@@ -1,54 +1,16 @@
-/* The full-screen bar's sheet. Travels with lib/fullbar.js — that file's
-   header says what the bar is for and why both surfaces share one.
+/* The bar's sheet. Travels with lib/fullbar.js -- that file's header says
+   what its two configurations are for.
 
    Loaded by the gallery and the profile, which are Skribl's own pages, so
    unlike inlineplayer.css this one is not downloaded by a host and its prose
    costs a stranger nothing.
 
-   The bar is hidden until its wrapper is actually full size. The two ways in
-   are the real Fullscreen API and `.is-immersive-page`, the CSS state
-   lib/immersive.js falls back to on iOS Safari, which has the API for <video>
-   and nothing else; both are written into one selector list here for the same
-   reason they are in each page's own sheet — a fallback that drifts from the
-   real thing is two full-screen modes and nobody can tell which one they are
-   in. */
-.skfull { display: none; }
-:fullscreen > .skfull,
-.is-immersive-page > .skfull {
-  display: flex;
-  flex-direction: column;
-  gap: 11px;
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 5;
-  box-sizing: border-box;
-  padding: 14px 20px calc(14px + env(safe-area-inset-bottom, 0px));
-  /* A scrim rather than a slab: the drawing runs under it and a hard edge
-     across a picture is worse than a soft one. */
-  background: linear-gradient(to top, rgba(6, 7, 10, 0.96), rgba(6, 7, 10, 0.82) 62%,
-                                      rgba(6, 7, 10, 0));
-  color: #e7e9ea;
-  font-family: inherit;
-}
+   THE CARD'S BAR is all here. FULL SCREEN is the link page's (the owner's
+   "All yes" to one full screen everywhere): its band, its x and its frame
+   are styles.css's own rules, which reach these pages as fullband.css; this
+   sheet keeps only what these pages add to it, who drew the drawing, and the
+   band put away while the stage is a card. */
 
-/* THE BAR STEPS BACK WHILE IT PLAYS, AND THE DRAWING HAS THE WHOLE SCREEN
-   (lib/chromefade.js says when; the owner's picks for every full screen, the
-   link page's and the editors' too: styles.css "CONTROLS THAT STEP BACK").
-   After a quiet spell the bar and the page's x fade, and the pointer with
-   them; the first move, tap or key brings them back. The host used to keep
-   the bar's measured height as a band under the drawing, after a pug whose
-   feet were behind the buttons; now the controls lie over its foot only
-   while someone is using them -- paused, finished, or just touched. */
-.skfull-host :is(.skfull:not(.skfull-card), .tileExit, .full-exit) { transition: opacity 0.35s ease; }
-.skfull-host.chrome-asleep :is(.skfull:not(.skfull-card), .tileExit, .full-exit) { opacity: 0; pointer-events: none; }
-.skfull-host.chrome-asleep { cursor: none; }
-
-/* THE SCRUBBER GETS ITS OWN ROW, which is the one layout decision here worth
-   stating: squeezed between the buttons it is a 6px target on a phone, and a
-   6px target is not a target. */
-.skfull-scrub { display: flex; align-items: center; gap: 12px; }
 .skfull-time {
   flex: none;
   width: 42px;
@@ -159,77 +121,12 @@
 .skfull-play svg:has(path[d^="M8 5"]) { translate: -2.43%; }
 @media (hover: hover) { .skfull-play:hover { background: var(--accent, #7c5cff); filter: brightness(1.08); } }
 
-.skfull-rate {
-  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
-  font-size: 13.5px;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -0.02em;
-}
 
-/* Who and what. Full screen is the one place with no card around the drawing
-   to read, so the bar carries it. */
-.skfull-who {
-  flex: 1 1 auto;
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  padding-left: 6px;
-}
-.skfull-av {
-  flex: none;
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  overflow: hidden;
-  display: grid;
-  place-items: center;
-  background: linear-gradient(135deg, #3a3f4b, #232730);
-  color: #fff;
-  font-size: 11px;
-  font-weight: 700;
-  line-height: 1;
-}
-.skfull-av[hidden] { display: none; }
-.skfull-av img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.skfull-words { min-width: 0; }
-.skfull-title {
-  font-size: 14px;
-  font-weight: 650;
-  letter-spacing: -0.01em;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.skfull-by {
-  margin-top: 1px;
-  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
-  font-size: 11.5px;
-  color: #8b97a8;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.skfull-by[hidden] { display: none; }
-
-/* Under 420px the words yield before the controls do: a viewer who cannot
-   reach play is stuck, and one who cannot read the title is only curious. */
-@media (max-width: 420px) {
-  :fullscreen > .skfull,
-  .is-immersive-page > .skfull { padding-left: 12px; padding-right: 12px; }
-  .skfull-row { gap: 7px; }
-  .skfull-by { display: none; }
-}
 
 /* ---------------------------------------------------------------------------
-   THE CARD FOOTER: the same bar, at card size (direction B).
-
-   Same builder, same control behaviour, fewer controls and no scrub row of its
-   own — lib/fullbar.js's header says which two configurations exist and why
-   there is one builder rather than two transports. What changes here is size
-   and the fact that it is ALWAYS shown: a card's footer is not conditional on
-   anything, so it opts out of the :fullscreen gate above.
+   THE CARD FOOTER: the bar at card size (direction B), with the scrubber in
+   its row. It is ALWAYS shown: a card's footer is not conditional on
+   anything, and it steps aside in full screen, where the band is.
    --------------------------------------------------------------------------- */
 /* NO RULE ABOVE THE CARD'S FOOTER. It had `border-top: 1px solid` and the
    line ran the full width of the card, straight under a stage whose own border
@@ -381,22 +278,18 @@
 }
 .skfull-card .skfull-time { width: auto; color: #c7cedb; }
 
-/* THE FADE TAKES ITS COLOURS FROM THE DRAWING (the owner's pick A after v326,
-   and for full screen "A, smart fade and yes to all"; lib/smartfade.js reads
-   it, lib/fullbar.js says when). `is-smart` is set only when the drawing
-   could be read; without it, the scrim above stands. */
+/* THE FADE TAKES ITS COLOURS FROM THE DRAWING (the owner's pick A after v326;
+   lib/smartfade.js reads it, lib/fullbar.js says when). `is-smart` is set
+   only when the drawing could be read; without it, the scrim above stands. */
 .skfull.skfull-card.is-smart {
   background: none;
   isolation: isolate;
   padding-left: max(11px, var(--row-l, 0px));
   padding-right: max(11px, var(--row-r, 0px));
 }
-.skfull:not(.skfull-card).is-smart { background: none; isolation: isolate; }
-/* ON THE DRAWING ONLY: inside the card's edge and round corners, or over the
-   drawing letterboxed in a full screen; beside it, the colour there needs no
-   fade. Strongest at the foot and gone above the buttons, 22px on the card
-   and 40px over full screen's taller bar, so it never draws a line across
-   the picture. */
+/* ON THE DRAWING ONLY: inside the card's edge and round corners; beside it,
+   the colour there needs no fade. Strongest at the foot and gone 22px above
+   the buttons, so it never draws a line across the picture. */
 .skfull.is-smart::before {
   content: '';
   position: absolute;
@@ -413,7 +306,6 @@
   height: calc(100% + 22px - var(--fx-b, 0px));
   border-radius: 0 0 var(--fx-rr, 0px) var(--fx-rl, 0px);
 }
-.skfull:not(.skfull-card).is-smart::before { height: max(0px, calc(100% + 40px - var(--fx-b, 0px))); }
 /* GLASS, light or dark by what is under each control, the play pill's two
    (inlineplayer.css .is-says): white on a dark ground, the action violet's
    ink on a pale one. */
@@ -444,39 +336,6 @@
 .skfull.is-smart .skfull-time.t-light { color: #241a52; }
 .skfull.is-smart .skfull-track.t-dark { background: rgba(255, 255, 255, 0.34); }
 .skfull.is-smart .skfull-track.t-light { background: rgba(36, 26, 82, 0.24); }
-/* FULL SCREEN'S WORDS, toned by what is under their letters, with a faint
-   halo in the other tone: on plain paper it is the paper's own tone and is
-   not seen; over a line of ink it keeps the words clear of it. */
-.skfull.is-smart .skfull-words.t-dark .skfull-title { color: #fff; }
-.skfull.is-smart .skfull-words.t-dark .skfull-by { color: rgba(255, 255, 255, 0.82); }
-.skfull.is-smart .skfull-words.t-light .skfull-title { color: #241a52; }
-.skfull.is-smart .skfull-words.t-light .skfull-by { color: #3f3566; }
-.skfull:not(.skfull-card).is-smart :is(.skfull-time, .skfull-words:not(.cap)).t-dark {
-  text-shadow: 0 0 2px rgba(16, 12, 32, 0.6), 0 0 7px rgba(16, 12, 32, 0.42);
-}
-.skfull:not(.skfull-card).is-smart :is(.skfull-time, .skfull-words:not(.cap)).t-light {
-  text-shadow: 0 0 2px rgba(255, 255, 255, 0.8), 0 0 7px rgba(255, 255, 255, 0.55);
-}
-/* A NAME THAT CROSSES THE DRAWING'S EDGE (a tall drawing on a desk: light on
-   one side, dark on the other) sits in a capsule of the buttons' glass, made
-   strong enough to carry its ink over either side. */
-.skfull.is-smart .skfull-words.cap {
-  padding: 4px 12px 5px;
-  border: 1px solid transparent;
-  border-radius: 14px;
-  -webkit-backdrop-filter: blur(12px) saturate(1.6);
-          backdrop-filter: blur(12px) saturate(1.6);
-}
-.skfull.is-smart .skfull-words.cap.t-dark {
-  border-color: rgba(255, 255, 255, 0.14);
-  background: rgba(16, 12, 32, 0.62);
-  box-shadow: 0 3px 12px rgba(10, 6, 30, 0.3);
-}
-.skfull.is-smart .skfull-words.cap.t-light {
-  border-color: rgba(255, 255, 255, 0.9);
-  background: rgba(255, 255, 255, 0.74);
-  box-shadow: 0 3px 12px rgba(10, 6, 30, 0.12);
-}
 
 /* Under 420 the controls keep their size and the gaps give way: a viewer who
    cannot reach play is stuck, one who cannot read a timestamp is only curious. */
@@ -485,3 +344,53 @@
   .skfull.skfull-card.is-smart { padding-left: max(9px, var(--row-l, 0px)); padding-right: max(9px, var(--row-r, 0px)); }
   .skfull-card .skfull-row { gap: 6px; }
 }
+
+/* ---------------------------------------------------------------------------
+   FULL SCREEN: the link page's band, put away while the stage is a card.
+   `.player-bar` is `display: contents` at rest (styles.css), which outranks
+   [hidden], so the band says so itself.
+   --------------------------------------------------------------------------- */
+.skfull-host > .player-bar[hidden] { display: none; }
+
+/* WHO DREW IT, IN THE CORNER (the owner's pick A for one full screen): the
+   one thing these pages have that the link page does not, across from the x
+   and at its height, in the buttons' glass for the ground it sits on (the
+   drawing's, out to the screen's edges), and stepping back with them. */
+.fb-who {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  z-index: 3;
+  box-sizing: border-box;
+  max-width: calc(100% - 100px);
+  min-height: 44px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 4px 16px;
+  border: 1px solid transparent;
+  border-radius: 22px;
+  line-height: 1.2;
+  -webkit-backdrop-filter: blur(12px) saturate(1.6);
+          backdrop-filter: blur(12px) saturate(1.6);
+  transition: opacity 0.35s ease;
+}
+.fb-who[hidden] { display: none; }
+.fb-who b, .fb-who span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fb-who b { font-size: 15px; font-weight: 700; }
+.fb-who span { font-size: 13px; }
+.fb-who span[hidden] { display: none; }
+.fb-who.t-dark {
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.26);
+  background: rgba(255, 255, 255, 0.14);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 3px 12px rgba(10, 6, 30, 0.4);
+}
+.fb-who.t-light {
+  color: #241a52;
+  border-color: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.68);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 3px 12px rgba(10, 6, 30, 0.14);
+}
+.skfull-host.chrome-asleep .fb-who { opacity: 0; pointer-events: none; }
+@media (prefers-reduced-motion: reduce) { .fb-who { transition: none; } }

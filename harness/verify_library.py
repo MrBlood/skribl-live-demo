@@ -621,14 +621,14 @@ with sync_playwright() as sp:
             isStage: !!(document.fullscreenElement
                         && document.fullscreenElement.classList.contains('stageCanvasWrap')),
             pressed: document.getElementById('btnFull').getAttribute('aria-pressed'),
-            exitShown: getComputedStyle(document.getElementById('fullExit')).display !== 'none' })""")
+            exitShown: getComputedStyle(document.querySelector('.stageCanvasWrap > .player-btn.full-exit')).display !== 'none' })""")
         check("the stage wrap goes full screen, the button says pressed, and the way out is inside",
               fs["isStage"] and fs["pressed"] == "true" and fs["exitShown"], str(fs))
-        pg.click("#fullExit")
+        pg.click(".stageCanvasWrap > .player-btn.full-exit")
         pg.wait_for_timeout(600)
         fs2 = pg.evaluate("""() => ({ el: document.fullscreenElement,
             pressed: document.getElementById('btnFull').getAttribute('aria-pressed'),
-            exitShown: getComputedStyle(document.getElementById('fullExit')).display !== 'none' })""")
+            exitShown: getComputedStyle(document.querySelector('.stageCanvasWrap > .player-btn.full-exit')).display !== 'none' })""")
         check("the in-frame control leaves full screen and the button follows the document",
               fs2["el"] is None and fs2["pressed"] == "false" and not fs2["exitShown"], str(fs2))
     pg.close()
@@ -1988,7 +1988,7 @@ with sync_playwright() as _spf:
                  left: Math.round(r.left), top: Math.round(r.top),
                  pinned: getComputedStyle(w).position,
                  locked: getComputedStyle(document.documentElement).overflow,
-                 exit: getComputedStyle(document.getElementById('fullExit')).display,
+                 exit: getComputedStyle(document.querySelector('.stageCanvasWrap > .player-btn.full-exit')).display,
                  pressed: document.getElementById('btnFull').getAttribute('aria-pressed') }; }""")
     # AGAINST THE VIEWPORT, not against the class: `position: fixed` resolves
     # against the nearest transformed, filtered or contained ancestor rather
@@ -2005,11 +2005,14 @@ with sync_playwright() as _spf:
     check("...and the page behind it cannot scroll",
           _big["locked"] == "hidden", str(_big))
 
-    # ---- THE SAME BAR THE GALLERY'S TILE GETS (v308) ----------------------
+    # ---- THE SAME BAR THE GALLERY'S TILE GETS (v308), AND NOW THE LINK PAGE'S
     # Owner, holding a screenshot of each: this page's full screen had a way
     # out and no controls, the gallery's had controls and no way out, and
     # neither looked like the other. "In the end the two full screens should
-    # look identical with controls present on the bottom."
+    # look identical with controls present on the bottom." Then: "why can't
+    # the gallery player look like the others? with the same scrubber and
+    # all?" -- both are the link page's band now (lib/fullbar.js band()), and
+    # verify_onefull measures them against it part by part.
     #
     # THE LIST IS SPELLED OUT AND IT IS THE SAME LITERAL verify_gallery USES.
     # That is the point: a change to lib/fullbar.js reddens both suites
@@ -2018,15 +2021,16 @@ with sync_playwright() as _spf:
     # two apart -- and "they drifted" is the defect, not "one is wrong".
     _lbar = _pf.evaluate("""() => {
         const w = document.querySelector('.stageCanvasWrap');
-        const bar = w.querySelector('.skfull');
+        const bar = w.querySelector(':scope > .player-bar');
         const box = w.querySelector('.skribl-inline');
         if (!bar) return { missing: true };
         const br = bar.getBoundingClientRect(), wr = w.getBoundingClientRect();
-        const t = bar.querySelector('.skfull-track');
-        const p = bar.querySelector('.skfull-play');
+        const t = bar.querySelector('.player-progress');
+        const p = bar.querySelector('.player-controls .primary');
         return {
           shown: getComputedStyle(bar).display,
-          btns: [...bar.querySelectorAll('.skfull-btn')].map(b => b.className.split(' ')[1]),
+          btns: [...bar.querySelectorAll('.player-controls > button')].filter(b => !b.hidden)
+                  .map(b => (b.getAttribute('aria-label') || '').replace(/^Pause$/, 'Play')),
           bare: !!(box && box.classList.contains('is-bare')),
           /* ABSENT IS A REAL ANSWER HERE, not a probe failure. The stage
              attaches the player with its own transport already supplied, so
@@ -2041,10 +2045,9 @@ with sync_playwright() as _spf:
           atBottom: Math.round(wr.bottom - br.bottom),
           scrubOwnRow: !!(t && p && t.getBoundingClientRect().bottom
                           <= p.getBoundingClientRect().top + 1) }; }""")
-    check("the profile's full screen carries the SAME bar as the gallery's tile",
+    check("the profile's full screen carries the SAME band as the gallery's tile: the link page's",
           not _lbar.get("missing") and _lbar["shown"] == "flex"
-          and _lbar["btns"] == ['skfull-restart', 'skfull-play', 'skfull-loop',
-                                'skfull-mute', 'skfull-rate', 'skfull-exit'],
+          and _lbar["btns"] == ['Restart', 'Play', 'Loop', 'Leave full screen'],
           f"{_lbar} \u2014 this literal is the one verify_gallery asserts; the "
           f"two surfaces drifting apart is the defect, not either being wrong")
     check("...at the bottom, scrubber on its own row, component's transport yielding",
@@ -2052,7 +2055,7 @@ with sync_playwright() as _spf:
           and _lbar["scrubOwnRow"] and _lbar["bare"]
           and _lbar["ownControls"] in ("none", "absent"), str(_lbar))
 
-    _pf.evaluate("() => document.getElementById('fullExit').click()")
+    _pf.evaluate("() => document.querySelector('.stageCanvasWrap > .player-btn.full-exit').click()")
     _pf.wait_for_timeout(600)
     _back = _pf.evaluate("""() => ({
         pinned: getComputedStyle(document.querySelector('.stageCanvasWrap')).position,

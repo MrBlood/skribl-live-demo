@@ -1,0 +1,485 @@
+/* fullband.css — DERIVED FROM styles.css. Do not edit by hand.
+
+   THE LINK PAGE'S FULL SCREEN, FOR THE GALLERY AND THE LIBRARY (the owner:
+   "why can't the gallery player look like the others? with the same scrubber
+   and all?", then "All yes"). Their full screen builds the link page's band,
+   its x and its frame (lib/fullbar.js band()), and these are styles.css's own
+   rules for them, so the five full screens are written once.
+
+   WHICH RULES. harness/tools/cssgraph.py --band-census opens the Gallery's
+   full screen in every state the band has (paused, playing, the speeds open,
+   a drag on the scrubber, the controls stepped back, a dark drawing and a
+   pale one, a Flip, both themes, a phone and a desk) and records each
+   selector that matches inside the full-screen frame. A rule comes here when
+   one of its selectors did and none of them matched anything outside the
+   frame on the Gallery or the Library, so nothing else on either page is
+   restyled. Rules are taken one by one, inside @media too, in their original
+   order.
+
+   THE COST IS DUPLICATION, paid for by an assertion: verify_seam.py, on
+   every pull request, regenerates this file with player.css and fails if it
+   differs by one byte from what styles.css and the recorded census produce.
+   A rule edited in styles.css and not re-emitted here is a red suite; the
+   one command that re-emits player.css re-emits this too. */
+
+/* The band's tokens: styles.css's :root and its light theme, on a full-screen frame. */
+.watch-full:is(:fullscreen, .is-immersive-page) {
+  --accent: #7c5cff;
+  --accent-bright: #9179ff;
+  --ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --hairline: rgba(255,255,255,0.055);
+  --hairline-strong: rgba(255,255,255,0.09);
+  --on-canvas-drop-rgb: 10,6,30;
+  --on-canvas-ink: #241a52;
+  --on-canvas-shade-rgb: 16,12,32;
+  --on-canvas-violet: #3a24a8;
+  --r-pill: 999px;
+  --seg-on-fill: rgba(124, 92, 255, 0.22);
+  --seg-on-ink: #d4c9ff;
+  --surface-base: #0b0d12;
+  --surface-control: #171b23;
+  --surface-control-hover: #1c212c;
+  --surface-control-rgb: 23,27,35;
+  --surface-deep: #06070a;
+  --surface-deep-rgb: 6,7,10;
+  --text-muted: #b7bfcc;
+  --text-primary: #f6f7f9;
+  --text-secondary: #b7bfcc;
+  --text-strong: #e7e9ea;
+  --wash-rgb: 255,255,255;
+}
+:root[data-theme="light"] .watch-full:is(:fullscreen, .is-immersive-page) {
+  --hairline: rgba(0,0,0,0.09);
+  --hairline-strong: rgba(0,0,0,0.15);
+  --seg-on-ink: #36209a;
+  --surface-base: #fbfcfd;
+  --surface-control: #edf0f4;
+  --surface-control-hover: #e2e7ee;
+  --surface-control-rgb: 237,240,244;
+  --surface-deep: #ffffff;
+  --surface-deep-rgb: 255,255,255;
+  --text-muted: #3f4756;
+  --text-primary: #11161e;
+  --text-secondary: #3f4756;
+  --text-strong: #1f252f;
+  --wash-rgb: 0,0,0;
+}
+/* What the band inherits: styles.css's body rule's type and ink. */
+.watch-full:is(:fullscreen, .is-immersive-page) {
+  -webkit-font-smoothing: antialiased;
+  color: var(--text-strong);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-variant-numeric: tabular-nums;
+  line-height: normal;
+}
+
+/* .player-btn uses display:flex, which overrides the hidden attribute — this
+   keeps the mute button truly hidden for audio-less Skribls. */
+.player-btn[hidden] { display: none; }
+
+/* FULL SCREEN on the player. The wrapper is what goes fullscreen, so it has to stop
+   being a sized box and become the screen, and `place-items: center` is what
+   holds the drawing in the middle of it.
+
+   THE CANVAS IS SIZED IN JAVASCRIPT, NOT HERE, and the first draft of this
+   block believed otherwise. It carried a `.canvas-wrap:fullscreen > canvas`
+   rule setting width and height to auto under 100vw/100vh caps, reasoning that
+   a replaced element with auto sizes letterboxes itself at any shape. That
+   rule never applied for one frame: layoutPlayerCanvas() writes an INLINE
+   width and height onto the canvas, inline beats a stylesheet, and it runs
+   again on `fullscreenchange` — so the drawing stayed at the size it had in
+   the page (551px in a 1200px screen, measured) inside a black field, while
+   every assertion about the control passed. The rule is gone and
+   layoutPlayerCanvas() branches on the fullscreen element instead.
+
+   NO ASPECT RATIO IS HARD-CODED HERE, deliberately. The profile stage's
+   fullscreen rule says `calc(100vh * 16 / 9)`, which assumes every drawing is
+   16:9 and is only harmless because the canvas keeps its own ratio inside the
+   box. The JS branch fits the authored shape at ANY ratio — the lesson the
+   in-post player's stretch bug taught, applied rather than repeated.
+
+   AND ITS STAND-IN ON AN IPHONE. iOS Safari has the Fullscreen API for
+   <video> and nothing else, so app.js goes through lib/immersive.js, which
+   puts `.is-immersive-page` on the wrapper where the API is missing or
+   refuses. Every rule below is written for both as ONE selector, for the
+   reason the Gallery and the Library give: a stand-in that drifts from the
+   real thing is two full-screen modes, and nobody can tell which one they are
+   in. :is() and not a selector list, which is not style: a browser that does
+   not know `:fullscreen` drops a whole list that names it, and the iPhone is
+   the browser this is for. :is() forgives the name it does not know and keeps
+   the other. */
+:is(.canvas-wrap, .watch-full):is(:fullscreen, .is-immersive-page) {
+  /* BELT AND BRACES, MEASURED AS SUCH. The Fullscreen spec's UA stylesheet
+     sizes the top-layer element with `width: 100% !important` and
+     `max-width: none !important`, which outranks these four lines and the
+     inline width layoutPlayerCanvas writes; Chromium fills the wrapper with or
+     without them. They stay for an engine that does not apply the spec'd rule,
+     and verify_player_isolation measures the wrapper against the screen so
+     that "some layer supplies this" is asserted rather than assumed. */
+  width: 100vw;
+  height: 100vh;
+  max-width: 100vw;
+  max-height: 100vh;
+  border: 0;
+  border-radius: 0;
+  /* TOKENS, NOT THE LITERALS THIS WAS COPIED WITH. The stage's rule says
+     `background: #000` and `rgba(6,7,10,.72)`, but it lives in a TEMPLATE;
+     these lines are in the stylesheet, where verify_theme and verify_surfaces
+     hold every neutral to a token so the chrome can follow a light theme. Both
+     went red on the first draft of this rule, which is the gates doing exactly
+     their job on a copy-paste. --surface-deep IS #06070a, so this is the same
+     ink by its name. */
+  background: var(--surface-deep);
+  display: grid;
+  place-items: center;
+}
+/* THE STAND-IN PINS ITSELF, the one thing the API did that a class has to do
+   on its own: the declarations the Fullscreen spec's UA sheet gives the
+   element in the top layer, `!important` for the same reason it has them.
+   layoutPlayerCanvas() writes an inline width and height onto this box, and in
+   real full screen it is the UA's `!important` that beats them; here, without
+   it, the wrapper stays the size it was in the page. 100dvh, not 100vh: on a
+   phone `vh` is the tallest the viewport ever gets, so with the URL bar
+   showing, the transport would sit under it. */
+:is(.canvas-wrap, .watch-full).is-immersive-page {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 2147483000;
+  margin: 0 !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  width: 100vw !important;
+  height: 100dvh !important;
+  max-width: none !important;
+  max-height: none !important;
+}
+/* TWO CLASSES, NOT ONE, AND THAT IS THE WHOLE FIX. This was `.full-exit`,
+   which ties on specificity with `.player-btn` -- the other class the same
+   button carries -- so the winner was decided by which rule came LAST in the
+   sheet. .player-btn does, 185 lines later, so `display: none` lost and the
+   exit control sits on the player at all times: a close button on a page with
+   nothing to close. A pin that only checks the control APPEARS in full screen
+   never sees it.
+   `.player-btn.full-exit` outranks `.player-btn` outright, so the rule no
+   longer depends on where it sits. */
+.player-btn.full-exit { display: none; position: absolute; top: 14px; right: 14px;
+  z-index: 3; width: 44px; height: 44px; background: var(--surface-deep);
+  border-color: var(--hairline-strong); color: var(--text-primary); }
+:is(.canvas-wrap, .watch-full):is(:fullscreen, .is-immersive-page) .player-btn.full-exit { display: grid; place-items: center; }
+
+/* THE TRANSPORT GOES FULL SCREEN WITH THE DRAWING. Full screen renders only
+   the top-layer subtree, and the transport row lives in .player-shell below
+   the wrapper -- so without help it is not on screen at all: a drawing, a close
+   button, and nothing to press. app.js moves
+   #playerBar into .canvas-wrap on the way in and back on the way out.
+
+   `display: contents` at rest so the wrapper generates no box: the scrubber
+   and the button row stay direct flex children of the shell, exactly as they
+   were before there was anything around them. */
+.player-bar { display: contents; }
+:is(.canvas-wrap, .watch-full):is(:fullscreen, .is-immersive-page) .player-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 3;
+  box-sizing: border-box;
+  padding: 14px 20px calc(14px + env(safe-area-inset-bottom, 0px));
+  /* A scrim rather than a slab, the same shape lib/fullbar.js uses on the
+     gallery and the profile: a hard edge across a picture is worse than a
+     soft one, and the three surfaces should be recognisably one product. */
+  background: linear-gradient(to top, rgba(var(--surface-deep-rgb), .96),
+                                      rgba(var(--surface-deep-rgb), .82) 62%,
+                                      rgba(var(--surface-deep-rgb), 0));
+}
+/* THE BAND TAKES ITS COLOURS FROM THE DRAWING (lib/smartfade.js; the owner's
+   "A, smart fade and yes to all" for every full screen, from the measured
+   mock): the link page's band and the editors', which are one band. Set only
+   when the drawing could be read; without it, the scrim above stands. The
+   fade lies on the drawing only, in its own colours read across its foot,
+   strongest at the bottom and gone 40px above the band. Each control is light
+   or dark glass by what is under it, and each word light or dark ink with a
+   faint halo in the other tone, which only shows where ink runs under it.
+   The Gallery's and the Library's bar wear the same (fullbar.css). */
+:is(.canvas-wrap, .watch-full):is(:fullscreen, .is-immersive-page) .player-bar.is-smart {
+  background: none;
+  isolation: isolate;
+}
+.player-bar.is-smart::before {
+  content: '';
+  position: absolute;
+  left: var(--fx-l, 0px);
+  right: var(--fx-r, 0px);
+  bottom: var(--fx-b, 0px);
+  height: max(0px, calc(100% + 40px - var(--fx-b, 0px)));
+  background: var(--fade-x, none);
+  -webkit-mask-image: linear-gradient(to top, rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.55) 45%, rgba(0, 0, 0, 0.22) 75%, transparent);
+          mask-image: linear-gradient(to top, rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.55) 45%, rgba(0, 0, 0, 0.22) 75%, transparent);
+  pointer-events: none;
+  z-index: -1;
+}
+.player-bar.is-smart :is(.player-btn, .rl-speed, .full-btn):is(.t-dark, .t-light) {
+  -webkit-backdrop-filter: blur(12px) saturate(1.6);
+          backdrop-filter: blur(12px) saturate(1.6);
+}
+.player-bar.is-smart :is(.player-btn, .rl-speed, .full-btn).t-dark {
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.26);
+  background: rgba(255, 255, 255, 0.14);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 3px 12px rgba(var(--on-canvas-drop-rgb), 0.4);
+}
+.player-bar.is-smart :is(.player-btn, .rl-speed, .full-btn).t-light {
+  color: var(--on-canvas-violet);
+  border-color: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.68);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 3px 12px rgba(var(--on-canvas-drop-rgb), 0.14);
+}
+/* Lit in both, as Repeat is on the card: the violet ground, its ink by the tone. */
+.player-bar.is-smart :is(.player-btn.active, .full-btn[aria-pressed="true"]).t-dark {
+  color: #fff; border-color: #a593ff; background: rgba(124, 92, 255, 0.38);
+}
+.player-bar.is-smart :is(.player-btn.active, .full-btn[aria-pressed="true"]).t-light {
+  color: var(--on-canvas-violet); border-color: #7c5cff; background: rgba(124, 92, 255, 0.22);
+}
+@media (hover: hover) {
+  .player-bar.is-smart :is(.player-btn, .rl-speed, .full-btn).t-dark:not(.active):hover { background: rgba(255, 255, 255, 0.22); }
+  .player-bar.is-smart :is(.player-btn, .rl-speed, .full-btn).t-light:not(.active):hover { background: rgba(255, 255, 255, 0.8); }
+}
+.player-bar.is-smart :is(.player-time > span, .rl-drawn, .rl-m, .rl-skip).t-dark {
+  color: #fff;
+  text-shadow: 0 0 2px rgba(var(--on-canvas-shade-rgb), 0.6), 0 0 7px rgba(var(--on-canvas-shade-rgb), 0.42);
+}
+.player-bar.is-smart :is(.player-time > span, .rl-drawn, .rl-m, .rl-skip).t-light {
+  color: var(--on-canvas-ink);
+  text-shadow: 0 0 2px rgba(255, 255, 255, 0.8), 0 0 7px rgba(255, 255, 255, 0.55);
+}
+.player-bar.is-smart .t-dark b { color: #fff; }
+.player-bar.is-smart .t-light b { color: var(--on-canvas-ink); }
+/* THE TRACK TAKES THE WIDTH IT IS GIVEN. `max-width: 340px` is right under a
+   centred column and wrong across a screen: a scrubber a quarter of the way
+   along a 1900px bar reads as a progress meter somebody forgot to finish. Full
+   screen is also where a drawing is long enough that seeking to a moment
+   matters, and a 340px track is a coarse instrument for it. */
+:is(.canvas-wrap, .watch-full):is(:fullscreen, .is-immersive-page) .player-progress,
+:is(.canvas-wrap, .watch-full):is(:fullscreen, .is-immersive-page) .player-time { max-width: none; }
+/* THE CLOCK CLEARS THE PLAYHEAD. Its -10px pull (below) was set for the 6px
+   track; under the scrubber's 30px bar, in this band's 11px gap, it left the
+   clock 1px under the bar, and the playhead pokes 3px past the bar with a 2px
+   ring: at a drawing's end, where a finished drawing rests, it sat on the last
+   digit. 6px under, as on the page, where the column's 16px gap makes it. */
+:is(.canvas-wrap, .watch-full):is(:fullscreen, .is-immersive-page) .rl-scrub + .player-time { margin-top: -5px; }
+
+/* CONTROLS THAT STEP BACK (lib/chromefade.js; the owner's picks for every
+   full screen -- the link page's, the editors', and the Gallery's and the
+   Library's in fullbar.css): the band and the x fade a moment after a
+   drawing starts and come back at the first move, tap or key. The drawing
+   does not move when they come and go -- it already has the whole screen,
+   and they lie over its foot -- and the pointer goes with them, so a still
+   mouse leaves nothing on the picture. The link page used to reserve a band
+   under the drawing for its bar (the Gallery's pug, whose feet were behind
+   the controls); with the bar away while it plays, the drawing has it back. */
+:is(.canvas-wrap, .watch-full):is(:fullscreen, .is-immersive-page) :is(.player-bar, .player-btn.full-exit) {
+  transition: opacity 0.35s var(--ease);
+}
+.chrome-asleep :is(.player-bar, .player-btn.full-exit) { opacity: 0; pointer-events: none; }
+.chrome-asleep { cursor: none; }
+
+/* WRAPS, because the row is eight controls now rather than five and 12px of
+   gap between 46px circles runs past a 390px phone. Centred so a wrapped
+   second line reads as part of the same cluster. The order is deliberate:
+   the things you press while WATCHING come first (restart, play, loop, speed,
+   mute, full) and the things you press when you are DONE last (copy the link,
+   go to the gallery). */
+.player-controls { display: flex; flex-wrap: wrap; justify-content: center;
+  gap: 10px; align-items: center; }
+
+.player-progress {
+  width: 100%;
+  max-width: 340px;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(var(--wash-rgb), 0.08);
+  /* visible, not hidden: the 24px band below must reach past the 6px track,
+     and the fill carries its own radius so nothing needed the clip. */
+  overflow: visible;
+  position: relative;
+  cursor: pointer;
+  touch-action: none;
+}
+/* A 6px track is a 6px target; the band makes it 44 (v287 audit
+   SK-A11Y-005). It reaches under the title above, which takes no taps, and
+   over the transport below, which is later in the DOM and so keeps its own.
+   The seek handlers read clientX, so a tap on the band lands where it looks. */
+.player-progress::before {
+  content: ''; position: absolute;
+  left: 0; right: 0; top: 50%; height: 44px; transform: translateY(-50%);
+}
+.player-progress-fill {
+  height: 100%;
+  width: 0%;
+  background: var(--accent);
+  border-radius: 999px;
+  transition: width 0.08s linear;
+}
+
+/* `.player-link` was here: two full-width rows under the transport, Copy link
+   and Gallery, which on a phone were most of what sat below the drawing. Both
+   are 46px buttons IN the transport row now (_skribl_player_controls.html) and
+   nothing carries the class, so the rules went with them. The --tap-grow band
+   they needed went too: a .player-btn is already 46px square. */
+
+/* NO DOUBLE-TAP WAIT, on the buttons and the speeds both. Without
+   `touch-action: manipulation` Safari holds a tap about 300ms to see whether
+   a second one is coming, and the second of two quick presses is the one
+   that disappears: the owner's "the button is not very responsive, it takes
+   pushing it many times, there is a lag", of the Gallery's old full-screen
+   bar (fullbar.css says it at length; flip.css since Flip shipped). Since
+   one full screen the Gallery and the Library wear this band, so the rule is
+   here, where every full screen's band comes from. Tap, scroll and pinch
+   are kept; only the double-tap zoom goes. One rule for all three, which
+   is cheaper served than the property in each. */
+.player-btn, .rl-speed, .rl-chips button { touch-action: manipulation; }
+.player-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 999px;
+  border: 1px solid var(--hairline);
+  background: var(--surface-control);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.1s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.player-btn svg { width: 20px; height: 20px; }
+@media (hover: hover) { .player-btn:hover { background: var(--surface-control-hover); }
+}
+.player-btn:active { transform: scale(0.94); }
+
+.player-btn.primary {
+  width: 58px;
+  height: 58px;
+  background: var(--accent);
+  border: none;
+  color: #fff;
+}
+.player-btn.primary svg { width: 24px; height: 24px; }
+/* Play's arrow, centred to the eye: a triangle's middle is halfway between its
+   box and its mass, 0.58 of the glyph's 24 units left of where the one play
+   (verify_icons) puts it -- the rule the full-screen band's arrow is drawn to
+   (lib/watchfull.js). Matched by the glyph, so Pause, which is symmetric,
+   stays put. */
+.player-btn.primary svg:has(path[d^="M8 5"]) { translate: -0.58px; }
+@media (hover: hover) { .player-btn.primary:hover { background: var(--accent-bright); }
+}
+
+/* A LIT TOGGLE IS THE ONE PILL'S SELECTED LOOK -- its tint and its ink, as
+   on the library's transport -- and not solid violet, which is Play's: Loop
+   on read as a second Play button. */
+.player-btn.active {
+  background: var(--seg-on-fill);
+  border-color: transparent;
+  color: var(--seg-on-ink);
+}
+
+/* The clock under the track. pointer-events: none because the track's 44px
+   band reaches down under it, and a tap there is a seek. */
+.player-time { display: flex; justify-content: space-between; width: 100%;
+  max-width: 340px; margin-top: -10px; pointer-events: none;
+  font: 12px/1 ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-variant-numeric: tabular-nums; color: var(--text-secondary); }
+
+/* WHAT YOU ARE WATCHING: "Drawn in 47 min · watching at 8×" (lib/replayline.js,
+   the owner's pick B). The speed in the line is the button; it opens one row of
+   speeds, which closes again on a pick. The player has it under the track, the
+   Pad under its scrubber (above it on a phone, where the speeds open upward).
+   The pressed speed is the selection tint every pick-one pill uses. */
+.replay-line { display: flex; flex-direction: column; align-items: center; gap: 8px;
+  width: 100%; font-size: 15px; line-height: 1.4; color: var(--text-muted); text-align: center;
+  transition: opacity 0.15s var(--ease); }
+.replay-line b { color: var(--text-primary); font-weight: 600; }
+.rl-text { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; column-gap: 5px; }
+.rl-speed { position: relative; display: inline-flex; align-items: center; gap: 3px;
+  margin-left: 2px; padding: 3px 9px 3px 11px; border: 0; border-radius: var(--r-pill);
+  font: inherit; font-weight: 650; font-variant-numeric: tabular-nums;
+  background: var(--seg-on-fill); color: var(--seg-on-ink); cursor: pointer; }
+.rl-speed::before { content: ''; position: absolute; inset: -10px -3px; }   /* a 44px tap */
+.rl-speed svg { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 2.4;
+  stroke-linecap: round; stroke-linejoin: round; transition: transform 0.26s var(--ease); }
+.replay-line.open .rl-speed svg { transform: rotate(180deg); }
+.rl-skip { flex-basis: 100%; font-size: 13px; }
+.rl-skip[hidden] { display: none; }
+.rl-chips { display: flex; gap: 2px; padding: 4px; max-width: 100%; box-sizing: border-box;
+  border-radius: var(--r-pill); background: rgb(var(--surface-control-rgb));
+  border: 1px solid var(--hairline-strong); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  opacity: 1; transform: none;
+  transition: opacity 0.26s var(--ease), transform 0.26s var(--ease), display 0.26s allow-discrete; }
+@starting-style { .rl-chips { opacity: 0; transform: translateY(-4px); }
+}
+.rl-chips[hidden] { display: none; opacity: 0; transform: translateY(-4px); }
+/* Each speed shrinks only to its own label (a flex item's own minimum): an even split (flex: 1 1 0,
+   min-width: 0) gave every chip 28px and pushed "16×" 5px out of its pill at
+   every width, 320 to 768. Eight across fit the 260px a 320px phone gives. */
+.rl-chips button { position: relative; flex: 1 1 30px; max-width: 48px; height: 34px;
+  padding: 0 4px; border: 0; border-radius: var(--r-pill); background: none;
+  font: inherit; font-weight: 550; font-variant-numeric: tabular-nums;
+  color: var(--text-primary); cursor: pointer; }
+.rl-chips button::before { content: ''; position: absolute; inset: -5px 0; }   /* 44px */
+.rl-chips button[data-r="fit"] { max-width: 54px; flex-grow: 1.3; margin-left: 4px; }
+.rl-chips button[aria-pressed="true"] { background: var(--seg-on-fill); color: var(--seg-on-ink); font-weight: 700; }
+@media (forced-colors: active) {
+  .rl-speed, .rl-chips button[aria-pressed="true"] { outline: 2px solid ButtonText; outline-offset: -2px; }
+}
+@media (prefers-reduced-motion: reduce) { .rl-chips, .rl-speed svg { transition: none; }
+}
+/* Tucked against the clock above it and the transport below: on a desk the
+   player's drawing is sized by the height left over, so every row of chrome
+   under it is taken from the drawing (the canvas is the hero). */
+.player-bar .replay-line { margin: -6px 0 -4px; }
+/* THE SCRUBBER, on both (lib/replayline.js scrub(); the owner's S3): a bar of
+   the drawing's shape, painted in the bar's `color`; a playhead; the artist's
+   clock in a bubble while dragging. The old thin fill is hidden under it. */
+.rl-scrub { color: var(--accent); background: rgba(var(--wash-rgb), 0.06); border-radius: 9px; touch-action: none; }
+.rl-strip { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.rl-head { position: absolute; top: -3px; bottom: -3px; width: 3px; margin-left: -1.5px; border-radius: 2px;
+  background: var(--accent); box-shadow: 0 0 0 2px var(--surface-base); pointer-events: none; }
+/* A layer up (z-index 2): riding above a finger it is over the drawing, and the
+   link page's canvas sits at 1, so the bubble went under it there. */
+.rl-bubble { position: absolute; z-index: 2; bottom: calc(100% + 10px); transform: translateX(-50%); white-space: pre;
+  padding: 4px 10px; border-radius: 10px; font-size: 13px; font-weight: 650; font-variant-numeric: tabular-nums;
+  color: var(--text-primary); background: rgb(var(--surface-control-rgb)); border: 1px solid var(--hairline-strong);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.2); opacity: 0; transition: opacity 0.15s var(--ease); pointer-events: none; }
+.rl-scrub.dragging .rl-bubble { opacity: 1; }
+/* While it shows, the bubble is the clock, and the words beside the bar fade
+   until the finger lifts: on a phone the Pad's sit just over the bar, where
+   the bubble rides (the owner's P5, pick A). On all three players, so they
+   scrub alike; the in-post one's rule is in inlineplayer.css. */
+.rl-scrub.dragging ~ .replay-line { opacity: 0; }
+.player-progress.rl-scrub { height: 30px; }
+.rl-scrub .player-progress-fill, .rl-scrub .play-scrub-fill { display: none; }
+
+/* Short viewports (landscape phones, ~360–414px tall): the metadata shell is a
+   fixed ~267px, which — with the canvas floor + app padding — overflowed and
+   forced vertical scroll. Compact the shell (tighter gaps, smaller type, drop
+   the decorative "Made with" line) and shrink the app padding/gap. Because the
+   player fit-scale MEASURES the shell live (playerReservedV), reducing its height
+   here automatically frees vertical budget for the canvas — no JS change needed. */
+/* ONE ROW ON A PHONE. Seven controls at 46px wrapped onto two lines at
+   390, where the row is 330px wide; at 40 (52 for Play) with 6px between
+   they take 328. 40 drawn, 46 to a finger: over the 44 floor, and two
+   neighbours' bands meet in the gap without overlapping. */
+@media (max-width: 420px) {
+  .player-controls { gap: 6px; }
+  .player-controls .player-btn { position: relative; width: 40px; height: 40px; }
+  .player-controls .player-btn::before { content: ''; position: absolute; inset: -3px; }
+  .player-controls .player-btn.primary { width: 52px; height: 52px; }
+}
+
+@media (max-height: 480px) {
+  .player-controls { gap: 8px; }
+}

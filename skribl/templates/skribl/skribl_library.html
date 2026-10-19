@@ -23,6 +23,10 @@
      palette, both ramps (this said "both ramps" for releases while the page
      had one). #}
   <link rel="stylesheet" href="{{ skribl_asset('posted.css') }}">
+  {# fullband.css: the link page's full screen, its band and its x, in
+     styles.css's own rules (harness/tools/cssgraph.py emits it, as it does
+     player.css). Before fullbar.css, which is this page's half. #}
+  <link rel="stylesheet" href="{{ skribl_asset('fullband.css') }}">
   {# fullbar.css travels with lib/fullbar.js — see that sheet's header. #}
   <link rel="stylesheet" href="{{ skribl_asset('fullbar.css') }}">
   {# tooltip.css travels with lib/tooltip.js — see that sheet's header. #}
@@ -536,19 +540,17 @@
        than no full size at all. Set by lib/immersive.js on <html>, cleared on
        the way out. */
     html.skribl-immersive, html.skribl-immersive body { overflow: hidden; }
+    /* The frame is the link page's (fullband.css: the drawing's ground to
+       the screen's edges, the drawing in the middle); this keeps the stage's
+       own inset off it. */
     .stageCanvasWrap:fullscreen, .stageCanvasWrap.is-immersive-page {
-      margin: 0; border: 0; border-radius: 0; background: #000;
-      display: grid; place-items: center; }
+      margin: 0; border: 0; border-radius: 0; }
     .stageCanvasWrap.is-immersive-page {
       position: fixed; inset: 0; z-index: 2147483000;
       /* 100dvh, not 100vh: on a phone `vh` is the tallest the viewport ever
          gets, so with the URL bar showing the bottom of the drawing would sit
          underneath it. */
       width: 100vw; height: 100dvh; }
-    .full-exit { display: none; position: absolute; top: 14px; right: 14px; z-index: 3; width: 44px; height: 44px;
-      background: var(--plate-glass); border-color: var(--plate-edge); color: var(--plate-ink); }
-    .stageCanvasWrap:fullscreen .full-exit,
-    .stageCanvasWrap.is-immersive-page .full-exit { display: grid; }
     .more-wrap { display: flex; justify-content: center; margin-top: 16px; }
     .more { display: inline-flex; align-items: center; gap: 9px; font-family: var(--font-mono); font-size: 12.5px; letter-spacing: .04em; color: var(--text); background: var(--control); border: 1px solid var(--hairline); border-radius: 999px; padding: 10px 20px; cursor: pointer; transition: background .15s, border-color .15s; }
     .more:hover { background: var(--control-hi); border-color: var(--hover-edge); }
@@ -777,10 +779,6 @@
            title is this page's progress, and two bars moving together read
            as two players (from an iPhone). #}
         {{ skribl_inline_draft('stageBox', controls=false, progress=false) }}
-        {# The way out of full screen, INSIDE the element that is full screen:
-           the transport is not on the display then, and Escape is the
-           browser's, not this page's. Shown by CSS only under :fullscreen. #}
-        <button type="button" class="tbtn full-exit" id="fullExit" title="Leave full screen" aria-label="Leave full screen"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
       </div>
       <div class="pmeta">
         <div class="ptitle" id="pTitle">—</div>
@@ -921,6 +919,15 @@
      the module, which is why its absence made no error. verify_library asserts
      the pair beside the photofit one. #}
   <script src="{{ skribl_asset('lib/audiosession.js') }}" defer></script>
+  {# lib/replayline.js, lib/scrubkeys.js and lib/seekcache.js: THE SAME DRIFT,
+     FOR THE FULL SCREEN. The macro has loaded them since the line under a
+     post (v322); this list did not, which was harmless while nothing on this
+     page drew a line. The full screen is the link page's now (lib/fullbar.js
+     band(), the owner's "All yes"), and its scrubber and speeds are the
+     player's own line, built by these. #}
+  <script src="{{ skribl_asset('lib/replayline.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/scrubkeys.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/seekcache.js') }}" defer></script>
   <script src="{{ skribl_asset('inlineplayer.js') }}" defer></script>
   {# lib/posted.js: the list this browser kept of what it posted -- the
      profile's population when there are no accounts (v304; see the route). #}

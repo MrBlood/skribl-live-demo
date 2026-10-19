@@ -20,9 +20,13 @@ WHAT IS ASKED, every row read off PAINTED PIXELS:
     Gallery's words sit where the fade is strong enough without it, so there
     the halo is asked to lift what is under the letters.
   * Each glass control takes the tone of what is under it: light glass over a
-    light ground, dark over a dark one, and it turns with the page's theme.
-  * A title crossing a tall drawing's edge on a desk sits in a capsule, which
-    carries its words over both sides.
+    light ground, dark over a dark one.
+  * The Gallery's and the Library's full screen is the link page's since one
+    full screen (the owner: "why can't the gallery player look like the
+    others? with the same scrubber and all?"), so the drawing's own ground
+    reaches the screen's edges: beside a tall drawing on a desk is its paper,
+    not the page, and a theme turn leaves the glass there as it was. The name
+    sits in the top corner in the glass for that ground.
   * A photo under the drawing as a picture of its own (the Pad's) keeps the
     scrim: nothing is set on a guess.
 
@@ -163,7 +167,7 @@ class Bar:
         pg.add_style_tag(content=f"""
 .player-nib, .skribl-inline-nib {{ visibility: hidden !important; }}
 {sel} {{ transition: none !important; }}
-.chrome-asleep :is(.player-bar, .player-btn.full-exit, .skfull) {{ opacity: 1 !important; }}
+.chrome-asleep :is(.player-bar, .player-btn.full-exit, .fb-who) {{ opacity: 1 !important; }}
 {sel}.__w.__w.__w.__w :is({words}), {sel}.__w.__w.__w.__w :is({words}) * {{ color: transparent !important; }}
 {sel}.__s.__s.__s.__s * {{ visibility: hidden !important; }}
 {sel}.__s.__s.__s.__s :is({words}), {sel}.__s.__s.__s.__s :is({words}) * {{ visibility: visible !important; color: transparent !important; }}
@@ -231,8 +235,13 @@ class Bar:
         return v[len(v) // 2]
 
 
+GPAUSE = """t => { const b = t.querySelector('.tileStage > .player-bar .player-controls .primary');
+    if (b && b.getAttribute('aria-label') === 'Pause') b.click(); }"""
+
+
 def gallery(b, view, theme, title):
-    """The Gallery's full screen of one post, paused near its end."""
+    """The Gallery's full screen of one post, paused near its end. Its band is
+    the link page's, so it is read with the link page's words and glass."""
     pg = b.new_page(color_scheme=theme, **view)
     if view is PHONE:
         pg.add_init_script(NO_API)
@@ -242,15 +251,17 @@ def gallery(b, view, theme, title):
     tile.scroll_into_view_if_needed(); pg.wait_for_timeout(300)
     tile.evaluate("t => t.classList.add('ctl-on')")
     tile.locator(".skfull-card .skfull-full").first.click(); pg.wait_for_timeout(1200)
-    tile.evaluate("""t => { const s = t.querySelector('.tileStage'), b = s.querySelector('.skfull:not(.skfull-card) .skfull-play');
-        if (b.getAttribute('aria-label') === 'Pause') b.click(); }""")
+    tile.evaluate(GPAUSE)
     pg.wait_for_timeout(300)
-    tile.evaluate("""t => { const tr = t.querySelector('.tileStage .skfull:not(.skfull-card) .skfull-track'), r = tr.getBoundingClientRect();
-        tr.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: r.left + r.width * 0.985, clientY: r.top + r.height / 2 })); }""")
+    tile.evaluate("""t => { const tr = t.querySelector('.tileStage > .player-bar .player-progress'), r = tr.getBoundingClientRect();
+        for (const k of ['pointerdown', 'pointerup', 'click']) tr.dispatchEvent(new PointerEvent(k, { bubbles: true,
+          clientX: r.left + r.width * 0.985, clientY: r.top + r.height / 2, pointerId: 1, isPrimary: true })); }""")
     pg.wait_for_timeout(700)
+    tile.evaluate(GPAUSE)
+    pg.wait_for_timeout(300)
     tile.evaluate("t => t.querySelector('.tileStage').setAttribute('data-fs-probe', '')")
-    return pg, Bar(pg, "[data-fs-probe] .skfull:not(.skfull-card)", ".skfull-time, .skfull-title, .skfull-by",
-                   ".skfull-btn:not(.skfull-play)", keep=".skfull-words")
+    return pg, Bar(pg, "[data-fs-probe] > .player-bar", ".player-time > span, .rl-drawn, .rl-m, .rl-skip",
+                   ".player-btn:not(.primary), .rl-speed")
 
 
 def link(b, view, theme, sid):
@@ -397,28 +408,32 @@ with sync_playwright() as p:
 
     if on("desk"):
         print("\nFULL SCREEN FADE — the Gallery on a desk: a tall drawing, narrower than the bar")
-        # A pale drawing on a dark page: the title runs from the dark beside it
-        # onto the paper, light on one side and dark on the other.
-        WHO = ("() => { const w = document.querySelector('[data-fs-probe] .skfull-words'); return w ? { cap: w.classList.contains('cap'), "
+        # A pale drawing on a dark page. Before one full screen the page's dark
+        # showed beside it and the title ran from it onto the paper, so it
+        # wore a capsule; now the drawing's paper is all around it, as on the
+        # link page, and the name is in the corner, on that paper. The band
+        # centres its buttons as the link page's does, so on a desk they lie
+        # over the drawing itself: what sits BESIDE it is the name, and the
+        # name is the row that the paper reaching the edges answers to.
+        WHO = ("() => { const w = document.querySelector('[data-fs-probe] > .fb-who'); return w && w.getClientRects().length ? { "
                "tone: w.classList.contains('t-light') ? 'light' : w.classList.contains('t-dark') ? 'dark' : null } : null; }")
         pg, bar = gallery(b, DESK, "dark", TALL)
         st, who = bar.state(), pg.evaluate(WHO)
-        check("Gallery, desk: the title crossing the drawing's edge sits in its capsule",
-              bool(who) and who["cap"], str(who))
+        check("Gallery, desk: the name in the corner wears the glass for the paper it sits on (light)",
+              bool(who) and who["tone"] == "light", str(who))
         worst, where, n = bar.words_worst()
-        check("Gallery, desk: every word reads, the title in its capsule included (4.5:1 or more)",
+        check("Gallery, desk: every word reads (4.5:1 or more)",
               n > 20 and worst >= 4.5, f"{worst:.2f} at '{where}'")
-        left = tones(st, lambda g: g["r"][2] < st["bar"][0] + 300)
-        check("Gallery, desk, dark page: the controls beside the drawing are dark glass",
-              left and all(t == "dark" for t in left), str(left))
+        every = tones(st, lambda g: True)
+        check("Gallery, desk, dark page: every control wears the paper's glass, light",
+              every and all(t == "light" for t in every), str([(g["name"][:20], g["tone"]) for g in st["glass"]]))
         pg.evaluate("() => document.documentElement.setAttribute('data-theme', 'light')")
         pg.wait_for_timeout(400)
         st2, who2 = bar.state(), pg.evaluate(WHO)
-        left2 = tones(st2, lambda g: g["r"][2] < st2["bar"][0] + 300)
-        check("Gallery, desk: a theme turn turns them, light glass on the light page",
-              left2 and all(t == "light" for t in left2), str(left2))
-        check("Gallery, desk: on the light page the title is over light on both sides, and has no capsule",
-              bool(who2) and not who2["cap"], str(who2))
+        every2 = tones(st2, lambda g: True)
+        check("Gallery, desk: a theme turn leaves them and the name so: the ground is the drawing's, not the page's",
+              every2 and all(t == "light" for t in every2) and bool(who2) and who2["tone"] == "light",
+              f"{every2}, {who2}")
         pg.close()
 
     if on("link"):

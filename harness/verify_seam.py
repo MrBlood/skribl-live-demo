@@ -498,6 +498,10 @@ except _sp.TimeoutExpired:
     _rc, _err = "timeout", "cssgraph did not finish in 120 s"
 _committed = (ROOT / "skribl" / "static" / "player.css").read_text(encoding="utf-8")
 _fresh = _out.read_text(encoding="utf-8") if _out.exists() else ""
+# The same command emits the band's sheet beside it (fullband.css: the link
+# page's full screen for the Gallery and the Library), from the same source.
+_band_committed = (ROOT / "skribl" / "static" / "fullband.css").read_text(encoding="utf-8")
+_band_fresh = (_dir / "fullband.css").read_text(encoding="utf-8") if (_dir / "fullband.css").exists() else ""
 _sh.rmtree(_dir, ignore_errors=True)
 check("player.css is byte for byte what cssgraph emits from styles.css "
       "(after editing styles.css: python3 harness/tools/cssgraph.py --emit "
@@ -505,6 +509,9 @@ check("player.css is byte for byte what cssgraph emits from styles.css "
       _rc == 0 and _committed == _fresh,
       f"cssgraph exit {_rc}; committed {len(_committed):,} vs "
       f"regenerated {len(_fresh):,} chars" + (f"; stderr: {_err}" if _err else ""))
+check("...and so is fullband.css, the band's sheet the same command writes beside it",
+      _rc == 0 and _band_committed == _band_fresh,
+      f"committed {len(_band_committed):,} vs regenerated {len(_band_fresh):,} chars")
 
 # ---------------------------------------------------------------------------
 print("\nWARNING-CLEAN — every tracked Python file compiles without a SyntaxWarning")

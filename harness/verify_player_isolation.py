@@ -1082,7 +1082,15 @@ with sync_playwright() as sp:
     #   neutral and every ink to a token. Listed live in css_live.json: only
     #   full screen matches them. It passes CSS_TARGET by 681 B, and the
     #   target stays. 40,681 measured.
-    CSS_RATCHET, CSS_WAS, CSS_TARGET = 40_687, 119_844, 40_000
+    # RAISED (one full screen: the Gallery's and the Library's is this band,
+    #   the owner's "why can't the gallery player look like the others? with
+    #   the same scrubber and all?", then "All yes"), for one named cost:
+    #   +73 B -- no double-tap wait on the band's buttons and its speeds
+    #   (touch-action: manipulation, one rule), which the Gallery's old bar
+    #   had and this band never did; Safari held each tap about 300ms and
+    #   dropped the second of two quick ones. verify_jsstrip's line moves with
+    #   it. 40,754 measured.
+    CSS_RATCHET, CSS_WAS, CSS_TARGET = 40_760, 119_844, 40_000
     total_css = sum(css_bytes.values())
     check(f"the player's CSS does not grow past {CSS_RATCHET:,} bytes "
           f"(was {CSS_WAS:,} at v194; target {CSS_TARGET:,})",

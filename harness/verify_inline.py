@@ -1529,7 +1529,20 @@ with sync_playwright() as sp:
     #   host never loads (they were 1,912 B here in the first build). WHICH
     #   CALLER PAYS: every page that shows a post, for a look only the
     #   Gallery's cards take. 68,883 B measured.
-    EMBED_RATCHET = 68_887
+    # RAISED (one full screen: the Gallery's and the Library's is the link
+    #   page's, the owner's "why can't the gallery player look like the
+    #   others? with the same scrubber and all?", then "All yes"), for one
+    #   named cost: +449 B -- inlineplayer.js handing the line a post wears
+    #   under it to a host's band (me.band), the clock it shows (me.clock: the
+    #   artist's time, as the link page's) and the drawing's ground
+    #   (me.ground), the wiring that was the line's own made one function
+    #   (+431); inlineplayer.css the box in full screen as the whole frame, no
+    #   border, round or ground of its own, so the drawing's reaches the
+    #   screen's edges (+18). WHICH CALLER PAYS: every page that shows a post,
+    #   for a band only the Gallery and the Library build; the scrubber and
+    #   the speeds are the line's, so a host pays for the handle and not for
+    #   a second copy. 69,332 B measured.
+    EMBED_RATCHET = 69_336
     # THE RATCHET MEASURES DISPLAY, NOT COMPOSE, and the two are separate costs
     # paid by separate pages. Excluded here and measured on its own below:
     #   feed.js          the PREVIEW PAGE's own script (fetch the listing, clone
@@ -2024,6 +2037,56 @@ with sync_playwright() as sp:
                  text: tx ? tx.innerText.replace(/\\s+/g, ' ').trim() : '' }; }""", id_b)
     check("the speed in the line opens the speeds, and a pick plays at it and closes them",
           _open and _sp["rate"] == 2 and _sp["closed"] and "watching at 2×" in _sp["text"], json.dumps(_sp))
+
+    # ...AND STILL WHEN THE SOUND LETS GO ON THE WAY. It was reported twice
+    # that "the 1x speed does not change when clicked", of the Gallery's full
+    # screen, and never reproduced; what can produce it is a throw after the
+    # rate is set and before the words are. A pick sets the rate, then
+    # rebuilds the sound on an AudioContext the browser may take away, and the
+    # line repaints after the pick returns -- so a throw from the sound would
+    # leave the player at 2x and the line at 1x, a control that looks dead
+    # while working. applyRate catches it. The Gallery's and the Library's
+    # band are this line (me.band), moved here from verify_gallery with the
+    # control, because only a drawing WITH sound reaches the sound: this
+    # suite's post with sound, playing.
+    #
+    # DRIVEN BY MAKING THE THROW HAPPEN: every AudioContext's `state` throws
+    # for the length of one press, and the probe counts that it was read, so
+    # a row that never reached the sound says so instead of passing.
+    _pg2.evaluate("(id) => document.querySelector('[data-skribl-id=\"' + id + '\"]').scrollIntoView({ block: 'center' })", id_m)
+    _pg2.wait_for_timeout(300)
+    _pg2.evaluate("(id) => { const p = window.SkriblInline.find(id); p.setRate(1); p.play(); }", id_m)
+    try:
+        _pg2.wait_for_function("(id) => { const s = window.SkriblInline.find(id).state(); return s.loaded && s.state === 'playing'; }",
+                               arg=id_m, timeout=15000)
+    except PWTimeout:
+        pass
+    _lg = _pg2.evaluate("""(id) => {
+        const p = window.SkriblInline.find(id);
+        const ln = document.querySelector('[data-skribl-id="' + id + '"]').nextElementSibling;
+        const btn = ln && ln.querySelector('.rl-speed');
+        const B = window.BaseAudioContext && BaseAudioContext.prototype;
+        const real = B && Object.getOwnPropertyDescriptor(B, 'state');
+        if (!p || !btn || !real) return { missing: true };
+        const out = { playing: p.state().state === 'playing', reads: 0 };
+        Object.defineProperty(B, 'state', { configurable: true,
+            get: function () { out.reads++; throw new Error('probe: the sound let go'); } });
+        try {
+            btn.click();
+            const chip = ln.querySelector('.rl-chips [data-r="2"]');
+            if (chip) chip.click();
+        } finally { Object.defineProperty(B, 'state', real); }
+        const tx = ln.querySelector('.rl-text');
+        out.rate = p.rate();
+        out.text = tx ? tx.innerText.replace(/\\s+/g, ' ').trim() : '';
+        out.closed = ln.querySelector('.rl-chips').hidden;
+        p.pause(); p.setRate(1);
+        return out; }""", id_m)
+    check("...and when the sound lets go on the way, the pick still plays at it and the line says so",
+          not _lg.get("missing") and _lg["playing"] and _lg["reads"] > 0
+          and _lg["rate"] == 2 and "watching at 2×" in _lg["text"] and _lg["closed"],
+          json.dumps(_lg) + " — reads 0 is a probe that never reached the sound; "
+          "2 with the line at 1× is the control that looks dead while working")
 
     # A FLIP'S SCRUBBER IS ITS PAGES, one equal segment each, not its clock.
     # Pages of 333, 667 and 333 ms: a quarter of the way along is three

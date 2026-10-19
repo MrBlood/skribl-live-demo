@@ -413,7 +413,13 @@ with sync_playwright() as sp:
     # is not yet tied to a carve; the first candidate is the band's own
     # selectors, which name its controls in every rule where one class set by
     # lib/smartfade.js would do. Put to the owner with the JavaScript's.
-    _css_target = 40_706
+    #
+    # AND 73 B MORE, IN WRITING, at one full screen: the band's no-double-tap
+    # rule (`touch-action: manipulation` on its buttons and its speeds, one
+    # rule, 73 B served), which the Gallery's old full-screen bar had and the
+    # link page's band never did. The Gallery and the Library wear that band
+    # now, so the rule went where it comes from. Spent value and 25 B again.
+    _css_target = 40_779
     check(f"the player's stylesheet is served stripped, under the {_css_target:,}-byte target (40,000 once its debt is paid)",
           _href is not None and 0 < len(_served_css) <= _css_target and len(_served_css) < len(_raw_css),
           f"{len(_served_css):,} B served of {len(_raw_css):,} B on disk")

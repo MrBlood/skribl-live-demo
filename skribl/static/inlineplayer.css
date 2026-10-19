@@ -59,7 +59,7 @@
 /* A POST: shaped to its drawing, a tall one narrowed to a screenful (v322). */
 .skribl-inline.is-shaped{width:min(100%,calc(min(70vh,640px) * var(--skribl-ar,1.7778)));margin-left:auto;margin-right:auto}
 .skribl-inline.has-line :is(.skribl-inline-prog,.skribl-inline-dur){display:none}
-.skribl-inline.is-immersive { width: 100%; height: 100%; border: 0; border-radius: 0; }
+.skribl-inline.is-immersive { width: 100%; height: 100%; border: 0; border-radius: 0; background: none; }
 .skribl-inline.is-immersive :is(.skribl-inline-poster, .skribl-inline-veil),
 .skribl-inline.is-bare :is(.skribl-inline-controls, .skribl-inline-dur) {
   display: none; }

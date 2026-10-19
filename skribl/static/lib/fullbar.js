@@ -16,23 +16,21 @@
  * It does NOT hide the idle veil: that is the play cue, not a control, and a
  * card without it is a black rectangle with no sign it moves.
  *
- * TWO CONFIGURATIONS, ONE BUILDER. `attach` takes what varies:
+ * TWO CONFIGURATIONS. `attach` takes what varies:
  *
- *   full screen  restart play loop mute rate | who | exit, scrubber on its
- *                own row, shown only while the wrapper is up.
  *   card footer  play loop mute | scrubber inline | time | full, always shown.
+ *   full screen  the link page's band (band() below): its scrubber, clock,
+ *                words and buttons, the x, and who drew it in the corner,
+ *                shown only while the wrapper is up.
  *
- * Everything else — what a control DOES, how it reads the player, the rule
- * that lit means "currently true" — is shared, which is the half that rots
- * when it is copied.
+ * What a control DOES, how it reads the player and the rule that lit means
+ * "currently true" are the same in both, which is the half that rots when it
+ * is copied.
  */
 (function (global) {
   'use strict';
 
   var doc = global.document;
-  /* The same three the Pad's preview row and /s/ offer. A fourth rate is a
-     fourth tap to get back to 1x. */
-  var RATES = [1, 2, 0.5];
 
   function mmss(ms) {
     if (!(ms > 0)) return '0:00';
@@ -73,37 +71,91 @@
     return b;
   }
 
-  /* attach(wrap, opts) -> { sync, el }
+  /* WRITE ONLY WHAT CHANGED. Not a micro-optimisation: it is why the speed
+   * button did not answer a press.
    *
-   *   wrap        the element the page fullscreens; the bar is appended to it
-   *   opts.player function returning the in-post player handle, or null. A
-   *               FUNCTION and not the handle itself: the gallery's tile has no
-   *               player until somebody presses play, and the profile's stage
-   *               swaps its one out every time a different row is selected.
-   *   opts.meta   function returning { title, name, handle, avatar } or null
-   *   opts.onExit called when the viewer asks to leave
+   * `sync()` runs on a FRAME while the drawing plays. `innerHTML =` and
+   * `textContent =` REPLACE a node's children even when the value is
+   * identical, so assigning unconditionally rebuilt every button ~67 times a
+   * second. A PRESS WHOSE ELEMENT IS REMOVED AND RE-INSERTED BETWEEN THE
+   * MOUSEDOWN AND THE MOUSEUP PRODUCES NO CLICK -- the node keeps its
+   * listeners, so pointerdown and pointerup still arrive and only the click
+   * goes missing.
+   *
+   * Titles cost twice: `lib/tooltip.js` watches the `title` attribute, so
+   * unconditional writes woke its observer every frame to move the same
+   * string to `data-tip` and strip it, which sync then restored. */
+  /* COMPARING AGAINST THE DOM IS NOT ENOUGH, and both exceptions cost a
+     frame's worth of rebuilding until they were found by measuring again
+     after the first attempt:
+
+     `innerHTML` RE-SERIALISES. The value read back is the browser's own
+     spelling of the markup -- attribute order and self-closing tags
+     normalised -- so `el.innerHTML !== ICON.play` was true every time for an
+     icon that had not changed, and the guard rebuilt exactly what it was
+     meant to protect. Remember the string we SET instead.
+
+     AND THE TITLE IS NOT OURS ALONE. `lib/tooltip.js` moves `title` to
+     `data-tip` and removes it, on purpose, so the native bubble cannot
+     stack under the drawn one -- which means `el.title` reads back empty
+     for a title that is perfectly current, and a DOM comparison re-set it
+     on every frame, waking that module's observer to strip it again. The
+     two were fighting at frame rate. Comparing against our own last value
+     ends it, and updating `data-tip` where tooltip has taken over keeps the
+     drawn bubble honest. */
+  function setHTML(el, html) {
+    if (el._skHTML === html) return;
+    el._skHTML = html;
+    el.innerHTML = html;
+  }
+  function setText(el, txt) { if (el.textContent !== txt) el.textContent = txt; }
+  function attr(el, name, val) {
+    if (el.getAttribute(name) !== val) el.setAttribute(name, val);
+  }
+  function title(el, txt) {
+    if (el._skTitle === txt) return;
+    el._skTitle = txt;
+    if (el.hasAttribute('data-tip')) el.setAttribute('data-tip', txt);
+    else el.title = txt;
+  }
+  /* Title and aria-label travel together everywhere in this bar. */
+  function label(el, txt) { title(el, txt); attr(el, 'aria-label', txt); }
+
+  /* What the listing said about the drawing's sound: true, false, or null
+     where it said nothing. Read once per box. */
+  function listed(pl) {
+    var box = pl && pl.el;
+    if (!box) return null;
+    if (box._skSound === undefined) {
+      var info = null;
+      try { info = JSON.parse(box.getAttribute('data-skribl-line') || 'null'); } catch (e) { info = null; }
+      box._skSound = info && typeof info.sound === 'boolean' ? info.sound : null;
+    }
+    return box._skSound;
+  }
+
+  /* attach(wrap, opts) -> { sync, el, running }
+   *
+   *   wrap         the element the page fullscreens; the bar is appended to it
+   *   opts.player  function returning the in-post player handle, or null. A
+   *                FUNCTION and not the handle itself: the gallery's tile has
+   *                no player until somebody presses play, and the profile's
+   *                stage swaps its one out every time a different row is
+   *                selected.
+   *   opts.variant 'skfull-card' for the card's row (with opts.controls,
+   *                opts.onFull and opts.isFull); anything else is full screen
+   *   opts.meta    full screen: function returning { title, name, handle }
+   *   opts.onExit  full screen: called when the viewer asks to leave
    */
   function attach(wrap, opts) {
     opts = opts || {};
+    if (opts.variant !== 'skfull-card') return band(wrap, opts);
     var getPlayer = opts.player || function () { return null; };
-    var getMeta = opts.meta || function () { return null; };
-    /* The full-screen set is the default, so the surface that named this
-       module does not have to spell itself out. */
-    var want = opts.controls || ['restart', 'play', 'loop', 'mute', 'rate'];
-    var ownRow = opts.scrubRow !== false;
-    var showWho = opts.who !== false;
+    var want = opts.controls || ['play', 'loop', 'mute', 'full'];
 
     var bar = doc.createElement('div');
     bar.className = 'skfull' + (opts.variant ? ' ' + opts.variant : '');
 
-    /* THE SCRUBBER GETS ITS OWN ROW IN FULL SCREEN. Squeezed between the
-       buttons it is a 6px target on a phone, which is not a target. On a card
-       the row is shorter and it rides inline, where there is width for it. */
-    var scrub = doc.createElement('div');
-    scrub.className = 'skfull-scrub';
-    var at = doc.createElement('span');
-    at.className = 'skfull-time';
-    at.textContent = '0:00';
     var track = doc.createElement('div');
     track.className = 'skfull-track';
     track.setAttribute('role', 'slider');
@@ -119,91 +171,26 @@
     row.className = 'skfull-row';
 
     var made = {};
-    made.restart = btn('skfull-restart', 'Restart', ICON.restart);
     made.play = btn('skfull-play', 'Play', ICON.play);
     made.loop = btn('skfull-loop', 'Repeat', ICON.loop);
     made.mute = btn('skfull-mute', 'Mute', ICON.sound);
-    made.rate = btn('skfull-rate', 'Speed', '');
-    made.rate.textContent = '1\u00d7';
     made.full = btn('skfull-full', 'Full screen', ICON.full);
-    var bRestart = made.restart, bPlay = made.play, bLoop = made.loop;
-    var bMute = made.mute, bRate = made.rate;
-    /* The speed this control last ASKED for, per bar. Null until the first
-       press, so an untouched bar steps from whatever the player reports. See
-       the rate handler for why reading the player alone cannot advance. */
-    var wanted = null;
+    var bPlay = made.play, bLoop = made.loop;
+    var bMute = made.mute;
 
-    if (ownRow) {
-      scrub.appendChild(at);
-      scrub.appendChild(track);
-      scrub.appendChild(dur);
-      bar.appendChild(scrub);
-    }
     for (var i = 0; i < want.length; i++) {
       if (made[want[i]]) row.appendChild(made[want[i]]);
     }
     /* Inline: the track takes the space the meta line would have, and the one
        time shown is the DURATION, because a card is answering "how long is
        this" rather than "where am I". */
-    if (!ownRow) { row.appendChild(track); row.appendChild(dur); }
+    row.appendChild(track);
+    row.appendChild(dur);
 
-    /* WHO AND WHAT, on the same bar. Full screen is the one place a viewer has
-       no card around the drawing to read, so the bar carries it there — and
-       does not on a card, where the head says it already. */
-    var av = doc.createElement('span');
-    av.className = 'skfull-av';
-    av.setAttribute('aria-hidden', 'true');
-    var tTitle = doc.createElement('div');
-    tTitle.className = 'skfull-title';
-    var tWho = doc.createElement('div');
-    tWho.className = 'skfull-by';
-    if (showWho) {
-      var who = doc.createElement('div');
-      who.className = 'skfull-who';
-      var words = doc.createElement('div');
-      words.className = 'skfull-words';
-      words.appendChild(tTitle);
-      words.appendChild(tWho);
-      who.appendChild(av);
-      who.appendChild(words);
-      row.appendChild(who);
-    }
-
-    var bExit = null;
-    if (!opts.controls || want.indexOf('exit') >= 0 || opts.onExit) {
-      bExit = btn('skfull-exit', 'Leave full screen', ICON.exit);
-      if (!opts.controls || want.indexOf('exit') >= 0) row.appendChild(bExit);
-    }
     bar.appendChild(row);
     wrap.appendChild(bar);
 
     function player() { return getPlayer(); }
-    /* What the listing said about the drawing's sound: true, false, or null
-       where it said nothing. Read once per box. */
-    function listed(pl) {
-      var box = pl && pl.el;
-      if (!box) return null;
-      if (box._skSound === undefined) {
-        var info = null;
-        try { info = JSON.parse(box.getAttribute('data-skribl-line') || 'null'); } catch (e) { info = null; }
-        box._skSound = info && typeof info.sound === 'boolean' ? info.sound : null;
-      }
-      return box._skSound;
-    }
-
-    /* THE BAR STEPS BACK WHILE IT PLAYS (lib/chromefade.js; the owner's picks
-       for every full screen): after a quiet spell it fades with the page's x,
-       and a move, a key or a tap brings it back -- a finger's first tap on a
-       faded screen only that. Up while the drawing is paused part-way or not
-       started; finished, it comes up as the drawing ends and steps back again,
-       so the finished drawing is seen whole. running() is the page's word that
-       full screen opened or closed; never on a card. */
-    var fade = opts.variant !== 'skfull-card' && global.SkriblChromeFade
-      ? global.SkriblChromeFade.attach(wrap, { tapWakes: true, awake: function () {
-          var st = player() && player().state();
-          return !st || (st.state !== 'playing' && !(st.totalMs && st.elapsedMs >= st.totalMs));
-        } }) : null;
-    var fadePlaying = null;
 
     /* THE CARD'S FADE TAKES ITS COLOURS FROM THE DRAWING (the owner's pick A
        after v326: "The fade has to be like the glass with smart fade,
@@ -232,25 +219,9 @@
        A drawing that cannot be read keeps the scrim: `is-smart` is never set
        on a guess. The reading and the tones are lib/smartfade.js's, which
        every bar over a drawing shares; the card's own geometry (its plate,
-       its round corners, its row) is here.
-
-       IN FULL SCREEN TOO (the owner's "A, smart fade and yes to all"): the
-       same fade on the drawing letterboxed in the stage, each control and
-       the time toned the same way, and the title in a capsule where it
-       crosses the drawing's edge (a tall drawing on a desk). It is read when
-       full screen opens and when the drawing plays, pauses or ends. */
+       its round corners, its row) is here. */
     var S = global.SkriblSmartFade;
-    var smart = opts.variant === 'skfull-card' ? smartFade() : null;
-    var wide = opts.variant !== 'skfull-card' && S ? S.full(bar, {
-      canvas: function () {
-        var pl = player(), c = pl && pl.el && pl.el.querySelector('.skribl-inline-canvas');
-        return c && !c.hidden ? c : null;
-      },
-      contain: true,
-      glass: '.skfull-btn:not(.skfull-play), .skfull-track',
-      words: '.skfull-time',
-      caps: '.skfull-words'
-    }) : null, wideWas;
+    var smart = smartFade();
     function smartFade() {
       var box = null, cv = null, img = null, cols = null, from = '', asked = false, ro = null, mo = null, unwatch = null,
           on = false, was;
@@ -394,13 +365,6 @@
       e.stopPropagation();
       if (opts.onFull) opts.onFull();
     });
-    bRestart.addEventListener('click', function () {
-      var pl = player();
-      if (!pl) return;
-      pl.seek(0);
-      pl.play();
-      sync();
-    });
     bPlay.addEventListener('click', function () {
       var pl = player();
       if (pl) { pl.toggle(); sync(); }
@@ -417,101 +381,17 @@
       SI.setSoundOn(!SI.soundOn());
       sync();
     });
-    bRate.addEventListener('click', function () {
-      var pl = player();
-      if (!pl) return;
-      /* THE REPAINT IS IN A `finally`. setRate rebuilds the audio graph on an
-       * AudioContext the browser may take away; a throw from in there must not
-       * skip the repaint and leave the label reading a speed the player is no
-       * longer running. setRate does not let that throw escape either -- either
-       * half alone leaves the other's failure silent. */
-      /* THE STEP COMES FROM WHAT THIS CONTROL LAST ASKED FOR WHENEVER THE
-       * PLAYER DISAGREES WITH IT.
-       *
-       * Stepping from `pl.rate()` is right only while the handle answering is
-       * the one the last press wrote to. When it is not -- a player rebuilt
-       * under the bar, a handle swapped for another card's -- the read comes
-       * back at the default and the cycle recomputes the SAME next value every
-       * press, so the speed sticks. An UNKNOWN rate is worse: indexOf gives
-       * -1, (-1 + 1) % 3 is 0, so every press asks for 1x and a control
-       * already at 1x looks dead.
-       *
-       * `wanted` is NOT a cached copy for display -- the label below still
-       * reads the player, so it cannot lie about the speed being run. It is
-       * this control's memory of its own last request, which is the one thing
-       * the player cannot tell it. */
-      var now = pl.rate();
-      var from = (wanted !== null && now !== wanted) ? wanted : now;
-      var i = RATES.indexOf(from);
-      if (i < 0) i = RATES.indexOf(wanted);   // still unknown: our own last ask
-      if (i < 0) i = 0;                       // first press on a strange rate
-      wanted = RATES[(i + 1) % RATES.length];
-      try { pl.setRate(wanted); } finally { sync(); }
-    });
-    if (bExit) bExit.addEventListener('click', function () {
-      if (opts.onExit) opts.onExit();
-    });
 
     /* Every control reads the PLAYER's state rather than remembering its own.
        A control that keeps a copy is a control that lies the moment anything
        else moves the thing it is about — a replay ending, a row being swapped
        under the stage, another post claiming the page's sound. */
-    /* WRITE ONLY WHAT CHANGED. Not a micro-optimisation: it is why the speed
-     * button did not answer a press.
-     *
-     * `sync()` runs on a FRAME while the drawing plays. `innerHTML =` and
-     * `textContent =` REPLACE a node's children even when the value is
-     * identical, so assigning unconditionally rebuilt every button ~67 times a
-     * second. A PRESS WHOSE ELEMENT IS REMOVED AND RE-INSERTED BETWEEN THE
-     * MOUSEDOWN AND THE MOUSEUP PRODUCES NO CLICK -- the node keeps its
-     * listeners, so pointerdown and pointerup still arrive and only the click
-     * goes missing.
-     *
-     * Titles cost twice: `lib/tooltip.js` watches the `title` attribute, so
-     * unconditional writes woke its observer every frame to move the same
-     * string to `data-tip` and strip it, which sync then restored. */
-    /* COMPARING AGAINST THE DOM IS NOT ENOUGH, and both exceptions cost a
-       frame's worth of rebuilding until they were found by measuring again
-       after the first attempt:
-
-       `innerHTML` RE-SERIALISES. The value read back is the browser's own
-       spelling of the markup -- attribute order and self-closing tags
-       normalised -- so `el.innerHTML !== ICON.play` was true every time for an
-       icon that had not changed, and the guard rebuilt exactly what it was
-       meant to protect. Remember the string we SET instead.
-
-       AND THE TITLE IS NOT OURS ALONE. `lib/tooltip.js` moves `title` to
-       `data-tip` and removes it, on purpose, so the native bubble cannot
-       stack under the drawn one -- which means `el.title` reads back empty
-       for a title that is perfectly current, and a DOM comparison re-set it
-       on every frame, waking that module's observer to strip it again. The
-       two were fighting at frame rate. Comparing against our own last value
-       ends it, and updating `data-tip` where tooltip has taken over keeps the
-       drawn bubble honest. */
-    function setHTML(el, html) {
-      if (el._skHTML === html) return;
-      el._skHTML = html;
-      el.innerHTML = html;
-    }
-    function setText(el, txt) { if (el.textContent !== txt) el.textContent = txt; }
-    function attr(el, name, val) {
-      if (el.getAttribute(name) !== val) el.setAttribute(name, val);
-    }
-    function title(el, txt) {
-      if (el._skTitle === txt) return;
-      el._skTitle = txt;
-      if (el.hasAttribute('data-tip')) el.setAttribute('data-tip', txt);
-      else el.title = txt;
-    }
-    /* Title and aria-label travel together everywhere in this bar. */
-    function label(el, txt) { title(el, txt); attr(el, 'aria-label', txt); }
 
     function sync() {
       var pl = player();
       var st = pl ? pl.state() : null;
       if (smart && pl) smart.start(st && st.state);
       /* A play, a pause or the end changes what lies under the bar. */
-      if (wide && st && st.state !== wideWas) { wideWas = st.state; wide.read(); }
       var playing = !!st && st.state === 'playing';
       /* PUBLISHED TO THE HOST, because a surface may want to style itself on
          it -- the card narrows its hover reveal to a drawing that is NOT
@@ -526,7 +406,6 @@
       }
       setHTML(bPlay, playing ? ICON.pause : ICON.play);
       label(bPlay, playing ? 'Pause' : 'Play');
-      if (fade && fadePlaying !== playing) { fadePlaying = playing; fade.poke(); }
 
       var loop = !!(pl && pl.looping());
       bLoop.classList.toggle('on', loop);
@@ -552,58 +431,18 @@
       label(bMute, !has ? 'This Skribl has no sound' : (on ? 'Sound is on' : 'Sound is off'));
       attr(bMute, 'aria-pressed', String(!on));
 
-      var r = pl ? pl.rate() : 1;
-      /* An author's start can be any of ¼× to 16×, or a Fit's own number
-         (3.4×), so the label rounds rather than printing 3.4333×. */
-      setText(bRate, r === 0.5 ? '½×' : r === 0.25 ? '¼×' : Math.round(r * 10) / 10 + '×');
-      label(bRate, 'Speed: ' + bRate.textContent + ' — tap to change');
-
       var total = (st && st.totalMs) || 0;
       var el = (st && st.elapsedMs) || 0;
       var w = (total ? Math.min(1, el / total) * 100 : 0) + '%';
       if (fill.style.width !== w) fill.style.width = w;
-      setText(at, mmss(el));
-      /* A card answers "how long is this"; full screen answers "where am I",
-         and shows both. */
-      setText(dur, ownRow ? mmss(total)
-        : (playing || el > 0 ? mmss(el) + ' / ' + mmss(total) : mmss(total)));
+      /* A card answers "how long is this", and where it is once it plays. */
+      setText(dur, playing || el > 0 ? mmss(el) + ' / ' + mmss(total) : mmss(total));
       attr(track, 'aria-valuenow', String(Math.round(total ? el / total * 100 : 0)));
 
       if (made.full) {
         var big = !!(opts.isFull && opts.isFull());
         attr(made.full, 'aria-pressed', String(big));
         label(made.full, big ? 'Leave full screen' : 'Full screen');
-      }
-
-      if (!showWho) return;
-      var m = getMeta() || {};
-      setText(tTitle, m.title || 'Untitled Skribl');
-      setText(tWho, m.name ? (m.handle ? m.name + ' · ' + m.handle : m.name)
-                           : (m.handle || ''));
-      if (tWho.hidden !== !tWho.textContent) tWho.hidden = !tWho.textContent;
-      var wantHidden = !m.name && !m.handle;
-      if (av.hidden !== wantHidden) av.hidden = wantHidden;
-      /* THE AVATAR IS REBUILT ONLY WHEN THE PERSON CHANGES. On a bar that
-         syncs per frame, rebuilding means a NEW <img> with a new src and a new
-         error listener sixty times a second for a picture that never changed.
-         The key is what the avatar is FOR: while that string holds, the node
-         already on screen is correct. */
-      var key = (m.avatar || '') + '|' + (m.name || '') + '|' + (m.handle || '');
-      if (av._skKey !== key) {
-        av._skKey = key;
-        av.textContent = '';
-        if (m.avatar) {
-          var img = doc.createElement('img');
-          img.src = m.avatar;
-          img.alt = '';
-          img.addEventListener('error', function () {
-            img.remove();
-            av.textContent = (m.name || m.handle || '?').replace('@', '').charAt(0).toUpperCase();
-          });
-          av.appendChild(img);
-        } else if (!wantHidden) {
-          av.textContent = (m.name || m.handle || '?').replace('@', '').charAt(0).toUpperCase();
-        }
       }
     }
 
@@ -669,8 +508,6 @@
       }
     }
     function running(on) {
-      if (fade) fade[on ? 'start' : 'stop']();
-      if (wide) { wideWas = null; wide[on ? 'start' : 'stop'](); }
       if (on) { if (!raf && !tick) beat(); return; }
       if (raf) global.cancelAnimationFrame(raf);
       if (tick) global.clearTimeout(tick);
@@ -678,17 +515,231 @@
       tick = null;
     }
 
-    /* THE HOST IS MARKED for the sheet's fade (fullbar.css). The bar used to
-       reserve its own measured height on it, a band under the drawing, after a
-       pug whose feet were behind the controls; with the bar away while it
-       plays, the drawing has the whole screen, and the bar lies over its foot
-       only while someone is using it. The card's bar is not the host's: it is
-       hidden in full screen. */
-    if (opts.variant !== 'skfull-card') wrap.classList.add('skfull-host');
+    sync();
+    return { el: bar, sync: sync, running: running };
+  }
+
+  /* ONE FULL SCREEN, EVERYWHERE (the owner: "why can't the gallery player
+     look like the others? with the same scrubber and all?", then "All yes"
+     to the mock). The Gallery's and the Library's full screen is the link
+     page's: its band, its x and the drawing's own ground out to the screen's
+     edges.
+
+     THE MARKUP is the link page's (_skribl_player_controls.html), built here.
+     THE RULES are styles.css's own: they reach these two pages as
+     fullband.css, which harness/tools/cssgraph.py emits from styles.css the
+     way it emits player.css, so they are written once and verify_cssplit
+     holds the copy to its source. THE SCRUBBER that shows the drawing's
+     shape and THE WORDS with every speed are the in-post player's own line
+     (inlineplayer.js band()), on its own clock.
+
+     What these pages have that the link page does not is who drew it: that
+     sits in the top corner across from the x, in the buttons' glass, and
+     steps back with them.
+
+     band(wrap, opts) -> { el, sync, running }, as attach()'s. */
+  var CLOSE = svg('<path d="M18 6 6 18"/><path d="m6 6 12 12"/>');
+  function pbtn(cls, name, html) {
+    var b = doc.createElement('button');
+    b.type = 'button';
+    b.className = 'player-btn' + (cls ? ' ' + cls : '');
+    b.setAttribute('aria-label', name);
+    b.innerHTML = html;
+    return b;
+  }
+  function band(wrap, opts) {
+    var getPlayer = opts.player || function () { return null; };
+    var getMeta = opts.meta || function () { return null; };
+    function player() { return getPlayer(); }
+    var S = global.SkriblSmartFade, RL = global.SkriblReplayLine;
+    /* `.watch-full` is the frame every full screen's rules name
+       (styles.css, `:is(.canvas-wrap, .watch-full)`): the link page's is
+       .canvas-wrap, the editors' and these pages' .watch-full. */
+    wrap.classList.add('watch-full', 'skfull-host');
+
+    var bar = doc.createElement('div');
+    bar.className = 'player-bar';
+    bar.hidden = true;
+    var time = doc.createElement('div');
+    time.className = 'player-time';
+    time.setAttribute('aria-hidden', 'true');
+    var at = doc.createElement('span'), dur = doc.createElement('span');
+    at.textContent = dur.textContent = '0:00';
+    time.appendChild(at);
+    time.appendChild(dur);
+    var row = doc.createElement('div');
+    row.className = 'player-controls';
+    var bRestart = pbtn('', 'Restart', ICON.restart), bPlay = pbtn('primary', 'Play', ICON.play),
+        bLoop = pbtn('active', 'Loop', ICON.loop), bMute = pbtn('', 'Mute', ICON.sound),
+        bFull = pbtn('', 'Leave full screen', ICON.full);
+    bLoop.setAttribute('aria-pressed', 'true');
+    bMute.setAttribute('aria-pressed', 'false');
+    bMute.hidden = true;
+    bFull.setAttribute('aria-pressed', 'true');
+    [bRestart, bPlay, bLoop, bMute, bFull].forEach(function (b) { row.appendChild(b); });
+    bar.appendChild(time);
+    bar.appendChild(row);
+    var x = pbtn('full-exit', 'Leave full screen', CLOSE);
+    var who = doc.createElement('div');
+    who.className = 'fb-who';
+    who.hidden = true;
+    var wTitle = doc.createElement('b'), wBy = doc.createElement('span');
+    who.appendChild(wTitle);
+    who.appendChild(wBy);
+    wrap.appendChild(bar);
+    wrap.appendChild(x);
+    wrap.appendChild(who);
+
+    /* THE SCRUBBER AND THE WORDS ARE THE PLAYER'S, so a new player (the
+       Library puts one on its stage for each row) gets new ones: fresh
+       nodes, so the last player's hold on the old ones goes with them. */
+    var prog = null, words = null, wired = null;
+    function wire(pl) {
+      if (!pl || pl === wired) return;
+      wired = pl;
+      if (prog) prog.remove();
+      if (words) words.remove();
+      prog = doc.createElement('div');
+      prog.className = 'player-progress';
+      prog.setAttribute('aria-label', 'Scrub');
+      prog.innerHTML = '<div class="player-progress-fill"></div>';
+      words = doc.createElement('div');
+      bar.insertBefore(prog, time);
+      bar.insertBefore(words, row);
+      if (!(pl.band && pl.band(prog, words))) prog.hidden = words.hidden = true;
+    }
+
+    bRestart.addEventListener('click', function () {
+      var pl = player();
+      if (!pl) return;
+      pl.seek(0);
+      pl.play();
+      sync();
+    });
+    bPlay.addEventListener('click', function () {
+      var pl = player();
+      if (pl) { pl.toggle(); sync(); }
+    });
+    bLoop.addEventListener('click', function () {
+      var pl = player();
+      if (pl) { pl.setLoop(!pl.looping()); sync(); }
+    });
+    bMute.addEventListener('click', function () {
+      var SI = global.SkriblInline;
+      if (SI) { SI.setSoundOn(!SI.soundOn()); sync(); }
+    });
+    [bFull, x].forEach(function (b) {
+      b.addEventListener('click', function (e) {
+        e.stopPropagation();
+        if (opts.onExit) opts.onExit();
+      });
+    });
+
+    /* THE BAND STEPS BACK WHILE IT PLAYS, the x and the name with it
+       (lib/chromefade.js; the owner's picks for every full screen). */
+    var fade = global.SkriblChromeFade ? global.SkriblChromeFade.attach(wrap, { tapWakes: true, awake: function () {
+      var st = player() && player().state();
+      return !st || (st.state !== 'playing' && !(st.totalMs && st.elapsedMs >= st.totalMs));
+    } }) : null, fadePlaying = null;
+    /* ITS COLOURS FROM THE DRAWING (lib/smartfade.js), toned as the link
+       page's are: the same controls, the same words. */
+    var smart = S ? S.full(bar, {
+      canvas: function () {
+        var pl = player(), c = pl && pl.el && pl.el.querySelector('.skribl-inline-canvas');
+        return c && !c.hidden ? c : null;
+      },
+      contain: true,
+      glass: '.player-btn:not(.primary), .rl-speed',
+      words: '.player-time > span, .rl-drawn, .rl-m, .rl-skip'
+    }) : null, smartWas = null;
+
+    /* THE DRAWING'S GROUND TO THE SCREEN'S EDGES, as the link page paints
+       its frame: one picture, not a drawing in a box. The name in the corner
+       wears the glass for that ground. */
+    var groundWas;
+    function ground(g) {
+      if (g === groundWas) return;
+      groundWas = g;
+      wrap.style.backgroundColor = g || '';
+      var v = g && S ? S.ground(wrap) : null;
+      var light = !!v && 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2] >= 115;
+      who.classList.toggle('t-light', light);
+      who.classList.toggle('t-dark', !light);
+    }
+
+    var on = false;
+    function sync() {
+      var pl = player();
+      wire(pl);
+      var st = pl ? pl.state() : null;
+      var playing = !!st && st.state === 'playing';
+      if (wrap._skPlaying !== playing) {
+        wrap._skPlaying = playing;
+        wrap.classList.toggle('is-playing', playing);
+      }
+      setHTML(bPlay, playing ? ICON.pause : ICON.play);
+      attr(bPlay, 'aria-label', playing ? 'Pause' : 'Play');
+      if (fade && fadePlaying !== playing) { fadePlaying = playing; fade.poke(); }
+      /* A play, a pause or the end changes what lies under the band. */
+      if (smart && on && st && st.state !== smartWas) { smartWas = st.state; smart.read(); }
+
+      var loop = !!(pl && pl.looping());
+      bLoop.classList.toggle('active', loop);
+      attr(bLoop, 'aria-pressed', String(loop));
+
+      /* Mute steps aside on a silent drawing, as on the card and the link
+         page; the listing says so before the drawing loads. */
+      var SI = global.SkriblInline, muted = !(SI && SI.soundOn()), has = !!(st && st.hasAudio);
+      var silent = st && st.loaded ? !has : listed(pl) !== true;
+      if (bMute.hidden !== silent) bMute.hidden = silent;
+      setHTML(bMute, muted ? ICON.muted : ICON.sound);
+      attr(bMute, 'aria-label', muted ? 'Unmute' : 'Mute');
+      attr(bMute, 'aria-pressed', String(muted));
+
+      var c = pl && pl.clock ? pl.clock() : null;
+      if (c && RL) {
+        setText(at, RL.clock(c.at));
+        setText(dur, RL.clock(c.dur));
+      }
+      if (on) ground(pl && pl.ground ? pl.ground() : null);
+
+      var m = getMeta() || {};
+      setText(wTitle, m.title || 'Untitled Skribl');
+      setText(wBy, m.name ? (m.handle ? m.name + ' · ' + m.handle : m.name) : (m.handle || ''));
+      if (wBy.hidden !== !wBy.textContent) wBy.hidden = !wBy.textContent;
+    }
+
+    /* A frame while it plays, so the clock under the scrubber moves with
+       the drawing; a quarter second while it does not. Only while it is on
+       screen, and never once the host has left. */
+    var raf = null, tick = null;
+    function beat() {
+      if (!wrap.isConnected) { running(false); return; }
+      sync();
+      var st = player() && player().state();
+      if (st && st.state === 'playing') {
+        tick = null;
+        raf = global.requestAnimationFrame(beat);
+      } else {
+        raf = null;
+        tick = global.setTimeout(beat, 250);
+      }
+    }
+    function running(want) {
+      on = !!want;
+      bar.hidden = who.hidden = !on;
+      if (fade) fade[on ? 'start' : 'stop']();
+      if (smart) { smartWas = null; smart[on ? 'start' : 'stop'](); }
+      if (on) { if (!raf && !tick) beat(); return; }
+      ground(null);
+      if (raf) global.cancelAnimationFrame(raf);
+      if (tick) global.clearTimeout(tick);
+      raf = tick = null;
+    }
 
     sync();
     return { el: bar, sync: sync, running: running };
   }
 
-  global.SkriblFullBar = { attach: attach, RATES: RATES };
+  global.SkriblFullBar = { attach: attach };
 })(window);

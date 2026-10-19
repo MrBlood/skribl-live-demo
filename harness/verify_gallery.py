@@ -611,8 +611,9 @@ with sync_playwright() as _spg:
     # the drawing stop short of the screen.
     _band = _pg2.evaluate("""() => {
         const st = document.querySelector('.tileStage');
-        const bar = st && st.querySelector('.skfull:not(.skfull-card)');
-        const cv = st && st.querySelector('canvas');
+        const bar = st && st.querySelector(':scope > .player-bar');
+        /* the drawing's, by name: the band's scrubber is a canvas too */
+        const cv = st && st.querySelector('.skribl-inline-canvas');
         if (!st || !bar || !cv) return { missing: true };
         const b = bar.getBoundingClientRect(), c = cv.getBoundingClientRect();
         return { host: st.classList.contains('skfull-host'),
@@ -630,63 +631,60 @@ with sync_playwright() as _spg:
     # THE PLAYER HAVING A BAD MOMENT.
     #
     # It has been reported "the 1x speed does not change when clicked" twice
-    # and it has not reproduced here -- headless, on the real Fullscreen API
-    # and on the fallback, with and without a listed rate, the control cycles
-    # and the drawing changes speed (the rows in the immersive section measure
-    # the drawing itself doing it). What IS reachable, and is what these two
-    # rows pin, is the way that symptom can be produced without the control
-    # being broken at all: setRate rebuilds the audio graph on an AudioContext
-    # the browser is allowed to take away, a throw from in there used to escape
-    # with the new rate already applied, and the repaint that was the NEXT line
-    # never ran. The player is at 2x; the button says 1x; the person presses it
-    # again and gets ½x, which is not what the label promised either.
+    # and it has not reproduced here. The speed is the line's now: the band
+    # is the link page's (the owner: "why can't the gallery player look like
+    # the others? with the same scrubber and all?"), so "watching at 1× ▾"
+    # opens the speeds and one picks. This row is the ordinary case: a pick
+    # plays at it and the line says so.
     #
-    # DRIVEN BY MAKING THE THROW HAPPEN, not by hoping for one: the probe wraps
-    # the player's own setRate so it applies the rate and then throws, which is
-    # exactly the shape of the failure. Without the `finally` this row goes red
-    # and the one above it stays green, which is the whole reason there are two.
+    # THE BAD MOMENT MOVED WITH THE CONTROL, to verify_inline.py. The old bar's
+    # button called setRate and repainted after it, and a throw on the way was
+    # driven here by wrapping setRate. The line calls the player's own pick,
+    # where the only step after the rate is set is the sound's (setRate's
+    # audio graph, on an AudioContext the browser may take away), and a
+    # drawing without sound never reaches it. The Gallery's first card has
+    # none, so the row that makes the sound throw is verify_inline's, on its
+    # post with sound: the same line, wired by the same code.
     _rate = _pg2.evaluate("""() => {
         const st = document.querySelector('.tileStage');
         const box = st && st.querySelector('[data-skribl-inline]');
-        const btn = st && st.querySelector('.skfull:not(.skfull-card) .skfull-rate');
+        const bar = st && st.querySelector(':scope > .player-bar');
+        const btn = bar && bar.querySelector('.rl-speed');
         const pl = box && box._skriblInline;
         if (!pl || !btn) return { missing: true };
-        const label = () => (btn.textContent || '').trim();
-        const out = {};
-        pl.setRate(1); btn.click();
-        out.plain = [pl.rate(), label()];
-
-        const real = pl.setRate;
-        pl.setRate = function (r) { real.call(pl, r); throw new Error('probe'); };
-        const before = pl.rate();
-        try { btn.click(); } catch (e) { out.escaped = true; }
-        pl.setRate = real;
-        out.thrown = [before, pl.rate(), label()];
+        const label = () => (btn.textContent || '').replace(/\\s+/g, '').trim();
         pl.setRate(1);
+        btn.click();
+        const open = !bar.querySelector('.rl-chips').hidden;
+        const chip = bar.querySelector('.rl-chips [data-r="2"]');
+        if (chip) chip.click();
+        const out = { open: open, rate: pl.rate(), label: label(),
+                      closed: bar.querySelector('.rl-chips').hidden };
+        pl.setRate(1);
+        /* The line hands focus back to its speed, as it should for a
+           keyboard, and a probe with no pointer reads as one: the card keeps
+           its controls up for focus in the stage (gallery.js, peek). Put the
+           focus back; the card then takes its ordinary 2.6s peek, waited out
+           below so the round trip reads the way out and not the peek. */
+        if (st.contains(document.activeElement)) document.activeElement.blur();
         return out; }""")
-    check("pressing the speed control changes the speed and says so",
-          not _rate.get("missing") and _rate["plain"][0] != 1
-          and _rate["plain"][1] == (str(_rate["plain"][0]) + "\u00d7"),
-          f"{_rate} \u2014 the ordinary case, and the one that has never failed "
-          f"here; without it the row below could pass on a control that only "
-          f"ever answers when something goes wrong")
-    check("...and still says so when the player throws on the way",
-          not _rate.get("missing") and _rate["thrown"][1] != _rate["thrown"][0]
-          and _rate["thrown"][2] == "\u00bd\u00d7",
-          f"{_rate} \u2014 the rate was applied and the repaint was not, so the "
-          f"label reported a speed the player had already left. That is a "
-          f"control that looks dead while working, which is the report we have")
+    _pg2.wait_for_timeout(2800)
+    check("pressing a speed in the line changes the speed and says so",
+          not _rate.get("missing") and _rate["open"] and _rate["rate"] == 2
+          and _rate["label"] == "2×" and _rate["closed"],
+          f"{_rate} — the ordinary case, the link page's speeds: one tap "
+          f"opens them, one picks, the player runs at it and the line says so")
 
     # OUT BY THE BUTTON, NOT BY ESCAPE. Under the real Fullscreen API Escape
     # works; in the FALLBACK -- which is what a headless Chromium gets without a
     # user gesture, and what an iPhone gets -- the page is still the page and
-    # `.tileExit` is the only way out. This suite's own full-screen section says
+    # the x is the only way out. This suite's own full-screen section says
     # so in as many words. Pressing Escape left the probe INSIDE full screen, so
     # the "back out" census was the "in full screen" one measured twice and the
     # row reported a defect that a browser says is not there: painted loop
     # controls on one tile go 1 at rest, 2 in full screen (the card's, plus the
     # full-screen bar's own, which is correct), 1 again after the exit.
-    _pg2.evaluate("() => { const b = document.querySelector('.tile .tileExit') || document.querySelector('.tile .skfull-card .skfull-full'); if (b) b.click(); }")
+    _pg2.evaluate("() => { const b = document.querySelector('.tile .tileStage > .player-btn.full-exit') || document.querySelector('.tile .skfull-card .skfull-full'); if (b) b.click(); }")
     _pg2.wait_for_timeout(900)
     _l2 = _loops("back out")
     check("the full-screen round trip actually came back out",
@@ -974,12 +972,12 @@ with sync_playwright() as _spk:
             if (!st.contains(c)) return;
             /* the way out of full screen is allowed to be over the art: it is
                the one control with nowhere else to live */
-            if (c.classList.contains('tileExit')) return;
+            if (c.classList.contains('full-exit')) return;
             /* AND SO IS THE TRANSPORT, SINCE v310. It is over the drawing's
                bottom edge on purpose now -- see the row below, which asserts
                the thing that actually matters: that it is INVISIBLE at rest
                and therefore not on the picture when nobody is using it. */
-            if (c.closest('.skfull')) return;
+            if (c.closest('.skfull, .player-bar')) return;
             const r = c.getBoundingClientRect();
             if (r.width && r.height) out.inArt.push(c.className.split(' ')[0]);
           });
@@ -1786,8 +1784,8 @@ with sync_playwright() as _spa:
           bare: !!(box && box.classList.contains('is-bare')),
           ownDur: (() => { const d = t.querySelector('.skribl-inline-dur');
                            return d ? getComputedStyle(d).display : 'absent'; })(),
-          /* the full-screen bar's own row must NOT be showing on a card */
-          fullBars: t.querySelectorAll('.skfull:not(.skfull-card)').length }; }""")
+          /* the full-screen band must NOT be showing on a card */
+          fullBars: [...t.querySelectorAll('.player-bar')].filter(x => x.getClientRects().length).length }; }""")
     # INVERTED IN v310, AND THE PREVIOUS FORM IS WHY. It read "under the
     # drawing" and pinned direction B's permanent footer row -- which the
     # owner's auditor asked to be rid of ("avoid showing a full media-player
@@ -2121,7 +2119,7 @@ with sync_playwright() as _spi:
         api: !!(document.fullscreenEnabled || document.webkitFullscreenEnabled),
         tiles: document.querySelectorAll('.tile').length,
         buttons: document.querySelectorAll('.tile .skfull-card .skfull-full').length,
-        exits: document.querySelectorAll('.tileExit').length })""")
+        exits: document.querySelectorAll('.tileStage > .player-btn.full-exit').length })""")
     check("the simulation is real: this page believes it has no Fullscreen API",
           _has["api"] is False,
           f"{_has} \u2014 with the API still present every row below would be "
@@ -2146,7 +2144,7 @@ with sync_playwright() as _spi:
                  pinned: getComputedStyle(st).position,
                  immersive: !!(box && box.classList.contains('is-immersive')),
                  locked: getComputedStyle(document.documentElement).overflow,
-                 exitSeen: getComputedStyle(st.querySelector('.tileExit')).display }; }""")
+                 exitSeen: getComputedStyle(st.querySelector(':scope > .player-btn.full-exit')).display }; }""")
     # MEASURED AGAINST THE VIEWPORT, not against the class. `position: fixed`
     # is resolved against the nearest ancestor with a transform, a filter or
     # containment rather than against the viewport, so a tile inside a
@@ -2192,8 +2190,10 @@ with sync_playwright() as _spi:
         out = _pi.evaluate("""() => {
             const st = document.querySelector('.tile .tileStage');
             const pct = e => parseFloat((e && e.style.width || '0').replace('%','')) || 0;
+            /* the band's playhead: the scrubber a viewer reads (lib/replayline.js) */
+            const head = st.querySelector(':scope > .player-bar .rl-head');
             return { draw: pct(st.querySelector('.skribl-inline-prog')),
-                     bar: pct(document.querySelector('.skfull-fill')),
+                     bar: parseFloat(head && head.style.left || '0') || 0,
                      rate: st.querySelector('.skribl-inline')._skriblInline.rate() }; }""")
         _pi.evaluate("""() => document.querySelector(
             '.tile .tileStage .skribl-inline')._skriblInline.pause()""")
@@ -2304,42 +2304,52 @@ with sync_playwright() as _spi:
           f"with the nib hidden); [dx, dy, w, h, ok] = "
           f"{_nib.get('samples', [])[:6]}")
 
-    # ---- ONE BAR, AND IT IS THE PROFILE'S BAR (v308) ----------------------
+    # ---- ONE BAR, AND IT IS THE LINK PAGE'S (v308, then one full screen) --
     # Owner, holding two screenshots of the same feature: "the two full screens
     # should look identical with controls present on the bottom. all the stuff
     # should be on the bottom." They diverged because each page built its own,
-    # so neither builds one now -- lib/fullbar.js does, and both call it.
+    # so neither builds one now -- lib/fullbar.js does, and both call it. And
+    # since "why can't the gallery player look like the others? with the same
+    # scrubber and all?" what it builds is the link page's band: its scrubber,
+    # its clock, its line of speeds, its buttons and its x.
     #
     # THE CONTROL SET IS SPELLED OUT rather than counted. A count passes on the
     # wrong six. verify_library asserts the SAME list against the profile's
     # stage, so a change to the module reddens both together and a change to
     # one PAGE reddens only that one, which is the distinction worth keeping.
+    # Read by what each button SAYS, playing or not (Pause reads as Play), and
+    # only the ones painted: Mute steps aside on a silent drawing, and this
+    # one is silent.
     _bar = _pi.evaluate("""() => {
         const st = document.querySelector('.tile .tileStage');
-        const bar = st.querySelector('.skfull');
+        const bar = st.querySelector(':scope > .player-bar');
         const box = st.querySelector('.skribl-inline');
         const marks = st.querySelector('.tileMarks');
         if (!bar) return { missing: true };
         const br = bar.getBoundingClientRect(), sr = st.getBoundingClientRect();
+        const seen = b => !b.hidden && b.getBoundingClientRect().width > 0;
         return {
           shown: getComputedStyle(bar).display,
-          btns: [...bar.querySelectorAll('.skfull-btn')].map(b => b.className.split(' ')[1]),
+          bars: st.querySelectorAll('.player-bar').length,
+          old: st.querySelectorAll('.skfull:not(.skfull-card)').length,
+          btns: [...bar.querySelectorAll('.player-controls > button')].filter(seen)
+                  .map(b => (b.getAttribute('aria-label') || '').replace(/^Pause$/, 'Play')),
           bare: !!(box && box.classList.contains('is-bare')),
           ownControls: box ? getComputedStyle(box.querySelector('.skribl-inline-controls')).display : '?',
           ownDur: box ? getComputedStyle(box.querySelector('.skribl-inline-dur')).display : '?',
           marks: marks ? getComputedStyle(marks).display : 'no-marks',
           atBottom: Math.round(sr.bottom - br.bottom),
           scrubOwnRow: (() => {
-            const t = bar.querySelector('.skfull-track');
-            const p = bar.querySelector('.skfull-play');
+            const t = bar.querySelector('.player-progress');
+            const p = bar.querySelector('.player-controls .primary');
             return !!(t && p && t.getBoundingClientRect().bottom
                       <= p.getBoundingClientRect().top + 1);
           })(),
-          title: (bar.querySelector('.skfull-title') || {}).textContent }; }""")
+          title: (st.querySelector(':scope > .fb-who b') || {}).textContent }; }""")
     check("full screen carries one bar, at the bottom, with the agreed controls",
           not _bar.get("missing") and _bar["shown"] == "flex"
-          and _bar["btns"] == ['skfull-restart', 'skfull-play', 'skfull-loop', 'skfull-mute',
-                'skfull-rate', 'skfull-exit']
+          and _bar["bars"] == 1 and _bar["old"] == 0
+          and _bar["btns"] == ['Restart', 'Play', 'Loop', 'Leave full screen']
           and _bar["atBottom"] <= 1, str(_bar))
     check("...the component's own transport yields to it",
           not _bar.get("missing") and _bar["bare"]
@@ -2367,21 +2377,25 @@ with sync_playwright() as _spi:
 
     # THE BAR DRIVES THE PLAYER, rather than keeping a state of its own. Pause
     # through the bar and the PLAYER has to be paused, not merely the icon.
-    _pi.evaluate("() => document.querySelector('.skfull-play').click()")
+    _pi.evaluate("() => document.querySelector('.tile .tileStage > .player-bar .player-controls .primary').click()")
     _pi.wait_for_timeout(400)
     _drive = _pi.evaluate("""() => {
         const st = document.querySelector('.tile .tileStage');
         const pl = st.querySelector('.skribl-inline')._skriblInline;
-        const bar = st.querySelector('.skfull');
+        const bar = st.querySelector(':scope > .player-bar');
+        const speed = bar.querySelector('.rl-speed');
+        const loopBtn = [...bar.querySelectorAll('.player-controls > button')]
+          .find(b => b.getAttribute('aria-label') === 'Loop');
         const before = pl.state().state;
         const r0 = pl.rate();
-        bar.querySelector('.skfull-rate').click();
+        speed.click();
+        bar.querySelector('.rl-chips [data-r="2"]').click();
         const r1 = pl.rate();
-        const label = bar.querySelector('.skfull-rate').textContent;
-        bar.querySelector('.skfull-loop').click();
+        const label = speed.textContent.replace(/\\s+/g, '');
+        loopBtn.click();
         return { paused: before, r0: r0, r1: r1, label: label,
                  loop: pl.looping(),
-                 lit: bar.querySelector('.skfull-loop').classList.contains('on') }; }""")
+                 lit: loopBtn.classList.contains('active') }; }""")
     check("the bar drives the player: pause pauses it, speed changes its rate",
           _drive["paused"] == "paused" and _drive["r0"] == 1
           and _drive["r1"] == 2 and _drive["label"] == "2\u00d7",
@@ -2392,7 +2406,7 @@ with sync_playwright() as _spi:
           f"{_drive} \u2014 lit is the resting state, the same reading the "
           f"component's own loop button uses")
 
-    _pi.evaluate("() => document.querySelector('.tile .tileExit').click()")
+    _pi.evaluate("() => document.querySelector('.tile .tileStage > .player-btn.full-exit').click()")
     _pi.wait_for_timeout(600)
 
     # ...AND THE SAME FORMULA IN A TILE, which is the claim the fix actually
@@ -2479,7 +2493,10 @@ with sync_playwright() as _spn:
     _NIB = r"""() => {
         const t = document.querySelector(".tile");
         const n = t && t.querySelector(".skribl-inline-nib");
-        const c = t && t.querySelector("canvas");
+        /* THE DRAWING'S CANVAS BY NAME: since one full screen the stage also
+           holds the band's scrubber, which is a canvas too, 30px tall, and
+           the first one read as a scale of 0.049. */
+        const c = t && t.querySelector(".skribl-inline-canvas");
         const b = t && t.querySelector("[data-skribl-inline]");
         if (!n || !c || !b) return { missing: true };
         const aw = +b.getAttribute("data-skribl-w") || 0;
@@ -3005,49 +3022,45 @@ with sync_playwright() as _spf:
 
 
 
-print("\nGALLERY — the speed control advances even when the player disagrees")
+print("\nGALLERY — the speed pressed is the speed it plays, whatever the player says")
 # REPORTED THREE TIMES, and the first two fixes were aimed at
 # what could be seen from here: a throw escaping setRate, and a label painted
 # before the write. Both were real. Neither was this.
 #
-# Stepping from `pl.rate()` is right only while the handle answering is the one
-# the last press wrote to. When it is not, the read comes back at the default
-# and the cycle recomputes the same next value every press -- "goes to 2x and
-# sticks", "stuck at 1/2x", and, for a rate the list does not contain, indexOf
-# -1 and (-1+1)%3 == 0, so every press asks for 1x and a control already at 1x
-# does nothing at all. Three shapes, one cause.
+# The old bar's one button STEPPED from `pl.rate()` (1×, 2×, ½×, round), which
+# is right only while the handle answering is the one the last press wrote to.
+# When it was not, the read came back at the default and every press asked for
+# the same next value -- "goes to 2x and sticks", "stuck at 1/2x", and for a
+# rate the list did not contain, every press asked for 1x. Three shapes, one
+# cause: a control that worked out its next value from a report.
 #
-# A PLAYER THAT LIES IS THE FIXTURE, because that is the condition, and no
-# real-browser tap can produce it here: Chromium cycles correctly with touch or
-# click, one tile or eight. The suite therefore drives the CONTROL against a
-# handle that reports a rate of its own choosing -- which is what the failing
-# surface looks like from the button's side.
-_RATE_DRIVE = r"""(mode) => {
-    const btn = [...document.querySelectorAll('.skfull-rate')]
-                  .find(b => b.offsetParent !== null);
-    if (!btn) return { missing: true };
-    const host = btn.closest('.skfull-host');
-    const box = host && host.querySelector('.skribl-inline');
+# THE LINE HAS NO STEP. Since one full screen the speeds are the link page's,
+# one chip each, and a press asks for the chip's own speed, so there is no next
+# value to work out and nothing to read first. This keeps that true: the
+# handle LIES (it answers 1 whatever was written, the stale case that was the
+# report), and three presses must still land on three speeds, read from the
+# player's real rate and from the line's own words. A line that went back to
+# stepping from the handle reddens it; so does a pick that is not applied.
+_RATE_DRIVE = r"""() => {
+    const st = document.querySelector('.tile .tileStage');
+    const bar = st && st.querySelector(':scope > .player-bar');
+    const btn = bar && bar.querySelector('.rl-speed');
+    const box = st && st.querySelector('.skribl-inline');
     const pl = box && box._skriblInline;
-    if (!pl) return { missing: true };
-    if (!pl.__realSetRate) {
-        pl.__realSetRate = pl.setRate.bind(pl);
-        pl.__realRate = pl.rate.bind(pl);
-    }
-    const asked = [];
-    pl.setRate = function (r) { asked.push(r); return pl.__realSetRate(r); };
-    if (mode === 'stuck') {
-        /* The handle answers 1 whatever was written -- a player rebuilt under
-           the bar. Pressing must still walk the list. */
-        pl.rate = function () { return 1; };
-    } else if (mode === 'unknown') {
-        /* A rate the list does not contain: the indexOf -1 case. */
-        pl.rate = function () { return 1.75; };
-    }
-    for (let i = 0; i < 3; i++) btn.click();
-    pl.setRate = pl.__realSetRate;
-    pl.rate = pl.__realRate;
-    return { asked: asked };
+    if (!pl || !btn || !btn.getClientRects().length) return { missing: true };
+    const real = pl.rate.bind(pl);
+    pl.rate = function () { return 1; };
+    const got = [], said = [];
+    ['2', '0.5', '16'].forEach(r => {
+        btn.click();
+        const chip = bar.querySelector('.rl-chips [data-r="' + r + '"]');
+        if (chip) chip.click();
+        got.push(real());
+        said.push(btn.textContent.replace(/\s+/g, ''));
+    });
+    pl.rate = real;
+    pl.setRate(1);
+    return { got: got, said: said };
 }"""
 with sync_playwright() as _spr:
     _br = _spr.chromium.launch()
@@ -3063,24 +3076,13 @@ with sync_playwright() as _spr:
     _pr.click(".tile .skfull-card .skfull-full", force=True)
     _pr.wait_for_timeout(900)
 
-    _healthy = _pr.evaluate(_RATE_DRIVE, "healthy")
-    check("with an honest player the speed walks the whole list",
-          _healthy.get("asked") == [2, 0.5, 1],
-          f"asked {_healthy.get('asked')} — three presses must visit every "
-          f"speed and come home; this is the surface that already worked and "
-          f"must keep working")
-    _stuck = _pr.evaluate(_RATE_DRIVE, "stuck")
-    check("...and it still walks it when the player reports a stale rate",
-          _stuck.get("asked") == [2, 0.5, 1],
-          f"asked {_stuck.get('asked')} — [2, 2, 2] is the owner's 'it goes to "
-          f"2x and stays stuck at 2x': the control recomputed the same step "
-          f"every press because the handle kept answering 1")
-    _unknown = _pr.evaluate(_RATE_DRIVE, "unknown")
-    check("...and when the player reports a rate the list does not contain",
-          len(set(_unknown.get("asked") or [])) == 3,
-          f"asked {_unknown.get('asked')} — [1, 1, 1] is indexOf returning -1 "
-          f"and (-1+1)%3 landing on 1x every time, which is the 'it does "
-          f"nothing at all' report")
+    _stuck = _pr.evaluate(_RATE_DRIVE)
+    check("each speed pressed is the speed it plays, even when the player reports a stale rate",
+          _stuck.get("got") == [2, 0.5, 16]
+          and _stuck.get("said") == ["2×", "½×", "16×"],
+          f"{_stuck} — [2, 2, 2] would be the owner's 'it goes to 2x and "
+          f"stays stuck at 2x': a control working its next value out from a "
+          f"handle that kept answering 1")
     _pr.close()
     _br.close()
 
@@ -3101,17 +3103,29 @@ print("\nGALLERY — the transport's controls do not wait for a second tap")
 # property is inherited-ish in effect (a parent's `manipulation` covers a child
 # that does not set it), so a rule that reaches only some of the bar would read
 # as fixed from any single sample.
+#
+# THE CARD'S BAR AND THE FULL SCREEN'S BAND, both. The band is the link page's
+# since one full screen, built from styles.css's rules, and those never had
+# it: the Gallery's old full-screen bar did. So the rule went where the band's
+# rules come from, and every full screen has it now. The band is measured open
+# (its line is the player's, and is wired when it first shows).
 _TOUCH = r"""() => {
-    const names = ['skfull-play', 'skfull-loop', 'skfull-mute',
-                   'skfull-rate', 'skfull-full'];
-    const out = {}; let n = 0;
-    names.forEach(c => {
-        const b = document.querySelector('.' + c);
-        if (!b) { out[c] = 'absent'; return; }
-        n++;
-        out[c] = getComputedStyle(b).touchAction;
-    });
-    out.__found = n;
+    const t = document.querySelector('.tile');
+    const st = t && t.querySelector('.tileStage');
+    const band = st && st.querySelector(':scope > .player-bar');
+    const out = { __card: 0, __band: 0 };
+    const take = (part, name, b) => {
+        if (!b) { out[name] = 'absent'; return; }
+        out[part]++;
+        out[name] = getComputedStyle(b).touchAction;
+    };
+    ['skfull-play', 'skfull-loop', 'skfull-mute', 'skfull-full'].forEach(c =>
+        take('__card', c, t && t.querySelector('.skfull-card .' + c)));
+    [...(band ? band.querySelectorAll('.player-controls > button') : [])].forEach(b =>
+        take('__band', 'band ' + b.getAttribute('aria-label'), b));
+    take('__band', 'band speed', band && band.querySelector('.rl-speed'));
+    take('__band', 'band speeds', band && band.querySelector('.rl-chips button'));
+    take('__band', 'band x', st && st.querySelector(':scope > .player-btn.full-exit'));
     return out;
 }"""
 with sync_playwright() as _spt:
@@ -3121,15 +3135,18 @@ with sync_playwright() as _spt:
     post_public_api("tap latency fixture")
     browsing.goto(_pt, BASE, "/gallery")
     _pt.wait_for_timeout(1800)
+    _pt.evaluate("() => document.querySelector('.tile .skfull-card .skfull-full').click()")
+    _pt.wait_for_timeout(900)
     _ta = _pt.evaluate(_TOUCH)
     # COUNTED BEFORE MEASURED: every control absent would make the census below
     # vacuously true, and this suite has shipped that mistake before.
-    check("the bar's controls are on the page to be measured",
-          _ta.get("__found", 0) >= 4,
-          f"{_ta!r} — fewer than four controls found, so the check below "
-          f"would pass by having nothing to look at")
+    check("the bar's controls are on the page to be measured, the card's and the band's",
+          _ta.get("__card") == 4 and _ta.get("__band") == 8,
+          f"{_ta!r} — the card's four and the band's eight (five buttons, the "
+          f"speed, a speed, the x); fewer and the check below would pass by "
+          f"having nothing to look at")
     _bad = {k: v for k, v in _ta.items()
-            if k != "__found" and v not in ("manipulation", "absent")}
+            if not k.startswith("__") and v not in ("manipulation", "absent")}
     check("...and every one of them drops the double-tap wait",
           not _bad,
           f"{_bad!r} — 'auto' is the ~300ms hold before a tap becomes a "
@@ -3164,11 +3181,10 @@ print("\nGALLERY — the transport does not rebuild itself under the pointer")
 # it again. This asserts the OUTCOME -- no churn -- so any future guard that
 # looks right and does not work is still caught.
 _CHURN = r"""async (ms) => {
-    const btn = [...document.querySelectorAll('.skfull-rate')]
-                  .find(b => b.offsetParent !== null);
-    if (!btn) return { missing: true };
-    const stage = btn.closest('.skfull-host');
-    const box = stage && stage.querySelector('.skribl-inline');
+    const stage = document.querySelector('.tile .tileStage');
+    const btn = stage && stage.querySelector(':scope > .player-bar .rl-speed');
+    if (!btn || !btn.getClientRects().length) return { missing: true };
+    const box = stage.querySelector('.skribl-inline');
     const pl = box && box._skriblInline;
     if (!pl) return { missing: true };
     if (pl.state().state !== 'playing') pl.play && pl.play();
@@ -3180,7 +3196,7 @@ _CHURN = r"""async (ms) => {
             const t = m.target;
             /* A CONTROL rebuilding its own contents is the defect; the clock's
                own text is not, because the clock genuinely changes. */
-            if (t.nodeType === 1 && t.closest && t.closest('.skfull-btn')) seen.controls++;
+            if (t.nodeType === 1 && t.closest && t.closest('.skfull-btn, .player-btn, .rl-speed, .rl-chips')) seen.controls++;
         });
     });
     mo.observe(stage, { subtree: true, childList: true, attributes: true });
@@ -3207,7 +3223,7 @@ with sync_playwright() as _spc:
           f"exercising the case it exists for")
     check("...and no control rebuilds its own contents while it plays",
           _c.get("controls", 1) == 0,
-          f"{_c.get('controls')} rebuilds of a .skfull-btn's children in 1.5s "
+          f"{_c.get('controls')} rebuilds of a control's children in 1.5s "
           f"— a button replaced between a mousedown and a mouseup produces no "
           f"click, which is the owner's 'it takes pushing it many times'")
     check("...and the bar's total mutation rate stays sane",

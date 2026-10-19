@@ -497,22 +497,24 @@ with sync_playwright() as _pe:
     _pg.add_style_tag(content=_HIDE)
     _centred("the Library's Play", _read(_pg, "#btnPlay"))
     _pg.click("#btnFull")
-    # Awake while it is measured: the bar steps back a moment after a drawing
-    # starts (lib/chromefade.js), and Pause only shows while one plays.
-    _pg.add_style_tag(content=".skfull-host.chrome-asleep .skfull { opacity: 1 !important; }")
-    _bar = ".skfull:not(.skfull-card) .skfull-play"
+    # Awake while it is measured: the band steps back a moment after a drawing
+    # starts (lib/chromefade.js), and Pause only shows while one plays. The
+    # band is the link page's since one full screen.
+    _pg.add_style_tag(content=".chrome-asleep :is(.player-bar, .player-btn.full-exit) "
+                              "{ opacity: 1 !important; pointer-events: auto !important; }")
+    _bar = ".stageCanvasWrap > .player-bar .player-controls .primary"
     _pg.wait_for_selector(_bar, state="visible")
     _pg.wait_for_timeout(300)
     if _pg.get_attribute(_bar, "aria-label") != "Play":
         _pg.click(_bar)
     _pg.wait_for_function("(s) => document.querySelector(s).getAttribute('aria-label') === 'Play'", arg=_bar)
     _pg.wait_for_timeout(300)
-    _centred("the full-screen bar's Play (the Library's, the Gallery's)", _read(_pg, _bar))
+    _centred("the full-screen band's Play (the Library's and the Gallery's, the link page's own)", _read(_pg, _bar))
     _pg.click(_bar)
     _pg.wait_for_function("(s) => document.querySelector(s).getAttribute('aria-label') === 'Pause'", arg=_bar)
     _pg.wait_for_timeout(300)
     _pz = _read(_pg, _bar)
-    check("...and its Pause, a symmetric mark, sits in the middle too: the bar draws on whole pixels",
+    check("...and its Pause, a symmetric mark, sits in the middle too",
           _pz is not None and abs(_pz[0]) <= 1 / 3 and abs(_pz[1]) <= 1 / 3, f"optical offset {_pz} px")
     _pg.close()
 

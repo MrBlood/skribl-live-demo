@@ -738,7 +738,7 @@
      * to; `picked` is the viewer having chosen, which the drawing arriving
      * must not undo. */
     var choice = 1, picked = false;
-    var RL = global.SkriblReplayLine, lineUI = null, scrubUI = null, bar = null;
+    var RL = global.SkriblReplayLine, lineUI = null, scrubUI = null, bar = null, sayEl = null;
     var info = null, pagesN = 0, shapeCols = null, drawnMs = null, held = false, pendingF = null;
     var clockFn = null;   // replay ms -> the artist's, for the scrubber's bubble
     var state = 'idle';                       // idle | playing | paused
@@ -838,7 +838,28 @@
        * (lib/sharecard.js). The fade's own arithmetic is the bar's, in a file
        * a host never loads; this is the part only the component knows. */
       read: readCard,
-      card: [CARD_W, PLATE_R, PLATE_IN]
+      card: [CARD_W, PLATE_R, PLATE_IN],
+      /* ONE FULL SCREEN (the owner: "why can't the gallery player look like
+       * the others? with the same scrubber and all?", then "All yes"). The
+       * Gallery's and the Library's band (lib/fullbar.js) takes the line a
+       * post wears under it, the scrubber that shows the drawing's shape and
+       * the words with every speed, wired here to this player's own clock. A
+       * player with a line of its own keeps that one. */
+      band: function (scrubEl, wordsEl) {
+        if (!RL || line) return false;
+        wire(scrubEl, wordsEl);
+        paintLine();
+        return true;
+      },
+      /* Where the replay is and how long it runs: the artist's time for a
+       * drawing, as "Drawn in" counts it, and the replay's for a Flip. The
+       * clock under the band's scrubber, as on the link page. */
+      clock: function () {
+        var T = payload ? totalMs : info ? info.play || 0 : 0;
+        return { at: clockFn ? clockFn(curMs()) : curMs(), dur: clockFn ? clockFn(T) : T };
+      },
+      /* The drawing's ground, which a full screen wears to its edges. */
+      ground: function () { return under ? under.color : null; }
     };
     players.push(me);
     el._skriblInline = me;
@@ -1088,7 +1109,7 @@
       if (durEl) durEl.hidden = false;
       if (lineUI) {
         lineUI.update();
-        var fitB = line.querySelector('[data-r="fit"]');
+        var fitB = sayEl.querySelector('[data-r="fit"]');
         if (fitB) fitB.hidden = !!flipFrames;
       }
       if (scrubUI) scrubUI.reset();
@@ -1798,8 +1819,21 @@
        * from the first paint and the row does not change at the first tap. */
       if (info && typeof info.sound === 'boolean') mark('is-silent', !info.sound);
       if (info) { choice = RL.fromPost(info.speed, info.drawn); rate = RL.rate(choice, info.play); }
-      bar = line.querySelector('.skribl-inline-scrub');
-      var say = line.querySelector('.skribl-inline-say');
+      wire(line.querySelector('.skribl-inline-scrub'), line.querySelector('.skribl-inline-say'));
+      /* A tap on the line is the line's: a host that makes the whole post a
+       * link must not navigate on a scrub or a speed. */
+      line.addEventListener('click', function (e) { e.stopPropagation(); });
+      line.classList.add('is-on');
+      paintLine();
+    }
+
+    /* THE SCRUBBER AND THE WORDS, on this player's clock: the line under a
+     * post, or a host's band (me.band). At rest nothing else paints the
+     * scrubber, so one laid out late (a host revealing the post, a font
+     * arriving, full screen opening) paints when its size lands. */
+    function wire(scrubEl, wordsEl) {
+      bar = scrubEl;
+      sayEl = wordsEl;
       if (bar) {
         scrubUI = RL.scrub(bar, {
           points: function () { return (!flipFrames && timeline) || []; },
@@ -1811,9 +1845,10 @@
           tip: function (f) { var n = pageCount(); return n ? 'Page ' + Math.min(n, Math.floor(f * n) + 1) + ' of ' + n : ''; }
         });
         if (global.SkriblScrub) global.SkriblScrub.attach(bar, { seek: function (f) { scrubStart(); scrubTo(f); scrubEnd(); }, frac: frac });
+        if (global.ResizeObserver) new global.ResizeObserver(function () { paintLine(); }).observe(bar);
       }
-      if (say) {
-        lineUI = RL.attach(say, {
+      if (sayEl) {
+        lineUI = RL.attach(sayEl, {
           choice: function () { return choice; },
           pick: pick,
           playMs: function () { return payload ? totalMs : info ? info.play : 0; },
@@ -1823,17 +1858,9 @@
             return n > 1 ? '<b>' + n + ' pages</b><span class="rl-m"> · </span>' : '';
           }
         });
-        var fit0 = say.querySelector('[data-r="fit"]');
-        if (fit0) fit0.hidden = pagesN > 1;
+        var fit0 = sayEl.querySelector('[data-r="fit"]');
+        if (fit0) fit0.hidden = pagesN > 1 || !!flipFrames;
       }
-      /* A tap on the line is the line's: a host that makes the whole post a
-       * link must not navigate on a scrub or a speed. */
-      line.addEventListener('click', function (e) { e.stopPropagation(); });
-      line.classList.add('is-on');
-      paintLine();
-      /* At rest nothing else paints it, so a line laid out late (a host
-       * revealing the post, a font arriving) paints when its size lands. */
-      if (bar && global.ResizeObserver) new global.ResizeObserver(function () { paintLine(); }).observe(bar);
     }
 
     applySound();

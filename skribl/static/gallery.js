@@ -384,19 +384,10 @@
          while it was the only place a tile had for a button; the card's
          transport row carries full screen now, and two of the same glyph eight
          pixels apart is one too many. One control per thing a person can do. */
-      /* A WAY OUT, INSIDE THE THING. Under the real API Escape and the system
-         gesture both work; in the FALLBACK the page is still the page and
-         nothing else exits it. */
-      var exit = document.createElement('button');
-      exit.type = 'button';
-      exit.className = 'tileExit';
-      exit.title = 'Leave full screen';
-      exit.setAttribute('aria-label', 'Leave full screen');
-      exit.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"'
-        + ' stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
-        + '<path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>';
-      exit.addEventListener('click', function (e) { e.stopPropagation(); imm.close(); });
-      stage.appendChild(exit);
+      /* THE WAY OUT IS THE BAND'S (lib/fullbar.js): the link page's x, inside
+         the thing that is full screen, where it has to be. Under the real API
+         Escape and the system gesture work too; in the fallback the page is
+         still the page, and nothing else leaves it. */
       /* WHAT A FULL SCREEN SHOWS. Idle, a tile shows the POSTER -- the share
          card, cropped to keep its wordmark band out of frame -- and the canvas
          sits at time zero underneath it, which for a replay is blank. That
