@@ -1781,20 +1781,60 @@
      * bars under the thumb do not change at the first tap. */
     try { info = JSON.parse(el.getAttribute('data-skribl-line') || 'null'); } catch (e) { info = null; }
     if (!info || typeof info !== 'object') info = null;
-    /* No line under it (the Gallery's cards): the play button says it. */
+    /* No line under it (the Gallery's cards): the play button says it, and so
+     * does its name, which the words in the pill are not part of. */
     var says = !line && RL && info && playEl && (info.pages > 1 ? info.pages + ' pages' : info.drawn > 0 ? 'drawn in ' + RL.words(info.drawn) : '');
-    if (says) { playEl.insertAdjacentHTML('beforeend', '<span>' + says + '</span>'); mark('is-says', true); tone(); }
-    /* THE PILL IS GLASS, and the glass is dark or light by the drawing under
-     * it (the owner's pick D after v324): the card's lower-left, where the
-     * pill sits, read off the card already on screen. A card that cannot be
-     * read (another origin's, say) keeps the light glass. */
+    if (says) {
+      playEl.insertAdjacentHTML('beforeend', '<span>' + says + '</span>');
+      mark('is-says', true);
+      el.setAttribute('aria-label', label = (label || 'Play this Skribl') + ', ' + says);
+      fitSays(); tone();
+      if (global.ResizeObserver) new global.ResizeObserver(fitSays).observe(playEl.parentNode);
+    }
+    /* CENTRED ON THE DRAWING'S FOOT AND ALWAYS INSIDE IT (the owner's pick A
+     * after v326): it sat in the lower-left corner, and on a drawing about its
+     * own width it ran past the right edge, so it read as centred and the
+     * drawing as shifted, and on a light page its words sat on the card. A
+     * drawing too narrow for the words keeps the time, measured on the real
+     * pill so it follows the fonts. */
+    function fitSays() {
+      var sp = playEl.lastChild, w = playEl.parentNode.clientWidth - 24;
+      if (w <= 0) return;
+      sp.textContent = says;
+      if (playEl.offsetWidth > w && says.indexOf('drawn in ') === 0) sp.textContent = says.slice(9);
+    }
+    /* THE PILL IS GLASS, dark or light by the drawing under it (the owner's
+     * pick D after v324), read where it sits, the middle of the drawing's
+     * foot, off the card already on screen. And its words read there (after
+     * v326): the glass that matches, unless its words would fall under 4.5:1
+     * on what is under them and the other glass reads better. A mid-green
+     * drawing took the dark glass at 3.7:1. The samples are blocks about the
+     * glass's own blur, which smooths a little less than they do, so the
+     * line is 5 for the 4.5 (a skull's beard read 4.8 here and 4.1 on the
+     * screen). A card that cannot be read (another origin's, say) keeps the
+     * light glass. */
     function tone() {
       if (!poster) return;
       if (!poster.naturalWidth) { poster.addEventListener('load', tone, { once: true }); return; }
-      var px = readCard(0, 0.7, 0.5, 0.3, 8, 8), L = 0;
+      var px = readCard(0.2, 0.78, 0.6, 0.22, 8, 4), L = 0, dk = 99, lt = 99, j, g;
       if (!px) return;   // tainted or unreadable: the light glass
-      for (var j = 0; j < px.length; j += 4) L += 0.2126 * px[j] + 0.7152 * px[j + 1] + 0.0722 * px[j + 2];
-      mark('is-says-dark', L / 64 < 115);
+      for (j = 0; j < px.length; j += 4) {
+        L += 0.2126 * px[j] + 0.7152 * px[j + 1] + 0.0722 * px[j + 2];
+        g = lum(px, j, 0.14); dk = Math.min(dk, 1.05 / (g + 0.05));   // white on the dark glass
+        g = lum(px, j, 0.68); lt = Math.min(lt, (g + 0.05) / 0.1);    // #3a24a8 on the light glass
+      }
+      var dark = L / 32 < 115;
+      if ((dark ? dk : lt) < 5 && (dark ? lt : dk) > (dark ? dk : lt)) dark = !dark;
+      mark('is-says-dark', dark);
+    }
+    /* The luminance of a sample under glass of white at alpha a (WCAG). */
+    function lum(px, j, a) {
+      var s = 0, w = [0.2126, 0.7152, 0.0722];
+      for (var i = 0; i < 3; i++) {
+        var c = (px[j + i] * (1 - a) + 255 * a) / 255;
+        s += w[i] * (c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
+      }
+      return s;
     }
     /* THE CARD, READ: a box of the drawing on the card image already on
      * screen (shares of the drawing's own rectangle) into a cw x ch sample on
