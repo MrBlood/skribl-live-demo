@@ -1362,7 +1362,7 @@
      smaller. `nowrap` because a stated height leaves a wrapped label nowhere to
      go: at 320px "This page" wrapped to two lines and the box simply grew. */
   .mb-scope button { min-width: 34px; padding: 0 12px; font-size: 13px; white-space: nowrap; }
-  .mb-done { margin-left: auto; background: var(--ui-active); border-color: transparent; color: #fff; }
+  .mb-done { margin-left: auto; background: var(--accent-fill); border-color: transparent; color: #fff; }
   /* The canvas says what it is doing. `grab` is the resting affordance and
      `grabbing` the active one — the same pair the photo repositioner uses. */
   .flip-stage.moving #pad { cursor: grab; }
@@ -1686,7 +1686,7 @@ body.stroking .strip-wrap {
 .loophandle:focus-visible { box-shadow: 0 0 0 2px var(--surface-panel), 0 0 0 4px var(--ui-hi); }
 .loophandle .lh-bubble { display: none; position: absolute; top: 50%;
   padding: 3px 8px; border-radius: 8px; font-size: 12px; font-weight: 700; line-height: 16px;
-  color: #fff; background: var(--ui-hi); white-space: nowrap; box-shadow: 0 4px 12px rgba(0, 0, 0, .35); pointer-events: none; }
+  color: #fff; background: var(--accent-fill); white-space: nowrap; box-shadow: 0 4px 12px rgba(0, 0, 0, .35); pointer-events: none; }
 .loophandle.dragging .lh-bubble { display: block; }
 /* Inside the loop, never past the bar: at the strip's edge it was clipped. */
 .loophandle.from .lh-bubble { left: calc(100% + 6px); transform: translate(0, -50%); }

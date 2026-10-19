@@ -1850,7 +1850,7 @@ body.replaying .tab-panel > * { opacity: var(--drawer-rest); }
 }
 .reposition-btn svg { width: 15px; height: 15px; }
 @media (hover: hover) { .reposition-btn:hover { background: var(--surface-control-hover); color: var(--text-strong); } }
-.reposition-btn.active { background: var(--ui-active); color: #fff; border-color: transparent; }
+.reposition-btn.active { background: var(--accent-fill); color: #fff; border-color: transparent; }
 .reposition-btn[hidden] { display: none; }
 #photoZoomRow[hidden] { display: none; }
 .reposition-hint {
@@ -2705,7 +2705,7 @@ body.replaying .tab-panel > * { opacity: var(--drawer-rest); }
   position: absolute;
   bottom: calc(100% + 5px);
   left: 50%;
-  background: var(--ui-active);
+  background: var(--accent-fill);
   color: #fff;
   font-size: 12px;
   font-weight: 700;
@@ -6240,7 +6240,7 @@ body:not(.player-mode) :is(.toolbar, .flip-tools) {
 .learn-cap > .learn-title, .learn-cap > .learn-line { flex: 0 0 100%; }
 .learn-title { font-size: 20px; font-weight: 700; letter-spacing: -0.2px; color: var(--text-primary); }
 .learn-n { display: inline-grid; place-items: center; width: 19px; height: 19px; margin-right: 7px;
-  border-radius: 50%; background: var(--ui-hi); color: #fff; font-size: 11px; font-weight: 700;
+  border-radius: 50%; background: var(--accent-fill); color: #fff; font-size: 11px; font-weight: 700;
   vertical-align: 1px; }
 .learn-line { font-size: 16px; line-height: 1.45; color: var(--text-secondary); }
 .learn-try { min-height: 44px; padding: 0 22px; border-radius: 12px; border: 0;
@@ -8505,7 +8505,7 @@ body.replaying .media-card { pointer-events: none; }
 .hs-list .hs-share { width: 16px; height: 16px; vertical-align: -3px; }
 .hs-done {
   width: 100%; justify-content: center; min-height: 44px;
-  background: var(--accent); border-color: transparent; color: #fff; font-weight: 650;
+  background: var(--accent-fill); border-color: transparent; color: #fff; font-weight: 650;
 }
 @media (min-width: 641px) {
   .hs-scrim { align-items: center; }
@@ -8635,7 +8635,7 @@ body.replaying .media-card { pointer-events: none; }
 .othertab-x svg { width: 14px; height: 14px; }
 .othertab-open, .othertab-later { order: 2; flex: 1 1 0; min-height: 44px; padding: 0 14px; border-radius: 999px;
   font: inherit; font-weight: 600; cursor: pointer; white-space: nowrap; }
-.othertab-open { border: 0; background: var(--ui-hi); color: #fff; }
+.othertab-open { border: 0; background: var(--accent-fill); color: #fff; }
 .othertab-later { border: 1px solid var(--hairline-strong); background: transparent; color: inherit; margin-right: 8px; }
 .othertab-open:disabled, .othertab-later:disabled { opacity: .55; cursor: default; }
 /* The buttons start their own line: a zero-height break after Not now. */
