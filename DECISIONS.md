@@ -20113,3 +20113,16 @@ The player's scripts are 3,134 B lighter (151,670 -> 148,536), and the names
 the two editors both define fell from 62 to 53 (verify_surfaces). The new
 verify_music drives every row on both editors; each was red on one of them
 before.
+
+Found on the way, by the affected suites. The Pad's video export still called
+the Test Seam stop this change took away, so an export threw before its
+download: fixed, and a search for every removed name found no other caller.
+verify_tools kept two exemptions for the music strip's old save triggers,
+which the drawer replaced; its stale-entry check said so, and they are gone.
+And the next seal could not have started: release_run.py refuses while a
+suite on disk is in no batch, and five had reached main in none over five
+pull requests (verify_padedges, verify_flipedges, verify_viewedges and
+verify_words from the whole-app review, and verify_music here), which only
+the seal's own dry run would have said. Each is placed now and tagged by what
+it does, and verify_docs asks the same question on every pull request, so the
+next unplaced suite is red where it is added (red on main, green here).

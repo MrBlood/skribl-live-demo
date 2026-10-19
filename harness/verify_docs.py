@@ -350,6 +350,22 @@ check("run_harness.sh and release_run.py exclude the same generated files",
       f"only in run_harness: {sorted(_sh_names - _py_names)}; "
       f"only in release_run: {sorted(_py_names - _sh_names)}")
 
+print("\nDOCS — every suite has its place in the seal")
+# release_run.py refuses to start while a suite on disk is in no batch, and
+# that refusal came only at the seal: after v326, five new suites reached main
+# in no batch over five pull requests, and nothing said so until the next
+# seal's dry run. Asked here, it is said on the pull request that adds one.
+import release_run as _rr_cov                                        # noqa: E402
+_on_disk = sorted(p.name for p in (ROOT / "harness").glob("verify_*.py"))
+_listed = [s for b in _rr_cov.BATCHES for s in b]
+_unplaced = [s for s in _on_disk if s not in _listed]
+_twice = sorted({s for s in _listed if _listed.count(s) > 1})
+_gone = [s for s in _listed if s not in _on_disk]
+check("every suite on disk is in exactly one of release_run.py's batches",
+      not (_unplaced or _twice or _gone),
+      f"in no batch: {_unplaced}; listed twice: {_twice}; listed, not on disk: {_gone}"
+      if (_unplaced or _twice or _gone) else f"all {len(_on_disk)} suites placed once")
+
 print("\nDOCS — the deployed runtime is pinned, and it is the one tested")
 # constraints.txt is a hash-locked cp312 environment. Render's default Python
 # depends on when the service was created and can move under you, so an

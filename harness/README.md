@@ -394,8 +394,9 @@ stays a sleep.
   is saved; Match Drawing Time counts each page at its own length and leaves
   an empty Flip alone; the switch silences Play and a preview, brings Play's
   music back, and a switched-off track stays in a Pad draft, its autosave and
-  its reopening while a post leaves it out; a new track starts at 1x; a photo
-  named song.mp3 is refused by its type; and Play stops a preview.
+  its reopening; a new track starts at 1x; a photo named song.mp3 is refused
+  by its type; and Play stops a preview. A post leaving a switched-off track
+  out, which both already did, is kept by rows green before too.
 - `verify_learncard.py` — the card on the button (lib/learncard.js), Pad and
   Flip: holding a button (real touch) opens its card with its example; a
   quick tap stays a tap, a moving finger is no hold, the lift does not press,

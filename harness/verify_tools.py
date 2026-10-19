@@ -1484,16 +1484,15 @@ with sync_playwright() as _b14:
 # the reason it is not a stateful gesture cleanup.
 print("\nV214b — every touchend cleanup is paired with touchcancel")
 
-_TOUCH_ALLOW = {
-    # Autosave triggers, not drag cleanups: nothing stays alive after them, so a
-    # cancelled touch simply does not schedule a save it did not need to. Pairing
-    # these would be copying the shape of the fix rather than its substance.
-    # (The canvas's own was a third until v315, when Pad moved to Pointer
-    # Events and that trigger became a pointerup; the stale-entry check below
-    # is what said so.)
-    ("musicTrack", "scheduleAutosave"),
-    ("zoomTrackWrap", "scheduleAutosave"),
-}
+_TOUCH_ALLOW = set()
+# Empty, and kept so the next exemption has a place and a reason. The last two
+# were autosave triggers, not drag cleanups: the music strip's and the loop
+# detail's touchend called scheduleAutosave, and nothing stayed alive after
+# them. They went when the Pad and Flip came to share one music drawer (after
+# v326): lib/musicdrawer.js saves at the end of each drag itself, a cancelled
+# one included. (The canvas's own was a third until v315, when Pad moved to
+# Pointer Events and that trigger became a pointerup; the stale-entry check
+# below is what said so, both times.)
 
 _pat_end = _re2.compile(
     r"([A-Za-z_$][\w$.]*)\.addEventListener\(\s*'touchend'\s*,\s*"
