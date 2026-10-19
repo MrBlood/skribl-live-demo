@@ -213,6 +213,18 @@ def measure(q, root, scale):
     return words, low
 
 
+# What a point lands on, and what the editor held after the stroke: the Post
+# opener's account of itself when Post does not come back (see post()).
+UNDER = """([x, y]) => { const e = document.elementFromPoint(x, y); if (!e) return 'nothing';
+  return e.id ? '#' + e.id : e.tagName.toLowerCase() + (typeof e.className === 'string' && e.className.trim()
+    ? '.' + e.className.trim().split(/\\s+/).join('.') : ''); }"""
+HELD = """() => { const open = ['drawPanel', 'musicPanel', 'photoPanel'].filter(i => { const p = document.getElementById(i); return p && !p.hidden; });
+  const d = document.getElementById('recordBtn');
+  return 'a take ' + (typeof recording === 'undefined' ? 'n/a' : recording ? 'on' : 'off')
+    + ', ' + (typeof strokes === 'undefined' ? 'n/a' : strokes.length) + ' points'
+    + ', drawer ' + (open.join(' ') || 'none') + ', Done ' + (d ? (d.hidden ? 'hidden' : 'shown') : 'absent'); }"""
+
+
 def surfaces(name, ids, q, canvas, btn):
     """Each surface: (label, how to open it from a fresh page, its root)."""
     m = "#" + ids["menu"]
@@ -238,6 +250,7 @@ def surfaces(name, ids, q, canvas, btn):
     def post():
         bx = q.locator(canvas).bounding_box()
         cx, cy = bx["x"] + bx["width"] / 2, bx["y"] + bx["height"] / 2
+        under = q.evaluate(UNDER, [cx - 60, cy])
         q.mouse.move(cx - 60, cy); q.mouse.down()
         for i in range(30):
             q.mouse.move(cx - 60 + i * 4, cy + math.sin(i / 4) * 40)
@@ -247,9 +260,19 @@ def surfaces(name, ids, q, canvas, btn):
         # On a slow runner a fixed wait was not enough: Post was still disabled
         # and the click timed out (main's CI, after v324). So end the take
         # whenever it shows, and wait for Post itself.
-        q.wait_for_function("""() => {
-          if (document.body.classList.contains('recording')) document.getElementById('recordBtn').click();
-          return !document.getElementById('postBtn').disabled; }""", timeout=15000)
+        # WHY, WHEN IT STILL DOES NOT. Beside other suites this wait timed out
+        # on a phone now and then (the parallel runs of #540 to #543), green
+        # alone every time, and it did not come back when asked to: not under
+        # a CPU hog, not beside verify_a11y and verify_onepill. A bare timeout
+        # said nothing, so it says what the editor held: what the stroke's
+        # first point landed on, whether a take started, its points, an open
+        # drawer, and whether Done showed.
+        try:
+            q.wait_for_function("""() => {
+              if (document.body.classList.contains('recording')) document.getElementById('recordBtn').click();
+              return !document.getElementById('postBtn').disabled; }""", timeout=15000)
+        except Exception:
+            raise RuntimeError(f"Post stayed disabled (the stroke began on {under}; then {q.evaluate(HELD)})") from None
         q.click("#postBtn"); q.wait_for_timeout(900)
 
     def answers():
@@ -363,7 +386,7 @@ with sync_playwright() as p:
                         q.evaluate("() => document.activeElement && document.activeElement.blur()")
                         words, low = measure(q, root, opts.get("device_scale_factor", 1))
                     except Exception as e:
-                        check(f"{where} opened and was read", False, repr(e)[:160])
+                        check(f"{where} opened and was read", False, repr(e)[:320])
                         continue
                     if words is None:
                         check(f"{where} opened and was read", False, f"no {root}")
