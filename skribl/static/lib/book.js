@@ -37,7 +37,7 @@
   ] : [
     { t: 'This is Skribl Pad', s: 'Everything you draw plays back the way you drew it: every line, at your speed.', demo: 'blooby-card' },
     { t: 'Draw', s: 'Press harder for a thicker line. Tap Pen again for colour and brush.', demo: 'cat', along: 'cat' },
-    { t: 'Watch it come alive', s: 'Play it at a quarter speed, or sixteen times faster to see an hour in a minute.', clip: 'speed' },
+    { t: 'Watch it come alive', s: 'Play it at a quarter speed, sixteen times faster, or Fit to see an hour in half a minute.', clip: 'speed' },
     { t: 'Rubbing out is part of the show', s: 'The eraser plays back too. Undo takes back a stroke; nothing is lost.', demo: 'eraser' },
     { t: 'Add a song', s: 'A song under your drawing, looping the part you pick.', clip: 'music' },
     { t: 'Share it', s: 'Post it for a link anyone can open to watch it draw itself.', clip: 'post' }

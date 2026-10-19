@@ -375,6 +375,14 @@ stays a sleep.
   Loop and Mute as everywhere else; the Library's Play and Mute and a post's
   box say by name what a press does next; the Gallery's words; and every
   colour of each page's own is read by the page or what it loads.
+- `verify_words.py` — the words a review after v326 found saying what is no
+  longer true, read where a person reads them on the Pad and Flip, each red
+  on the words before: How it works' tips (drafts and what is uploaded,
+  signed in or out; Flip's stamps, strip, pages and onion skin; the take's
+  timers and lock; the rainbow swatches; Photo and music; Crossfade; Flip,
+  not Flip Mode; P and E on both; Smudge; how to ask a button; the name's
+  reach); Ask's drafts and draw-more answers; the Post and Shape cards; the
+  book's speeds; and Draw along's ending, whole in a phone's pill.
 - `verify_learncard.py` — the card on the button (lib/learncard.js), Pad and
   Flip: holding a button (real touch) opens its card with its example; a
   quick tap stays a tap, a moving finger is no hold, the lift does not press,

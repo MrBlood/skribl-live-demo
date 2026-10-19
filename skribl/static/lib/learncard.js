@@ -41,6 +41,7 @@
   var live = force || !navigator.webdriver;
   var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var touchFirst = window.matchMedia && window.matchMedia('(hover: none)').matches;
+  var FLIP = !!document.getElementById('strip');   // a Flip plays its pages; a Pad drawing draws itself
 
   // name, sentence, example (demo: a real Skribl from How it works; clip: a
   // phone recording), the How it works search that More opens, and tagOnly
@@ -55,7 +56,7 @@
     { sel: '#eraserToolBtn', name: 'Eraser', tag: 'Eraser', demo: 'eraser',
       line: 'Rubs out what you drew, and the replay shows it rubbing out.',
       do: [['Tap again', 'Eraser size']] },
-    { sel: '#shapeToolBtn', name: 'Shapes', tag: 'Shapes', demo: 'shape', more: 'Shape',
+    { sel: '#shapeToolBtn', name: 'Shape', tag: 'Shape', demo: 'shape', more: 'Shape',
       line: 'Straight lines, rectangles, ovals and polygons.',
       do: [['Tap', 'Pick line, box, oval or polygon']] },
     { sel: '#toolMoreBtn', name: 'More tools', tag: 'More tools', more: 'Fill',
@@ -67,7 +68,7 @@
       line: 'A photo under your drawing, or a song that loops while it plays.',
       do: [['Tap', 'Opens Photo and Music']] },
     { sel: '#postBtn', name: 'Post', tag: 'Post', clip: 'post',
-      line: 'Get a link anyone can open to watch your drawing draw itself.',
+      line: FLIP ? 'Get a link anyone can open to watch it play.' : 'Get a link anyone can open to watch your drawing draw itself.',
       do: [['Tap', 'A title and caption, then post']] },
     { sel: '#tuneBtn', name: 'Tune', tag: 'Tune', more: 'Grid',
       line: 'Grid, mirror, and how your drawing plays.',

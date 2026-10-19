@@ -28,6 +28,9 @@
   if (!drawer || !input || !answerEl) return;
   var isFlip = !!document.getElementById('strip');
   var MENU = isFlip ? '#moreBtn' : '#menuBtn';
+  // Where Save keeps a draft: the account when signed in (lib/savedrafts.js
+  // picks the same way), this browser otherwise.
+  var SIGNED = !!(window.SKRIBL_DRAFTS && window.SKRIBL_DRAFTS.signedIn);
 
   // id, editor ('pad', 'flip' or both), title, the line under it, the words
   // it answers, its example (demo: a real Skribl; clip: a phone recording),
@@ -52,9 +55,11 @@
       related: ['move', 'floop'] },
     { id: 'takes', ed: 'pad', title: 'Draw more over a replay', sub: 'Add a take', clip: 'takes',
       words: ['take', 'record', 'again', 'more', 'add'],
-      steps: [['Play your drawing, or stop where you want.', '#playBtn', 'Play'],
-              ['Tap <b>Add take</b>.', '#addTakePill', 'Add take'],
-              ['Draw. The replay plays every take in order.']],
+      // Add take is on the canvas between takes, and steps aside while the
+      // replay plays, so the answer starts where it shows.
+      steps: [['When a take is done, tap <b>Add take</b> on the canvas.', '#addTakePill', 'Add take'],
+              ['Draw, then tap <b>Done</b>.'],
+              ['Tap <b>Play</b>: the replay plays every take in order.', '#playBtn', 'Play']],
       related: ['speed', 'post'] },
     { id: 'post', title: 'Share it as a link', sub: 'Post', clip: 'post',
       words: ['share', 'link', 'post', 'publish', 'send'],
@@ -89,7 +94,7 @@
       related: ['drafts'] },
     { id: 'drafts', title: 'Save it and come back later', sub: 'Your drafts', words: ['save', 'draft', 'keep', 'later', 'open'],
       steps: [['Open the <b>⋯</b> menu.', MENU, 'Menu'],
-              ['Tap <b>Save</b>. It stays on this browser.', '#saveCloudDraftItem', 'Save'],
+              ['Tap <b>Save</b>. ' + (SIGNED ? 'It\u2019s kept in your account, in any browser you sign in to.' : 'It stays on this browser.'), '#saveCloudDraftItem', 'Save'],
               ['Find it again in <b>Your drafts</b>.']],
       related: ['new', 'export'] },
     { id: 'move', ed: 'flip', title: 'Make it move', sub: 'Pages', demo: 'flip-wave',
