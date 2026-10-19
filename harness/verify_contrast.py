@@ -222,6 +222,7 @@ UNDER = """([x, y]) => { const e = document.elementFromPoint(x, y); if (!e) retu
   const home = []; for (let a = e.parentElement; a && a !== document.body && home.length < 3; a = a.parentElement) if (a.id) home.push('#' + a.id);
   return name(e) + (home.length ? ' in ' + home.join(' < ') : ''); }"""
 HELD = """() => { const open = ['drawPanel', 'musicPanel', 'photoPanel'].filter(i => { const p = document.getElementById(i); return p && !p.hidden; });
+  const card = document.querySelector('.lc-card'); if (card) open.push('a button card (' + ((card.querySelector('.lc-t') || card).textContent.trim().slice(0, 24)) + ')');
   const d = document.getElementById('recordBtn');
   return 'a take ' + (typeof recording === 'undefined' ? 'n/a' : recording ? 'on' : 'off')
     + ', ' + (typeof strokes === 'undefined' ? 'n/a' : strokes.length) + ' points'
@@ -263,12 +264,14 @@ def surfaces(name, ids, q, canvas, btn):
         # On a slow runner a fixed wait was not enough: Post was still disabled
         # and the click timed out (main's CI, after v324). So end the take
         # whenever it shows, and wait for Post itself.
-        # WHY, WHEN IT STILL DOES NOT. Beside other suites this wait timed out
-        # on a phone now and then (the parallel runs of #540 to #543), green
-        # alone every time, and a bare timeout said nothing; so it says what
-        # the editor held: what the stroke's first point landed on and where
-        # that lives, whether a take started, its points, an open drawer, and
-        # whether Done showed.
+        # WHY, WHEN IT DOES NOT. Beside other suites this wait timed out on a
+        # phone now and then (the parallel runs of #540 to #543), green alone
+        # every time, and a bare timeout said nothing; so it says what the
+        # editor held: what the stroke's first point landed on and where that
+        # lives, whether a take started, its points, an open drawer or button
+        # card, and whether Done showed. Its first two reports named a button
+        # card's example, which is why the pointer rests on the canvas while
+        # each page loads (the loop below).
         try:
             q.wait_for_function("""() => {
               if (document.body.classList.contains('recording')) document.getElementById('recordBtn').click();
@@ -381,6 +384,15 @@ with sync_playwright() as p:
                         continue
                     where = f"{name}, {scheme}, {dev}: {label}"
                     try:
+                        # THE POINTER RESTS ON THE CANVAS while the next page
+                        # loads (the screen's middle is the canvas on both
+                        # editors, phone and desk). The last sheet's click left
+                        # it over a dock button, and a fresh page's hover there
+                        # opens that button's card about a second in
+                        # (lib/learncard.js rests, which this suite turns on).
+                        # On a phone the card rises over the canvas, and beside
+                        # other suites the Post opener's stroke landed on it.
+                        q.mouse.move(opts["viewport"]["width"] / 2, opts["viewport"]["height"] / 2)
                         browsing.goto(q, BASE, route)
                         q.wait_for_timeout(700)
                         q.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
