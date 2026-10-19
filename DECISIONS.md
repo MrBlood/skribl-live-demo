@@ -19287,13 +19287,16 @@ corners read square and grey where the paper's colour filled the card's mat
 inside them. The fade now takes the corner the drawing shows: the box's
 inner round while the canvas plays, the card image's plate round at rest.
 
-One reader for both glasses: inlineplayer.js `readArea()` reads the drawing
-off the canvas while it shows, else off the card image already on screen;
-the pill's `tone()` and the new `ground()` both use it, so the two cannot
-read one drawing two ways. `area()` says where the drawing is and how round
-its bottom corners are. lib/fullbar.js reads both on events only (the card or
-the canvas becoming what shows, a play, pause or end, a resize, a turn of the
-page's theme), never on the beat.
+One reader of the card image for both glasses: inlineplayer.js `readCard()`
+is the pill's `tone()` read made shareable, handed to the bar with the card's
+frame, so the pill and the fade read one drawing one way. Everything else is
+lib/fullbar.js's, which a host never loads: the strips and their medians, the
+canvas read while it shows (the canvas is the drawing itself), and where the
+drawing sits and how round its bottom corners are. The first build put those
+in the component too and every host paid 1,912 B for them; now the embed
+grows by 229 B, the named cost in verify_inline's ratchet. The bar reads on
+events only (the card or the canvas becoming what shows, a play, pause or
+end, a resize, a turn of the page's theme), never on the beat.
 
 verify_cardfade (new, solo in the seal: it measures painted pixels and posts
 to the shared server) reads every row off pixels: the fade on empty paper,
@@ -19307,7 +19310,9 @@ a guess, the fade a rectangle, the fade over the whole bar, the row not moved
 inside, the fade's colour a fixed near-black, the time left at the old grey.
 The theme row first passed with its watch removed: it read Repeat, which is
 lit violet in either glass and dark over a dark card either way. It reads
-Mute now, and goes red without the watch.
+Mute now, and goes red without the watch. The unreadable drawing is a read
+that throws, as a tainted canvas's does; a stub on the player's method went
+quiet when the reading moved to the bar.
 
 Pad and Flip: shared. Posts of both kinds play through this one card on the
 Gallery and on profiles; the editors have no card bar. Full screen (the
