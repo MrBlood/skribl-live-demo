@@ -201,9 +201,9 @@
        dark band onto the card's edges, and left the time at 2.6:1 there.
 
        - THE FADE LIES ON THE DRAWING ONLY, inside its edge and round corners
-         (inlineplayer.js area()), in the drawing's own colours: its foot read
-         in strips across (ground()), so on empty paper it cannot be seen and
-         it only softens ink that runs under the controls. Painted as a
+         (area() below), in the drawing's own colours: its foot read in
+         strips across (ground()), so on empty paper it cannot be seen and it
+         only softens ink that runs under the controls. Painted as a
          rectangle, the paper filled the card's colour in the drawing's
          corners and they read square and grey; beside the drawing the card's
          own colour needs no fade at all.
@@ -221,8 +221,57 @@
        on a guess. */
     var smart = opts.variant === 'skfull-card' ? smartFade() : null;
     function smartFade() {
-      var box = null, cv = null, cols = null, from = '', asked = false, ro = null, mo = null, on = false, was;
+      var box = null, cv = null, img = null, cols = null, from = '', asked = false, ro = null, mo = null, on = false, was;
       function off() { bar.classList.remove('is-smart'); }
+      /* THE DRAWING'S FOOT: its bottom eighth in 16 strips across, each strip
+         the middle value of its own pixels, so a line of ink through it does
+         not tint it. Off the canvas while it shows, which IS the drawing;
+         before, off the card image, through the player's reader of it
+         (inlineplayer.js readCard), the play pill's glass's too. Null until
+         there is something to read. */
+      function ground(pl) {
+        var n = 16, w = 6, h = 12, px = null, out = [];
+        if (cv && !cv.hidden) {
+          try {
+            var c = doc.createElement('canvas'), g = c.getContext('2d');
+            c.width = n * w; c.height = h;
+            g.fillStyle = '#fff'; g.fillRect(0, 0, n * w, h);
+            g.drawImage(cv, cv.width * 0.01, cv.height * 0.875, cv.width * 0.98, cv.height * 0.115, 0, 0, n * w, h);
+            px = g.getImageData(0, 0, n * w, h).data;
+          } catch (e) { px = null; }
+        } else px = pl.read(0.01, 0.875, 0.98, 0.115, n * w, h);
+        if (!px) return null;
+        for (var s = 0; s < n; s++) {
+          var ch = [[], [], []];
+          for (var y = 0; y < h; y++) {
+            for (var x = s * w; x < s * w + w; x++) {
+              for (var i = 0, o = (y * n * w + x) * 4; i < 3; i++) ch[i].push(px[o + i]);
+            }
+          }
+          out.push(ch.map(function (v) { v.sort(function (a, b) { return a - b; }); return v[v.length >> 1]; }));
+        }
+        return out;
+      }
+      /* WHERE THE DRAWING IS on screen, and the round of its two bottom
+         corners: the canvas while it shows; before, the card image's crop of
+         it, where fitPoster left the drawing's rectangle on the image
+         (`_d`, in the card's pixels) and the plate's own round, scaled; each
+         inside the box's rounded edge. */
+      function area(pl) {
+        var b = box.getBoundingClientRect(), cs = getComputedStyle(box), bw = parseFloat(cs.borderBottomWidth) || 0,
+            R = Math.max(0, (parseFloat(cs.borderBottomLeftRadius) || 0) - bw), r, rad = 0;
+        if (cv && !cv.hidden) r = cv.getBoundingClientRect();
+        else if (img && img._d && img.naturalWidth && pl.card) {
+          var p = img.getBoundingClientRect(), s = p.width / pl.card[0], d = img._d, i = pl.card[2];
+          r = { left: p.left + (d[0] + i) * s, right: p.left + (d[0] + d[2] - i) * s,
+                top: p.top + (d[1] + i) * s, bottom: p.top + (d[1] + d[3] - i) * s };
+          rad = (pl.card[1] - i) * s;
+        } else return null;
+        var x0 = Math.max(r.left, b.left + bw), x1 = Math.min(r.right, b.right - bw), y1 = Math.min(r.bottom, b.bottom - bw);
+        function round(x, edge) { return Math.abs(x - edge) < 1.5 && Math.abs(y1 - b.bottom + bw) < 1.5 ? Math.max(R, rad) : rad; }
+        return { left: x0, right: x1, top: Math.max(r.top, b.top + bw), bottom: y1,
+                 rl: round(x0, b.left + bw), rr: round(x1, b.right - bw) };
+      }
       function rgb(v) { return 'rgb(' + v[0] + ' ' + v[1] + ' ' + v[2] + ')'; }
       function luma(v) { return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]; }
       /* What the card shows beside the drawing: the first ground painted
@@ -236,9 +285,10 @@
       }
       function update() {
         var pl = player();
-        if (!pl || !pl.area || !pl.ground || !wrap.isConnected) return off();
+        if (!pl || !pl.read || !wrap.isConnected) return off();
         if (pl.el !== box) {
-          box = pl.el; cv = box.querySelector('.skribl-inline-canvas'); cols = null; asked = false;
+          box = pl.el; cv = box.querySelector('.skribl-inline-canvas'); img = box.querySelector('.skribl-inline-poster');
+          cols = null; asked = false;
           if (mo) mo.disconnect();
           if (cv && global.MutationObserver) {
             mo = new MutationObserver(update);
@@ -253,11 +303,16 @@
         if (src !== from) { from = src; cols = null; asked = false; }
         if (!cols && !asked) {
           asked = true;
-          cols = pl.ground(16, function () { asked = false; update(); });
+          cols = ground(pl);
+          /* A card image still on its way: read when it lands. One that
+             cannot be read stays unasked until what shows changes. */
           if (cols) asked = false;
+          else if (src === 'card' && img && !img.naturalWidth) {
+            img.addEventListener('load', function () { asked = false; update(); }, { once: true });
+          }
         }
         if (!cols) return off();
-        var a = pl.area(), b = bar.getBoundingClientRect();
+        var a = area(pl), b = bar.getBoundingClientRect();
         if (!a || !b.width || a.right - a.left < 8) return off();
         var n = cols.length, w = a.right - a.left, m = mat(), s = bar.style;
         s.setProperty('--fx-l', (a.left - b.left).toFixed(1) + 'px');

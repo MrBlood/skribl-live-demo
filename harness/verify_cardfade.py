@@ -389,9 +389,12 @@ with sync_playwright() as p:
     pg = open_gallery(b, PHONE, "dark")
     c = Card(pg, titles["paper"], phone=True)
     smart_before = c.g["smart"]
-    # As a card from another origin answers: nothing. Read again on the next
-    # change of state, which is when the bar reads.
-    c.tile.evaluate("t => { const p = t.querySelector('.skribl-inline')._skriblInline; p.ground = () => null; }")
+    # As a card or a canvas holding another origin's picture answers: reading
+    # its pixels throws (a tainted canvas's SecurityError). Read again on the
+    # next change of state, which is when the bar reads. THE MECHANISM, NOT A
+    # NAME: a stub on one method went quiet when the reading moved.
+    c.tile.evaluate("""() => { CanvasRenderingContext2D.prototype.getImageData = function () {
+      throw new DOMException('The canvas has been tainted by cross-origin data.', 'SecurityError'); }; }""")
     c.tile.locator(".skfull-card .skfull-play").first.click()
     pg.wait_for_timeout(400)
     c.tile.locator(".skfull-card .skfull-play").first.click()
