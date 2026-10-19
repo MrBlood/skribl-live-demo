@@ -1553,7 +1553,13 @@ with sync_playwright() as sp:
     #   on one line (+38). WHICH CALLER PAYS: every page that shows a post,
     #   for a look only a line-less box takes (the Gallery's cards). 70,260 B
     #   measured.
-    EMBED_RATCHET = 70_264
+    # RAISED (the in-post box's name says what a tap on it does next, after
+    #   v326, the viewing pages' review: it said "Play this Skribl" while it
+    #   played), for one named cost: +99 B -- inlineplayer.js look() naming
+    #   the box "Pause this Skribl" while it plays and its own name again when
+    #   it stops. WHICH CALLER PAYS: every page that shows a post, for a name
+    #   a screen reader reads on every post. 70,359 B measured.
+    EMBED_RATCHET = 70_364
     # THE RATCHET MEASURES DISPLAY, NOT COMPOSE, and the two are separate costs
     # paid by separate pages. Excluded here and measured on its own below:
     #   feed.js          the PREVIEW PAGE's own script (fetch the listing, clone

@@ -158,8 +158,7 @@
 
     var track = doc.createElement('div');
     track.className = 'skfull-track';
-    track.setAttribute('role', 'slider');
-    track.setAttribute('aria-label', 'Position');
+    track.setAttribute('aria-label', 'Scrub');   // its role, focus and keys: SkriblScrub, below
     var fill = doc.createElement('div');
     fill.className = 'skfull-fill';
     track.appendChild(fill);
@@ -172,7 +171,7 @@
 
     var made = {};
     made.play = btn('skfull-play', 'Play', ICON.play);
-    made.loop = btn('skfull-loop', 'Repeat', ICON.loop);
+    made.loop = btn('skfull-loop', 'Loop', ICON.loop);
     made.mute = btn('skfull-mute', 'Mute', ICON.sound);
     made.full = btn('skfull-full', 'Full screen', ICON.full);
     var bPlay = made.play, bLoop = made.loop;
@@ -361,6 +360,14 @@
     }
 
     track.addEventListener('click', seekTo);
+    // A SLIDER THAT MOVES (after v326, the viewing pages' review): the track
+    // said role=slider and Tab passed it by, and no key moved it. The keyboard
+    // half every other scrubber here has (lib/scrubkeys.js, loaded wherever
+    // this bar is), named Scrub as they are.
+    if (global.SkriblScrub) global.SkriblScrub.attach(track, {
+      seek: function (f) { var pl = player(), st = pl && pl.state(); if (st && st.totalMs) { pl.seek(st.totalMs * f); sync(); } },
+      frac: function () { var pl = player(), st = pl && pl.state(); return st && st.totalMs ? Math.min(1, st.elapsedMs / st.totalMs) : 0; }
+    });
     if (made.full) made.full.addEventListener('click', function (e) {
       e.stopPropagation();
       if (opts.onFull) opts.onFull();
@@ -410,11 +417,18 @@
       var loop = !!(pl && pl.looping());
       bLoop.classList.toggle('on', loop);
       attr(bLoop, 'aria-pressed', String(loop));
+      // NAMED AS EVERY OTHER LOOP AND MUTE ARE (after v326, the viewing pages'
+      // review): the card said "Repeat" and "Sound is on" where its own full
+      // screen, the link page and the Library say Loop and Mute / Unmute, and
+      // "Sound is off, pressed" read oddly. The state words stay in the tip.
       title(bLoop, loop ? 'Repeating' : 'Plays once');
 
       var SI = global.SkriblInline;
       var on = !!(SI && SI.soundOn());
-      var has = !!(st && st.hasAudio);
+      // Before it has loaded, the listing says whether it has sound (as for
+      // `silent` below): a card with sound read "This Skribl has no sound",
+      // pressed and greyed, until its first play.
+      var has = st && st.loaded ? !!st.hasAudio : listed(pl) === true;
       /* MUTE STEPS ASIDE ON A SILENT DRAWING (the owner: yes, after the
          card's fade). Greyed out on every silent card it was a control with
          nothing to act on. Known from the listing before the drawing loads
@@ -428,7 +442,8 @@
       }
       setHTML(bMute, on ? ICON.sound : ICON.muted);
       if (bMute.disabled !== !has) bMute.disabled = !has;
-      label(bMute, !has ? 'This Skribl has no sound' : (on ? 'Sound is on' : 'Sound is off'));
+      title(bMute, !has ? 'This Skribl has no sound' : (on ? 'Sound is on' : 'Sound is off'));
+      attr(bMute, 'aria-label', !has ? 'This Skribl has no sound' : (on ? 'Mute' : 'Unmute'));
       attr(bMute, 'aria-pressed', String(!on));
 
       var total = (st && st.totalMs) || 0;
@@ -437,7 +452,8 @@
       if (fill.style.width !== w) fill.style.width = w;
       /* A card answers "how long is this", and where it is once it plays. */
       setText(dur, playing || el > 0 ? mmss(el) + ' / ' + mmss(total) : mmss(total));
-      attr(track, 'aria-valuenow', String(Math.round(total ? el / total * 100 : 0)));
+      if (global.SkriblScrub) global.SkriblScrub.sync(track, total ? el / total : 0);
+      else attr(track, 'aria-valuenow', String(Math.round(total ? el / total * 100 : 0)));
 
       if (made.full) {
         var big = !!(opts.isFull && opts.isFull());
@@ -528,7 +544,7 @@
      THE MARKUP is the link page's (_skribl_player_controls.html), built here.
      THE RULES are styles.css's own: they reach these two pages as
      fullband.css, which harness/tools/cssgraph.py emits from styles.css the
-     way it emits player.css, so they are written once and verify_cssplit
+     way it emits player.css, so they are written once and verify_seam
      holds the copy to its source. THE SCRUBBER that shows the drawing's
      shape and THE WORDS with every speed are the in-post player's own line
      (inlineplayer.js band()), on its own clock.
@@ -639,7 +655,11 @@
        (lib/chromefade.js; the owner's picks for every full screen). */
     var fade = global.SkriblChromeFade ? global.SkriblChromeFade.attach(wrap, { tapWakes: true, awake: function () {
       var st = player() && player().state();
-      return !st || (st.state !== 'playing' && !(st.totalMs && st.elapsedMs >= st.totalMs));
+      // ...and never while a menu of its own is open (the speeds), as the
+      // link page's band keeps itself up (after v326, the viewing pages'
+      // review: the open speeds faded away with the rest).
+      return !st || (st.state !== 'playing' && !(st.totalMs && st.elapsedMs >= st.totalMs))
+        || !!bar.querySelector('[aria-expanded="true"]');
     } }) : null, fadePlaying = null;
     /* ITS COLOURS FROM THE DRAWING (lib/smartfade.js), toned as the link
        page's are: the same controls, the same words. */

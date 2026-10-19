@@ -65,13 +65,11 @@
          ramp below can answer it the way the editor's does. */
       --danger: #f4326f;
       /* The colours this sheet used to type at its rules (#20). The no-photo
-         avatar's disc and the full-screen exit's plate sit on a drawing or a
-         dark disc in both themes, so neither has a light value. */
+         avatar's disc sits on a dark disc in both themes, so it has no light
+         value. (The full-screen exit's plate went with the old bar: the band
+         is fullband.css's.) */
       --avatar-a: #3a3f4b;
       --avatar-b: #232730;
-      --plate: rgba(6,7,10,.72);
-      --plate-edge: rgba(255,255,255,.18);
-      --plate-ink: #eef1f6;
       --scrim: rgba(0,0,0,.4);
     }
     :root[data-theme="light"] {
@@ -732,7 +730,7 @@
 
   <main>
     <h1>Public gallery</h1>
-    <p class="sub" id="gallerySub">Skribls people chose to show. Tap one to watch it draw itself.</p>
+    <p class="sub" id="gallerySub">Skribls people chose to show. Tap one to watch it come alive.</p>
     {# NEW / HOT AND SEARCH (v304). New is the listing as it always was; Hot is
        plays in the last seven days, most first (GET /api/skribls?sort=hot,
        counted once per client per post per day). Search is the listing's own
@@ -761,7 +759,8 @@
     <p class="state" id="galleryEmpty" hidden>
       <b>Nothing here yet.</b><br>
       Skribls appear here when their author ticks
-      <b>Show in the public gallery</b> before posting.
+      <b>Show in the public gallery</b> as they post, or turns it on later
+      in their Library.
     </p>
     <p class="state" id="galleryNone" hidden>
       <b>Nothing matches that.</b> Try part of a title.

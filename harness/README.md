@@ -365,6 +365,16 @@ stays a sleep.
   Select through here works on a phone; after Cut, Paste is within reach on
   a blank page and Ctrl+V pastes; the strip counts pages, not the paste
   ghost; a tile's x says its arm out loud and names its page.
+- `verify_viewedges.py` — the viewing pages' edges the review after v326
+  found, each driven on the real page and each red on the code before its
+  fix: leaving the Gallery's full screen puts the card back on top; the
+  speeds stay open while full screen plays; Loop turned off in the Library's
+  full screen reads off on the page and one press turns it back on; a host's
+  Library names who drew it from the listing; a card with sound offers
+  Unmute before it plays, its scrubber takes focus and keys, and it names
+  Loop and Mute as everywhere else; the Library's Play and Mute and a post's
+  box say by name what a press does next; the Gallery's words; and every
+  colour of each page's own is read by the page or what it loads.
 - `verify_learncard.py` — the card on the button (lib/learncard.js), Pad and
   Flip: holding a button (real touch) opens its card with its example; a
   quick tap stays a tap, a moving finger is no hold, the lift does not press,
