@@ -4054,6 +4054,7 @@ function showPlayerError(msg, canRetry) {
   let strokeComp = null; // wet/dry stroke compositor for low-opacity replay (flag-gated)
   let muted = false;
   let _fade = null;      // the controls stepping back in full screen (below)
+  let _smart = null, _smartWas = null;   // the band's colours read from the drawing (below)
   let barAt = 0;         // where the progress bar stands, 0 to 1 (setProgress)
   // lib/seekcache.js: copies of the canvas a seek starts from (see editorSeek).
   const seekCache = (!isFlip && timeline.length && window.SkriblSeekCache)
@@ -4068,6 +4069,9 @@ function showPlayerError(msg, canRetry) {
     // there brought them back every lap -- for good, on anything shorter than
     // the fade's quiet spell.
     if (_fade && !running) _fade.poke();
+    // A play, a pause or the end changes what lies under the band.
+    const now = running || queued;
+    if (_smart && now !== _smartWas) { _smartWas = now; _smart.read(); }
   }
   function setProgress(frac) {
     barAt = frac;
@@ -4542,6 +4546,17 @@ function showPlayerError(msg, canRetry) {
     // after the full-screen A/B). The in-post player's rule (lib/fullbar.js).
     _fade = window.SkriblChromeFade && SkriblChromeFade.attach(canvasWrap, { tapWakes: true,
       awake: () => !(running || queued) && barAt < 1 || !!(_bar && _bar.querySelector('[aria-expanded="true"]')) });
+    // THE BAND TAKES ITS COLOURS FROM THE DRAWING (lib/smartfade.js, the
+    // owner's "A, smart fade and yes to all" for every full screen): a fade
+    // on the drawing only, in its own colours, and each control and word
+    // light or dark by what is under it. Over a photo, which this canvas
+    // does not hold, the band keeps its scrim.
+    _smart = _bar && window.SkriblSmartFade ? SkriblSmartFade.full(_bar, {
+      canvas: () => canvas,
+      photo: () => !!(photoBgImg && photoBgImg.src && photoBgImg.style.display !== 'none'),
+      glass: '.player-btn:not(.primary), .rl-speed',
+      words: '.player-time > span, .rl-drawn, .rl-m, .rl-skip'
+    }) : null;
     // `on` from the module, which answers for both ways in: our wrapper as
     // the fullscreen element, or its pinned CSS state.
     const _syncFull = on => {
@@ -4559,6 +4574,7 @@ function showPlayerError(msg, canRetry) {
       }
       if (_fade) _fade[on ? 'start' : 'stop']();
       layoutPlayerCanvas();      // the box just changed shape
+      if (_smart) _smart[on ? 'start' : 'stop']();
     };
     const _full = SkriblImmersive.attach(canvasWrap, { onChange: _syncFull });
     pFull.addEventListener('click', _full.toggle);

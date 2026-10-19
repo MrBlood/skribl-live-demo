@@ -147,6 +147,7 @@ BATCHES = [
     ["verify_tappause.py"],                # measures — whether a preview stays still once tapped
     ["verify_fullfade.py"],                # measures — what is painted after a timed quiet spell, on three surfaces
     ["verify_cardfade.py"],                # measures — what is painted under the Gallery card's controls; posts to the shared server
+    ["verify_fullsmart.py"],               # measures — what is painted under every full screen's bar; posts to the shared server
     ["verify_replayspeed.py"],             # measures — progress over wall time at each speed; posts to the shared server
     ["verify_videoexport.py"],             # measures — records real WebM in Chromium and reads its tracks
     # store: posts through both editors' sheets to the shared server (one

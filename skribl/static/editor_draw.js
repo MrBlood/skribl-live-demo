@@ -840,6 +840,10 @@ if (padLine && playScrub && window.SkriblReplayLine) {
       wrap: canvasWrap, button: fullBtn, carry: [playScrub, padLine], fit: padFullFit,
       playing: () => playing, paused: () => playPaused,
       play: () => { if (!playing) playBtn.click(); }, pause: pausePlayback, resume: resumePlayback,
+      // The band's colours, read from the drawing; a photo is a picture of
+      // its own under this canvas, and keeps the scrim.
+      canvas: () => canvas,
+      photo: () => !!(photoBgImg && photoBgImg.src && photoBgImg.style.display !== 'none'),
     });
   }
 }

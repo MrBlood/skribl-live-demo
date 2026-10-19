@@ -170,6 +170,7 @@ here is the rule you can break tomorrow.
 | Work on the canvas, including media still on its way back from the store, is asked about before a draft replaces it; a late store answer never lands on a different document; Save draft waits for a file still being read. | `verify_amber.py`, `verify_clouddrafts.py` |
 | Every bottom sheet closes on a tap of its grabber or a swipe down, owns the touch from its first pixel (no pull-to-refresh), and eases away. | `verify_sheetswipe.py` |
 | The Gallery card's fade takes its colours from the drawing under it: invisible on empty paper, inside the drawing's round corners and off the card beside it; each glass control takes the tone of what is under it; the time reads at 4.5:1 on painted pixels; a drawing that cannot be read keeps the scrim; Mute steps aside on a silent drawing, on the card and in full screen, from the first paint. | `verify_cardfade.py` |
+| Every full screen's bar takes its colours from the drawing too (the Gallery's and the Library's, the link page's, Pad's and Flip's), read by the card's own reading (lib/smartfade.js): the fade unseen on empty paper and no fog on a dark drawing; every word at 4.5:1 on its worst painted pixel; each control's glass by what is under it, turning with the theme; a title crossing a tall drawing's edge in a capsule; a photo under the drawing as a picture of its own keeps the scrim. | `verify_fullsmart.py` |
 
 **One from v179 did NOT survive, and is recorded here rather than quietly
 dropped.** "Segmented controls state a height" was true when written; `flip.css`
@@ -807,6 +808,7 @@ rather than a shared rule.
 | `sheetswipe.js` | Pad+Flip+library+gallery | Sheets that go away — one swipe, every bottom sheet. |
 | `sizeclass.js` | Flip | One size decision, made once, for the whole app. |
 | `slidernudge.js` | Pad+Flip | - and + beside a range slider, for exact steps a slider alone cannot land on with a finger. |
+| `smartfade.js` | Pad+Flip+player+library+gallery | The smart fade: one reading of a drawing for every bar that lies over it. |
 | `smoothing.js` | Pad+Flip | Smoothing (the stroke stabilizer) — shared by both editors. |
 | `stamps.js` | Flip | Stamps — the clipboard, but named, persistent and multi-slot. |
 | `strokelayers.js` | Pad+Flip+player | Stroke layers — the see-through-stroke compositor's on/off, shared by both. |

@@ -19442,3 +19442,58 @@ never came.
 The pointer now rests on the canvas while each page loads (the screen's middle
 is the canvas on both editors, phone and desk). Nothing in the product
 changed: a card that opens where a mouse rests is the card doing its job.
+
+## After v326 -- every full screen's bar takes its colours from the drawing
+
+The owner, from the measured full-screen mock: "A, smart fade and yes to all".
+The Gallery card's smart fade (#541) carried to every bar that lies over a
+drawing in full screen: the Gallery's and the Library's (one bar,
+lib/fullbar.js), the link page's (#playerBar) and Pad's and Flip's
+(lib/watchfull.js, which wears the link page's band). Before it, the
+Gallery's near-black scrim moved a pale drawing's empty paper 4.9:1 and sank
+the time into it, and a light page's white fog on the link page moved a dark
+drawing 3.4:1.
+
+ONE READING FOR EVERY BAR, lib/smartfade.js: the drawing's foot in 16 strips,
+each its middle value; the ground under the canvas; light or dark glass by
+what is under a control, words by what is under their letters. The card's
+bar now reads through it too, so the card and full screen cannot drift; the
+card keeps its own geometry (its plate, its round corners, its row) in
+fullbar.js. It is read when full screen opens and when the drawing plays,
+pauses or ends, never on the beat; toned again on a resize or a theme turn.
+
+What full screen adds to the card's: the fade reaches 40px above the bar
+(the bar is taller than the card's, whose fade reaches 22px); the words carry
+a faint halo in the other tone, unseen on plain paper, there for a line of
+ink under them; and a title crossing a tall drawing's edge on a desk, light
+on one side and dark on the other, sits in a capsule of the buttons' glass,
+62% deep in the dark, so its words read over either side (5.8:1 at worst,
+where 56% read 4.7:1).
+
+NOTHING ON A GUESS. A photo under the drawing as a picture of its own (the
+link page's and the Pad's #photoBgImg) keeps the scrim, because the canvas
+does not hold it. Flip paints its photo into the page's canvas, and the
+Gallery's player into its own, so both read it.
+
+The band's rules are state-only, so they are listed live in css_live.json for
+the player's CSS, all the link page loads. Their glass and ink are four
+`--on-canvas` tokens in `:root`, the same in both themes, as the empty-state
+hint's are: they follow what is under the band, never the page. The link page
+pays for it: +5,479 B of JavaScript (the module, 2,025 B downloaded, and the
+lines that wire it) and +2,722 B of CSS, both ratchets raised with the costs
+named, both now past the targets they were aiming at.
+
+verify_fullsmart (new) reads every row off painted pixels: the fade unseen on
+paper and no fog on a dark drawing; every word at 4.5:1 on its worst pixel
+under its letters, the other controls away; each control's glass, turning
+with the theme; the title's capsule; the photo's scrim. The pen's glowing dot
+rides above every bar while a drawing plays and hides once it ends, so it is
+set aside: it sat on a time's last digit at 3.4:1, and no fade can reach it.
+
+THE HALO HAD NO PIN at first: taking it away turned no row red, because no
+drawing in the suite ran ink under the words. Lines of ink 4px wide, every
+11px, now run under them. On the link page they read 5.3:1 with the halo and
+3.7 without (dark lines on paper, phone), and 5.7 and 3.9 (pale lines on a
+dark drawing, desk). The Gallery's words sit lower, where the fade carries
+them alone (5.8 without), so there the row asks what the halo does: the
+worst pixel under the letters lifts from 5.8 to 7.4.

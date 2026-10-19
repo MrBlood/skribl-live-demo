@@ -85,6 +85,12 @@ details to send with it.
       white glass on the pale one and dark glass on the dark one, with no grey
       band across the drawing and its bottom corners still round. A drawing
       with no sound has no Mute button at all, and nothing moves when it starts.
+- [ ] Full screen a pale drawing on the Gallery and on a shared link, then a
+      dark one → no grey band and no white fog over the drawing; the buttons
+      are white glass over pale ground and dark glass over dark; the time
+      reads. On a desk, a tall drawing's title sits in a small glass capsule
+      where it crosses the drawing's edge. Pad's and Flip's own full screen
+      look the same.
 - [ ] Turn the phone sideways on the Pad and on a shared link → nothing is cut
       off, and the drawing is not stretched.
 - [ ] Flip with a dozen pages, a loop and a hold of ×2 → every word on the page

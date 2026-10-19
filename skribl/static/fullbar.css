@@ -381,62 +381,102 @@
 }
 .skfull-card .skfull-time { width: auto; color: #c7cedb; }
 
-/* THE FADE TAKES ITS COLOURS FROM THE DRAWING (the owner's pick A after v326;
-   lib/fullbar.js says how they are read, and when). `is-smart` is set only
-   when the drawing could be read; without it, the scrim above stands. */
+/* THE FADE TAKES ITS COLOURS FROM THE DRAWING (the owner's pick A after v326,
+   and for full screen "A, smart fade and yes to all"; lib/smartfade.js reads
+   it, lib/fullbar.js says when). `is-smart` is set only when the drawing
+   could be read; without it, the scrim above stands. */
 .skfull.skfull-card.is-smart {
   background: none;
   isolation: isolate;
   padding-left: max(11px, var(--row-l, 0px));
   padding-right: max(11px, var(--row-r, 0px));
 }
-/* ON THE DRAWING ONLY, inside its edge and round corners; beside it is the
-   card, whose own colour needs no fade. Strongest at the foot and gone 22px
-   above the buttons, so it never draws a line across the picture. */
-.skfull.skfull-card.is-smart::before {
+.skfull:not(.skfull-card).is-smart { background: none; isolation: isolate; }
+/* ON THE DRAWING ONLY: inside the card's edge and round corners, or over the
+   drawing letterboxed in a full screen; beside it, the colour there needs no
+   fade. Strongest at the foot and gone above the buttons, 22px on the card
+   and 40px over full screen's taller bar, so it never draws a line across
+   the picture. */
+.skfull.is-smart::before {
   content: '';
   position: absolute;
   left: var(--fx-l, 0px);
   right: var(--fx-r, 0px);
   bottom: var(--fx-b, 0px);
-  height: calc(100% + 22px - var(--fx-b, 0px));
-  border-radius: 0 0 var(--fx-rr, 0px) var(--fx-rl, 0px);
   background: var(--fade-x, none);
   -webkit-mask-image: linear-gradient(to top, rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.55) 45%, rgba(0, 0, 0, 0.22) 75%, transparent);
           mask-image: linear-gradient(to top, rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.55) 45%, rgba(0, 0, 0, 0.22) 75%, transparent);
   pointer-events: none;
   z-index: -1;
 }
+.skfull.skfull-card.is-smart::before {
+  height: calc(100% + 22px - var(--fx-b, 0px));
+  border-radius: 0 0 var(--fx-rr, 0px) var(--fx-rl, 0px);
+}
+.skfull:not(.skfull-card).is-smart::before { height: max(0px, calc(100% + 40px - var(--fx-b, 0px))); }
 /* GLASS, light or dark by what is under each control, the play pill's two
    (inlineplayer.css .is-says): white on a dark ground, the action violet's
    ink on a pale one. */
-.skfull-card.is-smart .skfull-btn:is(.t-dark, .t-light) {
+.skfull.is-smart .skfull-btn:is(.t-dark, .t-light) {
   -webkit-backdrop-filter: blur(12px) saturate(1.6);
           backdrop-filter: blur(12px) saturate(1.6);
 }
-.skfull-card.is-smart .skfull-btn.t-dark {
+.skfull.is-smart .skfull-btn.t-dark {
   color: #fff;
   border-color: rgba(255, 255, 255, 0.26);
   background: rgba(255, 255, 255, 0.14);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 3px 12px rgba(10, 6, 30, 0.4);
 }
-.skfull-card.is-smart .skfull-btn.t-light {
+.skfull.is-smart .skfull-btn.t-light {
   color: #3a24a8;
   border-color: rgba(255, 255, 255, 0.9);
   background: rgba(255, 255, 255, 0.68);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 3px 12px rgba(10, 6, 30, 0.14);
 }
 /* Repeat stays lit in both: the violet ground, its ink by the tone. */
-.skfull-card.is-smart .skfull-loop.on.t-dark { color: #fff; border-color: #a593ff; background: rgba(124, 92, 255, 0.38); }
-.skfull-card.is-smart .skfull-loop.on.t-light { color: #3a24a8; border-color: #7c5cff; background: rgba(124, 92, 255, 0.22); }
+.skfull.is-smart .skfull-loop.on.t-dark { color: #fff; border-color: #a593ff; background: rgba(124, 92, 255, 0.38); }
+.skfull.is-smart .skfull-loop.on.t-light { color: #3a24a8; border-color: #7c5cff; background: rgba(124, 92, 255, 0.22); }
 @media (hover: hover) {
-  .skfull-card.is-smart .skfull-btn.t-dark:not(.on):not(:disabled):hover { background: rgba(255, 255, 255, 0.22); }
-  .skfull-card.is-smart .skfull-btn.t-light:not(.on):not(:disabled):hover { background: rgba(255, 255, 255, 0.8); }
+  .skfull.is-smart .skfull-btn.t-dark:not(.on):not(:disabled):hover { background: rgba(255, 255, 255, 0.22); }
+  .skfull.is-smart .skfull-btn.t-light:not(.on):not(:disabled):hover { background: rgba(255, 255, 255, 0.8); }
 }
-.skfull-card.is-smart .skfull-time.t-dark { color: #fff; }
-.skfull-card.is-smart .skfull-time.t-light { color: #241a52; }
-.skfull-card.is-smart .skfull-track.t-dark { background: rgba(255, 255, 255, 0.34); }
-.skfull-card.is-smart .skfull-track.t-light { background: rgba(36, 26, 82, 0.24); }
+.skfull.is-smart .skfull-time.t-dark { color: #fff; }
+.skfull.is-smart .skfull-time.t-light { color: #241a52; }
+.skfull.is-smart .skfull-track.t-dark { background: rgba(255, 255, 255, 0.34); }
+.skfull.is-smart .skfull-track.t-light { background: rgba(36, 26, 82, 0.24); }
+/* FULL SCREEN'S WORDS, toned by what is under their letters, with a faint
+   halo in the other tone: on plain paper it is the paper's own tone and is
+   not seen; over a line of ink it keeps the words clear of it. */
+.skfull.is-smart .skfull-words.t-dark .skfull-title { color: #fff; }
+.skfull.is-smart .skfull-words.t-dark .skfull-by { color: rgba(255, 255, 255, 0.82); }
+.skfull.is-smart .skfull-words.t-light .skfull-title { color: #241a52; }
+.skfull.is-smart .skfull-words.t-light .skfull-by { color: #3f3566; }
+.skfull:not(.skfull-card).is-smart :is(.skfull-time, .skfull-words:not(.cap)).t-dark {
+  text-shadow: 0 0 2px rgba(16, 12, 32, 0.6), 0 0 7px rgba(16, 12, 32, 0.42);
+}
+.skfull:not(.skfull-card).is-smart :is(.skfull-time, .skfull-words:not(.cap)).t-light {
+  text-shadow: 0 0 2px rgba(255, 255, 255, 0.8), 0 0 7px rgba(255, 255, 255, 0.55);
+}
+/* A NAME THAT CROSSES THE DRAWING'S EDGE (a tall drawing on a desk: light on
+   one side, dark on the other) sits in a capsule of the buttons' glass, made
+   strong enough to carry its ink over either side. */
+.skfull.is-smart .skfull-words.cap {
+  padding: 4px 12px 5px;
+  border: 1px solid transparent;
+  border-radius: 14px;
+  -webkit-backdrop-filter: blur(12px) saturate(1.6);
+          backdrop-filter: blur(12px) saturate(1.6);
+}
+.skfull.is-smart .skfull-words.cap.t-dark {
+  border-color: rgba(255, 255, 255, 0.14);
+  background: rgba(16, 12, 32, 0.62);
+  box-shadow: 0 3px 12px rgba(10, 6, 30, 0.3);
+}
+.skfull.is-smart .skfull-words.cap.t-light {
+  border-color: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.74);
+  box-shadow: 0 3px 12px rgba(10, 6, 30, 0.12);
+}
 
 /* Under 420 the controls keep their size and the gaps give way: a viewer who
    cannot reach play is stuck, one who cannot read a timestamp is only curious. */

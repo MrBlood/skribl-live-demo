@@ -29,7 +29,12 @@
  *
  *   SkriblWatchFull.makeButton()  -> the way in, for the editor to place
  *   SkriblWatchFull.attach({ wrap, button, carry, fit, playing, paused,
- *                            play, pause, resume })  -> { isOn, close }
+ *                            play, pause, resume, canvas, photo })  -> { isOn, close }
+ *
+ * THE BAND TAKES ITS COLOURS FROM THE DRAWING (lib/smartfade.js, the owner's
+ * "A, smart fade and yes to all" for every full screen), as the link page's
+ * does: `canvas()` is the editor's drawing, and `photo()` says when a photo
+ * shows under it as a picture of its own, which keeps the scrim.
  */
 (function (global) {
   'use strict';
@@ -82,11 +87,20 @@
       awake: function () { return o.paused() || !!band.querySelector('[aria-expanded="true"]'); }
     }) : null;
 
+    var smart = global.SkriblSmartFade && o.canvas ? global.SkriblSmartFade.full(band, {
+      canvas: o.canvas,
+      photo: o.photo,
+      glass: '.player-btn:not(.primary), .rl-speed, .full-btn',
+      words: '.rl-drawn, .rl-m, .rl-skip'
+    }) : null, was = null;
+
     function sync() {
       var running = o.playing() && !o.paused();
       play.innerHTML = running ? PAUSE : PLAY;
       play.setAttribute('aria-label', running ? 'Pause' : 'Play');
       if (fade) fade.poke();
+      // A play, a pause or the end changes what lies under the band.
+      if (smart && running !== was) { was = running; smart.read(); }
     }
 
     function onChange(on) {
@@ -117,6 +131,7 @@
         if (exit.parentNode) exit.parentNode.removeChild(exit);
       }
       o.fit(on);
+      if (smart) { was = null; smart[on ? 'start' : 'stop'](); }
       // A focused element that is moved, or removed, loses focus to <body>.
       if (had) o.button.focus({ preventScroll: true });
     }
