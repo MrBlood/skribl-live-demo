@@ -19555,3 +19555,20 @@ it.
 
 The CSS line stays where the smart fade put it (40,706 B, 681 B over
 40,000), with its debt still named in verify_jsstrip.
+
+THE SUITE THAT HEARD THE LINK PAGE WAS LISTENING TO THE PAD. verify_audio
+went red after the carve, alone and twice: no sound from a shared Flip with
+music. It had never pressed the visitor's Play. It clicked #playBtn, Pad's
+Play, which the link page keeps inside a header it never shows (display:
+none !important), and so ran Pad's replay with Pad's music loop on the link
+page, the loop this carve moved. Shown: with the link page's own loop bed
+broken on main's code, the old step stayed green, 18 of 18. It presses
+#playerPlayBtn now and counts the link page's own sources: 18 of 18 on this
+build and on main, and red on both rows with the loop bed broken.
+
+That old step was, by accident, the only check of Pad's Play with music,
+and Pad's Play reaches its loop behind a typeof guard, so deleting
+playMusicLooped turned nothing red. verify_audiosession's "Preview Loop
+actually makes a sound" section now plays the drawing with its music on
+both editors (a Flip of one page does not play, so it draws two). Pad's row
+goes red with the loop deleted and Flip's stays green.
