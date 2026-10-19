@@ -243,6 +243,14 @@
   --on-canvas-rgb: 246,247,249;
   /* The grid's ink, the same decision: white on the default dark ground. */
   --on-canvas-grid-rgb: 255,255,255;
+  /* And a full screen's band, which lies on the drawing (lib/smartfade.js):
+     its glass and words are light or dark by what is under them, never by the
+     theme. The Gallery's bar wears the same values in fullbar.css, which
+     loads without this sheet. */
+  --on-canvas-shade-rgb: 16,12,32;   /* the halo under white words */
+  --on-canvas-drop-rgb: 10,6,30;     /* the glass's drop shadow */
+  --on-canvas-ink: #241a52;          /* words over a light ground */
+  --on-canvas-violet: #3a24a8;       /* a control's ink over a light ground */
 
   /* Semantic colours. The danger red, the warn amber and the ok green were all
      picked to sit on a near-black ground, and on a white one they wash out:
@@ -5115,20 +5123,20 @@ body.player-mode .app {
   color: #fff;
   border-color: rgba(255, 255, 255, 0.26);
   background: rgba(255, 255, 255, 0.14);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 3px 12px rgba(10, 6, 30, 0.4);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 3px 12px rgba(var(--on-canvas-drop-rgb), 0.4);
 }
 .player-bar.is-smart :is(.player-btn, .rl-speed, .full-btn).t-light {
-  color: #3a24a8;
+  color: var(--on-canvas-violet);
   border-color: rgba(255, 255, 255, 0.9);
   background: rgba(255, 255, 255, 0.68);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 3px 12px rgba(10, 6, 30, 0.14);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 3px 12px rgba(var(--on-canvas-drop-rgb), 0.14);
 }
 /* Lit in both, as Repeat is on the card: the violet ground, its ink by the tone. */
 .player-bar.is-smart :is(.player-btn.active, .full-btn[aria-pressed="true"]).t-dark {
   color: #fff; border-color: #a593ff; background: rgba(124, 92, 255, 0.38);
 }
 .player-bar.is-smart :is(.player-btn.active, .full-btn[aria-pressed="true"]).t-light {
-  color: #3a24a8; border-color: #7c5cff; background: rgba(124, 92, 255, 0.22);
+  color: var(--on-canvas-violet); border-color: #7c5cff; background: rgba(124, 92, 255, 0.22);
 }
 @media (hover: hover) {
   .player-bar.is-smart :is(.player-btn, .rl-speed, .full-btn).t-dark:not(.active):hover { background: rgba(255, 255, 255, 0.22); }
@@ -5136,14 +5144,14 @@ body.player-mode .app {
 }
 .player-bar.is-smart :is(.player-time > span, .rl-drawn, .rl-m, .rl-skip).t-dark {
   color: #fff;
-  text-shadow: 0 0 2px rgba(16, 12, 32, 0.6), 0 0 7px rgba(16, 12, 32, 0.42);
+  text-shadow: 0 0 2px rgba(var(--on-canvas-shade-rgb), 0.6), 0 0 7px rgba(var(--on-canvas-shade-rgb), 0.42);
 }
 .player-bar.is-smart :is(.player-time > span, .rl-drawn, .rl-m, .rl-skip).t-light {
-  color: #241a52;
+  color: var(--on-canvas-ink);
   text-shadow: 0 0 2px rgba(255, 255, 255, 0.8), 0 0 7px rgba(255, 255, 255, 0.55);
 }
 .player-bar.is-smart .t-dark b { color: #fff; }
-.player-bar.is-smart .t-light b { color: #241a52; }
+.player-bar.is-smart .t-light b { color: var(--on-canvas-ink); }
 /* SHARE, COPY LINK AND GALLERY STAND DOWN IN FULL SCREEN. All take a person off
    this drawing, which is the one thing full screen is for; the transport is
    what belongs over a picture filling the display. They are a tap away again

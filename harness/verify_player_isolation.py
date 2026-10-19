@@ -866,7 +866,18 @@ with sync_playwright() as sp:
     #   bubble and the bar on each move. One module for the Pad, this player
     #   and the in-post one, so the three cannot place it differently.
     #   153,186 measured.
-    BYTES_RATCHET, BYTES_TARGET = 153_191, 153_800
+    # RAISED (the owner's "A, smart fade and yes to all": every full screen's
+    #   bar takes its colours from the drawing), for named costs: +5,479 B --
+    #   lib/smartfade.js (5,003 B; 2,025 B downloaded), the one reading of a
+    #   drawing's foot and the tone of each control and word over it, which
+    #   the Gallery's card and full screen, the Library's, the editors' and
+    #   this page's share, and the app.js lines that wire this page's band to
+    #   it and read it again on a play, a pause or the end (+476). Nothing to
+    #   spend against on this page: the module replaces no code the player
+    #   had, and nothing stands in for it when it is absent (the scrim stays).
+    #   It passes BYTES_TARGET, which stays where it is: the two numbers
+    #   disagreeing is the record. 158,665 measured.
+    BYTES_RATCHET, BYTES_TARGET = 158_670, 153_800
     # The page's own HTML. The brand is the one-stroke skribl signature INLINE
     # in the page (~1.4KB of paths, a ~0.9KB nonce'd draw-on script, and the
     # <linearGradient> defs), and inline is load-bearing rather than lazy:
@@ -1055,7 +1066,16 @@ with sync_playwright() as sp:
     #   of the playhead's ring at a drawing's end (.rl-scrub + .player-time),
     #   listed live in css_live.json because only full screen matches it.
     #   37,959 measured.
-    CSS_RATCHET, CSS_WAS, CSS_TARGET = 37_965, 119_844, 40_000
+    # RAISED (the owner's "A, smart fade and yes to all"), for named costs:
+    #   +2,722 B -- the band's fade on the drawing in the drawing's own
+    #   colours (.player-bar.is-smart::before), the light and dark glass with
+    #   their lit and hover looks, the words' light and dark ink with a faint
+    #   halo, and the four --on-canvas tokens they are written in, in :root
+    #   (copied whole) because verify_surfaces and verify_theme hold every
+    #   neutral and every ink to a token. Listed live in css_live.json: only
+    #   full screen matches them. It passes CSS_TARGET by 681 B, and the
+    #   target stays. 40,681 measured.
+    CSS_RATCHET, CSS_WAS, CSS_TARGET = 40_687, 119_844, 40_000
     total_css = sum(css_bytes.values())
     check(f"the player's CSS does not grow past {CSS_RATCHET:,} bytes "
           f"(was {CSS_WAS:,} at v194; target {CSS_TARGET:,})",

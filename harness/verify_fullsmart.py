@@ -297,14 +297,16 @@ def pad(b, theme, photo=False):
 
 
 def flip(b, theme):
-    """Flip's own full screen on a desk: long strokes on its ground, the last
-    along the foot, paused."""
+    """Flip's own full screen on a desk: long strokes on a dark ground, the
+    last along the foot, paused. Dark under a light page, where the band was a
+    white fog."""
     pg = b.new_page(color_scheme=theme, **DESK)
     browsing.goto(pg, BASE, "/flip")
     pg.evaluate("() => { try { localStorage.clear(); } catch (e) {} }")
     browsing.goto(pg, BASE, "/flip")
     pg.wait_for_timeout(800)
     pg.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+    pg.evaluate("() => setBg('#0d0f14')")
     bx = pg.locator("#pad").bounding_box()
     for yy, amp, ph in ((0.45, 0.05, 0), (0.70, 0.06, 1.3), (0.94, 0.03, 0.6)):
         x0, x1 = bx["x"] + bx["width"] * 0.06, bx["x"] + bx["width"] * 0.94
@@ -326,111 +328,127 @@ def tones(st, which):
 
 
 # ------------------------------------------------------------------ the rows
+# One part at a time, for calibrating: FULLSMART_ONLY=gallery,desk,link,pad,flip,photo
+ONLY = [x for x in os.environ.get("FULLSMART_ONLY", "").split(",") if x]
+
+
+def on(section):
+    return not ONLY or section in ONLY
+
+
 ids = {n: post(n, f"Full fade {n} {TAG}") for n in ("paper", "dark")}
 TALL = f"Full fade tall drawing {TAG}"
-ids["tall"] = post("paper", TALL)
+post("paper", TALL)
 
 with sync_playwright() as p:
     b = p.chromium.launch()
 
-    print("\nFULL SCREEN FADE — the Gallery's full screen, on a phone")
-    pg, bar = gallery(b, PHONE, "dark", f"Full fade paper {TAG}")
-    st = bar.state()
-    moved = bar.fade_moves()
-    check("Gallery, phone: a pale drawing's bar takes the drawing's colours (is-smart, no scrim)",
-          st["smart"] and st["scrim"] == "none", f"{st['smart']}, {st['scrim'][:40]}")
-    check("Gallery, phone: the fade cannot be seen on the drawing's empty paper (1.10 or less)",
-          moved <= 1.10, f"{moved:.2f} along the bar's top row; the scrim moved it 4.9")
-    worst, where, n = bar.words_worst()
-    check("Gallery, phone: every word reads on the paper under it (4.5:1 or more on its worst pixel)",
-          n > 20 and worst >= 4.5, f"{worst:.2f} at '{where}', {n} pixels under letters")
-    tl = [w["tone"] for w in st["words"] if w["text"].startswith("0:")]
-    check("Gallery, phone: the time over the paper wears the dark ink of a light ground",
-          tl and all(t == "light" for t in tl), str(tl))
-    pg.close()
-
-    pg, bar = gallery(b, PHONE, "dark", f"Full fade dark {TAG}")
-    worst, where, n = bar.words_worst()
-    check("Gallery, phone: on a dark drawing every word reads too (4.5:1 or more)",
-          n > 20 and worst >= 4.5, f"{worst:.2f} at '{where}'")
-    st = bar.state()
-    gl = tones(st, lambda g: True)
-    check("Gallery, phone: over the dark around the drawing, the controls are dark glass",
-          gl and all(t == "dark" for t in gl), str([(g["name"], g["tone"]) for g in st["glass"]]))
-    pg.close()
-
-    print("\nFULL SCREEN FADE — the Gallery on a desk: a tall drawing, narrower than the bar")
-    # A pale drawing on a dark page: the title runs from the dark beside it
-    # onto the paper, light on one side and dark on the other.
-    WHO = "() => { const w = document.querySelector('[data-fs-probe] .skfull-words'); return w ? { cap: w.classList.contains('cap'), tone: w.classList.contains('t-light') ? 'light' : w.classList.contains('t-dark') ? 'dark' : null } : null; }"
-    pg, bar = gallery(b, DESK, "dark", TALL)
-    st, who = bar.state(), pg.evaluate(WHO)
-    check("Gallery, desk: the title crossing the drawing's edge sits in its capsule",
-          bool(who) and who["cap"], str(who))
-    worst, where, n = bar.words_worst()
-    check("Gallery, desk: every word reads, the title in its capsule included (4.5:1 or more)",
-          n > 20 and worst >= 4.5, f"{worst:.2f} at '{where}'")
-    left = tones(st, lambda g: g["r"][2] < st["bar"][0] + 300)
-    check("Gallery, desk, dark page: the controls beside the drawing are dark glass",
-          left and all(t == "dark" for t in left), str(left))
-    pg.evaluate("() => document.documentElement.setAttribute('data-theme', 'light')")
-    pg.wait_for_timeout(400)
-    st2, who2 = bar.state(), pg.evaluate(WHO)
-    left2 = tones(st2, lambda g: g["r"][2] < st2["bar"][0] + 300)
-    check("Gallery, desk: a theme turn turns them, light glass on the light page",
-          left2 and all(t == "light" for t in left2), str(left2))
-    check("Gallery, desk: on the light page the title is over light on both sides, and has no capsule",
-          bool(who2) and not who2["cap"], str(who2))
-    pg.close()
-
-    print("\nFULL SCREEN FADE — a shared link's full screen")
-    for view, vname in ((PHONE, "phone"), (DESK, "desk")):
-        pg, bar = link(b, view, "light", ids["dark"])
+    if on("gallery"):
+        print("\nFULL SCREEN FADE — the Gallery's full screen, on a phone")
+        pg, bar = gallery(b, PHONE, "dark", f"Full fade paper {TAG}")
         st = bar.state()
         moved = bar.fade_moves()
-        check(f"Link page, {vname}, light page: a dark drawing's band is no white fog (is-smart, 1.10 or less)",
-              st["smart"] and moved <= 1.10, f"{st['smart']}, {moved:.2f}; the fog moved it 3.4")
+        check("Gallery, phone: a pale drawing's bar takes the drawing's colours (is-smart, no scrim)",
+              st["smart"] and st["scrim"] == "none", f"{st['smart']}, {st['scrim'][:40]}")
+        check("Gallery, phone: the fade cannot be seen on the drawing's empty paper (1.10 or less)",
+              moved <= 1.10, f"{moved:.2f} along the bar's top row; the scrim moved it 4.9")
         worst, where, n = bar.words_worst()
-        check(f"Link page, {vname}: every word reads on the dark drawing (4.5:1 or more)",
-              n > 20 and worst >= 4.5, f"{worst:.2f} at '{where}'")
+        check("Gallery, phone: every word reads on the paper under it (4.5:1 or more on its worst pixel)",
+              n > 20 and worst >= 4.5, f"{worst:.2f} at '{where}', {n} pixels under letters")
+        tl = [w["tone"] for w in st["words"] if w["text"].startswith("0:")]
+        check("Gallery, phone: the time over the paper wears the dark ink of a light ground",
+              tl and all(t == "light" for t in tl), str(tl))
         pg.close()
-        pg, bar = link(b, view, "dark", ids["paper"])
+
+        pg, bar = gallery(b, PHONE, "dark", f"Full fade dark {TAG}")
+        worst, where, n = bar.words_worst()
+        check("Gallery, phone: on a dark drawing every word reads too (4.5:1 or more)",
+              n > 20 and worst >= 4.5, f"{worst:.2f} at '{where}'")
+        st = bar.state()
+        gl = tones(st, lambda g: True)
+        check("Gallery, phone: over the dark around the drawing, the controls are dark glass",
+              gl and all(t == "dark" for t in gl), str([(g["name"], g["tone"]) for g in st["glass"]]))
+        pg.close()
+
+    if on("desk"):
+        print("\nFULL SCREEN FADE — the Gallery on a desk: a tall drawing, narrower than the bar")
+        # A pale drawing on a dark page: the title runs from the dark beside it
+        # onto the paper, light on one side and dark on the other.
+        WHO = ("() => { const w = document.querySelector('[data-fs-probe] .skfull-words'); return w ? { cap: w.classList.contains('cap'), "
+               "tone: w.classList.contains('t-light') ? 'light' : w.classList.contains('t-dark') ? 'dark' : null } : null; }")
+        pg, bar = gallery(b, DESK, "dark", TALL)
+        st, who = bar.state(), pg.evaluate(WHO)
+        check("Gallery, desk: the title crossing the drawing's edge sits in its capsule",
+              bool(who) and who["cap"], str(who))
+        worst, where, n = bar.words_worst()
+        check("Gallery, desk: every word reads, the title in its capsule included (4.5:1 or more)",
+              n > 20 and worst >= 4.5, f"{worst:.2f} at '{where}'")
+        left = tones(st, lambda g: g["r"][2] < st["bar"][0] + 300)
+        check("Gallery, desk, dark page: the controls beside the drawing are dark glass",
+              left and all(t == "dark" for t in left), str(left))
+        pg.evaluate("() => document.documentElement.setAttribute('data-theme', 'light')")
+        pg.wait_for_timeout(400)
+        st2, who2 = bar.state(), pg.evaluate(WHO)
+        left2 = tones(st2, lambda g: g["r"][2] < st2["bar"][0] + 300)
+        check("Gallery, desk: a theme turn turns them, light glass on the light page",
+              left2 and all(t == "light" for t in left2), str(left2))
+        check("Gallery, desk: on the light page the title is over light on both sides, and has no capsule",
+              bool(who2) and not who2["cap"], str(who2))
+        pg.close()
+
+    if on("link"):
+        print("\nFULL SCREEN FADE — a shared link's full screen")
+        for view, vname in ((PHONE, "phone"), (DESK, "desk")):
+            pg, bar = link(b, view, "light", ids["dark"])
+            st = bar.state()
+            moved = bar.fade_moves()
+            check(f"Link page, {vname}, light page: a dark drawing's band is no white fog (is-smart, 1.10 or less)",
+                  st["smart"] and moved <= 1.10, f"{st['smart']}, {moved:.2f}; the fog moved it 3.4")
+            worst, where, n = bar.words_worst()
+            check(f"Link page, {vname}: every word reads on the dark drawing (4.5:1 or more)",
+                  n > 20 and worst >= 4.5, f"{worst:.2f} at '{where}'")
+            pg.close()
+            pg, bar = link(b, view, "dark", ids["paper"])
+            st = bar.state()
+            moved = bar.fade_moves()
+            check(f"Link page, {vname}, dark page: a pale drawing's band is no grey band (is-smart, 1.10 or less)",
+                  st["smart"] and moved <= 1.10, f"{st['smart']}, {moved:.2f}")
+            worst, where, n = bar.words_worst()
+            check(f"Link page, {vname}: every word reads on the paper (4.5:1 or more)",
+                  n > 20 and worst >= 4.5, f"{worst:.2f} at '{where}'")
+            pg.close()
+
+    if on("pad"):
+        print("\nFULL SCREEN FADE — Pad's own full screen, on a desk")
+        pg, bar = pad(b, "dark")
         st = bar.state()
         moved = bar.fade_moves()
-        check(f"Link page, {vname}, dark page: a pale drawing's band is no grey band (is-smart, 1.10 or less)",
+        check("Pad: its band takes the paper's colours (is-smart, the fade unseen on the paper, 1.10 or less)",
               st["smart"] and moved <= 1.10, f"{st['smart']}, {moved:.2f}")
         worst, where, n = bar.words_worst()
-        check(f"Link page, {vname}: every word reads on the paper (4.5:1 or more)",
+        check("Pad: every word in its band reads on the drawing (4.5:1 or more)",
               n > 20 and worst >= 4.5, f"{worst:.2f} at '{where}'")
+        gl = st["glass"]
+        check("Pad: the band's controls over the paper are light glass",
+              gl and all(g["tone"] == "light" for g in gl), str([(g["name"][:20], g["tone"]) for g in gl]))
         pg.close()
 
-    print("\nFULL SCREEN FADE — Pad's and Flip's own full screen, on a desk")
-    pg, bar = pad(b, "dark")
-    st = bar.state()
-    moved = bar.fade_moves()
-    check("Pad: its band takes the paper's colours (is-smart, the fade unseen on the paper, 1.10 or less)",
-          st["smart"] and moved <= 1.10, f"{st['smart']}, {moved:.2f}")
-    worst, where, n = bar.words_worst()
-    check("Pad: every word in its band reads on the drawing (4.5:1 or more)",
-          n > 20 and worst >= 4.5, f"{worst:.2f} at '{where}'")
-    gl = st["glass"]
-    check("Pad: the band's controls over the paper are light glass",
-          gl and all(g["tone"] == "light" for g in gl), str([(g["name"][:20], g["tone"]) for g in gl]))
-    pg.close()
+    if on("flip"):
+        print("\nFULL SCREEN FADE — Flip's own full screen, on a desk")
+        pg, bar = flip(b, "light")
+        st = bar.state()
+        moved = bar.fade_moves()
+        check("Flip, light page: its dark page's band is no white fog (is-smart, 1.10 or less)",
+              st["smart"] and moved <= 1.10, f"{st['smart']}, {moved:.2f}")
+        pg.close()
 
-    pg, bar = flip(b, "light")
-    st = bar.state()
-    moved = bar.fade_moves()
-    check("Flip: its band takes its page's colours too (is-smart, 1.10 or less)",
-          st["smart"] and moved <= 1.10, f"{st['smart']}, {moved:.2f}")
-    pg.close()
-
-    print("\nFULL SCREEN FADE — a photo under the drawing keeps the scrim")
-    pg, bar = pad(b, "dark", photo=True)
-    st = bar.state()
-    check("Pad with a photo: nothing is set on a guess (no is-smart, the scrim stands)",
-          not st["smart"] and "gradient" in st["scrim"], f"{st['smart']}, {st['scrim'][:50]}")
-    pg.close()
+    if on("photo"):
+        print("\nFULL SCREEN FADE — a photo under the drawing keeps the scrim")
+        pg, bar = pad(b, "dark", photo=True)
+        st = bar.state()
+        check("Pad with a photo: nothing is set on a guess (no is-smart, the scrim stands)",
+              not st["smart"] and "gradient" in st["scrim"], f"{st['smart']}, {st['scrim'][:50]}")
+        pg.close()
     b.close()
 
 print("\n" + "=" * 62)
