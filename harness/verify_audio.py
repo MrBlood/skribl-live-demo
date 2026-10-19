@@ -22,6 +22,7 @@ with wave.open(WAV, "wb") as w:
 # analyser so we can measure real signal, not just assert a node exists.
 TAP = """
 window.__tapMax = 0;
+window.__srcs = 0;
 (function () {
   const Orig = window.AudioContext || window.webkitAudioContext;
   function Tapped() {
@@ -32,6 +33,7 @@ window.__tapMax = 0;
     const orig = ctx.createBufferSource.bind(ctx);
     ctx.createBufferSource = function () {
       const n = orig();
+      window.__srcs++;
       const oc = n.connect.bind(n);
       n.connect = function (d) { try { oc(an); } catch (e) {} return oc(d); };
       return n;
@@ -95,10 +97,16 @@ with sync_playwright() as p:
     check("posted payload is a multi-frame flip with music",
           meta["frames"] > 1 and meta["mode"] == "flip" and meta["music"], json.dumps(meta))
 
-    pl.evaluate("() => { const b=document.getElementById('playBtn'); if(b) b.click(); }")
+    # THE VISITOR'S PLAY, #playerPlayBtn, and the link page's own loop bed. This
+    # clicked #playBtn until the music preview carve: Pad's Play, which the
+    # link page keeps inside a header it never shows (display: none), so no
+    # visitor can press it. It ran Pad's replay here, with Pad's music loop,
+    # which is editor_music.js's now and never loaded on this page: it
+    # measured a path nobody can take, and not the one they do.
+    if pl.get_attribute("#playerPlayBtn", "aria-label") != "Pause":
+        pl.click("#playerPlayBtn")
     pl.wait_for_timeout(1500)
-    wa = pl.evaluate("""() => ({ src: typeof _waLoop!=='undefined' && !!_waLoop.source(),
-                                dur: typeof _waLoop!=='undefined' ? _waLoop.duration() : null,
+    wa = pl.evaluate("""() => ({ sources: window.__srcs || 0,
                                 state: typeof audioCtx!=='undefined' && audioCtx ? audioCtx.state : null })""")
     # sample the analyser while it plays
     peak = 0.0; hashes = []
@@ -114,7 +122,7 @@ with sync_playwright() as p:
     check("AUDIO IS PLAYING (non-silent signal at the graph output)", peak > 0.01,
           f"peak amplitude {peak:.4f}")
     check("gapless path in use (Web Audio, not <audio> fallback)",
-          wa["src"] and wa["state"] == "running", json.dumps(wa))
+          wa["sources"] > 0 and wa["state"] == "running", json.dumps(wa))
     check("no player page errors", not plerrs, "; ".join(plerrs[:2]))
 
     # ---------- numeric seam check: render 3 loop iterations offline ----------

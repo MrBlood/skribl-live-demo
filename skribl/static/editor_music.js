@@ -16,6 +16,9 @@
 // Since the player template lost the music panel, these listeners were attaching
 // to DETACHED stub elements on every shared link: work with no possible effect.
 //
+// And, at the foot, Preview Loop, Test Seam and Play's music loop, carved from
+// app.js later with the same rule.
+//
 // LOAD ORDER: classic script reading globals app.js declares. Keep it after
 // app.js, and out of skribl_player.html.
 function dragZoomHandle(handle, isStart) {
@@ -349,3 +352,289 @@ function dragRangeWindow(rangeEl) {
 }
 
 dragRangeWindow(musicRange);
+
+// ---- Preview Loop, Test Seam and Play's music loop ------------------------
+//
+// CARVED FROM app.js, which every shared link downloads (owner: "1, carve
+// it"). A shared link plays its music through its own loop bed (app.js,
+// "Player audio") and never named any of this except stopLoopPreview, which
+// loadSkribl reaches through clearCanvas and resetMediaForLoad, now behind a
+// typeof guard. Moving it paid the debt the smart fade ran up on
+// verify_jsstrip's 153,800 B target.
+//
+// WHAT STAYED: `previewingLoop`, the flag stopPlayback reads (state never
+// lives here, above), and the Web Audio engine with its wrappers
+// (startWebAudioLoop and the rest), which editor_draw.js calls too.
+//
+// A BINDING TRAVELS WITH ITS FUNCTION: the two buttons and their click
+// listeners came along.
+const previewLoopBtn = _authoringCtl('previewLoopBtn');
+const testSeamBtn = _authoringCtl('testSeamBtn');
+let previewLoopTimer = null;
+let seamTimer = null;
+let seamStopTimer = null;
+
+function stopSeamTest() {
+  if (seamTimer) clearInterval(seamTimer);
+  if (seamStopTimer) clearTimeout(seamStopTimer);
+  seamTimer = null;
+  seamStopTimer = null;
+}
+
+// Audition the exact clip that will be posted — the built (optionally
+// crossfaded) loop WAV, played on repeat — so Test Seam can prove the seam is
+// smooth. Used only when a crossfade is set; the hard-cut case keeps the
+// original source-seam behavior below. Auto-stops after a few loops.
+let _builtLoopPreviewAudio = null;
+let _builtLoopPreviewTimer = null;
+function stopBuiltLoopPreview() {
+  if (_builtLoopPreviewAudio) { try { _builtLoopPreviewAudio.pause(); } catch (e) {} _builtLoopPreviewAudio = null; }
+  if (_builtLoopPreviewTimer) { clearTimeout(_builtLoopPreviewTimer); _builtLoopPreviewTimer = null; }
+}
+function playBuiltLoopPreview() {
+  stopBuiltLoopPreview();
+  const built = buildTrimmedLoopWav();
+  if (!built) return false;
+  const a = new Audio(built.dataUrl);
+  a.loop = true;
+  _builtLoopPreviewAudio = a;
+  a.play().catch(() => {});
+  const ms = Math.max(2000, built.duration * 1000 * 3);
+  _builtLoopPreviewTimer = setTimeout(() => { if (_builtLoopPreviewAudio === a) stopBuiltLoopPreview(); }, ms);
+  return true;
+}
+
+// Preview Loop plays the baked loop clip (below) via native loop=true, so it
+// wraps sample-accurately with no timer-cut click. Its own element, stopped here.
+let _previewLoopAudio = null;
+function stopPreviewLoopAudio() {
+  if (_previewLoopAudio) { try { _previewLoopAudio.pause(); } catch (e) {} _previewLoopAudio = null; }
+}
+
+function stopLoopPreview() {
+  previewingLoop = false;
+  // Guarded on `playing`, as Flip's is: Play's own music still needs it.
+  if (!playing && window.SkriblAudioSession) window.SkriblAudioSession.release();
+  if (audioEl) audioEl.pause();
+  if (previewLoopTimer) clearInterval(previewLoopTimer);
+  stopSeamTest();
+  stopBuiltLoopPreview();
+  stopPreviewLoopAudio();
+  if (typeof stopWebAudioLoop === 'function') stopWebAudioLoop();
+  previewLoopTimer = null;
+  if (playhead) playhead.hidden = true;
+  if (zoomPlayhead) zoomPlayhead.hidden = true;
+  if (previewLoopBtn) previewLoopBtn.textContent = 'Preview Loop';
+}
+
+function startLoopPreview() {
+  if (!audioEl) return;
+  /* iOS silences Web Audio when the ringer switch is off; hold a playback
+     session so this is audible. Gesture-scoped — see lib/audiosession.js. */
+  if (window.SkriblAudioSession) window.SkriblAudioSession.claim();
+  previewingLoop = true;
+  previewLoopBtn.textContent = 'Stop Preview';
+  try { audioEl.pause(); } catch (e) {}   // keep the raw source from playing underneath
+
+  // Primary path: sample-accurate Web Audio loop of the exact posted clip.
+  // Gapless + drift-free. Playhead reads the audio clock, mapped to song time.
+  // The fallbacks below are reachable ASYNCHRONOUSLY too: on a device whose
+  // AudioContext never reaches 'running', the Web Audio attempt fails after
+  // this function has already returned, and the preview must still play.
+  let previewHandedOff = false;
+  const previewFallback = () => {
+    if (previewHandedOff || !previewingLoop) return;
+    previewHandedOff = true;
+    if (previewLoopTimer) { clearInterval(previewLoopTimer); previewLoopTimer = null; }
+    startLoopPreviewNative();
+  };
+  if (startWebAudioLoop(previewFallback)) {
+    previewLoopTimer = setInterval(() => {
+      if (!previewingLoop || !_waLoop.playing()) return;
+      const songTime = webAudioLoopSongTime();
+      const pct = (songTime / audioDuration) * 100;
+      if (playhead) { playhead.hidden = false; playhead.style.left = pct + '%'; }
+      if (zoomPlayhead && currentAudioBuffer) {
+        const zw = getZoomWindow();
+        const zoomPct = ((songTime - zw.start) / zw.duration) * 100;
+        zoomPlayhead.hidden = false;
+        zoomPlayhead.style.left = Math.max(0, Math.min(100, zoomPct)) + '%';
+      }
+    }, 30);
+    return;
+  }
+
+  startLoopPreviewNative();
+}
+
+function startLoopPreviewNative() {
+  if (!audioEl) return;
+  // Fallback A: baked clip via native <audio> loop (if Web Audio unavailable).
+  const built = (typeof buildTrimmedLoopWav === 'function') ? buildTrimmedLoopWav() : null;
+  if (built) {
+    stopPreviewLoopAudio();
+    const a = new Audio(built.dataUrl);
+    a.loop = true;
+    _previewLoopAudio = a;
+    a.play().catch(() => {});
+    previewLoopTimer = setInterval(() => {
+      if (!previewingLoop || !_previewLoopAudio) return;
+      const songTime = (trimStart || 0) + _previewLoopAudio.currentTime;
+      const pct = (songTime / audioDuration) * 100;
+      if (playhead) { playhead.hidden = false; playhead.style.left = pct + '%'; }
+      if (zoomPlayhead && currentAudioBuffer) {
+        const zw = getZoomWindow();
+        const zoomPct = ((songTime - zw.start) / zw.duration) * 100;
+        zoomPlayhead.hidden = false;
+        zoomPlayhead.style.left = Math.max(0, Math.min(100, zoomPct)) + '%';
+      }
+    }, 30);
+    return;
+  }
+
+  // Fallback (decoded buffer not ready): original hand-wrapped source preview.
+  audioEl.currentTime = trimStart;
+  audioEl.play();
+  previewLoopTimer = setInterval(() => {
+    if (!previewingLoop || !audioEl) return;
+    if (audioEl.currentTime >= trimEnd - 0.05) {
+      audioEl.currentTime = trimStart;
+      audioEl.play();
+    }
+    const pct = (audioEl.currentTime / audioDuration) * 100;
+    if (playhead) {
+      playhead.hidden = false;
+      playhead.style.left = pct + '%';
+    }
+    // Zoom playhead — position within the zoom window
+    if (zoomPlayhead && currentAudioBuffer) {
+      const zw = getZoomWindow();
+      const zoomPct = ((audioEl.currentTime - zw.start) / zw.duration) * 100;
+      zoomPlayhead.hidden = false;
+      zoomPlayhead.style.left = Math.max(0, Math.min(100, zoomPct)) + '%';
+    }
+  }, 50);
+}
+
+previewLoopBtn.addEventListener('click', () => {
+  if (!audioEl) return;
+  previewingLoop ? stopLoopPreview() : startLoopPreview();
+});
+
+testSeamBtn.addEventListener('click', () => {
+  if (!audioEl) return;
+  stopLoopPreview();
+  // With a crossfade set, the raw source has no smoothed seam to hear — audition
+  // the actual built (folded) clip on repeat instead. Hard-cut case falls
+  // through to the original source-seam test below.
+  if (loopCrossfadeMs > 0 && currentAudioBuffer) {
+    if (playBuiltLoopPreview()) {
+      showToast('Previewing crossfaded loop', testSeamBtn);
+      return;
+    }
+  }
+  const seamStart = Math.max(trimStart, trimEnd - 1.25);
+  audioEl.currentTime = seamStart;
+  audioEl.play();
+  seamTimer = setInterval(() => {
+    if (!audioEl) { stopSeamTest(); return; }
+    const pct = (audioEl.currentTime / audioDuration) * 100;
+    if (playhead) {
+      playhead.hidden = false;
+      playhead.style.left = pct + '%';
+    }
+    if (zoomPlayhead && currentAudioBuffer) {
+      const zw = getZoomWindow();
+      const zoomPct = ((audioEl.currentTime - zw.start) / zw.duration) * 100;
+      zoomPlayhead.hidden = false;
+      zoomPlayhead.style.left = Math.max(0, Math.min(100, zoomPct)) + '%';
+    }
+    if (audioEl.currentTime >= trimEnd - 0.05 && !seamStopTimer) {
+      audioEl.currentTime = trimStart;
+      seamStopTimer = setTimeout(() => {
+        if (audioEl) audioEl.pause();
+        if (playhead) playhead.hidden = true;
+        if (zoomPlayhead) zoomPlayhead.hidden = true;
+        stopSeamTest();
+      }, 1250);
+    }
+  }, 30);
+});
+
+function playMusicLooped(drawingMs, onStarted) {
+  if (!audioEl) {
+    if (onStarted) onStarted();
+    return;
+  }
+  if (playhead) playhead.hidden = false;
+
+  // Primary: sample-accurate Web Audio loop (gapless, drift-free) — the same
+  // clip the post uses. The drawing replay (onStarted) starts immediately in
+  // lockstep. The interval only drives the playhead + the total-time stop.
+  // The native path is a FUNCTION now, not just the code below, because the
+  // Web Audio attempt can fail asynchronously (an unlock that never reaches
+  // 'running'). Called at most once, by whichever path gives up first.
+  let handedOff = false;
+  const nativeFallback = () => {
+    if (handedOff) return;
+    handedOff = true;
+    playNativeLooped(drawingMs, onStarted);
+  };
+  if (startWebAudioLoop(nativeFallback)) {
+    if (onStarted) onStarted();
+    let elapsedWA = 0;
+    const loopCheckWA = setInterval(() => {
+      if (!playing) { stopWebAudioLoop(); if (playhead) playhead.hidden = true; clearInterval(loopCheckWA); return; }
+      if (playPaused) return;   // a pause is not music played
+      elapsedWA += 100 * replayRate;
+      const songTime = webAudioLoopSongTime();
+      if (playhead) playhead.style.left = (songTime / audioDuration * 100) + '%';
+      if (elapsedWA >= drawingMs) { stopWebAudioLoop(); if (playhead) playhead.hidden = true; clearInterval(loopCheckWA); }
+    }, 100);
+    return;
+  }
+  nativeFallback();
+}
+
+function playNativeLooped(drawingMs, onStarted) {
+  // Timer-wrapped <audio> loop. On iOS this is the path that actually plays:
+  // the element's own gesture-driven play() has none of Web Audio's unlock
+  // conditions, which is why Test Seam works on the owner's phone while the
+  // Web Audio preview does not.
+  if (!audioEl) { if (onStarted) onStarted(); return; }
+  audioEl.currentTime = trimStart;
+
+  const playPromise = audioEl.play();
+  const begin = () => { if (onStarted) onStarted(); };
+
+  if (playPromise && typeof playPromise.then === 'function') {
+    playPromise.then(begin).catch(begin);
+  } else {
+    begin();
+  }
+
+  let elapsed = 0;
+  const loopCheck = setInterval(() => {
+    if (!playing) {
+      audioEl.pause();
+      if (playhead) playhead.hidden = true;
+      clearInterval(loopCheck);
+      return;
+    }
+    if (playPaused) return;
+    elapsed += 100 * replayRate;
+    if (audioEl.currentTime >= trimEnd - 0.05) {
+      audioEl.currentTime = trimStart;
+      audioEl.play();
+    }
+    const pct = (audioEl.currentTime / audioDuration) * 100;
+    if (playhead) {
+      playhead.style.left = pct + '%';
+    }
+    if (elapsed >= drawingMs) {
+      audioEl.pause();
+      if (playhead) playhead.hidden = true;
+      clearInterval(loopCheck);
+    }
+  }, 100);
+}

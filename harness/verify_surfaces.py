@@ -63,7 +63,14 @@ print("\nSURFACES — how far apart app.js and flip.js have grown")
 FN = re.compile(r"^\s{0,2}(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(")
 app_src = (STATIC / "app.js").read_text(encoding="utf-8")
 flip_src = (STATIC / "flip.js").read_text(encoding="utf-8")
-app_fns = {m.group(1) for line in app_src.split("\n") if (m := FN.match(line))}
+# THE PAD IS app.js AND ITS editor_*.js MODULES. The census read app.js alone,
+# so every carve since v310 took the names it moved out of the count while
+# both copies stayed: it read 41 when the Pad's whole surface shared 62 names
+# with Flip, and the music preview carve would have hidden three more
+# (startLoopPreview, startLoopPreviewNative, stopLoopPreview). A carve moves
+# code; it does not remove a copy.
+pad_src = [app_src] + [f.read_text(encoding="utf-8") for f in sorted(STATIC.glob("editor_*.js"))]
+app_fns = {m.group(1) for src in pad_src for line in src.split("\n") if (m := FN.match(line))}
 flip_fns = {m.group(1) for line in flip_src.split("\n") if (m := FN.match(line))}
 shared = sorted(app_fns & flip_fns)
 
@@ -100,9 +107,12 @@ shared = sorted(app_fns & flip_fns)
 # two counted names, and it is counted honestly rather than hidden by giving
 # the wrapper a different name in one file. The cure named in v211 (moving the
 # Web Audio loop into a shared lib) is still the way to move this number down.
-PARALLEL_RATCHET = 60
-check(f"app.js and flip.js define at most {PARALLEL_RATCHET} of the same "
-      f"function names", len(shared) <= PARALLEL_RATCHET,
+# 60 -> 62, RECOUNTED rather than raised: the census reads the Pad's whole
+# surface now (above), and 62 is what it finds, after the music preview carve
+# as before it.
+PARALLEL_RATCHET = 62
+check(f"the Pad (app.js and its editor modules) and flip.js define at most "
+      f"{PARALLEL_RATCHET} of the same function names", len(shared) <= PARALLEL_RATCHET,
       f"{len(shared)}: {', '.join(shared[:8])}... — each one is a fix that has "
       "to be made twice, with nothing to catch the second")
 

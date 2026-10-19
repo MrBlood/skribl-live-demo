@@ -267,9 +267,11 @@ with sync_playwright() as sp:
     # fade on every full screen (+5,479 B: lib/smartfade.js on the link page
     # and app.js's wiring of it, 158,665 measured, #546), raised in
     # verify_player_isolation and missed here: main went red on it, the same
-    # signal once more.
+    # signal once more. And LOWERED by the carve that paid for it, in both
+    # places together: Preview Loop, Test Seam and Play's music loop left
+    # app.js for editor_music.js (-6,992 B, 151,673 measured).
     check("stripping keeps the player's JS under its ratchet",
-          lean_total <= 158_670,
+          lean_total <= 151_678,
           f"{src_total:,} B of source -> {lean_total:,} B parsed")
     # START-HERE concluded from a function count that reaching 153,600 needs a
     # separate player entry point, and the v199 handoff concluded from a
@@ -307,12 +309,14 @@ with sync_playwright() as sp:
     # allowed to move: name the debt when you spend, pay it when you can.
     #
     # WHAT IS LEFT OF THE DEBT, so the next person finds a figure and not a
-    # feeling: ~1,365 lines of editor-only code still sit in app.js and still
-    # ship to every player. The photo drawer was carvable because its call
-    # sites were ALL already outside app.js. The music preview cluster (~223
-    # lines: startWebAudioLoop, startLoopPreviewNative, playNativeLooped,
-    # startLoopPreview, playMusicLooped) is next and is harder, because its
-    # callers are still inside app.js.
+    # feeling: ~1,365 lines of editor-only code sat in app.js and shipped to
+    # every player, less the ~270 the music preview carve moved. The photo
+    # drawer was carvable because its call sites were ALL already outside
+    # app.js. The music preview's were not: clearCanvas and resetMediaForLoad,
+    # which the player runs through loadSkribl, and Pad's Play, whose hidden
+    # button the player's page keeps. Each now calls into editor_music.js
+    # behind a typeof guard. Next, the Web Audio engine's wrappers
+    # (startWebAudioLoop and the rest), which editor_draw.js calls too.
     #
     # AND A CARVE CAN BREAK THE EDITOR INVISIBLY. `bindEl('resetPhotoBtn',
     # 'click', resetPhotoAdjustments)` sits at app.js's TOP LEVEL and passes
@@ -325,19 +329,15 @@ with sync_playwright() as sp:
     # "-109 B under" is what this line said when it FAILED, which reads as a
     # margin and is a deficit. Over and under are named, not signed.
     #
-    # BROKEN THE SECOND TIME, deliberately and in writing (after v326, #546).
-    # The owner chose the smart fade for every full screen, the link page's
-    # included ("A, smart fade and yes to all"), and lib/smartfade.js is
-    # 5,003 B of it: the player went 4,865 B over. The line moves to the spent
-    # value and 25 B, as it did for the speed control, and THE DEBT IS NAMED:
-    # carve the music preview cluster above out of app.js, or have the link
-    # page load lib/smartfade.js only when someone opens full screen. Either
-    # moves this line back to 153,800. Put to the owner, who can reverse the
-    # trade.
-    _target = 158_690
-    _margin = _target - lean_total
-    check(f"REACHES the {_target:,} target (strip + whitespace collapse; 153,800 once its debt is paid)",
-          lean_total <= _target,
+    # BROKEN THE SECOND TIME, deliberately and in writing (after v326, #546),
+    # AND PAID. The owner chose the smart fade for every full screen, the link
+    # page's included, and lib/smartfade.js took the player 4,865 B over. The
+    # line moved to the spent value with the debt named, the owner chose how
+    # to pay it ("1, carve it"), and the music preview carve paid it: the
+    # line is back at 153,800, with 2,127 B to spare.
+    _margin = 153_800 - lean_total
+    check("REACHES the 153,800 target (strip + whitespace collapse)",
+          lean_total <= 153_800,
           f"lean_total {lean_total:,} B — "
           + (f"{_margin:,} B of margin left" if _margin >= 0
              else f"OVER the target by {-_margin:,} B"))

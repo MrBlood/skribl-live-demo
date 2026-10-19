@@ -637,9 +637,11 @@ with sync_playwright() as sp:
     #   per-feature accounting every other entry has is gone for good.
     #
     # WHAT IS LEFT, for whoever needs headroom next: ~1,365 lines of editor-only
-    # code still in app.js and still shipped to every player. The music preview
-    # cluster is the next carve and is harder than the photo one was, because
-    # its callers are still inside app.js where the photo cluster's were not.
+    # code were still in app.js and shipped to every player, less the ~270 the
+    # music preview carve moved to editor_music.js (owner: "1, carve it"; its
+    # callers inside app.js reach it behind typeof guards, since loadSkribl
+    # runs on the player). The Web Audio engine's wrappers (startWebAudioLoop
+    # and the rest) stayed, because editor_draw.js calls them too.
     # The Pad leave guard (flipBtn/leaveSheet/leaveGo wiring) is ~4,021 B of
     # source, strictly editor-only, and may delete itself instead: it exists
     # only because localStorage cannot hold media bytes, so durable drafts
@@ -877,7 +879,12 @@ with sync_playwright() as sp:
     #   had, and nothing stands in for it when it is absent (the scrim stays).
     #   It passes BYTES_TARGET, which stays where it is: the two numbers
     #   disagreeing is the record. 158,665 measured.
-    BYTES_RATCHET, BYTES_TARGET = 158_670, 153_800
+    # LOWERED (the owner, choosing how that debt is paid: "1, carve it"):
+    #   Preview Loop, Test Seam and Play's music loop left app.js for
+    #   editor_music.js, -6,992 B (app.js 113,584 -> 106,592 parsed), which
+    #   brings the player back under BYTES_TARGET with 2,127 B to spare. The
+    #   room is not spent: the ratchet follows it down. 151,673 measured.
+    BYTES_RATCHET, BYTES_TARGET = 151_678, 153_800
     # The page's own HTML. The brand is the one-stroke skribl signature INLINE
     # in the page (~1.4KB of paths, a ~0.9KB nonce'd draw-on script, and the
     # <linearGradient> defs), and inline is load-bearing rather than lazy:

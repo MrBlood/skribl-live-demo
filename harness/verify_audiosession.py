@@ -284,6 +284,46 @@ with sync_playwright() as p:
               peak > 5, f"analyser peak {peak}")
         check(f"{label}: and claiming the session did not break it",
               pg.inner_text("#previewLoopBtn").strip() == "Stop Preview")
+        # AND PLAY, the ordinary way to hear a drawing with its music. Pad's
+        # music loop is editor_music.js's since the music preview carve, and
+        # Pad's Play reaches it behind a typeof guard (the link page keeps a
+        # hidden copy of that button), so a loop gone missing would replay in
+        # silence with nothing else to say so. Flip's Play is its own.
+        pg.click("#previewLoopBtn")                      # stop the preview
+        browsing.pad_drawer_close(pg)
+        pg.wait_for_timeout(600)
+        quiet = pg.evaluate(PEAK)
+        cv = pg.locator("#canvas" if label == "Pad" else "#pad").bounding_box()
+        pg.mouse.move(cv["x"] + cv["width"] * 0.2, cv["y"] + cv["height"] * 0.5)
+        pg.mouse.down()
+        for k in range(1, 31):
+            pg.mouse.move(cv["x"] + cv["width"] * (0.2 + 0.02 * k),
+                          cv["y"] + cv["height"] * (0.5 + 0.1 * math.sin(k / 4)), steps=2)
+            pg.wait_for_timeout(40)
+        pg.mouse.up()
+        pg.wait_for_timeout(300)
+        if label == "Pad":
+            pg.evaluate("() => { if (typeof endRecordingTake === 'function' && recording) endRecordingTake(); }")
+            pg.wait_for_timeout(300)
+            pg.evaluate("() => document.getElementById('playBtn').click()")
+        else:
+            # A Flip of one page has nothing to flip to, and Play does not
+            # start: a second page first.
+            pg.evaluate("addFrame(false)")
+            pg.wait_for_timeout(150)
+            pg.mouse.move(cv["x"] + cv["width"] * 0.3, cv["y"] + cv["height"] * 0.4)
+            pg.mouse.down()
+            for k in range(1, 21):
+                pg.mouse.move(cv["x"] + cv["width"] * (0.3 + 0.02 * k), cv["y"] + cv["height"] * 0.4, steps=2)
+            pg.mouse.up()
+            pg.wait_for_timeout(300)
+            pg.evaluate("() => document.getElementById('play').click()")
+        peak = 0
+        for _ in range(12):
+            pg.wait_for_timeout(200)
+            peak = max(peak, pg.evaluate(PEAK))
+        check(f"{label}: Play plays the drawing with its music",
+              quiet <= 2 and peak > 5, f"analyser peak {quiet} stopped, {peak} on Play")
         pg.close()
 
     print("\n5 — AND IT IS RELEASED WHEN NOTHING WANTS SOUND ANY MORE")

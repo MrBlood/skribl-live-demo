@@ -19520,3 +19520,55 @@ app.js, or have the link page load lib/smartfade.js only when someone opens
 full screen. For the CSS, the band's own selectors name its controls in
 every rule where one class would do. The choice of how, or whether, to pay
 it is the owner's.
+
+## After v326 -- the music preview carved off the player, which pays the smart fade's debt
+
+The owner, choosing how the smart fade's debt is paid: "1, carve it".
+
+Preview Loop, Test Seam and Play's music loop (stopSeamTest through
+playNativeLooped, about 270 lines) left app.js for editor_music.js, with
+the two buttons they bind and their click listeners. A shared link plays its
+music through its own loop bed and never needed any of it, but downloaded
+it on every load: 6,992 B of parsed JavaScript. The player's JavaScript is
+151,673 B now, 2,127 B under the 153,800 target the smart fade had passed.
+Both ratchets follow it down, and verify_jsstrip's target line is back at
+153,800.
+
+WHY THIS ONE WAS HARDER THAN THE PHOTO CARVE: its callers were still inside
+app.js. clearCanvas and resetMediaForLoad stop the preview, and the player
+runs both through loadSkribl. Pad's Play stops it and starts the music loop,
+and the player's page keeps a hidden #playBtn that loadSkribl unhides. Each
+now calls into editor_music.js behind a typeof guard, as resetMediaForLoad
+already did for exitReposition. The flag stopPlayback reads, previewingLoop,
+stays in app.js, because the player reaches stopPlayback and state never
+lives in an editor-only file.
+
+TWO SOURCE CHECKS HAD TO FOLLOW THE CODE. verify_ux's pin on the native
+fallbacks reads editor_music.js for them now. verify_surfaces' count of
+functions written twice, once for the Pad and once for Flip, read app.js
+alone, so every carve since v310 had taken its moved names out of the count
+while both copies stayed. It read 41 when the Pad's whole surface shared 62
+names with Flip, and this carve would have hidden three more. It reads
+app.js and every editor_*.js file now, and its ratchet is recounted at 62
+rather than raised: shown red with one more duplicate (63) and green without
+it.
+
+The CSS line stays where the smart fade put it (40,706 B, 681 B over
+40,000), with its debt still named in verify_jsstrip.
+
+THE SUITE THAT HEARD THE LINK PAGE WAS LISTENING TO THE PAD. verify_audio
+went red after the carve, alone and twice: no sound from a shared Flip with
+music. It had never pressed the visitor's Play. It clicked #playBtn, Pad's
+Play, which the link page keeps inside a header it never shows (display:
+none !important), and so ran Pad's replay with Pad's music loop on the link
+page, the loop this carve moved. Shown: with the link page's own loop bed
+broken on main's code, the old step stayed green, 18 of 18. It presses
+#playerPlayBtn now and counts the link page's own sources: 18 of 18 on this
+build and on main, and red on both rows with the loop bed broken.
+
+That old step was, by accident, the only check of Pad's Play with music,
+and Pad's Play reaches its loop behind a typeof guard, so deleting
+playMusicLooped turned nothing red. verify_audiosession's "Preview Loop
+actually makes a sound" section now plays the drawing with its music on
+both editors (a Flip of one page does not play, so it draws two). Pad's row
+goes red with the loop deleted and Flip's stays green.
