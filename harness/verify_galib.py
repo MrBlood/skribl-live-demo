@@ -346,23 +346,45 @@ with sync_playwright() as p:
     pg.mouse.click(5, 400); pg.wait_for_timeout(200)
     pg.close()
 
-    # The editors' saved-drafts sheet is the same row.
-    pg = open_page(ctx, "/skribl-pad")
-    pg.evaluate("() => SkriblSavedDrafts.open()")
-    pg.wait_for_timeout(900)
-    SB = """() => { const d = document.querySelector('#savedDraftsSheet .sdrafts-del'); const r = d.getBoundingClientRect();
-      const m = d.closest('.sdrafts-row').querySelector('.sdrafts-meta');
-      return { w: r.width, h: r.height, x: r.left, armed: d.classList.contains('armed'), meta: m.textContent,
-               live: m.getAttribute('aria-live') }; }"""
-    s0 = pg.evaluate(SB)
-    pg.click("#savedDraftsSheet .sdrafts-del >> nth=0"); pg.wait_for_timeout(250)
-    s1 = pg.evaluate(SB)
-    check("the Pad's drafts sheet: the armed bin keeps its box, and its meta line asks",
-          s1["armed"] and s0["w"] == s1["w"] == 44 and s0["x"] == s1["x"] and "again" in s1["meta"]
-          and s1["live"] == "polite", f"{s0} -> {s1}")
-    pg.keyboard.press("Tab"); pg.wait_for_timeout(200)
-    check("the Pad's drafts sheet: focus leaving the bin disarms it", not pg.evaluate(SB)["armed"])
-    pg.close()
+    # The editors' saved-drafts sheet is the same row (D3): its end is the
+    # same ⋯, at every width, since the sheet is a phone's width even on a
+    # desk; and its menu floats over the list, whose edge would cut it off.
+    # The last row's menu reaches past the list's foot, so its words are
+    # painted only if it floats.
+    SHEET = """() => { const s = document.getElementById('savedDraftsSheet');
+      const r = s.querySelector('.sdrafts-row.more-open') || [...s.querySelectorAll('.sdrafts-row')].pop();
+      const more = r.querySelector('.draft-more'), mr = more ? more.getBoundingClientRect() : null;
+      const list = s.querySelector('.sdrafts-list').getBoundingClientRect();
+      const bs = [...r.querySelectorAll('.draft-act')].filter(b => b.getClientRects().length);
+      const d = r.querySelector('.draft-del'), dr = d && d.getBoundingClientRect();
+      return { more: mr ? [Math.round(mr.width), Math.round(mr.height)] : null, open: r.classList.contains('more-open'),
+               words: bs.map(b => b.innerText.trim()), tall: bs.every(b => b.getBoundingClientRect().height >= 44),
+               painted: bs.map(b => { const q = b.getBoundingClientRect(), at = document.elementFromPoint(q.left + q.width / 2, q.top + q.height / 2); return !!(at && b.contains(at)); }),
+               past: bs.some(b => b.getBoundingClientRect().bottom > list.bottom + 1),
+               del: d ? [d.classList.contains('armed'), d.innerText.trim(), Math.round(dr.height), Math.round(dr.top)] : null }; }"""
+    for ed, path in (("Pad", "/skribl-pad"), ("Flip", "/flip")):
+        pg = open_page(ctx, path)
+        pg.evaluate("() => SkriblSavedDrafts.open()")
+        pg.wait_for_timeout(900)
+        s0 = pg.evaluate(SHEET)
+        if s0["more"]:
+            pg.locator("#savedDraftsSheet .sdrafts-row").last.locator(".draft-more").click(); pg.wait_for_timeout(250)
+        s1 = pg.evaluate(SHEET)
+        check(f"the {ed}'s drafts sheet: a row ends in one ⋯, 44px, opening Open, Save a .skribl file and Delete, each 44px tall",
+              s0["more"] == [44, 44] and s0["words"] == [] and s1["open"] and s1["words"][1:] == ["Save a .skribl file", "Delete"]
+              and s1["words"][0].startswith("Open in ") and s1["tall"], f"{s0} -> {s1}")
+        check(f"the {ed}'s drafts sheet: ...the last row's menu reaches past the list's foot and every word is painted (it floats)",
+              s1["past"] and len(s1["painted"]) == 3 and all(s1["painted"]), str(s1))
+        if s1["open"]:
+            pg.locator("#savedDraftsSheet .sdrafts-row.more-open .draft-del").click(); pg.wait_for_timeout(250)
+        s2 = pg.evaluate(SHEET)
+        check(f"the {ed}'s drafts sheet: Delete asks in place, its word the question, its box and place kept",
+              bool(s1["del"]) and bool(s2["del"]) and s2["del"][:2] == [True, "Tap again to delete"]
+              and s2["del"][2:] == s1["del"][2:], f"{s1['del']} -> {s2['del']}")
+        pg.keyboard.press("Tab"); pg.wait_for_timeout(200)
+        check(f"the {ed}'s drafts sheet: focus leaving Delete disarms it",
+              not (pg.evaluate(SHEET)["del"] or [True])[0])
+        pg.close()
 
     # ================================================================ MENU
     print("\nGALIB 3 -- the page menu is the editors' menu: their paper and cards, a popover on a desktop, a sheet on a phone")

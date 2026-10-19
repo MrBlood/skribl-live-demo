@@ -290,10 +290,6 @@
   function disarmOthers(keep) {
     disarmers.forEach(function (d) { if (d !== keep) d(); });
   }
-  // A bin, not a ×: a × reads as "close", and it was the smallest thing on the row.
-  var BIN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" '
-    + 'stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/>'
-    + '<path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>';
 
   /* When the store is not answering, drafts saved now are kept in a smaller
      one and older ones may not show until it answers: say so, above the list,
@@ -334,80 +330,56 @@
       words.appendChild(meta);
       openBtn.appendChild(pic);
       openBtn.appendChild(words);
-      var del = el('button', 'sdrafts-del');
-      del.type = 'button';
-      var delLabel = 'Delete ' + (it.title || 'this draft');
-      del.setAttribute('aria-label', delLabel);
-      del.innerHTML = BIN;
-      // The row's question is spoken when it is asked, not only shown.
-      meta.setAttribute('aria-live', 'polite');
-      var armedOpen = false, armedDel = false, metaText = meta.textContent, armT = null;
-      function outside(e) { if (!del.contains(e.target)) disarm(); }
+      var armedOpen = false, metaText = meta.textContent;
       function disarm() {
-        if (armedDel) {
-          clearTimeout(armT);
-          doc.removeEventListener('pointerdown', outside, true);
-        }
-        armedOpen = false; armedDel = false;
+        if (!armedOpen) return;
+        armedOpen = false;
         meta.textContent = metaText;
         row.classList.remove('armed');
-        del.classList.remove('armed');
-        del.setAttribute('aria-label', delLabel);
-        del.innerHTML = BIN;
       }
       disarmers.push(disarm);
-      del.addEventListener('focusout', function () { if (armedDel) disarm(); });
       openBtn.addEventListener('click', function () {
         // Opening REPLACES the canvas. Work on it is asked about once, on the
         // row itself, the way New Skribl asks: a second tap confirms.
         if (!armedOpen && opts.hasContent && opts.hasContent()) {
           disarmOthers(disarm);
-          if (armedDel) disarm();
           armedOpen = true;
-          meta.textContent = 'Tap again \u2014 this replaces what is on your canvas';
+          meta.textContent = 'Tap again — this replaces what is on your canvas';
           row.classList.add('armed');
           return;
         }
         openDraft(it);
       });
-      del.addEventListener('click', function () {
-        if (!armedDel) {
-          disarmOthers(disarm);
-          if (armedOpen) disarm();
-          armedDel = true;
-          /* THE BIN ASKS WITHOUT MOVING (the v317 bin rule, which the media
-             drawer's bin follows): it keeps its 44px box and tints its icon,
-             and the meta line -- a live region -- asks. It used to grow into
-             a "Delete?" pill over the row. It disarms when focus leaves it, on
-             a tap anywhere else, and on a 20 s safety net. */
-          meta.textContent = 'Tap the bin again to delete';
-          // Its name says what the next tap does; the old label hid the question.
-          del.setAttribute('aria-label', 'Tap again to delete ' + (it.title || 'this draft'));
-          del.classList.add('armed');
-          armT = setTimeout(disarm, 20000);
-          doc.addEventListener('pointerdown', outside, true);
-          return;
-        }
-        disarm();
-        // The list is rebuilt, and the bin that had focus goes with it; a
-        // keyboard user left on <body> was outside the dialog, where Tab and
-        // Escape no longer reached it (third review). Focus lands on the row
-        // that took this one's place, or the sheet's close button.
-        var at = Array.prototype.indexOf.call(listEl.querySelectorAll('.sdrafts-row'), row);
-        var hadFocus = row.contains(document.activeElement);
-        backend.remove(it.id).then(function () {
-          if (opts._current === it.id) opts._current = null;
-          return refresh();
-        }, function (e) { opts.toast(e.message); return false; }).then(function (ok) {
-          if (ok === false || !hadFocus || sheet.hidden) return;   // a refused delete keeps its row, and focus
-          var rows = listEl.querySelectorAll('.sdrafts-row');
-          var next = rows[Math.min(at, rows.length - 1)];
-          var target = (next && next.querySelector('.sdrafts-open')) || sheet.querySelector('.sdrafts-close');
-          if (target) target.focus();
-        });
-      });
       row.appendChild(openBtn);
-      row.appendChild(del);
+      /* ITS END IS THE LIBRARY'S (D3): one ⋯ with Open in Pad (or Flip), Save
+         a .skribl file and Delete. At every width, because the sheet is a
+         phone's width even on a desk (460px), and the menu floats over the
+         list, which would cut it off. Open in the menu is the card's own tap,
+         so it asks first over work on the canvas. */
+      rowEnd(row, it, {
+        open: function () { openBtn.click(); },
+        meta: meta,
+        disarmers: disarmers,
+        float: true,
+        remove: function () {
+          // The list is rebuilt, and the Delete that had focus goes with it;
+          // a keyboard user left on <body> was outside the dialog, where Tab
+          // and Escape no longer reached it (third review). Focus lands on the
+          // row that took this one's place, or the sheet's close button.
+          var at = Array.prototype.indexOf.call(listEl.querySelectorAll('.sdrafts-row'), row);
+          var hadFocus = row.contains(document.activeElement);
+          return backend.remove(it.id).then(function () {
+            if (opts._current === it.id) opts._current = null;
+            return refresh();
+          }).then(function () {
+            if (!hadFocus || sheet.hidden) return;
+            var rows = listEl.querySelectorAll('.sdrafts-row');
+            var next = rows[Math.min(at, rows.length - 1)];
+            var target = (next && next.querySelector('.sdrafts-open')) || sheet.querySelector('.sdrafts-close');
+            if (target) target.focus();
+          });
+        }
+      });
       listEl.appendChild(row);
       if (armOnRender === it.id) {
         armOnRender = null;
@@ -623,12 +595,13 @@
      end their rows here, so the two lists cannot drift apart again.
 
        rowEnd(row, it, { href | open(), remove() -> Promise, meta,
-                         disarmers: [] })
+                         disarmers: [], float })
 
      `meta` is the row's second line, made a live region: a passing answer
      (a file that could not be made, a refused delete) and a desk's Delete
      question are said there. `disarmers` is the list's, so only one row asks
-     at a time. */
+     at a time. `float` is for a list that scrolls (the editors' sheet): its
+     open menu floats over the list instead of being cut off by it. */
   var DOTS = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.9"/>'
     + '<circle cx="12" cy="12" r="1.9"/><circle cx="19" cy="12" r="1.9"/></svg>';
   function ico(paths) {
@@ -670,7 +643,7 @@
     if (!row) return;
     row.classList.add('more-open');
     row.querySelector('.draft-more').setAttribute('aria-expanded', 'true');
-    flip(row, row.querySelector('.draft-acts'));
+    if (row._float) place(row); else flip(row, row.querySelector('.draft-acts'));
     var first = row.querySelector('.draft-act');
     if (first) first.focus();
   }
@@ -685,10 +658,32 @@
     var q = menu && menu.getBoundingClientRect(), r = row.getBoundingClientRect();
     if (q && q.height && q.bottom > global.innerHeight - 8 && r.top > global.innerHeight - r.bottom) row.classList.add('up');
   }
+  /* A ROW IN A LIST THAT SCROLLS (the editors' sheet) FLOATS ITS MENU over
+     the list, under its ⋯, or the list's own edge would cut it off. Fixed,
+     so its box is the nearest transformed ancestor's (the sheet's), or the
+     screen's; and above the ⋯ when the screen ends first. It shuts when the
+     list scrolls under it. */
+  function place(row) {
+    if (!row._float) return;
+    var acts = row.querySelector('.draft-acts');
+    var more = row.querySelector('.draft-more').getBoundingClientRect(), rr = row.getBoundingClientRect();
+    var cb = row.parentElement;
+    while (cb && cb !== doc.body && global.getComputedStyle(cb).transform === 'none') cb = cb.parentElement;
+    var o = { x: 0, y: 0 };
+    if (cb && cb !== doc.body) { var b = cb.getBoundingClientRect(); o = { x: b.left + cb.clientLeft, y: b.top + cb.clientTop }; }
+    var top = more.bottom - 4;
+    if (top + acts.offsetHeight > global.innerHeight - 8) top = more.top + 4 - acts.offsetHeight;
+    acts.style.left = (rr.right - 8 - acts.offsetWidth - o.x) + 'px';
+    acts.style.top = (top - o.y) + 'px';
+  }
   if (doc) {
     doc.addEventListener('pointerdown', function (e) {
       if (openRow && !openRow.contains(e.target)) rowMenu(null);
     }, true);
+    doc.addEventListener('scroll', function (e) {
+      if (openRow && openRow._float && e.target !== doc && e.target.contains && e.target.contains(openRow)) rowMenu(null);
+    }, true);
+    global.addEventListener('resize', function () { if (openRow && openRow._float) rowMenu(null); });
     doc.addEventListener('keydown', function (e) {
       if (e.key !== 'Escape' || !openRow || !openRow.contains(e.target)) return;
       e.stopPropagation();
@@ -729,6 +724,7 @@
     var title = it.title || 'Untitled Skribl';
     var flip = it.kind === 'flip';
     row.classList.add('has-more');
+    if (how.float) row._float = true;
     var more = el('button', 'draft-more');
     more.type = 'button';
     more.setAttribute('aria-expanded', 'false');

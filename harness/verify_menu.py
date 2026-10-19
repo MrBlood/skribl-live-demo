@@ -406,8 +406,8 @@ with sync_playwright() as p:
               return { row: wd('.sdrafts-row'), mine: wd('.sdrafts-this'), files: wd('.sdrafts-files') }; }""")
             check(f"{name} {scheme}: a saved draft's row is as wide as the cards above and below it",
                   w["row"] and w["row"] == w["mine"] == w["files"], str(w))
-            # Keyboard focus: Tab onto the row's open button from the bin above it.
-            q.focus("#savedDraftsSheet .sdrafts-row .sdrafts-del")
+            # Keyboard focus: Tab back onto the row's open button from its ⋯.
+            q.focus("#savedDraftsSheet .sdrafts-row .draft-more")
             q.keyboard.press("Shift+Tab")
             q.wait_for_timeout(300)
             r = q.evaluate("""() => { const o = document.querySelector('#savedDraftsSheet .sdrafts-open'), row = o.parentElement,

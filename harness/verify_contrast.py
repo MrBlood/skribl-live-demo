@@ -308,6 +308,22 @@ def surfaces(name, ids, q, canvas, btn):
     def names():
         q.evaluate("() => window.SkriblLearnCard.tags(true)"); q.wait_for_timeout(400)
 
+    # A draft row's ⋯ menu (D3), floated over the sheet's list, on the menu's
+    # paper. A stroke first, so there is a draft to save and a row to open.
+    # Last, because the stroke stays in the autosave for any state after it.
+    def drafts_menu():
+        bx = q.locator(canvas).bounding_box()
+        cx, cy = bx["x"] + bx["width"] / 2, bx["y"] + bx["height"] / 2
+        q.mouse.move(cx - 40, cy); q.mouse.down()
+        for i in range(20):
+            q.mouse.move(cx - 40 + i * 4, cy + math.sin(i / 4) * 30)
+        q.mouse.up(); q.wait_for_timeout(400)
+        q.evaluate("() => { if (window.SkriblName) SkriblName.set('A row to read'); return SkriblSavedDrafts.save(); }")
+        q.wait_for_timeout(600)
+        via("openCloudDraftItem")()
+        q.locator("#savedDraftsSheet .sdrafts-row .draft-more").first.click(timeout=5000)
+        q.wait_for_timeout(300)
+
     return (("the menu", menu, m), ("New", page("new"), m), ("Settings", page("settings"), m),
             ("Your drafts", via("openCloudDraftItem"), "#savedDraftsSheet"),
             ("Export", via(ids["export"]), "#exportSheet"), ("Report a problem", via(ids["report"]), "#reportSheet"),
@@ -320,7 +336,8 @@ def surfaces(name, ids, q, canvas, btn):
             ("The draw drawer", drawer, "#drawPanel"), ("Photo, with a picture", photo, "#mediaCard"),
             ("Music, Trim", music(False), "#mediaCard"), ("Music, Fine-tune", music(True), "#mediaCard"),
             ("A button's card", card, ".lc-card"), ("A Show me step", step, ".lc-card"),
-            ("Name every button", names, ".lc-tags"))
+            ("Name every button", names, ".lc-tags"),
+            ("Your drafts, a row's menu", drafts_menu, "#savedDraftsSheet"))
 
 
 census = {}

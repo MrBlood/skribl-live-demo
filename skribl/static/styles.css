@@ -7053,22 +7053,46 @@ body.playing .flip-grid { display: none; }
 .sdrafts-name { font-size: 15px; font-weight: 600; color: var(--text-primary);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sdrafts-meta { font-size: 12.5px; color: var(--text-muted); }
-/* THE BIN KEEPS ITS BOX (the v317 bin rule; the Library's .draft-del is the
-   same row). Armed, the icon turns the danger colour on a danger tint in the
-   same 44px circle, and the meta line asks (lib/savedrafts.js) -- it used to
-   grow into a "Delete?" pill. No border: the armed edge is an inset shadow. */
-.sdrafts-del { flex: 0 0 auto; width: 44px; height: 44px; padding: 0; margin-right: 6px;
-  border-radius: 999px; border: 0; background: transparent; color: var(--text-muted);
-  font: inherit; cursor: pointer; display: inline-grid; place-items: center; }
-.sdrafts-del svg { width: 19px; height: 19px; }
-@media (hover: hover) { .sdrafts-del:hover { color: var(--text-primary); background: rgba(var(--wash-rgb), .06); } }
-.sdrafts-del.armed { color: var(--danger);
-  box-shadow: inset 0 0 0 1px rgba(244, 50, 111, .5); background: rgba(244, 50, 111, .12); }
-@media (hover: hover) {
-  .sdrafts-del.armed:hover { color: var(--danger);
-    box-shadow: inset 0 0 0 1px rgba(244, 50, 111, .5); background: rgba(244, 50, 111, .12); }
-}
-.sdrafts-row:has(> .sdrafts-del.armed) .sdrafts-meta { color: var(--danger); }
+/* A DRAFT ROW ENDS AS A POSTED ROW DOES (D3, the owner's pick A; built by
+   lib/savedrafts.js rowEnd, as the Library's Drafts rows are): one ⋯ that
+   opens Open in Pad (or Flip), Save a .skribl file and Delete, last, past a
+   line, on the menu's paper. At every width: the sheet is a phone's width even
+   on a desk (460px), where the Library's rows show their ⋯ too. The menu is
+   fixed, placed under its ⋯ by the script, so the list's edge never cuts it
+   off. The pills posted.css draws for a desk's row are not used here. */
+.sdrafts-row .draft-more { flex: 0 0 auto; display: grid; place-items: center; width: 44px; height: 44px;
+  margin-right: 6px; padding: 0; border: 0; border-radius: 12px; background: none;
+  color: var(--text-secondary); cursor: pointer; }
+.sdrafts-row .draft-more svg { width: 18px; height: 18px; fill: currentColor; }
+.sdrafts-row .draft-acts { display: none; }
+.sdrafts-row.more-open .draft-acts { position: fixed; z-index: 5; display: flex; flex-direction: column;
+  align-items: stretch; min-width: 210px; padding: 6px; background: var(--menu-paper);
+  border: 1px solid var(--menu-card-line); border-radius: 16px;
+  box-shadow: 0 12px 40px rgba(30, 16, 90, 0.22), 0 2px 6px rgba(30, 16, 90, 0.10); }
+.sdrafts-row .draft-act { position: relative; display: flex; align-items: center; gap: 12px; width: 100%;
+  min-height: 44px; margin: 0; padding: 12px 14px; border: 0; border-radius: 10px; background: none;
+  color: var(--text-primary); font: inherit; font-size: 15px; font-weight: 600; text-align: left;
+  text-decoration: none; cursor: pointer; }
+.sdrafts-row .draft-act::before { content: none; }
+.sdrafts-row .draft-ico { display: block; flex: 0 0 auto; width: 18px; height: 18px; color: var(--text-secondary); }
+@media (hover: hover) { .sdrafts-row .draft-act:hover:not(:disabled) { background: rgba(var(--wash-rgb), .06); } }
+/* Delete last, past a rule, as every menu's destructive row is; asked once,
+   its word the question, white on the deep red (lib/savedrafts.js). Its ink is
+   the Library's for the same row (skribl_library.html --danger-soft), set on
+   the row rather than the root: the player wears styles.css's root tokens, and
+   a token only this sheet reads would grow the player's CSS for nothing. */
+.sdrafts-row { --row-danger-ink: #ffb3c6; }
+:root[data-theme="light"] .sdrafts-row { --row-danger-ink: #7a0a2d; }
+.sdrafts-row .draft-del { margin-top: 13px; color: var(--row-danger-ink); }
+.sdrafts-row .draft-del::after { content: ''; position: absolute; left: 8px; right: 8px; top: -7px;
+  height: 1px; background: var(--menu-card-line); }
+.sdrafts-row .draft-del .draft-ico { color: var(--row-danger-ink); }
+.sdrafts-row .draft-del.armed,
+.sdrafts-row .draft-del.armed .draft-ico { background: #9e0b39; color: #fff; }
+/* ...under a pointer too: the row's hover tint outranks .armed, and white on
+   the tint was the Library's first build's 1:1. Behind the guard, as every
+   hover rule is (A11Y 17b). */
+@media (hover: hover) { .sdrafts-row .draft-del.armed:hover { background: #9e0b39; color: #fff; } }
 /* THIS DRAWING and AS A FILE (after v323): the menu's naming and .skribl
    rows live here now (lib/savedrafts.js moves them in). */
 .sdrafts-this { display: flex; align-items: center; gap: 12px; margin: 12px 0 14px; padding: 12px; border-radius: 16px;

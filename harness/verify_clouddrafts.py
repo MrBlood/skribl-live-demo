@@ -838,16 +838,19 @@ try:
         pd.wait_for_timeout(200)
         armed = pd.evaluate("() => [...document.querySelectorAll('#savedDraftsSheet .sdrafts-row')].map(r => r.classList.contains('armed'))")
         check("the sheet: arming a second row puts the first one back", armed[:2] == [False, True], str(armed))
-        pd.locator("#savedDraftsSheet .sdrafts-del").nth(0).click()
+        # Delete is in the row's ⋯ menu (D3), asked once as the bin was.
+        pd.locator("#savedDraftsSheet .sdrafts-row").nth(0).locator(".draft-more").click()
+        pd.wait_for_timeout(200)
+        pd.locator("#savedDraftsSheet .sdrafts-row").nth(0).locator(".draft-del").click()
         pd.wait_for_timeout(200)
         armed2 = pd.evaluate("""() => [...document.querySelectorAll('#savedDraftsSheet .sdrafts-row')].map(r =>
-            r.classList.contains('armed') || r.querySelector('.sdrafts-del').classList.contains('armed'))""")
+            r.classList.contains('armed') || r.querySelector('.draft-del').classList.contains('armed'))""")
         check("...and asking to delete one row puts back the row that asked to open",
               armed2[:2] == [True, False], str(armed2))
-        lab = pd.evaluate("""() => { const d = document.querySelectorAll('#savedDraftsSheet .sdrafts-del');
+        lab = pd.evaluate("""() => { const d = document.querySelectorAll('#savedDraftsSheet .draft-del');
             return [d[0].getAttribute('aria-label'), d[1].getAttribute('aria-label'),
                     document.querySelector('#savedDraftsSheet .sdrafts-meta').getAttribute('aria-live')]; }""")
-        check("the asking bin's name says what the next tap does, the others' do not, and the row's question is spoken",
+        check("the asking Delete's name says what the next tap does, the others' do not, and the row's line is a live region",
               lab[0].startswith("Tap again to delete") and lab[1].startswith("Delete ") and lab[2] == "polite", str(lab))
         # A KEYBOARD DELETE KEEPS FOCUS IN THE DIALOG (third review). The list
         # is rebuilt and the focused bin goes with it: focus fell to <body>,
@@ -857,7 +860,10 @@ try:
         pd.evaluate("() => SkriblSavedDrafts.open()"); pd.wait_for_timeout(900)
         kb_row = pd.evaluate("""() => [...document.querySelectorAll('#savedDraftsSheet .sdrafts-row')]
             .findIndex(r => r.textContent.includes('Delete me by keyboard'))""")
-        pd.locator("#savedDraftsSheet .sdrafts-del").nth(kb_row).focus()
+        # The row's ⋯ from the keyboard opens its menu, then Delete, twice.
+        pd.locator("#savedDraftsSheet .sdrafts-row").nth(kb_row).locator(".draft-more").focus()
+        pd.keyboard.press("Enter"); pd.wait_for_timeout(200)
+        pd.locator("#savedDraftsSheet .sdrafts-row").nth(kb_row).locator(".draft-del").focus()
         pd.keyboard.press("Enter"); pd.wait_for_timeout(150); pd.keyboard.press("Enter"); pd.wait_for_timeout(900)
         kb = pd.evaluate("""() => { const a = document.activeElement, s = document.getElementById('savedDraftsSheet');
             return { inSheet: s.contains(a), what: a.className,
