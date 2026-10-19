@@ -19302,12 +19302,14 @@ verify_cardfade (new, solo in the seal: it measures painted pixels and posts
 to the shared server) reads every row off pixels: the fade on empty paper,
 the time against what is painted behind its words, each button's own fill
 and its icon, the card's colour outside the corners and beside a narrow
-drawing, the row inside the drawing, the same at rest off the card image, a
-theme turn, and the scrim kept for a drawing that cannot be read. On main's
-code 12 of 19 fail. Nine mutations each fail their own rows: every control
-light glass, light glass's icons white, no theme watch, the smart look kept on
-a guess, the fade a rectangle, the fade over the whole bar, the row not moved
-inside, the fade's colour a fixed near-black, the time left at the old grey.
+drawing, the row inside the drawing, the same at rest off the card image
+(with the card image's own rounder corners), a theme turn, and the scrim kept
+for a drawing that cannot be read. On main's code 13 of 20 fail. Ten
+mutations each fail their own rows: every control light glass, light glass's
+icons white, no theme watch, the smart look kept on a guess, the fade a
+rectangle, the plate's round ignored at rest, the fade over the whole bar,
+the row not moved inside, the fade's colour a fixed near-black, the time left
+at the old grey.
 The theme row first passed with its watch removed: it read Repeat, which is
 lit violet in either glass and dark over a dark card either way. It reads
 Mute now, and goes red without the watch. The unreadable drawing is a read
