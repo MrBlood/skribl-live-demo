@@ -19190,3 +19190,24 @@ refusal. GALIB 2's desk Delete keeps its box. On main's code 20 of 156 fail;
 on this branch 156 of 156 pass. Three mutations each fail their own check:
 the Flip refusal removed, the desk's word changed, the tap elsewhere not
 heard.
+
+## After v326 -- a row's menu at the foot of the screen opens above its ⋯
+
+Found on the owner's iPhone the evening #538 went live ("Does this look
+right"): the Library's last draft row opened its ⋯ menu under the row, past
+the foot of the screen, with only Open in Pad in sight. A posted row's menu,
+whose rules a draft row's share, did the same.
+
+Where the screen ends under it and there is more room above, the menu now
+stands above its ⋯ (`.up`, set by lib/savedrafts.js `flip()` and
+lib/postedui.js `more()`): over a draft row's top, its ⋯ being in the row's
+middle; just above a posted row's title line, whose ⋯ is at its top. A posted
+row's menu is placed in the row's grid (posted.css puts it in row 2), so a
+`bottom` measured from that track stood it over the ⋯ itself; up, it takes the
+title's track, row 1. Everywhere else it opens under its row as before. The
+editors' sheet floats its menu and was already placed this way (`place()`).
+
+verify_galib reads both lists on a phone with the screen ending 12px under the
+last row, light and dark: the menu open, inside the screen, above its ⋯,
+every word painted. On main's code all four fail (the menu runs off the
+screen); here, four of four.

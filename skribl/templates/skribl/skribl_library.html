@@ -637,6 +637,13 @@
         position: absolute; right: 8px; top: calc(100% - 10px); min-width: 210px; padding: 6px; gap: 0;
         background: var(--mp); border: 1px solid var(--ml); border-radius: 16px;
         box-shadow: 0 12px 40px rgba(30, 16, 90, 0.22), 0 2px 6px rgba(30, 16, 90, 0.10); }
+      /* ...and above its ⋯ where the screen ends below it (lib/savedrafts.js
+         flip, lib/postedui.js more): over a draft row's top, its ⋯ being in
+         the row's middle. A posted row's menu is placed in the row's grid
+         (posted.css, row 2 under the title), so up it takes the title's
+         track, row 1, and stands just above it, clear of the ⋯ there. */
+      .draft-row.has-more.more-open.up .draft-acts { top: auto; bottom: calc(100% - 10px); }
+      .posted-row.has-more.more-open.up .posted-actions { grid-row: 1; top: auto; bottom: calc(100% + 2px); }
       .posted-row.has-more .posted-actions button,
       .draft-row.has-more .draft-act { display: flex; align-items: center; gap: 12px; width: 100%;
         min-height: 44px; padding: 12px 14px; border: 0; border-radius: 10px; background: none;

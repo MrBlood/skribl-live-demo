@@ -662,7 +662,7 @@
   var openRow = null;
   function rowMenu(row) {
     if (openRow && openRow !== row) {
-      openRow.classList.remove('more-open');
+      openRow.classList.remove('more-open', 'up');
       var was = openRow.querySelector('.draft-more');
       if (was) was.setAttribute('aria-expanded', 'false');
     }
@@ -670,8 +670,20 @@
     if (!row) return;
     row.classList.add('more-open');
     row.querySelector('.draft-more').setAttribute('aria-expanded', 'true');
+    flip(row, row.querySelector('.draft-acts'));
     var first = row.querySelector('.draft-act');
     if (first) first.focus();
+  }
+  /* ABOVE ITS ⋯ WHERE THE SCREEN ENDS FIRST (the owner's phone: the last
+     draft's menu opened under its row, past the screen's foot, with only Open
+     in sight). The phone's menu hangs from its row (skribl_library.html);
+     .up stands it on the row's top instead, when the screen ends below it
+     and there is more room above. lib/postedui.js does the same for a posted
+     row's menu, whose rules these share. */
+  function flip(row, menu) {
+    row.classList.remove('up');
+    var q = menu && menu.getBoundingClientRect(), r = row.getBoundingClientRect();
+    if (q && q.height && q.bottom > global.innerHeight - 8 && r.top > global.innerHeight - r.bottom) row.classList.add('up');
   }
   if (doc) {
     doc.addEventListener('pointerdown', function (e) {

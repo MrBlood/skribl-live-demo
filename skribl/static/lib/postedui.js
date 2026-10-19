@@ -743,8 +743,15 @@
       if (!row) return;
       var b = row.querySelector('.posted-more');
       row.classList.toggle('more-open', on);
+      row.classList.remove('up');
       b.setAttribute('aria-expanded', on ? 'true' : 'false');
-      if (on) { var f = row.querySelector('.posted-actions button'); if (f) f.focus(); }
+      if (on) {
+        // Above its ⋯ where the screen ends first, as a draft row's menu
+        // (lib/savedrafts.js flip): under the last row it ran off the screen.
+        var q = row.querySelector('.posted-actions').getBoundingClientRect(), r = row.getBoundingClientRect();
+        if (q.height && q.bottom > global.innerHeight - 8 && r.top > global.innerHeight - r.bottom) row.classList.add('up');
+        var f = row.querySelector('.posted-actions button'); if (f) f.focus();
+      }
     }
     global.document.addEventListener('pointerdown', function (e) {
       var open = listEl.querySelector('.posted-row.more-open');
