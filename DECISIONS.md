@@ -19894,3 +19894,49 @@ a posted draft keeps).
 
 Pad and Flip: the Pad's. Flip draws its exported page and its card on its own
 canvas, and its own review is separate.
+
+## After v326 -- the Flip review: undo, the page bar, the strip and the paste (bug fixes)
+
+A read-only review of Flip, before the next seal, drove it with a real mouse
+and real touch and found seven ways it acted on the wrong thing, or on
+nothing. Each now has a row in the new verify_flipedges, red on the code
+before it (2/14 there, the two that pass being the no-page-error rows).
+
+- "Undo clear" never worked by mouse or finger. Every pointerup on the page
+  ran endStroke, which spent the clear's backup before the button's click
+  arrived; only Enter on the focused button reached it. It is spent by a
+  stroke now, and by an undo or redo that acts, not by a Ctrl+Z on the empty
+  page a clear leaves.
+- The undo history outlived the document. After New Skribl, Clear all pages
+  or opening a file or a draft, Undo pulled a deleted page into the new
+  drawing, or threw and left every stroke after it throwing until a reload.
+  A replaced document starts with none.
+- An undo named its page by position, and Duplicate, Blank, a page move and
+  a paste shift pages without an entry of their own. A selection's Flip
+  undone after a Duplicate rewrote the page beside it; a tween's undo deleted
+  the artist's page and its redo put one page object in twice. Every entry
+  carries the page it acted on, found again at undo time (dropped when it is
+  gone), and a tween's carved holds go back by page.
+- On a desk the page bar stayed live during playback, and its Delete took
+  whichever page was flashing by. play() now disables it as its own rule
+  always said, and the page actions refuse while playing.
+- "Select through here" was always disabled on a phone, where the ⋯ shows
+  only on the current page: the test was "this is the current page". It
+  starts from the page you were on before.
+- After Cut, the chip says "paste it on any page", and on a blank page there
+  was no Paste: the selection bar showed only with a selection. With the
+  Select tool held and something cut or copied, it shows Paste and Done; and
+  Ctrl+V pastes a cut selection when no pages are copied.
+- With a page copied, the paste ghost in the strip put the playback outline,
+  the loop's bracket, a drag's drop and Move mode's scope a tile off. Every
+  lookup counts pages (_tiles), as the thumbnails already did.
+
+And the tile's x names its page and says its first press out loud, as every
+other arm here does (SK-AUD-018); four notes lost their capitals and
+"In-between" for the button's own "Tween", the onion skin's "stacked-sheets
+button" and the photo's "Media"; a group tooltip that said "Pen / Eraser"
+and two comments describing things that are gone are gone.
+
+Pad and Flip: Flip's. The Pad's own review is above; Flip's New Skribl
+still undoes through Undo clear, where the Pad shows an Undo chip (a choice
+for the owner).

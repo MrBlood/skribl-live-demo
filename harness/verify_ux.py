@@ -2791,7 +2791,7 @@ with _sp() as _np:
     _pg.wait_for_timeout(200)
     _said = _pg.evaluate("() => document.getElementById('flipChip').textContent")
     check("NEW SKRIBL: Clear all pages on a photo-only page says the photo is what is left, instead of doing nothing",
-          "photo" in _said and "Media" in _said and _pg.evaluate("() => !!bgImage"), repr(_said))
+          "photo" in _said and "Photo and music" in _said and _pg.evaluate("() => !!bgImage"), repr(_said))
     _pg.keyboard.press("Escape")
     _pg.wait_for_timeout(300)
     # The owner's page: New Skribl, through the real menu: New, then Start.

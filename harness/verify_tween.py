@@ -641,7 +641,7 @@ with sync_playwright() as p:
     page.wait_for_timeout(300)
     check("on the last page it explains there is no next pose",
           page.evaluate("() => frames.length") == 2
-          and "BETWEEN" in (page.evaluate(
+          and "between two pages" in (page.evaluate(
               "() => (document.getElementById('flipChip')||{}).textContent") or ""),
           page.evaluate("() => (document.getElementById('flipChip')||{}).textContent"))
 

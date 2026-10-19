@@ -283,8 +283,8 @@ with sync_playwright() as p:
     # surface-aware for exactly this reason.
     check("...and does NOT talk about arrows on a surface with none",
           "arrow" not in _txt, _txt)
-    check("and points at the thumbnails for changing page",
-          "thumbnail" in _txt, _txt)
+    check("and points at the pages below for changing page",
+          "tap a page below" in _txt, _txt)
 
     # It must not cover the filmstrip it just told you to tap. At bottom:96px
     # it landed squarely on the strip — Flip's bottom chrome is ~230px tall and

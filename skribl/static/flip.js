@@ -291,6 +291,9 @@ let pageClip = null;
    Selecting a range moved to "Select through here" in a page's own ⋯ popover,
    beside Move and Copy, which already speak in spans. */
 let spanAnchor = null, _pdragArmTimer = null;
+// The page you were on before the last move to another (go): where "Select
+// through here" starts when its ⋯ is the current page's own, as on a phone.
+let _lastPage = null;
 // Selection tokens — see the note in app.js. Flip is more exposed than the Pad
 // because it clears the input immediately, so a second pick during a slow decode
 // is easy. Bumped on selection AND removal. (Review round 9, #1)
@@ -1146,6 +1149,7 @@ function exportHide(){ const o=document.getElementById('flipExport'); if(!o || o
   const inside=o.contains(document.activeElement); o.hidden=true;
   if(inside && window.SkriblModal) window.SkriblModal.close(o); }
 function applyPayload(d){
+  actionLog.length=0; redoStack.length=0;   // a new document, no history (clearAllPages says why)
   // Adopt the loaded draft's name into the tab (blank keeps the auto-default).
   if(window.SkriblName && d && d.title && !/^Untitled Skribl$/.test(d.title)) window.SkriblName.set(d.title);
   // Restore the saved canvas size first, so frames/thumbs build at the right
@@ -2256,9 +2260,13 @@ pad.addEventListener('pointermove', e=>{
   // expensive half and the frame is only shown once anyway.
   render(); });
 function endStroke(){
-  invalidateClearUndo();   // review #4: new work invalidates a pending clear-undo
   if(reposActive){ reposActive=false; refreshAllThumbs(); scheduleSave(); return; }
   if(!drawing) return;
+  // New work invalidates a pending clear-undo (review #4) -- a STROKE, not any
+  // lift: this runs on every pointerup on the page, so the press on "Undo
+  // clear" itself spent the backup before its click arrived, and the button
+  // never worked by mouse or finger (after v326, the Flip review).
+  invalidateClearUndo();
   // Settle: with smoothing on, the drawn point lags the finger — walk it to the real
   // release point so the stroke actually ends where the pen lifted.
   if(smoothingAlpha<1 && !erasing && smoothPt && lastRaw){
@@ -2548,7 +2556,7 @@ const HOLD_X='<svg class="holdx" viewBox="0 0 10 10" fill="none" stroke="current
 function disarmAll(){
   // _tiles(), not children: see refreshThumb. armedDel is a PAGE index and
   // can be past the paste ghost, which would disarm a different tile's X.
-  if(armedDel >= 0){ const prev=_tiles()[armedDel]; if(prev){ const pd=prev.querySelector('.del'); if(pd) pd.classList.remove('armed'); } armedDel=-1; }
+  if(armedDel >= 0){ const prev=_tiles()[armedDel]; if(prev){ const pd=prev.querySelector('.del'); if(pd){ pd.classList.remove('armed'); pd.title='Delete page'; pd.setAttribute('aria-label', 'Delete page ' + (armedDel + 1)); } } armedDel=-1; }
   if(armedClear){ armedClear=false; const cb=document.getElementById('clear'); if(cb){ cb.classList.remove('armed'); cb.title='Delete all pages (keeps music and background)'; const cl=document.getElementById('clearLabel'); if(cl) cl.textContent='Clear all pages'; } }
 }
 /* ---- page toolbar --------------------------------------------------
@@ -2768,7 +2776,7 @@ function buildStrip(){
         +'aria-label="Hold page '+(i+1)+', shown '+_h+' time'+(_h===1?'':'s')+'">'
         +HOLD_X+_h+'</button></div>'
       // On a phone the ⋯ below holds Delete, in this corner (flip.css .pageops).
-      +(_compactStrip() ? '' : '<button class="del" title="Delete page" aria-label="Delete page">'+DEL_SVG+'</button>')
+      +(_compactStrip() ? '' : '<button class="del" title="Delete page" aria-label="Delete page '+(i+1)+'">'+DEL_SVG+'</button>')
       // A page that draws itself has to SAY so on the strip. The hold badge is
       // the precedent: a per-page property nobody can see is one people set by
       // accident and then cannot find. Not a button — the switch lives in the
@@ -2862,8 +2870,12 @@ function buildStrip(){
       const ops = ev.target.closest('.pageops');
       if(ops){
         ev.stopPropagation();
+        // Where a span from here starts: the page you are on, or, when this ⋯
+        // is that page's own (on a phone it is the only one shown), the page
+        // you were on before it. Taken before go() moves you.
+        const from = (i !== idx) ? idx : _lastPage;
         if(i !== idx) go(i);              // act on the page you opened it from
-        openPageOps(ops, i);
+        openPageOps(ops, i, from);
         return;
       }
       const del = ev.target.closest('.del');
@@ -2871,6 +2883,10 @@ function buildStrip(){
         if(f.strokes.length && armedDel !== i){
           disarmAll();
           armedDel = i; del.classList.add('armed'); del.title='Tap again to delete';
+          // Said as well as shown, as every other arm here is (SK-AUD-018): a
+          // screen reader heard nothing and the name stayed "Delete page".
+          del.setAttribute('aria-label', 'Tap again to delete page ' + (i + 1));
+          announceConfirm('Tap again to delete page ' + (i + 1));
           return;
         }
         delFrame(i); return;
@@ -3018,7 +3034,7 @@ _OPS_ICON['Keep under'] = '<path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 16l9 5 
 _OPS_ICON['Stop keeping under'] = _OPS_ICON['Keep under'];
 // Remove loop: the loop's arrows, struck through. It was the one row without one.
 _OPS_ICON['Remove loop'] = _OPS_ICON['Loop'] + '<path d="M4 4l16 16"/>';
-function openPageOps(trigger, i){
+function openPageOps(trigger, i, from){
   closePageOps(false);
   // THE TRIGGER YOU TAPPED MAY BE GONE. Opening the menu on a page you are not
   // on selects that page first, which REBUILDS the strip -- so the button in
@@ -3027,7 +3043,7 @@ function openPageOps(trigger, i){
   // owner, from an iPhone: "This menu ... looks weird?"). Ask the strip for
   // the page's live ⋯ instead.
   if(!trigger.isConnected){
-    const live = strip.children[i] && strip.children[i].querySelector('.pageops');
+    const live = _tiles()[i] && _tiles()[i].querySelector('.pageops');   // a tile, not a child (_tiles says why)
     if(live) trigger = live;
   }
   const sp = pageSpan();
@@ -3046,9 +3062,13 @@ function openPageOps(trigger, i){
        Here it needs no mode and no gesture: this popover already speaks in
        spans -- Move and Copy above it say "these N pages" -- so "through here"
        reads as the sentence the rest of the menu is already writing. Disabled
-       on the page you are already on, where it would select nothing. */
-    ['Select through here', 'Select every page from the one you are on through this one',
-     () => extendSpanTo(i), i === idx],
+       on the page it would start from, where it would select nothing.
+       ALWAYS DISABLED ON A PHONE, until after v326 (the Flip review): the ⋯
+       shows only on the current page there, and the test was "this is the
+       current page". It starts from the page you were on before now. */
+    ['Select through here', 'Select every page from the one you were on through this one',
+     () => { setSpanAnchor(from); extendSpanTo(i); },
+     from == null || from === i || from >= frames.length],
     // The ⋯ menu's half of the Draw switch. The page bar carries the other
     // half and only one of the two is ever rendered, so both must exist or the
     // control disappears at one size class — the split this whole menu exists
@@ -3185,8 +3205,11 @@ document.addEventListener('keydown', e=>{
     e.preventDefault(); spanCopy(); return;
   }
   if(mod && !e.shiftKey && !e.altKey && (e.key === 'v' || e.key === 'V')){
-    if(!(pageClip && pageClip.length)) return;
-    e.preventDefault(); spanPaste(); return;
+    // Pages first, as before; with none copied, a cut or copied selection
+    // pastes onto this page (the Select tool's Paste, by keyboard).
+    if(pageClip && pageClip.length){ e.preventDefault(); spanPaste(); return; }
+    if(selClipboard && selClipboard.length && !playing){ e.preventDefault(); selPaste(); return; }
+    return;
   }
 });
 
@@ -3271,10 +3294,10 @@ function movePage(i,dir){
     // compact surface there are no arrows — the move came from the tile's ⋯
     // menu (v227) — and a hint that describes a control the surface does not
     // have is worse than no hint: it sends the reader looking for it.
-    const via = _compactStrip() ? 'This' : 'These arrows';
+    const via = _compactStrip() ? 'Move left and right' : 'These arrows';
     window.SkriblHints.show('page-move',
-      'Moved this page to position ' + to + '. ' + via + ' REORDERS pages — '
-      + 'tap a thumbnail below to change which page you are on.');
+      'Moved this page to position ' + to + '. ' + via + ' reorder pages; '
+      + 'tap a page below to change which one you\u2019re on.');
   }
   movePageTo(i, i+dir);
 }
@@ -3301,8 +3324,10 @@ function movePageTo(i,j){
    reorder happens once on release. A small threshold keeps ordinary taps
    (select page) working. */
 let _pdrag=null, _pdragSuppressClick=false;
+// Pages only, never the paste ghost (_tiles): with a page copied, a drag
+// between pages 3 and 4 landed after 4 (after v326, the Flip review).
 function stripTileCenters(){
-  return [...strip.querySelectorAll('.frame')].map(el=>{
+  return [..._tiles()].map(el=>{
     const r=el.getBoundingClientRect(); return r.left + r.width/2;
   });
 }
@@ -3449,6 +3474,7 @@ function _drawOnHere(sp, i){
   return frameDraw(frames[sp ? sp.from : i]);
 }
 function spanSetDraw(on){
+  if(playing) return;   // the page under a playback is the one flashing by (play() says why)
   const s = spanOrCurrent();
   const from = s.from, to = s.to;
   for(let i=from; i<=to; i++){
@@ -3460,6 +3486,7 @@ function spanSetDraw(on){
           : (cnt>1 ? cnt + ' pages snap in' : 'Page snaps in'));
 }
 function spanCopy(){
+  if(playing) return;
   const s = spanOrCurrent();
   pageClip = SkriblPageSpan.extract(frames, s).map(deepCopy);
   buildStrip();
@@ -3468,12 +3495,13 @@ function spanCopy(){
     : 'Page copied — use ＋ Paste');
 }
 function spanDelete(){
+  if(playing) return;
   const s = pageSpan();
   if(!s) return delFrame(idx);                    // unchanged single-page path
   if(SkriblPageSpan.count(s) >= frames.length){
-    // Deleting every page would leave a pageless flipbook. delFrame's own
-    // one-page case already answers this: reset to a single blank rather than
-    // refuse, so "clear the whole thing" stays reachable.
+    // Deleting every page would leave a pageless flipbook, so it is refused
+    // and points at Clear all, which empties them with an Undo. The page bar
+    // disables Delete for such a span; this is the guard behind it.
     chip('That is every page — use Clear all');
     return;
   }
@@ -3515,6 +3543,7 @@ function spanHold(){
 /* Nudge the span one slot. `dir` is -1 or +1. The span keeps its selection and
    `idx` keeps its page, so holding an arrow walks a run across the film. */
 function spanMove(dir){
+  if(playing) return;
   const s = pageSpan();
   if(!s) return movePage(idx, dir);               // unchanged single-page path
   const to = dir < 0 ? s.from - 1 : s.to + 2;     // insert before this original
@@ -3586,7 +3615,7 @@ function addFrame(copy){ if(moveMode) return;
   }
   disarmAll(); invalidateClearUndo(); redoStack.length=0; clearSpan(true); const f=copy?deepCopy(frame()):newFrame(); frames.splice(idx+1,0,f); idx++; buildStrip(); render(); scheduleSave();
   scrollStripToActive(true); }
-function delFrame(i){ if(moveMode) return; invalidateClearUndo(); redoStack.length=0;
+function delFrame(i){ if(moveMode || playing) return; invalidateClearUndo(); redoStack.length=0;
   // A range is a pair of INDICES, so any page count change that this function
   // makes invalidates it. Dropping it here rather than trying to fix it up is
   // deliberate: the same reasoning the stroke selection uses when you change
@@ -3620,6 +3649,7 @@ function go(i){ if(moveMode) return;
   // the ranges would run off the end.
   if(typeof selClear === 'function') selClear(true);
   if(picking) setPicking(false);     // the lens would show one page and pick another
+  if(i !== idx) _lastPage = idx;
   idx=i; redoStack.length=0; buildStrip(); render(); }
 
 /* ---- Instant flip scrub -------------------------------------------------
@@ -3642,7 +3672,7 @@ const FLIP_HOLD_STEP  = 62;    // ms between pages while held (~16/sec)
 let _flipHoldT = null, _flipHoldDir = 0, _flipHoldMoved = false;
 
 function markStripActive(){
-  const tiles = strip.children;
+  const tiles = _tiles();
   for(let i=0;i<tiles.length;i++){
     if(tiles[i].classList) tiles[i].classList.toggle('on', i===idx);
   }
@@ -3904,7 +3934,7 @@ function loopRemove(){
    Laid out in the strip's own coordinates (it is position:relative), so they
    scroll with the pages; near the strip's edges a drag scrolls it along. */
 function _posLoopHandles(from, to){
-  const tiles = strip.querySelectorAll('.frame');
+  const tiles = _tiles();   // pages, not the paste ghost: a bracket for 3-4 sat a tile left
   const hs = strip.querySelectorAll('.loophandle'), box = strip.querySelector('.loopframe');
   const a = tiles[from], b = tiles[to];
   if(hs.length !== 2 || !a || !b) return;
@@ -3954,7 +3984,7 @@ function _wireLoopHandle(h, side){
   // The page edge nearest the finger: a start handle snaps to a page's left
   // edge, an end handle to a right edge, and neither crosses the other.
   const snap = () => {
-    const tiles = strip.querySelectorAll('.frame');
+    const tiles = _tiles();
     let best = cur[side], bd = Infinity;
     tiles.forEach((t, i) => {
       if(side === 'from' ? i > cur.to : i < cur.from) return;
@@ -4074,7 +4104,7 @@ function _playCountFor(page){
 }
 function updatePlayProgress(){ if(flipProgressFill && frames.length) flipProgressFill.style.width=(_flipFrac(idx+1)*100)+'%';
   // The strip follows the page on screen while it plays (F1, pick C).
-  if(playing && strip){ const els=strip.querySelectorAll('.frame');
+  if(playing && strip){ const els=_tiles();   // the paste ghost put the outline a tile off
     els.forEach((el,i)=>el.classList.toggle('now', i===idx));
     const cur=els[idx]; if(cur){ const sr=strip.getBoundingClientRect(), cr=cur.getBoundingClientRect();
       if(cr.left < sr.left || cr.right > sr.right) cur.scrollIntoView({block:'nearest', inline:'nearest'}); } }
@@ -4291,6 +4321,11 @@ function play(){
   // an open drawer, and it played with its top under the header.
   if(window.SkriblDrawerDetent) SkriblDrawerDetent.revealTop(pad);
   playing=true; document.body.classList.add('playing');
+  // The page bar steps out of play with everything else (syncPagebar disables
+  // it while playing): on a desk it stayed live, and its Delete took whichever
+  // page was flashing by, page 3 while the person was on page 1 (after v326,
+  // the Flip review). stop() rebuilds the strip, which brings it back.
+  syncPagebar();
   setPlayFace(true);
   if(flipPlayer){ flipPlayer.hidden=false; requestAnimationFrame(()=>flipPlayer.classList.add('show')); }
   startMusic();
@@ -8210,7 +8245,9 @@ function carveForInsert(at){
    inverting that means dividing, which does not round-trip once a hold has been
    clamped. Snapshotting the three values and putting them back is exact. */
 function genCarveState(){
-  return { fps: fps, subdiv: subdiv, holds: frames.map(f => f.hold) };
+  // Holds by page, not by place, for noteAction's reason: an index list put
+  // back after a Duplicate gave every later page its neighbour's hold.
+  return { fps: fps, subdiv: subdiv, holds: frames.map(f => [f, f.hold]) };
 }
 
 function noteGenPage(at, was, page, label){
@@ -8223,8 +8260,7 @@ function noteGenPage(at, was, page, label){
 
 function applyCarveState(s){
   fps = s.fps; subdiv = s.subdiv;
-  for(let i = 0; i < frames.length && i < s.holds.length; i++)
-    frames[i].hold = s.holds[i];
+  for(const [f, h] of s.holds) if(frames.includes(f)) f.hold = h;
 }
 
 /* Inserts the exposure between this page and the next. */
@@ -8282,7 +8318,7 @@ function addTween(){
   if(playing) return;
   if(moveMode){ chip('Finish or cancel the move first'); return; }
   const a = frames[idx], b = frames[idx + 1];
-  if(!b){ chip('A motion smear goes BETWEEN two pages — add the next pose first'); return; }
+  if(!b){ chip('A motion smear goes between two pages: add the next pose first'); return; }
   /* AIMED BY THE SELECTION, when there is one. Select the arm and the arm
      smears while the figure stays ink -- which is the picture the effect is
      named after, and what it looked like on every example that read as motion
@@ -8743,7 +8779,7 @@ function addInbetween(){
   if(playing) return;
   if(moveMode){ chip('Finish or cancel the move first'); return; }
   const a = frames[idx], b = frames[idx + 1];
-  if(!b){ chip('An in-between goes BETWEEN two pages — add the next pose first'); return; }
+  if(!b){ chip('A tween goes between two pages: add the next pose first'); return; }
   /* ALIGNED FIRST, the same way buildTween does it, because buildInbetween
      pairs index for index and the pages it is handed need not agree. Without
      this, adding a stroke to one page mis-paired everything after it or threw.
@@ -8792,9 +8828,9 @@ function addInbetween(){
   // The slots carveForInsert freed, not a hard 1: see the split note there.
   t.hold = _c.hold;
   frames.splice(_c.at, 0, t); idx++;
-  noteGenPage(_c.at, _was, t, 'In-between');
+  noteGenPage(_c.at, _was, t, 'Tween');   // the button's own name, in "Tween undone" too
   buildStrip(); render(); scheduleSave(); syncFlipDuration(); scrollStripToActive(true);
-  chip('In-between added');
+  chip('Tween added');
 }
 
 /* ---------- liquify ----------------------------------------------------
@@ -9915,6 +9951,7 @@ function selPaste(){
   selAppend(selClipboard);
   selSpans = selSpansForAppended(selClipboard);
   selCommitFrame(before, 'Paste');
+  syncSelBar();   // the pasted strokes are the selection: its buttons come back
   chip('Pasted');
   selRender(null);
 }
@@ -9923,15 +9960,22 @@ function selPaste(){
    pattern setMoveMode() established. Five more actions do not fit on a 320px
    phone as extra chrome; they fit as a different job for the same row. */
 function syncSelBar(){
-  const on = selSpans.length > 0;
+  // AFTER A CUT, PASTE STAYS WITHIN REACH (after v326, the Flip review). The
+  // bar showed only with a selection, so on a blank page, where Cut's chip
+  // sends you ("paste it on any page"), there was nothing to select and no
+  // Paste. With the Select tool held and something cut or copied, the bar
+  // shows Paste and Done alone; the selection's own buttons wait for one.
+  const has = selSpans.length > 0;
+  const on = has || (flipTool === 'select' && !!(selClipboard && selClipboard.length));
   const pb = document.getElementById('pagebar'), sb = document.getElementById('selbar');
   // Move mode owns the row when it is active, and it is mutually exclusive with
   // Select — so never take the row from it.
   if(moveMode){ if(sb) sb.hidden = true; return; }
   if(sb) sb.hidden = !on;
   if(pb) pb.hidden = on;
+  ['sbFlipH', 'sbFlipV', 'sbDup', 'sbCut', 'sbStamp'].forEach(id => { const b = document.getElementById(id); if(b) b.hidden = !has; });
   const who = document.getElementById('sbWho');
-  if(who && on) who.textContent = selSpans.length === 1 ? '1 stroke' : selSpans.length + ' strokes';
+  if(who && on) who.textContent = !has ? 'Ready to paste' : selSpans.length === 1 ? '1 stroke' : selSpans.length + ' strokes';
   const paste = document.getElementById('sbPaste');
   // Paste is hidden until there is something to paste, rather than shown
   // disabled: a disabled control on a bar this tight is a cell of dead width.
@@ -10153,9 +10197,35 @@ function selUp(pt){
   }
 }
 
+// PAGES BY THEMSELVES, NOT BY PLACE (after v326, the Flip review). Duplicate,
+// Blank, a page move and a paste shift pages without an entry of their own, so
+// a position logged before them named another page by the time it was undone:
+// a selection's Flip undone after a Duplicate rewrote the page beside it, and
+// an in-between's undo deleted the artist's own page. Every entry now carries
+// the page it acted on, and _placeEntry() finds where that page is now.
 function noteAction(entry){
+  if(entry && typeof entry === 'object'){
+    if(typeof entry.idx === 'number' && !entry.ref) entry.ref = frames[entry.idx];
+    if(Array.isArray(entry.idxs)) entry.refs = entry.idxs.map(i => frames[i]);
+    if(entry.type === 'delpages') entry.prev = entry.at > 0 ? frames[entry.at - 1] : null;   // the page they go back after
+  }
   actionLog.push(entry);
   if(actionLog.length > MOVE_UNDO_LIMIT * 4) actionLog.shift();
+}
+// Where an entry's pages are now, written back into it; false when one of
+// them is gone, and the entry is then dropped (nothing it describes is left).
+// `redo` for the other direction: a generated page is out of the document
+// then, and a deletion's pages are in it.
+function _placeEntry(m, redo){
+  if(!m || typeof m !== 'object' || !m.type) return true;
+  if(m.ref){ const at = frames.indexOf(m.ref); if(at < 0) return false; m.idx = at; }
+  if(m.refs){ const ats = m.refs.map(f => frames.indexOf(f)); if(ats.some(a => a < 0)) return false; m.idxs = ats; }
+  if(m.type === 'genpage' && !redo){ const at = frames.indexOf(m.page); if(at < 0) return false; m.at = at; }
+  if(m.type === 'delpages'){
+    if(redo){ const at = m.pages && m.pages.length ? frames.indexOf(m.pages[0]) : -1; if(at < 0) return false; m.at = at; }
+    else if(!m.replaced && 'prev' in m){ const at = m.prev ? frames.indexOf(m.prev) : -1; if(m.prev && at < 0) return false; m.at = at + 1; }
+  }
+  return true;
 }
 
 /* FILL — a region, expressed as strokes, because strokes are the only thing
@@ -10264,8 +10334,7 @@ function doFill(p){
     groups++;
   }
   redoStack.length = 0;
-  actionLog.push({ type:'fill', idx: idx, groups: groups });
-  if(actionLog.length > MOVE_UNDO_LIMIT * 4) actionLog.shift();
+  noteAction({ type:'fill', idx: idx, groups: groups });
   // A FLOOD THAT TAKES MOST OF THE CANVAS IS ALMOST ALWAYS A GAP IN THE
   // OUTLINE, not what was wanted. Measured on the audit: tapping inside an open
   // L-shape added 438 points and covered the page, silently, and the owner had
@@ -10418,7 +10487,7 @@ function doStamp(p){
   if(playing) return;
   if(!stampsReady()){ chip('Stamps are unavailable'); return; }
   if(stampArmed < 0 || stampArmed >= stampShelf.length){
-    chip(stampShelf.length ? 'Pick a stamp first' : 'No stamps yet — select something and tap Stamp');
+    chip(stampShelf.length ? 'Pick a stamp first' : 'No stamps yet. Pick something with Select, then tap the stamp button in its bar.');
     return;
   }
   const st = stampShelf[stampArmed];
@@ -10438,15 +10507,20 @@ function doStamp(p){
     f.strokeGroups.push(r.length);
   }
   redoStack.length = 0;
-  actionLog.push({ type:'fill', label:'Stamp', idx: idx, groups: runs.length });
-  if(actionLog.length > MOVE_UNDO_LIMIT * 4) actionLog.shift();
+  noteAction({ type:'fill', label:'Stamp', idx: idx, groups: runs.length });
   chip('Stamped');
   render(); refreshThumb(idx); updateToolState(); scheduleSave();
 }
 
 function undoStroke(){
-  invalidateClearUndo();
   if(playing) return;
+  while(actionLog.length && !_placeEntry(actionLog[actionLog.length - 1], false)) actionLog.pop();
+  // Only an undo that undoes something spends the clear's undo: Ctrl+Z on the
+  // empty page a clear leaves used to destroy the backup silently, the
+  // toolbar's Undo greyed out (after v326, the Flip review). The same test as
+  // the button's (updateToolState).
+  if(frame().strokeGroups.length === 0 && !(actionLog.length && typeof actionLog[actionLog.length-1] === 'object')) return;
+  invalidateClearUndo();
   if(picking) setPicking(false);     // the drawing under the lens is about to change
   // A FILL is one action, and this must be tested BEFORE the generic object
   // branch below — that branch pops any object entry and then assumes it is a
@@ -10563,8 +10637,9 @@ function undoStroke(){
   render(); refreshThumb(idx); updateToolState(); scheduleSave();
 }
 function redoStroke(){
-  invalidateClearUndo();
+  while(redoStack.length && !_placeEntry(redoStack[redoStack.length - 1], true)) redoStack.pop();
   if(playing || !redoStack.length) return;
+  invalidateClearUndo();   // as undo: only when it acts
   if(picking) setPicking(false);     // the drawing under the lens is about to change
   if(typeof redoStack[redoStack.length-1] === 'object'
      && redoStack[redoStack.length-1].type === 'selframe'){
@@ -10647,7 +10722,7 @@ function redoStroke(){
     const tf = frame();
     for(const p of m.pts) tf.strokes.push(p);
     for(const c of m.counts) tf.strokeGroups.push(c);
-    actionLog.push({ type:'fill', label: m.label, idx: m.idx, groups: m.counts.length });
+    noteAction({ type:'fill', label: m.label, idx: m.idx, groups: m.counts.length });
     chip((m.label || 'Fill') + ' redone');
     render(); refreshThumb(m.idx); updateToolState(); scheduleSave();
     return;
@@ -10798,7 +10873,7 @@ function syncMoveLabel(){
   // The strip shows scope far better than any label can, and costs no width in
   // a bar that is already tight at 320px.
   const set = new Set(t);
-  strip.querySelectorAll('.frame').forEach((el, i) => {
+  _tiles().forEach((el, i) => {
     el.classList.toggle('in-scope', moveMode && set.has(i));
   });
 }
@@ -10849,7 +10924,7 @@ function setMoveMode(on){
     if(window.SkriblHints){
       window.SkriblHints.show('move-artwork', onion
         ? 'Drag anywhere to move this page\u2019s drawing. The faint page beneath is your reference.'
-        : 'Drag anywhere to move this page\u2019s drawing. Turn on the stacked-sheets button to see the page beneath while you line it up.');
+        : 'Drag anywhere to move this page\u2019s drawing. Turn on Onion skin, in Tune, to see the page beneath while you line it up.');
     }
   } else {
     moveOrigin = null;
@@ -11034,7 +11109,11 @@ function clearAllPages(opts){
      speed control showing a rate no page is using. Backed up with the frames
      above, because undoing the clear has to bring the timing back with them. */
   fps = poseRate(); subdiv = 1;
-  frames=[newFrame()]; idx=0; redoStack.length=0;
+  // A NEW DOCUMENT STARTS WITH NO HISTORY (after v326, the Flip review): the
+  // undo log is keyed to pages that are gone, so an Undo after a clear pulled
+  // a deleted page into the new drawing, or threw and left every later
+  // stroke throwing until a reload.
+  frames=[newFrame()]; idx=0; redoStack.length=0; actionLog.length=0;
   // The selection counters move first, so a photo or track still being read --
   // or still on its way back from the draft store -- lands on nothing.
   if(withMedia){ imageSelectionSeq++; removeBgImage(); removeMusic();
@@ -11054,7 +11133,7 @@ bindEl('clear', 'click',e=>{
   const empty = frames.length===1 && frames[0].strokes.length===0;
   // Clear all pages keeps music and the photo, so a page whose only picture IS
   // the photo has nothing for it to clear -- and doing nothing looked broken.
-  if(empty){ if(flipHasMedia()) chip(bgImage||pendingPhotoMeta ? 'Only the photo is left \u2014 remove it in Media, or start a New Skribl' : 'Only the music is left \u2014 remove it in Media, or start a New Skribl'); return; }
+  if(empty){ if(flipHasMedia()) chip(bgImage||pendingPhotoMeta ? 'Only the photo is left \u2014 remove it in Photo and music, or start a New Skribl' : 'Only the music is left \u2014 remove it in Photo and music, or start a New Skribl'); return; }
   const lbl=document.getElementById('clearLabel');
   if(!armedClear){ disarmAll(); armedClear=true; e.currentTarget.classList.add('armed'); if(lbl) lbl.textContent='Tap again to clear pages'; e.currentTarget.title='Tap again to delete all pages'; announceConfirm('Tap again to clear pages'); return; }
   armedClear=false; e.currentTarget.classList.remove('armed'); if(lbl) lbl.textContent='Clear all pages'; e.currentTarget.title='Delete all pages (keeps music and background)';
@@ -11085,7 +11164,7 @@ bindEl('clearUndo', 'click',()=>{
   if(clearFramesBackup.cw && clearFramesBackup.ch) { applyCanvasSize(clearFramesBackup.cw, clearFramesBackup.ch); syncCanvasSeg(); }   // ...and maybe its shape
   if(clearFramesBackup.name && window.SkriblName) window.SkriblName.restore(clearFramesBackup.name);
   if(window.SkriblSavedDrafts) window.SkriblSavedDrafts.resume(clearFramesBackup.draftId);   // and the saved draft it was
-  clearFramesBackup=null; redoStack.length=0;
+  clearFramesBackup=null; redoStack.length=0; actionLog.length=0;
   document.getElementById('clearUndo').disabled=true;
   buildStrip(); render(); updateToolState(); scheduleSave();
   chip('Animation restored');
@@ -11482,10 +11561,6 @@ if (window.SkriblTooltip) window.SkriblTooltip.init();
 // The paint-target seg and the drawer's seg pills: lib/painttarget.js.
 
 
-// NO NAVIGATION GUARD ON FLIP, deliberately. Flip persists pages, music and the
-// background image, so leaving for Pad loses nothing and a confirm here would be
-// a prompt that is always wrong. Pad needs one because its autosave holds
-// strokes but NOT media bytes — see the note on atRisk() in app.js.
 
 /* ---------- boot marker: the last statement in this file --------------------
    Its only job is to prove that this file reached its end. flip.js and app.js
