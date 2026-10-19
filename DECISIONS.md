@@ -19364,8 +19364,13 @@ is placed in), and above the ⋯ where the screen ends first. It shuts when the
 list scrolls or the window resizes, as a tap elsewhere and Escape shut it.
 
 Delete wears the Library's deeper red, `--row-danger-ink` (#7a0a2d in light,
-#ffb3c6 in dark): the same row's Delete, 9.8:1 and 10.7:1 on the menu's paper, where the
-editors' own --danger would read 5.4:1 and 4.7:1.
+#ffb3c6 in dark): the same row's Delete, 9.8:1 and 10.7:1 on the menu's paper,
+where the editors' own --danger would read 5.4:1 and 4.7:1. The token is set
+on the sheet's row, not the root: the player wears styles.css's root tokens,
+and verify_player_isolation's budget caught a first draft that grew the
+player's CSS by a token only this sheet reads. The asking red stays red under
+a pointer through a hover rule behind the hover guard, where A11Y 17b caught a
+first draft that had it outside.
 
 The sheet's old bin, and its own copy of the bin's paths (`BIN` in
 lib/savedrafts.js), are gone; every draft row's bin is drawn by rowEnd.

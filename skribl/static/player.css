@@ -281,9 +281,6 @@
   --danger: #f4326f;
   --danger-mid: #e0576b;
   --danger-soft: #ff9d9d;
-  /* A draft row's Delete in its ⋯ menu: the Library's ink for the same row
-     (skribl_library.html --danger-soft), 7:1 on the menu's paper (D3). */
-  --row-danger-ink: #ffb3c6;
   --danger-soft-2: #ff8a8a;
   --danger-soft-3: #ff8f8f;
   --danger-fill: #b3283f;
@@ -2185,7 +2182,6 @@ body.player-mode .app { position: relative; padding-bottom: calc(64px + env(safe
   --danger:        #c1104a;
   --danger-mid:    #b32a45;
   --danger-soft:   #b81447;
-  --row-danger-ink: #7a0a2d;
   --danger-soft-2: #b81447;
   --danger-soft-3: #b81447;
   --warn:          #8a5b00;
