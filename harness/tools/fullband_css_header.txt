@@ -1,0 +1,22 @@
+/* fullband.css — DERIVED FROM styles.css. Do not edit by hand.
+
+   THE LINK PAGE'S FULL SCREEN, FOR THE GALLERY AND THE LIBRARY (the owner:
+   "why can't the gallery player look like the others? with the same scrubber
+   and all?", then "All yes"). Their full screen builds the link page's band,
+   its x and its frame (lib/fullbar.js band()), and these are styles.css's own
+   rules for them, so the five full screens are written once.
+
+   WHICH RULES. harness/tools/cssgraph.py --band-census opens the Gallery's
+   full screen in every state the band has (paused, playing, the speeds open,
+   a drag on the scrubber, the controls stepped back, a dark drawing and a
+   pale one, a Flip, both themes, a phone and a desk) and records each
+   selector that matches inside the full-screen frame. A rule comes here when
+   one of its selectors did and none of them matched anything outside the
+   frame on the Gallery or the Library, so nothing else on either page is
+   restyled. Rules are taken one by one, inside @media too, in their original
+   order.
+
+   THE COST IS DUPLICATION, paid for by an assertion: verify_cssplit.py
+   regenerates this file and fails if it differs by one byte from what
+   styles.css and the recorded census produce. A rule edited in styles.css
+   and not re-emitted here is a red suite. */

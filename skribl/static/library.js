@@ -397,12 +397,9 @@
     };
     var imm = window.SkriblImmersive.attach(stageWrap, { onChange: syncFull });
     btnFull.addEventListener('click', function () { imm.toggle(); });
-    /* THE EXIT IS NOT DECORATION AND IT IS LESS OPTIONAL THAN IT WAS. Under
-       the real API only the fullscreened subtree renders, so the transport row
-       is off screen and Escape is the only other way out; in the FALLBACK the
-       page is still the page, and nothing at all exits it but this button. */
-    var fullExit = document.getElementById('fullExit');
-    if (fullExit) fullExit.addEventListener('click', function () { imm.close(); });
+    /* THE EXIT IS THE BAND'S (lib/fullbar.js): the link page's x, inside the
+       stage, because under the real API only the fullscreened subtree renders
+       and in the FALLBACK nothing else leaves the page. */
   }
 
   scrub.addEventListener('click', function (e) {

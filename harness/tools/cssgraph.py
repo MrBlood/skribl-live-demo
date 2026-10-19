@@ -226,8 +226,244 @@ def emit(live_path, out_path):
 
 
 HEADER = Path(__file__).with_name("player_css_header.txt").read_text()
+BAND_HEADER = Path(__file__).with_name("fullband_css_header.txt").read_text()
+
+
+# --- the band: the link page's full screen, for the Gallery and the Library ---
+# A SECOND SUBSET, AND A STRICTER ONE. player.css is a whole page's sheet and
+# keeps a block when anything in it matches, because it replaces styles.css on
+# that page. fullband.css lands on pages that have their own sheets, so it
+# takes RULES, not blocks, and only a rule that styles the full-screen frame
+# and nothing else on the page: a stray `button` or `*` would restyle the
+# Gallery. The census (--band-census) records both answers per selector:
+# "band", matched inside the frame, and "band_out", matched outside it.
+NESTED = ("@media", "@starting-style")
+BAND_FRAME = ".watch-full:is(:fullscreen, .is-immersive-page)"
+INHERITED = ("color", "font-family", "font-size", "font-weight", "font-style", "line-height", "letter-spacing",
+             "-webkit-font-smoothing", "-moz-osx-font-smoothing", "font-variant-numeric", "text-rendering")
+
+
+def _rule_selectors(head):
+    return [x.strip() for x in re.split(r",(?![^(]*\))", head) if x.strip()]
+
+
+def every_selector(region=None):
+    """Every selector in styles.css's rules, at any depth inside @media and
+    @starting-style -- what the census asks the page about."""
+    out = []
+    for _s, _e, h, b in blocks(text if region is None else region):
+        h = h.strip()
+        if h.startswith(NESTED):
+            out.extend(every_selector(b))
+        elif h and not h.startswith("@"):
+            out.extend(_rule_selectors(h))
+    return out
+
+
+def _band_rules(region, band, out_sel, used):
+    parts = []
+    for s, e, h, b in blocks(region):
+        h = h.strip()
+        if h.startswith(NESTED):
+            whole = region[s:e]
+            brace, close = whole.find("{"), whole.rfind("}")
+            inner = _band_rules(whole[brace + 1:close], band, out_sel, used)
+            if inner.strip():
+                parts.append(whole[:brace + 1] + inner + "\n" + whole[close:])
+            continue
+        if not h or h.startswith("@"):
+            continue
+        sels = _rule_selectors(h)
+        if any(x in band for x in sels) and not any(x in out_sel for x in sels):
+            parts.append(region[s:e])
+            used.update(re.findall(r"animation(?:-name)?\s*:\s*([\w-]+)", b))
+    return "".join(parts)
+
+
+def _tokens(header):
+    """The custom properties one of styles.css's token blocks sets."""
+    out = {}
+    for _s, _e, h, b in blocks(text):
+        if h.strip() == header:
+            for m in re.finditer(r"(--[a-z0-9-]+)\s*:\s*([^;]+);", re.sub(r"/\*.*?\*/", "", b, flags=re.S)):
+                out[m.group(1)] = " ".join(m.group(2).split())
+    return out
+
+
+def emit_band(live_path, out_path):
+    live = json.loads(Path(live_path).read_text())
+    if "band" not in live:
+        return 0
+    used = set()
+    rules = _band_rules(text, set(live["band"]), set(live.get("band_out", [])), used)
+    # The keyframes a kept rule names, and only those.
+    frames = "".join(text[s:e] for s, e, h, _b in blocks(text)
+                     if re.match(r"@(-webkit-)?keyframes\s+([\w-]+)", h.strip())
+                     and re.match(r"@(-webkit-)?keyframes\s+([\w-]+)", h.strip()).group(2) in used)
+    # THE WORDS THOSE RULES ARE WRITTEN IN, with styles.css's values for each
+    # theme, set on the frame: these pages keep their own palette, and the
+    # band inside the frame is the link page's to the colour. Every name a
+    # kept rule reads, and every name those values read in turn.
+    dark, light = _tokens(":root"), _tokens(':root[data-theme="light"]')
+    # WHAT THE BAND INHERITS is the link page's body: its type and ink, from
+    # styles.css's own body rule, and the browser's line-height where that
+    # rule sets none. Only on a frame that is full screen, so a card at rest
+    # is untouched.
+    body = {}
+    for _s, _e, h, b in blocks(text):
+        if h.strip() == "body":
+            for m in re.finditer(r"([a-z-]+)\s*:\s*([^;]+);", re.sub(r"/\*.*?\*/", "", b, flags=re.S)):
+                if m.group(1) in INHERITED:
+                    body[m.group(1)] = " ".join(m.group(2).split())
+    body.setdefault("line-height", "normal")
+    need = set(re.findall(r"var\((--[a-z0-9-]+)", re.sub(r"/\*.*?\*/", "", rules, flags=re.S) + " ".join(body.values())))
+    todo = list(need)
+    while todo:
+        t = todo.pop()
+        for ref in re.findall(r"var\((--[a-z0-9-]+)", dark.get(t, "") + " " + light.get(t, "")):
+            if ref not in need:
+                need.add(ref)
+                todo.append(ref)
+    def block(sel, vals):
+        names = sorted(n for n in need if n in vals)
+        return sel + " {\n" + "".join(f"  {n}: {vals[n]};\n" for n in names) + "}\n" if names else ""
+    tokens = ("\n/* The band's tokens: styles.css's :root and its light theme, on a full-screen frame. */\n"
+              + block(BAND_FRAME, dark) + block(':root[data-theme="light"] ' + BAND_FRAME, light)
+              + "/* What the band inherits: styles.css's body rule's type and ink. */\n"
+              + BAND_FRAME + " {\n" + "".join(f"  {k}: {v};\n" for k, v in sorted(body.items())) + "}\n")
+    body = BAND_HEADER + tokens + rules + frames
+    Path(out_path).write_text(body)
+    return len(body)
+
+
+def band_census(base, live_path):
+    """Ask the Gallery, in every state its full screen has, which selectors
+    match inside the frame and which match anything outside it; ask the
+    Library the second question too. Writes "band" and "band_out"."""
+    import math as _m
+    import urllib.request as _u
+    sys.path.insert(0, str(ROOT / "harness"))
+    import browsing
+    from playwright.sync_api import sync_playwright
+
+    sels = sorted(set(every_selector()))
+    strip = {x: STATE.sub("", x).strip() for x in sels}
+
+    def post(title, ground, ink, flip=False):
+        def ring(r, n, t0, cx=201, cy=380):
+            return [{"x": round(cx + r * _m.cos(i / n * 6.283), 1), "y": round(cy + r * _m.sin(i / n * 6.283), 1),
+                     "color": ink, "t": t0 + i * 400, "start": i == 0, "size": 6} for i in range(n + 1)]
+        if flip:
+            frames = [{"strokes": ring(60 + 40 * k, 60, 0), "strokeGroups": [61], "background": {"color": ground}}
+                      for k in range(3)]
+            body = {"title": title, "version": 2, "schemaVersion": 2, "visibility": "public", "playbackMode": "flip",
+                    "canvasSize": {"cssWidth": 402, "cssHeight": 760}, "frames": frames, "fps": 6}
+        else:
+            pts = ring(60, 400, 0) + ring(150, 400, 200000) + ring(180, 400, 400000)
+            body = {"title": title, "version": 2, "schemaVersion": 2, "visibility": "public", "playbackMode": "replay",
+                    "canvasSize": {"cssWidth": 402, "cssHeight": 760},
+                    "frames": [{"strokes": pts, "strokeGroups": [401, 401, 401], "background": {"color": ground}}]}
+        req = _u.Request(base + "/api/skribls", data=json.dumps(body).encode(),
+                         headers={"Content-Type": "application/json"})
+        return json.loads(_u.urlopen(req, timeout=30).read())["id"]
+
+    names = {"dark": post("Census dark", "#2e1b52", "#c9b8ff"),
+             "pale": post("Census pale", "#fdfcf7", "#3a24a8"),
+             "flip": post("Census flip", "#203040", "#ffd166", flip=True)}
+    # INSIDE is the open frame and the band's own parts in it: the band, the
+    # x, the name. Not the drawing's player, which inlineplayer.css styles. A
+    # card's frame and its band, put away, are the same component on another
+    # card and are not OUTSIDE; everything else on the page is.
+    ASK = """([sels, strip, frameSel]) => {
+      const PARTS = '.watch-full > :is(.player-bar, .player-btn.full-exit, .fb-who)';
+      const frame = frameSel ? document.querySelector(frameSel) : null, inside = [], outside = [];
+      const part = e => e.matches('.watch-full') || !!e.closest(PARTS);
+      const within = e => !!frame && (e === frame || (frame.contains(e) && !!e.closest(PARTS)));
+      for (const x of sels) {
+        let ins = false, outs = false;
+        for (const q of new Set([x, strip[x]])) {
+          if (!q) continue;
+          let all;
+          try { all = document.querySelectorAll(q); } catch (e) { continue; }
+          for (const e of all) {
+            if (within(e)) ins = true; else if (!part(e)) outs = true;
+            if (ins && outs) break;
+          }
+        }
+        if (ins) inside.push(x);
+        if (outs) outside.push(x);
+      }
+      return [inside, outside]; }"""
+    NO_API = """(() => { try { Object.defineProperty(Document.prototype, 'fullscreenEnabled', { get: () => false, configurable: true }); } catch (e) {}
+      try { delete Element.prototype.requestFullscreen; } catch (e) {} try { delete Element.prototype.webkitRequestFullscreen; } catch (e) {} })();"""
+    band, out = set(), set()
+    PHONE = dict(viewport={"width": 402, "height": 874}, device_scale_factor=2, is_mobile=True, has_touch=True)
+    DESK = dict(viewport={"width": 1280, "height": 800})
+    plan = [("phone", "dark", "dark"), ("phone", "light", "dark"), ("desk", "dark", "dark"), ("desk", "light", "dark"),
+            ("desk", "light", "pale"), ("phone", "dark", "pale"), ("desk", "dark", "flip"), ("phone", "light", "flip")]
+    with sync_playwright() as p:
+        b = p.chromium.launch()
+        for view, theme, which in plan:
+            pg = b.new_page(color_scheme=theme, **(PHONE if view == "phone" else DESK))
+            if view == "phone":
+                pg.add_init_script(NO_API)
+            pg.add_init_script(f"try {{ localStorage.setItem('skribl_theme_v1', '{theme}'); }} catch (e) {{}}")
+            browsing.goto(pg, base, "/gallery")
+            pg.wait_for_timeout(1500)
+            tile = pg.locator(f".tile:has(.skribl-inline[data-skribl-id='{names[which]}'])").first
+            tile.scroll_into_view_if_needed()
+            tile.evaluate("t => t.classList.add('ctl-on')")
+            tile.locator(".skfull-card .skfull-full").first.click()
+            pg.wait_for_timeout(1500)
+            frame = ".tileStage.watch-full:is(:fullscreen, .is-immersive-page)"
+            def ask():
+                i, o = pg.evaluate(ASK, [sels, strip, frame])
+                band.update(i)
+                out.update(o)
+            # Pressed in the page, not by pointer: the census runs before the
+            # sheet it makes, when the band is not yet where a finger can be.
+            def press(sel):
+                pg.evaluate("(s) => document.querySelector(s).click()", f"{frame} {sel}")
+                pg.wait_for_timeout(300)
+            ask()                                                            # playing
+            press(".player-controls .primary")                               # paused
+            ask()
+            pg.evaluate(f"() => document.querySelector('{frame} .rl-scrub').classList.add('dragging')")
+            ask()                                                            # a drag on the scrubber
+            pg.evaluate(f"() => document.querySelector('{frame} .rl-scrub').classList.remove('dragging')")
+            press(".rl-speed")
+            ask()                                                            # the speeds open
+            press(".rl-speed")
+            pg.evaluate(f"() => document.querySelector('{frame}').classList.add('chrome-asleep')")
+            ask()                                                            # stepped back
+            pg.close()
+        # The Library: nothing here outside its stage may match either.
+        for view in ("phone", "desk"):
+            pg = b.new_page(**(PHONE if view == "phone" else DESK))
+            browsing.goto(pg, base, "/library")
+            pg.wait_for_timeout(1500)
+            _i, o = pg.evaluate(ASK, [sels, strip, ".stageCanvasWrap"])
+            out.update(o)
+            pg.close()
+        b.close()
+    live = json.loads(Path(live_path).read_text())
+    live["band"] = sorted(band - out)
+    live["band_out"] = sorted(band & out)
+    Path(live_path).write_text(json.dumps(live, indent=1) + "\n")
+    print(f"band: {len(live['band'])} selectors inside the frame only; "
+          f"{len(live['band_out'])} inside it and outside too (left out):")
+    for x in live["band_out"]:
+        print("   ", x)
+
+
+if len(sys.argv) > 2 and sys.argv[1] == "--band-census":
+    band_census(sys.argv[2], sys.argv[3] if len(sys.argv) > 3 else ROOT / "harness" / "tools" / "css_live.json")
 
 if len(sys.argv) > 2 and sys.argv[1] == "--emit":
-    n = emit(sys.argv[2], sys.argv[3] if len(sys.argv) > 3
-             else ROOT / "skribl" / "static" / "player.css")
+    out = Path(sys.argv[3]) if len(sys.argv) > 3 else ROOT / "skribl" / "static" / "player.css"
+    n = emit(sys.argv[2], out)
     print(f"emitted {n:,} chars")
+    # The band's sheet beside it: the same command keeps both current.
+    nb = emit_band(sys.argv[2], out.with_name("fullband.css"))
+    if nb:
+        print(f"emitted {nb:,} chars of the band (fullband.css)")

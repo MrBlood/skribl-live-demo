@@ -20,6 +20,10 @@
   {% include 'skribl/_skribl_theme_boot.html' %}
   {% from 'skribl/_skribl_inline_player.html' import skribl_inline_assets, skribl_inline %}
   {{ skribl_inline_assets() }}
+  {# fullband.css: the link page's full screen, its band and its x, in
+     styles.css's own rules (harness/tools/cssgraph.py emits it, as it does
+     player.css). Before fullbar.css, which is this page's half. #}
+  <link rel="stylesheet" href="{{ skribl_asset('fullband.css') }}">
   {# fullbar.css travels with lib/fullbar.js — see that sheet's header. #}
   <link rel="stylesheet" href="{{ skribl_asset('fullbar.css') }}">
   {# tooltip.css travels with lib/tooltip.js — see that sheet's header. #}
@@ -428,18 +432,6 @@
     /* Watch it big is the FOOTER's button now (lib/fullbar.js, .skfull-full).
        A `.tileFull` lived here too, beside Report, and stayed after the card
        grew a transport row -- so every tile carried the same glyph twice. */
-    /* The way back out, over the drawing and only while it IS full size. The
-       profile's stage has had one since v304; this page had none, which was
-       fine while the only way in was the real API (Escape and the system
-       gesture both work there) and is not fine at all in the fallback, where
-       the page is still the page and nothing else leaves it. */
-    .tileExit { display: none; position: absolute; top: 14px; right: 14px; z-index: 4;
-      width: 44px; height: 44px; place-items: center; border-radius: 12px;
-      background: var(--plate); border: 1px solid var(--plate-edge);
-      color: var(--plate-ink); cursor: pointer; }
-    .tileStage:fullscreen .tileExit,
-    .tileStage.is-immersive-page .tileExit { display: grid; }
-    .tileExit svg { width: 20px; height: 20px; }
     /* The two marks, over the drawing, in the corners the profile's rows use:
        kind top left, sound top right. Decoration — the words are in
        .tileSr, which a screen reader gets and the eye does not. 18px is the
@@ -606,8 +598,9 @@
        a card in a grid, and a stage that IS the display has no card around it
        to be inset from. The fallback already said so for its own reasons; the
        real API needs it too now that the resting state has a margin. */
+    /* The frame is the link page's (fullband.css: the drawing's ground to
+       the screen's edges, the drawing in the middle, the x the band's). */
     .tileStage:fullscreen, .tileStage.is-immersive-page {
-      background: #000; display: flex; align-items: center; justify-content: center;
       width: 100vw; height: 100vh; margin: 0; border-radius: 0; }
     .tileStage.is-immersive-page {
       position: fixed; inset: 0; z-index: 2147483000;
