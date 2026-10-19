@@ -516,6 +516,12 @@ function endDraw() {
   }
   if (tool === 'shape') {
     if (window.SkriblShapeTool) window.SkriblShapeTool.commit(lastRawPos, _constrainActive);
+    // A TAP WITH NO DRAG MAKES NO SHAPE (after v326, the Pad review): Oval and
+    // Poly give no outline for a zero-size drag, but the press had already
+    // marked the canvas drawn on and, on a blank one, started a take, so the
+    // next drawing after Done was never recorded. Nothing drawn, nothing
+    // kept: unwound exactly as a pinch unwinds the stroke its first finger began.
+    if (!currentStroke.length) { abortStrokeForPinch(); return; }
     drawing = false;
     document.body.classList.remove('stroking');
     commitStrokeWithMirrors();

@@ -33,6 +33,11 @@
   let closeTimer = null;
 
   function openExport() {
+    // A REPLAY ENDS FIRST (after v326, the Pad review): the image is the live
+    // canvas, and with a replay running or paused part-way that is the replay
+    // so far, under an option called "The final drawing as a still image".
+    // Post and Video end it the same way.
+    if (playing) stopPlayback();
     // Seed the file-name field from the title, unless the author has
     // already typed one for this export (lib/nametab.js keeps that flag).
     if (window.SkriblName && window.SkriblName.seedExport) window.SkriblName.seedExport();
@@ -43,6 +48,8 @@
       videoBtn.disabled = true;
     } else {
       videoDesc.textContent = audioEl ? 'Replay of your drawing with music' : 'Replay of your drawing';
+      // The tooltip says the music only when there is some (the Pad review).
+      videoBtn.title = audioEl ? 'Save it as a video file, with its music' : 'Save it as a video file';
       videoBtn.disabled = false;
       // Label the button with the format this browser will actually output.
       // The container lives in the TITLE only — the description's job is the

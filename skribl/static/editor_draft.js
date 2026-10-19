@@ -292,7 +292,14 @@ function serializeAutosave() {
     photoMeta: (photoBgImg && photoBgImg.style.display !== 'none' && photoBgImg._fileName)
       ? { name: photoBgImg._fileName, fit: photoFit, opacity: photoOpacityVal_, blur: photoBlur_, offset: { x: photoOffsetX, y: photoOffsetY }, zoom: photoZoom }
       : (typeof pendingPhotoMeta !== 'undefined' ? (pendingPhotoMeta || _inFlight.photo) : null),
-    musicMeta: currentMusicMeta()
+    musicMeta: currentMusicMeta(),
+    // THE NAME, THE PAUSES AND THE VIEWERS' SPEED (after v326, the Pad review):
+    // a reload brought the drawing back nameless, on Tight, at Auto. A post
+    // carries all three (serializeSkribl) and Flip's autosave its title; the
+    // TYPED name only, so a blank one still takes a fresh date name on save.
+    title: ((document.getElementById('skriblName') || {}).value || '').trim() || undefined,
+    pauseMode: pauseMode,
+    playSpeed: authorSpeed || undefined
   });
 }
 
@@ -589,7 +596,12 @@ function clearAutosave() {
   if (PAD_DRAFT_OFF) durableRev = draftRev;
   else try { slotRemove(); durableRev = draftRev; } catch (e) {}
   // The draft is being deliberately discarded (posted, or cleared) — the
-  // media bytes belong to it and go with it.
+  // media bytes belong to it and go with it. UNLESS THE MEDIA IS STILL ON THE
+  // PAGE (after v326, the Pad review): a post keeps the photo and the track
+  // on screen, and the next drawing's autosave names them; with their bytes
+  // gone, a reload said "Media missing" under a pill that had said Saved.
+  // New Skribl removes the media before it gets here, so its bytes still go.
+  if (_mediaPresent()) return;
   if (window.SkriblDraftStore && !PAD_DRAFT_OFF) {
     SkriblDraftStore.del('pad:photo').catch(() => {});
     SkriblDraftStore.del('pad:music').catch(() => {});
@@ -737,6 +749,11 @@ function holdStrokes(pts) {
 
 function restoreAutosave(data) {
   clearCanvas();
+  // The drawing's name, its pauses and its viewers' speed, as loadSkribl adopts
+  // a post's (serializeAutosave says why).
+  if (data.title && window.SkriblName) window.SkriblName.set(data.title);
+  if (data.pauseMode) { setPauseMode(data.pauseMode); if (window._skriblSyncPauseSeg) window._skriblSyncPauseSeg(); }
+  if (data.playSpeed) authorSpeed = data.playSpeed;
   // Its own canvas before anything is painted, as loadSkribl and Flip's restore
   // do, so every stroke lands where it was drawn. An autosave from before it
   // carried one keeps the size this window chose, unless that would cut the
