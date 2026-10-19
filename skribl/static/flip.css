@@ -617,12 +617,14 @@
   .frame.ghost-paste:focus-visible { outline: 2px solid var(--ui-line); outline-offset: 2px; }
   .frame.ghost-paste .ghost-plus { font-size: 20px; font-weight: 600; line-height: 1; }
   .frame.ghost-paste .ghost-n {
-    position: absolute; bottom: 5px; right: 6px; font-size: 10px; font-weight: 700;
+    position: absolute; bottom: 5px; right: 6px; font-size: 12px; font-weight: 700;
     font-variant-numeric: tabular-nums; color: var(--text-secondary);
   }
   .frame canvas { width: 100%; height: 100%; display: block; }
-  /* Top-left, with the hold badge to its right — the ops bar owns the bottom. */
-  .frame .num { position: absolute; top: 4px; left: 6px; font-size: 10px; font-weight: 700; color: var(--text-secondary);
+  /* Top-left, the hold badge beside it in one row that grows with the number
+     (the strip at 12px: at a fixed left:30px the badge sat on "10" and up). */
+  .frame .tiletop { position: absolute; top: 4px; left: 6px; z-index: 2; display: flex; align-items: center; gap: 4px; }
+  .frame .num { font-size: 12px; font-weight: 700; color: var(--text-secondary);
     background: rgba(var(--glass-deep-2-rgb), .7); border-radius: 5px; padding: 1px 5px; font-variant-numeric: tabular-nums; }
   .frame .del { position: absolute; top: 3px; right: 3px; width: 26px; height: 26px; border-radius: 7px; border: 0;
     background: rgba(var(--glass-deep-2-rgb), .72); color: var(--text-secondary); display: none; align-items: center; justify-content: center; cursor: pointer; padding: 0; }
@@ -777,6 +779,8 @@
   .frame .holdbadge.idle { background: rgba(var(--glass-deep-2-rgb), .82); color: var(--text-secondary); }
   @media (hover: hover) { .frame .holdbadge:hover { filter: brightness(1.12); } }
   .frame .holdbadge:focus-visible { outline: 2px solid var(--ui-line); outline-offset: 1px; }
+  /* The drawn ×, a capital's height beside the count (flip.js HOLD_X). */
+  .frame .holdbadge .holdx { width: 8px; height: 8px; margin-right: 1px; vertical-align: 0; }
   .btn.flip-play:disabled { opacity: .38; cursor: default; box-shadow: none; }
   /* The menu the ⋯ opens. Fixed rather than absolute so it escapes the strip's
      own overflow — a popover clipped by the scroller it belongs to is a popover
@@ -1112,11 +1116,7 @@
 }
 
 .frame .holdbadge {
-  position: absolute;
-  top: 4px;
-  left: 30px;             /* was right:24px, which crowded the ✕. Sits after the
-                             page number instead, clear of both. */
-  z-index: 2;
+  position: relative;     /* its 44px box is drawn from here; the row places it */
   /* a <button>, not a <div> — the badge cycles the hold now. Button UA
      styles have to be undone explicitly or it inherits a system border and the
      platform font. */
@@ -1130,13 +1130,15 @@
      face). text-box trims the line to cap height and baseline, so equal padding
      centres the ink in any font; where it is unsupported it centres as before. */
   padding: 4px 5px;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
   line-height: 1.4;
   text-box: trim-both cap alphabetic;
   border-radius: 5px;
-  color: #0d0f14;
-  background: var(--ui-active);
+  /* White on the action violet, 5.3:1 (the strip at 12px). Dark on the bright
+     violet was 4.4:1, under AA for words this size. */
+  color: #fff;
+  background: var(--accent-fill);
   /* A hold of 1 is the default, so showing ×1 on every tile would be noise on a
      strip whose job is to show DRAWINGS. It appears on the tile you are on, the
      one under the pointer, or the one with focus — the same rule the delete ✕
@@ -1616,10 +1618,12 @@ body.stroking .strip-wrap {
 }
 .frame .loopchip, .frame .underlabel {
   position: relative; display: block; border: 0; margin: 0; font-family: inherit;
-  font-size: 10px; font-weight: 600; line-height: 14px; padding: 1px 5px; border-radius: 6px;
+  font-size: 12px; font-weight: 600; line-height: 14px; padding: 1px 5px; border-radius: 6px;
   background: rgba(var(--glass-deep-2-rgb), .88); white-space: nowrap;
 }
-.frame .loopchip { color: var(--ui-hi); cursor: pointer; -webkit-appearance: none; appearance: none; }
+/* The small violet words' ink, 8.2:1 light and 10.4:1 dark (the strip at
+   12px; the bright violet read 4.3:1 on the light glass). */
+.frame .loopchip { color: var(--accent-ink); cursor: pointer; -webkit-appearance: none; appearance: none; }
 /* Forever's \u221e (flip.js, loopChipText): 18x9, wider than the digits are
    tall, so it reads at a glance; stroked, so it stays sharp at any scale. */
 .frame .loopchip .loopinf { display: inline-block; width: 18px; height: 9px; vertical-align: -1px; margin-right: 4px; }
@@ -1630,9 +1634,12 @@ body.stroking .strip-wrap {
 .frame.noplay { border-style: dashed; }
 .frame.noplay canvas { opacity: .18; }
 .frame.noplay .num { opacity: .6; }
+/* IN THE PAGE'S MIDDLE, where no control is: at the bottom it ran under the
+   ⋯ on the page you were on, even at 10px. 30px down sits it between the top
+   corner's button and the bottom row, clear of both; it takes no taps. */
 .frame .noplaytag {
-  position: absolute; left: 50%; bottom: 5px; transform: translateX(-50%); z-index: 2;
-  font-size: 10px; font-weight: 600; line-height: 14px; padding: 1px 6px; border-radius: 6px;
+  position: absolute; left: 50%; top: 30px; transform: translateX(-50%); z-index: 2;
+  font-size: 12px; font-weight: 600; line-height: 14px; padding: 1px 6px; border-radius: 6px;
   background: rgba(var(--glass-deep-2-rgb), .88); color: var(--text-soft); white-space: nowrap; pointer-events: none;
 }
 .frame .noplaymark { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
