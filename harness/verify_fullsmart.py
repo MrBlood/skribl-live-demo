@@ -411,7 +411,10 @@ with sync_playwright() as p:
         # A pale drawing on a dark page. Before one full screen the page's dark
         # showed beside it and the title ran from it onto the paper, so it
         # wore a capsule; now the drawing's paper is all around it, as on the
-        # link page, and the name is in the corner, on that paper.
+        # link page, and the name is in the corner, on that paper. The band
+        # centres its buttons as the link page's does, so on a desk they lie
+        # over the drawing itself: what sits BESIDE it is the name, and the
+        # name is the row that the paper reaching the edges answers to.
         WHO = ("() => { const w = document.querySelector('[data-fs-probe] > .fb-who'); return w && w.getClientRects().length ? { "
                "tone: w.classList.contains('t-light') ? 'light' : w.classList.contains('t-dark') ? 'dark' : null } : null; }")
         pg, bar = gallery(b, DESK, "dark", TALL)
@@ -421,16 +424,16 @@ with sync_playwright() as p:
         worst, where, n = bar.words_worst()
         check("Gallery, desk: every word reads (4.5:1 or more)",
               n > 20 and worst >= 4.5, f"{worst:.2f} at '{where}'")
-        left = tones(st, lambda g: g["r"][2] < st["bar"][0] + 300)
-        check("Gallery, desk, dark page: the controls beside the drawing wear its paper's glass, light",
-              left and all(t == "light" for t in left), str(left))
+        every = tones(st, lambda g: True)
+        check("Gallery, desk, dark page: every control wears the paper's glass, light",
+              every and all(t == "light" for t in every), str([(g["name"][:20], g["tone"]) for g in st["glass"]]))
         pg.evaluate("() => document.documentElement.setAttribute('data-theme', 'light')")
         pg.wait_for_timeout(400)
         st2, who2 = bar.state(), pg.evaluate(WHO)
-        left2 = tones(st2, lambda g: g["r"][2] < st2["bar"][0] + 300)
-        check("Gallery, desk: a theme turn leaves them so: the ground is the drawing's, not the page's",
-              left2 and all(t == "light" for t in left2) and bool(who2) and who2["tone"] == "light",
-              f"{left2}, {who2}")
+        every2 = tones(st2, lambda g: True)
+        check("Gallery, desk: a theme turn leaves them and the name so: the ground is the drawing's, not the page's",
+              every2 and all(t == "light" for t in every2) and bool(who2) and who2["tone"] == "light",
+              f"{every2}, {who2}")
         pg.close()
 
     if on("link"):

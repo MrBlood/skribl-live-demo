@@ -612,7 +612,8 @@ with sync_playwright() as _spg:
     _band = _pg2.evaluate("""() => {
         const st = document.querySelector('.tileStage');
         const bar = st && st.querySelector(':scope > .player-bar');
-        const cv = st && st.querySelector('canvas');
+        /* the drawing's, by name: the band's scrubber is a canvas too */
+        const cv = st && st.querySelector('.skribl-inline-canvas');
         if (!st || !bar || !cv) return { missing: true };
         const b = bar.getBoundingClientRect(), c = cv.getBoundingClientRect();
         return { host: st.classList.contains('skfull-host'),
@@ -660,7 +661,14 @@ with sync_playwright() as _spg:
         const out = { open: open, rate: pl.rate(), label: label(),
                       closed: bar.querySelector('.rl-chips').hidden };
         pl.setRate(1);
+        /* The line hands focus back to its speed, as it should for a
+           keyboard, and a probe with no pointer reads as one: the card keeps
+           its controls up for focus in the stage (gallery.js, peek). Put the
+           focus back; the card then takes its ordinary 2.6s peek, waited out
+           below so the round trip reads the way out and not the peek. */
+        if (st.contains(document.activeElement)) document.activeElement.blur();
         return out; }""")
+    _pg2.wait_for_timeout(2800)
     check("pressing a speed in the line changes the speed and says so",
           not _rate.get("missing") and _rate["open"] and _rate["rate"] == 2
           and _rate["label"] == "2×" and _rate["closed"],
@@ -2485,7 +2493,10 @@ with sync_playwright() as _spn:
     _NIB = r"""() => {
         const t = document.querySelector(".tile");
         const n = t && t.querySelector(".skribl-inline-nib");
-        const c = t && t.querySelector("canvas");
+        /* THE DRAWING'S CANVAS BY NAME: since one full screen the stage also
+           holds the band's scrubber, which is a canvas too, 30px tall, and
+           the first one read as a scale of 0.049. */
+        const c = t && t.querySelector(".skribl-inline-canvas");
         const b = t && t.querySelector("[data-skribl-inline]");
         if (!n || !c || !b) return { missing: true };
         const aw = +b.getAttribute("data-skribl-w") || 0;
