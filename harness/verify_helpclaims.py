@@ -714,7 +714,13 @@ with sync_playwright() as p:
                 .find(x => x.querySelector('.help-pill').textContent.trim() === 'Pages');
                 return t ? [...t.querySelectorAll('.help-desc strong')].map(s => s.textContent.trim()) : null; }""")
             bar = pg.evaluate(PAGE_BAR)
-            ghosts = [w for w in (named or []) if w not in bar and w not in ("←", "→", "✕")]
+            # A name the add row lacks is still a real button when one on the
+            # page is called by it (the page bar's Delete, Undo); a glyph is
+            # the strip's own (the arrows, a tile's x, a phone tile's ⋯).
+            real = pg.evaluate("""(names) => names.filter(w => [...document.querySelectorAll('button')].some(b =>
+                ((b.getAttribute('aria-label') || b.textContent || '').trim().toLowerCase()).startsWith(w.toLowerCase())))""",
+                [w for w in (named or []) if w not in bar])
+            ghosts = [w for w in (named or []) if w not in bar and w not in real and w not in ("←", "→", "✕", "⋯")]
             check("Flip: every page button the Pages tip names is a button on the page",
                   named and not ghosts, f"named {named}, the page bar has {bar}")
         # THE QUICK START'S WAY INTO THE DRAW MENU IS THE ONE THAT WORKS. Flip's
