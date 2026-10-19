@@ -161,11 +161,13 @@ work inside the site and on its own.
 is always open. Today the drawings say *sketchbook* and the chrome around them says
 *inspected*: monospace caps, legal-sounding notices, every control the same weight.
 Aim: the drawing is the hero, controls quiet until needed, words that sound like a
-friend. Safety facts are said once, kindly, where they matter. **"Skribl is kind."** That is
-the owner's first word for the feel, and it applies everywhere: to the words on the
-screen, to how mistakes are handled (nothing is lost, and the person is never
-blamed), to beginners, and to how we work together. The owner may add two more
-words; write them here when they do, and check every mock against all of them.
+friend. Safety facts are said once, kindly, where they matter.
+
+**"Powerful, playful, simple, and kind."** That is the feel, in the owner's words.
+Kind came first, on its own, and it applies everywhere: to the words on the screen,
+to how mistakes are handled (nothing is lost, and the person is never blamed), to
+beginners, and to how we work together. The other three came after the 12px and
+drafts mocks. Check every mock against all four, and say in it how it does.
 
 **Where things stand** is in the newest `DECISIONS.md` entries, not here: this
 section holds what does not go stale.

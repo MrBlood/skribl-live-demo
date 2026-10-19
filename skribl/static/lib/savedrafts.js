@@ -695,7 +695,7 @@
       var data = rec && rec.payload;
       if (!data || typeof data !== 'object') throw new Error('Couldn’t read that draft.');
       if ((data.frames || []).some(function (f) { return f && f.gen; })) {
-        throw new Error('Only Flip can draw its in-between pages: open it in Flip to save it as a file.');
+        throw new Error('Only Flip can save this one as a file: open it there.');
       }
       var title = data.title || rec.title || it.title || 'Untitled Skribl';
       var file = data.title ? data : Object.assign({}, data, { title: title });

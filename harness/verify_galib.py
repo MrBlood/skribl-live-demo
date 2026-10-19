@@ -740,8 +740,8 @@ with sync_playwright() as p:
     if trow.locator(".draft-file").count():
         trow.locator(".draft-file").click(); pg.wait_for_timeout(1200)
     said = trow.locator(".draft-meta").inner_text() if trow.count() else ""
-    check("drafts desk: a Flip draft holding an in-between page writes no file, and its row says only Flip can draw those, and how",
-          not _downloads and "Only Flip can draw its in-between pages" in said and "open it in Flip" in said,
+    check("drafts desk: a Flip draft holding an in-between page writes no file, and its row says only Flip can save it, and where",
+          not _downloads and "Only Flip can save this one as a file" in said and "open it there" in said,
           f"downloads {_downloads}; said {said!r}")
     pg.close()
     desk_d.close()

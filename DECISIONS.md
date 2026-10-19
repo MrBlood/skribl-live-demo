@@ -19162,8 +19162,9 @@ Save a .skribl file is new: the file the editor's Save as a file makes,
 without opening the draft, because a draft holds exactly that. A Flip draft
 keeps an in-between page as its recipe, which only Flip can draw, and the
 format's other readers cannot read a recipe; so a Flip draft holding one
-writes no file, and its row says to open it in Flip and save it there. The
-mock did not show that case.
+writes no file, and its row says "Only Flip can save this one as a file: open
+it there." The mock did not show that case; the owner picked those words, the
+shorter of two, from the as-built page, and kept the rest as built.
 
 Delete asks once, and the arm never moves (the v317 bin rule). In the phone's
 menu the button is the menu's width, so its word becomes "Tap again to
