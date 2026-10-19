@@ -556,7 +556,8 @@ def editor_common(pg, menu, export_item, canvas):
     click(pg, "#mediaOpenBtn"); esc(pg)
     click(pg, menu); click(pg, "#saveCloudDraftItem", 900); esc(pg)
     click(pg, menu); click(pg, "#openCloudDraftItem, #miOpenDraft", 900); yield "drafts sheet"
-    click(pg, ".sdrafts-del", 400); yield "drafts sheet, delete asked"; esc(pg)
+    click(pg, ".sdrafts-row .draft-more", 300); yield "drafts sheet, a row's menu"
+    click(pg, ".sdrafts-row.more-open .draft-del", 400); yield "drafts sheet, delete asked"; esc(pg)
     click(pg, menu); click(pg, "#reportItem, #miReport", 700); yield "report"; esc(pg)
     click(pg, menu); click(pg, "#openCloudDraftItem", 900); click(pg, "#nameItem", 500); yield "name"; esc(pg)
     click(pg, menu); click(pg, "#helpItem, #miInfo", 900); yield "how it works"

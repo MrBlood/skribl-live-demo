@@ -19341,3 +19341,31 @@ Pad and Flip: shared. Posts of both kinds play through this one card on the
 Gallery and on profiles; the editors have no card bar. Full screen (the
 Gallery's and the link page's bars) keeps its dark scrim for now: the owner
 said yes to a mock of the same fade there, which comes next.
+
+## After v326 -- the editors' Your drafts sheet ends its rows the same way (D3)
+
+The second half of D3. The mock said: "The editors' 'Your drafts' sheet draws
+the same row, on Pad and Flip, so it gets the same ⋯." Its rows ended in the
+same bin the Library's did.
+
+Each row in the sheet now ends in one ⋯, on Pad and Flip alike, opening Open
+in Pad (or Flip), Save a .skribl file, and Delete, last, past a line. It's
+built by the same `rowEnd()` as the Library's rows. The ⋯ shows at every
+width: the sheet is 460px even on a desk, a phone's width, and the Library's
+rows show their ⋯ under 640px. Open in the menu is the card's own tap, so
+over work on the canvas it still asks first ("Tap again — this replaces what
+is on your canvas"), and a draft of the other kind still opens in its own
+editor.
+
+The list scrolls, and a menu inside it would be cut off at its edge. So the
+open menu floats: it is fixed, placed under its ⋯ by the script, in the
+sheet's box (the sheet is transformed, which makes it the box a fixed element
+is placed in), and above the ⋯ where the screen ends first. It shuts when the
+list scrolls or the window resizes, as a tap elsewhere and Escape shut it.
+
+Delete wears the Library's deeper red, `--row-danger-ink` (#7a0a2d in light,
+#ffb3c6 in dark): the same row's Delete, 7:1 on the menu's paper, where the
+editors' own --danger reads about 5.4:1.
+
+The sheet's old bin, and its own copy of the bin's paths (`BIN` in
+lib/savedrafts.js), are gone; every draft row's bin is drawn by rowEnd.
