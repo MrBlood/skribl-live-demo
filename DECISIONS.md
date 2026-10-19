@@ -19990,3 +19990,54 @@ a suite by its old name say what is true.
 
 Pad and Flip: the editors' own full screen (lib/watchfull.js) keeps its band
 up while its speeds are open already; nothing here changes either editor.
+
+## After v326 -- the words: How it works, Ask, the cards, the book and Draw along (copy fixes)
+
+A read-only review of every word the editors say about themselves found
+these no longer true. Each was checked against the code before it changed,
+and each is now read by the new verify_words where a person reads it, red on
+the words before.
+
+- Signed in, Ask told a person a saved draft "stays on this browser", and
+  How it works that "nothing is uploaded until you post". Signed in, Save
+  keeps a draft, its photo and its music in the account (lib/savedrafts.js
+  picks the account's store). Both now say which, by the drafts' own switch.
+- "Save draft" was the name of a button that says Save, in the Autosave tip
+  and the Library's empty Drafts.
+- Flip: the stamp shelf "stays up while you place" (it steps away, as the
+  owner asked, and Stamps brings it back); "a scrub bar over the canvas" (F1
+  pick C made the page strip the timeline); a page's x deletes it (on a
+  phone the ⋯ ends in Delete); hover a page to move it (the bar above the
+  strip does, the ⋯ on a phone); the onion skin's "stacked-sheets toggle"
+  (Onion skin, in Tune).
+- The Pad's take kept "the timing of each stroke, not the pauses": every
+  pause is kept, and Pauses, in Tune, replays them as drawn, trims them or
+  squeezes them (the default). "New pixels can't silently diverge" is "what
+  you see is always what replays".
+- The custom colours were a "+", a rainbow swatch since the + went; "Media"
+  was the button named Photo and music; the Crossfade tip did not say where
+  it is (under Fine-tune, on both editors); "Flip Mode" was Flip (the
+  editor switch's name to a screen reader, and a note), and a Flip-only tip
+  carried a Pad half no page could show, now gone; P and E were Flip's
+  shortcuts alone, and the Pad has both; Smudge said one thing
+  twice; "hold one" told a mouse what only a finger does (a pointer rests);
+  the name "goes with" posts, whose title starts empty (filling it from the
+  name is the owner's call).
+- Ask's "Draw more over a replay" began "Play your drawing", and Add take
+  steps aside while it plays: it begins with Add take now.
+- Draw along's ending, "You drew the cat. Press Play to watch it.", was cut
+  off mid-word in a phone's pill (263px of words in 192px, which cannot
+  wrap), and a one-page Flip has no Play. "You drew it! Tap Play." on the Pad
+  and "You drew it! Tap Duplicate." on Flip fit with room for the iPhone's
+  face (measured in this box's; not tested in SF).
+- The Post card told a Flip it would "draw itself" (it plays); the Shape
+  card was named Shapes beside a button named Shape; and the book's "sixteen
+  times faster to see an hour in a minute" was out by four (16x is 3 min 45
+  s of an hour): Fit is the half minute.
+
+Left for the owner, not changed: the .skribl file's three names ("Save as a
+file", "Save a backup", "Draft saved"), and the delete key's two ("delete
+key" on the Post sheet, the owner's K1, "recovery key" in the Library).
+
+Pad and Flip: shared words, both editors, except where one has what the
+other does not (Flip's strip and stamps, the Pad's takes).

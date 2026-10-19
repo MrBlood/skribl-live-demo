@@ -88,7 +88,10 @@
     if (!run) return;
     var n = run.strokes.length;
     if (run.k >= n) {
-      run.where.textContent = 'You drew ' + run.name + '. Press Play to watch it.';
+      // Short enough for a phone's pill, which cannot wrap (192px there: "You
+      // drew the cat. Press Play to watch it." was cut off mid-word), and
+      // Flip's next step is a second page, since one page has no Play.
+      run.where.textContent = document.getElementById('strip') ? 'You drew it! Tap Duplicate.' : 'You drew it! Tap Play.';
       run.skip.hidden = true;
     } else {
       run.where.textContent = run.name + ' · ' + (run.k + 1) + ' of ' + n;

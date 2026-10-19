@@ -49,7 +49,7 @@
     <button type="button" class="menu-editor on" aria-label="Flip, the editor you are in">{{ flip_ic }}<span>Flip</span></button>
     {%- else -%}
     <button type="button" class="menu-editor on" aria-label="Pad, the editor you are in">{{ pad_ic }}<span>Pad</span></button>
-    <a href="{{ url_for('.skribl_flip') }}{% if compose %}?compose=1{% endif %}" id="flipBtn" class="menu-editor" aria-label="Flip Mode: make an animation page by page, a separate draft from this one">{{ flip_ic }}<span>Flip</span></a>
+    <a href="{{ url_for('.skribl_flip') }}{% if compose %}?compose=1{% endif %}" id="flipBtn" class="menu-editor" aria-label="Skribl Flip: make an animation page by page, a separate draft from this one">{{ flip_ic }}<span>Flip</span></a>
     {%- endif -%}
   </span>
 
