@@ -19316,7 +19316,28 @@ Mute now, and goes red without the watch. The unreadable drawing is a read
 that throws, as a tainted canvas's does; a stub on the player's method went
 quiet when the reading moved to the bar.
 
+MUTE STEPS ASIDE ON A SILENT DRAWING, on the card and in full screen (the
+owner, asked with the fade: "yes to all"). Greyed out on every silent card it
+was a control with nothing to act on. lib/fullbar.js knows from the listing
+before the drawing loads (`sound` on the box's data-skribl-line; the Gallery
+now writes it for a Flip's pages-only line too), so the row does not change at
+the first tap, and from the drawing itself once it has; where neither has
+said, Mute stays, greyed, as before. `.skfull-btn[hidden]` is `display: none`:
+the button's own `display: grid` outranked the attribute. The same rows caught
+the card's row moving 2.6px at the first tap: it was placed from the card
+image's plate, which sits inside the drawing's frame, and is now placed from
+the frame in both states, where the canvas lands.
+
+verify_cardfade's last section asks it: no Mute on a silent card at rest,
+playing, or in full screen; a card with sound keeps its Mute; the first tap
+moves no button. On main's code 16 of its 25 rows fail. Five more mutations
+each fail their own rows: silent known only once loaded (2), the row placed
+from the plate (1), [hidden] outranked by the grid (3), full screen keeping its
+Mute (1), Mute hidden everywhere (6). Hidden everywhere first CRASHED the
+suite (a zero-size button's ring read off the shot) instead of failing it; a
+button that is not painted now fails its rows by name.
+
 Pad and Flip: shared. Posts of both kinds play through this one card on the
 Gallery and on profiles; the editors have no card bar. Full screen (the
-Gallery's and the link page's bars) keeps its dark scrim for now; the owner
-was asked whether to mock the same fade there next.
+Gallery's and the link page's bars) keeps its dark scrim for now: the owner
+said yes to a mock of the same fade there, which comes next.
