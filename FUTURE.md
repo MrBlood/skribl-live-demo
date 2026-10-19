@@ -775,7 +775,7 @@ when you post?" -- he did not then; a post said "Posted!" and nothing more --
 and the owner's answer was "keep it parked until after the audit". He cheers
 now (#476), and START-HERE puts him on the device check.
 
-## 6m. Blooby says hi: he grows to full screen, waving (owner, after #476)
+## 6m. Blooby says hi: he grows to full screen, waving (owner, after #476) — BUILT
 
 THE ASK, the night the cheer merged: "make a blooby waving start small then
 emerge at full screen. Animate him waving the whole time. Keep star background
@@ -936,7 +936,8 @@ AFTER IT WENT LIVE (owner: "It looks good"): Settings in the menu wears a
 gear, the header's sliders are named Tune on both editors, and the first Save
 of an unnamed drawing asks for a name, the date name filled in and selected.
 
-NEXT, IN THIS ORDER (owner, after v323): "finish the … first. Don't start on
+NEXT, IN THIS ORDER (owner, after v323), and since done (6p builds Hold to
+learn, Draw along, Show me and the "?"): "finish the … first. Don't start on
 how it works until we're done with …". When the menu is merged and the owner
 is happy with it, come back to How it works (6n). Its open ideas: Hold to
 learn (press and hold any control for a card with its example), Draw along

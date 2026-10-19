@@ -339,9 +339,16 @@ def register_security(bp, skribl_version, player_target="_blank"):
         _inflate_request below completes the story for compressed bodies —
         this bounds what arrives, that bounds what it inflates to.
         """
-        if request.method not in ("POST", "PUT", "PATCH"):
-            return None
         limit = _request_limit()
+        if request.method not in ("POST", "PUT", "PATCH"):
+            # A DELETE has a body too, its delete key, and it is read (after
+            # v326, the server review: 50 KB of one answered 204 where the
+            # same on a PATCH was 413). Bounded on the read, chunked included,
+            # with no length asked of a request that sends no body.
+            if request.content_length is not None and request.content_length > limit:
+                return jsonify({"error": "Request body too large."}), 413
+            request.max_content_length = limit
+            return None
         if request.content_length is None:
             return jsonify({"error": "Content-Length is required."}), 411
         if request.content_length > limit:

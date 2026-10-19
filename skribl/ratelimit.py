@@ -260,9 +260,17 @@ def _rate_backend():
     return val
 
 
+# A host with no key at all, on the memory backend (after v326, the server
+# review): every play and every report answered 500, though the docstring
+# below promised the raise only for the db backend. Memory forgets on restart
+# anyway, so a key that lasts the process is all its hash needs.
+_PROCESS_RATE_KEY = secrets.token_bytes(32)
+
+
 def _rate_hmac_key():
     """The identity-hash key: explicit app config > env > app SECRET_KEY > env
-    SECRET_KEY. Raises on the db backend with no key at all."""
+    SECRET_KEY. Raises on the db backend with no key at all; the memory
+    backend falls back to a key that lasts the process."""
     cfg_key = cfg_secret = None
     try:
         cfg_key = current_app.config.get("SKRIBL_RATE_HMAC_KEY")
@@ -271,6 +279,8 @@ def _rate_hmac_key():
         pass
     key = (cfg_key or os.environ.get("SKRIBL_RATE_HMAC_KEY")
            or cfg_secret or os.environ.get("SECRET_KEY") or b"")
+    if not key and _rate_backend() == "memory":
+        return _PROCESS_RATE_KEY
     if not key:
         raise RuntimeError(
             "SKRIBL_RATE_HMAC_KEY (or SECRET_KEY) is required when "

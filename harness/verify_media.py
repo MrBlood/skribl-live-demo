@@ -113,12 +113,23 @@ cases_bad = [
      {"frames": [frame()], "thumbnail": durl("image/png", 2_500_000)}, "too large"),
     ("a non-string data value", {"frames": [frame(photo={"data": 12345})]}, "data URL"),
 ]
+# THE PERSON READS `error`, AN API CALLER `detail` (after v326, the server
+# review: a Flip with a big screenshot read "Couldn't post. 'frames[0].photo.data'
+# is too large (8200 kB; limit 8000 kB)."). The field's version, the one these
+# rows match on, moved to `detail`; `error` names the photo or the music in
+# plain words and never a field path.
 for name, payload, expect in cases_bad:
     payload.setdefault("title", "harness")
     status, body = post(payload)
-    err = str(body.get("error", ""))
-    check(f"rejects {name}", status == 400 and expect.lower() in err.lower(),
-          f"{status} {err[:80]}")
+    err, detail = str(body.get("error", "")), str(body.get("detail", ""))
+    check(f"rejects {name}", status == 400 and expect.lower() in detail.lower()
+          and ".data" not in err and "frames[" not in err
+          and ("photo" in err.lower() or "music" in err.lower() or "card" in err.lower()),
+          f"{status} {err[:60]} | {detail[:60]}")
+status, body = post({"title": "harness", "frames": [frame(photo={"data": durl("image/png", 8_200_000)})]})
+check("an oversize photo says so in plain words, with its size and the limit",
+      status == 400 and str(body.get("error", "")).startswith("The photo is too big to post (8.2 MB; up to 8 MB)"),
+      f"{status} {str(body.get('error', ''))[:90]}")
 
 print("\nCOVERAGE — the walker reaches media wherever it lives")
 status, body = post({"title": "harness",

@@ -182,8 +182,9 @@ mute and loop on it.
 
 **What it costs and when.** `skribl_inline_assets()` pulls
 `inlineplayer.css`, `inlineplayer.js`, and the shared rule modules
-`lib/canvassizes.js`, `lib/holdtiming.js`, `lib/audiosession.js` and
-`lib/photofit.js` — under a
+`lib/canvassizes.js`, `lib/holdtiming.js`, `lib/audiosession.js`,
+`lib/photofit.js`, and for the line under a post `lib/replayline.js`,
+`lib/scrubkeys.js` and `lib/seekcache.js` — under a
 byte ratchet `harness/verify_inline.py` prints and holds (this sentence used to
 quote the number and name `lib/sharecard.js`, which v281 dropped from the
 macro; run the suite). Per post, idle, it costs ONE image: the poster at
@@ -438,9 +439,10 @@ stroke below 100% opacity used to be drawn here as a row of translucent stamps,
 so its overlaps stacked and the feed showed a scalloped, banded version of a
 drawing that is smooth on `/s/<id>`.
 
-**And it keeps the drawing's shape.** The box is 16:9 because that is the
-widest canvas a drawing can have; anything else letterboxes inside it. Until
-v305 it did not — the canvas carried a definite CSS width and height, so the
+**And it keeps the drawing's shape.** Without `canvas_w` and `canvas_h` the
+box is 16:9, because that is the widest canvas a drawing can have, and
+anything else letterboxes inside it; with them it takes the drawing's own
+shape (above). Until v305 the drawing itself did not — the canvas carried a definite CSS width and height, so the
 box's two maximums clamped each axis separately and a 9:16 drawing was drawn
 216% too wide, in your feed as much as in Skribl's own. If you style the embed,
 do not give `.skribl-inline-canvas` a width or a height: `auto` is what lets
@@ -592,8 +594,8 @@ sign in on, and inside your composer: press the Skribl button, ⋯ Open a draft,
 pick it, Add to post. Signed out, or with no `current_user_id`, the same two
 rows keep drafts in that browser only, and the menu says which.
 
-* **A draft is not a post.** No link, no player, no listing, no visibility, no
-  Library entry, no spent post quota. Posting one does not delete it; the
+* **A draft is not a post.** No link, no player, no listing, no visibility and
+  no spent post quota; the Library lists it under Drafts, not with posts. Posting one does not delete it; the
   author does, from the list.
 * **Its author only.** Anyone else, and a missing id, get the same 404 for
   read, overwrite and delete. Signed out is 401. Writes need the CSRF header

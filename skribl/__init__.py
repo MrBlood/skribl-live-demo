@@ -246,7 +246,6 @@ def create_blueprint(session=None, url_prefix=None,
     # None means "nobody is signed in", which is the truth for an unauthenticated
     # deployment, and it is what the authorization rule is written against.
     bp.skribl_current_user_id = current_user_id or (lambda: None)
-    # Recorded separately from the callable above, because the callable is
     # THE FLAG THAT USED TO GATE DELETE AND PATCH IS GONE, and so is the claim
     # that it still does. It read: "it is what register_routes() uses to decide
     # whether DELETE and PATCH exist at all" — while the note beside those very

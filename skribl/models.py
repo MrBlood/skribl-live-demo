@@ -681,8 +681,9 @@ class SkriblIdempotency(SkriblBase):
     second rate-limit slot on nothing. With an `Idempotency-Key` header, the
     retry finds this row and gets the SAME post back.
 
-    Scoped to the AUTHOR: key_hash = sha256(user_id_or_'anon' + '|' + key), so
-    one client's key can never resolve to (or block on) another's post. Rows
+    Scoped to the AUTHOR, or for an anonymous caller to its X-Skribl-Client
+    capability (routes.py, the idempotency key's hash), so one client's key can
+    never resolve to (or block on) another's post; with neither, no key. Rows
     ride the SAME transaction as the post they name — the host owns the commit
     (docs/INTEGRATION.md), so either both are durable or neither is, which is
     exactly the property a retry needs. A concurrent duplicate loses on the

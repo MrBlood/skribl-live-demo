@@ -96,6 +96,26 @@ print("\nEXISTING REFUSALS — pinned so they stay refusals")
 st, body = post({"strokes": [{"x": float("nan"), "y": 5}]})
 check("NaN coordinate refused", st == 400 and "finite" in str(body.get("error", "")),
       f"{st} {str(body)[:70]}")
+# A POINT'S TIME, BOUNDED (after v326, the server review). Unbounded, an
+# infinite `t` (1e400 in the JSON) or a gap too wide for a float answered 500
+# when the line under the post was summed, a 400-digit number did too (and so
+# did a 400-digit x, through math.isfinite), and a NaN was stored as a bare
+# NaN token that no browser can read back, so the post could never play. The
+# editors cannot send any of these (JSON.stringify writes null); a
+# hand-built request can.
+_ok = [{"x": 1, "y": 1, "t": 0}]
+for _label, _pts in (("an infinite t", _ok + [{"x": 2, "y": 2, "t": float("inf")}]),
+                     ("a t gap too wide for a float", [{"x": 1, "y": 1, "t": -1e308}, {"x": 2, "y": 2, "t": 1e308}]),
+                     ("a 400-digit t", _ok + [{"x": 2, "y": 2, "t": 10 ** 400}]),
+                     ("a NaN t", _ok + [{"x": 2, "y": 2, "t": float("nan")}]),
+                     ("a 400-digit x", [{"x": 10 ** 400, "y": 1, "t": 0}, {"x": 2, "y": 2, "t": 5}])):
+    st, body = post({"strokes": _pts, "strokeGroups": [2]})
+    check(f"{_label} is refused, neither stored nor a crash", st == 400, f"{st} {str(body)[:80]}")
+st, body = post({"strokes": _ok + [{"x": 2, "y": 2, "t": 40}], "strokeGroups": [2], "note": float("nan")})
+check("a NaN anywhere else in the payload is refused, as no browser could read it back",
+      st == 400, f"{st} {str(body)[:80]}")
+st, body = post({"strokes": _ok + [{"x": 2, "y": 2, "t": 40}], "strokeGroups": [2]})
+check("...and the same drawing with ordinary times posts", st == 201, f"{st} {str(body)[:80]}")
 st, body = post({"strokes": [{"x": 1, "y": 2}], "strokeGroups": [0, 1]})
 check("zero-point stroke group refused", st == 400
       and "strokeGroups" in str(body.get("error", "")), f"{st} {str(body)[:70]}")
@@ -112,13 +132,16 @@ print("\nBASESNAPSHOT — the media slot nothing used to walk")
 # that it now goes through the same image rules as everything else.
 st, body = post({"frames": [frame],
                  "baseSnapshot": "data:image/png;base64,AAAAAAAAAAAA"})
+# The field is named in `detail` since the person reads `error` (after v326:
+# "The drawing's picture couldn't be read. Try another file.").
 check("a root baseSnapshot with a bogus image signature is refused",
-      st == 400 and "baseSnapshot" in str(body.get("error", "")),
+      st == 400 and "baseSnapshot" in str(body.get("detail", ""))
+      and "picture" in str(body.get("error", "")) and "baseSnapshot" not in str(body.get("error", "")),
       f"{st} {str(body)[:80]}")
 st, body = post({"frames": [dict(frame,
                  baseSnapshot="data:image/png;base64,AAAAAAAAAAAA")]})
 check("so is a per-frame one, with its frame named",
-      st == 400 and "frames[0].baseSnapshot" in str(body.get("error", "")),
+      st == 400 and "frames[0].baseSnapshot" in str(body.get("detail", "")),
       f"{st} {str(body)[:80]}")
 st, _ = post({"frames": [dict(frame, baseSnapshot=None)]})
 check("Flip's explicit baseSnapshot:null still accepted", st == 201, f"{st}")

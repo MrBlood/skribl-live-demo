@@ -74,7 +74,7 @@ from .validation import (_iter_media_items, _payload_has_audio,
                          _payload_canvas, _payload_kind, _payload_pages,
                          _payload_line,
                          _validate_payload_complexity, _validate_payload_extra,
-                         _validate_payload_media)
+                         _validate_payload_media, media_refusal)
 
 
 def _installed_media_store():
@@ -114,9 +114,13 @@ class SkriblRejected(Exception):
 
     status = 400
 
-    def __init__(self, message):
+    def __init__(self, message, detail=None):
         super().__init__(message)
         self.message = message
+        # The field's version of a refusal written for the person (a photo too
+        # big to post): what an API caller matches on. None when the message
+        # is already both.
+        self.detail = detail
 
 
 class SkriblIdempotencyRace(SkriblRejected):
@@ -255,9 +259,9 @@ def create_post(payload, *, author_id=None, media_store=None,
         raise SkriblRejected(complexity_error)
     # Media: type + per-item size caps. See _validate_payload_media. This is
     # the only place a data URL is vetted before it lands in the JSON column.
-    media_error = _validate_payload_media(payload)
+    media_error = media_refusal(payload)
     if media_error:
-        raise SkriblRejected(media_error)
+        raise SkriblRejected(*media_error)
     # AND EVERYTHING NEITHER OF THEM LOOKED AT. The two checks above bound the
     # keys the schema knows; this bounds the rest, which is what actually rides
     # into the column. It runs AFTER them so the cheap structural refusals still

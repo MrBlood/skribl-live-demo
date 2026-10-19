@@ -90,8 +90,10 @@ _PAUSE_CAPS = {"keep": None, "trim": 250, "tight": 50}
 
 
 def _line_num(p, key):
+    # Finite and in range, or nothing: a stored row from before the bound on
+    # `t` (POINT_T_LIMIT, below) must not overflow the line's arithmetic.
     v = p.get(key) if isinstance(p, dict) else None
-    return v if isinstance(v, (int, float)) and not isinstance(v, bool) else None
+    return v if _finite(v) and abs(v) <= POINT_T_LIMIT else None
 
 
 def _payload_line(payload):
@@ -668,10 +670,20 @@ LOOP_MS_MIN = 500
 LOOP_MS_MAX = 30_000
 COORD_LIMIT = 100_000
 MAX_BRUSH = 500
+# A point's time `t`, in ms (after v326, the server review): the Pad writes
+# milliseconds since its take began, Flip the page's clock. Bounded, because
+# an unbounded one answered 500 (1e400 is infinity, and the gap between -1e308
+# and 1e308 is too) or was stored as NaN, which no browser can read back, so
+# the post could never play. A million million ms is over thirty years.
+POINT_T_LIMIT = 1e12
 
 
 def _finite(n):
-    return isinstance(n, (int, float)) and not isinstance(n, bool) and math.isfinite(n)
+    # An int is finite however long it is; math.isfinite() raises on one too
+    # big for a float (a 400-digit x answered 500), so only floats ask it.
+    if isinstance(n, bool) or not isinstance(n, (int, float)):
+        return False
+    return isinstance(n, int) or math.isfinite(n)
 
 
 def _validate_points(points, label, budget, cap=None):
@@ -706,6 +718,9 @@ def _validate_points(points, label, budget, cap=None):
         size = p.get("size")
         if size is not None and (not _finite(size) or size <= 0 or size > MAX_BRUSH):
             return f"'{label}' has an out-of-range brush size.", budget
+        t = p.get("t")
+        if isinstance(t, (int, float)) and not isinstance(t, bool) and (not _finite(t) or abs(t) > POINT_T_LIMIT):
+            return f"'{label}[{index}].t' is out of range.", budget
     return None, budget
 
 
@@ -913,6 +928,46 @@ def _validate_payload_media(payload):
     return None
 
 
+# THE PERSON READS THE REFUSAL (after v326, the server review). The editors
+# show a refusal's words as they are, and these named the field: "Couldn't
+# post. 'frames[0].photo.data' is too large (8200 kB; limit 8000 kB)." on a
+# Flip with a big screenshot. media_refusal() says it in plain words and hands
+# the field's version back as the detail, for an API caller to match on.
+_MEDIA_SLOT = (("music", "The music"), ("photo", "The photo"),
+               ("baseSnapshot", "The drawing's picture"), ("thumbnail", "The card's picture"))
+
+
+def _media_words(label, err, verb="post"):
+    slot = next((name for key, name in _MEDIA_SLOT if key in label), "A file")
+    m = re.search(r"too large \((\d+) kB; limit (\d+) kB\)", err)
+    if m:
+        return (f"{slot} is too big to {verb} ({int(m.group(1)) / 1000:.1f} MB; up to "
+                f"{int(m.group(2)) / 1000:g} MB). Try a smaller one.")
+    m = re.search(r"too large \((\d+)x(\d+); limit (\d+) px", err)
+    if m:
+        return (f"{slot} is too big to {verb} ({m.group(1)}\u00d7{m.group(2)}; up to "
+                f"{m.group(3)} px a side). Try a smaller one.")
+    if "too many pixels" in err:
+        return f"{slot} has too many pixels to {verb}. Try a smaller one."
+    m = re.search(r"too long \((\d+)s; limit (\d+)s\)", err)
+    if m:
+        return (f"{slot} is too long to {verb} ({m.group(1)} s; up to {m.group(2)} s). "
+                f"Try a shorter one.")
+    if "SVG" in err:
+        return f"{slot} can't be an SVG file. Try a PNG or a JPEG."
+    return f"{slot} couldn't be read. Try another file."
+
+
+def media_refusal(payload, verb="post"):
+    """(words for the person, detail for an API caller), or None. `verb` is
+    what the person was doing: posting, or saving a draft to their account."""
+    for value, kind, cap, label in _iter_media_items(payload):
+        err = _validate_media_data_url(value, kind, cap, label)
+        if err:
+            return _media_words(label, err, verb), err
+    return None
+
+
 # --- Everything the checks above do NOT bound --------------------------------
 # THE CAPS ABOVE ARE EXCELLENT WHERE A CAP EXISTS, AND ABSENT ONE KEY AWAY.
 # _iter_media_items walks four slots; _validate_payload_complexity walks points,
@@ -1011,8 +1066,10 @@ def _payload_skeleton(payload):
 def _validate_payload_extra(payload):
     """Caps what no other validator bounds. Returns an error or None."""
     try:
+        # allow_nan=False: a NaN or an Infinity anywhere a browser cannot read
+        # back is refused here rather than stored (Python's json reads them).
         extra = len(json.dumps(_payload_skeleton(payload), separators=(",", ":"),
-                               default=str))
+                               default=str, allow_nan=False))
     except (TypeError, ValueError, RecursionError):
         # Unserialisable or pathologically nested. It arrived as JSON, so this
         # is not a shape we produced -- refuse it rather than carry it into the

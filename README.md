@@ -155,12 +155,14 @@ to the full player a shared `/s/<id>` link opens. A host embeds it in two lines:
 
 Idle, a post is one cached image — the poster at `/s/<id>/poster`, the share
 card's drawing without its brand strip — and a play button; nothing is fetched
-until somebody taps. Playing, it redraws the drawing with a progress
-hairline and a nib at the pen. There are two viewer controls and only two —
-**mute** (page-wide, session-remembered; sound starts off, muted) and **loop** (per post,
-on by default; turning it off stops the drawing at its last frame and stops the
-music with it). One Skribl plays at a time, and scrolling one out of view
-settles it.
+until somebody taps. Playing, it redraws itself with a nib at the pen, at the
+speed its author chose for viewers, and the line under it scrubs and changes
+the speed (¼× to 16×, and Fit); with `line=False` a hairline shows the
+progress instead. Beside them are **mute** (page-wide, session-remembered;
+sound starts off, muted) and **loop** (per post, on by default; turning it off
+stops the drawing at its last frame and stops the music with it). One Skribl
+plays at a time, and scrolling one out of view settles it. docs/INTEGRATION.md
+("What a viewer gets") has the whole of it.
 `/feed` is that page, live, over whatever this deployment has posted publicly.
 
 **Drawing one from a host's composer.** `?compose=1` opens the Pad as an
@@ -293,6 +295,7 @@ v269 outage happened. On Render both run from the dashboard's **Start
 Command** (Render does not read the `Procfile`); START-HERE.md's "Running it"
 has the details.
 
-Templates and `app.py` must deploy together — the CSP nonce lives in both, and a
-header without the matching `nonce` attribute blocks the inline config script.
+Templates and `skribl/security.py` must deploy together — the CSP nonce lives
+in both, and a header without the matching `nonce` attribute blocks the inline
+config script.
 Static files carry `?v=` cache-busts that are bumped only when that file changes.

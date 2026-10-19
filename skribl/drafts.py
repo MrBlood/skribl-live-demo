@@ -31,7 +31,7 @@ import sqlalchemy as sa
 from .core import MAX_TITLE_CHARS, _env_int
 from .models import SkriblDraft, normalise_user_id, session
 from .validation import (_validate_payload_complexity, _validate_payload_extra,
-                         _validate_payload_media)
+                         media_refusal)
 
 DRAFT_KINDS = ("pad", "flip")
 # A list thumbnail, not a picture: a JPEG data URL a few kilobytes long. The
@@ -73,10 +73,11 @@ def _thumbnail_ok(thumbnail):
 
 
 class DraftRejected(Exception):
-    def __init__(self, message, status=400):
+    def __init__(self, message, status=400, detail=None):
         super().__init__(message)
         self.message = message
         self.status = status
+        self.detail = detail   # as SkriblRejected's: the field's version
 
 
 class DraftConflict(DraftRejected):
@@ -113,11 +114,15 @@ def _validate(payload, kind, title, thumbnail):
         if (not isinstance(thumbnail, str) or len(thumbnail) > MAX_THUMBNAIL_CHARS
                 or not _thumbnail_ok(thumbnail)):
             raise DraftRejected("The draft's picture could not be used.")
-    for check in (_validate_payload_complexity, _validate_payload_media,
-                  _validate_payload_extra):
-        error = check(payload)
-        if error:
-            raise DraftRejected(error)
+    error = _validate_payload_complexity(payload)
+    if error:
+        raise DraftRejected(error)
+    media = media_refusal(payload, verb="save")
+    if media:
+        raise DraftRejected(media[0], detail=media[1])
+    error = _validate_payload_extra(payload)
+    if error:
+        raise DraftRejected(error)
     return title
 
 

@@ -403,11 +403,12 @@ because of that.
 - **Show light AND dark** for any UI mock or screenshot, and phone and desktop
   when both are affected. Mocks are rendered on the real page, not drawn.
 - **Times in Mountain time.**
-- **No AI branding in the repository or on GitHub.** No `Co-Authored-By` or
-  session trailers on commits; squash merges use an explicit, trailer-free
-  title and message; PR descriptions end with "🩸 Built with help from Cal."
-  and any tool-added footer is removed. The helper is called Cal.
-- **Branch `cal/work`**, restarted from `origin/main` after every merge.
+- **The PR ending, the trailers and the branch are WORKING-AGREEMENTS.md's.**
+  Squash merges use an explicit, trailer-free title and message; a PR
+  description ends with "🩸 Built with help from Cal." followed by the Claude
+  Code lines the session supplies. All work goes on the branch the session
+  names, reused across PRs and restarted from `origin/main` after every merge.
+  The helper is called Cal.
 - **A merge waits for a green `main`**; "merge it when the tests pass" is the
   usual instruction and covers the PR's own smoke check. After a merge, check
   `main`'s full harness run and fix anything red.
@@ -416,8 +417,9 @@ because of that.
   label needs it, thin strokes, no extra boxes around things, parts of a row on
   one centre line. The owner judges on a Windows desktop (Segoe UI) and an
   iPhone, so verify there in spirit: font-independent layout, measured.
-- **Offer choices as mocks** — usually three to five, each named, with one
-  recommendation and why — and build only what was chosen.
+- **Offer choices as mocks** — two or three, each named, with one
+  recommendation and why (WORKING-AGREEMENTS.md) — and build only what was
+  chosen.
 - **Restate the target in one line before mocking** ("the add row under the
   page bar will change"), and measure what the owner saw before arguing
   with it. When feedback names a thing on screen, name the element back.
