@@ -83,5 +83,9 @@ details to send with it.
       follow it when the menu's Theme is System.
 - [ ] Turn the phone sideways on the Pad and on a shared link → nothing is cut
       off, and the drawing is not stretched.
+- [ ] Flip with a dozen pages, a loop and a hold of ×2 → every word on the page
+      strip reads in SF and nothing sits on anything else, even on page 10 and
+      on; the page you are on has one ⋯ in its top corner, and its menu's
+      Delete removes the page (Undo brings it back).
 - [ ] Add to Home Screen, open it from there → it opens without Safari's bars,
       with the right icon and name.

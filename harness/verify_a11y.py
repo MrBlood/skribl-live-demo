@@ -1591,7 +1591,12 @@ with sync_playwright() as p:
     # Icon-only, and every one of them was title-only before this.
     # #mediaOpenBtn took #colorCurrent's place when the dock redesign removed
     # Flip's colour ring: it is Flip's icon-only bar control now.
-    _ICON_ONLY = ["#mediaOpenBtn", "#undo", "#redo", ".strip .del"]
+    # The strip's ✕ is a desk control now: on a phone the page's ⋯ holds
+    # Delete, in the ✕'s corner (the strip at 12px, the owner's pick A). So
+    # each of those two is read at the width that draws it, and the agreement
+    # further down is over the controls both widths draw.
+    _ICON_ONLY = ["#mediaOpenBtn", "#undo", "#redo", ".strip .del", ".strip .pageops"]
+    _WIDTH = {".strip .del": "fine", ".strip .pageops": "coarse"}
     _by_pointer = {}
     for _label, _vp, _touch in (("fine", {"width": 1280, "height": 900}, False),
                                 ("coarse", {"width": 390, "height": 844}, True)):
@@ -1604,8 +1609,8 @@ with sync_playwright() as p:
         _ctx.close()
 
     for _sel in _ICON_ONLY:
-        _fine = _by_pointer["fine"][_sel]
-        check(f"{_sel} has a name a screen reader can read (desktop)",
+        _fine = _by_pointer[_WIDTH.get(_sel, "fine")][_sel]
+        check(f"{_sel} has a name a screen reader can read ({'phone' if _WIDTH.get(_sel) == 'coarse' else 'desktop'})",
               bool(_fine) and _fine not in ("(absent)", "(ignored)"),
               f"computed AX name {_fine!r} — an icon-only control whose only "
               f"name was `title` reads as bare 'button' once tooltip.js adopts "
@@ -1613,13 +1618,13 @@ with sync_playwright() as p:
 
     # The two must AGREE, or the bug is merely hiding at the other width.
     _split = [s for s in _ICON_ONLY
-              if _by_pointer["fine"][s] != _by_pointer["coarse"][s]]
+              if s not in _WIDTH and _by_pointer["fine"][s] != _by_pointer["coarse"][s]]
     check("...and the desktop and phone names are the same name",
           not _split,
           f"differ on {_split}: fine={{{', '.join(repr(_by_pointer['fine'][s]) for s in _split)}}} "
           f"coarse={{{', '.join(repr(_by_pointer['coarse'][s]) for s in _split)}}} "
           f"— a control named on touch and anonymous on desktop is the defect, "
-          f"not two acceptable behaviours" if _split else "4 controls, both widths")
+          f"not two acceptable behaviours" if _split else f"{len(_ICON_ONLY) - len(_WIDTH)} controls, both widths")
 
     # AND THE CLASS, NOT JUST THE FOUR. The four above now carry aria-label in
     # the markup AND are protected by the adopter, so either fix alone keeps
@@ -2649,12 +2654,14 @@ print("\nA11Y 20 — no words at 10px or under (WAVE's very small text), and the
 # under; the 11px words are another question, not asked here). Each rule that
 # drew them is then read at the 12px the owner picked.
 #
-# NOT YET FLIP'S PAGE STRIP. At 12px its words ran into each other on a
-# phone's 104px tile (the forever chip under the page's ⋯ and its touch box,
-# page 10 and on into the hold badge, the ×1 a pixel off centre in two faces),
-# which the mock, measuring each word alone, did not show. How the strip fits
-# them is the owner's to pick, so its tiles are left out of the reading until
-# then. (The duration badge is 10px only on a phone, where it is hidden.)
+# AND FLIP'S PAGE STRIP, LAST. At 12px as it sat its words ran into each
+# other on a phone's 104px tile (the forever chip under the page's ⋯ and its
+# touch box, page 10 and on into the hold badge, the ×1 a pixel off centre in
+# two faces), which the first mock, measuring each word alone, did not show.
+# The owner picked how it fits from a mock of the strip itself (A: one ⋯ per
+# page, in the ✕'s corner); verify_loopui reads its tiles crowded, and its
+# words are read here with the rest. (The duration badge is 10px only on a
+# phone, where it is hidden.)
 _SMALL = r"""() => { const out = new Set();
   const who = el => { let anc = ''; for (let n = el.parentElement; n; n = n.parentElement) if (n.id) { anc = ' in #' + n.id; break; }
     const cls = (el.getAttribute('class') || '').trim().split(/\s+/).filter(Boolean)[0];
@@ -2662,7 +2669,7 @@ _SMALL = r"""() => { const out = new Set();
   const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
   for (let t = w.nextNode(); t; t = w.nextNode()) {
     const s = t.textContent.trim(), el = t.parentElement;
-    if (!s || !el || el.closest('script, style, title, noscript, #strip .frame')) continue;
+    if (!s || !el || el.closest('script, style, title, noscript')) continue;
     const r = el.getBoundingClientRect();
     if (r.width <= 1 || r.height <= 1) continue;
     let o = 1;
@@ -2676,7 +2683,7 @@ _AT = """(sels) => sels.map(s => { const e = [...document.querySelectorAll(s)].f
   return [s, e ? parseFloat(getComputedStyle(e).fontSize) : null]; })"""
 _WAS10 = {"the draw drawer, with Recent": [".recent-label"], "the shape card, Sides": [".shape-knob label"],
           "How it works, its tip counts": [".accordion-count"], "the music trim, both handles held": [".trim-bubble"],
-          "Flip's tool tray": [".tool-tray-btn"]}
+          "Flip's tool tray": [".tool-tray-btn"], "Flip's page strip": ["#strip .frame .num", "#strip .frame .holdbadge"]}
 
 
 def _boot20(pg, path, key):
@@ -2734,6 +2741,7 @@ with sync_playwright() as _pw:
         _pg.evaluate("() => { addFrame(false); addFrame(false); buildStrip(); }")
         _pg.wait_for_timeout(400)
         _read["Flip"] = _pg.evaluate(_SMALL)
+        _at += _pg.evaluate(_AT, _WAS10["Flip's page strip"])
         if _pg.evaluate("() => { const m = document.getElementById('toolMoreBtn'); return !!m && !m.hidden; }"):
             _pg.click("#toolMoreBtn"); _pg.wait_for_timeout(500)
         _read["Flip's tool tray"] = _pg.evaluate(_SMALL) if _pg.evaluate(

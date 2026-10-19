@@ -623,7 +623,10 @@
   .frame canvas { width: 100%; height: 100%; display: block; }
   /* Top-left, the hold badge beside it in one row that grows with the number
      (the strip at 12px: at a fixed left:30px the badge sat on "10" and up). */
-  .frame .tiletop { position: absolute; top: 4px; left: 6px; z-index: 2; display: flex; align-items: center; gap: 4px; }
+  /* A selection's first page reads its range ("10–12"), and beside a hold that
+     reaches the top corner's button: past 63px the badge goes under it. */
+  .frame .tiletop { position: absolute; top: 4px; left: 6px; z-index: 2; display: flex; flex-wrap: wrap;
+    align-items: center; gap: 2px 4px; max-width: 63px; }
   .frame .num { font-size: 12px; font-weight: 700; color: var(--text-secondary);
     background: rgba(var(--glass-deep-2-rgb), .7); border-radius: 5px; padding: 1px 5px; font-variant-numeric: tabular-nums; }
   .frame .del { position: absolute; top: 3px; right: 3px; width: 26px; height: 26px; border-radius: 7px; border: 0;
@@ -742,12 +745,18 @@
   .frame.on .del { display: flex; }
   /* ---- compact page actions ------------------------------------------------
      On the compact surface the persistent page bar is gone and the active tile
-     carries a ... instead. Same visibility rule as the x beside it -- the tile
-     you are on, or the one you are pointing at -- so the strip has one idea
-     about when per-tile controls exist. focus-within, so it is reachable
-     without a pointer. */
+     carries a ... instead. Same visibility rule as the hold badge beside it --
+     the tile you are on, or the one you are pointing at -- so the strip has one
+     idea about when per-tile controls exist. focus-within, so it is reachable
+     without a pointer.
+
+     ONE ⋯ PER PAGE, IN THE ✕'S CORNER (the owner's pick A, the strip at 12px).
+     Its menu ends in Delete, so on a phone the ✕ folds into it (flip.js does
+     not draw one), as the drafts rows' ⋯ holds theirs. At the bottom left it
+     shared a row with the loop chip, which at 12px ran under it, and it sat
+     on the draw-itself mark. */
   .frame .pageops {
-    position: absolute; bottom: 3px; left: 4px; z-index: 2;
+    position: absolute; top: 3px; right: 3px; z-index: 2;
     width: 24px; height: 20px; border-radius: 5px; border: 0; padding: 0;
     background: rgba(var(--glass-deep-2-rgb), .82); color: var(--text-secondary);
     display: none; align-items: center; justify-content: center; cursor: pointer;
@@ -1088,8 +1097,8 @@
    marked .idle, and hidden by the rule further down unless its tile is active,
    hovered or focused. This comment used to say "always visible" flatly, which
    stopped being true the moment the badge became a button. */
-/* DRAW-ON, per page. The mark sits bottom-left: the page number owns top-left,
-   the hold badge sits after it at left:30px, and the ✕ owns top-right, so this
+/* DRAW-ON, per page. The mark sits bottom-left: the page number and its hold
+   badge own top-left, and the ✕ (on a phone, the ⋯) owns top-right, so this
    is the one corner of a tile nothing else claims.
 
    Tokens only, no literal: --accent's own value written out by hand is the
@@ -1612,9 +1621,11 @@ body.stroking .strip-wrap {
 .frame.loop-first .loopband { left: 3px; border-top-left-radius: 2px; border-bottom-left-radius: 2px; }
 .frame.loop-last .loopband { right: 3px; border-top-right-radius: 2px; border-bottom-right-radius: 2px; }
 .frame.underpage { border-color: rgb(var(--under-rgb)); box-shadow: 0 0 0 1px rgb(var(--under-rgb)); }
+/* The chip, a button, sits lowest and Under above it, so on the page that
+   carries both the label, not the button, is the one nearer the top corner. */
 .frame .tilemarks {
   position: absolute; right: 4px; bottom: 4px; z-index: 2;
-  display: flex; flex-direction: column; align-items: flex-end; gap: 2px;
+  display: flex; flex-direction: column-reverse; align-items: flex-end; gap: 2px;
 }
 .frame .loopchip, .frame .underlabel {
   position: relative; display: block; border: 0; margin: 0; font-family: inherit;

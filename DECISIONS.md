@@ -19211,3 +19211,46 @@ verify_galib reads both lists on a phone with the screen ending 12px under the
 last row, light and dark: the menu open, inside the screen, above its ⋯,
 every word painted. On main's code all four fail (the menu runs off the
 screen); here, four of four.
+
+## After v326 -- Flip's page strip at 12px (pick A: one ⋯ per page)
+
+The last of the 10px words. At 12px as the tile sat, its words ran into each
+other on a phone's 104 by 72 tile: the loop chip under the ⋯ of the page you
+were on (what the owner had fixed when "Forever · 2–6" ran under it), page
+numbers from 10 under their hold badge, and Won't play further under the ⋯,
+which it already reached at 10px. The owner picked A from a mock of the strip
+itself, four crowded strips side by side, now, 12px as it sat, A and B (B kept
+the chip at 10px).
+
+- ONE ⋯ PER PAGE ON A PHONE, IN THE ✕'S CORNER. Its menu already ended in
+  Delete under a line, as the drafts rows' ⋯ does, so on a phone flip.js draws
+  no ✕ and the ⋯ takes its corner. Deleting a page is two taps either way (⋯,
+  Delete; the ✕ took two taps for a drawn page), with Undo as before. The bottom
+  row is the loop chip's alone, so it fits at 12px with its words as they are,
+  and the draw-itself mark, which the ⋯ used to sit on, shows. A desk keeps
+  its ✕: it has no ⋯, the page bar does that job.
+- The number and its hold badge share one row that grows with the number. A
+  selection's first page reads its range ("10–12"); beside a hold that reached
+  the top corner's button, so past 63px the badge goes under it.
+- The hold's × is drawn, as Forever's ∞ is: typed, it sat a pixel off centre
+  in two of this box's faces. A set hold is white on the action violet, 5.3:1
+  (dark on the bright violet was 4.4:1).
+- The loop chip's words wear the small violet words' ink, 8.2:1 light and
+  10.4:1 dark (4.3:1 and 4.5:1 before).
+- Won't play sits in the page's middle, 30px down, clear of the top corner's
+  button and the bottom row; it takes no taps.
+- Under sits above the chip on the page that carries both, so the button is
+  the one further from the top corner.
+- Remove loop, the one row of the page's menu without an icon, wears the
+  loop's arrows struck through.
+
+Pad has no page strip, so nothing changes there.
+
+verify_loopui THE STRIP AT 12PX reads five crowded strips (a forever loop on
+the page you are on, page 10 held after it, a one-page six-second loop, a page
+that is Under and starts a loop, pages 10 to 12 selected) on a phone and a
+desk, light and dark: every word 12px, no part's painted box on another's, no
+button's box in another's 44px touch box, a set hold and the chip at AA, and
+on a phone no ✕ and one ⋯ in the top corner. A11Y 20 reads the strip's words
+with the rest again, and the icon-only names read the ✕ on a desk and the ⋯
+on a phone. verify_hold's multiplier is the drawn ×.

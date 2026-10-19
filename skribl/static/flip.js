@@ -2767,7 +2767,8 @@ function buildStrip(){
         +'title="Hold this page longer — tap to cycle" '
         +'aria-label="Hold page '+(i+1)+', shown '+_h+' time'+(_h===1?'':'s')+'">'
         +HOLD_X+_h+'</button></div>'
-      +'<button class="del" title="Delete page" aria-label="Delete page">'+DEL_SVG+'</button>'
+      // On a phone the ⋯ below holds Delete, in this corner (flip.css .pageops).
+      +(_compactStrip() ? '' : '<button class="del" title="Delete page" aria-label="Delete page">'+DEL_SVG+'</button>')
       // A page that draws itself has to SAY so on the strip. The hold badge is
       // the precedent: a per-page property nobody can see is one people set by
       // accident and then cannot find. Not a button — the switch lives in the
