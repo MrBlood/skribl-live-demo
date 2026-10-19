@@ -19489,3 +19489,11 @@ under its letters, the other controls away; each control's glass, turning
 with the theme; the title's capsule; the photo's scrim. The pen's glowing dot
 rides above every bar while a drawing plays and hides once it ends, so it is
 set aside: it sat on a time's last digit at 3.4:1, and no fade can reach it.
+
+THE HALO HAD NO PIN at first: taking it away turned no row red, because no
+drawing in the suite ran ink under the words. Lines of ink 4px wide, every
+11px, now run under them. On the link page they read 5.3:1 with the halo and
+3.7 without (dark lines on paper, phone), and 5.7 and 3.9 (pale lines on a
+dark drawing, desk). The Gallery's words sit lower, where the fade carries
+them alone (5.8 without), so there the row asks what the halo does: the
+worst pixel under the letters lifts from 5.8 to 7.4.

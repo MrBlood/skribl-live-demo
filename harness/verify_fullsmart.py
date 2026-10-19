@@ -15,7 +15,10 @@ WHAT IS ASKED, every row read off PAINTED PIXELS:
   * On a pale drawing's empty paper the fade cannot be seen, and on a dark
     drawing under a light page it is not a fog.
   * Every word on the bar reads on what is under it: the worst pixel under
-    its letters, the other controls away, at 4.5:1 or more.
+    its letters, the other controls away, at 4.5:1 or more. Over lines of ink
+    running right under the words too, which is their faint halo's job; the
+    Gallery's words sit where the fade is strong enough without it, so there
+    the halo is asked to lift what is under the letters.
   * Each glass control takes the tone of what is under it: light glass over a
     light ground, dark over a dark one, and it turns with the page's theme.
   * A title crossing a tall drawing's edge on a desk sits in a capsule, which
@@ -71,7 +74,7 @@ NO_API = """(() => { try {
 
 # ------------------------------------------------------------------ fixtures
 W, H = 402, 760
-GROUND = {"paper": "#f6f2ea", "dark": "#0f1014"}
+GROUND = {"paper": "#f6f2ea", "dark": "#0f1014", "lines": "#f6f2ea", "darklines": "#0f1014"}
 
 
 def _strokes(name):
@@ -91,6 +94,16 @@ def _strokes(name):
         stroke(lambda u: (-10 + 422 * u, 520 - 140 * math.sin(math.pi * u) ** 1.4), 60, "#2a2340", 9)
         for k in range(9):
             stroke(lambda u, k=k: (20 + k * 44 + 8 * u, 750 - 90 * u), 12, "#2f7d4f", 6)
+    elif name in ("lines", "darklines"):    # lines of ink right under the words, 4px every 11px
+        y = H * 0.80
+        while y < H * 0.995:
+            for i in range(40):
+                u = i / 39
+                out.append({"x": round(-6 + (W + 12) * u, 1), "y": round(y + 3 * math.sin(u * 7), 1), "t": t[0],
+                            "color": "#2a2340" if name == "lines" else "#c9bcff", "start": i == 0, "size": 4.0})
+                t[0] += 10
+            t[0] += 100
+            y += 11
     else:                   # waves through the foot
         for k, c in enumerate(["#7c5cff", "#a593ff", "#c9bcff"]):
             stroke(lambda u, k=k: (-10 + 422 * u, 600 + k * 56 + 20 * math.sin(u * 9 + k)), 60, c, 11 - 2 * k)
@@ -184,12 +197,14 @@ class Bar:
         return im.getpixel((min(im.width - 1, max(0, int((x - self.clip["x"]) * k))),
                             min(im.height - 1, max(0, int((y - self.clip["y"]) * k)))))
 
-    def words_worst(self):
+    def words_worst(self, bare=False):
         """Each word's ink against what is under its letters (the other
-        controls away), where its letters paint. (worst, where, count)."""
+        controls away), where its letters paint. (worst, where, count); with
+        `bare`, also the worst against the bar away, where no halo is."""
         st, shown, see, solo = self.state(), self.shot(), self.shot("__w"), self.shot("__s")
+        away = self.shot("__b") if bare else None
         k = shown.width / self.clip["width"]
-        worst, where, n = 99.0, "", 0
+        worst, where, n, worst_away = 99.0, "", 0, 99.0
         for w in st["words"]:
             ink, r = rgb(w["ink"]), w["r"]
             y = r[1]
@@ -201,9 +216,11 @@ class Bar:
                         v = ratio(ink, self.px(solo, x, y)); n += 1
                         if v < worst:
                             worst, where = v, w["text"][:16]
+                        if away:
+                            worst_away = min(worst_away, ratio(ink, self.px(away, x, y)))
                     x += 1 / k
                 y += 1 / k
-        return worst, where, n
+        return (worst, where, n, worst_away) if bare else (worst, where, n)
 
     def fade_moves(self, y=None):
         """How far the fade moves what is painted along the bar's top row:
@@ -336,7 +353,7 @@ def on(section):
     return not ONLY or section in ONLY
 
 
-ids = {n: post(n, f"Full fade {n} {TAG}") for n in ("paper", "dark")}
+ids = {n: post(n, f"Full fade {n} {TAG}") for n in ("paper", "dark", "lines", "darklines")}
 TALL = f"Full fade tall drawing {TAG}"
 post("paper", TALL)
 
@@ -368,6 +385,14 @@ with sync_playwright() as p:
         gl = tones(st, lambda g: True)
         check("Gallery, phone: over the dark around the drawing, the controls are dark glass",
               gl and all(t == "dark" for t in gl), str([(g["name"], g["tone"]) for g in st["glass"]]))
+        pg.close()
+
+        # Here the words sit where the fade is strong enough to carry them
+        # over a line of ink alone, so this asks what the halo does under them.
+        pg, bar = gallery(b, PHONE, "light", f"Full fade lines {TAG}")
+        worst, where, n, bare = bar.words_worst(bare=True)
+        check("Gallery, phone: over lines of ink, the words' halo lifts what is under their letters (0.5:1 or more)",
+              n > 20 and worst >= 4.5 and worst - bare >= 0.5, f"{worst:.2f} at '{where}', {bare:.2f} without it")
         pg.close()
 
     if on("desk"):
@@ -415,6 +440,16 @@ with sync_playwright() as p:
                   st["smart"] and moved <= 1.10, f"{st['smart']}, {moved:.2f}")
             worst, where, n = bar.words_worst()
             check(f"Link page, {vname}: every word reads on the paper (4.5:1 or more)",
+                  n > 20 and worst >= 4.5, f"{worst:.2f} at '{where}'")
+            pg.close()
+        # Lines of ink right under the words: what their halo is for. Without
+        # it the worst pixel read 3.7 (dark lines on paper, phone) and 3.9
+        # (pale lines on a dark drawing, desk).
+        for view, vname, theme, kind, what in ((PHONE, "phone", "light", "lines", "dark lines of ink on paper"),
+                                               (DESK, "desk", "dark", "darklines", "pale lines on a dark drawing")):
+            pg, bar = link(b, view, theme, ids[kind])
+            worst, where, n = bar.words_worst()
+            check(f"Link page, {vname}: every word reads over {what} running under it (4.5:1 or more)",
                   n > 20 and worst >= 4.5, f"{worst:.2f} at '{where}'")
             pg.close()
 
