@@ -19847,3 +19847,50 @@ verify_integration (the host with no key, the DELETE body, the private
 headers), verify_hostconfig (the demo's refusal said once, and its warning
 when it boots). Red on the code before: apiedges 53/61, media 15/25,
 integration 26/29, hostconfig 56/57.
+
+## After v326 -- the Pad review: seven edges a person could walk (bug fixes)
+
+A read-only review of the Pad, before the next seal, walked it the way a
+person does and found seven places it was left in a state it should not be
+in. Each was reproduced in a browser; each now has a row in the new
+verify_padedges that is red on the code before it (5/17 there, the five that
+pass being the no-page-error rows).
+
+- The photo and the music lost their bytes to Clear drawing and to every
+  post, while they stayed on screen: the pill said Saved, and a reload said
+  "Media missing". Clear drawing now rewrites the autosave (the drawing goes,
+  the media stays), and dropping a posted draft keeps the bytes while the
+  media is on the page; New Skribl removes the media first, so its bytes
+  still go.
+- Ctrl+Z and Ctrl+Y reached Undo and Redo during a replay, past the toolbar
+  that takes no pointer then: the canvas jumped while the replay painted on,
+  and undoing a one-stroke drawing took Play/Stop away with the replay still
+  running and left its ink. Both end the replay first, as Record does.
+- An Oval or Poly tap with no drag on a blank canvas started an empty take,
+  so the next drawing after Done was never recorded. A shape that makes no
+  points is unwound now, exactly as a pinch unwinds the stroke its first
+  finger began.
+- A reload lost the drawing's name, its Pauses and the speed its viewers
+  start at. The autosave carries all three (the typed name only, so a blank
+  one still takes a fresh date name), as a post and Flip's autosave do.
+- New Skribl with only a photo, a track or a picked ground said "Already a
+  fresh one" and left them. They count as work now, as the drafts count them
+  and How it works promises.
+- Export opened during a replay saved the replay so far as "The final
+  drawing as a still image". Opening Export ends the replay first, as Post and
+  Video do; the Video option's tooltip says "with its music" only when there
+  is some.
+- A draft opened over a drawing never played had its see-through strokes
+  painted twice (alpha 192 for 128): the old drawing's base, still decoding,
+  painted the new strokes, then the new drawing's own decode did. Clearing
+  the canvas supersedes a restore in flight, and a decoded base is cached
+  under its own source.
+
+And four messages said "Stop recording" for the button that says Done.
+
+Checks: verify_padedges, one section per edge. The two halves of the media
+fix each redden their own row (the autosave Clear drawing rewrites; the bytes
+a posted draft keeps).
+
+Pad and Flip: the Pad's. Flip draws its exported page and its card on its own
+canvas, and its own review is separate.

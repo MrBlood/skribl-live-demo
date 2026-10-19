@@ -1584,6 +1584,11 @@ addTakePill.addEventListener('click', () => {
 
 function clearCanvas() {
   stopPlayback();
+  // A restore stopPlayback began for the drawing being cleared, its base still
+  // decoding, must not land on the next one (after v326, the Pad review: a
+  // draft opened over a drawing never played had its see-through strokes
+  // painted twice, alpha 192 for 128, by the old decode and then its own).
+  restoreSeq++;
   if (typeof stopLoopPreview === 'function') stopLoopPreview();   // editor_music.js's
   const { width: cw, height: ch } = getCanvasLogicalSize(); ctx.clearRect(0, 0, cw, ch);
   canvasWrap.style.backgroundColor = bgColor;
@@ -1710,9 +1715,11 @@ function clearAndRestore(callback) {
       callback();
       return;
     }
-    const img = new Image();
+    const img = new Image(), src = preRecordSnapshot;
     img.onload = () => {
-      _baseImgCache = { src: preRecordSnapshot, img };   // cache regardless, so later calls are sync
+      // Cached under the base it decoded, not whichever is current when it
+      // lands: a new drawing's base could otherwise map to the old picture.
+      _baseImgCache = { src, img };                      // cache regardless, so later calls are sync
       if (seq !== restoreSeq) return;                    // superseded by a newer scrub/play — don't paint
       ctx.clearRect(0, 0, cw, ch);
       ctx.drawImage(img, 0, 0, cw, ch);
@@ -2569,7 +2576,7 @@ function applyPhotoPosition() {
 }
 
 function enterReposition() {
-  if (recording) { showToast('Stop recording to reposition the photo', document.getElementById('repositionBtn')); return; }
+  if (recording) { showToast('Tap Done, then move the photo', document.getElementById('repositionBtn')); return; }
   repositioning = true;
   const btn = document.getElementById('repositionBtn');
   if (btn) { btn.classList.add('active'); btn.setAttribute('aria-pressed', 'true'); }
@@ -2605,7 +2612,7 @@ function updateRepositionUI() {
     hint.hidden = !available;
     hint.textContent = enabled
       ? 'In Fill, parts of your image may be cropped. Drag the image to choose which part shows behind your drawing.'
-      : 'Stop recording to reposition the image.';
+      : 'Tap Done, then move the image.';
   }
   if (!enabled && repositioning) exitReposition();
 }

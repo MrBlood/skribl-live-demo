@@ -142,7 +142,7 @@
     const label = clearDrawerBtn.querySelector('span');
     const disarm = () => { armed = false; clearDrawerBtn.classList.remove('armed'); if (label) label.textContent = 'Clear drawing'; };
     clearDrawerBtn.addEventListener('click', () => {
-      if (recording) { showToast('Stop recording before clearing', clearDrawerBtn); return; }
+      if (recording) { showToast('Tap Done to finish this take first', clearDrawerBtn); return; }
       if (!armed) {
         armed = true;
         clearDrawerBtn.classList.add('armed');
@@ -155,7 +155,10 @@
       disarm();
       const _clearSnap = hasContent ? makeHistoryState() : null;
       clearCanvas();
-      if (typeof clearAutosave === 'function') clearAutosave();
+      // The drawing goes and the photo and the music stay (clearCanvas keeps
+      // media), so the autosave is rewritten, not dropped: dropping it took
+      // their bytes with it (after v326, the Pad review).
+      if (typeof scheduleAutosave === 'function') scheduleAutosave();
       clearBackup = _clearSnap; updateClearUndoBtn();
     });
   }

@@ -141,11 +141,15 @@ function clearAllWithUndo() {
   const item = document.getElementById('clearMenuItem');
   if (!item) return;
   item.addEventListener('click', () => {
-    if (recording) { showToast('Stop recording before starting a new one', item); return; }
+    if (recording) { showToast('Tap Done to finish this take first', item); return; }
     const want = window.SkriblMenuPages ? window.SkriblMenuPages.chosenSize() : null;
     const seg = want && document.querySelector('#canvasSeg button[data-size="' + want + '"]');
     const reshape = !!(seg && !seg.classList.contains('on'));
-    const work = hasContent || recorded;
+    // A photo, a track or a picked ground on its own is work too (after v326,
+    // the Pad review: a photo alone met "Already a fresh one" and stayed),
+    // as the drafts count it below and How it works promises.
+    const work = hasContent || recorded || (typeof _mediaPresent === 'function' && _mediaPresent())
+      || (window.SkriblCanvasGround && bgColor !== window.SkriblCanvasGround.start());
     if (work) clearAllWithUndo();
     closeMenu();
     if (reshape) seg.click();   // free now: the canvas is empty
@@ -200,8 +204,14 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
+// A REPLAY ENDS FIRST, as Record ends it (after v326, the Pad review). The
+// toolbar takes no pointer during a replay, but Ctrl+Z and Ctrl+Y reach these
+// through the keyboard: the canvas jumped to the earlier drawing while the
+// replay kept painting the old one over it, and undoing a one-stroke drawing
+// took Play/Stop away with the replay still running, leaving its ink behind.
 undoBtn.addEventListener('click', () => {
   if (undoStack.length === 0) return;
+  if (playing) stopPlayback();
   if (pickingColor) stopPicking();   // the drawing under the lens is about to change
   redoStack.push(makeHistoryState());
   redoBtn.disabled = false;
@@ -217,6 +227,7 @@ undoBtn.addEventListener('click', () => {
 
 redoBtn.addEventListener('click', () => {
   if (redoStack.length === 0) return;
+  if (playing) stopPlayback();   // as undo, above
   if (pickingColor) stopPicking();   // the drawing under the lens is about to change
   undoStack.push(makeHistoryState());
   undoBtn.disabled = false;
