@@ -232,6 +232,26 @@ with sync_playwright() as p:
     b = p.chromium.launch()
 
     # ---- fixtures ---------------------------------------------------------
+    # A MID-TONE DRAWING (after v326): a mid-green took the dark glass by its
+    # average and its words read 3.7:1; the glass picks by what reads now.
+    # And A TALL, PHONE-SHAPED ONE, narrower on a desk than the pill's words.
+    # Posted FIRST, so they are the oldest and the Gallery's first screen is
+    # what it was (a tall card first left five lines of words on a phone's
+    # first screen, where the page's contrast row reads at least six), and in
+    # a context of their own, so the Pad's autosave does not carry them into
+    # the drafts the Pad saves below.
+    _fx = b.new_context(**DESK)
+    _fp = open_page(_fx, "/skribl-pad")
+    for _t, _bg, _w, _h in (("meadow", "#4f7a2a", 816, 612), ("reed", "#1e1640", 390, 844)):
+        _mb = {"title": f"{TAG} {_t}", "version": 2, "schemaVersion": 2, "visibility": "public", "playbackMode": "replay",
+               "frames": [{"strokes": [{"x": 60 + i * 20, "y": 120 + (i % 4) * 25, "color": "#ff4fa3", "size": 8, "t": i * 120} for i in range(14)],
+                           "strokeGroups": [14], "background": {"color": _bg}}],
+               "canvasSize": {"cssWidth": _w, "cssHeight": _h}}
+        _fp.evaluate("(d) => loadSkribl(d)", _mb); _fp.wait_for_timeout(1200)
+        _mb["thumbnail"] = _fp.evaluate("() => window.SkriblPostedCard.build(window.skriblPreviewCanvas())")
+        urllib.request.urlopen(urllib.request.Request(BASE + "/api/skribls", data=json.dumps(_mb).encode(),
+                                                      headers={"Content-Type": "application/json"}), timeout=20).read()
+    _fx.close()
     mine = [post(f"{TAG} {w}") for w in ("coil", "wave", "tide")] + [post(f"{TAG} private", "unlisted")]
     ctx = b.new_context(**DESK)
     pad = open_page(ctx, "/skribl-pad")
@@ -254,18 +274,6 @@ with sync_playwright() as p:
     _nb["thumbnail"] = pad.evaluate("() => window.SkriblPostedCard.build(window.skriblPreviewCanvas())")
     urllib.request.urlopen(urllib.request.Request(BASE + "/api/skribls", data=json.dumps(_nb).encode(),
                                                   headers={"Content-Type": "application/json"}), timeout=20).read()
-    # A MID-TONE DRAWING (after v326): a mid-green took the dark glass by its
-    # average and its words read 3.7:1; the glass picks by what reads now.
-    # And A TALL, PHONE-SHAPED ONE, narrower on a desk than the pill's words.
-    for _t, _bg, _w, _h in (("meadow", "#4f7a2a", 816, 612), ("reed", "#1e1640", 390, 844)):
-        _mb = {"title": f"{TAG} {_t}", "version": 2, "schemaVersion": 2, "visibility": "public", "playbackMode": "replay",
-               "frames": [{"strokes": [{"x": 60 + i * 20, "y": 120 + (i % 4) * 25, "color": "#ff4fa3", "size": 8, "t": i * 120} for i in range(14)],
-                           "strokeGroups": [14], "background": {"color": _bg}}],
-               "canvasSize": {"cssWidth": _w, "cssHeight": _h}}
-        pad.evaluate("(d) => loadSkribl(d)", _mb); pad.wait_for_timeout(1200)
-        _mb["thumbnail"] = pad.evaluate("() => window.SkriblPostedCard.build(window.skriblPreviewCanvas())")
-        urllib.request.urlopen(urllib.request.Request(BASE + "/api/skribls", data=json.dumps(_mb).encode(),
-                                                      headers={"Content-Type": "application/json"}), timeout=20).read()
     remember(pad, mine)
     state = ctx.storage_state(indexed_db=True)
     pad.close()
