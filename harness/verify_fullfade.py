@@ -33,6 +33,11 @@ WHAT IS ASKED, ON EACH SURFACE AND SCREEN
     to lap. Every lap used to bring them back, which on a drawing shorter
     than the quiet spell meant they never left.
 
+THE CLOCK CLEARS THE PLAYHEAD, asked here because this suite opens the link
+page's full screen on both screens: at a drawing's end the scrubber's head,
+which pokes past its bar with a ring, sat on the last digit of the clock under
+it. Asked of what each one paints, not of their boxes.
+
 VISIBLE MEANS PAINTED. A faded control keeps its rect, so each one is asked of
 elementFromPoint at a point inside it (WORKING-AGREEMENTS, "a rect is not a
 paint").
@@ -41,6 +46,7 @@ THE PHONE IS THE OWNER'S, 402x874, with the Fullscreen API taken away as
 Safari has it for anything but a video, so the pinned stand-in is what goes
 full screen there. The desk has the real API.
 """
+import io
 import json
 import math
 import os
@@ -292,6 +298,63 @@ def laps(b, fx, finger):
     ctx.close()
 
 
+def clock(b, fx, finger):
+    """THE CLOCK CLEARS THE PLAYHEAD. In full screen the band's 11px gap and the
+    clock's -10px pull, set for the old 6px track, left the clock 1px under the
+    scrubber's 30px bar, and the head pokes 3px past the bar with a 2px ring:
+    at a drawing's end, where a finished drawing rests, it sat on the last
+    digit. Three shots of the clock's row: as shown, the head away, the digits
+    see-through. Where the first two differ the head paints; where the first
+    and third differ the digits do; no pixel may be both."""
+    from PIL import Image, ImageChops
+    who = f"The link page ({'phone' if finger else 'desk'})"
+    ctx = b.new_context(**(PHONE if finger else DESK))
+    pg = ctx.new_page()
+    if finger:
+        pg.add_init_script(NO_API)
+    link_in(pg, fx)
+    # Paused, then to its very end with a press at the track's far edge (a
+    # paused seek stays paused, so nothing moves between the shots), and the
+    # band kept up for them (the stepping back is the rest of this suite's).
+    pg.evaluate("() => { const b = document.getElementById('playerPlayBtn'); if (b.getAttribute('aria-label') === 'Pause') b.click(); }")
+    pg.wait_for_timeout(300)
+    pg.evaluate("""() => { const tr = document.getElementById('playerProgress'), r = tr.getBoundingClientRect();
+        for (const t of ['pointerdown', 'pointerup', 'click']) tr.dispatchEvent(new PointerEvent(t, { bubbles: true,
+          clientX: r.right - 0.5, clientY: r.top + r.height / 2, pointerId: 1, isPrimary: true })); }""")
+    pg.wait_for_timeout(900)
+    pg.add_style_tag(content=".chrome-asleep :is(.player-bar, .player-btn.full-exit) { opacity: 1 !important; transition: none !important; }")
+    box = pg.evaluate("""() => { const t = document.querySelector('#playerBar .player-time'), h = document.querySelector('#playerProgress .rl-head');
+        if (!t || !h) return null; const a = t.getBoundingClientRect(), c = h.getBoundingClientRect();
+        const x0 = Math.min(a.left, c.left) - 4, y0 = Math.min(a.top, c.top) - 4;
+        return { x: Math.max(0, x0), y: Math.max(0, y0), width: Math.max(a.right, c.right) + 4 - Math.max(0, x0),
+                 height: Math.max(a.bottom, c.bottom) + 4 - Math.max(0, y0), at: document.getElementById('playerAt').textContent,
+                 dur: document.getElementById('playerDur').textContent, head: Math.round(parseFloat(h.style.left) || 0) }; }""")
+    if not box:
+        check(f"{who}: at a drawing's end, the playhead clears the clock's digits", False, "no clock or no head")
+        ctx.close()
+        return
+    clip = {k: box[k] for k in ("x", "y", "width", "height")}
+    shot = lambda: Image.open(io.BytesIO(pg.screenshot(clip=clip))).convert("RGB")
+    def away(css):
+        h = pg.add_style_tag(content=css); pg.wait_for_timeout(80)
+        im = shot()
+        h.evaluate("e => e.remove()"); pg.wait_for_timeout(80)
+        return im
+    shown = shot()
+    no_head = away("#playerProgress .rl-head { visibility: hidden !important; }")
+    no_digits = away("#playerAt, #playerDur { color: transparent !important; }")
+    def mask(a, c):
+        d = ImageChops.difference(a, c).tobytes()
+        return [d[i] + d[i + 1] + d[i + 2] > 30 for i in range(0, len(d), 3)]
+    head, digits = mask(shown, no_head), mask(shown, no_digits)
+    both = sum(1 for h, d in zip(head, digits) if h and d)
+    check(f"{who}: at a drawing's end, the playhead and its ring clear the clock's digits",
+          both == 0 and sum(head) > 0 and sum(digits) > 20,
+          f"{both} pixels both; the head paints {sum(head)}, the digits {sum(digits)}; "
+          f"the clock reads {box['at']} of {box['dur']}, the head at {box['head']}%")
+    ctx.close()
+
+
 print("\nFULL SCREEN STEPS BACK — the link page, the Gallery and the Library")
 with sync_playwright() as p:
     b = p.chromium.launch()
@@ -302,6 +365,9 @@ with sync_playwright() as p:
     short = post(rings=1)
     for finger in (True, False):
         laps(b, short, finger)
+    print("\nTHE CLOCK CLEARS THE PLAYHEAD — the link page, at a drawing's end")
+    for finger in (True, False):
+        clock(b, short, finger)
     b.close()
 
 print("\n" + "=" * 62)

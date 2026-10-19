@@ -38,6 +38,7 @@
     ".canvas-wrap:is(:fullscreen, .is-immersive-page) .player-more",
     ":is(.canvas-wrap, .watch-full):is(:fullscreen, .is-immersive-page) .player-progress",
     ":is(.canvas-wrap, .watch-full):is(:fullscreen, .is-immersive-page) .player-time",
+    ":is(.canvas-wrap, .watch-full):is(:fullscreen, .is-immersive-page) .rl-scrub + .player-time",
     ":is(.canvas-wrap, .watch-full):is(:fullscreen, .is-immersive-page) :is(.player-bar, .player-btn.full-exit)",
     ".chrome-asleep",
     ".chrome-asleep :is(.player-bar, .player-btn.full-exit)",
