@@ -19704,3 +19704,51 @@ Library's line scripts.
 The in-post player's line costs a host 449 B more (verify_inline, named);
 the player's stylesheet 73 B more for the no-double-tap rule (verify_jsstrip
 and verify_player_isolation, named).
+
+## After v326 -- the Gallery card's pill, centred on the drawing's foot; and the card a post carries
+
+The owner, of a Gallery screenshot: "what rule do you use about placement of
+the 'drawn in' pill. it looks centered, but then the canvas does not look
+centered." The rule was the drawing's lower-left corner, 12px in. On a tall,
+phone-shaped drawing the pill is about as wide as the drawing, so it started
+12px in and ran past the right edge: about 7px on the owner's window, 40px on
+a 1280px desk. It read as centred and the drawing as shifted left, and on a
+light page the part past the edge sat on the card, its white words at 1.1:1.
+
+The mock measured now beside three fixes. The owner's picks: "1. a, 2. yes,
+3. yes".
+
+- A: the pill is centred on the drawing's foot and always inside it. A
+  drawing too narrow for the words keeps the time ("15 sec"), measured on the
+  real pill so it follows the fonts. The box's name carries "drawn in ..."
+  either way; the words in the pill were never part of it.
+- The glass picks by what reads. It reads under the pill's new place and
+  keeps the drawing's tone (the owner's pick D after v324) unless its words
+  would fall under 4.5:1 there and the other glass reads better. A mid-green
+  drawing took the dark glass by its average at 3.7:1; a skull's beard under
+  the centred pill read 4.1. The model samples blocks about the glass's own
+  blur, which smooths a little less than they do, so its line is 5 for the
+  4.5 (the beard read 4.8 in the model and 4.1 on the screen).
+- Bloom rested in the Gallery as an empty square and drew itself when tapped
+  (the owner's "yes"). The Pad's card is its canvas flattened at post time,
+  and a replay running or paused part-way has that canvas cleared and half
+  redrawn, so the card was the replay so far. The shared flattening ends the
+  replay first (stopPlayback puts the whole drawing back); every caller is
+  someone posting, saving a draft or attaching, which ends the watching
+  anyway. Flip draws its card page on its own canvas and never had this.
+  Bloom's own card was saved blank and stays so: posting it again makes a
+  whole one.
+
+Checks. verify_galib's pill rows: centred on the foot and inside its edges;
+on a tall drawing two to a row, the time alone, centred, inside, and the name
+still saying "drawn in"; the mid-green drawing's glass at 4.5:1 or more.
+Taken away one at a time on a copy of the tree, each piece reddens its own
+rows: the corner CSS (six rows), the words never shortened (the narrow rows,
+34px past the edge), the old glass rule (the mid-green rows, dark glass at
+3.7), the name without "drawn in" (the narrow rows). verify_sharecard posts
+with the replay paused part-way and compares the card with the same
+drawing's card at rest and with the ground's alone: on main's code the posted
+card is as far from the drawing as the empty one is (3.4 against 3.5), and
+the same as the drawing here (0).
+
+The in-post player costs a host 928 B more (verify_inline, named).

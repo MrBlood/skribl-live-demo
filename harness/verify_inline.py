@@ -1542,7 +1542,18 @@ with sync_playwright() as sp:
     #   for a band only the Gallery and the Library build; the scrubber and
     #   the speeds are the line's, so a host pays for the handle and not for
     #   a second copy. 69,332 B measured.
-    EMBED_RATCHET = 69_336
+    # RAISED (the Gallery card's pill centred on the drawing's foot and always
+    #   inside it, the owner's pick A after v326, and its glass picking by
+    #   what reads, a "yes" from the same mock), for one named cost: +928 B --
+    #   inlineplayer.js fitSays(), the words kept to the time on a drawing too
+    #   narrow for them, measured on the real pill and again on a resize; the
+    #   box's name carrying "drawn in ..."; tone() reading under the pill's
+    #   new place and the contrast of both glasses' words there, with lum()
+    #   (+890); inlineplayer.css the veil spanning the drawing and the words
+    #   on one line (+38). WHICH CALLER PAYS: every page that shows a post,
+    #   for a look only a line-less box takes (the Gallery's cards). 70,260 B
+    #   measured.
+    EMBED_RATCHET = 70_264
     # THE RATCHET MEASURES DISPLAY, NOT COMPOSE, and the two are separate costs
     # paid by separate pages. Excluded here and measured on its own below:
     #   feed.js          the PREVIEW PAGE's own script (fetch the listing, clone
