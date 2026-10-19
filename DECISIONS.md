@@ -19418,3 +19418,27 @@ verify_fullfade reads it off painted pixels, phone and desk: the clock's row
 shot as shown, with the playhead away, and with the digits see-through; no
 pixel may be both the playhead's and a digit's. Red on the old rule (5 pixels
 on a phone, 2 on a desk) and with the rule left out of player.css alone.
+
+## After v326 -- the Post sheet that would not open beside other suites
+
+Every parallel run of #540 to #543 had verify_contrast red beside the others,
+on the Pad's Post sheet on a phone, and green alone: the opener's wait for
+Post timed out after 15 s, and a bare timeout said nothing. A CPU hog did not
+bring it back, nor did running it beside verify_a11y and verify_onepill.
+
+So the opener says what the editor held when Post stays disabled: what the
+stroke's first point landed on and where that lives, whether a take started,
+its points, an open drawer or button card, and whether Done showed. Its first
+two reports, beside verify_a11y and verify_drafts, named the same thing: an
+in-post player with no named parent, which is a button card's example
+(lib/learncard.js builds the card on the fly). This suite turns the cards on
+to measure them. The last sheet's click left the pointer over a dock button;
+a fresh page's hover there opens that button's card about a second in
+(reproduced on demand: the pointer resting on the pen opens the Pen card 1.2 s
+after a reload; resting on the canvas, nothing). On a phone the card rises
+over the canvas, the stroke landed on its example, no take started, and Post
+never came.
+
+The pointer now rests on the canvas while each page loads (the screen's middle
+is the canvas on both editors, phone and desk). Nothing in the product
+changed: a card that opens where a mouse rests is the card doing its job.
