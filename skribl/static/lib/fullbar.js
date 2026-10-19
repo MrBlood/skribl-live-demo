@@ -193,6 +193,130 @@
         } }) : null;
     var fadePlaying = null;
 
+    /* THE CARD'S FADE TAKES ITS COLOURS FROM THE DRAWING (the owner's pick A
+       after v326: "The fade has to be like the glass with smart fade,
+       sampling the background for the fade colors and making it subtle. It's
+       so obvious and ugly when it's wrong"). The fixed near-black scrim turned
+       a pale drawing's empty paper grey by 6.7:1 under the controls, spread a
+       dark band onto the card's edges, and left the time at 2.6:1 there.
+
+       - THE FADE LIES ON THE DRAWING ONLY, inside its edge and round corners
+         (inlineplayer.js area()), in the drawing's own colours: its foot read
+         in strips across (ground()), so on empty paper it cannot be seen and
+         it only softens ink that runs under the controls. Painted as a
+         rectangle, the paper filled the card's colour in the drawing's
+         corners and they read square and grey; beside the drawing the card's
+         own colour needs no fade at all.
+       - EACH GLASS CONTROL TAKES THE TONE OF WHAT IS UNDER IT, light glass on
+         a pale ground and dark on a dark one, as the play pill's does: the
+         drawing where it is over the drawing, the card's own colour where it
+         is not (a tall drawing on a desk card is narrower than the row).
+       - WHERE THE DRAWING CAN HOLD THE ROW (a phone's tall card), the row sits
+         4px inside it, not 3px out over the card's edge, where the time's
+         last figure took the drawing's ink over the edge's colour.
+
+       READ ON EVENTS, NEVER ON THE BEAT: when the card or the canvas becomes
+       what is showing, when the stage resizes, when the page's theme turns.
+       A drawing that cannot be read keeps the scrim: `is-smart` is never set
+       on a guess. */
+    var smart = opts.variant === 'skfull-card' ? smartFade() : null;
+    function smartFade() {
+      var box = null, cv = null, cols = null, from = '', asked = false, ro = null, mo = null, on = false, was;
+      function off() { bar.classList.remove('is-smart'); }
+      function rgb(v) { return 'rgb(' + v[0] + ' ' + v[1] + ' ' + v[2] + ')'; }
+      function luma(v) { return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]; }
+      /* What the card shows beside the drawing: the first ground painted
+         under it, up from the box. */
+      function mat() {
+        for (var e = box; e && e.nodeType === 1; e = e.parentElement) {
+          var m = getComputedStyle(e).backgroundColor.match(/[\d.]+/g);
+          if (m && (m.length < 4 || +m[3] > 0.5)) return [+m[0], +m[1], +m[2]];
+        }
+        return [255, 255, 255];
+      }
+      function update() {
+        var pl = player();
+        if (!pl || !pl.area || !pl.ground || !wrap.isConnected) return off();
+        if (pl.el !== box) {
+          box = pl.el; cv = box.querySelector('.skribl-inline-canvas'); cols = null; asked = false;
+          if (mo) mo.disconnect();
+          if (cv && global.MutationObserver) {
+            mo = new MutationObserver(update);
+            mo.observe(cv, { attributes: true, attributeFilter: ['hidden'] });
+          }
+          if (ro) ro.observe(box);
+        }
+        /* The canvas once it is the one showing, the card before: what the
+           eye sees under the bar, which for a post without its card are not
+           the same drawing. */
+        var src = cv && !cv.hidden ? 'canvas' : 'card';
+        if (src !== from) { from = src; cols = null; asked = false; }
+        if (!cols && !asked) {
+          asked = true;
+          cols = pl.ground(16, function () { asked = false; update(); });
+          if (cols) asked = false;
+        }
+        if (!cols) return off();
+        var a = pl.area(), b = bar.getBoundingClientRect();
+        if (!a || !b.width || a.right - a.left < 8) return off();
+        var n = cols.length, w = a.right - a.left, m = mat(), s = bar.style;
+        s.setProperty('--fx-l', (a.left - b.left).toFixed(1) + 'px');
+        s.setProperty('--fx-r', (b.right - a.right).toFixed(1) + 'px');
+        s.setProperty('--fx-b', Math.max(0, b.bottom - a.bottom).toFixed(1) + 'px');
+        s.setProperty('--fx-rl', a.rl.toFixed(1) + 'px');
+        s.setProperty('--fx-rr', a.rr.toFixed(1) + 'px');
+        s.setProperty('--fade-x', 'linear-gradient(to right, ' + cols.map(function (v, k) {
+          return rgb(v) + ' ' + ((k + 0.5) / n * 100).toFixed(1) + '%';
+        }).join(', ') + ')');
+        var need = 0, shown = 0, kids = row.children, gap = parseFloat(getComputedStyle(row).columnGap) || 0;
+        for (var i = 0; i < kids.length; i++) {
+          if (!kids[i].getClientRects().length) continue;
+          need += kids[i] === track ? 48 : kids[i].getBoundingClientRect().width;
+          shown++;
+        }
+        var fits = w - 8 >= need + gap * Math.max(0, shown - 1);
+        s.setProperty('--row-l', fits ? (a.left - b.left + 4).toFixed(1) + 'px' : '0px');
+        s.setProperty('--row-r', fits ? (b.right - a.right + 4).toFixed(1) + 'px' : '0px');
+        bar.classList.add('is-smart');
+        /* After the row has moved: what is under each control now. */
+        function under(x, y) {
+          if (x < a.left || x > a.right || y < a.top || y > a.bottom) return m;
+          return cols[Math.max(0, Math.min(n - 1, Math.floor((x - a.left) / w * n)))];
+        }
+        var glass = [made.loop, made.mute, made.full, track, dur];
+        for (var j = 0; j < glass.length; j++) {
+          var el = glass[j];
+          if (!el || !el.isConnected) continue;
+          var q = el.getBoundingClientRect(), y = (q.top + q.bottom) / 2, L = 0, c = 0;
+          for (var x = q.left; x <= q.right; x += 2) { L += luma(under(x, y)); c++; }
+          var dark = !c || L / c < 115;
+          el.classList.toggle('t-dark', dark);
+          el.classList.toggle('t-light', !dark);
+        }
+      }
+      return {
+        /* From the beat until the player is there; the gallery mounts the
+           players after it has built the cards. */
+        start: function (state) {
+          /* A play, a pause or an end is when a canvas first has its ground
+             painted (a photo under the drawing arrives late): read again. */
+          if (on && state !== was) { was = state; cols = null; asked = false; update(); }
+          if (on || !player()) return;
+          on = true;
+          was = state;
+          if (global.ResizeObserver) { ro = new ResizeObserver(update); ro.observe(wrap); }
+          watchTheme();
+          smartCards.push({ wrap: wrap, update: update });
+          update();
+        },
+        stop: function () {
+          if (ro) ro.disconnect();
+          if (mo) mo.disconnect();
+          ro = mo = null;
+        }
+      };
+    }
+
     function seekTo(e) {
       var pl = player();
       if (!pl) return;
@@ -324,6 +448,7 @@
     function sync() {
       var pl = player();
       var st = pl ? pl.state() : null;
+      if (smart && pl) smart.start(st && st.state);
       var playing = !!st && st.state === 'playing';
       /* PUBLISHED TO THE HOST, because a surface may want to style itself on
          it -- the card narrows its hover reveal to a drawing that is NOT
@@ -456,7 +581,7 @@
          that has LEFT stops. */
       if (wrap) {
         if (wrap.isConnected) hosted = true;
-        else if (hosted) { running(false); return; }
+        else if (hosted) { running(false); if (smart) smart.stop(); return; }
       }
       sync();
       var pl = player();
@@ -488,6 +613,27 @@
 
     sync();
     return { el: bar, sync: sync, running: running };
+  }
+
+  /* ONE WATCH ON THE PAGE'S THEME for every card's fade: the card's own
+     colour beside a narrow drawing turns with it, and a control over it has
+     to turn too. A card whose host has left is dropped on the next turn. */
+  var smartCards = [], themeWatched = false;
+  function themed() {
+    smartCards = smartCards.filter(function (c) {
+      if (!c.wrap.isConnected) return false;
+      c.update();
+      return true;
+    });
+  }
+  function watchTheme() {
+    if (themeWatched) return;
+    themeWatched = true;
+    if (global.MutationObserver) {
+      new MutationObserver(themed).observe(doc.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    }
+    var mq = global.matchMedia && global.matchMedia('(prefers-color-scheme: dark)');
+    if (mq && mq.addEventListener) mq.addEventListener('change', themed);
   }
 
   global.SkriblFullBar = { attach: attach, RATES: RATES };

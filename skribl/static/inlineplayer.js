@@ -831,6 +831,45 @@
         elapsed = Math.max(0, Math.min(ms, totalMs));
         render(elapsed, true, true);
         return true;
+      },
+      /* THE DRAWING'S FOOT, for a bar laid over it (lib/fullbar.js's card):
+       * its bottom eighth in n strips across, each strip the middle value of
+       * its own pixels, so a line of ink through it does not tint it. Null
+       * until there is something to read; `then` runs when the card loads. */
+      ground: function (n, then) {
+        if (poster && !poster.naturalWidth && !(payload && !canvas.hidden)) {
+          if (then) poster.addEventListener('load', function () { then(); }, { once: true });
+          return null;
+        }
+        var w = 6, h = 12, px = readArea(0.01, 0.875, 0.98, 0.115, n * w, h), out = [];
+        if (!px) return null;
+        for (var s = 0; s < n; s++) {
+          var ch = [[], [], []];
+          for (var y = 0; y < h; y++) for (var x = s * w; x < s * w + w; x++)
+            for (var i = 0, o = (y * n * w + x) * 4; i < 3; i++) ch[i].push(px[o + i]);
+          out.push(ch.map(function (v) { v.sort(function (a, b) { return a - b; }); return v[v.length >> 1]; }));
+        }
+        return out;
+      },
+      /* Where the drawing is on screen now, and the round of its two bottom
+       * corners, for the same bar, which keeps its fade inside them: the
+       * canvas while it shows, else the card's crop of it (the plate's own
+       * corner), each within this box's rounded edge. */
+      area: function () {
+        var b = el.getBoundingClientRect(), cs = getComputedStyle(el), bw = parseFloat(cs.borderBottomWidth) || 0,
+            R = Math.max(0, (parseFloat(cs.borderBottomLeftRadius) || 0) - bw), r, rad = 0;
+        if (payload && !canvas.hidden) r = canvas.getBoundingClientRect();
+        else if (poster && poster._d && poster.naturalWidth) {
+          var p = poster.getBoundingClientRect(), s = p.width / CARD_W, d = poster._d, i = PLATE_IN;
+          r = { left: p.left + (d[0] + i) * s, right: p.left + (d[0] + d[2] - i) * s,
+                top: p.top + (d[1] + i) * s, bottom: p.top + (d[1] + d[3] - i) * s };
+          rad = (PLATE_R - i) * s;
+        } else return null;
+        var x0 = Math.max(r.left, b.left + bw), x1 = Math.min(r.right, b.right - bw),
+            y1 = Math.min(r.bottom, b.bottom - bw);
+        function round(x, edge) { return Math.abs(x - edge) < 1.5 && Math.abs(y1 - b.bottom + bw) < 1.5 ? Math.max(R, rad) : rad; }
+        return { left: x0, right: x1, top: Math.max(r.top, b.top + bw), bottom: y1,
+                 rl: round(x0, b.left + bw), rr: round(x1, b.right - bw) };
       }
     };
     players.push(me);
@@ -1763,16 +1802,29 @@
     function tone() {
       if (!poster) return;
       if (!poster.naturalWidth) { poster.addEventListener('load', tone, { once: true }); return; }
+      var px = readArea(0, 0.7, 0.5, 0.3, 8, 8), L = 0;
+      if (!px) return;   // tainted or unreadable: the light glass
+      for (var j = 0; j < px.length; j += 4) L += 0.2126 * px[j] + 0.7152 * px[j + 1] + 0.0722 * px[j + 2];
+      mark('is-says-dark', L / 64 < 115);
+    }
+    /* THE DRAWING, READ: a box of it (shares of the drawing's own rectangle)
+     * into a cw x ch sample on white, as a see-through drawing shows. Off the
+     * canvas while it is the one showing, else off the card already on
+     * screen; null when there is nothing to read yet, or it cannot be read
+     * (another origin's). The pill's glass and the card's fade both look
+     * here (ground() below), so the two cannot read one drawing two ways. */
+    function readArea(x, y, w, h, cw, ch) {
+      var live = payload && !canvas.hidden, src = live ? canvas : poster;
+      if (!src || !(live || src.naturalWidth)) return null;
       try {
-        var d = poster._d || [0, 0, CARD_W, CARD_H], k = poster.naturalWidth / CARD_W, c = doc.createElement('canvas'), L = 0;
-        c.width = c.height = 8;
-        var g = c.getContext('2d');
-        g.fillStyle = '#fff'; g.fillRect(0, 0, 8, 8);   // a see-through card reads light, as it shows
-        g.drawImage(poster, d[0] * k, (d[1] + d[3] * 0.7) * k, d[2] * 0.5 * k, d[3] * 0.3 * k, 0, 0, 8, 8);
-        var px = g.getImageData(0, 0, 8, 8).data;
-        for (var j = 0; j < px.length; j += 4) L += 0.2126 * px[j] + 0.7152 * px[j + 1] + 0.0722 * px[j + 2];
-        mark('is-says-dark', L / 64 < 115);
-      } catch (e) { /* tainted or unreadable: the light glass */ }
+        var d = live ? [0, 0, canvas.width, canvas.height] : poster._d || [0, 0, CARD_W, CARD_H],
+            k = live ? 1 : poster.naturalWidth / CARD_W, c = doc.createElement('canvas'), g;
+        c.width = cw; c.height = ch;
+        g = c.getContext('2d');
+        g.fillStyle = '#fff'; g.fillRect(0, 0, cw, ch);
+        g.drawImage(src, (d[0] + d[2] * x) * k, (d[1] + d[3] * y) * k, d[2] * w * k, d[3] * h * k, 0, 0, cw, ch);
+        return g.getImageData(0, 0, cw, ch).data;
+      } catch (e) { return null; }
     }
     if (line && RL) {
       pagesN = info && info.pages > 1 ? info.pages | 0 : 0;
