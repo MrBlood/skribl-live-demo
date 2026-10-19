@@ -19825,10 +19825,11 @@ the test client; each now has a row that is red on the code before it.
 - The cards' meta, which can carry a private post's title, and the two
   drafts reads went out with no Cache-Control. They say private, no-store,
   as the listing and the payload already did.
-- The demo with SKRIBL_DEMO_IDENTITY set and no login key said nobody was
-  signed in and the demo would run anonymous, then refused to boot for want
-  of CSRF. Without a key nobody can sign in, so it boots; with a key it still
-  refuses.
+- The demo with SKRIBL_DEMO_IDENTITY set, no login key and CSRF off logged
+  that nobody was signed in and the demo would run anonymous, then refused to
+  boot for want of CSRF. The refusal is the design verify_hostseams pins (an
+  identity without CSRF fails closed, naming the switch); the warning now
+  comes only when the demo does boot, with CSRF on.
 
 And the documents it found out of date: SESSION-CONTEXT's standing
 preferences contradicted WORKING-AGREEMENTS on the PR ending, the branch and
@@ -19843,6 +19844,6 @@ Checks: verify_apiedges (the time, the 400-digit x, NaN elsewhere, and the
 two baseSnapshot rows reading the field from `detail`), verify_media (every
 refusal in plain words with its field in `detail`, and the 8.2 MB photo),
 verify_integration (the host with no key, the DELETE body, the private
-headers), verify_hostconfig (the demo identity with and without a key). Red
-on the code before: apiedges 53/61, media 15/25, integration 26/29,
-hostconfig 56/57.
+headers), verify_hostconfig (the demo's refusal said once, and its warning
+when it boots). Red on the code before: apiedges 53/61, media 15/25,
+integration 26/29, hostconfig 56/57.

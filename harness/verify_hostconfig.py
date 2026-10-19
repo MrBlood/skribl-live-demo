@@ -231,17 +231,17 @@ code, out, err = boot()
 check("a local boot is left on the library default",
       "BACKEND=None" in out, out.strip()[:60])
 
-# THE DEMO'S IDENTITY WITHOUT ITS KEY (after v326, the server review). With
-# SKRIBL_DEMO_IDENTITY set and no login key the log says nobody is signed in
-# and the demo runs anonymous, then it refused to boot for want of CSRF. No
-# key, no sign-in, nothing CSRF has to guard: it boots. With a key it still
-# refuses, because then a cookie does sign somebody in.
+# THE DEMO'S IDENTITY WITHOUT ITS KEY, WITH CSRF OFF (after v326, the server
+# review). It refuses to boot, naming the switch, as verify_hostseams pins.
+# What was wrong was the log before it: "nobody is signed in and the demo runs
+# anonymous", then the refusal. The warning is for a demo that does boot.
 code, out, err = boot(SKRIBL_DEMO_IDENTITY="ada", SKRIBL_DEMO_LOGIN_KEY="", SKRIBL_CSRF_PROTECT="0")
-check("the demo identity with no login key boots anonymous, as its warning says",
-      code == 0, f"exit {code} — {err.strip().splitlines()[-1][:100] if err.strip() else ''}")
-code, out, err = boot(SKRIBL_DEMO_IDENTITY="ada", SKRIBL_DEMO_LOGIN_KEY="k" * 20, SKRIBL_CSRF_PROTECT="0")
-check("...and with a key and no CSRF it still refuses, naming the switch",
-      code != 0 and "SKRIBL_CSRF_PROTECT" in err,
+check("the demo identity with no key and CSRF off refuses, without first saying it runs anonymous",
+      code != 0 and "SKRIBL_CSRF_PROTECT" in err and "runs anonymous" not in err,
+      f"exit {code} — {err.strip().splitlines()[-1][:100] if err.strip() else ''}")
+code, out, err = boot(SKRIBL_DEMO_IDENTITY="ada", SKRIBL_DEMO_LOGIN_KEY="", SKRIBL_CSRF_PROTECT="1")
+check("...and with CSRF on it boots, and says it runs anonymous",
+      code == 0 and "runs anonymous" in err,
       f"exit {code} — {err.strip().splitlines()[-1][:100] if err.strip() else ''}")
 # And the reason any of this matters, asserted rather than asserted-about: the
 # library's own default really is the per-process one.

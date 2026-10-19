@@ -223,21 +223,21 @@ def create_app():
     _demo_id = (os.environ.get("SKRIBL_DEMO_IDENTITY") or "").strip()
     _demo_key = (os.environ.get("SKRIBL_DEMO_LOGIN_KEY") or "").strip()
     current_user_id = None
-    if _demo_id and len(_demo_key) < 16:
+    # Said only when the demo does boot: with CSRF off it refuses just below,
+    # and the log said it would run anonymous first (after v326, the server
+    # review). verify_hostseams pins the refusal; verify_hostconfig the order.
+    if _demo_id and len(_demo_key) < 16 and csrf is not None:
         app.logger.warning(
             "SKRIBL_DEMO_IDENTITY is set but SKRIBL_DEMO_LOGIN_KEY is %s: nobody "
             "is signed in and the demo runs anonymous. Set a key of 16+ "
             "characters and visit /demo-login?key=<key> to sign in as %s.",
             "missing" if not _demo_key else "shorter than 16 characters", _demo_id)
     if _demo_id:
-        if csrf is None and len(_demo_key) >= 16:
+        if csrf is None:
             # init_skribl raises on this pairing and is right to (an id from a
             # cookie with no CSRF means any page can post as the signed-in
             # user). Said here in the demo's own words, naming the demo's own
             # switch, because its message cannot know about this env var.
-            # Only with a key: without one nobody can sign in, and the demo
-            # boots anonymous as the warning above says (after v326, the
-            # server review: it said so, then refused to boot).
             raise RuntimeError(
                 "SKRIBL_DEMO_IDENTITY signs a user in, so this demo needs CSRF "
                 "on as well: set SKRIBL_CSRF_PROTECT=1. (Skribl refuses the "
