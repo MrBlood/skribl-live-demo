@@ -263,9 +263,13 @@ with sync_playwright() as sp:
     # aria-hidden on each since WAVE read them as images with no alternative
     # text (+171 B, 152,881 measured), raised in both places together. And
     # for the scrubber's clock riding over the finger (+305 B, 153,186
-    # measured), raised in both places together again.
+    # measured), raised in both places together again. And for the smart
+    # fade on every full screen (+5,479 B: lib/smartfade.js on the link page
+    # and app.js's wiring of it, 158,665 measured, #546), raised in
+    # verify_player_isolation and missed here: main went red on it, the same
+    # signal once more.
     check("stripping keeps the player's JS under its ratchet",
-          lean_total <= 153_191,
+          lean_total <= 158_670,
           f"{src_total:,} B of source -> {lean_total:,} B parsed")
     # START-HERE concluded from a function count that reaching 153,600 needs a
     # separate player entry point, and the v199 handoff concluded from a
@@ -296,7 +300,7 @@ with sync_playwright() as sp:
     # out of this line. A target raised once per release is a record of
     # spending, not an achievement.
     #
-    # It has been broken exactly once, deliberately and in writing, to ship the
+    # It was broken once before, deliberately and in writing, to ship the
     # viewer's speed control with 25 B of margin -- and then reversed by the
     # carve the same note had named as the debt, rather than left at the spent
     # value with a comfortable margin. That is the only way this line is
@@ -320,9 +324,20 @@ with sync_playwright() as sp:
     #
     # "-109 B under" is what this line said when it FAILED, which reads as a
     # margin and is a deficit. Over and under are named, not signed.
-    _margin = 153_800 - lean_total
-    check("REACHES the 153,800 target (strip + whitespace collapse)",
-          lean_total <= 153_800,
+    #
+    # BROKEN THE SECOND TIME, deliberately and in writing (after v326, #546).
+    # The owner chose the smart fade for every full screen, the link page's
+    # included ("A, smart fade and yes to all"), and lib/smartfade.js is
+    # 5,003 B of it: the player went 4,865 B over. The line moves to the spent
+    # value and 25 B, as it did for the speed control, and THE DEBT IS NAMED:
+    # carve the music preview cluster above out of app.js, or have the link
+    # page load lib/smartfade.js only when someone opens full screen. Either
+    # moves this line back to 153,800. Put to the owner, who can reverse the
+    # trade.
+    _target = 158_690
+    _margin = _target - lean_total
+    check(f"REACHES the {_target:,} target (strip + whitespace collapse; 153,800 once its debt is paid)",
+          lean_total <= _target,
           f"lean_total {lean_total:,} B — "
           + (f"{_margin:,} B of margin left" if _margin >= 0
              else f"OVER the target by {-_margin:,} B"))
@@ -392,8 +407,15 @@ with sync_playwright() as sp:
         _html = _r.read().decode()
     _href = re.search(r'href="([^"]*player\.css\?v=[^"]*)"', _html)
     _served_css = _served(_href.group(1))[0] if _href else b""
-    check("the player's stylesheet is served stripped, under the 40,000-byte target",
-          _href is not None and 0 < len(_served_css) <= 40_000 and len(_served_css) < len(_raw_css),
+    # BROKEN IN WRITING with the JavaScript's (after v326, #546): the smart
+    # fade's band rules and their four --on-canvas tokens took the stylesheet
+    # 681 B over 40,000. The line moves to the spent value and 25 B. THE DEBT
+    # is not yet tied to a carve; the first candidate is the band's own
+    # selectors, which name its controls in every rule where one class set by
+    # lib/smartfade.js would do. Put to the owner with the JavaScript's.
+    _css_target = 40_706
+    check(f"the player's stylesheet is served stripped, under the {_css_target:,}-byte target (40,000 once its debt is paid)",
+          _href is not None and 0 < len(_served_css) <= _css_target and len(_served_css) < len(_raw_css),
           f"{len(_served_css):,} B served of {len(_raw_css):,} B on disk")
     check("...and a legal banner in CSS survives the strip",
           b"/*! keep */" in strip_css_bytes(b"/*! keep */\np{color:red}/* gone */\nq{}"))

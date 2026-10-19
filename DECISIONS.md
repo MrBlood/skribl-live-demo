@@ -19497,3 +19497,26 @@ drawing in the suite ran ink under the words. Lines of ink 4px wide, every
 dark drawing, desk). The Gallery's words sit lower, where the fade carries
 them alone (5.8 without), so there the row asks what the halo does: the
 worst pixel under the letters lifts from 5.8 to 7.4.
+
+## After v326 -- main went red on the smart fade's bytes, counted in a second place
+
+Main's full run after #546 went red in one suite on both databases:
+verify_jsstrip, which reads the player's bytes on its own and keeps its own
+copy of the JavaScript ratchet. #546 raised verify_player_isolation's ratchet
+and missed this one, as the jsstrip note records happening twice before. The
+two suites read the same template, so the disagreement was the signal it is
+meant to be. The affected suites run before the merge were chosen by the
+files the change touched. This suite reads the player's size, and nothing in
+it named those files. Grepping for the numbers being raised would have found
+it.
+
+jsstrip also asserts the two targets the player had reached: 153,800 B of
+JavaScript and 40,000 B of CSS. The smart fade passed both, by 4,865 B and
+681 B. The jsstrip rule lets that line move only deliberately and in writing,
+with the debt named, as it did once for the speed control (v308), whose debt
+a carve paid (v310). So both lines move to the spent value and 25 B, and
+the debt is named where they stand: carve the music preview cluster out of
+app.js, or have the link page load lib/smartfade.js only when someone opens
+full screen. For the CSS, the band's own selectors name its controls in
+every rule where one class would do. The choice of how, or whether, to pay
+it is the owner's.
