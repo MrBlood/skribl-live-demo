@@ -137,6 +137,9 @@
 .skfull-btn svg { width: 17px; height: 17px; display: block; }
 @media (hover: hover) { .skfull-btn:hover { background: rgba(255, 255, 255, 0.12); } }
 .skfull-btn:disabled { opacity: 0.4; cursor: default; }
+/* A button stepped aside (Mute on a silent drawing) takes no room; the
+   button's own `display: grid` would otherwise outrank [hidden]. */
+.skfull-btn[hidden] { display: none; }
 .skfull-btn:focus-visible { outline: 2px solid var(--accent, #7c5cff); outline-offset: 2px; }
 
 .skfull-play {

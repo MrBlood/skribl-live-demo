@@ -21,6 +21,9 @@ WHAT IS ASKED, every row read off PAINTED PIXELS, never off a class name:
     beside it is untouched, the controls over it take ITS tone, and they turn
     when the page's theme does.
   * A drawing that cannot be read keeps the scrim: nothing is set on a guess.
+  * Mute steps aside on a silent drawing, on the card and in full screen,
+    from the first paint, so the row does not change at the first tap (the
+    owner: yes).
 
 THE FIXTURES are drawn for this: ink under the controls on purpose (grass, a
 signature under the time, a sea line), each with a card image of its own the
@@ -124,7 +127,7 @@ def _card(name, pts):
     return "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode()
 
 
-def post(name):
+def post(name, sound=True, title=None):
     pts = _strokes(name)
     groups, n = [], 0
     for i, p in enumerate(pts):
@@ -132,9 +135,10 @@ def post(name):
             groups.append(n); n = 0
         n += 1
     groups.append(n)
-    frame = {"strokes": pts, "strokeGroups": groups, "background": {"color": GROUND[name]},
-             "music": {"data": _wav(), "name": "t.wav", "trimStart": 0, "trimEnd": 2}}
-    title = f"Card fade {name} {TAG}"
+    frame = {"strokes": pts, "strokeGroups": groups, "background": {"color": GROUND[name]}}
+    if sound:
+        frame["music"] = {"data": _wav(), "name": "t.wav", "trimStart": 0, "trimEnd": 2}
+    title = title or f"Card fade {name} {TAG}"
     body = {"title": title, "version": 2, "schemaVersion": 2, "visibility": "public",
             "playbackMode": "replay", "canvasSize": {"cssWidth": W, "cssHeight": H},
             "frames": [frame], "thumbnail": _card(name, pts)}
@@ -294,6 +298,19 @@ def open_gallery(b, view, theme):
 
 # ------------------------------------------------------------------ the rows
 titles = {n: post(n) for n in ("paper", "dark", "sky")}
+titles["silent"] = post("paper", sound=False, title=f"Card fade silent {TAG}")
+
+# The Fullscreen API taken away, so full screen is the page's own CSS state
+# (lib/immersive.js's fallback, iOS Safari's only one): the same bar, testable.
+NO_API = """(() => { try {
+  Object.defineProperty(Document.prototype, 'fullscreenEnabled', { get: () => false, configurable: true });
+  Object.defineProperty(Document.prototype, 'webkitFullscreenEnabled', { get: () => false, configurable: true }); } catch (e) {}
+  try { delete Element.prototype.requestFullscreen; } catch (e) {}
+  try { delete Element.prototype.webkitRequestFullscreen; } catch (e) {} })();"""
+MUTE = """(t) => { const card = t.querySelector('.skfull.skfull-card'), full = t.querySelector('.skfull:not(.skfull-card)');
+  const m = b => { const e = b && b.querySelector('.skfull-mute'); return e ? e.getClientRects().length > 0 : null; };
+  const x = s => { const e = card.querySelector(s); return e ? Math.round(e.getBoundingClientRect().left * 10) / 10 : null; };
+  return { card: m(card), full: m(full), row: [x('.skfull-play'), x('.skfull-loop'), x('.skfull-full')] }; }"""
 
 with sync_playwright() as p:
     b = p.chromium.launch()
@@ -417,6 +434,43 @@ with sync_playwright() as p:
     check("a card that read its drawing wears the smart fade", smart_before)
     check("...and once its drawing cannot be read, the near-black scrim is back, not a guess",
           (not g2["smart"]) and "rgba(6, 7, 10" in g2["scrim"], f"smart {g2['smart']}, background {g2['scrim'][:60]}")
+    pg.close()
+
+    print("\nCARD FADE — Mute steps aside on a silent drawing, on the card and in full screen")
+    pg = b.new_page(color_scheme="dark", **PHONE)
+    pg.add_init_script(NO_API)
+    browsing.goto(pg, BASE, "/gallery")
+    pg.wait_for_timeout(1500)
+    pg.add_style_tag(content=SHOW)
+    quiet = pg.locator(".tile", has_text=titles["silent"]).first
+    loud = pg.locator(".tile", has_text=titles["paper"]).first
+    quiet.scroll_into_view_if_needed(); pg.wait_for_timeout(400)
+    quiet.evaluate("t => t.classList.add('ctl-on')"); pg.wait_for_timeout(200)
+    rest = quiet.evaluate(MUTE)
+    loud.scroll_into_view_if_needed(); pg.wait_for_timeout(400)
+    loud.evaluate("t => t.classList.add('ctl-on')"); pg.wait_for_timeout(200)
+    said = loud.evaluate(MUTE)
+    check("at rest, before anything plays, a silent drawing's card has no Mute",
+          rest["card"] is False, f"Mute painted: {rest['card']}")
+    check("...and a drawing with sound keeps its Mute", said["card"] is True, f"Mute painted: {said['card']}")
+    quiet.scroll_into_view_if_needed(); pg.wait_for_timeout(300)
+    quiet.locator(".skribl-inline").first.tap(); pg.wait_for_timeout(1200)
+    quiet.evaluate("t => t.classList.add('ctl-on')"); pg.wait_for_timeout(200)
+    played = quiet.evaluate(MUTE)
+    # THE BUTTONS, NOT THE SCRUBBER: the time grows from "0:05" to "0:01 /
+    # 0:05" when a card plays, as it always has, and the scrubber gives way
+    # to it. A Mute that left only once the drawing loaded would take 46px
+    # out from under Full screen at that tap; so would a row placed from the
+    # card image's plate, 2.6px inside the drawing (this row caught both).
+    check("...and the first tap does not move a button (Play, Repeat, Full screen where they were)",
+          all(a is not None and b is not None and abs(a - b) <= 0.5 for a, b in zip(rest["row"], played["row"])),
+          f"left edges {rest['row']} at rest, {played['row']} playing")
+    check("...and playing, still no Mute", played["card"] is False, f"Mute painted: {played['card']}")
+    quiet.locator(".skfull-card .skfull-full").first.click(); pg.wait_for_timeout(900)
+    quiet.evaluate("t => { const s = t.querySelector('.tileStage'); s.dispatchEvent(new PointerEvent('pointermove', { bubbles: true })); }")
+    pg.wait_for_timeout(200)
+    big = quiet.evaluate(MUTE)
+    check("...and in full screen its bar has no Mute either", big["full"] is False, f"Mute painted in full screen: {big['full']}")
     pg.close()
     b.close()
 

@@ -178,6 +178,18 @@
     wrap.appendChild(bar);
 
     function player() { return getPlayer(); }
+    /* What the listing said about the drawing's sound: true, false, or null
+       where it said nothing. Read once per box. */
+    function listed(pl) {
+      var box = pl && pl.el;
+      if (!box) return null;
+      if (box._skSound === undefined) {
+        var info = null;
+        try { info = JSON.parse(box.getAttribute('data-skribl-line') || 'null'); } catch (e) { info = null; }
+        box._skSound = info && typeof info.sound === 'boolean' ? info.sound : null;
+      }
+      return box._skSound;
+    }
 
     /* THE BAR STEPS BACK WHILE IT PLAYS (lib/chromefade.js; the owner's picks
        for every full screen): after a quiet spell it fades with the page's x,
@@ -259,18 +271,23 @@
          inside the box's rounded edge. */
       function area(pl) {
         var b = box.getBoundingClientRect(), cs = getComputedStyle(box), bw = parseFloat(cs.borderBottomWidth) || 0,
-            R = Math.max(0, (parseFloat(cs.borderBottomLeftRadius) || 0) - bw), r, rad = 0;
-        if (cv && !cv.hidden) r = cv.getBoundingClientRect();
+            R = Math.max(0, (parseFloat(cs.borderBottomLeftRadius) || 0) - bw), r, f, rad = 0;
+        if (cv && !cv.hidden) r = f = cv.getBoundingClientRect();
         else if (img && img._d && img.naturalWidth && pl.card) {
           var p = img.getBoundingClientRect(), s = p.width / pl.card[0], d = img._d, i = pl.card[2];
           r = { left: p.left + (d[0] + i) * s, right: p.left + (d[0] + d[2] - i) * s,
                 top: p.top + (d[1] + i) * s, bottom: p.top + (d[1] + d[3] - i) * s };
+          /* The drawing's FRAME, the plate's inset aside: where the canvas
+             will be (fitPoster lands it there), so the row placed from it
+             does not move at the first tap. */
+          f = { left: p.left + d[0] * s, right: p.left + (d[0] + d[2]) * s };
           rad = (pl.card[1] - i) * s;
         } else return null;
         var x0 = Math.max(r.left, b.left + bw), x1 = Math.min(r.right, b.right - bw), y1 = Math.min(r.bottom, b.bottom - bw);
         function round(x, edge) { return Math.abs(x - edge) < 1.5 && Math.abs(y1 - b.bottom + bw) < 1.5 ? Math.max(R, rad) : rad; }
         return { left: x0, right: x1, top: Math.max(r.top, b.top + bw), bottom: y1,
-                 rl: round(x0, b.left + bw), rr: round(x1, b.right - bw) };
+                 rl: round(x0, b.left + bw), rr: round(x1, b.right - bw),
+                 fl: Math.max(f.left, b.left + bw), fr: Math.min(f.right, b.right - bw) };
       }
       function rgb(v) { return 'rgb(' + v[0] + ' ' + v[1] + ' ' + v[2] + ')'; }
       function luma(v) { return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]; }
@@ -329,9 +346,9 @@
           need += kids[i] === track ? 48 : kids[i].getBoundingClientRect().width;
           shown++;
         }
-        var fits = w - 8 >= need + gap * Math.max(0, shown - 1);
-        s.setProperty('--row-l', fits ? (a.left - b.left + 4).toFixed(1) + 'px' : '0px');
-        s.setProperty('--row-r', fits ? (b.right - a.right + 4).toFixed(1) + 'px' : '0px');
+        var fits = a.fr - a.fl - 8 >= need + gap * Math.max(0, shown - 1);
+        s.setProperty('--row-l', fits ? (a.fl - b.left + 4).toFixed(1) + 'px' : '0px');
+        s.setProperty('--row-r', fits ? (b.right - a.fr + 4).toFixed(1) + 'px' : '0px');
         bar.classList.add('is-smart');
         /* After the row has moved: what is under each control now. */
         function under(x, y) {
@@ -364,6 +381,9 @@
           smartCards.push({ wrap: wrap, update: update });
           update();
         },
+        /* The row changed under the fade (Mute stepped aside): the row's
+           place and each control's tone are read again. */
+        relayout: function () { if (on) update(); },
         /* The host has left (a search or a sort rebuilds the grid): its
            watches go, and so does its place in the theme's list. */
         stop: function () {
@@ -531,6 +551,17 @@
       var SI = global.SkriblInline;
       var on = !!(SI && SI.soundOn());
       var has = !!(st && st.hasAudio);
+      /* MUTE STEPS ASIDE ON A SILENT DRAWING (the owner: yes, after the
+         card's fade). Greyed out on every silent card it was a control with
+         nothing to act on. Known from the listing before the drawing loads
+         (`sound` on the box's data-skribl-line), so the row does not change
+         at the first tap; from the drawing itself once it has. Where neither
+         has said, it stays, greyed, as before. */
+      var silent = st && st.loaded ? !has : listed(pl) === false;
+      if (bMute.hidden !== silent) {
+        bMute.hidden = silent;
+        if (smart) smart.relayout();
+      }
       setHTML(bMute, on ? ICON.sound : ICON.muted);
       if (bMute.disabled !== !has) bMute.disabled = !has;
       label(bMute, !has ? 'This Skribl has no sound' : (on ? 'Sound is on' : 'Sound is off'));

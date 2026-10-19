@@ -486,6 +486,13 @@
        player's `says`), from the listing as feed.js gives it to the line. A
        Flip's `line` is null (its line counts pages), so it gets its pages. */
     var said = item.line || (item.kind === 'flip' && item.pages > 1 ? { pages: item.pages } : null);
+    /* AND WHETHER IT HAS SOUND, which a Flip's pages-only line left out: the
+       bar's Mute steps aside on a silent drawing from the first paint
+       (lib/fullbar.js), so the row does not change at the first tap. */
+    if (typeof item.has_audio === 'boolean') {
+      said = said || {};
+      if (typeof said.sound !== 'boolean') said.sound = item.has_audio;
+    }
     if (said) box.setAttribute('data-skribl-line', JSON.stringify(said));
     var poster = box.querySelector('.skribl-inline-poster');
     if (poster) {
