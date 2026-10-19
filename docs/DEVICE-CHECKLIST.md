@@ -83,7 +83,8 @@ details to send with it.
       follow it when the menu's Theme is System.
 - [ ] On the Gallery, tap a pale drawing, then a dark one → the controls are
       white glass on the pale one and dark glass on the dark one, with no grey
-      band across the drawing and its bottom corners still round.
+      band across the drawing and its bottom corners still round. A drawing
+      with no sound has no Mute button at all, and nothing moves when it starts.
 - [ ] Turn the phone sideways on the Pad and on a shared link → nothing is cut
       off, and the drawing is not stretched.
 - [ ] Flip with a dozen pages, a loop and a hold of ×2 → every word on the page
