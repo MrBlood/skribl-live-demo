@@ -138,6 +138,9 @@
       var frame = document.createElement('div'); frame.className = 'lc-phone';
       var v = document.createElement('video');
       v.muted = true; v.loop = true; v.playsInline = true; v.setAttribute('playsinline', ''); v.setAttribute('aria-hidden', 'true');
+      // The clip's own shape, so the outline hugs the whole screen it filmed.
+      var ratio = src.getAttribute('data-ratio');
+      if (ratio) v.style.aspectRatio = ratio;
       v.poster = src.getAttribute(light ? 'data-poster-light' : 'data-poster-dark');
       if (!reduce) { v.src = src.getAttribute('data-clip-' + (light ? 'light' : 'dark') + (h264 ? '' : '-webm')); v.autoplay = true; }
       frame.appendChild(v); box.appendChild(frame);

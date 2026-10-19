@@ -7779,8 +7779,8 @@ body.stroking .toolbar, body.stroking .flip-tools {
 #helpLook > .ask-back { margin: 0 18px; }                       /* on the field's edge, as on an answer */
 .ask-answer-t { margin: 4px 4px 14px; font-size: 26px; font-weight: 750; letter-spacing: -.02em; line-height: 1.15; outline: none; }
 .ask-answer-pic { overflow: hidden; border-radius: 16px; border: 1px solid var(--menu-card-line); background: var(--menu-card); }
-.ask-answer-pic .lc-phone { height: 220px; border-radius: 0; }
-.ask-answer-pic .lc-phone video { width: 150px; }
+.ask-answer-pic .lc-phone { height: 353px; border-radius: 0; }  /* the tall phone's whole screen, as in the book */
+.ask-answer-pic .lc-phone video { width: 148px; }   /* 150 with its outline */
 .ask-answer-pic .lc-stage { border-radius: 0; }
 .ask-steps { counter-reset: s; margin: 10px 0 0; padding: 0; list-style: none; }
 .ask-steps li { display: flex; gap: 12px; align-items: flex-start; padding: 10px 4px; font-size: 16px; line-height: 1.4; }
@@ -7816,9 +7816,15 @@ body.stroking .toolbar, body.stroking .flip-tools {
 .lc-stage { position: relative; aspect-ratio: 4 / 3; border-radius: 12px; overflow: hidden; }
 .lc-stage .skribl-inline { position: absolute; inset: 0; width: 100%; height: 100%; aspect-ratio: auto; border: 0; border-radius: 0; background: transparent; cursor: default; }
 .lc-stage .skribl-inline-veil, .lc-stage .skribl-inline-dur { display: none !important; }
-.lc-phone { position: relative; height: 160px; border-radius: 12px; overflow: hidden; background: color-mix(in srgb, var(--accent) 8%, var(--menu-card)); }
-.lc-phone video { position: absolute; left: 50%; top: 14px; width: 112px; aspect-ratio: 600 / 1298; transform: translateX(-50%); object-fit: cover;
-  border-radius: 16px 16px 0 0; border: 1px solid var(--menu-card-line); border-bottom: 0; box-shadow: 0 8px 22px rgba(40, 25, 110, .18); }
+/* A screen recording shows whole (owner: "the viewport cuts off the videos";
+   the clips mock, A): the phone at its own ratio (data-ratio, which
+   lib/learncard.js puts on the video; this one is the short screens'), in the
+   middle of a frame tall enough for the tallest, inside its own outline. The
+   ratio sizes the picture, not the outline round it (content-box), or the
+   tall screens sat a pixel short of it top and bottom; 110 is 112 outlined. */
+.lc-phone { position: relative; height: 270px; border-radius: 12px; overflow: hidden; background: color-mix(in srgb, var(--accent) 8%, var(--menu-card)); }
+.lc-phone video { position: absolute; left: 50%; top: 50%; box-sizing: content-box; width: 110px; aspect-ratio: 600 / 984; transform: translate(-50%, -50%); object-fit: contain;
+  border-radius: 16px; border: 1px solid var(--menu-card-line); box-shadow: 0 8px 22px rgba(40, 25, 110, .18); }
 .lc-body { padding: 0 4px 2px; }
 .lc-card .lc-t, .lc-banner .lc-t { margin: 0 0 4px; font-size: 20px; font-weight: 700; letter-spacing: -.01em; }
 .lc-card .lc-line, .lc-banner .lc-line, .lc-note .lc-line { margin: 0; font-size: 14px; line-height: 1.4; color: var(--text-secondary); }
@@ -8745,9 +8751,13 @@ body.replaying .media-card { pointer-events: none; }
 .bk-body { flex: 1; min-height: 0; overflow: auto; padding: 6px 18px 0; touch-action: pan-y; }
 .bk-pic { border-radius: var(--r-card); overflow: hidden; background: var(--menu-card); border: 1px solid var(--menu-card-line); box-shadow: var(--menu-card-drop); }
 .bk-pic[hidden] { display: none; }
-.bk-pic .lc-stage { aspect-ratio: 4 / 3; border-radius: 0; }
-.bk-pic .lc-phone { height: 300px; border-radius: 0; }
-.bk-pic .lc-phone video { width: 150px; }
+/* One picture height on every page, so the words under it never move as the
+   pages turn: the tall phone's whole screen on a phone, the drawing's 4:3 on a
+   desk. A height and a ratio together would make the box as wide as both
+   (469px on a phone), so each width has one of them. */
+.bk-pic .lc-stage, .bk-pic .lc-phone { height: 353px; aspect-ratio: auto; border-radius: 0; }
+@media (min-width: 641px) { .bk-pic .lc-stage, .bk-pic .lc-phone { height: auto; aspect-ratio: 4 / 3; } }
+.bk-pic .lc-phone video { width: 148px; }   /* 150 with its outline */
 .bk-t { margin: 18px 2px 6px; font-size: 26px; font-weight: 750; letter-spacing: -.02em; line-height: 1.15; }
 .bk-s { margin: 0 2px; font-size: 17px; line-height: 1.45; color: var(--text-secondary); }
 .bk-along { margin: 16px 2px 0; display: inline-flex; align-items: center; min-height: 44px; padding: 0 18px; border-radius: 999px;

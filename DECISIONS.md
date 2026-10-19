@@ -19572,3 +19572,47 @@ playMusicLooped turned nothing red. verify_audiosession's "Preview Loop
 actually makes a sound" section now plays the drawing with its music on
 both editors (a Flip of one page does not play, so it draws two). Pad's row
 goes red with the loop deleted and Flip's stays green.
+
+## After v326 -- every screen recording shows whole: the book, the button cards, Ask
+
+The owner: "the viewport cuts off the videos on the how it works book. you
+should double check all the videos to make sure you can see them." It was
+more than the book. lib/learncard.js's picture() puts a phone recording in
+16 places across the two editors: the book's pages, the button cards and
+Ask's answers. None of them showed the whole clip. Every recording sat in a
+video shaped like the tall screens (600 x 1298) and filled it, inside a frame
+shorter than the phone. On a phone the book's speed page showed 66% of its
+clip, its song and Post pages 87%, Ask's answers 47 to 63%, and the Photo
+card 45%. The short screens (600 x 984) lost their sides as well as their
+foot.
+
+The owner's pick from the clips mock (A, "All yes"):
+
+- The phone keeps the width it had: 150px in the book and Ask, 112 on the card.
+- Its whole screen sits inside its own outline, in the middle of a frame
+  grown to hold the tallest: 270px on the card, 353 in Ask, and 353 in the
+  book on a phone, where the desk book takes the drawings' 4:3.
+- Each clip carries its own ratio. The help template sets data-ratio from the
+  shape make_help_clips.py cut it to, so the outline is the phone's and
+  nothing shows between them.
+- The book's picture is one height on every page now, a drawing's or a
+  recording's, so the words under it stay put as the pages turn. On a phone
+  they were 275px and 302.
+
+TWO THINGS THE FIRST DRAFT GOT WRONG, both found by the new rows. A height
+and a ratio on one box make it as wide as both: the book's 353px picture
+with the drawings' 4:3 was 470px wide on a 402px phone, so each width has
+one of them. And the ratio sized the outline, not the picture (the page's
+border-box), so the tall screens sat 1.15px short of it top and bottom. The
+video sizes its picture by the ratio now (content-box), 110px and 148px
+inside a 1px outline, the widths it had.
+
+verify_book section 7 walks every place by name, so a place that stops being
+reached is a red row and not a smaller sample. A clip's painted rect is
+worked out from its own size and the video's object-fit, cut by every box
+that clips it and by the screen, and elementFromPoint has to find the video
+at the clip's edges and corners. On main's code all 14 rows are red. Taken
+away one at a time, each piece of the fix turns its own rows red: the
+frames' heights, the template's ratio, picture() setting it, the phone
+book's ratio, the desk book's 4:3, the content-box. The centring in the
+frame and the rounded outline are the look, and nothing pins them.
