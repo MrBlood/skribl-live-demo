@@ -16,6 +16,14 @@ row holds a promise, on the Pad and on Flip:
      not; Skip moves on; Done and Escape put it away.
   6. THE GUIDE IS NEVER THE DRAWING: it is its own layer, and after Done the
      drawing holds what you drew and nothing of the guide.
+  7. EVERY RECORDING SHOWS WHOLE (owner: "the viewport cuts off the videos on
+     the how it works book. you should double check all the videos"; the
+     clips mock, A). lib/learncard.js's picture() puts the same phone
+     recordings in the book, on the button cards and in Ask's answers, so
+     every place it puts one is walked, phone and desk: the whole clip
+     painted to its edges and corners, inside an outline of its own shape at
+     today's size; the book's picture one height on every page; each clip's
+     ratio its poster's.
 
 Touch is real touch (CDP), so the editor draws what a finger would. Visible
 means painted: elementFromPoint.
@@ -58,6 +66,63 @@ ALONG = """() => { const g = document.querySelector('.da-guide'), p = document.q
            pill: !!p, pillTop: p ? Math.round(p.getBoundingClientRect().top) : null, headBottom: head ? Math.round(head.getBoundingClientRect().bottom) : 0,
            where: p ? p.querySelector('.da-where').textContent : '', state: window.SkriblDrawAlong && SkriblDrawAlong.state() }; }"""
 
+# 7. Each recording placed: the clip's painted rect, worked out from its own
+# size and the video's object-fit and object-position, then cut by the
+# video's box, every box round it that clips, and the screen. Painted means
+# elementFromPoint finds the video at the clip's edges and corners (inside
+# its rounded corners), so a frame that clips it, a scroller, a sheet over it
+# or the screen's edge all turn it red. bars: the gap between the clip and the
+# outline drawn round it, across and down (negative: the clip spills past it).
+WHOLE = """(sel) => Promise.all([...document.querySelectorAll(sel)].filter(v => v.getClientRects().length).map(v =>
+  new Promise(res => { if (v.videoWidth) res(); else { v.addEventListener('loadedmetadata', () => res(), { once: true }); setTimeout(res, 8000); } })
+  .then(() => {
+    const cs = getComputedStyle(v), r = v.getBoundingClientRect(), px = k => parseFloat(cs[k]) || 0;
+    const bx = { l: r.left + px('borderLeftWidth') + px('paddingLeft'), t: r.top + px('borderTopWidth') + px('paddingTop'),
+                 w: r.width - px('borderLeftWidth') - px('borderRightWidth') - px('paddingLeft') - px('paddingRight'),
+                 h: r.height - px('borderTopWidth') - px('borderBottomWidth') - px('paddingTop') - px('paddingBottom') };
+    const vw = v.videoWidth, vh = v.videoHeight, fit = cs.objectFit;
+    if (!vw || !vh) return { clip: (v.currentSrc || v.src || '?').split('/').pop(), vw, vh, seen: 0, miss: 8, bars: [0, 0], w: 0 };
+    let sx = bx.w / vw, sy = bx.h / vh;
+    if (fit === 'contain') sx = sy = Math.min(sx, sy);
+    else if (fit === 'scale-down') sx = sy = Math.min(sx, sy, 1);
+    else if (fit === 'cover') sx = sy = Math.max(sx, sy);
+    else if (fit === 'none') sx = sy = 1;
+    const cw = vw * sx, ch = vh * sy;
+    const [ox, oy] = cs.objectPosition.split(' ').map((p, i) => p.endsWith('%') ? parseFloat(p) / 100 * (i ? bx.h - ch : bx.w - cw) : parseFloat(p));
+    const c = { l: bx.l + ox, t: bx.t + oy, r: bx.l + ox + cw, b: bx.t + oy + ch };
+    let L = Math.max(c.l, bx.l, 0), T = Math.max(c.t, bx.t, 0), R = Math.min(c.r, bx.l + bx.w, innerWidth), B = Math.min(c.b, bx.t + bx.h, innerHeight);
+    for (let a = v.parentElement; a; a = a.parentElement) {
+      const o = getComputedStyle(a); if (o.overflowX === 'visible' && o.overflowY === 'visible') continue;
+      const q = a.getBoundingClientRect(); L = Math.max(L, q.left); T = Math.max(T, q.top); R = Math.min(R, q.right); B = Math.min(B, q.bottom);
+    }
+    const d = 2 + 0.3 * (parseFloat(cs.borderTopLeftRadius) || 0), mx = (c.l + c.r) / 2, my = (c.t + c.b) / 2;
+    const pts = [[mx, c.t + 2], [mx, c.b - 2], [c.l + 2, my], [c.r - 2, my], [c.l + d, c.t + d], [c.r - d, c.t + d], [c.l + d, c.b - d], [c.r - d, c.b - d]];
+    return { clip: (v.currentSrc || v.src).split('/').pop().split('?')[0].replace(/-(light|dark)[.](mp4|webm)$/, ''), vw, vh,
+             w: Math.round(r.width * 10) / 10, seen: Math.round(1000 * Math.max(0, R - L) * Math.max(0, B - T) / (cw * ch)) / 10,
+             miss: pts.filter(([x, y]) => document.elementFromPoint(x, y) !== v).length,
+             bars: [Math.round((bx.w - cw) * 10) / 10, Math.round((bx.h - ch) * 10) / 10] };
+  })))"""
+BKPIC = """() => { const p = document.getElementById('bkPic'); if (!p || p.hidden || !p.firstElementChild) return null;
+  const r = p.getBoundingClientRect(), k = p.firstElementChild.getBoundingClientRect();
+  return { kind: p.firstElementChild.className, h: Math.round(r.height * 10) / 10, w: Math.round(r.width * 10) / 10,
+           inner: p.clientWidth, kw: Math.round(k.width * 10) / 10 }; }"""
+RATIOS = """() => Promise.all([...document.querySelectorAll('.learn-clip')].map(f => Promise.all(['light', 'dark'].map(t =>
+  new Promise(res => { const i = new Image(); i.onload = () => res(i.naturalWidth / i.naturalHeight); i.onerror = () => res(0); i.src = f.getAttribute('data-poster-' + t); })))
+  .then(([l, d]) => { const r = (f.getAttribute('data-ratio') || '').split('/').map(Number);
+    return { clip: f.getAttribute('data-clip-name'), ratio: r.length === 2 && r[1] ? r[0] / r[1] : 0, light: l, dark: d }; })))"""
+ASK = """(id) => { document.getElementById('askAnswer').innerHTML = '';
+  const r = document.createElement('button'); r.setAttribute('data-answer', id); r.hidden = true;
+  document.getElementById('helpWatch').appendChild(r); r.click(); r.remove(); }"""
+# Every place picture() puts a recording, by editor: Flip's book, cards and
+# answers have only the clips its How it works holds. Walked to the letter, so
+# a place that stops being reached is a red row, not a smaller sample.
+PLACES = {
+    "Pad": ["book speed", "book music", "book post", "card #mediaOpenBtn photo", "card #postBtn post", "ask music",
+            "ask speed", "ask takes", "ask post", "ask export", "ask photo"],
+    "Flip": ["book music", "book post", "card #postBtn post", "ask music", "ask post"],
+}
+TODAY = {"book": 150, "card": 112, "ask": 150}   # the phone's width before the fix: it grows its frame, not shrinks
+
 
 def fresh(b, opts, route, scheme="light"):
     c = b.new_context(color_scheme=scheme, **opts)
@@ -76,6 +141,55 @@ def open_book(q):
     q.wait_for_timeout(700)
     q.click("#askTour")
     q.wait_for_timeout(1500)
+
+
+def clip_walk(q):
+    """Each recording, where picture() puts it: the book's pages (and the
+    picture's box on every page), the button cards, Ask's answers."""
+    found, pics = {}, []
+    open_book(q)
+    pages = q.evaluate("() => SkriblBook.pages")
+    for i in range(pages):
+        pic = q.evaluate(BKPIC)
+        if pic:
+            pics.append(pic)
+        for m in q.evaluate(WHOLE, "#bkPic .lc-phone video"):
+            found[f"book {m['clip']}"] = m
+        if i < pages - 1:
+            q.click("#bkNext"); q.wait_for_timeout(500)
+    q.evaluate("() => SkriblBook.close('draw')"); q.wait_for_timeout(400)
+    for sel in ("#mediaOpenBtn", "#postBtn"):
+        if q.evaluate("(s) => !document.querySelector(s)", sel):
+            continue
+        q.evaluate("(s) => SkriblLearnCard.open(s)", sel); q.wait_for_timeout(600)
+        for m in q.evaluate(WHOLE, ".lc-card .lc-phone video"):
+            found[f"card {sel} {m['clip']}"] = m
+        q.evaluate("() => SkriblLearnCard.close()"); q.wait_for_timeout(250)
+    q.evaluate("() => openHelpDrawer()"); q.wait_for_timeout(700)
+    for aid in ("music", "speed", "takes", "post", "export", "photo"):
+        q.evaluate(ASK, aid); q.wait_for_timeout(600)
+        for m in q.evaluate(WHOLE, ".ask-answer-pic .lc-phone video"):
+            found[f"ask {aid}" if m["clip"] == aid else f"ask {aid} {m['clip']}"] = m
+    q.evaluate("() => closeHelpDrawer && closeHelpDrawer()"); q.wait_for_timeout(300)
+    return found, pics
+
+
+def clip_rows(q, name, n, view):
+    found, pics = clip_walk(q)
+    say = "; ".join(f"{k} {m['seen']}% miss {m['miss']} bars {m['bars']} w {m['w']}" for k, m in found.items())
+    check(f"{name} ({view}): every screen recording shows whole, painted to its edges and corners: "
+          f"the book, the button cards and Ask's answers ({len(PLACES[name])} places)",
+          sorted(found) == sorted(PLACES[name]) and all(m["seen"] >= 99.9 and m["miss"] == 0 for m in found.values()),
+          f"walked {sorted(found)}; {say}")
+    check(f"{name} ({view}): ...each in an outline of its own shape (no gap, no spill), at today's size or bigger",
+          bool(found) and all(abs(m["bars"][0]) <= 1 and abs(m["bars"][1]) <= 1 and m["w"] >= TODAY[k.split()[0]] - 0.5
+                              for k, m in found.items()), say)
+    hs = [p["h"] for p in pics]
+    desk = view.startswith("desk")
+    shape = "the drawing's 4:3" if desk else "the tall phone whole"
+    check(f"{name} ({view}): the book's picture is one height on all {n} pages ({shape}), and no example is wider than its page",
+          len(pics) == n and max(hs) - min(hs) <= 1 and all(p["kw"] <= p["inner"] + 0.5 for p in pics)
+          and (not desk or all(abs(p["h"] - p["w"] * 3 / 4) <= 2 for p in pics)), str(pics))
 
 
 def stroke(q, cdp, pts):
@@ -189,6 +303,15 @@ with sync_playwright() as p:
         check(f"{name}: no page errors", not errs, "; ".join(errs[:2]))
         c.close()
 
+        # 7. Every recording whole, on a phone in light...
+        c, q, errs = fresh(b, PHONE, route)
+        rs = q.evaluate(RATIOS)
+        off = [r for r in rs if not (r["light"] and r["dark"] and abs(r["ratio"] / r["light"] - 1) < 0.005 and abs(r["ratio"] / r["dark"] - 1) < 0.005)]
+        check(f"{name}: each of its {len(rs)} clips carries its recording's own ratio (both themes' posters)", len(rs) >= 5 and not off, str(off or rs))
+        clip_rows(q, name, n, "phone, light")
+        check(f"{name}: no page errors walking the recordings", not errs, "; ".join(errs[:2]))
+        c.close()
+
         # On a desk, a dialog in the middle.
         c, q, errs = fresh(b, DESK, route, scheme="dark")
         open_book(q)
@@ -196,6 +319,8 @@ with sync_playwright() as p:
           return { left: Math.round(r.left), right: Math.round(r.right), top: Math.round(r.top), bottom: Math.round(r.bottom), w: Math.round(r.width), vw: innerWidth, vh: innerHeight }; }""")
         check(f"{name}: on a desk the book is a dialog in the middle, at most 560px wide, clear of the edges",
               abs((geo["left"] + geo["right"]) / 2 - geo["vw"] / 2) <= 1 and geo["w"] <= 560 and geo["top"] > 20 and geo["bottom"] < geo["vh"] - 20, str(geo))
+        q.evaluate("() => SkriblBook.close('draw')"); q.wait_for_timeout(400)
+        clip_rows(q, name, n, "desk, dark")   # ...and on a desk in dark
         check(f"{name}: no page errors on a desk", not errs, "; ".join(errs[:2]))
         c.close()
     b.close()

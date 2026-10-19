@@ -49,8 +49,13 @@
     {% macro learn_card(demo, title, line, group, n=None, tool=None, clip=None, shape=None) -%}
     {% if clip %}
     {# A screen clip (harness/tools/make_help_clips.py), one per theme so it
-       matches the app around it; lib/helplearn.js picks and plays it. #}
-    <figure class="learn-card learn-clip" data-group="{{ group }}" data-clip-name="{{ clip }}"{% if tool %} data-learn-tool="{{ tool }}"{% endif %}{% if shape %} data-shape="{{ shape }}"{% endif %}
+       matches the app around it; lib/helplearn.js picks and plays it. Its
+       ratio is the shape the tool cut it to (the tall phone screens, the
+       short ones, the 4:3 tools, the zoom), so a frame placed round it by
+       lib/learncard.js is the phone's own outline and shows all of it;
+       verify_book holds each ratio to its poster. #}
+    {% set ratio = {'music': '600 / 1298', 'post': '600 / 1298', 'zoom': '600 / 540'}.get(clip, '600 / 984' if shape == 'screen' else '4 / 3') %}
+    <figure class="learn-card learn-clip" data-group="{{ group }}" data-clip-name="{{ clip }}" data-ratio="{{ ratio }}"{% if tool %} data-learn-tool="{{ tool }}"{% endif %}{% if shape %} data-shape="{{ shape }}"{% endif %}
             data-clip-dark="{{ skribl_asset('help/clips/' ~ clip ~ '-dark.mp4') }}"
             data-clip-light="{{ skribl_asset('help/clips/' ~ clip ~ '-light.mp4') }}"
             data-clip-dark-webm="{{ skribl_asset('help/clips/' ~ clip ~ '-dark.webm') }}"
