@@ -593,6 +593,13 @@ with sync_playwright() as p:
         _page.evaluate(SEED_POSTED)
         _page.reload(wait_until="load")
         _page.wait_for_timeout(1400)
+        # AT THE FOOT OF THE SCREEN THE MENU OPENS ABOVE ITS ⋯ (the fix for the
+        # menu that opened off the bottom; verify_galib's FOOT block pins it),
+        # and this fixture's row sits at the foot of a 900px screen. So the
+        # row is scrolled up first: this check is about the menu's own layout
+        # where it has room, under the title.
+        _page.evaluate("() => { const r = document.querySelector('.posted-row-keyed');"
+                       " if (r) r.scrollIntoView({block: 'start'}); }")
         # The row's buttons are behind its ⋯ on a phone; open it to read them.
         if _page.locator('.posted-row-keyed .posted-more').count():
             _page.click('.posted-row-keyed .posted-more'); _page.wait_for_timeout(200)
