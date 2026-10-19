@@ -17,9 +17,10 @@
  * delete (two taps). WHAT IT DOES NOT: serialising and loading a drawing,
  * which each editor passes in, because the Pad's and Flip's documents differ.
  *
- * The editors and the Library load it; the Library only lists and deletes
- * (list/remove/ago) and never calls init(), so open() does nothing there.
- * The player never saves anything (verify_player_isolation).
+ * The editors and the Library load it; the Library lists, ends its rows
+ * (rowEnd: Save a .skribl file, Delete) and never calls init(), so open()
+ * does nothing there. The player never saves anything
+ * (verify_player_isolation).
  */
 (function (global) {
   'use strict';

@@ -770,7 +770,7 @@ rather than a shared rule.
 | `mirror.js` | Pad+Flip | Mirror drawing — reflect each point across the canvas centre, shared by both. |
 | `modalfocus.js` | Pad+Flip+library+gallery | Focus for surfaces that declare aria-modal="true". |
 | `mp4export.js` | Pad+Flip | MP4 export through WebCodecs + the vendored mp4-muxer: one encoder pipeline for both editors (SK312-003, v315). |
-| `nametab.js` | Pad+Flip | The skribl NAME drawer — a title for the drawing, shared by Pad and Flip. |
+| `nametab.js` | Pad+Flip+library | The skribl NAME drawer — a title for the drawing, shared by Pad and Flip. |
 | `offline.js` | Pad+Flip+library | The Home Screen app: opening with no signal, and staying current. |
 | `othertab.js` | Pad+Flip | TWO TABS, TWO DRAWINGS, NOTHING LOST (SK-AUD-006; the owner's pick T1). |
 | `pagemenu.js` | library+gallery | The page menu: the ••• on the gallery and the library, and what it opens. |
