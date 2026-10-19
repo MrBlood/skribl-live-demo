@@ -310,10 +310,15 @@ NO_API = """(() => { try {
   Object.defineProperty(Document.prototype, 'webkitFullscreenEnabled', { get: () => false, configurable: true }); } catch (e) {}
   try { delete Element.prototype.requestFullscreen; } catch (e) {}
   try { delete Element.prototype.webkitRequestFullscreen; } catch (e) {} })();"""
-MUTE = """(t) => { const card = t.querySelector('.skfull.skfull-card'), full = t.querySelector('.skfull:not(.skfull-card)');
-  const m = b => { const e = b && b.querySelector('.skfull-mute'); return e ? e.getClientRects().length > 0 : null; };
+# The full screen's band is the link page's since one full screen, and its
+# Mute is the one that says Mute or Unmute.
+MUTE = """(t) => { const card = t.querySelector('.skfull.skfull-card'), full = t.querySelector('.tileStage > .player-bar');
+  const seen = e => e ? e.getClientRects().length > 0 : null;
+  const m = b => seen(b && b.querySelector('.skfull-mute'));
+  const bm = b => seen(b && [...b.querySelectorAll('.player-controls > button')]
+    .find(e => /^(Mute|Unmute)$/.test(e.getAttribute('aria-label') || '')));
   const x = s => { const e = card.querySelector(s); return e ? Math.round(e.getBoundingClientRect().left * 10) / 10 : null; };
-  return { card: m(card), full: m(full), row: [x('.skfull-play'), x('.skfull-loop'), x('.skfull-full')] }; }"""
+  return { card: m(card), full: bm(full), row: [x('.skfull-play'), x('.skfull-loop'), x('.skfull-full')] }; }"""
 
 with sync_playwright() as p:
     b = p.chromium.launch()

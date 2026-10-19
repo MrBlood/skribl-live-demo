@@ -672,8 +672,9 @@ def player_states(pg):
 # that run dropped findings it had simply not seen. In a full-screen state the
 # pointer moves over the drawing before the census and before each photograph,
 # as a hand near the bar does, and the photograph waits until the bar is all the
-# way back. BAR is every part chromefade puts to sleep (fullbar.css, player.css).
-BAR = ".skfull:not(.skfull-card), .tileExit, .full-exit, .player-bar"
+# way back. BAR is every part chromefade puts to sleep (styles.css and the
+# sheets made from it, fullbar.css for the name in the corner).
+BAR = ".full-exit, .player-bar, .fb-who"
 AWAKE = ("() => !document.querySelector('.chrome-asleep') && [...document.querySelectorAll("
          + json.dumps(BAR) + ")].every(e => getComputedStyle(e).opacity === '1')")
 
@@ -705,7 +706,7 @@ def leave_full(pg, exit_sel):
 
 def library_states(pg):
     yield "rest"
-    click(pg, "#btnFull", 800); yield "full screen"; leave_full(pg, "#fullExit")
+    click(pg, "#btnFull", 800); yield "full screen"; leave_full(pg, ".stageCanvasWrap > .player-btn.full-exit")
     pg.fill("#postedSearch", "Cen") if pg.locator("#postedSearch").count() else None
     pg.wait_for_timeout(300); yield "search"
     click(pg, "#searchClear")
@@ -723,7 +724,7 @@ def gallery_states(pg):
     yield "a tile"
     click(pg, ".tileMore"); yield "tile menu"
     click(pg, ".cmItem.cmReport", 600); yield "report"; esc(pg)
-    click(pg, ".skfull-full", 900); yield "a tile, full screen"; leave_full(pg, ".tileExit")
+    click(pg, ".skfull-full", 900); yield "a tile, full screen"; leave_full(pg, ".tileStage > .player-btn.full-exit")
     click(pg, "#pageMenuBtn"); yield "page menu"; esc(pg)
 
 

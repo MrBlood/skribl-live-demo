@@ -171,12 +171,11 @@
     row.className = 'skfull-row';
 
     var made = {};
-    made.restart = btn('skfull-restart', 'Restart', ICON.restart);
     made.play = btn('skfull-play', 'Play', ICON.play);
     made.loop = btn('skfull-loop', 'Repeat', ICON.loop);
     made.mute = btn('skfull-mute', 'Mute', ICON.sound);
     made.full = btn('skfull-full', 'Full screen', ICON.full);
-    var bRestart = made.restart, bPlay = made.play, bLoop = made.loop;
+    var bPlay = made.play, bLoop = made.loop;
     var bMute = made.mute;
 
     for (var i = 0; i < want.length; i++) {
@@ -365,13 +364,6 @@
     if (made.full) made.full.addEventListener('click', function (e) {
       e.stopPropagation();
       if (opts.onFull) opts.onFull();
-    });
-    bRestart.addEventListener('click', function () {
-      var pl = player();
-      if (!pl) return;
-      pl.seek(0);
-      pl.play();
-      sync();
     });
     bPlay.addEventListener('click', function () {
       var pl = player();

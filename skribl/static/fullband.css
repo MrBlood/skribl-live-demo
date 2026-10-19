@@ -331,6 +331,17 @@
    nothing carries the class, so the rules went with them. The --tap-grow band
    they needed went too: a .player-btn is already 46px square. */
 
+/* NO DOUBLE-TAP WAIT, on the buttons and the speeds both. Without
+   `touch-action: manipulation` Safari holds a tap about 300ms to see whether
+   a second one is coming, and the second of two quick presses is the one
+   that disappears: the owner's "the button is not very responsive, it takes
+   pushing it many times, there is a lag", of the Gallery's old full-screen
+   bar (fullbar.css says it at length; flip.css since Flip shipped). Since
+   one full screen the Gallery and the Library wear this band, so the rule is
+   here, where every full screen's band comes from. Tap, scroll and pinch
+   are kept; only the double-tap zoom goes. One rule for all three, which
+   is cheaper served than the property in each. */
+.player-btn, .rl-speed, .rl-chips button { touch-action: manipulation; }
 .player-btn {
   display: flex;
   align-items: center;
