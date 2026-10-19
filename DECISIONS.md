@@ -19374,3 +19374,28 @@ first draft that had it outside.
 
 The sheet's old bin, and its own copy of the bin's paths (`BIN` in
 lib/savedrafts.js), are gone; every draft row's bin is drawn by rowEnd.
+
+## After v326 -- the violet round: white words on the action violet
+
+The owner's pick from the page strip's mock. The first 12px mock left two
+things "for the purple round": the music trim's times and Flip's loop chip,
+white or violet words under 4.5:1. Looking for the rest found seven places
+that put white words on the bright violet (#7c5cff), 4.35:1 in both themes,
+under AA: Open it on the two-tabs question, the music trim's times, the
+numbers on How it works' first tips, the Home Screen steps' Got it, the bubble
+on a held loop handle in Flip, Done on Flip's move and select bars, and
+Reposition image while it is on. Each shows only mid-action, so A11Y 6c's
+sweep, which reads a page at rest, never met one, and its list of on-demand
+fills did not name them.
+
+They wear the action violet now, `--accent-fill` (#6d4cf0), Make one's and
+Post's: 5.33:1, one step deeper, the same hue (the owner: the purple stays the
+brand). Preview Loop was moved the same way by the drawers round
+(`#previewLoopBtn`), so the base `.loop-btn` rule, which nothing visible wears,
+stays as it is. Hover brightens one of them, Got it (a `.btn`); at 1.1 the
+action violet still reads 4.67:1. Buttons that carry only an icon on the bright violet (the
+eyedropper picking, Play, the nudges) keep it: an icon needs 3:1.
+
+A11Y 6c lists the seven, by the rule each is drawn by (the bars' two Done
+buttons are two entries). On the old colours all 16 readings failed, light and
+dark; with the action violet, 16 of 16 pass.

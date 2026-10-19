@@ -1859,9 +1859,19 @@ with sync_playwright() as p:
       }
       return { seen, out };
     }"""
+    # THE VIOLET ROUND (the owner's pick, after the strip mock): seven more
+    # places put white words on the bright violet, 4.35:1, and each shows
+    # only mid-action -- another tab's drawing waiting, a trim handle or a
+    # loop handle held, the tips open, the Home Screen steps, moving or
+    # selecting pages, Reposition on -- so the sweep below, which reads a
+    # page at rest, never met one. They wear the action violet now, Make
+    # one's, 5.3:1, as Preview Loop already did; each is read by its rule.
     for _route, _specs in (("/", [[".pending-btn"], [".autosave-readd"], ["button.name-done"],
-                                  ["#postBtn"], ["#postSubmitBtn"]]),
-                           ("/flip", [["#postSubmitBtn"]]),
+                                  ["#postBtn"], ["#postSubmitBtn"],
+                                  [".othertab-open"], [".trim-bubble"],
+                                  [".learn-n"], ["#homeScreenDone"]]),
+                           ("/flip", [["#postSubmitBtn"], [".loophandle", ".lh-bubble"],
+                                      ["#mbDone"], ["#sbDone"], [".reposition-btn.active"]]),
                            # The library's selected filter chip is not here any
                            # more: a selected option is a tint now (the one
                            # pill), not white words on a solid fill, and
