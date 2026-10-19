@@ -185,7 +185,7 @@ GEOM = """(t) => {
   else { const p = img.getBoundingClientRect(), s = p.width / 1200, q = img._d;
          d = [p.left + (q[0] + 2) * s, p.top + (q[1] + 2) * s, p.left + (q[0] + q[2] - 2) * s, p.top + (q[1] + q[3] - 2) * s];
          plate = (18 - 2) * s; }
-  const btn = c => { const e = bar.querySelector('.skfull-' + c); return e && { r: R(e), ink: getComputedStyle(e).color }; };
+  const btn = c => { const e = bar.querySelector('.skfull-' + c); return e && e.getClientRects().length ? { r: R(e), ink: getComputedStyle(e).color } : null; };
   return { live, plate, bar: R(bar), box: R(box), stage: R(t.querySelector('.tileStage')), drawing: d,
            time: R(bar.querySelector('.skfull-dur')), timeInk: getComputedStyle(bar.querySelector('.skfull-dur')).color,
            play: R(bar.querySelector('.skfull-play')), loop: btn('loop'), mute: btn('mute'), full: btn('full'),
@@ -258,7 +258,10 @@ class Card:
         return v[len(v) // 2] if v else None, a, b
 
     def fill(self, im, which):
-        """A button's own fill: the middle value of a ring inside its edge."""
+        """A button's own fill: the middle value of a ring inside its edge;
+        None for a button that is not painted at all."""
+        if not self.g.get(which):
+            return None
         r = self.g[which]["r"]
         cx, cy, R = (r[0] + r[2]) / 2, (r[1] + r[3]) / 2, (r[2] - r[0]) / 2
         ring = [self.px(im, cx + R * f * math.cos(a), cy + R * f * math.sin(a))
@@ -331,9 +334,9 @@ with sync_playwright() as p:
     shown = c.shot()
     fills = {k: c.fill(shown, k) for k in ("loop", "mute", "full")}
     check("...and the buttons beside it are light glass (each button's own fill)",
-          all(lum(v) > 0.5 for v in fills.values()),
-          ", ".join(f"{k} {lum(v):.2f}" for k, v in fills.items()) + " (relative luminance; light glass is over 0.5)")
-    icons = {k: ratio(rgb(g[k]["ink"]), fills[k]) for k in fills}
+          all(v is not None and lum(v) > 0.5 for v in fills.values()),
+          ", ".join(f"{k} {lum(v):.2f}" if v else f"{k} not painted" for k, v in fills.items()) + " (relative luminance; light glass is over 0.5)")
+    icons = {k: ratio(rgb(g[k]["ink"]), v) if v else 0 for k, v in fills.items()}
     check("...and every icon reads on its own button, 3:1 or more",
           min(icons.values()) >= 3, ", ".join(f"{k} {v:.2f}:1" for k, v in icons.items()))
     # Just outside the drawing's bottom corners, on the card's own colour:
@@ -353,8 +356,8 @@ with sync_playwright() as p:
     shown = c.shot()
     fills = {k: c.fill(shown, k) for k in ("loop", "mute", "full")}
     check("on a dark drawing the buttons are dark glass",
-          all(lum(v) < 0.2 for v in fills.values()),
-          ", ".join(f"{k} {lum(v):.2f}" for k, v in fills.items()) + " (dark glass is under 0.2)")
+          all(v is not None and lum(v) < 0.2 for v in fills.values()),
+          ", ".join(f"{k} {lum(v):.2f}" if v else f"{k} not painted" for k, v in fills.items()) + " (dark glass is under 0.2)")
     tw = c.time_worst()
     check("...and the time reads on it", tw >= 4.5, f"worst {tw:.2f}:1")
     c = Card(pg, titles["sky"], phone=True)
@@ -370,8 +373,8 @@ with sync_playwright() as p:
     shown = c.shot()
     fills = {k: c.fill(shown, k) for k in ("loop", "full")}
     check("...and on a pale drawing the buttons are light glass, read off the card image",
-          all(lum(v) > 0.5 for v in fills.values()),
-          ", ".join(f"{k} {lum(v):.2f}" for k, v in fills.items()))
+          all(v is not None and lum(v) > 0.5 for v in fills.values()),
+          ", ".join(f"{k} {lum(v):.2f}" if v else f"{k} not painted" for k, v in fills.items()))
     d, ym = c.g["drawing"], (c.g["bar"][1] + c.g["bar"][3]) / 2
     moved, bare, gone = c.fade_moves(d[0] + 3, d[2] - 3, ym)
     check("...and the fade cannot be seen on its empty paper", moved is not None and moved <= 1.10, f"median {moved:.2f}")
@@ -381,8 +384,8 @@ with sync_playwright() as p:
     c = Card(pg, titles["dark"], phone=True, play=False)
     shown = c.shot()
     fills = {k: c.fill(shown, k) for k in ("loop", "full")}
-    check("...and on a dark one, dark glass", all(lum(v) < 0.2 for v in fills.values()),
-          ", ".join(f"{k} {lum(v):.2f}" for k, v in fills.items()))
+    check("...and on a dark one, dark glass", all(v is not None and lum(v) < 0.2 for v in fills.values()),
+          ", ".join(f"{k} {lum(v):.2f}" if v else f"{k} not painted" for k, v in fills.items()))
     pg.close()
 
     print("\nCARD FADE — a tall drawing on a desk card, narrower than the row")
@@ -402,7 +405,7 @@ with sync_playwright() as p:
     shown = c.shot()
     over = c.fill(shown, "mute")
     check("...and a control over the card's colour takes ITS tone: light glass on a light page",
-          lum(over) > 0.5, f"Mute's fill {lum(over):.2f}, over the card beside the drawing")
+          over is not None and lum(over) > 0.5, f"Mute's fill {lum(over):.2f}, over the card beside the drawing" if over else "Mute not painted")
     tw = c.time_worst()
     check("...and the time over it reads", tw >= 4.5, f"worst {tw:.2f}:1")
     # The page's theme turns: the card's colour with it, and the control too.
@@ -412,7 +415,7 @@ with sync_playwright() as p:
     shown = c.shot()
     over = c.fill(shown, "mute")
     check("...and when the page turns dark, that control turns to dark glass with it",
-          lum(over) < 0.2, f"Mute's fill {lum(over):.2f} after the theme turned")
+          over is not None and lum(over) < 0.2, f"Mute's fill {lum(over):.2f} after the theme turned" if over else "Mute not painted")
     pg.close()
 
     print("\nCARD FADE — a drawing that cannot be read keeps the scrim")
