@@ -19616,3 +19616,91 @@ away one at a time, each piece of the fix turns its own rows red: the
 frames' heights, the template's ratio, picture() setting it, the phone
 book's ratio, the desk book's 4:3, the content-box. The centring in the
 frame and the rounded outline are the look, and nothing pins them.
+
+## After v326 -- one full screen: the Gallery's and the Library's are the link page's
+
+The owner: "why can't the gallery player look like the others? with the same
+scrubber and all?" They could not because the Gallery and the Library play
+in the in-post player, and its full-screen bar (lib/fullbar.js) was built
+before the link page had its line of speeds and its scrubber in the
+drawing's shape. It never moved over. Measured on one drawing at one moment,
+the Gallery showed a 6px line, three speeds a tap each, 0:50 of 2:00 where
+the link page said 8:26 of 20:09 (the artist's time, as "Drawn in 20 min"
+says), and the page's colour round the drawing.
+
+The owner's picks from the mock ("All yes"):
+
+- The Gallery's and the Library's full screen is the link page's, with who
+  drew it in the top corner across from the x (A).
+- The cards in the grid keep their small bar.
+- One PR, checked on the Gallery and the Library, phone and desk, light and
+  dark, with a check that their full screen measures the same as the link
+  page's.
+
+And the two defaults given when the owner asked whether anything needed a
+choice: the name in the corner is words only (no avatar), and a tap on the
+drawing pauses, as it already did.
+
+WHAT IT IS. lib/fullbar.js band() builds the link page's band inside the
+stage: the scrubber, the clock, the line with every speed, the five buttons,
+the x, and the name in the corner (.fb-who, in the glass for the ground it
+sits on, stepping back with the controls). attach() is the card's alone now.
+The scrubber and the words are the player's own: the in-post player lends
+the line a post wears under it (me.band), wired to its own clock, and tells
+the band the artist's time (me.clock) and the drawing's ground (me.ground),
+which the frame wears to the screen's edges. A new player (the Library puts
+one on its stage for each row) gets fresh ones.
+
+THE RULES ARE THE LINK PAGE'S, NOT A COPY OF THEM. fullband.css is made from
+styles.css by harness/tools/cssgraph.py, as player.css is, and verify_seam
+holds it to the regeneration byte for byte on the PR gate. A browser census
+keeps every rule that matches inside the full-screen frame's band parts and
+nothing outside them; styles.css's tokens (the dark :root and the light
+data-theme) are emitted scoped to the frame, with the body's inherited type
+and ink, so the band reads the same words in the same face. Splitting the
+sheet by hand failed before (verify_cssplit's docstring says how).
+
+FOUND ON THE WAY, each by a row that went red:
+
+- The census first called every card's hidden band "outside" the frame,
+  because every tile carries one. Inside is the open frame's parts; a part
+  on another card is not outside.
+- The name in the corner was white on white and the ground stopped short of
+  the edges: the in-post box kept its own border, round and background in
+  full screen. In immersive it has none (inlineplayer.css).
+- The Library's page did not load lib/replayline.js, lib/scrubkeys.js or
+  lib/seekcache.js, so its player had no line to lend. It loads them now.
+- The Gallery's old bar had touch-action: manipulation, the fix for the
+  owner's "the button is not very responsive, it takes pushing it many
+  times, there is a lag". The link page's band never had it. One rule in
+  styles.css gives it to the band's buttons and speeds, so every full screen
+  has it: the link page and the Pad's band too. Flip had it already
+  (flip.css).
+- The old bar's one speed button stepped from the player's rate, which was
+  the cause of "goes to 2x and sticks". The line has no step: a press asks
+  for its own speed. verify_gallery now presses three speeds with the
+  player's rate lying and reads three speeds. The throw on the way (a pick
+  sets the rate, then rebuilds the sound) moved to verify_inline's post with
+  sound, because only a drawing with sound reaches the sound. That row pins
+  applyRate's catch, which nothing pinned before: without it the player runs
+  at 2x and the line says 1x.
+
+LEFT AS IT IS: the link page's own full screen keeps its canvas frame's
+inset vignette (.canvas-wrap's inset shadow), which the Gallery and the
+Library do not have. verify_onefull's edges rows ask the two of them only.
+Put to the owner as an optional choice; the default is to leave it.
+
+verify_onefull asks the Gallery and the Library beside the link page, one
+drawing paused at one place, on the owner's phone and a desk, in both
+themes: the same parts in the same order, each measuring the same by its
+computed size, spacing, type, colour and glass; the same clock; every speed;
+the ground at the screen's edges, read off painted pixels; the name in the
+corner; the way out. Every row is red on main's code. Taken away one at a
+time, each piece turns its own rows red: the band's sheet, its tokens, the
+body's type, the player's band hook, its clock, its ground, the box's own
+background in full screen, the name, the name stepping back, and the
+Library's line scripts.
+
+The in-post player's line costs a host 449 B more (verify_inline, named);
+the player's stylesheet 73 B more for the no-double-tap rule (verify_jsstrip
+and verify_player_isolation, named).
