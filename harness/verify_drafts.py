@@ -581,11 +581,14 @@ with sync_playwright() as p:
         else:
             # Under the threshold the draft is the plain JSON every reader and
             # suite has always read, key for key and in the same order -- with
-            # the canvas's size, the one key added since (SHAPE, below).
+            # the canvas's size (SHAPE, below) and the pause mode (the Pad
+            # review after v326: a reload kept neither) the keys added since. A
+            # typed name and a viewers' speed add "title" and "playSpeed" when
+            # there is one (verify_padedges).
             check(f"{_label}: stays the plain draft, key for key",
                   made["keys"] == ["version", "writerId", "savedAt", "baseSnapshot", "strokes", "strokeGroups",
                                    "redoStrokes", "redoStrokeGroups", "canvasSize", "background", "photoMeta",
-                                   "musicMeta"],
+                                   "musicMeta", "pauseMode"],
                   str(made["keys"]))
         pg.reload(wait_until="load")
         pg.wait_for_timeout(1200)
