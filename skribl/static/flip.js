@@ -2540,6 +2540,11 @@ function abortStrokeForPinch(){
 /* ---- frame strip ---- */
 const strip = document.getElementById('strip');
 const DEL_SVG='<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+/* THE HOLD'S × IS DRAWN (the strip at 12px). Typed, it sat a pixel off the
+   badge's centre in two of this box's faces, and differently in each; drawn,
+   it is one mark in every font, as Forever's ∞ is. The badge's name still
+   says the count in words. */
+const HOLD_X='<svg class="holdx" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2 2l6 6M8 2l-6 6"/></svg>';
 function disarmAll(){
   // _tiles(), not children: see refreshThumb. armedDel is a PAGE index and
   // can be past the paste ghost, which would disarm a different tile's X.
@@ -2755,12 +2760,15 @@ function buildStrip(){
     // active one, hovered or focused, which is exactly the rule the delete ✕
     // already follows. A page with no hold still shows nothing.
     const _h = artistHold(f);
-    el.innerHTML='<div class="num">'+_numTxt+'</div>'
-      +'<button class="del" title="Delete page" aria-label="Delete page">'+DEL_SVG+'</button>'
+    // THE NUMBER AND ITS HOLD SHARE ONE ROW (the strip at 12px): the badge
+    // sat at a fixed left:30px, so a number from 10 up ran under it.
+    el.innerHTML='<div class="tiletop"><div class="num">'+_numTxt+'</div>'
       +'<button class="holdbadge'+(_h>1?'':' idle')+'" '
         +'title="Hold this page longer — tap to cycle" '
         +'aria-label="Hold page '+(i+1)+', shown '+_h+' time'+(_h===1?'':'s')+'">'
-        +'\u00d7'+_h+'</button>'
+        +HOLD_X+_h+'</button></div>'
+      // On a phone the ⋯ below holds Delete, in this corner (flip.css .pageops).
+      +(_compactStrip() ? '' : '<button class="del" title="Delete page" aria-label="Delete page">'+DEL_SVG+'</button>')
       // A page that draws itself has to SAY so on the strip. The hold badge is
       // the precedent: a per-page property nobody can see is one people set by
       // accident and then cannot find. Not a button — the switch lives in the
@@ -3008,6 +3016,8 @@ _OPS_ICON['Loop'] = '<path d="M17 2l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"
   .forEach(k => { _OPS_ICON[k] = _OPS_ICON['Loop']; });
 _OPS_ICON['Keep under'] = '<path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 16l9 5 9-5"/>';
 _OPS_ICON['Stop keeping under'] = _OPS_ICON['Keep under'];
+// Remove loop: the loop's arrows, struck through. It was the one row without one.
+_OPS_ICON['Remove loop'] = _OPS_ICON['Loop'] + '<path d="M4 4l16 16"/>';
 function openPageOps(trigger, i){
   closePageOps(false);
   // THE TRIGGER YOU TAPPED MAY BE GONE. Opening the menu on a page you are not

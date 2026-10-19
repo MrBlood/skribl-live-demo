@@ -498,10 +498,13 @@ with sync_playwright() as _p:
     check("the hold survives re-renders and page changes",
           _pg.evaluate("() => frameHold(frames[0])") == 2,
           "buildStrip rebuilds every badge, so the value must come from the frame")
-    check("the hold count still reads as a multiplier",
-          "\u00d7" in (_pg.locator("#strip .frame").nth(0)
-                       .locator(".holdbadge").inner_text() or ""),
-          _pg.locator("#strip .frame").nth(0).locator(".holdbadge").inner_text())
+    # The × is drawn since the strip went to 12px (flip.js HOLD_X): a typed one
+    # sat a pixel off centre in two faces. The count beside it is still words.
+    _x = _pg.evaluate("""() => { const b = document.querySelector('#strip .frame .holdbadge');
+        const x = b && b.querySelector('svg.holdx'); const r = x && x.getBoundingClientRect();
+        return { drawn: !!(r && r.width >= 6 && r.height >= 6), text: b ? b.textContent.trim() : null }; }""")
+    check("the hold count still reads as a multiplier: a drawn × before the count",
+          _x["drawn"] and _x["text"] == "2", str(_x))
     check("aria-label still names the action for screen readers",
           "move" in (_pg.get_attribute("#pbLeft", "aria-label") or "").lower(),
           _pg.get_attribute("#pbLeft", "aria-label"))

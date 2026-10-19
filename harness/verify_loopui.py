@@ -278,6 +278,11 @@ with sync_playwright() as p:
     items = menu()
     check("on a looped page the ⋯ menu offers Remove loop (owner: \"How do we undo a loop?\")",
           "Remove loop" in items, str(items))
+    # A LINE ICON ON EVERY ROW (the owner's pick for the page's card); Remove
+    # loop was the one without, until the strip at 12px gave it the loop's
+    # arrows, struck through.
+    _bare = pg.evaluate("() => [...document.querySelectorAll('.pageops-menu .pageops-item')].filter(b => !b.querySelector('svg path')).map(b => b.textContent.trim())")
+    check("...and every row of the menu wears its icon, Remove loop's too", not _bare, str(_bare))
     if "Remove loop" in items:                                      # absent, the check above is the report
         pg.locator(".pageops-menu .pageops-item", has_text="Remove loop").click()
     check("...and it removes the loop", pg.evaluate(STATE)["loop"] is None, str(pg.evaluate(STATE)["loop"]))
@@ -363,16 +368,17 @@ with sync_playwright() as p:
     browsing.goto(pg, BASE, "/flip")
     pg.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
     pg.evaluate(SETUP, 6)
-    # The loop starts on page 2, so its start bar sits right beside page 1's delete.
+    # The loop starts on page 2, so its start bar sits right beside page 1's
+    # corner button: on a phone the ⋯, which holds Delete (the strip at 12px).
     pg.evaluate("() => { docLoop = { from: 1, to: 2, times: 2 }; idx = 0; buildStrip(); document.getElementById('strip').scrollLeft = 0; }")
     pg.wait_for_timeout(200)
     reach = pg.evaluate("""() => { const h = document.querySelector('#strip .loophandle.from').getBoundingClientRect(), cy = h.top + h.height / 2, cx = h.left + h.width / 2;
         const hit = x => { const a = document.elementFromPoint(x, cy); return !!(a && a.closest('.loophandle.from')); };
-        const t = document.querySelectorAll('#strip .frame')[0], d = t.querySelector('.del');
+        const t = document.querySelectorAll('#strip .frame')[0], d = t.querySelector('.pageops');
         let del = null; if (d) { const r = d.getBoundingClientRect(); const a = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); del = !!(a && d.contains(a)); }
         return { left: hit(cx - 18), right: hit(cx + 18), del }; }""")
     check("phone: a bar takes a finger 18px either side of its centre", reach["left"] and reach["right"], str(reach))
-    check("phone: ...and the neighbouring page's delete is still what a tap on it reaches", reach["del"] is True, str(reach))
+    check("phone: ...and the neighbouring page's ⋯ is still what a tap on it reaches", reach["del"] is True, str(reach))
     cdp = ctx.new_cdp_session(pg)
     # As a person does: scroll the strip until the end bar is in view.
     pg.evaluate("() => { const s = document.getElementById('strip'), h = s.querySelector('.loophandle.to'); s.scrollLeft = h.offsetLeft + 60 - s.clientWidth; }")
@@ -424,6 +430,94 @@ with sync_playwright() as _p5:
             check(f"...and its ∞ is drawn, painted and big enough to know at a glance",
                   bool(_m["inf"]) and _m["inf"]["w"] >= 16 and _m["inf"]["h"] >= 8 and _m["inf"]["painted"], str(_m["inf"]))
     _b5.close()
+
+# THE STRIP AT 12PX (the owner's pick A, from the strip's mock). Every word on
+# a page's tile is 12px, and nothing on it covers anything else: the number
+# and its hold share a row, Won't play sits in the page's middle, and on a
+# phone the page you are on carries one ⋯ in the corner the ✕ had, its menu
+# holding Delete, so the bottom row is the loop chip's. Five strips that put
+# the most on one tile, on a phone and a desk, light and dark: each part's
+# painted box against every other part's, and each button's box against the
+# other buttons' 44px touch boxes. And the words read: a set hold is white on
+# the action violet, the chip's words the small violet words' ink.
+print("\nTHE STRIP AT 12PX — every word 12px, nothing on a tile over anything else")
+_STRIPS = {
+    "a forever loop on page 2, you on it": dict(loop={"from": 1, "to": 1, "forever": True},
+                                                under={"page": 0, "from": 1, "to": 11}, holds={}, draw=[1], on=1),
+    "page 10 held x2, after the loop": dict(loop={"from": 1, "to": 1, "forever": True}, under=None,
+                                            holds={"9": 2, "10": 3}, draw=[9], on=9),
+    "page 12 loops 6 s, held x2": dict(loop={"from": 11, "to": 11, "ms": 6000}, under=None, holds={"11": 2}, draw=[], on=11),
+    "page 2 is Under and starts a x3 loop": dict(loop={"from": 1, "to": 4, "times": 3},
+                                                 under={"page": 1, "from": 2, "to": 6}, holds={"1": 2}, draw=[], on=1),
+    "pages 10-12 selected, 10 held x2": dict(loop=None, under=None, holds={"9": 2}, draw=[], on=9, span=11),
+}
+_STRIP_SET = """(s) => { frames = Array.from({ length: 12 }, (_, k) => { const f = newFrame();
+    f.strokes = [{ x: 80 + k * 30, y: 120, color: '#7c5cff', size: 10, t: 0, start: true }, { x: 200 + k * 20, y: 320, color: '#7c5cff', size: 10, t: 0 }];
+    f.strokeGroups = [2]; return f; });
+  for (const [k, h] of Object.entries(s.holds)) frames[+k].hold = h;
+  for (const k of s.draw) frames[k].draw = true;
+  docLoop = s.loop; docUnder = s.under; spanAnchor = null;
+  if (s.span != null) { idx = s.span; extendSpanTo(s.on); } else { idx = s.on; buildStrip(); render(); }
+  const t = [...document.querySelectorAll('#strip .frame:not(.ghost-paste)')][s.on];
+  t.scrollIntoView({ inline: 'center', block: 'nearest' }); }"""
+_STRIP_READ = """() => {
+  const rgb = s => (s.match(/[\\d.]+/g) || []).map(Number);
+  const lum = c => { const f = v => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+    return 0.2126 * f(c[0]) + 0.7152 * f(c[1]) + 0.0722 * f(c[2]); };
+  const cr = e => { const cs = getComputedStyle(e), a = lum(rgb(cs.color)), b = lum(rgb(cs.backgroundColor));
+    return Math.round(((Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05)) * 100) / 100; };
+  const vis = e => e && e.getClientRects().length && getComputedStyle(e).display !== 'none' && getComputedStyle(e).visibility !== 'hidden';
+  const box = e => { const r = e.getBoundingClientRect(); return [r.left, r.top, r.right, r.bottom]; };
+  const hit = (a, b) => Math.max(0, Math.min(a[2], b[2]) - Math.max(a[0], b[0])) * Math.max(0, Math.min(a[3], b[3]) - Math.max(a[1], b[1]));
+  const out = { over: [], bands: [], small: [], ink: [], x: 0, dots: [] };
+  for (const t of document.querySelectorAll('#strip .frame:not(.ghost-paste)')) {
+    const tb = box(t); if (tb[2] <= 0 || tb[0] >= innerWidth) continue;
+    const page = t.querySelector('.num').textContent.trim();
+    const parts = [['number', '.num'], ['hold', '.holdbadge'], ['chip', '.loopchip'], ['Under', '.underlabel'],
+                   ["Won't play", '.noplaytag'], ['⋯', '.pageops'], ['✕', '.del'], ['draw mark', '.drawmark']]
+      .map(([n, q]) => [n, t.querySelector(q)]).filter(([, e]) => vis(e));
+    const buttons = parts.filter(([n]) => ['hold', 'chip', '⋯', '✕'].includes(n));
+    const clip = b => [Math.max(b[0], tb[0]), Math.max(b[1], tb[1]), Math.min(b[2], tb[2]), Math.min(b[3], tb[3])];
+    const band = e => { const b = box(e), cx = (b[0] + b[2]) / 2, cy = (b[1] + b[3]) / 2; return clip([cx - 22, cy - 22, cx + 22, cy + 22]); };
+    for (let i = 0; i < parts.length; i++) for (let j = i + 1; j < parts.length; j++) {
+      const a = Math.round(hit(box(parts[i][1]), box(parts[j][1]))); if (a) out.over.push(page + ': ' + parts[i][0] + ' on ' + parts[j][0] + ' ' + a + 'px2'); }
+    for (const [n, e] of buttons) for (const [m, f] of buttons) { if (e === f) continue;
+      const a = Math.round(hit(box(e), band(f))); if (a) out.bands.push(page + ': ' + n + ' in the ' + m + "'s touch box " + a + 'px2'); }
+    for (const [n, e] of parts) { if (['⋯', '✕', 'draw mark'].includes(n)) continue;
+      const px = parseFloat(getComputedStyle(e).fontSize); if (px !== 12) out.small.push(page + ': ' + n + ' ' + px + 'px'); }
+    const h = t.querySelector('.holdbadge:not(.idle)'), c = t.querySelector('.loopchip');
+    if (vis(h)) out.ink.push(['hold', page, cr(h)]);
+    if (vis(c)) out.ink.push(['chip', page, cr(c)]);
+    if (vis(t.querySelector('.del'))) out.x++;
+    const d = t.querySelector('.pageops');
+    if (vis(d)) { const b = box(d); out.dots.push([page, Math.round(tb[2] - b[2]), Math.round(b[1] - tb[1])]); }
+  }
+  return out; }"""
+with sync_playwright() as _p6:
+    _b6 = _p6.chromium.launch()
+    for _size, _opts in (("phone", dict(viewport={"width": 402, "height": 874}, device_scale_factor=2, is_mobile=True, has_touch=True)),
+                         ("desk", dict(viewport={"width": 1280, "height": 800}))):
+        for _scheme in ("light", "dark"):
+            _pg = _b6.new_page(color_scheme=_scheme, **_opts)
+            _pg.goto(BASE + "/flip", wait_until="load")
+            _pg.wait_for_function("() => window.__skriblBoot && window.__skriblBoot.flip")
+            _pg.evaluate("() => { if (window.SkriblHints) SkriblHints.hide(); }")
+            for _name, _st in _STRIPS.items():
+                _pg.evaluate(_STRIP_SET, _st); _pg.wait_for_timeout(250)
+                _r = _pg.evaluate(_STRIP_READ)
+                _w = f"{_size}, {_scheme}, {_name}"
+                check(f"{_w}: every word on a tile is 12px", not _r["small"], "; ".join(_r["small"][:4]))
+                check(f"{_w}: nothing on a tile covers anything else", not _r["over"], "; ".join(_r["over"][:4]))
+                check(f"{_w}: no button sits in another's touch box", not _r["bands"], "; ".join(_r["bands"][:4]))
+                _low = [f"{k} on {p} {v}" for k, p, v in _r["ink"] if v < 4.5]
+                check(f"{_w}: a set hold's and the chip's words clear AA ({len(_r['ink'])} read)",
+                      bool(_r["ink"]) and not _low, "; ".join(_low) or str(_r["ink"][:3]))
+                if _size == "phone":
+                    check(f"{_w}: no ✕ on a phone; the page you are on has one ⋯, in the top corner the ✕ had",
+                          _r["x"] == 0 and len(_r["dots"]) == 1 and _r["dots"][0][1] <= 6 and _r["dots"][0][2] <= 6,
+                          f"✕ {_r['x']}, ⋯ {_r['dots']}")
+            _pg.close()
+    _b6.close()
 
 bad = [r for r in results if not r[0]]
 print(f"\n{'=' * 62}\n{len(results) - len(bad)}/{len(results)} passed"
