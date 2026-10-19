@@ -143,9 +143,9 @@
    lands on depend on paint order. Height is the floor that matters (44, Apple's
    number); the width is the pill plus whatever is free beside it, which is the
    same rule verify_layout states for the editors' packed rows. */
-.posted-actions button { position: relative; z-index: 1; }
-.posted-actions button { --tap-grow: 6px; }
-.posted-actions button::before { content: ''; position: absolute;
+.posted-actions button, .draft-act { position: relative; z-index: 1; }
+.posted-actions button, .draft-act { --tap-grow: 6px; }
+.posted-actions button::before, .draft-act::before { content: ''; position: absolute;
   inset: calc(-1 * var(--tap-grow)) 0; }
 /* The row's own link is 40 tall and needs 2px a side. Its band stops at the
    row gap so it cannot reach the action strip below it. */
@@ -232,23 +232,24 @@
 }
 /* The destructive sibling of .posted-copy. Danger-toned so it does not read
    as another neutral utility beside "Copy link", and only rendered at all when
-   this browser holds the post's revocation key. */
-.posted-delete {
+   this browser holds the post's revocation key. A draft row's Delete and Save
+   file wear these two (D3: "the same as posted rows"; lib/savedrafts.js). */
+.posted-delete, .draft-del {
   flex: 0 0 auto; padding: 5px 10px; border-radius: 8px;
   background: rgba(244, 50, 111, 0.12); border: 1px solid rgba(244, 50, 111, 0.35);
   color: var(--danger-soft); font-size: 12px; font-weight: 600;
   font-family: inherit; cursor: pointer;
 }
-@media (hover: hover) { .posted-delete:hover:not(:disabled) { background: rgba(244, 50, 111, 0.2); } }
-.posted-delete:disabled { opacity: .6; cursor: default; }
+@media (hover: hover) { :is(.posted-delete, .draft-del):hover:not(:disabled) { background: rgba(244, 50, 111, 0.2); } }
+.posted-delete:disabled, .draft-del:disabled { opacity: .6; cursor: default; }
 /* Armed by a first tap (SK-AUD-014): the second tap deletes for everyone, so
    the button turns solid danger for the seconds it is live. */
-.posted-delete.armed { background: var(--danger); color: #fff; }
+.posted-delete.armed, .draft-del.armed { background: var(--danger); color: #fff; }
 
-.posted-copy { flex: 0 0 auto; background: transparent; font: inherit; font-size: 11.5px;
+.posted-copy, .draft-file { flex: 0 0 auto; background: transparent; font: inherit; font-size: 11.5px;
   border: 1px solid var(--hairline-strong); color: var(--text-secondary);
   padding: 5px 9px; border-radius: 8px; cursor: pointer; }
-@media (hover: hover) { .posted-copy:hover { color: var(--text-primary); } }
+@media (hover: hover) { :is(.posted-copy, .draft-file):hover { color: var(--text-primary); } }
 .posted-copy.done { color: var(--ui-hi); border-color: rgba(124,92,255,0.4); }
 /* Copy key — the same chrome as Copy link because it is the same kind of act,
    and deliberately NOT danger-toned like .posted-delete beside it: copying a

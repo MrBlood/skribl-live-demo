@@ -603,8 +603,9 @@ try:
         victim = names[-1]
         pa.locator("#draftsList .draft-del").last.click()
         pa.wait_for_timeout(600)
-        # The bin asks WITHOUT MOVING since the gallery/library pass: it keeps
-        # its box and the row's meta line asks (verify_galib pins the box).
+        # Delete asks WITHOUT MOVING (the v317 bin rule, kept by D3's labelled
+        # Delete): it keeps its box and the row's meta line asks (verify_galib
+        # pins the box).
         check("Delete asks first, on the row, and deletes nothing yet",
               pa.locator("#draftsList .draft-del").last.evaluate("d => d.classList.contains('armed')")
               and "again" in pa.locator("#draftsList .draft-row").last.locator(".draft-meta").inner_text()
@@ -878,22 +879,24 @@ try:
               not vanish["same"] and "updated" not in vanish["toast"] and "Saved" in vanish["toast"], str(vanish))
         pd.evaluate("() => { SkriblSavedDrafts.forget(); SkriblName.set('Delete me in the library'); }")
         pd.evaluate("() => SkriblSavedDrafts.save()"); pd.wait_for_timeout(600)
-        # The Library draws the same row: the card opens, the bin asks, one at a time.
+        # The Library draws the same row: the card opens, and its end is a
+        # posted row's (D3): on a desk, Save file and Delete; Delete asks,
+        # one row at a time.
         browsing.goto(pd, BASE, "/skribl/library#drafts", require_boot=False)
         pd.wait_for_timeout(1500)
         lib = pd.evaluate("""() => { const rows = [...document.querySelectorAll('#draftsList .draft-row')];
             return { n: rows.length, links: rows.every(r => r.querySelector('a.draft-open[href*="?draft="]')),
-                     pills: document.querySelectorAll('#draftsList .draft-acts').length }; }""")
-        check("the Library's rows are the card itself as the link, no pill buttons",
-              lib["n"] >= 2 and lib["links"] and lib["pills"] == 0, str(lib))
+                     ends: rows.map(r => [...r.querySelectorAll('.draft-act')].filter(b => b.getClientRects().length).map(b => b.innerText.trim()).join(' | ')) }; }""")
+        check("the Library's rows are the card itself as the link, ending in Save file and Delete on a desk",
+              lib["n"] >= 2 and lib["links"] and set(lib["ends"]) == {"Save file | Delete"}, str(lib))
         pd.locator("#draftsList .draft-del").nth(0).click()
         pd.wait_for_timeout(150)
         pd.locator("#draftsList .draft-del").nth(1).click()
         pd.wait_for_timeout(150)
         larmed = pd.evaluate("() => [...document.querySelectorAll('#draftsList .draft-del')].map(d => d.classList.contains('armed'))")
-        check("the Library: one bin asks at a time", larmed[:2] == [False, True], str(larmed))
+        check("the Library: one Delete asks at a time", larmed[:2] == [False, True], str(larmed))
         llab = pd.evaluate("""() => [...document.querySelectorAll('#draftsList .draft-del')].slice(0, 2).map(d => d.getAttribute('aria-label'))""")
-        check("the Library: the asking bin's name says so too", llab[0].startswith("Delete ") and llab[1].startswith("Tap again to delete"), str(llab))
+        check("the Library: the asking Delete's name says so too", llab[0].startswith("Delete ") and llab[1].startswith("Tap again to delete"), str(llab))
         lk_row = pd.evaluate("""() => [...document.querySelectorAll('#draftsList .draft-row')]
             .findIndex(r => r.textContent.includes('Delete me in the library'))""")
         pd.locator("#draftsList .draft-del").nth(lk_row).focus()

@@ -244,7 +244,9 @@ _drawn = lambda txt: set(_re.findall(r'(?:\bd|points)="([^"]+)"', txt))
 _left = sorted(f"{p.relative_to(_ROOT)}: {d}" for p, t in _SRC.items() for d in _drawn(t) if d in _RETIRED)
 check("no retired bin shape is drawn anywhere (templates and scripts)", not _left, "; ".join(_left[:4]))
 _BIN = ['M3 6h18', 'M8 6V4h8v2', 'M19 6l-1 14H6L5 6', 'M10 11v6M14 11v6']
-_SITES = {"static/lib/savedrafts.js": 1, "static/library.js": 1, "static/lib/postedui.js": 1,
+# The Library's draft rows draw theirs through lib/savedrafts.js rowEnd (D3),
+# beside the editors' sheet's own: two there, none in library.js.
+_SITES = {"static/lib/savedrafts.js": 2, "static/lib/postedui.js": 1,
           "templates/skribl/_skribl_draw_drawer.html": 2,
           "templates/skribl/_skribl_image_drawer.html": 1, "templates/skribl/_skribl_music_drawer.html": 1}
 _short = []

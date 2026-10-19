@@ -315,24 +315,16 @@
     .draft-words { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
     .draft-name { font-size: 15px; font-weight: 700; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .draft-meta { font-family: var(--font-mono); font-size: 12px; color: var(--text-3); }
-    /* THE BIN KEEPS ITS BOX (#3; the v317 bin rule the media drawer's bin
-       follows). It used to grow from 44 into a 77px "Delete?" pill, which is
-       the arm that moves -- the drawer's bin grew over its switch that way
-       and the next tap removed the file. Armed, the icon takes the danger
-       colour on a danger tint inside the same 44px circle, and the row's meta
-       line asks the question (library.js). NO BORDER, not even a transparent
-       one: the armed edge is an inset shadow, as the drawer's is. */
-    .draft-del { flex: 0 0 auto; width: 44px; height: 44px; padding: 0; margin-right: 6px; border-radius: 999px;
-      border: 0; background: transparent; color: var(--text-3); font: inherit;
-      cursor: pointer; display: inline-grid; place-items: center; }
-    .draft-del svg { width: 19px; height: 19px; }
-    @media (hover: hover) { .draft-del:hover { color: var(--text); } }
-    /* The theme's danger colour, as the editors' twin (.sdrafts-del.armed) has it: a literal
-       pink was 2.27:1 on the light theme's white row (third review). */
-    .draft-del.armed, .draft-del.armed:hover { color: var(--danger);
-      box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--danger) 50%, transparent);
-      background: color-mix(in srgb, var(--danger) 10%, transparent); }
-    .draft-meta.asks { color: var(--danger); font-family: var(--font-ui); }
+    /* A DRAFT ROW ENDS AS A POSTED ROW DOES (D3, the owner's pick A; built by
+       lib/savedrafts.js rowEnd, its pills posted.css's). The card opens the
+       draft, so a desk shows Save file and Delete; the phone's ⋯ and its menu
+       are with the posted rows' (below). */
+    .draft-acts { flex: 0 0 auto; display: flex; align-items: center; column-gap: 6px; margin-right: 12px; }
+    .draft-more, .draft-go, .draft-long, .draft-ico { display: none; }
+    /* A desk's Delete asks on the row's second line, so the button keeps its
+       box (lib/savedrafts.js), in Delete's own ink: --danger was 4.2:1 on the
+       dark card, under AA for 12px words. */
+    .draft-meta.asks { color: var(--danger-soft); font-family: var(--font-ui); }
     /* The filter is a track of the one pill too (segslider.css), in the
        page's type rather than monospace. Its options are 34 you can SEE --
        the chip's own height, and SK-AUD-005's floor (these once measured 28
@@ -498,7 +490,7 @@
        the ::before band in posted.css. This said 32 — under even the
        visible floor — and /library was never in the gate that would have
        said so. */
-    .posted-actions button { min-height: 34px; }
+    .posted-actions button, .draft-act { min-height: 34px; }
     /* NO DEAD TAP BETWEEN THEM (#15). posted.css gives these a band above and
        below only, so at 390 the 6px gaps between the icons answered nothing:
        a thumb that landed between Copy link and Delete did nothing at all.
@@ -508,7 +500,7 @@
        -4, NOT -3: the band is inset from the PADDING box, and these buttons
        carry a 1px border, so -3 stopped a pixel short each side and left two
        dead columns in every gap (measured, not reasoned). */
-    .posted-actions button::before { inset: calc(-1 * var(--tap-grow)) -4px; }
+    .posted-actions button::before, .draft-act::before { inset: calc(-1 * var(--tap-grow)) -4px; }
     .posted-gallery { flex: 0 0 auto; background: transparent; font: inherit; font-size: 11.5px;
       border: 1px solid var(--hairline-strong); color: var(--text-secondary); padding: 5px 9px; border-radius: 8px; cursor: pointer; }
     .posted-gallery.on { color: var(--seg-on-ink); border-color: transparent; background: var(--seg-on-fill); }
@@ -606,8 +598,8 @@
     .posted-row.active { background: #2e2552; border-color: transparent; box-shadow: none; }
     :root[data-theme="light"] .posted-row.active { background: #efebff; }
     .search input { background: var(--card); border-color: var(--card-line); border-radius: 12px; }
-    .tbtn:not(.on), .posted-copy, .posted-key, .more { background: var(--card); border-color: var(--card-line); }
-    .posted-copy, .posted-key, .posted-gallery, .posted-delete { border-radius: 12px; }
+    .tbtn:not(.on), .posted-copy, .posted-key, .more, .draft-file { background: var(--card); border-color: var(--card-line); }
+    .posted-copy, .posted-key, .posted-gallery, .posted-delete, .draft-act { border-radius: 12px; }
     .now .lbl, .stat span, .kind { text-transform: none; letter-spacing: normal; font-size: 13px; }
     /* A CALMER LIST (the owner's pick A after v324: "all yes"). The count
        repeats "6 posted" above, so it is drawn only while a search narrows
@@ -625,38 +617,54 @@
        the labelled strip: there is room for it. */
     .posted-more { display: none; }
     @media (max-width: 640px) {
+      /* A draft row's ⋯ (D3) is the same button at the row's right end, and
+         its menu the same paper: the rules below name both. */
+      .draft-row.has-more { position: relative; }
+      .draft-row.has-more .draft-more { display: grid; place-items: center; flex: 0 0 auto;
+        width: 44px; height: 44px; margin-right: 6px; padding: 0; border: 0; border-radius: 12px;
+        background: none; color: var(--text-2); cursor: pointer; }
+      .draft-more svg { width: 18px; height: 18px; fill: currentColor; }
+      .draft-row.has-more .draft-acts { display: none; }
       .posted-row.has-more { position: relative; }
-      .posted-row.has-more.more-open { z-index: 5; }
+      .posted-row.has-more.more-open, .draft-row.has-more.more-open { z-index: 5; }
       .posted-row.has-more .posted-more { display: grid; place-items: center; grid-row: 1; grid-column: 3;
         width: 44px; height: 44px; margin: -6px -6px -6px 0; padding: 0; border: 0; border-radius: 12px;
         background: none; color: var(--text-2); cursor: pointer; }
       .posted-more svg { width: 18px; height: 18px; fill: currentColor; }
       .posted-row.has-more .posted-actions { display: none; }
-      .posted-row.has-more.more-open .posted-actions { display: flex; flex-direction: column; align-items: stretch;
+      .posted-row.has-more.more-open .posted-actions,
+      .draft-row.has-more.more-open .draft-acts { display: flex; flex-direction: column; align-items: stretch; margin: 0;
         position: absolute; right: 8px; top: calc(100% - 10px); min-width: 210px; padding: 6px; gap: 0;
         background: var(--mp); border: 1px solid var(--ml); border-radius: 16px;
         box-shadow: 0 12px 40px rgba(30, 16, 90, 0.22), 0 2px 6px rgba(30, 16, 90, 0.10); }
-      .posted-row.has-more .posted-actions button { display: flex; align-items: center; gap: 12px; width: 100%;
+      .posted-row.has-more .posted-actions button,
+      .draft-row.has-more .draft-act { display: flex; align-items: center; gap: 12px; width: 100%;
         min-height: 44px; padding: 12px 14px; border: 0; border-radius: 10px; background: none;
         color: var(--text); font: inherit; font-size: 15px; font-weight: 600; text-align: left; }
-      .posted-row.has-more .posted-actions button::before { inset: 0; }
-      .posted-row.has-more .posted-actions .posted-lbl { display: inline; }
-      .posted-row.has-more .posted-actions .posted-ico { display: block; width: 18px; height: 18px; color: var(--text-2); }
+      .posted-row.has-more .posted-actions button::before, .draft-row.has-more .draft-act::before { inset: 0; }
+      .posted-row.has-more .posted-actions .posted-lbl, .draft-row.has-more .draft-long { display: inline; }
+      .posted-row.has-more .posted-actions .posted-ico,
+      .draft-row.has-more .draft-ico { display: block; width: 18px; height: 18px; color: var(--text-2); }
+      .draft-row.has-more .draft-go { text-decoration: none; }
       .posted-row.has-more .posted-actions button.said .posted-ico { display: block; }
       .posted-row.has-more .posted-actions .posted-gallery.on { color: var(--seg-on-ink); background: none; }
       .posted-row.has-more .posted-actions .posted-gallery.on::after { content: '\2713'; margin-left: auto; }
       /* Delete last, past a rule, as every menu's destructive row is. */
-      .posted-row.has-more .posted-actions .posted-delete { order: 9; position: relative; margin-top: 13px; }
-      .posted-row.has-more .posted-actions .posted-delete::after { content: ''; position: absolute;
+      .posted-row.has-more .posted-actions .posted-delete,
+      .draft-row.has-more .draft-del { order: 9; position: relative; margin-top: 13px; }
+      .posted-row.has-more .posted-actions .posted-delete::after,
+      .draft-row.has-more .draft-del::after { content: ''; position: absolute;
         left: 8px; right: 8px; top: -7px; height: 1px; background: var(--ml); }
       .posted-row.has-more .posted-actions .posted-delete,
-      .posted-row.has-more .posted-actions .posted-delete .posted-ico { color: var(--danger-soft); }
+      .posted-row.has-more .posted-actions .posted-delete .posted-ico,
+      .draft-row.has-more .draft-del, .draft-row.has-more .draft-del .draft-ico { color: var(--danger-soft); }
       .posted-row.has-more .posted-actions .posted-delete.armed,
-      .posted-row.has-more .posted-actions .posted-delete.armed .posted-ico { background: #9e0b39; color: #fff; }
+      .posted-row.has-more .posted-actions .posted-delete.armed .posted-ico,
+      .draft-row.has-more .draft-del.armed, .draft-row.has-more .draft-del.armed .draft-ico { background: #9e0b39; color: #fff; }
     }
     /* Armed, the second tap's warning is white on a red deep enough to read
        7:1 (it was the bright red, 3.4 in dark). */
-    .posted-actions .posted-delete.armed { background: #9e0b39; color: #fff; }
+    .posted-actions .posted-delete.armed, .draft-acts .draft-del.armed { background: #9e0b39; color: #fff; }
     :root { --mp: #17142a; --ml: rgba(167, 146, 255, 0.18); }
     :root[data-theme="light"] { --mp: #f3f0ff; --ml: rgba(124, 92, 255, 0.34); }
     @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
@@ -947,6 +955,9 @@
   <script src="{{ skribl_asset('lib/marks.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/postedui.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/draftstore.js') }}" defer></script>
+  {# The editors' file name (lib/nametab.js filename()), for a draft row's
+     Save a .skribl file (D3). Its drawer is the editors'; here it no-ops. #}
+  <script src="{{ skribl_asset('lib/nametab.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/savedrafts.js') }}" defer></script>
   <script src="{{ skribl_asset('library.js') }}" defer></script>
 {{ mark_templates() }}

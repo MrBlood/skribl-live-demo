@@ -54,6 +54,10 @@ details to send with it.
       waiting, from a different tab at …" offers the other. Open it → the page
       reloads into it, says "The drawing you had open is in Drafts" and asks
       nothing more; Keep for later → it shows under Drafts in the Library.
+- [ ] Library → Drafts on the phone: a draft's ⋯ → Open in Pad (or Flip),
+      Save a .skribl file, and Delete, last, which asks once. Save a .skribl
+      file → Files has a .skribl that the Pad's Open a file… opens. A Flip
+      draft with in-between pages says to open it in Flip and save it there.
 - [ ] In a **Private** tab, draw and post → it works; nothing throws, even
       though storage is refused there.
 - [ ] Feed demo: write a line, attach a Skribl, write another line, Post →

@@ -17,9 +17,10 @@
  * delete (two taps). WHAT IT DOES NOT: serialising and loading a drawing,
  * which each editor passes in, because the Pad's and Flip's documents differ.
  *
- * The editors and the Library load it; the Library only lists and deletes
- * (list/remove/ago) and never calls init(), so open() does nothing there.
- * The player never saves anything (verify_player_isolation).
+ * The editors and the Library load it; the Library lists, ends its rows
+ * (rowEnd: Save a .skribl file, Delete) and never calls init(), so open()
+ * does nothing there. The player never saves anything
+ * (verify_player_isolation).
  */
 (function (global) {
   'use strict';
@@ -611,6 +612,201 @@
     }, function (e) { opts.toast(e.message); });
   }
 
+  /* ---- a draft row's end (D3) ------------------------------------------ */
+  /* THE SAME ⋯ AS A POSTED ROW (D3, the owner's pick A). A draft row ended in
+     a bin while a posted row ended in a ⋯ on a phone and labelled buttons on
+     a desk, so the two lists behaved differently. Now a phone's ⋯ opens Open
+     in Pad (or Flip), Save a .skribl file, and Delete, last, under a line; a
+     desk shows Save file and Delete, and the card itself opens the draft.
+     Delete asks once, on itself, as a posted row's does: its word becomes the
+     question and it turns red. The Library's Drafts tab and the editors' sheet
+     end their rows here, so the two lists cannot drift apart again.
+
+       rowEnd(row, it, { href | open(), remove() -> Promise, meta,
+                         disarmers: [] })
+
+     `meta` is the row's second line, made a live region: a passing answer
+     (a file that could not be made, a refused delete) and a desk's Delete
+     question are said there. `disarmers` is the list's, so only one row asks
+     at a time. */
+  var DOTS = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.9"/>'
+    + '<circle cx="12" cy="12" r="1.9"/><circle cx="19" cy="12" r="1.9"/></svg>';
+  function ico(paths) {
+    return '<svg class="draft-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" '
+      + 'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + paths + '</svg>';
+  }
+  // The kinds' own marks (lib/postedui.js), the download arrow, the one bin.
+  var MARK = {
+    pad: '<path d="M17 3.5a2.1 2.1 0 0 1 3 3L8.5 18 4 20l2-4.5z"/>',
+    flip: '<path d="M12 6.5C9.5 4.9 6.4 4.6 3 5.2v13c3.4-.6 6.5-.3 9 1.3 2.5-1.6 5.6-1.9 9-1.3v-13c-3.4-.6-6.5-.3-9 1.3z"/>'
+        + '<path d="M12 6.5v13.3"/>'
+  };
+  var DOWN = '<path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/>';
+  var BIN_D = '<path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/>';
+
+  // Delete's question is spoken as it is shown, through a live region (as the
+  // posted rows' #postedStatus is), with no second line of words on screen.
+  var live = null;
+  function speak(words) {
+    if (!live) {
+      live = el('span', 'vis-hidden');
+      live.setAttribute('role', 'status');
+      live.setAttribute('aria-live', 'polite');
+      doc.body.appendChild(live);
+    }
+    live.textContent = words;
+  }
+
+  // One row's menu is open at a time; a tap anywhere else or Escape shuts it,
+  // and Escape hands focus back to its ⋯.
+  var openRow = null;
+  function rowMenu(row) {
+    if (openRow && openRow !== row) {
+      openRow.classList.remove('more-open');
+      var was = openRow.querySelector('.draft-more');
+      if (was) was.setAttribute('aria-expanded', 'false');
+    }
+    openRow = row || null;
+    if (!row) return;
+    row.classList.add('more-open');
+    row.querySelector('.draft-more').setAttribute('aria-expanded', 'true');
+    var first = row.querySelector('.draft-act');
+    if (first) first.focus();
+  }
+  if (doc) {
+    doc.addEventListener('pointerdown', function (e) {
+      if (openRow && !openRow.contains(e.target)) rowMenu(null);
+    }, true);
+    doc.addEventListener('keydown', function (e) {
+      if (e.key !== 'Escape' || !openRow || !openRow.contains(e.target)) return;
+      e.stopPropagation();
+      var row = openRow;
+      rowMenu(null);
+      row.querySelector('.draft-more').focus();
+    }, true);
+  }
+
+  /* SAVE A .SKRIBL FILE without opening the draft (D3): the file the editor's
+     Save as a file makes, which is what a draft holds. A Flip draft keeps an
+     in-between page as its recipe, which only Flip can draw, so a Flip draft
+     holding one says so rather than write a file nothing else could read. */
+  function saveFile(it) {
+    return backend.load(it.id).then(function (rec) {
+      var data = rec && rec.payload;
+      if (!data || typeof data !== 'object') throw new Error('Couldn’t read that draft.');
+      if ((data.frames || []).some(function (f) { return f && f.gen; })) {
+        throw new Error('Only Flip can save this one as a file: open it there.');
+      }
+      var title = data.title || rec.title || it.title || 'Untitled Skribl';
+      var file = data.title ? data : Object.assign({}, data, { title: title });
+      // A plain download, not JSON, as the editors' own (iPhone Safari named
+      // a JSON blob "name.skribl.json" and showed it instead of saving it).
+      var blob = new Blob([JSON.stringify(file)], { type: 'application/octet-stream' });
+      var a = doc.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = global.SkriblName ? global.SkriblName.filename(title) : 'skribl.skribl';
+      doc.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(function () { URL.revokeObjectURL(a.href); }, 4000);
+      return true;
+    });
+  }
+
+  function rowEnd(row, it, how) {
+    var title = it.title || 'Untitled Skribl';
+    var flip = it.kind === 'flip';
+    row.classList.add('has-more');
+    var more = el('button', 'draft-more');
+    more.type = 'button';
+    more.setAttribute('aria-expanded', 'false');
+    more.setAttribute('aria-label', 'More for ' + title);
+    more.innerHTML = DOTS;
+    more.addEventListener('click', function () { rowMenu(row.classList.contains('more-open') ? null : row); });
+    var acts = el('span', 'draft-acts');
+    // Open is said in the phone's menu; on a desk the card itself opens it.
+    var go = el(how.href ? 'a' : 'button', 'draft-act draft-go');
+    if (how.href) go.href = how.href;
+    else { go.type = 'button'; go.addEventListener('click', function () { rowMenu(null); how.open(); }); }
+    go.innerHTML = ico(flip ? MARK.flip : MARK.pad) + '<span class="draft-lbl">Open in ' + (flip ? 'Flip' : 'Pad') + '</span>';
+    var file = el('button', 'draft-act draft-file');
+    file.type = 'button';
+    file.setAttribute('aria-label', 'Save ' + title + ' as a .skribl file');
+    file.innerHTML = ico(DOWN) + '<span class="draft-lbl">Save<span class="draft-long"> a .skribl</span> file</span>';
+    var meta = how.meta || null, metaText = meta ? meta.textContent : '', sayT = null;
+    if (meta) meta.setAttribute('aria-live', 'polite');
+    function say(words) {
+      if (!meta) return;
+      clearTimeout(sayT);
+      meta.classList.remove('asks');
+      meta.textContent = words;
+      sayT = setTimeout(function () { meta.textContent = metaText; }, 8000);
+    }
+    file.addEventListener('click', function () {
+      file.disabled = true;
+      saveFile(it).then(function () { file.disabled = false; rowMenu(null); },
+        function (e) { file.disabled = false; rowMenu(null); say(e.message); });
+    });
+    var del = el('button', 'draft-act draft-del');
+    del.type = 'button';
+    del.setAttribute('aria-label', 'Delete ' + title);
+    del.innerHTML = ico(BIN_D) + '<span class="draft-lbl">Delete</span>';
+    var word = del.querySelector('.draft-lbl');
+    /* ASKED ONCE, AND IT HOLDS UNTIL THE PERSON LEAVES IT (the rule the
+       posted rows' Delete and the editors' New Skribl follow): focus leaving
+       it, a tap anywhere else, or a 20 s safety net puts it back.
+       AND THE ARM NEVER MOVES (the v317 bin rule). In the phone's menu the
+       button is the menu's width, so its word becomes the question; on a
+       desk a longer word would push Save file aside, under the next click, so
+       the button keeps its word and its box and turns red, and the row's
+       second line asks. */
+    var armed = false, armT = null;
+    function outside(e) { if (!del.contains(e.target)) disarm(); }
+    function disarm() {
+      if (!armed) return;
+      armed = false;
+      clearTimeout(armT);
+      doc.removeEventListener('pointerdown', outside, true);
+      del.classList.remove('armed');
+      word.textContent = 'Delete';
+      del.setAttribute('aria-label', 'Delete ' + title);
+      if (meta && meta.classList.contains('asks')) { meta.classList.remove('asks'); meta.textContent = metaText; }
+    }
+    if (how.disarmers) how.disarmers.push(disarm);
+    del.addEventListener('focusout', disarm);
+    del.addEventListener('click', function () {
+      if (!armed) {
+        if (how.disarmers) how.disarmers.forEach(function (d) { if (d !== disarm) d(); });
+        armed = true;
+        del.classList.add('armed');
+        del.setAttribute('aria-label', 'Tap again to delete ' + title);
+        if (row.classList.contains('more-open') || !meta) {
+          word.textContent = 'Tap again to delete';
+          speak('Tap again to delete ' + title);
+        } else {
+          clearTimeout(sayT);
+          meta.classList.add('asks');
+          meta.textContent = 'Tap Delete again to delete it';   // a live region: said as shown
+        }
+        armT = setTimeout(disarm, 20000);
+        doc.addEventListener('pointerdown', outside, true);
+        return;
+      }
+      disarm();
+      // Asked first: the caller reads where focus is, and a disabled button drops it.
+      var done = how.remove();
+      del.disabled = true;
+      Promise.resolve(done).then(function (ok) { if (ok === false) del.disabled = false; },
+        function (e) { del.disabled = false; say(e.message); });
+    });
+    acts.appendChild(go);
+    acts.appendChild(file);
+    acts.appendChild(del);
+    row.appendChild(more);
+    row.appendChild(acts);
+    return acts;
+  }
+
   global.SkriblSavedDrafts = {
     /* opts: {kind, serialize(), load(obj), hasContent(), busy() -> media still
               being read, thumbnail() -> canvas, otherUrl() -> the other
@@ -666,6 +862,8 @@
       return backend.save(null, { kind: opts.kind, title: title, payload: payload, thumbnail: thumbFrom(opts.thumbnail && opts.thumbnail()) })
         .then(function () { return true; });
     },
+    rowEnd: rowEnd,
+    saveFile: saveFile,
     ago: ago
   };
 })(window);
