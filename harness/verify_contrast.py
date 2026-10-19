@@ -216,8 +216,11 @@ def measure(q, root, scale):
 # What a point lands on, and what the editor held after the stroke: the Post
 # opener's account of itself when Post does not come back (see post()).
 UNDER = """([x, y]) => { const e = document.elementFromPoint(x, y); if (!e) return 'nothing';
-  return e.id ? '#' + e.id : e.tagName.toLowerCase() + (typeof e.className === 'string' && e.className.trim()
-    ? '.' + e.className.trim().split(/\\s+/).join('.') : ''); }"""
+  const name = n => n.id ? '#' + n.id : n.tagName.toLowerCase() + (typeof n.className === 'string' && n.className.trim()
+    ? '.' + n.className.trim().split(/\\s+/).slice(0, 3).join('.') : '');
+  // Where it lives, too: the nearest three of its ancestors that have an id.
+  const home = []; for (let a = e.parentElement; a && a !== document.body && home.length < 3; a = a.parentElement) if (a.id) home.push('#' + a.id);
+  return name(e) + (home.length ? ' in ' + home.join(' < ') : ''); }"""
 HELD = """() => { const open = ['drawPanel', 'musicPanel', 'photoPanel'].filter(i => { const p = document.getElementById(i); return p && !p.hidden; });
   const d = document.getElementById('recordBtn');
   return 'a take ' + (typeof recording === 'undefined' ? 'n/a' : recording ? 'on' : 'off')
@@ -262,11 +265,10 @@ def surfaces(name, ids, q, canvas, btn):
         # whenever it shows, and wait for Post itself.
         # WHY, WHEN IT STILL DOES NOT. Beside other suites this wait timed out
         # on a phone now and then (the parallel runs of #540 to #543), green
-        # alone every time, and it did not come back when asked to: not under
-        # a CPU hog, not beside verify_a11y and verify_onepill. A bare timeout
-        # said nothing, so it says what the editor held: what the stroke's
-        # first point landed on, whether a take started, its points, an open
-        # drawer, and whether Done showed.
+        # alone every time, and a bare timeout said nothing; so it says what
+        # the editor held: what the stroke's first point landed on and where
+        # that lives, whether a take started, its points, an open drawer, and
+        # whether Done showed.
         try:
             q.wait_for_function("""() => {
               if (document.body.classList.contains('recording')) document.getElementById('recordBtn').click();
