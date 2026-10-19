@@ -263,7 +263,7 @@ with sync_playwright() as p:
     page.wait_for_timeout(300)
     msg = page.evaluate("() => (document.getElementById('flipChip')||{}).textContent") or ""
     check("on the last page it explains there is no next pose",
-          page.evaluate("() => frames.length") == _n and "BETWEEN" in msg, repr(msg))
+          page.evaluate("() => frames.length") == _n and "between two pages" in msg and "next pose" in msg, repr(msg))
 
     print("\nORDINARY STROKE DATA — the player has learned nothing new")
     page.evaluate(LIMB, 70)
