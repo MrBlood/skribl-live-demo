@@ -1049,7 +1049,13 @@ with sync_playwright() as sp:
     #   0.15s fade), listed live in css_live.json because nothing at rest
     #   matches it; and the bubble a layer up, since riding above a finger it
     #   is over this page's canvas, which sits at z-index 1. 37,845 measured.
-    CSS_RATCHET, CSS_WAS, CSS_TARGET = 37_850, 119_844, 40_000
+    # RAISED (the clock clears the playhead, a fix found measuring the
+    #   full-screen fade), for one named cost: +114 B -- in full screen the
+    #   clock under the scrubber sits 6px under its bar, as on the page, clear
+    #   of the playhead's ring at a drawing's end (.rl-scrub + .player-time),
+    #   listed live in css_live.json because only full screen matches it.
+    #   37,959 measured.
+    CSS_RATCHET, CSS_WAS, CSS_TARGET = 37_965, 119_844, 40_000
     total_css = sum(css_bytes.values())
     check(f"the player's CSS does not grow past {CSS_RATCHET:,} bytes "
           f"(was {CSS_WAS:,} at v194; target {CSS_TARGET:,})",
