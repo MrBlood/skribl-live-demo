@@ -169,6 +169,7 @@ here is the rule you can break tomorrow.
 | Saved drafts on the server have a per-author byte budget (`SKRIBL_MAX_DRAFT_BYTES`), raster-only thumbnails, and a list that reads no payloads. | `verify_hostseams.py`, `verify_clouddrafts.py` |
 | Work on the canvas, including media still on its way back from the store, is asked about before a draft replaces it; a late store answer never lands on a different document; Save draft waits for a file still being read. | `verify_amber.py`, `verify_clouddrafts.py` |
 | Every bottom sheet closes on a tap of its grabber or a swipe down, owns the touch from its first pixel (no pull-to-refresh), and eases away. | `verify_sheetswipe.py` |
+| The Gallery card's fade takes its colours from the drawing under it: invisible on empty paper, inside the drawing's round corners and off the card beside it; each glass control takes the tone of what is under it; the time reads at 4.5:1 on painted pixels; a drawing that cannot be read keeps the scrim; Mute steps aside on a silent drawing, on the card and in full screen, from the first paint. | `verify_cardfade.py` |
 
 **One from v179 did NOT survive, and is recorded here rather than quietly
 dropped.** "Segmented controls state a height" was true when written; `flip.css`

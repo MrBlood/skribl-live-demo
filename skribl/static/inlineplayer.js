@@ -831,7 +831,14 @@
         elapsed = Math.max(0, Math.min(ms, totalMs));
         render(elapsed, true, true);
         return true;
-      }
+      },
+      /* The card image's reader, for the card's fade over the drawing's foot
+       * (lib/fullbar.js), with the card's own frame that fade needs to find
+       * the drawing on the image: its width, the plate's round and inset
+       * (lib/sharecard.js). The fade's own arithmetic is the bar's, in a file
+       * a host never loads; this is the part only the component knows. */
+      read: readCard,
+      card: [CARD_W, PLATE_R, PLATE_IN]
     };
     players.push(me);
     el._skriblInline = me;
@@ -1763,16 +1770,26 @@
     function tone() {
       if (!poster) return;
       if (!poster.naturalWidth) { poster.addEventListener('load', tone, { once: true }); return; }
+      var px = readCard(0, 0.7, 0.5, 0.3, 8, 8), L = 0;
+      if (!px) return;   // tainted or unreadable: the light glass
+      for (var j = 0; j < px.length; j += 4) L += 0.2126 * px[j] + 0.7152 * px[j + 1] + 0.0722 * px[j + 2];
+      mark('is-says-dark', L / 64 < 115);
+    }
+    /* THE CARD, READ: a box of the drawing on the card image already on
+     * screen (shares of the drawing's own rectangle) into a cw x ch sample on
+     * white, as a see-through card shows; null when it cannot be read
+     * (another origin's). The pill's glass reads here and so does the card's
+     * fade (lib/fullbar.js), so the two read one drawing one way. */
+    function readCard(x, y, w, h, cw, ch) {
+      if (!poster || !poster.naturalWidth) return null;
       try {
-        var d = poster._d || [0, 0, CARD_W, CARD_H], k = poster.naturalWidth / CARD_W, c = doc.createElement('canvas'), L = 0;
-        c.width = c.height = 8;
-        var g = c.getContext('2d');
-        g.fillStyle = '#fff'; g.fillRect(0, 0, 8, 8);   // a see-through card reads light, as it shows
-        g.drawImage(poster, d[0] * k, (d[1] + d[3] * 0.7) * k, d[2] * 0.5 * k, d[3] * 0.3 * k, 0, 0, 8, 8);
-        var px = g.getImageData(0, 0, 8, 8).data;
-        for (var j = 0; j < px.length; j += 4) L += 0.2126 * px[j] + 0.7152 * px[j + 1] + 0.0722 * px[j + 2];
-        mark('is-says-dark', L / 64 < 115);
-      } catch (e) { /* tainted or unreadable: the light glass */ }
+        var d = poster._d || [0, 0, CARD_W, CARD_H], k = poster.naturalWidth / CARD_W, c = doc.createElement('canvas'), g;
+        c.width = cw; c.height = ch;
+        g = c.getContext('2d');
+        g.fillStyle = '#fff'; g.fillRect(0, 0, cw, ch);
+        g.drawImage(poster, (d[0] + d[2] * x) * k, (d[1] + d[3] * y) * k, d[2] * w * k, d[3] * h * k, 0, 0, cw, ch);
+        return g.getImageData(0, 0, cw, ch).data;
+      } catch (e) { return null; }
     }
     if (line && RL) {
       pagesN = info && info.pages > 1 ? info.pages | 0 : 0;

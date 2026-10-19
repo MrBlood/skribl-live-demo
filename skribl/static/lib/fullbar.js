@@ -178,6 +178,18 @@
     wrap.appendChild(bar);
 
     function player() { return getPlayer(); }
+    /* What the listing said about the drawing's sound: true, false, or null
+       where it said nothing. Read once per box. */
+    function listed(pl) {
+      var box = pl && pl.el;
+      if (!box) return null;
+      if (box._skSound === undefined) {
+        var info = null;
+        try { info = JSON.parse(box.getAttribute('data-skribl-line') || 'null'); } catch (e) { info = null; }
+        box._skSound = info && typeof info.sound === 'boolean' ? info.sound : null;
+      }
+      return box._skSound;
+    }
 
     /* THE BAR STEPS BACK WHILE IT PLAYS (lib/chromefade.js; the owner's picks
        for every full screen): after a quiet spell it fades with the page's x,
@@ -192,6 +204,196 @@
           return !st || (st.state !== 'playing' && !(st.totalMs && st.elapsedMs >= st.totalMs));
         } }) : null;
     var fadePlaying = null;
+
+    /* THE CARD'S FADE TAKES ITS COLOURS FROM THE DRAWING (the owner's pick A
+       after v326: "The fade has to be like the glass with smart fade,
+       sampling the background for the fade colors and making it subtle. It's
+       so obvious and ugly when it's wrong"). The fixed near-black scrim turned
+       a pale drawing's empty paper grey by 6.7:1 under the controls, spread a
+       dark band onto the card's edges, and left the time at 2.6:1 there.
+
+       - THE FADE LIES ON THE DRAWING ONLY, inside its edge and round corners
+         (area() below), in the drawing's own colours: its foot read in
+         strips across (ground()), so on empty paper it cannot be seen and it
+         only softens ink that runs under the controls. Painted as a
+         rectangle, the paper filled the card's colour in the drawing's
+         corners and they read square and grey; beside the drawing the card's
+         own colour needs no fade at all.
+       - EACH GLASS CONTROL TAKES THE TONE OF WHAT IS UNDER IT, light glass on
+         a pale ground and dark on a dark one, as the play pill's does: the
+         drawing where it is over the drawing, the card's own colour where it
+         is not (a tall drawing on a desk card is narrower than the row).
+       - WHERE THE DRAWING CAN HOLD THE ROW (a phone's tall card), the row sits
+         4px inside it, not 3px out over the card's edge, where the time's
+         last figure took the drawing's ink over the edge's colour.
+
+       READ ON EVENTS, NEVER ON THE BEAT: when the card or the canvas becomes
+       what is showing, when the stage resizes, when the page's theme turns.
+       A drawing that cannot be read keeps the scrim: `is-smart` is never set
+       on a guess. */
+    var smart = opts.variant === 'skfull-card' ? smartFade() : null;
+    function smartFade() {
+      var box = null, cv = null, img = null, cols = null, from = '', asked = false, ro = null, mo = null, on = false, was;
+      function off() { bar.classList.remove('is-smart'); }
+      /* THE DRAWING'S FOOT: its bottom eighth in 16 strips across, each strip
+         the middle value of its own pixels, so a line of ink through it does
+         not tint it. Off the canvas while it shows, which IS the drawing;
+         before, off the card image, through the player's reader of it
+         (inlineplayer.js readCard), the play pill's glass's too. Null until
+         there is something to read. */
+      function ground(pl) {
+        var n = 16, w = 6, h = 12, px = null, out = [];
+        if (cv && !cv.hidden) {
+          try {
+            var c = doc.createElement('canvas'), g = c.getContext('2d');
+            c.width = n * w; c.height = h;
+            g.fillStyle = '#fff'; g.fillRect(0, 0, n * w, h);
+            g.drawImage(cv, cv.width * 0.01, cv.height * 0.875, cv.width * 0.98, cv.height * 0.115, 0, 0, n * w, h);
+            px = g.getImageData(0, 0, n * w, h).data;
+          } catch (e) { px = null; }
+        } else px = pl.read(0.01, 0.875, 0.98, 0.115, n * w, h);
+        if (!px) return null;
+        for (var s = 0; s < n; s++) {
+          var ch = [[], [], []];
+          for (var y = 0; y < h; y++) {
+            for (var x = s * w; x < s * w + w; x++) {
+              for (var i = 0, o = (y * n * w + x) * 4; i < 3; i++) ch[i].push(px[o + i]);
+            }
+          }
+          out.push(ch.map(function (v) { v.sort(function (a, b) { return a - b; }); return v[v.length >> 1]; }));
+        }
+        return out;
+      }
+      /* WHERE THE DRAWING IS on screen, and the round of its two bottom
+         corners: the canvas while it shows; before, the card image's crop of
+         it, where fitPoster left the drawing's rectangle on the image
+         (`_d`, in the card's pixels) and the plate's own round, scaled; each
+         inside the box's rounded edge. */
+      function area(pl) {
+        var b = box.getBoundingClientRect(), cs = getComputedStyle(box), bw = parseFloat(cs.borderBottomWidth) || 0,
+            R = Math.max(0, (parseFloat(cs.borderBottomLeftRadius) || 0) - bw), r, f, rad = 0;
+        if (cv && !cv.hidden) r = f = cv.getBoundingClientRect();
+        else if (img && img._d && img.naturalWidth && pl.card) {
+          var p = img.getBoundingClientRect(), s = p.width / pl.card[0], d = img._d, i = pl.card[2];
+          r = { left: p.left + (d[0] + i) * s, right: p.left + (d[0] + d[2] - i) * s,
+                top: p.top + (d[1] + i) * s, bottom: p.top + (d[1] + d[3] - i) * s };
+          /* The drawing's FRAME, the plate's inset aside: where the canvas
+             will be (fitPoster lands it there), so the row placed from it
+             does not move at the first tap. */
+          f = { left: p.left + d[0] * s, right: p.left + (d[0] + d[2]) * s };
+          rad = (pl.card[1] - i) * s;
+        } else return null;
+        var x0 = Math.max(r.left, b.left + bw), x1 = Math.min(r.right, b.right - bw), y1 = Math.min(r.bottom, b.bottom - bw);
+        function round(x, edge) { return Math.abs(x - edge) < 1.5 && Math.abs(y1 - b.bottom + bw) < 1.5 ? Math.max(R, rad) : rad; }
+        return { left: x0, right: x1, top: Math.max(r.top, b.top + bw), bottom: y1,
+                 rl: round(x0, b.left + bw), rr: round(x1, b.right - bw),
+                 fl: Math.max(f.left, b.left + bw), fr: Math.min(f.right, b.right - bw) };
+      }
+      function rgb(v) { return 'rgb(' + v[0] + ' ' + v[1] + ' ' + v[2] + ')'; }
+      function luma(v) { return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]; }
+      /* What the card shows beside the drawing: the first ground painted
+         under it, up from the box. */
+      function mat() {
+        for (var e = box; e && e.nodeType === 1; e = e.parentElement) {
+          var m = getComputedStyle(e).backgroundColor.match(/[\d.]+/g);
+          if (m && (m.length < 4 || +m[3] > 0.5)) return [+m[0], +m[1], +m[2]];
+        }
+        return [255, 255, 255];
+      }
+      function update() {
+        var pl = player();
+        if (!pl || !pl.read || !wrap.isConnected) return off();
+        if (pl.el !== box) {
+          box = pl.el; cv = box.querySelector('.skribl-inline-canvas'); img = box.querySelector('.skribl-inline-poster');
+          cols = null; asked = false;
+          if (mo) mo.disconnect();
+          if (cv && global.MutationObserver) {
+            mo = new MutationObserver(update);
+            mo.observe(cv, { attributes: true, attributeFilter: ['hidden'] });
+          }
+          if (ro) ro.observe(box);
+        }
+        /* The canvas once it is the one showing, the card before: what the
+           eye sees under the bar, which for a post without its card are not
+           the same drawing. */
+        var src = cv && !cv.hidden ? 'canvas' : 'card';
+        if (src !== from) { from = src; cols = null; asked = false; }
+        if (!cols && !asked) {
+          asked = true;
+          cols = ground(pl);
+          /* A card image still on its way: read when it lands. One that
+             cannot be read stays unasked until what shows changes. */
+          if (cols) asked = false;
+          else if (src === 'card' && img && !img.naturalWidth) {
+            img.addEventListener('load', function () { asked = false; update(); }, { once: true });
+          }
+        }
+        if (!cols) return off();
+        var a = area(pl), b = bar.getBoundingClientRect();
+        if (!a || !b.width || a.right - a.left < 8) return off();
+        var n = cols.length, w = a.right - a.left, m = mat(), s = bar.style;
+        s.setProperty('--fx-l', (a.left - b.left).toFixed(1) + 'px');
+        s.setProperty('--fx-r', (b.right - a.right).toFixed(1) + 'px');
+        s.setProperty('--fx-b', Math.max(0, b.bottom - a.bottom).toFixed(1) + 'px');
+        s.setProperty('--fx-rl', a.rl.toFixed(1) + 'px');
+        s.setProperty('--fx-rr', a.rr.toFixed(1) + 'px');
+        s.setProperty('--fade-x', 'linear-gradient(to right, ' + cols.map(function (v, k) {
+          return rgb(v) + ' ' + ((k + 0.5) / n * 100).toFixed(1) + '%';
+        }).join(', ') + ')');
+        var need = 0, shown = 0, kids = row.children, gap = parseFloat(getComputedStyle(row).columnGap) || 0;
+        for (var i = 0; i < kids.length; i++) {
+          if (!kids[i].getClientRects().length) continue;
+          need += kids[i] === track ? 48 : kids[i].getBoundingClientRect().width;
+          shown++;
+        }
+        var fits = a.fr - a.fl - 8 >= need + gap * Math.max(0, shown - 1);
+        s.setProperty('--row-l', fits ? (a.fl - b.left + 4).toFixed(1) + 'px' : '0px');
+        s.setProperty('--row-r', fits ? (b.right - a.fr + 4).toFixed(1) + 'px' : '0px');
+        bar.classList.add('is-smart');
+        /* After the row has moved: what is under each control now. */
+        function under(x, y) {
+          if (x < a.left || x > a.right || y < a.top || y > a.bottom) return m;
+          return cols[Math.max(0, Math.min(n - 1, Math.floor((x - a.left) / w * n)))];
+        }
+        var glass = [made.loop, made.mute, made.full, track, dur];
+        for (var j = 0; j < glass.length; j++) {
+          var el = glass[j];
+          if (!el || !el.isConnected) continue;
+          var q = el.getBoundingClientRect(), y = (q.top + q.bottom) / 2, L = 0, c = 0;
+          for (var x = q.left; x <= q.right; x += 2) { L += luma(under(x, y)); c++; }
+          var dark = !c || L / c < 115;
+          el.classList.toggle('t-dark', dark);
+          el.classList.toggle('t-light', !dark);
+        }
+      }
+      return {
+        /* From the beat until the player is there; the gallery mounts the
+           players after it has built the cards. */
+        start: function (state) {
+          /* A play, a pause or an end is when a canvas first has its ground
+             painted (a photo under the drawing arrives late): read again. */
+          if (on && state !== was) { was = state; cols = null; asked = false; update(); }
+          if (on || !player()) return;
+          on = true;
+          was = state;
+          if (global.ResizeObserver) { ro = new ResizeObserver(update); ro.observe(wrap); }
+          watchTheme();
+          smartCards.push({ wrap: wrap, update: update });
+          update();
+        },
+        /* The row changed under the fade (Mute stepped aside): the row's
+           place and each control's tone are read again. */
+        relayout: function () { if (on) update(); },
+        /* The host has left (a search or a sort rebuilds the grid): its
+           watches go, and so does its place in the theme's list. */
+        stop: function () {
+          if (ro) ro.disconnect();
+          if (mo) mo.disconnect();
+          ro = mo = null;
+          smartCards = smartCards.filter(function (c) { return c.wrap !== wrap; });
+        }
+      };
+    }
 
     function seekTo(e) {
       var pl = player();
@@ -324,6 +526,7 @@
     function sync() {
       var pl = player();
       var st = pl ? pl.state() : null;
+      if (smart && pl) smart.start(st && st.state);
       var playing = !!st && st.state === 'playing';
       /* PUBLISHED TO THE HOST, because a surface may want to style itself on
          it -- the card narrows its hover reveal to a drawing that is NOT
@@ -348,6 +551,17 @@
       var SI = global.SkriblInline;
       var on = !!(SI && SI.soundOn());
       var has = !!(st && st.hasAudio);
+      /* MUTE STEPS ASIDE ON A SILENT DRAWING (the owner: yes, after the
+         card's fade). Greyed out on every silent card it was a control with
+         nothing to act on. Known from the listing before the drawing loads
+         (`sound` on the box's data-skribl-line), so the row does not change
+         at the first tap; from the drawing itself once it has. Where neither
+         has said, it stays, greyed, as before. */
+      var silent = st && st.loaded ? !has : listed(pl) === false;
+      if (bMute.hidden !== silent) {
+        bMute.hidden = silent;
+        if (smart) smart.relayout();
+      }
       setHTML(bMute, on ? ICON.sound : ICON.muted);
       if (bMute.disabled !== !has) bMute.disabled = !has;
       label(bMute, !has ? 'This Skribl has no sound' : (on ? 'Sound is on' : 'Sound is off'));
@@ -456,7 +670,7 @@
          that has LEFT stops. */
       if (wrap) {
         if (wrap.isConnected) hosted = true;
-        else if (hosted) { running(false); return; }
+        else if (hosted) { running(false); if (smart) smart.stop(); return; }
       }
       sync();
       var pl = player();
@@ -488,6 +702,27 @@
 
     sync();
     return { el: bar, sync: sync, running: running };
+  }
+
+  /* ONE WATCH ON THE PAGE'S THEME for every card's fade: the card's own
+     colour beside a narrow drawing turns with it, and a control over it has
+     to turn too. A card whose host has left is dropped on the next turn. */
+  var smartCards = [], themeWatched = false;
+  function themed() {
+    smartCards = smartCards.filter(function (c) {
+      if (!c.wrap.isConnected) return false;
+      c.update();
+      return true;
+    });
+  }
+  function watchTheme() {
+    if (themeWatched) return;
+    themeWatched = true;
+    if (global.MutationObserver) {
+      new MutationObserver(themed).observe(doc.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    }
+    var mq = global.matchMedia && global.matchMedia('(prefers-color-scheme: dark)');
+    if (mq && mq.addEventListener) mq.addEventListener('change', themed);
   }
 
   global.SkriblFullBar = { attach: attach, RATES: RATES };

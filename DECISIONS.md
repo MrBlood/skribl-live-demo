@@ -19254,3 +19254,90 @@ button's box in another's 44px touch box, a set hold and the chip at AA, and
 on a phone no ✕ and one ⋯ in the top corner. A11Y 20 reads the strip's words
 with the rest again, and the icon-only names read the ✕ on a desk and the ⋯
 on a phone. verify_hold's multiplier is the drawn ×.
+
+## After v326 -- the Gallery card's fade takes its colours from the drawing (pick A)
+
+The owner, at the card's controls over a pale drawing: "The fade has to be
+like the glass with smart fade, sampling the background for the fade colors
+and making it subtle. It's so obvious and ugly when it's wrong." Measured on
+the mock, the fixed near-black scrim turned a pale drawing's empty paper grey
+by 6.7:1 under the controls, spread a dark band 7:1 over the card's own edges
+on a light page, and left the time's words at 2.3 to 2.9:1 on pale drawings.
+Of three options (now; A, a fade sampled from the drawing; B, glass with no
+fade), the owner: "Smart fade is good."
+
+- The fade lies on the drawing only, inside its edge and round corners, in
+  the drawing's own colours: its bottom eighth read in 16 strips across, each
+  strip the middle value of its pixels, so a line of ink crossing under the
+  controls does not tint it. On empty paper it cannot be seen (1.00); it only
+  softens ink that runs under the controls, strongest at the foot (70%) and
+  gone 22px above the buttons.
+- Each glass control takes the tone of what is under it, the play pill's two
+  glasses: the drawing where it is over the drawing, the card's own colour
+  where it is not. A tall drawing on a desk card is narrower than the row, so
+  there the controls beside it take the card's colour, and turn with the
+  page's theme.
+- Where the drawing can hold the row (a phone's tall card), the row sits 4px
+  inside it. At 9px from the stage it hung 3px out over the card's edge, and
+  the time's last figure took the drawing's ink over the edge's colour.
+- A drawing that cannot be read (another origin's card) keeps the scrim.
+
+THE FIRST MOCK OF A PAINTED A RECTANGLE OF FADE, and the drawing's rounded
+corners read square and grey where the paper's colour filled the card's mat
+inside them. The fade now takes the corner the drawing shows: the box's
+inner round while the canvas plays, the card image's plate round at rest.
+
+One reader of the card image for both glasses: inlineplayer.js `readCard()`
+is the pill's `tone()` read made shareable, handed to the bar with the card's
+frame, so the pill and the fade read one drawing one way. Everything else is
+lib/fullbar.js's, which a host never loads: the strips and their medians, the
+canvas read while it shows (the canvas is the drawing itself), and where the
+drawing sits and how round its bottom corners are. The first build put those
+in the component too and every host paid 1,912 B for them; now the embed
+grows by 229 B, the named cost in verify_inline's ratchet. The bar reads on
+events only (the card or the canvas becoming what shows, a play, pause or
+end, a resize, a turn of the page's theme), never on the beat.
+
+verify_cardfade (new, solo in the seal: it measures painted pixels and posts
+to the shared server) reads every row off pixels: the fade on empty paper,
+the time against what is painted behind its words, each button's own fill
+and its icon, the card's colour outside the corners and beside a narrow
+drawing, the row inside the drawing, the same at rest off the card image
+(with the card image's own rounder corners), a theme turn, and the scrim kept
+for a drawing that cannot be read. On main's code 13 of 20 fail. Ten
+mutations each fail their own rows: every control light glass, light glass's
+icons white, no theme watch, the smart look kept on a guess, the fade a
+rectangle, the plate's round ignored at rest, the fade over the whole bar,
+the row not moved inside, the fade's colour a fixed near-black, the time left
+at the old grey.
+The theme row first passed with its watch removed: it read Repeat, which is
+lit violet in either glass and dark over a dark card either way. It reads
+Mute now, and goes red without the watch. The unreadable drawing is a read
+that throws, as a tainted canvas's does; a stub on the player's method went
+quiet when the reading moved to the bar.
+
+MUTE STEPS ASIDE ON A SILENT DRAWING, on the card and in full screen (the
+owner, asked with the fade: "yes to all"). Greyed out on every silent card it
+was a control with nothing to act on. lib/fullbar.js knows from the listing
+before the drawing loads (`sound` on the box's data-skribl-line; the Gallery
+now writes it for a Flip's pages-only line too), so the row does not change at
+the first tap, and from the drawing itself once it has; where neither has
+said, Mute stays, greyed, as before. `.skfull-btn[hidden]` is `display: none`:
+the button's own `display: grid` outranked the attribute. The same rows caught
+the card's row moving 2.6px at the first tap: it was placed from the card
+image's plate, which sits inside the drawing's frame, and is now placed from
+the frame in both states, where the canvas lands.
+
+verify_cardfade's last section asks it: no Mute on a silent card at rest,
+playing, or in full screen; a card with sound keeps its Mute; the first tap
+moves no button. On main's code 16 of its 25 rows fail. Five more mutations
+each fail their own rows: silent known only once loaded (2), the row placed
+from the plate (1), [hidden] outranked by the grid (3), full screen keeping its
+Mute (1), Mute hidden everywhere (6). Hidden everywhere first CRASHED the
+suite (a zero-size button's ring read off the shot) instead of failing it; a
+button that is not painted now fails its rows by name.
+
+Pad and Flip: shared. Posts of both kinds play through this one card on the
+Gallery and on profiles; the editors have no card bar. Full screen (the
+Gallery's and the link page's bars) keeps its dark scrim for now: the owner
+said yes to a mock of the same fade there, which comes next.

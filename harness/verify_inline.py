@@ -1519,7 +1519,17 @@ with sync_playwright() as sp:
     #   (+89). WHICH CALLER PAYS: every page that shows a post, because the
     #   scrubber is there at rest; it is the Pad's module, so a post cannot
     #   place the clock differently from the Pad and /s/<id>. 68,654 B measured.
-    EMBED_RATCHET = 68_658
+    # RAISED (the Gallery card's fade takes its colours from the drawing, the
+    #   owner's pick A after v326: "Smart fade is good"), for one named cost:
+    #   +229 B -- inlineplayer.js tone()'s read of the card image becomes
+    #   readCard(), handed to lib/fullbar.js with the card's frame (its width,
+    #   the plate's round and inset), so the pill's glass and the card's fade
+    #   read one drawing one way. The fade's own arithmetic, its read of the
+    #   canvas and where the drawing is all live in lib/fullbar.js, which a
+    #   host never loads (they were 1,912 B here in the first build). WHICH
+    #   CALLER PAYS: every page that shows a post, for a look only the
+    #   Gallery's cards take. 68,883 B measured.
+    EMBED_RATCHET = 68_887
     # THE RATCHET MEASURES DISPLAY, NOT COMPOSE, and the two are separate costs
     # paid by separate pages. Excluded here and measured on its own below:
     #   feed.js          the PREVIEW PAGE's own script (fetch the listing, clone
