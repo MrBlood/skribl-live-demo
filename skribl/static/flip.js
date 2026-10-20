@@ -2174,6 +2174,13 @@ if(window.SkriblLostLift) window.SkriblLostLift.watch(pad, {
   end: ()=>endStroke(),
   down: _padDown
 });
+// What the screen said (lib/inputlog.js, shared with the Pad): only with
+// ?inputlog in the address.
+if(window.SkriblInputLog) window.SkriblInputLog.watch(pad, {
+  editor: 'Flip',
+  state: ()=>({ d: drawing, id: strokePointerId, pin: pinching, play: playing, tool: flipTool,
+                g: frames[idx] ? frames[idx].strokeGroups.length : 0 })
+});
 pad.addEventListener('pointermove', e=>{
   if(pinching){ return; }
   if(liquifying){

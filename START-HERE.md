@@ -760,6 +760,7 @@ rather than a shared rule.
 | `holdtiming.js` | Pad+Flip+player+library+in-post | Per-page timing — the ONE definition of how long a page lasts and how much of a drawing page has been revealed, shared by the Flip editor and every surface that plays one. |
 | `homescreen.js` | Pad+Flip | Getting Skribl onto the Home Screen: the ⋯ row, the one-time banner, and the steps sheet both open. |
 | `immersive.js` | Pad+Flip+player+library+gallery | Full size on the devices that have a Fullscreen API, and on the one that does not. |
+| `inputlog.js` | Pad+Flip | The input log: what the screen said, for a bug only a phone shows. |
 | `inputsamples.js` | Pad+Flip | The points the browser already captured and the handler was throwing away. |
 | `keyregistry.js` | Flip | lib/keyregistry.js — what is bound to which key, and whether two things answer at once. |
 | `labels.js` | Pad+Flip+library+gallery | WORDS IN A BUTTON SIT IN THE MIDDLE BY THEIR CAPITALS, in any font. |

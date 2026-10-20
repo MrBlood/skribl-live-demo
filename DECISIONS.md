@@ -20180,3 +20180,45 @@ and +71 B of stylesheet (the full-screen rule), raised in writing in
 verify_jsstrip and verify_player_isolation. The new verify_names,
 verify_posttitle and verify_newundo drive both editors, red on the code
 before.
+
+## After v326 -- T1: asking the phone, with an input log (tooling)
+
+The owner's iPhone, re-testing after v326 (T1): "When I go really fast it
+stops drawing. It seems like it's processing because if you wait a second it
+will accept your strokes", Flip fine. Then, of the next fix's test steps: "Not
+off edge. That was coincidence" and "No rest your thumb". One finger, in the
+middle of the drawing, and the Pad stops taking strokes for about a second.
+
+So the reading that #528 and #553 were built on -- a lift the page never
+hears, then a thumb resting on the glass -- is not what the phone does, and the
+third version of it (where a touch began, not the count) stays off main. It
+was never seen on the phone; it was inferred, and twice the inference was
+wrong.
+
+Chromium here does not do it. Sixty quick one-finger strokes on each editor,
+then 120 with the processor slowed six times, real touch through CDP at 402
+by 874: every stroke kept, on both. The pop-ups that sit over the drawing (the
+saving pill, the tips) already let a finger through. No timer refuses a press.
+The answer is on the phone, and a phone has no console without a Mac.
+
+lib/inputlog.js asks it. Opened with ?inputlog in the address, either editor
+records what the screen said: every press, lift and cancel, pointer and touch
+alike, where it landed, how many fingers the screen listed and where each
+began, what the editor was doing just before (drawing, whose stroke, pinching,
+playing, the tool, how many strokes it holds), a press that began no stroke
+marked NO STROKE, a frame that came late, and the page losing focus or going
+out of sight. Copy log puts it on the clipboard, as Report a problem does; it
+sends nothing. Its listeners are passive, on the window, in the capture
+phase: it hears everything first and can cancel nothing. Without ?inputlog it
+adds no listener and no element. Its bar sits in the top corner, over the
+logo, never the drawing.
+
+verify_pointerpad drives it on both editors: off, nothing; on, the bar off the
+drawing, a press refused while pinching marked with why, and Copy log's text
+headed by the editor and its build. Each was red with its part broken: always
+on (both off rows), the mark never written (both NO STROKE rows), either
+editor not watched (that editor's rows), the bar moved over the drawing.
+
+Pad and Flip: shared -- one module, each editor passes its own state.
+
+Not tested here: WebKit, which is the point of it.

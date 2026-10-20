@@ -639,6 +639,15 @@ if (window.SkriblLostLift) {
     down: _canvasDown
   });
 }
+// WHAT THE SCREEN SAID (lib/inputlog.js, shared with Flip): nothing at all
+// unless the page was opened with ?inputlog, and then every press and lift,
+// with what the Pad was doing, for the phone the bug only shows on.
+if (window.SkriblInputLog) {
+  window.SkriblInputLog.watch(canvas, {
+    editor: 'Pad',
+    state: () => ({ d: drawing, id: strokePointerId, pin: pinching, play: playing, fin: finishedRecording, tool: tool, g: strokeGroups.length })
+  });
+}
 /* NO pointerleave -> endDraw.
  *
  * It ended the stroke the moment the cursor crossed the canvas edge, so
