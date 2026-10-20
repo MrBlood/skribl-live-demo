@@ -1323,6 +1323,15 @@ body.player-mode .app {
   display: grid;
   place-items: center;
 }
+/* NO SHADOW ON ANY FULL SCREEN (the owner's yes, Q6). The canvas frame's ring
+   and inset vignette are for a drawing that sits in a page; in full screen the
+   drawing's ground runs to every edge. Two full screens are this frame: the
+   share link's, and the Pad's own (lib/watchfull.js hands it the Pad's
+   .canvas-wrap), so both wore the shadow at the screen's edges. Flip's frame
+   never had one, and its canvas's is off in full screen (flip.css); the
+   Gallery's and the Library's stage never wore one. Now none do, and the
+   editors keep their frame while you draw. */
+.canvas-wrap:is(:fullscreen, .is-immersive-page) { box-shadow: none; }
 /* THE STAND-IN PINS ITSELF, the one thing the API did that a class has to do
    on its own: the declarations the Fullscreen spec's UA sheet gives the
    element in the top layer, `!important` for the same reason it has them.

@@ -61,6 +61,7 @@ CLAIMS = {
               "verify_tools.py::a pentagon drawn from a drag 15% taller than wide comes out with its sides EQUAL"],
     "Brush style": ["probe:brush_style"],
     "Stroke layers": ["verify_tools.py::turning Stroke layers OFF makes a self-crossing stroke BEAD"],
+    "Mirror": ["verify_tools.py::a vertical mirror doubles the points"],
     "Grid": ["probe:grid"],
     "Brush size": ["verify_pressure.py::full force equals the nominal brush size, never exceeds it",
                    "verify_tools.py::move the brush size through the slider's own input event"],
@@ -119,6 +120,7 @@ CLAIMS = {
     # Recording (Pad)
     "Auto-record": ["verify_ux.py::AUTO-RECORD: the first stroke starts the take"],
     "Two timers": ["probe:takes"],
+    "Pauses": ["verify_tools.py::the Pauses seg writes through to the drawing's own setting"],
     "Canvas locks between takes": ["probe:takes"],
     "Add more takes": ["verify_ux.py::F4 setup: Add take started a take", "probe:takes"],
     # One pill text on both editors since #410, so its claims cover both.
@@ -144,6 +146,8 @@ CLAIMS = {
                    "verify_pages.py::onion depth/tint live there and are reachable"],
     "fps": ["verify_gifenc.py::frame delay matches the chosen fps"],
     "Draw-on": ["verify_hold.py::a Draw-on page reaches its last stroke before the page turns"],
+    "Loop": ["verify_loopui.py::Loop on a span steps x2, x3, x4, 2 s, 4 s, 6 s, Forever, then off"],
+    "Keep under": ["verify_loopui.py::Keep under makes this page the page under every page after it"],
     # Music
     "Add a track": ["verify_amber.py::Pad GREEN once a track is attached", "probe:media_tabs",
                     "verify_parity.py::{}: a file dropped anywhere on the card is taken, and the wrong kind is refused"],
@@ -174,7 +178,8 @@ CLAIMS = {
                  "verify_drafts.py::after restore, Post is live"],
     "Saved drafts": ["verify_clouddrafts.py::with storage hung, Save draft still saves",
                      "verify_ux.py::opening a backup file lets go of the saved draft"],
-    "Name": ["verify_ux.py::Undo brings the old title back with the drawing, on both editors"],
+    "Name": ["verify_ux.py::Undo brings the old title back with the drawing, on both editors",
+             "verify_posttitle.py::a named drawing's title starts with its name"],
     "Backups": ["verify_ux.py::FORMAT: a replay .skribl loads in Pad"],
     "Export": ["verify_gifenc.py::Pad exports a valid GIF89a too", "verify_canvas.py::GIF exports at the new canvas size"],
     "Post": ["verify_sheetswipe.py::mid-send, neither a swipe nor the grabber closes the post sheet",

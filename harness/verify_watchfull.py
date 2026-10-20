@@ -17,6 +17,7 @@ on the seal's box. The section moved here whole, assertions word for word, with
 the three helpers it borrowed from verify_parity (ED, _fresh, _drawn), so each
 suite has room again.
 """
+import io
 import math
 import os
 import sys
@@ -40,8 +41,9 @@ def summarise_and_exit():
 
 try:
     from playwright.sync_api import sync_playwright
+    from PIL import Image
 except ImportError:
-    print("SKIP: playwright is not installed")
+    print("SKIP: playwright or Pillow is not installed")
     sys.exit(0)
 
 # Each editor: its canvas, its Play, and how to ask whether it is playing.
@@ -178,6 +180,24 @@ with sync_playwright() as p:
                   "the drawing as big as the screen allows, centred, in its own shape",
                   _s["mode"] == ("stand-in" if _dev == "phone" else "api") and _fills(_s, _page)
                   and _s["canvas"][2] > _page["canvas"][2], f"page {_page['canvas']} -> {_s}")
+            # NO SHADOW ON ANY FULL SCREEN (the owner's yes, Q6). The Pad's frame is
+            # the link page's .canvas-wrap, and wore its inset vignette at the
+            # screen's edges; Flip's never did. Asked of both as a property, and
+            # of the Pad, which could show it, as what is painted at each edge.
+            _sh = _q.evaluate("(o) => [o.wrap, o.cv].map(s => getComputedStyle(document.querySelector(s)).boxShadow)", _o)
+            check(f"{_tag}: no shadow round the screen's edges, the frame's or the drawing's, as on every full screen",
+                  _sh == ["none", "none"], str(_sh))
+            if _name == "Pad":
+                _sty = _q.add_style_tag(content=".watch-band, .watch-exit { visibility: hidden !important; }")
+                _q.wait_for_timeout(150)
+                _im = Image.open(io.BytesIO(_q.screenshot())).convert("RGB")
+                _q.evaluate("(el) => el.remove()", _sty)
+                _gw, _gh = _im.size
+                _gnd = _q.evaluate("(o) => (getComputedStyle(document.querySelector(o.wrap)).backgroundColor.match(/\\d+/g) || []).slice(0, 3).map(Number)", _o)
+                _px = [_im.getpixel(xy) for xy in ((2, _gh // 2), (_gw - 3, _gh // 2), (_gw // 2, 2), (_gw // 2, _gh - 3))]
+                check(f"{_tag}: ...and the drawing's ground reaches every edge of the screen, painted, with no shadow over it",
+                      len(_gnd) == 3 and all(max(abs(a - c) for a, c in zip(px, _gnd)) <= 3 for px in _px),
+                      f"edges {_px}, ground {_gnd}")
             check(f"{_tag}: the band carries the editor's own controls, with Play and a way out painted",
                   _s["band"] == [x[1:] for x in _o["carry"]] + ["watch-row"] and _s["play"] and _s["exit"]
                   and _s["label"] == "Leave full screen" and _s["pressed"] == "true", str(_s))

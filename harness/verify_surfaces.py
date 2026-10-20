@@ -118,7 +118,14 @@ shared = sorted(app_fns & flip_fns)
 # one-line adapter as the four that stayed (stopLoopPreview, setCrossfadeUI,
 # updateZoomPanSlider): each editor's typeof-guarded callers reach the shared
 # drawer through it, and the drawer itself is written once.
-PARALLEL_RATCHET = 53
+# 53 -> 54, counted honestly: restoreClear. Flip's way back from a clear lived
+# inside its Undo clear button's handler, where the census could not see it;
+# New Skribl's Undo (the owner's Q4, lib/newundo.js) calls it too, so it has a
+# name now, the Pad's name for the same role. It was always the parallel of the
+# Pad's restoreClear, each over its own document model; the offer around both
+# is the one copy, and the cure for this one would be a document model the two
+# editors share.
+PARALLEL_RATCHET = 54
 check(f"the Pad (app.js and its editor modules) and flip.js define at most "
       f"{PARALLEL_RATCHET} of the same function names", len(shared) <= PARALLEL_RATCHET,
       f"{len(shared)}: {', '.join(shared[:8])}... — each one is a fix that has "

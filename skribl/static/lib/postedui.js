@@ -697,7 +697,7 @@
                  is the one affordance that outlives the browser. Shown only
                  where a key exists, for the same reason Delete is. */
               (e.tok ? '<button type="button" class="posted-key" data-key="' +
-                esc(e.id) + '" aria-label="Copy the recovery key for this ' +
+                esc(e.id) + '" aria-label="Copy the delete key for this ' +
                 'Skribl" title="Copy the key that can delete this Skribl from any browser. ' +
                 'Nothing can reissue it">' + glyph('key') + lbl('Copy key') + '</button>' : '')
             : '') +

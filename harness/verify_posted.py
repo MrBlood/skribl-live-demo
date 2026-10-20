@@ -1493,13 +1493,13 @@ print("\nTOO LONG TO POST — said before anything is sent, and the button saves
 # byte and came back as "'frames[0].strokes' has too many points". Now: AT the
 # cap it posts, for real; one point past it, nothing is sent, the reason is the
 # words both editors share (lib/postsheet.js failure('long')), and Post becomes
-# Save a backup -- the ⋯ menu's drawer, and a .skribl file holding every point.
+# Save as a file -- the ⋯ menu's drawer, and a .skribl file holding every point.
 # Flip says the same when its pages add up past the budget, and then what only
 # it knows: how much of the length its generated pages are.
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from skribl import validation as _V
 _LONG = ("Couldn’t post. Your drawing is still here. It’s longer than a post can hold, "
-         "so save a backup to keep a copy as a file.")
+         "so save it as a file to keep a copy.")
 _FILL_PAD = """(n) => { const need = n - strokes.length;
   for (let i = 0; i < need; i++) strokes.push({ x: 20 + (i % 700), y: 20 + ((i / 700) | 0) % 500,
     color: '#7c5cff', size: 3, t: 4000 + i * 18, start: i === 0 });
@@ -1544,7 +1544,7 @@ def _start(pw, path, sel, boot, viewport):
 
 
 def _backup(pg, what):
-    """Press Save a backup: the sheet goes, the menu's drawer comes, and
+    """Press Save as a file: the sheet goes, the menu's drawer comes, and
     confirming it downloads a .skribl file. Returns (after, pages) where pages
     is the file's frames' point counts, or None."""
     pg.click("#postSubmitBtn"); pg.wait_for_timeout(700)
@@ -1592,11 +1592,11 @@ with sync_playwright() as _pw:
         _s = _pg.evaluate(_SHEET)
         check(f"Pad ({_scheme}), one point past it: nothing is sent, and the reason is the shared words",
               not _sent and _s["shown"] and _s["error"] and _s["says"] == _LONG, f"{_s}; {len(_sent)} POST(s)")
-        check(f"...and Post has become Save a backup, with the menu's icon painted in place of the plane",
-              _s["label"] == "Save a backup" and _s["floppy"] and not _s["plane"], str(_s))
+        check(f"...and Post has become Save as a file, with the menu's icon painted in place of the plane",
+              _s["label"] == "Save as a file" and _s["floppy"] and not _s["plane"], str(_s))
         _after, _pages = _backup(_pg, "pad")
         check("...which puts the sheet away and opens the ⋯ menu's own drawer",
-              not _after["sheet"] and _after["drawer"] and _after["done"] == "Save a backup", str(_after))
+              not _after["sheet"] and _after["drawer"] and _after["done"] == "Save as a file", str(_after))
         check("...and the .skribl file it downloads holds every point",
               _pages == [_cap + 1], f"{_pages}")
         # A sheet that did not go away (a failure above) is closed first, so
@@ -1618,8 +1618,8 @@ with sync_playwright() as _pw:
     check("Flip, past the budget: nothing is sent, the same words, then its generated pages",
           not _sent and _s["error"] and _s["says"].startswith(_LONG + " Its 3 generated pages make up "),
           f"{_s}; {len(_sent)} POST(s)")
-    check("...and the same Save a backup button",
-          _s["label"] == "Save a backup" and _s["floppy"] and not _s["plane"], str(_s))
+    check("...and the same Save as a file button",
+          _s["label"] == "Save as a file" and _s["floppy"] and not _s["plane"], str(_s))
     _after, _pages = _backup(_pg, "flip")
     check("...which saves every page",
           not _after["sheet"] and isinstance(_pages, list) and len(_pages) == _n, f"{_after}; {_pages}")

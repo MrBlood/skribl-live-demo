@@ -892,7 +892,13 @@ with sync_playwright() as sp:
     #   "Plays for" label that never showed (-3,194 B), less what the Pad's
     #   draft now says of a switched-off track and the view's reset on a load
     #   (+60). 148,536 measured; the ratchet follows it down.
-    BYTES_RATCHET, BYTES_TARGET = 148_541, 153_800
+    # RAISED (the owner's seven yeses, after v326), for named costs, all in
+    #   app.js: +88 B -- the file's own words ("Saved as a file", and "Opened
+    #   your file" handed to loadSkribl, which says what its caller tells
+    #   it), and the shape row in Settings kept true once a drawing opens,
+    #   one line as restoreAutosave has. verify_jsstrip's line moves with it.
+    #   148,624 measured.
+    BYTES_RATCHET, BYTES_TARGET = 148_629, 153_800
     # The page's own HTML. The brand is the one-stroke skribl signature INLINE
     # in the page (~1.4KB of paths, a ~0.9KB nonce'd draw-on script, and the
     # <linearGradient> defs), and inline is load-bearing rather than lazy:
@@ -1098,7 +1104,13 @@ with sync_playwright() as sp:
     #   had and this band never did; Safari held each tap about 300ms and
     #   dropped the second of two quick ones. verify_jsstrip's line moves with
     #   it. 40,754 measured.
-    CSS_RATCHET, CSS_WAS, CSS_TARGET = 40_760, 119_844, 40_000
+    # RAISED (the owner's yes, Q6: no shadow on any full screen), for one
+    #   named cost: +71 B -- the canvas frame's ring and vignette dropped in
+    #   full screen (.canvas-wrap:is(:fullscreen, .is-immersive-page)), the
+    #   link page's and the Pad's own, the same frame. Listed live in
+    #   css_live.json: only full screen matches it. verify_jsstrip's line
+    #   moves with it. 40,825 measured.
+    CSS_RATCHET, CSS_WAS, CSS_TARGET = 40_831, 119_844, 40_000
     total_css = sum(css_bytes.values())
     check(f"the player's CSS does not grow past {CSS_RATCHET:,} bytes "
           f"(was {CSS_WAS:,} at v194; target {CSS_TARGET:,})",

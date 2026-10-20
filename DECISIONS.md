@@ -20126,3 +20126,57 @@ verify_words from the whole-app review, and verify_music here), which only
 the seal's own dry run would have said. Each is placed now and tagged by what
 it does, and verify_docs asks the same question on every pull request, so the
 next unplaced suite is red where it is added (red on main, green here).
+
+## After v326 -- the owner's seven yeses: one name each, the Post title from the name, New Skribl's way back on both, no shadow on any full screen, four tips
+
+The owner said yes to all seven choices on the resubmission page.
+
+- Q1. The button that makes a .skribl file had three names. The ⋯ menu said
+  Save as a file; the name box it opens and the Post sheet (when a drawing is
+  too long to post) said Save a backup; the note after it said Draft saved.
+  It is Save as a file everywhere now, then "Saved as a file", and "Opened
+  your file" when one opens, on both editors; the Post sheet's too-long words
+  say "save it as a file". loadSkribl() takes what to say as a second
+  argument, so the other ways a drawing opens (a draft from Your drafts, a
+  composer's re-edit, New's Undo) keep their own words.
+- Q2. The key that can take a post down was the delete key on the Post sheet
+  (the owner's K1) and a recovery key in the Library: its button, the way in,
+  the label, the key shown after a post and the guard before a clear. It is
+  the delete key everywhere. One key, one name.
+- Q3. The Post title starts from the drawing's name (lib/postsheet.js, both
+  editors): a name a person gave, not the date name a blank drawing saves
+  under. The box follows the name while it holds only what the sheet put
+  there, so a rename, or a New Skribl, carries through; words typed in it
+  stay, and so does a box emptied by hand, until the name changes. The Name
+  tip says so.
+- Q4. Flip's New Skribl says "New Skribl" with an Undo, Undo says "Restored"
+  with a Redo, as the Pad's always has, from one offer both use
+  (lib/newundo.js). Flip's chip carries the button, which goes when the chip
+  fades, so nothing unseen takes a tap or Tab. Redo is the Start again on the
+  shape New Skribl picked, on both: the Pad's kept the old drawing's shape.
+  And found on the way, on the Pad: a drawing that opened (New's Undo, a
+  draft, a file) took its own shape while the shape row in Settings still lit
+  the last one's. loadSkribl() syncs the row, as restoreAutosave does.
+- Q5. The Library's subtitle promised "the full playback controls a post
+  keeps out of the way", which a post has not done since v322. It says what
+  the page is for: "Everything you have posted, newest first, to watch again,
+  share or take down."
+- Q6. No shadow on any full screen. The share link's full screen and the
+  Pad's own are the same frame (.canvas-wrap), and both wore its ring and
+  inset vignette at the screen's edges; Flip's frame never had one, and the
+  Gallery's and the Library's stage never did. Now none do; the editors keep
+  their frame while you draw.
+- Q7. Four tips in How it works: Flip's Loop and Keep under, the Pad's Mirror
+  and Pauses, each tied to the rows that prove what it says
+  (verify_helpclaims).
+
+Pad and Flip: shared throughout -- the name box, the Post sheet and the offer
+are one module each, and the full screens one rule. The Pad's restoreClear and
+Flip's are each editor's way back from a clear over its own document, now
+named on both (verify_surfaces counts it: 54).
+
+The player carries +88 B of script (the file's words, the shape row's sync)
+and +71 B of stylesheet (the full-screen rule), raised in writing in
+verify_jsstrip and verify_player_isolation. The new verify_names,
+verify_posttitle and verify_newundo drive both editors, red on the code
+before.

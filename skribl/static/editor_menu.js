@@ -108,7 +108,7 @@ function resetAll() {
 // Skipped while mediaBusy > 0 — the same guard saveDraft() uses — because the
 // snapshot would capture a half-loaded photo or track. The clear still happens in
 // that case, just without the undo offer.
-function clearAllWithUndo() {
+function clearAllWithUndo(again) {
   // A new Skribl is a new draft: the next Save must not overwrite the old one.
   const prevDraft = window.SkriblSavedDrafts ? window.SkriblSavedDrafts.forget() : null;
   let snap = null;
@@ -117,19 +117,17 @@ function clearAllWithUndo() {
   }
   resetAll();
   const prevName = window.SkriblName && window.SkriblName.reset ? window.SkriblName.reset() : null;
-  if (!snap) return;
-  showToast('New Skribl', null, {
-    label: 'Undo',
-    onClick: () => {
-      try {
-        loadSkribl(snap);
-        if (window.SkriblName) window.SkriblName.restore(prevName);   // its names come back with it
-        if (window.SkriblSavedDrafts) window.SkriblSavedDrafts.resume(prevDraft);   // and its saved draft
-        showToast('Restored', null, { label: 'Redo', onClick: clearAllWithUndo });
-      } catch (err) {
-        showToast('Couldn\u2019t restore that', null);
-      }
-    }
+  if (!snap || !window.SkriblNewUndo) return;
+  // The offer, its words and its Redo are lib/newundo.js's, Flip's too. Redo
+  // is Start again (`again`, the new shape with it), or the clear alone.
+  window.SkriblNewUndo.offer({
+    say: (msg, action) => showToast(msg, null, action),
+    undo: () => {
+      loadSkribl(snap);
+      if (window.SkriblName) window.SkriblName.restore(prevName);   // its names come back with it
+      if (window.SkriblSavedDrafts) window.SkriblSavedDrafts.resume(prevDraft);   // and its saved draft
+    },
+    redo: again || clearAllWithUndo
   });
 }
 
@@ -150,7 +148,13 @@ function clearAllWithUndo() {
     // as the drafts count it below and How it works promises.
     const work = hasContent || recorded || (typeof _mediaPresent === 'function' && _mediaPresent())
       || (window.SkriblCanvasGround && bgColor !== window.SkriblCanvasGround.start());
-    if (work) clearAllWithUndo();
+    // Redo after an Undo is this Start again, the shape it picked included.
+    // It kept the old drawing's shape, so a Redo was not the new drawing.
+    const again = () => {
+      clearAllWithUndo(again);
+      if (seg && !seg.classList.contains('on')) seg.click();
+    };
+    if (work) clearAllWithUndo(again);
     closeMenu();
     if (reshape) seg.click();   // free now: the canvas is empty
     if (!work && !reshape) showToast('Already a fresh one');
@@ -158,11 +162,13 @@ function clearAllWithUndo() {
 })();
 
 // Name it as part of saving: the drawer opens with the current/auto name and
-// its button reads "Save a backup" — confirming runs the actual download. Named,
-// because the Post sheet offers the same backup when a drawing is too long to post.
+// its button reads "Save as a file", the ⋯ menu's own words (the owner: one
+// name for the button that makes a .skribl file) — confirming runs the actual
+// download. Named, because the Post sheet offers the same file when a drawing
+// is too long to post.
 function openSaveBackup() {
   if (window.SkriblName && window.SkriblName.open) {
-    window.SkriblName.open({ label: 'Save a backup', onConfirm: saveDraft });
+    window.SkriblName.open({ label: 'Save as a file', onConfirm: saveDraft });
   } else {
     saveDraft();
   }

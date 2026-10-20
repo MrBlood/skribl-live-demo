@@ -558,6 +558,8 @@
   {# lib/musicdrawer.js: the music drawer's controls, one copy with the Pad's (the owner:
      "the same music editor on both pad and flip"). Before flip.js, which wires it. #}
   <script src="{{ skribl_asset('lib/musicdrawer.js') }}" defer></script>
+  {# lib/newundo.js: New Skribl's Undo and Redo, one offer for both editors (the owner's Q4). #}
+  <script src="{{ skribl_asset('lib/newundo.js') }}" defer></script>
   <!-- Flip ONLY, deliberately. flip.js is not served to the player, so nothing
        here reaches a shared link. Adding it to app.js would put it on the
        player's critical path, and that path is currently OVER its byte ratchet

@@ -34,7 +34,7 @@
     var submitLabel = $('postSubmitLabel');
     var postIcon = $('postSubmitIcon');
     var backupIcon = $('postBackupIcon');
-    var backingUp = false;   // the button is Save a backup (offerBackup)
+    var backingUp = false;   // the button is Save as a file (offerBackup)
     var soundMark = $('postSound');
     var soundDot = $('postSoundDot');
     var soundText = $('postSoundText');
@@ -199,7 +199,7 @@
 
     /* TOO LONG TO POST (the Pad plan, step 2; the owner's pick A). The reason
      * in plain words, said before anything is sent, and the button becomes the
-     * one thing that helps: Save a backup, the ⋯ menu's own words and icon,
+     * one thing that helps: Save as a file, the ⋯ menu's own words and icon,
      * which makes a .skribl file. Pressing it puts the sheet away and opens the
      * editor's own backup (cfg.backup), the drawer the menu opens. Every open
      * starts at idle, which puts Post back. An editor with no backup to offer
@@ -210,7 +210,7 @@
     }
     function showBackup(on) {
       backingUp = on;
-      if (on) submitLabel.textContent = 'Save a backup';
+      if (on) submitLabel.textContent = 'Save as a file';
       // SVG elements have no .hidden property; the attribute is what hides them.
       if (postIcon) postIcon.toggleAttribute('hidden', on);
       if (backupIcon) backupIcon.toggleAttribute('hidden', !on);
@@ -277,6 +277,26 @@
       if (soundText) soundText.textContent = msg;
     }
 
+    /* THE TITLE STARTS FROM THE DRAWING'S NAME (the owner's yes, Q3). Only a
+     * name a person gave: the date name a blank drawing saves under
+     * (lib/nametab.js isAuto) is not one. The box follows the name while what
+     * is in it is still what this put there, so a rename, or a New Skribl,
+     * carries through. Words typed in the box are the person's and stay; so
+     * does a box they emptied, until the drawing's name changes. */
+    var filled = null, typedUnder = null;
+    function fillTitle() {
+      var N = window.SkriblName;
+      if (!N) return;
+      var named = N.get(), v = titleInput.value;
+      if (typedUnder === named || (v.trim() && v !== filled)) return;
+      var t = N.isAuto(named) ? '' : named;
+      titleInput.value = filled = titleInput.maxLength > 0 ? t.slice(0, titleInput.maxLength) : t;
+    }
+    titleInput.addEventListener('input', function () {
+      filled = null;
+      typedUnder = window.SkriblName ? window.SkriblName.get() : null;
+    });
+
     function open() {
       setState('idle');
       if (cfg.onOpen) cfg.onOpen();
@@ -284,8 +304,10 @@
       syncPublicSub();
       // Ask before creating server state, not after — see lib/recoverykey.js.
       if (window.SkriblRecoveryKey) window.SkriblRecoveryKey.warnIfVolatile(sheet);
-      // Field values persist across an accidental close within the session; they
-      // reset only after a successful post. So don't clear them here.
+      // Field values persist across a close within the session, a post's too
+      // (v293), so nothing clears them here; the title may follow the
+      // drawing's name, never over words typed in the box (fillTitle).
+      fillTitle();
       updateCharCount();
       // The editor's own picture of what is being posted: the Pad flattens its
       // canvas, Flip its poster page. Shaped like the drawing so it shows whole
@@ -462,7 +484,7 @@
     if (what === 'server') return FIRST + (extra ? ', saved on this device' : '') + '. The server had a problem; try again in a moment.';
     if (what === 'odd') return FIRST + '. The connection gave a strange answer (a Wi-Fi sign-in page?); try again.';
     if (what === 'pages') return FIRST + '. ' + extra;
-    if (what === 'long') return FIRST + '. It\u2019s longer than a post can hold, so save a backup to keep a copy as a file.' + (extra ? ' ' + extra : '');
+    if (what === 'long') return FIRST + '. It\u2019s longer than a post can hold, so save it as a file to keep a copy.' + (extra ? ' ' + extra : '');
     return FIRST + '. ' + (extra || 'The server turned it down.');
   }
 

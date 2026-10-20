@@ -107,7 +107,7 @@
     d.hidden = true;
     d.innerHTML =
       '<div class="reckey-sheet">' +
-        '<h2 id="reckeyTitle" class="reckey-title">Save your recovery key</h2>' +
+        '<h2 id="reckeyTitle" class="reckey-title">Save your delete key</h2>' +
         '<p class="reckey-why">Your Skribl is posted. This browser could not ' +
         'keep the key that lets you take it down again, so this is the only ' +
         'time it will be shown.</p>' +
@@ -253,13 +253,13 @@
     d.hidden = true;
     d.innerHTML =
       '<div class="reckey-sheet">' +
-        '<h2 id="recoverTitle" class="reckey-title">Use a recovery key</h2>' +
+        '<h2 id="recoverTitle" class="reckey-title">Use a delete key</h2>' +
         '<p class="reckey-why">For a Skribl this browser has forgotten. Paste ' +
         'its link and the key you saved.</p>' +
         '<label class="reckey-label" for="recoverId">Skribl link or ID</label>' +
         '<input class="reckey-input" id="recoverId" type="text" autocomplete="off" ' +
           'autocapitalize="off" spellcheck="false" placeholder="https://…/s/abc123">' +
-        '<label class="reckey-label" for="recoverKey">Recovery key</label>' +
+        '<label class="reckey-label" for="recoverKey">Delete key</label>' +
         '<input class="reckey-input" id="recoverKey" type="text" autocomplete="off" ' +
           'autocapitalize="off" spellcheck="false">' +
         '<div class="reckey-actions">' +
@@ -288,7 +288,7 @@
       var id = parseId(idEl.value);
       var key = String(keyEl.value || '').trim();
       if (!id) { said.textContent = 'That does not look like a Skribl link or ID.'; return null; }
-      if (!key) { said.textContent = 'Paste the recovery key you saved.'; return null; }
+      if (!key) { said.textContent = 'Paste the delete key you saved.'; return null; }
       return { id: id, key: key };
     }
 
@@ -428,8 +428,8 @@
     var said = d2.querySelector('#clearKeysSaid');
     d2.querySelector('#clearKeysWhy').textContent =
       keyed.length + (keyed.length === 1
-        ? ' Skribl in this list has a recovery key stored here.'
-        : ' Skribls in this list have recovery keys stored here.');
+        ? ' Skribl in this list has a delete key stored here.'
+        : ' Skribls in this list have delete keys stored here.');
     said.textContent = '';
     go.disabled = true;
 
