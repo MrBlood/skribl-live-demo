@@ -1120,7 +1120,12 @@ with sync_playwright() as sp:
     #   link page's and the Pad's own, the same frame. Listed live in
     #   css_live.json: only full screen matches it. verify_jsstrip's line
     #   moves with it. 40,825 measured.
-    CSS_RATCHET, CSS_WAS, CSS_TARGET = 40_831, 119_844, 40_000
+    # RAISED (L3, Safari's Page Zoom at 150%), for one named cost: +75 B --
+    #   the ⋯ menu's card and its point follow --menu-shift, so the card stays
+    #   inside the window when the ⋯ wraps to mid-screen (it ran 89px off the
+    #   left), and the card is never wider than the window less 16px.
+    #   verify_jsstrip's line moves with it. 40,900 measured.
+    CSS_RATCHET, CSS_WAS, CSS_TARGET = 40_906, 119_844, 40_000
     total_css = sum(css_bytes.values())
     check(f"the player's CSS does not grow past {CSS_RATCHET:,} bytes "
           f"(was {CSS_WAS:,} at v194; target {CSS_TARGET:,})",
