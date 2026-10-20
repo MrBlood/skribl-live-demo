@@ -153,6 +153,20 @@ html { scroll-padding-top: 96px; }
    its word, Make one and the ••• are wider than 320 inside the card; the word
    is what the page's own heading already says, so it goes first. */
 @media (max-width: 380px) { .top { gap: 8px; } }
+/* AT 150% THERE WAS NO ROOM (owner, L3): a 402pt iPhone at Safari's 150%
+   lays the page out 268px wide, and the mark, its word, Make one and the •••
+   need about 297 -- the ••• sat past the right edge, out of reach. Below the
+   320 safety net Make one is what the Pad's Post is at that size: a round
+   button with a + drawn where its words were, the words kept for VoiceOver.
+   The word beside the mark stays (owner, after v324: "It should say gallery
+   or library"). verify_galib reads it at 268 and at 320. */
+.make > .make-plus { display: none; width: 20px; height: 20px; }
+@media (max-width: 319px) {
+  .make { width: 44px; padding: 0; justify-content: center; }
+  .make > span { position: absolute; width: 1px; height: 1px; overflow: hidden;
+    clip-path: inset(50%); white-space: nowrap; }
+  .make > .make-plus { display: block; }
+}
 
 /* The ••• in each header. Round, 44px, in the header's own hairline -- the
    same weight as the gallery's "Yours" pill it replaced, so the header does

@@ -446,6 +446,8 @@
   {# lib/toolscroll.js: on a screen too narrow for one row, the toolbar scrolls
      and glides once to show there is more (SK312-005, v315). #}
   <script src="{{ skribl_asset('lib/toolscroll.js') }}" defer></script>
+  {# lib/chromefit.js: the canvas re-fits when the chrome changes size, window or no window (Flip's too). #}
+  <script src="{{ skribl_asset('lib/chromefit.js') }}" defer></script>
   <!-- Editors only: the player never posts. See the header of postedaudio.js. -->
   <script src="{{ skribl_asset('lib/postedaudio.js') }}" defer></script>
   <!-- Editors only, same reason: the share card is composited at POST time.

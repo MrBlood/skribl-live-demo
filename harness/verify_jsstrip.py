@@ -281,9 +281,12 @@ with sync_playwright() as sp:
     # once a drawing opens, one line as restoreAutosave has. And RAISED, in both
     # places together, by T1 after v326 (+74 B, all app.js, 148,703 measured):
     # the take's clock written only when its words change, where it wrote the
-    # same "0:06" five times a second while the pen was down.
+    # same "0:06" five times a second while the pen was down. And RAISED, in
+    # both places together, by L3 at 150% after v326 (+376 B, all app.js,
+    # 149,079 measured): the post page's ⋯ menu kept inside the window, and
+    # the Pad's fit measuring with the drawing out of the way.
     check("stripping keeps the player's JS under its ratchet",
-          lean_total <= 148_708,
+          lean_total <= 149_084,
           f"{src_total:,} B of source -> {lean_total:,} B parsed")
     # START-HERE concluded from a function count that reaching 153,600 needs a
     # separate player entry point, and the v199 handoff concluded from a
@@ -436,7 +439,12 @@ with sync_playwright() as sp:
     # screen (Q6): `.canvas-wrap:is(:fullscreen, .is-immersive-page)` drops
     # the canvas frame's ring and vignette, the link page's full screen and
     # the Pad's own (the same frame). Spent value and 25 B again.
-    _css_target = 40_850
+    #
+    # AND 75 B MORE, IN WRITING, at Safari's Page Zoom at 150% (L3): the ⋯
+    # menu's card and its point follow --menu-shift, so the card stays inside
+    # the window when the ⋯ wraps to mid-screen, and the card is never wider
+    # than the window less 16px. Spent value and 25 B again.
+    _css_target = 40_925
     check(f"the player's stylesheet is served stripped, under the {_css_target:,}-byte target (40,000 once its debt is paid)",
           _href is not None and 0 < len(_served_css) <= _css_target and len(_served_css) < len(_raw_css),
           f"{len(_served_css):,} B served of {len(_raw_css):,} B on disk")
