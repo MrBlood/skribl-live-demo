@@ -20283,7 +20283,7 @@ Pad and Flip: the same rule in each editor's own save, and one shared pill rule.
 Not tested here: WebKit. The input log (?inputlog) on the owner's phone is the
 test that matters.
 
-## After v326 -- L3 at 150%: the drawing re-fits when the zoom changes, and the post page's menu stays on screen (bug fixes)
+## After v326 -- L3 at 150%: the drawing re-fits when the zoom changes, and every ⋯ stays in reach (bug fixes, and the owner's yes to a round +)
 
 The owner's L3 screenshots, at Safari's Page Zoom of 150% on a 402pt iPhone
 (268 CSS px wide, under the 320 safety net). The first two came back at 115%,
@@ -20318,11 +20318,19 @@ finds the button. And "Add take", hung from the middle of the canvas, may only
 be half the canvas wide: on a tall drawing at 150% it folded onto two lines.
 It is one line now.
 
-Not done here, and asked: at 150% the Library and Gallery headers have no room
-for both Make one and the ⋯, which goes past the right edge once there is a
-post. The proposal is the Pad's own answer at that size (Post becomes a round
-paper plane): Make one becomes a round +, the cursive word stays. That changes
-how something looks, so it waits for the owner.
+And the header, asked first because it changes how something looks: at 150%
+the Library and Gallery headers had no room for both Make one and the ⋯. The
+lockup, Make one and the ⋯ need about 297px; the ⋯ sat past the right edge,
+out of reach, once the Library had a post (the Gallery always). Mocked now
+beside A, the Pad's own answer at that size (Post becomes a round paper
+plane), and the owner: "Ok". Below the 320 safety net Make one is a round +,
+44px, its words kept for VoiceOver; the cursive word beside the mark stays
+(owner, after v324: "It should say gallery or library"). One rule in
+pagemenu.css for both pages, and the + drawn in each page's Make one.
+verify_galib: at 268 the ⋯ is on screen and answers its own centre, and Make
+one is a round + still named Make one, on both pages (all four red before:
+the ⋯ at 251-297 on a 268px page, the page 295 and 297 wide); at 320 Make one
+keeps its words (red with the rule widened to 400).
 
 verify_layout, new section "LAYOUT 150%": six rows. Red on main: the Pad back
 to 100% with no resize event (244px, 244px), the Pad to 150% without a reload
@@ -20345,7 +20353,8 @@ shift), raised in writing in verify_jsstrip and verify_player_isolation.
 
 Pad and Flip: the re-fit is one module for both; the measuring line and Add
 take are the Pad's own (Flip has no takes, and its fit never measured the
-stage); the menu is the post page's.
+stage); the menu is the post page's, and the header is the Gallery's and the
+Library's, one rule for both.
 
 Not tested here: WebKit, and Safari's own Page Zoom. Held-back resize events
 stand in for it in Chromium; the owner's phone is the test that matters.

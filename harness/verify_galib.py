@@ -504,6 +504,38 @@ with sync_playwright() as p:
     check("ONE lockup: mark height and Make one's weight/size agree on both pages",
           lockups["/gallery"] == lockups["/library"] and lockups["/gallery"] == [30, "600", "13px"], str(lockups))
 
+    # AT 150% THE ••• WAS OUT OF REACH (owner, L3). A 402pt iPhone at Safari's
+    # 150% lays the page out 268px wide; the lockup, Make one and the ••• took
+    # about 297, and the ••• sat past the right edge. Below the 320 safety net
+    # Make one is a round + now (the Pad's Post at that size), still named
+    # Make one; at 320 it keeps its words. Not a phone context: a phone's
+    # browser here zooms a too-wide page out to fit, which Safari's Page Zoom
+    # does not, and that would hide the very overflow this reads.
+    MAKE = """() => { const m = document.getElementById('pageMenuBtn').getBoundingClientRect();
+      const k = document.querySelector('#galleryMake, #libMake'), kb = k.getBoundingClientRect();
+      const at = document.elementFromPoint(m.left + m.width / 2, m.top + m.height / 2);
+      const plus = k.querySelector('.make-plus'), words = k.querySelector('span').getBoundingClientRect();
+      return { width: innerWidth, page: document.documentElement.scrollWidth, menu: [Math.round(m.left), Math.round(m.right)],
+               reach: !!(at && at.closest('#pageMenuBtn')), make: [Math.round(kb.width), Math.round(kb.height)],
+               plus: !!plus && plus.getBoundingClientRect().width > 0, words: Math.round(words.width) }; }"""
+    for _w in (268, 320):
+        _nc = b.new_context(storage_state=state, viewport={"width": _w, "height": 600}, device_scale_factor=3, has_touch=True)
+        for path in ("/gallery", "/library"):
+            pg = open_page(_nc, path)
+            k = pg.evaluate(MAKE)
+            named = pg.get_by_role("link", name="Make one").count()
+            if _w == 268:
+                check(f"{path} at 150% (268): the ••• is on screen and answers its own centre, the page no wider than the window",
+                      k["reach"] and k["menu"][1] <= k["width"] and k["page"] <= k["width"], str(k))
+                check(f"{path} at 150% (268): Make one is a round + 44px across, still named Make one",
+                      k["plus"] and abs(k["make"][0] - 44) <= 1 and abs(k["make"][1] - 44) <= 1 and k["words"] <= 1 and named == 1,
+                      f"{k}, named {named}")
+            else:
+                check(f"{path} at the 320 safety net: Make one keeps its words",
+                      not k["plus"] and k["words"] > 40 and k["reach"] and named == 1, f"{k}, named {named}")
+            pg.close()
+        _nc.close()
+
     # ========================================================= REPORT SHEET
     print("\nGALIB 5 -- the report sheet: a bottom sheet on a phone, a centred card on a desktop")
     REP = """() => { const c = document.getElementById('reportForm'), r = c.getBoundingClientRect(), cs = getComputedStyle(c);
