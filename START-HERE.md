@@ -736,6 +736,7 @@ rather than a shared rule.
 | `canvassizes.js` | Pad+Flip+library+in-post | Canvas presets — the one table both editors read. |
 | `canvaszoom.js` | Pad+Flip | The canvas magnifier: zoom, pan, the HUD, its grip, wheel and Space-drag. |
 | `chromefade.js` | Pad+Flip+player+library+gallery | Controls that step back while a drawing plays, and come back the moment someone reaches for them. |
+| `chromefit.js` | Pad+Flip | The editors' fit when the chrome around the canvas changes size and the window says nothing -- Pad's and Flip's, one watch. |
 | `colorselect.js` | Pad+Flip | Colour selection — the part both editors must agree on. |
 | `composehost.js` | HOST | The pad button's lifecycle, for a HOST's composer. |
 | `constrain.js` | Pad+Flip | Shift-to-constrain — snap a stroke to the nearest axis, shared by both editors. |

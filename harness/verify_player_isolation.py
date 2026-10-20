@@ -902,7 +902,13 @@ with sync_playwright() as sp:
     #   cost, all in app.js: +74 B -- the take's clock written only when its
     #   words change, where it wrote the same "0:06" five times a second while
     #   the pen was down. verify_jsstrip's line moves with it. 148,703 measured.
-    BYTES_RATCHET, BYTES_TARGET = 148_708, 153_800
+    # RAISED (L3, after v326: Safari's Page Zoom at 150%), for named costs,
+    #   all in app.js: +376 B -- the post page's ⋯ menu kept 8px inside the
+    #   window, where at 150% it ran 89px off the left (placeMenu, on open
+    #   and on a resize while open), and the Pad's fit measuring with the
+    #   drawing out of the way, so a shorter window can shrink it.
+    #   verify_jsstrip's line moves with it. 149,079 measured.
+    BYTES_RATCHET, BYTES_TARGET = 149_084, 153_800
     # The page's own HTML. The brand is the one-stroke skribl signature INLINE
     # in the page (~1.4KB of paths, a ~0.9KB nonce'd draw-on script, and the
     # <linearGradient> defs), and inline is load-bearing rather than lazy:

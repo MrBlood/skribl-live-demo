@@ -111,6 +111,12 @@ function layoutEditorCanvas() {
   if (!authoredW || !authoredH) return;
   if (window._skriblFullFit?.()) return;   // full screen lays it out (editor_draw.js)
   const areaEl = canvasArea || canvasWrap.parentElement || canvasWrap;
+  // MEASURED WITH THE DRAWING OUT OF THE WAY. Once the page outgrows the
+  // window the area is as tall as what is in it, so a fitted canvas propped
+  // the area up at its own height and a narrower or shorter window could not
+  // shrink it: zoomed to 150% without a reload, the dock went 102px past the
+  // bottom of the screen (L3). The size set below is the only one painted.
+  canvasWrap.style.height = '0px';
   const area = areaEl.getBoundingClientRect();
   // Subtract the padding. getBoundingClientRect() reports the BORDER box, so
   // the breathing room .canvas-area reserves was being handed straight back to
@@ -4295,13 +4301,22 @@ function showPlayerError(msg, canRetry) {
   // the line under the track, where the speed is said.)
   const pMore = document.getElementById('playerMoreBtn');
   const pMenu = document.getElementById('playerMenu');
+  // Kept 8px inside the window (styles.css --menu-shift): at 150% the ⋯
+  // wraps to mid-screen and the card ran off the left (owner, L3).
+  const placeMenu = () => {
+    pMenu.style.removeProperty('--menu-shift');
+    const r = pMenu.getBoundingClientRect();
+    const s = Math.min(0, r.left - 8) || Math.max(0, r.right + 8 - innerWidth);
+    if (s) pMenu.style.setProperty('--menu-shift', s + 'px');
+  };
   const setMenu = (open, refocus) => {
     pMenu.hidden = !open;
     pMore.setAttribute('aria-expanded', '' + open);
-    if (open) pMenu.querySelector('.menu-item').focus();
+    if (open) { placeMenu(); pMenu.querySelector('.menu-item').focus(); }
     else if (refocus) pMore.focus();
   };
   if (pMore && pMenu) {
+    window.addEventListener('resize', () => { if (!pMenu.hidden) placeMenu(); });
     pMore.addEventListener('click', () => setMenu(pMenu.hidden));
     document.addEventListener('pointerdown', e => {
       if (!pMenu.hidden && !pMore.parentNode.contains(e.target)) setMenu(false);

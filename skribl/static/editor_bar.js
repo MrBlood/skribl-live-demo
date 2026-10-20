@@ -37,6 +37,16 @@ if (window.SkriblPendingCards && window.SkriblPendingCards.bindDrops && _padDraw
     say: (msg, anchor) => showToast(msg, anchor)
   });
 }
+// The canvas re-fits when the header or the dock changes size, whether or not
+// the window says so: a Page Zoom changed while Safari sat in the background
+// arrived with no resize event, and the drawing kept its 150% size at 100%
+// (owner, L3). lib/chromefit.js, the watch Flip has kept since #289.
+if (window.SkriblChromeFit) {
+  window.SkriblChromeFit.watch({
+    chrome: [document.querySelector('.header'), document.getElementById('toolBar')],
+    target: canvas, fit: resizeCanvas
+  });
+}
 // ...and when a song or a photo lands, the card grows below what opening it
 // revealed: bring its end on screen again, short of the dock passing under the
 // header (lib/drawerdetent.js followGrowth, which Flip calls too).

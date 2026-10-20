@@ -602,6 +602,8 @@
   <script src="{{ skribl_asset('lib/draftstore.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/othertab.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/savedrafts.js') }}" defer></script>
+  {# lib/chromefit.js: the stage re-fits when the chrome changes size, window or no window (the Pad's too). #}
+  <script src="{{ skribl_asset('lib/chromefit.js') }}" defer></script>
   <script src="{{ skribl_asset('flip.js') }}" defer></script>
   {% if compose %}<script src="{{ skribl_asset('editor_compose.js') }}" defer></script>{% endif %}
   {% if not compose %}{{ hs.steps() }}{% endif %}

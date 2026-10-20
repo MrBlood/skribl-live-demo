@@ -46,6 +46,12 @@ SECTION 5 — the move-bar readout does not spill its pill.
     against the box's own height, with the offset written through the function
     that ships — setting textContent directly does not reproduce it.
 
+SECTION 150% — Safari's Page Zoom on a 402pt iPhone, 268px wide.
+    Under the 320 safety net, and where the owner's L3 screenshots found the
+    Pad's drawing stuck at its old size after the zoom changed without a
+    reload (both ways), Add take folded onto two lines, and the post page's
+    menu running off the left edge. Each row was red before its fix.
+
 Requires a running server. Run it like the other browser suites:
     ./harness/run_harness.sh verify_layout.py
 """
@@ -1387,6 +1393,114 @@ with sync_playwright() as p:
                     check(f"{_path} @{_w}: Media and Magnify sit as far apart as Undo and Redo",
                           _gap is not None and abs(_gap["mediaMag"] - _gap["undoRedo"]) <= 1.5, str(_gap))
             _ctx.close()
+
+    # ------------------------------------------------------------ 150% zoom
+    # SAFARI'S PAGE ZOOM AT 150% (the owner's L3, the v327 re-test). A 402pt
+    # iPhone at 150% lays every page out 268 CSS px wide, under the 320 this
+    # suite keeps as the safety net, and the owner's screenshots found three
+    # things there. Each row was red on the tree before its fix.
+    print("\nLAYOUT 150% — Safari's Page Zoom on a 402pt iPhone (268px)")
+    HOLD_RESIZE = ("window.addEventListener('resize', e => {"
+                   " if (window.__holdResize) e.stopImmediatePropagation(); }, true);")
+
+    def phone_at(w):
+        return browser.new_context(viewport={"width": w, "height": round(744 * w / 402)},
+                                   device_scale_factor=3, is_mobile=True, has_touch=True)
+
+    # BACK TO 100% WITHOUT A RELOAD: "When I switch back to 100% I get 3rd
+    # screen shot" -- the drawing kept its 150% size in a band of empty page.
+    # A zoom changed in Settings while Safari sat in the background reached
+    # the page with no resize event; the Pad re-fit only on one, Flip on its
+    # chrome changing size (lib/chromefit.js, both editors' now). The event is
+    # held back here and the drawing has to grow anyway. Flip passed before
+    # the fix: its row guards the watch it now shares.
+    for _ed, _path, _sel in (("Pad", "/", "#canvas"), ("Flip", "/flip", "#pad")):
+        _ctx = phone_at(268)
+        _pg = _ctx.new_page()
+        _pg.add_init_script(HOLD_RESIZE)
+        browsing.goto(_pg, BASE, _path)
+        _pg.wait_for_timeout(2600)            # past the dock's once-per-load glide
+        draw_a_stroke(_pg)
+        _w0 = _pg.locator(_sel).bounding_box()["width"]
+        _pg.evaluate("() => { window.__holdResize = true; }")
+        _pg.set_viewport_size({"width": 402, "height": 744})
+        _pg.wait_for_timeout(800)
+        _w1 = _pg.locator(_sel).bounding_box()["width"]
+        check(f"{_ed}: from 150% back to 100% with no resize event, the drawing re-fits",
+              _w1 >= _w0 * 1.3, f"{_w0:.0f}px wide at 150%, {_w1:.0f}px at 100%")
+        _ctx.close()
+
+    # AND THE OTHER WAY, 100% to 150% without a reload. Once the page
+    # outgrew the window the canvas area was as tall as the canvas in it, so
+    # the fitted drawing propped itself up and the dock went 102px past the
+    # bottom of the screen (app.js layoutEditorCanvas measures with the
+    # drawing out of the way now). Flip re-fits from the window on the way
+    # down and never had this.
+    _ctx = phone_at(402)
+    _pg = _ctx.new_page()
+    browsing.goto(_pg, BASE, "/")
+    _pg.wait_for_timeout(600)
+    draw_a_stroke(_pg)
+    _pg.set_viewport_size({"width": 268, "height": 496})
+    _pg.wait_for_timeout(800)
+    _z = _pg.evaluate("""() => ({ dock: Math.round(document.getElementById('toolBar').getBoundingClientRect().bottom),
+        window: innerHeight, canvas: Math.round(document.getElementById('canvas').getBoundingClientRect().height) })""")
+    check("Pad: from 100% to 150% with no reload, the drawing shrinks and the dock stays on screen",
+          _z["dock"] <= _z["window"], str(_z))
+    _ctx.close()
+
+    # ADD TAKE ON ONE LINE. Hung from the canvas's middle, the pill may be
+    # only half the canvas wide, and a tall drawing at 150% folded it into
+    # "Add / take". Drawn at 100%, then the window narrowed to 268 and
+    # shortened, so the drawing is fitted by its height and comes out narrow
+    # (the owner's was 142px wide). Counted as the lines its words sit on: a
+    # Range's rects, one per line. The label's own box would not do -- it is
+    # a flex item, one box however many lines are inside it, and the first
+    # draft of this row passed with the fix taken out.
+    _ctx = phone_at(402)
+    _pg = _ctx.new_page()
+    browsing.goto(_pg, BASE, "/")
+    _pg.wait_for_timeout(600)
+    stop_the_take(_pg)
+    _pg.set_viewport_size({"width": 268, "height": 380})
+    _pg.wait_for_timeout(800)
+    _t = _pg.evaluate("""() => { const p = document.getElementById('addTakePill');
+        const c = document.getElementById('canvas').getBoundingClientRect();
+        const r = document.createRange(); if (p) r.selectNodeContents(p.querySelector('span'));
+        const lines = p ? new Set([...r.getClientRects()].map(b => Math.round(b.top))).size : 0;
+        return { shown: !!p && !p.hidden, lines,
+                 canvas: Math.round(c.width) + 'x' + Math.round(c.height) }; }""")
+    check("Pad at 150%, a tall drawing: Add take stays on one line",
+          _t["shown"] and _t["lines"] == 1, str(_t))
+
+    # THE POST PAGE'S ⋯ MENU. At 268 the ⋯ wraps onto a row of its own,
+    # mid-screen, and the card hung from its right edge ran 89px off the left:
+    # Share, Copy link and Public gallery cut. Kept 8px inside the window now
+    # (app.js placeMenu), and its point still has to find the button.
+    _pg.click("#postBtn")
+    _pg.wait_for_timeout(400)
+    _post = browsing.submit_post(_pg)
+    _ctx.close()
+    if not _post.get("url"):
+        check("post page at 150%: a post to open (fixture)", False, str(_post))
+    else:
+        _ctx = phone_at(268)
+        _pg = _ctx.new_page()
+        _pg.goto(_post["url"], wait_until="load")
+        _pg.wait_for_timeout(1200)
+        _pg.click("#playerMoreBtn")
+        _pg.wait_for_timeout(400)
+        _m = _pg.evaluate("""() => { const m = document.getElementById('playerMenu');
+            const b = document.getElementById('playerMoreBtn').getBoundingClientRect();
+            const r = m.getBoundingClientRect(), a = getComputedStyle(m, '::after');
+            const tip = r.right - 1 - parseFloat(a.right) - parseFloat(a.width) / 2;
+            return { open: !m.hidden, left: Math.round(r.left), right: Math.round(r.right), width: innerWidth,
+                     tip: Math.round(tip), button: [Math.round(b.left), Math.round(b.right)] }; }""")
+        check("post page at 150%: the ⋯ menu opens inside the window",
+              _m["open"] and _m["left"] >= 0 and _m["right"] <= _m["width"], str(_m))
+        check("post page at 150%: ...and its point still finds the ⋯",
+              _m["button"][0] <= _m["tip"] <= _m["button"][1], str(_m))
+        _ctx.close()
 
     browser.close()
 

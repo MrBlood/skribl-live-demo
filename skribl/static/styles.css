@@ -1407,6 +1407,10 @@ body.playback-paused .tap-paused { display: grid; }
   font-size: 13px;
   font-weight: 600;
   letter-spacing: -0.1px;
+  /* One line. Hung from the middle (left: 50%), it may only be as wide as
+     half the canvas, and a tall drawing at 150% folded it into "Add / take"
+     (owner, L3). */
+  white-space: nowrap;
   cursor: pointer;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
   transition: opacity 0.25s var(--ease);
@@ -5498,11 +5502,15 @@ a.player-btn { text-decoration: none; }
    and the title showed through it on an iPhone. The rows are the editor
    menu's .menu-item. Speed left it for the line under the track (below). */
 .player-more { position: relative; }
-.player-menu { position: absolute; right: 0; bottom: calc(100% + 12px); z-index: 20;
-  min-width: 248px; padding: 4px; border-radius: 14px;
+/* --menu-shift keeps the card on screen: a narrow window wraps the ⋯ onto a
+   row of its own, mid-screen, and the card hung from its right edge ran 89px
+   off the left at 150% (owner, L3). app.js placeMenu() writes it on open; the
+   point moves the other way, so it still finds the button. */
+.player-menu { position: absolute; right: var(--menu-shift, 0); bottom: calc(100% + 12px); z-index: 20;
+  min-width: min(248px, calc(100vw - 16px)); padding: 4px; border-radius: 14px;
   background: rgb(var(--surface-control-rgb));
   border: 1px solid var(--hairline-strong); box-shadow: 0 12px 36px rgba(0, 0, 0, 0.35); }
-.player-menu::after { content: ''; position: absolute; right: 15px; bottom: -7px;
+.player-menu::after { content: ''; position: absolute; right: calc(15px - var(--menu-shift, 0px)); bottom: -7px;
   width: 12px; height: 12px; transform: rotate(45deg); background: inherit;
   border: solid var(--hairline-strong); border-width: 0 1px 1px 0; }
 .player-menu[hidden] { display: none; }

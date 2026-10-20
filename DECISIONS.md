@@ -20282,3 +20282,70 @@ Pad and Flip: the same rule in each editor's own save, and one shared pill rule.
 
 Not tested here: WebKit. The input log (?inputlog) on the owner's phone is the
 test that matters.
+
+## After v326 -- L3 at 150%: the drawing re-fits when the zoom changes, and the post page's menu stays on screen (bug fixes)
+
+The owner's L3 screenshots, at Safari's Page Zoom of 150% on a 402pt iPhone
+(268 CSS px wide, under the 320 safety net). The first two came back at 115%,
+measured from four controls of known size, so the check was taken again with a
+tell: at 150% the Pad's Post button is a round paper plane with no word. Then
+the owner: "When I switch back to 100% I get 3rd screen shot. Also check the
+... menu at 150%".
+
+The third screenshot was the Pad at 100% with its drawing still the size it
+had at 150%, in a band of empty page. The Pad re-fit its canvas only on the
+window's resize event, and a zoom changed in Settings while Safari sat in the
+background reached the page without one. Flip re-fit when its chrome changed
+size (the header, the strip, the dock: a ResizeObserver since #289), so it
+followed. That watch is lib/chromefit.js now, and both editors use it: only
+the chrome is observed, never the stage, so a fit cannot feed back into
+itself, and a fit that moved the canvas says so with a resize event, as
+Flip's always did. Measured with the event held back: the Pad stayed 244px
+wide at 100%; Flip went to 378, and now the Pad does too.
+
+The same family the other way: from 100% to 150% without a reload, the Pad's
+drawing could not shrink and the dock went 102px past the bottom of the
+screen. Once the page outgrew the window the canvas area was as tall as the
+canvas in it, so the fitted drawing propped itself up. layoutEditorCanvas
+measures with the drawing out of the way now; the size it sets is the only one
+painted. Flip re-fits from the window and never had this.
+
+The menu: at 268 the post page's ⋯ wraps onto a row of its own, mid-screen,
+and the card hung from its right edge ran 89px off the left, cutting Share,
+Copy link and Public gallery. It is kept 8px inside the window (app.js
+placeMenu, --menu-shift), and its point moves the other way, so it still
+finds the button. And "Add take", hung from the middle of the canvas, may only
+be half the canvas wide: on a tall drawing at 150% it folded onto two lines.
+It is one line now.
+
+Not done here, and asked: at 150% the Library and Gallery headers have no room
+for both Make one and the ⋯, which goes past the right edge once there is a
+post. The proposal is the Pad's own answer at that size (Post becomes a round
+paper plane): Make one becomes a round +, the cursive word stays. That changes
+how something looks, so it waits for the owner.
+
+verify_layout, new section "LAYOUT 150%": six rows. Red on main: the Pad back
+to 100% with no resize event (244px, 244px), the Pad to 150% without a reload
+(dock at 598 in a 496px window), the menu inside the window (left -94). Each
+other row red with its own part undone: Flip's re-fit with chromefit's fit
+call removed (the Pad's goes red with it, and alone with the Pad's watch
+removed), Add take with its nowrap removed (two lines, on a 115px drawing),
+the menu's point with its shift removed. The Add take row's first draft
+counted the label's boxes, and the label is a flex item, one box however many
+lines are in it; it passed with the fix taken out. It counts the lines its
+words sit on now (a Range's rects).
+
+No canvas fit runs while the pen is down: zero writes to the canvas's size
+during a fast touch scribble on the Pad at 402 and at 268, counted by an
+observer that does see a fit when one happens.
+
+The player carries +376 B of script (the menu's placement, the Pad's
+measuring line; both app.js) and +75 B of served stylesheet (the menu's
+shift), raised in writing in verify_jsstrip and verify_player_isolation.
+
+Pad and Flip: the re-fit is one module for both; the measuring line and Add
+take are the Pad's own (Flip has no takes, and its fit never measured the
+stage); the menu is the post page's.
+
+Not tested here: WebKit, and Safari's own Page Zoom. Held-back resize events
+stand in for it in Chromium; the owner's phone is the test that matters.

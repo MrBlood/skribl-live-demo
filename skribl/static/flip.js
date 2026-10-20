@@ -216,33 +216,14 @@ function syncGrid(){
 // The pills (fps, the tool shelf, Fill / Fit / Stretch, every seg) follow a
 // resize themselves: lib/segslider.js watches each track.
 window.addEventListener('resize', ()=>{ sizeStage(); });
-// The chrome around the stage changes height without the window changing: the
-// header's play control widens once there are two pages (2px taller on a
-// phone), and the strip's rows come and go. Each of those left the dock that
-// much past the bottom until the next resize. Only the chrome is observed,
-// never the stage, so re-fitting cannot feed back into itself.
-if(typeof ResizeObserver === 'function'){
-  let _fitQueued = false, _lastPadBox = null;
-  const _chromeRO = new ResizeObserver(()=>{
-    if(_fitQueued) return; _fitQueued = true;
-    requestAnimationFrame(()=>{
-      _fitQueued = false;
-      sizeStage();
-      // A chrome change that moved or resized the canvas is, to everything that
-      // tracks the canvas, a resize: the cached rect behind the brush rings and
-      // the eyedropper's lens both listen for one. Without it an armed lens
-      // stayed where the canvas USED to be (main's CI, after #289). Compared
-      // with the last box seen here, not with the box before sizeStage(): the
-      // header's growth has already moved the canvas by the time this runs.
-      const r = pad.getBoundingClientRect();
-      const box = r.left + ',' + r.top + ',' + r.width + ',' + r.height;
-      if(_lastPadBox !== null && box !== _lastPadBox) window.dispatchEvent(new Event('resize'));
-      _lastPadBox = box;
-    });
-  });
-  ['.header', '.strip-wrap', '.flip-tools'].forEach(sel => {
-    // border-box: padding and borders are height the stage has to give up too.
-    const el = document.querySelector(sel); if(el) _chromeRO.observe(el, { box: 'border-box' });
+// The chrome around the stage changes size without the window changing (a
+// second page widens the header's play control, the strip's rows come and go,
+// a zoom changed while Safari was away). lib/chromefit.js watches it, for the
+// Pad too: only the chrome, never the stage, so a fit cannot feed back.
+if(window.SkriblChromeFit){
+  window.SkriblChromeFit.watch({
+    chrome: ['.header', '.strip-wrap', '.flip-tools'].map(sel => document.querySelector(sel)),
+    target: pad, fit: sizeStage
   });
 }
 
