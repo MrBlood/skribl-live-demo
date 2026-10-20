@@ -14,6 +14,11 @@ away.
 
 Visible means PAINTED: elementFromPoint at the screen's middle lands inside
 him. Gone means removed, and the canvas painted there again.
+
+A slow line is a row too: when his player is not here within hello.js's LATE
+he does not come that time and is not marked seen, so the next open shows him.
+The v327 seal run met that path by accident, on a server's first page (see the
+warm-up below), and read it as a failure; this row meets it on purpose.
 """
 import os
 import sys
@@ -76,6 +81,18 @@ with sync_playwright() as p:
     b = p.chromium.launch()
     print("BLOOBY SAYS HI — the first open on a phone")
 
+    # WARM THE SERVER FIRST. A fresh server trims the comments out of each
+    # script on its first request (security.py; about 3 s of lexing for the
+    # Pad's 107 files here), and his player waits in that queue: on a server's
+    # first page he came about 0.2 s inside his 4 s, and in the v327 seal run,
+    # where this suite had a fresh server to itself, he missed it. This suite
+    # is about him, not a cold server, so both editors are opened once in a
+    # context of their own; every row below still opens a fresh browser.
+    w = b.new_context(**PHONE)
+    for route in ("/skribl-pad", "/flip"):
+        _open(w, route)
+    w.close()
+
     for scheme in ("light", "dark"):
         c = b.new_context(color_scheme=scheme, **PHONE)
         got = []
@@ -126,6 +143,30 @@ with sync_playwright() as p:
     s2, ms2 = _until(q, lambda s: not s["here"], 4000)
     check("Reduce Motion: a still hello (never playing), then he fades and is gone",
           ms is not None and "playing" not in states and ms2 is not None, f"states {sorted(states)}, gone after a further {ms2} ms")
+    c.close()
+
+    # A slow line: his player held for 5 s, past his 4. The page's load waits
+    # for that script, so this open waits only for the page's own parse.
+    c = b.new_context(**PHONE)
+    c.add_init_script(FORCE)
+    held = []
+    c.route("**/inlineplayer.js*", lambda r: held.append(r))
+    q = c.new_page()
+    q.goto(BASE + "/skribl-pad", wait_until="domcontentloaded")
+    q.wait_for_timeout(5000)
+    s = q.evaluate(ST)
+    for r in held:
+        r.continue_()
+    c.unroute("**/inlineplayer.js*")
+    q.wait_for_timeout(1000)
+    s1 = q.evaluate(ST)
+    q.reload(wait_until="load")
+    s2, ms2 = _until(q, lambda s: s["painted"] and s["on"], 8000)
+    check("a slow line: his player 5 s late, he does not come (the canvas there, nothing marked seen, "
+          "and not when it does arrive), and the next open shows him",
+          len(held) == 1 and not s["painted"] and s["canvasThere"] and s["seen"] is None
+          and not s1["painted"] and s1["seen"] is None and ms2 is not None and s2["seen"] == "1",
+          f"held {len(held)}; at 5 s {s}; once it came {s1}; next open {s2} after {ms2} ms")
     c.close()
 
     # Flip: the same hello, and one "seen" for both editors.
