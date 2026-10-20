@@ -2596,7 +2596,7 @@ with sync_playwright() as _spl:
         browsing.goto(_e, BASE, "/library"); _e.wait_for_timeout(900)
         _r0 = _e.evaluate(_RECTS)
         _rk = _e.evaluate("() => { const a = document.getElementById('postedRecover'); return !!(a && a.offsetParent); }")
-        check(f"[{_vw}] nothing posted: no search and no gallery/link row; the tabs and 'Use a recovery key' stay",
+        check(f"[{_vw}] nothing posted: no search and no gallery/link row; the tabs and 'Use a delete key' stay",
               _r0["tabs"] and not _r0["chips"] and not _r0["search"] and _rk, str(_r0))
         _e.click("#tabDrafts"); _e.wait_for_timeout(600)
         _r1 = _e.evaluate(_RECTS)

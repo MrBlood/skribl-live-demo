@@ -237,6 +237,9 @@ BATCHES = [
     ["verify_flipedges.py", "verify_words.py"],
     ["verify_viewedges.py"],               # store — posts public fixtures to the shared server, which verify_gallery and verify_hot count
     ["verify_music.py"],                   # measures — a preview's playhead over time, on both editors
+    # The owner's seven yeses (after v326): one name each, the Post title from
+    # the name, New Skribl's way back on both editors.
+    ["verify_names.py", "verify_posttitle.py", "verify_newundo.py"],
 ]
 
 

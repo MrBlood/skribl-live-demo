@@ -123,7 +123,7 @@ def run(page, label, path):
     save_open = page.evaluate("() => document.getElementById('nameShell').classList.contains('open')")
     check(f"[{label}] Save draft opens the name drawer (you name it as you save)", save_open)
     btn = page.evaluate("() => document.getElementById('nameDone').textContent")
-    check(f"[{label}] the drawer's button reads 'Save a backup' on that path", btn == "Save a backup", repr(btn))
+    check(f"[{label}] the drawer's button reads 'Save as a file' on that path, the menu's own words", btn == "Save as a file", repr(btn))
 
     # And the backup it saves: a .skribl, labelled a plain download. iPhone
     # Safari names a download after its type, so a backup labelled JSON came out
@@ -137,7 +137,7 @@ def run(page, label, path):
         page.click("#nameDone")
     name = dl.value.suggested_filename
     types = page.evaluate("() => window.__blobTypes")
-    check(f"[{label}] Save a backup downloads a .skribl labelled a plain file, not JSON",
+    check(f"[{label}] Save as a file downloads a .skribl labelled a plain file, not JSON",
           name.endswith(".skribl") and types[-1:] == ["application/octet-stream"], f"{name!r}, labelled {types[-1:]}")
 
 

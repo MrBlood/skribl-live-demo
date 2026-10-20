@@ -22,9 +22,9 @@ stand-in Safari gets) and a desk (the real API), in both themes:
   2. THE SAME CLOCK: the artist's time at the same place, and the whole of it.
   3. EVERY SPEED: the words' button opens the link page's speeds, a Flip's
      without Fit, and a pick reaches the player.
-  4. THE DRAWING'S GROUND TO THE SCREEN'S EDGES, as on the link page, read
-     off painted pixels at the edges (the link page's keep its canvas
-     frame's inset vignette as well).
+  4. THE DRAWING'S GROUND TO THE SCREEN'S EDGES, on the link page too, read
+     off painted pixels at the edges. The link page's wore its canvas frame's
+     inset vignette until the owner's yes to Q6: no shadow on any full screen.
   5. WHO DREW IT in the top corner across from the x, at its height, its
      words clear on their glass, stepping back with the controls.
   6. THE WAY OUT: the x and the full-screen button leave.
@@ -262,6 +262,9 @@ with sync_playwright() as p:
         ref = lk.evaluate(READ, [LINK, PROPS])
         ref_edges = edges(lk)
         lk.close()
+        check(f"the link page ({where}): the drawing's ground reaches the screen's edges, with no shadow over it",
+              all(max(abs(a - c) for a, c in zip(px, rgb(GROUND))) <= 3 for px in ref_edges),
+              f"edges {ref_edges}; ground {GROUND}")
         print(f"\n{where}: the link page's band reads {ref['order']}, {ref['buttons']}, {ref['at']} of {ref['dur']}")
         for sname, P, opener in (("Gallery", GAL, open_gallery), ("Library", LIB, open_library)):
             pg = opener(b, view, theme)
@@ -302,11 +305,8 @@ with sync_playwright() as p:
                   ok, str(w) + (f" contrast {contrast(w['ink'], w['glass'], w['ground']):.2f}" if w else ""))
             here_edges = edges(pg)
             want = rgb(GROUND)
-            # The link page's own edges are the ground under its frame's inset
-            # vignette (styles.css .canvas-wrap: the editor's canvas edge,
-            # which its full screen keeps); these frames have none.
             check(f"{sname} ({where}): the drawing's ground reaches the screen's edges",
-                  all(max(abs(a - c) for a, c in zip(px, want)) <= 3 for px in here_edges), f"here {here_edges}; the link page's, under its vignette, {ref_edges}")
+                  all(max(abs(a - c) for a, c in zip(px, want)) <= 3 for px in here_edges), f"here {here_edges}; the link page's {ref_edges}")
             check(f"{sname} ({where}): no page errors", not errs, "; ".join(errs[:2]))
             pg.close()
 

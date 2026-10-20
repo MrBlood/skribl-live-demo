@@ -1359,9 +1359,20 @@ function tryRestore(){
     return ok;
   } catch (e) { return false; }
 }
-function chip(msg){
+// action, when given, is { label, onClick }: a button in the chip, as the Pad's
+// toast has (app.js showToast), for New Skribl's Undo and Redo (lib/newundo.js).
+// The chip lets the canvas have every other touch; the button takes its own.
+function chip(msg, action){
   const el = document.getElementById('flipChip');
   el.textContent = msg;
+  let holdMs = 2200;
+  if(action && action.label && typeof action.onClick === 'function'){
+    const btn = document.createElement('button');
+    btn.type = 'button'; btn.className = 'toast-action'; btn.textContent = action.label;
+    btn.addEventListener('click', ()=>{ clearTimeout(el._t); el.classList.remove('show'); action.onClick(); });
+    el.appendChild(btn);
+    holdMs = 7000;   // an offer to undo needs time to read and reach, as the Pad's
+  }
   /* JUST UNDER THE HEADER, NEVER ON THE DOCK (owner, iPhone: "the blur undone
      toast is right on top of the undo button preventing rapid undos"). It sat
      18px off the bottom of the screen, which on a phone is the dock -- so
@@ -1373,7 +1384,7 @@ function chip(msg){
   const h = document.querySelector('.flip-app .header'), r = h && h.getBoundingClientRect();
   el.style.top = (r && r.bottom > 0) ? Math.round(r.bottom + 8) + 'px' : '';
   el.classList.add('show');
-  clearTimeout(el._t); el._t = setTimeout(()=>el.classList.remove('show'), 2200);
+  clearTimeout(el._t); el._t = setTimeout(()=>el.classList.remove('show'), holdMs);
 }
 // The blank-page whisper (Pad's .canvas-empty-hint, same treatment): visible
 // only while the document is genuinely empty — one page, no strokes, no photo.
@@ -5571,7 +5582,7 @@ function saveDraft(){
   a.download=(window.SkriblName ? window.SkriblName.filename(data.title)
     : 'skribl-flip-'+new Date().toISOString().slice(0,10)+'.skribl');
   document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href), 4000);
-  chip('Draft saved');
+  chip('Saved as a file');
 }
 const draftInput=document.getElementById('draftInput');
 function loadDraftFile(file){
@@ -5621,7 +5632,7 @@ function loadDraftFile(file){
       if (musicData) decodeForWaveform();
       fitPad(); buildStrip(); render(); sizeFill(); setBg(bgColor); syncMediaUI();
       if(!FLIP_COMPOSE){ try{ slotWrite(JSON.stringify(serializeFlip({ recipes: true, pack: true }))); }catch(_){ } }  // best-effort
-      chip(ok?'Draft loaded':'Loaded');
+      chip('Opened your file');
     }catch(err){ chip('Could not read file'); }
   };
   r.readAsText(file);
@@ -5803,7 +5814,7 @@ async function shareSkribl(){
       + (frames.length - _B.MAX_FRAMES) + ' to post it.'));
     chip('Too many pages'); return;
   }
-  /* Too long: the Pad's words and its Save a backup button, and then what
+  /* Too long: the Pad's words and its Save as a file button, and then what
      only Flip knows -- how much of the length its generated pages are. */
   if(_B && _B.overBudget(frames)){
     const d = _B.describe(frames, f => !!genRecipe.get(f));
@@ -5950,7 +5961,7 @@ var postUI = window.SkriblPostSheet ? window.SkriblPostSheet.attach({
   opener: document.getElementById('postBtn'),
   toast: (msg) => chip(msg),
   submit: () => shareSkribl(),
-  backup: () => openSaveBackup(),   // the ⋯ menu's Save a backup, below
+  backup: () => openSaveBackup(),   // the ⋯ menu's Save as a file, below
   cancel: () => { if(_shareAbort) _shareAbort.abort(); },
   // The poster page, the one the share card shows (posterPage), on the
   // drawing's own ground.
@@ -6491,10 +6502,11 @@ if (window.SkriblSheetSwipe) window.SkriblSheetSwipe.attach(moreMenu, { handle: 
 })();
 
 bindEl('postBtn', 'click', openShareCompose);
-// Name it as part of saving — the drawer's button reads "Save a backup". Named,
-// because the Post sheet offers the same backup when an animation is too long.
+// Name it as part of saving — the drawer's button reads "Save as a file", the
+// menu's words, as on the Pad. Named, because the Post sheet offers the same
+// file when an animation is too long.
 function openSaveBackup(){
-  if(window.SkriblName && window.SkriblName.open){ window.SkriblName.open({label:'Save a backup', onConfirm:saveDraft}); }
+  if(window.SkriblName && window.SkriblName.open){ window.SkriblName.open({label:'Save as a file', onConfirm:saveDraft}); }
   else { saveDraft(); } }
 bindEl('miSave', 'click',()=>{ closeMenu(); openSaveBackup(); });
 bindEl('miLoad', 'click',()=>{ closeMenu(); draftInput.click(); });
@@ -11011,8 +11023,10 @@ bindEl('clear', 'click',e=>{
   armedClear=false; e.currentTarget.classList.remove('armed'); if(lbl) lbl.textContent='Clear all pages'; e.currentTarget.title='Delete all pages (keeps music and background)';
   clearAllPages();
 });
-bindEl('clearUndo', 'click',()=>{
-  if(!clearFramesBackup) return;
+// The way back from a clear: the pages drawer's Undo clear, and New Skribl's
+// Undo (lib/newundo.js). False when there is nothing to bring back.
+function restoreClear(){
+  if(!clearFramesBackup) return false;
   disarmAll();
   if(clearFramesBackup.doc){
     // New Skribl took the media too: the document comes back whole, through the
@@ -11023,8 +11037,7 @@ bindEl('clearUndo', 'click',()=>{
     if(b.name && window.SkriblName) window.SkriblName.restore(b.name);
     if(window.SkriblSavedDrafts) window.SkriblSavedDrafts.resume(b.draftId);
     redoStack.length=0; updateToolState();
-    chip('Animation restored');
-    return;
+    return true;
   }
   frames = clearFramesBackup.frames.map(deepCopy);
   idx = Math.min(clearFramesBackup.idx, frames.length-1);
@@ -11039,8 +11052,17 @@ bindEl('clearUndo', 'click',()=>{
   clearFramesBackup=null; redoStack.length=0; actionLog.length=0;
   document.getElementById('clearUndo').disabled=true;
   buildStrip(); render(); updateToolState(); scheduleSave();
-  chip('Animation restored');
-});
+  return true;
+}
+bindEl('clearUndo', 'click',()=>{ if(restoreClear()) chip('Animation restored'); });
+// NEW SKRIBL WITH ITS WAY BACK, the Pad's chip from the same code (the owner's
+// yes, Q4): "New Skribl" and an Undo; Undo says "Restored" and offers a Redo,
+// which is this again, on the shape New Skribl picked (preset), as the Pad's.
+function newSkriblWithUndo(preset){
+  clearAllPages({ media: true });
+  if(preset && preset.id!==currentSizeId()){ applyCanvasSize(preset.w, preset.h); syncCanvasSeg(); }
+  if(window.SkriblNewUndo) window.SkriblNewUndo.offer({ say: chip, undo: restoreClear, redo: ()=>newSkriblWithUndo(preset) });
+}
 
 /* Smear weight — the same seg shape as grid density and mirror, because it is
    the same kind of choice and the roving-tabindex keyboard model already knows
@@ -11243,8 +11265,8 @@ bindEl('miInfo', 'click',()=>{ closeMenu(); openHelpDrawer(); });
     const reshape=!!(preset && preset.id!==currentSizeId());
     const empty = frames.length===1 && frames[0].strokes.length===0 && !flipHasMedia();
     closeMenu(); disarmAll();
-    if(!empty) clearAllPages({ media: true });
-    if(reshape){ applyCanvasSize(preset.w, preset.h); syncCanvasSeg(); }
+    if(!empty) newSkriblWithUndo(preset);
+    else if(reshape){ applyCanvasSize(preset.w, preset.h); syncCanvasSeg(); }
     if(empty && !reshape) chip('Already a fresh one');
   });
 })();

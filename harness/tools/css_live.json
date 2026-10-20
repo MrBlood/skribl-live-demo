@@ -48,6 +48,7 @@
   ".player-bar.is-smart .t-dark b",
   ".player-bar.is-smart .t-light b",
   ":is(.canvas-wrap, .watch-full):is(:fullscreen, .is-immersive-page) .player-btn.full-exit",
+  ".canvas-wrap:is(:fullscreen, .is-immersive-page)",
   ".canvas-wrap:is(:fullscreen, .is-immersive-page) .player-more",
   ":is(.canvas-wrap, .watch-full):is(:fullscreen, .is-immersive-page) .player-progress",
   ":is(.canvas-wrap, .watch-full):is(:fullscreen, .is-immersive-page) .player-time",

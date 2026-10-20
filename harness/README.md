@@ -383,6 +383,23 @@ stays a sleep.
   not Flip Mode; P and E on both; Smudge; how to ask a button; the name's
   reach); Ask's drafts and draw-more answers; the Post and Shape cards; the
   book's speeds; and Draw along's ending, whole in a phone's pill.
+- `verify_names.py` — one name for each thing (the owner's yeses Q1, Q2,
+  Q5), red on the words before: Save as a file in the ⋯ menu and on the name
+  box's button, "Saved as a file" after it and "Opened your file" when one
+  opens, on both editors; the delete key everywhere the Library named a
+  recovery key; the Library's subtitle; and no script string or template text
+  left saying an old name.
+- `verify_posttitle.py` — the Post title starts from the drawing's name (the
+  owner's yes, Q3), on both editors through the one Post sheet
+  (lib/postsheet.js): an unnamed drawing's title stays empty, not its date
+  name; a named one's starts with its name and follows a rename; the next
+  drawing after New Skribl does not carry the last one's; words typed in the
+  box stay; and a box emptied by hand stays empty until the name changes.
+- `verify_newundo.py` — New Skribl and the way back on both editors
+  (lib/newundo.js, the owner's yes, Q4): Start says New Skribl with an Undo;
+  Undo brings the strokes, the name and the shape back and says Restored with
+  a Redo; Redo is Start again, on the shape it picked; the same words in the
+  same order on both; and Flip's faded chip takes no tap and no focus.
 - `verify_music.py` — one music editor on both editors (lib/musicdrawer.js,
   the owner's "it needs to be the same music editor on both pad and flip"),
   every row driven on the Pad and on Flip and red on one of them before: no

@@ -841,6 +841,11 @@
     border-radius: var(--r-pill); padding: 7px 14px; font-size: 12.5px; font-weight: 600;
     opacity: 0; pointer-events: none; transition: opacity .3s var(--ease); }
   .flip-chip.show { opacity: 1; }
+  /* An Undo or a Redo in the chip (New Skribl's, lib/newundo.js) is the Pad's
+     .toast-action, which takes taps back from the chip. Once the chip has
+     faded, the button goes as well: an unseen button must not take a tap meant
+     for the page under it, or be reached by Tab. After the fade, not before. */
+  .flip-chip:not(.show) .toast-action { visibility: hidden; transition: visibility 0s .3s; }
 
   /* ---------- Responsive header ----------
      Two circle toggles + fps + Flip-it + back + info + wordmark is a lot for a

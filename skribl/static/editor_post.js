@@ -35,7 +35,7 @@
     compose: window.SKRIBL_MODE === 'compose',
     toast: showToast,
     submit: () => submit(),
-    backup: () => openSaveBackup(),   // editor_menu.js: the ⋯ menu's Save a backup
+    backup: () => openSaveBackup(),   // editor_menu.js: the ⋯ menu's Save as a file
     cancel: () => { if (sendSkribl._abort) sendSkribl._abort.abort(); },
     onOpen: () => { pendingLocalId = null; openChips(false); renderSpeed(); },
     // Mirror the pad's shape so the snapshot shows whole (no crop), and match

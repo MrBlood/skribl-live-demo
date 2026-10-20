@@ -274,9 +274,13 @@ with sync_playwright() as sp:
     # controls (the edges' nudges, Match Drawing Time, Crossfade's and
     # Scroll's sync, the switch, the dead "Plays for" label) left app.js for
     # lib/musicdrawer.js, which the player never loads (-3,134 B, 148,536
-    # measured).
+    # measured). And RAISED, in both places together, by the owner's seven
+    # yeses (+88 B, all app.js, 148,624 measured): the file's own words
+    # ("Saved as a file", and "Opened your file" handed to loadSkribl, which
+    # says what its caller tells it), and the shape row in Settings kept true
+    # once a drawing opens, one line as restoreAutosave has.
     check("stripping keeps the player's JS under its ratchet",
-          lean_total <= 148_541,
+          lean_total <= 148_629,
           f"{src_total:,} B of source -> {lean_total:,} B parsed")
     # START-HERE concluded from a function count that reaching 153,600 needs a
     # separate player entry point, and the v199 handoff concluded from a
@@ -424,7 +428,12 @@ with sync_playwright() as sp:
     # rule, 73 B served), which the Gallery's old full-screen bar had and the
     # link page's band never did. The Gallery and the Library wear that band
     # now, so the rule went where it comes from. Spent value and 25 B again.
-    _css_target = 40_779
+    #
+    # AND 71 B MORE, IN WRITING, at the owner's yes to no shadow on any full
+    # screen (Q6): `.canvas-wrap:is(:fullscreen, .is-immersive-page)` drops
+    # the canvas frame's ring and vignette, the link page's full screen and
+    # the Pad's own (the same frame). Spent value and 25 B again.
+    _css_target = 40_850
     check(f"the player's stylesheet is served stripped, under the {_css_target:,}-byte target (40,000 once its debt is paid)",
           _href is not None and 0 < len(_served_css) <= _css_target and len(_served_css) < len(_raw_css),
           f"{len(_served_css):,} B served of {len(_raw_css):,} B on disk")

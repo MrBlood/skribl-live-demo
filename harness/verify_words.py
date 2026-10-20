@@ -137,8 +137,10 @@ with sync_playwright() as p:
           bool(F.get("Smudge")) and F["Smudge"].count("rather than doing nothing") == 1, F.get("Smudge"))
     check("How it works' empty search says how to ask a button, with a finger or a pointer",
           has(P.get("(empty)"), "hold one, or rest your pointer on it"), P.get("(empty)"))
-    check("Pad: the name's tip says what the name goes with, which is not yet a post's title",
-          has(P.get("Name"), "drafts, backups and exports", without=("and posts",)), P.get("Name"))
+    # A post's title since the owner's Q3: a name you give starts it.
+    check("Pad: the name's tip says what the name goes with, a post's title among them",
+          has(P.get("Name"), "drafts, backups and exports", "a name you give starts its title when you post",
+              without=("and posts",)), P.get("Name"))
     check("Signed out, Photo & music says nothing is uploaded until you post",
           has(P.get("Photo & music"), "Nothing is uploaded until you post."), P.get("Photo & music"))
 

@@ -2850,7 +2850,7 @@ function saveDraft() {
   a.click();
   document.body.removeChild(a);
   setTimeout(() => URL.revokeObjectURL(url), 1000);
-  showToast('Draft saved', menuBtn);
+  showToast('Saved as a file', menuBtn);
 }
 
 // Fully tear down any loaded music + photo before loading a draft, so a draft
@@ -2951,7 +2951,7 @@ function resetMediaForLoad() {
 // rule has to be uniform enough that omitting it is visible.
 let skriblLoadSeq = 0;
 
-function loadSkribl(data) {
+function loadSkribl(data, said) {
   // Validate the raw payload has a recognizable format marker, THEN canonicalize.
   if (!data || (data.version == null && data.schemaVersion == null && !data.frames)) { showToast('That file isn\'t a valid draft', menuBtn); return; }
   const loadSeq = ++skriblLoadSeq;   // this document load owns every callback below
@@ -2974,6 +2974,10 @@ function loadSkribl(data) {
       && data.canvasSize.cssWidth && data.canvasSize.cssHeight) {
     establishEditorCanvas(data.canvasSize.cssWidth, data.canvasSize.cssHeight);
     layoutEditorCanvas();
+    // ...and the shape row in Settings says so, as restoreAutosave's does:
+    // after New Skribl's Undo it lit the new shape over the old drawing, and
+    // a draft or a file of another shape opened under the last one's.
+    if (window.syncCanvasSeg) window.syncCanvasSeg();
   }
 
   // Background
@@ -3168,7 +3172,7 @@ function loadSkribl(data) {
   updateEmptyHint();
   updateCanvasLockCue();
   if (!document.body.classList.contains('player-mode')) {
-    showToast('Draft loaded', menuBtn);
+    showToast(said || 'Draft loaded', menuBtn);
     // The loaded draft is now the active work — refresh autosave so a later
     // restore prompt reflects this, not a stale previous session.
     setTimeout(() => {
@@ -3197,7 +3201,7 @@ bindEl('draftInput', 'change', (e) => {
       // still said "Draft loaded". Refuse with directions. Draft-file path
       // only — the shared player still opens Flip posts via loadSkribl.
       if (data && data.playbackMode === 'flip') return showToast('That\'s a Flip Skribl — open it in Flip', menuBtn);
-      loadSkribl(data);
+      loadSkribl(data, 'Opened your file');
     } catch (err) {
       showToast('Couldn\'t read that draft file', menuBtn);
     }
