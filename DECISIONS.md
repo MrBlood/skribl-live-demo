@@ -20222,3 +20222,63 @@ editor not watched (that editor's rows), the bar moved over the drawing.
 Pad and Flip: shared -- one module, each editor passes its own state.
 
 Not tested here: WebKit, which is the point of it.
+
+## After v326 -- T1: nothing heavy while the pen is down (bug fix)
+
+The owner, on the iPhone, after the input log went up: "If I draw back and
+fast on iPhone it stops and waits to catch up. Flip is fine. Saving pop?"
+
+The save was the thing. Both editors save a draft a moment after a change:
+the Pad 1.2s after a lift, Flip 0.8s after a change. The timer was never told
+about the next stroke, so when that stroke began inside the wait -- every
+stroke, drawing fast -- the draft was written and the Saved pill popped up in
+the middle of it, and the line stood still until both were done. Driven here
+with real touch, a stroke begun just after a lift and drawn on past the timer
+got one draft write with the pen down, on each editor.
+
+Now the debounced save waits for the finger: if a stroke is down when the
+timer goes off, it looks again a quarter second later (editor_draft.js
+autosaveWhenLifted, flip.js saveWhenLifted). A flush -- pagehide, leaving for
+the other editor -- still writes at once, because that path is about not
+losing work and nothing is being drawn then.
+
+Two smaller costs went with it. While the pen is down the saved pill is at a
+tenth of its strength, and now its frosted glass steps away too, as the
+header's always has: a blur nobody can see, redone for every frame of a
+changing screen, is work an iPhone does for nothing. And the Pad's take clock
+wrote the same "0:06" five times a second, each a layout; it is written when
+its words change.
+
+Measured first, on the way: the Pad restyles about seventeen times as often as
+Flip during the same scribble (Chromium's counters, processor slowed four
+times: 1,225 against 73), four in five of them the take's waveform, whose bars
+dance while the pen is down. That
+is the design (the owner's "the wave") and it stays; Chromium may not be what
+the iPhone does with it, and the input log is how to find out.
+
+verify_pointerpad: a stroke drawn past the timer gets no draft write with the
+pen down and one after the lift, on both editors; the pill has no glass while
+drawing; the clock is written at most once a second. Each red with its part
+undone: the Pad's old timer, Flip's old timer, the pill's rule removed, the
+clock written every tick.
+
+And one thing the old timing hid. A music write the store refused once is
+retried by the next save. On main that retry came from the save that landed
+mid-stroke, and the save after the lift found the bytes stored and said Saved.
+With one save after the lift, the retry's own landing has to say it, and it
+did not: the pill refreshed only while showing, and an amber you dismissed is
+hidden. Now a landing that turns a dismissed amber green says so
+(editor_draft.js _refreshMediaPill). verify_amber's retry row was red with the
+save fix alone, 109/110, and is green with this, 110/110.
+
+verify_strokegroups' snapshot taken mid-stroke is now a flush's
+(flushFlipDraft while the pen is down): the debounced save no longer writes
+mid-stroke, and a flush, the page hidden or left while drawing, still can.
+
+The player carries +74 B of script (the clock written on change, in app.js),
+raised in writing in verify_jsstrip and verify_player_isolation.
+
+Pad and Flip: the same rule in each editor's own save, and one shared pill rule.
+
+Not tested here: WebKit. The input log (?inputlog) on the owner's phone is the
+test that matters.

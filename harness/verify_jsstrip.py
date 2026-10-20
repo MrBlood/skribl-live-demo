@@ -278,9 +278,12 @@ with sync_playwright() as sp:
     # yeses (+88 B, all app.js, 148,624 measured): the file's own words
     # ("Saved as a file", and "Opened your file" handed to loadSkribl, which
     # says what its caller tells it), and the shape row in Settings kept true
-    # once a drawing opens, one line as restoreAutosave has.
+    # once a drawing opens, one line as restoreAutosave has. And RAISED, in both
+    # places together, by T1 after v326 (+74 B, all app.js, 148,703 measured):
+    # the take's clock written only when its words change, where it wrote the
+    # same "0:06" five times a second while the pen was down.
     check("stripping keeps the player's JS under its ratchet",
-          lean_total <= 148_629,
+          lean_total <= 148_708,
           f"{src_total:,} B of source -> {lean_total:,} B parsed")
     # START-HERE concluded from a function count that reaching 153,600 needs a
     # separate player entry point, and the v199 handoff concluded from a

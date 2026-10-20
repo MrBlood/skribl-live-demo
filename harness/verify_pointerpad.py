@@ -23,11 +23,15 @@ What each row pins, and what it replaced:
   * a mouse drags the photo in reposition mode (it listened on window mouse*);
   * a mouse stroke schedules the autosave (it listened for canvas mouseup);
   * the input log (lib/inputlog.js) records nothing without ?inputlog, and
-    with it marks a press either editor refused, with the editor's state.
+    with it marks a press either editor refused, with the editor's state;
+  * nothing heavy happens while the pen is down: the draft's save waits for
+    the lift, the saved pill drops its glass, and the take's clock is written
+    only when its words change.
 """
 import os
 import struct
 import sys
+import time
 import zlib
 
 BASE = os.environ.get("SKRIBL_BASE", "http://127.0.0.1:5001")
@@ -538,6 +542,77 @@ with sync_playwright() as sp:
               txt[:160])
         check(f"{name}: no page errors from the input log", not ierrs, "; ".join(ierrs[:2]))
         ictx.close()
+
+    # NOTHING HEAVY WHILE THE PEN IS DOWN (T1, after v326). The owner's iPhone:
+    # "If I draw back and fast on iPhone it stops and waits to catch up. Flip is
+    # fine. Saving pop?" The save's timer starts at a lift and went off whether
+    # or not the next stroke had begun, so the write and its Saved pill landed
+    # in the middle of it. Every write of the editor's draft is watched, with
+    # whether a stroke was down when it happened; the next stroke starts at once
+    # and is drawn back and forth for well past the timer.
+    print("\nPOINTER PAD AND FLIP — nothing heavy while the pen is down")
+    WATCH = """(key) => { window.__writes = [];
+      const set = Storage.prototype.setItem;
+      Storage.prototype.setItem = function (k, v) {
+        if (k === key) window.__writes.push(!!drawing);
+        return set.apply(this, arguments); }; }"""
+    for name, route, surface, key, wait in (("Pad", "/skribl-pad", "#canvas", "skribl_autosave_v1", 1200),
+                                           ("Flip", "/flip", "#pad", "skribl_flip_autosave_v1", 800)):
+        hctx = b.new_context(viewport={"width": 402, "height": 874}, has_touch=True, is_mobile=True)
+        hp = hctx.new_page()
+        herrs = []
+        hp.on("pageerror", lambda e: herrs.append(str(e)))
+        hp.goto(BASE + route, wait_until="load")
+        hp.evaluate("() => localStorage.clear()")
+        hp.reload(wait_until="load")
+        hp.wait_for_function("(s) => typeof drawing !== 'undefined' && !!document.querySelector(s)",
+                             arg=surface, timeout=15000)
+        hp.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+        hcdp = hctx.new_cdp_session(hp)
+        r = hp.locator(surface).bounding_box()
+        hx, hy = r["x"] + r["width"] * 0.2, r["y"] + r["height"] * 0.3
+
+        def ht(kind, pts):
+            hcdp.send("Input.dispatchTouchEvent", {"type": kind, "touchPoints": [{"x": x, "y": y, "id": i} for i, (x, y) in pts]})
+        ht("touchStart", [(1, (hx, hy))])
+        for k in range(1, 6):
+            ht("touchMove", [(1, (hx + k * 20, hy))])
+        ht("touchEnd", [])                                # a lift: the save's timer starts
+        hp.evaluate(WATCH, key)
+        ht("touchStart", [(2, (hx, hy + 90))])           # and the next stroke at once
+        until, k = time.time() + (wait + 1400) / 1000, 0
+        while time.time() < until:
+            k += 1
+            ht("touchMove", [(2, (hx + (k % 12) * 16, hy + 90 + (k % 3) * 4))])
+            if k == 20:
+                glass = hp.evaluate("() => getComputedStyle(document.getElementById('autosaveStatus')).backdropFilter")
+            hp.wait_for_timeout(25)
+        during = hp.evaluate("() => window.__writes.slice()")
+        ht("touchEnd", [])
+        hp.wait_for_timeout(wait + 900)
+        writes = hp.evaluate("() => window.__writes.slice()")
+        check(f"{name}: a save never lands while a stroke is down, however long the stroke",
+              not any(writes), f"{len(during)} draft writes during a {k}-move stroke, {sum(writes)} of them with the pen down")
+        check(f"{name}: ...it lands once the finger is up",
+              len(writes) > len(during) and writes[-1] is False, f"writes, pen down or not: {writes}")
+        check(f"{name}: ...and while the pen is down the saved pill keeps no frosted glass",
+              glass in ("none", ""), f"backdrop-filter {glass!r}")
+        check(f"{name}: no page errors from a long stroke past the save's timer", not herrs, "; ".join(herrs[:2]))
+        if name == "Pad":
+            # The take's clock, while a stroke records: written when its words change.
+            hp.evaluate("""() => { window.__clock = 0; new MutationObserver((l) => { window.__clock += l.length; })
+              .observe(document.getElementById('recTimer'), { childList: true, characterData: true, subtree: true }); }""")
+            ht("touchStart", [(3, (hx, hy + 180))])
+            t0, k = time.time(), 0
+            while time.time() < t0 + 2.2:
+                k += 1
+                ht("touchMove", [(3, (hx + (k % 12) * 16, hy + 180))])
+                hp.wait_for_timeout(25)
+            ht("touchEnd", [])
+            n = hp.evaluate("() => window.__clock")
+            check("Pad: ...and the take's clock is written when its words change, not five times a second",
+                  1 <= n <= 4, f"{n} writes of the clock in 2.2s of drawing")
+        hctx.close()
     b.close()
 
 passed = sum(1 for ok, _ in results if ok)

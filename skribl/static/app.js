@@ -1515,8 +1515,11 @@ function beginRecording(continueTake) {
     // the replay's length after pause-tightening; "0:06 · 0:01 play" said
     // nothing a first-time user could parse. Two spans, so the clock can stay
     // lit while the pen is down and the caption recedes with the rest.
-    recTimer.textContent = wall;
-    if (recPlays) recPlays.textContent = 'plays ' + play;
+    // Written only when the words change (T1, after v326): five times a second
+    // the same "0:06" was written again, and each write is a new layout while
+    // the pen is down.
+    if (recTimer.textContent !== wall) recTimer.textContent = wall;
+    if (recPlays && recPlays.textContent !== 'plays ' + play) recPlays.textContent = 'plays ' + play;
   }, 200);
 }
 

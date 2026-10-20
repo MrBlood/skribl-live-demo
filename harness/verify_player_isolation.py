@@ -898,7 +898,11 @@ with sync_playwright() as sp:
     #   it), and the shape row in Settings kept true once a drawing opens,
     #   one line as restoreAutosave has. verify_jsstrip's line moves with it.
     #   148,624 measured.
-    BYTES_RATCHET, BYTES_TARGET = 148_629, 153_800
+    # RAISED (T1, after v326: "it stops and waits to catch up"), for a named
+    #   cost, all in app.js: +74 B -- the take's clock written only when its
+    #   words change, where it wrote the same "0:06" five times a second while
+    #   the pen was down. verify_jsstrip's line moves with it. 148,703 measured.
+    BYTES_RATCHET, BYTES_TARGET = 148_708, 153_800
     # The page's own HTML. The brand is the one-stroke skribl signature INLINE
     # in the page (~1.4KB of paths, a ~0.9KB nonce'd draw-on script, and the
     # <linearGradient> defs), and inline is load-bearing rather than lazy:

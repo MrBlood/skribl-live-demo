@@ -590,7 +590,20 @@ function scheduleAutosave() {
   // disk no longer matches the document. draftRev is that fact as a number.
   draftRev++;
   clearTimeout(autosaveTimer);
-  autosaveTimer = setTimeout(writeAutosave, 1200);
+  autosaveTimer = setTimeout(autosaveWhenLifted, 1200);
+}
+
+// NEVER WITH THE PEN DOWN (after v326, the owner's iPhone, T1: "If I draw back
+// and fast on iPhone it stops and waits to catch up. Flip is fine. Saving
+// pop?"). The timer starts at a lift, so it went off 1.2s later whether or not
+// the next stroke had begun: the write and its Saved pill landed in the middle
+// of that stroke, and the line stood still until they were done. A stroke in
+// progress now puts the write off until the finger is up. A flush (pagehide,
+// leaving for Flip) still writes at once: that path is about not losing work,
+// and nothing is being drawn then.
+function autosaveWhenLifted() {
+  if (drawing) { autosaveTimer = setTimeout(autosaveWhenLifted, 250); return; }
+  writeAutosave();
 }
 
 function clearAutosave() {
@@ -979,11 +992,16 @@ const _fromStore = { photo: false, music: false };
 
 function _refreshMediaPill() {
   // Only speak when a save has already spoken — this refines the pill the
-  // last write showed, it never conjures one before the first save.
+  // last write showed, it never conjures one before the first save. An amber
+  // you dismissed has spoken too (hidden, still .partial): when the bytes it
+  // was about land, the green is news. It was always said by a second save;
+  // since the save waits for the pen to lift (T1, after v326) the save that
+  // retries the bytes is often the only one, so the landing says it.
   const el = document.getElementById('autosaveStatus');
-  if (!el || el.hidden) return;
+  const ok = mediaDurabilityOk() && !_pendingMediaLost();
+  if (!el || (el.hidden && !(ok && el.classList.contains('partial')))) return;
   if (durableRev === draftRev) {
-    showAutosaveStatus(mediaDurabilityOk() && !_pendingMediaLost() ? 'saved' : 'saved-no-media');
+    showAutosaveStatus(ok ? 'saved' : 'saved-no-media');
   }
 }
 
