@@ -590,7 +590,20 @@ function scheduleAutosave() {
   // disk no longer matches the document. draftRev is that fact as a number.
   draftRev++;
   clearTimeout(autosaveTimer);
-  autosaveTimer = setTimeout(writeAutosave, 1200);
+  autosaveTimer = setTimeout(autosaveWhenLifted, 1200);
+}
+
+// NEVER WITH THE PEN DOWN (after v326, the owner's iPhone, T1: "If I draw back
+// and fast on iPhone it stops and waits to catch up. Flip is fine. Saving
+// pop?"). The timer starts at a lift, so it went off 1.2s later whether or not
+// the next stroke had begun: the write and its Saved pill landed in the middle
+// of that stroke, and the line stood still until they were done. A stroke in
+// progress now puts the write off until the finger is up. A flush (pagehide,
+// leaving for Flip) still writes at once: that path is about not losing work,
+// and nothing is being drawn then.
+function autosaveWhenLifted() {
+  if (drawing) { autosaveTimer = setTimeout(autosaveWhenLifted, 250); return; }
+  writeAutosave();
 }
 
 function clearAutosave() {

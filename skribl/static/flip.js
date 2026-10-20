@@ -664,7 +664,7 @@ let _saveT = null;
 // media-spill paths still show "Saving…" while a multi-megabyte write is
 // genuinely pending, and 'failed'/'saved-no-media' still persist.
 var _flipDirty = false;   // an edit since the last save (scheduleSave sets it, saveNow clears it)
-function scheduleSave(){ _flipDirty = true; clearTimeout(_saveT); _saveT = setTimeout(saveNow, 800);
+function scheduleSave(){ _flipDirty = true; clearTimeout(_saveT); _saveT = setTimeout(saveWhenLifted, 800);
   if (typeof updateFlipEmptyHint === 'function') updateFlipEmptyHint(); }
 // media:false drops the base64 bytes but keeps photo/musicMeta, so a restore can
 // rebuild everything except the files themselves and prompt the user to re-add
@@ -1084,6 +1084,13 @@ function dropStoredMedia(){
 }
 // For lib/report.js: the media store as this session sees it.
 window.skriblMediaStoreState = () => 'spill ' + _mediaSpillState;
+// Never with the pen down: the Pad's rule (editor_draft.js autosaveWhenLifted,
+// the owner's T1 after v326). The debounce starts at a change, so a save could
+// land in the middle of the next stroke; it waits for the finger to lift.
+function saveWhenLifted(){
+  if(drawing){ _saveT = setTimeout(saveWhenLifted, 250); return; }
+  saveNow();
+}
 // Flush NOW — the 800ms debounce must never be a loss window (review P0-2).
 // saveNow() is synchronous for the localStorage half; the IndexedDB half was
 // written at the last quota save and only re-runs if this flush hits quota too.

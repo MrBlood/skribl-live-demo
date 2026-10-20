@@ -290,6 +290,10 @@ stays a sleep.
   ?inputlog it adds no bar and records nothing; with it, its bar stays off the
   drawing, a press the editor refused is marked NO STROKE with why, and Copy
   log puts the whole log on the clipboard under the editor's name and build.
+  And nothing heavy while the pen is down, on both editors: a stroke begun
+  just after a lift and drawn on past the save's timer gets no draft write
+  until the finger lifts, the saved pill drops its glass while drawing, and the
+  Pad's take clock is written only when its words change.
 - `verify_hostseams.py` — the four host seams: the SQL `feed_filter` (including
   that a filtered feed still returns FULL pages and a cursor pointing at a row
   the viewer saw), `csrf=False` producing a working app, `visibility_values`,

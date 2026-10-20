@@ -1120,6 +1120,14 @@ body.stroking .skribl-hint {
   opacity: 0.1;
   transition: opacity 0.3s ease 0.12s;
 }
+/* ...and the pill's glass steps away with the header's (T1, after v326: "it
+   stops and waits to catch up ... Saving pop?"). At a tenth of its strength
+   the blur shows nothing, and a frosted element on a screen that changes
+   every frame is a blur an iPhone redoes every frame. */
+body.stroking .autosave-status {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
 
 .zoom-hud {
   position: absolute;
