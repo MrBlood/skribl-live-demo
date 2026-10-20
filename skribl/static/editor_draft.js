@@ -992,11 +992,16 @@ const _fromStore = { photo: false, music: false };
 
 function _refreshMediaPill() {
   // Only speak when a save has already spoken — this refines the pill the
-  // last write showed, it never conjures one before the first save.
+  // last write showed, it never conjures one before the first save. An amber
+  // you dismissed has spoken too (hidden, still .partial): when the bytes it
+  // was about land, the green is news. It was always said by a second save;
+  // since the save waits for the pen to lift (T1, after v326) the save that
+  // retries the bytes is often the only one, so the landing says it.
   const el = document.getElementById('autosaveStatus');
-  if (!el || el.hidden) return;
+  const ok = mediaDurabilityOk() && !_pendingMediaLost();
+  if (!el || (el.hidden && !(ok && el.classList.contains('partial')))) return;
   if (durableRev === draftRev) {
-    showAutosaveStatus(mediaDurabilityOk() && !_pendingMediaLost() ? 'saved' : 'saved-no-media');
+    showAutosaveStatus(ok ? 'saved' : 'saved-no-media');
   }
 }
 

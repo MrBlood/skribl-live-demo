@@ -20262,6 +20262,22 @@ drawing; the clock is written at most once a second. Each red with its part
 undone: the Pad's old timer, Flip's old timer, the pill's rule removed, the
 clock written every tick.
 
+And one thing the old timing hid. A music write the store refused once is
+retried by the next save. On main that retry came from the save that landed
+mid-stroke, and the save after the lift found the bytes stored and said Saved.
+With one save after the lift, the retry's own landing has to say it, and it
+did not: the pill refreshed only while showing, and an amber you dismissed is
+hidden. Now a landing that turns a dismissed amber green says so
+(editor_draft.js _refreshMediaPill). verify_amber's retry row was red with the
+save fix alone, 109/110, and is green with this, 110/110.
+
+verify_strokegroups' snapshot taken mid-stroke is now a flush's
+(flushFlipDraft while the pen is down): the debounced save no longer writes
+mid-stroke, and a flush, the page hidden or left while drawing, still can.
+
+The player carries +74 B of script (the clock written on change, in app.js),
+raised in writing in verify_jsstrip and verify_player_isolation.
+
 Pad and Flip: the same rule in each editor's own save, and one shared pill rule.
 
 Not tested here: WebKit. The input log (?inputlog) on the owner's phone is the

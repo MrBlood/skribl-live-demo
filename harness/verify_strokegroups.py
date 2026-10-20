@@ -199,7 +199,11 @@ try:
         pg.mouse.move(cx + 50, cy + 50)
         pg.mouse.down()                    # second stroke starts inside the 800 ms
         pg.mouse.move(cx + 56, cy + 53)
-        pg.wait_for_timeout(1400)          # the autosave lands HERE, mid-stroke
+        # The debounced save waits for the lift now (T1, after v326: a save
+        # landing mid-stroke stalled the line), so the draft written mid-stroke
+        # is a flush's: the page hidden or left while a finger is down.
+        pg.wait_for_timeout(1400)
+        pg.evaluate("() => flushFlipDraft()")   # the snapshot lands HERE, mid-stroke
         draft = pg.evaluate("""() => {
             const raw = localStorage.getItem('skribl_flip_autosave_v1');
             if (!raw) return null;
@@ -208,7 +212,7 @@ try:
                 pts: (f.strokes || []).length,
                 grp: (f.strokeGroups || []).reduce((a, b) => a + b, 0)}));
         }""")
-        check("the autosave fired mid-stroke at all (FIXTURE GATE)",
+        check("a flush mid-stroke wrote the draft at all (FIXTURE GATE)",
               draft is not None and any(r["pts"] for r in draft),
               f"{draft} — if nothing was saved this phase proves nothing")
         check("a draft written mid-stroke is in step",
