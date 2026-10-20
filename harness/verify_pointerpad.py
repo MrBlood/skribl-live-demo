@@ -21,7 +21,9 @@ What each row pins, and what it replaced:
     was on touch events;
   * the eraser ring follows a MOUSE erase (it listened for mousemove);
   * a mouse drags the photo in reposition mode (it listened on window mouse*);
-  * a mouse stroke schedules the autosave (it listened for canvas mouseup).
+  * a mouse stroke schedules the autosave (it listened for canvas mouseup);
+  * the input log (lib/inputlog.js) records nothing without ?inputlog, and
+    with it marks a press either editor refused, with the editor's state.
 """
 import os
 import struct
@@ -466,6 +468,76 @@ with sync_playwright() as sp:
           f"photoOffsetX {ox0} -> {ox1}")
     check("no page errors from the photo drag", not errs, "; ".join(errs[:2]))
     ctx.close()
+
+    # THE INPUT LOG (lib/inputlog.js, both editors). The owner's iPhone after
+    # v326, T1: one finger, really fast, no thumb resting, nowhere near an
+    # edge, and the Pad "stops drawing ... if you wait a second it will accept
+    # your strokes", Flip fine. Chromium keeps every such stroke, so the phone
+    # is asked: opened with ?inputlog, each editor records what the screen
+    # said and what it did, and Copy hands that over as text. Off, it must add
+    # nothing; on, a press the editor refused has to say so, and why.
+    print("\nPOINTER PAD AND FLIP — the input log: off unless asked; on, a refused press says so")
+    for name, route, surface in (("Pad", "/skribl-pad", "#canvas"), ("Flip", "/flip", "#pad")):
+        ierrs = []
+
+        def iopen(url):
+            # A fresh context each time: a drawing restored from the last
+            # visit is a finished take, which the Pad locks against new ink.
+            c = b.new_context(viewport={"width": 402, "height": 874}, has_touch=True, is_mobile=True)
+            c.grant_permissions(["clipboard-read", "clipboard-write"], origin=BASE)
+            p = c.new_page()
+            p.on("pageerror", lambda e: ierrs.append(str(e)))
+            p.goto(BASE + url, wait_until="load")
+            p.wait_for_function("(s) => typeof drawing !== 'undefined' && !!document.querySelector(s)",
+                                arg=surface, timeout=15000)
+            p.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+            return c, p, c.new_cdp_session(p), p.locator(surface).bounding_box()
+
+        def istroke(r, tid, fy):
+            x, y = r["x"] + r["width"] * 0.3, r["y"] + r["height"] * fy
+            icdp.send("Input.dispatchTouchEvent", {"type": "touchStart", "touchPoints": [{"x": x, "y": y, "id": tid}]})
+            for k in range(1, 6):
+                icdp.send("Input.dispatchTouchEvent", {"type": "touchMove",
+                                                       "touchPoints": [{"x": x + k * 18, "y": y, "id": tid}]})
+            icdp.send("Input.dispatchTouchEvent", {"type": "touchEnd", "touchPoints": []})
+
+        LINES = r"() => SkriblInputLog.text().split('\n').filter(l => /^ *\d+\.\d{3} /.test(l)).length"
+        ictx, ip, icdp, r = iopen(route)
+        istroke(r, 1, 0.4)
+        off = ip.evaluate("() => [SkriblInputLog.on(), !!document.getElementById('skriblInputLog')]")
+        check(f"{name}: without ?inputlog the log is off: no bar, and a stroke records nothing",
+              off == [False, False] and ip.evaluate(LINES) == 0, f"on, bar: {off}; lines {ip.evaluate(LINES)}")
+        ictx.close()
+
+        ictx, ip, icdp, r = iopen(route + "?inputlog=1")
+        istroke(r, 1, 0.3)
+        ip.evaluate("() => { pinching = true; }")       # a press the editor will refuse, and why
+        istroke(r, 2, 0.45)
+        ip.evaluate("() => { pinching = false; }")
+        istroke(r, 3, 0.6)
+        bar = ip.evaluate("""(s) => { const b = document.getElementById('skriblInputLog');
+          if (!b) return null; const q = b.getBoundingClientRect(), d = document.querySelector(s).getBoundingClientRect();
+          const at = document.elementFromPoint((q.left + q.right) / 2, (q.top + q.bottom) / 2);
+          return { painted: !!(at && b.contains(at)), clear: q.bottom <= d.top || q.top >= d.bottom || q.right <= d.left || q.left >= d.right }; }""",
+                          surface)
+        check(f"{name}: ...with it, the log's bar is painted, and nowhere on the drawing",
+              bool(bar) and bar["painted"] and bar["clear"], str(bar))
+        txt = ""
+        if bar:                                          # no bar, nothing to copy: the rows below say so
+            ip.click("#skriblInputLog button:has-text('Copy log')")
+            ip.wait_for_timeout(300)
+            txt = ip.evaluate("() => navigator.clipboard.readText()")
+        downs = [l for l in txt.split("\n") if " ptr down " in l and " on DRAWING" in l]
+        check(f"{name}: ...a press the editor refused is marked NO STROKE, with why (pinching); the presses either side drew",
+              len(downs) == 3 and downs[1].endswith("<-- NO STROKE") and " pin1 " in downs[1]
+              and "NO STROKE" not in downs[0] + downs[2],
+              "\n      ".join(downs) or txt[:300])
+        build = ip.evaluate("() => document.querySelector('script[data-build]').getAttribute('data-build')")
+        check(f"{name}: ...and Copy log puts it all on the clipboard, headed by the editor and its build",
+              txt.startswith(f"Skribl input log · {name} · build {build}\n") and txt.count(" ptr up ") >= 3,
+              txt[:160])
+        check(f"{name}: no page errors from the input log", not ierrs, "; ".join(ierrs[:2]))
+        ictx.close()
     b.close()
 
 passed = sum(1 for ok, _ in results if ok)

@@ -286,7 +286,10 @@ stays a sleep.
   with force, a stroke that leaves the canvas, a second pointer mid-stroke, and
   the three listeners hung off a stroke that a prevented pointerdown would
   silence if they still waited for mouse events (eraser ring, photo drag,
-  autosave).
+  autosave). And the input log (lib/inputlog.js) on both editors: without
+  ?inputlog it adds no bar and records nothing; with it, its bar stays off the
+  drawing, a press the editor refused is marked NO STROKE with why, and Copy
+  log puts the whole log on the clipboard under the editor's name and build.
 - `verify_hostseams.py` — the four host seams: the SQL `feed_filter` (including
   that a filtered feed still returns FULL pages and a cursor pointing at a row
   the viewer saw), `csrf=False` producing a working app, `visibility_values`,
