@@ -20387,6 +20387,21 @@ and the 150% fixes on the phone (Z1 to Z4) were skipped this time: they go to
 the auditor as not re-checked on the phone. The owner then said go: "check
 answers, fix if need be, then seal". Nothing in the answers needed a fix.
 
+The first release run of this seal came back red in one suite, and the fix is
+in the suite, not the app. Blooby did not come on the first page a fresh server
+served: his player was not there within his 4 seconds, so he did not come and
+was not marked seen, and he came on the next open. That is his own rule
+working (lib/hello.js), met by accident. A fresh server trims the comments out
+of each script on its first request (security.py), about 3 seconds of lexing
+for the Pad's 107 files on this box, and his player waits in that queue; on a
+server's first page he came about 0.2 seconds inside his window, and the run
+gave verify_hello a fresh server of its own. The suite now opens both editors
+once before it measures him, and a new row holds his player back on purpose.
+Red without the warm-up on a fresh, busy server, four times in four; green
+with it, four in four; the new row red on a hello that marks him seen before
+he comes and on one with no time limit. The 3 seconds are real on any freshly
+started server, once per process; that is noted here, not changed in a seal.
+
 The resubmission asks for exactly this: one sealed release that carries the
 fixes, so the owner's re-test runs on a build whose menu says which one it is
 (Skribl · v327), with the hashes of what was tested.
