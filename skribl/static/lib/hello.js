@@ -58,12 +58,20 @@
    * scripts, which run after this one: on a slow line the player and the
    * drawing came first, and the mark played as plain pages, all at once and
    * gone in 0.8 s. The same file as the page's, so one of the two is the
-   * cache's. */
+   * cache's.
+   *
+   * ASKED FOR FIRST (owner: "Why does it not show every time in
+   * incognito"). An empty cache, as every private window has, on a slow
+   * line: the three files were asked for after the editor's hundred-odd
+   * scripts and came with them, 6.5 s into LATE's 4 on 3G, so it did not
+   * come. At high priority they are here within its first second, and it
+   * plays while the editor is still loading. */
   function script(src, name) {
     if (window[name]) return Promise.resolve();
     return new Promise(function (done, fail) {
       var js = document.createElement('script');
       js.src = src;
+      js.fetchPriority = 'high';
       js.onload = function () { if (window[name]) done(); else fail(); };
       js.onerror = fail;
       document.head.appendChild(js);
@@ -80,7 +88,7 @@
                         script(el.getAttribute('data-player-js'), 'SkriblInline')]);
   }
   function drawing() {
-    return fetch(el.getAttribute('data-hello')).then(function (r) {
+    return fetch(el.getAttribute('data-hello'), { priority: 'high' }).then(function (r) {
       if (!r.ok) throw new Error('hello ' + r.status);
       return r.json();
     });

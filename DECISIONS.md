@@ -20569,3 +20569,35 @@ them and it never came at all, red for the wrong reason.
 
 Pad and Flip: one partial and one module for both editors. Not tested here:
 the iPhone's engine; this is the kind of thing a phone on a slow line does.
+
+## After v327 -- The hello asks for its files first, so a slow first visit still gets it (bug fix)
+
+The owner: "Why does it not show every time in incognito". Two reasons, one of
+them a bug.
+
+Once it has played, a private window remembers it: the hello comes once, and
+Chrome and Edge keep one memory for every incognito window until the last one
+closes. That is by design.
+
+The bug: an empty cache, as every private window has, on a slow line. The
+hello waits LATE (4 s) for its three files (the player, the hold timing, the
+drawing) and otherwise does not come that time. They are small, but they were
+asked for after the editor's own 104 scripts (384 KB here) and came with them.
+Measured here on an empty cache, with Chrome's network presets: Slow 4G had
+them at 3.3 s of its 4, and 3G at 6.5 s, so on 3G it never came, and on a
+phone's real line Slow 4G sits at the edge.
+
+Now the three are asked for at high priority (fetchPriority on the two
+scripts, priority on the drawing's fetch): Slow 4G has them at 0.45 s, 3G at
+0.92 s, and the hello plays while the editor is still loading (3G: its files
+at 2.5 s, the page's at 8.1 s). Nothing more is fetched, and LATE is as it was.
+
+CHECKED (verify_hello, an empty cache on DevTools' 3G): the hello comes, its
+files here before the page's own scripts. Red on the old hello (taken away at
+4.4 s, its files at 6.8 s), green with this. The measuring tool was itself
+shown both ways first: it read "not this time" on every run until its watch
+was pointed at the document rather than a root that did not exist yet.
+
+Not tested here: WebKit, and the live site, whose server may share the line
+differently from this box's (HTTP/1.1 here); the priority is the same ask of
+the browser either way.

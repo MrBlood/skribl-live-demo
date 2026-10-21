@@ -31,6 +31,8 @@ The v327 seal run met that path by accident, on a server's first page (see the
 warm-up below), and read it as a failure; this row meets it on purpose. So is
 a slow line for the page's own scripts: the hello brings the hold timing with
 the player, or it played its drawing as plain pages, all at once (after v327).
+And an empty cache on 3G, as a private window has: its files asked for first,
+or they queued behind the editor's and it missed its window.
 """
 import base64
 import io
@@ -525,6 +527,35 @@ with sync_playwright() as p:
           f"still writes itself in its own time ({timed} ms), never as plain pages all at once",
           hold_after and len(held_page) == 1 and plan is not None and not plan["pageRan"] and plan["total"] == timed,
           f"held {behind} ({len(held_page)}), the hold timing behind it: {hold_after}; the hello's player {plan}")
+    c.close()
+
+    # An empty cache on a slow line, as a first visit in a private window on
+    # a phone meets it (owner: "Why does it not show every time in
+    # incognito"): 3G as DevTools has it. The hello's three files were asked
+    # for after the editor's hundred-odd scripts and came with them, 6.5 s
+    # into its 4, so it did not come; asked for first, they are here within
+    # its first second and it plays while the editor is still loading. The
+    # hold timing is asked for twice, the page's copy and the hello's, so
+    # its first arrival is the hello's.
+    c = b.new_context(**PHONE)
+    c.add_init_script(FORCE)
+    q = c.new_page()
+    cdp = c.new_cdp_session(q)
+    cdp.send("Network.enable")
+    cdp.send("Network.emulateNetworkConditions", {"offline": False, "latency": 300,
+                                                  "downloadThroughput": 0.78e6 / 8, "uploadThroughput": 0.33e6 / 8})
+    q.goto(BASE + "/skribl-pad", wait_until="commit", timeout=60000)
+    q.wait_for_function("() => !!document.body", timeout=30000)
+    s3, ms3 = _until(q, lambda s: (s["painted"] and s["on"]) or not s["here"], 15000)
+    q.wait_for_load_state("domcontentloaded", timeout=60000)
+    tm = q.evaluate("""() => { const ends = n => performance.getEntriesByType('resource').filter(e => e.name.includes(n)).map(e => e.responseEnd);
+        const late = n => Math.max(0, ...ends(n)), first = n => ends(n).length ? Math.min(...ends(n)) : Infinity;
+        return { own: Math.round(Math.max(late('/inlineplayer.js'), first('/lib/holdtiming.js'), late('/brand/hello.json'))),
+                 page: Math.round(performance.getEntriesByType('navigation')[0].domContentLoadedEventEnd) }; }""")
+    check("an empty cache on a slow line (3G), as a first visit in a private window: the hello still comes, "
+          "its own files asked for first and here before the editor's own scripts",
+          ms3 is not None and s3["painted"] and tm["own"] < tm["page"],
+          f"came {s3['painted']} after {ms3} ms (here {s3['here']}); its files by {tm['own']} ms, the page's by {tm['page']} ms")
     c.close()
 
     # Flip: the same hello, and one "seen" for both editors.
