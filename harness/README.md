@@ -199,7 +199,10 @@ stays a sleep.
   several at once, and the clips advance and match the theme; the chips
   filter; Escape, the grip and closing How it works close the drawer and stop
   everything; Try it picks the tool and leaves Shape's card open; reduced
-  motion shows finished drawings and posters and fetches no video. Every example is drawn through the real editor by
+  motion shows finished drawings and posters and fetches no video; on a phone
+  How it works rises in with no frame jumping, and opening it does not work
+  the page's style out again for every entry (counted by the browser, so a
+  busy runner cannot decide it). Every example is drawn through the real editor by
   `tools/make_art.py` (Pad: the tool cards, the quick start's Draw card and
   Ideas to try) and `tools/make_flip.py` (Flip loops): an illustrator's
   strokes, `tools/artworks.py` and `tools/flipworks.py`, performed as real pen
@@ -482,7 +485,8 @@ stays a sleep.
   until it has; the dot comes to rest over the i (read off the canvas's own
   pixels); the ink lifts away in the order it was written (read off the
   screen's pixels, the way out held at its start and its middle), and it never
-  comes again. A tap skips it, holds what is written and draws nothing; a key
+  comes again. A tap skips it, holds what is written, draws nothing and
+  presses nothing under it (tapped over the menu, the menu stays shut); a key
   skips it and does nothing else; a still hello under Reduce Motion, the
   finished mark, then just a fade; a slow line, and it waits for the next
   open; a slow line for the page's own scripts, and it still writes itself in

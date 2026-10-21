@@ -146,16 +146,28 @@
       fitting = true;
       requestAnimationFrame(function () { fitting = false; fitMore(); });
     }
+    /* EVERY ENTRY IS READ FIRST, THEN WRITTEN, and only what changed (main
+     * red after #571: How it works jumped 59% of its rise in one frame). It
+     * wrote each More's word and then read the next entry's height, so the
+     * browser worked out the page's style again once an entry, and once more
+     * for each new label lib/labels.js wrapped: 150 to 165 times as it began
+     * to rise, 120-170 ms in one go here and about a second on a phone-slow
+     * processor (verify_helpdemos counts them). */
     function fitMore() {
       if (drawer.hidden) return;
-      [].slice.call(drawer.querySelectorAll('.help-tip')).forEach(function (tip) {
+      var seen = [].slice.call(drawer.querySelectorAll('.help-tip')).map(function (tip) {
         var b = tip.querySelector('.help-more'), d = tip.querySelector('.help-desc');
-        if (!b || !d) return;
+        if (!b || !d) return null;
         var open = tip.classList.contains('is-open');
-        b.textContent = open ? 'Less' : 'More';
-        b.setAttribute('aria-expanded', String(open));
         // A rendered entry whose words all fit has nothing more to show.
-        if (!open && d.clientHeight) b.hidden = d.scrollHeight <= d.clientHeight + 1;
+        return { b: b, open: open, fits: !open && d.clientHeight ? d.scrollHeight <= d.clientHeight + 1 : null };
+      });
+      seen.forEach(function (s) {
+        if (!s) return;
+        var word = s.open ? 'Less' : 'More';
+        if (s.b.textContent !== word) s.b.textContent = word;
+        if (s.b.getAttribute('aria-expanded') !== String(s.open)) s.b.setAttribute('aria-expanded', String(s.open));
+        if (s.fits !== null && s.b.hidden !== s.fits) s.b.hidden = s.fits;
       });
     }
     drawer.addEventListener('click', function (e) {

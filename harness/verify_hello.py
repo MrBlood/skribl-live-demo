@@ -450,6 +450,27 @@ with sync_playwright() as p:
           f"{ms2} ms; words still up: {ink}")
     c.close()
 
+    # ...AND THE TAP PRESSES NOTHING UNDER IT (found building the hello's
+    # mock). It lets go of the pointer as it starts to leave, and a phone
+    # makes a tap's click where the finger lifts, on whatever is under it: a
+    # tap over the menu at the top right skipped the hello and opened the
+    # menu, on the Pad and on Flip. A mouse's click never reached it.
+    shut = []
+    for route, btn in (("/skribl-pad", "menuBtn"), ("/flip", "moreBtn")):
+        c = b.new_context(**PHONE)
+        q = _open(c, route)
+        s, ms = _until(q, lambda s: s["painted"] and s["on"] and s["el"] >= 500, 8000)
+        x, y = q.evaluate("(id) => { const r = document.getElementById(id).getBoundingClientRect(); "
+                          "return [r.left + r.width / 2, r.top + r.height / 2]; }", btn)
+        q.touchscreen.tap(x, y)
+        s2, ms2 = _until(q, lambda s: not s["here"], 1500)
+        q.wait_for_timeout(300)
+        shut.append((route, ms, ms2, q.evaluate("(id) => document.getElementById(id).getAttribute('aria-expanded')", btn)))
+        c.close()
+    check("...and that tap presses nothing under it: tapped over the menu, the hello goes and the menu stays shut",
+          all(ms is not None and ms2 is not None and was == "false" for _, ms, ms2, was in shut),
+          "; ".join(f"{r}: came after {ms} ms, gone {ms2} ms after the tap, the menu open: {was}" for r, ms, ms2, was in shut))
+
     # Reduce Motion: a still hello, the finished mark with its dot in place, then it just fades.
     c = b.new_context(reduced_motion="reduce", **PHONE)
     q = _open(c, "/skribl-pad")
