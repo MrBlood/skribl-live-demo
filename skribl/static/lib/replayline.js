@@ -206,8 +206,44 @@
    *             it to the columns. The caller's code, so a surface that
    *             needs neither does not carry it.
    *   tip(f)    optional: the bubble's words instead of the clock
-   * Returns { paint(f), reset(), drag(surface, on) }. */
+   * Returns { paint(f), reset(), drag(surface, on) }.
+   *
+   * A DOT IN EACH NEW COLOUR WHERE A LINE CHANGED IT (the owner, of the
+   * desktop checks: "the scrubber shows nothing during the recolor part", and
+   * then "all yes" to B of the mock). A recolour lays no ink, so the columns
+   * were empty while colours ran; each moment is now a dot of the colour it
+   * gave, in the middle of its run, found in the timeline itself (the pair of
+   * entries lib/recolorplay.js place() puts there a RUN apart, the first in
+   * the new colour), so every player that hands over its points has them and a
+   * Flip, whose points are none, has none. Played, a dot is whole; ahead, half
+   * as strong, as the columns are faded. A colour that would not read on the
+   * track (under 3:1 against what is painted there) is ringed in the bar's own
+   * colour, which does, in both themes. */
   var FINE = [[110, 0.25], [48, 0.5]], LIFT = 56;
+  function rgbOf(c) {
+    var m = /^#([0-9a-f]{6})$/i.exec(c || '');
+    if (m) return [parseInt(m[1].slice(0, 2), 16), parseInt(m[1].slice(2, 4), 16), parseInt(m[1].slice(4), 16), 1];
+    m = /rgba?\(([^)]+)\)/.exec(c || '');
+    if (!m) return null;
+    var v = m[1].split(',').map(parseFloat);
+    return [v[0], v[1], v[2], v.length > 3 ? v[3] : 1];
+  }
+  function over(a, b) { return [0, 1, 2].map(function (k) { return a[k] * a[3] + b[k] * (1 - a[3]); }); }
+  function lum(c) {
+    return [0.2126, 0.7152, 0.0722].reduce(function (s, w, k) {
+      var v = c[k] / 255; return s + w * (v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4));
+    }, 0);
+  }
+  // What is painted where the bar is: its own ground over its ancestors'.
+  function behind(el) {
+    var ls = [], c = [255, 255, 255];
+    for (; el && el.nodeType === 1; el = el.parentElement) {
+      var b = rgbOf(getComputedStyle(el).backgroundColor);
+      if (b && b[3] > 0) { ls.push(b); if (b[3] >= 1) break; }
+    }
+    while (ls.length) c = over(ls.pop(), c);
+    return c;
+  }
   function scrub(bar, o) {
     if (!bar || !o) return null;
     bar.classList.add('rl-scrub');
@@ -215,7 +251,17 @@
         head = document.createElement('span');
     cv.className = 'rl-strip'; tip.className = 'rl-bubble'; head.className = 'rl-head';
     [cv, head, tip].forEach(function (e) { e.setAttribute('aria-hidden', 'true'); bar.appendChild(e); });
-    var cols = null, drawnCol = -2, drag = null;
+    var cols = null, drawnCol = -2, drag = null, marks = [], marksOf = null;
+    function moments() {
+      var tl = o.points() || [], T = o.total() || 1;
+      if (tl === marksOf) return marks;
+      marksOf = tl; marks = [];
+      for (var k = 0; k < tl.length; k++) {
+        var e = tl[k], n = tl[k + 1];
+        if (e.rc && !e.rcEnd) marks.push({ f: (e.playT + (n && n.rcEnd ? n.playT : e.playT)) / 2 / T, c: e.color });
+      }
+      return marks;
+    }
 
     function bin() {
       var tl = o.points() || [], T = o.total() || 1, w = bar.clientWidth;
@@ -268,6 +314,17 @@
         x.globalAlpha = k < at ? 1 : 0.36;
         x.fillRect(k * cw + cw * 0.2, (H - ch) / 2, cw * 0.6, ch);
       }
+      var ms = moments(), track = ms.length ? behind(bar) : null, ink = x.fillStyle;
+      for (k = 0; k < ms.length; k++) {
+        var c = rgbOf(ms[k].c);
+        if (!c) continue;
+        var la = lum(over(c, track)), lb = lum(track);
+        x.globalAlpha = ms[k].f < f ? 1 : 0.5;
+        x.beginPath(); x.arc(ms[k].f * cv.width, H / 2, 3.5 * dpr, 0, 2 * Math.PI);
+        x.fillStyle = ms[k].c; x.fill();
+        if ((Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05) < 3) { x.strokeStyle = ink; x.lineWidth = dpr; x.stroke(); }
+      }
+      x.globalAlpha = 1; x.fillStyle = ink;
     }
     // r is the bar's box; lift how far over it the bubble's foot wants to be.
     function say(f, fine, r, lift) {

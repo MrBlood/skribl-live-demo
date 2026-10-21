@@ -928,7 +928,15 @@ with sync_playwright() as sp:
     #   script tag here, so a drawing without recolours, which is nearly all
     #   of them, downloads none of it. verify_jsstrip's line moves with it.
     #   150,945 measured.
-    BYTES_RATCHET, BYTES_TARGET = 150_950, 153_800
+    # RAISED (the owner's yes to B after the desktop checks: "the scrubber
+    #   shows nothing during the recolor part"), for a named cost, all in
+    #   lib/replayline.js: +1,758 B -- each colour's moment found in the
+    #   timeline the scrubber already reads, and its dot's contrast against
+    #   what is painted under the bar, so a colour that would not read on the
+    #   track is ringed in the bar's own colour. Every page with a scrubber
+    #   pays it; the dots only draw where a drawing has recolours.
+    #   verify_jsstrip's line moves with it. 152,703 measured.
+    BYTES_RATCHET, BYTES_TARGET = 152_708, 153_800
     # The page's own HTML. The brand is the one-stroke skribl signature INLINE
     # in the page (~1.4KB of paths, a ~0.9KB nonce'd draw-on script, and the
     # <linearGradient> defs), and inline is load-bearing rather than lazy:

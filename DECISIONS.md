@@ -21101,3 +21101,70 @@ green on both.
 
 Pad and Flip: shared, lib/learncard.js serves both.
 
+## After v328 -- A dot on the scrubber where a line changed colour, and the glowing dot in the files (the owner's yeses after the desktop checks)
+
+Two of the owner's notes on the desktop checks, both about watching a drawing:
+"not a problem, but the scrubber shows nothing during the recolor part", and,
+of a GIF and a video of a recoloured drawing, "does the nip dissappear on mp4,
+on gif". Mocked (now, A purple bars through each run, B a dot of the new
+colour at each change; and the screen's dot beside the owner's own video at
+the same moment), and "all yes": B, and the dot in the files.
+
+THE SCRUBBER'S DOTS (lib/replayline.js scrub()). A recolour lays no ink, so the
+columns were empty while colours ran. Each colour's moment is now a dot of the
+colour it gave, in the middle of its run, found in the timeline the scrubber
+already reads: lib/recolorplay.js place() puts each moment there as two entries
+a RUN apart at the tap, the first in the new colour. So every player that hands
+the scrubber its points has the dots (the link page, the Pad's own preview, a
+post's card once its drawing is there), and a Flip, whose points are none, has
+none; Flip's recolours change a page, not a moment in a replay. Played, a dot
+is whole; ahead of the playhead, half as strong, as the columns are faded. The
+mock measured pink and green at 2.7:1 on the light track and 5.9:1 on the dark,
+so a dot whose colour would not read at 3:1 against what is painted under the
+bar is ringed in the bar's own colour, which reads on both (3.81:1 on the
+light, 4.16:1 on the dark): pink and green are ringed on the light track and
+not on the dark, and a very dark colour would be ringed on the dark track.
+
+The player's script pays for it in writing: +1,758 B, all lib/replayline.js
+(the moments found in the timeline and each dot's contrast against what is
+under the bar). verify_jsstrip's and verify_player_isolation's line moves to
+152,708, verify_inline's embed line to 73,979.
+
+THE GLOWING DOT IN THE FILES (editor_export.js exportNib). The screen's replay
+has a bead riding the point just drawn (app.js showNibAtIndex); the GIF and the
+video now draw the same bead over each frame, after the drawing so the drawing
+never holds it: 1.9 times the line's width at the file's scale, 5 to 90 px,
+tinted to the ink, with its halo of the same ink outside it as the stylesheet's
+box-shadow casts one, the halo scaled with the bead so a 480 px GIF and a
+full-size video keep its look. At a colour's moment the timeline's own entry is
+the tap the colour runs from, so the bead sits there in the new colour while it
+runs, as on screen. None while erasing (the screen's is a faint hollow ring,
+not ink), and none once the drawing is done: the finished drawing is held
+without it, as the player's finished poster is. All three of the Pad's file
+paths draw it (the GIF, the MP4 through WebCodecs, the WebM through
+MediaRecorder). Flip has no bead on screen, not even on a page that draws
+itself, so its files have none either; I told the owner Flip's pages "appear
+whole", which is not quite so, and the point stands for that reason instead.
+
+verify_recolorplay: THE SCRUBBER'S DOTS (the link page in both themes and the
+Pad's preview) and THE BEAD IN THE FILES (a GIF, a WebM, and the MP4 path's own
+frames, read by what each frame shows rather than when, so a recorder running
+late under load cannot move the answer). Headless Chromium here has no H.264
+encoder, so the MP4 row hands the export a stand-in encoder that steps the
+frames as lib/mp4export.js does and keeps each one: the frames read are the
+ones a desk's Chrome or Edge would encode.
+
+Each row was shown red by its own break, on a trimmed copy of the suite. The
+dots: none drawn turns all three dot rows red; the ring never drawn, the light
+page's row only (its rim reads the dot's pink, -80, where the ring's purple
+reads +121); the ring always drawn, the dark page's only; no fading ahead of
+the playhead, both link pages (255 ahead, where half is 128). The bead: the
+GIF's, the WebM's and the MP4 path's calls each taken away turn their own
+file's row red and no other; the bead kept on the finished drawing turns all
+three red on the last frame (the tap tinted 111 to 132, where 30 is the most
+allowed); the bead skipped while a colour runs turns all three red on the tap
+(1 to 4, where 25 is the least). As built, every row is green.
+
+Pad and Flip: the dots are shared code that Flip reaches with no moments; the
+bead is the Pad's export, since Flip has none on screen.
+
