@@ -1350,6 +1350,24 @@ body.playback-paused .tap-paused { display: grid; }
   transition: opacity 0.25s ease;
 }
 .skribl-hello.is-on { opacity: 1; }
+/* THE HELLO'S GROUND FROM THE FIRST PAINT (the owner, on a reload: "it goes to
+   the canvas first, then goes to the skribl cursive"). The hello shows once the
+   page's scripts and its files are here, by when the canvas had been painted.
+   When it will come, the head says so before the first paint
+   (_skribl_hello_boot.html) and this lays its ground over the page, just under
+   the hello, so the first thing painted is the ground the mark writes on.
+   lib/hello.js takes it from under the hello as the hello leaves; "lift" is
+   its fade when the page is ready before the hello's files are, or the hello
+   does not come after all. */
+html[data-hello-cover] body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: var(--surface-base);
+  transition: opacity 0.35s ease;
+}
+html[data-hello-cover="lift"] body::after { opacity: 0; pointer-events: none; }
 .skribl-hello.is-leaving {
   opacity: 0;
   transition: opacity 0.45s ease;

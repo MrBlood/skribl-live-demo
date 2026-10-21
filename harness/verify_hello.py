@@ -35,6 +35,14 @@ And an empty cache on 3G, as a private window has: its files asked for first,
 or they queued behind the editor's and it missed its window, and drawn once the
 page's own scripts are done, or it froze as each of them ran. And the replay
 link: ?hello=again plays it again where it was seen, asking as this suite does.
+
+Its ground first (owner, after the desktop checks: "on a reload it goes to the
+canvas first, then goes to the skribl cursive"): read off every frame the
+screen makes on a reload of the replay link, the first thing painted is the
+hello's ground and nothing of the page shows before the hello. The ground
+holds the page only while the page's own scripts come; and if lib/hello.js
+never runs it goes by itself. Whether it comes is the head's decision alone
+(_skribl_hello_boot.html), with the one key lib/hello.js marks.
 """
 import base64
 import io
@@ -248,6 +256,15 @@ far, dot_off = on_the_mark(HELLO_JSON)
 check(f"the hello writes the header's own mark: its line within {NEAR} of the mark's units of the header's, "
       "its dot at rest on the header's dot", far <= NEAR and dot_off <= NEAR,
       f"its line strays {far}, its dot is {dot_off} away (make_hello.py draws it from the template)")
+# Whether it comes is decided in the page's head, before the first paint
+# (_skribl_hello_boot.html), and lib/hello.js marks it seen: the one key in
+# both, and no second decision in lib/hello.js (no read of what was seen).
+_boot = open(os.path.join(ROOT, "skribl", "templates", "skribl", "_skribl_hello_boot.html")).read()
+_js = open(os.path.join(ROOT, "skribl", "static", "lib", "hello.js")).read()
+_bk, _jk = re.findall(r"localStorage\.getItem\('([^']+)'\)", _boot), re.findall(r"var KEY = '([^']+)'", _js)
+check("the head decides whether it comes and lib/hello.js marks it seen, with the one key; lib/hello.js decides nothing again",
+      _bk == [KEY] and _jk == [KEY] and "localStorage.getItem" not in _js,
+      f"the head reads {_bk}, lib/hello.js marks {_jk}, and reads seen itself: {'localStorage.getItem' in _js}")
 HELLO = json.load(open(HELLO_JSON))
 
 
@@ -375,6 +392,36 @@ def _sharp(s):
     ok = grid and s["px"] == [k * w, k * h] and all(abs(v) <= 0.1 for v in s["fill"]) and s["moved"] == "none"
     return ok, (f"stage {s['stage']} screen px, drawing {s['px']} (want {k} x), canvas against the stage "
                 f"{s['fill']}, moved by {s['moved']}")
+
+
+LEFT = (0, 255, 0)    # the page a reload leaves, painted a colour no Skribl page is
+
+
+def _seen(png, ground):
+    """What one frame of the screen shows: the page being left, a blank
+    frame, the PAGE (its header or its dock: anything but the ground along
+    the top or the foot, where the hello draws nothing), the hello's ink on
+    its ground, or the ground alone."""
+    im = _png(png).convert("RGB")
+    im = im.resize((im.width // 4, im.height // 4))
+    w, h = im.size
+    px = im.load()
+
+    def share(y0, y1, test):
+        pts = [px[x, y] for y in range(y0, y1) for x in range(0, w, 2)]
+        return sum(1 for c in pts if test(c)) / max(1, len(pts))
+
+    def off(c, ref, d):
+        return max(abs(a - b) for a, b in zip(c, ref)) > d
+    if share(0, h, lambda c: not off(c, LEFT, 30)) > 0.5:
+        return "left"
+    if share(0, h, lambda c: not off(c, (255, 255, 255), 6)) > 0.95:
+        return "blank"
+    if max(share(0, h // 12, lambda c: off(c, ground, 40)), share(h - h // 9, h, lambda c: off(c, ground, 40))) > 0.004:
+        return "page"
+    if share(h // 3, 2 * h // 3, lambda c: off(c, ground, 40)) > 0.001:
+        return "hello"
+    return "ground"
 
 
 with sync_playwright() as p:
@@ -551,12 +598,18 @@ with sync_playwright() as p:
     # for that script, so this open waits only for the page's own parse.
     c = b.new_context(**PHONE)
     c.add_init_script(FORCE)
+    # Every change to the ground the head laid, on the page's clock.
+    c.add_init_script("""window.__cover = []; new MutationObserver(() => window.__cover.push(
+        [document.documentElement.getAttribute('data-hello-cover'), Math.round(performance.now())]))
+      .observe(document, { attributes: true, attributeFilter: ['data-hello-cover'], subtree: true });""")
     held_js = []
     c.route("**/inlineplayer.js*", lambda r: held_js.append(r))
     q = c.new_page()
     q.goto(BASE + "/skribl-pad", wait_until="domcontentloaded")
     q.wait_for_timeout(5000)
     s = q.evaluate(ST, False)
+    cover = q.evaluate("() => window.__cover")
+    ready = q.evaluate("() => Math.round(performance.getEntriesByType('navigation')[0].domContentLoadedEventStart)")
     for r in held_js:
         r.continue_()
     c.unroute("**/inlineplayer.js*")
@@ -569,6 +622,34 @@ with sync_playwright() as p:
           len(held_js) == 1 and not s["painted"] and s["canvasThere"] and s["seen"] is None
           and not s1["painted"] and s1["seen"] is None and ms2 is not None and s2["seen"] == "1",
           f"held {len(held_js)}; at 5 s {s}; once it came {s1}; next open {s2} after {ms2} ms")
+    # ...and its ground holds the page only while the page's own scripts come,
+    # as an app's launch screen does: once they are done it waits a moment for
+    # the hello's files, then fades, never the 4 s the hello waits for them.
+    t = {k: v for k, v in reversed(cover)}
+    lift, gone = t.get("lift"), t.get(None)
+    check("...its ground holds the page while the page's own scripts come, then fades once they are done "
+          "(within 1.5 s), not when the hello gives up",
+          [k for k, _ in cover] == ["up", "lift", None] and lift is not None and ready <= lift <= ready + 1500
+          and gone is not None and 300 <= gone - lift <= 1500,
+          f"the ground: {cover}; the page ready at {ready} ms")
+    c.close()
+
+    # IF lib/hello.js NEVER RUNS (refused here), the head's ground goes by
+    # itself: at 8 s, and the canvas is there.
+    c = b.new_context(**PHONE)
+    c.add_init_script(FORCE)
+    c.route("**/lib/hello.js*", lambda r: r.abort())
+    q = c.new_page()
+    q.goto(BASE + "/skribl-pad", wait_until="load")
+    early = q.evaluate(ST, False)
+    early_cover = q.evaluate("() => [document.documentElement.getAttribute('data-hello-cover'), Math.round(performance.now())]")
+    q.wait_for_function("() => performance.now() > 9500", timeout=20000)
+    late = q.evaluate(ST, False)
+    late_cover = q.evaluate("() => document.documentElement.getAttribute('data-hello-cover')")
+    check("if lib/hello.js never runs, the head's ground holds at first and goes by itself at 8 s, the canvas there",
+          early_cover[0] == "up" and not early["canvasThere"] and late_cover is None and late["canvasThere"],
+          f"at {early_cover[1]} ms the ground {early_cover[0]}, canvas {early['canvasThere']}; "
+          f"at 9.5 s the ground {late_cover}, canvas {late['canvasThere']}")
     c.close()
 
     # A slow line for the page's own scripts: the first of them after the
@@ -673,6 +754,72 @@ with sync_playwright() as p:
           all(ms is not None and not here and there for _, ms, here, there in replays),
           "; ".join(f"{r}: came after {ms} ms, then plain open: hello there {here}, canvas {there}"
                     for r, ms, here, there in replays))
+
+    # THE FIRST PAINT IS ITS GROUND (the owner, after the desktop checks: "on
+    # a reload it goes to the canvas first, then goes to the skribl cursive
+    # with i's dot dropping in"). It shows once the page's scripts and its
+    # files are here, and the page had painted the canvas long before; now the
+    # head lays its ground over the page before the first paint. Read as the
+    # screen paints it, every frame the browser makes, on a reload of the
+    # replay link as the owner made it. The page being left is painted a
+    # colour no Skribl page is, so its frames are told from the new page's,
+    # and only frames after the first of those count: the screen's first
+    # frame can be one from before that colour was painted, on a busy machine
+    # (the page as it was, read as the new page once beside other suites).
+    # And the first of the editor's scripts after the hello's is held 0.8 s,
+    # so the time the canvas would show is long enough to see on any machine.
+    reloads = []
+    for route in ("/skribl-pad", "/flip"):
+        c = b.new_context(color_scheme="dark", **DESK)
+        srcs = [u.split("?")[0] for u in re.findall(r'<script src="([^"]+)" defer', c.request.get(BASE + route).text())]
+        at = next((k for k, u in enumerate(srcs) if u.endswith("/lib/hello.js")), -1)
+        behind = srcs[at + 1] if 0 <= at < len(srcs) - 1 else None
+        q = _open(c, route + "?hello=again", force=False)
+        _until(q, lambda s: s["painted"] and s["on"], 8000)
+        q.keyboard.press("Escape")
+        _until(q, lambda s: not s["here"], 3000)
+        ground = _hex(q.evaluate("() => getComputedStyle(document.documentElement).getPropertyValue('--surface-base').trim()"))
+        q.evaluate("() => { document.documentElement.style.background = '#00ff00'; document.body.style.visibility = 'hidden'; }")
+        q.evaluate("() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))")
+        held = []
+        c.route(lambda url: behind is not None and url.split("?")[0].endswith(behind), lambda r: held.append([time.time(), r]))
+        cdp = c.new_cdp_session(q)
+        frames = []
+
+        def frame(ev, cdp=cdp, frames=frames):
+            frames.append(base64.b64decode(ev["data"]))
+            try:
+                cdp.send("Page.screencastFrameAck", {"sessionId": ev["sessionId"]})
+            except Exception:
+                pass
+        cdp.on("Page.screencastFrame", frame)
+        cdp.send("Page.startScreencast", {"format": "png", "everyNthFrame": 1})
+        q.wait_for_timeout(150)
+        q.reload(wait_until="commit")
+        t0, on_at, let_go = time.time(), None, 0
+        while time.time() - t0 < 10:
+            for h in held:
+                if h[1] is not None and time.time() - h[0] >= 0.8:
+                    h[1].continue_()
+                    h[1] = None
+                    let_go += 1
+            if on_at is None and q.evaluate("() => { const h = document.getElementById('skriblHello'); "
+                                            "return !!h && h.classList.contains('is-on'); }"):
+                on_at = time.time()
+            if on_at is not None and time.time() - on_at > 0.5:
+                break
+            q.wait_for_timeout(16)
+        cdp.send("Page.stopScreencast")
+        kinds = [_seen(f, ground) for f in frames]
+        left = "left" in kinds
+        seen = [k for k in kinds[kinds.index("left") if left else len(kinds):] if k not in ("left", "blank")]
+        reloads.append((route, on_at is not None and left, let_go, seen))
+        c.close()
+    check("a reload of the replay link on a desk paints the hello's own ground first, and nothing of the page "
+          "before the hello, on the Pad and on Flip (every frame the screen made, an editor's script held 0.8 s)",
+          all(on and n == 1 and s[:1] == ["ground"] and "hello" in s and "page" not in s for _, on, n, s in reloads),
+          "; ".join(f"{r}: the hello came (and the page left was seen) {on}, held {n}; the new page's frames: ground {s.count('ground')}, "
+                    f"page {s.count('page')}, hello {s.count('hello')}, first {s[:1]}" for r, on, n, s in reloads))
 
     # Flip: the same hello, and one "seen" for both editors.
     c = b.new_context(**PHONE)

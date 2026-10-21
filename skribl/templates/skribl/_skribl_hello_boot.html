@@ -1,0 +1,30 @@
+{# Whether the hello comes, decided BEFORE FIRST PAINT, and its ground laid
+   over the page when it does (lib/hello.js, _skribl_hello.html).
+
+   The owner, on a reload: "it goes to the canvas first, then goes to the
+   skribl cursive with i's dot dropping in." The hello waits for the page's
+   own scripts and its files before it shows, so the page painted the canvas
+   first and the hello came in over it. Decided here, inline in <head> as the
+   theme is (_skribl_theme_boot.html, for the same reason), the first paint is
+   the hello's own ground and the canvas is first seen as the hello leaves.
+
+   THE DECISION IS MADE HERE ONLY. lib/hello.js reads data-hello-comes and
+   decides nothing of its own; the key it marks seen with is this one
+   (verify_hello reads the two for the same key). It comes when this browser
+   has never seen this hello, on a page of its own (not a composer's frame);
+   ?hello=again plays it on any open, seen or not; automation never meets it
+   unless it asks (window.__skriblHelloForce, set before the page loads).
+
+   THE GROUND NEVER HOLDS UP A PAGE THAT IS READY. It stays while the page's
+   own scripts come, as an app's launch screen does (the canvas does nothing
+   before they run); once they are done, lib/hello.js waits 0.3 s more for
+   the hello's files and then fades it, and the hello, if its files come
+   later, comes in over the canvas as it used to. If lib/hello.js never runs,
+   or the page never gets that far, it fades by itself at 8 s.
+   data-hello-cover is "up" while it waits, "on" once the hello is over it,
+   "lift" as it fades (styles.css, THE HELLO'S GROUND).
+
+   Any failure leaves both off: no hello, no ground, the page as it was. #}
+<script nonce="{{ csp_nonce }}">
+(function(){try{var q=location.search,a=/[?&]hello=again(&|$)/.test(q),f=window.__skriblHelloForce===true||a,s;try{s=localStorage.getItem('skribl.hello.v2')==='1';}catch(e){s=true;}if((navigator.webdriver&&!f)||(s&&!a)||window.top!==window||/[?&]compose=1\b/.test(q))return;var r=document.documentElement;r.setAttribute('data-hello-comes','');r.setAttribute('data-hello-cover','up');setTimeout(function(){if(r.getAttribute('data-hello-cover')!=='up')return;r.setAttribute('data-hello-cover','lift');setTimeout(function(){if(r.getAttribute('data-hello-cover')==='lift')r.removeAttribute('data-hello-cover');},400);},8000);}catch(e){}})();
+</script>

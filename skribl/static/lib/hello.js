@@ -8,16 +8,29 @@
  * a tap, a click or any key skips it, a still hello under Reduce Motion, one
  * module for the Pad and Flip.
  *
- * NOTHING IS FETCHED UNLESS IT COMES. It comes when this browser has never
- * seen this hello, on a page of its own (not a composer's frame). When it will
- * not, its element goes at once, so lib/learncard.js (one welcome at a time)
- * can tell by looking. The player, the hold timing it reads and the drawing
+ * NOTHING IS FETCHED UNLESS IT COMES, which the page's head decides before
+ * its first paint (_skribl_hello_boot.html; nothing here decides it again):
+ * when this browser has never seen this hello, on a page of its own (not a
+ * composer's frame). When it will not, its element goes at once, so
+ * lib/learncard.js (one welcome at a time) can tell by looking. The player, the hold timing it reads and the drawing
  * are asked for first; it draws once the page's own scripts are done, and if
  * they are not here within LATE ms of that it does not come this time, and is
  * not marked seen, so the canvas is never held up waiting for it.
  *
  * SEEN IS PER HELLO: v1 was Blooby's, on his star, and someone who met him
  * meets the mark once too.
+ *
+ * ITS GROUND FROM THE FIRST PAINT (the owner, on a reload: "it goes to the
+ * canvas first, then goes to the skribl cursive"). It shows once the page's
+ * scripts and its files are here, and the page had painted the canvas by
+ * then. When it comes, the head lays its ground over the page before the
+ * first paint (styles.css, THE HELLO'S GROUND); the hello comes in over that,
+ * the ground goes from under it as it leaves, and the canvas is first seen
+ * as the ink lifts. The ground never holds up a page that is ready: once
+ * the page's scripts are done it waits GRACE more for the files, then fades
+ * (the hello can still come within LATE, over the canvas, as it used to); it
+ * fades too when the hello does not come after all; and the head fades it
+ * by itself at 8 s if nothing here ever runs.
  *
  * THE REPLAY LINK (owner: "Yes to the replay link"): an address with
  * ?hello=again plays it on that open, seen or not, and asks for it as a
@@ -41,17 +54,23 @@
   'use strict';
   var el = document.getElementById('skriblHello');
   if (!el) return;
-  var KEY = 'skribl.hello.v2';
+  var KEY = 'skribl.hello.v2';   // the head reads the same key (_skribl_hello_boot.html)
   var LATE = 4000;
+  var GRACE = 300;
   var BUDGET = 8e6;
-  var again = /[?&]hello=again(&|$)/.test(location.search);
-  var force = window.__skriblHelloForce === true || again;
+  var root = document.documentElement;
 
-  function seen() { try { return localStorage.getItem(KEY) === '1'; } catch (e) { return true; } }
   function mark() { try { localStorage.setItem(KEY, '1'); } catch (e) {} }
   function away() { if (el.parentNode) el.parentNode.removeChild(el); }
+  // The ground the head laid: "up" while it waits, "on" under the hello.
+  function cover() { return root.getAttribute('data-hello-cover'); }
+  function lift() {
+    if (cover() !== 'up' && cover() !== 'on') return;
+    root.setAttribute('data-hello-cover', 'lift');
+    setTimeout(function () { if (cover() === 'lift') root.removeAttribute('data-hello-cover'); }, 400);
+  }
 
-  if ((navigator.webdriver && !force) || (seen() && !again) || window.top !== window || /[?&]compose=1\b/.test(location.search)) {
+  if (!root.hasAttribute('data-hello-comes')) {
     away();
     return;
   }
@@ -132,6 +151,8 @@
   function leave() {
     if (gone) return;
     gone = true;
+    // The ground goes from under it, so its own fade shows the canvas.
+    root.removeAttribute('data-hello-cover');
     window.removeEventListener('keydown', key, true);
     window.removeEventListener('resize', fit);
     // Held where it is; at its end the player holds a Flip's last page whole.
@@ -170,7 +191,7 @@
    * V214b names it). */
   function noClick(e) { if (gone) e.preventDefault(); }
 
-  function never() { window.removeEventListener('keydown', key, true); away(); }
+  function never() { window.removeEventListener('keydown', key, true); lift(); away(); }
 
   /* THE PAGE'S OWN SCRIPTS FIRST, THEN THE HELLO. Its files are asked for
    * now, and first, but it draws once the page's scripts are done
@@ -184,9 +205,14 @@
       window.addEventListener('load', function () { done(); });
     });
   }
+  var have = false;
   var files = Promise.all([player(), drawing()]);
-  files.catch(function () {});   // said below, once the page is ready
-  ready().then(function () { return Promise.race([files, late()]); }).then(function (got) {
+  files.then(function () { have = true; }, function () {});   // a failure is said below, once the page is ready
+  ready().then(function () {
+    // The page is ready: its ground waits GRACE more for the hello, no longer.
+    if (!have) setTimeout(function () { if (!p) lift(); }, GRACE);
+    return Promise.race([files, late()]);
+  }).then(function (got) {
     var payload = got[1];
     var cs = payload.canvasSize || {};
     cw = cs.cssWidth || cw;
@@ -196,6 +222,8 @@
     el.hidden = false;
     p = window.SkriblInline.attach(box, payload, { ambient: true, dpr: fit() });
     if (!p) { never(); return; }
+    // Over its ground now, which stays under it until it leaves.
+    if (cover() === 'up') root.setAttribute('data-hello-cover', 'on');
     mark();
     // Once through, ending on the finished mark: a post loops, a hello does not.
     p.setLoop(false);

@@ -21000,3 +21000,53 @@ red: Flip's to 'none', the Pad's to 'not-allowed' on a loaded drawing.
 
 Pad and Flip: shared, one module and one rule each side; Flip was the one that
 lost it.
+
+## After v327 -- The hello's ground is the first paint (the owner's desktop checks, H1 and H3)
+
+The owner, of the hello on a desk: "on a reload it goes to the canvas first,
+then goes to the skribl cursive with i's dot dropping in." lib/hello.js shows
+the hello once the page's own scripts are done and its files are here, and by
+then the page had painted the canvas: on a reload of the replay link here, 15
+frames of the Pad's header, canvas and dock came before the hello (about 0.6 s).
+
+Whether it comes is now decided in the page's head, before the first paint, as
+the theme is: _skribl_hello_boot.html (both editors include it after the theme
+boot) stamps data-hello-comes on the page and lays the hello's ground over it
+(styles.css, THE HELLO'S GROUND: body::after, just under the hello). The hello
+comes in over that ground, which goes from under it as it leaves, so the canvas
+is first seen as the ink lifts. lib/hello.js reads the stamp and decides
+nothing of its own; the key it marks seen with is the one the head reads.
+
+The ground never holds up a page that is ready. It stays while the page's own
+scripts come, as an app's launch screen does, since the canvas does nothing
+before they run; once they are done lib/hello.js waits 0.3 s more for its files
+and then fades it, and a hello whose files come later still comes in over the
+canvas, as it did (on a slow line that is where it differs from a plain 2.5 s
+cap, which would have shown a page that did nothing and then covered it). If
+lib/hello.js never runs, or the page never gets that far, the head fades it at
+8 s. Under Reduce Motion its fade is near-instant, as every fade is.
+
+A reload keeps showing the page it leaves until the new one paints; that is
+the browser's, and it is the page that was there. From the new page's first
+frame on, it is the ground and then the hello.
+
+verify_hello, read off every frame the screen made (Page.startScreencast) on a
+reload of the replay link, the page being left painted a colour no Skribl page
+is (only the frames after the first of that colour count) and one of the
+editor's scripts held 0.8 s: the first thing painted is the hello's ground and
+no frame of the page comes before the hello, on the Pad and on Flip. Red on the
+tree before (6 frames of the page, first, on each editor). Each part shown red
+on its own: the ground's rule gone (7 frames of the page); the 0.3 s gone (the ground waited for the hello to
+give up, lifting at 4.7 s with the page ready at 0.7); the backstop gone (still
+up at 9.5 s with lib/hello.js refused); lib/hello.js leaving the ground in
+place (the existing row "then it is gone, the canvas there again"); and the key
+drifting or a second decision in lib/hello.js (a static row). Beside two other
+suites the row first went red on Flip with one frame of the page before the
+ground: the screen's first frame was the page being left as it was before its
+colour was painted, read as the new page. It now waits two frames for that
+colour and counts only what comes after it; four runs on Flip with the machine
+loaded past its cores were clean before that change too, so it was the
+instrument, not a flash.
+
+Pad and Flip: shared, one partial and one module for both.
+
