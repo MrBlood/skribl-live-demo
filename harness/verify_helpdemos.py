@@ -466,6 +466,11 @@ with sync_playwright() as p:
         pg.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
         opener = ("#menuBtn", "#helpItem") if name == "Pad" else ("#moreBtn", "#miInfo")
         pg.click(opener[0]); pg.wait_for_timeout(600)
+        # The browser's own count of the times it worked out the page's style.
+        cdp = ctx.new_cdp_session(pg)
+        cdp.send("Performance.enable")
+        recalc = lambda: next(m["value"] for m in cdp.send("Performance.getMetrics")["metrics"] if m["name"] == "RecalcStyleCount")
+        r0 = recalc()
         frames = pg.evaluate("""(item) => new Promise(res => { const d = document.getElementById('helpDrawer'),
             i = d.querySelector('.help-drawer-inner'), out = [], t0 = performance.now();
             document.querySelector(item).click();
@@ -482,6 +487,17 @@ with sync_playwright() as p:
               scrolled == 0, f"drawer scroll peaked at {scrolled}px over {len(frames)} frames")
         check(f"{name}: ...and the sheet travels up from the foot, no frame jumping 40% of the way",
               steady and tops[0] > tops[-1] + 200, f"sheet top edge by frame: {[round(x) for x in tops]}")
+        # ...AND NOTHING HOLDS IT UP WHILE IT DOES (main red after #571: the
+        # sheet jumped 59% of the way in one frame on a busy runner). Opening
+        # it rewrote every entry's More and read the next one's height, so the
+        # style was worked out again once an entry, and again for each new
+        # label lib/labels.js wrapped: 150 to 165 times, 120-170 ms in one go
+        # here and about a second on a phone-slow processor, where the sheet
+        # did not move at all. Counted, not timed, so a busy runner cannot
+        # make it pass or fail: about one a frame is the rise itself.
+        recalcs = round(recalc() - r0)
+        check(f"{name}: ...and opening it does not work the page's style out again for every entry",
+              recalcs < 100, f"{recalcs} style recalculations in the {len(frames)} frames it rises")
         ctx.close()
 
         # 7. on a phone with a panel open, How it works is still the SCREEN.

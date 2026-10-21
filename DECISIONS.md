@@ -20641,3 +20641,31 @@ to the canvas. Red on the hello before this, and red again with either half
 taken out (getting past "seen", or counting as an ask).
 
 Pad and Flip: one module for both editors. Not tested here: WebKit.
+
+## After v327 -- How it works opens without holding the page up (main red after #571)
+
+Main's run after #571 went red on one shard: verify_helpdemos saw How it works
+rise 59% of the way in a single frame on the Pad, on a busy runner (postgresql
+4/6; the same suites passed on sqlite 4/6). Not the replay link's doing: the
+cause was older, and real. Opening How it works fits every entry's More button
+(lib/helpsearch.js). It wrote each one's word and then read the next entry's
+height, so the browser worked out the page's style again once an entry, and
+once more for each label lib/labels.js wrapped afresh: 150 to 165 times, 120
+to 170 ms in one go on this box, and about a second with the processor slowed
+to a phone's (DevTools 4x), when the sheet did not move at all. The owner's
+old "the menu hiccups before it slides in" had this in it too.
+
+The fit now reads every entry first, then writes, and only what changed: about
+one style pass a frame as it rises, no long task on this box, and 0.1 to 0.15 s
+of work at 4x where there was a second. The first frame's step that remains
+(about a quarter of the way) is the slide's own easing in a frame of ordinary
+length; laying the sheet out a frame before it moves did not help, so it is
+not in.
+
+CHECKED (verify_helpdemos): opening it does not work the style out again for
+every entry, counted by the browser (RecalcStyleCount), so a busy runner cannot
+make it pass or fail: 161 on the Pad and 173 on Flip on main's helpsearch
+(red), 53 and 49 with this (green). The frame-by-frame row passed on both
+here; it took a busy runner to show it.
+
+Pad and Flip: one module for both. Not tested here: WebKit.

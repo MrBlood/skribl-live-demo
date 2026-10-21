@@ -199,7 +199,10 @@ stays a sleep.
   several at once, and the clips advance and match the theme; the chips
   filter; Escape, the grip and closing How it works close the drawer and stop
   everything; Try it picks the tool and leaves Shape's card open; reduced
-  motion shows finished drawings and posters and fetches no video. Every example is drawn through the real editor by
+  motion shows finished drawings and posters and fetches no video; on a phone
+  How it works rises in with no frame jumping, and opening it does not work
+  the page's style out again for every entry (counted by the browser, so a
+  busy runner cannot decide it). Every example is drawn through the real editor by
   `tools/make_art.py` (Pad: the tool cards, the quick start's Draw card and
   Ideas to try) and `tools/make_flip.py` (Flip loops): an illustrator's
   strokes, `tools/artworks.py` and `tools/flipworks.py`, performed as real pen
