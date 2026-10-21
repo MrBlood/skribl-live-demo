@@ -164,7 +164,8 @@ ST = """(ink) => { const h = document.getElementById('skriblHello'), c = h && h.
     if (ink) { const img = x.getImageData(0, 0, c.width, c.height).data;
       for (let i = 0; i < img.length; i += 4 * 97) if (img[i] > 240 && img[i + 1] > 240 && img[i + 2] > 240 && img[i + 3] > 240) white++; } } catch (e) {} }
   return { here: !!h, painted: !!h && !h.hidden && !!at && h.contains(at), on: !!h && h.classList.contains('is-on'),
-           leaving: !!h && h.classList.contains('is-leaving'), lit: !!g && g.classList.contains('is-lit'),
+           leaving: !!h && h.classList.contains('is-leaving'), swell: !!h && h.classList.contains('is-swell'),
+           lit: !!g && g.classList.contains('is-lit'),
            bg: h ? getComputedStyle(h).backgroundImage : null, corner: corner, white: white,
            stage: r ? [r.left, r.top, r.width, r.height].map(v => +(v * d).toFixed(2)) : null,
            fill: r && cr ? [cr.left - r.left, cr.top - r.top, cr.width - r.width, cr.height - r.height].map(v => +(v * d).toFixed(2)) : null,
@@ -254,9 +255,10 @@ with sync_playwright() as p:
             check("...he is still there through the walk-up, playing",
                   mid["painted"] and mid["state"] == "playing", str(mid))
             s1, _ = _until(q, lambda s: s["leaving"] or not s["here"], 6000)
-            check("...he leaves after one wave (the loop's first of two), into the canvas",
-                  s1["here"] and abs(s1["el"] - (s1["total"] - 1000)) <= 300,
-                  f"leaving at {s1['el']} ms of {s1['total']}")
+            check("...he leaves after one wave (the loop's first of two), the picture opening onto the canvas "
+                  "a breath larger as it fades",
+                  s1["here"] and abs(s1["el"] - (s1["total"] - 1000)) <= 300 and s1["swell"],
+                  f"leaving at {s1['el']} ms of {s1['total']}, swelling {s1['swell']}")
             s2, ms2 = _until(q, lambda s: not s["here"], 3000)
             check("...then he fades and is gone, the canvas there again",
                   ms2 is not None and s2["canvasThere"], f"{s2} after a further {ms2} ms")
@@ -288,10 +290,14 @@ with sync_playwright() as p:
     while time.time() - t0 < 1.2:
         states.add(q.evaluate(ST, False)["state"])
         q.wait_for_timeout(100)
+    s1, _ = _until(q, lambda s: s["leaving"] or not s["here"], 4000)
     s2, ms2 = _until(q, lambda s: not s["here"], 4000)
-    check("Reduce Motion: a still hello (never playing), the star's light on, then he fades and is gone",
-          ms is not None and s["lit"] and "playing" not in states and ms2 is not None,
-          f"lit {s['lit']}, states {sorted(map(str, states))}, gone after a further {ms2} ms")
+    check("Reduce Motion: a still hello (never playing), the star's light on, then he fades, "
+          "with no swell, and is gone",
+          ms is not None and s["lit"] and "playing" not in states and s1["leaving"] and not s1["swell"]
+          and ms2 is not None,
+          f"lit {s['lit']}, states {sorted(map(str, states))}, leaving {s1['leaving']} swelling {s1['swell']}, "
+          f"gone after a further {ms2} ms")
     c.close()
 
     # A slow line: his player held for 5 s, past his 4. The page's load waits

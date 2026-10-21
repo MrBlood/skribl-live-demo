@@ -95,6 +95,7 @@
     window.removeEventListener('keydown', key, true);
     window.removeEventListener('resize', fit);
     el.classList.add('is-leaving');
+    if (!reduce) el.classList.add('is-swell');
     setTimeout(function () {
       if (p) p.settle();
       if (el.parentNode) el.parentNode.removeChild(el);

@@ -20456,7 +20456,11 @@ The icon's glow comes on under the star as it finishes. The Home Screen
 icon's light is behind everything, its lilac deepening to the edge, so the
 drawing carries no ground of its own. He leaves after one wave of the loop's
 two, and the picture opens onto the canvas, a breath larger as it fades (no
-swell under Reduce Motion). About 6.8 s in all.
+swell under Reduce Motion). About 6.8 s in all. That swell is hello.js's to
+leave off under Reduce Motion, not a media query's: cssgraph keeps every
+Reduce Motion rule in player.css (its superset gate), and
+verify_player_isolation's ratchet caught the 86 bytes the link page would have
+paid for a hello it never shows.
 
 ANY SCREEN, ANY KEY. He comes on the first visit on a desk as on a phone;
 never in a composer's frame. A tap, a click or any key skips him, and the key
@@ -20474,5 +20478,6 @@ lilac; sharp, by three pixels a point, by twice past the budget, by the box
 translate); the star drawing itself, by a star page that does not draw and by
 the light on at once; one wave, by leaving at the loop's end; a key that does
 nothing else, by the key passed on; a desk, by the old phones-only rule;
-Reduce Motion's light, by a still hello without it. Not tested here: the
+Reduce Motion's light, by a still hello without it; the swell, by leaving
+without it and by swelling under Reduce Motion. Not tested here: the
 iPhone's engine, SF and Segoe UI.
