@@ -701,7 +701,15 @@ function makeStrokeCompositor(visCtx, visCanvas) {
       if (wetActive) { visCtx.globalAlpha = wetAlpha; visCtx.drawImage(wet, 0, 0); }
       visCtx.restore();
     },
-    finish() { if (wetActive) bakeWet(); }
+    finish() { if (wetActive) bakeWet(); },
+    // The visible canvas becomes the dry layer again, after something painted
+    // it whole (a recolour's moment in a replay, lib/recolorplay.js).
+    reseed() {
+      wctx.clearRect(0, 0, lgW, lgH); wetActive = false; wetAlpha = 1;
+      dctx.save(); dctx.setTransform(1, 0, 0, 1, 0, 0);
+      dctx.clearRect(0, 0, dry.width, dry.height); dctx.drawImage(visCanvas, 0, 0);
+      dctx.restore();
+    }
   };
 }
 
@@ -770,11 +778,17 @@ function paintStrokesStatic(strokeArr) {
 // playT has elapsed, using the supplied dot/line fns (main canvas vs the
 // offscreen export canvas). No audio, no DOM, no globals — just drawing.
 // Returns the next index to resume from.
-function replayTimelineToCanvas(timeline, startIndex, elapsedMs, dotFn, lineFn) {
+//
+// An entry carrying `rc` is a recolour's moment, not a point
+// (lib/recolorplay.js place()): the timeline's own `rc` repaints the drawing
+// in its colours as of then, on `comp` when the caller draws through one.
+function replayTimelineToCanvas(timeline, startIndex, elapsedMs, dotFn, lineFn, comp) {
   let i = startIndex;
   while (i < timeline.length && timeline[i].playT <= elapsedMs) {
     const p = timeline[i];
-    if (p.start || i === 0) {
+    if (p.rc) {
+      if (timeline.rc) timeline.rc.on(p, comp);
+    } else if (p.start || i === 0) {
       dotFn(p.x, p.y, p.color, p.size, p.erase);
     } else {
       const prev = timeline[i - 1];
@@ -793,16 +807,19 @@ function seekDrawRange(cache, timeline, from, to, comp) {
   const dot = comp ? comp.dotFn : drawDot, line = comp ? comp.lineFn : drawLine;
   return cache.draw(from, to, (i) => {
     const p = timeline[i];
-    if (p.start || i === 0) dot(p.x, p.y, p.color, p.size, p.erase);
+    if (p.rc) { if (timeline.rc) timeline.rc.on(p, comp); }
+    else if (p.start || i === 0) dot(p.x, p.y, p.color, p.size, p.erase);
     else { const q = timeline[i - 1]; line(q.x, q.y, p.x, p.y, p.color, p.size, p.erase); }
   }, comp ? () => comp.present() : null);
 }
 // One frame of a replay, or a seek's drawing: through the cache when there is
-// one (taking copies on the way), else the replay core as it always was.
+// one (taking copies on the way), else the replay core as it always was. A
+// recolour's colour running along its line is shown at `ms` (rc.tick).
 function replayStep(cache, timeline, from, ms, comp) {
   const i = cache ? seekDrawRange(cache, timeline, from, cache.indexAt(ms), comp)
-    : replayTimelineToCanvas(timeline, from, ms, comp ? comp.dotFn : drawDot, comp ? comp.lineFn : drawLine);
+    : replayTimelineToCanvas(timeline, from, ms, comp ? comp.dotFn : drawDot, comp ? comp.lineFn : drawLine, comp);
   if (comp) comp.present();   // no finish(): the stroke at the playhead stays mid-draw
+  if (timeline.rc) timeline.rc.tick(ms);
   return i;
 }
 /* ONE SEEK for the Pad's preview and the shared player. Paints the canvas at
@@ -842,6 +859,7 @@ function seekCanvas(cache, timeline, ms, at, comp, done, step) {
     if (s) {
       restoreSeq++;
       if (s.restored) comp = layers ? makeStrokeCompositor(ctx, canvas) : null;
+      if (timeline.rc) timeline.rc.from(s.index);   // a recolour's run behind it carries on
       return go(s.index, comp);
     }
   }
@@ -1440,7 +1458,27 @@ function buildPlaybackTimeline() {
   // Points that arrived in one bundle play one after another, not at once
   // (lib/holdtiming.js untie(): the rule every replay shares).
   if (window.SkriblHold) SkriblHold.untie(timeline);
-  return timeline;
+  // A recolour plays when it was made (lib/recolorplay.js), here on the
+  // drawing's own canvas; an export puts its own canvas in `rc`.
+  const R = window.SkriblRecolorPlay, out = R ? R.place(timeline, strokes, strokeGroups, recolors) : timeline;
+  if (out !== timeline) out.rc = _rcLive || (_rcLive = R.player({ canvas: canvas, repaint: recolorRepaint,
+    unit: () => canvas.width / (getCanvasLogicalSize().width || 1) }));
+  return out;
+}
+let _rcLive = null;
+// The drawing as just `pts` on its base, for a recolour's moment: painted at
+// once, as clearAndRestore would were the base not still loading (a replay
+// starts from it, so it has loaded), and without stopping a seek that is
+// drawing its way there.
+function recolorRepaint(pts, comp) {
+  if (comp) comp.finish();
+  const { width: cw, height: ch } = getCanvasLogicalSize();
+  ctx.clearRect(0, 0, cw, ch);
+  if (preRecordSnapshot && _baseImgCache && _baseImgCache.src === preRecordSnapshot && _baseImgCache.img.complete) {
+    ctx.drawImage(_baseImgCache.img, 0, 0, cw, ch);
+  }
+  paintStrokesStatic(pts);
+  if (comp) comp.reseed();
 }
 
 function getPlaybackDuration() {
@@ -1450,7 +1488,7 @@ function getPlaybackDuration() {
     const gap = strokes[i].t - strokes[i - 1].t;
     if (gap > 0) total += Math.min(gap, pauseCapMs());
   }
-  return total;
+  return total + (window.SkriblRecolorPlay ? SkriblRecolorPlay.extra(strokes, recolors) : 0);
 }
 
 function updateDrawingTimeLabels() {
@@ -1717,6 +1755,7 @@ function baseReadyNow() {
 }
 function clearAndRestore(callback) {
   seekStop();   // a race would draw on over the base
+  if (window.SkriblRecolorPlay) SkriblRecolorPlay.stopAll();   // ...and a recolour's run over the drawing
   const seq = ++restoreSeq;
   const { width: cw, height: ch } = getCanvasLogicalSize();
   ctx.clearRect(0, 0, cw, ch);
@@ -3490,6 +3529,11 @@ function showPlayerError(msg, canRetry) {
 
   // Restore all state and paint the finished drawing as the poster frame.
   loadSkribl(data);
+  // A drawing with recolours brings the module that plays them, and only one
+  // that has them: most have none (lib/recolorplay.js, SKRIBL_RECOLORPLAY).
+  if (recolors.length && !window.SkriblRecolorPlay && window.SKRIBL_RECOLORPLAY) {
+    await new Promise(r => { const s = document.createElement('script'); s.src = window.SKRIBL_RECOLORPLAY; s.onload = s.onerror = r; document.head.appendChild(s); });
+  }
 
   // ---- Player-owned playback orchestrator ----
   // Reuses the shared timeline + replayTimelineToCanvas core (NO second replay

@@ -230,7 +230,12 @@ with sync_playwright() as sp:
     # drifting apart.
     _tpl = (ROOT / "skribl" / "templates" / "skribl" / "skribl_player.html")
     _body = re.sub(r"\{#.*?#\}", "", _tpl.read_text(encoding="utf-8"), flags=re.S)
-    player_js = [a for a in re.findall(r"skribl_asset\('([^']+)'\)", _body)
+    # THE SCRIPT TAGS, not every asset the template names: lib/recolorplay.js
+    # is named in the page's config for app.js to fetch only for a drawing
+    # with recolours, so it is not a download every viewer pays (counted
+    # alone below), and verify_player_isolation, which counts what the page
+    # really fetches, would disagree with a list that took it in.
+    player_js = [a for a in re.findall(r"<script\b[^>]*\bsrc=\"\{\{\s*skribl_asset\('([^']+)'\)\s*\}\}\"", _body)
                  if a.endswith(".js")]
     check("the player's JS list came from the template, not a hand list",
           len(player_js) >= 5 and "app.js" in player_js,
@@ -287,10 +292,20 @@ with sync_playwright() as sp:
     # the Pad's fit measuring with the drawing out of the way. And RAISED, in
     # both places together, by Recolor (+364 B, all app.js, 149,443 measured):
     # the drawing's recolours kept with its undo, its clear, its post and its
-    # load, the moment each line changed colour, for the replay.
+    # load, the moment each line changed colour, for the replay. And RAISED,
+    # in both places together, by the replay showing that moment (+1,502 B,
+    # all app.js, 150,945 measured); the module that plays it,
+    # lib/recolorplay.js, is fetched only for a drawing that has recolours
+    # and is not in this sum (its own line, below).
     check("stripping keeps the player's JS under its ratchet",
-          lean_total <= 149_448,
+          lean_total <= 150_950,
           f"{src_total:,} B of source -> {lean_total:,} B parsed")
+    # THE MODULE ONLY A RECOLOURED DRAWING FETCHES (lib/recolorplay.js, by
+    # app.js on the link page and inlineplayer.js in a post): its own pin, so
+    # a download most viewers never make cannot grow unseen either.
+    _rc = len(strip_bytes((STATIC / "lib" / "recolorplay.js").read_bytes(), "lib/recolorplay.js"))
+    check("the recolour module a recoloured drawing fetches stays under its own ratchet",
+          _rc <= 10_120, f"{_rc:,} B parsed")
     # START-HERE concluded from a function count that reaching 153,600 needs a
     # separate player entry point, and the v199 handoff concluded from a
     # predicted 153,741 that it does not. Both were wrong in opposite

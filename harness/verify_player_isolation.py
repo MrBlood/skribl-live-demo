@@ -916,7 +916,17 @@ with sync_playwright() as sp:
     #   replay to show it then. The mode, its bar and the run along the line
     #   are lib/recolor.js and editor_tools.js, which the player never loads.
     #   verify_jsstrip's line moves with it. 149,443 measured.
-    BYTES_RATCHET, BYTES_TARGET = 149_448, 153_800
+    # RAISED (the owner's pick R2 of the recolour mock: the replay shows a
+    #   line's new colour when it was given), for a named cost, all in
+    #   app.js: +1,502 B -- the moments placed in the timeline, a moment's
+    #   repaint and the compositor's reseed after it, the replay cores
+    #   handing a moment to the timeline's player and the run ticked with
+    #   the replay, and this page fetching lib/recolorplay.js (10,114 B) only
+    #   for a drawing that has recolours. SPENT FIRST: the module is not a
+    #   script tag here, so a drawing without recolours, which is nearly all
+    #   of them, downloads none of it. verify_jsstrip's line moves with it.
+    #   150,945 measured.
+    BYTES_RATCHET, BYTES_TARGET = 150_950, 153_800
     # The page's own HTML. The brand is the one-stroke skribl signature INLINE
     # in the page (~1.4KB of paths, a ~0.9KB nonce'd draw-on script, and the
     # <linearGradient> defs), and inline is load-bearing rather than lazy:

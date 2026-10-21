@@ -514,6 +514,16 @@ stays a sleep.
   thumbnail, a fill's bands as one line, a recoloured tween page saved as it
   looks, and the Select bar's Color with its bare count on a phone. Each row
   was shown red by its own break.
+- `verify_recolorplay.py` — a recolour in the replay (lib/recolorplay.js):
+  the line plays in its old colour until the moment it was recoloured, then
+  the new colour runs along it from where it was tapped, on the Pad's Play
+  (read through a scrub, back and forth, and under Reduce Motion), on the link
+  page (which fetches the module only for a drawing with recolours), in the
+  Gallery's player on a phone and a desk (its run laid exactly over the
+  letterboxed canvas), in the server's line under the post, and in a GIF and
+  a video (the video's frames where ffmpeg is installed); and a GIF keeps a
+  base drawn before the first take with see-through layering on. Each row was
+  shown red by its own break.
 - `verify_watchfull.py` — full screen while it plays, in the Pad and Flip
   (lib/watchfull.js), on the same phone and desk: the way in at the end of the
   line under the drawing, the drawing as big as the screen allows, the band

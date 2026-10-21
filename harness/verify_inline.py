@@ -1571,7 +1571,18 @@ with sync_playwright() as sp:
     #   gone (lib/hello.js, outside this sum). WHICH CALLER PAYS: every page
     #   that shows a post, for every Flip that reaches its end. 70,481 B
     #   measured.
-    EMBED_RATCHET = 70_486
+    # RAISED (the owner's pick R2 of the recolour mock: a replay shows a
+    #   line's new colour when it was given), for one named cost: +1,735 B,
+    #   all inlineplayer.js -- the post's moments placed in its timeline, a
+    #   moment painted into the compositor's ink layer or onto the canvas,
+    #   the run ticked with the replay and kept through a scrub, and the
+    #   fetch of lib/recolorplay.js (10,114 B) ONLY for a post that has
+    #   recolours, which is why the module is not in this sum: the macro
+    #   names it on inlineplayer.js's tag and nothing loads it otherwise.
+    #   WHICH CALLER PAYS: every page that shows a post, for the hooks; a
+    #   page showing a recoloured post, for the module, once. 72,216 B
+    #   measured.
+    EMBED_RATCHET = 72_221
     # THE RATCHET MEASURES DISPLAY, NOT COMPOSE, and the two are separate costs
     # paid by separate pages. Excluded here and measured on its own below:
     #   feed.js          the PREVIEW PAGE's own script (fetch the listing, clone

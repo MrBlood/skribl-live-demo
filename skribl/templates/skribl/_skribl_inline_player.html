@@ -93,7 +93,12 @@
 {# lib/seekcache.js: a scrub through a long post starts from the nearest copy of its
    ink (v322 plan, step 3), as on the Pad and /s/<id>. Absent, it seeks from zero. #}
 <script src="{{ skribl_asset('lib/seekcache.js') }}" defer></script>
-<script src="{{ skribl_asset('inlineplayer.js') }}" defer></script>
+{# data-recolorplay: lib/recolorplay.js, which plays a line recoloured on the Pad
+   changing colour when it was changed (the owner's pick R2), the rule the Pad,
+   /s/<id> and the exports share. inlineplayer.js fetches it only for a post
+   that has recolours, which most never will, so a page of posts pays nothing
+   for it. Absent, a post plays in its finished colours, as it did before. #}
+<script src="{{ skribl_asset('inlineplayer.js') }}" data-recolorplay="{{ skribl_asset('lib/recolorplay.js') }}" defer></script>
 {%- endmacro %}
 
 {#  THE INSIDES, ONCE. A posted Skribl and an un-posted DRAFT differ only in
