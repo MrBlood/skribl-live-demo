@@ -12,7 +12,8 @@
 <div id="skriblHello" class="skribl-hello" role="img" aria-label="Skribl's signature" hidden
      data-hello="{{ skribl_asset('brand/hello.json') }}"
      data-player-css="{{ skribl_asset('inlineplayer.css') }}"
-     data-player-js="{{ skribl_asset('inlineplayer.js') }}">
+     data-player-js="{{ skribl_asset('inlineplayer.js') }}"
+     data-hold-js="{{ skribl_asset('lib/holdtiming.js') }}">
   <div class="skribl-hello-stage">
     {{ skribl_inline_draft('skriblHelloBox', controls=false, progress=false, plain=true) }}
   </div>

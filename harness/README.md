@@ -485,7 +485,9 @@ stays a sleep.
   comes again. A tap skips it, holds what is written and draws nothing; a key
   skips it and does nothing else; a still hello under Reduce Motion, the
   finished mark, then just a fade; a slow line, and it waits for the next
-  open; the button cards' first note waits for another visit; never in a
+  open; a slow line for the page's own scripts, and it still writes itself in
+  its own time (it brings the hold timing with the player); the button cards'
+  first note waits for another visit; never in a
   composer's frame or to automation that did not ask, and nothing of it is
   fetched there. Each row was shown red by its own break, served or read in
   place of the real file.

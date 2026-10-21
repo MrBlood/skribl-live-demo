@@ -20541,3 +20541,31 @@ Motion now rests on the player's rule and goes red without it.
 Pad and Flip: the Pad's replay already ended on its finished drawing; this is
 the in-post player's Flip path, shared by every page that shows a post. Not
 tested here: the iPhone's engine.
+
+## After v327 -- The hello brings its own hold timing (bug fix)
+
+Found while checking the Flip's end: on a slow line the first hello can play
+as plain pages, the whole mark at once and gone in 0.8 s, where it should
+write itself over about 2.4 s. lib/hello.js is the first of the editor's
+deferred scripts and loads the in-post player itself; the player reads the
+hold timing (lib/holdtiming.js, which makes a page draw itself and how long
+each one holds) as it takes the drawing. The page's own copy of the hold
+timing runs among its deferred scripts, after the hello, and they wait for
+one another. When the editor's scripts came slowly and the player and the
+drawing quickly (a player already cached from the Gallery, say), the hello
+took its drawing before the hold timing had run: no plan, every page a plain
+twelfth of a second.
+
+The hello now loads the hold timing with the player, the same file as the
+page's (data-hold-js on the partial), so one of the two is the cache's.
+
+CHECKED (verify_hello, a slow line for the page's own scripts: the first of
+them after the hello held, so every deferred script behind it waits too, the
+page's own copy of the hold timing among them): the hello's player has the
+hold timing's plan, the drawing's own time, and not plain pages. Red on the
+old hello (833 ms where the plan gives 2,350), green with this. The first
+try held every one of the page's scripts; the hello's own files queued behind
+them and it never came at all, red for the wrong reason.
+
+Pad and Flip: one partial and one module for both editors. Not tested here:
+the iPhone's engine; this is the kind of thing a phone on a slow line does.
