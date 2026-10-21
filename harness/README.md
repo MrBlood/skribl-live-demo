@@ -469,14 +469,20 @@ stays a sleep.
   drafts holds the name and the .skribl file both ways; How it works' tabs are
   the same pill. Each row was shown red by its own break, served in place of
   the real file.
-- `verify_hello.py` — Blooby says hi (lib/hello.js): the first open on a
-  phone, Pad and Flip, light and dark. He fills the screen in his own lilac,
-  full width and drawn at the phone's 3 pixels a point, walks up and waves,
-  fades into the canvas, and never comes again; a tap skips him and draws
-  nothing; a still hello under Reduce Motion; never on a desk, in a
-  composer's frame, or to automation that did not ask, and nothing of his is
-  fetched there. Each row was shown red by its own break, served in place of
-  the real file.
+- `verify_hello.py` — Blooby says hi (lib/hello.js): the first open, Pad
+  and Flip, phone and desk, light and dark. The star's points are points
+  (read off the drawing itself, before any browser). He fills the screen in
+  the Home Screen icon's own light, through a drawing with no ground of its
+  own, sharp: his box on whole screen pixels, his drawing a whole number of
+  its pixels to each (twice within 8 million, once past it) and placed by no
+  transform. His star draws itself and its light comes on when it is done;
+  he walks up, leaves after one wave of the loop's two, fades into the
+  canvas, and never comes again; a tap skips him and draws nothing, a key
+  skips him and does nothing else; a still hello under Reduce Motion; a slow
+  line, and he waits for the next open; never in a composer's frame or to
+  automation that did not ask, and nothing of his is fetched there. Each row
+  was shown red by its own break, served in place of the real file (the
+  star's, by the old drawing).
 - `verify_watchfull.py` — full screen while it plays, in the Pad and Flip
   (lib/watchfull.js), on the same phone and desk: the way in at the end of the
   line under the drawing, the drawing as big as the screen allows, the band

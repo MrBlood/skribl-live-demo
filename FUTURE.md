@@ -850,6 +850,38 @@ Reduce Motion, one module for both editors (lib/hello.js,
 `_skribl_hello.html`, brand/blooby-hello.json; verify_hello). The badge came
 off first.
 
+THE SECOND ROUND, after v327. The owner: "his background looks super low
+resolution. and it just doesn't grab me. since it's the first thing and first
+time - it has to be awesome and kind"; "shouldn't he be on laptops too - any
+first time?"; "weird nubs on the edge of star tips"; "I was hoping for a super
+crisp look, but it looks kind of blurry". Mocked as four versions played by
+the real player in a phone frame and a laptop frame (today's; A, crisp; B,
+the star drawn for you; C, the icon alive), and the owner: "C looks good".
+BUILT, as C:
+
+* The star draws itself first, a time-lapse of the pen (the outline, the
+  colouring, then the hatching that fills the points, in 1.6 s), and its
+  light, the icon's glow, comes on as it finishes. He walks up, waves once,
+  and the picture opens onto the canvas, a breath larger as it fades: about
+  6.8 s in all.
+* Points that are points: each side is its own fine line out to its point
+  (make_grow.py's take `hello`). Two points back from each tip the star is
+  4.9 to 5.9 points wide; the old one's balls were 9.8 to 10.
+* The Home Screen icon's own light behind him, the lilac deepening to the
+  icon's edge; the drawing has no ground of its own.
+* Sharp: his box on whole screen pixels and his drawing a whole number of its
+  pixels to each, twice the screen's where the drawing stays within 8 million
+  pixels (laptops, smaller phones) and one for one past it. The old rule drew
+  1.39 of its pixels to each of the screen's, off the grid, and the iPhone
+  softened every edge. Twice on a 402-point iPhone's full screen would be
+  10.3 million pixels, where Chrome here went from half a millisecond a frame
+  to nine.
+* Every first visit, on any screen; never in a composer's frame. A tap, a
+  click or any key skips him, and the key does nothing else.
+
+Not tested here: the iPhone's engine, SF and Segoe UI (verify_hello measures
+it in Chrome).
+
 ## 6n. How it works: show it, hand over the pen, keep the manual for looking things up (3 and 4 built)
 
 ASKED after the hello mock: does How it works make sense, and should it be
