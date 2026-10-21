@@ -498,7 +498,11 @@ stays a sleep.
   asked for first, drawing once the page's own scripts are done; the button
   cards'
   first note waits for another visit; the replay link (?hello=again) plays it
-  again where it was seen, on both editors; never in a
+  again where it was seen, on both editors; on a reload of it the first thing
+  painted is the hello's ground and nothing of the page shows before the hello
+  (every frame the screen made), the ground holding the page only while the
+  page's own scripts come and going by itself if lib/hello.js never runs, and
+  the head the one place it is decided (one key with lib/hello.js); never in a
   composer's frame or to automation that did not ask, and nothing of it is
   fetched there. Each row was shown red by its own break, served or read in
   place of the real file.

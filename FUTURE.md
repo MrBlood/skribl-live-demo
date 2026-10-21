@@ -891,6 +891,12 @@ m1", then of its dot, "It's to the right?", then "all yes". BUILT, as M1
 * The replay link (owner: "Yes to the replay link"): an address with
   ?hello=again, on the Pad or Flip, plays it again whether or not it was seen,
   and every reload of that address plays it again.
+* Its ground first (after v327, the owner: "on a reload it goes to the canvas
+  first, then goes to the skribl cursive"): the page's head decides whether it
+  comes before the first paint and lays its ground over the page, so the
+  canvas is first seen as the ink lifts. The ground stays while the page's own
+  scripts come, as an app's launch screen does, never past them by more than
+  0.3 s, and goes by itself at 8 s if the hello never runs.
 
 LEFT, named:
 
