@@ -870,6 +870,9 @@ body.playback-paused .tap-paused { display: grid; }
 .canvas-empty-hint.hidden {
   opacity: 0;
 }
+@media (prefers-reduced-motion: reduce) {
+  .skribl-hello.is-leaving { transform: none; }
+}
 @keyframes addtake-nudge {
   0%   { transform: translateX(-50%) scale(1); }
   35%  { transform: translateX(-50%) scale(1.08) translateY(-3px); }

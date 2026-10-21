@@ -1334,36 +1334,64 @@ body.playback-paused .tap-paused { display: grid; }
   opacity: 0;
 }
 
-/* BLOOBY SAYS HI (lib/hello.js, FUTURE.md 6m): the first open on a phone.
-   His own lilac, the Home Screen icon's, fills the screen in both themes, and
-   his drawing sits in it at its 9:16, as wide as the screen allows. He comes
-   in over a quarter second and leaves over half a second, into the canvas;
-   under Reduce Motion that fade is all that moves. */
+/* BLOOBY SAYS HI (lib/hello.js, FUTURE.md 6m): the first open, on any screen.
+   The Home Screen icon's own light fills the screen in both themes: its lilac,
+   deepening to the icon's edge (blooby.ICON_TILE to ICON_EDGE). His drawing
+   has no ground of its own, so that light shows through it, and the star's
+   glow comes on under it once the star has drawn itself. lib/hello.js puts
+   the stage on whole screen pixels, and the box and its canvas fill it
+   exactly, so nothing is centred by a fraction of a pixel. He comes in over
+   a quarter second; at the end the picture opens onto the canvas, a breath
+   larger as it fades. Under Reduce Motion the fades are all that moves. */
 .skribl-hello {
   position: fixed;
   inset: 0;
   z-index: 10000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #cdbfff;
+  background: #cdbfff radial-gradient(farthest-corner at 50% 52%, #cdbfff 12%, #ccbeff 30%, #c7b8fe 50%, #bfaefc 70%, #b5a2fa 85%, #a994f8 100%);
   opacity: 0;
   transition: opacity 0.25s ease;
 }
 .skribl-hello.is-on { opacity: 1; }
-.skribl-hello.is-leaving { opacity: 0; transition: opacity 0.5s ease; pointer-events: none; }
+.skribl-hello.is-leaving {
+  opacity: 0;
+  transform: scale(1.04);
+  transition: opacity 0.6s ease, transform 0.6s cubic-bezier(0.2, 0.7, 0.2, 1);
+  pointer-events: none;
+}
+.skribl-hello-stage { position: absolute; }
+.skribl-hello-glow { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; transition: opacity 0.7s ease; pointer-events: none; }
+.skribl-hello-glow.is-lit { opacity: 1; }
 /* .is-shaped too: a post's shaped box keeps to 70vh for a feed (inlineplayer.css);
-   the hello has the whole screen. */
+   the hello's fills its stage. */
 .skribl-hello .skribl-inline,
 .skribl-hello .skribl-inline.is-shaped {
-  width: min(100vw, calc(100dvh * 531 / 944));
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  aspect-ratio: auto;
   border: 0;
   border-radius: 0;
   box-shadow: none;
-  background: #cdbfff;
+  background: none;
   cursor: default;
 }
+/* The canvas fills the box to the pixel: the box holds the drawing's 9:16
+   exactly, so there is nothing to letterbox and no half-pixel centring for
+   an engine to smooth over. */
+.skribl-hello .skribl-inline-canvas {
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  transform: none;
+}
 .skribl-hello :is(.skribl-inline-veil, .skribl-inline-play, .skribl-inline-dur, .skribl-inline-prog, .skribl-inline-nib) { display: none; }
+@media (prefers-reduced-motion: reduce) {
+  .skribl-hello.is-leaving { transform: none; }
+}
 
 /* ...AND ON A LIGHT CANVAS, DARK INK (owner: "the grid is white so doesn't
    show on light background", and the empty-state hint with it). The canvas
