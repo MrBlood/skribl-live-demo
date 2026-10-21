@@ -1488,7 +1488,7 @@ function beginRecording(continueTake) {
     // baked into the base, so history states can go pixel-less again.
     preRecordSnapshot = canvas.toDataURL();
     unrecordedInk = false;
-    strokes = []; strokeGroups = [];
+    strokes = []; strokeGroups = []; recolors = [];   // their lines are base now
   }
   // continueTake: keep existing strokes/strokeGroups AND the original base so the
   // new take appends on top. Never re-snapshot the base mid-Skribl, or the prior

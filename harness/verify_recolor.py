@@ -448,6 +448,15 @@ with sync_playwright() as pw:
     check("a recolour undone before a reload stays undone after it, on the canvas too",
           st["c"] == INK and st["n"] == 0 and near(im.getpixel((im.width // 2, im.height // 2)), INK_RGB),
           f"{st}, pixel {im.getpixel((im.width // 2, im.height // 2))}")
+    # A fresh take paints the lines so far into its base and starts the list of
+    # points again; their recolours go with them, or they would name the new
+    # take's lines by the old ones' numbers.
+    fresh_take = q.evaluate(f"""() => {{ setPenColor('{PINK}'); SkriblPadRecolor.arm(); return true; }}""")
+    tap(q, "/skribl-pad", 150, 200); q.wait_for_timeout(450)
+    had = q.evaluate("() => { SkriblPadRecolor.disarm(); const n = recolors.length; beginRecording(false); return { had: n, now: recolors.length, pts: strokes.length }; }")
+    q.evaluate("() => endRecordingTake()")
+    check("a fresh take starts with no recolours, its old lines being its base now",
+          fresh_take and had["had"] == 1 and had["now"] == 0 and had["pts"] == 0, json.dumps(had))
     c.close()
 
     # =================================================================== Flip
