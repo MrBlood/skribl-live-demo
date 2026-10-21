@@ -95,12 +95,14 @@ def _to_line(p, line):
 
 def on_the_mark(path):
     """The hello's drawing against the header's paths, placed as make_hello.py
-    places them: the farthest its line strays from the mark's, and how far its
-    dot at rest is from the mark's dot, both in the mark's units."""
+    places them: the farthest either line strays from the other (each way, so
+    a mark with more to it than the drawing shows too), and how far its dot at
+    rest is from the mark's dot, both in the mark's units."""
     d = json.load(open(path))
     cs = d["canvasSize"]
     word, _, dot, _, s = make_hello.fit(cs["cssWidth"], cs["cssHeight"])
-    far = max(_to_line((p["x"], p["y"]), word) for p in d["frames"][0]["strokes"]) / s
+    drawn = [(p["x"], p["y"]) for p in d["frames"][0]["strokes"]]
+    far = max(max(_to_line(p, word) for p in drawn), max(_to_line(p, drawn) for p in word)) / s
     last = d["frames"][-1]["strokes"]
     lx = (min(p["x"] for p in last) + max(p["x"] for p in last)) / 2
     ly = (min(p["y"] for p in last) + max(p["y"] for p in last)) / 2
@@ -111,6 +113,8 @@ def on_the_mark(path):
 # ------------------------------------------------------------------ pixels
 def _png(data_url_or_bytes):
     raw = data_url_or_bytes
+    if not raw or raw == "data:,":
+        return None                                     # gone, or nothing to draw on
     if isinstance(raw, str):
         raw = base64.b64decode(raw.split(",", 1)[1])
     return Image.open(io.BytesIO(raw)).convert("RGBA")
@@ -120,6 +124,8 @@ def _pieces(im, least=30):
     """The separate pieces of ink (alpha over half): (labels, [(id, pixels, x0, y0, x1, y1)]), biggest first."""
     w, h = im.size
     mask = im.getchannel("A").point(lambda v: 1 if v > 128 else 0).tobytes()
+    if mask.count(1) > w * h // 4:                      # a ground, not a line: one piece, unread
+        return None, [(0, mask.count(1), 0, 0, w - 1, h - 1)]
     label = array("H", bytes(2 * w * h))
     out, nid, i = [], 0, mask.find(1)
     while i != -1:
@@ -146,17 +152,32 @@ def dot_over_i(im, unit):
     """Read off the drawn pixels: the dot against the i under it, along the
     i's 8-degree lean, in the mark's units (+ toward the b). `unit` is the
     canvas pixels to one of the mark's units. None when there is no dot."""
+    if im is None:
+        return None, "gone before it could be read"
     w, h = im.size
     label, pieces = _pieces(im)
     if len(pieces) != 2:
         return None, f"{len(pieces)} piece(s) of ink"
     word, dot = pieces
     cx, cy = (dot[2] + dot[4]) / 2, (dot[3] + dot[5]) / 2
-    half = 2.4 * unit                                   # clear of the r's shoulder and the b's stem
-    cols = range(max(0, int(cx - half)), min(w, int(cx + half) + 1))
-    top = next((y for y in range(dot[5] + 1, h) if any(label[y * w + x] == word[0] for x in cols)), None)
-    if top is None:
+    # Under the dot, the turn at the top of a line: a peak, the line falling
+    # away on both sides of it, nearest the dot. Not any line that passes
+    # beside the dot (ink at its height: the b's tall stem, just to the
+    # right), and not the slope up to one (the b's edge, rising toward it).
+    ends = {}
+    for x in range(max(0, int(cx - 3.5 * unit)), min(w, int(cx + 3.5 * unit) + 1)):
+        if any(label[y * w + x] == word[0] for y in range(dot[3], dot[5] + 1)):
+            continue
+        y = next((y for y in range(dot[5] + 1, h) if label[y * w + x] == word[0]), None)
+        if y is not None:
+            ends[x] = y
+    k = max(2, int(0.6 * unit))
+    peaks = [x for x in ends if all(x + d in ends and ends[x] <= ends[x + d] for d in range(-k, k + 1))]
+    if not peaks:
         return None, "no i under the dot"
+    peak = min(peaks, key=lambda x: abs(x - cx))
+    top = ends[peak]
+    cols = [x for x in ends if abs(x - peak) <= 1.2 * unit]
     xs = [x for y in range(top, min(h, top + int(1.2 * unit))) for x in cols if label[y * w + x] == word[0]]
     tx = sum(xs) / len(xs)
     cusp = top + 1.15 * unit                            # the line's turn, half the pen under its ink's top
@@ -191,7 +212,10 @@ def exit_read(a, b, ground):
     went (edge pixels to ink)."""
     g = Image.new("RGB", a.size, ground)
     da, db = (ImageChops.difference(im.convert("RGB"), g).convert("L") for im in (a, b))
-    x0, _, x1, _ = da.point(lambda v: 255 if v > 40 else 0).getbbox()
+    box = da.point(lambda v: 255 if v > 40 else 0).getbbox()
+    if not box:
+        return {"left": (0, 0), "right": (0, 0), "rise": 0, "soft": (0, 0), "start": "no ink"}
+    x0, _, x1, _ = box
     span, h = x1 - x0, a.size[1]
     left, right = (x0, 0, x0 + int(0.3 * span), h), (x1 - int(0.3 * span), 0, x1, h)
 
@@ -271,7 +295,7 @@ HOLD = """() => { const h = document.getElementById('skriblHello');
                            evaporating: h.classList.contains('is-evaporating') }; })
     .observe(h, { attributes: true, attributeFilter: ['class'] }); }"""
 # All of them moved to `ms` into the way out.
-AT = """(ms) => { const h = document.getElementById('skriblHello');
+AT = """(ms) => { const h = document.getElementById('skriblHello'); if (!h) return 0;
   for (const x of h.getAnimations({ subtree: true })) x.currentTime = ms;
   return +getComputedStyle(h).opacity; }"""
 GO = """() => { const h = document.getElementById('skriblHello'); if (h) for (const x of h.getAnimations({ subtree: true })) x.play(); }"""
@@ -364,23 +388,27 @@ with sync_playwright() as p:
                   f"at {early['el']} ms {early['ink']} ink samples, at {late['el']} ms {whole} "
                   f"in {len(pieces)} piece(s) of ink")
             # Then the dot, and the way out, held at its start the moment it begins.
-            q.wait_for_function("() => window.__helloHeld", timeout=8000)
-            held = q.evaluate("() => window.__helloHeld")
+            try:
+                q.wait_for_function("() => window.__helloHeld", timeout=8000)
+            except Exception:
+                pass
+            held = q.evaluate("() => window.__helloHeld || null") or {"el": -1, "total": 0, "moving": [], "evaporating": False}
             end = _png(q.evaluate(BITMAP))
-            box = q.evaluate("() => { const r = document.querySelector('#skriblHello .skribl-hello-stage').getBoundingClientRect();"
-                             " return { x: r.left, y: r.top, width: r.width, height: r.height }; }")
-            a = _png(q.screenshot(clip=box, scale="css"))
+            box = q.evaluate("() => { const st = document.querySelector('#skriblHello .skribl-hello-stage'); if (!st) return null;"
+                             " const r = st.getBoundingClientRect(); return { x: r.left, y: r.top, width: r.width, height: r.height }; }")
+            a = _png(q.screenshot(clip=box, scale="css")) if box else None
             mid = q.evaluate(AT, 450)
-            bb = _png(q.screenshot(clip=box, scale="css"))
+            bb = _png(q.screenshot(clip=box, scale="css")) if box else None
             q.evaluate(GO)
-            off2, why2 = dot_over_i(end, PEN * end.size[0] / CSS_W)
+            off2, why2 = dot_over_i(end, PEN * end.size[0] / CSS_W if end else 1)
             check(f"...then the dot drops in and comes to rest over the i, along its lean, within {NEAR} "
                   "of the mark's units (read off the canvas's pixels)",
                   off2 is not None and abs(off2) <= NEAR, f"{off2} of the mark's units (+ toward the b): {why2}")
-            e = exit_read(a, bb, ground)
+            e = exit_read(a, bb, ground) if a and bb else {"left": (0, 0), "right": (0, 0), "rise": 0, "soft": (0, 0), "start": "gone"}
             check("...it goes once the dot is at rest, the ink lifting away in the order it was written: halfway, "
                   "the first letters gone and the last still there, risen and softened, the ground still whole",
                   held["evaporating"] and sorted("mask" if "mask-position" in n else n for n in held["moving"]) == ["filter", "mask", "transform"]
+                  and e["left"][0] > 0
                   and held["el"] >= held["total"] - 250
                   and e["left"][1] <= 0.15 * e["left"][0] and e["right"][1] >= 0.6 * e["right"][0]
                   and e["rise"] >= 0.005 and e["soft"][1] >= 1.5 * e["soft"][0] + 0.02 and mid >= 0.98,
@@ -422,7 +450,7 @@ with sync_playwright() as p:
     still, why = (None, "no canvas")
     if ms is not None:
         im = _png(q.evaluate(BITMAP))
-        still, why = dot_over_i(im, PEN * im.size[0] / CSS_W)
+        still, why = dot_over_i(im, PEN * im.size[0] / CSS_W if im else 1)
     states = set()
     t0 = time.time()
     while time.time() - t0 < 1.2:

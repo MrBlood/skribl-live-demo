@@ -970,7 +970,7 @@
 
       /* At most 2 pixels a point: a feed holds many players and a third
        * pixel is half again the memory and paint for each. One player alone
-       * on the screen may name its own (attach's dpr): Blooby's hello sits
+       * on the screen may name its own (attach's dpr): the first hello sits
        * on whole screen pixels and draws a whole number of pixels to each,
        * so no engine shrinks it by an odd amount (lib/hello.js). */
       var dpr = me.dpr || Math.min(global.devicePixelRatio || 1, 2);

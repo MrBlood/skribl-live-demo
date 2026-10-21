@@ -469,20 +469,24 @@ stays a sleep.
   drafts holds the name and the .skribl file both ways; How it works' tabs are
   the same pill. Each row was shown red by its own break, served in place of
   the real file.
-- `verify_hello.py` — Blooby says hi (lib/hello.js): the first open, Pad
-  and Flip, phone and desk, light and dark. The star's points are points
-  (read off the drawing itself, before any browser). He fills the screen in
-  the Home Screen icon's own light, through a drawing with no ground of its
-  own, sharp: his box on whole screen pixels, his drawing a whole number of
-  its pixels to each (twice within 8 million, once past it) and placed by no
-  transform. His star draws itself and its light comes on when it is done;
-  he walks up, leaves after one wave of the loop's two, fades into the
-  canvas, and never comes again; a tap skips him and draws nothing, a key
-  skips him and does nothing else; a still hello under Reduce Motion; a slow
-  line, and he waits for the next open; never in a composer's frame or to
-  automation that did not ask, and nothing of his is fetched there. Each row
-  was shown red by its own break, served in place of the real file (the
-  star's, by the old drawing).
+- `verify_hello.py` — Skribl says hi (lib/hello.js): the first open, Pad
+  and Flip, phone and desk, light and dark. Before any browser: the header's
+  dot is over its i, and the hello's drawing lies on the header's own paths,
+  dot and all. Then the mark fills the screen on the page's own ground,
+  through a drawing with no ground of its own, every colour of its sweep at
+  least 3:1 there, sharp: the box on whole screen pixels, the drawing a whole
+  number of its pixels to each (twice within 8 million, once past it) and
+  placed by no transform. The mark writes itself, and its dot is not there
+  until it has; the dot comes to rest over the i (read off the canvas's own
+  pixels); the ink lifts away in the order it was written (read off the
+  screen's pixels, the way out held at its start and its middle), and it never
+  comes again. A tap skips it, holds what is written and draws nothing; a key
+  skips it and does nothing else; a still hello under Reduce Motion, the
+  finished mark, then just a fade; a slow line, and it waits for the next
+  open; the button cards' first note waits for another visit; never in a
+  composer's frame or to automation that did not ask, and nothing of it is
+  fetched there. Each row was shown red by its own break, served or read in
+  place of the real file.
 - `verify_watchfull.py` — full screen while it plays, in the Pad and Flip
   (lib/watchfull.js), on the same phone and desk: the way in at the end of the
   line under the drawing, the drawing as big as the screen allows, the band
