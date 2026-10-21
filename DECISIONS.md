@@ -20952,3 +20952,23 @@ a unit (2.5 px).
 
 Pad and Flip: both examples, from the one card (blooby.card), so the two cannot
 drift.
+
+## After v327 -- Main red after #578: Flip's tap-to-resume row measures where it paused
+
+verify_tappause's "Flip: a second tap carries the flip on from where it
+paused" went red on one shard of main's run after #578 (postgres 1/6; the
+sqlite lane passed the same commit, and flip.js was not touched): "the page
+gave way 164.9 ms after the resume, with about 550 ms of its 1000 left". The
+page was right. The check assumed the pausing tap landed 450 ms into its page;
+sent from the suite on a runner busy with a database, it landed near 835, and
+the page rightly gave way 165 ms after the resume.
+
+The row now reads where it paused on the page's own clock: when each page came
+up and when the pause and the resume landed (a recorder that stops once the
+page after the resume is up). What the page showed before the pause and after
+the resume make its 1000 ms between them, within 150 ms, and at least half of
+what was left comes after the resume. Shown green on the tree (676 ms before,
+324 left, gave way 320 after), red when the resume starts the page again (gave
+way 1010 ms after, 276 left) and when it skips it (27 ms after, 371 left), and
+green with the tap sent at 800 ms, where the old row went red as it did on
+main (17.9 ms after the resume).
