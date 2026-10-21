@@ -1334,36 +1334,57 @@ body.playback-paused .tap-paused { display: grid; }
   opacity: 0;
 }
 
-/* BLOOBY SAYS HI (lib/hello.js, FUTURE.md 6m): the first open, on any screen.
-   The Home Screen icon's own light fills the screen in both themes: its lilac,
-   deepening to the icon's edge (blooby.ICON_TILE to ICON_EDGE). His drawing
-   has no ground of its own, so that light shows through it, and the star's
-   glow comes on under it once the star has drawn itself. lib/hello.js puts
-   the stage on whole screen pixels, and the box and its canvas fill it
-   exactly, so nothing is centred by a fraction of a pixel. He comes in over
-   a quarter second; at the end the picture opens onto the canvas, a breath
-   larger as it fades. Under Reduce Motion the fades are all that moves. */
+/* SKRIBL SAYS HI (lib/hello.js, FUTURE.md 6m): the first open, on any screen.
+   The page's own ground in both themes, as under the header's mark, and on it
+   the mark writing itself in its own sweep of colour (the drawing has no
+   ground of its own): 4.5 to 6.2:1 on the dark, 4.2 to 3.1:1 on the light.
+   lib/hello.js puts the stage on whole screen pixels, and the box and its
+   canvas fill it exactly, so nothing is centred by a fraction of a pixel. It
+   comes in over a quarter second. */
 .skribl-hello {
   position: fixed;
   inset: 0;
   z-index: 10000;
-  background: #cdbfff radial-gradient(farthest-corner at 50% 52%, #cdbfff 12%, #ccbeff 30%, #c7b8fe 50%, #bfaefc 70%, #b5a2fa 85%, #a994f8 100%);
+  background: var(--surface-base);
   opacity: 0;
   transition: opacity 0.25s ease;
 }
 .skribl-hello.is-on { opacity: 1; }
 .skribl-hello.is-leaving {
   opacity: 0;
-  transition: opacity 0.6s ease, transform 0.6s cubic-bezier(0.2, 0.7, 0.2, 1);
+  transition: opacity 0.45s ease;
   pointer-events: none;
 }
-/* The picture opening onto the canvas, a breath larger as it fades. Never
-   under Reduce Motion: lib/hello.js leaves it off there, rather than a media
-   query here, which would ride into player.css (cssgraph keeps every one). */
-.skribl-hello.is-swell { transform: scale(1.04); }
+/* THE INK LIFTS AWAY in the order it was written: a soft edge sweeps across it
+   left to right while the line rises a little and blurs, and from 0.6 s the
+   ground fades too, so the canvas shows through as the last of it goes.
+   lib/hello.js sets the edge in place first (.is-lifting: all of the ink still
+   showing), a frame before it moves, so these are transitions. A @keyframes
+   here would ride into player.css (cssgraph keeps every one), and so would a
+   Reduce Motion query, so under Reduce Motion lib/hello.js leaves the lifting
+   off and the whole hello just fades. The transitions are the moving rule's
+   alone: on the edge's own rule, putting the edge in place would itself
+   glide, in from hidden. */
+.skribl-hello.is-lifting .skribl-inline {
+  -webkit-mask-image: linear-gradient(90deg, transparent 0 44%, #000 56% 100%);
+  mask-image: linear-gradient(90deg, transparent 0 44%, #000 56% 100%);
+  -webkit-mask-size: 300% 100%;
+  mask-size: 300% 100%;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: 100% 0;
+  mask-position: 100% 0;
+}
+.skribl-hello.is-evaporating { transition-delay: 0.6s; }
+.skribl-hello.is-evaporating .skribl-inline {
+  -webkit-mask-position: 0% 0;
+  mask-position: 0% 0;
+  transform: translateY(-2.5%);
+  filter: blur(3px);
+  transition: -webkit-mask-position 0.9s cubic-bezier(0.45, 0, 0.55, 1), mask-position 0.9s cubic-bezier(0.45, 0, 0.55, 1),
+              transform 0.9s cubic-bezier(0.45, 0, 0.55, 1), filter 0.9s cubic-bezier(0.45, 0, 0.55, 1);
+}
 .skribl-hello-stage { position: absolute; }
-.skribl-hello-glow { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; transition: opacity 0.7s ease; pointer-events: none; }
-.skribl-hello-glow.is-lit { opacity: 1; }
 /* .is-shaped too: a post's shaped box keeps to 70vh for a feed (inlineplayer.css);
    the hello's fills its stage. */
 .skribl-hello .skribl-inline,

@@ -5,8 +5,8 @@ The owner asked for it after the Blooby cheer (v323): "make a blooby waving
 start small then emerge at full screen ... keep star background logo and start
 blooby small and grow full size -- show multiple interpretations". These are
 the seven takes, A1 to E, that the owner has as .skribl files and a filmed
-mock (FUTURE.md 6l). The owner picked C for Blooby's first hello; the app
-plays the take `hello`, below.
+mock; which one, and where he lives, is theirs to pick (FUTURE.md 6l). Nothing
+in the app uses this yet.
 
 Each take is a Flip drawn through the real Flip editor with real pen input
 (artdraw), on a 9:16 canvas in the Home Screen icon's lilac:
@@ -37,22 +37,6 @@ THE HELLO AS MOCKED AT THE v323 SEAL (FUTURE.md 6m): take C with
 -- Blooby at the icon's share of the star and standing on its white, no band
 of light round the star, its corners filled. Unset, every take draws as it
 did when the owner first saw the seven.
-
-THE HELLO AS IT SHIPS (the owner's pick after v327, mock C: "C looks good")
-is its own take, `hello`: take C at that share and lift, with three changes.
-
-  * The star's points are points (pointed_star). The one closed outline of
-    a round pen ended every point in a ball, and its smoothing pinched a
-    neck behind some: the owner's "nubs" on the star tips.
-  * Its page draws itself, a time-lapse of the pen: the outline, then the
-    colouring, then the hatching that fills the points, each group fitted
-    to its share of STAR_MS with every stroke keeping its own rhythm (the
-    pen draws at its own pace; the hello plays it fast, as "fit" would).
-  * No ground: the payload carries no background colour, so the hello's
-    own light (the Home Screen icon's glass, lib/hello.js) shows through.
-
-    python3 harness/tools/make_grow.py OUTDIR hello
-    cp OUTDIR/hello.json skribl/static/brand/blooby-hello.json
 """
 import copy
 import json
@@ -79,7 +63,7 @@ FPS = 12
 TITLES = {"A1": "Blooby says hi (A1, even)", "A2": "Blooby says hi (A2, eased)",
           "A3": "Blooby says hi (A3, settle and twinkle)", "B": "Blooby says hi (B, pop)",
           "C": "Blooby says hi (C, walks up)", "D": "Blooby says hi (D, draws himself)",
-          "E": "Blooby says hi (E, the whole logo)", "hello": "Blooby says hi"}
+          "E": "Blooby says hi (E, the whole logo)"}
 CYCLE = 12                        # pages per wave: one wave a second
 STAR_INNER = blooby.ICON_STAR_INNER
 # THE WHOLE STAR, as the app's Blooby badge has it (blooby.BADGE_*): in a tall
@@ -87,11 +71,6 @@ STAR_INNER = blooby.ICON_STAR_INNER
 # white band across the screen. All six points inside, a little margin.
 STAR_FRAC = float(os.environ.get("GROW_STAR_FRAC", 0.5))   # its points' reach, as a share of the width
 FILL_FRAC = float(os.environ.get("GROW_FILL_FRAC", 0.70))  # his full height, as a share of the width (the badge's)
-# The hello (take `hello`): the icon's share of the star, lifted onto its white.
-HELLO_FILL, HELLO_LIFT = 0.525, 0.087
-# The star's page as a time-lapse: outline, colouring, hatching -- each
-# group's milliseconds, and the beat between its strokes.
-STAR_MS = ((820, 18), (460, 24), (300, 0))
 
 # ------------------------------------------------------------------ Blooby
 
@@ -271,85 +250,6 @@ def star_strokes(cx, cy, r, cw, ch, scale=1.0):
     return glow + fill + spines + edge
 
 
-# A point's half angle, at its tip.
-HALF = math.atan2(STAR_INNER * math.sin(math.radians(30)), 1 - STAR_INNER * math.cos(math.radians(30)))
-
-
-def _edge_dist(r):
-    """How far each side's line is from the middle (the same for all twelve)."""
-    (tx, ty), (ix, iy) = star_pts(0, 0, r)[0], star_pts(0, 0, r)[1]
-    return abs(tx * iy - ty * ix) / math.hypot(ix - tx, iy - ty)
-
-
-def _truncated(pts, wmin):
-    """The star with each point cut square where it is `wmin` wide: no row of
-    the colouring is shorter than that, so none turns a hairpin that the pen's
-    smoothing swings out past the side (bumps along the narrow points)."""
-    out, n = [], len(pts)
-    for k in range(n):
-        if k % 2:
-            out.append(pts[k])
-            continue
-        tip = pts[k]
-        for other in (pts[k - 1], pts[(k + 1) % n]):
-            dx, dy = other[0] - tip[0], other[1] - tip[1]
-            d = math.hypot(dx, dy)
-            back = (wmin / 2) / math.sin(HALF)          # along the side, to where the point is wmin wide
-            out.append((tip[0] + dx / d * back, tip[1] + dy / d * back))
-    return out
-
-
-def _hatch(inner, tip, centre, depth, size, outline_half):
-    """A straight line `depth` inside one side and parallel to it, from the
-    inner corner out to where it meets the point's middle: hatching that fills
-    a point with no turn for the smoothing to swing past the side."""
-    tx, ty = tip[0] - inner[0], tip[1] - inner[1]
-    d = math.hypot(tx, ty)
-    ux, uy = tx / d, ty / d
-    nx, ny = -uy, ux
-    if (centre[0] - inner[0]) * nx + (centre[1] - inner[1]) * ny < 0:
-        nx, ny = -nx, -ny                           # the normal that points into the star
-    end = d - depth / math.tan(HALF)                # along the side, where this line reaches the middle
-    if end <= 4:
-        return None
-    # On past the middle, as far as its round end stays inside the other
-    # side's outline, so the two sides' lines overlap instead of leaving a
-    # sliver; and back past the inner corner, into the star's body.
-    over = min(size * 0.6, max(0.0, (depth + outline_half - size / 2) / math.sin(2 * HALF)))
-    return [(inner[0] + nx * depth - ux * size, inner[1] + ny * depth - uy * size),
-            (inner[0] + nx * depth + ux * (end + over), inner[1] + ny * depth + uy * (end + over))]
-
-
-def pointed_star(cx, cy, r, cw, ch, outline=5.0, row=26.0, wmin=20.0,
-                 hatches=((2.5, 5.0), (6.0, 6.0), (10.5, 7.0), (15.5, 8.0), (21.0, 9.0), (27.0, 10.0))):
-    """The hello's star, inked the way a hand inks one, as three groups in the
-    order they are drawn: the outline, the colouring, the hatching.
-
-    No stroke turns a corner. Each side is its own fine line from the inner
-    corner out to the point, lifting off there, so every point ends in a
-    point; the colouring runs on the star shrunk by its round ends' reach
-    and cut square where a point gets narrow, so those ends stay under the
-    outline; and straight lines parallel to each side fill the narrow
-    points. (star_strokes' one closed loop of a round pen ended every point
-    in a ball, and its smoothing pinched a neck behind some.)"""
-    m = 2
-    pts = star_pts(cx, cy, r)[:12]
-    shrink = 1 - (row / 2 - outline / 2 + 0.5) / _edge_dist(r)
-    inset = _truncated(star_pts(cx, cy, r * shrink)[:12], wmin)
-    rows = [S(blooby.dense(p, 4), "fill", WHITE, size=row, pace=2.6, peak=1.0, flat=True)
-            for p in poly_rows(inset + [inset[0]], 14, 0.5, m, cw - m)]
-    sides = [(pts[(k + 1) % 12], pts[k]) if k % 2 == 0 else (pts[k], pts[(k + 1) % 12]) for k in range(12)]
-    hatching = []
-    for depth, size in hatches:
-        for inner, tip in sides:
-            p = _hatch(inner, tip, (cx, cy), depth, size, outline / 2)
-            if p:
-                hatching.append(S(blooby.dense(p, 2), "fill", WHITE, size=size, pace=0.9, peak=1.0, flat=True))
-    lines = [S(blooby.dense([inner, tip], 2), "form", WHITE, size=outline, pace=0.8, peak=1.0, flat=True)
-             for inner, tip in sides]
-    return lines, rows, hatching
-
-
 # ------------------------------------------------------------------ the takes
 
 def ease_out(t):
@@ -362,10 +262,8 @@ def ease_out_back(t, c=0.9):
 
 def take(name, cw, ch):
     """The pages of a take: dicts saying what each page holds."""
-    hello = name == "hello"
-    k_full = (HELLO_FILL if hello else FILL_FRAC) * cw / REF_H              # his full height, as a share of the width
-    lift = HELLO_LIFT if hello else float(os.environ.get("GROW_LIFT", 0))
-    mid = (cw / 2, ch / 2 - lift * cw)                                       # where he stands, lifted onto the star
+    k_full = FILL_FRAC * cw / REF_H              # his full height, the badge's share of the width
+    mid = (cw / 2, ch / 2 - float(os.environ.get("GROW_LIFT", 0)) * cw)   # where he stands, lifted onto the star
     pages, loop_n, star_page = [], 24, True
     feet_full = (mid[0] + (REF_FEET[0] - REF_C[0]) * k_full, mid[1] + (REF_FEET[1] - REF_C[1]) * k_full)
 
@@ -394,7 +292,7 @@ def take(name, cw, ch):
         sy = [1.0, 1.12, 1.14, 1.1, 1.04, 1.0, 0.96, 0.94, 0.97, 1.0, 1.02, 1.01, 1.0, 1.0]
         tw = [0, 0, 0, 0, 0.3, 0.7, 1.0, 1.0, 0.8, 0.6, 0.4, 0.2, 0, 0]
         growth(sc, sx=sx, sy=sy, sparkle=tw, anchor=REF_FEET, at=feet_full)
-    elif name in ("C", "hello"):   # he walks up to you from far off on the star, waving, a waddle in each step
+    elif name == "C":      # he walks up to you from far off on the star, waving, a waddle in each step
         g = 40
         sc, at, rot = [], [], []
         far_feet = (mid[0], mid[1] - 0.18 * ch)
@@ -465,13 +363,9 @@ def build(name, out_dir, browser):
     def draw(strokes, seed, tempo=1.6, gaps=6.0):
         artdraw.draw(page, strokes, seed=seed, canvas="#pad", logical=logical, tempo=tempo, pause_tempo=gaps)
 
-    first, hello = True, name == "hello"
+    first = True
     if spec["star_page"]:
-        if hello:
-            groups = pointed_star(cw / 2, ch / 2, star_r, cw, ch)
-            draw([s for g in groups for s in g], 1, tempo=1.0, gaps=6.0)
-        else:
-            draw(star_strokes(cw / 2, ch / 2, star_r, cw, ch), 1, tempo=2.2)
+        draw(star_strokes(cw / 2, ch / 2, star_r, cw, ch), 1, tempo=2.2)
         first = False
     for i, p in enumerate(spec["pages"]):
         if not first:
@@ -503,34 +397,12 @@ def build(name, out_dir, browser):
     total = page.evaluate("() => frames.length")
     draws = [i for i, p in enumerate(spec["pages"]) if p.get("draw")]
     off = 1 if spec["star_page"] else 0
-    draws = [d + off for d in draws] + ([0] if hello else [])
     under = {"page": 0, "from": 1, "to": total - 1} if spec["star_page"] else None
     loop = {"from": growth_end, "to": total - 1, "forever": True}
-    if hello:
-        # THE STAR'S PAGE AS A TIME-LAPSE, in the editor itself so the backup
-        # and the post agree: each group fitted to its milliseconds, each
-        # stroke keeping its own rhythm, a beat between strokes.
-        bad = page.evaluate("""([counts, plan]) => {
-            const pts = frames[0].strokes, runs = [];
-            for (const p of pts) { if (p.start || !runs.length) runs.push([]); runs[runs.length - 1].push(p); }
-            if (runs.length !== counts.reduce((a, b) => a + b, 0)) return runs.length + ' strokes for ' + counts;
-            let t = pts[0].t, at = 0;
-            counts.forEach((n, g) => {
-              const group = runs.slice(at, at + n), span = plan[g][0], beat = plan[g][1];
-              at += n;
-              const raw = group.reduce((a, s) => a + Math.max(1, s[s.length - 1].t - s[0].t), 0);
-              const k = (span - beat * (n - 1)) / raw;
-              group.forEach(s => { const t0 = s[0].t;
-                s.forEach(p => { p.t = Math.round(t + (p.t - t0) * k); });
-                t = s[s.length - 1].t + beat; });
-            });
-            return null; }""", [[len(g) for g in groups], [list(x) for x in STAR_MS]])
-        if bad:
-            raise SystemExit(f"hello: the star page recorded {bad}")
     page.evaluate("""([draws, under, loop]) => { frames.forEach(f => { delete f.draw; });
         draws.forEach(i => { frames[i].draw = true; });
         docUnder = under; docLoop = loop; idx = 0; buildStrip(); render(); }""",
-                  [draws, under, loop])
+                  [[d + off for d in draws], under, loop])
     page.evaluate("t => window.SkriblName && window.SkriblName.set(t)", TITLES.get(name, 'Blooby says hi'))
     page.wait_for_timeout(300)
     doc = page.evaluate("() => serializeFlip()")
@@ -539,9 +411,6 @@ def build(name, out_dir, browser):
     ctx.close()
     if errs:
         raise SystemExit(f"{name}: page errors {errs[:2]}")
-    if hello:
-        for f in payload["frames"]:
-            f["background"] = None          # the hello's own light shows through (lib/hello.js)
     out = pathlib.Path(out_dir)
     (out / f"{name}.skribl").write_text(json.dumps(doc))
     (out / f"{name}.json").write_text(json.dumps(payload))

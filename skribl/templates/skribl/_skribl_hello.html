@@ -1,31 +1,19 @@
 {#
-   BLOOBY SAYS HI (FUTURE.md 6m): the first time Skribl opens, on any screen,
-   his star draws itself and its light comes on, he walks up from far away
-   onto it, waves once, and the picture opens onto the canvas. Once only; a
-   tap, a click or any key skips him; a still hello under Reduce Motion. One
-   partial for both editors, played by the in-post player (the hello is a Flip
-   drawn with the real pen by harness/tools/make_grow.py's take `hello`) in
-   the Home Screen icon's own light. lib/hello.js decides whether he comes at
-   all and fetches nothing when he does not.
+   SKRIBL SAYS HI (FUTURE.md 6m): the first time Skribl opens, on any screen,
+   the mark writes itself with the real pen, the i's dot drops in and bounces
+   into place, and the ink lifts away into the canvas. Once only; a tap, a
+   click or any key skips it; a still hello under Reduce Motion. One partial
+   for both editors, played by the in-post player (the hello is a Flip drawn
+   with the real pen by harness/tools/make_hello.py, from the header's own
+   mark) on the page's own ground. lib/hello.js decides whether it comes at
+   all, takes this away at once when it does not, and fetches nothing then.
 #}
 {% from 'skribl/_skribl_inline_player.html' import skribl_inline_draft %}
-<div id="skriblHello" class="skribl-hello" role="img" aria-label="Blooby waves hello from his star" hidden
-     data-hello="{{ skribl_asset('brand/blooby-hello.json') }}"
+<div id="skriblHello" class="skribl-hello" role="img" aria-label="Skribl's signature" hidden
+     data-hello="{{ skribl_asset('brand/hello.json') }}"
      data-player-css="{{ skribl_asset('inlineplayer.css') }}"
      data-player-js="{{ skribl_asset('inlineplayer.js') }}">
   <div class="skribl-hello-stage">
-    {# THE STAR'S LIGHT, under the drawing: the icon's glow (blooby.ICON_GLOW),
-       the star blurred twice at 0.030 and 0.010 of the drawing's width, at the
-       strength mock C showed. The star is the drawing's own (make_grow.py:
-       centred, its points half the width out, inner corners at 0.407). #}
-    <svg class="skribl-hello-glow" viewBox="0 0 531 944" aria-hidden="true" focusable="false">
-      <defs>
-        <filter id="skriblHelloGlowWide" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="16"/></filter>
-        <filter id="skriblHelloGlowNear" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="5.3"/></filter>
-      </defs>
-      <path d="M265.5 206.5L319.5 378.4L495.4 339.2L373.6 472.0L495.4 604.8L319.5 565.6L265.5 737.5L211.5 565.6L35.6 604.8L157.4 472.0L35.6 339.2L211.5 378.4Z" fill="#fff" opacity=".55" filter="url(#skriblHelloGlowWide)"/>
-      <path d="M265.5 206.5L319.5 378.4L495.4 339.2L373.6 472.0L495.4 604.8L319.5 565.6L265.5 737.5L211.5 565.6L35.6 604.8L157.4 472.0L35.6 339.2L211.5 378.4Z" fill="#fff" opacity=".6" filter="url(#skriblHelloGlowNear)"/>
-    </svg>
     {{ skribl_inline_draft('skriblHelloBox', controls=false, progress=false, plain=true) }}
   </div>
 </div>
