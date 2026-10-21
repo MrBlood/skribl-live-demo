@@ -20972,3 +20972,31 @@ what was left comes after the resume. Shown green on the tree (676 ms before,
 way 1010 ms after, 276 left) and when it skips it (27 ms after, 371 left), and
 green with the tap sent at 800 ms, where the old row went red as it did on
 main (17.9 ms after the resume).
+
+## After v327 -- Recolor keeps its pointer on Flip after a colour change (the owner's desktop check R3)
+
+The owner, checking Recolor on a desk: "on flip the pointer dissapears when I
+select a different color to recolor the lines ... as soon as I change the
+color, the pointer dissapears over the canvas." The mode puts the pen's ring
+away and wants the system's crosshair, which lib/recolor.js wrote inline on
+the canvas from sync(), the one call every colour change passes. A colour pick
+also sets the pen's own cursor inline: 'none' on Flip, for the ring. The Pad
+set the pen's first and then synced, so the crosshair came back; Flip's
+setColor() synced first and then ran setTool('pen'), so the pen's 'none' came
+last and nothing at all showed over the canvas.
+
+The mode's crosshair is now a rule over any inline cursor while it is on,
+body.recoloring on each editor's canvas (flip.css #pad, styles.css #canvas),
+and lib/recolor.js writes no cursor at all: the order an editor calls things
+in cannot lose it again, nor can Flip's zoom, which writes '' (Flip's canvas
+is 'none' under it). On the Pad the rule also covers a finished take, whose
+lock writes 'not-allowed' where recolouring is allowed.
+
+verify_recolor, THE POINTER (new, on a desk, both editors): the pointer over
+the canvas is a crosshair in the mode, and still is after a colour picked from
+the bar. On the tree before the fix, Flip's second row was red ('none') and
+the Pad's were green. Each rule taken out alone turns its own editor's rows
+red: Flip's to 'none', the Pad's to 'not-allowed' on a loaded drawing.
+
+Pad and Flip: shared, one module and one rule each side; Flip was the one that
+lost it.

@@ -507,7 +507,8 @@ stays a sleep.
   the end of the Pen | Background row, and the colour row nine colours again,
   read for its gaps at 320, 390 and 402; the mode's bar in the dock's row,
   the dock out of reach for a finger and the keyboard, the canvas unmoved, the
-  bar's colour the pen's; a tap takes the topmost line and keeps its opacity,
+  bar's colour the pen's; on a desk the mode's crosshair over the canvas, a
+  colour picked from the bar included (Flip lost it there); a tap takes the topmost line and keeps its opacity,
   a tap on nothing and the first finger of a pinch change nothing, an eraser's
   stroke is never hit; a drag takes each line it crosses as one undo; the
   colour runs from the finger (read off the run's own overlay on every frame,

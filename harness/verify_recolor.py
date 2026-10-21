@@ -16,6 +16,11 @@ The rows, each the owner's choice or a fault found building it:
   bar's colour is the pen's, and a colour picked from it closes the drawer
   again; Done and Escape give the dock back.
 
+  THE POINTER. On a desk the mode's crosshair is over the canvas, and stays
+  after a colour is picked from the bar: on Flip it vanished there (the
+  owner's desktop check R3), and on the Pad a loaded drawing's lock would say
+  'not-allowed'.
+
   A TAP recolours the line under it, the topmost where two cross, keeping its
   opacity, and nothing else; a tap on nothing changes nothing and leaves no
   undo step; an eraser's line is never hit; the first finger of a pinch
@@ -264,6 +269,39 @@ with sync_playwright() as pw:
         q.evaluate(f"() => {e['rc']}.arm()"); q.wait_for_timeout(250)
         q.keyboard.press("Escape"); q.wait_for_timeout(250)
         check(f"{route}: Escape ends it too", not armed(q, route))
+        c.close()
+
+    # =============================================================== the pointer
+    print("\nTHE POINTER — on a desk the mode's crosshair is over the canvas, and stays after a colour change")
+    # The owner, on Flip: "as soon as I change the color, the pointer
+    # dissapears over the canvas." The mode puts the pen's ring away, and
+    # Flip's colour pick set the pen's cursor ('none', for the ring) after the
+    # mode had set its own. Flip's row is that scenario. The Pad set them the
+    # other way round and could not lose it; its row asks the same of a loaded
+    # drawing, whose lock writes 'not-allowed' on the canvas, which is the
+    # stylesheet's rule doing the work (styles.css, flip.css: body.recoloring).
+    for route in ED:
+        e = ED[route]
+        c, q = fresh(b, route, DESK)
+        load(q, route, drawing())
+        q.evaluate(e["drawer"]); q.wait_for_timeout(400)
+        q.click("#recolorBtn"); q.wait_for_timeout(400)
+
+        def pointer(x, y):
+            s = screen_of(q, route, x, y)
+            q.mouse.move(s["x"] + 40, s["y"] + 40)
+            q.mouse.move(s["x"], s["y"], steps=4); q.wait_for_timeout(120)
+            return q.evaluate("""([x, y]) => { const h = document.elementFromPoint(x, y);
+                return { on: h && (h.id || h.className), cursor: h && getComputedStyle(h).cursor }; }""", [s["x"], s["y"]])
+        was = pointer(300, 300)
+        check(f"{route}: in Recolor the pointer over the canvas is a crosshair",
+              armed(q, route) and was["cursor"] == "crosshair", json.dumps(was))
+        q.click(".recolor-swatch"); q.wait_for_timeout(400)
+        q.evaluate("() => [...document.querySelectorAll('#colorGroup .color-dot[data-color]')].find(x => x.dataset.color.toLowerCase() === '#00a95c').click()")
+        q.wait_for_timeout(400)
+        now = pointer(300, 300)
+        check(f"{route}: ...and still is after a new colour from the bar",
+              armed(q, route) and now["cursor"] == "crosshair", json.dumps(now))
         c.close()
 
     # ==================================================================== a tap

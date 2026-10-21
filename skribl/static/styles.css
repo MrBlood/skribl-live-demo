@@ -2198,6 +2198,12 @@ body.replaying .tab-panel > * { opacity: var(--drawer-rest); }
 /* A finished take's Add take pill sits on the drawing: while lines are being
    tapped it steps aside, and is back on Done. */
 body.recoloring #addTakePill { visibility: hidden; }
+/* The mode's pointer is the system's crosshair (the pen's ring is put away),
+   over any cursor the canvas's tool or lock writes inline: a finished take's
+   'not-allowed' is wrong here, as recolouring a take is allowed. Flip's is the
+   same rule (flip.css), which is where an inline cursor once won: the pointer
+   went "as soon as I change the color" (the owner). */
+body.recoloring #canvas { cursor: crosshair !important; }
 /* (Under Reduce Motion the bar and the dock simply swap: the comprehensive
    reduced-motion rule makes every transition near-instant.) */
 

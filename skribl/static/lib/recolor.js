@@ -307,8 +307,13 @@
     /* The bar's colour and Undo, as they are now. A colour picked while the
        mode is on closes the drawer: the next thing wanted is the drawing. The
        editors call this from the one place every colour change passes (the
-       pen's swoosh), which is also after any tool change put its own cursor
-       on the canvas, so the mode's goes back. */
+       pen's swoosh).
+       THE MODE'S CROSSHAIR IS THE STYLESHEETS' (body.recoloring, styles.css
+       and flip.css), not written here: a colour pick also sets the pen's own
+       cursor inline, 'none' on Flip for the ring the mode puts away, and Flip
+       set it after this did, so the pointer vanished over the canvas "as soon
+       as I change the color" (the owner). A rule over the inline cursor
+       cannot lose to the order things are called in. */
     function sync() {
       if (!bar) return;
       var hex = (o.color && o.color()) || '#7c5cff';
@@ -317,7 +322,6 @@
       bar._swatch.title = 'Change the color';
       bar._undo.disabled = !o.undoButton || !!o.undoButton.disabled;
       if (armed && shown && shown !== hex && o.colorsOpen && o.colorsOpen() && o.closeColors) o.closeColors();
-      if (armed && o.surface) o.surface.style.cursor = 'crosshair';
       shown = hex;
     }
 
@@ -335,9 +339,8 @@
       if (o.dock) o.dock.classList.toggle('is-recoloring', armed);
       document.body.classList.toggle('recoloring', armed);
       bar.inert = !armed;
-      if (o.surface && !armed) o.surface.style.cursor = '';
-      // The editor first (it closes the drawer and holds the pen, which put
-      // their own cursor on the canvas), then the bar and the mode's cursor.
+      // The editor first (it closes the drawer and holds the pen; off, it puts
+      // its tool's cursor back), then the bar.
       if (o.onChange) o.onChange(armed);
       shown = null;
       sync();

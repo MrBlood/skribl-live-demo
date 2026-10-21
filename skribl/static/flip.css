@@ -251,6 +251,12 @@
      playing or paused Flip showed nothing at all (the owner, clicking it to
      pause). */
   body.playing #pad { cursor: default !important; }
+  /* Recolor puts the pen's ring away and wants the system's crosshair, over
+     the cursor setTool() writes inline: a colour pick ends in setTool('pen'),
+     whose 'none' is for the ring, and the owner's pointer vanished over the
+     canvas "as soon as I change the color". The mode owns it while it is on
+     (lib/recolor.js; the Pad's is the same rule, styles.css). */
+  body.recoloring #pad { cursor: crosshair !important; }
   /* IN FULL SCREEN THE DRAWING IS THE SCREEN (lib/watchfull.js, the Pad's
      too): the page frame above -- the edge, the rounded corners, the drop
      shadow -- is for finding the canvas on a page, and full screen has
