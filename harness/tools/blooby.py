@@ -144,6 +144,7 @@ AX0, AX1, AY_TOP, AY1 = 268, 548, 128, 486    # the arched window
 AR = (AX1 - AX0) / 2
 ACX, ACY = (AX0 + AX1) / 2, AY_TOP + AR
 PX0, PY0, PX1, PY1 = 292, 502, 524, 552       # the name plate
+TITLE = (325, 25.5, 2.7)                      # the signature's place and scale (verify_helpdemos reads it)
 
 
 def dense(pts, step=6):
@@ -336,7 +337,7 @@ def card(with_blooby=True):
     # The title: the signature in accent purple, outlined in ink so it reads on the lavender (as the All
     # Star title is outlined), over a yellow shadow. Its tall letters break the frame on purpose; its
     # foot clears the arch, where the two yellows had run together.
-    main, dot = sig_strokes(325, 25.5, 2.7)
+    main, dot = sig_strokes(*TITLE)
     st.append(S([(x + 4, y + 4) for x, y in main], "form", YEL, size=12, pace=0.9, peak=1.0, flat=True))
     st.append(S(main, "form", INK, size=11, pace=0.9, peak=1.0, flat=True))
     st.append(S(dot, "form", INK, size=11.5, peak=1.0, flat=True))

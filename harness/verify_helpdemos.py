@@ -119,6 +119,63 @@ check("...and he steps straight into the wave: of all its pages, page 2's arm is
 check("his wave is every page after, looped Forever, and none of them draws itself",
       loop == {"from": 2, "to": last, "forever": True} and not any(draws[2:]), f"loop {loop}, draws {draws}")
 
+# ---- 1c. the card's title is the header's mark -----------------------------
+# The card's title is the header's own mark, drawn by the pen: blooby.py reads
+# both its paths from the template. After v327 the mark's dot moved 1.3 of its
+# units left, over the i, and the two examples that draw the card kept the old
+# spot until they were drawn again (3.6 px right, on the card). Asked of the
+# drawings: the dot each draws twice, ink then purple, sits where the
+# template's dot falls on the card, and the title's line is the template's.
+print("\nTHE CARD'S TITLE -- the header's mark, its dot over the i")
+sys.path.insert(0, str(ROOT / "harness" / "tools"))
+import blooby  # noqa: E402
+
+_main, _dot = blooby.sig_strokes(*blooby.TITLE)
+_want = ((_dot[0][0] + _dot[1][0]) / 2, (_dot[0][1] + _dot[1][1]) / 2)
+_box = (min(x for x, _ in _main), min(y for _, y in _main), max(x for x, _ in _main), max(y for _, y in _main))
+
+
+def _seg(p, a, b):
+    """How far p is from the segment a-b."""
+    dx, dy = b[0] - a[0], b[1] - a[1]
+    t = max(0.0, min(1.0, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / ((dx * dx + dy * dy) or 1)))
+    return math.dist(p, (a[0] + t * dx, a[1] + t * dy))
+
+
+def _title(f):
+    """The strokes inside the title's box (and a pen's width round it), as
+    (points, extent): the yellow shadow, the ink and purple lines, the dots."""
+    out, i = [], 0
+    for n in f["strokeGroups"]:
+        g, i = f["strokes"][i:i + n], i + n
+        xs, ys = [p["x"] for p in g], [p["y"] for p in g]
+        if min(xs) >= _box[0] - 15 and max(xs) <= _box[2] + 15 and min(ys) >= _box[1] - 15 and max(ys) <= _box[3] + 15:
+            out.append((g, max(max(xs) - min(xs), max(ys) - min(ys))))
+    return out
+
+
+for _name in ("blooby-card.json", "flip-blooby-card.json"):
+    _t = _title(json.loads((DEMOS / _name).read_text())["frames"][0])
+    _dots = [g for g, ext in _t if ext < 6]
+    _cols = [g[0]["color"] for g in _dots]
+    _off = [math.dist(_want, (sum(p["x"] for p in g) / len(g), sum(p["y"] for p in g) / len(g))) for g in _dots]
+    check(f"{_name}: the title's dot is drawn twice, ink then purple",
+          _cols == [blooby.INK, blooby.PURPLE], f"{len(_dots)} dot(s), colours {_cols}")
+    check(f"...where the header's mark puts it, over the i",
+          _dots and max(_off) < 1.0, "off by " + ", ".join(f"{d:.1f}" for d in _off) + " px")
+    # The line: its corners where the template's are, and no point of it
+    # farther from the template's line than the pen's own wobble (1.1 px as
+    # drawn; an i moved a unit sideways is 2.7).
+    _ink = [g for g, ext in _t if ext > 100 and g[0]["color"] == blooby.INK]
+    _err = [max(abs(a - b) for a, b in zip(_box, (min(p["x"] for p in g), min(p["y"] for p in g),
+                                                   max(p["x"] for p in g), max(p["y"] for p in g)))) for g in _ink]
+    _far = [max(min(_seg((p["x"], p["y"]), _main[k], _main[k + 1]) for k in range(len(_main) - 1)) for p in g)
+            for g in _ink]
+    check(f"...and the title's line is the header's mark's line",
+          len(_ink) == 1 and _err[0] < 1.5 and _far[0] < 1.6,
+          f"{len(_ink)} ink line(s), corners off by " + ", ".join(f"{e:.1f}" for e in _err)
+          + " px, farthest point " + ", ".join(f"{d:.1f}" for d in _far) + " px")
+
 # Ink across the stage's canvas: pixels clearly unlike the drawing's own
 # ground, read at its corner. (It counted pixels brighter than a DARK ground
 # until the illustrations brought a paper one, where it counted the paper.)

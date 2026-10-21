@@ -192,7 +192,9 @@ stays a sleep.
   after the button was renamed.
 - `verify_helpdemos.py` — How it works, shown: a Watch it work bar above the
   reference opens a drawer of example cards. Every example is posted to the
-  server and must be accepted, as a person's drawing is; every Pad tool (and
+  server and must be accepted, as a person's drawing is; the two that draw
+  the Blooby card title it with the header's own mark, its dot where the
+  template puts it (read off the drawings' points); every Pad tool (and
   every tool Flip shares with it) has a card with Try it; the editor fetches
   nothing for them, How it works only the bar's previews, the drawer the rest;
   the bar counts the cards; in the drawer the replays paint changing ink,
