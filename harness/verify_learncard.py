@@ -8,9 +8,11 @@ cards mock, "All yes"). Each row holds a promise, on the Pad and on Flip:
      the button. Got it closes it and gives focus back to the button.
   2. HOLDING KEEPS ITS OLD JOBS: a Flip page held still lifts to be dragged
      (and no card opens), the slider's + held still repeats.
-  3. REST on a button with a mouse about a second: the same card, "Move away
+  3. REST on a button with a mouse two seconds: the same card, "Move away
      to close", and it does close when the pointer leaves. The button's own
-     tooltip names it first; it steps aside while the card shows.
+     tooltip names it first, and alone for a while: at a second and a half
+     there is still no card (the owner, after v327: it came too quickly,
+     at one). It steps aside while the card shows.
   4. "?" NAMES EVERY BUTTON: a tag on each, painted beside its button; a tag
      opens that button's card; Escape puts them away. How it works' "Name
      every button" does the same.
@@ -170,14 +172,18 @@ with sync_playwright() as p:
             c, q = fresh(b, DESK, route)
             x, y = center(q, "#eraserToolBtn")
             q.mouse.move(x, y)
+            t0 = q.evaluate("() => performance.now()")
             q.wait_for_timeout(450)
             early = q.evaluate(TIP)
-            q.wait_for_timeout(900)
+            q.wait_for_function("(t) => performance.now() - t >= 1500", arg=t0)
+            still = q.evaluate("(t) => [!!document.querySelector('.lc-card'), Math.round(performance.now() - t)]", t0)
+            q.wait_for_function("(t) => performance.now() - t >= 2400", arg=t0)
             card = q.evaluate(CARD)
             late = q.evaluate(TIP)
-            check(f"{name}: resting on Eraser shows its tooltip, then grows into its card (Move away to close), the tooltip stepping aside",
-                  not early[0] and early[1] and card and card["name"] == "Eraser" and card["hint"] == "Move away to close"
-                  and card["painted"] and not late[1], f"early {early}, card {card}, then {late}")
+            check(f"{name}: resting on Eraser shows its tooltip, alone at a second and a half, then grows into its card "
+                  "by two and a half (Move away to close), the tooltip stepping aside",
+                  not early[0] and early[1] and not still[0] and card and card["name"] == "Eraser" and card["hint"] == "Move away to close"
+                  and card["painted"] and not late[1], f"early {early}, a card at {still[1]} ms: {still[0]}, card {card}, then {late}")
             q.mouse.move(40, 300)   # well clear of the button and of its card
             q.wait_for_timeout(600)
             after = q.evaluate("() => !document.querySelector('.lc-card')")

@@ -433,7 +433,8 @@ stays a sleep.
   quick tap stays a tap, a moving finger is no hold, the lift does not press,
   Got it gives focus back; holding a Flip page still lifts it to move and the
   slider's + still repeats, with no card; resting with a mouse shows the
-  tooltip, then the card, and moving away closes it; `?` tags every button,
+  tooltip, alone at a second and a half, then the card by two and a half (it
+  waits two seconds), and moving away closes it; `?` tags every button,
   a tag opens its card, Escape closes; How it works' Name every button; the
   first-time note once; automation never meets any of it unless it asks.
 - `verify_ask.py` — Ask, How it works as one question (lib/ask.js), Pad and

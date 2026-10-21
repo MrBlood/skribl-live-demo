@@ -12,9 +12,12 @@
  * HOW IT OPENS. On a touch screen, hold the button about half a second
  * (HOLD); a quick tap is still a tap, a finger that moves is a drag, and the
  * lift after the card opens does not also press the button. With a mouse,
- * rest on the button about a second (REST) and move away to close: the
+ * rest on the button two seconds (REST) and move away to close: the
  * button's own tooltip (lib/tooltip.js) names it first, and the card grows
- * out of that pause, the tooltip stepping aside while it shows. "?" puts a
+ * out of that pause, the tooltip stepping aside while it shows. Two, not
+ * one (the owner, after v327: "when you hover over a tool and it shows the
+ * help card, it should take longer to appear"): at a second it came while a
+ * pointer was only passing on its way to use the button. "?" puts a
  * name tag on every button; a tag opens that button's card, from the
  * keyboard too. How it works' "Name every button" does the same.
  *
@@ -36,7 +39,7 @@
  */
 (function () {
   'use strict';
-  var HOLD = 500, MOVE = 10, REST = 1000, GRACE = 250;
+  var HOLD = 500, MOVE = 10, REST = 2000, GRACE = 250;
   var NOTE_KEY = 'skribl.learncard.note.v1';
   var force = window.__skriblLearnForce === true;
   var live = force || !navigator.webdriver;
