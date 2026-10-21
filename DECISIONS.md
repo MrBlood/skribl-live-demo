@@ -20922,3 +20922,33 @@ post loops, so beside two other suites the read caught the next lap at 0%: the
 replay had carried on, finished and begun again. It reads the fill on every
 frame now and takes the most it reached (6.7% -> 83%; red, at 6.8% -> 6.8%,
 when a sheet over the drawing keeps the tap from carrying anything on).
+
+## After v327 -- the Blooby card's title takes the mark's dot (the owner's choice 6)
+
+The sixth of the recolour mock's choices, all yes: draw the two help examples
+that make the Blooby card again, so the title's dot sits over the i as the
+header's has since the hello (FUTURE.md named it as left).
+
+Both were drawn again through the real editors with the pen, at the card's own
+careful pace, as they were made the first time: `make_art.py blooby-card` on
+the Pad and `make_flip.py blooby-card` on Flip. Their tool reads both of the
+mark's paths from the template, so the title is the header's mark, and the
+dot now lands 0.1 px from where the template puts it on the card, where it sat
+3.6 px right. Nothing else moved: on the Pad's card the two dot strokes moved
+3.5 px and no other point did (the same 70 strokes, points and sizes; 30.3 s
+of replay where it was 30.2, as a real pen's timing varies), and on Flip's
+only page 1's two dots did (the card's eleven pages after it, its loop, the
+page kept under and 10 a second are as they were). The Pad's example carries
+playSpeed 'auto' now, as every Pad drawing saved since the author's speed
+does; at 30 s of drawing that plays as drawn, as before.
+
+blooby.TITLE names where the title sits and how big, so a check can ask where
+the template's dot lands on the card. verify_helpdemos asks it of each example
+(THE CARD'S TITLE): the dot drawn twice, ink then purple, within 1 px of the
+template's; the title's line within 1.6 px of the template's line and its
+corners within 1.5. Each row shown red by its own break: the old examples (the
+dot 3.6 px off), an example missing its purple dot, and one whose i was moved
+a unit (2.5 px).
+
+Pad and Flip: both examples, from the one card (blooby.card), so the two cannot
+drift.

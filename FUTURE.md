@@ -897,7 +897,8 @@ LEFT, named:
 * The Blooby card's title, in the two help demos that draw the card
   (blooby-card, flip-blooby-card), is a drawing of the mark with its dot at the
   old spot. Its tool reads the new spot; the demos take it when they are drawn
-  again.
+  again (drawn again after v327: the dot over the i on both, read off the
+  drawings by verify_helpdemos).
 * A Flip whose loop a viewer turns off (the full-screen bar, the Library)
   ended on its first page, not its last: at its very end the player's clock
   comes round to page one (fixed after v327: the player ends every Flip on
