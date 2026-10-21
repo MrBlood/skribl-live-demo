@@ -1364,10 +1364,11 @@ body.playback-paused .tap-paused { display: grid; }
    Reduce Motion query, so under Reduce Motion lib/hello.js leaves the lifting
    off and the whole hello just fades. The transitions are the moving rule's
    alone: on the edge's own rule, putting the edge in place would itself
-   glide, in from hidden. */
+   glide, in from hidden. A mask reads only how opaque it is, so its solid
+   part is white: as solid as black, and no grey for a theme to flip. */
 .skribl-hello.is-lifting .skribl-inline {
-  -webkit-mask-image: linear-gradient(90deg, transparent 0 44%, #000 56% 100%);
-  mask-image: linear-gradient(90deg, transparent 0 44%, #000 56% 100%);
+  -webkit-mask-image: linear-gradient(90deg, transparent 0 44%, #fff 56% 100%);
+  mask-image: linear-gradient(90deg, transparent 0 44%, #fff 56% 100%);
   -webkit-mask-size: 300% 100%;
   mask-size: 300% 100%;
   -webkit-mask-repeat: no-repeat;
