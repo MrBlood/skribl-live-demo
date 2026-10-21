@@ -380,8 +380,10 @@ stays a sleep.
   Library names who drew it from the listing; a card with sound offers
   Unmute before it plays, its scrubber takes focus and keys, and it names
   Loop and Mute as everywhere else; the Library's Play and Mute and a post's
-  box say by name what a press does next; the Gallery's words; and every
-  colour of each page's own is read by the page or what it loads.
+  box say by name what a press does next; the Gallery's words; a Flip at its
+  end shows its last page whole (played once, taken to its end on the
+  scrubber, and at rest with no card); and every colour of each page's own
+  is read by the page or what it loads.
 - `verify_words.py` — the words a review after v326 found saying what is no
   longer true, read where a person reads them on the Pad and Flip, each red
   on the words before: How it works' tips (drafts and what is uploaded,

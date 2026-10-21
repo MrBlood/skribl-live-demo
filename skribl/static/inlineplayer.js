@@ -1211,9 +1211,18 @@
          * is how displayAt() is told there is nothing owed. A LOOP RESTART is
          * not a jump -- it is the clock coming round, and the page it leaves
          * is owed its last frame as any page turn is, which is why this cannot
-         * key off `full`: the loop repaints fully too. See lib/holdtiming.js. */
-        var shown = flipPlan
-          ? H.displayAt(flipPlan, flipFrames, at, jump ? null : lastShown)
+         * key off `full`: the loop repaints fully too. See lib/holdtiming.js.
+         *
+         * THE END IS THE LAST PAGE, WHOLE. At exactly its length the clock
+         * comes round to a Flip's first page (the plan wraps it), so a Flip
+         * that played once and stopped, was taken to its end, or sat at rest
+         * with no card showed its first page again: blank, where that page
+         * draws itself. The editor's own replay ends on its last page whole
+         * (app.js), and so does this. A forever loop has no end: its clock
+         * stays inside its stretch. */
+        var P = flipPlan, end = P && !P.forever && at >= totalMs ? P.slots.length - 1 : -1;
+        var shown = end >= 0 ? { slot: end, index: P.slots[end], progress: 1 }
+          : P ? H.displayAt(P, flipFrames, at, jump ? null : lastShown)
           : { index: Math.min(flipFrames.length - 1,
                               Math.floor(at / Math.max(1, totalMs) * flipFrames.length)),
               progress: 0 };

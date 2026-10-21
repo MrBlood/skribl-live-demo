@@ -1562,7 +1562,16 @@ with sync_playwright() as sp:
     # LOWERED (Blooby's first hello, as C): -9 B, attach()'s maxDpr, the
     #   hello's alone, becoming `dpr`, the name the player already gives that
     #   number. 70,350 B measured.
-    EMBED_RATCHET = 70_355
+    # RAISED (a Flip's end, after v327: one that played once with Loop off,
+    #   was taken to its end or sat at rest with no card showed its first
+    #   page again, blank where that page draws itself), for one named cost:
+    #   +131 B -- inlineplayer.js render() painting a Flip's last page whole
+    #   at its end, as the editor's own replay does. Spent first: the rule is
+    #   one test and one object, and the hello's workaround for the old end is
+    #   gone (lib/hello.js, outside this sum). WHICH CALLER PAYS: every page
+    #   that shows a post, for every Flip that reaches its end. 70,481 B
+    #   measured.
+    EMBED_RATCHET = 70_486
     # THE RATCHET MEASURES DISPLAY, NOT COMPOSE, and the two are separate costs
     # paid by separate pages. Excluded here and measured on its own below:
     #   feed.js          the PREVIEW PAGE's own script (fetch the listing, clone

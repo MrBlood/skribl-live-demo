@@ -888,10 +888,11 @@ LEFT, named:
   (blooby-card, flip-blooby-card), is a drawing of the mark with its dot at the
   old spot. Its tool reads the new spot; the demos take it when they are drawn
   again.
-* A Flip whose loop a viewer turns off (the full-screen bar, the Library) ends
-  on its first page, not its last: at its very end the player's clock comes
-  round to page one. The hello asks for the last moment instead, as the
-  scrubber does; the player should, for every Flip.
+* A Flip whose loop a viewer turns off (the full-screen bar, the Library)
+  ended on its first page, not its last: at its very end the player's clock
+  comes round to page one (fixed after v327: the player ends every Flip on
+  its last page whole, as the editor does, and the hello no longer asks for
+  the last moment itself).
 
 Not tested here: the iPhone's engine, SF and Segoe UI (verify_hello measures
 it in Chrome).

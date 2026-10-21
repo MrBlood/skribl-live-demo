@@ -20509,3 +20509,35 @@ passed on; seen per hello, by the old key; sharp, by three pixels a point, by
 twice past the budget, by 0.3 points off the grid and by the canvas rule
 removed; never in a composer's frame, by dropping that test. Not tested here:
 the iPhone's engine, SF and Segoe UI.
+
+## After v327 -- A Flip ends on its last page, whole (bug fix)
+
+Left, named, in the hello's round (FUTURE.md 6m): a Flip whose loop a viewer
+turns off ended on its first page, not its last. At exactly its length a
+Flip's clock comes round to page one (lib/holdtiming.js wraps it, as a loop
+must), and the in-post player painted that moment as the end. So a Flip played
+once in the Library or a full screen, one taken to its very end (a click at
+the far end of the Library's scrubber), and one at rest with no card (a draft
+in a host's composer, whose rest is meant to be the finished drawing) all
+showed their first page: blank, where that page draws itself.
+
+The editor's own replay always ended on the last page whole (app.js). The
+in-post player now does the same: asked for a Flip's end, it paints the plan's
+last page complete (inlineplayer.js render()). A forever loop has no end and
+is unchanged; the scrubber's own drag still stops a hair before the end, as it
+did. The hello asked for the last moment itself to get round this; it no
+longer needs to, and lib/hello.js lost both workarounds.
+
+The cost is +131 B for every page that shows a post, raised in writing in
+verify_inline's ratchet.
+
+CHECKED (verify_viewedges, the Library's stage and a draft's box): played once
+with Loop off, a click at the scrubber's far end, and at rest with no card,
+each shown red on the old player (a blank canvas each time) and green with the
+fix, the Flip's first page drawing itself and its last still, every reading
+taken off the canvas's pixels by corner. verify_hello's still under Reduce
+Motion now rests on the player's rule and goes red without it.
+
+Pad and Flip: the Pad's replay already ended on its finished drawing; this is
+the in-post player's Flip path, shared by every page that shows a post. Not
+tested here: the iPhone's engine.
