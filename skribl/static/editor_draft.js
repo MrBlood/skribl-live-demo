@@ -681,15 +681,18 @@ function rebuildHistoryForRestore(maxStrokes, maxGroups, appliedCount, baseHasCo
   // owner's "it seemed fine until all of a sudden it just slowed down".
   // restoreHistoryState (app.js) repaints these states on undo/redo.
   const renderPrefix = (k) => clearAndRestore(() => paintStrokesStatic(maxStrokes.slice(0, starts[k])));
-  // Each state keeps the recolours of the lines it has. Its lines carry the
-  // colours they ended with, as every rebuilt state's strokes always have.
+  // Each state keeps the recolours made by then (`n`, the points there were).
+  // Its lines carry the colours they ended with, as every rebuilt state's
+  // strokes always have; a later one is left out rather than kept for a
+  // moment past the state's end, which a stroke drawn after an undo would
+  // otherwise reach.
   const rc = recolors.slice();
   const stateAt = (k) => ({
     image: null,
     base: preRecordSnapshot,
     strokes: maxStrokes.slice(0, starts[k]),
     strokeGroups: maxGroups.slice(0, k),
-    recolors: rc.filter(r => r && r.g < k),
+    recolors: rc.filter(r => r && r.g < k && r.n <= starts[k]),
     hasContent: (k === 0) ? baseHasContent : true
   });
 

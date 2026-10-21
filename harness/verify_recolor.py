@@ -210,6 +210,15 @@ with sync_playwright() as pw:
             return { n: it.length, min: Math.min(...it.slice(1).map((r, i) => r.left - it[i].right)) }; }""")
         need = 4 if w < 360 else 10
         check(f"at {w}px the colour row is the nine colours, at least {need}px apart", g["n"] == 9 and g["min"] >= need, json.dumps(g))
+        # The touch area is the ::before ring (styles.css --tap-grow): each tool
+        # 44 or more, and the two rings meet without crossing, so a tap at the
+        # seam cannot reach the wrong one.
+        t = q.evaluate("""() => { const e = document.getElementById('eyedropperBtn'), r = document.getElementById('recolorBtn');
+            const g = el => { const b = el.getBoundingClientRect(), i = parseFloat(getComputedStyle(el, '::before').inset) || 0;
+              return { l: b.left + i, r: b.right - i, w: b.width - 2 * i, h: b.height - 2 * i }; };
+            const a = g(e), z = g(r); return { eye: Math.round(a.w), recolor: Math.round(z.w), tall: Math.round(Math.min(a.h, z.h)), cross: Math.round((a.r - z.l) * 10) / 10 }; }""")
+        check(f"at {w}px each colour tool is 44px or more to the touch, and the two touch areas do not cross",
+              min(t["eye"], t["recolor"], t["tall"]) >= 44 and t["cross"] <= 0, json.dumps(t))
         c.close()
 
     # ================================================================== the mode
@@ -304,6 +313,10 @@ with sync_playwright() as pw:
         check(f"{route}: a drag recolours the three lines it crosses and no other",
               c1[4] == c1[5] == c1[6] == PINK and all(c1[i] == c0[i] for i in range(len(c0)) if i not in (4, 5, 6)), json.dumps(c1))
         check(f"{route}: the drag is one step of undo", undo_depth(q, route) == u0 + 1, f"{u0} -> {undo_depth(q, route)}")
+        if route == "/skribl-pad":
+            # One gesture, one moment: a replay runs the three together.
+            ks = q.evaluate("() => recolors.map(r => r.k)")
+            check(f"{route}: the three it crossed are kept as one moment", ks == [0, 0, 0], json.dumps(ks))
         q.click(".recolor-undo"); q.wait_for_timeout(400)
         check(f"{route}: one Undo, from the bar, takes the whole drag back", colours(q, route) == c0, json.dumps(colours(q, route)))
         c.close()
@@ -379,16 +392,17 @@ with sync_playwright() as pw:
     tap(q, "/skribl-pad", 150, 200); q.wait_for_timeout(450)
     r = q.evaluate("() => JSON.parse(JSON.stringify(recolors))")
     n = q.evaluate("() => strokes.length")
-    check("a recolour on a finished take is kept: the line, its colours, the drawing's length, no clock",
-          len(r) == 1 and r[0]["g"] == 0 and r[0]["was"] == INK and r[0]["to"] == PINK and r[0]["n"] == n and "t" not in r[0]
-          and 0 <= r[0]["at"] < 24, json.dumps(r))
+    check("a recolour on a finished take is kept: the line, its colours, the drawing's length, its moment, no clock",
+          len(r) == 1 and r[0]["g"] == 0 and r[0]["was"] == INK and r[0]["to"] == PINK and r[0]["n"] == n and r[0].get("k") == 0
+          and "t" not in r[0] and 0 <= r[0]["at"] < 24, json.dumps(r))
     q.evaluate("() => { SkriblPadRecolor.disarm(); beginRecording(true); }"); q.wait_for_timeout(700)
     q.evaluate(f"() => {{ setPenColor('{GREEN}'); SkriblPadRecolor.arm(); }}"); q.wait_for_timeout(200)
     tap(q, "/skribl-pad", 400, 380); q.wait_for_timeout(400)
     r = q.evaluate("() => JSON.parse(JSON.stringify(recolors))")
     clock = q.evaluate("() => Date.now() - startTime")
-    check("one made while a take records carries the take's clock",
-          len(r) == 2 and isinstance(r[1].get("t"), (int, float)) and 300 <= r[1]["t"] <= clock, json.dumps(r[1:]) + f" clock {clock}")
+    check("one made while a take records carries the take's clock, and is the next moment",
+          len(r) == 2 and isinstance(r[1].get("t"), (int, float)) and 300 <= r[1]["t"] <= clock and r[1].get("k") == 1,
+          json.dumps(r[1:]) + f" clock {clock}")
     q.evaluate("() => { SkriblPadRecolor.disarm(); endRecordingTake(); }"); q.wait_for_timeout(300)
     pay = q.evaluate("() => serializeSkribl()")
     check("a post carries them, in its frame", len(pay["frames"][0].get("recolors") or []) == 2, json.dumps(pay["frames"][0].get("recolors")))
@@ -409,6 +423,16 @@ with sync_playwright() as pw:
     q.reload(wait_until="load"); waits.settle(q, 1500)
     back = q.evaluate("() => ({ n: recolors.length, c: strokes.length && strokes[0].color })")
     check("a draft brings them back with the colours on a reload", back["n"] == 2 and back["c"] == PINK, json.dumps(back))
+    # The reload rebuilds Undo a line at a time (editor_draft.js). A line
+    # undone there takes with it the recolours made after it, which a line
+    # drawn next would otherwise put in the middle of its own replay.
+    try:
+        q.wait_for_function("() => !document.getElementById('undoBtn').disabled", timeout=5000)
+        q.evaluate("() => document.getElementById('undoBtn').click()"); q.wait_for_timeout(300)
+        after = q.evaluate("() => ({ n: recolors.length, g: strokeGroups.length })")
+    except Exception as ex:  # noqa: BLE001 -- the failure is the finding
+        after = {"error": repr(ex)[:160]}
+    check("after the reload, Undo of the last line keeps no recolour made after it", after.get("n") == 0, json.dumps(after))
     c.close()
     # An undone recolour, then a reload: the drawing as it stands, never the undone colour.
     c, q = fresh(b, "/skribl-pad")

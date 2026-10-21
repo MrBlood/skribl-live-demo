@@ -148,8 +148,10 @@
   //   at SkriblSelectTool's first move in editor_draw.js.
   //
   //   THE MOMENT IS KEPT (recolors, app.js): which line, the colour it had and
-  //   took, how many points the drawing had then, the point the colour ran
-  //   from and, while a take records, its clock. That is what lets a replay
+  //   took, how many points the drawing had then, which gesture it was (`k`,
+  //   counting from 0: the lines one drag crossed share it, and two taps with
+  //   nothing drawn between them do not), the point the colour ran from and,
+  //   while a take records, its clock. That is what lets a replay
   //   show the change when it was made rather than as if the line had always
   //   been that colour (the owner's pick, R2 of the mock). v219 took Select
   //   off the Pad because it moved recorded points and the replay drew them
@@ -160,6 +162,7 @@
   //   drawing stays exactly its base and its recorded lines.
   const recolorBtn = document.getElementById('recolorBtn');
   if (recolorBtn && window.SkriblRecolor) {
+    let gesture = -1;   // this gesture's `k`, set by begin()
     window.SkriblPadRecolor = window.SkriblRecolor.create({
       button: recolorBtn,
       dock: document.getElementById('toolBar'),
@@ -175,6 +178,8 @@
         undoBtn.disabled = false;
         redoStack = [];
         redoBtn.disabled = true;
+        const last = recolors[recolors.length - 1];
+        gesture = last && Number.isInteger(last.k) ? last.k + 1 : 0;
       },
       apply: (g0, g1, hex, at) => {
         let a = 0, changed = false;
@@ -187,7 +192,7 @@
             if (c !== strokes[i].color) { strokes[i] = Object.assign({}, strokes[i], { color: c }); here = true; }
           }
           if (here) {
-            const r = { g: g, n: strokes.length, at: Math.max(0, Math.min(n - 1, at - a)), was: was, to: strokes[a].color };
+            const r = { g: g, n: strokes.length, k: gesture, at: Math.max(0, Math.min(n - 1, at - a)), was: was, to: strokes[a].color };
             if (recording) r.t = Date.now() - startTime;
             recolors.push(r);
             changed = true;
