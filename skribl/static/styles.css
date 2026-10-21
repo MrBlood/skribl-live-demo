@@ -7930,6 +7930,13 @@ body.stroking .toolbar, body.stroking .flip-tools {
   display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; pointer-events: auto;
   background: var(--menu-card); border: 1px solid var(--menu-card-line); border-radius: 16px; box-shadow: var(--menu-card-drop), 0 12px 30px rgba(20, 10, 60, .18); }
 .lc-banner { top: calc(140px + env(safe-area-inset-top, 0px)); }   /* under the header's tags, clear of the dock's */
+/* THE FIRST-TIME NOTE SITS UNDER EVERY SHEET: above the canvas, the dock and
+   the first-use hints, below How it works, its little book, Your drafts and the
+   rest (90 and up), so a sheet opened while it is up covers it, rather than the
+   note covering the sheet's buttons. Its words send you to How it works, and at
+   141 it sat over the book's Draw along on a phone. The banner stays over the
+   name tags (140). */
+.lc-note { z-index: 85; }
 body.lc-open .skribl-tip { display: none !important; }   /* the card grows out of the tooltip's pause; one at a time */
 .lc-banner .lc-t { font-size: 17px; font-weight: 650; margin-bottom: 2px; }
 .lc-note .lc-line { flex: 1; font-size: 16px; font-weight: 600; color: var(--text-primary); }
