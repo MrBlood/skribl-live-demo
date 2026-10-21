@@ -513,7 +513,9 @@
      which reads window.SkriblRecentColors at first use. #}
   <script src="{{ skribl_asset('lib/recentcolors.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/eyedropper.js') }}" defer></script>
-  {# lib/recolor.js: the eyedropper's mirror, a line takes the pen's colour (both editors). #}
+  {# lib/recolor.js: the eyedropper's mirror, a line takes the pen's colour (both editors);
+     lib/recolorplay.js holds the colour rule it uses and its run, which every Pad replay shares. #}
+  <script src="{{ skribl_asset('lib/recolorplay.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/recolor.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/shapecard.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/drawerdetent.js') }}" defer></script>

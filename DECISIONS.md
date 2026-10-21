@@ -20838,3 +20838,87 @@ the mode on. verify_parity lists Recolor among the controls both editors carry.
 Pad and Flip: shared (lib/recolor.js, the drawer partial, the dock's bar);
 Flip alone has the Select bar's Color, as it alone has Select. Not tested here:
 WebKit, and the owner's fonts.
+
+## After v327 -- the replay shows a recolour when it was made (the owner's pick R2)
+
+Choice 2 of the recolour mock, "the Pad's replay shows the change when you
+made it", yes with the other five. Every replay of a Pad drawing -- the Pad's
+Play, the link page, the in-post player (Gallery, Library, a host's feed), and
+the GIF, WebM and MP4 exports -- now plays a recoloured line in the colour it
+was drawn in; at the moment it was recoloured, the new colour runs along it
+from where it was tapped, as it did in the editor; and the replay carries on.
+
+ONE MODULE FOR EVERY REPLAY (lib/recolorplay.js), so they cannot show it
+differently. place() puts each moment into the timeline as two entries, where
+it was made and RUN (380 ms of replay) after, and everything after waits RUN;
+the replay is that much longer, at any speed in proportion. The replay cores
+hand those entries to the timeline's player instead of drawing them.
+
+THE CHANGE IS A REPAINT, never a line drawn over the old one: a line drawn
+later across it, an eraser through it and a see-through colour come out as the
+finished drawing has them only if the drawing so far is painted again in its
+colours as of then. Each engine keeps its own paint (its base, its compositor,
+which reseeds from the repaint); the module says what to paint.
+
+THE RUN is a canvas laid exactly over the drawing (its box, its transform, its
+fit, fractions and all: half a pixel off would hop back as it ends) showing the
+drawing as it now is, with the part of each line the colour has not reached as
+it was. The drawing's own canvas is hidden under it and never painted by it, so
+a seek's copy can never hold half a run. A scrub inside the run keeps it; one
+that repaints from before the moment starts it again when it reaches it.
+Under Reduce Motion the colour simply changes, and the moment is a still RUN:
+the replay is one length for everyone. An export has no screen to lay a canvas
+over and draws the run into its frames.
+
+A MOMENT COUNTS by one rule: an entry whose `k` is a whole number from 0 and
+whose `n` is a whole number from 1 to the points there are; entries sharing a
+`k` (one drag) are one moment. The server keeps the same rule
+(validation._payload_line), so the line under a post says the replay's length
+and its shape with the run in them -- checked against the JS on 400 drawings
+with junk entries in, and on a real post. What a moment paints never changes
+its timing.
+
+WHAT IT COSTS, AND WHO PAYS: the module is 10,114 B and is fetched by the link
+page and the in-post player ONLY for a drawing that has recolours; nearly all
+drawings have none, and pay for the hooks alone: the link page +1,487 B
+(app.js), a page of posts +1,735 B (inlineplayer.js). The editors load it with
+lib/recolor.js, which now takes its colour rule and the run's shape from it.
+verify_jsstrip counts the page's script tags, not every asset its config names,
+and pins the module on its own; verify_player_isolation and verify_inline raise
+with the hooks' names.
+
+ALSO: a GIF lost a base drawn before the first take whenever see-through
+layering was on -- its compositor was made before the base and the first
+present() wiped it. It is made after the base now, as the two video exports
+always had it.
+
+Pad and Flip: the replay is the Pad's (Flip's recolours edit the page in place,
+and a Flip plays pages). CHECKED (verify_recolorplay, new, each row shown red
+by its own break: the timeline not placed, the cores drawing a moment as a dot,
+a scrub stopping the run, Reduce Motion ignored, the link page never fetching or
+always fetching the module, the server not counting the run, the GIF's
+compositor before its base, the run laid on whole pixels, the in-post player
+not placing, the exports drawing on the editor's canvas). Not tested here:
+WebKit, and the MP4 export, which needs real Chrome (the same code as the GIF
+and WebM paths; CI's MP4 job makes one but does not read its colours).
+
+MAIN WENT RED AFTER #576, on both of the player's byte lines (verify_jsstrip,
+verify_player_isolation): 149,458 B against 149,448. Recolor's line was set
+from 149,443, measured before its last 15 B -- a fresh take clearing the
+recolours, the fix for a take that kept the last one's -- and never measured
+again. Its cost was +379 B, not +364. This change's lines are measured on
+main's tree plus this change (150,945, +1,487 B), and the two notes say so.
+The lesson is the old one: a ratchet is measured on the commit it ships in.
+
+ALSO: verify_surfaces read a script's assets with a greedy match, so the
+in-post player's tag, which names lib/recolorplay.js in a data attribute, read
+as that module in place of inlineplayer.js, and every module the player reads
+looked unread. It reads the SRC now (shown red on the old match, and on a page
+given a module nothing reads).
+
+AND verify_replayspeed's "a second tap carries it on" read the fill once,
+300 ms after the tap. At 8x what is left of its replay runs about 310 ms and a
+post loops, so beside two other suites the read caught the next lap at 0%: the
+replay had carried on, finished and begun again. It reads the fill on every
+frame now and takes the most it reached (6.7% -> 83%; red, at 6.8% -> 6.8%,
+when a sheet over the drawing keeps the tap from carrying anything on).

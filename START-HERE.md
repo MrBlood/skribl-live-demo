@@ -801,6 +801,7 @@ rather than a shared rule.
 | `pressure.js` | Pad+Flip | Stylus pressure — the curve, the floor, and the on/off, shared by both editors. |
 | `recentcolors.js` | Pad+Flip | Recent colours — the first controller shared by both editors. |
 | `recolor.js` | Pad+Flip | Recolor: a line already drawn takes a new colour (the owner, of the mock: "I love the recolor too", every choice yes). |
+| `recolorplay.js` | Pad+Flip+player+in-post | A recolour in the replay (the owner's pick R2 of the recolour mock: the Pad's replay shows the change when you made it). |
 | `recoverykey.js` | Pad+Flip+library | Both ends of an anonymous author's revocation key: showing one, taking one back, and standing between a bulk clear and the keys it would discard. |
 | `replayline.js` | Pad+player+library+in-post | How fast a replay runs, and the line that says what you are watching. |
 | `report.js` | Pad+Flip+library+gallery | "Report a problem" — the context, collected once, for both editors. |

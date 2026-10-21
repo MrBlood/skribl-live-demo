@@ -40,34 +40,16 @@
 (function () {
   'use strict';
 
-  var RUN = 380;      // ms for a new colour to run the length of a line
+  var RUN = 380;      // ms for a new colour to run the length of a line (lib/recolorplay.js RUN)
   var SLOP = 8;       // CSS px a press travels before it is a drag
   var SLACK = 10;     // CSS px of finger around a line that still hits it
   var STEP = 4;       // CSS px between the hit-tests along a drag
 
   /* ---- colour ------------------------------------------------------------ */
 
-  function rgbOf(hex) {
-    var m = /^#?([0-9a-f]{6})$/i.exec(String(hex || '').trim());
-    if (!m) return null;
-    var h = m[1];
-    return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
-  }
-
-  /* `hex` in the form and at the opacity of `old`: '#rrggbb' for a solid
-     line, 'rgba(r, g, b, a)' as the Pad's opacity and brushes write it,
-     '#rrggbbaa' as a Motion Smear does. */
-  function tint(old, hex) {
-    var c = rgbOf(hex);
-    if (!c) return old;
-    var solid = '#' + String(hex).trim().replace('#', '').toLowerCase();
-    var s = typeof old === 'string' ? old.trim() : '', m;
-    if ((m = /^#[0-9a-f]{6}([0-9a-f]{2})$/i.exec(s))) return solid + m[1].toLowerCase();
-    if ((m = /^rgba\(\s*[\d.]+\s*,\s*[\d.]+\s*,\s*[\d.]+\s*,\s*([\d.]+)\s*\)$/i.exec(s))) {
-      return 'rgba(' + c[0] + ', ' + c[1] + ', ' + c[2] + ', ' + m[1] + ')';
-    }
-    return solid;
-  }
+  /* `hex` in the form and at the opacity of `old` (lib/recolorplay.js tint,
+     the one rule: every replay recolours a line by it too). */
+  function tint(old, hex) { return window.SkriblRecolorPlay.tint(old, hex); }
 
   /* ---- lines ------------------------------------------------------------- */
 
@@ -177,40 +159,16 @@
       } catch (e) { before = null; }
     }
 
-    /* A run along points pts[from..] of one line, its colour starting at
-       point `at`. Arc lengths are kept so the colour moves at an even pace
-       however the points were spaced. */
+    /* A run along the points of one line, its colour starting at point
+       `at`: lib/recolorplay.js reads the line by arc length, so the colour
+       moves at an even pace however the points were spaced, and draws the
+       part not reached the way every replay draws it. */
     function add(pts, at) {
       if (reduce || !before || !pts.length) return;
-      var P = [], cum = [0];
-      for (var i = 0; i < pts.length; i++) {
-        P.push({ x: pts[i].x, y: pts[i].y, w: pts[i].size || 1 });
-        if (i) cum.push(cum[i - 1] + Math.hypot(P[i].x - P[i - 1].x, P[i].y - P[i - 1].y));
-      }
-      var s0 = cum[Math.max(0, Math.min(at, P.length - 1))], total = cum[cum.length - 1];
-      runs.push({ P: P, cum: cum, s0: s0, span: Math.max(s0, total - s0), t0: performance.now() });
+      var r = window.SkriblRecolorPlay.line(pts, at);
+      r.t0 = performance.now();
+      runs.push(r);
       if (!raf) raf = requestAnimationFrame(tick);
-    }
-
-    // The part of a line from arc length s1 to s2, each segment at its own
-    // width and a pixel more each side, round-capped as the painters cap it.
-    function part(c, r, s1, s2, pad) {
-      var P = r.P, cum = r.cum;
-      if (P.length === 1) {
-        c.beginPath(); c.arc(P[0].x, P[0].y, P[0].w / 2 + pad, 0, Math.PI * 2); c.fill();
-        return;
-      }
-      for (var i = 0; i + 1 < P.length; i++) {
-        var a = cum[i], b = cum[i + 1];
-        if (b < s1 || a > s2) continue;
-        var p = P[i], q = P[i + 1], L = b - a || 1;
-        var u = Math.max(0, (s1 - a) / L), v = Math.min(1, (s2 - a) / L);
-        c.lineWidth = Math.max(p.w, q.w) + 2 * pad;
-        c.beginPath();
-        c.moveTo(p.x + (q.x - p.x) * u, p.y + (q.y - p.y) * u);
-        c.lineTo(p.x + (q.x - p.x) * v, p.y + (q.y - p.y) * v);
-        c.stroke();
-      }
     }
 
     function tick(now) {
@@ -225,15 +183,8 @@
       c.globalCompositeOperation = 'source-over';
       c.clearRect(0, 0, cv.width, cv.height);
       c.setTransform(k, 0, 0, k, 0, 0);
-      c.lineCap = 'round'; c.lineJoin = 'round';
-      c.strokeStyle = c.fillStyle = '#000';
       runs.forEach(function (r) {
-        var e = Math.min(1, (now - r.t0) / RUN);
-        var reach = (1 - Math.pow(1 - e, 3)) * r.span;          // eased out: quick, then gentle
-        var total = r.cum[r.cum.length - 1];
-        if (r.P.length === 1) { if (e < 0.5) part(c, r, 0, 0, 1 / k); return; }
-        if (r.s0 - reach > 0) part(c, r, 0, r.s0 - reach, 1 / k);
-        if (r.s0 + reach < total) part(c, r, r.s0 + reach, total, 1 / k);
+        window.SkriblRecolorPlay.unreached(c, [r], Math.min(1, (now - r.t0) / RUN), 1 / k);
       });
       // What was there, inside the part the colour has not reached.
       c.setTransform(1, 0, 0, 1, 0, 0);

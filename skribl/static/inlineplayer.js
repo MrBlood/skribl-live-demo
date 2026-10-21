@@ -316,6 +316,29 @@
    * browser happens to be set — the same reason loadSkribl() adopts it. */
   var PAUSE_CAPS = { keep: Infinity, trim: 250, tight: 50 };
 
+  /* THE RECOLOUR MODULE, ONLY FOR A POST THAT NEEDS IT. A line recoloured on
+   * the Pad changes colour in the replay when it was changed
+   * (lib/recolorplay.js); the macro names the module on this script's tag and
+   * it is fetched once, the first time a post with recolours arrives, so a
+   * page of posts without any pays nothing for it. Not there, or not
+   * loading, the post plays in its finished colours, as it always did. */
+  var RECOLOR_SRC = (global.document && global.document.currentScript &&
+                     global.document.currentScript.getAttribute('data-recolorplay')) || null;
+  var recolorLoad = null;
+  function recolorFor(p) {
+    var f = framesOf(p || {})[0];
+    if (global.SkriblRecolorPlay || !RECOLOR_SRC || !f || !Array.isArray(f.recolors) || !f.recolors.length) {
+      return null;   // nothing to wait for: the caller goes on at once
+    }
+    return recolorLoad || (recolorLoad = new Promise(function (done) {
+      var sc = global.document.createElement('script');
+      sc.src = RECOLOR_SRC;
+      sc.onload = done;
+      sc.onerror = function () { recolorLoad = null; done(); };
+      global.document.head.appendChild(sc);
+    }));
+  }
+
   function buildTimeline(strokes, pauseMode) {
     if (!strokes || !strokes.length) return [];
     var cap = Object.prototype.hasOwnProperty.call(PAUSE_CAPS, pauseMode)
@@ -532,6 +555,9 @@
     while (i < timeline.length && timeline[i].playT <= elapsed) {
       if (cache) cache.tap(i, comp && comp.finish);
       var p = timeline[i];
+      /* A recolour's moment (lib/recolorplay.js), not a point: the timeline's
+       * `rc` paints the drawing again in its colours as of then. */
+      if (p.rc) { if (timeline.rc) timeline.rc.on(p, comp); i++; continue; }
       var prev = i > 0 ? timeline[i - 1] : null;
       var st = p.start || i === 0;
       if (comp) {
@@ -773,7 +799,7 @@
       applySound: applySound,
       /* Read by verify_inline.py. A player that can only be checked by looking
        * at it is a player nothing can hold to a number. */
-      adopt: function (p) { adopt(p); },
+      adopt: function (p) { var w = recolorFor(p); if (w) w.then(function () { adopt(p); }); else adopt(p); },
       /* TRANSPORT, for a surface that is allowed one. A post is not — see
        * inlineplayer.css — but the profile's Skribls tab is a page ABOUT the
        * drawings, where scrubbing and restarting are the point. It drives this
@@ -950,7 +976,11 @@
            * column is called and what this file assumed first: the box played
            * a zero-length nothing and reported totalMs 0. A host proxy that
            * hands back the drawing bare still works. */
-          adopt((body && (body.skribl || body.payload)) || body);
+          var p = (body && (body.skribl || body.payload)) || body, w = recolorFor(p);
+          return w ? w.then(function () { return p; }) : p;
+        })
+        .then(function (p) {
+          adopt(p);
           loading = false;
           busy(false);
           return payload;
@@ -1087,6 +1117,14 @@
         underPage = (H && H.underOf) ? H.underOf(payload.under, frames.length) : null;
       } else {
         timeline = buildTimeline(f0.strokes || [], payload.pauseMode);
+        /* A LINE RECOLOURED ON THE PAD changes colour when it was changed, as
+         * on the Pad and at /s/<id> (lib/recolorplay.js): its moments go into
+         * the timeline, and this canvas's player paints them. */
+        var RCP = global.SkriblRecolorPlay, placed = RCP ? RCP.place(timeline, f0.strokes || [], f0.strokeGroups, f0.recolors) : timeline;
+        if (placed !== timeline) {
+          placed.rc = RCP.player({ canvas: canvas, unit: function () { return pixelRatio; }, repaint: recolorRepaint });
+          timeline = placed;
+        }
         totalMs = timeline.length ? timeline[timeline.length - 1].playT : 0;
         /* WHERE A VIEWER STARTS: the author's pick, `playSpeed`. The same
          * rule as lib/replayline.js fromPost() -- 'fit' or 'auto' over a
@@ -1195,6 +1233,22 @@
       ctx.drawImage(copy, 0, 0);
       ctx.restore();
     }
+    /* The drawing as just `pts` on its ground, for a recolour's moment: into
+     * the compositor's ink layer when there is one (the ground stays its
+     * base, which an eraser reveals), else straight onto the canvas. */
+    function recolorRepaint(pts, c) {
+      if (!c) { clear(); paintStatic(ctx, pts, canvas, pixelRatio); return; }
+      c.finish();
+      var ink = global.document.createElement('canvas');
+      ink.width = canvas.width; ink.height = canvas.height;
+      var ictx = ink.getContext('2d');
+      ictx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+      paintStatic(ictx, pts, ink, pixelRatio);
+      var d = c.dry.getContext('2d');
+      d.save(); d.setTransform(1, 0, 0, 1, 0, 0); d.clearRect(0, 0, c.dry.width, c.dry.height); d.restore();
+      c.seed(ink);
+      c.present();
+    }
     /* Full repaint from zero. The incremental path below only appends, which is
      * what makes a replay cheap; anything that moves time backwards (seek,
      * loop, a resize) comes through here. */
@@ -1295,6 +1349,7 @@
           var s = seekCache && seekCache.start(seekCache.indexAt(at), jump && drawn > 0 ? drawn : null, ctx);
           if (s) drawn = s.index;   // put() rebuilt the compositor if it restored a copy
           else { clear(); drawn = 0; comp = makeCompositor(ctx, canvas, timeline, pixelRatio); }
+          if (timeline.rc) timeline.rc.from(drawn);   // a recolour's run behind it carries on
           drewFrom = drawn;
           /* A FAR FIRST JUMP RACES THERE, a slice a frame, through the same
            * replayTo to the same points; the bar and the line say where it is
@@ -1311,6 +1366,7 @@
           drawn = replayTo(ctx, timeline, drawn, at, comp, seekCache);
           if (comp && drawn >= timeline.length) comp.finish();
         }
+        if (timeline.rc) timeline.rc.tick(at);
         setNib(state === 'playing' && drawn > 0 && drawn < timeline.length
                ? timeline[drawn - 1] : null);
       }

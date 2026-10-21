@@ -280,9 +280,16 @@ with sync_playwright() as p:
     glyph = pg.evaluate("() => { const g = document.querySelector('.canvas-wrap .tap-paused'); return g ? getComputedStyle(g).display : 'absent'; }")
     pg.wait_for_timeout(500)
     p1 = pg.evaluate(FILL)
+    # The fill read on every frame from before the second tap, and the most
+    # it reached: at 8x what is left of this replay runs about 310 ms and a
+    # post loops, so one read 300 ms on caught the next lap at 0% on a busy
+    # machine (the replay had carried on, finished and begun again).
+    pg.evaluate("""() => { const out = window.__fills = [], t0 = performance.now();
+        (function f() { out.push(parseFloat(document.getElementById('playerProgressFill').style.width) || 0);
+          if (performance.now() - t0 < 2000) requestAnimationFrame(f); })(); }""")
     pg.mouse.click(cv["x"] + cv["width"] / 2, cv["y"] + cv["height"] / 2)
     pg.wait_for_timeout(300)
-    p2 = pg.evaluate(FILL)
+    p2 = pg.evaluate("() => Math.max(...window.__fills)")
     glyph2 = pg.evaluate("() => { const g = document.querySelector('.canvas-wrap .tap-paused'); return g ? getComputedStyle(g).display : 'absent'; }")
     check("on a shared link a tap on the drawing pauses it where it is, with the play mark in the middle",
           p0 > 0 and p1 == p0 and glyph == "grid", f"{p0}% -> {p1}%, mark {glyph}")

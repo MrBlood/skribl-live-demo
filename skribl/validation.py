@@ -96,6 +96,50 @@ def _line_num(p, key):
     return v if _finite(v) and abs(v) <= POINT_T_LIMIT else None
 
 
+# lib/recolorplay.js RUN: the replay time a recolour's colour takes to run
+# along its line, which every replay of a Pad drawing waits at the moment.
+_RECOLOR_RUN_MS = 380
+
+
+def _whole(v, lo, hi):
+    # lib/recolorplay.js whole(): a number with no fraction, lo..hi. JSON's
+    # true is not 1 here, as typeof true is not 'number' there.
+    if isinstance(v, bool) or not isinstance(v, (int, float)):
+        return False
+    try:
+        f = float(v)
+    except OverflowError:   # an integer past a double is Infinity in JS
+        return False
+    return math.isfinite(f) and f.is_integer() and lo <= f <= hi
+
+
+def _recolor_moments(pts, src):
+    """lib/recolorplay.js moments(), for the timing only: the `n` of each
+    recolour moment in the order the replay meets them.
+
+    An entry counts when it is an object whose `k` is a whole number from 0
+    and whose `n` is a whole number from 1 to the points there are; entries
+    sharing a `k` are one moment, at the `n` of the first; moments go by `n`,
+    then by where they first appear. What a moment paints does not enter: a
+    replay waits its RUN whether or not its lines can be painted."""
+    lst = src.get("recolors") if isinstance(src, dict) else None
+    if not isinstance(lst, list) or not pts:
+        return []
+    seen, out = set(), []
+    for i, e in enumerate(lst):
+        if not isinstance(e, dict):
+            continue
+        k, n = e.get("k"), e.get("n")
+        if not _whole(k, 0, math.inf) or not _whole(n, 1, len(pts)):
+            continue
+        if float(k) in seen:
+            continue
+        seen.add(float(k))
+        out.append((int(n), i))
+    out.sort()
+    return [n for n, _ in out]
+
+
 def _payload_line(payload):
     """The in-post line's summary for a Pad Skribl, as a dict, or None.
 
@@ -114,7 +158,10 @@ def _payload_line(payload):
       play   inlineplayer.js buildTimeline(): the same gaps, each capped by the
              payload's pauseMode (Tight when it has none, as the player
              replays it) -- how long the replay runs at 1x, which Fit's number
-             and "long pauses skipped" are worked out from.
+             and "long pauses skipped" are worked out from. Each recolour
+             moment adds lib/recolorplay.js's RUN where it was made (the
+             points after it wait for the colour to run along its line), by
+             that file's rule (_recolor_moments).
       speed  the author's `playSpeed`, as posted, or None (plays as drawn);
              lib/replayline.js fromPost() turns it into where a viewer starts.
       shape  lib/replayline.js scrub()'s bins at a fixed LINE_SHAPE_BINS: the
@@ -122,7 +169,9 @@ def _payload_line(payload):
              the most in any one, as a base-36 digit (0 is no ink; any ink is
              at least 1, so a light stretch still shows). The scrubber shows
              this both before and after the payload arrives, so pressing play
-             changes nothing under the drawing.
+             changes nothing under the drawing. A recolour's RUN lays no ink,
+             and the replay starts a line again after one, so the point
+             following a moment lays none either.
 
     None for a Flip (its line counts pages, and `pages` is already a column)
     and for a drawing with fewer than two points. The frames come out the way
@@ -153,12 +202,21 @@ def _payload_line(payload):
             play_t.append(play_t[-1] + (gap if cap is None else min(gap, cap)))
         else:
             play_t.append(play_t[-1])
-    total = play_t[-1] or 1
+    moments = _recolor_moments(pts, first if isinstance(frames, list) and frames else payload)
+    shift = j = 0
+    for i in range(len(play_t)):
+        while j < len(moments) and moments[j] <= i:
+            shift += _RECOLOR_RUN_MS
+            j += 1
+        play_t[i] += shift
+    play = play_t[-1] + _RECOLOR_RUN_MS * (len(moments) - j)   # the runs after the last point
+    total = play or 1
     n = LINE_SHAPE_BINS
     ink = [0.0] * n
+    broken = set(moments)
     for k in range(1, len(pts)):
         p, q = pts[k], pts[k - 1]
-        if isinstance(p, dict) and p.get("start"):
+        if (isinstance(p, dict) and p.get("start")) or k in broken:
             continue
         x1, y1, x0, y0 = (_line_num(p, "x"), _line_num(p, "y"),
                           _line_num(q, "x"), _line_num(q, "y"))
@@ -173,7 +231,7 @@ def _payload_line(payload):
     speed = payload.get("playSpeed")
     if speed is not None and _validate_play_speed(speed):
         speed = None
-    return {"drawn": int(round(drawn)), "play": int(round(play_t[-1])),
+    return {"drawn": int(round(drawn)), "play": int(round(play)),
             "speed": speed, "shape": shape}
 
 

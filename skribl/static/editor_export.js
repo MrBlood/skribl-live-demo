@@ -141,6 +141,39 @@
   // vendored `gifenc` global. Transparent mode keys out the background (GIF's
   // 1-bit alpha → crisp for bold line art); color mode paints the pad's solid
   // background (no fringe). Gated on gifenc; dormant/handled if absent.
+  /* A RECOLOUR PLAYS IN AN EXPORT AS IT DOES ON SCREEN (lib/recolorplay.js).
+     buildPlaybackTimeline hands every timeline the editor canvas's own `rc`;
+     an export draws on a stroke layer of its own, so it takes one for that
+     layer: the moment paints the layer again in its colours as of then (the
+     base under it, through a compositor when see-through layering is on, as
+     the replay itself draws), and frame(ms) is what each frame shows of the
+     layer, the colour running along its line while it runs. */
+  function exportRecolor(timeline, strokeCanvas, sctx, sDot, sLine, drawBase) {
+    const plain = () => strokeCanvas;
+    if (!timeline.rc || !window.SkriblRecolorPlay) return plain;
+    const dpr = window.devicePixelRatio || 1;
+    const rc = timeline.rc = SkriblRecolorPlay.player({
+      canvas: strokeCanvas, overlay: false, unit: () => dpr,
+      repaint: (pts, comp) => {
+        if (comp) comp.finish();
+        sctx.save(); sctx.setTransform(1, 0, 0, 1, 0, 0);
+        sctx.clearRect(0, 0, strokeCanvas.width, strokeCanvas.height);
+        sctx.restore();
+        drawBase();
+        const c2 = strokeLayersOn() ? makeStrokeCompositor(sctx, strokeCanvas) : null;
+        const dot = c2 ? c2.dotFn : sDot, line = c2 ? c2.lineFn : sLine;
+        for (let k = 0; k < pts.length; k++) {
+          const p = pts[k];
+          if (p.start || k === 0) dot(p.x, p.y, p.color, p.size, p.erase);
+          else { const q = pts[k - 1]; line(q.x, q.y, p.x, p.y, p.color, p.size, p.erase); }
+        }
+        if (c2) { c2.finish(); c2.present(); }
+        if (comp) comp.reseed();
+      }
+    });
+    return (ms) => rc.compose(ms) || strokeCanvas;
+  }
+
   async function exportGif() {
     try {
       await skriblLoadVendor('gifenc');
@@ -176,19 +209,25 @@
       const sctx = strokeCanvas.getContext('2d'); sctx.scale(dpr, dpr);
       const sDot = (x, y, c, s, er) => { sctx.globalCompositeOperation = er ? 'destination-out' : 'source-over'; sctx.beginPath(); sctx.arc(x, y, s / 2, 0, Math.PI * 2); sctx.fillStyle = er ? 'rgba(0,0,0,1)' : c; sctx.fill(); sctx.globalCompositeOperation = 'source-over'; };
       const sLine = (x1, y1, x2, y2, c, s, er) => { sctx.globalCompositeOperation = er ? 'destination-out' : 'source-over'; sctx.beginPath(); sctx.moveTo(x1, y1); sctx.lineTo(x2, y2); sctx.strokeStyle = er ? 'rgba(0,0,0,1)' : c; sctx.lineWidth = s; sctx.lineCap = 'round'; sctx.lineJoin = 'round'; sctx.stroke(); sctx.globalCompositeOperation = 'source-over'; };
-      const comp = strokeLayersOn() ? makeStrokeCompositor(sctx, strokeCanvas) : null;
-
       // Seed prior strokes (pre-record snapshot is drawing-only on transparent).
+      let baseImg = null;
+      const drawBase = () => { if (baseImg) { try { sctx.drawImage(baseImg, 0, 0, logicalW, logicalH); } catch (e) {} } };
       if (preRecordSnapshot) {
-        await new Promise((res) => { const im = new Image(); im.onload = () => { try { sctx.drawImage(im, 0, 0, logicalW, logicalH); } catch (e) {} res(); }; im.onerror = () => res(); im.src = preRecordSnapshot; });
+        await new Promise((res) => { const im = new Image(); im.onload = () => { baseImg = im; drawBase(); res(); }; im.onerror = () => res(); im.src = preRecordSnapshot; });
       }
+      // AFTER THE BASE, as the two video exports have it: the compositor's dry
+      // layer starts as a copy of the stroke layer, and made before the base it
+      // started empty, so its first present() wiped the base out of every GIF
+      // with see-through layering on.
+      const comp = strokeLayersOn() ? makeStrokeCompositor(sctx, strokeCanvas) : null;
+      const layerAt = exportRecolor(timeline, strokeCanvas, sctx, sDot, sLine, drawBase);
 
       const out = document.createElement('canvas'); out.width = outW; out.height = outH;
       const octx = out.getContext('2d');
-      function frameData() {
+      function frameData(ms) {
         octx.clearRect(0, 0, outW, outH);
         if (!transparent) { octx.fillStyle = bgColor || '#0d0f14'; octx.fillRect(0, 0, outW, outH); }
-        octx.drawImage(strokeCanvas, 0, 0, outW, outH);
+        octx.drawImage(layerAt(ms), 0, 0, outW, outH);
         return octx.getImageData(0, 0, outW, outH);
       }
 
@@ -206,10 +245,10 @@
           return;
         }
         const elapsed = f * (1000 / fps);
-        if (comp) { ti = replayTimelineToCanvas(timeline, ti, elapsed, comp.dotFn, comp.lineFn); comp.present(); }
+        if (comp) { ti = replayTimelineToCanvas(timeline, ti, elapsed, comp.dotFn, comp.lineFn, comp); comp.present(); }
         else { ti = replayTimelineToCanvas(timeline, ti, elapsed, sDot, sLine); }
         if (f === totalFrames - 1 && comp) { comp.finish(); comp.present(); }
-        const img = frameData();
+        const img = frameData(elapsed);
         const palette = G.quantize(img.data, 256, { format: fmt, oneBitAlpha: transparent });
         const index = G.applyPalette(img.data, palette, fmt);
         const opts = { palette, delay };
@@ -390,13 +429,16 @@
           drawPhotoFitted(rctx, photoBgImg, w, h, photoFit, photoOffsetX, photoOffsetY, photoZoom);
           rctx.restore();
         }
-        rctx.drawImage(strokeCanvas, 0, 0, w, h);
+        rctx.drawImage(layerAt(at), 0, 0, w, h);
       }
 
       // Seed the pre-record base drawing, if any.
+      let baseImg = null, at = 0;
+      const drawBase = () => { if (baseImg) { try { sctx.drawImage(baseImg, 0, 0, w / dpr, h / dpr); } catch (e) {} } };
       if (preRecordSnapshot) {
-        await new Promise((res) => { const im = new Image(); im.onload = () => { try { sctx.drawImage(im, 0, 0, w / dpr, h / dpr); } catch (e) {} res(); }; im.onerror = () => res(); im.src = preRecordSnapshot; });
+        await new Promise((res) => { const im = new Image(); im.onload = () => { baseImg = im; drawBase(); res(); }; im.onerror = () => res(); im.src = preRecordSnapshot; });
       }
+      const layerAt = exportRecolor(timeline, strokeCanvas, sctx, sDot, sLine, drawBase);
 
       const totalMs = timeline[timeline.length - 1].playT || 0;
       const holdMs = 700;
@@ -405,9 +447,10 @@
         ready, canvas: rec, durationSec: (totalMs + holdMs) / 1000, audio: useAudio ? audioBuf : null,
         drawFrame: (f, isLast) => {
           const elapsed = f * (1000 / 30);
-          if (comp) { ti = replayTimelineToCanvas(timeline, ti, elapsed, comp.dotFn, comp.lineFn); comp.present(); }
+          if (comp) { ti = replayTimelineToCanvas(timeline, ti, elapsed, comp.dotFn, comp.lineFn, comp); comp.present(); }
           else { ti = replayTimelineToCanvas(timeline, ti, elapsed, sDot, sLine); }
           if (isLast && comp) { comp.finish(); comp.present(); }
+          at = elapsed;
           composite();
         },
         aborted: () => _exportAbort,
@@ -494,12 +537,15 @@
           drawPhotoFitted(rctx, photoBgImg, w, h, photoFit, photoOffsetX, photoOffsetY, photoZoom);
           rctx.restore();
         }
-        rctx.drawImage(strokeCanvas, 0, 0, w, h);
+        rctx.drawImage(layerAt(at), 0, 0, w, h);
       }
       // The pre-record base drawing, if any, goes under the strokes first.
+      let baseImg = null, at = 0;
+      const drawBase = () => { if (baseImg) sctx.drawImage(baseImg, 0, 0, w / dpr, h / dpr); };
       if (preRecordSnapshot) {
-        await new Promise((res) => { const im = new Image(); im.onload = () => { sctx.drawImage(im, 0, 0, w / dpr, h / dpr); res(); }; im.onerror = res; im.src = preRecordSnapshot; });
+        await new Promise((res) => { const im = new Image(); im.onload = () => { baseImg = im; drawBase(); res(); }; im.onerror = res; im.src = preRecordSnapshot; });
       }
+      const layerAt = exportRecolor(timeline, strokeCanvas, sctx, sDot, sLine, drawBase);
       // Wet/dry compositor for low-opacity strokes, targeting the export stroke
       // layer. Seeds dry from strokeCanvas (base already painted). Flag-gated.
       const comp = strokeLayersOn() ? makeStrokeCompositor(sctx, strokeCanvas) : null;
@@ -511,10 +557,11 @@
         canvas: rec, fps, frames: drawn + Math.round(HOLD_MS * fps / 1000), music: loop,
         draw: (k) => {
           if (k < drawn) {
-            const at = Math.min(totalMs, k * 1000 / fps);
-            if (comp) { idx = replayTimelineToCanvas(timeline, idx, at, comp.dotFn, comp.lineFn); comp.present(); }
+            at = Math.min(totalMs, k * 1000 / fps);
+            if (comp) { idx = replayTimelineToCanvas(timeline, idx, at, comp.dotFn, comp.lineFn, comp); comp.present(); }
             else idx = replayTimelineToCanvas(timeline, idx, at, sDot, sLine);
           } else if (!finished) {
+            at = Infinity;   // the finished drawing, held
             finished = true;
             if (comp) { comp.finish(); comp.present(); }
           }

@@ -282,9 +282,13 @@ _SURFACES = {"editor": "skribl_editor.html", "flip": "skribl_flip.html",
 def _scripts(path):
     """Script SRCs only — Jinja comments are stripped first, because a note
     saying a file is NOT loaded names it too. (That false positive turned up
-    the first time this was run by hand.)"""
+    the first time this was run by hand.) The SRC, not any asset in the tag:
+    the in-post player's tag also names lib/recolorplay.js in a data
+    attribute, a module it fetches only for a recoloured drawing, and a
+    greedy match read that name in place of inlineplayer.js's and called
+    every module the player reads unread."""
     body = re.sub(r"\{#.*?#\}", "", path.read_text(encoding="utf-8"), flags=re.S)
-    return re.findall(r"<script[^>]*skribl_asset\('([^']+)'\)", body)
+    return re.findall(r"<script[^>]*?\bsrc=\"\{\{\s*skribl_asset\('([^']+)'\)", body)
 
 def _unread(asset, siblings):
     """True when nothing else the page loads names any global this module
