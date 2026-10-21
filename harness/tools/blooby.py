@@ -218,7 +218,8 @@ def sig_strokes(x, y, scale):
                         u ** 3 * p0[1] + 3 * u * u * t * c1[1] + 3 * u * t * t * c2[1] + t ** 3 * p[1]))
         i += 6
     sk = lambda px, py: (x + (px - py * math.tan(math.radians(8))) * scale, y + py * scale)
-    return [sk(*p) for p in pts], [sk(38.8, 11.5), sk(39.4, 11.8)]   # the line, and the i's dot
+    dot = [float(v) for v in re.findall(r"-?\d+\.?\d*", re.search(r'<path class="st dot" d="([^"]+)"', src).group(1))]
+    return [sk(*p) for p in pts], [sk(dot[0], dot[1]), sk(dot[-2], dot[-1])]   # the line, and the i's dot
 
 
 LETTERS = {   # capitals in a 1 x 1.4 box, as a hand letters them

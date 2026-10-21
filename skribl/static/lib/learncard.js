@@ -25,7 +25,8 @@
  * from their name tag. The Pages card says how to move a page.
  *
  * THE FIRST-TIME NOTE says so once, ever, on a page of its own, and not on
- * the visit Blooby says hi (lib/hello.js) nor while a first-use hint is up
+ * the visit Skribl says hi (lib/hello.js, which takes its element away at
+ * once when it will not come, on any screen) nor while a first-use hint is up
  * (lib/hints.js): one welcome at a time.
  *
  * AUTOMATION NEVER MEETS ANY OF THIS unless it asks (window.__skriblLearnForce,
@@ -462,9 +463,7 @@
     }
 
     if (live && window.top === window && !/[?&]compose=1\b/.test(location.search)) {
-      var helloComing = false;
-      try { helloComing = !!document.getElementById('skriblHello') && localStorage.getItem('skribl.hello.v1') !== '1'
-                          && window.matchMedia('(hover: none) and (pointer: coarse)').matches; } catch (e) {}
+      var helloComing = !!document.getElementById('skriblHello');
       // One welcome at a time: while a first-use hint (lib/hints.js) is up,
       // the note waits for it to go; if it is still up after a while, the note
       // comes on another visit.

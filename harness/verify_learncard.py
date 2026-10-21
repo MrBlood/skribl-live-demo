@@ -217,7 +217,6 @@ with sync_playwright() as p:
             c = b.new_context(**PHONE)
             c.add_init_script(FORCE)
             q = c.new_page()
-            q.add_init_script("try { localStorage.setItem('skribl.hello.v1', '1'); } catch (e) {}")
             # a first-use hint up when the note would come (Pad shows none of its own on a first open)
             q.add_init_script("addEventListener('load', () => setTimeout(() => window.SkriblHints && SkriblHints.show('lcTestHint', 'A first-use hint'), 300));")
             browsing.goto(q, BASE, route)

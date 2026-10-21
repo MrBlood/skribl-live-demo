@@ -775,7 +775,7 @@ when you post?" -- he did not then; a post said "Posted!" and nothing more --
 and the owner's answer was "keep it parked until after the audit". He cheers
 now (#476), and START-HERE puts him on the device check.
 
-## 6m. Blooby says hi: he grows to full screen, waving (owner, after #476) — BUILT
+## 6m. The first hello: Blooby on his star, then the mark that writes itself (owner, after #476 and v327) — BUILT
 
 THE ASK, the night the cheer merged: "make a blooby waving start small then
 emerge at full screen. Animate him waving the whole time. Keep star background
@@ -849,6 +849,52 @@ fixed, sharp at 3x, one wave then the fade, a tap skips, a still hello under
 Reduce Motion, one module for both editors (lib/hello.js,
 `_skribl_hello.html`, brand/blooby-hello.json; verify_hello). The badge came
 off first.
+
+THE SECOND ROUND, after v327. The owner: "his background looks super low
+resolution. and it just doesn't grab me. since it's the first thing and first
+time - it has to be awesome and kind"; "shouldn't he be on laptops too - any
+first time?"; "weird nubs on the edge of star tips"; "I was hoping for a super
+crisp look, but it looks kind of blurry". Mocked as four takes on his star,
+and the owner: "C looks good". C was built, and before it merged the owner
+asked whether the first hello should be the brand itself, written and then
+evaporating. Mocked twice more, the second time as the app draws its mark:
+M1, the dot bounces in, and M2, Blooby lands on the i. The owner: "I like
+m1", then of its dot, "It's to the right?", then "all yes". BUILT, as M1
+(C never shipped):
+
+* The mark writes itself: the header's own mark, the same one stroke and even
+  line, laid down by the real pen in the sweep's colours, Skribl purple to the
+  accent blue (1.6 s). The i's dot drops in, stretched as it falls and
+  squashed as it lands, bounces, and rests over the i (0.75 s). Then the ink
+  lifts away in the order it was written, rising a little and softening, and
+  the canvas shows through as the last of it goes (0.9 s). About 3.4 s, and
+  9 KB as served where Blooby's star was 299.
+* On the page's own ground, light or dark, as under the header's mark.
+* The dot over the i, in the header too: before the skew its middle is
+  straight above the i's top. It sat 1.3 units right, which only showed once
+  the mark filled a screen. `harness/tools/make_hello.py` draws the hello from
+  the template's own paths, so the two cannot drift.
+* Sharp: the box on whole screen pixels and the drawing a whole number of its
+  pixels to each, twice the screen's where the drawing stays within 8 million
+  pixels (laptops, smaller phones) and one for one past it.
+* Every first visit, on any screen; never in a composer's frame. A tap, a
+  click or any key skips it, and the key does nothing else. Someone who met
+  Blooby meets the mark once. The visit it comes, the button cards' first note
+  waits for another.
+
+LEFT, named:
+
+* The Blooby card's title, in the two help demos that draw the card
+  (blooby-card, flip-blooby-card), is a drawing of the mark with its dot at the
+  old spot. Its tool reads the new spot; the demos take it when they are drawn
+  again.
+* A Flip whose loop a viewer turns off (the full-screen bar, the Library) ends
+  on its first page, not its last: at its very end the player's clock comes
+  round to page one. The hello asks for the last moment instead, as the
+  scrubber does; the player should, for every Flip.
+
+Not tested here: the iPhone's engine, SF and Segoe UI (verify_hello measures
+it in Chrome).
 
 ## 6n. How it works: show it, hand over the pen, keep the manual for looking things up (3 and 4 built)
 

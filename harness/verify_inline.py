@@ -1559,7 +1559,10 @@ with sync_playwright() as sp:
     #   the box "Pause this Skribl" while it plays and its own name again when
     #   it stops. WHICH CALLER PAYS: every page that shows a post, for a name
     #   a screen reader reads on every post. 70,359 B measured.
-    EMBED_RATCHET = 70_364
+    # LOWERED (Blooby's first hello, as C): -9 B, attach()'s maxDpr, the
+    #   hello's alone, becoming `dpr`, the name the player already gives that
+    #   number. 70,350 B measured.
+    EMBED_RATCHET = 70_355
     # THE RATCHET MEASURES DISPLAY, NOT COMPOSE, and the two are separate costs
     # paid by separate pages. Excluded here and measured on its own below:
     #   feed.js          the PREVIEW PAGE's own script (fetch the listing, clone

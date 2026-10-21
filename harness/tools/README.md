@@ -33,6 +33,11 @@ Blooby growing from small to full screen on his star, waving, in the seven
 takes put to the owner at v323 (FUTURE.md 6m), saved as `.skribl` files to a
 folder you name. Nothing in the app uses it yet.
 
+`make_hello.py` draws the first hello (lib/hello.js) the same way: the brand
+mark, read from `_skribl_brand_mark.html`, written by the pen in its sweep of
+colour, then its dot bouncing in, saved as the payload the app plays
+(`skribl/static/brand/hello.json`).
+
 ## Measurement
 
 `cssgraph.py` emits `player.css` (run it after any `styles.css` change — the
