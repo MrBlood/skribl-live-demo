@@ -358,9 +358,24 @@ with sync_playwright() as p:
     for surface, path in (("Pad", "/skribl-pad"), ("Flip", "/flip")):
         print(f"\nHELP — {surface} on a phone: labels above their words, every section shown to its end")
         ph = b.new_page(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True)
-        ph.goto(BASE + path, wait_until="load"); ph.wait_for_timeout(1200)
-        ph.evaluate("() => { window.SkriblHints && SkriblHints.hide(); }")
-        ph.evaluate(OPEN_ALL)
+        ph.goto(BASE + path, wait_until="load")
+        # THE PAGE WENT AWAY UNDER THIS ONCE (main, after #575: Flip on a phone,
+        # "Execution context was destroyed" at the next evaluate, once in two
+        # lanes, green on its re-run and here). What took it is not known, so
+        # every load of the page from here on is written down, and a page that
+        # goes is a red row naming where it went rather than a crash.
+        went = []
+        ph.on("framenavigated", lambda f: went.append(f.url) if f == ph.main_frame else None)
+        ph.wait_for_timeout(1200)
+        try:
+            ph.evaluate("() => { window.SkriblHints && SkriblHints.hide(); }")
+            ph.evaluate(OPEN_ALL)
+        except Exception as ex:  # noqa: BLE001 -- the failure is the finding
+            ph.wait_for_timeout(600)   # for the load that took it to be heard
+            check(f"{surface}: the page stays where it was opened, all through the sheet", False,
+                  f"{repr(ex)[:160]}; it loaded again: {went or 'nothing seen'}")
+            ph.close()
+            continue
         # Each section glides open in .34s; under a loaded box that ran past a
         # fixed 700ms. Wait for every open one to reach its full height, up to
         # 3s, so a section that never does still fails below.
@@ -409,6 +424,7 @@ with sync_playwright() as p:
             return v.length > 3 ? +v[3] : 1; }""")
         check(f"{surface}: the help sheet's title bar is opaque, so what scrolls under it cannot show through",
               alpha == 1, f"background alpha {alpha}")
+        check(f"{surface}: the page stays where it was opened, all through the sheet", not went, str(went))
         ph.close()
 
     b.close()
