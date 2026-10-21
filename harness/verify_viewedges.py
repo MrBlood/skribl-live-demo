@@ -23,6 +23,10 @@ page and each was red on the code before its fix:
     what a press does next ("Pause this Skribl" while it plays);
   * the Gallery's words: "come alive" for a Pad or a Flip, and the empty
     state names the switch an author can use later, in the Library;
+  * a Flip at its end shows its last page whole: played once with Loop off,
+    taken to its end on the scrubber, and at rest with no card (a draft in a
+    host's composer), where the player's clock came round to its first page,
+    blank where that page draws itself (after v327);
   * every colour the Gallery and the Library declare is read by the page or
     by something it loads.
 """
@@ -41,7 +45,7 @@ from assertions import make_check
 import browsing
 
 try:
-    from playwright.sync_api import sync_playwright
+    from playwright.sync_api import sync_playwright, TimeoutError as PWTimeout
 except ImportError as exc:
     print(f"SUITE-SKIPPED: {exc}")
     print("No assertions were executed. This is NOT evidence the viewing pages are right.")
@@ -97,6 +101,42 @@ def drawing(title, n, music=False):
 SOUND = drawing(f"View sound {TAG}", 400, music=True)
 SILENT = drawing(f"View silent {TAG}", 800)
 
+# A FLIP WHOSE ENDS DIFFER: its first page draws itself (blank at its start),
+# its last is still, and each page's mark has a corner of its own, so a
+# reading says which page is on screen and whether it is whole.
+FLIP_AT = {"first": (100, 150), "middle": (201, 380), "last": (300, 610)}
+
+
+def mark(at, color, gap):
+    cx, cy = FLIP_AT[at]
+    return [{"x": round(cx + 60 * math.cos(i / 24 * 6.283), 1), "y": round(cy + 60 * math.sin(i / 24 * 6.283), 1),
+             "color": color, "t": i * gap, "start": i == 0, "size": 10} for i in range(25)]
+
+
+FLIP = post({"title": f"View flip {TAG}", "version": 2, "schemaVersion": 2, "visibility": "public",
+             "playbackMode": "flip", "fps": 6, "canvasSize": {"cssWidth": 402, "cssHeight": 760},
+             "frames": [{"strokes": mark("first", "#7c5cff", 40), "strokeGroups": [25], "draw": True,
+                         "background": {"color": "#2e1b52"}},
+                        {"strokes": mark("middle", "#7c5cff", 0), "strokeGroups": [25], "hold": 2},
+                        {"strokes": mark("last", "#ff48b0", 0), "strokeGroups": [25], "hold": 2}]})
+
+# Which corners carry ink, read off the canvas the box paints: a mark is a
+# ring of ten-pixel line, so a corner with a few hundred pixels off the ground
+# is drawn and one with none is not.
+INK = """(box) => { const c = box && box.querySelector('.skribl-inline-canvas');
+  if (!c || !c.width) return null;
+  const x = c.getContext('2d'), k = c.width / 402, g = x.getImageData(2, 2, 1, 1).data, out = {};
+  for (const [name, [cx, cy]] of Object.entries(%s)) {
+    const d = x.getImageData(Math.round((cx - 75) * k), Math.round((cy - 75) * k), Math.round(150 * k), Math.round(150 * k)).data;
+    let n = 0;
+    for (let i = 0; i < d.length; i += 4) if (Math.abs(d[i] - g[0]) + Math.abs(d[i + 1] - g[1]) + Math.abs(d[i + 2] - g[2]) > 60) n++;
+    out[name] = n; }
+  return out; }""" % json.dumps(FLIP_AT)
+
+
+def last_page(ink):
+    return bool(ink) and ink["last"] > 300 and ink["first"] == 0 and ink["middle"] == 0
+
 FULL = {"gallery": ".tileStage.watch-full:is(:fullscreen, .is-immersive-page)",
         "library": ".stageCanvasWrap.watch-full:is(:fullscreen, .is-immersive-page)"}
 
@@ -127,10 +167,10 @@ def gallery(b, view, theme="dark"):
     return pg
 
 
-def library(b, view, item, theme="light"):
+def library(b, view, item, theme="light", kind="pad", pages=1):
     pg = themed(b, view, theme)
-    seed = json.dumps([{"id": item["id"], "url": item.get("url"), "title": item.get("title") or "", "kind": "pad",
-                        "pages": 1, "visibility": "public"}])
+    seed = json.dumps([{"id": item["id"], "url": item.get("url"), "title": item.get("title") or "", "kind": kind,
+                        "pages": pages, "visibility": "public"}])
     pg.add_init_script("try { localStorage.setItem('skribl_posted_v1', %s); } catch (e) {}" % json.dumps(seed))
     browsing.goto(pg, BASE, "/library")
     pg.wait_for_timeout(800)
@@ -291,6 +331,72 @@ with sync_playwright() as p:
                       FULL["library"])
     check("a host's Library names who drew it in full screen from the listing, never the signed-in id",
           bool(who) and "Ada Draws" in who and "@ada" in who and "host-user-42" not in who, str(who))
+    pg.close()
+
+    # ------------------------------------------------------- a Flip's end
+    # At exactly its length a Flip's clock comes round to its first page, and
+    # the player showed that page at its end: blank, for one whose first page
+    # draws itself. The editor's own replay ends on the last page whole.
+    print("\nA FLIP AT ITS END (the Library's stage, a desk)")
+    pg = library(b, DESK, FLIP, kind="flip", pages=3)
+    BOX = "() => document.querySelector('.stageCanvasWrap .skribl-inline')"
+    READ = "(B) => (" + INK + ")((new Function('return (' + B + ')()'))())"
+    STATE = ("(S) => { const s = (new Function('return (' + S + ')()'))().state();"
+             " return [s.state, Math.round(s.elapsedMs), Math.round(s.totalMs)]; }")
+    # A wait's test runs under the page's script policy, which refuses
+    # new Function, so the stage is named outright there.
+    ON_STAGE = "document.querySelector('.stageCanvasWrap .skribl-inline')._skriblInline"
+    # As a person does it: the drawing starts on its own when its row is
+    # picked; Loop off, then Restart, and watch it to its end.
+    pg.wait_for_function(f"() => {{ const p = {ON_STAGE}; return p && p.state().state === 'playing'; }}", timeout=15000)
+    pg.click("#btnLoop")
+    pg.click("#btnRestart")
+    try:
+        pg.wait_for_function(f"() => {{ const s = {ON_STAGE}.state(); return s.state !== 'playing' && s.elapsedMs >= s.totalMs; }}",
+                             timeout=15000)
+    except PWTimeout:
+        pass
+    pg.wait_for_timeout(300)
+    once, st = pg.evaluate(READ, BOX), pg.evaluate(STATE, STAGE)
+    looping = pg.evaluate("(S) => (new Function('return (' + S + ')()'))().looping()", STAGE)
+    check("a Flip played once stops on its last page, whole, never back on its first",
+          looping is False and last_page(once), f"ink by corner {once}; player {st}, looping {looping}")
+    # From its first page, partly drawn, a click at the very end of the
+    # page's own scrubber: the end of the drawing.
+    pg.click("#btnRestart")
+    pg.wait_for_timeout(250)
+    pg.click("#btnPlay")
+    pg.wait_for_timeout(200)
+    was = pg.evaluate(READ, BOX)
+    pg.evaluate("""() => { const s = document.getElementById('scrub'), r = s.getBoundingClientRect();
+        s.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: r.right, clientY: r.top + r.height / 2 })); }""")
+    pg.wait_for_timeout(300)
+    end, st = pg.evaluate(READ, BOX), pg.evaluate(STATE, STAGE)
+    check("...and taken to its end, by a click at the far end of the scrubber, it shows its last page",
+          bool(was) and was["first"] > 0 and was["last"] == 0 and last_page(end),
+          f"before, on its first page: {was}; after: {end}; player {st}")
+    pg.close()
+
+    # At rest with no card: a draft in a host's composer is attached by its
+    # payload, and its rest is the finished drawing (inlineplayer.js attach).
+    pg = themed(b, DESK)
+    browsing.goto(pg, BASE, "/feed")
+    pg.wait_for_selector(".skribl-inline[data-skribl-id]", state="attached", timeout=20000)
+    body = json.loads(urllib.request.urlopen(BASE + f"/api/skribls/{FLIP['id']}", timeout=30).read())
+    pg.evaluate("""(payload) => { const src = document.querySelector('.skribl-inline[data-skribl-id]');
+        const tmp = document.createElement('div'); tmp.innerHTML = src.outerHTML;
+        const box = tmp.firstElementChild; box.classList.remove('is-playing', 'is-paused', 'is-loading');
+        box.setAttribute('data-skribl-w', 402); box.setAttribute('data-skribl-h', 760); box.id = 'flipRest';
+        box.style.width = '402px';
+        const host = document.createElement('article'); host.appendChild(box); document.body.prepend(host);
+        SkriblInline.attach(box, payload); }""", body.get("skribl") or body)
+    pg.wait_for_function("() => { const p = document.getElementById('flipRest')._skriblInline; return p && p.state().loaded; }",
+                         timeout=10000)
+    pg.wait_for_timeout(400)
+    rest = pg.evaluate("""(INK) => { const box = document.getElementById('flipRest');
+        return { state: box._skriblInline.state().state, ink: (new Function('return (' + INK + ')'))()(box) }; }""", INK)
+    check("a Flip at rest with no card (a draft in a host's composer) shows its last page whole, not its first page blank",
+          bool(rest) and rest["state"] == "idle" and last_page(rest["ink"]), str(rest))
     pg.close()
 
     # --------------------------------------------------------- in a post

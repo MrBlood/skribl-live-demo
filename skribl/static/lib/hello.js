@@ -107,14 +107,8 @@
     gone = true;
     window.removeEventListener('keydown', key, true);
     window.removeEventListener('resize', fit);
-    if (p) {
-      var at = p.state();
-      if (at.state === 'playing') p.pause();
-      // At its end the player turns a Flip back to its first page, blank here
-      // (the word draws itself): the last moment is asked for instead, as the
-      // player's own scrubber does.
-      if (at.elapsedMs >= at.totalMs - 1) p.seek(at.totalMs - 1);
-    }
+    // Held where it is; at its end the player holds a Flip's last page whole.
+    if (p && p.state().state === 'playing') p.pause();
     if (!reduce) {
       el.classList.add('is-lifting');
       void box.offsetWidth;
@@ -157,10 +151,8 @@
     window.addEventListener('resize', fit);
     requestAnimationFrame(function () { el.classList.add('is-on'); });
     if (reduce) {
-      // Still: the finished mark, its dot in place, then the fade. Asked for
-      // at its last moment: at rest, and at its very end, the player shows a
-      // Flip's first page, which is blank here.
-      p.seek(p.state().totalMs - 1);
+      // Still: the finished mark, its dot in place, then the fade. At rest,
+      // with no card, the player shows a Flip's last page whole: that mark.
       setTimeout(leave, 1800);
       return;
     }
