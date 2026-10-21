@@ -33,7 +33,8 @@ a slow line for the page's own scripts: the hello brings the hold timing with
 the player, or it played its drawing as plain pages, all at once (after v327).
 And an empty cache on 3G, as a private window has: its files asked for first,
 or they queued behind the editor's and it missed its window, and drawn once the
-page's own scripts are done, or it froze as each of them ran.
+page's own scripts are done, or it froze as each of them ran. And the replay
+link: ?hello=again plays it again where it was seen, asking as this suite does.
 """
 import base64
 import io
@@ -578,6 +579,26 @@ with sync_playwright() as p:
           f"came {s3['painted']} after {ms3} ms (here {s3['here']}); its files by {tm['own']} ms, the page's by {tm['page']} ms; "
           f"on at {tm['on']} ms, the page ready at {tm['ready']} ms")
     c.close()
+
+    # The replay link (owner: "Yes to the replay link"): an address with
+    # ?hello=again plays it again where it was seen, and asks for it as this
+    # suite does (no force here: automation that did not ask never meets
+    # it), on both editors; a plain open after it goes straight to the canvas.
+    replays = []
+    for route in ("/skribl-pad", "/flip"):
+        c = b.new_context(**PHONE)
+        c.add_init_script("try { localStorage.setItem('%s', '1'); } catch (e) {}" % KEY)
+        q = _open(c, route + "?hello=again", force=False)
+        s, ms = _until(q, lambda s: s["painted"] and s["on"], 8000)
+        q.goto(BASE + route, wait_until="load")
+        plain = q.evaluate(ST, False)
+        replays.append((route, ms, plain["here"], plain["canvasThere"]))
+        c.close()
+    check("the replay link: ?hello=again plays it again where it was seen, on the Pad and on Flip, "
+          "and a plain open after it goes straight to the canvas",
+          all(ms is not None and not here and there for _, ms, here, there in replays),
+          "; ".join(f"{r}: came after {ms} ms, then plain open: hello there {here}, canvas {there}"
+                    for r, ms, here, there in replays))
 
     # Flip: the same hello, and one "seen" for both editors.
     c = b.new_context(**PHONE)
