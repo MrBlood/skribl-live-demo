@@ -159,6 +159,17 @@
   }
   window.addEventListener('keydown', key, true);
 
+  /* A TAP THAT SKIPS IT PRESSES NOTHING ELSE (found building the hello's
+   * mock). It lets go of the pointer the moment it starts to leave
+   * (.is-leaving), and a phone makes a tap's click where the finger lifts, on
+   * whatever is under it: a tap over the menu at the top right skipped the
+   * hello and opened the menu. Ending that tap here makes no click at all; a
+   * mouse's click never reached what was under it. A touchend is never
+   * passive, so it may; and it holds no gesture, so it has no touchcancel to
+   * pair with: a touch the system takes away makes no click (verify_tools
+   * V214b names it). */
+  function noClick(e) { if (gone) e.preventDefault(); }
+
   function never() { window.removeEventListener('keydown', key, true); away(); }
 
   /* THE PAGE'S OWN SCRIPTS FIRST, THEN THE HELLO. Its files are asked for
@@ -189,13 +200,7 @@
     // Once through, ending on the finished mark: a post loops, a hello does not.
     p.setLoop(false);
     el.addEventListener('pointerdown', leave);
-    /* A TAP THAT SKIPS IT PRESSES NOTHING ELSE (found building the hello's
-     * mock). It lets go of the pointer the moment it starts to leave
-     * (.is-leaving), and a phone makes a tap's click where the finger lifts,
-     * on whatever is under it: a tap over the menu at the top right skipped
-     * the hello and opened the menu. Ending that tap here makes no click at
-     * all; a mouse's click never reached what was under it. */
-    el.addEventListener('touchend', function (e) { if (gone) e.preventDefault(); }, { passive: false });
+    el.addEventListener('touchend', noClick);
     window.addEventListener('resize', fit);
     requestAnimationFrame(function () { el.classList.add('is-on'); });
     if (reduce) {

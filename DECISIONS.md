@@ -20713,3 +20713,19 @@ end), and the screen paints it so (held on that page, the dot on the canvas
 is a line; at the end, a dot). Both red on the drawing before this.
 
 Pad and Flip: one hello for both. Not tested here: WebKit.
+
+## After v327 -- Main red after #573: the hello's touchend, named and allowlisted
+
+#573 gave the hello a touchend (a tap that skips it presses nothing under it)
+and did not run verify_tools, whose V214b asks that every touchend be paired
+with a touchcancel or named in its allowlist with a reason: shard 1 went red on
+sqlite and on PostgreSQL alike. The rule is for gestures a cancelled touch
+would leave stuck. The hello's holds none: it only cancels the click a tap
+would make, and a touch the system takes away makes no click. So it is named
+(noClick) and allowlisted with that reason, rather than paired with a
+touchcancel that would do nothing.
+
+CHECKED (verify_tools V214b): red on main (hello.js:el.function), red with the
+handler named but not allowlisted, green with both; the stale-entry check finds
+it. verify_hello unchanged. The lesson, for the next listener: grep the harness
+for the event's own name before calling the affected suites complete.
