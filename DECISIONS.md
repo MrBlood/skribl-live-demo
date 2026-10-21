@@ -20688,3 +20688,28 @@ editors, the hello goes and the menu stays shut. Red on the hello before this
 
 Pad and Flip: one module for both. Not tested here: WebKit, where a phone's tap
 is the case that matters.
+
+## After v327 -- The hello winks (the owner: "A, the wink. build it.")
+
+The owner on the hello as built: "it's just a little flat". A first round of
+ideas, mocked beside it in the real player (pen pressure, a sheen, a splash),
+missed: "i like now best still. none of those really capture what I was
+looking for", and, asked for something "subtle and fun and a little bit sassy,
+but kind", four more: a wink, a side-eye, a tardy dot and a hand-off onto the
+pen. Mocked the same way, and the owner: "A, the wink. build it."
+
+Settled over the i, the dot closes like an eye and opens again: half shut, a
+line (a touch low, as a lid closes), half open, then it rests for the last two
+pages. Four pages more of the dot (two at rest, the wink's three, two at rest
+again, where it rested three), drawn by harness/tools/make_hello.py through the
+real Flip editor like the rest: a
+third of a second more, the dot's part 1.08 s where it was 0.75. The word, the
+drop, the bounce, the way out and the still hello under Reduce Motion (the
+dot at rest) are as they were.
+
+CHECKED (verify_hello): once it rests it winks, read off the drawing's own
+pages (shut to a line for one page, half shut either side, at rest to the
+end), and the screen paints it so (held on that page, the dot on the canvas
+is a line; at the end, a dot). Both red on the drawing before this.
+
+Pad and Flip: one hello for both. Not tested here: WebKit.
