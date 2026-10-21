@@ -483,7 +483,8 @@ stays a sleep.
   number of its pixels to each (twice within 8 million, once past it) and
   placed by no transform. The mark writes itself, and its dot is not there
   until it has; the dot comes to rest over the i (read off the canvas's own
-  pixels); the ink lifts away in the order it was written (read off the
+  pixels), and once rested it winks, shut to a line for a page (read off the
+  drawing's pages and off the canvas held on that page); the ink lifts away in the order it was written (read off the
   screen's pixels, the way out held at its start and its middle), and it never
   comes again. A tap skips it, holds what is written, draws nothing and
   presses nothing under it (tapped over the menu, the menu stays shut); a key

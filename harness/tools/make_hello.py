@@ -18,8 +18,10 @@ A Flip, drawn through the real Flip editor with real pen input, on 9:16:
 
   page 0      the word without its dot, drawing itself: one movement of the
               hand, fitted into WORD_MS, kept UNDER every page after it
-  pages 1-9   the dot: stretched as it falls, squashed as it lands, the
-              bounce, then at rest over the i for the last three
+  pages 1-13  the dot: stretched as it falls, squashed as it lands, the
+              bounce, at rest over the i, then a wink (owner: "A, the wink.
+              build it."): it closes like an eye and opens again, and rests
+              for the last two
 
     python3 harness/tools/make_hello.py OUTDIR
     cp OUTDIR/hello.json skribl/static/brand/hello.json
@@ -46,11 +48,14 @@ MARK = ROOT / "skribl" / "templates" / "skribl" / "_skribl_brand_mark.html"
 A, B = (0x7c, 0x5c, 0xff), (0x5b, 0x8c, 0xff)   # --accent -> --accent-2, as the mark's gradient runs
 PIECES = 64
 WORD_MS = 1600
-FPS = 12                                         # the dot's nine pages are three quarters of a second
+FPS = 12                                         # the dot's thirteen pages are a little over a second
 # The dot's pages: how far above its place (in canvas widths), and how wide
-# and tall against its own size. Stretched as it falls, squashed as it lands.
+# and tall against its own size. Stretched as it falls, squashed as it lands;
+# then, settled, it winks: half shut, shut (a line, a touch low, as a lid
+# closes), half open, and at rest again.
 DOT_PAGES = ((-0.20, 0.80, 1.35), (-0.09, 0.85, 1.25), (0.0, 1.38, 0.70), (-0.045, 0.95, 1.10),
-             (-0.018, 1.0, 1.0), (0.0, 1.14, 0.88), (0.0, 1.0, 1.0), (0.0, 1.0, 1.0), (0.0, 1.0, 1.0))
+             (-0.018, 1.0, 1.0), (0.0, 1.14, 0.88), (0.0, 1.0, 1.0), (0.0, 1.0, 1.0),
+             (0.003, 1.22, 0.55), (0.006, 1.5, 0.2), (0.002, 1.18, 0.62), (0.0, 1.0, 1.0), (0.0, 1.0, 1.0))
 
 
 def mark():

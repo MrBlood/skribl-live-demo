@@ -869,6 +869,13 @@ m1", then of its dot, "It's to the right?", then "all yes". BUILT, as M1
   lifts away in the order it was written, rising a little and softening, and
   the canvas shows through as the last of it goes (0.9 s). About 3.4 s, and
   9 KB as served where Blooby's star was 299.
+* THE WINK (after v327, the owner: "it's just a little flat", then, of four
+  more ideas mocked beside it, "A, the wink. build it."): settled over the i,
+  the dot closes like an eye and opens again, half shut, a line, half open,
+  then rests (a third of a second more, the dot's part 1.08 s). The first
+  round (pen pressure, a sheen, a splash) was "now" still, "none of those
+  really capture what I was looking for"; side-eye, a tardy dot and a hand-off
+  onto the pen were the others in the second.
 * On the page's own ground, light or dark, as under the header's mark.
 * The dot over the i, in the header too: before the skew its middle is
   straight above the i's top. It sat 1.3 units right, which only showed once

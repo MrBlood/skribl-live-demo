@@ -1,8 +1,8 @@
 /* Skribl says hi: the first time Skribl opens, on any screen (FUTURE.md 6m).
  *
- * The mark writes itself with the real pen, the i's dot drops in and bounces
- * into place, and the ink lifts away into the canvas in the order it was
- * written: the in-post player playing a Flip drawn through the real Flip
+ * The mark writes itself with the real pen, the i's dot drops in, bounces
+ * into place and winks (owner: "A, the wink. build it."), and the ink lifts
+ * away into the canvas in the order it was written: the in-post player playing a Flip drawn through the real Flip
  * editor (brand/hello.json, harness/tools/make_hello.py, from the header's own
  * mark) on the page's own ground, light or dark. The owner's picks: once only,
  * a tap, a click or any key skips it, a still hello under Reduce Motion, one

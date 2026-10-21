@@ -249,6 +249,39 @@ check(f"the hello writes the header's own mark: its line within {NEAR} of the ma
       "its dot at rest on the header's dot", far <= NEAR and dot_off <= NEAR,
       f"its line strays {far}, its dot is {dot_off} away (make_hello.py draws it from the template)")
 HELLO = json.load(open(HELLO_JSON))
+
+
+def dot_pages(d):
+    """Each of the dot's pages after the word: how tall it is against how wide,
+    and how far its middle is from where it rests, in its own size."""
+    last = d["frames"][-1]["strokes"]
+    rx = (min(p["x"] for p in last) + max(p["x"] for p in last)) / 2
+    ry = (min(p["y"] for p in last) + max(p["y"] for p in last)) / 2
+    out = []
+    for f in d["frames"][1:]:
+        s = f["strokes"]
+        if not s:
+            out.append(None)
+            continue
+        x0, x1 = min(p["x"] for p in s), max(p["x"] for p in s)
+        y0, y1 = min(p["y"] for p in s), max(p["y"] for p in s)
+        out.append((round((y1 - y0 + s[0]["size"]) / (x1 - x0 + s[0]["size"]), 2),
+                    round(math.hypot((x0 + x1) / 2 - rx, (y0 + y1) / 2 - ry) / last[0]["size"], 2)))
+    return out
+
+
+# THE WINK (owner: "A, the wink. build it."): settled over the i, the dot
+# closes like an eye, a line for one page, half shut either side of it, and
+# rests open to the end. Read off the drawing's own pages.
+DOTS = dot_pages(HELLO)
+SHUT = [k for k, s in enumerate(DOTS) if s and s[0] < 0.3]
+WINK = SHUT[0] if len(SHUT) == 1 else None
+check("...and once it rests, it winks: shut to a line for one page, half shut either side, open to the end",
+      WINK is not None and 0 < WINK < len(DOTS) - 3 and DOTS[WINK][1] < 0.25
+      and any(s and s[0] > 0.85 and s[1] < 0.05 for s in DOTS[:WINK - 1])
+      and all(DOTS[j] and 0.3 <= DOTS[j][0] < 0.85 and DOTS[j][1] < 0.25 for j in (WINK - 1, WINK + 1))
+      and all(s and s[0] > 0.85 and s[1] < 0.05 for s in DOTS[-2:]),
+      f"the dot's pages (tall against wide, off its rest): {DOTS}")
 CSS_W = HELLO["canvasSize"]["cssWidth"]
 PEN = HELLO["frames"][0]["strokes"][0]["size"] / make_hello.mark()[3]     # canvas points to one of the mark's units
 SWEEP = sorted({p["color"] for p in HELLO["frames"][0]["strokes"]} | {p["color"] for p in HELLO["frames"][-1]["strokes"]})
@@ -470,6 +503,26 @@ with sync_playwright() as p:
     check("...and that tap presses nothing under it: tapped over the menu, the hello goes and the menu stays shut",
           all(ms is not None and ms2 is not None and was == "false" for _, ms, ms2, was in shut),
           "; ".join(f"{r}: came after {ms} ms, gone {ms2} ms after the tap, the menu open: {was}" for r, ms, ms2, was in shut))
+
+    # ...and the wink as the screen paints it: held on its shut page, the dot
+    # is a line; at the end, a dot again.
+    c = b.new_context(**PHONE)
+    q = _open(c, "/skribl-pad")
+    s, ms = _until(q, lambda s: s["painted"] and s["on"], 8000)
+    SEEK = """(t) => { const h = document.getElementById('skriblHello'), c = h && h.querySelector('canvas');
+        const p = h && SkriblInline.players().find(q => q.el && h.contains(q.el));
+        if (!p) return null; p.seek(t); return c.toDataURL('image/png'); }"""
+    word_ms = q.evaluate("(f) => SkriblHold.pageMs(f, 12)", HELLO["frames"][0]) if ms is not None else 0
+    shapes = []
+    for t in ((word_ms + WINK * 1000 / 12 + 40) if WINK is not None else 0, 1e9):
+        im = _png(q.evaluate(SEEK, t)) if ms is not None else None
+        pieces = _pieces(im)[1] if im else []
+        dot = pieces[1] if len(pieces) == 2 else None
+        shapes.append(round((dot[5] - dot[3] + 1) / (dot[4] - dot[2] + 1), 2) if dot else None)
+    c.close()
+    check("...and the screen paints it so: held on that page the dot is a line, and at the end a dot again",
+          shapes[0] is not None and shapes[0] < 0.35 and shapes[1] is not None and 0.8 <= shapes[1] <= 1.25,
+          f"the dot's height against its width on the canvas: shut {shapes[0]}, at the end {shapes[1]}")
 
     # Reduce Motion: a still hello, the finished mark with its dot in place, then it just fades.
     c = b.new_context(reduced_motion="reduce", **PHONE)
