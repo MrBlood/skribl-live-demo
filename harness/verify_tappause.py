@@ -417,6 +417,22 @@ def music_checks(pg, cdp, who, sel, play):
 FLIP = """() => ({ idx, playing, paused: document.body.classList.contains('playback-paused'),
   points: frames[idx] ? frames[idx].strokes.length : 0,
   clock: parseFloat(document.getElementById('flipDuration').textContent) })"""
+# WHERE IT PAUSED, READ ON THE PAGE'S OWN CLOCK: when each page came up, and
+# when the pause and the resume landed. A tap sent from here can take a while
+# to arrive on a busy runner (one meant for 450 ms into its page landed near
+# 835, and the page rightly gave way 165 ms after the resume), so the time
+# left is measured, not assumed. It stops once the page after the resume is up.
+TIMELINE = """() => { const r = window.__tp = { ups: [], pause: null, resume: null };
+  let last = idx;
+  const obs = new MutationObserver(() => { const p = document.body.classList.contains('playback-paused'), t = performance.now();
+    if (p && r.pause === null) r.pause = t;
+    else if (!p && r.pause !== null && r.resume === null) { r.resume = t; obs.disconnect(); } });
+  obs.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+  (function poll() { if (idx !== last) { last = idx; r.ups.push(performance.now()); }
+    if (r.resume === null || !r.ups.some(t => t > r.resume)) setTimeout(poll, 4); })(); }"""
+SPLIT = """() => { const r = window.__tp, up = r.ups.filter(t => t < r.pause).pop(), next = r.ups.find(t => t > r.resume);
+  return { before: up === undefined || r.pause === null ? null : Math.round(r.pause - up),
+           after: next === undefined || r.resume === null ? null : Math.round(next - r.resume) }; }"""
 PAGES = """(o) => { const line = (x0, y0, t0) => { const pts = []; for (let j = 0; j < 14; j++)
     pts.push({ x: x0 + j * 2, y: y0 + j * 14, color: '#ffffff', size: 6, t: t0 + j * (o.span / 14), start: j === 0 }); return pts; };
   frames.length = 0;
@@ -461,6 +477,7 @@ def flip_suite(b):
     flip_setup(pg)
     cx, cy = centre(pg, "#pad")
     flip_play(pg, cdp)
+    pg.evaluate(TIMELINE)
     page_change(pg)                       # a page has just come up
     before = arrow(pg, ".flip-wrap")
     pg.wait_for_timeout(450)
@@ -494,9 +511,15 @@ def flip_suite(b):
     gone = page_change(pg)
     f3 = pg.evaluate(FLIP)
     after = arrow(pg, ".flip-wrap")
+    # One page a second: what it showed before the pause and after the resume
+    # make the page's 1000 ms between them. A page started again comes to more
+    # (its whole second after the resume); one skipped, to about the pause.
+    sp = pg.evaluate(SPLIT)
+    left = None if sp["before"] is None else 1000 - sp["before"]
     check("Flip: a second tap carries the flip on from where it paused",
-          gone is not None and 250 < gone < 800 and not f3["paused"],
-          f"the page gave way {gone}ms after the resume, with about 550ms of its 1000 left")
+          gone is not None and left is not None and sp["after"] is not None and not f3["paused"]
+          and abs(sp["after"] - left) < 150 and sp["after"] >= left / 2,
+          f"{sp['before']}ms of the page before the pause, so {left}ms left; it gave way {sp['after']}ms after the resume")
     check("...and the round Play is gone", after[0] < 10, str(after))
     check("...and the time readout counts on from where it stood, not from nought",
           f3["clock"] >= f2["clock"] + 0.2, f"{f2['clock']}s paused, {f3['clock']}s once the page gave way")
