@@ -238,6 +238,35 @@ with sync_playwright() as p:
             c.close()
         part("note", note)
 
+        # 5b. the note never covers a sheet: How it works opens over it, and
+        # its little book's Draw along stays in reach. verify_words met the
+        # note on top of that button once the hello stopped standing in for
+        # it on phones; what is painted is asked, never a rect.
+        def under():
+            c = b.new_context(**PHONE)
+            c.add_init_script(FORCE)
+            q = c.new_page()
+            browsing.goto(q, BASE, route)
+            q.wait_for_timeout(1200)
+            q.evaluate("() => document.querySelector('.lc-note') || window.SkriblLearnCard.note(true)")
+            q.evaluate("() => openHelpDrawer()")
+            q.wait_for_timeout(700)
+            at = q.evaluate("""() => { const n = document.querySelector('.lc-note'); if (!n) return 'no note';
+                const r = n.getBoundingClientRect(), e = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+                return !e ? 'nothing' : e.closest('.lc-note') ? 'the note' : e.closest('#helpDrawer') ? 'How it works' : (e.id || e.className || e.tagName); }""")
+            q.click("#askTour")
+            q.wait_for_timeout(1200)
+            q.click("#bkNext")
+            q.wait_for_timeout(400)
+            along = q.evaluate("""() => { const a = document.getElementById('bkAlong'); if (!a || a.hidden) return 'no button';
+                const r = a.getBoundingClientRect(), e = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+                return !!e && a.contains(e) ? 'in reach' : !e ? 'nothing' : e.closest('.lc-note') ? 'under the note' : (e.className || e.tagName); }""")
+            check(f"{name}: the first-time note never covers a sheet: How it works opens over it, and its book's "
+                  "Draw along stays in reach", at == "How it works" and along == "in reach",
+                  f"at the note's middle with How it works open: {at}; Draw along: {along}")
+            c.close()
+        part("note under sheets", under)
+
         # 6. automation
         def auto():
             c, q = fresh(b, PHONE, route, force=False)
