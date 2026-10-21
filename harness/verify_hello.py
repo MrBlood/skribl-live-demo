@@ -28,7 +28,9 @@ at its start and at its middle.
 A slow line is a row too: when the player is not here within hello.js's LATE
 it does not come that time and is not marked seen, so the next open shows it.
 The v327 seal run met that path by accident, on a server's first page (see the
-warm-up below), and read it as a failure; this row meets it on purpose.
+warm-up below), and read it as a failure; this row meets it on purpose. So is
+a slow line for the page's own scripts: the hello brings the hold timing with
+the player, or it played its drawing as plain pages, all at once (after v327).
 """
 import base64
 import io
@@ -36,6 +38,7 @@ from array import array
 import json
 import math
 import os
+import re
 import sys
 import time
 from assertions import make_check
@@ -488,6 +491,40 @@ with sync_playwright() as p:
           len(held_js) == 1 and not s["painted"] and s["canvasThere"] and s["seen"] is None
           and not s1["painted"] and s1["seen"] is None and ms2 is not None and s2["seen"] == "1",
           f"held {len(held_js)}; at 5 s {s}; once it came {s1}; next open {s2} after {ms2} ms")
+    c.close()
+
+    # A slow line for the page's own scripts: the first of them after the
+    # hello held, and scripts deferred run in order, so every one behind it
+    # waits too, the page's own copy of the hold timing among them, while the
+    # player and the drawing come quickly. (Holding them all queued the
+    # hello's own files behind them.) The hello brings the hold timing with
+    # the player; without it the mark played as plain pages, all at once and
+    # gone in 0.8 s.
+    c = b.new_context(**PHONE)
+    c.add_init_script(FORCE)
+    srcs = [u.split("?")[0] for u in re.findall(r'<script src="([^"]+)" defer', c.request.get(BASE + "/skribl-pad").text())]
+    at = next((k for k, u in enumerate(srcs) if u.endswith("/lib/hello.js")), -1)
+    behind = srcs[at + 1] if 0 <= at < len(srcs) - 1 else None
+    hold_after = behind is not None and any(u.endswith("/lib/holdtiming.js") for u in srcs[at + 2:])
+    held_page = []
+    c.route(lambda url: behind is not None and url.split("?")[0].endswith(behind), lambda r: held_page.append(r))
+    q = c.new_page()
+    q.goto(BASE + "/skribl-pad", wait_until="commit")
+    plan, t0 = None, time.time()
+    while plan is None and time.time() - t0 < 6:
+        plan = q.evaluate("""() => { const h = document.getElementById('skriblHello');
+            const p = h && window.SkriblInline && SkriblInline.players().find(x => x.el && h.contains(x.el));
+            return p ? { total: Math.round(p.state().totalMs), pageRan: typeof window.openDrawer === 'function' } : null; }""")
+        if plan is None:
+            q.wait_for_timeout(50)
+    for r in held_page:
+        r.continue_()
+    q.wait_for_function("() => !!window.SkriblHold", timeout=8000)
+    timed = q.evaluate("(d) => Math.round(SkriblHold.plan(d.frames, d.fps || 12, d.loop).cycle)", HELLO)
+    check("a slow line for the page's own scripts: the hello brings the hold timing with the player, so the mark "
+          f"still writes itself in its own time ({timed} ms), never as plain pages all at once",
+          hold_after and len(held_page) == 1 and plan is not None and not plan["pageRan"] and plan["total"] == timed,
+          f"held {behind} ({len(held_page)}), the hold timing behind it: {hold_after}; the hello's player {plan}")
     c.close()
 
     # Flip: the same hello, and one "seen" for both editors.

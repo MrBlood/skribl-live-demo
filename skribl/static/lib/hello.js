@@ -11,9 +11,9 @@
  * NOTHING IS FETCHED UNLESS IT COMES. It comes when this browser has never
  * seen this hello, on a page of its own (not a composer's frame). When it will
  * not, its element goes at once, so lib/learncard.js (one welcome at a time)
- * can tell by looking. The player and the drawing load first; if they are not
- * here within LATE ms it does not come this time, and is not marked seen, so
- * the canvas is never held up waiting for it.
+ * can tell by looking. The player, the hold timing it reads and the drawing
+ * load first; if they are not here within LATE ms it does not come this time,
+ * and is not marked seen, so the canvas is never held up waiting for it.
  *
  * SEEN IS PER HELLO: v1 was Blooby's, on his star, and someone who met him
  * meets the mark once too.
@@ -53,19 +53,31 @@
   var stage = el.querySelector('.skribl-hello-stage');
   var box = el.querySelector('.skribl-inline');
 
-  function player() {
-    if (window.SkriblInline) return Promise.resolve();
+  /* THE PLAYER, AND THE HOLD TIMING IT READS as it takes a Flip
+   * (lib/holdtiming.js). The page has its own copy, among its deferred
+   * scripts, which run after this one: on a slow line the player and the
+   * drawing came first, and the mark played as plain pages, all at once and
+   * gone in 0.8 s. The same file as the page's, so one of the two is the
+   * cache's. */
+  function script(src, name) {
+    if (window[name]) return Promise.resolve();
     return new Promise(function (done, fail) {
+      var js = document.createElement('script');
+      js.src = src;
+      js.onload = function () { if (window[name]) done(); else fail(); };
+      js.onerror = fail;
+      document.head.appendChild(js);
+    });
+  }
+  function player() {
+    if (!window.SkriblInline) {
       var css = document.createElement('link');
       css.rel = 'stylesheet';
       css.href = el.getAttribute('data-player-css');
       document.head.appendChild(css);
-      var js = document.createElement('script');
-      js.src = el.getAttribute('data-player-js');
-      js.onload = function () { if (window.SkriblInline) done(); else fail(); };
-      js.onerror = fail;
-      document.head.appendChild(js);
-    });
+    }
+    return Promise.all([script(el.getAttribute('data-hold-js'), 'SkriblHold'),
+                        script(el.getAttribute('data-player-js'), 'SkriblInline')]);
   }
   function drawing() {
     return fetch(el.getAttribute('data-hello')).then(function (r) {
