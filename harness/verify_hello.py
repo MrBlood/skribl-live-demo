@@ -31,6 +31,9 @@ The v327 seal run met that path by accident, on a server's first page (see the
 warm-up below), and read it as a failure; this row meets it on purpose. So is
 a slow line for the page's own scripts: the hello brings the hold timing with
 the player, or it played its drawing as plain pages, all at once (after v327).
+And an empty cache on 3G, as a private window has: its files asked for first,
+or they queued behind the editor's and it missed its window, and drawn once the
+page's own scripts are done, or it froze as each of them ran.
 """
 import base64
 import io
@@ -497,9 +500,11 @@ with sync_playwright() as p:
     # hello held, and scripts deferred run in order, so every one behind it
     # waits too, the page's own copy of the hold timing among them, while the
     # player and the drawing come quickly. (Holding them all queued the
-    # hello's own files behind them.) The hello brings the hold timing with
-    # the player; without it the mark played as plain pages, all at once and
-    # gone in 0.8 s.
+    # hello's own files behind them.) Its drawing must never play as plain
+    # pages, all at once and gone in 0.8 s, which it did when it took the
+    # drawing before the hold timing had run: read while they are held (it
+    # waits for the page now, so there may be no player yet) and once they
+    # come.
     c = b.new_context(**PHONE)
     c.add_init_script(FORCE)
     srcs = [u.split("?")[0] for u in re.findall(r'<script src="([^"]+)" defer', c.request.get(BASE + "/skribl-pad").text())]
@@ -510,21 +515,68 @@ with sync_playwright() as p:
     c.route(lambda url: behind is not None and url.split("?")[0].endswith(behind), lambda r: held_page.append(r))
     q = c.new_page()
     q.goto(BASE + "/skribl-pad", wait_until="commit")
-    plan, t0 = None, time.time()
-    while plan is None and time.time() - t0 < 6:
-        plan = q.evaluate("""() => { const h = document.getElementById('skriblHello');
-            const p = h && window.SkriblInline && SkriblInline.players().find(x => x.el && h.contains(x.el));
-            return p ? { total: Math.round(p.state().totalMs), pageRan: typeof window.openDrawer === 'function' } : null; }""")
-        if plan is None:
-            q.wait_for_timeout(50)
+    TOTAL = """() => { const h = document.getElementById('skriblHello');
+        const p = h && window.SkriblInline && SkriblInline.players().find(x => x.el && h.contains(x.el));
+        return p ? Math.round(p.state().totalMs) : null; }"""
+    totals, ran, t0 = [], False, time.time()
+    while time.time() - t0 < 3:
+        v = q.evaluate(TOTAL)
+        if v is not None:
+            totals.append(v)
+        ran = ran or q.evaluate("() => typeof window.openDrawer === 'function'")
+        q.wait_for_timeout(50)
     for r in held_page:
         r.continue_()
+    t0 = time.time()
+    while time.time() - t0 < 8:
+        v = q.evaluate(TOTAL)
+        if v is not None:
+            totals.append(v)
+            break
+        q.wait_for_timeout(50)
     q.wait_for_function("() => !!window.SkriblHold", timeout=8000)
     timed = q.evaluate("(d) => Math.round(SkriblHold.plan(d.frames, d.fps || 12, d.loop).cycle)", HELLO)
-    check("a slow line for the page's own scripts: the hello brings the hold timing with the player, so the mark "
-          f"still writes itself in its own time ({timed} ms), never as plain pages all at once",
-          hold_after and len(held_page) == 1 and plan is not None and not plan["pageRan"] and plan["total"] == timed,
-          f"held {behind} ({len(held_page)}), the hold timing behind it: {hold_after}; the hello's player {plan}")
+    check("a slow line for the page's own scripts: the mark still writes itself in its own time "
+          f"({timed} ms), never as plain pages all at once, while they are held and once they come",
+          hold_after and len(held_page) == 1 and not ran and bool(totals) and all(t == timed for t in totals),
+          f"held {behind} ({len(held_page)}), the hold timing behind it: {hold_after}, the page's scripts ran while "
+          f"held: {ran}; the hello's player's totals {sorted(set(totals))}")
+    c.close()
+
+    # An empty cache on a slow line, as a first visit in a private window on
+    # a phone meets it (owner: "Why does it not show every time in
+    # incognito"): 3G as DevTools has it. The hello's three files were asked
+    # for after the editor's hundred-odd scripts and came with them, 6.5 s
+    # into its 4, so it did not come; asked for first, they are here within
+    # its first second. And it draws once the page's own scripts are done:
+    # started while they ran, it froze as each one did. The hold timing is
+    # asked for twice, the page's copy and the hello's, so its first arrival
+    # is the hello's.
+    c = b.new_context(**PHONE)
+    c.add_init_script(FORCE)
+    c.add_init_script("""new MutationObserver((m, o) => { const h = document.getElementById('skriblHello'); if (!h) return;
+      o.disconnect(); new MutationObserver((n, w) => { if (h.classList.contains('is-on')) { window.__helloOn = performance.now(); w.disconnect(); } })
+        .observe(h, { attributes: true, attributeFilter: ['class'] }); }).observe(document, { childList: true, subtree: true });""")
+    q = c.new_page()
+    cdp = c.new_cdp_session(q)
+    cdp.send("Network.enable")
+    cdp.send("Network.emulateNetworkConditions", {"offline": False, "latency": 300,
+                                                  "downloadThroughput": 0.78e6 / 8, "uploadThroughput": 0.33e6 / 8})
+    q.goto(BASE + "/skribl-pad", wait_until="commit", timeout=60000)
+    q.wait_for_function("() => !!document.body", timeout=30000)
+    s3, ms3 = _until(q, lambda s: (s["painted"] and s["on"]) or not s["here"], 15000)
+    q.wait_for_load_state("domcontentloaded", timeout=60000)
+    tm = q.evaluate("""() => { const ends = n => performance.getEntriesByType('resource').filter(e => e.name.includes(n)).map(e => e.responseEnd);
+        const late = n => Math.max(0, ...ends(n)), first = n => ends(n).length ? Math.min(...ends(n)) : Infinity;
+        const nav = performance.getEntriesByType('navigation')[0];
+        return { own: Math.round(Math.max(late('/inlineplayer.js'), first('/lib/holdtiming.js'), late('/brand/hello.json'))),
+                 page: Math.round(nav.domContentLoadedEventEnd), ready: Math.round(nav.domContentLoadedEventStart),
+                 on: window.__helloOn == null ? null : Math.round(window.__helloOn) }; }""")
+    check("an empty cache on a slow line (3G), as a first visit in a private window: the hello still comes, "
+          "its own files asked for first and here before the editor's own scripts, and it draws once those are done",
+          ms3 is not None and s3["painted"] and tm["own"] < tm["page"] and tm["on"] is not None and tm["on"] >= tm["ready"],
+          f"came {s3['painted']} after {ms3} ms (here {s3['here']}); its files by {tm['own']} ms, the page's by {tm['page']} ms; "
+          f"on at {tm['on']} ms, the page ready at {tm['ready']} ms")
     c.close()
 
     # Flip: the same hello, and one "seen" for both editors.

@@ -12,8 +12,9 @@
  * seen this hello, on a page of its own (not a composer's frame). When it will
  * not, its element goes at once, so lib/learncard.js (one welcome at a time)
  * can tell by looking. The player, the hold timing it reads and the drawing
- * load first; if they are not here within LATE ms it does not come this time,
- * and is not marked seen, so the canvas is never held up waiting for it.
+ * are asked for first; it draws once the page's own scripts are done, and if
+ * they are not here within LATE ms of that it does not come this time, and is
+ * not marked seen, so the canvas is never held up waiting for it.
  *
  * SEEN IS PER HELLO: v1 was Blooby's, on his star, and someone who met him
  * meets the mark once too.
@@ -58,12 +59,20 @@
    * scripts, which run after this one: on a slow line the player and the
    * drawing came first, and the mark played as plain pages, all at once and
    * gone in 0.8 s. The same file as the page's, so one of the two is the
-   * cache's. */
+   * cache's.
+   *
+   * ASKED FOR FIRST (owner: "Why does it not show every time in
+   * incognito"). An empty cache, as every private window has, on a slow
+   * line: the three files were asked for after the editor's hundred-odd
+   * scripts and came with them, 6.5 s into LATE's 4 on 3G, so it did not
+   * come. At high priority they are here within its first second, long
+   * before the page's own scripts are done, which is when it draws (below). */
   function script(src, name) {
     if (window[name]) return Promise.resolve();
     return new Promise(function (done, fail) {
       var js = document.createElement('script');
       js.src = src;
+      js.fetchPriority = 'high';
       js.onload = function () { if (window[name]) done(); else fail(); };
       js.onerror = fail;
       document.head.appendChild(js);
@@ -80,7 +89,7 @@
                         script(el.getAttribute('data-player-js'), 'SkriblInline')]);
   }
   function drawing() {
-    return fetch(el.getAttribute('data-hello')).then(function (r) {
+    return fetch(el.getAttribute('data-hello'), { priority: 'high' }).then(function (r) {
       if (!r.ok) throw new Error('hello ' + r.status);
       return r.json();
     });
@@ -146,7 +155,21 @@
 
   function never() { window.removeEventListener('keydown', key, true); away(); }
 
-  Promise.race([Promise.all([player(), drawing()]), late()]).then(function (got) {
+  /* THE PAGE'S OWN SCRIPTS FIRST, THEN THE HELLO. Its files are asked for
+   * now, and first, but it draws once the page's scripts are done
+   * (DOMContentLoaded), as it always did on a fast line: started while they
+   * still ran, on a slowed phone over a slow line it froze for up to 0.65 s
+   * at a time as each one did. LATE counts from then. */
+  function ready() {
+    return new Promise(function (done) {
+      if (document.readyState === 'complete') { done(); return; }
+      document.addEventListener('DOMContentLoaded', function () { done(); });
+      window.addEventListener('load', function () { done(); });
+    });
+  }
+  var files = Promise.all([player(), drawing()]);
+  files.catch(function () {});   // said below, once the page is ready
+  ready().then(function () { return Promise.race([files, late()]); }).then(function (got) {
     var payload = got[1];
     var cs = payload.canvasSize || {};
     cw = cs.cssWidth || cw;
