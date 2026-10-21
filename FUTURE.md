@@ -881,6 +881,9 @@ m1", then of its dot, "It's to the right?", then "all yes". BUILT, as M1
   click or any key skips it, and the key does nothing else. Someone who met
   Blooby meets the mark once. The visit it comes, the button cards' first note
   waits for another.
+* The replay link (owner: "Yes to the replay link"): an address with
+  ?hello=again, on the Pad or Flip, plays it again whether or not it was seen,
+  and every reload of that address plays it again.
 
 LEFT, named:
 

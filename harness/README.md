@@ -490,7 +490,8 @@ stays a sleep.
   3G, as a first visit in a private window, and it still comes, its own files
   asked for first, drawing once the page's own scripts are done; the button
   cards'
-  first note waits for another visit; never in a
+  first note waits for another visit; the replay link (?hello=again) plays it
+  again where it was seen, on both editors; never in a
   composer's frame or to automation that did not ask, and nothing of it is
   fetched there. Each row was shown red by its own break, served or read in
   place of the real file.

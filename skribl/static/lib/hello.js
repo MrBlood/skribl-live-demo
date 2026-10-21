@@ -19,6 +19,11 @@
  * SEEN IS PER HELLO: v1 was Blooby's, on his star, and someone who met him
  * meets the mark once too.
  *
+ * THE REPLAY LINK (owner: "Yes to the replay link"): an address with
+ * ?hello=again plays it on that open, seen or not, and asks for it as a
+ * suite does. Every load that carries it plays it, so a reload replays it.
+ * Never in a composer's frame, all the same.
+ *
  * AUTOMATION NEVER MEETS IT unless it asks (window.__skriblHelloForce, set
  * before the page loads): every suite opens a fresh browser, and a hello on
  * top of every first canvas would be in each one's way. verify_hello asks.
@@ -39,13 +44,14 @@
   var KEY = 'skribl.hello.v2';
   var LATE = 4000;
   var BUDGET = 8e6;
-  var force = window.__skriblHelloForce === true;
+  var again = /[?&]hello=again(&|$)/.test(location.search);
+  var force = window.__skriblHelloForce === true || again;
 
   function seen() { try { return localStorage.getItem(KEY) === '1'; } catch (e) { return true; } }
   function mark() { try { localStorage.setItem(KEY, '1'); } catch (e) {} }
   function away() { if (el.parentNode) el.parentNode.removeChild(el); }
 
-  if ((navigator.webdriver && !force) || seen() || window.top !== window || /[?&]compose=1\b/.test(location.search)) {
+  if ((navigator.webdriver && !force) || (seen() && !again) || window.top !== window || /[?&]compose=1\b/.test(location.search)) {
     away();
     return;
   }

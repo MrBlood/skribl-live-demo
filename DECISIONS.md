@@ -20620,3 +20620,24 @@ Not tested here: WebKit, and the live site, whose server may share the line
 differently from this box's (HTTP/1.1 here); the priority is the same ask of
 the browser either way. The frame gaps are this box's software drawing with
 the processor slowed; their size against each other is what they show.
+
+## After v327 -- The hello's replay link (the owner's yes)
+
+Offered after the incognito question, so the hello can be looked at again
+without closing every private window: "Yes to the replay link".
+
+An address with ?hello=again, on the Pad or Flip, plays it on that open
+whether or not this browser has seen it, and every load that carries it plays
+it, so a reload replays it. It counts as asking, as verify_hello's own switch
+does, so automation that did not ask still never meets it. Never in a
+composer's frame, all the same. Nothing else reads the address, except one
+place that copies it: a draft saved on this device only keeps the Pad's
+address with it, so one saved while the link was open would replay the hello
+when opened from the Library. Named, not fixed: the link is for looking.
+
+CHECKED (verify_hello): with the hello already seen and no switch set, the
+link plays it on the Pad and on Flip, and a plain open after it goes straight
+to the canvas. Red on the hello before this, and red again with either half
+taken out (getting past "seen", or counting as an ask).
+
+Pad and Flip: one module for both editors. Not tested here: WebKit.
