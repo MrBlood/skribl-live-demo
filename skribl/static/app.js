@@ -325,6 +325,12 @@ function updateCanvasLockCue() {
 let strokes = [];
 let currentStroke = [];
 let strokeGroups = [];
+// Recolors (lib/recolor.js, editor_tools.js): each time a line already drawn
+// took a new colour, in the order they were made. The points carry the colour
+// they ended with, so every still picture, and any player that never reads
+// this list, shows the drawing as it was left; the list is what lets a replay
+// show the change at the moment it was made.
+let recolors = [];
 let startTime = null;
 let lastPos = null;
 let preRecordSnapshot = null;
@@ -380,6 +386,7 @@ function makeHistoryState() {
     base: preRecordSnapshot,
     strokes: strokes.slice(),
     strokeGroups: strokeGroups.slice(),
+    recolors: recolors.slice(),
     hasContent: hasContent
   };
   if (unrecordedInk) {
@@ -1481,7 +1488,7 @@ function beginRecording(continueTake) {
     // baked into the base, so history states can go pixel-less again.
     preRecordSnapshot = canvas.toDataURL();
     unrecordedInk = false;
-    strokes = []; strokeGroups = [];
+    strokes = []; strokeGroups = []; recolors = [];   // their lines are base now
   }
   // continueTake: keep existing strokes/strokeGroups AND the original base so the
   // new take appends on top. Never re-snapshot the base mid-Skribl, or the prior
@@ -1595,7 +1602,9 @@ function clearCanvas() {
   if (typeof stopLoopPreview === 'function') stopLoopPreview();   // editor_music.js's
   const { width: cw, height: ch } = getCanvasLogicalSize(); ctx.clearRect(0, 0, cw, ch);
   canvasWrap.style.backgroundColor = bgColor;
-  strokes = []; strokeGroups = [];
+  strokes = []; strokeGroups = []; recolors = [];
+  // Nothing is left to recolour (editor_tools.js; the player has none).
+  if (window.SkriblPadRecolor) SkriblPadRecolor.disarm();
   recorded = false;
   hasContent = false;
   finishedRecording = false;   // unlock: canvas is drawable again
@@ -1630,6 +1639,7 @@ function restoreClear() {
   preRecordSnapshot = clearBackup.base || null;
   strokes = clearBackup.strokes.slice();
   strokeGroups = clearBackup.strokeGroups.slice();
+  recolors = (clearBackup.recolors || []).slice();
   syncStateAfterHistoryChange(clearBackup.hasContent);
   clearBackup = null; updateClearUndoBtn();
   if (typeof showToast === 'function') showToast('Drawing restored', null);
@@ -2654,7 +2664,7 @@ function captureCurrentFrame() {
     ? { data: audioEl._draftData || null, name: audioEl._fileName || null, trimStart: trimStart, trimEnd: trimEnd, crossfadeMs: loopCrossfadeMs }
     : null;
   if (music && !musicEnabled) music.enabled = false;
-  return {
+  const frame = {
     strokes: strokes.slice(),
     strokeGroups: strokeGroups.slice(),
     baseSnapshot: baseSnapshot,
@@ -2664,6 +2674,9 @@ function captureCurrentFrame() {
       : null,
     music: music
   };
+  // Only a drawing with recolours carries the key (see `recolors`).
+  if (recolors.length) frame.recolors = recolors.slice();
+  return frame;
 }
 
 // Canonicalize ANY Skribl payload — legacy (frame-less) or new (frames[]) — into
@@ -3001,6 +3014,7 @@ function loadSkribl(data, said) {
   // Strokes — replay-render them onto the canvas
   strokes = (data.strokes || []).slice();
   strokeGroups = (data.strokeGroups || []).slice();
+  { const f0 = data.frames && data.frames[0]; recolors = (f0 && Array.isArray(f0.recolors)) ? f0.recolors.slice() : []; }
 
   const renderStrokes = () => paintStrokesStatic(strokes);
 

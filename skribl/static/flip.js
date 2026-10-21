@@ -380,6 +380,9 @@ let selMarqueeFrom = null, selMoveFrom = null, selDx = 0, selDy = 0;
 // Mirrors `drawing`/`strokePointerId`: a second pointer (a palm, a second
 // finger) must not steer a drag that a different one started.
 let selecting = false, selPointerId = null;
+/* Recolor (lib/recolor.js), up here for the reason above: setColor() and
+   paintPenSwoosh() run during init and ask it to follow the pen's colour. */
+let _recolor = null, _rcBefore = null;
 /* Move mode's state, hoisted here for the same reason as the selection's above.
    It used to sit 500 lines down, next to setMoveMode() — and syncSelBar() reads
    moveMode, while setTool() calls selClear() -> syncSelBar() during init. So the
@@ -2063,6 +2066,9 @@ const _padDown = e=>{ if(playing) return; if(pinching) return;
     if(_eyedropper && _eyedropper.beginPick && _eyedropper.beginPick(e)) return;
     sampleColorAt(e); return;
   }
+  // Recolor (lib/recolor.js): this press recolours the line under it, or each
+  // line a drag crosses, and draws nothing.
+  if(_recolor && _recolor.isArmed() && _recolor.press(e)) return;
   // Move mode intercepts BEFORE drawing, or dragging the artwork would lay a
   // stroke down the middle of it.
   if(moveMode){
@@ -2495,7 +2501,7 @@ pad.addEventListener('pointermove', e=>{
   if(e.pointerType && e.pointerType !== 'mouse' && e.pointerType !== 'pen'){
     hideCursors(); return;
   }
-  if(playing || picking){ hideCursors(); return; }
+  if(playing || picking || (_recolor && _recolor.isArmed())){ hideCursors(); return; }
   if(ZoomView && ZoomView.isZoomed()){ hideCursors(); return; }   // use a normal cursor while magnified
   // Blur and Smudge reach the way Liquify does (reachFor), so they wear its
   // ring: the owner asked where the blur's edge was, and the pen's ring said
@@ -3237,13 +3243,29 @@ const _thumbCache = new WeakMap();
 // A change anywhere in the page changes this. Cheap enough to run on every
 // tile of every rebuild: arithmetic only, no canvas, no allocation.
 function _thumbSig(f){
-  const pts = f.strokes; let acc = pts.length * 31 + (f.strokeGroups||[]).length;
+  const pts = f.strokes; let acc = pts.length * 31 + (f.strokeGroups||[]).length, col = 0;
   for(let i = 0; i < pts.length; i++){
     const p = pts[i];
     acc = (acc + p.x * 7.31 + p.y * 3.17 + (p.size || 0)) % 2147483647;
+    // ...and its colour, since a line can take a new one where it lies
+    // (Recolor, the Select bar's Color): the thumbnail followed only shape.
+    col = (col * 33 + _colourHash(p.color)) % 2147483647;
   }
   // The backdrop is not in the strokes, and neither is the eraser flag pattern.
-  return acc + '|' + pts.length + '|' + (bgColor || '') + '|' + (bgImage ? 1 : 0);
+  return acc + '|' + col + '|' + pts.length + '|' + (bgColor || '') + '|' + (bgImage ? 1 : 0);
+}
+// A colour's number for the signature, worked out once per colour a page uses.
+// `var` and made on first use: a thumbnail can be drawn before this line runs.
+var _colourHashes = null;
+function _colourHash(c){
+  if(!_colourHashes) _colourHashes = new Map();
+  let h = _colourHashes.get(c);
+  if(h === undefined){
+    const t = String(c); h = 7;
+    for(let i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) % 2147483647;
+    _colourHashes.set(c, h);
+  }
+  return h;
 }
 /* Bounded, for the reason lib/framebitmap.js is: bitmaps are how canvases die on
    phones. 88x62 at dpr 2 is ~87KB a page, so a 200-page document would hold
@@ -3649,6 +3671,7 @@ function noteDelPages(at, pages, idxBefore, replaced, label){
                replaced: !!replaced, label: label });
 }
 function go(i){ if(moveMode) return;
+  if(_recolor) _recolor.settle();   // a colour still running belongs to the page being left
   // A selection is a set of INDEX RANGES into one page's strokes array. Carrying
   // it to another page would point those ranges at different artwork — the
   // frame would move strokes the marquee never touched, and on a shorter page
@@ -4320,6 +4343,7 @@ function play(){
   // one-page Flip, which the help already calls "just a drawing".
   if(frames.length<2 && !frames.some(frameDraw)) return;
   if(picking) setPicking(false);     // no lens over a moving frame (Space reaches here with the drawer open)
+  if(_recolor) _recolor.disarm();    // nor a recolour: a replay is no page to tap
   if(previewingLoop) stopLoopPreview();   // one sound at a time, as the Pad's Play
   disarmAll(); editIdx = idx;
   if(ZoomView && ZoomView.isZoomed()) ZoomView.fit();       // play at 100% so frames aren't cropped
@@ -4953,6 +4977,63 @@ function sampleColorAt(e){
 }
 _initEyedropper();   // the lib binds the button's own click handler
 
+/* RECOLOR (lib/recolor.js, shared with the Pad): a line already drawn takes
+   the pen's colour. The lib owns the mode, the bar in the dock's row and the
+   colour running along the line; what a change does to a page is Flip's: one
+   step of undo a gesture, through the before/after page entry the Select
+   bar's actions use (selCommitFrame), and the page let go of any recipe it was
+   generated from (rcDetach). Flip has no clock inside a page, so nothing more
+   is kept: the page simply shows its lines in their colours. */
+if(window.SkriblRecolor){
+  _recolor = window.SkriblRecolor.create({
+    button: document.getElementById('recolorBtn'),
+    dock: document.querySelector('.flip-tools'),
+    surface: pad,
+    color: () => color,
+    lines: () => ({ pts: frame().strokes, groups: frame().strokeGroups }),
+    point: ev => pos(ev),
+    unit: () => DPR,
+    art: () => paintArtwork(),
+    begin: () => { _rcBefore = { idx: idx, snap: selFrameSnap() }; },
+    apply: (g0, g1, hex, at) => {
+      const f = frame(), pts = f.strokes, groups = f.strokeGroups;
+      let a = 0, changed = false;
+      for(let g = 0; g < g0; g++) a += groups[g];
+      let z = a;
+      for(let g = g0; g <= g1; g++) z += groups[g];
+      for(let i = a; i < z && i < pts.length; i++){
+        const c = SkriblRecolor.tint(pts[i].color, hex);
+        if(c !== pts[i].color){ pts[i].color = c; changed = true; }
+      }
+      if(changed) rcDetach(f);
+      return changed;
+    },
+    repaint: () => render(),
+    end: () => {
+      const b = _rcBefore; _rcBefore = null;
+      if(b && b.idx === idx) selCommitFrame(b.snap, 'Recolor');
+    },
+    undoButton: document.getElementById('undo'),
+    openColors: () => _flipDrawerCtl.open('draw'),
+    closeColors: () => closePop(),
+    colorsOpen: () => _flipDrawerCtl.isOpen('draw'),
+    focusHome: () => document.getElementById('penToolBtn'),
+    // On: the drawer goes, a colour pick gives way and the pen is the tool
+    // (Done goes back to it); the rings step aside for the system cursor.
+    // Off: the pen's cursor comes back with setTool.
+    onChange: on => {
+      if(on){
+        if(picking) setPicking(false);
+        if(flipTool !== 'pen') setTool('pen');
+        closePop();
+        hideCursors();
+      } else {
+        setTool(flipTool);
+      }
+    },
+  });
+}
+
 const photoPanel=document.getElementById('photoPanel'), musicPanel=document.getElementById('musicPanel');
 const mediaOpenBtn=document.getElementById('mediaOpenBtn');
 // The exclusive-open machine is lib/drawers.js (shared with Pad); Flip keeps
@@ -5134,7 +5215,13 @@ var _swooshRepaint = (window.SkriblPenSwoosh && window.SkriblPenSwoosh.wire)
       state:()=>({ brush: window.SkriblBrush ? window.SkriblBrush.name() : 'pen',
                    size: size, color: color, opacity: strokeOpacity, bg: bgColor }) })
   : null;
-function paintPenSwoosh(){ if(_swooshRepaint) _swooshRepaint(); }
+function paintPenSwoosh(){
+  if(_swooshRepaint) _swooshRepaint();
+  // Every pen colour change comes through here: the Recolor bar's colour and
+  // the Select bar's Color glyph follow it (lib/recolor.js).
+  if(_recolor) _recolor.sync();
+  syncSelColor();
+}
 function sizeFill(){ const min=+sizeEl.min,max=+sizeEl.max; sizeEl.style.setProperty('--slider-fill', ((sizeEl.value-min)/(max-min)*100)+'%');
   sizeVal.textContent=sizeEl.value+'px';
   const d=Math.min(+sizeEl.value,26); if(brushDot){ brushDot.style.width=d+'px'; brushDot.style.height=d+'px'; } }
@@ -9752,6 +9839,44 @@ function selMirror(axis){
   selRender(null);
 }
 
+/* COLOR: every selected line takes the pen's colour, each keeping its own
+   opacity (lib/recolor.js tint), as one step of undo. The colour runs along
+   each from its middle, as the drawer's Recolor runs it from a finger; a
+   selection that already wears the colour is left as it is. */
+function selColor(){
+  if(!selSpans.length || !window.SkriblRecolor) return;
+  const f = frame(), T = SkriblRecolor.tint;
+  // Each span is one line (lib/selection.js spans); an eraser's is no ink.
+  const lines = selSpans.filter(([a, z]) => a < f.strokes.length && !f.strokes[a].erase
+    && f.strokes.slice(a, z).some(p => T(p.color, color) !== p.color));
+  if(!lines.length){ chip('Already that color'); return; }
+  const before = selFrameSnap();
+  if(_recolor) _recolor.hold();
+  for(const [a, z] of lines){
+    for(let i = a; i < z && i < f.strokes.length; i++) f.strokes[i].color = T(f.strokes[i].color, color);
+  }
+  rcDetach(f);
+  selCommitFrame(before, 'Color');
+  selRender(null);
+  if(_recolor) _recolor.ran(lines.map(([a, z]) => f.strokes.slice(a, z)));
+  chip('Colored');
+}
+/* The Color button's glyph is the pen's colour (paintPenSwoosh keeps it). */
+function syncSelColor(){
+  const d = document.querySelector('#sbColor .sb-color-dot');
+  if(d) d.style.background = color;
+}
+/* A GENERATED PAGE IS SAVED AS ITS RECIPE while it still holds what the pages
+   either side of it made (serializeFlip), and that check reads positions,
+   never colours. A recoloured page, and any page made from it, is written out
+   as it now looks rather than rebuilt from a recipe that would undo it. */
+function rcDetach(f){
+  const i = frames.indexOf(f);
+  genRecipe.delete(f);
+  if(frames[i - 1]) genRecipe.delete(frames[i - 1]);
+  if(frames[i + 1]) genRecipe.delete(frames[i + 1]);
+}
+
 /* The selected strokes, as whole groups, in document order. Shared by duplicate
    and cut so the two cannot disagree about what "the selection" is. */
 function selExtract(){
@@ -9852,9 +9977,22 @@ function syncSelBar(){
   if(moveMode){ if(sb) sb.hidden = true; return; }
   if(sb) sb.hidden = !on;
   if(pb) pb.hidden = on;
-  ['sbFlipH', 'sbFlipV', 'sbDup', 'sbCut', 'sbStamp'].forEach(id => { const b = document.getElementById(id); if(b) b.hidden = !has; });
+  ['sbFlipH', 'sbFlipV', 'sbColor', 'sbDup', 'sbCut', 'sbStamp'].forEach(id => { const b = document.getElementById(id); if(b) b.hidden = !has; });
   const who = document.getElementById('sbWho');
-  if(who && on) who.textContent = !has ? 'Ready to paste' : selSpans.length === 1 ? '1 stroke' : selSpans.length + ' strokes';
+  // On a phone the count is the number alone (.pb-tx shows only at the
+  // regular size), so Color fits in the row beside the rest.
+  if(who && on){
+    if(!has) who.textContent = 'Ready to paste';
+    else {
+      const n = selSpans.length;
+      who.textContent = String(n);
+      const w = document.createElement('span');
+      w.className = 'pb-tx';
+      w.textContent = n === 1 ? ' stroke' : ' strokes';
+      who.appendChild(w);
+    }
+  }
+  syncSelColor();
   const paste = document.getElementById('sbPaste');
   // Paste is hidden until there is something to paste, rather than shown
   // disabled: a disabled control on a bar this tight is a cell of dead width.
@@ -10393,6 +10531,7 @@ function doStamp(p){
 
 function undoStroke(){
   if(playing) return;
+  if(_recolor) _recolor.settle();   // the page under a running colour is about to change
   while(actionLog.length && !_placeEntry(actionLog[actionLog.length - 1], false)) actionLog.pop();
   // Only an undo that undoes something spends the clear's undo: Ctrl+Z on the
   // empty page a clear leaves used to destroy the backup silently, the
@@ -10516,6 +10655,7 @@ function undoStroke(){
   render(); refreshThumb(idx); updateToolState(); scheduleSave();
 }
 function redoStroke(){
+  if(_recolor) _recolor.settle();   // as undo
   while(redoStack.length && !_placeEntry(redoStack[redoStack.length - 1], true)) redoStack.pop();
   if(playing || !redoStack.length) return;
   invalidateClearUndo();   // as undo: only when it acts
@@ -10856,6 +10996,7 @@ KeyRegistry.register({surface:'flip', label:'cancel Move artwork',
 document.addEventListener('keydown', e=>{ if(e.key === 'Escape' && moveMode) cancelMove(); });
 bindEl('sbFlipH', 'click', ()=>{ if(!playing) selMirror('h'); });
 bindEl('sbFlipV', 'click', ()=>{ if(!playing) selMirror('v'); });
+bindEl('sbColor', 'click', ()=>{ if(!playing) selColor(); });
 bindEl('sbDup',   'click', ()=>{ if(!playing) selDuplicate(); });
 bindEl('sbCut',   'click', ()=>{ if(!playing) selCut(); });
 bindEl('sbPaste', 'click', ()=>{ if(!playing) selPaste(); });
@@ -11183,7 +11324,7 @@ window.addEventListener('keydown', e=>{
   // hold-to-riffle. Leaving the single-step versions here as well meant BOTH
   // fired on one press and the page advanced twice.
   if(e.key==='p' || e.key==='P'){ setTool('pen'); }
-  if(e.key==='e' || e.key==='E'){ setTool('eraser'); }
+  if(e.key==='e' || e.key==='E'){ if(_recolor) _recolor.disarm(); setTool('eraser'); }
   // Brush size and grid, matching Pad. Dispatched as an 'input' event rather
   // than set-and-call: the value label, the fill and the autosave all hang off
   // this input's own event, and reaching past them would move the number alone.

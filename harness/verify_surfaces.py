@@ -125,7 +125,14 @@ shared = sorted(app_fns & flip_fns)
 # Pad's restoreClear, each over its own document model; the offer around both
 # is the one copy, and the cure for this one would be a document model the two
 # editors share.
-PARALLEL_RATCHET = 54
+# 54 -> 55, counted honestly: paintPenSwoosh. Every pen colour change on each
+# editor comes through it, and Recolor's bar shows the pen's colour, so both
+# now call lib/recolor.js's sync() from there. Flip's was already a function
+# over lib/penswoosh.js; the Pad's was that lib's wiring held in a const,
+# which the census does not read, and is a function now for the same two
+# lines. An adapter on each side over two shared libs, like _eraserSize and
+# _brushWidth; the cure would be one pen-colour event both editors raise.
+PARALLEL_RATCHET = 55
 check(f"the Pad (app.js and its editor modules) and flip.js define at most "
       f"{PARALLEL_RATCHET} of the same function names", len(shared) <= PARALLEL_RATCHET,
       f"{len(shared)}: {', '.join(shared[:8])}... — each one is a fix that has "

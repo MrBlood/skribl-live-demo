@@ -13,13 +13,19 @@
 // color, strokeOpacity, bgColor and _padDrawerCtl. It also hands the media
 // card's file drops to the open drawer.
 
-const paintPenSwoosh = (window.SkriblPenSwoosh && window.SkriblPenSwoosh.wire)
+const _paintSwoosh = (window.SkriblPenSwoosh && window.SkriblPenSwoosh.wire)
   ? window.SkriblPenSwoosh.wire({
       canvas: 'penSwoosh', button: 'penToolBtn', range: 'brushSizeRange', scope: '#drawPanel, #toolBar',
       state: () => ({ brush: window.SkriblBrush ? window.SkriblBrush.name() : 'pen',
                       size: size, color: color, opacity: strokeOpacity, bg: bgColor })
     })
   : () => {};
+// Every pen colour change comes through here (updateCurrentColorChip), so the
+// Recolor bar's colour follows it from here too (lib/recolor.js sync).
+function paintPenSwoosh() {
+  _paintSwoosh();
+  if (window.SkriblPadRecolor) window.SkriblPadRecolor.sync();
+}
 
 const _mediaTabs = (window.SkriblMediaTabs && _padDrawerCtl) ? window.SkriblMediaTabs.attach({
   ctl: _padDrawerCtl, button: 'mediaOpenBtn', strip: 'mediaTabs',

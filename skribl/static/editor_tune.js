@@ -134,7 +134,12 @@
     if (e.ctrlKey || e.metaKey || e.altKey) return;   // leave Ctrl+Z and friends alone
     var k = e.key;
     if (k === 'p' || k === 'P') { if (typeof setTool === 'function') setTool('pen'); return; }
-    if (k === 'e' || k === 'E') { if (typeof setTool === 'function') setTool('eraser'); return; }
+    if (k === 'e' || k === 'E') {
+      // The eraser is not the pen Recolor rides on (lib/recolor.js): it ends.
+      if (window.SkriblPadRecolor) window.SkriblPadRecolor.disarm();
+      if (typeof setTool === 'function') setTool('eraser');
+      return;
+    }
     if (k === '[') { _nudgeBrush(-1); return; }
     if (k === ']') { _nudgeBrush(1); return; }
     if (k === 'g' || k === 'G') { if (gridBtn) gridBtn.click(); return; }

@@ -20729,3 +20729,112 @@ CHECKED (verify_tools V214b): red on main (hello.js:el.function), red with the
 handler named but not allowlisted, green with both; the stale-entry check finds
 it. verify_hello unchanged. The lesson, for the next listener: grep the harness
 for the event's own name before calling the affected suites complete.
+
+## After v327 -- Recolor: a line already drawn takes a new colour (the owner: "I love the recolor too")
+
+The mock of recolouring lines (choices 1-6, each defaulting to yes) and the
+owner's "I love the recolor too", taken as yes to all six. This entry is the
+editors' half: the button, the mode, the run of colour, undo, Flip's Select bar.
+The replay showing a change when it was made, and the Blooby card's demos with
+the new dot, follow.
+
+ONE MODULE FOR BOTH EDITORS (lib/recolor.js): the hit-test, the colour rule,
+the run along the line and the bar. What a change does to a drawing stays each
+editor's: the Pad's undo stack and its record of the moment (editor_tools.js),
+Flip's page entry in its action log (flip.js).
+
+THE BUTTON sits beside the eyedropper, its mirror (that takes a colour from the
+drawing, this gives one to it). In the colour row the pair made eleven items,
+which at a phone's 24px dots shut the gaps to 7px at 402 and overlapped them at
+320 -- the crowding the owner sent back once ("the pink is too close to
+white"). So the eyedropper and Recolor sit together at the end of the Pen |
+Background row, at every size, and the colour row is nine colours again (15px
+apart at 402). That is the one change from the mock, where the pair closed the
+colour row: said in the report, and one CSS grid to put back. The two stay 30px
+with the eyedropper's own 8px of touch round each (46 to a finger), 16px apart
+so the touch areas meet without crossing; the phone rule that grew the
+eyedropper's to 10px was for the 24px button the colour row needed, and with
+the row to themselves they need neither.
+
+THE MODE. Tapping Recolor closes the drawer, and its bar takes the dock's row
+(the dock keeps its size and glass, so nothing moves; its own controls fade out
+of sight and out of reach): the pen's colour, "Tap a line to recolor", Undo and
+Done. The mock's bubble on the canvas hid the lines you would tap, so the words
+are in the bar. The colour opens the drawer to change it, and a pick there
+closes it again. Done, Escape, a replay and the eraser key end the mode. Flip's
+Select and Move bars take the page bar's row; this bar takes the dock's on both
+editors, so the two behave the same, and Undo is in the bar because the dock's
+is under it.
+
+A LINE is one movement of the pen (a group). A Flip fill is many groups laid in
+one tap, read as one line (consecutive level bands, each starting a millisecond
+after the last ended, one colour), or a tap on a fill would recolour a stripe.
+An eraser's stroke is never hit. A tap takes the topmost line under it, else the
+nearest within a finger's slack; a drag takes each line it crosses, once; a
+press changes nothing until it lifts or travels, so the first finger of a pinch
+recolours nothing. The colour keeps the line's opacity, in whichever form its
+colour was written (hex, rgba, a Smear's hex-8).
+
+THE COLOUR RUNS ALONG THE LINE from the finger, both ends at once, 380 ms,
+eased. The editor repaints once with the new colour; a canvas laid over the
+drawing shows the drawing as it was (the artwork stage, backdrop and photo and
+ink) across the part the colour has not reached, shrinking to nothing, and goes.
+The editor's canvas is never painted by the run, so nothing it paints meanwhile
+can be painted over. Under Reduce Motion the colour simply changes.
+
+UNDO is one step a gesture: the Pad pushes its history state and REPLACES the
+recoloured points (a state holds the point objects themselves -- Select's lesson
+in editor_draw.js); Flip records one before/after page entry ('selframe', named
+Recolor), as the Select bar's actions do.
+
+THE PAD KEEPS THE MOMENT (app.js `recolors`): the line, its old and new colour,
+the drawing's length then, which gesture it was (`k`: the lines one drag
+crossed share one, so a replay runs them together, and two taps with nothing
+drawn between them do not), the point the colour ran from, and, while a take
+records, the take's clock. The points carry the colour they ended with, so every
+still picture and any player that never reads the list shows the drawing as it
+was left; the list is what will let the replay show the change when it was made
+(the owner's R2). v219 took Select off the Pad because it moved recorded points
+and the replay drew them in their new place at their old time; this is the same
+kind of edit, with its time kept. A post, a .skribl file and the draft carry
+it, the history states hold it, and the server keeps it as it keeps any frame
+key, inside the payload's extra-bytes budget. A recolour among the undone steps
+leaves the draft's redo out (the restore rebuilds history as the applied strokes
+plus later strokes, and an undone recolour changed lines already drawn), so a
+reload never brings an undone colour back. And the undo a reload rebuilds, a
+line at a time, keeps in each state only the recolours made by then: a line
+undone there takes the later recolours with it, where they would have waited
+for the next line drawn to reach their moment and played in the middle of it.
+
+WHAT IT COST: the player's JavaScript +364 B, all app.js (the list kept with
+the undo states, the clear, the post's frame and the load, which is the part
+the player needs), raised in verify_player_isolation and verify_jsstrip
+together. verify_surfaces counts one more name both editors define,
+paintPenSwoosh: the Pad's pen-colour funnel is a function now, like Flip's,
+since Recolor's bar follows the pen colour from there on both.
+
+FLIP: one page entry of undo a gesture; the page thumbnail's signature reads
+colour now (it read only shape, so a recoloured page kept its old tile); and a
+generated page that was recoloured, or the pages either side of one made from a
+recoloured page, is saved as it now looks, not as the recipe that would rebuild
+it in the old colours (the recipe's print reads positions, never colours). The
+Select bar gains Color: every selected line takes the pen's colour, keeping its
+opacity, as one step of undo; its glyph is the pen's colour; on a phone the
+count is the bare number, so the row's seven buttons fit.
+
+CHECKED (verify_recolor, new, on both editors): each row was shown red
+by its own break -- the tools back in the colour row (the row's gaps, the
+pair's place), the tools left showing with Background, the dock's controls
+reachable, the drawer left open, a colour pick leaving it open, an undo step for
+a tap on nothing, an undo step per line of a drag, the first of overlapping
+lines taken, a solid colour for a see-through line, an eraser's stroke hit, a
+pinch's first finger recolouring, no run, a run under Reduce Motion, no clock
+during a take, no recolours in a post or a draft, the undone recolour's redo
+written, no moment number, the rebuilt undo keeping a later recolour, the
+tools' touch areas crossing on a phone, a thumbnail blind to colour, a fill taken a band at a time, a tween
+page saved as its recipe, the bare count, and a replay or the eraser key leaving
+the mode on. verify_parity lists Recolor among the controls both editors carry.
+
+Pad and Flip: shared (lib/recolor.js, the drawer partial, the dock's bar);
+Flip alone has the Select bar's Color, as it alone has Select. Not tested here:
+WebKit, and the owner's fonts.

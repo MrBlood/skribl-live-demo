@@ -23,7 +23,9 @@
         b.classList.toggle('active', on);
         b.setAttribute('aria-pressed', String(on));
       });
-      ['colorGroup', 'bgGroup'].forEach(function (id) {
+      // The colour tools go with the pen's colours: the eyedropper and
+      // Recolor are both about the pen (the drawer partial).
+      ['colorGroup', 'colorTools', 'bgGroup'].forEach(function (id) {
         var g = document.getElementById(id);
         if (g) g.hidden = g.dataset.target !== target;
       });

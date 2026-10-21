@@ -500,6 +500,20 @@ stays a sleep.
   composer's frame or to automation that did not ask, and nothing of it is
   fetched there. Each row was shown red by its own break, served or read in
   place of the real file.
+- `verify_recolor.py` — Recolor (lib/recolor.js): a line already drawn takes
+  the pen's colour, on the Pad and Flip. The button beside the eyedropper at
+  the end of the Pen | Background row, and the colour row nine colours again,
+  read for its gaps at 320, 390 and 402; the mode's bar in the dock's row,
+  the dock out of reach for a finger and the keyboard, the canvas unmoved, the
+  bar's colour the pen's; a tap takes the topmost line and keeps its opacity,
+  a tap on nothing and the first finger of a pinch change nothing, an eraser's
+  stroke is never hit; a drag takes each line it crosses as one undo; the
+  colour runs from the finger (read off the run's own overlay on every frame,
+  where a screenshot lands late), at once under Reduce Motion; the Pad keeps
+  each moment through a post, the server, a draft and an undone reload; Flip's
+  thumbnail, a fill's bands as one line, a recoloured tween page saved as it
+  looks, and the Select bar's Color with its bare count on a phone. Each row
+  was shown red by its own break.
 - `verify_watchfull.py` — full screen while it plays, in the Pad and Flip
   (lib/watchfull.js), on the same phone and desk: the way in at the end of the
   line under the drawing, the drawing as big as the screen allows, the band

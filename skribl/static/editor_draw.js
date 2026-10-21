@@ -284,6 +284,11 @@ function startDraw(e) {
     openDrawer(null);
     return;
   }
+  // Recolor (lib/recolor.js, wired in editor_tools.js): the press recolours
+  // the line under it, or each line a drag crosses, and draws nothing. Above
+  // the post-record lock, as the eyedropper is: it adds no ink, so a finished
+  // take may take it.
+  if (window.SkriblPadRecolor && SkriblPadRecolor.isArmed() && SkriblPadRecolor.press(e)) return;
   // Post-record lock: the completed replay can't be drawn over. The visible
   // answer is the on-canvas "+ Add take" pill — nudge it so the eye lands on
   // the way forward, right where the press just failed; the toast explains.
@@ -740,6 +745,8 @@ if (window.SkriblTapPause) {
 // after app.js's own Play handler, so `playing` says which way the tap went.
 playBtn.addEventListener('click', () => {
   if (playing && window.SkriblDrawerDetent) SkriblDrawerDetent.revealTop(canvas);
+  // A replay is no drawing to recolour: the mode ends, as a colour pick does.
+  if (playing && window.SkriblPadRecolor) SkriblPadRecolor.disarm();
 });
 const SPEED_KEY = 'skribl_replay_rate';
 function setPreviewSpeed(c) {

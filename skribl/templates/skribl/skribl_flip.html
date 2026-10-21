@@ -167,6 +167,10 @@
         <span class="pb-who" id="sbWho">Selection</span>
         <button type="button" class="pb" id="sbFlipH" title="Flip left to right" aria-label="Flip left to right"><span class="pb-glyph" aria-hidden="true"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v16" stroke-dasharray="2.5 2.5" opacity=".75"/><path d="M9.5 8 5 12l4.5 4"/><path d="M14.5 8 19 12l-4.5 4"/></svg></span><span class="pb-tx">Flip</span></button>
         <button type="button" class="pb" id="sbFlipV" title="Flip top to bottom" aria-label="Flip top to bottom"><span class="pb-glyph" aria-hidden="true"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16" stroke-dasharray="2.5 2.5" opacity=".75"/><path d="M8 9.5 12 5l4 4.5"/><path d="M8 14.5 12 19l4-4.5"/></svg></span><span class="pb-tx">Flip</span></button>
+        {# COLOR: every selected line takes the pen's colour, in one step
+           (lib/recolor.js tint; the drawer's Recolor does one line at a time).
+           Its glyph is the colour itself, kept in step with the pen. #}
+        <button type="button" class="pb" id="sbColor" title="Give the selection the pen&rsquo;s color" aria-label="Color the selection with the pen&rsquo;s color"><span class="pb-glyph" aria-hidden="true"><span class="sb-color-dot"></span></span><span class="pb-tx">Color</span></button>
         {# "Duplicate", not "Copy": this button PLACES a copy in the page immediately
    (selDuplicate), while the page bar's Copy puts pages on a clipboard for
    Paste. One word per behaviour — the two were both labelled Copy. #}
@@ -509,6 +513,8 @@
      which reads window.SkriblRecentColors at first use. #}
   <script src="{{ skribl_asset('lib/recentcolors.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/eyedropper.js') }}" defer></script>
+  {# lib/recolor.js: the eyedropper's mirror, a line takes the pen's colour (both editors). #}
+  <script src="{{ skribl_asset('lib/recolor.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/shapecard.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/drawerdetent.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/smoothing.js') }}" defer></script>

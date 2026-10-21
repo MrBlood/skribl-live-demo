@@ -284,9 +284,12 @@ with sync_playwright() as sp:
     # same "0:06" five times a second while the pen was down. And RAISED, in
     # both places together, by L3 at 150% after v326 (+376 B, all app.js,
     # 149,079 measured): the post page's ⋯ menu kept inside the window, and
-    # the Pad's fit measuring with the drawing out of the way.
+    # the Pad's fit measuring with the drawing out of the way. And RAISED, in
+    # both places together, by Recolor (+364 B, all app.js, 149,443 measured):
+    # the drawing's recolours kept with its undo, its clear, its post and its
+    # load, the moment each line changed colour, for the replay.
     check("stripping keeps the player's JS under its ratchet",
-          lean_total <= 149_084,
+          lean_total <= 149_448,
           f"{src_total:,} B of source -> {lean_total:,} B parsed")
     # START-HERE concluded from a function count that reaching 153,600 needs a
     # separate player entry point, and the v199 handoff concluded from a

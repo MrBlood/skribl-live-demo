@@ -908,7 +908,15 @@ with sync_playwright() as sp:
     #   and on a resize while open), and the Pad's fit measuring with the
     #   drawing out of the way, so a shorter window can shrink it.
     #   verify_jsstrip's line moves with it. 149,079 measured.
-    BYTES_RATCHET, BYTES_TARGET = 149_084, 153_800
+    # RAISED (the owner's "I love the recolor too": a line already drawn
+    #   takes the pen's colour), for a named cost, all in app.js: +364 B --
+    #   the drawing's recolours (`recolors`), kept in its undo states, its
+    #   clear and its way back, its post's frame and its load, which is the
+    #   one this player needs: the moment each line changed colour, for the
+    #   replay to show it then. The mode, its bar and the run along the line
+    #   are lib/recolor.js and editor_tools.js, which the player never loads.
+    #   verify_jsstrip's line moves with it. 149,443 measured.
+    BYTES_RATCHET, BYTES_TARGET = 149_448, 153_800
     # The page's own HTML. The brand is the one-stroke skribl signature INLINE
     # in the page (~1.4KB of paths, a ~0.9KB nonce'd draw-on script, and the
     # <linearGradient> defs), and inline is load-bearing rather than lazy:
