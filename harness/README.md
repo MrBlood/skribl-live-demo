@@ -488,7 +488,8 @@ stays a sleep.
   open; a slow line for the page's own scripts, and it still writes itself in
   its own time (it brings the hold timing with the player); an empty cache on
   3G, as a first visit in a private window, and it still comes, its own files
-  asked for first; the button cards'
+  asked for first, drawing once the page's own scripts are done; the button
+  cards'
   first note waits for another visit; never in a
   composer's frame or to automation that did not ask, and nothing of it is
   fetched there. Each row was shown red by its own break, served or read in

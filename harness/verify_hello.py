@@ -32,7 +32,8 @@ warm-up below), and read it as a failure; this row meets it on purpose. So is
 a slow line for the page's own scripts: the hello brings the hold timing with
 the player, or it played its drawing as plain pages, all at once (after v327).
 And an empty cache on 3G, as a private window has: its files asked for first,
-or they queued behind the editor's and it missed its window.
+or they queued behind the editor's and it missed its window, and drawn once the
+page's own scripts are done, or it froze as each of them ran.
 """
 import base64
 import io
@@ -499,9 +500,11 @@ with sync_playwright() as p:
     # hello held, and scripts deferred run in order, so every one behind it
     # waits too, the page's own copy of the hold timing among them, while the
     # player and the drawing come quickly. (Holding them all queued the
-    # hello's own files behind them.) The hello brings the hold timing with
-    # the player; without it the mark played as plain pages, all at once and
-    # gone in 0.8 s.
+    # hello's own files behind them.) Its drawing must never play as plain
+    # pages, all at once and gone in 0.8 s, which it did when it took the
+    # drawing before the hold timing had run: read while they are held (it
+    # waits for the page now, so there may be no player yet) and once they
+    # come.
     c = b.new_context(**PHONE)
     c.add_init_script(FORCE)
     srcs = [u.split("?")[0] for u in re.findall(r'<script src="([^"]+)" defer', c.request.get(BASE + "/skribl-pad").text())]
@@ -512,21 +515,32 @@ with sync_playwright() as p:
     c.route(lambda url: behind is not None and url.split("?")[0].endswith(behind), lambda r: held_page.append(r))
     q = c.new_page()
     q.goto(BASE + "/skribl-pad", wait_until="commit")
-    plan, t0 = None, time.time()
-    while plan is None and time.time() - t0 < 6:
-        plan = q.evaluate("""() => { const h = document.getElementById('skriblHello');
-            const p = h && window.SkriblInline && SkriblInline.players().find(x => x.el && h.contains(x.el));
-            return p ? { total: Math.round(p.state().totalMs), pageRan: typeof window.openDrawer === 'function' } : null; }""")
-        if plan is None:
-            q.wait_for_timeout(50)
+    TOTAL = """() => { const h = document.getElementById('skriblHello');
+        const p = h && window.SkriblInline && SkriblInline.players().find(x => x.el && h.contains(x.el));
+        return p ? Math.round(p.state().totalMs) : null; }"""
+    totals, ran, t0 = [], False, time.time()
+    while time.time() - t0 < 3:
+        v = q.evaluate(TOTAL)
+        if v is not None:
+            totals.append(v)
+        ran = ran or q.evaluate("() => typeof window.openDrawer === 'function'")
+        q.wait_for_timeout(50)
     for r in held_page:
         r.continue_()
+    t0 = time.time()
+    while time.time() - t0 < 8:
+        v = q.evaluate(TOTAL)
+        if v is not None:
+            totals.append(v)
+            break
+        q.wait_for_timeout(50)
     q.wait_for_function("() => !!window.SkriblHold", timeout=8000)
     timed = q.evaluate("(d) => Math.round(SkriblHold.plan(d.frames, d.fps || 12, d.loop).cycle)", HELLO)
-    check("a slow line for the page's own scripts: the hello brings the hold timing with the player, so the mark "
-          f"still writes itself in its own time ({timed} ms), never as plain pages all at once",
-          hold_after and len(held_page) == 1 and plan is not None and not plan["pageRan"] and plan["total"] == timed,
-          f"held {behind} ({len(held_page)}), the hold timing behind it: {hold_after}; the hello's player {plan}")
+    check("a slow line for the page's own scripts: the mark still writes itself in its own time "
+          f"({timed} ms), never as plain pages all at once, while they are held and once they come",
+          hold_after and len(held_page) == 1 and not ran and bool(totals) and all(t == timed for t in totals),
+          f"held {behind} ({len(held_page)}), the hold timing behind it: {hold_after}, the page's scripts ran while "
+          f"held: {ran}; the hello's player's totals {sorted(set(totals))}")
     c.close()
 
     # An empty cache on a slow line, as a first visit in a private window on
