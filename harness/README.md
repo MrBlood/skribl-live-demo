@@ -485,7 +485,8 @@ stays a sleep.
   until it has; the dot comes to rest over the i (read off the canvas's own
   pixels); the ink lifts away in the order it was written (read off the
   screen's pixels, the way out held at its start and its middle), and it never
-  comes again. A tap skips it, holds what is written and draws nothing; a key
+  comes again. A tap skips it, holds what is written, draws nothing and
+  presses nothing under it (tapped over the menu, the menu stays shut); a key
   skips it and does nothing else; a still hello under Reduce Motion, the
   finished mark, then just a fade; a slow line, and it waits for the next
   open; a slow line for the page's own scripts, and it still writes itself in

@@ -20669,3 +20669,22 @@ make it pass or fail: 161 on the Pad and 173 on Flip on main's helpsearch
 here; it took a busy runner to show it.
 
 Pad and Flip: one module for both. Not tested here: WebKit.
+
+## After v327 -- A tap that skips the hello presses nothing else
+
+Found building the mock of three ideas for the hello. The hello lets go of the
+pointer the moment it starts to leave (.is-leaving), so the canvas is there at
+once; but a phone makes a tap's click where the finger lifts, on whatever is
+under it. A tap over the menu at the top right skipped the hello and opened the
+menu, on the Pad and on Flip. A mouse's click never reached what was under it.
+
+The hello now cancels the end of the tap that skips it, and a tap whose end is
+cancelled makes no click. Nothing else changes: it still lets go at once, so a
+new tap during its way out reaches the canvas.
+
+CHECKED (verify_hello): tapped over the menu while the hello plays, on both
+editors, the hello goes and the menu stays shut. Red on the hello before this
+(the menu open on both), green with this.
+
+Pad and Flip: one module for both. Not tested here: WebKit, where a phone's tap
+is the case that matters.
