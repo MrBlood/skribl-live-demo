@@ -136,6 +136,89 @@
     });
   }
 
+  // RECOLOR (lib/recolor.js, shared with Flip): a line already drawn takes
+  // the pen's colour. The lib owns the mode, the bar in the dock's row and
+  // the colour running along the line; what a change does to the drawing is
+  // the Pad's own, here.
+  //
+  //   ONE UNDO STEP A GESTURE, on the stack a stroke uses (begin). The
+  //   recoloured points are REPLACED, never edited: a history state holds the
+  //   point objects themselves (makeHistoryState slices the array), so an
+  //   edit in place would edit the undo state too -- Select's lesson, written
+  //   at SkriblSelectTool's first move in editor_draw.js.
+  //
+  //   THE MOMENT IS KEPT (recolors, app.js): which line, the colour it had and
+  //   took, how many points the drawing had then, the point the colour ran
+  //   from and, while a take records, its clock. That is what lets a replay
+  //   show the change when it was made rather than as if the line had always
+  //   been that colour (the owner's pick, R2 of the mock). v219 took Select
+  //   off the Pad because it moved recorded points and the replay drew them
+  //   in their new place at their old time; this is the same kind of edit,
+  //   with its time kept.
+  //
+  //   ALLOWED ON A FINISHED TAKE, as the eyedropper is: it adds no ink, so the
+  //   drawing stays exactly its base and its recorded lines.
+  const recolorBtn = document.getElementById('recolorBtn');
+  if (recolorBtn && window.SkriblRecolor) {
+    window.SkriblPadRecolor = window.SkriblRecolor.create({
+      button: recolorBtn,
+      dock: document.getElementById('toolBar'),
+      surface: canvas,
+      color: () => color,
+      lines: () => ({ pts: strokes, groups: strokeGroups }),
+      point: ev => getPos(ev),
+      unit: () => canvas.width / (getCanvasLogicalSize().width || 1),
+      art: () => padArtwork(),
+      begin: () => {
+        undoStack.push(makeHistoryState());
+        if (undoStack.length > 30) undoStack.shift();
+        undoBtn.disabled = false;
+        redoStack = [];
+        redoBtn.disabled = true;
+      },
+      apply: (g0, g1, hex, at) => {
+        let a = 0, changed = false;
+        for (let g = 0; g < g0; g++) a += strokeGroups[g];
+        for (let g = g0; g <= g1; g++) {
+          const n = strokeGroups[g], was = strokes[a] ? strokes[a].color : null;
+          let here = false;
+          for (let i = a; i < a + n; i++) {
+            const c = SkriblRecolor.tint(strokes[i].color, hex);
+            if (c !== strokes[i].color) { strokes[i] = Object.assign({}, strokes[i], { color: c }); here = true; }
+          }
+          if (here) {
+            const r = { g: g, n: strokes.length, at: Math.max(0, Math.min(n - 1, at - a)), was: was, to: strokes[a].color };
+            if (recording) r.t = Date.now() - startTime;
+            recolors.push(r);
+            changed = true;
+          }
+          a += n;
+        }
+        return changed;
+      },
+      repaint: () => clearAndRestore(() => paintStrokesStatic(strokes)),
+      end: () => { if (typeof scheduleAutosave === 'function') scheduleAutosave(); },
+      undoButton: undoBtn,
+      openColors: () => openDrawer('draw'),
+      closeColors: () => openDrawer(null),
+      colorsOpen: () => !!(_padDrawerCtl && _padDrawerCtl.isOpen('draw')),
+      focusHome: () => document.getElementById('penToolBtn'),
+      // On: the drawer goes (the drawing is what is wanted next), a colour
+      // pick or a photo drag gives way, and the pen is the tool, since Done
+      // goes back to it. Off: the lock, eraser or pen cursor comes back.
+      onChange: on => {
+        if (on) {
+          if (pickingColor) stopPicking();
+          if (typeof exitReposition === 'function') exitReposition();
+          openDrawer(null);
+          if (tool !== 'pen') setTool('pen');
+        } else {
+          updateCanvasLockCue();
+        }
+      },
+    });
+  }
+
   const clearDrawerBtn = document.getElementById('clearDrawerBtn');
   if (clearDrawerBtn) {
     let armed = false, armTimer = null;

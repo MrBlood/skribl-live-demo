@@ -199,6 +199,7 @@ BATCHES = [
      "verify_identity.py"],                # v303: the manifest, icons and theme-color
     ["verify_nametab.py"],                 # unrecorded
     ["verify_hello.py"],                   # measures — a hello that waits out its own wave
+    ["verify_recolor.py"],                 # measures — the colour's run read on every frame, real touch drags
     ["verify_menu.py"],                    # measures — painted targets, waits out each page and Undo
     ["verify_contrast.py"],                # measures — painted grounds, photographed with the words hidden
     ["verify_learncard.py"],               # measures — real touch holds and mouse rests, timed

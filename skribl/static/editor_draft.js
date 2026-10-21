@@ -250,7 +250,12 @@ function serializeAutosave() {
   // draft holds.
   const W = window.SkriblPointWrite, P = window.SkriblPointPack;
   const written = (list) => (W ? list.map(W.point) : list.slice());
-  const deepest = (redoStack.length && redoStack[0] && redoStack[0].strokes) ? redoStack[0] : null;
+  // A RECOLOUR AMONG THE UNDONE STEPS leaves no deepest drawing to rebuild
+  // from: the restore below rebuilds history as the applied strokes plus more
+  // strokes after them, and an undone recolour changed lines already drawn,
+  // not the count of them. The redo is left out then, never rebuilt wrong.
+  const redoTop = (redoStack.length && redoStack[0] && redoStack[0].strokes) ? redoStack[0] : null;
+  const deepest = (redoTop && (redoTop.recolors || []).length === recolors.length) ? redoTop : null;
   // A LONG DRAWING IS PACKED (lib/pointpack.js, v322 plan step 1): four
   // characters a point, lossless against the rule above, so a two-hour drawing
   // is 0.69 million characters where its JSON would be eleven -- more than the
@@ -268,6 +273,9 @@ function serializeAutosave() {
     savedAt: new Date().toISOString(),
     baseSnapshot: baseSnapshot
   };
+  // When lines took new colours (app.js `recolors`), so a reload's replay
+  // still shows each change when it was made.
+  if (recolors.length) rec.recolors = recolors.slice();
   if (pk) {
     rec.packed = pk;
     rec.redoPacked = rpk;
@@ -673,11 +681,15 @@ function rebuildHistoryForRestore(maxStrokes, maxGroups, appliedCount, baseHasCo
   // owner's "it seemed fine until all of a sudden it just slowed down".
   // restoreHistoryState (app.js) repaints these states on undo/redo.
   const renderPrefix = (k) => clearAndRestore(() => paintStrokesStatic(maxStrokes.slice(0, starts[k])));
+  // Each state keeps the recolours of the lines it has. Its lines carry the
+  // colours they ended with, as every rebuilt state's strokes always have.
+  const rc = recolors.slice();
   const stateAt = (k) => ({
     image: null,
     base: preRecordSnapshot,
     strokes: maxStrokes.slice(0, starts[k]),
     strokeGroups: maxGroups.slice(0, k),
+    recolors: rc.filter(r => r && r.g < k),
     hasContent: (k === 0) ? baseHasContent : true
   });
 
@@ -787,6 +799,7 @@ function restoreAutosave(data) {
   updateVignette();
   strokes = (data.strokes || []).slice();
   strokeGroups = (data.strokeGroups || []).slice();
+  recolors = Array.isArray(data.recolors) ? data.recolors.slice() : [];
   if (!(size && size.cssWidth > 0 && size.cssHeight > 0)) {
     holdStrokes(data.redoStrokes && data.redoStrokes.length ? data.redoStrokes : strokes);
   }

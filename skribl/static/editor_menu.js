@@ -227,6 +227,10 @@ undoBtn.addEventListener('click', () => {
   restoreHistoryState(prev);
   strokes = prev.strokes.slice();
   strokeGroups = prev.strokeGroups.slice();
+  recolors = (prev.recolors || []).slice();
+  // A colour still running along a line ends where it was going: the drawing
+  // under it has just changed (lib/recolor.js).
+  if (window.SkriblPadRecolor) SkriblPadRecolor.settle();
   syncStateAfterHistoryChange(prev.hasContent === undefined ? strokes.length > 0 : prev.hasContent);
   if (undoStack.length === 0) undoBtn.disabled = true;
 });
@@ -242,6 +246,8 @@ redoBtn.addEventListener('click', () => {
   restoreHistoryState(next);
   strokes = next.strokes.slice();
   strokeGroups = next.strokeGroups.slice();
+  recolors = (next.recolors || []).slice();
+  if (window.SkriblPadRecolor) SkriblPadRecolor.settle();   // as undo, above
   syncStateAfterHistoryChange(next.hasContent === undefined ? strokes.length > 0 : next.hasContent);
   if (redoStack.length === 0) redoBtn.disabled = true;
 });

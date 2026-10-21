@@ -1827,6 +1827,28 @@ body.replaying .tab-panel > * { opacity: var(--drawer-rest); }
   flex-direction: column;
   gap: 8px;
 }
+/* The colour section's rows: the Pen | Background switch with the two colour
+   tools at its end (the eyedropper, and Recolor), then the colours. Why the
+   tools moved up from the end of the colours is in the drawer partial. */
+.color-section {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: "label label" "seg tools" "dots dots" "recent recent";
+  column-gap: 12px;
+  align-items: center;
+}
+.color-section > .draw-section-label { grid-area: label; }
+.color-section > .paint-target { grid-area: seg; justify-self: start; }
+/* The switch's own 10px below moves to the colours, so the tools centre on the
+   switch and the colours sit where they did. */
+.color-section > #paintTargetSeg { margin-bottom: 0; }
+.color-section > .color-group { margin-top: 10px; }
+.color-section > .color-tools { grid-area: tools; display: flex; gap: 14px; }
+.color-section > .color-tools[hidden] { display: none; }
+.color-section > .color-group { grid-area: dots; }
+.color-section > .recent-row { grid-area: recent; }
+/* 30 visual, 44 tap, and 14px apart so the two taps meet without overlapping. */
+.color-tools .eyedropper-btn { --tap-grow: 7px; }
 
 /* Tighten the space between the tool row, Color, and Canvas sections so the
    panel reads as calmer groups instead of three full-height blocks. Scoped to
@@ -2116,6 +2138,69 @@ body.replaying .tab-panel > * { opacity: var(--drawer-rest); }
 @media (hover: hover) { .eyedropper-btn:hover { background: var(--surface-control-hover); color: var(--text-bright); } }
 .eyedropper-btn.picking { background: var(--ui-active); color: #fff; border-color: transparent; }
 
+/* RECOLOR (lib/recolor.js, both editors). Its button is the eyedropper's
+   twin in the colour row (the class it shares above). While the mode is on,
+   its bar takes the dock's row: the dock keeps its size and its glass, so
+   nothing on the page moves, and its own controls fade out of sight and out
+   of reach as the bar fades in over them -- the way Flip's Select bar takes
+   the page bar's row, so nothing sits on the drawing being tapped. */
+.flip-tools { position: relative; }   /* the Pad's .toolbar already is */
+.recolor-bar {
+  position: absolute; inset: 0; z-index: 2;
+  display: flex; align-items: center; gap: 8px;
+  padding: 0 8px;
+  visibility: hidden; opacity: 0;
+  transition: opacity .2s ease, visibility 0s linear .2s;
+}
+.is-recoloring > .recolor-bar { visibility: visible; opacity: 1; transition: opacity .2s ease .06s; }
+.is-recoloring > :not(.recolor-bar) {
+  visibility: hidden; opacity: 0; pointer-events: none;
+  transition: opacity .2s ease, visibility 0s linear .2s;
+}
+/* The colour the lines will take: the pen's, in a ring of the dock's ink. A
+   tap opens the colour drawer to change it. */
+.recolor-swatch {
+  flex: none; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%;
+  background: none; display: grid; place-items: center; cursor: pointer;
+}
+.recolor-dot {
+  width: 26px; height: 26px; border-radius: 50%;
+  outline: 1.5px solid var(--text-tool); outline-offset: 2px;
+}
+.recolor-say {
+  flex: 1; min-width: 0;
+  font-size: 15px; font-weight: 600; line-height: 1.2;
+  color: var(--text-strong);
+}
+.recolor-undo {
+  flex: none; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 12px;
+  background: none; color: var(--text-tool-lit); cursor: pointer;
+  display: grid; place-items: center;
+}
+.recolor-undo svg { width: 26px; height: 26px; }
+.recolor-undo:disabled { opacity: .32; cursor: default; }
+/* Done is the bar's one action: the action violet, white words, as Flip's
+   Select and Move bars end. */
+.recolor-done {
+  flex: none; min-height: 40px; padding: 0 16px; border: 0; border-radius: 12px;
+  background: var(--accent-fill); color: #fff; cursor: pointer;
+  font-size: 15px; font-weight: 600;
+}
+.recolor-swatch:focus-visible, .recolor-undo:focus-visible, .recolor-done:focus-visible {
+  outline: 2px solid var(--focus-ring); outline-offset: 2px;
+}
+@media (hover: hover) {
+  .recolor-undo:not(:disabled):hover { color: var(--text-strong); background: rgba(var(--wash-rgb), .04); }
+}
+/* The colour running along a line: a canvas laid over the drawing for the
+   third of a second it takes (lib/recolor.js runner), never touched. */
+.recolor-run { position: absolute; pointer-events: none; z-index: 2; }
+/* A finished take's Add take pill sits on the drawing: while lines are being
+   tapped it steps aside, and is back on Done. */
+body.recoloring #addTakePill { visibility: hidden; }
+/* (Under Reduce Motion the bar and the dock simply swap: the comprehensive
+   reduced-motion rule makes every transition near-instant.) */
+
 .recent-row { display: flex; align-items: center; gap: 10px; }
 .recent-label { font-size: 12px; }
 .recent-colors { display: flex; align-items: center; gap: 7px; }
@@ -2277,7 +2362,9 @@ body.replaying .tab-panel > * { opacity: var(--drawer-rest); }
      the bumped --tap-grow / input overhang below. */
   .color-dot, .bg-swatch { width: 26px; height: 26px; }
   #colorGroup .color-dot { width: 24px; height: 24px; }
-  .eyedropper-btn { width: 24px; height: 24px; }
+  /* (The eyedropper stepped down with them while it closed the row. It and
+     Recolor sit beside the Pen | Background switch now, at their own size:
+     the row is nine colours, ~14px apart at 390.) */
   .smooth-btn { padding: 5px 10px; }
   .prop-row .draw-section-label { width: 58px; }
 }

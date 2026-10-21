@@ -1068,6 +1068,12 @@
    button whose contents reach its edge reads as cramped rather than as bigger. */
 .pb-glyph svg { width: 18px; height: 18px; display: block; }
 .pb.on .pb-glyph { opacity: 1; }
+/* The Select bar's Color: its glyph IS the pen's colour (flip.js
+   syncSelColor), so it is shown whole rather than at the glyphs' tone, ringed
+   in the bar's ink so a white or pale pen still has an edge. */
+#sbColor .pb-glyph { opacity: 1; }
+.sb-color-dot { display: block; width: 18px; height: 18px; border-radius: 50%;
+  box-shadow: 0 0 0 1.5px var(--text-secondary); }
 /* NO GLYPH ON MOVE, and the attempt is worth recording. A small page rectangle
    beside the arrow was tried and REVERTED: at 11px a plain rounded rect renders
    as a zero, so the buttons read "◀ 0" and "0 ▶" — a number, not a page, and

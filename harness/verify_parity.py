@@ -69,6 +69,7 @@ CONTROLS = [
     ("recent colours",     "#recentColors",    "#recentColors",   ""),
     ("recent colours row", "#recentRow",       "#recentRow",      ""),
     ("eyedropper",         "#eyedropperBtn",   "#eyedropperBtn",  ""),
+    ("recolor",            "#recolorBtn",      "#recolorBtn",     ""),
     ("background swatches", "#bgGroup",        "#bgGroup",        ""),
     # --- brush ------------------------------------------------------------
     # DECLARED, and pinned here so it cannot drift further. The partial's own
