@@ -909,16 +909,18 @@ with sync_playwright() as sp:
     #   drawing out of the way, so a shorter window can shrink it.
     #   verify_jsstrip's line moves with it. 149,079 measured.
     # RAISED (the owner's "I love the recolor too": a line already drawn
-    #   takes the pen's colour), for a named cost, all in app.js: +364 B --
+    #   takes the pen's colour), for a named cost, all in app.js: +379 B --
     #   the drawing's recolours (`recolors`), kept in its undo states, its
     #   clear and its way back, its post's frame and its load, which is the
     #   one this player needs: the moment each line changed colour, for the
     #   replay to show it then. The mode, its bar and the run along the line
     #   are lib/recolor.js and editor_tools.js, which the player never loads.
-    #   verify_jsstrip's line moves with it. 149,443 measured.
+    #   verify_jsstrip's line moves with it. 149,458 on main: the line was
+    #   set from 149,443, measured before the change's last 15 B (a fresh
+    #   take clearing the recolours), and main went red on it.
     # RAISED (the owner's pick R2 of the recolour mock: the replay shows a
     #   line's new colour when it was given), for a named cost, all in
-    #   app.js: +1,502 B -- the moments placed in the timeline, a moment's
+    #   app.js: +1,487 B -- the moments placed in the timeline, a moment's
     #   repaint and the compositor's reseed after it, the replay cores
     #   handing a moment to the timeline's player and the run ticked with
     #   the replay, and this page fetching lib/recolorplay.js (10,114 B) only

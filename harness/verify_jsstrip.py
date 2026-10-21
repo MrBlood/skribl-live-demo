@@ -290,10 +290,11 @@ with sync_playwright() as sp:
     # both places together, by L3 at 150% after v326 (+376 B, all app.js,
     # 149,079 measured): the post page's ⋯ menu kept inside the window, and
     # the Pad's fit measuring with the drawing out of the way. And RAISED, in
-    # both places together, by Recolor (+364 B, all app.js, 149,443 measured):
+    # both places together, by Recolor (+379 B, all app.js, 149,458 on main;
+    # set from 149,443, measured before its last 15 B, and main went red):
     # the drawing's recolours kept with its undo, its clear, its post and its
     # load, the moment each line changed colour, for the replay. And RAISED,
-    # in both places together, by the replay showing that moment (+1,502 B,
+    # in both places together, by the replay showing that moment (+1,487 B,
     # all app.js, 150,945 measured); the module that plays it,
     # lib/recolorplay.js, is fetched only for a drawing that has recolours
     # and is not in this sum (its own line, below).

@@ -20880,7 +20880,7 @@ its timing.
 
 WHAT IT COSTS, AND WHO PAYS: the module is 10,114 B and is fetched by the link
 page and the in-post player ONLY for a drawing that has recolours; nearly all
-drawings have none, and pay for the hooks alone: the link page +1,502 B
+drawings have none, and pay for the hooks alone: the link page +1,487 B
 (app.js), a page of posts +1,735 B (inlineplayer.js). The editors load it with
 lib/recolor.js, which now takes its colour rule and the run's shape from it.
 verify_jsstrip counts the page's script tags, not every asset its config names,
@@ -20901,3 +20901,24 @@ compositor before its base, the run laid on whole pixels, the in-post player
 not placing, the exports drawing on the editor's canvas). Not tested here:
 WebKit, and the MP4 export, which needs real Chrome (the same code as the GIF
 and WebM paths; CI's MP4 job makes one but does not read its colours).
+
+MAIN WENT RED AFTER #576, on both of the player's byte lines (verify_jsstrip,
+verify_player_isolation): 149,458 B against 149,448. Recolor's line was set
+from 149,443, measured before its last 15 B -- a fresh take clearing the
+recolours, the fix for a take that kept the last one's -- and never measured
+again. Its cost was +379 B, not +364. This change's lines are measured on
+main's tree plus this change (150,945, +1,487 B), and the two notes say so.
+The lesson is the old one: a ratchet is measured on the commit it ships in.
+
+ALSO: verify_surfaces read a script's assets with a greedy match, so the
+in-post player's tag, which names lib/recolorplay.js in a data attribute, read
+as that module in place of inlineplayer.js, and every module the player reads
+looked unread. It reads the SRC now (shown red on the old match, and on a page
+given a module nothing reads).
+
+AND verify_replayspeed's "a second tap carries it on" read the fill once,
+300 ms after the tap. At 8x what is left of its replay runs about 310 ms and a
+post loops, so beside two other suites the read caught the next lap at 0%: the
+replay had carried on, finished and begun again. It reads the fill on every
+frame now and takes the most it reached (6.7% -> 83%; red, at 6.8% -> 6.8%,
+when a sheet over the drawing keeps the tap from carrying anything on).
