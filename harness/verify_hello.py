@@ -573,6 +573,14 @@ with sync_playwright() as p:
 
     # Reduce Motion: a still hello, the finished mark with its dot in place, then it just fades.
     c = b.new_context(reduced_motion="reduce", **PHONE)
+    # Its opacity on every frame the screen makes, with whether it is on and
+    # whether it is leaving, until it is gone: the fade is read, not its class.
+    c.add_init_script("""window.__fade = []; (function f() {
+        const h = document.getElementById('skriblHello');
+        if (h) __fade.push([h.classList.contains('is-on'), h.classList.contains('is-leaving'),
+                            +getComputedStyle(h).opacity]);
+        else if (__fade.length && __fade[__fade.length - 1] !== 'gone') __fade.push('gone');
+        requestAnimationFrame(f); })();""")
     q = _open(c, "/skribl-pad")
     s, ms = _until(q, lambda s: s["painted"] and s["on"], 8000)
     still, why = (None, "no canvas")
@@ -592,6 +600,31 @@ with sync_playwright() as p:
           and s1["leaving"] and not s1["evaporating"] and ms2 is not None,
           f"the still's dot {still} ({why}), states {sorted(map(str, states))}, leaving {s1['leaving']} "
           f"lifting away {s1['evaporating']}, gone after a further {ms2} ms")
+    # THE OWNER'S iPHONE, after v328: "when reduce motion is on the opening
+    # skribl doesn't fade away, it just disappears". Both of the stylesheet's
+    # Reduce Motion rules take every transition to nothing, the hello's fade
+    # with them, so it went in one frame. Read off every frame: coming in and
+    # going, it passes through the middle on several frames, and no one frame
+    # moves it more than a third of the way.
+    fade = q.evaluate("() => window.__fade")
+    rows = [r for r in fade if r != "gone"]
+
+    def glide(part):
+        mid = sum(1 for _, _, o in part if 0.05 < o < 0.95)
+        step = max((abs(b_[2] - a_[2]) for a_, b_ in zip(part, part[1:])), default=1.0)
+        return mid, round(step, 2)
+
+    # Each part with the frame either side of it, so a jump at its edge is a
+    # step: coming in runs from before it is on to its last frame resting;
+    # going, from that frame to gone (read as nothing).
+    first_go = next((i for i, r in enumerate(rows) if r[1]), len(rows))
+    come = glide(rows[:first_go])
+    go = glide(rows[max(first_go - 1, 0):] + ([[False, True, 0.0]] if fade[-1:] == ["gone"] else []))
+    check("Reduce Motion: the hello fades in and fades away, never there or gone in one frame "
+          "(the owner's iPhone: 'it just disappears')",
+          come[0] >= 3 and come[1] <= 0.34 and go[0] >= 5 and go[1] <= 0.34 and fade[-1:] == ["gone"],
+          f"coming in: {come[0]} frames between, the largest step {come[1]}; going: {go[0]} frames "
+          f"between, the largest step {go[1]}; {len(rows)} frames read")
     c.close()
 
     # A slow line: the player held for 5 s, past its 4. The page's load waits

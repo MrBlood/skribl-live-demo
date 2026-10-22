@@ -21511,3 +21511,34 @@ AAC encoder; the note says so, and that the AAC route (Windows, macOS) is not
 in the files. Followed from the finished zip as written: every sum checks,
 the report's own sums check, and the patch on a fresh copy of the v328 source
 zip turns verify_docs from 140/142 to 145/145.
+
+## After v328 -- Under Reduce Motion the hello fades, coming and going (bug fix)
+
+The owner, back from the refreshed iPhone checklist (all good; VoiceOver not
+done): "the only little thing is when reduce motion is on the opening
+"skribl" doesn't fade away, it just disappears and opens the pad canvas
+screen."
+
+lib/hello.js said that under Reduce Motion "it all just fades", and leaves the
+lifting away out. But styles.css has two Reduce Motion rules for everything
+(transition-duration 0.001ms, and transition: none), so the hello's fade went
+with them: in one frame and out in one frame, on every browser, not only the
+iPhone's. A fade is not motion. The hello now sets its own fade on itself
+under Reduce Motion (an inline !important, which outranks a sheet's), at the
+sheet's own lengths, 0.25 s in and 0.45 s out. No Reduce Motion rule is added
+to styles.css, since cssgraph would carry it into player.css.
+
+verify_hello's Reduce Motion row asked only that the hello was marked leaving
+and was then gone, so it was green while the fade did not happen. A row beside
+it now reads the hello's opacity on every frame the screen makes, coming in
+and going, each part with the frame either side of it. Its first draft read
+only the frames after each class changed, so it reported a step of 0 over the
+jump; with the frames either side it read the jump. Red as it was (no frame
+between, a step of 1 both ways), green as built (9 frames between coming in,
+18 going; the largest step 0.15 and 0.08). verify_hello 32/32; beside it
+verify_learncard 37/37, verify_jsstrip 35/35, verify_offline 28/28,
+verify_csp 32/32, verify_surfaces 12/12, verify_docs 142/142, and
+verify_tools 136/136, which reads lib/hello.js's listeners, alone.
+
+Pad and Flip: shared, one module for both; the row drives the Pad. Not tested
+here: WebKit.

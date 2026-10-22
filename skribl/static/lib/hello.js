@@ -76,6 +76,15 @@
   }
 
   var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  /* UNDER REDUCE MOTION IT STILL FADES, coming and going (the owner's iPhone,
+   * after v328: "it just disappears and opens the pad canvas screen"). Both
+   * of the stylesheet's Reduce Motion rules take every transition to nothing,
+   * and its fade went with them. A fade is not motion, so the hello keeps its
+   * own, set on itself: an inline !important outranks a sheet's, and no
+   * Reduce Motion rule is added to styles.css (it would ride into
+   * player.css). Durations are the sheet's: in over 0.25 s, out over 0.45. */
+  function fade(s) { if (reduce) el.style.setProperty('transition', 'opacity ' + s + 's ease', 'important'); }
+  fade(0.25);
   var stage = el.querySelector('.skribl-hello-stage');
   var box = el.querySelector('.skribl-inline');
 
@@ -162,6 +171,7 @@
       void box.offsetWidth;
       el.classList.add('is-evaporating');
     }
+    fade(0.45);
     el.classList.add('is-leaving');
     setTimeout(function () {
       if (p) p.settle();
