@@ -1,0 +1,7 @@
+# Reproduction and limitations
+
+Run the hash checks in the packet. Extract source to a folder ending in `v328` with NO `.git`; use supplied Python 3.12.13 plus wheels, and from that unmodified source run `python3.12 harness/verify_docs.py`. Observed on pristine extraction: `141/142 passed` with the phantom untracked-file check failing. The development harness needs browser Playwright not included in offline wheels, though the application itself boots and supports backend test suites. Administrator network policy blocks system Chromium from local server; browser attempted from Python 3.13 Playwright.
+
+HTTP probes on fresh boot: `/`, `/flip`, `/library`, `/gallery`, `/feed`, `/api/skribls`: 200. `/pad`: 404 (Pad is at `/`, not a valid issue).
+
+No modifications were made to the baseline source before SHA checks. Testing took place in disposable extracted copies.

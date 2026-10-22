@@ -21487,3 +21487,9 @@ name rule, 141/142 (the name row). The v328 source zip itself, unpacked as it
 came: 140/142, the auditor's red plus the name.
 
 Pad and Flip: not for either; this is the harness, not the app.
+
+The owner: "yes keep the report". It is in `docs/audit/v328/returned/`: the
+zip byte for byte as received, and each of its three files beside it with
+`.txt` added to the name. The added suffix keeps the auditor's report out of
+verify_docs' reading of every `.md` in the tree, where its own sentences (the
+release record's totals, quoted) would be a hand-typed count in our docs.
