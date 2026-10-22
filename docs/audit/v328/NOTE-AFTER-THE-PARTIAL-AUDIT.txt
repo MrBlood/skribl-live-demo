@@ -1,0 +1,128 @@
+SKRIBL v328 -- A NOTE AFTER THE PARTIAL AUDIT
+=============================================
+
+Thank you for the partial audit
+(skribl-v328-audit-partial-developer-package.zip, SHA-256
+c9bb9b2c8a8efb03aa23eedc301bcceaaba04cfa499d91ce80188d62742506f5). It is
+kept as received. Your seven baseline hashes are the ones that were sent.
+Nothing in the v328 packet changes: the files you already hold are still
+the audit's baseline. This zip holds four files:
+
+  NOTE-AFTER-THE-PARTIAL-AUDIT.txt   this note
+  mp4-exports.zip                    the export files real Chrome made from
+                                     the sealed tree (part 4)
+  AUD-001.patch                      the fix for AUD-001, to try on your own
+                                     copy of the v328 source (part 1)
+  SHA256SUMS-followup.txt            the SHA-256 of the other three
+
+Where to start: part 3 (the app on screen, through the live site) and part
+4 (the exported files) are the two things your sandbox could not reach.
+
+
+1. AUD-001 IS CONFIRMED AND FIXED, AFTER v328
+
+Reproduced here on the v328 source zip, unpacked with no .git:
+verify_docs.py 140/142, two rows red, both the harness's and not the app's.
+
+  a. "a file in the frozen hash that no commit records makes the tree DIRTY".
+     Outside a git checkout, `git diff HEAD` prints its usage text, and
+     release_run.source_state() kept that text's last line as its reason
+     (the "--output <file>" you saw). It did fail closed: the state was
+     "unknown", never "clean". The row itself only meant something inside a
+     checkout.
+  b. "the archive directory name carries SKRIBL_VERSION". harness/package.py
+     names the packages skribl-v328-source, -runtime and -evidence, and the
+     row asked for a name that ENDS in v328, so it was red on every zip
+     shipped. That is the rename your reproduction had to make.
+
+The fix:
+  - source_state() asks git where the checkout is first, and says "not a git
+    checkout" when there is none, or "not its own checkout" when the folder
+    sits inside someone else's clone.
+  - The row makes its own small checkout in a temporary folder, so it asks
+    the same thing in a clone and in an unpacked zip. Beside it are rows for
+    the no-.git case and the nested case.
+  - The name row accepts the packager's own names.
+
+It is on GitHub as a pull request, MrBlood/skribl-live-demo#591, and in no
+sealed release yet. AUD-001.patch is that change to the two files it
+touches, harness/release_run.py and harness/verify_docs.py. To try it on a
+fresh copy of the v328 source, unpacked as it comes (skribl-v328-source,
+no rename):
+
+    cd skribl-v328-source
+    patch -p1 < ../AUD-001.patch          # or: git apply ../AUD-001.patch
+    python3.12 harness/verify_docs.py     # here: 145/145, where it was 140/142
+
+The patch changes the harness only. Applied, the copy is no longer the v328
+baseline, so use a second copy for it.
+
+
+2. HIST-001: WHAT THE ROW KEEPS NOW
+
+After its second red, the row was changed (on main after v328, #588) to keep
+the browser's own account of the page after it loads: DevTools' events for
+a context destroyed or cleared, a navigation, a crash, each with its time.
+If it goes red again, its detail says what the browser saw. In the one
+full run on main since that change, it passed. The cause is still unknown,
+and what the row asks is unchanged.
+
+
+3. THE APP ON SCREEN: THE LIVE SITE
+
+Your browser refused 127.0.0.1 (ERR_BLOCKED_BY_ADMINISTRATOR). That refusal
+comes from a policy inside the browser, so sending Playwright would not get
+past it, and none is sent. If your browser can open an outside site, the
+app is live at:
+
+    https://skribl-live-demo.onrender.com/          the Pad
+    https://skribl-live-demo.onrender.com/flip      Flip
+    https://skribl-live-demo.onrender.com/gallery   the Gallery
+    https://skribl-live-demo.onrender.com/library   the Library
+
+It runs main, which is v328 plus three small changes and harness-only fixes:
+  - a button's help card waits two seconds instead of one;
+  - a dot of the new colour on the replay's scrubber where a line was
+    recoloured;
+  - the glowing dot that rides the line, now drawn in the Pad's GIF and
+    video exports as it is on screen.
+Its version label (the last line of the ⋯ menu) still says v328, because
+the version moves only at a seal. A post made there is unlisted unless
+"Show in the public gallery" is ticked; please leave it unticked. The live
+site cannot be reached from the developer's container, so it was not
+checked from there today.
+
+
+4. THE EXPORTS: FILES THAT REAL CHROME MADE FROM THE SEALED TREE
+
+The headless Chromium the harness uses has no H.264 encoder, so the MP4
+lane runs on GitHub in real Chrome (Google Chrome 156.0.8078.47, Linux).
+In the run that attested v328 (run 39683246696, on the tree harness/RELEASE.md
+names, 29da5c3a4504...), it kept every file it exported and read each back
+with ffprobe. mp4-exports.zip is that run's artifact as GitHub stores it:
+GitHub's own SHA-256 of it is
+3a7c0c94ac864bab2838284e1188a6142668ac32eea61911a6bf606e481475b7, and it is
+attested nowhere else. Inside, report.txt names the tree, the commit, the
+browser, each file's SHA-256, and what ffprobe read:
+
+    pad.mp4           H.264, 706x706, 45 frames, 1.5 s, no audio
+    flip.mp4          H.264, 816x612, 15 frames, 0.5 s, no audio
+    pad-music.webm    VP9 + Opus, 46 video frames, 1.49 s, audio about -14 dB
+    flip-music.webm   VP9 + Opus,  6 video frames, 0.44 s, audio about -14 dB
+    flip-sheet.png, flip-music-sheet.png   a contact sheet of each Flip
+
+Why the drawings with music are WebM, not MP4: Chrome on Linux has no AAC
+audio encoder, and the app will not make a silent MP4 of a drawing with
+music, so it falls back to WebM with the music in it. That fallback is the
+designed route there. Chrome on Windows and macOS has AAC and makes an MP4
+with sound; that route is not in these files, and was not run on GitHub.
+The files are developer-produced, as you would class them, but they are the
+files themselves, ready for your own ffprobe or ffmpeg.
+
+
+5. WHAT CANNOT BE SENT
+
+No iPhone, Safari or WebKit runs where Skribl is built, so an iPhone check
+can come only from the owner's own phone. The owner's thirteen desktop
+checks were on Windows (DECISIONS.md, "v328 -- the seal of everything since
+v327").

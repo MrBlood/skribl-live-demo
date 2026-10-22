@@ -21413,3 +21413,101 @@ along, send the interpreter the way v328's note did. And a red case has to
 fail inside its own sandbox: v328's ran pip with no environment around it,
 and three packages landed in the container's own Python 3.13, which the
 session was not allowed to remove.
+
+## After v328 -- bootstrap.sh finishes an install it was cut off in
+
+The session after the handoff, checking the ground: the first
+`harness/bootstrap.sh` was reaped at a turn boundary part way through its pip
+installs. The second run found the venv's python3, skipped installing, and
+stopped at the tables with "No module named 'flask'"; so would every run after
+it, until the venv was deleted or the installs were run by hand. The owner:
+"yes, put up the bootstrap fix".
+
+A venv the script makes now carries a mark, `.bootstrap-installing`, from before
+the venv exists until both installs have finished. While the mark is there,
+the next run installs again into the venv it finds. A venv with no mark is used
+as it is: README-OFFLINE's, made from the wheels with no package network, must
+not send pip to a network it does not have, and a venv an earlier bootstrap
+finished has no mark either.
+
+verify_bootstrap runs the script against a stand-in python3.12 whose venv's
+python3 and pip only write down what they were asked, and whose pip fails on
+request; every run stops at the tables, so no server starts and nothing is
+fetched. Red on the script as it was (4/7: no mark after the failed run, and
+no install on the next), and red with the mark never taken off (5/7: a
+finished venv installed into on every run). Green as built (7/7). The owner's
+case ran for real too: a fresh venv, a bootstrap stopped at 20 seconds (the
+mark left), then a second run that installed, booted, and imported Flask and
+Playwright, with the mark gone. It needs no browser, server or network, so it
+joins the pull-request gate beside verify_runreport, and the release batch
+that suite is in.
+
+Pad and Flip: not for either; this is the harness's environment, not the app.
+
+## After v328 -- the auditor's first answer, and verify_docs in an unpacked zip (AUD-001)
+
+The v328 auditor sent back a partial audit, as
+`skribl-v328-audit-partial-developer-package.zip` (SHA-256 c9bb9b2c8a8e...;
+the owner holds it): AUDIT-REPORT.md, BASELINE-HASHES.json, REPRODUCTION.md.
+Its seven hashes are the ones sent (the five in docs/audit/v328/SHA256SUMS-packet.txt
+less README-FIRST, and the Python halves and the whole in the note). The app came
+up offline on the Python 3.12 the note sent, ten server-side suites passed as
+written, no product defect was found, and nothing was scored: the auditor's
+browser could not reach 127.0.0.1 (ERR_BLOCKED_BY_ADMINISTRATOR) and the offline
+wheels carry no Playwright, so nothing on screen was seen. Release decision:
+not determined. Two items: HIST-001, the Flip-help row lost on CI, which #588
+already made keep the browser's own account; and AUD-001, below.
+
+AUD-001: verify_docs on the source zip, unpacked, with no .git, was red. Two
+rows, both the harness's, not the app's:
+
+* "a file in the frozen hash that no commit records makes the tree DIRTY"
+  injected a phantom into the tree the suite runs in, which only means
+  something in a checkout. Outside one, `git diff HEAD` does not fail cleanly:
+  it prints its usage, and release_run.source_state() kept the usage's last
+  line as its reason (`unknown ['    --output <file> ...']`). The state was
+  right (unknown, never clean); the reason was noise. source_state() now asks
+  git where the checkout is first: no repository says "not a git checkout (an
+  unpacked archive has no .git)", and one whose top is not the tree (a zip
+  unpacked inside somebody's clone) says "not its own checkout". The row now
+  makes its own checkout in a temporary folder (clean, then a file in no
+  commit), and asks the archive's case and the nested case beside it, so it
+  asks the same thing in a clone and in a zip.
+* "the archive directory name carries SKRIBL_VERSION" asked that the name END
+  in the version, and harness/package.py names each package
+  skribl-<version>-<kind>: red on every zip the release built. The auditor
+  renamed the folder to get past it. It now takes the packager's names, with
+  or without the kind.
+
+Shown in a copy of this branch's tracked files unpacked as the zip unpacks
+(skribl-v328-source, no .git): 142/142, and 142/142 in the clone. Red by its
+own break each: source_state() as it was, 140/142 (the archive row and the
+nested row); without only the nested half, 141/142 (the nested row); the old
+name rule, 141/142 (the name row). The v328 source zip itself, unpacked as it
+came: 140/142, the auditor's red plus the name.
+
+Pad and Flip: not for either; this is the harness, not the app.
+
+The owner: "yes keep the report". It is in `docs/audit/v328/returned/`: the
+zip byte for byte as received, and each of its three files beside it with
+`.txt` added to the name. The added suffix keeps the auditor's report out of
+verify_docs' reading of every `.md` in the tree, where its own sentences (the
+release record's totals, quoted) would be a hand-typed count in our docs.
+
+**The follow-up for the auditor.** The owner: "create a zip for me to give
+them to start". `skribl-v328-audit-followup.zip` (SHA-256 c9fd124555e2...,
+about 75 KB) holds four files, three of them kept here in `docs/audit/v328/`
+as given to the owner: NOTE-AFTER-THE-PARTIAL-AUDIT.txt (AUD-001 and its fix,
+HIST-001, the live site for the app on screen, the exports), AUD-001.patch
+(the fix to harness/release_run.py and harness/verify_docs.py), and
+SHA256SUMS-followup.txt. The fourth is mp4-exports.zip, the MP4 lane's artifact
+from run 39683246696 on the sealed tree, which the owner downloaded from
+GitHub (the container's proxy refuses GitHub's artifact store); its SHA-256
+is the digest GitHub lists for it, 3a7c0c94ac86..., and it can be fetched
+from that run again until the artifact expires (January 2027). Its report and
+this container's own ffprobe agree: the two MP4s are H.264 with no audio, and
+the two drawings with music are WebM with Opus, because Chrome on Linux has no
+AAC encoder; the note says so, and that the AAC route (Windows, macOS) is not
+in the files. Followed from the finished zip as written: every sum checks,
+the report's own sums check, and the patch on a fresh copy of the v328 source
+zip turns verify_docs from 140/142 to 145/145.

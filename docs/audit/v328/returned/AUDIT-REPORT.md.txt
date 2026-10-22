@@ -1,0 +1,74 @@
+# Skribl v328 — independent audit, evidence-bounded assessment
+
+**Status:** PARTIAL AUDIT. **Release decision:** NOT DETERMINED. This is not a completed 60-section forensic acceptance audit and does not establish 90+ quality or release readiness. No user-facing product bug has yet been independently confirmed.
+
+## Baseline and methodology
+Target: supplied sealed v328 ZIP archives. The live main branch is newer and was not substituted. Source declares v328. Supplied README identifies commit `98067f8da84cfe0b46d222e61f62da671d361a8a`; external GitHub provenance attestation was **not independently verified**. The supplied note replaces overbroad README-FIRST claims about internal checksums and wheel hashes.
+
+The four delivered outer archives, both Python split files, and joined Python runtime were checked against the supplied SHA-256 values. The source internal manifest matched 574/574 entries, runtime 352/352, evidence 215/215. All Python dependencies installed offline on supplied Python 3.12.13. A new SQLite database booted and GET `/api/skribls` returned HTTP 200. HTTP GET of `/`, `/flip`, `/library`, `/gallery`, `/feed`, and `/api/skribls` returned 200. `/pad` returned 404 because Pad is served at `/`; **not a defect**.
+
+Directly executed harness suites (independent invocations against the supplied code): integration 29/29, transaction contract 95/95, API edge cases 61/61, create post 74/74, deletion 67/67, privacy 54/54, sweep job 66/66, CSRF 27/27, media authorization 50/50, asset cache 12/12. These are actual executions of developer-authored tests, NOT independently designed end-to-end user tests. Total passing assertions in this subset: 535. `verify_docs.py` failed 1/142 on a pristine extraction. Some browser-oriented suites failed to start because the supplied Python 3.12 offline wheelhouse lacks Playwright; several intentionally skipped. This is testing coverage, not product failures.
+
+The bundled release record *claims* 13,145 assertions across 146 suites, with two local skips (MP4 and PostgreSQL) covered in external lanes; this was read from packaged evidence, not independently reproduced. The pre-audit note discloses a red GitHub job (Flip help at phone size, lost execution context twice across CI runs). Its root cause is not determined. The note also discloses no Safari/iPhone physical verification.
+
+## Confirmed audit/test infrastructure issue
+**AUD-001 — `verify_docs.py` cannot fully pass in a pristine distributable archive without Git metadata.** Classification: CONFIRMED (test portability / release reproducibility), not a functional Skribl issue. Severity: Medium for external re-audit confidence, not a product release blocker by itself. Starting state: unzip pristine source under a directory ending in `v328`, without `.git`; run its Python 3.12 `harness/verify_docs.py`. Expected: a deliberately injected phantom file is recognized as untracked/dirty; observed: `141/142 passed`, failure `a file in the frozen hash that no commit records makes the tree DIRTY` and `unknown ['    --output <file>       output to a specific file']`. Inference: test relies on Git state or a subprocess output not meaningful in export-only directories. Recommended fix: detect missing Git metadata and test the fallback contract explicitly with controlled temporary fixtures; distinguish `NOT APPLICABLE` from `PASS` and never infer release cleanliness from an archive without repository metadata. Regression: verify_docs in both a clean git checkout and byte-identical extracted release zip, with injected untracked file and deleted tracked file.
+
+**HIST-001 — Flip help at phone size.** Classification: INTERMITTENT developer-reported, NOT independently reproduced. Developer note identifies CI `harness (postgresql 4/6)` red in run `39702105179`, error `Execution context was destroyed`; reportedly occurred twice on GitHub runners. Recommended: capture navigation, console, browser crash/target closure and redirect events; retry only with failure preserved and investigate root cause. No evidence of an actual user-facing crash was established here.
+
+## A–T: original deliverables (coverage-constrained)
+**A Executive summary:** The archives are internally intact, app starts and critical server-side suites pass; browser, export, iPhone and complete persistence/visual quality remain unverified. The real product quality cannot responsibly be graded from these checks.
+
+**B Scorecard:** UI, UX, visual polish, interaction, ease of use, accessibility, reliability, state, data integrity, error recovery, consistency, native feel, trust, perceived performance, maturity, overall quality and launch readiness: **NOT SCORED** pending direct user-visible interaction and platform testing. Numeric scores now would imply verification that did not occur.
+
+**C Complete issue register:** AUD-001 confirmed test portability limitation; HIST-001 historically intermittent. No independently confirmed user-facing functional defects. This is not an exhaustive register.
+
+**D Confirmed functional bugs:** None independently demonstrated by tests performed; absence of findings is NOT evidence of absence.
+
+**E Suspected/unverified risks:** Browser export media content, local/cloud save collisions, interruptions, pointer cancellations, iPhone audio, VoiceOver, stale caches, storage exhaustion, unknown Flip help test failure.
+
+**F Top product risks:** (1) unverified actual video/audio file content; (2) unverified durable saving/conflicts and false success; (3) unverified Safari/iPhone functionality; (4) inadequate direct user-visible testing; (5) unresolved sporadic Flip help CI failure.
+
+**G Highest-impact improvements:** First secure repeatable browser testing and actual export output inspection; then real device testing and multi-tab persistence testing. Fix demonstrated issues only after reproduction.
+
+**H Quick wins:** Make `verify_docs` release-archive-safe; preserve and capture first failure in CI; publish explicit browser and device compatibility evidence.
+
+**I Structural problems:** Not determined; no code architecture failure substantiated. Test reproducibility across archive/checkout requires attention.
+
+**J Polish problems:** Not tested; no fabricated visual criticisms.
+
+**K Accessibility remediation:** Not tested in screen reader or keyboard-driven browser; prioritize VoiceOver/keyboard label and focus verification before readiness certification.
+
+**L Screen-by-screen:** Pad `/`, Flip `/flip`, Library `/library`, Gallery `/gallery`, Feed `/feed` all served HTML (200). No independent visual or interactive assessment due Chromium localhost administrator block. Share/playback views not driven.
+
+**M UX friction map:** NOT TESTED — direct user interaction unavailable.
+
+**N State/edge-case matrix:** Backend API, transactions, create/delete, privacy, sweep, CSRF, authz exercised through existing test suites. Offline network, mid-export, relaunch, multi-tab, long session, enormous drawings, and mobile device states NOT TESTED.
+
+**O Consistency matrix:** NOT TESTED — equivalent screen components could not be visually compared.
+
+**P Delete-these list:** No justified removal recommendation without interaction evidence.
+
+**Q Elite-review polish list:** NOT TESTED — screenshots and responsive layout were not obtainable.
+
+**R Recommended redesign:** Deferred; evidence does not support a redesign prescription.
+
+**S Prioritized roadmap:** P0 — none independently demonstrated; P1 — browser export output verification, real iPhone/Safari, persistence and asynchronous recoverability checks, diagnosis of intermittent Flip help CI failure; P2 — visual, accessibility and component consistency review; P3 — broader repeated-use optimization. Acceptance criteria require reproducible direct evidence.
+
+**T Untested/incomplete:** Complete UI interactions, browser automation, screenshots, physical iPhone/Safari/WebKit, VoiceOver, MP4/AAC decoded tracks, GIF frames, device lifecycle, offline/sync, multi-tab/cloud, PostgreSQL under live concurrency, performance metrics, large-data stress, recovery flows, actual exports.
+
+## U–Z: addendum deliverables
+**U Previous defect closure matrix:** Music missing from video, initial duplicated frames, false export success, empty/no-frame files, timing/sync, third-party MP4 playback, interrupted exports: **NOT TESTED** directly. Lost strokes and pointer cancellation: **NOT TESTED**. Multiple-tab saves, stale drafts, resurrection and local/cloud indications: **NOT TESTED** directly. Copy-link announcements, screen-reader focus, icon tools, dialogs, keyboard and large text: **NOT TESTED**. The developer has targeted tests for several, but passing claims do not mark them VERIFIED FIXED.
+
+**V Independent evidence vs claims:** Direct: checksums, offline boot, HTTP endpoints, named suite execution and docs-suite reproducibility issue. Developer-supplied only: full 146-suite aggregate, external MP4/Postgres attestations, owner's Windows checks, known intermittent CI red, later main-branch improvements.
+
+**W 90+ readiness gap:** Insufficient direct UX/UI and real export validation, absent WebKit/iPhone evidence, persistence conflict verification and recovery stress testing, unresolved intermittent phone-sized Flip help CI incident. This is an evidence gap, not a proven claim that the product is sub-90.
+
+**X Confidence and limitations:** HIGH confidence in checksums, local boot and specified server-suite results; LOW confidence in untested visual quality and true device readiness. Chromium navigation to `http://127.0.0.1:5001/` was blocked (`net::ERR_BLOCKED_BY_ADMINISTRATOR`) even with route interception; Python 3.12 package wheelhouse lacks Playwright. No real iPhone/Safari available. No independent H.264 frame or AAC stream extraction.
+
+**Y Release decision:** **NOT DETERMINED** (insufficient evidence). An authoritative READY, CONDITIONALLY READY, or NOT READY verdict would require direct critical-workflow execution; among the requested fixed labels, this is **CONDITIONALLY READY FOR FURTHER VALIDATION ONLY**, not a shipping endorsement. Blocking criteria for approval: critical exports validated from decoded media, durable save verified, touch drawing exercised, accessibility and iPhone compatibility reviewed.
+
+**Z Developer delivery package:** This report plus SHA-256 baseline and reproduction notes. No patches to product code made. Use the issue record above to address auditability; investigate HIST-001 with preserved traces. After fixes, run affected suite in pristine archive and checkout, and inspect third-party media output and Safari/iPhone behavior.
+
+## Important methodological distinction
+The server-side suite results are independently *executed* but their test assertions are developer-written, so they do not establish independent product quality. This deliverable reflects actual work possible in the present runtime and expressly does **not** claim completion of the requested audit or promised comprehensive coverage.
