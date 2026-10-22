@@ -21801,3 +21801,16 @@ GIF's old one-image-per-page loop (3 images), the old nibRGB (Smear blue read
 white, and the two rules disagree), and fitPad's refit (a dot off the line).
 
 Pad and Flip: shared. The painter and the ink are one module both editors load.
+
+## After v328 -- verify_hello reads the Reduce Motion record once it is finished
+
+Main after #600 went red on both lanes' shard 2 on one row, verify_hello's
+"Reduce Motion: the hello fades in and fades away", with every number in it
+green (coming in 9 and 10 frames between, largest step 0.15; going 18, 0.08).
+The one clause left is that the per-frame record ends "gone", and that entry is
+written on the first animation frame after lib/hello.js removes the hello. The
+row read the record as soon as its poll saw the hello leave, and on a busy
+runner that frame had not come yet. It now waits for the entry (3 s at most)
+and then reads. Not reproduced here, where the frame always comes first; green
+as built (32/32), and red as before with the Reduce Motion fade taken out
+(0 frames between, a step of 1 each way).
