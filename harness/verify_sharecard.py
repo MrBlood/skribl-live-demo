@@ -80,9 +80,17 @@ check("and lib/sharecard.js, which the feed DOES load, carries no compositor",
 # ONE COMPOSITE IN THE TREE. The accent wash is unique to the card and cheap to
 # find, so it stands in for the whole composite: if it appears anywhere else,
 # somebody has a second card builder and the two will drift the way the geometry
-# did before this module existed.
+# did before this module existed. What is looked for is the wash itself: a
+# radial gradient whose stops, within the next few lines, are the accent
+# (124,92,255, or #7c5cff). Any radial gradient stood in for it until the glowing
+# dot in the Pad's files (editor_export.js exportNib, after v328) drew two of a
+# line's own ink, which is no card, and main went red on it.
+_ACCENT = re.compile(r"rgba?\(\s*124\s*,\s*92\s*,\s*255|#7c5cff", re.I)
+def _washes(text):
+    return [m.start() for m in re.finditer(r"createRadialGradient\(", text)
+            if _ACCENT.search(text[m.start():m.start() + 400])]
 _copies = sorted(p.name for p in (ROOT / "skribl" / "static").rglob("*.js")
-                 if "createRadialGradient(" in p.read_text(encoding="utf-8")
+                 if _washes(p.read_text(encoding="utf-8"))
                  and "gifenc" not in p.name and "muxer" not in p.name)
 check("and it is the only file that composites one",
       _copies == ["postedcard.js"], ", ".join(_copies))

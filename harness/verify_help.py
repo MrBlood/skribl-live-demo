@@ -20,6 +20,7 @@ Two guards:
 """
 import os
 import sys
+import time
 from assertions import make_check
 
 BASE = os.environ.get("SKRIBL_BASE", "http://127.0.0.1:5001")
@@ -358,12 +359,38 @@ with sync_playwright() as p:
     for surface, path in (("Pad", "/skribl-pad"), ("Flip", "/flip")):
         print(f"\nHELP — {surface} on a phone: labels above their words, every section shown to its end")
         ph = b.new_page(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True)
+        # THE PAGE WENT AWAY UNDER THIS TWICE, both times Flip on a phone at the
+        # first evaluate after its load, both on CI (main after #575, sqlite
+        # 5/6, green on its re-run; main after #583, postgres 4/6, green in the
+        # seal on the same tree). What took it is not known. Every load of the page from here on is written down,
+        # and a page that goes is a red row naming where it went rather than a
+        # crash; the second time no load was heard at all ("nothing seen"), and
+        # Playwright says "Execution context was destroyed" for any lost context
+        # that is not a crash. So the browser's own account is kept as well:
+        # DevTools' events for the page after its load (a context destroyed or
+        # cleared, a navigation in the document or out of it, a crash), each
+        # with its time from the load, said in the row if it goes.
+        under, armed = [], [False]
+        cdp = ph.context.new_cdp_session(ph)
+        t_load = [0.0]
+        def heard(name, keep=("executionContextId", "reason", "url", "type")):
+            def on(e):
+                if not armed[0]:
+                    return
+                bits = [f"{k}={e[k]}" for k in keep if e.get(k) not in (None, "")]
+                fr = e.get("frame") or {}
+                if fr.get("url") and not fr.get("parentId"):
+                    bits.append("url=" + fr["url"])
+                under.append(f"+{time.time() - t_load[0]:.2f}s {name.split('.')[1]}" + (f" ({', '.join(bits)})" if bits else ""))
+            return on
+        for name in ("Runtime.executionContextDestroyed", "Runtime.executionContextsCleared", "Page.frameNavigated",
+                     "Page.navigatedWithinDocument", "Page.frameRequestedNavigation", "Page.frameDetached",
+                     "Inspector.targetCrashed", "Inspector.detached"):
+            cdp.on(name, heard(name))
+        cdp.send("Runtime.enable"); cdp.send("Page.enable")
+        ph.on("crash", lambda *_: under.append(f"+{time.time() - t_load[0]:.2f}s the page crashed"))
         ph.goto(BASE + path, wait_until="load")
-        # THE PAGE WENT AWAY UNDER THIS ONCE (main, after #575: Flip on a phone,
-        # "Execution context was destroyed" at the next evaluate, once in two
-        # lanes, green on its re-run and here). What took it is not known, so
-        # every load of the page from here on is written down, and a page that
-        # goes is a red row naming where it went rather than a crash.
+        t_load[0], armed[0] = time.time(), True
         went = []
         ph.on("framenavigated", lambda f: went.append(f.url) if f == ph.main_frame else None)
         ph.wait_for_timeout(1200)
@@ -373,7 +400,8 @@ with sync_playwright() as p:
         except Exception as ex:  # noqa: BLE001 -- the failure is the finding
             ph.wait_for_timeout(600)   # for the load that took it to be heard
             check(f"{surface}: the page stays where it was opened, all through the sheet", False,
-                  f"{repr(ex)[:160]}; it loaded again: {went or 'nothing seen'}")
+                  f"{repr(ex)[:160]}; it loaded again: {went or 'nothing seen'}; "
+                  f"the browser saw: {under or 'nothing'}")
             ph.close()
             continue
         # Each section glides open in .34s; under a loaded box that ran past a
@@ -424,7 +452,8 @@ with sync_playwright() as p:
             return v.length > 3 ? +v[3] : 1; }""")
         check(f"{surface}: the help sheet's title bar is opaque, so what scrolls under it cannot show through",
               alpha == 1, f"background alpha {alpha}")
-        check(f"{surface}: the page stays where it was opened, all through the sheet", not went, str(went))
+        check(f"{surface}: the page stays where it was opened, all through the sheet", not went,
+              f"{went}; the browser saw: {under or 'nothing'}")
         ph.close()
 
     b.close()

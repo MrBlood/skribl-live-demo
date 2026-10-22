@@ -21232,3 +21232,43 @@ were not updated.
   passes in the whole suite (verify_learncard's "Pen's card says the same on
   the Pad and Flip" reads the hold row's lines). Name it as the trim's, and run
   the whole suite once.
+
+## After v328 -- two reds on main after the seal: a gate that took the glowing dot for a second card, and Flip's help sheet losing its page
+
+THE GATE (main after #585, sqlite 1/6 and postgres 1/6, both red the same
+way). verify_sharecard keeps one card composite in the tree, and its stand-in
+for the composite was any radial gradient in a script: "and it is the only file
+that composites one" now named editor_export.js beside lib/postedcard.js. The
+glowing dot in the Pad's files (#585) draws two radial gradients of a line's own
+ink, and the suite was not among the ones that PR ran: a miss of mine, since it
+reads every script, not the files it names. The card is not built twice, so the
+gate now looks for what it meant, the card's accent wash: a radial gradient whose
+stops, within the next few lines, are the accent (124,92,255 or #7c5cff). It
+finds the card's wash and not the dot's gradients; with the wash pasted into
+another script it is red naming that file (verify_sharecard 29/30), and as it is
+it is green (30/30). The suites that read every script were run beside it.
+
+THE PAGE THAT WENT. Main's full battery on the seal's commit (run 39702105179) was green in fifteen
+of its sixteen jobs. In PostgreSQL's fourth shard, verify_help's "Flip: the page
+stays where it was opened, all through the sheet" was red: "Execution context
+was destroyed" at the first evaluate after the page's load, and "it loaded
+again: nothing seen". It is that row's second red, both times Flip on a phone
+and both on CI (the first, after #575, on sqlite 5/6); the same tree passed it
+in the seal and on every other job.
+
+What the record says, and what it does not: Playwright words any lost context
+that is not a crash or a closed page that way (its crExecutionContext.js
+rewriteError; a crash is reported as a crash), and no load of the page was
+heard. A hundred and twenty runs of the row's own opening here, three at once,
+one with the CPU slowed four times, each recording DevTools' own events, lost no
+context. So the cause is not known, and what the row asks is not changed.
+
+What changes is what it keeps: the browser's own account of the page after its
+load (DevTools' events for a context destroyed or cleared, a navigation in the
+document or out of it, a crash), each with its time from the load, said in the
+row when the page goes. As it is, both editors' rows are green (verify_help
+87/87). With the page made to reload itself 1.25 s after its load, both are red
+and name it twice over, Playwright's load and the browser's own (a reload asked
+for at +1.25 s, the contexts cleared and the frame navigated at +1.43 s). A
+renderer crashed on purpose took the test driver down with it, so it shows
+nothing about the row and is not counted. The app is unchanged.
