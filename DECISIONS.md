@@ -21232,3 +21232,30 @@ were not updated.
   passes in the whole suite (verify_learncard's "Pen's card says the same on
   the Pad and Flip" reads the hold row's lines). Name it as the trim's, and run
   the whole suite once.
+
+## After v328 -- Flip's help sheet lost its page a second time on CI, and the row now keeps the browser's own account
+
+Main's full battery on the seal's commit (run 39702105179) was green in fifteen
+of its sixteen jobs. In PostgreSQL's fourth shard, verify_help's "Flip: the page
+stays where it was opened, all through the sheet" was red: "Execution context
+was destroyed" at the first evaluate after the page's load, and "it loaded
+again: nothing seen". It is that row's second red, both times Flip on a phone
+and both on CI (the first, after #575, on sqlite 5/6); the same tree passed it
+in the seal and on every other job.
+
+What the record says, and what it does not: Playwright words any lost context
+that is not a crash or a closed page that way (its crExecutionContext.js
+rewriteError; a crash is reported as a crash), and no load of the page was
+heard. A hundred and twenty runs of the row's own opening here, three at once,
+one with the CPU slowed four times, each recording DevTools' own events, lost no
+context. So the cause is not known, and what the row asks is not changed.
+
+What changes is what it keeps: the browser's own account of the page after its
+load (DevTools' events for a context destroyed or cleared, a navigation in the
+document or out of it, a crash), each with its time from the load, said in the
+row when the page goes. As it is, both editors' rows are green (verify_help
+87/87). With the page made to reload itself 1.25 s after its load, both are red
+and name it twice over, Playwright's load and the browser's own (a reload asked
+for at +1.25 s, the contexts cleared and the frame navigated at +1.43 s). A
+renderer crashed on purpose took the test driver down with it, so it shows
+nothing about the row and is not counted. The app is unchanged.
