@@ -696,8 +696,88 @@ TOOLS = "() => [...document.querySelectorAll('[data-tool]')].map(b => b.getAttri
 # button that had read "Duplicate" for many releases.
 PAGE_BAR = "() => [...document.querySelectorAll('.addbtn')].map(b => b.textContent.replace(/\\s+/g, ' ').trim())"
 HELP_TEXT = "() => document.getElementById('helpDrawer').textContent.replace(/\\s+/g, ' ')"
+
+# GATE 3b: EVERY CONTROL IN THE DRAWERS AND BARS IS DESCRIBED (the owner,
+# before the v329 seal: "are you sure that the how it works is all up to date
+# with all the tools and functions in pad and flip?"). Gate 3 reads tools and
+# ⋯ rows only, so Flip's selection bar (Flip, Duplicate, Cut, Paste), the move
+# bar's typed offset, the Pad's GIF background and the music's Step size were
+# in no tip while it was green. This reads every named control on the page
+# (button, input, select, switch, tab) outside the sheets that explain
+# themselves, and asks the sheet for its name, as the control says it, or for
+# the phrase CONTROL_ALIASES gives it. An alias is checked like a name (it must
+# be in the sheet) and one no control uses fails, so the table cannot rot.
+# Named exceptions, each for a reason: a pen colour or a background swatch
+# (the Color and Background tips describe the swatches, not each hue: read
+# from lib/palette.js and #bgGroup, not typed), an option of a group the sheet
+# describes (Coarse in a described Grid density), and GENERIC's words.
+SHEETS = ("#helpDrawer, #menuSheet, #moreMenu, #exportSheet, #postSheet, #reportSheet, #leaveSheet, "
+          "#homeScreenSteps, #homeScreenBanner, #bookRoot, #askSheet, #playerMenu, #cloudDraftsSheet, template")
+CONTROLS = """(sheets) => { const out = [], seen = new Set();
+  for (const el of document.querySelectorAll('button, input:not([type=hidden]):not([type=file]), select, [role=button], [role=switch], [role=tab]')) {
+    if (el.closest(sheets)) continue;
+    const vis = (el.textContent || '').replace(/\\s+/g, ' ').trim();
+    const name = (el.getAttribute('aria-label') || vis || el.getAttribute('title') || '').replace(/\\s+/g, ' ').trim();
+    if (!name || seen.has(name)) continue; seen.add(name);
+    const grp = el.closest('[role=group], [role=radiogroup], [role=tablist], .seg');
+    let g = grp && grp !== el ? (grp.getAttribute('aria-label') || '') : '';
+    const lb = grp && grp.getAttribute('aria-labelledby');
+    if (!g && lb) g = ((document.getElementById(lb.split(' ')[0]) || {}).textContent || '').trim();
+    out.push({ name, vis, group: g, swatch: !!el.closest('#colorGroup .color-dot:not(.color-custom), #bgGroup .bg-swatch:not(.bg-custom)')
+               || (window.SkriblPalette && SkriblPalette.PEN.some(c => c.name === name)) });
+  }
+  return out; }"""
+# A control named in the sheet by other words: its name -> the sheet's phrase.
+CONTROL_ALIASES = {
+    # the header and the dock
+    "Post to Skribl": "tap post to give it a title", "More options": "the ⋯ menu",
+    "Name your skribl": "the name goes with its drafts", "Watching speed, 1×": "tap the speed in it",
+    "Watching speed": "the speeds sit where", "Undo last stroke": "the undo button",
+    "Redo last stroke": "redo puts it back", "Toggle magnify controls": "toggles the zoom pill",
+    "Close the drawer (drag up for more)": "a tap on the grey bar at its top",
+    # the draw drawer
+    "Pick a color from the canvas": "pick any color already on the canvas",
+    "Recolor lines": "tap recolor beside the eyedropper", "Custom drawing color": "the rainbow one to mix your own",
+    "Custom canvas background": "the rainbow one for your own",
+    "Brush, smoothing & more": "colors, brush, opacity and smoothing",
+    "Stroke opacity": "lowers how solid each new stroke is",
+    "Number of sides": "poly offers sides", "Corner rounding": "offers rounding",
+    "Draw-on replay": "makes a page draw itself",
+    # Tune
+    "Grid overlay": "overlays alignment guides", "Mirror drawing": "reflects what you draw",
+    "Tint onion pages": "tints them by distance",
+    # the zoom pill
+    "Zoom out": "use + / −", "Fit to screen": "fit returns to 100%",
+    # Flip's bars and strip
+    "Move offset in canvas units. Activate to type exact coordinates.": "type them as x, y",
+    "Offset as x, y": "type them as x, y", "Which pages to move": "and following",
+    "Hold page 1, shown 1 time": "to hold it longer", "Delete page 1": "to delete a page",
+    "Pick something with Select": "pick part of your drawing with select",
+    "Stamp size, as a percentage": "size scales the stroke widths",
+    # the music drawer
+    "Add music MP3, WAV, M4A or OGG · it loops under your drawing": "add a track",
+    "Add music MP3, WAV, M4A or OGG · it loops under every page": "add a track",
+    "Toggle music on or off": "turns the music off without removing it",
+    "Remove the track": "removes the track", "Scroll the loop detail view": "scroll to move along the waveform",
+    "Nudge start earlier": "beside the start and end of the loop", "Nudge start later": "beside the start and end of the loop",
+    "Nudge end earlier": "beside the start and end of the loop", "Nudge end later": "beside the start and end of the loop",
+    "Finer step": "step size makes that step finer", "Coarser step": "step size makes that step finer or coarser",
+    "Loop crossfade length": "folds the loop's tail over its head",
+    # the photo drawer
+    "Add a photo JPG, PNG, GIF or WebP · or drop one here": "add a photo",
+    "Toggle image on or off": "hides the photo without removing it", "Remove the photo": "removes the photo",
+    "Reposition image": "drag to move the image", "Scale the photo without moving your drawing": "scale the image up",
+    "Fade the photo back so your lines read clearly": "fade the image back",
+    "Soften the photo so it does not compete with the drawing": "soften the image",
+    "Reset adjustments": "returns the adjustments",
+}
+# Words that name a kind of control, not a function: a − and + beside a
+# slider, a ✕ that puts a note away.
+GENERIC = {"Decrease", "Increase", "Dismiss",
+           "How it works"}   # Flip's own button for this sheet: the one control it need not describe
 PILLS = "() => [...document.querySelectorAll('#helpDrawer .help-pill')].map(p => p.textContent.trim())"
 
+alias_used = {}
 with sync_playwright() as p:
     b = p.chromium.launch()
     rendered = set()
@@ -722,6 +802,26 @@ with sync_playwright() as p:
                 undescribed.append(label)
         check(f"{nm}: every ⋯ menu row and every tool is named in How it works",
               len(menu) >= 8 and len(tools) >= 3 and not undescribed, f"not described: {undescribed}")
+        # gate 3b: every named control in the drawers and bars
+        ctrls = pg.evaluate(CONTROLS, SHEETS)
+        flat = " ".join(text.replace("\u2019", "'").split())
+        def said(phrase):
+            return " ".join(phrase.lower().replace("\u2019", "'").split()) in flat
+        loose, used = [], set()
+        for c in ctrls:
+            if c["swatch"] or c["name"] in GENERIC or said(c["name"]) or (len(c["vis"]) > 2 and said(c["vis"])):
+                continue
+            if c["name"] in CONTROL_ALIASES:
+                used.add(c["name"])
+                if said(CONTROL_ALIASES[c["name"]]):
+                    continue
+            if c["group"] and (said(c["group"]) or (c["group"] in CONTROL_ALIASES and said(CONTROL_ALIASES[c["group"]]))):
+                used.add(c["group"])
+                continue
+            loose.append(c["name"])
+        alias_used[nm] = used
+        check(f"{nm}: every named control in the drawers and bars is described in How it works",
+              len(ctrls) >= 60 and not loose, f"{len(loose)} of {len(ctrls)} not described: {loose}")
         if path == "/flip":
             # ...and the other direction, for the tip that names buttons by their
             # words: every button the Pages tip names is a button on the page.
@@ -764,6 +864,9 @@ with sync_playwright() as p:
             except Exception as e:      # a probe that cannot run has not shown anything
                 ok, detail = False, f"{type(e).__name__}: {str(e)[:160]}"
             check(f"{nm}: probe:{name} — {fn.__doc__.strip().splitlines()[0]}", ok, detail)
+    stale = sorted(k for k in CONTROL_ALIASES if not any(k in u for u in alias_used.values()))
+    check("every alias for a control is still used by a control on Pad or Flip",
+          bool(alias_used) and not stale, f"stale: {stale}")
     b.close()
 
 bad = [r for r in results if not r[0]]
