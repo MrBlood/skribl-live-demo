@@ -21443,3 +21443,47 @@ joins the pull-request gate beside verify_runreport, and the release batch
 that suite is in.
 
 Pad and Flip: not for either; this is the harness's environment, not the app.
+
+## After v328 -- the auditor's first answer, and verify_docs in an unpacked zip (AUD-001)
+
+The v328 auditor sent back a partial audit, as
+`skribl-v328-audit-partial-developer-package.zip` (SHA-256 c9bb9b2c8a8e...;
+the owner holds it): AUDIT-REPORT.md, BASELINE-HASHES.json, REPRODUCTION.md.
+Its seven hashes are the ones sent (the five in docs/audit/v328/SHA256SUMS-packet.txt
+less README-FIRST, and the Python halves and the whole in the note). The app came
+up offline on the Python 3.12 the note sent, ten server-side suites passed as
+written, no product defect was found, and nothing was scored: the auditor's
+browser could not reach 127.0.0.1 (ERR_BLOCKED_BY_ADMINISTRATOR) and the offline
+wheels carry no Playwright, so nothing on screen was seen. Release decision:
+not determined. Two items: HIST-001, the Flip-help row lost on CI, which #588
+already made keep the browser's own account; and AUD-001, below.
+
+AUD-001: verify_docs on the source zip, unpacked, with no .git, was red. Two
+rows, both the harness's, not the app's:
+
+* "a file in the frozen hash that no commit records makes the tree DIRTY"
+  injected a phantom into the tree the suite runs in, which only means
+  something in a checkout. Outside one, `git diff HEAD` does not fail cleanly:
+  it prints its usage, and release_run.source_state() kept the usage's last
+  line as its reason (`unknown ['    --output <file> ...']`). The state was
+  right (unknown, never clean); the reason was noise. source_state() now asks
+  git where the checkout is first: no repository says "not a git checkout (an
+  unpacked archive has no .git)", and one whose top is not the tree (a zip
+  unpacked inside somebody's clone) says "not its own checkout". The row now
+  makes its own checkout in a temporary folder (clean, then a file in no
+  commit), and asks the archive's case and the nested case beside it, so it
+  asks the same thing in a clone and in a zip.
+* "the archive directory name carries SKRIBL_VERSION" asked that the name END
+  in the version, and harness/package.py names each package
+  skribl-<version>-<kind>: red on every zip the release built. The auditor
+  renamed the folder to get past it. It now takes the packager's names, with
+  or without the kind.
+
+Shown in a copy of this branch's tracked files unpacked as the zip unpacks
+(skribl-v328-source, no .git): 142/142, and 142/142 in the clone. Red by its
+own break each: source_state() as it was, 140/142 (the archive row and the
+nested row); without only the nested half, 141/142 (the nested row); the old
+name rule, 141/142 (the name row). The v328 source zip itself, unpacked as it
+came: 140/142, the auditor's red plus the name.
+
+Pad and Flip: not for either; this is the harness, not the app.

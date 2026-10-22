@@ -527,6 +527,25 @@ def source_state():
     # (this runs at the start of every slice, and a seal is easy to poll
     # alongside). A transient lock must not turn into an assertion about the
     # repository, so it retries once and then says what actually happened.
+    # NOT A CHECKOUT IS SAID AS ONE. Outside a repository `git diff HEAD` does
+    # not fail cleanly: it falls back to comparing two paths, prints its usage,
+    # and the last line of that usage became the reason. The v328 auditor ran
+    # the source zip (no .git, by design) and read `unknown ['    --output
+    # <file>       output to a specific file']` (AUD-001). The state was right,
+    # never clean; the reason was noise. So git is asked first where the
+    # checkout is: no repository, or a repository whose top is not ROOT (an
+    # archive unpacked inside somebody else's clone, whose files git would
+    # list against the wrong tree), is named as that.
+    try:
+        top = subprocess.run(["git", "-C", str(ROOT), "rev-parse", "--show-toplevel"],
+                             capture_output=True, text=True, timeout=30)
+    except Exception as exc:
+        return "unknown", [f"git could not be run: {type(exc).__name__}"]
+    if top.returncode != 0 and "not a git repository" in (top.stderr or ""):
+        return "unknown", ["not a git checkout (an unpacked archive has no .git)"]
+    if top.returncode == 0 and pathlib.Path(top.stdout.strip()).resolve() != pathlib.Path(ROOT).resolve():
+        return "unknown", [f"not its own checkout: inside {top.stdout.strip()}"]
+
     why = "git did not answer"
     for attempt in (0, 1):
         try:

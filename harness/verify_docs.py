@@ -402,8 +402,13 @@ if (ROOT / ".git").exists():
     check("archive naming: skipped, this is a git checkout",
           True, f"directory {ROOT.name!r} — the version lives in skribl/core.py")
 else:
+    # harness/package.py names each package skribl-<version>-<kind>, so the
+    # version is in the middle: asking that the name END in it was red on every
+    # zip the release built, and the v328 auditor renamed the folder to get past
+    # it (AUD-001). The name is the packager's, or the packager's without its kind.
     check("the archive directory name carries SKRIBL_VERSION",
-          bool(_v) and ROOT.name.endswith(_v),
+          bool(_v) and re.fullmatch(rf"skribl-{re.escape(_v)}(-source|-runtime|-evidence)?",
+                                    ROOT.name) is not None,
           f"directory {ROOT.name!r} against SKRIBL_VERSION {_v!r}")
 
 print("\nDOCS — suite counts match what is on disk")
@@ -747,26 +752,55 @@ check("...but generated-only dirt is the process working, and still seals",
 # record said `clean`, and the sealed hash could not be reproduced from the
 # commit it names.
 #
-# DRIVEN BY INJECTING A PHANTOM into the list the hash is built from, rather
-# than by writing a file into the repository: a suite that leaves a stray file
-# behind when it is interrupted would poison the next seal with the very
-# condition it is testing for. Confirmed by hand against a real untracked file
-# before this was written — it landed in tree_files() and the old rule never
-# named it.
-_real_tf = _rr.tree_files
+# DRIVEN ON A CHECKOUT OF ITS OWN, made here in a temporary folder, never by
+# writing a file into the repository: a suite that leaves a stray file behind
+# when it is interrupted would poison the next seal with the very condition it
+# is testing for. It used to inject a phantom into tree_files() of the tree
+# the suite runs in, which only means something when that tree is a checkout;
+# the v328 auditor ran it from the source zip, which has no .git by design,
+# and it went red there (AUD-001). On its own checkout it asks the same in a
+# clone and in an unpacked archive, and the archive's own case is asked too.
+import shutil as _shutil  # noqa: E402
+import tempfile as _tempfile  # noqa: E402
+
+_real_root = _rr.ROOT
+_GIT = ["git", "-c", "user.name=verify_docs", "-c", "user.email=verify_docs@invalid",
+        "-c", "commit.gpgsign=false", "-c", "core.hooksPath=/dev/null"]
+_fx = Path(_tempfile.mkdtemp(prefix="skribl-source-state-"))
 try:
-    _rr.tree_files = lambda: list(_real_tf()) + ["ZZZ-hashed-but-untracked.txt"]
+    (_fx / "checkout").mkdir()
+    (_fx / "checkout" / "tracked.txt").write_text("in a commit\n")
+    for _cmd in (["init", "-q"], ["add", "tracked.txt"], ["commit", "-q", "-m", "fixture"]):
+        subprocess.run(_GIT + _cmd, cwd=_fx / "checkout", check=True, capture_output=True)
+    _rr.ROOT = _fx / "checkout"
+    _clean_state = _rr.source_state()
+    (_fx / "checkout" / "ZZZ-hashed-but-untracked.txt").write_text("in no commit\n")
     _phantom_state, _phantom_paths = _rr.source_state()
+    (_fx / "archive").mkdir()
+    (_fx / "archive" / "a.txt").write_text("unpacked\n")
+    _rr.ROOT = _fx / "archive"
+    _archive_state = _rr.source_state()
+    (_fx / "checkout" / "nested").mkdir()
+    _rr.ROOT = _fx / "checkout" / "nested"
+    _nested_state = _rr.source_state()
 finally:
-    _rr.tree_files = _real_tf
+    _rr.ROOT = _real_root
+    _shutil.rmtree(_fx, ignore_errors=True)
+check("a checkout with every file in a commit is clean (the case the next row turns)",
+      _clean_state == ("clean", []), str(_clean_state))
 check("a file in the frozen hash that no commit records makes the tree DIRTY",
       _phantom_state == "dirty"
       and "ZZZ-hashed-but-untracked.txt" in _phantom_paths,
       f"{_phantom_state} {_phantom_paths[:4]} — the hash covers what is on "
       f"disk, so anything on disk that git does not track has to be named "
       f"here or the record claims a clean tree nobody can rebuild")
-check("...and the restore left tree_files as it found it",
-      _rr.tree_files is _real_tf)
+check("a folder with no .git (an unpacked archive) is UNKNOWN, never clean, and says why in words",
+      _archive_state == ("unknown", ["not a git checkout (an unpacked archive has no .git)"]),
+      f"{_archive_state} — git's own usage text was the reason once (AUD-001)")
+check("an archive unpacked inside somebody else's checkout is UNKNOWN too, naming it",
+      _nested_state[0] == "unknown" and _nested_state[1][0].startswith("not its own checkout"),
+      str(_nested_state))
+check("...and the fixture left ROOT as it found it", _rr.ROOT is _real_root)
 
 # And the classifier under it: a lane is ATTESTED only on tree-bound evidence.
 _att, _pend = _rr.external_coverage("0" * 64, ["verify_postgres.py"])
