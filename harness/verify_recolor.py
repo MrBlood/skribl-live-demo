@@ -559,6 +559,58 @@ with sync_playwright() as pw:
             check("Color's glyph is the pen's colour", dot == "rgb(0, 169, 92)", dot)
         c.close()
 
+    # ========================================================= the button's drops
+    # The owner, before the v329 seal: "make this button more exciting, like
+    # maybe 3 colored drops and the skribl line under it, so it shows kinda
+    # what it does"; option B of the mock, "all yes". Read off the PAINTED
+    # button, both editors, both themes: each of the three inks is in the drops
+    # (the top of the button) and carried by the line (the bottom), and each
+    # stands 3:1 against the button's own ground, what a graphic needs.
+    print("\nTHE BUTTON'S DROPS — three of the pen's inks falling into a line that carries them")
+    from PIL import Image
+    # The three inks as the page defines them (styles.css's .rc-inks), so a
+    # change of token is what the rows measure, not a copy typed here.
+    TOKENS = {"purple": "--recolor-drop-a", "pink": "--recolor-drop-b", "blue": "--recolor-drop-c"}
+
+    def _lum(rgb):
+        c = [v / 255 for v in rgb]
+        c = [x / 12.92 if x <= 0.03928 else ((x + 0.055) / 1.055) ** 2.4 for x in c]
+        return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]
+
+    def _ratio(a, b_):
+        hi, lo = sorted((_lum(a), _lum(b_)), reverse=True)
+        return (hi + 0.05) / (lo + 0.05)
+    for route in ED:
+        for theme in ("light", "dark"):
+            c = b.new_context(color_scheme=theme, **{**PHONE, "device_scale_factor": 4})
+            q = c.new_page()
+            browsing.goto(q, BASE, route)
+            q.evaluate("() => { window.SkriblHints && SkriblHints.hide && SkriblHints.hide(); }")
+            q.evaluate(ED[route]["drawer"]); q.wait_for_timeout(600)
+            ground = q.evaluate("""() => getComputedStyle(document.getElementById('recolorBtn')).backgroundColor
+                .match(/\\d+/g).slice(0, 3).map(Number)""")
+            INKS = {k: tuple(int(v[i:i + 2], 16) for i in (1, 3, 5)) for k, v in q.evaluate(
+                "(t) => Object.fromEntries(Object.entries(t).map(([k, n]) => [k, getComputedStyle(document.querySelector('#recolorBtn svg'))"
+                ".getPropertyValue(n).trim()]))", TOKENS).items()}
+            im = Image.open(io.BytesIO(q.locator("#recolorBtn svg").screenshot())).convert("RGB")
+            w, h = im.size
+            px = im.load()
+            top, low = {k: 0 for k in INKS}, {k: 0 for k in INKS}
+            for y in range(h):
+                for x in range(w):
+                    p = px[x, y]
+                    for k, ink in INKS.items():
+                        if sum((p[i] - ink[i]) ** 2 for i in range(3)) < 45 ** 2:
+                            (top if y < h * 0.55 else low)[k] += 1
+            ratios = {k: round(_ratio(v, ground), 2) for k, v in INKS.items()}
+            check(f"{route} {theme}: the Recolor button paints a drop of each of the three inks",
+                  all(n >= 20 for n in top.values()), f"ink pixels in the drops {top} of {w}x{h}")
+            check(f"{route} {theme}: ...and the line under them carries those colours",
+                  sum(1 for n in low.values() if n >= 6) >= 2, f"ink pixels in the line {low}")
+            check(f"{route} {theme}: ...each drop 3:1 or more against the button",
+                  min(ratios.values()) >= 3, f"against rgb{tuple(ground)}: {ratios}")
+            c.close()
+
     # ================================================================== the ends
     print("\nTHE ENDS — a replay and the eraser key end the mode")
     for route in ED:

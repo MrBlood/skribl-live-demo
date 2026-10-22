@@ -21635,3 +21635,41 @@ and the page reloading the moment the sheet opens, as on CI, red "while opening
 every section of the sheet, +1.85s" with Playwright's error and the same
 account. As it is, both editors' rows are green (verify_help 87/87). The app
 is unchanged.
+
+## After v328 -- Recolor's button shows what it does: three drops falling into a line (the owner's B)
+
+The owner, before the v329 seal, of Recolor's button (a drop over a grey
+wave): "I would like you to make this button more exciting, like maybe 3
+colored drops and the skribl line under it, so it shows kinda what it does".
+Mocked in the real button on the Pad, phone and desk, light and dark, beside
+now: A, three drops over the grey line; B, three drops and the line carrying
+their colours; C, one drop and the line turning from grey to its colour. B,
+recommended; "all yes".
+
+The drops are three of the pen's own inks (lib/palette.js): Skribl purple,
+Fluoro pink, Ink blue. The line under them is a sweep of the same three. Inks,
+not chrome, so one value in both themes, and each stands 3:1 or more against
+the button's ground (light 4.35, 3.09, 4.73; dark 3.66, 5.15, 3.36). The
+eyedropper beside it stays grey: it takes a colour, so it has none to show.
+Recolor's tip in How it works draws the same, with its own gradient id (ids
+are unique on a page). The three values sit on the drawing (.rc-inks), not
+:root: on :root they rode into player.css, 81 B over its ratchet
+(verify_player_isolation, verify_jsstrip), for a button the player never
+shows.
+
+verify_recolor, THE BUTTON'S DROPS, read off the painted button on both
+editors in both themes, with the inks read from the page's own .rc-inks:
+each ink in the drops, the line carrying them, each drop 3:1 against the
+button. Red by its own break each: the old drawing (no ink pixels, 8 rows);
+the line back to grey (the line rows, 4); a drop set to Acid yellow (the
+contrast row on light, 1.25:1, on both editors). The contrast row first read
+the inks from a list typed in the test, which a change of token could not
+reach; it reads the page now, and that break was run again after the move.
+As built 88/88, with verify_a11y 595/595, verify_contrast 334/334,
+verify_parity 410/410, verify_help 87/87, verify_helpclaims 42/42,
+verify_icons 60/60, verify_theme 118/118, verify_seam 424/424,
+verify_player_isolation 85/85, verify_jsstrip 35/35, verify_surfaces 12/12,
+verify_docs 142/142.
+
+Pad and Flip: shared, one partial for the drawer and one for How it works.
+Not tested here: SF and Segoe UI; the drawing is drawn, not typed.

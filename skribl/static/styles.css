@@ -2156,6 +2156,24 @@ body.replaying .tab-panel > * { opacity: var(--drawer-rest); }
 @media (hover: hover) { .eyedropper-btn:hover { background: var(--surface-control-hover); color: var(--text-bright); } }
 .eyedropper-btn.picking { background: var(--ui-active); color: #fff; border-color: transparent; }
 
+/* RECOLOR'S THREE DROPS (the owner: "maybe 3 colored drops and the skribl
+   line under it, so it shows kinda what it does"; option B of the mock): three
+   of the pen's own inks (lib/palette.js), Skribl purple, Fluoro pink and Ink
+   blue, falling into a line that carries their colours, so the button shows
+   what it does. Inks, not chrome, so one value in both themes; against the
+   button's ground each is 3:1 or more (light 4.35, 3.09, 4.73; dark 3.66,
+   5.15, 3.36), what a graphic needs. The eyedropper beside it stays grey: it
+   takes a colour, so it has none to show. The same drawing is on Recolor's
+   tip in How it works. Set on the drawing (.rc-inks), not :root, so the
+   player, which never shows it, does not carry them. */
+.rc-inks { --recolor-drop-a: #7c5cff; --recolor-drop-b: #ff48b0; --recolor-drop-c: #0078bf; }
+.rc-drop-a { fill: var(--recolor-drop-a); }
+.rc-drop-b { fill: var(--recolor-drop-b); }
+.rc-drop-c { fill: var(--recolor-drop-c); }
+.rc-stop-a { stop-color: var(--recolor-drop-a); }
+.rc-stop-b { stop-color: var(--recolor-drop-b); }
+.rc-stop-c { stop-color: var(--recolor-drop-c); }
+
 /* RECOLOR (lib/recolor.js, both editors). Its button is the eyedropper's
    twin in the colour row (the class it shares above). While the mode is on,
    its bar takes the dock's row: the dock keeps its size and its glass, so
