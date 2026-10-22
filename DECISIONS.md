@@ -21300,7 +21300,7 @@ before anything else.
 
 **The auditor's packet for v328** was made and sent to the owner at about 6:55
 PM on 21 October, just after the seal merged: six files, each under 30 MB. The
-owner sends it on.
+owner sent it on to the auditor on the morning of 22 October.
 
 * `README-FIRST.txt`, the auditor's guide, in six parts: check the files
   arrived whole; check where the three release zips came from (`gh attestation
@@ -21330,6 +21330,20 @@ the wheels zip's fingerprint is in that SHA256SUMS-packet.txt. The session's
 own copies were in its scratch space and went with its container; the owner
 holds the six files that were sent.
 
+**A note to go with it, before the audit.** Once the owner had sent the six
+files, they asked whether anything else should go to the auditor first. A
+short note was written for them to send, kept in the tree as it was given to
+them, `docs/audit/v328/NOTE-BEFORE-THE-AUDIT.txt`. It changes nothing in the
+packet, and says four things. README-FIRST's sentence that pip checks every
+wheel against constraints.txt's hashes holds for the app's packages, not for
+the harness's Flask-WTF, WTForms and Pillow (README-OFFLINE says it rightly;
+the app imports none of them), and the doubled click and MarkupSafe wheels
+install as pinned. The offline packages are for Linux x86_64 with Python 3.12
+only. GitHub's run on the seal commit has one red job (verify_help, Flip at
+phone size, PostgreSQL 4/6) on code that passed that row everywhere else,
+cause unknown. And the live site runs main, which has the three yeses v328
+does not.
+
 **To answer for the packet, or to make the next one:**
 
 * A file the auditor holds is the one that was sent when its SHA-256 matches
@@ -21347,8 +21361,9 @@ holds the six files that were sent.
 
 **Still open, at the end of the session:**
 
-* **The resubmission.** The owner sends the six files to the auditor; whatever
-  comes back is the next session's first job.
+* **The audit.** The owner sent the six files on the morning of 22 October,
+  and the note above was written for them to send next; the auditor starts on
+  the owner's go-ahead. Whatever comes back is the next session's first job.
 * **The owner's look at the three yeses**, on the PC: rest on a button and
   count to two before its card; open a recoloured drawing's link in light and
   in dark and find the dots; export a recoloured drawing from the Pad as a GIF

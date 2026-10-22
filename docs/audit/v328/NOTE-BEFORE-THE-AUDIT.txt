@@ -1,0 +1,60 @@
+SKRIBL v328 -- A NOTE BEFORE THE AUDIT
+======================================
+
+Written after the packet was sent, so nothing in it has to change: the six
+files and SHA256SUMS-packet.txt stand as they are. Four things the packet does
+not say, or says too strongly.
+
+
+1. ONE SENTENCE IN README-FIRST.TXT SAYS TOO MUCH
+
+Part 2 says of the wheels zip: "its pins are constraints.txt's hashes in the
+source zip, and pip checks every wheel against them on install." That holds
+for the app's packages, not for all of them. README-OFFLINE.txt, inside the
+wheels zip, has it right: the app's packages install with --require-hashes
+against constraints.txt, and the test harness's own Flask-WTF and Pillow (with
+WTForms, which Flask-WTF needs) install from the same zip with the network
+off, but without hashes. The app does not import any of the three; the
+harness and its tools do.
+
+The wheels folder also holds two packages twice, click (8.4.2 and 8.5.0) and
+MarkupSafe (3.0.3 and 3.0.4); the newer copies came down with the harness's
+packages. Following README-OFFLINE.txt installs the versions constraints.txt
+pins, 8.4.2 and 3.0.3. That was checked again, offline, on 22 October.
+
+
+2. THE OFFLINE PACKAGES ARE FOR ONE KIND OF MACHINE
+
+As the wheels zip's name and README-OFFLINE.txt say, they are built for Linux
+on x86_64 with Python 3.12, which is where the offline install was proved. On
+anything else (macOS, Windows, another Python version) they will not install.
+With the internet, requirements.txt in the source zip names the other
+supported install, `pip install -r requirements.txt`; that was not run for
+this packet.
+
+
+3. ONE RED JOB IN GITHUB'S RUN ON THE SEAL COMMIT
+
+GitHub's run on the v328 commit (98067f8, harness run 39702105179) shows one
+job of sixteen red: "harness (postgresql 4/6)". One row failed in it, in
+verify_help: Flip's help sheet at phone size. The test lost its hold on the
+page ("Execution context was destroyed") just after the page loaded, and no
+reload of the page was seen. The same code passed that row in the seal's own
+run (harness/RELEASE.md), in GitHub's run on the frozen tree before the merge
+(run 39683246696, every job green, the run the MP4 and PostgreSQL attestations
+come from), and in main's later runs. It is the second time that row has
+failed this way, both times on GitHub's machines and both on Flip at phone
+size. The cause is not known. After the seal, the test was changed to record
+what the browser itself saw, should it happen again. The app was not changed.
+
+
+4. THE LIVE SITE IS NEWER THAN v328
+
+The public demo runs the repository's main branch, which has moved on since
+v328: the help card waits two seconds before it opens on a desk (#584), and a
+recoloured drawing shows a dot on the scrubber where a line changed colour,
+with the Pad's GIF and video files showing the glowing pen dot (#585). The
+other changes since are to the tests and the notes only (#586, #588 and
+after). None of these is in the packet. The audit is of the zips; anything the
+live site has that they do not is one of these. The next sealed release, v329,
+will carry them.
