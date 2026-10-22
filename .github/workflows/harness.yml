@@ -622,6 +622,55 @@ jobs:
             exit 1
           fi
 
+  # WEBKIT, ON AN IPHONE'S SCREEN (after v328, the owner: "let's keep it native
+  # to our Python/Flask stack ... add it to the main branch pipeline"). Built
+  # like the Firefox job above: after a merge only, a skip fails it, and the
+  # build container has no WebKit, so this is the only place the smoke runs.
+  # Playwright's WebKit is the engine Safari is built on, for Linux; it is not
+  # an iPhone. harness/webkit_smoke.py says what it asks and why, prints each
+  # page's load times, and saves a full-page screenshot of any page that threw,
+  # logged an error or had a request fail; the folder is kept as an artifact.
+  webkit:
+    name: webkit smoke (iPhone 15)
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5.6.0
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r constraints.txt --require-hashes
+          pip install -r harness/requirements.txt
+      - name: Install WebKit
+        run: python -m playwright install --with-deps webkit
+      - name: Run the WebKit smoke
+        env:
+          SKRIBL_SMOKE_SHOTS: ${{ runner.temp }}/webkit-shots
+        run: ./harness/run_harness.sh webkit_smoke.py
+      - name: Fail if the WebKit smoke only SKIPPED
+        # The same guard as Firefox's: a skip proves nothing about WebKit, on
+        # the one job that exists to run it.
+        run: |
+          if grep -q "suites skipped   : 0" harness/LAST-RUN.txt; then
+            echo "WebKit smoke ran."
+          else
+            echo "WebKit smoke SKIPPED on the job that exists to run it." >&2
+            cat harness/LAST-RUN.txt >&2
+            exit 1
+          fi
+      - name: Keep the screenshots of any page that went wrong
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
+        with:
+          name: webkit-smoke-screenshots
+          path: ${{ runner.temp }}/webkit-shots/
+          if-no-files-found: ignore
+
   # SOMEBODY READS MAIN NOW (v314). The battery above runs after a merge, and
   # for a long time nothing read its result: main sat red for about five hours
   # after #221 and again after the v311 merge, both found by accident
@@ -639,7 +688,7 @@ jobs:
   # drives case by case on every pull request.
   main-watch:
     name: main watch (a red main opens an issue)
-    needs: [sqlite, postgres, mp4, firefox]
+    needs: [sqlite, postgres, mp4, firefox, webkit]
     if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -651,5 +700,5 @@ jobs:
       - name: Open, update or close the red-main issue
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          JOB_RESULTS: '{"sqlite": "${{ needs.sqlite.result }}", "postgres": "${{ needs.postgres.result }}", "mp4": "${{ needs.mp4.result }}", "firefox": "${{ needs.firefox.result }}"}'
+          JOB_RESULTS: '{"sqlite": "${{ needs.sqlite.result }}", "postgres": "${{ needs.postgres.result }}", "mp4": "${{ needs.mp4.result }}", "firefox": "${{ needs.firefox.result }}", "webkit": "${{ needs.webkit.result }}"}'
         run: python3 harness/tools/mainwatch.py

@@ -61,6 +61,16 @@ bare run and a seal never meet it; there is no Firefox in the build container,
 where it would only skip. `SKRIBL_SMOKE_ENGINE=chromium` runs the same steps on
 Chromium, which is how a change to it is checked here.
 
+**WebKit** is CI's too, after a merge: `harness/webkit_smoke.py` does the same
+on Playwright's "iPhone 15" (its screen, scale, touch and user agent) in
+WebKit, the engine Safari is built on, and adds what a phone's first visit
+can show: no page throws, logs an error, or has a request to Skribl fail or
+answer 400 or more; a full-page screenshot of any page that does
+(`SKRIBL_SMOKE_SHOTS`, kept as the job's artifact); and each page's first
+byte, DOMContentLoaded and load, printed as a baseline. It is WebKit on Linux,
+not an iPhone, and it makes no video (that build records through a media stack
+an iPhone does not have). `SKRIBL_SMOKE_ENGINE=chromium` checks it here.
+
 ## The suites
 
 **Assertion counts are NOT listed here.** This section used to carry one per

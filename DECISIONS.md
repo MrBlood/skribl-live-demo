@@ -21673,3 +21673,41 @@ verify_docs 142/142.
 
 Pad and Flip: shared, one partial for the drawer and one for How it works.
 Not tested here: SF and Segoe UI; the drawing is drawn, not typed.
+
+## After v328 -- A WebKit smoke on an iPhone's screen, after every merge (the owner's yes)
+
+The owner passed on a suggestion from another assistant: an npm Playwright
+suite in WebKit on an emulated iPhone, catching script errors, console errors
+and failed requests, with a screenshot on failure and load times. Asked
+whether Skribl already did that: it did not. Every browser suite is Chromium,
+plus the Firefox smoke after a merge; this container cannot download WebKit.
+Proposed instead in the harness's own shape, not a second npm stack beside a
+Python one, and said plainly what it is not: Playwright's WebKit is the engine
+Safari is built on, for Linux, not an iPhone. The owner: "let's keep it native
+to our Python/Flask stack ... add it to the main branch pipeline".
+
+harness/webkit_smoke.py, built like harness/firefox_smoke.py, on Playwright's
+"iPhone 15" (393x659 at 3x, touch, its user agent): the Pad, Flip, the
+Gallery, the Library and a share link boot; a stroke on each editor is data
+and ink; the Pad's replay plays; each editor posts through its own sheet,
+ticked public; the link plays with ink; the Gallery shows both posts and the
+Library lists both. On every page: nothing thrown, nothing logged as an error,
+no request to Skribl failed or answered 400 or more (warnings printed, not
+failed), and a full-page screenshot of any page that broke one of those or
+stopped a step, kept as the job's artifact. Each page's first byte,
+DOMContentLoaded and load are printed from its own navigation timing, a
+baseline rather than a gate. No video: that build records through a media
+stack an iPhone does not have, and its answer would describe neither.
+
+CI's new `webkit` job runs it after a merge only, installs WebKit with its
+system packages, and fails on a skip, as Firefox's does; main-watch waits for
+it too, so a red WebKit smoke opens the "main is red" issue. verify_docs pins
+all three (the lane, its skip guard, main-watch's five needs and results).
+
+Checked here on Chromium with the same phone (SKRIBL_SMOKE_ENGINE=chromium):
+12/12, with the load times printed. Shown red: on a port Chrome refuses
+(5061), every page's steps and the failed-request row; with an error logged
+and an error thrown planted on every page, those two rows, and a screenshot of
+each of the five pages. Its first real WebKit run is CI's, after this merges.
+
+Pad and Flip: both, as Firefox's smoke does.
