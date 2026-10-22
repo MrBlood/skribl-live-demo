@@ -21606,3 +21606,32 @@ Pad and Flip: shared; both save account drafts through lib/savedrafts.js and
 this route. Not here: the same SQLite lock on other writes (a post, a draft's
 first save), which ratelimit.py already turns into refusals for its own; named,
 not chased.
+
+## After v328 -- Flip's help row keeps more when its page goes (HIST-001, the third red)
+
+Main's full run on #594's commit (run 39799832970, postgresql 2/6): verify_help's
+"Flip: the page stays where it was opened, all through the sheet" red for the
+third time, the same as before ("Execution context was destroyed"), and with
+#588's account of the page: "it loaded again: nothing seen; the browser saw:
+nothing". So no navigation, no context destroyed or cleared, no crash, while
+Playwright said the context was destroyed. The page did not reload itself, as
+was thought possible. Not #594's: the row went red twice before it, and #594
+changes only the hello under Reduce Motion. #592's full run, just before,
+was green on every job, and issue #593 closed itself.
+
+What the row asks is unchanged; what it keeps when it fails is more:
+Playwright's whole error, where it was cut at 160 characters; which of its two
+steps it was (hiding the first-use hint, or opening every section) and when; a
+main-world context created, so a renderer swapped under the page would show
+as a new context with no old one destroyed; and the tab as the browser itself
+holds it, from a session on the browser (destroyed, crashed, detached, or its
+address changed; a change of title is not kept). The target's information
+carries no process number, so a swap shows only as the new context.
+
+Shown red three ways on a scratch copy (Flip only, deleted after): the page
+reloading itself at 1.25 s, and going to another site (127.0.0.1 to localhost)
+at 1.25 s, each name the load, the target's new address and the new context;
+and the page reloading the moment the sheet opens, as on CI, red "while opening
+every section of the sheet, +1.85s" with Playwright's error and the same
+account. As it is, both editors' rows are green (verify_help 87/87). The app
+is unchanged.

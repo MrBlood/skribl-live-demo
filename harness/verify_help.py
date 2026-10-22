@@ -370,6 +370,15 @@ with sync_playwright() as p:
         # DevTools' events for the page after its load (a context destroyed or
         # cleared, a navigation in the document or out of it, a crash), each
         # with its time from the load, said in the row if it goes.
+        #
+        # THE THIRD TIME (main after #594, postgresql 2/6) the browser saw none
+        # of those: no context gone, no navigation, no crash, while Playwright
+        # said the context was destroyed. So the row keeps more: Playwright's
+        # whole error (it was cut at 160 characters; any call log comes with
+        # it), which of its two steps it was and when, a main-world context
+        # CREATED (a new one with no old one destroyed is a renderer swapped
+        # under the page), and the browser's own account of the tab as a
+        # target (destroyed, crashed, detached, or its address changed).
         under, armed = [], [False]
         cdp = ph.context.new_cdp_session(ph)
         t_load = [0.0]
@@ -377,6 +386,12 @@ with sync_playwright() as p:
             def on(e):
                 if not armed[0]:
                     return
+                if name == "Runtime.executionContextCreated":
+                    ctx = e.get("context") or {}
+                    aux = ctx.get("auxData") or {}
+                    if not aux.get("isDefault"):
+                        return   # Playwright's own utility worlds, every page has them
+                    e = {"executionContextId": ctx.get("id"), "url": ctx.get("origin")}
                 bits = [f"{k}={e[k]}" for k in keep if e.get(k) not in (None, "")]
                 fr = e.get("frame") or {}
                 if fr.get("url") and not fr.get("parentId"):
@@ -385,23 +400,47 @@ with sync_playwright() as p:
             return on
         for name in ("Runtime.executionContextDestroyed", "Runtime.executionContextsCleared", "Page.frameNavigated",
                      "Page.navigatedWithinDocument", "Page.frameRequestedNavigation", "Page.frameDetached",
-                     "Inspector.targetCrashed", "Inspector.detached"):
+                     "Inspector.targetCrashed", "Inspector.detached", "Runtime.executionContextCreated"):
             cdp.on(name, heard(name))
         cdp.send("Runtime.enable"); cdp.send("Page.enable")
+        # The tab as the browser holds it, from a session on the browser itself.
+        me = cdp.send("Target.getTargetInfo")["targetInfo"]
+        bcdp = b.new_browser_cdp_session()
+        def as_target(name):
+            def on(e):
+                info = e.get("targetInfo") or {}
+                if armed[0] and (e.get("targetId") or info.get("targetId")) == me["targetId"]:
+                    if name.endswith("targetInfoChanged"):
+                        moved = [k for k in ("url",) if info.get(k) != me.get(k)]
+                        if not moved:
+                            return   # its title, say: nothing to do with the page going
+                        me.update({k: info.get(k) for k in moved})
+                    bits = [f"{k}={info[k]}" for k in ("url", "attached") if info.get(k) not in (None, "")]
+                    under.append(f"+{time.time() - t_load[0]:.2f}s {name.split('.')[1]}"
+                                 + (f" ({', '.join(bits)})" if bits else ""))
+            return on
+        for name in ("Target.targetDestroyed", "Target.targetCrashed", "Target.targetInfoChanged",
+                     "Target.detachedFromTarget"):
+            bcdp.on(name, as_target(name))
+        bcdp.send("Target.setDiscoverTargets", {"discover": True})
         ph.on("crash", lambda *_: under.append(f"+{time.time() - t_load[0]:.2f}s the page crashed"))
         ph.goto(BASE + path, wait_until="load")
         t_load[0], armed[0] = time.time(), True
         went = []
         ph.on("framenavigated", lambda f: went.append(f.url) if f == ph.main_frame else None)
         ph.wait_for_timeout(1200)
+        step = ["hiding the first-use hint"]
         try:
             ph.evaluate("() => { window.SkriblHints && SkriblHints.hide(); }")
+            step[0] = "opening every section of the sheet"
             ph.evaluate(OPEN_ALL)
         except Exception as ex:  # noqa: BLE001 -- the failure is the finding
             ph.wait_for_timeout(600)   # for the load that took it to be heard
+            whole = " | ".join(line.strip() for line in str(ex).splitlines() if line.strip())
             check(f"{surface}: the page stays where it was opened, all through the sheet", False,
-                  f"{repr(ex)[:160]}; it loaded again: {went or 'nothing seen'}; "
-                  f"the browser saw: {under or 'nothing'}")
+                  f"while {step[0]}, +{time.time() - t_load[0]:.2f}s: {type(ex).__name__}: {whole[:1500]}; "
+                  f"it loaded again: {went or 'nothing seen'}; the browser saw: {under or 'nothing'}")
+            bcdp.detach()
             ph.close()
             continue
         # Each section glides open in .34s; under a loaded box that ran past a
@@ -454,6 +493,7 @@ with sync_playwright() as p:
               alpha == 1, f"background alpha {alpha}")
         check(f"{surface}: the page stays where it was opened, all through the sheet", not went,
               f"{went}; the browser saw: {under or 'nothing'}")
+        bcdp.detach()
         ph.close()
 
     b.close()
