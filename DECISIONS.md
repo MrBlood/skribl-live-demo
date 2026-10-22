@@ -21233,9 +21233,22 @@ were not updated.
   the Pad and Flip" reads the hold row's lines). Name it as the trim's, and run
   the whole suite once.
 
-## After v328 -- Flip's help sheet lost its page a second time on CI, and the row now keeps the browser's own account
+## After v328 -- two reds on main after the seal: a gate that took the glowing dot for a second card, and Flip's help sheet losing its page
 
-Main's full battery on the seal's commit (run 39702105179) was green in fifteen
+THE GATE (main after #585, sqlite 1/6 and postgres 1/6, both red the same
+way). verify_sharecard keeps one card composite in the tree, and its stand-in
+for the composite was any radial gradient in a script: "and it is the only file
+that composites one" now named editor_export.js beside lib/postedcard.js. The
+glowing dot in the Pad's files (#585) draws two radial gradients of a line's own
+ink, and the suite was not among the ones that PR ran: a miss of mine, since it
+reads every script, not the files it names. The card is not built twice, so the
+gate now looks for what it meant, the card's accent wash: a radial gradient whose
+stops, within the next few lines, are the accent (124,92,255 or #7c5cff). It
+finds the card's wash and not the dot's gradients; with the wash pasted into
+another script it is red naming that file (verify_sharecard 29/30), and as it is
+it is green (30/30). The suites that read every script were run beside it.
+
+THE PAGE THAT WENT. Main's full battery on the seal's commit (run 39702105179) was green in fifteen
 of its sixteen jobs. In PostgreSQL's fourth shard, verify_help's "Flip: the page
 stays where it was opened, all through the sheet" was red: "Execution context
 was destroyed" at the first evaluate after the page's load, and "it loaded
