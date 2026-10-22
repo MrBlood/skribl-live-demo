@@ -606,6 +606,14 @@ with sync_playwright() as p:
     # with them, so it went in one frame. Read off every frame: coming in and
     # going, it passes through the middle on several frames, and no one frame
     # moves it more than a third of the way.
+    # "gone" is written on the first frame after the hello leaves the page;
+    # _until saw it leave, and on a busy runner that frame had not come yet
+    # (main after #600, both lanes: every step green, the record ending a
+    # frame early). So the record is read once that frame has come.
+    try:
+        q.wait_for_function("() => (window.__fade || []).slice(-1)[0] === 'gone'", timeout=3000)
+    except Exception:
+        pass
     fade = q.evaluate("() => window.__fade")
     rows = [r for r in fade if r != "gone"]
 
