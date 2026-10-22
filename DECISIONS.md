@@ -21272,3 +21272,102 @@ and name it twice over, Playwright's load and the browser's own (a reload asked
 for at +1.25 s, the contexts cleared and the frame navigated at +1.43 s). A
 renderer crashed on purpose took the test driver down with it, so it shows
 nothing about the row and is not counted. The app is unchanged.
+
+## After v328 -- the handoff at the session's end: the auditor's packet as sent, and where things stand
+
+The owner, once main was green again: "make a new handoff since you created
+the auditor files. I am going to start a new session". The entry two above
+this one ("where things stand, and notes for the next session") was written
+before main's runs went red, and stays true as written. This one is the state
+at the end of the session; the next session starts here.
+
+**Where things stand, on the evening of 21 October.** Main is green: its full
+battery on #588's commit passed on both databases at 8:44 PM MDT. Apart from
+this entry's own pull request, no pull request or issue was open and nothing
+was scheduled. v328 is the newest release. The owner's three yeses from the
+desktop checks (#584, #585) are on main and in no sealed release yet.
+
+**What came after the entry two above.** Main's full runs went red in two
+places, both in the harness, not the app. verify_sharecard took the Pad's new
+glowing dot for a second share card: a real miss, since that suite reads every
+script and #585 had not run it. verify_help's Flip-on-a-phone row lost its page
+on CI, its second time. #588 fixed the first and gave the second the browser's
+own account; the entry above this one says how. If that row goes red again,
+its detail says what the browser saw after the load, with times: read that
+before anything else.
+
+**The auditor's packet for v328** was made and sent to the owner at about 6:55
+PM on 21 October, just after the seal merged: six files, each under 30 MB. The
+owner sends it on.
+
+* `README-FIRST.txt`, the auditor's guide, in six parts: check the files
+  arrived whole; check where the three release zips came from (`gh attestation
+  verify`, and the Release's own SHA-256s); what the seal says (the note types
+  none of the seal's numbers and points at harness/RELEASE.md); run it
+  offline; what the owner checked by hand (the thirteen desktop checks, and
+  which DECISIONS entry records them); what was not tested (no WebKit or
+  iPhone, no Segoe UI or SF, the hand checks on Windows).
+* `SHA256SUMS-packet.txt`, the SHA-256 of the other five.
+* `skribl-v328-source.zip`, `skribl-v328-runtime.zip` and
+  `skribl-v328-evidence.zip`: byte for byte the zips `release.yml` built from
+  the seal commit and published as the v328 Release. Before they went in, each
+  was checked against the Release's SHA256SUMS-v328.txt and against its own
+  SHA256SUMS inside, and each one's attestation was found through GitHub's
+  attestations API.
+* `skribl-wheels-cp312-linux-x86_64.zip`, from `harness/tools/wheelhouse.py`:
+  every Python package, so the app runs with no package network. It is not
+  attested; its pins are constraints.txt's hashes, which pip checks on install.
+  Its README-OFFLINE was run line by line in an unpacked copy, with pip's
+  network refused, to an app that answered.
+
+**Where the packet is now.** The two text files are in the tree as they were
+sent, in `docs/audit/v328/`; `sha256sum -c --ignore-missing
+SHA256SUMS-packet.txt` run there says README-FIRST.txt is the one sent. The
+zips are not in the tree: the three release zips are on the v328 Release, and
+the wheels zip's fingerprint is in that SHA256SUMS-packet.txt. The session's
+own copies were in its scratch space and went with its container; the owner
+holds the six files that were sent.
+
+**To answer for the packet, or to make the next one:**
+
+* A file the auditor holds is the one that was sent when its SHA-256 matches
+  its line in `docs/audit/v328/SHA256SUMS-packet.txt`.
+* The release zips can be fetched from the Release again at any time.
+* The wheels zip is rebuilt with `python3 harness/tools/wheelhouse.py OUT`
+  from a clean copy of the v328 tree (a fresh clone at the tag, never a
+  checkout over work in progress). Whether a rebuild matches the sent zip byte
+  for byte has not been tried; the SHA256SUMS inside it checks it either way.
+* The next packet's README-FIRST starts from this one: change the version, the
+  seal commit, the sizes and part 5 (that seal's hand checks), and keep part
+  3's rule that the numbers live in harness/RELEASE.md. Keep the new pair in
+  `docs/audit/` under its version when it is sent (`docs/SESSION-CONTEXT.md`
+  §4, step 9).
+
+**Still open, at the end of the session:**
+
+* **The resubmission.** The owner sends the six files to the auditor; whatever
+  comes back is the next session's first job.
+* **The owner's look at the three yeses**, on the PC: rest on a button and
+  count to two before its card; open a recoloured drawing's link in light and
+  in dark and find the dots; export a recoloured drawing from the Pad as a GIF
+  and as an MP4 and watch the glowing dot. The dot is the Pad's alone: Flip
+  shows none on screen, so its files have none.
+* **Nothing since v327 has been seen on an iPhone**: the hello and its wink,
+  Recolor, the scrubber's dots, the glowing dot in the Pad's files.
+* **Sealing v329**, which carries the three yeses. The owner was asked whether
+  to seal at once or after the PC look; Cal recommended after, so that a tweak
+  from the look rides the same seal. It was not answered when the session
+  ended. A seal here takes about three hours (v328's tests ran from 4:00 to
+  6:45 PM) and runs alone.
+* **The owner's page**: "Skribl Desktop Checks"
+  (https://claude.ai/artifact/HHLuXfvRMzpcmrCUvMuaqx) is current, and its live
+  card says main is green with the three yeses in.
+* FUTURE.md's items wait for the owner to choose, as always.
+
+**A note for the session that picks this up.** A change that adds drawing work
+to a script (a gradient, a composite, a new kind of canvas call) runs the
+suites that read every script, not only those that name the files it touches.
+At #588 those were verify_a11y, verify_docs, verify_icons, verify_jsstrip,
+verify_names, verify_seam, verify_sharecard, verify_surfaces and verify_tools;
+find them by grepping the suites for a glob over the scripts rather than by
+trusting this list.
