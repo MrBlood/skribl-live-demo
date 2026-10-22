@@ -21711,3 +21711,55 @@ and an error thrown planted on every page, those two rows, and a screenshot of
 each of the five pages. Its first real WebKit run is CI's, after this merges.
 
 Pad and Flip: both, as Firefox's smoke does.
+
+## After v328 -- How it works names every control in the drawers and bars, and a check that holds it there
+
+The owner, before the v329 seal: "are you sure that the how it works is all up
+to date with all the tools and functions in pad and flip?" Not quite.
+verify_helpclaims' gate 3 asks for every tool button (data-tool) and every ⋯
+row, and it was green; it never looked inside a drawer or a bar. A count of
+every named control against the sheet's words found gaps, mocked with new
+words beside the Recolor button, and "all yes" to both: the four tips as
+written, and a wider check before the seal.
+
+THE FOUR, as mocked: Flip's Select names the selection bar's flips,
+Duplicate, Cut and Paste; Flip's Move artwork says to tap the numbers and type
+x, y; the Pad's Export names the GIF's Solid or Transparent background (Size is
+Flip's only: the mock first said both had it, and was corrected before it was
+sent); and Nudge names Step size, under Fine-tune.
+
+AND WHAT THE WIDER CHECK FOUND BEYOND THEM, given words in the same way: Grid
+density (Coarse, Medium, Fine, in Tune); Clear drawing on the Pad and Clear all
+pages on Flip, at the end of the draw drawer (a second tap, the media kept, an
+Undo beside it); Redo; the music's and the photo's on/off switch, and the
+music's bin; and Flip's Smear weight (Light, Normal, Strong, for the next Smear).
+
+GATE 3b (verify_helpclaims): every named control on each editor (button,
+input, select, switch, tab), outside the sheets that explain themselves
+(the ⋯ menu, Export, Post, Report, Ask, the little book, the Home Screen steps,
+the leave dialog, the player's share menu), is described: its own name or
+visible words are in the sheet, or CONTROL_ALIASES' phrase for it is (checked
+like a name, and an alias no control uses fails as stale); or it is a pen
+colour or background swatch (read from lib/palette.js and #bgGroup), an option
+of a group the sheet describes, or one of GENERIC's words (Decrease, Increase,
+Dismiss, and Flip's own How it works button). Pad 119 controls, Flip 159. On
+main's sheet it is red on exactly the gaps above, Pad 12 and Flip 16 (Paste,
+the typed offset, Step size and the nudges, the switches, the bin, Clear,
+Redo, Grid density, Smear weight); with the new words 45/45. Its first draft
+asked for "any word of the name anywhere", which passed Flip's Cut and
+Duplicate because the Pages tip uses those words; it asks for the name now.
+Flip's Duplicate and Cut still pass on the Pages tip's words; theirs are in
+the Select tip all the same.
+
+verify_help's "the sheet covers what the app does now" forbade the words
+"clear drawing" and "clear all pages" outright, from when Clear was a ⋯ row
+that New Skribl replaced (the reason is not written down; that is the reading
+that fits). The draw drawer's two Clear buttons are real, so it now asks that
+every sentence naming a clear places it in the draw drawer, and that the
+button is there: green as built, red with the sentence sending people to the
+⋯ menu instead (both editors).
+
+verify_helpclaims 45/45, verify_help 87/87, verify_ask, verify_book 56/56,
+verify_a11y 595/595, verify_docs.
+
+Pad and Flip: shared, one How it works partial with Flip's own tips.

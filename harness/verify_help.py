@@ -461,9 +461,19 @@ with sync_playwright() as p:
         pills = ph.evaluate("() => [...document.querySelectorAll('#helpDrawer .help-pill')].map(p => p.textContent.trim())")
         words = ph.evaluate("() => document.getElementById('helpDrawer').textContent.toLowerCase()")
         want = ["Saved drafts", "Name", "Menus & panels", "Undo & New Skribl"]
+        # CLEAR IS THE DRAW DRAWER'S, NOT THE ⋯ MENU'S. This row forbade the
+        # words outright, from when Clear was a ⋯ row that New Skribl replaced.
+        # The draw drawer's own Clear drawing (Pad) and Clear all pages (Flip)
+        # are still there, and the sheet now describes them (after v328, the
+        # owner's "is How it works up to date?"): so every sentence naming a
+        # clear has to place it in the draw drawer, and the button has to be
+        # there. A sheet that still sent people to the ⋯ menu for it is red.
+        clears = [x.strip() for x in words.replace("\n", " ").split(".")
+                  if "clear drawing" in x or "clear all pages" in x]
+        there = ph.evaluate("() => !!document.querySelector('#drawPanel :is(#clearDrawerBtn, #clear)')")
         check(f"{surface}: the sheet covers what the app does now (drafts, naming, panels, New Skribl)",
-              all(w in pills for w in want) and "clear drawing" not in words and "clear all pages" not in words,
-              f"missing {[w for w in want if w not in pills]}")
+              all(w in pills for w in want) and all("draw drawer" in x for x in clears) and there,
+              f"missing {[w for w in want if w not in pills]}; clears said {clears}; the drawer's button there: {there}")
         # A CLOSED SECTION SHOWS NOTHING (owner's iPhone, after v317: "I closed
         # the first accordion and the first still displays under"). The body
         # collapses a grid row to 0fr, and a 0fr row cannot shrink below its
