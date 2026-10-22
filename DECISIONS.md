@@ -21493,3 +21493,21 @@ zip byte for byte as received, and each of its three files beside it with
 `.txt` added to the name. The added suffix keeps the auditor's report out of
 verify_docs' reading of every `.md` in the tree, where its own sentences (the
 release record's totals, quoted) would be a hand-typed count in our docs.
+
+**The follow-up for the auditor.** The owner: "create a zip for me to give
+them to start". `skribl-v328-audit-followup.zip` (SHA-256 c9fd124555e2...,
+about 75 KB) holds four files, three of them kept here in `docs/audit/v328/`
+as given to the owner: NOTE-AFTER-THE-PARTIAL-AUDIT.txt (AUD-001 and its fix,
+HIST-001, the live site for the app on screen, the exports), AUD-001.patch
+(the fix to harness/release_run.py and harness/verify_docs.py), and
+SHA256SUMS-followup.txt. The fourth is mp4-exports.zip, the MP4 lane's artifact
+from run 39683246696 on the sealed tree, which the owner downloaded from
+GitHub (the container's proxy refuses GitHub's artifact store); its SHA-256
+is the digest GitHub lists for it, 3a7c0c94ac86..., and it can be fetched
+from that run again until the artifact expires (January 2027). Its report and
+this container's own ffprobe agree: the two MP4s are H.264 with no audio, and
+the two drawings with music are WebM with Opus, because Chrome on Linux has no
+AAC encoder; the note says so, and that the AAC route (Windows, macOS) is not
+in the files. Followed from the finished zip as written: every sum checks,
+the report's own sums check, and the patch on a fresh copy of the v328 source
+zip turns verify_docs from 140/142 to 145/145.
