@@ -692,7 +692,11 @@ jobs:
   # drives case by case on every pull request.
   main-watch:
     name: main watch (a red main opens an issue)
-    needs: [sqlite, postgres, mp4, firefox, webkit]
+    # Not webkit: its install pulls some 190 system packages from the Ubuntu
+    # mirror, which crawled twice after v328 and timed the job out before its
+    # smoke began. It still runs and shows red or green on every merge; it
+    # opens no red-main issue (the owner's yes, after the v329 seal).
+    needs: [sqlite, postgres, mp4, firefox]
     if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -704,5 +708,5 @@ jobs:
       - name: Open, update or close the red-main issue
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          JOB_RESULTS: '{"sqlite": "${{ needs.sqlite.result }}", "postgres": "${{ needs.postgres.result }}", "mp4": "${{ needs.mp4.result }}", "firefox": "${{ needs.firefox.result }}", "webkit": "${{ needs.webkit.result }}"}'
+          JOB_RESULTS: '{"sqlite": "${{ needs.sqlite.result }}", "postgres": "${{ needs.postgres.result }}", "mp4": "${{ needs.mp4.result }}", "firefox": "${{ needs.firefox.result }}"}'
         run: python3 harness/tools/mainwatch.py

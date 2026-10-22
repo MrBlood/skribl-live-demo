@@ -27,6 +27,7 @@ import argparse
 import datetime
 import hashlib
 import json
+import os
 import pathlib
 import re
 import subprocess
@@ -601,6 +602,77 @@ def tree_hash():
     return hashlib.sha256(inner.encode()).hexdigest()
 
 
+def preflight(env=None):
+    """What would sink a three-hour run in its first minute, asked first.
+
+    The v329 seal's first start used the system python3, which has no Flask:
+    every batch failed in seconds and the run had to start over. Each batch is
+    run_harness.sh, which runs `python3` from PATH, so this asks THAT python3
+    for Flask and a Chromium that launches. It also asks that nothing else is
+    running a server or a browser here, since a neighbour is the load the
+    timing suites read as a slow frame (WORKING-AGREEMENTS, "Sealing a
+    release"), and that run_harness.sh's port is free. Returns the problems,
+    each one line; none means go.
+    """
+    env = env or os.environ
+    problems = []
+    probe = ("import flask\n"
+             "from playwright.sync_api import sync_playwright\n"
+             "p = sync_playwright().start(); b = p.chromium.launch(); b.close(); p.stop()\n")
+    try:
+        r = subprocess.run(["python3", "-c", probe], cwd=ROOT, env=env,
+                           capture_output=True, text=True, timeout=90)
+        if r.returncode != 0:
+            last = (r.stderr or r.stdout).strip().splitlines()[-1:] or ["no output"]
+            problems.append(f"the python3 on PATH cannot import Flask or launch Chromium: {last[0][:200]} "
+                            f"(put the venv first: PATH=/tmp/skribl-venv/bin:$PATH)")
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        problems.append(f"the python3 on PATH did not answer: {exc}")
+    # By what each process IS (its command name, or the script python runs),
+    # never by words anywhere in its arguments: a shell whose command line
+    # merely names this file is this run's own parent. This run's ancestors and
+    # finished processes (state Z, the probe's own browser being reaped) are
+    # not neighbours.
+    try:
+        ps = subprocess.run(["ps", "-eo", "pid=,ppid=,stat=,comm=,args="],
+                            capture_output=True, text=True).stdout
+    except OSError:
+        ps = ""
+    procs = {}
+    for line in ps.splitlines():
+        f = line.split(None, 4)
+        if len(f) >= 4 and f[0].isdigit():
+            procs[int(f[0])] = (int(f[1]), f[2], f[3], f[4] if len(f) > 4 else "")
+    mine, pid = set(), os.getpid()
+    while pid in procs and pid not in mine:
+        mine.add(pid)
+        pid = procs[pid][0]
+    for pid, (_, stat, comm, args) in sorted(procs.items()):
+        if pid in mine or stat.startswith("Z"):
+            continue
+        argv = args.split()
+        script = next((a for a in argv[1:] if not a.startswith("-")), "") if comm.startswith("python") else ""
+        what = None
+        exe = pathlib.Path(argv[0]).name if argv else ""
+        if exe in ("chrome", "headless_shell", "headless_shell.real", "firefox", "MiniBrowser") or comm.startswith(("chrome", "headless_shell")):
+            what = "a browser"
+        elif comm == "postgres":
+            what = "PostgreSQL"
+        elif comm.startswith("python") and "flask" in argv[1:4] and "run" in argv:
+            what = "a Flask server"
+        elif comm == "run_harness.sh" or "run_harness.sh" in argv[:2] or (argv[:1] == ["bash"] and argv[1:2] and argv[1].endswith("run_harness.sh")):
+            what = "run_harness.sh"
+        elif script.endswith(("run_parallel.py", "release_run.py")) or script.endswith(".py") and pathlib.Path(script).name.startswith("verify_"):
+            what = pathlib.Path(script).name
+        if what:
+            problems.append(f"{what} is already running here (pid {pid}): {args[:100]}")
+    import socket
+    with socket.socket() as sock:
+        if sock.connect_ex(("127.0.0.1", 5001)) == 0:
+            problems.append("port 5001, run_harness.sh's, is already answering")
+    return problems
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--dry-run", action="store_true")
@@ -656,6 +728,13 @@ def main():
             print("  listed more than once       :", ", ".join(dupes))
         return 1
     print(f"batch coverage: all {len(on_disk)} suites appear exactly once")
+    problems = preflight()
+    if problems:
+        print("PREFLIGHT REFUSED — fix these before a run of hours begins:")
+        for p_ in problems:
+            print(f"  {p_}")
+        return 2
+    print("preflight      : python3 has Flask and a Chromium; nothing else running")
     if args.dry_run:
         return 0
 

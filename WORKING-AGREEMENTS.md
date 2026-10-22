@@ -335,6 +335,19 @@ for nothing is a target.
 
 ## Sealing a release
 
+**SEAL ONLY WHEN THERE IS A REASON.** The owner, after v329 took half a day:
+"we don't need to seal so frequently." A seal is about three hours of this
+box running alone. Seal for an outside audit, for a release someone is handed,
+or when the owner asks; not at the end of a session, and not because changes
+have piled up. Between seals, every merge is covered by main's full run after
+it (twelve shards, both databases, the MP4, Firefox and WebKit lanes). A
+handoff says "not sealed since vNNN" and that is fine.
+
+Before a seal, `release_run.py --dry-run` (with the venv first on PATH) asks
+in about a minute what would sink it: a python3 without Flask or a Chromium
+that launches, a server, browser or suite already running, port 5001 taken.
+The real run asks the same and refuses with exit 2.
+
 Bump `SKRIBL_VERSION` in `skribl/core.py`, add the `DECISIONS.md` entry,
 update the version lines in `README.md` and `ARCHIVE-README.md` (pinned by
 `verify_docs`), then `harness/release_run.py` (it checkpoints and resumes on
