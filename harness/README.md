@@ -69,7 +69,9 @@ answer 400 or more; a full-page screenshot of any page that does
 (`SKRIBL_SMOKE_SHOTS`, kept as the job's artifact); and each page's first
 byte, DOMContentLoaded and load, printed as a baseline. It is WebKit on Linux,
 not an iPhone, and it makes no video (that build records through a media stack
-an iPhone does not have). `SKRIBL_SMOKE_ENGINE=chromium` checks it here.
+an iPhone does not have). `SKRIBL_SMOKE_ENGINE=chromium` checks it here. It shows
+its own red or green on every merge and opens no red-main issue: its install
+comes from the Ubuntu mirror, which has been slow enough to time it out.
 
 ## The suites
 

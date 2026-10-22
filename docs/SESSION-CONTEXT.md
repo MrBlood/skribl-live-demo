@@ -194,6 +194,13 @@ any theory about why.
 WORKING-AGREEMENTS.md's "Sealing a release" is the rule; this is the sequence that has
 satisfied it, with the mechanics the rule leaves out.
 
+0. **Is a seal wanted at all?** Only for an outside audit, a release someone is
+   handed, or the owner's ask (WORKING-AGREEMENTS.md, "Sealing a release").
+   Then `PATH=/tmp/skribl-venv/bin:$PATH python3 harness/release_run.py
+   --dry-run` (about a minute) before anything else: it refuses a python3
+   without Flask or Chromium, a server, browser or suite already running, and
+   a taken port 5001. v329's first start used the system python3 and every
+   batch died in seconds.
 1. Bump `SKRIBL_VERSION` in `skribl/core.py`, write the DECISIONS entry, update
    the version lines in `README.md` and `ARCHIVE-README.md`. If a `lib/*.js`
    was added, `python3 harness/gen_docs.py` regenerates the module index. Run

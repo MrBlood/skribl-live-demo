@@ -1723,9 +1723,15 @@ _wft = (ROOT / ".github" / "workflows" / "harness.yml").read_text(encoding="utf-
 _mwb = re.search(r"^  main-watch:\n((?:    .*\n|\s*\n)+)", _wft, re.M)
 _mwb = _mwb.group(1) if _mwb else ""
 check("the main-watch job exists", bool(_mwb), "no `main-watch:` job in harness.yml")
-check("...it waits for all five after-merge jobs (the battery's three, Firefox and WebKit)",
-      re.search(r"^    needs:\s*\[\s*sqlite\s*,\s*postgres\s*,\s*mp4\s*,\s*firefox\s*,\s*webkit\s*\]\s*$", _mwb, re.M) is not None,
+check("...it waits for the four after-merge jobs that gate main (the battery's three and Firefox)",
+      re.search(r"^    needs:\s*\[\s*sqlite\s*,\s*postgres\s*,\s*mp4\s*,\s*firefox\s*\]\s*$", _mwb, re.M) is not None,
       "a job that does not need a lane cannot see it fail")
+# WebKit runs after every merge and shows its own result, but opens no red-main
+# issue: a slow Ubuntu mirror timed its install out twice after v328 (the
+# owner's yes, after the v329 seal). A webkit in needs: would put that back.
+check("...and not for WebKit, whose slow installs are not main's red",
+      not re.search(r"^    needs:.*\bwebkit\b", _mwb, re.M) and "needs.webkit" not in _mwb,
+      "main-watch needs webkit again")
 _if = re.search(r"^    if:\s*(.+)$", _mwb, re.M)
 _if = _if.group(1) if _if else ""
 check("...it runs when they FAIL (always()) and only on a push to main",
@@ -1737,8 +1743,8 @@ check("...its token can write issues and nothing broader",
       re.search(r"^    permissions:\n      contents: read\n      issues: write\n", _mwb, re.M) is not None,
       "permissions block missing or wider than contents:read + issues:write")
 check("...and it hands decide() every lane's result",
-      all(f'"{j}": "${{{{ needs.{j}.result }}}}"' in _mwb for j in ("sqlite", "postgres", "mp4", "firefox", "webkit"))
-      and "harness/tools/mainwatch.py" in _mwb, "JOB_RESULTS must name all five needs")
+      all(f'"{j}": "${{{{ needs.{j}.result }}}}"' in _mwb for j in ("sqlite", "postgres", "mp4", "firefox"))
+      and "harness/tools/mainwatch.py" in _mwb, "JOB_RESULTS must name all four needs")
 
 # MAIN'S CI SHARDS RUN EVERY SUITE, ONCE. Each battery job is a matrix of
 # shards, and each shard runs the names harness/shard.py prints for "I/N". A
