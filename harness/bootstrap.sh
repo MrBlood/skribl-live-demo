@@ -46,11 +46,24 @@ fi
 [ -n "$PY" ] || { echo "python$PIN not found; the repo pins $PIN (.python-version) and the lock is built for it"; exit 2; }
 
 # --- 2. the install ----------------------------------------------------------
+# A venv this script makes carries a mark from before it exists until both
+# installs have finished. A run cut off part way (a turn boundary reaps it, a
+# pip fails) leaves the mark, and the next run installs again: the first draft
+# skipped every venv that had a python3, so an interrupted install stayed
+# interrupted and the next run booted nothing ("No module named 'flask'").
+# A venv somebody else made (README-OFFLINE's, from the wheels, with no
+# package network) has no mark and is used as it is.
+PENDING="$VENV/.bootstrap-installing"
 if [ ! -x "$VENV/bin/python3" ]; then
+  mkdir -p "$VENV"
+  : > "$PENDING"
   "$PY" -m venv "$VENV"
+fi
+if [ -e "$PENDING" ]; then
   "$VENV/bin/python3" -m pip install --quiet --upgrade pip
   "$VENV/bin/pip" install --quiet -r constraints.txt --require-hashes
   "$VENV/bin/pip" install --quiet -r harness/requirements.txt
+  rm -f "$PENDING"
 fi
 echo "venv:     $("$VENV/bin/python3" --version) at $VENV"
 echo "playwright: $("$VENV/bin/python3" -c 'from importlib.metadata import version; print(version("playwright"))' 2>/dev/null || echo 'not installed')"

@@ -121,6 +121,9 @@ jobs:
       # a temp SQLite file with the test client and the CLI -- no server.
       # verify_runreport joined after v325: the parallel runner's report is
       # driven with results built in the suite itself -- no browser, no server.
+      # verify_bootstrap joined after v328: bootstrap.sh is run against a
+      # stand-in python3.12 and stops at the tables -- no browser, no server,
+      # no network.
       - name: Run the boot and source suites
         run: |
           ./harness/run_harness.sh \
@@ -129,7 +132,7 @@ jobs:
             verify_createpost.py verify_sweepjob.py verify_deletion.py \
             verify_backfill.py verify_hostseams.py verify_mediareport.py \
             verify_surfaces.py verify_integration.py verify_mediameta.py \
-            verify_takedown.py verify_runreport.py
+            verify_takedown.py verify_runreport.py verify_bootstrap.py
       # run_harness.sh exits 0 on a skip, so a suite that quietly declined to
       # run would leave this job green having proved nothing. None of these is
       # designed to skip, so ANY skip is a failure -- the guard is generalised

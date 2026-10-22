@@ -111,6 +111,8 @@ stale the same way (the paragraph under the list says so too):
                          and report sheet, bins that ask without moving
     verify_runreport.py  run_parallel.py keeps its first red: red beside
                          others and green alone is INTERMITTENT, never ok
+    verify_bootstrap.py  bootstrap.sh finishes an install it was cut off in,
+                         and leaves a venv it did not make as it is
 
 That list is a sample and always was — there are far more suites on disk than
 appear here, and `RELEASE.md` names every one of them.

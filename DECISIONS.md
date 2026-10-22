@@ -21413,3 +21413,33 @@ along, send the interpreter the way v328's note did. And a red case has to
 fail inside its own sandbox: v328's ran pip with no environment around it,
 and three packages landed in the container's own Python 3.13, which the
 session was not allowed to remove.
+
+## After v328 -- bootstrap.sh finishes an install it was cut off in
+
+The session after the handoff, checking the ground: the first
+`harness/bootstrap.sh` was reaped at a turn boundary part way through its pip
+installs. The second run found the venv's python3, skipped installing, and
+stopped at the tables with "No module named 'flask'"; so would every run after
+it, until the venv was deleted or the installs were run by hand. The owner:
+"yes, put up the bootstrap fix".
+
+A venv the script makes now carries a mark, `.bootstrap-installing`, from before
+the venv exists until both installs have finished. While the mark is there,
+the next run installs again into the venv it finds. A venv with no mark is used
+as it is: README-OFFLINE's, made from the wheels with no package network, must
+not send pip to a network it does not have, and a venv an earlier bootstrap
+finished has no mark either.
+
+verify_bootstrap runs the script against a stand-in python3.12 whose venv's
+python3 and pip only write down what they were asked, and whose pip fails on
+request; every run stops at the tables, so no server starts and nothing is
+fetched. Red on the script as it was (4/7: no mark after the failed run, and
+no install on the next), and red with the mark never taken off (5/7: a
+finished venv installed into on every run). Green as built (7/7). The owner's
+case ran for real too: a fresh venv, a bootstrap stopped at 20 seconds (the
+mark left), then a second run that installed, booted, and imported Flask and
+Playwright, with the mark gone. It needs no browser, server or network, so it
+joins the pull-request gate beside verify_runreport, and the release batch
+that suite is in.
+
+Pad and Flip: not for either; this is the harness's environment, not the app.
