@@ -21168,3 +21168,67 @@ allowed); the bead skipped while a colour runs turns all three red on the tap
 Pad and Flip: the dots are shared code that Flip reaches with no moments; the
 bead is the Pad's export, since Flip has none on screen.
 
+
+## After v328 -- where things stand, and notes for the next session
+
+The owner, at the end of the session that sealed v328: "prepare a handoff for
+the next session". This is it, written once that session's work had merged. It
+types no counts: `harness/RELEASE.md` has the seal's.
+
+**Merged in that session, newest last.** The v328 seal (#583), with the
+owner's thirteen desktop checks in its entry. Then the owner's three yeses from
+those checks, which the v328 seal does not carry and the next one will: the
+help card waits two seconds on a desk (#584); a dot of the new colour on the
+scrubber where a line changed colour, and the glowing dot riding the line in
+the Pad's GIFs and videos (#585). The two entries above this one say how
+each was built and shown red. Main's full battery runs after each merge; when
+this entry was written, the run on the seal's commit was still going and the
+later ones were queued behind it, so the first thing to check is that main's
+latest run is green.
+
+**The audit packet for v328** went to the owner as six files, each under 30
+MB: README-FIRST, SHA256SUMS-packet, the three zips `release.yml` built and
+attested from the seal commit (the v328 Release), and the wheels zip from
+`harness/tools/wheelhouse.py`, proved by installing with pip's network refused.
+Its README-FIRST names the owner's desktop checks and where they are written.
+All of it can be rebuilt: the zips and their sums are on the Release, and the
+wheelhouse is one command from the v328 tree (`docs/SESSION-CONTEXT.md` §4,
+step 9).
+
+**The owner's pages.** "Skribl Desktop Checks"
+(https://claude.ai/artifact/HHLuXfvRMzpcmrCUvMuaqx) is the current one: the
+owner's checks and the steps to the audit, kept in the page's own database, so
+a session changes a step's words and state with the artifact tools rather than
+by publishing the page again. "Skribl v327 Resubmission"
+(https://claude.ai/artifact/D1NQ1tM27mG8fGa6z3gS69) and "Skribl Last Checks"
+(https://claude.ai/artifact/XdmDDymWHKnbe2bKpDrEZo) are earlier rounds' and
+were not updated.
+
+**Still open, after v328:**
+
+* **The owner's look at the three yeses**, on the Windows desk: rest on a
+  button and count to two; open a recoloured drawing's link in light and in
+  dark and find its dots; export a recoloured drawing from the Pad as a GIF
+  and as an MP4 and watch the glowing dot ride the line and sit on the tap.
+  The MP4's own encoder was not run here (headless Chromium has none); the
+  frames it is handed were.
+* **The resubmission to the auditor**, with the v328 packet, and whatever the
+  auditor sends back.
+* **Nothing since v327 has been seen on an iPhone**: the hello and its wink,
+  Recolor, the scrubber's dots. This round's checks were on Windows.
+* **The next seal (v329)** carries the three yeses.
+* FUTURE.md's items wait for the owner to choose, as always.
+
+**Notes for the session that picks this up:**
+
+* **A seal runs alone.** The v328 run went in two slices, each a tracked
+  background command, and nothing else used a browser beside it;
+  `docs/SESSION-CONTEXT.md` §4 now says why.
+* **A waiter must not match itself.** `pgrep -f PATTERN` in a loop whose own
+  command line holds PATTERN never ends. Wait on a log line or on the
+  background command's own notice.
+* **A trimmed copy of a suite can fail a row by construction.** A row that
+  reads what an earlier, trimmed-away row collected fails in the copy and
+  passes in the whole suite (verify_learncard's "Pen's card says the same on
+  the Pad and Flip" reads the hold row's lines). Name it as the trim's, and run
+  the whole suite once.

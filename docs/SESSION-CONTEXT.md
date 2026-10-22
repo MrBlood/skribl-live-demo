@@ -226,6 +226,14 @@ satisfied it, with the mechanics the rule leaves out.
    command, in `--budget` slices that end well inside that command's time
    limit (90 minutes, `--budget 5400`, against a 2-hour limit), and re-invoke
    it when a slice ends. Every slice re-verifies the frozen hash.
+
+   **Nothing else in a browser while it runs.** The seal's timing rows (the
+   hold's frame pacing, the hello's clocks, the recorders) share the box's
+   CPUs (four, at v328) with whatever else runs, so a suite, a mock or a probe
+   beside the seal is the same load PostgreSQL was (WORKING-AGREEMENTS.md,
+   "Sealing a release"). Write, read and prepare while it runs, and run the
+   next change's suites once it has passed. At v328 the owner's three picks
+   were built and their checks written during the run, and run after it.
 5. **While it holds, carry both attestations into the tree.** The `mp4` and
    `postgres` jobs each write a file naming the tree they tested; artifact
    download is blocked, so transcribe each from the job's own `cat` step (the
