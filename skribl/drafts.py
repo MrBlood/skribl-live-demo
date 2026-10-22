@@ -90,6 +90,15 @@ class DraftConflict(DraftRejected):
         self.current = current
 
 
+class DraftBusy(DraftRejected):
+    """Another write held the database while this save was being made (SQLite's
+    one writer at a time: the v328 audit's AUD-002). Nothing was saved and
+    nothing was lost; saving again a moment later goes through, or meets a
+    real conflict and is answered as one."""
+    def __init__(self):
+        super().__init__("Another save is being made right now. Try again in a moment.", status=409)
+
+
 class DraftNotFound(Exception):
     message = "Draft not found."
 
@@ -182,9 +191,11 @@ def save_draft(author_id, payload, *, kind, title=None, thumbnail=None, public_i
 
     `base_updated_at` is the updatedAt of the copy the client opened. Given,
     the overwrite happens only if the stored draft is still that copy, and
-    raises DraftConflict otherwise; the row is locked for the comparison, so
-    two saves arriving together cannot both pass it. Absent (an older client,
-    a host's own code), the overwrite is unconditional, as it always was."""
+    raises DraftConflict otherwise. Two saves arriving together cannot both
+    pass it: on PostgreSQL the row is locked for the comparison, and on SQLite
+    the file's one writer lets one write and the other is DraftBusy (below).
+    Absent (an older client, a host's own code), the overwrite is
+    unconditional, as it always was."""
     owner = _owner(author_id)
     title = _validate(payload, kind, title, thumbnail)
     if public_id is not None and base_updated_at is not None:
@@ -208,9 +219,29 @@ def save_draft(author_id, payload, *, kind, title=None, thumbnail=None, public_i
             status=409)
     if public_id is not None:
         d = _find(owner, public_id)
-        d.kind, d.title, d.payload_json = kind, title, payload
-        d.thumbnail, d.size_bytes, d.updated_at = thumbnail, size, now
-        s.flush()
+        # A SAVE THAT MEETS ANOTHER WRITE IS TOLD SO, NEVER A 500 (the v328
+        # audit's AUD-002). On SQLite every request is a real transaction
+        # (models.py's BEGIN recipe), so its reads hold the file's read lock
+        # until it ends; two saves that have both read and then both write
+        # deadlock, and SQLite fails one of them, at once or after its busy
+        # timeout. The row lock above is PostgreSQL's alone. The lock is the whole file's,
+        # so what this save met may be any write, not another save of this
+        # draft: it is answered as busy, not as a conflict, and the editor says
+        # so and keeps the drawing. A Save after it meets the stored draft as
+        # it then is, and a real conflict is answered as one.
+        # One UPDATE statement, not the ORM's flush: a flush that fails marks
+        # the host's session for rollback, and the host's commit after this
+        # answer would then be the 500 instead.
+        try:
+            s.query(SkriblDraft).filter(SkriblDraft.id == d.id).update(
+                {SkriblDraft.kind: kind, SkriblDraft.title: title,
+                 SkriblDraft.payload_json: payload, SkriblDraft.thumbnail: thumbnail,
+                 SkriblDraft.size_bytes: size, SkriblDraft.updated_at: now},
+                synchronize_session="evaluate")
+        except sa.exc.OperationalError as exc:
+            if "locked" not in str(exc.orig).lower():
+                raise
+            raise DraftBusy()
         return _summary(d)
     count = s.query(SkriblDraft).filter(SkriblDraft.user_id == owner).count()
     if count >= max_drafts():
