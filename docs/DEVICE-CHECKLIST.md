@@ -3,7 +3,7 @@
 What the suites cannot prove. They run headless Chromium on Linux: no iOS
 Safari, no Apple Pencil, no VoiceOver, no silent switch, no Dynamic Type. Every
 line below is a thing that has broken on a real phone before, or would, with
-the suites green. About fifteen minutes on an iPhone; do it before a release
+the suites green. About twenty-five minutes on an iPhone; do it before a release
 the owner will show people, and after anything touching input, audio, zoom or
 text size.
 
@@ -11,6 +11,27 @@ Open the live site in **Safari** (not an in-app browser) unless a line says
 otherwise. For each line: do it, and it is right if what follows the arrow
 happens. Anything else is a bug; `•••` → **Report a problem** copies the
 details to send with it.
+
+## First time: the hello
+
+The hello plays once per browser, on the first visit. Add `?hello=again` to
+the address to see it again; every reload of that address replays it.
+
+- [ ] Open `https://skribl-live-demo.onrender.com/?hello=again` → the skribl
+      mark writes itself in one stroke, the dot drops onto the i (straight
+      over it, not off to the right), bounces, winks once, then the ink lifts
+      away left to right into the canvas. Sharp edges, not soft; about three
+      and a half seconds.
+- [ ] Reload it and watch the very first moment → the hello's ground is there
+      from the start; the canvas does not flash up first.
+- [ ] Reload, and while it plays tap where the `•••` menu sits, top right →
+      the hello goes and the menu stays shut.
+- [ ] The same address with `/flip?hello=again` → the same hello, then Flip.
+- [ ] Settings → Accessibility → Motion → Reduce Motion on, reload → the mark
+      shows still, dot at rest, and simply fades. (Turn it off again after.)
+- [ ] Open the Pad from the Home Screen icon for the first time → note
+      whether the hello plays (the Home Screen app keeps its own storage, so
+      it may meet it as a first visit).
 
 ## Drawing (Pad)
 
@@ -33,6 +54,31 @@ details to send with it.
       with a play mark in the middle; tap again → it carries on.
 - [ ] Tap the zoom % and type a number → the page does NOT zoom in (a text
       field under 16px makes iOS magnify the whole page).
+
+## Recolor (Pad, then Flip)
+
+- [ ] Draw three lines in three colours, open the draw drawer → the
+      eyedropper and Recolor sit side by side at the end of the Pen |
+      Background row, and the nine colours below have clear room between
+      them (nothing touching at the phone's width).
+- [ ] Pick a new colour, tap Recolor → the drawer closes and the bottom bar
+      reads "Tap a line to recolor" with the pen's colour, Undo and Done;
+      nothing else on the page moves.
+- [ ] Tap a line → the new colour runs along it from your finger, both ways
+      at once. Drag across the other two → both change. Put two fingers down
+      to pinch → nothing is recoloured.
+- [ ] Undo in the bar → the last tap or drag goes back. Tap the colour in the
+      bar → the drawer opens; pick a colour → it closes and you are still in
+      Recolor. Done → back to the pen.
+- [ ] Press Play → each recoloured line first draws in its old colour; at the
+      moment you recoloured it the new colour runs along it, and the replay
+      carries on. The bar under the drawing has a dot of the new colour where
+      each change happens (a colour that would not show against the bar has a
+      ring round it).
+- [ ] Post it and open its link, in light and in dark → the same replay and
+      the same dots.
+- [ ] In Flip, draw a line on a page, Recolor it, Undo, Recolor again, Done →
+      it behaves as on the Pad (Flip has no replay of the change, and no dots).
 
 ## Sound
 
@@ -63,6 +109,16 @@ details to send with it.
 - [ ] Feed demo: write a line, attach a Skribl, write another line, Post →
       all the words, then the drawing (the drawing goes after the words, as a
       photo does).
+
+## Exporting
+
+- [ ] From the Pad, export a recoloured drawing as a GIF and open the file
+      it gives you → a glowing dot rides the line as it draws, sits on the tap in
+      the new colour while a colour runs, and is gone from the finished
+      drawing.
+- [ ] Export the same drawing as a video, once with music added → note
+      whether the phone made an MP4 or a WebM, whether it plays on the phone,
+      and whether the music is in it. The glowing dot rides it as in the GIF.
 
 ## Reading and hearing it (accessibility)
 
@@ -99,3 +155,8 @@ details to send with it.
       Delete removes the page (Undo brings it back).
 - [ ] Add to Home Screen, open it from there → it opens without Safari's bars,
       with the right icon and name.
+- [ ] In the Library, play a Flip with Loop off → it ends on its last page,
+      whole, not on a blank first page.
+- [ ] How it works → Trading card (a Pad example) and A card that waves (a
+      Flip one) → the skribl title's dot sits straight over the i, as in the
+      header.
