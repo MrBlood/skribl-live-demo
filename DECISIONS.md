@@ -21275,17 +21275,19 @@ nothing about the row and is not counted. The app is unchanged.
 
 ## After v328 -- the handoff at the session's end: the auditor's packet as sent, and where things stand
 
-The owner, once main was green again: "make a new handoff since you created
-the auditor files. I am going to start a new session". The entry two above
-this one ("where things stand, and notes for the next session") was written
-before main's runs went red, and stays true as written. This one is the state
-at the end of the session; the next session starts here.
+The owner, the morning after main went green again: "make a new handoff
+since you created the auditor files. I am going to start a new session".
+The entry two above this one ("where things stand, and notes for the next
+session") was written before main's runs went red, and stays true as
+written. This one is the state at the end of the session; the next session
+starts here.
 
-**Where things stand, on the evening of 21 October.** Main is green: its full
-battery on #588's commit passed on both databases at 8:44 PM MDT. Apart from
-this entry's own pull request, no pull request or issue was open and nothing
-was scheduled. v328 is the newest release. The owner's three yeses from the
-desktop checks (#584, #585) are on main and in no sealed release yet.
+**Where things stand, on the morning of 22 October.** Main is green: its full
+battery on #588's commit passed on both databases at 8:44 PM MDT the evening
+before, and nothing has merged since. Apart from this entry's own pull
+request, no pull request or issue was open and nothing was scheduled. v328 is
+the newest release. The owner's three yeses from the desktop checks
+(#584, #585) are on main and in no sealed release yet.
 
 **What came after the entry two above.** Main's full runs went red in two
 places, both in the harness, not the app. verify_sharecard took the Pad's new
