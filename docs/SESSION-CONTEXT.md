@@ -272,6 +272,11 @@ satisfied it, with the mechanics the rule leaves out.
    SHA256SUMS. Put it in the audit packet beside the release zips and name it
    in README-FIRST. The v321 auditor could not install Flask, never opened a
    page, and scored most of the product "not tested" for that reason alone.
+   When the packet goes out, keep its README-FIRST.txt and
+   SHA256SUMS-packet.txt as they were sent, in `docs/audit/` under the
+   version (v328's: `docs/audit/v328/README-FIRST.txt`). The zips stay on
+   the Release; those two are what a later session needs to answer for what
+   the auditor was given, and to start the next packet's note from.
 
 Getting step 5 wrong costs either a re-run or a sealed record that contradicts
 evidence already in hand; the second is an evidence gap, so it is a re-run.
