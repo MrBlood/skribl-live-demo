@@ -936,7 +936,13 @@ with sync_playwright() as sp:
     #   track is ringed in the bar's own colour. Every page with a scrubber
     #   pays it; the dots only draw where a drawing has recolours.
     #   verify_jsstrip's line moves with it. 152,703 measured.
-    BYTES_RATCHET, BYTES_TARGET = 152_708, 153_800
+    # RAISED (the owner's C, after v328: the glowing dot on a Flip page that
+    #   draws itself, everywhere), for a named cost, all in app.js: +209 B --
+    #   drawFlipFrame handing the last revealed point to the replay's own
+    #   dot (showNibAt, split out of showNibAtIndex) while it plays, and
+    #   nibRGB reading a Smear's #rrggbbaa as its colour, where it read white.
+    #   verify_jsstrip's line moves with it. 152,917 measured.
+    BYTES_RATCHET, BYTES_TARGET = 152_920, 153_800
     # The page's own HTML. The brand is the one-stroke skribl signature INLINE
     # in the page (~1.4KB of paths, a ~0.9KB nonce'd draw-on script, and the
     # <linearGradient> defs), and inline is load-bearing rather than lazy:

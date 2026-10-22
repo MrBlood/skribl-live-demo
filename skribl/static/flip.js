@@ -126,6 +126,9 @@ function fitPad(){
   pad.style.height = Math.round(CH*scale)+'px';
   syncGrid();
   if(ZoomView && ZoomView.isZoomed()) ZoomView.reclamp();
+  // The dot moves with the canvas in the same frame (Play hides the strip,
+  // and the canvas grows a frame later: the dot sat 10px off for that frame).
+  if(flipNib && !flipNib.hidden && flipNibLast) revealNib(flipNibLast[0], flipNibLast[1]);
 }
 // Give the canvas stage a stable height = viewport minus the fixed chrome (header,
 // toolbar, chip, strip). Drawers live in .flip-drawers (not measured here), so an
@@ -4195,6 +4198,30 @@ function _spanOf(f){
   const s = Number(p[p.length-1].t) - Number(p[0].t);
   return s > 0 ? s : 320;
 }
+/* THE GLOWING DOT ON A PAGE THAT DRAWS ITSELF (the owner, after v328: "on flip
+ * play on a draw on slide, I don't see a glowing nib drawing the line"; "C,
+ * everywhere"). The Pad's own: .player-nib, the stylesheet's bead and halo,
+ * tinted to the ink by lib/nib.js, at the last point the reveal has drawn, and
+ * the size the Pad's editor gives it. Over the canvas from the frame, placed
+ * from the canvas's own box so a zoomed page puts it on the line too. Gone
+ * once the page is whole, on a still page and when the playing stops. */
+/* var, not let: fitPad() runs at boot, long before this line, and asks. */
+var flipNib = null, flipNibLast = null;
+function revealNib(f, n){
+  flipNibLast = [f, n];
+  const pts = (f && f.strokes) || [];
+  const p = playing && n > 0 && n < pts.length ? pts[n - 1] : null;
+  if(!p){ if(flipNib) flipNib.hidden = true; return; }
+  const c = document.getElementById('pad'), wrap = c && c.closest('.flip-wrap');
+  if(!wrap) return;
+  if(!flipNib){ flipNib = document.createElement('div'); flipNib.className = 'player-nib'; flipNib.hidden = true; wrap.appendChild(flipNib); }
+  const r = c.getBoundingClientRect(), wr = wrap.getBoundingClientRect();
+  flipNib.style.left = (r.left - wr.left + p.x * r.width / CW) + 'px';
+  flipNib.style.top = (r.top - wr.top + p.y * r.height / CH) + 'px';
+  flipNib.classList.toggle('erase', !!p.erase);
+  if(!p.erase && window.SkriblNib) flipNib.style.setProperty('--nib-rgb', window.SkriblNib.rgb(p.color));
+  flipNib.hidden = false;
+}
 /* Reveal a drawing page over its own duration. This is the old drawOnTick,
  * scoped to ONE page instead of driving the whole document: the outer timer
  * still owns when to advance, so a drawing page and a still page are scheduled
@@ -4214,11 +4241,14 @@ function startReveal(f, durMs, fromMs){
   const tick = () => {
     if(!playing || scrubbingFrames || playPaused) return;
     const e = performance.now() - revealStart;
-    renderPartial(f, due(e / Math.max(1, durMs)));
-    if(e < durMs) revealRAF = requestAnimationFrame(tick);
-    else renderPartial(f, p.length);
+    const n = due(e / Math.max(1, durMs));
+    renderPartial(f, n);
+    if(e < durMs){ revealNib(f, n); revealRAF = requestAnimationFrame(tick); }
+    else { renderPartial(f, p.length); revealNib(f, p.length); }
   };
-  renderPartial(f, fromMs ? due(fromMs / Math.max(1, durMs)) : 0);
+  const n0 = fromMs ? due(fromMs / Math.max(1, durMs)) : 0;
+  renderPartial(f, n0);
+  revealNib(f, n0);
   revealRAF = requestAnimationFrame(tick);
 }
 function playStep(){ if(scrubbingFrames) return;
@@ -4227,6 +4257,7 @@ function playStep(){ if(scrubbingFrames) return;
   // A drawing page must never blit a cached bitmap: the cache exists because a
   // still page does not change, and this one does. It also must not FILL the
   // cache from a half-drawn canvas, so it goes nowhere near playPaint().
+  revealNib(null, 0);
   if(frameDraw(frames[idx])){
     if(revealRAF){ cancelAnimationFrame(revealRAF); revealRAF = null; }
     startReveal(frames[idx], _pageMsAt(idx));
@@ -4374,6 +4405,7 @@ function stop(){
   playing=false; document.body.classList.remove('playing');
   setPlayFace(false);
   clearInterval(playTimer); playTimer=null; if(revealRAF) cancelAnimationFrame(revealRAF); revealRAF=null;
+  revealNib(null, 0);
   stopMusic(); scrubbingFrames=false;
   stopFlipElapsed();
   if(flipPlayer){ flipPlayer.classList.remove('show'); flipPlayer.hidden=true; }
@@ -5405,6 +5437,11 @@ if(window.SkriblStrokeLayers){
 function drawFrameTo(c, f, prog){
   drawBackdrop(c);
   drawUnderPage(c, frames.indexOf(f));
+  paintRevealed(c, f, prog);
+}
+/* The page's own ink, as much as `prog` has revealed, with the dot: the part
+ * of drawFrameTo a transparent GIF uses without the backdrop. */
+function paintRevealed(c, f, prog){
   const pts = (f && f.strokes) || [];
   /* No prog means a still page and no module means the feature is not
    * available on this load, which by holdtiming.js's fallback rule plays a
@@ -5412,7 +5449,12 @@ function drawFrameTo(c, f, prog){
    * exported file reveals exactly what the three live surfaces reveal. */
   const H = (typeof window !== 'undefined') ? window.SkriblHold : null;
   if(prog == null || !frameDraw(f) || pts.length < 2 || !H){ paintFrame(c, pts); return; }
-  paintFrame(c, pts.slice(0, H.dueCount(f, prog)));
+  const n = H.dueCount(f, prog);
+  paintFrame(c, pts.slice(0, n));
+  /* AND THE DOT RIDES IT, as on screen (the owner, after v328), drawn by the
+   * Pad's own painter (lib/nib.js): after the page, so the page never holds
+   * it, and none once the page is whole. c draws in the page's own units. */
+  if(n > 0 && n < pts.length && window.SkriblNib) window.SkriblNib.paint(c, pts[n - 1], 1, 1);
 }
 
 /* THE EXPORTED FILE HAS TO SHOW WHAT THE PLAYER SHOWS. Both export paths used
@@ -6175,16 +6217,25 @@ async function exportGIF(){
     // for crisp 1-bit-alpha line art; 'color' bakes the pad background as before.
     const transparent=(gifBgMode==='transparent');
     const fmt=transparent?'rgba4444':'rgb565';
-    const _order=exportPageOrder(r.from-1, r.to-1);
-    for(let k=0;k<_order.length;k++){ const i=_order[k];
+    /* A PAGE THAT DRAWS ITSELF DRAWS ITSELF IN THE GIF TOO (after v328): it
+     * painted whole, so the GIF never showed what Draw on previews, nor the
+     * dot. The video's units (exportUnits): one GIF frame per tick while a
+     * page draws, and a still page one frame held as long as its ticks. */
+    const _order=[];
+    for(const u of exportUnits(r.from-1, r.to-1)){
+      const still=!frameDraw(frames[u.i]), last=_order[_order.length-1];
+      if(still && last && last.still && last.i===u.i && last.n<frameHold(frames[u.i])) last.n++;
+      else _order.push({ i:u.i, prog:still ? undefined : u.prog, still, n:1 });
+    }
+    for(let k=0;k<_order.length;k++){ const i=_order[k].i, prog=_order[k].prog;
       if(_exportAbort){ exportHide(); chip('Export cancelled'); exporting=false; return; }
-      if(transparent){ fc.clearRect(0,0,CW,CH); drawUnderPage(fc, i); paintFrame(fc, frames[i].strokes); }  // ink only (the page's and the one under it), on transparent
-      else { drawFrameTo(fc, frames[i]); }
+      if(transparent){ fc.clearRect(0,0,CW,CH); drawUnderPage(fc, i); paintRevealed(fc, frames[i], prog); }  // ink only (the page's and the one under it), on transparent
+      else { drawFrameTo(fc, frames[i], prog); }
       octx.clearRect(0,0,outW,outH); octx.drawImage(full,0,0,outW,outH);
       const img=octx.getImageData(0,0,outW,outH);
       const palette=G.quantize(img.data,256,{format:fmt, oneBitAlpha:transparent});
       const index=G.applyPalette(img.data,palette,fmt);
-      const opts={palette,delay:delay*frameHold(frames[i])}; if(k===0) opts.repeat=0;   // loop forever
+      const opts={palette,delay:delay*_order[k].n}; if(k===0) opts.repeat=0;   // loop forever
       if(transparent){ let tIdx=palette.findIndex(c=>c.length>3&&c[3]===0); if(tIdx<0) tIdx=0; opts.transparent=true; opts.transparentIndex=tIdx; opts.dispose=2; }
       enc.writeFrame(index,outW,outH,opts);
       exportSet((k+1)/_order.length);

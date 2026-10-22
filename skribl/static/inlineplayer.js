@@ -1303,6 +1303,7 @@
           ctx.restore();
         }
         var fr = flipFrames[idx];
+        var flipTip = null;
         if (fr && fr.strokes && fr.strokes.length) {
           /* A DRAWING PAGE REVEALS, and dueCount() owns how much — the same
            * answer the editor and the /s/ player get, from the same module, so
@@ -1325,11 +1326,13 @@
           if (H && H.drawOf(fr)) {
             var n = H.dueCount(fr, shown.progress);
             if (n) paintStatic(ctx, fr.strokes.slice(0, n), canvas, pixelRatio);
+            // and the dot rides it while it plays (the owner's C, after v328)
+            if (state === 'playing' && n > 0 && n < fr.strokes.length) flipTip = fr.strokes[n - 1];
           } else {
             paintStatic(ctx, fr.strokes, canvas, pixelRatio);
           }
         }
-        setNib(null);
+        setNib(flipTip);
       } else {
         /* THE COMPOSITOR HAS TO OUTLIVE THE FRAME. The replay path is
          * incremental — it appends the points that have come due and leaves

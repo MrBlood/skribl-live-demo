@@ -302,9 +302,11 @@ with sync_playwright() as sp:
     # the new colour where each line changed it), +1,758 B, all
     # lib/replayline.js: the moments found in the timeline, and the dot's
     # contrast against what is painted under the bar, so a colour that would
-    # not read is ringed (152,703 measured).
+    # not read is ringed (152,703 measured). And RAISED, in both places
+    # together, by the glowing dot on a Flip page that draws itself (the
+    # owner's C, after v328), +209 B, all app.js (152,917 measured).
     check("stripping keeps the player's JS under its ratchet",
-          lean_total <= 152_708,
+          lean_total <= 152_920,
           f"{src_total:,} B of source -> {lean_total:,} B parsed")
     # THE MODULE ONLY A RECOLOURED DRAWING FETCHES (lib/recolorplay.js, by
     # app.js on the link page and inlineplayer.js in a post): its own pin, so

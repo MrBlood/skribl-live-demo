@@ -1589,7 +1589,13 @@ with sync_playwright() as sp:
     #   bar, ringed where it would not read. WHICH CALLER PAYS: every page that
     #   shows a post; the dots draw only for a post with recolours, once its
     #   drawing is there. 73,974 B measured.
-    EMBED_RATCHET = 73_979
+    # RAISED (the owner's C, after v328: the glowing dot on a Flip page that
+    #   draws itself, everywhere), for one named cost: +106 B, all
+    #   inlineplayer.js -- render() handing the last revealed point of a
+    #   drawing page to setNib while it plays, where it always passed null.
+    #   WHICH CALLER PAYS: every page that shows a post, for every Flip with
+    #   a Draw on page. 74,085 B measured.
+    EMBED_RATCHET = 74_090
     # THE RATCHET MEASURES DISPLAY, NOT COMPOSE, and the two are separate costs
     # paid by separate pages. Excluded here and measured on its own below:
     #   feed.js          the PREVIEW PAGE's own script (fetch the listing, clone
