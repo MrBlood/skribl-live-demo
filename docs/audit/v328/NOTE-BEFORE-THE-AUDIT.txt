@@ -1,0 +1,95 @@
+SKRIBL v328 -- A NOTE BEFORE THE AUDIT
+======================================
+
+Written after the packet was sent, so nothing in it has to change: the six
+files and SHA256SUMS-packet.txt stand as they are. If an earlier copy of this
+note reached you, this one replaces it. With it come two more files, Python
+3.12 itself in two halves (part 1 below). Four things the packet does not say,
+or says too strongly.
+
+
+1. RUN IT ON PYTHON 3.12, WHATEVER PYTHON THE SANDBOX HAS
+
+The offline packages (skribl-wheels-cp312-linux-x86_64.zip) are built for
+Linux on x86_64 with Python 3.12, the version the app is deployed and sealed
+on, and harness/bootstrap.sh stops on any machine without a python3.12. An
+earlier re-audit ran where the Python was 3.13 and could not run the harness
+for that reason. So Python 3.12 itself comes with this note, in two halves,
+each under 30 MB:
+
+  cpython-3.12.13-linux-x86_64.tar.gz.part1   SHA-256 187766b9b320c6eebae81ba0a2a10d948eb98330f55ee71611a400756e103425
+  cpython-3.12.13-linux-x86_64.tar.gz.part2   SHA-256 747469970f0d86a67d0184b91138d271bafd7e6653303437e2eed14f4acbcce9
+
+Joined, they are python-build-standalone's own build, byte for byte: release
+20260718 of github.com/astral-sh/python-build-standalone, the file
+cpython-3.12.13+20260718-x86_64-unknown-linux-gnu-install_only_stripped.tar.gz,
+SHA-256 5854aa6ec71cad00334d5065633c210b2e7feb40956767a59a91791cadcf0b79,
+which is what that release's own SHA256SUMS lists for it. It runs without
+installing anything.
+
+Put the two halves beside the wheels zip in the folder the source zip unpacks
+to (skribl-v328-source/), and run these lines there, in one shell, so that
+the PATH and the environment carry from line to line:
+
+    cat cpython-3.12.13-linux-x86_64.tar.gz.part1 cpython-3.12.13-linux-x86_64.tar.gz.part2 > cpython-3.12.13-linux-x86_64.tar.gz
+    sha256sum cpython-3.12.13-linux-x86_64.tar.gz     # 5854aa6e...0b79, as above
+    tar -xzf cpython-3.12.13-linux-x86_64.tar.gz      # makes ./python
+    export PATH="$PWD/python/bin:$PATH"               # python3.12 is now this one
+    python3.12 -V                                     # Python 3.12.13
+
+then the lines of README-OFFLINE.txt, from the wheels zip, exactly as
+written: the unzip, the environment, the two installs, harness/bootstrap.sh.
+
+That whole sequence was run before this note was sent, starting from the
+source zip in the packet, with pip's network refused and the machine's own
+Python 3.12 made unavailable: the app came up on Python 3.12.13, and its home
+page, the Pad and Flip answered. With the same Python unavailable and the five
+lines above left out, it stopped the way a machine with only 3.13 would: "No
+matching distribution found for greenlet==3.5.4". If the sandbox will not run
+programs from where the files sit ("Permission denied"), do all of this in a
+copy under /tmp.
+
+
+2. TWO SENTENCES IN README-FIRST.TXT SAY TOO MUCH
+
+Part 1 says each zip carries its own SHA256SUMS inside. The three release zips
+do; the wheels zip does not. What checks the wheels is the sentence in part 2,
+which is also too broad: "its pins are constraints.txt's hashes in the source
+zip, and pip checks every wheel against them on install." That holds for the
+app's packages. README-OFFLINE.txt has it right: the app's packages install
+with --require-hashes against constraints.txt, and the test harness's own
+Flask-WTF and Pillow (with WTForms, which Flask-WTF needs) install from the
+same zip with the network off, but without hashes. The app does not import any
+of the three; the harness and its tools do.
+
+The wheels folder also holds two packages twice, click (8.4.2 and 8.5.0) and
+MarkupSafe (3.0.3 and 3.0.4); the newer copies came down with the harness's
+packages. Following README-OFFLINE.txt installs the versions constraints.txt
+pins, 8.4.2 and 3.0.3, and the run in part 1 did.
+
+
+3. ONE RED JOB IN GITHUB'S RUN ON THE SEAL COMMIT
+
+GitHub's run on the v328 commit (98067f8, harness run 39702105179) shows one
+job of sixteen red: "harness (postgresql 4/6)". One row failed in it, in
+verify_help: Flip's help sheet at phone size. The test lost its hold on the
+page ("Execution context was destroyed") just after the page loaded, and no
+reload of the page was seen. The same code passed that row in the seal's own
+run (harness/RELEASE.md), in GitHub's run on the frozen tree before the merge
+(run 39683246696, every job green, the run the MP4 and PostgreSQL attestations
+come from), and in main's later runs. It is the second time that row has
+failed this way, both times on GitHub's machines and both on Flip at phone
+size. The cause is not known. After the seal, the test was changed to record
+what the browser itself saw, should it happen again. The app was not changed.
+
+
+4. THE LIVE SITE IS NEWER THAN v328
+
+The public demo runs the repository's main branch, which has moved on since
+v328: the help card waits two seconds before it opens on a desk (#584), and a
+recoloured drawing shows a dot on the scrubber where a line changed colour,
+with the Pad's GIF and video files showing the glowing pen dot (#585). The
+other changes since are to the tests and the notes only (#586, #588 and
+after). None of these is in the packet. The audit is of the zips; anything the
+live site has that they do not is one of these. The next sealed release, v329,
+will carry them.

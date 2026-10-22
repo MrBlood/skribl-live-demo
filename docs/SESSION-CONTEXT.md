@@ -273,10 +273,15 @@ satisfied it, with the mechanics the rule leaves out.
    in README-FIRST. The v321 auditor could not install Flask, never opened a
    page, and scored most of the product "not tested" for that reason alone.
    When the packet goes out, keep its README-FIRST.txt and
-   SHA256SUMS-packet.txt as they were sent, in `docs/audit/` under the
-   version (v328's: `docs/audit/v328/README-FIRST.txt`). The zips stay on
-   the Release; those two are what a later session needs to answer for what
-   the auditor was given, and to start the next packet's note from.
+   SHA256SUMS-packet.txt as they were sent, and any note that follows them,
+   in `docs/audit/` under the version (v328's:
+   `docs/audit/v328/README-FIRST.txt` and the files beside it). The zips stay
+   on the Release; those files are what a later session needs to answer for
+   what the auditor was given, and to start the next packet's note from.
+   An auditor with no Python 3.12 cannot use the wheels or bootstrap.sh
+   (ChatGPT's sandbox, the owner's auditor, had 3.13 at v303). Send Python
+   3.12 itself beside the packet, as v328's note did: the lines, and how
+   they were proved, are in `docs/audit/v328/NOTE-BEFORE-THE-AUDIT.txt`.
 
 Getting step 5 wrong costs either a re-run or a sealed record that contradicts
 evidence already in hand; the second is an evidence gap, so it is a re-run.

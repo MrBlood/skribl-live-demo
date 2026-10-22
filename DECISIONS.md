@@ -21300,7 +21300,7 @@ before anything else.
 
 **The auditor's packet for v328** was made and sent to the owner at about 6:55
 PM on 21 October, just after the seal merged: six files, each under 30 MB. The
-owner sends it on.
+owner sent it on to the auditor on the morning of 22 October.
 
 * `README-FIRST.txt`, the auditor's guide, in six parts: check the files
   arrived whole; check where the three release zips came from (`gh attestation
@@ -21330,6 +21330,34 @@ the wheels zip's fingerprint is in that SHA256SUMS-packet.txt. The session's
 own copies were in its scratch space and went with its container; the owner
 holds the six files that were sent.
 
+**A note and Python 3.12 to go with it, before the audit.** Once the owner
+had sent the six files, they asked whether anything else should go to the
+auditor first, then said the auditor runs ChatGPT's sandbox. The v303
+re-audit had found Python 3.13 there and could not run the harness, and the
+offline packages and bootstrap.sh both need 3.12. So Python 3.12 itself went
+with a note: python-build-standalone's own build, release 20260718,
+cpython-3.12.13+20260718-x86_64-unknown-linux-gnu-install_only_stripped.tar.gz
+(the SHA-256 that release's own SHA256SUMS lists), split into two halves under
+30 MB with `head -c` and `tail -c` at half its size, rounded up. The note, kept
+in the tree as it was given to the owner, is
+`docs/audit/v328/NOTE-BEFORE-THE-AUDIT.txt`. It names the halves' and the
+whole's SHA-256s, and gives the five lines that join, check and unpack it and
+put it on the PATH ahead of README-OFFLINE's own. Those lines, read from the
+note and from the sent wheels zip as written, were run from the sent source
+zip with pip's network refused and this machine's python3.12 replaced by a
+stub that fails: the app came up on 3.12.13, and the home page, the Pad and
+Flip answered. Without the five lines it stopped as a 3.13 machine would, on
+"No matching distribution found for greenlet==3.5.4". The note also says
+that README-FIRST says too much twice (the wheels zip carries no SHA256SUMS
+inside, and pip checks the app's wheels against constraints.txt but not the
+harness's Flask-WTF, WTForms and Pillow, which the app does not import); that
+GitHub's run on the seal commit has one red job (verify_help, Flip at phone
+size, PostgreSQL 4/6) on code that passed that row everywhere else, cause
+unknown; and that the live site runs main, which has the three yeses v328
+does not. The halves are not in the tree. The release's download,
+https://github.com/astral-sh/python-build-standalone/releases/download/20260718/cpython-3.12.13%2B20260718-x86_64-unknown-linux-gnu-install_only_stripped.tar.gz,
+and the split rule make them again byte for byte.
+
 **To answer for the packet, or to make the next one:**
 
 * A file the auditor holds is the one that was sent when its SHA-256 matches
@@ -21338,7 +21366,9 @@ holds the six files that were sent.
 * The wheels zip is rebuilt with `python3 harness/tools/wheelhouse.py OUT`
   from a clean copy of the v328 tree (a fresh clone at the tag, never a
   checkout over work in progress). Whether a rebuild matches the sent zip byte
-  for byte has not been tried; the SHA256SUMS inside it checks it either way.
+  for byte has not been tried. The zip carries no SHA256SUMS of its own: the
+  sent one is checked by its line in SHA256SUMS-packet.txt, and on install pip
+  checks the app's wheels against constraints.txt's hashes.
 * The next packet's README-FIRST starts from this one: change the version, the
   seal commit, the sizes and part 5 (that seal's hand checks), and keep part
   3's rule that the numbers live in harness/RELEASE.md. Keep the new pair in
@@ -21347,8 +21377,10 @@ holds the six files that were sent.
 
 **Still open, at the end of the session:**
 
-* **The resubmission.** The owner sends the six files to the auditor; whatever
-  comes back is the next session's first job.
+* **The audit.** The owner sent the six files on the morning of 22 October;
+  the note and the two halves of Python 3.12 above were given to them to send
+  next, and the auditor starts on the owner's go-ahead. Whatever comes back is
+  the next session's first job.
 * **The owner's look at the three yeses**, on the PC: rest on a button and
   count to two before its card; open a recoloured drawing's link in light and
   in dark and find the dots; export a recoloured drawing from the Pad as a GIF
@@ -21373,3 +21405,11 @@ At #588 those were verify_a11y, verify_docs, verify_icons, verify_jsstrip,
 verify_names, verify_seam, verify_sharecard, verify_surfaces and verify_tools;
 find them by grepping the suites for a glob over the scripts rather than by
 trusting this list.
+
+**And one for the next packet.** `harness/tools/wheelhouse.py` builds for
+Python 3.12 only and proves on this machine's own 3.12, so it cannot tell
+that an auditor without 3.12 is stuck. Until it learns to bring Python 3.12
+along, send the interpreter the way v328's note did. And a red case has to
+fail inside its own sandbox: v328's ran pip with no environment around it,
+and three packages landed in the container's own Python 3.13, which the
+session was not allowed to remove.
