@@ -403,6 +403,13 @@ stays a sleep.
   end shows its last page whole (played once, taken to its end on the
   scrubber, and at rest with no card); and every colour of each page's own
   is read by the page or what it loads.
+- `verify_flipnib.py` — the glowing dot on a Flip page that draws itself
+  (the owner's C, after v328), read on every animation frame where it plays:
+  Flip's Play, the link page and a post's box. The dot rides the line as it
+  draws, wears its ink (a Smear's #rrggbbaa too) and is gone on a still page
+  and at Stop; a video frame half way carries it and a whole page none; the
+  GIF reveals a Draw on page tick by tick with the dot, where it painted the
+  page whole; the link page's ink and lib/nib.js's give one answer.
 - `verify_words.py` — the words a review after v326 found saying what is no
   longer true, read where a person reads them on the Pad and Flip, each red
   on the words before: How it works' tips (drafts and what is uploaded,

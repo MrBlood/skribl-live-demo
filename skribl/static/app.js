@@ -1193,7 +1193,10 @@ function penColorFor(hex) {
 // still gets a clearly visible bead. Falls back to white if the color is odd.
 function nibRGB(color) {
   if (typeof color === 'string') {
-    const hex = color.match(/^#([0-9a-fA-F]{6})$/);
+    // #rrggbbaa too (a Smear's): the same rule as lib/nib.js's rgb(), which
+    // the editors load and this file's link page does not (verify_flipnib
+    // holds the two to one answer).
+    const hex = color.match(/^#([0-9a-fA-F]{6})(?:[0-9a-fA-F]{2})?$/);
     if (hex) {
       const h = hex[1];
       return parseInt(h.slice(0, 2), 16) + ',' + parseInt(h.slice(2, 4), 16) + ',' + parseInt(h.slice(4, 6), 16);
@@ -3654,6 +3657,13 @@ function showPlayerError(msg, canRetry) {
      every later visit is one drawImage. Keys are frame indices because the
      player's frames never change; the store is dropped only with the backing
      store (sizePlayerCanvas), whose captures it describes. */
+  /* THE GLOWING DOT ON A FLIP PAGE THAT DRAWS ITSELF (the owner, after v328:
+     "C, everywhere"): the same bead the Pad's replay rides, at the last point
+     the page has revealed while it plays, and gone once the page is whole.
+     The bead is made below; until it is (the poster is painted first), and
+     while nothing plays, this does nothing. */
+  let nibUp = null;
+  function flipNibAt(p) { if (nibUp) nibUp(running ? p : null); }
   function drawFlipFrame(fi, prog) {
     const at = Math.max(0, Math.min(flipFrames.length - 1, fi));
     lastShown = { index: at, progress: prog };   // what is on screen, for displayAt (lib/holdtiming.js)
@@ -3674,14 +3684,17 @@ function showPlayerError(msg, canRetry) {
          progress 0 — it revealed the first point of a page that had not yet
          started, where the editor revealed none. One owner, one boundary. */
       const pts = (fr0 && Array.isArray(fr0.strokes)) ? fr0.strokes : [];
+      let n = 0;
       if (pts.length) {
-        const n = _hold.dueCount(fr0, prog);
+        n = _hold.dueCount(fr0, prog);
         if (n) paintStrokesStatic(pts.slice(0, n));
       }
       flipUnderPaint(at);
+      flipNibAt(n > 0 && n < pts.length ? pts[n - 1] : null);
       lastFlipDrawn = -1;   // the next still page must repaint over this
       return;
     }
+    flipNibAt(null);
     if (at === lastFlipDrawn) return;
     const s = getCanvasLogicalSize();
     const FB = window.SkriblFrameBitmap;
@@ -3823,8 +3836,8 @@ function showPlayerError(msg, canRetry) {
   //
   // Out here rather than in the body for the reason playerFitScale's note
   // gives: a counted span includes its prose.
-  function showNibAtIndex(nextIdx) {
-    const p = nextIdx > 0 ? timeline[nextIdx - 1] : null;
+  function showNibAtIndex(nextIdx) { showNibAt(nextIdx > 0 ? timeline[nextIdx - 1] : null); }
+  function showNibAt(p) {
     if (!p) { nib.hidden = true; return; }
     const g = nibGeom();
     const s = g.s;
@@ -3838,6 +3851,7 @@ function showPlayerError(msg, canRetry) {
     nib.hidden = false;
   }
   function hideNib() { nib.hidden = true; }
+  nibUp = showNibAt;   // a Flip page that draws itself rides it too (drawFlipFrame)
   // Keep a paused/idle nib aligned if the viewport changes scale under it.
   window.addEventListener('resize', () => { if (!nib.hidden) showNibAtIndex(idx); });
   // ---- Player audio: gapless Web Audio loop bed --------------------------
@@ -4051,7 +4065,7 @@ function showPlayerError(msg, canRetry) {
       drawFlipFrame(_d.index, _d.progress);
       if (flipPlan) lastShown.slot = _d.slot;
       setProgress(flipDurMs ? (flipPlan ? _hold.wrapMs(flipPlan, elapsed) : cycT) / flipDurMs : 1);
-      hideNib();
+      // The dot is drawFlipFrame's now: shown on a page that draws, hidden on the rest.
       // A FOREVER loop never ends, whatever the player's own loop says: the
       // stretch is meant to keep going for as long as it is on screen.
       if (!loop && !(flipPlan && flipPlan.forever) && elapsed >= flipDurMs) {

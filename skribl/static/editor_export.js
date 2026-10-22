@@ -186,30 +186,11 @@
      colour runs from, so the bead sits there in the new colour while it runs,
      as on screen. None while erasing (the screen's is a faint hollow ring that
      is not ink), and none once the drawing is done: the finished drawing is
-     held without it, as the player's finished poster is. Flip has no bead on
-     screen, so its files have none either. */
+     held without it, as the player's finished poster is. Flip's files draw
+     the same dot on a page that draws itself (flip.js drawFrameTo). */
   function exportNib(ctx, p, sx, sy) {
-    if (!p || p.erase) return;
-    const nb = Math.max(5, Math.min(90, 1.9 * (p.size || 8) * Math.min(sx, sy)));
-    const x = p.x * sx, y = p.y * sy, r = nb / 2, k = nb / 14;
-    const ink = (a) => 'rgba(' + nibRGB(p.color) + ',' + a + ')';
-    ctx.save();
-    // The halo: box-shadow 0 0 10px 2px at 0.45 is a disc 2px wider than the
-    // bead, blurred by 10, and drawn only outside the bead.
-    const out = r + 12 * k;
-    let g = ctx.createRadialGradient(x, y, r, x, y, out);
-    g.addColorStop(0, ink(0.29)); g.addColorStop(2 / 12, ink(0.22));
-    g.addColorStop(7 / 12, ink(0.07)); g.addColorStop(1, ink(0));
-    ctx.fillStyle = g;
-    ctx.beginPath(); ctx.arc(x, y, out, 0, 2 * Math.PI); ctx.arc(x, y, r, 0, 2 * Math.PI, true); ctx.fill();
-    // The bead: radial-gradient(circle, ink 0.95 0 30%, 0.25 60%, transparent
-    // 70%), whose 100% is its box's farthest corner.
-    g = ctx.createRadialGradient(x, y, 0, x, y, nb * Math.SQRT1_2);
-    g.addColorStop(0, ink(0.95)); g.addColorStop(0.3, ink(0.95));
-    g.addColorStop(0.6, ink(0.25)); g.addColorStop(0.7, ink(0));
-    ctx.fillStyle = g;
-    ctx.beginPath(); ctx.arc(x, y, r, 0, 2 * Math.PI); ctx.fill();
-    ctx.restore();
+    // lib/nib.js draws it, for Flip's files too (the owner, after v328).
+    if (window.SkriblNib) window.SkriblNib.paint(ctx, p, sx, sy);
   }
 
   async function exportGif() {

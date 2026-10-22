@@ -21763,3 +21763,41 @@ verify_helpclaims 45/45, verify_help 87/87, verify_ask, verify_book 56/56,
 verify_a11y 595/595, verify_docs.
 
 Pad and Flip: shared, one How it works partial with Flip's own tips.
+
+## After v328 -- The glowing dot on Flip's Draw on pages, everywhere (the owner's C)
+
+The owner: "on flip play on a draw on slide, I don't see a glowing nib drawing
+the line", and to the mock's three options, "C, everywhere". A Flip page set to
+Draw on now carries the Pad's bead at the tip of its line wherever it plays:
+
+- Flip's Play (flip.js revealNib): a `.player-nib` over the canvas, placed from
+  the canvas's own box, 14px as on the Pad's editor, gone at the page's end, on
+  a still page and at Stop. fitPad moves it with the canvas: Play hides the
+  strip and the canvas grows a frame later, and the dot sat 10px off for that
+  frame (verify_flipnib saw it as a dot off any line).
+- The link page (app.js drawFlipFrame, through showNibAt, the Pad replay's own
+  placement and 1.9x size). Its Flip frame loop called hideNib() every frame;
+  that call is gone, since drawFlipFrame now owns the dot on a Flip.
+- A post's box (inlineplayer.js): setNib on the last revealed point while it
+  plays, where it was always setNib(null).
+- The files. drawFrameTo paints the dot after a part-drawn page, with the Pad
+  export's painter, now lib/nib.js (editor_export.js's exportNib calls it), so
+  the WebM and MP4 carry it. THE GIF PAINTED A DRAW ON PAGE WHOLE, one image
+  per page, against the Draw on tip's word that the files show what you
+  previewed. It now uses the video's units (exportUnits): one image per tick
+  while a page draws, a still page one image held its ticks. A Flip of three
+  pages, two drawing for 2.4 s at 6 fps, went from 3 images to 31.
+
+lib/nib.js holds the ink rule too: #rrggbb, a Smear's #rrggbbaa and rgb()/rgba(),
+alpha dropped; anything else white. app.js's nibRGB took #rrggbbaa for white
+before; it has the same rule now (the link page loads app.js, not lib/nib.js).
+
+verify_flipnib (new, 17/17): one Flip of a pink Draw on page, a still page and
+a Smear-blue Draw on page, read on every animation frame on Flip's Play, the
+link page and the feed's box, plus a video frame, the GIF and the ink rule.
+Each hook taken out turns its rows red: the editor's (3 rows), the link page's
+(2), the post's (2), the file painter (the video frame and the GIF dot), the
+GIF's old one-image-per-page loop (3 images), the old nibRGB (Smear blue read
+white, and the two rules disagree), and fitPad's refit (a dot off the line).
+
+Pad and Flip: shared. The painter and the ink are one module both editors load.
