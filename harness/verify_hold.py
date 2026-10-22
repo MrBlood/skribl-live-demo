@@ -575,21 +575,27 @@ with sync_playwright() as _p2:
         # breathe. The fixture was left alone deliberately: making the tween
         # denser would raise the ratio and also change what the pacing
         # assertions below are pacing.
+        #
+        # AND 40 PAINTS, THE MINIMUM OF FIVE (v329's seal). The v329 run read
+        # 5.9x (light 0.28ms) on a tree that reads 7.7x to 9.5x on its own: a
+        # light frame of a quarter of a millisecond still lets one hiccup in
+        # three samples move the ratio by a third. Twice the paints and five
+        # samples, and the minimum of each; the 6x line is where it was.
         cost = _t.evaluate("""
           () => {
-            /* One batch: 20 paints, returned as a per-paint mean. 4 paints
+            /* One batch: 40 paints (20 before v329), returned as a per-paint mean. 4 paints
                of a 0.3ms frame is 1.2ms of wall clock, which is close
                enough to performance.now()'s resolution and to a scheduler
                hiccup for the ratio to wander by a third between runs. */
             const batch = (i) => { idx = i; const t0 = performance.now();
-              for (let k = 0; k < 20; k++) render();
-              return (performance.now() - t0) / 20; };
+              for (let k = 0; k < 40; k++) render();
+              return (performance.now() - t0) / 40; };
             /* Warm both, then take the MINIMUM of three batches each.
                A minimum is the right estimator for a cost floor: noise
                only ever adds time, so the smallest observation is the one
                least contaminated by whatever else the box was doing. */
             batch(0); batch(1);
-            const best = (i) => Math.min(batch(i), batch(i), batch(i));
+            const best = (i) => Math.min(batch(i), batch(i), batch(i), batch(i), batch(i));
             const light = best(0), heavy = best(1);
             return { heavy: +heavy.toFixed(2), light: +light.toFixed(2),
                      ratio: +(heavy / light).toFixed(1) }; }""")
