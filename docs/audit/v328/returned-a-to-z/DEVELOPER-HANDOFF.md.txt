@@ -1,0 +1,25 @@
+# Skribl v328 — Developer Handoff
+
+## First action: AUD-002 — SQLite concurrency on account drafts
+
+**HIGH / CONFIRMED under controlled overlapping requests.** `PUT /api/drafts/<id>` accepts `baseUpdatedAt`; code at `skribl/drafts.py` attempts `with_for_update()` and then writes in a second SQL statement. With SQLite this does **not** guarantee the row is locked. Two requests read the same version, both pass validation, one commits, and the other throws `sqlite3.OperationalError: database is locked` => HTTP 500. This occurred 3/3 times under a synchronized read-before-write probe. Ordinary-user incidence and PostgreSQL behavior are not established.
+
+**Minimal repro:** Use sealed v328, the supplied Python 3.12 environment, and `scripts/draft_race.py`. It builds a disposable SQLite host and aligns two concurrent requests after both loaded the same revision. It never edits the product source. Expected `(200, 409)` (or safe structured retry) and no 500. Observed `(200, 500)` each trial. `evidence/draft-concurrency-probe.json` provides outcomes.
+
+**Correction:** Use a genuine atomic revision compare-and-swap operation, plus bounded retries on actual SQLite contention. Have the losing request verify state in a fresh transaction and respond with the expected structured 409 conflict *without clobbering its content*. Consider integer revisions rather than ISO-formatted timestamps. Ensure the server's response matches the client (`skribl/static/lib/savedrafts.js`) conflict-copy behavior, and that a generic 500 is not mistaken for a conflict.
+
+**Acceptance:** 20+ simultaneous saved-draft update trials on SQLite and PostgreSQL; exactly one winner and one recoverable conflict each run, zero 500, content from both editors recoverable, no false save messages. Also cover interrupted writes, deleted drafts, browser copy-on-conflict, and retry replay.
+
+## Second action: AUD-001 — post-v328 portable release verification patch
+
+**MEDIUM / CONFIRMED harness issue.** Sealed v328 pristine extracted source: `verify_docs.py` 140/142. The follow-up patch applied to a **separate copy**: 145/145. Do not misrepresent v328 as containing the patch. Include and reseal the fix in the next release; run in unmodified ZIP extraction and Git checkout, preserving all checksums.
+
+## Third action: HIST-001 — intermittent Flip help CI failure
+
+**INTERMITTENT, developer-reported, not independently reproduced.** Preserve failed trace, crash/context/navigation events and artifact even when retry passes; root cause remains unknown. Verify real browser/phone help interactions.
+
+## Critical acceptance work still missing
+
+Actual browser drawing and gesture tests; real iPhone Safari/VoiceOver; multi-tab IndexedDB/cloud interplay; audio-enabled MP4/AAC export on Windows/macOS; end-to-end export playback and interruption; comprehensive polished-screen review; WebKit rendering/performance. These are marked NOT TESTED, **not** filed as bugs.
+
+See `AUDIT-v328-A-to-Z.md` for the complete coverage ledger, risk order, closure matrix and release rationale.

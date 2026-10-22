@@ -21542,3 +21542,67 @@ verify_tools 136/136, which reads lib/hello.js's listeners, alone.
 
 Pad and Flip: shared, one module for both; the row drives the Pad. Not tested
 here: WebKit.
+
+## After v328 -- Two saves of one account draft at once: one saved, the other told, never a 500 (AUD-002, bug fix)
+
+The auditor's second answer, `skribl-v328-audit-developer-package-AZ.zip`
+(SHA-256 cd6dbf261420..., about 155 KB), kept as received in
+`docs/audit/v328/returned-a-to-z/` with its three reports beside it as `.txt`
+(as the first answer's are, so verify_docs does not read their quoted totals as
+ours). Its own SHA256SUMS checks. The release decision: NOT READY for
+unconditional launch sign-off, and nothing scored; the browser was still
+refused, so nothing on screen was seen. AUD-001: the patch verified on a copy
+(145/145) and to be sealed in the next release. HIST-001: as before. And the
+first product finding, AUD-002, HIGH: two saves of one account draft made
+together, on SQLite, answered one 200 and one 500 (three of three, with both
+held after each had read the draft; scripts/draft_race.py).
+
+WHAT HAPPENS. Skribl makes every SQLite request a real transaction
+(models.py's BEGIN recipe), so a save's reads hold the file's read lock until
+the request ends. Two saves that have both read, then both write, deadlock,
+and SQLite makes one fail with "database is locked". The comparison's row
+lock (with_for_update) is PostgreSQL's alone. The failing write was the ORM's
+flush, which also marks the host's session for rollback, so even a caught
+error would have come back as a 500 from the host's commit.
+
+WHAT CHANGES (skribl/drafts.py save_draft). The overwrite of a saved draft is
+one UPDATE statement, not the ORM's flush, and a "database is locked" there is
+DraftBusy: a 409 with busy:true, "Another save is being made right now. Try
+again in a moment." Not a conflict: the lock is the whole file's, so what a
+save met may be any write, and a conflict would have the editor say this
+draft changed on another device and save a copy that was never needed. The
+editor shows the message and keeps the drawing; a Save after it meets the
+stored draft as it then is, and a real conflict is answered as one, which the
+editor already keeps as a copy (lib/savedrafts.js). On PostgreSQL the row lock
+already made the second save a conflict, and still does.
+
+The auditor's other suggestion, the comparison carried into the UPDATE
+itself, was built and taken out again: on SQLite a save that has compared
+holds the read lock, so the other cannot commit before it writes, and on
+PostgreSQL the row is locked; no order of two saves reaches it, so nothing
+could show it red, and it stays out.
+
+verify_draftrace, new, in-process through docs/INTEGRATION.md's own host on two
+threads, held together at the comparison as the auditor's probe was: twenty
+pairs, and a save that meets a write to another draft. On SQLite every pair is
+one save and one busy, and the busy one's next Save is the conflict (so the
+editor keeps both); the save that meets another draft's write is busy and
+then goes through, never a conflict. On PostgreSQL, where DATABASE_URL names
+one (CI's postgres jobs), every pair is a save and a conflict. Shown red each
+by its own break: main as it was, every pair one 200 and one 500, and the
+other draft's write a 500; the ORM's flush put back with the lock still
+caught, the same; busy answered as a conflict, false conflicts on both rows;
+on PostgreSQL, with_for_update taken out, every pair two 200s, the first save
+replaced without a word. As built, 4/4 here and 8/8 with a PostgreSQL 16 run
+for the purpose (stopped after; no seal was running). The auditor's own probe
+on this tree: (200, 500) three times before, a save and a busy three times
+after. It needs neither browser nor server, so it joins the PR gate.
+
+Beside it: verify_clouddrafts 94/94, verify_hostseams 69/69, verify_txcontract
+95/95, verify_integration 29/29, verify_csrf 27/27, verify_docs 142/142,
+verify_bootstrap 7/7.
+
+Pad and Flip: shared; both save account drafts through lib/savedrafts.js and
+this route. Not here: the same SQLite lock on other writes (a post, a draft's
+first save), which ratelimit.py already turns into refusals for its own; named,
+not chased.

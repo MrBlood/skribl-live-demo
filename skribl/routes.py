@@ -33,7 +33,7 @@ from .ratelimit import (_client_ip, _rate_commit_post, _rate_key, _rate_limited,
 from .validation import _decode_data_url_image
 from .creation import (CLIENT_TOKEN_RE, SkriblIdempotencyRace, SkriblRejected,
                        SkriblUnavailable, create_post)
-from .drafts import (DraftConflict, DraftNotFound, DraftRejected, delete_draft, get_draft,
+from .drafts import (DraftBusy, DraftConflict, DraftNotFound, DraftRejected, delete_draft, get_draft,
                      list_drafts, save_draft)
 from .drafts import max_drafts as _max_drafts
 from .deletion import (SkriblNotFound, SkriblRefused, delete_post,
@@ -1458,6 +1458,8 @@ def register_routes(bp, *, index_route=False):
             body["detail"] = exc.detail
         if isinstance(exc, DraftConflict):
             body.update(conflict=True, current=exc.current)
+        if isinstance(exc, DraftBusy):
+            body["busy"] = True
         return jsonify(body), getattr(exc, "status", 404)
 
     @bp.get("/api/drafts")
@@ -1501,7 +1503,7 @@ def register_routes(bp, *, index_route=False):
 
     @bp.put("/api/drafts/<draft_id>")
     def update_saved_draft(draft_id):
-        """Overwrite one of your saved drafts; 409 with conflict:true if it changed since `baseUpdatedAt`."""
+        """Overwrite one of your saved drafts; 409 with conflict:true if it changed since `baseUpdatedAt`, or busy:true if another write held the database."""
         # Draft writes spend the same attempts budget posts do (v317, security
         # review): each is up to a full payload of validation and a row rewrite.
         if not _csrf_ok():

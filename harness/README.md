@@ -113,6 +113,8 @@ stale the same way (the paragraph under the list says so too):
                          others and green alone is INTERMITTENT, never ok
     verify_bootstrap.py  bootstrap.sh finishes an install it was cut off in,
                          and leaves a venv it did not make as it is
+    verify_draftrace.py  two saves of one account draft at once: one saved,
+                         the other a conflict or busy, never a 500
 
 That list is a sample and always was — there are far more suites on disk than
 appear here, and `RELEASE.md` names every one of them.

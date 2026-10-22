@@ -1,0 +1,238 @@
+# Skribl v328 — Independent Forensic Audit (Evidence-Bounded)
+
+**Audit target:** the supplied **sealed v328** source, runtime and evidence packages. Commit declared in packet: `98067f8da84cfe0b46d222e61f62da671d361a8a`. The public site's newer `main` branch is **excluded**. This is a **substantial, but incomplete, forensic audit**. It is not equivalent to exercising every feature in a working browser on every supported platform.
+
+**Decision for unconditional public launch sign-off:** **NOT READY** (verification incomplete, and AUD-002 requires remediation). This is a decision about the **evidence required to authorize launch**, not a claim that the entire product is defective.
+
+**No overall 0–100 score awarded.** An overall score, especially 90+, would imply firsthand browser interaction, genuine iPhone/Safari testing and end-to-end export validation that did not occur. Scores that cannot be defended are reported as **NOT SCORED**, not as zero.
+
+## Evidence summary and provenance
+
+1. The previous stage verified checksums of four ZIP archives, both Python parts and their concatenation, and all internal source (574/574), runtime (352/352), evidence (215/215) manifest entries. See `evidence/BASELINE-HASHES.json`.
+2. The v328 application booted on the supplied Python 3.12.13 and offline wheelhouse. GET `/`, `/flip`, `/library`, `/gallery`, `/feed`, `/api/skribls` returned 200. The existing developer-authored tests were **independently executed**: 535/535 assertions across ten server-oriented suites in the earlier audit stage. Executing someone else's suite is not the same as independently designing tests.
+3. **32 newly authored tests passed 32/32** in a disposable Flask/SQLite host, covering public/unlisted/private access, post creation and readback, owner separation, drafts, stale-revision behavior, deletion, input errors, search, pagination boundary, idempotent retries. See `evidence/independent-api-results.json` and `scripts/independent_http.py`.
+4. **AUD-002: CONFIRMED**. In three controlled-overlap trials of two conditional saves against the same draft, one request returned 200 and the other returned **500**, with logged `sqlite3.OperationalError: database is locked`. Expected: one success, the other a handled 409 conflict (or equivalent recoverable response). See `evidence/draft-concurrency-probe.json`, `scripts/draft_race.py`. This is **SQLite scope**; PostgreSQL not independently exercised. The probe dynamically delays both requests after reading their version, without altering source files; it exercises an adversarial race, not ordinary traffic frequency.
+5. `harness/verify_docs.py` against the pristine ZIP extraction: **140/142**, failing archive-name and untracked-file tests. Against a **different, patched copy** with supplied post-v328 `AUD-001.patch`: **145/145**. See both logs. The fix is *not* in the sealed release.
+6. Independently ran FFprobe/FFmpeg on the **developer-supplied artifacts** `pad.mp4`, `flip.mp4`, `pad-music.webm`, and `flip-music.webm`. Their video streams decode, WebM music files contain Opus audio, and the first two decoded frames differ in all four files. This is **independent inspection of developer-generated artifacts**, not independent browser export. See `evidence/independent-media-analysis.json`.
+7. Chrome/Playwright navigation is stopped by `net::ERR_BLOCKED_BY_ADMINISTRATOR` even for `data:` and `file:` pages, despite HTTP reaching the app from Python/curl. A **limited static preview** was made using `page.set_content()` with returned HTML and inlined CSS, *with application scripts removed*. The previews are not proof of usable UI, active state, responsive dynamic layout, or runtime accessibility. Ten previews produced no document-level horizontal overflow at 390 × 844 or 1440 × 900; see `evidence/static-preview-contact-sheet.jpg`.
+8. The pre-audit note discloses an intermittently red GitHub runner test on Flip help at phone size (`Execution context was destroyed`). It remains **developer-reported, unresolved**, and was not reproduced here. The developer admits no physical iPhone or Safari test in its release container.
+
+---
+
+## A. Executive summary
+
+Positive, **limited** findings: the sealed packets passed integrity checking; the application boots; key server endpoints respond; 535 existing backend assertions and 32 independently designed HTTP checks passed; developer-supplied export artifacts have genuinely decodable content. **Negative finding:** overlapping saved-draft updates on SQLite can escape the intended conflict mechanism as an HTTP 500. **Auditability finding:** v328's docs verification fails on the distributable archive (the follow-up patch corrects it in an unsealed copy). **Major unknowns:** true touch drawing, autosave and IndexedDB, multi-tab browser behavior, actual end-to-end export and playback, modal interactions, iPhone Safari, VoiceOver, and interactive visual refinement. No finding count or unearned high grade substitutes for these unknowns.
+
+## B. Product quality scorecard (0–100 where supportable)
+
+| Requested category | Score | Evidence and what would justify 90+ |
+| --- | --- | --- |
+| UI quality | NOT SCORED | Static HTML/CSS screenshots only; need fully running browser across screens |
+| UX quality | NOT SCORED | No primary user tasks completed visually; need first-time tasks and recovery flows |
+| Visual polish | NOT SCORED | Static previews cannot evaluate dynamic tools, sheets or overlays |
+| Interaction quality | NOT SCORED | Browser policy blocks navigation and application JS interactions |
+| Ease of use | NOT SCORED | Need real novice and power-user task trials |
+| Accessibility | NOT SCORED | No VoiceOver, live focus or Dynamic Type tests |
+| Reliability | NOT SCORED | Server subset positive; concurrency produces 500; whole UX not exercised |
+| State management | NOT SCORED | Draft revision conflict works serially; overlap fails; client states unknown |
+| Data integrity | NOT SCORED | Persisted server reads and delete checks pass; race and browser persistence require closure |
+| Error recovery | NOT SCORED | Serial 409 handled; SQLite race results in generic 500 |
+| Consistency | NOT SCORED | Cross-screen interactive component parity not verified |
+| Platform-native feel | NOT SCORED | Real Safari/iPhone behavior untested |
+| Trust | NOT SCORED | Server access scopes tested; user-facing state/consent feedback not tested |
+| Perceived performance | NOT SCORED | No authentic browser timing, input-to-feedback or device profiling |
+| Product maturity | NOT SCORED | Nontrivial server test coverage; unverified client quality; known auditability and race defects |
+| Overall product quality | NOT SCORED | Cannot responsibly infer a total from backend coverage and static previews |
+| Acquisition / launch readiness | NOT SCORED | Significant missing direct evidence and AUD-002; **release decision NOT READY** |
+
+**A score left unassigned is not a zero.** The addendum's 90+ target must be earned from real, independently repeatable interaction and release data. Historical v321/v325 scores were not used as anchors.
+
+## C. Complete issue register — within tested scope
+
+**AUD-002 — Simultaneous conditional saved-draft updates produce an unhandled database lock**
+- **Status:** CONFIRMED with controlled scheduling, reproducible 3/3. **Category:** Reliability / Data Integrity / State / Error Recovery. **Severity:** HIGH for draft-saving resilience; lower operational exposure if production uses PostgreSQL. **Frequency in ordinary use:** UNKNOWN.
+- **Screen/flow:** Authenticated Pad or Flip > saved account draft > two active sessions updating the same draft through `PUT /api/drafts/<draft_id>`.
+- **Starting state:** One persisted draft with `updatedAt=T`, two independent request sessions both submitting `baseUpdatedAt=T`, SQLite backend.
+- **Reproduction:** Run `scripts/draft_race.py` with the sealed source's Python environment. Probe aligns the two requests immediately after each reads the persisted revision. 3 trials reproduced a 200/500 pair. The traceback points to `skribl/drafts.py`'s `session.flush()` after `.with_for_update()` on a SQLite database (`drafts.py`, around lines 193–213).
+- **Expected:** Exactly one revision wins. Second request returns a comprehensible **409 conflict** or a safe retry outcome, never 500 or a false success. Client work remains available, and successful update is durable.
+- **Observed:** One 200 and one 500 each run; SQLite error `database is locked`. One winner's title persisted. **No silent data-loss claim is established.**
+- **Likely cause — INFERENCE:** SQLAlchemy `.with_for_update()` is not a SQLite row lock; each session passes the optimistic version comparison before its write, then SQLite's write lock rejects a competitor. The route only turns `DraftRejected`/`DraftNotFound` into bounded JSON; database `OperationalError` becomes 500.
+- **Recommended correction:** Introduce an atomic compare-and-swap update using a monotonic revision and `UPDATE ... WHERE owner_id = ? AND draft_id = ? AND revision = expected`, require `rowcount == 1`, and return structured 409 on stale revisions. For SQLite, serialize/retry lock contention in a bounded transaction with a fresh revision check; avoid blanket catch of all DB errors as conflict. Retain the editor's copy-on-conflict workflow. Do not overwrite an original on retries.
+- **Ideal implementation:** Two devices editing one draft result in one saved revision and one explicit copy/concurrent-change recovery, not a generic failure. No false success.
+- **Regression tests:** On SQLite, two concurrent HTTP updates from the same baseline version repeated at least 20 times under controlled and ordinary overlap; expect one 200, one 409 (or approved recovery), zero 500, correct final body; then PostgreSQL in CI, sequential stale revisions, delete-while-save, network retry and autosave races. Verify UI preserves the losing editor's content.
+- **Adjacent workflows/regression risk:** Pad/Flip saved drafts, Library drafts list, cloud drafts concurrency, optimistic update API, upload, client retry and offline-resume behavior. **Do not assume this applies to local IndexedDB drafts or PostgreSQL.**
+
+**AUD-001 — Release documentation test not portable to the ZIP users receive**
+- **Status:** CONFIRMED in sealed v328; targeted fix independently verified **only in a separately patched copy**. **Category:** Test architecture / release auditability. **Severity:** MEDIUM for external verification; **not a user-facing bug**. **Frequency:** Always on tested clean extraction.
+- **Screen/flow:** `harness/verify_docs.py` in a ZIP extraction without Git metadata.
+- **Starting state/reproduction:** Extract sealed source as `skribl-v328-source`, run the suite. **Observed:** 140/142; archive suffix is rejected and no-Git dirty-state test fails. **Expected:** Release archive's own naming accepted and the tracked/untracked test independently controlled or correctly marked not-applicable without Git.
+- **Evidence:** `evidence/verify-docs-original.log` and `evidence/verify-docs-followup-patch.log` (latter 145/145).
+- **Likely scope:** `harness/verify_docs.py` and `harness/release_run.py` only; separate from app runtime.
+- **Fix:** Adopt/verify the proposed `AUD-001.patch` after v328, include it in a newly sealed release, rerun against Git checkout and unpacked archive, then regenerate/reseal checksums.
+- **Regression tests:** Clean Git worktree, intentionally dirty worktree, parent/child Git checkout, no-Git ZIP, supplied release directory name, missing file. Never claim the v328 seal itself contains the fix.
+
+**HIST-001 — Flip help test loses execution context in GitHub runner**
+- **Status:** INTERMITTENT **developer-reported**; **not independently reproduced**. **Category:** Browser reliability / test instrumentation. **Severity:** UNDETERMINED (possible medium reliability signal). **Frequency:** Two reported CI occurrences, denominator unknown.
+- **Screen/flow:** Flip help sheet, phone-sized browser, PostgreSQL CI shard.
+- **Evidence:** `NOTE-BEFORE-THE-AUDIT.txt` and follow-up note; one red GitHub job on seal commit reported despite surrounding green runs. The post-seal instrumentation modification is **not** in v328.
+- **Required action:** Preserve first-failure Playwright trace, browser navigation/target-crash events, page URL and console; rerun until cause is found, *without treating subsequent green runs as closure*. Regression on Chrome/WebKit/mobile viewport after diagnosing.
+
+## D. Confirmed functional bugs
+
+Only **AUD-002** qualifies as a newly independently demonstrated product/backend defect. It was reproduced under deliberate concurrency on SQLite. There is no demonstrated general loss of drafts and no verified claim about production PostgreSQL.
+
+## E. Suspected or unverified product risks
+
+**NOT TESTED:** actual pointer-cancel drawing durability, multi-touch, background/foreground restoration, IndexedDB exhaustion, service-worker mixed-version page state, cross-tab autosave, actual H.264+AAC export on Windows/macOS, iPhone audio restrictions, mid-export interruption, accessibility announcements, VoiceOver focus, Dynamic Type clipping, full navigation and platform behavior. These are priorities, **not bug allegations**. **INTERMITTENT:** HIST-001 only, based on supplied history.
+
+## F. Top risks (ranked by impact × exposure × trust/data consequences)
+
+1. **AUD-002, draft save concurrency** — confirmed only for SQLite with synchronized overlapping writes. Remediate before signing off affected deployments.
+2. **Core browser drawing/editing has no independent end-to-end acceptance proof here** — broad exposure, unknown defect rate.
+3. **Real iPhone/Safari/WebKit completely unverified** — product explicitly targets that platform.
+4. **Export workflow and AAC sound on client devices unverified** — saved media artifacts validate codec content but not the whole user path.
+5. **Browser-local persistence and multi-tab recovery not independently validated** — high trust/data stakes.
+6. **HIST-001 unresolved intermittent Flip test** — root cause unknown, potential blind spot.
+
+## G. Highest-impact improvements
+
+Close AUD-002 with a true atomic revision protocol; install runnable browser coverage against the sealed deployment; test real iPhone/Safari and VoiceOver; validate exported media produced *during an independently driven session*, including content, timing, frame hashes and audible track; exercise multiple tabs and interrupted writes with independent persistence checks.
+
+## H. Quick wins
+
+Ship AUD-001's narrowly targeted harness fix in the next seal and verify its archive as received. Retain first failed CI trace even if a retry passes. Document a clear compatibility/feature matrix identifying AAC availability/fallback. Record the exact version/build hash in test artifacts and user-visible diagnostics.
+
+## I. Structural problems
+
+**Observed:** SQLite-specific concurrency behavior and error-path handling are not robust to simultaneous optimistic draft edits. **Inferred:** a revision CAS and bounded error translation would unify recovery. **Not established:** broader navigation architecture defects, design-system drift or framework-wide state faults.
+
+## J. Polish problems
+
+**NOT TESTED** as user-visible issues. The ten JS-disabled HTML/CSS previews are not evidence enough to criticize completed app styling or microinteractions. No invented spacing/icon/copy defects.
+
+## K. Accessibility remediation
+
+No direct remediation claim is supportable. Required acceptance checks: VoiceOver tools, drawing area description, icon labels, keyboard/tab order, focus return from sheets/dialogs, live announcements for link copied and save/export, semantic error announcement, Dynamic Type and Reduce Motion at iPhone extremes. **ALL NOT TESTED** on real platform.
+
+## L. Screen-by-screen assessment
+
+| Surface | Verified | Not independently verified |
+| --- | --- | --- |
+| Pad `/` | HTTP 200; static initial HTML/CSS rendered | drawing gestures, photo/music import, undo/redo, autosave, posting, export, motion and full layout |
+| Flip `/flip` | HTTP 200; static initial HTML/CSS rendered | frames, timeline, recolor, interrupted touches, touch pointer movement, help sheet, export |
+| Library `/library` | HTTP 200; static initial HTML/CSS rendered; server draft operations separately tested | interactive draft list, player and menus, refresh and cross-device recovery |
+| Gallery `/gallery` | HTTP 200; static initial HTML/CSS rendered; listing API subset tested | visual list, filter/sort controls, empty states, playback and scrolling |
+| Feed `/feed` | HTTP 200; static initial HTML/CSS rendered | embedded drawing, playback, share controls and host integration UI |
+| Player `/s/<id>` | Server post fetch and visibility tested via API | live playback, share card action, focus and deep links |
+| Saved drafts | create/read/update/conflict/delete via API; SQLite concurrency failure | client-side copy recovery and browser-local IndexedDB behavior |
+
+## M. UX friction map
+
+**NOT TESTED directly.** Candidate friction questions requiring observation: discoverability of Pad vs Flip, tool naming, how to know whether a draft is local or in the account, feedback when post/export completes, recovery on 409 versus generic 500, cost of switching from Library to editor. Do not treat any of these as found defects.
+
+## N. State and edge-case matrix
+
+| Transition | Result / scope |
+| --- | --- |
+| Create → persist → retrieve post | PASS, independent SQLite API |
+| Public ↔ unlisted/private access | PASS, owner and non-owner API |
+| Draft create → persist → update → stale revision | PASS sequential API |
+| Draft two simultaneous conditional saves | FAIL, one 500 in 3/3 synchronized SQLite trials |
+| Delete draft/post → retrieve again | PASS, independent API |
+| Duplicate create with identical idempotency key/body | PASS, 201 then 200 with same id |
+| Duplicate idempotency key with changed body | PASS, HTTP 409 |
+| Huge listing limit, malformed cursor and literal % search | PASS, API validation |
+| Idle, reload, offline, no storage, service-worker update | NOT TESTED |
+| Multi-tab UI autosave/undo/redo | NOT TESTED |
+| Browser-generated export/playback, real audio sync | NOT TESTED |
+| Responsive static HTML/CSS at two widths | RENDERED (10 previews), not runtime layout validation |
+
+## O. Consistency matrix
+
+**API-level observations:** consistent owner/non-owner read restrictions across tested listings, drafts and visibility changes; 409 on normal stale draft update, inconsistent **500 under simultaneous** draft update. **Not tested:** visual controls, typography, menus, sheets, loaders, icon weights, navigation patterns and equivalent component interactions.
+
+## P. Potential 'delete these' list
+
+None justified. Removing a screen/control based on a JS-disabled snapshot would be speculative.
+
+## Q. Tiny defects elite reviewers might notice
+
+**Confirmed build/test detail:** the v328 `verify_docs` script cannot certify the archive name it ships with. **Confirmed functional detail:** a database-lock race bypasses the designed conflict-copy response. **Not established:** aesthetic micro-defects; live screen review is required.
+
+## R. Recommended product redesign
+
+A wholesale redesign is **not supported**. Focus design requirement: preserve every unsaved draft through a conflict and show an understandable choice (e.g. “This draft changed on another device. We saved your version as a copy.”) only after that copy actually persists. Adopt server state transitions that distinguish *pending / saved / conflict / failed / retryable*. Do not conflate generic 500 with an identified 409. Review visual system after full app screenshots and tasks are obtainable.
+
+## S. Prioritized remediation roadmap
+
+| Priority | Problem | Action | Affected areas | Regression risk | Verification criteria |
+| --- | --- | --- | --- | --- | --- |
+| **P0 before SQLite production launch** | AUD-002 overlapping save 500 | Atomic revision CAS, bounded SQLite contention handling, coherent 409/copy response | account drafts, Library, Pad, Flip | unintended overwrites, duplicate copies, reordering | 20+ synchronized double saves, no 500, exactly one winner, loser preserves content; repeat on PostgreSQL |
+| **P1 before full sign-off** | Browser behavior unverified | Run cold-start through publish/draw/export/share/save/delete in complete Chromium & real WebKit | entire app | coverage changes not user code | externally repeatable traces and genuine rendered screenshots |
+| **P1** | iPhone/Safari unverified | Physical iPhone test for touch, audio, Home Screen PWA, safe areas, VoiceOver | all primary workflows | platform divergence | device matrix with actual iOS versions, screen captures, accessibility results |
+| **P1** | Export path unverified | Drive export, decode produced files, confirm frame timing/audio and third-party playback | Pad, Flip, exports | media API and codec fallback | H.264/AAC when supported; WebM fallback where not; clear UI, no false success |
+| **P1** | HIST-001 | Capture first CI failure and root-cause it | Flip help | retry masking | cause explained, stable tests, app behavior verified |
+| **P2** | AUD-001 test portability | Merge proposed harness correction into next seal | release harness | Git checkout/archive mismatch | clean archive 145/145 plus checkout tests; new seal hashes |
+| **P2** | Visual/accessibility audit | Run comprehensive comparative real-screen + assistive tech pass | UI system | layout refactoring | actual recorded issues and resolved regression matrix |
+| **P3** | Long-session behavior | Stress tests for large drawings, storage failures, updates and resumed sessions | browsers/PWA | timing regressions | repeatable soak and recovery metrics |
+
+## T. Untested / incompletely tested areas (mandatory)
+
+**No authentic browser navigation or JS interactions**, despite limited CSS preview. **No iPhone**, **no Safari/WebKit**, **no VoiceOver**, **no WebKit-specific audio**. **No full visual review, performance profiling, client-side storage inspection, cross-tab UI testing, offline/online toggles, rotation, device lock/relaunch, huge drawings, photo editing, manual publication, third-party MP4/AAC client playback, app-generated exports from this environment, or full PostgreSQL race check**. Scriptless static previews are **not a substitute**. The original long-form audit's stopping criteria have **not** been achieved. This document must not be represented as an exhaustive A–Z acceptance certification.
+
+## U. Previous defect closure matrix
+
+| Historical concern | Audit status | Reason |
+| --- | --- | --- |
+| Video missing promised music | NOT TESTED as live workflow | WebM audio present in supplied artifact, but independent export unavailable |
+| Duplicated initial frames | NOT TESTED as live workflow | First two decoded frames differ in four supplied artifacts |
+| Empty/false export success, zero frames | NOT TESTED as live workflow | Supplied artifacts decode to 45, 15, 46 and 6 frames; UI success not exercised |
+| Wrong frame counts/timing or desync | NOT TESTED as live workflow | File durations/frame counts inspected, not audiovisual perceptual sync |
+| MP4 audio fails in third-party players | NOT TESTED | Supplied MP4 files have no audio; AAC export is unrepresented |
+| Interrupted/cancelled exports | NOT TESTED | No interactive export possible |
+| Lost pointer-end strokes and multitouch | NOT TESTED | No browser drawing or phone touch access |
+| Concurrent account draft writes | **REGRESSION/DEFECT CONFIRMED** (SQLite forced overlap) | AUD-002, one 500 per trial |
+| Stale local drafts/multi-tab autosave | NOT TESTED | Browser data stores inaccessible |
+| Incorrect save indications, resurrected deletion | NOT TESTED as UI | Server-side delete persistence checked, not IndexedDB/other views |
+| Copy-link announcement, icon tools, dialog focus | NOT TESTED | Screen reader and live DOM focus unavailable |
+| Large-text layout, gesture-only accessibility | NOT TESTED | No real iOS/VoiceOver |
+| Flip phone help CI context loss | **INTERMITTENT** (developer report) | HIST-001, no cause established |
+| v328 docs test portability | **CONFIRMED**, patch **VERIFIED** outside seal | AUD-001, 140/142 original vs 145/145 patched |
+
+## V. Independent evidence versus developer claims
+
+**Personally executed:** archive integrity stage from earlier turn; 535 named server-harness assertions in earlier turn; 32 newly authored HTTP checks; synchronized SQLite save stress; docs-suite v328 and post-v328 patch comparison; FFprobe/FFmpeg decoding of supplied media; HTTP endpoint checks; ten static CSS preview renders. **Developer claims not adopted as new fact:** “FULL RELEASE PASS” across 146 suites / 13,145 assertions, external MP4/Postgres CI attestations, desktop manual checks, all actual user interactions. **Developer files inspected but not generated here:** the four media clips. **Still not externally corroborated:** release provenance attestation through GitHub, physical device quality, Chrome exporter UI.
+
+## W. Gaps to a justified 90+ score
+
+1. Repair and verify draft concurrency error handling on each supported DB.
+2. Independently complete primary Pad, Flip, Library, Gallery and publishing flows in the browser, including recoveries.
+3. Physical iPhone/Safari checks on representative recent and older iOS versions, with VoiceOver and large type.
+4. Test audio-enabled MP4 with AAC on real supported encoders and verify export files after user actions.
+5. Validate local storage, multiple-tab contention, interrupted saves, service-worker upgrades and re-entry.
+6. Resolve HIST-001 and capture robust evidence for any flaky CI rerun.
+7. Only then conduct detailed visual/cognitive-load/system consistency scoring.
+
+These are **proof gaps**, not automatically defects. The product may improve its verified standing considerably once tests are possible. A declared score over 90 today would be aspirational.
+
+## X. Confidence and environment limitations
+
+**High:** exact artifact hashes, manually executed response codes for 32 API cases, three forced SQLite contention results, DOCS 140/142 vs 145/145, media codec/frame data. **Medium:** impact of SQLite race in real workloads (reproduction involves controlled overlap). **Low:** everything directly experienced by a user on mobile and browser; static previews do not exercise real JS or dynamic layout. The policy-blocked browser specifically prevents meeting the original stopping criteria. No feature is labeled VERIFIED FIXED solely because developer tests exist.
+
+## Y. Release decision
+
+**NOT READY for unconditional external-release/acquisition sign-off based on the currently available independent verification**. Criteria to change decision: (1) AUD-002 fixed for supported storage backends, (2) real browser and iPhone interactions verified, (3) actual exports and audiovisual playback inspected end-to-end, (4) critical persistence and accessibility paths tested, (5) unresolved CI intermittent failure triaged. This is an evidence/acceptance gate, **not a definitive statement that every untested feature is broken**.
+
+## Z. Developer delivery package
+
+The ZIP includes this complete A–Z assessment; a concise issue handoff; reproduction scripts and raw structured results; relevant test logs; a static-preview contact sheet explicitly marked as **non-interactive**; baseline checksums; and package hashes. Original application source was **not edited**. The supplied AUD-001 patch lives in the follow-up package and is not silently applied to v328. No production data was used; tests ran against disposable SQLite databases.
+
+---
+
+## Evidence control, integrity and exclusions
+
+- All files in this report are packaged with a new `SHA256SUMS` and verified after ZIP creation. No ZIP is larger than 30 MB.
+- The new SQLite concurrency probe is a **controlled scheduling test**, not measured natural frequency, and its timeout configuration was chosen for the disposable audit host. Replicate under production-like SQLite and PostgreSQL setups before generalizing frequency or impact.
+- The media artifacts were provided by the developer and **decoded independently**, which validates their contents but cannot validate provenance beyond the provided package/hashes or that the browser reliably emits them.
+- The simulated visual previews used **server-rendered HTML plus CSS with scripts removed**, so no aesthetic, functional, interactive, or accessibility conclusion is based solely on them.
+- The post-v328 patch test was run in a *separate modified source copy*; sealed v328's checksums and source are unchanged.
