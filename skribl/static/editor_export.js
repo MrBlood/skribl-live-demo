@@ -174,6 +174,44 @@
     return (ms) => rc.compose(ms) || strokeCanvas;
   }
 
+  /* THE GLOWING DOT IN THE FILES (the owner, of the desktop checks: "does the
+     nip dissappear on mp4, on gif"; it did, and then "all yes" to keeping it).
+     The bead rides the point just drawn, as the player's does (app.js
+     showNibAtIndex), drawn over each frame after the drawing so the drawing
+     never holds it: 1.9 times the line's width at the file's scale, 5 to 90
+     px, tinted to the ink (nibRGB), its halo of the same ink outside it as the
+     stylesheet's box-shadow casts one (player.css .player-nib), the halo and
+     its blur scaled with the bead so a 480 px GIF and a full-size video keep
+     its look. At a colour's moment the timeline's own entry is the tap the
+     colour runs from, so the bead sits there in the new colour while it runs,
+     as on screen. None while erasing (the screen's is a faint hollow ring that
+     is not ink), and none once the drawing is done: the finished drawing is
+     held without it, as the player's finished poster is. Flip has no bead on
+     screen, so its files have none either. */
+  function exportNib(ctx, p, sx, sy) {
+    if (!p || p.erase) return;
+    const nb = Math.max(5, Math.min(90, 1.9 * (p.size || 8) * Math.min(sx, sy)));
+    const x = p.x * sx, y = p.y * sy, r = nb / 2, k = nb / 14;
+    const ink = (a) => 'rgba(' + nibRGB(p.color) + ',' + a + ')';
+    ctx.save();
+    // The halo: box-shadow 0 0 10px 2px at 0.45 is a disc 2px wider than the
+    // bead, blurred by 10, and drawn only outside the bead.
+    const out = r + 12 * k;
+    let g = ctx.createRadialGradient(x, y, r, x, y, out);
+    g.addColorStop(0, ink(0.29)); g.addColorStop(2 / 12, ink(0.22));
+    g.addColorStop(7 / 12, ink(0.07)); g.addColorStop(1, ink(0));
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(x, y, out, 0, 2 * Math.PI); ctx.arc(x, y, r, 0, 2 * Math.PI, true); ctx.fill();
+    // The bead: radial-gradient(circle, ink 0.95 0 30%, 0.25 60%, transparent
+    // 70%), whose 100% is its box's farthest corner.
+    g = ctx.createRadialGradient(x, y, 0, x, y, nb * Math.SQRT1_2);
+    g.addColorStop(0, ink(0.95)); g.addColorStop(0.3, ink(0.95));
+    g.addColorStop(0.6, ink(0.25)); g.addColorStop(0.7, ink(0));
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(x, y, r, 0, 2 * Math.PI); ctx.fill();
+    ctx.restore();
+  }
+
   async function exportGif() {
     try {
       await skriblLoadVendor('gifenc');
@@ -224,10 +262,11 @@
 
       const out = document.createElement('canvas'); out.width = outW; out.height = outH;
       const octx = out.getContext('2d');
-      function frameData(ms) {
+      function frameData(ms, p) {
         octx.clearRect(0, 0, outW, outH);
         if (!transparent) { octx.fillStyle = bgColor || '#0d0f14'; octx.fillRect(0, 0, outW, outH); }
         octx.drawImage(layerAt(ms), 0, 0, outW, outH);
+        exportNib(octx, p, outW / logicalW, outH / logicalH);
         return octx.getImageData(0, 0, outW, outH);
       }
 
@@ -248,7 +287,7 @@
         if (comp) { ti = replayTimelineToCanvas(timeline, ti, elapsed, comp.dotFn, comp.lineFn, comp); comp.present(); }
         else { ti = replayTimelineToCanvas(timeline, ti, elapsed, sDot, sLine); }
         if (f === totalFrames - 1 && comp) { comp.finish(); comp.present(); }
-        const img = frameData(elapsed);
+        const img = frameData(elapsed, elapsed < totalMs && ti > 0 ? timeline[ti - 1] : null);
         const palette = G.quantize(img.data, 256, { format: fmt, oneBitAlpha: transparent });
         const index = G.applyPalette(img.data, palette, fmt);
         const opts = { palette, delay };
@@ -430,6 +469,7 @@
           rctx.restore();
         }
         rctx.drawImage(layerAt(at), 0, 0, w, h);
+        exportNib(rctx, at < totalMs && ti > 0 ? timeline[ti - 1] : null, dpr, dpr);
       }
 
       // Seed the pre-record base drawing, if any.
@@ -538,6 +578,7 @@
           rctx.restore();
         }
         rctx.drawImage(layerAt(at), 0, 0, w, h);
+        exportNib(rctx, at < totalMs && idx > 0 ? timeline[idx - 1] : null, dpr, dpr);
       }
       // The pre-record base drawing, if any, goes under the strokes first.
       let baseImg = null, at = 0;

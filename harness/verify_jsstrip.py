@@ -297,9 +297,14 @@ with sync_playwright() as sp:
     # in both places together, by the replay showing that moment (+1,487 B,
     # all app.js, 150,945 measured); the module that plays it,
     # lib/recolorplay.js, is fetched only for a drawing that has recolours
-    # and is not in this sum (its own line, below).
+    # and is not in this sum (its own line, below). And RAISED, in both places
+    # together, by the scrubber's dots (the owner's yes to B after the desktop checks: a dot of
+    # the new colour where each line changed it), +1,758 B, all
+    # lib/replayline.js: the moments found in the timeline, and the dot's
+    # contrast against what is painted under the bar, so a colour that would
+    # not read is ringed (152,703 measured).
     check("stripping keeps the player's JS under its ratchet",
-          lean_total <= 150_950,
+          lean_total <= 152_708,
           f"{src_total:,} B of source -> {lean_total:,} B parsed")
     # THE MODULE ONLY A RECOLOURED DRAWING FETCHES (lib/recolorplay.js, by
     # app.js on the link page and inlineplayer.js in a post): its own pin, so

@@ -530,8 +530,15 @@ stays a sleep.
   Gallery's player on a phone and a desk (its run laid exactly over the
   letterboxed canvas), in the server's line under the post, and in a GIF and
   a video (the video's frames where ffmpeg is installed); and a GIF keeps a
-  base drawn before the first take with see-through layering on. Each row was
-  shown red by its own break.
+  base drawn before the first take with see-through layering on. The
+  scrubber's dots: a dot of the new colour mid-run, half as strong ahead of
+  the playhead and whole once played, on the link page in both themes and in
+  the Pad's own preview, ringed in the bar's colour only where it would not
+  read on the track. The bead in the files: the glowing dot rides the line's
+  tip in a GIF, a WebM and the MP4 path's own frames (a stand-in encoder keeps
+  each frame, since headless Chromium cannot encode H.264), sits on the tap
+  while the colour runs, and is gone from the last frame, read off each
+  file's frames by what they show. Each row was shown red by its own break.
 - `verify_watchfull.py` — full screen while it plays, in the Pad and Flip
   (lib/watchfull.js), on the same phone and desk: the way in at the end of the
   line under the drawing, the drawing as big as the screen allows, the band

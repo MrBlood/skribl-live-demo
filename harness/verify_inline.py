@@ -1582,7 +1582,14 @@ with sync_playwright() as sp:
     #   WHICH CALLER PAYS: every page that shows a post, for the hooks; a
     #   page showing a recoloured post, for the module, once. 72,216 B
     #   measured.
-    EMBED_RATCHET = 72_221
+    # RAISED (the owner's yes to B after the desktop checks: a dot of the new
+    #   colour on the scrubber where each line changed it), for a named cost:
+    #   +1,758 B, all lib/replayline.js -- the moments found in the timeline
+    #   the scrubber reads, and each dot's contrast against what is under the
+    #   bar, ringed where it would not read. WHICH CALLER PAYS: every page that
+    #   shows a post; the dots draw only for a post with recolours, once its
+    #   drawing is there. 73,974 B measured.
+    EMBED_RATCHET = 73_979
     # THE RATCHET MEASURES DISPLAY, NOT COMPOSE, and the two are separate costs
     # paid by separate pages. Excluded here and measured on its own below:
     #   feed.js          the PREVIEW PAGE's own script (fetch the listing, clone
