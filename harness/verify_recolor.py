@@ -48,6 +48,7 @@ The rows, each the owner's choice or a fault found building it:
 """
 import io
 import json
+import re
 import os
 import sys
 import urllib.request
@@ -559,18 +560,17 @@ with sync_playwright() as pw:
             check("Color's glyph is the pen's colour", dot == "rgb(0, 169, 92)", dot)
         c.close()
 
-    # ========================================================= the button's drops
-    # The owner, before the v329 seal: "make this button more exciting, like
-    # maybe 3 colored drops and the skribl line under it, so it shows kinda
-    # what it does"; option B of the mock, "all yes". Read off the PAINTED
-    # button, both editors, both themes: each of the three inks is in the drops
-    # (the top of the button) and carried by the line (the bottom), and each
-    # stands 3:1 against the button's own ground, what a graphic needs.
-    print("\nTHE BUTTON'S DROPS — three of the pen's inks falling into a line that carries them")
+    # ===================================================== the button's drop
+    # The owner, after v329: the three drops were "kind of confusing looking"
+    # at their real size; C of the mock: one drop lands on the line and the
+    # line takes its colour from there, in the PEN'S colour. Read off the
+    # PAINTED button, both editors, both themes, for every swatch the palette
+    # offers: the drop wears the pen's colour, the line starts in the button's
+    # grey and ends in the pen's colour, and the drop reads 3:1 against the
+    # button (a pale pen is outlined in the grey, lib/recolor.js). Recolor's
+    # tip in How it works is told the same colour.
+    print("\nTHE BUTTON'S DROP — in the pen's colour, a line that takes it, and readable on every pen")
     from PIL import Image
-    # The three inks as the page defines them (styles.css's .rc-inks), so a
-    # change of token is what the rows measure, not a copy typed here.
-    TOKENS = {"purple": "--recolor-drop-a", "pink": "--recolor-drop-b", "blue": "--recolor-drop-c"}
 
     def _lum(rgb):
         c = [v / 255 for v in rgb]
@@ -580,6 +580,9 @@ with sync_playwright() as pw:
     def _ratio(a, b_):
         hi, lo = sorted((_lum(a), _lum(b_)), reverse=True)
         return (hi + 0.05) / (lo + 0.05)
+
+    def _rgb(css):
+        return tuple(int(v) for v in re.findall(r"\d+", css)[:3])
     for route in ED:
         for theme in ("light", "dark"):
             c = b.new_context(color_scheme=theme, **{**PHONE, "device_scale_factor": 4})
@@ -587,28 +590,43 @@ with sync_playwright() as pw:
             browsing.goto(q, BASE, route)
             q.evaluate("() => { window.SkriblHints && SkriblHints.hide && SkriblHints.hide(); }")
             q.evaluate(ED[route]["drawer"]); q.wait_for_timeout(600)
-            ground = q.evaluate("""() => getComputedStyle(document.getElementById('recolorBtn')).backgroundColor
-                .match(/\\d+/g).slice(0, 3).map(Number)""")
-            INKS = {k: tuple(int(v[i:i + 2], 16) for i in (1, 3, 5)) for k, v in q.evaluate(
-                "(t) => Object.fromEntries(Object.entries(t).map(([k, n]) => [k, getComputedStyle(document.querySelector('#recolorBtn svg'))"
-                ".getPropertyValue(n).trim()]))", TOKENS).items()}
-            im = Image.open(io.BytesIO(q.locator("#recolorBtn svg").screenshot())).convert("RGB")
-            w, h = im.size
-            px = im.load()
-            top, low = {k: 0 for k in INKS}, {k: 0 for k in INKS}
-            for y in range(h):
-                for x in range(w):
-                    p = px[x, y]
-                    for k, ink in INKS.items():
-                        if sum((p[i] - ink[i]) ** 2 for i in range(3)) < 45 ** 2:
-                            (top if y < h * 0.55 else low)[k] += 1
-            ratios = {k: round(_ratio(v, ground), 2) for k, v in INKS.items()}
-            check(f"{route} {theme}: the Recolor button paints a drop of each of the three inks",
-                  all(n >= 20 for n in top.values()), f"ink pixels in the drops {top} of {w}x{h}")
-            check(f"{route} {theme}: ...and the line under them carries those colours",
-                  sum(1 for n in low.values() if n >= 6) >= 2, f"ink pixels in the line {low}")
-            check(f"{route} {theme}: ...each drop 3:1 or more against the button",
-                  min(ratios.values()) >= 3, f"against rgb{tuple(ground)}: {ratios}")
+            ground = _rgb(q.evaluate("() => getComputedStyle(document.getElementById('recolorBtn')).backgroundColor"))
+            grey = _rgb(q.evaluate("() => getComputedStyle(document.getElementById('recolorBtn')).color"))
+            pens = q.evaluate("() => [...document.querySelectorAll('#colorGroup .color-dot[data-color]')].map(d => d.dataset.color.toLowerCase())")
+            wrong, flat, faint, tip = [], [], [], []
+            for pen in pens:
+                q.evaluate("(h) => document.querySelector(`#colorGroup .color-dot[data-color='${h}' i]`).click()", pen)
+                q.wait_for_timeout(120)
+                # Flip's colour popout closes on a pick (it covers the canvas):
+                # open it again to read the button.
+                if not q.locator("#recolorBtn").is_visible():
+                    q.evaluate(ED[route]["drawer"]); q.wait_for_timeout(500)
+                ink = tuple(int(pen[i:i + 2], 16) for i in (1, 3, 5))
+                im = Image.open(io.BytesIO(q.locator("#recolorBtn svg").screenshot())).convert("RGB")
+                w, h = im.size
+                px = im.load()
+                near = lambda p_, c_: sum((p_[i] - c_[i]) ** 2 for i in range(3)) < 40 ** 2
+                drop = sum(1 for y in range(int(h * 0.55)) for x in range(int(w * 0.6)) if near(px[x, y], ink))
+                line_l = sum(1 for y in range(int(h * 0.55), h) for x in range(int(w * 0.33)) if near(px[x, y], grey))
+                line_r = sum(1 for y in range(int(h * 0.55), h) for x in range(int(w * 0.55), w) if near(px[x, y], ink))
+                legible = sum(1 for y in range(int(h * 0.55)) for x in range(int(w * 0.6)) if _ratio(px[x, y], ground) >= 3)
+                if drop < 20:
+                    wrong.append((pen, drop))
+                if line_l < 6 or line_r < 6:
+                    flat.append((pen, line_l, line_r))
+                if legible < 40:
+                    faint.append((pen, legible, round(_ratio(ink, ground), 2)))
+                t = q.evaluate("() => { const s = document.querySelector('.help-tip .rc-inks'); return s ? s.style.getPropertyValue('--recolor-ink') : null; }")
+                if t != pen:
+                    tip.append((pen, t))
+            check(f"{route} {theme}: the Recolor button's drop wears the pen's colour, for every swatch",
+                  len(pens) >= 7 and not wrong, f"{len(pens)} pens; not in the drop: {wrong}")
+            check(f"{route} {theme}: ...and its line starts grey and ends in the pen's colour",
+                  not flat, f"(pen, grey px at the start, pen px at the end): {flat}")
+            check(f"{route} {theme}: ...and the drop reads 3:1 against the button on every pen, a pale one outlined",
+                  not faint, f"against rgb{ground}, (pen, px at 3:1+, the pen's own ratio): {faint}")
+            check(f"{route} {theme}: ...and Recolor's tip in How it works is told the same colour",
+                  not tip, f"(pen, the tip's colour): {tip}")
             c.close()
 
     # ================================================================== the ends

@@ -315,6 +315,7 @@
        as I change the color" (the owner). A rule over the inline cursor
        cannot lose to the order things are called in. */
     function sync() {
+      inkButton((o.color && o.color()) || '#7c5cff');
       if (!bar) return;
       var hex = (o.color && o.color()) || '#7c5cff';
       bar._dot.style.background = hex;
@@ -487,6 +488,48 @@
       }
     };
   }
+
+  /* THE BUTTON'S DROP TAKES THE PEN'S COLOUR (the owner, after v329, C of the
+   * mock; styles.css .rc-inks says what is drawn). Each editor calls sync() on
+   * every pen colour change, so every .rc-inks drawing (the button, and
+   * Recolor's tip in How it works) is given the colour here, and .rc-pale
+   * where that colour is under 3:1 against the first painted ground behind it,
+   * which outlines it in the button's grey. Asked again when the theme
+   * changes: one colour can read on one ground and not the other. */
+  var lastInk = null;
+  function rgbOf(str) {
+    var m = String(str).match(/rgba?\(\s*(\d+)[,\s]+(\d+)[,\s]+(\d+)(?:[,\s/]+([\d.]+))?/);
+    return m ? { r: +m[1], g: +m[2], b: +m[3], a: m[4] == null ? 1 : +m[4] } : null;
+  }
+  function lum(c) {
+    var f = function (v) { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+    return 0.2126 * f(c.r) + 0.7152 * f(c.g) + 0.0722 * f(c.b);
+  }
+  function groundOf(el) {
+    for (var n = el; n && n.nodeType === 1; n = n.parentElement) {
+      var c = rgbOf(getComputedStyle(n).backgroundColor);
+      if (c && c.a > 0.5) return c;
+    }
+    return { r: 255, g: 255, b: 255 };
+  }
+  function inkButton(hex) {
+    if (/^#[0-9a-f]{6}$/i.test(hex || '')) lastInk = hex.toLowerCase();
+    if (!lastInk) return;
+    var ink = { r: parseInt(lastInk.slice(1, 3), 16), g: parseInt(lastInk.slice(3, 5), 16), b: parseInt(lastInk.slice(5, 7), 16) };
+    var drawings = document.querySelectorAll('.rc-inks');
+    for (var i = 0; i < drawings.length; i++) {
+      var el = drawings[i], a = lum(ink), b = lum(groundOf(el));
+      el.style.setProperty('--recolor-ink', lastInk);
+      el.classList.toggle('rc-pale', (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05) < 3);
+    }
+  }
+  (function () {
+    var again = function () { requestAnimationFrame(function () { inkButton(null); }); };
+    if (typeof MutationObserver !== 'undefined') {
+      new MutationObserver(again).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    }
+    try { window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', again); } catch (e) {}
+  })();
 
   window.SkriblRecolor = { RUN: RUN, tint: tint, index: index, hit: hit, lineOf: lineOf, runner: runner, create: create };
 }());
