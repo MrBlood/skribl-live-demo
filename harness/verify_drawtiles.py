@@ -296,12 +296,13 @@ with sync_playwright() as pw:
         c.close()
         c, q, errs = fresh(b, route, DESK, reduce=True)
         open_drawer(q, route)
-        tile(q, "feel", 300)
-        anim = q.evaluate("() => getComputedStyle(document.getElementById('dpFeel')).animationName")
+        q.evaluate("() => document.querySelector('.dp-tile[data-dp=feel]').click()")
+        anim = q.evaluate("() => document.getElementById('dpFeel').getAnimations().length")
+        q.wait_for_timeout(300)
         tile(q, "feel", 0)
         gone = q.evaluate("() => new Promise(r => requestAnimationFrame(() => r(document.getElementById('dpFeel').hidden)))")
         check(f"{nm}: under Reduce Motion the choices neither unfold nor fold: they are there, then not",
-              anim == "none" and gone is True, f"animation {anim!r}, hidden next frame {gone}")
+              anim == 0 and gone is True, f"{anim} animations as it opened, hidden next frame {gone}")
         c.close()
 
         # ======================================================== the phone's detent

@@ -30,7 +30,7 @@
  * the open choices on screen. A drawer hidden by any route closes its tile, so
  * every open starts with four tiles, predictable.
  *
- * KIND TRANSITIONS. The choices unfold (CSS) and fold away again before they
+ * KIND TRANSITIONS. The choices unfold and fold away again (Web Animations) before they
  * leave, and the page never jumps as they go (SkriblDrawerDetent.shrinkGently).
  * Reduced motion: no fold, nothing moves.
  */
@@ -205,6 +205,7 @@
       var p = folding; folding = null;
       clearTimeout(p.__foldT);
       p.classList.remove('dp-folding');
+      if (p.getAnimations) p.getAnimations().forEach(function (a) { a.cancel(); });
       var drop = function () {
         p.hidden = true;
         tiles.forEach(function (t) { if (t.getAttribute('data-dp') === p.getAttribute('data-dp')) t.classList.remove('dp-open'); });
@@ -230,6 +231,10 @@
         root.setAttribute('data-col', String(col(k)));
         now.hidden = false;
         paint(now);
+        if (!instant && !still() && now.animate) {
+          now.animate([{ opacity: 0, transform: 'scaleY(.92)' }, { opacity: 1, transform: 'none' }],
+                      { duration: 220, easing: 'cubic-bezier(.2, .8, .2, 1)' });
+        }
       }
       if (old && !k) {
         // Closing: fold away first, then leave; at once under reduced motion.
@@ -237,6 +242,8 @@
         else {
           folding = old;
           old.classList.add('dp-folding');
+          if (old.animate) old.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'scaleY(.94)' }],
+                                       { duration: 180, easing: 'ease-in', fill: 'forwards' });
           old.__foldT = setTimeout(finishFold, 200);
         }
       }

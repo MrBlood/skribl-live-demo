@@ -65,6 +65,9 @@
   // to attachSegSlider, whose pill, with no track to sit in, painted a column
   // of tint down the whole page under the chosen tile. lib/segslider.js still
   // writes their aria-pressed and gives each its one Tab stop (.dp-choices).
+  // The drawer's four tiles (Brush, Size, Feel, Eraser), shared with Flip via
+  // lib/drawtiles.js. Here, not in app.js: the player loads app.js and has no drawer.
+  if (window.SkriblDrawTiles) window.SkriblDrawTiles.attach(document.getElementById('drawPanel'));
   const smoothSeg = document.getElementById('smoothSeg');
   if (smoothSeg && window.SkriblSmoothing) {
     window.SkriblSmoothing.create({

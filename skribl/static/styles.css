@@ -5982,7 +5982,11 @@ body.player-mode .player-shell { position: static; }
 .dp-v { font-size: 12px; font-weight: 500; color: var(--text-secondary); line-height: 1.25; }
 .dp-tile .dp-v { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 @media (hover: hover) { .dp-tile:not(.dp-open):hover { background: color-mix(in srgb, var(--accent) 7%, var(--menu-card)); } }
-.dp-tile:focus-visible, .dp-choice:focus-visible { outline: 2px solid var(--ui-hi); outline-offset: 2px; }
+/* Under forced colours backgrounds are replaced, so the chosen choice and the
+   open tile carry an outline: transparent everywhere else, painted there (no
+   @media block, which the player's sheet would have to keep). */
+.dp-choices > .dp-choice.active, .dp-tile.dp-open { outline: 2px solid transparent; outline-offset: -2px; }
+.dp-tile:focus-visible, .dp-choices > .dp-choice:focus-visible { outline: 2px solid var(--ui-hi); outline-offset: 2px; }
 /* JOINED: the open tile and its choices are one shape. The tile reaches 11px
    down over the 10px gap and the card's top edge, its own bottom edge the
    card's colour, so the seam is not there to see. The outer corner squares off
@@ -5995,15 +5999,14 @@ body.player-mode .player-shell { position: static; }
 .dp-panel {
   margin-top: 10px; padding: 12px; border-radius: 16px;
   background: var(--menu-card); border: 1px solid var(--menu-card-line); box-shadow: var(--menu-card-drop);
-  display: flex; flex-direction: column; gap: 8px;
-  transform-origin: top; animation: dp-unfold .22s cubic-bezier(.2, .8, .2, 1);
+  display: flex; flex-direction: column; gap: 8px; transform-origin: top;
 }
 .dp[data-col="0"] > .dp-panel { border-top-left-radius: 0; }
 .dp[data-col="3"] > .dp-panel { border-top-right-radius: 0; }
-.dp-panel.dp-folding { animation: dp-fold .18s ease-in forwards; pointer-events: none; }
-@keyframes dp-unfold { from { opacity: 0; transform: scaleY(.92); } to { opacity: 1; transform: none; } }
-@keyframes dp-fold { to { opacity: 0; transform: scaleY(.94); } }
-@media (prefers-reduced-motion: reduce) { .dp-panel, .dp-panel.dp-folding { animation: none; } .dp-tile, .dp-choice { transition: none; } }
+/* The unfold and the fold are lib/drawtiles.js's (Web Animations), so Reduce
+   Motion is honoured there, and the player's sheet carries no keyframes for a
+   drawer it never has. */
+.dp-panel.dp-folding { pointer-events: none; }
 .dp-panel > .draw-section-label { font-size: 13px; font-weight: 500; color: var(--text-secondary); margin-top: 4px; }
 .dp-panel > .draw-section-label:first-child { margin-top: 0; }
 .dp-aside { font-weight: 400; }
@@ -6030,9 +6033,6 @@ body.player-mode .player-shell { position: static; }
 .dp-switch-words { display: flex; flex-direction: column; text-align: left; }
 .dp-switch .dp-k { font-size: 14px; }
 .dp-foot-divider { width: 100%; }
-@media (forced-colors: active) {
-  .dp-choice.active, .dp-tile.dp-open { outline: 2px solid Highlight; outline-offset: -2px; }
-}
 
 
 /* ---------- Image / Music on-off toggle ---------- */
