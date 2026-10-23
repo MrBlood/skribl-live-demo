@@ -480,9 +480,10 @@ with sync_playwright() as pw:
         e1 = pg.evaluate("() => trimEnd")
         order = None
         if _n == "Flip":
-            # At 6 pages a second a frame is 1/6 s, past 0.1s: it moves to keep the four in size order.
+            # At 6 pages a second a frame is 1/6 s, past 0.1s: it moves to keep the four in size order
+            # (the four shown: 1 beat waits, hidden, until a tempo is tapped).
             pg.evaluate("() => { fps = 6; updateToolState(); }"); pg.wait_for_timeout(150)
-            order = pg.evaluate("() => [...document.querySelectorAll('#musicStepSeg button')].map(b => b.dataset.step)")
+            order = pg.evaluate("() => [...document.querySelectorAll('#musicStepSeg button')].filter(b => !b.hidden).map(b => b.dataset.step)")
             pg.evaluate("() => { fps = 12; updateToolState(); }"); pg.wait_for_timeout(150)
         check(f"{_n}: Each tap's frame is the editor's own, and keeps its place in size order",
               frame == f"1 frame, 1/{rate} of a second" and abs((e1 - e0) - 1 / rate) < 1e-9

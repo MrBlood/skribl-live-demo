@@ -192,8 +192,9 @@ with sync_playwright() as p:
           {n: (m["inputs"], m["inPanel"], m["musicOutOfTab"]) for n, m in _marks.items()})
     check("...and Flip's photo and backup inputs are out of it too",
           all(m["othersOutOfTab"] for m in _marks.values()), {n: m["othersOutOfTab"] for n, m in _marks.items()})
+    # Five: 0.01s, 1 frame, 0.1s, 1s, and 1 beat, which shows once a tempo is tapped.
     check("Each tap's steps are named the same on both",
-          _marks["Pad"]["steps"] == _marks["Flip"]["steps"] and len(_marks["Pad"]["steps"]) == 4,
+          _marks["Pad"]["steps"] == _marks["Flip"]["steps"] and len(_marks["Pad"]["steps"]) == 5,
           {n: m["steps"] for n, m in _marks.items()})
 
     print("\nMUSIC — Smooth restart, Hear the loop and Hear the restart")
