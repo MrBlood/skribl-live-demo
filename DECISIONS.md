@@ -21949,3 +21949,43 @@ everything else.
 
 Other suites await promises their pages resolve; none has been seen red this
 way, and they are left as they are.
+
+## After v329 -- The draw drawer's four tiles (the owner: "go ahead, build it. Keep it kind")
+
+Under the colour, the drawer was six rows of labelled pills on the Pad and
+seven on Flip, behind a "Brush, smoothing & more" button on a phone. The owner
+asked for it to be as visual and kind as the ⋯ menu had become, and picked from
+four mocked shapes "In place", Joined: four picture tiles -- Brush, Size, Feel,
+Eraser -- each painted in the pen's colour with what it holds now; a tap opens
+its choices in place, joined to the tile as one shape, and the same tile closes
+them. No chevron and no back button (the owner: easy to forget, and cheap).
+Colours are the menu's tokens role for role: a tile and its card are the
+menu's card, an unchosen choice the paper, the chosen one the one tint.
+
+lib/drawtiles.js owns which tile is open, the pictures and the tiles' words,
+and four quick sizes. Every control inside keeps its id and its module, so
+nothing behind them changed. Size holds the slider, the quick sizes and
+opacity; Feel holds smoothing, pressure ("with a stylus; a finger draws one
+width") and Flip's Draw-on; Clear and its Undo stay at the drawer's end. On a
+phone the half detent shows Color and the tiles; opening a tile goes to full,
+its choices on screen and Clear with them. Closing folds the choices away over
+frames; Reduce Motion keeps them still.
+
+Two things the build found. Pad still handed the four groups to the pill
+slider, whose pill, with no track to sit in, hung from a far ancestor and
+painted a column of tint down the whole page under the chosen choice
+(lib/segslider.js now gives .dp-choices the aria-pressed, the one Tab stop and
+the arrows, but no pill). And a choice's name ran its two lines together for a
+screen reader ("OffAs you drew it").
+
+verify_drawtiles (243 rows) was shown red per component, Pad or Flip, one
+theme per device: the pill put back (nothing paints outside the drawer), no
+fold (the fold row), not joined and an off-token tile (one shape, the menu's
+colours), the pictures ignoring the pen, the detent ignoring tiles (the
+phone's full), the choices taken out of the pick groups (one Tab stop, and the
+quick size's pressed state), the JS ignoring Reduce Motion, a quick size not
+firing the slider's input (the editor's readout), and the tiles' words left
+stale. A CSS-only Reduce Motion mutation stayed green -- a global rule already
+stills animations -- so the row is pinned by its JS branch instead.
+
+Pad and Flip: shared, one partial and one module.
