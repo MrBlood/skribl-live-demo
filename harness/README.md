@@ -440,17 +440,33 @@ stays a sleep.
 - `verify_music.py` — one music editor on both editors (lib/musicdrawer.js,
   the owner's "it needs to be the same music editor on both pad and flip"),
   every row driven on the Pad and on Flip and red on one of them before: no
-  editor keeps its own copy of a control; the Scroll and Crossfade rows are
-  the drawer's markup; one file input, out of the Tab order; the step size
-  named the same; Crossfade carries a playing preview to the new join; Test
-  Seam plays the join, crossfade and all; Preview Loop's fallback is the
-  baked clip, at 1x whatever the replay's speed; an edge let go off the strip
-  is saved; Match Drawing Time counts each page at its own length and leaves
-  an empty Flip alone; the switch silences Play and a preview, brings Play's
-  music back, and a switched-off track stays in a Pad draft, its autosave and
-  its reopening; a new track starts at 1x; a photo named song.mp3 is refused
-  by its type; and Play stops a preview. A post leaving a switched-off track
-  out, which both already did, is kept by rows green before too.
+  editor keeps its own copy of a control; the Scroll and Smooth restart rows
+  are the drawer's markup; one file input, out of the Tab order; Each tap's
+  steps named the same; Smooth restart carries a playing preview to the new
+  join; Hear the restart plays the join, smooth restart and all; Hear the
+  whole loop's fallback is the baked clip, at 1x whatever the replay's speed;
+  an edge let go off the strip is saved; Fit my drawing (it was Match Drawing
+  Time) counts each page at its own length and is off on an empty Flip; the
+  switch silences Play and a preview, brings Play's music back, and a
+  switched-off track stays in a Pad draft, its autosave and its reopening; a
+  new track starts at 1x; a photo named song.mp3 is refused by its type; and
+  Play stops a preview. A post leaving a switched-off track out, which both
+  already did, is kept by rows green before too.
+- `verify_musiclevels.py` — the music drawer's three levels (lib/musicdrawer.js,
+  the owner's "3 levels of controls... from super simple to super powerful"),
+  on the Pad and on Flip: Simple, Adjust and Fine-tune each show what they add
+  and hide the rest with `hidden`; switching keeps the loop, says so over the
+  strip, and is remembered by both editors; a new song starts on Skribl's pick
+  (the first 20 seconds or the whole song, on the Pad as long as a drawing
+  already there, with a smooth restart), and a draft's song keeps its own
+  loop; a change offers Back to Skribl's pick, whose Undo goes after eight
+  seconds, and an Undo of the drawing says the drawing changed; Fit counts the
+  smooth restart; Whole song says when it is the longest loop; with nothing
+  drawn Fit is off and wakes with a drawing; Smooth restart's switch keeps its
+  last length; typed times, Each tap's frame (the Pad's video, Flip's pages a
+  second, in size order) and Lock the length; the sync line; 16px fields;
+  Play with my drawing is the editor's Play, or the loop alone with nothing to
+  play; Fine-tune keeps the switch in sight, and back to Simple glides.
 - `verify_learncard.py` — the card on the button (lib/learncard.js), Pad and
   Flip: holding a button (real touch) opens its card with its example; a
   quick tap stays a tap, a moving finger is no hold, the lift does not press,

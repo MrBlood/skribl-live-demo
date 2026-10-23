@@ -18,7 +18,7 @@ before. What they had said:
     Pauses decides how it replays), and "new pixels can't silently diverge";
   * a "+" for the custom colours, a rainbow swatch since the + went;
   * "Media" for the button named Photo and music;
-  * Crossfade without where it is (under Fine-tune); "Flip Mode" for Flip; the P and E
+  * Crossfade without where it is (under Fine-tune; it is Smooth restart now); "Flip Mode" for Flip; the P and E
     shortcuts as Flip's alone, which the Pad has too; Smudge saying one
     thing twice; "hold one" to a mouse, which rests;
   * that a drawing's name goes with its posts (the Post title starts empty);
@@ -127,9 +127,9 @@ with sync_playwright() as p:
               f"{t.get('Add a track', '')[:80]} | {t.get('Add a photo', '')[:60]}")
         check(f"{ed}: Pen and Eraser name their shortcuts, P and E",
               has(t.get("Pen"), "Shortcut: P.") and has(t.get("Eraser"), "Shortcut: E."), f"{t.get('Pen', '')[-40:]} | {t.get('Eraser', '')[-40:]}")
-    check("Crossfade says where it is, under Fine-tune, on the Pad and Flip alike",
-          has(P.get("Crossfade"), "Under Fine-tune") and has(F.get("Crossfade"), "Under Fine-tune"),
-          f"Pad {P.get('Crossfade')}; Flip {F.get('Crossfade')}")
+    check("Smooth restart (it was Crossfade) says where it is, under Adjust and Fine-tune, on the Pad and Flip alike",
+          has(P.get("Smooth restart"), "Under Adjust and Fine-tune") and has(F.get("Smooth restart"), "Under Adjust and Fine-tune"),
+          f"Pad {P.get('Smooth restart')}; Flip {F.get('Smooth restart')}")
     switch = pad.evaluate("() => { const b = document.getElementById('flipBtn'); return b ? b.getAttribute('aria-label') : null; }")
     check("Pad: the editor switch names Flip as Skribl Flip, as the Pad is Skribl Pad, not Flip Mode",
           bool(switch) and switch.startswith("Skribl Flip:"), str(switch))

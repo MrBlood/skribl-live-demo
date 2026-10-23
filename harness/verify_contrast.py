@@ -322,14 +322,17 @@ def surfaces(name, ids, q, canvas, btn):
         q.set_input_files(ids["photo"], {"name": "photo.png", "mimeType": "image/png", "buffer": PNG})
         q.wait_for_timeout(1500)
 
-    def music(fine):
+    # The music drawer at each of its three levels (lib/musicdrawer.js), a
+    # new drawer opening on Simple: Adjust and Fine-tune each add words of
+    # their own (Adjust's length line and typed times; Fine-tune's sync line).
+    def music(level):
         def f():
             browsing.pad_drawer(q, "music"); q.wait_for_timeout(400)
             q.set_input_files("#musicInput", {"name": "song.wav", "mimeType": "audio/wav", "buffer": WAV})
             q.wait_for_function("() => typeof currentAudioBuffer !== 'undefined' && !!currentAudioBuffer", timeout=20000)
             q.wait_for_timeout(700)
-            if fine:
-                q.click("#fineTuneToggle"); q.wait_for_timeout(900)
+            if level:
+                q.click({"adjust": "#fineTuneTrim", "fine": "#fineTuneToggle"}[level]); q.wait_for_timeout(900)
         return f
 
     # The card on the button and the name tags (lib/learncard.js), which the
@@ -367,7 +370,8 @@ def surfaces(name, ids, q, canvas, btn):
             ("Tune", tune, "#tuneShell"),
             ("The draw drawer", drawer("brush"), "#drawPanel"), ("The draw drawer, Size", drawer("size"), "#drawPanel"),
             ("The draw drawer, Feel", drawer("feel"), "#drawPanel"), ("The draw drawer, Eraser", drawer("eraser"), "#drawPanel"), ("Photo, with a picture", photo, "#mediaCard"),
-            ("Music, Trim", music(False), "#mediaCard"), ("Music, Fine-tune", music(True), "#mediaCard"),
+            ("Music, Simple", music(None), "#mediaCard"), ("Music, Adjust", music("adjust"), "#mediaCard"),
+            ("Music, Fine-tune", music("fine"), "#mediaCard"),
             ("A button's card", card, ".lc-card"), ("A Show me step", step, ".lc-card"),
             ("Name every button", names, ".lc-tags"),
             ("Your drafts, a row's menu", drafts_menu, "#savedDraftsSheet"))
@@ -461,7 +465,7 @@ with sync_playwright() as p:
 # difference is drift), and every sheet the menu opens is the menu's paper.
 print("\nCONSISTENCY")
 DRAWERS = ("Tune", "The draw drawer", "The draw drawer, Size", "The draw drawer, Feel", "The draw drawer, Eraser",
-           "Photo, with a picture", "Music, Trim", "Music, Fine-tune")
+           "Photo, with a picture", "Music, Simple", "Music, Adjust", "Music, Fine-tune")
 PAPER = ("the menu", "New", "Settings", "Your drafts", "Export", "Report a problem", "Post",
          "Ask", "Ask, its answers", "Ask, an answer", "The little book")
 for scheme in ("light", "dark"):

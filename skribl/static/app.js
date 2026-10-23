@@ -1499,6 +1499,8 @@ function updateDrawingTimeLabels() {
   if (durationBadge) {
     durationBadge.textContent = formatDuration(playMs);
   }
+  // The music drawer says what the loop is against the drawing (editor only).
+  if (typeof syncMusicDrawer === 'function') syncMusicDrawer();
 }
 
 let recTimerInterval = null;
@@ -2151,8 +2153,6 @@ const handleEnd = document.getElementById('handleEnd');
 const trimStartLabel = document.getElementById('trimStartLabel');
 const trimEndLabel = document.getElementById('trimEndLabel');
 const trimDurLabel = document.getElementById('trimDurLabel');
-const startReadout = document.getElementById('startReadout');
-const endReadout = document.getElementById('endReadout');
 
 let audioEl = null;
 let audioDuration = 0;
@@ -2220,17 +2220,11 @@ function updateTrimUI() {
   // Update bubbles — hundredths, since these mark exact cut points
   if (bubbleStart) bubbleStart.textContent = formatTimeH(trimStart);
   if (bubbleEnd) bubbleEnd.textContent = formatTimeH(trimEnd);
-  // Fine-tune panel readouts — 2 decimals so even a 0.01s nudge is visible
-  if (startReadout) startReadout.textContent = trimStart.toFixed(2) + 's';
-  if (endReadout) endReadout.textContent = trimEnd.toFixed(2) + 's';
-  // Update loop summary
-  const dur = trimEnd - trimStart;
-  
-  if (loopSummary) loopSummary.textContent = `Loop: ${formatTimeH(trimStart)} → ${formatTimeH(trimEnd)} [${dur.toFixed(2)}s]`;
   // Update zoom waveform (throttled)
   requestZoomWaveformDraw();
   updateZoomHandles();
-  if (typeof updateZoomPanSlider === 'function') updateZoomPanSlider();
+  // The typed times, the lines and the pick are the drawer's (lib/musicdrawer.js).
+  if (typeof syncMusicDrawer === 'function') syncMusicDrawer();
 }
 
 // Waveform canvases live in the music panel — editor only. A detached <canvas>
@@ -2241,7 +2235,6 @@ const waveformCtx = waveformCanvas.getContext('2d');
 const zoomWaveformCanvas = _authoringCtl('zoomWaveformCanvas', 'canvas');
 const zoomWaveformCtx = zoomWaveformCanvas.getContext('2d');
 const loopZoomLabel = document.getElementById('loopZoomLabel');
-const loopSummary = document.getElementById('loopSummary');
 const playhead = document.getElementById('playhead');
 const zoomPlayhead = document.getElementById('zoomPlayhead');
 const zoomHandleStart = document.getElementById('zoomHandleStart');

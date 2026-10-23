@@ -21989,3 +21989,165 @@ stale. A CSS-only Reduce Motion mutation stayed green -- a global rule already
 stills animations -- so the row is pinned by its JS branch instead.
 
 Pad and Flip: shared, one partial and one module.
+
+## After v329 -- The music drawer's three levels (the owner: "I want it all, but from super simple to super powerful")
+
+Step 1 of the music plan the owner approved in the mock ("All yes", then
+"Yes" to start): the three levels, with today's controls in their new homes.
+The owner's words were the brief: "like 3 levels of controls. The more control
+you want, the deeper into the controls you go... most people don't want to get
+super detailed, they want it to just work automatically while others like me
+want to get super detailed and perfect with the loops... no getting rid of
+anything either... Keep it kind too. The 4 pillars."
+
+The drawer's head is one pill of three, each its name over what it is for:
+Simple (Skribl does it), Adjust (shape it yourself), Fine-tune (make it
+perfect). A level only shows and hides -- `data-levels` on each block, so a
+hidden control is `hidden` and out of the Tab order -- and the strip, its times
+and the pick line are on every level in the same place, so switching never
+moves the loop under the finger. "Switching keeps your loop." says so over the
+strip for a moment, taking no tap and no room. The level is remembered, one
+key for both editors.
+
+- Simple: Skribl's pick, Fit my drawing, Whole song, Play with my drawing.
+- Adjust: the loop's length against the drawing and both ends typed (to the
+  hundredth), Smooth restart and Hear the restart.
+- Fine-tune: today's Fine-tune re-homed -- the loop detail with Loop / Start /
+  End, zoom and Scroll, and Hear the whole loop; Each tap (0.01s, 1 frame,
+  0.1s, 1s); Start of loop and End of loop typed (to the thousandth) or
+  stepped; the sync line ("Comes round every 8.000s · 240 frames at 30 a
+  second · fits your drawing"); Lock the length; Smooth restart and its
+  length.
+
+Today's names, kept as ids so nothing behind them moved: Trim is Adjust
+(#fineTuneTrim), Match Drawing Time is Fit my drawing (#matchDrawingBtn), Test
+Seam is Hear the restart (#testSeamBtn), Preview Loop is Hear the whole loop
+(#previewLoopBtn), Crossfade is Smooth restart's length (#crossfadeSlider).
+Step size's - and + became Each tap's four. Today's 0.02s and 0.05s steps are
+not among them, as the owner chose: "All yes but lose .02 and .05."
+
+SKRIBL'S PICK is what a new song starts on: its first 20 seconds, or all of a
+shorter one, with a smooth restart (0.25s, never more than a quarter of the
+loop). On the Pad a drawing already there sets the length instead, what is
+heard as long as the drawing, as the Pad's add always did. Not on Flip (the
+owner said yes): an animation goes round in a second or two, and a loop that
+short stutters; Fit my animation is one tap. Phase 1 of the pick, with no ears
+yet: "the part that loops best, on the beat" is step 3, and the pick line says
+only what is true ("Skribl picked the first 8 seconds, as long as your
+drawing, with a smooth restart."). A change says "You've made your own loop."
+with Back to Skribl's pick, whose Undo lasts eight seconds. When it was the
+drawing that changed -- an Undo with the drawer open, or more drawing after
+the song -- the line says "Your drawing has changed since Skribl picked this
+loop." instead, and the way back fits the drawing as it is now. A song a draft
+brings back keeps the draft's loop: the pick is for a song just chosen (Flip
+marks that with `musicFresh`; the Pad's add already skipped a restore).
+
+A SMOOTH RESTART MAKES THE LOOP SHORTER, which the drawer now counts. The
+crossfade folds the loop's end over its start (lib/audioloop.js), so what is
+heard comes round sooner than the stretch selected, by the crossfade's length.
+Match Drawing Time set the selection to the drawing and, with a crossfade on,
+fell short of it by that much; Fit my drawing makes what is HEARD as long as
+the drawing, and "fits your drawing" and every length the drawer says are what
+is heard. With the pick turning the smooth restart on for every new song (the
+owner said yes to that too), this went from a corner to the common case.
+
+PLAY WITH MY DRAWING is the editor's own Play (it shows the whole drawing, as
+Play does), and follows it however it is pressed; with nothing to replay it
+plays the loop on its own and says "Play the loop". The Pad's replay rests the
+drawer while it plays, as it always has, so Stop is the header's.
+
+Four things the build found, each fixed where it lived:
+
+- The drawer did not hear about the drawing. Fit stayed off after the first
+  stroke, and the lines went stale after an Undo with the drawer open. Each
+  editor's duration label already ran on every drawing change (the Pad's
+  updateDrawingTimeLabels, Flip's syncFlipDuration); it now refreshes the
+  drawer too, measuring the drawing once per refresh.
+- A level picked soon after a song landed, or soon after the drawer opened,
+  chased the page down: the reveal's late re-asserts (300, 700 and 1200ms)
+  saw a taller drawer and carried the page to its new end, the switch just
+  tapped under the header. lib/drawerdetent.js: a level change moves
+  followGrowth's baseline and calls its re-asserts off, and a press inside a
+  drawer calls off revealPanelEnd's (once the person acts, the page is
+  theirs). Fine-tune's own reveal shows the loop detail but never scrolls the
+  switch out of sight.
+- A length said two ways: a 4.448s drawing was "the first 4.4 seconds" over
+  an Adjust line saying 4.45s. The seconds are rounded from the hundredths
+  the lines show, as a person rounds what they read: 4.5.
+- A two-line label read as one word ("SimpleSkribl does it"), the bug the
+  draw drawer's tiles had: a space between the two spans, which the flex
+  layout ignores.
+
+The loop detail's header says "smooth 0.25s" where it said "xfade 250ms".
+How it works says the new words: Three levels, Skribl's pick, Fit my drawing
+(or animation), Smooth restart, Hear the restart, Play with my drawing, Loop
+Detail with Hear the whole loop, Start and end with Adjust's typed ends, Each
+tap and Lock the length. verify_helpclaims claims each, and its census of
+named controls knows the new ones (the level switch by its group, How much
+control).
+
+verify_musiclevels was shown red per component: a broken copy of one file
+served to the browser (the files on disk untouched), one part of the suite
+run. The levels not hiding turned the three "what each level shows" rows and
+"hidden, so out of the Tab order" red on both editors; the level not stored,
+"remembered"; no note, "says so"; a switch that moved the loop, "keeps the
+loop". The pick without its smooth restart, both editors' pick rows; Flip's
+pick not applied, its pick and its way back; Flip's pick applied on every
+decode, its re-add and its draft rows; no Undo, the way back and the eight
+seconds; a minute's Undo, the eight seconds; the pick not remembered, "an
+Undo says the drawing changed", which the Pad's refresh hook removed also
+turned; the old rounding, the 4.448s row. Match Drawing Time's old sum, Fit
+and the one tint; Whole song keeping its start, or never "Longest loop", its
+row; Flip's refresh hook removed, Flip's "Fit wakes"; Fit never off, both.
+The switch always coming back at 0.25s, both; the lines counting the
+selection, both. No comma, no put-back, a frame fixed at the Pad's 1/30 (Flip's
+frame and sync line), no size order (Flip's frame), no lock, no frames in the
+sync line, and 13px fields each turned their rows. Play not the editor's, Play
+not following it, and one label for both cases, their rows. The press rule
+removed, the Pad's Fine-tune rows on the desk and sideways; the growth fix
+removed, both editors on the desk (a 236-365px frame); the cap removed, both
+sideways; no glide back, both glide rows.
+
+The glide rows read the switch on every animation frame, and beside two other
+suites one went red on Flip held sideways: a 165px step. Timed, the reveal's
+frames ran 58-150ms under that load, and a glide seen through a frame that
+long is one big step; alone it was green. The row now says each step's frame
+time. Letting a long frame carry more (3px a millisecond) was tried and
+hid a chase, 424px in one 176ms frame, so the 160px rule stays and a red in a
+long frame is told apart by a run alone.
+
+Four more reds beside the others were the suites' own, each fixed where it
+lived. verify_helpclaims' census of named controls did not know the new ones,
+still listed seven that are gone, and one claim named a row by a title it
+does not have. verify_tools' V214f posted 4.75s for its 5s loop: the pick's
+smooth restart folds 0.25s off the posted clip, so its fixture asks for a
+clean cut, as verify_loopcap's does. And verify_sheetswipe's "back to Adjust"
+leapt 706px on both editors: at 664px tall the switch is 400px above the
+screen at Fine-tune's end, and the leap was Playwright scrolling it into view
+for the click. That row now runs on the owner's phone (402x874) and taps
+Adjust from the switch, scrolled back up to the way a person must; there the
+page loses 238-262px, the build glides it in 49-52px frames, and without
+shrinkGently it is one frame (red). verify_ux's V210 expected Start and End
+stacked at 363px: the rebuilt Fine-tune gives their grid the screen less 78px
+(it was less 100), so two 130px groups fit from 348px, nothing spilling; the
+stack is checked at 340 instead.
+
+Two stayed green, and say why. The Pad's re-add guard: the saved loop is
+applied after any pick, so it is kept either way (the guard stays, for an
+older save without a crossfade). Whole song without its own 20s cap: each
+editor clamps every loop to 20s, so that was not a defect. And one fix came
+out because it could not be shown red: `overflow-anchor: none` on the levels.
+Measured with it and without, tapped 30ms and 400ms after a song lands, the
+switch moved the same; the 84px leap first blamed on scroll anchoring was the
+app's own reveal still gliding.
+
+Pad and Flip: shared -- one partial, one module (lib/musicdrawer.js), and each
+editor's half is its hooks. Flip's only difference is its pick (above) and its
+frame: one of Flip's pages a second where the Pad's is its video's, 30 a
+second.
+
+Not tested here: the sound on an iPhone, a finger on the strip, Segoe UI and
+SF. And kept as it is, a question the owner chose to take up after step 2:
+the Pad's replay still stops the music when the drawing ends (START-HERE's
+"When the drawing stops, the music stops"), so "your finished drawing stays
+while the song plays on" is not said anywhere yet.

@@ -24,7 +24,7 @@ driven on BOTH editors, and each was red on one of them before:
   * Flip took a photo named song.mp3 as far as a failed decode;
   * Flip's Play left a preview playing under it;
   * Flip's file input was invisible and still reached by Tab, and the two
-    editors named the step size's buttons differently.
+    editors named the step size's buttons differently (Each tap's, now).
 
 Rows that pass on the old code too pin what must not change: the side that
 was already right.
@@ -102,7 +102,7 @@ def take(pg):
 PLAY = {"Pad": "#playBtn", "Flip": "#play"}
 
 
-def editor(b, name, path, *, init=None, drawn=True, track=True):
+def editor(b, name, path, *, init=None, drawn=True, track=True, level="fine"):
     pg = b.new_page(viewport={"width": 1280, "height": 900})
     if init:
         pg.add_init_script(init)
@@ -119,9 +119,17 @@ def editor(b, name, path, *, init=None, drawn=True, track=True):
         pg.wait_for_function("() => document.getElementById('musicUploadBtn').classList.contains('loaded') && !!currentAudioBuffer",
                              timeout=20000)
         pg.wait_for_timeout(400)
-        # The same loop on both, the whole 6 s track: the Pad fits a new track
-        # to the drawing already there, which is right and not what these ask.
-        pg.evaluate("() => { trimStart = 0; trimEnd = audioDuration; updateTrimUI(); }")
+        # The same loop on both, the whole 6 s track with a clean cut: a new
+        # track starts on Skribl's pick (fitted to the Pad's drawing, with a
+        # smooth restart), which is right and not what these ask, and the pick
+        # has its own suite (verify_musiclevels.py).
+        pg.evaluate("() => { trimStart = 0; trimEnd = audioDuration; loopCrossfadeMs = 0; setCrossfadeUI(); updateTrimUI(); }")
+        # Most rows press a control only Fine-tune shows (Hear the whole loop,
+        # Smooth restart's length), so they start there, as a person would.
+        if level:
+            pg.click({"simple": "#musicLevelSimple", "adjust": "#fineTuneTrim", "fine": "#fineTuneToggle"}[level])
+            pg.wait_for_timeout(450)
+            browsing.wait_scroll_still(pg)   # Fine-tune glides its waveform into view
     return pg
 
 
@@ -176,26 +184,25 @@ with sync_playwright() as p:
             return { inputs: document.querySelectorAll('#musicInput').length,
                      inPanel: !!(inp && inp.closest('#musicPanel')), musicOutOfTab: out(inp),
                      othersOutOfTab: ['imageInput', 'photoInput', 'draftInput'].every(i => out(q(i))),
-                     finer: q('nudgeStepFiner').getAttribute('aria-label'),
-                     coarser: q('nudgeStepCoarser').getAttribute('aria-label') }; }""")
+                     steps: [...document.querySelectorAll('#musicStepSeg button')].map(b => b.dataset.step + ':' + b.textContent) }; }""")
         pg.close()
     check("one #musicInput, the drawer's own, out of the Tab order on both (Flip's was invisible and reached by Tab)",
           all(m["inputs"] == 1 and m["inPanel"] and m["musicOutOfTab"] for m in _marks.values()),
           {n: (m["inputs"], m["inPanel"], m["musicOutOfTab"]) for n, m in _marks.items()})
     check("...and Flip's photo and backup inputs are out of it too",
           all(m["othersOutOfTab"] for m in _marks.values()), {n: m["othersOutOfTab"] for n, m in _marks.items()})
-    check("the step size's buttons are named the same on both",
-          _marks["Pad"]["finer"] == _marks["Flip"]["finer"] and _marks["Pad"]["coarser"] == _marks["Flip"]["coarser"],
-          {n: (m["finer"], m["coarser"]) for n, m in _marks.items()})
+    check("Each tap's steps are named the same on both",
+          _marks["Pad"]["steps"] == _marks["Flip"]["steps"] and len(_marks["Pad"]["steps"]) == 4,
+          {n: m["steps"] for n, m in _marks.items()})
 
-    print("\nMUSIC — Crossfade, Preview Loop and Test Seam")
+    print("\nMUSIC — Smooth restart, Hear the whole loop and Hear the restart")
     for _n, _p in EDITORS:
         pg = editor(b, _n, _p)
         pg.click("#previewLoopBtn"); pg.wait_for_timeout(700)
         a = pg.evaluate("() => { const s = _waLoop.source(); window.__src = s; return s ? s.buffer.duration : null; }")
         slide(pg, "#crossfadeSlider", 200); pg.wait_for_timeout(500)
         z = pg.evaluate("() => { const s = _waLoop.source(); return { fresh: !!s && s !== window.__src, dur: s ? s.buffer.duration : null, on: previewingLoop }; }")
-        check(f"{_n}: Crossfade carries a playing Preview Loop over to the new join",
+        check(f"{_n}: Smooth restart carries a playing Hear the whole loop over to the new join",
               a is not None and z["fresh"] and z["on"] and z["dur"] is not None and z["dur"] < a - 0.15,
               f"clip {a} s before, after: {z}")
         pg.click("#previewLoopBtn"); pg.wait_for_timeout(200)
@@ -213,7 +220,7 @@ with sync_playwright() as p:
         first_ok = bool(shown) and shown[0] >= (clip_end - (1.25 + 0.3) / tr[2] * 100)
         came_round = any(shown[j] < shown[j - 1] - 5 for j in range(1, len(shown)))   # it went back
         stopped = bool(seen) and seen[-1][2] is False and seen[-1][1] is None
-        check(f"{_n}: Test Seam plays the join, crossfade and all: the loop's end, then its start, then it stops",
+        check(f"{_n}: Hear the restart plays the join, smooth restart and all: the loop's end, then its start, then it stops",
               first_ok and came_round and stopped,
               f"first {shown[:1]} (join at {clip_end:.0f}%), came round {came_round}, stopped {stopped}, "
               f"{len(shown)} frames with the playhead shown")
@@ -233,7 +240,7 @@ with sync_playwright() as p:
         pg.evaluate("() => { window.__plays = []; document.getElementById('previewLoopBtn').click(); }")
         pg.wait_for_timeout(1300)
         plays = pg.evaluate("() => window.__plays")
-        check(f"{_n}: with no Web Audio, Preview Loop loops the baked clip (the posted loop), not the raw track",
+        check(f"{_n}: with no Web Audio, Hear the whole loop loops the baked clip (the posted loop), not the raw track",
               any(x["loop"] and not x["track"] for x in plays) and not any(x["track"] for x in plays), str(plays))
         pg.close()
 
@@ -243,7 +250,7 @@ with sync_playwright() as p:
             pg.evaluate("() => { replayRate = 2; }")
         pg.click("#previewLoopBtn"); pg.wait_for_timeout(700)
         rate = pg.evaluate("() => { const s = _waLoop.source(); return s ? s.playbackRate.value : null; }")
-        check(f"{_n}: Preview Loop plays the loop as posted, at 1x, whatever the replay's speed",
+        check(f"{_n}: Hear the whole loop plays the loop as posted, at 1x, whatever the replay's speed",
               rate == 1, f"playbackRate {rate} with the replay at {'2x' if _n == 'Pad' else 'its own pace'}")
         pg.close()
 
@@ -265,27 +272,28 @@ with sync_playwright() as p:
               f"saved {before} before, {after} after; the loop's end is {live}")
         pg.close()
 
-    print("\nMUSIC — Match Drawing Time")
+    print("\nMUSIC — Fit my drawing (it was Match Drawing Time)")
     pg = editor(b, "Pad", "/")
     want = pg.evaluate("() => getPlaybackDuration() / 1000")
     pg.click("#matchDrawingBtn"); pg.wait_for_timeout(200)
     got = pg.evaluate("() => trimEnd - trimStart")
-    check("Pad: Match Drawing Time sets the loop to the replay's length",
+    check("Pad: Fit my drawing sets the loop to the replay's length",
           abs(got - max(0.5, min(want, 6))) < 0.02, f"loop {got:.2f} s for a {want:.2f} s replay")
     pg.close()
     pg = editor(b, "Flip", "/flip", drawn=False)
     pg.evaluate(PAGES, {"n": 3, "fps": 12, "hold": 8})
     pg.click("#matchDrawingBtn"); pg.wait_for_timeout(200)
     got = pg.evaluate("() => trimEnd - trimStart")
-    check("Flip: Match Drawing Time counts each page at its own length (three pages held 8 at 12 fps is 2 s)",
+    check("Flip: Fit my animation counts each page at its own length (three pages held 8 at 12 fps is 2 s)",
           abs(got - 2.0) < 0.02, f"loop {got:.2f} s; pages over fps would say 0.25, and the 0.5 s floor")
     pg.close()
     pg = editor(b, "Flip", "/flip", drawn=False)
     before = pg.evaluate("() => trimEnd - trimStart")
-    pg.click("#matchDrawingBtn"); pg.wait_for_timeout(200)
+    off = pg.evaluate("() => { const f = document.getElementById('matchDrawingBtn'); f.click(); return f.disabled; }")
+    pg.wait_for_timeout(200)
     got = pg.evaluate("() => trimEnd - trimStart")
-    check("Flip: with nothing drawn, Match Drawing Time leaves the loop alone, as the Pad's does",
-          abs(got - before) < 0.001, f"{before:.2f} s -> {got:.2f} s")
+    check("Flip: with nothing drawn, Fit my animation is off and leaves the loop alone, as the Pad's does",
+          off and abs(got - before) < 0.001, f"disabled {off}; {before:.2f} s -> {got:.2f} s")
     pg.close()
 
     print("\nMUSIC — the switch")
@@ -313,8 +321,8 @@ with sync_playwright() as p:
         pg.click("#previewLoopBtn"); pg.wait_for_timeout(600)
         pg.evaluate("() => document.getElementById('musicToggle').click()"); pg.wait_for_timeout(250)
         st = pg.evaluate("() => ({ wa: _waLoop.playing(), on: previewingLoop, btn: document.getElementById('previewLoopBtn').textContent })")
-        check(f"{_n}: the switch, off, stops a preview, and Preview Loop says so",
-              not st["wa"] and not st["on"] and st["btn"] == "Preview Loop", str(st))
+        check(f"{_n}: the switch, off, stops a preview, and Hear the whole loop says so",
+              not st["wa"] and not st["on"] and st["btn"] == "Hear the whole loop", str(st))
         pg.close()
 
     print("\nMUSIC — a switched-off track is kept, and left out of a post")
@@ -382,7 +390,7 @@ with sync_playwright() as p:
         pg.click("#previewLoopBtn"); pg.wait_for_timeout(500)
         pg.click(PLAY[_n]); pg.wait_for_timeout(400)
         st = pg.evaluate("() => ({ on: previewingLoop, btn: document.getElementById('previewLoopBtn').textContent, play: playing })")
-        check(f"{_n}: Play stops a preview first, so one thing plays", st["play"] and not st["on"] and st["btn"] == "Preview Loop", str(st))
+        check(f"{_n}: Play stops a preview first, so one thing plays", st["play"] and not st["on"] and st["btn"] == "Hear the whole loop", str(st))
         pg.close()
     b.close()
 

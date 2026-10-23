@@ -163,17 +163,32 @@ CLAIMS = {
                     "verify_parity.py::{}: a file dropped anywhere on the card is taken, and the wrong kind is refused"],
     "Loop markers": ["verify_tools.py::the drag is live AND has already moved the trim"],
     "Move the loop": ["probe:loop_move"],
-    "Loop Detail": ["verify_parity.py::the fine-tune disclosure opens the loop detail on both"],
-    "Crossfade": ["verify_loopcap.py::clip shortened by exactly the crossfade",
-                  "verify_music.py::Crossfade carries a playing Preview Loop over to the new join"],
-    "Match Drawing Time": ["probe:loop_window",
-                           "verify_music.py::Match Drawing Time sets the loop to the replay's length",
-                           "verify_music.py::Match Drawing Time counts each page at its own length"],
-    "Preview Loop": ["verify_audiosession.py::Preview Loop puts signal on the audio graph",
-                     "verify_music.py::Preview Loop loops the baked clip (the posted loop)"],
-    "Test Seam": ["verify_audio.py::no click at the seam",
-                  "verify_music.py::Test Seam plays the join, crossfade and all"],
-    "Nudge": ["verify_parity.py::a nudge moves the trim edge by the same amount on both"],
+    "Three levels": ["verify_musiclevels.py::switching the level keeps the loop",
+                     "verify_musiclevels.py::the level is remembered, on the other editor too"],
+    "Skribl's pick": ["verify_musiclevels.py::a new song starts on Skribl's pick",
+                      "verify_musiclevels.py::Back to Skribl's pick puts it back, and its Undo undoes that"],
+    "Loop Detail": ["verify_parity.py::the fine-tune disclosure opens the loop detail on both",
+                    "verify_audiosession.py::Preview Loop puts signal on the audio graph",
+                    "verify_music.py::Hear the whole loop loops the baked clip (the posted loop)"],
+    "Smooth restart": ["verify_loopcap.py::clip shortened by exactly the crossfade",
+                       "verify_music.py::Smooth restart carries a playing Hear the whole loop over to the new join",
+                       "verify_musiclevels.py::Smooth restart's switch turns the fold on at its last length, and off"],
+    "Fit my drawing": ["probe:loop_window",
+                       "verify_music.py::Fit my drawing sets the loop to the replay's length",
+                       "verify_musiclevels.py::Fit counts the smooth restart: what is heard is as long as the drawing"],
+    "Fit my animation": ["probe:loop_window",
+                         "verify_music.py::Fit my animation counts each page at its own length",
+                         "verify_musiclevels.py::Whole song loops all of a short song, and a long one's first 20 seconds"],
+    "Hear the restart": ["verify_audio.py::no click at the seam",
+                         "verify_music.py::Hear the restart plays the join, smooth restart and all"],
+    "Play with my drawing": ["verify_musiclevels.py::Play with my drawing is the editor's own Play",
+                             "verify_musiclevels.py::with nothing to play, it plays the loop on its own"],
+    "Play with my animation": ["verify_musiclevels.py::Play with my drawing is the editor's own Play",
+                               "verify_musiclevels.py::with nothing to play, it plays the loop on its own"],
+    "Start and end": ["verify_parity.py::a nudge moves the trim edge by the same amount on both",
+                      "verify_musiclevels.py::a typed time moves its end, and a time that is not one puts it back",
+                      "verify_musiclevels.py::Each tap's frame is the editor's own",
+                      "verify_musiclevels.py::Lock the length moves both ends together"],
     # Background image
     "Add a photo": ["verify_parity.py::loading a photo marks the tab on both", "probe:media_tabs",
                     "verify_parity.py::{}: a file dropped anywhere on the card is taken, and the wrong kind is refused",
@@ -585,7 +600,7 @@ DRAWING_S = {"/skribl-pad": "() => getPlaybackDuration() / 1000", "/flip": "() =
 
 
 def probe_loop_window(b, nm, path):
-    """Match Drawing Time sets the loop to exactly as long as the drawing plays."""
+    """Fit my drawing makes what is heard exactly as long as the drawing plays."""
     ctx, pg, errs = fresh(b, path)
     if path == "/flip":
         for i in range(11):
@@ -600,12 +615,14 @@ def probe_loop_window(b, nm, path):
     pg.evaluate("() => { trimStart = 0; trimEnd = audioDuration; updateTrimUI(); }")
     pg.evaluate("() => document.getElementById('matchDrawingBtn').click()")
     pg.wait_for_timeout(300)
-    got = pg.evaluate("() => ({ s: trimStart, e: trimEnd })")
+    got = pg.evaluate("() => ({ s: trimStart, e: trimEnd, xf: loopCrossfadeMs })")
     ctx.close()
-    length = got["e"] - got["s"]
+    # What is heard: the smooth restart folds its length off the selection
+    # (lib/audioloop.js caps the fold at half of it).
+    length = (got["e"] - got["s"]) - min(got["xf"] / 1000, (got["e"] - got["s"]) / 2)
     # Above the loop's floor and under the track, so "matches" is not a clamp.
     ok = floor + 0.2 < want < 7.0 and abs(length - want) < 0.06 and not errs
-    return ok, f"loop {length:.2f}s for a drawing that plays {want:.2f}s (the loop's floor is {floor}s)"
+    return ok, f"heard {length:.2f}s (smooth restart {got['xf']}ms) for a drawing that plays {want:.2f}s (the loop's floor is {floor}s)"
 
 
 def probe_loop_move(b, nm, path):
@@ -768,10 +785,16 @@ CONTROL_ALIASES = {
     "Add music MP3, WAV, M4A or OGG · it loops under every page": "add a track",
     "Toggle music on or off": "turns the music off without removing it",
     "Remove the track": "removes the track", "Scroll the loop detail view": "scroll to move along the waveform",
-    "Nudge start earlier": "beside the start and end of the loop", "Nudge start later": "beside the start and end of the loop",
-    "Nudge end earlier": "beside the start and end of the loop", "Nudge end later": "beside the start and end of the loop",
-    "Finer step": "step size makes that step finer", "Coarser step": "step size makes that step finer or coarser",
-    "Loop crossfade length": "folds the loop's tail over its head",
+    "How much control": "as much control as you want",
+    "Loop starts at, in seconds": "type where the loop starts and ends",
+    "Loop ends at, in seconds": "type where the loop starts and ends",
+    "Start of loop, earlier": "move each with − and +", "Start of loop, later": "move each with − and +",
+    "End of loop, earlier": "move each with − and +", "End of loop, later": "move each with − and +",
+    "Smooth restart length": "it makes the loop shorter by its length",
+    # named with what they say before there is a drawing
+    "Fit my drawing once you've drawn": "makes what you hear as long as your",
+    "Fit my animation once you've drawn": "makes what you hear as long as your",
+    "Play the loop": "it plays the loop on its own",
     # the photo drawer
     "Add a photo JPG, PNG, GIF or WebP · or drop one here": "add a photo",
     "Toggle image on or off": "hides the photo without removing it", "Remove the photo": "removes the photo",

@@ -139,8 +139,6 @@ CROP_PREFIX = os.environ.get("CENTRING_CROP_PREFIX", "")
 UNREACHABLE = {
     # The music trim nudges appear only once a track has decoded and a range
     # is set; this headless pass loads no audio. verify_ux and verify_parity drive them.
-    "#nudgeStepCoarser": "music trim, needs a decoded track",
-    "#nudgeStepFiner": "music trim, needs a decoded track",
     ".nudge-btn": "music trim, needs a decoded track",
 }
 

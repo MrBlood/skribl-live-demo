@@ -1019,7 +1019,7 @@ with _sp204() as _p:
                 + struct.pack("<IHHIIHH", 16, 1, 1, rate, rate * 2, 2, 16)
                 + b"data" + struct.pack("<I", len(frames)) + frames)
     _AUD = wav_bytes()
-    for pw in (363, 390, 1280):
+    for pw in (340, 363, 390, 1280):
         mp = _b.new_page(viewport={"width": pw, "height": 844})
         mp.goto(BASE + "/", wait_until="load"); waits.settle(mp, 700)
         browsing.pad_drawer(mp, "music"); mp.wait_for_timeout(300)
@@ -1046,23 +1046,21 @@ with _sp204() as _p:
             return { overlap, spill, rows: new Set(groups.map(g => Math.round(g.top))).size }; }""")
         check(f"V207: at {pw}px the nudge pills do not overlap each other or spill their column", not _ov["overlap"] and not _ov["spill"], str(_ov))
         if pw <= 640:
-            # v210 (owner's iPhone): the layout is 2 + 1 — Start and End share
-            # a row, Step size takes its own row underneath. The v207 pin said
-            # "three rows"; that was guarding the three-ON-ONE-ROW overlap, not
-            # arguing for one-per-row as a design, and the overlap/spill check
-            # above still guards that class at every width. So: two rows, and
-            # the first two groups on the SAME one.
+            # v210 (owner's iPhone): Start and End share a row. Step size, a
+            # third group under them, is Each tap now, its own row above them
+            # (lib/musicdrawer.js). The overlap/spill check above still guards
+            # the class at every width.
             _rows = mp.evaluate("""() => [...document.querySelectorAll('#fineTuneBody .edge-group')]
                 .map(e => Math.round(e.getBoundingClientRect().top))""")
-            if pw >= 375:
-                check(f"V210: at {pw}px the nudge groups lay out 2 + 1 (Start|End, then Step)",
-                      len(set(_rows)) == 2 and _rows[0] == _rows[1] and _rows[2] > _rows[0],
-                      f"group tops {_rows}")
+            if pw >= 363:
+                check(f"V210: at {pw}px Start of loop and End of loop share a row",
+                      len(_rows) == 2 and _rows[0] == _rows[1], f"group tops {_rows}")
             else:
-                # 363 and narrower cannot hold two 128px pills; the grid must
-                # fall back to one column rather than spill (v207 bug class).
+                # 340 cannot hold two 130px groups (the grid is the screen less
+                # 78px, and two need 270); the grid must fall back to one
+                # column rather than spill (v207 bug class).
                 check(f"V210: at {pw}px (too narrow for 2-up) the nudge groups stack one per row",
-                      len(set(_rows)) == 3, f"group tops {_rows}")
+                      len(_rows) == 2 and _rows[1] > _rows[0], f"group tops {_rows}")
         if pw == 1280:
             check("V206: nudge buttons are 32px on desktop (option A)", fit and fit["nudgeW"] == 32, str(fit))
             # tap area: click 5px LEFT of the first "-" nudge (start-earlier). Its
@@ -1072,10 +1070,10 @@ with _sp204() as _p:
             mp.evaluate("() => document.querySelector('#fineTuneBody .nudge-btn[data-which=\"start\"][data-amount=\"1\"]').scrollIntoView({block: 'center'})")
             mp.wait_for_timeout(300)
             r = mp.evaluate("() => { const b = document.querySelector('#fineTuneBody .nudge-btn[data-which=\"start\"][data-amount=\"1\"]').getBoundingClientRect(); return {x: b.left, y: b.top, w: b.width, h: b.height, r: b.right}; }")
-            before = mp.evaluate("() => document.getElementById('startReadout').textContent")
+            before = mp.evaluate("() => document.getElementById('startReadout').value")
             # click 5px to the RIGHT of the '+' (outside its box, in the tap zone, away from the readout on its left)
             mp.mouse.click(r["r"] + 5, r["y"] + r["h"] / 2); mp.wait_for_timeout(300)
-            after = mp.evaluate("() => document.getElementById('startReadout').textContent")
+            after = mp.evaluate("() => document.getElementById('startReadout').value")
             check("V206: a click 5px outside the '+' nudge still nudges (44pt tap area is real)",
                   before != after, f"readout {before!r} -> {after!r}")
         mp.close()
