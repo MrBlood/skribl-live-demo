@@ -22024,23 +22024,23 @@ Today's names, kept as ids so nothing behind them moved: Trim is Adjust
 Seam is Hear the restart (#testSeamBtn), Preview Loop is Hear the whole loop
 (#previewLoopBtn), Crossfade is Smooth restart's length (#crossfadeSlider).
 Step size's - and + became Each tap's four. Today's 0.02s and 0.05s steps are
-not among them (the mock's four); the owner is asked.
+not among them, as the owner chose: "All yes but lose .02 and .05."
 
 SKRIBL'S PICK is what a new song starts on: its first 20 seconds, or all of a
 shorter one, with a smooth restart (0.25s, never more than a quarter of the
 loop). On the Pad a drawing already there sets the length instead, what is
-heard as long as the drawing, as the Pad's add always did. Not on Flip: an
-animation goes round in a second or two, and a loop that short stutters; Fit
-my animation is one tap. Phase 1 of the pick, with no ears yet: "the part that
-loops best, on the beat" is step 3, and the pick line says only what is true
-("Skribl picked the first 8 seconds, as long as your drawing, with a smooth
-restart."). A change says "You've made your own loop." with Back to Skribl's
-pick, whose Undo lasts eight seconds. When it was the drawing that changed --
-an Undo with the drawer open, or more drawing after the song -- the line says
-"Your drawing has changed since Skribl picked this loop." instead, and the way
-back fits the drawing as it is now. A song a draft brings back keeps the
-draft's loop: the pick is for a song just chosen (Flip marks that with
-`musicFresh`; the Pad's add already skipped a restore).
+heard as long as the drawing, as the Pad's add always did. Not on Flip (the
+owner said yes): an animation goes round in a second or two, and a loop that
+short stutters; Fit my animation is one tap. Phase 1 of the pick, with no ears
+yet: "the part that loops best, on the beat" is step 3, and the pick line says
+only what is true ("Skribl picked the first 8 seconds, as long as your
+drawing, with a smooth restart."). A change says "You've made your own loop."
+with Back to Skribl's pick, whose Undo lasts eight seconds. When it was the
+drawing that changed -- an Undo with the drawer open, or more drawing after
+the song -- the line says "Your drawing has changed since Skribl picked this
+loop." instead, and the way back fits the drawing as it is now. A song a draft
+brings back keeps the draft's loop: the pick is for a song just chosen (Flip
+marks that with `musicFresh`; the Pad's add already skipped a restore).
 
 A SMOOTH RESTART MAKES THE LOOP SHORTER, which the drawer now counts. The
 crossfade folds the loop's end over its start (lib/audioloop.js), so what is
@@ -22048,8 +22048,8 @@ heard comes round sooner than the stretch selected, by the crossfade's length.
 Match Drawing Time set the selection to the drawing and, with a crossfade on,
 fell short of it by that much; Fit my drawing makes what is HEARD as long as
 the drawing, and "fits your drawing" and every length the drawer says are what
-is heard. With the pick turning the smooth restart on for every new song, this
-went from a corner to the common case.
+is heard. With the pick turning the smooth restart on for every new song (the
+owner said yes to that too), this went from a corner to the common case.
 
 PLAY WITH MY DRAWING is the editor's own Play (it shows the whole drawing, as
 Play does), and follows it however it is pressed; with nothing to replay it
@@ -22081,8 +22081,10 @@ Four things the build found, each fixed where it lived:
 The loop detail's header says "smooth 0.25s" where it said "xfade 250ms".
 How it works says the new words: Three levels, Skribl's pick, Fit my drawing
 (or animation), Smooth restart, Hear the restart, Play with my drawing, Loop
-Detail with Hear the whole loop, Start and end with Each tap and Lock the
-length. verify_helpclaims claims each.
+Detail with Hear the whole loop, Start and end with Adjust's typed ends, Each
+tap and Lock the length. verify_helpclaims claims each, and its census of
+named controls knows the new ones (the level switch by its group, How much
+control).
 
 verify_musiclevels was shown red per component: a broken copy of one file
 served to the browser (the files on disk untouched), one part of the suite
@@ -22121,7 +22123,7 @@ frame: one of Flip's pages a second where the Pad's is its video's, 30 a
 second.
 
 Not tested here: the sound on an iPhone, a finger on the strip, Segoe UI and
-SF. And kept as it is, a question for the owner: the Pad's replay still stops
-the music when the drawing ends (START-HERE's "When the drawing stops, the
-music stops"), so "your finished drawing stays while the song plays on" is
-not said anywhere yet.
+SF. And kept as it is, a question the owner chose to take up after step 2:
+the Pad's replay still stops the music when the drawing ends (START-HERE's
+"When the drawing stops, the music stops"), so "your finished drawing stays
+while the song plays on" is not said anywhere yet.
