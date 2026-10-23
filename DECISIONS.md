@@ -22258,3 +22258,19 @@ just before the click now, and they agree to the ten-thousandth.
 Not tested here: tapping with a finger on an iPhone, the sound, whether Safari
 reports a Bluetooth headset's latency (where it reports none, the beat sits
 that much late), Segoe UI and SF.
+
+## After v329 -- The music drawer is too much (the owner: "we'll need to streamline it")
+
+The owner, with Hear the loop and Tap the beat live (#613): "The music drawer
+is so complicated. I think I liked it better before you did so much to it."
+The pile-up began with step 1, which tucked Preview Loop into Fine-tune's loop
+detail; hearing the loop alone got cumbersome, and #613 added more to fix it.
+Offered three ways: this morning's drawer exactly (before the levels and the
+beat, Preview Loop in reach), that plus one line counting the beats, or
+today's opening on the strip and the pair with the rest behind one More. The
+owner: "Leave it for now but we'll need to streamline it."
+
+So the drawer stays as #613 left it, and the next music work is streamlining
+it, mocked first with this morning's drawer beside today's. Step 2 of the
+music plan (the timeline, the Restart view, Cut on silence) waits for that,
+since each of its pieces adds to the drawer.
