@@ -21919,3 +21919,33 @@ drawing put back (every row but the tip's). verify_icons 60/60, verify_contrast
 85/85, verify_recolorplay 23/23, verify_parity 410/410, verify_docs.
 
 Pad and Flip: shared, one module and one drawing.
+
+## After v329 -- HIST-001 found: a promise Chrome collected, not a page that went
+
+Five reds on CI since #575 (main after #575, #583, #594, #595 and the v329
+dispatch), each verify_help's Flip-on-a-phone row: "Execution context was
+destroyed, most likely because of a navigation", about 1.4s after the load, at
+the step that opens every section of How it works; no navigation heard, and,
+once the row kept the browser's account, no context destroyed or created, no
+crash and no change to the tab.
+
+Reproduced here on that step alone, in a loop: red 15 times in 200 runs at
+normal speed, never with the CPU slowed. After each red the page was the same
+document (the same performance.timeOrigin, navigation type "navigate") and
+answered the next call; the step's timer had run and its promise had resolved
+about 80ms after it was set. Playwright's own protocol log said what happened:
+the reply to that evaluate was `Promise was collected`, which Playwright words
+as the navigation message. The step was one evaluate awaiting a promise the
+page resolved from a 60ms timer, and opening the sheet loads its demos
+(images, sound, a 690 KB file); in that burst Chrome sometimes collected the
+awaited promise. The app was never involved.
+
+The step is now two calls with the wait between them in the suite: open the
+sheet, wait 60ms, open its sections. 0 reds in 60 runs of the loop; verify_help
+87/87 three times; and red on both editors with a reload put into the opening
+("it loaded again" naming the page), so the row still catches a page that
+really goes. The browser's account the row keeps stays: it is what ruled out
+everything else.
+
+Other suites await promises their pages resolve; none has been seen red this
+way, and they are left as they are.
