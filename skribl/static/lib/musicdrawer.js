@@ -282,8 +282,9 @@
       if (Z) Z.sync(1);
       syncFocus();
       syncPan();
-      // A new song: the last one's Undo is not this one's.
+      // A new song: the last one's Undo and pick are not this one's.
       forgetUndo();
+      picked = null;
     }
 
     /* ---- The loop's edges. ------------------------------------------------
@@ -423,11 +424,16 @@
       var t = h.trim();
       return !!p && near(t.start, p.start) && near(t.end, p.end) && h.crossfade() === p.ms;
     }
+    // The loop Skribl's pick last made. Still the loop, but no longer the pick
+    // (the Pad's pick follows the drawing), it was the drawing that changed,
+    // not the person: the line says so, rather than "your own loop".
+    var picked = null;
     // On a new song, from each editor's add (never a restore): returns the pick.
     function applyPick() {
       var p = pickNow();
       if (!p || !h.hasTrack()) return null;
       var was = h.crossfade();
+      picked = p;
       h.setTrim(p.start, p.end);
       setFade(p.ms);
       h.refresh();
@@ -452,7 +458,8 @@
       pickLine.hidden = !h.hasTrack();
       if (pickLine.hidden) return;
       var p = pickNow(drawing), mine = !isPick(p);
-      if (pickText) pickText.textContent = mine ? "You've made your own loop." : undo ? "Back to Skribl's pick." : pickWords(p);
+      if (pickText) pickText.textContent = !mine ? (undo ? "Back to Skribl's pick." : pickWords(p))
+        : isPick(picked) ? 'Your ' + work + ' has changed since Skribl picked this loop.' : "You've made your own loop.";
       if (back) back.hidden = !mine;
       if (undoBtn) undoBtn.hidden = mine || !undo;
     }

@@ -195,14 +195,14 @@ with sync_playwright() as p:
           _marks["Pad"]["steps"] == _marks["Flip"]["steps"] and len(_marks["Pad"]["steps"]) == 4,
           {n: m["steps"] for n, m in _marks.items()})
 
-    print("\nMUSIC — Crossfade, Preview Loop and Test Seam")
+    print("\nMUSIC — Smooth restart, Hear the whole loop and Hear the restart")
     for _n, _p in EDITORS:
         pg = editor(b, _n, _p)
         pg.click("#previewLoopBtn"); pg.wait_for_timeout(700)
         a = pg.evaluate("() => { const s = _waLoop.source(); window.__src = s; return s ? s.buffer.duration : null; }")
         slide(pg, "#crossfadeSlider", 200); pg.wait_for_timeout(500)
         z = pg.evaluate("() => { const s = _waLoop.source(); return { fresh: !!s && s !== window.__src, dur: s ? s.buffer.duration : null, on: previewingLoop }; }")
-        check(f"{_n}: Crossfade carries a playing Preview Loop over to the new join",
+        check(f"{_n}: Smooth restart carries a playing Hear the whole loop over to the new join",
               a is not None and z["fresh"] and z["on"] and z["dur"] is not None and z["dur"] < a - 0.15,
               f"clip {a} s before, after: {z}")
         pg.click("#previewLoopBtn"); pg.wait_for_timeout(200)
@@ -220,7 +220,7 @@ with sync_playwright() as p:
         first_ok = bool(shown) and shown[0] >= (clip_end - (1.25 + 0.3) / tr[2] * 100)
         came_round = any(shown[j] < shown[j - 1] - 5 for j in range(1, len(shown)))   # it went back
         stopped = bool(seen) and seen[-1][2] is False and seen[-1][1] is None
-        check(f"{_n}: Test Seam plays the join, crossfade and all: the loop's end, then its start, then it stops",
+        check(f"{_n}: Hear the restart plays the join, smooth restart and all: the loop's end, then its start, then it stops",
               first_ok and came_round and stopped,
               f"first {shown[:1]} (join at {clip_end:.0f}%), came round {came_round}, stopped {stopped}, "
               f"{len(shown)} frames with the playhead shown")
@@ -240,7 +240,7 @@ with sync_playwright() as p:
         pg.evaluate("() => { window.__plays = []; document.getElementById('previewLoopBtn').click(); }")
         pg.wait_for_timeout(1300)
         plays = pg.evaluate("() => window.__plays")
-        check(f"{_n}: with no Web Audio, Preview Loop loops the baked clip (the posted loop), not the raw track",
+        check(f"{_n}: with no Web Audio, Hear the whole loop loops the baked clip (the posted loop), not the raw track",
               any(x["loop"] and not x["track"] for x in plays) and not any(x["track"] for x in plays), str(plays))
         pg.close()
 
@@ -250,7 +250,7 @@ with sync_playwright() as p:
             pg.evaluate("() => { replayRate = 2; }")
         pg.click("#previewLoopBtn"); pg.wait_for_timeout(700)
         rate = pg.evaluate("() => { const s = _waLoop.source(); return s ? s.playbackRate.value : null; }")
-        check(f"{_n}: Preview Loop plays the loop as posted, at 1x, whatever the replay's speed",
+        check(f"{_n}: Hear the whole loop plays the loop as posted, at 1x, whatever the replay's speed",
               rate == 1, f"playbackRate {rate} with the replay at {'2x' if _n == 'Pad' else 'its own pace'}")
         pg.close()
 
