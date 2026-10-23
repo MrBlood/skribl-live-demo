@@ -2464,18 +2464,59 @@ body.recoloring #canvas { cursor: crosshair !important; }
 .mt-switch-words { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
 .mt-switch .layer-toggle { display: inline-block; }
 .mt-smooth #testSeamBtn { margin-top: 6px; }
-.mt-hear { display: flex; justify-content: center; margin-top: 12px; }
 
-/* PLAY WITH MY DRAWING: the action of every level, so the accent's fill. */
-.mt-play { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 44px; margin-top: 14px;
-  border: 0; border-radius: 999px; background: var(--accent-fill); color: #fff; font: inherit; font-size: 15px; font-weight: 650;
-  cursor: pointer; -webkit-tap-highlight-color: transparent; }
-.mt-play svg { width: 16px; height: 16px; flex: none; }
+/* THE PAIR THAT PLAYS, under the strip on every level: Play with my drawing
+   is the action, so the accent's fill; Hear the loop, the same size beside
+   it, a menu card with the small violet words. Each is its verb over what it
+   plays (15px over 12px), so both fit a 168px half of the owner's phone. */
+.mt-transport { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 12px; }
+.mt-play { display: flex; align-items: center; justify-content: flex-start; gap: 10px; min-width: 0; min-height: 52px;
+  padding: 6px 14px; border: 0; border-radius: 999px; background: var(--accent-fill); color: #fff; font: inherit;
+  text-align: left; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.mt-play svg { width: 18px; height: 18px; flex: none; }
 .mt-play .mt-stop-icon, .mt-play.playing .mt-play-icon { display: none; }
 .mt-play.playing .mt-stop-icon { display: block; }
+.mt-play .tp { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; min-width: 0; }
+.mt-play .tp-k { font-size: 15px; font-weight: 700; line-height: 1.15; }
+.mt-play .tp-v { font-size: 12px; font-weight: 500; line-height: 1.2; white-space: nowrap; }
+.mt-play.mt-loop { background: var(--menu-card); color: var(--accent-ink); border: 1px solid var(--menu-card-line); box-shadow: var(--menu-card-drop); }
+.mt-play.mt-loop .tp-v { color: var(--text-secondary); }
 .mt-play:disabled { opacity: .5; cursor: default; }
 .mt-play:focus-visible { outline: 2px solid var(--ui-hi); outline-offset: 2px; }
-@media (hover: hover) { .mt-play:not(:disabled):hover { filter: brightness(1.08); } }
+/* Under 360px a half is 127px and "with my animation" needs 160: one each to a row. */
+@media (max-width: 359px) { .mt-transport { grid-template-columns: minmax(0, 1fr); } }
+@media (hover: hover) { .mt-play:not(:disabled):not(.mt-loop):hover { filter: brightness(1.08); }
+  .mt-play.mt-loop:not(:disabled):hover { background: color-mix(in srgb, var(--accent) 7%, var(--menu-card)); } }
+
+/* TAP THE BEAT, on Adjust and Fine-tune: the tap is a menu card with the
+   small violet words, lit while it listens; Make it is three counts the size
+   of a finger. A count the song is too short for is there, faded. */
+.mt-beat { margin-top: 12px; }
+.mt-tap-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; }
+.mt-tap { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 6px 16px 6px 12px; border-radius: 999px;
+  border: 1px solid var(--menu-card-line); background: var(--menu-card); box-shadow: var(--menu-card-drop);
+  color: var(--accent-ink); font: inherit; font-size: 14px; font-weight: 650; cursor: pointer;
+  -webkit-tap-highlight-color: transparent; transition: background .15s ease, box-shadow .15s ease; }
+.mt-tap svg { width: 18px; height: 18px; flex: none; }
+.mt-tap.tapping { background: var(--seg-on-fill); border-color: transparent; color: var(--seg-on-ink);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 28%, transparent); }
+.mt-tap:focus-visible { outline: 2px solid var(--ui-hi); outline-offset: 2px; }
+@media (hover: hover) { .mt-tap:not(.tapping):hover { background: color-mix(in srgb, var(--accent) 7%, var(--menu-card)); } }
+.mt-tempo { flex: 1 1 150px; min-width: 0; font-size: 13px; line-height: 1.35; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.mt-tempo b { color: var(--text-primary); font-weight: 650; }
+.mt-make { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 8px; font-size: 13px; color: var(--text-secondary); }
+.mt-make .mt-count { min-width: 44px; min-height: 44px; justify-content: center; padding: 4px 12px; font-size: 15px; font-variant-numeric: tabular-nums; }
+.mt-make .mt-count.on { background: var(--seg-on-fill); border-color: transparent; color: var(--seg-on-ink); }
+.mt-make .mt-count:disabled { opacity: .45; cursor: default; }
+
+/* THE BEAT, MARKED: a tick on every beat, taller every four counted from the
+   loop's start, along the foot of the strip and the loop detail (as many as
+   stand 6px apart); and, with a smooth restart, a dashed line where the loop
+   comes round. lib/musicdrawer.js lays them; they take no taps. */
+.mt-ticks { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.mt-ticks i { position: absolute; bottom: 0; width: 1px; height: 6px; margin-left: -0.5px; background: var(--accent-ink); opacity: .75; }
+.mt-ticks i.bar { width: 2px; height: 11px; margin-left: -1px; opacity: .85; }
+.mt-ticks b { position: absolute; top: 0; bottom: 0; width: 0; margin-left: -1px; border-left: 2px dashed var(--accent-ink); opacity: .9; }
 
 @media (max-width: 640px) {
   /* Breathing room for the pen row on a phone. At 28px the gaps closed to
@@ -9081,7 +9122,7 @@ body.drawalong .canvas-empty-hint { display: none; }
 /* Words in the drawers that were too faint (the drawers mock, measured on the
    loaded photo and music drawers): secondary words take the sheet's ink, and
    the zoom's value the small violet words'. Play with my drawing's white words
-   sit on the action fill (.mt-play). */
+   sit on the action fill (.mt-play); Hear the loop's are the violet ones. */
 #repositionHint, #trimStartLabel, #trimEndLabel, .loop-zoom-head > span:first-child, #clearLabel { color: var(--text-secondary); }
 :where(.tab-panel, .media-card) .clear-drawer-btn { color: var(--text-secondary); }   /* 4.19 on the dark card; hover, armed and disabled still win */
 :where(.tab-panel, .media-card) .clear-drawer-btn.armed { color: var(--danger-soft); }   /* --danger read 4.44 on the dark card's tint */

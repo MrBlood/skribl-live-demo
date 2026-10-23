@@ -51,6 +51,27 @@
  * lengths the lines say and Fit my drawing all count what is heard. Match
  * Drawing Time did not, so with a crossfade set it fell short of the drawing.
  *
+ * THE PAIR THAT PLAYS (owner: "How do I test the loop without having it show
+ * me drawing?"): Play with my drawing presses the editor's Play, and Hear the
+ * loop (it was Preview Loop, then Hear the whole loop) plays the music alone,
+ * round and round. Both sit under the strip on every level. An end moved
+ * while the loop plays is heard from its next time round: the gapless engine
+ * starts the new loop where the old one comes round.
+ *
+ * TAP THE BEAT (owner: "to know how many beats are in the loop, so I'm not at
+ * 7 or 9 when I want 8"). Tapped along with Hear the loop, which the first tap
+ * starts, so every tap is timed against the loop as posted at its own speed.
+ * The tempo is the middle of the gaps between taps, to the nearest whole beat
+ * a minute (most music is), and where a beat falls is the taps' own, read off
+ * the song's clock less the time the sound takes to reach the ear, so the
+ * marks sit on what was heard. Then every count is of
+ * what is HEARD, smooth restart and all: the length line and the sync line
+ * say the beats, Make it sets the end so the loop is that many, Each tap
+ * gains one beat, and an end let go within a few pixels of a beat settles on
+ * it (the end where the loop comes round, so with a smooth restart the handle
+ * sits that much past the beat). The tempo is the editor's, saved with the
+ * song in its drafts.
+ *
  * TEST SEAM IS AN <audio> ELEMENT, played inside the tap. On a phone set to
  * silent that is the one that is heard (verify_audiosession's first note),
  * and it is why Test Seam worked on the owner's iPhone before Preview Loop
@@ -83,7 +104,7 @@
  *   audio()             the track's <audio> element, or null
  *   buffer()            the decoded AudioBuffer, or null
  *   loop                the gapless engine: start(onFail, offset), stop(),
- *                       playing(), elapsed()
+ *                       playing(), elapsed(), duration(), latency()
  *   clip()              the baked loop { dataUrl, duration }, or null
  *   playing()           the drawing is playing (Play)
  *   setPreviewing(b)    the editor's own flag, which its Play and stop read
@@ -91,9 +112,12 @@
  *   musicOn()           Play's music, joining the drawing where it is
  *   musicOff()          Play's music, stopped
  *   syncRow()           redraw the file row and its switch
+ *   tempo()             the song's tapped tempo { bpm, phase }, or null;
+ *                       setTempo(t), kept with the song in the drafts
  *
  * Returns { sync, syncCrossfade, resetView, matchDrawing, applyPick,
- * stopPreview, previewing, level }. Editor-only: the player has no drawer and
+ * stopPreview, previewing, level, tempo }. SkriblMusicDrawer.tempoFrom(raw)
+ * reads a saved tempo back, or null. Editor-only: the player has no drawer and
  * never loads this. */
 (function (global) {
   'use strict';
@@ -104,6 +128,8 @@
   var PICK_FADE_MS = 250;                  // Skribl's pick's smooth restart
   var UNDO_MS = 8000;
   var EPS = 0.0005;                        // two times are one at the thousandth
+  var TAP_IDLE_MS = 2000;                  // Tap the beat settles after this long without a tap
+  var SNAP_PX = 8;                         // an end let go this near a beat settles on it
 
   function fill(el) {
     var mn = +el.min, mx = +el.max;
@@ -129,6 +155,29 @@
     return Math.abs(t - Math.round(t)) < 0.05 ? String(Math.round(t)) : t.toFixed(1);
   }
   function seconds(s) { var w = says(s); return w.indexOf(':') >= 0 ? w : w + (w === '1' ? ' second' : ' seconds'); }
+  // A tempo as saved: { bpm, phase } -- beats a minute, and where a beat falls
+  // in the song, in seconds. Anything else is no tempo.
+  function tempoFrom(t) {
+    var bpm = t ? +t.bpm : NaN, ph = t ? +t.phase : NaN;
+    return bpm >= 30 && bpm <= 300 && isFinite(ph) ? { bpm: bpm, phase: ph } : null;
+  }
+  // "8 beats", "8.8 beats", "1 beat": whole when it is within a twentieth.
+  function beatWords(n) {
+    var w = Math.abs(n - Math.round(n)) < 0.05 ? String(Math.round(n)) : n.toFixed(1);
+    return w + (w === '1' ? ' beat' : ' beats');
+  }
+  function median(xs) {
+    if (!xs.length) return 0;
+    var v = xs.slice().sort(function (a, b) { return a - b; }), m = v.length >> 1;
+    return v.length % 2 ? v[m] : (v[m - 1] + v[m]) / 2;
+  }
+  // A verb over what it plays: the pair's two lines (spans .tp-k and .tp-v).
+  function twoLines(el, k, v) {
+    if (!el) return;
+    var a = el.querySelector('.tp-k'), b = el.querySelector('.tp-v');
+    if (a && a.textContent !== k) a.textContent = k;
+    if (b && b.textContent !== v) b.textContent = v;
+  }
   // A typed time: 12.345, 12,345, 12.3s or 1:02.5. Anything else is null.
   function parseTime(v) {
     var s = String(v == null ? '' : v).trim().replace(/s$/i, '').replace(',', '.');
@@ -285,9 +334,13 @@
       if (Z) Z.sync(1);
       syncFocus();
       syncPan();
-      // A new song: the last one's Undo and pick are not this one's.
+      // A new song: the last one's Undo, pick and taps are not this one's.
       forgetUndo();
       picked = null;
+      taps = [];
+      clearTimeout(tapT);
+      tapT = null;
+      tapNote = '';
     }
 
     /* ---- The loop's edges. ------------------------------------------------
@@ -318,9 +371,23 @@
             var zw = zoomed ? h.zoomWindow() : null;
             setEdge(which, zw ? zw.start + pct * (zw.end - zw.start) : pct * h.trim().duration, zoomed ? 'slide' : 'constrain');
           },
-          end: function () { handle.classList.remove('dragging'); h.changed(); }
+          end: function () { handle.classList.remove('dragging'); snap(which, rail, zoomed); h.changed(); }
         };
       });
+    }
+    // Let go within SNAP_PX of a beat, an end settles on it: the start on the
+    // beat, the end where the loop comes round (a smooth restart's length
+    // before the handle). Typed and stepped ends never snap, nor a locked loop.
+    function snap(which, rail, zoomed) {
+      var tp = tempo(), p = beatSecs();
+      if (!tp || locked || !h.hasTrack()) return;
+      var t = h.trim(), fold = Math.min(h.crossfade() / 1000, (t.end - t.start) / 2);
+      var at = which === 'start' ? t.start : t.end - fold;
+      var beat = tp.phase + Math.round((at - tp.phase) / p) * p;
+      var span = zoomed ? h.zoomWindow().duration : t.duration;
+      var px = Math.abs(beat - at) / span * rail.getBoundingClientRect().width;
+      if (!(px <= SNAP_PX) || Math.abs(beat - at) < EPS) return;
+      setEdge(which, which === 'start' ? beat : beat + fold, zoomed ? 'slide' : 'constrain');
     }
     dragEdge($('handleStart'), 'start', track, false);
     dragEdge($('handleEnd'), 'end', track, false);
@@ -354,7 +421,7 @@
      * buttons carry data-which. */
     var steps = $('musicStepSeg');
     function frameSecs() { var f = h.frameSeconds ? h.frameSeconds() : 0; return f > 0 ? f : 1 / 30; }
-    function stepOf(b) { return b.dataset.step === 'frame' ? frameSecs() : parseFloat(b.dataset.step); }
+    function stepOf(b) { return b.dataset.step === 'frame' ? frameSecs() : b.dataset.step === 'beat' ? beatSecs() : parseFloat(b.dataset.step); }
     function stepNow() {
       var b = steps && steps.querySelector('button.on[data-step]');
       return b ? stepOf(b) : 0.1;
@@ -366,6 +433,17 @@
       if (by.some(function (b, i) { return b !== bs[i]; })) by.forEach(function (b) { steps.appendChild(b); });
       var fr = steps.querySelector('button[data-step="frame"]');
       if (fr) { fr.title = '1 frame, 1/' + Math.round(1 / frameSecs()) + ' of a second'; fr.setAttribute('aria-label', fr.title); }
+      // One beat, once there is a tempo; gone with it, the tap falls back to 0.1s.
+      var bt = steps.querySelector('button[data-step="beat"]');
+      if (bt) {
+        var tp = tempo();
+        bt.hidden = !tp;
+        if (tp) { bt.title = '1 beat, ' + (60 / tp.bpm).toFixed(3) + 's at ' + tp.bpm + ' a minute'; bt.setAttribute('aria-label', bt.title); }
+        else if (bt.classList.contains('on')) {
+          var d = steps.querySelector('button[data-step="0.1"]');
+          steps.querySelectorAll('button[data-step]').forEach(function (x) { x.classList.toggle('on', x === d); });
+        }
+      }
     }
     if (steps) steps.addEventListener('click', function (e) {
       var b = e.target.closest('button[data-step]');
@@ -447,7 +525,7 @@
     var undo = null, undoT = null;
     function forgetUndo() { undo = null; clearTimeout(undoT); }
     // Any change made here to the loop: an Undo of the way back is stale.
-    function touched() { if (undo) { forgetUndo(); syncPick(); } }
+    function touched() { if (undo) { forgetUndo(); syncPick(); } retime(); }
     var pickLine = $('musicPickLine'), pickText = $('musicPickText');
     var back = $('musicBackPick'), undoBtn = $('musicPickUndo');
     function pickWords(p) {
@@ -544,17 +622,19 @@
     }
     function syncLines(secs) {
       var t = h.trim(), ok = h.hasTrack(), len = ok ? heard(t, h.crossfade()) : 0;
-      if (lenLine) lenLine.textContent = ok ? len.toFixed(2) + 's · ' + (against(len, secs, 0) || 'loop') : '';
+      var tp = ok ? tempo() : null, nb = tp ? beatWords(len / beatSecs()) : '';
+      if (lenLine) lenLine.textContent = ok ? len.toFixed(2) + 's · ' + (nb ? nb + (against(len, secs, 0) ? ' · ' + against(len, secs, 0) : '')
+        : (against(len, secs, 0) || 'loop')) : '';
       if (syncLine) {
         var f = frameSecs(), n = len / f, nf = Math.abs(n - Math.round(n)) < 0.01 ? String(Math.round(n)) : n.toFixed(1);
         var rel = against(len, secs, 3);
         syncLine.textContent = ok ? 'Comes round every ' + len.toFixed(3) + 's · ' + nf + ' frames at ' + Math.round(1 / f) + ' a second'
-          + (rel ? ' · ' + rel : '') : '';
+          + (nb ? ' · ' + nb + ' at ' + tp.bpm + ' a minute' : '') + (rel ? ' · ' + rel : '') : '';
       }
     }
 
-    /* ---- Preview Loop and Test Seam. --------------------------------------
-     * Preview Loop (Hear the whole loop) plays the posted clip on the gapless
+    /* ---- Hear the loop and Test Seam. --------------------------------------
+     * Hear the loop (Preview Loop) plays the posted clip on the gapless
      * engine; where that cannot start (no unlock, now or later), the clip
      * loops on an <audio> element, and before the decode, the track itself
      * loops by hand. */
@@ -574,6 +654,8 @@
     function every(fn) { if (pv.tick) clearInterval(pv.tick); pv.tick = setInterval(function () { if (pv.on) fn(); }, 30); }
     function stopPreview() {
       pv.on = false;
+      clearTimeout(retimeT);
+      retimeT = null;
       h.setPreviewing(false);
       if (pv.tick) clearInterval(pv.tick);
       if (pv.backstop) clearTimeout(pv.backstop);
@@ -601,11 +683,31 @@
       h.setPreviewing(true);
       syncHear();
     }
-    // Whichever started what plays says Stop, and only that one.
-    function syncHear() {
-      if (previewBtn) previewBtn.textContent = pv.on && pv.mode === 'loop' ? 'Stop' : 'Hear the whole loop';
+    // Whichever started what plays says Stop, and only that one. `secs`: the
+    // drawing's length when the caller has measured it (sync, below).
+    function syncHear(secs) {
+      var looping = pv.on && pv.mode === 'loop';
+      if (previewBtn) {
+        twoLines(previewBtn, looping ? 'Stop' : 'Hear', 'the loop');
+        previewBtn.classList.toggle('playing', looping);
+        previewBtn.disabled = !h.hasTrack();
+      }
       if (seamBtn) seamBtn.textContent = pv.on && pv.mode === 'seam' ? 'Stop' : 'Hear the restart';
-      syncPlay();
+      syncPlay(secs);
+    }
+    // An end moved while the loop plays: the new loop starts where this one
+    // comes round, on the gapless engine (the clip on an element keeps its
+    // loop until it is heard again: a new element outside a tap may not play).
+    var retimeT = null;
+    function retime() {
+      if (!pv.on || pv.mode !== 'loop' || pv.engine !== 'wa' || !h.loop.playing()) return;
+      var dur = h.loop.duration ? h.loop.duration() : 0;
+      if (!(dur > 0)) return;
+      clearTimeout(retimeT);
+      retimeT = setTimeout(function () {
+        retimeT = null;
+        if (pv.on && pv.mode === 'loop' && pv.engine === 'wa') h.loop.start(function () { if (pv.on) loopNative(); }, 0);
+      }, Math.max(0, (dur - h.loop.elapsed()) * 1000 - 10));
     }
     function baked() { return h.buffer() ? h.clip() : null; }
     // The baked clip `c` on its own element, from `at` seconds into it.
@@ -696,26 +798,25 @@
     /* ---- Play with my drawing. ---------------------------------------------
      * The editor's own Play, so the drawing replays with its music exactly as
      * Play plays it (and Play shows the whole drawing, lib/drawerdetent.js
-     * revealTop). With nothing to replay, it plays the loop on its own, and
-     * says so. It follows the editor's Play however that is pressed. */
-    var play = $('musicPlayBtn'), playLabel = $('musicPlayLabel');
+     * revealTop). It follows the editor's Play however that is pressed. With
+     * nothing to replay it waits, as Fit my drawing does: Hear the loop,
+     * beside it, plays the music on its own. */
+    var play = $('musicPlayBtn');
     function drawn(secs) {
       var b = h.playButton ? h.playButton() : null;
       return b && !b.disabled && (secs != null ? secs : h.drawingSeconds()) > 0 ? b : null;
     }
     function syncPlay(secs) {
       if (!play) return;
-      var b = drawn(secs), on = (!!b && h.playing()) || (pv.on && pv.mode === 'loop');
-      play.disabled = !h.hasTrack();
+      var b = drawn(secs), on = h.playing();
+      play.disabled = !h.hasTrack() || (!b && !on);
       play.classList.toggle('playing', on);
-      if (playLabel) playLabel.textContent = on ? 'Stop' : b ? 'Play with my ' + work : 'Play the loop';
+      twoLines(play, on ? 'Stop' : 'Play', (on ? 'the ' : 'with my ') + work);
     }
     if (play) play.addEventListener('click', function () {
       var b = drawn();
       if (h.playing()) { var pb = h.playButton && h.playButton(); if (pb) pb.click(); }
-      else if (pv.on) stopPreview();
-      else if (b) b.click();
-      else startLoop(0);
+      else if (b) { if (pv.on) stopPreview(); b.click(); }
       syncPlay();
     });
     var pb0 = h.playButton ? h.playButton() : null;
@@ -723,6 +824,165 @@
     // A drawing begun while the drawer was shut: say so when it opens.
     if (panel && global.MutationObserver) new MutationObserver(function () { if (!panel.hidden) sync(); })
       .observe(panel, { attributes: true, attributeFilter: ['hidden'] });
+
+    /* ---- Tap the beat. -----------------------------------------------------
+     * Four taps or more, along with Hear the loop; the first tap starts it
+     * when it is quiet, and is not counted (it is the start, not a beat). Two
+     * seconds without a tap and it settles on the tempo, to the nearest whole
+     * beat a minute; tapped again later, it listens again from the start. */
+    var tapBtn = $('musicTapBtn'), tapWords = $('musicTapWords'), tempoLine = $('musicTempo');
+    var taps = [], tapT = null, tapNote = '';
+    function tempo() { return tempoFrom(h.tempo ? h.tempo() : null); }
+    function beatSecs() { var tp = tempo(); return tp ? 60 / tp.bpm : 0; }
+    // Where the loop has got to, in the song's seconds, as heard while Hear
+    // the loop plays: on the gapless engine, the audio clock less the time the
+    // sound takes to reach the ear (a phone's speaker, more with Bluetooth), so
+    // the beat marked is the beat tapped to.
+    function songNow() {
+      if (!pv.on || pv.mode !== 'loop') return null;
+      var t = h.trim(), a = h.audio();
+      if (pv.engine === 'wa' && h.loop.playing()) return t.start + h.loop.elapsed() - (h.loop.latency ? h.loop.latency() : 0);
+      if (pv.engine === 'clip' && pv.el) return t.start + pv.el.currentTime;
+      if (pv.engine === 'track' && a) return a.currentTime;
+      return null;
+    }
+    // The gaps a person keeps time with: a fifth of a second to two.
+    function gapsOf(ts) {
+      var g = [];
+      for (var i = 1; i < ts.length; i++) {
+        var d = (ts[i].at - ts[i - 1].at) / 1000;
+        if (d >= 0.2 && d <= 2) g.push(d);
+      }
+      return g;
+    }
+    // One beat, from the gaps: the middle gap finds it, so a stray tap cannot
+    // move it, and the gaps near the middle one, averaged, settle it.
+    function beatOf(ts) {
+      var g = gapsOf(ts), m = median(g), near = g.filter(function (d) { return d >= m * 0.8 && d <= m * 1.25; });
+      return near.length ? near.reduce(function (a, d) { return a + d; }, 0) / near.length : m;
+    }
+    function settle() {
+      tapT = null;
+      var m = beatOf(taps);
+      if (taps.length >= 4 && m > 0) {
+        var bpm = Math.round(60 / m), p = 60 / bpm, x = 0, y = 0, n = 0, run = [];
+        // Where a beat falls: each tap's place in its beat, averaged round the
+        // circle, over the taps since the loop last came round (a loop that is
+        // not a whole number of beats puts its next time round's beats elsewhere).
+        taps.forEach(function (tp) {
+          if (tp.song == null) return;
+          if (run.length && tp.song < run[run.length - 1].song) run = [];
+          run.push(tp);
+        });
+        run.forEach(function (tp) { var a = 2 * Math.PI * tp.song / p; x += Math.cos(a); y += Math.sin(a); n++; });
+        var ph = n ? ((Math.atan2(y, x) / (2 * Math.PI)) * p + p) % p : 0;
+        if (h.setTempo) h.setTempo({ bpm: bpm, phase: Math.round(ph * 10000) / 10000 });
+        tapNote = '';
+        h.changed();
+      } else tapNote = taps.length ? 'Four taps or more, in time with the music.' : '';
+      taps = [];
+      sync();
+    }
+    // Every line here is two lines at most on a phone, as tall as the tap
+    // itself: the tap stays put under a finger while its words change.
+    function syncTap() {
+      if (!tapBtn) return;
+      var listening = !!tapT, tp = tempo(), m = beatOf(taps);
+      tapBtn.classList.toggle('tapping', listening);
+      tapBtn.disabled = !h.hasTrack();
+      if (tapWords) tapWords.textContent = listening ? 'Keep tapping' : 'Tap the beat';
+      if (!tempoLine) return;
+      var html = listening
+        ? (taps.length >= 2 && m > 0 ? taps.length + ' taps, about <b>' + Math.round(60 / m) + '</b> a minute' : 'Keep tapping along with the beat.')
+        : tapNote || (tp ? '<b>' + tp.bpm + ' beats a minute</b> · tap again to change it'
+          : 'Tap along with the music to count its beats.');
+      if (tempoLine._html !== html) { tempoLine.innerHTML = html; tempoLine._html = html; }
+    }
+    if (tapBtn) tapBtn.addEventListener('click', function () {
+      if (!h.hasTrack()) return;
+      clearTimeout(tapT);
+      tapT = setTimeout(settle, TAP_IDLE_MS);
+      tapNote = '';
+      if (!(pv.on && pv.mode === 'loop')) {
+        // The first tap starts the loop from its top; a drawing that was
+        // playing gives way to it.
+        if (h.playing()) { var pb = h.playButton && h.playButton(); if (pb) pb.click(); }
+        taps = [];
+        startLoop(0);
+      } else taps.push({ at: global.performance.now(), song: songNow() });
+      syncTap();
+    });
+
+    /* ---- Make it N beats: the three whole counts nearest what is heard. ----
+     * The start stays; the end goes where the loop is that many beats, its
+     * smooth restart included. A count the song (or the 20s cap) is too short
+     * for is faded, and the count the loop is, exactly, wears the one tint. */
+    var make = $('musicMake'), counts = make ? [].slice.call(make.querySelectorAll('.mt-count')) : [];
+    function lenFor(n) { var want = n * beatSecs(), xf = h.crossfade() / 1000; return xf <= want ? want + xf : 2 * want; }
+    function syncMake() {
+      if (!make) return;
+      var p = beatSecs(), t = h.trim(), ok = h.hasTrack() && p > 0;
+      make.hidden = !ok;
+      if (!ok) return;
+      var len = heard(t, h.crossfade()), r = Math.max(2, Math.round(len / p));
+      var cap = Math.min(t.duration, t.start + T.MAX_LOOP_SECONDS);
+      counts.forEach(function (c, i) {
+        var k = r - 1 + i, l = lenFor(k);
+        c.dataset.n = k;
+        c.textContent = String(k);
+        c.setAttribute('aria-label', 'Make it ' + k + ' beats');
+        c.disabled = t.start + l > cap + EPS || l < T.MIN_LOOP_SECONDS;
+        setOn(c, Math.abs(len - k * p) < 0.002, 'aria-pressed');
+      });
+    }
+    counts.forEach(function (c) {
+      c.addEventListener('click', function () {
+        var k = +c.dataset.n;
+        if (!h.hasTrack() || !(k > 0) || c.disabled) return;
+        var t = h.trim();
+        h.setTrim(t.start, t.start + lenFor(k));
+        touched();
+        h.refresh();
+        h.changed();
+      });
+    });
+
+    /* ---- The beat, marked on the strip and in the loop detail. -------------
+     * A tick on every beat that stands 6px from the next (else every fourth,
+     * else every sixteenth), taller every four counted from the loop's start,
+     * and with a smooth restart a dashed line where the loop comes round.
+     * Over the waveform and the loop's tint, under the handles. */
+    function lay(host, t0, t1) {
+      if (!host) return;
+      var box = host.querySelector('.mt-ticks'), tp = tempo(), p = beatSecs(), w = host.clientWidth;
+      if (!tp || !h.hasTrack() || !(w > 0) || !(t1 > t0)) { if (box) box.parentNode.removeChild(box); return; }
+      if (!box) {
+        box = document.createElement('div');
+        box.className = 'mt-ticks';
+        box.setAttribute('aria-hidden', 'true');
+        host.insertBefore(box, host.querySelector('.music-trim-handle, .zoom-handle'));
+      }
+      var t = h.trim(), ppb = w * p / (t1 - t0), html = '';
+      var every = ppb >= 6 ? 1 : ppb * 4 >= 6 ? 4 : ppb * 16 >= 6 ? 16 : 0;
+      var k0 = Math.round((t.start - tp.phase) / p);
+      if (every) for (var k = Math.ceil((t0 - tp.phase) / p); tp.phase + k * p <= t1 + 1e-9; k++) {
+        if (((k - k0) % every + every) % every) continue;
+        html += '<i' + (((k - k0) % 4 + 4) % 4 === 0 ? ' class="bar"' : '') + ' style="left:'
+          + ((tp.phase + k * p - t0) / (t1 - t0) * 100).toFixed(3) + '%"></i>';
+      }
+      var fold = Math.min(h.crossfade() / 1000, (t.end - t.start) / 2);
+      if (fold > 0) html += '<b style="left:' + ((t.end - fold - t0) / (t1 - t0) * 100).toFixed(3) + '%"></b>';
+      if (box._html !== html) { box.innerHTML = html; box._html = html; }
+    }
+    function syncTicks() {
+      var ok = h.hasTrack(), zw = ok && wrap && !wrap.closest('[hidden]') ? h.zoomWindow() : null;
+      lay(track, 0, ok ? h.trim().duration : 0);
+      lay(wrap, zw ? zw.start : 0, zw ? zw.end : 0);
+    }
+    var ticksRaf = 0;
+    global.addEventListener('resize', function () {
+      if (!ticksRaf) ticksRaf = global.requestAnimationFrame(function () { ticksRaf = 0; syncTicks(); });
+    });
 
     /* ---- Smooth restart: the clip's join, folded over its head. ------------
      * The switch turns it on at its last length (Skribl's pick's, until one is
@@ -746,6 +1006,8 @@
         : 'A clean cut back to the start.';
     }
     function rejoin() {
+      clearTimeout(retimeT);
+      retimeT = null;
       if (pv.on) {
         if (pv.mode === 'seam') startSeam();
         else if (pv.engine === 'wa' && h.loop.playing()) h.loop.start(function () { if (pv.on) loopNative(); }, h.loop.elapsed());
@@ -797,7 +1059,10 @@
       syncPicks(secs);
       syncLines(secs);
       syncPick(secs);
-      syncPlay(secs);
+      syncHear(secs);
+      syncTap();
+      syncMake();
+      syncTicks();
     }
     sync();
 
@@ -805,9 +1070,10 @@
       sync: sync, syncCrossfade: syncCrossfade, resetView: resetView,
       matchDrawing: matchDrawing, applyPick: applyPick, stopPreview: stopPreview,
       previewing: function () { return pv.on; },
-      level: function () { return level; }
+      level: function () { return level; },
+      tempo: tempo
     };
   }
 
-  global.SkriblMusicDrawer = { wire: wire };
+  global.SkriblMusicDrawer = { wire: wire, tempoFrom: tempoFrom };
 })(window);

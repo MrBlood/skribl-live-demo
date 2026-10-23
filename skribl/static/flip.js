@@ -353,6 +353,9 @@ let pendingMusicMeta = null, pendingPhotoMeta = null;
 let musicEnabled = true, trimStart = 0, trimEnd = null, audioDuration = 0;   // trim/loop
 const MAX_LOOP_SECONDS = 20;   // hard cap on loop length; enforced at load AND on every drag
 let audioCtx = null, currentAudioBuffer = null, loopCrossfadeMs = 0;         // decoded buffer for the waveform
+// The song's tapped tempo, { bpm, phase } or null (Tap the beat,
+// lib/musicdrawer.js): saved with the song in the drafts, never posted.
+let musicTempo = null;
 let zoomMag = 1, zoomFocus = 'loop', zoomCenter = null;                       // Loop Detail magnification
 let musicDrawer = null;     // lib/musicdrawer.js, wired with the music drawer below
 // A song just chosen, not a draft's: its decode starts it on Skribl's pick.
@@ -742,7 +745,7 @@ function serializeFlip(opts){
     bgImage: withMedia ? (bgImage || null) : null,
     music: withMedia ? (musicData || null) : null,
     photo: bgImage ? { fit:photoFit, opacity:photoOpacity, blur:photoBlur, zoom:photoZoom, offX:photoOffX, offY:photoOffY, enabled:photoEnabled, name:imageName } : (pendingPhotoMeta || null),
-    musicMeta: musicData ? { enabled:musicEnabled, trimStart:trimStart, trimEnd:trimEnd, crossfadeMs:loopCrossfadeMs, name:musicName } : (pendingMusicMeta || null),
+    musicMeta: musicData ? { enabled:musicEnabled, trimStart:trimStart, trimEnd:trimEnd, crossfadeMs:loopCrossfadeMs, name:musicName, tempo:musicTempo } : (pendingMusicMeta || null),
     // writeFrames AFTER the map, never before: genRecipe is keyed on the live
     // frame objects, and tidying first would hand it copies it has never seen.
     frames: writeFrames(frames.map((f, i) => {
@@ -974,7 +977,7 @@ function saveNow(){
                                         enabled:photoEnabled, name:imageName };
       if (musicData) pendingMusicMeta = { enabled:musicEnabled, trimStart:trimStart,
                                           trimEnd:trimEnd, crossfadeMs:loopCrossfadeMs,
-                                          name:musicName };
+                                          name:musicName, tempo:musicTempo };
       showAutosaveStatus('saved-no-media');
       console.error('[skribl] media spill to IndexedDB timed out after ' + SPILL_TIMEOUT_MS + 'ms');
     }, SPILL_TIMEOUT_MS);
@@ -995,7 +998,7 @@ function saveNow(){
                                                          enabled:photoEnabled, name:imageName };
                        if (musicData) pendingMusicMeta = { enabled:musicEnabled, trimStart:trimStart,
                                                            trimEnd:trimEnd, crossfadeMs:loopCrossfadeMs,
-                                                           name:musicName };
+                                                           name:musicName, tempo:musicTempo };
                        showAutosaveStatus('saved-no-media');
                        console.error('[skribl] media spill to IndexedDB failed:', e3); });
   } else {
@@ -1233,6 +1236,7 @@ function applyPayload(d){
   trimStart = typeof mm.trimStart==='number' ? mm.trimStart : 0;
   trimEnd = typeof mm.trimEnd==='number' ? mm.trimEnd : null;
   loopCrossfadeMs = typeof mm.crossfadeMs==='number' ? mm.crossfadeMs : 0;
+  musicTempo = window.SkriblMusicDrawer ? window.SkriblMusicDrawer.tempoFrom(mm.tempo) : null;
   musicName = typeof mm.name==='string' ? mm.name : '';
   currentAudioBuffer = null; resetMusicView();   // whole loop, 1x: on the cells too, where Start or End stayed lit on a new track
   /* A SUBDIVIDED DOCUMENT IS A VALID DOCUMENT. This took only 6, 12 and 24 and
@@ -5623,6 +5627,7 @@ function decodeForWaveform(){
         if(typeof m.trimEnd==='number')   trimEnd=Math.min(m.trimEnd, audioDuration);
         trimEnd=Math.max(trimStart+0.5, Math.min(trimEnd, audioDuration));
         if(typeof m.crossfadeMs==='number') loopCrossfadeMs=m.crossfadeMs;
+        if(m.tempo!==undefined && window.SkriblMusicDrawer) musicTempo=window.SkriblMusicDrawer.tempoFrom(m.tempo);
         musicEnabled = m.enabled!==false;
         pendingMusicMeta=null;
         if(typeof setCrossfadeUI==='function') setCrossfadeUI(); }
@@ -5644,11 +5649,11 @@ function ensureAudio(){
   }
 }
 function setMusic(dataURL){ musicData=dataURL; if(audioEl){ try{audioEl.pause();}catch(_){}} audioEl=null;
-  musicEnabled=true; trimStart=0; trimEnd=null; audioDuration=0; loopCrossfadeMs=0; currentAudioBuffer=null; musicFresh=true;
+  musicEnabled=true; trimStart=0; trimEnd=null; audioDuration=0; loopCrossfadeMs=0; musicTempo=null; currentAudioBuffer=null; musicFresh=true;
   resetMusicView();
   ensureAudio(); decodeForWaveform(); syncMediaUI(); scheduleSave(); }
 function removeMusic(){ musicSelectionSeq++; if(typeof stopLoopPreview==='function') stopLoopPreview(); if(audioEl){ try{audioEl.pause();}catch(_){}} audioEl=null;
-  musicData=null; musicName=''; currentAudioBuffer=null; loopCrossfadeMs=0; pendingMusicMeta=null; musicFresh=false;
+  musicData=null; musicName=''; currentAudioBuffer=null; loopCrossfadeMs=0; musicTempo=null; pendingMusicMeta=null; musicFresh=false;
   try{ waveformCtx.clearRect(0,0,waveformCanvas.width,waveformCanvas.height); zoomWaveformCtx.clearRect(0,0,zoomWaveformCanvas.width,zoomWaveformCanvas.height); }catch(_){}
   if(typeof setCrossfadeUI==='function') setCrossfadeUI();
   syncMediaUI(); scheduleSave(); }
@@ -6501,7 +6506,7 @@ function attachSegSlider(group){ if(window.SkriblSegSlider) window.SkriblSegSlid
 // THE DRAWER'S CONTROLS ARE lib/musicdrawer.js's, one copy shared with the Pad
 // (owner: "it needs to be the same music editor on both pad and flip"): Trim |
 // Fine-tune, the loop detail's zoom and Scroll, the edges' drags and nudges,
-// Crossfade, Match Drawing Time, Preview Loop, Test Seam and the switch. Flip
+// Crossfade, Match Drawing Time, Preview Loop, Test Seam, Tap the beat and the switch. Flip
 // hands it its own state; its Play keeps its own pace and loops (F1).
 let previewingLoop=false;   // stopMusic and exportVideo read it
 musicDrawer = window.SkriblMusicDrawer ? window.SkriblMusicDrawer.wire({
@@ -6530,7 +6535,7 @@ musicDrawer = window.SkriblMusicDrawer ? window.SkriblMusicDrawer.wire({
   playButton: ()=>playBtn,
   audio: ()=>{ ensureAudio(); return audioEl; },
   buffer: ()=>currentAudioBuffer,
-  loop: { start:startWebAudioLoop, stop:stopWebAudioLoop, playing:()=>_waLoop.playing(), elapsed:()=>_waLoop.elapsed() },
+  loop: { start:startWebAudioLoop, stop:stopWebAudioLoop, playing:()=>_waLoop.playing(), elapsed:()=>_waLoop.elapsed(), duration:()=>_waLoop.duration(), latency:()=>_waLoop.latency() },
   clip: buildTrimmedLoopWav,
   playing: ()=>playing,
   setPreviewing: (on)=>{ previewingLoop=on; },
@@ -6539,6 +6544,8 @@ musicDrawer = window.SkriblMusicDrawer ? window.SkriblMusicDrawer.wire({
   musicOn: startMusic,
   musicOff: stopMusic,
   syncRow: syncMusicUI,
+  tempo: ()=>musicTempo,
+  setTempo: (t)=>{ musicTempo=t; },
 }) : null;
 function stopLoopPreview(){ if(musicDrawer) musicDrawer.stopPreview(); }
 function setCrossfadeUI(){ if(musicDrawer) musicDrawer.syncCrossfade(); }

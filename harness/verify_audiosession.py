@@ -275,9 +275,8 @@ with sync_playwright() as p:
         pg.set_input_files("#musicInput",
                            {"name": "t.wav", "mimeType": "audio/wav", "buffer": AUD})
         pg.wait_for_timeout(3000)
-        # Preview Loop is Hear the whole loop now, under Fine-tune (lib/musicdrawer.js).
-        pg.click("#fineTuneToggle"); pg.wait_for_timeout(400)
-        browsing.wait_scroll_still(pg)
+        # Preview Loop is Hear the loop now, under the strip on every level
+        # (lib/musicdrawer.js).
         pg.click("#previewLoopBtn")
         peak = 0
         for _ in range(12):
@@ -286,7 +285,7 @@ with sync_playwright() as p:
         check(f"{label}: Preview Loop puts signal on the audio graph",
               peak > 5, f"analyser peak {peak}")
         check(f"{label}: and claiming the session did not break it",
-              pg.inner_text("#previewLoopBtn").strip() == "Stop")
+              pg.inner_text("#previewLoopBtn .tp-k").strip() == "Stop")
         # AND PLAY, the ordinary way to hear a drawing with its music. Pad's
         # music loop is editor_music.js's since the music preview carve, and
         # Pad's Play reaches it behind a typeof guard (the link page keeps a

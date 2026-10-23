@@ -44,8 +44,8 @@ The rows:
   takes text is 16px (A11Y 11b; these are built hidden).
 
   PLAY. Play with my drawing is the editor's own Play and follows it however
-  it is pressed; with nothing to play it plays the loop on its own, and says
-  so.
+  it is pressed; with nothing drawn it waits, and Hear the loop, beside it on
+  every level, plays the music on its own (verify_musicbeat has the rest).
 
   KIND, NOT JUMPY. Picking Fine-tune never takes the switch just tapped out of
   sight, and going back to Simple from the drawer's end glides: the switch is
@@ -143,9 +143,9 @@ LEVEL_BTN = {"simple": "#musicLevelSimple", "adjust": "#fineTuneTrim", "fine": "
 SIGHT = """() => { const s = document.getElementById('fineTuneSeg').getBoundingClientRect(), h = document.querySelector('.header');
   const top = h && ['sticky', 'fixed'].includes(getComputedStyle(h).position) ? h.getBoundingClientRect().bottom : 0;
   return { seg: Math.round(s.top), header: Math.round(top), vh: innerHeight }; }"""
-EVERY = ["musicTrack", "musicPickLine", "matchDrawingBtn", "musicWholeBtn", "musicPlayBtn"]
-ADJUST = ["musicLenLine", "musicFrom", "musicTo", "musicSmooth", "testSeamBtn"]
-FINE = ["fineTuneBody", "zoomTrackWrap", "zoomPanSlider", "previewLoopBtn", "musicStepSeg", "startReadout", "endReadout",
+EVERY = ["musicTrack", "musicPickLine", "matchDrawingBtn", "musicWholeBtn", "musicPlayBtn", "previewLoopBtn"]
+ADJUST = ["musicLenLine", "musicFrom", "musicTo", "musicTapBtn", "musicSmooth", "testSeamBtn"]
+FINE = ["fineTuneBody", "zoomTrackWrap", "zoomPanSlider", "musicTapBtn", "musicStepSeg", "startReadout", "endReadout",
         "musicSyncLine", "musicLock", "musicSmooth", "crossfadeSlider", "testSeamBtn"]
 ALL = sorted(set(EVERY + ADJUST + FINE))
 WANT = {"simple": set(EVERY), "adjust": set(EVERY + ADJUST), "fine": set(EVERY + FINE)}
@@ -222,9 +222,9 @@ with sync_playwright() as pw:
             if lv != "simple":
                 pick_level(pg, lv)
             shown[lv] = set(pg.evaluate(SHOWN, ALL))
-        check(f"{_n}: a new drawer opens on Simple: the strip, the pick line, the two picks and Play, and nothing deeper",
+        check(f"{_n}: a new drawer opens on Simple: the strip, the pick line, the pair that plays and the two picks, and nothing deeper",
               shown["simple"] == WANT["simple"], f"extra {sorted(shown['simple'] - WANT['simple'])}, missing {sorted(WANT['simple'] - shown['simple'])}")
-        check(f"{_n}: Adjust adds the typed times, Smooth restart and Hear the restart",
+        check(f"{_n}: Adjust adds the typed times, Tap the beat, Smooth restart and Hear the restart",
               shown["adjust"] == WANT["adjust"], f"extra {sorted(shown['adjust'] - WANT['adjust'])}, missing {sorted(WANT['adjust'] - shown['adjust'])}")
         check(f"{_n}: Fine-tune adds the loop detail, Each tap, the steppers, the sync line, Lock the length and Smooth restart's length",
               shown["fine"] == WANT["fine"], f"extra {sorted(shown['fine'] - WANT['fine'])}, missing {sorted(WANT['fine'] - shown['fine'])}")
@@ -527,20 +527,21 @@ with sync_playwright() as pw:
         if theirs["play"]:
             pg.click(PLAY[_n]); pg.wait_for_timeout(300)
         check(f"{_n}: Play with my drawing is the editor's own Play, and follows it however it is pressed",
-              was == f"Play with my {WORK[_n]}" and st["play"] and not st["pv"] and st["label"] == "Stop"
-              and not after["play"] and after["label"] == was and theirs["play"] and theirs["label"] == "Stop",
+              was == f"Play with my {WORK[_n]}" and st["play"] and not st["pv"] and st["label"] == f"Stop the {WORK[_n]}"
+              and not after["play"] and after["label"] == was and theirs["play"] and theirs["label"] == f"Stop the {WORK[_n]}",
               f"{was!r}; pressed: {st}; the editor's Play stopped it: {after}; the editor's Play started it: {theirs}")
         c.close()
     for _n, _p in eds("play"):
         c, pg, _ = editor(b, _n, _p, drawn=False)
-        was = pg.evaluate(SAID)["play"]
-        pg.click("#musicPlayBtn"); pg.wait_for_timeout(500)
-        st = pg.evaluate("() => ({ play: playing, pv: previewingLoop, label: document.getElementById('musicPlayLabel').textContent })")
-        pg.click("#musicPlayBtn"); pg.wait_for_timeout(300)
-        stop = pg.evaluate("() => ({ pv: previewingLoop, label: document.getElementById('musicPlayLabel').textContent })")
-        check(f"{_n}: with nothing to play, it plays the loop on its own, and says so",
-              was == "Play the loop" and not st["play"] and st["pv"] and st["label"] == "Stop" and not stop["pv"] and stop["label"] == was,
-              f"{was!r}; pressed: {st}; again: {stop}")
+        was = pg.evaluate("() => ({ label: document.getElementById('musicPlayLabel').textContent, off: document.getElementById('musicPlayBtn').disabled })")
+        pg.click("#previewLoopBtn"); pg.wait_for_timeout(500)
+        st = pg.evaluate("() => ({ play: playing, pv: previewingLoop, hear: document.getElementById('musicHearLabel').textContent })")
+        pg.click("#previewLoopBtn"); pg.wait_for_timeout(300)
+        stop = pg.evaluate("() => ({ pv: previewingLoop, hear: document.getElementById('musicHearLabel').textContent })")
+        check(f"{_n}: with nothing drawn, Play with my drawing waits, and Hear the loop plays the music on its own",
+              was == {"label": f"Play with my {WORK[_n]}", "off": True} and not st["play"] and st["pv"] and st["hear"] == "Stop the loop"
+              and not stop["pv"] and stop["hear"] == "Hear the loop",
+              f"Play: {was}; Hear the loop pressed: {st}; again: {stop}")
         c.close()
 
     print("\nMUSIC LEVELS — kind, not jumpy")
