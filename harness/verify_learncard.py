@@ -154,6 +154,10 @@ with sync_playwright() as p:
             c, q = fresh(b, DESK, route)
             q.evaluate("() => document.getElementById('penToolBtn').click()")   # Pen is picked: a click opens its drawer
             q.wait_for_timeout(500)
+            # The size slider is in the Size tile's choices since the draw
+            # drawer's four tiles (#609), so the tile opens first.
+            q.click(".dp-tile[data-dp=size]")
+            q.wait_for_timeout(500)
             plus = q.evaluate("() => { const b = [...document.querySelectorAll('.slider-nudge-btn')].find(e => e.getClientRects().length && /increase|\\+|more/i.test((e.getAttribute('aria-label') || '') + e.textContent));"
                               " if (!b) return null; const inp = b.closest('.slider-nudge-wrap').parentElement.querySelector('input[type=range]'); b.id = 'lcPlus'; return inp ? inp.value : null; }")
             if plus is None:
