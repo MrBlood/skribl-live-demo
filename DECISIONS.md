@@ -22116,7 +22116,7 @@ time. Letting a long frame carry more (3px a millisecond) was tried and
 hid a chase, 424px in one 176ms frame, so the 160px rule stays and a red in a
 long frame is told apart by a run alone.
 
-Three more reds beside the others were the suites' own, each fixed where it
+Four more reds beside the others were the suites' own, each fixed where it
 lived. verify_helpclaims' census of named controls did not know the new ones,
 still listed seven that are gone, and one claim named a row by a title it
 does not have. verify_tools' V214f posted 4.75s for its 5s loop: the pick's
@@ -22127,7 +22127,10 @@ screen at Fine-tune's end, and the leap was Playwright scrolling it into view
 for the click. That row now runs on the owner's phone (402x874) and taps
 Adjust from the switch, scrolled back up to the way a person must; there the
 page loses 238-262px, the build glides it in 49-52px frames, and without
-shrinkGently it is one frame (red).
+shrinkGently it is one frame (red). verify_ux's V210 expected Start and End
+stacked at 363px: the rebuilt Fine-tune gives their grid the screen less 78px
+(it was less 100), so two 130px groups fit from 348px, nothing spilling; the
+stack is checked at 340 instead.
 
 Two stayed green, and say why. The Pad's re-add guard: the saved loop is
 applied after any pick, so it is kept either way (the guard stays, for an
