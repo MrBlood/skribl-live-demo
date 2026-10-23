@@ -2393,13 +2393,6 @@ body.recoloring #canvas { cursor: crosshair !important; }
   flex-direction: column; gap: 1px; line-height: 1.2; text-align: center; }
 .lv-k { font-size: 14px; }
 .lv-v { font-size: 12px; font-weight: 500; }
-/* NO ANCHOR IN THE LEVELS. A level shows and hides blocks under the switch
-   just tapped. On a short screen the browser's scroll anchoring chose one of
-   them -- Play, below the new blocks -- and held IT still, which moved the
-   switch 84px in one frame (verify_musiclevels reads it on every frame). With
-   none of them an anchor the screen holds still, and only the drawer's own
-   reveal (lib/musicdrawer.js) moves it, gliding. */
-.music-trim { overflow-anchor: none; }
 .fine-tune-body { margin-top: 14px; }
 .fine-tune-body[hidden], .mt-when[hidden], .mt-smooth[hidden], .crossfade-row[hidden],
 .mt-pick[hidden], .mt-pick-btn[hidden] { display: none; }
