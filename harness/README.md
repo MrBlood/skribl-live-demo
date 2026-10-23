@@ -545,6 +545,16 @@ stays a sleep.
   thumbnail, a fill's bands as one line, a recoloured tween page saved as it
   looks, and the Select bar's Color with its bare count on a phone. Each row
   was shown red by its own break.
+- `verify_drawtiles.py` — the draw drawer's four tiles (lib/drawtiles.js),
+  Brush, Size, Feel and Eraser, on the Pad and Flip, phone and desk, both
+  themes: every control hidden until its tile opens and then painted where a
+  finger lands; each choice changes the editor's own state and the tile's
+  words follow; the open tile and its card one shape, in the menu's tokens;
+  nothing in the drawer paints outside it (the stray pill's column); the
+  pictures in the pen's colour; closing folds over frames, at once under
+  Reduce Motion; on a phone half shows the tiles and a tile goes to full with
+  Clear; one Tab stop per group, arrows move the choice. Each row shown red
+  by its own break (DRAWTILES_ONLY / DRAWTILES_QUICK run the part that matters).
 - `verify_recolorplay.py` — a recolour in the replay (lib/recolorplay.js):
   the line plays in its old colour until the moment it was recoloured, then
   the new colour runs along it from where it was tapped, on the Pad's Play

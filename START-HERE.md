@@ -744,8 +744,8 @@ rather than a shared rule.
 | `dragtrack.js` | Pad+Flip | A horizontal drag on a track: the plumbing, once, for both editors. |
 | `drawalong.js` | Pad+Flip | Draw along: a drawing from the little book, laid faintly on your own canvas one stroke at a time, for you to trace at your pace (owner, after v323: the little book mock, "Yes to all as long as it's kind"; FUTURE.md 6p). |
 | `drawerdetent.js` | Pad+Flip | The draw drawer's HALF detent — one implementation, both editors. |
-| `drawtiles.js` | Pad+Flip | The draw drawer's four picture tiles (Brush, Size, Feel, Eraser), each opening its choices joined in place. |
 | `drawers.js` | Pad+Flip | Exclusive drawer controller — the ONE implementation of a machine both editors had hand-rolled: named panels above/below a toolbar, at most one open, the opener button reflecting state, and a scroll that reveals the opened panel without stranding it under browser chrome. |
+| `drawtiles.js` | Pad+Flip | The draw drawer's four tiles -- Brush, Size, Feel, Eraser -- one implementation, both editors. |
 | `editorswitch.js` | Pad+Flip | The menu's Pad | Flip switch moves before it goes (owner's iPhone, after v323: "when I click flip, starts loading flip and never shows the button move, then boom you're in flip. |
 | `erasersize.js` | Pad+Flip | Eraser size — shared by both editors. |
 | `eventpoint.js` | Pad+Flip+player | Which contact a gesture belongs to — shared by Pad, Flip and the player. |
