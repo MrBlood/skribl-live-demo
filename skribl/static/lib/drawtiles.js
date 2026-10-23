@@ -280,9 +280,6 @@
     root.__dp = { show: show, open: function () { return open; }, paint: paint, refresh: refresh };
   }
 
-  function boot() { attach(document.getElementById('drawPanel')); }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
-  else boot();
-
+  // Each editor attaches it to its own #drawPanel, beside the detent.
   window.SkriblDrawTiles = { attach: attach };
 }());

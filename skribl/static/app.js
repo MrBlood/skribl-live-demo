@@ -1359,6 +1359,8 @@ if (window.SkriblDrawerDetent) {
   window.SkriblDrawerDetent.attach(document.getElementById('drawPanel'),
     { close: () => openDrawer(null), dock: document.getElementById('toolBar') });
 }
+// The drawer's four tiles (Brush, Size, Feel, Eraser), shared with Flip via lib/drawtiles.js.
+if (window.SkriblDrawTiles) window.SkriblDrawTiles.attach(document.getElementById('drawPanel'));
 const toolBarEl = document.getElementById('toolBar');
 if (toolBarEl) toolBarEl.addEventListener('click', (e) => {
   const btn = e.target.closest('.tool-open');
