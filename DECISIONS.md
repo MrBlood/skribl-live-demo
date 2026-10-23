@@ -22151,3 +22151,25 @@ SF. And kept as it is, a question the owner chose to take up after step 2:
 the Pad's replay still stops the music when the drawing ends (START-HERE's
 "When the drawing stops, the music stops"), so "your finished drawing stays
 while the song plays on" is not said anywhere yet.
+
+## After v329 -- Main red after #609 and #611: two rows that read the old help and the old drawer
+
+Main went red after #609 and again after #611, and both reds were the checks,
+not the app.
+
+verify_learncard's "the slider's + is there to hold" has been red since #609
+(shard 5 then; #611's new suite moved it to shard 3). The draw drawer's four
+tiles put the size slider in the Size tile's choices, and the row looked for
+the slider's + with the tiles closed. It opens the Size tile first. Red as it
+was (36/37), green with the tile opened (37/37).
+
+verify_ask's "song" row, red since #611 on both lanes, asked for a word no
+entry uses, so that everything it found came through a cousin (music, sound,
+audio, track). The Skribl's pick tip says "A new song starts on its first 20
+seconds", so the word is in an entry now and the row could not pass. The help
+keeps the word: the drawer says Whole song and a new song, and How it works
+says what the drawer says. The row now asks for what it was for: among what
+"song" finds, a music entry that never says it, which only a cousin can find.
+Red as it was (52/54, both editors), green as built (54/54), and red again
+with the cousins taken out of lib/helpsearch.js (51/54: no entry found by a
+cousin alone, on either editor).
