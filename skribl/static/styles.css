@@ -2383,15 +2383,99 @@ body.recoloring #canvas { cursor: crosshair !important; }
 }
 @media (hover: hover) { .panel-btn:hover { background: var(--surface-control-hover); color: var(--text-bright); } }
 
-/* Trim | Fine-tune: the one pill, full width at the head of the music
-   section. Fine-tune hides the trim strip and its times and shows the loop
-   detail in their place, so nothing opens below the fold. */
+/* THE THREE LEVELS: the one pill, full width at the head of the loop, each
+   option its name over what it is for (Simple / Skribl does it, Adjust /
+   shape it yourself, Fine-tune / make it perfect). Was Trim | Fine-tune,
+   where Fine-tune swapped the strip out; the strip stays on every level now,
+   so switching never moves the loop under the finger. */
 .ft-seg { display: flex; width: 100%; box-sizing: border-box; margin-bottom: 12px; }
-.ft-seg button { flex: 1; min-height: 36px; font-size: 14px; }
-.music-trim.ft-on .music-trim-track,
-.music-trim.ft-on .music-trim-times { display: none; }
-.fine-tune-body { margin-top: 12px; }
-.fine-tune-body[hidden] { display: none; }
+.ft-seg button { flex: 1 1 0; min-width: 0; min-height: 48px; padding: 6px 4px;
+  flex-direction: column; gap: 1px; line-height: 1.2; text-align: center; }
+.lv-k { font-size: 14px; }
+.lv-v { font-size: 12px; font-weight: 500; }
+.fine-tune-body { margin-top: 14px; }
+.fine-tune-body[hidden], .mt-when[hidden], .mt-smooth[hidden], .crossfade-row[hidden],
+.mt-pick[hidden], .mt-pick-btn[hidden] { display: none; }
+
+/* Said for a moment after a level is picked, over the strip: it takes no
+   taps (pointer-events) and no room (absolute). An opacity fade, which moves
+   nothing, so Reduce Motion has nothing to still. */
+.mt-kept {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 4;
+  padding: 5px 12px; border-radius: 999px; white-space: nowrap; pointer-events: none;
+  background: var(--menu-card); color: var(--text-primary); box-shadow: var(--menu-card-drop);
+  font-size: 13px; font-weight: 600; opacity: 0; transition: opacity .25s ease;
+}
+.mt-kept.show { opacity: 1; }
+
+/* THE PICK LINE: the same words in the same place on every level, the way
+   back at its end. Small violet words are --accent-ink, the menu's. */
+.mt-pick { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 8px; margin-top: 12px;
+  font-size: 13px; line-height: 1.35; color: var(--text-secondary); }
+.mt-spark { width: 16px; height: 16px; flex: none; color: var(--accent-ink); }
+.mt-pick-text { flex: 1 1 180px; min-width: 0; }
+.mt-pick-btn { display: inline-flex; align-items: center; gap: 5px; min-height: 32px; padding: 4px 10px;
+  border: 1px solid var(--menu-card-line); border-radius: 999px; background: var(--menu-card);
+  color: var(--accent-ink); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
+  -webkit-tap-highlight-color: transparent; }
+.mt-pick-btn svg { width: 14px; height: 14px; flex: none; }
+@media (hover: hover) { .mt-pick-btn:hover { background: color-mix(in srgb, var(--accent) 7%, var(--menu-card)); } }
+
+/* ADJUST'S LINE: the loop's length against the drawing, and both ends typed.
+   A field that takes text is 16px, or iOS magnifies the page (A11Y 11b). */
+.mt-when { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; margin-top: 12px; }
+.mt-len { flex: 1 1 100%; font-size: 13px; font-weight: 600; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.mt-at { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-secondary); }
+.mt-time { font: inherit; font-size: 16px; font-variant-numeric: tabular-nums; color: var(--text-primary);
+  background: var(--menu-paper); border: 1px solid var(--menu-card-line); border-radius: 10px;
+  padding: 5px 8px; width: 78px; box-sizing: border-box; text-align: center; }
+.mt-time:focus-visible { outline: 2px solid var(--ui-hi); outline-offset: 1px; }
+
+/* FIT MY DRAWING and WHOLE SONG: two menu cards, as the draw drawer's tiles
+   are; the one that describes the loop wears the one tint. Compact under
+   Fine-tune, where they are a starting point and not the point. */
+.mt-picks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 12px; }
+.mt-pick-card { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; min-width: 0; min-height: 48px;
+  padding: 8px 12px; border-radius: 16px; border: 1px solid var(--menu-card-line); background: var(--menu-card);
+  box-shadow: var(--menu-card-drop); font: inherit; text-align: left; cursor: pointer;
+  -webkit-tap-highlight-color: transparent; transition: background .15s ease, border-color .15s ease; }
+.mt-k { font-size: 14px; font-weight: 650; color: var(--text-primary); line-height: 1.25; }
+.mt-v { font-size: 12px; font-weight: 500; color: var(--text-secondary); line-height: 1.3; }
+.mt-pick-card .mt-k, .mt-pick-card .mt-v { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mt-pick-card.on { background: var(--seg-on-fill); border-color: transparent; box-shadow: none; outline: 2px solid transparent; outline-offset: -2px; }
+.mt-pick-card.on .mt-k, .mt-pick-card.on .mt-v { color: var(--seg-on-ink); }
+.mt-pick-card:disabled { cursor: default; }
+.mt-pick-card:disabled .mt-k { color: var(--text-secondary); }
+.mt-pick-card:focus-visible { outline: 2px solid var(--ui-hi); outline-offset: 2px; }
+@media (hover: hover) { .mt-pick-card:not(.on):not(:disabled):hover { background: color-mix(in srgb, var(--accent) 7%, var(--menu-card)); } }
+.music-detail[data-level="fine"] .mt-pick-card { min-height: 40px; padding: 6px 12px; flex-direction: row; align-items: baseline; gap: 6px; }
+
+/* EACH TAP, the sync line, and the switch rows (Lock the length, Smooth
+   restart): the draw drawer's switch row, name over what it does. */
+.mt-steps { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; margin-top: 16px; }
+.mt-cap { font-size: 13px; font-weight: 600; color: var(--text-secondary); }
+.mt-step-seg { flex: 1 1 220px; display: flex; }
+.mt-step-seg button { flex: 1 1 0; min-width: 0; min-height: 36px; padding: 5px 4px; white-space: nowrap; }
+.mt-sync { margin: 12px 0 0; font-size: 13px; line-height: 1.4; color: var(--text-secondary); font-variant-numeric: tabular-nums; text-align: center; }
+.mt-sect { margin: 18px 0 4px; font-size: 13px; font-weight: 600; color: var(--text-secondary); }
+.mt-smooth { margin-top: 8px; }
+.music-detail[data-level="adjust"] .mt-smooth { margin-top: 14px; }
+.mt-switch { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 2px; }
+.mt-switch-words { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.mt-switch .layer-toggle { display: inline-block; }
+.mt-smooth #testSeamBtn { margin-top: 6px; }
+.mt-hear { display: flex; justify-content: center; margin-top: 12px; }
+
+/* PLAY WITH MY DRAWING: the action of every level, so the accent's fill. */
+.mt-play { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 44px; margin-top: 14px;
+  border: 0; border-radius: 999px; background: var(--accent-fill); color: #fff; font: inherit; font-size: 15px; font-weight: 650;
+  cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.mt-play svg { width: 16px; height: 16px; flex: none; }
+.mt-play .mt-stop-icon, .mt-play.playing .mt-play-icon { display: none; }
+.mt-play.playing .mt-stop-icon { display: block; }
+.mt-play:disabled { opacity: .5; cursor: default; }
+.mt-play:focus-visible { outline: 2px solid var(--ui-hi); outline-offset: 2px; }
+@media (hover: hover) { .mt-play:not(:disabled):hover { filter: brightness(1.08); } }
 
 @media (max-width: 640px) {
   /* Breathing room for the pen row on a phone. At 28px the gaps closed to
@@ -2910,37 +2994,6 @@ body.recoloring #canvas { cursor: crosshair !important; }
   }
 }
 
-.loop-preview-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  margin-top: 10px;
-  flex-wrap: wrap;
-}
-
-.loop-summary {
-  font-size: 12px;
-  color: var(--text-tool);
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-}
-
-.loop-actions {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  width: 100%;
-  justify-content: center;
-}
-
-.loop-actions .loop-btn {
-  flex: 1;
-  min-width: 90px;
-  text-align: center;
-  justify-content: center;
-}
-
 .loop-btn {
   border: none;
   border-radius: 999px;
@@ -3008,21 +3061,28 @@ body.recoloring #canvas { cursor: crosshair !important; }
   padding: 3px 4px;
 }
 
-.step-readout { color: var(--ui-hi); }
-
+/* Start of loop and End of loop, typed to the thousandth between their - and
+   +: a field that takes text, so 16px (A11Y 11b), and borderless inside the
+   group that already draws the edge. */
 .edge-readout {
-  min-width: 56px;
+  width: 66px;
+  min-width: 0;
   text-align: center;
-  font-size: 12px;
+  font: inherit;
+  font-size: 16px;
   font-weight: 700;
   color: var(--text-strong);
   font-variant-numeric: tabular-nums;
-  padding: 0 2px;
+  padding: 2px 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
 }
+.edge-readout:focus-visible { outline: 2px solid var(--ui-hi); outline-offset: 0; }
 
 .nudge-btn {
   /* 26 -> 32 visual, readable but still compact enough for
-     the three side-by-side Start/End/Step columns; the invisible 44pt tap
+     the side-by-side Start of loop / End of loop columns; the invisible 44pt tap
      area (button-system block) does the rest. The readout between - and +
      keeps their tap areas from overlapping each other. */
   width: 32px;
@@ -5032,29 +5092,14 @@ button:not([hidden]):has(> svg.mk:only-child) { display: inline-flex; align-item
     width: 44px;
   }
 
-  .loop-summary { width: 100%; }
-
-  .loop-actions {
-    width: 100%;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-  }
-
-  #previewLoopBtn { grid-column: 1 / -1; }
-
-  /* Three [- value +] pills DO NOT fit on one row once the nudge buttons are
-     the 30/32px tier-2 size: three ~120px pills need ~380px and a 390px phone
-     has ~290px of grid, which gives overlapping pills at 390 and a wrap at 363.
-     One per row reads as three tall stacked pills. TWO fit comfortably
-     (~250px), so Start and End sit side by side, each a compact label-over-pill
-     column, and Step size takes its own full row underneath. The phone audit
-     measures every pill's rectangle, so the overlap is still guarded. */
+  /* Start of loop and End of loop sit side by side, each its name over its
+     [- 0.000 +] group, where two fit; below that they stack. Each column must
+     hold a whole group: 130px with the 16px time (2px gaps and padding, 30px
+     buttons). minmax(130) + 10px gap = 270 fits the 275/290px grids at
+     375/390 and drops to one column at 363 (263px grid) and 320 rather than
+     spilling the group -- the bug class verify_ux caught at 363. (Step size
+     was a third column here; Each tap is its own row above now.) */
   .finetune-grid {
-    /* Each column must hold a whole [- 00.00s +] pill: MEASURED 128px at
-       every phone width. minmax(130) + 10px gap = 270 fits the 275/290px
-       grids at 375/390 and drops to one column at 363 (263px grid) and 320
-       (220px) rather than spilling the pill -- the exact bug class, which
-       verify_ux caught again at 363 while this was being built. */
     display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
     gap: 16px 10px; align-items: stretch;
   }
@@ -5062,54 +5107,19 @@ button:not([hidden]):has(> svg.mk:only-child) { display: inline-flex; align-item
     flex-direction: column; align-items: stretch; justify-content: flex-start;
     min-width: 0; gap: 6px;
   }
-  /* Centred over the pill it names, matching the >=641px layout, which was
+  /* Centred over the group it names, matching the >=641px layout, which was
      already centred. `text-align: left` plus `align-self: flex-start` left the
      label hanging off the left of its own control: measured centre-to-centre
      offsets of +23px at 640, +16 at 430 and +68 at 363 — the wider the column
-     got relative to the 128px pill, the further the label drifted from it. */
+     got relative to the group, the further the label drifted from it. */
   .edge-name { text-align: center; }
-  .edge-controls { flex: none; gap: 4px; padding: 3px; align-self: center; }
-  .edge-readout { min-width: 52px; font-size: 12px; }
+  .edge-controls { flex: none; gap: 2px; padding: 2px; align-self: center; }
+  .edge-readout { width: 60px; }
   .nudge-btn { width: 30px; height: 30px; font-size: 16px; }
 
 }
 
-/* Step size joins Start and End as a third column WHENEVER a third column
-   exists, and only takes its own full-width row when it does not.
-   ---------------------------------------------------------------------------
-   An unconditional `grid-column: 1 / -1` on the third group inside the max-640
-   block pushes Step size onto its own row even at widths where auto-fit has
-   already laid out three columns and left one empty. The grid is
-   `repeat(auto-fit, minmax(130px, 1fr))` and it resolves to THREE columns at
-   640 (173px each), 560 (147px) and 510 (130px), against a control 128px wide
-   at every one of them -- 45px spare at 640 while the label sits alone on a row
-   underneath. auto-fit drops to two columns between 510px and 508px (swept 2px
-   at a time), so 509 is the exact width at which the span becomes necessary
-   rather than merely inherited.
-
-   Below it Start and End stay two-up with Step size full width beneath, which
-   is right: Step size is a MODIFIER -- it changes what Start and End do -- so it
-   should not look like a third edge.
-
-   The row is NOT `justify-content: space-between` with `flex: 1` on the label:
-   that pins the name to the far left and its control to the far right and
-   leaves the eye to cross the whole panel to connect them. It MEASURES snug
-   either way -- the flex gap really is 10px -- because `flex: 1` stretches the
-   label's BOX while its text stays left-aligned inside it. The numbers and the
-   screenshot disagree here, and the screenshot is right. */
-@media (max-width: 509px) {
-  .edge-group:nth-child(3) {
-    grid-column: 1 / -1;
-    flex-direction: row; align-items: center; justify-content: center;
-    gap: 10px;
-  }
-  .edge-group:nth-child(3) .edge-name { flex: 0 0 auto; text-align: center; }
-  .edge-group:nth-child(3) .edge-controls { align-self: center; }
-}
-
 .music-dropzone[hidden] { display: none; }
-
-.loop-summary { display: none; }
 
 /* ---------- Read-only player mode ---------- */
 .player-shell[hidden] { display: none; }
@@ -6123,7 +6133,7 @@ body.player-mode .player-shell { position: static; }
 .slider-nudge-btn:active { background: var(--accent-fill); color: #fff; }
 .zoom-pan-row, .crossfade-row { display: flex; align-items: center; gap: 10px; margin: 16px 0 4px; }
 .zoom-pan-row { margin-bottom: 0; }
-/* Same size as the Start / End / Step nudges four rows away (.nudge-btn: 32px,
+/* Same size as the Start of loop / End of loop nudges below (.nudge-btn: 32px,
    30px on a phone), so one panel shows one
    size of minus and plus. */
 .zoom-pan-row .slider-nudge-btn, .crossfade-row .slider-nudge-btn { width: 32px; height: 32px; border-radius: calc(var(--r-seg) - 3px); }
@@ -9068,15 +9078,14 @@ body.drawalong .canvas-empty-hint { display: none; }
 :where(.tab-panel, .media-card) .nudge-btn { background: color-mix(in srgb, var(--accent) 7%, var(--menu-card)); }
 :where(.tab-panel, .media-card, .tool-tray, .tune-shell) .drawer-divider { background: var(--menu-card-line); }
 /* Words in the drawers that were too faint (the drawers mock, measured on the
-   loaded photo and music drawers): secondary words take the sheet's ink, the
-   zoom's value the small violet words', and Preview Loop's white words sit on
-   the action fill. */
+   loaded photo and music drawers): secondary words take the sheet's ink, and
+   the zoom's value the small violet words'. Play with my drawing's white words
+   sit on the action fill (.mt-play). */
 #repositionHint, #trimStartLabel, #trimEndLabel, .loop-zoom-head > span:first-child, #clearLabel { color: var(--text-secondary); }
 :where(.tab-panel, .media-card) .clear-drawer-btn { color: var(--text-secondary); }   /* 4.19 on the dark card; hover, armed and disabled still win */
 :where(.tab-panel, .media-card) .clear-drawer-btn.armed { color: var(--danger-soft); }   /* --danger read 4.44 on the dark card's tint */
 @media (hover: hover) { :where(.tab-panel, .media-card) .clear-drawer-btn:hover { color: var(--danger-soft); } }
 #zoomMagVal { color: var(--accent-ink); }
-#previewLoopBtn { background: var(--accent-fill); }
 
 /* A FINGER SHOWS NO RING (lib/modalfocus.js marks data-input on <html>).
    Safari draws :focus-visible for a script's focus after a tap, so every

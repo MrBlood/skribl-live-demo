@@ -355,6 +355,8 @@ const MAX_LOOP_SECONDS = 20;   // hard cap on loop length; enforced at load AND 
 let audioCtx = null, currentAudioBuffer = null, loopCrossfadeMs = 0;         // decoded buffer for the waveform
 let zoomMag = 1, zoomFocus = 'loop', zoomCenter = null;                       // Loop Detail magnification
 let musicDrawer = null;     // lib/musicdrawer.js, wired with the music drawer below
+// A song just chosen, not a draft's: its decode starts it on Skribl's pick.
+let musicFresh = false;
 let musicName = '';                                                          // track filename (shown in the dropzone)
 let drawing = false, curCount = 0, playing = false, playTimer = null;
 // Measured cost of painting each frame, by index, kept as a running average.
@@ -1214,6 +1216,7 @@ function applyPayload(d){
   if (typeof savedBg === 'string' && /^#[0-9a-f]{6}$/i.test(savedBg)) bgColor = savedBg;
   bgImage  = (typeof d.bgImage === 'string' && d.bgImage.slice(0,10) === 'data:image') ? d.bgImage : null;
   musicData = (typeof d.music === 'string' && d.music.slice(0,10) === 'data:audio') ? d.music : null;
+  musicFresh = false;   // a draft's loop is its own, never Skribl's pick over it
   const ph = d.photo || {};
   // Was ['cover','contain','fill'], which rejected the 'stretch' this file
   // itself posts and silently downgraded it to 'cover'.
@@ -5609,6 +5612,9 @@ function decodeForWaveform(){
       // loadedmetadata handler and the cap every drag handler enforces). Setting
       // audioDuration here was what made updateTrimUI's 20s default unreachable.
       if(trimEnd==null || trimEnd>audioDuration) trimEnd=Math.min(audioDuration, trimStart+MAX_LOOP_SECONDS);
+      // A song just chosen starts on Skribl's pick (lib/musicdrawer.js); a
+      // re-added one keeps the loop its autosave had, below.
+      const fresh=musicFresh && !pendingMusicMeta; musicFresh=false;
       // Re-adding a track the autosave had to drop — reapply its saved loop.
       if(pendingMusicMeta){ const m=pendingMusicMeta;
         if(typeof m.trimStart==='number') trimStart=Math.max(0, Math.min(m.trimStart, audioDuration));
@@ -5618,6 +5624,7 @@ function decodeForWaveform(){
         musicEnabled = m.enabled!==false;
         pendingMusicMeta=null;
         if(typeof setCrossfadeUI==='function') setCrossfadeUI(); }
+      if(fresh && musicDrawer) musicDrawer.applyPick();
       drawWaveform(buf); requestZoomWaveformDraw(); updateZoomHandles(); updateTrimUI(); syncMusicUI(); syncMediaUI();
     // Only the CURRENT decode clears the shared flag — an older completion
     // clearing it tells shareSkribl (line ~2097 awaits this) that nothing is
@@ -5635,11 +5642,11 @@ function ensureAudio(){
   }
 }
 function setMusic(dataURL){ musicData=dataURL; if(audioEl){ try{audioEl.pause();}catch(_){}} audioEl=null;
-  musicEnabled=true; trimStart=0; trimEnd=null; audioDuration=0; loopCrossfadeMs=0; currentAudioBuffer=null;
+  musicEnabled=true; trimStart=0; trimEnd=null; audioDuration=0; loopCrossfadeMs=0; currentAudioBuffer=null; musicFresh=true;
   resetMusicView();
   ensureAudio(); decodeForWaveform(); syncMediaUI(); scheduleSave(); }
 function removeMusic(){ musicSelectionSeq++; if(typeof stopLoopPreview==='function') stopLoopPreview(); if(audioEl){ try{audioEl.pause();}catch(_){}} audioEl=null;
-  musicData=null; musicName=''; currentAudioBuffer=null; loopCrossfadeMs=0; pendingMusicMeta=null;
+  musicData=null; musicName=''; currentAudioBuffer=null; loopCrossfadeMs=0; pendingMusicMeta=null; musicFresh=false;
   try{ waveformCtx.clearRect(0,0,waveformCanvas.width,waveformCanvas.height); zoomWaveformCtx.clearRect(0,0,zoomWaveformCanvas.width,zoomWaveformCanvas.height); }catch(_){}
   if(typeof setCrossfadeUI==='function') setCrossfadeUI();
   syncMediaUI(); scheduleSave(); }
@@ -6434,9 +6441,8 @@ const trimStartLabel=document.getElementById('trimStartLabel'), trimEndLabel=doc
 const bubbleStart=document.getElementById('bubbleStart'), bubbleEnd=document.getElementById('bubbleEnd'), playhead=document.getElementById('playhead');
 const waveformCanvas=document.getElementById('waveformCanvas'), waveformCtx=waveformCanvas.getContext('2d');
 const zoomWaveformCanvas=document.getElementById('zoomWaveformCanvas'), zoomWaveformCtx=zoomWaveformCanvas.getContext('2d');
-const loopZoomLabel=document.getElementById('loopZoomLabel'), loopSummary=document.getElementById('loopSummary'), zoomPlayhead=document.getElementById('zoomPlayhead');
+const loopZoomLabel=document.getElementById('loopZoomLabel'), zoomPlayhead=document.getElementById('zoomPlayhead');
 const zoomHandleStart=document.getElementById('zoomHandleStart'), zoomHandleEnd=document.getElementById('zoomHandleEnd'), zoomTrackWrap=document.getElementById('zoomTrackWrap');
-const startReadout=document.getElementById('startReadout'), endReadout=document.getElementById('endReadout');
 const updateSliderFill = setFill;
 function formatTimeH(sec){ let total=Math.round(sec*100); const hh=total%100; total=(total-hh)/100; const s=total%60; const m=Math.floor(total/60); return m+':'+String(s).padStart(2,'0')+'.'+String(hh).padStart(2,'0'); }
 
@@ -6459,11 +6465,8 @@ function updateTrimUI(){
   trimDurLabel.textContent=formatTimeH(trimEnd-trimStart)+' selected';
   if(bubbleStart) bubbleStart.textContent=formatTimeH(trimStart);
   if(bubbleEnd) bubbleEnd.textContent=formatTimeH(trimEnd);
-  if(startReadout) startReadout.textContent=trimStart.toFixed(2)+'s';
-  if(endReadout) endReadout.textContent=trimEnd.toFixed(2)+'s';
-  const dur=trimEnd-trimStart;
-  if(loopSummary) loopSummary.textContent='Loop: '+formatTimeH(trimStart)+' \u2192 '+formatTimeH(trimEnd)+' [' + dur.toFixed(2)+'s]';
-  requestZoomWaveformDraw(); updateZoomHandles(); if(typeof updateZoomPanSlider==='function') updateZoomPanSlider();
+  // The typed times, the lines and the pick are the drawer's (lib/musicdrawer.js).
+  requestZoomWaveformDraw(); updateZoomHandles(); if(typeof syncMusicDrawer==='function') syncMusicDrawer();
 }
 
 // Maths, handles and waveform of the zoomed loop view: lib/loopwave.js (v315), shared with Pad.
@@ -6517,6 +6520,12 @@ musicDrawer = window.SkriblMusicDrawer ? window.SkriblMusicDrawer.wire({
   // match, as on the Pad.
   drawingSeconds: ()=>!frames.some(f=>f.strokes.length) ? 0
     : window.SkriblHold ? window.SkriblHold.plan(frames, fps, docLoop).cycle/1000 : frames.length/fps,
+  // A new song starts on its first 20 seconds, not one turn of the
+  // animation: that is a second or two, and a loop that short stutters.
+  fitsByDefault: false,
+  // One frame at Flip's own pages a second.
+  frameSeconds: ()=>1/(fps||12),
+  playButton: ()=>playBtn,
   audio: ()=>{ ensureAudio(); return audioEl; },
   buffer: ()=>currentAudioBuffer,
   loop: { start:startWebAudioLoop, stop:stopWebAudioLoop, playing:()=>_waLoop.playing(), elapsed:()=>_waLoop.elapsed() },
@@ -6531,7 +6540,7 @@ musicDrawer = window.SkriblMusicDrawer ? window.SkriblMusicDrawer.wire({
 }) : null;
 function stopLoopPreview(){ if(musicDrawer) musicDrawer.stopPreview(); }
 function setCrossfadeUI(){ if(musicDrawer) musicDrawer.syncCrossfade(); }
-function updateZoomPanSlider(){ if(musicDrawer) musicDrawer.syncPan(); }
+function syncMusicDrawer(){ if(musicDrawer) musicDrawer.sync(); }
 function resetMusicView(){ if(musicDrawer) musicDrawer.resetView(); }
 
 // upload / toggle / remove

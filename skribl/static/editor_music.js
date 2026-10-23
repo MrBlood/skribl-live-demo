@@ -1,10 +1,11 @@
 // Editor-only: the Pad's half of the music drawer.
 //
 // THE DRAWER'S CONTROLS ARE lib/musicdrawer.js's, one copy shared with Flip
-// (owner: "it needs to be the same music editor on both pad and flip"): Trim |
-// Fine-tune, the loop detail's zoom and Scroll, the edges' drags and nudges,
-// Crossfade, Match Drawing Time, Preview Loop, Test Seam and the switch. The
-// Pad hands it its own state through the hooks below. What is left here is the
+// (owner: "it needs to be the same music editor on both pad and flip"): the
+// three levels, Skribl's pick, the loop detail's zoom and Scroll, the edges'
+// drags, nudges and typed times, Smooth restart, Fit my drawing, Whole song,
+// the hear buttons, Play with my drawing and the switch. The Pad hands it its
+// own state through the hooks below. What is left here is the
 // Pad's own: the file row (add and remove), the hooks, and Play's music loop,
 // which follows the replay's speed.
 //
@@ -36,6 +37,11 @@ if (window.SkriblMusicDrawer) padDrawer = window.SkriblMusicDrawer.wire({
   changed: () => { if (typeof scheduleAutosave === 'function') scheduleAutosave(); },
   // The replay's length at 1x, pauses as Pauses replays them.
   drawingSeconds: () => strokes.length ? getPlaybackDuration() / 1000 : 0,
+  // A new song's loop is as long as the drawing already there, as it was.
+  fitsByDefault: true,
+  // One frame of the video the Pad exports (lib/mp4export.js).
+  frameSeconds: () => 1 / ((window.SkriblMp4 && window.SkriblMp4.FPS) || 30),
+  playButton: () => playBtn,
   audio: () => audioEl,
   buffer: () => currentAudioBuffer,
   loop: { start: startWebAudioLoop, stop: stopWebAudioLoop,
@@ -53,7 +59,7 @@ if (window.SkriblMusicDrawer) padDrawer = window.SkriblMusicDrawer.wire({
 // app.js reaches these by name, typeof-guarded, because the player has no drawer.
 function stopLoopPreview() { if (padDrawer) padDrawer.stopPreview(); }
 function setCrossfadeUI() { if (padDrawer) padDrawer.syncCrossfade(); }
-function updateZoomPanSlider() { if (padDrawer) padDrawer.syncPan(); }
+function syncMusicDrawer() { if (padDrawer) padDrawer.sync(); }
 function resetMusicView() { if (padDrawer) padDrawer.resetView(); }
 
 // The file row: the drop area until a track is added, then the track itself
@@ -120,16 +126,14 @@ musicInput.addEventListener('change', async (e) => {
     document.getElementById('musicRemove').hidden = false;
     updateTrimUI();
     padMusicRow();
-    // "Just works" default: if a recording already exists, size the loop to the
-    // drawing's length so the music and the replay finish together — no manual
-    // trimming for the common case. Fine-tune stays one tap away. Reuses the
-    // tested match-drawing logic (keeps start at 0, clamps to song + 20s cap).
-    // Skipped while restoring saved trim from an autosave/draft, so a user's
-    // chosen loop is never overwritten.
+    // "Just works" default: Skribl's pick (lib/musicdrawer.js). With a
+    // recording already there the loop is as long as the drawing, so the
+    // music and the replay come round together, with a smooth restart; the
+    // levels are one tap away. Skipped while restoring saved trim from an
+    // autosave/draft, so a user's chosen loop is never overwritten.
     const _restoringTrim = (typeof pendingMusicMeta !== 'undefined' && pendingMusicMeta);
-    if (!_restoringTrim && padDrawer && padDrawer.matchDrawing()) {
-      showToast('Loop set to your drawing length', musicUploadBtn);
-    }
+    const _pick = !_restoringTrim && padDrawer ? padDrawer.applyPick() : null;
+    if (_pick && _pick.fits) showToast('Loop set to your drawing length', musicUploadBtn);
     // Reapply any pending trim from an autosave restore, from THIS path so it
     // can't race a separately-attached listener.
     if (typeof pendingMusicMeta !== 'undefined' && pendingMusicMeta) {

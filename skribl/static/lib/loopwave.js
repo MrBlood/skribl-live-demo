@@ -126,7 +126,8 @@
     ctx.fillRect(0, mid, w, 1);
 
     if (o.label && o.formatTime) {
-      var xfLabel = o.crossfadeMs > 0 ? '  ·  xfade ' + o.crossfadeMs + 'ms' : '';
+      // The crossfade by the name the drawer gives it (lib/musicdrawer.js).
+      var xfLabel = o.crossfadeMs > 0 ? '  ·  smooth ' + (o.crossfadeMs / 1000).toFixed(2) + 's' : '';
       o.label.textContent = o.formatTime(o.trimStart) + ' → ' + o.formatTime(o.trimEnd)
         + ' [' + loopDuration.toFixed(2) + 's]' + xfLabel;
     }

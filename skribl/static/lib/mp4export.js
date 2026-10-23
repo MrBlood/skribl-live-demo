@@ -179,5 +179,6 @@
     }
   }
 
-  global.SkriblMp4 = { pickAvcCodec: pickAvcCodec, aacSupported: aacSupported, prepare: prepare, encode: encode, aacConfig: aacConfig };
+  // FPS is read by the music drawer too: Fine-tune's "1 frame" is one of these.
+  global.SkriblMp4 = { pickAvcCodec: pickAvcCodec, aacSupported: aacSupported, prepare: prepare, encode: encode, aacConfig: aacConfig, FPS: FPS };
 })(window);
