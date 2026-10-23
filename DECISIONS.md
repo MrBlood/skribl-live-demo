@@ -21890,3 +21890,32 @@ run alone (they measure, or share a store) and about 51 in the rest, so three
 at a time saves some 35 minutes, not the two hours first said, and needs
 run_harness.sh made safe to run twice at once (its port, database, log and
 LAST-RUN.txt). With seals rare, not worth it; told to the owner.
+
+## After v329 -- Recolor's button: one drop and a line that takes the pen's colour (the owner's C)
+
+The owner, on the iPhone: "The record button is cool but at normal size it's
+kind of confusing looking." At 18px the three drops were about 4px each, four
+specks with the line. Mocked on the real drawer at 402px and 3x, both themes:
+now, A one tricolour drop, B one purple drop with the line purple from where it
+lands, and C, B in the pen's colour. The owner: "C".
+
+The drawing (both editors' drawer and Recolor's tip in How it works): the start
+of the line in the button's grey, then one drop landing on it and the rest of
+the line in the pen's colour. lib/recolor.js sync(), which both editors call on
+every pen colour change, gives every .rc-inks drawing the colour (--recolor-ink),
+and .rc-pale where it is under 3:1 against the first painted ground behind it:
+the drop and the line then carry an outline in the grey (white and yellow on
+the light button, black on the dark), asked again when the theme changes. Its
+first home was lib/colorselect.js, which the Pad's swatch click does not go
+through; the check found that, with the drop still purple on every Pad pen.
+
+verify_recolor's button rows, both editors, both themes, every swatch: the
+drop wears the pen's colour, the line starts grey and ends in it, the drop
+has 40 or more pixels at 3:1 against the button, and the tip is told the same
+colour. 92/92. Red with sync's call taken out (every row but the 3:1 one),
+with the outline never set (the 3:1 row on all four), and with the three-drop
+drawing put back (every row but the tip's). verify_icons 60/60, verify_contrast
+334/334, verify_help 87/87, verify_helpclaims 45/45, verify_player_isolation
+85/85, verify_recolorplay 23/23, verify_parity 410/410, verify_docs.
+
+Pad and Flip: shared, one module and one drawing.
