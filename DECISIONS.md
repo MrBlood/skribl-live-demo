@@ -22274,3 +22274,15 @@ So the drawer stays as #613 left it, and the next music work is streamlining
 it, mocked first with this morning's drawer beside today's. Step 2 of the
 music plan (the timeline, the Restart view, Cut on silence) waits for that,
 since each of its pieces adds to the drawer.
+
+## After v329 -- Loops come in whole bars: 4, 8, 16 beats (the owner)
+
+The owner, after the step 2 mock: "Also fyi, we only ever want 4,8,16,...
+beats. Probably never going to odd numbers. Like 1 2 3 4.. 1 2 3 4 etc." So
+once the beat is known, a loop's length is whole bars of four, doubling: 4, 8,
+16 or 32 beats (1, 2, 4 or 8 bars), with 12 and 24 only if the owner asks for
+them. The drawer as #613 left it does not hold to that yet: Make it offers the
+three whole counts nearest what is heard, odd ones included (7 8 9), and an
+end let go near any beat settles on it. The streamline (the step 2 mock's
+second choice) replaces Make it with ends that settle on those counts, and the
+beat marks already count the bars, taller every fourth from the loop's start.
