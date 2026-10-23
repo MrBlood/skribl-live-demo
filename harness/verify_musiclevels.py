@@ -551,6 +551,11 @@ with sync_playwright() as pw:
     # carry it more than 160px (a glide's frames measured 44-57px here; a
     # re-assert chasing the new end, 236-684px), and it ends in sight, on a
     # desk and on a phone held sideways, where Fine-tune is taller than the screen.
+    # Each frame's time is kept and said. Beside other suites a frame of the
+    # reveal lasted up to 150ms, and a glide seen through one is one big step
+    # (165px once, in a run beside two others): a red in a long frame is told
+    # apart by a run alone. Allowing a long frame more would hide a chase: one
+    # measured 424px in a 176ms frame, under the 3px a millisecond tried.
     for _n, _p in eds("kind"):
         for dev, o in (("desk", DESK), ("phone sideways", SIDEWAYS)):
             c = waits.instrument(b.new_context(**o))
@@ -562,15 +567,17 @@ with sync_playwright() as pw:
             pg.wait_for_function("() => document.getElementById('musicUploadBtn').classList.contains('loaded') && !!currentAudioBuffer", timeout=20000)
             pg.wait_for_timeout(400)
             pg.evaluate("""() => { window.__tops = []; const s = document.getElementById('fineTuneSeg'), t0 = performance.now();
-                (function f() { window.__tops.push(s.getBoundingClientRect().top); if (performance.now() - t0 < 1900) requestAnimationFrame(f); })(); }""")
+                (function f() { window.__tops.push([performance.now(), s.getBoundingClientRect().top]);
+                  if (performance.now() - t0 < 1900) requestAnimationFrame(f); })(); }""")
             pg.click("#fineTuneToggle")
             pg.wait_for_timeout(2100)
             tops = pg.evaluate("() => window.__tops")
             r = pg.evaluate(SIGHT)
-            big = max(abs(tops[i] - tops[i - 1]) for i in range(1, len(tops))) if len(tops) > 1 else None
+            big = max((abs(b[1] - a[1]), b[0] - a[0]) for a, b in zip(tops, tops[1:])) if len(tops) > 1 else None
             check(f"{_n}: Fine-tune picked as a song lands glides, and keeps the switch in sight ({dev})",
-                  big is not None and big <= 160 and r["header"] <= r["seg"] < r["vh"] - 40,
-                  f"the biggest frame {big if big is None else round(big)}px over {len(tops)} frames; ends at {r}")
+                  big is not None and big[0] <= 160 and r["header"] <= r["seg"] < r["vh"] - 40,
+                  f"the biggest frame {round(big[0]) if big else None}px, in a {round(big[1]) if big else None}ms frame,"
+                  f" over {len(tops)} frames; ends at {r}")
             c.close()
     for _n, _p in eds("kind"):
         c, pg, _ = editor(b, _n, _p, drawn=False, opts=PHONE, level="fine")

@@ -1942,7 +1942,10 @@ with sync_playwright() as _b18:
     _p18.mouse.up(); _p18.wait_for_timeout(200)
 
     _p18.set_input_files("#musicInput", _FW); _p18.wait_for_timeout(3500)
-    _p18.evaluate("() => { trimStart = 2; trimEnd = 7; updateTrimUI(); }")
+    # A 5s loop with a clean cut: a new song starts on Skribl's pick, whose
+    # smooth restart folds 0.25s off the posted clip (lib/musicdrawer.js), and
+    # this compares two routes to the same plain loop.
+    _p18.evaluate("() => { trimStart = 2; trimEnd = 7; loopCrossfadeMs = 0; updateTrimUI(); }")
     _p18.wait_for_timeout(300)
     _freshS = _p18.evaluate(_FSTATE)
 

@@ -621,12 +621,23 @@ with sync_playwright() as p:
         check(f"{who}: every row of the loop panel has at least 8px above it",
               all(g >= 8 for _, g in gaps), str(gaps))
         # NO LEAP BACK TO ADJUST (owner: "when you're in fine tune and switch
-        # back to trim it snaps back"). Scrolled to the end of Fine-tune, Adjust
-        # makes the page several hundred px shorter and the browser clamped the
-        # scroll in ONE frame. lib/drawerdetent.js's shrinkGently glides it
-        # instead: no frame may move the pill more than 120px.
+        # back to trim it snaps back"). Fine-tune now ends below the screen, so
+        # the switch is reached by scrolling back up to it, and from there
+        # Adjust makes the page several hundred px shorter: the browser clamped
+        # the scroll in ONE frame. lib/drawerdetent.js's shrinkGently glides it
+        # instead: no frame may move the pill more than 120px. On the owner's
+        # phone, 402x874: at 664 tall the switch is 400px above the screen at
+        # Fine-tune's end, so a click there is Playwright scrolling it into
+        # view first (a 706px "leap" of its own), and from the switch the clamp
+        # is 28-52px, which a 120px rule cannot see; at 874 it is 238-262px.
+        pg.set_viewport_size({"width": 402, "height": 874})
+        pg.wait_for_timeout(300)
         pg.evaluate("() => window.scrollTo(0, 1e6)")
         pg.wait_for_timeout(800)
+        pg.evaluate("""() => { const s = document.getElementById('fineTuneSeg'), h = document.querySelector('.header');
+            const top = h && ['sticky', 'fixed'].includes(getComputedStyle(h).position) ? h.getBoundingClientRect().bottom : 0;
+            const over = s.getBoundingClientRect().top - top - 10; if (over < 0) window.scrollBy(0, over); }""")
+        pg.wait_for_timeout(600)
         pg.evaluate("""() => { window._ftLog = []; const t0 = performance.now(), seg = document.getElementById('fineTuneSeg');
             const f = () => { _ftLog.push(seg.getBoundingClientRect().top); if (performance.now() - t0 < 1500) requestAnimationFrame(f); };
             requestAnimationFrame(f); }""")
