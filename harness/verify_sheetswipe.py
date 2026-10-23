@@ -553,10 +553,11 @@ with sync_playwright() as p:
         check(f"{who}: no page errors", not errs, "; ".join(errs[:2]))
         ctx.close()
 
-    # 7 TRIM | FINE-TUNE (owner: "Clicking this moves the arrow but doesn't
+    # 7 THE MUSIC LEVELS (owner: "Clicking this moves the arrow but doesn't
     # show you what's there"). Fine-tune was a row under Preview Loop that
-    # opened below the fold. It is a mode of the music drawer now, and picking
-    # it must put the loop detail ON SCREEN, in the trim strip's place.
+    # opened below the fold. It is a level of the music drawer now (Simple,
+    # Adjust, Fine-tune; lib/musicdrawer.js), the strip stays on every level,
+    # and picking Fine-tune must put the loop detail ON SCREEN.
     import wave as _wave, struct as _struct, math as _math, io as _io
     _buf = _io.BytesIO()
     with _wave.open(_buf, "wb") as _w:
@@ -596,32 +597,34 @@ with sync_playwright() as p:
                      strip: document.getElementById('musicTrack').getBoundingClientRect().height,
                      top: Math.round(z.top), bottom: Math.round(z.bottom), vh: Math.round(vh),
                      painted: !!(hit && hit.closest('#zoomTrackWrap')) }; }""")
-        check(f"{who}: Fine-tune is pressed and the trim strip gives way to the loop detail",
-              ft["pressed"] == "true" and ft["strip"] == 0, str(ft))
+        check(f"{who}: Fine-tune is pressed, and the strip stays above the loop detail",
+              ft["pressed"] == "true" and ft["strip"] > 0, str(ft))
         check(f"{who}: ...and the loop detail is ON SCREEN, painted, without a scroll by hand",
               ft["top"] >= 0 and ft["bottom"] <= ft["vh"] and ft["painted"], str(ft))
         pg.click("#fineTuneTrim")
         pg.wait_for_timeout(500)
         back = pg.evaluate("() => ({ strip: document.getElementById('musicTrack').getBoundingClientRect().height,"
                            " hidden: document.getElementById('fineTuneBody').hidden })")
-        check(f"{who}: Trim brings the strip back", back["strip"] > 0 and back["hidden"] is True, str(back))
+        check(f"{who}: Adjust (it was Trim) keeps the strip and puts the loop detail away", back["strip"] > 0 and back["hidden"] is True, str(back))
         # ROOM BETWEEN THE LOOP PANEL'S ROWS (owner: "things just seem close
         # together"). Measured before at 390: the handles' caps touched the zoom
         # bar (0px) and sat 2px over Scroll. Every gap down the panel is >= 8px;
         # the handle's box is what reaches past the waveform, caps included.
         pg.click("#fineTuneToggle")
         pg.wait_for_timeout(1200)
-        gaps = pg.evaluate("""() => { const q = s => document.querySelector('#fineTuneBody ' + s).getBoundingClientRect();
+        gaps = pg.evaluate("""() => { const q = s => document.querySelector('#musicDetail ' + s).getBoundingClientRect();
             const rows = [['zoom bar', q('.zoom-mag-bar')], ['handles', q('#zoomHandleStart')], ['scroll', q('.zoom-pan-row')],
-                          ['start/end', q('.edge-group')], ['step size', q('.edge-group:nth-child(3)')], ['crossfade', q('.crossfade-row')]];
+                          ['hear', q('.mt-hear')], ['each tap', q('.mt-steps')], ['start/end', q('.edge-group')],
+                          ['sync line', q('#musicSyncLine')], ['lock', q('.fine-tune-body .mt-switch')],
+                          ['smooth restart', q('.mt-smooth .mt-switch')], ['length', q('.crossfade-row')]];
             return rows.slice(1).map((r, i) => [rows[i][0] + ' -> ' + r[0], Math.round(r[1].top - rows[i][1].bottom)]); }""")
         check(f"{who}: every row of the loop panel has at least 8px above it",
               all(g >= 8 for _, g in gaps), str(gaps))
-        # NO LEAP BACK TO TRIM (owner: "when you're in fine tune and switch back
-        # to trim it snaps back"). Scrolled to the end of Fine-tune, Trim makes
-        # the page ~290px shorter and the browser clamped the scroll in ONE
-        # frame. lib/drawerdetent.js's shrinkGently glides it instead: no frame
-        # may move the pill more than 120px.
+        # NO LEAP BACK TO ADJUST (owner: "when you're in fine tune and switch
+        # back to trim it snaps back"). Scrolled to the end of Fine-tune, Adjust
+        # makes the page several hundred px shorter and the browser clamped the
+        # scroll in ONE frame. lib/drawerdetent.js's shrinkGently glides it
+        # instead: no frame may move the pill more than 120px.
         pg.evaluate("() => window.scrollTo(0, 1e6)")
         pg.wait_for_timeout(800)
         pg.evaluate("""() => { window._ftLog = []; const t0 = performance.now(), seg = document.getElementById('fineTuneSeg');
@@ -631,7 +634,7 @@ with sync_playwright() as p:
         pg.wait_for_timeout(1700)
         log = pg.evaluate("_ftLog")
         steps = [abs(b2 - a2) for a2, b2 in zip(log, log[1:])]
-        check(f"{who}: back to Trim from the end of Fine-tune, the pill glides rather than leaps",
+        check(f"{who}: back to Adjust from the end of Fine-tune, the pill glides rather than leaps",
               len(log) > 10 and max(steps) <= 120 and abs(log[-1] - log[0]) > 50,
               f"largest single-frame move {round(max(steps or [0]))}px, total {round(log[-1] - log[0]) if log else '?'}px over {len(log)} frames")
         check(f"{who}: no page errors", not errs, "; ".join(errs[:2]))

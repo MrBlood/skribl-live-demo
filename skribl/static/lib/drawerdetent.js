@@ -306,12 +306,11 @@
    * NOT an open, a tab switch or a music level: each has its own reveal
    * already. Each shows or hides one of the panels, or changes the music
    * drawer's level (#musicDetail's data-level, set before its blocks show or
-   * hide), so that moves the baseline instead of being followed -- watched on
-   * those elements, not
-   * read off the card's size, because Photo and Music empty are the same
-   * height and a switch between them resizes nothing (the first draft of this
-   * kept the panel's name per resize, missed that switch, and so never followed
-   * a song added after it).
+   * hide), so that moves the baseline instead of being followed -- watched
+   * on those elements, not read off the card's size, because Photo and Music
+   * empty are the same height and a switch between them resizes nothing (the
+   * first draft of this kept the panel's name per resize, missed that switch,
+   * and so never followed a song added after it).
    *
    * Never so far that the dock slides under the pinned header: that is
    * controls on top of controls (verify_ux's phone audit), and the reason

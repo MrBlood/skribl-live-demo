@@ -68,7 +68,7 @@
       whole loop, Crossfade is Smooth restart's length. -#}
   <div id="musicDetail" class="music-detail" data-level="simple" hidden>
     <div class="music-trim">
-      <span class="seg ft-seg lv-seg" id="fineTuneSeg" role="group" aria-label="How much control"><span class="seg-slider"></span><button type="button" id="musicLevelSimple" data-level="simple" class="on"><span class="lv-k">Simple</span><span class="lv-v">Skribl does it</span></button><button type="button" id="fineTuneTrim" data-level="adjust"><span class="lv-k">Adjust</span><span class="lv-v">shape it yourself</span></button><button type="button" id="fineTuneToggle" data-level="fine" aria-controls="fineTuneBody"><span class="lv-k">Fine-tune</span><span class="lv-v">make it perfect</span></button></span>
+      <span class="seg ft-seg lv-seg" id="fineTuneSeg" role="group" aria-label="How much control"><span class="seg-slider"></span><button type="button" id="musicLevelSimple" data-level="simple" class="on"><span class="lv-k">Simple</span> <span class="lv-v">Skribl does it</span></button><button type="button" id="fineTuneTrim" data-level="adjust"><span class="lv-k">Adjust</span> <span class="lv-v">shape it yourself</span></button><button type="button" id="fineTuneToggle" data-level="fine" aria-controls="fineTuneBody"><span class="lv-k">Fine-tune</span> <span class="lv-v">make it perfect</span></button></span>
       <div class="music-trim-track" id="musicTrack">
         <canvas id="waveformCanvas" class="waveform-canvas"></canvas>
         <div class="music-trim-range" id="musicRange"></div>
@@ -105,8 +105,8 @@
         <label class="mt-at">to <input type="text" inputmode="decimal" autocomplete="off" spellcheck="false" class="mt-time" id="musicTo" data-edge="end" aria-label="Loop ends at, in seconds"></label>
       </div>
       <div class="mt-picks">
-        <button type="button" id="matchDrawingBtn" class="mt-pick-card" aria-pressed="false"><span class="mt-k">Fit my {{ work }}</span><span class="mt-v" id="musicFitSub">as long as your {{ work }}</span></button>
-        <button type="button" id="musicWholeBtn" class="mt-pick-card" aria-pressed="false"><span class="mt-k" id="musicWholeName">Whole song</span><span class="mt-v" id="musicWholeSub">0:00</span></button>
+        <button type="button" id="matchDrawingBtn" class="mt-pick-card" aria-pressed="false"><span class="mt-k">Fit my {{ work }}</span> <span class="mt-v" id="musicFitSub">as long as your {{ work }}</span></button>
+        <button type="button" id="musicWholeBtn" class="mt-pick-card" aria-pressed="false"><span class="mt-k" id="musicWholeName">Whole song</span> <span class="mt-v" id="musicWholeSub">0:00</span></button>
       </div>
       <div class="fine-tune-body" id="fineTuneBody" data-levels="fine" hidden>
         <div class="loop-zoom">
@@ -148,7 +148,7 @@
         </div>
         <p class="mt-sect">How it loops</p>
         <div class="mt-switch">
-          <span class="mt-switch-words"><span class="mt-k">Lock the length</span><span class="mt-v" id="musicLockSub">When on, moving one end moves the other.</span></span>
+          <span class="mt-switch-words"><span class="mt-k">Lock the length</span> <span class="mt-v" id="musicLockSub">When on, moving one end moves the other.</span></span>
           <button type="button" id="musicLock" class="layer-toggle" role="switch" aria-checked="false" aria-label="Lock the length"><span class="layer-toggle-knob"></span></button>
         </div>
       </div>
@@ -157,7 +157,7 @@
           folds the loop's end over its start). -#}
       <div class="mt-smooth" data-levels="adjust fine" hidden>
         <div class="mt-switch">
-          <span class="mt-switch-words"><span class="mt-k">Smooth restart</span><span class="mt-v" id="musicSmoothSub">A clean cut back to the start.</span></span>
+          <span class="mt-switch-words"><span class="mt-k">Smooth restart</span> <span class="mt-v" id="musicSmoothSub">A clean cut back to the start.</span></span>
           <button type="button" id="musicSmooth" class="layer-toggle" role="switch" aria-checked="false" aria-label="Smooth restart"><span class="layer-toggle-knob"></span></button>
         </div>
         <div class="crossfade-row" data-levels="fine" hidden><span class="crossfade-label">Length</span><input type="range" id="crossfadeSlider" class="slider" min="0" max="500" value="0" step="5" aria-label="Smooth restart length"><span class="crossfade-val" id="crossfadeVal">Off</span></div>

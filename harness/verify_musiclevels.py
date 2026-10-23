@@ -85,9 +85,21 @@ except ImportError as exc:
 import browsing  # noqa: E402
 import waits  # noqa: E402
 
-# For calibration: MUSICLEVELS_ONLY=Pad (or Flip) runs one editor. A real run sets neither.
+# For calibration: MUSICLEVELS_ONLY=Pad (or Flip) runs one editor, and
+# MUSICLEVELS_PART=levels (pick, picks, smooth, fine, play, kind) one part, so
+# a row can be shown red in seconds. A real run sets neither.
 ONLY = os.environ.get("MUSICLEVELS_ONLY", "")
+PART = os.environ.get("MUSICLEVELS_PART", "")
 EDITORS = [e for e in (("Pad", "/"), ("Flip", "/flip")) if not ONLY or e[0] == ONLY]
+
+
+def part(name):
+    return not PART or PART == name
+
+
+def eds(name):
+    """The editors a part runs on: none, when calibration asks for another part."""
+    return EDITORS if part(name) else []
 DESK = dict(viewport={"width": 1280, "height": 900})
 PHONE = dict(viewport={"width": 402, "height": 874}, device_scale_factor=2, is_mobile=True, has_touch=True)
 WORK = {"Pad": "drawing", "Flip": "animation"}
@@ -179,11 +191,22 @@ def pick_level(pg, level):
     browsing.wait_scroll_still(pg)
 
 
+def press(pg, sel, ms=200):
+    """A real click on a control that may be missing from a broken build: a
+    row then says so in red rather than the run stopping on a timeout."""
+    try:
+        pg.click(sel, timeout=3000)
+    except Exception:
+        return False
+    pg.wait_for_timeout(ms)
+    return True
+
+
 with sync_playwright() as pw:
     b = pw.chromium.launch()
 
     print("\nMUSIC LEVELS — three, and what each shows")
-    for _n, _p in EDITORS:
+    for _n, _p in eds("levels"):
         c, pg, errs = editor(b, _n, _p)
         seg = pg.evaluate("() => [...document.querySelectorAll('#fineTuneSeg button')].map(b => [b.dataset.level, b.querySelector('.lv-k').textContent, b.querySelector('.lv-v').textContent])")
         check(f"{_n}: three levels, Simple first, each its name over what it is for",
@@ -227,19 +250,20 @@ with sync_playwright() as pw:
         c.close()
 
     # The level is one choice, kept for both editors (one origin, one key).
-    c = waits.instrument(b.new_context(**DESK))
-    _, pad, _ = editor(b, "Pad", "/", ctx=c, drawn=False)
-    pick_level(pad, "adjust")
-    pad.reload(); browsing.goto(pad, BASE, "/"); add(pad, SHORT)
-    again = pad.evaluate("() => document.getElementById('musicDetail').dataset.level")
-    _, flip, _ = editor(b, "Flip", "/flip", ctx=c, drawn=False)
-    there = flip.evaluate("() => [document.getElementById('musicDetail').dataset.level, [...document.querySelectorAll('#fineTuneSeg button.on')].map(b => b.dataset.level)]")
-    check("the level is remembered, on the other editor too",
-          again == "adjust" and there == ["adjust", ["adjust"]], f"Pad after a reload {again!r}; Flip {there}")
-    c.close()
+    if part("levels") and not ONLY:
+        c = waits.instrument(b.new_context(**DESK))
+        _, pad, _ = editor(b, "Pad", "/", ctx=c, drawn=False)
+        pick_level(pad, "adjust")
+        pad.reload(); browsing.goto(pad, BASE, "/"); add(pad, SHORT)
+        again = pad.evaluate("() => document.getElementById('musicDetail').dataset.level")
+        _, flip, _ = editor(b, "Flip", "/flip", ctx=c, drawn=False)
+        there = flip.evaluate("() => [document.getElementById('musicDetail').dataset.level, [...document.querySelectorAll('#fineTuneSeg button.on')].map(b => b.dataset.level)]")
+        check("the level is remembered, on the other editor too",
+              again == "adjust" and there == ["adjust", ["adjust"]], f"Pad after a reload {again!r}; Flip {there}")
+        c.close()
 
     print("\nMUSIC LEVELS — Skribl's pick")
-    for _n, _p in EDITORS:
+    for _n, _p in eds("pick"):
         got = {}
         for drawn, song in ((True, SHORT), (False, LONG), (True, LONG)):
             c, pg, _ = editor(b, _n, _p, drawn=drawn, song=song)
@@ -257,34 +281,35 @@ with sync_playwright() as pw:
             why.append(f"{'drawn' if drawn else 'blank'} {nm}: {t['s']:.2f}-{t['e']:.3f} xf {t['xf']} heard {heard(t):.3f} (drawing {secs:.3f}) {words!r}")
         check(f"{_n}: a new song starts on Skribl's pick", ok, "; ".join(why))
 
-    for _n, _p in EDITORS:
+    for _n, _p in eds("pick"):
         c, pg, errs = editor(b, _n, _p, level="fine")
         pick = pg.evaluate(TRIM)
         pg.click('.nudge-btn[data-which="end"][data-amount="-1"]'); pg.wait_for_timeout(200)
         own, said = pg.evaluate(TRIM), pg.evaluate(SAID)
         check(f"{_n}: a change says so, with the way back",
               said["pick"] == "You've made your own loop." and said["back"] and not said["undo"], f"{said['pick']!r}, back {said['back']}, undo {said['undo']}")
-        pg.click("#musicBackPick"); pg.wait_for_timeout(200)
+        went = press(pg, "#musicBackPick")
         back, said2 = pg.evaluate(TRIM), pg.evaluate(SAID)
         focus = pg.evaluate("() => document.activeElement && document.activeElement.id")
-        pg.click("#musicPickUndo"); pg.wait_for_timeout(200)
+        undid = press(pg, "#musicPickUndo")
         undone, said3 = pg.evaluate(TRIM), pg.evaluate(SAID)
         check(f"{_n}: Back to Skribl's pick puts it back, and its Undo undoes that",
-              back == pick and said2["pick"] == "Back to Skribl's pick." and said2["undo"] and not said2["back"] and focus == "musicPickUndo"
-              and undone == own and said3["pick"] == "You've made your own loop.",
-              f"pick {pick}, own {own}, back {back} ({said2['pick']!r}, focus {focus}), undone {undone} ({said3['pick']!r})")
+              went and undid and back == pick and said2["pick"] == "Back to Skribl's pick." and said2["undo"] and not said2["back"]
+              and focus == "musicPickUndo" and undone == own and said3["pick"] == "You've made your own loop.",
+              f"pick {pick}, own {own}, back {back} ({said2['pick']!r}, focus {focus}), undone {undone} ({said3['pick']!r}); pressed back {went}, undo {undid}")
         if _n == EDITORS[0][0]:
             # One shared timer (lib/musicdrawer.js), so one editor is asked.
-            pg.click("#musicBackPick"); pg.wait_for_timeout(8400)
+            went = press(pg, "#musicBackPick", 8400)
             late = pg.evaluate(SAID)
             check("the Undo goes after eight seconds, and the line says Skribl's pick again",
-                  not late["undo"] and not late["back"] and late["pick"].startswith("Skribl picked"), str({k: late[k] for k in ('pick', 'undo', 'back')}))
+                  went and not late["undo"] and not late["back"] and late["pick"].startswith("Skribl picked"),
+                  str({k: late[k] for k in ('pick', 'undo', 'back')}) + f"; pressed back {went}")
         c.close()
 
     # The Pad's pick follows the drawing. Undo with the drawer open is the
     # drawing changing, not the person: the line says so, and the way back
     # fits the drawing as it is now.
-    if not ONLY or ONLY == "Pad":
+    if part("pick") and (not ONLY or ONLY == "Pad"):
         c, pg, _ = editor(b, "Pad", "/", drawn=False, song=None)
         box = pg.evaluate("() => { const r = document.getElementById('canvas').getBoundingClientRect(); return { x: r.x, y: r.y }; }")
         for row in (0, 1):
@@ -297,7 +322,7 @@ with sync_playwright() as pw:
         two, s0 = pg.evaluate(DRAWING["Pad"]), pg.evaluate(SAID)
         pg.evaluate("() => document.getElementById('undoBtn').click()"); pg.wait_for_timeout(400)
         one, s1 = pg.evaluate(DRAWING["Pad"]), pg.evaluate(SAID)
-        pg.click("#musicBackPick"); pg.wait_for_timeout(200)
+        press(pg, "#musicBackPick")
         t2, s2 = pg.evaluate(TRIM), pg.evaluate(SAID)
         check("Pad: an Undo with the drawer open says the drawing changed, and Back to Skribl's pick fits it again",
               s0["pick"].startswith("Skribl picked") and one < two - 0.5
@@ -306,8 +331,20 @@ with sync_playwright() as pw:
               f"{two:.2f}s then {one:.2f}s: {s1['pick']!r}, back {s1['back']}; after the way back heard {heard(t2):.3f}s, fit {s2['fit']}")
         c.close()
 
+    # A song the autosave had to drop is re-added from its card: its saved loop
+    # comes back with it (pendingMusicMeta), and Skribl's pick stays away.
+    for _n, _p in eds("pick"):
+        c, pg, _ = editor(b, _n, _p, song=None)
+        browsing.pad_drawer(pg, "music")
+        pg.evaluate("() => { pendingMusicMeta = { trimStart: 1, trimEnd: 3, crossfadeMs: 0, enabled: true }; }")
+        add(pg, SHORT)
+        t = pg.evaluate(TRIM)
+        check(f"{_n}: a song re-added from its card keeps its saved loop, never Skribl's pick",
+              t["s"] == 1 and t["e"] == 3 and t["xf"] == 0, str(t))
+        c.close()
+
     # A song a draft brings back keeps the draft's loop: the pick is for a song just chosen.
-    for _n, _p in EDITORS:
+    for _n, _p in eds("pick"):
         c, pg, _ = editor(b, _n, _p)
         pg.evaluate("() => { trimStart = 1; trimEnd = 3; loopCrossfadeMs = 0; setCrossfadeUI(); updateTrimUI();"
                     " (typeof scheduleAutosave === 'function' ? scheduleAutosave : scheduleSave)(); }")
@@ -321,7 +358,7 @@ with sync_playwright() as pw:
         c.close()
 
     print("\nMUSIC LEVELS — Fit my drawing and Whole song")
-    for _n, _p in EDITORS:
+    for _n, _p in eds("picks"):
         c, pg, _ = editor(b, _n, _p)
         secs = pg.evaluate(DRAWING[_n])
         pg.evaluate("() => { trimStart = 0.5; trimEnd = 5.5; updateTrimUI(); }")
@@ -349,7 +386,7 @@ with sync_playwright() as pw:
               f"short: {t2['s']:.2f}-{t2['e']:.2f} {said2['wholeName']!r} {said2['wholeSub']!r}; long: {said3['wholeName']!r} {said3['wholeSub']!r}, {t3['s']:.2f}-{t3['e']:.2f}")
         c.close()
 
-    for _n, _p in EDITORS:
+    for _n, _p in eds("picks"):
         c, pg, _ = editor(b, _n, _p, drawn=False)
         off = pg.evaluate(SAID)
         if _n == "Pad":
@@ -376,7 +413,7 @@ with sync_playwright() as pw:
         c.close()
 
     print("\nMUSIC LEVELS — Smooth restart")
-    for _n, _p in EDITORS:
+    for _n, _p in eds("smooth"):
         c, pg, _ = editor(b, _n, _p, level="adjust")
         pg.click("#musicSmooth"); pg.wait_for_timeout(150)
         a, sa = pg.evaluate(TRIM), pg.evaluate(SAID)
@@ -399,7 +436,7 @@ with sync_playwright() as pw:
         c.close()
 
     print("\nMUSIC LEVELS — Fine-tune")
-    for _n, _p in EDITORS:
+    for _n, _p in eds("fine"):
         c, pg, _ = editor(b, _n, _p, level="fine")
         pg.fill("#endReadout", "4.25"); pg.press("#endReadout", "Enter"); pg.wait_for_timeout(150)
         t1 = pg.evaluate(TRIM)
@@ -456,7 +493,7 @@ with sync_playwright() as pw:
         c.close()
 
     print("\nMUSIC LEVELS — Play with my drawing")
-    for _n, _p in EDITORS:
+    for _n, _p in eds("play"):
         c, pg, errs = editor(b, _n, _p)
         was = pg.evaluate(SAID)["play"]
         pg.click("#musicPlayBtn"); pg.wait_for_timeout(500)
@@ -472,7 +509,7 @@ with sync_playwright() as pw:
               and not after["play"] and after["label"] == was and theirs["play"] and theirs["label"] == "Stop",
               f"{was!r}; pressed: {st}; the editor's Play stopped it: {after}; the editor's Play started it: {theirs}")
         c.close()
-    for _n, _p in EDITORS:
+    for _n, _p in eds("play"):
         c, pg, _ = editor(b, _n, _p, drawn=False)
         was = pg.evaluate(SAID)["play"]
         pg.click("#musicPlayBtn"); pg.wait_for_timeout(500)
@@ -485,7 +522,7 @@ with sync_playwright() as pw:
         c.close()
 
     print("\nMUSIC LEVELS — kind, not jumpy")
-    for _n, _p in EDITORS:
+    for _n, _p in eds("kind"):
         c, pg, _ = editor(b, _n, _p, drawn=False, opts=PHONE)
         pg.evaluate("() => document.getElementById('fineTuneSeg').scrollIntoView({ block: 'end' })")
         browsing.wait_scroll_still(pg)
