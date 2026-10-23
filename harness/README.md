@@ -485,7 +485,11 @@ stays a sleep.
   smooth restart comes round) and the loop detail its own window; an end let
   go near a beat settles on it, typed ends never; the tempo goes with the
   song into the drafts and a re-add card, and a new song starts with none;
-  the counts and the marks read against what is behind them, light and dark.
+  the counts and the marks read against what is behind them, light and dark;
+  the pair's words are whole at 320, 360 and 402px, side by side from 360.
+  Taps run on the page's own clock, each woken early to land on its mark; a
+  try whose taps strayed more than 4ms (a busy machine) is tapped again on a
+  fresh page, three tries at most, and the row says which try it was.
 - `verify_learncard.py` — the card on the button (lib/learncard.js), Pad and
   Flip: holding a button (real touch) opens its card with its example; a
   quick tap stays a tap, a moving finger is no hold, the lift does not press,

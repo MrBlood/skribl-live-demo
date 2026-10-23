@@ -131,12 +131,15 @@ TAPS = """(o) => new Promise((res) => { const b = document.getElementById('music
 # Taps on the song's own beat, `off` past each half second as heard: timed on
 # the page's clock from one reading of the song's (which moves in 8-21ms
 # steps), less the time the sound takes to reach the ear; each tap says where
-# the song had got to, as heard, as it landed. Woken early as TAPS is.
+# the song had got to, as heard, as it landed: read just before its click, as
+# the tap's own handler reads it first thing (read after, the handler's work
+# let the clock take a step on some taps, and the means drifted 7ms apart).
+# Woken early as TAPS is.
 ON_BEAT = """(o) => new Promise((res) => { const b = document.getElementById('musicTapBtn'), seen = [], off = [];
   const lat = _waLoop.latency(), heard = () => trimStart + _waLoop.elapsed() - lat;
   const s0 = heard(), t0 = performance.now(), first = Math.ceil((s0 - o.off) / 0.5) * 0.5 + o.off + 0.5;
   const mark = (k) => t0 + (first + k * 0.5 - s0) * 1000;
-  const go = () => { const k = seen.length; while (performance.now() < mark(k)) {} off.push(performance.now() - mark(k)); b.click(); seen.push(heard());
+  const go = () => { const k = seen.length; while (performance.now() < mark(k)) {} off.push(performance.now() - mark(k)); const s = heard(); b.click(); seen.push(s);
     if (seen.length >= o.n) { res({ seen, lat, spread: Math.max(...off) - Math.min(...off) }); return; }
     setTimeout(go, Math.max(0, mark(seen.length) - performance.now() - 15)); };
   setTimeout(go, Math.max(0, mark(0) - performance.now() - 15)); })"""
