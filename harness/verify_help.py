@@ -333,10 +333,22 @@ with sync_playwright() as p:
     # sheet with every section open, at iPhone width, on both editors.
     # After the opening has settled: every opening starts on Ask's home, set
     # by an observer that runs after this script, so the list is chosen later.
-    OPEN_ALL = """() => new Promise(res => { (window.openHelpDrawer || (() => { document.getElementById('helpDrawer').hidden = false; }))();
-        setTimeout(() => { document.getElementById('askBrowse').click();
-          document.querySelectorAll('#helpDrawer .accordion-header').forEach(h => {
-            if (h.getAttribute('aria-expanded') !== 'true') h.click(); }); res(); }, 60); })"""
+    #
+    # TWO CALLS AND A WAIT HERE, NEVER A PROMISE THE PAGE RESOLVES (HIST-001,
+    # found after v329). This was one evaluate awaiting a promise the page
+    # resolved from a 60ms timer. Opening the sheet loads its demos (images,
+    # sound, a 690 KB file), and in that burst Chrome sometimes collected the
+    # awaited promise after it had resolved: the reply was "Promise was
+    # collected", which Playwright words as "Execution context was destroyed,
+    # most likely because of a navigation". Nothing had gone: the same
+    # document, which answered the next call, and no event from the browser,
+    # which is why five reds on CI named no cause. Reproduced here, the old
+    # way red 15 times in 200 runs (each with the timer run and the promise
+    # resolved); this way, none in 60.
+    OPEN_SHEET = "() => { (window.openHelpDrawer || (() => { document.getElementById('helpDrawer').hidden = false; }))(); }"
+    OPEN_ALL = """() => { document.getElementById('askBrowse').click();
+        document.querySelectorAll('#helpDrawer .accordion-header').forEach(h => {
+          if (h.getAttribute('aria-expanded') !== 'true') h.click(); }); }"""
     LAYOUT = """() => {
       const out = { clipped: [], beside: [], sections: 0, tips: 0 };
       document.querySelectorAll('#helpDrawer .accordion-body').forEach(b => {
@@ -432,6 +444,9 @@ with sync_playwright() as p:
         step = ["hiding the first-use hint"]
         try:
             ph.evaluate("() => { window.SkriblHints && SkriblHints.hide(); }")
+            step[0] = "opening the sheet"
+            ph.evaluate(OPEN_SHEET)
+            ph.wait_for_timeout(60)
             step[0] = "opening every section of the sheet"
             ph.evaluate(OPEN_ALL)
         except Exception as ex:  # noqa: BLE001 -- the failure is the finding
