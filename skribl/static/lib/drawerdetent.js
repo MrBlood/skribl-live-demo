@@ -68,13 +68,23 @@
       var max = scroller.scrollHeight - window.innerHeight;
       return Math.max(0, Math.min(want, max));
     }
+    // A press inside the drawer calls the re-asserts off: they settle the
+    // device's own scrolls, and once the person acts the page is theirs. The
+    // music drawer's Fine-tune, tapped within 1.2s of the drawer opening, made
+    // it taller, and the last re-assert carried the page to its new end with
+    // the switch just tapped under the header.
+    var acted = false;
+    function act() { acted = true; }
+    panel.addEventListener('pointerdown', act);
+    panel.addEventListener('keydown', act);
+    setTimeout(function () { panel.removeEventListener('pointerdown', act); panel.removeEventListener('keydown', act); }, 1300);
     requestAnimationFrame(function () {
       if (mine !== revealGen) return;
       window.scrollTo({ top: target(), behavior: behavior || 'smooth' });
     });
     [300, 700, 1200].forEach(function (ms) {
       setTimeout(function () {
-        if (mine !== revealGen || panel.hidden || panel.classList.contains('eyedropper-veiled')) return;
+        if (mine !== revealGen || acted || panel.hidden || panel.classList.contains('eyedropper-veiled')) return;
         if (panel.getBoundingClientRect().bottom > viewH() + 1) {
           (document.scrollingElement || document.documentElement).scrollTop = target();
         }
@@ -293,9 +303,11 @@
    * is open brings its end on screen again, the way opening did, and with the
    * same re-asserts. `current()` is the open panel, or null while it is shut.
    *
-   * NOT an open, a tab switch or Fine-tune: each has its own reveal already.
-   * Each shows or hides one of the panels or the Fine-tune body, so that moves
-   * the baseline instead of being followed -- watched on those elements, not
+   * NOT an open, a tab switch or a music level: each has its own reveal
+   * already. Each shows or hides one of the panels, or changes the music
+   * drawer's level (#musicDetail's data-level, set before its blocks show or
+   * hide), so that moves the baseline instead of being followed -- watched on
+   * those elements, not
    * read off the card's size, because Photo and Music empty are the same
    * height and a switch between them resizes nothing (the first draft of this
    * kept the panel's name per resize, missed that switch, and so never followed
@@ -325,7 +337,7 @@
   var DRIFT = 24;
   function followGrowth(card, o) {
     if (!card || typeof ResizeObserver === 'undefined') return;
-    var dock = o.dock || null, lastH = 0;
+    var dock = o.dock || null, lastH = 0, gen = 0;
     function height() { return card.getBoundingClientRect().height; }
     function target() {
       var scroller = document.scrollingElement || document.documentElement;
@@ -337,12 +349,13 @@
       return Math.max(top, Math.min(want, scroller.scrollHeight - window.innerHeight));
     }
     function reveal() {
+      var mine = ++gen;
       var b = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches
         ? 'auto' : 'smooth';
       requestAnimationFrame(function () { window.scrollTo({ top: target(), behavior: b }); });
       [300, 700, 1200].forEach(function (ms) {
         setTimeout(function () {
-          if (card.offsetParent === null) return;
+          if (mine !== gen || card.offsetParent === null) return;
           var scroller = document.scrollingElement || document.documentElement;
           var t = target();
           if (t > scroller.scrollTop + 1) { scroller.scrollTop = t; return; }
@@ -352,10 +365,16 @@
         }, ms);
       });
     }
-    var moves = new MutationObserver(function () { lastH = height(); });
-    [].forEach.call(card.querySelectorAll('#photoPanel, #musicPanel, #fineTuneBody'), function (m) {
+    // A move of the baseline also calls off the last growth's re-asserts: a
+    // level picked within 1.2s of a song landing had them chase the taller
+    // card's end, the switch just tapped scrolled away under the header.
+    var moves = new MutationObserver(function () { lastH = height(); gen++; });
+    [].forEach.call(card.querySelectorAll('#photoPanel, #musicPanel'), function (m) {
       moves.observe(m, { attributes: true, attributeFilter: ['hidden'] });
     });
+    // Only the level: #musicDetail un-hiding is a song landing, which IS followed.
+    var lv = card.querySelector('#musicDetail');
+    if (lv) moves.observe(lv, { attributes: true, attributeFilter: ['data-level'] });
     new ResizeObserver(function () {
       var h = height(), grew = !!o.current() && lastH > 0 && h > lastH + 1;
       lastH = h;
@@ -364,5 +383,5 @@
   }
 
   window.SkriblDrawerDetent = { attach: attach, revealPanelEnd: revealPanelEnd, revealTop: revealTop, veil: veil,
-                                shrinkGently: shrinkGently, followGrowth: followGrowth };
+                                shrinkGently: shrinkGently, followGrowth: followGrowth, stuckBottom: stuckBottom };
 }());

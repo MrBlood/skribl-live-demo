@@ -75,7 +75,10 @@ with sync_playwright() as p:
 
     # --------------------------------------------------------- (b) post size
     print("\n(b) FLIP — posts the cropped loop, not the whole file")
-    pg.evaluate("() => { trimStart = 2; trimEnd = 10; updateTrimUI(); }")  # 8s loop
+    # An 8s loop with a clean cut: a new song starts on Skribl's pick, whose
+    # smooth restart folds 0.25s off the clip (lib/musicdrawer.js), and these
+    # ask about the cut. The fold has its own rows below.
+    pg.evaluate("() => { trimStart = 2; trimEnd = 10; loopCrossfadeMs = 0; updateTrimUI(); }")
     box = pg.locator("#pad").bounding_box()
     scribble(pg, box, 0.0)
     for k in range(1, 3):

@@ -185,10 +185,14 @@
         h.refresh();
         h.strip();
         if (next !== 'fine') return;
-        // Just the waveform into view, not the drawer's whole end: that tucked
-        // the dock under the pinned header (verify_ux's phone audit).
+        // Fine-tune's loop detail opens below the picks: bring its waveform
+        // into view (a tap that seemed to do nothing was the old Fine-tune's
+        // fault), but never so far that the switch just tapped goes under the
+        // pinned header -- nor the dock with it (verify_ux's phone audit).
         var vh = global.visualViewport ? global.visualViewport.height : global.innerHeight;
+        var top = det && det.stuckBottom ? det.stuckBottom() : 0;
         var over = wrap ? wrap.getBoundingClientRect().bottom - vh + 12 : 0;
+        if (seg) over = Math.min(over, seg.getBoundingClientRect().top - top - 8);
         if (over > 0) global.scrollBy({ top: over, behavior: 'smooth' });
       });
     });
@@ -406,10 +410,11 @@
 
     /* ---- Skribl's pick, and the way back to it. ---------------------------- */
     function fadeFor(len) { return Math.max(0, Math.min(PICK_FADE_MS, Math.floor(len * 1000 / 4 / 5) * 5)); }
-    function pickNow() {
+    // `drawing`: the drawing's length when the caller has it (sync, below).
+    function pickNow(drawing) {
       var d = h.trim().duration;
       if (!(d > 0)) return null;
-      var secs = h.fitsByDefault ? h.drawingSeconds() : 0, ms, end;
+      var secs = !h.fitsByDefault ? 0 : drawing != null ? drawing : h.drawingSeconds(), ms, end;
       if (secs > 0) { ms = fadeFor(secs); end = T.loopLength(secs + ms / 1000, d); }
       else { end = Math.min(d, T.MAX_LOOP_SECONDS); ms = fadeFor(end); }
       return { start: 0, end: end, ms: ms, fits: secs > 0 && near(heard({ start: 0, end: end }, ms), secs) };
@@ -442,11 +447,11 @@
       if (near(p.end, h.trim().duration)) return 'Skribl picked the whole song' + smooth;
       return 'Skribl picked the first ' + seconds(p.end) + smooth;
     }
-    function syncPick() {
+    function syncPick(drawing) {
       if (!pickLine) return;
       pickLine.hidden = !h.hasTrack();
       if (pickLine.hidden) return;
-      var p = pickNow(), mine = !isPick(p);
+      var p = pickNow(drawing), mine = !isPick(p);
       if (pickText) pickText.textContent = mine ? "You've made your own loop." : undo ? "Back to Skribl's pick." : pickWords(p);
       if (back) back.hidden = !mine;
       if (undoBtn) undoBtn.hidden = mine || !undo;
@@ -500,8 +505,8 @@
       h.refresh();
       h.changed();
     });
-    function syncPicks() {
-      var t = h.trim(), ok = h.hasTrack(), secs = h.drawingSeconds(), d = t.duration;
+    function syncPicks(secs) {
+      var t = h.trim(), ok = h.hasTrack(), d = t.duration;
       var longest = Math.min(d, T.MAX_LOOP_SECONDS);
       if (fit) {
         fit.disabled = !ok || !(secs > 0);
@@ -527,8 +532,8 @@
       var by = Math.abs(len - secs);
       return (dp ? by.toFixed(dp) + 's ' : '') + (len < secs ? 'shorter' : 'longer') + ' than your ' + work;
     }
-    function syncLines() {
-      var t = h.trim(), ok = h.hasTrack(), len = ok ? heard(t, h.crossfade()) : 0, secs = h.drawingSeconds();
+    function syncLines(secs) {
+      var t = h.trim(), ok = h.hasTrack(), len = ok ? heard(t, h.crossfade()) : 0;
       if (lenLine) lenLine.textContent = ok ? len.toFixed(2) + 's · ' + (against(len, secs, 0) || 'loop') : '';
       if (syncLine) {
         var f = frameSecs(), n = len / f, nf = Math.abs(n - Math.round(n)) < 0.01 ? String(Math.round(n)) : n.toFixed(1);
@@ -684,13 +689,13 @@
      * revealTop). With nothing to replay, it plays the loop on its own, and
      * says so. It follows the editor's Play however that is pressed. */
     var play = $('musicPlayBtn'), playLabel = $('musicPlayLabel');
-    function drawn() {
+    function drawn(secs) {
       var b = h.playButton ? h.playButton() : null;
-      return b && !b.disabled && h.drawingSeconds() > 0 ? b : null;
+      return b && !b.disabled && (secs != null ? secs : h.drawingSeconds()) > 0 ? b : null;
     }
-    function syncPlay() {
+    function syncPlay(secs) {
       if (!play) return;
-      var b = drawn(), on = (!!b && h.playing()) || (pv.on && pv.mode === 'loop');
+      var b = drawn(secs), on = (!!b && h.playing()) || (pv.on && pv.mode === 'loop');
       play.disabled = !h.hasTrack();
       play.classList.toggle('playing', on);
       if (playLabel) playLabel.textContent = on ? 'Stop' : b ? 'Play with my ' + work : 'Play the loop';
@@ -704,7 +709,7 @@
       syncPlay();
     });
     var pb0 = h.playButton ? h.playButton() : null;
-    if (pb0 && global.MutationObserver) new MutationObserver(syncPlay).observe(pb0, { attributes: true, attributeFilter: ['class', 'disabled'] });
+    if (pb0 && global.MutationObserver) new MutationObserver(function () { syncPlay(); }).observe(pb0, { attributes: true, attributeFilter: ['class', 'disabled'] });
     // A drawing begun while the drawer was shut: say so when it opens.
     if (panel && global.MutationObserver) new MutationObserver(function () { if (!panel.hidden) sync(); })
       .observe(panel, { attributes: true, attributeFilter: ['hidden'] });
@@ -770,16 +775,19 @@
     });
 
     // Everything the drawer says, from the loop as it is: the editors call it
-    // at the end of every repaint (their updateTrimUI).
+    // at the end of every repaint (their updateTrimUI) and when the drawing's
+    // length changes. The length is one walk over every point on the Pad, so
+    // it is measured once here, and not at all with no song.
     function sync() {
+      var secs = h.hasTrack() ? h.drawingSeconds() : 0;
       syncPan();
       syncTimes(false);
       syncSteps();
       syncLock();
-      syncPicks();
-      syncLines();
-      syncPick();
-      syncPlay();
+      syncPicks(secs);
+      syncLines(secs);
+      syncPick(secs);
+      syncPlay(secs);
     }
     sync();
 

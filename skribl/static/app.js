@@ -1499,6 +1499,8 @@ function updateDrawingTimeLabels() {
   if (durationBadge) {
     durationBadge.textContent = formatDuration(playMs);
   }
+  // The music drawer says what the loop is against the drawing (editor only).
+  if (typeof syncMusicDrawer === 'function') syncMusicDrawer();
 }
 
 let recTimerInterval = null;

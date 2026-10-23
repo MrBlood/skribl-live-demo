@@ -2630,6 +2630,8 @@ function syncFlipDuration(){
   // and reads as broken. Sub-minute durations show one decimal instead.
   flipDurationEl.textContent = fmtFlipSecs(flipTotalSecs());
   flipDurationEl.title=frames.length+' page'+(frames.length===1?'':'s')+' at '+(fps||12)+' fps';
+  // The music drawer says what the loop is against the animation (lib/musicdrawer.js).
+  if(typeof syncMusicDrawer==='function') syncMusicDrawer();
 }
 
 function syncPagebar(){
