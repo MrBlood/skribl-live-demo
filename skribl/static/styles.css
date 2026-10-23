@@ -2414,14 +2414,13 @@ body.recoloring #canvas { cursor: crosshair !important; }
 /* ---------- The draw drawer's HALF detent (phones only) -------------------
    The drawer covered most of the canvas, so choosing a pen colour meant
    judging contrast against art you could no longer see. At sheet widths it
-   now opens at the HALF detent — grabber, colour section, and an honest
-   "Brush, smoothing & more" button — and lib/drawerdetent.js moves it
-   between half and full. Desktop never shows any of this: the handle and
-   the more button stay display:none, and no section hides, because the
-   drawer was never in the canvas's way there. Same width gate the
-   .menu-handle uses, on purpose: both editors' compact states coincide
-   with it. */
-.drawer-detent-handle, .drawer-detent-more { display: none; }
+   opens at the HALF detent -- grabber, colour section and the four tiles
+   (lib/drawtiles.js) -- and lib/drawerdetent.js moves it between half and
+   full; opening a tile goes to full. Desktop never shows any of this: the
+   handle stays display:none, and nothing hides, because the drawer was never
+   in the canvas's way there. Same width gate the .menu-handle uses, on
+   purpose: both editors' compact states coincide with it. */
+.drawer-detent-handle { display: none; }
 @media (max-width: 640px) {
   .drawer-detent-handle {
     display: flex;
@@ -2442,30 +2441,10 @@ body.recoloring #canvas { cursor: crosshair !important; }
     opacity: 0.7;
     flex: none;   /* the menu grabber's lesson: an empty div shrinks to 0 under flex pressure */
   }
-  /* The half detent: everything below the colour section steps out of the
-     flow. Direct-child dividers only — the more-drawer's own divider goes
-     with its parent. */
-  #drawPanel:not(.detent-full) > .draw-inline,
-  #drawPanel:not(.detent-full) > .drawer-divider,
+  /* The half detent: Clear and its Undo step out of the flow until the
+     drawer is pulled up or a tile is opened. Direct children only. */
+  #drawPanel:not(.detent-full) > .dp-foot-divider,
   #drawPanel:not(.detent-full) > .more-drawer { display: none; }
-  #drawPanel:not(.detent-full) .drawer-detent-more {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 7px;
-    width: 100%;
-    margin-top: 12px;
-    padding: 11px;
-    border: 1px solid var(--hairline);
-    border-radius: 10px;
-    background: var(--surface-panel);
-    color: var(--text-soft);
-    font-size: 12.5px;
-    font-weight: 600;
-    cursor: pointer;
-    -webkit-tap-highlight-color: transparent;
-  }
-  .drawer-detent-more svg { width: 14px; height: 14px; flex: none; }
   /* THE FULL DRAWER, FITTED UNDER THE HEADER (lib/drawerdetent.js fit()).
      Taller than the room below the sticky header, it is capped to that room
      and scrolls inside itself, the grabber pinned at its top -- so the grip
@@ -5978,29 +5957,82 @@ body.player-mode .player-shell { position: static; }
 .photo-opacity-row input:disabled { opacity: .4; cursor: default; }
 
 
-/* ---------- Brush size + the segmented settings ----------
-   WAS "Brush sizes + Smoothing on one line" — written for TWO children, with
-   `flex: 1 1 0; min-width: 0`. It now holds SIX (size, smoothing, brush, shape,
-   pressure, eraser), so each got a sixth of the width and every segmented
-   control clipped: measured at 206px of box for 210px of content, at EVERY
-   width including 1280px. `min-width: 0` is what let it clip silently instead
-   of pushing back, and the labels overlapping their own controls is what that
-   looks like on screen.
-
-   Now it wraps. The basis is the widest thing a .smooth-seg actually needs, so
-   a control either gets its full width or moves to the next line — it never
-   gets a squeezed one. */
-.draw-inline { display: flex; gap: 18px 16px; align-items: flex-start; flex-wrap: wrap; }
-.draw-inline > * { flex: 1 1 232px; min-width: 232px; }
-/* The buttons share whatever the row gives them rather than sitting at content
-   width and overflowing by a few pixels into `overflow: hidden`. That silent
-   few-pixel clip is what put the labels on top of their own controls. */
-.draw-inline .smooth-seg .smooth-btn { flex: 1 1 auto; }
-.draw-inline .prop-row { flex-direction: column; align-items: flex-start; gap: 9px; }
-.draw-inline .smooth-seg { width: 100%; }
-@media (max-width: 480px) { .draw-inline { gap: 12px 10px; }
-  /* One per line on a phone: 215px does not fit twice in 320-480px. */
-  .draw-inline > * { flex: 1 1 100%; min-width: 0; } }
+/* ---------- The draw drawer's four tiles (lib/drawtiles.js) ----------------
+   Under the colour: Brush, Size, Feel and Eraser, each a little picture of what
+   it holds now in the pen's colour. A tap opens its choices in place, JOINED to
+   the tile as one shape -- the open tile drops its bottom edge and runs into
+   the card below it -- and the same tile closes them (the owner's pick of four
+   mocked shapes: "In place", Joined). The ⋯ menu's tokens, role for role, so
+   the drawer and the menu are one family: a tile is a menu card, a choice is
+   the one tint, the nesting goes paper, card, paper as the menu's pages do.
+   Was: six rows of labelled pills (seven on Flip) in .draw-inline, and on a
+   phone a "Brush, smoothing & more" button in front of them. */
+.dp { width: 100%; max-width: 520px; }
+.dp-tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; position: relative; z-index: 1; align-items: start; }
+.dp-tile, .dp-choice {
+  display: flex; flex-direction: column; align-items: center; gap: 1px; min-width: 0;
+  padding: 7px 4px 8px; border-radius: 16px; border: 1px solid var(--menu-card-line);
+  background: var(--menu-card); box-shadow: var(--menu-card-drop);
+  color: var(--text-secondary); font: inherit; cursor: pointer; text-align: center;
+  -webkit-tap-highlight-color: transparent;
+  transition: background .15s ease, border-color .15s ease;
+}
+.dp-art { display: block; width: 100%; height: 38px; pointer-events: none; color: var(--text-secondary); }
+.dp-k { font-size: 13px; font-weight: 650; color: var(--text-primary); line-height: 1.25; }
+.dp-v { font-size: 12px; font-weight: 500; color: var(--text-secondary); line-height: 1.25; }
+.dp-tile .dp-v { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+@media (hover: hover) { .dp-tile:not(.dp-open):hover { background: color-mix(in srgb, var(--accent) 7%, var(--menu-card)); } }
+/* Under forced colours backgrounds are replaced, so the chosen choice and the
+   open tile carry an outline: transparent everywhere else, painted there (no
+   @media block, which the player's sheet would have to keep). */
+.dp-choices > .dp-choice.active, .dp-tile.dp-open { outline: 2px solid transparent; outline-offset: -2px; }
+.dp-tile:focus-visible, .dp-choices > .dp-choice:focus-visible { outline: 2px solid var(--ui-hi); outline-offset: 2px; }
+/* JOINED: the open tile and its choices are one shape. The tile reaches 11px
+   down over the 10px gap and the card's top edge, its own bottom edge the
+   card's colour, so the seam is not there to see. The outer corner squares off
+   when the tile is at an end. */
+.dp-tile.dp-open {
+  border-color: var(--menu-card-line); border-bottom-color: var(--menu-card);
+  border-radius: 16px 16px 0 0; padding-bottom: 19px; margin-bottom: -11px; box-shadow: none;
+}
+.dp-tile.dp-open .dp-k { color: var(--seg-on-ink); }
+.dp-panel {
+  margin-top: 10px; padding: 12px; border-radius: 16px;
+  background: var(--menu-card); border: 1px solid var(--menu-card-line); box-shadow: var(--menu-card-drop);
+  display: flex; flex-direction: column; gap: 8px; transform-origin: top;
+}
+.dp[data-col="0"] > .dp-panel { border-top-left-radius: 0; }
+.dp[data-col="3"] > .dp-panel { border-top-right-radius: 0; }
+/* The unfold and the fold are lib/drawtiles.js's (Web Animations), so Reduce
+   Motion is honoured there, and the player's sheet carries no keyframes for a
+   drawer it never has. */
+.dp-panel.dp-folding { pointer-events: none; }
+.dp-panel > .draw-section-label { font-size: 13px; font-weight: 500; color: var(--text-secondary); margin-top: 4px; }
+.dp-panel > .draw-section-label:first-child { margin-top: 0; }
+.dp-aside { font-weight: 400; }
+/* THE CHOICES sit on the drawer's paper inside the card -- paper, card, paper.
+   The chosen one is the one tint with its own ink and no edge of its own. */
+.dp-choices { display: grid; gap: 8px; }
+.dp-two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.dp-three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.dp-four { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.dp-choices > .dp-choice { border: 1px solid var(--menu-card-line); background: var(--menu-paper); box-shadow: none;
+  border-radius: 16px; color: var(--text-secondary); font-weight: 500; }
+.dp-choices > .dp-choice.active { background: var(--seg-on-fill); border-color: transparent; }
+.dp-choice.active .dp-k, .dp-choice.active .dp-v { color: var(--seg-on-ink); }
+@media (hover: hover) { .dp-choices > .dp-choice:not(.active):hover { background: color-mix(in srgb, var(--accent) 7%, var(--menu-paper)); } }
+.dp-sizes { margin-top: 2px; }
+.dp-sizes .dp-art { height: 26px; }
+.dp-panel #opacityRow { flex-direction: column; align-items: stretch; gap: 4px; margin-top: 6px; }
+.dp-panel #opacityRow .draw-section-label { width: auto; font-size: 13px; }
+.dp-opacity-art { height: 26px; border-radius: 12px; background: var(--menu-paper); }
+.dp-opacity-line { display: flex; align-items: center; gap: 10px; }
+.dp-opacity-line .slider { flex: 1; min-width: 0; }
+.dp-panel .tool-row .draw-section-label { font-size: 13px; }
+.dp-switch { justify-content: space-between; gap: 12px; padding: 6px 2px 0; }
+.dp-switch-words { display: flex; flex-direction: column; text-align: left; }
+.dp-switch .dp-k { font-size: 14px; }
+.dp-foot-divider { width: 100%; }
 
 
 /* ---------- Image / Music on-off toggle ---------- */
@@ -6023,22 +6055,6 @@ body.player-mode .player-shell { position: static; }
 /* ---------- Brush size slider (inline with Smoothing) ---------- */
 .brush-slider-line { display: flex; align-items: center; gap: 10px; width: 100%; }
 .brush-slider-line .slider-nudge-wrap { flex: 1; min-width: 0; }
-/* smoothing pill: buttons fill the container so it isn't stretched with empty space */
-.draw-inline .smooth-seg { width: 100%; margin-left: 0; }
-.draw-inline .smooth-seg .smooth-btn { flex: 1; }
-/* `flex-wrap: nowrap` is NOT redundant here, and removing it reopens a real bug.
-   The rule above sets `flex-direction: column` on a phone; the wrap fix further
-   up sets `flex-wrap: wrap` to stop the six segmented controls being squeezed.
-   Both are right on their own and COLUMN-WRAP is what they compose to: inside
-   `#drawPanel`, which is height-constrained and `overflow: hidden auto`, the
-   items fill the first column and then wrap into a SECOND COLUMN to the right,
-   outside the panel. Measured at 375px with the colour drawer open: five
-   children each a correct 297px wide, laid out at x = 39, 350, 661, 972, 1283,
-   putting twelve `.smooth-btn`s past the panel's right edge at 353px. Every
-   child measured the right SIZE, which is why this survived a width audit —
-   it is a position defect wearing a width defect's clothes.
-   One control per line is the intent below 560px, so there is nothing to wrap. */
-@media (max-width: 560px) { .draw-inline { flex-direction: column; flex-wrap: nowrap; gap: 14px; } .draw-inline > * { width: 100%; } }
 
 
 /* ---------- The loop-view zoom bar ---------------------------------------

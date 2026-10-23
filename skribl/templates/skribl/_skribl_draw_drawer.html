@@ -6,9 +6,11 @@
      - root: Flip is a .draw-popout dialog; Pad is a plain .tab-panel
      - color presets: built at runtime by lib/palette.js on both (Pad once had fixed dots here)
      - brush input: Pad #brushSizeRange (1–30/5); Flip #size (2–34/7) + #sizeVal
-     - (every seg below carries ONE .seg-slider pill, on both surfaces;
-       lib/segslider.js places it. Pad used to inject a second one in JS.)
-     - more-drawer: Pad has id="moreDrawer"; Flip adds Grid + Draw-on rows
+     - Pen | Background is the one seg here, with ONE .seg-slider pill that
+       lib/segslider.js places. The tiles' choices (.dp-choices) are picture
+       buttons, not a track: the tint is on the chosen tile itself.
+     - Feel: Flip adds the Draw-on switch
+     - more-drawer (now only Clear and its Undo): Pad has id="moreDrawer"
      - clear/undo: Pad #clearDrawerBtn/#clearUndoBtn; Flip #clear(+#clearLabel)/#clearUndo
    Include with:
      {% with kind='pad'  %}{% include 'skribl/_skribl_draw_drawer.html' %}{% endwith %}
@@ -88,107 +90,114 @@
     </div>
   </div>
 
-  {# Visible only at the HALF detent on a phone: the honest label for what
-     the pull-up reveals. A button, so it works by tap as well as drag. #}
-  <button type="button" class="drawer-detent-more" id="drawerDetentMore">
-    Brush, smoothing &amp; more
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 15 12 9 18 15"/></svg>
-  </button>
+  {# THE FOUR TILES (lib/drawtiles.js, both editors). Everything below the
+     colour used to be a stack of labelled pills -- six rows on Pad, seven on
+     Flip -- behind a "Brush, smoothing & more" button on a phone. Now it is
+     four picture tiles, each painted in the pen's colour with what it holds
+     now, and a tap opens that tile's choices in place, JOINED to it as one
+     shape; the same tile closes them. No chevron and no back button: the owner
+     found both "not intuitive" and "cheap". The choices are pictures too, so
+     you see the Marker before you pick it. Every control inside keeps its id
+     and its module (brushes, smoothing, pressure, erasersize, the editors'
+     size and opacity handlers), so nothing behind them changed. #}
+  <div class="dp" id="drawTiles">
+    <div class="dp-tiles" role="group" aria-label="Brush, size, feel and eraser">
+      <button type="button" class="dp-tile" data-dp="brush" aria-expanded="false" aria-controls="dpBrush"><canvas class="dp-art" data-art="brush" aria-hidden="true"></canvas><span class="dp-k">Brush</span> <span class="dp-v">Pen</span></button>
+      <button type="button" class="dp-tile" data-dp="size" aria-expanded="false" aria-controls="dpSize"><canvas class="dp-art" data-art="size" aria-hidden="true"></canvas><span class="dp-k">Size</span> <span class="dp-v">5px</span></button>
+      <button type="button" class="dp-tile" data-dp="feel" aria-expanded="false" aria-controls="dpFeel"><canvas class="dp-art" data-art="feel" aria-hidden="true"></canvas><span class="dp-k">Feel</span> <span class="dp-v">Off</span></button>
+      <button type="button" class="dp-tile" data-dp="eraser" aria-expanded="false" aria-controls="dpEraser"><canvas class="dp-art" data-art="eraser" aria-hidden="true"></canvas><span class="dp-k">Eraser</span> <span class="dp-v">3&times; pen</span></button>
+    </div>
 
-  <div class="draw-inline">
-    <div class="tool-row">
-      <span class="draw-section-label" id="brushSizeLabel">Brush size</span>
-      <div class="brush-slider-line">
-        {% if kind == 'flip' -%}
-        <input type="range" id="size" class="slider" min="2" max="34" value="7" step="1" aria-label="Brush size">
-        <span class="prop-val" id="sizeVal">7px</span>
-        <span class="brush-dot-cell"><span class="brush-dot" id="brushSizeDot" style="width:7px;height:7px"></span></span>
-        {%- else -%}
-        <input type="range" id="brushSizeRange" class="slider" min="1" max="30" value="5" step="1" aria-label="Brush size">
-        <span class="prop-val" id="brushSizeVal">5px</span>
-        <span class="brush-dot-cell"><span class="brush-dot" id="brushSizeDot" style="width:5px;height:5px"></span></span>
-        {%- endif %}
-      </div>
-    </div>
-    <div class="prop-row">
-      <span class="draw-section-label">Smoothing</span>
-      {# role=group + a name, so the three buttons announce as one control
-         rather than three unrelated ones. aria-pressed is written by
-         lib/smoothing.js on every change. #}
-      <div class="smooth-seg" id="smoothSeg" role="group"
-           aria-label="Stroke smoothing">
-        <span class="seg-slider"></span>
-        <button type="button" class="smooth-btn active" data-smooth="off" aria-pressed="true">Off</button>
-        <button type="button" class="smooth-btn" data-smooth="low" aria-pressed="false">Low</button>
-        <button type="button" class="smooth-btn" data-smooth="high" aria-pressed="false">High</button>
-      </div>
-    </div>
-    {# Eraser width, as a multiple of the pen. This 3 lived in seven places
-       across the two editors (including both eraser-CURSOR sites) before
-       lib/erasersize.js; the seg reads and writes the one copy, so the ring
-       and the erasing can no longer disagree. Shared partial, so both
-       surfaces get the control from this one block. #}
     {# Brush presets. Every one of these is expressed through per-point size
-       and colour alone — see lib/brushes.js — so the player replays them with
+       and colour alone -- see lib/brushes.js -- so the player replays them with
        no notion that brushes exist. #}
-    <div class="prop-row" id="brushRow">
-      <span class="draw-section-label">Brush</span>
-      <div class="smooth-seg" id="brushSeg" role="group" aria-label="Brush">
-        <span class="seg-slider"></span>
-        <button type="button" class="smooth-btn active" data-brush="pen" aria-pressed="true" title="The plain pen &mdash; your width, your opacity">Pen</button>
-        <button type="button" class="smooth-btn" data-brush="marker" aria-pressed="false" title="Wider and slightly translucent, constant width">Marker</button>
-        <button type="button" class="smooth-btn" data-brush="pencil" aria-pressed="false" title="Thinner, and lighter the faster you draw">Pencil</button>
-        <button type="button" class="smooth-btn" data-brush="airbrush" aria-pressed="false" title="Wide and faint &mdash; builds up over passes">Air</button>
+    <div class="dp-panel" id="dpBrush" data-dp="brush" hidden>
+      <div class="dp-choices dp-two" id="brushSeg" role="group" aria-label="Brush">
+        <button type="button" class="dp-choice active" data-brush="pen" aria-pressed="true"><canvas class="dp-art" data-art="brush:pen" aria-hidden="true"></canvas><span class="dp-k">Pen</span> <span class="dp-v">Your width, your opacity</span></button>
+        <button type="button" class="dp-choice" data-brush="marker" aria-pressed="false"><canvas class="dp-art" data-art="brush:marker" aria-hidden="true"></canvas><span class="dp-k">Marker</span> <span class="dp-v">Wide, a little see-through</span></button>
+        <button type="button" class="dp-choice" data-brush="pencil" aria-pressed="false"><canvas class="dp-art" data-art="brush:pencil" aria-hidden="true"></canvas><span class="dp-k">Pencil</span> <span class="dp-v">Thin, lighter when fast</span></button>
+        <button type="button" class="dp-choice" data-brush="airbrush" aria-pressed="false"><canvas class="dp-art" data-art="brush:airbrush" aria-hidden="true"></canvas><span class="dp-k">Air</span> <span class="dp-v">Soft, builds up</span></button>
       </div>
     </div>
-    {# Stylus pressure. The curve and the floor live in lib/pressure.js, shared
-       with Flip; only the raw read is per-surface, because the two editors bind
-       different event families. Shown on every device: a tablet user needs it,
-       and it costs a mouse user one glance. #}
-    <div class="prop-row">
-      <span class="draw-section-label">Pressure</span>
-      <div class="smooth-seg" id="pressureSeg" role="group" aria-label="Stylus pressure">
-        <span class="seg-slider"></span>
-        <button type="button" class="smooth-btn" data-pressure="off" aria-pressed="false" title="Ignore stylus pressure &mdash; every stroke the nominal width">Off</button>
-        <button type="button" class="smooth-btn active" data-pressure="on" aria-pressed="true" title="Vary stroke width with stylus pressure (the default)">On</button>
+
+    <div class="dp-panel" id="dpSize" data-dp="size" hidden>
+      <div class="tool-row">
+        <span class="draw-section-label" id="brushSizeLabel">Brush size</span>
+        <div class="brush-slider-line">
+          {% if kind == 'flip' -%}
+          <input type="range" id="size" class="slider" min="2" max="34" value="7" step="1" aria-label="Brush size">
+          <span class="prop-val" id="sizeVal">7px</span>
+          <span class="brush-dot-cell"><span class="brush-dot" id="brushSizeDot" style="width:7px;height:7px"></span></span>
+          {%- else -%}
+          <input type="range" id="brushSizeRange" class="slider" min="1" max="30" value="5" step="1" aria-label="Brush size">
+          <span class="prop-val" id="brushSizeVal">5px</span>
+          <span class="brush-dot-cell"><span class="brush-dot" id="brushSizeDot" style="width:5px;height:5px"></span></span>
+          {%- endif %}
+        </div>
+      </div>
+      {# Four sizes a tap away; the slider above is still every size between.
+         lib/drawtiles.js sets the slider and fires its own input event, so the
+         editor's handler does the rest exactly as a drag would. #}
+      <div class="dp-choices dp-four dp-sizes" role="group" aria-label="Quick sizes">
+        <button type="button" class="dp-choice" data-size="2"><canvas class="dp-art" data-art="size:2" aria-hidden="true"></canvas><span class="dp-v">Fine</span></button>
+        <button type="button" class="dp-choice" data-size="5"><canvas class="dp-art" data-art="size:5" aria-hidden="true"></canvas><span class="dp-v">Medium</span></button>
+        <button type="button" class="dp-choice" data-size="12"><canvas class="dp-art" data-art="size:12" aria-hidden="true"></canvas><span class="dp-v">Bold</span></button>
+        <button type="button" class="dp-choice" data-size="24"><canvas class="dp-art" data-art="size:24" aria-hidden="true"></canvas><span class="dp-v">Huge</span></button>
+      </div>
+      <div class="prop-row" id="opacityRow">
+        <span class="draw-section-label">Opacity</span>
+        <canvas class="dp-art dp-opacity-art" data-art="opacity" aria-hidden="true"></canvas>
+        <div class="dp-opacity-line">
+          <input type="range" id="opacitySlider" class="slider" min="10" max="100" value="100" step="1" aria-label="Stroke opacity">
+          <span class="prop-val" id="opacityVal">100%</span>
+        </div>
       </div>
     </div>
-    <div class="prop-row" id="eraserRow">
-      <span class="draw-section-label">Eraser</span>
-      <div class="smooth-seg" id="eraserSeg" role="group" aria-label="Eraser width">
-        <span class="seg-slider"></span>
-        <button type="button" class="smooth-btn" data-eraser="2" aria-pressed="false" title="Eraser twice the pen width">2&times;</button>
-        <button type="button" class="smooth-btn active" data-eraser="3" aria-pressed="true" title="Eraser three times the pen width (the default)">3&times;</button>
-        <button type="button" class="smooth-btn" data-eraser="5" aria-pressed="false" title="Eraser five times the pen width">5&times;</button>
+
+    <div class="dp-panel" id="dpFeel" data-dp="feel" hidden>
+      <span class="draw-section-label">Smoothing</span>
+      {# aria-pressed is written by lib/smoothing.js on every change. #}
+      <div class="dp-choices dp-three" id="smoothSeg" role="group" aria-label="Stroke smoothing">
+        <button type="button" class="dp-choice active" data-smooth="off" aria-pressed="true"><canvas class="dp-art" data-art="smooth:off" aria-hidden="true"></canvas><span class="dp-k">Off</span> <span class="dp-v">As you drew it</span></button>
+        <button type="button" class="dp-choice" data-smooth="low" aria-pressed="false"><canvas class="dp-art" data-art="smooth:low" aria-hidden="true"></canvas><span class="dp-k">Low</span> <span class="dp-v">A little steadier</span></button>
+        <button type="button" class="dp-choice" data-smooth="high" aria-pressed="false"><canvas class="dp-art" data-art="smooth:high" aria-hidden="true"></canvas><span class="dp-k">High</span> <span class="dp-v">Smooth curves</span></button>
+      </div>
+      {# Stylus pressure. The curve and the floor live in lib/pressure.js, shared
+         with Flip; only the raw read is per-surface. Said plainly here: a
+         finger draws one width whichever is chosen. #}
+      <span class="draw-section-label">Pressure <span class="dp-aside">&middot; with a stylus; a finger draws one width</span></span>
+      <div class="dp-choices dp-two" id="pressureSeg" role="group" aria-label="Stylus pressure">
+        <button type="button" class="dp-choice" data-pressure="off" aria-pressed="false"><canvas class="dp-art" data-art="press:off" aria-hidden="true"></canvas><span class="dp-k">Off</span> <span class="dp-v">Every line one width</span></button>
+        <button type="button" class="dp-choice active" data-pressure="on" aria-pressed="true"><canvas class="dp-art" data-art="press:on" aria-hidden="true"></canvas><span class="dp-k">On</span> <span class="dp-v">Press harder, draw wider</span></button>
+      </div>
+      {% if kind == 'flip' -%}
+      {# Draw-on: a Flip-only playback style, not a canvas-tuning control (Grid
+         moved to the tune drawer in v204). #}
+      <div class="prop-row dp-switch">
+        <span class="dp-switch-words"><span class="dp-k">Draw-on</span> <span class="dp-v">When it plays, each page draws itself in stroke order</span></span>
+        <button type="button" id="drawOnBtn" class="layer-toggle" role="switch" aria-checked="false" aria-label="Draw-on replay"><span class="layer-toggle-knob"></span></button>
+      </div>
+      {%- endif %}
+    </div>
+
+    {# Eraser width, as a multiple of the pen: lib/erasersize.js holds the one
+       copy, so the ring and the erasing can no longer disagree. #}
+    <div class="dp-panel" id="dpEraser" data-dp="eraser" hidden>
+      <div class="dp-choices dp-three" id="eraserSeg" role="group" aria-label="Eraser width">
+        <button type="button" class="dp-choice" data-eraser="2" aria-pressed="false"><canvas class="dp-art" data-art="eraser:2" aria-hidden="true"></canvas><span class="dp-v">2&times; the pen</span></button>
+        <button type="button" class="dp-choice active" data-eraser="3" aria-pressed="true"><canvas class="dp-art" data-art="eraser:3" aria-hidden="true"></canvas><span class="dp-v">3&times; the pen</span></button>
+        <button type="button" class="dp-choice" data-eraser="5" aria-pressed="false"><canvas class="dp-art" data-art="eraser:5" aria-hidden="true"></canvas><span class="dp-v">5&times; the pen</span></button>
       </div>
     </div>
   </div>
 
-  <div class="drawer-divider"></div>
+  <div class="drawer-divider dp-foot-divider"></div>
 
   {% if kind == 'flip' -%}
   <div class="more-drawer">
   {%- else -%}
   <div id="moreDrawer" class="more-drawer">
   {%- endif %}
-    <div class="prop-row" id="opacityRow">
-      <span class="draw-section-label">Opacity</span>
-      <input type="range" id="opacitySlider" class="slider" min="10" max="100" value="100" step="1" aria-label="Stroke opacity">
-      <span class="prop-val" id="opacityVal">100%</span>
-    </div>
-    {% if kind == 'flip' -%}
-    {# Grid moved to the tune drawer in v204 (it's a working aid, alongside
-       Speed/Onion/Motion guides). Draw-on stays here: it's a Flip-only
-       playback style, not a canvas-tuning control. #}
-    <div class="prop-row">
-      <span class="draw-section-label">Draw-on</span>
-      <button type="button" id="drawOnBtn" class="layer-toggle" role="switch" aria-checked="false" aria-label="Draw-on replay"><span class="layer-toggle-knob"></span></button>
-      <span class="prop-val grid-hint">On playback, each frame draws itself on in stroke order</span>
-    </div>
-    {%- endif %}
-
-    <div class="drawer-divider"></div>
-
     <div class="drawer-actions">
       {% if kind == 'flip' -%}
       <button type="button" id="clear" class="clear-drawer-btn" title="Delete all pages (keeps music and background)">

@@ -4,9 +4,9 @@
  * pen colour meant judging contrast against art you could no longer see
  * (owner picked this fix from the design audit, mocked before built). At
  * compact widths the drawer now OPENS at the half detent: the grabber, the
- * colour section, and an honest "Brush, smoothing & more" button — the
- * canvas stays visible above. Pulling the grabber up (or the more button)
- * expands to the full drawer; pulling down returns to half; pulling down
+ * colour section, and the four tiles (lib/drawtiles.js) — the canvas stays
+ * visible above. Pulling the grabber up, or opening a tile, expands to the
+ * full drawer; pulling down returns to half; pulling down
  * again closes. TAPPING the grabber closes the drawer, at either detent (v317,
  * the owner: "I hit the drawer grip and they stay" -- it toggled half and
  * full, which on a phone reads as a menu that will not go away; every sheet's
@@ -136,7 +136,6 @@
     if (!panel) return;
     opts = opts || {};
     var handle = panel.querySelector('.drawer-detent-handle');
-    var more = panel.querySelector('.drawer-detent-more');
     if (!handle) return;
     var close = typeof opts.close === 'function' ? opts.close : null;
     var dock = opts.dock || null;
@@ -206,7 +205,18 @@
     }
     (window.visualViewport || window).addEventListener('resize', function () { if (isFull()) fit(); });
 
-    if (more) more.addEventListener('click', function () { setFull(true); });
+    /* A TILE OPENED (lib/drawtiles.js). On a phone its choices need the full
+     * drawer, and they need to be on screen: from half, go full (which
+     * reveals); already full, re-fit to the new height and reveal again,
+     * since the choices just added height below the fold. A tile closing only
+     * re-fits. Desktop has no detent, and the page is left where it is. */
+    panel.addEventListener('drawtile', function (e) {
+      if (handle.offsetParent === null) return;
+      if (!(e.detail && e.detail.open)) { requestAnimationFrame(fit); return; }
+      if (!isFull()) { setFull(true); return; }
+      fit();
+      reveal();
+    });
 
     /* The grabber: a tap closes; a deliberate drag reads the direction — up
      * expands, down collapses, down again closes. Threshold 24px so a wobbly

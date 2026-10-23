@@ -332,7 +332,6 @@
      holds a file (.music-dropzone.loaded, both editors). The Draw drawer's Grid
      switch sits in a prop row instead, so reveal it here. */
   .prop-row .layer-toggle { display: inline-block; flex: none; }   /* Grid toggle in the Draw drawer */
-  .grid-hint { margin-left: 12px; color: var(--text-secondary); font-size: 12.5px; text-align: left; flex: 1; }
   .t-btn.on { color: var(--text-primary); border-color: var(--ui-line); }
   /* the Media button uses the Pad's .tool-open + green .tab-dot; keep it sized like the row */
   .flip-tools .tool-open { width: 40px; height: 40px; border-radius: 12px; }

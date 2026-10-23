@@ -133,7 +133,8 @@ CENSUS = r"""(root) => {
   for (const sel of ['.menu-tile', '.menu-list', '.seg', '.sdrafts-row', '.sdrafts-files', '.sdrafts-this', '.learn-card', '.ask-row', '.ask-tour', '.ask-best-card',
                      '.help-tip', '.help-search', '.export-opt', '.tune-row', '.post-card', '.ask-list', '.accordion-header', '.post-preview',
                      '.bk-pic', '.ask-go', '.menu-start', '.export-nameinput', '.post-input', '.bk-back',
-                     '.smooth-seg', '.media-tabs', '.photo-fit-group', '.reposition-btn', '.clear-drawer-btn', '.edge-controls']) {
+                     '.smooth-seg', '.media-tabs', '.photo-fit-group', '.reposition-btn', '.clear-drawer-btn', '.edge-controls',
+                     '.dp-tile', '.dp-panel']) {
     const el = [...R.querySelectorAll(sel)].find(e => e.getClientRects().length);
     if (el) cards[sel] = s(el);
   }
@@ -308,10 +309,13 @@ def surfaces(name, ids, q, canvas, btn):
     # draw drawer unfolded, Photo with a picture in it, Music with a song, on
     # Trim and on Fine-tune. Opened empty, six lines too faint to read were
     # never in view to be measured.
-    def drawer():
-        browsing.pad_drawer(q, "draw"); q.wait_for_timeout(500)
-        if q.evaluate("() => { const m = document.getElementById('drawerDetentMore'); return !!m && !!m.getClientRects().length && getComputedStyle(m).display !== 'none'; }"):
-            q.click("#drawerDetentMore"); q.wait_for_timeout(900)
+    # The draw drawer is four tiles now (lib/drawtiles.js), each opening its
+    # choices in place: every tile is read open, so every word in it is.
+    def drawer(tile):
+        def f():
+            browsing.pad_drawer(q, "draw"); q.wait_for_timeout(500)
+            q.click(f".dp-tile[data-dp='{tile}']"); q.wait_for_timeout(900)
+        return f
 
     def photo():
         browsing.pad_drawer(q, "photo"); q.wait_for_timeout(400)
@@ -361,7 +365,8 @@ def surfaces(name, ids, q, canvas, btn):
             ("Ask, an answer", answer, "#helpDrawer .help-drawer-inner"),
             ("The little book", book, "#bookRoot .bk"), ("Draw along", along, ".da-pill"),
             ("Tune", tune, "#tuneShell"),
-            ("The draw drawer", drawer, "#drawPanel"), ("Photo, with a picture", photo, "#mediaCard"),
+            ("The draw drawer", drawer("brush"), "#drawPanel"), ("The draw drawer, Size", drawer("size"), "#drawPanel"),
+            ("The draw drawer, Feel", drawer("feel"), "#drawPanel"), ("The draw drawer, Eraser", drawer("eraser"), "#drawPanel"), ("Photo, with a picture", photo, "#mediaCard"),
             ("Music, Trim", music(False), "#mediaCard"), ("Music, Fine-tune", music(True), "#mediaCard"),
             ("A button's card", card, ".lc-card"), ("A Show me step", step, ".lc-card"),
             ("Name every button", names, ".lc-tags"),
@@ -455,7 +460,8 @@ with sync_playwright() as p:
 # wear the same sheet and the same cards (one product, two editors: any
 # difference is drift), and every sheet the menu opens is the menu's paper.
 print("\nCONSISTENCY")
-DRAWERS = ("Tune", "The draw drawer", "Photo, with a picture", "Music, Trim", "Music, Fine-tune")
+DRAWERS = ("Tune", "The draw drawer", "The draw drawer, Size", "The draw drawer, Feel", "The draw drawer, Eraser",
+           "Photo, with a picture", "Music, Trim", "Music, Fine-tune")
 PAPER = ("the menu", "New", "Settings", "Your drafts", "Export", "Report a problem", "Post",
          "Ask", "Ask, its answers", "Ask, an answer", "The little book")
 for scheme in ("light", "dark"):
@@ -482,7 +488,7 @@ for scheme in ("light", "dark"):
     tile = ((census.get(("Pad", scheme, "the menu")) or {}).get("cards", {}).get(".menu-tile") or {}).get("bg")
     cardlike = {(n, l, sel): census[(n, sc, l)]["cards"][sel]["bg"] for (n, sc, l) in census
                 for sel in (".seg", ".export-opt", ".smooth-seg", ".media-tabs", ".photo-fit-group", ".reposition-btn",
-                            ".clear-drawer-btn", ".edge-controls")
+                            ".clear-drawer-btn", ".edge-controls", ".dp-tile", ".dp-panel")
                 if sc == scheme and l in ("the menu", "New", "Settings", "Export") + DRAWERS and census[(n, sc, l)]
                 and sel in census[(n, sc, l)]["cards"]}
     check(f"{scheme}: every choice on the menu's sheets and in the dock's drawers, and Export's options, is a white card "
@@ -494,7 +500,7 @@ for scheme in ("light", "dark"):
             ".export-opt": "16px", ".post-preview": "16px", ".bk-pic": "16px", ".sdrafts-row": "16px",
             ".seg": "12px", ".help-search": "12px", ".ask-go": "12px", ".menu-start": "12px", ".export-nameinput": "12px",
             ".post-input": "12px", ".bk-back": "12px", ".smooth-seg": "12px", ".media-tabs": "12px", ".photo-fit-group": "12px",
-            ".reposition-btn": "12px", ".clear-drawer-btn": "12px", ".edge-controls": "12px"}
+            ".reposition-btn": "12px", ".clear-drawer-btn": "12px", ".edge-controls": "12px", ".dp-tile": "16px"}
     # The dock's drawers and Tune are the menu's paper too (the drawers mock, C).
     paper = (census.get(("Pad", scheme, "the menu")) or {}).get("sheet", {}).get("bg")
     drawers = {(n, l): census[(n, sc, l)]["sheet"]["bg"] for (n, sc, l) in census

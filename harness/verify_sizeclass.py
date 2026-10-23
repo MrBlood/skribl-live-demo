@@ -682,13 +682,10 @@ if _Img:
                 ap.wait_for_timeout(1200)
                 ap.evaluate(f"() => {_ctl}.open('draw')")
                 ap.wait_for_timeout(700)
-                # The draw drawer opens at the HALF detent at compact widths
-                # (colour only — lib/drawerdetent.js), and the slider under
-                # measure lives in the full state. Take the path a user does:
-                # the "Brush, smoothing & more" button. Desktop-width runs
-                # find it display:none and skip the click.
-                ap.evaluate("() => { const m = document.getElementById('drawerDetentMore');"
-                            " if (m && getComputedStyle(m).display !== 'none') m.click(); }")
+                # The slider under measure lives in the Size tile's choices
+                # (lib/drawtiles.js). Take the path a user does: tap Size.
+                ap.evaluate("() => { const m = document.querySelector('.dp-tile[data-dp=size]');"
+                            " if (m && m.getAttribute('aria-expanded') !== 'true') m.click(); }")
                 ap.wait_for_timeout(400)
                 # Push the thumb to the end so it cannot sit under the label or
                 # off the captured strip.

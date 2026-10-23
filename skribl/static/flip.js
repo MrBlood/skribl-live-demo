@@ -5128,6 +5128,8 @@ function closePop(){ if(_flipDrawerCtl.isOpen('draw')) _flipDrawerCtl.open(null)
 if (window.SkriblDrawerDetent) {
   window.SkriblDrawerDetent.attach(drawPanel, { close: () => closePop(), dock: document.querySelector('.flip-tools') });
 }
+// The drawer's four tiles (Brush, Size, Feel, Eraser), shared with the Pad via lib/drawtiles.js.
+if (window.SkriblDrawTiles) window.SkriblDrawTiles.attach(drawPanel);
 function hidePhoto(){ if(_flipDrawerCtl.isOpen('photo')) _flipDrawerCtl.open(null); }
 function hideMusic(){ if(_flipDrawerCtl.isOpen('music')) _flipDrawerCtl.open(null); }
 // Media and its Photo | Music tabs: lib/mediatabs.js, shared with the Pad.

@@ -58,6 +58,12 @@
 
   var SEGS = '.seg, .smooth-seg, .gif-seg, .photo-fit-group';
   var TRACKS = SEGS + ', .seg-track, .media-tabs';
+  /* PICTURE CHOICES. The draw drawer's tiles open grids of picture buttons
+   * (.dp-choices, lib/drawtiles.js) that are pick-one controls with no track:
+   * two rows of two have no line for a pill to slide along, so the chosen
+   * tile wears the tint itself. They get everything here BUT the pill -- the
+   * aria-pressed written from the class, the one Tab stop, the arrow keys. */
+  var PICKS = SEGS + ', .dp-choices';
   var PILLS = ':scope > .seg-slider, :scope > .photo-fit-slider, :scope > .tool-slider';
 
   function selected(group) {
@@ -198,7 +204,7 @@
   function onSegKey(e) {
     var b = e.target;
     if (!b || b.tagName !== 'BUTTON' || !b.closest) return;
-    var g = b.closest(SEGS);
+    var g = b.closest(PICKS);
     if (!g) return;
     var all = [].slice.call(g.querySelectorAll('button'));
     var btns = [];
@@ -216,7 +222,7 @@
     btns[to].click();
   }
   function syncAll(root) {
-    var gs = (root || document).querySelectorAll(SEGS);
+    var gs = (root || document).querySelectorAll(PICKS);
     for (var i = 0; i < gs.length; i++) syncPressed(gs[i]);
   }
   function watchDocument() {
@@ -236,14 +242,14 @@
         var m = muts[i], t = m.target;
         if (!t || t.nodeType !== 1) continue;
         if (m.type === 'attributes') {
-          var g = t.closest ? t.closest(SEGS) : null;
+          var g = t.closest ? t.closest(PICKS) : null;
           if (g) syncPressed(g);
         } else {
           for (var j = 0; j < m.addedNodes.length; j++) {
             var n = m.addedNodes[j];
             if (n.nodeType !== 1) continue;
-            if (n.matches && n.matches(SEGS)) syncPressed(n);
-            else if (n.closest && n.closest(SEGS)) syncPressed(n.closest(SEGS));
+            if (n.matches && n.matches(PICKS)) syncPressed(n);
+            else if (n.closest && n.closest(PICKS)) syncPressed(n.closest(PICKS));
             if (n.querySelectorAll) syncAll(n);
             if (n.matches && n.matches(TRACKS)) track(n);
             if (n.querySelectorAll) trackAll(n);

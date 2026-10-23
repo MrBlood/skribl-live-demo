@@ -294,11 +294,11 @@ with sync_playwright() as p:
         phone = q.viewport_size["width"] < 641
         yield "dock"
         browsing.pad_drawer(q, "draw")
-        if phone and q.is_visible("#drawerDetentMore"):
-            q.click("#drawerDetentMore"); settle(q, 400)
-        q.click("#brushSeg [data-brush='marker']"); settle(q)
+        # The Brush row is a tile's picture choices now (lib/drawtiles.js), not
+        # a pill; the drawer's one track is Pen | Background, read here.
+        q.click("#paintTargetSeg [data-target='background']"); settle(q)
         yield "draw drawer"
-        q.click("#brushSeg [data-brush='pen']")
+        q.click("#paintTargetSeg [data-target='stroke']")
         browsing.pad_drawer_close(q)
         if ed == "pad":
             q.click("#shapeToolBtn")
@@ -410,12 +410,12 @@ with sync_playwright() as p:
                     except Exception as e:
                         check(f"ONE PILL: {route} [{theme} {form}] could be driven through every state", False, repr(e)[:300])
                     c.close()
-        must = {("/skribl-pad", k) for k in ("toolGroup", "paintTargetSeg", "smoothSeg", "brushSeg", "pressureSeg",
-                                              "eraserSeg", "shapeSeg", "gridDensitySeg", "mirrorSeg", "pauseSeg",
+        # Brush, smoothing, pressure and eraser left the census with the draw
+        # drawer's tiles (lib/drawtiles.js): picture choices, no pill to slide.
+        must = {("/skribl-pad", k) for k in ("toolGroup", "paintTargetSeg", "shapeSeg", "gridDensitySeg", "mirrorSeg", "pauseSeg",
                                               "postSpeedSeg", "photoFitGroup", "themeSeg", "hintSeg", "canvasSeg",
                                               "mediaTabs")}
-        must |= {("/flip", k) for k in ("toolGroup", "paintTargetSeg", "smoothSeg", "brushSeg", "pressureSeg",
-                                         "eraserSeg", "shapeSeg", "fps", "gridDensitySeg", "mirrorSeg",
+        must |= {("/flip", k) for k in ("toolGroup", "paintTargetSeg", "shapeSeg", "fps", "gridDensitySeg", "mirrorSeg",
                                          "smearWeightSeg", "onionDepthSeg", "photoFitGroup", "themeSeg", "hintSeg",
                                          "canvasSeg", "mbScope", "exportSizeSeg", "exportLoopsSeg", "mediaTabs")}
         missing = sorted(m for m in must if m not in seen)
@@ -547,7 +547,7 @@ with sync_playwright() as p:
                 keys.add(r["key"])
                 check(f"FORCED: {route} {r['key']} — the selected option's edge is heavier than an unselected one's",
                       r["on"] >= 2 and r["on"] > r["off"], str(r))
-            need = {"toolGroup", "smoothSeg", "brushSeg", "mirrorSeg", "mediaTabs"} if route != "/gallery" and route != "/library" else set()
+            need = {"toolGroup", "paintTargetSeg", "mirrorSeg", "mediaTabs"} if route != "/gallery" and route != "/library" else set()
             if route == "/flip":
                 need |= {"toolTray", "fps"}
             check(f"FORCED: {route} measured the controls it must (and at least two)",
@@ -790,7 +790,9 @@ with sync_playwright() as p:
                           ("Skribls / Drafts", ".libtabs-list > [aria-selected='true']")])
             for name, sel in probe:
                 if name == "Brush":
+                    # the brushes are the Brush tile's choices: open it, as a person does
                     browsing.pad_drawer(q, "draw"); settle(q, 400)
+                    q.click(".dp-tile[data-dp=brush]"); settle(q, 500)
                 if name == "Photo | Music":
                     browsing.pad_drawer(q, "photo"); settle(q, 400)
                 sel = q.evaluate("(s) => { const e = document.querySelector(s); if (!e) return null; e.setAttribute('data-fprobe', ''); return '[data-fprobe]'; }", sel)
@@ -809,6 +811,7 @@ with sync_playwright() as p:
             c = ctx_for("dark", "desk"); q = c.new_page()
             browsing.goto(q, BASE, route); settle(q)
             browsing.pad_drawer(q, "draw"); settle(q, 400)
+            q.click(".dp-tile[data-dp=brush]"); settle(q, 500)
             rows = [("Brush", "#brushSeg > button:nth-of-type(2)")]
             d = ring(q, rows[0][1])
             results_rows = [(rows[0][0], d)]

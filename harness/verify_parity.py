@@ -665,7 +665,7 @@ with sync_playwright() as p:
               str(pv) in pt and str(fv) in ft,
               f"pad readout {pt!r} for {pv}, flip {ft!r} for {fv}")
 
-    onecount = "(sel) => document.querySelectorAll(sel + ' .smooth-btn.active').length"
+    onecount = "(sel) => document.querySelectorAll(sel + ' [data-smooth].active').length"
     check("exactly one smoothing option reads as selected on both",
           pad.evaluate(onecount, "#smoothSeg") == 1
           and flip.evaluate(onecount, "#smoothSeg") == 1,
@@ -680,7 +680,7 @@ with sync_playwright() as p:
     # asserted nowhere: both surfaces could have drifted to different stabilizer
     # strengths and every existing assertion would still have passed.
     alphas = """() => { const out = [];
-        document.querySelectorAll('#smoothSeg .smooth-btn').forEach(b => {
+        document.querySelectorAll('#smoothSeg [data-smooth]').forEach(b => {
             b.click(); out.push([b.dataset.smooth, smoothingAlpha]); });
         return out; }"""
     pa2, fa2 = pad.evaluate(alphas), flip.evaluate(alphas)
@@ -1009,10 +1009,12 @@ with sync_playwright() as p:
                             " return !!e && e.offsetParent !== null; }", panel):
             open_via(pg_, opener, settle=500)
 
-    # smoothSeg lives in the draw drawer and the menu CLOSES that drawer, so it
-    # has to be measured before the menu is opened. Measuring it after produced
-    # a null that looked exactly like a positioning failure.
-    groups = [("#smoothSeg", [(pad, "@pad:draw", "drawPanel"),
+    # The draw drawer's pill is Pen | Background (smoothing became a tile's
+    # picture choices, lib/drawtiles.js). It lives in the drawer and the menu
+    # CLOSES that drawer, so it has to be measured before the menu is opened.
+    # Measuring it after produced a null that looked exactly like a
+    # positioning failure.
+    groups = [("#paintTargetSeg", [(pad, "@pad:draw", "drawPanel"),
                               (flip, "@pad:draw", "drawPanel")]),
               ("#hintSeg",   [(pad, "#menuBtn", "menuSheet"), (flip, "#moreBtn", "moreMenu")]),
               ("#canvasSeg", [(pad, "#menuBtn", "menuSheet"), (flip, "#moreBtn", "moreMenu")])]
