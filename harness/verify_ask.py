@@ -131,11 +131,15 @@ with sync_playwright() as p:
         stray = [t[:50] for t in res["texts"] if not cousin.search(t)]
         check(f"{name}: ...and each one holds the word, or a cousin as a whole word (\"repeated\" is not \"repeat\")",
               not stray, str(stray))
-        # "song" is in no entry: only its cousins (music, sound...) find them.
+        # "song" also finds the music entries that never say it: its cousins
+        # (music, sound, audio, track) count. Some entries say "song" since
+        # the music drawer's levels (#611: "A new song starts on its first 20
+        # seconds"), so the row asks for the ones the word alone cannot find.
         ask(q, "song")
-        rep = q.evaluate("() => [...document.querySelectorAll('#helpLook .help-tip')].filter(t => t.offsetParent !== null).map(t => t.textContent)")
-        check(f"{name}: an everyday cousin finds them: \"song\", a word no entry uses, lists the music entries",
-              any("music" in t.lower() for t in rep) and not any("song" in t.lower() for t in rep), f"{len(rep)} entries")
+        rep = q.evaluate("() => [...document.querySelectorAll('#helpLook .help-tip')].filter(t => t.offsetParent !== null).map(t => t.textContent.toLowerCase())")
+        by_cousin = [t for t in rep if "song" not in t and _re.search(r"\b(music|sound|audio|track)\b", t)]
+        check(f"{name}: an everyday cousin finds them: \"song\" lists the music entries that never say it",
+              len(by_cousin) >= 1, f"{len(rep)} entries, {len(by_cousin)} of them found by a cousin alone")
         ask(q, "zzqx")
         none = q.evaluate("""() => { const e = document.querySelector('#helpLook .help-empty');
           return { shown: !!e && !e.hidden && e.offsetParent !== null, best: !document.getElementById('askBest').hidden,
