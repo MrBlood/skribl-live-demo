@@ -614,7 +614,7 @@ with sync_playwright() as p:
         pg.wait_for_timeout(1200)
         gaps = pg.evaluate("""() => { const q = s => document.querySelector('#musicDetail ' + s).getBoundingClientRect();
             const rows = [['zoom bar', q('.zoom-mag-bar')], ['handles', q('#zoomHandleStart')], ['scroll', q('.zoom-pan-row')],
-                          ['hear', q('.mt-hear')], ['each tap', q('.mt-steps')], ['start/end', q('.edge-group')],
+                          ['each tap', q('.mt-steps')], ['start/end', q('.edge-group')],
                           ['sync line', q('#musicSyncLine')], ['lock', q('.fine-tune-body .mt-switch')],
                           ['smooth restart', q('.mt-smooth .mt-switch')], ['length', q('.crossfade-row')]];
             return rows.slice(1).map((r, i) => [rows[i][0] + ' -> ' + r[0], Math.round(r[1].top - rows[i][1].bottom)]); }""")

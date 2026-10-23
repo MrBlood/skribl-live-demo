@@ -22173,3 +22173,88 @@ says what the drawer says. The row now asks for what it was for: among what
 Red as it was (52/54, both editors), green as built (54/54), and red again
 with the cousins taken out of lib/helpsearch.js (51/54: no entry found by a
 cousin alone, on either editor).
+
+## After v329 -- Hear the loop, and Tap the beat (the owner: "so I'm not at 7 or 9 when I want 8")
+
+The owner, with the three levels live: "How do I test the loop without having
+it show me drawing? It's cumbersome, plus to know how many beats are in the
+loop, so I'm not at 7 or 9 when I want 8." The mock laid the answers into the
+real drawer and photographed them beside today's; "All yes" to its five
+defaults.
+
+THE PAIR THAT PLAYS. Play with my drawing and Hear the loop sit side by side,
+the same size, under the strip and the pick line on every level, so an end
+dragged is an end heard. Each is its verb over what it plays (Play / with my
+drawing, Hear / the loop), and Stop while it plays. Hear the loop is today's
+Preview Loop, the music alone, round and round; the loop detail's own Hear the
+whole loop went, since the pair sits just above it (the owner's second yes).
+An end moved while the loop plays is heard from its next time round: the
+gapless engine starts the new loop where the old one comes round, never a cut
+mid-loop. With nothing drawn, Play with my drawing waits, faded, as Fit my
+drawing does; step 1 had it play the loop instead, which is Hear the loop's
+job now. Under 360px half the row is 127px and "with my animation" needs 160,
+so there the two go one to a row.
+
+TAP THE BEAT, on Adjust and Fine-tune. It is tapped along with Hear the loop,
+which the first tap starts (that tap is not counted: it is the start, not a
+beat), so every tap is timed against the loop as it will be posted. Two
+seconds after the last tap it settles. The tempo is the middle gap, so one
+stray tap cannot move it, refined by the mean of the gaps near it and rounded
+to a whole beat a minute. Where the beat falls is the taps' own, read off the
+song's clock (the circular mean of each tap's place in its beat, over the taps
+since the loop last came round), less the time the sound takes to reach the
+ear. A person taps to what they hear, which is the audio clock less the
+context's and the device's latency (lib/audioloop.js latency(): 42ms in this
+box's Chromium, 10 base and 32 output; a phone's speaker is about as much,
+Bluetooth 150-250ms). Read raw, the marks, and every end that snaps to them,
+would sit that much late. Fewer than four taps leave the tempo as it was, and
+say so. Every line the tap shows is two lines at most on a phone, as tall as
+the tap: the first draft's idle line wrapped to three, and the first tap moved
+the button 4.3px under the finger.
+
+THEN EVERY COUNT IS OF WHAT IS HEARD, smooth restart included. The length line
+and the sync line say the beats. Make it offers the three whole counts nearest
+what is heard and sets the end so the loop is that many: with a 0.25s smooth
+restart the handle sits 0.25s past the eighth beat, and a dashed line on the
+strip shows where the loop comes round, on the beat. A count the song or the
+20s cap is too short for is faded. Each tap gains One beat, in size order. The
+strip marks every beat that stands 6px from the next (else every fourth, else
+every sixteenth), taller every four counted from the loop's start, and the
+loop detail marks its own window. An end let go within 8px of a beat settles
+on it (for the end, the place the loop comes round), and typed or stepped ends
+never snap. The tempo is the editor's own state, as the crossfade is: saved
+with the song in the drafts and the re-add card, never posted, and gone with a
+new song.
+
+Pad and Flip: shared. The template and lib/musicdrawer.js are one copy; each
+editor added only its state (`musicTempo`), its two hooks, the engine's
+duration and latency, and the tempo where its drafts already wrote the
+crossfade.
+
+How it works has a tip for each (Hear the loop, Tap the beat), and Play with my
+drawing, Loop Detail and Start and end say the new arrangement.
+
+verify_musicbeat is new: 44 rows, each on the Pad and on Flip. Each part was
+shown red with that part broken, served to the browser from a mutated copy
+with the files on disk untouched: 32 mutations, each red on the rows it
+breaks. Some runs did not count the first time and were run again: one
+crashed on a click Flip's drawers covered (the suite's clicks now go through
+press(), which says so in red), one served only the second of its two edits
+to one file (the calibration's router answered the last route only; now one
+handler a file), and the tap part's ran again after its probes changed.
+
+Calibrating found two faults in the instrument itself. Beside another suite,
+the stray gap read 119 once: a tap held up past its mark by a busy machine.
+The taps now wake 15ms early and wait out the rest on the clock, and a try
+whose taps strayed more than 4ms is tapped again on a fresh page, three tries
+at most. 4ms is the most the rows can stand: half a beat a minute at 120 is
+2.1ms in the mean of the stray gap's four gaps. A page held up 40ms just
+before a mark read 12ms; quiet, the taps land within 1ms. And the phase row
+read the song's clock after each click, while the tap's handler reads it
+first thing: the handler's own work let the audio clock take one of its
+8-21ms steps on some taps, and twice the two means sat 7ms apart. It reads
+just before the click now, and they agree to the ten-thousandth.
+
+Not tested here: tapping with a finger on an iPhone, the sound, whether Safari
+reports a Bluetooth headset's latency (where it reports none, the beat sits
+that much late), Segoe UI and SF.

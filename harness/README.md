@@ -465,8 +465,31 @@ stays a sleep.
   drawn Fit is off and wakes with a drawing; Smooth restart's switch keeps its
   last length; typed times, Each tap's frame (the Pad's video, Flip's pages a
   second, in size order) and Lock the length; the sync line; 16px fields;
-  Play with my drawing is the editor's Play, or the loop alone with nothing to
-  play; Fine-tune keeps the switch in sight, and back to Simple glides.
+  Play with my drawing is the editor's Play, and waits with nothing drawn;
+  Fine-tune keeps the switch in sight, and back to Simple glides.
+- `verify_musicbeat.py` — the music drawer's pair and its beat (the owner:
+  "How do I test the loop without having it show me drawing?... so I'm not at
+  7 or 9 when I want 8"), on the Pad and on Flip: Play with my drawing and
+  Hear the loop under the strip in the same place on every level, the same
+  size, with no second Hear in the loop detail; Hear the loop plays the music
+  alone until Stop, and an end moved while it plays is heard from its next
+  time round; Tap the beat's first tap starts the loop and is not a beat, taps
+  in time settle on the tempo two seconds after the last (a stray gap does not
+  move it), and where the beat falls is the taps' own on the song's clock as
+  heard (less the time the sound takes to reach the ear); on a phone the tap
+  stays put while its words change; Make it offers the three
+  whole counts nearest what is heard, makes what is heard exactly that many
+  beats, smooth restart and all, and fades a count the song is too short for;
+  Each tap gains one beat in size order; the strip marks the beats (taller
+  every four from the loop's start, no closer than 6px, a dashed line where a
+  smooth restart comes round) and the loop detail its own window; an end let
+  go near a beat settles on it, typed ends never; the tempo goes with the
+  song into the drafts and a re-add card, and a new song starts with none;
+  the counts and the marks read against what is behind them, light and dark;
+  the pair's words are whole at 320, 360 and 402px, side by side from 360.
+  Taps run on the page's own clock, each woken early to land on its mark; a
+  try whose taps strayed more than 4ms (a busy machine) is tapped again on a
+  fresh page, three tries at most, and the row says which try it was.
 - `verify_learncard.py` — the card on the button (lib/learncard.js), Pad and
   Flip: holding a button (real touch) opens its card with its example; a
   quick tap stays a tap, a moving finger is no hold, the lift does not press,

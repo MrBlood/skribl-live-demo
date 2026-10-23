@@ -2294,6 +2294,9 @@ const bubbleEnd = document.getElementById('bubbleEnd');
 let audioCtx = null;
 let currentAudioBuffer = null;
 let loopCrossfadeMs = 0;   // loop crossfade length in ms (0 = off); see buildTrimmedLoopWav
+// The song's tapped tempo, { bpm, phase } or null (Tap the beat,
+// lib/musicdrawer.js): saved with the song in the drafts, never posted.
+let musicTempo = null;
 
 let zoomDrawPending = false;
 
@@ -2662,6 +2665,7 @@ function applyPendingMusicSettings(meta) {
   // Keep a sane minimum loop length.
   trimEnd = Math.max(trimStart + 0.5, Math.min(trimEnd, audioDuration));
   if (meta.crossfadeMs != null) { loopCrossfadeMs = meta.crossfadeMs; if (typeof setCrossfadeUI === 'function') setCrossfadeUI(); }
+  if (meta.tempo !== undefined) musicTempo = (window.SkriblMusicDrawer ? window.SkriblMusicDrawer.tempoFrom(meta.tempo) : null);
   updateTrimUI();
 }
 
@@ -2696,7 +2700,7 @@ function captureCurrentFrame() {
   // A track switched off stays in the draft, marked so, as Flip's does; a
   // post leaves it out (editor_post.js). Dropping it lost the song.
   const music = audioEl && audioEl._objectUrl
-    ? { data: audioEl._draftData || null, name: audioEl._fileName || null, trimStart: trimStart, trimEnd: trimEnd, crossfadeMs: loopCrossfadeMs }
+    ? { data: audioEl._draftData || null, name: audioEl._fileName || null, trimStart: trimStart, trimEnd: trimEnd, crossfadeMs: loopCrossfadeMs, tempo: musicTempo }
     : null;
   if (music && !musicEnabled) music.enabled = false;
   const frame = {
@@ -2928,6 +2932,7 @@ function resetMediaForLoad() {
   trimEnd = 0;
   currentAudioBuffer = null;
   loopCrossfadeMs = 0;
+  musicTempo = null;
   // State above, drawer UI below. The player runs this on every load — it was
   // clearing waveform canvases and rewriting button labels for a drawer it does
   // not have. Unguarded property writes on absent elements (musicDetail.hidden)
@@ -3165,6 +3170,7 @@ function loadSkribl(data, said) {
     trimStart = data.music.trimStart != null ? data.music.trimStart : 0;
     trimEnd = data.music.trimEnd != null ? data.music.trimEnd : null;
     loopCrossfadeMs = data.music.crossfadeMs != null ? data.music.crossfadeMs : 0;
+    musicTempo = (window.SkriblMusicDrawer ? window.SkriblMusicDrawer.tempoFrom(data.music.tempo) : null);
     if (data.music.enabled === false) { musicEnabled = false; syncLayerToggle(document.getElementById('musicToggle'), false); }
     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     fetch(data.music.data).then(r => r.arrayBuffer()).then(buf => {

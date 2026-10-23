@@ -296,6 +296,13 @@
         var c = o.ctx();
         if (!c || duration <= 0) return 0;
         return (c.currentTime - startCtx) % duration;
+      },
+      // How long after the audio clock the sound reaches the ear: the
+      // context's own processing and the device's (a phone's speaker, more
+      // with Bluetooth). What a person taps to is the clock less this.
+      latency: function () {
+        var c = o.ctx();
+        return c ? (c.baseLatency || 0) + (c.outputLatency || 0) : 0;
       }
     };
   }

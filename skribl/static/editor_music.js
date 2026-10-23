@@ -4,7 +4,7 @@
 // (owner: "it needs to be the same music editor on both pad and flip"): the
 // three levels, Skribl's pick, the loop detail's zoom and Scroll, the edges'
 // drags, nudges and typed times, Smooth restart, Fit my drawing, Whole song,
-// the hear buttons, Play with my drawing and the switch. The Pad hands it its
+// the hear buttons, Play with my drawing, Tap the beat and the switch. The Pad hands it its
 // own state through the hooks below. What is left here is the
 // Pad's own: the file row (add and remove), the hooks, and Play's music loop,
 // which follows the replay's speed.
@@ -45,7 +45,8 @@ if (window.SkriblMusicDrawer) padDrawer = window.SkriblMusicDrawer.wire({
   audio: () => audioEl,
   buffer: () => currentAudioBuffer,
   loop: { start: startWebAudioLoop, stop: stopWebAudioLoop,
-          playing: () => _waLoop.playing(), elapsed: () => _waLoop.elapsed() },
+          playing: () => _waLoop.playing(), elapsed: () => _waLoop.elapsed(), duration: () => _waLoop.duration(),
+          latency: () => _waLoop.latency() },
   clip: buildTrimmedLoopWav,
   playing: () => playing,
   setPreviewing: (on) => { previewingLoop = on; },
@@ -55,6 +56,8 @@ if (window.SkriblMusicDrawer) padDrawer = window.SkriblMusicDrawer.wire({
   musicOff: padMusicOff,
   // The row says "Muted" while the track is switched off.
   syncRow: () => { syncLayerToggle(document.getElementById('musicToggle'), musicEnabled); padMusicRow(); },
+  tempo: () => musicTempo,
+  setTempo: (t) => { musicTempo = t; },
 });
 // app.js reaches these by name, typeof-guarded, because the player has no drawer.
 function stopLoopPreview() { if (padDrawer) padDrawer.stopPreview(); }
@@ -132,6 +135,7 @@ musicInput.addEventListener('change', async (e) => {
     // levels are one tap away. Skipped while restoring saved trim from an
     // autosave/draft, so a user's chosen loop is never overwritten.
     const _restoringTrim = (typeof pendingMusicMeta !== 'undefined' && pendingMusicMeta);
+    if (!_restoringTrim) musicTempo = null;   // a new song's beat is its own: tapped again
     const _pick = !_restoringTrim && padDrawer ? padDrawer.applyPick() : null;
     if (_pick && _pick.fits) showToast('Loop set to your drawing length', musicUploadBtn);
     // Reapply any pending trim from an autosave restore, from THIS path so it
@@ -217,6 +221,7 @@ musicRemove.addEventListener('click', (e) => {
   zoomWaveformCtx.clearRect(0, 0, zoomWaveformCanvas.width, zoomWaveformCanvas.height);
   currentAudioBuffer = null;
   loopCrossfadeMs = 0; if (typeof setCrossfadeUI === 'function') setCrossfadeUI();
+  musicTempo = null;
   if (loopZoomLabel) loopZoomLabel.textContent = '0:00.00 → 0:00.00 [0.00s]';
 });
 
