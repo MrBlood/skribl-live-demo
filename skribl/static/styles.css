@@ -5095,10 +5095,11 @@ button:not([hidden]):has(> svg.mk:only-child) { display: inline-flex; align-item
   /* Start of loop and End of loop sit side by side, each its name over its
      [- 0.000 +] group, where two fit; below that they stack. Each column must
      hold a whole group: 130px with the 16px time (2px gaps and padding, 30px
-     buttons). minmax(130) + 10px gap = 270 fits the 275/290px grids at
-     375/390 and drops to one column at 363 (263px grid) and 320 rather than
-     spilling the group -- the bug class verify_ux caught at 363. (Step size
-     was a third column here; Each tap is its own row above now.) */
+     buttons). minmax(130) + 10px gap = 270, and the grid is the screen less
+     78px: two-up from 348px (285px at 363, 312 at 390), one column at 340
+     (262px) and 320 rather than spilling the group -- the bug class verify_ux
+     caught at 363. (Step size was a third column here; Each tap is its own
+     row above now.) */
   .finetune-grid {
     display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
     gap: 16px 10px; align-items: stretch;

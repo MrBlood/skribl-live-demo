@@ -1019,7 +1019,7 @@ with _sp204() as _p:
                 + struct.pack("<IHHIIHH", 16, 1, 1, rate, rate * 2, 2, 16)
                 + b"data" + struct.pack("<I", len(frames)) + frames)
     _AUD = wav_bytes()
-    for pw in (363, 390, 1280):
+    for pw in (340, 363, 390, 1280):
         mp = _b.new_page(viewport={"width": pw, "height": 844})
         mp.goto(BASE + "/", wait_until="load"); waits.settle(mp, 700)
         browsing.pad_drawer(mp, "music"); mp.wait_for_timeout(300)
@@ -1052,12 +1052,13 @@ with _sp204() as _p:
             # the class at every width.
             _rows = mp.evaluate("""() => [...document.querySelectorAll('#fineTuneBody .edge-group')]
                 .map(e => Math.round(e.getBoundingClientRect().top))""")
-            if pw >= 375:
+            if pw >= 363:
                 check(f"V210: at {pw}px Start of loop and End of loop share a row",
                       len(_rows) == 2 and _rows[0] == _rows[1], f"group tops {_rows}")
             else:
-                # 363 and narrower cannot hold two 130px groups; the grid must
-                # fall back to one column rather than spill (v207 bug class).
+                # 340 cannot hold two 130px groups (the grid is the screen less
+                # 78px, and two need 270); the grid must fall back to one
+                # column rather than spill (v207 bug class).
                 check(f"V210: at {pw}px (too narrow for 2-up) the nudge groups stack one per row",
                       len(_rows) == 2 and _rows[1] > _rows[0], f"group tops {_rows}")
         if pw == 1280:
