@@ -202,6 +202,7 @@ BATCHES = [
     ["verify_nametab.py"],                 # unrecorded
     ["verify_hello.py"],                   # measures — a hello that waits out its own wave
     ["verify_recolor.py"],                 # measures — the colour's run read on every frame, real touch drags
+    ["verify_drawtiles.py"],               # measures — painted targets, the fold read on every frame
     ["verify_recolorplay.py"],             # measures — every replay read on every frame, the exports decoded
     ["verify_menu.py"],                    # measures — painted targets, waits out each page and Undo
     ["verify_contrast.py"],                # measures — painted grounds, photographed with the words hidden

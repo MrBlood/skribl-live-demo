@@ -1926,6 +1926,12 @@ body.player-mode .app { position: relative; padding-bottom: calc(64px + env(safe
     background: rgba(var(--wash-rgb), 0.045);
   }
   .duration-badge { display: none !important; }}
+@keyframes dp-unfold { from { opacity: 0; transform: scaleY(.92); } to { opacity: 1; transform: none; } }
+@keyframes dp-fold { to { opacity: 0; transform: scaleY(.94); } }
+@media (prefers-reduced-motion: reduce) { .dp-panel, .dp-panel.dp-folding { animation: none; } .dp-tile, .dp-choice { transition: none; } }
+@media (forced-colors: active) {
+  .dp-choice.active, .dp-tile.dp-open { outline: 2px solid Highlight; outline-offset: -2px; }
+}
 
 /* ===================================================================
    Apple-style mobile header (v74): bare glyphs, one filled Post pill,

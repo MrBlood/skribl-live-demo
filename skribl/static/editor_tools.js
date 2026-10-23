@@ -60,16 +60,17 @@
   }
 
   // Shared with Flip via lib/smoothing.js — the level-to-alpha mapping was
-  // three magic numbers written out twice. The pills on these rows are
-  // lib/segslider.js's: attachSegSlider hands each over, and the template pill
-  // is the one it moves (it used to make a second one here).
+  // three magic numbers written out twice. These four are picture choices in
+  // the draw drawer's tiles now (lib/drawtiles.js), not pill tracks: NOT handed
+  // to attachSegSlider, whose pill, with no track to sit in, painted a column
+  // of tint down the whole page under the chosen tile. lib/segslider.js still
+  // writes their aria-pressed and gives each its one Tab stop (.dp-choices).
   const smoothSeg = document.getElementById('smoothSeg');
   if (smoothSeg && window.SkriblSmoothing) {
     window.SkriblSmoothing.create({
       seg: smoothSeg,
       onChange: a => { smoothingAlpha = a; },
     });
-    attachSegSlider(smoothSeg);
   }
 
   // Eraser width — the shared multiplier (lib/erasersize.js). Repainting the
@@ -81,19 +82,16 @@
       seg: eraserSeg,
       onChange: () => { if (typeof updateEraserCursor === 'function') updateEraserCursor(); },
     });
-    attachSegSlider(eraserSeg);
   }
 
   const brushSeg = document.getElementById('brushSeg');
   if (brushSeg && window.SkriblBrush) {
     window.SkriblBrush.create({ seg: brushSeg });
-    attachSegSlider(brushSeg);
   }
 
   const pressureSeg = document.getElementById('pressureSeg');
   if (pressureSeg && window.SkriblPressure) {
     window.SkriblPressure.create({ seg: pressureSeg });
-    attachSegSlider(pressureSeg);
   }
 
   // Shared with Flip via lib/eyedropper.js. The native window.EyeDropper

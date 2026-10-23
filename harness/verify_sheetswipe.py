@@ -469,7 +469,7 @@ with sync_playwright() as p:
             browsing.pad_drawer(pg, "draw", settle=600)
             pg.evaluate("""() => { window.__gripUps = 0;
                 document.querySelector('#drawPanel .drawer-detent-handle').addEventListener('pointerup', () => window.__gripUps++);
-                document.querySelector('#drawPanel .drawer-detent-more').click(); }""")
+                document.querySelector('#drawPanel .dp-tile[data-dp=feel]').click(); }""")
             waits.settle(pg, 1700)
             g = pg.evaluate(GRIP)
             check(f"{who}: expanded, the whole grip is painted, edge to edge", g["hit"], str(g))
@@ -516,7 +516,7 @@ with sync_playwright() as p:
         print(f"\n{who}")
         ctx, pg, errs = fresh(b, route)
         browsing.pad_drawer(pg, "draw", settle=600)
-        pg.evaluate("() => { const m = document.querySelector('#drawPanel .drawer-detent-more'); if (m) m.click(); }")
+        pg.evaluate("() => { const m = document.querySelector('#drawPanel .dp-tile[data-dp=feel]'); if (m) m.click(); }")
         pg.wait_for_timeout(1500)
         opened_y = pg.evaluate("() => Math.round(window.scrollY)")
         check(f"{who}: the full draw drawer scrolled the page to show itself (precondition)",

@@ -41,7 +41,7 @@
     if (!seg) return null;
 
     function select(btn) {
-      var buttons = seg.querySelectorAll('.smooth-btn');
+      var buttons = seg.querySelectorAll('[data-smooth]');
       for (var i = 0; i < buttons.length; i++) {
         // Explicit boolean. classList.toggle(name, undefined) TOGGLES rather
         // than setting, which is how two controls once read as selected at the
@@ -58,7 +58,7 @@
     }
 
     seg.addEventListener('click', function (e) {
-      var btn = e.target.closest ? e.target.closest('.smooth-btn') : null;
+      var btn = e.target.closest ? e.target.closest('[data-smooth]') : null;
       if (!btn) return;
       select(btn);
     });
@@ -66,7 +66,7 @@
     return {
       alphaFor: alphaFor,
       current: function () {
-        var on = seg.querySelector('.smooth-btn.active');
+        var on = seg.querySelector('[data-smooth].active');
         return alphaFor(on && on.dataset ? on.dataset.smooth : 'off');
       }
     };

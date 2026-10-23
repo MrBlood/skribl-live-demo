@@ -294,11 +294,11 @@ with sync_playwright() as p:
         phone = q.viewport_size["width"] < 641
         yield "dock"
         browsing.pad_drawer(q, "draw")
-        if phone and q.is_visible("#drawerDetentMore"):
-            q.click("#drawerDetentMore"); settle(q, 400)
-        q.click("#brushSeg [data-brush='marker']"); settle(q)
+        # The Brush row is a tile's picture choices now (lib/drawtiles.js), not
+        # a pill; the drawer's one track is Pen | Background, read here.
+        q.click("#paintTargetSeg [data-target='background']"); settle(q)
         yield "draw drawer"
-        q.click("#brushSeg [data-brush='pen']")
+        q.click("#paintTargetSeg [data-target='stroke']")
         browsing.pad_drawer_close(q)
         if ed == "pad":
             q.click("#shapeToolBtn")

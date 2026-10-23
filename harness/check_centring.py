@@ -501,7 +501,8 @@ def editor_common(pg, menu, export_item, canvas):
     """What both editors share: the draw drawer and its parts, the menu, its
     sheets, Media, How it works."""
     click(pg, "#penToolBtn"); yield "draw drawer"
-    click(pg, "#drawerDetentMore"); yield "draw drawer, more"
+    click(pg, ".dp-tile[data-dp=brush]"); yield "draw drawer, Brush"
+    click(pg, ".dp-tile[data-dp=feel]"); yield "draw drawer, Feel"
     click(pg, "#paintTargetSeg [data-target=background]"); yield "draw drawer, background"
     click(pg, "#paintTargetSeg [data-target=ink], #paintTargetSeg [data-target=pen], #paintTargetSeg button")
     click(pg, "#eyedropperBtn"); yield "eyedropper"; esc(pg)

@@ -739,7 +739,6 @@ CONTROL_ALIASES = {
     "Pick a color from the canvas": "pick any color already on the canvas",
     "Recolor lines": "tap recolor beside the eyedropper", "Custom drawing color": "the rainbow one to mix your own",
     "Custom canvas background": "the rainbow one for your own",
-    "Brush, smoothing & more": "colors, brush, opacity and smoothing",
     "Stroke opacity": "lowers how solid each new stroke is",
     "Number of sides": "poly offers sides", "Corner rounding": "offers rounding",
     "Draw-on replay": "makes a page draw itself",
