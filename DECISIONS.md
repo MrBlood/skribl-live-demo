@@ -22108,6 +22108,27 @@ removed, the Pad's Fine-tune rows on the desk and sideways; the growth fix
 removed, both editors on the desk (a 236-365px frame); the cap removed, both
 sideways; no glide back, both glide rows.
 
+The glide rows read the switch on every animation frame, and beside two other
+suites one went red on Flip held sideways: a 165px step. Timed, the reveal's
+frames ran 58-150ms under that load, and a glide seen through a frame that
+long is one big step; alone it was green. The row now says each step's frame
+time. Letting a long frame carry more (3px a millisecond) was tried and
+hid a chase, 424px in one 176ms frame, so the 160px rule stays and a red in a
+long frame is told apart by a run alone.
+
+Three more reds beside the others were the suites' own, each fixed where it
+lived. verify_helpclaims' census of named controls did not know the new ones,
+still listed seven that are gone, and one claim named a row by a title it
+does not have. verify_tools' V214f posted 4.75s for its 5s loop: the pick's
+smooth restart folds 0.25s off the posted clip, so its fixture asks for a
+clean cut, as verify_loopcap's does. And verify_sheetswipe's "back to Adjust"
+leapt 706px on both editors: at 664px tall the switch is 400px above the
+screen at Fine-tune's end, and the leap was Playwright scrolling it into view
+for the click. That row now runs on the owner's phone (402x874) and taps
+Adjust from the switch, scrolled back up to the way a person must; there the
+page loses 238-262px, the build glides it in 49-52px frames, and without
+shrinkGently it is one frame (red).
+
 Two stayed green, and say why. The Pad's re-add guard: the saved loop is
 applied after any pick, so it is kept either way (the guard stays, for an
 older save without a crossfade). Whole song without its own 20s cap: each
