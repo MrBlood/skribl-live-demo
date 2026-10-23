@@ -336,6 +336,23 @@ with sync_playwright() as pw:
               f"{two:.2f}s then {one:.2f}s: {s1['pick']!r}, back {s1['back']}; after the way back heard {heard(t2):.3f}s, fit {s2['fit']}")
         c.close()
 
+    # The pick's seconds are rounded from the hundredths the lines show, as a
+    # person rounds what they read: a drawing 4.448s long was "4.4 seconds"
+    # over an Adjust line saying 4.45s. Built point by point, 8ms apart.
+    if part("pick") and (not ONLY or ONLY == "Pad"):
+        c, pg, _ = editor(b, "Pad", "/", drawn=False, song=None)
+        pg.evaluate("""() => { strokes.length = 0;
+            for (let k = 0; k <= 556; k++) strokes.push({ x: 0.2 + k * 0.001, y: 0.4, color: '#7c5cff', size: 6, t: k * 8, start: k === 0 });
+            strokeGroups.length = 0; strokeGroups.push(strokes.length); updateDrawingTimeLabels(); }""")
+        add(pg, SHORT)
+        pick_level(pg, "adjust")
+        secs, said = pg.evaluate(DRAWING["Pad"]), pg.evaluate(SAID)
+        check("Pad: the pick's seconds and the lengths under it agree, as a person rounds them",
+              abs(secs - 4.448) < 1e-9 and said["pick"].startswith("Skribl picked the first 4.5 seconds,")
+              and said["len"].startswith("4.45s · ") and said["fitSub"] == "4.5s",
+              f"a {secs:.3f}s drawing: {said['pick']!r}; {said['len']!r}; Fit says {said['fitSub']!r}")
+        c.close()
+
     # A song the autosave had to drop is re-added from its card: its saved loop
     # comes back with it (pendingMusicMeta), and Skribl's pick stays away.
     for _n, _p in eds("pick"):

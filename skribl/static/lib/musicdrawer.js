@@ -116,13 +116,16 @@
     var len = t.end - t.start;
     return len - Math.min(Math.max(0, ms) / 1000, len / 2);
   }
-  // "8", "8.4", "1:12": a length the way a person says it.
+  // "8", "8.4", "1:12": a length the way a person says it. Rounded from the
+  // hundredths the lines show, as a person rounds what they read: 4.448 was
+  // "4.4 seconds" over a line saying 4.45s, which reads as two lengths.
   function says(s) {
+    s = Math.round(s * 100) / 100;
     if (s >= 59.95) {
       var m = Math.floor(Math.round(s) / 60), r = Math.round(s) % 60;
       return m + ':' + (r < 10 ? '0' : '') + r;
     }
-    var t = Math.round(s * 10) / 10;
+    var t = Math.round(s * 10 + 1e-9) / 10;
     return Math.abs(t - Math.round(t)) < 0.05 ? String(Math.round(t)) : t.toFixed(1);
   }
   function seconds(s) { var w = says(s); return w.indexOf(':') >= 0 ? w : w + (w === '1' ? ' second' : ' seconds'); }
