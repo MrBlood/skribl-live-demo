@@ -94,6 +94,11 @@ CLAIMS = {
                    "verify_parity.py::lifting the finger picks what the lens showed",
                    "verify_parity.py::a click on the drawing picks the colour under the lens",
                    "verify_parity.py::Cancel abandons: the pen keeps its colour"],
+    "Brush, Size, Feel, Eraser": ["verify_drawtiles.py::opens its choices, and only its",
+                                  "verify_drawtiles.py::the same tile closes it (said at once)",
+                                  "verify_drawtiles.py::Marker is the brush, and the tile says so",
+                                  "verify_drawtiles.py::Bold sets the size to 12, the editor's own readout follows, and so does the tile",
+                                  "verify_drawtiles.py::the pictures are painted in the pen's colour and follow it"],
     "Recolor": ["verify_recolor.py::a tap where two lines cross recolours the one on top, and only it",
                 "verify_recolor.py::a drag recolours the three lines it crosses and no other",
                 "verify_recolor.py::one Undo, from the bar, takes the whole drag back",
@@ -740,6 +745,11 @@ CONTROL_ALIASES = {
     "Recolor lines": "tap recolor beside the eyedropper", "Custom drawing color": "the rainbow one to mix your own",
     "Custom canvas background": "the rainbow one for your own",
     "Stroke opacity": "lowers how solid each new stroke is",
+    # the four tiles (lib/drawtiles.js): each tile is named by its value, so by its group
+    "Brush, size, feel and eraser": "the four tiles under the colors",
+    "Brush": "pen, marker, pencil or air", "Stroke smoothing": "evens out shaky lines",
+    "Stylus pressure": "varies the line width as you press", "Eraser width": "is how wide it rubs out",
+    "Quick sizes": "four quick sizes",
     "Number of sides": "poly offers sides", "Corner rounding": "offers rounding",
     "Draw-on replay": "makes a page draw itself",
     # Tune
