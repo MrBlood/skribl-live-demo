@@ -102,6 +102,7 @@ def eds(name):
     return EDITORS if part(name) else []
 DESK = dict(viewport={"width": 1280, "height": 900})
 PHONE = dict(viewport={"width": 402, "height": 874}, device_scale_factor=2, is_mobile=True, has_touch=True)
+SIDEWAYS = dict(viewport={"width": 874, "height": 402}, device_scale_factor=2, is_mobile=True, has_touch=True)
 WORK = {"Pad": "drawing", "Flip": "animation"}
 PLAY = {"Pad": "#playBtn", "Flip": "#play"}
 
@@ -138,6 +139,10 @@ SAID = """() => { const q = (id) => document.getElementById(id);
 SHOWN = """(ids) => ids.filter((id) => { const el = document.getElementById(id);
   return !!el && !el.closest('[hidden]') && el.getClientRects().length > 0; })"""
 LEVEL_BTN = {"simple": "#musicLevelSimple", "adjust": "#fineTuneTrim", "fine": "#fineTuneToggle"}
+# Where the level switch is, against the pinned header (0 where the header scrolls away) and the screen.
+SIGHT = """() => { const s = document.getElementById('fineTuneSeg').getBoundingClientRect(), h = document.querySelector('.header');
+  const top = h && ['sticky', 'fixed'].includes(getComputedStyle(h).position) ? h.getBoundingClientRect().bottom : 0;
+  return { seg: Math.round(s.top), header: Math.round(top), vh: innerHeight }; }"""
 EVERY = ["musicTrack", "musicPickLine", "matchDrawingBtn", "musicWholeBtn", "musicPlayBtn"]
 ADJUST = ["musicLenLine", "musicFrom", "musicTo", "musicSmooth", "testSeamBtn"]
 FINE = ["fineTuneBody", "zoomTrackWrap", "zoomPanSlider", "previewLoopBtn", "musicStepSeg", "startReadout", "endReadout",
@@ -522,19 +527,37 @@ with sync_playwright() as pw:
         c.close()
 
     print("\nMUSIC LEVELS — kind, not jumpy")
+    # Fine-tune picked as a song lands (400ms on, a quick person): the app's
+    # own scrolls are still settling then -- the drawer's open and the card's
+    # growth each re-assert at 300, 700 and 1200ms -- and the level makes the
+    # drawer taller under them. Read the switch on every frame: no frame may
+    # carry it more than 160px (a glide's frames measured 44-57px here; a
+    # re-assert chasing the new end, 236-684px), and it ends in sight, on a
+    # desk and on a phone held sideways, where Fine-tune is taller than the screen.
     for _n, _p in eds("kind"):
-        c, pg, _ = editor(b, _n, _p, drawn=False, opts=PHONE)
-        pg.evaluate("() => document.getElementById('fineTuneSeg').scrollIntoView({ block: 'end' })")
-        browsing.wait_scroll_still(pg)
-        pg.click("#fineTuneToggle"); pg.wait_for_timeout(400)
-        browsing.wait_scroll_still(pg)
+        for dev, o in (("desk", DESK), ("phone sideways", SIDEWAYS)):
+            c = waits.instrument(b.new_context(**o))
+            pg = c.new_page()
+            browsing.goto(pg, BASE, _p)
+            pg.evaluate("() => window.SkriblHints && window.SkriblHints.hide && window.SkriblHints.hide()")
+            browsing.pad_drawer(pg, "music", settle=50)
+            pg.set_input_files("#musicInput", SHORT)
+            pg.wait_for_function("() => document.getElementById('musicUploadBtn').classList.contains('loaded') && !!currentAudioBuffer", timeout=20000)
+            pg.wait_for_timeout(400)
+            pg.evaluate("""() => { window.__tops = []; const s = document.getElementById('fineTuneSeg'), t0 = performance.now();
+                (function f() { window.__tops.push(s.getBoundingClientRect().top); if (performance.now() - t0 < 1900) requestAnimationFrame(f); })(); }""")
+            pg.click("#fineTuneToggle")
+            pg.wait_for_timeout(2100)
+            tops = pg.evaluate("() => window.__tops")
+            r = pg.evaluate(SIGHT)
+            big = max(abs(tops[i] - tops[i - 1]) for i in range(1, len(tops))) if len(tops) > 1 else None
+            check(f"{_n}: Fine-tune picked as a song lands glides, and keeps the switch in sight ({dev})",
+                  big is not None and big <= 160 and r["header"] <= r["seg"] < r["vh"] - 40,
+                  f"the biggest frame {big if big is None else round(big)}px over {len(tops)} frames; ends at {r}")
+            c.close()
+    for _n, _p in eds("kind"):
+        c, pg, _ = editor(b, _n, _p, drawn=False, opts=PHONE, level="fine")
         pg.wait_for_timeout(1300)   # past every re-assert there is
-        r = pg.evaluate("() => { const s = document.getElementById('fineTuneSeg').getBoundingClientRect(), h = document.querySelector('.header');"
-                        " const top = h && ['sticky', 'fixed'].includes(getComputedStyle(h).position) ? h.getBoundingClientRect().bottom : 0;"
-                        " const w = document.getElementById('zoomTrackWrap').getBoundingClientRect();"
-                        " return { seg: Math.round(s.top), header: Math.round(top), vh: innerHeight, wave: Math.round(w.top) }; }")
-        check(f"{_n}: picking Fine-tune never takes the switch just tapped out of sight",
-              r["header"] <= r["seg"] < r["vh"] - 40, str(r))
         # Back to Simple with the switch just under the header and Fine-tune's
         # end below the screen: the drawer loses most of its height, which near
         # the page's end is a clamp. Read the switch on every frame.
