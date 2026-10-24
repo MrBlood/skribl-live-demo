@@ -2440,10 +2440,16 @@ body.recoloring #canvas { cursor: crosshair !important; }
    10px gap and the card's top edge, its own bottom edge the card's colour,
    so the seam is not there to see; it is above the card for that, as the
    tiles are. Its words keep their place as it opens: the padding, not a
-   centring, puts them in the middle of the closed tile. */
+   centring, puts them in the middle of the closed tile. ONE LINE IN ANY
+   FONT, as the record clock's: the words are trimmed to cap height over the
+   baseline (text-box), so the + centres on the letters and not on the
+   font's ascent and descent (untrimmed, the + sat 1px low in this box's
+   face, and the tile was 56px for 48). They wrap below about 360px rather
+   than be cut short. */
 .mt-more { position: relative; z-index: 1; width: 100%; min-height: 0; margin-top: 8px; padding: 14px 14px;
   flex-direction: row; align-items: center; gap: 8px; }
-.mt-more-words { display: flex; align-items: baseline; gap: 6px; flex: 1 1 auto; min-width: 0; }
+.mt-more-words { flex: 1 1 auto; min-width: 0; font-size: 14px; line-height: 1.25; text-box: trim-both cap alphabetic; }
+.mt-more .mt-k, .mt-more .mt-v { white-space: normal; }
 .mt-more .mk { flex: none; width: 18px; height: 18px; color: var(--accent-ink); }
 .mt-more .mk-minus, .mt-more[aria-expanded="true"] .mk-plus { display: none; }
 .mt-more[aria-expanded="true"] .mk-minus { display: block; }

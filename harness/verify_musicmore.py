@@ -255,21 +255,65 @@ with sync_playwright() as pw:
         check(f"{_n}: opening and closing More keeps the loop",
               all(t == before for t in seen) and before["xf"] == 120, f"{before} then {seen}")
 
-        # It unfolds and folds away, read on every frame: opacity between 0 and
-        # 1 on the way, the tile still joined while it folds, then hidden.
+        # It unfolds and folds away: the animations themselves, read as the
+        # tap lands (opacity from 0 in, to 0 out, the draw drawer's 220ms and
+        # 180ms), and the frames, read on every one: some on the way in, and
+        # on the way out with the tile still joined, then hidden. One frame
+        # each way is the most a loaded machine guarantees: beside other
+        # suites a frame lasted up to 100ms and the unfold's ease is past 98%
+        # by half its time.
         FRAMES = """() => { window.__mf = []; const d = document.getElementById('fineTuneBody'), t = document.getElementById('fineTuneToggle'), t0 = performance.now();
             (function f() { window.__mf.push([Math.round(performance.now() - t0), d.hidden, +getComputedStyle(d).opacity, t.classList.contains('open')]);
-              if (performance.now() - t0 < 600) requestAnimationFrame(f); })(); }"""
-        pg.evaluate(FRAMES); pg.click("#fineTuneToggle"); pg.wait_for_timeout(700)
+              if (performance.now() - t0 < 600) requestAnimationFrame(f); })();
+            t.click();
+            return d.getAnimations().map(a => { const k = a.effect.getKeyframes(); return [+k[0].opacity, +k[k.length - 1].opacity, a.effect.getTiming().duration]; }); }"""
+        a_up = pg.evaluate(FRAMES); pg.wait_for_timeout(700)
         up = pg.evaluate("() => window.__mf")
-        pg.evaluate(FRAMES); pg.click("#fineTuneToggle"); pg.wait_for_timeout(700)
+        a_down = pg.evaluate(FRAMES); pg.wait_for_timeout(700)
         down = pg.evaluate("() => window.__mf")
         mid_up = [f for f in up if not f[1] and 0.02 < f[2] < 0.98]
         mid_down = [f for f in down if not f[1] and 0.02 < f[2] < 0.98 and f[3]]
         check(f"{_n}: More unfolds, and folds away joined to its tile before it goes",
-              len(mid_up) >= 2 and len(mid_down) >= 2 and down[-1][1] and not down[-1][3],
-              f"{len(mid_up)} frames on the way in, {len(mid_down)} on the way out; last {down[-1] if down else None}")
+              a_up == [[0, 1, 220]] and a_down == [[1, 0, 180]] and len(mid_up) >= 1 and len(mid_down) >= 1
+              and down[-1][1] and not down[-1][3],
+              f"animations {a_up} in, {a_down} out; {len(mid_up)} frames on the way in, {len(mid_down)} on the way out; last {down[-1] if down else None}")
         check(f"{_n}: no page errors through More", not errs, "; ".join(errs[:2]))
+        c.close()
+
+    # More's + sits on its words' line in any font: a centred line box
+    # centres the font's ascent and descent, not the letters, and fonts split
+    # those differently (the record clock's lesson, verify_ux). The words are
+    # trimmed to cap height (text-box), so the INK is measured, in each
+    # installed face forced onto the tile: the + within half a pixel of "More".
+    from PIL import Image as _Img
+    import io as _io
+    for _n, _p in eds("more"):
+        c = waits.instrument(b.new_context(device_scale_factor=2, **DESK))
+        c, pg, _ = editor(b, _n, _p, ctx=c, drawn=False)
+        faces = pg.evaluate("""() => ['DejaVu Sans', 'Liberation Sans', 'FreeSans'].filter(f => {
+            const x = document.createElement('canvas').getContext('2d'), t = 'More The restart';
+            x.font = '40px monospace'; const a = x.measureText(t).width;
+            x.font = '40px "' + f + '", monospace'; return Math.abs(x.measureText(t).width - a) > 0.5; })""")
+        off = {}
+        for f in faces:
+            pg.evaluate("""f => { let s = document.getElementById('moreFace'); if (!s) { s = document.createElement('style'); s.id = 'moreFace';
+                document.head.appendChild(s); } s.textContent = '#fineTuneToggle, #fineTuneToggle * { font-family: "' + f + '", sans-serif !important; }'; }""", f)
+            pg.wait_for_timeout(200)
+            g = pg.evaluate("""() => { const t = document.getElementById('fineTuneToggle'); t.scrollIntoView({ block: 'center' });
+                const r = t.getBoundingClientRect(), k = t.querySelector('.mt-k').getBoundingClientRect();
+                const m = [...t.querySelectorAll('.mk')].find(e => getComputedStyle(e).display !== 'none').getBoundingClientRect();
+                return { r: [r.left, r.top, r.width, r.height], k: [k.left - r.left, k.right - r.left], m: [m.left - r.left, m.right - r.left] }; }""")
+            im = _Img.open(_io.BytesIO(pg.screenshot(clip={"x": g["r"][0], "y": g["r"][1], "width": g["r"][2], "height": g["r"][3]}))).convert("RGB")
+            bg = im.getpixel((int((g["k"][1] + 4) * 2), 6))
+            def centre(x0, x1):
+                ys = [y for y in range(im.height) if any(sum(abs(a - b2) for a, b2 in zip(im.getpixel((x, y)), bg)) > 120
+                                                       for x in range(int(x0 * 2) + 1, int(x1 * 2) - 1))]
+                return (min(ys) + max(ys) + 1) / 4 if ys else None
+            kc, mc = centre(*g["k"]), centre(*g["m"])
+            off[f] = None if kc is None or mc is None else round(mc - kc, 2)
+        check(f"{_n}: More's + sits on its words' line, in every face there is to try",
+              len(faces) >= 2 and all(v is not None and abs(v) <= 0.5 for v in off.values()),
+              f"the + against the ink of More, px: {off}")
         c.close()
 
     # Reduce Motion: at once, both ways; nothing on the way.

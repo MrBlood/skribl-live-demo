@@ -22286,3 +22286,121 @@ three whole counts nearest what is heard, odd ones included (7 8 9), and an
 end let go near any beat settles on it. The streamline (the step 2 mock's
 second choice) replaces Make it with ends that settle on those counts, and the
 beat marks already count the bars, taller every fourth from the loop's start.
+
+## After v329 -- The music drawer, streamlined: one view and More (the owner: "we'll need to streamline it")
+
+The owner, with the three levels and the beat live: "The music drawer is so
+complicated. I think I liked it better before you did so much to it," then
+"Leave it for now but we'll need to streamline it." The step 2 mock
+photographed the drawer two ways, as planned and streamlined, and "I guess you
+should finish" took its five defaults: streamlined; loops in whole bars (4, 8,
+16, 32 beats); Smooth restart in More; Cut on silence on by default; and the
+streamline first, with today's strip, before step 2's timeline. Cut on silence
+comes with step 2. The owner asked whether we could go back to before any
+changes: yes, by reverting #613 and #611 in one PR (to check before such a
+merge: that drafts keep their songs and loops). Not done; it stays an offer.
+
+ONE VIEW, AND MORE. The drawer opens on the strip, the one line, the pair that
+plays (Play with my drawing, Hear the loop), Fit my drawing and Whole song,
+and More. More is a menu card the drawer's width, its name and what it holds
+on one line (More · The restart, the beat, exact times) and a drawn + at its
+end (a - while open), the words trimmed to cap height as the record clock's
+are (text-box), so the + sits on the letters in any font: untrimmed, it sat
+1px low in this box's face and the tile was 56px for 48; asserted in three
+faces. It opens in place, joined to its tile as the draw
+drawer's tiles are, and unfolds and folds away the way they do (Web
+Animations, at once under Reduce Motion); the drawer gets shorter only once
+the fold is done, and gently (lib/drawerdetent.js). It holds four parts, each
+under its name: The restart (Smooth restart, its length, Hear the restart),
+The beat (Tap the beat), Exact times (the loop detail, and Start and End of
+loop typed or stepped) and How it loops (Lock the length). Inside More's card
+the controls are on the drawer's paper again (paper, card, paper), and the
+loop detail has no box of its own there, which would be a card in a card.
+Whether More is open is remembered under the levels' key, one for both
+editors: 'fine' (Fine-tune) is open, anything else, the old Adjust too,
+closed. The ids stay: #fineTuneToggle is More's tile, #fineTuneBody what it
+opens, and #musicDetail's data-level still says which, set before More shows
+or hides, so lib/drawerdetent.js takes it as a move of its baseline and not
+as a song landing.
+
+THE ONE LINE: "4.00s · 8 beats · fits your drawing", then Skribl's pick, or
+Back to Skribl's pick, and for eight seconds after that, its Undo. It was
+three lines: the pick line ("Skribl picked the first 20 seconds, with a smooth
+restart."), Adjust's length line, and Fine-tune's sync line ("Comes round
+every 4.000s · 120 frames at 30 a second ..."). The length is what is heard,
+to the hundredth, in bold; the beats come once there is a tempo; the drawing,
+once there is one. A loop that was the pick and is not now, because the
+drawing changed, says only that it is shorter or longer than the drawing, and
+offers the way back: nobody is told they did something ("You've made your own
+loop" went with the rest of the old words). The strip's middle label ("0:04.25
+selected") went too, a second length beside the line's; the song's two ends
+stay under the strip, and a handle's bubble says its time while it moves.
+
+ITS HEIGHT NEVER CHANGES. Sized to what it said, the line wrapped on the
+owner's phone the moment the way back appeared ("Back to Skribl's pick" is
+169px of a 344px line), and everything under it dropped 24px with the finger
+still on the strip. Its words and its end now have fixed widths to share,
+340px and 190px, so below 540px the end always takes a second row and above
+it never does: 55.5px on the phone and 32px on a desk, whatever it says.
+
+WHOLE BARS (the owner: "we only ever want 4,8,16,... beats. Probably never
+going to odd numbers. Like 1 2 3 4.. 1 2 3 4 etc"). With a tempo, an end let
+go on the strip settles where the loop is 4, 8, 16 or 32 beats, the count
+nearest what the finger left, smooth restart and all, with the other end
+kept; a count the song or the 20s cap has no room for is passed over. The
+start settles as the end does. The settle glides there in 200ms, frame by
+frame, so the strip, its handles and the line move as one (a CSS transition
+on the handles alone would have left the strip's tint and the line to jump),
+at once under Reduce Motion; any other change to the loop stops it. Dragging
+the start no longer puts it on a beat, so the loop slid along the strip does:
+let go, its start settles on the nearest beat, its length kept. In the loop
+detail, a close-up, an end let go within 8px of a beat still settles on it,
+as before. Typed and stepped ends never settle, nor a locked loop's. - and +
+move 0.1s, or a bar once there is a tempo (so 12 beats is there, by asking
+for it), and their names and a line under them say which. Make it 7 8 9 went,
+as the mock said, and so did Each tap (0.01s, 1 frame, 0.1s, 1 beat, 1s), its
+frame, and the editors' frameSeconds hook that gave it.
+
+MEASURED as the mock measured (the controls you can see and press, and the
+drawer's height), on the Pad on the owner's phone with the cat drawn, a song
+and a tempo: the drawer as it opens has 7 controls and is 514px tall, where
+today's Simple had 9 (502px) and Adjust, where the beat's words were, 18
+(814px). With More open, 28 at 1243px; Fine-tune had 39 at 1320px.
+
+Pad and Flip: shared. The template, lib/musicdrawer.js and the CSS are one
+copy; each editor lost the strip's middle label and the frame hook.
+
+How it works: More takes Three levels' place; Skribl's pick says the line;
+Move the loop, Smooth restart, Tap the beat, Loop Detail, and Start and end
+say where they live now and which ends settle.
+
+TESTS. verify_musiclevels.py is verify_musicmore.py, the one view and More.
+verify_musicbeat.py lost Make it and Each tap's beat and gained whole bars
+(both ends, the room the song and the cap leave, the glide, Reduce Motion, the
+slide) and the loop detail's settle, with typed and locked ends that never
+settle. The suites that clicked a level now open More: verify_music,
+verify_sheetswipe, verify_contrast (Music, and Music with More open),
+verify_tools, verify_onepill, verify_theme, verify_ux and verify_parity, by
+aria-expanded (the tile is a disclosure; a row asking for aria-pressed would
+have closed an open More), and check_centring's two labels. verify_helpclaims
+names the new rows.
+
+Found while testing:
+
+- Playwright's own click scrolls a control into view at once. On a phone held
+  sideways More's tile is below the screen 400ms after a song lands, and the
+  click's scroll read as a 207px frame of the drawer's. The row taps the tile
+  where it is; on Flip held sideways, where the growth's reveal stops short of
+  the tile for the dock ("a short phone may still leave the last row to scroll
+  to"), it scrolls there first, as a person does.
+- verify_sheetswipe allowed no frame over 120px when the glide back to Adjust
+  was 238-262px. Closing More from the drawer's end glides about 700px, and the
+  browser's own smooth scroll moved 171px in one frame at its fastest. The cap
+  is a third of the whole move now, and 120px on a short one; the clamp it is
+  there for is the whole move in one frame.
+- In dark, the card's inset highlight (1px of white at 4%) shows as a faint
+  line under an open tile, under More's as under the draw drawer's. Left as
+  the draw drawer has it: one shape for both, and a fix for both together.
+
+Not tested here: dragging the strip with a finger on an iPhone (no WebKit),
+the sound, Segoe UI and SF.
