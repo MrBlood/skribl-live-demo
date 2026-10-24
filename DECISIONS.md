@@ -22748,3 +22748,29 @@ rows; the armed bin widened, its bin row on both editors (the switch pushed
 CI's numbers again). The same file served unchanged stayed green.
 
 Not tested here: a finger on an iPhone (no WebKit), the sound, Segoe UI and SF.
+
+## After v329 -- Tap the beat's row reads the song beside the tap's own handler (main green again)
+
+Main went red after step 2 in one shard: verify_musicbeat's "where the beat
+falls is the taps' own" on Flip, the tempo's beat 10ms from the taps' own
+(the row allows 5). Nothing in the drawer was wrong. The row read where the
+song had got to just before each click, and the tap's handler reads it again
+as it runs; the audio clock moves in steps (2.9 or 11.6ms here), and a busy
+page let it step between the two reads. Replayed on this box with the
+processor slowed sixfold, the handler read 11.6ms later than the row on four
+taps of six, and the row went red one time in six, the same way.
+
+The row now reads the song beside the handler: a listener on the button that
+goes first (capture, at the target) and one that goes after it, so the
+handler's own reading is between the two, equal to both unless the clock
+stepped in that moment. The tempo's beat has to lie between the two means,
+half a millisecond either side (it keeps four places), which is tighter than
+the 5ms it had and holds on a busy page.
+
+CALIBRATION, the processor slowed sixfold on Flip, a fresh page each: the old
+reading red one time in six, the new one green six of six (the clock stepped
+within a tap on two of them, and the handler's beat was between the two
+readings). The drawer broken in a copy served to the browser: the time to the
+ear left out (the beat 42ms late), and the beat not the taps' own (fixed at
+0): red on the Pad and Flip, two runs each. The same file served unchanged:
+green.
