@@ -22775,16 +22775,24 @@ ear left out (the beat 42ms late), and the beat not the taps' own (fixed at
 0): red on the Pad and Flip, two runs each. The same file served unchanged:
 green.
 
-## After v329 -- More starts closed every time; Each press picks how far - and + move
+## After v329 -- More starts closed every time; Each press picks how far - and + move; Snap to the beat
 
-Two of the owner's questions from the phone, and the picks. "More starts
+Three of the owner's questions from the phone, and the picks. "More starts
 open": it remembered an old Fine-tune, and with More open the music drawer is
 taller than a phone. Of always closed, closed today then remembered, or left
 remembering, the pick was always closed. Then "How to adjust step?", of Exact
 times' "- and + move 0.1s.": the streamline had made the step automatic (0.1s,
 or a bar once there is a tempo; before it, Each tap had five steps). Of
 leaving it, a small choice under the times, or holding for finer, the pick
-was the choice.
+was the choice. Then, of the whole bars: "It's cool how it snaps to a beat
+but if a song has a bunch of empty space at the beginning it ends up putting
+the beat in the middle rather than in the right spot. Can I no longer freely
+adjust start and end? It seems like it snaps no matter what." The start was
+never put on a beat, only the loop's length on whole bars, so a start in a
+quiet intro left every bar after it off the music. Of a let-go end landing on
+the beat marks, and a switch to turn snapping off, the pick was both, "if
+they let me set the starting point. I need a free set so it's not all
+automatic".
 
 MORE STARTS CLOSED, EVERY TIME (lib/musicdrawer.js): on a load, the old
 remembered key on file too, and whenever the music panel is put away (the
@@ -22792,13 +22800,32 @@ drawer closed, or Photo picked), when it closes at once, with nothing of it
 on the screen to fold. Nothing remembers it, so the drawer opens on its one
 view, which fits the owner's phone.
 
-EACH PRESS, under the times: one pill (lib/segslider.js), 0.01s, 0.1s or a
-bar, the bar dimmed until there is a tempo, as a dimmed button is. Untouched
-it is the step it was, 0.1s, and a bar once the beat is tapped; a step
-picked is kept, a tempo or not; a new song starts untouched. The buttons'
-names say the step ("End of loop, 0.01s later"); the line that said it went.
+EACH PRESS, under the times: one pill (lib/segslider.js), 0.01s, 0.1s, and a
+bar once there is a tempo. Untouched it is a bar while Snap to the beat is
+on, and the step it was, 0.1s, otherwise; a step picked is kept, a tempo or
+not; a new song starts untouched. The buttons' names say the step ("End of
+loop, 0.01s later"); the line that said it went. The bar was first dimmed
+until there was a tempo, as a dimmed button is, and read 2.5:1 on the dark
+desk card (verify_onepill: every label of a pill 4.5:1), with a title to say
+why that a phone never shows. It is not there until there is a tempo now.
 
-Pad and Flip: shared, the template and lib/musicdrawer.js.
+SNAP TO THE BEAT, under the tap once there is a tempo, on to start. On, a
+start let go on the timeline lands on the nearest beat and the end follows
+to whole bars (of 4, 8, 16 and 32 beats, the count nearest what is heard from
+there that the song and the 20s cap have room for); an end let go counts its
+whole bars from the start wherever it is, so a start set off the beat, typed
+or placed with the switch off, is never moved. The slid loop and a tap on the
+whole song start on a beat, and in the Restart view an end let go near a
+beat settles on it, as before. Off, nothing settles. Typed and pressed times
+never did and still do not. The switch is kept in the tempo, as snap: false,
+so it goes with the song into the drafts and the .skribl file and nothing
+else had to learn it; tapped again, the tempo keeps it; a new song has no
+tempo, so it starts on. The switch and the bar open out when the tempo lands,
+the row down and the pill across, frame by frame, so what is under them
+glides rather than jumps; at once under Reduce Motion.
+
+Pad and Flip: shared, the template, lib/musicdrawer.js and the CSS; neither
+editor changed.
 
 The tall-drawer fix's rows opened the drawer with More open to make it taller
 than a phone, which can no longer happen. The music drawer is still taller
@@ -22807,16 +22834,36 @@ the tall case now and the owner's 402x874, where it fits, the other; and a
 scroll on there moves the page about 90px, so the row asks 40, not 100.
 
 TESTS. verify_musicmore: More starts closed (a load with the old key on
-file, the drawer opened again, Photo and back); untouched, - and + move 0.1s
-or a bar and say which; Each press picks the step and keeps it, a tempo or
-not; a new song starts untouched. The tall-drawer rows as above.
-verify_musicbeat reads the name's contrast, verify_sheetswipe the row's air,
-verify_helpclaims the new rows. CALIBRATION, each part broken in a copy
-served to the browser, the file on disk untouched: the old key read back and
-the panel not watched (More's row red on both editors each time), the pick
-ignored, a bar never dimmed, the pick not forgotten for a new song, the
-buttons' names stale, the wheel not calling the opening off, and the cap
-taken out of the opening; each red on its own rows, and the same file served
-unchanged green. One row was wrong at first: the new song's row picked 0.1s
-before the new song, which untouched looks the same as, so it stayed green
-with the reset gone; it picks 0.01s now.
+file, the drawer opened again, Photo and back); untouched, - and + move 0.1s,
+or a bar once there is a tempo while Snap to the beat is on, and say which;
+Each press picks the step and keeps it, a tempo or not; a new song starts
+untouched. The tall-drawer rows as above. verify_musicbeat: the start let go
+lands on the nearest beat and the end follows; an end let go counts whole
+bars from the start wherever it is; the switch shows once there is a tempo,
+on to start, and says what it does; off, nothing settles (the start and the
+end on the timeline, the song slid, a tap on the whole song, an end near a
+beat in the Restart view); the switch and the bar open out frame by frame,
+at once under Reduce Motion; the switch is kept in the drafts, tapped again
+it stays, and a new song puts it away; its words read against what is behind
+them. verify_sheetswipe reads the step row's air, verify_helpclaims the new
+rows and the Snap to the beat tip.
+
+CALIBRATION, each part broken in a copy served to the browser, the file on
+disk untouched. More: the old key read back and the panel not watched (More's
+row red on both editors each time), the pick ignored, the pick not
+forgotten for a new song, the buttons' names stale, the wheel not
+calling the opening off, and the cap taken out of the opening. Snap to the
+beat: the switch ignored by the ends and the Restart view, and by the slid
+loop and the tap (the off row both times), the start let go settling the old
+way and not on a beat (the start's row both times), an end let go moving the
+start (the kept start's row), the switch doing nothing (its own row, the off
+row and the untouched step's), the tempo forgetting it (the drafts' row),
+tapping again forgetting it (its row), the switch shown with no tempo (its
+own row, the opening out, a new song's), the opening out in one frame, and
+under Reduce Motion (each its row), the bar always there (the step rows and
+the opening out), the untouched step ignoring the switch (its row) and the
+switch's words faint (the words' row in light and dark). Each red on both
+editors on its own rows, and the same files served unchanged green. One row
+was wrong at first: the new song's row picked 0.1s before the new song,
+which untouched looks the same as, so it stayed green with the reset gone; it
+picks 0.01s now.
