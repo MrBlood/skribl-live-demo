@@ -132,6 +132,12 @@ four passes and was "wonky" on a background drawing. A brush should show its
 real size (a circle the width of the blur) and do what its name says. Treat
 anything that changes ink the user didn't mean to change as a bug.
 
+**Exact control, not buttons that decide.** Of the Photo drawer mocks, which
+put the sliders behind More and added one-tap cards and quick picks: "I want
+to have exact control, not buttons that decide for me." Earlier, of Snap to the
+beat: "I need a free set so it's not all automatic." Keep the exact controls in
+view, and don't add a button that picks a value for the person.
+
 **Words follow what the user does.** "Save draft" and "save backup" were confused
 because only one of them makes a `.skribl` file. Label buttons by what they make.
 
