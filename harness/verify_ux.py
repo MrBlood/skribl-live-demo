@@ -1019,7 +1019,7 @@ with _sp204() as _p:
                 + struct.pack("<IHHIIHH", 16, 1, 1, rate, rate * 2, 2, 16)
                 + b"data" + struct.pack("<I", len(frames)) + frames)
     _AUD = wav_bytes()
-    for pw in (340, 363, 390, 1280):
+    for pw in (340, 363, 375, 390, 1280):
         mp = _b.new_page(viewport={"width": pw, "height": 844})
         mp.goto(BASE + "/", wait_until="load"); waits.settle(mp, 700)
         browsing.pad_drawer(mp, "music"); mp.wait_for_timeout(300)
@@ -1047,18 +1047,19 @@ with _sp204() as _p:
         check(f"V207: at {pw}px the nudge pills do not overlap each other or spill their column", not _ov["overlap"] and not _ov["spill"], str(_ov))
         if pw <= 640:
             # v210 (owner's iPhone): Start and End share a row. Step size, a
-            # third group under them, is Each tap now, its own row above them
-            # (lib/musicdrawer.js). The overlap/spill check above still guards
-            # the class at every width.
+            # third group under them, was Each tap, and is gone (lib/
+            # musicdrawer.js). The overlap/spill check above still guards the
+            # class at every width.
             _rows = mp.evaluate("""() => [...document.querySelectorAll('#fineTuneBody .edge-group')]
                 .map(e => Math.round(e.getBoundingClientRect().top))""")
-            if pw >= 363:
+            if pw >= 375:
                 check(f"V210: at {pw}px Start of loop and End of loop share a row",
                       len(_rows) == 2 and _rows[0] == _rows[1], f"group tops {_rows}")
             else:
-                # 340 cannot hold two 130px groups (the grid is the screen less
-                # 78px, and two need 270); the grid must fall back to one
-                # column rather than spill (v207 bug class).
+                # 363 and 340 cannot hold two 130px groups: inside More's card
+                # the grid is the screen less 104px (it was 78px on the drawer's
+                # paper, two-up from 348), and two need 270. The grid must fall
+                # back to one column rather than spill (v207 bug class).
                 check(f"V210: at {pw}px (too narrow for 2-up) the nudge groups stack one per row",
                       len(_rows) == 2 and _rows[1] > _rows[0], f"group tops {_rows}")
         if pw == 1280:

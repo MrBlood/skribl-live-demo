@@ -22304,18 +22304,23 @@ ONE VIEW, AND MORE. The drawer opens on the strip, the one line, the pair that
 plays (Play with my drawing, Hear the loop), Fit my drawing and Whole song,
 and More. More is a menu card the drawer's width, its name and what it holds
 on one line (More · The restart, the beat, exact times) and a drawn + at its
-end (a - while open), the words trimmed to cap height as the record clock's
-are (text-box), so the + sits on the letters in any font: untrimmed, it sat
-1px low in this box's face and the tile was 56px for 48; asserted in three
-faces. It opens in place, joined to its tile as the draw
+end (a - while open). Its words are one block, which lib/labels.js trims to
+cap height over the baseline as it does every button's label (.lbl-own), so
+the + sits on the letters in any font; the first build's words were a flex
+row, which cannot be trimmed, and the + sat 1-2px low and the tile was 56px
+for 48. Asserted on the ink in nine faces, the ones that split ascent and
+descent unlike the app's among them. It opens in place, joined to its tile as the draw
 drawer's tiles are, and unfolds and folds away the way they do (Web
 Animations, at once under Reduce Motion); the drawer gets shorter only once
 the fold is done, and gently (lib/drawerdetent.js). It holds four parts, each
 under its name: The restart (Smooth restart, its length, Hear the restart),
 The beat (Tap the beat), Exact times (the loop detail, and Start and End of
 loop typed or stepped) and How it loops (Lock the length). Inside More's card
-the controls are on the drawer's paper again (paper, card, paper), and the
-loop detail has no box of its own there, which would be a card in a card.
+the loop detail has no box of its own, which would be a card in a card, and
+every choice keeps the menu's white card, as every choice in a drawer does:
+the first build put them on the paper (paper, card, paper, as the draw
+drawer's choices sit in its card), and verify_contrast's census, the owner's
+sheets rule, said so.
 Whether More is open is remembered under the levels' key, one for both
 editors: 'fine' (Fine-tune) is open, anything else, the old Adjust too,
 closed. The ids stay: #fineTuneToggle is More's tile, #fineTuneBody what it
@@ -22398,6 +22403,12 @@ Found while testing:
   browser's own smooth scroll moved 171px in one frame at its fastest. The cap
   is a third of the whole move now, and 120px on a short one; the clamp it is
   there for is the whole move in one frame.
+- Inside More's card the Start and End of loop grid is 26px narrower than on
+  the drawer's paper, so the two sit side by side from 374px (the owner's 402,
+  and 375) where they did from 348, and stack below, as they always did where
+  two do not fit (verify_ux V210 asks it at 375 now, and stacking at 363). The
+  time was not narrowed to win the room back: "19.999" is 53px in this box's
+  face and 62px in DejaVu Sans, in a 60px field.
 - In dark, the card's inset highlight (1px of white at 4%) shows as a faint
   line under an open tile, under More's as under the draw drawer's. Left as
   the draw drawer has it: one shape for both, and a fix for both together.

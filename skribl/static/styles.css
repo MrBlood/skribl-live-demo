@@ -2440,15 +2440,15 @@ body.recoloring #canvas { cursor: crosshair !important; }
    10px gap and the card's top edge, its own bottom edge the card's colour,
    so the seam is not there to see; it is above the card for that, as the
    tiles are. Its words keep their place as it opens: the padding, not a
-   centring, puts them in the middle of the closed tile. ONE LINE IN ANY
-   FONT, as the record clock's: the words are trimmed to cap height over the
-   baseline (text-box), so the + centres on the letters and not on the
-   font's ascent and descent (untrimmed, the + sat 1px low in this box's
-   face, and the tile was 56px for 48). They wrap below about 360px rather
-   than be cut short. */
+   centring, puts them in the middle of the closed tile. Its words are ONE
+   BLOCK, not a flex row: lib/labels.js trims a button's label to cap height
+   over the baseline (labels.css .lbl-own), so the + centres on the letters
+   and not on the font's ascent and descent. A flex row cannot be trimmed: in
+   the first build the + sat 1-2px low and the tile was 56px for 48. They
+   wrap below about 360px rather than be cut short. */
 .mt-more { position: relative; z-index: 1; width: 100%; min-height: 0; margin-top: 8px; padding: 14px 14px;
   flex-direction: row; align-items: center; gap: 8px; }
-.mt-more-words { flex: 1 1 auto; min-width: 0; font-size: 14px; line-height: 1.25; text-box: trim-both cap alphabetic; }
+.mt-more-words { flex: 1 1 auto; min-width: 0; font-size: 14px; line-height: 1.25; }
 .mt-more .mt-k, .mt-more .mt-v { white-space: normal; }
 .mt-more .mk { flex: none; width: 18px; height: 18px; color: var(--accent-ink); }
 .mt-more .mk-minus, .mt-more[aria-expanded="true"] .mk-plus { display: none; }
@@ -2495,19 +2495,19 @@ body.recoloring #canvas { cursor: crosshair !important; }
 @media (hover: hover) { .mt-play:not(:disabled):not(.mt-loop):hover { filter: brightness(1.08); }
   .mt-play.mt-loop:not(:disabled):hover { background: color-mix(in srgb, var(--accent) 7%, var(--menu-card)); } }
 
-/* TAP THE BEAT, in More: the tap is on the drawer's paper inside More's card
-   (paper, card, paper), with the small violet words, lit while it listens. */
+/* TAP THE BEAT, in More: the tap is a menu card with the small violet words,
+   lit while it listens. */
 .mt-beat { margin-top: 6px; }
 .mt-tap-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; }
 .mt-tap { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 6px 16px 6px 12px; border-radius: 999px;
-  border: 1px solid var(--menu-card-line); background: var(--menu-paper);
+  border: 1px solid var(--menu-card-line); background: var(--menu-card); box-shadow: var(--menu-card-drop);
   color: var(--accent-ink); font: inherit; font-size: 14px; font-weight: 650; cursor: pointer;
   -webkit-tap-highlight-color: transparent; transition: background .15s ease, box-shadow .15s ease; }
 .mt-tap svg { width: 18px; height: 18px; flex: none; }
 .mt-tap.tapping { background: var(--seg-on-fill); border-color: transparent; color: var(--seg-on-ink);
   box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 28%, transparent); }
 .mt-tap:focus-visible { outline: 2px solid var(--ui-hi); outline-offset: 2px; }
-@media (hover: hover) { .mt-tap:not(.tapping):hover { background: color-mix(in srgb, var(--accent) 7%, var(--menu-paper)); } }
+@media (hover: hover) { .mt-tap:not(.tapping):hover { background: color-mix(in srgb, var(--accent) 7%, var(--menu-card)); } }
 .mt-tempo { flex: 1 1 150px; min-width: 0; font-size: 13px; line-height: 1.35; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
 .mt-tempo b { color: var(--text-primary); font-weight: 650; }
 
@@ -5134,10 +5134,11 @@ button:not([hidden]):has(> svg.mk:only-child) { display: inline-flex; align-item
      [- 0.000 +] group, where two fit; below that they stack. Each column must
      hold a whole group: 130px with the 16px time (2px gaps and padding, 30px
      buttons). minmax(130) + 10px gap = 270, and the grid is the screen less
-     78px: two-up from 348px (285px at 363, 312 at 390), one column at 340
-     (262px) and 320 rather than spilling the group -- the bug class verify_ux
-     caught at 363. (Step size was a third column here; Each tap is its own
-     row above now.) */
+     104px inside More's card (it was 78px on the drawer's paper): two-up from
+     374px (271px at 375, 298 at the owner's 402), one column at 363 and 340
+     rather than spilling the group -- the bug class verify_ux caught at 363.
+     The time is not narrowed to win the 26px back: "19.999" is 53px in this
+     box's face and 62px in DejaVu Sans. */
   .finetune-grid {
     display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
     gap: 16px 10px; align-items: stretch;
@@ -9114,14 +9115,11 @@ body.drawalong .canvas-empty-hint { display: none; }
 :where(.tab-panel, .media-card, .shape-pop, .tool-tray, .tune-shell) :is(.reposition-btn, .panel-btn, .clear-drawer-btn,
     .edge-controls, .mag-step, .slider-nudge-btn, .eyedropper-btn) { border-radius: var(--r-control); }
 :where(.tab-panel, .media-card) .loop-zoom { border-radius: var(--r-card); }
-:where(.tab-panel, .media-card) .nudge-btn { background: color-mix(in srgb, var(--accent) 7%, var(--menu-paper)); }
-/* INSIDE MORE, a card, its controls are paper again: paper, card, paper, as
-   the draw drawer's choices sit in its card. The loop detail's own box would
-   be a card in a card, so it has none there; its hovers are said again, after
-   this. (The - and + above sit in More's edge groups, which are paper.) */
-:where(.tab-panel, .media-card) .fine-tune-body :is(.seg, .loop-btn:where(.subtle), .edge-controls, .mag-step, .slider-nudge-btn) { background: var(--menu-paper); }
+:where(.tab-panel, .media-card) .nudge-btn { background: color-mix(in srgb, var(--accent) 7%, var(--menu-card)); }
+/* INSIDE MORE, a card, the loop detail has no box of its own, which would be
+   a card in a card. Its choices keep the menu's white card, as every choice
+   in a drawer does (the owner's sheets rule; verify_contrast). */
 :where(.tab-panel, .media-card) .fine-tune-body .loop-zoom { background: none; border: 0; border-radius: 0; padding: 0; margin-top: 6px; }
-@media (hover: hover) { :where(.tab-panel, .media-card) .fine-tune-body .slider-nudge-btn:hover { background: var(--surface-nudge-hover); } }
 :where(.tab-panel, .media-card, .tool-tray, .tune-shell) .drawer-divider { background: var(--menu-card-line); }
 /* Words in the drawers that were too faint (the drawers mock, measured on the
    loaded photo and music drawers): secondary words take the sheet's ink, and

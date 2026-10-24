@@ -798,11 +798,10 @@ CONTROL_ALIASES = {
     "Add music MP3, WAV, M4A or OGG · it loops under every page": "add a track",
     "Toggle music on or off": "turns the music off without removing it",
     "Remove the track": "removes the track", "Scroll the loop detail view": "scroll to move along the waveform",
-    "How much control": "as much control as you want",
-    "Loop starts at, in seconds": "type where the loop starts and ends",
-    "Loop ends at, in seconds": "type where the loop starts and ends",
-    "Start of loop, earlier": "move each with − and +", "Start of loop, later": "move each with − and +",
-    "End of loop, earlier": "move each with − and +", "End of loop, later": "move each with − and +",
+    "More The restart, the beat, exact times": "the restart, the beat and exact times, one tap away",
+    # - and + say how far a press goes (0.1s; a bar once there is a tempo, which this page has not)
+    "Start of loop, 0.1s earlier": "move each with − and +", "Start of loop, 0.1s later": "move each with − and +",
+    "End of loop, 0.1s earlier": "move each with − and +", "End of loop, 0.1s later": "move each with − and +",
     "Smooth restart length": "it makes the loop shorter by its length",
     # named with what they say before there is a drawing
     "Fit my drawing once you've drawn": "makes what you hear as long as your",

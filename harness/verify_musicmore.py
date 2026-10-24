@@ -218,15 +218,21 @@ with sync_playwright() as pw:
         closed = set(pg.evaluate(SHOWN, ALL))
         tile = pg.evaluate("() => { const t = document.getElementById('fineTuneToggle');"
                            " return [t.querySelector('.mt-k').textContent, t.querySelector('.mt-v').textContent, t.getAttribute('aria-expanded'), t.getAttribute('aria-controls')]; }")
+        # The drawn mark the tile ends on (lib marks, _skribl_marks.html): + closed, - open.
+        MARK = "() => ['.mk-plus', '.mk-minus'].filter(s => { const m = document.querySelector('#fineTuneToggle ' + s); return m && getComputedStyle(m).display !== 'none'; })"
+        mark_closed = pg.evaluate(MARK)
         check(f"{_n}: a new drawer opens on the one view: the strip, the one line, the pair that plays, the two picks and More, and nothing deeper",
               closed == set(VIEW) and tile == ["More", "The restart, the beat, exact times", "false", "fineTuneBody"],
               f"extra {sorted(closed - set(VIEW))}, missing {sorted(set(VIEW) - closed)}; the tile {tile}")
         set_more(pg, True)
         opened = set(pg.evaluate(SHOWN, ALL))
         heads = pg.evaluate("() => [...document.querySelectorAll('#fineTuneBody > .mt-sect')].map(p => p.textContent)")
+        mark_open = pg.evaluate(MARK)
         check(f"{_n}: More opens the restart, the beat, exact times and how it loops, each under its name",
               opened == set(VIEW + MORE) and heads == SECTIONS and pg.get_attribute("#fineTuneToggle", "aria-expanded") == "true",
               f"extra {sorted(opened - set(VIEW + MORE))}, missing {sorted(set(VIEW + MORE) - opened)}; {heads}")
+        check(f"{_n}: More's tile ends on a drawn +, and a - while it is open",
+              mark_closed == [".mk-plus"] and mark_open == [".mk-minus"], f"closed {mark_closed}, open {mark_open}")
         # Joined: the open tile reaches over the card's top edge and is above it,
         # so the point just inside the card's edge is the tile's.
         j = pg.evaluate("""() => { const t = document.getElementById('fineTuneToggle'), d = document.getElementById('fineTuneBody');
@@ -283,21 +289,27 @@ with sync_playwright() as pw:
     # More's + sits on its words' line in any font: a centred line box
     # centres the font's ascent and descent, not the letters, and fonts split
     # those differently (the record clock's lesson, verify_ux). The words are
-    # trimmed to cap height (text-box), so the INK is measured, in each
-    # installed face forced onto the tile: the + within half a pixel of "More".
+    # one block, which lib/labels.js trims to cap height (labels.css
+    # .lbl-own; a flex row cannot be trimmed), so the INK is measured, in the page's
+    # own face and in each installed face forced onto the tile: the + within
+    # half a pixel of "More". The faces that split ascent and descent unlike
+    # the app's are the ones that can tell: with the trim taken off, the + sat
+    # 2px low in DejaVu Serif, 1.5 in FreeSerif, 1 in IPAPGothic and Inter
+    # Display, and level in the sans faces; trimmed, within half a pixel in all.
     from PIL import Image as _Img
     import io as _io
     for _n, _p in eds("more"):
         c = waits.instrument(b.new_context(device_scale_factor=2, **DESK))
         c, pg, _ = editor(b, _n, _p, ctx=c, drawn=False)
-        faces = pg.evaluate("""() => ['DejaVu Sans', 'Liberation Sans', 'FreeSans'].filter(f => {
+        faces = [None] + pg.evaluate("""() => ['DejaVu Sans', 'Liberation Sans', 'FreeSans', 'Inter', 'Inter Display',
+            'DejaVu Serif', 'FreeSerif', 'IPAPGothic'].filter(f => {
             const x = document.createElement('canvas').getContext('2d'), t = 'More The restart';
             x.font = '40px monospace'; const a = x.measureText(t).width;
             x.font = '40px "' + f + '", monospace'; return Math.abs(x.measureText(t).width - a) > 0.5; })""")
         off = {}
         for f in faces:
             pg.evaluate("""f => { let s = document.getElementById('moreFace'); if (!s) { s = document.createElement('style'); s.id = 'moreFace';
-                document.head.appendChild(s); } s.textContent = '#fineTuneToggle, #fineTuneToggle * { font-family: "' + f + '", sans-serif !important; }'; }""", f)
+                document.head.appendChild(s); } s.textContent = f ? '#fineTuneToggle, #fineTuneToggle * { font-family: "' + f + '", sans-serif !important; }' : ''; }""", f)
             pg.wait_for_timeout(200)
             g = pg.evaluate("""() => { const t = document.getElementById('fineTuneToggle'); t.scrollIntoView({ block: 'center' });
                 const r = t.getBoundingClientRect(), k = t.querySelector('.mt-k').getBoundingClientRect();
@@ -310,9 +322,9 @@ with sync_playwright() as pw:
                                                        for x in range(int(x0 * 2) + 1, int(x1 * 2) - 1))]
                 return (min(ys) + max(ys) + 1) / 4 if ys else None
             kc, mc = centre(*g["k"]), centre(*g["m"])
-            off[f] = None if kc is None or mc is None else round(mc - kc, 2)
+            off[f or "the page's own"] = None if kc is None or mc is None else round(mc - kc, 2)
         check(f"{_n}: More's + sits on its words' line, in every face there is to try",
-              len(faces) >= 2 and all(v is not None and abs(v) <= 0.5 for v in off.values()),
+              len(faces) >= 5 and all(v is not None and abs(v) <= 0.5 for v in off.values()),
               f"the + against the ink of More, px: {off}")
         c.close()
 
