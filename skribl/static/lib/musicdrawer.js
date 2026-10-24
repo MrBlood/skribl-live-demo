@@ -340,6 +340,7 @@
     function stopGlide() { if (glideRaf) { global.cancelAnimationFrame(glideRaf); glideRaf = 0; } }
     function setEdge(which, time, mode) {
       stopGlide();
+      if (tl && tl.focus) tl.focus(which);
       var t = h.trim(), n;
       if (locked) {
         var len = t.end - t.start, s = Math.max(0, Math.min(t.duration - len, t.start + time - (which === 'start' ? t.start : t.end)));
