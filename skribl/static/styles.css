@@ -2948,10 +2948,11 @@ body.recoloring #canvas { cursor: crosshair !important; }
 @media (hover: hover) { .loop-btn:hover { filter: brightness(1.08); } }
 .loop-btn:disabled { opacity: 0.4; cursor: default; }
 
+/* Start and End of loop, straight under their name, Exact times: the rule
+   that sat above them parted them from the loop detail, which went with step
+   2, and alone it parted the fields from their own name. */
 .finetune-panel {
-  margin-top: 16px;
-  padding-top: 16px;
-  border-top: 1px solid var(--line);
+  margin-top: 8px;
 }
 
 .finetune-grid {

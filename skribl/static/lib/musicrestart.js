@@ -60,6 +60,9 @@
       var st = getComputedStyle(root), tok = function (n) { return st.getPropertyValue(n).trim(); };
       var acc = tok('--accent'), ink = tok('--accent-ink');
       var g = ends(), w2 = w / 2, dur = g.t.duration, mid = hh / 2 + 6, room = hh / 2 - 22;
+      // What is painted, for whoever asks (the harness): the two windows and
+      // each beat on either side.
+      var drawn = root._painted = { end: [g.e - W, g.e], start: [g.s, g.s + W], beats: [], blend: g.xf };
       var bx = g.xf > 0 ? Math.min(w, w2 + g.xf / W * w2) : w2;
       if (g.xf > 0) {
         var gr = x.createLinearGradient(w2, 0, bx, 0);
@@ -92,6 +95,7 @@
             x.strokeStyle = ink; x.globalAlpha = 0.5; x.lineWidth = 1; x.setLineDash([2, 3]);
             x.beginPath(); x.moveTo(px, 26); x.lineTo(px, hh - 6); x.stroke(); x.setLineDash([]);
             x.globalAlpha = 0.95; x.fillStyle = ink; x.beginPath(); x.arc(px, 26, 2.6, 0, 7); x.fill(); x.globalAlpha = 1;
+            drawn.beats.push([sd[0], +px.toFixed(2), +(tp.phase + k * p).toFixed(4)]);
           }
         });
       }

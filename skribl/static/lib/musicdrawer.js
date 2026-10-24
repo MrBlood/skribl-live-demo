@@ -361,16 +361,23 @@
       }
       glideTo(n.start, n.end);
     }
+    // Where a loop of `len` starting near `start` starts on a beat: the
+    // nearest beat, or at either end of the song the one on the side there is
+    // room. `start` itself without a tempo, or with no room either side.
+    function beatFor(start, len) {
+      var tp = tempo(), p = beatSecs(), d = h.trim().duration;
+      if (!tp) return start;
+      var beat = tp.phase + Math.round((start - tp.phase) / p) * p;
+      if (beat + len > d + EPS) beat -= p;
+      if (beat < -EPS) beat += p;
+      return beat < -EPS || beat + len > d + EPS ? start : Math.max(0, beat);
+    }
     // A slid loop, let go: with a tempo its start settles on the nearest beat.
     function onBeat() {
-      var tp = tempo(), p = beatSecs();
-      if (!tp || !h.hasTrack()) return;
-      var t = h.trim(), len = t.end - t.start, beat = tp.phase + Math.round((t.start - tp.phase) / p) * p;
-      // At either end of the song, the beat on the side there is room.
-      if (beat + len > t.duration + EPS) beat -= p;
-      if (beat < -EPS) beat += p;
-      if (beat < -EPS || beat + len > t.duration + EPS || Math.abs(beat - t.start) < EPS) return;
-      glideTo(Math.max(0, beat), Math.max(0, beat) + len);
+      if (!h.hasTrack()) return;
+      var t = h.trim(), len = t.end - t.start, beat = beatFor(t.start, len);
+      if (Math.abs(beat - t.start) < EPS) return;
+      glideTo(beat, beat + len);
     }
 
     /* ---- The timeline (lib/musictimeline.js): the drawing stays put and the
@@ -385,7 +392,11 @@
       lane: h.lane, laneKey: h.laneKey, name: laneName, still: still,
       edge: function (which, t) { setEdge(which, t, 'constrain'); },
       slide: slideTo,
-      glide: function (s, e) { glideTo(s, e); },
+      // A tap on the whole song: the loop glides there, starting on a beat.
+      jump: function (start) {
+        var t = h.trim(), len = t.end - t.start, s0 = beatFor(Math.max(0, Math.min(t.duration - len, start)), len);
+        glideTo(s0, s0 + len);
+      },
       letGo: function (kind, which) { if (kind === 'end') snap(which, 0); else onBeat(); h.changed(); }
     }) : null;
 

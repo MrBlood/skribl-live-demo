@@ -50,7 +50,8 @@
  *   name(secs)          the words over the drawing's lane
  *   edge(which, t)      move an end there (during a drag)
  *   slide(start)        move the loop there, its length kept
- *   glide(start, end)   the same, gliding there (a tap on the whole song)
+ *   jump(start)         the same, gliding there and onto a beat (a tap on the
+ *                       whole song)
  *   letGo(kind, which)  a drag that moved something is over ('end' | 'slide')
  *   still()             Reduce Motion
  * Returns { draw, reset, playhead(t), x(t), view(), held() }. */
@@ -137,6 +138,9 @@
       }
       lastT = now;
       paint();
+      // The view, for whoever reads it (the harness): the time at the left
+      // edge and the seconds across, as painted.
+      if (view) root.dataset.view = view.v0.toFixed(4) + ' ' + view.span.toFixed(4);
       if ((!held && view !== goal) || (held && held.kind === 'end' && held.zone)) request();
     }
     function request() { if (!raf) raf = global.requestAnimationFrame(frame); }
@@ -164,6 +168,9 @@
       x.setTransform(dpr, 0, 0, dpr, 0, 0);
       x.clearRect(0, 0, w, hh);
       if (!ok) return;
+      // What is painted, as it is painted, for whoever asks (the harness):
+      // each mark on the drawing's lane, each comes-round line, each beat.
+      var drawn = root._painted = { marks: [], lines: [], beats: [], turns: 0 };
       var st = getComputedStyle(root), tok = function (n) { return st.getPropertyValue(n).trim(); };
       var acc = tok('--accent'), ink = tok('--accent-ink'), fill = tok('--accent-fill') || acc;
       var card = tok('--menu-card'), line = tok('--menu-card-line'), paper = tok('--menu-paper') || card;
@@ -184,6 +191,7 @@
         }
         turns.forEach(function (tn) {
           var c2 = tn[0], off = tn[1], stop = tn[2], lastX = -1;
+          drawn.turns = c2 + 1;
           if (c2) {
             var b0 = X(s0 + off + again.from), b1 = Math.min(X(s0 + off + again.from + again.period), X(stop));
             if (b1 - b0 < 2) return;
@@ -201,6 +209,7 @@
             x.fillStyle = numbered ? fill : acc;
             rr(A + (numbered ? 1.5 : 0), numbered ? 4 : 6, Math.max(3, B - A - (numbered ? 3 : 0)), LANE - (numbered ? 8 : 12), numbered ? 4 : 3);
             x.fill();
+            drawn.marks.push([+A.toFixed(2), +B.toFixed(2), c2]);
             lastX = B;
             if (numbered && !c2 && B - A > 18) {
               x.globalAlpha = 1; x.fillStyle = '#fff'; x.font = '650 11px ' + st.fontFamily; x.textBaseline = 'middle';
@@ -217,6 +226,7 @@
           if (hl / view.span * w < 4) break;
           x.strokeStyle = ink; x.globalAlpha = 0.8; x.setLineDash([3, 3]); x.lineWidth = 1.5;
           x.beginPath(); x.moveTo(rx, 0); x.lineTo(rx, hh); x.stroke(); x.setLineDash([]); x.globalAlpha = 1; lines++;
+          drawn.lines.push(+rx.toFixed(2));
         }
       } else {
         x.setLineDash([4, 4]); rr(a0, 0.5, Math.max(40, w * 0.25), LANE - 1, 8); x.strokeStyle = line; x.stroke(); x.setLineDash([]);
@@ -250,6 +260,7 @@
           if (ppb * 4 < 6 && ((kb - k0) % 16 + 16) % 16) continue;
           x.fillStyle = ink; x.globalAlpha = bar ? 0.9 : 0.75;
           x.beginPath(); x.arc(X(tp.phase + kb * p), sTop + 8, bar ? 2.4 : 1.7, 0, 7); x.fill();
+          drawn.beats.push([+X(tp.phase + kb * p).toFixed(2), bar, +(tp.phase + kb * p).toFixed(4)]);
         }
         x.globalAlpha = 1;
       }
@@ -335,23 +346,26 @@
     }
     if (D && stage) D.bind(stage, grab);
     // The whole song's line: the loop goes where the finger is, its middle
-    // under it, gliding there from a tap and following a drag; let go, it
-    // settles as a slid loop does.
+    // under it. A tap glides it there, onto a beat once there is a tempo; a
+    // drag follows the finger and, let go, settles as a slid loop does.
     if (D && whole) D.bind(whole, function (e) {
       if (!h.hasTrack()) return null;
       e.preventDefault();
-      var g = { kind: 'slide' };
+      var g = { kind: 'slide', moved: false, x0: EP.at(e).clientX };
       held = g;
       root.classList.add('holding');
       function at(cx) {
         var r = whole.getBoundingClientRect(), t = trim(), len = t.end - t.start;
         return Math.max(0, Math.min(t.duration - len, (cx - r.left) / r.width * t.duration - len / 2));
       }
-      var s = at(EP.at(e).clientX), len0 = trim().end - trim().start;
-      h.glide(s, s + len0);
+      h.jump(at(g.x0));
       return {
-        move: function (cx) { h.slide(at(cx)); },
-        end: function () { held = null; root.classList.remove('holding'); h.letGo('slide', null); draw(); }
+        move: function (cx) {
+          if (!g.moved && Math.abs(cx - g.x0) < 2) return;
+          g.moved = true;
+          h.slide(at(cx));
+        },
+        end: function () { held = null; root.classList.remove('holding'); if (g.moved) h.letGo('slide', null); draw(); }
       };
     });
 
