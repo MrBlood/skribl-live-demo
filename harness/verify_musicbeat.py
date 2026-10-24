@@ -134,18 +134,25 @@ TAPS = """(o) => new Promise((res) => { const b = document.getElementById('music
     due += o.gaps[i++]; setTimeout(go, Math.max(0, t0 + due - performance.now() - 15)); };
   setTimeout(go, o.lead || 0); })"""
 # Taps on the song's own beat, `off` past each half second as heard: timed on
-# the page's clock from one reading of the song's (which moves in 8-21ms
-# steps), less the time the sound takes to reach the ear; each tap says where
-# the song had got to, as heard, as it landed: read just before its click, as
-# the tap's own handler reads it first thing (read after, the handler's work
-# let the clock take a step on some taps, and the means drifted 7ms apart).
+# the page's clock from one reading of the song's (which moves in steps, of
+# 2.9 or 11.6ms on this box), less the time the sound takes to reach the ear.
+# Where the song had got to as each tap landed is read BESIDE THE TAP'S OWN
+# HANDLER: by a listener on the button that goes first (capture, at the
+# target) and one that goes after it, so the handler's own reading is between
+# the two, and equal to both unless the clock stepped in that moment. Read
+# before the click, a busy page let the clock step before the handler on some
+# taps (CI, Flip: the means 10ms apart; here, the processor slowed sixfold,
+# 11.6ms on four taps of six); read after it alone, the other way (7ms).
 # Woken early as TAPS is.
-ON_BEAT = """(o) => new Promise((res) => { const b = document.getElementById('musicTapBtn'), seen = [], off = [];
+ON_BEAT = """(o) => new Promise((res) => { const b = document.getElementById('musicTapBtn'), seen = [], after = [], off = [];
   const lat = _waLoop.latency(), heard = () => trimStart + _waLoop.elapsed() - lat;
+  const first_ = () => seen.push(heard()), last_ = () => after.push(heard());
+  b.addEventListener('click', first_, true); b.addEventListener('click', last_);
   const s0 = heard(), t0 = performance.now(), first = Math.ceil((s0 - o.off) / 0.5) * 0.5 + o.off + 0.5;
   const mark = (k) => t0 + (first + k * 0.5 - s0) * 1000;
-  const go = () => { const k = seen.length; while (performance.now() < mark(k)) {} off.push(performance.now() - mark(k)); const s = heard(); b.click(); seen.push(s);
-    if (seen.length >= o.n) { res({ seen, lat, spread: Math.max(...off) - Math.min(...off) }); return; }
+  const go = () => { const k = seen.length; while (performance.now() < mark(k)) {} off.push(performance.now() - mark(k)); b.click();
+    if (seen.length >= o.n) { b.removeEventListener('click', first_, true); b.removeEventListener('click', last_);
+      res({ seen, after, lat, spread: Math.max(...off) - Math.min(...off) }); return; }
     setTimeout(go, Math.max(0, mark(seen.length) - performance.now() - 15)); };
   setTimeout(go, Math.max(0, mark(0) - performance.now() - 15)); })"""
 # A machine busy enough to hold a tap up past its mark anyway makes a tempo a
@@ -402,12 +409,18 @@ with sync_playwright() as pw:
         pg.wait_for_timeout(2300)
         st = pg.evaluate(SAID)
         ph = st["kept"]["phase"] if st["kept"] else None
-        seen = got["seen"]
-        x = sum(math.cos(2 * math.pi * s / 0.5) for s in seen); y = sum(math.sin(2 * math.pi * s / 0.5) for s in seen)
-        mean = (math.atan2(y, x) / (2 * math.pi) * 0.5) % 0.5
+
+        def mean_of(xs):
+            x = sum(math.cos(2 * math.pi * s / 0.5) for s in xs); y = sum(math.sin(2 * math.pi * s / 0.5) for s in xs)
+            return (math.atan2(y, x) / (2 * math.pi) * 0.5) % 0.5
+        # The handler's own mean is between the two readings' (the tempo keeps
+        # four places: half a millisecond either side).
+        lo, hi = sorted((mean_of(got["seen"]), mean_of(got["after"])))
+        stepped = sum(1 for a, z in zip(got["seen"], got["after"]) if abs(z - a) > 1e-9)
         check(f"{_n}: where the beat falls is the taps' own, read off the song's clock as heard",
-              ph is not None and st["kept"]["bpm"] == 120 and got["lat"] > 0 and phase_gap(ph, mean) < 0.005 and phase_gap(ph, 0.12) < 0.04,
-              f"tapped 0.12s past each half second as heard ({got['lat'] * 1000:.0f}ms after the clock; the song's clock, less that, said {mean:.4f} on average): {st['kept']}"
+              ph is not None and st["kept"]["bpm"] == 120 and got["lat"] > 0 and lo - 0.0005 <= ph <= hi + 0.0005 and phase_gap(ph, 0.12) < 0.04,
+              f"tapped 0.12s past each half second as heard ({got['lat'] * 1000:.0f}ms after the clock; the song's clock, less that, said {lo:.4f} on average"
+              + (f" to {hi:.4f}, stepping in the tap on {stepped} of {len(got['seen'])}" if stepped else "") + f", beside the tap's own handler): {st['kept']}"
               f" (taps within {got['spread']:.1f}ms of their marks, try {k})")
         c.close()
 
