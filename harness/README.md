@@ -484,9 +484,11 @@ stays a sleep.
   (on a 390x640 phone) opens at its top, the bar just under the header, one
   that fits (on the owner's phone) shows its end, and a person who scrolls on
   as it opens is left where they scrolled to; a song landing as it opens is the
-  newer reveal, and nothing pulls the page back after it; a draft opened says
-  its own smooth restart, the switch, its words and its length agreeing with
-  the line.
+  newer reveal, and nothing pulls the page back after it; a person who scrolls
+  back up as a song lands (a finger on the owner's phone, a wheel and Page Up
+  on a desk) is left where they scrolled to; a draft opened says its own
+  smooth restart, the switch, its words and its length agreeing with the
+  line.
 - `verify_musicbeat.py` — the music drawer's pair and its beat (the owner:
   "How do I test the loop without having it show me drawing?... so I'm not at
   7 or 9 when I want 8", then "we only ever want 4,8,16,... beats"), on the Pad

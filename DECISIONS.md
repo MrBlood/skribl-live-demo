@@ -22950,3 +22950,39 @@ frames' steps, which are the view's rounding to four places (red on Flip
 once); with nothing to glide they raised instead of going red; and a button
 disabled early (the ladder stopping at 32x) waited out Playwright's 30
 seconds instead of saying so. The calibration found the last two.
+
+
+## After v329 -- A person who scrolls back up as a song lands is left there
+
+Found while step 2's rows were being read, and fixed on the owner's word
+("Fix the bug too"). When a song lands, the drawer grows and
+lib/drawerdetent.js followGrowth glides the page to the drawer's new end,
+then holds it there with re-asserts at 300, 700 and 1200ms. The hold only
+ever pushes down, so a person who scrolled back up in that time, to look at
+the drawing, came straight back to the drawer's end at the next re-assert: on
+a desk, a wheel 300px up 330ms after the song landed was taken back 296px in
+one frame at 700ms, on the Pad and Flip alike; on a phone, a finger dragging
+240px down the drawer moved the page 34px, the 700ms re-assert taking the
+rest back as it went, and the last one took back all but 4px of that. A
+downward scroll past the cap was already left alone (DRIFT); an upward one
+never was.
+
+THE FIX (lib/drawerdetent.js): as the opening's re-asserts are called off
+once the person acts (revealPanelEnd), a wheel, a touch, a press or a key
+anywhere while the growth's are due calls them off. Moves no person made, the
+drift a glide overshoots and the browser's anchoring, are still taken back.
+Pad and Flip: shared, one lib.
+
+TESTS. verify_musicmore, in its kind part, on the Pad and Flip: the drawer
+open and past the opening's own re-asserts, a song lands, and a person
+scrolls up while the growth's are still due, by a finger on the owner's phone
+(a touch drag on the drawer's tabs, held still before it lets go, so there is
+no fling), a wheel on a desk and Page Up on a desk; read on every frame until
+the last re-assert is past, the page stays where they put it.
+
+CALIBRATION, each in a copy of the lib served to the browser, the file on
+disk untouched: the fix taken out, red on all six rows, both editors; the
+wheel left out of what calls the hold off, red on the wheel's two rows only;
+the finger left out (its touch and its press), the finger's two rows only;
+the key left out, Page Up's two rows only; the same file served unchanged,
+green.

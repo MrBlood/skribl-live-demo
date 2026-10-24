@@ -901,6 +901,54 @@ with sync_playwright() as pw:
               f"the page taken to its foot {early:.0f}ms after the drawer opened, at {ys[0]}px;"
               f" over {len(ys)} frames it went {min(ys)}-{max(ys)}px")
         c.close()
+    # A PERSON WHO SCROLLS BACK UP AS A SONG LANDS IS LEFT THERE. The growth's
+    # hold (lib/drawerdetent.js followGrowth) only ever pushed down, so a scroll
+    # up to the drawing came straight back to the drawer's end at its next
+    # re-assert, 300px in one frame. The drawer open and past the opening's own
+    # re-asserts, a song lands, and a person scrolls up while the growth's are
+    # still due: a finger on the owner's phone, a wheel and Page Up on a desk.
+    # The page is read on every frame from the song landing until the last
+    # re-assert is past, and from a quarter second after they let go it stays
+    # where they put it. When they let go is said: after the last re-assert,
+    # this row could not tell.
+    for _n, _p in eds("kind"):
+        for how, o in (("a finger on the phone", PHONE), ("a wheel on a desk", DESK), ("Page Up on a desk", DESK)):
+            c, pg, _ = editor(b, _n, _p, drawn=False, song=None, opts=o)
+            browsing.pad_drawer(pg, "music", settle=50)
+            pg.wait_for_timeout(1400)                       # past the opening's re-asserts
+            cdp = c.new_cdp_session(pg) if o is PHONE else None
+            pg.set_input_files("#musicInput", SHORT)
+            pg.wait_for_function("() => document.getElementById('musicUploadBtn').classList.contains('loaded') && !!currentAudioBuffer", timeout=20000)
+            pg.evaluate("""() => { window.__ys = []; const t0 = window.__t0 = performance.now();
+                (function f() { __ys.push([performance.now() - t0, Math.round(scrollY)]);
+                  if (performance.now() - t0 < 1900) requestAnimationFrame(f); })(); }""")
+            pg.wait_for_timeout(350)
+            was = pg.evaluate("() => Math.round(scrollY)")
+            if cdp:
+                tab = pg.evaluate("() => { const r = document.getElementById('mediaTabs').getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; }")
+
+                def touch(kind, y):
+                    cdp.send("Input.dispatchTouchEvent", {"type": kind, "touchPoints": [] if kind == "touchEnd" else [{"x": tab[0], "y": y}]})
+                touch("touchStart", tab[1])
+                for k in range(1, 9):
+                    touch("touchMove", tab[1] + k * 30); pg.wait_for_timeout(16)
+                for _ in range(3):                         # held still, so it lets go with no fling
+                    touch("touchMove", tab[1] + 240); pg.wait_for_timeout(16)
+                touch("touchEnd", tab[1] + 240)
+            elif how.startswith("a wheel"):
+                pg.mouse.move(640, 450); pg.mouse.wheel(0, -300)
+            else:
+                pg.keyboard.press("PageUp")
+            let_go = pg.evaluate("() => performance.now() - window.__t0")
+            pg.wait_for_timeout(250)
+            put = pg.evaluate("() => Math.round(scrollY)")
+            pg.wait_for_timeout(1500)
+            after = [y for t, y in pg.evaluate("() => window.__ys") if t >= let_go + 250]
+            check(f"{_n}: a person who scrolls back up as a song lands is left where they scrolled to ({how})",
+                  was - put >= 100 and let_go < 1100 and len(after) > 20 and max(abs(y - put) for y in after) <= 2,
+                  f"the page at {was}px, scrolled up to {put}px, let go {let_go:.0f}ms after the song landed;"
+                  f" then over {len(after)} frames {min(after) if after else None}-{max(after) if after else None}px")
+            c.close()
     # A DRAFT OPENED SAYS ITS OWN SMOOTH RESTART (the owner's Flip: "19.75s"
     # over a switch that said Off). A draft with a 0.25s smooth restart, saved,
     # then opened over a song whose smooth restart was switched off: the line,
