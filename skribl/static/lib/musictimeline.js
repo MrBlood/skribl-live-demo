@@ -16,17 +16,18 @@
  *
  * It took over from the strip (the whole song, two handles, a window to
  * slide) and from the loop detail in More (a close-up of an end at 1x to 16x,
- * Loop/Start/End and Scroll). The restart's close-up is the Restart view
- * (lib/musicrestart.js).
+ * Loop/Start/End and Scroll), whose magnifier is the timeline's now. The
+ * restart's close-up is the Restart view (lib/musicrestart.js).
  *
  * WHAT A FINGER DOES. On the song it slides the song under the drawing: both
  * ends move and the loop keeps its length. On an end it moves that end, and
  * held near the timeline's edge the view widens, smoothly, so a loop can grow
- * past what is on screen. On the whole-song line the loop goes where the
- * finger is. On the drawing nothing: it stays put, and a finger there can
- * scroll the page. Let go, and lib/musicdrawer.js settles what was moved once
- * there is a tempo (an end on whole bars, a slid loop's start on a beat);
- * then the view eases back to its framing.
+ * past what is on screen (magnified, it slides along instead). On the
+ * whole-song line the loop goes where the finger is. On the drawing nothing:
+ * it stays put, and a finger there can scroll the page. Let go, and
+ * lib/musicdrawer.js settles what was moved while Snap to the beat is on (an
+ * end on whole bars, a start or a slid loop's start on a beat); then the view
+ * eases back to its framing.
  *
  * THE FRAMING: 1.28 times the longer of the loop and the drawing, the
  * drawing counted up to three loops (a two-hour piece would make the loop a
@@ -34,6 +35,18 @@
  * (70ms to most of the way, so a settle and the reframing after it read as
  * one glide) and holds still while a finger is down, but for the widening.
  * Reduce Motion: no easing, the view is where it belongs at once.
+ *
+ * MAGNIFY (the owner, looking for the loop detail's: "All yes but maybe go
+ * to x64?", then "stay"): - and + at the end of the name's line, 1x to 64x.
+ * Each rung is the framing over that many with the end last touched in the
+ * middle: the start, until the end is grabbed, or moved anywhere else (- and
+ * +, a typed time, the Restart view: focus()). The loop never moves for it,
+ * and a step glides there as any reframing does. Magnified, an end held near
+ * either edge carries the view along at the zoom, as far as the end can
+ * follow, so the loop can shorten past what is in view as well as grow, and a
+ * slide carries the view with the end zoomed around. The zoom stays when the
+ * drawer is put away; a new song (reset()) is 1x on its start. Magnified past
+ * a block a column, the song is drawn from its samples (peakOf).
  *
  * A finger on the song scrolls the page if it moves up or down first
  * (touch-action: pan-y and a 6px lock), as the strip never let it: the
@@ -56,7 +69,7 @@
  *                       whole song)
  *   letGo(kind, which)  a drag that moved something is over ('end' | 'slide')
  *   still()             Reduce Motion
- * Returns { draw, reset, playhead(t), x(t), view(), held() }. */
+ * Returns { draw, reset, focus(which), playhead(t), x(t), view(), held() }. */
 (function (global) {
   'use strict';
 
@@ -189,9 +202,15 @@
       var w = width(), g = held, dt = Math.min(64, Math.max(0, now - (lastT || now))) / 1000;
       if (!g.zone || !(dt > 0)) return;
       if (mag > 1) {
-        // Magnified: along, at the zoom, toward the edge the finger is at.
-        view = { v0: view.v0 + g.side * PAN * g.zone * dt * view.span, span: view.span };
-        h.edge(g.which, T(Math.max(0, Math.min(w, g.x - rect().left))));
+        // Magnified: along, at the zoom, toward the edge the finger is at, as
+        // far as the end can follow. Where it stops (the song's start or end,
+        // the other end, the cap) the view stops with it: the end under the
+        // finger, or where it is when it was already stopped, never a jump.
+        var fx = Math.max(0, Math.min(w, g.x - rect().left)), was = view.v0;
+        view = { v0: was + g.side * PAN * g.zone * dt * view.span, span: view.span };
+        h.edge(g.which, T(fx));
+        var tt = trim(), under = (g.which === 'end' ? tt.end : tt.start) - fx / w * view.span;
+        view = { v0: Math.max(Math.min(was, view.v0), Math.min(Math.max(was, view.v0), under)), span: view.span };
         return;
       }
       var t = trim(), most = SPAN * Math.max(t.duration, 1);
@@ -457,7 +476,6 @@
       // An end moved anywhere else (- and +, a typed time, the Restart view):
       // magnified, the view goes to it.
       focus: function (which) { if ((which === 'start' || which === 'end') && which !== focus) { focus = which; draw(); } },
-      mag: function () { return mag; },
       playhead: playhead,
       x: function (t) { return view ? X(t) : null; },
       view: function () { return view ? { v0: view.v0, span: view.span } : null; },

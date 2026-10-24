@@ -534,22 +534,37 @@ stays a sleep.
   scrolls the page while one that goes sideways slides; an end follows the
   finger with its time in its bubble while the view holds still, held near the
   edge the view widens frame by frame with the far side kept, and let go it
-  eases to its framing frame by frame (at once under Reduce Motion); a tap on
-  the whole song's line puts the loop's middle there, on a beat once there is
-  a tempo, and a drag along it slides the loop; the playhead runs across the
-  loop while it plays; the Restart view (lib/musicrestart.js) shows the loop's
-  last 0.6s beside its first, a smooth restart's fold counted, its left moves
-  the end and its right the start with the music following the finger, its
-  dot sets the smooth restart in 5ms steps, back to the line for a clean cut,
-  stopping at half a second or half the loop, and its hint says what to do;
-  Cut on silence is on for a new song, off for a draft's that never said, and
-  kept in the drafts, its words say how far both ends move (under a
+  eases to its framing frame by frame (at once under Reduce Motion); magnify
+  (the owner: "All yes but maybe go to x64?", then "stay") steps 1x to 64x and
+  says the rung, each button stopping at its end of the ladder, each rung the
+  framing over that many with the end last touched in the middle (the start,
+  until a tap or a drag on the end, or the end's own - and +, makes it the
+  end) and the loop never moving for it, a step gliding there frame by frame
+  (at once under Reduce Motion); zoomed in, an end follows the finger while
+  the view holds still, held at either edge the view slides along at the zoom
+  with the end under the finger, only as far as the end can follow (at the
+  song's start it stops with the end under the finger, and held there again it
+  holds still), and let go it glides back with the end in the middle; a finger
+  on the song slides it at the zoom with the ends put; the zoom stays when the
+  drawer is put away and opened again, and a new song starts at 1x; zoomed
+  past a block of 128 samples a column, the song is drawn from its samples;
+  the magnifier sits at the end of the name's line, its middle on the name's,
+  its words and glyphs read against what is behind them, light and dark; a tap
+  on the whole song's line puts the loop's middle there, on a beat once there
+  is a tempo, and a drag along it slides the loop; the playhead runs across
+  the loop while it plays; the Restart view (lib/musicrestart.js) shows the
+  loop's last 0.6s beside its first, a smooth restart's fold counted, its left
+  moves the end and its right the start with the music following the finger,
+  its dot sets the smooth restart in 5ms steps, back to the line for a clean
+  cut, stopping at half a second or half the loop, and its hint says what to
+  do; Cut on silence is on for a new song, off for a draft's that never said,
+  and kept in the drafts, its words say how far both ends move (under a
   thousandth, or to the thousandth, later or earlier), the baked loop moves
   both ends the same to the nearest clean join, the length kept and no click
   where it comes round (31 steps of the song's own without it, at most two
-  with it), with a smooth restart or switched off nothing moves, switched while
-  the loop plays it plays on from the new join, the posted clip is the cut
-  loop sample for sample, and the player plays it as it is.
+  with it), with a smooth restart or switched off nothing moves, switched
+  while the loop plays it plays on from the new join, the posted clip is the
+  cut loop sample for sample, and the player plays it as it is.
 - `verify_learncard.py` — the card on the button (lib/learncard.js), Pad and
   Flip: holding a button (real touch) opens its card with its example; a
   quick tap stays a tap, a moving finger is no hold, the lift does not press,
