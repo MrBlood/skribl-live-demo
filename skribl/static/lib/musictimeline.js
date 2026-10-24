@@ -26,8 +26,13 @@
  * whole-song line the loop goes where the finger is. On the drawing nothing:
  * it stays put, and a finger there can scroll the page. Let go, and
  * lib/musicdrawer.js settles what was moved while Snap to the beat is on (an
- * end on whole bars, a start or a slid loop's start on a beat); then the view
- * eases back to its framing.
+ * end on whole bars, a start or a slid loop's start on a beat; magnified, a
+ * start stays where it is let go and the beat moves to it, so it is told
+ * where the music begins); then the view eases back to its framing. The beat
+ * marks glide when where a beat falls moves (beatTo).
+ *
+ * EACH END IS A LINE WITH A TAB AT ITS FOOT (styles.css): nothing over the
+ * wave beside the line, where the music starts.
  *
  * THE FRAMING: 1.28 times the longer of the loop and the drawing, the
  * drawing counted up to three loops (a two-hour piece would make the loop a
@@ -67,7 +72,8 @@
  *   slide(start)        move the loop there, its length kept
  *   jump(start)         the same, gliding there and onto a beat (a tap on the
  *                       whole song)
- *   letGo(kind, which)  a drag that moved something is over ('end' | 'slide')
+ *   letGo(kind, which, zoomed)  a drag that moved something is over ('end' |
+ *                       'slide'), magnified past 1x or not
  *   still()             Reduce Motion
  * Returns { draw, reset, focus(which), playhead(t), x(t), view(), held() }. */
 (function (global) {
@@ -129,7 +135,7 @@
     var hs = root.querySelector('.mt-tl-handle[data-which="start"]'), he = root.querySelector('.mt-tl-handle[data-which="end"]');
     var ph = root.querySelector('.music-playhead');
     var view = null, held = null, raf = 0, lastT = 0, peaks = null, lane = null, laneKey = null, laneSecs = 0;
-    var mag = 1, focus = 'start';
+    var mag = 1, focus = 'start', beat = null;   // beat: the tempo as its marks are painted (beatTo)
     var magOut = root.querySelector('.mt-tl-mag-btn[data-mag="-1"]'), magIn = root.querySelector('.mt-tl-mag-btn[data-mag="1"]');
     var magVal = root.querySelector('.mt-tl-mag-val'), nameBox = root.querySelector('.mt-tl-namebox');
 
@@ -160,23 +166,39 @@
     function frame(now) {
       raf = 0;
       if (!h.hasTrack()) { view = null; paint(); return; }
-      var goal = target();
+      var goal = target(), dt = Math.min(64, Math.max(0, now - (lastT || now)));
       if (!view) view = goal;
       else if (held && held.kind === 'slide') view = mag > 1 ? { v0: focused() - held.off, span: view.span }
         : { v0: trim().start - LEAD * view.span, span: view.span };
       else if (held && held.kind === 'end') widen(now);
       else if (h.still()) view = goal;
       else {
-        var dt = Math.min(64, Math.max(0, now - (lastT || now))), k = 1 - Math.exp(-dt / EASE_MS);
+        var k = 1 - Math.exp(-dt / EASE_MS);
         view = { v0: view.v0 + (goal.v0 - view.v0) * k, span: view.span + (goal.span - view.span) * k };
         if (Math.abs(goal.v0 - view.v0) < goal.span * 1e-4 && Math.abs(goal.span - view.span) < goal.span * 1e-4) view = goal;
       }
+      var gliding = beatTo(dt);
       lastT = now;
       paint();
       // The view, for whoever reads it (the harness): the time at the left
       // edge and the seconds across, as painted.
       if (view) root.dataset.view = view.v0.toFixed(4) + ' ' + view.span.toFixed(4);
-      if ((!held && view !== goal) || (held && held.kind === 'end' && held.zone)) request();
+      if ((!held && view !== goal) || (held && held.kind === 'end' && held.zone) || gliding) request();
+    }
+    // THE BEAT MARKS GLIDE when where a beat falls moves and the tempo does
+    // not (a start let go magnified becomes a beat, lib/musicdrawer.js), with
+    // the view's own ease and the shorter way round, so they move as one with
+    // the settle and the reframing after it. A new tempo, or none, is there at
+    // once, and so is all of it under Reduce Motion. True while on the way.
+    function beatTo(dt) {
+      var tp = h.tempo();
+      if (!tp) { beat = null; return false; }
+      if (!beat || beat.bpm !== tp.bpm || h.still()) { beat = { bpm: tp.bpm, phase: tp.phase }; return false; }
+      var p = 60 / tp.bpm, d = tp.phase - beat.phase;
+      d -= Math.round(d / p) * p;
+      if (Math.abs(d) < 1e-4) { beat = { bpm: tp.bpm, phase: tp.phase }; return false; }
+      beat = { bpm: tp.bpm, phase: beat.phase + d * (1 - Math.exp(-dt / EASE_MS)) };
+      return true;
     }
     function request() { if (!raf) raf = global.requestAnimationFrame(frame); }
     // The words now, the pixels on the next frame: a bubble says its end's
@@ -313,7 +335,7 @@
         }
         x.globalAlpha = 1;
       }
-      var tp = h.tempo();
+      var tp = beat;
       if (tp) {
         var p = 60 / tp.bpm, ppb = p / view.span * w, k0 = Math.round((s0 - tp.phase) / p);
         for (var kb = Math.ceil((Math.max(0, view.v0) - tp.phase) / p); tp.phase + kb * p <= Math.min(dur, view.v0 + view.span); kb++) {
@@ -401,7 +423,7 @@
           held = null;
           root.classList.remove('holding');
           // A press that moved nothing settles nothing.
-          if (g.moved) h.letGo(g.kind, g.which);
+          if (g.moved) h.letGo(g.kind, g.which, mag > 1);
           draw();
         }
       };
@@ -427,7 +449,7 @@
           g.moved = true;
           h.slide(at(cx));
         },
-        end: function () { held = null; root.classList.remove('holding'); if (g.moved) h.letGo('slide', null); draw(); }
+        end: function () { held = null; root.classList.remove('holding'); if (g.moved) h.letGo('slide', null, mag > 1); draw(); }
       };
     });
 
@@ -472,7 +494,7 @@
       draw: function () { syncMag(); draw(); },
       // A new song: the view starts where it belongs, not where the last was,
       // at 1x on its start.
-      reset: function () { lane = null; view = null; mag = 1; focus = 'start'; syncMag(); draw(); },
+      reset: function () { lane = null; view = null; mag = 1; focus = 'start'; beat = null; syncMag(); draw(); },
       // An end moved anywhere else (- and +, a typed time, the Restart view):
       // magnified, the view goes to it.
       focus: function (which) { if ((which === 'start' || which === 'end') && which !== focus) { focus = which; draw(); } },

@@ -515,7 +515,13 @@ stays a sleep.
   "I need a free set so it's not all automatic") shows under the tap once
   there is a tempo, on to start, saying what it does, and opens out with a
   bar in Each press frame by frame (at once under Reduce Motion), and off
-  nothing settles, on the timeline, in the Restart view, slid or tapped; the
+  nothing settles, on the timeline, in the Restart view, slid or tapped;
+  zoomed in (the owner: "how do I tell it where the beginning is?"), a start
+  let go on the music's beat, between the marks of a tempo tapped 45ms late,
+  stays exactly there and a beat falls on it, the beats a minute kept and the
+  end following on whole bars, the marks gliding there frame by frame (at
+  once under Reduce Motion), then at 1x a start lands on the new beat, the new
+  beat is kept in the drafts, and tapped again the beat is the taps' own; the
   tempo goes with the song into the drafts and a re-add card, the switch with
   it, tapped again the switch stays, and a new song starts with none and the
   switch put away; the one line, the tap's and the switch's words and the
@@ -536,7 +542,14 @@ stays a sleep.
   scrolls the page while one that goes sideways slides; an end follows the
   finger with its time in its bubble while the view holds still, held near the
   edge the view widens frame by frame with the far side kept, and let go it
-  eases to its framing frame by frame (at once under Reduce Motion); magnify
+  eases to its framing frame by frame (at once under Reduce Motion); each
+  end's grip is a tab at its foot (the owner: in the middle it "kind of gets in
+  the way of seeing where the wave starts for the beat"), asked of what is on
+  top on a phone and a desk: beside either line over the song nothing is the
+  grip (and the grip can be hit, so what is on top is what is painted), the
+  tab shows half under the song's edge clear of the whole song's line, which
+  a tap under it still reaches, and the tab pressed below the edge drags its
+  end; magnify
   (the owner: "All yes but maybe go to x64?", then "stay") steps 1x to 64x and
   says the rung, each button stopping at its end of the ladder, each rung the
   framing over that many with the end last touched in the middle (the start,

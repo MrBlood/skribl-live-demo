@@ -72,10 +72,11 @@
  * the song's clock less the time the sound takes to reach the ear, so the
  * marks sit on what was heard. Then every count is of
  * what is HEARD, smooth restart and all: the one line says the beats, and,
- * with Snap to the beat on, a start let go on the timeline lands on a beat and
- * the loop on whole bars, 4, 8, 16 or 32 beats (the owner: "we only ever want
- * 4,8,16,... beats"), the end where the loop comes round, so with a smooth
- * restart the handle sits that much past the beat. The loop slid along the
+ * with Snap to the beat on, a start let go on the timeline lands on a beat
+ * (zoomed in, it stays, and the beat moves to it) and the loop on whole bars,
+ * 4, 8, 16 or 32 beats (the owner: "we only ever want 4,8,16,... beats"), the
+ * end where the loop comes round, so with a smooth restart the handle sits
+ * that much past the beat. The loop slid along the
  * song starts on a beat, and - and + move a bar unless another step is
  * picked. Off, nothing settles. The tempo is the editor's, saved with the
  * song in its drafts, and the switch with it.
@@ -384,6 +385,14 @@
      *   the start on the nearest beat, and the end follows so the loop is
      *     whole bars: of 4, 8, 16 and 32 beats, the count nearest what the
      *     finger left that the song and the 20s cap have room for;
+     *   magnified, the start where it is let go, and a beat falls there (the
+     *     owner, zoomed in on where the music begins: "how do I tell it where
+     *     the beginning is? When I take it to the beginning it just snaps to
+     *     a different spot"; of the mock, "All yes"). A tapped beat is rarely
+     *     on the music to the hundredth (on the mock's song, 45ms off), and
+     *     zoomed in the note can be seen. The tempo keeps its beats a minute;
+     *     every beat, bar and snap after counts from that start, and the end
+     *     follows as above. Tapped again, the beat is the taps' own;
      *   the end on whole bars the same way, counted from the start wherever
      *     it is: dragging the end never moves a start you have set.
      * In the Restart view, a close-up (`pxPerSec`, its scale), an end let go
@@ -405,14 +414,15 @@
       });
       return best;
     }
-    function snap(which, pxPerSec) {
+    function snap(which, pxPerSec, zoomed) {
       if (!snapOn() || locked || !h.hasTrack()) return;
       var tp = tempo(), p = beatSecs(), t = h.trim(), n, k;
       var state = { start: t.start, end: t.end, duration: t.duration };
       if (!pxPerSec && which === 'start') {
-        var s = tp.phase + Math.round((t.start - tp.phase) / p) * p;
+        var s = zoomed ? t.start : tp.phase + Math.round((t.start - tp.phase) / p) * p;
         if (s < -EPS) s += p;
         s = Math.max(0, s);
+        if (zoomed && h.setTempo) h.setTempo({ bpm: tp.bpm, phase: Math.round(s * 10000) / 10000 });
         k = barsFor(heard({ start: s, end: t.end }, h.crossfade()), t.duration - s);
         // No whole bars fit from that beat: the start settles alone.
         n = k ? { start: s, end: s + lenFor(k) } : T.setHandle(state, 'start', s, 'constrain');
@@ -467,7 +477,7 @@
         var t = h.trim(), len = t.end - t.start, s0 = beatFor(Math.max(0, Math.min(t.duration - len, start)), len);
         glideTo(s0, s0 + len);
       },
-      letGo: function (kind, which) { if (kind === 'end') snap(which, 0); else onBeat(); h.changed(); }
+      letGo: function (kind, which, zoomed) { if (kind === 'end') snap(which, 0, zoomed); else onBeat(); h.changed(); }
     }) : null;
 
     /* ---- The Restart view (lib/musicrestart.js), in More: the end beside the
@@ -980,7 +990,8 @@
       var tp = tempo(), on = snapOn();
       if (snapRow.hidden !== !tp) { snapRow.hidden = !tp; if (tp) glideIn(snapRow, 'y'); }
       setOn(snapSw, on);
-      var w = on ? 'The start you drag lands on a beat, and the loop on whole bars.' : 'Ends stay exactly where you let them go.';
+      var w = on ? 'The start you drag lands on a beat, and the loop on whole bars. Zoomed in, it stays where you put it, and the beat follows.'
+        : 'Ends stay exactly where you let them go.';
       if (snapSub && snapSub.textContent !== w) snapSub.textContent = w;
     }
     if (snapSw) snapSw.addEventListener('click', function () {

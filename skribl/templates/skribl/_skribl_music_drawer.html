@@ -68,8 +68,9 @@
   <div id="musicDetail" class="music-detail" data-level="simple" hidden>
     <div class="music-trim">
       {#- THE TIMELINE (lib/musictimeline.js): the drawing's own lane above,
-          the song under it with the loop lit and its two ends to drag, and the
-          whole song in one line below. Your {{ work }} stays put; the song
+          the song under it with the loop lit and its two ends to drag (each a
+          line with a tab at its foot, clear of the wave), and the whole song
+          in one line below. Your {{ work }} stays put; the song
           slides under it. It was the strip, the whole song with two handles,
           and the loop detail in More. The words over the drawing's lane are
           the drawer's; the canvas draws the rest and is hidden from screen
@@ -89,8 +90,8 @@
         </div>
         <div class="mt-tl-stage" id="musicTlStage">
           <canvas class="mt-tl-canvas" id="musicTlCanvas" aria-hidden="true"></canvas>
-          <div class="mt-tl-handle" id="tlStart" data-which="start" aria-hidden="true"><span class="mt-tl-grip"><svg viewBox="0 0 18 32" fill="currentColor" aria-hidden="true"><path d="M7.2 11 3 16l4.2 5zM10.8 11 15 16l-4.2 5z"/></svg></span><span class="trim-bubble" id="bubbleStart">0:00.00</span></div>
-          <div class="mt-tl-handle" id="tlEnd" data-which="end" aria-hidden="true"><span class="mt-tl-grip"><svg viewBox="0 0 18 32" fill="currentColor" aria-hidden="true"><path d="M7.2 11 3 16l4.2 5zM10.8 11 15 16l-4.2 5z"/></svg></span><span class="trim-bubble right" id="bubbleEnd">0:00.00</span></div>
+          <div class="mt-tl-handle" id="tlStart" data-which="start" aria-hidden="true"><span class="mt-tl-grip"><svg viewBox="0 8 18 16" fill="currentColor" aria-hidden="true"><path d="M7.2 11 3 16l4.2 5zM10.8 11 15 16l-4.2 5z"/></svg></span><span class="trim-bubble" id="bubbleStart">0:00.00</span></div>
+          <div class="mt-tl-handle" id="tlEnd" data-which="end" aria-hidden="true"><span class="mt-tl-grip"><svg viewBox="0 8 18 16" fill="currentColor" aria-hidden="true"><path d="M7.2 11 3 16l4.2 5zM10.8 11 15 16l-4.2 5z"/></svg></span><span class="trim-bubble right" id="bubbleEnd">0:00.00</span></div>
           <div class="music-playhead" id="playhead" hidden></div>
         </div>
         <div class="mt-tl-whole" id="musicTlWhole" aria-hidden="true"><span class="mt-tl-part" id="musicTlPart"></span></div>
@@ -153,7 +154,9 @@
             the Restart view. SNAP TO THE BEAT shows with it, on to start: a
             start dragged on the timeline lands on a beat, and the loop on
             whole bars, 4, 8, 16 or 32 beats (the owner: "we only ever want
-            4,8,16"); off, the ends stay where they are let go (the owner: "I
+            4,8,16"); zoomed in, the start stays where it is let go and the
+            beat moves to it (the owner: "how do I tell it where the beginning
+            is?"); off, the ends stay where they are let go (the owner: "I
             need a free set so it's not all automatic"). -#}
         <p class="mt-sect">The beat</p>
         <div class="mt-beat" id="musicBeat">
@@ -163,7 +166,7 @@
           </div>
           <div class="mt-snap" id="musicSnapRow" hidden>
             <div class="mt-switch">
-              <span class="mt-switch-words"><span class="mt-k">Snap to the beat</span> <span class="mt-v" id="musicSnapSub">The start you drag lands on a beat, and the loop on whole bars.</span></span>
+              <span class="mt-switch-words"><span class="mt-k">Snap to the beat</span> <span class="mt-v" id="musicSnapSub">The start you drag lands on a beat, and the loop on whole bars. Zoomed in, it stays where you put it, and the beat follows.</span></span>
               <button type="button" id="musicSnap" class="layer-toggle on" role="switch" aria-checked="true" aria-label="Snap to the beat"><span class="layer-toggle-knob"></span></button>
             </div>
           </div>
