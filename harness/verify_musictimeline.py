@@ -19,6 +19,13 @@ plan, mocked first; the owner: "Yes on all").
   song's line moves the loop there, its middle under the finger; a drag along
   it slides the loop with the finger.
 
+  EACH END'S GRIP IS A TAB AT ITS FOOT (the owner: in the middle of the line
+  it "kind of gets in the way of seeing where the wave starts for the beat").
+  Asked of what is painted on top, on a phone and a desk: beside either line,
+  over the song, nothing is the grip; the tab shows half under the song's
+  edge and keeps clear of the whole song's line, which a tap under it still
+  reaches; and the tab, pressed below the song's edge, drags its end.
+
   MAGNIFY (the owner, looking for Fine-tune's: "All yes but maybe go to
   x64?", then "stay"). Magnifier - and + at the end of the name's line, its
   middle on the name's, step 1x to 64x and say the rung, each stopping at its
@@ -88,8 +95,8 @@ import browsing  # noqa: E402
 import waits  # noqa: E402
 
 # For calibration: MUSICTL_ONLY=Pad (or Flip) runs one editor, and
-# MUSICTL_PART=layout (frame, slide, ends, mag, whole, playhead, restart,
-# cut, bake, post) one part. A real run sets neither.
+# MUSICTL_PART=layout (frame, slide, ends, grip, mag, whole, playhead,
+# restart, cut, bake, post) one part. A real run sets neither.
 ONLY = os.environ.get("MUSICTL_ONLY", "")
 PART = os.environ.get("MUSICTL_PART", "")
 EDITORS = [e for e in (("Pad", "/"), ("Flip", "/flip")) if not ONLY or e[0] == ONLY]
@@ -439,6 +446,52 @@ with sync_playwright() as p:
               off and max(off) < 2e-3 * goal[1],
               f"off its framing by {[round(o, 3) for o in off[:5]]}s on the first frames")
         c.close()
+
+    print("\nMUSIC TIMELINE — the ends' grips, at their foot")
+    # What is on top, asked of the page at every other pixel beside each line
+    # (3 to 14px either side, its own 3px left out) from the song's top to
+    # 10px above its foot: never the grip. Then a point of the tab below the
+    # song's edge (the tab shows there), the whole song's line under the line
+    # (still the whole song's), and the boxes for the words.
+    GRIPS = """() => { const st = document.getElementById('musicTlStage').getBoundingClientRect(), wl = document.getElementById('musicTlWhole'),
+        w = wl.getBoundingClientRect(), out = {};
+      for (const id of ['tlStart', 'tlEnd']) {
+        const h = document.getElementById(id), r = h.getBoundingClientRect(), g = h.querySelector('.mt-tl-grip'), line = r.left + r.width / 2;
+        const isGrip = (e) => !!e && !!g && (e === g || g.contains(e));
+        let hits = 0, asked = 0;
+        for (let y = st.top + 34 + 2; y <= st.bottom - 10; y += 2)
+          for (let dx = 3; dx <= 14; dx += 1) for (const sd of [-1, 1]) { asked++; if (isGrip(document.elementFromPoint(line + sd * dx, y))) hits++; }
+        const gr = g.getBoundingClientRect(), ty = Math.min(gr.bottom - 2, st.bottom + 5), under = document.elementFromPoint(line, w.top + w.height / 2);
+        out[id] = { hits: hits, asked: asked, line: line, x: gr.left + gr.width / 2, y: ty, below: isGrip(document.elementFromPoint(line, ty)),
+                    top: gr.top, bottom: gr.bottom, edge: st.bottom, wholeTop: w.top, whole: !!under && (under === wl || wl.contains(under)) };
+      }
+      return out; }"""
+    for _n, _p in eds("grip"):
+        for face, opts in (("a phone", PHONE), ("a desk", DESK)):
+            c, pg, errs = editor(b, _n, _p, opts=opts)
+            pg.evaluate(SET, {"s": 2.0, "e": 5.0, "xf": 0, "tempo": None})
+            into_view(pg, "#musicTimeline")
+            pg.wait_for_timeout(600)
+            g = pg.evaluate(GRIPS)
+            ends = ("tlStart", "tlEnd")
+            check(f"{_n}, {face}: each end's grip sits at its foot: beside either line, over the song, nothing on top is the grip",
+                  all(g[i]["asked"] > 300 and g[i]["hits"] == 0 for i in ends),
+                  "; ".join(f"{i}: the grip on top at {g[i]['hits']} of {g[i]['asked']} points beside the line" for i in ends))
+            check(f"{_n}, {face}: ...a tab that shows half under the song's edge and keeps clear of the whole song's line, which a tap under it still reaches",
+                  all(g[i]["below"] and g[i]["top"] < g[i]["edge"] < g[i]["bottom"] and g[i]["bottom"] <= g[i]["wholeTop"] - 2 and g[i]["whole"] for i in ends),
+                  "; ".join(f"{i}: shown below the edge {g[i]['below']}, the tab {g[i]['top']:.1f}-{g[i]['bottom']:.1f} over the edge at {g[i]['edge']:.1f},"
+                            f" the whole line from {g[i]['wholeTop']:.1f}, reached under it {g[i]['whole']}" for i in ends))
+            # The tab, pressed below the song's edge, drags its end (no tempo, so nothing settles).
+            t0, v0, st = pg.evaluate(TRIM), pg.evaluate(VIEW), pg.evaluate(BOX, "#musicTlStage")
+            drag(pg, g["tlEnd"]["x"], g["tlEnd"]["y"], g["tlEnd"]["x"] - 40, g["tlEnd"]["y"], steps=10)
+            pg.wait_for_timeout(300)
+            t1 = pg.evaluate(TRIM)
+            moved = (t0["e"] - t1["e"]) / v0[1] * st["w"]
+            check(f"{_n}, {face}: the tab, pressed below the song's edge, drags its end",
+                  abs(moved - 40) < 1.5 and t1["s"] == t0["s"],
+                  f"the end {t0['e']:.3f} -> {t1['e']:.3f}, {moved:.1f}px for a 40px drag; the start {t0['s']} -> {t1['s']}")
+            check(f"{_n}, {face}: no page errors from the grips", not errs, "; ".join(errs[:2]))
+            c.close()
 
     print("\nMUSIC TIMELINE — magnify")
     MAG = "() => ({ said: document.getElementById('musicTlMag').textContent, out: document.getElementById('musicTlOut').disabled, in: document.getElementById('musicTlIn').disabled })"

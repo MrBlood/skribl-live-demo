@@ -2860,7 +2860,15 @@ body.recoloring #canvas { cursor: crosshair !important; }
    with where the loop is in it. A finger that moves up or down first scrolls
    the page (pan-y): the module locks a sideways drag after 6px. The name's
    line is a whole 18px: at 1.35 it was 17.55, and every row under the
-   timeline sat half a pixel off, More's tile and its + among them. */
+   timeline sat half a pixel off, More's tile and its + among them.
+   EACH END'S GRIP IS A TAB AT ITS FOOT (the owner, of the grip in the middle
+   of the line: "it kind of gets in the way of seeing where the wave starts
+   for the beat. it sits right over the middle"; of the mock, "All yes"):
+   half under the song's edge, as the Restart view's dot sits at its foot, so
+   nothing covers the wave beside the line and a finger holds it below the
+   wave. In the middle it covered 59% of what was painted within 14px of the
+   line on a soft start (a phone, 16x). The tap band reaches down to it, and
+   it keeps 3px clear of the whole song's line. */
 .mt-tl { position: relative; margin-top: 2px; }
 .mt-tl-name { margin: 0 0 6px; font-size: 13px; font-weight: 600; line-height: 18px; color: var(--text-secondary);
   white-space: nowrap; width: max-content; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
@@ -2887,14 +2895,14 @@ body.recoloring #canvas { cursor: crosshair !important; }
 .mt-tl.holding .mt-tl-stage { cursor: grabbing; }
 .mt-tl-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 .mt-tl-handle { position: absolute; left: 0; top: 34px; bottom: 0; width: 18px; margin-left: -9px; z-index: 2;
-  display: flex; align-items: center; justify-content: center; cursor: ew-resize; touch-action: none;
+  display: flex; align-items: flex-end; justify-content: center; cursor: ew-resize; touch-action: none;
   -webkit-tap-highlight-color: transparent; }
-.mt-tl-handle::before { content: ""; position: absolute; inset: 0 -13px; }
+.mt-tl-handle::before { content: ""; position: absolute; inset: 0 -13px -12px; }
 .mt-tl-handle::after { content: ""; position: absolute; top: 0; bottom: 0; left: 50%; width: 3px; margin-left: -1.5px;
   background: var(--accent); border-radius: 2px; }
-.mt-tl-grip { position: relative; z-index: 1; width: 18px; height: 32px; border-radius: 6px; background: var(--accent);
-  color: #fff; display: grid; place-items: center; box-shadow: 0 1px 3px rgba(20, 10, 60, .25); }
-.mt-tl-grip svg { width: 18px; height: 32px; display: block; }
+.mt-tl-grip { position: relative; z-index: 1; flex: none; width: 22px; height: 18px; margin-bottom: -9px; border-radius: 6px;
+  background: var(--accent); color: #fff; display: grid; place-items: center; box-shadow: 0 1px 3px rgba(20, 10, 60, .25); }
+.mt-tl-grip svg { width: 18px; height: 16px; display: block; }
 .mt-tl-handle.dragging .mt-tl-grip { background: var(--accent-fill); }
 .mt-tl-handle.off, .mt-tl.empty .mt-tl-handle, .mt-tl.empty .mt-tl-part { visibility: hidden; }
 .mt-tl-whole { position: relative; height: 4px; margin: 12px 0 6px; border-radius: 2px; background: var(--menu-card-line);
