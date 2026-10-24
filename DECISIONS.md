@@ -22986,3 +22986,15 @@ wheel left out of what calls the hold off, red on the wheel's two rows only;
 the finger left out (its touch and its press), the finger's two rows only;
 the key left out, Page Up's two rows only; the same file served unchanged,
 green.
+
+
+## After v329 -- The owner's S icon, filed with the deeper edge, not built in
+
+The owner's new Home Screen icon, Blooby as a white S on lilac, his arm up
+to the star. Cal's pen redraw of it was "sloppy", so the render is kept as
+the owner made it, and of it as made or with its edge deepened toward the
+brand's violet (2.0:1 on a light Home Screen, as today's; 1.6:1 as made), the
+pick was the deeper edge: "File it away". It is `docs/brand/s-blooby-icon.png`
+and nothing ships it: the app's icon files, `harness/tools/blooby.py` and
+`verify_identity` are as they were. FUTURE.md 6q has how the file was made
+from the render and what building it in would take.
