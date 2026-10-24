@@ -2,15 +2,16 @@
 //
 // THE DRAWER'S CONTROLS ARE lib/musicdrawer.js's, one copy shared with Flip
 // (owner: "it needs to be the same music editor on both pad and flip"): the
-// three levels, Skribl's pick, the loop detail's zoom and Scroll, the edges'
-// drags, nudges and typed times, Smooth restart, Fit my drawing, Whole song,
-// the hear buttons, Play with my drawing, Tap the beat and the switch. The Pad hands it its
+// one view and More, Skribl's pick, the timeline and the Restart view
+// (lib/musictimeline.js, lib/musicrestart.js), nudges and typed times, Smooth
+// restart, Cut on silence, Fit my drawing, Whole song, the hear buttons, Play
+// with my drawing, Tap the beat and the switch. The Pad hands it its
 // own state through the hooks below. What is left here is the
 // Pad's own: the file row (add and remove), the hooks, and Play's music loop,
 // which follows the replay's speed.
 //
 // WHAT STAYED IN app.js, and why. The drawer's STATE and the functions the
-// PLAYER reaches through loadSkribl (clampTrim, drawWaveform, updateTrimUI,
+// PLAYER reaches through loadSkribl (clampTrim, updateTrimUI,
 // showToast and the rest) are still in app.js. A binding declared in an
 // editor-only file does not exist on the player at all, so any player code
 // touching it throws — state can never live here. This file only holds things
@@ -22,18 +23,24 @@ let padDrawer = null;
 if (window.SkriblMusicDrawer) padDrawer = window.SkriblMusicDrawer.wire({
   trim: () => ({ start: trimStart, end: trimEnd, duration: audioDuration }),
   setTrim: (start, end) => { trimStart = start; trimEnd = end; },
-  view: () => ({ mag: zoomMag, focus: zoomFocus, center: zoomCenter }),
-  setView: (v) => {
-    if ('mag' in v) zoomMag = v.mag;
-    if ('focus' in v) zoomFocus = v.focus;
-    if ('center' in v) zoomCenter = v.center;
-  },
   crossfade: () => loopCrossfadeMs,
   setCrossfade: (ms) => { loopCrossfadeMs = ms; },
+  cut: () => loopCutOnSilence,
+  setCut: (on) => { loopCutOnSilence = !!on; },
   hasTrack: () => !!audioEl && Number.isFinite(audioDuration) && audioDuration > 0,
   refresh: updateTrimUI,
-  strip: () => { if (currentAudioBuffer) drawWaveform(currentAudioBuffer); },
-  zoomWindow: getZoomWindow,
+  // The timeline's drawing lane: each stroke when it replays, at 1x with
+  // Pauses as they replay (the replay's own timeline, so a recolour's moment
+  // is in it). Walked again only when the drawing changes (laneKey).
+  lane: () => {
+    if (!strokes.length) return { seconds: 0, marks: [] };
+    const tl = buildPlaybackTimeline(), marks = [];
+    let cur = null;
+    tl.forEach((p) => { if (p.start || !cur) { if (cur) marks.push(cur); cur = [p.playT, p.playT]; } else cur[1] = p.playT; });
+    if (cur) marks.push(cur);
+    return { seconds: getPlaybackDuration() / 1000, marks: marks.map((m) => [m[0] / 1000, Math.max(m[1], m[0] + 60) / 1000]) };
+  },
+  laneKey: () => strokes.length + ':' + (strokes.length ? getPlaybackDuration() : 0) + ':' + (typeof recolors !== 'undefined' ? recolors.length : 0),
   changed: () => { if (typeof scheduleAutosave === 'function') scheduleAutosave(); },
   // The replay's length at 1x, pauses as Pauses replays them.
   drawingSeconds: () => strokes.length ? getPlaybackDuration() / 1000 : 0,
@@ -120,8 +127,8 @@ musicInput.addEventListener('change', async (e) => {
     musicDetail.hidden = false;
     musicUploadBtn.classList.add('loaded');
     resetMusicToggle();
-    // A new song starts on its whole loop at 1x, as Flip's does: the last
-    // track's zoom, focus and scroll belonged to a different song.
+    // A new song's timeline starts where it belongs, as Flip's does: the
+    // last track's view belonged to a different song.
     resetMusicView();
     musicTabDot.hidden = false;
     document.getElementById('musicRemove').hidden = false;
@@ -180,9 +187,7 @@ musicInput.addEventListener('change', async (e) => {
     currentAudioBuffer = audioBuffer;
     setTimeout(() => {
       if (seq !== musicSelectionSeq) return;      // and superseded before the paint
-      drawWaveform(audioBuffer);
-      drawZoomWaveform();
-      updateZoomHandles();
+      syncMusicDrawer();                          // the timeline, with the song's waveform
     }, 50);
   }).catch(() => {}).finally(() => {
     // Only the CURRENT decode may clear the shared flag. An older completion
@@ -215,13 +220,11 @@ musicRemove.addEventListener('click', (e) => {
   padMusicRow();
   musicTabDot.hidden = true;
   document.getElementById('musicRemove').hidden = true;
-  waveformCtx.clearRect(0, 0, waveformCanvas.width, waveformCanvas.height);
-  zoomWaveformCtx.clearRect(0, 0, zoomWaveformCanvas.width, zoomWaveformCanvas.height);
   currentAudioBuffer = null;
   loopCrossfadeMs = 0; if (typeof setCrossfadeUI === 'function') setCrossfadeUI();
   musicTempo = null;
   loopCutOnSilence = false;
-  if (loopZoomLabel) loopZoomLabel.textContent = '0:00.00 → 0:00.00 [0.00s]';
+  syncMusicDrawer();
 });
 
 // ---- Play's music loop ---------------------------------------------------
@@ -251,7 +254,7 @@ function padMusicOff() {
   if (padPlayTimer) { clearInterval(padPlayTimer); padPlayTimer = null; }
   stopWebAudioLoop();
   if (audioEl) audioEl.pause();
-  if (playhead) playhead.hidden = true;
+  if (padDrawer) padDrawer.playhead(null);
   if (playPaused) pausedMusic = null;
 }
 
@@ -261,7 +264,6 @@ function playMusicLooped(drawingMs, onStarted, fromMs) {
     if (onStarted) onStarted();
     return;
   }
-  if (playhead) playhead.hidden = false;
   const from = fromMs || 0;
 
   // Primary: sample-accurate Web Audio loop (gapless, drift-free) — the same
@@ -283,12 +285,11 @@ function playMusicLooped(drawingMs, onStarted, fromMs) {
     let elapsedWA = from;
     if (padPlayTimer) clearInterval(padPlayTimer);
     const loopCheckWA = padPlayTimer = setInterval(() => {
-      if (!playing) { stopWebAudioLoop(); if (playhead) playhead.hidden = true; clearInterval(loopCheckWA); return; }
+      if (!playing) { stopWebAudioLoop(); if (padDrawer) padDrawer.playhead(null); clearInterval(loopCheckWA); return; }
       if (playPaused) return;   // a pause is not music played
       elapsedWA += 100 * replayRate;
-      const songTime = webAudioLoopSongTime();
-      if (playhead) playhead.style.left = (songTime / audioDuration * 100) + '%';
-      if (elapsedWA >= drawingMs) { stopWebAudioLoop(); if (playhead) playhead.hidden = true; clearInterval(loopCheckWA); }
+      if (padDrawer) padDrawer.playhead(webAudioLoopSongTime());
+      if (elapsedWA >= drawingMs) { stopWebAudioLoop(); if (padDrawer) padDrawer.playhead(null); clearInterval(loopCheckWA); }
     }, 100);
     return;
   }
@@ -318,7 +319,7 @@ function playNativeLooped(drawingMs, onStarted, fromMs) {
   const loopCheck = padPlayTimer = setInterval(() => {
     if (!playing) {
       audioEl.pause();
-      if (playhead) playhead.hidden = true;
+      if (padDrawer) padDrawer.playhead(null);
       clearInterval(loopCheck);
       return;
     }
@@ -328,13 +329,10 @@ function playNativeLooped(drawingMs, onStarted, fromMs) {
       audioEl.currentTime = trimStart;
       audioEl.play();
     }
-    const pct = (audioEl.currentTime / audioDuration) * 100;
-    if (playhead) {
-      playhead.style.left = pct + '%';
-    }
+    if (padDrawer) padDrawer.playhead(audioEl.currentTime);
     if (elapsed >= drawingMs) {
       audioEl.pause();
-      if (playhead) playhead.hidden = true;
+      if (padDrawer) padDrawer.playhead(null);
       clearInterval(loopCheck);
     }
   }, 100);

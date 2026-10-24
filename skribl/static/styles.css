@@ -2385,7 +2385,7 @@ body.recoloring #canvas { cursor: crosshair !important; }
 
 .fine-tune-body[hidden], .mt-pick[hidden], .mt-pick-btn[hidden], .mt-pick-tag[hidden] { display: none; }
 
-/* THE ONE LINE, under the strip: the loop's length, bold, in beats and
+/* THE ONE LINE, under the timeline: the loop's length, bold, in beats and
    against the drawing, then Skribl's pick or the way back at its end. Small
    violet words are --accent-ink, the menu's. It was three lines (the pick,
    Adjust's length and Fine-tune's sync line). ITS HEIGHT NEVER CHANGES UNDER
@@ -2463,8 +2463,8 @@ body.recoloring #canvas { cursor: crosshair !important; }
 .fine-tune-body.mt-folding { pointer-events: none; }
 
 /* MORE'S FOUR PARTS, each under its name (The restart, The beat, Exact times,
-   How it loops), and the switch rows (Smooth restart, Lock the length): the
-   draw drawer's switch row, name over what it does. */
+   How it loops), and the switch rows (Smooth restart, Cut on silence, Lock
+   the length): the draw drawer's switch row, name over what it does. */
 .mt-sect { margin: 18px 0 4px; font-size: 13px; font-weight: 600; color: var(--text-secondary); }
 .fine-tune-body > .mt-sect:first-child { margin-top: 2px; }
 .mt-step-line { margin: 10px 0 0; font-size: 13px; line-height: 1.4; color: var(--text-secondary); font-variant-numeric: tabular-nums; text-align: center; }
@@ -2472,8 +2472,24 @@ body.recoloring #canvas { cursor: crosshair !important; }
 .mt-switch-words { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
 .mt-switch .layer-toggle { display: inline-block; }
 .mt-smooth #testSeamBtn { margin-top: 6px; }
+/* THE RESTART VIEW (lib/musicrestart.js): the end beside the start, on the
+   paper inside More's card (a card in a card would be a box in a box), its
+   two words in its top corners and the blend's dot at its foot, whose tap
+   band is 44px. A finger that moves up or down first scrolls the page. */
+.mt-rv { position: relative; height: 112px; margin-top: 6px; border-radius: 10px; background: var(--menu-paper);
+  overflow: hidden; touch-action: pan-y; -webkit-user-select: none; user-select: none; cursor: ew-resize; }
+.mt-rv-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.mt-rv-tag { position: absolute; top: 6px; left: 8px; font-size: 12px; font-weight: 600; line-height: 1.2;
+  color: var(--text-secondary); pointer-events: none; }
+.mt-rv-tag.start { left: auto; right: 8px; }
+.mt-rv-dot { position: absolute; left: 0; bottom: 6px; width: 16px; height: 16px; margin-left: -8px; border-radius: 50%; z-index: 1;
+  background: var(--accent); box-shadow: 0 0 0 2px #fff, 0 1px 4px rgba(20, 10, 60, .3); cursor: ew-resize; touch-action: none; }
+.mt-rv-dot::before { content: ""; position: absolute; inset: -14px; border-radius: 50%; }
+.mt-rv-dot.dragging { background: var(--accent-fill); }
+.mt-rv-dot[hidden] { display: none; }
+.mt-rv-hint { margin: 8px 0 0; font-size: 13px; line-height: 1.35; color: var(--text-secondary); }
 
-/* THE PAIR THAT PLAYS, under the strip on every level: Play with my drawing
+/* THE PAIR THAT PLAYS, under the timeline, More open or not: Play with my drawing
    is the action, so the accent's fill; Hear the loop, the same size beside
    it, a menu card with the small violet words. Each is its verb over what it
    plays (15px over 12px), so both fit a 168px half of the owner's phone. */
@@ -2511,15 +2527,6 @@ body.recoloring #canvas { cursor: crosshair !important; }
 @media (hover: hover) { .mt-tap:not(.tapping):hover { background: color-mix(in srgb, var(--accent) 7%, var(--menu-card)); } }
 .mt-tempo { flex: 1 1 150px; min-width: 0; font-size: 13px; line-height: 1.35; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
 .mt-tempo b { color: var(--text-primary); font-weight: 650; }
-
-/* THE BEAT, MARKED: a tick on every beat, taller every four counted from the
-   loop's start, along the foot of the strip and the loop detail (as many as
-   stand 6px apart); and, with a smooth restart, a dashed line where the loop
-   comes round. lib/musicdrawer.js lays them; they take no taps. */
-.mt-ticks { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
-.mt-ticks i { position: absolute; bottom: 0; width: 1px; height: 6px; margin-left: -0.5px; background: var(--accent-ink); opacity: .75; }
-.mt-ticks i.bar { width: 2px; height: 11px; margin-left: -1px; opacity: .85; }
-.mt-ticks b { position: absolute; top: 0; bottom: 0; width: 0; margin-left: -1px; border-left: 2px dashed var(--accent-ink); opacity: .9; }
 
 @media (max-width: 640px) {
   /* Breathing room for the pen row on a phone. At 28px the gaps closed to
@@ -2841,167 +2848,55 @@ body.recoloring #canvas { cursor: crosshair !important; }
 
 @media (hover: hover) { .pending-dismiss:hover { background: rgba(var(--wash-rgb), 0.06); color: var(--text-secondary); } }
 
-.music-trim-track {
-  position: relative;
-  height: 48px;
-  background: var(--surface-well);
-  border-radius: 0;
-  overflow: visible;
-}
-
-.waveform-canvas {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  display: block;
-  border-radius: 0;
-  overflow: hidden;
-}
-
-.music-trim-range {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  background: rgba(124, 92, 255, 0.22);
-  border-left: 2px solid var(--ui-line);
-  border-right: 2px solid var(--ui-line);
-  z-index: 1;
-  border-radius: 0;
-  cursor: grab;
-  -webkit-tap-highlight-color: transparent;
-}
-
-/* Subtle grip in the center so it's discoverable that the whole loop drags */
-.music-trim-range::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 14px;
-  height: 14px;
-  transform: translate(-50%, -50%);
-  background-image: radial-gradient(circle, rgba(var(--wash-rgb), 0.55) 1px, transparent 1.4px);
-  background-size: 4px 4px;
-  background-position: center;
-  opacity: 0.7;
-  pointer-events: none;
-}
-
-.music-trim-range:active,
-.music-trim-range.dragging {
-  cursor: grabbing;
-  background: rgba(124, 92, 255, 0.3);
-}
-
-.music-trim-range.narrow {
-  cursor: default;
-}
-
-.music-trim-range.narrow::after {
-  display: none;
-}
-
-.music-trim-handle {
-  position: absolute;
-  top: -6px;
-  bottom: -6px;
-  width: 16px;
-  background: transparent;
-  cursor: ew-resize;
-  border-radius: 0;
-  transform: translateX(-50%);
-  z-index: 2;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.music-trim-handle .zoom-handle-line {
-  flex: 1;
-  width: 1px;
-  background: var(--ui-hi);
-  box-shadow: 0 0 3px rgba(124, 92, 255, 0.5);
-}
-
-.music-trim-handle .zoom-handle-cap {
-  width: 8px;
-  height: 5px;
-  background: var(--ui-hi);
-  border-radius: 2px;
-  flex-shrink: 0;
-}
-
-.music-trim-handle.dragging .zoom-handle-line { background: #9580ff; }
-@media (hover: hover) { .music-trim-handle:hover .zoom-handle-line { background: #9580ff; } }
-
-.music-trim-handle.dragging .zoom-handle-cap { background: #9580ff; }
-@media (hover: hover) { .music-trim-handle:hover .zoom-handle-cap { background: #9580ff; } }
+/* THE TIMELINE (lib/musictimeline.js), the music drawer's one view of the
+   loop. It took the strip's place. The words over the drawing's lane are the
+   drawer's; the canvas paints both lanes; the two handles stand over the song
+   (their tap bands are 44px); under them the whole song is one thin line,
+   with where the loop is in it. A finger that moves up or down first scrolls
+   the page (pan-y): the module locks a sideways drag after 6px. */
+.mt-tl { position: relative; margin-top: 2px; }
+.mt-tl-name { margin: 0 0 6px; font-size: 13px; font-weight: 600; line-height: 1.35; color: var(--text-secondary);
+  white-space: nowrap; width: max-content; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.mt-tl-stage { position: relative; height: 118px; touch-action: pan-y; -webkit-user-select: none; user-select: none; cursor: grab; }
+.mt-tl.holding .mt-tl-stage { cursor: grabbing; }
+.mt-tl-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.mt-tl-handle { position: absolute; left: 0; top: 34px; bottom: 0; width: 18px; margin-left: -9px; z-index: 2;
+  display: flex; align-items: center; justify-content: center; cursor: ew-resize; touch-action: none;
+  -webkit-tap-highlight-color: transparent; }
+.mt-tl-handle::before { content: ""; position: absolute; inset: 0 -13px; }
+.mt-tl-handle::after { content: ""; position: absolute; top: 0; bottom: 0; left: 50%; width: 3px; margin-left: -1.5px;
+  background: var(--accent); border-radius: 2px; }
+.mt-tl-grip { position: relative; z-index: 1; width: 18px; height: 32px; border-radius: 6px; background: var(--accent);
+  color: #fff; display: grid; place-items: center; box-shadow: 0 1px 3px rgba(20, 10, 60, .25); }
+.mt-tl-grip svg { width: 18px; height: 32px; display: block; }
+.mt-tl-handle.dragging .mt-tl-grip { background: var(--accent-fill); }
+.mt-tl-handle.off, .mt-tl.empty .mt-tl-handle, .mt-tl.empty .mt-tl-part { visibility: hidden; }
+.mt-tl-whole { position: relative; height: 4px; margin: 12px 0 6px; border-radius: 2px; background: var(--menu-card-line);
+  cursor: pointer; touch-action: none; }
+.mt-tl-whole::before { content: ""; position: absolute; inset: -14px 0; }
+.mt-tl-part { position: absolute; top: -1px; height: 6px; border-radius: 3px; background: var(--accent); pointer-events: none; }
 
 .music-playhead {
   position: absolute;
   top: 0;
   bottom: 0;
+  left: 0;
   width: 2px;
+  margin-left: -1px;
   background: var(--text-primary);   /* over a waveform that flips with the theme */
   z-index: 3;
   pointer-events: none;
   box-shadow: 0 0 6px rgba(var(--wash-rgb), 0.6);
 }
+.mt-tl .music-playhead { top: 34px; }
 
 .music-playhead[hidden] { display: none; }
 
-.music-trim-times {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 6px;
-  font-size: 11px;
-  color: var(--text-muted);
-  font-variant-numeric: tabular-nums;
-}
-
-.loop-zoom {
-  margin-top: 12px;
-  padding: 14px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: var(--surface-raised);
-}
-
-.loop-zoom-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12px;
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--text-muted);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-#loopZoomLabel {
-  color: var(--text-tool);
-  font-variant-numeric: tabular-nums;
-  text-transform: none;
-  letter-spacing: 0;
-  font-size: 11px;
-}
-
-.zoom-waveform-canvas {
-  width: 100%;
-  height: 72px;
-  display: block;
-  border-radius: 0;
-  background: var(--surface-well);
-}
-
 /* THE TIME READS FROM ITS CUT LINE INWARD (the 12px words, after v326).
    Centred on its handle, the start's bubble hung off the screen's left edge
-   with the loop at 0:00, and the end's off the right at the track's end. The
+   with the loop at 0:00, and the end's off the right at the song's end. The
    start's now begins at its line and the end's finishes at its, so both stay
-   over the track wherever the handles sit. */
+   over the timeline wherever the handles sit. Shown while an end is held. */
 .trim-bubble {
   position: absolute;
   bottom: calc(100% + 5px);
@@ -3024,11 +2919,11 @@ body.recoloring #canvas { cursor: crosshair !important; }
   right: 50%;
 }
 
-.music-trim-handle.dragging .trim-bubble {
+.mt-tl-handle.dragging .trim-bubble {
   opacity: 1;
 }
 @media (hover: hover) {
-  .music-trim-handle:hover .trim-bubble {
+  .mt-tl-handle:hover .trim-bubble {
     opacity: 1;
   }
 }
@@ -3130,10 +3025,10 @@ body.recoloring #canvas { cursor: crosshair !important; }
      .edge-controls is 12px with 3px of padding, so 9px sits concentric. It was
      a 50% circle, which read as a circle inside a rounded-square the moment the
      container stopped being a pill.
-     It also settles an inconsistency that predates the squaring: the Scroll and
+     It also settles an inconsistency that predates the squaring: the
      Crossfade nudges in the SAME panel were .slider-nudge-btn at 7px on a 26px
-     box, two shapes for one minus/plus gesture four rows apart. They take this
-     size and corner now (.zoom-pan-row / .crossfade-row .slider-nudge-btn). */
+     box, two shapes for one minus/plus gesture rows apart. They take this
+     size and corner now (.crossfade-row .slider-nudge-btn). */
   border-radius: calc(var(--r-seg) - 3px);
   border: 0;
   background: var(--line);
@@ -3152,55 +3047,6 @@ body.recoloring #canvas { cursor: crosshair !important; }
 
 @media (hover: hover) { .nudge-btn:hover { background: var(--line); color: var(--text-strong); } }
 .nudge-btn:active { background: var(--ui-active); color: #fff; }
-
-.zoom-handle[hidden] { display: none; }
-
-.zoom-handle {
-  position: absolute;
-  top: -6px;
-  bottom: -6px;
-  width: 28px;
-  transform: translateX(-50%);
-  cursor: ew-resize;
-  z-index: 5;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.zoom-handle-line {
-  flex: 1;
-  width: 1px;
-  background: var(--ui-hi);
-  box-shadow: 0 0 3px rgba(124, 92, 255, 0.5);
-}
-
-.zoom-handle-cap {
-  width: 8px;
-  height: 5px;
-  background: var(--ui-hi);
-  border-radius: 2px;
-  flex-shrink: 0;
-}
-
-.zoom-handle.dragging .zoom-handle-line {
-  background: #9580ff;
-}
-@media (hover: hover) {
-  .zoom-handle:hover .zoom-handle-line {
-    background: #9580ff;
-  }
-}
-
-.zoom-handle.dragging .zoom-handle-cap {
-  background: #9580ff;
-}
-@media (hover: hover) {
-  .zoom-handle:hover .zoom-handle-cap {
-    background: #9580ff;
-  }
-}
 
 /* ---------- Photo tab ---------- */
 /* Fill / Fit / Stretch: a track of the one pill (A SELECTED OPTION IS A
@@ -5126,11 +4972,6 @@ button:not([hidden]):has(> svg.mk:only-child) { display: inline-flex; align-item
 
   .tool-row { gap: 5px; }
 
-  .music-trim-handle,
-  .zoom-handle {
-    width: 44px;
-  }
-
   /* Start of loop and End of loop sit side by side, each its name over its
      [- 0.000 +] group, where two fit; below that they stack. Each column must
      hold a whole group: 130px with the 16px time (2px gaps and padding, 30px
@@ -6112,48 +5953,7 @@ body.player-mode .player-shell { position: static; }
 .brush-slider-line .slider-nudge-wrap { flex: 1; min-width: 0; }
 
 
-/* ---------- The loop-view zoom bar ---------------------------------------
-   Also two runtime <style> strings — editor_music.js and flip.js — and they
-   had already drifted: only Pad's copy carried the 640px rule, so on a narrow
-   phone the bar justified differently on the two surfaces for no reason anyone
-   chose. That is the whole argument against CSS-in-a-JS-string in one example.
-   The shell and the cells come from .seg; this is bar layout only. */
-/* The loop panel's rows are 14-16px apart (owner, from an iPhone: "things just
-   seem close together"). Measured before at 390: the handles' caps touched the
-   zoom bar (0px) and sat 2px above Scroll, and Crossfade's thumb overlapped the
-   Step size row. The caps reach 6px past the waveform on both sides, so 14px
-   here and 16px on Scroll leave 8-10px of air around them. */
-.zoom-mag-bar { display: flex; gap: 8px; justify-content: space-between; align-items: center; margin: 0 0 14px; flex-wrap: wrap; }
-.zoom-mag-bar > .zoom-seg { flex: 0 0 auto; }
-/* THE ZOOM STEPPER. Same shell as .edge-controls below it -- well, hairline,
-   --r-seg radius -- because this panel already says "step this value" three
-   times and a fourth should not look like a new kind of control. The BUTTONS
-   carry magnifier glyphs rather than plain signs: a leading magnifier beside
-   plain ones measured 118px and put the bar back onto two lines at 390, so the
-   icon had to be the button rather than an addition to it.
-
-   RADIUS COMES FROM THE TOKEN, both here and on the cells. This shipped with a
-   typed 11px against .edge-controls' 12px while the comment above it claimed
-   the two matched, and the assertion that reads .edge-controls at runtime is
-   what caught it -- a check written against the typed number would have agreed
-   with the mistake. The cells use the same calc(--r-seg - 3px) as .nudge-btn:
-   3px of padding, so the corner sits concentric inside the shell's. */
-.mag-step { display: flex; align-items: center; gap: 2px; padding: 3px;
-  background: var(--surface-well); border: 1px solid var(--line-strong);
-  border-radius: var(--r-seg); flex: 0 0 auto; }
-.mag-step-btn { width: 28px; height: 28px; border-radius: calc(var(--r-seg) - 3px); border: 0;
-  background: transparent; color: var(--text-primary); cursor: pointer;
-  display: grid; place-items: center; padding: 0;
-  transition: background .14s ease, opacity .14s ease; }
-.mag-step-btn svg { width: 17px; height: 17px; display: block; }
-@media (hover: hover) { .mag-step-btn:hover:not(:disabled) { background: var(--surface-control-hover); } }
-.mag-step-btn:disabled { opacity: .32; cursor: default; }
-.mag-step-btn:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
-.mag-step-val { min-width: 26px; text-align: center; font-size: 12px;
-  font-weight: 700; color: var(--ui-hi); font-variant-numeric: tabular-nums; }
-@media (max-width: 640px) { .zoom-mag-bar { justify-content: flex-start; gap: 8px 10px; } }
-
-/* ---------- Slider nudgers, zoom/crossfade rows -------------------------
+/* ---------- Slider nudgers, the crossfade row ----------------------------
    These lived in a STRING, twice: editor_photo.js and flip.js each built the
    same stylesheet at runtime and appended it to <head>, with the same four
    hard-coded neutrals in both copies. Nothing compared them, and no colour
@@ -6176,17 +5976,14 @@ body.player-mode .player-shell { position: static; }
 }
 @media (hover: hover) { .slider-nudge-btn:hover { background: var(--surface-nudge-hover); } }
 .slider-nudge-btn:active { background: var(--accent-fill); color: #fff; }
-.zoom-pan-row, .crossfade-row { display: flex; align-items: center; gap: 10px; margin: 16px 0 4px; }
-.zoom-pan-row { margin-bottom: 0; }
+.crossfade-row { display: flex; align-items: center; gap: 10px; margin: 16px 0 4px; }
 /* Same size as the Start of loop / End of loop nudges below (.nudge-btn: 32px,
    30px on a phone), so one panel shows one
    size of minus and plus. */
-.zoom-pan-row .slider-nudge-btn, .crossfade-row .slider-nudge-btn { width: 32px; height: 32px; border-radius: calc(var(--r-seg) - 3px); }
-@media (max-width: 640px) { .zoom-pan-row .slider-nudge-btn, .crossfade-row .slider-nudge-btn { width: 30px; height: 30px; } }
-.zoom-pan-label, .crossfade-label { font-size: 12px; color: var(--text-soft); flex: none; min-width: 64px; }
+.crossfade-row .slider-nudge-btn { width: 32px; height: 32px; border-radius: calc(var(--r-seg) - 3px); }
+@media (max-width: 640px) { .crossfade-row .slider-nudge-btn { width: 30px; height: 30px; } }
+.crossfade-label { font-size: 12px; color: var(--text-soft); flex: none; min-width: 64px; }
 .crossfade-val { font-size: 12px; color: var(--text-bright); flex: none; min-width: 38px; text-align: right; }
-#zoomTrackWrap { cursor: grab; }
-#zoomTrackWrap.panning { cursor: grabbing; }
 
 /* ---------- Brush size: rounded tray + snug value + preview dot ---------- */
 .brush-slider-line {
@@ -9113,24 +8910,19 @@ body.drawalong .canvas-empty-hint { display: none; }
 .tune-shell.open { border-top: 0; }
 .tool-tray::after { border-top-color: var(--menu-paper); }
 :where(.tab-panel, .media-card, .shape-pop, .tool-tray, .tune-shell) :is(.seg, .smooth-seg, .photo-fit-group, .media-tabs, .gif-seg,
-    .brush-slider-line, .reposition-btn, .panel-btn, .clear-drawer-btn, .loop-btn:where(.subtle), .edge-controls, .mag-step,
-    .slider-nudge-btn, .eyedropper-btn, .loop-zoom) {
+    .brush-slider-line, .reposition-btn, .panel-btn, .clear-drawer-btn, .loop-btn:where(.subtle), .edge-controls,
+    .slider-nudge-btn, .eyedropper-btn) {
   background: var(--menu-card); border: 1px solid var(--menu-card-line);
 }
 :where(.tab-panel, .media-card, .shape-pop, .tool-tray, .tune-shell) :is(.reposition-btn, .panel-btn, .clear-drawer-btn,
-    .edge-controls, .mag-step, .slider-nudge-btn, .eyedropper-btn) { border-radius: var(--r-control); }
-:where(.tab-panel, .media-card) .loop-zoom { border-radius: var(--r-card); }
+    .edge-controls, .slider-nudge-btn, .eyedropper-btn) { border-radius: var(--r-control); }
 :where(.tab-panel, .media-card) .nudge-btn { background: color-mix(in srgb, var(--accent) 7%, var(--menu-card)); }
-/* INSIDE MORE, a card, the loop detail has no box of its own, which would be
-   a card in a card. Its choices keep the menu's white card, as every choice
-   in a drawer does (the owner's sheets rule; verify_contrast). */
-:where(.tab-panel, .media-card) .fine-tune-body .loop-zoom { background: none; border: 0; border-radius: 0; padding: 0; margin-top: 6px; }
 :where(.tab-panel, .media-card, .tool-tray, .tune-shell) .drawer-divider { background: var(--menu-card-line); }
 /* Words in the drawers that were too faint (the drawers mock, measured on the
    loaded photo and music drawers): secondary words take the sheet's ink, and
-   the zoom's value the small violet words'. Play with my drawing's white words
-   sit on the action fill (.mt-play); Hear the loop's are the violet ones. */
-#repositionHint, #trimStartLabel, #trimEndLabel, .loop-zoom-head > span:first-child, #clearLabel { color: var(--text-secondary); }
+   Play with my drawing's white words sit on the action fill (.mt-play);
+   Hear the loop's are the violet ones. */
+#repositionHint, #clearLabel { color: var(--text-secondary); }
 :where(.tab-panel, .media-card) .clear-drawer-btn { color: var(--text-secondary); }   /* 4.19 on the dark card; hover, armed and disabled still win */
 :where(.tab-panel, .media-card) .clear-drawer-btn.armed { color: var(--danger-soft); }   /* --danger read 4.44 on the dark card's tint */
 @media (hover: hover) { :where(.tab-panel, .media-card) .clear-drawer-btn:hover { color: var(--danger-soft); } }

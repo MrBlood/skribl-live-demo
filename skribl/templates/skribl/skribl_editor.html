@@ -476,9 +476,10 @@
   <script src="{{ skribl_asset('lib/photofit.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/artwork.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/looptrim.js') }}" defer></script>
-  {# lib/loopwave.js: the zoomed loop view -- window, handles, waveform -- one copy (v315). #}
-  <script src="{{ skribl_asset('lib/loopwave.js') }}" defer></script>
-  <script src="{{ skribl_asset('lib/zoomstep.js') }}" defer></script>
+  {# lib/musictimeline.js and lib/musicrestart.js: the music drawer's timeline and
+     its Restart view (step 2), one copy for both editors; before musicdrawer.js. #}
+  <script src="{{ skribl_asset('lib/musictimeline.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/musicrestart.js') }}" defer></script>
   {# lib/musicdrawer.js: the music drawer's controls, one copy with Flip's (the owner:
      "the same music editor on both pad and flip"). Before editor_music.js, which wires it. #}
   <script src="{{ skribl_asset('lib/musicdrawer.js') }}" defer></script>
