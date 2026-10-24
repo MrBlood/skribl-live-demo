@@ -2864,6 +2864,25 @@ body.recoloring #canvas { cursor: crosshair !important; }
 .mt-tl { position: relative; margin-top: 2px; }
 .mt-tl-name { margin: 0 0 6px; font-size: 13px; font-weight: 600; line-height: 18px; color: var(--text-secondary);
   white-space: nowrap; width: max-content; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+/* MAGNIFY, at the end of the name's line: the - readout + of Exact times
+   (.edge-controls, .nudge-btn), the same card, line and fill, its cells 28px
+   and grown to 44 for a finger, the glyphs the magnifier Fine-tune's had. */
+.mt-tl-head { display: flex; align-items: center; gap: 10px; margin: 0 0 6px; }
+.mt-tl-namebox { flex: 1 1 auto; min-width: 0; }
+.mt-tl-head .mt-tl-name { margin: 0; }
+.mt-tl-mag { display: flex; align-items: center; gap: 2px; padding: 3px; flex: none;
+  background: var(--menu-card); border: 1px solid var(--menu-card-line); border-radius: var(--r-control); }
+.mt-tl-mag-btn { position: relative; z-index: 1; width: 28px; height: 28px; padding: 0; border: 0; display: grid; place-items: center;
+  border-radius: calc(var(--r-seg) - 3px); background: color-mix(in srgb, var(--accent) 7%, var(--menu-card)); color: var(--text-tool);
+  cursor: pointer; -webkit-tap-highlight-color: transparent; transition: background .15s ease, color .15s ease, opacity .15s ease; }
+.mt-tl-mag-btn::before { content: ""; position: absolute; inset: -8px; background: transparent; border-radius: inherit; }
+.mt-tl-mag-btn svg { width: 18px; height: 18px; display: block; }
+@media (hover: hover) { .mt-tl-mag-btn:hover:not(:disabled) { color: var(--text-strong); } }
+.mt-tl-mag-btn:active:not(:disabled) { background: var(--ui-active); color: #fff; }
+.mt-tl-mag-btn:disabled { opacity: .35; cursor: default; }
+.mt-tl-mag-btn:focus-visible { outline: 2px solid var(--ui-hi); outline-offset: 1px; }
+.mt-tl-mag-val { min-width: 34px; text-align: center; font-size: 13px; font-weight: 700; line-height: 1; color: var(--text-strong);
+  font-variant-numeric: tabular-nums; }
 .mt-tl-stage { position: relative; height: 118px; touch-action: pan-y; -webkit-user-select: none; user-select: none; cursor: grab; }
 .mt-tl.holding .mt-tl-stage { cursor: grabbing; }
 .mt-tl-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
