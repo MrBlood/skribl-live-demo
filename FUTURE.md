@@ -1045,6 +1045,34 @@ the examples grew), Draw along on Flip across pages, and more answers over
 time, from what people type and find nothing for (nothing typed leaves the
 app today, so that needs the owner's say).
 
+## 6q. Blooby as the S: the owner's icon, filed, not built in (owner, after #627)
+
+The owner sent four renders of a new Home Screen icon: Blooby as a white S
+on a lilac tile, his arm raised to the star. Asked to make it more Skribl,
+Cal redrew it with the pen, and the owner: "That image looks nothing like
+this. Yours is sloppy." The lesson: their clean, confident curves are the
+point, so their render is used as it is and never redrawn. Shown with two
+changes only, the pick was "mine with deeper edges. File it away", then
+"Let's forget about that for a while."
+
+FILED: `docs/brand/s-blooby-icon.png`, 1254px square, the render pixel for
+pixel but for two changes. THE CORNERS: the black outside the rounded
+corners, flooded from each corner over dark pixels and 4px more for the
+rim, filled from the tile around it (push-pull) and softened 6px inside the
+fill alone (an icon file is a full square; the phone rounds it). THE DEEPER
+EDGE: from 0.62 to 1.06 of the way out (a squircle's distance from the
+middle), eased in (to the power 1.6), the ground moves up to 72% of the way
+to `#9179ff`, and the white S, arm, star and face not at all. On a light
+Home Screen its edge reads 2.0:1, as today's icon does (as rendered, 1.6:1).
+
+TO BUILD IT IN, when the owner says: the three files (icon-512, icon-192,
+apple-touch-icon at 180) made from it instead of `harness/tools/blooby.py
+icon`, the icon notes there, and `verify_identity` taught the new icon (it
+reads today's: the star's top point over his head, the lilac beside him).
+A vector from the owner would make sharper files. The small Blooby pictures
+in the app stay as they are unless the owner asks. Not tested: how iOS 26
+tints and relights it on a real iPhone.
+
 ## 7. The honest state
 
 The tool is good. It is better than it needs to be for a demo and not yet enough
