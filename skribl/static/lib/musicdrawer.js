@@ -76,8 +76,8 @@
  * 32 beats (the owner: "we only ever want 4,8,16,... beats"), the end where
  * the loop comes round, so with a smooth restart the handle sits that much
  * past the beat. The loop slid along the song settles its start on a beat,
- * and - and + move a bar. The tempo is the editor's, saved with the song in
- * its drafts.
+ * and - and + move a bar unless another step is picked. The tempo is the
+ * editor's, saved with the song in its drafts.
  *
  * TEST SEAM IS AN <audio> ELEMENT, played inside the tap. On a phone set to
  * silent that is the one that is heard (verify_audiosession's first note),
@@ -132,7 +132,6 @@
   'use strict';
 
   var SEAM = 1.25;                         // seconds either side of the join
-  var LEVEL_KEY = 'skribl_music_level';    // one for both editors: 'fine' is More open
   var PICK_FADE_MS = 250;                  // Skribl's pick's smooth restart
   var UNDO_MS = 8000;
   var EPS = 0.0005;                        // two times are one at the thousandth
@@ -211,14 +210,15 @@
      * tiles do (lib/drawtiles.js), at once under Reduce Motion, and the drawer
      * gets shorter only once the fold is done, gently: scrolled near its end,
      * the page would clamp and leap under the finger (lib/drawerdetent.js).
-     * Whether it is open is remembered, one key for both editors: 'fine' (it
-     * was Fine-tune) is open, anything else closed, the old Adjust too.
+     * MORE STARTS CLOSED, EVERY TIME: on a load, and whenever the music panel
+     * is put away, so the drawer opens on its one view, short enough for a
+     * phone (the owner, finding it open from an old Fine-tune: "More starts
+     * open"; then the pick, always closed). Nothing remembers it.
      * #musicDetail's data-level says which, set before More shows or hides,
      * so lib/drawerdetent.js does not follow it as a song landing. `hidden`
      * takes what More holds out of the Tab order as well as off the screen. */
     var moreBtn = $('fineTuneToggle'), moreBody = $('fineTuneBody');
     var open = false, folding = false, foldT = null;
-    try { open = global.localStorage.getItem(LEVEL_KEY) === 'fine'; } catch (e) {}
     function still() { return !!(global.matchMedia && global.matchMedia('(prefers-reduced-motion: reduce)').matches); }
     function showMore() {
       if (detail) detail.dataset.level = open ? 'fine' : 'simple';
@@ -243,7 +243,6 @@
       if (next === open) return;
       if (folding) finishFold();
       open = next;
-      try { global.localStorage.setItem(LEVEL_KEY, open ? 'fine' : 'simple'); } catch (e2) {}
       if (!open) {
         folding = true;
         showMore();
@@ -289,12 +288,25 @@
     }
     showMore();
     if (moreBtn) moreBtn.addEventListener('click', function () { setMore(!open); });
+    // Put away (the drawer closed, or Photo picked), More closes with it, at
+    // once: nothing of it is on the screen to fold.
+    if (panel && global.MutationObserver) new global.MutationObserver(function () {
+      if (!panel.hidden || !(open || folding)) return;
+      clearTimeout(foldT);
+      if (moreBody) {
+        moreBody.classList.remove('mt-folding');
+        if (moreBody.getAnimations) moreBody.getAnimations().forEach(function (a) { a.cancel(); });
+      }
+      open = folding = false;
+      showMore();
+    }).observe(panel, { attributes: true, attributeFilter: ['hidden'] });
 
     // A new song: the timeline starts where it belongs, and the last song's
     // Undo and taps are not this one's.
     function resetView() {
       if (tl) tl.reset();
       forgetUndo();
+      stepPick = null;
       taps = [];
       clearTimeout(tapT);
       tapT = null;
@@ -430,21 +442,43 @@
       }
     }) : null;
 
-    /* ---- - and +: 0.1s a press, or a bar once there is a tempo. ----------
-     * Each button's name says which, and so does the line under them (it was
-     * Each tap, with five steps to choose from). Only the edges' buttons carry
-     * data-which. */
-    var nudges = [].slice.call(document.querySelectorAll('.nudge-btn[data-which]')), stepLine = $('musicStepLine');
-    function stepNow() { var p = beatSecs(); return p > 0 ? 4 * p : 0.1; }
+    /* ---- - and +: how far each press moves. --------------------------------
+     * One pill under the times, Each press: 0.01s, 0.1s, or a bar, faded until
+     * there is a tempo (the owner, asking how to change the step after it
+     * went automatic; it had been Each tap, with five steps). Untouched it is
+     * today's step, 0.1s, and a bar once the beat is tapped; a new song starts
+     * untouched. Each button's name says the step too. Only the edges'
+     * buttons carry data-which. */
+    var nudges = [].slice.call(document.querySelectorAll('.nudge-btn[data-which]'));
+    var stepSeg = $('musicStepSeg'), stepBtns = stepSeg ? [].slice.call(stepSeg.querySelectorAll('button[data-step]')) : [];
+    var stepPick = null;   // null untouched, else '0.01', '0.1' or 'bar'
+    function stepKey() {
+      if (stepPick === '0.01' || stepPick === '0.1') return stepPick;
+      return beatSecs() > 0 ? 'bar' : '0.1';
+    }
+    function stepNow() { var k = stepKey(); return k === 'bar' ? 4 * beatSecs() : parseFloat(k); }
     function syncSteps() {
-      var p = beatSecs();
+      var p = beatSecs(), k = stepKey();
       nudges.forEach(function (b) {
-        var w = (b.dataset.which === 'start' ? 'Start' : 'End') + ' of loop, ' + (p > 0 ? 'a bar ' : '0.1s ')
+        var w = (b.dataset.which === 'start' ? 'Start' : 'End') + ' of loop, ' + (k === 'bar' ? 'a bar' : k + 's') + ' '
           + (parseFloat(b.dataset.amount) > 0 ? 'later' : 'earlier');
         if (b.getAttribute('aria-label') !== w) b.setAttribute('aria-label', w);
       });
-      if (stepLine) stepLine.textContent = !h.hasTrack() ? '' : p > 0 ? '\u2212 and + move a bar, ' + (4 * p).toFixed(2) + 's.' : '\u2212 and + move 0.1s.';
+      stepBtns.forEach(function (b) {
+        var on = b.dataset.step === k, off = b.dataset.step === 'bar' && !(p > 0);
+        if (b.classList.contains('on') !== on) b.classList.toggle('on', on);
+        if (b.disabled !== off) b.disabled = off;
+        var t = b.dataset.step !== 'bar' ? '' : off ? 'Once you have tapped the beat' : 'A bar, ' + (4 * p).toFixed(2) + 's';
+        if ((b.getAttribute('title') || '') !== t) { if (t) b.setAttribute('title', t); else b.removeAttribute('title'); }
+      });
     }
+    stepBtns.forEach(function (b) {
+      b.addEventListener('click', function () {
+        if (b.disabled) return;
+        stepPick = b.dataset.step;
+        syncSteps();
+      });
+    });
     nudges.forEach(function (b) {
       b.addEventListener('click', function () {
         var which = b.dataset.which, dir = parseFloat(b.dataset.amount);

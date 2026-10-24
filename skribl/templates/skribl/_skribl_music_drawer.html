@@ -149,9 +149,10 @@
           </div>
         </div>
         {#- EXACT TIMES: Start and End of loop typed to the thousandth or moved
-            with - and +, 0.1s a press, or a bar once there is a tempo. The
-            loop detail that sat above them went with step 2: the timeline
-            and the Restart view do its job. -#}
+            with - and +, as far as Each press says: 0.01s, 0.1s, or a bar
+            once there is a tempo (one pill, lib/segslider.js; untouched, 0.1s
+            or a bar). The loop detail that sat above them went with step 2:
+            the timeline and the Restart view do its job. -#}
         <p class="mt-sect">Exact times</p>
         <div class="finetune-panel">
           <div class="finetune-grid">
@@ -172,7 +173,10 @@
               </div>
             </div>
           </div>
-          <p class="mt-step-line" id="musicStepLine"></p>
+          <div class="mt-step">
+            <span class="edge-name" id="musicStepLbl">Each press</span>
+            <span class="seg mt-step-seg" id="musicStepSeg" role="group" aria-labelledby="musicStepLbl"><span class="seg-slider"></span><button type="button" data-step="0.01">0.01s</button><button type="button" data-step="0.1" class="on">0.1s</button><button type="button" data-step="bar" disabled title="Once you have tapped the beat">a bar</button></span>
+          </div>
         </div>
         {#- HOW IT LOOPS: Cut on silence (lib/audioloop.js cutFrames: a clean
             cut's two ends move together, a few thousandths, to where the
