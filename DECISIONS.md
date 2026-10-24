@@ -22528,3 +22528,34 @@ scrollIntoView, the wheel not calling the re-asserts off, and the repaint
 without the switch's row. The same file served unchanged stayed green.
 
 Not tested here: the owner's iPhone (no WebKit here) and its URL bar settling.
+
+## After v329 -- A song landing calls off the drawer opening's re-asserts (main green again)
+
+Main went red after the tall-drawer fix above, in CI only, in verify_parity on
+a desk: "arming the bin moves nothing", the music switch 29px up on Flip and
+5px on the Pad between the row's two reads. Here it was green; with the CPU
+slowed four times it went red in five of eight tries.
+
+TWO REVEALS, EACH RE-ASSERTING ITS OWN PLACE. The drawer's opening
+(lib/drawerdetent.js revealPanelEnd) re-asserts at 300, 700 and 1200ms, either
+way since the fix above. A song landing in that time grows the drawer, and
+followGrowth glides to the new end and re-asserts that. The opening's
+re-asserts, aimed at the end before it grew, cut that glide short (the page
+260px in one frame on Flip), held the page a pixel off the growth's cap (the
+panel's end against the card's), and pulled back the page verify_parity had
+moved on to bring the bin into view: 521 to 492px on Flip, 473 to 468px on
+the Pad, CI's numbers exactly. A growth is the newer reveal now, so it calls
+off the opening's re-asserts, as a newer opening and Play already did
+(revealGen). With the CPU slowed four times the row's own steps then stood
+still in all 24 tries.
+
+Pad and Flip: shared, one lib.
+
+verify_musicmore, in its kind part, on the Pad and Flip: a song lands as the
+drawer opens, the bin is brought into view as verify_parity's row brings it,
+and the page is read on every frame until the opening's last re-assert has
+passed; nothing may move it. Without the change it is red on both editors in
+three runs of three (5px on the Pad, 29px on Flip), the change served away with
+the file on disk untouched; the same file served unchanged stayed green. Flip's
+"More opened as a song lands glides" row went red once without the change too,
+but that was a long frame (170px in 56ms): two more runs without it were green.

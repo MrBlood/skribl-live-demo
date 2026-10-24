@@ -369,6 +369,12 @@
     }
     function reveal() {
       var mine = ++gen;
+      // A GROWTH IS THE NEWER REVEAL, so it calls off the opening's
+      // re-asserts (revealPanelEnd above), which aimed at the drawer's end
+      // before it grew. A song landing within 1.2s of the drawer opening had
+      // them snap this glide short, the page 260px in one frame on Flip, then
+      // hold the page a pixel off this cap (the panel's end, not the card's).
+      revealGen++;
       var b = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches
         ? 'auto' : 'smooth';
       requestAnimationFrame(function () { window.scrollTo({ top: target(), behavior: b }); });

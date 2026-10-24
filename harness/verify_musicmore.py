@@ -826,6 +826,35 @@ with sync_playwright() as pw:
               put["y"] > at["y"] + 100 and abs(left["y"] - put["y"]) <= 2,
               f"opening at {at['y']}, scrolled on to {put['y']}, then {left['y']} once the opening's re-asserts were done")
         c.close()
+    # A SONG LANDING IS THE NEWER REVEAL (main went red after the fix above:
+    # verify_parity's switch moved 29px on Flip and 5px on the Pad between two
+    # reads). The opening re-asserts its place either way until 1.2s; a song
+    # landing in that time grows the drawer and glides to its new end, and the
+    # opening's re-asserts, aimed at the end before it grew, snapped that glide
+    # short and pulled back a page moved on since. Here the song lands as the
+    # drawer opens, the bin is brought into view as verify_parity's bin row
+    # brings it (the browser does the same for a control taking focus), and
+    # the page is read on every frame until the opening's last re-assert is
+    # past. Nothing may move it. The bin is brought into view well inside
+    # that time (said), or this row could not tell.
+    for _n, _p in eds("kind"):
+        c, pg, _ = editor(b, _n, _p, drawn=False, song=None, opts=DESK)
+        browsing.pad_drawer(pg, "music", settle=50)
+        opened = pg.evaluate("() => performance.now()")
+        pg.set_input_files("#musicInput", SHORT)
+        pg.wait_for_function("() => document.getElementById('musicUploadBtn').classList.contains('loaded') && !!currentAudioBuffer", timeout=20000)
+        pg.wait_for_timeout(300)
+        got = pg.evaluate("""() => new Promise((done) => {
+            document.getElementById('musicRemove').scrollIntoView({ block: 'center' });
+            const ys = [], t0 = performance.now();
+            (function f() { ys.push(Math.round(scrollY));
+              if (performance.now() - t0 < 1400) requestAnimationFrame(f); else done({ ys, t0 }); })(); })""")
+        ys, early = got["ys"], got["t0"] - opened
+        check(f"{_n}: a song landing as the drawer opens is the newer reveal: nothing pulls the page back after it",
+              len(ys) > 20 and early < 1000 and max(ys) - min(ys) <= 1,
+              f"the bin brought into view {early:.0f}ms after the drawer opened, the page at {ys[0]}px;"
+              f" over {len(ys)} frames it went {min(ys)}-{max(ys)}px")
+        c.close()
     # A DRAFT OPENED SAYS ITS OWN SMOOTH RESTART (the owner's Flip: "19.75s"
     # over a switch that said Off). A draft with a 0.25s smooth restart, saved,
     # then opened over a song whose smooth restart was switched off: the line,
