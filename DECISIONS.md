@@ -22559,3 +22559,151 @@ three runs of three (5px on the Pad, 29px on Flip), the change served away with
 the file on disk untouched; the same file served unchanged stayed green. Flip's
 "More opened as a song lands glides" row went red once without the change too,
 but that was a long frame (170px in 56ms): two more runs without it were green.
+
+## After v329 -- Step 2 of the music plan: the timeline, the Restart view, Cut on silence
+
+The owner, to the list after the streamline: "Yes on all," and choice 8 was
+"step 2: the timeline, the Restart view and Cut on silence, mocked as built
+before anything merges." The mock (the stream variant) is what was built; this
+is the build, photographed beside today's drawer, waiting on the owner's OK.
+
+THE TIMELINE (lib/musictimeline.js) took over from the strip (the whole song,
+two handles, a window to slide) and from the loop detail in More (a close-up
+of an end at 1x to 32x, Loop | Start | End and Scroll). YOUR DRAWING STAYS PUT
+AND THE SONG SLIDES UNDER IT. Above, the drawing's own lane: each stroke when
+it replays on the Pad, each page as long as it shows on Flip, numbered, its
+next turns fainter until the loop has come round, and a dashed line wherever
+the loop comes round under it; over it, its name and how long it plays ("Your
+drawing · 7.6s", or "nothing drawn yet"). Below, the song: its waveform, the
+loop lit, a dot on each beat once there is a tempo (bigger on each bar from the
+loop's start), a smooth restart's fold coming in at the loop's end, and what
+lies past either end of the song dimmed. The loop's two ends are handles, each
+with its time in a bubble while it is held. Under it all, the whole song as
+one thin line, and where the loop is in it.
+
+THE FRAMING: 1.28 times the longer of the loop and the drawing, the drawing
+counted up to three loops (a two-hour piece would make the loop a sliver),
+with the loop's start 9% in. The view eases toward it every frame (70ms to
+most of the way, so a settle and the reframing after it read as one glide) and
+holds still while a finger is down; under Reduce Motion it is where it belongs
+at once.
+
+WHAT A FINGER DOES. On the song it slides the song under the drawing: both
+ends move, the loop keeps its length, and the handles stay where they are on
+screen. On an end it moves that end, and held within 28px of the edge it is
+dragged toward, the view widens smoothly, the far side kept, so a loop can
+grow past what is on screen. On the whole song's line a tap glides the loop
+there, its middle under the finger and its start on a beat once there is a
+tempo; a drag slides it with the finger. On the drawing's lane nothing: it is
+the drawing, and a finger there scrolls the page. A finger on the song that
+moves up or down first scrolls the page too (touch-action: pan-y and a 6px
+lock), which the strip never let it: the timeline is two and a half strips
+tall. Let go, the drawer settles what was moved once there is a tempo, as
+before: an end on whole bars, a slid loop's start on a beat.
+
+THE RESTART VIEW (lib/musicrestart.js), in More under The restart: the loop's
+end beside its start. On the left its last 0.6 seconds up to where it comes
+round, on the right its first 0.6, and the line between them is the restart;
+with a smooth restart the end's last moments fade out under the start, as
+lib/audioloop.js folds them, and what is drawn is what plays, Cut on silence's
+move included. A finger on the left moves the end and on the right the start,
+the music following the finger, so the beats can be lined up across the join
+by eye; let go near a beat (8px) and it settles on it, the loop detail's rule,
+whose close-up job this took. The dot at its foot is the smooth restart's
+length: pulled out it blends the two, in 5ms steps, as far as half a second or
+half the loop; back to the line, a clean cut. Its hint says so, with the beat
+("Line the beats up across the middle: drag either side.") and without.
+
+CUT ON SILENCE (lib/audioloop.js cutFrames), under How it loops, beside Lock
+the length. A clean cut clicks where the loop's last sample jumps to its first.
+With it on, both ends move together, by the same number of frames, 5ms at most
+either way, to where the loop's first samples come nearest the song's own next
+ones after its last. On for a new song; off for a song from a draft or card
+that never said, so nothing already made changes; kept in the drafts and the
+re-add cards. Its words say how far ("Both ends move 0.001s later, to where the
+end runs into the start without a click", "under a thousandth of a second" for
+less). With a smooth restart there is nothing to cut, and it says so. The
+posted clip is the cut loop, and the player plays it as it is (the post's music
+carries no cut, so it is not cut twice).
+
+DEPARTURES FROM THE MOCK, each for a reason:
+- ONE MOVE FOR BOTH ENDS. The mock moved each end to its own quiet moment,
+  which changed the loop's length by up to ten thousandths; Fit my drawing and
+  whole bars are exact lengths, and a loop that goes round for minutes hears
+  ten thousandths as drift.
+- THE NEAREST CLEAN JOIN, NOT THE CLEANEST (found by the new suite). A note
+  comes round to the same place every half of its period, so joins nearly as
+  clean as each other lie all through the reach. Taking the cleanest by a hair
+  moved a 220Hz tone's loop the whole 5ms when one 0.5ms away was within a
+  sixth of it; now the smallest move within a quarter of the cleanest wins, and
+  that one was cleaner on the join too (0.011 off the song's next sample
+  against 0.019).
+- The end held at the edge widens the view; the mock did not say how a loop
+  grows past the screen.
+- Exact times lost its rule, the line above Start and End of loop: it parted
+  them from the loop detail, and alone it parted the fields from their own
+  name.
+
+Pad and Flip: shared. One template partial, lib/musicdrawer.js, the two new
+modules and the CSS are one copy each; each editor's half is its hooks: the
+lane (the Pad's playback timeline, Flip's lib/holdtiming.js plan) and Cut on
+silence's state in the drafts and the post. Six function names left both
+editors with the strip and the loop detail (drawWaveform, drawZoomWaveform,
+formatTimeH, getZoomWindow, requestZoomWaveformDraw, updateZoomHandles), so
+verify_surfaces' ratchet is 49 from 55. lib/loopwave.js and lib/zoomstep.js
+are gone.
+
+How it works: The timeline, Loop ends, The Restart view and Cut on silence are
+new; Move the loop, Smooth restart, Skribl's pick, Play and Tap the beat say
+where things live now; Loop markers and Loop Detail went with what they named.
+
+TESTS. New suite verify_musictimeline.py: the one view, the framing, the
+fingers (mouse and a real touch sequence), an end and the edge read on every
+frame, the whole song's line, the playhead, the Restart view, and Cut on
+silence through the bake, the drafts, the post and the player. The suites that
+read the strip or the loop detail read the timeline and the Restart view now:
+verify_music, verify_musicbeat, verify_musicmore, verify_parity,
+verify_sheetswipe, verify_tools, verify_onepill, verify_ux, verify_a11y (the
+time bubbles over the timeline, its ends at its edges), verify_theme (the
+timeline and the Restart view light, opened light and switched from dark) and
+verify_audio (a 0.01s move shows in the Restart view on a phone, 2.7px,
+which is what the loop detail's 32x was for). verify_helpclaims names the new
+rows, and its loop probe drags the song.
+
+CALIBRATION. Each part was shown red with that part broken, served to the
+browser from a mutated copy with the files on disk untouched: 60 mutations of
+lib/musictimeline.js, lib/musicrestart.js, lib/musicdrawer.js,
+lib/audioloop.js, both editors' scripts and styles.css, every one red on the
+rows it breaks
+(the timeline without its name, its marks placed by the view, the framing
+uncapped, without its lead or by the loop alone; a slide that moves the view or
+stretches the loop, a lane that takes the finger, a touch that cannot scroll
+the page, has no dead zone or never locks; the view easing or following under
+an end held, no bubble, no widening, a widening that jumps, grows both ways or
+leaves the end behind, a snap back under the finger, Reduce Motion ignored; the
+whole song's line putting the start under the finger, off the beat, or not
+dragging; the playhead hidden or at the wrong time. The Restart view too wide,
+without its fold, its sides swapped, moving against the finger, the dot
+without its steps, its way back or its two limits, one hint for both. Cut on
+silence off for a new song or on for an old one, on each editor, not saved,
+its words to the hundredth, at no move or the wrong way; the farthest join, one
+end alone, the switch ignored, cutting a smooth restart, the switch not heard
+in a loop already playing, an editor not passing it to the bake, the post
+uncut or cut twice. And the other suites'
+rows: verify_audio's 0.01s, verify_theme's timeline and Restart view,
+verify_helpclaims's slide). Served with no change, the cut part was green.
+
+Three rows were wrong at first. The phone's swipe was red on the good build:
+it went up a page already at its foot, where nothing can scroll, and now goes
+down. Two were green on a broken one: the tap on the whole song's line landed
+on a beat already, so a missing settle could not show (it now lands off one),
+and verify_theme read the drawer's paper, not the timeline's and the Restart
+view's own ground, so a stale or a dark card could not show (it now reads a
+pixel of each one's own). Two mutations were added on the way: the view
+reframing while an end is held, so the view holding still under a finger is
+pinned by itself, and the card's colour read once, a theme switch that
+repaints nothing. Four edits did not apply at first: the served scripts lose
+their comments and indentation, and the edits had kept them; written to the
+served text, all four went red.
+
+Not tested here: a finger on an iPhone (no WebKit), the sound, Segoe UI and SF.

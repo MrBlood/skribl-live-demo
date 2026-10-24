@@ -3,8 +3,10 @@
    - buildLoopChannels(buffer, startFrame, frames, xfadeFrames): PURE
        equal-power crossfade fold -> { channels, frames }.
    - buildLoopAudioBuffer(state): reads audio state passed in as a plain object
-       ({ currentAudioBuffer, audioCtx, trimStart, trimEnd, loopCrossfadeMs });
-       writes nothing. Slices [trimStart,trimEnd] and folds the crossfade.
+       ({ currentAudioBuffer, audioCtx, trimStart, trimEnd, loopCrossfadeMs, cut });
+       writes nothing. Slices [trimStart,trimEnd] and folds the crossfade; with
+       `cut` (Cut on silence) and no crossfade, both ends move together to
+       where the loop joins without a click (cutSeconds says how far).
    Loaded as a classic script BEFORE app.js / flip.js; publishes
    window.SkriblAudioLoop. Each host file keeps a 1-line shim that passes its own
    module-level audio globals, so behavior is identical to the pre-extraction copies. */
@@ -34,35 +36,83 @@
     return { channels, frames: outLen };
   }
 
+  // The same slice and fold as the posted clip (loopChannels, below), into
+  // an AudioBuffer: one copy of the arithmetic, so what plays is what posts.
   function buildLoopAudioBuffer(state) {
-    const currentAudioBuffer = state.currentAudioBuffer;
     const audioCtx = state.audioCtx;
-    const trimStart = state.trimStart;
-    const trimEnd = state.trimEnd;
-    const loopCrossfadeMs = state.loopCrossfadeMs;
-    if (!currentAudioBuffer || !audioCtx) return null;
-    const sr = currentAudioBuffer.sampleRate;
-    const ls = Math.max(0, trimStart || 0);
-    const le = Math.min(currentAudioBuffer.duration, (trimEnd != null ? trimEnd : currentAudioBuffer.duration));
+    if (!state.currentAudioBuffer || !audioCtx) return null;
+    const lc = loopChannels(state);
+    if (!lc) return null;
+    const out = audioCtx.createBuffer(lc.channels.length, lc.frames, lc.sampleRate);
+    for (let c = 0; c < lc.channels.length; c++) out.getChannelData(c).set(lc.channels[c]);
+    return out;
+  }
+
+  /* CUT ON SILENCE (the music drawer's switch, under How it loops). A clean
+   * cut clicks where the loop's last sample jumps to its first. With the cut
+   * on, both ends move together, by the same number of frames and CUT_MS at
+   * most either way, to where the loop's first samples come nearest the
+   * song's own next ones after its last, over every channel. ONE MOVE FOR
+   * BOTH ENDS keeps the loop's length, so Fit my drawing and whole bars stay
+   * exact: moving each end to its own quiet moment, as the step 2 mock drew
+   * it, changed the length by up to ten thousandths, and a loop that goes
+   * round for minutes hears that as drift.
+   * THE NEAREST CLEAN JOIN, NOT THE CLEANEST. A note comes round to the same
+   * place every half of its period, so there are joins nearly as clean as
+   * each other all through the reach; the cleanest by a hair was as often
+   * the farthest (a 220Hz tone: 5ms off, when one 0.5ms off was within a
+   * sixth of it). So of the moves within a quarter of the cleanest, the
+   * smallest wins, and the loop goes no further than it has to.
+   * With a smooth restart there is nothing to cut (the fold joins two samples
+   * that were neighbours in the song), so the move is 0. */
+  const CUT_MS = 5, NEAR = 1.25;
+  function cutFrames(buffer, startFrame, frames) {
+    const n = buffer.length, m = Math.round(CUT_MS / 1000 * buffer.sampleRate), chans = [];
+    for (let c = 0; c < buffer.numberOfChannels; c++) chans.push(buffer.getChannelData(c));
+    // Nearest first: 0, then 1 and -1, then 2 and -2, and so on.
+    const tried = [];
+    let least = Infinity;
+    for (let k = 0; k <= m; k++) {
+      for (let side = 0; side < (k ? 2 : 1); side++) {
+        const d = side ? -k : k, s = startFrame + d, e = s + frames;
+        if (s < 0 || e + 3 > n) continue;
+        let cost = 0;
+        for (let c = 0; c < chans.length; c++) {
+          const x = chans[c];
+          cost += Math.abs(x[s] - x[e]) + Math.abs(x[s + 1] - x[e + 1]) + Math.abs(x[s + 2] - x[e + 2]);
+        }
+        tried.push(d, cost);
+        if (cost < least) least = cost;
+      }
+    }
+    for (let i = 0; i < tried.length; i += 2) if (tried[i + 1] <= least * NEAR + 1e-12) return tried[i];
+    return 0;
+  }
+  // The loop's window in frames, with the cut moved: { buffer, sr, startFrame,
+  // frames, xfadeFrames }, or null when the buffer is not usable.
+  function loopWindow(state) {
+    const buffer = state.currentAudioBuffer;
+    if (!buffer) return null;
+    const sr = buffer.sampleRate;
+    const ls = Math.max(0, state.trimStart || 0);
+    const le = Math.min(buffer.duration, (state.trimEnd != null ? state.trimEnd : buffer.duration));
     if (le - ls < 0.05) return null;
-    const startFrame = Math.floor(ls * sr);
-    const endFrame = Math.min(currentAudioBuffer.length, Math.floor(le * sr));
+    let startFrame = Math.floor(ls * sr);
+    const endFrame = Math.min(buffer.length, Math.floor(le * sr));
     const frames = endFrame - startFrame;
     if (frames <= 0) return null;
-    const numCh = currentAudioBuffer.numberOfChannels;
-    const xfadeFrames = Math.min(Math.floor((loopCrossfadeMs / 1000) * sr), Math.floor(frames / 2));
-    let channels, outLen;
-    if (loopCrossfadeMs > 0 && xfadeFrames > 0) {
-      const built = buildLoopChannels(currentAudioBuffer, startFrame, frames, xfadeFrames);
-      channels = built.channels; outLen = built.frames;
-    } else {
-      outLen = frames;
-      channels = [];
-      for (let c = 0; c < numCh; c++) channels.push(currentAudioBuffer.getChannelData(c).subarray(startFrame, startFrame + frames));
-    }
-    const out = audioCtx.createBuffer(numCh, outLen, sr);
-    for (let c = 0; c < numCh; c++) out.getChannelData(c).set(channels[c]);
-    return out;
+    // Crossfade can't exceed half the loop, or the fold would overlap itself.
+    const xfadeFrames = state.loopCrossfadeMs > 0 ? Math.min(Math.floor((state.loopCrossfadeMs / 1000) * sr), Math.floor(frames / 2)) : 0;
+    if (state.cut && !(xfadeFrames > 0)) startFrame += cutFrames(buffer, startFrame, frames);
+    return { buffer: buffer, sr: sr, startFrame: startFrame, frames: frames, xfadeFrames: xfadeFrames };
+  }
+  // How far Cut on silence moves both ends, in seconds (later is more), for
+  // the words under its switch: 0 when it is off, with a smooth restart, or
+  // when the ends already join.
+  function cutSeconds(state) {
+    const w = state && state.cut ? loopWindow(state) : null;
+    if (!w || w.xfadeFrames > 0) return 0;
+    return (w.startFrame - Math.floor(Math.max(0, state.trimStart || 0) * w.sr)) / w.sr;
   }
 
   // --- WAV encoders (pure) ---------------------------------------------------
@@ -146,31 +196,20 @@
   // window and the SAME crossfade fold but a different encode. Two copies of
   // this arithmetic is exactly how the two surfaces drifted apart before lib/
   // existed; there is one copy and both builders call it.
+  // `state.cut`: Cut on silence (above), absent on the player, whose clip was
+  // cut when it was posted.
   function loopChannels(state) {
-    const currentAudioBuffer = state.currentAudioBuffer;
-    const trimStart = state.trimStart;
-    const trimEnd = state.trimEnd;
-    const loopCrossfadeMs = state.loopCrossfadeMs;
-    if (!currentAudioBuffer) return null;
-    const sr = currentAudioBuffer.sampleRate;
-    const ls = Math.max(0, trimStart || 0);
-    const le = Math.min(currentAudioBuffer.duration, (trimEnd != null ? trimEnd : currentAudioBuffer.duration));
-    if (le - ls < 0.05) return null;
-    const startFrame = Math.floor(ls * sr);
-    const endFrame = Math.min(currentAudioBuffer.length, Math.floor(le * sr));
-    const frames = endFrame - startFrame;
-    if (frames <= 0) return null;
-    // Crossfade can't exceed half the loop, or the fold would overlap itself.
-    const xfadeFrames = Math.min(Math.floor((loopCrossfadeMs / 1000) * sr), Math.floor(frames / 2));
-    if (loopCrossfadeMs > 0 && xfadeFrames > 0) {
-      const built = buildLoopChannels(currentAudioBuffer, startFrame, frames, xfadeFrames);
-      return { channels: built.channels, frames: built.frames, sampleRate: sr };
+    const w = loopWindow(state);
+    if (!w) return null;
+    if (w.xfadeFrames > 0) {
+      const built = buildLoopChannels(w.buffer, w.startFrame, w.frames, w.xfadeFrames);
+      return { channels: built.channels, frames: built.frames, sampleRate: w.sr };
     }
     const channels = [];
-    for (let c = 0; c < currentAudioBuffer.numberOfChannels; c++) {
-      channels.push(currentAudioBuffer.getChannelData(c).subarray(startFrame, startFrame + frames));
+    for (let c = 0; c < w.buffer.numberOfChannels; c++) {
+      channels.push(w.buffer.getChannelData(c).subarray(w.startFrame, w.startFrame + w.frames));
     }
-    return { channels: channels, frames: frames, sampleRate: sr };
+    return { channels: channels, frames: w.frames, sampleRate: w.sr };
   }
 
   function buildTrimmedLoopWav(state) {
@@ -314,6 +353,8 @@
     audioBufferToWavDataURL: audioBufferToWavDataURL,
     encodeWavFromChannels: encodeWavFromChannels,
     loopChannels: loopChannels,
-    buildTrimmedLoopWav: buildTrimmedLoopWav
+    buildTrimmedLoopWav: buildTrimmedLoopWav,
+    cutSeconds: cutSeconds,
+    CUT_MS: CUT_MS
   };
 })(typeof window !== 'undefined' ? window : this);

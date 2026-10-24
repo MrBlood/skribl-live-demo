@@ -132,7 +132,12 @@ shared = sorted(app_fns & flip_fns)
 # which the census does not read, and is a function now for the same two
 # lines. An adapter on each side over two shared libs, like _eraserSize and
 # _brushWidth; the cure would be one pen-colour event both editors raise.
-PARALLEL_RATCHET = 55
+# 55 -> 49, the right way: step 2 of the music plan. The timeline
+# (lib/musictimeline.js) and the Restart view (lib/musicrestart.js) are
+# written once and paint themselves, so the strip's and the loop detail's
+# adapters left both files -- drawWaveform, drawZoomWaveform, formatTimeH,
+# getZoomWindow, requestZoomWaveformDraw, updateZoomHandles -- and none came in.
+PARALLEL_RATCHET = 49
 check(f"the Pad (app.js and its editor modules) and flip.js define at most "
       f"{PARALLEL_RATCHET} of the same function names", len(shared) <= PARALLEL_RATCHET,
       f"{len(shared)}: {', '.join(shared[:8])}... — each one is a fix that has "

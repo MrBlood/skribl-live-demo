@@ -1320,17 +1320,9 @@ const _padDrawerCtl = (typeof skriblDrawers === 'function') ? skriblDrawers({
     if (name !== 'photo' && typeof exitReposition === 'function') exitReposition();
     if (typeof pickingColor !== 'undefined' && pickingColor) stopPicking();
     if (name === 'photo' && typeof updateRepositionUI === 'function') updateRepositionUI();
-    if (name === 'music') {
-      updateDrawingTimeLabels();
-      // Nothing else re-calls drawWaveform — the decode chain is its only
-      // caller — so opening the drawer is the one moment the strip can recover
-      // a paint it missed while the panel had no layout. TWO frames: one for
-      // the [hidden] removal to take effect, a second for the panel to be laid
-      // out, so musicTrack reports its real width rather than 0.
-      if (currentAudioBuffer) {
-        requestAnimationFrame(() => requestAnimationFrame(() => drawWaveform(currentAudioBuffer)));
-      }
-    }
+    // The timeline paints itself when the drawer gives it a size
+    // (lib/musictimeline.js, a ResizeObserver); this says what is drawn.
+    if (name === 'music') updateDrawingTimeLabels();
     // Drawer opens below the bar; scroll just enough to reveal it (keeps max
     // canvas in frame), and scroll back to rest when everything closes. Honor
     // the user's reduced-motion preference — the CSS sets scroll-behavior:auto
@@ -2148,32 +2140,11 @@ let musicSelectionSeq = 0;
 let photoSelectionSeq = 0;
 const musicPanel = document.getElementById('musicPanel');
 const musicRemove = _authoringCtl('musicRemove');
-const musicTrack = document.getElementById('musicTrack');
-const musicRange = document.getElementById('musicRange');
-const handleStart = document.getElementById('handleStart');
-const handleEnd = document.getElementById('handleEnd');
-const trimStartLabel = document.getElementById('trimStartLabel');
-const trimEndLabel = document.getElementById('trimEndLabel');
 
 let audioEl = null;
 let audioDuration = 0;
 let trimStart = 0;
 let trimEnd = 0;
-
-function formatTime(sec) {
-  const m = Math.floor(sec / 60);
-  const s = Math.floor(sec % 60);
-  return m + ':' + String(s).padStart(2, '0');
-}
-
-function formatTimeH(sec) {
-  let total = Math.round(sec * 100); // work in hundredths to avoid float drift
-  const hh = total % 100;
-  total = (total - hh) / 100;        // whole seconds
-  const s = total % 60;
-  const m = Math.floor(total / 60);
-  return m + ':' + String(s).padStart(2, '0') + '.' + String(hh).padStart(2, '0');
-}
 
 function clampTrim() {
   // Clamp half of the old updateTrimUI, split out so it runs on the PLAYER too.
@@ -2201,131 +2172,31 @@ function clampTrim() {
 }
 
 function updateTrimUI() {
-  // Clamp always; paint only where there is a trim track to paint on. The null
-  // check is what lets the player's template drop the editor shell safely.
+  // Clamp always. The drawer paints from the clamped loop (lib/musicdrawer.js:
+  // the timeline, the lines and the picks); the player has no drawer, which is
+  // what the typeof guard is for.
   if (!clampTrim()) return;
-  if (!handleStart || !musicRange || !musicTrack) return;
-  const startPct = (trimStart / audioDuration) * 100;
-  const endPct = (trimEnd / audioDuration) * 100;
-  handleStart.style.left = startPct + '%';
-  handleEnd.style.left = endPct + '%';
-  musicRange.style.left = startPct + '%';
-  musicRange.style.width = (endPct - startPct) + '%';
-  // If the selection is too thin to grab a center, drop the move affordance
-  // (the edge handles cover it). ~40px is roughly two handle half-widths.
-  const rangePx = ((endPct - startPct) / 100) * musicTrack.getBoundingClientRect().width;
-  musicRange.classList.toggle('narrow', rangePx < 40);
-  trimStartLabel.textContent = formatTime(0);
-  trimEndLabel.textContent = formatTime(audioDuration);
-  // Update bubbles — hundredths, since these mark exact cut points
-  if (bubbleStart) bubbleStart.textContent = formatTimeH(trimStart);
-  if (bubbleEnd) bubbleEnd.textContent = formatTimeH(trimEnd);
-  // Update zoom waveform (throttled)
-  requestZoomWaveformDraw();
-  updateZoomHandles();
-  // The typed times, the lines and the pick are the drawer's (lib/musicdrawer.js).
   if (typeof syncMusicDrawer === 'function') syncMusicDrawer();
 }
 
-// Waveform canvases live in the music panel — editor only. A detached <canvas>
-// gives a real 2d context, so drawWaveform() and every clearRect() downstream
-// work unchanged and paint into nothing.
-const waveformCanvas = _authoringCtl('waveformCanvas', 'canvas');
-const waveformCtx = waveformCanvas.getContext('2d');
-const zoomWaveformCanvas = _authoringCtl('zoomWaveformCanvas', 'canvas');
-const zoomWaveformCtx = zoomWaveformCanvas.getContext('2d');
-const loopZoomLabel = document.getElementById('loopZoomLabel');
-const playhead = document.getElementById('playhead');
-const zoomPlayhead = document.getElementById('zoomPlayhead');
-const zoomHandleStart = document.getElementById('zoomHandleStart');
-const zoomHandleEnd = document.getElementById('zoomHandleEnd');
-const zoomTrackWrap = document.getElementById('zoomTrackWrap');
-
-// --- Loop-detail magnification -------------------------------------------
-// ONE source of truth for the zoom window, replacing the context formula that
-// used to be duplicated across updateZoomHandles / dragZoomHandle /
-// drawZoomWaveform. zoomFocus centers the window on the whole loop, the start
-// edge, or the end edge; zoomMag tightens it so a boundary can be pushed right
-// up against the waveform (down to a few ms per pixel at 8x).
-let zoomMag = 1;
-let zoomFocus = 'loop';   // 'loop' | 'start' | 'end' | 'free'
-let zoomCenter = null;    // explicit pan center (seconds); null = derive from focus
-// The zoomed loop view's maths, handles and waveform live in lib/loopwave.js
-// since v315 (SK312-003), one implementation for both editors. The player loads
-// app.js but not the lib and has no music drawer; the fallback keeps any
-// playback path that asks from throwing there.
-function getZoomWindow() {
-  if (!window.SkriblLoopWave) {
-    return { start: 0, end: audioDuration || 0, duration: Math.max(0.001, audioDuration || 0) };
-  }
-  return window.SkriblLoopWave.zoomWindow({ start: trimStart, end: trimEnd, duration: audioDuration,
-                                            mag: zoomMag, center: zoomCenter, focus: zoomFocus });
-}
-
-function updateZoomHandles() {
-  if (!zoomTrackWrap || !zoomHandleStart || !zoomHandleEnd || !window.SkriblLoopWave) return;
-  if (!Number.isFinite(audioDuration) || audioDuration <= 0) return;
-  const hd = window.SkriblLoopWave.handles(trimStart, trimEnd, getZoomWindow());
-  zoomHandleStart.style.left = hd.startPct + '%';
-  zoomHandleEnd.style.left = hd.endPct + '%';
-  zoomHandleStart.hidden = !hd.startShown;
-  zoomHandleEnd.hidden = !hd.endShown;
-}
-
-
-
 // Sliding-pill highlight for a segmented group built by script: hands it to
 // lib/segslider.js, which gives it a pill if it has none and slides it under
-// whichever button is selected. A group with NO selected button (the
-// Loop/Start/End focus row while free-panning) hides the pill. Guarded, so the
-// player, which loads app.js but not the lib, runs this file without throwing.
+// whichever button is selected. A group with NO selected button hides the
+// pill. Guarded, so the player, which loads app.js but not the lib, runs this
+// file without throwing.
 function attachSegSlider(group){ if(window.SkriblSegSlider) window.SkriblSegSlider.attach(group); }
 
-// Focus + magnification control for the Loop Detail view. Built in JS (styles
-// injected once) so the whole feature lives in this one file. Focus centers the
-// zoom window on the loop / start edge / end edge; the multiplier tightens it.
-
-// Fine-tune disclosure: the Music panel opens to essentials (waveform + trim +
-// Match/Preview); the deep Loop Detail (zoom, focus/magnifier, nudgers) lives
-// behind this toggle so all three tab panels share the same "essentials shown,
-// depth one tap away" rhythm. Null-guarded — the player shell has no toggle.
-const bubbleStart = document.getElementById('bubbleStart');
-const bubbleEnd = document.getElementById('bubbleEnd');
 let audioCtx = null;
 let currentAudioBuffer = null;
 let loopCrossfadeMs = 0;   // loop crossfade length in ms (0 = off); see buildTrimmedLoopWav
 // The song's tapped tempo, { bpm, phase } or null (Tap the beat,
 // lib/musicdrawer.js): saved with the song in the drafts, never posted.
 let musicTempo = null;
-
-let zoomDrawPending = false;
-
-function requestZoomWaveformDraw() {
-  if (zoomDrawPending) return;
-  zoomDrawPending = true;
-  requestAnimationFrame(() => {
-    zoomDrawPending = false;
-    // The strip colours the loop now, so it follows the trim too (Flip's
-    // requestZoomWaveformDraw has always redrawn both).
-    if (currentAudioBuffer) drawWaveform(currentAudioBuffer);
-    drawZoomWaveform();
-  });
-}
-
-function drawZoomWaveform() {
-  if (!currentAudioBuffer || !zoomWaveformCanvas || !window.SkriblLoopWave) return;
-  window.SkriblLoopWave.drawZoom({ canvas: zoomWaveformCanvas, ctx: zoomWaveformCtx, buffer: currentAudioBuffer,
-    trimStart: trimStart, trimEnd: trimEnd, crossfadeMs: loopCrossfadeMs, zw: getZoomWindow(),
-    label: loopZoomLabel, formatTime: formatTimeH });
-}
-
-// The whole-track strip: lib/loopwave.js (editors only; the player has no
-// music drawer and does not load it). Its blank-strip guard is documented there.
-function drawWaveform(audioBuffer) {
-  if (!window.SkriblLoopWave) return;
-  window.SkriblLoopWave.drawStrip({ canvas: waveformCanvas, ctx: waveformCtx, track: musicTrack, buffer: audioBuffer,
-    trimStart: trimStart, trimEnd: trimEnd });
-}
+// Cut on silence (lib/audioloop.js cutFrames): both ends of a clean cut move
+// together, a few thousandths, to where the loop joins without a click. On for
+// a new song; a draft keeps its own, and one saved before it had none (off).
+// The player's is off: its clip was cut when it was posted.
+let loopCutOnSilence = false;
 
 const musicUploadBtn = _authoringCtl('musicUploadBtn');
 const musicDetail = document.getElementById('musicDetail');
@@ -2666,6 +2537,7 @@ function applyPendingMusicSettings(meta) {
   trimEnd = Math.max(trimStart + 0.5, Math.min(trimEnd, audioDuration));
   if (meta.crossfadeMs != null) { loopCrossfadeMs = meta.crossfadeMs; if (typeof setCrossfadeUI === 'function') setCrossfadeUI(); }
   if (meta.tempo !== undefined) musicTempo = (window.SkriblMusicDrawer ? window.SkriblMusicDrawer.tempoFrom(meta.tempo) : null);
+  loopCutOnSilence = meta.cut === true;
   updateTrimUI();
 }
 
@@ -2700,7 +2572,7 @@ function captureCurrentFrame() {
   // A track switched off stays in the draft, marked so, as Flip's does; a
   // post leaves it out (editor_post.js). Dropping it lost the song.
   const music = audioEl && audioEl._objectUrl
-    ? { data: audioEl._draftData || null, name: audioEl._fileName || null, trimStart: trimStart, trimEnd: trimEnd, crossfadeMs: loopCrossfadeMs, tempo: musicTempo }
+    ? { data: audioEl._draftData || null, name: audioEl._fileName || null, trimStart: trimStart, trimEnd: trimEnd, crossfadeMs: loopCrossfadeMs, tempo: musicTempo, cut: loopCutOnSilence }
     : null;
   if (music && !musicEnabled) music.enabled = false;
   const frame = {
@@ -2845,7 +2717,7 @@ function encodeWavFromChannels(channels, sampleRate) { return window.SkriblAudio
 // WAV data URL + its duration, or null if the decoded buffer isn't usable. When
 // a crossfade is set, the tail is folded over the head so the clip loops
 // seamlessly (the clip is then shorter by the crossfade length).
-function buildTrimmedLoopWav() { return window.SkriblAudioLoop.buildTrimmedLoopWav({ currentAudioBuffer, trimStart, trimEnd, loopCrossfadeMs }); }
+function buildTrimmedLoopWav() { return window.SkriblAudioLoop.buildTrimmedLoopWav({ currentAudioBuffer, trimStart, trimEnd, loopCrossfadeMs, cut: loopCutOnSilence }); }
 
 // --- Sample-accurate live loop engine (Web Audio) ---------------------------
 // The live monitors (Preview Loop, editor Play) used timer-wrapped <audio>,
@@ -2854,7 +2726,7 @@ function buildTrimmedLoopWav() { return window.SkriblAudioLoop.buildTrimmedLoopW
 // with loop=true — scheduled in the audio hardware clock, so it's gapless and
 // drift-free forever. Reuses buildLoopChannels for the crossfaded fold, so no
 // WAV round-trip: we build the AudioBuffer directly.
-function buildLoopAudioBuffer() { return window.SkriblAudioLoop.buildLoopAudioBuffer({ currentAudioBuffer: currentAudioBuffer, audioCtx: audioCtx, trimStart: trimStart, trimEnd: trimEnd, loopCrossfadeMs: loopCrossfadeMs }); }
+function buildLoopAudioBuffer() { return window.SkriblAudioLoop.buildLoopAudioBuffer({ currentAudioBuffer: currentAudioBuffer, audioCtx: audioCtx, trimStart: trimStart, trimEnd: trimEnd, loopCrossfadeMs: loopCrossfadeMs, cut: loopCutOnSilence }); }
 // The engine itself -- unlock in the gesture, no source before 'running', the
 // generation counter, the hand-off to native <audio> -- is lib/audioloop.js's,
 // shared with Flip and the player. Its header says what each copy was missing.
@@ -2933,6 +2805,7 @@ function resetMediaForLoad() {
   currentAudioBuffer = null;
   loopCrossfadeMs = 0;
   musicTempo = null;
+  loopCutOnSilence = false;
   // State above, drawer UI below. The player runs this on every load — it was
   // clearing waveform canvases and rewriting button labels for a drawer it does
   // not have. Unguarded property writes on absent elements (musicDetail.hidden)
@@ -2949,9 +2822,6 @@ function resetMediaForLoad() {
     if (typeof padMusicRow === 'function') padMusicRow();
     if (musicTabDot) musicTabDot.hidden = true;
     if (musicRemove) musicRemove.hidden = true;
-    if (waveformCtx) waveformCtx.clearRect(0, 0, waveformCanvas.width, waveformCanvas.height);
-    if (zoomWaveformCtx) zoomWaveformCtx.clearRect(0, 0, zoomWaveformCanvas.width, zoomWaveformCanvas.height);
-    if (loopZoomLabel) loopZoomLabel.textContent = '0:00.00 → 0:00.00 [0.00s]';
   }
   // Photo
   photoBg = null;
@@ -3171,6 +3041,7 @@ function loadSkribl(data, said) {
     trimEnd = data.music.trimEnd != null ? data.music.trimEnd : null;
     loopCrossfadeMs = data.music.crossfadeMs != null ? data.music.crossfadeMs : 0;
     musicTempo = (window.SkriblMusicDrawer ? window.SkriblMusicDrawer.tempoFrom(data.music.tempo) : null);
+    loopCutOnSilence = data.music.cut === true;
     if (data.music.enabled === false) { musicEnabled = false; syncLayerToggle(document.getElementById('musicToggle'), false); }
     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     fetch(data.music.data).then(r => r.arrayBuffer()).then(buf => {
@@ -3224,10 +3095,10 @@ function loadSkribl(data, said) {
         // paStop() first, so a race with a simultaneous play/seek cannot
         // stack two sources.
         if (window._skriblLateAudio) window._skriblLateAudio();
-        // Waveforms are drawer furniture; the player painted them into canvases
-        // it never shows, on every shared link with music.
-        if (!document.body.classList.contains('player-mode')) {
-          setTimeout(() => { drawWaveform(audioBuffer); drawZoomWaveform(); updateZoomHandles(); }, 60);
+        // The timeline's waveform is drawer furniture: the drawer repaints
+        // with the decoded song, and the player has no drawer.
+        if (!document.body.classList.contains('player-mode') && typeof syncMusicDrawer === 'function') {
+          setTimeout(syncMusicDrawer, 60);
         }
       }).catch(e => console.warn('skribl: music decode failed', e));
     }).catch(e => console.warn('skribl: music fetch failed', e));

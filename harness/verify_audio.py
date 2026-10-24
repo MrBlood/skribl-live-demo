@@ -159,24 +159,20 @@ with sync_playwright() as p:
     b.close()
 
 # ============================================================================
-# THE LOOP-DETAIL MAGNIFICATION IS A STEPPER, AND IT REACHES 32x
+# THE CLOSE-UP IS THE RESTART VIEW, AND A 0.01s MOVE SHOWS IN IT
 #
-# It was four cells -- 1x 2x 4x 8x -- costing 179px, which forced the focus row
-# and the zoom row onto separate lines. The stepper is 94px and both fit on one
-# line from 390px up.
-#
-# THE CEILING WAS THE REAL DEFECT. The finest nudge step is 0.01s and the old
-# 8x could not resolve it: on a 330px waveform one step is 0.94px for a 20s loop
-# and 0.39px for a 60s one. The tool offered a nudge you could not see. A
-# four-cell control could not afford two more levels; a stepper extends for
-# free, which is the stronger argument for it.
-#
-# The buttons carry magnifier glyphs rather than plain signs. A leading
-# magnifier beside plain ones was measured at 118px and put the bar back onto
-# two lines at 390 -- identifying the control would have cost the space the
-# change was made to save.
+# The loop detail's magnifier was there so that a small move could be seen:
+# at its old 8x ceiling a 0.01s step was 0.94px for a 20s loop on a 330px
+# waveform, a move offered that nobody could see, so it went to 32x. Step 2
+# took the loop detail out, and the Restart view (lib/musicrestart.js) does
+# its close-up job: the end's last 0.6s beside the start's first 0.6s, the
+# same scale however long the loop is. So the measure is the same and the
+# instrument is new: a beat painted on the end's side, read from what was
+# painted, moves by more than a pixel and a half when the end is typed
+# 0.01s later, on a 430px phone. Cut on silence off and a clean cut, so the
+# end moves only by what was typed.
 # ============================================================================
-print("\nZOOM STEPPER — one line, and enough magnification to see a 0.01s step")
+print("\nTHE RESTART VIEW \u2014 a 0.01s move shows in it, at phone width")
 with sync_playwright() as _zp:
     _zb = _zp.chromium.launch()
     try:
@@ -189,65 +185,30 @@ with sync_playwright() as _zp:
         _t = zp.query_selector("#fineTuneToggle")
         if _t:
             _t.click(); zp.wait_for_timeout(800)
-
-        bar = zp.evaluate(
-            "() => { const b = document.querySelector('.zoom-mag-bar');"
-            " if (!b) return null;"
-            " return { h: Math.round(b.getBoundingClientRect().height),"
-            "          kids: [...b.children].map(e =>"
-            "                 Math.round(e.getBoundingClientRect().width)) }; }")
-        check("the loop-detail bar exists", bar is not None, "nothing to measure")
-        if bar:
-            check("focus and zoom share one line at phone width",
-                  bar["h"] < 50,
-                  f"bar is {bar['h']}px tall with children {bar['kids']} — four "
-                  "zoom cells cost 179px and pushed it to two rows")
-            check("...and the stepper is the compact one",
-                  len(bar["kids"]) == 2 and bar["kids"][1] <= 110,
-                  f"{bar['kids']} — a leading magnifier measured 118px and wraps")
-
-        # THE LADDER. Each press must halve the window and move the readout, and
-        # the ends must stop rather than wrap.
-        seen = []
-        for _ in range(8):
-            st = zp.evaluate(
-                "() => ({ mag: zoomMag,"
-                " label: document.getElementById('zoomMagVal').textContent,"
-                " win: +getZoomWindow().duration.toFixed(4),"
-                " outDis: document.getElementById('zoomMagOut').disabled,"
-                " inDis: document.getElementById('zoomMagIn').disabled })")
-            seen.append(st)
-            if st["inDis"]:
-                break
-            zp.click("#zoomMagIn"); zp.wait_for_timeout(200)
-        mags = [s["mag"] for s in seen]
-        check("the ladder climbs 1 to 32 by doubling",
-              mags == [1, 2, 4, 8, 16, 32], str(mags))
-        check("every step actually narrows the window",
-              all(seen[i + 1]["win"] < seen[i]["win"] for i in range(len(seen) - 1)),
-              str([s["win"] for s in seen]) + " — a readout that changes while "
-              "the view does not is worse than no control")
-        check("the readout tracks the level",
-              all(s["label"].startswith(str(s["mag"])) for s in seen),
-              str([(s["mag"], s["label"]) for s in seen]))
-        check("zoom-out is disabled at the bottom and only there",
-              seen[0]["outDis"] is True
-              and all(not s["outDis"] for s in seen[1:]),
-              str([(s["mag"], s["outDis"]) for s in seen]))
-        check("zoom-in is disabled at the top and only there",
-              seen[-1]["inDis"] is True
-              and all(not s["inDis"] for s in seen[:-1]),
-              str([(s["mag"], s["inDis"]) for s in seen]))
-
-        # THE POINT OF 32x: a 0.01s nudge has to be visible on the waveform.
-        px = zp.evaluate(
-            "() => { const w = document.getElementById('zoomTrackWrap');"
-            " const width = w.getBoundingClientRect().width;"
-            " return (0.01 / (getZoomWindow().duration / width)); }")
-        check("at full magnification a 0.01s step is more than a pixel wide",
-              px > 1.5,
-              f"{px:.2f}px — the finest nudge is 0.01s, and at the old 8x "
-              "ceiling that was under a pixel on any loop over ~4s")
+        zp.evaluate(
+            "() => { const c = document.getElementById('musicCut');"
+            " if (c && c.getAttribute('aria-checked') === 'true') c.click();"
+            " musicTempo = { bpm: 120, phase: 0 }; trimStart = 0; trimEnd = 4.25;"
+            " loopCrossfadeMs = 0; setCrossfadeUI(); updateTrimUI(); }")
+        zp.evaluate("() => document.getElementById('musicRestart').scrollIntoView({ block: 'center' })")
+        zp.wait_for_timeout(500)
+        # The beat at 4s, on the end's side of the line, as painted.
+        BEAT = ("() => { const r = document.getElementById('musicRestart'), p = r && r._painted;"
+                " const b = p && p.beats.find((b) => b[0] === 'end' && Math.abs(b[2] - 4) < 1e-6);"
+                " return { half: r ? r.clientWidth / 2 : 0, x: b ? b[1] : null,"
+                "          end: p ? +p.end[1].toFixed(3) : null }; }")
+        before = zp.evaluate(BEAT)
+        check("the Restart view paints the end's beat", before["x"] is not None,
+              f"{before} \u2014 nothing painted on the end's side to read")
+        zp.fill("#endReadout", "4.260"); zp.press("#endReadout", "Enter")
+        zp.wait_for_timeout(500)
+        after = zp.evaluate(BEAT)
+        moved = (before["x"] - after["x"]) if before["x"] is not None and after["x"] is not None else 0
+        check("a 0.01s move of the end is more than a pixel and a half there",
+              after["end"] == 4.26 and moved > 1.5,
+              f"the end went {before['end']} to {after['end']} and its beat moved {moved:.2f}px "
+              f"(half {before['half']}px) \u2014 the finest typed move has to show where the "
+              "join is lined up")
         zp.close()
     finally:
         _zb.close()

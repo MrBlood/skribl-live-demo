@@ -572,24 +572,27 @@ with sync_playwright() as p:
         pg.wait_for_function("() => typeof currentAudioBuffer !== 'undefined' && !!currentAudioBuffer", timeout=20000)
         pg.wait_for_timeout(600)
         # ONE COLOUR RULE FOR THE SAME SOUND (owner: "the colors are
-        # different"): the strip's peaks inside the loop are the accent, the
-        # rest slate, as Loop Detail draws them. Read off the strip's own
-        # pixels, at the busiest column inside and outside a middle loop.
+        # different"): the timeline draws the song in the accent, the loop's
+        # peaks solid and the rest of the song faint, and the Restart view
+        # the same accent. Read off the timeline's own pixels in the song's
+        # middle band: the most accent-coloured pixel inside a middle loop
+        # and outside it, before its start.
         pg.evaluate("() => { trimStart = audioDuration * 0.25; trimEnd = audioDuration * 0.75; updateTrimUI(); }")
-        pg.wait_for_timeout(400)
-        ink = pg.evaluate("""() => { const c = document.getElementById('waveformCanvas'), x = c.getContext('2d');
-            const d = x.getImageData(0, 0, c.width, c.height).data, w = c.width, h = c.height;
-            const col = (x0, x1) => { let r = 0, g = 0, b = 0, n = 0;
-              for (let X = Math.floor(x0); X < Math.floor(x1); X++) for (let Y = 0; Y < h; Y++) {
-                const k = (Y * w + X) * 4; if (d[k + 3] > 200) { r += d[k]; g += d[k + 1]; b += d[k + 2]; n++; } }
-              return n ? [Math.round(r / n), Math.round(g / n), Math.round(b / n), n] : null; };
-            return { inside: col(w * 0.35, w * 0.65), outside: col(w * 0.02, w * 0.2) }; }""")
-        _in, _out = ink["inside"], ink["outside"]
-        check(f"{who}: the strip draws the loop's peaks in the accent and the rest in slate, as Loop Detail does",
-              bool(_in and _out) and _in[2] - _in[0] > 60 and abs(_out[2] - _out[0]) < 40,
-              f"inside rgb+count {_in}, outside {_out}")
-        # More (it was Fine-tune; its tile keeps the id) opens the loop
-        # detail among the rest: what opened comes ON SCREEN, its first part
+        pg.wait_for_timeout(700)
+        ink = pg.evaluate("""() => { const c = document.getElementById('musicTlCanvas'), x = c.getContext('2d'), k = c.width / c.clientWidth;
+            const y0 = Math.round(60 * k), y1 = Math.round(100 * k), w = c.width;
+            const d = x.getImageData(0, y0, w, y1 - y0).data, rows = y1 - y0;
+            const most = (x0, x1) => { let best = -999;
+              for (let X = Math.floor(x0); X < Math.floor(x1); X++) for (let Y = 0; Y < rows; Y++) {
+                const i = (Y * w + X) * 4; if (d[i + 3] > 200) best = Math.max(best, d[i + 2] - d[i]); }
+              return best; };
+            const card = getComputedStyle(document.getElementById('musicTimeline')).getPropertyValue('--menu-card').trim();
+            return { inside: most(w * 0.35, w * 0.65), outside: most(w * 0.015, w * 0.07), card: card }; }""")
+        check(f"{who}: the timeline draws the loop's peaks in the accent, solid, and the rest of the song faint",
+              ink["inside"] > 110 and 30 < ink["outside"] < ink["inside"] - 40,
+              f"blue over red at the most accented pixel: inside the loop {ink['inside']}, before it {ink['outside']} (the card {ink['card']})")
+        # More (it was Fine-tune; its tile keeps the id) opens the Restart
+        # view among the rest: what opened comes ON SCREEN, its first part
         # painted, without a scroll by hand.
         pg.click("#fineTuneToggle")
         pg.wait_for_timeout(1600)
@@ -597,28 +600,32 @@ with sync_playwright() as p:
             const vh = window.visualViewport ? visualViewport.height : innerHeight;
             const hit = document.elementFromPoint(z.left + z.width / 2, z.top + z.height / 2);
             return { open: document.getElementById('fineTuneToggle').getAttribute('aria-expanded'),
-                     strip: document.getElementById('musicTrack').getBoundingClientRect().height,
+                     strip: document.getElementById('musicTimeline').getBoundingClientRect().height,
                      top: Math.round(d.top), bottom: Math.round(z.bottom), vh: Math.round(vh),
                      painted: !!(hit && hit.closest('#musicSmooth')) }; }""")
-        check(f"{who}: More is open, and the strip stays above what it opens",
+        check(f"{who}: More is open, and the timeline stays above what it opens",
               ft["open"] == "true" and ft["strip"] > 0, str(ft))
         check(f"{who}: ...and what More opens is ON SCREEN, painted, without a scroll by hand",
               ft["top"] >= 0 and ft["bottom"] <= ft["vh"] and ft["painted"], str(ft))
         pg.click("#fineTuneToggle")
         pg.wait_for_timeout(700)
-        back = pg.evaluate("() => ({ strip: document.getElementById('musicTrack').getBoundingClientRect().height,"
+        back = pg.evaluate("() => ({ strip: document.getElementById('musicTimeline').getBoundingClientRect().height,"
                            " hidden: document.getElementById('fineTuneBody').hidden })")
-        check(f"{who}: closing More keeps the strip and puts the loop detail away", back["strip"] > 0 and back["hidden"] is True, str(back))
+        check(f"{who}: closing More keeps the timeline and puts what More holds away", back["strip"] > 0 and back["hidden"] is True, str(back))
         # ROOM BETWEEN THE LOOP PANEL'S ROWS (owner: "things just seem close
-        # together"). Measured before at 390: the handles' caps touched the zoom
-        # bar (0px) and sat 2px over Scroll. Every gap down the panel is >= 8px;
-        # the handle's box is what reaches past the waveform, caps included.
+        # together"). Measured before at 390: the loop detail's handle caps
+        # touched its zoom bar (0px) and sat 2px over Scroll. Every gap down
+        # what More opens is >= 8px, the Restart view's own box included.
         pg.click("#fineTuneToggle")
         pg.wait_for_timeout(1200)
         gaps = pg.evaluate("""() => { const q = s => document.querySelector('#musicDetail ' + s).getBoundingClientRect();
-            const rows = [['smooth restart', q('.mt-smooth .mt-switch')], ['length', q('.crossfade-row')], ['hear the restart', q('#testSeamBtn')],
-                          ['tap', q('.mt-tap-row')], ['zoom bar', q('.zoom-mag-bar')], ['handles', q('#zoomHandleStart')], ['scroll', q('.zoom-pan-row')],
-                          ['start/end', q('.edge-group')], ['step line', q('#musicStepLine')], ['lock', q('.fine-tune-body > .mt-switch')]];
+            // A switch row by its words: its 8px of padding above and below is
+            // the row's own air, so two switch rows in a row touch box to box
+            // with 16px between what they say.
+            const sw = (id) => document.getElementById(id).closest('.mt-switch').querySelector('.mt-switch-words').getBoundingClientRect();
+            const rows = [['smooth restart', sw('musicSmooth')], ['restart view', q('#musicRestart')], ['its hint', q('#musicRvHint')],
+                          ['length', q('.crossfade-row')], ['hear the restart', q('#testSeamBtn')], ['tap', q('.mt-tap-row')],
+                          ['start/end', q('.edge-group')], ['step line', q('#musicStepLine')], ['cut on silence', sw('musicCut')], ['lock', sw('musicLock')]];
             return rows.slice(1).map((r, i) => [rows[i][0] + ' -> ' + r[0], Math.round(r[1].top - rows[i][1].bottom)]); }""")
         check(f"{who}: every row of what More opens has at least 8px above it",
               all(g >= 8 for _, g in gaps), str(gaps))

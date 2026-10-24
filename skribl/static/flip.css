@@ -16,7 +16,7 @@
   .flip-app button, .flip-app label, .flip-app input, .flip-app .seg, .flip-app .tool-open,
   .flip-app .layer-toggle, .flip-app .tab-panel, .flip-app .media-card, .flip-app .strip,
   .flip-app .t-btn, .flip-app .tool-btn, .flip-app .nudge-btn, .flip-app .loop-btn,
-  .flip-app .zoom-mag-btn, .flip-app .slider-nudge-btn { touch-action: manipulation; }
+  .flip-app .slider-nudge-btn { touch-action: manipulation; }
   .flip-app .app { min-height: 100dvh; height: auto; }
   .flip-app .header { gap: 8px; justify-content: flex-start; }
 

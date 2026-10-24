@@ -161,26 +161,38 @@ CLAIMS = {
     # Music
     "Add a track": ["verify_amber.py::Pad GREEN once a track is attached", "probe:media_tabs",
                     "verify_parity.py::{}: a file dropped anywhere on the card is taken, and the wrong kind is refused"],
-    "Loop markers": ["verify_tools.py::the drag is live AND has already moved the trim"],
+    "The timeline": ["verify_musictimeline.py::the timeline is the drawer's one view",
+                     "verify_musictimeline.py::the view frames the loop",
+                     "verify_musicbeat.py::the drawing's own lane runs under the loop, with a dashed line each time the loop comes round under it"],
+    "Loop ends": ["verify_music.py::a loop's edge dragged and let go off the timeline is saved",
+                  "verify_musictimeline.py::an end follows the finger",
+                  "verify_musictimeline.py::held near the edge, the view widens smoothly",
+                  "verify_musicbeat.py::an end let go on the timeline settles on whole bars, the nearest of 4, 8, 16 and 32 beats"],
     "Move the loop": ["probe:loop_move",
-                      "verify_musicbeat.py::the loop slid along the strip settles its start on a beat, its length kept"],
+                      "verify_musictimeline.py::a finger on the song slides it under the drawing",
+                      "verify_musictimeline.py::a tap on the whole song's line moves the loop there",
+                      "verify_musicbeat.py::the song slid under the drawing settles the loop's start on a beat, its length kept"],
     "More": ["verify_musicmore.py::More opens the restart, the beat, exact times and how it loops",
              "verify_musicmore.py::opening and closing More keeps the loop",
              "verify_musicmore.py::whether More is open is remembered, on the other editor too"],
     "Skribl's pick": ["verify_musicmore.py::a new song starts on Skribl's pick",
                       "verify_musicmore.py::the one line says the length heard, bold, its beats once there is a tempo",
                       "verify_musicmore.py::Back to Skribl's pick puts it back, and its Undo undoes that"],
-    "Loop Detail": ["verify_parity.py::More opens the loop detail on both",
-                    "verify_musicbeat.py::the loop detail marks the beats in its own window",
-                    "verify_musicbeat.py::in the loop detail an end let go near a beat settles on it"],
+    "The Restart view": ["verify_musictimeline.py::the Restart view shows the loop's last 0.6s beside its first 0.6s",
+                         "verify_musictimeline.py::the dot pulls the smooth restart longer or shorter",
+                         "verify_musicbeat.py::in the Restart view an end let go near a beat settles on it; far from one, it stays",
+                         "verify_audio.py::a 0.01s move of the end is more than a pixel and a half there"],
+    "Cut on silence": ["verify_musictimeline.py::Cut on silence is on for a new song",
+                       "verify_musictimeline.py::the baked loop is cut where it joins without a click",
+                       "verify_musictimeline.py::Cut on silence's words say how far both ends move"],
     "Hear the loop": ["verify_audiosession.py::Preview Loop puts signal on the audio graph",
                       "verify_music.py::Hear the loop loops the baked clip (the posted loop)",
                       "verify_musicbeat.py::Hear the loop plays the music alone, round and round, and Stop stops it",
                       "verify_musicbeat.py::an end moved while the loop plays is heard from its next time round"],
     "Tap the beat": ["verify_musicbeat.py::Tap the beat's first tap starts the loop and is not a beat",
                      "verify_musicbeat.py::taps in time settle on the tempo, two seconds after the last, and the one line counts the beats",
-                     "verify_musicbeat.py::the strip marks every beat, taller every four from the loop's start",
-                     "verify_musicbeat.py::an end let go on the strip settles on whole bars, the nearest of 4, 8, 16 and 32 beats",
+                     "verify_musicbeat.py::the timeline puts a dot on every beat in view, bigger on each bar counted from the loop's start",
+                     "verify_musicbeat.py::an end let go on the timeline settles on whole bars, the nearest of 4, 8, 16 and 32 beats",
                      "verify_musicbeat.py::a count the song or the 20s cap has no room for is passed over",
                      "verify_musicbeat.py::the tempo is saved with the song in the drafts, and comes back with it"],
     "Smooth restart": ["verify_loopcap.py::clip shortened by exactly the crossfade",
@@ -639,19 +651,21 @@ def probe_loop_window(b, nm, path):
 
 
 def probe_loop_move(b, nm, path):
-    """Dragging inside the loop slides the whole window without resizing it."""
+    """Dragging the song under the drawing slides the loop without resizing it."""
     ctx, pg, errs = fresh(b, path)
     _with_music(pg, path)
     browsing.pad_drawer(pg, "music", settle=0)      # Media, then Music (both editors)
     pg.wait_for_timeout(800)
     pg.evaluate("() => { trimStart = 2; trimEnd = 5; updateTrimUI(); }")
-    pg.wait_for_timeout(150)
-    box = pg.locator("#musicRange").bounding_box()
+    pg.wait_for_timeout(400)
+    # The song's lane, half way across: inside the loop, clear of its two
+    # handles (9% and 87% of the way across, the view's framing).
+    box = pg.locator("#musicTlStage").bounding_box()
     before = pg.evaluate("() => ({ s: trimStart, e: trimEnd })")
-    x, y = box["x"] + box["width"] / 2, box["y"] + box["height"] / 2
+    x, y = box["x"] + box["width"] / 2, box["y"] + box["height"] * 0.65
     pg.mouse.move(x, y)
     pg.mouse.down()
-    pg.mouse.move(x + 60, y, steps=8)
+    pg.mouse.move(x - 60, y, steps=8)              # the song goes left, so the loop takes in later music
     pg.mouse.up()
     pg.wait_for_timeout(200)
     after = pg.evaluate("() => ({ s: trimStart, e: trimEnd })")
@@ -797,7 +811,7 @@ CONTROL_ALIASES = {
     "Add music MP3, WAV, M4A or OGG · it loops under your drawing": "add a track",
     "Add music MP3, WAV, M4A or OGG · it loops under every page": "add a track",
     "Toggle music on or off": "turns the music off without removing it",
-    "Remove the track": "removes the track", "Scroll the loop detail view": "scroll to move along the waveform",
+    "Remove the track": "removes the track",
     "More The restart, the beat, exact times": "the restart, the beat and exact times, one tap away",
     # - and + say how far a press goes (0.1s; a bar once there is a tempo, which this page has not)
     "Start of loop, 0.1s earlier": "move each with − and +", "Start of loop, 0.1s later": "move each with − and +",
