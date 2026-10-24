@@ -352,8 +352,16 @@
    * growth and fought whoever scrolled on in that time: a song added and the
    * page scrolled to its end came straight back to the cap, 231px, in three
    * runs of three. A drift is the few px a glide overshoots; a scroll is a
-   * screenful. Past DRIFT the page is where the person put it, and it stays. */
+   * screenful. Past DRIFT the page is where the person put it, and it stays.
+   *
+   * A PERSON WHO SCROLLS BACK UP IS LEFT THERE TOO. The take-back only ever
+   * pushes down, so a scroll up to the drawing as a song landed came straight
+   * back to the drawer's end, 300px in one frame at the next re-assert, on a
+   * desk's wheel and a phone's finger alike. As the opening's re-asserts do
+   * (revealPanelEnd above), a wheel, a touch, a press or a key anywhere while
+   * they are due calls them off: once the person acts, the page is theirs. */
   var DRIFT = 24;
+  var ACTS = ['wheel', 'touchstart', 'pointerdown', 'keydown'];
   function followGrowth(card, o) {
     if (!card || typeof ResizeObserver === 'undefined') return;
     var dock = o.dock || null, lastH = 0, gen = 0;
@@ -375,6 +383,10 @@
       // them snap this glide short, the page 260px in one frame on Flip, then
       // hold the page a pixel off this cap (the panel's end, not the card's).
       revealGen++;
+      function act() { if (mine === gen) gen++; }
+      var opts = { capture: true, passive: true };
+      ACTS.forEach(function (n) { window.addEventListener(n, act, opts); });
+      setTimeout(function () { ACTS.forEach(function (n) { window.removeEventListener(n, act, opts); }); }, 1300);
       var b = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches
         ? 'auto' : 'smooth';
       requestAnimationFrame(function () { window.scrollTo({ top: target(), behavior: b }); });
