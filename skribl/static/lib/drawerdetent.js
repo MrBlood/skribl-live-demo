@@ -303,10 +303,10 @@
    * is open brings its end on screen again, the way opening did, and with the
    * same re-asserts. `current()` is the open panel, or null while it is shut.
    *
-   * NOT an open, a tab switch or a music level: each has its own reveal
-   * already. Each shows or hides one of the panels, or changes the music
-   * drawer's level (#musicDetail's data-level, set before its blocks show or
-   * hide), so that moves the baseline instead of being followed -- watched
+   * NOT an open, a tab switch or the music drawer's More: each has its own
+   * reveal already. Each shows or hides one of the panels, or opens or closes
+   * More (#musicDetail's data-level, set before More shows or hides), so
+   * that moves the baseline instead of being followed -- watched
    * on those elements, not read off the card's size, because Photo and Music
    * empty are the same height and a switch between them resizes nothing (the
    * first draft of this kept the panel's name per resize, missed that switch,
@@ -314,9 +314,9 @@
    *
    * Never so far that the dock slides under the pinned header: that is
    * controls on top of controls (verify_ux's phone audit), and the reason
-   * Fine-tune's own nudge stops at its waveform. Capped there, a short phone
-   * may still leave the last row to scroll to; growth only ever scrolls
-   * down, but for one thing.
+   * the music drawer's More stops its own nudge short of the header. Capped
+   * there, a short phone may still leave the last row to scroll to; growth
+   * only ever scrolls down, but for one thing.
    *
    * THE CAP IS HELD, NOT ONLY AIMED AT. On a 390x640 phone a photo could
    * leave the page past it, the dock 1-9px under the header -- in anything
@@ -365,13 +365,14 @@
       });
     }
     // A move of the baseline also calls off the last growth's re-asserts: a
-    // level picked within 1.2s of a song landing had them chase the taller
-    // card's end, the switch just tapped scrolled away under the header.
+    // level picked within 1.2s of a song landing (the levels More replaced)
+    // had them chase the taller card's end, the switch just tapped scrolled
+    // away under the header.
     var moves = new MutationObserver(function () { lastH = height(); gen++; });
     [].forEach.call(card.querySelectorAll('#photoPanel, #musicPanel'), function (m) {
       moves.observe(m, { attributes: true, attributeFilter: ['hidden'] });
     });
-    // Only the level: #musicDetail un-hiding is a song landing, which IS followed.
+    // Only More: #musicDetail un-hiding is a song landing, which IS followed.
     var lv = card.querySelector('#musicDetail');
     if (lv) moves.observe(lv, { attributes: true, attributeFilter: ['data-level'] });
     new ResizeObserver(function () {

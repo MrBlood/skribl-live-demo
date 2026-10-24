@@ -452,44 +452,54 @@ stays a sleep.
   new track starts at 1x; a photo named song.mp3 is refused by its type; and
   Play stops a preview. A post leaving a switched-off track out, which both
   already did, is kept by rows green before too.
-- `verify_musiclevels.py` — the music drawer's three levels (lib/musicdrawer.js,
-  the owner's "3 levels of controls... from super simple to super powerful"),
-  on the Pad and on Flip: Simple, Adjust and Fine-tune each show what they add
-  and hide the rest with `hidden`; switching keeps the loop, says so over the
-  strip, and is remembered by both editors; a new song starts on Skribl's pick
-  (the first 20 seconds or the whole song, on the Pad as long as a drawing
-  already there, with a smooth restart), and a draft's song keeps its own
-  loop; a change offers Back to Skribl's pick, whose Undo goes after eight
-  seconds, and an Undo of the drawing says the drawing changed; Fit counts the
-  smooth restart; Whole song says when it is the longest loop; with nothing
-  drawn Fit is off and wakes with a drawing; Smooth restart's switch keeps its
-  last length; typed times, Each tap's frame (the Pad's video, Flip's pages a
-  second, in size order) and Lock the length; the sync line; 16px fields;
-  Play with my drawing is the editor's Play, and waits with nothing drawn;
-  Fine-tune keeps the switch in sight, and back to Simple glides.
+- `verify_musicmore.py` — the music drawer's one view, and More
+  (lib/musicdrawer.js; the owner: "The music drawer is so complicated...
+  we'll need to streamline it"), on the Pad and on Flip; it was the three
+  levels' suite, renamed with them. A new drawer opens on the strip,
+  the one line, the pair that plays, Fit and Whole song, and More; More opens
+  the restart, the beat, exact times and how it loops, each under its name,
+  joined to its tile, hides them with `hidden` when closed, keeps the loop,
+  unfolds and folds away (at once under Reduce Motion), and is remembered by
+  both editors, a saved Adjust opening it closed; a new song starts on
+  Skribl's pick (the first 20 seconds or the whole song, on the Pad as long as
+  a drawing already there, with a smooth restart), and a draft's song keeps
+  its own loop; the one line says the length heard, its beats and against the
+  drawing, its height the same whatever it says, on a phone and a desk; a
+  change offers Back to Skribl's pick, whose Undo goes after eight seconds,
+  and an Undo of the drawing shows the way back and no more; Fit counts the
+  smooth restart, and its seconds agree with the line's; Whole song says when
+  it is the longest loop; with nothing drawn Fit is off and wakes with a
+  drawing; Smooth restart's switch keeps its last length; typed times, - and +
+  (0.1s, or a bar once there is a tempo, and say which) and Lock the length;
+  16px fields; Play with my drawing is the editor's Play, and waits with
+  nothing drawn; More opened as a song lands keeps its tile in sight, and
+  closing it from the drawer's end glides.
 - `verify_musicbeat.py` — the music drawer's pair and its beat (the owner:
   "How do I test the loop without having it show me drawing?... so I'm not at
-  7 or 9 when I want 8"), on the Pad and on Flip: Play with my drawing and
-  Hear the loop under the strip in the same place on every level, the same
-  size, with no second Hear in the loop detail; Hear the loop plays the music
-  alone until Stop, and an end moved while it plays is heard from its next
-  time round; Tap the beat's first tap starts the loop and is not a beat, taps
-  in time settle on the tempo two seconds after the last (a stray gap does not
-  move it), and where the beat falls is the taps' own on the song's clock as
+  7 or 9 when I want 8", then "we only ever want 4,8,16,... beats"), on the Pad
+  and on Flip: Play with my drawing and Hear the loop under the strip in the
+  same place whether More is open or not, the same size, with no second Hear
+  the loop; Hear the loop plays the music alone until Stop, and an end moved
+  while it plays is heard from its next time round; Tap the beat's first tap
+  starts the loop and is not a beat, taps in time settle on the tempo two
+  seconds after the last (a stray gap does not move it), the one line counts
+  the beats, and where the beat falls is the taps' own on the song's clock as
   heard (less the time the sound takes to reach the ear); on a phone the tap
-  stays put while its words change; Make it offers the three
-  whole counts nearest what is heard, makes what is heard exactly that many
-  beats, smooth restart and all, and fades a count the song is too short for;
-  Each tap gains one beat in size order; the strip marks the beats (taller
-  every four from the loop's start, no closer than 6px, a dashed line where a
-  smooth restart comes round) and the loop detail its own window; an end let
-  go near a beat settles on it, typed ends never; the tempo goes with the
-  song into the drafts and a re-add card, and a new song starts with none;
-  the counts and the marks read against what is behind them, light and dark;
-  the pair's words are whole at 320, 360 and 402px, side by side from 360.
-  Taps run on the page's own clock, each woken early to land on its mark; a
-  try whose taps strayed more than 4ms (a busy machine) is tapped again on a
-  fresh page, three tries at most, and the row says which try it was.
+  stays put while its words change; an end let go on the strip settles on
+  whole bars, the nearest of 4, 8, 16 and 32 beats, smooth restart and all,
+  the start and the end alike, passing over a count the song or the 20s cap
+  has no room for, gliding there (at once under Reduce Motion), and the loop
+  slid along the strip settles its start on a beat; the strip marks the beats
+  (taller every four from the loop's start, no closer than 6px, a dashed line
+  where a smooth restart comes round) and the loop detail its own window, where
+  an end let go near a beat settles on it; typed ends never settle, nor a
+  locked loop's; the tempo goes with the song into the drafts and a re-add
+  card, and a new song starts with none; the one line, the tap's words and the
+  marks read against what is behind them, light and dark; the pair's words are
+  whole at 320, 360 and 402px, side by side from 360. Taps run on the page's
+  own clock, each woken early to land on its mark; a try whose taps strayed
+  more than 4ms (a busy machine) is tapped again on a fresh page, three tries
+  at most, and the row says which try it was.
 - `verify_learncard.py` — the card on the button (lib/learncard.js), Pad and
   Flip: holding a button (real touch) opens its card with its example; a
   quick tap stays a tap, a moving finger is no hold, the lift does not press,

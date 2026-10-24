@@ -1,30 +1,33 @@
 #!/usr/bin/env python3
-"""The music drawer's three levels (lib/musicdrawer.js), on the Pad and on Flip.
+"""The music drawer's one view, and More (lib/musicdrawer.js), on the Pad and on Flip.
 
-The owner: "like 3 levels of controls. The more control you want, the deeper
-into the controls you go. I want it all, but from super simple to super
-powerful... no getting rid of anything either... Keep it kind too." Step 1 of
-the build plan: Simple, Adjust and Fine-tune, with today's controls in their
-new homes and names. verify_music.py keeps how each control works (the
-previews, the switch, Fit's sum on Flip); this keeps where each one lives,
-what the drawer says, and the new pieces.
+The owner, with the drawer at three levels: "The music drawer is so
+complicated. I think I liked it better before you did so much to it," then
+"we'll need to streamline it," and yes to the step 2 mock's five defaults.
+The view is the strip, the one line under it, the pair that plays, Fit my
+drawing and Whole song, and More; More holds the rest. verify_music.py keeps
+how each control works (the previews, the switch, Fit's sum on Flip) and
+verify_musicbeat.py the beat; this keeps where each one lives, what the drawer
+says, and More itself. It was verify_musiclevels.py, the three levels'.
 
 The rows:
 
-  THE LEVELS. Three, Simple first, each its name over what it is for. Each
-  shows what it adds and hides the rest with `hidden` (so out of the Tab order
-  too): Simple is the strip, the pick line, the two picks and Play; Adjust
-  adds the typed times, Smooth restart and Hear the restart; Fine-tune the
-  loop detail, Each tap, the steppers, the sync line, Lock the length and
-  Smooth restart's length. Switching keeps the loop, and says so over the
-  strip without taking a tap. The level is remembered, by the other editor
-  too.
+  THE VIEW AND MORE. A new drawer opens on the one view. More opens the
+  restart, the beat, exact times and how it loops, each under its name, and
+  what it holds is `hidden` while it is closed (so out of the Tab order too).
+  Opening and closing keep the loop. It unfolds and folds away joined to its
+  tile, as the draw drawer's tiles do, and at once under Reduce Motion.
+  Whether it is open is remembered, by the other editor too; the old Adjust
+  opens closed.
 
-  SKRIBL'S PICK. A new song starts on the first 20 seconds (the whole song
-  when it is shorter), with a smooth restart; on the Pad a drawing already
-  there sets the length instead, what is heard as long as the drawing. The
-  pick line says which. A change says "your own loop" with the way back;
-  the way back has an Undo, which goes after eight seconds. A song a draft
+  THE ONE LINE. A new song starts on Skribl's pick: the first 20 seconds (the
+  whole song when it is shorter), with a smooth restart; on the Pad a drawing
+  already there sets the length instead, what is heard as long as the
+  drawing. The line says the length heard, the beats once there is a tempo,
+  and against the drawing, then Skribl's pick or the way back; the way back
+  has an Undo, which goes after eight seconds. Nobody is told they did
+  something: a drawing that changed under the pick shows the way back and no
+  more. Its height never changes as it says other things. A song a draft
   brings back keeps the draft's loop.
 
   THE PICKS. Fit counts the smooth restart (what is heard is as long as the
@@ -34,22 +37,21 @@ The rows:
   off and says why, and wakes when a drawing is made with the drawer open.
 
   SMOOTH RESTART. One switch, on at its last length and off to a clean cut;
-  the lines count what is heard.
+  the line counts what is heard.
 
-  FINE-TUNE. A typed time moves its end (a comma is a point); a time that is
-  not one puts the loop's own back. Each tap's frame is the editor's own --
-  the Pad's video, 30 a second; Flip's pages a second -- and keeps its place
-  in size order. Lock the length moves both ends together. The sync line
-  says the loop in seconds and frames against the drawing. Every field that
-  takes text is 16px (A11Y 11b; these are built hidden).
+  EXACT TIMES. A typed time moves its end (a comma is a point); a time that
+  is not one puts the loop's own back. - and + move 0.1s, or a bar once there
+  is a tempo, and their names and the line under them say which. Lock the
+  length moves both ends together. Every field that takes text is 16px (A11Y
+  11b; these are built hidden).
 
   PLAY. Play with my drawing is the editor's own Play and follows it however
-  it is pressed; with nothing drawn it waits, and Hear the loop, beside it on
-  every level, plays the music on its own (verify_musicbeat has the rest).
+  it is pressed; with nothing drawn it waits, and Hear the loop, beside it,
+  plays the music on its own (verify_musicbeat has the rest).
 
-  KIND, NOT JUMPY. Picking Fine-tune never takes the switch just tapped out of
-  sight, and going back to Simple from the drawer's end glides: the switch is
-  read on every frame and never leaps.
+  KIND, NOT JUMPY. More opened as a song lands never takes the tile just
+  tapped out of sight, and closing it from the drawer's end glides: the tile
+  is read on every frame and never leaps.
 
 Checked red per component: see DECISIONS.md for which mutation turned which
 row red.
@@ -80,16 +82,16 @@ try:
     from playwright.sync_api import sync_playwright
 except ImportError as exc:
     print(f"SUITE-SKIPPED: {exc}")
-    print("No assertions were executed. This is NOT evidence the music drawer has its levels.")
+    print("No assertions were executed. This is NOT evidence the music drawer has its one view and More.")
     raise SystemExit(77)
 import browsing  # noqa: E402
 import waits  # noqa: E402
 
-# For calibration: MUSICLEVELS_ONLY=Pad (or Flip) runs one editor, and
-# MUSICLEVELS_PART=levels (pick, picks, smooth, fine, play, kind) one part, so
-# a row can be shown red in seconds. A real run sets neither.
-ONLY = os.environ.get("MUSICLEVELS_ONLY", "")
-PART = os.environ.get("MUSICLEVELS_PART", "")
+# For calibration: MUSICMORE_ONLY=Pad (or Flip) runs one editor, and
+# MUSICMORE_PART=more (pick, line, picks, smooth, exact, play, kind) one part,
+# so a row can be shown red in seconds. A real run sets neither.
+ONLY = os.environ.get("MUSICMORE_ONLY", "")
+PART = os.environ.get("MUSICMORE_PART", "")
 EDITORS = [e for e in (("Pad", "/"), ("Flip", "/flip")) if not ONLY or e[0] == ONLY]
 
 
@@ -130,25 +132,23 @@ DRAWING = {"Pad": "() => strokes.length ? getPlaybackDuration() / 1000 : 0",
            "Flip": "() => window.SkriblHold.plan(frames, fps, docLoop).cycle / 1000"}
 TRIM = "() => ({ s: trimStart, e: trimEnd, d: audioDuration, xf: loopCrossfadeMs })"
 SAID = """() => { const q = (id) => document.getElementById(id);
-  return { pick: q('musicPickText').textContent, back: !q('musicBackPick').hidden, undo: !q('musicPickUndo').hidden,
+  return { line: q('musicPickText').textContent, tag: !q('musicPickTag').hidden, back: !q('musicBackPick').hidden, undo: !q('musicPickUndo').hidden,
            fit: q('matchDrawingBtn').getAttribute('aria-pressed'), fitOff: q('matchDrawingBtn').disabled, fitSub: q('musicFitSub').textContent,
            whole: q('musicWholeBtn').getAttribute('aria-pressed'), wholeName: q('musicWholeName').textContent, wholeSub: q('musicWholeSub').textContent,
-           len: q('musicLenLine').textContent, sync: q('musicSyncLine').textContent, play: q('musicPlayLabel').textContent,
+           play: q('musicPlayLabel').textContent, step: q('musicStepLine').textContent,
            smooth: q('musicSmooth').getAttribute('aria-checked'), smoothSub: q('musicSmoothSub').textContent }; }"""
 # Shown: no [hidden] on the way up, and a box. Hidden: a [hidden] on the way up.
 SHOWN = """(ids) => ids.filter((id) => { const el = document.getElementById(id);
   return !!el && !el.closest('[hidden]') && el.getClientRects().length > 0; })"""
-LEVEL_BTN = {"simple": "#musicLevelSimple", "adjust": "#fineTuneTrim", "fine": "#fineTuneToggle"}
-# Where the level switch is, against the pinned header (0 where the header scrolls away) and the screen.
-SIGHT = """() => { const s = document.getElementById('fineTuneSeg').getBoundingClientRect(), h = document.querySelector('.header');
+# Where More's tile is, against the pinned header (0 where the header scrolls away) and the screen.
+SIGHT = """() => { const s = document.getElementById('fineTuneToggle').getBoundingClientRect(), h = document.querySelector('.header');
   const top = h && ['sticky', 'fixed'].includes(getComputedStyle(h).position) ? h.getBoundingClientRect().bottom : 0;
   return { seg: Math.round(s.top), header: Math.round(top), vh: innerHeight }; }"""
-EVERY = ["musicTrack", "musicPickLine", "matchDrawingBtn", "musicWholeBtn", "musicPlayBtn", "previewLoopBtn"]
-ADJUST = ["musicLenLine", "musicFrom", "musicTo", "musicTapBtn", "musicSmooth", "testSeamBtn"]
-FINE = ["fineTuneBody", "zoomTrackWrap", "zoomPanSlider", "musicTapBtn", "musicStepSeg", "startReadout", "endReadout",
-        "musicSyncLine", "musicLock", "musicSmooth", "crossfadeSlider", "testSeamBtn"]
-ALL = sorted(set(EVERY + ADJUST + FINE))
-WANT = {"simple": set(EVERY), "adjust": set(EVERY + ADJUST), "fine": set(EVERY + FINE)}
+VIEW = ["musicTrack", "musicPickLine", "musicPlayBtn", "previewLoopBtn", "matchDrawingBtn", "musicWholeBtn", "fineTuneToggle"]
+MORE = ["fineTuneBody", "musicSmooth", "crossfadeSlider", "testSeamBtn", "musicTapBtn", "zoomTrackWrap", "zoomPanSlider",
+        "startReadout", "endReadout", "musicStepLine", "musicLock"]
+ALL = sorted(set(VIEW + MORE))
+SECTIONS = ["The restart", "The beat", "Exact times", "How it loops"]
 
 
 def heard(t):
@@ -157,7 +157,7 @@ def heard(t):
     return n - min(t["xf"] / 1000, n / 2)
 
 
-def editor(b, name, path, *, drawn=True, song=SHORT, ctx=None, opts=DESK, level=None):
+def editor(b, name, path, *, drawn=True, song=SHORT, ctx=None, opts=DESK, more=False):
     c = ctx or waits.instrument(b.new_context(**opts))
     pg = c.new_page()
     errs = []
@@ -176,8 +176,8 @@ def editor(b, name, path, *, drawn=True, song=SHORT, ctx=None, opts=DESK, level=
             pg.evaluate(PAGES, {"n": 3, "fps": 12, "hold": 8})
     if song:
         add(pg, song)
-    if level:
-        pick_level(pg, level)
+    if more:
+        set_more(pg, True)
     return c, pg, errs
 
 
@@ -190,10 +190,12 @@ def add(pg, song):
     waits.settle(pg, 500)
 
 
-def pick_level(pg, level):
-    pg.click(LEVEL_BTN[level])
-    pg.wait_for_timeout(350)
-    browsing.wait_scroll_still(pg)
+def set_more(pg, want):
+    """More open or closed, by its tile, as a person does."""
+    if (pg.get_attribute("#fineTuneToggle", "aria-expanded") == "true") != want:
+        pg.click("#fineTuneToggle")
+        pg.wait_for_timeout(350)
+        browsing.wait_scroll_still(pg)
 
 
 def press(pg, sel, ms=200):
@@ -210,110 +212,168 @@ def press(pg, sel, ms=200):
 with sync_playwright() as pw:
     b = pw.chromium.launch()
 
-    print("\nMUSIC LEVELS — three, and what each shows")
-    for _n, _p in eds("levels"):
+    print("\nMUSIC MORE — the one view, and More")
+    for _n, _p in eds("more"):
         c, pg, errs = editor(b, _n, _p)
-        seg = pg.evaluate("() => [...document.querySelectorAll('#fineTuneSeg button')].map(b => [b.dataset.level, b.querySelector('.lv-k').textContent, b.querySelector('.lv-v').textContent])")
-        check(f"{_n}: three levels, Simple first, each its name over what it is for",
-              seg == [["simple", "Simple", "Skribl does it"], ["adjust", "Adjust", "shape it yourself"], ["fine", "Fine-tune", "make it perfect"]],
-              str(seg))
-        shown = {}
-        for lv in ("simple", "adjust", "fine"):
-            if lv != "simple":
-                pick_level(pg, lv)
-            shown[lv] = set(pg.evaluate(SHOWN, ALL))
-        check(f"{_n}: a new drawer opens on Simple: the strip, the pick line, the pair that plays and the two picks, and nothing deeper",
-              shown["simple"] == WANT["simple"], f"extra {sorted(shown['simple'] - WANT['simple'])}, missing {sorted(WANT['simple'] - shown['simple'])}")
-        check(f"{_n}: Adjust adds the typed times, Tap the beat, Smooth restart and Hear the restart",
-              shown["adjust"] == WANT["adjust"], f"extra {sorted(shown['adjust'] - WANT['adjust'])}, missing {sorted(WANT['adjust'] - shown['adjust'])}")
-        check(f"{_n}: Fine-tune adds the loop detail, Each tap, the steppers, the sync line, Lock the length and Smooth restart's length",
-              shown["fine"] == WANT["fine"], f"extra {sorted(shown['fine'] - WANT['fine'])}, missing {sorted(WANT['fine'] - shown['fine'])}")
-        pick_level(pg, "simple")
-        tab = pg.evaluate("""(ids) => ids.filter((id) => { const el = document.getElementById(id); return !el.closest('[hidden]'); })""",
-                          sorted(set(ADJUST + FINE) - set(EVERY)))
-        check(f"{_n}: what a level hides is hidden, so out of the Tab order too", not tab, f"not [hidden] on Simple: {tab}")
+        closed = set(pg.evaluate(SHOWN, ALL))
+        tile = pg.evaluate("() => { const t = document.getElementById('fineTuneToggle');"
+                           " return [t.querySelector('.mt-k').textContent, t.querySelector('.mt-v').textContent, t.getAttribute('aria-expanded'), t.getAttribute('aria-controls')]; }")
+        check(f"{_n}: a new drawer opens on the one view: the strip, the one line, the pair that plays, the two picks and More, and nothing deeper",
+              closed == set(VIEW) and tile == ["More", "The restart, the beat, exact times", "false", "fineTuneBody"],
+              f"extra {sorted(closed - set(VIEW))}, missing {sorted(set(VIEW) - closed)}; the tile {tile}")
+        set_more(pg, True)
+        opened = set(pg.evaluate(SHOWN, ALL))
+        heads = pg.evaluate("() => [...document.querySelectorAll('#fineTuneBody > .mt-sect')].map(p => p.textContent)")
+        check(f"{_n}: More opens the restart, the beat, exact times and how it loops, each under its name",
+              opened == set(VIEW + MORE) and heads == SECTIONS and pg.get_attribute("#fineTuneToggle", "aria-expanded") == "true",
+              f"extra {sorted(opened - set(VIEW + MORE))}, missing {sorted(set(VIEW + MORE) - opened)}; {heads}")
+        # Joined: the open tile reaches over the card's top edge and is above it,
+        # so the point just inside the card's edge is the tile's.
+        j = pg.evaluate("""() => { const t = document.getElementById('fineTuneToggle'), d = document.getElementById('fineTuneBody');
+            t.scrollIntoView({ block: 'center' }); const a = t.getBoundingClientRect(), r = d.getBoundingClientRect();
+            const at = document.elementFromPoint(r.left + r.width / 2, r.top + 0.5);
+            return { over: +(a.bottom - r.top).toFixed(2), same: Math.abs(a.left - r.left) < 0.5 && Math.abs(a.right - r.right) < 0.5,
+                     tile: !!at && t.contains(at), open: t.classList.contains('open') }; }""")
+        check(f"{_n}: open, More's tile and what it opens are one shape, the tile over the card's edge",
+              j["open"] and j["same"] and j["tile"] and 0.5 <= j["over"] <= 1.5, str(j))
+        set_more(pg, False)
+        pg.wait_for_timeout(300)
+        tab = pg.evaluate("(ids) => ids.filter((id) => !document.getElementById(id).closest('[hidden]'))", MORE)
+        check(f"{_n}: what More holds is hidden while it is closed, so out of the Tab order too",
+              not tab and pg.get_attribute("#fineTuneToggle", "aria-expanded") == "false", f"not [hidden] with More closed: {tab}")
 
-        # Switching keeps the loop: an own loop and smooth restart, through every level and back.
-        pick_level(pg, "fine")
+        # Opening and closing keep the loop: an own loop and smooth restart, through twice.
+        set_more(pg, True)
         pg.evaluate("() => { trimStart = 0.7; trimEnd = 3.9; updateTrimUI(); }")
         pg.evaluate("() => { const s = document.getElementById('crossfadeSlider'); s.value = '120'; s.dispatchEvent(new Event('input', { bubbles: true })); }")
         before = pg.evaluate(TRIM)
         seen = []
-        for lv in ("simple", "adjust", "fine", "simple"):
-            pick_level(pg, lv)
+        for want in (False, True, False):
+            set_more(pg, want)
+            pg.wait_for_timeout(250)
             seen.append(pg.evaluate(TRIM))
-        check(f"{_n}: switching the level keeps the loop",
+        check(f"{_n}: opening and closing More keeps the loop",
               all(t == before for t in seen) and before["xf"] == 120, f"{before} then {seen}")
-        pick_level(pg, "adjust")
-        k = pg.evaluate("() => { const k = document.getElementById('musicKept'), r = k.getBoundingClientRect(), s = getComputedStyle(k);"
-                        " return { shown: k.classList.contains('show'), taps: s.pointerEvents, pos: s.position, in: k.closest('#musicTrack') !== null }; }")
-        pg.wait_for_timeout(2900)
-        gone = pg.evaluate("() => !document.getElementById('musicKept').classList.contains('show')")
-        check(f"{_n}: switching the level says so, over the strip, and takes no taps or room",
-              k["shown"] and k["taps"] == "none" and k["pos"] == "absolute" and k["in"] and gone, f"{k}; gone after 2.9s: {gone}")
-        check(f"{_n}: no page errors through the levels", not errs, "; ".join(errs[:2]))
+
+        # It unfolds and folds away, read on every frame: opacity between 0 and
+        # 1 on the way, the tile still joined while it folds, then hidden.
+        FRAMES = """() => { window.__mf = []; const d = document.getElementById('fineTuneBody'), t = document.getElementById('fineTuneToggle'), t0 = performance.now();
+            (function f() { window.__mf.push([Math.round(performance.now() - t0), d.hidden, +getComputedStyle(d).opacity, t.classList.contains('open')]);
+              if (performance.now() - t0 < 600) requestAnimationFrame(f); })(); }"""
+        pg.evaluate(FRAMES); pg.click("#fineTuneToggle"); pg.wait_for_timeout(700)
+        up = pg.evaluate("() => window.__mf")
+        pg.evaluate(FRAMES); pg.click("#fineTuneToggle"); pg.wait_for_timeout(700)
+        down = pg.evaluate("() => window.__mf")
+        mid_up = [f for f in up if not f[1] and 0.02 < f[2] < 0.98]
+        mid_down = [f for f in down if not f[1] and 0.02 < f[2] < 0.98 and f[3]]
+        check(f"{_n}: More unfolds, and folds away joined to its tile before it goes",
+              len(mid_up) >= 2 and len(mid_down) >= 2 and down[-1][1] and not down[-1][3],
+              f"{len(mid_up)} frames on the way in, {len(mid_down)} on the way out; last {down[-1] if down else None}")
+        check(f"{_n}: no page errors through More", not errs, "; ".join(errs[:2]))
         c.close()
 
-    # The level is one choice, kept for both editors (one origin, one key).
-    if part("levels") and not ONLY:
+    # Reduce Motion: at once, both ways; nothing on the way.
+    for _n, _p in eds("more"):
+        c = waits.instrument(b.new_context(reduced_motion="reduce", **DESK))
+        c, pg, _ = editor(b, _n, _p, ctx=c, drawn=False)
+        pg.evaluate("""() => { window.__mf = []; const d = document.getElementById('fineTuneBody'), t0 = performance.now();
+            (function f() { window.__mf.push([d.hidden, +getComputedStyle(d).opacity]); if (performance.now() - t0 < 2500) requestAnimationFrame(f); })(); }""")
+        pg.click("#fineTuneToggle"); pg.wait_for_timeout(400); pg.click("#fineTuneToggle"); pg.wait_for_timeout(400)
+        pg.wait_for_function("() => window.__mf.length && window.__mf[window.__mf.length - 1][0]", timeout=3000)
+        fr = pg.evaluate("() => window.__mf")
+        check(f"{_n}: under Reduce Motion More opens and closes at once, nothing on the way",
+              fr and not [f for f in fr if not f[0] and f[1] < 0.999] and any(not f[0] for f in fr) and fr[-1][0], f"{len(fr)} frames, {fr[:3]} ... {fr[-2:]}")
+        c.close()
+
+    # Open or closed is one choice, kept for both editors (one origin, one key);
+    # the old middle level, Adjust, opens closed.
+    if part("more") and not ONLY:
         c = waits.instrument(b.new_context(**DESK))
         _, pad, _ = editor(b, "Pad", "/", ctx=c, drawn=False)
-        pick_level(pad, "adjust")
+        set_more(pad, True)
         pad.reload(); browsing.goto(pad, BASE, "/"); add(pad, SHORT)
-        again = pad.evaluate("() => document.getElementById('musicDetail').dataset.level")
+        again = pad.evaluate("() => [document.getElementById('fineTuneToggle').getAttribute('aria-expanded'), document.getElementById('fineTuneBody').hidden]")
         _, flip, _ = editor(b, "Flip", "/flip", ctx=c, drawn=False)
-        there = flip.evaluate("() => [document.getElementById('musicDetail').dataset.level, [...document.querySelectorAll('#fineTuneSeg button.on')].map(b => b.dataset.level)]")
-        check("the level is remembered, on the other editor too",
-              again == "adjust" and there == ["adjust", ["adjust"]], f"Pad after a reload {again!r}; Flip {there}")
+        there = flip.evaluate("() => [document.getElementById('fineTuneToggle').getAttribute('aria-expanded'), document.getElementById('fineTuneBody').hidden]")
+        flip.evaluate("() => localStorage.setItem('skribl_music_level', 'adjust')")
+        flip.reload(); browsing.goto(flip, BASE, "/flip"); add(flip, SHORT)
+        adj = flip.evaluate("() => [document.getElementById('fineTuneToggle').getAttribute('aria-expanded'), document.getElementById('fineTuneBody').hidden]")
+        check("whether More is open is remembered, on the other editor too, and the old Adjust opens it closed",
+              again == ["true", False] and there == ["true", False] and adj == ["false", True],
+              f"Pad after a reload {again}; Flip {there}; a saved Adjust {adj}")
         c.close()
 
-    print("\nMUSIC LEVELS — Skribl's pick")
+    print("\nMUSIC MORE — Skribl's pick, and the one line")
     for _n, _p in eds("pick"):
         got = {}
         for drawn, song in ((True, SHORT), (False, LONG), (True, LONG)):
             c, pg, _ = editor(b, _n, _p, drawn=drawn, song=song)
-            got[(drawn, song["name"])] = (pg.evaluate(TRIM), pg.evaluate(DRAWING[_n]), pg.evaluate(SAID)["pick"])
+            got[(drawn, song["name"])] = (pg.evaluate(TRIM), pg.evaluate(DRAWING[_n]), pg.evaluate(SAID))
             c.close()
         ok, why = True, []
-        for (drawn, nm), (t, secs, words) in got.items():
+        for (drawn, nm), (t, secs, said) in got.items():
+            h_ = heard(t)
+            # The line: the length heard, then against the drawing once there is one.
+            rel = "" if not drawn else " · fits your drawing" if abs(h_ - secs) < 0.0005 else \
+                f" · {'shorter' if h_ < secs else 'longer'} than your {WORK[_n]}"
+            words = f"{h_:.2f}s" + (rel or " loop")
             if _n == "Pad" and drawn:
-                good = t["s"] == 0 and t["xf"] == 250 and abs(heard(t) - secs) < 0.002 and "as long as your drawing, with a smooth restart." in words
+                good = t["s"] == 0 and t["xf"] == 250 and abs(h_ - secs) < 0.002
             elif nm == "long.wav":
-                good = t["s"] == 0 and abs(t["e"] - 20) < 0.001 and t["xf"] == 250 and words == "Skribl picked the first 20 seconds, with a smooth restart."
+                good = t["s"] == 0 and abs(t["e"] - 20) < 0.001 and t["xf"] == 250
             else:
-                good = t["s"] == 0 and abs(t["e"] - t["d"]) < 0.001 and t["xf"] == 250 and words == "Skribl picked the whole song, with a smooth restart."
+                good = t["s"] == 0 and abs(t["e"] - t["d"]) < 0.001 and t["xf"] == 250
+            good = good and said["line"] == words and said["tag"] and not said["back"] and not said["undo"]
             ok = ok and good
-            why.append(f"{'drawn' if drawn else 'blank'} {nm}: {t['s']:.2f}-{t['e']:.3f} xf {t['xf']} heard {heard(t):.3f} (drawing {secs:.3f}) {words!r}")
-        check(f"{_n}: a new song starts on Skribl's pick", ok, "; ".join(why))
+            why.append(f"{'drawn' if drawn else 'blank'} {nm}: {t['s']:.2f}-{t['e']:.3f} xf {t['xf']} heard {h_:.3f} (drawing {secs:.3f}) {said['line']!r} tag {said['tag']}")
+        check(f"{_n}: a new song starts on Skribl's pick, and the one line says so", ok, "; ".join(why))
+
+    # The line's words, from the loop as it is: what is heard, the beats once
+    # there is a tempo, against the drawing.
+    for _n, _p in eds("line"):
+        c, pg, _ = editor(b, _n, _p)
+        secs = pg.evaluate(DRAWING[_n])
+        got = []
+        for xf, end, tempo in ((250, 4.25, None), (250, 4.25, {"bpm": 120, "phase": 0}), (0, 3.0, {"bpm": 90, "phase": 0.1})):
+            pg.evaluate("(o) => { loopCrossfadeMs = o.xf; setCrossfadeUI(); trimStart = 0; trimEnd = o.end; musicTempo = o.tempo; updateTrimUI(); }",
+                        {"xf": xf, "end": end, "tempo": tempo})
+            pg.wait_for_timeout(100)
+            got.append(pg.evaluate("() => [document.getElementById('musicPickText').textContent, document.getElementById('musicPickText').querySelector('b').textContent]"))
+        h1, h3 = 4.0, 3.0
+        rel = lambda h_: f"{'shorter' if h_ < secs else 'longer'} than your {WORK[_n]}"
+        want = [[f"4.00s · {rel(h1)}", "4.00s"], [f"4.00s · 8 beats · {rel(h1)}", "4.00s"], [f"3.00s · 4.5 beats · {rel(h3)}", "3.00s"]]
+        check(f"{_n}: the one line says the length heard, bold, its beats once there is a tempo, and against the {WORK[_n]}",
+              got == want, f"{got} for a {secs:.3f}s {WORK[_n]}, want {want}")
+        c.close()
 
     for _n, _p in eds("pick"):
-        c, pg, errs = editor(b, _n, _p, level="fine")
+        c, pg, errs = editor(b, _n, _p, more=True)
         pick = pg.evaluate(TRIM)
         pg.click('.nudge-btn[data-which="end"][data-amount="-1"]'); pg.wait_for_timeout(200)
         own, said = pg.evaluate(TRIM), pg.evaluate(SAID)
-        check(f"{_n}: a change says so, with the way back",
-              said["pick"] == "You've made your own loop." and said["back"] and not said["undo"], f"{said['pick']!r}, back {said['back']}, undo {said['undo']}")
+        check(f"{_n}: a change shows the way back in place of Skribl's pick",
+              said["back"] and not said["tag"] and not said["undo"], f"{said['line']!r}, tag {said['tag']}, back {said['back']}, undo {said['undo']}")
         went = press(pg, "#musicBackPick")
         back, said2 = pg.evaluate(TRIM), pg.evaluate(SAID)
         focus = pg.evaluate("() => document.activeElement && document.activeElement.id")
         undid = press(pg, "#musicPickUndo")
         undone, said3 = pg.evaluate(TRIM), pg.evaluate(SAID)
         check(f"{_n}: Back to Skribl's pick puts it back, and its Undo undoes that",
-              went and undid and back == pick and said2["pick"] == "Back to Skribl's pick." and said2["undo"] and not said2["back"]
-              and focus == "musicPickUndo" and undone == own and said3["pick"] == "You've made your own loop.",
-              f"pick {pick}, own {own}, back {back} ({said2['pick']!r}, focus {focus}), undone {undone} ({said3['pick']!r}); pressed back {went}, undo {undid}")
+              went and undid and back == pick and said2["tag"] and said2["undo"] and not said2["back"]
+              and focus == "musicPickUndo" and undone == own and said3["back"] and not said3["tag"],
+              f"pick {pick}, own {own}, back {back} (tag {said2['tag']}, undo {said2['undo']}, focus {focus}), undone {undone} (back {said3['back']}); pressed back {went}, undo {undid}")
         if _n == EDITORS[0][0]:
             # One shared timer (lib/musicdrawer.js), so one editor is asked.
             went = press(pg, "#musicBackPick", 8400)
             late = pg.evaluate(SAID)
             check("the Undo goes after eight seconds, and the line says Skribl's pick again",
-                  went and not late["undo"] and not late["back"] and late["pick"].startswith("Skribl picked"),
-                  str({k: late[k] for k in ('pick', 'undo', 'back')}) + f"; pressed back {went}")
+                  went and not late["undo"] and not late["back"] and late["tag"],
+                  str({k: late[k] for k in ('line', 'tag', 'undo', 'back')}) + f"; pressed back {went}")
         c.close()
 
     # The Pad's pick follows the drawing. Undo with the drawer open is the
-    # drawing changing, not the person: the line says so, and the way back
-    # fits the drawing as it is now.
+    # drawing changing, not the person: the line says only that it no longer
+    # fits, and the way back fits the drawing as it is now.
     if part("pick") and (not ONLY or ONLY == "Pad"):
         c, pg, _ = editor(b, "Pad", "/", drawn=False, song=None)
         box = pg.evaluate("() => { const r = document.getElementById('canvas').getBoundingClientRect(); return { x: r.x, y: r.y }; }")
@@ -329,29 +389,46 @@ with sync_playwright() as pw:
         one, s1 = pg.evaluate(DRAWING["Pad"]), pg.evaluate(SAID)
         press(pg, "#musicBackPick")
         t2, s2 = pg.evaluate(TRIM), pg.evaluate(SAID)
-        check("Pad: an Undo with the drawer open says the drawing changed, and Back to Skribl's pick fits it again",
-              s0["pick"].startswith("Skribl picked") and one < two - 0.5
-              and s1["pick"] == "Your drawing has changed since Skribl picked this loop." and s1["back"] and s1["fit"] == "false"
-              and abs(heard(t2) - one) < 0.002 and s2["fit"] == "true",
-              f"{two:.2f}s then {one:.2f}s: {s1['pick']!r}, back {s1['back']}; after the way back heard {heard(t2):.3f}s, fit {s2['fit']}")
+        check("Pad: an Undo with the drawer open shows the way back, no more, and Back to Skribl's pick fits the drawing again",
+              s0["tag"] and s0["line"].endswith("· fits your drawing") and one < two - 0.5
+              and s1["line"].endswith("· longer than your drawing") and s1["back"] and not s1["tag"] and s1["fit"] == "false"
+              and abs(heard(t2) - one) < 0.002 and s2["fit"] == "true" and s2["tag"] and s2["line"].endswith("· fits your drawing"),
+              f"{two:.2f}s then {one:.2f}s: {s1['line']!r}, back {s1['back']}; after the way back heard {heard(t2):.3f}s, fit {s2['fit']}, {s2['line']!r}")
         c.close()
 
-    # The pick's seconds are rounded from the hundredths the lines show, as a
+    # Fit's seconds are rounded from the hundredths the line shows, as a
     # person rounds what they read: a drawing 4.448s long was "4.4 seconds"
-    # over an Adjust line saying 4.45s. Built point by point, 8ms apart.
+    # over a line saying 4.45s. Built point by point, 8ms apart.
     if part("pick") and (not ONLY or ONLY == "Pad"):
         c, pg, _ = editor(b, "Pad", "/", drawn=False, song=None)
         pg.evaluate("""() => { strokes.length = 0;
             for (let k = 0; k <= 556; k++) strokes.push({ x: 0.2 + k * 0.001, y: 0.4, color: '#7c5cff', size: 6, t: k * 8, start: k === 0 });
             strokeGroups.length = 0; strokeGroups.push(strokes.length); updateDrawingTimeLabels(); }""")
         add(pg, SHORT)
-        pick_level(pg, "adjust")
         secs, said = pg.evaluate(DRAWING["Pad"]), pg.evaluate(SAID)
-        check("Pad: the pick's seconds and the lengths under it agree, as a person rounds them",
-              abs(secs - 4.448) < 1e-9 and said["pick"].startswith("Skribl picked the first 4.5 seconds,")
-              and said["len"].startswith("4.45s · ") and said["fitSub"] == "4.5s",
-              f"a {secs:.3f}s drawing: {said['pick']!r}; {said['len']!r}; Fit says {said['fitSub']!r}")
+        check("Pad: the line's length and Fit's agree, as a person rounds them",
+              abs(secs - 4.448) < 1e-9 and said["line"] == "4.45s · fits your drawing" and said["fitSub"] == "4.5s",
+              f"a {secs:.3f}s drawing: {said['line']!r}; Fit says {said['fitSub']!r}")
         c.close()
+
+    # The line's height never changes as it says other things: the pick, the
+    # way back, the pick with its Undo, a tempo's beats, a longer length. Its
+    # end has a share of its own, so it wraps below 540px whatever it says.
+    for _n, _p in eds("line"):
+        hs = {}
+        for dev, o in (("phone", PHONE), ("desk", DESK)):
+            c, pg, _ = editor(b, _n, _p, opts=o, more=True)
+            H = "() => Math.round(document.getElementById('musicPickLine').getBoundingClientRect().height * 10) / 10"
+            row = [pg.evaluate(H)]
+            pg.click('.nudge-btn[data-which="end"][data-amount="-1"]'); pg.wait_for_timeout(150); row.append(pg.evaluate(H))
+            press(pg, "#musicBackPick"); row.append(pg.evaluate(H))
+            pg.evaluate("() => { musicTempo = { bpm: 117, phase: 0.03 }; trimStart = 0.5; trimEnd = 5.9; updateTrimUI(); }")
+            pg.wait_for_timeout(150); row.append(pg.evaluate(H))
+            hs[dev] = row
+            c.close()
+        check(f"{_n}: the one line's height never changes as it says other things, on a phone and a desk",
+              all(len(set(r)) == 1 for r in hs.values()) and hs["phone"][0] > hs["desk"][0],
+              f"pick, own, back with its Undo, a tempo: {hs}")
 
     # A song the autosave had to drop is re-added from its card: its saved loop
     # comes back with it (pendingMusicMeta), and Skribl's pick stays away.
@@ -379,7 +456,7 @@ with sync_playwright() as pw:
               t["s"] == 1 and t["e"] == 3 and t["xf"] == 0, str(t))
         c.close()
 
-    print("\nMUSIC LEVELS — Fit my drawing and Whole song")
+    print("\nMUSIC MORE — Fit my drawing and Whole song")
     for _n, _p in eds("picks"):
         c, pg, _ = editor(b, _n, _p)
         secs = pg.evaluate(DRAWING[_n])
@@ -434,14 +511,13 @@ with sync_playwright() as pw:
               f"before: off {off['fitOff']} {off['fitSub']!r} {off['play']!r}; after: off {on['fitOff']} {on['fitSub']!r} {on['play']!r}")
         c.close()
 
-    print("\nMUSIC LEVELS — Smooth restart")
+    print("\nMUSIC MORE — Smooth restart")
     for _n, _p in eds("smooth"):
-        c, pg, _ = editor(b, _n, _p, level="adjust")
+        c, pg, _ = editor(b, _n, _p, more=True)
         pg.click("#musicSmooth"); pg.wait_for_timeout(150)
         a, sa = pg.evaluate(TRIM), pg.evaluate(SAID)
         pg.click("#musicSmooth"); pg.wait_for_timeout(150)
         b2 = pg.evaluate(TRIM)
-        pick_level(pg, "fine")
         pg.evaluate("() => { const s = document.getElementById('crossfadeSlider'); s.value = '400'; s.dispatchEvent(new Event('input', { bubbles: true })); }")
         pg.click("#musicSmooth"); pg.wait_for_timeout(150)
         pg.click("#musicSmooth"); pg.wait_for_timeout(150)
@@ -451,45 +527,38 @@ with sync_playwright() as pw:
               and b2["xf"] == 250 and c2["xf"] == 400 and sc["smooth"] == "true"
               and sc["smoothSub"] == "The end fades into the start over 0.40s, which makes the loop 0.40s shorter.",
               f"off {a['xf']} ({sa['smoothSub']!r}), on {b2['xf']}, after the length is set {c2['xf']} ({sc['smoothSub']!r})")
-        pick_level(pg, "adjust")
         t, s2 = pg.evaluate(TRIM), pg.evaluate(SAID)
-        check(f"{_n}: the lines count what is heard: the length less the smooth restart",
-              s2["len"].startswith(f"{heard(t):.2f}s · "), f"{s2['len']!r} for {t}")
+        check(f"{_n}: the line counts what is heard: the length less the smooth restart",
+              s2["line"].startswith(f"{heard(t):.2f}s · ") and abs(heard(t) - (t["e"] - t["s"] - 0.4)) < 1e-9, f"{s2['line']!r} for {t}")
         c.close()
 
-    print("\nMUSIC LEVELS — Fine-tune")
-    for _n, _p in eds("fine"):
-        c, pg, _ = editor(b, _n, _p, level="fine")
+    print("\nMUSIC MORE — Exact times")
+    for _n, _p in eds("exact"):
+        c, pg, _ = editor(b, _n, _p, more=True)
         pg.fill("#endReadout", "4.25"); pg.press("#endReadout", "Enter"); pg.wait_for_timeout(150)
         t1 = pg.evaluate(TRIM)
         pg.fill("#endReadout", "soon"); pg.press("#endReadout", "Enter"); pg.wait_for_timeout(150)
         t2, v2 = pg.evaluate(TRIM), pg.evaluate("() => document.getElementById('endReadout').value")
-        pick_level(pg, "adjust")
-        pg.fill("#musicFrom", "1,5"); pg.press("#musicFrom", "Enter"); pg.wait_for_timeout(150)
-        t3 = pg.evaluate(TRIM)
-        pick_level(pg, "fine")
-        v3 = pg.evaluate("() => document.getElementById('startReadout').value")
+        pg.fill("#startReadout", "1,5"); pg.press("#startReadout", "Enter"); pg.wait_for_timeout(150)
+        t3, v3 = pg.evaluate(TRIM), pg.evaluate("() => document.getElementById('startReadout').value")
         check(f"{_n}: a typed time moves its end, and a time that is not one puts it back",
               abs(t1["e"] - 4.25) < 1e-9 and t2 == t1 and v2 == "4.250" and abs(t3["s"] - 1.5) < 1e-9 and v3 == "1.500",
-              f"4.25 -> {t1['e']}; 'soon' -> {t2['e']} shown {v2!r}; Adjust's '1,5' -> {t3['s']}, Fine-tune shows {v3!r}")
-        frame = pg.evaluate("() => { const b = document.querySelector('#musicStepSeg [data-step=frame]'); return b.getAttribute('aria-label'); }")
-        rate = 30 if _n == "Pad" else 12
-        pg.click("#musicStepSeg [data-step=frame]"); pg.wait_for_timeout(100)
-        e0 = pg.evaluate("() => trimEnd")
+              f"4.25 -> {t1['e']}; 'soon' -> {t2['e']} shown {v2!r}; '1,5' -> {t3['s']} shown {v3!r}")
+        # - and +: 0.1s a press, or a bar once there is a tempo; their names and the line say which.
+        NAMES = "() => [...document.querySelectorAll('.nudge-btn[data-which]')].map(b => b.getAttribute('aria-label'))"
+        e0, n0, l0 = pg.evaluate("() => trimEnd"), pg.evaluate(NAMES), pg.evaluate(SAID)["step"]
         pg.click('.nudge-btn[data-which="end"][data-amount="1"]'); pg.wait_for_timeout(150)
         e1 = pg.evaluate("() => trimEnd")
-        order = None
-        if _n == "Flip":
-            # At 6 pages a second a frame is 1/6 s, past 0.1s: it moves to keep the four in size order
-            # (the four shown: 1 beat waits, hidden, until a tempo is tapped).
-            pg.evaluate("() => { fps = 6; updateToolState(); }"); pg.wait_for_timeout(150)
-            order = pg.evaluate("() => [...document.querySelectorAll('#musicStepSeg button')].filter(b => !b.hidden).map(b => b.dataset.step)")
-            pg.evaluate("() => { fps = 12; updateToolState(); }"); pg.wait_for_timeout(150)
-        check(f"{_n}: Each tap's frame is the editor's own, and keeps its place in size order",
-              frame == f"1 frame, 1/{rate} of a second" and abs((e1 - e0) - 1 / rate) < 1e-9
-              and (order is None or order == ["0.01", "0.1", "frame", "1"]),
-              f"{frame!r}; one tap moved the end {e1 - e0:.5f}s (1/{rate} is {1 / rate:.5f}); at 6 a second {order}")
-        pg.click("#musicStepSeg [data-step='0.1']")
+        pg.evaluate("() => { musicTempo = { bpm: 120, phase: 0 }; updateTrimUI(); }"); pg.wait_for_timeout(150)
+        n1, l1 = pg.evaluate(NAMES), pg.evaluate(SAID)["step"]
+        pg.click('.nudge-btn[data-which="end"][data-amount="-1"]'); pg.wait_for_timeout(150)
+        e2 = pg.evaluate("() => trimEnd")
+        check(f"{_n}: - and + move 0.1s, or a bar once there is a tempo, and say which",
+              abs((e1 - e0) - 0.1) < 1e-9 and abs((e1 - e2) - 2.0) < 1e-9 and l0 == "\u2212 and + move 0.1s." and l1 == "\u2212 and + move a bar, 2.00s."
+              and n0 == ["Start of loop, 0.1s earlier", "Start of loop, 0.1s later", "End of loop, 0.1s earlier", "End of loop, 0.1s later"]
+              and n1 == ["Start of loop, a bar earlier", "Start of loop, a bar later", "End of loop, a bar earlier", "End of loop, a bar later"],
+              f"+ moved the end {e1 - e0:.4f}s, then - at 120 a minute {e1 - e2:.4f}s; {l0!r} then {l1!r}; {n0} then {n1}")
+        pg.evaluate("() => { musicTempo = null; updateTrimUI(); }"); pg.wait_for_timeout(100)
         pg.click("#musicLock"); pg.wait_for_timeout(100)
         l0 = pg.evaluate(TRIM)
         pg.click('.nudge-btn[data-which="start"][data-amount="1"]'); pg.wait_for_timeout(150)
@@ -501,21 +570,12 @@ with sync_playwright() as pw:
               abs((l1["s"] - l0["s"]) - 0.1) < 1e-9 and abs((l1["e"] - l0["e"]) - 0.1) < 1e-9
               and abs((l2["s"] - l1["s"]) - 0.1) < 1e-9 and abs(l2["e"] - l1["e"]) < 1e-9,
               f"locked: start {l0['s']:.3f}->{l1['s']:.3f}, end {l0['e']:.3f}->{l1['e']:.3f}; unlocked: start ->{l2['s']:.3f}, end ->{l2['e']:.3f}")
-        pg.click("#matchDrawingBtn"); pg.wait_for_timeout(200)
-        t, s = pg.evaluate(TRIM), pg.evaluate(SAID)
-        # Read as numbers: JavaScript's toFixed and Python's format round a
-        # half differently (59.25 frames is "59.3" there, "59.2" here).
-        m = re.fullmatch(r"Comes round every (\d+\.\d{3})s · (\d+(?:\.\d)?) frames at (\d+) a second · fits your (\w+)", s["sync"])
-        check(f"{_n}: the sync line says the loop in seconds and frames, against the drawing",
-              bool(m) and abs(float(m.group(1)) - heard(t)) <= 0.0006 and abs(float(m.group(2)) - heard(t) * rate) <= 0.051
-              and int(m.group(3)) == rate and m.group(4) == WORK[_n],
-              f"{s['sync']!r} for {heard(t):.4f}s, {heard(t) * rate:.3f} frames at {rate}")
         sizes = pg.evaluate("() => [...document.querySelectorAll('#musicDetail input:not([type=range])')].map(i => [i.id, parseFloat(getComputedStyle(i).fontSize)])")
         check(f"{_n}: every field that takes text is 16px (iOS magnifies the page under that)",
-              len(sizes) == 4 and all(px >= 16 for _, px in sizes), str(sizes))
+              len(sizes) == 2 and all(px >= 16 for _, px in sizes), str(sizes))
         c.close()
 
-    print("\nMUSIC LEVELS — Play with my drawing")
+    print("\nMUSIC MORE — Play with my drawing")
     for _n, _p in eds("play"):
         c, pg, errs = editor(b, _n, _p)
         was = pg.evaluate(SAID)["play"]
@@ -545,19 +605,27 @@ with sync_playwright() as pw:
               f"Play: {was}; Hear the loop pressed: {st}; again: {stop}")
         c.close()
 
-    print("\nMUSIC LEVELS — kind, not jumpy")
-    # Fine-tune picked as a song lands (400ms on, a quick person): the app's
-    # own scrolls are still settling then -- the drawer's open and the card's
-    # growth each re-assert at 300, 700 and 1200ms -- and the level makes the
-    # drawer taller under them. Read the switch on every frame: no frame may
-    # carry it more than 160px (a glide's frames measured 44-57px here; a
-    # re-assert chasing the new end, 236-684px), and it ends in sight, on a
-    # desk and on a phone held sideways, where Fine-tune is taller than the screen.
-    # Each frame's time is kept and said. Beside other suites a frame of the
-    # reveal lasted up to 150ms, and a glide seen through one is one big step
-    # (165px once, in a run beside two others): a red in a long frame is told
-    # apart by a run alone. Allowing a long frame more would hide a chase: one
-    # measured 424px in a 176ms frame, under the 3px a millisecond tried.
+    print("\nMUSIC MORE — kind, not jumpy")
+    # More opened as a song lands (as soon as its tile is on the screen, a
+    # quick person): the app's own scrolls are still settling then -- the
+    # drawer's open and the card's growth each re-assert at 300, 700 and
+    # 1200ms -- and More makes the drawer taller under them. The tap is at the
+    # tile's place on the screen: Playwright's own click scrolls a control
+    # into view at once first, and on a phone held sideways, where the tile is
+    # still below the screen 400ms on, that was a 207px frame of the test's
+    # own making. On Flip held sideways the growth's reveal stops short of the
+    # tile for the dock (lib/drawerdetent.js: "a short phone may still leave
+    # the last row to scroll to"), so there a person scrolls to it first, and
+    # so does this. Read the tile on every frame: no frame may
+    # carry it more than 160px (a glide's frames measured 44-57px when this
+    # was the level switch; a re-assert chasing the new end, 236-684px), and
+    # it ends in sight, on a desk and on a phone held sideways, where More is
+    # taller than the screen. Each frame's time is kept and said. Beside other
+    # suites a frame of the reveal lasted up to 150ms, and a glide seen
+    # through one is one big step (165px once, in a run beside two others): a
+    # red in a long frame is told apart by a run alone. Allowing a long frame
+    # more would hide a chase: one measured 424px in a 176ms frame, under the
+    # 3px a millisecond tried.
     for _n, _p in eds("kind"):
         for dev, o in (("desk", DESK), ("phone sideways", SIDEWAYS)):
             c = waits.instrument(b.new_context(**o))
@@ -568,37 +636,46 @@ with sync_playwright() as pw:
             pg.set_input_files("#musicInput", SHORT)
             pg.wait_for_function("() => document.getElementById('musicUploadBtn').classList.contains('loaded') && !!currentAudioBuffer", timeout=20000)
             pg.wait_for_timeout(400)
-            pg.evaluate("""() => { window.__tops = []; const s = document.getElementById('fineTuneSeg'), t0 = performance.now();
+            ON = "() => { const r = document.getElementById('fineTuneToggle').getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight; }"
+            for _ in range(30):
+                if pg.evaluate(ON):
+                    break
+                pg.wait_for_timeout(50)
+            wheel = 0
+            while not pg.evaluate(ON) and wheel < 12:
+                pg.mouse.wheel(0, 100); pg.wait_for_timeout(150); wheel += 1
+            at = pg.evaluate("() => { const r = document.getElementById('fineTuneToggle').getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; }")
+            pg.evaluate("""() => { window.__tops = []; const s = document.getElementById('fineTuneToggle'), t0 = performance.now();
                 (function f() { window.__tops.push([performance.now(), s.getBoundingClientRect().top]);
                   if (performance.now() - t0 < 1900) requestAnimationFrame(f); })(); }""")
-            pg.click("#fineTuneToggle")
+            pg.mouse.click(*at)
             pg.wait_for_timeout(2100)
             tops = pg.evaluate("() => window.__tops")
             r = pg.evaluate(SIGHT)
             big = max((abs(b[1] - a[1]), b[0] - a[0]) for a, b in zip(tops, tops[1:])) if len(tops) > 1 else None
-            check(f"{_n}: Fine-tune picked as a song lands glides, and keeps the switch in sight ({dev})",
+            check(f"{_n}: More opened as a song lands glides, and keeps its tile in sight ({dev})",
                   big is not None and big[0] <= 160 and r["header"] <= r["seg"] < r["vh"] - 40,
                   f"the biggest frame {round(big[0]) if big else None}px, in a {round(big[1]) if big else None}ms frame,"
-                  f" over {len(tops)} frames; ends at {r}")
+                  f" over {len(tops)} frames; ends at {r}" + (f"; scrolled to it first ({wheel} turns of the wheel)" if wheel else ""))
             c.close()
     for _n, _p in eds("kind"):
-        c, pg, _ = editor(b, _n, _p, drawn=False, opts=PHONE, level="fine")
+        c, pg, _ = editor(b, _n, _p, drawn=False, opts=PHONE, more=True)
         pg.wait_for_timeout(1300)   # past every re-assert there is
-        # Back to Simple with the switch just under the header and Fine-tune's
-        # end below the screen: the drawer loses most of its height, which near
-        # the page's end is a clamp. Read the switch on every frame.
-        pg.evaluate("() => { const s = document.getElementById('fineTuneSeg'), h = document.querySelector('.header');"
+        # Closed with its tile just under the header and More's end below the
+        # screen: the drawer loses most of its height, which near the page's
+        # end is a clamp. Read the tile on every frame.
+        pg.evaluate("() => { const s = document.getElementById('fineTuneToggle'), h = document.querySelector('.header');"
                     " const top = h && ['sticky', 'fixed'].includes(getComputedStyle(h).position) ? h.getBoundingClientRect().bottom : 0;"
                     " window.scrollBy(0, s.getBoundingClientRect().top - top - 10); }")
         browsing.wait_scroll_still(pg)
-        pg.evaluate("""() => { window.__tops = []; const s = document.getElementById('fineTuneSeg'), t0 = performance.now();
+        pg.evaluate("""() => { window.__tops = []; const s = document.getElementById('fineTuneToggle'), t0 = performance.now();
             (function f() { window.__tops.push(s.getBoundingClientRect().top); if (performance.now() - t0 < 1400) requestAnimationFrame(f); })(); }""")
-        pg.click("#musicLevelSimple")
+        pg.click("#fineTuneToggle")
         pg.wait_for_timeout(1500)
         tops = pg.evaluate("() => window.__tops")
         steps = [abs(tops[i] - tops[i - 1]) for i in range(1, len(tops))]
         moved = abs(tops[-1] - tops[0]) if tops else 0
-        check(f"{_n}: going back to Simple from the drawer's end glides: the switch never leaps",
+        check(f"{_n}: closing More from the drawer's end glides: its tile never leaps",
               len(tops) > 20 and moved > 40 and max(steps) < 0.45 * moved,
               f"moved {moved:.0f}px over {len(tops)} frames, the biggest frame {max(steps) if steps else 0:.0f}px")
         c.close()

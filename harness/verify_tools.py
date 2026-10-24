@@ -1413,9 +1413,14 @@ with sync_playwright() as _b14:
         # "unchanged after cancel" true for the wrong reason — the exact class of
         # vacuous pass this review warned about. The handle paths want the full
         # track so they have somewhere to drag TO.
-        # Trim | Fine-tune is a mode now: the trim strip and the loop detail
-        # are not on screen together, so each path is driven in its own mode.
-        _p14.click("#fineTuneToggle" if _psel == "#zoomHandleStart" else "#fineTuneTrim")
+        # The strip and the loop detail (in More, its tile #fineTuneToggle)
+        # are not on screen together, so each path is driven where it is
+        # seen: More open for the loop detail's handle, closed for the strip.
+        _want = "true" if _psel == "#zoomHandleStart" else "false"
+        if _p14.get_attribute("#fineTuneToggle", "aria-expanded") != _want:
+            _p14.click("#fineTuneToggle")
+            _p14.wait_for_timeout(500)
+        _p14.locator(_psel).scroll_into_view_if_needed()
         _p14.wait_for_timeout(300)
         if _psel == "#musicRange":
             _p14.evaluate("() => { trimStart = 2; trimEnd = 6; updateTrimUI(); }")

@@ -6444,7 +6444,7 @@ const musicUploadBtn=document.getElementById('musicUploadBtn');
 const musicDetail=document.getElementById('musicDetail'), musicToggle=document.getElementById('musicToggle'), musicRemove=document.getElementById('musicRemove');
 const musicTrack=document.getElementById('musicTrack'), musicRange=document.getElementById('musicRange');
 const handleStart=document.getElementById('handleStart'), handleEnd=document.getElementById('handleEnd');
-const trimStartLabel=document.getElementById('trimStartLabel'), trimEndLabel=document.getElementById('trimEndLabel'), trimDurLabel=document.getElementById('trimDurLabel');
+const trimStartLabel=document.getElementById('trimStartLabel'), trimEndLabel=document.getElementById('trimEndLabel');
 const bubbleStart=document.getElementById('bubbleStart'), bubbleEnd=document.getElementById('bubbleEnd'), playhead=document.getElementById('playhead');
 const waveformCanvas=document.getElementById('waveformCanvas'), waveformCtx=waveformCanvas.getContext('2d');
 const zoomWaveformCanvas=document.getElementById('zoomWaveformCanvas'), zoomWaveformCtx=zoomWaveformCanvas.getContext('2d');
@@ -6469,7 +6469,6 @@ function updateTrimUI(){
   const rangePx=((endPct-startPct)/100)*musicTrack.getBoundingClientRect().width;
   musicRange.classList.toggle('narrow', rangePx<40);
   trimStartLabel.textContent=fmtTime(0); trimEndLabel.textContent=fmtTime(audioDuration);
-  trimDurLabel.textContent=formatTimeH(trimEnd-trimStart)+' selected';
   if(bubbleStart) bubbleStart.textContent=formatTimeH(trimStart);
   if(bubbleEnd) bubbleEnd.textContent=formatTimeH(trimEnd);
   // The typed times, the lines and the pick are the drawer's (lib/musicdrawer.js).
@@ -6530,8 +6529,6 @@ musicDrawer = window.SkriblMusicDrawer ? window.SkriblMusicDrawer.wire({
   // A new song starts on its first 20 seconds, not one turn of the
   // animation: that is a second or two, and a loop that short stutters.
   fitsByDefault: false,
-  // One frame at Flip's own pages a second.
-  frameSeconds: ()=>1/(fps||12),
   playButton: ()=>playBtn,
   audio: ()=>{ ensureAudio(); return audioEl; },
   buffer: ()=>currentAudioBuffer,

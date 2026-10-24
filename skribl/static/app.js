@@ -2152,7 +2152,6 @@ const handleStart = document.getElementById('handleStart');
 const handleEnd = document.getElementById('handleEnd');
 const trimStartLabel = document.getElementById('trimStartLabel');
 const trimEndLabel = document.getElementById('trimEndLabel');
-const trimDurLabel = document.getElementById('trimDurLabel');
 
 let audioEl = null;
 let audioDuration = 0;
@@ -2216,7 +2215,6 @@ function updateTrimUI() {
   musicRange.classList.toggle('narrow', rangePx < 40);
   trimStartLabel.textContent = formatTime(0);
   trimEndLabel.textContent = formatTime(audioDuration);
-  trimDurLabel.textContent = formatTimeH(trimEnd - trimStart) + ' selected';
   // Update bubbles — hundredths, since these mark exact cut points
   if (bubbleStart) bubbleStart.textContent = formatTimeH(trimStart);
   if (bubbleEnd) bubbleEnd.textContent = formatTimeH(trimEnd);

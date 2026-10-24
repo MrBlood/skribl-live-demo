@@ -24,7 +24,7 @@ driven on BOTH editors, and each was red on one of them before:
   * Flip took a photo named song.mp3 as far as a failed decode;
   * Flip's Play left a preview playing under it;
   * Flip's file input was invisible and still reached by Tab, and the two
-    editors named the step size's buttons differently (Each tap's, now).
+    editors named the step size's buttons differently (the - and +, now).
 
 Rows that pass on the old code too pin what must not change: the side that
 was already right.
@@ -102,7 +102,7 @@ def take(pg):
 PLAY = {"Pad": "#playBtn", "Flip": "#play"}
 
 
-def editor(b, name, path, *, init=None, drawn=True, track=True, level="fine"):
+def editor(b, name, path, *, init=None, drawn=True, track=True, more=True):
     pg = b.new_page(viewport={"width": 1280, "height": 900})
     if init:
         pg.add_init_script(init)
@@ -122,15 +122,14 @@ def editor(b, name, path, *, init=None, drawn=True, track=True, level="fine"):
         # The same loop on both, the whole 6 s track with a clean cut: a new
         # track starts on Skribl's pick (fitted to the Pad's drawing, with a
         # smooth restart), which is right and not what these ask, and the pick
-        # has its own suite (verify_musiclevels.py).
+        # has its own suite (verify_musicmore.py).
         pg.evaluate("() => { trimStart = 0; trimEnd = audioDuration; loopCrossfadeMs = 0; setCrossfadeUI(); updateTrimUI(); }")
-        # Most rows press a control only Fine-tune shows (Smooth restart's
-        # length), so they start there, as a person would; Hear the loop is on
-        # every level, under the strip.
-        if level:
-            pg.click({"simple": "#musicLevelSimple", "adjust": "#fineTuneTrim", "fine": "#fineTuneToggle"}[level])
-            pg.wait_for_timeout(450)
-            browsing.wait_scroll_still(pg)   # Fine-tune glides its waveform into view
+        # Most rows press a control only More shows (Smooth restart's length),
+        # so they open it first, as a person would; Hear the loop is under the
+        # strip either way.
+        if more:
+            fine(pg)
+            browsing.wait_scroll_still(pg)   # More glides what it opens into view
     return pg
 
 
@@ -140,7 +139,8 @@ def slide(pg, sel, value):
 
 
 def fine(pg):
-    pg.evaluate("() => { const t = document.getElementById('fineTuneToggle'); if (t.getAttribute('aria-pressed') !== 'true') t.click(); }")
+    """More open (its tile keeps Fine-tune's id)."""
+    pg.evaluate("() => { const t = document.getElementById('fineTuneToggle'); if (t.getAttribute('aria-expanded') !== 'true') t.click(); }")
     pg.wait_for_timeout(450)
 
 
@@ -185,16 +185,17 @@ with sync_playwright() as p:
             return { inputs: document.querySelectorAll('#musicInput').length,
                      inPanel: !!(inp && inp.closest('#musicPanel')), musicOutOfTab: out(inp),
                      othersOutOfTab: ['imageInput', 'photoInput', 'draftInput'].every(i => out(q(i))),
-                     steps: [...document.querySelectorAll('#musicStepSeg button')].map(b => b.dataset.step + ':' + b.textContent) }; }""")
+                     steps: [...document.querySelectorAll('.nudge-btn[data-which]')].map(b => b.getAttribute('aria-label')) }; }""")
         pg.close()
     check("one #musicInput, the drawer's own, out of the Tab order on both (Flip's was invisible and reached by Tab)",
           all(m["inputs"] == 1 and m["inPanel"] and m["musicOutOfTab"] for m in _marks.values()),
           {n: (m["inputs"], m["inPanel"], m["musicOutOfTab"]) for n, m in _marks.items()})
     check("...and Flip's photo and backup inputs are out of it too",
           all(m["othersOutOfTab"] for m in _marks.values()), {n: m["othersOutOfTab"] for n, m in _marks.items()})
-    # Five: 0.01s, 1 frame, 0.1s, 1s, and 1 beat, which shows once a tempo is tapped.
-    check("Each tap's steps are named the same on both",
-          _marks["Pad"]["steps"] == _marks["Flip"]["steps"] and len(_marks["Pad"]["steps"]) == 5,
+    # Each end's - and +, named for what one press moves: 0.1s, or a bar once a tempo is tapped.
+    check("the - and + are named the same on both, and say how far a press goes",
+          _marks["Pad"]["steps"] == _marks["Flip"]["steps"]
+          == ["Start of loop, 0.1s earlier", "Start of loop, 0.1s later", "End of loop, 0.1s earlier", "End of loop, 0.1s later"],
           {n: m["steps"] for n, m in _marks.items()})
 
     print("\nMUSIC — Smooth restart, Hear the loop and Hear the restart")
@@ -258,7 +259,9 @@ with sync_playwright() as p:
 
     print("\nMUSIC — the loop's edges are saved where they land")
     for _n, _p in EDITORS:
-        pg = editor(b, _n, _p)
+        # The strip only: More open glides what it opens into view, and the
+        # strip with it out of view, above.
+        pg = editor(b, _n, _p, more=False)
         pg.wait_for_timeout(1800)                        # the add's own save lands first
         before = pg.evaluate(SAVED_END, STOREKEY[_n])
         r = pg.evaluate("() => { const h = document.getElementById('handleEnd').getBoundingClientRect(), t = document.getElementById('musicTrack').getBoundingClientRect();"

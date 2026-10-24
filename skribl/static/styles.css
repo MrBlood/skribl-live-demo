@@ -2383,37 +2383,26 @@ body.recoloring #canvas { cursor: crosshair !important; }
 }
 @media (hover: hover) { .panel-btn:hover { background: var(--surface-control-hover); color: var(--text-bright); } }
 
-/* THE THREE LEVELS: the one pill, full width at the head of the loop, each
-   option its name over what it is for (Simple / Skribl does it, Adjust /
-   shape it yourself, Fine-tune / make it perfect). Was Trim | Fine-tune,
-   where Fine-tune swapped the strip out; the strip stays on every level now,
-   so switching never moves the loop under the finger. */
-.ft-seg { display: flex; width: 100%; box-sizing: border-box; margin-bottom: 12px; }
-.ft-seg button { flex: 1 1 0; min-width: 0; min-height: 48px; padding: 6px 4px;
-  flex-direction: column; gap: 1px; line-height: 1.2; text-align: center; }
-.lv-k { font-size: 14px; }
-.lv-v { font-size: 12px; font-weight: 500; }
-.fine-tune-body { margin-top: 14px; }
-.fine-tune-body[hidden], .mt-when[hidden], .mt-smooth[hidden], .crossfade-row[hidden],
-.mt-pick[hidden], .mt-pick-btn[hidden] { display: none; }
+.fine-tune-body[hidden], .mt-pick[hidden], .mt-pick-btn[hidden], .mt-pick-tag[hidden] { display: none; }
 
-/* Said for a moment after a level is picked, over the strip: it takes no
-   taps (pointer-events) and no room (absolute). An opacity fade, which moves
-   nothing, so Reduce Motion has nothing to still. */
-.mt-kept {
-  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 4;
-  padding: 5px 12px; border-radius: 999px; white-space: nowrap; pointer-events: none;
-  background: var(--menu-card); color: var(--text-primary); box-shadow: var(--menu-card-drop);
-  font-size: 13px; font-weight: 600; opacity: 0; transition: opacity .25s ease;
-}
-.mt-kept.show { opacity: 1; }
-
-/* THE PICK LINE: the same words in the same place on every level, the way
-   back at its end. Small violet words are --accent-ink, the menu's. */
-.mt-pick { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 8px; margin-top: 12px;
-  font-size: 13px; line-height: 1.35; color: var(--text-secondary); }
-.mt-spark { width: 16px; height: 16px; flex: none; color: var(--accent-ink); }
-.mt-pick-text { flex: 1 1 180px; min-width: 0; }
+/* THE ONE LINE, under the strip: the loop's length, bold, in beats and
+   against the drawing, then Skribl's pick or the way back at its end. Small
+   violet words are --accent-ink, the menu's. It was three lines (the pick,
+   Adjust's length and Fine-tune's sync line). ITS HEIGHT NEVER CHANGES UNDER
+   A DRAG: the words and the end have fixed widths to share (340px, room for
+   the longest words, and 190px, for the way back or the pick with its Undo),
+   so the end goes to a second row below 540px whatever the line says. Sized
+   to what it says, the end wrapped on a phone the moment the way back
+   appeared, and everything under the line dropped 24px with the finger
+   still on the strip. */
+.mt-pick { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; margin-top: 8px;
+  font-size: 13px; line-height: 1.35; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.mt-pick-text { flex: 1 1 340px; min-width: 0; }
+.mt-pick-text b { color: var(--text-primary); font-weight: 650; }
+.mt-pick-end { flex: 1 1 190px; display: flex; align-items: center; justify-content: flex-end; gap: 6px; min-height: 32px; }
+.mt-pick-tag { display: inline-flex; align-items: center; gap: 5px;
+  color: var(--accent-ink); font-weight: 600; white-space: nowrap; }
+.mt-spark { width: 14px; height: 14px; flex: none; color: var(--accent-ink); }
 .mt-pick-btn { display: inline-flex; align-items: center; gap: 5px; min-height: 32px; padding: 4px 10px;
   border: 1px solid var(--menu-card-line); border-radius: 999px; background: var(--menu-card);
   color: var(--accent-ink); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
@@ -2421,19 +2410,15 @@ body.recoloring #canvas { cursor: crosshair !important; }
 .mt-pick-btn svg { width: 14px; height: 14px; flex: none; }
 @media (hover: hover) { .mt-pick-btn:hover { background: color-mix(in srgb, var(--accent) 7%, var(--menu-card)); } }
 
-/* ADJUST'S LINE: the loop's length against the drawing, and both ends typed.
-   A field that takes text is 16px, or iOS magnifies the page (A11Y 11b). */
-.mt-when { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; margin-top: 12px; }
-.mt-len { flex: 1 1 100%; font-size: 13px; font-weight: 600; color: var(--text-primary); font-variant-numeric: tabular-nums; }
-.mt-at { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-secondary); }
+/* A TYPED TIME (More's Start of loop and End of loop). A field that takes
+   text is 16px, or iOS magnifies the page (A11Y 11b). */
 .mt-time { font: inherit; font-size: 16px; font-variant-numeric: tabular-nums; color: var(--text-primary);
   background: var(--menu-paper); border: 1px solid var(--menu-card-line); border-radius: 10px;
   padding: 5px 8px; width: 78px; box-sizing: border-box; text-align: center; }
 .mt-time:focus-visible { outline: 2px solid var(--ui-hi); outline-offset: 1px; }
 
 /* FIT MY DRAWING and WHOLE SONG: two menu cards, as the draw drawer's tiles
-   are; the one that describes the loop wears the one tint. Compact under
-   Fine-tune, where they are a starting point and not the point. */
+   are; the one that describes the loop wears the one tint. */
 .mt-picks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 12px; }
 .mt-pick-card { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; min-width: 0; min-height: 48px;
   padding: 8px 12px; border-radius: 16px; border: 1px solid var(--menu-card-line); background: var(--menu-card);
@@ -2447,19 +2432,35 @@ body.recoloring #canvas { cursor: crosshair !important; }
 .mt-pick-card:disabled { cursor: default; }
 .mt-pick-card:disabled .mt-k { color: var(--text-secondary); }
 .mt-pick-card:focus-visible { outline: 2px solid var(--ui-hi); outline-offset: 2px; }
-@media (hover: hover) { .mt-pick-card:not(.on):not(:disabled):hover { background: color-mix(in srgb, var(--accent) 7%, var(--menu-card)); } }
-.music-detail[data-level="fine"] .mt-pick-card { min-height: 40px; padding: 6px 12px; flex-direction: row; align-items: baseline; gap: 6px; }
+@media (hover: hover) { .mt-pick-card:not(.on):not(.open):not(:disabled):hover { background: color-mix(in srgb, var(--accent) 7%, var(--menu-card)); } }
 
-/* EACH TAP, the sync line, and the switch rows (Lock the length, Smooth
-   restart): the draw drawer's switch row, name over what it does. */
-.mt-steps { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; margin-top: 16px; }
-.mt-cap { font-size: 13px; font-weight: 600; color: var(--text-secondary); }
-.mt-step-seg { flex: 1 1 220px; display: flex; }
-.mt-step-seg button { flex: 1 1 0; min-width: 0; min-height: 36px; padding: 5px 4px; white-space: nowrap; }
-.mt-sync { margin: 12px 0 0; font-size: 13px; line-height: 1.4; color: var(--text-secondary); font-variant-numeric: tabular-nums; text-align: center; }
+/* MORE: a menu card the width of the drawer, its name and what it holds on
+   one baseline and a drawn + at its end (a - while open). Open, it JOINS what
+   it opens as the draw drawer's tiles do: the tile reaches 11px down over the
+   10px gap and the card's top edge, its own bottom edge the card's colour,
+   so the seam is not there to see; it is above the card for that, as the
+   tiles are. Its words keep their place as it opens: the padding, not a
+   centring, puts them in the middle of the closed tile. */
+.mt-more { position: relative; z-index: 1; width: 100%; min-height: 0; margin-top: 8px; padding: 14px 14px;
+  flex-direction: row; align-items: center; gap: 8px; }
+.mt-more-words { display: flex; align-items: baseline; gap: 6px; flex: 1 1 auto; min-width: 0; }
+.mt-more .mk { flex: none; width: 18px; height: 18px; color: var(--accent-ink); }
+.mt-more .mk-minus, .mt-more[aria-expanded="true"] .mk-plus { display: none; }
+.mt-more[aria-expanded="true"] .mk-minus { display: block; }
+.mt-more.open { border-bottom-color: var(--menu-card); border-radius: 16px 16px 0 0; padding-bottom: 25px; margin-bottom: -11px; box-shadow: none; }
+.mt-more.open .mt-k { color: var(--seg-on-ink); }
+.fine-tune-body { margin-top: 10px; padding: 12px 12px 8px; border-radius: 0 0 16px 16px;
+  background: var(--menu-card); border: 1px solid var(--menu-card-line); box-shadow: var(--menu-card-drop); transform-origin: top; }
+/* The unfold and the fold are lib/musicdrawer.js's (Web Animations), so
+   Reduce Motion is honoured there. */
+.fine-tune-body.mt-folding { pointer-events: none; }
+
+/* MORE'S FOUR PARTS, each under its name (The restart, The beat, Exact times,
+   How it loops), and the switch rows (Smooth restart, Lock the length): the
+   draw drawer's switch row, name over what it does. */
 .mt-sect { margin: 18px 0 4px; font-size: 13px; font-weight: 600; color: var(--text-secondary); }
-.mt-smooth { margin-top: 8px; }
-.music-detail[data-level="adjust"] .mt-smooth { margin-top: 14px; }
+.fine-tune-body > .mt-sect:first-child { margin-top: 2px; }
+.mt-step-line { margin: 10px 0 0; font-size: 13px; line-height: 1.4; color: var(--text-secondary); font-variant-numeric: tabular-nums; text-align: center; }
 .mt-switch { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 2px; }
 .mt-switch-words { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
 .mt-switch .layer-toggle { display: inline-block; }
@@ -2488,26 +2489,21 @@ body.recoloring #canvas { cursor: crosshair !important; }
 @media (hover: hover) { .mt-play:not(:disabled):not(.mt-loop):hover { filter: brightness(1.08); }
   .mt-play.mt-loop:not(:disabled):hover { background: color-mix(in srgb, var(--accent) 7%, var(--menu-card)); } }
 
-/* TAP THE BEAT, on Adjust and Fine-tune: the tap is a menu card with the
-   small violet words, lit while it listens; Make it is three counts the size
-   of a finger. A count the song is too short for is there, faded. */
-.mt-beat { margin-top: 12px; }
+/* TAP THE BEAT, in More: the tap is on the drawer's paper inside More's card
+   (paper, card, paper), with the small violet words, lit while it listens. */
+.mt-beat { margin-top: 6px; }
 .mt-tap-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; }
 .mt-tap { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 6px 16px 6px 12px; border-radius: 999px;
-  border: 1px solid var(--menu-card-line); background: var(--menu-card); box-shadow: var(--menu-card-drop);
+  border: 1px solid var(--menu-card-line); background: var(--menu-paper);
   color: var(--accent-ink); font: inherit; font-size: 14px; font-weight: 650; cursor: pointer;
   -webkit-tap-highlight-color: transparent; transition: background .15s ease, box-shadow .15s ease; }
 .mt-tap svg { width: 18px; height: 18px; flex: none; }
 .mt-tap.tapping { background: var(--seg-on-fill); border-color: transparent; color: var(--seg-on-ink);
   box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 28%, transparent); }
 .mt-tap:focus-visible { outline: 2px solid var(--ui-hi); outline-offset: 2px; }
-@media (hover: hover) { .mt-tap:not(.tapping):hover { background: color-mix(in srgb, var(--accent) 7%, var(--menu-card)); } }
+@media (hover: hover) { .mt-tap:not(.tapping):hover { background: color-mix(in srgb, var(--accent) 7%, var(--menu-paper)); } }
 .mt-tempo { flex: 1 1 150px; min-width: 0; font-size: 13px; line-height: 1.35; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
 .mt-tempo b { color: var(--text-primary); font-weight: 650; }
-.mt-make { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 8px; font-size: 13px; color: var(--text-secondary); }
-.mt-make .mt-count { min-width: 44px; min-height: 44px; justify-content: center; padding: 4px 12px; font-size: 15px; font-variant-numeric: tabular-nums; }
-.mt-make .mt-count.on { background: var(--seg-on-fill); border-color: transparent; color: var(--seg-on-ink); }
-.mt-make .mt-count:disabled { opacity: .45; cursor: default; }
 
 /* THE BEAT, MARKED: a tick on every beat, taller every four counted from the
    loop's start, along the foot of the strip and the loop detail (as many as
@@ -2956,11 +2952,6 @@ body.recoloring #canvas { cursor: crosshair !important; }
   font-size: 11px;
   color: var(--text-muted);
   font-variant-numeric: tabular-nums;
-}
-
-#trimDurLabel {
-  color: var(--text-tool);
-  font-weight: 600;
 }
 
 .loop-zoom {
@@ -9117,7 +9108,14 @@ body.drawalong .canvas-empty-hint { display: none; }
 :where(.tab-panel, .media-card, .shape-pop, .tool-tray, .tune-shell) :is(.reposition-btn, .panel-btn, .clear-drawer-btn,
     .edge-controls, .mag-step, .slider-nudge-btn, .eyedropper-btn) { border-radius: var(--r-control); }
 :where(.tab-panel, .media-card) .loop-zoom { border-radius: var(--r-card); }
-:where(.tab-panel, .media-card) .nudge-btn { background: color-mix(in srgb, var(--accent) 7%, var(--menu-card)); }
+:where(.tab-panel, .media-card) .nudge-btn { background: color-mix(in srgb, var(--accent) 7%, var(--menu-paper)); }
+/* INSIDE MORE, a card, its controls are paper again: paper, card, paper, as
+   the draw drawer's choices sit in its card. The loop detail's own box would
+   be a card in a card, so it has none there; its hovers are said again, after
+   this. (The - and + above sit in More's edge groups, which are paper.) */
+:where(.tab-panel, .media-card) .fine-tune-body :is(.seg, .loop-btn:where(.subtle), .edge-controls, .mag-step, .slider-nudge-btn) { background: var(--menu-paper); }
+:where(.tab-panel, .media-card) .fine-tune-body .loop-zoom { background: none; border: 0; border-radius: 0; padding: 0; margin-top: 6px; }
+@media (hover: hover) { :where(.tab-panel, .media-card) .fine-tune-body .slider-nudge-btn:hover { background: var(--surface-nudge-hover); } }
 :where(.tab-panel, .media-card, .tool-tray, .tune-shell) .drawer-divider { background: var(--menu-card-line); }
 /* Words in the drawers that were too faint (the drawers mock, measured on the
    loaded photo and music drawers): secondary words take the sheet's ink, and

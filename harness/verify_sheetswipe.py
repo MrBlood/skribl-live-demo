@@ -553,11 +553,11 @@ with sync_playwright() as p:
         check(f"{who}: no page errors", not errs, "; ".join(errs[:2]))
         ctx.close()
 
-    # 7 THE MUSIC LEVELS (owner: "Clicking this moves the arrow but doesn't
-    # show you what's there"). Fine-tune was a row under Preview Loop that
-    # opened below the fold. It is a level of the music drawer now (Simple,
-    # Adjust, Fine-tune; lib/musicdrawer.js), the strip stays on every level,
-    # and picking Fine-tune must put the loop detail ON SCREEN.
+    # 7 THE MUSIC DRAWER'S MORE (owner: "Clicking this moves the arrow but
+    # doesn't show you what's there"). Fine-tune was a row under Preview Loop
+    # that opened below the fold, then a level (Simple, Adjust, Fine-tune), and
+    # is More now (lib/musicdrawer.js): the strip stays above it, and opening
+    # More must put what it opens ON SCREEN.
     import wave as _wave, struct as _struct, math as _math, io as _io
     _buf = _io.BytesIO()
     with _wave.open(_buf, "wb") as _w:
@@ -588,24 +588,27 @@ with sync_playwright() as p:
         check(f"{who}: the strip draws the loop's peaks in the accent and the rest in slate, as Loop Detail does",
               bool(_in and _out) and _in[2] - _in[0] > 60 and abs(_out[2] - _out[0]) < 40,
               f"inside rgb+count {_in}, outside {_out}")
+        # More (it was Fine-tune; its tile keeps the id) opens the loop
+        # detail among the rest: what opened comes ON SCREEN, its first part
+        # painted, without a scroll by hand.
         pg.click("#fineTuneToggle")
         pg.wait_for_timeout(1600)
-        ft = pg.evaluate("""() => { const z = document.getElementById('zoomWaveformCanvas').getBoundingClientRect();
+        ft = pg.evaluate("""() => { const z = document.getElementById('musicSmooth').getBoundingClientRect(), d = document.getElementById('fineTuneBody').getBoundingClientRect();
             const vh = window.visualViewport ? visualViewport.height : innerHeight;
             const hit = document.elementFromPoint(z.left + z.width / 2, z.top + z.height / 2);
-            return { pressed: document.getElementById('fineTuneToggle').getAttribute('aria-pressed'),
+            return { open: document.getElementById('fineTuneToggle').getAttribute('aria-expanded'),
                      strip: document.getElementById('musicTrack').getBoundingClientRect().height,
-                     top: Math.round(z.top), bottom: Math.round(z.bottom), vh: Math.round(vh),
-                     painted: !!(hit && hit.closest('#zoomTrackWrap')) }; }""")
-        check(f"{who}: Fine-tune is pressed, and the strip stays above the loop detail",
-              ft["pressed"] == "true" and ft["strip"] > 0, str(ft))
-        check(f"{who}: ...and the loop detail is ON SCREEN, painted, without a scroll by hand",
+                     top: Math.round(d.top), bottom: Math.round(z.bottom), vh: Math.round(vh),
+                     painted: !!(hit && hit.closest('#musicSmooth')) }; }""")
+        check(f"{who}: More is open, and the strip stays above what it opens",
+              ft["open"] == "true" and ft["strip"] > 0, str(ft))
+        check(f"{who}: ...and what More opens is ON SCREEN, painted, without a scroll by hand",
               ft["top"] >= 0 and ft["bottom"] <= ft["vh"] and ft["painted"], str(ft))
-        pg.click("#fineTuneTrim")
-        pg.wait_for_timeout(500)
+        pg.click("#fineTuneToggle")
+        pg.wait_for_timeout(700)
         back = pg.evaluate("() => ({ strip: document.getElementById('musicTrack').getBoundingClientRect().height,"
                            " hidden: document.getElementById('fineTuneBody').hidden })")
-        check(f"{who}: Adjust (it was Trim) keeps the strip and puts the loop detail away", back["strip"] > 0 and back["hidden"] is True, str(back))
+        check(f"{who}: closing More keeps the strip and puts the loop detail away", back["strip"] > 0 and back["hidden"] is True, str(back))
         # ROOM BETWEEN THE LOOP PANEL'S ROWS (owner: "things just seem close
         # together"). Measured before at 390: the handles' caps touched the zoom
         # bar (0px) and sat 2px over Scroll. Every gap down the panel is >= 8px;
@@ -613,41 +616,45 @@ with sync_playwright() as p:
         pg.click("#fineTuneToggle")
         pg.wait_for_timeout(1200)
         gaps = pg.evaluate("""() => { const q = s => document.querySelector('#musicDetail ' + s).getBoundingClientRect();
-            const rows = [['zoom bar', q('.zoom-mag-bar')], ['handles', q('#zoomHandleStart')], ['scroll', q('.zoom-pan-row')],
-                          ['each tap', q('.mt-steps')], ['start/end', q('.edge-group')],
-                          ['sync line', q('#musicSyncLine')], ['lock', q('.fine-tune-body .mt-switch')],
-                          ['smooth restart', q('.mt-smooth .mt-switch')], ['length', q('.crossfade-row')]];
+            const rows = [['smooth restart', q('.mt-smooth .mt-switch')], ['length', q('.crossfade-row')], ['hear the restart', q('#testSeamBtn')],
+                          ['tap', q('.mt-tap-row')], ['zoom bar', q('.zoom-mag-bar')], ['handles', q('#zoomHandleStart')], ['scroll', q('.zoom-pan-row')],
+                          ['start/end', q('.edge-group')], ['step line', q('#musicStepLine')], ['lock', q('.fine-tune-body > .mt-switch')]];
             return rows.slice(1).map((r, i) => [rows[i][0] + ' -> ' + r[0], Math.round(r[1].top - rows[i][1].bottom)]); }""")
-        check(f"{who}: every row of the loop panel has at least 8px above it",
+        check(f"{who}: every row of what More opens has at least 8px above it",
               all(g >= 8 for _, g in gaps), str(gaps))
-        # NO LEAP BACK TO ADJUST (owner: "when you're in fine tune and switch
-        # back to trim it snaps back"). Fine-tune now ends below the screen, so
-        # the switch is reached by scrolling back up to it, and from there
-        # Adjust makes the page several hundred px shorter: the browser clamped
-        # the scroll in ONE frame. lib/drawerdetent.js's shrinkGently glides it
-        # instead: no frame may move the pill more than 120px. On the owner's
-        # phone, 402x874: at 664 tall the switch is 400px above the screen at
-        # Fine-tune's end, so a click there is Playwright scrolling it into
-        # view first (a 706px "leap" of its own), and from the switch the clamp
-        # is 28-52px, which a 120px rule cannot see; at 874 it is 238-262px.
+        # NO LEAP WHEN MORE CLOSES (owner, of the old Fine-tune: "when you're in
+        # fine tune and switch back to trim it snaps back"). More ends below
+        # the screen, so its tile is reached by scrolling back up to it, and
+        # from there closing makes the page several hundred px shorter: the
+        # browser would clamp the scroll in ONE frame. lib/drawerdetent.js's
+        # shrinkGently glides it instead: no frame may move the tile more than
+        # a third of the whole move (it was 120px of a 238-262px glide, back to
+        # Adjust; More's is about 700px, and the browser's own glide over that
+        # moved 171px in one frame at its fastest), nor 120px on a short one.
+        # On the owner's phone, 402x874: at 664 tall a control 400px above the
+        # screen is Playwright scrolling it into view first (a 706px "leap" of
+        # its own), and the clamp is too small there for this rule to see; at
+        # 874 it is hundreds of px.
         pg.set_viewport_size({"width": 402, "height": 874})
         pg.wait_for_timeout(300)
         pg.evaluate("() => window.scrollTo(0, 1e6)")
         pg.wait_for_timeout(800)
-        pg.evaluate("""() => { const s = document.getElementById('fineTuneSeg'), h = document.querySelector('.header');
+        pg.evaluate("""() => { const s = document.getElementById('fineTuneToggle'), h = document.querySelector('.header');
             const top = h && ['sticky', 'fixed'].includes(getComputedStyle(h).position) ? h.getBoundingClientRect().bottom : 0;
             const over = s.getBoundingClientRect().top - top - 10; if (over < 0) window.scrollBy(0, over); }""")
         pg.wait_for_timeout(600)
-        pg.evaluate("""() => { window._ftLog = []; const t0 = performance.now(), seg = document.getElementById('fineTuneSeg');
-            const f = () => { _ftLog.push(seg.getBoundingClientRect().top); if (performance.now() - t0 < 1500) requestAnimationFrame(f); };
+        pg.evaluate("""() => { window._ftLog = []; const t0 = performance.now(), seg = document.getElementById('fineTuneToggle');
+            const f = () => { _ftLog.push([performance.now(), seg.getBoundingClientRect().top]); if (performance.now() - t0 < 1500) requestAnimationFrame(f); };
             requestAnimationFrame(f); }""")
-        pg.click("#fineTuneTrim")
+        pg.click("#fineTuneToggle")
         pg.wait_for_timeout(1700)
         log = pg.evaluate("_ftLog")
-        steps = [abs(b2 - a2) for a2, b2 in zip(log, log[1:])]
-        check(f"{who}: back to Adjust from the end of Fine-tune, the pill glides rather than leaps",
-              len(log) > 10 and max(steps) <= 120 and abs(log[-1] - log[0]) > 50,
-              f"largest single-frame move {round(max(steps or [0]))}px, total {round(log[-1] - log[0]) if log else '?'}px over {len(log)} frames")
+        steps = [(abs(b2[1] - a2[1]), b2[0] - a2[0]) for a2, b2 in zip(log, log[1:])]
+        total = abs(log[-1][1] - log[0][1]) if log else 0
+        big = max(steps) if steps else (0, 0)
+        check(f"{who}: closing More from the drawer's end, its tile glides rather than leaps",
+              len(log) > 10 and big[0] <= max(120, total / 3) and total > 50,
+              f"largest single-frame move {round(big[0])}px in a {round(big[1])}ms frame, total {round(total)}px over {len(log)} frames")
         check(f"{who}: no page errors", not errs, "; ".join(errs[:2]))
         ctx.close()
     b.close()

@@ -39,8 +39,6 @@ if (window.SkriblMusicDrawer) padDrawer = window.SkriblMusicDrawer.wire({
   drawingSeconds: () => strokes.length ? getPlaybackDuration() / 1000 : 0,
   // A new song's loop is as long as the drawing already there, as it was.
   fitsByDefault: true,
-  // One frame of the video the Pad exports (lib/mp4export.js).
-  frameSeconds: () => 1 / ((window.SkriblMp4 && window.SkriblMp4.FPS) || 30),
   playButton: () => playBtn,
   audio: () => audioEl,
   buffer: () => currentAudioBuffer,

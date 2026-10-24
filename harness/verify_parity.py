@@ -88,7 +88,7 @@ CONTROLS = [
     ("music waveform",     "#waveformCanvas",  "#waveformCanvas", ""),
     ("music trim start",   "#handleStart",     "#handleStart",    ""),
     ("music trim end",     "#handleEnd",       "#handleEnd",      ""),
-    ("fine-tune loop",     "#fineTuneToggle",  "#fineTuneToggle", ""),
+    ("music drawer's More", "#fineTuneToggle", "#fineTuneToggle", ""),
     # --- canvas / system --------------------------------------------------
     ("canvas size control", "#canvasSeg",      "#canvasSeg",      ""),
     ("first-use hints",    "#hintSeg",         "#hintSeg",        ""),
@@ -929,7 +929,7 @@ with sync_playwright() as p:
     disclose = """() => { document.getElementById('fineTuneToggle').click(); return true; }"""
     pad.evaluate(disclose); flip.evaluate(disclose)
     pad.wait_for_timeout(500); flip.wait_for_timeout(500)
-    check("the fine-tune disclosure opens the loop detail on both",
+    check("More opens the loop detail on both",
           pad.evaluate(vis, "zoomWaveformCanvas") and flip.evaluate(vis, "zoomWaveformCanvas"),
           f"pad={pad.evaluate(vis, 'zoomWaveformCanvas')}, "
           f"flip={flip.evaluate(vis, 'zoomWaveformCanvas')}")
