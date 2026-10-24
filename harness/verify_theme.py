@@ -837,28 +837,28 @@ with sync_playwright() as p:
     # paints; the other sits on --menu-paper, a CSS background. So a page that
     # opens light must show both light, and a page switched from dark to light
     # must repaint, which is the part a token read once could get wrong. Read
-    # off the screen, both editors: the colour most of each one is painted.
+    # off the screen, both editors, where only each one's own ground shows: the
+    # timeline's song past the loop's end, in its top band (no waveform reaches
+    # it and no beat is marked), and the Restart view's corner under its
+    # waveform. The colour most of the timeline shows is the drawer's paper
+    # around it, which follows the theme whatever the canvas does, so it was
+    # green with the song painted in a colour read once and kept.
     import io as _io, math as _math, struct as _struct, wave as _wave
     _b = _io.BytesIO()
     with _wave.open(_b, "wb") as _w:
         _w.setnchannels(1); _w.setsampwidth(2); _w.setframerate(8000)
         _w.writeframes(b"".join(_struct.pack("<h", int(6000 * _math.sin(i / 9))) for i in range(8000 * 6)))
     _WAV = _b.getvalue()
-    _MOST = """async (b64) => {
-      const img = new Image(); img.src = 'data:image/png;base64,' + b64; await img.decode();
-      const c = document.createElement('canvas'); c.width = img.width; c.height = img.height;
-      const x = c.getContext('2d'); x.drawImage(img, 0, 0);
-      const d = x.getImageData(0, 0, img.width, img.height).data, n = {}; let best = null;
-      for (let i = 0; i < d.length; i += 4) {
-        const k = (d[i] >> 3) + ',' + (d[i + 1] >> 3) + ',' + (d[i + 2] >> 3);
-        n[k] = (n[k] || 0) + 1; if (!best || n[k] > n[best]) best = k; }
-      return { rgb: best.split(',').map((v) => (+v << 3) + 4), share: +(n[best] / (d.length / 4)).toFixed(2) };
-    }"""
-    def _most(q, sel):
+    def _spot(q, sel, fx, fy):
+        """The colour on screen at a point of `sel`: fx from its left (from its
+        right when negative), fy from its top (from its bottom when negative)."""
         q.evaluate("(s) => document.querySelector(s).scrollIntoView({ block: 'center' })", sel)
         q.wait_for_timeout(250)
-        png = q.locator(sel).screenshot()
-        return q.evaluate(_MOST, base64.b64encode(png).decode())
+        bb = q.locator(sel).bounding_box()
+        x = bb["x"] + (fx if fx >= 0 else bb["width"] + fx)
+        y = bb["y"] + (fy if fy >= 0 else bb["height"] + fy)
+        png = q.screenshot(clip={"x": x - 2, "y": y - 2, "width": 5, "height": 5})
+        return q.evaluate(_PIXEL, base64.b64encode(png).decode())
     for _nm, _route in (("Pad", "/skribl-pad"), ("Flip", "/flip")):
         for _how in ("opened light", "switched from dark"):
             _q = browser.new_page(viewport={"width": 1000, "height": 1100},
@@ -875,13 +875,13 @@ with sync_playwright() as p:
             _q.evaluate("() => { trimStart = 2.5; trimEnd = 3.5; updateTrimUI(); }")
             _q.wait_for_timeout(500)
             if _how == "switched from dark":
-                _dark = _most(_q, "#musicTlStage")
+                _dark = _spot(_q, "#musicTlStage", -10, 37)
                 _q.evaluate("() => window.SkriblTheme.set('light')")
                 _q.wait_for_timeout(400)
-            _tl, _rv = _most(_q, "#musicTlStage"), _most(_q, "#musicRestart")
+            _tl, _rv = _spot(_q, "#musicTlStage", -10, 37), _spot(_q, "#musicRestart", 8, -4)
             check(f"{_nm}, {_how}: the timeline's song and the Restart view are light grounds, not dark slabs",
-                  lum(_tl["rgb"]) > 150 and lum(_rv["rgb"]) > 150
-                  and (_how == "opened light" or lum(_dark["rgb"]) < 100),
+                  lum(_tl) > 150 and lum(_rv) > 150
+                  and (_how == "opened light" or lum(_dark) < 100),
                   f"timeline {_tl}, Restart view {_rv}" + (f", the timeline before the switch {_dark}"
                                                            if _how == "switched from dark" else "")
                   + " \u2014 lum over 150 wanted; a colour read once and kept goes stale on a switch")

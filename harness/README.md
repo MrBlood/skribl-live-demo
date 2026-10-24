@@ -504,6 +504,34 @@ stays a sleep.
   own clock, each woken early to land on its mark; a try whose taps strayed
   more than 4ms (a busy machine) is tapped again on a fresh page, three tries
   at most, and the row says which try it was.
+- `verify_musictimeline.py` — step 2 of the music plan (the owner: "Yes on
+  all"), on the Pad and on Flip: the timeline (lib/musictimeline.js) is the
+  drawer's one view, the drawing's lane over the song, two handles and the
+  whole song's line, and the lane says what it is and how long it plays, its
+  marks where the drawing plays from the loop's start; the view frames the
+  loop (1.28 times the longer of the loop and the drawing, the drawing counted
+  up to three loops, the start 9% in); a finger on the song slides it under
+  the drawing, the length kept and the handles put, a press on the drawing's
+  lane moves nothing, and on a phone a finger that goes up or down first
+  scrolls the page while one that goes sideways slides; an end follows the
+  finger with its time in its bubble while the view holds still, held near the
+  edge the view widens frame by frame with the far side kept, and let go it
+  eases to its framing frame by frame (at once under Reduce Motion); a tap on
+  the whole song's line puts the loop's middle there, on a beat once there is
+  a tempo, and a drag along it slides the loop; the playhead runs across the
+  loop while it plays; the Restart view (lib/musicrestart.js) shows the loop's
+  last 0.6s beside its first, a smooth restart's fold counted, its left moves
+  the end and its right the start with the music following the finger, its
+  dot sets the smooth restart in 5ms steps, back to the line for a clean cut,
+  stopping at half a second or half the loop, and its hint says what to do;
+  Cut on silence is on for a new song, off for a draft's that never said, and
+  kept in the drafts, its words say how far both ends move (under a
+  thousandth, or to the thousandth, later or earlier), the baked loop moves
+  both ends the same to the nearest clean join, the length kept and no click
+  where it comes round (31 steps of the song's own without it, at most two
+  with it), with a smooth restart or switched off nothing moves, switched while
+  the loop plays it plays on from the new join, the posted clip is the cut
+  loop sample for sample, and the player plays it as it is.
 - `verify_learncard.py` — the card on the button (lib/learncard.js), Pad and
   Flip: holding a button (real touch) opens its card with its example; a
   quick tap stays a tap, a moving finger is no hold, the lift does not press,

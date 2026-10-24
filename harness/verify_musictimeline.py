@@ -267,7 +267,9 @@ with sync_playwright() as p:
         secs = pg.evaluate(DRAWN[_n])
         rows = []
         # The loop longer than the drawing; the drawing longer, counted whole;
-        # the drawing longer than three loops, counted as three.
+        # the drawing longer than three loops, counted as three. The drawing
+        # plays about 2s, so the last two ask for it whole and for three loops
+        # of it, and the row says so of the fixture as well as of the view.
         for s, e in ((1.0, 5.0), (2.0, 3.0), (3.0, 3.5)):
             pg.evaluate(SET, {"s": s, "e": e, "xf": 0})
             pg.wait_for_timeout(900)
@@ -275,7 +277,7 @@ with sync_playwright() as p:
             rows.append(((s, e), v, framing({"s": s, "e": e}, secs)))
         ok = all(abs(v[0] - f[0]) < 2e-3 * f[1] and abs(v[1] - f[1]) < 2e-3 * f[1] for _, v, f in rows)
         check(f"{_n}: the view frames the loop: 1.28 times the longer of the loop and the {WORK[_n]} (counted up to three loops), the loop's start 9% in",
-              ok and 1.0 < secs < 1.5 * 3 and abs(rows[0][2][1] - 1.28 * 4) < 1e-9
+              ok and abs(rows[0][2][1] - 1.28 * 4) < 1e-9
               and abs(rows[1][2][1] - 1.28 * secs) < 1e-9 and abs(rows[2][2][1] - 1.28 * 1.5) < 1e-9,
               "; ".join(f"loop {lp}: view {v[0]:.3f}+{v[1]:.3f}, want {f[0]:.3f}+{f[1]:.3f}" for lp, v, f in rows)
               + f" (the {WORK[_n]} plays {secs:.2f}s)")
@@ -434,14 +436,16 @@ with sync_playwright() as p:
         y = wh["y"] + wh["h"] / 2
         pg.mouse.click(wh["x"] + wh["w"] * 0.75, y); pg.wait_for_timeout(900)
         t1 = pg.evaluate(TRIM)
+        # With a tempo, 31% along: the loop's middle there would start it at
+        # 2.72s, between two beats (2.6 and 3.1).
         pg.evaluate(SET, {"tempo": {"bpm": 120, "phase": 0.1}})
-        pg.mouse.click(wh["x"] + wh["w"] * 0.3, y); pg.wait_for_timeout(900)
+        pg.mouse.click(wh["x"] + wh["w"] * 0.31, y); pg.wait_for_timeout(900)
         t2 = pg.evaluate(TRIM)
         on_beat = abs(((t2["s"] - 0.1) / 0.5) - round((t2["s"] - 0.1) / 0.5)) < 1e-3
         check(f"{_n}: a tap on the whole song's line moves the loop there, its middle under the finger, on a beat once there is a tempo",
               abs(t1["s"] - (0.75 * 12 - 1)) < 0.02 and abs((t1["e"] - t1["s"]) - 2) < 1e-6
-              and on_beat and abs(t2["s"] - (0.3 * 12 - 1)) <= 0.25 + 1e-6 and abs((t2["e"] - t2["s"]) - 2) < 1e-6,
-              f"at 75%: {t1['s']:.3f}-{t1['e']:.3f} (want 8.000); with a tempo, at 30%: {t2['s']:.3f}-{t2['e']:.3f} (a beat near 2.6)")
+              and on_beat and abs(t2["s"] - (0.31 * 12 - 1)) <= 0.25 + 1e-6 and abs((t2["e"] - t2["s"]) - 2) < 1e-6,
+              f"at 75%: {t1['s']:.3f}-{t1['e']:.3f} (want 8.000); with a tempo, at 31%: {t2['s']:.3f}-{t2['e']:.3f} (the beat nearest 2.72)")
         pg.evaluate(SET, {"tempo": None})
         drag(pg, wh["x"] + wh["w"] * 0.25, y, wh["x"] + wh["w"] * 0.6, y, steps=10, up=False)
         mid = pg.evaluate(TRIM)
@@ -511,18 +515,20 @@ with sync_playwright() as p:
         def dot():
             r = pg.evaluate(BOX, "#musicBlendDot")
             return r["x"] + r["w"] / 2, r["y"] + r["h"] / 2
+        # 43px: not a whole number of 5ms steps on these widths, so a dot
+        # that did not keep to them would show it.
         dx, dy = dot()
-        drag(pg, dx, dy, dx + 40, dy, steps=8)
+        drag(pg, dx, dy, dx + 43, dy, steps=8)
         pg.wait_for_timeout(250)
         on = pg.evaluate("() => ({ xf: loopCrossfadeMs, sw: document.getElementById('musicSmooth').getAttribute('aria-checked') })")
         dx, dy = dot()
         drag(pg, dx, dy, rv["x"] + half - 30, dy, steps=8)
         pg.wait_for_timeout(250)
         off = pg.evaluate("() => ({ xf: loopCrossfadeMs, sw: document.getElementById('musicSmooth').getAttribute('aria-checked') })")
-        want = 40 / half * 600
+        want = 43 / half * 600
         check(f"{_n}: the dot pulls the smooth restart longer or shorter, in 5ms steps, back to the line for a clean cut",
               on["xf"] % 5 == 0 and abs(on["xf"] - want) <= 5 and on["sw"] == "true" and off["xf"] == 0 and off["sw"] == "false",
-              f"40px out: {on} (want about {want:.0f}ms); back past the line: {off}")
+              f"43px out: {on} (want about {want:.0f}ms); back past the line: {off}")
         caps = []
         for s, e, most in ((1.0, 3.0, 500), (1.0, 1.6, 300)):
             pg.evaluate(SET, {"s": s, "e": e, "xf": 0})
