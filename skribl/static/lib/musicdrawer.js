@@ -1057,6 +1057,10 @@
     // it is measured once here, and not at all with no song.
     function sync() {
       var secs = h.hasTrack() ? h.drawingSeconds() : 0;
+      // Smooth restart's switch, words and length too: Flip's draft and file
+      // opens set the loop's smooth restart and repainted only the rest, so
+      // the line said 19.75s under a switch that said Off (the owner's phone).
+      syncCrossfade();
       syncPan();
       syncTimes(false);
       syncSteps();

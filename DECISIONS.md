@@ -22472,3 +22472,59 @@ of a one-theme Pad run, 8 levels), and the cover made the tile's whole width
 broken to 0 in light and dark). The same file served unchanged stayed green.
 
 Pad and Flip: shared, one rule each in styles.css.
+
+## After v329 -- A tall drawer opens at its top; a Flip draft's smooth restart shows on its switch
+
+The owner, from an iPhone, with two screenshots: "When you click the media
+button and click music it open all the way to the bottom? Second is loading a
+new music file?" The first: the music drawer opened through Media and Music
+with its top, the tabs, the song and the strip, under the header, and Lock the
+length on screen. The second: a song just added, the drawer from its top.
+
+WHY THE TWO DIFFER. Adding a song grows the drawer, and that growth was
+already followed only so far: the bar above the drawer stays under the pinned
+header (lib/drawerdetent.js followGrowth, "controls on top of controls"). The
+open had no such stop. It scrolled the drawer's end to the foot of the screen
+(the Pad's revealPanelEnd, Flip's scrollIntoView with block 'end'), and since
+#616 remembers More open, the music drawer is taller than a phone: 1236px on
+the owner's 874px screen, so its end at the foot put its top 350 to 600px
+above the screen.
+
+NOW THE OPEN STOPS WHERE THE GROWTH DOES. revealPanelEnd takes the bar above
+the drawer and never scrolls it under the header; a drawer that fits still
+opens with its end on screen, as before. Flip moves from scrollIntoView to the
+same computed scroll, which the Pad moved to because scrollIntoView proved
+unreliable on the owner's iPhone, and it now jumps under Reduce Motion as the
+Pad's does. The re-asserts that settle the iPhone's own scrolls put the page
+back on that place whichever way it was carried (what is above the drawer can
+still be settling as it opens; aimed once, the bar ended 4 to 78px under the
+header), and a wheel or a trackpad anywhere now calls them off, as a press or a
+key in the drawer already did, so a person who scrolls on is left there.
+
+THE SECOND SCREENSHOT HAD ITS OWN BUG. "19.75s" under the first 20 seconds is
+a 0.25s smooth restart, and the switch beside it said Off: a Flip draft opened
+from Your drafts or a .skribl file set the loop's smooth restart and repainted
+everything in the drawer but the switch's row. Reproduced on main and on the
+step 2 branch: a draft saved with 0.25s, opened over a song whose smooth
+restart was switched off. The drawer's own repaint (lib/musicdrawer.js sync,
+which every editor's updateTrimUI ends with) now says the switch, its words
+and its length too, so no path can set the one without the other. The Pad
+already synced it on its own loads.
+
+Pad and Flip: shared. lib/drawerdetent.js is one copy, each editor passes its
+own bar (the Pad's #toolBar, Flip's .flip-tools), and the drawer's repaint is
+lib/musicdrawer.js's.
+
+verify_musicmore, in its kind part, on the Pad and Flip: opened with More open
+the drawer starts at its top, the bar just under the header, on the owner's
+phone and a 390x640 one, and Photo, which fits, still shows its end; a person
+who scrolls on as it opens is left where they scrolled to; a draft opened says
+its own smooth restart, the switch, its words and its length agreeing with the
+line. On main the first two rows are red on both editors (the tabs 344 to 606px
+above the screen) and the third on Flip. Shown red per part of the fix, each
+broken copy served to the browser with the file on disk untouched: the stop
+taken out of revealPanelEnd, the Pad's bar not passed, Flip back on
+scrollIntoView, the wheel not calling the re-asserts off, and the repaint
+without the switch's row. The same file served unchanged stayed green.
+
+Not tested here: the owner's iPhone (no WebKit here) and its URL bar settling.

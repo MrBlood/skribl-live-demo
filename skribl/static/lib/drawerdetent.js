@@ -57,14 +57,30 @@
    * a schedule no single timeout catches. Each assert is a no-op when the
    * end is already visible, so browsers that got it right the first time
    * feel nothing.
+   *
+   * A DRAWER TALLER THAN THE SCREEN OPENS AT ITS TOP. Its end at the foot of
+   * the screen took its top -- the tabs, the song, the strip -- up under the
+   * header: with More open the music drawer is 1236px on the owner's 874px
+   * phone, and it opened at Lock the length (the owner: "When you click the
+   * media button and click music it open all the way to the bottom?"). So,
+   * as followGrowth below already did for a song landing, never so far that
+   * `dock` -- the bar that sits right above the drawer -- passes under the
+   * pinned header; without one, never past the drawer's own top. A drawer
+   * that fits still opens with its end on screen. The re-asserts put the
+   * page back on that place whichever way it was carried (what is above the
+   * drawer can still be settling its height as it opens), until the person
+   * acts: a press or a key in the drawer, or a wheel or trackpad anywhere.
    */
   var revealGen = 0;   // a newer reveal calls off an older one's re-asserts
-  function revealPanelEnd(panel, behavior) {
+  function revealPanelEnd(panel, behavior, dock) {
     var mine = ++revealGen;
     function target() {
       var r = panel.getBoundingClientRect();
       var scroller = document.scrollingElement || document.documentElement;
-      var want = scroller.scrollTop + r.bottom - viewH() + 8;
+      var top = scroller.scrollTop;
+      var want = top + r.bottom - viewH() + 8;
+      var lid = dock && dock.offsetParent !== null ? dock.getBoundingClientRect().top - 4 : r.top - 8;
+      want = Math.min(want, top + lid - stuckBottom());
       var max = scroller.scrollHeight - window.innerHeight;
       return Math.max(0, Math.min(want, max));
     }
@@ -73,11 +89,16 @@
     // music drawer's Fine-tune, tapped within 1.2s of the drawer opening, made
     // it taller, and the last re-assert carried the page to its new end with
     // the switch just tapped under the header.
+    // A wheel or a trackpad anywhere is a person scrolling on, too.
     var acted = false;
     function act() { acted = true; }
     panel.addEventListener('pointerdown', act);
     panel.addEventListener('keydown', act);
-    setTimeout(function () { panel.removeEventListener('pointerdown', act); panel.removeEventListener('keydown', act); }, 1300);
+    window.addEventListener('wheel', act, { passive: true });
+    setTimeout(function () {
+      panel.removeEventListener('pointerdown', act); panel.removeEventListener('keydown', act);
+      window.removeEventListener('wheel', act, { passive: true });
+    }, 1300);
     requestAnimationFrame(function () {
       if (mine !== revealGen) return;
       window.scrollTo({ top: target(), behavior: behavior || 'smooth' });
@@ -85,9 +106,8 @@
     [300, 700, 1200].forEach(function (ms) {
       setTimeout(function () {
         if (mine !== revealGen || acted || panel.hidden || panel.classList.contains('eyedropper-veiled')) return;
-        if (panel.getBoundingClientRect().bottom > viewH() + 1) {
-          (document.scrollingElement || document.documentElement).scrollTop = target();
-        }
+        var scroller = document.scrollingElement || document.documentElement, t = target();
+        if (Math.abs(t - scroller.scrollTop) > 2) scroller.scrollTop = t;
       }, ms);
     });
   }
