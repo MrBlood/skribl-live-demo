@@ -5117,14 +5117,19 @@ const _flipDrawerCtl = skriblDrawers({
     // scrolling it into view would drag the canvas off screen to reveal a panel
     // that was already fully visible.
     if(name === 'tools') return;
-    // block:'end', not 'nearest'. 'nearest' scrolls the MINIMUM amount, so a
-    // drawer that is already partly on screen gets no scroll at all — which on a
-    // phone left the colour swatches and the eyedropper permanently sliced by the
-    // bottom edge, under Safari's toolbar. 'end' brings the drawer's bottom to
-    // the viewport bottom, and the safe-area padding on .flip-drawers keeps it
-    // clear of the browser chrome once it gets there.
-    requestAnimationFrame(()=>{ try{ open.scrollIntoView({behavior:'smooth', block:'end'}); }catch(_){ open.scrollIntoView(); }
-      if(currentAudioBuffer && open===musicPanel) requestZoomWaveformDraw(); });
+    // The drawer's END on screen, as the Pad's: lib/drawerdetent.js
+    // revealPanelEnd, the computed scroll the Pad moved to because
+    // scrollIntoView proved unreliable on the owner's iPhone. It was
+    // block:'end' here ('nearest' scrolls the minimum, which on a phone left
+    // the swatches and the eyedropper sliced by the bottom edge, under
+    // Safari's toolbar), which took a drawer taller than the screen up under
+    // the header to show its end: the music drawer with More open opened at
+    // its foot. Now the tools stay under the header, and such a drawer opens
+    // at its top. Reduced motion jumps, as the Pad's does.
+    const b = (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) ? 'auto' : 'smooth';
+    if(window.SkriblDrawerDetent) window.SkriblDrawerDetent.revealPanelEnd(open, b, document.querySelector('.flip-tools'));
+    else requestAnimationFrame(()=>{ try{ open.scrollIntoView({behavior:b, block:'end'}); }catch(_){ open.scrollIntoView(); } });
+    requestAnimationFrame(()=>{ if(currentAudioBuffer && open===musicPanel) requestZoomWaveformDraw(); });
   }
 });
 // Only the wrappers with live callers survive the collapse: closePop for the

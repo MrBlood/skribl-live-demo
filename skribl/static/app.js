@@ -1340,8 +1340,10 @@ const _padDrawerCtl = (typeof skriblDrawers === 'function') ? skriblDrawers({
     if (panel) {
       // Shared with the detent lib: computed scroll + visualViewport math +
       // settle-retries, because scrollIntoView proved unreliable on the one
-      // device that matters. See lib/drawerdetent.js revealPanelEnd.
-      if (window.SkriblDrawerDetent) window.SkriblDrawerDetent.revealPanelEnd(panel, b);
+      // device that matters. See lib/drawerdetent.js revealPanelEnd. The bar
+      // stays under the header, so a drawer taller than the screen opens at
+      // its top (the music drawer with More open), as Flip's does.
+      if (window.SkriblDrawerDetent) window.SkriblDrawerDetent.revealPanelEnd(panel, b, document.getElementById('toolBar'));
       else requestAnimationFrame(() => panel.scrollIntoView({ behavior: b, block: 'end' }));
     }
     else window.scrollTo({ top: 0, behavior: b });

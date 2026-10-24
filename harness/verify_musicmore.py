@@ -777,6 +777,80 @@ with sync_playwright() as pw:
               len(tops) > 20 and moved > 40 and max(steps) < 0.45 * moved,
               f"moved {moved:.0f}px over {len(tops)} frames, the biggest frame {max(steps) if steps else 0:.0f}px")
         c.close()
+    # OPENED WITH MORE OPEN, THE DRAWER STARTS AT ITS TOP (the owner's iPhone:
+    # "When you click the media button and click music it open all the way to
+    # the bottom?"). More open is remembered, and with it the drawer is taller
+    # than a phone; the open scrolled its end to the screen's foot, which took
+    # the tabs, the song and the strip up under the header. Now the bar above
+    # the drawer stays under the header, as a song landing already left it
+    # (lib/drawerdetent.js), on the owner's phone and a short one; a drawer
+    # that fits still opens with its end on screen; and a person who scrolls
+    # on as it opens is left where they scrolled to. Media and Music tapped as
+    # a person taps them, the page at rest at its top first.
+    TOP = """() => { const h = document.querySelector('.header'), q = (s) => document.querySelector(s).getBoundingClientRect();
+      const head = h && ['sticky', 'fixed'].includes(getComputedStyle(h).position) ? h.getBoundingClientRect().bottom : 0;
+      const dock = document.querySelector('#toolBar, .flip-tools');
+      return { head: Math.round(head), dock: Math.round(dock.getBoundingClientRect().top), tabs: Math.round(q('#mediaTabs').top),
+               end: Math.round(q('#mediaCard').bottom), vh: Math.round(visualViewport ? visualViewport.height : innerHeight), y: Math.round(scrollY) }; }"""
+    for _n, _p in eds("kind"):
+        for dev, o in (("phone", PHONE), ("short phone", dict(PHONE, viewport={"width": 390, "height": 640}))):
+            c, pg, _ = editor(b, _n, _p, opts=o, more=True)
+            browsing.pad_drawer_close(pg)
+            pg.wait_for_function("() => window.scrollY === 0", timeout=5000); pg.wait_for_timeout(300)
+            pg.click("#mediaOpenBtn"); pg.wait_for_timeout(150)
+            if pg.get_attribute("#mediaTabMusic", "aria-selected") != "true":
+                pg.click("#mediaTabMusic")
+            pg.wait_for_timeout(1500)                  # past every re-assert there is
+            tall = pg.evaluate(TOP)
+            pg.click("#mediaTabPhoto"); pg.wait_for_timeout(1500)
+            fits = pg.evaluate(TOP)
+            check(f"{_n}: opened with More open, the drawer starts at its top: the bar under the header, the tabs on screen ({dev})",
+                  tall["end"] > tall["vh"] and tall["head"] - 1 <= tall["dock"] <= tall["head"] + 12 and tall["head"] <= tall["tabs"] < tall["vh"]
+                  and fits["end"] <= fits["vh"] + 1 and fits["dock"] >= fits["head"] - 1,
+                  f"Music with More open (its end at {tall['end']} on a {tall['vh']}px screen): {tall}; Photo, which fits: {fits}")
+            c.close()
+    for _n, _p in eds("kind"):
+        c, pg, _ = editor(b, _n, _p, opts=PHONE, more=True)
+        browsing.pad_drawer_close(pg)
+        pg.wait_for_function("() => window.scrollY === 0", timeout=5000); pg.wait_for_timeout(300)
+        pg.click("#mediaOpenBtn"); pg.wait_for_timeout(150)
+        if pg.get_attribute("#mediaTabMusic", "aria-selected") != "true":
+            pg.click("#mediaTabMusic")
+        pg.wait_for_timeout(250)
+        at = pg.evaluate(TOP)
+        pg.mouse.move(200, 600); pg.mouse.wheel(0, 300); pg.wait_for_timeout(150)
+        put = pg.evaluate(TOP)
+        pg.wait_for_timeout(1500)
+        left = pg.evaluate(TOP)
+        check(f"{_n}: a person who scrolls on as the drawer opens is left where they scrolled to",
+              put["y"] > at["y"] + 100 and abs(left["y"] - put["y"]) <= 2,
+              f"opening at {at['y']}, scrolled on to {put['y']}, then {left['y']} once the opening's re-asserts were done")
+        c.close()
+    # A DRAFT OPENED SAYS ITS OWN SMOOTH RESTART (the owner's Flip: "19.75s"
+    # over a switch that said Off). A draft with a 0.25s smooth restart, saved,
+    # then opened over a song whose smooth restart was switched off: the line,
+    # the switch, its words and its length agree. Flip's draft and file opens
+    # set the loop and repainted all but the switch's row.
+    SAVE = {"Pad": "() => JSON.stringify(serializeSkribl())", "Flip": "() => JSON.stringify(serializeFlip())"}
+    OPEN = {"Pad": "(s) => loadSkribl(JSON.parse(s))", "Flip": "(s) => applyFlipDraftObject(JSON.parse(s))"}
+    for _n, _p in eds("kind"):
+        c, pg, _ = editor(b, _n, _p, opts=PHONE, song=LONG, more=True)
+        saved = pg.evaluate(SAVE[_n])
+        was = pg.evaluate(TRIM)
+        pg.click("#musicSmooth"); pg.wait_for_timeout(200)
+        off = pg.evaluate(SAID)
+        pg.evaluate(OPEN[_n], saved)
+        pg.wait_for_function("() => !!currentAudioBuffer && audioDuration > 25", timeout=20000)
+        pg.wait_for_timeout(1200)
+        t, said = pg.evaluate(TRIM), pg.evaluate(SAID)
+        val = pg.evaluate("() => document.getElementById('crossfadeVal').textContent")
+        check(f"{_n}: a draft opened says its own smooth restart: the line, the switch, its words and its length agree",
+              was["xf"] == 250 and off["smooth"] == "false" and t["xf"] == 250 and said["smooth"] == "true" and val == "0.25s"
+              and said["smoothSub"] == "The end fades into the start over 0.25s, which makes the loop 0.25s shorter."
+              and said["line"].startswith(f"{heard(t):.2f}s"),
+              f"saved with {was['xf']}ms, switched off ({off['smooth']}), opened: {t['xf']}ms, the switch {said['smooth']}, "
+              f"its length {val!r}, the line {said['line']!r}")
+        c.close()
 
     b.close()
 
