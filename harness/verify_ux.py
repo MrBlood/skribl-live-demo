@@ -1019,12 +1019,12 @@ with _sp204() as _p:
                 + struct.pack("<IHHIIHH", 16, 1, 1, rate, rate * 2, 2, 16)
                 + b"data" + struct.pack("<I", len(frames)) + frames)
     _AUD = wav_bytes()
-    for pw in (340, 363, 390, 1280):
+    for pw in (340, 363, 375, 390, 1280):
         mp = _b.new_page(viewport={"width": pw, "height": 844})
         mp.goto(BASE + "/", wait_until="load"); waits.settle(mp, 700)
         browsing.pad_drawer(mp, "music"); mp.wait_for_timeout(300)
         mp.set_input_files("#musicInput", {"name": "t.wav", "mimeType": "audio/wav", "buffer": _AUD}); mp.wait_for_timeout(1500)
-        mp.evaluate("() => { const t = document.getElementById('fineTuneToggle'); if (t && t.getAttribute('aria-pressed') !== 'true') t.click(); }")
+        mp.evaluate("() => { const t = document.getElementById('fineTuneToggle'); if (t && t.getAttribute('aria-expanded') !== 'true') t.click(); }")
         mp.wait_for_timeout(400)
         fit = mp.evaluate("""() => { const vw = document.documentElement.clientWidth;
             const grid = document.querySelector('#fineTuneBody .finetune-grid'); if (!grid) return null;
@@ -1047,18 +1047,19 @@ with _sp204() as _p:
         check(f"V207: at {pw}px the nudge pills do not overlap each other or spill their column", not _ov["overlap"] and not _ov["spill"], str(_ov))
         if pw <= 640:
             # v210 (owner's iPhone): Start and End share a row. Step size, a
-            # third group under them, is Each tap now, its own row above them
-            # (lib/musicdrawer.js). The overlap/spill check above still guards
-            # the class at every width.
+            # third group under them, was Each tap, and is gone (lib/
+            # musicdrawer.js). The overlap/spill check above still guards the
+            # class at every width.
             _rows = mp.evaluate("""() => [...document.querySelectorAll('#fineTuneBody .edge-group')]
                 .map(e => Math.round(e.getBoundingClientRect().top))""")
-            if pw >= 363:
+            if pw >= 375:
                 check(f"V210: at {pw}px Start of loop and End of loop share a row",
                       len(_rows) == 2 and _rows[0] == _rows[1], f"group tops {_rows}")
             else:
-                # 340 cannot hold two 130px groups (the grid is the screen less
-                # 78px, and two need 270); the grid must fall back to one
-                # column rather than spill (v207 bug class).
+                # 363 and 340 cannot hold two 130px groups: inside More's card
+                # the grid is the screen less 104px (it was 78px on the drawer's
+                # paper, two-up from 348), and two need 270. The grid must fall
+                # back to one column rather than spill (v207 bug class).
                 check(f"V210: at {pw}px (too narrow for 2-up) the nudge groups stack one per row",
                       len(_rows) == 2 and _rows[1] > _rows[0], f"group tops {_rows}")
         if pw == 1280:
@@ -1509,7 +1510,7 @@ with _sp204() as _p:
         _z.evaluate("() => { const t = document.querySelector('.skribl-hint'); if (t) t.click(); }")
         ux_open(_z, opener); _z.wait_for_timeout(300)
         _z.set_input_files("#musicInput", {"name": "t.wav", "mimeType": "audio/wav", "buffer": _AUD}); _z.wait_for_timeout(1500)
-        _z.evaluate("() => { const t = document.getElementById('fineTuneToggle'); if (t && t.getAttribute('aria-pressed') !== 'true') t.click(); }")
+        _z.evaluate("() => { const t = document.getElementById('fineTuneToggle'); if (t && t.getAttribute('aria-expanded') !== 'true') t.click(); }")
         _z.wait_for_timeout(900)
         # RADIUS IS READ FROM THE TOKEN, NOT TYPED. This asserted the literal
         # "999px" until v220 squared every segmented control (--r-seg, styles.css).
@@ -1804,7 +1805,7 @@ with _sp204() as _p:
                     ux_close(_f, op); _f.wait_for_timeout(200)
             ux_open(_f, openers[3]); _f.wait_for_timeout(300)
             _f.set_input_files("#musicInput", {"name": "t.wav", "mimeType": "audio/wav", "buffer": _AUD}); _f.wait_for_timeout(1400)
-            _f.evaluate("() => { const t = document.getElementById('fineTuneToggle'); if (t && t.getAttribute('aria-pressed') !== 'true') t.click(); }"); _f.wait_for_timeout(600)
+            _f.evaluate("() => { const t = document.getElementById('fineTuneToggle'); if (t && t.getAttribute('aria-expanded') !== 'true') t.click(); }"); _f.wait_for_timeout(600)
             _r = _f.evaluate(_AUDIT)
             check(f"PHONE {nm}@{pw}: ...with music loaded + fine-tune open", _AUDIT_OK(_r), str(_r))
             _f.close()
@@ -3238,7 +3239,7 @@ with sync_playwright() as _gp:
             # the dock and the drawer are what is under it. The ground stayed
             # only while the DRAWING overlapped, so it went, and the dock's
             # icons showed through, stacked on the header's. A song in Music,
-            # Fine-tune open, scrolled to the end, with the drawing confirmed
+            # More open, scrolled to the end, with the drawing confirmed
             # above the header first so the check cannot pass on a short page.
             browsing.pad_drawer(_g, "music", settle=400)
             _g.set_input_files("#musicInput", {"name": "t.wav", "mimeType": "audio/wav", "buffer": _WAV})

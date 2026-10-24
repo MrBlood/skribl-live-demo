@@ -544,8 +544,8 @@ def editor_common(pg, menu, export_item, canvas):
         pg.wait_for_timeout(300)
     except Exception:
         pass
-    yield "media card, song (Trim)"
-    click(pg, "#fineTuneToggle"); yield "media card, song (Fine-tune)"
+    yield "media card, song"
+    click(pg, "#fineTuneToggle"); yield "media card, song (More open)"
     click(pg, "#mediaTabPhoto")
     try:
         pg.set_input_files("#photoInput, #imageInput", {"name": "p.png", "mimeType": "image/png", "buffer": PNG}); pg.wait_for_timeout(1200)
