@@ -2439,7 +2439,8 @@ body.recoloring #canvas { cursor: crosshair !important; }
    it opens as the draw drawer's tiles do: the tile reaches 11px down over the
    10px gap and the card's top edge, its own bottom edge the card's colour,
    so the seam is not there to see; it is above the card for that, as the
-   tiles are. Its words keep their place as it opens: the padding, not a
+   tiles are, and covers the card's dark top light as they do (JOINED, at
+   .dp-tile.dp-open). Its words keep their place as it opens: the padding, not a
    centring, puts them in the middle of the closed tile. Its words are ONE
    BLOCK, not a flex row: lib/labels.js trims a button's label to cap height
    over the baseline (labels.css .lbl-own), so the + centres on the letters
@@ -2453,7 +2454,7 @@ body.recoloring #canvas { cursor: crosshair !important; }
 .mt-more .mk { flex: none; width: 18px; height: 18px; color: var(--accent-ink); }
 .mt-more .mk-minus, .mt-more[aria-expanded="true"] .mk-plus { display: none; }
 .mt-more[aria-expanded="true"] .mk-minus { display: block; }
-.mt-more.open { border-bottom-color: var(--menu-card); border-radius: 16px 16px 0 0; padding-bottom: 25px; margin-bottom: -11px; box-shadow: none; }
+.mt-more.open { border-bottom-color: var(--menu-card); border-radius: 16px 16px 0 0; padding-bottom: 25px; margin-bottom: -11px; box-shadow: 0 2px 0 -1px var(--menu-card); }
 .mt-more.open .mt-k { color: var(--seg-on-ink); }
 .fine-tune-body { margin-top: 10px; padding: 12px 12px 8px; border-radius: 0 0 16px 16px;
   background: var(--menu-card); border: 1px solid var(--menu-card-line); box-shadow: var(--menu-card-drop); transform-origin: top; }
@@ -6040,10 +6041,14 @@ body.player-mode .player-shell { position: static; }
 /* JOINED: the open tile and its choices are one shape. The tile reaches 11px
    down over the 10px gap and the card's top edge, its own bottom edge the
    card's colour, so the seam is not there to see. The outer corner squares off
-   when the tile is at an end. */
+   when the tile is at an end. In dark the card's drop lights its top edge from
+   inside (--menu-card-drop's 1px inset), one row below its border, and that
+   row showed under the open tile as a faint line: the tile's own shadow
+   covers it, 1px under the tile and only as wide as its inside, so where the
+   tile is at an end the card's side edge still runs unbroken. */
 .dp-tile.dp-open {
   border-color: var(--menu-card-line); border-bottom-color: var(--menu-card);
-  border-radius: 16px 16px 0 0; padding-bottom: 19px; margin-bottom: -11px; box-shadow: none;
+  border-radius: 16px 16px 0 0; padding-bottom: 19px; margin-bottom: -11px; box-shadow: 0 2px 0 -1px var(--menu-card);
 }
 .dp-tile.dp-open .dp-k { color: var(--seg-on-ink); }
 .dp-panel {

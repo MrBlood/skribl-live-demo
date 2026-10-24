@@ -16,7 +16,10 @@ The rows:
   restart, the beat, exact times and how it loops, each under its name, and
   what it holds is `hidden` while it is closed (so out of the Tab order too).
   Opening and closing keep the loop. It unfolds and folds away joined to its
-  tile, as the draw drawer's tiles do, and at once under Reduce Motion.
+  tile, as the draw drawer's tiles do, and at once under Reduce Motion. No
+  line shows where they join, read on the screenshot's pixels in light and
+  dark (the card's dark top light, a 1px inset, once showed under the tile),
+  and the card's side edges run unbroken past it.
   Whether it is open is remembered, by the other editor too; the old Adjust
   opens closed.
 
@@ -198,6 +201,35 @@ def set_more(pg, want):
         browsing.wait_scroll_still(pg)
 
 
+# Where More's tile meets what it opens, as painted (verify_drawtiles reads the
+# draw drawer's tiles the same way): the largest step from the card's colour
+# over the rows from the tile's bottom border to 3px into the card, across the
+# tile's inside, and the smallest on each side edge at the joint (0 is a break,
+# which a cover the tile's whole width paints).
+JOINT = """() => { const t = document.getElementById('fineTuneToggle'), p = document.getElementById('fineTuneBody');
+  t.scrollIntoView({ block: 'center', behavior: 'instant' });
+  const a = t.getBoundingClientRect(), z = p.getBoundingClientRect();
+  return { a: [a.left, a.top, a.right, a.bottom], z: [z.left, z.top, z.right, z.bottom], card: getComputedStyle(p).backgroundColor }; }"""
+
+
+def seam(pg, dpr=1):
+    from PIL import Image
+    j = pg.evaluate(JOINT)
+    a, z = j["a"], j["z"]
+    card = [int(v) for v in re.findall(r"\d+", j["card"])[:3]]
+    x0, y0 = min(a[0], z[0]) - 2, a[3] - 6
+    im = Image.open(io.BytesIO(pg.screenshot(clip={"x": x0, "y": y0, "width": max(a[2], z[2]) + 2 - x0, "height": 14}))).convert("RGB")
+    w, h = im.size
+
+    def step(x, y):
+        c = im.getpixel((min(w - 1, max(0, int((x - x0) * dpr))), min(h - 1, max(0, int((y - y0) * dpr)))))
+        return max(abs(c[i] - card[i]) for i in range(3))
+    inside = [a[0] + 2 + i / dpr for i in range(int((a[2] - a[0] - 4) * dpr))]
+    worst = max(step(x, a[3] - 1 + i / dpr) for i in range(int(4 * dpr)) for x in inside)
+    edges = [min(step(col, a[3] - 4 + i / dpr) for i in range(int(8 * dpr))) for col in (a[0] + .5 / dpr, a[2] - .5 / dpr)]
+    return worst, edges
+
+
 def press(pg, sel, ms=200):
     """A real click on a control that may be missing from a broken build: a
     row then says so in red rather than the run stopping on a timeout."""
@@ -242,6 +274,16 @@ with sync_playwright() as pw:
                      tile: !!at && t.contains(at), open: t.classList.contains('open') }; }""")
         check(f"{_n}: open, More's tile and what it opens are one shape, the tile over the card's edge",
               j["open"] and j["same"] and j["tile"] and 0.5 <= j["over"] <= 1.5, str(j))
+        painted = {}
+        for scheme in ("light", "dark"):
+            pg.emulate_media(color_scheme=scheme); pg.wait_for_timeout(150)
+            painted[scheme] = seam(pg)
+        pg.emulate_media(color_scheme="light")
+        check(f"{_n}: no line shows where More's tile meets what it opens, light or dark (painted pixels: the rows "
+              "at the joint are the card's colour), and the card's side edges run unbroken past it",
+              all(w <= 2 and min(e) >= 4 for w, e in painted.values()),
+              "; ".join(f"{s}: largest step from the card at the joint {w} (2 at most), the edges' smallest {e} (4 at least)"
+                        for s, (w, e) in painted.items()))
         set_more(pg, False)
         pg.wait_for_timeout(300)
         tab = pg.evaluate("(ids) => ids.filter((id) => !document.getElementById(id).closest('[hidden]'))", MORE)
