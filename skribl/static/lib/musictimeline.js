@@ -144,7 +144,22 @@
       if ((!held && view !== goal) || (held && held.kind === 'end' && held.zone)) request();
     }
     function request() { if (!raf) raf = global.requestAnimationFrame(frame); }
-    function draw() { if (!raf) { lastT = 0; request(); } }
+    // The words now, the pixels on the next frame: a bubble says its end's
+    // time the moment it moves (a nudge, a typed time), as the strip's did.
+    function draw() { words(); if (!raf) { lastT = 0; request(); } }
+    function words() {
+      if (!h.hasTrack()) return;
+      var t = trim();
+      [[hs, t.start], [he, t.end]].forEach(function (e) {
+        var bub = e[0] && e[0].querySelector('.trim-bubble');
+        if (bub) { var s = clock(e[1]); if (bub.textContent !== s) bub.textContent = s; }
+      });
+      if (nameEl && h.name) {
+        laneNow();
+        var said = h.name(laneSecs);
+        if (nameEl.textContent !== said) nameEl.textContent = said;
+      }
+    }
 
     // Held near the edge an end is dragged toward, the view widens, the far
     // side kept, and the end follows the finger out.
@@ -276,19 +291,14 @@
       x.restore();
 
       // The handles, the words over the drawing and the whole song's line.
+      words();
       [[hs, s0], [he, s1]].forEach(function (e) {
         if (!e[0]) return;
         var at = X(e[1]);
         e[0].style.transform = 'translateX(' + at.toFixed(2) + 'px)';
         e[0].classList.toggle('off', at < -12 || at > w + 12);
-        var bub = e[0].querySelector('.trim-bubble');
-        if (bub) { var s = clock(e[1]); if (bub.textContent !== s) bub.textContent = s; }
       });
-      if (nameEl) {
-        var words = h.name ? h.name(Dd) : '';
-        if (nameEl.textContent !== words) nameEl.textContent = words;
-        nameEl.style.transform = 'translateX(' + Math.max(0, Math.min(w - nameEl.offsetWidth, a0)).toFixed(2) + 'px)';
-      }
+      if (nameEl) nameEl.style.transform = 'translateX(' + Math.max(0, Math.min(w - nameEl.offsetWidth, a0)).toFixed(2) + 'px)';
       if (part && dur > 0) {
         part.style.left = (s0 / dur * 100).toFixed(3) + '%';
         part.style.width = 'max(4px, ' + (L / dur * 100).toFixed(3) + '%)';

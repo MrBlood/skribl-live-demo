@@ -85,9 +85,9 @@ CONTROLS = [
     ("photo fit control",  "#photoFitGroup",   "#photoFitGroup",  ""),
     ("reset photo",        "#resetPhotoBtn",   "#resetPhotoBtn",  ""),
     ("open music drawer",  "#mediaTabMusic",   "#mediaTabMusic",  ""),
-    ("music waveform",     "#waveformCanvas",  "#waveformCanvas", ""),
-    ("music trim start",   "#handleStart",     "#handleStart",    ""),
-    ("music trim end",     "#handleEnd",       "#handleEnd",      ""),
+    ("music timeline",     "#musicTlCanvas",   "#musicTlCanvas",  ""),
+    ("music loop start",   "#tlStart",         "#tlStart",        ""),
+    ("music loop end",     "#tlEnd",           "#tlEnd",          ""),
     ("music drawer's More", "#fineTuneToggle", "#fineTuneToggle", ""),
     # --- canvas / system --------------------------------------------------
     ("canvas size control", "#canvasSeg",      "#canvasSeg",      ""),
@@ -906,39 +906,44 @@ with sync_playwright() as p:
           _pn == _fn == ["Loops under the drawing"] * 4
           and pad.text_content("#musicBtnMeta") == flip.text_content("#musicBtnMeta") == "Loops under the drawing · 0:01",
           f"pad {_pn}, flip {_fn}")
-    check("the trim handles report the same start on both",
-          pad.text_content("#handleStart").strip() == flip.text_content("#handleStart").strip(),
-          f"pad {pad.text_content('#handleStart').strip()!r} against "
-          f"flip {flip.text_content('#handleStart').strip()!r}")
+    check("the loop's ends report the same start on both",
+          pad.text_content("#tlStart").strip() == flip.text_content("#tlStart").strip(),
+          f"pad {pad.text_content('#tlStart').strip()!r} against "
+          f"flip {flip.text_content('#tlStart').strip()!r}")
     check("and the same end, so both read the same duration from the file",
-          pad.text_content("#handleEnd").strip() == flip.text_content("#handleEnd").strip(),
-          f"pad {pad.text_content('#handleEnd').strip()!r} against "
-          f"flip {flip.text_content('#handleEnd').strip()!r}")
+          pad.text_content("#tlEnd").strip() == flip.text_content("#tlEnd").strip(),
+          f"pad {pad.text_content('#tlEnd').strip()!r} against "
+          f"flip {flip.text_content('#tlEnd').strip()!r}")
 
-    # The waveform is drawn, not declared: an empty canvas next to a loaded
+    # The waveform is drawn, not declared: an empty song lane next to a loaded
     # track is exactly the kind of thing an assertion on state would miss.
-    painted = """() => { const c = document.getElementById('waveformCanvas');
+    # The timeline paints its lanes before the song decodes, so what is asked
+    # for is the waveform itself: the accent, solid, across the song lane's
+    # middle band (lib/musictimeline.js draws the loop's peaks in it).
+    painted = """() => { const c = document.getElementById('musicTlCanvas');
         if (!c || !c.width) return false;
-        const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
-        for (let i = 3; i < d.length; i += 4) if (d[i] !== 0) return true;
-        return false; }"""
-    check("the waveform is actually drawn on both",
+        const k = c.width / c.clientWidth, y0 = Math.round(70 * k), y1 = Math.round(90 * k);
+        const d = c.getContext('2d').getImageData(0, y0, c.width, y1 - y0).data;
+        let n = 0;
+        for (let i = 0; i < d.length; i += 4) if (d[i + 3] > 240 && Math.abs(d[i] - 124) < 24 && Math.abs(d[i + 1] - 92) < 24 && d[i + 2] > 220) n++;
+        return n > 40; }"""
+    check("the song's waveform is actually drawn on the timeline on both",
           pad.evaluate(painted) and flip.evaluate(painted),
           f"pad={pad.evaluate(painted)}, flip={flip.evaluate(painted)}")
 
     disclose = """() => { document.getElementById('fineTuneToggle').click(); return true; }"""
     pad.evaluate(disclose); flip.evaluate(disclose)
     pad.wait_for_timeout(500); flip.wait_for_timeout(500)
-    check("More opens the loop detail on both",
-          pad.evaluate(vis, "zoomWaveformCanvas") and flip.evaluate(vis, "zoomWaveformCanvas"),
-          f"pad={pad.evaluate(vis, 'zoomWaveformCanvas')}, "
-          f"flip={flip.evaluate(vis, 'zoomWaveformCanvas')}")
+    check("More opens the Restart view on both",
+          pad.evaluate(vis, "musicRvCanvas") and flip.evaluate(vis, "musicRvCanvas"),
+          f"pad={pad.evaluate(vis, 'musicRvCanvas')}, "
+          f"flip={flip.evaluate(vis, 'musicRvCanvas')}")
 
-    nudge = """() => { const before = document.getElementById('handleStart').textContent.trim();
+    nudge = """() => { const before = document.getElementById('tlStart').textContent.trim();
         const b = document.querySelector('.edge-controls .nudge-btn');
         if (!b) return null;
         b.click();
-        return [before, document.getElementById('handleStart').textContent.trim()]; }"""
+        return [before, document.getElementById('tlStart').textContent.trim()]; }"""
     pn, fn = pad.evaluate(nudge), flip.evaluate(nudge)
     check("a nudge moves the trim edge by the same amount on both",
           pn is not None and fn is not None and pn == fn,
@@ -1273,26 +1278,29 @@ with sync_playwright() as p:
               not any(_off.values()), f"{_off}")
         _q.close()
 
-    # ---- the whole-track strip keeps its drawing when it has no layout ----
-    # lib/loopwave.js drawStrip, one copy since v315. Sizing a canvas from a
-    # 0-wide rect CLEARS it, and decode draws the strip once: with the drawer
-    # shut at that instant the strip stayed blank for the session. The guard
-    # that prevents it was pinned by nothing (removing it left every suite
-    # green). The property, on each editor: a redraw with no layout keeps the
-    # last good bitmap.
-    print("\nPARITY — the music strip survives a redraw with the drawer shut")
-    STRIP = """() => {
-        const buf = currentAudioBuffer;
-        const ink = () => { const c = waveformCanvas; if (!c.width) return 0;
+    # ---- the timeline keeps its drawing when it has no layout ----------------
+    # It was the strip's guard (lib/loopwave.js drawStrip, v315): sizing a
+    # canvas from a 0-wide rect CLEARS it, and with the drawer shut as the song
+    # decoded the strip stayed blank for the session. lib/musictimeline.js
+    # paints only when it has a size, and repaints itself when it gets one (a
+    # ResizeObserver). The property, on each editor: a repaint with no layout
+    # keeps the last good bitmap.
+    print("\nPARITY — the music timeline survives a repaint with the drawer shut")
+    STRIP = """() => new Promise((done) => {
+        const c = document.getElementById('musicTlCanvas'), stage = document.getElementById('musicTlStage');
+        const ink = () => { if (!c.width) return 0;
             const px = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let n = 0;
             for (let i = 3; i < px.length; i += 4) if (px[i]) n++; return n; };
-        const prev = musicTrack.getAttribute('style') || '';
-        if (!musicTrack.getBoundingClientRect().width) return 'the music drawer did not open';
-        drawWaveform(buf); const before = { w: waveformCanvas.width, ink: ink() };
-        musicTrack.setAttribute('style', prev + ';display:none');
-        drawWaveform(buf); const after = { w: waveformCanvas.width, ink: ink() };
-        musicTrack.setAttribute('style', prev);
-        return { before: before, after: after }; }"""
+        const frames = (n, f) => requestAnimationFrame(() => n > 1 ? frames(n - 1, f) : f());
+        const prev = stage.getAttribute('style') || '';
+        if (!stage.getBoundingClientRect().width) { done('the music drawer did not open'); return; }
+        syncMusicDrawer();
+        frames(2, () => { const before = { w: c.width, ink: ink() };
+          stage.setAttribute('style', prev + ';display:none');
+          syncMusicDrawer();
+          frames(3, () => { const after = { w: c.width, ink: ink() };
+            stage.setAttribute('style', prev);
+            done({ before: before, after: after }); }); }); })"""
     for _route in ("/skribl-pad", "/flip"):
         _q = b.new_page(viewport={"width": 900, "height": 1100})
         _q.goto(BASE + _route, wait_until="load"); _q.wait_for_timeout(700)
@@ -1307,7 +1315,7 @@ with sync_playwright() as p:
         browsing.pad_drawer(_q, "music", settle=0)
         _q.wait_for_timeout(900)
         _r = _q.evaluate(STRIP)
-        check(f"{_route}: the strip draws, and a redraw with no layout leaves it drawn",
+        check(f"{_route}: the timeline paints, and a repaint with no layout leaves it painted",
               isinstance(_r, dict) and _r["before"]["ink"] > 500 and _r["after"] == _r["before"], f"{_r}")
         _q.close()
 
@@ -1548,16 +1556,16 @@ with sync_playwright() as p:
                       and ((_g["below"] <= 1 and _g["endPainted"]) or _g["dockClear"] <= 8),
                       f"before {_before}, after {_g}")
                 if _k == "music":
-                    # Fine-tune is not this growth. Its own nudge brings just its waveform on
-                    # screen, and the follower must not chase the card's end past it: showing
-                    # the Fine-tune body moves the follower's baseline. A break of that turned
-                    # nothing above red, so this is what pins it.
+                    # More is not this growth. Its own nudge brings what it opens on screen (the
+                    # Restart view first), and the follower must not chase the card's end past
+                    # it: showing More's body moves the follower's baseline. A break of that
+                    # turned nothing above red, so this is what pins it.
                     _q.click("#fineTuneToggle"); waits.settle(_q, 1800)
-                    _ft = _q.evaluate("""() => { const z = document.getElementById('zoomTrackWrap'), c = document.getElementById('mediaCard');
+                    _ft = _q.evaluate("""() => { const z = document.getElementById('musicRestart'), c = document.getElementById('mediaCard');
                         const vh = window.visualViewport ? window.visualViewport.height : innerHeight;
                         return { wave: Math.round(z.getBoundingClientRect().bottom - vh),
                                  end: Math.round(c.getBoundingClientRect().bottom - vh) }; }""")
-                    check(f"{_route} at {_w}x{_h}: ...and Fine-tune keeps its own nudge: its waveform comes on "
+                    check(f"{_route} at {_w}x{_h}: ...and More keeps its own nudge: the Restart view comes on "
                           "screen and the page does not chase the card's end", _ft["wave"] <= 0 and _ft["end"] > 40, str(_ft))
                 _gc.close()
 

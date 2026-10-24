@@ -19,7 +19,8 @@ driven on BOTH editors, and each was red on one of them before:
     on again mid-Play the Pad's music did not come back;
   * the Pad dropped a switched-off track from its draft and autosave (the song
     was lost), where Flip kept it;
-  * a new track kept the Pad's last zoom, focus and scroll;
+  * a new track kept the Pad's last zoom, focus and scroll (the loop detail's,
+    then; the timeline's view since step 2);
   * the Pad's Preview Loop played at the replay's speed, pitch and all;
   * Flip took a photo named song.mp3 as far as a failed decode;
   * Flip's Play left a preview playing under it;
@@ -71,6 +72,7 @@ def _wav(seconds=6.0, rate=22050, f0=220.0):
 
 TRACK = {"name": "tone.wav", "mimeType": "audio/wav", "buffer": _wav()}
 TRACK2 = {"name": "other.wav", "mimeType": "audio/wav", "buffer": _wav(5.0, f0=330.0)}
+TRACK30 = {"name": "long.wav", "mimeType": "audio/wav", "buffer": _wav(30.0, rate=8000, f0=262.0)}
 # A photo's bytes under a song's name: the type says what it is.
 PNG = bytes.fromhex("89504e470d0a1a0a0000000d4948445200000001000000010806000000"
                     "1f15c4890000000d49444154789c6300010000050001"
@@ -84,6 +86,9 @@ PAGES = """(o) => { frames.length = 0;
   fps = o.fps; idx = 0; buildStrip(); render(); updateToolState(); }"""
 
 STOREKEY = {"Pad": "skribl_autosave_v1", "Flip": "skribl_flip_autosave_v1"}
+# The drawing's length as the timeline's lane counts it (each editor's lane hook).
+DRAWING_S = {"Pad": "() => strokes.length ? getPlaybackDuration() / 1000 : 0",
+             "Flip": "() => frames.some(f => f.strokes.length) ? SkriblHold.plan(frames, fps, docLoop).cycle / 1000 : 0"}
 SAVED_END = "(k) => { try { const d = JSON.parse(localStorage.getItem(k) || 'null'); return d && d.musicMeta ? d.musicMeta.trimEnd : null; } catch (e) { return 'unreadable'; } }"
 
 
@@ -165,9 +170,9 @@ _served = {}
 for _n, _p in EDITORS:
     with urllib.request.urlopen(BASE.rstrip("/") + _p) as _r:
         _served[_n] = _r.read().decode("utf-8")
-check("the Scroll and Crossfade rows are in the drawer's markup as served, on both",
-      all(s.count('id="zoomPanSlider"') == 1 and s.count('id="crossfadeSlider"') == 1 for s in _served.values()),
-      {n: (s.count('id="zoomPanSlider"'), s.count('id="crossfadeSlider"')) for n, s in _served.items()})
+check("the Crossfade row (Smooth restart's length) and the timeline are in the drawer's markup as served, on both, and the loop detail's Scroll is gone",
+      all(s.count('id="crossfadeSlider"') == 1 and s.count('id="musicTimeline"') == 1 and 'id="zoomPanSlider"' not in s for s in _served.values()),
+      {n: (s.count('id="crossfadeSlider"'), s.count('id="musicTimeline"'), s.count('id="zoomPanSlider"')) for n, s in _served.items()})
 check("the Pad's dead \"Plays for\" label is gone (the loop's summary wrote over it on the first trim)",
       "matchDrawingLabel" not in _served["Pad"] and "matchDrawingLabel" not in _code["Pad"],
       "the span, and the three writers that never found it")
@@ -210,22 +215,26 @@ with sync_playwright() as p:
               f"clip {a} s before, after: {z}")
         pg.click("#previewLoopBtn"); pg.wait_for_timeout(200)
         # Test Seam with the crossfade still set: the playhead, read on every
-        # frame, should start in the clip's last 1.25 s, come round, and stop.
-        pg.evaluate("""() => { window.__seen = []; const ph = document.getElementById('playhead');
-            const t0 = performance.now();
-            (function tick() { window.__seen.push([performance.now() - t0, ph.hidden ? null : parseFloat(ph.style.left), previewingLoop]);
+        # frame as the song's time under it on the timeline (its place over
+        # the timeline's view), should start in the clip's last 1.25 s, come
+        # round, and stop.
+        pg.evaluate("""() => { window.__seen = []; const ph = document.getElementById('playhead'), tl = document.getElementById('musicTimeline'),
+              stage = document.getElementById('musicTlStage'), t0 = performance.now();
+            const at = () => { if (ph.hidden) return null; const m = /translateX\\(([-\\d.]+)px\\)/.exec(ph.style.transform), v = (tl.dataset.view || '0 1').split(' ').map(Number);
+              return m ? v[0] + parseFloat(m[1]) / stage.clientWidth * v[1] : null; };
+            (function tick() { window.__seen.push([performance.now() - t0, at(), previewingLoop]);
               if (performance.now() - t0 < 4500) requestAnimationFrame(tick); })(); }""")
         pg.click("#testSeamBtn"); pg.wait_for_timeout(4800)
         seen = pg.evaluate("() => window.__seen")
         tr = pg.evaluate("() => [trimStart, trimEnd, audioDuration, loopCrossfadeMs]")
         shown = [v for _, v, _ in seen if v is not None]
-        clip_end = (tr[1] - tr[3] / 1000) / tr[2] * 100
-        first_ok = bool(shown) and shown[0] >= (clip_end - (1.25 + 0.3) / tr[2] * 100)
-        came_round = any(shown[j] < shown[j - 1] - 5 for j in range(1, len(shown)))   # it went back
+        clip_end = tr[1] - tr[3] / 1000
+        first_ok = bool(shown) and shown[0] >= clip_end - (1.25 + 0.3)
+        came_round = any(shown[j] < shown[j - 1] - 0.3 for j in range(1, len(shown)))   # it went back
         stopped = bool(seen) and seen[-1][2] is False and seen[-1][1] is None
         check(f"{_n}: Hear the restart plays the join, smooth restart and all: the loop's end, then its start, then it stops",
               first_ok and came_round and stopped,
-              f"first {shown[:1]} (join at {clip_end:.0f}%), came round {came_round}, stopped {stopped}, "
+              f"first {[round(x, 2) for x in shown[:1]]}s (the join at {clip_end:.2f}s), came round {came_round}, stopped {stopped}, "
               f"{len(shown)} frames with the playhead shown")
         pg.close()
 
@@ -259,20 +268,20 @@ with sync_playwright() as p:
 
     print("\nMUSIC — the loop's edges are saved where they land")
     for _n, _p in EDITORS:
-        # The strip only: More open glides what it opens into view, and the
-        # strip with it out of view, above.
+        # The timeline only: More open glides what it opens into view, and the
+        # timeline with it out of view, above.
         pg = editor(b, _n, _p, more=False)
         pg.wait_for_timeout(1800)                        # the add's own save lands first
         before = pg.evaluate(SAVED_END, STOREKEY[_n])
-        r = pg.evaluate("() => { const h = document.getElementById('handleEnd').getBoundingClientRect(), t = document.getElementById('musicTrack').getBoundingClientRect();"
+        r = pg.evaluate("() => { const h = document.getElementById('tlEnd').getBoundingClientRect(), t = document.getElementById('musicTlStage').getBoundingClientRect();"
                         " return { hx: h.x + h.width / 2, hy: h.y + h.height / 2, tx: t.x, tw: t.width, ty: t.y + t.height }; }")
         pg.mouse.move(r["hx"], r["hy"]); pg.mouse.down()
-        pg.mouse.move(r["tx"] + r["tw"] * 0.5, r["hy"], steps=8)
-        pg.mouse.move(r["tx"] + r["tw"] * 0.25, r["ty"] + 140, steps=6)    # off the strip
+        pg.mouse.move(r["tx"] + r["tw"] * 0.3, r["hy"], steps=8)
+        pg.mouse.move(r["tx"] + r["tw"] * 0.2, r["ty"] + 140, steps=6)    # off the timeline
         pg.mouse.up()
         pg.wait_for_timeout(1900)
         live, after = pg.evaluate("() => trimEnd"), pg.evaluate(SAVED_END, STOREKEY[_n])
-        check(f"{_n}: a loop's edge dragged and let go off the strip is saved",
+        check(f"{_n}: a loop's edge dragged and let go off the timeline is saved",
               isinstance(after, (int, float)) and abs(after - live) < 0.02 and abs(live - (before or 0)) > 0.3,
               f"saved {before} before, {after} after; the loop's end is {live}")
         pg.close()
@@ -365,18 +374,34 @@ with sync_playwright() as p:
     pg.close()
 
     print("\nMUSIC — a new track, a new view")
+    # The timeline's view (lib/musictimeline.js, data-view: the time at its
+    # left edge and the seconds across): widened by an end held at its edge,
+    # then a new song. It starts where it belongs for the new loop: its start
+    # 9% in, and 1.28 times the longer of the loop and the drawing across.
+    VIEW = "() => (document.getElementById('musicTimeline').dataset.view || '').split(' ').map(Number)"
     for _n, _p in EDITORS:
-        pg = editor(b, _n, _p)
-        fine(pg)
-        pg.click("#zoomMagIn"); pg.click("#zoomMagIn"); slide(pg, "#zoomPanSlider", 800); pg.wait_for_timeout(150)
-        moved = pg.evaluate("() => [zoomMag, zoomFocus]")
+        pg = editor(b, _n, _p, track=False, more=False)
+        browsing.pad_drawer(pg, "music")
+        pg.set_input_files("#musicInput", TRACK30)
+        pg.wait_for_function("() => Math.abs(audioDuration - 30) < 0.05 && !!currentAudioBuffer", timeout=20000)
+        pg.evaluate("() => { trimStart = 0; trimEnd = 4; loopCrossfadeMs = 0; setCrossfadeUI(); updateTrimUI(); }")
+        pg.evaluate("() => document.getElementById('musicTimeline').scrollIntoView({ block: 'center' })"); pg.wait_for_timeout(500)
+        was = pg.evaluate(VIEW)
+        r = pg.evaluate("() => { const h = document.getElementById('tlEnd').getBoundingClientRect(), t = document.getElementById('musicTlStage').getBoundingClientRect();"
+                        " return { hx: h.x + h.width / 2, hy: h.y + h.height / 2, right: t.right }; }")
+        pg.mouse.move(r["hx"], r["hy"]); pg.mouse.down()
+        pg.mouse.move(r["right"] - 3, r["hy"], steps=6); pg.wait_for_timeout(700)
+        wide = pg.evaluate(VIEW)
+        pg.mouse.up(); pg.wait_for_timeout(100)
         pg.set_input_files("#musicInput", TRACK2)
-        pg.wait_for_function("() => Math.abs(audioDuration - 5) < 0.05", timeout=20000); pg.wait_for_timeout(500)
-        v = pg.evaluate("() => ({ mag: zoomMag, focus: zoomFocus, center: zoomCenter, val: document.getElementById('zoomMagVal').textContent,"
-                        " lit: [...document.querySelectorAll('.zoom-mag-btn.on')].map(b => b.dataset.focus) })")
-        check(f"{_n}: a new track starts on its whole loop at 1x (the last song's zoom and scroll were kept)",
-              moved[0] > 1 and moved[1] == "free" and v["mag"] == 1 and v["focus"] == "loop" and v["center"] is None
-              and v["val"] == "1×" and v["lit"] == ["loop"], f"before {moved}, after {v}")
+        pg.wait_for_function("() => Math.abs(audioDuration - 5) < 0.05", timeout=20000); pg.wait_for_timeout(800)
+        v, t = pg.evaluate(VIEW), pg.evaluate("() => ({ s: trimStart, e: trimEnd })")
+        d = pg.evaluate(DRAWING_S[_n])
+        L = t["e"] - t["s"]
+        span = 1.28 * max(L, min(d, 3 * L))
+        check(f"{_n}: a new track starts the timeline where it belongs for its loop (the last song's widened view is not kept)",
+              wide[1] > was[1] * 1.1 and abs(v[1] - span) < 1e-3 and abs(v[0] - (t["s"] - 0.09 * span)) < 1e-3,
+              f"view {was} widened to {wide}; after the new song {v}, want start {t['s'] - 0.09 * span:.4f} and {span:.4f} across")
         pg.close()
 
     print("\nMUSIC — Flip's own")

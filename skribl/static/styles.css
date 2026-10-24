@@ -2476,7 +2476,7 @@ body.recoloring #canvas { cursor: crosshair !important; }
    paper inside More's card (a card in a card would be a box in a box), its
    two words in its top corners and the blend's dot at its foot, whose tap
    band is 44px. A finger that moves up or down first scrolls the page. */
-.mt-rv { position: relative; height: 112px; margin-top: 6px; border-radius: 10px; background: var(--menu-paper);
+.mt-rv { position: relative; height: 112px; margin-top: 8px; border-radius: 10px; background: var(--menu-paper);
   overflow: hidden; touch-action: pan-y; -webkit-user-select: none; user-select: none; cursor: ew-resize; }
 .mt-rv-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 .mt-rv-tag { position: absolute; top: 6px; left: 8px; font-size: 12px; font-weight: 600; line-height: 1.2;
