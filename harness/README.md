@@ -462,8 +462,9 @@ stays a sleep.
   the restart (the Restart view among it), the beat, exact times and how it
   loops (Cut on silence and Lock the length), each under its name,
   joined to its tile, hides them with `hidden` when closed, keeps the loop,
-  unfolds and folds away (at once under Reduce Motion), and is remembered by
-  both editors, a saved Adjust opening it closed; a new song starts on
+  unfolds and folds away (at once under Reduce Motion), and starts closed
+  every time (on a load, the old remembered key too, and every opening of the
+  drawer, Photo and back included); a new song starts on
   Skribl's pick (the first 20 seconds or the whole song, on the Pad as long as
   a drawing already there, with a smooth restart), and a draft's song keeps
   its own loop; the one line says the length heard, its beats and against the
@@ -473,13 +474,15 @@ stays a sleep.
   smooth restart, and its seconds agree with the line's; Whole song says when
   it is the longest loop; with nothing drawn Fit is off and wakes with a
   drawing; Smooth restart's switch keeps its last length; typed times, - and +
-  (0.1s, or a bar once there is a tempo, and say which) and Lock the length;
+  as far as Each press says (untouched 0.1s, or a bar once there is a tempo;
+  0.01s or 0.1s picked and kept; a bar dimmed until there is a tempo; a new
+  song untouched; the buttons' names say the step) and Lock the length;
   16px fields; Play with my drawing is the editor's Play, and waits with
   nothing drawn; More opened as a song lands keeps its tile in sight, and
-  closing it from the drawer's end glides; opened with More open, the drawer
-  starts at its top, the bar just under the header, on a phone and a short one
-  (a drawer that fits still shows its end), and a person who scrolls on as it
-  opens is left where they scrolled to; a song landing as it opens is the
+  closing it from the drawer's end glides; a drawer taller than the screen
+  (on a 390x640 phone) opens at its top, the bar just under the header, one
+  that fits (on the owner's phone) shows its end, and a person who scrolls on
+  as it opens is left where they scrolled to; a song landing as it opens is the
   newer reveal, and nothing pulls the page back after it; a draft opened says
   its own smooth restart, the switch, its words and its length agreeing with
   the line.

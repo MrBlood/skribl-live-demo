@@ -22774,3 +22774,49 @@ readings). The drawer broken in a copy served to the browser: the time to the
 ear left out (the beat 42ms late), and the beat not the taps' own (fixed at
 0): red on the Pad and Flip, two runs each. The same file served unchanged:
 green.
+
+## After v329 -- More starts closed every time; Each press picks how far - and + move
+
+Two of the owner's questions from the phone, and the picks. "More starts
+open": it remembered an old Fine-tune, and with More open the music drawer is
+taller than a phone. Of always closed, closed today then remembered, or left
+remembering, the pick was always closed. Then "How to adjust step?", of Exact
+times' "- and + move 0.1s.": the streamline had made the step automatic (0.1s,
+or a bar once there is a tempo; before it, Each tap had five steps). Of
+leaving it, a small choice under the times, or holding for finer, the pick
+was the choice.
+
+MORE STARTS CLOSED, EVERY TIME (lib/musicdrawer.js): on a load, the old
+remembered key on file too, and whenever the music panel is put away (the
+drawer closed, or Photo picked), when it closes at once, with nothing of it
+on the screen to fold. Nothing remembers it, so the drawer opens on its one
+view, which fits the owner's phone.
+
+EACH PRESS, under the times: one pill (lib/segslider.js), 0.01s, 0.1s or a
+bar, the bar dimmed until there is a tempo, as a dimmed button is. Untouched
+it is the step it was, 0.1s, and a bar once the beat is tapped; a step
+picked is kept, a tempo or not; a new song starts untouched. The buttons'
+names say the step ("End of loop, 0.01s later"); the line that said it went.
+
+Pad and Flip: shared, the template and lib/musicdrawer.js.
+
+The tall-drawer fix's rows opened the drawer with More open to make it taller
+than a phone, which can no longer happen. The music drawer is still taller
+than a 390x640 phone with More closed (its end at 747px on 640), so that is
+the tall case now and the owner's 402x874, where it fits, the other; and a
+scroll on there moves the page about 90px, so the row asks 40, not 100.
+
+TESTS. verify_musicmore: More starts closed (a load with the old key on
+file, the drawer opened again, Photo and back); untouched, - and + move 0.1s
+or a bar and say which; Each press picks the step and keeps it, a tempo or
+not; a new song starts untouched. The tall-drawer rows as above.
+verify_musicbeat reads the name's contrast, verify_sheetswipe the row's air,
+verify_helpclaims the new rows. CALIBRATION, each part broken in a copy
+served to the browser, the file on disk untouched: the old key read back and
+the panel not watched (More's row red on both editors each time), the pick
+ignored, a bar never dimmed, the pick not forgotten for a new song, the
+buttons' names stale, the wheel not calling the opening off, and the cap
+taken out of the opening; each red on its own rows, and the same file served
+unchanged green. One row was wrong at first: the new song's row picked 0.1s
+before the new song, which untouched looks the same as, so it stayed green
+with the reset gone; it picks 0.01s now.

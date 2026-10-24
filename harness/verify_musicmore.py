@@ -22,8 +22,8 @@ The rows:
   line shows where they join, read on the screenshot's pixels in light and
   dark (the card's dark top light, a 1px inset, once showed under the tile),
   and the card's side edges run unbroken past it.
-  Whether it is open is remembered, by the other editor too; the old Adjust
-  opens closed.
+  It starts closed every time: on a load (the old remembered key too), and on
+  every opening of the drawer, Photo and back included.
 
   THE ONE LINE. A new song starts on Skribl's pick: the first 20 seconds (the
   whole song when it is shorter), with a smooth restart; on the Pad a drawing
@@ -45,8 +45,10 @@ The rows:
   the line counts what is heard.
 
   EXACT TIMES. A typed time moves its end (a comma is a point); a time that
-  is not one puts the loop's own back. - and + move 0.1s, or a bar once there
-  is a tempo, and their names and the line under them say which. Lock the
+  is not one puts the loop's own back. - and + move as far as Each press
+  says: untouched 0.1s, or a bar once there is a tempo; 0.01s or 0.1s picked
+  and kept; a bar dimmed until there is a tempo; a new song untouched. Their
+  names say the step. Lock the
   length moves both ends together. Every field that takes text is 16px (A11Y
   11b; these are built hidden).
 
@@ -140,7 +142,8 @@ SAID = """() => { const q = (id) => document.getElementById(id);
   return { line: q('musicPickText').textContent, tag: !q('musicPickTag').hidden, back: !q('musicBackPick').hidden, undo: !q('musicPickUndo').hidden,
            fit: q('matchDrawingBtn').getAttribute('aria-pressed'), fitOff: q('matchDrawingBtn').disabled, fitSub: q('musicFitSub').textContent,
            whole: q('musicWholeBtn').getAttribute('aria-pressed'), wholeName: q('musicWholeName').textContent, wholeSub: q('musicWholeSub').textContent,
-           play: q('musicPlayLabel').textContent, step: q('musicStepLine').textContent,
+           play: q('musicPlayLabel').textContent,
+           step: [...document.querySelectorAll('#musicStepSeg button')].map(b => (b.classList.contains('on') ? '*' : '') + b.textContent + (b.disabled ? ' (dim)' : '')).join(' · '),
            smooth: q('musicSmooth').getAttribute('aria-checked'), smoothSub: q('musicSmoothSub').textContent }; }"""
 # Shown: no [hidden] on the way up, and a box. Hidden: a [hidden] on the way up.
 SHOWN = """(ids) => ids.filter((id) => { const el = document.getElementById(id);
@@ -151,7 +154,7 @@ SIGHT = """() => { const s = document.getElementById('fineTuneToggle').getBoundi
   return { seg: Math.round(s.top), header: Math.round(top), vh: innerHeight }; }"""
 VIEW = ["musicTimeline", "musicPickLine", "musicPlayBtn", "previewLoopBtn", "matchDrawingBtn", "musicWholeBtn", "fineTuneToggle"]
 MORE = ["fineTuneBody", "musicSmooth", "musicRestart", "crossfadeSlider", "testSeamBtn", "musicTapBtn",
-        "startReadout", "endReadout", "musicStepLine", "musicCut", "musicLock"]
+        "startReadout", "endReadout", "musicStepSeg", "musicCut", "musicLock"]
 ALL = sorted(set(VIEW + MORE))
 SECTIONS = ["The restart", "The beat", "Exact times", "How it loops"]
 
@@ -385,22 +388,28 @@ with sync_playwright() as pw:
               fr and not [f for f in fr if not f[0] and f[1] < 0.999] and any(not f[0] for f in fr) and fr[-1][0], f"{len(fr)} frames, {fr[:3]} ... {fr[-2:]}")
         c.close()
 
-    # Open or closed is one choice, kept for both editors (one origin, one key);
-    # the old middle level, Adjust, opens closed.
-    if part("more") and not ONLY:
+    # MORE STARTS CLOSED, EVERY TIME (the owner, finding it open from an old
+    # Fine-tune: "More starts open"; then the pick, always closed): on a load,
+    # the old remembered key on file too, and on every opening of the drawer,
+    # whether it was closed or Photo was picked. Nothing remembers it.
+    STATE = "() => [document.getElementById('fineTuneToggle').getAttribute('aria-expanded'), document.getElementById('fineTuneBody').hidden]"
+    for _n, _p in eds("more"):
         c = waits.instrument(b.new_context(**DESK))
-        _, pad, _ = editor(b, "Pad", "/", ctx=c, drawn=False)
-        set_more(pad, True)
-        pad.reload(); browsing.goto(pad, BASE, "/"); add(pad, SHORT)
-        again = pad.evaluate("() => [document.getElementById('fineTuneToggle').getAttribute('aria-expanded'), document.getElementById('fineTuneBody').hidden]")
-        _, flip, _ = editor(b, "Flip", "/flip", ctx=c, drawn=False)
-        there = flip.evaluate("() => [document.getElementById('fineTuneToggle').getAttribute('aria-expanded'), document.getElementById('fineTuneBody').hidden]")
-        flip.evaluate("() => localStorage.setItem('skribl_music_level', 'adjust')")
-        flip.reload(); browsing.goto(flip, BASE, "/flip"); add(flip, SHORT)
-        adj = flip.evaluate("() => [document.getElementById('fineTuneToggle').getAttribute('aria-expanded'), document.getElementById('fineTuneBody').hidden]")
-        check("whether More is open is remembered, on the other editor too, and the old Adjust opens it closed",
-              again == ["true", False] and there == ["true", False] and adj == ["false", True],
-              f"Pad after a reload {again}; Flip {there}; a saved Adjust {adj}")
+        _, pg, _ = editor(b, _n, _p, ctx=c, drawn=False)
+        set_more(pg, True)
+        opened = pg.evaluate(STATE)
+        pg.evaluate("() => localStorage.setItem('skribl_music_level', 'fine')")
+        pg.reload(); browsing.goto(pg, BASE, _p); add(pg, SHORT)
+        loaded = pg.evaluate(STATE)
+        set_more(pg, True)
+        browsing.pad_drawer_close(pg); browsing.pad_drawer(pg, "music")
+        reopened = pg.evaluate(STATE)
+        set_more(pg, True)
+        pg.click("#mediaTabPhoto"); pg.wait_for_timeout(300); pg.click("#mediaTabMusic"); pg.wait_for_timeout(300)
+        back = pg.evaluate(STATE)
+        check(f"{_n}: More starts closed every time: on a load, the old remembered key too; the drawer opened again; Photo and back",
+              opened == ["true", False] and loaded == reopened == back == ["false", True],
+              f"opened {opened}; after a reload {loaded}; the drawer opened again {reopened}; Photo and back {back}")
         c.close()
 
     print("\nMUSIC MORE — Skribl's pick, and the one line")
@@ -644,7 +653,9 @@ with sync_playwright() as pw:
         check(f"{_n}: a typed time moves its end, and a time that is not one puts it back",
               abs(t1["e"] - 4.25) < 1e-9 and t2 == t1 and v2 == "4.250" and abs(t3["s"] - 1.5) < 1e-9 and v3 == "1.500",
               f"4.25 -> {t1['e']}; 'soon' -> {t2['e']} shown {v2!r}; '1,5' -> {t3['s']} shown {v3!r}")
-        # - and +: 0.1s a press, or a bar once there is a tempo; their names and the line say which.
+        # - and +: as far as Each press says. Untouched it is 0.1s, or a bar
+        # once there is a tempo; the pill shows which, and the buttons' names
+        # say it.
         NAMES = "() => [...document.querySelectorAll('.nudge-btn[data-which]')].map(b => b.getAttribute('aria-label'))"
         e0, n0, l0 = pg.evaluate("() => trimEnd"), pg.evaluate(NAMES), pg.evaluate(SAID)["step"]
         pg.click('.nudge-btn[data-which="end"][data-amount="1"]'); pg.wait_for_timeout(150)
@@ -653,11 +664,35 @@ with sync_playwright() as pw:
         n1, l1 = pg.evaluate(NAMES), pg.evaluate(SAID)["step"]
         pg.click('.nudge-btn[data-which="end"][data-amount="-1"]'); pg.wait_for_timeout(150)
         e2 = pg.evaluate("() => trimEnd")
-        check(f"{_n}: - and + move 0.1s, or a bar once there is a tempo, and say which",
-              abs((e1 - e0) - 0.1) < 1e-9 and abs((e1 - e2) - 2.0) < 1e-9 and l0 == "\u2212 and + move 0.1s." and l1 == "\u2212 and + move a bar, 2.00s."
+        check(f"{_n}: untouched, - and + move 0.1s, or a bar once there is a tempo, and say which",
+              abs((e1 - e0) - 0.1) < 1e-9 and abs((e1 - e2) - 2.0) < 1e-9
+              and l0 == "0.01s · *0.1s · a bar (dim)" and l1 == "0.01s · 0.1s · *a bar"
               and n0 == ["Start of loop, 0.1s earlier", "Start of loop, 0.1s later", "End of loop, 0.1s earlier", "End of loop, 0.1s later"]
               and n1 == ["Start of loop, a bar earlier", "Start of loop, a bar later", "End of loop, a bar earlier", "End of loop, a bar later"],
-              f"+ moved the end {e1 - e0:.4f}s, then - at 120 a minute {e1 - e2:.4f}s; {l0!r} then {l1!r}; {n0} then {n1}")
+              f"+ moved the end {e1 - e0:.4f}s, then - at 120 a minute {e1 - e2:.4f}s; Each press {l0!r} then {l1!r}; {n0} then {n1}")
+        # Picked, a step is kept, a tempo or not, and a new song starts untouched.
+        pg.evaluate("() => { musicTempo = null; updateTrimUI(); }"); pg.wait_for_timeout(150)
+        pg.click('#musicStepSeg button[data-step="0.01"]'); pg.wait_for_timeout(150)
+        f0 = pg.evaluate("() => trimEnd")
+        pg.click('.nudge-btn[data-which="end"][data-amount="-1"]'); pg.wait_for_timeout(150)
+        f1, m1, k1 = pg.evaluate("() => trimEnd"), pg.evaluate(NAMES), pg.evaluate(SAID)["step"]
+        pg.evaluate("() => { musicTempo = { bpm: 120, phase: 0 }; updateTrimUI(); }"); pg.wait_for_timeout(150)
+        k2 = pg.evaluate(SAID)["step"]
+        pg.click('#musicStepSeg button[data-step="0.1"]'); pg.wait_for_timeout(150)
+        pg.click('.nudge-btn[data-which="end"][data-amount="-1"]'); pg.wait_for_timeout(150)
+        f2, k3 = pg.evaluate("() => trimEnd"), pg.evaluate(SAID)["step"]
+        check(f"{_n}: Each press picks the step and keeps it, a tempo or not",
+              abs((f0 - f1) - 0.01) < 1e-9 and abs((f1 - f2) - 0.1) < 1e-9
+              and k1 == "*0.01s · 0.1s · a bar (dim)" and k2 == "*0.01s · 0.1s · a bar" and k3 == "0.01s · *0.1s · a bar"
+              and m1 == ["Start of loop, 0.01s earlier", "Start of loop, 0.01s later", "End of loop, 0.01s earlier", "End of loop, 0.01s later"],
+              f"0.01s picked: - moved {f0 - f1:.4f}s ({k1!r}, {m1}); a tempo: {k2!r}; 0.1s picked with it: - moved {f1 - f2:.4f}s ({k3!r})")
+        # 0.01s picked first: 0.1s kept would look untouched.
+        pg.click('#musicStepSeg button[data-step="0.01"]'); pg.wait_for_timeout(150)
+        k5 = pg.evaluate(SAID)["step"]
+        add(pg, LONG)
+        k4 = pg.evaluate(SAID)["step"]
+        check(f"{_n}: a new song starts on the untouched step",
+              k5.startswith("*0.01s") and k4 == "0.01s · *0.1s · a bar (dim)", f"0.01s picked ({k5!r}), then a new song: {k4!r}")
         pg.evaluate("() => { musicTempo = null; updateTrimUI(); }"); pg.wait_for_timeout(100)
         pg.click("#musicLock"); pg.wait_for_timeout(100)
         l0 = pg.evaluate(TRIM)
@@ -779,53 +814,54 @@ with sync_playwright() as pw:
               len(tops) > 20 and moved > 40 and max(steps) < 0.45 * moved,
               f"moved {moved:.0f}px over {len(tops)} frames, the biggest frame {max(steps) if steps else 0:.0f}px")
         c.close()
-    # OPENED WITH MORE OPEN, THE DRAWER STARTS AT ITS TOP (the owner's iPhone:
+    # A DRAWER TALLER THAN THE SCREEN OPENS AT ITS TOP (the owner's iPhone:
     # "When you click the media button and click music it open all the way to
-    # the bottom?"). More open is remembered, and with it the drawer is taller
-    # than a phone; the open scrolled its end to the screen's foot, which took
-    # the tabs, the song and the strip up under the header. Now the bar above
-    # the drawer stays under the header, as a song landing already left it
-    # (lib/drawerdetent.js), on the owner's phone and a short one; a drawer
-    # that fits still opens with its end on screen; and a person who scrolls
-    # on as it opens is left where they scrolled to. Media and Music tapped as
-    # a person taps them, the page at rest at its top first.
+    # the bottom?"). The open scrolled the drawer's end to the screen's foot,
+    # which took the tabs, the song and the strip up under the header; More
+    # was open then, remembered, and More starts closed now, but the music
+    # drawer is still taller than a 390x640 phone. The bar above the drawer
+    # stays under the header, as a song landing already left it
+    # (lib/drawerdetent.js); on the owner's phone, where the drawer fits, it
+    # opens with its end on screen; and a person who scrolls on as it opens
+    # is left where they scrolled to. Media and Music tapped as a person taps
+    # them, the page at rest at its top first.
     TOP = """() => { const h = document.querySelector('.header'), q = (s) => document.querySelector(s).getBoundingClientRect();
       const head = h && ['sticky', 'fixed'].includes(getComputedStyle(h).position) ? h.getBoundingClientRect().bottom : 0;
       const dock = document.querySelector('#toolBar, .flip-tools');
       return { head: Math.round(head), dock: Math.round(dock.getBoundingClientRect().top), tabs: Math.round(q('#mediaTabs').top),
                end: Math.round(q('#mediaCard').bottom), vh: Math.round(visualViewport ? visualViewport.height : innerHeight), y: Math.round(scrollY) }; }"""
-    for _n, _p in eds("kind"):
-        for dev, o in (("phone", PHONE), ("short phone", dict(PHONE, viewport={"width": 390, "height": 640}))):
-            c, pg, _ = editor(b, _n, _p, opts=o, more=True)
-            browsing.pad_drawer_close(pg)
-            pg.wait_for_function("() => window.scrollY === 0", timeout=5000); pg.wait_for_timeout(300)
-            pg.click("#mediaOpenBtn"); pg.wait_for_timeout(150)
-            if pg.get_attribute("#mediaTabMusic", "aria-selected") != "true":
-                pg.click("#mediaTabMusic")
-            pg.wait_for_timeout(1500)                  # past every re-assert there is
-            tall = pg.evaluate(TOP)
-            pg.click("#mediaTabPhoto"); pg.wait_for_timeout(1500)
-            fits = pg.evaluate(TOP)
-            check(f"{_n}: opened with More open, the drawer starts at its top: the bar under the header, the tabs on screen ({dev})",
-                  tall["end"] > tall["vh"] and tall["head"] - 1 <= tall["dock"] <= tall["head"] + 12 and tall["head"] <= tall["tabs"] < tall["vh"]
-                  and fits["end"] <= fits["vh"] + 1 and fits["dock"] >= fits["head"] - 1,
-                  f"Music with More open (its end at {tall['end']} on a {tall['vh']}px screen): {tall}; Photo, which fits: {fits}")
-            c.close()
-    for _n, _p in eds("kind"):
-        c, pg, _ = editor(b, _n, _p, opts=PHONE, more=True)
+    SHORT_PHONE = dict(PHONE, viewport={"width": 390, "height": 640})
+    def reopen(pg, settle):
         browsing.pad_drawer_close(pg)
         pg.wait_for_function("() => window.scrollY === 0", timeout=5000); pg.wait_for_timeout(300)
         pg.click("#mediaOpenBtn"); pg.wait_for_timeout(150)
         if pg.get_attribute("#mediaTabMusic", "aria-selected") != "true":
             pg.click("#mediaTabMusic")
-        pg.wait_for_timeout(250)
+        pg.wait_for_timeout(settle)
+    for _n, _p in eds("kind"):
+        got = {}
+        for dev, o in (("short phone", SHORT_PHONE), ("phone", PHONE)):
+            c, pg, _ = editor(b, _n, _p, opts=o)
+            reopen(pg, 1500)                           # past every re-assert there is
+            got[dev] = pg.evaluate(TOP)
+            c.close()
+        tall, fits = got["short phone"], got["phone"]
+        check(f"{_n}: a drawer taller than the screen opens at its top, the bar under the header and the tabs on screen; one that fits shows its end",
+              tall["end"] > tall["vh"] and tall["head"] - 1 <= tall["dock"] <= tall["head"] + 12 and tall["head"] <= tall["tabs"] < tall["vh"]
+              and fits["end"] <= fits["vh"] + 1 and fits["dock"] >= fits["head"] - 1,
+              f"390x640, the drawer's end at {tall['end']} on a {tall['vh']}px screen: {tall}; 402x874, where it fits: {fits}")
+    # (With More closed the 390x640 page has about 90px left below the
+    # opening's place, so a scroll on is 40px or more, not the 100 there was.)
+    for _n, _p in eds("kind"):
+        c, pg, _ = editor(b, _n, _p, opts=SHORT_PHONE)
+        reopen(pg, 250)
         at = pg.evaluate(TOP)
-        pg.mouse.move(200, 600); pg.mouse.wheel(0, 300); pg.wait_for_timeout(150)
+        pg.mouse.move(200, 500); pg.mouse.wheel(0, 300); pg.wait_for_timeout(150)
         put = pg.evaluate(TOP)
         pg.wait_for_timeout(1500)
         left = pg.evaluate(TOP)
         check(f"{_n}: a person who scrolls on as the drawer opens is left where they scrolled to",
-              put["y"] > at["y"] + 100 and abs(left["y"] - put["y"]) <= 2,
+              put["y"] > at["y"] + 40 and abs(left["y"] - put["y"]) <= 2,
               f"opening at {at['y']}, scrolled on to {put['y']}, then {left['y']} once the opening's re-asserts were done")
         c.close()
     # A SONG LANDING IS THE NEWER REVEAL (main went red after the fix above:

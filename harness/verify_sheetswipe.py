@@ -625,7 +625,7 @@ with sync_playwright() as p:
             const sw = (id) => document.getElementById(id).closest('.mt-switch').querySelector('.mt-switch-words').getBoundingClientRect();
             const rows = [['smooth restart', sw('musicSmooth')], ['restart view', q('#musicRestart')], ['its hint', q('#musicRvHint')],
                           ['length', q('.crossfade-row')], ['hear the restart', q('#testSeamBtn')], ['tap', q('.mt-tap-row')],
-                          ['start/end', q('.edge-group')], ['step line', q('#musicStepLine')], ['cut on silence', sw('musicCut')], ['lock', sw('musicLock')]];
+                          ['start/end', q('.edge-group')], ['each press', q('.mt-step')], ['cut on silence', sw('musicCut')], ['lock', sw('musicLock')]];
             return rows.slice(1).map((r, i) => [rows[i][0] + ' -> ' + r[0], Math.round(r[1].top - rows[i][1].bottom)]); }""")
         check(f"{who}: every row of what More opens has at least 8px above it",
               all(g >= 8 for _, g in gaps), str(gaps))

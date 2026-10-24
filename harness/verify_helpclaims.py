@@ -174,7 +174,7 @@ CLAIMS = {
                       "verify_musicbeat.py::the song slid under the drawing settles the loop's start on a beat, its length kept"],
     "More": ["verify_musicmore.py::More opens the restart, the beat, exact times and how it loops",
              "verify_musicmore.py::opening and closing More keeps the loop",
-             "verify_musicmore.py::whether More is open is remembered, on the other editor too"],
+             "verify_musicmore.py::More starts closed every time"],
     "Skribl's pick": ["verify_musicmore.py::a new song starts on Skribl's pick",
                       "verify_musicmore.py::the one line says the length heard, bold, its beats once there is a tempo",
                       "verify_musicmore.py::Back to Skribl's pick puts it back, and its Undo undoes that"],
@@ -212,7 +212,8 @@ CLAIMS = {
                                "verify_musicmore.py::with nothing drawn, Play with my drawing waits"],
     "Start and end": ["verify_parity.py::a nudge moves the trim edge by the same amount on both",
                       "verify_musicmore.py::a typed time moves its end, and a time that is not one puts it back",
-                      "verify_musicmore.py::- and + move 0.1s, or a bar once there is a tempo, and say which",
+                      "verify_musicmore.py::untouched, - and + move 0.1s, or a bar once there is a tempo, and say which",
+                      "verify_musicmore.py::Each press picks the step and keeps it, a tempo or not",
                       "verify_musicmore.py::Lock the length moves both ends together"],
     # Background image
     "Add a photo": ["verify_parity.py::loading a photo marks the tab on both", "probe:media_tabs",

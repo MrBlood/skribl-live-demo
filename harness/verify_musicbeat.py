@@ -188,7 +188,7 @@ CONTRAST = """() => {
     return ratio(over({ ...c, a: c.a * (bg ? +cs.opacity : 1) }, g), g); };
   const q = (s) => document.querySelector(s);
   return { line: ink(q('#musicPickText')), length: ink(q('#musicPickText b')), pick: ink(q('#musicPickTag')), tempo: ink(q('#musicTempo')),
-           tap: ink(q('#musicTapWords')), hear: ink(q('#previewLoopBtn .tp-k')), step: ink(q('#musicStepLine')),
+           tap: ink(q('#musicTapWords')), hear: ink(q('#previewLoopBtn .tp-k')), press: ink(q('#musicStepLbl')),
            more: ink(q('#fineTuneToggle .mt-v')) }; }"""
 
 
