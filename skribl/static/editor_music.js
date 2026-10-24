@@ -133,7 +133,7 @@ musicInput.addEventListener('change', async (e) => {
     // levels are one tap away. Skipped while restoring saved trim from an
     // autosave/draft, so a user's chosen loop is never overwritten.
     const _restoringTrim = (typeof pendingMusicMeta !== 'undefined' && pendingMusicMeta);
-    if (!_restoringTrim) musicTempo = null;   // a new song's beat is its own: tapped again
+    if (!_restoringTrim) { musicTempo = null; loopCutOnSilence = true; }   // a new song's beat is its own: tapped again; and it is cut on silence
     const _pick = !_restoringTrim && padDrawer ? padDrawer.applyPick() : null;
     if (_pick && _pick.fits) showToast('Loop set to your drawing length', musicUploadBtn);
     // Reapply any pending trim from an autosave restore, from THIS path so it
@@ -220,6 +220,7 @@ musicRemove.addEventListener('click', (e) => {
   currentAudioBuffer = null;
   loopCrossfadeMs = 0; if (typeof setCrossfadeUI === 'function') setCrossfadeUI();
   musicTempo = null;
+  loopCutOnSilence = false;
   if (loopZoomLabel) loopZoomLabel.textContent = '0:00.00 → 0:00.00 [0.00s]';
 });
 

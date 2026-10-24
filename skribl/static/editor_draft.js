@@ -352,9 +352,9 @@ function currentMusicMeta() {
   const decoded = Number.isFinite(audioDuration) && audioDuration > 0 && trimEnd > trimStart;
   if (!decoded) {
     if (prev && prev.name === audioEl._fileName) return prev;
-    return { name: audioEl._fileName, trimStart: null, trimEnd: null, crossfadeMs: loopCrossfadeMs, enabled: musicEnabled, tempo: musicTempo };
+    return { name: audioEl._fileName, trimStart: null, trimEnd: null, crossfadeMs: loopCrossfadeMs, enabled: musicEnabled, tempo: musicTempo, cut: loopCutOnSilence };
   }
-  return { name: audioEl._fileName, trimStart: trimStart, trimEnd: trimEnd, crossfadeMs: loopCrossfadeMs, enabled: musicEnabled, tempo: musicTempo };
+  return { name: audioEl._fileName, trimStart: trimStart, trimEnd: trimEnd, crossfadeMs: loopCrossfadeMs, enabled: musicEnabled, tempo: musicTempo, cut: loopCutOnSilence };
 }
 
 /* The pill itself — its five states, the wording, and the way out — is

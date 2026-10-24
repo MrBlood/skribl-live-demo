@@ -2295,6 +2295,11 @@ let loopCrossfadeMs = 0;   // loop crossfade length in ms (0 = off); see buildTr
 // The song's tapped tempo, { bpm, phase } or null (Tap the beat,
 // lib/musicdrawer.js): saved with the song in the drafts, never posted.
 let musicTempo = null;
+// Cut on silence (lib/audioloop.js cutFrames): both ends of a clean cut move
+// together, a few thousandths, to where the loop joins without a click. On for
+// a new song; a draft keeps its own, and one saved before it had none (off).
+// The player's is off: its clip was cut when it was posted.
+let loopCutOnSilence = false;
 
 let zoomDrawPending = false;
 
@@ -2664,6 +2669,7 @@ function applyPendingMusicSettings(meta) {
   trimEnd = Math.max(trimStart + 0.5, Math.min(trimEnd, audioDuration));
   if (meta.crossfadeMs != null) { loopCrossfadeMs = meta.crossfadeMs; if (typeof setCrossfadeUI === 'function') setCrossfadeUI(); }
   if (meta.tempo !== undefined) musicTempo = (window.SkriblMusicDrawer ? window.SkriblMusicDrawer.tempoFrom(meta.tempo) : null);
+  loopCutOnSilence = meta.cut === true;
   updateTrimUI();
 }
 
@@ -2698,7 +2704,7 @@ function captureCurrentFrame() {
   // A track switched off stays in the draft, marked so, as Flip's does; a
   // post leaves it out (editor_post.js). Dropping it lost the song.
   const music = audioEl && audioEl._objectUrl
-    ? { data: audioEl._draftData || null, name: audioEl._fileName || null, trimStart: trimStart, trimEnd: trimEnd, crossfadeMs: loopCrossfadeMs, tempo: musicTempo }
+    ? { data: audioEl._draftData || null, name: audioEl._fileName || null, trimStart: trimStart, trimEnd: trimEnd, crossfadeMs: loopCrossfadeMs, tempo: musicTempo, cut: loopCutOnSilence }
     : null;
   if (music && !musicEnabled) music.enabled = false;
   const frame = {
@@ -2843,7 +2849,7 @@ function encodeWavFromChannels(channels, sampleRate) { return window.SkriblAudio
 // WAV data URL + its duration, or null if the decoded buffer isn't usable. When
 // a crossfade is set, the tail is folded over the head so the clip loops
 // seamlessly (the clip is then shorter by the crossfade length).
-function buildTrimmedLoopWav() { return window.SkriblAudioLoop.buildTrimmedLoopWav({ currentAudioBuffer, trimStart, trimEnd, loopCrossfadeMs }); }
+function buildTrimmedLoopWav() { return window.SkriblAudioLoop.buildTrimmedLoopWav({ currentAudioBuffer, trimStart, trimEnd, loopCrossfadeMs, cut: loopCutOnSilence }); }
 
 // --- Sample-accurate live loop engine (Web Audio) ---------------------------
 // The live monitors (Preview Loop, editor Play) used timer-wrapped <audio>,
@@ -2852,7 +2858,7 @@ function buildTrimmedLoopWav() { return window.SkriblAudioLoop.buildTrimmedLoopW
 // with loop=true — scheduled in the audio hardware clock, so it's gapless and
 // drift-free forever. Reuses buildLoopChannels for the crossfaded fold, so no
 // WAV round-trip: we build the AudioBuffer directly.
-function buildLoopAudioBuffer() { return window.SkriblAudioLoop.buildLoopAudioBuffer({ currentAudioBuffer: currentAudioBuffer, audioCtx: audioCtx, trimStart: trimStart, trimEnd: trimEnd, loopCrossfadeMs: loopCrossfadeMs }); }
+function buildLoopAudioBuffer() { return window.SkriblAudioLoop.buildLoopAudioBuffer({ currentAudioBuffer: currentAudioBuffer, audioCtx: audioCtx, trimStart: trimStart, trimEnd: trimEnd, loopCrossfadeMs: loopCrossfadeMs, cut: loopCutOnSilence }); }
 // The engine itself -- unlock in the gesture, no source before 'running', the
 // generation counter, the hand-off to native <audio> -- is lib/audioloop.js's,
 // shared with Flip and the player. Its header says what each copy was missing.
@@ -2931,6 +2937,7 @@ function resetMediaForLoad() {
   currentAudioBuffer = null;
   loopCrossfadeMs = 0;
   musicTempo = null;
+  loopCutOnSilence = false;
   // State above, drawer UI below. The player runs this on every load — it was
   // clearing waveform canvases and rewriting button labels for a drawer it does
   // not have. Unguarded property writes on absent elements (musicDetail.hidden)
@@ -3169,6 +3176,7 @@ function loadSkribl(data, said) {
     trimEnd = data.music.trimEnd != null ? data.music.trimEnd : null;
     loopCrossfadeMs = data.music.crossfadeMs != null ? data.music.crossfadeMs : 0;
     musicTempo = (window.SkriblMusicDrawer ? window.SkriblMusicDrawer.tempoFrom(data.music.tempo) : null);
+    loopCutOnSilence = data.music.cut === true;
     if (data.music.enabled === false) { musicEnabled = false; syncLayerToggle(document.getElementById('musicToggle'), false); }
     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     fetch(data.music.data).then(r => r.arrayBuffer()).then(buf => {
