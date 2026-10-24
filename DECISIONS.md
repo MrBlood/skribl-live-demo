@@ -23082,3 +23082,20 @@ glide's alone; the long way round, the glide's alone; Reduce Motion ignored
 by the marks, its row alone; tapped again keeping the old beat, its row
 alone; the switch's old words, its row. The same files served unchanged,
 green.
+
+
+## After v329 -- The Photo drawer stays as it is: exact control
+
+The owner asked whether the Photo drawer had changed. It had not: the music
+drawer was rebuilt over several rounds, and the Photo drawer is as v317 left
+it, every control on view (the fit, Reposition, a line on how, Zoom, Opacity
+and Blur, Reset). Mocked to match the music drawer, from the real app: A, one
+view with two cards (Move the photo, and Fade it back, to 50%) and the
+sliders and Reset behind More (260px tall where it is 411, 8 controls where
+it is 16); B, quick picks for the fade (Full, Light, Half) and the blur
+(Sharp, Soft, Softer), the exact sliders behind More. The owner: "I guess i
+like it the way it is more than any of your choices. I want to have exact
+control, not buttons that decide for me." So it stays, and the rule went into
+WORKING-AGREEMENTS.md beside "I need a free set so it's not all automatic"
+(Snap to the beat): keep the exact controls in view, and add no button that
+picks a value for the person. Nothing in the tree changed but these words.
