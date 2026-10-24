@@ -127,8 +127,10 @@ with sync_playwright() as p:
               f"{t.get('Add a track', '')[:80]} | {t.get('Add a photo', '')[:60]}")
         check(f"{ed}: Pen and Eraser name their shortcuts, P and E",
               has(t.get("Pen"), "Shortcut: P.") and has(t.get("Eraser"), "Shortcut: E."), f"{t.get('Pen', '')[-40:]} | {t.get('Eraser', '')[-40:]}")
-    check("Smooth restart (it was Crossfade) says where it is, under Adjust and Fine-tune, on the Pad and Flip alike",
-          has(P.get("Smooth restart"), "Under Adjust and Fine-tune") and has(F.get("Smooth restart"), "Under Adjust and Fine-tune"),
+    # Where it is moved with the drawer: under Adjust and Fine-tune until the
+    # streamline (#616), in More since. The old levels' names are gone.
+    check("Smooth restart (it was Crossfade) says where it is, in More, on the Pad and Flip alike",
+          all(has(t.get("Smooth restart"), "In More", without=("Adjust", "Fine-tune")) for t in (P, F)),
           f"Pad {P.get('Smooth restart')}; Flip {F.get('Smooth restart')}")
     switch = pad.evaluate("() => { const b = document.getElementById('flipBtn'); return b ? b.getAttribute('aria-label') : null; }")
     check("Pad: the editor switch names Flip as Skribl Flip, as the Pad is Skribl Pad, not Flip Mode",
