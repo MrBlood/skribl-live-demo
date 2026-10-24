@@ -22554,7 +22554,8 @@ Pad and Flip: shared, one lib.
 verify_musicmore, in its kind part, on the Pad and Flip: a song lands as the
 drawer opens, the bin is brought into view as verify_parity's row brings it,
 and the page is read on every frame until the opening's last re-assert has
-passed; nothing may move it. Without the change it is red on both editors
-(5px on the Pad, 29px on Flip), and so is Flip's "More opened as a song lands
-glides" row (a 170px frame), the change served away with the file on disk
-untouched; the same file served unchanged stayed green.
+passed; nothing may move it. Without the change it is red on both editors in
+three runs of three (5px on the Pad, 29px on Flip), the change served away with
+the file on disk untouched; the same file served unchanged stayed green. Flip's
+"More opened as a song lands glides" row went red once without the change too,
+but that was a long frame (170px in 56ms): two more runs without it were green.
