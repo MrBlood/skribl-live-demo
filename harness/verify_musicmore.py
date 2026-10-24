@@ -4,8 +4,10 @@
 The owner, with the drawer at three levels: "The music drawer is so
 complicated. I think I liked it better before you did so much to it," then
 "we'll need to streamline it," and yes to the step 2 mock's five defaults.
-The view is the strip, the one line under it, the pair that plays, Fit my
-drawing and Whole song, and More; More holds the rest. verify_music.py keeps
+The view is the timeline (step 2; it was the strip), the one line under it,
+the pair that plays, Fit my drawing and Whole song, and More; More holds the
+rest, the Restart view and Cut on silence among it (verify_musictimeline.py
+has how those work). verify_music.py keeps
 how each control works (the previews, the switch, Fit's sum on Flip) and
 verify_musicbeat.py the beat; this keeps where each one lives, what the drawer
 says, and More itself. It was verify_musiclevels.py, the three levels'.
@@ -147,9 +149,9 @@ SHOWN = """(ids) => ids.filter((id) => { const el = document.getElementById(id);
 SIGHT = """() => { const s = document.getElementById('fineTuneToggle').getBoundingClientRect(), h = document.querySelector('.header');
   const top = h && ['sticky', 'fixed'].includes(getComputedStyle(h).position) ? h.getBoundingClientRect().bottom : 0;
   return { seg: Math.round(s.top), header: Math.round(top), vh: innerHeight }; }"""
-VIEW = ["musicTrack", "musicPickLine", "musicPlayBtn", "previewLoopBtn", "matchDrawingBtn", "musicWholeBtn", "fineTuneToggle"]
-MORE = ["fineTuneBody", "musicSmooth", "crossfadeSlider", "testSeamBtn", "musicTapBtn", "zoomTrackWrap", "zoomPanSlider",
-        "startReadout", "endReadout", "musicStepLine", "musicLock"]
+VIEW = ["musicTimeline", "musicPickLine", "musicPlayBtn", "previewLoopBtn", "matchDrawingBtn", "musicWholeBtn", "fineTuneToggle"]
+MORE = ["fineTuneBody", "musicSmooth", "musicRestart", "crossfadeSlider", "testSeamBtn", "musicTapBtn",
+        "startReadout", "endReadout", "musicStepLine", "musicCut", "musicLock"]
 ALL = sorted(set(VIEW + MORE))
 SECTIONS = ["The restart", "The beat", "Exact times", "How it loops"]
 
@@ -253,7 +255,7 @@ with sync_playwright() as pw:
         # The drawn mark the tile ends on (lib marks, _skribl_marks.html): + closed, - open.
         MARK = "() => ['.mk-plus', '.mk-minus'].filter(s => { const m = document.querySelector('#fineTuneToggle ' + s); return m && getComputedStyle(m).display !== 'none'; })"
         mark_closed = pg.evaluate(MARK)
-        check(f"{_n}: a new drawer opens on the one view: the strip, the one line, the pair that plays, the two picks and More, and nothing deeper",
+        check(f"{_n}: a new drawer opens on the one view: the timeline, the one line, the pair that plays, the two picks and More, and nothing deeper",
               closed == set(VIEW) and tile == ["More", "The restart, the beat, exact times", "false", "fineTuneBody"],
               f"extra {sorted(closed - set(VIEW))}, missing {sorted(set(VIEW) - closed)}; the tile {tile}")
         set_more(pg, True)
@@ -832,11 +834,13 @@ with sync_playwright() as pw:
     # landing in that time grows the drawer and glides to its new end, and the
     # opening's re-asserts, aimed at the end before it grew, snapped that glide
     # short and pulled back a page moved on since. Here the song lands as the
-    # drawer opens, the bin is brought into view as verify_parity's bin row
-    # brings it (the browser does the same for a control taking focus), and
-    # the page is read on every frame until the opening's last re-assert is
-    # past. Nothing may move it. The bin is brought into view well inside
-    # that time (said), or this row could not tell.
+    # drawer opens, the page is taken on down to its foot, past where the
+    # growth left it (bringing the bin into view, verify_parity's move, did
+    # that on the strip's shorter drawer; on the timeline's it moves the page
+    # up, into the growth's own hold on the card's end, which rightly brings
+    # it back), and the page is read on every frame until the opening's last
+    # re-assert is past. Nothing may move it. The page is taken there well
+    # inside that time (said), or this row could not tell.
     for _n, _p in eds("kind"):
         c, pg, _ = editor(b, _n, _p, drawn=False, song=None, opts=DESK)
         browsing.pad_drawer(pg, "music", settle=50)
@@ -845,14 +849,14 @@ with sync_playwright() as pw:
         pg.wait_for_function("() => document.getElementById('musicUploadBtn').classList.contains('loaded') && !!currentAudioBuffer", timeout=20000)
         pg.wait_for_timeout(300)
         got = pg.evaluate("""() => new Promise((done) => {
-            document.getElementById('musicRemove').scrollIntoView({ block: 'center' });
+            scrollTo(0, document.scrollingElement.scrollHeight);
             const ys = [], t0 = performance.now();
             (function f() { ys.push(Math.round(scrollY));
               if (performance.now() - t0 < 1400) requestAnimationFrame(f); else done({ ys, t0 }); })(); })""")
         ys, early = got["ys"], got["t0"] - opened
         check(f"{_n}: a song landing as the drawer opens is the newer reveal: nothing pulls the page back after it",
               len(ys) > 20 and early < 1000 and max(ys) - min(ys) <= 1,
-              f"the bin brought into view {early:.0f}ms after the drawer opened, the page at {ys[0]}px;"
+              f"the page taken to its foot {early:.0f}ms after the drawer opened, at {ys[0]}px;"
               f" over {len(ys)} frames it went {min(ys)}-{max(ys)}px")
         c.close()
     # A DRAFT OPENED SAYS ITS OWN SMOOTH RESTART (the owner's Flip: "19.75s"

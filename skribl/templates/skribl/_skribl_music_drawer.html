@@ -54,37 +54,35 @@
 
   {#- ONE VIEW, AND MORE (owner: "The music drawer is so complicated. I think
       I liked it better before you did so much to it", then "we'll need to
-      streamline it"; the step 2 mock's five defaults). The view is the strip,
-      the one line under it, the pair that plays, Fit my drawing and Whole
-      song, and More. More holds the rest, each control as it was under
-      Fine-tune: the restart (Smooth restart, its length, Hear the restart),
-      the beat (Tap the beat), exact times (the loop detail, and Start and End
-      of loop typed or stepped) and how it loops (Lock the length). It was
-      three levels, Simple, Adjust and Fine-tune (DECISIONS.md, "The music
-      drawer's three levels"); nothing they held is gone but Make it, which
-      ends that settle on whole bars replace, Each tap and the second line
-      saying the length. The ids stay: #fineTuneToggle is More and
-      #fineTuneBody what it opens; Match Drawing Time is Fit my drawing, Test
-      Seam is Hear the restart, Preview Loop is Hear the loop, Crossfade is
-      Smooth restart's length. -#}
+      streamline it"; the step 2 mock's five defaults). The view is the
+      timeline (step 2: it was the strip), the one line under it, the pair
+      that plays, Fit my drawing and Whole song, and More. More holds the
+      rest: the restart (Smooth restart, the Restart view, its length, Hear
+      the restart), the beat (Tap the beat), exact times (Start and End of
+      loop typed or stepped) and how it loops (Cut on silence, Lock the
+      length). It was three levels, Simple, Adjust and Fine-tune (DECISIONS.md,
+      "The music drawer's three levels"). The ids stay: #fineTuneToggle is
+      More and #fineTuneBody what it opens; Match Drawing Time is Fit my
+      drawing, Test Seam is Hear the restart, Preview Loop is Hear the loop,
+      Crossfade is Smooth restart's length. -#}
   <div id="musicDetail" class="music-detail" data-level="simple" hidden>
     <div class="music-trim">
-      <div class="music-trim-track" id="musicTrack">
-        <canvas id="waveformCanvas" class="waveform-canvas"></canvas>
-        <div class="music-trim-range" id="musicRange"></div>
-        <div class="music-playhead" id="playhead" hidden></div>
-        <div class="music-trim-handle left" id="handleStart">
-          <div class="zoom-handle-cap top"></div><div class="zoom-handle-line"></div><div class="zoom-handle-cap bottom"></div>
-          <span class="trim-bubble" id="bubbleStart">0:00</span>
+      {#- THE TIMELINE (lib/musictimeline.js): the drawing's own lane above,
+          the song under it with the loop lit and its two ends to drag, and the
+          whole song in one line below. Your {{ work }} stays put; the song
+          slides under it. It was the strip, the whole song with two handles,
+          and the loop detail in More. The words over the drawing's lane are
+          the drawer's; the canvas draws the rest and is hidden from screen
+          readers, which have Start and End of loop in More. -#}
+      <div class="mt-tl" id="musicTimeline">
+        <p class="mt-tl-name" id="musicTlName"></p>
+        <div class="mt-tl-stage" id="musicTlStage">
+          <canvas class="mt-tl-canvas" id="musicTlCanvas" aria-hidden="true"></canvas>
+          <div class="mt-tl-handle" id="tlStart" data-which="start" aria-hidden="true"><span class="mt-tl-grip"><svg viewBox="0 0 18 32" fill="currentColor" aria-hidden="true"><path d="M7.2 11 3 16l4.2 5zM10.8 11 15 16l-4.2 5z"/></svg></span><span class="trim-bubble" id="bubbleStart">0:00.00</span></div>
+          <div class="mt-tl-handle" id="tlEnd" data-which="end" aria-hidden="true"><span class="mt-tl-grip"><svg viewBox="0 0 18 32" fill="currentColor" aria-hidden="true"><path d="M7.2 11 3 16l4.2 5zM10.8 11 15 16l-4.2 5z"/></svg></span><span class="trim-bubble right" id="bubbleEnd">0:00.00</span></div>
+          <div class="music-playhead" id="playhead" hidden></div>
         </div>
-        <div class="music-trim-handle right" id="handleEnd">
-          <div class="zoom-handle-cap top"></div><div class="zoom-handle-line"></div><div class="zoom-handle-cap bottom"></div>
-          <span class="trim-bubble right" id="bubbleEnd">0:00</span>
-        </div>
-      </div>
-      <div class="music-trim-times">
-        <span id="trimStartLabel">0:00</span>
-        <span id="trimEndLabel">0:00</span>
+        <div class="mt-tl-whole" id="musicTlWhole" aria-hidden="true"><span class="mt-tl-part" id="musicTlPart"></span></div>
       </div>
       {#- THE ONE LINE: how long the loop is, in beats once there is a tempo,
           and against the drawing; then Skribl's pick, or the way back to it,
@@ -117,14 +115,23 @@
       <button type="button" id="fineTuneToggle" class="mt-pick-card mt-more" aria-expanded="false" aria-controls="fineTuneBody"><span class="mt-more-words"><span class="mt-k">More</span> <span class="mt-v">The restart, the beat, exact times</span></span>{{ mark('plus') }}{{ mark('minus') }}</button>
       <div class="fine-tune-body" id="fineTuneBody" hidden>
         {#- THE RESTART: Smooth restart (today's equal-power crossfade, which
-            folds the loop's end over its start), its length, and Hear the
-            restart. -#}
+            folds the loop's end over its start), the Restart view
+            (lib/musicrestart.js: the end beside the start, to line the beats
+            up across the join and pull the dot to blend them), the smooth
+            restart's length, and Hear the restart. -#}
         <p class="mt-sect">The restart</p>
         <div class="mt-smooth">
           <div class="mt-switch">
             <span class="mt-switch-words"><span class="mt-k">Smooth restart</span> <span class="mt-v" id="musicSmoothSub">A clean cut back to the start.</span></span>
             <button type="button" id="musicSmooth" class="layer-toggle" role="switch" aria-checked="false" aria-label="Smooth restart"><span class="layer-toggle-knob"></span></button>
           </div>
+          <div class="mt-rv" id="musicRestart">
+            <canvas class="mt-rv-canvas" id="musicRvCanvas" aria-hidden="true"></canvas>
+            <span class="mt-rv-tag" aria-hidden="true">the end</span><span class="mt-rv-tag start" aria-hidden="true">the start</span>
+            <div class="mt-rv-dot" id="musicBlendDot" aria-hidden="true"></div>
+            <div class="music-playhead" id="musicRvPlayhead" hidden></div>
+          </div>
+          <p class="mt-rv-hint" id="musicRvHint"></p>
           <div class="crossfade-row"><span class="crossfade-label">Length</span><input type="range" id="crossfadeSlider" class="slider" min="0" max="500" value="0" step="5" aria-label="Smooth restart length"><span class="crossfade-val" id="crossfadeVal">Off</span></div>
           <button type="button" id="testSeamBtn" class="loop-btn subtle">Hear the restart</button>
         </div>
@@ -141,20 +148,11 @@
             <span class="mt-tempo" id="musicTempo" role="status"></span>
           </div>
         </div>
-        {#- EXACT TIMES: the loop detail, and Start and End of loop typed to
-            the thousandth or moved with - and +, 0.1s a press, or a bar once
-            there is a tempo. -#}
+        {#- EXACT TIMES: Start and End of loop typed to the thousandth or moved
+            with - and +, 0.1s a press, or a bar once there is a tempo. The
+            loop detail that sat above them went with step 2: the timeline
+            and the Restart view do its job. -#}
         <p class="mt-sect">Exact times</p>
-        <div class="loop-zoom">
-          <div class="loop-zoom-head"><span>Loop Detail</span><span id="loopZoomLabel">0:00.00 &rarr; 0:00.00 [0.00s]</span></div>
-          <div style="position:relative" id="zoomTrackWrap">
-            <canvas id="zoomWaveformCanvas" class="zoom-waveform-canvas"></canvas>
-            <div class="music-playhead" id="zoomPlayhead" hidden></div>
-            <div class="zoom-handle" id="zoomHandleStart" data-which="start" hidden><div class="zoom-handle-cap top"></div><div class="zoom-handle-line"></div><div class="zoom-handle-cap bottom"></div></div>
-            <div class="zoom-handle" id="zoomHandleEnd" data-which="end" hidden><div class="zoom-handle-cap top"></div><div class="zoom-handle-line"></div><div class="zoom-handle-cap bottom"></div></div>
-          </div>
-          <div class="zoom-pan-row"><span class="zoom-pan-label">Scroll</span><input type="range" id="zoomPanSlider" class="slider" min="0" max="1000" value="500" step="1" aria-label="Scroll the loop detail view"></div>
-        </div>
         <div class="finetune-panel">
           <div class="finetune-grid">
             <div class="edge-group">
@@ -176,7 +174,15 @@
           </div>
           <p class="mt-step-line" id="musicStepLine"></p>
         </div>
+        {#- HOW IT LOOPS: Cut on silence (lib/audioloop.js cutFrames: a clean
+            cut's two ends move together, a few thousandths, to where the
+            loop joins without a click; on for a new song) and Lock the
+            length. -#}
         <p class="mt-sect">How it loops</p>
+        <div class="mt-switch">
+          <span class="mt-switch-words"><span class="mt-k">Cut on silence</span> <span class="mt-v" id="musicCutSub"></span></span>
+          <button type="button" id="musicCut" class="layer-toggle" role="switch" aria-checked="false" aria-label="Cut on silence"><span class="layer-toggle-knob"></span></button>
+        </div>
         <div class="mt-switch">
           <span class="mt-switch-words"><span class="mt-k">Lock the length</span> <span class="mt-v" id="musicLockSub">When on, moving one end moves the other.</span></span>
           <button type="button" id="musicLock" class="layer-toggle" role="switch" aria-checked="false" aria-label="Lock the length"><span class="layer-toggle-knob"></span></button>

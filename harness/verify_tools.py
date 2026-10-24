@@ -1380,8 +1380,10 @@ _TOUCH = """([sel, type, x, y]) => {
     touches: empty ? [] : [t], targetTouches: empty ? [] : [t],
     changedTouches: [t], bubbles: true, cancelable: true, view: window}));
 }"""
-_TSTATE = ("() => ({start:+trimStart.toFixed(3), end:+trimEnd.toFixed(3), "
-           "dragging: !!document.querySelector('.dragging')})")
+# The drag's own mark: a handle or the dot is .dragging while held; the
+# timeline and the Restart view are .holding while a finger slides them.
+_TSTATE = ("() => ({start:+trimStart.toFixed(3), end:+trimEnd.toFixed(3), xf: loopCrossfadeMs, "
+           "dragging: !!document.querySelector('.dragging, .holding')})")
 
 import math as _m, struct as _st, wave as _wv
 _TCWAV = "/tmp/v214_tc.wav"
@@ -1403,30 +1405,30 @@ with sync_playwright() as _b14:
     _p14.evaluate("() => openDrawer('music')"); _p14.wait_for_timeout(600)
     _p14.click("#fineTuneToggle"); _p14.wait_for_timeout(500)
 
-    # Three INDEPENDENT gesture paths, so removing cancellation from one
-    # reddens only that one. Mutation-tested per path, per the review.
-    for _pname, _psel in (("zoom handle", "#zoomHandleStart"),
-                          ("trim handle", "#handleStart"),
-                          ("range window", "#musicRange")):
-        # The RANGE window slides the whole selection, so it needs room on both
-        # sides: reset to the full track and it cannot move at all, which makes
-        # "unchanged after cancel" true for the wrong reason — the exact class of
-        # vacuous pass this review warned about. The handle paths want the full
-        # track so they have somewhere to drag TO.
-        # The strip and the loop detail (in More, its tile #fineTuneToggle)
-        # are not on screen together, so each path is driven where it is
-        # seen: More open for the loop detail's handle, closed for the strip.
-        _want = "true" if _psel == "#zoomHandleStart" else "false"
+    # Five INDEPENDENT gesture paths, so removing cancellation from one
+    # reddens only that one. Mutation-tested per path, per the review. They
+    # were three until step 2 (the loop detail's handle, the strip's handle,
+    # the strip's range window); the timeline and the Restart view are these.
+    for _pname, _psel in (("timeline end", "#tlStart"),
+                          ("song slide", "#musicTlStage"),
+                          ("whole song line", "#musicTlWhole"),
+                          ("restart view side", "#musicRestart"),
+                          ("blend dot", "#musicBlendDot")):
+        # A SLID loop needs room on both sides: reset to the full track and it
+        # cannot move at all, which makes "unchanged after cancel" true for the
+        # wrong reason, the exact class of vacuous pass this review warned
+        # about. So every path starts on a loop in the middle of the song,
+        # with a smooth restart for the dot to change.
+        # The timeline and the Restart view (in More, its tile
+        # #fineTuneToggle) are each driven where they are seen: More open for
+        # the Restart view's paths, closed for the timeline's.
+        _want = "true" if _psel in ("#musicRestart", "#musicBlendDot") else "false"
         if _p14.get_attribute("#fineTuneToggle", "aria-expanded") != _want:
             _p14.click("#fineTuneToggle")
             _p14.wait_for_timeout(500)
+        _p14.evaluate("() => { trimStart = 2; trimEnd = 6; loopCrossfadeMs = 120; setCrossfadeUI(); updateTrimUI(); }")
         _p14.locator(_psel).scroll_into_view_if_needed()
-        _p14.wait_for_timeout(300)
-        if _psel == "#musicRange":
-            _p14.evaluate("() => { trimStart = 2; trimEnd = 6; updateTrimUI(); }")
-        else:
-            _p14.evaluate("() => { trimStart = 0; trimEnd = audioDuration; updateTrimUI(); }")
-        _p14.wait_for_timeout(150)
+        _p14.wait_for_timeout(500)
         _bx = _p14.locator(_psel).bounding_box()
         if not _bx:
             check(f"V214a {_pname}: element is laid out", False, "no bounding box")
@@ -1439,21 +1441,21 @@ with sync_playwright() as _b14:
         # GATE: if the drag never took hold, "does not move after cancel" is
         # satisfied by a gesture that never started, and proves nothing.
         check(f"V214a {_pname} gate: the drag is live AND has already moved the "
-              f"trim (a gesture that never moved makes the check below vacuous)",
+              f"loop (a gesture that never moved makes the check below vacuous)",
               _live["dragging"] is True and
-              (_live["start"] != _pre["start"] or _live["end"] != _pre["end"]),
-              f"dragging={_live['dragging']}, trim {_pre['start']}-{_pre['end']} "
-              f"-> {_live['start']}-{_live['end']}")
+              (_live["start"] != _pre["start"] or _live["end"] != _pre["end"] or _live["xf"] != _pre["xf"]),
+              f"dragging={_live['dragging']}, loop {_pre['start']}-{_pre['end']} ({_pre['xf']}ms) "
+              f"-> {_live['start']}-{_live['end']} ({_live['xf']}ms)")
 
         _p14.evaluate(_TOUCH, [_psel, "touchcancel", _x + 60, _y]); _p14.wait_for_timeout(120)
         _atCancel = _p14.evaluate(_TSTATE)
         _p14.evaluate(_TOUCH, [_psel, "touchmove", _x + 190, _y]); _p14.wait_for_timeout(120)
         _after = _p14.evaluate(_TSTATE)
 
-        check(f"V214a {_pname}: a move AFTER touchcancel no longer changes the trim",
-              _after["start"] == _atCancel["start"] and _after["end"] == _atCancel["end"],
-              f"at cancel {_atCancel['start']}-{_atCancel['end']}, "
-              f"after a further move {_after['start']}-{_after['end']}")
+        check(f"V214a {_pname}: a move AFTER touchcancel no longer changes the loop",
+              _after["start"] == _atCancel["start"] and _after["end"] == _atCancel["end"] and _after["xf"] == _atCancel["xf"],
+              f"at cancel {_atCancel['start']}-{_atCancel['end']} ({_atCancel['xf']}ms), "
+              f"after a further move {_after['start']}-{_after['end']} ({_after['xf']}ms)")
         check(f"V214a {_pname}: ...and the dragging state is cleared by the cancel",
               _atCancel["dragging"] is False and _after["dragging"] is False,
               f"dragging at cancel={_atCancel['dragging']}, after={_after['dragging']}")

@@ -344,7 +344,7 @@ with sync_playwright() as p:
         if q.get_attribute("#fineTuneToggle", "aria-expanded") != "true":   # More, open
             q.click("#fineTuneToggle")
         settle(q)
-        q.evaluate("() => { const b = document.querySelector('.zoom-mag-bar'); if (b) b.scrollIntoView({block: 'center'}); }")
+        q.evaluate("() => { const b = document.getElementById('musicRestart'); if (b) b.scrollIntoView({block: 'center'}); }")
         settle(q, 300)
         yield "music drawer"
         # The phone's music drawer is taller than the screen and the reach
@@ -429,8 +429,10 @@ with sync_playwright() as p:
         lost = sorted(f"{r} {k} [{f}]" for (r, k) in rows for f in FORMS if (r, k, f) not in tune_seen)
         check("ONE PILL: every settings row's control was measured with the drawer open, on a desk and on a phone",
               not lost, f"not reached: {lost}")
-        for route, extra in (("/skribl-pad", ("zoom-seg", "gif-seg")), ("/flip", ("zoom-seg", "gif-seg"))):
-            check(f"ONE PILL: {route}'s script-built and sheet-borne tracks were measured: {', '.join(extra)}",
+        # The loop detail's Loop | Start | End (zoom-seg), the one track a
+        # script built, went with step 2.
+        for route, extra in (("/skribl-pad", ("gif-seg",)), ("/flip", ("gif-seg",))):
+            check(f"ONE PILL: {route}'s sheet-borne track was measured: {', '.join(extra)}",
                   all(any(k[0] == route and e in k[1] for k in seen) for e in extra),
                   str(sorted(k[1] for k in seen if k[0] == route)))
         for route in ("/skribl-pad", "/flip"):
@@ -621,26 +623,8 @@ with sync_playwright() as p:
             check(f"(d) {route}: the open Tune button is tinted, in pixels",
                   max(abs(shut[i] - opened[i]) for i in range(3)) >= 12, f"shut {shut} open {opened}")
             q.click("#tuneBtn"); settle(q, 400)
-            # (c)(g) the loop view's focus follows the state, with the class the seg reads.
-            browsing.pad_drawer(q, "music")
-            q.set_input_files("#musicInput", {"name": "t.wav", "mimeType": "audio/wav", "buffer": AUD})
-            q.wait_for_function("() => document.getElementById('musicUploadBtn').classList.contains('loaded')", timeout=20000)
-            settle(q, 500)
-            if q.get_attribute("#fineTuneToggle", "aria-expanded") != "true":   # More, open
-                q.click("#fineTuneToggle"); settle(q, 500)
-            q.click(".zoom-seg [data-focus='start']"); settle(q, 300)
-            lit = "() => [...document.querySelectorAll('.zoom-seg [data-focus]')].filter(b => b.classList.contains('on') || b.classList.contains('active')).map(b => b.dataset.focus)"
-            check(f"(c) {route}: choosing Start lights Start", q.evaluate(lit) == ["start"], str(q.evaluate(lit)))
-            if ed == "flip":
-                q.evaluate("() => { const s = document.getElementById('zoomPanSlider'); s.value = '700'; s.dispatchEvent(new Event('input', { bubbles: true })); }")
-                settle(q, 300)
-                check(f"(c) {route}: a free pan leaves no focus lit", q.evaluate(lit) == [], str(q.evaluate(lit)))
-                q.click(".zoom-seg [data-focus='end']"); settle(q, 200)
-                q.set_input_files("#musicInput", {"name": "u.wav", "mimeType": "audio/wav", "buffer": AUD})
-                settle(q, 1500)
-                check(f"(g) {route}: a new track lights Loop, the focus it resets to", q.evaluate(lit) == ["loop"],
-                      str(q.evaluate(lit)))
-            browsing.pad_drawer_close(q)
+            # (c)(g) were the loop detail's Loop | Start | End following the
+            # state; the seg went with the loop detail in step 2.
             if ed == "flip":
                 # (e) a canvas no preset names says its size; (f) an unnamed fps says its rate.
                 q.evaluate("() => { applyCanvasSize(700, 500); }")
