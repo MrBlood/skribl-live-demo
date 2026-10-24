@@ -22998,3 +22998,87 @@ pick was the deeper edge: "File it away". It is `docs/brand/s-blooby-icon.png`
 and nothing ships it: the app's icon files, `harness/tools/blooby.py` and
 `verify_identity` are as they were. FUTURE.md 6q has how the file was made
 from the render and what building it in would take.
+
+
+## After v329 -- The loop's ends: a tab at each foot; zoomed in, the start stays and the beat follows
+
+Two of the owner's from the phone, mocked together and picked together ("All
+yes"). Zoomed in on where a song begins, a tempo tapped and Snap to the beat
+on: "how do I tell it where the beginning is? When I take it to the beginning
+it just snaps to a different spot (under a beat?)". It did: a start let go
+settled on the nearest tapped beat at 16x as at 1x, and a tapped beat is
+rarely on the music to the hundredth. On the mock's song, tapped 45ms late, a
+start let go on the note moved 45ms (48px on a phone at 16x, 93 on a desk)
+and left the note's first 45ms outside the loop. Then, of the handle: "the
+little handle in the middle of the line kind of gets in the way of seeing
+where the wave starts for the beat. it sits right over the middle." On a soft
+start it covered 59% of what was painted within 14px of the line, on a loud
+one 32%, and on a phone the finger held it there too. Of the grip as a tab at
+its foot, beside the line outside the loop, or slipping into the line while
+held, the pick was the tab; of the start kept with the beat moved to it, kept
+with the marks left where the taps put them, or found on the note's attack,
+the pick was the first; and the switch says so. Asked then whether the snaps
+after that count from a start set that way: they do.
+
+A TAB AT EACH END'S FOOT (styles.css): the grip is 22 by 18px and half under
+the song's edge, as the Restart view's dot sits at its foot, its arrows drawn
+to fit (the template's viewBox), the tap band reaching down to it, 3px clear
+of the whole song's line. It covers nothing beside the line on a soft start
+and 2% on a loud one (the tips of the loudest bars). Its edge reads as the
+grip's did, 3.6:1 on light and 3.1:1 on dark over the song, and 3.9 to 4.1:1
+below it.
+
+ZOOMED IN, THE START STAYS AND THE BEAT FOLLOWS (lib/musicdrawer.js snap):
+the timeline says whether it is magnified as it lets go, and magnified, with
+Snap to the beat on, a start let go stays where it is and a beat falls there:
+the tempo keeps its beats a minute and its phase becomes the start. The end
+follows on whole bars from it, as before. Every snap after counts from the
+new beat (a start at 1x, a slid loop, the Restart view, a bar in Each
+press); the new beat is kept with the song in the drafts; tapped again, the
+beat is the taps' own. At 1x nothing changes. THE MARKS GLIDE to the new beat
+(lib/musictimeline.js beatTo) with the view's own ease and the shorter way
+round, so the settle, the reframing after it and the marks read as one; a
+new tempo, or none, is there at once, and so is all of it under Reduce
+Motion.
+
+WORDS. The switch says "The start you drag lands on a beat, and the loop on
+whole bars. Zoomed in, it stays where you put it, and the beat follows." The
+help's Loop ends, Magnify the timeline and Snap to the beat say the tab and
+the zoomed-in start, and how to go back to the taps.
+
+Pad and Flip: shared, one stylesheet, one timeline and one drawer; neither
+editor changed.
+
+TESTS. verify_musictimeline, its grip part, on a phone and a desk: beside
+either line over the song, at every other pixel 3 to 14px from it, nothing on
+top is the grip, and the grip can be hit, so what is on top is what is
+painted; the tab shows half under the song's edge and keeps clear of the
+whole song's line, which a tap under it still reaches; the tab, pressed below
+the song's edge, drags its end. verify_musicbeat, its zoomed part, with the
+tempo tapped 45ms late: at 16x a start let go on the music's beat stays
+exactly there and a beat falls on it, the beats a minute kept and the end on
+whole bars; the mark glides there frame by frame the shorter way, and under
+Reduce Motion is there at once; then at 1x a start lands on the new beat; the
+new beat comes back after a reload; tapped 0.12s past each beat after that,
+the beat is the taps' own. The switch's row reads its new words, and
+verify_helpclaims the three tips.
+
+THE INSTRUMENT, before it was believed. The mock's first measure of what the
+grip hides compared a shot with the handles and one without, pixel by pixel:
+a purple grip over the purple wave changes no pixel, and a grip covering the
+whole band read 27 to 62%. What is covered is asked of the page instead (what
+is on top at each painted point), which read a full cover as 100% and none as
+0%. What is on top is what can be hit, so the row also asks that the grip can
+be: in the middle and made unhittable, it would read clear.
+
+CALIBRATION, each part broken in a copy served to the browser, the files on
+disk untouched, on both editors (the grip's on a phone and a desk too): the
+grip back in the middle, its two rows; the same made unhittable, its two
+rows; the tab's half under the edge dead, all three; the tab hung low over
+the whole song's line, the clearance row alone. Magnified or not left
+unsaid, the zoomed rows but the end's and the drafts'; the start kept but the
+beat not moved, the beat's, the glide's and 1x's; the marks jumping, the
+glide's alone; the long way round, the glide's alone; Reduce Motion ignored
+by the marks, its row alone; tapped again keeping the old beat, its row
+alone; the switch's old words, its row. The same files served unchanged,
+green.

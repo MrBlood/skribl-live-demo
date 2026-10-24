@@ -452,7 +452,8 @@ with sync_playwright() as p:
     # (3 to 14px either side, its own 3px left out) from the song's top to
     # 10px above its foot: never the grip. Then a point of the tab below the
     # song's edge (the tab shows there), the whole song's line under the line
-    # (still the whole song's), and the boxes for the words.
+    # (still the whole song's), and the boxes for the words. What is on top is
+    # what is painted only while the grip can be hit, so that is asked too.
     GRIPS = """() => { const st = document.getElementById('musicTlStage').getBoundingClientRect(), wl = document.getElementById('musicTlWhole'),
         w = wl.getBoundingClientRect(), out = {};
       for (const id of ['tlStart', 'tlEnd']) {
@@ -462,7 +463,8 @@ with sync_playwright() as p:
         for (let y = st.top + 34 + 2; y <= st.bottom - 10; y += 2)
           for (let dx = 3; dx <= 14; dx += 1) for (const sd of [-1, 1]) { asked++; if (isGrip(document.elementFromPoint(line + sd * dx, y))) hits++; }
         const gr = g.getBoundingClientRect(), ty = Math.min(gr.bottom - 2, st.bottom + 5), under = document.elementFromPoint(line, w.top + w.height / 2);
-        out[id] = { hits: hits, asked: asked, line: line, x: gr.left + gr.width / 2, y: ty, below: isGrip(document.elementFromPoint(line, ty)),
+        out[id] = { hits: hits, asked: asked, hit: getComputedStyle(g).pointerEvents !== 'none' && getComputedStyle(g).visibility === 'visible',
+                    line: line, x: gr.left + gr.width / 2, y: ty, below: isGrip(document.elementFromPoint(line, ty)),
                     top: gr.top, bottom: gr.bottom, edge: st.bottom, wholeTop: w.top, whole: !!under && (under === wl || wl.contains(under)) };
       }
       return out; }"""
@@ -475,8 +477,8 @@ with sync_playwright() as p:
             g = pg.evaluate(GRIPS)
             ends = ("tlStart", "tlEnd")
             check(f"{_n}, {face}: each end's grip sits at its foot: beside either line, over the song, nothing on top is the grip",
-                  all(g[i]["asked"] > 300 and g[i]["hits"] == 0 for i in ends),
-                  "; ".join(f"{i}: the grip on top at {g[i]['hits']} of {g[i]['asked']} points beside the line" for i in ends))
+                  all(g[i]["asked"] > 300 and g[i]["hits"] == 0 and g[i]["hit"] for i in ends),
+                  "; ".join(f"{i}: the grip on top at {g[i]['hits']} of {g[i]['asked']} points beside the line (it can be hit: {g[i]['hit']})" for i in ends))
             check(f"{_n}, {face}: ...a tab that shows half under the song's edge and keeps clear of the whole song's line, which a tap under it still reaches",
                   all(g[i]["below"] and g[i]["top"] < g[i]["edge"] < g[i]["bottom"] and g[i]["bottom"] <= g[i]["wholeTop"] - 2 and g[i]["whole"] for i in ends),
                   "; ".join(f"{i}: shown below the edge {g[i]['below']}, the tab {g[i]['top']:.1f}-{g[i]['bottom']:.1f} over the edge at {g[i]['edge']:.1f},"
