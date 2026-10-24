@@ -46,9 +46,9 @@ The rows:
 
   EXACT TIMES. A typed time moves its end (a comma is a point); a time that
   is not one puts the loop's own back. - and + move as far as Each press
-  says: untouched 0.1s, or a bar once there is a tempo; 0.01s or 0.1s picked
-  and kept; a bar dimmed until there is a tempo; a new song untouched. Their
-  names say the step. Lock the
+  says: untouched 0.1s, or a bar once there is a tempo while Snap to the beat
+  is on; 0.01s or 0.1s picked and kept; a bar there only once there is a
+  tempo; a new song untouched. Their names say the step. Lock the
   length moves both ends together. Every field that takes text is 16px (A11Y
   11b; these are built hidden).
 
@@ -143,7 +143,7 @@ SAID = """() => { const q = (id) => document.getElementById(id);
            fit: q('matchDrawingBtn').getAttribute('aria-pressed'), fitOff: q('matchDrawingBtn').disabled, fitSub: q('musicFitSub').textContent,
            whole: q('musicWholeBtn').getAttribute('aria-pressed'), wholeName: q('musicWholeName').textContent, wholeSub: q('musicWholeSub').textContent,
            play: q('musicPlayLabel').textContent,
-           step: [...document.querySelectorAll('#musicStepSeg button')].map(b => (b.classList.contains('on') ? '*' : '') + b.textContent + (b.disabled ? ' (dim)' : '')).join(' · '),
+           step: [...document.querySelectorAll('#musicStepSeg button')].filter(b => !b.hidden).map(b => (b.classList.contains('on') ? '*' : '') + b.textContent + (b.disabled ? ' (dim)' : '')).join(' · '),
            smooth: q('musicSmooth').getAttribute('aria-checked'), smoothSub: q('musicSmoothSub').textContent }; }"""
 # Shown: no [hidden] on the way up, and a box. Hidden: a [hidden] on the way up.
 SHOWN = """(ids) => ids.filter((id) => { const el = document.getElementById(id);
@@ -654,8 +654,8 @@ with sync_playwright() as pw:
               abs(t1["e"] - 4.25) < 1e-9 and t2 == t1 and v2 == "4.250" and abs(t3["s"] - 1.5) < 1e-9 and v3 == "1.500",
               f"4.25 -> {t1['e']}; 'soon' -> {t2['e']} shown {v2!r}; '1,5' -> {t3['s']} shown {v3!r}")
         # - and +: as far as Each press says. Untouched it is 0.1s, or a bar
-        # once there is a tempo; the pill shows which, and the buttons' names
-        # say it.
+        # once there is a tempo while Snap to the beat is on; the pill shows
+        # which, and the buttons' names say it.
         NAMES = "() => [...document.querySelectorAll('.nudge-btn[data-which]')].map(b => b.getAttribute('aria-label'))"
         e0, n0, l0 = pg.evaluate("() => trimEnd"), pg.evaluate(NAMES), pg.evaluate(SAID)["step"]
         pg.click('.nudge-btn[data-which="end"][data-amount="1"]'); pg.wait_for_timeout(150)
@@ -664,12 +664,18 @@ with sync_playwright() as pw:
         n1, l1 = pg.evaluate(NAMES), pg.evaluate(SAID)["step"]
         pg.click('.nudge-btn[data-which="end"][data-amount="-1"]'); pg.wait_for_timeout(150)
         e2 = pg.evaluate("() => trimEnd")
-        check(f"{_n}: untouched, - and + move 0.1s, or a bar once there is a tempo, and say which",
+        # Snap to the beat off: the step a free set wants, untouched.
+        pg.evaluate("() => document.getElementById('musicSnap').scrollIntoView({ block: 'center' })"); pg.wait_for_timeout(200)
+        pg.click("#musicSnap"); pg.wait_for_timeout(150)
+        n2, l2 = pg.evaluate(NAMES), pg.evaluate(SAID)["step"]
+        pg.click("#musicSnap"); pg.wait_for_timeout(150)
+        check(f"{_n}: untouched, - and + move 0.1s, or a bar once there is a tempo while Snap to the beat is on, and say which",
               abs((e1 - e0) - 0.1) < 1e-9 and abs((e1 - e2) - 2.0) < 1e-9
-              and l0 == "0.01s · *0.1s · a bar (dim)" and l1 == "0.01s · 0.1s · *a bar"
+              and l0 == "0.01s · *0.1s" and l1 == "0.01s · 0.1s · *a bar" and l2 == "0.01s · *0.1s · a bar"
               and n0 == ["Start of loop, 0.1s earlier", "Start of loop, 0.1s later", "End of loop, 0.1s earlier", "End of loop, 0.1s later"]
-              and n1 == ["Start of loop, a bar earlier", "Start of loop, a bar later", "End of loop, a bar earlier", "End of loop, a bar later"],
-              f"+ moved the end {e1 - e0:.4f}s, then - at 120 a minute {e1 - e2:.4f}s; Each press {l0!r} then {l1!r}; {n0} then {n1}")
+              and n1 == ["Start of loop, a bar earlier", "Start of loop, a bar later", "End of loop, a bar earlier", "End of loop, a bar later"]
+              and n2 == n0,
+              f"+ moved the end {e1 - e0:.4f}s, then - at 120 a minute {e1 - e2:.4f}s; Each press {l0!r}, then {l1!r}, then with the switch off {l2!r}; {n0} then {n1}")
         # Picked, a step is kept, a tempo or not, and a new song starts untouched.
         pg.evaluate("() => { musicTempo = null; updateTrimUI(); }"); pg.wait_for_timeout(150)
         pg.click('#musicStepSeg button[data-step="0.01"]'); pg.wait_for_timeout(150)
@@ -683,7 +689,7 @@ with sync_playwright() as pw:
         f2, k3 = pg.evaluate("() => trimEnd"), pg.evaluate(SAID)["step"]
         check(f"{_n}: Each press picks the step and keeps it, a tempo or not",
               abs((f0 - f1) - 0.01) < 1e-9 and abs((f1 - f2) - 0.1) < 1e-9
-              and k1 == "*0.01s · 0.1s · a bar (dim)" and k2 == "*0.01s · 0.1s · a bar" and k3 == "0.01s · *0.1s · a bar"
+              and k1 == "*0.01s · 0.1s" and k2 == "*0.01s · 0.1s · a bar" and k3 == "0.01s · *0.1s · a bar"
               and m1 == ["Start of loop, 0.01s earlier", "Start of loop, 0.01s later", "End of loop, 0.01s earlier", "End of loop, 0.01s later"],
               f"0.01s picked: - moved {f0 - f1:.4f}s ({k1!r}, {m1}); a tempo: {k2!r}; 0.1s picked with it: - moved {f1 - f2:.4f}s ({k3!r})")
         # 0.01s picked first: 0.1s kept would look untouched.
@@ -692,7 +698,7 @@ with sync_playwright() as pw:
         add(pg, LONG)
         k4 = pg.evaluate(SAID)["step"]
         check(f"{_n}: a new song starts on the untouched step",
-              k5.startswith("*0.01s") and k4 == "0.01s · *0.1s · a bar (dim)", f"0.01s picked ({k5!r}), then a new song: {k4!r}")
+              k5.startswith("*0.01s") and k4 == "0.01s · *0.1s", f"0.01s picked ({k5!r}), then a new song: {k4!r}")
         pg.evaluate("() => { musicTempo = null; updateTrimUI(); }"); pg.wait_for_timeout(100)
         pg.click("#musicLock"); pg.wait_for_timeout(100)
         l0 = pg.evaluate(TRIM)

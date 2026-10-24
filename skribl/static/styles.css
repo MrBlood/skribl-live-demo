@@ -2468,12 +2468,11 @@ body.recoloring #canvas { cursor: crosshair !important; }
 .mt-sect { margin: 18px 0 4px; font-size: 13px; font-weight: 600; color: var(--text-secondary); }
 .fine-tune-body > .mt-sect:first-child { margin-top: 2px; }
 /* EACH PRESS, under the times: how far - and + move, the one pill beside a
-   name in the edge names' style ("Start of loop"); "a bar" is dimmed until
-   there is a tempo, as a dimmed button is (.zoom-hud .zoom-btn). */
+   name in the edge names' style ("Start of loop"); "a bar" shows once there
+   is a tempo, opening out on one line (lib/musicdrawer.js glideIn). */
 .mt-step { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 10px; }
 .mt-step-seg { --seg-h: 40px; }
-.mt-step-seg button { height: 100%; line-height: 1; }
-.mt-step-seg button:disabled { color: var(--text-dim); cursor: default; }
+.mt-step-seg button { height: 100%; line-height: 1; white-space: nowrap; }
 .mt-switch { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 2px; }
 .mt-switch-words { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
 .mt-switch .layer-toggle { display: inline-block; }

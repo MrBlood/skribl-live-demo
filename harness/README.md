@@ -474,9 +474,10 @@ stays a sleep.
   smooth restart, and its seconds agree with the line's; Whole song says when
   it is the longest loop; with nothing drawn Fit is off and wakes with a
   drawing; Smooth restart's switch keeps its last length; typed times, - and +
-  as far as Each press says (untouched 0.1s, or a bar once there is a tempo;
-  0.01s or 0.1s picked and kept; a bar dimmed until there is a tempo; a new
-  song untouched; the buttons' names say the step) and Lock the length;
+  as far as Each press says (untouched 0.1s, or a bar once there is a tempo
+  while Snap to the beat is on; 0.01s or 0.1s picked and kept; a bar there
+  only once there is a tempo; a new song untouched; the buttons' names say
+  the step) and Lock the length;
   16px fields; Play with my drawing is the editor's Play, and waits with
   nothing drawn; More opened as a song lands keeps its tile in sight, and
   closing it from the drawer's end glides; a drawer taller than the screen
@@ -497,17 +498,25 @@ stays a sleep.
   seconds after the last (a stray gap does not move it), the one line counts
   the beats, and where the beat falls is the taps' own on the song's clock as
   heard (less the time the sound takes to reach the ear); on a phone the tap
-  stays put while its words change; an end let go on the timeline settles on
-  whole bars, the nearest of 4, 8, 16 and 32 beats, smooth restart and all,
-  the start and the end alike, passing over a count the song or the 20s cap
-  has no room for, gliding there (at once under Reduce Motion), and the song
-  slid under the drawing settles the loop's start on a beat; the timeline
-  dots every beat in view (bigger on each bar from the loop's start, no
-  closer than 6px), the drawing's lane runs under the loop with a dashed line
-  each time it comes round, and the Restart view marks the beats in its two
-  windows, where an end let go near a beat settles on it; typed ends never
-  settle, nor a locked loop's; the tempo goes with the song into the drafts and a re-add
-  card, and a new song starts with none; the one line, the tap's words and the
+  stays put while its words change; with Snap to the beat on, an end let go
+  on the timeline settles on whole bars, the nearest of 4, 8, 16 and 32
+  beats, smooth restart and all, counted from the start wherever it is (a
+  start set off the beat is never moved), and the start let go lands on the
+  nearest beat with the end following to whole bars, passing over a count the
+  song or the 20s cap has no room for, gliding there (at once under Reduce
+  Motion), and the song slid under the drawing settles the loop's start on a
+  beat; the timeline dots every beat in view (bigger on each bar from the
+  loop's start, no closer than 6px), the drawing's lane runs under the loop
+  with a dashed line each time it comes round, and the Restart view marks the
+  beats in its two windows, where an end let go near a beat settles on it;
+  typed ends never settle, nor a locked loop's; Snap to the beat (the owner:
+  "I need a free set so it's not all automatic") shows under the tap once
+  there is a tempo, on to start, saying what it does, and opens out with a
+  bar in Each press frame by frame (at once under Reduce Motion), and off
+  nothing settles, on the timeline, in the Restart view, slid or tapped; the
+  tempo goes with the song into the drafts and a re-add card, the switch with
+  it, tapped again the switch stays, and a new song starts with none and the
+  switch put away; the one line, the tap's and the switch's words and the
   marks read against what is behind them, light and dark; the pair's words are
   whole at 320, 360 and 402px, side by side from 360. Taps run on the page's
   own clock, each woken early to land on its mark; a try whose taps strayed
