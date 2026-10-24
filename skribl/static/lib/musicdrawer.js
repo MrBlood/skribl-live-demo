@@ -71,13 +71,14 @@
  * a minute (most music is), and where a beat falls is the taps' own, read off
  * the song's clock less the time the sound takes to reach the ear, so the
  * marks sit on what was heard. Then every count is of
- * what is HEARD, smooth restart and all: the one line says the beats, and an
- * end let go on the timeline settles where the loop is whole bars, 4, 8, 16 or
- * 32 beats (the owner: "we only ever want 4,8,16,... beats"), the end where
- * the loop comes round, so with a smooth restart the handle sits that much
- * past the beat. The loop slid along the song settles its start on a beat,
- * and - and + move a bar. The tempo is the editor's, saved with the song in
- * its drafts.
+ * what is HEARD, smooth restart and all: the one line says the beats, and,
+ * with Snap to the beat on, a start let go on the timeline lands on a beat and
+ * the loop on whole bars, 4, 8, 16 or 32 beats (the owner: "we only ever want
+ * 4,8,16,... beats"), the end where the loop comes round, so with a smooth
+ * restart the handle sits that much past the beat. The loop slid along the
+ * song starts on a beat, and - and + move a bar unless another step is
+ * picked. Off, nothing settles. The tempo is the editor's, saved with the
+ * song in its drafts, and the switch with it.
  *
  * TEST SEAM IS AN <audio> ELEMENT, played inside the tap. On a phone set to
  * silent that is the one that is heard (verify_audiosession's first note),
@@ -118,7 +119,8 @@
  *   musicOn()           Play's music, joining the drawing where it is
  *   musicOff()          Play's music, stopped
  *   syncRow()           redraw the file row and its switch
- *   tempo()             the song's tapped tempo { bpm, phase }, or null;
+ *   tempo()             the song's tapped tempo { bpm, phase }, with
+ *                       snap: false when Snap to the beat is off, or null;
  *                       setTempo(t), kept with the song in the drafts
  *   dock()              the bar right above the drawer, which More's nudge
  *                       leaves under the pinned header while More's first
@@ -132,7 +134,6 @@
   'use strict';
 
   var SEAM = 1.25;                         // seconds either side of the join
-  var LEVEL_KEY = 'skribl_music_level';    // one for both editors: 'fine' is More open
   var PICK_FADE_MS = 250;                  // Skribl's pick's smooth restart
   var UNDO_MS = 8000;
   var EPS = 0.0005;                        // two times are one at the thousandth
@@ -165,10 +166,12 @@
     return Math.abs(t - Math.round(t)) < 0.05 ? String(Math.round(t)) : t.toFixed(1);
   }
   // A tempo as saved: { bpm, phase } -- beats a minute, and where a beat falls
-  // in the song, in seconds. Anything else is no tempo.
+  // in the song, in seconds -- with snap: false once Snap to the beat is
+  // turned off for it. Anything else is no tempo.
   function tempoFrom(t) {
     var bpm = t ? +t.bpm : NaN, ph = t ? +t.phase : NaN;
-    return bpm >= 30 && bpm <= 300 && isFinite(ph) ? { bpm: bpm, phase: ph } : null;
+    if (!(bpm >= 30 && bpm <= 300 && isFinite(ph))) return null;
+    return t.snap === false ? { bpm: bpm, phase: ph, snap: false } : { bpm: bpm, phase: ph };
   }
   // "8 beats", "8.8 beats", "1 beat": whole when it is within a twentieth.
   function beatWords(n) {
@@ -211,15 +214,29 @@
      * tiles do (lib/drawtiles.js), at once under Reduce Motion, and the drawer
      * gets shorter only once the fold is done, gently: scrolled near its end,
      * the page would clamp and leap under the finger (lib/drawerdetent.js).
-     * Whether it is open is remembered, one key for both editors: 'fine' (it
-     * was Fine-tune) is open, anything else closed, the old Adjust too.
+     * MORE STARTS CLOSED, EVERY TIME: on a load, and whenever the music panel
+     * is put away, so the drawer opens on its one view, short enough for a
+     * phone (the owner, finding it open from an old Fine-tune: "More starts
+     * open"; then the pick, always closed). Nothing remembers it.
      * #musicDetail's data-level says which, set before More shows or hides,
      * so lib/drawerdetent.js does not follow it as a song landing. `hidden`
      * takes what More holds out of the Tab order as well as off the screen. */
     var moreBtn = $('fineTuneToggle'), moreBody = $('fineTuneBody');
     var open = false, folding = false, foldT = null;
-    try { open = global.localStorage.getItem(LEVEL_KEY) === 'fine'; } catch (e) {}
     function still() { return !!(global.matchMedia && global.matchMedia('(prefers-reduced-motion: reduce)').matches); }
+    // What shows once there is a beat (Snap to the beat, and a bar in Each
+    // press) opens out from nothing, across ('x') or down, rather than
+    // pushing what is around it aside in one frame; at once under Reduce
+    // Motion, and when it is not on the screen to see.
+    function glideIn(el, axis) {
+      if (!el || still() || !el.animate || !el.offsetParent) return;
+      var cs = global.getComputedStyle(el), from = { opacity: 0 }, to = { opacity: 1 };
+      (axis === 'x' ? ['width', 'minWidth', 'paddingLeft', 'paddingRight'] : ['height', 'paddingTop', 'paddingBottom'])
+        .forEach(function (k) { from[k] = '0px'; to[k] = cs[k]; });
+      el.style.overflow = 'hidden';
+      var an = el.animate([from, to], { duration: 240, easing: 'cubic-bezier(.2, .8, .2, 1)' });
+      an.onfinish = an.oncancel = function () { el.style.overflow = ''; };
+    }
     function showMore() {
       if (detail) detail.dataset.level = open ? 'fine' : 'simple';
       if (moreBtn) {
@@ -243,7 +260,6 @@
       if (next === open) return;
       if (folding) finishFold();
       open = next;
-      try { global.localStorage.setItem(LEVEL_KEY, open ? 'fine' : 'simple'); } catch (e2) {}
       if (!open) {
         folding = true;
         showMore();
@@ -289,12 +305,25 @@
     }
     showMore();
     if (moreBtn) moreBtn.addEventListener('click', function () { setMore(!open); });
+    // Put away (the drawer closed, or Photo picked), More closes with it, at
+    // once: nothing of it is on the screen to fold.
+    if (panel && global.MutationObserver) new global.MutationObserver(function () {
+      if (!panel.hidden || !(open || folding)) return;
+      clearTimeout(foldT);
+      if (moreBody) {
+        moreBody.classList.remove('mt-folding');
+        if (moreBody.getAnimations) moreBody.getAnimations().forEach(function (a) { a.cancel(); });
+      }
+      open = folding = false;
+      showMore();
+    }).observe(panel, { attributes: true, attributeFilter: ['hidden'] });
 
     // A new song: the timeline starts where it belongs, and the last song's
     // Undo and taps are not this one's.
     function resetView() {
       if (tl) tl.reset();
       forgetUndo();
+      stepPick = null;
       taps = [];
       clearTimeout(tapT);
       tapT = null;
@@ -345,43 +374,68 @@
       }
       step(t0);
     }
-    // With a tempo, an end let go on the timeline settles where the loop is
-    // whole bars: of 4, 8, 16 and 32 beats, the count nearest what the finger
-    // left that the song and the 20s cap have room for, the other end kept.
-    // In the Restart view, a close-up (`pxPerSec`, its scale), an end let go
-    // within SNAP_PX of a beat settles on it instead: the loop detail's rule,
-    // which the Restart view took over. Either way the end is where the loop
-    // comes round, a smooth restart's length before the handle. Typed and
-    // stepped ends never settle, nor a locked loop.
+    /* SNAP TO THE BEAT (the owner, a song with a quiet start: "it ends up
+     * putting the beat in the middle rather than in the right spot. Can I no
+     * longer freely adjust start and end?"; then the picks, "if they let me
+     * set the starting point. I need a free set so it's not all automatic").
+     * With a tempo and the switch under The beat on, an end let go on the
+     * timeline settles:
+     *   the start on the nearest beat, and the end follows so the loop is
+     *     whole bars: of 4, 8, 16 and 32 beats, the count nearest what the
+     *     finger left that the song and the 20s cap have room for;
+     *   the end on whole bars the same way, counted from the start wherever
+     *     it is: dragging the end never moves a start you have set.
+     * In the Restart view, a close-up (`pxPerSec`, its scale), an end let go
+     * within SNAP_PX of a beat settles on it instead: the loop detail's rule,
+     * which the Restart view took over. The loop slid along the song, or sent
+     * by a tap on the whole song, starts on a beat (beatFor). Either way the
+     * end is where the loop comes round, a smooth restart's length before the
+     * handle. The switch off, nothing settles. Typed and stepped ends never
+     * do, nor a locked loop's. */
+    function snapOn() { var tp = tempo(); return !!tp && tp.snap !== false; }
+    // Of 4, 8, 16 and 32 beats, the count nearest `len` heard that `room`
+    // seconds hold, or 0.
+    function barsFor(len, room) {
+      var p = beatSecs(), best = 0;
+      BARS.forEach(function (k) {
+        var l = lenFor(k);
+        if (l > Math.min(T.MAX_LOOP_SECONDS, room) + EPS || l < T.MIN_LOOP_SECONDS - EPS) return;
+        if (!best || Math.abs(len - k * p) < Math.abs(len - best * p)) best = k;
+      });
+      return best;
+    }
     function snap(which, pxPerSec) {
-      var tp = tempo(), p = beatSecs();
-      if (!tp || locked || !h.hasTrack()) return;
-      var t = h.trim(), fold = Math.min(h.crossfade() / 1000, (t.end - t.start) / 2), n;
-      if (!pxPerSec) {
-        var len = heard(t, h.crossfade()), best = 0;
-        var room = Math.min(T.MAX_LOOP_SECONDS, which === 'end' ? t.duration - t.start : t.end);
-        BARS.forEach(function (k) {
-          var l = lenFor(k);
-          if (l > room + EPS || l < T.MIN_LOOP_SECONDS - EPS) return;
-          if (!best || Math.abs(len - k * p) < Math.abs(len - best * p)) best = k;
-        });
-        if (!best || Math.abs(len - best * p) < EPS) return;
-        n = T.setHandle({ start: t.start, end: t.end, duration: t.duration }, which,
-          which === 'end' ? t.start + lenFor(best) : t.end - lenFor(best), 'constrain');
+      if (!snapOn() || locked || !h.hasTrack()) return;
+      var tp = tempo(), p = beatSecs(), t = h.trim(), n, k;
+      var state = { start: t.start, end: t.end, duration: t.duration };
+      if (!pxPerSec && which === 'start') {
+        var s = tp.phase + Math.round((t.start - tp.phase) / p) * p;
+        if (s < -EPS) s += p;
+        s = Math.max(0, s);
+        k = barsFor(heard({ start: s, end: t.end }, h.crossfade()), t.duration - s);
+        // No whole bars fit from that beat: the start settles alone.
+        n = k ? { start: s, end: s + lenFor(k) } : T.setHandle(state, 'start', s, 'constrain');
+      } else if (!pxPerSec) {
+        k = barsFor(heard(t, h.crossfade()), t.duration - t.start);
+        if (!k) return;
+        n = T.setHandle(state, 'end', t.start + lenFor(k), 'constrain');
       } else {
+        var fold = Math.min(h.crossfade() / 1000, (t.end - t.start) / 2);
         var at = which === 'start' ? t.start : t.end - fold;
         var beat = tp.phase + Math.round((at - tp.phase) / p) * p;
-        if (!(Math.abs(beat - at) * pxPerSec <= SNAP_PX) || Math.abs(beat - at) < EPS) return;
-        n = T.setHandle({ start: t.start, end: t.end, duration: t.duration }, which, which === 'start' ? beat : beat + fold, 'slide');
+        if (!(Math.abs(beat - at) * pxPerSec <= SNAP_PX)) return;
+        n = T.setHandle(state, which, which === 'start' ? beat : beat + fold, 'slide');
       }
+      if (near(n.start, t.start) && near(n.end, t.end)) return;
       glideTo(n.start, n.end);
     }
     // Where a loop of `len` starting near `start` starts on a beat: the
     // nearest beat, or at either end of the song the one on the side there is
-    // room. `start` itself without a tempo, or with no room either side.
+    // room. `start` itself with the switch off or no tempo, or with no room
+    // either side.
     function beatFor(start, len) {
       var tp = tempo(), p = beatSecs(), d = h.trim().duration;
-      if (!tp) return start;
+      if (!snapOn()) return start;
       var beat = tp.phase + Math.round((start - tp.phase) / p) * p;
       if (beat + len > d + EPS) beat -= p;
       if (beat < -EPS) beat += p;
@@ -430,21 +484,45 @@
       }
     }) : null;
 
-    /* ---- - and +: 0.1s a press, or a bar once there is a tempo. ----------
-     * Each button's name says which, and so does the line under them (it was
-     * Each tap, with five steps to choose from). Only the edges' buttons carry
-     * data-which. */
-    var nudges = [].slice.call(document.querySelectorAll('.nudge-btn[data-which]')), stepLine = $('musicStepLine');
-    function stepNow() { var p = beatSecs(); return p > 0 ? 4 * p : 0.1; }
+    /* ---- - and +: how far each press moves. --------------------------------
+     * One pill under the times, Each press: 0.01s, 0.1s, and a bar once there
+     * is a tempo, opening out beside them (the owner, asking how to change the
+     * step after it went automatic; it had been Each tap, with five steps).
+     * Faded until then, as a dimmed button is, it read 2.5:1 (verify_onepill).
+     * Untouched it is a bar while Snap to the beat is on, and today's step,
+     * 0.1s, otherwise; a new song starts untouched. Each button's name says
+     * the step too. Only the edges' buttons carry data-which. */
+    var nudges = [].slice.call(document.querySelectorAll('.nudge-btn[data-which]'));
+    var stepSeg = $('musicStepSeg'), stepBtns = stepSeg ? [].slice.call(stepSeg.querySelectorAll('button[data-step]')) : [];
+    var stepPick = null;   // null untouched, else '0.01', '0.1' or 'bar'
+    function stepKey() {
+      if (stepPick === '0.01' || stepPick === '0.1') return stepPick;
+      if (stepPick === 'bar') return beatSecs() > 0 ? 'bar' : '0.1';
+      return snapOn() ? 'bar' : '0.1';
+    }
+    function stepNow() { var k = stepKey(); return k === 'bar' ? 4 * beatSecs() : parseFloat(k); }
     function syncSteps() {
-      var p = beatSecs();
+      var p = beatSecs(), k = stepKey();
       nudges.forEach(function (b) {
-        var w = (b.dataset.which === 'start' ? 'Start' : 'End') + ' of loop, ' + (p > 0 ? 'a bar ' : '0.1s ')
+        var w = (b.dataset.which === 'start' ? 'Start' : 'End') + ' of loop, ' + (k === 'bar' ? 'a bar' : k + 's') + ' '
           + (parseFloat(b.dataset.amount) > 0 ? 'later' : 'earlier');
         if (b.getAttribute('aria-label') !== w) b.setAttribute('aria-label', w);
       });
-      if (stepLine) stepLine.textContent = !h.hasTrack() ? '' : p > 0 ? '\u2212 and + move a bar, ' + (4 * p).toFixed(2) + 's.' : '\u2212 and + move 0.1s.';
+      stepBtns.forEach(function (b) {
+        var on = b.dataset.step === k, gone = b.dataset.step === 'bar' && !(p > 0);
+        if (b.classList.contains('on') !== on) b.classList.toggle('on', on);
+        if (b.hidden !== gone) { b.hidden = b.disabled = gone; if (!gone) glideIn(b, 'x'); }
+        var t = b.dataset.step === 'bar' && !gone ? 'A bar, ' + (4 * p).toFixed(2) + 's' : '';
+        if ((b.getAttribute('title') || '') !== t) { if (t) b.setAttribute('title', t); else b.removeAttribute('title'); }
+      });
     }
+    stepBtns.forEach(function (b) {
+      b.addEventListener('click', function () {
+        if (b.disabled) return;
+        stepPick = b.dataset.step;
+        syncSteps();
+      });
+    });
     nudges.forEach(function (b) {
       b.addEventListener('click', function () {
         var which = b.dataset.which, dir = parseFloat(b.dataset.amount);
@@ -854,7 +932,9 @@
         });
         run.forEach(function (tp) { var a = 2 * Math.PI * tp.song / p; x += Math.cos(a); y += Math.sin(a); n++; });
         var ph = n ? ((Math.atan2(y, x) / (2 * Math.PI)) * p + p) % p : 0;
-        if (h.setTempo) h.setTempo({ bpm: bpm, phase: Math.round(ph * 10000) / 10000 });
+        var next = { bpm: bpm, phase: Math.round(ph * 10000) / 10000 };
+        if (tempo() && !snapOn()) next.snap = false;      // tapped again, the switch stays as it was
+        if (h.setTempo) h.setTempo(next);
         tapNote = '';
         h.changed();
       } else tapNote = taps.length ? 'Four taps or more, in time with the music.' : '';
@@ -889,6 +969,25 @@
         startLoop(0);
       } else taps.push({ at: global.performance.now(), song: songNow() });
       syncTap();
+    });
+
+    // Snap to the beat, under the tap once there is a tempo, on to start and
+    // kept with it in the drafts (SNAP TO THE BEAT, above, has what it does).
+    var snapRow = $('musicSnapRow'), snapSw = $('musicSnap'), snapSub = $('musicSnapSub');
+    function syncSnap() {
+      if (!snapRow) return;
+      var tp = tempo(), on = snapOn();
+      if (snapRow.hidden !== !tp) { snapRow.hidden = !tp; if (tp) glideIn(snapRow, 'y'); }
+      setOn(snapSw, on);
+      var w = on ? 'The start you drag lands on a beat, and the loop on whole bars.' : 'Ends stay exactly where you let them go.';
+      if (snapSub && snapSub.textContent !== w) snapSub.textContent = w;
+    }
+    if (snapSw) snapSw.addEventListener('click', function () {
+      var tp = tempo();
+      if (!tp || !h.setTempo) return;
+      h.setTempo(tp.snap === false ? { bpm: tp.bpm, phase: tp.phase } : { bpm: tp.bpm, phase: tp.phase, snap: false });
+      h.changed();
+      sync();
     });
 
     /* ---- Smooth restart: the clip's join, folded over its head. ------------
@@ -1016,6 +1115,7 @@
       syncPick(secs);
       syncHear(secs);
       syncTap();
+      syncSnap();
       syncCut();
       syncRvHint();
       if (tl) tl.draw();

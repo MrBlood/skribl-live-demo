@@ -138,20 +138,31 @@
         {#- TAP THE BEAT (owner: "to know how many beats are in the loop, so
             I'm not at 7 or 9 when I want 8"). Tapped along with Hear the
             loop, which the first tap starts; the tempo it finds counts the
-            loop in beats on the one line and marks them on the strip, and an
-            end dragged on the strip settles on whole bars: 4, 8, 16 or 32
-            beats (the owner: "we only ever want 4,8,16"). -#}
+            loop in beats on the one line and marks them on the timeline and
+            the Restart view. SNAP TO THE BEAT shows with it, on to start: a
+            start dragged on the timeline lands on a beat, and the loop on
+            whole bars, 4, 8, 16 or 32 beats (the owner: "we only ever want
+            4,8,16"); off, the ends stay where they are let go (the owner: "I
+            need a free set so it's not all automatic"). -#}
         <p class="mt-sect">The beat</p>
         <div class="mt-beat" id="musicBeat">
           <div class="mt-tap-row">
             <button type="button" id="musicTapBtn" class="mt-tap">{{ music_glyph() }}<span id="musicTapWords">Tap the beat</span></button>
             <span class="mt-tempo" id="musicTempo" role="status"></span>
           </div>
+          <div class="mt-snap" id="musicSnapRow" hidden>
+            <div class="mt-switch">
+              <span class="mt-switch-words"><span class="mt-k">Snap to the beat</span> <span class="mt-v" id="musicSnapSub">The start you drag lands on a beat, and the loop on whole bars.</span></span>
+              <button type="button" id="musicSnap" class="layer-toggle on" role="switch" aria-checked="true" aria-label="Snap to the beat"><span class="layer-toggle-knob"></span></button>
+            </div>
+          </div>
         </div>
         {#- EXACT TIMES: Start and End of loop typed to the thousandth or moved
-            with - and +, 0.1s a press, or a bar once there is a tempo. The
-            loop detail that sat above them went with step 2: the timeline
-            and the Restart view do its job. -#}
+            with - and +, as far as Each press says: 0.01s, 0.1s, or a bar,
+            which shows once there is a tempo (one pill, lib/segslider.js;
+            untouched, a bar while Snap to the beat is on, else 0.1s). Typed
+            and pressed times never snap. The loop detail that sat above them
+            went with step 2: the timeline and the Restart view do its job. -#}
         <p class="mt-sect">Exact times</p>
         <div class="finetune-panel">
           <div class="finetune-grid">
@@ -172,7 +183,10 @@
               </div>
             </div>
           </div>
-          <p class="mt-step-line" id="musicStepLine"></p>
+          <div class="mt-step">
+            <span class="edge-name" id="musicStepLbl">Each press</span>
+            <span class="seg mt-step-seg" id="musicStepSeg" role="group" aria-labelledby="musicStepLbl"><span class="seg-slider"></span><button type="button" data-step="0.01">0.01s</button><button type="button" data-step="0.1" class="on">0.1s</button><button type="button" data-step="bar" hidden disabled>a bar</button></span>
+          </div>
         </div>
         {#- HOW IT LOOPS: Cut on silence (lib/audioloop.js cutFrames: a clean
             cut's two ends move together, a few thousandths, to where the
