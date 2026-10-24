@@ -22867,3 +22867,86 @@ editors on its own rows, and the same files served unchanged green. One row
 was wrong at first: the new song's row picked 0.1s before the new song,
 which untouched looks the same as, so it stayed green with the reset gone; it
 picks 0.01s now.
+
+
+## After v329 -- Magnify on the timeline, 1x to 64x, around the end last touched
+
+The owner, from the phone: "Where did magnify go?", and then "I was looking
+for the magnify on fine tune". The loop detail in More had one (an end close
+up, 1x to 16x, with Loop, Start, End and Scroll); the timeline took over from
+the loop detail in step 2 and the magnifier went with it. Mocked beside
+today, on the timeline, around the end last touched, the answer was "All yes
+but maybe go to x64?", and of the zoom going back to 1x when the drawer is
+put away or staying, "stay".
+
+MAGNIFY (lib/musictimeline.js, the template, the CSS): a magnifier's - and +
+either side of the rung, Exact times' look, at the end of the timeline's name
+line, its middle on the name's. Each rung is the framing over 1, 2, 4, 8, 16,
+32 or 64, with the end last touched in the middle: the start, until a tap or
+a drag on the end's handle, the end's own - and +, a typed end or the Restart
+view's end makes it the end (lib/musicdrawer.js's setEdge tells the timeline
+which). The loop never moves for it. A step glides there as any reframing
+does, at once under Reduce Motion; each button stops at its end of the
+ladder. Zoomed in, a held end follows the finger while the view holds still,
+and held near either edge (not only its own, so the loop can shorten past
+what is in view as well as grow) the view slides along at the zoom, PAN views
+a second at the edge itself, rather than widening; let go, it glides back
+with the end in the middle. It slides only as far as the end can follow:
+where the end stops (the song's start or end, the other end, the 20s cap) the
+view stops with it, the end under the finger, and an end held at the edge
+that was already as far as it goes leaves the view still rather than jumping
+it there. The mock slid on into the dimmed part past the song, the end
+drifting off from under the finger: nothing stopped it, which reading the
+slide's code again for its calibration found. A slide at the zoom carries the
+view with the end zoomed around, so the song moves under the finger and the
+ends stay where they are on screen. The zoom stays when the drawer is put
+away and opened again; a new song starts at 1x on its start. At 64x a column
+of the song can hold less than the 128 samples of its finest block, so there
+the song is drawn from the samples themselves, and a single loud sample shows
+in its own column and no other.
+
+Pad and Flip: shared, the template, lib/musictimeline.js, lib/musicdrawer.js
+and the CSS; neither editor changed.
+
+TESTS. verify_musictimeline, a new part (magnify), each on both editors: the
+ladder and its readout, each button stopping at its end; each rung's framing
+around the start, the loop unmoved; a step's glide, frame by frame, and at
+once under Reduce Motion; a tap on the end's handle making it the end zoomed
+around; at 8x, a held end following the finger while the view holds, held at
+the left edge and then the right the view sliding along with the end under
+the finger, held at the song's start the view stopping with the start under
+the finger and held there again holding still, let go gliding back with it in
+the middle, a slide with the ends put, and the end's own + making it the end;
+the zoom kept when the drawer is put away and opened again, and a new song at
+1x on its framing; a loud sample in its own column; the magnifier's place,
+and its words and glyphs against what is behind them, light and dark on the
+owner's phone. verify_helpclaims reads the new tip, "Magnify the timeline".
+
+CALIBRATION, each part broken in a copy served to the browser, the files on
+disk untouched, and the magnify part run: the ladder stopping at 32x, and the
+buttons never disabled (the ladder's row; never disabled, a new song's row
+too, whose - is disabled at 1x); a rung framed from the start, 9% in (most
+rows); a step moving the loop a millisecond (the rungs' row and the tap's); a
+step in one frame (the glide's row); Reduce Motion gliding (its row); a held
+end dragging the view to it (the held rows, either edge, the let-go and the
+edge's stop); held at the edge, the view widening as at 1x (either edge, the
+edge's stop and its holding still), sliding on past where the end can go (the
+edge's two rows), or jumping to put a stopped end under the finger (holding
+still); panning only at the end's own edge (either edge); a slide at the zoom
+putting the start 9% in (the slide's row); a let-go jumping back (the let-go
+row); a tap on a handle not making it the end (the tap's row); - and + not
+making it the end (theirs, and the reopened view's); the zoom reset when the
+drawer is put away, and kept for a new song (the stays row, each); the
+samples' path taken out (its row); and the magnifier beside the name, off the
+name's middle, its rung faint and its glyphs faint (the placement row, light
+and dark, each). Each red on both editors on its own rows, and the same files
+served unchanged green.
+
+The rows' first draft had four mistakes of its own, all in the instrument,
+and all fixed before the calibration counted: after a drag they measured the
+zoomed view against the span from before it, when the longer loop has a
+longer framing over 8 (red on the good build); the glides counted their last
+frames' steps, which are the view's rounding to four places (red on Flip
+once); with nothing to glide they raised instead of going red; and a button
+disabled early (the ladder stopping at 32x) waited out Playwright's 30
+seconds instead of saying so. The calibration found the last two.

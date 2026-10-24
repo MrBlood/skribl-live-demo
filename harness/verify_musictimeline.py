@@ -19,6 +19,20 @@ plan, mocked first; the owner: "Yes on all").
   song's line moves the loop there, its middle under the finger; a drag along
   it slides the loop with the finger.
 
+  MAGNIFY (the owner, looking for Fine-tune's: "All yes but maybe go to
+  x64?", then "stay"). Magnifier - and + at the end of the name's line, its
+  middle on the name's, step 1x to 64x and say the rung, each stopping at its
+  end of the ladder. Each rung is the framing over that many, around the end
+  last touched (the start until the end is), and the loop never moves for
+  it; a step glides there frame by frame, at once under Reduce Motion.
+  Zoomed in, an end follows the finger at the zoom while the view holds
+  still; held at either edge the view slides along, and let go it glides
+  back with that end in the middle. The end's own - and + make it the end
+  zoomed around. The zoom stays when the drawer is put away and opened again;
+  a new song starts at 1x on its start. Zoomed past a block a column, the
+  song is drawn from its samples. Its words and glyphs read against what is
+  behind them, light and dark.
+
   THE PLAYHEAD runs across the loop on the timeline while the loop plays.
 
   THE RESTART VIEW (lib/musicrestart.js). The loop's last 0.6s beside its
@@ -74,8 +88,8 @@ import browsing  # noqa: E402
 import waits  # noqa: E402
 
 # For calibration: MUSICTL_ONLY=Pad (or Flip) runs one editor, and
-# MUSICTL_PART=layout (frame, slide, ends, whole, playhead, restart, cut,
-# bake, post) one part. A real run sets neither.
+# MUSICTL_PART=layout (frame, slide, ends, mag, whole, playhead, restart,
+# cut, bake, post) one part. A real run sets neither.
 ONLY = os.environ.get("MUSICTL_ONLY", "")
 PART = os.environ.get("MUSICTL_PART", "")
 EDITORS = [e for e in (("Pad", "/"), ("Flip", "/flip")) if not ONLY or e[0] == ONLY]
@@ -425,6 +439,260 @@ with sync_playwright() as p:
               off and max(off) < 2e-3 * goal[1],
               f"off its framing by {[round(o, 3) for o in off[:5]]}s on the first frames")
         c.close()
+
+    print("\nMUSIC TIMELINE — magnify")
+    MAG = "() => ({ said: document.getElementById('musicTlMag').textContent, out: document.getElementById('musicTlOut').disabled, in: document.getElementById('musicTlIn').disabled })"
+    LADDER = ["1\u00d7", "2\u00d7", "4\u00d7", "8\u00d7", "16\u00d7", "32\u00d7", "64\u00d7"]
+
+    def around(view, t, span):
+        """How far a view is from `span` seconds with `t` in its middle, as a share of the span."""
+        return max(abs(view[1] - span), abs(view[0] + view[1] / 2 - t)) / span
+
+    def zoomed(pg, n, m):
+        """The seconds across at `m`x for the loop as it is now: its framing over `m`."""
+        return framing(pg.evaluate(TRIM), pg.evaluate(DRAWN[n]))[1] / m
+
+    def mag_to(pg, want):
+        for _ in range(8):
+            m = pg.evaluate(MAG)
+            if m["said"] == want or m["said"] not in LADDER:
+                return
+            up = LADDER.index(want) > LADDER.index(m["said"])
+            if m["in" if up else "out"]:
+                return       # stopped short of it: the rows say where it is
+            pg.click("#musicTlIn" if up else "#musicTlOut")
+            pg.wait_for_timeout(60)
+
+    def press(pg, sel):
+        """A real click on a magnify button, or none when it is disabled."""
+        if pg.evaluate("(s) => document.querySelector(s).disabled", sel):
+            return False
+        pg.click(sel)
+        return True
+
+    for _n, _p in eds("mag"):
+        c, pg, errs = editor(b, _n, _p)
+        pg.evaluate(SET, {"s": 2.0, "e": 5.0, "xf": 0, "tempo": None})
+        into_view(pg, "#musicTimeline")
+        pg.wait_for_timeout(600)
+        f0 = framing(pg.evaluate(TRIM), pg.evaluate(DRAWN[_n]))
+        said, views, loops = [pg.evaluate(MAG)], [], []
+        for k in range(6):
+            if not press(pg, "#musicTlIn"):
+                break
+            pg.wait_for_timeout(500)
+            said.append(pg.evaluate(MAG)); views.append(pg.evaluate(VIEW)); loops.append(pg.evaluate(TRIM))
+        for k in range(len(views)):
+            press(pg, "#musicTlOut"); pg.wait_for_timeout(80)
+        back = pg.evaluate(MAG)
+        check(f"{_n}: magnify steps 1x to 64x and says the rung, each button stopping at its end of the ladder",
+              [m["said"] for m in said] == LADDER and said[0]["out"] and not said[0]["in"] and said[-1]["in"] and not said[-1]["out"]
+              and all(not m["in"] and not m["out"] for m in said[1:-1]) and back["said"] == "1\u00d7" and back["out"],
+              f"{[m['said'] for m in said]}; at 1x out {said[0]['out']}, in {said[0]['in']}; at 64x in {said[-1]['in']}; back to {back['said']}")
+        off = [around(v, 2.0, f0[1] / 2 ** (k + 1)) for k, v in enumerate(views)]
+        check(f"{_n}: each rung frames the loop over that many, the start in the middle, and the loop never moves for it",
+              off and max(off) < 2e-3 and all(l["s"] == 2.0 and l["e"] == 5.0 for l in loops),
+              f"the framing {f0[1]:.3f}s; at 2x..64x off by {[round(o, 5) for o in off]} of a span;"
+              f" the loop {loops[-1]['s'] if loops else None}-{loops[-1]['e'] if loops else None}")
+        # A step glides there, read on every frame from the click.
+        pg.wait_for_timeout(700)
+        pg.evaluate("() => { window.__fr = []; const tl = document.getElementById('musicTimeline'), t0 = performance.now();"
+                    " (function f() { window.__fr.push((tl.dataset.view || '').split(' ').map(Number)); if (performance.now() - t0 < 600) requestAnimationFrame(f); })(); }")
+        press(pg, "#musicTlIn")
+        pg.wait_for_timeout(700)
+        fr = [v[1] for v in pg.evaluate("() => window.__fr")]
+        goal = f0[1] / 2
+        gap = [abs(sp - goal) for sp in fr]
+        g0 = gap[0] if gap else 0
+        way = [g for g in gap if 2e-3 * goal < g < g0 - 2e-3 * goal]
+        # Each frame's share of the way, until it is there: the view is read
+        # to 4 places, so the last frames' steps are the rounding's.
+        # None at all (nothing to glide, or a jump) reads as a jump.
+        shares = [(gap[i] - gap[i + 1]) / g0 for i in range(len(gap) - 1) if gap[i] > 2e-3 * goal] if g0 else []
+        shares = shares or [1.0]
+        check(f"{_n}: a step glides there, frame by frame",
+              g0 > 0.3 * goal and len(way) >= 4 and max(shares) <= 0.7 and min(shares) > -1e-6 and gap[-1] < 2e-3 * goal,
+              f"from {fr[0] if fr else None:.3f}s to {goal:.3f}s: {len(way)} frames on the way, the most in a frame {max(shares):.2f} of it,"
+              f" the least {min(shares):.4f}")
+        # A tap on an end's handle, nothing moved, makes it the end zoomed around.
+        press(pg, "#musicTlOut"); pg.wait_for_timeout(700)
+        he = pg.evaluate(BOX, "#tlEnd")
+        pg.mouse.click(he["x"] + he["w"] / 2, he["y"] + he["h"] / 2)
+        pg.wait_for_timeout(300)
+        press(pg, "#musicTlIn"); pg.wait_for_timeout(700)
+        vt, tt = pg.evaluate(VIEW), pg.evaluate(TRIM)
+        check(f"{_n}: a tap on an end's handle makes it the end zoomed around",
+              around(vt, tt["e"], f0[1] / 2) < 2e-3 and abs(tt["s"] - 2.0) < 1e-9 and abs(tt["e"] - 5.0) < 1e-9,
+              f"the loop {tt['s']:.3f}-{tt['e']:.3f}; at 2x the view {vt}, its middle {vt[0] + vt[1] / 2:.3f}")
+        check(f"{_n}: no page errors from magnify", not errs, "; ".join(errs[:2]))
+        c.close()
+    for _n, _p in eds("mag"):
+        c = waits.instrument(b.new_context(reduced_motion="reduce", **DESK))
+        c, pg, errs = editor(b, _n, _p, ctx=c)
+        pg.evaluate(SET, {"s": 2.0, "e": 5.0, "xf": 0, "tempo": None})
+        into_view(pg, "#musicTimeline")
+        pg.wait_for_timeout(400)
+        f0 = framing(pg.evaluate(TRIM), pg.evaluate(DRAWN[_n]))
+        press(pg, "#musicTlIn")
+        fr = pg.evaluate(FRAMES, 200)
+        off = [around(v[1], 2.0, f0[1] / 2) for v in fr]
+        check(f"{_n}: under Reduce Motion a step is there at once",
+              off and max(off) < 2e-3, f"off by {[round(o, 4) for o in off[:4]]} of a span on the first frames")
+        c.close()
+    for _n, _p in eds("mag"):
+        c, pg, errs = editor(b, _n, _p)
+        pg.evaluate(SET, {"s": 2.0, "e": 5.0, "xf": 0, "tempo": None})
+        into_view(pg, "#musicTimeline")
+        pg.wait_for_timeout(600)
+        f0 = framing(pg.evaluate(TRIM), pg.evaluate(DRAWN[_n]))
+        mag_to(pg, "8\u00d7"); pg.wait_for_timeout(700)
+        span = f0[1] / 8
+        st, v0 = pg.evaluate(BOX, "#musicTlStage"), pg.evaluate(VIEW)
+        hs = pg.evaluate(BOX, "#tlStart")
+        hx, hy = hs["x"] + hs["w"] / 2, hs["y"] + hs["h"] / 2
+        drag(pg, hx, hy, hx - 40, hy, steps=8, up=False)
+        held, vh = pg.evaluate(TRIM), pg.evaluate(VIEW)
+        sx = at(vh, st["w"], held["s"])
+        check(f"{_n}: zoomed in, an end follows the finger at the zoom while the view holds still",
+              abs(sx - (hx - 40 - st["x"])) < 1.0 and max(abs(a - b_) for a, b_ in zip(v0, vh)) < 1e-4 and abs(vh[1] - span) < 1e-3 * span,
+              f"the start at {sx:.1f}px under a finger at {hx - 40 - st['x']:.1f}px; view {v0} -> {vh} (8x is {span:.4f}s)")
+        # Held at the left edge, then the right: the view slides along at the zoom.
+        pg.mouse.move(st["x"] + 3, hy, steps=4)
+        left = pg.evaluate(FRAMES, 600)
+        pg.mouse.move(st["x"] + st["w"] - 3, hy, steps=10)
+        right = pg.evaluate(FRAMES, 600)
+        lv, rv = [f[1][0] for f in left], [f[1][0] for f in right]
+        under_l = at(left[-1][1], st["w"], left[-1][2]); under_r = at(right[-1][1], st["w"], right[-1][2])
+        check(f"{_n}: zoomed in, held at either edge, the view slides along at the zoom, the end under the finger",
+              lv[-1] < lv[0] - 0.05 * span and all(b_ <= a + 1e-9 for a, b_ in zip(lv, lv[1:]))
+              and rv[-1] > rv[0] + 0.05 * span and all(b_ >= a - 1e-9 for a, b_ in zip(rv[3:], rv[4:]))
+              and max(abs(f[1][1] - span) for f in left + right) < 1e-3 * span and abs(under_l - 3) < 2.0 and abs(under_r - (st["w"] - 3)) < 2.0,
+              f"left edge {lv[0]:.3f} -> {lv[-1]:.3f}s, then right {rv[0]:.3f} -> {rv[-1]:.3f}s; span {span:.4f}s throughout;"
+              f" the start {under_l:.1f}px and {under_r:.1f}px from the left")
+        pg.mouse.up()
+        after = pg.evaluate(FRAMES, 900)
+        # The loop is longer now, and so is its framing over 8.
+        span = zoomed(pg, _n, 8)
+        gap = [around(f[1], f[2], span) for f in after]
+        shares = [(gap[i] - gap[i + 1]) / gap[0] for i in range(len(gap) - 1) if gap[i] > 2e-3] if gap and gap[0] else []
+        shares = shares or [1.0]
+        landed = next((i for i, g in enumerate(gap) if g < 2e-3), None)
+        check(f"{_n}: let go, the view glides back with that end in the middle, frame by frame",
+              gap[0] > 0.2 and landed is not None and landed >= 4 and max(shares) <= 0.7 and min(shares) > -1e-6,
+              f"from {gap[0]:.2f} of a span off: in the middle on frame {landed}, the most in a frame {max(shares):.2f}, the least {min(shares):.4f}")
+        # A finger on the song at the zoom: the song slides under it, and the
+        # end zoomed around stays where it is on screen.
+        pg.wait_for_timeout(300)
+        t0, v0, h0 = pg.evaluate(TRIM), pg.evaluate(VIEW), pg.evaluate(HANDS)
+        sy = st["y"] + st["h"] * 0.65
+        drag(pg, st["x"] + st["w"] * 0.25, sy, st["x"] + st["w"] * 0.25 - 60, sy, up=False)
+        t1, h1 = pg.evaluate(TRIM), pg.evaluate(HANDS)
+        pg.mouse.up()
+        slid = pg.evaluate(FRAMES, 500)
+        h2 = pg.evaluate(HANDS)
+        moved = 60 / st["w"] * v0[1]
+        check(f"{_n}: zoomed in, a finger on the song slides it under the finger at the zoom, the loop's ends staying put on screen",
+              abs((t1["s"] - t0["s"]) - moved) < 0.05 * moved and abs((t1["e"] - t1["s"]) - (t0["e"] - t0["s"])) < 1e-6
+              and max(abs(a - b_) for a, b_ in zip(h0, h1)) < 1 and max(abs(a - b_) for a, b_ in zip(h0, h2)) < 1
+              and max(around(f[1], f[2], v0[1]) for f in slid) < 2e-3,
+              f"60px left: the loop {t0['s']:.4f} -> {t1['s']:.4f} (want +{moved:.4f}s); handles {h0} -> {h1} -> {h2};"
+              f" let go, the start off the middle by {max(around(f[1], f[2], v0[1]) for f in slid):.4f} of a span at most")
+        # The end's own + in Exact times: the end is the one zoomed around now.
+        set_more(pg, True)
+        pg.click('.nudge-btn[data-which="end"][data-amount="1"]')
+        pg.wait_for_timeout(900)
+        t1, v1 = pg.evaluate(TRIM), pg.evaluate(VIEW)
+        span = zoomed(pg, _n, 8)
+        check(f"{_n}: the end's own - and + make it the end zoomed around",
+              around(v1, t1["e"], span) < 2e-3 and pg.evaluate(MAG)["said"] == "8\u00d7",
+              f"the end at {t1['e']:.3f}; view {v1}, its middle {v1[0] + v1[1] / 2:.3f}")
+        # Put away and opened again, it stays; a new song is 1x on its start.
+        browsing.pad_drawer_close(pg)
+        browsing.pad_drawer(pg, "music")
+        into_view(pg, "#musicTimeline")
+        pg.wait_for_timeout(900)
+        kept, vk = pg.evaluate(MAG)["said"], pg.evaluate(VIEW)
+        add(pg, SHORT)
+        pg.evaluate(SET, {"s": 1.0, "e": 3.0})
+        into_view(pg, "#musicTimeline")
+        pg.wait_for_timeout(900)
+        fresh, vf = pg.evaluate(MAG), pg.evaluate(VIEW)
+        g = framing(pg.evaluate(TRIM), pg.evaluate(DRAWN[_n]))
+        check(f"{_n}: the zoom stays when the drawer is put away and opened again, and a new song starts at 1x on its start",
+              kept == "8\u00d7" and around(vk, t1["e"], span) < 2e-3 and fresh["said"] == "1\u00d7" and fresh["out"]
+              and abs(vf[0] - g[0]) < 2e-3 * g[1] and abs(vf[1] - g[1]) < 2e-3 * g[1],
+              f"opened again: {kept}, view {vk}; a new song: {fresh['said']}, view {vf} (its framing {g[0]:.3f} {g[1]:.3f})")
+        check(f"{_n}: no page errors from a finger at the zoom", not errs, "; ".join(errs[:2]))
+        c.close()
+    for _n, _p in eds("mag"):
+        # Held at the edge, the view slides only as far as the end can follow:
+        # the start held at the left edge until it reaches the song's start.
+        c, pg, errs = editor(b, _n, _p)
+        pg.evaluate(SET, {"s": 0.6, "e": 3.6, "xf": 0, "tempo": None})
+        into_view(pg, "#musicTimeline")
+        pg.wait_for_timeout(600)
+        mag_to(pg, "8\u00d7"); pg.wait_for_timeout(700)
+        st, v0 = pg.evaluate(BOX, "#musicTlStage"), pg.evaluate(VIEW)
+        hs = pg.evaluate(BOX, "#tlStart")
+        hx, hy = hs["x"] + hs["w"] / 2, hs["y"] + hs["h"] / 2
+        drag(pg, hx, hy, st["x"] + 3, hy, steps=8, up=False)
+        fr = pg.evaluate(FRAMES, 1400)
+        pg.mouse.up()
+        last, tail = fr[-1], [f[1][0] for f in fr[-12:]]
+        under = at(last[1], st["w"], last[2])
+        check(f"{_n}: zoomed in, held at the edge, the view slides only as far as the end can follow, and stops with it under the finger",
+              v0[0] - last[1][0] > 0.3 and abs(last[2]) < 1e-9 and max(tail) - min(tail) < 1e-4 * last[1][1] and abs(under - 3) < 2.0,
+              f"the view's left edge {v0[0]:.3f} -> {last[1][0]:.4f}s, over the last frames {min(tail):.4f}..{max(tail):.4f};"
+              f" the start {last[2]:.3f}s, {under:.1f}px from the left under a finger at 3px")
+        # Already as far as it goes, the start at the song's start: held at the
+        # edge, the view holds still, with no jump.
+        pg.wait_for_timeout(900)
+        v1 = pg.evaluate(VIEW)
+        hs = pg.evaluate(BOX, "#tlStart")
+        hx, hy = hs["x"] + hs["w"] / 2, hs["y"] + hs["h"] / 2
+        drag(pg, hx, hy, st["x"] + 3, hy, steps=8, up=False)
+        fr = pg.evaluate(FRAMES, 800)
+        pg.mouse.up()
+        moved = max(abs(f[1][0] - v1[0]) for f in fr)
+        check(f"{_n}: zoomed in, held at the edge past where the end can go, the view holds still",
+              abs(fr[-1][2]) < 1e-9 and moved < 1e-4 * v1[1],
+              f"the start {fr[-1][2]:.3f}s; the view's left edge {v1[0]:.4f}s, {moved:.5f}s from it at most while held")
+        check(f"{_n}: no page errors at the edge", not errs, "; ".join(errs[:2]))
+        c.close()
+    for _n, _p in eds("mag"):
+        # Past a block a column the song is drawn from its samples: a single
+        # loud sample shows in the column that holds it and in no other.
+        c, pg, errs = editor(b, _n, _p, drawn=False, song=None)
+        r = pg.evaluate("""() => { const sr = 8000, b = new AudioBuffer({ length: sr, numberOfChannels: 1, sampleRate: sr }), d = b.getChannelData(0);
+          for (let i = 0; i < d.length; i++) d[i] = 0.01; d[1000] = 1;
+          const T = window.SkriblMusicTimeline, P = T.peaksOf(b), at = (s) => s / sr;
+          return { on: T.peakOf(P, at(990), at(1010)), beside: T.peakOf(P, at(1010), at(1050)), before: T.peakOf(P, at(960), at(990)) }; }""")
+        check(f"{_n}: zoomed past a block a column, the song is drawn from its samples",
+              r["on"] > 0.99 and r["beside"] < 0.02 and r["before"] < 0.02,
+              f"the column with the loud sample {r['on']:.3f}, the columns beside it {r['beside']:.3f} and {r['before']:.3f} (its block of 128 holds them all)")
+        c.close()
+    for _n, _p in eds("mag"):
+        for theme in ("light", "dark"):
+            c = waits.instrument(b.new_context(color_scheme=theme, **PHONE))
+            c, pg, errs = editor(b, _n, _p, ctx=c)
+            into_view(pg, "#musicTimeline")
+            mag_to(pg, "8\u00d7"); pg.wait_for_timeout(600)
+            r = pg.evaluate("""() => {
+              const parse = (s) => { const m = s.match(/^rgba?\\(([^)]+)\\)/); if (!m) return null; const p = m[1].split(/[\\s,\\/]+/).filter(Boolean).map(Number); return { r: p[0], g: p[1], b: p[2], a: p.length > 3 ? p[3] : 1 }; };
+              const over = (t, b) => { const a = t.a + b.a * (1 - t.a); return { r: (t.r * t.a + b.r * b.a * (1 - t.a)) / a, g: (t.g * t.a + b.g * b.a * (1 - t.a)) / a, b: (t.b * t.a + b.b * b.a * (1 - t.a)) / a, a }; };
+              const ground = (el) => { const l = []; for (let e = el; e; e = e.parentElement) { const c = parse(getComputedStyle(e).backgroundColor); if (c && c.a > 0) { l.push(c); if (c.a >= 0.999) break; } }
+                let acc = { r: 255, g: 255, b: 255, a: 1 }; for (let i = l.length - 1; i >= 0; i--) acc = over(l[i], acc); return acc; };
+              const lum = (c) => { const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }; return 0.2126 * f(c.r) + 0.7152 * f(c.g) + 0.0722 * f(c.b); };
+              const ratio = (x, y) => { const a = lum(x), b = lum(y); return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05); };
+              const ink = (el) => { const g = ground(el); return ratio(over(parse(getComputedStyle(el).color), g), g); };
+              const q = (s) => document.querySelector(s), n = q('#musicTlName').getBoundingClientRect(), m = q('.mt-tl-mag').getBoundingClientRect(), st = q('#musicTlStage').getBoundingClientRect();
+              return { level: ink(q('#musicTlMag')), glyph: Math.min(ink(q('#musicTlIn')), ink(q('#musicTlOut'))),
+                       middle: (m.top + m.bottom) / 2 - (n.top + n.bottom) / 2, right: m.right - st.right, below: st.top - m.bottom }; }""")
+            check(f"{_n}: magnify sits at the end of the name's line, its middle on the name's, and its words and glyphs read against what is behind them ({theme})",
+                  abs(r["middle"]) <= 0.5 and abs(r["right"]) <= 0.5 and r["below"] >= 4 and r["level"] >= 4.5 and r["glyph"] >= 3,
+                  f"middle {r['middle']:+.2f}px from the name's, right edge {r['right']:+.2f}px from the song's, {r['below']:.1f}px over the lane;"
+                  f" the level {r['level']:.2f}:1, the glyphs {r['glyph']:.2f}:1")
+            c.close()
 
     print("\nMUSIC TIMELINE — the whole song's line")
     for _n, _p in eds("whole"):

@@ -16,17 +16,18 @@
  *
  * It took over from the strip (the whole song, two handles, a window to
  * slide) and from the loop detail in More (a close-up of an end at 1x to 16x,
- * Loop/Start/End and Scroll). The restart's close-up is the Restart view
- * (lib/musicrestart.js).
+ * Loop/Start/End and Scroll), whose magnifier is the timeline's now. The
+ * restart's close-up is the Restart view (lib/musicrestart.js).
  *
  * WHAT A FINGER DOES. On the song it slides the song under the drawing: both
  * ends move and the loop keeps its length. On an end it moves that end, and
  * held near the timeline's edge the view widens, smoothly, so a loop can grow
- * past what is on screen. On the whole-song line the loop goes where the
- * finger is. On the drawing nothing: it stays put, and a finger there can
- * scroll the page. Let go, and lib/musicdrawer.js settles what was moved once
- * there is a tempo (an end on whole bars, a slid loop's start on a beat);
- * then the view eases back to its framing.
+ * past what is on screen (magnified, it slides along instead). On the
+ * whole-song line the loop goes where the finger is. On the drawing nothing:
+ * it stays put, and a finger there can scroll the page. Let go, and
+ * lib/musicdrawer.js settles what was moved while Snap to the beat is on (an
+ * end on whole bars, a start or a slid loop's start on a beat); then the view
+ * eases back to its framing.
  *
  * THE FRAMING: 1.28 times the longer of the loop and the drawing, the
  * drawing counted up to three loops (a two-hour piece would make the loop a
@@ -34,6 +35,18 @@
  * (70ms to most of the way, so a settle and the reframing after it read as
  * one glide) and holds still while a finger is down, but for the widening.
  * Reduce Motion: no easing, the view is where it belongs at once.
+ *
+ * MAGNIFY (the owner, looking for the loop detail's: "All yes but maybe go
+ * to x64?", then "stay"): - and + at the end of the name's line, 1x to 64x.
+ * Each rung is the framing over that many with the end last touched in the
+ * middle: the start, until the end is grabbed, or moved anywhere else (- and
+ * +, a typed time, the Restart view: focus()). The loop never moves for it,
+ * and a step glides there as any reframing does. Magnified, an end held near
+ * either edge carries the view along at the zoom, as far as the end can
+ * follow, so the loop can shorten past what is in view as well as grow, and a
+ * slide carries the view with the end zoomed around. The zoom stays when the
+ * drawer is put away; a new song (reset()) is 1x on its start. Magnified past
+ * a block a column, the song is drawn from its samples (peakOf).
  *
  * A finger on the song scrolls the page if it moves up or down first
  * (touch-action: pan-y and a 6px lock), as the strip never let it: the
@@ -56,11 +69,15 @@
  *                       whole song)
  *   letGo(kind, which)  a drag that moved something is over ('end' | 'slide')
  *   still()             Reduce Motion
- * Returns { draw, reset, playhead(t), x(t), view(), held() }. */
+ * Returns { draw, reset, focus(which), playhead(t), x(t), view(), held() }. */
 (function (global) {
   'use strict';
 
   var SPAN = 1.28, LEAD = 0.09, EASE_MS = 70, ZONE = 28, GROW = 1.4;
+  // MAGNIFY: the framing over 1 to 64, around the end last touched; zoomed
+  // in, an end held near either edge carries the view along (PAN views a
+  // second at the edge itself) instead of widening it.
+  var MAGS = [1, 2, 4, 8, 16, 32, 64], PAN = 1.6;
   var LANE = 26, GAP = 8, LOCK_PX = 6;
 
   // The song's loudness in blocks, once per buffer: the largest |sample|
@@ -89,6 +106,15 @@
   // The loudest over [t0, t1), 0..1 of the song's loudest.
   function peakOf(P, t0, t1) {
     var s0 = Math.max(0, t0 * P.sr), s1 = Math.max(s0 + 1, t1 * P.sr), l = 0;
+    // Magnified past a block a column: the samples themselves.
+    if (s1 - s0 < LEVELS[0]) {
+      var b0 = P.buffer, j0 = Math.floor(s0), j1 = Math.min(b0.length, Math.ceil(s1)), top = 0;
+      for (var c = 0; c < b0.numberOfChannels; c++) {
+        var d = b0.getChannelData(c);
+        for (var j = j0; j < j1; j++) { var a = d[j] < 0 ? -d[j] : d[j]; if (a > top) top = a; }
+      }
+      return top / P.top;
+    }
     while (l + 1 < LEVELS.length && LEVELS[l + 1] <= s1 - s0) l++;
     var blk = LEVELS[l], arr = P.levels[l], a = Math.floor(s0 / blk), b = Math.min(arr.length, Math.ceil(s1 / blk)), m = 0;
     for (var i = a; i < b; i++) if (arr[i] > m) m = arr[i];
@@ -103,6 +129,9 @@
     var hs = root.querySelector('.mt-tl-handle[data-which="start"]'), he = root.querySelector('.mt-tl-handle[data-which="end"]');
     var ph = root.querySelector('.music-playhead');
     var view = null, held = null, raf = 0, lastT = 0, peaks = null, lane = null, laneKey = null, laneSecs = 0;
+    var mag = 1, focus = 'start';
+    var magOut = root.querySelector('.mt-tl-mag-btn[data-mag="-1"]'), magIn = root.querySelector('.mt-tl-mag-btn[data-mag="1"]');
+    var magVal = root.querySelector('.mt-tl-mag-val'), nameBox = root.querySelector('.mt-tl-namebox');
 
     function rect() { return stage.getBoundingClientRect(); }
     function width() { return stage.clientWidth || 0; }
@@ -112,12 +141,15 @@
       if (lane === null || k !== laneKey) { laneKey = k; lane = h.lane ? h.lane() : null; laneSecs = lane && lane.seconds > 0 ? lane.seconds : 0; }
       return lane;
     }
-    // Where the view belongs for the loop as it is.
+    // Where the view belongs for the loop as it is: its framing, or
+    // magnified, that over `mag` with the end last touched in the middle.
     function target() {
       var t = trim(), L = Math.max(0.05, t.end - t.start), d = Math.min(laneSecs, 3 * L);
       var span = SPAN * Math.max(L, d);
+      if (mag > 1) { span /= mag; return { v0: focused() - span / 2, span: span }; }
       return { v0: t.start - LEAD * span, span: span };
     }
+    function focused() { var t = trim(); return focus === 'end' ? t.end : t.start; }
     function X(t) { return (t - view.v0) / view.span * width(); }
     function T(x) { return view.v0 + x / width() * view.span; }
 
@@ -130,7 +162,8 @@
       if (!h.hasTrack()) { view = null; paint(); return; }
       var goal = target();
       if (!view) view = goal;
-      else if (held && held.kind === 'slide') view = { v0: trim().start - LEAD * view.span, span: view.span };
+      else if (held && held.kind === 'slide') view = mag > 1 ? { v0: focused() - held.off, span: view.span }
+        : { v0: trim().start - LEAD * view.span, span: view.span };
       else if (held && held.kind === 'end') widen(now);
       else if (h.still()) view = goal;
       else {
@@ -168,6 +201,18 @@
     function widen(now) {
       var w = width(), g = held, dt = Math.min(64, Math.max(0, now - (lastT || now))) / 1000;
       if (!g.zone || !(dt > 0)) return;
+      if (mag > 1) {
+        // Magnified: along, at the zoom, toward the edge the finger is at, as
+        // far as the end can follow. Where it stops (the song's start or end,
+        // the other end, the cap) the view stops with it: the end under the
+        // finger, or where it is when it was already stopped, never a jump.
+        var fx = Math.max(0, Math.min(w, g.x - rect().left)), was = view.v0;
+        view = { v0: was + g.side * PAN * g.zone * dt * view.span, span: view.span };
+        h.edge(g.which, T(fx));
+        var tt = trim(), under = (g.which === 'end' ? tt.end : tt.start) - fx / w * view.span;
+        view = { v0: Math.max(Math.min(was, view.v0), Math.min(Math.max(was, view.v0), under)), span: view.span };
+        return;
+      }
       var t = trim(), most = SPAN * Math.max(t.duration, 1);
       var grow = 1 + GROW * g.zone * dt, span = Math.min(most, view.span * grow);
       if (span === view.span) return;
@@ -300,7 +345,7 @@
         e[0].style.transform = 'translateX(' + at.toFixed(2) + 'px)';
         e[0].classList.toggle('off', at < -12 || at > w + 12);
       });
-      if (nameEl) nameEl.style.transform = 'translateX(' + Math.max(0, Math.min(w - nameEl.offsetWidth, a0)).toFixed(2) + 'px)';
+      if (nameEl) nameEl.style.transform = 'translateX(' + Math.max(0, Math.min((nameBox ? nameBox.clientWidth : w) - nameEl.offsetWidth, a0)).toFixed(2) + 'px)';
       if (part && dur > 0) {
         part.style.left = (s0 / dur * 100).toFixed(3) + '%';
         part.style.width = 'max(4px, ' + (L / dur * 100).toFixed(3) + '%)';
@@ -320,8 +365,8 @@
       var touch = e.type === 'touchstart';
       if (hd || !touch) e.preventDefault();
       var g = { kind: hd ? 'end' : 'slide', which: hd ? hd.dataset.which : null, x: pt.clientX, y0: pt.clientY,
-                x0: pt.clientX, locked: !!hd || !touch, zone: 0, from: trim().start };
-      if (hd) hd.classList.add('dragging');
+                x0: pt.clientX, locked: !!hd || !touch, zone: 0, from: trim().start, off: focused() - view.v0 };
+      if (hd) { hd.classList.add('dragging'); focus = hd.dataset.which; }
       held = g;
       root.classList.add('holding');
       return {
@@ -339,6 +384,11 @@
           var w = width(), lx = cx - rect().left;
           if (g.kind === 'end') {
             g.zone = g.which === 'end' ? Math.max(0, Math.min(1, (lx - (w - ZONE)) / ZONE)) : Math.max(0, Math.min(1, (ZONE - lx) / ZONE));
+            g.side = g.which === 'end' ? 1 : -1;
+            if (mag > 1) {   // either edge, magnified: the loop can shorten past what is in view too
+              var zr = Math.max(0, Math.min(1, (lx - (w - ZONE)) / ZONE)), zl = Math.max(0, Math.min(1, (ZONE - lx) / ZONE));
+              g.zone = Math.max(zr, zl); g.side = zr >= zl ? 1 : -1;
+            }
             h.edge(g.which, T(Math.max(0, Math.min(w, lx))));
             if (g.zone) request();
           } else {
@@ -363,7 +413,7 @@
     if (D && whole) D.bind(whole, function (e) {
       if (!h.hasTrack()) return null;
       e.preventDefault();
-      var g = { kind: 'slide', moved: false, x0: EP.at(e).clientX };
+      var g = { kind: 'slide', moved: false, x0: EP.at(e).clientX, off: view ? focused() - view.v0 : 0 };
       held = g;
       root.classList.add('holding');
       function at(cx) {
@@ -380,6 +430,26 @@
         end: function () { held = null; root.classList.remove('holding'); if (g.moved) h.letGo('slide', null); draw(); }
       };
     });
+
+    // Magnify: a step glides there as any reframing does (at once under
+    // Reduce Motion); the readout says the rung, the ends stop.
+    function syncMag() {
+      var i = MAGS.indexOf(mag);
+      if (magVal) { var w = mag + '\u00d7'; if (magVal.textContent !== w) magVal.textContent = w; }
+      if (magOut) magOut.disabled = i <= 0 || !h.hasTrack();
+      if (magIn) magIn.disabled = i >= MAGS.length - 1 || !h.hasTrack();
+    }
+    function step(dir) {
+      var i = Math.max(0, Math.min(MAGS.length - 1, MAGS.indexOf(mag) + dir));
+      if (MAGS[i] === mag) return;
+      mag = MAGS[i];
+      syncMag();
+      draw();
+    }
+    [magOut, magIn].forEach(function (b) {
+      if (b) b.addEventListener('click', function () { if (!b.disabled) step(+b.dataset.mag); });
+    });
+    syncMag();
 
     // The playhead: where the song is, on the song, while something plays.
     function playhead(t) {
@@ -399,9 +469,13 @@
     if (global.MutationObserver) new MutationObserver(draw).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
 
     return {
-      draw: draw,
-      // A new song: the view starts where it belongs, not where the last was.
-      reset: function () { lane = null; view = null; draw(); },
+      draw: function () { syncMag(); draw(); },
+      // A new song: the view starts where it belongs, not where the last was,
+      // at 1x on its start.
+      reset: function () { lane = null; view = null; mag = 1; focus = 'start'; syncMag(); draw(); },
+      // An end moved anywhere else (- and +, a typed time, the Restart view):
+      // magnified, the view goes to it.
+      focus: function (which) { if ((which === 'start' || which === 'end') && which !== focus) { focus = which; draw(); } },
       playhead: playhead,
       x: function (t) { return view ? X(t) : null; },
       view: function () { return view ? { v0: view.v0, span: view.span } : null; },
