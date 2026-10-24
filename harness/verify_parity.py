@@ -872,8 +872,9 @@ with sync_playwright() as p:
           pad.evaluate(vis, "musicTabDot") and flip.evaluate(vis, "musicTabDot"),
           f"pad={pad.evaluate(vis, 'musicTabDot')}, flip={flip.evaluate(vis, 'musicTabDot')}")
 
-    # The music row: the name, and the track's length -- the same length both
-    # editors print under the waveform (#trimEndLabel) -- and a tile whose note
+    # The music row: the name, and the track's own length (the one-second
+    # track's 0:01, which is what each editor's audioDuration says; the strip
+    # that printed it under the waveform went with step 2) -- and a tile whose note
     # sits on the selected tab's own tint, measured live from the tab so a
     # retuned purple moves both together. The tint is the strip's sliding pill
     # (the one pill), so the fill is read from the pill and the ink from the tab.
@@ -884,12 +885,12 @@ with sync_playwright() as p:
         const r = tile.getBoundingClientRect(), at = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
         const a = getComputedStyle(tile), b = getComputedStyle(tab), f = pill ? getComputedStyle(pill).backgroundColor : null;
         return { name: g('musicBtnLabel').textContent, meta: g('musicBtnMeta').textContent,
-                 end: g('trimEndLabel').textContent, painted: !!at && tile.contains(at),
+                 secs: audioDuration, painted: !!at && tile.contains(at),
                  tint: a.backgroundColor === f && a.color === b.color,
                  tile: [a.backgroundColor, a.color], tab: [f, b.color] }; }"""
     _pmr, _fmr = pad.evaluate(MROW), flip.evaluate(MROW)
-    check("a loaded track's row names it and gives the length the waveform shows, on both",
-          all(r["name"] == "t.wav" and r["meta"] == "Loops under the drawing · " + r["end"] for r in (_pmr, _fmr))
+    check("a loaded track's row names it and gives its length, on both",
+          all(r["name"] == "t.wav" and abs(r["secs"] - 1.0) < 0.05 for r in (_pmr, _fmr))
           and _pmr["meta"] == _fmr["meta"] == "Loops under the drawing · 0:01", f"pad {_pmr}, flip {_fmr}")
     check("...and its note is painted on the selected tab's tint, on both",
           all(r["painted"] and r["tint"] for r in (_pmr, _fmr)), f"pad {_pmr}, flip {_fmr}")

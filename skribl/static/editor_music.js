@@ -29,6 +29,7 @@ if (window.SkriblMusicDrawer) padDrawer = window.SkriblMusicDrawer.wire({
   setCut: (on) => { loopCutOnSilence = !!on; },
   hasTrack: () => !!audioEl && Number.isFinite(audioDuration) && audioDuration > 0,
   refresh: updateTrimUI,
+  dock: () => document.getElementById('toolBar'),
   // The timeline's drawing lane: each stroke when it replays, at 1x with
   // Pauses as they replay (the replay's own timeline, so a recolour's moment
   // is in it). Walked again only when the drawing changes (laneKey).

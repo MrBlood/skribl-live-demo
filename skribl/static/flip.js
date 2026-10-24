@@ -6486,6 +6486,7 @@ musicDrawer = window.SkriblMusicDrawer ? window.SkriblMusicDrawer.wire({
   setCut: (on)=>{ loopCutOnSilence=!!on; },
   hasTrack: ()=>!!musicData && audioDuration>0,
   refresh: updateTrimUI,
+  dock: ()=>document.querySelector('.flip-tools'),
   // The timeline's lane: one pass of the pages as they play (lib/holdtiming.js
   // plan: each at its own length, a loop's stretch as many times as it runs),
   // numbered, and the part that goes round again (for a forever loop, the

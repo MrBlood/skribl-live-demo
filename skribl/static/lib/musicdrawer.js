@@ -120,6 +120,8 @@
  *   syncRow()           redraw the file row and its switch
  *   tempo()             the song's tapped tempo { bpm, phase }, or null;
  *                       setTempo(t), kept with the song in the drafts
+ *   dock()              the bar right above the drawer, which More's nudge
+ *                       leaves under the pinned header (lib/drawerdetent.js)
  *
  * Returns { sync, syncCrossfade, resetView, matchDrawing, applyPick,
  * stopPreview, playhead, previewing, more, tempo }. SkriblMusicDrawer.tempoFrom(raw)
@@ -260,7 +262,11 @@
       // The Restart view's canvas was laid out at zero size while hidden.
       // Then bring what opened into view (a tap that seemed to do nothing was
       // the old Fine-tune's fault), but never so far that More goes under the
-      // pinned header -- nor the dock with it (verify_ux's phone audit).
+      // pinned header -- nor the bar above the drawer, the editor's dock(),
+      // as lib/drawerdetent.js caps the drawer's own reveals. With the
+      // timeline the drawer is tall enough on a phone that More's tile alone
+      // let Fit my drawing and Whole song pass under the header (verify_ux's
+      // phone audit).
       requestAnimationFrame(function () {
         h.refresh();
         if (rv) rv.draw();
@@ -269,6 +275,8 @@
         var vh = global.visualViewport ? global.visualViewport.height : global.innerHeight;
         var top = det && det.stuckBottom ? det.stuckBottom() : 0;
         var over = Math.min(moreBody.getBoundingClientRect().bottom - vh + 12, moreBtn.getBoundingClientRect().top - top - 8);
+        var bar = h.dock ? h.dock() : null;
+        if (bar && bar.offsetParent !== null) over = Math.min(over, bar.getBoundingClientRect().top - top - 4);
         if (over > 0) global.scrollBy({ top: over, behavior: 'smooth' });
       });
     }
