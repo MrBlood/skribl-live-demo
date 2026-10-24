@@ -22413,5 +22413,36 @@ Found while testing:
   line under an open tile, under More's as under the draw drawer's. Left as
   the draw drawer has it: one shape for both, and a fix for both together.
 
+- verify_surfaces reads class names as tokens across the repo, and the marks'
+  classes are made by the macro (mk-{{ name }}), so a rule styling .mk-plus
+  and .mk-minus looked unused. verify_musicmore now asks which mark shows,
+  the + closed and the - open, which names both.
+- verify_helpclaims's control aliases named the old controls ("How much
+  control", "Loop starts at, in seconds", the - and + without their step):
+  stale, and its own table check said so.
+
+CALIBRATION. Each part was shown red with that part broken, served to the
+browser from a mutated copy with the files on disk untouched: 35 mutations
+of lib/musicdrawer.js, styles.css and labels.css, 34 of them red on the rows
+they break (More never hiding, no fold, no unfold, motion
+under Reduce Motion, More forgotten, the old Adjust opening it, the tile
+under its card, the tile not joined, the loop lost on opening; the pick
+always shown, "fits" always said, no beats, the selection's length, the line
+sized to its words, the old blaming words; - and + always 0.1s, a beat, or
+unnamed; no shrink, an uncapped scroll; whole bars off, any count, the
+selection's length, no room checked, a jump, a glide under Reduce Motion,
+the start moving the end, a free slide; the loop detail's settle off or on
+bars; typed and locked ends settling; the words as a flex row, labels.css's
+trim gone). One turned nothing red: dropping More's data-level. In today's
+layout the follower's cap (the dock under the header) stops it short of
+where More's own nudge goes, so there is nothing for it to chase; it stays,
+as lib/drawerdetent.js's contract with the drawer, which its comment names.
+Two rows were changed by calibrating: the unfold row, which went red beside
+other suites for want of frames (a frame lasted up to 100ms, and the
+unfold's ease is past 98% by half its time), now reads the animations as
+well; and the + row, green with the trim taken off in the sans faces, now
+also forces the faces that split ascent and descent unlike the app's, where
+an untrimmed line sat 1-2px low.
+
 Not tested here: dragging the strip with a finger on an iPhone (no WebKit),
 the sound, Segoe UI and SF.
