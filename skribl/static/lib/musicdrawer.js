@@ -121,7 +121,8 @@
  *   tempo()             the song's tapped tempo { bpm, phase }, or null;
  *                       setTempo(t), kept with the song in the drafts
  *   dock()              the bar right above the drawer, which More's nudge
- *                       leaves under the pinned header (lib/drawerdetent.js)
+ *                       leaves under the pinned header while More's first
+ *                       control still shows (lib/drawerdetent.js)
  *
  * Returns { sync, syncCrossfade, resetView, matchDrawing, applyPick,
  * stopPreview, playhead, previewing, more, tempo }. SkriblMusicDrawer.tempoFrom(raw)
@@ -263,10 +264,13 @@
       // Then bring what opened into view (a tap that seemed to do nothing was
       // the old Fine-tune's fault), but never so far that More goes under the
       // pinned header -- nor the bar above the drawer, the editor's dock(),
-      // as lib/drawerdetent.js caps the drawer's own reveals. With the
-      // timeline the drawer is tall enough on a phone that More's tile alone
-      // let Fit my drawing and Whole song pass under the header (verify_ux's
-      // phone audit).
+      // as lib/drawerdetent.js caps the drawer's own reveals, unless that
+      // would leave even More's first control below the screen, a tap that
+      // seems to do nothing again: then the first control wins. With the
+      // timeline the drawer is tall enough for both to bind: More's tile
+      // alone let Fit my drawing and Whole song pass under the header on an
+      // 844px phone (verify_ux's phone audit), and the bar alone left Smooth
+      // restart below a 664px one (verify_sheetswipe).
       requestAnimationFrame(function () {
         h.refresh();
         if (rv) rv.draw();
@@ -275,8 +279,11 @@
         var vh = global.visualViewport ? global.visualViewport.height : global.innerHeight;
         var top = det && det.stuckBottom ? det.stuckBottom() : 0;
         var over = Math.min(moreBody.getBoundingClientRect().bottom - vh + 12, moreBtn.getBoundingClientRect().top - top - 8);
-        var bar = h.dock ? h.dock() : null;
-        if (bar && bar.offsetParent !== null) over = Math.min(over, bar.getBoundingClientRect().top - top - 4);
+        var bar = h.dock ? h.dock() : null, first = moreBody.querySelector('button, input, select, textarea');
+        if (bar && bar.offsetParent !== null) {
+          var need = first ? first.getBoundingClientRect().bottom - vh + 12 : 0;
+          over = Math.min(over, Math.max(bar.getBoundingClientRect().top - top - 4, need));
+        }
         if (over > 0) global.scrollBy({ top: over, behavior: 'smooth' });
       });
     }

@@ -1557,17 +1557,19 @@ with sync_playwright() as p:
                       and ((_g["below"] <= 1 and _g["endPainted"]) or _g["dockClear"] <= 8),
                       f"before {_before}, after {_g}")
                 if _k == "music":
-                    # More is not this growth. Its own nudge brings what it opens on screen (the
-                    # Restart view first), and the follower must not chase the card's end past
-                    # it: showing More's body moves the follower's baseline. A break of that
-                    # turned nothing above red, so this is what pins it.
+                    # More is not this growth. Its own nudge brings what it opens on screen (its
+                    # first control, Smooth restart, at the least: with the timeline the Restart
+                    # view under it no longer fits a phone with the bar under the header), and
+                    # the follower must not chase the card's end past it: showing More's body
+                    # moves the follower's baseline. A break of that turned nothing above red,
+                    # so this is what pins it.
                     _q.click("#fineTuneToggle"); waits.settle(_q, 1800)
-                    _ft = _q.evaluate("""() => { const z = document.getElementById('musicRestart'), c = document.getElementById('mediaCard');
+                    _ft = _q.evaluate("""() => { const z = document.getElementById('musicSmooth'), c = document.getElementById('mediaCard');
                         const vh = window.visualViewport ? window.visualViewport.height : innerHeight;
-                        return { wave: Math.round(z.getBoundingClientRect().bottom - vh),
+                        return { first: Math.round(z.getBoundingClientRect().bottom - vh),
                                  end: Math.round(c.getBoundingClientRect().bottom - vh) }; }""")
-                    check(f"{_route} at {_w}x{_h}: ...and More keeps its own nudge: the Restart view comes on "
-                          "screen and the page does not chase the card's end", _ft["wave"] <= 0 and _ft["end"] > 40, str(_ft))
+                    check(f"{_route} at {_w}x{_h}: ...and More keeps its own nudge: its first control comes on "
+                          "screen and the page does not chase the card's end", _ft["first"] <= 0 and _ft["end"] > 40, str(_ft))
                 _gc.close()
 
     # THE CAP IS HELD, NOT ONLY AIMED AT (lib/drawerdetent.js followGrowth). The
@@ -1794,7 +1796,12 @@ with sync_playwright() as p:
             browsing.pad_drawer(_q, _k)
             _q.set_input_files(_in[_k], _f)
             _q.wait_for_function("(k) => document.getElementById(k + 'UploadBtn').classList.contains('loaded')", arg=_k, timeout=20000)
-            _q.wait_for_timeout(300)
+            # Past the growth's last re-assert first: lib/drawerdetent.js holds the
+            # card's end on screen until 1.2s after a file lands, and with the
+            # timeline's taller drawer the bin brought to the middle moves the page
+            # up into that hold, which then moved the switch between the two reads
+            # (18px on the Pad, 42 on Flip). The arming is what this reads.
+            _q.wait_for_timeout(1300)
             _q.evaluate(f"() => document.getElementById('{_k}Remove').scrollIntoView({{ block: 'center' }})")
             _sw0 = _q.evaluate(SWBOX, _k)
             _q.click(f"#{_k}Remove"); _q.wait_for_timeout(400)   # past the bin's colour transition
