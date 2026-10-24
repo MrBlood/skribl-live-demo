@@ -440,12 +440,14 @@ stays a sleep.
 - `verify_music.py` — one music editor on both editors (lib/musicdrawer.js,
   the owner's "it needs to be the same music editor on both pad and flip"),
   every row driven on the Pad and on Flip and red on one of them before: no
-  editor keeps its own copy of a control; the Scroll and Smooth restart rows
-  are the drawer's markup; one file input, out of the Tab order; Each tap's
-  steps named the same; Smooth restart carries a playing preview to the new
-  join; Hear the restart plays the join, smooth restart and all; Hear the
-  whole loop's fallback is the baked clip, at 1x whatever the replay's speed;
-  an edge let go off the strip is saved; Fit my drawing (it was Match Drawing
+  editor keeps its own copy of a control; the Smooth restart row and the
+  timeline are the drawer's markup, and the loop detail's Scroll is gone; one
+  file input, out of the Tab order; the - and + named the same; Smooth
+  restart carries a playing preview to the new join; Hear the restart plays
+  the join, smooth restart and all; Hear the loop's fallback is the baked
+  clip, at 1x whatever the replay's speed; an edge let go off the timeline is
+  saved; a new track starts the timeline where its loop belongs, not where
+  the last song's view was widened to; Fit my drawing (it was Match Drawing
   Time) counts each page at its own length and is off on an empty Flip; the
   switch silences Play and a preview, brings Play's music back, and a
   switched-off track stays in a Pad draft, its autosave and its reopening; a
@@ -455,9 +457,10 @@ stays a sleep.
 - `verify_musicmore.py` — the music drawer's one view, and More
   (lib/musicdrawer.js; the owner: "The music drawer is so complicated...
   we'll need to streamline it"), on the Pad and on Flip; it was the three
-  levels' suite, renamed with them. A new drawer opens on the strip,
+  levels' suite, renamed with them. A new drawer opens on the timeline,
   the one line, the pair that plays, Fit and Whole song, and More; More opens
-  the restart, the beat, exact times and how it loops, each under its name,
+  the restart (the Restart view among it), the beat, exact times and how it
+  loops (Cut on silence and Lock the length), each under its name,
   joined to its tile, hides them with `hidden` when closed, keeps the loop,
   unfolds and folds away (at once under Reduce Motion), and is remembered by
   both editors, a saved Adjust opening it closed; a new song starts on
@@ -477,23 +480,24 @@ stays a sleep.
 - `verify_musicbeat.py` — the music drawer's pair and its beat (the owner:
   "How do I test the loop without having it show me drawing?... so I'm not at
   7 or 9 when I want 8", then "we only ever want 4,8,16,... beats"), on the Pad
-  and on Flip: Play with my drawing and Hear the loop under the strip in the
-  same place whether More is open or not, the same size, with no second Hear
+  and on Flip: Play with my drawing and Hear the loop under the timeline in
+  the same place whether More is open or not, the same size, with no second Hear
   the loop; Hear the loop plays the music alone until Stop, and an end moved
   while it plays is heard from its next time round; Tap the beat's first tap
   starts the loop and is not a beat, taps in time settle on the tempo two
   seconds after the last (a stray gap does not move it), the one line counts
   the beats, and where the beat falls is the taps' own on the song's clock as
   heard (less the time the sound takes to reach the ear); on a phone the tap
-  stays put while its words change; an end let go on the strip settles on
+  stays put while its words change; an end let go on the timeline settles on
   whole bars, the nearest of 4, 8, 16 and 32 beats, smooth restart and all,
   the start and the end alike, passing over a count the song or the 20s cap
-  has no room for, gliding there (at once under Reduce Motion), and the loop
-  slid along the strip settles its start on a beat; the strip marks the beats
-  (taller every four from the loop's start, no closer than 6px, a dashed line
-  where a smooth restart comes round) and the loop detail its own window, where
-  an end let go near a beat settles on it; typed ends never settle, nor a
-  locked loop's; the tempo goes with the song into the drafts and a re-add
+  has no room for, gliding there (at once under Reduce Motion), and the song
+  slid under the drawing settles the loop's start on a beat; the timeline
+  dots every beat in view (bigger on each bar from the loop's start, no
+  closer than 6px), the drawing's lane runs under the loop with a dashed line
+  each time it comes round, and the Restart view marks the beats in its two
+  windows, where an end let go near a beat settles on it; typed ends never
+  settle, nor a locked loop's; the tempo goes with the song into the drafts and a re-add
   card, and a new song starts with none; the one line, the tap's words and the
   marks read against what is behind them, light and dark; the pair's words are
   whole at 320, 360 and 402px, side by side from 360. Taps run on the page's

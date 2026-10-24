@@ -828,39 +828,64 @@ with sync_playwright() as p:
           _attr(naked3) == "light", "the embed would flash dark before going light")
     naked3.close()
 
-    print("\nTHEME — Loop Detail's waveform follows the theme (owner, light theme)")
-    # lib/loopwave.js painted the zoomed waveform's ground as a literal
+    print("\nTHEME — the timeline and the Restart view follow the theme (owner, light theme)")
+    # lib/loopwave.js painted the loop detail's waveform ground as a literal
     # '#161a22' -- dark --surface-well -- in every theme, so in light mode Loop
-    # Detail was a black slab inside a light drawer. The canvas's own CSS
-    # background is the one owner of that colour now. Pixel-read, both editors:
-    # the ground is sampled at the canvas's left edge with the loop placed in
-    # the middle of a 6s track, so the sample is context, never the loop tint.
+    # Detail was a black slab inside a light drawer. Its job went to the
+    # timeline (lib/musictimeline.js) and the Restart view (lib/musicrestart.js)
+    # in step 2: the one paints its song's ground with --menu-card, read when it
+    # paints; the other sits on --menu-paper, a CSS background. So a page that
+    # opens light must show both light, and a page switched from dark to light
+    # must repaint, which is the part a token read once could get wrong. Read
+    # off the screen, both editors: the colour most of each one is painted.
     import io as _io, math as _math, struct as _struct, wave as _wave
     _b = _io.BytesIO()
     with _wave.open(_b, "wb") as _w:
         _w.setnchannels(1); _w.setsampwidth(2); _w.setframerate(8000)
         _w.writeframes(b"".join(_struct.pack("<h", int(6000 * _math.sin(i / 9))) for i in range(8000 * 6)))
     _WAV = _b.getvalue()
+    _MOST = """async (b64) => {
+      const img = new Image(); img.src = 'data:image/png;base64,' + b64; await img.decode();
+      const c = document.createElement('canvas'); c.width = img.width; c.height = img.height;
+      const x = c.getContext('2d'); x.drawImage(img, 0, 0);
+      const d = x.getImageData(0, 0, img.width, img.height).data, n = {}; let best = null;
+      for (let i = 0; i < d.length; i += 4) {
+        const k = (d[i] >> 3) + ',' + (d[i + 1] >> 3) + ',' + (d[i + 2] >> 3);
+        n[k] = (n[k] || 0) + 1; if (!best || n[k] > n[best]) best = k; }
+      return { rgb: best.split(',').map((v) => (+v << 3) + 4), share: +(n[best] / (d.length / 4)).toFixed(2) };
+    }"""
+    def _most(q, sel):
+        q.evaluate("(s) => document.querySelector(s).scrollIntoView({ block: 'center' })", sel)
+        q.wait_for_timeout(250)
+        png = q.locator(sel).screenshot()
+        return q.evaluate(_MOST, base64.b64encode(png).decode())
     for _nm, _route in (("Pad", "/skribl-pad"), ("Flip", "/flip")):
-        _q = browser.new_page(viewport={"width": 1000, "height": 1100})
-        _q.goto(BASE + _route + "?theme=light", wait_until="load"); _q.wait_for_timeout(700)
-        _q.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
-        browsing.pad_drawer(_q, "music")
-        _q.set_input_files("#musicInput", {"name": "t.wav", "mimeType": "audio/wav", "buffer": _WAV})
-        _q.wait_for_function("() => typeof currentAudioBuffer !== 'undefined' && !!currentAudioBuffer", timeout=20000)
-        _q.evaluate("() => { const t = document.getElementById('fineTuneToggle');"   # More, open
-                    " if (t && t.getAttribute('aria-expanded') !== 'true') t.click(); }")
-        _q.wait_for_timeout(500)
-        _q.evaluate("() => { trimStart = 2.5; trimEnd = 3.5; updateTrimUI(); }")
-        _q.wait_for_timeout(500)
-        _px = _q.evaluate("""() => { const c = document.getElementById('zoomWaveformCanvas');
-            if (!c || !c.width) return null;
-            const d = c.getContext('2d').getImageData(1, 1, 1, 1).data;
-            return [d[0], d[1], d[2]]; }""")
-        check(f"{_nm}: in light mode, Loop Detail's ground is light, not a dark slab",
-              _px is not None and lum(_px) > 150,
-              f"ground pixel {_px} — lum {lum(_px) if _px else None}; a dark literal in lib/loopwave.js ignores the theme")
-        _q.close()
+        for _how in ("opened light", "switched from dark"):
+            _q = browser.new_page(viewport={"width": 1000, "height": 1100},
+                                  color_scheme="dark" if _how == "switched from dark" else "light")
+            _q.goto(BASE + _route + ("?theme=light" if _how == "opened light" else ""), wait_until="load")
+            _q.wait_for_timeout(700)
+            _q.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+            browsing.pad_drawer(_q, "music")
+            _q.set_input_files("#musicInput", {"name": "t.wav", "mimeType": "audio/wav", "buffer": _WAV})
+            _q.wait_for_function("() => typeof currentAudioBuffer !== 'undefined' && !!currentAudioBuffer", timeout=20000)
+            _q.evaluate("() => { const t = document.getElementById('fineTuneToggle');"   # More, open
+                        " if (t && t.getAttribute('aria-expanded') !== 'true') t.click(); }")
+            _q.wait_for_timeout(500)
+            _q.evaluate("() => { trimStart = 2.5; trimEnd = 3.5; updateTrimUI(); }")
+            _q.wait_for_timeout(500)
+            if _how == "switched from dark":
+                _dark = _most(_q, "#musicTlStage")
+                _q.evaluate("() => window.SkriblTheme.set('light')")
+                _q.wait_for_timeout(400)
+            _tl, _rv = _most(_q, "#musicTlStage"), _most(_q, "#musicRestart")
+            check(f"{_nm}, {_how}: the timeline's song and the Restart view are light grounds, not dark slabs",
+                  lum(_tl["rgb"]) > 150 and lum(_rv["rgb"]) > 150
+                  and (_how == "opened light" or lum(_dark["rgb"]) < 100),
+                  f"timeline {_tl}, Restart view {_rv}" + (f", the timeline before the switch {_dark}"
+                                                           if _how == "switched from dark" else "")
+                  + " \u2014 lum over 150 wanted; a colour read once and kept goes stale on a switch")
+            _q.close()
 
     print("\nTHEME — a browser that refuses storage still renders, and follows the OS")
     page2 = browser.new_page(viewport={"width": 1000, "height": 900}, color_scheme="light")

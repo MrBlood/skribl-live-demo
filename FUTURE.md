@@ -129,17 +129,19 @@ first (sizes are the tool's to print, not this paragraph's):
     stroke painter, draft save
 
 Two of those are not what a reader of either file would guess. Pad's copy of
-the music drawer's loop-detail pan (`dragZoomPan`) lives in `editor_photo.js`,
-not `editor_music.js`. The canvas zoom and pinch copies are also where the two
-editors' event families met (Pad bound mouse and touch, Flip Pointer Events).
+the music drawer's loop-detail pan (`dragZoomPan`, gone with the loop detail in
+step 2) lived in `editor_photo.js`, not `editor_music.js`. The canvas zoom and
+pinch copies are also where the two editors' event families met (Pad bound
+mouse and touch, Flip Pointer Events).
 Pad's canvas moved onto Pointer Events in v315 (SK312-002) with the pinch left
 on touch events as Flip's is.
 
 **THE LIST ABOVE IS THE v312 MEASUREMENT, AND v315 CLOSED MOST OF IT.** Each
 of these is now one copy, in a module both editors call: the magnifier and
 pinch (`lib/canvaszoom.js`), the music trim drags (`lib/dragtrack.js`), the
-loop view and the waveform strip (`lib/loopwave.js`), the re-add cards
-(`lib/pendingcards.js`), the paint target and drawer pills
+loop view and the waveform strip (one module then; since step 2 the music
+timeline, `lib/musictimeline.js`), the re-add cards (`lib/pendingcards.js`),
+the paint target and drawer pills
 (`lib/painttarget.js`), grid density (`lib/gridoverlay.js`), the live loop
 engine (`lib/audioloop.js`, which the player shares) and the MP4 encoder
 (`lib/mp4export.js`). Three of those merges found a bug that one editor had and

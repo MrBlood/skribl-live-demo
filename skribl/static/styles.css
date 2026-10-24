@@ -8927,7 +8927,6 @@ body.drawalong .canvas-empty-hint { display: none; }
 :where(.tab-panel, .media-card) .clear-drawer-btn { color: var(--text-secondary); }   /* 4.19 on the dark card; hover, armed and disabled still win */
 :where(.tab-panel, .media-card) .clear-drawer-btn.armed { color: var(--danger-soft); }   /* --danger read 4.44 on the dark card's tint */
 @media (hover: hover) { :where(.tab-panel, .media-card) .clear-drawer-btn:hover { color: var(--danger-soft); } }
-#zoomMagVal { color: var(--accent-ink); }
 
 /* A FINGER SHOWS NO RING (lib/modalfocus.js marks data-input on <html>).
    Safari draws :focus-visible for a script's focus after a tap, so every

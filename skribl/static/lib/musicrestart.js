@@ -1,5 +1,7 @@
-/* THE RESTART VIEW, in More under The restart (step 2 of the music plan,
- * mocked first; the owner: "Yes on all"). THE END BESIDE THE START: on the
+/* THE RESTART VIEW: the loop's end beside its start, in More under The
+ * restart, to line the beats up across the join by eye and pull a smooth
+ * restart's blend longer or shorter. (Step 2 of the music plan, mocked first;
+ * the owner: "Yes on all".) THE END BESIDE THE START: on the
  * left the loop's last 0.6 seconds up to where it comes round, on the right
  * its first 0.6, and the line between them is the restart. With a smooth
  * restart the end's last moments fade out under the start, as

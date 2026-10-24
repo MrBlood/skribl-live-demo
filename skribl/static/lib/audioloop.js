@@ -51,19 +51,27 @@
   /* CUT ON SILENCE (the music drawer's switch, under How it loops). A clean
    * cut clicks where the loop's last sample jumps to its first. With the cut
    * on, both ends move together, by the same number of frames and CUT_MS at
-   * most either way, to where the loop's first samples are nearest the
-   * song's own next ones after its last, over every channel; a tie goes to the
-   * smaller move. ONE MOVE FOR BOTH ENDS keeps the loop's length, so Fit my
-   * drawing and whole bars stay exact: moving each end to its own quiet
-   * moment, as the step 2 mock drew it, changed the length by up to ten
-   * thousandths, and a loop that goes round for minutes hears that as drift.
+   * most either way, to where the loop's first samples come nearest the
+   * song's own next ones after its last, over every channel. ONE MOVE FOR
+   * BOTH ENDS keeps the loop's length, so Fit my drawing and whole bars stay
+   * exact: moving each end to its own quiet moment, as the step 2 mock drew
+   * it, changed the length by up to ten thousandths, and a loop that goes
+   * round for minutes hears that as drift.
+   * THE NEAREST CLEAN JOIN, NOT THE CLEANEST. A note comes round to the same
+   * place every half of its period, so there are joins nearly as clean as
+   * each other all through the reach; the cleanest by a hair was as often
+   * the farthest (a 220Hz tone: 5ms off, when one 0.5ms off was within a
+   * sixth of it). So of the moves within a quarter of the cleanest, the
+   * smallest wins, and the loop goes no further than it has to.
    * With a smooth restart there is nothing to cut (the fold joins two samples
    * that were neighbours in the song), so the move is 0. */
-  const CUT_MS = 5;
+  const CUT_MS = 5, NEAR = 1.25;
   function cutFrames(buffer, startFrame, frames) {
     const n = buffer.length, m = Math.round(CUT_MS / 1000 * buffer.sampleRate), chans = [];
     for (let c = 0; c < buffer.numberOfChannels; c++) chans.push(buffer.getChannelData(c));
-    let best = 0, bestCost = Infinity;
+    // Nearest first: 0, then 1 and -1, then 2 and -2, and so on.
+    const tried = [];
+    let least = Infinity;
     for (let k = 0; k <= m; k++) {
       for (let side = 0; side < (k ? 2 : 1); side++) {
         const d = side ? -k : k, s = startFrame + d, e = s + frames;
@@ -73,10 +81,12 @@
           const x = chans[c];
           cost += Math.abs(x[s] - x[e]) + Math.abs(x[s + 1] - x[e + 1]) + Math.abs(x[s + 2] - x[e + 2]);
         }
-        if (cost < bestCost - 1e-12) { bestCost = cost; best = d; }
+        tried.push(d, cost);
+        if (cost < least) least = cost;
       }
     }
-    return best;
+    for (let i = 0; i < tried.length; i += 2) if (tried[i + 1] <= least * NEAR + 1e-12) return tried[i];
+    return 0;
   }
   // The loop's window in frames, with the cut moved: { buffer, sr, startFrame,
   // frames, xfadeFrames }, or null when the buffer is not usable.

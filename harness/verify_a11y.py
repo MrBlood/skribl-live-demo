@@ -2739,12 +2739,17 @@ with sync_playwright() as _pw:
         _pg.wait_for_timeout(300)
         _pg.set_input_files("#musicInput", {"name": "t.wav", "mimeType": "audio/wav", "buffer": _wav1()})
         _pg.wait_for_function("() => document.getElementById('musicUploadBtn').classList.contains('loaded')", timeout=15000)
-        _pg.evaluate("() => document.querySelectorAll('.music-trim-handle').forEach(h => h.classList.add('dragging'))")
+        _pg.evaluate("() => document.querySelectorAll('.mt-tl-handle').forEach(h => h.classList.add('dragging'))")
         _pg.wait_for_timeout(300)
         _read["the music trim, both handles held"] = _pg.evaluate(_SMALL)
         _at += _pg.evaluate(_AT, _WAS10["the music trim, both handles held"])
-        _held = _pg.evaluate("""() => { const t = document.getElementById('musicTrack').getBoundingClientRect();
-            return [...document.querySelectorAll('.trim-bubble')].map(b => { const r = b.getBoundingClientRect();
+        # The timeline's ends as far out as a finger can take them (the start
+        # at its left edge, the end at its right, as an end held in the edge
+        # zone is), read before the timeline's next frame puts them back.
+        _held = _pg.evaluate("""() => { const st = document.getElementById('musicTlStage'), t = st.getBoundingClientRect();
+            document.getElementById('tlStart').style.transform = 'translateX(0px)';
+            document.getElementById('tlEnd').style.transform = 'translateX(' + t.width + 'px)';
+            return [...st.querySelectorAll('.trim-bubble')].map(b => { const r = b.getBoundingClientRect();
               return [Math.round(r.left - t.left), Math.round(t.right - r.right)]; }); }""")
         # Flip with a few pages, at rest and with its tool tray open.
         _boot20(_pg, "/flip", "flip")
@@ -2772,7 +2777,7 @@ with sync_playwright() as _pw:
         _off = [f"{sel} {px}px" for sel, px in _at if px != 12]
         check(f"{_size}: every rule that drew 10px words is at 12px, each read where it shows",
               len(_at) == sum(len(v) for v in _WAS10.values()) and not _off, "; ".join(_off) or f"{len(_at)} read")
-        check(f"{_size}, the music trim's bubbles stay over the track, both held at the ends",
+        check(f"{_size}, the timeline's time bubbles stay over it, both ends held at its edges",
               len(_held) == 2 and all(a >= 0 and b >= 0 for a, b in _held), str(_held))
         _ctx.close()
     _b20.close()

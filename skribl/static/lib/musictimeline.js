@@ -1,5 +1,7 @@
 /* THE TIMELINE: the music drawer's one view of the loop, on the Pad and on
- * Flip (step 2 of the music plan, mocked first; the owner: "Yes on all").
+ * Flip, the drawing's lane above the song, the loop's two ends as handles,
+ * and the whole song as one thin line under them. (Step 2 of the music plan,
+ * mocked first; the owner: "Yes on all".)
  * YOUR DRAWING STAYS PUT AND THE SONG SLIDES UNDER IT.
  *
  * Above, the drawing's own lane: each stroke when it was drawn (the Pad), or

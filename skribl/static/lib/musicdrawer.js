@@ -944,8 +944,9 @@
       if (!on) words = 'Each end cuts exactly where it is set.';
       else if (h.crossfade() > 0) words = 'For a clean cut: with Smooth restart on, the restart is already smooth.';
       else if (!h.buffer()) words = 'The two ends move together to where the loop joins without a click.';
-      else if (Math.abs(d) < EPS) words = 'The end already runs into the start without a click.';
-      else words = 'Both ends move ' + Math.abs(d).toFixed(3) + 's ' + (d > 0 ? 'later' : 'earlier') + ', to where the end runs into the start without a click.';
+      else if (d === 0) words = 'The end already runs into the start without a click.';
+      else words = 'Both ends move ' + (Math.abs(d) < EPS ? 'under a thousandth of a second' : Math.abs(d).toFixed(3) + 's') + ' '
+        + (d > 0 ? 'later' : 'earlier') + ', to where the end runs into the start without a click.';
       if (cutSub && cutSub.textContent !== words) cutSub.textContent = words;
     }
     if (cutSw) cutSw.addEventListener('click', function () {
