@@ -22706,4 +22706,25 @@ repaints nothing. Four edits did not apply at first: the served scripts lose
 their comments and indentation, and the edits had kept them; written to the
 served text, all four went red.
 
+WHAT THE AFFECTED SUITES FOUND, run side by side on step 2 before these four
+fixes: 46 of 51 green, and each red here was real.
+- More's own nudge (lib/musicdrawer.js) kept More's tile out from under the
+  header and nothing more. With the timeline the drawer is tall enough on a
+  phone that opening More scrolled about 700px and took the tool bar, Fit my
+  drawing and Whole song under the header (verify_ux's phone audit, the Pad
+  and Flip at 375 and 390). It stops now with the editor's bar just under the
+  header, a new dock() hook, as lib/drawerdetent.js caps the drawer's own
+  reveals: 86px on the Pad at 375.
+- The timeline's name line was 17.55px tall (13px at 1.35), so every row
+  under it sat half a pixel off, and More's + read 0.75px off its words in
+  Liberation Sans (verify_musicmore; main reads -0.25). The line is a whole
+  18px now, and the + reads main's numbers again.
+- The grips' icons carried aria-hidden on their wrapper, not on the svg,
+  which WAVE counts as an icon with no name (verify_a11y A11Y 19).
+- verify_parity's music row read the strip's end label, gone with the strip,
+  and stopped the suite there; it reads the track's own length now, so the
+  rows after it run on step 2 for the first time.
+Flip's "More opened as a song lands glides" was red beside other suites only
+(169px in a 94ms frame), and green alone: a long frame.
+
 Not tested here: a finger on an iPhone (no WebKit), the sound, Segoe UI and SF.

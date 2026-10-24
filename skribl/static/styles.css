@@ -2853,9 +2853,11 @@ body.recoloring #canvas { cursor: crosshair !important; }
    drawer's; the canvas paints both lanes; the two handles stand over the song
    (their tap bands are 44px); under them the whole song is one thin line,
    with where the loop is in it. A finger that moves up or down first scrolls
-   the page (pan-y): the module locks a sideways drag after 6px. */
+   the page (pan-y): the module locks a sideways drag after 6px. The name's
+   line is a whole 18px: at 1.35 it was 17.55, and every row under the
+   timeline sat half a pixel off, More's tile and its + among them. */
 .mt-tl { position: relative; margin-top: 2px; }
-.mt-tl-name { margin: 0 0 6px; font-size: 13px; font-weight: 600; line-height: 1.35; color: var(--text-secondary);
+.mt-tl-name { margin: 0 0 6px; font-size: 13px; font-weight: 600; line-height: 18px; color: var(--text-secondary);
   white-space: nowrap; width: max-content; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
 .mt-tl-stage { position: relative; height: 118px; touch-action: pan-y; -webkit-user-select: none; user-select: none; cursor: grab; }
 .mt-tl.holding .mt-tl-stage { cursor: grabbing; }
