@@ -20,9 +20,12 @@ The rows:
   Draw-on) and the tile's words follow.
 
   ONE SHAPE. The open tile reaches over the gap into its card, and what is
-  painted on the seam is the tile; its bottom edge is the card's colour. The
-  tiles and the card are the menu's card, an unchosen choice the menu's
-  paper, the chosen one the one tint.
+  painted on the seam is the tile; its bottom edge is the card's colour. No
+  line shows there, read on the screenshot's pixels in light and dark (the
+  card's dark top light, a 1px inset, once showed under the open tile), and
+  at an end the card's edge runs unbroken. The tiles and the card are the
+  menu's card, an unchosen choice the menu's paper, the chosen one the one
+  tint.
 
   NOTHING PAINTS OUTSIDE THE DRAWER. Built first, Pad still handed these four
   groups to the pill slider, whose pill, with no track, hung from a far
@@ -145,6 +148,43 @@ def tile(q, k, ms=500):
     q.wait_for_timeout(ms)
 
 
+# THE SEAM, AS PAINTED. In dark the card's drop lights its top edge from
+# inside (--menu-card-drop's 1px inset), one row under its border, and the open
+# tile covered only the border: that row showed under the tile as a faint line,
+# 8 levels over the card. Read on a screenshot, not on styles: the largest step
+# from the card's colour over the rows from the tile's bottom border to 3px into
+# the card, across the tile's inside; and, where the tile is at an end, the
+# smallest step on the card's side edge at the joint (0 is a break in the edge,
+# which a cover the tile's whole width paints).
+JOINT = """([t, p]) => { t = document.querySelector(t); p = document.querySelector(p);
+  let a = t.getBoundingClientRect();
+  if (a.bottom < 8 || a.bottom > innerHeight - 8) { t.scrollIntoView({ block: 'center', behavior: 'instant' }); a = t.getBoundingClientRect(); }
+  const z = p.getBoundingClientRect();
+  return { a: [a.left, a.top, a.right, a.bottom], z: [z.left, z.top, z.right, z.bottom], card: getComputedStyle(p).backgroundColor }; }"""
+
+
+def seam(q, tsel, psel, dpr):
+    import io
+    import re
+    from PIL import Image
+    j = q.evaluate(JOINT, [tsel, psel])
+    a, z = j["a"], j["z"]
+    card = [int(v) for v in re.findall(r"\d+", j["card"])[:3]]
+    x0, y0 = min(a[0], z[0]) - 2, a[3] - 6
+    im = Image.open(io.BytesIO(q.screenshot(clip={"x": x0, "y": y0, "width": max(a[2], z[2]) + 2 - x0, "height": 14}))).convert("RGB")
+    w, h = im.size
+
+    def step(x, y):
+        c = im.getpixel((min(w - 1, max(0, int((x - x0) * dpr))), min(h - 1, max(0, int((y - y0) * dpr)))))
+        return max(abs(c[i] - card[i]) for i in range(3))
+    inside = [a[0] + 2 + i / dpr for i in range(int((a[2] - a[0] - 4) * dpr))]
+    worst = max(step(x, a[3] - 1 + i / dpr) for i in range(int(4 * dpr)) for x in inside)
+    edges = {side: min(step(col, a[3] - 4 + i / dpr) for i in range(int(8 * dpr)))
+             for side, xa, xz, col in (("left", a[0], z[0], a[0] + .5 / dpr), ("right", a[2], z[2], a[2] - .5 / dpr))
+             if abs(xa - xz) < .75}
+    return worst, edges
+
+
 with sync_playwright() as pw:
     b = waits.instrument(pw.chromium.launch())
 
@@ -190,6 +230,11 @@ with sync_playwright() as pw:
                     check(f"{who}: {k}'s tile and its choices are one shape: the tile runs into the card, "
                           "the seam painted by the tile in the card's colour",
                           j["over"] >= 0.5 and j["seam"] and j["edge"] == j["card"] and j["tile"] == j["card"], str(j))
+                    worst, edges = seam(q, f".dp-tile[data-dp={k}]", f".dp-panel[data-dp={k}]", opts.get("device_scale_factor", 1))
+                    check(f"{who}: no line shows where {k}'s tile meets its card (painted pixels: the rows at the "
+                          "joint are the card's colour), and at an end the card's edge runs unbroken",
+                          worst <= 2 and all(v >= 4 for v in edges.values()) and (k not in ("brush", "eraser") or len(edges) == 1),
+                          f"largest step from the card at the joint {worst} (2 at most); the edge's smallest {edges} (4 at least)")
                     out = q.evaluate(OUTSIDE)
                     check(f"{who}: with {k} open, nothing in the drawer paints outside it", not out, "; ".join(out[:4]))
 

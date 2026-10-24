@@ -22446,3 +22446,29 @@ an untrimmed line sat 1-2px low.
 
 Not tested here: dragging the strip with a finger on an iPhone (no WebKit),
 the sound, Segoe UI and SF.
+
+## After v329 -- The faint line under an open tile, in dark
+
+In dark a faint 1px line showed under an open tile, in the draw drawer and
+under More. The card's drop lights its top edge from inside
+(--menu-card-drop's 1px inset, 4% white), one row below its border, and the
+open tile covered the border but not that row. Measured on the Pad and Flip,
+phone and desk: the row was 8 levels over the card (43,38,66 on 35,30,59)
+under all four tiles and More. Light has no inset, and read 0.
+
+The open tile now covers that row with its own shadow in the card's colour,
+`0 2px 0 -1px`: 1px under the tile and, by the -1px spread, only as wide as
+its inside, so where a tile is at an end the card's side edge still runs
+unbroken past the joint. After: 0 or 1 level in dark (the 1 is a closed
+neighbour's drop), 0 in light, and the edges as before.
+
+verify_drawtiles reads every tile's joint on the screenshot (Pad and Flip,
+phone and desk, light and dark), and verify_musicmore reads More's, light and
+dark. Shown red per component, each broken copy served to the browser with
+the file on disk untouched: the tiles' cover taken off (the eight joint rows
+of a one-theme Pad run, 8 levels), and the cover made the tile's whole width
+(Brush's and Eraser's rows, the edge broken to 0); More's the same two ways
+(its row red on both editors: the line 8 levels in dark, then both edges
+broken to 0 in light and dark). The same file served unchanged stayed green.
+
+Pad and Flip: shared, one rule each in styles.css.
