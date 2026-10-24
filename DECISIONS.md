@@ -22706,15 +22706,22 @@ repaints nothing. Four edits did not apply at first: the served scripts lose
 their comments and indentation, and the edits had kept them; written to the
 served text, all four went red.
 
-WHAT THE AFFECTED SUITES FOUND, run side by side on step 2 before these four
-fixes: 46 of 51 green, and each red here was real.
-- More's own nudge (lib/musicdrawer.js) kept More's tile out from under the
-  header and nothing more. With the timeline the drawer is tall enough on a
-  phone that opening More scrolled about 700px and took the tool bar, Fit my
-  drawing and Whole song under the header (verify_ux's phone audit, the Pad
-  and Flip at 375 and 390). It stops now with the editor's bar just under the
-  header, a new dock() hook, as lib/drawerdetent.js caps the drawer's own
-  reveals: 86px on the Pad at 375.
+WHAT THE AFFECTED SUITES FOUND, run side by side on step 2: 46 of 51 green the
+first time and 47 the second, and each red was real.
+- MORE'S NUDGE, BETWEEN TWO RULES. More's own nudge (lib/musicdrawer.js)
+  kept More's tile out from under the header and nothing more. With the
+  timeline the drawer is tall enough on a phone that opening More scrolled
+  about 700px and took the tool bar, Fit my drawing and Whole song under the
+  header (verify_ux's phone audit, the Pad and Flip at 375 and 390). Capped at
+  the bar alone, the editor's new dock(), as lib/drawerdetent.js caps the
+  drawer's own reveals, it left even More's first control, Smooth restart,
+  below a 664px screen (verify_sheetswipe): a tap that seemed to do nothing,
+  which is why the nudge exists. So the bar stays under the header unless that
+  would leave More's first control off the screen, and then the first control
+  wins: 86px on an 844px phone, the bar 4px below the header. On the strip's
+  shorter drawer the loop detail's waveform came on screen too (verify_parity
+  asked for it); the Restart view that took its place fits no phone with the
+  bar under the header, so verify_parity asks for the first control.
 - The timeline's name line was 17.55px tall (13px at 1.35), so every row
   under it sat half a pixel off, and More's + read 0.75px off its words in
   Liberation Sans (verify_musicmore; main reads -0.25). The line is a whole
@@ -22722,9 +22729,22 @@ fixes: 46 of 51 green, and each red here was real.
 - The grips' icons carried aria-hidden on their wrapper, not on the svg,
   which WAVE counts as an icon with no name (verify_a11y A11Y 19).
 - verify_parity's music row read the strip's end label, gone with the strip,
-  and stopped the suite there; it reads the track's own length now, so the
-  rows after it run on step 2 for the first time.
+  and stopped the suite there; it reads the track's own length now. The rows
+  after it then ran on step 2 for the first time, and its bin row read the
+  switch before the growth's hold was past: bringing the bin to the middle
+  moves the timeline's taller drawer up, into lib/drawerdetent.js's hold on
+  the card's end, which brought it back between the two reads (18px on the
+  Pad, 42 on Flip). It reads once 1.3s have passed; the arming is what it
+  reads. The newer-reveal row (merged just before this) brought the bin into
+  view the same way, so its probe takes the page to its foot now, past where
+  the growth left it, as the bin's move did on the strip's drawer.
 Flip's "More opened as a song lands glides" was red beside other suites only
 (169px in a 94ms frame), and green alone: a long frame.
+Each change shown red with its part broken, the broken copy served to the
+browser: the bar not capped turned verify_ux's four phone rows red; the bar
+alone, verify_sheetswipe's two; the nudge taken out, verify_parity's six More
+rows; the armed bin widened, its bin row on both editors (the switch pushed
+60px); the merged fix taken out, the newer-reveal row on both (5px and 29px,
+CI's numbers again). The same file served unchanged stayed green.
 
 Not tested here: a finger on an iPhone (no WebKit), the sound, Segoe UI and SF.
