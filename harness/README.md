@@ -590,7 +590,10 @@ stays a sleep.
   under Skribl's pick and the beat line saying "heard by Skribl" after
   "Listening for the beat…"; a swung song at 88 gets 16 beats from its
   groove's first bar, and a band speeding up starts and ends within 15ms of
-  its bars; the loop glides to its pick and the marks fade in, read on every
+  its bars; a rock beat at 120, an 808's kicks between its snares, is heard
+  at 120, not at 60 on its snares, its pick 32 of its beats from the bar
+  where its drums come in; decoded at 48 kHz, as phones and Windows decode,
+  the swung song is heard as at 44.1; the loop glides to its pick and the marks fade in, read on every
   frame (at once under Reduce Motion); slow chords, a steady tone, a sweep and
   rain get today's pick with no beat, and the line says so (the sweep and the
   rain each fail one of the two things that make a beat steady, so each guard
