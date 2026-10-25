@@ -404,25 +404,36 @@
      opens FROM its tool button, so it has to hang off .flip-tools, which is
      position: relative. .tool-group is overflow: hidden and would clip it.
      Its own class rather than a second .shape-pop, because the two differ in
-     the one dimension that matters -- this one holds a grid that grows. */
+     the one dimension that matters -- this one holds a grid that grows.
+     ITS PAPER, EDGE AND DROP ARE THE DOCK'S DRAWERS' (the owner, after the
+     drawers' words went a size up: "Yes", the drawers' look and type), named
+     in styles.css's THE DOCK'S DRAWERS ON THE MENU'S PAPER, along with its
+     fade; its corner is a drawer's, 16. */
   .stamp-pop { position: absolute; bottom: calc(100% + 8px); left: 8px; z-index: 45;
     width: min(292px, calc(100vw - 24px));
-    background: var(--surface-pop); border: 1px solid var(--hairline, #252a35);
-    border-radius: 14px; padding: 8px; box-shadow: 0 12px 30px rgba(0,0,0,.55); }
+    border-radius: 16px; padding: 8px; }
   /* Paired with the rule above: an explicit display defeats [hidden], which
      this codebase has been bitten by three times. */
   .stamp-pop[hidden] { display: none; }
   .stamp-pop::after { content: ''; position: absolute; top: 100%; left: 64px;
-    border: 7px solid transparent; border-top-color: var(--surface-pop); }
+    border: 7px solid transparent; border-top-color: var(--menu-paper); }
   /* auto-fill, not auto-fit: with one stamp on the shelf auto-fit stretches it
      to the full width and a single stamp looks like a different control than
-     six do. */
+     six do.
+     ROOM FOR THE ×. Each stamp's × hangs 4px off its cell's top right corner,
+     and a grid that scrolls clips what hangs out of it: the top row's × lost
+     its top and the last column's its right side, to the eye and to a tap
+     (verify_stamps, every stamp's × is whole). The scroll box reaches 4px into
+     the shelf's padding on every side and gives it back as its own, so no
+     cell moves. */
   .stamp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(62px, 1fr));
-    gap: 6px; max-height: 208px; overflow-y: auto; }
+    gap: 6px; max-height: 208px; overflow-y: auto; margin: -4px; padding: 4px; }
   .stamp-cell { position: relative; }
+  /* A stamp is a picture card on the paper, as the draw drawer's tiles are:
+     the menu's white card, its lilac edge, a card's 16. */
   .stamp-btn { display: block; width: 100%; aspect-ratio: 1; padding: 0;
-    background: var(--surface-2, rgba(255,255,255,.04));
-    border: 1px solid var(--hairline); border-radius: 10px; cursor: pointer;
+    background: var(--menu-card);
+    border: 1px solid var(--menu-card-line); border-radius: 16px; cursor: pointer;
     overflow: hidden; transition: outline-color .12s ease; }
   .stamp-btn canvas { display: block; width: 100%; height: 100%; }
   @media (hover: hover) { .stamp-btn:hover { border-color: var(--ui-line); } }
@@ -441,7 +452,7 @@
   .stamp-del { position: absolute; top: -4px; right: -4px; width: 24px; height: 24px;
     display: grid; place-items: center; padding: 0; line-height: 1;
     font-size: 13px; font-weight: 700; color: var(--text-primary);
-    background: var(--surface-pop); border: 1px solid var(--ui-line);
+    background: var(--menu-card); border: 1px solid var(--menu-card-line);
     border-radius: 50%; cursor: pointer; opacity: .5; transition: opacity .12s ease; }
   /* ALWAYS PRESENT, dimmed rather than hidden. Revealing it on hover is the
      tidier design and it makes the only route to deleting a stamp unreachable
@@ -451,19 +462,25 @@
      simply always there and quiet until you reach for it. */
   .stamp-del:focus-visible { opacity: 1; }
   @media (hover: hover) { .stamp-cell:hover .stamp-del, .stamp-del:hover { opacity: 1; } }
-  .stamp-empty { margin: 4px 2px 2px; font-size: 11.5px; line-height: 1.45;
+  /* The drawers' words (a size up, B): a sentence in a drawer is the photo
+     drawer's, 12px in the sheet's second ink, and it wraps balanced (the
+     drawers' text-wrap), so "selection." is not left alone on its line. */
+  .stamp-empty { margin: 4px 2px 2px; font-size: 12px; line-height: 1.45;
     color: var(--text-muted); }
   .stamp-empty[hidden] { display: none; }
   .stamp-empty b { color: var(--text-primary); font-weight: 650; }
   /* The empty shelf's way out. A real button rather than bold text, because the
      old sentence asked the reader to go and find a control and they could not:
      this one IS the control. Full width so it cannot be read as a word in the
-     sentence, which is exactly how "tap Stamp" was misread. */
-  .stamp-empty-go { display: block; width: 100%; margin: 7px 0 6px;
-    padding: 7px 10px; border-radius: 8px; cursor: pointer;
-    background: var(--surface-control); color: var(--text-primary);
-    border: 1px solid var(--hairline-strong);
-    font: inherit; font-size: 11.5px; font-weight: 650; text-align: center;
+     sentence, which is exactly how "tap Stamp" was misread.
+     A control on the paper is the menu's white card with its lilac edge, and a
+     button's corner is 12; its words are a drawer button's 13. 600, not 650:
+     a face with no 650 takes the next weight up, and Segoe UI's is bold. */
+  .stamp-empty-go { display: block; width: 100%; margin: 8px 0 6px;
+    padding: 8px 10px; border-radius: var(--r-control); cursor: pointer;
+    background: var(--menu-card); color: var(--text-primary);
+    border: 1px solid var(--menu-card-line);
+    font: inherit; font-size: 13px; font-weight: 600; text-align: center;
     transition: background .14s ease, border-color .14s ease; }
   @media (hover: hover) {
     .stamp-empty-go:hover { background: var(--surface-control-hover);
@@ -471,7 +488,9 @@
   }
   .stamp-empty-go:active { filter: brightness(1.2); }
   .stamp-empty-go:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
-  .stamp-empty-then { display: block; color: var(--text-dim); }
+  /* The sentence's second half, in its ink: --text-dim read 3.05:1 on the
+     white shelf and 2.57 on the dark one (verify_contrast). */
+  .stamp-empty-then { display: block; }
   /* The stamp glyph shown INLINE in the sentence, at text size, so the reader is
      matching a picture against a picture rather than a word against an icon. */
   .stamp-empty-ic { display: inline-block; width: 15px; height: 15px;

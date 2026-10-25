@@ -23362,3 +23362,88 @@ editor's Tune button with the amber that carries controls: red before on both
 (the pill visible, its × live), green after, and each half served back out
 goes red on its own. On the scenario, Flip's light phone through Tune as CI
 runs it: two of the four runs before the fix red, all nine after it green.
+
+## After v329 -- Flip's stamp shelf takes the drawers' look and type
+
+The owner, asked whether Flip's stamp drawer should get the same look and
+text size as the other drawers (the default yes): "Yes". The shelf was the
+last surface the dock opens that kept the old pop's look: white in light and
+the dock's grey in dark, a grey hairline, a heavy black drop, 14px corners,
+10px stamps, an 8px grey button and 11.5px words.
+
+THE LOOK. The shelf is the menu's paper with the tiles' lilac edge and drop,
+a drawer's 16px corner, and an arrow of the same paper. Its stamps are
+picture cards, as the draw drawer's tiles are: the menu's white card, the
+lilac edge, a card's 16 (the armed stamp keeps its ring). Each stamp's ×
+is that card too, and the empty shelf's way out ("Pick something with
+Select") a white card button with a button's 12. The shelf is named in
+styles.css's THE DOCK'S DRAWERS ON THE MENU'S PAPER with the others; its
+cards' rules are flip.css's, which loads after styles.css.
+
+THE TYPE (B). The empty shelf's sentence is a drawer's sentence, the photo
+drawer's 12px in the second ink, and it wraps balanced like every drawer's,
+so "selection." is no longer alone on its line. Its way out is a drawer
+button's 13px, at 600: 650 is a weight Segoe UI does not have, and there
+the browser takes the next one up, bold. The sentence's second half ("Then tap [the stamp] in
+the bar along the bottom.") wore --text-dim, 3.05:1 on the white shelf and
+2.57 on the dark one; it is the sentence's ink now, 8.3 and 9.7.
+
+THE FADE. The shelf appeared and vanished in a single frame, as the shape
+picker and the tool tray did before the motion survey (the dock's own fade
+while drawing, .flip-tools > *, reached it, but with nothing to fade from or
+to). It fades the way they do (0.18s, its opacity and a 6px rise), and still
+hides by [hidden], set at once, so every script and suite that reads .hidden
+sees the truth at once.
+
+FOUND ON THE WAY.
+- The arrow under the shape picker kept the well's grey when the picker took
+  the paper (in light, rgb(234, 238, 244) under rgb(243, 240, 255)), on Pad
+  and Flip. It is the paper now, as the tool tray's already was.
+- Each stamp's × hangs 4px off its cell's corner, and the grid, which
+  scrolls, clipped what hung out of it: the top row's × lost its top and the
+  last column's its right side, to the eye and to a tap. It was so before
+  this change too; the zoomed photographs showed it. The grid's scroll box
+  reaches 4px into the shelf's padding and gives it back as its own, so no
+  stamp moves.
+- The empty Photo and Music drawers ("Add a photo", "Add music"), the first
+  thing anyone sees in them, were never in the drawers' census, which read
+  them loaded, and their hint line kept its 12.5px through B. It is 13, the
+  size of the line under a loaded song's or photo's name, which is the same
+  place in the drawer.
+- verify_contrast read a word said only to a screen reader as a word (the
+  shelf's "the stamp button", clipped to nothing in a 1px box). A word
+  clipped to nothing is skipped now, by the mechanism (a clip or clip-path
+  that keeps none of it, or a 1px box that hides its overflow), not by its
+  class.
+
+THE INSTRUMENTS. verify_contrast reads the shelf with the drawers (Flip
+only: the Pad has no stamps), empty and with three stamps, none armed: its
+paper, its edge, its cards' fill and edge, one corner per kind, its words
+12 to 16px in whole pixels with no lone last word, and its Size knob; it now
+asserts each drawer's own edge is the tiles' lilac line and the arrow under
+a pop its paper, and reads the empty Photo and Music drawers. verify_stamps:
+on a phone's shelf of five stamps, a row of four and one under it, a tap
+just inside each edge of each × finds it. verify_motion: the shelf opens and
+closes over several frames.
+
+CALIBRATION, each break served to the browser in place of the real sheet,
+the files on disk untouched. verify_contrast, red on its own rows: the
+stamps', the ×'s and the button's old fill, edge and corners (the white card,
+the lilac line, the corners); the shelf's paper off the drawers' list (the
+paper, and its words, read through it to the page); its edge off the list,
+its 14px corner, its old arrow (the edge, the corners, the arrow); the shape
+picker's arrow as it was, on Pad and Flip (the arrow); the words at 11.5
+(the sizes); "Then tap" in --text-dim (AA, in both themes); the balance off
+("selection." alone again). On the tree as it was, the empty drawers' hint
+at 12.5 (the sizes, on both editors), and the screen reader's "the stamp
+button" read as a word (one word fewer read after, and "Then tap" still read,
+and still short). verify_stamps: the grid's room taken away (the top row's ×
+finds the shelf at its top, the last column's at its right too).
+verify_motion: the shelf as it was (it opens and closes in one frame); its
+starting point off (it opens in one); its hidden state off, or its own
+transition (it closes in one; the dock's fade while drawing still fades it
+in). The same files served unchanged: all green.
+
+Pad and Flip: the stamp shelf is Flip's alone (the Pad has no stamps), and
+its rules sit with its siblings'. The shape picker's arrow and the empty
+drawers' hint are shared: styles.css, which both editors load.

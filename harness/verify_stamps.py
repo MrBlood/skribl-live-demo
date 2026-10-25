@@ -883,6 +883,46 @@ with sync_playwright() as _sp3:
     finally:
         _pb.close()
 
+# ============================================================================
+# EVERY STAMP'S × IS WHOLE. It hangs 4px off its cell's top right corner, and
+# the grid scrolls, so the grid clipped what hung out of it: the top row's ×
+# lost its top and the last column's its right side, and a tap there found
+# the shelf (seen when the shelf took the drawers' look). Asked of what is
+# painted, not of the box: just inside each edge of each ×, a tap finds it.
+# Five stamps on a phone's shelf are a row of four and one under it.
+# ============================================================================
+print("\nEVERY STAMP'S × IS WHOLE — the top row's and the last column's")
+with sync_playwright() as _sp4:
+    _xb = _sp4.chromium.launch()
+    try:
+        xp = _xb.new_page(viewport={"width": 402, "height": 874})
+        browsing.goto(xp, BASE, "/flip")
+        xp.evaluate("() => localStorage.clear()")
+        xp.reload(wait_until="load")
+        xp.wait_for_timeout(1200)
+        xp.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+        xp.evaluate("""() => { const S = window.SkriblStamps;
+          const mk = (n) => S.fromRuns([[{x:0,y:0,color:'#7c5cff',size:2,start:true},{x:9,y:9+n,color:'#7c5cff',size:2}]]);
+          S.store(null, [mk(1), mk(2), mk(3), mk(4), mk(5)]); loadStampShelf(); stampArmed = -1; setTool('stamp'); }""")
+        xp.wait_for_timeout(500)
+        seen = xp.evaluate("""() => { const g = document.getElementById('stampGrid').getBoundingClientRect();
+          const xs = [...document.querySelectorAll('#stampGrid .stamp-del')].map(d => d.getBoundingClientRect());
+          return { n: xs.length, rows: new Set(xs.map(b => Math.round(b.top))).size,
+                   cols: new Set(xs.map(b => Math.round(b.left))).size }; }""")
+        cut = xp.evaluate("""() => [...document.querySelectorAll('#stampGrid .stamp-del')].flatMap((d, i) => {
+          const b = d.getBoundingClientRect(), cx = (b.left + b.right) / 2, cy = (b.top + b.bottom) / 2;
+          return [['top', cx, b.top + 2], ['right', b.right - 2, cy], ['bottom', cx, b.bottom - 2], ['left', b.left + 2, cy]]
+            .map(([side, x, y]) => [side, document.elementFromPoint(x, y)])
+            .filter(([, at]) => !(at && (at === d || d.contains(at))))
+            .map(([side, at]) => 'stamp ' + (i + 1) + "'s × at its " + side + ' finds '
+                 + (!at ? 'nothing' : at.id ? '#' + at.id : String(at.className || at.tagName))); })""")
+        check(f"a tap just inside each edge of each stamp's × finds it ({seen['n']} read, "
+              f"{seen['cols']} columns, {seen['rows']} rows)",
+              seen["n"] == 5 and seen["cols"] == 4 and seen["rows"] == 2 and not cut,
+              "; ".join(cut) or str(seen))
+    finally:
+        _xb.close()
+
 bad = [r for r in results if not r[0]]
 print(f"\n{'=' * 62}\n{len(results) - len(bad)}/{len(results)} passed"
       + ("" if not bad else "  FAILURES: " + ", ".join(n for _, n in bad)))

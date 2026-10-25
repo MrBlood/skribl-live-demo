@@ -23,7 +23,7 @@ mark and the readout each), the scrub bar's allow-discrete removed, the Media
 card dropping its glass for a replay, its contents left at nothing while
 resting, the drawer contents' fade removed, the page
 height hold removed (Pad and Flip each), Flip's scroll home put back to
-'auto', the popovers' transition removed, the
+'auto', the popovers' transition removed (the stamp shelf's too), the
 Flip menu dim's animation removed, and the pill put back on its spring.
 """
 import re, sys, math
@@ -221,6 +221,27 @@ with sync_playwright() as p:
     sc = [r[0] for r in rows if r[1] != "none"]
     check("the menu's dim comes up over several frames", bool(sc) and between(sc, 0, 1) >= 2,
           f"{between(sc, 0, 1) if sc else 0} frames between")
+    ctx.close()
+
+    # The stamp shelf is the dock's third pop, and it appeared and vanished in a
+    # single frame until it took the drawers' look (the owner: "Yes"). Opened
+    # the way a person first finds it, from the tray, and put away by its own
+    # button, which the tray promoted onto the dock.
+    print("\nFLIP — the stamp shelf")
+    ctx, pg = phone(b)
+    open_editor(pg, "/flip")
+    pg.click("#toolMoreBtn"); pg.wait_for_timeout(500)
+    rows = record(pg, [["#stampPop", "opacity"], ["#stampPop", "display"]], 500,
+                  lambda: pg.click(".tool-tray-btn[data-tool='stamp']"))
+    sp = [r[0] for r in rows if r[1] != "none"]
+    check("the stamp shelf opens over several frames", between(sp, 0, 1) >= 2,
+          f"{between(sp, 0, 1)} frames between")
+    pg.wait_for_timeout(300)
+    rows = record(pg, [["#stampPop", "opacity"], ["#stampPop", "display"]], 500,
+                  lambda: pg.click("#stampToolBtn"))
+    sp = [r[0] for r in rows if r[1] != "none"]
+    check("...and closes over several frames", between(sp, 1, 0) >= 2,
+          f"{between(sp, 1, 0)} frames between")
     ctx.close()
 
     print("\nTHE PILL — calm, with no overshoot")

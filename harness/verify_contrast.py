@@ -69,7 +69,8 @@ EDITORS = (
 # The dock's drawers, and the sheets the menu opens (CONSISTENCY, and the
 # drawers' type).
 DRAWERS = ("Tune", "The shape picker", "The draw drawer", "The draw drawer, Size", "The draw drawer, Feel", "The draw drawer, Eraser",
-           "Photo, with a picture", "Music", "Music, More open", "The stamp shelf", "The stamp shelf, with stamps")
+           "Photo, empty", "Photo, with a picture", "Music, empty", "Music", "Music, More open",
+           "The stamp shelf", "The stamp shelf, with stamps")
 FLIP_ONLY = ("The stamp shelf", "The stamp shelf, with stamps")   # the Pad has no stamps
 PAPER = ("the menu", "New", "Settings", "Your drafts", "Export", "Report a problem", "Post",
          "Ask", "Ask, its answers", "Ask, an answer", "The little book")
@@ -198,7 +199,12 @@ CENSUS = r"""(root) => {
       caps.push((el.className && typeof el.className === 'string' ? '.' + el.className.trim().split(/\s+/)[0] : el.tagName.toLowerCase())
                 + ' "' + el.textContent.trim().slice(0, 20) + '"');
   }
-  return { sheet: s(R), cards, labels, caps };
+  // The little arrow a pop points with (a triangle: its ::after's top border
+  // coloured, its sides clear), when it has one.
+  const a = getComputedStyle(R, '::after');
+  const arrow = a.content !== 'none' && a.display !== 'none' && parseFloat(a.borderTopWidth) > 0
+    && a.borderLeftColor === 'rgba(0, 0, 0, 0)' ? a.borderTopColor : null;
+  return { sheet: s(R), arrow, cards, labels, caps };
 }"""
 
 # THE DRAWERS' TYPE (the owner, of the type mock's B: "all yes"). Every word
@@ -491,6 +497,14 @@ def surfaces(name, ids, q, canvas, btn):
                 q.wait_for_timeout(200)
         return f
 
+    # And Photo and Music as they first open, empty: the first thing anyone
+    # sees in them. Read loaded only, the empty drawers' hint line kept its
+    # 12.5px through the drawers' words going a size up (B).
+    def empty(what):
+        def f():
+            browsing.pad_drawer(q, what); q.wait_for_timeout(600)
+        return f
+
     def photo():
         browsing.pad_drawer(q, "photo"); q.wait_for_timeout(400)
         q.set_input_files(ids["photo"], {"name": "photo.png", "mimeType": "image/png", "buffer": PNG})
@@ -543,8 +557,10 @@ def surfaces(name, ids, q, canvas, btn):
              ("The little book", book, "#bookRoot .bk"), ("Draw along", along, ".da-pill"),
              ("Tune", tune, "#tuneShell"), ("The shape picker", shapes, "#shapePop"),
              ("The draw drawer", drawer("brush"), "#drawPanel"), ("The draw drawer, Size", drawer("size"), "#drawPanel"),
-             ("The draw drawer, Feel", drawer("feel"), "#drawPanel"), ("The draw drawer, Eraser", drawer("eraser"), "#drawPanel"), ("Photo, with a picture", photo, "#mediaCard"),
-             ("Music", music(False), "#mediaCard"), ("Music, More open", music(True), "#mediaCard"))
+             ("The draw drawer, Feel", drawer("feel"), "#drawPanel"), ("The draw drawer, Eraser", drawer("eraser"), "#drawPanel"),
+             ("Photo, empty", empty("photo"), "#mediaCard"), ("Photo, with a picture", photo, "#mediaCard"),
+             ("Music, empty", empty("music"), "#mediaCard"), ("Music", music(False), "#mediaCard"),
+             ("Music, More open", music(True), "#mediaCard"))
             + (((FLIP_ONLY[0], stamps(False), "#stampPop"), (FLIP_ONLY[1], stamps(True), "#stampPop")) if name == "Flip" else ())
             + (("A button's card", card, ".lc-card"), ("A Show me step", step, ".lc-card"),
                ("Name every button", names, ".lc-tags"),
@@ -784,6 +800,15 @@ for scheme in ("light", "dark"):
     check(f"{scheme}: and each drawer's edge is the tiles' lilac line ({len(rims)} read)",
           bool(rim) and rim != "none" and len(rims) >= (1 if ONLY else 10) and set(rims.values()) == {rim},
           f"tile {rim}; " + "; ".join(f"{n} {l}: {g}" for (n, l), g in sorted(rims.items()) if g != rim))
+    # AND THE ARROW UNDER A POP IS ITS PAPER. It points at the button the pop
+    # opened from and is of a piece with it: the shape picker's kept the well's
+    # grey when the picker took the paper, on both editors.
+    arrows = {(n, l): (census[(n, sc, l)]["arrow"], census[(n, sc, l)]["sheet"]["bg"]) for (n, sc, l) in census
+              if sc == scheme and l in DRAWERS and census[(n, sc, l)] and census[(n, sc, l)].get("arrow")}
+    if not ONLY or {"The shape picker", *FLIP_ONLY} & set(ONLY):
+        check(f"{scheme}: and the arrow under a pop is its paper ({len(arrows)} read)",
+              len(arrows) >= (1 if ONLY else 4) and all(w == g for w, g in arrows.values()),
+              "; ".join(f"{n} {l}: arrow {w} on {g}" for (n, l), (w, g) in sorted(arrows.items()) if w != g))
     off, seen = [], 0
     for (n, sc, l), cz in census.items():
         if sc != scheme or l not in PAPER + DRAWERS or not cz:
