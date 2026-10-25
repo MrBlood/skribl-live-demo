@@ -1258,7 +1258,7 @@
 .beat-more-in { min-height: 0; overflow: hidden; }
 .beat-more-body { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; padding: 0 0 10px; }
 .beat-more + .tune-row { border-top: 1px solid var(--menu-card-rule); }
-#beatRoundSeg button[hidden] { display: none; }
+#beatRoundSeg[hidden], #beatRoundSeg button[hidden] { display: none; }
 @media (prefers-reduced-motion: reduce) { .beat-more { transition: none; } }
 
 /* Onion row dims when onion skin is off — the controls stay put so the panel
