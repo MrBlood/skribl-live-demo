@@ -23324,3 +23324,22 @@ unchanged: all green.
 Pad and Flip: shared. Every rule is styles.css's, which both editors load.
 Flip's stamp drawer is not in the census, and its words stay 11.5px until it
 is brought in (its own question to the owner).
+
+## After v329 -- Main red after #633: More's + in CI's faces; a short word says what it was read against
+
+Main's full run after the drawers' words (#633) was red in two places, both
+only in CI's faces. verify_musicmore: More's + sat 1px off its words in CI's
+own Liberation Sans and FreeSerif (here, 0 and 0.25). A size up, More was
+15px inside a 14px block, and lib/labels.js trims the block to the block's
+capitals, so More's capitals stood above the trimmed box by an amount that
+depends on the face. The block is now More's 15px, and its line is the +'s
+18px, so the box the + centres on is More's capitals, on whole pixels (a
+15px block on a 1.25 line instead put the + 0.75px off here: the line was
+18.72px against the +'s 18). Here it reads as it did; CI is the proof.
+
+verify_contrast: Flip's Tune "2" (the onion skin's depth) read 6.85:1 in CI
+where this box reads 9.35, in this box's face, DejaVu Sans and Liberation Sans
+forced alike. Its ink over a pale lilac would give 6.85, so in CI something
+the colour of the pill was under it. A word short of its line now says what
+it was read against (its ink, the ground's colour and where), so CI says what
+was under the "2".

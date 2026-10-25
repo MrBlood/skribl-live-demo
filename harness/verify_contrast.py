@@ -281,25 +281,29 @@ def measure(q, root, scale):
         l, t, r, bt = (max(0, b["l"]) + 1) * scale, (max(0, b["t"]) + 1) * scale, (min(b["r"], im.width / scale) - 1) * scale, (min(b["b"], im.height / scale) - 1) * scale
         if r <= l or bt <= t:
             continue
-        worst = None
+        worst, under = None, None
         for i in range(3):
             for j in range(3):
                 ground = im.getpixel((int(l + (r - l) * (i + .5) / 3), int(t + (bt - t) * (j + .5) / 3)))
                 a = w["ink"][3]
                 ink = [w["ink"][k] * a + ground[k] * (1 - a) for k in range(3)]
                 v = ratio(ink, ground)
-                worst = v if worst is None else min(worst, v)
+                if worst is None or v < worst:
+                    worst, under = v, ground
         need = 3 if (w["px"] >= 24 or (w["px"] >= 18.66 and w["w"] >= 700)) else 4.5
         w["ratio"] = round(worst, 2)
+        # WHAT IT WAS READ AGAINST, so a short word says why where it is read:
+        # main's CI read Flip's Tune "2" at 6.85 where this box reads 9.35.
+        said = f'ink rgb{tuple(round(c) for c in w["ink"][:3])} a{w["ink"][3]:.2f} on rgb{tuple(under)} at {round(b["l"])},{round(b["t"])}'
         if worst < need:
-            low.append(f'{w["name"]} "{w["text"]}" {worst:.2f}<{need}')
+            low.append(f'{w["name"]} "{w["text"]}" {worst:.2f}<{need} ({said})')
         # TWO INKS (owner, after v324: "The two inks looks sharp"): every word
         # not on the brand purple reads 7:1 (4.5 if large, WCAG's AAA).
         # On the purple only LARGE words are held to it (4.5, the big buttons'
         # 19px bold); the small pills stay at AA (owner: the purple stays).
         sharp = 4.5 if (w["px"] >= 24 or (w["px"] >= 18.66 and w["w"] >= 700)) else 7
         if worst < sharp and not (w.get("fill") and sharp == 7):
-            SHORT7.append(f'{w["name"]} "{w["text"]}" {worst:.2f}<{sharp}')
+            SHORT7.append(f'{w["name"]} "{w["text"]}" {worst:.2f}<{sharp} ({said})')
     return words, low
 
 

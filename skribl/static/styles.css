@@ -2446,10 +2446,14 @@ body.recoloring #canvas { cursor: crosshair !important; }
    over the baseline (labels.css .lbl-own), so the + centres on the letters
    and not on the font's ascent and descent. A flex row cannot be trimmed: in
    the first build the + sat 1-2px low and the tile was 56px for 48. They
-   wrap below about 360px rather than be cut short. */
+   wrap below about 360px rather than be cut short. The block's own size is
+   More's, so the trim is to More's capitals, and its line is the +'s 18px, so
+   the two centre on whole pixels: a size up (B) More was 15px in a 14px block,
+   trimmed to the block's capitals, and in main's CI (its own Liberation Sans
+   and FreeSerif) the + sat 1px off. */
 .mt-more { position: relative; z-index: 1; width: 100%; min-height: 0; margin-top: 8px; padding: 14px 14px;
   flex-direction: row; align-items: center; gap: 8px; }
-.mt-more-words { flex: 1 1 auto; min-width: 0; font-size: 14px; line-height: 1.25; }
+.mt-more-words { flex: 1 1 auto; min-width: 0; font-size: 15px; line-height: 18px; }
 .mt-more .mt-k, .mt-more .mt-v { white-space: normal; }
 .mt-more .mk { flex: none; width: 18px; height: 18px; color: var(--accent-ink); }
 .mt-more .mk-minus, .mt-more[aria-expanded="true"] .mk-plus { display: none; }
