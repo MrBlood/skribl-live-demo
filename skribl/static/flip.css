@@ -1218,16 +1218,16 @@
 /* Watching speed (F1): the label and its five speeds share one 44px line,
    the speeds at the row's end like Speed's 6 / 12 / 24, and the small print
    runs under both, the row's full width (the owner's layout). Where the line
-   is too narrow for both (a 320px phone), the speeds drop under the label. */
-#tuneWatchRow { display: grid; grid-template-columns: auto 1fr; align-items: center; column-gap: 12px; row-gap: 2px; }
+   is too narrow for both, the speeds drop under the label, at its start: the
+   row wraps by itself. It was a breakpoint at 359px, which held the words a
+   size down; a size up (B) the label and the speeds wanted 320px of a 375px
+   phone's 309 and pushed the whole sheet into its clip, and where they fit
+   depends on the face. */
+#tuneWatchRow { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; column-gap: 12px; row-gap: 2px; }
 #tuneWatchRow .tune-label { display: contents; }
-#tuneWatchRow .tune-name { grid-column: 1; grid-row: 1; min-height: 44px; display: flex; align-items: center; }
-#tuneWatchRow .seg { grid-column: 2; grid-row: 1; justify-self: end; margin: 0; }
-#tuneWatchRow .tune-hint { grid-column: 1 / -1; grid-row: 2; }
-@media (max-width: 359px) {
-  #tuneWatchRow .seg { grid-column: 1 / -1; grid-row: 2; justify-self: start; }
-  #tuneWatchRow .tune-hint { grid-row: 3; }
-}
+#tuneWatchRow .tune-name { min-height: 44px; display: flex; align-items: center; }
+#tuneWatchRow .seg { margin: 0; }
+#tuneWatchRow .tune-hint { flex: 0 0 100%; order: 1; }
 
 /* Onion row dims when onion skin is off — the controls stay put so the panel
    never changes height mid-toggle. */

@@ -2507,12 +2507,15 @@ body.recoloring #canvas { cursor: crosshair !important; }
 .mt-play.playing .mt-stop-icon { display: block; }
 .mt-play .tp { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; min-width: 0; }
 .mt-play .tp-k { font-size: 16px; font-weight: 700; line-height: 1.15; }
-.mt-play .tp-v { font-size: 13px; font-weight: 500; line-height: 1.2; white-space: nowrap; }
+.mt-play .tp-v { font-size: 13px; font-weight: 500; line-height: 1.2; }
 .mt-play.mt-loop { background: var(--menu-card); color: var(--accent-ink); border: 1px solid var(--menu-card-line); box-shadow: var(--menu-card-drop); }
 .mt-play.mt-loop .tp-v { color: var(--text-secondary); }
 .mt-play:disabled { opacity: .5; cursor: default; }
 .mt-play:focus-visible { outline: 2px solid var(--ui-hi); outline-offset: 2px; }
-/* Under 360px a half is 127px and "with my animation" needs 160: one each to a row. */
+/* Under 360px a half is 127px and "with my animation" needs 160: one each to a row.
+   From 360px a size up (B) it can want a line more than a half holds there
+   ("with my animation" is 99px of Flip's 91 at 360): it wraps under the verb,
+   as the drawers' words do, rather than running out of its button. */
 @media (max-width: 359px) { .mt-transport { grid-template-columns: minmax(0, 1fr); } }
 @media (hover: hover) { .mt-play:not(:disabled):not(.mt-loop):hover { filter: brightness(1.08); }
   .mt-play.mt-loop:not(:disabled):hover { background: color-mix(in srgb, var(--accent) 7%, var(--menu-card)); } }
@@ -2520,7 +2523,12 @@ body.recoloring #canvas { cursor: crosshair !important; }
 /* TAP THE BEAT, in More: the tap is a menu card with the small violet words,
    lit while it listens. */
 .mt-beat { margin-top: 6px; }
-.mt-tap-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; }
+/* The tap stays where the finger is while its words change: the row holds
+   the tap at its top, and the words start a half-line down, so their first
+   line sits level with the tap's middle (44px less a 1.35 line, halved) and
+   more lines go below it. Centred, three lines of words a size up (B) moved
+   the tap 6px down and back as the line changed. */
+.mt-tap-row { display: flex; align-items: flex-start; flex-wrap: wrap; gap: 8px 12px; }
 .mt-tap { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 6px 16px 6px 12px; border-radius: 999px;
   border: 1px solid var(--menu-card-line); background: var(--menu-card); box-shadow: var(--menu-card-drop);
   color: var(--accent-ink); font: inherit; font-size: 15px; font-weight: 650; cursor: pointer;
@@ -2530,7 +2538,7 @@ body.recoloring #canvas { cursor: crosshair !important; }
   box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 28%, transparent); }
 .mt-tap:focus-visible { outline: 2px solid var(--ui-hi); outline-offset: 2px; }
 @media (hover: hover) { .mt-tap:not(.tapping):hover { background: color-mix(in srgb, var(--accent) 7%, var(--menu-card)); } }
-.mt-tempo { flex: 1 1 150px; min-width: 0; font-size: 14px; line-height: 1.35; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.mt-tempo { flex: 1 1 150px; min-width: 0; padding-top: calc((44px - 1.35em) / 2); font-size: 14px; line-height: 1.35; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
 .mt-tempo b { color: var(--text-primary); font-weight: 650; }
 
 @media (max-width: 640px) {
@@ -2591,13 +2599,16 @@ body.recoloring #canvas { cursor: crosshair !important; }
      is on screen wherever the person has scrolled to, and a tap on it is a
      tap on it, not on the header it used to hide behind. Solid while fitted:
      content passes under the pinned grip, and on glass it would show through
-     it. The grip reaches the panel's edges over its 16px side padding and
-     sticks at the panel's top over its 14px top padding. */
+     it. The solid is the menu's paper, as every drawer is: it was the well's
+     grey, unseen until the drawers' words a size up (B) made Flip's Feel tile
+     tall enough to be fitted on a phone. The grip reaches the panel's edges
+     over its 16px side padding and sticks at the panel's top over its 14px
+     top padding. */
   #drawPanel.detent-fit {
     max-height: var(--detent-room);
     overflow-y: auto;
     overscroll-behavior: contain;
-    background: rgb(var(--surface-well-2-rgb));
+    background: var(--menu-paper);
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
   }
@@ -2609,7 +2620,7 @@ body.recoloring #canvas { cursor: crosshair !important; }
     width: auto;
     margin: -14px -16px 0;
     padding-top: 6px;
-    background: rgb(var(--surface-well-2-rgb));
+    background: var(--menu-paper);
   }
 }
 
@@ -7037,10 +7048,12 @@ body.playing .flip-grid { display: none; }
    one line from 390px up -- 50px tall instead of 90, and the sheet no longer
    jumps a line when the grid goes on. Fine is still 44.7px, a full finger.
    Narrower than 390 it drops under the label, as any row does. Both editors:
-   the row is shared. */
+   the row is shared. With the drawers' words a size up (B) the row wanted
+   352px of 390's 342, so the three take 6px sides, and Fine keeps its finger
+   at 44px. */
 @media (max-width: 640px) {
   #tuneGridRow .tune-label { flex-basis: auto; }
-  #gridDensitySeg button { padding-left: 9px; padding-right: 9px; }
+  #gridDensitySeg button { padding-left: 6px; padding-right: 6px; min-width: 44px; }
 }
 
 /* 3. Header: the control cluster must never sit against — or under — the
@@ -8982,6 +8995,11 @@ body.drawalong .canvas-empty-hint { display: none; }
    Report sheet's button), so in the drawers only. */
 :where(.tab-panel, .media-card, .tool-tray, .tune-shell, .shape-pop) .seg button { font-size: 14px; }
 :where(.tab-panel, .media-card) .panel-btn { font-size: 13px; }
+/* And a line of them that wraps is balanced, so it does not leave one word
+   alone on its last line ("Loops under the drawing ·" over "1:11"). It
+   keeps the number of lines, so no drawer grows; text-wrap is inherited, and
+   a word set on one line keeps its own. */
+:where(.tab-panel, .media-card, .tune-shell, .shape-pop) { text-wrap: balance; }
 :where(.tab-panel, .media-card, .tool-tray, .tune-shell) .drawer-divider { background: var(--menu-card-line); }
 /* Words in the drawers that were too faint (the drawers mock, measured on the
    loaded photo and music drawers): secondary words take the sheet's ink, and

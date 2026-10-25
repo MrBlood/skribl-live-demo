@@ -644,7 +644,8 @@ stays a sleep.
   fields too), Tune's rows parted by the menu's rule, one style for a
   section's name and none in capitals, one corner per kind. And the drawers'
   type (B): every word in a dock drawer, Tune and the shape picker 12 to 16px
-  in whole pixels, none cut off at a side, and the shape picker's Sides and
+  in whole pixels, none cut off at a side, no wrapped line ending on a word
+  left alone (the drawers' lines are balanced), and the shape picker's Sides and
   Rounding ending before their sliders, which start and end together (the
   picker is read with the polygon picked, so its knobs show).
   `CONTRAST_ONLY="Export|Post"` reads only those.

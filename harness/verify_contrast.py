@@ -30,8 +30,8 @@ control is exempt (WCAG 1.4.3). Each surface also reports its own colours
 
 THE DRAWERS' TYPE: every word in the dock's drawers, Tune and the shape
 picker is 12 to 16px, a size nearer the menu's 16 over 14 (the owner, of the
-type mock's B), and none is cut off at a side; the shape picker's knobs hold
-their words a size up.
+type mock's B), none is cut off at a side, and none is left alone on the last
+line of words that wrap; the shape picker's knobs hold their words a size up.
 """
 import io
 import math
@@ -181,13 +181,15 @@ CENSUS = r"""(root) => {
 # running past the side of a box above it that clips. Only the sides: a drawer
 # taller than the screen scrolls, and what is under its fold is not cut. A
 # word not painted (a bubble shown only while an end is dragged) is not cut.
+# Where words wrap, their LAST LINE IS NOT A WORD LEFT ALONE: at least a third
+# as wide as the line above it ("Loops under the drawing ·" over "1:11" was).
 # And the shape picker's two knobs, Sides and Rounding: where each label's
 # words end against its slider, where the reading's end against the row, and
 # where each slider starts and ends.
 TYPE = r"""(root) => {
   const R = document.querySelector(root); if (!R) return null;
   const name = (el) => el.id ? '#' + el.id : el.tagName.toLowerCase() + (el.classList.length ? '.' + [...el.classList].slice(0, 2).join('.') : '');
-  const words = [], cut = [];
+  const words = [], cut = [], alone = [];
   for (const el of R.querySelectorAll('*')) {
     const texts = [...el.childNodes].filter(n => n.nodeType === 3 && n.textContent.trim());
     if (!texts.length || el.closest('[hidden], svg')) continue;
@@ -207,6 +209,17 @@ TYPE = r"""(root) => {
     words.push({ name: name(el), text: el.textContent.trim().slice(0, 24), px: parseFloat(cs.fontSize) });
     if (op >= 0.01 && cs.overflowX !== 'visible' && el.scrollWidth > el.clientWidth + 1)
       cut.push(say + ' holds ' + el.scrollWidth + 'px in ' + el.clientWidth);
+    // its lines, its own words' and those of the inline words inside it
+    const lines = [], tw = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    for (let n = tw.nextNode(); n; n = tw.nextNode()) {
+      if (n.parentElement !== el && getComputedStyle(n.parentElement).display !== 'inline') continue;
+      const g = document.createRange(); g.selectNodeContents(n);
+      for (const q of g.getClientRects()) { if (!q.width || !q.height) continue; const mid = (q.top + q.bottom) / 2;
+        const L = lines.find(l => Math.abs(l.mid - mid) < q.height / 2);
+        if (L) { L.l = Math.min(L.l, q.left); L.r = Math.max(L.r, q.right); } else lines.push({ mid, l: q.left, r: q.right }); } }
+    lines.sort((a, b) => a.mid - b.mid);
+    if (op >= 0.01 && lines.length >= 2) { const z = lines[lines.length - 1], y = lines[lines.length - 2];
+      if (z.r - z.l < (y.r - y.l) / 3) alone.push(say + ' ends on ' + Math.round(z.r - z.l) + 'px under ' + Math.round(y.r - y.l)); }
   }
   const T = e => { const g = document.createRange(); g.selectNodeContents(e); return g.getBoundingClientRect(); };
   const knobs = [...R.querySelectorAll('.shape-knob')].filter(k => k.getClientRects().length).map(k => {
@@ -214,7 +227,7 @@ TYPE = r"""(root) => {
     const ib = i.getBoundingClientRect(), kb = k.getBoundingClientRect();
     return { label: l.textContent.trim(), ends: T(l).right, slider: [ib.left, ib.right], out: o.textContent.trim(),
              outIn: T(o).left >= ib.right - 0.5 && T(o).right <= kb.right + 0.5 }; });
-  return { words, cut: [...new Set(cut)], knobs };
+  return { words, cut: [...new Set(cut)], alone: [...new Set(alone)], knobs };
 }"""
 
 
@@ -526,10 +539,11 @@ with sync_playwright() as p:
                         census[(name, scheme, label)] = q.evaluate(CENSUS, root)
                     if label in DRAWERS:
                         tp = q.evaluate(TYPE, root)
-                        agg = typeset.setdefault((name, scheme, dev), {"read": 0, "words": [], "cut": [], "knobs": []})
+                        agg = typeset.setdefault((name, scheme, dev), {"read": 0, "words": [], "cut": [], "alone": [], "knobs": []})
                         agg["read"] += 1
                         agg["words"] += [dict(w, where=label) for w in tp["words"]]
                         agg["cut"] += [f"{label}: {c}" for c in tp["cut"]]
+                        agg["alone"] += [f"{label}: {c}" for c in tp["alone"]]
                         agg["knobs"] += tp["knobs"]
                 c.close()
     b.close()
@@ -538,7 +552,8 @@ with sync_playwright() as p:
 # in a dock drawer, Tune and the shape picker a size nearer the menu's 16 over
 # 14, the smallest 12 where it was 11, in whole pixels; nothing a size up is
 # cut off at a side, on a phone or a desk (the name over the timeline and the
-# line under a song's name wrap now); and the shape picker's labels end
+# line under a song's name wrap now), and what wraps is balanced, so no last
+# line is a word left alone; and the shape picker's labels end
 # before their sliders, which start and end together, with the reading inside
 # the row.
 print("\nTHE DRAWERS' TYPE")
@@ -551,6 +566,8 @@ for (name, scheme, dev), agg in sorted(typeset.items()):
           len(agg["words"]) >= (1 if ONLY else 150) and not off, "; ".join(off[:8]) + (f" (+{len(off) - 8} more)" if len(off) > 8 else ""))
     check(f"{where}: and none of them is cut off at a side ({agg['read']} read)",
           agg["read"] >= (1 if ONLY else len(DRAWERS)) and not agg["cut"], "; ".join(agg["cut"][:6]))
+    check(f"{where}: and where they wrap, no last line is a word left alone (a third of the line above, or more)",
+          agg["read"] >= (1 if ONLY else len(DRAWERS)) and not agg["alone"], "; ".join(agg["alone"][:6]))
     if not ONLY or "The shape picker" in ONLY:
         kn = agg["knobs"]
         check(f"{where}: the shape picker's Sides and Rounding end before their sliders, the sliders start and end together, "
