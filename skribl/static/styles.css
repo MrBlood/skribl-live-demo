@@ -2481,7 +2481,7 @@ body.recoloring #canvas { cursor: crosshair !important; }
    paper inside More's card (a card in a card would be a box in a box), its
    two words in its top corners and the blend's dot at its foot, whose tap
    band is 44px. A finger that moves up or down first scrolls the page. */
-.mt-rv { position: relative; height: 112px; margin-top: 8px; border-radius: 10px; background: var(--menu-paper);
+.mt-rv { position: relative; height: 112px; margin-top: 8px; border-radius: var(--r-control); background: var(--menu-paper);
   overflow: hidden; touch-action: pan-y; -webkit-user-select: none; user-select: none; cursor: ew-resize; }
 .mt-rv-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 .mt-rv-tag { position: absolute; top: 6px; left: 8px; font-size: 12px; font-weight: 600; line-height: 1.2;
@@ -2714,7 +2714,7 @@ body.recoloring #canvas { cursor: crosshair !important; }
 .music-dropzone.loaded > .dz-add,
 .music-dropzone:not(.loaded) > .dz-lead,
 .music-dropzone:not(.loaded) > .dz-file { display: none; }
-.dz-lead { flex: none; width: 44px; height: 44px; border-radius: 10px; box-shadow: 0 0 0 1px var(--header-rim); }
+.dz-lead { flex: none; width: 44px; height: 44px; border-radius: var(--r-control); box-shadow: 0 0 0 1px var(--header-rim); }
 .dz-thumb { display: block; object-fit: cover; background: rgba(var(--wash-rgb), 0.06); }
 .dz-tile { display: grid; place-items: center; background: var(--seg-on-fill); color: var(--seg-on-ink); }
 .dz-tile svg { width: 22px; height: 22px; }
@@ -4160,8 +4160,8 @@ body.player-mode #canvasEmptyHint { display: none !important; }
   width: 18px;
   height: 18px;
   border-radius: 5px;
-  border: 1.5px solid var(--hairline-strong);
-  background: rgba(var(--wash-rgb), 0.03);
+  border: 1.5px solid var(--menu-card-line);
+  background: var(--menu-card);
   display: grid;
   place-items: center;
   transition: background 0.15s ease, border-color 0.15s ease;
@@ -4195,10 +4195,13 @@ body.player-mode #canvasEmptyHint { display: none !important; }
   .post-check-input:checked + .post-check-box::after { border-color: HighlightText; }
 }
 
+/* Post's title and caption are the menu's field, as Ask's and Export's are: a
+   white card with the lilac edge (they were the page's grey, the one sheet the
+   menu opens whose fields were). */
 .post-input {
   width: 100%;
-  background: rgba(var(--wash-rgb), 0.03);
-  border: 1px solid var(--hairline);
+  background: var(--menu-card);
+  border: 1px solid var(--menu-card-line);
   border-radius: var(--r-control);
   padding: 9px 11px;
   color: var(--text-primary);
@@ -6850,10 +6853,13 @@ body:not(.player-mode) :is(.toolbar, .flip-tools) {
 .compose-lead { display: flex; align-items: center; gap: 2px; min-width: 0; }
 .compose-close { flex: 0 0 auto; margin-left: -4px; }
 .compose-close svg { width: 22px; height: 22px; }
-.tune-title { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
-  color: var(--text-muted); padding: 8px 0 4px; }
+/* Tune's name is a drawer's section label, as the music drawer's are (.mt-sect),
+   and its rows are parted by the menu's rule: Tune is the menu's paper (the
+   drawers mock), and it wore small capitals and the grey line the menu's
+   sheets do not (the drawers' census, after #630: "all yes"). */
+.tune-title { font-size: 13px; font-weight: 600; color: var(--text-secondary); padding: 8px 0 4px; }
 .tune-row { display: flex; align-items: center; gap: 14px; padding: 8px 0; }
-.tune-row + .tune-row { border-top: 1px solid var(--hairline); }
+.tune-row + .tune-row { border-top: 1px solid var(--menu-card-rule); }
 /* margin-right:auto clusters each row's controls on the RIGHT edge (label left,
    control right — the settings-table pattern). Without it the desktop drawer's
    controls huddled mid-left with 300px of dead row to their right; mobile
@@ -7429,7 +7435,7 @@ html:has(.flip-export:not([hidden])) { overscroll-behavior-y: none; }
   z-index: 44;
   background: var(--surface-pop);
   border: 1px solid var(--hairline, #252a35);
-  border-radius: 14px;
+  border-radius: 16px;
   /* Vertical padding matches the breathing room .shape-knob now takes, so the
      first and last rows are not tighter against the edge than against each
      other. Horizontal stays 6. */
@@ -8952,6 +8958,12 @@ body.drawalong .canvas-empty-hint { display: none; }
 :where(.tab-panel, .media-card, .shape-pop, .tool-tray, .tune-shell) :is(.reposition-btn, .panel-btn, .clear-drawer-btn,
     .edge-controls, .slider-nudge-btn, .eyedropper-btn) { border-radius: var(--r-control); }
 :where(.tab-panel, .media-card) .nudge-btn { background: color-mix(in srgb, var(--accent) 7%, var(--menu-card)); }
+/* Tune's round buttons (Grid, Stroke layers, Flip's onion skin) are cards on the
+   paper like every control; on, each keeps its own tint (.onion-tint.active
+   wins). And Hear the restart: .loop-btn.subtle's own grey outranked the list
+   above, so it wore the lilac edge on a grey fill; here it is the card. */
+:where(.tune-shell) .onion-tint { background: var(--menu-card); border-color: var(--menu-card-line); }
+:where(.tab-panel, .media-card) .loop-btn.subtle { background: var(--menu-card); }
 :where(.tab-panel, .media-card, .tool-tray, .tune-shell) .drawer-divider { background: var(--menu-card-line); }
 /* Words in the drawers that were too faint (the drawers mock, measured on the
    loaded photo and music drawers): secondary words take the sheet's ink, and

@@ -937,24 +937,10 @@
    any Pad row would). */
 #smearWeightSeg button { padding-left: 9px; padding-right: 9px; }
 
-.onion-tint {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  /* 32px, the switch every settings row shares on both editors (Grid and
-     Stroke layers wear this class too, so it is not Flip's to change). Was 22,
-     chosen for an earlier, shorter segment. The Onion row's own tint toggle
-     is sized to its neighbour below. */
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  border: 1px solid var(--hairline-strong);
-  border-radius: var(--r-pill);
-  background: transparent;
-  color: var(--text-secondary);
-  cursor: pointer;
-}
-.onion-tint svg { width: 18px; height: 18px; }  /* v205-fix: tier-2 (32px box), was 16 (13 originally) */
+/* .onion-tint, the 32px switch every Tune row shares on both editors, is
+   styles.css's alone. A copy of it here, loaded later, kept Flip's switches
+   the old grey ring after the Pad's became the menu's card (the drawers'
+   census, after #630). */
 /* THE ONION ROW'S TINT TOGGLE matches the 1/2/3 segment beside it, so it does
    not sit proud: 34px, which is what the shared rows render a segment at
    (26px cells in a 3px-padded, 1px-bordered group). verify_ux holds the two
