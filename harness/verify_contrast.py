@@ -86,6 +86,14 @@ HIDE_TEXT = """* { color: transparent !important; -webkit-text-fill-color: trans
   text-shadow: none !important; caret-color: transparent !important; }
 ::placeholder { color: transparent !important; }"""
 
+# What is painted at a point, every layer down, pointer-events or not (a hit
+# test skips what takes no touch, and a guide or a toast can take none).
+STACK = r"""([x, y]) => { const s = document.createElement('style');
+  s.textContent = '* { pointer-events: auto !important; }'; document.head.appendChild(s);
+  const name = n => (n.id ? '#' + n.id : n.tagName.toLowerCase() + (typeof n.className === 'string' && n.className.trim()
+    ? '.' + n.className.trim().split(/\s+/).slice(0, 2).join('.') : '') + '("' + n.textContent.trim().slice(0, 12) + '")');
+  const out = document.elementsFromPoint(x, y).slice(0, 5).map(name); s.remove(); return out.join(' > '); }"""
+
 # Every visible element holding words, inside the open surface: its box (the
 # union of its text nodes' rects), its ink with alpha and inherited opacity,
 # and the size WCAG reads.
@@ -275,31 +283,53 @@ def measure(q, root, scale):
         if [w["box"] for w in q.evaluate(WORDS, root) or []] == [w["box"] for w in words]:
             break
         q.wait_for_timeout(400)
-    low = []
+    low, later = [], None
     for w in words:
         b = w["box"]
         l, t, r, bt = (max(0, b["l"]) + 1) * scale, (max(0, b["t"]) + 1) * scale, (min(b["r"], im.width / scale) - 1) * scale, (min(b["b"], im.height / scale) - 1) * scale
         if r <= l or bt <= t:
             continue
-        worst = None
+        worst, under, at = None, None, None
         for i in range(3):
             for j in range(3):
-                ground = im.getpixel((int(l + (r - l) * (i + .5) / 3), int(t + (bt - t) * (j + .5) / 3)))
+                pt = (int(l + (r - l) * (i + .5) / 3), int(t + (bt - t) * (j + .5) / 3))
+                ground = im.getpixel(pt)
                 a = w["ink"][3]
                 ink = [w["ink"][k] * a + ground[k] * (1 - a) for k in range(3)]
                 v = ratio(ink, ground)
-                worst = v if worst is None else min(worst, v)
+                if worst is None or v < worst:
+                    worst, under, at = v, ground, pt
         need = 3 if (w["px"] >= 24 or (w["px"] >= 18.66 and w["w"] >= 700)) else 4.5
+        sharp = 4.5 if (w["px"] >= 24 or (w["px"] >= 18.66 and w["w"] >= 700)) else 7
         w["ratio"] = round(worst, 2)
+        # WHAT IT WAS READ AGAINST, so a short word says why where it is read:
+        # main's CI read Flip's Tune "2" at 6.85 where this box reads 9.35.
+        # And, for a short word, what the same point is a moment later, the
+        # words still hidden (the same: it is painted there; another: it was
+        # on its way), and what is painted there, every layer down: CI's "2"
+        # was read on rgb(218, 221, 224), its own ink at a fifth, where every
+        # read here, in CI's face and its order of sheets, is white.
+        said = f'ink rgb{tuple(round(c) for c in w["ink"][:3])} a{w["ink"][3]:.2f} on rgb{tuple(under)} at {round(b["l"])},{round(b["t"])}'
+        if worst < need or (worst < sharp and not (w.get("fill") and sharp == 7)):
+            if later is None:
+                style = q.add_style_tag(content=HIDE_TEXT)
+                q.wait_for_timeout(600)
+                later = Image.open(io.BytesIO(q.screenshot())).convert("RGB")
+                style.evaluate("s => s.remove()")
+            # ...and the photograph under the word as rows of # (anything
+            # darker than 240) and . , so its shape says what it is.
+            sx, sy = max(1, int((r - l) // 16)), max(1, int((bt - t) // 10))
+            shape = '/'.join(''.join('#' if sum(im.getpixel((x, y))) < 720 else '.' for x in range(int(l), int(r), sx))
+                             for y in range(int(t), int(bt), sy))
+            said += f'; 0.6s later rgb{tuple(later.getpixel(at))}; there: {q.evaluate(STACK, [at[0] / scale, at[1] / scale])}; under it {shape}'
         if worst < need:
-            low.append(f'{w["name"]} "{w["text"]}" {worst:.2f}<{need}')
+            low.append(f'{w["name"]} "{w["text"]}" {worst:.2f}<{need} ({said})')
         # TWO INKS (owner, after v324: "The two inks looks sharp"): every word
         # not on the brand purple reads 7:1 (4.5 if large, WCAG's AAA).
         # On the purple only LARGE words are held to it (4.5, the big buttons'
         # 19px bold); the small pills stay at AA (owner: the purple stays).
-        sharp = 4.5 if (w["px"] >= 24 or (w["px"] >= 18.66 and w["w"] >= 700)) else 7
         if worst < sharp and not (w.get("fill") and sharp == 7):
-            SHORT7.append(f'{w["name"]} "{w["text"]}" {worst:.2f}<{sharp}')
+            SHORT7.append(f'{w["name"]} "{w["text"]}" {worst:.2f}<{sharp} ({said})')
     return words, low
 
 

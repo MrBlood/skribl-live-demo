@@ -215,6 +215,37 @@ with sync_playwright() as p:
               f"load rather than on layout would leave a rotated phone wrong")
         page.close()
 
+    print("\nPILL — and under Tune, a drawer whose shell never hides")
+    # Tune is a drawer, but it opens and shuts by its class, not by the hidden
+    # attribute every entry in the rule names, so it was left off the list:
+    # "Saved", lifted clear of a phone's dock, sat on Tune's onion skin row
+    # while Tune was open (main's CI, after the drawers' words went a size up:
+    # verify_contrast read the "2" against the pill's edge). The name drawer
+    # wears the same shell. Driven through each editor's own Tune button, with
+    # the amber that carries controls, so the rule has to take its × too.
+    STATE = """() => { const el = document.getElementById('autosaveStatus'), cs = getComputedStyle(el);
+      const x = document.getElementById('autosaveStatusDismiss'), t = document.getElementById('tuneShell');
+      return { opacity: cs.opacity, pill: cs.pointerEvents, x: x ? getComputedStyle(x).pointerEvents : null,
+               tune: !!t && t.classList.contains('open') }; }"""
+    for label, path in SURFACES:
+        page = browser.new_page(viewport={"width": 393, "height": 852})
+        page.goto(BASE + path, wait_until="load")
+        page.wait_for_timeout(1200)
+        page.evaluate("""() => { SkriblAutosavePill.configure({ pending: () => true });
+            SkriblAutosavePill.show('saved-no-media'); }""")
+        page.wait_for_timeout(450)
+        before = page.evaluate(STATE)
+        page.evaluate("() => { const b = document.getElementById('tuneBtn'); if (b) b.click(); }")
+        page.wait_for_timeout(450)
+        after = page.evaluate(STATE)
+        check(f"{label}: with Tune shut the pill shows, and its controls take taps",
+              not before["tune"] and before["opacity"] == "1" and before["pill"] == "auto" and before["x"] == "auto",
+              f"{before} — if this stops being true the next row proves nothing")
+        check(f"{label}: ...and with Tune open it gives way, its controls too",
+              after["tune"] and after["opacity"] == "0" and after["pill"] == "none" and after["x"] == "none",
+              str(after))
+        page.close()
+
     print("\nPILL — the fitter settles instead of spinning")
     # WHY. sync() writes the pill's class and style; this library OBSERVES the
     # pill's class attribute. `classList.remove()` sets the attribute even when

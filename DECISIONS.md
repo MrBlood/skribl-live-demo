@@ -23324,3 +23324,41 @@ unchanged: all green.
 Pad and Flip: shared. Every rule is styles.css's, which both editors load.
 Flip's stamp drawer is not in the census, and its words stay 11.5px until it
 is brought in (its own question to the owner).
+
+## After v329 -- Main red after #633: More's + in CI's faces; the autosave pill gives way to Tune
+
+Main's full run after the drawers' words (#633) was red in two places, both
+only in CI's faces. verify_musicmore: More's + sat 1px off its words in CI's
+own Liberation Sans and FreeSerif (here, 0 and 0.25). A size up, More was
+15px inside a 14px block, and lib/labels.js trims the block to the block's
+capitals, so More's capitals stood above the trimmed box by an amount that
+depends on the face. The block is now More's 15px, and its line is the +'s
+18px, so the box the + centres on is More's capitals, on whole pixels (a
+15px block on a 1.25 line instead put the + 0.75px off here: the line was
+18.72px against the +'s 18). Here it reads as it did; CI is the proof: the
+run dispatched on this fix had both sixth shards green.
+
+verify_contrast: Flip's Tune "2" (the onion skin's depth) read 6.85:1 in CI
+where this box read 9.35. A word short of its line now says what it was read
+against, and CI said: its ink rgb(63, 71, 86) on rgb(218, 221, 224) at 94,608,
+the same in both lanes; 94,608 is where Liberation Sans puts the "2", so that
+is CI's face. Every single read here was white (in that face, after every
+sheet CI opens first, with the processor slowed eightfold, photographed 0 to
+150ms after the words are hidden), so a short word now also says what the
+same point reads 0.6s later, every layer painted there, and the photograph
+under it as rows of # and . (calibrated: a grey patch served under the "2"
+prints all #, a faint outline served on it prints a 2). The full suite here
+then caught it too: white 0.6s later, nothing but the "2" there by then, and
+under it the rounded end of something. Six runs of Flip's light phone, the
+photographs kept, caught it twice: the autosave pill ("Saved", its green dot),
+lifted clear of a phone's dock, sitting on Tune's onion skin row. A real
+overlap, not the instrument's: the pill gives way to every drawer and sheet
+that covers the page (styles.css, "A transient status pill must not sit on top
+of a control"), each named by the hidden attribute it carries, and Tune's
+shell never hides: it opens and shuts by its class, so it was never on the
+list. It is now, by that class (.tune-shell.open, which the name drawer wears
+too), for the pill and its ×, on both editors. verify_pillfit drives each
+editor's Tune button with the amber that carries controls: red before on both
+(the pill visible, its × live), green after, and each half served back out
+goes red on its own. On the scenario, Flip's light phone through Tune as CI
+runs it: two of the four runs before the fix red, all nine after it green.
