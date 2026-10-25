@@ -79,7 +79,7 @@
 (function (global) {
   'use strict';
 
-  var SPAN = 1.28, LEAD = 0.09, EASE_MS = 70, ZONE = 28, GROW = 1.4;
+  var SPAN = 1.28, LEAD = 0.09, EASE_MS = 70, ZONE = 28, GROW = 1.4, FADE_MS = 200;
   // MAGNIFY: the framing over 1 to 64, around the end last touched; zoomed
   // in, an end held near either edge carries the view along (PAN views a
   // second at the edge itself) instead of widening it.
@@ -136,6 +136,7 @@
     var ph = root.querySelector('.music-playhead');
     var view = null, held = null, raf = 0, lastT = 0, peaks = null, lane = null, laneKey = null, laneSecs = 0;
     var mag = 1, focus = 'start', beat = null;   // beat: the tempo as its marks are painted (beatTo)
+    var beatIn = 1;                              // and how far its marks have faded in
     var magOut = root.querySelector('.mt-tl-mag-btn[data-mag="-1"]'), magIn = root.querySelector('.mt-tl-mag-btn[data-mag="1"]');
     var magVal = root.querySelector('.mt-tl-mag-val'), nameBox = root.querySelector('.mt-tl-namebox');
 
@@ -188,12 +189,17 @@
     // THE BEAT MARKS GLIDE when where a beat falls moves and the tempo does
     // not (a start let go magnified becomes a beat, lib/musicdrawer.js), with
     // the view's own ease and the shorter way round, so they move as one with
-    // the settle and the reframing after it. A new tempo, or none, is there at
-    // once, and so is all of it under Reduce Motion. True while on the way.
+    // the settle and the reframing after it. A new tempo is there at once; a
+    // beat where there was none (one heard, lib/musicears.js, as the loop
+    // glides to its pick, or the first one tapped) fades in over FADE_MS
+    // rather than appearing in one frame. All of it at once under Reduce
+    // Motion. True while on the way.
     function beatTo(dt) {
       var tp = h.tempo();
       if (!tp) { beat = null; return false; }
-      if (!beat || beat.bpm !== tp.bpm || h.still()) { beat = { bpm: tp.bpm, phase: tp.phase }; return false; }
+      if (!beat) { beat = { bpm: tp.bpm, phase: tp.phase }; beatIn = h.still() ? 1 : 0; return beatIn < 1; }
+      if (beatIn < 1) { beatIn = h.still() ? 1 : Math.min(1, beatIn + dt / FADE_MS); if (beatIn < 1) { beat = { bpm: tp.bpm, phase: tp.phase }; return true; } }
+      if (beat.bpm !== tp.bpm || h.still()) { beat = { bpm: tp.bpm, phase: tp.phase }; return false; }
       var p = 60 / tp.bpm, d = tp.phase - beat.phase;
       d -= Math.round(d / p) * p;
       if (Math.abs(d) < 1e-4) { beat = { bpm: tp.bpm, phase: tp.phase }; return false; }
@@ -254,7 +260,7 @@
       if (!ok) return;
       // What is painted, as it is painted, for whoever asks (the harness):
       // each mark on the drawing's lane, each comes-round line, each beat.
-      var drawn = root._painted = { marks: [], lines: [], beats: [], turns: 0 };
+      var drawn = root._painted = { marks: [], lines: [], beats: [], turns: 0, beatIn: beatIn };
       var st = getComputedStyle(root), tok = function (n) { return st.getPropertyValue(n).trim(); };
       var acc = tok('--accent'), ink = tok('--accent-ink'), fill = tok('--accent-fill') || acc;
       var card = tok('--menu-card'), line = tok('--menu-card-line'), paper = tok('--menu-paper') || card;
@@ -342,7 +348,7 @@
           var bar = ((kb - k0) % 4 + 4) % 4 === 0;
           if (ppb < 6 && !bar) continue;
           if (ppb * 4 < 6 && ((kb - k0) % 16 + 16) % 16) continue;
-          x.fillStyle = ink; x.globalAlpha = bar ? 0.9 : 0.75;
+          x.fillStyle = ink; x.globalAlpha = (bar ? 0.9 : 0.75) * beatIn;
           x.beginPath(); x.arc(X(tp.phase + kb * p), sTop + 8, bar ? 2.4 : 1.7, 0, 7); x.fill();
           drawn.beats.push([+X(tp.phase + kb * p).toFixed(2), bar, +(tp.phase + kb * p).toFixed(4)]);
         }
