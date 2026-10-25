@@ -791,9 +791,11 @@
       var rest = [p > 0 ? beatWords(len / p) : '', against(len, secs)].filter(Boolean);
       var html = '<b>' + len.toFixed(2) + 's</b>' + (rest.length ? ' · ' + rest.join(' · ') : ' loop');
       if (pickText && pickText._html !== html) { pickText.innerHTML = html; pickText._html = html; }
-      var mine = !isPick(pickNow(secs)) && !isPick(beatsPick);
-      if (pickTag) pickTag.hidden = mine;
-      if (back) back.hidden = !mine || !!undo;
+      // While a song brought back is heard again, neither: until then the
+      // pick is the one without ears.
+      var mine = !isPick(pickNow(secs)) && !isPick(beatsPick), hold = !!ears && !pickedNew;
+      if (pickTag) pickTag.hidden = mine || hold;
+      if (back) back.hidden = !mine || !!undo || hold;
       if (undoBtn) undoBtn.hidden = !undo;
     }
     // The loop as Undo puts it back, and what a change that offers Undo
@@ -1355,9 +1357,17 @@
     function sync() {
       var secs = h.hasTrack() ? h.drawingSeconds() : 0;
       // The Pad picks when the song's length is known, before it is decoded:
-      // the ears start once it is (Flip picks after; a restore never listens).
+      // the ears start once it is (Flip picks after). A song a draft brings
+      // back with a beat Skribl heard is heard again, quietly: its loop and
+      // its beat stay as kept (heardIt moves only a new song's pick), and
+      // Skribl's pick, the way back to it and Beats know the heard pick
+      // again. Not heard again, the pick itself said "Back to Skribl's pick",
+      // and that went to the song's first 20 seconds, 40.8 beats from 0:00.
       if (!h.hasTrack()) { if (earsFor || pickedNew) forgetEars(); }
-      else if (pickedNew && h.buffer) { var buf = h.buffer(); if (buf && buf !== earsFor) listenTo(buf); }
+      else if (h.buffer) {
+        var buf = h.buffer(), kept = tempo();
+        if (buf && buf !== earsFor && (pickedNew || (kept && kept.heard))) listenTo(buf);
+      }
       // Smooth restart's switch, words and length too: Flip's draft and file
       // opens set the loop's smooth restart and repainted only the rest, so
       // the line said 19.75s under a switch that said Off (the owner's phone).

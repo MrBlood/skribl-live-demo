@@ -23777,5 +23777,42 @@ no start range (8 at 23.5s); no nearest (16 from 4.18, not the 8's 6.11; the
 band's 32 back at 4.92); no same beat (the band's 32 at 7.351 for 7.304).
 As built: 20 of 20 and 16 of 16.
 
+THE PAGE STAYS STILL. As a beat landed, Beats opening grew the drawer, and
+its growth follow (lib/drawerdetent.js) scrolled the page a moment later,
+46px on the Pad and 22px on Flip, under a finger reaching for the timeline:
+beside other suites, verify_musicbeat's whole-bars drags on Flip let go a
+bar off, and two glides were read in fewer frames. Beats' height is left out
+of the card's for the follow: Beats glides open in place and what is under
+it glides down, and a song landing with it is still followed. verify_musicbeat
+reads the page as a beat lands, on a phone and a desk (the follow before:
+scrolled 44-46px; as built, still). verify_sheetswipe's census of what More
+opens found Each press by its row's class, which Beats wears too, so it read
+Beats, hidden, as Each press (-1177px); it finds Each press by its own seg.
+
+A STALL THAT IS NOT OURS. In the same side-by-side run verify_musictimeline
+stopped for 25 minutes, the page's renderer waiting inside Chromium's own
+compositor (cc::LayerTreeHost::WaitForProtectedSequenceCompletion, read with
+gdb) with no CPU in use: probably what stopped main's postgres 6/6 after
+#642, and it passed on a re-run there. Not this change's; left for the
+harness, where a suite that stops answering could be named as such.
+
+FOUND ON THE WAY, on main since the ears: a song a draft brings back was not
+listened to (step 3: "A song a draft brings back keeps its loop and is not
+listened to"), so after a reload there was no heard pick to know. Skribl's
+own pick said "Back to Skribl's pick", and Back went to the pick without ears,
+the song's first 20 seconds: 40.8 beats from 0:00, in the intro. A song
+brought back with a beat Skribl heard is heard again now, once and quietly:
+its loop and its beat stay as kept (heardIt moves only a new song's pick),
+and the pick, the way back and Beats know the heard pick again. While Skribl
+listens neither the tag nor the way back shows, so the way back cannot be
+tapped to the pick without ears. The words do not change: a beat already
+heard says "heard by Skribl" throughout. verify_musicears' KEPT rows, with
+each answer held until released so what shows while Skribl listens can be
+read: heard again once, the loop, the beat and the tag as kept; neither
+showing while it listens; moved a bar, Back to the heard pick. Calibration:
+the drawer before the fix turned the three red (asked to listen 0 times;
+the way back showing; Back to 0.000-20.000); without the hold, the one row
+alone. As built: 10 of 10.
+
 Pad and Flip: shared. One drawer (lib/musicdrawer.js) and one pair of ears
 (lib/musicears.js) for both editors.

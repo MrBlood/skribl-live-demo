@@ -34,7 +34,9 @@ the loop, so I'm not at 7 or 9 when I want 8"; "All yes" to the mock; then
   of the mock, "All yes if it's intuitive"). Under the one line once there
   is a beat, the counts the song and the 20s cap have room for, the loop's
   own lit, none while it is not whole bars (and none pressed). It opens out,
-  what is under it gliding down, at once under Reduce Motion. A count tapped
+  what is under it gliding down, at once under Reduce Motion, and the page
+  stays still as it does (the drawer's growth follow scrolled it 46px under
+  a finger reaching for the timeline). A count tapped
   on a loop of the person's own keeps the start and makes the loop that
   many beats, smooth restart and all; near the song's end it moves back by
   whole beats, only as far as it must. It glides there, the count lit from
@@ -676,6 +678,13 @@ with sync_playwright() as pw:
       read(); musicTempo = { bpm: 120, phase: 0 }; updateTrimUI();
       (function f() { read(); if (performance.now() - t0 < 700) requestAnimationFrame(f); else res(out); })(); })"""
 
+    # The page as a beat lands, every frame for 1.6s: where it is scrolled to,
+    # and the timeline's top on the screen.
+    STILL = """() => new Promise((res) => { const out = [], t0 = performance.now(), tl = document.getElementById('musicTlStage');
+      const read = () => out.push([performance.now() - t0, scrollY, tl.getBoundingClientRect().top]);
+      read(); musicTempo = { bpm: 120, phase: 0 }; updateTrimUI();
+      (function f() { read(); if (performance.now() - t0 < 1600) requestAnimationFrame(f); else res(out); })(); })"""
+
     def beats(pg, n, ms=450):
         return press(pg, f'#musicBeatsSeg button[data-beats="{n}"]', ms)
 
@@ -741,6 +750,18 @@ with sync_playwright() as pw:
               f"the second tap with the start at {mid:.3f}, on its way from 6.0 to 3.5: {t4['s']:.4f}-{t4['e']:.4f}, lit {t4['lit']}; Undo: {t5['s']:.4f}-{t5['e']:.4f}")
         check(f"{_n}: no page errors through Beats", not errs, "; ".join(errs[:2]))
         c.close()
+    for _n, _p in eds("beats"):
+        for dev, opts in (("phone", PHONE), ("desk", DESK)):
+            # Where the song's landing left the page (its follow brings the
+            # drawer's end on screen), once that follow is over.
+            c, pg, errs = editor(b, _n, _p, more=False, opts=opts)
+            pg.wait_for_timeout(1500)
+            rec = pg.evaluate(STILL)
+            ys, tops = sorted({round(f[1]) for f in rec}), [f[2] for f in rec]
+            check(f"{_n}: as the beat lands and Beats opens, the page stays still: nothing scrolls it ({dev})",
+                  len(ys) == 1 and max(tops) - min(tops) < 0.5,
+                  f"scrolled to {ys}; the timeline's top moved {max(tops) - min(tops):.1f}px")
+            c.close()
     for _n, _p in eds("beats"):
         for still in (False, True):
             c = waits.instrument(b.new_context(reduced_motion="reduce" if still else "no-preference", **DESK))

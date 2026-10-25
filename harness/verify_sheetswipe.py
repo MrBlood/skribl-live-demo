@@ -621,11 +621,12 @@ with sync_playwright() as p:
         gaps = pg.evaluate("""() => { const q = s => document.querySelector('#musicDetail ' + s).getBoundingClientRect();
             // A switch row by its words: its 8px of padding above and below is
             // the row's own air, so two switch rows in a row touch box to box
-            // with 16px between what they say.
+            // with 16px between what they say. Each press by its own seg: Beats,
+            // under the one line, wears the same row's class.
             const sw = (id) => document.getElementById(id).closest('.mt-switch').querySelector('.mt-switch-words').getBoundingClientRect();
             const rows = [['smooth restart', sw('musicSmooth')], ['restart view', q('#musicRestart')], ['its hint', q('#musicRvHint')],
                           ['length', q('.crossfade-row')], ['hear the restart', q('#testSeamBtn')], ['tap', q('.mt-tap-row')],
-                          ['start/end', q('.edge-group')], ['each press', q('.mt-step')], ['cut on silence', sw('musicCut')], ['lock', sw('musicLock')]];
+                          ['start/end', q('.edge-group')], ['each press', document.getElementById('musicStepSeg').closest('.mt-step').getBoundingClientRect()], ['cut on silence', sw('musicCut')], ['lock', sw('musicLock')]];
             return rows.slice(1).map((r, i) => [rows[i][0] + ' -> ' + r[0], Math.round(r[1].top - rows[i][1].bottom)]); }""")
         check(f"{who}: every row of what More opens has at least 8px above it",
               all(g >= 8 for _, g in gaps), str(gaps))

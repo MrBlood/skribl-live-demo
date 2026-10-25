@@ -354,6 +354,13 @@
    * runs of three. A drift is the few px a glide overshoots; a scroll is a
    * screenful. Past DRIFT the page is where the person put it, and it stays.
    *
+   * NOR BEATS OPENING AS A BEAT LANDS (lib/musicdrawer.js): its height is
+   * left out of the card's, so the page does not move by itself a moment
+   * after Skribl hears the beat or a tap settles it, under a finger reaching
+   * for the timeline (it scrolled 46px on the Pad and 22px on Flip, and
+   * verify_musicbeat's drags on Flip let go a bar off). Beats glides open,
+   * and what is under it glides down; a song landing with it is followed.
+   *
    * A PERSON WHO SCROLLS BACK UP IS LEFT THERE TOO. The take-back only ever
    * pushes down, so a scroll up to the drawing as a song landed came straight
    * back to the drawer's end, 300px in one frame at the next re-assert, on a
@@ -364,8 +371,10 @@
   var ACTS = ['wheel', 'touchstart', 'pointerdown', 'keydown'];
   function followGrowth(card, o) {
     if (!card || typeof ResizeObserver === 'undefined') return;
-    var dock = o.dock || null, lastH = 0, gen = 0;
-    function height() { return card.getBoundingClientRect().height; }
+    var dock = o.dock || null, lastH = 0, gen = 0, beats = card.querySelector('#musicBeatsRow');
+    function height() {
+      return card.getBoundingClientRect().height - (beats && !beats.hidden ? beats.getBoundingClientRect().height : 0);
+    }
     function target() {
       var scroller = document.scrollingElement || document.documentElement;
       var top = scroller.scrollTop;

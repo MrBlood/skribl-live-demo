@@ -53,8 +53,12 @@ rain has sounds on most beats but gathers round no circle.
   person's own, its start a beat past the bar, keeps its start.
 
   KEPT. The loop and the heard beat come back after a reload, still "heard
-  by Skribl"; a song brought back is not listened to again. Snap to the
-  beat's switch keeps it heard.
+  by Skribl". The song brought back is heard again, once and quietly: the
+  loop and the beat stay as kept, and it is still Skribl's pick (not heard
+  again, the pick said "Back to Skribl's pick", and that went to the song's
+  first 20 seconds, 40.8 beats from 0:00); while Skribl hears it, neither the
+  tag nor the way back shows; moved, Back to Skribl's pick goes to the heard
+  pick. Snap to the beat's switch keeps it heard.
 
 Every row runs on the Pad and on Flip, on a phone: one drawer
 (lib/musicdrawer.js) and one pair of ears (lib/musicears.js).
@@ -208,9 +212,13 @@ TAGS = """() => { const out = window.__rec = [], t0 = performance.now(), q = (id
 HOLD = """() => { const E = window.SkriblEars, real = E.listen; window.__held = [];
   E.listen = (buf, done) => { let h = null; window.__held.push(() => { h = real(buf, done); }); return { cancel() { if (h) h.cancel(); } }; }; }"""
 RELEASE = "() => { (window.__held || []).splice(0).forEach((go) => go()); }"
-# How many times the ears are asked to listen, from before the page's scripts run.
+# How many times the ears are asked to listen, from before the page's scripts
+# run; each answer held until RELEASE, so what shows while Skribl listens can
+# be read.
 COUNT_INIT = """Object.defineProperty(window, 'SkriblEars', { configurable: true, get() { return this.__ears; },
-  set(v) { const real = v.listen; v.listen = function (b, d) { window.__listens = (window.__listens || 0) + 1; return real(b, d); }; this.__ears = v; } });"""
+  set(v) { const real = v.listen; window.__held = [];
+    v.listen = function (b, d) { window.__listens = (window.__listens || 0) + 1; let h = null;
+      window.__held.push(() => { h = real(b, d); }); return { cancel() { if (h) h.cancel(); } }; }; this.__ears = v; } });"""
 LONGDRAW = """(secs) => { strokes.length = 0;
   for (let i = 0; i <= secs * 20; i++) strokes.push({ x: 40 + (i % 20) * 9, y: 60 + Math.floor(i / 20) % 8 * 20, color: '#7c5cff', size: 6, t: i * 50, start: i % 20 === 0 });
   updateDrawingTimeLabels(); }"""
@@ -519,7 +527,11 @@ with sync_playwright() as p:
     print("\nKEPT -- the heard beat comes back with the song, and is not listened for again")
     for name, path in eds("kept"):
         c, q, errs = editor(b, path, init=COUNT_INIT)
-        st = add(q, "steady")
+        add(q, "steady", wait=False)
+        q.wait_for_function("() => (window.__listens || 0) >= 1", timeout=20000)
+        q.evaluate(RELEASE)
+        q.wait_for_function(EARS_DONE, timeout=20000); waits.settle(q, 600)
+        st = q.evaluate(STATE)
         q.click("#fineTuneToggle"); waits.settle(q, 500)
         if q.is_visible("#musicSnap"):
             q.click("#musicSnap"); waits.settle(q, 300)
@@ -536,13 +548,34 @@ with sync_playwright() as p:
         q.reload()
         q.wait_for_function("() => document.getElementById('musicUploadBtn').classList.contains('loaded') && !!currentAudioBuffer", timeout=20000)
         waits.settle(q, 1500)
+        mid = q.evaluate(STATE)
+        asked = q.evaluate("() => window.__listens || 0")
+        q.evaluate(RELEASE)
+        try:
+            q.wait_for_function("() => !document.getElementById('musicPickTag').hidden", timeout=15000)
+        except Exception:
+            pass
+        waits.settle(q, 600)
         again = q.evaluate(STATE)
         check(f"{name}: after a reload the loop and the heard beat come back, still heard by Skribl",
               abs(again["s"] - st["s"]) < 1e-3 and abs(again["e"] - st["e"]) < 1e-3 and (again["tempo"] or {}).get("heard") is True
               and again["beat"] == "124 beats a minute, heard by Skribl · tap to change it",
               f"loop {again['s']:.4f}-{again['e']:.4f}, tempo {again['tempo']}, beat {again['beat']!r}")
-        check(f"{name}: and the song brought back is not listened to again",
-              q.evaluate("() => window.__listens || 0") == 0, f"listened {q.evaluate('() => window.__listens || 0')} times")
+        check(f"{name}: the song brought back is heard again, once and quietly: its loop and beat stay as kept, and it is still Skribl's pick",
+              asked == 1 and q.evaluate("() => window.__listens || 0") == 1 and again["tempo"] == st["tempo"]
+              and abs(again["s"] - st["s"]) < 1e-9 and abs(again["e"] - st["e"]) < 1e-9 and again["tag"] and not again["back"],
+              f"asked to listen {asked} times; loop {again['s']:.4f}-{again['e']:.4f}, tempo {again['tempo']}, tag {again['tag']}, the way back {again['back']}")
+        check(f"{name}: while Skribl hears it again, neither the tag nor the way back shows",
+              asked == 1 and not mid["tag"] and not mid["back"], f"asked {asked}; while it listened: tag {mid['tag']}, the way back {mid['back']}")
+        p = 60 / st["tempo"]["bpm"]
+        browsing.pad_drawer(q, "music")
+        q.evaluate("(p) => { trimStart += 4 * p; trimEnd += 4 * p; updateTrimUI(); }", p)
+        moved = q.evaluate(STATE)
+        went = tap(q, "#musicBackPick")
+        k = q.evaluate(STATE)
+        check(f"{name}: and moved a bar, Back to Skribl's pick goes to the heard pick, not to the song's first 20 seconds",
+              moved["back"] and went and abs(k["s"] - st["s"]) < 1e-6 and abs(k["e"] - st["e"]) < 1e-6 and k["tag"],
+              f"moved to {moved['s']:.4f} (the way back {moved['back']}, tapped {went}); Back: {k['s']:.4f}-{k['e']:.4f}, the pick {st['s']:.4f}-{st['e']:.4f}")
         c.close()
     b.close()
 

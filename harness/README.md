@@ -534,7 +534,7 @@ stays a sleep.
   shows under the one line once there is a beat, the counts the song and the
   20s cap have room for, the loop's own lit and none (none pressed) while it
   is not whole bars, opening out frame by frame (at once under Reduce
-  Motion); a count tapped on a loop of the person's own keeps the start and
+  Motion) with the page still, on a phone and a desk; a count tapped on a loop of the person's own keeps the start and
   makes the loop that many beats, moved back near the song's end only as far
   as it must, gliding there with the count lit from the tap all the way; a
   second tap while it glides counts from where it lands, and each tap offers
@@ -628,7 +628,11 @@ stays a sleep.
   back the 8, still Skribl's pick; the band keeps its start to the
   millisecond from its 4 to its 32; a loop of the person's own, a beat past
   the bar, keeps its start; the Snap switch keeps the beat heard, and after
-  a reload the loop and the heard beat come back, not listened for again.
+  a reload the loop and the heard beat come back, and the song is heard again
+  once, quietly: the loop and the beat stay as kept and it is still Skribl's
+  pick, neither the tag nor the way back showing while Skribl listens, and
+  moved a bar, Back to Skribl's pick goes to the heard pick (it went to the
+  song's first 20 seconds, 40.8 beats from 0:00).
   `MUSICEARS_PART=beat` (glide, none, pad, beats, kind, kept) and
   `MUSICEARS_ONLY=Pad` run a part. Each row was
   shown red by its own break, served in place of the real file.
