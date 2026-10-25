@@ -23295,8 +23295,8 @@ Coarse / Medium / Fine fell under "Grid" at 390 and on the owner's 402
 at 44px, one line again from 390 up. Tap the beat moved 6px as its words
 changed, centred against three lines (verify_musicbeat): the row holds it at
 its top and the words start a half-line down. "with my animation" ran 8px
-out of its half at 360 (verify_musicbeat): the pair's small words wrap under
-the verb. Flip's Feel tile grew tall enough to be fitted under the header,
+out of its half at 360 (verify_musicbeat): below 380 the pair's small words
+wrap under the verb (from 380 they are one line, as they were). Flip's Feel tile grew tall enough to be fitted under the header,
 and a fitted draw drawer was the well's grey (verify_contrast): it is the
 menu's paper. And on a 375x844 phone the music drawer with More open is now
 too tall for the dock and More's first control both, so the drawer's own
