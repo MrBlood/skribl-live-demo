@@ -613,12 +613,16 @@ stays a sleep.
 - `verify_contrast.py` — every word on every sheet against what is painted
   behind it (owner, after v323: "check contrasts and consistency on all our
   changes, and future changes"): the menu (main, New, Settings), Your drafts,
-  Export, Report a problem, Post, How it works (Watch, Look it up) and Tune,
-  on Pad and Flip, light and dark, a phone and a desk. The ground is a
-  photograph of the sheet with its words made transparent; WCAG AA (4.5:1,
-  3:1 large), disabled controls and a sheet's edge fade exempt. Then
-  consistency: each surface the same on Pad and Flip, and every sheet the menu
-  opens one paper. `CONTRAST_ONLY="Export|Post"` reads only those.
+  Export, Report a problem, Post, How it works (Watch, Look it up), Tune, the
+  shape picker and the dock's drawers, on Pad and Flip, light and dark, a
+  phone and a desk. The ground is a photograph of the sheet with its words
+  made transparent; WCAG AA (4.5:1, 3:1 large), disabled controls and a
+  sheet's edge fade exempt. Then consistency: each surface the same on Pad
+  and Flip, every sheet the menu opens one paper, and the drawers wear the
+  menu's look: each control a white card with the tiles' lilac edge (Post's
+  fields too), Tune's rows parted by the menu's rule, one style for a
+  section's name and none in capitals, one corner per kind.
+  `CONTRAST_ONLY="Export|Post"` reads only those.
 - `verify_menu.py` — the ⋯ menu, one for both editors (_skribl_menu.html,
   lib/menupages.js): on a phone and a desk, light and dark, it fits without
   scrolling, every target 44px, names 16px over 14px; Pad's and Flip's are

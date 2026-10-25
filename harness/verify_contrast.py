@@ -13,8 +13,9 @@ desk, for each surface a person can open:
 
   the menu (main, New, Settings), Your drafts, Export, Report a problem,
   Post, How it works (Ask's home, its answers, an answer; lib/ask.js), the
-  little book and Draw along (lib/book.js, lib/drawalong.js), Tune, a
-  button's card, a Show me step and the name tags (lib/learncard.js).
+  little book and Draw along (lib/book.js, lib/drawalong.js), Tune, the
+  shape picker, the dock's drawers, a button's card, a Show me step and the
+  name tags (lib/learncard.js).
 
 THE GROUND IS READ FROM PIXELS, NOT STYLES: the surface is photographed once
 with every word made transparent, and each word's ground is the colour
@@ -124,7 +125,10 @@ WORDS = r"""(root) => {
   return out;
 }"""
 
-# The surface's own colours and its cards', for the consistency table.
+# The surface's own colours and its cards', for the consistency table. The
+# rule between two rows is a card here too: the second row's top edge (the
+# menu's list and Tune's rows). And every word set in capitals, aria-hidden or
+# not, since those are painted too (Tune's name is aria-hidden).
 CENSUS = r"""(root) => {
   const R = document.querySelector(root); if (!R) return null;
   const s = (el) => { const cs = getComputedStyle(el); return { bg: cs.backgroundColor, edge: cs.borderTopWidth !== '0px' ? cs.borderTopColor : 'none',
@@ -134,11 +138,28 @@ CENSUS = r"""(root) => {
                      '.help-tip', '.help-search', '.export-opt', '.tune-row', '.post-card', '.ask-list', '.accordion-header', '.post-preview',
                      '.bk-pic', '.ask-go', '.menu-start', '.export-nameinput', '.post-input', '.bk-back',
                      '.smooth-seg', '.media-tabs', '.photo-fit-group', '.reposition-btn', '.clear-drawer-btn', '.edge-controls',
-                     '.dp-tile', '.dp-panel']) {
+                     '.dp-tile', '.dp-panel', '.loop-btn.subtle', '.onion-tint:not(.active)', '.post-check-box', '.mt-rv', '.dz-lead',
+                     '.tune-row + .tune-row', '.menu-list > .menu-item:not([hidden]) ~ .menu-item:not([hidden])']) {
     const el = [...R.querySelectorAll(sel)].find(e => e.getClientRects().length);
     if (el) cards[sel] = s(el);
   }
-  return { sheet: s(R), cards };
+  // A section's name, by its size, weight and ink: Tune's and the music drawer's.
+  const labels = {};
+  for (const sel of ['.tune-title', '.mt-sect']) {
+    const el = [...R.querySelectorAll(sel)].find(e => e.getClientRects().length);
+    if (el) { const cs = getComputedStyle(el); labels[sel] = { px: cs.fontSize, w: cs.fontWeight, ink: cs.color, tt: cs.textTransform }; }
+  }
+  const caps = [];
+  for (const el of R.querySelectorAll('*')) {
+    if (![...el.childNodes].some(n => n.nodeType === 3 && /[a-z]/i.test(n.textContent))) continue;
+    if (!el.getClientRects().length || el.closest('[hidden]')) continue;
+    const cs = getComputedStyle(el);
+    if (cs.visibility !== 'visible') continue;
+    if (cs.textTransform === 'uppercase' || /small-caps/.test(cs.fontVariantCaps))
+      caps.push((el.className && typeof el.className === 'string' ? '.' + el.className.trim().split(/\s+/)[0] : el.tagName.toLowerCase())
+                + ' "' + el.textContent.trim().slice(0, 20) + '"');
+  }
+  return { sheet: s(R), cards, labels, caps };
 }"""
 
 
@@ -305,6 +326,15 @@ def surfaces(name, ids, q, canvas, btn):
     def tune():
         q.click("#tuneBtn"); q.wait_for_timeout(700)
 
+    # The shape picker: a card the dock opens above the Shape tool, on the
+    # menu's paper like the drawers (its corner was 14, a drawer's is 16).
+    def shapes():
+        if name == "Pad":
+            q.evaluate("() => document.getElementById('shapeToolBtn').click()")
+        else:
+            q.evaluate("() => shelfSetTool('shape')")
+        q.wait_for_selector("#shapePop:not([hidden])", timeout=3000); q.wait_for_timeout(500)
+
     # THE DOCK'S DRAWERS AS THEY ARE USED (after v324, the drawers mock): the
     # draw drawer unfolded, Photo with a picture in it, Music with a song, with
     # More closed and open. Opened empty, six lines too faint to read were
@@ -367,7 +397,7 @@ def surfaces(name, ids, q, canvas, btn):
             ("Ask, its answers", answers, "#helpDrawer .help-drawer-inner"),
             ("Ask, an answer", answer, "#helpDrawer .help-drawer-inner"),
             ("The little book", book, "#bookRoot .bk"), ("Draw along", along, ".da-pill"),
-            ("Tune", tune, "#tuneShell"),
+            ("Tune", tune, "#tuneShell"), ("The shape picker", shapes, "#shapePop"),
             ("The draw drawer", drawer("brush"), "#drawPanel"), ("The draw drawer, Size", drawer("size"), "#drawPanel"),
             ("The draw drawer, Feel", drawer("feel"), "#drawPanel"), ("The draw drawer, Eraser", drawer("eraser"), "#drawPanel"), ("Photo, with a picture", photo, "#mediaCard"),
             ("Music", music(False), "#mediaCard"), ("Music, More open", music(True), "#mediaCard"),
@@ -463,7 +493,7 @@ with sync_playwright() as p:
 # wear the same sheet and the same cards (one product, two editors: any
 # difference is drift), and every sheet the menu opens is the menu's paper.
 print("\nCONSISTENCY")
-DRAWERS = ("Tune", "The draw drawer", "The draw drawer, Size", "The draw drawer, Feel", "The draw drawer, Eraser",
+DRAWERS = ("Tune", "The shape picker", "The draw drawer", "The draw drawer, Size", "The draw drawer, Feel", "The draw drawer, Eraser",
            "Photo, with a picture", "Music", "Music, More open")
 PAPER = ("the menu", "New", "Settings", "Your drafts", "Export", "Report a problem", "Post",
          "Ask", "Ask, its answers", "Ask, an answer", "The little book")
@@ -489,21 +519,65 @@ for scheme in ("light", "dark"):
     # card, the colour of the tiles; and each kind of thing has one corner:
     # a sheet 22, a card 16, a button or field 12.
     tile = ((census.get(("Pad", scheme, "the menu")) or {}).get("cards", {}).get(".menu-tile") or {}).get("bg")
+    # Post's fields and its checkbox, Tune's round buttons and Hear the
+    # restart joined this list with the drawers' census (after #630): they
+    # were the page's grey, or a grey fill inside the lilac edge.
+    CARDLIKE = (".seg", ".export-opt", ".smooth-seg", ".media-tabs", ".photo-fit-group", ".reposition-btn",
+                ".clear-drawer-btn", ".edge-controls", ".dp-tile", ".dp-panel",
+                ".loop-btn.subtle", ".onion-tint:not(.active)", ".post-input", ".post-check-box")
     cardlike = {(n, l, sel): census[(n, sc, l)]["cards"][sel]["bg"] for (n, sc, l) in census
-                for sel in (".seg", ".export-opt", ".smooth-seg", ".media-tabs", ".photo-fit-group", ".reposition-btn",
-                            ".clear-drawer-btn", ".edge-controls", ".dp-tile", ".dp-panel")
-                if sc == scheme and l in ("the menu", "New", "Settings", "Export") + DRAWERS and census[(n, sc, l)]
+                for sel in CARDLIKE
+                if sc == scheme and l in ("the menu", "New", "Settings", "Export", "Post") + DRAWERS and census[(n, sc, l)]
                 and sel in census[(n, sc, l)]["cards"]}
-    check(f"{scheme}: every choice on the menu's sheets and in the dock's drawers, and Export's options, is a white card "
-          f"like the menu's tiles ({len(cardlike)} read)",
+    check(f"{scheme}: every choice on the menu's sheets and in the dock's drawers, Export's options and Post's fields, "
+          f"is a white card like the menu's tiles ({len(cardlike)} read)",
           bool(tile) and len(cardlike) >= (1 if ONLY else 20) and set(cardlike.values()) == {tile},
           f"tile {tile}; " + "; ".join(f"{n} {l} {sel}: {v}" for (n, l, sel), v in sorted(cardlike.items()) if v != tile))
+    # AND ITS EDGE IS THE TILES' LILAC. The white alone let a control keep the
+    # page's grey line (Post's fields, Tune's round buttons).
+    rim = ((census.get(("Pad", scheme, "the menu")) or {}).get("cards", {}).get(".menu-tile") or {}).get("edge")
+    edged = {(n, l, sel): census[(n, sc, l)]["cards"][sel]["edge"] for (n, sc, l) in census
+             for sel in CARDLIKE
+             if sc == scheme and l in ("the menu", "New", "Settings", "Export", "Post") + DRAWERS and census[(n, sc, l)]
+             and sel in census[(n, sc, l)]["cards"] and census[(n, sc, l)]["cards"][sel]["edge"] != "none"}
+    check(f"{scheme}: and every one with an edge wears the tiles' lilac line ({len(edged)} read)",
+          bool(rim) and rim != "none" and len(edged) >= (1 if ONLY else 20) and set(edged.values()) == {rim},
+          f"tile {rim}; " + "; ".join(f"{n} {l} {sel}: {v}" for (n, l, sel), v in sorted(edged.items()) if v != rim))
+    # THE RULE BETWEEN ROWS IS THE MENU'S. Tune's rows are a list on the paper,
+    # like the menu's own, and were parted by the page's grey hairline.
+    rule = ((census.get(("Pad", scheme, "the menu")) or {}).get("cards", {})
+            .get(".menu-list > .menu-item:not([hidden]) ~ .menu-item:not([hidden])") or {}).get("edge")
+    tunes = {n: ((census.get((n, scheme, "Tune")) or {}).get("cards", {}).get(".tune-row + .tune-row") or {}).get("edge")
+             for n in ("Pad", "Flip") if census.get((n, scheme, "Tune"))}
+    if not ONLY or "Tune" in ONLY:
+        check(f"{scheme}: Tune's rows are parted by the menu's rule ({len(tunes)} read)",
+              bool(rule) and rule != "none" and len(tunes) == 2 and set(tunes.values()) == {rule},
+              f"the menu's rule {rule}; " + "; ".join(f"{n}: {v}" for n, v in sorted(tunes.items())))
+    # ONE SECTION NAME. Tune's name is a section's name in a drawer, set as the
+    # music drawer's are (13px, 600, the sheet's ink), not in small capitals.
+    sect = {(n, l, sel): census[(n, sc, l)]["labels"][sel] for (n, sc, l) in census
+            for sel in (".tune-title", ".mt-sect")
+            if sc == scheme and census[(n, sc, l)] and sel in census[(n, sc, l)].get("labels", {})}
+    looks = {(v["px"], v["w"], v["ink"], v["tt"]) for v in sect.values()}
+    if not ONLY or {"Tune", "Music, More open"} <= set(ONLY):
+        check(f"{scheme}: Tune's name and the music drawer's section names are one style ({len(sect)} read)",
+              {sel for (_, _, sel) in sect} == {".tune-title", ".mt-sect"} and len(looks) == 1,
+              "; ".join(f"{n} {l} {sel}: {v['px']} {v['w']} {v['ink']} {v['tt']}" for (n, l, sel), v in sorted(sect.items())))
+    # NO SMALL CAPITALS on the menu's sheets or in the dock's drawers: the
+    # vibe question (WORKING-AGREEMENTS) named "monospace caps" as the chrome
+    # that says inspected, and Tune's name was the last word set that way.
+    capped = [f"{n} {l}: {w}" for (n, sc, l), cz in census.items()
+              if sc == scheme and l in PAPER + DRAWERS and cz for w in cz.get("caps", [])]
+    _read = sum(1 for (n, sc, l), cz in census.items() if sc == scheme and l in PAPER + DRAWERS and cz)
+    check(f"{scheme}: no word on the menu's sheets or in the dock's drawers is set in capitals ({_read} read)",
+          _read >= (1 if ONLY else 36) and not capped, "; ".join(capped[:8]))
     KIND = {".menu-tile": "16px", ".menu-list": "16px", ".sdrafts-this": "16px", ".sdrafts-files": "16px", ".learn-card": "16px",
             ".ask-tour": "16px", ".ask-best-card": "16px", ".ask-list": "16px", ".help-tip": "16px", ".accordion-header": "16px",
             ".export-opt": "16px", ".post-preview": "16px", ".bk-pic": "16px", ".sdrafts-row": "16px",
             ".seg": "12px", ".help-search": "12px", ".ask-go": "12px", ".menu-start": "12px", ".export-nameinput": "12px",
             ".post-input": "12px", ".bk-back": "12px", ".smooth-seg": "12px", ".media-tabs": "12px", ".photo-fit-group": "12px",
-            ".reposition-btn": "12px", ".clear-drawer-btn": "12px", ".edge-controls": "12px", ".dp-tile": "16px"}
+            ".reposition-btn": "12px", ".clear-drawer-btn": "12px", ".edge-controls": "12px", ".dp-tile": "16px",
+            ".mt-rv": "12px", ".dz-lead": "12px"}
     # The dock's drawers and Tune are the menu's paper too (the drawers mock, C).
     paper = (census.get(("Pad", scheme, "the menu")) or {}).get("sheet", {}).get("bg")
     drawers = {(n, l): census[(n, sc, l)]["sheet"]["bg"] for (n, sc, l) in census

@@ -23099,3 +23099,57 @@ control, not buttons that decide for me." So it stays, and the rule went into
 WORKING-AGREEMENTS.md beside "I need a free set so it's not all automatic"
 (Snap to the beat): keep the exact controls in view, and add no button that
 picks a value for the person. Nothing in the tree changed but these words.
+
+## After v329 -- The drawers wear the menu's look: the spots that had drifted
+
+The owner asked whether the drawers mesh with the ⋯ menu: "originally we
+wanted to make sure the drawers had the same vibe as the ... menu. do they all
+mesh and vibe the same way?" A census of every control in every drawer and on
+every sheet, Pad and Flip, light and dark, against the menu's own tokens
+(paper, card, card line, rule, corners) found that the drawers wear the
+menu's paper, cards, edges and corners, with five exceptions, fixed here on
+"all yes" (no layout, size or word changed; the drawers' type step-up is a
+mock of its own):
+
+- Tune: its name in small capitals in the muted grey (the one word set that
+  way on any sheet or drawer), its rows parted by the page's grey hairline,
+  and its round switches (Grid, Stroke layers, Motion guides, Onion skin) a
+  grey ring on nothing. Now its name is a section's name, as the music
+  drawer's are (13px, 600, the sheet's ink), its rows are parted by the
+  menu's list rule, and each switch is the menu's card with the lilac edge;
+  on, each keeps its own tint.
+- Flip's copy of that switch: flip.css carried its own `.onion-tint`, loaded
+  after styles.css, so Flip's switches would have kept the grey ring after
+  the Pad's changed. The copy is gone and the switch is styles.css's alone.
+- Post: its title and caption fields and its checkbox were the page's grey,
+  where Ask's and Export's fields are the menu's card. Now the card, with the
+  lilac edge.
+- Hear the restart: `.loop-btn.subtle`'s own grey outranked the drawers'
+  list of controls, so it wore the lilac edge on a grey fill. Now the card.
+- Corners: the Restart view and the song's tile in the file row were 10px,
+  the shape picker 14. A button or field is 12, a drawer 16.
+
+And a misread in the audit, said plainly: Undo's grey edge is its disabled
+look, on purpose, and Clear drawing already had the lilac one. Nothing
+changed there.
+
+THE CHECK is verify_contrast's consistency part. It now reads the shape
+picker as a drawer, and Hear the restart, Tune's switches (off), Post's fields
+and its checkbox among the white cards. A new row asks that every one of them
+with an edge wears the tiles' lilac line: the white alone let a control keep
+the grey line. Tune's rows' rule is the menu's list rule; Tune's name and the
+music drawer's section names are one style; no word on a sheet or in a drawer
+is set in capitals, aria-hidden or not (Tune's name is aria-hidden, which the
+contrast read skips); the Restart view's and the file row's corners are 12,
+the shape picker's 16.
+
+CALIBRATION, each fix undone in a copy served to the browser, the files on
+disk untouched. Tune's capitals: the one-style and capitals rows, in both
+themes. The grey rule: the rule row. Post's grey fields, Post's grey checkbox,
+Tune's switches unfixed: the white-card and edge rows. Flip's copy back: those
+two and "Tune looks the same on Pad and Flip". Hear the restart's grey: the
+white-card row only (its edge was already lilac). Each corner: the corner row
+only. The same files served unchanged: all green.
+
+Pad and Flip: shared. One stylesheet for both, and Flip's copy of the switch
+removed.
