@@ -40,8 +40,17 @@ the editor wrote down for itself.
   for the song to come round), and the first round lands on the beat too. A
   pause and a resume keep them together.
 
+  POSTED. A Beat Flip posted, its pages each a colour of their own, read off
+  the middle of the canvas on every frame against the song as heard: on the
+  link page and in a post's box in the feed, every round within 60ms of its
+  beat (the players do not allow for the speaker's delay, 42ms here) and none
+  sliding, the last four where the first four were; a pause in the box
+  carries the song on from where it was. The box slid 190ms in sixteen
+  seconds, each pass starting again from zero on the frame that noticed, and
+  started its song from its top after a pause, 340ms off.
+
 On Flip only (the Pad has no pages), on a phone. FLIPBEAT_PART=show (round,
-kept, beat) runs one part, for calibration. Each row was shown red by its
+kept, beat, posted) runs one part, for calibration. Each row was shown red by its
 own break, served in place of the real file; the Reduce Motion row only with
 flip.css's rule and styles.css's two global ones all gone, since each alone
 keeps the row still.
@@ -126,6 +135,28 @@ REC = """(secs) => new Promise((done) => { const out = [], t0 = performance.now(
     if (playing && !playPaused && idx !== last) { last = idx;
       out.push({ t: now - t0, at: now, page: idx, heard: _waLoop.playing() ? _waLoop.elapsed() - _waLoop.latency() : null }); }
     if (now - t0 < secs * 1000) requestAnimationFrame(tick); else done(out); })(); })"""
+# For the players, which run no flip.js: pages each a colour of their own
+# across the canvas's middle, so the middle pixel says which page is up.
+COLOURS = [(40 + 17 * k, 220 - 15 * k, (90 + 37 * k) % 256) for k in range(12)]
+COLOURED = """(o) => { frames.length = 0;
+  for (let k = 0; k < o.cols.length; k++) { const f = newFrame(), pts = [], col = '#' + o.cols[k].map((v) => v.toString(16).padStart(2, '0')).join('');
+    for (let j = 0; j < 30; j++) pts.push({ x: CW * 0.2 + j * CW * 0.6 / 29, y: CH * 0.5, color: col, size: 60, t: j * 5, start: j === 0 });
+    f.strokes.push(...pts); f.strokeGroups.push(pts.length); frames.push(f); }
+  fps = 12; idx = 0; buildStrip(); render(); updateToolState(); scheduleSave(); }"""
+# Where a player's song is, as heard: every looping source started is noted
+# with the clock, its offset and its rate (a player's own variables are its own).
+HEARD = """(() => { const real = AudioBufferSourceNode.prototype.start;
+  AudioBufferSourceNode.prototype.start = function (when, off) {
+    if (this.loop && this.buffer && this.buffer.duration > 2)
+      window.__src = { ctx: this.context, at: Math.max(this.context.currentTime, when || 0), off: off || 0, dur: this.buffer.duration, rate: this.playbackRate.value };
+    return real.apply(this, arguments); };
+  window.__heard = () => { const s = window.__src; if (!s) return null; const c = s.ctx;
+    return ((c.currentTime - s.at) * s.rate + s.off) % s.dur - ((c.baseLatency || 0) + (c.outputLatency || 0)); }; })();"""
+# Each time the canvas's middle changes, its colour and the song as heard.
+WATCH = """([sel, secs]) => new Promise((done) => { const cv = document.querySelector(sel), g = cv.getContext('2d'), out = [], t0 = performance.now(); let last = null;
+  (function tick() { const now = performance.now(), d = g.getImageData(cv.width >> 1, cv.height >> 1, 1, 1).data, key = d[0] + ',' + d[1] + ',' + d[2];
+    if (key !== last) { last = key; out.push({ page: null, rgb: [d[0], d[1], d[2]], heard: window.__heard() }); }
+    if (now - t0 < secs * 1000) requestAnimationFrame(tick); else done(out); })(); })"""
 # When Play is pressed, by the page's own clock.
 PLAYAT = "() => document.getElementById('play').addEventListener('click', () => { window.__playAt = performance.now(); }, { once: true, capture: true })"
 TAPS = """(o) => new Promise((res) => { const b = document.getElementById('musicTapBtn'); let i = 0, t0 = null, due = 0;
@@ -189,6 +220,20 @@ def first_up(q, rec):
     """How long the page Play started on stayed up: from the press to the
     next page, as painted."""
     return rec[1]["at"] - q.evaluate("() => window.__playAt") if len(rec) > 1 else None
+
+
+def page_of(rgb):
+    """Which page a colour is, or None (the card, the ground, a blend)."""
+    d, k = min((sum(abs(a - b) for a, b in zip(rgb, c)), k) for k, c in enumerate(COLOURS))
+    return k if d < 30 else None
+
+
+def steady(off):
+    """Every round within 60ms of its beat (a player that does not allow for
+    the speaker's delay is that much ahead), and none sliding: the last four
+    where the first four were, within 25ms."""
+    mid = lambda xs: sorted(xs)[len(xs) // 2]
+    return len(off) >= 8 and max(abs(x) for x in off) <= 60 and abs(mid(off[-4:]) - mid(off[:4])) <= 25
 
 
 def round_starts(rec, bpm, bars, first=0):
@@ -351,6 +396,60 @@ with sync_playwright() as p:
               again["bars"] == 1 and abs(again["fps"] - st["fps"]) < 1e-9 and again["lit"] == ["Beat"] and again["open"],
               f"before {st['bars']} at {st['fps']:.4f}; after {again['bars']} at {again['fps']:.4f}, lit {again['lit']}")
         c.close()
+
+    if part("posted"):
+        print("\nPOSTED -- the link page and a post's box keep it on the song")
+        c, q, errs = editor(b)
+        q.evaluate(COLOURED, {"cols": COLOURS}); song(q); tune(q)
+        q.click("#fpsBeat"); waits.settle(q, 400); untune(q)
+        bpm = q.evaluate("() => musicTempo.bpm")
+        pid = q.evaluate("""async () => { const r = await fetch(window.SKRIBL_API_BASE, { method: 'POST', headers: skriblPostHeaders(),
+            body: JSON.stringify(Object.assign(buildSharePayload(), { title: 'On the beat', visibility: 'public' })) });
+          return (await r.json()).id; }""")
+        c.close()
+        v = b.new_context(**PHONE)
+        v.add_init_script(HEARD)
+        pg = v.new_page()
+        perrs = []
+        pg.on("pageerror", lambda e: perrs.append(str(e)))
+        pg.goto(f"{BASE}/s/{pid}", wait_until="load")
+        pg.wait_for_selector("#playerPlayBtn", state="visible", timeout=20000); pg.wait_for_timeout(900)
+        pg.click("#playerPlayBtn")
+        rec = [dict(r, page=page_of(r["rgb"])) for r in pg.evaluate(WATCH, ["#canvas", 16])]
+        off = round_starts(rec, bpm, 0.5)
+        check("posted, the link page keeps the rounds on the song: each within 60ms of its beat as heard, none sliding",
+              steady(off), f"{len(off)} rounds: " + " ".join(f"{x:+.0f}" for x in off))
+        pg.close()
+        pg = v.new_page()
+        pg.on("pageerror", lambda e: perrs.append(str(e)))
+        browsing.goto(pg, BASE, "/feed")
+        box = f".skribl-inline[data-skribl-id='{pid}']"
+        pg.wait_for_selector(box, state="attached", timeout=20000)
+        pg.evaluate("(s) => document.querySelector(s).scrollIntoView({ block: 'center' })", box)
+        pg.wait_for_timeout(800)
+        pg.evaluate("(s) => document.querySelector(s).click()", box)
+        rec = [dict(r, page=page_of(r["rgb"])) for r in pg.evaluate(WATCH, [box + " .skribl-inline-canvas", 16])]
+        off = round_starts(rec, bpm, 0.5)
+        check("...and so does a post's box in the feed, its song started where the drawing is",
+              steady(off), f"{len(off)} rounds: " + " ".join(f"{x:+.0f}" for x in off))
+        # Paused 2.3s into a fresh play, the drawing is a third of a round into
+        # a pass: a song started again from its top is that far off the beat.
+        pg.close()
+        pg = v.new_page()
+        pg.on("pageerror", lambda e: perrs.append(str(e)))
+        browsing.goto(pg, BASE, "/feed")
+        pg.wait_for_selector(box, state="attached", timeout=20000)
+        pg.evaluate("(s) => document.querySelector(s).scrollIntoView({ block: 'center' })", box)
+        pg.wait_for_timeout(800)
+        pg.evaluate("(s) => document.querySelector(s).click()", box); pg.wait_for_timeout(2300)
+        pg.evaluate("(s) => document.querySelector(s).click()", box); pg.wait_for_timeout(900)
+        pg.evaluate("(s) => document.querySelector(s).click()", box)
+        rec = [dict(r, page=page_of(r["rgb"])) for r in pg.evaluate(WATCH, [box + " .skribl-inline-canvas", 8])]
+        off = round_starts(rec, bpm, 0.5)
+        check("a pause in a post's box carries the song on from where it was: every round after it within 60ms of its beat",
+              len(off) >= 6 and max(abs(x) for x in off) <= 60, " ".join(f"{x:+.0f}" for x in off))
+        check("nothing went wrong on the link page or in the feed", not perrs, "; ".join(perrs)[:200])
+        v.close()
 
     if part("beat"):
         print("\nON THE BEAT -- the pages keep to the song's own clock")

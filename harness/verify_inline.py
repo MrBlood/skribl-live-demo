@@ -1595,7 +1595,14 @@ with sync_playwright() as sp:
     #   drawing page to setNib while it plays, where it always passed null.
     #   WHICH CALLER PAYS: every page that shows a post, for every Flip with
     #   a Draw on page. 74,085 B measured.
-    EMBED_RATCHET = 74_090
+    # RAISED (a bug fix, found building Match the beat: a post's box slid off
+    #   its song about 12ms a second and started the song from its top after a
+    #   pause), for one named cost: +226 B, all inlineplayer.js -- each pass
+    #   carrying on from what its frame came late by, the passes' time kept
+    #   (`lap`), and the song started where the drawing is. WHICH CALLER PAYS:
+    #   every page that shows a post, for every post with music. Spent first:
+    #   `lap` joins the clock's own line. 74,311 B measured.
+    EMBED_RATCHET = 74_315
     # THE RATCHET MEASURES DISPLAY, NOT COMPOSE, and the two are separate costs
     # paid by separate pages. Excluded here and measured on its own below:
     #   feed.js          the PREVIEW PAGE's own script (fetch the listing, clone
