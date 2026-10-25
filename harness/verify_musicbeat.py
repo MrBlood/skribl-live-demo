@@ -760,7 +760,7 @@ with sync_playwright() as pw:
         s3 = pg.evaluate(SNAP)
         check(f"{_n}: Snap to the beat shows under the tap once there is a tempo, on to start, and says what it does; off, that the ends stay where they are let go",
               not s0["shown"] and s1["shown"] and s1["on"] == "true"
-              and s1["says"] == "The start you drag lands on a beat, and the loop on whole bars. Zoomed in, it stays where you put it, and the beat follows."
+              and s1["says"] == "The start you drag lands on a beat, or where the music starts, and the loop on whole bars. Zoomed in, it stays where you put it, and the beat follows."
               and s2["on"] == "false" and s2["says"] == "Ends stay exactly where you let them go." and s2["kept"] == {"bpm": 120, "phase": 0, "snap": False}
               and s3["on"] == "true" and s3["kept"] == {"bpm": 120, "phase": 0},
               f"no tempo: shown {s0['shown']}; a tempo: {s1}; pressed: {s2}; again: {s3['on']}, {s3['kept']}")

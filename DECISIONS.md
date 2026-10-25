@@ -23707,7 +23707,10 @@ between two drums (4.000 for 3.000); a gap too short to be a silence (1.150
 for 1.333); a whole beat into the music for half (0.400 for 0.667); and,
 zoomed in, the beat moving whatever the distance. As built: 20 of 20.
 
-Contrast unchanged: no new words or colours on the drawer. How it works says
-it (Loop ends, Magnify the timeline, Snap to the beat).
+The switch says it too: "The start you drag lands on a beat, or where the
+music starts, and the loop on whole bars." (asked whether to add the words
+after "All yes": "I said all yes"). The same words in the same token, so the
+same contrast; no new colours. How it works says it (Loop ends, Magnify the
+timeline, Snap to the beat).
 
 Pad and Flip: shared. One drawer and one timeline for both editors.

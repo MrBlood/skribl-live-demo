@@ -1142,7 +1142,7 @@
       var tp = tempo(), on = snapOn();
       if (snapRow.hidden !== !tp) { snapRow.hidden = !tp; if (tp) glideIn(snapRow, 'y'); }
       setOn(snapSw, on);
-      var w = on ? 'The start you drag lands on a beat, and the loop on whole bars. Zoomed in, it stays where you put it, and the beat follows.'
+      var w = on ? 'The start you drag lands on a beat, or where the music starts, and the loop on whole bars. Zoomed in, it stays where you put it, and the beat follows.'
         : 'Ends stay exactly where you let them go.';
       if (snapSub && snapSub.textContent !== w) snapSub.textContent = w;
     }
