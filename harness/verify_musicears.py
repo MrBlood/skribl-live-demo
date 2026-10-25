@@ -40,6 +40,18 @@ rain has sounds on most beats but gathers round no circle.
   THE PAD'S LENGTH. With a drawing, whole bars nearest it (the owner's pick):
   a 7-second drawing gets 16 beats.
 
+  BEATS (the owner: "There should be ways to have skribl pick 4 or 8 16
+  32"; of the mock, "All yes if it's intuitive"). A count tapped on Skribl's
+  pick is Skribl's pick for that many beats where the loop is: from the
+  steady song's 32, 8 is inside the loop (picked from the whole song it was
+  at 23.5s, the loop at 4.2s), on a bar and 8 of the song's beats long; it is
+  still Skribl's pick, and the way back never shows on the way there. Undo
+  brings back the 32 and its beat. Longer, 16 from that 8 is around it and
+  keeps its start, and Undo of it brings back the 8, still Skribl's pick. A
+  band that speeds up keeps the start to the millisecond from its 4 to its
+  32 (its bars sit a little apart in each stretch heard). A loop of the
+  person's own, its start a beat past the bar, keeps its start.
+
   KEPT. The loop and the heard beat come back after a reload, still "heard
   by Skribl"; a song brought back is not listened to again. Snap to the
   beat's switch keeps it heard.
@@ -68,7 +80,7 @@ import browsing  # noqa: E402
 import waits  # noqa: E402
 
 # For calibration: MUSICEARS_ONLY=Pad (or Flip) runs one editor, and
-# MUSICEARS_PART=beat (glide, none, pad, kind, kept) one part. A real run sets neither.
+# MUSICEARS_PART=beat (glide, none, pad, beats, kind, kept) one part. A real run sets neither.
 ONLY = os.environ.get("MUSICEARS_ONLY", "")
 PART = os.environ.get("MUSICEARS_PART", "")
 EDITORS = [e for e in (("Pad", "/skribl-pad"), ("Flip", "/flip")) if not ONLY or e[0] == ONLY]
@@ -176,6 +188,7 @@ STATE = """() => { const tl = document.getElementById('musicTimeline'), p = tl &
            line: (document.getElementById('musicPickText') || {}).textContent || '',
            tag: !(document.getElementById('musicPickTag') || { hidden: true }).hidden,
            back: !(document.getElementById('musicBackPick') || { hidden: true }).hidden,
+           undo: !(document.getElementById('musicPickUndo') || { hidden: true }).hidden,
            beat: (document.getElementById('musicTempo') || {}).textContent || '', beatIn: p ? p.beatIn : null }; }"""
 # Every animation frame from now: the loop's ends, how far the marks have
 # faded in, and the beat line's words (the glide, the fade and "Listening").
@@ -184,6 +197,13 @@ RECORD = """() => { window.__rec = []; const t0 = performance.now();
     window.__rec.push({ t: performance.now() - t0, s: trimStart, e: trimEnd, bi: p && musicTempo ? p.beatIn : null,
                         w: (document.getElementById('musicTempo') || {}).textContent || '', tempo: !!musicTempo });
     if (window.__rec.length < 900) requestAnimationFrame(tick); })(); }"""
+# Every animation frame from just before a tap on Beats: the loop's start,
+# and whether the tag and the way back show; and when the tap landed.
+TAGS = """() => { const out = window.__rec = [], t0 = performance.now(), q = (id) => document.getElementById(id);
+  window.__tapAt = null;
+  q('musicBeatsSeg').addEventListener('click', () => { window.__tapAt = performance.now() - t0; }, { capture: true, once: true });
+  (function f() { out.push([performance.now() - t0, trimStart, !q('musicPickTag').hidden, !q('musicBackPick').hidden]);
+    if (performance.now() - t0 < 800) requestAnimationFrame(f); })(); }"""
 # Skribl's answer held until released, so what a person does meanwhile can be done.
 HOLD = """() => { const E = window.SkriblEars, real = E.listen; window.__held = [];
   E.listen = (buf, done) => { let h = null; window.__held.push(() => { h = real(buf, done); }); return { cancel() { if (h) h.cancel(); } }; }; }"""
@@ -237,6 +257,17 @@ def add(q, name, wait=True):
         q.wait_for_function(EARS_DONE, timeout=20000)
         waits.settle(q, 600)
     return q.evaluate(STATE)
+
+
+def tap(q, sel):
+    """A real click on a count of Beats (or on Undo), then the glide: a
+    control a broken build hides makes a row say so in red, not a timeout."""
+    try:
+        q.click(sel if str(sel).startswith("#") else f'#musicBeatsSeg button[data-beats="{sel}"]', timeout=3000)
+    except Exception:
+        return False
+    waits.settle(q, 500)
+    return True
 
 
 def heard_len(st):
@@ -373,6 +404,73 @@ with sync_playwright() as p:
         check(f"{name}: a {secs:.1f}-second drawing gets 16 beats, the count nearest it, from the bar where the drums come in",
               abs(st["s"] - T["drums"][0]) <= 0.010 and abs(L - bars_from(T, st["s"], 16)) <= 0.010 and "16 beats" in st["line"],
               f"start {st['s']:.4f}, heard {L:.4f}s, line {st['line']!r}")
+        c.close()
+
+    print("\nBEATS -- a count tapped on Skribl's pick is Skribl's pick for that many, where the loop is")
+    for name, path in eds("beats"):
+        c, q, errs = editor(b, path)
+        st = add(q, "steady")
+        q.evaluate("() => document.getElementById('musicBeatsRow').scrollIntoView({ block: 'center' })"); q.wait_for_timeout(300)
+        q.evaluate(TAGS)
+        tap(q, 8)
+        a8 = q.evaluate(STATE)
+        rec, at = q.evaluate("() => window.__rec"), q.evaluate("() => window.__tapAt")
+        after = [f for f in rec if at is not None and f[0] >= at]
+        L, want = heard_len(a8), bars_from(T, a8["s"], 8)
+        off = a8["s"] - nearest(T["downbeats"], a8["s"])
+        check(f"{name}: from the pick's 32 beats, 8 is inside the loop, on a bar within 10ms, and 8 of the song's beats long within 10ms",
+              st["s"] - 1e-6 <= a8["s"] and a8["e"] <= st["e"] + 1e-6 and abs(off) <= 0.010 and want is not None and abs(L - want) <= 0.010,
+              f"the pick {st['s']:.3f}-{st['e']:.3f}; 8: {a8['s']:.4f}-{a8['e']:.4f} ({off * 1000:+.1f}ms from a bar), heard {L:.4f}s against {want}")
+        way = [f for f in after if abs(f[1] - st["s"]) > 1e-6 and abs(f[1] - a8["s"]) > 1e-6]
+        check(f"{name}: it is still Skribl's pick, and the way back never shows on the way there; Undo is offered",
+              a8["tag"] and not a8["back"] and a8["undo"] and len(way) >= 3 and all(f[2] and not f[3] for f in after),
+              f"tag {a8['tag']}, the way back {a8['back']}, Undo {a8['undo']}; {len(way)} frames on the way, "
+              f"{sum(1 for f in after if not f[2] or f[3])} of {len(after)} without the tag or with the way back")
+        tap(q, "#musicPickUndo")
+        u = q.evaluate(STATE)
+        check(f"{name}: Undo brings back the pick's 32 beats and their beat",
+              abs(u["s"] - st["s"]) < 1e-9 and abs(u["e"] - st["e"]) < 1e-9 and u["tempo"] == st["tempo"] and u["tag"] and not u["back"],
+              f"{u['s']:.4f}-{u['e']:.4f}, tempo {u['tempo']} (the pick's {st['tempo']}), tag {u['tag']}")
+        tap(q, 8)
+        e8 = q.evaluate(STATE)
+        tap(q, 16)
+        a16 = q.evaluate(STATE)
+        L16, want16 = heard_len(a16), bars_from(T, a16["s"], 16)
+        check(f"{name}: longer, 16 from that 8 is around it and keeps its start, where it joins as well, 16 of the song's beats long within 10ms",
+              abs(a16["s"] - e8["s"]) < 1e-9 and a16["e"] >= e8["e"] - 1e-6 and want16 is not None and abs(L16 - want16) <= 0.010 and a16["tag"],
+              f"the 8 {e8['s']:.4f}-{e8['e']:.4f}; 16: {a16['s']:.4f}-{a16['e']:.4f}, heard {L16:.4f}s against {want16}, tag {a16['tag']}")
+        tap(q, "#musicPickUndo")
+        u8 = q.evaluate(STATE)
+        check(f"{name}: and Undo of it brings back the 8, still Skribl's pick",
+              abs(u8["s"] - e8["s"]) < 1e-9 and abs(u8["e"] - e8["e"]) < 1e-9 and u8["tag"] and not u8["back"],
+              f"{u8['s']:.4f}-{u8['e']:.4f}, tag {u8['tag']}, the way back {u8['back']}")
+        check(f"{name}: nothing went wrong on the page", not errs, "; ".join(errs)[:200])
+        c.close()
+
+        c, q, errs = editor(b, path)
+        st = add(q, "band")
+        TB = SONGS["band"]["truth"]
+        tap(q, 4)
+        a4 = q.evaluate(STATE)
+        tap(q, 32)
+        a32 = q.evaluate(STATE)
+        off = a4["s"] - nearest(TB["downbeats"], a4["s"])
+        L, want = heard_len(a32), bars_from(TB, a32["s"], 32)
+        check(f"{name}: a band speeding up, from its 4 beats (on a bar within 15ms), 32 keeps the start to the millisecond, 32 of its beats long within 15ms",
+              "4 beats" in a4["line"] and abs(off) <= 0.015 and abs(a32["s"] - a4["s"]) < 0.0005 and want is not None and abs(L - want) <= 0.015,
+              f"the 4 {a4['s']:.4f}-{a4['e']:.4f} ({off * 1000:+.1f}ms from a bar); 32: {a32['s']:.4f}-{a32['e']:.4f}, heard {L:.4f}s against {want}")
+        c.close()
+
+        c, q, errs = editor(b, path)
+        st = add(q, "steady")
+        p = 60 / st["tempo"]["bpm"]
+        q.evaluate("(p) => { trimStart += p; trimEnd += p; updateTrimUI(); }", p)
+        own = q.evaluate(STATE)
+        tap(q, 8)
+        a = q.evaluate(STATE)
+        check(f"{name}: a loop of the person's own, its start a beat past the bar, keeps its start: 8 beats from it, theirs and not Skribl's pick",
+              not own["tag"] and abs(a["s"] - own["s"]) < 1e-9 and abs(heard_len(a) - 8 * p) < 1e-6 and not a["tag"],
+              f"their loop {own['s']:.4f}-{own['e']:.4f} (tag {own['tag']}); 8: {a['s']:.4f}-{a['e']:.4f}, heard {heard_len(a) / p:.3f} beats, tag {a['tag']}")
         c.close()
 
     print("\nKIND -- what a person does before Skribl has listened stays")

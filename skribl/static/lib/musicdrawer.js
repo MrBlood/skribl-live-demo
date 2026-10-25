@@ -362,8 +362,11 @@
      * ('slide'). Declared, not accidental: lib/looptrim.js has the reasons.
      * With Lock the length on, any end moves the whole loop instead. Every
      * change is saved when it lands, wherever the finger is let go. */
-    var locked = false, glideRaf = 0;
-    function stopGlide() { if (glideRaf) { global.cancelAnimationFrame(glideRaf); glideRaf = 0; } }
+    var locked = false, glideRaf = 0, aim = null;
+    function stopGlide() { if (glideRaf) { global.cancelAnimationFrame(glideRaf); glideRaf = 0; } aim = null; }
+    // The loop as it is, or where it lands while a settle glides there: what
+    // the tag and Beats go by, so neither changes its mind on the way.
+    function loopNow() { var t = h.trim(); return aim ? { start: aim[0], end: aim[1], duration: t.duration } : t; }
     function setEdge(which, time, mode) {
       stopGlide();
       if (tl && tl.focus) tl.focus(which);
@@ -387,9 +390,10 @@
     // A settle glides there, both ends together, frame by frame so the
     // timeline, its handles and the one line move as one; at once under
     // Reduce Motion. Saved when it lands.
-    function glideTo(s1, e1) {
+    function glideTo(s1, e1, then) {
       stopGlide();
       var t = h.trim(), s0 = t.start, e0 = t.end, t0 = global.performance.now();
+      aim = [s1, e1];
       function step(now) {
         var k = still() ? 1 : Math.min(1, Math.max(0, now - t0) / GLIDE_MS), q = 1 - Math.pow(1 - k, 3);
         h.setTrim(s0 + (s1 - s0) * q, e0 + (e1 - e0) * q);
@@ -398,6 +402,7 @@
         glideRaf = 0;
         touched();
         h.changed();
+        if (then) then();
       }
       step(t0);
     }
@@ -662,12 +667,13 @@
     function fadeFor(len) { return Math.max(0, Math.min(PICK_FADE_MS, Math.floor(len * 1000 / 4 / 5) * 5)); }
     // EARS (lib/musicears.js): what Skribl heard in a new song, once. `earsHeard`
     // is null until it has listened, and false when there is no steady beat.
-    // `pickedNew` is the pick a new song started on, while the loop is still it.
-    var ears = null, earsFor = null, earsHeard = null, earsKey = '', earsPick = null, pickedNew = null;
+    // `pickedNew` is the pick a new song started on, while the loop is still it,
+    // and `beatsPick` the one Beats made (below).
+    var ears = null, earsFor = null, earsHeard = null, earsKey = '', earsPick = null, pickedNew = null, beatsPick = null;
     function listenTo(buf) {
       if (!global.SkriblEars || !buf || buf === earsFor) return;
       if (ears) ears.cancel();
-      earsFor = buf; earsHeard = null; earsKey = '';
+      earsFor = buf; earsHeard = null; earsKey = ''; beatsPick = null;
       ears = global.SkriblEars.listen(buf, function (H) {
         ears = null;
         if (earsFor !== buf) return;
@@ -678,7 +684,7 @@
     }
     function forgetEars() {
       if (ears) ears.cancel();
-      ears = null; earsFor = null; earsHeard = null; earsKey = ''; earsPick = null; pickedNew = null;
+      ears = null; earsFor = null; earsHeard = null; earsKey = ''; earsPick = null; pickedNew = null; beatsPick = null;
     }
     // Skribl's pick with ears, for the drawing's length as it is: whole bars
     // nearest it on the Pad (the owner's pick), the longest that fits otherwise.
@@ -692,20 +698,30 @@
       }
       return earsPick;
     }
+    function fromEars(P, secs) {
+      return { start: P.start, end: P.end, ms: PICK_FADE_MS, fits: secs > 0 && near(P.heard, secs),
+               tempo: { bpm: Math.round(P.bpm * 1000) / 1000, phase: Math.round(P.phase * 10000) / 10000, heard: true } };
+    }
     // `drawing`: the drawing's length when the caller has it (sync, below).
     function pickNow(drawing) {
       var d = h.trim().duration;
       if (!(d > 0)) return null;
       var secs = !h.fitsByDefault ? 0 : drawing != null ? drawing : h.drawingSeconds(), ms, end;
       var P = earsPickFor(secs, d);
-      if (P) return { start: P.start, end: P.end, ms: PICK_FADE_MS, fits: secs > 0 && near(P.heard, secs),
-                      tempo: { bpm: Math.round(P.bpm * 1000) / 1000, phase: Math.round(P.phase * 10000) / 10000, heard: true } };
+      if (P) return fromEars(P, secs);
       if (secs > 0) { ms = fadeFor(secs); end = T.loopLength(secs + ms / 1000, d); }
       else { end = Math.min(d, T.MAX_LOOP_SECONDS); ms = fadeFor(end); }
       return { start: 0, end: end, ms: ms, fits: secs > 0 && near(heard({ start: 0, end: end }, ms), secs) };
     }
+    // The loop's length in whole bars of the beat, 4, 8, 16 or 32, or 0.
+    function countOf() {
+      var p = beatSecs();
+      if (!(p > 0) || !h.hasTrack()) return 0;
+      var n = heard(loopNow(), h.crossfade()) / p, c = Math.round(n);
+      return BARS.indexOf(c) >= 0 && Math.abs(n - c) < 0.01 ? c : 0;
+    }
     function isPick(p) {
-      var t = h.trim();
+      var t = loopNow();
       return !!p && near(t.start, p.start) && near(t.end, p.end) && h.crossfade() === p.ms;
     }
     // A pick, set: the loop, its smooth restart, and with ears the beat heard.
@@ -775,20 +791,28 @@
       var rest = [p > 0 ? beatWords(len / p) : '', against(len, secs)].filter(Boolean);
       var html = '<b>' + len.toFixed(2) + 's</b>' + (rest.length ? ' · ' + rest.join(' · ') : ' loop');
       if (pickText && pickText._html !== html) { pickText.innerHTML = html; pickText._html = html; }
-      var mine = !isPick(pickNow(secs));
+      var mine = !isPick(pickNow(secs)) && !isPick(beatsPick);
       if (pickTag) pickTag.hidden = mine;
-      if (back) back.hidden = !mine;
-      if (undoBtn) undoBtn.hidden = mine || !undo;
+      if (back) back.hidden = !mine || !!undo;
+      if (undoBtn) undoBtn.hidden = !undo;
     }
-    if (back) back.addEventListener('click', function () {
-      var t = h.trim(), was = { start: t.start, end: t.end, ms: h.crossfade(), tempo: h.tempo ? h.tempo() : null };
-      var p = h.hasTrack() ? pickNow() : null;
-      if (!p) return;
-      setPick(p);
+    // The loop as Undo puts it back, and what a change that offers Undo
+    // leaves to undo, for UNDO_MS.
+    function state() {
+      var t = loopNow();
+      return { start: t.start, end: t.end, ms: h.crossfade(), tempo: h.tempo ? h.tempo() : null, pick: beatsPick };
+    }
+    function remember(was) {
       undo = was;
       clearTimeout(undoT);
       undoT = setTimeout(function () { undo = null; syncPick(); }, UNDO_MS);
       sync();
+    }
+    if (back) back.addEventListener('click', function () {
+      var was = state(), p = h.hasTrack() ? pickNow() : null;
+      if (!p) return;
+      setPick(p);
+      remember(was);
       if (undoBtn) undoBtn.focus();   // where the button was: focus is not lost
     });
     if (undoBtn) undoBtn.addEventListener('click', function () {
@@ -799,6 +823,7 @@
       h.setTrim(u.start, u.end);
       setFade(u.ms);
       if (h.setTempo && u.tempo !== (h.tempo ? h.tempo() : null)) h.setTempo(u.tempo);
+      beatsPick = u.pick;
       h.refresh();
       h.changed();
       if (was !== u.ms) rejoin();
@@ -1134,6 +1159,64 @@
       syncTap();
     });
 
+    /* ---- Beats: how many beats the loop is (the owner: "There should be
+     * ways to have skribl pick 4 or 8 16 32"; of the mock, "All yes if it's
+     * intuitive"). Under the one line once there is a beat, heard or tapped:
+     * of 4, 8, 16 and 32, the counts the 20s cap and the song have room for,
+     * the loop's own lit, none while it is not whole bars. A count tapped
+     * while the loop is Skribl's (the tag), with ears, is Skribl's pick for
+     * that many beats where the loop is: the smoothest stretch inside it
+     * when shorter, around it when longer, starting on a bar, and the start
+     * kept when it is as good. (Picked from the whole song, 8 beats of a
+     * test song moved the loop from 4.2s to 23.5s: not what a tap on 8
+     * means.) Otherwise the start stays where it is and the loop is that
+     * many beats from it, moved back by whole beats only where the song ends
+     * first. The loop glides there, and Undo puts it back. */
+    var beatsRow = $('musicBeatsRow'), beatsSeg = $('musicBeatsSeg');
+    function ours() {
+      var tp = tempo();
+      return !!earsHeard && !!tp && !!tp.heard && (isPick(pickNow()) || isPick(beatsPick));
+    }
+    function repick(c, t) {
+      var now = heard(t, h.crossfade()), want = c * earsHeard.period, a = t.start + now - want;
+      var P = global.SkriblEars.pick(earsHeard, { duration: t.duration, target: want, maxLoop: T.MAX_LOOP_SECONDS,
+        minLoop: T.MIN_LOOP_SECONDS, fadeMs: PICK_FADE_MS, from: Math.max(0, Math.min(t.start, a)), to: Math.max(t.start, a), near: t.start });
+      return P && P.beats === c ? fromEars(P, 0) : null;
+    }
+    function roomFor(c) {
+      var p = beatSecs(), xf = h.crossfade() / 1000;
+      return p > 0 && c * p + xf <= Math.min(T.MAX_LOOP_SECONDS, h.trim().duration) + EPS;
+    }
+    function syncBeats() {
+      if (!beatsRow || !beatsSeg) return;
+      var tp = h.hasTrack() ? tempo() : null, c = countOf(), any = false, btns = beatsSeg.querySelectorAll('button');
+      for (var i = 0; i < btns.length; i++) {
+        var n = +btns[i].dataset.beats, fit = !!tp && roomFor(n);
+        if (btns[i].hidden !== !fit) btns[i].hidden = btns[i].disabled = !fit;
+        any = any || fit;
+        btns[i].classList.toggle('on', fit && n === c);
+      }
+      if (beatsRow.hidden !== !any) { beatsRow.hidden = !any; if (any) glideIn(beatsRow, 'y'); }
+    }
+    if (beatsSeg) beatsSeg.addEventListener('click', function (ev) {
+      var b = ev.target && ev.target.closest && ev.target.closest('button[data-beats]'), c = b ? +b.dataset.beats : 0;
+      if (!b || b.disabled || !h.hasTrack() || !tempo() || c === countOf()) return;
+      var t = loopNow(), was = state(), P = ours() ? repick(c, t) : null, s, e;
+      if (P) {
+        // a pick's smooth restart, which what is playing takes at once
+        if (h.crossfade() !== P.ms) { setFade(P.ms); rejoin(); }
+        if (h.setTempo) h.setTempo(P.tempo);
+        s = P.start; e = P.end;
+        beatsPick = { start: s, end: e, ms: P.ms };
+      } else {
+        var p = beatSecs(), len = lenFor(c);
+        s = t.start;
+        if (s + len > t.duration + EPS) s = Math.max(0, s - Math.ceil((s + len - t.duration) / p - 1e-9) * p);
+        e = s + len;
+      }
+      glideTo(s, e, function () { remember(was); });
+    });
+
     // Snap to the beat, under the tap once there is a tempo, on to start and
     // kept with it in the drafts (SNAP TO THE BEAT, above, has what it does).
     var snapRow = $('musicSnapRow'), snapSw = $('musicSnap'), snapSub = $('musicSnapSub');
@@ -1284,6 +1367,7 @@
       syncLock();
       syncPicks(secs);
       syncPick(secs);
+      syncBeats();
       syncHear(secs);
       syncTap();
       syncSnap();

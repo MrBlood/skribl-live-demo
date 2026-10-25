@@ -2477,6 +2477,9 @@ body.recoloring #canvas { cursor: crosshair !important; }
 .mt-step { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 10px; }
 .mt-step-seg { --seg-h: 40px; }
 .mt-step-seg button { height: 100%; line-height: 1; white-space: nowrap; }
+/* BEATS, under the one line, wears Each press's row; its space above is
+   padding, so it opens out with the row (glideIn) rather than in one frame. */
+.mt-beats { margin-top: 0; padding-top: 10px; }
 .mt-switch { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 2px; }
 .mt-switch-words { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
 .mt-switch .layer-toggle { display: inline-block; }

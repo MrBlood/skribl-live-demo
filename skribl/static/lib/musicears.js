@@ -8,8 +8,15 @@
  *                         then calls done(heard); returns { cancel }.
  *   hear(samples, rate)   the same at once, for a channel already in hand.
  *   pick(heard, o)        Skribl's pick, with ears, or null:
- *                         o = { duration, target, maxLoop, minLoop, fadeMs }
+ *                         o = { duration, target, maxLoop, minLoop, fadeMs,
+ *                               from, to, near }
  *                         -> { start, end, beats, bpm, phase, heard, join }
+ *                         from and to, when given, hold the start between
+ *                         them, to a quarter of a beat; near, when given,
+ *                         takes of joins as good the start nearest it, not
+ *                         the earliest, and near itself when that is the
+ *                         same beat (Beats, in lib/musicdrawer.js: a new
+ *                         length where the loop is, its start kept)
  *   steady(heard)         a beat was heard (pick can then still be null:
  *                         no whole bars fit the song or the loop's limits)
  *
@@ -67,7 +74,7 @@
   var SURE = 3.5, HITS = 0.5, MIN_HITS = 8;
   var WIDE = 64;                  // of 511 bins growing at once: a beat (drums, a pluck) is a burst
   var COUNTS = [4, 8, 16, 32];
-  var TIE = 0.03;                 // joins this close are as good: the earlier wins
+  var TIE = 0.03;                 // joins this close are as good: the earlier wins (or the nearer, o.near)
 
   function makeFFT(n) {
     var bits = Math.round(Math.log(n) / Math.LN2), rev = new Uint32Array(n), i, b;
@@ -399,10 +406,15 @@
       if (!k || Math.abs(c * H.period - o.target) < Math.abs(k * H.period - o.target)) k = c;
     });
     if (!k) return null;
-    var span = k * H.period + fade, W = Math.max(24, span + 8);
-    for (var w0 = 0; w0 < d; w0 += 4) {
+    // A quarter of a beat: within it, two starts are the same beat. A band
+    // that speeds up has its bars a little apart in each stretch heard (47ms
+    // on the test band's), and the start kept must not move by that.
+    var span = k * H.period + fade, W = Math.max(24, span + 8), same = H.period / 4;
+    var lo = o.from != null ? o.from - same : -Infinity, hi = o.to != null ? o.to + same : Infinity;
+    for (var w0 = 0; w0 < d && w0 <= hi; w0 += 4) {
       var w1 = Math.min(d, w0 + W);
       if (w1 - w0 < span + 2) break;
+      if (w1 < lo) continue;
       var g = local(H, w0, w1);
       if (!(g.sure >= SURE)) continue;
       var B = beatsOn(H, g, w0, w1), bar = barOf(B), p = g.period;
@@ -410,14 +422,16 @@
         if ((i - bar) % 4 !== 0) continue;
         var s = B[i].t;
         if (s + k * p + fade > d - 0.05 || i + k + 2 > B.length) break;
+        if (s < lo || s > hi) continue;
         var post = alike(B, i, i + k, 2), pre = i >= 2 ? alike(B, i - 2, i + k - 2, 2) : null;
         all.push({ start: s, beats: k, join: Math.max(post == null ? 0 : post, pre == null ? 0 : pre), bpm: g.bpm });
       }
     }
     if (!all.length) return null;
     var J = Math.max.apply(null, all.map(function (c) { return c.join; }));
-    var best = all.filter(function (c) { return c.join >= J - TIE; }).sort(function (a, b) { return a.start - b.start; })[0];
-    var start = Math.max(0, best.start);
+    var by = o.near == null ? function (c) { return c.start; } : function (c) { return Math.abs(c.start - o.near); };
+    var best = all.filter(function (c) { return c.join >= J - TIE; }).sort(function (a, b) { return by(a) - by(b); })[0];
+    var start = Math.max(0, o.near != null && Math.abs(best.start - o.near) <= same ? o.near : best.start);
     var L0 = 60 / best.bpm * best.beats, L = L0, top = -1;
     for (var dL = -0.03; dL <= 0.03 + 1e-9; dL += 0.0005) { var v = overlay(H, start, L0 + dL); if (v > top) { top = v; L = L0 + dL; } }
     var end = start + L + fade;
