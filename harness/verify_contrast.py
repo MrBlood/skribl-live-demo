@@ -27,6 +27,11 @@ and its ancestors' opacity laid over that ground.
 WCAG AA: 4.5:1, or 3:1 for large text (24px, or 18.66px at 700). A disabled
 control is exempt (WCAG 1.4.3). Each surface also reports its own colours
 (the sheet and its cards) under CONSISTENCY, for reading side by side.
+
+THE DRAWERS' TYPE: every word in the dock's drawers, Tune and the shape
+picker is 12 to 16px, a size nearer the menu's 16 over 14 (the owner, of the
+type mock's B), none is cut off at a side, and none is left alone on the last
+line of words that wrap; the shape picker's knobs hold their words a size up.
 """
 import io
 import math
@@ -60,6 +65,13 @@ EDITORS = (
     ("Flip", "/flip", "moreBtn", "#pad",
      dict(menu="moreMenu", help="miInfo", export="miExport", report="miReport", photo="#imageInput")),
 )
+
+# The dock's drawers, and the sheets the menu opens (CONSISTENCY, and the
+# drawers' type).
+DRAWERS = ("Tune", "The shape picker", "The draw drawer", "The draw drawer, Size", "The draw drawer, Feel", "The draw drawer, Eraser",
+           "Photo, with a picture", "Music", "Music, More open")
+PAPER = ("the menu", "New", "Settings", "Your drafts", "Export", "Report a problem", "Post",
+         "Ask", "Ask, its answers", "Ask, an answer", "The little book")
 
 # A picture and a song to load into the photo and music drawers.
 _im = Image.new("RGB", (300, 300), (243, 240, 255))
@@ -160,6 +172,62 @@ CENSUS = r"""(root) => {
                 + ' "' + el.textContent.trim().slice(0, 20) + '"');
   }
   return { sheet: s(R), cards, labels, caps };
+}"""
+
+# THE DRAWERS' TYPE (the owner, of the type mock's B: "all yes"). Every word
+# laid out in the open drawer, scrolled into view or not (a size does not
+# depend on being seen): its size; and whether it is CUT OFF AT A SIDE, a box
+# that clips its words holding more than it shows (an ellipsis), or a line
+# running past the side of a box above it that clips. Only the sides: a drawer
+# taller than the screen scrolls, and what is under its fold is not cut. A
+# word not painted (a bubble shown only while an end is dragged) is not cut.
+# Where words wrap, their LAST LINE IS NOT A WORD LEFT ALONE: at least a third
+# as wide as the line above it ("Loops under the drawing ·" over "1:11" was).
+# And the shape picker's two knobs, Sides and Rounding: where each label's
+# words end against its slider, where the reading's end against the row, and
+# where each slider starts and ends.
+TYPE = r"""(root) => {
+  const R = document.querySelector(root); if (!R) return null;
+  const name = (el) => el.id ? '#' + el.id : el.tagName.toLowerCase() + (el.classList.length ? '.' + [...el.classList].slice(0, 2).join('.') : '');
+  const words = [], cut = [], alone = [];
+  for (const el of R.querySelectorAll('*')) {
+    const texts = [...el.childNodes].filter(n => n.nodeType === 3 && n.textContent.trim());
+    if (!texts.length || el.closest('[hidden], svg')) continue;
+    const cs = getComputedStyle(el);
+    if (cs.visibility !== 'visible') continue;
+    let op = 1; for (let a = el; a && a.nodeType === 1; a = a.parentElement) op *= parseFloat(getComputedStyle(a).opacity);
+    const say = name(el) + ' "' + el.textContent.trim().slice(0, 24) + '"';
+    let laid = false;
+    for (const t of texts) { const g = document.createRange(); g.selectNodeContents(t);
+      for (const q of g.getClientRects()) { if (!q.width || !q.height) continue; laid = true;
+        for (let a = el.parentElement; a && op >= 0.01 && a !== R.parentElement; a = a.parentElement) {
+          if (getComputedStyle(a).overflowX === 'visible') continue;
+          const b = a.getBoundingClientRect();
+          if (q.left < b.left - 0.5 || q.right > b.right + 0.5) { cut.push(say + ' past the side of ' + name(a)); break; }
+        } } }
+    if (!laid) continue;
+    words.push({ name: name(el), text: el.textContent.trim().slice(0, 24), px: parseFloat(cs.fontSize) });
+    if (op >= 0.01 && cs.overflowX !== 'visible' && el.scrollWidth > el.clientWidth + 1)
+      cut.push(say + ' holds ' + el.scrollWidth + 'px in ' + el.clientWidth);
+    // its lines, its own words' and those of the inline words inside it
+    const lines = [], tw = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    for (let n = tw.nextNode(); n; n = tw.nextNode()) {
+      if (n.parentElement !== el && getComputedStyle(n.parentElement).display !== 'inline') continue;
+      const g = document.createRange(); g.selectNodeContents(n);
+      for (const q of g.getClientRects()) { if (!q.width || !q.height) continue; const mid = (q.top + q.bottom) / 2;
+        const L = lines.find(l => Math.abs(l.mid - mid) < q.height / 2);
+        if (L) { L.l = Math.min(L.l, q.left); L.r = Math.max(L.r, q.right); } else lines.push({ mid, l: q.left, r: q.right }); } }
+    lines.sort((a, b) => a.mid - b.mid);
+    if (op >= 0.01 && lines.length >= 2) { const z = lines[lines.length - 1], y = lines[lines.length - 2];
+      if (z.r - z.l < (y.r - y.l) / 3) alone.push(say + ' ends on ' + Math.round(z.r - z.l) + 'px under ' + Math.round(y.r - y.l)); }
+  }
+  const T = e => { const g = document.createRange(); g.selectNodeContents(e); return g.getBoundingClientRect(); };
+  const knobs = [...R.querySelectorAll('.shape-knob')].filter(k => k.getClientRects().length).map(k => {
+    const l = k.querySelector('label'), i = k.querySelector('input'), o = k.querySelector('output');
+    const ib = i.getBoundingClientRect(), kb = k.getBoundingClientRect();
+    return { label: l.textContent.trim(), ends: T(l).right, slider: [ib.left, ib.right], out: o.textContent.trim(),
+             outIn: T(o).left >= ib.right - 0.5 && T(o).right <= kb.right + 0.5 }; });
+  return { words, cut: [...new Set(cut)], alone: [...new Set(alone)], knobs };
 }"""
 
 
@@ -328,12 +396,17 @@ def surfaces(name, ids, q, canvas, btn):
 
     # The shape picker: a card the dock opens above the Shape tool, on the
     # menu's paper like the drawers (its corner was 14, a drawer's is 16).
+    # With the polygon picked, so its two knobs, Sides and Rounding, are read
+    # too: they show only for a shape that has them, and opened on another
+    # shape the census never saw the capitals they were set in.
     def shapes():
         if name == "Pad":
             q.evaluate("() => document.getElementById('shapeToolBtn').click()")
         else:
             q.evaluate("() => shelfSetTool('shape')")
         q.wait_for_selector("#shapePop:not([hidden])", timeout=3000); q.wait_for_timeout(500)
+        q.click("#shapeSeg [data-shape=poly]")
+        q.wait_for_selector("#shapeSidesRow:not([hidden])", timeout=3000); q.wait_for_timeout(300)
 
     # THE DOCK'S DRAWERS AS THEY ARE USED (after v324, the drawers mock): the
     # draw drawer unfolded, Photo with a picture in it, Music with a song, with
@@ -345,6 +418,11 @@ def surfaces(name, ids, q, canvas, btn):
         def f():
             browsing.pad_drawer(q, "draw"); q.wait_for_timeout(500)
             q.click(f".dp-tile[data-dp='{tile}']"); q.wait_for_timeout(900)
+            # Recent, under the colours, shows once colours have been used;
+            # shown here as A11Y 20 shows it, so its word is read too.
+            if tile == "brush":
+                q.evaluate("() => { const r = document.getElementById('recentRow'); if (r) r.hidden = false; }")
+                q.wait_for_timeout(200)
         return f
 
     def photo():
@@ -407,6 +485,7 @@ def surfaces(name, ids, q, canvas, btn):
 
 
 census = {}
+typeset = {}   # (editor, scheme, device): every drawer's words, cuts and knobs
 with sync_playwright() as p:
     b = p.chromium.launch()
     for name, route, btn, canvas, ids in EDITORS:
@@ -458,8 +537,45 @@ with sync_playwright() as p:
                               bool(words) and not _s7, "; ".join(_s7[:6]) + (f" (+{len(_s7) - 6} more)" if len(_s7) > 6 else ""))
                     if dev == "phone":
                         census[(name, scheme, label)] = q.evaluate(CENSUS, root)
+                    if label in DRAWERS:
+                        tp = q.evaluate(TYPE, root)
+                        agg = typeset.setdefault((name, scheme, dev), {"read": 0, "words": [], "cut": [], "alone": [], "knobs": []})
+                        agg["read"] += 1
+                        agg["words"] += [dict(w, where=label) for w in tp["words"]]
+                        agg["cut"] += [f"{label}: {c}" for c in tp["cut"]]
+                        agg["alone"] += [f"{label}: {c}" for c in tp["alone"]]
+                        agg["knobs"] += tp["knobs"]
                 c.close()
     b.close()
+
+# THE DRAWERS' TYPE (the owner, of the type mock's B: "all yes"): every word
+# in a dock drawer, Tune and the shape picker a size nearer the menu's 16 over
+# 14, the smallest 12 where it was 11, in whole pixels; nothing a size up is
+# cut off at a side, on a phone or a desk (the name over the timeline and the
+# line under a song's name wrap now), and what wraps is balanced, so no last
+# line is a word left alone; and the shape picker's labels end
+# before their sliders, which start and end together, with the reading inside
+# the row.
+print("\nTHE DRAWERS' TYPE")
+for (name, scheme, dev), agg in sorted(typeset.items()):
+    where = f"{name}, {scheme}, {dev}"
+    off = sorted({f'{w["where"]}: {w["name"]} "{w["text"]}" {w["px"]:g}px' for w in agg["words"]
+                  if not (12 <= w["px"] <= 16 and w["px"] == round(w["px"]))})
+    check(f"{where}: every word in the dock's drawers, Tune and the shape picker is 12 to 16px, in whole pixels "
+          f"({len(agg['words'])} read in {agg['read']})",
+          len(agg["words"]) >= (1 if ONLY else 150) and not off, "; ".join(off[:8]) + (f" (+{len(off) - 8} more)" if len(off) > 8 else ""))
+    check(f"{where}: and none of them is cut off at a side ({agg['read']} read)",
+          agg["read"] >= (1 if ONLY else len(DRAWERS)) and not agg["cut"], "; ".join(agg["cut"][:6]))
+    check(f"{where}: and where they wrap, no last line is a word left alone (a third of the line above, or more)",
+          agg["read"] >= (1 if ONLY else len(DRAWERS)) and not agg["alone"], "; ".join(agg["alone"][:6]))
+    if not ONLY or "The shape picker" in ONLY:
+        kn = agg["knobs"]
+        check(f"{where}: the shape picker's Sides and Rounding end before their sliders, the sliders start and end together, "
+              f"and each reading is inside its row",
+              [k["label"] for k in kn] == ["Sides", "Rounding"] and all(k["ends"] <= k["slider"][0] + 0.5 and k["outIn"] for k in kn)
+              and abs(kn[0]["slider"][0] - kn[1]["slider"][0]) <= 0.5 and abs(kn[0]["slider"][1] - kn[1]["slider"][1]) <= 0.5,
+              "; ".join(f'{k["label"]} ends {k["ends"]:.1f}, slider {k["slider"][0]:.1f}-{k["slider"][1]:.1f}, '
+                        f'"{k["out"]}" inside {k["outIn"]}' for k in kn) or "no knobs read")
 
 # THE DRAWER'S EDGE SHOWS (owner, after v324: "I can't really see the edges
 # of the drawer"). The page's pixel just outside a drawer's left edge, against
@@ -493,10 +609,6 @@ with sync_playwright() as p:
 # wear the same sheet and the same cards (one product, two editors: any
 # difference is drift), and every sheet the menu opens is the menu's paper.
 print("\nCONSISTENCY")
-DRAWERS = ("Tune", "The shape picker", "The draw drawer", "The draw drawer, Size", "The draw drawer, Feel", "The draw drawer, Eraser",
-           "Photo, with a picture", "Music", "Music, More open")
-PAPER = ("the menu", "New", "Settings", "Your drafts", "Export", "Report a problem", "Post",
-         "Ask", "Ask, its answers", "Ask, an answer", "The little book")
 for scheme in ("light", "dark"):
     labels = sorted({k[2] for k in census if k[1] == scheme})
     for label in labels:
@@ -554,7 +666,8 @@ for scheme in ("light", "dark"):
               bool(rule) and rule != "none" and len(tunes) == 2 and set(tunes.values()) == {rule},
               f"the menu's rule {rule}; " + "; ".join(f"{n}: {v}" for n, v in sorted(tunes.items())))
     # ONE SECTION NAME. Tune's name is a section's name in a drawer, set as the
-    # music drawer's are (13px, 600, the sheet's ink), not in small capitals.
+    # music drawer's are (14px since the drawers' type B, 600, the sheet's
+    # ink), not in small capitals.
     sect = {(n, l, sel): census[(n, sc, l)]["labels"][sel] for (n, sc, l) in census
             for sel in (".tune-title", ".mt-sect")
             if sc == scheme and census[(n, sc, l)] and sel in census[(n, sc, l)].get("labels", {})}

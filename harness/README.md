@@ -642,7 +642,12 @@ stays a sleep.
   and Flip, every sheet the menu opens one paper, and the drawers wear the
   menu's look: each control a white card with the tiles' lilac edge (Post's
   fields too), Tune's rows parted by the menu's rule, one style for a
-  section's name and none in capitals, one corner per kind.
+  section's name and none in capitals, one corner per kind. And the drawers'
+  type (B): every word in a dock drawer, Tune and the shape picker 12 to 16px
+  in whole pixels, none cut off at a side, no wrapped line ending on a word
+  left alone (the drawers' lines are balanced), and the shape picker's Sides and
+  Rounding ending before their sliders, which start and end together (the
+  picker is read with the polygon picked, so its knobs show).
   `CONTRAST_ONLY="Export|Post"` reads only those.
 - `verify_menu.py` — the ⋯ menu, one for both editors (_skribl_menu.html,
   lib/menupages.js): on a phone and a desk, light and dark, it fits without

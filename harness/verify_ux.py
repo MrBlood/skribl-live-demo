@@ -1583,7 +1583,22 @@ with _sp204() as _p:
     # overflow is not visible, with a minimum clearance so "not yet clipped by
     # 4px" is caught before iOS font metrics eat it. Real vertical scroll is
     # fine (the page scrolls); the horizontal axis and clipping are not.
-    _AUDIT = """() => { const vw = document.documentElement.clientWidth, vh = document.documentElement.clientHeight;
+    # MORE'S FIRST CONTROL WINS OVER THE DOCK (lib/musicdrawer.js, opening
+    # More): on a phone too short for both, the page scrolls the dock under the
+    # pinned header so that More's first control is on the screen, as it
+    # already did on a 664px phone (verify_sheetswipe). With the drawers' words
+    # a size up (B) a 375x844 phone is one, so with More open ({more: true}) the
+    # dock's controls under the header are tucked, not overlapping -- but only
+    # if the dock kept below the header would have left that control off the
+    # screen; scrolled under for any other reason, they still overlap.
+    _AUDIT = """(o) => { const vw = document.documentElement.clientWidth, vh = document.documentElement.clientHeight;
+        let tucked = new Set();
+        if (o && o.more) {
+          const det = window.SkriblDrawerDetent, top = det && det.stuckBottom ? det.stuckBottom() : 0;
+          const dock = document.getElementById('toolBar') || document.querySelector('.flip-tools');
+          const first = document.querySelector('#fineTuneBody button, #fineTuneBody input');
+          if (dock && first) { const short = top + 4 - dock.getBoundingClientRect().top;
+            if (short > 0 && first.getBoundingClientRect().bottom + short > vh - 12) tucked = new Set(dock.querySelectorAll('*')); } }
         const CLEAR = 6;   // px a control must keep from any clipping ancestor's edge
         const els = [...document.querySelectorAll('button, a[href], input[type=range], [role=switch], .color-dot, .brand')]
           .filter(e => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0 && getComputedStyle(e).visibility !== 'hidden'; });
@@ -1603,6 +1618,7 @@ with _sp204() as _p:
           for (let j = i + 1; j < rects.length; j++) {
             if (isGhost(j) || isToast(j)) continue;
             if (els[i].contains(els[j]) || els[j].contains(els[i])) continue;
+            if (tucked.has(els[i]) || tucked.has(els[j])) continue;
             const a = rects[i].r, b = rects[j].r;
             const ox = Math.min(a.right, b.right) - Math.max(a.left, b.left);
             const oy = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top);
@@ -1668,7 +1684,7 @@ with _sp204() as _p:
             ux_open(_f, openers[3]); _f.wait_for_timeout(300)
             _f.set_input_files("#musicInput", {"name": "t.wav", "mimeType": "audio/wav", "buffer": _AUD}); _f.wait_for_timeout(1400)
             _f.evaluate("() => { const t = document.getElementById('fineTuneToggle'); if (t && t.getAttribute('aria-expanded') !== 'true') t.click(); }"); _f.wait_for_timeout(600)
-            _r = _f.evaluate(_AUDIT)
+            _r = _f.evaluate(_AUDIT, {"more": True})
             check(f"PHONE {nm}@{pw}: ...with music loaded + fine-tune open", _AUDIT_OK(_r), str(_r))
             _f.close()
     # The header brand vs the control cluster, both states, three widths.

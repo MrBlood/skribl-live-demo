@@ -163,15 +163,26 @@ JOINT = """([t, p]) => { t = document.querySelector(t); p = document.querySelect
   return { a: [a.left, a.top, a.right, a.bottom], z: [z.left, z.top, z.right, z.bottom], card: getComputedStyle(p).backgroundColor }; }"""
 
 
+# THE JOINT HOLDS STILL FOR ITS PHOTOGRAPH. A drawer fitted under the header
+# (lib/drawerdetent.js) can still be settling as a tile opens: with the
+# drawers' words a size up Flip's Feel tile is fitted on a phone, and beside
+# other suites its joint moved 26px between the read and the photograph, so
+# the rows taken were the tile's words, not the joint (a step of 161). Read,
+# photograph, read again; the photograph counts only when the two reads agree.
 def seam(q, tsel, psel, dpr):
     import io
     import re
     from PIL import Image
-    j = q.evaluate(JOINT, [tsel, psel])
-    a, z = j["a"], j["z"]
+    for _ in range(8):
+        j = q.evaluate(JOINT, [tsel, psel])
+        a, z = j["a"], j["z"]
+        x0, y0 = min(a[0], z[0]) - 2, a[3] - 6
+        im = Image.open(io.BytesIO(q.screenshot(clip={"x": x0, "y": y0, "width": max(a[2], z[2]) + 2 - x0, "height": 14}))).convert("RGB")
+        k = q.evaluate(JOINT, [tsel, psel])
+        if all(abs(u - v) <= 0.5 for u, v in zip(j["a"] + j["z"], k["a"] + k["z"])):
+            break
+        q.wait_for_timeout(250)
     card = [int(v) for v in re.findall(r"\d+", j["card"])[:3]]
-    x0, y0 = min(a[0], z[0]) - 2, a[3] - 6
-    im = Image.open(io.BytesIO(q.screenshot(clip={"x": x0, "y": y0, "width": max(a[2], z[2]) + 2 - x0, "height": 14}))).convert("RGB")
     w, h = im.size
 
     def step(x, y):

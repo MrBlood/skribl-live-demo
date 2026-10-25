@@ -23237,3 +23237,90 @@ unchanged: all green.
 Pad and Flip: shared. One module and one drawer; of each editor's own code,
 only the Pad's toast hook (the Pad picks before its song is decoded, and the
 drawer starts the ears once it is).
+
+## After v329 -- The drawers' words, a size up (B)
+
+The owner, of the type mock (today, A and B side by side, the music, photo,
+draw and Tune drawers on a phone and a desk): "all yes" to B. Every word in a
+dock drawer (draw, Photo, Music closed and with More open), Tune and the shape
+picker is one size nearer the menu's 16 over 14: a pixel up each, so the
+smallest are 12 where they were 11, and the largest 16.
+
+WHERE. Each drawer's own rule carries its new size, edited in place (42
+rules in styles.css). Two controls are shared with sheets the menu opens, the
+pill track (`.seg button`: Settings' Theme, Export's sizes) and `.panel-btn`
+(the Report sheet's button), so those two take the drawers' size in the
+drawers only, and the menu's sheets keep theirs. Flip's tool tray keeps its
+12px names: they are the dock's own buttons' names, in a tray.
+
+WHAT WRAPS NOW. Two lines no longer fit a phone a size up: the line under a
+song's name ("Loops under the drawing · 1:11") and the name over the timeline
+("Your animation · nothing drawn yet"). Each wraps to a second line rather
+than being cut; a long file name is still cut at its end, as names are. So
+the music drawer is 9px taller on a phone than the mock's heights, which were
+measured with those two lines cut. And every line in a drawer that wraps is
+balanced (`text-wrap: balance` on the drawers, inherited), so none leaves a
+word alone on its last line: "Loops under the drawing ·" over "1:11" is now
+"Loops under the" over "drawing · 1:11", and "When on, moving one end moves
+the" over "other." is "When on, moving one" over "end moves the other.".
+Balance keeps the number of lines, so no drawer grows.
+
+FOUND ON THE WAY. The shape picker's knobs, Sides and Rounding, show only for
+a shape that has them, so the census had never read them: they were the last
+words in a drawer set in capitals (the drawers' census: none), and their
+widths did not hold, since a flex item's least width is its words': ROUNDING
+grew its 58px box to 69 and its slider started 11px after Sides'. They are
+words now, a size up (13, the reading 12), in boxes that hold Rounding and
+Sharp in a face as wide as DejaVu Sans (72 and 44, `min-width: 0`). The same
+knob is Flip's stamp size and the tool tray's reach size, so those rows match
+it. The draw drawer's Recent, shown once colours are used, is 13.
+
+THE INSTRUMENT is verify_contrast's THE DRAWERS' TYPE: every word laid out in
+each drawer, scrolled into view or not, on Pad and Flip, light and dark, a
+phone and a desk, is 12 to 16px in whole pixels; none is cut off at a side (a
+box that clips holding more than it shows, or a line past the side of a box
+that clips); where words wrap, no last line is a word left alone (a third as
+wide as the line above, or more); and the knobs' labels end before their
+sliders, which start and end together, each reading inside its row. The
+shape picker is read with the polygon picked and the draw drawer with Recent
+shown. A11Y 20 reads the three rules that once drew 10px words in a drawer
+(Recent, the knobs, the trim's bubbles) at 13, the rest at 12.
+
+WHAT A SIZE UP COST ON NARROW PHONES, found by the affected suites and taken
+back. Flip's Watching speed row wanted 320px of a 375px phone's 309 and
+pushed Tune into its clip (verify_ux): it wraps by itself now, the speeds
+under the label at its start, where it was a breakpoint at 359px. The grid's
+Coarse / Medium / Fine fell under "Grid" at 390 and on the owner's 402
+(verify_parity, the owner's "A on the grid"): they take 6px sides, Fine held
+at 44px, one line again from 390 up. Tap the beat moved 6px as its words
+changed, centred against three lines (verify_musicbeat): the row holds it at
+its top and the words start a half-line down. "with my animation" ran 8px
+out of its half at 360 (verify_musicbeat): below 380 the pair's small words
+wrap under the verb (from 380 they are one line, as they were). Flip's Feel tile grew tall enough to be fitted under the header,
+and a fitted draw drawer was the well's grey (verify_contrast): it is the
+menu's paper, and verify_drawtiles' seam, which read the joint and then
+photographed it while that fitted drawer was still settling (26px apart
+beside other suites), photographs it only once two reads agree (four loaded
+runs green, and the seam's own bug served still red on every dark row). And
+on a 375x844 phone the music drawer with More open is now
+too tall for the dock and More's first control both, so the drawer's own
+rule (the first control wins: the dock goes under the header, as on a 664px
+phone) applies there too; verify_ux's phone audit learned that rule, and a
+dock under the header for any other reason still overlaps.
+
+CALIBRATION, each break in a copy of styles.css served to the browser, the
+file on disk untouched, red on its own rows on both editors, light and dark,
+phone and desk: a Tune hint at 11, Play's name at 17, More's section names at
+13.5 (the sizes); the line under the song's name cut again, the timeline's
+name cut again (the cuts); the knobs' label box at 58 as it was, the
+reading's at 32 (the knobs); the knobs' capitals back (the census's
+capitals); Recent at 12.5 (the sizes); the balance taken away (the lone
+words: Tune's hints on a desk, the draw drawer's Feel on a phone). The phone
+audit without the drawer's rule went red on the dock at 375 (the battery's
+red), and with it, still red on a dock scrolled under the header by hand with
+More shut (Flip; Pad's page would not scroll there). The same files served
+unchanged: all green.
+
+Pad and Flip: shared. Every rule is styles.css's, which both editors load.
+Flip's stamp drawer is not in the census, and its words stay 11.5px until it
+is brought in (its own question to the owner).
