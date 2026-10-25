@@ -23298,7 +23298,11 @@ its top and the words start a half-line down. "with my animation" ran 8px
 out of its half at 360 (verify_musicbeat): below 380 the pair's small words
 wrap under the verb (from 380 they are one line, as they were). Flip's Feel tile grew tall enough to be fitted under the header,
 and a fitted draw drawer was the well's grey (verify_contrast): it is the
-menu's paper. And on a 375x844 phone the music drawer with More open is now
+menu's paper, and verify_drawtiles' seam, which read the joint and then
+photographed it while that fitted drawer was still settling (26px apart
+beside other suites), photographs it only once two reads agree (four loaded
+runs green, and the seam's own bug served still red on every dark row). And
+on a 375x844 phone the music drawer with More open is now
 too tall for the dock and More's first control both, so the drawer's own
 rule (the first control wins: the dock goes under the header, as on a 664px
 phone) applies there too; verify_ux's phone audit learned that rule, and a
