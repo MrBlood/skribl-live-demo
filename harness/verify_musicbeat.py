@@ -64,7 +64,9 @@ the loop, so I'm not at 7 or 9 when I want 8"; "All yes" to the mock; then
   them, and the beat's dots against the song's lane, on the pixels.
 
 Every row runs on the Pad and on Flip: one drawer (lib/musicdrawer.js), and
-each editor's half is its hooks.
+each editor's half is its hooks. Skribl's ears are off here (lib/musicears.js):
+every row is a person with no beat yet, and the pulse below is a beat the ears
+would hear at once; verify_musicears holds the ears to songs of their own.
 """
 import io
 import math
@@ -329,8 +331,19 @@ def phase_gap(a, b, p=0.5):
     return min(d, p - d)
 
 
+# SKRIBL'S EARS ARE OFF HERE (lib/musicears.js). These rows are what a person
+# does with no beat yet, from the first tap, and the pulse below is a beat the
+# ears would hear at once; verify_musicears holds the ears to songs of their own.
+NO_EARS = "Object.defineProperty(window, 'SkriblEars', { configurable: true, get() { return undefined; }, set(v) {} });"
 with sync_playwright() as pw:
     b = pw.chromium.launch()
+    _new_context = b.new_context
+
+    def _deaf(*a, **k):
+        c = _new_context(*a, **k)
+        c.add_init_script(NO_EARS)
+        return c
+    b.new_context = _deaf
 
     print("\nMUSIC BEAT — the pair that plays")
     for _n, _p in eds("pair"):

@@ -8,8 +8,12 @@ is known exactly, and every row is held to that, never to the ears' own
 numbers. A steady song at 124 a minute (an intro of chords and hi-hats, then
 the drums); a swung one at 88 (32 beats would be over the 20s a loop can be);
 a live band speeding up from 100 to 102, every hit a little early or late;
-slow chords with no drums; and a steady tone, the kind of song the other
-music suites load, which must not be heard as a beat.
+slow chords with no drums; and three that must not be heard as a beat: a
+steady tone and a sweeping one, the kind of song the other music suites load,
+and sounds starting at random, as rain does. Each of the two things that make
+a beat steady has one of them only it can tell (lib/musicears.js): the sweep
+gathers round a beat's circle but has no sound starting on its beats, and the
+rain has sounds on most beats but gathers round no circle.
 
   ON THE BEAT. A new song with a steady beat starts on the bar where the
   drums come in, within 10ms, and is 32 beats long by the song's own beats,
@@ -22,11 +26,11 @@ music suites load, which must not be heard as a beat.
 
   KIND. The loop glides to its pick and the beat marks fade in, read on every
   animation frame; at once under Reduce Motion. With no steady beat (slow
-  chords, a tone) the pick is today's, the first 20 seconds, no beat is set,
-  and the beat line says Skribl didn't hear one. A loop moved, or a beat
-  tapped, before Skribl has listened stays as it is. Back to Skribl's pick
-  goes to the heard pick and beat, and its Undo brings back the loop and the
-  beat that were there.
+  chords, a tone, a sweep, rain) the pick is today's, the first 20 seconds,
+  no beat is set, and the beat line says Skribl didn't hear one. A loop
+  moved, or a beat tapped, before Skribl has listened stays as it is. Back to
+  Skribl's pick goes to the heard pick and beat, and its Undo brings back the
+  loop and the beat that were there.
 
   THE PAD'S LENGTH. With a drawing, whole bars nearest it (the owner's pick):
   a 7-second drawing gets 16 beats.
@@ -116,10 +120,14 @@ SYNTH = r"""(spec) => {
     if (k.kick || k.snare) truth.drums.push(at(b0));
   }
   if (spec.tone) { for (let i = 0; i < out.length; i++) out[i] = 0.37 * Math.sin(2 * Math.PI * 220 * i / SR); }
+  if (spec.sweep) { for (let i = 0; i < out.length; i++) out[i] = 0.27 * Math.sin(2 * Math.PI * (220 + 30 * i / SR) * i / SR); }
+  if (spec.scatter) for (let t = 0.2; t < out.length / SR - 0.3; t += -Math.log(1 - r()) / spec.scatter)
+    add(t, (x) => (r() * 2 - 1) * Math.exp(-x * 60) * 0.6, 0.06);
   if (spec.fade) { const n = Math.round(spec.fade * SR), e = Math.round(beats[N] * SR); for (let i = 0; i < out.length; i++) out[i] *= i < e - n ? 1 : i < e ? (e - i) / n : 0; }
   let pk = 0; for (const v of out) pk = Math.max(pk, Math.abs(v)); pk = pk || 1;
   const pcm = new Int16Array(out.length);
-  for (let i = 0; i < out.length; i++) pcm[i] = Math.round(spec.tone ? out[i] * 32767 : Math.tanh(out[i] / pk * 1.2) * 0.85 * 32767);
+  const plain = spec.tone || spec.sweep;
+  for (let i = 0; i < out.length; i++) pcm[i] = Math.round(plain ? out[i] * 32767 : Math.tanh(out[i] / pk * 1.2) * 0.85 * 32767);
   const head = new DataView(new ArrayBuffer(44)), w = (o, s) => { for (let i = 0; i < 4; i++) head.setUint8(o + i, s.charCodeAt(i)); };
   w(0, 'RIFF'); head.setUint32(4, 36 + pcm.length * 2, true); w(8, 'WAVE'); w(12, 'fmt '); head.setUint32(16, 16, true);
   head.setUint16(20, 1, true); head.setUint16(22, 1, true); head.setUint32(24, SR, true); head.setUint32(28, SR * 2, true);
@@ -149,6 +157,8 @@ SPECS = {
     "chords": {"bpm": 45, "lead": 0.5, "fade": 4, "seed": 41, "sections": [
         {"bars": 6, "chords": ["Cmaj7", "Am", "F", "G", "Em", "F"], "pad": 1.4}]},
     "tone": {"bpm": 60, "lead": 0, "seed": 1, "tone": True, "sections": [{"bars": 3, "chords": ["C"]}]},
+    "sweep": {"bpm": 60, "lead": 0, "seed": 2, "sweep": True, "sections": [{"bars": 3, "chords": ["C"]}]},
+    "scatter": {"bpm": 60, "lead": 0, "seed": 5, "scatter": 12, "sections": [{"bars": 7, "chords": ["C"]}]},
 }
 
 STATE = """() => { const tl = document.getElementById('musicTimeline'), p = tl && tl._painted;
@@ -307,7 +317,8 @@ with sync_playwright() as p:
 
     print("\nNO STEADY BEAT -- the pick is today's and nothing is set")
     for name, path in eds("none"):
-        for song, what in (("chords", "slow chords"), ("tone", "a steady tone")):
+        for song, what in (("chords", "slow chords"), ("tone", "a steady tone"), ("sweep", "a sweeping tone"),
+                           ("scatter", "sounds starting at random, as rain does")):
             c, q, errs = editor(b, path)
             st = add(q, song)
             check(f"{name}: with {what}, the pick is today's, the first 20 seconds, and no beat is set",
@@ -342,17 +353,22 @@ with sync_playwright() as p:
         check(f"{name}: a loop moved before Skribl has listened stays where it was put, and no beat is set",
               abs(st["s"] - before["s"]) < 1e-6 and abs(st["e"] - 12.5) < 1e-6 and st["tempo"] is None,
               f"loop {st['s']:.3f}-{st['e']:.3f}, tempo {st['tempo']}")
-        # and Back to Skribl's pick, then its Undo
-        q.click("#musicBackPick"); waits.settle(q, 600)
+        # and Back to Skribl's pick, then its Undo (each offered only when it applies:
+        # a broken build that moved the loop anyway offers neither, and says so here)
+        offered = q.is_visible("#musicBackPick")
+        if offered:
+            q.click("#musicBackPick"); waits.settle(q, 600)
         back = q.evaluate(STATE)
         check(f"{name}: Back to Skribl's pick goes to the heard pick, with the beat heard",
-              abs(back["s"] - T["drums"][0]) <= 0.010 and (back["tempo"] or {}).get("heard") is True,
-              f"loop {back['s']:.3f}-{back['e']:.3f}, tempo {back['tempo']}")
-        q.click("#musicPickUndo"); waits.settle(q, 600)
+              offered and abs(back["s"] - T["drums"][0]) <= 0.010 and (back["tempo"] or {}).get("heard") is True,
+              f"offered {offered}; loop {back['s']:.3f}-{back['e']:.3f}, tempo {back['tempo']}")
+        offered = q.is_visible("#musicPickUndo")
+        if offered:
+            q.click("#musicPickUndo"); waits.settle(q, 600)
         und = q.evaluate(STATE)
         check(f"{name}: and its Undo brings back the loop and the beat that were there (none)",
-              abs(und["s"] - before["s"]) < 1e-6 and abs(und["e"] - 12.5) < 1e-6 and und["tempo"] is None,
-              f"loop {und['s']:.3f}-{und['e']:.3f}, tempo {und['tempo']}")
+              offered and abs(und["s"] - before["s"]) < 1e-6 and abs(und["e"] - 12.5) < 1e-6 and und["tempo"] is None,
+              f"offered {offered}; loop {und['s']:.3f}-{und['e']:.3f}, tempo {und['tempo']}")
         c.close()
         # a beat tapped
         c, q, errs = editor(b, path)
@@ -372,9 +388,11 @@ with sync_playwright() as p:
         c, q, errs = editor(b, path, init=COUNT_INIT)
         st = add(q, "steady")
         q.click("#fineTuneToggle"); waits.settle(q, 500)
-        q.click("#musicSnap"); waits.settle(q, 300)
+        if q.is_visible("#musicSnap"):
+            q.click("#musicSnap"); waits.settle(q, 300)
         off = q.evaluate(STATE)
-        q.click("#musicSnap"); waits.settle(q, 300)
+        if q.is_visible("#musicSnap"):
+            q.click("#musicSnap"); waits.settle(q, 300)
         on = q.evaluate(STATE)
         check(f"{name}: Snap to the beat's switch keeps the beat heard, off and on",
               (off["tempo"] or {}).get("heard") is True and (off["tempo"] or {}).get("snap") is False

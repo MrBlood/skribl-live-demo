@@ -779,6 +779,7 @@ rather than a shared rule.
 | `modalfocus.js` | Pad+Flip+library+gallery | Focus for surfaces that declare aria-modal="true". |
 | `mp4export.js` | Pad+Flip | MP4 export through WebCodecs + the vendored mp4-muxer: one encoder pipeline for both editors (SK312-003, v315). |
 | `musicdrawer.js` | Pad+Flip | THE MUSIC DRAWER'S CONTROLS, one copy for the Pad and for Flip. |
+| `musicears.js` | Pad+Flip | SKRIBL'S EARS: where a song's beat falls, which beat starts a bar, and which stretch of whole bars comes round most smoothly. |
 | `musicrestart.js` | Pad+Flip | THE RESTART VIEW: the loop's end beside its start, in More under The restart, to line the beats up across the join by eye and pull a smooth restart's blend longer or shorter. |
 | `musictimeline.js` | Pad+Flip | THE TIMELINE: the music drawer's one view of the loop, on the Pad and on Flip, the drawing's lane above the song, the loop's two ends as handles, and the whole song as one thin line under them. |
 | `nametab.js` | Pad+Flip+library | The skribl NAME drawer — a title for the drawing, shared by Pad and Flip. |

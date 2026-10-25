@@ -47,6 +47,9 @@ if (window.SkriblMusicDrawer) padDrawer = window.SkriblMusicDrawer.wire({
   drawingSeconds: () => strokes.length ? getPlaybackDuration() / 1000 : 0,
   // A new song's loop is as long as the drawing already there, as it was.
   fitsByDefault: true,
+  // Skribl has listened and the loop it started on is as long as the drawing
+  // (a song with no steady beat): said once it is true, not before.
+  fitted: () => showToast('Loop set to your drawing length', document.getElementById('musicUploadBtn')),
   playButton: () => playBtn,
   audio: () => audioEl,
   buffer: () => currentAudioBuffer,

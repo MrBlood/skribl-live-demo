@@ -29,22 +29,26 @@
  * NO STEADY BEAT, NO BEAT. A pad, a voice, a steady tone or a sweep has none,
  * and then Skribl says so and picks as it did before it had ears. Two things
  * must both hold: the flux gathers round the beat's circle (`sure`, its peak
- * against its mean: songs with drums measured 5.8 to 15.9, a click track 22
- * to 31, slow chords 2.1, against 3.5), and most beats in the played part
+ * against its mean: songs with drums measured 5.7 to 15.9, click tracks 23
+ * to 32, slow chords about 2, against 3.5), and most beats in the played part
  * have a sound starting on them (`hits`): a steady tone's one start, or a
  * sweep's even drift, gathers round any circle and lands on no beats.
  *
  * THE PICK. Of 4, 8, 16 and 32 beats (the owner: "we only ever want
  * 4,8,16,..."), the count nearest the length wanted that fits; starting on a
- * bar, in played music (nothing quiet: not an intro, not a fade); where the
- * song after the loop's end would go on as it goes on after its start, or
- * came to its start as it comes to the end (the same chord, the same things
- * playing); of joins as good, the earliest (the owner's pick: usually where
- * the beat comes in). A band that speeds up has a beat of its own in each
- * stretch, so each stretch is heard again on its own. Then the start lands
- * on its own sound, and the loop's length is its end laid over its start, to
- * the half millisecond, so the restart lands where the next bar would; the
- * beat given back is that length's own.
+ * bar; where the song after the loop's end would go on as it goes on after
+ * its start, or came to its start as it comes to the end (the same chord,
+ * the same things playing, as loud); of joins as good, the earliest (the
+ * owner's pick: usually where the beat comes in). An intro or a fade joins
+ * badly with the music either side of it, so the join keeps them out: a
+ * rule against quiet stretches as well was tried, never changed a test
+ * song's pick, and would have skipped a soft verse; it went. A band that speeds up has a beat of its own in each
+ * stretch, so each stretch is heard again on its own. Then the loop's length
+ * is its end laid over its start, to the half millisecond, so the restart
+ * lands where the next bar would; the beat given back is that length's own.
+ * (Moving the start onto its own sound as well was tried, and measured: 3ms
+ * better on one test song, 4ms worse on another, under a smooth restart's
+ * 250ms either way. It went.)
  *
  * Measured against songs whose every beat is known (verify_musicears): the
  * start within a few milliseconds of the bar, the length within a few of
@@ -215,19 +219,19 @@
   function dot(a, b) { var s = 0; for (var i = 0; i < a.length; i++) s += a[i] * b[i]; return s; }
 
   // Per beat from t0 to t1 on a grid { period, phase }: what plays (bands,
-  // against the song's own), which chord, how loud, and the kick at it.
+  // against the song's own), which chord, and the kick at it.
   function beatsOn(H, g, t0, t1) {
     var F = H.F, hop = H.hop, p = g.period, out = [], k, n;
     var t = g.phase + Math.ceil((t0 - g.phase) / p - 1e-9) * p;
     for (; t + p <= t1 + 1e-6; t += p) {
       var a = Math.max(0, Math.round(t / hop)), b = Math.min(F.n, Math.round((t + p) / hop));
-      var bands = new Float64Array(12), ch = new Float64Array(12), r = 0;
-      for (n = a; n < b; n++) { r += F.rms[n]; for (k = 0; k < 12; k++) { bands[k] += F.bands[n * 12 + k]; ch[k] += F.chroma[n * 12 + k]; } }
+      var bands = new Float64Array(12), ch = new Float64Array(12);
+      for (n = a; n < b; n++) for (k = 0; k < 12; k++) { bands[k] += F.bands[n * 12 + k]; ch[k] += F.chroma[n * 12 + k]; }
       var cnt = Math.max(1, b - a);
       for (k = 0; k < 12; k++) bands[k] = (bands[k] / cnt - H.mu[k]) / H.sd[k];
       var kick = 0;
       for (n = Math.max(0, a - 2); n <= Math.min(F.n - 1, a + 2); n++) kick = Math.max(kick, F.low[n]);
-      out.push({ t: t, z: bands, chroma: unit(ch), rms: r / cnt, kick: kick });
+      out.push({ t: t, z: bands, chroma: unit(ch), kick: kick });
     }
     return out;
   }
@@ -279,11 +283,6 @@
               loud: loud[Math.floor(loud.length * 0.9)] || 0 };
     var hb = hitsOf(H);
     H.hits = hb.hits; H.beatsPlayed = hb.beats;
-    // how loud a played beat is: the song's own beats, three in four as loud
-    // as this or quieter (a click track is quiet between its clicks, every
-    // beat alike, so a single step is the wrong thing to compare a beat with)
-    var per = beatsOn(H, H, 0, H.duration).map(function (b) { return b.rms; }).sort(function (a, b) { return a - b; });
-    H.beatLoud = per[Math.floor(per.length * 0.75)] || 0;
     return H;
   }
 
@@ -340,17 +339,6 @@
     }
     return sum;
   }
-  // Where the beat at about `t` is heard to start: the onsets' peak within
-  // 40ms, or `t` when nothing stands out there.
-  function onsetNear(H, t) {
-    var o = H.o, hop = H.hop, c = (t + H.lag) / hop, a = Math.max(1, Math.floor(c - 0.04 / hop)), b = Math.min(o.length - 2, Math.ceil(c + 0.04 / hop));
-    var at = -1, top = 2;
-    for (var n = a; n <= b; n++) if (o[n] > top && o[n] >= o[n - 1] && o[n] >= o[n + 1]) { top = o[n]; at = n; }
-    if (at < 0) return t;
-    var l = o[at - 1], r = o[at + 1], den = l - 2 * top + r, off = den < 0 ? 0.5 * (l - r) / den : 0;
-    return (at + off) * hop - H.lag;
-  }
-
   function pick(H, o) {
     if (!steady(H)) return null;
     var fade = Math.max(0, o.fadeMs || 0) / 1000, all = [], k = 0, d = Math.min(o.duration, H.duration);
@@ -371,9 +359,6 @@
         if ((i - bar) % 4 !== 0) continue;
         var s = B[i].t;
         if (s + k * p + fade > d - 0.05 || i + k + 2 > B.length) break;
-        var quiet = false;
-        for (var j = i; j < i + k; j++) if (B[j].rms < 0.35 * H.beatLoud) { quiet = true; break; }
-        if (quiet) continue;
         var post = alike(B, i, i + k, 2), pre = i >= 2 ? alike(B, i - 2, i + k - 2, 2) : null;
         all.push({ start: s, beats: k, join: Math.max(post == null ? 0 : post, pre == null ? 0 : pre), bpm: g.bpm });
       }
@@ -381,7 +366,7 @@
     if (!all.length) return null;
     var J = Math.max.apply(null, all.map(function (c) { return c.join; }));
     var best = all.filter(function (c) { return c.join >= J - TIE; }).sort(function (a, b) { return a.start - b.start; })[0];
-    var start = Math.max(0, onsetNear(H, best.start));
+    var start = Math.max(0, best.start);
     var L0 = 60 / best.bpm * best.beats, L = L0, top = -1;
     for (var dL = -0.03; dL <= 0.03 + 1e-9; dL += 0.0005) { var v = overlay(H, start, L0 + dL); if (v > top) { top = v; L = L0 + dL; } }
     var end = start + L + fade;

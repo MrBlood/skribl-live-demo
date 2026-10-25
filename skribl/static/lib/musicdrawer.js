@@ -39,13 +39,29 @@
  * Drawing Time is Fit my drawing, Test Seam is Hear the restart, Preview Loop
  * is Hear the loop, Crossfade is Smooth restart's length.
  *
- * SKRIBL'S PICK is what a new song starts as: the first 20 seconds (the whole
- * song, when it is shorter), with a smooth restart. Where the editor asks for
- * it (`fitsByDefault`, the Pad), a drawing already there sets the length
- * instead, as the Pad's add always did. Not on Flip: an animation goes round
- * in a second or two, and a loop that short is a stutter -- Fit my animation
- * is one tap. The pick line says which it is, and once the loop is changed,
- * offers Back to Skribl's pick with an Undo for eight seconds.
+ * SKRIBL'S PICK is what a new song starts as. Skribl listens first
+ * (lib/musicears.js; step 3 of the music plan, "the part that loops best, on
+ * the beat"; the mock and the owner: "all yes"). With a steady beat the loop
+ * starts on a bar, in played music, where it comes round smoothly (of joins
+ * as good, the first: usually where the beat comes in), and is whole bars,
+ * 4, 8, 16 or 32 beats: where the editor asks for the drawing's length
+ * (`fitsByDefault`, the Pad), the count nearest the drawing (the owner's
+ * pick; Fit my drawing makes it exact), else the most that fit the 20s. The
+ * beat heard is the song's beat at once, marked heard, so the beat count,
+ * Snap to the beat and "a bar" use it and the beat line says "heard by
+ * Skribl"; a tap makes it the taps'. Until it has listened (it reads a few
+ * milliseconds at a time, and the beat line says "Listening for the beat…"),
+ * and for a song with no steady beat, the pick is what it was before ears:
+ * the first 20 seconds (the whole song, when it is shorter), or on the Pad
+ * a drawing already there sets the length, with a smooth restart. Heard, the
+ * loop glides to the new pick, the beat's marks fading in, only if nothing
+ * was changed meanwhile: a loop moved or a beat tapped is left as it is.
+ * A song a draft brings back keeps its loop and is not listened to. Not on
+ * Flip for the drawing's length: an animation goes round in a second or two,
+ * and a loop that short is a stutter -- Fit my animation is one tap. The
+ * pick line says which it is, and once the loop is changed, offers Back to
+ * Skribl's pick (the heard one, with its beat) with an Undo for eight
+ * seconds, which brings back the loop and the beat that were there.
  *
  * THE ONE LINE says how long the loop is, in beats once there is a tempo,
  * against the drawing, and then Skribl's pick or the way back to it. It was
@@ -108,6 +124,8 @@
  *   changed()           the editor's autosave
  *   drawingSeconds()    the drawing's length, for Fit my drawing
  *   fitsByDefault       Skribl's pick is as long as the drawing (the Pad)
+ *   fitted()            optional: Skribl has listened and the loop is as
+ *                       long as the drawing (the Pad's toast says so)
  *   playButton()        the editor's Play, which Play with my drawing presses
  *   audio()             the track's <audio> element, or null
  *   buffer()            the decoded AudioBuffer, or null
@@ -120,9 +138,10 @@
  *   musicOn()           Play's music, joining the drawing where it is
  *   musicOff()          Play's music, stopped
  *   syncRow()           redraw the file row and its switch
- *   tempo()             the song's tapped tempo { bpm, phase }, with
- *                       snap: false when Snap to the beat is off, or null;
- *                       setTempo(t), kept with the song in the drafts
+ *   tempo()             the song's tempo { bpm, phase }, with snap: false
+ *                       when Snap to the beat is off and heard: true when
+ *                       Skribl heard it, or null; setTempo(t), kept with
+ *                       the song in the drafts
  *   dock()              the bar right above the drawer, which More's nudge
  *                       leaves under the pinned header while More's first
  *                       control still shows (lib/drawerdetent.js)
@@ -662,6 +681,8 @@
         setFade(p.ms);
         glideTo(p.start, p.end);
       }
+      // what applyPick held back: the loop is as long as the drawing
+      if (p && p.fits && h.fitted) h.fitted();
       sync();
     }
     var undo = null, undoT = null;
