@@ -529,7 +529,8 @@ stays a sleep.
   whole at 320, 360 and 402px, side by side from 360. Taps run on the page's
   own clock, each woken early to land on its mark; a try whose taps strayed
   more than 4ms (a busy machine) is tapped again on a fresh page, three tries
-  at most, and the row says which try it was.
+  at most, and the row says which try it was. Skribl's ears are off here
+  (every row is a person with no beat yet; verify_musicears holds the ears).
 - `verify_musictimeline.py` — step 2 of the music plan (the owner: "Yes on
   all"), on the Pad and on Flip: the timeline (lib/musictimeline.js) is the
   drawer's one view, the drawing's lane over the song, two handles and the
@@ -580,6 +581,26 @@ stays a sleep.
   with it), with a smooth restart or switched off nothing moves, switched
   while the loop plays it plays on from the new join, the posted clip is the
   cut loop sample for sample, and the player plays it as it is.
+- `verify_musicears.py` — step 3 of the music plan, Skribl's ears
+  (lib/musicears.js; the owner: "all yes"), on the Pad and on Flip, on a
+  phone, against songs made in the page whose every beat and bar is known: a
+  new song with a steady beat starts on the bar where the drums come in and is
+  32 beats long by the song's own beats, each within 10ms, on the beat heard
+  (to a twentieth of a beat a minute, marked heard), the one line counting it
+  under Skribl's pick and the beat line saying "heard by Skribl" after
+  "Listening for the beat…"; a swung song at 88 gets 16 beats from its
+  groove's first bar, and a band speeding up starts and ends within 15ms of
+  its bars; the loop glides to its pick and the marks fade in, read on every
+  frame (at once under Reduce Motion); slow chords, a steady tone, a sweep and
+  rain get today's pick with no beat, and the line says so (the sweep and the
+  rain each fail one of the two things that make a beat steady, so each guard
+  is shown to bite); the Pad's 7-second drawing gets 16 beats; a loop moved,
+  or a beat tapped, before Skribl has listened stays, Back to Skribl's pick
+  goes to the heard pick and beat and its Undo brings back what was there;
+  the Snap switch keeps the beat heard, and after a reload the loop and the
+  heard beat come back, not listened for again. `MUSICEARS_PART=beat` (glide,
+  none, pad, kind, kept) and `MUSICEARS_ONLY=Pad` run a part. Each row was
+  shown red by its own break, served in place of the real file.
 - `verify_learncard.py` — the card on the button (lib/learncard.js), Pad and
   Flip: holding a button (real touch) opens its card with its example; a
   quick tap stays a tap, a moving finger is no hold, the lift does not press,

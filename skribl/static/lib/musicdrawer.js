@@ -39,13 +39,29 @@
  * Drawing Time is Fit my drawing, Test Seam is Hear the restart, Preview Loop
  * is Hear the loop, Crossfade is Smooth restart's length.
  *
- * SKRIBL'S PICK is what a new song starts as: the first 20 seconds (the whole
- * song, when it is shorter), with a smooth restart. Where the editor asks for
- * it (`fitsByDefault`, the Pad), a drawing already there sets the length
- * instead, as the Pad's add always did. Not on Flip: an animation goes round
- * in a second or two, and a loop that short is a stutter -- Fit my animation
- * is one tap. The pick line says which it is, and once the loop is changed,
- * offers Back to Skribl's pick with an Undo for eight seconds.
+ * SKRIBL'S PICK is what a new song starts as. Skribl listens first
+ * (lib/musicears.js; step 3 of the music plan, "the part that loops best, on
+ * the beat"; the mock and the owner: "all yes"). With a steady beat the loop
+ * starts on a bar, in played music, where it comes round smoothly (of joins
+ * as good, the first: usually where the beat comes in), and is whole bars,
+ * 4, 8, 16 or 32 beats: where the editor asks for the drawing's length
+ * (`fitsByDefault`, the Pad), the count nearest the drawing (the owner's
+ * pick; Fit my drawing makes it exact), else the most that fit the 20s. The
+ * beat heard is the song's beat at once, marked heard, so the beat count,
+ * Snap to the beat and "a bar" use it and the beat line says "heard by
+ * Skribl"; a tap makes it the taps'. Until it has listened (it reads a few
+ * milliseconds at a time, and the beat line says "Listening for the beat…"),
+ * and for a song with no steady beat, the pick is what it was before ears:
+ * the first 20 seconds (the whole song, when it is shorter), or on the Pad
+ * a drawing already there sets the length, with a smooth restart. Heard, the
+ * loop glides to the new pick, the beat's marks fading in, only if nothing
+ * was changed meanwhile: a loop moved or a beat tapped is left as it is.
+ * A song a draft brings back keeps its loop and is not listened to. Not on
+ * Flip for the drawing's length: an animation goes round in a second or two,
+ * and a loop that short is a stutter -- Fit my animation is one tap. The
+ * pick line says which it is, and once the loop is changed, offers Back to
+ * Skribl's pick (the heard one, with its beat) with an Undo for eight
+ * seconds, which brings back the loop and the beat that were there.
  *
  * THE ONE LINE says how long the loop is, in beats once there is a tempo,
  * against the drawing, and then Skribl's pick or the way back to it. It was
@@ -108,6 +124,8 @@
  *   changed()           the editor's autosave
  *   drawingSeconds()    the drawing's length, for Fit my drawing
  *   fitsByDefault       Skribl's pick is as long as the drawing (the Pad)
+ *   fitted()            optional: Skribl has listened and the loop is as
+ *                       long as the drawing (the Pad's toast says so)
  *   playButton()        the editor's Play, which Play with my drawing presses
  *   audio()             the track's <audio> element, or null
  *   buffer()            the decoded AudioBuffer, or null
@@ -120,9 +138,10 @@
  *   musicOn()           Play's music, joining the drawing where it is
  *   musicOff()          Play's music, stopped
  *   syncRow()           redraw the file row and its switch
- *   tempo()             the song's tapped tempo { bpm, phase }, with
- *                       snap: false when Snap to the beat is off, or null;
- *                       setTempo(t), kept with the song in the drafts
+ *   tempo()             the song's tempo { bpm, phase }, with snap: false
+ *                       when Snap to the beat is off and heard: true when
+ *                       Skribl heard it, or null; setTempo(t), kept with
+ *                       the song in the drafts
  *   dock()              the bar right above the drawer, which More's nudge
  *                       leaves under the pinned header while More's first
  *                       control still shows (lib/drawerdetent.js)
@@ -168,11 +187,15 @@
   }
   // A tempo as saved: { bpm, phase } -- beats a minute, and where a beat falls
   // in the song, in seconds -- with snap: false once Snap to the beat is
-  // turned off for it. Anything else is no tempo.
+  // turned off for it, and heard: true when Skribl heard it (lib/musicears.js)
+  // rather than taps. Anything else is no tempo.
   function tempoFrom(t) {
     var bpm = t ? +t.bpm : NaN, ph = t ? +t.phase : NaN;
     if (!(bpm >= 30 && bpm <= 300 && isFinite(ph))) return null;
-    return t.snap === false ? { bpm: bpm, phase: ph, snap: false } : { bpm: bpm, phase: ph };
+    var out = { bpm: bpm, phase: ph };
+    if (t.snap === false) out.snap = false;
+    if (t.heard === true) out.heard = true;
+    return out;
   }
   // "8 beats", "8.8 beats", "1 beat": whole when it is within a twentieth.
   function beatWords(n) {
@@ -575,11 +598,46 @@
 
     /* ---- Skribl's pick, and the way back to it. ---------------------------- */
     function fadeFor(len) { return Math.max(0, Math.min(PICK_FADE_MS, Math.floor(len * 1000 / 4 / 5) * 5)); }
+    // EARS (lib/musicears.js): what Skribl heard in a new song, once. `earsHeard`
+    // is null until it has listened, and false when there is no steady beat.
+    // `pickedNew` is the pick a new song started on, while the loop is still it.
+    var ears = null, earsFor = null, earsHeard = null, earsKey = '', earsPick = null, pickedNew = null;
+    function listenTo(buf) {
+      if (!global.SkriblEars || !buf || buf === earsFor) return;
+      if (ears) ears.cancel();
+      earsFor = buf; earsHeard = null; earsKey = '';
+      ears = global.SkriblEars.listen(buf, function (H) {
+        ears = null;
+        if (earsFor !== buf) return;
+        earsHeard = global.SkriblEars.steady(H) ? H : false;
+        heardIt();
+      });
+      syncTap();
+    }
+    function forgetEars() {
+      if (ears) ears.cancel();
+      ears = null; earsFor = null; earsHeard = null; earsKey = ''; earsPick = null; pickedNew = null;
+    }
+    // Skribl's pick with ears, for the drawing's length as it is: whole bars
+    // nearest it on the Pad (the owner's pick), the longest that fits otherwise.
+    function earsPickFor(secs, d) {
+      if (!earsHeard) return null;
+      var key = secs.toFixed(3) + '|' + d.toFixed(3);
+      if (key !== earsKey) {
+        earsKey = key;
+        earsPick = global.SkriblEars.pick(earsHeard, { duration: d, target: secs > 0 ? secs : T.MAX_LOOP_SECONDS,
+          maxLoop: T.MAX_LOOP_SECONDS, minLoop: T.MIN_LOOP_SECONDS, fadeMs: PICK_FADE_MS });
+      }
+      return earsPick;
+    }
     // `drawing`: the drawing's length when the caller has it (sync, below).
     function pickNow(drawing) {
       var d = h.trim().duration;
       if (!(d > 0)) return null;
       var secs = !h.fitsByDefault ? 0 : drawing != null ? drawing : h.drawingSeconds(), ms, end;
+      var P = earsPickFor(secs, d);
+      if (P) return { start: P.start, end: P.end, ms: PICK_FADE_MS, fits: secs > 0 && near(P.heard, secs),
+                      tempo: { bpm: Math.round(P.bpm * 1000) / 1000, phase: Math.round(P.phase * 10000) / 10000, heard: true } };
       if (secs > 0) { ms = fadeFor(secs); end = T.loopLength(secs + ms / 1000, d); }
       else { end = Math.min(d, T.MAX_LOOP_SECONDS); ms = fadeFor(end); }
       return { start: 0, end: end, ms: ms, fits: secs > 0 && near(heard({ start: 0, end: end }, ms), secs) };
@@ -588,18 +646,44 @@
       var t = h.trim();
       return !!p && near(t.start, p.start) && near(t.end, p.end) && h.crossfade() === p.ms;
     }
-    // On a new song, from each editor's add (never a restore): returns the pick.
-    function applyPick() {
-      var p = pickNow();
-      if (!p || !h.hasTrack()) return null;
+    // A pick, set: the loop, its smooth restart, and with ears the beat heard.
+    function setPick(p) {
       var was = h.crossfade();
       stopGlide();
       h.setTrim(p.start, p.end);
       setFade(p.ms);
+      if (p.tempo && h.setTempo) h.setTempo(p.tempo);
       h.refresh();
       h.changed();
       if (was !== p.ms) rejoin();
-      return p;
+    }
+    // On a new song, from each editor's add (never a restore): today's pick at
+    // once, and Skribl listens. Until it has, nothing says the loop fits
+    // (the Pad's toast): with a beat it becomes whole bars.
+    function applyPick() {
+      forgetEars();
+      var p = pickNow();
+      if (!p || !h.hasTrack()) return null;
+      setPick(p);
+      pickedNew = p;
+      if (!global.SkriblEars) return p;
+      if (h.buffer && h.buffer()) listenTo(h.buffer());
+      return { start: p.start, end: p.end, ms: p.ms, fits: false };
+    }
+    // Heard: the loop glides to the pick with ears, and the beat is the one
+    // heard, if nothing changed meanwhile. A loop moved or a beat tapped, and
+    // the pick is left as it is (Back to Skribl's pick goes to the heard one).
+    function heardIt() {
+      var tp = tempo(), p = pickedNew && isPick(pickedNew) && !(tp && !tp.heard) ? pickNow() : null;
+      if (p && p.tempo) {
+        pickedNew = p;
+        if (h.setTempo) h.setTempo(p.tempo);
+        setFade(p.ms);
+        glideTo(p.start, p.end);
+      }
+      // what applyPick held back: the loop is as long as the drawing
+      if (p && p.fits && h.fitted) h.fitted();
+      sync();
     }
     var undo = null, undoT = null;
     function forgetUndo() { undo = null; clearTimeout(undoT); }
@@ -635,8 +719,10 @@
       if (undoBtn) undoBtn.hidden = mine || !undo;
     }
     if (back) back.addEventListener('click', function () {
-      var t = h.trim(), was = { start: t.start, end: t.end, ms: h.crossfade() };
-      if (!applyPick()) return;
+      var t = h.trim(), was = { start: t.start, end: t.end, ms: h.crossfade(), tempo: h.tempo ? h.tempo() : null };
+      var p = h.hasTrack() ? pickNow() : null;
+      if (!p) return;
+      setPick(p);
       undo = was;
       clearTimeout(undoT);
       undoT = setTimeout(function () { undo = null; syncPick(); }, UNDO_MS);
@@ -650,6 +736,7 @@
       stopGlide();
       h.setTrim(u.start, u.end);
       setFade(u.ms);
+      if (h.setTempo && u.tempo !== (h.tempo ? h.tempo() : null)) h.setTempo(u.tempo);
       h.refresh();
       h.changed();
       if (was !== u.ms) rejoin();
@@ -963,7 +1050,10 @@
       if (!tempoLine) return;
       var html = listening
         ? (taps.length >= 2 && m > 0 ? taps.length + ' taps, about <b>' + Math.round(60 / m) + '</b> a minute' : 'Keep tapping along with the beat.')
-        : tapNote || (tp ? '<b>' + tp.bpm + ' beats a minute</b> · tap again to change it'
+        : tapNote || (tp ? '<b>' + Math.round(tp.bpm) + ' beats a minute</b>'
+            + (tp.heard ? ', heard by Skribl \u00b7 tap to change it' : ' \u00b7 tap again to change it')
+          : ears ? 'Listening for the beat\u2026'
+          : earsHeard === false ? 'Skribl didn\u2019t hear a steady beat. Tap along with the music to count one.'
           : 'Tap along with the music to count its beats.');
       if (tempoLine._html !== html) { tempoLine.innerHTML = html; tempoLine._html = html; }
     }
@@ -997,7 +1087,10 @@
     if (snapSw) snapSw.addEventListener('click', function () {
       var tp = tempo();
       if (!tp || !h.setTempo) return;
-      h.setTempo(tp.snap === false ? { bpm: tp.bpm, phase: tp.phase } : { bpm: tp.bpm, phase: tp.phase, snap: false });
+      var n = { bpm: tp.bpm, phase: tp.phase };
+      if (tp.snap !== false) n.snap = false;
+      if (tp.heard) n.heard = true;
+      h.setTempo(n);
       h.changed();
       sync();
     });
@@ -1116,6 +1209,10 @@
     // it is measured once here, and not at all with no song.
     function sync() {
       var secs = h.hasTrack() ? h.drawingSeconds() : 0;
+      // The Pad picks when the song's length is known, before it is decoded:
+      // the ears start once it is (Flip picks after; a restore never listens).
+      if (!h.hasTrack()) { if (earsFor || pickedNew) forgetEars(); }
+      else if (pickedNew && h.buffer) { var buf = h.buffer(); if (buf && buf !== earsFor) listenTo(buf); }
       // Smooth restart's switch, words and length too: Flip's draft and file
       // opens set the loop's smooth restart and repainted only the rest, so
       // the line said 19.75s under a switch that said Off (the owner's phone).

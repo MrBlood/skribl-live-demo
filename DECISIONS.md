@@ -23153,3 +23153,87 @@ only. The same files served unchanged: all green.
 
 Pad and Flip: shared. One stylesheet for both, and Flip's copy of the switch
 removed.
+
+## After v329 -- Skribl's ears: a new song's loop starts on a bar, whole bars long, on the beat it heard
+
+Step 3 of the music plan, "the part that loops best, on the beat". The owner
+asked why it had not been done ("why havent you done The music plan's step 3
+(looping on the beat) yet?"): each round the owner's newer asks came first,
+and it needed ears, which needed a mock. The mock was the real drawer with the
+ears wired in and songs to hear, each restart today's beside the one with ears
+(today's restarted into the song's opening silence and intro, the drums
+stopping for 2.5 to 4.2 seconds every time round). The owner: "all yes" to
+whole bars nearest the drawing on the Pad, the first place the loop comes
+round smoothly, the beat heard used straight away, and the words.
+
+LIB/MUSICEARS.JS listens to a new song's first two minutes, a few
+milliseconds at a time so the page never stalls (0.4 to 0.8 seconds in all
+for a 70-second song in this box's Chromium; a phone is slower, not tested
+here). A spectral flux and its low part, per step twelve bands and twelve
+pitch classes; the tempo is the flux's strongest repeat between 40 and 240
+leaning to 120, refined to a thousandth of a beat a minute; where the beat
+falls is where the flux gathers round the beat's circle, less the flux's own
+lead on a sound (a fifth of its window and a little more, measured on clicks
+at 8 to 48 kHz, every rate within a millisecond after); a bar is where kicks
+and chord changes gather. A steady beat needs two things: the flux gathering
+round the circle (`sure`: songs with drums 5.7 to 15.9, clicks 23 to 32, slow
+chords about 2, against 3.5) and a sound starting across the spectrum on most
+beats (`hits`, at least half, at least eight: at a beat 100 to 490 of 511
+bins grew at once, a sweep crossing from bin to bin 2 to 9). Each guard alone
+was fooled by a test song the other catches: a steady tone's one start and a
+sweep's even drift gather round any circle (sure 4 to 45) and land on no
+beats; sounds starting at random, as rain does, land on most beats (24 of 31)
+and gather round none (2.3). So every song the other music suites load (steady
+tones, sweeps) is heard as no beat; the one with a beat, verify_musicbeat's
+pulse, now runs with the ears off, since its rows are a person tapping from
+nothing.
+
+THE PICK. Of 4, 8, 16 and 32 beats the count nearest the length wanted (the
+drawing on the Pad, else the most that fit the 20s); starting on a bar; where
+the song after the loop's end goes on as it does after its start, or came to
+its start as it comes to the end; of joins within 0.03 of the best, the
+earliest. Each stretch of the song is heard again on its own (a band speeds
+up), and the loop's length is its end laid over its start to the half
+millisecond. Two parts were built, measured and taken out because no song
+could tell them apart from their absence: moving the start onto its own sound
+(3ms better on one song, 4ms worse on another) and a rule against quiet
+stretches (the join already keeps intros and fades out, and the rule would
+have skipped a soft verse).
+
+THE DRAWER (lib/musicdrawer.js, both editors). A new song starts on today's
+pick at once, and the beat line says "Listening for the beat…". Heard, if
+nothing changed meanwhile, the loop glides to the pick with ears and the beat
+heard is set, marked heard (`heard: true`, kept with the song in the drafts,
+and by Snap to the beat's switch), its marks fading in on the timeline over
+200ms (lib/musictimeline.js; at once under Reduce Motion, and the first
+tapped beat fades in too). A loop moved or a beat tapped meanwhile is left as
+it is. Back to Skribl's pick goes to the heard pick and beat, and its Undo
+brings back the beat that was there as well as the loop. The beat line says
+"124 beats a minute, heard by Skribl · tap to change it", or "Skribl didn't
+hear a steady beat. Tap along with the music to count one."; a tapped beat
+keeps "tap again to change it". A song a draft brings back keeps its loop and
+is not listened to. The Pad's "Loop set to your drawing length" toast waits
+for the ears (a new `fitted` hook): with a beat the loop becomes whole bars,
+which that would not be, and with none it shows once Skribl has listened. The
+help's Skribl's pick, Loop ends, Tap the beat and Snap to the beat say so.
+
+THE INSTRUMENT is verify_musicears: songs made in the page whose every beat
+and bar is known (steady at 124 with an intro, swung at 88, a band speeding
+up from 100 to 102 with every hit up to 8ms off, slow chords, a tone, a sweep,
+rain), every row held to the song's own beats, on the Pad and on Flip.
+
+CALIBRATION, each part broken in a copy served to the browser, the files on
+disk untouched, each red on its own rows on both editors: the bar ignored
+(the swung and band rows; the steady song's first beat is a bar, so it cannot
+tell); the length not fitted (the band row); the circle not asked (the rain's
+row); the hits not asked (the tone's and the sweep's); a hit not needing the
+spectrum (the sweep's); the three sets of words; a moved loop changed anyway;
+a tapped beat replaced; the Undo leaving the beat; the loop jumping; the
+marks appearing at once; the marks fading under Reduce Motion; heard not kept,
+or dropped by the switch (the switch's and the reload's rows); a restored song
+listened to; the Pad's drawing not setting the count. The same files served
+unchanged: all green.
+
+Pad and Flip: shared. One module and one drawer; of each editor's own code,
+only the Pad's toast hook (the Pad picks before its song is decoded, and the
+drawer starts the ears once it is).
