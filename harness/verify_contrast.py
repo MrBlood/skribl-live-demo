@@ -69,7 +69,8 @@ EDITORS = (
 # The dock's drawers, and the sheets the menu opens (CONSISTENCY, and the
 # drawers' type).
 DRAWERS = ("Tune", "The shape picker", "The draw drawer", "The draw drawer, Size", "The draw drawer, Feel", "The draw drawer, Eraser",
-           "Photo, with a picture", "Music", "Music, More open")
+           "Photo, with a picture", "Music", "Music, More open", "The stamp shelf", "The stamp shelf, with stamps")
+FLIP_ONLY = ("The stamp shelf", "The stamp shelf, with stamps")   # the Pad has no stamps
 PAPER = ("the menu", "New", "Settings", "Your drafts", "Export", "Report a problem", "Post",
          "Ask", "Ask, its answers", "Ask, an answer", "The little book")
 
@@ -81,6 +82,14 @@ with wave.open(_wb, "wb") as _w:
     _w.setnchannels(1); _w.setsampwidth(2); _w.setframerate(22050)
     _w.writeframes(b"".join(struct.pack("<h", int(8000 * math.sin(i / 8))) for i in range(22050 * 4)))
 WAV = _wb.getvalue()
+# And three stamps for Flip's stamp shelf, which lives in its own storage
+# (lib/stamps.js), none of them armed, so each cell wears its resting edge.
+STAMPS = """() => { const S = window.SkriblStamps;
+  const run = (pts, c) => pts.map(([x, y], i) => ({ x, y, color: c, size: 7, start: i === 0 }));
+  const one = (pts, c) => S.fromRuns([run(pts, c)], { at: Date.now() });
+  S.store(null, [one([[10,40],[30,10],[50,40],[30,70],[10,40]], '#7c5cff'), one([[0,0],[25,30],[50,0],[75,30],[100,0]], '#ff7a59'),
+                 one([[20,20],[80,20],[80,80],[20,80],[20,20]], '#22303f')]);
+  loadStampShelf(); stampArmed = -1; syncStampPop(); return stampShelf.length; }"""
 
 HIDE_TEXT = """* { color: transparent !important; -webkit-text-fill-color: transparent !important;
   text-shadow: none !important; caret-color: transparent !important; }
@@ -115,11 +124,20 @@ WORDS = r"""(root) => {
   const onFill = (el) => { for (let a = el; a && a.nodeType === 1; a = a.parentElement) {
       const b = getComputedStyle(a); if (b.backgroundImage !== 'none') return false;
       if (rgb(b.backgroundColor)[3] > 0) return b.backgroundColor === purple; } return false; };
+  // WORDS SAID ONLY TO A SCREEN READER are clipped to nothing (a 1px box, or
+  // a clip or clip-path that keeps none of it). Their lines are laid out at
+  // full width all the same, and the box round them found the sentence they
+  // sit in, so they were read as words: the stamp shelf's "the stamp button".
+  const unseen = (el) => { for (let a = el; a && a !== R.parentElement; a = a.parentElement) {
+      const s = getComputedStyle(a), b = a.getBoundingClientRect();
+      if (s.clipPath === 'inset(50%)' || /^rect\(0px,? 0px,? 0px,? 0px\)$/.test(s.clip)
+          || (s.overflow === 'hidden' && b.width <= 1 && b.height <= 1)) return true; }
+    return false; };
   const out = [];
   for (const el of R.querySelectorAll('*')) {
     const texts = [...el.childNodes].filter(n => n.nodeType === 3 && n.textContent.trim());
     if (!texts.length) continue;
-    if (el.closest('[hidden], [aria-hidden="true"], :disabled, [aria-disabled="true"], svg')) continue;
+    if (el.closest('[hidden], [aria-hidden="true"], :disabled, [aria-disabled="true"], svg') || unseen(el)) continue;
     const cs = getComputedStyle(el);
     if (cs.visibility !== 'visible') continue;
     // EACH LINE OF EACH TEXT ITS OWN BOX. One box round all of an element's
@@ -159,6 +177,7 @@ CENSUS = r"""(root) => {
                      '.bk-pic', '.ask-go', '.menu-start', '.export-nameinput', '.post-input', '.bk-back',
                      '.smooth-seg', '.media-tabs', '.photo-fit-group', '.reposition-btn', '.clear-drawer-btn', '.edge-controls',
                      '.dp-tile', '.dp-panel', '.loop-btn.subtle', '.onion-tint:not(.active)', '.post-check-box', '.mt-rv', '.dz-lead',
+                     '.stamp-btn:not([aria-pressed="true"])', '.stamp-del', '.stamp-empty-go',
                      '.tune-row + .tune-row', '.menu-list > .menu-item:not([hidden]) ~ .menu-item:not([hidden])']) {
     const el = [...R.querySelectorAll(sel)].find(e => e.getClientRects().length);
     if (el) cards[sel] = s(el);
@@ -197,10 +216,15 @@ CENSUS = r"""(root) => {
 TYPE = r"""(root) => {
   const R = document.querySelector(root); if (!R) return null;
   const name = (el) => el.id ? '#' + el.id : el.tagName.toLowerCase() + (el.classList.length ? '.' + [...el.classList].slice(0, 2).join('.') : '');
+  const unseen = (el) => { for (let a = el; a && a !== R.parentElement; a = a.parentElement) {   // as WORDS' (a screen reader's words)
+      const s = getComputedStyle(a), b = a.getBoundingClientRect();
+      if (s.clipPath === 'inset(50%)' || /^rect\(0px,? 0px,? 0px,? 0px\)$/.test(s.clip)
+          || (s.overflow === 'hidden' && b.width <= 1 && b.height <= 1)) return true; }
+    return false; };
   const words = [], cut = [], alone = [];
   for (const el of R.querySelectorAll('*')) {
     const texts = [...el.childNodes].filter(n => n.nodeType === 3 && n.textContent.trim());
-    if (!texts.length || el.closest('[hidden], svg')) continue;
+    if (!texts.length || el.closest('[hidden], svg') || unseen(el)) continue;
     const cs = getComputedStyle(el);
     if (cs.visibility !== 'visible') continue;
     let op = 1; for (let a = el; a && a.nodeType === 1; a = a.parentElement) op *= parseFloat(getComputedStyle(a).opacity);
@@ -438,6 +462,18 @@ def surfaces(name, ids, q, canvas, btn):
         q.click("#shapeSeg [data-shape=poly]")
         q.wait_for_selector("#shapeSidesRow:not([hidden])", timeout=3000); q.wait_for_timeout(300)
 
+    # Flip's stamp shelf, the dock's other pop (the owner, after the drawers'
+    # words went a size up: "Yes", bring it into the drawers' look and type).
+    # Read empty, its words and its way out, and with three stamps, its cells,
+    # their × and the Size knob. Flip only: the Pad has no stamps.
+    def stamps(seeded):
+        def f():
+            if seeded:
+                q.evaluate(STAMPS)
+            q.evaluate("() => shelfSetTool('stamp')")
+            q.wait_for_selector("#stampPop:not([hidden])", timeout=3000); q.wait_for_timeout(500)
+        return f
+
     # THE DOCK'S DRAWERS AS THEY ARE USED (after v324, the drawers mock): the
     # draw drawer unfolded, Photo with a picture in it, Music with a song, with
     # More closed and open. Opened empty, six lines too faint to read were
@@ -497,21 +533,22 @@ def surfaces(name, ids, q, canvas, btn):
         q.locator("#savedDraftsSheet .sdrafts-row .draft-more").first.click(timeout=5000)
         q.wait_for_timeout(300)
 
-    return (("the menu", menu, m), ("New", page("new"), m), ("Settings", page("settings"), m),
-            ("Your drafts", via("openCloudDraftItem"), "#savedDraftsSheet"),
-            ("Export", via(ids["export"]), "#exportSheet"), ("Report a problem", via(ids["report"]), "#reportSheet"),
-            ("Post", post, "#postSheet"),
-            ("Ask", via(ids["help"], 1500), "#helpDrawer .help-drawer-inner"),
-            ("Ask, its answers", answers, "#helpDrawer .help-drawer-inner"),
-            ("Ask, an answer", answer, "#helpDrawer .help-drawer-inner"),
-            ("The little book", book, "#bookRoot .bk"), ("Draw along", along, ".da-pill"),
-            ("Tune", tune, "#tuneShell"), ("The shape picker", shapes, "#shapePop"),
-            ("The draw drawer", drawer("brush"), "#drawPanel"), ("The draw drawer, Size", drawer("size"), "#drawPanel"),
-            ("The draw drawer, Feel", drawer("feel"), "#drawPanel"), ("The draw drawer, Eraser", drawer("eraser"), "#drawPanel"), ("Photo, with a picture", photo, "#mediaCard"),
-            ("Music", music(False), "#mediaCard"), ("Music, More open", music(True), "#mediaCard"),
-            ("A button's card", card, ".lc-card"), ("A Show me step", step, ".lc-card"),
-            ("Name every button", names, ".lc-tags"),
-            ("Your drafts, a row's menu", drafts_menu, "#savedDraftsSheet"))
+    return ((("the menu", menu, m), ("New", page("new"), m), ("Settings", page("settings"), m),
+             ("Your drafts", via("openCloudDraftItem"), "#savedDraftsSheet"),
+             ("Export", via(ids["export"]), "#exportSheet"), ("Report a problem", via(ids["report"]), "#reportSheet"),
+             ("Post", post, "#postSheet"),
+             ("Ask", via(ids["help"], 1500), "#helpDrawer .help-drawer-inner"),
+             ("Ask, its answers", answers, "#helpDrawer .help-drawer-inner"),
+             ("Ask, an answer", answer, "#helpDrawer .help-drawer-inner"),
+             ("The little book", book, "#bookRoot .bk"), ("Draw along", along, ".da-pill"),
+             ("Tune", tune, "#tuneShell"), ("The shape picker", shapes, "#shapePop"),
+             ("The draw drawer", drawer("brush"), "#drawPanel"), ("The draw drawer, Size", drawer("size"), "#drawPanel"),
+             ("The draw drawer, Feel", drawer("feel"), "#drawPanel"), ("The draw drawer, Eraser", drawer("eraser"), "#drawPanel"), ("Photo, with a picture", photo, "#mediaCard"),
+             ("Music", music(False), "#mediaCard"), ("Music, More open", music(True), "#mediaCard"))
+            + (((FLIP_ONLY[0], stamps(False), "#stampPop"), (FLIP_ONLY[1], stamps(True), "#stampPop")) if name == "Flip" else ())
+            + (("A button's card", card, ".lc-card"), ("A Show me step", step, ".lc-card"),
+               ("Name every button", names, ".lc-tags"),
+               ("Your drafts, a row's menu", drafts_menu, "#savedDraftsSheet")))
 
 
 census = {}
@@ -574,7 +611,7 @@ with sync_playwright() as p:
                         agg["words"] += [dict(w, where=label) for w in tp["words"]]
                         agg["cut"] += [f"{label}: {c}" for c in tp["cut"]]
                         agg["alone"] += [f"{label}: {c}" for c in tp["alone"]]
-                        agg["knobs"] += tp["knobs"]
+                        agg["knobs"] += [dict(k, where=label) for k in tp["knobs"]]
                 c.close()
     b.close()
 
@@ -589,23 +626,31 @@ with sync_playwright() as p:
 print("\nTHE DRAWERS' TYPE")
 for (name, scheme, dev), agg in sorted(typeset.items()):
     where = f"{name}, {scheme}, {dev}"
+    drawn = sum(1 for d in DRAWERS if name == "Flip" or d not in FLIP_ONLY)
     off = sorted({f'{w["where"]}: {w["name"]} "{w["text"]}" {w["px"]:g}px' for w in agg["words"]
                   if not (12 <= w["px"] <= 16 and w["px"] == round(w["px"]))})
     check(f"{where}: every word in the dock's drawers, Tune and the shape picker is 12 to 16px, in whole pixels "
           f"({len(agg['words'])} read in {agg['read']})",
           len(agg["words"]) >= (1 if ONLY else 150) and not off, "; ".join(off[:8]) + (f" (+{len(off) - 8} more)" if len(off) > 8 else ""))
     check(f"{where}: and none of them is cut off at a side ({agg['read']} read)",
-          agg["read"] >= (1 if ONLY else len(DRAWERS)) and not agg["cut"], "; ".join(agg["cut"][:6]))
+          agg["read"] >= (1 if ONLY else drawn) and not agg["cut"], "; ".join(agg["cut"][:6]))
     check(f"{where}: and where they wrap, no last line is a word left alone (a third of the line above, or more)",
-          agg["read"] >= (1 if ONLY else len(DRAWERS)) and not agg["alone"], "; ".join(agg["alone"][:6]))
+          agg["read"] >= (1 if ONLY else drawn) and not agg["alone"], "; ".join(agg["alone"][:6]))
+    said = lambda kn: "; ".join(f'{k["label"]} ends {k["ends"]:.1f}, slider {k["slider"][0]:.1f}-{k["slider"][1]:.1f}, '
+                                f'"{k["out"]}" inside {k["outIn"]}' for k in kn) or "no knobs read"
     if not ONLY or "The shape picker" in ONLY:
-        kn = agg["knobs"]
+        kn = [k for k in agg["knobs"] if k["where"] == "The shape picker"]
         check(f"{where}: the shape picker's Sides and Rounding end before their sliders, the sliders start and end together, "
               f"and each reading is inside its row",
               [k["label"] for k in kn] == ["Sides", "Rounding"] and all(k["ends"] <= k["slider"][0] + 0.5 and k["outIn"] for k in kn)
               and abs(kn[0]["slider"][0] - kn[1]["slider"][0]) <= 0.5 and abs(kn[0]["slider"][1] - kn[1]["slider"][1]) <= 0.5,
-              "; ".join(f'{k["label"]} ends {k["ends"]:.1f}, slider {k["slider"][0]:.1f}-{k["slider"][1]:.1f}, '
-                        f'"{k["out"]}" inside {k["outIn"]}' for k in kn) or "no knobs read")
+              said(kn))
+    # The stamp shelf's Size is the same knob row; it shows once there are
+    # stamps (Flip only).
+    if name == "Flip" and (not ONLY or FLIP_ONLY[1] in ONLY):
+        kn = [k for k in agg["knobs"] if k["where"] in FLIP_ONLY]
+        check(f"{where}: the stamp shelf's Size ends before its slider, and its reading is inside its row",
+              bool(kn) and all(k["label"] == "Size" and k["ends"] <= k["slider"][0] + 0.5 and k["outIn"] for k in kn), said(kn))
 
 # THE DRAWER'S EDGE SHOWS (owner, after v324: "I can't really see the edges
 # of the drawer"). The page's pixel just outside a drawer's left edge, against
@@ -664,9 +709,11 @@ for scheme in ("light", "dark"):
     # Post's fields and its checkbox, Tune's round buttons and Hear the
     # restart joined this list with the drawers' census (after #630): they
     # were the page's grey, or a grey fill inside the lilac edge.
+    # And the stamp shelf's cells, their × and its way out (with the shelf).
     CARDLIKE = (".seg", ".export-opt", ".smooth-seg", ".media-tabs", ".photo-fit-group", ".reposition-btn",
                 ".clear-drawer-btn", ".edge-controls", ".dp-tile", ".dp-panel",
-                ".loop-btn.subtle", ".onion-tint:not(.active)", ".post-input", ".post-check-box")
+                ".loop-btn.subtle", ".onion-tint:not(.active)", ".post-input", ".post-check-box",
+                '.stamp-btn:not([aria-pressed="true"])', ".stamp-del", ".stamp-empty-go")
     cardlike = {(n, l, sel): census[(n, sc, l)]["cards"][sel]["bg"] for (n, sc, l) in census
                 for sel in CARDLIKE
                 if sc == scheme and l in ("the menu", "New", "Settings", "Export", "Post") + DRAWERS and census[(n, sc, l)]
@@ -720,7 +767,9 @@ for scheme in ("light", "dark"):
             ".seg": "12px", ".help-search": "12px", ".ask-go": "12px", ".menu-start": "12px", ".export-nameinput": "12px",
             ".post-input": "12px", ".bk-back": "12px", ".smooth-seg": "12px", ".media-tabs": "12px", ".photo-fit-group": "12px",
             ".reposition-btn": "12px", ".clear-drawer-btn": "12px", ".edge-controls": "12px", ".dp-tile": "16px",
-            ".mt-rv": "12px", ".dz-lead": "12px"}
+            ".mt-rv": "12px", ".dz-lead": "12px",
+            # a stamp is a picture card, as the draw drawer's tiles are; its way out a button
+            '.stamp-btn:not([aria-pressed="true"])': "16px", ".stamp-empty-go": "12px"}
     # The dock's drawers and Tune are the menu's paper too (the drawers mock, C).
     paper = (census.get(("Pad", scheme, "the menu")) or {}).get("sheet", {}).get("bg")
     drawers = {(n, l): census[(n, sc, l)]["sheet"]["bg"] for (n, sc, l) in census
@@ -728,6 +777,13 @@ for scheme in ("light", "dark"):
     check(f"{scheme}: every drawer the dock opens, and Tune, is the menu's paper ({len(drawers)} read)",
           bool(paper) and len(drawers) >= (1 if ONLY else 10) and set(drawers.values()) == {paper},
           f"paper {paper}; " + "; ".join(f"{n} {l}: {g}" for (n, l), g in sorted(drawers.items()) if g != paper))
+    # AND ITS EDGE IS THE TILES' LILAC LINE, as its cards' is (Tune's top is the
+    # header's, so Tune is not read here). The stamp shelf wore the dock's grey.
+    rims = {(n, l): census[(n, sc, l)]["sheet"]["edge"] for (n, sc, l) in census
+            if sc == scheme and l in DRAWERS and l != "Tune" and census[(n, sc, l)]}
+    check(f"{scheme}: and each drawer's edge is the tiles' lilac line ({len(rims)} read)",
+          bool(rim) and rim != "none" and len(rims) >= (1 if ONLY else 10) and set(rims.values()) == {rim},
+          f"tile {rim}; " + "; ".join(f"{n} {l}: {g}" for (n, l), g in sorted(rims.items()) if g != rim))
     off, seen = [], 0
     for (n, sc, l), cz in census.items():
         if sc != scheme or l not in PAPER + DRAWERS or not cz:
