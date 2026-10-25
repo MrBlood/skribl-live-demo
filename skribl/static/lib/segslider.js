@@ -172,9 +172,9 @@
    * 'class' alone, so writing aria-pressed here cannot re-enter the observer.
    *
    * verify_a11y section 4 is the census: every option carries the state,
-   * exactly one is pressed per one-of-N seg (a data-role="focus" group has a
-   * free state and may have none), the state agrees with the class, and it
-   * follows a click.
+   * exactly one is pressed per one-of-N seg (a group with a free state says
+   * so with data-free, and may have none), the state agrees with the class,
+   * and it follows a click.
    */
   function lit(b) { return b.classList.contains('on') || b.classList.contains('active'); }
   function syncPressed(group) {
@@ -188,7 +188,7 @@
     // ONE TAB STOP PER SEG (v292; SK-AUD-007). Every option was its own Tab
     // stop, so Flip's Tune drawer alone cost a keyboard user a dozen presses
     // to cross. The selected option carries the stop (the first enabled one
-    // when nothing is selected, as in a data-role="focus" group's free state)
+    // when nothing is selected, as in a data-free group's free state)
     // and the arrows, below, move among the rest — the pattern a native
     // segmented control and a radio group both follow.
     if (stop < 0) for (var k = 0; k < btns.length; k++) if (!btns[k].disabled) { stop = k; break; }

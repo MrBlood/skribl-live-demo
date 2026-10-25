@@ -109,6 +109,15 @@
           <button type="button" class="mt-pick-btn" id="musicPickUndo" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg>Undo</button>
         </span>
       </div>
+      {#- BEATS (the owner: "There should be ways to have skribl pick 4 or 8
+          16 32"; of the mock, "All yes if it's intuitive"): how many beats
+          the loop is, once there is a beat, the counts that fit lit by the
+          loop's own and none while it is not whole bars (data-free, as a seg
+          with a free state). lib/musicdrawer.js says what a tap does. -#}
+      <div class="mt-step mt-beats" id="musicBeatsRow" hidden>
+        <span class="edge-name" id="musicBeatsLbl">Beats</span>
+        <span class="seg mt-step-seg" id="musicBeatsSeg" role="group" aria-labelledby="musicBeatsLbl" data-free><span class="seg-slider"></span><button type="button" data-beats="4">4</button><button type="button" data-beats="8">8</button><button type="button" data-beats="16">16</button><button type="button" data-beats="32">32</button></span>
+      </div>
       {#- THE PAIR THAT PLAYS (owner: "How do I test the loop without having it
           show me drawing?"): Play with my drawing, the editor's own Play, and
           Hear the loop, the music alone, round and round. Under the strip, so

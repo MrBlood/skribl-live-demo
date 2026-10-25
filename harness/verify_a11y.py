@@ -781,8 +781,10 @@ with sync_playwright() as p:
     # with no word on which. The state is owned once now, in lib/segslider.js,
     # which already watches every seg's classes to move the pill — the same
     # observer writes aria-pressed — so this is a census, not a specimen.
-    # Exemption, by mechanism: a group with data-role="focus" has a free state
-    # in which nothing is selected, so zero pressed is its truth.
+    # Exemption, by mechanism: a group with a free state, in which nothing is
+    # selected, says so (data-free; the loop view's focus said data-role="focus"),
+    # so zero pressed is its truth: the music drawer's Beats while the loop is
+    # not whole bars.
     SEGSTATE = """() => {
       const groups = [...document.querySelectorAll('.seg, .smooth-seg, .gif-seg')].filter(g => g.querySelectorAll('button').length);
       const key = g => g.id ? '#' + g.id : g.tagName.toLowerCase() + '.' + [...g.classList].join('.');
@@ -793,7 +795,7 @@ with sync_playwright() as p:
         const pressed = btns.filter(b => b.getAttribute('aria-pressed') === 'true');
         if (btns.some(b => !b.hasAttribute('aria-pressed'))) out.missing.push(key(g));
         if (pressed.length > 1) out.many.push(key(g));
-        if (pressed.length === 0 && g.dataset.role !== 'focus') out.none.push(key(g));
+        if (pressed.length === 0 && g.dataset.role !== 'focus' && !g.hasAttribute('data-free')) out.none.push(key(g));
         if (btns.some(b => (b.getAttribute('aria-pressed') === 'true') !== lit(b))) out.disagree.push(key(g));
         // ONE TAB STOP (SK-AUD-007): among the enabled options exactly one is
         // in the sequence; the arrows reach the rest.
