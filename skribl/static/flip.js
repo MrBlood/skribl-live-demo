@@ -11560,8 +11560,11 @@ function syncBeatRow(){
   const open = beatBars != null;
   more.classList.toggle('open', open);
   if(open === more.hasAttribute('inert')) more.toggleAttribute('inert', !open);   // only when it changes: this runs on every save
+  // One round is always the lit one (a one-of-N row says which): while Beat
+  // is off, the one it would take, so the pill is there when the row opens.
+  const lit = open ? beatBars : (beatNearest() || 0.5);
   more.querySelectorAll('#beatRoundSeg button[data-bars]').forEach((b, i) => {
-    b.hidden = fits[i] == null; b.classList.toggle('on', +b.dataset.bars === beatBars); });
+    b.hidden = fits[i] == null; b.classList.toggle('on', +b.dataset.bars === lit); });
   const say = document.getElementById('beatSay');
   if(say && open){
     const lp = window.SkriblHold && docLoop ? window.SkriblHold.loopOf(docLoop, frames.length) : null;
