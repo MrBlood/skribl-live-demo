@@ -23515,3 +23515,92 @@ path, so every break ran the real ears, and the old ears' all-green gave it
 away. The same file served unchanged: 24 of 24.
 
 Pad and Flip: shared. One module (lib/musicears.js) and one drawer.
+
+## After v329 -- Match the beat: Flip's Beat speed, a round of the pages in whole bars
+
+The mock played today's Flip beside a matched one, both to a song: at 12
+pages a second the pages slide off the song's beat a little more each time
+round. The owner chose A, Beat as a fourth speed (6 · 12 · 24 · Beat), and
+"all yes" to the rest: a round of a quarter, a half, one or two bars, the
+one nearest the speed there was to start; Beat only once the song has a
+beat, heard or tapped; a page added or taken away keeps the round and
+changes the speed; Play from the page you are on, the song joining in step;
+and Choice stays at 68.
+
+A ROUND is what plays before the pages start again: all of them, each at its
+length by the timing lib's plan (lib/holdtiming.js), or a stretch that loops
+forever, the pages before it playing once. Still pages share the round by
+their holds, a page held twice taking two shares; a page that draws itself
+keeps the time it took to draw, and the still pages share the rest. The
+speed comes from a few passes over the plan, to within half a millisecond of
+the round, any number from 1 to 60 a second; a round over 60 is not offered.
+Speed's hint says "on the song's beat" and the line under the round what it
+makes ("12 pages in ½ bar · 12.4 a second"). A number turns Beat off at that
+speed; the song taken away puts Beat aside and the speed stays. Saved and
+posted as `beat: {bars}` beside `fps`; the server takes that one key and
+those four values (validation.py, held to flip.js's own reading by
+verify_sharedrules). The players read `fps` and leave `beat` alone.
+
+THE PAGES KEEP TO THE SONG'S CLOCK. Flip's page timer is a chain of waits,
+and the chain drifts against the audio clock: the same pages slid 179ms off
+the beat in sixteen seconds. With Beat, at a watching speed of 1x with the
+song playing, each page is due where the song says, by the loop's own clock
+as heard (less the speaker's delay), and a page the song has already passed
+is skipped rather than flashed by. Each round's first page then came up
+within 23ms of its beat in every run here. Slower or faster than 1x, the
+pages go at that speed and the song at its own, as they do without Beat.
+
+PLAY FROM ANY PAGE starts the song as far into its round as that page is, so
+the page is up for its own time. With the song started from its top, the
+clock did the rest, but page 8 stood still for 0.7 seconds while the song
+came round to it.
+
+POSTED. The link page times a Flip by its frame clock against one start, and
+starts the song where the drawing is, so a posted Beat Flip stays on the
+beat there: sixteen rounds, each 3 to 47ms ahead of the sound, with no drift
+(the lead is the speaker's delay, which the link page has never allowed
+for). A post's box (inlineplayer.js: the feed, the Gallery, the
+Library) drifts, about 12ms a second: each pass starts again from zero on
+the frame that notices, losing what that frame came late by, while the song
+plays on; and it starts its song from the top after decoding it or after a
+pause. A bug for every post with music, plain to hear with Beat; fixed on
+its own, next.
+
+NOT KEPT: a hook that refit Beat whenever the tempo changed. Every change of
+the tempo comes with a save, and a save refits; with the hook gone its break
+stayed green.
+
+THE INSTRUMENT is verify_flipbeat, on a phone, to a click track at 124 the
+ears hear: Beat's showing (no song, a steady tone, a beat heard, a beat
+tapped); the round, its line and its choices' glide (at once under Reduce
+Motion); each round's length; holds, drawing pages, a page added, a stretch
+looping forever, a round that cannot be made; a number turning Beat off; the
+song taken away; a reload; the post; and on the beat, playing for sixteen
+seconds, from page 8, and across a pause, each round's first page read on
+every frame against the song as heard: each within 45ms (about where a
+person starts to notice the sound before the picture) and the middle one
+within 20ms. Its first version counted the page already up when it began
+listening as a round, which measured how long the listening took to begin
+(+39ms once); it counts only pages that come up while it listens.
+
+CALIBRATION, each break served in place of flip.js, flip.css or styles.css,
+the files on disk untouched, red on its own rows: Beat always shown; the
+round always a quarter bar; no refit on a change; a number leaving Beat on;
+holds not counted; an unfit round offered; a forever stretch counted with the
+pages before it; Beat kept with no beat; a drawing page counted as a still
+one; no glide; the round not saved, not loaded, not posted; the pages on
+their own timer (all three timing rows: -61 to +234ms); the song from its
+top (the page 8 row: up 710ms against 127). The Reduce Motion row went red
+only with flip.css's rule and styles.css's two global ones all gone: each
+alone keeps it still. As built: 23 of 23.
+
+CONTRAST. verify_contrast reads Flip's Tune with Beat on, light and dark,
+phone and desk, beside Tune as it was. Every new word wears the token of
+Speed's words in its role: lit 8.64:1 light and 8.03:1 dark, unlit 9.35:1
+and 8.59:1, the lines under them 8.33:1 and 9.69:1.
+
+How it works says it (the fps tip, Set the timing), and Ask finds it under
+beat, tempo, rhythm and in time.
+
+Pad and Flip: Flip only. The Pad has no pages, and its speed is a way of
+watching, not the drawing itself.

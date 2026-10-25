@@ -6579,7 +6579,7 @@ musicDrawer = window.SkriblMusicDrawer ? window.SkriblMusicDrawer.wire({
   musicOff: stopMusic,
   syncRow: syncMusicUI,
   tempo: ()=>musicTempo,
-  setTempo: (t)=>{ musicTempo=t; if(beatBars!=null) scheduleSave(); else syncFpsSeg(); },
+  setTempo: (t)=>{ musicTempo=t; },
 }) : null;
 function stopLoopPreview(){ if(musicDrawer) musicDrawer.stopPreview(); }
 function setCrossfadeUI(){ if(musicDrawer) musicDrawer.syncCrossfade(); }
@@ -11559,7 +11559,7 @@ function syncBeatRow(){
   beat.classList.toggle('on', beatBars != null);
   const open = beatBars != null;
   more.classList.toggle('open', open);
-  if(open) more.removeAttribute('inert'); else more.setAttribute('inert', '');
+  if(open === more.hasAttribute('inert')) more.toggleAttribute('inert', !open);   // only when it changes: this runs on every save
   more.querySelectorAll('#beatRoundSeg button[data-bars]').forEach((b, i) => {
     b.hidden = fits[i] == null; b.classList.toggle('on', +b.dataset.bars === beatBars); });
   const say = document.getElementById('beatSay');

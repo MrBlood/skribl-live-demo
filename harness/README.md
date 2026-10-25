@@ -604,6 +604,27 @@ stays a sleep.
   heard beat come back, not listened for again. `MUSICEARS_PART=beat` (glide,
   none, pad, kind, kept) and `MUSICEARS_ONLY=Pad` run a part. Each row was
   shown red by its own break, served in place of the real file.
+- `verify_flipbeat.py` — Match the beat (the owner: "all yes"), Flip's Beat
+  speed, on a phone, to a click track at 124: with no song, or a song with no
+  beat (a steady tone), Speed is 6 · 12 · 24 as it was; with a beat heard, or
+  tapped with Skribl not listening, Beat shows beside 24. Beat takes the round
+  nearest the speed there was (12 pages at 12 a second is half a bar, to half
+  a millisecond), lights alone, and says what the round makes; the round's
+  choices open under Speed as a glide, read on every frame (at once under
+  Reduce Motion); a quarter, one and two bars each make a round of exactly
+  that, and a round the pages cannot make (over 60 a second) is not offered;
+  a page held twice counts twice, a page that draws itself keeps its own
+  time, a page added keeps the round at a new speed, and a stretch looping
+  forever is the round; 6, 12 or 24 turns Beat off at that speed, and the song
+  taken away puts Beat aside with the speed kept. After a reload Beat is the
+  speed, the same round and speed, and the post carries both (the server's
+  half: verify_sharedrules). Playing, every round starts on the song's beat as
+  heard, for sixteen seconds, each within 45ms and the middle one within 20ms
+  (the pages' own timer slid 179ms off); Play from page 8 starts the song as
+  far into its round, page 8 up as long as page 1 is from Play; a pause and a
+  resume keep them together. `FLIPBEAT_PART=show` (round, kept, beat) runs a
+  part. Each row was shown red by its own break, served in place of the real
+  file.
 - `verify_learncard.py` — the card on the button (lib/learncard.js), Pad and
   Flip: holding a button (real touch) opens its card with its example; a
   quick tap stays a tap, a moving finger is no hold, the lift does not press,

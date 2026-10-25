@@ -13,8 +13,8 @@ desk, for each surface a person can open:
 
   the menu (main, New, Settings), Your drafts, Export, Report a problem,
   Post, How it works (Ask's home, its answers, an answer; lib/ask.js), the
-  little book and Draw along (lib/book.js, lib/drawalong.js), Tune, the
-  shape picker, the dock's drawers, a button's card, a Show me step and the
+  little book and Draw along (lib/book.js, lib/drawalong.js), Tune (and
+  Flip's with Beat as the speed, its round's choices open), the shape picker, the dock's drawers, a button's card, a Show me step and the
   name tags (lib/learncard.js).
 
 THE GROUND IS READ FROM PIXELS, NOT STYLES: the surface is photographed once
@@ -68,10 +68,11 @@ EDITORS = (
 
 # The dock's drawers, and the sheets the menu opens (CONSISTENCY, and the
 # drawers' type).
-DRAWERS = ("Tune", "The shape picker", "The draw drawer", "The draw drawer, Size", "The draw drawer, Feel", "The draw drawer, Eraser",
+DRAWERS = ("Tune", "Tune, with Beat", "The shape picker", "The draw drawer", "The draw drawer, Size", "The draw drawer, Feel", "The draw drawer, Eraser",
            "Photo, empty", "Photo, with a picture", "Music, empty", "Music", "Music, More open",
            "The stamp shelf", "The stamp shelf, with stamps")
-FLIP_ONLY = ("The stamp shelf", "The stamp shelf, with stamps")   # the Pad has no stamps
+SHELF = ("The stamp shelf", "The stamp shelf, with stamps")       # the Pad has no stamps,
+FLIP_ONLY = SHELF + ("Tune, with Beat",)                          # nor pages to put on a song's beat
 PAPER = ("the menu", "New", "Settings", "Your drafts", "Export", "Report a problem", "Post",
          "Ask", "Ask, its answers", "Ask, an answer", "The little book")
 
@@ -454,6 +455,16 @@ def surfaces(name, ids, q, canvas, btn):
     def tune():
         q.click("#tuneBtn"); q.wait_for_timeout(700)
 
+    # Flip's Tune with Beat as the speed (Match the beat): its button lit and
+    # the round's choices open under Speed, with the line saying what the
+    # round makes. Beat shows once the song has a beat; the beat is set here
+    # as Skribl's ears set it (verify_flipbeat plays a real one), since this
+    # reads paint, not sound.
+    def tune_beat():
+        q.evaluate("() => { musicTempo = { bpm: 124, phase: 0, heard: true }; scheduleSave(); }")
+        tune()
+        q.click("#fpsBeat"); q.wait_for_timeout(600)
+
     # The shape picker: a card the dock opens above the Shape tool, on the
     # menu's paper like the drawers (its corner was 14, a drawer's is 16).
     # With the polygon picked, so its two knobs, Sides and Rounding, are read
@@ -561,7 +572,8 @@ def surfaces(name, ids, q, canvas, btn):
              ("Photo, empty", empty("photo"), "#mediaCard"), ("Photo, with a picture", photo, "#mediaCard"),
              ("Music, empty", empty("music"), "#mediaCard"), ("Music", music(False), "#mediaCard"),
              ("Music, More open", music(True), "#mediaCard"))
-            + (((FLIP_ONLY[0], stamps(False), "#stampPop"), (FLIP_ONLY[1], stamps(True), "#stampPop")) if name == "Flip" else ())
+            + (((SHELF[0], stamps(False), "#stampPop"), (SHELF[1], stamps(True), "#stampPop"),
+                ("Tune, with Beat", tune_beat, "#tuneShell")) if name == "Flip" else ())
             + (("A button's card", card, ".lc-card"), ("A Show me step", step, ".lc-card"),
                ("Name every button", names, ".lc-tags"),
                ("Your drafts, a row's menu", drafts_menu, "#savedDraftsSheet")))
@@ -663,8 +675,8 @@ for (name, scheme, dev), agg in sorted(typeset.items()):
               said(kn))
     # The stamp shelf's Size is the same knob row; it shows once there are
     # stamps (Flip only).
-    if name == "Flip" and (not ONLY or FLIP_ONLY[1] in ONLY):
-        kn = [k for k in agg["knobs"] if k["where"] in FLIP_ONLY]
+    if name == "Flip" and (not ONLY or SHELF[1] in ONLY):
+        kn = [k for k in agg["knobs"] if k["where"] in SHELF]
         check(f"{where}: the stamp shelf's Size ends before its slider, and its reading is inside its row",
               bool(kn) and all(k["label"] == "Size" and k["ends"] <= k["slider"][0] + 0.5 and k["outIn"] for k in kn), said(kn))
 
@@ -796,7 +808,7 @@ for scheme in ("light", "dark"):
     # AND ITS EDGE IS THE TILES' LILAC LINE, as its cards' is (Tune's top is the
     # header's, so Tune is not read here). The stamp shelf wore the dock's grey.
     rims = {(n, l): census[(n, sc, l)]["sheet"]["edge"] for (n, sc, l) in census
-            if sc == scheme and l in DRAWERS and l != "Tune" and census[(n, sc, l)]}
+            if sc == scheme and l in DRAWERS and not l.startswith("Tune") and census[(n, sc, l)]}
     check(f"{scheme}: and each drawer's edge is the tiles' lilac line ({len(rims)} read)",
           bool(rim) and rim != "none" and len(rims) >= (1 if ONLY else 10) and set(rims.values()) == {rim},
           f"tile {rim}; " + "; ".join(f"{n} {l}: {g}" for (n, l), g in sorted(rims.items()) if g != rim))
@@ -805,7 +817,7 @@ for scheme in ("light", "dark"):
     # grey when the picker took the paper, on both editors.
     arrows = {(n, l): (census[(n, sc, l)]["arrow"], census[(n, sc, l)]["sheet"]["bg"]) for (n, sc, l) in census
               if sc == scheme and l in DRAWERS and census[(n, sc, l)] and census[(n, sc, l)].get("arrow")}
-    if not ONLY or {"The shape picker", *FLIP_ONLY} & set(ONLY):
+    if not ONLY or {"The shape picker", *SHELF} & set(ONLY):
         check(f"{scheme}: and the arrow under a pop is its paper ({len(arrows)} read)",
               len(arrows) >= (1 if ONLY else 4) and all(w == g for w, g in arrows.values()),
               "; ".join(f"{n} {l}: arrow {w} on {g}" for (n, l), (w, g) in sorted(arrows.items()) if w != g))
@@ -815,7 +827,7 @@ for scheme in ("light", "dark"):
             continue
         seen += 1
         # A sheet is 22; a drawer is a card in the dock, 16 (Tune spans the top, square).
-        want = "22px" if l in PAPER else ("0px" if l == "Tune" else "16px")
+        want = "22px" if l in PAPER else ("0px" if l.startswith("Tune") else "16px")
         if cz["sheet"]["r"] != want:
             off.append(f"{n} {l} sheet {cz['sheet']['r']}")
         off += [f"{n} {l} {sel} {v['r']}" for sel, v in cz["cards"].items() if sel in KIND and v["r"] != KIND[sel]]

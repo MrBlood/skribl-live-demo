@@ -31,15 +31,20 @@ the editor wrote down for itself.
   KEPT. After a reload Beat is the speed, the same round and speed; the post
   carries both (the server's half: verify_sharedrules).
 
-  ON THE BEAT. Playing, every round starts on the song's beat as heard,
-  within 30ms (a frame and a little more), for sixteen seconds; on their own
-  timer the same pages slid 179ms off in that time. Play from a later page
-  starts the song as far into its round, so the first round lands on the
-  beat too, and a pause and a resume keep them together.
+  ON THE BEAT. Playing, every round starts on the song's beat as heard, for
+  sixteen seconds: each within 45ms (about where a person starts to notice
+  the sound coming before the picture) and the middle one within 20ms; on
+  their own timer the same pages slid 179ms off in that time. Play from a later page
+  starts the song as far into its round: that page is up as long as page 1
+  is from Play (a song started from its top held it half a second, waiting
+  for the song to come round), and the first round lands on the beat too. A
+  pause and a resume keep them together.
 
 On Flip only (the Pad has no pages), on a phone. FLIPBEAT_PART=show (round,
 kept, beat) runs one part, for calibration. Each row was shown red by its
-own break, served in place of the real file.
+own break, served in place of the real file; the Reduce Motion row only with
+flip.css's rule and styles.css's two global ones all gone, since each alone
+keeps the row still.
 """
 import io
 import math
@@ -119,8 +124,10 @@ ST = """() => { const q = (id) => document.getElementById(id), H = window.Skribl
 REC = """(secs) => new Promise((done) => { const out = [], t0 = performance.now(); let last = -1;
   (function tick() { const now = performance.now();
     if (playing && !playPaused && idx !== last) { last = idx;
-      out.push({ t: now - t0, page: idx, heard: _waLoop.playing() ? _waLoop.elapsed() - _waLoop.latency() : null }); }
+      out.push({ t: now - t0, at: now, page: idx, heard: _waLoop.playing() ? _waLoop.elapsed() - _waLoop.latency() : null }); }
     if (now - t0 < secs * 1000) requestAnimationFrame(tick); else done(out); })(); })"""
+# When Play is pressed, by the page's own clock.
+PLAYAT = "() => document.getElementById('play').addEventListener('click', () => { window.__playAt = performance.now(); }, { once: true, capture: true })"
 TAPS = """(o) => new Promise((res) => { const b = document.getElementById('musicTapBtn'); let i = 0, t0 = null, due = 0;
   const go = () => { if (t0 != null) while (performance.now() < t0 + due) {}
     if (t0 == null) t0 = performance.now(); b.click();
@@ -172,12 +179,25 @@ def words(b):
     return {0.25: "¼ bar", 0.5: "½ bar", 1: "1 bar", 2: "2 bars"}[b]
 
 
+def on_beat(off):
+    """Every round within 45ms of its beat, and the middle one within 20ms:
+    a frame late now and then is not a drift, nor a steady lag."""
+    return bool(off) and max(abs(x) for x in off) <= 45 and abs(sorted(off)[len(off) // 2]) <= 20
+
+
+def first_up(q, rec):
+    """How long the page Play started on stayed up: from the press to the
+    next page, as painted."""
+    return rec[1]["at"] - q.evaluate("() => window.__playAt") if len(rec) > 1 else None
+
+
 def round_starts(rec, bpm, bars, first=0):
     """How far (ms) each round's first page came up from the song's beat grid
-    for that round, as heard."""
+    for that round, as heard. Only pages that came up while listening: the
+    page already up when it began says when the listening began."""
     R = bars * 4 * 60 / bpm
     out = []
-    for r in rec:
+    for r in rec[1:]:
         if r["page"] == first and r["heard"] is not None:
             e = r["heard"] % R
             out.append((e - R if e > R / 2 else e) * 1000)
@@ -338,20 +358,25 @@ with sync_playwright() as p:
         q.evaluate(PAGES, {"n": 12}); song(q); tune(q)
         q.click("#fpsBeat"); waits.settle(q, 300); untune(q)
         bpm = q.evaluate("() => musicTempo.bpm")
-        q.evaluate("() => { idx = 0; render(); }")
+        q.evaluate("() => { idx = 0; render(); }"); q.evaluate(PLAYAT)
         q.click("#play"); rec = q.evaluate(REC, 16); q.click("#play")
+        up1 = first_up(q, rec)
         off = round_starts(rec, bpm, 0.5)
-        check("playing, every round starts on the song's beat as heard, within 30ms, for sixteen seconds",
-              len(off) >= 15 and max(abs(x) for x in off) <= 30,
+        check("playing, every round starts on the song's beat as heard, for sixteen seconds: each within 45ms, the middle one within 20ms",
+              len(off) >= 15 and on_beat(off),
               f"{len(off)} rounds: " + " ".join(f"{x:+.0f}" for x in off))
         waits.settle(q, 400)
-        q.evaluate("() => { idx = 7; render(); }")
+        # A song started from its top would hold page 8 up until the song came
+        # round to it: half a second, standing still.
+        q.evaluate("() => { idx = 7; render(); }"); q.evaluate(PLAYAT)
         q.click("#play"); rec = q.evaluate(REC, 5); q.click("#play")
+        up8 = first_up(q, rec)
         first = rec[0]["page"] if rec else None
         off = round_starts(rec, bpm, 0.5)
-        check("Play from page 8 starts the song as far into its round, so the first round lands on the beat too",
-              first == 7 and len(off) >= 4 and abs(off[0]) <= 30 and max(abs(x) for x in off) <= 30,
-              f"first page {first}, rounds: " + " ".join(f"{x:+.0f}" for x in off))
+        check("Play from page 8 starts the song as far into its round: page 8 is up as long as page 1 was from Play, and the first round lands on the beat too",
+              first == 7 and up1 is not None and up8 is not None and abs(up8 - up1) <= 40
+              and len(off) >= 4 and abs(off[0]) <= 45 and on_beat(off),
+              f"first page {first}, up {up8 or 0:.0f}ms (page 1 from Play {up1 or 0:.0f}), rounds: " + " ".join(f"{x:+.0f}" for x in off))
         waits.settle(q, 400)
         q.evaluate("() => { idx = 0; render(); }")
         q.click("#play"); q.wait_for_timeout(2300)
@@ -359,7 +384,7 @@ with sync_playwright() as p:
         rec = q.evaluate(REC, 5); q.click("#play")
         off = round_starts(rec, bpm, 0.5)
         check("a pause and a resume keep them together",
-              len(off) >= 4 and max(abs(x) for x in off) <= 30, " ".join(f"{x:+.0f}" for x in off))
+              len(off) >= 4 and on_beat(off), " ".join(f"{x:+.0f}" for x in off))
         check("nothing went wrong on the page", not errs, "; ".join(errs)[:200])
         c.close()
     b.close()
