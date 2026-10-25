@@ -622,7 +622,10 @@ stays a sleep.
   heard, for sixteen seconds, each within 45ms and the middle one within 20ms
   (the pages' own timer slid 179ms off); Play from page 8 starts the song as
   far into its round, page 8 up as long as page 1 is from Play; a pause and a
-  resume keep them together. `FLIPBEAT_PART=show` (round, kept, beat) runs a
+  resume keep them together. Posted, on the link page and in a post's box in
+  the feed, every round within 60ms of its beat and none sliding (the box slid
+  190ms in sixteen seconds before), and a pause in the box carries the song on
+  from where it was. `FLIPBEAT_PART=show` (round, kept, beat, posted) runs a
   part. Each row was shown red by its own break, served in place of the real
   file.
 - `verify_learncard.py` — the card on the button (lib/learncard.js), Pad and

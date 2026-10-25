@@ -23604,3 +23604,45 @@ beat, tempo, rhythm and in time.
 
 Pad and Flip: Flip only. The Pad has no pages, and its speed is a way of
 watching, not the drawing itself.
+
+## After v329 -- A post's box keeps its song in step
+
+Found building Match the beat, and a bug for every post with music: a post's
+box (inlineplayer.js: the feed, the Gallery, the Library) slid off its song.
+
+EACH PASS LOST A FRAME. At the end of a pass the box started its clock again
+from zero, on whichever frame noticed the end, so each pass lost what that
+frame came late by, while the song looped on its own: a Beat Flip in the
+feed slid 190ms off its beat in sixteen seconds, about 12ms a second. Each
+pass now carries on from what its frame came late by, as a stretch looping
+forever already did, and the passes' time is kept (`lap`), so the song's
+place is always the drawing's: lap + elapsed into its loop.
+
+THE SONG STARTED FROM ITS TOP whenever the box started it: after decoding it
+(70ms into the first play here, so the pages ran ahead from the start), after
+a pause, after a new speed. It starts where the drawing is now, the link
+page's rule (paStartAtElapsed); a scrub, a seek or a return to the start puts
+the drawing somewhere rather than playing it there, and the song follows it
+there.
+
+THE INSTRUMENT is verify_flipbeat's posted part: a Beat Flip posted with
+each page a colour of its own, the canvas's middle read on every frame
+against the song as heard, through a hook on the audio source's start (a
+player's own variables are its own). On the link page and in the box, every
+round within 60ms of its beat and the last four where the first four were,
+within 25ms; a pause 2.3 seconds into a fresh play in the box (a third of a
+round into a pass) carries the song on from where it was. Both players run
+about 20ms ahead of the sound: neither allows for the speaker's delay (42ms
+here), which the editor does.
+
+CALIBRATION, each break served in place of the real file: the box as it was
+(its row slid -119 to +116ms; after the pause -322ms); the pass from zero
+alone (a slide of 214ms; the pause row too); the song from its top alone
+(-110ms throughout; -342ms after the pause); and the link page's clock run
+1.2% slow, which slides the link page's row alone (-11 to +153ms). As built:
+4 of 4.
+
+BUDGET: +226 B on every page that shows a post (verify_inline's ratchet,
+74,311 B measured).
+
+Pad and Flip: shared. One player, for both editors' posts.

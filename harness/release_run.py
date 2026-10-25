@@ -254,7 +254,7 @@ BATCHES = [
     # After v328: the glowing dot on Flip's Draw on pages, everywhere (the owner's C).
     ["verify_flipnib.py"],                 # store — posts a public Flip and reads it in the feed
     # Match the beat (after v329, the owner: "all yes"): Flip's Beat speed.
-    ["verify_flipbeat.py"],                # measures — each round's first page against the song's clock, the round's choices read on every frame
+    ["verify_flipbeat.py"],                # measures, store — each round's first page against the song's clock; posts a public Flip and reads it in the feed
 ]
 
 

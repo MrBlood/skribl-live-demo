@@ -768,7 +768,10 @@
     var info = null, pagesN = 0, shapeCols = null, drawnMs = null, held = false, pendingF = null;
     var clockFn = null;   // replay ms -> the artist's, for the scrubber's bubble
     var state = 'idle';                       // idle | playing | paused
-    var elapsed = 0, t0 = 0, raf = null, drawn = 0;
+    /* `lap`: the passes already played, so the song keeps its place across
+     * them (it is lap + elapsed into its loop); zero when the drawing is put
+     * somewhere rather than played there. */
+    var elapsed = 0, t0 = 0, raf = null, drawn = 0, lap = 0;
     /* The page and progress this player last PAINTED, which is how
      * lib/holdtiming.js's displayAt() knows a drawing page has not yet been
      * shown whole. Unset, or null after adopt(), means nothing is owed a
@@ -854,7 +857,7 @@
       seek: function (ms) {
         if (!payload) return false;
         pause();
-        elapsed = Math.max(0, Math.min(ms, totalMs));
+        elapsed = Math.max(0, Math.min(ms, totalMs)); lap = 0;
         render(elapsed, true, true);
         return true;
       },
@@ -1449,7 +1452,7 @@
       pendingF = null;
       if (state === 'playing') pause();
       if (state === 'idle') { state = 'paused'; el.classList.add('is-paused'); }
-      elapsed = msAt(f);
+      elapsed = msAt(f); lap = 0;
       render(elapsed, true, true);
     }
     function scrubEnd() {
@@ -1626,7 +1629,10 @@
       gainNode.gain.value = soundOn() ? 1 : 0;
       srcNode.connect(gainNode);
       gainNode.connect(ac.destination);
-      srcNode.start(0);
+      /* Where the drawing is, not the clip's top: after a pause, a new speed
+       * or a song decoded after Play, the song carries on in step. */
+      var D = buffer.duration;
+      srcNode.start(0, D > 0 ? ((lap + elapsed + (state === 'playing' ? segElapsed() : 0)) / 1000) % D : 0);
     }
 
     function stopAudio() {
@@ -1657,7 +1663,7 @@
        * again — otherwise the button appears to do nothing until the next tap,
        * which reads as broken. */
       if (looping && state !== 'playing' && elapsed >= totalMs && totalMs) {
-        elapsed = 0;
+        elapsed = lap = 0;
         play();
       }
     }
@@ -1695,6 +1701,7 @@
        * (the stretch is meant to keep going for as long as it is on screen). */
       if (flipPlan && flipPlan.forever && at >= totalMs) {
         elapsed = flipPlan.introMs + ((at - flipPlan.introMs) % flipPlan.stretchMs);
+        lap += at - elapsed;
         t0 = now();
         render(elapsed, false);
         raf = global.requestAnimationFrame(frame);
@@ -1720,9 +1727,13 @@
           elapsed = totalMs;
           return;
         }
-        elapsed = 0;
+        /* Again from what this frame came late by: from zero, each pass lost
+         * up to a frame while the song played on, and a Flip slid off its song
+         * by about 12ms a second. */
+        elapsed = (at - totalMs) % totalMs;
+        lap += at - elapsed;
         t0 = now();
-        render(0, true);
+        render(elapsed, true);
         raf = global.requestAnimationFrame(frame);
         return;
       }
@@ -1754,7 +1765,7 @@
         if (music) { var ac = ensureCtx(); if (ac && ac.resume) ac.resume(); }
         return;
       }
-      if (elapsed >= totalMs) elapsed = 0;
+      if (elapsed >= totalMs) elapsed = lap = 0;
       /* Always a full repaint from zero when starting at zero — posterless, the
        * canvas is currently holding the FINISHED drawing (renderIdle), and the
        * incremental path only ever appends. */
@@ -1785,7 +1796,7 @@
       if (state === 'idle') return;
       pause();
       state = 'idle';
-      elapsed = 0;
+      elapsed = lap = 0;
       el.classList.remove('is-paused');
       prog.style.width = '0';
       /* Back to rest, the card on top: the canvas at time zero is the blank
