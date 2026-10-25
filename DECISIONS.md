@@ -23447,3 +23447,71 @@ in). The same files served unchanged: all green.
 Pad and Flip: the stamp shelf is Flip's alone (the Pad has no stamps), and
 its rules sit with its siblings'. The shape picker's arrow and the empty
 drawers' hint are shared: styles.css, which both editors load.
+
+## After v329 -- Skribl's ears hear a rock beat's whole count, its kicks, and the same at 48 kHz
+
+The owner, after twelve real recordings were run through the ears, before
+Match the beat: "yes, fix the ears first". Two fixes were proposed and one
+went. The beat sits 4 to 13ms after the hits on the real recordings, but
+that does not clip the restart: the smooth restart plays the song's own
+next downbeat (lib/audioloop.js folds the loop's tail over its head), so
+the loop comes round whole either way.
+
+HALF THE COUNT. A rock beat at 120, kicks on 1 and 3 and snares on 2 and 4,
+was heard at 60, on its snares. The flux sums what grows across 511 bins: a
+snare grows nearly all of them, a kick a few, so the flux's strongest repeat
+was snare to snare, stronger than the lean to 120. Made rock beats with an
+808's kicks (no beater click) were heard at half at 112, 120, 132 and 140;
+with a click, at their own count up to 140, and at half at 150. Now a beat
+heard slower than 85 a minute (where twice it is nearer 120) with a sound
+starting halfway between most of its beats is twice as fast; the doubled
+beat must hold as steady, or the beat heard stays. And a kick counts as a
+hit: the low part growing half as much as the song's own strong kicks do,
+and twenty times its loudness at least (the test songs' strong kicks grew
+670 to 1300 times it, songs with no bass under 35). Without that, an 808's
+kicks between the snares leave nothing halfway that a hit can hear.
+
+THE SAME AT 48 KHZ. A song is decoded at the device's rate: 44.1 kHz in this
+box's Chromium, where every suite runs, and usually 48 on phones and Windows
+(no phone here). The ears halved whatever came, so 44.1 became 22.05 but 48
+became 24, a different window and step, and the same song was heard
+differently: the suite's swung song at 176 instead of 88, a person reading
+aloud (a LibriSpeech clip) as a steady beat at 98. Every rate is now brought
+to 22.05 kHz, each step the mean of the samples it spans; at 44.1 that is
+what it was, sample for sample. On a click track and a snare's, rates from
+32 to 96 kHz now put the beat within 0.2ms of where 44.1 does (32 kHz was up
+to 0.8 off).
+
+MEASURED, old ears against new. The twelve real recordings (kept in scratch,
+not here: one is licensed non-commercial) hear the same at 44.1; at 48 the
+speech is no longer a beat. Choice (drums and bass) stays at 68: a sound
+halfway on 8 of its 25 beats. Slow songs with nothing between their beats
+stay slow (64, 70), and a one drop at 75 stays. Found and not fixed: a
+hip-hop groove at 84, kicks on 1, the and of 2, and 3 under 16th hats, is
+heard at 112, three of its beats for four; and slow grooves with 8th-note
+hats or bass are heard at twice (132 to 160), as before, which the rule
+above would say too.
+
+THE INSTRUMENT is verify_musicears. A rock song at 120 (an 808's kicks on 1
+and 3, snares on 2 and 4, a bar of hi-hats first) is heard at 120 and
+counts 32 beats, its pick from the bar where its drums come in: the ears as
+they were heard 60, counted 16 and started the loop on the first snare, half
+a second late. The swung song decoded at 48 kHz (a page whose AudioContext
+defaults to 48000) is heard as at 44.1: they heard 176. The suite's synth
+learns a kick with no click (`sub`). How it works' Tap the beat names both
+rows.
+
+CALIBRATION, each break served in place of lib/musicears.js, the files on
+disk untouched, red on its own rows on the Pad and on Flip: the ears as they
+were (the rock rows, and the 48 kHz row at 175.9); a kick not a hit (the rock
+rows); the old halving (the 48 kHz row alone); no doubling (the rock rows);
+doubling only when every halfway point has a sound (the rock rows: 22 of
+23); doubling below 200, not 85 (14 rows: the steady, swung and band songs
+doubled); the doubled beat half a beat off (the rock rows: the beat heard,
+60, stays); and that without its steady check (the rock rows: no beat at
+all). The bar on its third beat reddens the rock song's pick with the other
+songs' bars. The calibration copy's first route missed the script's real
+path, so every break ran the real ears, and the old ears' all-green gave it
+away. The same file served unchanged: 24 of 24.
+
+Pad and Flip: shared. One module (lib/musicears.js) and one drawer.

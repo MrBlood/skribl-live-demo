@@ -7,10 +7,11 @@ THE SONGS ARE MADE HERE, in the page, so where every beat and every bar falls
 is known exactly, and every row is held to that, never to the ears' own
 numbers. A steady song at 124 a minute (an intro of chords and hi-hats, then
 the drums); a swung one at 88 (32 beats would be over the 20s a loop can be);
-a live band speeding up from 100 to 102, every hit a little early or late;
-slow chords with no drums; and three that must not be heard as a beat: a
-steady tone and a sweeping one, the kind of song the other music suites load,
-and sounds starting at random, as rain does. Each of the two things that make
+a live band speeding up from 100 to 102, every hit a little early or late; a
+rock beat at 120 whose kicks, an 808's with no click, fall between its
+snares; slow chords with no drums; and three that must not be heard as a
+beat: a steady tone and a sweeping one, the kind of song the other music
+suites load, and sounds starting at random, as rain does. Each of the two things that make
 a beat steady has one of them only it can tell (lib/musicears.js): the sweep
 gathers round a beat's circle but has no sound starting on its beats, and the
 rain has sounds on most beats but gathers round no circle.
@@ -22,7 +23,11 @@ rain has sounds on most beats but gathers round no circle.
   a beat a minute, on the loop's start, and marked heard; the one line
   counts it ("32 beats") under Skribl's pick, and the beat line says so
   ("124 beats a minute, heard by Skribl · tap to change it"), having said
-  "Listening for the beat…" while it listened.
+  "Listening for the beat…" while it listened. The rock beat is heard at
+  120, not at 60 on its snares (the flux hears a kick least), and its pick
+  is 32 of its beats from the bar where its drums come in. Decoded at
+  48 kHz, as phones and Windows decode, the swung song is heard as it is at
+  44.1 (it was heard at 176).
 
   KIND. The loop glides to its pick and the beat marks fade in, read on every
   animation frame; at once under Reduce Motion. With no steady beat (slow
@@ -92,7 +97,7 @@ SYNTH = r"""(spec) => {
   const add = (t0, fn, dur) => { const i0 = Math.max(0, Math.round(t0 * SR)), n = Math.min(out.length - i0, Math.round(dur * SR));
     for (let i = 0; i < n; i++) out[i0 + i] += fn(i / SR); };
   const jit = () => spec.jitter ? gauss() * spec.jitter : 0;
-  const kick = (t, a) => add(t + jit(), (x) => a * 0.9 * Math.sin(2 * Math.PI * (45 * x + 75 * (1 - Math.exp(-x * 30)) / 30)) * Math.exp(-x * 9) + (x < 0.003 ? a * 0.3 * (r() - 0.5) : 0), 0.45);
+  const kick = (t, a) => add(t + jit(), (x) => a * 0.9 * Math.sin(2 * Math.PI * (45 * x + 75 * (1 - Math.exp(-x * 30)) / 30)) * Math.exp(-x * 9) + (x < 0.003 && !spec.sub ? a * 0.3 * (r() - 0.5) : 0), 0.45);
   const snare = (t, a) => { let hp = 0, pv = 0; add(t + jit(), (x) => { const n = r() * 2 - 1; hp = 0.6 * (hp + n - pv); pv = n;
     return a * (0.45 * hp * Math.exp(-x * 18) + 0.25 * Math.sin(2 * Math.PI * 185 * x) * Math.exp(-x * 25)); }, 0.3); };
   const hat = (t, a) => { let pv = 0; add(t + jit(), (x) => { const n = r() * 2 - 1, v = n - pv; pv = n; return a * 0.12 * v * Math.exp(-x * 70); }, 0.08); };
@@ -142,6 +147,7 @@ HATS = {"hat": [x, 0] * 8}
 LAZY = {"kick": [X, 0, 0, 0, 0, 0, x, 0, 0, 0, X, x, 0, 0, 0, 0], "snare": [0, 0, 0, 0, X, 0, 0, 0, 0, 0, 0, 0, X, 0, 0, x],
         "hat": [x] * 16, "bass": [X, 0, 0, 0, 0, 0, x, 0, 0, 0, X, 0, 0, 0, x, 0]}
 BAND = {"kick": [X, 0, 0, 0, 0, 0, 0, 0] * 2, "snare": [0, 0, 0, 0, X, 0, 0, 0] * 2, "hat": [x, 0] * 8, "bass": [X, 0, 0, 0] * 4}
+ROCK = {"kick": [X, 0, 0, 0, 0, 0, 0, 0] * 2, "snare": [0, 0, 0, 0, X, 0, 0, 0] * 2, "bass": [X, 0, 0, 0, 0, 0, 0, 0] * 2}
 SPECS = {
     "steady": {"bpm": 124, "lead": 0.30, "fade": 2.5, "seed": 11, "sections": [
         {"bars": 2, "chords": ["C", "G"], "pad": 1, "kit": HATS},
@@ -154,6 +160,10 @@ SPECS = {
     "band": {"bpm": 100, "lead": 0.12, "drift": 0.02, "jitter": 0.008, "fade": 2.5, "seed": 31, "sections": [
         {"bars": 1, "chords": ["C"], "kit": {"hat": [X, 0, 0, 0] * 4}},
         {"bars": 16, "chords": ["C", "F", "Am", "G"], "pad": 0.8, "kit": BAND}]},
+    # kicks on 1 and 3, snares on 2 and 4, and the kick an 808's: no click
+    "rock": {"bpm": 120, "lead": 0.40, "fade": 2.5, "seed": 71, "sub": True, "sections": [
+        {"bars": 1, "chords": ["Am"], "pad": 1, "kit": HATS},
+        {"bars": 12, "chords": ["Am", "F", "C", "G"], "pad": 1, "kit": ROCK}]},
     "chords": {"bpm": 45, "lead": 0.5, "fade": 4, "seed": 41, "sections": [
         {"bars": 6, "chords": ["Cmaj7", "Am", "F", "G", "Em", "F"], "pad": 1.4}]},
     "tone": {"bpm": 60, "lead": 0, "seed": 1, "tone": True, "sections": [{"bars": 3, "chords": ["C"]}]},
@@ -185,6 +195,9 @@ LONGDRAW = """(secs) => { strokes.length = 0;
   for (let i = 0; i <= secs * 20; i++) strokes.push({ x: 40 + (i % 20) * 9, y: 60 + Math.floor(i / 20) % 8 * 20, color: '#7c5cff', size: 6, t: i * 50, start: i % 20 === 0 });
   updateDrawingTimeLabels(); }"""
 EARS_DONE = "() => !!window.__earsDone"
+# The page's audio at 48 kHz, as phones and Windows decode (this box's Chromium decodes at 44.1).
+AT48K = """(() => { const A = window.AudioContext; if (!A) return;
+  window.AudioContext = class extends A { constructor(o) { super(Object.assign({ sampleRate: 48000 }, o || {})); } }; })();"""
 LISTENED = """() => { const E = window.SkriblEars; if (!E || E.__wrapped) return; const real = E.listen; E.__wrapped = true;
   E.listen = (b, d) => real(b, (H) => { d(H); window.__earsDone = true; }); }"""
 
@@ -290,6 +303,28 @@ with sync_playwright() as p:
         check(f"{name}: a band speeding up starts within 15ms of a bar and is 32 of its beats long, within 15ms",
               abs(off) <= 0.015 and want is not None and abs(L - want) <= 0.015,
               f"start {st['s']:.4f} ({off * 1000:+.1f}ms from a bar), heard {L:.4f}s against {want}")
+        c.close()
+
+        c, q, errs = editor(b, path)
+        st = add(q, "rock")
+        TR, tp = SONGS["rock"]["truth"], st["tempo"] or {}
+        L, want = heard_len(st), bars_from(TR, st["s"], 32)
+        check(f"{name}: a rock beat at 120, an 808's kicks between its snares, is heard at 120, not at 60 on its snares",
+              abs(tp.get("bpm", 0) - 120) <= 0.05 and tp.get("heard") is True and "32 beats" in st["line"],
+              f"tempo {tp}, line {st['line']!r}")
+        check(f"{name}: and its pick is 32 of its beats from the bar where its drums come in, within 10ms",
+              abs(st["s"] - TR["drums"][0]) <= 0.010 and want is not None and abs(L - want) <= 0.010,
+              f"start {st['s']:.4f} (the drums come in at {TR['drums'][0]:.4f}), heard {L:.4f}s against {want}")
+        c.close()
+
+        c, q, errs = editor(b, path, init=AT48K)
+        st = add(q, "swung")
+        rate = q.evaluate("() => currentAudioBuffer.sampleRate")
+        L, want = heard_len(st), bars_from(TS, st["s"], 16)
+        check(f"{name}: decoded at 48 kHz, as phones and Windows decode, the swung song is heard as at 44.1: 88 a minute, 16 beats from its groove's first bar",
+              rate == 48000 and abs((st["tempo"] or {}).get("bpm", 0) - 88) <= 0.05
+              and abs(st["s"] - TS["drums"][0]) <= 0.010 and want is not None and abs(L - want) <= 0.010,
+              f"decoded at {rate}; start {st['s']:.4f} (groove {TS['drums'][0]:.4f}), heard {L:.4f}s against {want}, tempo {st['tempo']}")
         c.close()
 
     print("\nKIND -- the loop glides to its pick and the marks fade in; at once under Reduce Motion")

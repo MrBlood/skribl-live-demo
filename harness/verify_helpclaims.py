@@ -211,6 +211,8 @@ CLAIMS = {
                      "verify_musicbeat.py::Snap to the beat shows under the tap once there is a tempo",
                      "verify_musicbeat.py::the tempo is saved with the song in the drafts, and comes back with it",
                      "verify_musicears.py::the beat line says it was heard",
+                     "verify_musicears.py::is heard at 120, not at 60 on its snares",
+                     "verify_musicears.py::decoded at 48 kHz, as phones and Windows decode",
                      "verify_musicears.py::after a reload the loop and the heard beat come back, still heard by Skribl"],
     "Snap to the beat": ["verify_musicbeat.py::Snap to the beat shows under the tap once there is a tempo, on to start",
                          "verify_musicbeat.py::the start let go lands on the nearest beat, and the end follows so the loop is whole bars",

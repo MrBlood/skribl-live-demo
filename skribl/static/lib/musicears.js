@@ -20,7 +20,10 @@
  * strongest repeat between 40 and 240 beats a minute, leaning to 120 (people
  * tap most music between 80 and 160), then refined over the song to the
  * thousandth: 32 beats a beat-a-minute off are 130ms off by the time a loop
- * comes round. Where the beat falls is where the flux gathers, read round
+ * comes round. A beat heard slower than 85 with a sound starting halfway
+ * between most of its beats is twice as fast, the count nearer 120: the flux
+ * hears a kick least, and a rock beat at 120, its kicks between its snares,
+ * was heard at 60. Where the beat falls is where the flux gathers, read round
  * the beat's circle; the flux peaks about 10ms before a sound is heard to
  * start (its window reaches it early), measured on clicks, and put back. A
  * bar is four beats; the beat that starts one is where the kicks and the
@@ -31,8 +34,9 @@
  * must both hold: the flux gathers round the beat's circle (`sure`, its peak
  * against its mean: songs with drums measured 5.7 to 15.9, click tracks 23
  * to 32, slow chords about 2, against 3.5), and most beats in the played part
- * have a sound starting on them (`hits`): a steady tone's one start, or a
- * sweep's even drift, gathers round any circle and lands on no beats.
+ * have a sound starting on them, a drum's or a kick's (`hits`): a steady
+ * tone's one start, or a sweep's even drift, gathers round any circle and
+ * lands on no beats.
  *
  * THE PICK. Of 4, 8, 16 and 32 beats (the owner: "we only ever want
  * 4,8,16,..."), the count nearest the length wanted that fits; starting on a
@@ -86,17 +90,21 @@
     };
   }
 
-  // One channel, the first two minutes, at half a 44.1 or 48 kHz rate: the
-  // beat lives well below.
+  // One channel, the first two minutes, at 22.05 kHz whatever the device
+  // decodes at (each step the mean of the samples it spans): the beat lives
+  // well below, and a song is heard the same at 44.1 kHz as at 48.
   function mono(channels, rate) {
-    var f = Math.max(1, Math.round(rate / 22050)), len = Math.min(channels[0].length, Math.round(MAX_SECONDS * rate));
-    var y = new Float32Array(Math.floor(len / f)), nc = channels.length;
+    var r = Math.max(1, rate / 22050), len = Math.min(channels[0].length, Math.round(MAX_SECONDS * rate));
+    var y = new Float32Array(Math.floor(len / r)), nc = channels.length;
     for (var i = 0; i < y.length; i++) {
-      var s = 0;
-      for (var c = 0; c < nc; c++) { var ch = channels[c]; for (var j = 0; j < f; j++) s += ch[i * f + j]; }
-      y[i] = s / (f * nc);
+      var a = i * r, b = a + r, j0 = Math.floor(a), j1 = Math.min(len, Math.ceil(b)), s = 0;
+      for (var c = 0; c < nc; c++) {
+        var ch = channels[c];
+        for (var j = j0; j < j1; j++) s += (Math.min(j + 1, b) - Math.max(j, a)) * ch[j];
+      }
+      y[i] = s / (r * nc);
     }
-    return { x: y, rate: rate / f };
+    return { x: y, rate: r > 1 ? 22050 : rate };
   }
 
   // The steps, a slice at a time: step(budgetMs) returns true when all are read.
@@ -207,12 +215,13 @@
     }
     var i = bl - lo, a = ac[i - 1], b = ac[i], c = ac[i + 1];
     var off = (a != null && c != null && a - 2 * b + c < 0) ? 0.5 * (a - c) / (a - 2 * b + c) : 0;
-    var top = refine(o, hop, 60 / ((bl + off) * hop), 0.03);
-    // most made music is a whole number of beats a minute: take it when it
-    // holds the beat as well
-    var whole = Math.round(top.bpm), cw = circle(o, hop, whole);
-    if (Math.abs(whole - top.bpm) < 0.06 && cw.peak >= top.peak * 0.99) top = { bpm: whole, peak: cw.peak, phase: cw.phase };
-    return top;
+    return whole(o, hop, refine(o, hop, 60 / ((bl + off) * hop), 0.03));
+  }
+  // Most made music is a whole number of beats a minute: take it when it
+  // holds the beat as well.
+  function whole(o, hop, top) {
+    var w = Math.round(top.bpm), cw = circle(o, hop, w);
+    return Math.abs(w - top.bpm) < 0.06 && cw.peak >= top.peak * 0.99 ? { bpm: w, peak: cw.peak, phase: cw.phase } : top;
   }
 
   function unit(v) { var s = 0, i; for (i = 0; i < v.length; i++) s += v[i] * v[i]; s = Math.sqrt(s) || 1; for (i = 0; i < v.length; i++) v[i] /= s; return v; }
@@ -245,44 +254,86 @@
     return bar;
   }
 
-  // Of the beats in the played part, how many have a sound starting on them:
-  // a peak of the flux within 35ms, standing out of the flux around it.
-  // Standing out means a quarter as strong as the song's own strong starts
-  // (the middle of its strongest, one for each beat), more than the flux's
-  // numerical dust, and across the spectrum: at a beat of the test songs 100
-  // to 490 bins grew at once, as a sweep crossed from bin to bin 2 to 9, and
-  // slow chords at most 33.
-  function hitsOf(H) {
-    var raw = H.raw, hop = H.hop, F = H.F, n, beats = [], peaks = [];
-    for (var t = H.phase + H.lag; t < H.duration; t += H.period) {
-      var c = Math.round(t / hop);
-      if (c >= 0 && c < F.n && F.rms[c] >= 0.25 * H.loud) beats.push(c);   // the played part only
+  // Peaks of x, strongest first; the middle of the strongest k of them.
+  function peaksOf(x) {
+    var v = [];
+    for (var n = 1; n < x.length - 1; n++) if (x[n] > 0 && x[n] >= x[n - 1] && x[n] >= x[n + 1]) v.push(x[n]);
+    return v.sort(function (a, b) { return b - a; });
+  }
+  function midTop(v, k) { var top = v.slice(0, Math.max(1, k)); return top[Math.floor(top.length / 2)] || 0; }
+
+  // The steps of the beats in the played part, or of the points `at` of the
+  // way from each to the next.
+  function played(H, at) {
+    var F = H.F, out = [];
+    for (var t = H.phase + H.lag; t + at * H.period < H.duration; t += H.period) {
+      var c = Math.round(t / H.hop);
+      if (c >= 0 && c < F.n && F.rms[c] >= 0.25 * H.loud) out.push(Math.round((t + at * H.period) / H.hop));
     }
-    for (n = 1; n < raw.length - 1; n++) if (raw[n] > 0 && raw[n] >= raw[n - 1] && raw[n] >= raw[n + 1]) peaks.push(raw[n]);
-    peaks.sort(function (a, b) { return b - a; });
-    var top = peaks.slice(0, Math.max(1, beats.length));
-    var floor = Math.max(1, 0.25 * (top[Math.floor(top.length / 2)] || 0)), reach = Math.ceil(0.035 / hop), hits = 0;
-    beats.forEach(function (c) {
-      for (var m = Math.max(1, c - reach); m <= Math.min(raw.length - 2, c + reach); m++) {
-        if (raw[m] >= floor && raw[m] >= raw[m - 1] && raw[m] >= raw[m + 1]
-            && Math.max(F.wide[m - 1], F.wide[m], F.wide[m + 1]) >= WIDE) { hits++; break; }
-      }
-    });
-    return { hits: hits, beats: beats.length };
+    return out;
+  }
+
+  // A sound starting within 35ms of step c: a peak of the flux at least
+  // `floor` and across the spectrum, or of the low part at least `kick`.
+  function hitAt(H, c, floor, kick) {
+    var raw = H.raw, low = H.low, F = H.F, reach = Math.ceil(0.035 / H.hop);
+    for (var m = Math.max(1, c - reach); m <= Math.min(raw.length - 2, c + reach); m++) {
+      if (raw[m] >= floor && raw[m] >= raw[m - 1] && raw[m] >= raw[m + 1]
+          && Math.max(F.wide[m - 1], F.wide[m], F.wide[m + 1]) >= WIDE) return true;
+      if (low[m] > 0 && low[m] >= kick && low[m] >= low[m - 1] && low[m] >= low[m + 1]) return true;
+    }
+    return false;
+  }
+
+  // Of the beats in the played part (or the points `at` of the way to the
+  // next), how many have a sound starting on them: a peak of the flux within
+  // 35ms, standing out of the flux around it, or a kick. Standing out means a
+  // quarter as strong as the song's own strong starts (the middle of its
+  // strongest, one for each beat), more than the flux's numerical dust, and
+  // across the spectrum: at a beat of the test songs 100 to 490 bins grew at
+  // once, as a sweep crossed from bin to bin 2 to 9, and slow chords at most
+  // 33. A kick grows a few of the 511 bins and the flux hardly hears it, so a
+  // kick is the low part growing half as much as the song's own strong kicks
+  // do (the middle of its strongest, one for each bar), and twenty times the
+  // song's loudness at least: the test songs' strong kicks grew 670 to 1300
+  // times it, songs with no bass under 35.
+  function hitsOf(H, at) {
+    var beats = played(H, 0), n = beats.length, pts = at ? played(H, at) : beats;
+    var floor = Math.max(1, 0.25 * midTop(H.peaks, n)), kick = Math.max(20 * H.loud, 0.5 * midTop(H.lowPeaks, Math.floor(n / 4)));
+    return { hits: pts.filter(function (c) { return hitAt(H, c, floor, kick); }).length, beats: pts.length };
+  }
+
+  // The beat T = { bpm, peak, phase } on H: its period, where it falls, how
+  // sure, and its hits.
+  function beat(H, T) {
+    var p = 60 / T.bpm, hb;
+    H.bpm = T.bpm; H.period = p; H.phase = ((T.phase - H.lag) % p + p) % p; H.sure = T.peak;
+    hb = hitsOf(H, 0); H.hits = hb.hits; H.beatsPlayed = hb.beats;
   }
 
   function finish(F, duration) {
-    var hop = F.hop, k, n, on = onsets(F.flux, hop), T = tempoOf(on.o, hop), p = 60 / T.bpm;
+    var hop = F.hop, k, n, on = onsets(F.flux, hop), low = onsets(F.low, hop).raw, T = tempoOf(on.o, hop);
     var mu = new Float64Array(12), sd = new Float64Array(12);
     for (n = 0; n < F.n; n++) for (k = 0; k < 12; k++) mu[k] += F.bands[n * 12 + k] / F.n;
     for (n = 0; n < F.n; n++) for (k = 0; k < 12; k++) sd[k] += Math.pow(F.bands[n * 12 + k] - mu[k], 2) / F.n;
     for (k = 0; k < 12; k++) sd[k] = Math.sqrt(sd[k]) || 1;
     var loud = Array.prototype.slice.call(F.rms).sort(function (a, b) { return a - b; });
-    var H = { F: F, o: on.o, raw: on.raw, hop: hop, lag: F.lag, mu: mu, sd: sd, bpm: T.bpm, period: p,
-              phase: ((T.phase - F.lag) % p + p) % p, sure: T.peak, duration: Math.min(duration, F.n * hop),
-              loud: loud[Math.floor(loud.length * 0.9)] || 0 };
-    var hb = hitsOf(H);
-    H.hits = hb.hits; H.beatsPlayed = hb.beats;
+    var H = { F: F, o: on.o, raw: on.raw, low: low, peaks: peaksOf(on.raw), lowPeaks: peaksOf(low), hop: hop, lag: F.lag,
+              mu: mu, sd: sd, duration: Math.min(duration, F.n * hop), loud: loud[Math.floor(loud.length * 0.9)] || 0 };
+    beat(H, T);
+    // A beat heard slower than 85 a minute, with a sound starting halfway
+    // between most of its beats, is twice as fast: the count nearer 120, as
+    // people tap. A rock beat at 120 was heard at 60, on its snares on 2 and
+    // 4: its kicks between them, on 1 and 3, are what the flux hears least.
+    // It must hold as steady there.
+    if (H.bpm < 120 / Math.SQRT2 && steady(H)) {
+      var hm = hitsOf(H, 0.5);
+      if (hm.hits >= HITS * hm.beats) {
+        var c2 = circle(H.o, hop, 2 * T.bpm);
+        beat(H, whole(H.o, hop, { bpm: 2 * T.bpm, peak: c2.peak, phase: c2.phase }));
+        if (!steady(H)) beat(H, T);
+      }
+    }
     return H;
   }
 
