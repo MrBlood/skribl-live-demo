@@ -2482,7 +2482,8 @@ body.recoloring #canvas { cursor: crosshair !important; }
 .mt-beats { margin-top: 0; padding-top: 10px; }
 /* THE TIMELINE FOLLOWS YOU (lib/musicdrawer.js): a copy of the timeline under
    the header while the real one is scrolled up out of sight, on a card's
-   paper, the card's own edge and drop. It glides in and away (at once under
+   paper, the card's own edge and drop, and its foot a card's corner (its
+   top is the header's, square). It glides in and away (at once under
    Reduce Motion), from under the header. Its layer is 41: over the Pad's media
    card (39, which it sits over) and level with the dock, which it follows in
    the page; under the header, which takes 42 whenever the page is scrolled,
@@ -2490,7 +2491,7 @@ body.recoloring #canvas { cursor: crosshair !important; }
    sheet. At 29 the Pad's card covered it, out of reach of a tap. */
 .mt-follow { position: fixed; z-index: 41; box-sizing: border-box; display: flex; flex-direction: column; align-items: stretch; gap: 6px;
   margin: 0; padding: 8px 14px 10px; background: var(--menu-card); border: 1px solid var(--menu-card-line); border-top: 0;
-  border-radius: 0 0 14px 14px; box-shadow: var(--menu-card-drop); color: var(--text-secondary); font: inherit; text-align: left;
+  border-radius: 0 0 16px 16px; box-shadow: var(--menu-card-drop); color: var(--text-secondary); font: inherit; text-align: left;
   cursor: pointer; -webkit-tap-highlight-color: transparent;
   opacity: 0; visibility: hidden; transform: translateY(-10px); pointer-events: none;
   transition: opacity .2s ease, transform .24s cubic-bezier(.2, .8, .2, 1), visibility 0s linear .24s; }

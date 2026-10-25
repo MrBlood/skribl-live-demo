@@ -23860,6 +23860,22 @@ assumed. And a tap closed Flip's drawer: Flip's tap-away rule closes the
 music drawer on a tap outside the panel and the card, and the copy is
 outside both. The rule knows the copy now.
 
+AND IN THE SUITES, found by the first side-by-side run. verify_contrast read
+the copy with the dock's drawers, whose paper it is not (it is the white the
+approved strip wore, a card's), so the drawers' paper, edge and corner rows
+went red for it on both editors: it is read as a card now, with a row of its
+own (the tiles' white, their lilac line at its sides, a card's 16 at its
+foot, square at the header), shown red with the 14px foot the artifact had
+and with the drawers' paper. The foot is 16 now, a card's corner, and the
+lane inside it is rounded as the timeline's song lane is, 10 (it was 8).
+And verify_musicmore and verify_sheetswipe close More from the drawer's end
+with its tile just under the header, which is under the copy now: the tap
+landed on the copy, and Playwright scrolled the page to the tile in one
+frame (670-739px), red as a leap. A person sees the tile under the copy and
+taps it there, so both put it there; each row shown red again with the
+fold's glide broken in lib/drawerdetent.js (616 and 592px in a frame) and
+green as built.
+
 CHECKS. verify_musicmore's new part, the timeline follows you, on both
 editors, a phone and a desk: away while the timeline is on the screen, and
 scrolled past it, under the header on the drawer to the pixel; painted over
@@ -23869,7 +23885,7 @@ length and beats; gliding in, frame by frame; End + at once, then the
 framing eased to, frame by frame; a tap back up to the timeline, the drawer
 still open; and at once under Reduce Motion. verify_contrast reads it as
 "Music, down at Exact times", on both editors, light and dark, a phone and
-a desk, among the drawers. Calibration:
+a desk, as a card (above). Calibration:
 13 breaks, each served in place of its
 file with the files on disk untouched, each red on the rows that guard it:
 the copy never shown (every row but the four page-error rows); always shown

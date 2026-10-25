@@ -70,7 +70,6 @@ EDITORS = (
 # drawers' type).
 DRAWERS = ("Tune", "Tune, with Beat", "The shape picker", "The draw drawer", "The draw drawer, Size", "The draw drawer, Feel", "The draw drawer, Eraser",
            "Photo, empty", "Photo, with a picture", "Music, empty", "Music", "Music, with a beat", "Music, More open",
-           "Music, down at Exact times",
            "The stamp shelf", "The stamp shelf, with stamps")
 SHELF = ("The stamp shelf", "The stamp shelf, with stamps")       # the Pad has no stamps,
 FLIP_ONLY = SHELF + ("Tune, with Beat",)                          # nor pages to put on a song's beat
@@ -173,7 +172,7 @@ WORDS = r"""(root) => {
 CENSUS = r"""(root) => {
   const R = document.querySelector(root); if (!R) return null;
   const s = (el) => { const cs = getComputedStyle(el); return { bg: cs.backgroundColor, edge: cs.borderTopWidth !== '0px' ? cs.borderTopColor : 'none',
-    r: cs.borderTopLeftRadius, blur: cs.backdropFilter }; };
+    side: cs.borderLeftWidth !== '0px' ? cs.borderLeftColor : 'none', r: cs.borderTopLeftRadius, foot: cs.borderBottomLeftRadius, blur: cs.backdropFilter }; };
   const cards = {};
   for (const sel of ['.menu-tile', '.menu-list', '.seg', '.sdrafts-row', '.sdrafts-files', '.sdrafts-this', '.learn-card', '.ask-row', '.ask-tour', '.ask-best-card',
                      '.help-tip', '.help-search', '.export-opt', '.tune-row', '.post-card', '.ask-list', '.accordion-header', '.post-preview',
@@ -856,6 +855,19 @@ for scheme in ("light", "dark"):
     check(f"{scheme}: one corner per kind on the menu's sheets and the dock's drawers: a sheet 22, a drawer or card 16, "
           f"a button or field 12 ({seen} read)",
           seen >= (1 if ONLY else 32) and not off, "; ".join(sorted(set(off)))[:400])
+    # THE TIMELINE'S COPY IS A CARD (lib/musicdrawer.js), not a drawer: it
+    # hangs from the header over the music drawer, so it wears the menu tile's
+    # white and the tiles' lilac line on its sides and foot, and its foot has
+    # a card's corner, 16; its top is the header's, square, as Tune's is. It
+    # was read with the drawers first, whose paper it is not.
+    fws = {n: census[(n, sc, l)]["sheet"] for (n, sc, l) in census
+           if sc == scheme and l == "Music, down at Exact times" and census[(n, sc, l)]}
+    if not ONLY or "Music, down at Exact times" in ONLY:
+        check(f"{scheme}: the timeline's copy is a card: the tiles' white, their lilac line at its sides, a card's 16 at its foot, "
+              f"square at the header ({len(fws)} read)",
+              bool(tile) and bool(rim) and len(fws) == len(EDITORS)
+              and all(f["bg"] == tile and f["side"] == rim and f["foot"] == "16px" and f["r"] == "0px" for f in fws.values()),
+              f"tile {tile}, line {rim}; " + "; ".join(f"{n}: {f['bg']}, side {f['side']}, foot {f['foot']}, top {f['r']}" for n, f in sorted(fws.items())))
 
 print("\nEach surface's own colours, for reading side by side")
 for (name, scheme, label), cz in sorted(census.items(), key=lambda kv: (kv[0][1], kv[0][2], kv[0][0])):

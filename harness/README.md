@@ -699,9 +699,9 @@ stays a sleep.
   behind it (owner, after v323: "check contrasts and consistency on all our
   changes, and future changes"): the menu (main, New, Settings), Your drafts,
   Export, Report a problem, Post, How it works (Watch, Look it up), Tune, the
-  shape picker, the dock's drawers (the music drawer's timeline copy, scrolled
-  down to Exact times, among them) and Flip's stamp shelf (empty, and with
-  stamps), on Pad and Flip, light and dark, a phone and a desk. The ground is a photograph of the sheet with its words
+  shape picker, the dock's drawers and Flip's stamp shelf (empty, and with
+  stamps), and the music drawer's timeline copy scrolled down to Exact times
+  (a card: the tiles' white and lilac line, a card's 16 at its foot), on Pad and Flip, light and dark, a phone and a desk. The ground is a photograph of the sheet with its words
   made transparent; WCAG AA (4.5:1, 3:1 large), disabled controls and a
   sheet's edge fade exempt, and words said only to a screen reader (clipped
   to nothing) not read as words. Then consistency: each surface the same on Pad

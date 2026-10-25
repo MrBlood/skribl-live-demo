@@ -903,11 +903,17 @@ with sync_playwright() as pw:
         pg.wait_for_timeout(1300)   # past every re-assert there is
         # Closed with its tile just under the header and More's end below the
         # screen: the drawer loses most of its height, which near the page's
-        # end is a clamp. Read the tile on every frame.
-        pg.evaluate("() => { const s = document.getElementById('fineTuneToggle'), h = document.querySelector('.header');"
-                    " const top = h && ['sticky', 'fixed'].includes(getComputedStyle(h).position) ? h.getBoundingClientRect().bottom : 0;"
-                    " window.scrollBy(0, s.getBoundingClientRect().top - top - 10); }")
-        browsing.wait_scroll_still(pg)
+        # end is a clamp. Read the tile on every frame. With the timeline up
+        # under the header its copy shows there (lib/musicdrawer.js) and covers
+        # what passes under it, so the tile goes just under the copy, where a
+        # person sees it and taps it: under the copy, the tap landed on the
+        # copy, and Playwright scrolled the page to the tile in one 739px frame.
+        UNDER = ("() => { const s = document.getElementById('fineTuneToggle'), h = document.querySelector('.header'), f = document.getElementById('musicFollow');"
+                 " const head = h && ['sticky', 'fixed'].includes(getComputedStyle(h).position) ? h.getBoundingClientRect().bottom : 0;"
+                 " const top = f && f.classList.contains('on') ? Math.max(head, parseFloat(f.style.top) + f.offsetHeight) : head;"
+                 " window.scrollBy(0, s.getBoundingClientRect().top - top - 10); }")
+        pg.evaluate(UNDER); browsing.wait_scroll_still(pg)
+        pg.wait_for_timeout(300); pg.evaluate(UNDER); browsing.wait_scroll_still(pg)
         pg.evaluate("""() => { window.__tops = []; const s = document.getElementById('fineTuneToggle'), t0 = performance.now();
             (function f() { window.__tops.push(s.getBoundingClientRect().top); if (performance.now() - t0 < 1400) requestAnimationFrame(f); })(); }""")
         pg.click("#fineTuneToggle")

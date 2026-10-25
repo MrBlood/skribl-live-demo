@@ -647,8 +647,14 @@ with sync_playwright() as p:
         pg.wait_for_timeout(300)
         pg.evaluate("() => window.scrollTo(0, 1e6)")
         pg.wait_for_timeout(800)
-        pg.evaluate("""() => { const s = document.getElementById('fineTuneToggle'), h = document.querySelector('.header');
-            const top = h && ['sticky', 'fixed'].includes(getComputedStyle(h).position) ? h.getBoundingClientRect().bottom : 0;
+        # The timeline is up under the header here, so its copy shows there
+        # (lib/musicdrawer.js) and covers what passes under it: the tile goes
+        # just under the copy, where a person sees it and taps it. Under the
+        # copy, the tap landed on the copy, and Playwright scrolled the page to
+        # the tile in one frame (670-739px).
+        pg.evaluate("""() => { const s = document.getElementById('fineTuneToggle'), h = document.querySelector('.header'), f = document.getElementById('musicFollow');
+            const head = h && ['sticky', 'fixed'].includes(getComputedStyle(h).position) ? h.getBoundingClientRect().bottom : 0;
+            const top = f && f.classList.contains('on') ? Math.max(head, parseFloat(f.style.top) + f.offsetHeight) : head;
             const over = s.getBoundingClientRect().top - top - 10; if (over < 0) window.scrollBy(0, over); }""")
         pg.wait_for_timeout(600)
         pg.evaluate("""() => { window._ftLog = []; const t0 = performance.now(), seg = document.getElementById('fineTuneToggle');

@@ -625,8 +625,8 @@
       function rr(a, b, c, d, r) { x.beginPath(); if (x.roundRect) x.roundRect(a, b, c, d, r); else x.rect(a, b, c, d); }
       x.setTransform(dpr, 0, 0, dpr, 0, 0);
       x.clearRect(0, 0, w, hh);
-      rr(0.5, 0.5, w - 1, hh - 1, 8); x.fillStyle = paper; x.fill(); x.strokeStyle = line; x.lineWidth = 1; x.stroke();
-      x.save(); rr(0, 0, w, hh, 8); x.clip();
+      rr(0.5, 0.5, w - 1, hh - 1, 10); x.fillStyle = paper; x.fill(); x.strokeStyle = line; x.lineWidth = 1; x.stroke();
+      x.save(); rr(0, 0, w, hh, 10); x.clip();
       x.fillStyle = acc; x.globalAlpha = 0.16; x.fillRect(X(t.start), 0, X(t.end) - X(t.start), hh); x.globalAlpha = 1;
       // The song as the timeline draws it, from its own peaks.
       var MT = global.SkriblMusicTimeline, buf = h.buffer && h.buffer(), P = (tl && tl.peaks && tl.peaks()) || fwPeaks;
