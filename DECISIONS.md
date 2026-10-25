@@ -23714,3 +23714,68 @@ same contrast; no new colours. How it works says it (Loop ends, Magnify the
 timeline, Snap to the beat).
 
 Pad and Flip: shared. One drawer and one timeline for both editors.
+
+## After v329 -- Beats: how many beats the loop is, 4 · 8 · 16 · 32
+
+The owner, after Skribl's pick started a song mid-way and "It actually
+works": "There should be ways to have skribl pick 4 or 8 16 32 64 etc.. like
+other skribl picks?"; of the mock (A, a row of counts under the one line,
+beside B, cards like Fit my drawing, on a phone and a desk, light and dark):
+"All yes if it's intuitive".
+
+WHAT IT IS. Under the one line, once there is a beat, heard or tapped:
+Beats, 4 · 8 · 16 · 32, the counts the song and the 20s cap have room for,
+the loop's own lit, none while the loop is not whole bars. 64 beats is past
+20 seconds below 192 a minute, so it is not offered. It is Each press's row,
+one seg; with nothing lit it says so (data-free, the free state verify_a11y
+exempts, which the loop view's focus once had as data-role="focus").
+
+INTUITIVE MEANT WHERE THE LOOP IS. The mock said a tap has Skribl pick again
+at that length. Picked from the whole song, the steady test song's best 8
+beats were at 23.5s while the loop sat at 4.2s: a tap on 8 would have thrown
+the loop 19 seconds down the song. So on Skribl's pick (the tag), with ears,
+a tap is Skribl's pick for that many beats where the loop is: the smoothest
+stretch inside it when shorter, around it when longer, starting on a bar; of
+joins as good, the one nearest the loop's start, and the start itself when
+that is the same beat (lib/musicears.js pick's new from, to and near). A band
+that speeds up has its bars a little apart in each stretch heard, 47ms on
+the test band's, and the start "kept" moved by that much until the same beat
+kept it exactly. The loop is still Skribl's pick after (the tag stays), and
+Back to Skribl's pick goes to the pick for the drawing, as before. On a loop
+of the person's own, or a tapped beat, the start stays where it is and the
+loop is that many beats from it, moved back by whole beats only where the
+song ends first.
+
+KIND. The loop glides there, the count lit from the tap and the tag kept all
+the way: the drawer reads where a glide will land (loopNow) for the tag, the
+lit count and a tap made while it glides, so nothing changes its mind on the
+way, and a second tap counts from where the first lands. Each tap offers
+Undo for eight seconds, and Back to Skribl's pick waits while it does (they
+share a place). Beats opens out as the beat lands, what is under it gliding
+down; at once under Reduce Motion.
+
+THE INSTRUMENTS. verify_musicbeat's Beats part (ears off, a person's own
+loop): shown, offered and lit; none lit at 8.24 beats; the start kept; near
+the song's end; Undo; two taps 60ms apart; the glide and the opening, and
+Reduce Motion. verify_musicears' Beats part (ears on, songs whose every bar is
+known): from the steady song's 32, 8 inside it, on a bar and 8 of its beats;
+the tag and no way back on every frame of the glide; Undo; 16 around the 8,
+its start kept; Undo of that, still the pick; the band's start kept to the
+millisecond from 4 to 32; a loop of the person's own keeps its start.
+verify_contrast reads the drawer with a beat ("Music, with a beat"), and
+verify_musicbeat's words row reads Beats' name and a count.
+
+CALIBRATION, each break served in place of the real file, turned red only
+rows that guard it: the glide's landing not read (the second tap counted
+from 4.58, mid-glide; the lit count none, then 8, on the way; the tag off
+and the way back on, mid-glide); every tap a re-pick (a person's own start a
+beat past the bar moved to the bar); no move back near the end; every count
+offered (32 on a 12s song); a count lit at 8.24 beats; no Undo; no opening
+glide; the Beats pick forgotten (the tag off after a tap); Undo not bringing
+it back; no glide (no frames, the second tap meeting a loop already landed);
+no start range (8 at 23.5s); no nearest (16 from 4.18, not the 8's 6.11; the
+band's 32 back at 4.92); no same beat (the band's 32 at 7.351 for 7.304).
+As built: 20 of 20 and 16 of 16.
+
+Pad and Flip: shared. One drawer (lib/musicdrawer.js) and one pair of ears
+(lib/musicears.js) for both editors.

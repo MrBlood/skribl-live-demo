@@ -530,10 +530,19 @@ stays a sleep.
   while past half a beat into the music, in a gap too short to be a silence
   and in the quiet between two drums on beats it lands on the nearest beat,
   and zoomed in a start let go far from a beat stays, and so does the beat;
+  Beats (the owner: "There should be ways to have skribl pick 4 or 8 16 32")
+  shows under the one line once there is a beat, the counts the song and the
+  20s cap have room for, the loop's own lit and none (none pressed) while it
+  is not whole bars, opening out frame by frame (at once under Reduce
+  Motion); a count tapped on a loop of the person's own keeps the start and
+  makes the loop that many beats, moved back near the song's end only as far
+  as it must, gliding there with the count lit from the tap all the way; a
+  second tap while it glides counts from where it lands, and each tap offers
+  Undo, the way back to Skribl's pick waiting while it does;
   the tempo goes with the song into the drafts and a re-add card, the switch with
   it, tapped again the switch stays, and a new song starts with none and the
-  switch put away; the one line, the tap's and the switch's words and the
-  marks read against what is behind them, light and dark; the pair's words are
+  switch put away; the one line, Beats, the tap's and the switch's words and
+  the marks read against what is behind them, light and dark; the pair's words are
   whole at 320, 360 and 402px, side by side from 360. Taps run on the page's
   own clock, each woken early to land on its mark; a try whose taps strayed
   more than 4ms (a busy machine) is tapped again on a fresh page, three tries
@@ -611,9 +620,17 @@ stays a sleep.
   is shown to bite); the Pad's 7-second drawing gets 16 beats; a loop moved,
   or a beat tapped, before Skribl has listened stays, Back to Skribl's pick
   goes to the heard pick and beat and its Undo brings back what was there;
-  the Snap switch keeps the beat heard, and after a reload the loop and the
-  heard beat come back, not listened for again. `MUSICEARS_PART=beat` (glide,
-  none, pad, kind, kept) and `MUSICEARS_ONLY=Pad` run a part. Each row was
+  Beats on Skribl's pick picks again where the loop is: from the steady
+  song's 32, 8 is inside the loop (from the whole song it was 19 seconds
+  away), on a bar and 8 of the song's beats long, still Skribl's pick with
+  the way back never showing on the way, and Undo brings back the 32 and its
+  beat; 16 from that 8 is around it and keeps its start, and its Undo brings
+  back the 8, still Skribl's pick; the band keeps its start to the
+  millisecond from its 4 to its 32; a loop of the person's own, a beat past
+  the bar, keeps its start; the Snap switch keeps the beat heard, and after
+  a reload the loop and the heard beat come back, not listened for again.
+  `MUSICEARS_PART=beat` (glide, none, pad, beats, kind, kept) and
+  `MUSICEARS_ONLY=Pad` run a part. Each row was
   shown red by its own break, served in place of the real file.
 - `verify_flipbeat.py` — Match the beat (the owner: "all yes"), Flip's Beat
   speed, on a phone, to a click track at 124: with no song, or a song with no

@@ -283,6 +283,7 @@ CONTRAST = """() => {
   return { line: ink(q('#musicPickText')), length: ink(q('#musicPickText b')), pick: ink(q('#musicPickTag')), tempo: ink(q('#musicTempo')),
            tap: ink(q('#musicTapWords')), hear: ink(q('#previewLoopBtn .tp-k')), press: ink(q('#musicStepLbl')),
            snap: ink(q('#musicSnapRow .mt-k')), snapSays: ink(q('#musicSnapSub')),
+           beats: ink(q('#musicBeatsLbl')), count: ink(q('#musicBeatsSeg button:not(.on):not([hidden])')),
            more: ink(q('#fineTuneToggle .mt-v')) }; }"""
 
 
@@ -697,7 +698,7 @@ with sync_playwright() as pw:
               and b3["offered"] == [4, 8, 16],
               f"no beat: shown {b0['shown']}; a 12s song at 120, the loop 8 beats: {b1['offered']}, lit {b1['lit']}; {where}; "
               f"a minute's song at 120: {b2['offered']}, lit {b2['lit']}; at 90 (32 beats would be 21.6s): {b3['offered']}")
-        pg.evaluate(LOOP, {"s": 0, "e": 4.37})                 # 8.24 beats: near 8, and not 8
+        pg.evaluate(SET, {"tempo": {"bpm": 120, "phase": 0}, "s": 0, "e": 4.37, "xf": 250})   # 8.24 beats: near 8, and not 8
         b4 = pg.evaluate(BEATS)
         check(f"{_n}: a loop that is not whole bars, 8.24 beats, has none lit, and none pressed (the free state a screen reader is told)",
               b4["shown"] and b4["lit"] == [] and b4["on"] == 0 and b4["free"], f"{b4}")
@@ -1183,7 +1184,7 @@ with sync_playwright() as pw:
             pg.evaluate(SET, {"tempo": {"bpm": 120, "phase": 0}, "s": 0, "e": 4.25, "xf": 250})
             pg.wait_for_timeout(600)
             r, dots = pg.evaluate(CONTRAST), dot_contrast(pg)
-            check(f"{_n}: the one line and the tap's words read against what is behind them, and the beat's dots against the song's lane ({theme})",
+            check(f"{_n}: the one line, Beats and the tap's words read against what is behind them, and the beat's dots against the song's lane ({theme})",
                   min(r.values()) >= 4.5 and dots.get("beat", 0) >= 3 and dots.get("bar", 0) >= 3,
                   ", ".join(f"{k} {v:.2f}" for k, v in list(r.items()) + [("dot " + k, v) for k, v in dots.items()]))
             c.close()
