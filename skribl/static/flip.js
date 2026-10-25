@@ -11563,6 +11563,11 @@ function syncBeatRow(){
   // One round is always the lit one (a one-of-N row says which): while Beat
   // is off, the one it would take, so the pill is there when the row opens.
   const lit = open ? beatBars : (beatNearest() || 0.5);
+  // With no round to offer (no beat yet), the choices are not there at all:
+  // a closed row keeps its size, and a lit round with nothing to paint is a
+  // pill missing (verify_ux SEG PILLS).
+  const seg = document.getElementById('beatRoundSeg');
+  if(seg && seg.hidden !== beat.hidden) seg.hidden = beat.hidden;
   more.querySelectorAll('#beatRoundSeg button[data-bars]').forEach((b, i) => {
     b.hidden = fits[i] == null; b.classList.toggle('on', +b.dataset.bars === lit); });
   const say = document.getElementById('beatSay');
