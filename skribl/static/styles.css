@@ -3413,7 +3413,12 @@ body:has(#moreMenu:not([hidden])) .autosave-status,
    good, which the pin that drives this rule caught on the clean tree. */
 body:has(#helpDrawer:not([hidden])) .autosave-status,
 body:has(#savedDraftsSheet:not([hidden])) .autosave-status,
-body:has(.flip-export:not([hidden])) .autosave-status {
+body:has(.flip-export:not([hidden])) .autosave-status,
+/* Tune is a drawer too, but its shell never hides: it opens and shuts by its
+   class, so that is what names it (and the name drawer, which wears the same
+   shell). Left off, "Saved", lifted clear of a phone's dock, sat on Tune's
+   onion skin row while it was open (main's CI read the 2 under its edge). */
+body:has(.tune-shell.open) .autosave-status {
   opacity: 0;
   pointer-events: none;
 }
@@ -3430,7 +3435,8 @@ body:has(.menu-overlay:not([hidden])) .autosave-dismiss,
 body:has(#moreMenu:not([hidden])) .autosave-dismiss,
 body:has(#helpDrawer:not([hidden])) .autosave-dismiss,
 body:has(#savedDraftsSheet:not([hidden])) .autosave-dismiss,
-body:has(.flip-export:not([hidden])) .autosave-dismiss {
+body:has(.flip-export:not([hidden])) .autosave-dismiss,
+body:has(.tune-shell.open) .autosave-dismiss {
   pointer-events: none;
 }
 .autosave-status[hidden] { display: none; }

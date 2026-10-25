@@ -647,7 +647,10 @@ stays a sleep.
   in whole pixels, none cut off at a side, no wrapped line ending on a word
   left alone (the drawers' lines are balanced), and the shape picker's Sides and
   Rounding ending before their sliders, which start and end together (the
-  picker is read with the polygon picked, so its knobs show).
+  picker is read with the polygon picked, so its knobs show). A word short
+  of its line says what it was read against and where, what the same point
+  reads 0.6s later, every layer painted there, and the photograph under it as
+  rows of # and . (how CI's Tune "2" turned out to be the autosave pill).
   `CONTRAST_ONLY="Export|Post"` reads only those.
 - `verify_menu.py` — the ⋯ menu, one for both editors (_skribl_menu.html,
   lib/menupages.js): on a phone and a desk, light and dark, it fits without
