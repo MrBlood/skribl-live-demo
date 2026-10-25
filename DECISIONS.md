@@ -23335,11 +23335,23 @@ capitals, so More's capitals stood above the trimmed box by an amount that
 depends on the face. The block is now More's 15px, and its line is the +'s
 18px, so the box the + centres on is More's capitals, on whole pixels (a
 15px block on a 1.25 line instead put the + 0.75px off here: the line was
-18.72px against the +'s 18). Here it reads as it did; CI is the proof.
+18.72px against the +'s 18). Here it reads as it did; CI is the proof: the
+run dispatched on this fix had both sixth shards green.
 
 verify_contrast: Flip's Tune "2" (the onion skin's depth) read 6.85:1 in CI
-where this box reads 9.35, in this box's face, DejaVu Sans and Liberation Sans
-forced alike. Its ink over a pale lilac would give 6.85, so in CI something
-the colour of the pill was under it. A word short of its line now says what
-it was read against (its ink, the ground's colour and where), so CI says what
-was under the "2".
+where this box reads 9.35. A word short of its line now says what it was read
+against, and CI said: its ink rgb(63, 71, 86) on rgb(218, 221, 224) at 94,608,
+the same in both lanes. That grey is no lilac (the guess here, the pill, would
+read 7.04): it is the ink at a fifth over white. 94,608 is exactly where the
+"2" lands with Liberation Sans forced here, so CI's face is Liberation Sans,
+and in that layout every read here is white: in a fresh page, after every
+sheet CI opens first in its order (a stroke, Draw along), with the processor
+slowed eightfold, and photographed 0 to 150ms after the words are hidden. A
+fade cannot leave the ghost: the words are hidden by their fill
+(-webkit-text-fill-color), which no transition eases, and a label served with
+a two-second fade on its colour still photographed blank. So a word short of
+its line now also says, from CI, what the same point reads 0.6s later (the
+same: painted there; another: on its way), every layer painted there,
+pointer-events or not, and the photograph under the word as rows of # and . ,
+whose shape says glyph or patch (calibrated: a grey patch served under the "2"
+prints all #, a faint outline served on it prints a 2).
