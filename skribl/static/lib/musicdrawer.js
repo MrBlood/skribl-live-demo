@@ -89,7 +89,9 @@
  * marks sit on what was heard. Then every count is of
  * what is HEARD, smooth restart and all: the one line says the beats, and,
  * with Snap to the beat on, a start let go on the timeline lands on a beat
- * (zoomed in, it stays, and the beat moves to it) and the loop on whole bars,
+ * (let go in the quiet before the music or just into it, where the music
+ * begins; zoomed in, it stays, and the beat moves to it when it is near one)
+ * and the loop on whole bars,
  * 4, 8, 16 or 32 beats (the owner: "we only ever want 4,8,16,... beats"), the
  * end where the loop comes round, so with a smooth restart the handle sits
  * that much past the beat. The loop slid along the
@@ -408,12 +410,26 @@
      *   the start on the nearest beat, and the end follows so the loop is
      *     whole bars: of 4, 8, 16 and 32 beats, the count nearest what the
      *     finger left that the song and the 20s cap have room for;
-     *   magnified, the start where it is let go, and a beat falls there (the
-     *     owner, zoomed in on where the music begins: "how do I tell it where
-     *     the beginning is? When I take it to the beginning it just snaps to
-     *     a different spot"; of the mock, "All yes"). A tapped beat is rarely
-     *     on the music to the hundredth (on the mock's song, 45ms off), and
-     *     zoomed in the note can be seen. The tempo keeps its beats a minute;
+     *   where the music begins after a silence instead (soundAt), the beat
+     *     kept, when the start is let go in that silence and the music is
+     *     nearer than the beat, or the beat is in a silence, or the start is
+     *     let go up to half a beat into the music: a song's first sound is
+     *     often a lead-in, between beats, and the nearest beat was in the
+     *     dead air before it (the owner: "how do I move the start to the
+     *     start of sound? It snaps back to empty space"; of the mock, "All
+     *     yes"). A sound that begins within an eighth of a beat of one lands
+     *     on that beat, so music on the beat settles as it did, and between
+     *     two sounds on beats the nearer one is kept. Whole bars from a
+     *     lead-in come round to the same place in the beat, so the loop
+     *     still keeps it;
+     *   magnified, the start where it is let go, and when that is within an
+     *     eighth of a beat of one, a beat falls there (the owner, zoomed in on
+     *     where the music begins: "how do I tell it where the beginning is?
+     *     When I take it to the beginning it just snaps to a different spot";
+     *     of the mock, "All yes"). A tapped beat is rarely on the music to the
+     *     hundredth (on the mock's song, 45ms off), and zoomed in the note can
+     *     be seen. Further off, a lead-in, the beat stays where it was, or
+     *     every mark would leave its drum. The tempo keeps its beats a minute;
      *     every beat, bar and snap after counts from that start, and the end
      *     follows as above. Tapped again, the beat is the taps' own;
      *   the end on whole bars the same way, counted from the start wherever
@@ -426,6 +442,51 @@
      * handle. The switch off, nothing settles. Typed and stepped ends never
      * do, nor a locked loop's. */
     function snapOn() { var tp = tempo(); return !!tp && tp.snap !== false; }
+    // Where a start let go at `t` lands instead of the nearest beat `on`, or
+    // null: where the music begins after a silence, when `t` is in the
+    // silence and the music is nearer than `on`, or when `on` is in it, or
+    // when `t` is up to half a beat into the music. A sound that begins
+    // within an eighth of a beat of one lands on that beat, so music on the
+    // beat snaps as it did. A silence is a hundredth of the song's loudest
+    // (-40dB) or less on every channel for HUSH or more, or from the song's
+    // own start, read off the samples: a level's blocks reach past a silence's
+    // edge, and a beat where the music stops would read as sound.
+    var QUIET = 0.01, HUSH = 0.15, STEP = 0.01;
+    function soundAt(t, on, tp) {
+      var MT = global.SkriblMusicTimeline, buf = h.buffer && h.buffer();
+      if (!MT || !buf) return null;
+      var P = (tl && tl.peaks && tl.peaks()) || null;
+      if (!P || P.buffer !== buf) P = MT.peaksOf(buf);
+      var sr = buf.sampleRate, n = buf.length, dur = buf.duration, p = 60 / tp.bpm, low = QUIET * P.top, ch = [], o = null, b, j;
+      for (j = 0; j < buf.numberOfChannels; j++) ch.push(buf.getChannelData(j));
+      var hit = function (i) { for (var c = 0; c < ch.length; c++) if (ch[c][i] >= low || ch[c][i] <= -low) return true; return false; };
+      var loud = function (x) {
+        for (var i = Math.max(0, Math.floor(x * sr)), e = Math.min(n, Math.ceil((x + STEP) * sr)); i < e; i++) if (hit(i)) return true;
+        return false;
+      };
+      // The silence holding x, from where it began to where the sound comes, or null.
+      var hush = function (x) {
+        x = Math.max(0, x);
+        if (loud(x)) return null;
+        var a = x, e = x;
+        while (e < dur && !loud(e)) e += STEP;
+        while (a > 0 && !loud(a - STEP)) a -= STEP;
+        return e < dur && (a <= 0 || e - a >= HUSH) ? e : null;
+      };
+      var mine = hush(t);
+      if (mine != null && Math.abs(mine - t) < Math.abs(on - t)) o = mine;
+      else if (loud(t)) {
+        for (b = t; b > 0 && t - b <= p / 2 && loud(b - STEP); b -= STEP);
+        if (t - b <= p / 2 && (b <= 0 || hush(b - STEP) != null)) o = b;
+      }
+      if (o == null) o = hush(on);
+      if (o == null) return null;
+      // To the sample: the first that sounds from where the walk stopped.
+      for (j = Math.max(0, Math.floor(o * sr)); j < n && !hit(j); j++);
+      o = j / sr;
+      var q = tp.phase + Math.round((o - tp.phase) / p) * p;
+      return Math.abs(o - q) <= p / 8 && q >= 0 ? q : o;
+    }
     // Of 4, 8, 16 and 32 beats, the count nearest `len` heard that `room`
     // seconds hold, or 0.
     function barsFor(len, room) {
@@ -442,10 +503,11 @@
       var tp = tempo(), p = beatSecs(), t = h.trim(), n, k;
       var state = { start: t.start, end: t.end, duration: t.duration };
       if (!pxPerSec && which === 'start') {
-        var s = zoomed ? t.start : tp.phase + Math.round((t.start - tp.phase) / p) * p;
+        var on = tp.phase + Math.round((t.start - tp.phase) / p) * p, first = zoomed ? null : soundAt(t.start, on, tp);
+        var s = zoomed ? t.start : first != null ? first : on;
         if (s < -EPS) s += p;
         s = Math.max(0, s);
-        if (zoomed && h.setTempo) h.setTempo({ bpm: tp.bpm, phase: Math.round(s * 10000) / 10000 });
+        if (zoomed && h.setTempo && Math.abs(t.start - on) <= p / 8) h.setTempo({ bpm: tp.bpm, phase: Math.round(s * 10000) / 10000 });
         k = barsFor(heard({ start: s, end: t.end }, h.crossfade()), t.duration - s);
         // No whole bars fit from that beat: the start settles alone.
         n = k ? { start: s, end: s + lenFor(k) } : T.setHandle(state, 'start', s, 'constrain');
@@ -1080,7 +1142,7 @@
       var tp = tempo(), on = snapOn();
       if (snapRow.hidden !== !tp) { snapRow.hidden = !tp; if (tp) glideIn(snapRow, 'y'); }
       setOn(snapSw, on);
-      var w = on ? 'The start you drag lands on a beat, and the loop on whole bars. Zoomed in, it stays where you put it, and the beat follows.'
+      var w = on ? 'The start you drag lands on a beat, or where the music starts, and the loop on whole bars. Zoomed in, it stays where you put it, and the beat follows.'
         : 'Ends stay exactly where you let them go.';
       if (snapSub && snapSub.textContent !== w) snapSub.textContent = w;
     }

@@ -22,13 +22,16 @@
  * WHAT A FINGER DOES. On the song it slides the song under the drawing: both
  * ends move and the loop keeps its length. On an end it moves that end, and
  * held near the timeline's edge the view widens, smoothly, so a loop can grow
- * past what is on screen (magnified, it slides along instead). On the
+ * past what is on screen, while there is more song past that edge to show
+ * (magnified, it slides along instead). On the
  * whole-song line the loop goes where the finger is. On the drawing nothing:
  * it stays put, and a finger there can scroll the page. Let go, and
  * lib/musicdrawer.js settles what was moved while Snap to the beat is on (an
- * end on whole bars, a start or a slid loop's start on a beat; magnified, a
- * start stays where it is let go and the beat moves to it, so it is told
- * where the music begins); then the view eases back to its framing. The beat
+ * end on whole bars, a start or a slid loop's start on a beat, a start let go
+ * in the quiet before the music or just into it where the music begins;
+ * magnified, a start stays where it is let go and the beat moves to it when
+ * it is near one, so it is told where the music begins); then the view eases
+ * back to its framing. The beat
  * marks glide when where a beat falls moves (beatTo).
  *
  * EACH END IS A LINE WITH A TAB AT ITS FOOT (styles.css): nothing over the
@@ -225,7 +228,11 @@
     }
 
     // Held near the edge an end is dragged toward, the view widens, the far
-    // side kept, and the end follows the finger out.
+    // side kept, and the end follows the finger out. Not where that edge
+    // already shows the song's start (or end): there is nothing past it, and
+    // on a phone at 1x the song's start sits inside the edge's zone, so a
+    // start held near where the music begins ran off to 0:00 (the owner: "It
+    // snaps back to empty space").
     function widen(now) {
       var w = width(), g = held, dt = Math.min(64, Math.max(0, now - (lastT || now))) / 1000;
       if (!g.zone || !(dt > 0)) return;
@@ -242,6 +249,7 @@
         return;
       }
       var t = trim(), most = SPAN * Math.max(t.duration, 1);
+      if (g.which === 'end' ? view.v0 + view.span >= t.duration : view.v0 <= 0) return;
       var grow = 1 + GROW * g.zone * dt, span = Math.min(most, view.span * grow);
       if (span === view.span) return;
       view = g.which === 'end' ? { v0: view.v0, span: span } : { v0: view.v0 + view.span - span, span: span };
@@ -507,7 +515,9 @@
       playhead: playhead,
       x: function (t) { return view ? X(t) : null; },
       view: function () { return view ? { v0: view.v0, span: view.span } : null; },
-      held: function () { return held ? held.kind : null; }
+      held: function () { return held ? held.kind : null; },
+      // The song's levels as painted (peaksOf), for where it is silent.
+      peaks: function () { return peaks; }
     };
   }
 

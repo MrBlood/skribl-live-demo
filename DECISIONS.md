@@ -23646,3 +23646,71 @@ BUDGET: +226 B on every page that shows a post (verify_inline's ratchet,
 74,311 B measured).
 
 Pad and Flip: shared. One player, for both editors' posts.
+
+## After v329 -- The loop's start lands where the music begins
+
+The owner, of a song with dead air before the music: "how do I move the start
+to the start of sound? It snaps back to empty space (no sound)"; of the mock
+(today, the edge fixed, and three places it could land, on a phone and a
+desk, light and dark): "All yes".
+
+TWO THINGS PUT THE START IN THE SILENCE. On a phone at 1x the song's start
+sits inside the timeline's edge zone, where an end held near the edge widens
+the view so the loop can grow past what is on screen. With nothing past that
+edge to show, the view kept widening and the start ran off to 0:00 under the
+finger (lib/musictimeline.js widen). The view now widens only while there is
+more song past the edge. Then Snap to the beat put the start on the nearest
+beat, and a song's first sound is often a lead-in, between two beats: the
+nearest beat was in the dead air.
+
+WHERE IT LANDS NOW (lib/musicdrawer.js soundAt), at 1x with Snap to the beat
+on: let go in the silence before the music and nearer it than the next beat,
+or with the nearest beat in the silence, or up to half a beat into the
+music, the start lands where the music begins, to the sample. The beat stays
+where it was and the loop on whole bars, so it still comes round on the beat.
+Music that begins within an eighth of a beat of one lands on that beat, so
+music on the beat settles as it did. Past half a beat into the music, in a
+gap too short to be a silence (under 0.15s), and in the quiet between two
+drums on beats, the start lands on the nearest beat, as before. A silence is
+a hundredth of the song's loudest (-40dB) or less on every channel, read off
+the samples: the timeline's levels are blocks of 128 samples that reach past
+a silence's edge, so at 44.1kHz a beat where the music stops read as sound
+(found on songs built for it, before the browser rows).
+
+ZOOMED IN, the start still stays where it is let go, and the beat moves to it
+only when it is within an eighth of a beat of one: a tapped beat a little off
+the music still lines up with the start, and a lead-in no longer pulls every
+beat mark off its drum.
+
+THE MOCK'S WORDS AND THE NEAREST BEAT. The mock said the music catches a
+start let go "in the silence before the sound". Between drums on every beat
+with nothing between them, that would take a start let go just after one
+drum on to the next, a beat from the finger. There the nearer beat is kept.
+
+THE INSTRUMENTS. verify_musictimeline: held near the edge that already shows
+the song's start, the view holds still and the start stays under the finger
+(main's timeline: the view moved 5.75s on the Pad and 5.51s on Flip, and the
+start ran to 0.000). verify_musicbeat's new part, on four songs made for it
+(a lead-in, the music on the beat, a break, drums alone): nine starts let go
+on each editor. Its drag, tl_drag, now knows the view stops widening where it
+shows the song's start or end.
+
+CALIBRATION, each break served in place of lib/musicdrawer.js: main's drawer
+(the start in the silence at 0.000, on the first drum at 0.667 for a start
+let go just before or just after the lead-in, at the break's 2.000, and
+zoomed in the beat moved to 0.399) turns 12 of the 20 red, every row but the
+three "as before" rows and the page errors; then each part taken out alone
+turns only its own rows red: the music nearer than the beat; half a beat
+into the music; the beat in a silence (the music on the beat, the break);
+the eighth of a beat (the same two, 0.1ms off the beat); the nearer beat
+between two drums (4.000 for 3.000); a gap too short to be a silence (1.150
+for 1.333); a whole beat into the music for half (0.400 for 0.667); and,
+zoomed in, the beat moving whatever the distance. As built: 20 of 20.
+
+The switch says it too: "The start you drag lands on a beat, or where the
+music starts, and the loop on whole bars." (asked whether to add the words
+after "All yes": "I said all yes"). The same words in the same token, so the
+same contrast; no new colours. How it works says it (Loop ends, Magnify the
+timeline, Snap to the beat).
+
+Pad and Flip: shared. One drawer and one timeline for both editors.

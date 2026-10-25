@@ -425,6 +425,29 @@ with sync_playwright() as p:
               and all(s_ > -1e-6 for s_ in steps) and max(steps) <= 0.7,
               f"from {g0:.2f}s off its framing: {len(after)} frames, at it on frame {landed}; the first frame {gap[0]:.2f}s off, "
               f"the most covered in a frame {max(steps) if steps else 0:.2f}")
+        # Held near an edge that already shows the song's start, nothing is
+        # past it to show: the view holds still and the start stays under the
+        # finger. On a phone at 1x the song's start sits inside the edge's
+        # zone, and a start held near where the music begins ran off to 0:00
+        # (the owner: "It snaps back to empty space"). The loop is placed so
+        # the song begins a few pixels in from the edge, inside its zone.
+        _sp = framing({"s": 0.0, "e": 2.0}, pg.evaluate(DRAWN[_n]))[1]
+        pg.evaluate(SET, {"s": 0.09 * _sp - 0.02, "e": 0.09 * _sp - 0.02 + 2.0})
+        pg.wait_for_timeout(700)
+        st, v0 = pg.evaluate(BOX, "#musicTlStage"), pg.evaluate(VIEW)
+        hs_ = pg.evaluate(BOX, "#tlStart")
+        hx, hy = hs_["x"] + hs_["w"] / 2, hs_["y"] + hs_["h"] / 2
+        song0 = at(v0, st["w"], 0.0)                       # where the song begins, from the stage's left
+        fx = song0 + 3                                     # over the song, inside the edge's zone
+        drag(pg, hx, hy, st["x"] + fx, hy, steps=6, up=False)
+        fr = pg.evaluate(FRAMES, 700)
+        pg.mouse.up(); pg.wait_for_timeout(300)
+        under = at(fr[-1][1], st["w"], fr[-1][2])
+        moved = max(abs(f[1][0] - fr[0][1][0]) + abs(f[1][1] - fr[0][1][1]) for f in fr)   # across the hold
+        check(f"{_n}: held near the edge that already shows the song's start, the view holds still and the start stays under the finger",
+              v0[0] < 0 and fx < 28 and moved < 1e-4 and abs(under - fx) < 1.0 and fr[-1][2] > 0.002,
+              f"the song begins {song0:.1f}px in, the finger {fx:.1f}px in; the view moved {moved:.4f}s; "
+              f"the start {fr[-1][2]:.3f}s, {under:.1f}px in")
         check(f"{_n}: no page errors from an end", not errs, "; ".join(errs[:2]))
         c.close()
     for _n, _p in eds("ends"):
