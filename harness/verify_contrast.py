@@ -70,6 +70,7 @@ EDITORS = (
 # drawers' type).
 DRAWERS = ("Tune", "Tune, with Beat", "The shape picker", "The draw drawer", "The draw drawer, Size", "The draw drawer, Feel", "The draw drawer, Eraser",
            "Photo, empty", "Photo, with a picture", "Music, empty", "Music", "Music, with a beat", "Music, More open",
+           "Music, down at Exact times",
            "The stamp shelf", "The stamp shelf, with stamps")
 SHELF = ("The stamp shelf", "The stamp shelf, with stamps")       # the Pad has no stamps,
 FLIP_ONLY = SHELF + ("Tune, with Beat",)                          # nor pages to put on a song's beat
@@ -544,6 +545,16 @@ def surfaces(name, ids, q, canvas, btn):
                    " loopCrossfadeMs = 250; setCrossfadeUI(); updateTrimUI(); }")
         q.wait_for_timeout(700)
 
+    # And scrolled down to Exact times, with a beat: the timeline's copy under
+    # the header (lib/musicdrawer.js), its words and the way back up on the
+    # card's paper, over whatever passes under it.
+    def music_down():
+        music(True)()
+        q.evaluate("() => { musicTempo = { bpm: 300, phase: 0, heard: true }; trimStart = 0; trimEnd = 1.85;"
+                   " loopCrossfadeMs = 250; setCrossfadeUI(); updateTrimUI(); }")
+        q.evaluate("() => { const e = document.querySelector('.finetune-grid'); scrollBy(0, e.getBoundingClientRect().top - innerHeight * 0.6); }")
+        q.wait_for_timeout(900)
+
     # The card on the button and the name tags (lib/learncard.js), which the
     # page only shows to automation that asks (see the context's init script).
     def card():
@@ -581,7 +592,8 @@ def surfaces(name, ids, q, canvas, btn):
              ("The draw drawer, Feel", drawer("feel"), "#drawPanel"), ("The draw drawer, Eraser", drawer("eraser"), "#drawPanel"),
              ("Photo, empty", empty("photo"), "#mediaCard"), ("Photo, with a picture", photo, "#mediaCard"),
              ("Music, empty", empty("music"), "#mediaCard"), ("Music", music(False), "#mediaCard"),
-             ("Music, with a beat", music_beat, "#mediaCard"), ("Music, More open", music(True), "#mediaCard"))
+             ("Music, with a beat", music_beat, "#mediaCard"), ("Music, More open", music(True), "#mediaCard"),
+             ("Music, down at Exact times", music_down, "#musicFollow"))
             + (((SHELF[0], stamps(False), "#stampPop"), (SHELF[1], stamps(True), "#stampPop"),
                 ("Tune, with Beat", tune_beat, "#tuneShell")) if name == "Flip" else ())
             + (("A button's card", card, ".lc-card"), ("A Show me step", step, ".lc-card"),

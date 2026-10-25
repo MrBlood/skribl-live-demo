@@ -266,7 +266,9 @@ CLAIMS = {
                       "verify_musicmore.py::a typed time moves its end, and a time that is not one puts it back",
                       "verify_musicmore.py::untouched, - and + move 0.1s, or a bar once there is a tempo while Snap to the beat is on, and say which",
                       "verify_musicmore.py::Each press picks the step and keeps it, a tempo or not",
-                      "verify_musicmore.py::Lock the length moves both ends together"],
+                      "verify_musicmore.py::Lock the length moves both ends together",
+                      "verify_musicmore.py::scrolled up past the header, it shows under the header, on the drawer to the pixel",
+                      "verify_musicmore.py::a tap on it takes the page back up to the timeline, the drawer still open, and it goes"],
     # Background image
     "Add a photo": ["verify_parity.py::loading a photo marks the tab on both", "probe:media_tabs",
                     "verify_parity.py::{}: a file dropped anywhere on the card is taken, and the wrong kind is refused",

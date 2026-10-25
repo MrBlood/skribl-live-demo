@@ -478,7 +478,12 @@ stays a sleep.
   while Snap to the beat is on; 0.01s or 0.1s picked and kept; a bar there
   only once there is a tempo; a new song untouched; the buttons' names say
   the step) and Lock the length;
-  16px fields; Play with my drawing is the editor's Play, and waits with
+  16px fields; scrolled down past the timeline, its copy under the header
+  (on the drawer to the pixel, a desk's scrollbar gutter allowed for; painted
+  over what passes under it and under the header; the loop framed, the one
+  line's length and beats; End + eased to, frame by frame; gliding in; a tap
+  back up to the timeline with the drawer still open), on a phone and a desk,
+  at once under Reduce Motion; Play with my drawing is the editor's Play, and waits with
   nothing drawn; More opened as a song lands keeps its tile in sight, and
   closing it from the drawer's end glides; a drawer taller than the screen
   (on a 390x640 phone) opens at its top, the bar just under the header, one
@@ -694,7 +699,8 @@ stays a sleep.
   behind it (owner, after v323: "check contrasts and consistency on all our
   changes, and future changes"): the menu (main, New, Settings), Your drafts,
   Export, Report a problem, Post, How it works (Watch, Look it up), Tune, the
-  shape picker, the dock's drawers and Flip's stamp shelf (empty, and with
+  shape picker, the dock's drawers (the music drawer's timeline copy, scrolled
+  down to Exact times, among them) and Flip's stamp shelf (empty, and with
   stamps), on Pad and Flip, light and dark, a phone and a desk. The ground is a photograph of the sheet with its words
   made transparent; WCAG AA (4.5:1, 3:1 large), disabled controls and a
   sheet's edge fade exempt, and words said only to a screen reader (clipped
