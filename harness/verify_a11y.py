@@ -2654,7 +2654,7 @@ with sync_playwright() as _pw:
         _ctx.close()
     _bw.close()
 
-print("\nA11Y 20 — no words at 10px or under (WAVE's very small text), and the ones that were are 12px")
+print("\nA11Y 20 — no words at 10px or under (WAVE's very small text), and the ones that were are 12px (13 in a drawer)")
 # THE 10px WORDS, AT 12px (the owner's pick from the v326 mocks). WAVE calls
 # text at 10px or under very small, and these drew it: Flip's tool tray's
 # labels, the draw drawer's Recent, the shape card's knobs, How it works' tip
@@ -2662,7 +2662,9 @@ print("\nA11Y 20 — no words at 10px or under (WAVE's very small text), and the
 # the state that shows each of them, on a phone and on a desk: every text node
 # laid out, not see-through, at its computed size, at WAVE's own line (10px or
 # under; the 11px words are another question, not asked here). Each rule that
-# drew them is then read at the 12px the owner picked.
+# drew them is then read at the 12px the owner picked; three of them are a dock
+# drawer's words (the draw drawer's Recent, the shape card's knobs, the music
+# trim's bubbles), a size up again since the drawers' type, B ("all yes"): 13.
 #
 # AND FLIP'S PAGE STRIP, LAST. At 12px as it sat its words ran into each
 # other on a phone's 104px tile (the forever chip under the page's ⋯ and its
@@ -2774,8 +2776,9 @@ with sync_playwright() as _pw:
         for _where, _small in _read.items():
             check(f"{_size}, {_where}: no words at 10px or under", not _small,
                   "; ".join(_small[:4]) + (f" (+{len(_small) - 4} more)" if len(_small) > 4 else ""))
-        _off = [f"{sel} {px}px" for sel, px in _at if px != 12]
-        check(f"{_size}: every rule that drew 10px words is at 12px, each read where it shows",
+        _B13 = {".recent-label", ".shape-knob label", ".trim-bubble"}
+        _off = [f"{sel} {px}px" for sel, px in _at if px != (13 if sel in _B13 else 12)]
+        check(f"{_size}: every rule that drew 10px words is at 12px, or 13 in a dock drawer, each read where it shows",
               len(_at) == sum(len(v) for v in _WAS10.values()) and not _off, "; ".join(_off) or f"{len(_at)} read")
         check(f"{_size}, the timeline's time bubbles stay over it, both ends held at its edges",
               len(_held) == 2 and all(a >= 0 and b >= 0 for a, b in _held), str(_held))

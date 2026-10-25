@@ -23237,3 +23237,58 @@ unchanged: all green.
 Pad and Flip: shared. One module and one drawer; of each editor's own code,
 only the Pad's toast hook (the Pad picks before its song is decoded, and the
 drawer starts the ears once it is).
+
+## After v329 -- The drawers' words, a size up (B)
+
+The owner, of the type mock (today, A and B side by side, the music, photo,
+draw and Tune drawers on a phone and a desk): "all yes" to B. Every word in a
+dock drawer (draw, Photo, Music closed and with More open), Tune and the shape
+picker is one size nearer the menu's 16 over 14: a pixel up each, so the
+smallest are 12 where they were 11, and the largest 16.
+
+WHERE. Each drawer's own rule carries its new size, edited in place (42
+rules in styles.css). Two controls are shared with sheets the menu opens, the
+pill track (`.seg button`: Settings' Theme, Export's sizes) and `.panel-btn`
+(the Report sheet's button), so those two take the drawers' size in the
+drawers only, and the menu's sheets keep theirs. Flip's tool tray keeps its
+12px names: they are the dock's own buttons' names, in a tray.
+
+WHAT WRAPS NOW. Two lines no longer fit a phone a size up: the line under a
+song's name ("Loops under the drawing · 1:11") and the name over the timeline
+("Your animation · nothing drawn yet"). Each wraps to a second line rather
+than being cut; a long file name is still cut at its end, as names are. So
+the drawer is a few pixels taller there than the mock's heights, which were
+measured with those two lines cut.
+
+FOUND ON THE WAY. The shape picker's knobs, Sides and Rounding, show only for
+a shape that has them, so the census had never read them: they were the last
+words in a drawer set in capitals (the drawers' census: none), and their
+widths did not hold, since a flex item's least width is its words': ROUNDING
+grew its 58px box to 69 and its slider started 11px after Sides'. They are
+words now, a size up (13, the reading 12), in boxes that hold Rounding and
+Sharp in a face as wide as DejaVu Sans (72 and 44, `min-width: 0`). The same
+knob is Flip's stamp size and the tool tray's reach size, so those rows match
+it. The draw drawer's Recent, shown once colours are used, is 13.
+
+THE INSTRUMENT is verify_contrast's THE DRAWERS' TYPE: every word laid out in
+each drawer, scrolled into view or not, on Pad and Flip, light and dark, a
+phone and a desk, is 12 to 16px in whole pixels; none is cut off at a side (a
+box that clips holding more than it shows, or a line past the side of a box
+that clips); and the knobs' labels end before their sliders, which start and
+end together, each reading inside its row. The shape picker is read with the
+polygon picked and the draw drawer with Recent shown. A11Y 20 reads the three
+rules that once drew 10px words in a drawer (Recent, the knobs, the trim's
+bubbles) at 13, the rest at 12.
+
+CALIBRATION, each break in a copy of styles.css served to the browser, the
+file on disk untouched, red on its own rows on both editors, light and dark,
+phone and desk: a Tune hint at 11, Play's name at 17, More's section names at
+13.5 (the sizes); the line under the song's name cut again, the timeline's
+name cut again (the cuts); the knobs' label box at 58 as it was, the
+reading's at 32 (the knobs); the knobs' capitals back (the census's
+capitals); Recent at 12.5 (the sizes). The same file served unchanged: all
+green.
+
+Pad and Flip: shared. Every rule is styles.css's, which both editors load.
+Flip's stamp drawer is not in the census, and its words stay 11.5px until it
+is brought in (its own question to the owner).

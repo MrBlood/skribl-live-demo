@@ -1732,7 +1732,7 @@ body.replaying .tab-panel > * { opacity: var(--drawer-rest); }
 /* ---------- Draw panel ---------- */
 
 .size-label {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--text-soft);
   font-weight: 500;
 }
@@ -1874,7 +1874,7 @@ body.replaying .tab-panel > * { opacity: var(--drawer-rest); }
 #drawPanel { gap: 13px; }
 
 .draw-section-label {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--text-soft);
   font-weight: 500;
   letter-spacing: 0;
@@ -1954,7 +1954,7 @@ body.replaying .tab-panel > * { opacity: var(--drawer-rest); }
   width: 100%; margin-top: 8px; padding: 9px;
   border: 1px solid var(--hairline); border-radius: 10px;
   background: var(--surface-panel); color: var(--text-soft);
-  font-size: 12px; font-weight: 500; cursor: pointer;
+  font-size: 13px; font-weight: 500; cursor: pointer;
   transition: background .15s ease, color .15s ease, border-color .15s ease;
   -webkit-tap-highlight-color: transparent;
 }
@@ -1964,7 +1964,7 @@ body.replaying .tab-panel > * { opacity: var(--drawer-rest); }
 .reposition-btn[hidden] { display: none; }
 #photoZoomRow[hidden] { display: none; }
 .reposition-hint {
-  margin: 8px 2px 0; font-size: 11px; line-height: 1.45; color: var(--text-muted);
+  margin: 8px 2px 0; font-size: 12px; line-height: 1.45; color: var(--text-muted);
 }
 .reposition-hint[hidden] { display: none; }
 
@@ -2244,7 +2244,7 @@ body.recoloring #canvas { cursor: crosshair !important; }
    reduced-motion rule makes every transition near-instant.) */
 
 .recent-row { display: flex; align-items: center; gap: 10px; }
-.recent-label { font-size: 12px; }
+.recent-label { font-size: 13px; }
 .recent-colors { display: flex; align-items: center; gap: 7px; }
 .recent-swatch {
   width: 22px; height: 22px; border-radius: 50%; padding: 0; border: 0;
@@ -2260,7 +2260,7 @@ body.recoloring #canvas { cursor: crosshair !important; }
 .prop-row { display: flex; align-items: center; gap: 12px; }
 .prop-row .draw-section-label { width: 66px; flex-shrink: 0; }
 .prop-val {
-  font-size: 12px; color: var(--text-bright); font-weight: 500;
+  font-size: 13px; color: var(--text-bright); font-weight: 500;
   width: 40px; text-align: right; flex-shrink: 0;
   font-variant-numeric: tabular-nums;
 }
@@ -2274,7 +2274,7 @@ body.recoloring #canvas { cursor: crosshair !important; }
   display: flex; margin-left: auto;
 }
 .smooth-btn {
-  font-size: 12px; padding: 5px 14px; min-width: 34px; display: inline-flex; align-items: center; justify-content: center  /* v206: match .seg cells */;
+  font-size: 13px; padding: 5px 14px; min-width: 34px; display: inline-flex; align-items: center; justify-content: center  /* v206: match .seg cells */;
   transition: color .15s ease;
 }
 
@@ -2362,7 +2362,7 @@ body.recoloring #canvas { cursor: crosshair !important; }
 .clear-drawer-btn {
   display: inline-flex; align-items: center; gap: 7px;
   border: 1px solid var(--hairline); background: var(--surface-panel); color: var(--text-soft);
-  font-size: 12px; font-weight: 500; padding: 9px 12px; border-radius: 10px;
+  font-size: 13px; font-weight: 500; padding: 9px 12px; border-radius: 10px;
   cursor: pointer;
   transition: background .15s ease, color .15s ease, border-color .15s ease;
   -webkit-tap-highlight-color: transparent;
@@ -2396,7 +2396,7 @@ body.recoloring #canvas { cursor: crosshair !important; }
    appeared, and everything under the line dropped 24px with the finger
    still on the strip. */
 .mt-pick { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; margin-top: 8px;
-  font-size: 13px; line-height: 1.35; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+  font-size: 14px; line-height: 1.35; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
 .mt-pick-text { flex: 1 1 340px; min-width: 0; }
 .mt-pick-text b { color: var(--text-primary); font-weight: 650; }
 .mt-pick-end { flex: 1 1 190px; display: flex; align-items: center; justify-content: flex-end; gap: 6px; min-height: 32px; }
@@ -2424,8 +2424,8 @@ body.recoloring #canvas { cursor: crosshair !important; }
   padding: 8px 12px; border-radius: 16px; border: 1px solid var(--menu-card-line); background: var(--menu-card);
   box-shadow: var(--menu-card-drop); font: inherit; text-align: left; cursor: pointer;
   -webkit-tap-highlight-color: transparent; transition: background .15s ease, border-color .15s ease; }
-.mt-k { font-size: 14px; font-weight: 650; color: var(--text-primary); line-height: 1.25; }
-.mt-v { font-size: 12px; font-weight: 500; color: var(--text-secondary); line-height: 1.3; }
+.mt-k { font-size: 15px; font-weight: 650; color: var(--text-primary); line-height: 1.25; }
+.mt-v { font-size: 13px; font-weight: 500; color: var(--text-secondary); line-height: 1.3; }
 .mt-pick-card .mt-k, .mt-pick-card .mt-v { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .mt-pick-card.on { background: var(--seg-on-fill); border-color: transparent; box-shadow: none; outline: 2px solid transparent; outline-offset: -2px; }
 .mt-pick-card.on .mt-k, .mt-pick-card.on .mt-v { color: var(--seg-on-ink); }
@@ -2465,7 +2465,7 @@ body.recoloring #canvas { cursor: crosshair !important; }
 /* MORE'S FOUR PARTS, each under its name (The restart, The beat, Exact times,
    How it loops), and the switch rows (Smooth restart, Cut on silence, Lock
    the length): the draw drawer's switch row, name over what it does. */
-.mt-sect { margin: 18px 0 4px; font-size: 13px; font-weight: 600; color: var(--text-secondary); }
+.mt-sect { margin: 18px 0 4px; font-size: 14px; font-weight: 600; color: var(--text-secondary); }
 .fine-tune-body > .mt-sect:first-child { margin-top: 2px; }
 /* EACH PRESS, under the times: how far - and + move, the one pill beside a
    name in the edge names' style ("Start of loop"); "a bar" shows once there
@@ -2484,7 +2484,7 @@ body.recoloring #canvas { cursor: crosshair !important; }
 .mt-rv { position: relative; height: 112px; margin-top: 8px; border-radius: var(--r-control); background: var(--menu-paper);
   overflow: hidden; touch-action: pan-y; -webkit-user-select: none; user-select: none; cursor: ew-resize; }
 .mt-rv-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
-.mt-rv-tag { position: absolute; top: 6px; left: 8px; font-size: 12px; font-weight: 600; line-height: 1.2;
+.mt-rv-tag { position: absolute; top: 6px; left: 8px; font-size: 13px; font-weight: 600; line-height: 1.2;
   color: var(--text-secondary); pointer-events: none; }
 .mt-rv-tag.start { left: auto; right: 8px; }
 .mt-rv-dot { position: absolute; left: 0; bottom: 6px; width: 16px; height: 16px; margin-left: -8px; border-radius: 50%; z-index: 1;
@@ -2492,7 +2492,7 @@ body.recoloring #canvas { cursor: crosshair !important; }
 .mt-rv-dot::before { content: ""; position: absolute; inset: -14px; border-radius: 50%; }
 .mt-rv-dot.dragging { background: var(--accent-fill); }
 .mt-rv-dot[hidden] { display: none; }
-.mt-rv-hint { margin: 8px 0 0; font-size: 13px; line-height: 1.35; color: var(--text-secondary); }
+.mt-rv-hint { margin: 8px 0 0; font-size: 14px; line-height: 1.35; color: var(--text-secondary); }
 
 /* THE PAIR THAT PLAYS, under the timeline, More open or not: Play with my drawing
    is the action, so the accent's fill; Hear the loop, the same size beside
@@ -2506,8 +2506,8 @@ body.recoloring #canvas { cursor: crosshair !important; }
 .mt-play .mt-stop-icon, .mt-play.playing .mt-play-icon { display: none; }
 .mt-play.playing .mt-stop-icon { display: block; }
 .mt-play .tp { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; min-width: 0; }
-.mt-play .tp-k { font-size: 15px; font-weight: 700; line-height: 1.15; }
-.mt-play .tp-v { font-size: 12px; font-weight: 500; line-height: 1.2; white-space: nowrap; }
+.mt-play .tp-k { font-size: 16px; font-weight: 700; line-height: 1.15; }
+.mt-play .tp-v { font-size: 13px; font-weight: 500; line-height: 1.2; white-space: nowrap; }
 .mt-play.mt-loop { background: var(--menu-card); color: var(--accent-ink); border: 1px solid var(--menu-card-line); box-shadow: var(--menu-card-drop); }
 .mt-play.mt-loop .tp-v { color: var(--text-secondary); }
 .mt-play:disabled { opacity: .5; cursor: default; }
@@ -2523,14 +2523,14 @@ body.recoloring #canvas { cursor: crosshair !important; }
 .mt-tap-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; }
 .mt-tap { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 6px 16px 6px 12px; border-radius: 999px;
   border: 1px solid var(--menu-card-line); background: var(--menu-card); box-shadow: var(--menu-card-drop);
-  color: var(--accent-ink); font: inherit; font-size: 14px; font-weight: 650; cursor: pointer;
+  color: var(--accent-ink); font: inherit; font-size: 15px; font-weight: 650; cursor: pointer;
   -webkit-tap-highlight-color: transparent; transition: background .15s ease, box-shadow .15s ease; }
 .mt-tap svg { width: 18px; height: 18px; flex: none; }
 .mt-tap.tapping { background: var(--seg-on-fill); border-color: transparent; color: var(--seg-on-ink);
   box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 28%, transparent); }
 .mt-tap:focus-visible { outline: 2px solid var(--ui-hi); outline-offset: 2px; }
 @media (hover: hover) { .mt-tap:not(.tapping):hover { background: color-mix(in srgb, var(--accent) 7%, var(--menu-card)); } }
-.mt-tempo { flex: 1 1 150px; min-width: 0; font-size: 13px; line-height: 1.35; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.mt-tempo { flex: 1 1 150px; min-width: 0; font-size: 14px; line-height: 1.35; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
 .mt-tempo b { color: var(--text-primary); font-weight: 650; }
 
 @media (max-width: 640px) {
@@ -2719,9 +2719,12 @@ body.recoloring #canvas { cursor: crosshair !important; }
 .dz-tile { display: grid; place-items: center; background: var(--seg-on-fill); color: var(--seg-on-ink); }
 .dz-tile svg { width: 22px; height: 22px; }
 .dz-file { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.dz-name, .dz-meta, .dz-ask { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.dz-name { font-size: 14px; font-weight: 600; color: var(--text-primary); }
-.dz-meta, .dz-ask { font-size: 12px; color: var(--text-secondary); }
+/* A long file name is cut at its end, as names are; the line under it
+   ("Loops under the drawing · 1:11") wraps instead, since the words a size up
+   (the drawers' type, B) no longer fit it on one line beside the switch. */
+.dz-name, .dz-ask { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dz-name { font-size: 15px; font-weight: 600; color: var(--text-primary); }
+.dz-meta, .dz-ask { font-size: 13px; color: var(--text-secondary); }
 /* While the bin is armed, its question takes the subtitle's line (below). */
 .dz-ask { display: none; color: var(--danger); }
 .music-dropzone:has(> .dropzone-remove.armed) .dz-meta { display: none; }
@@ -2870,8 +2873,11 @@ body.recoloring #canvas { cursor: crosshair !important; }
    line on a soft start (a phone, 16x). The tap band reaches down to it, and
    it keeps 3px clear of the whole song's line. */
 .mt-tl { position: relative; margin-top: 2px; }
-.mt-tl-name { margin: 0 0 6px; font-size: 13px; font-weight: 600; line-height: 18px; color: var(--text-secondary);
-  white-space: nowrap; width: max-content; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+/* The name wraps to a second line rather than being cut ("Your animation ·
+   nothing drawn yet" at the drawers' type a size up, B), the magnifier beside
+   it in the middle of its two lines. */
+.mt-tl-name { margin: 0 0 6px; font-size: 14px; font-weight: 600; line-height: 18px; color: var(--text-secondary);
+  max-width: 100%; overflow-wrap: anywhere; }
 /* MAGNIFY, at the end of the name's line: the - readout + of Exact times
    (.edge-controls, .nudge-btn), the same card, line and fill, its cells 28px
    and grown to 44 for a finger, the glyphs the magnifier Fine-tune's had. */
@@ -2889,7 +2895,7 @@ body.recoloring #canvas { cursor: crosshair !important; }
 .mt-tl-mag-btn:active:not(:disabled) { background: var(--ui-active); color: #fff; }
 .mt-tl-mag-btn:disabled { opacity: .35; cursor: default; }
 .mt-tl-mag-btn:focus-visible { outline: 2px solid var(--ui-hi); outline-offset: 1px; }
-.mt-tl-mag-val { min-width: 34px; text-align: center; font-size: 13px; font-weight: 700; line-height: 1; color: var(--text-strong);
+.mt-tl-mag-val { min-width: 34px; text-align: center; font-size: 14px; font-weight: 700; line-height: 1; color: var(--text-strong);
   font-variant-numeric: tabular-nums; }
 .mt-tl-stage { position: relative; height: 118px; touch-action: pan-y; -webkit-user-select: none; user-select: none; cursor: grab; }
 .mt-tl.holding .mt-tl-stage { cursor: grabbing; }
@@ -2937,7 +2943,7 @@ body.recoloring #canvas { cursor: crosshair !important; }
   left: 50%;
   background: var(--accent-fill);
   color: #fff;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   padding: 2px 5px;
@@ -2968,7 +2974,7 @@ body.recoloring #canvas { cursor: crosshair !important; }
   padding: 7px 11px;
   background: var(--ui-active);
   color: #fff;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
   cursor: pointer;
   transition: filter 0.15s ease;
@@ -3007,7 +3013,7 @@ body.recoloring #canvas { cursor: crosshair !important; }
 }
 
 .edge-name {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--text-tool);
   font-weight: 700;
   white-space: nowrap;
@@ -3103,7 +3109,7 @@ body.recoloring #canvas { cursor: crosshair !important; }
   -webkit-appearance: none;
   appearance: none;
   padding: 7px 0;
-  font-size: 12px;
+  font-size: 13px;
   transition: color 0.2s;
   user-select: none;
   text-align: center;
@@ -5692,9 +5698,9 @@ a.player-btn { text-decoration: none; }
    under the row, inside the panel, right-aligned, each a 44px tap. */
 #tuneSpeedRow { flex-wrap: wrap; }
 .tune-speed { display: contents; }
-.tune-speed .rl-speed { font-size: 15px; padding: 6px 10px 6px 12px; }
+.tune-speed .rl-speed { font-size: 16px; padding: 6px 10px 6px 12px; }
 .tune-speed .rl-speed::before { inset: -6px -2px; }   /* a 44px tap at its 33px */
-.tune-speed .rl-chips { flex-basis: auto; width: max-content; max-width: 100%; margin: 6px 0 2px auto; gap: 0; font-size: 15px; order: 3; }
+.tune-speed .rl-chips { flex-basis: auto; width: max-content; max-width: 100%; margin: 6px 0 2px auto; gap: 0; font-size: 16px; order: 3; }
 .tune-speed .rl-chips button { flex: 0 0 auto; min-width: 44px; max-width: none; padding: 0 6px; }
 .tune-speed .rl-text { order: 1; margin-left: auto; }
 /* While they are open, a zero-height break puts the chips on a line of their own. */
@@ -5908,8 +5914,8 @@ body.player-mode .player-shell { position: static; }
   transition: background .15s ease, border-color .15s ease;
 }
 .dp-art { display: block; width: 100%; height: 38px; pointer-events: none; color: var(--text-secondary); }
-.dp-k { font-size: 13px; font-weight: 650; color: var(--text-primary); line-height: 1.25; }
-.dp-v { font-size: 12px; font-weight: 500; color: var(--text-secondary); line-height: 1.25; }
+.dp-k { font-size: 14px; font-weight: 650; color: var(--text-primary); line-height: 1.25; }
+.dp-v { font-size: 13px; font-weight: 500; color: var(--text-secondary); line-height: 1.25; }
 .dp-tile .dp-v { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 @media (hover: hover) { .dp-tile:not(.dp-open):hover { background: color-mix(in srgb, var(--accent) 7%, var(--menu-card)); } }
 /* Under forced colours backgrounds are replaced, so the chosen choice and the
@@ -5941,7 +5947,7 @@ body.player-mode .player-shell { position: static; }
    Motion is honoured there, and the player's sheet carries no keyframes for a
    drawer it never has. */
 .dp-panel.dp-folding { pointer-events: none; }
-.dp-panel > .draw-section-label { font-size: 13px; font-weight: 500; color: var(--text-secondary); margin-top: 4px; }
+.dp-panel > .draw-section-label { font-size: 14px; font-weight: 500; color: var(--text-secondary); margin-top: 4px; }
 .dp-panel > .draw-section-label:first-child { margin-top: 0; }
 .dp-aside { font-weight: 400; }
 /* THE CHOICES sit on the drawer's paper inside the card -- paper, card, paper.
@@ -5958,14 +5964,14 @@ body.player-mode .player-shell { position: static; }
 .dp-sizes { margin-top: 2px; }
 .dp-sizes .dp-art { height: 26px; }
 .dp-panel #opacityRow { flex-direction: column; align-items: stretch; gap: 4px; margin-top: 6px; }
-.dp-panel #opacityRow .draw-section-label { width: auto; font-size: 13px; }
+.dp-panel #opacityRow .draw-section-label { width: auto; font-size: 14px; }
 .dp-opacity-art { height: 26px; border-radius: 12px; background: var(--menu-paper); }
 .dp-opacity-line { display: flex; align-items: center; gap: 10px; }
 .dp-opacity-line .slider { flex: 1; min-width: 0; }
-.dp-panel .tool-row .draw-section-label { font-size: 13px; }
+.dp-panel .tool-row .draw-section-label { font-size: 14px; }
 .dp-switch { justify-content: space-between; gap: 12px; padding: 6px 2px 0; }
 .dp-switch-words { display: flex; flex-direction: column; text-align: left; }
-.dp-switch .dp-k { font-size: 14px; }
+.dp-switch .dp-k { font-size: 15px; }
 .dp-foot-divider { width: 100%; }
 
 
@@ -6020,8 +6026,8 @@ body.player-mode .player-shell { position: static; }
    size of minus and plus. */
 .crossfade-row .slider-nudge-btn { width: 32px; height: 32px; border-radius: calc(var(--r-seg) - 3px); }
 @media (max-width: 640px) { .crossfade-row .slider-nudge-btn { width: 30px; height: 30px; } }
-.crossfade-label { font-size: 12px; color: var(--text-soft); flex: none; min-width: 64px; }
-.crossfade-val { font-size: 12px; color: var(--text-bright); flex: none; min-width: 38px; text-align: right; }
+.crossfade-label { font-size: 13px; color: var(--text-soft); flex: none; min-width: 64px; }
+.crossfade-val { font-size: 13px; color: var(--text-bright); flex: none; min-width: 38px; text-align: right; }
 
 /* ---------- Brush size: rounded tray + snug value + preview dot ---------- */
 .brush-slider-line {
@@ -6857,7 +6863,7 @@ body:not(.player-mode) :is(.toolbar, .flip-tools) {
    and its rows are parted by the menu's rule: Tune is the menu's paper (the
    drawers mock), and it wore small capitals and the grey line the menu's
    sheets do not (the drawers' census, after #630: "all yes"). */
-.tune-title { font-size: 13px; font-weight: 600; color: var(--text-secondary); padding: 8px 0 4px; }
+.tune-title { font-size: 14px; font-weight: 600; color: var(--text-secondary); padding: 8px 0 4px; }
 .tune-row { display: flex; align-items: center; gap: 14px; padding: 8px 0; }
 .tune-row + .tune-row { border-top: 1px solid var(--menu-card-rule); }
 /* margin-right:auto clusters each row's controls on the RIGHT edge (label left,
@@ -6865,8 +6871,8 @@ body:not(.player-mode) :is(.toolbar, .flip-tools) {
    controls huddled mid-left with 300px of dead row to their right; mobile
    already read this way via its flex-grow override below. */
 .tune-label { display: flex; flex-direction: column; gap: 1px; flex: 0 0 auto; width: 150px; margin-right: auto; }
-.tune-name { font-size: 13px; font-weight: 600; color: var(--text-primary); }
-.tune-hint { font-size: 11px; color: var(--text-muted); }
+.tune-name { font-size: 14px; font-weight: 600; color: var(--text-primary); }
+.tune-hint { font-size: 12px; color: var(--text-muted); }
 .tune-tool.open { color: var(--seg-on-ink); background: var(--seg-on-fill); }
 .flip-grid { position: absolute; top: 0; left: 0; pointer-events: none; display: none; z-index: 5; }
 .flip-grid.on { display: block; }
@@ -7490,14 +7496,19 @@ html:has(.flip-export:not([hidden])) { overscroll-behavior-y: none; }
    lands on the slider it belongs to. */
 .shape-knob { display: flex; align-items: center; gap: 8px; padding: 6px 4px 0;
   margin-block: 17px; }
-.shape-knob label { font-size: 12px; font-weight: 600; letter-spacing: .04em;
-  text-transform: uppercase; color: var(--text-muted); flex: 0 0 58px; white-space: nowrap; }
+.shape-knob label { font-size: 13px; font-weight: 600; color: var(--text-muted); flex: 0 0 72px; min-width: 0; white-space: nowrap; }
 .shape-knob input[type="range"] { flex: 1 1 auto; min-width: 90px; accent-color: var(--ui-hi); }
-.shape-knob output { font-size: 11px; font-weight: 600; color: var(--text-primary);
-  flex: 0 0 32px; text-align: right; font-variant-numeric: tabular-nums; }
+.shape-knob output { font-size: 12px; font-weight: 600; color: var(--text-primary);
+  flex: 0 0 44px; min-width: 0; text-align: right; font-variant-numeric: tabular-nums; }
 /* Both labels take one width, so Sides' and Rounding's sliders start and end
-   together (they were 46px-min labels, and ROUNDING is wider than SIDES).
-   The output holds "Sharp". */
+   together (they were 46px-min labels, and Rounding is wider than Sides).
+   The output holds "Sharp". THE WIDTHS HOLD (min-width: 0): a flex item's
+   least width is its words', so at 58px ROUNDING in capitals grew its own box
+   to 69 and its slider started 11px after Sides'. The words are a size up
+   with the drawers' (B) and set as words, not capitals (the drawers' census:
+   no capitals in a drawer; these knobs show only for a shape that has them,
+   so the census had not seen them); 72px and 44px hold Rounding and Sharp
+   in a face as wide as DejaVu Sans. */
 /* The shape the knobs make (lib/shapecard.js), under them, centred. */
 .shape-preview { display: flex; justify-content: center; padding-top: 2px; }
 .shape-preview[hidden] { display: none; }
@@ -8116,7 +8127,7 @@ body.replaying .media-card { pointer-events: none; }
 .media-tab {
   flex: 1 1 0; min-width: 0; min-height: 44px; border: 0; border-radius: var(--seg-pill-r); background: transparent;
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-  font: inherit; font-size: 14px; font-weight: 600; color: var(--text-soft); cursor: pointer;
+  font: inherit; font-size: 15px; font-weight: 600; color: var(--text-soft); cursor: pointer;
   position: relative; z-index: 1; -webkit-tap-highlight-color: transparent;
 }
 .media-tab svg { width: 18px; height: 18px; flex: none; }
@@ -8964,6 +8975,13 @@ body.drawalong .canvas-empty-hint { display: none; }
    above, so it wore the lilac edge on a grey fill; here it is the card. */
 :where(.tune-shell) .onion-tint { background: var(--menu-card); border-color: var(--menu-card-line); }
 :where(.tab-panel, .media-card) .loop-btn.subtle { background: var(--menu-card); }
+/* THE DRAWERS' WORDS, ONE SIZE UP (the owner, of the type mock's B: "all yes"):
+   every word in a dock drawer a size nearer the menu's 16 over 14, the
+   smallest 12 where it was 11. The drawers' own rules carry their new sizes;
+   these two controls are shared with sheets the menu opens (a pill track, the
+   Report sheet's button), so in the drawers only. */
+:where(.tab-panel, .media-card, .tool-tray, .tune-shell, .shape-pop) .seg button { font-size: 14px; }
+:where(.tab-panel, .media-card) .panel-btn { font-size: 13px; }
 :where(.tab-panel, .media-card, .tool-tray, .tune-shell) .drawer-divider { background: var(--menu-card-line); }
 /* Words in the drawers that were too faint (the drawers mock, measured on the
    loaded photo and music drawers): secondary words take the sheet's ink, and
