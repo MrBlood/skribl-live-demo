@@ -23360,5 +23360,5 @@ list. It is now, by that class (.tune-shell.open, which the name drawer wears
 too), for the pill and its ×, on both editors. verify_pillfit drives each
 editor's Tune button with the amber that carries controls: red before on both
 (the pill visible, its × live), green after, and each half served back out
-goes red on its own. On the scenario, the same six runs: two of the four
-before the fix red, every one after it green.
+goes red on its own. On the scenario, Flip's light phone through Tune as CI
+runs it: two of the four runs before the fix red, all nine after it green.
