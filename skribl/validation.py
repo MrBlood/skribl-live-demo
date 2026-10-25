@@ -898,7 +898,8 @@ def _validate_payload_complexity(payload):
     if len(frames) > MAX_FRAMES:
         return f"At most {MAX_FRAMES} frames are allowed (got {len(frames)})."
     err = (_validate_loop(payload.get("loop"), len(frames))
-           or _validate_under(payload.get("under"), len(frames)))
+           or _validate_under(payload.get("under"), len(frames))
+           or _validate_beat(payload.get("beat")))
     if err:
         return err
     for i, frame in enumerate(frames):
@@ -927,6 +928,28 @@ def _validate_payload_complexity(payload):
 
 def _is_int(n):
     return isinstance(n, int) and not isinstance(n, bool)
+
+
+# Flip's Beat speed (owner, of the mock: "all yes"): how long a round of the
+# pages lasts, in bars of the song, so a reopened Flip keeps Beat as its speed.
+# The speed itself rides in `fps`, checked above; flip.js BEAT_BARS offers the
+# same four, and verify_sharedrules holds the two together.
+BEAT_BARS = (0.25, 0.5, 1, 2)
+
+
+def _validate_beat(beat):
+    # Absent is the default and every post before Beat existed.
+    if beat is None:
+        return None
+    if not isinstance(beat, dict):
+        return "'beat' must be an object."
+    unknown = set(beat) - {"bars"}
+    if unknown:
+        return f"'beat' has an unknown key: {sorted(unknown)[0]!r}."
+    bars = beat.get("bars")
+    if isinstance(bars, bool) or not isinstance(bars, (int, float)) or bars not in BEAT_BARS:
+        return "'beat.bars' must be one of 0.25, 0.5, 1 or 2."
+    return None
 
 
 def _validate_loop(loop, n_frames):
