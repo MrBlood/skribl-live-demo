@@ -21,7 +21,8 @@ the loop, so I'm not at 7 or 9 when I want 8"; "All yes" to the mock; then
   settles where the loop is 4, 8, 16 or 32 beats, the count nearest what the
   finger left, smooth restart and all, counted from the start wherever it
   is: a start set off the beat is never moved. The start let go lands on the
-  nearest beat, and the end follows to whole bars. A count the song or the
+  nearest beat (or where the music begins, below), and the end follows to
+  whole bars. A count the song or the
   20s cap has no room for is passed over. An end past what is in view is
   held at the timeline's edge until the view has widened to it, as a person
   holds it. The settle glides there frame by frame, at once under Reduce
@@ -44,6 +45,16 @@ the loop, so I'm not at 7 or 9 when I want 8"; "All yes" to the mock; then
   whole bars. The marks glide there frame by frame, at once under Reduce
   Motion. Then at 1x a start lands on the new beat, the new beat is kept
   with the song in the drafts, and tapped again the beat is the taps' own.
+
+  WHERE THE MUSIC BEGINS (the owner, of a song with dead air before it: "It
+  snaps back to empty space"; of the mock, "All yes"). At 1x a start let go
+  in the silence before the music and nearer it than the next beat, or with
+  the nearest beat in the silence, or up to half a beat into the music,
+  lands where the music begins, the beat kept and the loop whole bars; music
+  that begins within an eighth of a beat of one, on that beat. Past half a
+  beat into the music, in a gap too short to be a silence, and in the quiet
+  between two drums on beats, it lands on the nearest beat, as before.
+  Zoomed in, a start let go far from a beat stays, and so does the beat.
 
   THE MARKS. The timeline puts a dot on every beat that stands 6px from the
   next (else every bar, else every fourth bar), bigger on each bar counted
@@ -99,7 +110,7 @@ import browsing  # noqa: E402
 import waits  # noqa: E402
 
 # For calibration: MUSICBEAT_ONLY=Pad (or Flip) runs one editor, and
-# MUSICBEAT_PART=pair (tap, bars, marks, detail, snap, zoomed, keep, words) one part.
+# MUSICBEAT_PART=pair (tap, bars, marks, detail, snap, zoomed, silence, keep, words) one part.
 # A real run sets neither.
 ONLY = os.environ.get("MUSICBEAT_ONLY", "")
 PART = os.environ.get("MUSICBEAT_PART", "")
@@ -131,6 +142,50 @@ def _wav(seconds, rate=8000):
 SHORT = {"name": "six.wav", "mimeType": "audio/wav", "buffer": _wav(6.0)}
 TWELVE = {"name": "twelve.wav", "mimeType": "audio/wav", "buffer": _wav(12.0)}
 LONG = {"name": "minute.wav", "mimeType": "audio/wav", "buffer": _wav(60.0)}
+# Songs whose music begins after a silence, for where the music begins: each a
+# sum of parts, a function of the time each, at 8000 a second.
+P90 = 60 / 90
+
+
+def _song(name, *parts, seconds=12.0, rate=8000):
+    n = int(seconds * rate)
+    v = [sum(f(i / rate) for f in parts) for i in range(n)]
+    k = 0.9 * 32767 / (max(abs(x) for x in v) or 1)
+    buf = io.BytesIO()
+    w = wave.open(buf, "wb")
+    w.setnchannels(1); w.setsampwidth(2); w.setframerate(rate)
+    w.writeframes(struct.pack("<%dh" % n, *[int(x * k) for x in v]))
+    w.close()
+    return {"name": name, "mimeType": "audio/wav", "buffer": buf.getvalue()}
+
+
+def _drum(t, p=P90, first=P90):
+    """A drum on every beat from `first`, under a hundredth of the loudest 0.28s on."""
+    if t < first:
+        return 0.0
+    x = (t - first) % p
+    return 0.9 * math.exp(-x / 0.06) * math.sin(2 * math.pi * 110 * x)
+
+
+def _held(t, first=P90):
+    """A chord held under the drums from `first`, never quiet."""
+    return 0.06 * math.sin(2 * math.pi * 220 * t) if t >= first else 0.0
+
+
+def _lead(t):
+    """A note at 0.40s, between two beats, ringing on into the first drum."""
+    return 0.3 * math.exp(-(t - 0.4) / 0.25) * math.sin(2 * math.pi * 440 * (t - 0.4)) if t >= 0.4 else 0.0
+
+
+# Silence to 0.40s, a lead-in note there, then the drums and the chord from the beat at 0.667s.
+LEADIN = _song("lead-in.wav", _lead, _drum, _held)
+# The same with no lead-in: the music begins on the beat.
+NOLEAD = _song("no-lead.wav", _drum, _held)
+# The music from 0:00, stopping on the beat at 2.0 and back on the beat at
+# 3.33, with a tenth of a second's gap at 1.05, too short to be a silence.
+BREAK = _song("break.wav", lambda t: 0.0 if 2.0 <= t < 5 * P90 or 1.05 <= t < 1.15 else _drum(t, first=0.0) + _held(t, first=0.0))
+# A drum every second from 1.0 and nothing between.
+SPARSE = _song("sparse.wav", lambda t: _drum(t, p=1.0, first=1.0))
 PAGES = """(o) => { frames.length = 0;
   for (let k = 0; k < o.n; k++) { const f = newFrame(); const pts = [];
     for (let j = 0; j < 12; j++) pts.push({ x: CW * (0.1 + 0.2 * k) + j * 6, y: CH * 0.3 + j * 12, color: '#7c5cff', size: 10, t: j * 5, start: j === 0 });
@@ -475,7 +530,7 @@ with sync_playwright() as pw:
     # then goes there, as a person does (lib/musictimeline.js widen).
     TL = ("(id) => { const s = document.getElementById('musicTlStage').getBoundingClientRect(), h = document.getElementById(id).getBoundingClientRect(),"
           " v = (document.getElementById('musicTimeline').dataset.view || '0 1').split(' ').map(Number);"
-          " return { x: s.left, w: s.width, hx: h.left + h.width / 2, hy: h.top + h.height / 2, v0: v[0], span: v[1] }; }")
+          " return { x: s.left, w: s.width, hx: h.left + h.width / 2, hy: h.top + h.height / 2, v0: v[0], span: v[1], d: audioDuration }; }")
     REC = """() => { const out = window.__rec = [], t0 = performance.now();
       (function f() { out.push([performance.now() - t0, trimStart, trimEnd]); if (performance.now() - t0 < 700) requestAnimationFrame(f); })(); }"""
 
@@ -483,7 +538,10 @@ with sync_playwright() as pw:
         pg.evaluate("() => document.getElementById('musicTimeline').scrollIntoView({ block: 'center' })"); pg.wait_for_timeout(300)
         at = pg.evaluate(TL, handle)
         x_of = lambda a: a["x"] + (t - a["v0"]) / a["span"] * a["w"]   # noqa: E731
-        inside = lambda a: a["x"] + 36 <= x_of(a) <= a["x"] + a["w"] - 36   # noqa: E731
+        # Clear of the edge's zone, or as clear as it gets: where the view
+        # already shows the song's start (or its end), it widens no further.
+        inside = lambda a: ((a["x"] + 36 <= x_of(a) or (handle == "tlStart" and a["v0"] <= 0))   # noqa: E731
+                            and (x_of(a) <= a["x"] + a["w"] - 36 or (handle == "tlEnd" and a["v0"] + a["span"] >= a["d"])))
         pg.mouse.move(at["hx"], at["hy"]); pg.mouse.down()
         if not inside(at):
             pg.mouse.move(at["x"] + (at["w"] - 3 if handle == "tlEnd" else 3), at["hy"], steps=6)
@@ -863,6 +921,79 @@ with sync_playwright() as pw:
         check(f"{_n}: tapped again after that, the beat is the taps' own",
               ph is not None and st["kept"]["bpm"] == 120 and phase_gap(ph, 0.12) < 0.04 and phase_gap(ph, 1.9999) > 0.08,
               f"a beat at 2.0 (1.9999), then tapped 0.12s past each half second: {st['kept']} (taps within {got['spread']:.1f}ms of their marks, try {k})")
+        c.close()
+
+    print("\nMUSIC BEAT — where the music begins")
+    # At 1x, each start let go once from a loop of four beats, with the beat
+    # set as the ears or the taps would set it: on the lead-in song a beat
+    # falls at 0:00, in the silence, and the music begins at FIRST, between
+    # beats (lib/musicdrawer.js soundAt).
+    T90 = {"bpm": 90, "phase": 0}
+    FIRST = 0.4
+
+    def let_go_at(pg, at, s=P90, e=5 * P90, tempo=T90):
+        """Where a start let go at `at` lands, the loop s to e before: (let go, after, the beat after)."""
+        pg.evaluate(SET, {"tempo": tempo, "s": s, "e": e, "xf": 0})
+        pg.wait_for_timeout(350)
+        g, t, _ = tl_drag(pg, "tlStart", at)
+        return g, t, pg.evaluate("() => musicTempo")
+
+    def bars_of(t, p=P90):
+        n = heard(t) / p
+        return any(abs(n - q) < 1e-6 for q in (4, 8, 16, 32))
+
+    def said(g, t, k, p=P90):
+        return f"let go at {g['s']:.3f}: {t['s']:.4f}-{t['e']:.4f}, {heard(t) / p:.3f} beats heard; the beat {k}"
+    for _n, _p in eds("silence"):
+        c, pg, errs = editor(b, _n, _p, song=LEADIN, more=False)
+        g, t, k = let_go_at(pg, 0.30)
+        check(f"{_n}: a start let go in the silence before the music lands where the music begins, the beat kept and the loop whole bars",
+              abs(g["s"] - 0.30) < 0.06 and abs(t["s"] - FIRST) < 0.001 and k == T90 and bars_of(t), said(g, t, k) + f" (the music begins at {FIRST})")
+        g, t, k = let_go_at(pg, 0.38)
+        check(f"{_n}: ...let go in the silence nearer the music than the next beat (a drum), where the music begins",
+              abs(g["s"] - 0.38) < 0.015 and abs(t["s"] - FIRST) < 0.001 and k == T90 and bars_of(t), said(g, t, k))
+        g, t, k = let_go_at(pg, 0.55)
+        check(f"{_n}: ...let go up to half a beat into the music, where the music begins",
+              abs(g["s"] - 0.55) < 0.03 and abs(t["s"] - FIRST) < 0.001 and k == T90 and bars_of(t), said(g, t, k))
+        g, t, k = let_go_at(pg, 0.80)
+        check(f"{_n}: past half a beat into the music, the nearest beat, as before",
+              abs(g["s"] - 0.80) < 0.03 and abs(t["s"] - P90) < 1e-6 and k == T90 and bars_of(t), said(g, t, k))
+        # Zoomed in to 4x, where the music begins: a third of a beat from the
+        # first drum, far from any beat.
+        pg.evaluate(SET, {"tempo": T90, "s": P90, "e": 5 * P90, "xf": 0})
+        pg.wait_for_timeout(350)
+        pg.evaluate("() => document.getElementById('musicTimeline').scrollIntoView({ block: 'center' })"); pg.wait_for_timeout(300)
+        for _ in range(2):
+            press(pg, "#musicTlIn", 260)
+        pg.wait_for_timeout(500)
+        mag = pg.evaluate("() => document.getElementById('musicTlMag').textContent")
+        g, t, _ = tl_drag(pg, "tlStart", FIRST)
+        k = pg.evaluate("() => musicTempo")
+        check(f"{_n}: zoomed in, a start let go where the music begins, far from a beat, stays there, and the beat stays on the drums",
+              "4" in mag and abs(t["s"] - g["s"]) < 1e-6 and abs(g["s"] - FIRST) < 0.01 and k == T90 and bars_of(t), f"at {mag}: " + said(g, t, k))
+        for _ in range(2):
+            press(pg, "#musicTlOut", 260)
+        pg.wait_for_timeout(500)
+        # The music beginning on a beat.
+        add(pg, NOLEAD)
+        g, t, k = let_go_at(pg, 0.30)
+        check(f"{_n}: where the music begins within an eighth of a beat of one, the start lands exactly on that beat",
+              abs(g["s"] - 0.30) < 0.06 and abs(t["s"] - P90) < 1e-6 and k == T90 and bars_of(t), said(g, t, k) + f" (the music begins on the beat at {P90:.4f})")
+        # A break in the music: gone on the beat at 2.0, back on the beat at 3.33.
+        add(pg, BREAK)
+        g, t, k = let_go_at(pg, 1.90, s=2 * P90, e=10 * P90)
+        check(f"{_n}: just before a break in the music, with the nearest beat in it, where the music comes back",
+              abs(g["s"] - 1.90) < 0.03 and abs(t["s"] - 5 * P90) < 1e-6 and k == T90 and bars_of(t), said(g, t, k) + f" (back at {5 * P90:.4f})")
+        g, t, k = let_go_at(pg, 1.10)
+        check(f"{_n}: in a gap a tenth of a second long, too short to be a silence, the nearest beat, as before",
+              abs(g["s"] - 1.10) < 0.015 and abs(t["s"] - 2 * P90) < 1e-6 and k == T90 and bars_of(t), said(g, t, k))
+        # Drums on every beat at 60 and nothing between.
+        add(pg, SPARSE)
+        T60 = {"bpm": 60, "phase": 0}
+        g, t, k = let_go_at(pg, 3.40, s=2.0, e=6.0, tempo=T60)
+        check(f"{_n}: in the quiet between two drums on beats, the nearer beat, as before",
+              abs(g["s"] - 3.40) < 0.03 and abs(t["s"] - 3.0) < 1e-6 and k == T60 and bars_of(t, 1.0), said(g, t, k, 1.0))
+        check(f"{_n}: no page errors where the music begins", not errs, "; ".join(errs[:2]))
         c.close()
 
     print("\nMUSIC BEAT — kept with the song")

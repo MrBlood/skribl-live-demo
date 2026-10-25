@@ -521,8 +521,16 @@ stays a sleep.
   stays exactly there and a beat falls on it, the beats a minute kept and the
   end following on whole bars, the marks gliding there frame by frame (at
   once under Reduce Motion), then at 1x a start lands on the new beat, the new
-  beat is kept in the drafts, and tapped again the beat is the taps' own; the
-  tempo goes with the song into the drafts and a re-add card, the switch with
+  beat is kept in the drafts, and tapped again the beat is the taps' own;
+  where the music begins after a silence (the owner: "It snaps back to empty
+  space"), at 1x a start let go in the silence before it and nearer it than
+  the next beat, or with the nearest beat in the silence, or up to half a beat
+  into the music, lands where the music begins, the beat kept and the loop
+  whole bars, on the beat when the music begins within an eighth of one,
+  while past half a beat into the music, in a gap too short to be a silence
+  and in the quiet between two drums on beats it lands on the nearest beat,
+  and zoomed in a start let go far from a beat stays, and so does the beat;
+  the tempo goes with the song into the drafts and a re-add card, the switch with
   it, tapped again the switch stays, and a new song starts with none and the
   switch put away; the one line, the tap's and the switch's words and the
   marks read against what is behind them, light and dark; the pair's words are
@@ -542,8 +550,11 @@ stays a sleep.
   lane moves nothing, and on a phone a finger that goes up or down first
   scrolls the page while one that goes sideways slides; an end follows the
   finger with its time in its bubble while the view holds still, held near the
-  edge the view widens frame by frame with the far side kept, and let go it
-  eases to its framing frame by frame (at once under Reduce Motion); each
+  edge the view widens frame by frame with the far side kept, but not where
+  it already shows the song's start (the owner: "It snaps back to empty
+  space"): held there the view holds still and the start stays under the
+  finger, and let go it eases to its framing frame by frame (at once under
+  Reduce Motion); each
   end's grip is a tab at its foot (the owner: in the middle it "kind of gets in
   the way of seeing where the wave starts for the beat"), asked of what is on
   top on a phone and a desk: beside either line over the song nothing is the
