@@ -635,13 +635,15 @@ stays a sleep.
   behind it (owner, after v323: "check contrasts and consistency on all our
   changes, and future changes"): the menu (main, New, Settings), Your drafts,
   Export, Report a problem, Post, How it works (Watch, Look it up), Tune, the
-  shape picker and the dock's drawers, on Pad and Flip, light and dark, a
-  phone and a desk. The ground is a photograph of the sheet with its words
+  shape picker, the dock's drawers and Flip's stamp shelf (empty, and with
+  stamps), on Pad and Flip, light and dark, a phone and a desk. The ground is a photograph of the sheet with its words
   made transparent; WCAG AA (4.5:1, 3:1 large), disabled controls and a
-  sheet's edge fade exempt. Then consistency: each surface the same on Pad
+  sheet's edge fade exempt, and words said only to a screen reader (clipped
+  to nothing) not read as words. Then consistency: each surface the same on Pad
   and Flip, every sheet the menu opens one paper, and the drawers wear the
-  menu's look: each control a white card with the tiles' lilac edge (Post's
-  fields too), Tune's rows parted by the menu's rule, one style for a
+  menu's look: the paper, each drawer's edge the tiles' lilac line, the arrow
+  under a pop its paper, each control a white card with that edge (Post's
+  fields and the stamps too), Tune's rows parted by the menu's rule, one style for a
   section's name and none in capitals, one corner per kind. And the drawers'
   type (B): every word in a dock drawer, Tune and the shape picker 12 to 16px
   in whole pixels, none cut off at a side, no wrapped line ending on a word
@@ -837,7 +839,9 @@ stays a sleep.
   that matter most, because none of them is visible in a screenshot — that the
   shelf has a BYTE budget rather than a slot count, that a full shelf refuses
   rather than evicting, and that it lives in its own storage key so it cannot
-  starve the draft the way Flip's own draft once starved the Pad's.
+  starve the draft the way Flip's own draft once starved the Pad's. And every
+  stamp's × is whole: just inside each of its edges, a tap finds it (the
+  grid clipped the top row's and the last column's).
 
 - `verify_fill.py` — Fill. A region expressed as strokes, because the frame
   format has no fill primitive and adding one is a change the player must
@@ -961,7 +965,8 @@ stays a sleep.
 
 - `verify_motion.py` — no one-frame jumps: each motion fix pinned by sampling
   computed style once per animation frame inside the page (a screen recording
-  drops frames and shows smooth fades as cuts).
+  drops frames and shows smooth fades as cuts). The dock's pops fade: the
+  shape picker in and out, the tool tray in, the stamp shelf in and out.
 
 ## Where a suite's rationale lives
 
