@@ -1248,6 +1248,19 @@
 #tuneWatchRow .seg { margin: 0; }
 #tuneWatchRow .tune-hint { flex: 0 0 100%; order: 1; }
 
+/* Match the beat: the round's bars and what they make sit under Speed while
+   Beat is on. They open and close as a glide (rows 0fr to 1fr, the Tune
+   shell's own way of reaching a natural height), so the sheet never jumps,
+   and at once under Reduce Motion. Not a row of its own: Speed's rule below
+   it still draws, as between any two rows. */
+.beat-more { display: grid; grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows .22s ease, opacity .18s ease; }
+.beat-more.open { grid-template-rows: 1fr; opacity: 1; }
+.beat-more-in { min-height: 0; overflow: hidden; }
+.beat-more-body { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; padding: 0 0 10px; }
+.beat-more + .tune-row { border-top: 1px solid var(--menu-card-rule); }
+#beatRoundSeg button[hidden] { display: none; }
+@media (prefers-reduced-motion: reduce) { .beat-more { transition: none; } }
+
 /* Onion row dims when onion skin is off — the controls stay put so the panel
    never changes height mid-toggle. */
 #tuneOnionRow.muted { opacity: 0.4; }

@@ -243,6 +243,12 @@ let color = "#7c5cff", size = 7, erasing = false, onion = true, fps = 12;
    is above 1, so a document nobody subdivided posts the bytes it always did. */
 let subdiv = 1;
 const poseRate = () => fps / (subdiv || 1);
+/* MATCH THE BEAT (owner, of the mock: "all yes"): while Beat is the speed,
+   how long a round of the pages lasts, in bars of the song (BEAT_BARS); null
+   when the speed is a number. Up here with fps, which it sets, because a
+   draft restore reaches the speed control before the control's own code. */
+let beatBars = null;
+const BEAT_BARS = [0.25, 0.5, 1, 2];
 // Onion skin depth/tint are view-only session state — deliberately NOT persisted
 // or posted, so they cannot affect the payload format or the player.
 let onionDepth = 1, onionTint = false;
@@ -658,7 +664,7 @@ let _saveT = null;
 // media-spill paths still show "Saving…" while a multi-megabyte write is
 // genuinely pending, and 'failed'/'saved-no-media' still persist.
 var _flipDirty = false;   // an edit since the last save (scheduleSave sets it, saveNow clears it)
-function scheduleSave(){ _flipDirty = true; clearTimeout(_saveT); _saveT = setTimeout(saveWhenLifted, 800);
+function scheduleSave(){ beatRefit(); _flipDirty = true; clearTimeout(_saveT); _saveT = setTimeout(saveWhenLifted, 800);
   if (typeof updateFlipEmptyHint === 'function') updateFlipEmptyHint(); }
 // media:false drops the base64 bytes but keeps photo/musicMeta, so a restore can
 // rebuild everything except the files themselves and prompt the user to re-add
@@ -739,6 +745,9 @@ function serializeFlip(opts){
     // CONTROL does, or a reopened draft lights the wrong button. Omitted at the
     // default so an unsubdivided document writes what it always wrote.
     ...(subdiv > 1 ? { subdiv: subdiv } : {}),
+    // Beat as the speed: how long a round lasts, so a reopened draft keeps it.
+    // Omitted when the speed is a number, so the bytes are what they were.
+    ...(beatBars != null ? { beat: { bars: beatBars } } : {}),
     canvasSize: { cssWidth: CW, cssHeight: CH, dpr: 1 },
     title: (window.SkriblName && window.SkriblName.get()) || 'Untitled Skribl',
     savedAt: new Date().toISOString(),
@@ -1259,6 +1268,10 @@ function applyPayload(d){
   // pages; anything else reads as no loop, as an unparseable hold reads as 1.
   docLoop = (d.loop && window.SkriblHold && window.SkriblHold.loopOf(d.loop, frames.length)) ? d.loop : null;
   docUnder = (d.under && window.SkriblHold && window.SkriblHold.underOf && window.SkriblHold.underOf(d.under, frames.length)) ? d.under : null;
+  // Beat comes back with the document, the speed it was posted at refitted to
+  // the pages and the beat it came with.
+  beatBars = beatOf(d.beat);
+  beatRefit();
   return frames.some(f => f.strokes.length);
 }
 // Media the autosave had to drop (too big for localStorage). Mirrors the Pad:
@@ -3842,6 +3855,12 @@ try{ const _v = parseFloat(localStorage.getItem(FLIP_SPEED_KEY));
   if(FLIP_RATES.indexOf(_v) >= 0) flipRate = _v; }catch(_){ }
 const drawOnBtn=document.getElementById('drawOnBtn');
 let scrubbingFrames=false, playI=0;
+/* With Beat as the speed, while it plays: where the next page is due, in the
+   plan's own time, and the plan time at which the song's loop begins
+   (runPlayTimer turns the two into a wait on the song's clock). Null when the
+   pages keep their own time: no Beat, a watching speed other than 1x, no song
+   playing, or a scrub or a new speed since Play. */
+let beatTimer=null;
 /* Paused by a tap on the canvas (lib/tappause.js). Still `playing`, so every
    guard that keeps the canvas a playback surface holds while it is paused.
    playDueAt is when the page on screen gives way, so a pause keeps what is left
@@ -4360,6 +4379,25 @@ function runPlayTimer(){
       : framePaintMs[ni] != null
         ? framePaintMs[ni]
         : (frames[ni] ? frames[ni].strokes.length * msPerPoint : 0);
+    // With Beat as the speed, the next page is due where the SONG says, by
+    // its own clock as heard (less the speaker's delay), not after a wait of
+    // its own, so the pages cannot drift off the beat. A page the song has
+    // already passed is skipped rather than flashed by.
+    if(beatTimer){
+      beatTimer.due += d;
+      const D = _waLoop.duration();
+      if(flipRate === 1 && _waLoop.playing() && D > 0){
+        const heard = _waLoop.elapsed() - _waLoop.latency();
+        const ahead = () => { let a = ((((beatTimer.due - beatTimer.anchor) / 1000 - heard) % D) + D) % D; return a > D / 2 ? a - D : a; };
+        let a = ahead();
+        for(let n = 0; a < 0 && n < frames.length * 8; n++){
+          const skip = _pageMsAt(_playPage(playI));
+          if(a * 1000 + skip > 0) break;
+          playI++; beatTimer.due += skip; a = ahead();
+        }
+        return Math.max(0, a * 1000 - est);
+      }
+    }
     return Math.max(0, d - est);
   };
   playStep();
@@ -4402,13 +4440,28 @@ function play(){
   syncPagebar();
   setPlayFace(true);
   if(flipPlayer){ flipPlayer.hidden=false; requestAnimationFrame(()=>flipPlayer.classList.add('show')); }
-  startMusic();
+  const _beat = beatStartAt(idx);     // with Beat, the song joins in step with this page
+  startMusic(_beat ? _beat.off : 0);
   startFlipElapsed();
   playBitmaps = window.SkriblFrameBitmap ? window.SkriblFrameBitmap.store() : null;
   playPlan = _loopPlan();
   _loopHandles();                     // playing: the handles step away (stop() rebuilds the strip)
   underCache = null;                  // painted afresh for this playback, then reused
-  playI=_playCountFor(idx); runPlayTimer();
+  playI=_playCountFor(idx); beatTimer=_beat ? { due:_beat.due, anchor:_beat.anchor } : null; runPlayTimer();
+}
+/* WHERE THE SONG JOINS, with Beat as the speed. A round's start is a bar of
+   the song, since the song's loop starts on one, so Play from any page
+   starts the song as far into its round as that page is (a stretch that
+   loops forever counts its rounds from the stretch), and the pages then keep
+   to the song's own clock (runPlayTimer): they cannot drift off the beat. At
+   a watching speed of 1x only; slower or faster, the pages go at that speed
+   and the song at its own, as they do without Beat. */
+function beatStartAt(page){
+  if(beatBars == null || flipRate !== 1 || !beatBpm() || !musicEnabled || !musicData || !window.SkriblHold) return null;
+  const p = window.SkriblHold.plan(frames, fps, docLoop), k = Math.max(0, p.slots.indexOf(page));
+  const round = beatBars * 4 * 60000 / beatBpm(), at = p.starts[k] - (p.forever ? p.introMs : 0);
+  const off = ((at % round) + round) % round;
+  return { off: off / 1000, due: p.starts[k], anchor: p.starts[k] - off };
 }
 function stop(){
   playPaused = false; pausedMusicAt = null; document.body.classList.remove('playback-paused');
@@ -4418,7 +4471,7 @@ function stop(){
   setPlayFace(false);
   clearInterval(playTimer); playTimer=null; if(revealRAF) cancelAnimationFrame(revealRAF); revealRAF=null;
   revealNib(null, 0);
-  stopMusic(); scrubbingFrames=false;
+  stopMusic(); scrubbingFrames=false; beatTimer=null;
   stopFlipElapsed();
   if(flipPlayer){ flipPlayer.classList.remove('show'); flipPlayer.hidden=true; }
   idx = Math.min(editIdx, frames.length-1);
@@ -4443,6 +4496,7 @@ function setFlipRate(c){
   const old = flipRate, now = performance.now();
   if(!(c > 0) || c === old) return;
   flipRate = c;
+  beatTimer = null;   // the song stays at its own speed: the pages go at the new one until the next Play
   try{ localStorage.setItem(FLIP_SPEED_KEY, String(c)); }catch(_){ }
   syncWatchSegs();
   if(!playing) return;
@@ -4545,6 +4599,7 @@ function scrubToPage(i){ const n=frames.length; if(!n) return; idx=Math.max(0, M
   // and revealing strokes under the finger would make the thumbnail you are
   // aiming at depend on how fast you moved.
   playI=_playCountFor(idx); render(); updatePlayProgress();
+  beatTimer=null;   // a scrub moves the pages, not the song: they keep their own time until the next Play
   // Paused, it stays paused: the round Play on the drawing says so. playI now
   // names the page it landed on, so the resume's first step is due at once and
   // shows that page afresh -- its whole time, and a drawing page its whole reveal.
@@ -5665,14 +5720,17 @@ function removeMusic(){ musicSelectionSeq++; if(typeof stopLoopPreview==='functi
   musicData=null; musicName=''; currentAudioBuffer=null; loopCrossfadeMs=0; musicTempo=null; loopCutOnSilence=false; pendingMusicMeta=null; musicFresh=false;
   if(typeof setCrossfadeUI==='function') setCrossfadeUI();
   syncMediaUI(); scheduleSave(); }
-function startMusicNative(){ ensureAudio(); if(audioEl){ try{ audioEl.currentTime=trimStart; audioEl.play().catch(()=>{}); }catch(_){}} }
-function startMusic(){ if(!musicEnabled) return;
+function startMusicNative(offset){ ensureAudio(); if(audioEl){ try{ audioEl.currentTime=trimStart+(offset||0); audioEl.play().catch(()=>{}); }catch(_){}} }
+// `offset`: seconds into the loop to begin (Beat's Play from a later page);
+// none, the loop's start.
+function startMusic(offset){ if(!musicEnabled) return;
+  const off = typeof offset === 'number' && offset > 0 ? offset : 0;
   // The silent switch (lib/audiosession.js): Preview Loop held the iOS playback
   // session and Flip it did not, so a phone set to silent played the animation
   // without its music (owner, v315). Every caller is a tap or a key.
   if(musicData && window.SkriblAudioSession) window.SkriblAudioSession.claim();   // only when there is something to hear
-  if(startWebAudioLoop(startMusicNative)) return;               // gapless path; native reachable on async unlock failure
-  startMusicNative(); }
+  if(startWebAudioLoop(()=>startMusicNative(off), off)) return;   // gapless path; native reachable on async unlock failure
+  startMusicNative(off); }
 function stopMusic(){ stopWebAudioLoop(); if(audioEl){ try{ audioEl.pause(); }catch(_){}}
   if(!previewingLoop && window.SkriblAudioSession) window.SkriblAudioSession.release(); }
 musicInput.addEventListener('change',async e=>{ const file=e.target.files&&e.target.files[0]; e.target.value='';
@@ -5871,7 +5929,7 @@ function buildSharePayload(){
   // substitutes 'Untitled Skribl' for an empty title, so sending '' is safe.
   const _t=document.getElementById('postTitleInput');
   const _c=document.getElementById('postCaptionInput');
-  const _payload = { version:2, schemaVersion:2, playbackMode: frames.length>1?'flip':'replay', fps:fps, ...(subdiv > 1 ? {subdiv:subdiv} : {}), ...(_validLoop() ? {loop:docLoop} : {}), ...(_validUnder() ? {under:docUnder} : {}), frames:writeFrames(outFrames), canvasSize:{cssWidth:CW,cssHeight:CH,dpr:1},
+  const _payload = { version:2, schemaVersion:2, playbackMode: frames.length>1?'flip':'replay', fps:fps, ...(subdiv > 1 ? {subdiv:subdiv} : {}), ...(beatBars != null ? {beat:{bars:beatBars}} : {}), ...(_validLoop() ? {loop:docLoop} : {}), ...(_validUnder() ? {under:docUnder} : {}), frames:writeFrames(outFrames), canvasSize:{cssWidth:CW,cssHeight:CH,dpr:1},
            title: (_t ? _t.value : '').trim(), caption: (_c ? _c.value : '').trim() };
   // THE PUBLIC CHOICE (v304), the Pad's rule: the key travels only when the
   // author ticked it; unticked, it is omitted and the server's "unlisted"
@@ -11164,7 +11222,7 @@ function clearAllPages(opts){
   const doc = (withMedia && flipHasMedia()) ? serializeFlip() : null;
   flipDocGen++;
   const _draftId = window.SkriblSavedDrafts ? window.SkriblSavedDrafts.forget() : null;   // a new Skribl is a new draft
-  clearFramesBackup = { doc: doc, frames: frames.map(deepCopy), idx: idx, fps: fps, subdiv: subdiv, draftId: _draftId,
+  clearFramesBackup = { doc: doc, frames: frames.map(deepCopy), idx: idx, fps: fps, subdiv: subdiv, beat: beatBars, draftId: _draftId,
                         bg: bgColor,
                         // ...and its shape, which New Skribl may change (its page in the ⋯ menu).
                         cw: CW, ch: CH,
@@ -11175,7 +11233,7 @@ function clearAllPages(opts){
      that are gone, which spends the insert budget on nothing and leaves the
      speed control showing a rate no page is using. Backed up with the frames
      above, because undoing the clear has to bring the timing back with them. */
-  fps = poseRate(); subdiv = 1;
+  fps = poseRate(); subdiv = 1; beatBars = null;
   // A NEW DOCUMENT STARTS WITH NO HISTORY (after v326, the Flip review): the
   // undo log is keyed to pages that are gone, so an Undo after a clear pulled
   // a deleted page into the new drawing, or threw and left every later
@@ -11228,6 +11286,7 @@ function restoreClear(){
   // frames alone would play them at the rate of the empty document.
   if(typeof clearFramesBackup.fps === 'number') fps = clearFramesBackup.fps;
   if(typeof clearFramesBackup.subdiv === 'number') subdiv = clearFramesBackup.subdiv;
+  beatBars = clearFramesBackup.beat == null ? null : clearFramesBackup.beat;
   if(clearFramesBackup.bg && clearFramesBackup.bg !== bgColor) setBg(clearFramesBackup.bg);   // New Skribl moved it
   if(clearFramesBackup.cw && clearFramesBackup.ch) { applyCanvasSize(clearFramesBackup.cw, clearFramesBackup.ch); syncCanvasSeg(); }   // ...and maybe its shape
   if(clearFramesBackup.name && window.SkriblName) window.SkriblName.restore(clearFramesBackup.name);
@@ -11405,16 +11464,119 @@ const fpsGroup=document.getElementById('fps');
    restore calls this before that line has run. */
 function syncFpsSeg(){
   const g=document.getElementById('fps'); if(!g) return;
-  const r=poseRate(), btns=[...g.querySelectorAll('button')];
-  btns.forEach(b=>b.classList.toggle('on', +b.dataset.fps===r));
+  const r=poseRate(), btns=[...g.querySelectorAll('button[data-fps]')];
+  btns.forEach(b=>b.classList.toggle('on', beatBars==null && +b.dataset.fps===r));
   const row=g.closest('.tune-row'), hint=row && row.querySelector('.tune-hint');
-  if(hint) hint.textContent = btns.some(b=>+b.dataset.fps===r) ? 'pages per second'
+  const said = beatBars!=null ? 'on the song\u2019s beat'
+    : btns.some(b=>+b.dataset.fps===r) ? 'pages per second'
     : ('pages per second \u00b7 this one plays at '+(Math.round(r*100)/100));
+  if(hint && hint.textContent !== said) hint.textContent = said;
+  syncBeatRow();
 }
 fpsGroup.addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b)return;
-  // The buttons mean POSES per second. In a subdivided document the stored rate
-  // is a multiple of that, so picking 24 on a halved document stores 48.
-  fps=(+b.dataset.fps)*(subdiv||1); syncFpsSeg();
+  if(b.dataset.beat){ if(beatBars!=null) return;
+    const n=beatNearest(); if(n==null) return;
+    beatBars=n; fps=beatFps(n);
+  } else {
+    // The buttons mean POSES per second. In a subdivided document the stored rate
+    // is a multiple of that, so picking 24 on a halved document stores 48.
+    beatBars=null; fps=(+b.dataset.fps)*(subdiv||1);
+  }
+  syncFpsSeg();
+  scheduleSave(); syncFlipDuration(); if(playing){ stop(); play(); } });
+
+/* MATCH THE BEAT. With a song that has a beat, heard by Skribl or tapped,
+   Beat is a fourth speed: a round of the pages lasts a quarter, a half, one
+   or two bars of the song, the speed is whatever does that, and the line
+   under it says what it makes ("12 pages in \u00bd bar \u00b7 12.4 a second").
+   A ROUND is what plays before it starts again: every page, a looped stretch
+   repeated, or -- a stretch that loops forever -- that stretch alone, its
+   pages before playing once. Still pages share the round, each by its hold;
+   a page that draws itself keeps its own time (the owner's "the replay is
+   the performance"). Turned on, the round nearest the speed you had; every
+   change to the pages refits the speed, so the round keeps its bars (the
+   owner's picks). A round no speed from 1 to 60 a second can make for these
+   pages is not offered, and if none can be, Beat steps aside and the speed
+   stays where it was. */
+// The round a document's `beat` names, read as the server checks it
+// (validation.py _validate_beat; verify_sharedrules holds the two together):
+// an object with `bars` and nothing else, one of BEAT_BARS. Anything else is
+// no Beat, as a loop that does not parse is no loop.
+function beatOf(raw){
+  if(!raw || typeof raw !== 'object' || Array.isArray(raw) || Object.keys(raw).some(k => k !== 'bars')) return null;
+  return typeof raw.bars === 'number' && BEAT_BARS.indexOf(raw.bars) >= 0 ? raw.bars : null;
+}
+function beatBpm(){ return musicTempo && musicTempo.bpm > 0 ? +musicTempo.bpm : 0; }
+function beatFps(bars){
+  const bpm = beatBpm(), H = window.SkriblHold;
+  if(!bpm || !H || !frames.length) return null;
+  const target = bars * 4 * 60000 / bpm;
+  // A stretch repeated for about some seconds repeats as often as the speed
+  // allows, so the fit is found again until it holds (a few passes at most).
+  let f = fps || 12;
+  for(let k = 0; k < 6; k++){
+    const p = H.plan(frames, f, docLoop), s0 = p.forever ? p.slots.length - (p.loop.to - p.loop.from + 1) : 0;
+    let still = 0, drawn = 0;
+    for(let i = s0; i < p.slots.length; i++){
+      const fr = frames[p.slots[i]];
+      if(frameDraw(fr)) drawn += p.ms[p.slots[i]]; else still += frameHold(fr) * 1000;
+    }
+    if(!(still > 0) || target - drawn <= 0) return null;
+    const next = still / (target - drawn);
+    if(Math.abs(next - f) < 1e-9){ f = next; break; }
+    f = next;
+  }
+  const p = H.plan(frames, f, docLoop), got = p.forever ? p.stretchMs : p.cycle;
+  return f >= 1 && f <= 60 && Math.abs(got - target) < 0.5 ? f : null;
+}
+// The round whose speed is nearest the one there is now (by ratio), of those
+// these pages can make.
+function beatNearest(){
+  let best = null, gap = Infinity;
+  for(const b of BEAT_BARS){
+    const f = beatFps(b); if(f == null) continue;
+    const g = Math.abs(Math.log(f / (fps || 12)));
+    if(g < gap - 1e-9){ gap = g; best = b; }
+  }
+  return best;
+}
+// Keep the round to its bars: the pages, their holds or the beat changed.
+function beatRefit(){
+  if(beatBars != null){
+    let f = beatBpm() ? beatFps(beatBars) : null;
+    if(f == null && beatBpm()){ const b = beatNearest(); if(b != null){ beatBars = b; f = beatFps(b); } }
+    if(f == null) beatBars = null;   // no beat, or no round fits: Beat steps aside and the speed stays
+    else fps = f;
+  }
+  syncFpsSeg();   // and Beat shows only while the song has a beat these pages can follow
+}
+function beatWords(b){ return b === 0.25 ? '\u00bc bar' : b === 0.5 ? '\u00bd bar' : b === 1 ? '1 bar' : b + ' bars'; }
+function syncBeatRow(){
+  const beat = document.getElementById('fpsBeat'), more = document.getElementById('beatMore');
+  if(!beat || !more) return;
+  const fits = BEAT_BARS.map(b => beatBpm() ? beatFps(b) : null);
+  beat.hidden = !fits.some(f => f != null);
+  beat.classList.toggle('on', beatBars != null);
+  const open = beatBars != null;
+  more.classList.toggle('open', open);
+  if(open === more.hasAttribute('inert')) more.toggleAttribute('inert', !open);   // only when it changes: this runs on every save
+  // One round is always the lit one (a one-of-N row says which): while Beat
+  // is off, the one it would take, so the pill is there when the row opens.
+  const lit = open ? beatBars : (beatNearest() || 0.5);
+  more.querySelectorAll('#beatRoundSeg button[data-bars]').forEach((b, i) => {
+    b.hidden = fits[i] == null; b.classList.toggle('on', +b.dataset.bars === lit); });
+  const say = document.getElementById('beatSay');
+  if(say && open){
+    const lp = window.SkriblHold && docLoop ? window.SkriblHold.loopOf(docLoop, frames.length) : null;
+    const what = !lp ? frames.length + (frames.length === 1 ? ' page' : ' pages') : lp.forever ? 'The loop' : 'A round';
+    const t = what + ' in ' + beatWords(beatBars) + ' \u00b7 ' + (Math.round(poseRate() * 10) / 10) + ' a second';
+    if(say.textContent !== t) say.textContent = t;
+  }
+}
+const beatRoundSeg=document.getElementById('beatRoundSeg');
+if(beatRoundSeg) beatRoundSeg.addEventListener('click',e=>{ const b=e.target.closest('button[data-bars]'); if(!b || beatBars==null) return;
+  const bars=+b.dataset.bars, f=beatFps(bars); if(f==null || bars===beatBars) return;
+  beatBars=bars; fps=f; syncFpsSeg();
   scheduleSave(); syncFlipDuration(); if(playing){ stop(); play(); } });
 
 

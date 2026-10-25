@@ -349,6 +349,22 @@ with sync_playwright() as p:
           not _usplit and any(_usrv) and not all(_usrv),
           f"(under, players show, server accepts): {_usplit}")
 
+    # FLIP'S BEAT ROUND (Match the beat), on the same terms: a `beat` the
+    # server posts and flip.js's beatOf() refuses would reopen with a number
+    # for the speed; the reverse is a post that fails with the editor showing
+    # Beat. Asked on Flip, the one surface that reads it.
+    _fp = browser.new_page(viewport={"width": 1000, "height": 860})
+    browsing.goto(_fp, BASE, "/flip")
+    _bp = [{"bars": v} for v in (0.25, 0.5, 1, 2, 1.0, 0, 0.75, 3, 4, -1, True, "1", None)]
+    _bp += [{}, {"bars": 1, "x": 1}, [1], "1", 1]
+    _blib = _fp.evaluate("(ps) => ps.map(b => typeof beatOf === 'function' ? beatOf(b) !== null : null)", _bp)
+    _fp.close()
+    _bsrv = [_V._validate_beat(v) is None for v in _bp]
+    _bsplit = [(v, a, b) for v, a, b in zip(_bp, _blib, _bsrv) if a != b]
+    check("every Beat round the server accepts is one Flip reads back, and no other",
+          None not in _blib and not _bsplit and any(_bsrv) and not all(_bsrv),
+          f"(beat, Flip reads it, server accepts): {_bsplit or _blib}")
+
     # ---- HOW A POINT IS WRITTEN -------------------------------------------
     print("\nHOW A POINT IS WRITTEN — the same spelling on both surfaces")
     pw = pg.evaluate("""() => {
