@@ -5231,8 +5231,11 @@ document.addEventListener('click',e=>{ const t=e.target;
   if(!drawPanel.hidden  && !t.closest('#drawPanel')  && !t.closest('#penToolBtn') && !t.closest('#eraserToolBtn')) closePop();
   // #mediaCard, not only the panel and the tabs: the card holds both, and the
   // seam and padding between them are part of it, not a tap away from it.
+  // Nor is the timeline's copy under the header (#musicFollow), which
+  // lib/musicdrawer.js moves to the page's end: a tap on it goes back up to
+  // the timeline, and it closed the drawer instead.
   if(!photoPanel.hidden && !t.closest('#photoPanel') && !t.closest('#mediaOpenBtn') && !t.closest('#mediaCard')) hidePhoto();
-  if(!musicPanel.hidden && !t.closest('#musicPanel') && !t.closest('#mediaOpenBtn') && !t.closest('#mediaCard')) hideMusic();
+  if(!musicPanel.hidden && !t.closest('#musicPanel') && !t.closest('#mediaOpenBtn') && !t.closest('#mediaCard') && !t.closest('#musicFollow')) hideMusic();
   if(toolTray && !toolTray.hidden && !t.closest('#toolTray') && !t.closest('#toolMoreBtn')) hideToolTray();
 });
 // Escape closes the tray. The drawers below the row are dismissed by tapping
