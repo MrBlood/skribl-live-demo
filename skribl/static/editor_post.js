@@ -288,7 +288,9 @@
        on its own canvas (flip.js), so it never had this. */
     if (typeof playing !== 'undefined' && playing && typeof stopPlayback === 'function') stopPlayback();
     try {
-      const w = canvas.width, h = canvas.height;
+      // At the drawing's own size, however big the canvas has grown (app.js).
+      const src = drawingPixels();
+      const w = src.width, h = src.height;
       const out = document.createElement('canvas');
       out.width = w; out.height = h;
       const octx = out.getContext('2d');
@@ -311,7 +313,7 @@
         }
         octx.restore();
       }
-      octx.drawImage(canvas, 0, 0, w, h);
+      octx.drawImage(src, 0, 0, w, h);
       return out;
     } catch (e) {
       return null;

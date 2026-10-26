@@ -177,10 +177,15 @@ FIT_GEOMETRY = """() => {
 }"""
 
 
+# The drawing at its own size on both sides. The editor's canvas grows past it
+# on a big window (app.js drawingPixels, the owner's B) and the player's never
+# does, so the editor is read through the copy every file is made from.
 INK = """() => {
-  const c = document.getElementById('canvas');
-  if (!c) return null;
-  const r = c.getBoundingClientRect();
+  const c0 = document.getElementById('canvas');
+  if (!c0) return null;
+  const c = (typeof drawingPixels === 'function' && !document.body.classList.contains('player-mode'))
+    ? drawingPixels() : c0;
+  const r = c0.getBoundingClientRect();
   let ink = 0;
   const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
   for (let i = 3; i < d.length; i += 4) if (d[i] > 0) ink++;
@@ -230,11 +235,22 @@ with sync_playwright() as sp:
     pg.on("pageerror", lambda e: ed_errs.append(str(e)))
     browsing.goto(pg, BASE, "/")
     pg.evaluate("() => localStorage.clear()")
+    # DRAWN WHERE THE CANVAS HAS NOT GROWN. At 1280x900 the editor shows the
+    # drawing a little past 1:1 and makes its bitmap that size (the owner's B);
+    # the ink below counts every pixel any ink touches, and a canvas shrunk to
+    # the drawing's own size spreads each edge over more of them (16% more,
+    # measured), so the two counts would be of two different pictures. 700 tall
+    # leaves the canvas under 1:1, as the player's is; the shape was picked at
+    # 900 on the first load, and stays.
+    pg.set_viewport_size({"width": 1280, "height": 700})
+    pg.wait_for_timeout(500)
     scribble(pg, pg.locator("#canvas").bounding_box())
     pg.wait_for_timeout(700)
     pg.click("#recordBtn")          # stop the take
     pg.wait_for_timeout(400)
     editor = pg.evaluate(INK)
+    pg.set_viewport_size({"width": 1280, "height": 900})
+    pg.wait_for_timeout(300)
 
     # Attach a real, TRIMMED loop. Trimming matters: an untrimmed upload can be
     # stored and replayed without ever building a loop buffer, which would leave

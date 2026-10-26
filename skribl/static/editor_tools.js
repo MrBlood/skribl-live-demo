@@ -126,7 +126,7 @@
       // sampleColorAt reads, so the ring shows what a pick will take.
       getPoint: ev => getPos(ev),
       artwork: () => padArtwork(),
-      dpr: () => window.devicePixelRatio || 1,
+      dpr: () => canvasRatio(),   // the stage is made at the canvas's own ratio
       bg: () => bgColor,
       current: () => color,        // the lens ring's bottom half
       // stopPicking, not just the lib's disarm: it also restores the

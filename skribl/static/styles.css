@@ -413,6 +413,19 @@ body {
   border-right: 1px solid var(--hairline);
   position: relative;
 }
+/* ONE SURFACE WHILE THE CANVAS'S ROW SPANS THE PAGE (lib/chromefit.js span(),
+   the owner's B). On a window wider than the column the canvas's row reaches
+   the page's edges, and the column's edges and the darker page beside it would
+   cut across the row, so the page wears the column's surface and its glow,
+   the glow at the column's own size (115% of 720px across), from edge to
+   edge. The row starts to reach out exactly where there are no sides to see,
+   so nothing jumps on the way. */
+body.canvas-wide {
+  background:
+    radial-gradient(828px 62% at 50% -6%, rgba(124,92,255,0.10) 0%, transparent 55%),
+    var(--surface-raised);
+}
+body.canvas-wide .app { background: transparent; border-left-color: transparent; border-right-color: transparent; }
 
 .header {
   display: flex;
