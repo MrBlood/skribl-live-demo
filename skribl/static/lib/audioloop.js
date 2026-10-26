@@ -219,6 +219,64 @@
              duration: lc.frames / lc.sampleRate };
   }
 
+  /* NO CLICK WHERE THE SOUND STARTS OR STOPS (the owner: "All yes" to a
+   * 5ms fade on Play, Stop and the sound switch). A sound begun or ended
+   * mid-wave jumps from silence to the wave, or the wave to silence, in one
+   * sample, and a jump is a click. So each of them glides over FADE_MS
+   * instead: too short to hear as a fade, long enough that nothing jumps. The
+   * loop's own join needs none of this: a smooth restart folds its end into
+   * its start, and Cut on silence moves both ends to where they match.
+   * glide: an AudioParam from where it is now to `to`. fadeIn: a source begun
+   * from silence through a gain of its own, which it returns. fadeOut: that
+   * source and gain to silence, the source stopped once there and both let go
+   * once it has ended (a source and its gain are made together, always).
+   * The link page uses these too; a post's box, which loads neither this
+   * file nor app.js, carries the same block word for word (verify_soundfade
+   * compares the two).
+   * WHERE IT IS NOW is worked out from the last glide, not read: an
+   * AudioParam's value lags the sound by up to a block (3ms), and a glide
+   * begun from that mid-glide jumps. Nor cancelAndHoldAtTime: Chrome's hold
+   * after a finished ramp starts the next ramp from that ramp's end, long ago,
+   * so the new one is all but over before it begins, which is a jump too.
+   * AND A MOMENT AHEAD (LEAD). The audio is made ahead of the page's clock,
+   * a few blocks at a time (here the clock moves 384 to 512 samples at a
+   * step), and a change scheduled for audio already made lands late, a glide
+   * begun there part done: measured, a start came in at 58% of the level, 3ms
+   * of its 5 gone, with the glide begun 10ms on. Most of all just after a
+   * context wakes, which is every first Play: begun "now", 3 starts in 52
+   * jumped the whole level (verify_soundfade asks 80). So each glide begins
+   * 30ms on, and a source starts as its glide begins (fadeIn's gain says when,
+   * g.at) and that much further into the clip, so it is where it would have
+   * been: the music keeps its time with the drawing, to the sample. */
+  var FADE_MS = 5, LEAD = 0.03;
+  function at(p, t) {
+    var g = p._glide;
+    return !g ? p.value : t >= g.t1 ? g.v1 : g.v0 + (g.v1 - g.v0) * (t - g.t0) / (g.t1 - g.t0);
+  }
+  function glide(ctx, p, to, t) {
+    if (t == null) t = ctx.currentTime + LEAD;
+    var g = p._glide, end = t + FADE_MS / 1000, v = at(p, t);
+    p.cancelScheduledValues(t);
+    // One still under way is cut short at t, where it has got to: its ramp is
+    // its end, so cancelling that would leave it flat until t, then a jump.
+    if (g && t > g.t0 && t < g.t1) p.linearRampToValueAtTime(v, t); else p.setValueAtTime(v, t);
+    p.linearRampToValueAtTime(to, end);
+    p._glide = { v0: v, t0: t, v1: to, t1: end };
+    return end;
+  }
+  function fadeIn(ctx, src, out, to) {
+    var g = ctx.createGain();
+    g.gain.value = 0; g.at = ctx.currentTime + LEAD;
+    glide(ctx, g.gain, to == null ? 1 : to, g.at);
+    src.connect(g); g.connect(out);
+    return g;
+  }
+  function fadeOut(src, g) {
+    var end = glide(src.context, g.gain, 0);
+    src.onended = function () { src.disconnect(); g.disconnect(); };
+    try { src.stop(end); } catch (e) { src.onended(); }
+  }
+
   /* THE LIVE LOOP ENGINE: one for Pad, Flip and the player (SK312-003, v315).
    *
    * Plays the trimmed loop as an AudioBufferSourceNode with loop=true, on the
@@ -252,7 +310,7 @@
    * stopped (lib/tappause.js) instead of from the top. Absent or 0 is the top,
    * as every other caller has it. elapsed() counts from there. */
   function engine(o) {
-    var source = null, startCtx = 0, duration = 0, gen = 0, pendingUnlock = null;
+    var source = null, fade = null, startCtx = 0, duration = 0, gen = 0, pendingUnlock = null;
 
     function unlock() {
       var ctx = o.ctx();
@@ -267,11 +325,7 @@
       // must not stand in for the next one's unlock.
       gen++;
       pendingUnlock = null;
-      if (source) {
-        try { source.stop(); } catch (e) {}
-        try { source.disconnect(); } catch (e) {}
-        source = null;
-      }
+      if (source) { fadeOut(source, fade); source = fade = null; }
     }
 
     function start(onFail, offset) {
@@ -292,10 +346,10 @@
         // which beats a take drifting out of sync). Preview only: the posted
         // clip and the export are untouched.
         try { src.playbackRate.value = o.rate ? o.rate() : 1; } catch (e) {}
-        src.connect(c.destination);
+        var g = fadeIn(c, src, c.destination);
         var off = (offset || 0) % buf.duration;
-        try { src.start(0, off); } catch (e) { return false; }
-        source = src; startCtx = c.currentTime - off; duration = buf.duration;
+        try { src.start(g.at, (off + LEAD * src.playbackRate.value) % buf.duration); } catch (e) { g.disconnect(); return false; }
+        source = src; fade = g; startCtx = g.at - LEAD - off; duration = buf.duration;
         return true;
       }
       function fail(why) {
@@ -355,6 +409,8 @@
     loopChannels: loopChannels,
     buildTrimmedLoopWav: buildTrimmedLoopWav,
     cutSeconds: cutSeconds,
-    CUT_MS: CUT_MS
+    CUT_MS: CUT_MS,
+    glide: glide, fadeIn: fadeIn, fadeOut: fadeOut,
+    FADE_MS: FADE_MS, LEAD: LEAD
   };
 })(typeof window !== 'undefined' ? window : this);

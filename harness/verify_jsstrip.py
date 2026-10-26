@@ -307,9 +307,12 @@ with sync_playwright() as sp:
     # owner's C, after v328), +209 B, all app.js (152,917 measured). And
     # RAISED, in both places together, by a posted song that stalls keeping
     # the pages with it (a bug fix, the owner's yes), +1,370 B: lib/holdtiming.js
-    # songClock and app.js's use of it (153,354 measured).
+    # songClock and app.js's use of it (153,354 measured). And RAISED, in both
+    # places together, by no click where the sound starts or stops (a bug fix,
+    # the owner's "All yes"), +1,181 B: lib/audioloop.js glide, fadeIn and
+    # fadeOut and their use in its engine and in app.js (154,537 measured).
     check("stripping keeps the player's JS under its ratchet",
-          lean_total <= 153_357,
+          lean_total <= 154_540,
           f"{src_total:,} B of source -> {lean_total:,} B parsed")
     # THE MODULE ONLY A RECOLOURED DRAWING FETCHES (lib/recolorplay.js, by
     # app.js on the link page and inlineplayer.js in a post): its own pin, so
@@ -379,9 +382,22 @@ with sync_playwright() as sp:
     # line moved to the spent value with the debt named, the owner chose how
     # to pay it ("1, carve it"), and the music preview carve paid it: the
     # line is back at 153,800, with 2,127 B to spare.
-    _margin = 153_800 - lean_total
-    check("REACHES the 153,800 target (strip + whitespace collapse)",
-          lean_total <= 153_800,
+    #
+    # BROKEN THE THIRD TIME, deliberately and in writing (a bug fix, the
+    # owner's "All yes" to no click where the sound starts or stops). The
+    # fade is 1,181 B of the player, 902 of them the glide itself, and took
+    # it 737 B over: it replaces nothing the player had but the stops it
+    # rewrote, which were spent first. The line moves to the spent value and
+    # 25 B, and THE DEBT IS NAMED, not yet tied to a carve. The first
+    # candidate: lib/audioloop.js's WAV writers (audioBufferToWavDataURL,
+    # encodeWavFromChannels, buildTrimmedLoopWav: 2,761 B served), which only
+    # the editors and a post's making call, into a file the link page does
+    # not load; that would move this line back to 153,800. Put to the owner,
+    # whose choice it is how, or whether, to pay it.
+    _target = 154_562
+    _margin = _target - lean_total
+    check(f"REACHES the {_target:,} target (strip + whitespace collapse; 153,800 once its debt is paid)",
+          lean_total <= _target,
           f"lean_total {lean_total:,} B — "
           + (f"{_margin:,} B of margin left" if _margin >= 0
              else f"OVER the target by {-_margin:,} B"))
