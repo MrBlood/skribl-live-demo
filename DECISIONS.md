@@ -23908,3 +23908,27 @@ the tap is made with the suite's press() now, so it is a red row. As built:
 
 Pad and Flip: shared. One drawer (lib/musicdrawer.js) draws it for both
 editors; the one difference is Flip's tap-away rule, which only Flip has.
+
+## After v329 -- Main red after #645: the copy's own Reduce Motion rule, in the player
+
+Main's full run after the timeline's copy (#645) was red in two suites, on
+both databases: verify_player_isolation (the player's CSS 40,992 B against its
+40,906 B ratchet) and verify_jsstrip (the same bytes served, against its
+40,925 B target). None of the copy's rules match on a player page, so
+cssgraph left them out, all but one: `harness/tools/cssgraph.py` holds every
+prefers-reduced-motion block as KEEP (a rule live only under a media query
+nobody exercised is not evidence of anything), so the copy's own Reduce
+Motion rule went to `player.css`, 92 B served, the whole overrun.
+
+It is gone, and the ratchet stays. styles.css's two global Reduce Motion
+rules (every transition none or near nothing, `!important`) keep the copy
+still, as #645's calibration showed: with them there, taking the copy's own
+rule out changed nothing, and verify_musicmore's Reduce Motion rows are green
+without it. #645's entry says it stays, as Tune's and the name card's do;
+it does not now. The served size is back to 40,900 B, the number the
+ratchet's last raise measured.
+
+The miss was the battery's: the copy's rules reached the player through a
+media query, so the two suites that weigh the player's CSS were not named as
+affected. WORKING-AGREEMENTS now says it: a re-emit that changes `player.css`
+runs both.
