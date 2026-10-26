@@ -45,7 +45,8 @@
  * Reduce Motion: no easing, the view is where it belongs at once.
  *
  * MAGNIFY (the owner, looking for the loop detail's: "All yes but maybe go
- * to x64?", then "stay"): - and + at the end of the name's line, 1x to 64x.
+ * to x64?", then "stay"; then, to see the wave cross: "Like 512x?" and "All
+ * yes" to the mock): - and + at the end of the name's line, 1x to 512x.
  * Each rung is the framing over that many with the end last touched in the
  * middle: the start, until the end is grabbed, or moved anywhere else (- and
  * +, a typed time, the Restart view: focus()). The loop never moves for it,
@@ -55,6 +56,18 @@
  * slide carries the view with the end zoomed around. The zoom stays when the
  * drawer is put away; a new song (reset()) is 1x on its start. Magnified past
  * a block a column, the song is drawn from its samples (peakOf).
+ *
+ * CLOSE IN, THE WAVE ITSELF. Loudness is the same above and below the middle,
+ * so mirrored bars never cross it, however far in. Once a point holds under
+ * 64 samples (64x for a 15s loop on a phone; 256x for a minute's), the song is
+ * the wave, through a middle line at its zero, so where it crosses shows:
+ * each point the samples' least and most, and under 8 a point the samples
+ * themselves, joined, each a dot once they are 6px apart; past the loop
+ * dimmed, as the bars are. The middle line is the timeline's guide ink at 65%,
+ * 3:1 and up on both grounds in both themes (the owner chose it over a
+ * quieter one): it is what a crossing is read against. Zoomed in, a start let
+ * go stays where it is let go (the owner, again: exact control); the join is
+ * already clean (lib/audioloop.js: a smooth restart, or Cut on silence).
  *
  * A finger on the song scrolls the page if it moves up or down first
  * (touch-action: pan-y and a 6px lock), as the strip never let it: the
@@ -83,10 +96,11 @@
   'use strict';
 
   var SPAN = 1.28, LEAD = 0.09, EASE_MS = 70, ZONE = 28, GROW = 1.4, FADE_MS = 200;
-  // MAGNIFY: the framing over 1 to 64, around the end last touched; zoomed
+  // MAGNIFY: the framing over 1 to 512, around the end last touched; zoomed
   // in, an end held near either edge carries the view along (PAN views a
-  // second at the edge itself) instead of widening it.
-  var MAGS = [1, 2, 4, 8, 16, 32, 64], PAN = 1.6;
+  // second at the edge itself) instead of widening it. Under WAVE_AT samples a
+  // point, the wave itself; under LINE_AT, the samples joined (below).
+  var MAGS = [1, 2, 4, 8, 16, 32, 64, 128, 256, 512], PAN = 1.6, WAVE_AT = 64, LINE_AT = 8;
   var LANE = 26, GAP = 8, LOCK_PX = 6;
 
   // The song's loudness in blocks, once per buffer: the largest |sample|
@@ -142,6 +156,9 @@
     var beatIn = 1;                              // and how far its marks have faded in
     var magOut = root.querySelector('.mt-tl-mag-btn[data-mag="-1"]'), magIn = root.querySelector('.mt-tl-mag-btn[data-mag="1"]');
     var magVal = root.querySelector('.mt-tl-mag-val'), nameBox = root.querySelector('.mt-tl-namebox');
+    // The rung's words take the widest rung's room (the CSS reads it here),
+    // so - and + stay where they are as it steps.
+    if (magVal) magVal.setAttribute('data-widest', MAGS[MAGS.length - 1] + '\u00d7');
 
     function rect() { return stage.getBoundingClientRect(); }
     function width() { return stage.clientWidth || 0; }
@@ -185,8 +202,9 @@
       lastT = now;
       paint();
       // The view, for whoever reads it (the harness): the time at the left
-      // edge and the seconds across, as painted.
-      if (view) root.dataset.view = view.v0.toFixed(4) + ' ' + view.span.toFixed(4);
+      // edge and the seconds across, as painted, to the microsecond (at 512x
+      // a phone's view is a few milliseconds across).
+      if (view) root.dataset.view = view.v0.toFixed(6) + ' ' + view.span.toFixed(6);
       if ((!held && view !== goal) || (held && held.kind === 'end' && held.zone) || gliding) request();
     }
     // THE BEAT MARKS GLIDE when where a beat falls moves and the tempo does
@@ -275,6 +293,46 @@
       var t = trim(), s0 = t.start, s1 = t.end, L = s1 - s0, xf = Math.min(h.crossfade() / 1000, L / 2), hl = L - xf;
       var dur = t.duration, ln = laneNow(), Dd = laneSecs, sTop = LANE + GAP, sH = hh - sTop;
       function rr(a, b, c, d, r) { x.beginPath(); if (x.roundRect) x.roundRect(a, b, c, d, r); else x.rect(a, b, c, d); }
+      // CLOSE IN, THE WAVE ITSELF (above): both channels as one (their mean),
+      // through the middle line at its zero, so where it crosses shows.
+      function wave(sr, spp, mid, room) {
+        var d0 = buf.getChannelData(0), d1 = buf.numberOfChannels > 1 ? buf.getChannelData(1) : null, n = buf.length, top = peaks.top;
+        var at = function (j) { return d1 ? (d0[j] + d1[j]) / 2 : d0[j]; };
+        var xs0 = X(s0), xs1 = X(s1), j;
+        drawn.song = spp < LINE_AT ? 'samples' : 'wave'; drawn.zero = +mid.toFixed(2);
+        x.save();
+        x.fillStyle = ink; x.globalAlpha = 0.65; x.fillRect(0, mid - 0.5, w, 1);
+        x.fillStyle = acc;
+        if (spp >= LINE_AT) {
+          // Each point, the samples' least and most.
+          for (var px = 0; px < w; px++) {
+            var u0 = T(px), u1 = T(px + 1);
+            if (u1 < 0 || u0 > dur) continue;
+            var j0 = Math.max(0, Math.floor(u0 * sr)), j1 = Math.min(n, Math.ceil(u1 * sr)), lo = Infinity, hi = -Infinity;
+            for (j = j0; j < j1; j++) { var v = at(j); if (v < lo) lo = v; if (v > hi) hi = v; }
+            if (!(hi >= lo)) continue;
+            x.globalAlpha = u1 > s0 && u0 < s1 ? 1 : 0.3;
+            x.fillRect(px, mid - hi / top * room, 1, Math.max(1, (hi - lo) / top * room));
+          }
+        } else {
+          // The samples themselves, joined; each a dot once 6px apart.
+          var ja = Math.max(0, Math.floor(T(0) * sr) - 1), jb = Math.min(n - 1, Math.ceil(T(w) * sr) + 1);
+          var path = function () {
+            x.beginPath();
+            for (var k = ja; k <= jb; k++) { if (k === ja) x.moveTo(X(k / sr), mid - at(k) / top * room); else x.lineTo(X(k / sr), mid - at(k) / top * room); }
+            x.stroke();
+          };
+          x.strokeStyle = acc; x.lineWidth = 1.5; x.lineJoin = 'round';
+          x.globalAlpha = 0.3; path();
+          x.save(); x.beginPath(); x.rect(xs0, sTop, xs1 - xs0, sH); x.clip(); x.globalAlpha = 1; path(); x.restore();
+          if (1 / spp >= 6) for (j = ja; j <= jb; j++) {
+            var dx = X(j / sr);
+            x.globalAlpha = dx >= xs0 && dx <= xs1 ? 1 : 0.3;
+            x.beginPath(); x.arc(dx, mid - at(j) / top * room, 1.6, 0, 7); x.fill();
+          }
+        }
+        x.restore();
+      }
 
       // THE DRAWING, from the loop's start.
       var a0 = X(s0), a1 = Dd > 0 ? X(s0 + Dd) : a0;
@@ -340,12 +398,17 @@
       if (peaks && peaks.buffer === buf) {
         var mid = sTop + sH / 2 + 3, room = sH / 2 - 10;
         x.fillStyle = acc;
-        for (var px = 0; px < w; px += 2) {
-          var u0 = T(px), u1 = T(px + 2);
-          if (u1 < 0 || u0 > dur) continue;
-          var v = peakOf(peaks, Math.max(0, u0), Math.min(dur, u1)), hgt = Math.max(1, v * room), inside = u1 > s0 && u0 < s1;
-          x.globalAlpha = inside ? 1 : 0.3;
-          x.fillRect(px, mid - hgt, 1.5, hgt * 2);
+        var sr = peaks.sr, spp = view.span / w * sr;
+        if (spp < WAVE_AT) wave(sr, spp, mid, room);
+        else {
+          drawn.song = 'loudness';
+          for (var px = 0; px < w; px += 2) {
+            var u0 = T(px), u1 = T(px + 2);
+            if (u1 < 0 || u0 > dur) continue;
+            var v = peakOf(peaks, Math.max(0, u0), Math.min(dur, u1)), hgt = Math.max(1, v * room), inside = u1 > s0 && u0 < s1;
+            x.globalAlpha = inside ? 1 : 0.3;
+            x.fillRect(px, mid - hgt, 1.5, hgt * 2);
+          }
         }
         x.globalAlpha = 1;
       }
