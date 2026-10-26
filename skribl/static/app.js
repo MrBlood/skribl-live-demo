@@ -3871,7 +3871,7 @@ function showPlayerError(msg, canRetry) {
   // live monitor. We own a GainNode (mute) and start the source at a phase
   // offset from the drawing clock so play/resume/seek stay aligned under the
   // replay. The decoded source + trim/crossfade state are set by loadSkribl().
-  let paSource = null, paGain = null, paBuffer = null, paGen = 0;
+  let paSource = null, paFade = null, paGain = null, paBuffer = null, paGen = 0;
   function paLoopBuffer() {
     // Build once and cache — the player's trims/crossfade don't change post-load.
     if (!paBuffer) {
@@ -3893,11 +3893,9 @@ function showPlayerError(msg, canRetry) {
     // path but nothing ever incremented it on stop).
     paGen++;
     if (audioEl && !audioEl.paused) { try { audioEl.pause(); } catch (e) {} }   // native fallback, if it took over (H1)
-    if (paSource) {
-      try { paSource.stop(); } catch (e) {}
-      try { paSource.disconnect(); } catch (e) {}
-      paSource = null;
-    }
+    // Faded out, not cut off (lib/audioloop.js fadeOut): stopped mid-wave,
+    // the sound would jump to silence in one sample, a click.
+    if (paSource) { SkriblAudioLoop.fadeOut(paSource, paFade); paSource = paFade = null; }
     if (songClk) songClk.ended();
   }
   // Start the loop bed aligned to a drawing-elapsed position (ms). Returns false
@@ -3934,8 +3932,8 @@ function showPlayerError(msg, canRetry) {
       // started the song where Play was pressed, and the song's clock then
       // took the drawing back there.
       if (running) elapsedMs = (drawAt = elapsedBase + segElapsed()) / replayRate * musicRate();
-      if (!paGain) { paGain = audioCtx.createGain(); paGain.connect(audioCtx.destination); }
-      paGain.gain.value = muted ? 0 : 1;
+      // paGain is the sound switch: the mute button glides it (below).
+      if (!paGain) { paGain = audioCtx.createGain(); paGain.gain.value = muted ? 0 : 1; paGain.connect(audioCtx.destination); }
       const dur = buf.duration;
       const offset = dur > 0 ? (((elapsedMs / 1000) % dur) + dur) % dur : 0;
       const src = audioCtx.createBufferSource();
@@ -3947,9 +3945,11 @@ function showPlayerError(msg, canRetry) {
          is worse to watch than a chipmunk. The stored clip is untouched; this
          is one playback's rate. */
       try { src.playbackRate.value = musicRate(); } catch (e) {}
-      src.connect(paGain);
-      try { src.start(0, offset); } catch (e) { return false; }
-      paSource = src;
+      // Begun from silence (lib/audioloop.js fadeIn), its own gain ahead of the switch.
+      const fade = SkriblAudioLoop.fadeIn(audioCtx, src, paGain);
+      // A moment ahead and as far into the clip (lib/audioloop.js LEAD).
+      try { src.start(fade.at, dur > 0 ? (offset + SkriblAudioLoop.LEAD * musicRate()) % dur : 0); } catch (e) { fade.disconnect(); return false; }
+      paSource = src; paFade = fade;
       // In step only while the clip keeps the drawing's rate (musicRate).
       if (songClk && musicRate() === replayRate) songClk.began(audioCtx, drawAt, replayRate);
       return true;
@@ -4323,7 +4323,7 @@ function showPlayerError(msg, canRetry) {
       pMute.hidden = false;
       pMute.addEventListener('click', () => {
         muted = !muted;
-        if (paGain) paGain.gain.value = muted ? 0 : 1;
+        if (paGain) SkriblAudioLoop.glide(audioCtx, paGain.gain, muted ? 0 : 1);   // over 5ms, no click
         // Muting is an edge that stops wanting sound, and unmuting mid-play is
         // a gesture that asks for it — both belong to the session.
         syncAudioSession();

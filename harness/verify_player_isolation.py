@@ -968,7 +968,18 @@ with sync_playwright() as sp:
     #   the drawing is when a late unlock lands (+344 B). Spent first: the
     #   clock's flag left unset rather than set false. verify_jsstrip's line
     #   moves with it. 153,354 measured.
-    BYTES_RATCHET, BYTES_TARGET = 153_357, 153_800
+    # RAISED (a bug fix, the owner's "All yes": no click where the sound
+    #   starts or stops), for a named cost: +1,181 B -- lib/audioloop.js
+    #   glide, fadeIn and fadeOut, each edge over 5ms from where the last
+    #   glide has it and a moment ahead (902 B), the loop engine's use of
+    #   them and their names (+130), and app.js's (+149): the link page's
+    #   Play, Pause and sound switch. Spent first: the stops' fallbacks for a
+    #   source with no gain of its own, which cannot happen, and a try around
+    #   a disconnect, which cannot throw. It passes BYTES_TARGET, by 737 B,
+    #   which stays where it is: the two numbers disagreeing is the record.
+    #   verify_jsstrip's lines move with it, its target line in writing with
+    #   the debt named. 154,537 measured.
+    BYTES_RATCHET, BYTES_TARGET = 154_540, 153_800
     # The page's own HTML. The brand is the one-stroke skribl signature INLINE
     # in the page (~1.4KB of paths, a ~0.9KB nonce'd draw-on script, and the
     # <linearGradient> defs), and inline is load-bearing rather than lazy:

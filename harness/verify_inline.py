@@ -1612,7 +1612,15 @@ with sync_playwright() as sp:
     #   from it. WHICH CALLER PAYS: every page that shows a post, for every post
     #   with music. Spent first: one guard where there were two, and the
     #   clock's flag left unset rather than set false. 75,578 B measured.
-    EMBED_RATCHET = 75_582
+    # RAISED (a bug fix, the owner's "All yes": no click where the sound
+    #   starts or stops), for one named cost: +762 B, all inlineplayer.js --
+    #   its own copy of lib/audioloop.js glide, fadeIn and fadeOut, word for
+    #   word (it loads neither that nor app.js): the box's play, pause and
+    #   sound switch each over 5ms. WHICH CALLER PAYS: every page that shows a
+    #   post, for every post with music. Spent first: the stop's fallbacks for
+    #   a source with no gain of its own, which cannot happen, and a try
+    #   around a disconnect, which cannot throw. 76,340 B measured.
+    EMBED_RATCHET = 76_344
     # THE RATCHET MEASURES DISPLAY, NOT COMPOSE, and the two are separate costs
     # paid by separate pages. Excluded here and measured on its own below:
     #   feed.js          the PREVIEW PAGE's own script (fetch the listing, clone

@@ -738,6 +738,28 @@ stays a sleep.
   `DRAWFULL_PART=button` (inout, watch, not) and `DRAWFULL_ONLY=Pad` run a
   part. Each row was shown red by its own break, served in place of the real
   file.
+- `verify_soundfade.py` — no click where the sound starts or stops (the
+  owner: "All yes" to a 5 ms fade on Play, Stop and the sound switch).
+  Asked of what reaches the speakers: before any page script, every
+  connection to a context's output is led through a recorder that passes the
+  sound on and keeps a copy, so what is read is everything the page plays,
+  after every gain. The song is a steady level, half of full scale, no
+  crossfade, so an unfaded edge steps the whole level in one sample. At each
+  edge the biggest one-sample step is a fiftieth of the level at most, and
+  the sound reaches the level, or leaves it, in 2 to 8ms. On the Pad and
+  Flip editors, Hear the loop and its Stop, and pressed again and again; on
+  the link page, Play, the sound switch both ways and pressed twice in a
+  moment, and Pause; in a post's box, play, the sound switch the same, and
+  pause. And what pressing rarely reaches: the box's copy of the glide is
+  lib/audioloop.js's word for word; a glide cut short 2ms in by another goes
+  on from where it had got to; and 80 first starts, each just after its
+  sound wakes up, as every first Play's is, none jumps (just woken, the
+  audio can be made ahead of the clock the page reads, and a start landing
+  on audio already made is over before it begins: without the 30ms lead, 27
+  in 76 jumped the whole level). Recorded by an AudioWorklet with the audio
+  thread's own frame count, so no block goes missing unseen (the pages
+  bypass the CSP for its blob). Each row was shown red on main's files, and
+  on each part broken alone, served in place of the branch's.
 - `verify_learncard.py` — the card on the button (lib/learncard.js), Pad and
   Flip: holding a button (real touch) opens its card with its example; a
   quick tap stays a tap, a moving finger is no hold, the lift does not press,

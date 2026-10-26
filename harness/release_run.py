@@ -259,6 +259,8 @@ BATCHES = [
     ["verify_bigcanvas.py"],               # measures — the canvas read on every frame while its bitmap is made again; a window dragged through eight sizes
     # Draw in full screen, on a desk (after v329, the owner's A).
     ["verify_drawfull.py"],
+    # No click where the sound starts or stops (after v329, the owner: "All yes").
+    ["verify_soundfade.py"],               # measures, store — what reaches the speakers, sample by sample; posts a public Pad and plays it in the feed
 ]
 
 

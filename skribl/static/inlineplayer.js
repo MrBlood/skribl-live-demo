@@ -228,6 +228,40 @@
    * time, so one context is also all that is ever needed. */
   var audioCtx = null;
 
+  /* NO CLICK WHERE THE SOUND STARTS OR STOPS: Play, Stop and the sound
+   * switch glide over 5ms instead of jumping in one sample. Word for word
+   * lib/audioloop.js glide, fadeIn and fadeOut (its header says why where a
+   * glide begins is worked out, not read, and why 30ms ahead and as far into
+   * the clip), which this box does not load; verify_soundfade compares them. */
+  var FADE_MS = 5, LEAD = 0.03;
+  function at(p, t) {
+    var g = p._glide;
+    return !g ? p.value : t >= g.t1 ? g.v1 : g.v0 + (g.v1 - g.v0) * (t - g.t0) / (g.t1 - g.t0);
+  }
+  function glide(ctx, p, to, t) {
+    if (t == null) t = ctx.currentTime + LEAD;
+    var g = p._glide, end = t + FADE_MS / 1000, v = at(p, t);
+    p.cancelScheduledValues(t);
+    // One still under way is cut short at t, where it has got to: its ramp is
+    // its end, so cancelling that would leave it flat until t, then a jump.
+    if (g && t > g.t0 && t < g.t1) p.linearRampToValueAtTime(v, t); else p.setValueAtTime(v, t);
+    p.linearRampToValueAtTime(to, end);
+    p._glide = { v0: v, t0: t, v1: to, t1: end };
+    return end;
+  }
+  function fadeIn(ctx, src, out, to) {
+    var g = ctx.createGain();
+    g.gain.value = 0; g.at = ctx.currentTime + LEAD;
+    glide(ctx, g.gain, to == null ? 1 : to, g.at);
+    src.connect(g); g.connect(out);
+    return g;
+  }
+  function fadeOut(src, g) {
+    var end = glide(src.context, g.gain, 0);
+    src.onended = function () { src.disconnect(); g.disconnect(); };
+    try { src.stop(end); } catch (e) { src.onended(); }
+  }
+
   var SOUND_KEY = 'skribl.inline.sound';
 
   function soundOn() {
@@ -1629,21 +1663,17 @@
        * worse to watch than a chipmunk. One playback's rate; the stored clip is
        * untouched. */
       try { srcNode.playbackRate.value = rate; } catch (e) {}
-      gainNode = ac.createGain();
-      gainNode.gain.value = soundOn() ? 1 : 0;
-      srcNode.connect(gainNode);
-      gainNode.connect(ac.destination);
+      gainNode = fadeIn(ac, srcNode, ac.destination, soundOn() ? 1 : 0);
       /* Where the drawing is, not the clip's top: after a pause, a new speed
        * or a song decoded after Play, the song carries on in step. */
       var D = buffer.duration;
       var from = lap + elapsed + (state === 'playing' ? segElapsed() : 0);
-      srcNode.start(0, D > 0 ? (from / 1000) % D : 0);
+      srcNode.start(gainNode.at, D > 0 ? (from / 1000 + LEAD * rate) % D : 0);
       if (songClk) songClk.began(ac, from, rate);
     }
 
     function stopAudio() {
-      if (srcNode) { try { srcNode.stop(0); } catch (e) {} try { srcNode.disconnect(); } catch (e) {} }
-      if (gainNode) { try { gainNode.disconnect(); } catch (e) {} }
+      if (srcNode) fadeOut(srcNode, gainNode);
       srcNode = gainNode = null;
       if (songClk) songClk.ended();
     }
@@ -1683,7 +1713,7 @@
         muteBtn.setAttribute('aria-label', on ? 'Mute' : 'Unmute');
         muteBtn.title = on ? 'Sound is on' : 'Sound is off';
       }
-      if (gainNode) gainNode.gain.value = on ? 1 : 0;
+      if (gainNode) glide(gainNode.context, gainNode.gain, on ? 1 : 0);
     }
 
     /* ---- transport ------------------------------------------------------ */

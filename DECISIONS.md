@@ -24279,3 +24279,111 @@ script's does not. On main the same scroll came a moment after the picture,
 so it passed by its timing. The row now reads where the stage is before and
 after its picture and takes it again until the two agree: green as built on
 both editors, light and dark, and red on all four with the dots painted out.
+
+## After v329 -- No click where the sound starts or stops
+
+Advice pasted in from elsewhere (search for a zero crossing, match the slope,
+a 5ms fade) was read against the code: the loop's own join already has all
+three in effect, a smooth restart's fold or Cut on silence. What it pointed
+at was Play, Stop and the sound switch, which began and ended the sound at
+full level, mid-wave: measured on a real song, a Stop at a random moment
+jumped by more than a tenth of the peak in one sample more than half the
+time. The owner: "All yes" to a 5 ms fade on Play, Stop and the sound
+switch, a bug fix.
+
+EACH EDGE GLIDES OVER 5MS (lib/audioloop.js glide, fadeIn, fadeOut): a
+source begins from silence through a gain of its own and stops at silence,
+let go once it has ended; a sound switch glides its gain. The editors' loop
+engine (Hear the loop, Play with my drawing, a tapped pause, on the Pad and
+Flip) and the link page use the same three; a post's box, which loads
+neither lib/audioloop.js nor app.js, carries the same block word for word,
+and verify_soundfade compares the two.
+
+WHERE A GLIDE BEGINS IS WORKED OUT, NOT READ. An AudioParam's value lags the
+sound by up to a block, so a glide begun from it in the middle of another
+jumps. And cancelAndHoldAtTime, the API made for this, does not do it in
+Chrome: after a finished ramp, the next ramp starts from that ramp's end,
+long ago, so it is all but over before it begins. Measured on a bare page:
+the sound switch dropped 98% in one sample with it, and glided over 4.49ms
+with the start set where the last glide says it is. A glide cut short by
+another goes on from where it had got to: the first's ramp is cut at the
+second's start, at the value it has reached there. Cancelled instead, it
+would leave the gain where it was until the second began, then jump.
+
+AND A MOMENT AHEAD. The audio is made ahead of the page's clock, a few
+blocks at a time (here the clock moves 384 to 512 samples a step), so a
+change scheduled for "now" can land on audio already made, a glide begun
+there part done: now and then a start came in at 58% of the level, 3ms of
+its 5 gone, and once more with the glide begun 10ms on. Most of all just
+after a context wakes, which is every first Play (the engine wakes it in
+the gesture and starts once it runs): on a bare page, begun "now", 3 first
+starts in 52 jumped the whole level, and none in 40 begun 10ms or 30ms on.
+So each glide begins 30ms on, and a source starts as its glide begins and
+that much further into its clip, so it is where it would have been: the
+music keeps its time with the drawing, to the sample, and no clock had to
+change.
+
+TESTS. verify_soundfade, new, on what reaches the speakers: every connection
+to a context's output is led through a bus, and an AudioWorklet on it keeps
+every block with the audio thread's own frame count (a ScriptProcessorNode's
+blocks are the page's to deliver, its times jitter by a block, and a busy
+page can lose one unseen, which first read a glide here as a jump). The song
+is a steady level, so an unfaded edge steps the whole level in one sample.
+Each edge's biggest one-sample step is a fiftieth of the level at most, and
+the sound reaches the level or leaves it in 2 to 8ms: on the Pad and Flip,
+Hear the loop, its Stop, and pressed again and again; on the link page,
+Play, the sound switch both ways and pressed twice in a moment, and Pause;
+in a post's box the same. And what pressing rarely reaches: the box's copy
+is lib/audioloop.js's word for word; a glide cut short 2ms in by another
+goes on from where it had got to (the page clock moves 9 to 12ms a step
+here, so two presses rarely land inside one glide); and 80 first starts,
+each on a context of its own just after it wakes, none jumps. As built,
+every edge steps 0.00227 at most (the glide's own: half of full scale over
+220 samples) and takes 4.49ms. The worklet loads from a blob, which the
+page's script-src refuses, so the suite's pages bypass the CSP; verify_csp
+pins the policy.
+
+CALIBRATION, each part broken alone in a copy served to the browser, the
+files on disk untouched; a break of the shared block is made in both copies,
+so that only the rows about what it does go red. As built, every row green,
+in eight runs as the suite grew, the last two with every row as it stands.
+On main's files, 17 rows red: every edge (0.49998, the whole level), the
+copies row (no block to compare), the cut-short probe and the first starts
+(nothing to call); green, the page errors, the post, and the two
+pressed-twice rows, since two presses in one moment cancel there. Each break
+went red on its own rows only: the editors' engine begun or stopped unfaded
+(the Pad's and Flip's Hear the loop and pressed again and again, or their
+Stop); the link page's Play, Pause or sound switch unfaded (its row, or the
+switch both ways); a post's box the same; cancelAndHoldAtTime in place of
+the start worked out (17 rows: every edge on every surface, all but over
+before it begins, and 77 first starts of 77); the start read from the gain's
+own value (the cut-short probe in two runs in two, with a press-again row or
+two, which ones varying with where the presses land); a glide cut short left
+flat until the next (the cut-short probe alone); no lead (the 80 first
+starts: 27 of 76 read jumped the whole level, with another suite running
+beside it, and Flip's first Hear the loop with them); the box's copy
+changed, doing the same (the copies row alone). The lead's row came out of
+its own calibration: until it existed, no row went red without the lead, in
+three runs, because every row presses on a context already awake.
+
+COST, in the bytes a viewer downloads (parsed, before gzip): the link page
++1,181 B (lib/audioloop.js +1,032: the three and where a glide begins, 902
+B, and their use in the engine and their names; app.js +149), a post's box
++762 B (its copy). Spent first: the stops' fallbacks for a source with no
+gain of its own, which cannot happen (the two are made together), and the
+try around a disconnect, which cannot throw. Both ratchets move with it,
+and verify_jsstrip's line.
+
+AND THE PLAYER'S TARGET IS PASSED, the third time, in writing. The link
+page's JavaScript is 154,537 B, 737 B over the 153,800 line verify_jsstrip
+asserts, and nothing on the page can be spent against it: the fade replaces
+only the stops it rewrote. As for the smart fade, the line moves to the
+spent value and 25 B (154,562), and the debt is named, not yet tied to a
+carve. The first candidate: lib/audioloop.js's WAV writers
+(audioBufferToWavDataURL, encodeWavFromChannels, buildTrimmedLoopWav: 2,761
+B served), which only the editors and a post's making call, into a file the
+link page does not load. How, or whether, to pay it is the owner's choice.
+
+Not tested here: Safari's and Firefox's Web Audio (no WebKit or Gecko audio
+here), a phone's own audio blocks, and a person's ear. What is pinned is the
+shape of the sound.
