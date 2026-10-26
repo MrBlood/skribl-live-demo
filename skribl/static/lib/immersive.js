@@ -59,17 +59,22 @@
   function attach(el, opts) {
     opts = opts || {};
     var onChange = opts.onChange || function () {};
-    var usingClass = false;
+    var usingClass = false, said = false;
 
     function on() { return fsEl() === el || usingClass; }
 
-    function report() { try { onChange(on()); } catch (e) {} }
-
-    /* One handler for both spellings and both mechanisms, so a caller never
-     * has to know which one got used. */
-    function fsChanged() {
-      if (usingClass) return;            // not ours to report
-      report();
+    /* Only a change is news. Every full screen on the page fires the same
+     * fullscreenchange, so the editors' watch heard the page itself go full
+     * screen (lib/drawfull.js) as its own leaving, and handed focus to its
+     * button. It is also why a fullscreenchange while the stand-in is on says
+     * nothing: on() is already true, and was said. One handler for both
+     * spellings and both mechanisms, so a caller never has to know which one
+     * got used. */
+    function report() {
+      var now = on();
+      if (now === said) return;
+      said = now;
+      try { onChange(now); } catch (e) {}
     }
 
     function openClass() {
@@ -114,16 +119,18 @@
       }
     }
 
-    doc.addEventListener('fullscreenchange', fsChanged);
-    doc.addEventListener('webkitfullscreenchange', fsChanged);
+    doc.addEventListener('fullscreenchange', report);
+    doc.addEventListener('webkitfullscreenchange', report);
 
     return {
       toggle: function () { if (on()) close(); else open(); },
       close: close,
       isOn: on,
       /* True when going big means the REAL thing here. The pages use it for
-       * wording, never for whether to show the control -- there is always a
-       * way to go big now, which is the entire point of this module. */
+       * wording, not for whether to show their control -- there is always a
+       * way to go big now, which is the entire point of this module. The one
+       * exception is lib/drawfull.js, whose element is the page itself: the
+       * stand-in pins an element over the page, which means nothing there. */
       isNative: function () { return !!apiFor(el); }
     };
   }

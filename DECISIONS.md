@@ -24147,3 +24147,54 @@ nib moved on 42% of frames. And the posted part's watcher reads the song
 BEFORE the canvas now: reading the canvas back waits on the GPU, longer the
 busier the box, and the song read after it was that much late (a round came
 "79ms late" beside other suites; alone, never).
+
+## After v329 -- Draw in full screen, on a desk (the owner's A)
+
+The owner asked for "a full screen button so it opens over everything else to
+full screen", and said "All yes" to the mock: B first (the canvas uses the
+window, #648), then A, a button at the dock's end after Magnify, on a desk
+only, with the drawers opening where they do today, under the dock.
+
+THE PAGE ITSELF GOES FULL SCREEN, the header and the dock with it, and the
+canvas takes the room through B's own fit: a full screen is a bigger window.
+On a 1920x1080 screen the Pad's cat shows at 1197x898 (B's 1017x763 in a
+1920x945 window) and Flip's card at 930x699 (the mock said 932: the fit keeps
+the drawing at 4:3 inside the frame's 2px line, and the mock put the frame at
+4:3). One module for both editors, lib/drawfull.js; going full screen is
+lib/immersive.js.
+
+THE REAL THING OR NOTHING. lib/immersive.js's stand-in (an element pinned over
+the page, for the iPhone) means nothing for a page that already fills the
+window, so where the browser cannot take the page full screen the button is
+not shown: no API, or fullscreenEnabled false though requestFullscreen is
+there, which is how a frame that does not allow it answers. And on a desk
+only: a mouse and a window wider than the page's 720px column, where the
+canvas grows past it too. The mock said over 640px, the dock's desk tier, but
+at 641 the Pad's dock ran 26px past its edge (verify_layout caught it); it
+needs about 667 with this box's fonts, and 720 leaves room for wider ones.
+Asked as a positive media query, because harness/tools/cssgraph.py keeps
+every touch-only block whole in the player's sheet and this one has nothing
+for the player.
+
+ON WEARS THE DOCK'S ON TILE, as Magnify and Media do, at Magnify's 26px and
+1.8px line. Its words say how out: "Leave full screen (Esc)"; lib/tooltip.js
+moves a title to data-tip for its own bubble, so that is where they are read
+back. ONE RHYTHM AT THE RIGHT END: 34.2px between the drawn icons, Media to
+Magnify and Magnify to this. That takes 7.5px before it where Magnify has 10,
+because Media's glyph is 32px wide in its 44px button and the other two are
+26. The four corners are the watch button's and the link page's. How it works
+has a tip for it, claimed by verify_drawfull.
+
+FOUND ON THE WAY: every full screen on a page fires the same
+fullscreenchange, and lib/immersive.js reported each one to every attached
+element as its own. The editors' watch heard the page itself leave full
+screen as its own leaving and, with nothing focused, handed focus to its
+button. It reports a change of its own now, and nothing else, which also
+said what its "not ours to report" guard for the stand-in said (on() is
+already true there, and was said), so the guard went: +2 B on the link page,
+which loads it for its own full screen, inside that budget's line.
+
+Not tested here: Escape (headless Chrome does not hand the browser's key over)
+and a real full screen's size (headless Chrome keeps the window's), so the
+sizes are asked of a window the screen's size; Windows, Edge, Safari and a
+real big monitor.

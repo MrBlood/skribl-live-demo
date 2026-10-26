@@ -709,6 +709,26 @@ stays a sleep.
   `BIGCANVAS_PART=size` (pixels, drawing, files, fill, rings, settle, phone, caps) and
   `BIGCANVAS_ONLY=Pad` run a part. Each row was shown red by its own break,
   served in place of the real file.
+- `verify_drawfull.py` — draw in full screen, on a desk (the owner's A, "All
+  yes", built on B; lib/drawfull.js), on both editors. On a 1920x945 window,
+  light and dark, the dock ends with the button, after Magnify, drawn at
+  Magnify's 26px at the same 1.8px line and in its ink, as far from Magnify as
+  Magnify is from Media, and named for what it does. Pressed, the page itself
+  goes full screen with the header and the dock still on it, and the button
+  says how out ("Leave full screen (Esc)"), pressed, on the dock's on tile;
+  with the window the screen's size, as a real full screen makes it, the
+  canvas shows at the mock's 1197x898 (the Pad's cat) and 932x699 (Flip's
+  card), and a drawer opens where it opens out of full screen, under the dock.
+  Pressed again, the page comes back out. Watching the drawing big from there
+  and leaving comes back to the page in full screen, and the page leaving
+  full screen does not hand focus to the watch's button (lib/immersive.js
+  reports only a change of its own). In a 721px window, the narrowest it
+  shows in, the dock holds it without clipping. Not shown on a phone, on a
+  touch screen at a desk's width, in a 720px window, or where the page cannot
+  go full screen. Escape is not tried here: headless Chrome does not hand it over.
+  `DRAWFULL_PART=button` (inout, watch, not) and `DRAWFULL_ONLY=Pad` run a
+  part. Each row was shown red by its own break, served in place of the real
+  file.
 - `verify_learncard.py` — the card on the button (lib/learncard.js), Pad and
   Flip: holding a button (real touch) opens its card with its example; a
   quick tap stays a tap, a moving finger is no hold, the lift does not press,

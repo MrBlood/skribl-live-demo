@@ -127,6 +127,9 @@ CLAIMS = {
     "Pinch": ["verify_pointerpad.py::two fingers on the canvas pinch-zoom the view"],
     "Pan (desktop)": ["verify_ux.py::Space+drag does NOT draw"],
     "Move the controls": ["probe:dock"],
+    "Draw in full screen": ["verify_drawfull.py::pressed, the page itself goes full screen, the header and the dock still on it",
+                            "verify_drawfull.py::pressed again, the page comes back out, and the button says so",
+                            "verify_drawfull.py::a drawer opens where it opens out of full screen, under the dock"],
     # Recording (Pad)
     "Auto-record": ["verify_ux.py::AUTO-RECORD: the first stroke starts the take"],
     "Two timers": ["probe:takes"],
