@@ -23932,3 +23932,127 @@ The miss was the battery's: the copy's rules reached the player through a
 media query, so the two suites that weigh the player's CSS were not named as
 affected. WORKING-AGREEMENTS now says it: a re-emit that changes `player.css`
 runs both.
+
+## After v329 -- A bigger canvas, sharp (the owner's B)
+
+The owner: "Is there any way that when canvas opens on a desktop it can have
+a full screen button so it opens over everything else to full screen? So if
+you're on a giant screen the editor/canvas can be huge?" The mock measured
+the canvas at 694x521 on every desk, a fifth of a 1920 screen and a tenth of
+a 2560 one, smaller than the 816x612 it was drawn at: the editors live in a
+720px column and never showed a drawing past 1:1, because a bitmap made at
+the drawing's own size softens every line when it is stretched. It showed
+three: today, B (a bigger canvas, drawn again at the size it shows) and A (B
+in full screen, the button at the dock's end). The owner said "All yes" to
+building B, then A, as two pull requests. This is B.
+
+THE ROW REACHES PAST THE COLUMN. lib/chromefit.js span() gives the row the
+canvas sits in (the Pad's .canvas-area, Flip's .flip-stage) negative margins
+of half the difference between the page and the column, measured, so on a
+window wider than 720px it spans the page's own box (inside the scrollbar
+gutters the root keeps, so it never runs under a scrollbar). The header, the
+dock and the drawers stay in the column. While it reaches, the page wears
+one surface (body.canvas-wide): the column's surface and its glow at the
+column's own size, from edge to edge, the column itself transparent. The
+row starts to reach exactly where there are no sides to see, so nothing
+jumps on the way. Each editor's fit calls span() before it measures.
+
+THE BITMAP GROWS WITH THE DRAWING. Neither editor caps the display at 1:1
+any more. The Pad: canvasRatio() is the bitmap's own pixels per drawing
+unit, the screen's ratio times canvasGrowth, stored when the bitmap is made
+(establishEditorCanvas); getCanvasLogicalSize, the stroke layers, the
+compositor, the artwork stage and the colour pick all read it. Flip: RS is
+the pad's own ratio; the pad and the four layers it is painted through
+(onion skin, temp, frame and artwork) are made at it, while DPR stays the
+drawing's own. A new size clears a canvas, so the bitmap is made again
+once the page is still: the size on screen follows the window at once, and
+the drawing is painted again from what describes it (the Pad's base plus
+paintStrokesStatic, the identity every replay's end and every undo rests on;
+Flip's render(), which paints from the pages). It waits while a stroke, a
+replay, a pinch, a photo drag, a smudge or blur, a selection or a colour
+pick is under way, any of which holds pixels of its own, and 150ms for the
+window to stop changing size, so a dragged window edge repaints once, at the
+end. Ink the Pad's strokes cannot rebuild (drawn outside a take) is carried
+over as pixels, and so is a drawing whose base picture has not decoded yet.
+
+A CEILING. The Pad's bitmap never holds more than 3x the drawing, what a
+phone at 3x already carries; Flip's never more than 2x, what it already draws
+at on a 2x screen, because a smudged page pays for every pixel on every
+repaint. Past that the canvas still shows bigger, a little softer: on a 5K
+screen at 2x the Pad stretches its 3x bitmap by 1.2.
+
+WHAT LEAVES THE CANVAS STAYS THE DRAWING'S OWN SIZE. The PNG, the GIF, the
+video files, the post card, a draft's base and thumbnail, a new take's base:
+all at the drawing's size times the screen's ratio (the Pad's
+drawingPixelSize() and drawingPixels(), the canvas itself whenever it is
+that size, so nothing that left it before changes by a pixel). Flip's
+paintFrame() goes through the frame layer at its target's resolution, the
+grown one for the pad and its caches, one at DPR for files and tiles, so an
+export of a long Flip does not pay for the grown canvas. Flip's fill reads
+the pad through a copy at DPR once it has grown, so the same tap on the
+same drawing makes the same runs on any screen (measured: 162 points, 81
+runs, grown or not).
+
+A NEW DRAWING STARTS IN THE SHAPE IT ALWAYS DID. The first build picked the
+starting shape against the wider row, and on a desk that turned 1:1 into
+4:3 (the preset that shows largest at 1:1 in the band). That is the drawing
+changing, which B promised it would not, and it rippled into the fixtures of
+three suites (verify_player_isolation's bead and phone rows drew a 4:3 where
+they had drawn a 1:1). The pick is made against the column again
+(chromefit's columnWidth()), and B changes only how big a drawing shows.
+
+FOUND ON THE WAY: A ZOOM MOVED EVERY STROKE. getCanvasLogicalSize read the
+screen's ratio live, so a browser zoom or a window moved to another screen
+changed the drawing space under a bitmap made at the old ratio, and every
+stroke landed away from the pen until a reload (at 1.25x, by a fifth). The
+ratio is now the bitmap's own, and a matchMedia watch on the resolution
+makes the bitmap again at the new ratio even when nothing resizes. Flip
+always held its DPR as a constant, so only the Pad had this.
+
+verify_player_isolation compared the player's drawing with the editor's
+canvas, which on its 1280x900 fixture now grows a little past 1:1. Its
+editor half is drawn at 1280x700, where the canvas has not grown, and read
+through drawingPixels(): the ink count counts every pixel any ink touches,
+and a canvas shrunk to the drawing's size spreads each edge over more of
+them (16% more, measured), so the two counts would have been of two
+different pictures. 0.04% apart as built.
+
+PIXEL FOR PIXEL. The branch's full run went red in verify_framecache: its
+fixture asks a 400x300 page shown at 1:1 on a 1000px window, and the canvas
+grows there now. Measured grown, the cache itself was a pixel off: it
+captured at CW*RS rounded (559 for a pad of 558) and laid the copy back
+through the transform, so a page played from the cache was not the page
+painted. It captures at the pad's real size and lays the copy back on the
+pad's own pixels; the fixture shows grown and asks for the capture one for
+one.
+
+That led to measuring what reaches the screen, a 1px line put into each
+bitmap and read off a screenshot, and the bigger canvas was not yet sharp to
+the pixel. Flip's pad wears a frame (a 2px border) and the drawing shows
+inside it, but the layers grew to the frame's outside: 692 pixels squeezed
+into 688, so a 1px line came out two pixels at half. That squeeze predates
+B, at 1:1 too; grown, the layers grow to the frame's inside now, and at 1:1
+and on a phone it is as it was. Grown, each canvas takes its bitmap's own
+size, up to the page's 1/64px, and is laid out again once the bitmap is
+made: rounded on their own, the size shown and the bitmap were a pixel apart
+at 1.25x and 2x. And Flip laid every page, and its live layers while a
+stroke is under way, through the transform: grown, CW*RS is rarely a whole
+number of pixels, and where it ran half a pixel or more past them the layer
+was stretched by that fraction and every line softened. A layer the size of
+the pad is laid on it pixel for pixel (layOn), and every layer's side is
+whole pixels counted with a hair of slack (layerPx), since a canvas told
+557.99999 is 557. At 1x the screen shows the bitmap one for one on both
+editors. At 1.25x and 2x the size is exact, but where the canvas lands on
+the screen is the browser's: half a pixel off a whole one, it blends, so
+those are measured by size.
+
+Found on the way, not fixed here: Flip maps the pointer through its frame's
+outside, so near the canvas's edges a stroke lands up to 2px from the pen
+(none in the middle). It predates B.
+
+Pad and Flip: shared where they can be: the row's reach and the page's one
+surface are one module and one rule for both; the growth is each editor's
+own, because the Pad paints a canvas that holds its pixels and Flip paints
+from its pages every time, and the two need different things to make a
+bitmap again. Not tested here: Windows, Edge, Safari, and Segoe UI or SF; a
+real 4K or 5K screen.

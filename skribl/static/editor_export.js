@@ -210,8 +210,10 @@
     const transparent = (gifBgMode === 'transparent');
 
     // Cap output size so GIFs stay a sane weight (256-color, no inter-frame delta).
-    const dpr = window.devicePixelRatio || 1;
-    const logicalW = canvas.width / dpr, logicalH = canvas.height / dpr;
+    // The drawing's own size, not the canvas's: the canvas may have grown to
+    // fit a big window (app.js canvasGrowth), and a file never does.
+    const px = drawingPixelSize(), dpr = px.dpr;
+    const logicalW = px.w / dpr, logicalH = px.h / dpr;
     const MAX_EDGE = 480;
     const scale = Math.min(1, MAX_EDGE / Math.max(logicalW, logicalH));
     const outW = Math.max(2, Math.round(logicalW * scale));
@@ -224,7 +226,7 @@
     try {
       // Strokes accumulate on a transparent canvas (the live canvas is already
       // transparent — bg color/photo live behind it — so this is strokes-only).
-      const strokeCanvas = document.createElement('canvas'); strokeCanvas.width = canvas.width; strokeCanvas.height = canvas.height;
+      const strokeCanvas = document.createElement('canvas'); strokeCanvas.width = px.w; strokeCanvas.height = px.h;
       const sctx = strokeCanvas.getContext('2d'); sctx.scale(dpr, dpr);
       const sDot = (x, y, c, s, er) => { sctx.globalCompositeOperation = er ? 'destination-out' : 'source-over'; sctx.beginPath(); sctx.arc(x, y, s / 2, 0, Math.PI * 2); sctx.fillStyle = er ? 'rgba(0,0,0,1)' : c; sctx.fill(); sctx.globalCompositeOperation = 'source-over'; };
       const sLine = (x1, y1, x2, y2, c, s, er) => { sctx.globalCompositeOperation = er ? 'destination-out' : 'source-over'; sctx.beginPath(); sctx.moveTo(x1, y1); sctx.lineTo(x2, y2); sctx.strokeStyle = er ? 'rgba(0,0,0,1)' : c; sctx.lineWidth = s; sctx.lineCap = 'round'; sctx.lineJoin = 'round'; sctx.stroke(); sctx.globalCompositeOperation = 'source-over'; };
@@ -328,7 +330,7 @@
 
   // ---- PNG export ----
   pngBtn.addEventListener('click', () => {
-    const w = canvas.width, h = canvas.height;
+    const { w, h } = drawingPixelSize();   // the drawing's own size (app.js)
     const out = document.createElement('canvas');
     out.width = w; out.height = h;
     const octx = out.getContext('2d');
@@ -371,7 +373,7 @@
     // fetching it. exportViaWebCodecsMp4() does the real load, on the click.
     if (!(window.Mp4Muxer || (window.SKRIBL_VENDOR && window.SKRIBL_VENDOR.mp4muxer))) return false;
     if (typeof VideoEncoder === 'undefined' || typeof VideoFrame === 'undefined') return false;
-    const w = canvas.width & ~1, h = canvas.height & ~1;
+    const px = drawingPixelSize(), w = px.w & ~1, h = px.h & ~1;
     if (!(await pickAvcCodec(w, h))) return false;
     // If the Skribl has music, MP4 needs AAC too — else the export falls back to
     // MediaRecorder, so don't promise MP4 in the label.
@@ -407,7 +409,8 @@
 
   async function exportViaWebCodecsMp4() {
     // ---- capability pre-check (NO UI side effects; false ⇒ clean fallback) ----
-    const ready = await window.SkriblMp4.prepare(canvas.width, canvas.height);
+    const px = drawingPixelSize();
+    const ready = await window.SkriblMp4.prepare(px.w, px.h);
     if (!ready) return false;
     const w = ready.w, h = ready.h;
     const timeline = buildPlaybackTimeline();
@@ -528,7 +531,7 @@
     progressLabel.textContent = 'Preparing…';
     const release = () => { videoBtn.disabled = false; pngBtn.disabled = false; };
     try {
-      const w = canvas.width, h = canvas.height;
+      const { w, h } = drawingPixelSize();
       const rec = document.createElement('canvas');
       rec.width = w; rec.height = h;
       const rctx = rec.getContext('2d');

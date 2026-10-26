@@ -14,9 +14,13 @@ bug. With the bitmap cache the same file's cached loops measured 1911ms and
 WHAT IS PINNED HERE, and why each assertion looks the way it does:
 
   * The blit shows THE SAME PIXELS as the paint it replaced, asserted as exact
-    data-URL equality — but only after asserting the canvas is displayed 1:1,
-    because at any other scale the capture is legitimately resampled and exact
-    equality would be a lie about what the design promises.
+    data-URL equality — but only after asserting the capture is the pad's own
+    pixels, one for one, because a capture smaller than the pad is
+    legitimately resampled and exact equality would be a lie about what the
+    design promises. The fixture shows grown, the way a desk shows it (the
+    pad painted again past 1:1, at a ratio CW*RS is no whole number of
+    pixels at): there a copy laid back through the transform came back
+    stretched by a fraction of a pixel, and a cached page was not the page.
   * A vacuity guard sits between the two halves of the identity check: the
     bitmap must actually EXIST before the second paint, otherwise "the second
     paint matches the first" is true of a build with no cache at all.
@@ -143,12 +147,13 @@ with sync_playwright() as p:
           "making the pressure")
 
     print("\nIDENTITY — the blit is the paint, pixel for pixel")
-    # 400x300 in a 1000px viewport displays at 1:1, so the capture IS the
-    # backing store and exact equality is the honest claim. Assert the scale
-    # first: at any other scale this whole block would be measuring resampling.
+    # 400x300 in a 1000px viewport shows grown, and once it is still the pad
+    # and its layers are made again at that ratio (fitPad), so the capture IS
+    # the pad's own pixels and exact equality is the honest claim. Assert that
+    # first: a capture of any other size would be measuring resampling.
+    pg.evaluate("() => { applyCanvasSize(400, 300, {silent: true}); sizeStage(); }")
+    pg.wait_for_function("() => layersGrownTo(_growWant)", timeout=10000)
     ident = pg.evaluate(f"""() => {{
-        applyCanvasSize(400, 300, {{silent: true}});
-        sizeStage();
         frames.length = 0;
         frames.push({HEAVY}, {LIGHT});
         idx = 0; buildStrip(); render();
@@ -157,7 +162,7 @@ with sync_playwright() as p:
         playBitmaps = FB.store();
         idx = 0;
         playPaint();                       // paints, and should capture
-        const held = !!FB.get(playBitmaps, frames[0]);
+        const cap = FB.get(playBitmaps, frames[0]), held = !!cap;
         const direct = pad.toDataURL();
         playPaint();                       // must blit the capture
         const blit = pad.toDataURL();
@@ -166,10 +171,13 @@ with sync_playwright() as p:
         const lightHeld = !!FB.get(playBitmaps, frames[1]);
         const bytes = playBitmaps.bytes;
         playBitmaps = null;
-        return {{scale1: Math.abs(rect.width - 400) < 0.5, held: held,
+        return {{grown: rect.width > 400.5, w: rect.width, pw: pad.width, ph: pad.height,
+                 own: !!cap && cap.width === pad.width && cap.height === pad.height,
+                 cap: cap ? [cap.width, cap.height] : null, held: held,
                  same: direct === blit, lightHeld: lightHeld, bytes: bytes}}; }}""")
-    check("the fixture displays at 1:1 (the identity claim is only honest there)",
-          ident["scale1"])
+    check("the fixture shows grown, as on a desk, and its capture is the pad's own pixels one for one (the identity claim is only honest there)",
+          ident["grown"] and ident["own"],
+          f"shown {ident['w']:.0f} wide; pad {ident['pw']}x{ident['ph']}, capture {ident['cap']}")
     check("the first paint of a heavy page fills the cache",
           ident["held"],
           "without this the equality below is vacuously true of a build with "
@@ -177,7 +185,7 @@ with sync_playwright() as p:
     check("the blit shows exactly the pixels the paint showed",
           ident["same"], "compared as full data URLs")
     check("a light page is painted but never cached",
-          not ident["lightHeld"] and ident["bytes"] == 400 * 300 * 4,
+          not ident["lightHeld"] and ident["bytes"] == ident["pw"] * ident["ph"] * 4,
           f"store holds {ident['bytes']} bytes — one heavy capture, nothing else")
 
     print("\nPLAYBACK — the second loop stops rasterising")

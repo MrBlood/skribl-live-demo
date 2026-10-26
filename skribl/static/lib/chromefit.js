@@ -1,5 +1,6 @@
 /* The editors' fit when the chrome around the canvas changes size and the
- * window says nothing -- Pad's and Flip's, one watch.
+ * window says nothing -- Pad's and Flip's, one watch -- and the canvas's row
+ * reaching past the column on a wide window (span()).
  *
  * WHY. The chrome around the stage changes size without the window changing:
  * on Flip the header's play control widens once there are two pages (2px
@@ -54,5 +55,41 @@
     return ro;
   }
 
-  global.SkriblChromeFit = { watch: watch };
+  /* THE CANVAS'S ROW SPANS THE PAGE (the owner's B, "All yes"). Both editors
+   * live in a 720px column; on a wider window the row the canvas sits in (the
+   * Pad's .canvas-area, Flip's .flip-stage) reaches out of it to the page's
+   * own edges, so the drawing can show as big as the window allows, while the
+   * header, the dock and the drawers stay in the column. The reach is
+   * measured, half the difference between the page and the column on each
+   * side, and the page is the body's box: inside the scrollbar gutters the
+   * root keeps, so the row never runs under a scrollbar or past the window.
+   * While it reaches, the page wears one surface (styles.css,
+   * body.canvas-wide), because the column's edges would cut across the row.
+   * Each editor's fit calls this before it measures the room it has.
+   *
+   *   SkriblChromeFit.span(rowEl)  ->  the px it reaches out on each side
+   */
+  // The column's own width inside its padding: what the row is without the
+  // reach. Which shape a new drawing starts in is picked against this, so it
+  // is what it was before the row could reach (the owner's B changes how big
+  // a drawing shows, never the drawing).
+  function columnWidth(row) {
+    var col = row && row.parentElement;
+    if (!col) return 0;
+    var cs = global.getComputedStyle(col);
+    return col.clientWidth - (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0);
+  }
+  function span(row) {
+    var col = row && row.parentElement, body = global.document.body;
+    if (!col || !body) return 0;
+    var inner = columnWidth(row);
+    var reach = Math.max(0, (body.clientWidth - inner) / 2);
+    if (reach < 0.5) reach = 0;
+    var m = reach ? -reach + 'px' : '';
+    if (row.style.marginLeft !== m) { row.style.marginLeft = m; row.style.marginRight = m; }
+    body.classList.toggle('canvas-wide', reach > 0);
+    return reach;
+  }
+
+  global.SkriblChromeFit = { watch: watch, span: span, columnWidth: columnWidth };
 })(window);

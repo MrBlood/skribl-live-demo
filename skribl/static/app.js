@@ -83,9 +83,50 @@ let repositioning = false;                  // photo-drag mode; suspends drawing
 function getCanvasLogicalSize() {
   // Both editor and player now use a FIXED authored backing store and only scale
   // the CSS display size to fit (letterbox). The logical drawing space is always
-  // the backing store in CSS px, so strokes / replay / clear never distort.
+  // the backing store over its ratio, so strokes / replay / clear never distort.
+  const r = canvasRatio();
+  return { width: canvas.width / r, height: canvas.height / r };
+}
+
+// THE CANVAS GROWS PAST THE SIZE IT WAS DRAWN AT, AND STAYS SHARP (the owner's
+// B, "All yes"). Where the window has room, layoutEditorCanvas shows the
+// drawing bigger than 1:1, and the bitmap behind it grows by the same factor,
+// so every line is drawn again at that size instead of stretched. canvasGrowth
+// is that factor, 1 until there is room (and always 1 in the player);
+// canvasRatio() is the canvas's pixels per drawing unit, the one number the
+// canvas, its stroke layers and everything that reads its pixels go by.
+// The drawing does not change: its coordinates are the authored ones at any
+// growth, and what leaves the canvas (files, posts, drafts, thumbnails, the
+// base a new take starts from) is made at the drawing's own size times the
+// screen's ratio, as it was before the canvas could grow (drawingPixels()).
+//
+// THE RATIO IS THE ONE THE BITMAP WAS MADE AT, not the screen's as it is now.
+// A browser zoom, or the window moved to another screen, changes
+// devicePixelRatio under a bitmap made at the old one; read live, the drawing
+// space shrank or grew with it and every stroke landed away from the pen
+// until a reload. The bitmap is made again at the new ratio when the layout
+// next settles (wantCanvasGrowth below compares the two).
+let canvasGrowth = 1;
+let _canvasRatio = 0;   // set by establishEditorCanvas; the player's stays 0
+function canvasRatio() { return _canvasRatio || (window.devicePixelRatio || 1) * canvasGrowth; }
+// The bitmap never holds more than a phone at 3x already carries for the same
+// drawing; past that the canvas still shows bigger, a little softer.
+const CANVAS_RATIO_MAX = 3;
+function drawingPixelSize() {
   const dpr = window.devicePixelRatio || 1;
-  return { width: canvas.width / dpr, height: canvas.height / dpr };
+  return { w: Math.round(authoredW * dpr), h: Math.round(authoredH * dpr), dpr: dpr };
+}
+// The canvas at the drawing's own size: the canvas itself whenever it is that
+// size, so nothing that left it before the canvas could grow changes by a pixel.
+function drawingPixels() {
+  const px = drawingPixelSize();
+  if (canvas.width === px.w && canvas.height === px.h) return canvas;
+  const c = document.createElement('canvas');
+  c.width = Math.max(1, px.w); c.height = Math.max(1, px.h);
+  const x = c.getContext('2d');
+  x.imageSmoothingQuality = 'high';
+  x.drawImage(canvas, 0, 0, c.width, c.height);
+  return c;
 }
 
 // The editor authors at a FIXED logical size (like the player) and scales the
@@ -95,22 +136,86 @@ function getCanvasLogicalSize() {
 // draft's canvasSize.
 let authoredW = 0, authoredH = 0;
 function establishEditorCanvas(w, h) {
-  const dpr = window.devicePixelRatio || 1;
+  const r = _canvasRatio = (window.devicePixelRatio || 1) * canvasGrowth;
   authoredW = Math.max(1, Math.round(w));
   authoredH = Math.max(1, Math.round(h));
-  canvas.width = Math.round(authoredW * dpr);
-  canvas.height = Math.round(authoredH * dpr);
+  canvas.width = Math.round(authoredW * r);
+  canvas.height = Math.round(authoredH * r);
   ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.scale(dpr, dpr);
+  ctx.scale(r, r);
 }
+
+// THE BITMAP FOLLOWS THE SIZE ON SCREEN, once the page is still. A new size
+// clears a canvas, so the drawing is painted again from its strokes, the same
+// identity every replay's end and every undo already rests on (the base plus
+// paintStrokesStatic). It waits while a stroke, a replay, a pinch, a photo
+// drag or a colour pick is under way, any of which holds pixels of its own,
+// and for the window to stop changing size, so dragging a window's edge
+// repaints once at the end rather than every frame; the size on screen
+// follows the window at once, and the lines sharpen when it settles. Ink the
+// strokes cannot rebuild (drawn outside a take) is carried over as pixels.
+let _growWant = 1, _growTimer = 0, _grownOnce = false;
+function canvasBusy() {
+  return drawing || playing || pinching || repositioning || pickingColor
+    || !!(window.SkriblSelectTool && SkriblSelectTool.hasSelection());
+}
+// Is the bitmap already the size this growth asks for, at the screen's ratio now?
+function grownTo(g) {
+  const r = (window.devicePixelRatio || 1) * g;
+  return Math.round(authoredW * r) === canvas.width && Math.round(authoredH * r) === canvas.height;
+}
+function growCanvasNow(g) {
+  const keep = unrecordedInk || !baseReadyNow();
+  let old = null;
+  if (keep && canvas.width && canvas.height) {
+    old = document.createElement('canvas');
+    old.width = canvas.width; old.height = canvas.height;
+    old.getContext('2d').drawImage(canvas, 0, 0);
+  }
+  canvasGrowth = g;
+  establishEditorCanvas(authoredW, authoredH);
+  if (old) {
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(old, 0, 0, canvas.width, canvas.height);
+    ctx.restore();
+  } else if (strokes.length || preRecordSnapshot) {
+    clearAndRestore(() => paintStrokesStatic(strokes));
+  }
+  layoutEditorCanvas();   // and the canvas takes the bitmap's own size (below)
+}
+function growCanvasWhenStill() {
+  clearTimeout(_growTimer);
+  _growTimer = 0;
+  if (grownTo(_growWant)) return;
+  if (canvasBusy()) { _growTimer = setTimeout(growCanvasWhenStill, 250); return; }
+  _grownOnce = true;
+  growCanvasNow(_growWant);
+}
+// Asked by every layout. Through a timer even the first time: the first layout
+// runs while this file is still loading, before the state canvasBusy() reads
+// exists, and a page that has just opened has nothing to wait for.
+function wantCanvasGrowth(g) {
+  _growWant = g;
+  clearTimeout(_growTimer);
+  _growTimer = 0;
+  if (grownTo(g)) return;
+  _growTimer = setTimeout(growCanvasWhenStill, _grownOnce ? 150 : 0);
+}
+
 // Fit the fixed authored size into the available area with ONE uniform scale
-// (aspect locked, never upscaled past 1:1) and center it via .canvas-area. The
-// backing store is untouched here, so this never clears the canvas or distorts
-// the drawing — rotating just re-fits the display.
+// (aspect locked) and center it via .canvas-area. Past 1:1 the bitmap grows to
+// match (above); below it the display shrinks and the bitmap stays. Either way
+// this never clears the canvas on its own or distorts the drawing — rotating
+// just re-fits the display.
 function layoutEditorCanvas() {
   if (!authoredW || !authoredH) return;
   if (window._skriblFullFit?.()) return;   // full screen lays it out (editor_draw.js)
   const areaEl = canvasArea || canvasWrap.parentElement || canvasWrap;
+  // The row reaches past the column on a wide window (lib/chromefit.js), and
+  // that is the room measured below.
+  if (canvasArea && window.SkriblChromeFit && SkriblChromeFit.span) SkriblChromeFit.span(canvasArea);
   // MEASURED WITH THE DRAWING OUT OF THE WAY. Once the page outgrows the
   // window the area is as tall as what is in it, so a fitted canvas propped
   // the area up at its own height and a narrower or shorter window could not
@@ -126,12 +231,23 @@ function layoutEditorCanvas() {
   const padY = parseFloat(cs.paddingTop || 0) + parseFloat(cs.paddingBottom || 0);
   const availW = Math.max(1, area.width - padX);
   const availH = Math.max(1, area.height - padY);
-  // Capped at 1: canvas.width is authoredW x dpr, so any scale above 1
-  // stretches a fixed bitmap and softens every line. Flip allowed up to 1.4
-  // and was visibly softer than Pad for the same drawing.
-  const scale = Math.min(1, availW / authoredW, availH / authoredH);
-  const dispW = Math.round(authoredW * scale);
-  const dispH = Math.round(authoredH * scale);
+  // Not capped at 1 any more. It was, because canvas.width was authoredW x dpr
+  // and any scale above 1 stretched a fixed bitmap and softened every line
+  // (Flip allowed 1.4 and was visibly softer than Pad for the same drawing).
+  // Now the bitmap grows with the scale, so past 1:1 the lines are drawn
+  // again at the new size, up to CANVAS_RATIO_MAX.
+  const scale = Math.min(availW / authoredW, availH / authoredH);
+  const dpr = window.devicePixelRatio || 1;
+  const g = Math.max(1, Math.min(scale, CANVAS_RATIO_MAX / dpr));
+  wantCanvasGrowth(g);
+  // Grown to what shows, the canvas then takes its bitmap's own size, so the
+  // screen shows it pixel for pixel: each rounded on its own, the two were a
+  // pixel apart at 1.25x and 2x, and the screen resampled the whole drawing.
+  // (Up to the page's 1/64px, so a 1.25x screen gets the whole pixel too.)
+  const own = g > 1 && g === scale && grownTo(g);
+  const css = (px) => Math.ceil(px / dpr * 64) / 64;
+  const dispW = own ? css(canvas.width) : Math.round(authoredW * scale);
+  const dispH = own ? css(canvas.height) : Math.round(authoredH * scale);
   canvasWrap.style.width = dispW + 'px';
   canvasWrap.style.height = dispH + 'px';
   canvas.style.width = dispW + 'px';
@@ -168,7 +284,10 @@ function resizeCanvas() {
       const areaEl = canvasArea || canvasWrap.parentElement || canvasWrap;
       const r = areaEl.getBoundingClientRect();
       const cs = getComputedStyle(areaEl);
-      const availW = r.width - (parseFloat(cs.paddingLeft || 0) + parseFloat(cs.paddingRight || 0));
+      // Against the column, not the page the row may reach across
+      // (lib/chromefit.js): a new drawing starts in the shape it always did.
+      const colW = (window.SkriblChromeFit && SkriblChromeFit.columnWidth) ? SkriblChromeFit.columnWidth(areaEl) : r.width;
+      const availW = Math.min(r.width, colW) - (parseFloat(cs.paddingLeft || 0) + parseFloat(cs.paddingRight || 0));
       const availH = r.height - (parseFloat(cs.paddingTop || 0) + parseFloat(cs.paddingBottom || 0));
       // A degenerate band (display:none boot states, tests without CSS) keeps
       // the classic default rather than trusting a 0x0 measurement.
@@ -202,6 +321,20 @@ window.addEventListener('resize', () => {
 window.addEventListener('orientationchange', () => {
   if (!document.body.classList.contains('player-mode')) layoutEditorCanvas();
 });
+// The screen's ratio can change with no resize at all (a window dragged to a
+// sharper screen, a zoom that leaves the layout as it was). The bitmap was
+// made at the old one, so the layout is asked again and the canvas is made at
+// the new ratio once the page is still (wantCanvasGrowth).
+(function watchScreenRatio() {
+  if (!window.matchMedia) return;
+  const mq = window.matchMedia('(resolution: ' + (window.devicePixelRatio || 1) + 'dppx)');
+  const on = () => {
+    if (mq.removeEventListener) mq.removeEventListener('change', on); else if (mq.removeListener) mq.removeListener(on);
+    if (!document.body.classList.contains('player-mode')) layoutEditorCanvas();
+    watchScreenRatio();
+  };
+  if (mq.addEventListener) mq.addEventListener('change', on); else if (mq.addListener) mq.addListener(on);
+})();
 
 let drawing = false;
 // Canvas magnify (editor only). ZoomView is assigned by initCanvasZoom() near
@@ -556,7 +689,7 @@ function solidStrokeColor(c) {
 let _dryCanvas = null, _wetCanvas = null, _dryCtx = null, _wetCtx = null;
 let _wetAlpha = 1, _slActive = false;
 function ensureStrokeLayers() {
-  const dpr = window.devicePixelRatio || 1;
+  const dpr = canvasRatio();
   if (!_dryCanvas) { _dryCanvas = document.createElement('canvas'); _dryCtx = _dryCanvas.getContext('2d'); }
   if (!_wetCanvas) { _wetCanvas = document.createElement('canvas'); _wetCtx = _wetCanvas.getContext('2d'); }
   if (_dryCanvas.width !== canvas.width || _dryCanvas.height !== canvas.height) {
@@ -612,7 +745,9 @@ function beginWetStroke(x, y, drawColor, drawSize) {
 // Consumers: build one after the base is on `visCanvas`, pass its dotFn/lineFn to
 // the loop, call present() each frame, and finish() at the end.
 function makeStrokeCompositor(visCtx, visCanvas) {
-  const dpr = window.devicePixelRatio || 1;
+  // The canvas's own ratio for the canvas (it may have grown); an export's
+  // layer is made at the drawing's own size, the screen's ratio.
+  const dpr = visCanvas === canvas ? canvasRatio() : (window.devicePixelRatio || 1);
   const dry = document.createElement('canvas');
   const wet = document.createElement('canvas');
   dry.width = wet.width = visCanvas.width;
@@ -1253,7 +1388,7 @@ function renderRecent() { _initRecent(); if (_recent) _recent.render(); }
 const artCv = document.createElement('canvas');
 
 function padArtwork() {
-  const dpr = window.devicePixelRatio || 1;
+  const dpr = canvasRatio();
   const showing = photoBgImg && photoBgImg.src && photoBgImg.complete
     && photoBgImg.naturalWidth && photoBgImg.style.display !== 'none';
   return window.SkriblArtwork.stage({
@@ -1270,7 +1405,7 @@ function padArtwork() {
 
 function sampleColorAt(x, y) {
   try {
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = canvasRatio();
     const art = padArtwork();
     const d = art.getContext('2d').getImageData(Math.round(x * dpr), Math.round(y * dpr), 1, 1).data;
     // The stage is opaque, so this fallback should never fire now. Kept because
@@ -1523,7 +1658,7 @@ function beginRecording(continueTake) {
     // Fresh Skribl: snapshot whatever is already on the canvas as the static
     // base image, and start the stroke list empty. Any unrecorded ink is now
     // baked into the base, so history states can go pixel-less again.
-    preRecordSnapshot = canvas.toDataURL();
+    preRecordSnapshot = drawingPixels().toDataURL();
     unrecordedInk = false;
     strokes = []; strokeGroups = []; recolors = [];   // their lines are base now
   }
@@ -2566,7 +2701,7 @@ function refreshPendingCards() {
 function captureCurrentFrame() {
   let baseSnapshot = null;
   try {
-    if (hasContent && strokes.length === 0) baseSnapshot = canvas.toDataURL();
+    if (hasContent && strokes.length === 0) baseSnapshot = drawingPixels().toDataURL();
     else if (preRecordSnapshot) baseSnapshot = preRecordSnapshot;
   } catch (e) { baseSnapshot = null; }
   // A track switched off stays in the draft, marked so, as Flip's does; a

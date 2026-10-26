@@ -19,6 +19,19 @@ function skriblPostHeaders(){
 // leaves you a pen rather than a blank row.
 const COLORS = (window.SkriblPalette && window.SkriblPalette.hexes) || ["#7c5cff","#ffffff","#141414"];
 const DPR = Math.min(window.devicePixelRatio||1, 2);
+// THE PAD'S OWN RATIO, which grows with the canvas (the owner's B, "All yes").
+// DPR stays the drawing's own: what a file, a thumbnail and the fill are made
+// at. RS is what the pad and the layers it is painted through are made at:
+// DPR until the window gives the canvas room past 1:1, then DPR times that
+// growth (fitPad), so a page is painted again at the size it shows instead of
+// stretched. Never past RS_MAX, what Flip already draws at on a 2x screen: a
+// smudged page pays for every pixel on every repaint.
+let RS = DPR;
+const RS_MAX = 2;
+// A layer's side in whole pixels at a ratio (the pad's own by default):
+// floored with a hair of slack, since a side that should be 558 can come out
+// 557.99999, and a canvas told that is 557, a pixel short of what shows.
+function layerPx(n, rs){ return Math.floor(n * (rs || RS) + 1e-6); }
 let CW = 0, CH = 0;              // mutable since v110 — set from FLIP_SIZES[0] below
 // Canvas presets. The payload has ALWAYS carried canvasSize and the player has
 // always honoured it (app.js establishEditorCanvas), so this needed no format
@@ -62,7 +75,7 @@ const FILL_TOLERANCE = 32;
 
 const pad = document.getElementById('pad');
 const ctx = pad.getContext('2d');
-pad.width = CW*DPR; pad.height = CH*DPR; ctx.scale(DPR,DPR);
+pad.width = CW*RS; pad.height = CH*RS; ctx.scale(RS,RS);
 
 // Resize every layer that is CW x CH at DPR. Stroke coordinates are deliberately
 // NOT rescaled: a drawing keeps its position and size on the page, and a smaller
@@ -86,8 +99,8 @@ function applyCanvasSize(w, h, opts){
   for(const pair of layers){
     const cv = pair[0], c = pair[1];
     if(!cv || !c) continue;
-    cv.width = CW * DPR; cv.height = CH * DPR;
-    c.setTransform(DPR, 0, 0, DPR, 0, 0);      // resizing resets the transform
+    cv.width = layerPx(CW); cv.height = layerPx(CH);
+    c.setTransform(RS, 0, 0, RS, 0, 0);        // resizing resets the transform
   }
   if(!opts || opts.silent !== true){
     sizeStage(); buildStrip(); render(); scheduleSave();
@@ -110,20 +123,76 @@ function stageAvail(stage){
 // lib/watchfull.js, attached beside tap-to-pause below. Declared here, above
 // fitPad, which asks it first and runs from the first layout on.
 let flipFull = null;
+// THE LAYERS FOLLOW THE SIZE ON SCREEN, once the page is still: the pad and
+// every layer it is painted through are made again at the new ratio and the
+// page painted again (render() paints from the pages, never from pixels).
+// It waits while a stroke, a replay, a smudge or blur, or a colour pick is
+// under way, and for the window to stop changing size, so a dragged window
+// edge repaints once, at the end; the size on screen follows the window at
+// once and the lines sharpen when it settles. The Pad does the same
+// (app.js wantCanvasGrowth).
+let _growWant = 1, _growTimer = 0, _grownOnce = false;
+function layersGrownTo(g){ return layerPx(CW, DPR*g) === pad.width && layerPx(CH, DPR*g) === pad.height; }
+function growLayersNow(g){
+  RS = DPR * g;
+  for(const [cv, c] of [[pad, ctx], [onionCv, octx], [tmpCv, tctx], [frameCv, fctx], [artCv, actx]]){
+    cv.width = layerPx(CW); cv.height = layerPx(CH);
+    c.setTransform(RS, 0, 0, RS, 0, 0);
+  }
+  playBitmaps = null; underCache = null; _liveCache = null;   // made at the old ratio
+  render();
+  fitPad();   // and the pad takes the layers' own size (below)
+}
+function growWhenStill(){
+  clearTimeout(_growTimer); _growTimer = 0;
+  if(layersGrownTo(_growWant)) return;
+  if(drawing || playing || picking || _fieldIdx >= 0 || pinching){ _growTimer = setTimeout(growWhenStill, 250); return; }
+  _grownOnce = true;
+  growLayersNow(_growWant);
+}
+// Asked by every fit; through a timer even the first time, which runs while
+// this file is still loading, before the state growWhenStill() reads exists.
+function wantGrow(g){
+  _growWant = g;
+  clearTimeout(_growTimer); _growTimer = 0;
+  if(layersGrownTo(g)) return;
+  _growTimer = setTimeout(growWhenStill, _grownOnce ? 150 : 0);
+}
 function fitPad(){
   if(flipFull && flipFull.isOn()){ flipFullFit(true); return; }
   const stage = document.querySelector('.flip-stage');
+  // The stage reaches past the column on a wide window (lib/chromefit.js),
+  // and that is the room measured below.
+  if(window.SkriblChromeFit && window.SkriblChromeFit.span) window.SkriblChromeFit.span(stage);
   const avail = stageAvail(stage);
   const availW = avail.w, availH = avail.h;
-  // Capped at 1, not 1.4. The backing store is CW x CH x DPR (see pad.width
-  // above), so any scale above 1 stretches a fixed bitmap and softens every
-  // line — at 1.10 on a 1000px window, Flip's strokes were ~10% blurrier than
-  // the same drawing in Pad, which has always clamped at 1 in
-  // layoutEditorCanvas(). Same authored canvas, two different sizes on screen,
-  // and the larger one was the worse one.
-  const scale = Math.max(0.1, Math.min(availW/CW, availH/CH, 1));
-  pad.style.width = Math.round(CW*scale)+'px';
-  pad.style.height = Math.round(CH*scale)+'px';
+  // Not capped at 1 any more. It was, because the backing store was CW x CH
+  // x DPR and any scale above 1 stretched a fixed bitmap and softened every
+  // line (at 1.10 on a 1000px window Flip's strokes were ~10% blurrier than
+  // the same drawing in Pad, which clamped at 1 too). Now the layers grow
+  // with the scale (above), up to RS_MAX, so past 1:1 the page is painted
+  // again at the size it shows.
+  const scale = Math.max(0.1, Math.min(availW/CW, availH/CH));
+  // PAST 1:1 THE DRAWING SHOWS INSIDE THE PAD'S FRAME (its border), so that
+  // is the room the layers grow to, the frame outside it. Grown to the
+  // frame's outside, the layers were squeezed 4px into its inside and the
+  // screen resampled every line: a 1px line came out two, at half.
+  const fr = parseFloat(getComputedStyle(pad).borderLeftWidth) || 0;
+  const inner = Math.min((availW - 2*fr)/CW, (availH - 2*fr)/CH);
+  const g = Math.max(1, Math.min(inner, RS_MAX / DPR));
+  wantGrow(g);
+  if(g > 1){
+    // The drawing's size at once as the window moves; once the layers are
+    // made at it, their own size, so the screen shows them pixel for pixel
+    // (up to the page's 1/64px, so a 1.25x screen gets the whole pixel too).
+    const own = g === inner && layersGrownTo(g);
+    const css = (px) => Math.ceil(px / DPR * 64) / 64;
+    pad.style.width = ((own ? css(pad.width) : Math.round(CW*inner)) + 2*fr)+'px';
+    pad.style.height = ((own ? css(pad.height) : Math.round(CH*inner)) + 2*fr)+'px';
+  } else {
+    pad.style.width = Math.round(CW*scale)+'px';
+    pad.style.height = Math.round(CH*scale)+'px';
+  }
   syncGrid();
   if(ZoomView && ZoomView.isZoomed()) ZoomView.reclamp();
   // The dot moves with the canvas in the same frame (Play hides the strip,
@@ -1661,7 +1730,7 @@ function paintStatic(c, strokeArr, overBudget){
          for a stroke that covers a corner of it is what made this per-run price
          2.44 ms. The run cannot mark a pixel outside its own bounds padded by
          half its widest brush, so both ends of the trip can be that box. The
-         source rect is in DEVICE pixels because tmpCv is CW*DPR wide; the
+         source rect is in DEVICE pixels because tmpCv is CW*RS wide; the
          destination is logical, because that is the space `c` draws in. */
       let bx0 = Infinity, by0 = Infinity, bx1 = -Infinity, by1 = -Infinity, bpad = 0;
       for (let k = 0; k < seg.length; k++) {
@@ -1688,7 +1757,7 @@ function paintStatic(c, strokeArr, overBudget){
         tctx.clearRect(bx0, by0, bw, bh);
         paintSeg(tctx, seg, true);                                  // solid on the temp layer
         c.globalAlpha = a;
-        c.drawImage(tmpCv, bx0 * DPR, by0 * DPR, bw * DPR, bh * DPR, bx0, by0, bw, bh);
+        c.drawImage(tmpCv, bx0 * RS, by0 * RS, bw * RS, bh * RS, bx0, by0, bw, bh);
         c.globalAlpha = 1;
       }
     }
@@ -1701,19 +1770,19 @@ function paintStatic(c, strokeArr, overBudget){
 // then composited onto the canvas ONCE at the target alpha — so overlapping dots/joints
 // don't build up into dark blobs (the pad's wet/dry compositor idea, applied to onion).
 const onionCv = document.createElement('canvas');
-onionCv.width = CW*DPR; onionCv.height = CH*DPR;
-const octx = onionCv.getContext('2d'); octx.scale(DPR,DPR);
+onionCv.width = CW*RS; onionCv.height = CH*RS;
+const octx = onionCv.getContext('2d'); octx.scale(RS,RS);
 // Separate temp layer for per-stroke opacity compositing (kept distinct from the
 // onion layer so the two never draw onto each other).
 const tmpCv = document.createElement('canvas');
-tmpCv.width = CW*DPR; tmpCv.height = CH*DPR;
-const tctx = tmpCv.getContext('2d'); tctx.scale(DPR,DPR);
+tmpCv.width = CW*RS; tmpCv.height = CH*RS;
+const tctx = tmpCv.getContext('2d'); tctx.scale(RS,RS);
 // Frame layer: a frame's strokes are drawn here (transparent), then composited over
 // the backdrop — so the eraser (destination-out) reveals the background image/colour
 // instead of punching a hole. Shared by the live canvas, thumbnails, and export.
 const frameCv = document.createElement('canvas');
-frameCv.width = CW*DPR; frameCv.height = CH*DPR;
-const fctx = frameCv.getContext('2d'); fctx.scale(DPR,DPR);
+frameCv.width = CW*RS; frameCv.height = CH*RS;
+const fctx = frameCv.getContext('2d'); fctx.scale(RS,RS);
 
 /* ---- ARTWORK STAGE ------------------------------------------------------
  * What the drawing IS: backdrop, background image, and the current page's
@@ -1733,8 +1802,8 @@ const fctx = frameCv.getContext('2d'); fctx.scale(DPR,DPR);
  * would have needed repeating for the next one. This retires the class.
  */
 const artCv = document.createElement('canvas');
-artCv.width = CW*DPR; artCv.height = CH*DPR;
-const actx = artCv.getContext('2d'); actx.scale(DPR,DPR);
+artCv.width = CW*RS; artCv.height = CH*RS;
+const actx = artCv.getContext('2d'); actx.scale(RS,RS);
 
 // Composite the artwork as it stands. Cheap: the same two calls render() makes,
 // minus every overlay. Callers ask for it on demand rather than keeping it in
@@ -1743,13 +1812,13 @@ function paintArtwork(){
   // Flip paints its own backdrop (drawBackdrop already composites the photo and
   // the background colour), so the shared stage is handed a finished backdrop
   // and only needs the strokes layered on. See lib/artwork.js.
-  actx.setTransform(DPR,0,0,DPR,0,0);
+  actx.setTransform(RS,0,0,RS,0,0);
   actx.clearRect(0,0,CW,CH);
   drawBackdrop(actx);
   fctx.clearRect(0,0,CW,CH);
   paintStatic(fctx, frame().strokes);
   return window.SkriblArtwork.stage({
-    canvas: artCv, w: CW, h: CH, dpr: DPR, bg: null, photo: null,
+    canvas: artCv, w: CW, h: CH, dpr: RS, bg: null, photo: null,
     strokes: frameCv, keep: true
   });
 }
@@ -1782,7 +1851,37 @@ function drawBackdrop(c){
   }
   c.restore();
 }
-function paintFrame(c, strokes){ fctx.clearRect(0,0,CW,CH); paintStatic(fctx, strokes); c.drawImage(frameCv, 0, 0, CW, CH); }
+/* THROUGH THE FRAME LAYER AT THE TARGET'S OWN RESOLUTION. The pad and its
+   caches are made at RS, which grows with the canvas; a file, a thumbnail and
+   anything else made at the drawing's own DPR or smaller go through a layer at
+   DPR, since painting them through the grown one would only spend pixels to
+   throw them away (an export paints every page of the document this way). */
+let _frameBaseCv = null, _frameBaseCtx = null;
+function frameLayerFor(c){
+  if(RS === DPR) return fctx;
+  const k = (c && c.getTransform) ? Math.abs(c.getTransform().a) : RS;
+  if(k > DPR + 1e-6) return fctx;
+  if(!_frameBaseCv){ _frameBaseCv = document.createElement('canvas'); _frameBaseCtx = _frameBaseCv.getContext('2d'); }
+  if(_frameBaseCv.width !== Math.trunc(CW*DPR) || _frameBaseCv.height !== Math.trunc(CH*DPR)){
+    _frameBaseCv.width = CW*DPR; _frameBaseCv.height = CH*DPR;
+  }
+  _frameBaseCtx.setTransform(DPR,0,0,DPR,0,0);
+  return _frameBaseCtx;
+}
+/* A LAYER IS LAID ON PIXEL FOR PIXEL when it is the size of what it is laid
+   on (the pad and every layer it is painted through are). CW x CH through
+   the transform is CW*RS pixels, rarely a whole number once the canvas has
+   grown, and a layer laid that way was stretched by a fraction of a pixel:
+   every page softened. Anything else (a file, a thumbnail) as before. */
+function layOn(c, cv){
+  if(c.canvas && cv.width === c.canvas.width && cv.height === c.canvas.height){
+    c.save(); c.setTransform(1,0,0,1,0,0); c.drawImage(cv, 0, 0); c.restore();
+  } else c.drawImage(cv, 0, 0, CW, CH);
+}
+function paintFrame(c, strokes){
+  const fl = frameLayerFor(c);
+  fl.clearRect(0,0,CW,CH); paintStatic(fl, strokes); layOn(c, fl.canvas);
+}
 // Centre of mass of a page's ink, in canvas coordinates. Averaging the stroke
 // POINTS (not their bounding box) is what makes the path track the drawing's
 // weight rather than its extremes, so a wobbling outline does not throw it.
@@ -1863,7 +1962,7 @@ function paintUnder(c){
         octx.restore();
       }
       c.globalAlpha = alphas[k-1] || alphas[alphas.length-1];
-      c.drawImage(onionCv, 0, 0, CW, CH);
+      layOn(c, onionCv);
       c.globalAlpha = 1;
     }
   }
@@ -1911,10 +2010,10 @@ function _overBudgetOf(arr){
     : layerableCount(arr, strokeAlphaOf) > LAYER_BUDGET;
 }
 function _liveReady(cv){
-  const w = CW*DPR, h = CH*DPR;
+  const w = layerPx(CW), h = layerPx(CH);
   if(cv.width !== w || cv.height !== h){ cv.width = w; cv.height = h; }
   const c = cv.getContext('2d');
-  c.setTransform(DPR,0,0,DPR,0,0);
+  c.setTransform(RS,0,0,RS,0,0);
   c.clearRect(0,0,CW,CH);
   return c;
 }
@@ -1931,7 +2030,7 @@ function liveBegin(fr){
   paintUnder(u);
   if(flat){
     // The finished ink composited over the backdrop, exactly as render() does it.
-    fctx.clearRect(0,0,CW,CH); paintStatic(fctx, pre, ob); u.drawImage(frameCv, 0, 0, CW, CH);
+    fctx.clearRect(0,0,CW,CH); paintStatic(fctx, pre, ob); layOn(u, frameCv);
   } else {
     paintStatic(_liveReady(_liveDryCv), pre, ob);
   }
@@ -1946,22 +2045,22 @@ function _liveUsable(){
   // replaced (undo, clear and a page swap all fail one of these).
   if(s.length < L.start || (L.start && s[L.start - 1] !== L.last)) return false;
   if(L.flat === erasing) return false;   // the eraser was toggled mid-stroke
-  return _liveUnderCv.width === CW*DPR && _liveUnderCv.height === CH*DPR;
+  return _liveUnderCv.width === layerPx(CW) && _liveUnderCv.height === layerPx(CH);
 }
 
 function render(){
   ctx.clearRect(0,0,CW,CH);
   if(_liveUsable()){
     const L = _liveCache, live = L.fr.strokes.length > L.start ? L.fr.strokes.slice(L.start) : null;
-    ctx.drawImage(_liveUnderCv, 0, 0, CW, CH);
+    layOn(ctx, _liveUnderCv);
     if(L.flat){
       if(live) paintStatic(ctx, live, L.ob);
     } else {
       fctx.save(); fctx.globalCompositeOperation = 'copy';
-      fctx.drawImage(_liveDryCv, 0, 0, CW, CH);
+      layOn(fctx, _liveDryCv);
       fctx.restore();
       if(live) paintStatic(fctx, live, L.ob);
-      ctx.drawImage(frameCv, 0, 0, CW, CH);
+      layOn(ctx, frameCv);
     }
   } else {
     paintUnder(ctx);
@@ -3900,14 +3999,14 @@ function drawUnderPage(c, i, faint){
     c.save(); c.globalAlpha = UNDER_EDIT_ALPHA; paintFrame(c, f.strokes); c.restore();
     return;
   }
-  if(!underCache || underCache.f !== f){
+  if(!underCache || underCache.f !== f || underCache.cv.width !== layerPx(CW) || underCache.cv.height !== layerPx(CH)){
     const cv = document.createElement('canvas');
-    cv.width = Math.round(CW * DPR); cv.height = Math.round(CH * DPR);
-    const cx = cv.getContext('2d'); cx.scale(DPR, DPR);
+    cv.width = layerPx(CW); cv.height = layerPx(CH);
+    const cx = cv.getContext('2d'); cx.scale(RS, RS);
     paintFrame(cx, f.strokes);
     underCache = { f, cv };
   }
-  c.drawImage(underCache.cv, 0, 0, CW, CH);
+  layOn(c, underCache.cv);
 }
 function _validLoop(){
   const H = window.SkriblHold;
@@ -4205,17 +4304,23 @@ function playPaint(){
   const FB = window.SkriblFrameBitmap;
   const hit = FB ? FB.get(playBitmaps, f) : null;
   if(hit){
-    ctx.clearRect(0,0,CW,CH);
-    ctx.drawImage(hit, 0, 0, CW, CH);
+    // Back onto the pad's own pixels, not CW x CH through the transform: grown,
+    // CW*RS is not a whole number of them, and the copy came back stretched by
+    // a fraction of a pixel, so a cached page was not the page painted.
+    ctx.save(); ctx.setTransform(1,0,0,1,0,0);
+    ctx.clearRect(0,0,pad.width,pad.height);
+    ctx.drawImage(hit, 0, 0, pad.width, pad.height);
+    ctx.restore();
     return true;
   }
   render();
   if(FB && f && playBitmaps){
     // Captured from the visible pad AFTER its own render, so the bitmap is the
     // exact composite this playback just showed — at the resolution it was
-    // shown at, which is what bounds the memory (see the lib header).
+    // shown at, which is what bounds the memory (see the lib header). The
+    // backing is the pad's real size (CW*RS rounded up past it, grown).
     const rect = pad.getBoundingClientRect();
-    const sz = FB.captureSize(CW * DPR, CH * DPR, rect.width * DPR, rect.height * DPR);
+    const sz = FB.captureSize(pad.width, pad.height, rect.width * DPR, rect.height * DPR);
     if(FB.wants(playBitmaps, f.strokes.length, sz.w, sz.h))
       FB.capture(playBitmaps, f, pad, sz.w, sz.h);
   }
@@ -5052,7 +5157,7 @@ function _initEyedropper(){
     // sampleColorAt reads — onion skin and guides stay invisible to it.
     getPoint: ev => pos(ev),
     artwork: () => paintArtwork(),
-    dpr: () => DPR,
+    dpr: () => RS,                 // the artwork is made at the pad's own ratio
     bg: () => bgColor,
     current: () => color,          // the lens ring's bottom half
     focusHome: () => document.getElementById('penToolBtn'),
@@ -5066,7 +5171,7 @@ function sampleColorAt(e){
   // drawing — a ghost of the previous page, or the guide's own violet.
   try{
     const art = paintArtwork();
-    const p=pos(e); const dx=Math.round(p.x*DPR), dy=Math.round(p.y*DPR);
+    const p=pos(e); const dx=Math.round(p.x*RS), dy=Math.round(p.y*RS);
     const d=art.getContext('2d').getImageData(dx,dy,1,1).data;
     const hex = d[3] < 10 ? bgColor
       : '#'+[d[0],d[1],d[2]].map(v=>v.toString(16).padStart(2,'0')).join('');
@@ -5091,7 +5196,7 @@ if(window.SkriblRecolor){
     color: () => color,
     lines: () => ({ pts: frame().strokes, groups: frame().strokeGroups }),
     point: ev => pos(ev),
-    unit: () => DPR,
+    unit: () => RS,
     art: () => paintArtwork(),
     begin: () => { _rcBefore = { idx: idx, snap: selFrameSnap() }; },
     apply: (g0, g1, hex, at) => {
@@ -10411,17 +10516,26 @@ let _fillCv = null, _fillCtx = null;
    colour plus this frame's strokes -- built here rather than kept in step with
    render(), because a cached layer that goes stale fills the shape you drew a
    moment ago. */
+/* AT THE DRAWING'S OWN SIZE, however big the canvas has grown (RS): the same
+   tap on the same drawing fills the same runs on any screen. Once the pad has
+   grown it is read through a copy at DPR, so the flood still runs against
+   what the pad shows. */
 function fillSourceImage(f){
-  if(!photoShowing()) return ctx.getImageData(0, 0, pad.width, pad.height);
+  if(!photoShowing() && RS === DPR) return ctx.getImageData(0, 0, pad.width, pad.height);
   if(!_fillCv) _fillCv = document.createElement('canvas');
-  if(_fillCv.width !== pad.width || _fillCv.height !== pad.height){
-    _fillCv.width = pad.width; _fillCv.height = pad.height;
+  if(_fillCv.width !== Math.trunc(CW*DPR) || _fillCv.height !== Math.trunc(CH*DPR)){
+    _fillCv.width = CW*DPR; _fillCv.height = CH*DPR;
     _fillCtx = _fillCv.getContext('2d');
   }
   // setTransform first: the scale below is applied every call, and without the
   // reset it would compound into DPR^n on the second fill of a session.
   _fillCtx.setTransform(1, 0, 0, 1, 0, 0);
   _fillCtx.clearRect(0, 0, _fillCv.width, _fillCv.height);
+  if(!photoShowing()){
+    _fillCtx.imageSmoothingQuality = 'high';
+    _fillCtx.drawImage(pad, 0, 0, _fillCv.width, _fillCv.height);
+    return _fillCtx.getImageData(0, 0, _fillCv.width, _fillCv.height);
+  }
   _fillCtx.scale(DPR, DPR);
   _fillCtx.fillStyle = bgColor;
   _fillCtx.fillRect(0, 0, CW, CH);
@@ -10473,7 +10587,7 @@ function doFill(p){
   // sizeOf(run) * points(run).length: points are SPACED along the run rather
   // than one per pixel, so that product silently undercounts by an order of
   // magnitude and the note never fires. Measured, not assumed.
-  const _canvasPx = (pad.width * pad.height) || 1;
+  const _canvasPx = (img.width * img.height) || 1;   // the source's own pixels (fillSourceImage)
   let _filled = 0;
   for(const run of res.runs) _filled += Math.max(0, run.x1 - run.x0) * Math.max(1, run.h);
   chip(res.truncated ? 'Filled (area was clipped)'
@@ -11730,7 +11844,12 @@ if(!restored && window.SkriblCanvasSizes && window.SkriblCanvasSizes.bestFor){
   const _st = document.querySelector('.flip-stage');
   if(_st && _st.clientWidth > 50 && _st.clientHeight > 50){
     const _avail = stageAvail(_st);
-    const _best = window.SkriblCanvasSizes.bestFor(_avail.w, _avail.h);
+    // Against the column, not the page the stage may reach across
+    // (lib/chromefit.js): a new document starts in the shape it always did.
+    const _cs = getComputedStyle(_st);
+    const _colW = (window.SkriblChromeFit && window.SkriblChromeFit.columnWidth)
+      ? window.SkriblChromeFit.columnWidth(_st) - parseFloat(_cs.paddingLeft) - parseFloat(_cs.paddingRight) : _avail.w;
+    const _best = window.SkriblCanvasSizes.bestFor(Math.min(_avail.w, _colW), _avail.h);
     if(applyCanvasSize(_best.w, _best.h, {silent:true})){
       sizeStage(); buildStrip(); render(); syncCanvasSeg();
     }

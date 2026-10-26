@@ -2053,7 +2053,9 @@ with sync_playwright() as p:
     # the way the editor's own sampler reads (getPos/pos + the composited stage).
     YEL = """([sel, want]) => { const c = document.querySelector(sel), r = c.getBoundingClientRect();
         const art = (typeof padArtwork === 'function') ? padArtwork() : paintArtwork();
-        const P = (typeof getPos === 'function') ? getPos : pos, d = (typeof DPR !== 'undefined') ? DPR : (window.devicePixelRatio || 1);
+        // At the artwork's own ratio: on a canvas grown past 1:1 it is made at
+        // the canvas's (B), not the screen's.
+        const P = (typeof getPos === 'function') ? getPos : pos, d = art.width / ((typeof CW !== 'undefined' && CW) ? CW : authoredW);
         const g = art.getContext('2d'), x = Math.floor(r.left + r.width * 0.5) + 0.5, run = [];
         for (let y = Math.floor(r.top) + 0.5; y < r.bottom; y++) {
           const p = P({ clientX: x, clientY: y }), q = g.getImageData(Math.floor(p.x * d), Math.floor(p.y * d), 1, 1).data;

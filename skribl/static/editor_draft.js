@@ -230,7 +230,7 @@ function serializeAutosave() {
   let baseSnapshot = null;
   try {
     if (hasContent && strokes.length === 0) {
-      baseSnapshot = canvas.toDataURL();
+      baseSnapshot = drawingPixels().toDataURL();
     } else if (preRecordSnapshot) {
       baseSnapshot = preRecordSnapshot;
     }
