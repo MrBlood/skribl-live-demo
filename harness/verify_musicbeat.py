@@ -296,10 +296,21 @@ CONTRAST = """() => {
 def dot_contrast(pg):
     import io as _io
     from PIL import Image as _Img
-    pg.evaluate("() => document.getElementById('musicTimeline').scrollIntoView({ block: 'center' })"); pg.wait_for_timeout(300)
-    st = pg.evaluate("() => { const r = document.getElementById('musicTlStage').getBoundingClientRect(); return [r.left, r.top, r.width, r.height]; }")
-    m = pg.evaluate(MARKS, "musicTimeline")
-    im = _Img.open(_io.BytesIO(pg.screenshot(clip={"x": st[0], "y": st[1], "width": st[2], "height": st[3]}))).convert("RGB")
+    # The picture is of the stage where it is WHILE it is taken. The drawer's
+    # hold can still put the page back where it glided to, up to 1.2s after it
+    # grew (lib/drawerdetent.js), which a person's own scroll stands down but
+    # this one does not: read where the stage is before and after the picture,
+    # and take it again until the two agree (a picture of the strip below it,
+    # dots and all missing, read 1.00 here).
+    STAGE = "() => { const r = document.getElementById('musicTlStage').getBoundingClientRect(); return [r.left, r.top, r.width, r.height]; }"
+    for _ in range(8):
+        pg.evaluate("() => document.getElementById('musicTimeline').scrollIntoView({ block: 'center' })"); pg.wait_for_timeout(300)
+        st = pg.evaluate(STAGE)
+        m = pg.evaluate(MARKS, "musicTimeline")
+        png = pg.screenshot(clip={"x": st[0], "y": st[1], "width": st[2], "height": st[3]})
+        if pg.evaluate(STAGE) == st:
+            break
+    im = _Img.open(_io.BytesIO(png)).convert("RGB")
     k = im.width / st[2]
 
     def lum(c):

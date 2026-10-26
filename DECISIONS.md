@@ -24268,3 +24268,14 @@ raised instead of going red; and it looked for the line where the stage's
 middle is, so a line drawn 2px low read as ink and four rows could not read
 the wave at all. It finds the line by its paint now, the rows inked across
 nine columns in ten.
+
+FOUND ON THE WAY: verify_musicbeat's row for the beat's dots against the
+song's lane went red here on the Pad in light, alone and beside others, and
+the picture said why: it was of the strip below the timeline. The row scrolls
+the timeline into view and takes its picture 300ms later, and the drawer's
+hold (lib/drawerdetent.js) can still put the page back where it glided to,
+up to 1.2s after it grew; a person's own scroll stands the hold down, a
+script's does not. On main the same scroll came a moment after the picture,
+so it passed by its timing. The row now reads where the stage is before and
+after its picture and takes it again until the two agree: green as built on
+both editors, light and dark, and red on all four with the dots painted out.
