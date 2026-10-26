@@ -359,6 +359,11 @@
       <button type="button" id="magnifyBtn" class="tool-open magnify-tool" title="Magnify — zoom centres, so scroll or hold Space and drag to aim it" aria-label="Toggle magnify controls" aria-pressed="false">
         <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
       </button>
+      {# Draw in full screen, as on the Pad: the same element in the same place
+         (lib/drawfull.js, desk only). #}
+      <button type="button" id="drawFullBtn" class="tool-open draw-full-tool" title="Draw in full screen" aria-label="Draw in full screen" aria-pressed="false" hidden>
+        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M16 3h3a2 2 0 0 1 2 2v3"/><path d="M8 21H5a2 2 0 0 1-2-2v-3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+      </button>
 {# The shape picker lives ON the Shape button, not buried in the drawer.
        Tapping Shape selects the tool AND opens this; tapping a kind sets it and
        closes. Tapping Shape again re-opens it to switch. Same #shapeSeg id and
@@ -496,6 +501,8 @@
      the drawing's own colours, and lib/watchfull.js is the editors' full
      screen itself, the same in both. #}
   <script src="{{ skribl_asset('lib/immersive.js') }}" defer></script>
+  {# lib/drawfull.js: the dock's Draw in full screen, after lib/immersive.js, which it goes full screen with. #}
+  <script src="{{ skribl_asset('lib/drawfull.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/chromefade.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/smartfade.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/watchfull.js') }}" defer></script>

@@ -1073,6 +1073,21 @@ A vector from the owner would make sharper files. The small Blooby pictures
 in the app stay as they are unless the owner asks. Not tested: how iOS 26
 tints and relights it on a real iPhone.
 
+## 6r. Flip's pen lands up to 2px off at the canvas's edges (measured, during #648)
+
+Flip's canvas has a 2px frame, and since B (#648) the drawing fills the
+inside of it, pixel for pixel. The pen is still mapped through the frame's
+OUTSIDE: a point is read as a share of the canvas's whole box, frame and
+all, so a stroke at the very edge lands up to 2px from the pen (the error is
+nothing at the middle and grows to the frame's width at the edges). It was
+there before B, hidden by the bitmap being squeezed the same way. The Pad has
+no frame and is not affected.
+
+TO FIX: map the pointer through the content box (the box less the frame on
+each side) wherever flip.js turns a pointer's place into the drawing's units,
+and the eyedropper's lens with it, with a row that puts the pen a pixel in
+from each edge and reads where the ink lands, red on today's mapping first.
+
 ## 7. The honest state
 
 The tool is good. It is better than it needs to be for a demo and not yet enough

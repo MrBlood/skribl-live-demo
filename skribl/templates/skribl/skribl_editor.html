@@ -336,6 +336,15 @@
     <button type="button" id="magnifyBtn" class="tool-open magnify-tool" title="Magnify — zoom centres, so scroll or hold Space and drag to aim it" aria-label="Toggle magnify controls" aria-pressed="false">
       <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
     </button>
+    {# DRAW IN FULL SCREEN, on a desk (the owner's A, built on B): the page goes
+       full screen, the header and this dock with it, and the canvas takes the
+       room. After Magnify, the other control that changes how you see the
+       drawing. Hidden until lib/drawfull.js finds a browser that can take the
+       page full screen; styles.css keeps it to a desk. The four corners are
+       the watch button's and the link page's, so the way in looks the same. #}
+    <button type="button" id="drawFullBtn" class="tool-open draw-full-tool" title="Draw in full screen" aria-label="Draw in full screen" aria-pressed="false" hidden>
+      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M16 3h3a2 2 0 0 1 2 2v3"/><path d="M8 21H5a2 2 0 0 1-2-2v-3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+    </button>
 </div>
 
   <!-- Draw drawer (shared partial — Pad + Flip) -->
@@ -400,6 +409,8 @@
      the drawing's own colours, and lib/watchfull.js is the editors' full
      screen itself, the same in both. #}
   <script src="{{ skribl_asset('lib/immersive.js') }}" defer></script>
+  {# lib/drawfull.js: the dock's Draw in full screen, after lib/immersive.js, which it goes full screen with. #}
+  <script src="{{ skribl_asset('lib/drawfull.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/chromefade.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/smartfade.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/watchfull.js') }}" defer></script>
