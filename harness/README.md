@@ -722,9 +722,10 @@ stays a sleep.
   Pressed again, the page comes back out. Watching the drawing big from there
   and leaving comes back to the page in full screen, and the page leaving
   full screen does not hand focus to the watch's button (lib/immersive.js
-  reports only a change of its own). Not shown on a phone, on a touch screen
-  at a desk's width, in a 640px window, or where the page cannot go full
-  screen. Escape is not tried here: headless Chrome does not hand it over.
+  reports only a change of its own). In a 721px window, the narrowest it
+  shows in, the dock holds it without clipping. Not shown on a phone, on a
+  touch screen at a desk's width, in a 720px window, or where the page cannot
+  go full screen. Escape is not tried here: headless Chrome does not hand it over.
   `DRAWFULL_PART=button` (inout, watch, not) and `DRAWFULL_ONLY=Pad` run a
   part. Each row was shown red by its own break, served in place of the real
   file.

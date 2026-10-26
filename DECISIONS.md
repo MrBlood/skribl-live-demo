@@ -24168,9 +24168,13 @@ the page, for the iPhone) means nothing for a page that already fills the
 window, so where the browser cannot take the page full screen the button is
 not shown: no API, or fullscreenEnabled false though requestFullscreen is
 there, which is how a frame that does not allow it answers. And on a desk
-only: a mouse and a window over 640px, asked as a positive media query,
-because harness/tools/cssgraph.py keeps every touch-only block whole in the
-player's sheet and this one has nothing for the player.
+only: a mouse and a window wider than the page's 720px column, where the
+canvas grows past it too. The mock said over 640px, the dock's desk tier, but
+at 641 the Pad's dock ran 26px past its edge (verify_layout caught it); it
+needs about 667 with this box's fonts, and 720 leaves room for wider ones.
+Asked as a positive media query, because harness/tools/cssgraph.py keeps
+every touch-only block whole in the player's sheet and this one has nothing
+for the player.
 
 ON WEARS THE DOCK'S ON TILE, as Magnify and Media do, at Magnify's 26px and
 1.8px line. Its words say how out: "Leave full screen (Esc)"; lib/tooltip.js

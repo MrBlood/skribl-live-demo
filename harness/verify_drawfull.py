@@ -30,8 +30,12 @@ The rows, on both editors:
   does not hand focus to the watch's button (lib/immersive.js reports only a
   change of its own; every full screen fires the same event).
 
+  WHERE IT FITS. In a 721px window, the narrowest it shows in, the dock holds
+  it, painted, without clipping (at 641 the Pad's dock ran 26px past its
+  edge).
+
   WHERE IT IS NOT. Not on a phone, not on a touch screen at a desk's width,
-  not in a window 640px wide, and not where the page cannot go full screen
+  not in a window 720px wide, and not where the page cannot go full screen
   (an iPhone, a frame that does not allow it), asked the way such a browser
   answers: requestFullscreen is there and fullscreenEnabled says no. (The
   editors refuse a frame from another site, frame-ancestors 'self', and a
@@ -264,10 +268,17 @@ with sync_playwright() as p:
         c.close()
 
     for name in eds("not"):
+        print(f"\nWHERE IT FITS -- {name}")
+        c, pg, errs = editor(b, name, w=721, h=900)
+        m = pg.evaluate(BTN, DOCK[name])
+        over = pg.evaluate("(dock) => { const d = document.querySelector(dock); return d.scrollWidth - d.clientWidth; }", DOCK[name])
+        check(f"{name}: in a 721px window, the narrowest it shows in, the dock holds it, painted, without clipping",
+              bool(m) and m["shown"] and m["painted"] and m["last"] and over <= 0, f"{m and [m['shown'], m['painted']]}; the dock {over}px past its edge")
+        c.close()
         print(f"\nWHERE IT IS NOT -- {name}")
         for label, kw in (("a phone (402x874, touch)", dict(w=402, h=874, is_mobile=True, has_touch=True, device_scale_factor=3)),
                           ("a touch screen at a desk's width (1024x768)", dict(w=1024, h=768, has_touch=True, is_mobile=True)),
-                          ("a window 640px wide, with a mouse", dict(w=640, h=900))):
+                          ("a window 720px wide, with a mouse", dict(w=720, h=900))):
             c, pg, errs = editor(b, name, **kw)
             m = pg.evaluate(BTN, DOCK[name])
             check(f"{name}: not on {label}", bool(m) and not m["shown"], str(m and [m["shown"], m["label"]]))

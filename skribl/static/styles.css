@@ -7498,14 +7498,17 @@ html:has(.flip-export:not([hidden])) { overscroll-behavior-y: none; }
    430 Pad showed eight controls and Flip nine. Pad is the reference. */
 @media (max-width: 430px) { .flip-tools #magnifyBtn { display: none; } }
 /* Draw in full screen (lib/drawfull.js) is for a desk, the owner's A: a mouse
-   and a window over 640px. A touch screen has its own way to go big (Watch
-   full screen, which plays the drawing), and a narrow window has no room left
-   in the row. It shows only there, and only once the module has found the
-   page can go full screen (it takes the hidden attribute off). Asked the
-   positive way round: the player's sheet (tools/cssgraph.py) keeps every
-   touch-only block whole, and this one has nothing for the player. */
+   and a window wider than the page's 720px column, where the canvas grows
+   past the column too (B). A touch screen has its own way to go big (Watch
+   full screen, which plays the drawing), and a narrower window has no room
+   left in the row: at 641 the Pad's dock ran 26px past its edge, and it needs
+   about 667 with this box's fonts. It shows only there, and only once the
+   module has found the page can go full screen (it takes the hidden attribute
+   off). Asked the positive way round: the player's sheet (tools/cssgraph.py)
+   keeps every touch-only block whole, and this one has nothing for the
+   player. */
 .toolbar #drawFullBtn, .flip-tools #drawFullBtn { display: none; }
-@media (hover: hover) and (pointer: fine) and (min-width: 641px) {
+@media (hover: hover) and (pointer: fine) and (min-width: 721px) {
   .toolbar #drawFullBtn:not([hidden]), .flip-tools #drawFullBtn:not([hidden]) { display: flex; }
 }
 
