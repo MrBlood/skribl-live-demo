@@ -2959,6 +2959,10 @@ body.recoloring #canvas { cursor: crosshair !important; }
 .mt-tl-mag-btn:focus-visible { outline: 2px solid var(--ui-hi); outline-offset: 1px; }
 .mt-tl-mag-val { min-width: 34px; text-align: center; font-size: 14px; font-weight: 700; line-height: 1; color: var(--text-strong);
   font-variant-numeric: tabular-nums; }
+/* As wide as the widest rung's words (data-widest, from the timeline) in
+   whatever face draws them, so - and + stay where they are from 1x to 512x;
+   hidden, so it is neither painted nor read out. */
+.mt-tl-mag-val::after { content: attr(data-widest); display: block; height: 0; overflow: hidden; visibility: hidden; }
 .mt-tl-stage { position: relative; height: 118px; touch-action: pan-y; -webkit-user-select: none; user-select: none; cursor: grab; }
 .mt-tl.holding .mt-tl-stage { cursor: grabbing; }
 .mt-tl-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }

@@ -27,11 +27,13 @@ plan, mocked first; the owner: "Yes on all").
   reaches; and the tab, pressed below the song's edge, drags its end.
 
   MAGNIFY (the owner, looking for Fine-tune's: "All yes but maybe go to
-  x64?", then "stay"). Magnifier - and + at the end of the name's line, its
-  middle on the name's, step 1x to 64x and say the rung, each stopping at its
-  end of the ladder. Each rung is the framing over that many, around the end
-  last touched (the start until the end is), and the loop never moves for
-  it; a step glides there frame by frame, at once under Reduce Motion.
+  x64?", then "stay"; then "Like 512x?" to see the wave cross). Magnifier -
+  and + at the end of the name's line, its middle on the name's, step 1x to
+  512x and say the rung, each stopping at its end of the ladder, and stay
+  where they are as the rung's words grow. Each rung is the framing over
+  that many, around the end last touched (the start until the end is), and
+  the loop never moves for it; a step glides there frame by frame, at once
+  under Reduce Motion.
   Zoomed in, an end follows the finger at the zoom while the view holds
   still; held at either edge the view slides along, and let go it glides
   back with that end in the middle. The end's own - and + make it the end
@@ -39,6 +41,17 @@ plan, mocked first; the owner: "Yes on all").
   a new song starts at 1x on its start. Zoomed past a block a column, the
   song is drawn from its samples. Its words and glyphs read against what is
   behind them, light and dark.
+
+  CLOSE IN, THE WAVE ITSELF (the owner: "We need to magnify by enough to see
+  where it crosses the middle line"; "All yes" to the mock). Asked of what is
+  painted, on a 44.1kHz tone whose every zero is known: while a point holds 64
+  samples or more the song is loudness, the same above and below; under 64 it
+  is the wave, which crosses the middle line; the line sits at the wave's zero,
+  halfway between its crests and troughs; the wave crosses it where the song
+  crosses zero, to the pixel; past the loop it is dimmed, as the bars are; and
+  under 8 samples a point it is the samples themselves, joined. The line
+  reads 3:1 and up against the song's ground, inside the loop and past it,
+  light and dark (the owner's pick, the stronger of the two mocked).
 
   THE PLAYHEAD runs across the loop on the timeline while the loop plays.
 
@@ -95,7 +108,7 @@ import browsing  # noqa: E402
 import waits  # noqa: E402
 
 # For calibration: MUSICTL_ONLY=Pad (or Flip) runs one editor, and
-# MUSICTL_PART=layout (frame, slide, ends, grip, mag, whole, playhead,
+# MUSICTL_PART=layout (frame, slide, ends, grip, mag, wave, whole, playhead,
 # restart, cut, bake, post) one part. A real run sets neither.
 ONLY = os.environ.get("MUSICTL_ONLY", "")
 PART = os.environ.get("MUSICTL_PART", "")
@@ -125,6 +138,8 @@ def _wav(seconds, rate=8000, hz=220.0):
 
 
 TWELVE = {"name": "twelve.wav", "mimeType": "audio/wav", "buffer": _wav(12.0)}
+# A 55Hz tone at a real song's rate: it crosses zero every 1/110s, exactly.
+LOW = {"name": "low.wav", "mimeType": "audio/wav", "buffer": _wav(8.0, rate=44100, hz=55.0)}
 SHORT = {"name": "six.wav", "mimeType": "audio/wav", "buffer": _wav(6.0)}
 PAGES = """(o) => { frames.length = 0;
   for (let k = 0; k < o.n; k++) { const f = newFrame(); const pts = [];
@@ -188,7 +203,7 @@ def editor(b, name, path, *, drawn=True, song=TWELVE, opts=DESK, more=False, ctx
 
 def add(pg, song):
     browsing.pad_drawer(pg, "music")
-    secs = len(song["buffer"]) / 16000
+    secs = (len(song["buffer"]) - 44) / struct.unpack("<I", song["buffer"][28:32])[0]   # its byte rate
     pg.set_input_files("#musicInput", song)
     pg.wait_for_function("(d) => document.getElementById('musicUploadBtn').classList.contains('loaded') && !!currentAudioBuffer"
                          " && Math.abs(audioDuration - d) < 0.2", arg=secs, timeout=20000)
@@ -519,8 +534,10 @@ with sync_playwright() as p:
             c.close()
 
     print("\nMUSIC TIMELINE — magnify")
-    MAG = "() => ({ said: document.getElementById('musicTlMag').textContent, out: document.getElementById('musicTlOut').disabled, in: document.getElementById('musicTlIn').disabled })"
-    LADDER = ["1\u00d7", "2\u00d7", "4\u00d7", "8\u00d7", "16\u00d7", "32\u00d7", "64\u00d7"]
+    MAG = """() => { const q = (id) => document.getElementById(id);
+      return { said: q('musicTlMag').textContent, out: q('musicTlOut').disabled, in: q('musicTlIn').disabled,
+               xo: q('musicTlOut').getBoundingClientRect().left, xi: q('musicTlIn').getBoundingClientRect().left }; }"""
+    LADDER = ["1\u00d7", "2\u00d7", "4\u00d7", "8\u00d7", "16\u00d7", "32\u00d7", "64\u00d7", "128\u00d7", "256\u00d7", "512\u00d7"]
 
     def around(view, t, span):
         """How far a view is from `span` seconds with `t` in its middle, as a share of the span."""
@@ -531,7 +548,7 @@ with sync_playwright() as p:
         return framing(pg.evaluate(TRIM), pg.evaluate(DRAWN[n]))[1] / m
 
     def mag_to(pg, want):
-        for _ in range(8):
+        for _ in range(len(LADDER) + 1):
             m = pg.evaluate(MAG)
             if m["said"] == want or m["said"] not in LADDER:
                 return
@@ -555,7 +572,7 @@ with sync_playwright() as p:
         pg.wait_for_timeout(600)
         f0 = framing(pg.evaluate(TRIM), pg.evaluate(DRAWN[_n]))
         said, views, loops = [pg.evaluate(MAG)], [], []
-        for k in range(6):
+        for k in range(len(LADDER) - 1):
             if not press(pg, "#musicTlIn"):
                 break
             pg.wait_for_timeout(500)
@@ -563,14 +580,19 @@ with sync_playwright() as p:
         for k in range(len(views)):
             press(pg, "#musicTlOut"); pg.wait_for_timeout(80)
         back = pg.evaluate(MAG)
-        check(f"{_n}: magnify steps 1x to 64x and says the rung, each button stopping at its end of the ladder",
+        check(f"{_n}: magnify steps 1x to 512x and says the rung, each button stopping at its end of the ladder",
               [m["said"] for m in said] == LADDER and said[0]["out"] and not said[0]["in"] and said[-1]["in"] and not said[-1]["out"]
               and all(not m["in"] and not m["out"] for m in said[1:-1]) and back["said"] == "1\u00d7" and back["out"],
-              f"{[m['said'] for m in said]}; at 1x out {said[0]['out']}, in {said[0]['in']}; at 64x in {said[-1]['in']}; back to {back['said']}")
+              f"{[m['said'] for m in said]}; at 1x out {said[0]['out']}, in {said[0]['in']}; at 512x in {said[-1]['in']}; back to {back['said']}")
+        # Its words grow from "1x" to "512x": - and + stay where they are.
+        moved = max(max(abs(m["xo"] - said[0]["xo"]), abs(m["xi"] - said[0]["xi"])) for m in said)
+        check(f"{_n}: ...and - and + stay where they are on every rung, the rung's words as wide as the widest",
+              len(said) == len(LADDER) and moved <= 0.25,
+              f"over {len(said)} rungs, - and + moved {moved:.2f}px at most")
         off = [around(v, 2.0, f0[1] / 2 ** (k + 1)) for k, v in enumerate(views)]
         check(f"{_n}: each rung frames the loop over that many, the start in the middle, and the loop never moves for it",
               off and max(off) < 2e-3 and all(l["s"] == 2.0 and l["e"] == 5.0 for l in loops),
-              f"the framing {f0[1]:.3f}s; at 2x..64x off by {[round(o, 5) for o in off]} of a span;"
+              f"the framing {f0[1]:.3f}s; at 2x..512x off by {[round(o, 5) for o in off]} of a span;"
               f" the loop {loops[-1]['s'] if loops else None}-{loops[-1]['e'] if loops else None}")
         # A step glides there, read on every frame from the click.
         pg.wait_for_timeout(700)
@@ -770,6 +792,155 @@ with sync_playwright() as p:
                   abs(r["middle"]) <= 0.5 and abs(r["right"]) <= 0.5 and r["below"] >= 4 and r["level"] >= 4.5 and r["glyph"] >= 3,
                   f"middle {r['middle']:+.2f}px from the name's, right edge {r['right']:+.2f}px from the song's, {r['below']:.1f}px over the lane;"
                   f" the level {r['level']:.2f}:1, the glyphs {r['glyph']:.2f}:1")
+            c.close()
+
+    print("\nMUSIC TIMELINE — close in, the wave itself")
+    # THE SONG AS PAINTED, read back from the canvas: the middle line found by
+    # its paint, the rows inked across nine columns in ten (the wave crosses
+    # any one row only near its zeros; loudness has no line, and there the
+    # stage's middle stands in); then per device column the first and last row
+    # of ink, the line's rows left out, against the ground at the top of that
+    # column, and the colours at the line and beside it. Asked of the pixels,
+    # not of what the timeline says it drew.
+    WAVEPX = """() => {
+      const tl = document.getElementById('musicTimeline'), cv = document.getElementById('musicTlCanvas'), P = tl._painted || {};
+      const w = cv.clientWidth, hh = cv.clientHeight, dpr = cv.width / w, W = cv.width;
+      const img = cv.getContext('2d').getImageData(0, 0, W, cv.height).data;
+      const at = (c, r) => { const i = (r * W + c) * 4; return [img[i], img[i + 1], img[i + 2]]; };
+      const far = (a, b) => Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]) + Math.abs(a[2] - b[2]);
+      const sTop = 26 + 8, r0 = Math.ceil((sTop + 3) * dpr), r1 = Math.floor((hh - 3) * dpr);
+      const c0 = Math.ceil(12 * dpr), c1 = W - 12 * dpr;
+      let mid = sTop + (hh - sTop) / 2 + 3, line = null;
+      if (P.song === 'wave' || P.song === 'samples') {
+        const runs = []; let run = null;
+        for (let r = r0 + 1; r <= r1; r++) {
+          let n = 0, k = 0;
+          for (let c = c0; c < c1; c++) { k++; if (far(at(c, r), at(c, r0)) > 30) n++; }
+          if (n >= 0.9 * k) { if (run && run[1] === r - 1) run[1] = r; else runs.push(run = [r, r]); }
+        }
+        runs.sort((a, b) => Math.abs((a[0] + a[1] + 1) / 2 - mid * dpr) - Math.abs((b[0] + b[1] + 1) / 2 - mid * dpr));
+        if (runs.length) { line = runs[0]; mid = (line[0] + line[1] + 1) / 2 / dpr; }
+      }
+      const m0 = line ? line[0] - 2 : Math.floor((mid - 1.5) * dpr), m1 = line ? line[1] + 2 : Math.ceil((mid + 1.5) * dpr);
+      const lr = line ? line[0] : Math.floor(mid * dpr), cols = [];
+      for (let c = c0; c < c1; c++) {
+        const g = at(c, r0); let top = null, bot = null, inkTop = null;
+        for (let r = r0 + 1; r <= r1; r++) {
+          if (r >= m0 && r <= m1) continue;
+          if (far(at(c, r), g) > 60) { if (top === null) { top = r; inkTop = at(c, r); } bot = r; }
+        }
+        cols.push({ c, top, bot, g, ink: inkTop, line: at(c, lr),
+                    beside: at(c, top !== null && top < lr ? Math.min(r1, lr + Math.round(5 * dpr)) : Math.max(r0, lr - Math.round(5 * dpr))) });
+      }
+      return { dpr, w, mid, lr, m0, m1, line, song: P.song || null, zero: P.zero != null ? P.zero : null,
+               view: (tl.dataset.view || '').split(' ').map(Number), trim: [trimStart, trimEnd], cols };
+    }"""
+
+    def lum(c):
+        f = lambda v: v / 12.92 if v <= 0.03928 else ((v + 0.055) / 1.055) ** 2.4
+        r, g, b = (f(v / 255) for v in c)
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b
+
+    def ratio(a, b):
+        la, lb = lum(a), lum(b)
+        return (max(la, lb) + 0.05) / (min(la, lb) + 0.05)
+
+    def sides(px):
+        """Each column with ink: above the middle line only, below only, or both."""
+        out = []
+        for col in px["cols"]:
+            if col["top"] is None:
+                continue
+            up, down = col["top"] < px["m0"], col["bot"] > px["m1"]
+            out.append((col["c"], "both" if up and down else "above" if up else "below"))
+        return out
+
+    def one_side(px):
+        sd = sides(px)
+        return sum(1 for _, k in sd if k != "both") / max(1, len(sd)), len(sd)
+
+    def symmetric(px):
+        """In the columns with ink both sides, how far the ink's two ends are from even about the line, at most (device px)."""
+        lr = px["mid"] * px["dpr"]
+        return max([abs((lr - col["top"]) - (col["bot"] - lr)) for col in px["cols"] if col["top"] is not None
+                    and col["top"] < px["m0"] and col["bot"] > px["m1"]] or [0])
+
+    def crossings(px):
+        """Where the painted wave goes from one side of the line to the other, in CSS px."""
+        out, last = [], None
+        for c, k in sides(px):
+            if k == "both":
+                continue
+            if last and last[1] != k:
+                out.append((last[0] + c) / 2 / px["dpr"])
+            last = (c, k)
+        return out
+
+    def zeros(px):
+        """Where the 55Hz tone crosses zero, every 1/110s, in CSS px, inside the columns read."""
+        v0, span, w = px["view"][0], px["view"][1], px["w"]
+        k0, k1 = math.ceil(v0 * 110), math.floor((v0 + span) * 110)
+        return [x for x in ((k / 110 - v0) / span * w for k in range(k0, k1 + 1)) if 14 <= x <= w - 14]
+
+    for _n, _p in eds("wave"):
+        for theme in ("dark", "light"):
+            ctx = waits.instrument(b.new_context(color_scheme=theme, **PHONE))
+            c, pg, errs = editor(b, _n, _p, song=LOW, ctx=ctx)
+            pg.evaluate(SET, {"s": 2.003, "e": 6.0, "xf": 0, "tempo": None})
+            into_view(pg, "#musicTimeline")
+            pg.wait_for_timeout(600)
+            shot = {}
+            for want in ("8×", "16×", "32×", "64×", "128×"):
+                mag_to(pg, want); pg.wait_for_timeout(700)
+                shot[want] = pg.evaluate(WAVEPX)
+            spp = {k: v["view"][1] / v["w"] * 44100 for k, v in shot.items()}
+            a8, a16 = one_side(shot["8×"]), one_side(shot["16×"])
+            check(f"{_n} ({theme}): while a point holds 64 samples or more the song is loudness, the same above and below the middle",
+                  spp["8×"] >= 64 and shot["8×"]["song"] == "loudness" and a8[1] > 50 and a8[0] < 0.05 and symmetric(shot["8×"]) <= 2,
+                  f"at 8x, {spp['8×']:.0f} samples a point: {shot['8×']['song']}, {a8[0] * 100:.0f}% of {a8[1]} columns on one side only, uneven by {symmetric(shot['8×'])}px at most")
+            check(f"{_n} ({theme}): ...and under 64 samples a point, the wave itself, which crosses the middle line",
+                  spp["16×"] < 64 and shot["16×"]["song"] == "wave" and a16[1] > 50 and a16[0] > 0.5 and len(crossings(shot["16×"])) >= 3,
+                  f"at 16x, {spp['16×']:.0f} samples a point: {shot['16×']['song']}, {a16[0] * 100:.0f}% of {a16[1]} columns on one side only,"
+                  f" {len(crossings(shot['16×']))} crossings painted")
+            # The line at the wave's zero: halfway between its crests and troughs.
+            off = []
+            for want in ("16×", "128×"):
+                px = shot[want]
+                ink = [col for col in px["cols"] if col["top"] is not None]
+                crest, trough = min(col["top"] for col in ink), max(col["bot"] for col in ink)
+                line = (px["line"][0] + px["line"][1] + 1) / 2 if px["line"] else None
+                off.append((want, (crest + trough + 1) / 2, line))
+            check(f"{_n} ({theme}): the middle line sits at the wave's zero, halfway between its crests and its troughs",
+                  all(l is not None and abs(m - l) <= 1.0 for _, m, l in off),
+                  "; ".join(f"at {w_}: the wave's middle row {m:.1f}, the line's {l if l is None else round(l, 1)} (device px)" for w_, m, l in off))
+            # The wave crosses the line where the song crosses zero.
+            err = []
+            for want in ("32×", "128×"):
+                got, want_x = crossings(shot[want]), zeros(shot[want])
+                err.append((want, len(want_x), max([min(abs(g - x) for g in got) for x in want_x] or [99]) if got else 99))
+            check(f"{_n} ({theme}): ...and the wave crosses it where the song crosses zero, to the pixel",
+                  all(n_ >= 1 and e <= 1.0 for _, n_, e in err),
+                  "; ".join(f"at {w_}: {n_} zeros in view, the painted crossing {e:.2f}px from each at most" for w_, n_, e in err))
+            # The middle line against the song's ground, inside the loop and past it.
+            px = shot["32×"]
+            xs = (px["trim"][0] - px["view"][0]) / px["view"][1] * px["w"] * px["dpr"]
+            calm = [col for col in px["cols"] if col["top"] is not None and (col["bot"] < px["m0"] - 6 * px["dpr"] or col["top"] > px["m1"] + 6 * px["dpr"])]
+            inside = [ratio(col["line"], col["beside"]) for col in calm if col["c"] > xs + 4]
+            outside = [ratio(col["line"], col["beside"]) for col in calm if col["c"] < xs - 4]
+            check(f"{_n} ({theme}): the middle line reads 3:1 and up against the song's ground, inside the loop and past it",
+                  inside and outside and min(inside) >= 3.0 and min(outside) >= 3.0,
+                  f"inside {f'{min(inside):.2f}:1' if inside else 'nothing to read'} over {len(inside)} columns,"
+                  f" past the loop {f'{min(outside):.2f}:1' if outside else 'nothing to read'} over {len(outside)}")
+            # Past the loop the wave is dimmed, as the bars are.
+            wi = [ratio(col["ink"], col["g"]) for col in calm if col["c"] > xs + 4]
+            wo = [ratio(col["ink"], col["g"]) for col in calm if col["c"] < xs - 4]
+            check(f"{_n} ({theme}): ...and past the loop the wave is dimmed, as the bars are",
+                  wi and wo and max(wo) < 0.6 * max(wi) and max(wi) >= 2.5,
+                  f"the wave's edge {max(wi) if wi else 0:.2f}:1 in the loop, {max(wo) if wo else 0:.2f}:1 past it")
+            check(f"{_n} ({theme}): under 8 samples a point, the samples themselves, joined",
+                  spp["128×"] < 8 and shot["128×"]["song"] == "samples" and spp["64×"] >= 8 and shot["64×"]["song"] == "wave",
+                  f"at 64x {spp['64×']:.1f} samples a point: {shot['64×']['song']}; at 128x {spp['128×']:.1f}: {shot['128×']['song']}")
+            check(f"{_n} ({theme}): no page errors close in", not errs, "; ".join(errs[:2]))
             c.close()
 
     print("\nMUSIC TIMELINE — the whole song's line")

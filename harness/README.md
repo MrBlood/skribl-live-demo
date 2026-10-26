@@ -576,8 +576,10 @@ stays a sleep.
   tab shows half under the song's edge clear of the whole song's line, which
   a tap under it still reaches, and the tab pressed below the edge drags its
   end; magnify
-  (the owner: "All yes but maybe go to x64?", then "stay") steps 1x to 64x and
-  says the rung, each button stopping at its end of the ladder, each rung the
+  (the owner: "All yes but maybe go to x64?", then "stay"; then "Like 512x?",
+  and "All yes" to the wave) steps 1x to 512x and says the rung, each button
+  stopping at its end of the ladder and - and + staying where they are as its
+  words grow, each rung the
   framing over that many with the end last touched in the middle (the start,
   until a tap or a drag on the end, or the end's own - and +, makes it the
   end) and the loop never moving for it, a step gliding there frame by frame
@@ -589,6 +591,13 @@ stays a sleep.
   on the song slides it at the zoom with the ends put; the zoom stays when the
   drawer is put away and opened again, and a new song starts at 1x; zoomed
   past a block of 128 samples a column, the song is drawn from its samples;
+  close in (on a 55Hz tone whose every zero is known, asked of what is
+  painted, light and dark), while a point holds 64 samples or more the song
+  is loudness, the same above and below, and under 64 it is the wave, which
+  crosses the middle line, the line at the wave's zero and the wave crossing
+  it where the tone crosses zero, to the pixel, dimmed past the loop, and
+  under 8 samples a point the samples themselves, joined; the line reads 3:1
+  and up against the song's ground, inside the loop and past it;
   the magnifier sits at the end of the name's line, its middle on the name's,
   its words and glyphs read against what is behind them, light and dark; a tap
   on the whole song's line puts the loop's middle there, on a beat once there

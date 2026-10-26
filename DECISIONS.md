@@ -24198,3 +24198,73 @@ Not tested here: Escape (headless Chrome does not hand the browser's key over)
 and a real full screen's size (headless Chrome keeps the window's), so the
 sizes are asked of a window the screen's size; Windows, Edge, Safari and a
 real big monitor.
+
+## After v329 -- Magnify to 512x: close in, the wave itself
+
+The owner, zoomed in on a loop's start: "We need to magnify by enough to see
+where it crosses the middle line", then "Like 512x?". At 64x a phone's view
+of a 15-second loop was 0.89ms a point, 39 samples, and the song was
+loudness bars, the same above and below the middle, so nothing could cross
+it. Mocked on the real drawer (Today beside Proposed; the middle line Quiet
+or Stronger; an end let go zoomed in Stays, or Snaps to the nearest place the
+wave crosses), the answer was "All yes": 128x, 256x and 512x, the wave
+itself, the stronger line, and Stays.
+
+THE LADDER goes on to 512x (lib/musictimeline.js MAGS). There a phone's view
+of the same loop is 0.11ms a point, 4.9 samples, and a desk's at 1280px
+0.06ms, 2.6 samples. The rung's words take the widest rung's room, in
+whatever face draws them, so - and + stay where they are as it steps: the
+readout was 34px and "128x" is 36.2px in this box's face, so - moved 2.2px
+at 128x. The widest rung is written by the timeline and reserved by the
+sheet, hidden, so it is neither painted nor read out.
+
+CLOSE IN, THE WAVE ITSELF. While a point holds 64 samples or more the song
+is loudness, as it was; under 64 it is the wave, both channels as one (their
+mean), each point the least and most of its samples, through a middle line
+at its zero; under 8, the samples themselves, joined, each a dot once they
+are 6px apart. Past the loop it is dimmed, as the bars are. The line is the
+timeline's guide ink at 65%: 3.3:1 to 4.4:1 against the song's ground,
+inside the loop and past it, light and dark (the quiet line mocked beside it
+was 1.8:1 to 2.0:1). The wave itself reads 3.1:1 dark and 3.6:1 light inside
+the loop, and 1.4:1 and 1.5:1 dimmed past it.
+
+LET GO STAYS AS IT IS. Snaps, an end let go zoomed in gliding to the nearest
+crossing within 25ms, was mocked and not chosen: zoomed in is for exact
+control. The join is already clean where it is heard: a smooth restart's
+equal-power fade, or Cut on silence (lib/audioloop.js), which moves both ends
+together to the nearest place they match. Advice pasted in from elsewhere (a
+zero-crossing search, matching the slope, a 5ms fade at the join) was read
+against that: the restart already does what it asks, and what it points at
+is Play, Stop and the sound switch, which start and stop the sound at full
+level. That is the next change, a bug fix.
+
+Pad and Flip: shared, lib/musictimeline.js and the CSS; neither editor
+changed.
+
+TESTS. verify_musictimeline, a new part (wave), on both editors, light and
+dark, on the owner's phone, over a 55Hz tone at 44.1kHz whose every zero is
+known, asked of what is painted: loudness at 8x (82 samples a point), the
+same above and below the line; the wave at 16x (41), which crosses it; the
+line at the wave's zero, halfway between its crests and troughs, at 16x and
+128x; the wave crossing the line where the tone crosses zero, within a pixel
+at 32x and 128x (0.67px and 0.43px at most); the line 3:1 and up inside the
+loop and past it; the wave dimmed past the loop; the samples joined at 128x
+and the wave still at 64x. The magnify part steps to 512x and asks - and +
+to stay put on every rung. verify_helpclaims reads the tip's new words.
+
+CALIBRATION, each break served to the browser in place of the real file,
+the files on disk untouched: the ladder stopping at 64x (the ladder's row,
+and the buttons', which then have seven rungs to ask); no wave (every row
+about it: the wave's, the line's, the crossings', the contrast, the dimming
+and the samples'); the line 2px low (the line's row, 2px from the wave's
+middle, and the crossings', 1.9px off at 128x); the quiet line (the
+contrast row, 1.8:1); the wave 20 samples late, 0.45ms (the crossings' row:
+1.13px at 32x, 3.83px at 128x); no dimming (the dim row); no samples (the
+samples' row); and the widest rung not written, or not reserved, as
+today's sheet (the buttons' row: 2.2px). Each red on both editors, on its
+own rows, and the same files served unchanged green. The calibration found
+two mistakes in the instrument: with no line to read, the contrast row
+raised instead of going red; and it looked for the line where the stage's
+middle is, so a line drawn 2px low read as ink and four rows could not read
+the wave at all. It finds the line by its paint now, the rows inked across
+nine columns in ten.
