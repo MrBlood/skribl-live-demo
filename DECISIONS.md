@@ -24017,6 +24017,39 @@ and a canvas shrunk to the drawing's size spreads each edge over more of
 them (16% more, measured), so the two counts would have been of two
 different pictures. 0.04% apart as built.
 
+PIXEL FOR PIXEL. The branch's full run went red in verify_framecache: its
+fixture asks a 400x300 page shown at 1:1 on a 1000px window, and the canvas
+grows there now. Measured grown, the cache itself was a pixel off: it
+captured at CW*RS rounded (559 for a pad of 558) and laid the copy back
+through the transform, so a page played from the cache was not the page
+painted. It captures at the pad's real size and lays the copy back on the
+pad's own pixels; the fixture shows grown and asks for the capture one for
+one.
+
+That led to measuring what reaches the screen, a 1px line put into each
+bitmap and read off a screenshot, and the bigger canvas was not yet sharp to
+the pixel. Flip's pad wears a frame (a 2px border) and the drawing shows
+inside it, but the layers grew to the frame's outside: 692 pixels squeezed
+into 688, so a 1px line came out two pixels at half. That squeeze predates
+B, at 1:1 too; grown, the layers grow to the frame's inside now, and at 1:1
+and on a phone it is as it was. Grown, each canvas takes its bitmap's own
+size, up to the page's 1/64px, and is laid out again once the bitmap is
+made: rounded on their own, the size shown and the bitmap were a pixel apart
+at 1.25x and 2x. And Flip laid every page, and its live layers while a
+stroke is under way, through the transform: grown, CW*RS is rarely a whole
+number of pixels, and where it ran half a pixel or more past them the layer
+was stretched by that fraction and every line softened. A layer the size of
+the pad is laid on it pixel for pixel (layOn), and every layer's side is
+whole pixels counted with a hair of slack (layerPx), since a canvas told
+557.99999 is 557. At 1x the screen shows the bitmap one for one on both
+editors. At 1.25x and 2x the size is exact, but where the canvas lands on
+the screen is the browser's: half a pixel off a whole one, it blends, so
+those are measured by size.
+
+Found on the way, not fixed here: Flip maps the pointer through its frame's
+outside, so near the canvas's edges a stroke lands up to 2px from the pen
+(none in the middle). It predates B.
+
 Pad and Flip: shared where they can be: the row's reach and the page's one
 surface are one module and one rule for both; the growth is each editor's
 own, because the Pad paints a canvas that holds its pixels and Flip paints

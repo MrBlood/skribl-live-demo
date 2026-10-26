@@ -669,10 +669,16 @@ stays a sleep.
   on both editors. On a 1920x945 and a 2560x1300 window, light and dark, the
   canvas shows as big as the window allows past 1:1 (the sizes the mock
   measured: the Pad's cat 1017x763 and 1491x1118, Flip's Blooby card 752x564
-  and 1225x919), its bitmap the size it shows; the canvas's row spans the page
+  and 1225x919), its bitmap the size it shows to the pixel (inside Flip's
+  frame); the canvas's row spans the page
   while the header and the dock stay in the column, nothing scrolls sideways,
   and the page is one surface, read on the screenshot's pixels at the foot of
-  the window either side of the column's edge. A stroke on a grown canvas
+  the window either side of the column's edge. Pixel for pixel: grown at 1x,
+  a 1px line put into either bitmap is one screen pixel, full dark, on a
+  screenshot; at 2x and 1.25x the canvas inside its frame is its bitmap's size
+  in the screen's pixels, to the page's 1/64px; and on Flip, at a ratio that
+  runs past whole pixels both ways, a page and the live layers under the pen
+  and the eraser are laid on one for one. A stroke on a grown canvas
   lands under the pen in the drawing's own units, the payload says the size it
   was drawn at, and a new drawing starts in the shape a 720px column gives it;
   Flip's fill makes the same runs grown or not. The Pad's PNG, GIF and post
@@ -686,7 +692,7 @@ stays a sleep.
   no resize remakes the bitmap at the new ratio, and a stroke at once still
   lands under the pen. A phone is as it was, and on a 2x desk the bitmap stops
   at 3x the drawing (Flip: 2x) while the canvas still shows bigger.
-  `BIGCANVAS_PART=size` (drawing, files, fill, rings, settle, phone, caps) and
+  `BIGCANVAS_PART=size` (pixels, drawing, files, fill, rings, settle, phone, caps) and
   `BIGCANVAS_ONLY=Pad` run a part. Each row was shown red by its own break,
   served in place of the real file.
 - `verify_learncard.py` — the card on the button (lib/learncard.js), Pad and
@@ -834,7 +840,8 @@ stays a sleep.
   600-second budget.
 - `verify_framecache.py` — a static page is rasterised at most once per
   playback, on BOTH surfaces. Pins the blit as pixel-identical to the paint it
-  replaced (only after asserting 1:1 display, where that claim is honest), the
+  replaced (only after asserting the capture is the pad's own pixels one for
+  one, where that claim is honest, on a pad shown grown as a desk shows it), the
   memory rules from the side that can lose (a light page is never cached, the
   byte ceiling refuses, a failed allocation closes the store), and that a blit
   REPLACES the frame's cost book entry — checked right after the FIRST blit,

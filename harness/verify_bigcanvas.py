@@ -201,7 +201,8 @@ LAID = """() => { frames.length = 0; const f = newFrame();
   let worst = 0, inked = 0;
   for (let i = 0; i < P.length; i += 4) { const a = F[i + 3] / 255; if (a < 0.125) continue; inked++;
     for (let k = 0; k < 3; k++) worst = Math.max(worst, Math.abs(P[i + k] - (F[i + k] * a + g[k] * (1 - a)))); }
-  return { grown: W > CW, inked: inked, worst: Math.round(worst), ground: g, bitmap: [W, H] }; }"""
+  return { grown: W > CW, inked: inked, worst: Math.round(worst), ground: g, bitmap: [W, H],
+           over: [CW * RS - Math.floor(CW * RS + 1e-6), CH * RS - Math.floor(CH * RS + 1e-6)] }; }"""
 
 
 # The pad kept, and later read against it away from the band at the foot where
@@ -325,12 +326,18 @@ with sync_playwright() as sp:
               m["bitmap"][0] > m["drawn"][0] * dpr and all(0 <= dev[i] - m["bitmap"][i] < 0.05 for i in (0, 1)),
               f"{dev[0]:.3f}x{dev[1]:.3f} screen pixels for a {m['bitmap'][0]}x{m['bitmap'][1]} bitmap ({m['drawn'][0]}x{m['drawn'][1]} drawn, {w}x{h})")
         c.close()
+    # Laid through the transform, a layer is stretched only where CW*RS runs
+    # half a pixel or more past its whole pixels (under that the browser lays
+    # it one for one anyway), so these rows ask a ratio that does, both ways:
+    # 400x300 at 1.25x on a 1000x800 window, 691.67 by 518.75.
     if "Flip" in eds("pixels"):
-        c, pg, errs = editor(b, "Flip", 2560, 1300, demo=False)
+        c, pg, errs = editor(b, "Flip", 1000, 800, demo=False, device_scale_factor=1.25)
+        small(pg, "Flip")
         r = pg.evaluate(LAID)
         check("Flip: grown, a page is laid on the pad pixel for pixel: the pad is the page's own layer over the ground",
-              r["grown"] and r["inked"] > 2000 and r["worst"] <= 3,
-              f"{r['inked']} inked pixels, the worst {r['worst']} levels from the layer over the ground {r['ground']}; bitmap {r['bitmap']}")
+              r["grown"] and min(r["over"]) >= 0.5 and r["inked"] > 2000 and r["worst"] <= 3,
+              f"{r['inked']} inked pixels, the worst {r['worst']} levels from the layer over the ground {r['ground']}; "
+              f"bitmap {r['bitmap']}, the drawing {[round(v, 2) for v in r['over']]}px past its whole pixels")
         # While the pen is down the page comes from the live layers, laid on
         # the same way: it holds still under the pen, to the pixel.
         for tool in ("pen", "eraser"):
