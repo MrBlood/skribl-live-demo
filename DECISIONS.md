@@ -24387,3 +24387,55 @@ link page does not load. How, or whether, to pay it is the owner's choice.
 Not tested here: Safari's and Firefox's Web Audio (no WebKit or Gecko audio
 here), a phone's own audio blocks, and a person's ear. What is pinned is the
 shape of the sound.
+
+## After v329 -- Main red after #652: a page the box held, and a slow mirror
+
+Main's full run after #652 went red, and its re-run red again, on two things
+#652 did not change.
+
+VERIFY_FLIPBEAT READ A PAGE THE BOX HELD AS A LATE DRAWING. In the run, the
+fifth round after "a pause and a resume" came 106ms late (-2 +20 +10 -6
++106); in the re-run, the first round after the link page's stall came 73ms
+late (+73 +13 +6 +8 +1 +3 +4 -3), each between rounds on the beat. Across ten
+shards' logs from #649 to #652, the other 858 rounds were within 34ms, before
+#652 and after it alike. Beside a CPU hog here, the two rounds over 60ms came
+up on frames 100 and 283ms after the frame before (86 and 134ms late), and one
+58ms late was read 49ms into its frame: a page that comes up while the box
+holds it is seen as late as the box held it, however on time it was drawn.
+So the watchers (REC on Flip, WATCH on the players) note how long it has been
+since their last look, and each row sets aside one round seen 50ms or more
+after the look before, the furthest off, and names it in its detail. One at
+most: a drawing late on every round is late on rounds the box did not hold,
+and a page that holds itself every round is held on more than one.
+
+CALIBRATION, in trimmed copies of the suite, today's and as built, each cut
+after the row it asks about (the link page's sixteen seconds, and Flip's), the
+files on disk untouched. The page held 100ms by busy work begun a few ms
+before a round's beat, as a busy host holds it; the rounds there six pages of
+161ms (the suite's are twelve of 81), so a page held 100ms comes up late
+rather than skipped. Today's: green as built; held once, red (+103 on the
+link page, +104 on Flip), as on main. As built: green; held once, green, the
+round named (+66 and +102); held twice, red, the other round judged (+102
+and +102); the link page's drawing 80ms behind its song (lib/holdtiming.js
+served so) and Flip's pages 80ms after it (flip.js served so), red on every
+round (+88 to +115, and +80 to +96). The first try read only the gap before
+the look that saw the page, and Flip's held round stayed red: Flip's pages
+are a timer's, and the first look after the hold came before the timer, so
+the page was seen late one ordinary look later. So the hold is read off the
+looks of the 300ms before, and counts when it ended after the page fell due.
+The whole suite beside the docs gate: 40/40, one round set aside (+12, after
+a hold of 72ms).
+
+THE MP4 JOB RAN OUT OF TIME ON APT. ffmpeg is not on the runner's image, and
+the step that reads the kept exports back installed it with an `apt-get
+update` of its own, every line of it silenced. On #652's own run the whole
+step took 15s; on main's two runs it said nothing for 8 and then 17 minutes,
+until the job's 20-minute limit cancelled it, and in the first Chrome's
+install, apt as well, had taken 11 of them. It installs without a second
+update now (Playwright's `--with-deps` runs one in the step before), without
+the recommended extras, and with each package in the log, and the job's limit
+is 35 minutes. The mirror's speed cannot be reproduced here; the branch's
+dispatched run is the test of the step.
+
+Not changed: the rows that read how long a page stayed up (a song gone 2.5s,
+the 4x bed), which a held page lengthens too. Neither has gone red.
