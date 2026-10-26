@@ -49,5 +49,7 @@
     return full;
   }
 
-  global.SkriblDrawFull = { attach: attach, view: attach(doc.getElementById('drawFullBtn')) };
+  // Nothing else on the page reads this module, so it exports nothing and
+  // wires its own button (verify_surfaces holds a page's modules to that).
+  attach(doc.getElementById('drawFullBtn'));
 })(window);
