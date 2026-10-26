@@ -128,7 +128,7 @@ let flipFull = null;
 // once and the lines sharpen when it settles. The Pad does the same
 // (app.js wantCanvasGrowth).
 let _growWant = 1, _growTimer = 0, _grownOnce = false;
-function grownTo(g){ return Math.trunc(CW*DPR*g) === pad.width && Math.trunc(CH*DPR*g) === pad.height; }
+function layersGrownTo(g){ return Math.trunc(CW*DPR*g) === pad.width && Math.trunc(CH*DPR*g) === pad.height; }
 function growLayersNow(g){
   RS = DPR * g;
   for(const [cv, c] of [[pad, ctx], [onionCv, octx], [tmpCv, tctx], [frameCv, fctx], [artCv, actx]]){
@@ -140,7 +140,7 @@ function growLayersNow(g){
 }
 function growWhenStill(){
   clearTimeout(_growTimer); _growTimer = 0;
-  if(grownTo(_growWant)) return;
+  if(layersGrownTo(_growWant)) return;
   if(drawing || playing || picking || _fieldIdx >= 0 || pinching){ _growTimer = setTimeout(growWhenStill, 250); return; }
   _grownOnce = true;
   growLayersNow(_growWant);
@@ -150,7 +150,7 @@ function growWhenStill(){
 function wantGrow(g){
   _growWant = g;
   clearTimeout(_growTimer); _growTimer = 0;
-  if(grownTo(g)) return;
+  if(layersGrownTo(g)) return;
   _growTimer = setTimeout(growWhenStill, _grownOnce ? 150 : 0);
 }
 function fitPad(){
