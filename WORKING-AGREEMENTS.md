@@ -224,7 +224,9 @@ that local run is what justifies CI's PR-side trim.
   per fix.
 - After ANY change to `skribl/static/styles.css`, re-emit the player's CSS:
   `python3 harness/tools/cssgraph.py --emit harness/tools/css_live.json
-  skribl/static/player.css`.
+  skribl/static/player.css`. If that changes `player.css`, run
+  `verify_player_isolation` and `verify_jsstrip` with the affected suites: the
+  player's CSS has a byte budget, and every Reduce Motion block ships to it.
 - All work goes on the branch the session names; it is reused across PRs.
 
 **A TEXT CONTROL UNDER 16px MAKES iOS MAGNIFY THE PAGE.** Every `input`,
