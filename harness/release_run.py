@@ -255,6 +255,8 @@ BATCHES = [
     ["verify_flipnib.py"],                 # store — posts a public Flip and reads it in the feed
     # Match the beat (after v329, the owner: "all yes"): Flip's Beat speed.
     ["verify_flipbeat.py"],                # measures, store — each round's first page against the song's clock; posts a public Flip and reads it in the feed
+    # A bigger canvas, sharp (after v329, the owner's B).
+    ["verify_bigcanvas.py"],               # measures — the canvas read on every frame while its bitmap is made again; a window dragged through eight sizes
 ]
 
 

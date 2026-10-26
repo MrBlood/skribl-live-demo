@@ -175,6 +175,7 @@ here is the rule you can break tomorrow.
 | The Gallery card's fade takes its colours from the drawing under it: invisible on empty paper, inside the drawing's round corners and off the card beside it; each glass control takes the tone of what is under it; the time reads at 4.5:1 on painted pixels; a drawing that cannot be read keeps the scrim; Mute steps aside on a silent drawing, on the card and in full screen, from the first paint. | `verify_cardfade.py` |
 | One full screen, everywhere: the Gallery's and the Library's full screen is the link page's -- its band (the scrubber in the drawing's shape, the artist's clock, the words with every speed, the buttons), its x and the drawing's ground to the screen's edges -- built by `lib/fullbar.js` band() in the link page's markup, from styles.css's own rules (`fullband.css`, emitted by `harness/tools/cssgraph.py` like `player.css`), with who drew it in the top corner. | `verify_onefull.py` (every part measured against the link page's), `verify_seam.py` (`fullband.css` byte for byte what the tool emits) |
 | Every full screen's bar takes its colours from the drawing too (the Gallery's and the Library's, the link page's, Pad's and Flip's), read by the card's own reading (lib/smartfade.js): the fade unseen on empty paper and no fog on a dark drawing; every word at 4.5:1 on its worst painted pixel; each control's glass by what is under it, turning with the theme; a title crossing a tall drawing's edge in a capsule; a photo under the drawing as a picture of its own keeps the scrim. | `verify_fullsmart.py` |
+| On a window with room the canvas shows past the size it was drawn at and its bitmap grows with it, so it stays sharp (the Pad's up to 3x the drawing, Flip's up to 2x); the drawing's own units, its payload and everything that leaves the canvas (files, post card, drafts, thumbnails, the fill) keep the drawing's own size, and a new drawing starts in the shape the 720px column gives it. | `verify_bigcanvas.py` |
 
 **One from v179 did NOT survive, and is recorded here rather than quietly
 dropped.** "Segmented controls state a height" was true when written; `flip.css`
@@ -738,7 +739,7 @@ rather than a shared rule.
 | `canvassizes.js` | Pad+Flip+library+in-post | Canvas presets — the one table both editors read. |
 | `canvaszoom.js` | Pad+Flip | The canvas magnifier: zoom, pan, the HUD, its grip, wheel and Space-drag. |
 | `chromefade.js` | Pad+Flip+player+library+gallery | Controls that step back while a drawing plays, and come back the moment someone reaches for them. |
-| `chromefit.js` | Pad+Flip | The editors' fit when the chrome around the canvas changes size and the window says nothing -- Pad's and Flip's, one watch. |
+| `chromefit.js` | Pad+Flip | The editors' fit when the chrome around the canvas changes size and the window says nothing -- Pad's and Flip's, one watch -- and the canvas's row reaching past the column on a wide window (span()). |
 | `colorselect.js` | Pad+Flip | Colour selection — the part both editors must agree on. |
 | `composehost.js` | HOST | The pad button's lifecycle, for a HOST's composer. |
 | `constrain.js` | Pad+Flip | Shift-to-constrain — snap a stroke to the nearest axis, shared by both editors. |

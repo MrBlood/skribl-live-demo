@@ -1,5 +1,6 @@
 /* The editors' fit when the chrome around the canvas changes size and the
- * window says nothing -- Pad's and Flip's, one watch.
+ * window says nothing -- Pad's and Flip's, one watch -- and the canvas's row
+ * reaching past the column on a wide window (span()).
  *
  * WHY. The chrome around the stage changes size without the window changing:
  * on Flip the header's play control widens once there are two pages (2px
