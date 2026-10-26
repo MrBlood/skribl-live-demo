@@ -52,6 +52,17 @@ The rows:
   length moves both ends together. Every field that takes text is 16px (A11Y
   11b; these are built hidden).
 
+  THE TIMELINE FOLLOWS YOU. With the timeline scrolled up past the header, a
+  copy of it shows under the header, on the drawer to the pixel (on a desk
+  the page's scrollbar gutter moves where a fixed box's left counts from),
+  painted over what passes under it and under the header; with the timeline
+  on the screen it stays away. It frames the loop, the loop most of it, and
+  says the one line's length and beats. A press of End + moves its end at
+  once; then it eases to frame the new loop, frame by frame. It glides in.
+  A tap on it goes back up to the timeline, the drawer still open (Flip's
+  tap-away rule closed it), and it goes. On a phone and a desk, and at once
+  under Reduce Motion.
+
   PLAY. Play with my drawing is the editor's own Play and follows it however
   it is pressed; with nothing drawn it waits, and Hear the loop, beside it,
   plays the music on its own (verify_musicbeat has the rest).
@@ -95,7 +106,7 @@ import browsing  # noqa: E402
 import waits  # noqa: E402
 
 # For calibration: MUSICMORE_ONLY=Pad (or Flip) runs one editor, and
-# MUSICMORE_PART=more (pick, line, picks, smooth, exact, play, kind) one part,
+# MUSICMORE_PART=more (pick, line, picks, smooth, exact, follow, play, kind) one part,
 # so a row can be shown red in seconds. A real run sets neither.
 ONLY = os.environ.get("MUSICMORE_ONLY", "")
 PART = os.environ.get("MUSICMORE_PART", "")
@@ -716,6 +727,94 @@ with sync_playwright() as pw:
               len(sizes) == 2 and all(px >= 16 for _, px in sizes), str(sizes))
         c.close()
 
+    print("\nMUSIC MORE — the timeline follows you")
+    # The copy under the header as it stands: on, where, what is painted at
+    # its middle, its canvas and the header's (a rect is not a paint), its
+    # framing and words, and whether the drawer is still open.
+    FOLLOW = """() => { const f = document.getElementById('musicFollow'), tl = document.getElementById('musicTimeline'), card = document.getElementById('mediaCard');
+      if (!f) return null;
+      const r = f.getBoundingClientRect(), c = card.getBoundingClientRect(), t = tl.getBoundingClientRect(), cs = getComputedStyle(f), h = document.querySelector('.header'), hr = h.getBoundingClientRect();
+      const foot = ['sticky', 'fixed'].includes(getComputedStyle(h).position) ? parseFloat(getComputedStyle(h).top || 0) + hr.height : 0;
+      const at = (x, y) => { const e = document.elementFromPoint(x, y); return !e ? null : e.closest('#musicFollow') ? 'copy' : e.closest('.header') ? 'header' : (e.id || e.tagName); };
+      return { on: f.classList.contains('on'), vis: cs.visibility, op: +cs.opacity, top: r.top, left: r.left, w: r.width,
+               cardLeft: c.left, cardW: c.width, tlTop: t.top, tlBottom: t.bottom, foot: foot, vh: innerHeight, open: !document.getElementById('musicPanel').hidden,
+               mid: at(r.left + r.width / 2, r.top + 20), lane: at(r.left + r.width / 2, r.bottom - 30), head: at(hr.left + hr.width / 2, hr.bottom - 8),
+               p: f._painted || null, words: (document.getElementById('musicFollowWords') || {}).textContent || '',
+               line: document.getElementById('musicPickText').textContent, s: trimStart, e: trimEnd }; }"""
+    # Every frame from now, 700ms: the copy's opacity and what it painted.
+    FOLLOW_REC = """() => { const out = window.__frec = [], t0 = performance.now(), f = document.getElementById('musicFollow');
+      (function k() { const p = f._painted; out.push([performance.now() - t0, +getComputedStyle(f).opacity, p ? p.view.slice() : null]);
+        if (performance.now() - t0 < 700) requestAnimationFrame(k); })(); }"""
+    DOWN = "() => { const e = document.querySelector('.finetune-grid'); scrollBy(0, e.getBoundingClientRect().top - innerHeight * 0.6); }"
+    TUNED = "() => { musicTempo = { bpm: 120, phase: 0 }; trimStart = 2; trimEnd = 10.25; loopCrossfadeMs = 250; setCrossfadeUI(); updateTrimUI(); }"
+    for _n, _p in eds("follow"):
+        for dev, opts in (("phone", PHONE), ("desk", DESK)):
+            c, pg, errs = editor(b, _n, _p, song=LONG, opts=opts, more=True)
+            pg.evaluate(TUNED)
+            pg.evaluate("() => document.getElementById('musicTimeline').scrollIntoView({ block: 'center' })")
+            waits.settle(pg, 700); browsing.wait_scroll_still(pg)
+            up = pg.evaluate(FOLLOW)
+            pg.evaluate(FOLLOW_REC)
+            pg.evaluate(DOWN)
+            pg.wait_for_timeout(800)
+            rec = pg.evaluate("() => window.__frec")
+            dn = pg.evaluate(FOLLOW)
+            way = [f for f in rec if 0.02 < f[1] < 0.98]
+            check(f"{_n}: with the timeline on the screen the copy stays away; scrolled up past the header, it shows under the header, on the drawer to the pixel ({dev})",
+                  up is not None and not up["on"] and up["vis"] == "hidden" and dn["on"] and dn["vis"] == "visible" and dn["op"] > 0.99
+                  and dn["tlBottom"] < dn["foot"] + 4 and abs(dn["top"] - dn["foot"]) <= 1 and abs(dn["left"] - dn["cardLeft"]) <= 1 and abs(dn["w"] - dn["cardW"]) <= 1,
+                  f"in view: on {up and up['on']} ({up and up['vis']}); scrolled down: on {dn['on']}, top {dn['top']:.1f} under a header ending {dn['foot']:.1f}, "
+                  f"left {dn['left']:.1f} / the card's {dn['cardLeft']:.1f}, width {dn['w']:.1f} / {dn['cardW']:.1f}")
+            check(f"{_n}: it is painted over what passes under it, and the header over it ({dev})",
+                  dn["mid"] == "copy" and dn["lane"] == "copy" and (dn["foot"] == 0 or dn["head"] == "header"),
+                  f"at its words: {dn['mid']}, its lane: {dn['lane']}, the header's foot: {dn['head']}")
+            p = dn["p"] or {}
+            fill = (p.get("end", 0) - p.get("start", 0)) / p["width"] if p.get("width") else 0
+            check(f"{_n}: it frames the loop, the loop filling most of it, and says the one line's length and beats ({dev})",
+                  fill >= 0.7 and dn["words"] == " · ".join(dn["line"].split(" · ")[:2]) == "8.00s · 16 beats",
+                  f"the loop {fill:.0%} of it; it says {dn['words']!r}, the line {dn['line']!r}")
+            check(f"{_n}: it glides in, frame by frame ({dev})", len(way) >= 3, f"{len(way)} frames on the way: " + ", ".join(f"{f[1]:.2f}" for f in way[:8]))
+            # One press of End +, a bar: the end at once, then the framing eases.
+            pg.evaluate(FOLLOW_REC)
+            pg.click('.nudge-btn[data-which="end"][data-amount="1"]')
+            pg.wait_for_timeout(800)
+            spans = [f[2][1] for f in pg.evaluate("() => window.__frec") if f[2]]
+            after = pg.evaluate(FOLLOW)
+            moving = [s for s in spans if abs(s - spans[0]) > 1e-3 and abs(s - spans[-1]) > 1e-3] if spans else []
+            m = max((after["e"] - after["s"]) / 7, 0.5)
+            want = min(after["e"] + m, 30) - max(0, after["s"] - m)
+            check(f"{_n}: a press of End + moves its end at once, then it eases to frame the new loop, frame by frame ({dev})",
+                  abs(after["e"] - 12.25) < 1e-6 and len(moving) >= 3 and all(b2 >= a2 - 1e-6 for a2, b2 in zip(spans, spans[1:]))
+                  and bool(spans) and abs(spans[-1] - want) < 0.01 and after["words"] == "10.00s · 20 beats",
+                  f"the end at {after['e']:.3f}; the framing {spans[0] if spans else 0:.2f}s -> {spans[-1] if spans else 0:.2f}s (wanted {want:.2f}), "
+                  f"{len(moving)} frames on the way; it says {after['words']!r}")
+            # A tap on it: back up to the timeline, the drawer still open, and the copy goes.
+            tapped = press(pg, "#musicFollow", 1100); browsing.wait_scroll_still(pg)
+            back = pg.evaluate(FOLLOW)
+            check(f"{_n}: a tap on it takes the page back up to the timeline, the drawer still open, and it goes ({dev})",
+                  tapped and back["open"] and back["tlBottom"] - back["tlTop"] > 50 and back["tlTop"] >= back["foot"] - 1 and back["tlBottom"] <= back["vh"] + 1 and not back["on"],
+                  f"tapped {tapped}; drawer open {back['open']}; the timeline {back['tlTop']:.0f}-{back['tlBottom']:.0f} under a header ending {back['foot']:.0f}, of a {back['vh']}px screen; the copy on {back['on']}")
+            check(f"{_n}: no page errors from the copy ({dev})", not errs, "; ".join(errs[:2]))
+            c.close()
+    for _n, _p in eds("follow"):
+        c = waits.instrument(b.new_context(reduced_motion="reduce", **PHONE))
+        c, pg, errs = editor(b, _n, _p, song=LONG, ctx=c, more=True)
+        pg.evaluate(TUNED)
+        pg.evaluate("() => document.getElementById('musicTimeline').scrollIntoView({ block: 'center' })")
+        waits.settle(pg, 700)
+        pg.evaluate(FOLLOW_REC)
+        pg.evaluate(DOWN); pg.wait_for_timeout(600)
+        way = [f for f in pg.evaluate("() => window.__frec") if 0.02 < f[1] < 0.98]
+        pg.evaluate(FOLLOW_REC)
+        pg.click('.nudge-btn[data-which="end"][data-amount="1"]'); pg.wait_for_timeout(600)
+        spans = [f[2][1] for f in pg.evaluate("() => window.__frec") if f[2]]
+        moving = [s for s in spans if abs(s - spans[0]) > 1e-3 and abs(s - spans[-1]) > 1e-3] if spans else []
+        on = pg.evaluate(FOLLOW)["on"]
+        check(f"{_n}: under Reduce Motion the copy is there at once, and so is its new framing",
+              on and not way and len(spans) > 2 and abs(spans[-1] - spans[0]) > 0.5 and not moving,
+              f"on {on}; {len(way)} frames fading, {len(moving)} frames easing, the framing {spans[0] if spans else 0:.2f}s -> {spans[-1] if spans else 0:.2f}s")
+        c.close()
+
     print("\nMUSIC MORE — Play with my drawing")
     for _n, _p in eds("play"):
         c, pg, errs = editor(b, _n, _p)
@@ -804,11 +903,17 @@ with sync_playwright() as pw:
         pg.wait_for_timeout(1300)   # past every re-assert there is
         # Closed with its tile just under the header and More's end below the
         # screen: the drawer loses most of its height, which near the page's
-        # end is a clamp. Read the tile on every frame.
-        pg.evaluate("() => { const s = document.getElementById('fineTuneToggle'), h = document.querySelector('.header');"
-                    " const top = h && ['sticky', 'fixed'].includes(getComputedStyle(h).position) ? h.getBoundingClientRect().bottom : 0;"
-                    " window.scrollBy(0, s.getBoundingClientRect().top - top - 10); }")
-        browsing.wait_scroll_still(pg)
+        # end is a clamp. Read the tile on every frame. With the timeline up
+        # under the header its copy shows there (lib/musicdrawer.js) and covers
+        # what passes under it, so the tile goes just under the copy, where a
+        # person sees it and taps it: under the copy, the tap landed on the
+        # copy, and Playwright scrolled the page to the tile in one 739px frame.
+        UNDER = ("() => { const s = document.getElementById('fineTuneToggle'), h = document.querySelector('.header'), f = document.getElementById('musicFollow');"
+                 " const head = h && ['sticky', 'fixed'].includes(getComputedStyle(h).position) ? h.getBoundingClientRect().bottom : 0;"
+                 " const top = f && f.classList.contains('on') ? Math.max(head, parseFloat(f.style.top) + f.offsetHeight) : head;"
+                 " window.scrollBy(0, s.getBoundingClientRect().top - top - 10); }")
+        pg.evaluate(UNDER); browsing.wait_scroll_still(pg)
+        pg.wait_for_timeout(300); pg.evaluate(UNDER); browsing.wait_scroll_still(pg)
         pg.evaluate("""() => { window.__tops = []; const s = document.getElementById('fineTuneToggle'), t0 = performance.now();
             (function f() { window.__tops.push(s.getBoundingClientRect().top); if (performance.now() - t0 < 1400) requestAnimationFrame(f); })(); }""")
         pg.click("#fineTuneToggle")

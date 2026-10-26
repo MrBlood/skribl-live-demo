@@ -172,7 +172,7 @@ WORDS = r"""(root) => {
 CENSUS = r"""(root) => {
   const R = document.querySelector(root); if (!R) return null;
   const s = (el) => { const cs = getComputedStyle(el); return { bg: cs.backgroundColor, edge: cs.borderTopWidth !== '0px' ? cs.borderTopColor : 'none',
-    r: cs.borderTopLeftRadius, blur: cs.backdropFilter }; };
+    side: cs.borderLeftWidth !== '0px' ? cs.borderLeftColor : 'none', r: cs.borderTopLeftRadius, foot: cs.borderBottomLeftRadius, blur: cs.backdropFilter }; };
   const cards = {};
   for (const sel of ['.menu-tile', '.menu-list', '.seg', '.sdrafts-row', '.sdrafts-files', '.sdrafts-this', '.learn-card', '.ask-row', '.ask-tour', '.ask-best-card',
                      '.help-tip', '.help-search', '.export-opt', '.tune-row', '.post-card', '.ask-list', '.accordion-header', '.post-preview',
@@ -544,6 +544,16 @@ def surfaces(name, ids, q, canvas, btn):
                    " loopCrossfadeMs = 250; setCrossfadeUI(); updateTrimUI(); }")
         q.wait_for_timeout(700)
 
+    # And scrolled down to Exact times, with a beat: the timeline's copy under
+    # the header (lib/musicdrawer.js), its words and the way back up on the
+    # card's paper, over whatever passes under it.
+    def music_down():
+        music(True)()
+        q.evaluate("() => { musicTempo = { bpm: 300, phase: 0, heard: true }; trimStart = 0; trimEnd = 1.85;"
+                   " loopCrossfadeMs = 250; setCrossfadeUI(); updateTrimUI(); }")
+        q.evaluate("() => { const e = document.querySelector('.finetune-grid'); scrollBy(0, e.getBoundingClientRect().top - innerHeight * 0.6); }")
+        q.wait_for_timeout(900)
+
     # The card on the button and the name tags (lib/learncard.js), which the
     # page only shows to automation that asks (see the context's init script).
     def card():
@@ -581,7 +591,8 @@ def surfaces(name, ids, q, canvas, btn):
              ("The draw drawer, Feel", drawer("feel"), "#drawPanel"), ("The draw drawer, Eraser", drawer("eraser"), "#drawPanel"),
              ("Photo, empty", empty("photo"), "#mediaCard"), ("Photo, with a picture", photo, "#mediaCard"),
              ("Music, empty", empty("music"), "#mediaCard"), ("Music", music(False), "#mediaCard"),
-             ("Music, with a beat", music_beat, "#mediaCard"), ("Music, More open", music(True), "#mediaCard"))
+             ("Music, with a beat", music_beat, "#mediaCard"), ("Music, More open", music(True), "#mediaCard"),
+             ("Music, down at Exact times", music_down, "#musicFollow"))
             + (((SHELF[0], stamps(False), "#stampPop"), (SHELF[1], stamps(True), "#stampPop"),
                 ("Tune, with Beat", tune_beat, "#tuneShell")) if name == "Flip" else ())
             + (("A button's card", card, ".lc-card"), ("A Show me step", step, ".lc-card"),
@@ -844,6 +855,19 @@ for scheme in ("light", "dark"):
     check(f"{scheme}: one corner per kind on the menu's sheets and the dock's drawers: a sheet 22, a drawer or card 16, "
           f"a button or field 12 ({seen} read)",
           seen >= (1 if ONLY else 32) and not off, "; ".join(sorted(set(off)))[:400])
+    # THE TIMELINE'S COPY IS A CARD (lib/musicdrawer.js), not a drawer: it
+    # hangs from the header over the music drawer, so it wears the menu tile's
+    # white and the tiles' lilac line on its sides and foot, and its foot has
+    # a card's corner, 16; its top is the header's, square, as Tune's is. It
+    # was read with the drawers first, whose paper it is not.
+    fws = {n: census[(n, sc, l)]["sheet"] for (n, sc, l) in census
+           if sc == scheme and l == "Music, down at Exact times" and census[(n, sc, l)]}
+    if not ONLY or "Music, down at Exact times" in ONLY:
+        check(f"{scheme}: the timeline's copy is a card: the tiles' white, their lilac line at its sides, a card's 16 at its foot, "
+              f"square at the header ({len(fws)} read)",
+              bool(tile) and bool(rim) and len(fws) == len(EDITORS)
+              and all(f["bg"] == tile and f["side"] == rim and f["foot"] == "16px" and f["r"] == "0px" for f in fws.values()),
+              f"tile {tile}, line {rim}; " + "; ".join(f"{n}: {f['bg']}, side {f['side']}, foot {f['foot']}, top {f['r']}" for n, f in sorted(fws.items())))
 
 print("\nEach surface's own colours, for reading side by side")
 for (name, scheme, label), cz in sorted(census.items(), key=lambda kv: (kv[0][1], kv[0][2], kv[0][0])):

@@ -928,6 +928,7 @@ body.playback-paused .tap-paused { display: grid; }
   font-variant-numeric: tabular-nums;
   transition: color .2s var(--ease);
 }
+@media (prefers-reduced-motion: reduce) { .mt-follow, .mt-follow.on { transition: none; } }
 
 .photo-bg-img {
   position: absolute;

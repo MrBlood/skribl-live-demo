@@ -585,6 +585,127 @@
       }
     }) : null;
 
+    /* ---- THE TIMELINE FOLLOWS YOU (the owner, of Exact times: "what it edits
+     * is out of view on phone, right?"; of the mock, B; of its first strips,
+     * "the loop is too small", twice; then "Yeah"). While the timeline is
+     * scrolled up under the header, a copy of it stays there, the drawer's
+     * width: the loop and a little of the song either side (a seventh of its
+     * length or a beat, whichever is more), the beat marked as the timeline
+     * marks it, the two ends, and the one line's length and beats. A press
+     * moves an end at once; then the copy eases to frame the new loop, as the
+     * timeline eases to its framing when an end is let go. It glides in and
+     * away, at once under Reduce Motion, and a tap on it takes the page back
+     * up to the timeline. It is fixed to the screen, so it moves to the
+     * page's end: a fixed box inside a drawer that transforms rides with it. */
+    var follow = $('musicFollow'), fwWords = $('musicFollowWords'), fwCv = $('musicFollowCanvas'), tlRoot = $('musicTimeline');
+    var fwOn = false, fwView = null, fwRaf = 0, fwLast = 0, fwPeaks = null;
+    if (follow && follow.parentNode !== document.body) document.body.appendChild(follow);
+    function headerFoot() { var D = global.SkriblDrawerDetent; return D && D.stuckBottom ? D.stuckBottom() : 0; }
+    function fwFrame(t, p) {
+      var m = Math.max((t.end - t.start) / 7, p || 0.5), v0 = Math.max(0, t.start - m), v1 = Math.min(t.duration, t.end + m);
+      return [v0, Math.max(0.01, v1 - v0)];
+    }
+    // One frame of the copy; true while it is still easing to its framing.
+    function fwDraw(dt) {
+      var t = h.trim(), tp = tempo(), p = tp ? 60 / tp.bpm : 0, len = heard(t, h.crossfade());
+      var html = '<b>' + len.toFixed(2) + 's</b>' + (p > 0 ? ' · ' + beatWords(len / p) : '');
+      if (fwWords && fwWords._html !== html) { fwWords.innerHTML = html; fwWords._html = html; }
+      var w = fwCv ? fwCv.clientWidth : 0, hh = fwCv ? fwCv.clientHeight : 0, dpr = global.devicePixelRatio || 1;
+      if (!(w > 0) || !(hh > 0)) return false;
+      if (fwCv.width !== Math.round(w * dpr) || fwCv.height !== Math.round(hh * dpr)) { fwCv.width = Math.round(w * dpr); fwCv.height = Math.round(hh * dpr); }
+      var want = fwFrame(t, p);
+      if (!fwView || still()) fwView = want.slice();
+      else { var e = 1 - Math.exp(-(dt || 16) / 110); fwView[0] += (want[0] - fwView[0]) * e; fwView[1] += (want[1] - fwView[1]) * e; }
+      var easing = Math.abs(want[0] - fwView[0]) > 1e-4 || Math.abs(want[1] - fwView[1]) > 1e-4;
+      if (!easing) fwView = want.slice();
+      var v0 = fwView[0], span = fwView[1], X = function (s) { return (s - v0) / span * w; };
+      var st = global.getComputedStyle(follow), tok = function (n) { return st.getPropertyValue(n).trim(); };
+      var acc = tok('--accent'), ink = tok('--accent-ink'), line = tok('--menu-card-line'), paper = tok('--menu-paper');
+      var x = fwCv.getContext('2d');
+      function rr(a, b, c, d, r) { x.beginPath(); if (x.roundRect) x.roundRect(a, b, c, d, r); else x.rect(a, b, c, d); }
+      x.setTransform(dpr, 0, 0, dpr, 0, 0);
+      x.clearRect(0, 0, w, hh);
+      rr(0.5, 0.5, w - 1, hh - 1, 10); x.fillStyle = paper; x.fill(); x.strokeStyle = line; x.lineWidth = 1; x.stroke();
+      x.save(); rr(0, 0, w, hh, 10); x.clip();
+      x.fillStyle = acc; x.globalAlpha = 0.16; x.fillRect(X(t.start), 0, X(t.end) - X(t.start), hh); x.globalAlpha = 1;
+      // The song as the timeline draws it, from its own peaks.
+      var MT = global.SkriblMusicTimeline, buf = h.buffer && h.buffer(), P = (tl && tl.peaks && tl.peaks()) || fwPeaks;
+      if (MT && buf && (!P || P.buffer !== buf)) P = fwPeaks = MT.peaksOf(buf);
+      if (P) {
+        for (var px = 0; px < w; px += 2) {
+          var u0 = v0 + px / w * span, u1 = v0 + (px + 2) / w * span;
+          if (u1 < 0 || u0 > t.duration) continue;
+          var v = MT.peakOf(P, Math.max(0, u0), Math.min(t.duration, u1)), hg = Math.max(1, v * (hh / 2 - 12));
+          x.globalAlpha = u1 > t.start && u0 < t.end ? 1 : 0.3;
+          x.fillRect(px, hh / 2 + 2 - hg, 1.5, hg * 2);
+        }
+      }
+      // The beat, as the timeline marks it: bigger on each bar from the loop's start.
+      if (p > 0) {
+        var k0 = Math.round((t.start - tp.phase) / p);
+        x.fillStyle = ink;
+        for (var kb = Math.ceil((v0 - tp.phase) / p); tp.phase + kb * p <= v0 + span; kb++) {
+          var bar = ((kb - k0) % 4 + 4) % 4 === 0;
+          x.globalAlpha = bar ? 0.9 : 0.6;
+          x.beginPath(); x.arc(X(tp.phase + kb * p), 8, bar ? 2.6 : 1.8, 0, 7); x.fill();
+        }
+      }
+      // The two ends, each with its tab at the foot, as the timeline's.
+      x.globalAlpha = 1; x.fillStyle = acc;
+      [t.start, t.end].forEach(function (s) {
+        var xx = Math.round(X(s));
+        x.fillRect(xx - 1, 0, 2, hh);
+        rr(xx - 7, hh - 10, 14, 10, 4); x.fill();
+      });
+      x.restore();
+      // What is painted, for whoever asks (the harness): the framing, the ends, the words.
+      follow._painted = { view: [v0, span], start: X(t.start), end: X(t.end), width: w, words: fwWords ? fwWords.textContent : '' };
+      return easing;
+    }
+    function fwStep(now) {
+      fwRaf = 0;
+      if (!fwOn) return;
+      var dt = fwLast ? Math.min(64, now - fwLast) : 16;
+      fwLast = now;
+      if (fwDraw(dt)) fwRaf = global.requestAnimationFrame(fwStep);
+    }
+    // Shown while the timeline is laid out (the drawer open on a song) and
+    // above the header's foot; placed under the header, the card's width.
+    // A fixed box's left counts from where the page's scrollbar gutter ends
+    // (styles.css, scrollbar-gutter: 10px in on this box's desk, more on
+    // Windows), not from the screen's edge: that offset is measured, so the
+    // copy sits on the card wherever the gutter is.
+    function fwPlace() {
+      if (!follow || !tlRoot) return;
+      var foot = headerFoot(), r = tlRoot.getBoundingClientRect();
+      var want = !!h.hasTrack() && tlRoot.offsetParent !== null && r.height > 0 && r.bottom < foot + 4;
+      if (want) {
+        var card = tlRoot.closest('.media-card') || tlRoot.parentElement, c = card.getBoundingClientRect();
+        var gutter = follow.getBoundingClientRect().left - (parseFloat(global.getComputedStyle(follow).left) || 0);
+        follow.style.left = (c.left - gutter) + 'px'; follow.style.width = c.width + 'px'; follow.style.top = foot + 'px';
+      }
+      if (want !== fwOn) {
+        fwOn = want;
+        if (want) fwView = null;
+        follow.classList.toggle('on', want);   // hidden, it is out of reach and unread (visibility)
+      }
+      if (fwOn && !fwRaf) { fwLast = 0; fwRaf = global.requestAnimationFrame(fwStep); }
+    }
+    // Placed again on any scroll (the page's, or a drawer's own), a new
+    // screen size, and the timeline or the card changing size: a drawer
+    // closing takes the timeline out of the layout without a scroll.
+    if (follow && tlRoot) {
+      follow.addEventListener('click', function () { tlRoot.scrollIntoView({ block: 'center', behavior: still() ? 'auto' : 'smooth' }); });
+      document.addEventListener('scroll', fwPlace, { passive: true, capture: true });
+      global.addEventListener('resize', fwPlace);
+      if (global.visualViewport) global.visualViewport.addEventListener('resize', fwPlace);
+      if (global.ResizeObserver) {
+        var fwRo = new global.ResizeObserver(fwPlace);
+        fwRo.observe(tlRoot);
+        if (tlRoot.closest('.media-card')) fwRo.observe(tlRoot.closest('.media-card'));
+      }
+    }
+
     /* ---- - and +: how far each press moves. --------------------------------
      * One pill under the times, Each press: 0.01s, 0.1s, and a bar once there
      * is a tempo, opening out beside them (the owner, asking how to change the
@@ -1385,6 +1506,7 @@
       syncRvHint();
       if (tl) tl.draw();
       if (rv) rv.draw();
+      fwPlace();
     }
     sync();
 

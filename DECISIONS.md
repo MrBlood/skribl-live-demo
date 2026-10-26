@@ -23816,3 +23816,95 @@ alone. As built: 10 of 10.
 
 Pad and Flip: shared. One drawer (lib/musicdrawer.js) and one pair of ears
 (lib/musicears.js) for both editors.
+
+## After v329 -- The timeline follows you down to Exact times
+
+The owner, of the music drawer on a phone: "The "exact times" is way down
+the page, but what it edits is out of view on phone, right?" It was: with
+More open, Exact times sits about 880px under the timeline's foot, so its -
+and + moved ends that were up under the header. Of the mock's three (now; A,
+the one line's words under the steppers; B, a slim timeline under the
+header), tried in an artifact built from the real drawer, the owner liked B,
+then of its strip, "the loop is too small", twice (the whole song in it left
+the loop a sliver), and of the third, the loop framed across the drawer's
+width on a 64px lane, "Yeah".
+
+AS BUILT. While the timeline is scrolled up past the header, a copy of it
+stays under the header at the drawer's width: the loop and a little of the
+song either side (a seventh of its length or a beat, whichever is more), the
+beat marked as the timeline marks it, bigger on each bar from the loop's
+start, the two ends with their tabs at the foot, and the one line's length
+and beats ("8.00s · 16 beats"), with "Timeline" and an arrow at the end of
+that line. A press of - or + moves its end at once; then the copy eases to
+frame the new loop, as the timeline eases to its framing when an end is let
+go. It glides in and away, at once under Reduce Motion, and a tap on it goes
+back up to the timeline. One button, "Back up to the timeline"; its canvas
+is hidden from screen readers, which have Start and End of loop in More.
+Fixed to the screen, it moves to the page's end: inside the card, whose
+glass is a backdrop filter, a fixed box is placed from the card. On a desk,
+where the header does not stick, it hangs from the top of the screen. Play
+scrolls the page to the drawing on both editors, so it glides away as Play
+starts and needs no rest of its own. The help's Start and end tip says it.
+
+FOUND ON THE WAY. Its layer: drafted at 29, under the header's 30, the Pad's
+media card (a flex item at 39) covered it, out of reach of a tap (the point
+at its middle was the Restart view's canvas). The header takes 42 whenever
+the page is scrolled (lib/headerglass.js), as it is while the copy shows, so
+the copy is at 41: over the card, level with the dock it follows in the
+page, under the header, the zoom HUD, the popovers and every sheet. Its
+left: a fixed box's left counts from where the page's scrollbar gutter ends
+(styles.css, scrollbar-gutter: stable both-edges), 10px in on this box's
+desk and more on Windows, so placed at the card's left it sat 10px right of
+the card; the offset is read off the copy each time it is placed, not
+assumed. And a tap closed Flip's drawer: Flip's tap-away rule closes the
+music drawer on a tap outside the panel and the card, and the copy is
+outside both. The rule knows the copy now.
+
+AND IN THE SUITES, found by the first side-by-side run. verify_contrast read
+the copy with the dock's drawers, whose paper it is not (it is the white the
+approved strip wore, a card's), so the drawers' paper, edge and corner rows
+went red for it on both editors: it is read as a card now, with a row of its
+own (the tiles' white, their lilac line at its sides, a card's 16 at its
+foot, square at the header), shown red with the 14px foot the artifact had
+and with the drawers' paper. The foot is 16 now, a card's corner, and the
+lane inside it is rounded as the timeline's song lane is, 10 (it was 8).
+And verify_musicmore and verify_sheetswipe close More from the drawer's end
+with its tile just under the header, which is under the copy now: the tap
+landed on the copy, and Playwright scrolled the page to the tile in one
+frame (670-739px), red as a leap. A person sees the tile under the copy and
+taps it there, so both put it there; each row shown red again with the
+fold's glide broken in lib/drawerdetent.js (616 and 592px in a frame) and
+green as built.
+
+CHECKS. verify_musicmore's new part, the timeline follows you, on both
+editors, a phone and a desk: away while the timeline is on the screen, and
+scrolled past it, under the header on the drawer to the pixel; painted over
+what passes under it, and the header over it (read with elementFromPoint, a
+rect not being a paint); the loop framed (78% of it) and the one line's
+length and beats; gliding in, frame by frame; End + at once, then the
+framing eased to, frame by frame; a tap back up to the timeline, the drawer
+still open; and at once under Reduce Motion. verify_contrast reads it as
+"Music, down at Exact times", on both editors, light and dark, a phone and
+a desk, as a card (above). Calibration:
+13 breaks, each served in place of its
+file with the files on disk untouched, each red on the rows that guard it:
+the copy never shown (every row but the four page-error rows); always shown
+(away in view, the glide in, the tap's "it goes"); the whole song framed (the
+framing, End + eased to, and Reduce Motion's new framing, which never
+moved); no easing (End + eased to, four rows); no tap (the tap, four); the
+words without the beats (the words, and End +'s); the gutter not allowed for
+(the desk's two placement rows only); easing under Reduce Motion (its two
+rows); layer 29 (the Pad's paint and tap rows, phone and desk; Flip's card
+is not a flex item, so its layer does not reach the copy there); no glide in
+the stylesheet (the glide in, four); Reduce Motion's rules gone (its two
+rows: the copy's own rule and styles.css's two global ones, since with the
+global ones there, the copy's own changes nothing; it stays, as Tune's and
+the name card's do); and Flip's tap-away rule without the copy (Flip's two
+tap rows). Two breaks first stopped the run rather than going red: one left
+an `else` without its `if`, so the drawer did not parse (an instrument
+fault, fixed), and a copy that never showed stopped the tap on a timeout;
+the tap is made with the suite's press() now, so it is a red row. As built:
+30 of 30.
+
+Pad and Flip: shared. One drawer (lib/musicdrawer.js) draws it for both
+editors; the one difference is Flip's tap-away rule, which only Flip has.
