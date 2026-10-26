@@ -15,12 +15,24 @@ The rows, on both editors:
   THE SIZE. On a 1920x945 and a 2560x1300 window, in light and dark, the
   canvas shows as big as the window allows past 1:1, as the mock measured
   (the Pad's cat 1017x763 and 1491x1118, Flip's Blooby card 752x564 and
-  1225x919), and its bitmap is the size it shows, so it is sharp. The row the
+  1225x919), and its bitmap is the size it shows (inside Flip's frame), to the
+  pixel, so it is sharp. The row the
   canvas sits in spans the page, while the header and the dock stay in the
   column, and nothing scrolls sideways. The page is one surface: read on the
   screenshot's pixels, the page at the window's edge is the page beside the
   canvas (the column's edges and the darker page beside it would cut across
   the row).
+
+  PIXEL FOR PIXEL. Grown, the screen shows the bitmap one pixel for one: a
+  1px line put into it comes out one screen pixel, full dark, on both editors
+  at 1x. (Flip's frame, 2px a side, squeezed a bitmap grown to its outside into
+  its inside, and every line came out two pixels at half.) At 2x and 1.25x the
+  canvas inside its frame is its bitmap's size in the screen's pixels, to the
+  page's 1/64px; where it lands on the screen is the browser's there (half a
+  pixel off, it blends), so those are measured by size. And a page is laid on
+  Flip's grown pad pixel for pixel: the pad is the page's own layer over the
+  ground. (Laid through the transform it was stretched by a fraction of a
+  pixel; a page played from Flip's cache is pinned in verify_framecache.)
 
   THE DRAWING DOES NOT CHANGE. A stroke on a grown canvas lands under the
   pen, in the drawing's own units, and the payload's canvasSize is the size it
@@ -46,8 +58,8 @@ The rows, on both editors:
   already carries (Flip: what it draws at on a 2x screen); past that the
   canvas still shows bigger.
 
-For calibration: BIGCANVAS_PART=size (drawing, files, fill, rings, settle,
-phone, caps) runs one part, and BIGCANVAS_ONLY=Pad (or Flip) one editor. A real
+For calibration: BIGCANVAS_PART=size (pixels, drawing, files, fill, rings,
+settle, phone, caps) runs one part, and BIGCANVAS_ONLY=Pad (or Flip) one editor. A real
 run sets neither.
 """
 import json
@@ -108,8 +120,11 @@ def eds(name):
 
 
 # The canvas as shown and as held, the screen's ratio, and the editor's ratio.
-READ = """(id) => { const c = document.getElementById(id), r = c.getBoundingClientRect();
-  return { shown: [Math.round(r.width), Math.round(r.height)], at: [r.left, r.top, r.width, r.height],
+# Inside Flip's frame (its border) is where the drawing shows; the Pad has none.
+READ = """(id) => { const c = document.getElementById(id), r = c.getBoundingClientRect(), s = getComputedStyle(c);
+  const bl = parseFloat(s.borderLeftWidth) || 0, bt = parseFloat(s.borderTopWidth) || 0;
+  return { shown: [Math.round(r.width), Math.round(r.height)], at: [r.left, r.top, r.width, r.height], frame: [bl, bt],
+           inner: [r.width - bl - (parseFloat(s.borderRightWidth) || 0), r.height - bt - (parseFloat(s.borderBottomWidth) || 0)],
            bitmap: [c.width, c.height], dpr: devicePixelRatio,
            ratio: typeof canvasRatio === 'function' && id === 'canvas' ? canvasRatio() : (typeof RS !== 'undefined' ? RS : null),
            drawn: id === 'canvas' ? [authoredW, authoredH] : [CW, CH] }; }"""
@@ -147,12 +162,84 @@ CAP = {"Pad": 3, "Flip": 2}
 
 def held(name, m):
     """The bitmap's width this editor should hold for what it shows: the shown size in
-    the screen's pixels past 1:1 (to its ceiling), the drawing's own under it."""
+    the screen's pixels past 1:1 (to its ceiling), the drawing's own under it. Flip's
+    is the size inside its frame."""
     grow = max(1.0, min(m["shown"][0] / m["drawn"][0], CAP[name] / m["dpr"]))
     if name == "Flip":
-        grow = max(1.0, min(m["shown"][0] / m["drawn"][0], CAP[name] / min(m["dpr"], 2)))
-        return int(m["drawn"][0] * min(m["dpr"], 2) * grow)
+        grow = max(1.0, min(m["inner"][0] / m["drawn"][0], CAP[name] / min(m["dpr"], 2)))
+        return int(m["drawn"][0] * min(m["dpr"], 2) * grow + 1e-6)
     return round(m["drawn"][0] * m["dpr"] * grow)
+
+
+# The drawing at 400x300, so even a small window has room to grow it, settled.
+SMALL = {"Pad": "() => { establishEditorCanvas(400, 300); layoutEditorCanvas(); }",
+         "Flip": "() => { applyCanvasSize(400, 300, {silent: true}); sizeStage(); }"}
+SETTLED = {"Pad": "() => grownTo(_growWant)", "Flip": "() => layersGrownTo(_growWant)"}
+# Whatever sits over the canvas (the grid, the starter words, the pen's dot)
+# hidden, and any pattern behind it, so a screenshot shows the bitmap alone.
+BARE = """(id) => { const c = document.getElementById(id), r = c.getBoundingClientRect();
+  for (const el of document.querySelectorAll('body *')) { if (el === c || el.contains(c)) continue;
+    const q = el.getBoundingClientRect(); if (q.right > r.left && q.left < r.right && q.bottom > r.top && q.top < r.bottom) el.style.visibility = 'hidden'; }
+  for (let p = c; p; p = p.parentElement) p.style.backgroundImage = 'none'; }"""
+# A 1px black line every 40 of the bitmap's own pixels, put straight into it.
+LINES = """(id) => { const c = document.getElementById(id), g = c.getContext('2d');
+  g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = 'copy'; g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);
+  g.globalCompositeOperation = 'source-over'; g.fillStyle = '#000';
+  for (let x = 5; x < c.width - 4; x += 40) g.fillRect(x, 0, 1, c.height); g.restore(); }"""
+STILL = "(id) => { const g = document.getElementById(id).getContext('2d'); return [g.getImageData(5, 9, 1, 1).data[0], g.getImageData(6, 9, 1, 1).data[0]]; }"
+# Three strokes in dark ink on a fresh page, the page painted, and the pad read
+# against the page's own layer over the ground (Flip paints a page through it).
+LAID = """() => { frames.length = 0; const f = newFrame();
+  for (const [y0, y1, size, col] of [[0.2, 0.8, 9, '#1d1b2e'], [0.75, 0.3, 4, '#5a2fd4'], [0.5, 0.55, 16, '#0e3b2a']]) {
+    const pts = [];
+    for (let j = 0; j < 40; j++) pts.push({ x: CW * (0.1 + 0.8 * j / 39), y: CH * (y0 + (y1 - y0) * j / 39) + Math.sin(j / 5) * CH * 0.04,
+                                            color: col, size: size, t: j * 8, start: j === 0 });
+    f.strokes.push(...pts); f.strokeGroups.push(pts.length); }
+  frames.push(f); idx = 0; buildStrip(); render();
+  const W = pad.width, H = pad.height, P = ctx.getImageData(0, 0, W, H).data, F = fctx.getImageData(0, 0, W, H).data;
+  const g = [P[0], P[1], P[2]];
+  let worst = 0, inked = 0;
+  for (let i = 0; i < P.length; i += 4) { const a = F[i + 3] / 255; if (a < 0.125) continue; inked++;
+    for (let k = 0; k < 3; k++) worst = Math.max(worst, Math.abs(P[i + k] - (F[i + k] * a + g[k] * (1 - a)))); }
+  return { grown: W > CW, inked: inked, worst: Math.round(worst), ground: g, bitmap: [W, H] }; }"""
+
+
+# The pad kept, and later read against it away from the band at the foot where
+# a stroke is under way: a page painted from the live layers holds still.
+SNAP = "() => { window.__snap = ctx.getImageData(0, 0, pad.width, pad.height); }"
+STILL_UNDER = """() => { const W = pad.width, H = pad.height, a = window.__snap.data, b = ctx.getImageData(0, 0, W, H).data, band = Math.floor(H * 0.88);
+  let worst = 0, n = 0;
+  for (let i = 0; i < band * W * 4; i += 4) { const d = Math.max(Math.abs(a[i] - b[i]), Math.abs(a[i + 1] - b[i + 1]), Math.abs(a[i + 2] - b[i + 2]));
+    if (d > worst) worst = d; if (d > 2) n++; }
+  return { worst: worst, n: n, live: _liveUsable(), drawing: drawing, erasing: erasing }; }"""
+
+
+def small(pg, name):
+    pg.evaluate(SMALL[name])
+    pg.wait_for_function(SETTLED[name], timeout=10000)
+    pg.wait_for_timeout(300)
+    return pg.evaluate(READ, CANVAS[name])
+
+
+def lines_on_screen(pg, name):
+    """Each line where it should land on the screen, as (pixels dark, darkest), and
+    whether the lines were still in the bitmap after the screenshot."""
+    cid = CANVAS[name]
+    pg.evaluate(BARE, cid)
+    pg.evaluate(LINES, cid)
+    m = pg.evaluate(READ, cid)
+    shot = Image.open(BytesIO(pg.screenshot(animations="disabled"))).convert("L")
+    still = pg.evaluate(STILL, cid) == [0, 255]
+    d = m["dpr"]
+    L, T = m["at"][0] + m["frame"][0], m["at"][1] + m["frame"][1]
+    W, H = m["inner"]
+    y = int((T + H / 2) * d)
+    out = []
+    for bx in range(5, m["bitmap"][0] - 4, 40):
+        sx = (L + (bx + 0.5) * W / m["bitmap"][0]) * d
+        win = [255 - shot.getpixel((x, y)) for x in range(int(sx) - 3, int(sx) + 4)]
+        out.append((sum(1 for v in win if v > 12), max(win)))
+    return out, still, m
 
 
 def stroke(pg, pts, steps=6):
@@ -188,12 +275,13 @@ with sync_playwright() as sp:
                 check(f"{tag}: the canvas shows at the size the mock measured",
                       abs(m["shown"][0] - want[0]) <= 2 and abs(m["shown"][1] - want[1]) <= 2,
                       f"{m['shown'][0]}x{m['shown'][1]}, the mock {want[0]}x{want[1]}, drawn at {m['drawn'][0]}x{m['drawn'][1]}")
-                # Sharp: a bitmap at least the size shown, in the screen's pixels.
+                # Sharp: the bitmap is what shows (inside Flip's frame), to the pixel.
                 past = m["shown"][0] > m["drawn"][0]
-                check(f"{tag}: the bitmap is the size it shows" + (" (past 1:1, so it grew)" if past else " (under 1:1, the drawing's own)"),
-                      (abs(m["bitmap"][0] - m["shown"][0] * m["dpr"]) <= 2) if past
+                inner = [round(v * m["dpr"]) for v in m["inner"]]
+                check(f"{tag}: the bitmap is the size it shows, to the pixel" + (" (past 1:1, so it grew)" if past else " (under 1:1, the drawing's own)"),
+                      (m["bitmap"] == inner) if past
                       else (m["bitmap"][0] == round(m["drawn"][0] * m["dpr"])),
-                      f"bitmap {m['bitmap'][0]}x{m['bitmap'][1]} for {m['shown'][0]}x{m['shown'][1]} shown at {m['dpr']}x")
+                      f"bitmap {m['bitmap'][0]}x{m['bitmap'][1]} for {inner[0]}x{inner[1]} showing (inside the frame) at {m['dpr']}x")
                 bx = pg.evaluate(BOXES, {"row": ROW[name], "dock": DOCK[name]})
                 check(f"{tag}: the canvas's row spans the page; the header and the dock stay in the column; nothing scrolls sideways",
                       bx["row"] and abs(bx["row"][1] - bx["body"]) <= 1 and abs(bx["row"][0]) <= 12
@@ -214,6 +302,54 @@ with sync_playwright() as sp:
                       f"edge {px[0]}, outside the column {px[1]}, inside it {px[2]} ({near} apart), body.canvas-wide {bx['wide']}")
                 check(f"{tag}: no page errors", not errs, "; ".join(errs[:2]))
                 c.close()
+
+    # ================= PIXEL FOR PIXEL =================
+    if part("pixels"):
+        print("PIXEL FOR PIXEL: the screen shows the bitmap one for one")
+    for name in eds("pixels"):
+        c, pg, errs = editor(b, name, 2560, 1300, demo=False)
+        got, still, m = lines_on_screen(pg, name)
+        crisp = sum(1 for n, pk in got if n == 1 and pk >= 250)
+        check(f"{name}: grown at 1x, the screen shows the bitmap pixel for pixel: a 1px line put in it is one screen pixel, full dark",
+              m["bitmap"][0] > m["drawn"][0] and still and len(got) >= 12 and crisp == len(got),
+              f"{crisp} of {len(got)} lines crisp (pixels dark, darkest: {got[:2]} ... {got[len(got) // 2]}); "
+              f"bitmap {m['bitmap'][0]}x{m['bitmap'][1]}, {m['inner'][0]:.2f}x{m['inner'][1]:.2f} inside the frame; lines kept {still}")
+        c.close()
+    for name, w, h, dpr in (("Pad", 640, 600, 2), ("Pad", 1440, 900, 1.25), ("Flip", 1000, 800, 1.25)):
+        if name not in eds("pixels"):
+            continue
+        c, pg, errs = editor(b, name, w, h, demo=False, device_scale_factor=dpr)
+        m = small(pg, name)
+        dev = [v * dpr for v in m["inner"]]
+        check(f"{name}: grown at {dpr}x, the canvas inside its frame is its bitmap's size in the screen's pixels, to the page's 1/64px",
+              m["bitmap"][0] > m["drawn"][0] * dpr and all(0 <= dev[i] - m["bitmap"][i] < 0.05 for i in (0, 1)),
+              f"{dev[0]:.3f}x{dev[1]:.3f} screen pixels for a {m['bitmap'][0]}x{m['bitmap'][1]} bitmap ({m['drawn'][0]}x{m['drawn'][1]} drawn, {w}x{h})")
+        c.close()
+    if "Flip" in eds("pixels"):
+        c, pg, errs = editor(b, "Flip", 2560, 1300, demo=False)
+        r = pg.evaluate(LAID)
+        check("Flip: grown, a page is laid on the pad pixel for pixel: the pad is the page's own layer over the ground",
+              r["grown"] and r["inked"] > 2000 and r["worst"] <= 3,
+              f"{r['inked']} inked pixels, the worst {r['worst']} levels from the layer over the ground {r['ground']}; bitmap {r['bitmap']}")
+        # While the pen is down the page comes from the live layers, laid on
+        # the same way: it holds still under the pen, to the pixel.
+        for tool in ("pen", "eraser"):
+            pg.evaluate("(t) => setTool(t)", tool)
+            pg.evaluate(SNAP)
+            m = pg.evaluate(READ, "pad")
+            L, T, W, H = m["at"]
+            y = T + H * 0.96
+            pg.mouse.move(L + W * 0.3, y); pg.mouse.down()
+            for k in range(1, 7):
+                pg.mouse.move(L + W * (0.3 + 0.05 * k), y, steps=2)
+            pg.wait_for_timeout(150)
+            st = pg.evaluate(STILL_UNDER)
+            pg.mouse.up(); pg.wait_for_timeout(200)
+            check(f"Flip: grown, with the {tool} down the page under it holds still to the pixel (the live layers laid on one for one)",
+                  st["live"] and st["drawing"] and st["erasing"] == (tool == "eraser") and st["worst"] <= 2,
+                  f"the worst {st['worst']} levels off, {st['n']} pixels more than 2; painted from the live layers {st['live']}")
+        check("Flip: no page errors laying a page", not errs, "; ".join(errs[:2]))
+        c.close()
 
     # ================= THE DRAWING DOES NOT CHANGE =================
     if part("drawing"):

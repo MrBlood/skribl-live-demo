@@ -183,6 +183,7 @@ function growCanvasNow(g) {
   } else if (strokes.length || preRecordSnapshot) {
     clearAndRestore(() => paintStrokesStatic(strokes));
   }
+  layoutEditorCanvas();   // and the canvas takes the bitmap's own size (below)
 }
 function growCanvasWhenStill() {
   clearTimeout(_growTimer);
@@ -236,9 +237,17 @@ function layoutEditorCanvas() {
   // Now the bitmap grows with the scale, so past 1:1 the lines are drawn
   // again at the new size, up to CANVAS_RATIO_MAX.
   const scale = Math.min(availW / authoredW, availH / authoredH);
-  wantCanvasGrowth(Math.max(1, Math.min(scale, CANVAS_RATIO_MAX / (window.devicePixelRatio || 1))));
-  const dispW = Math.round(authoredW * scale);
-  const dispH = Math.round(authoredH * scale);
+  const dpr = window.devicePixelRatio || 1;
+  const g = Math.max(1, Math.min(scale, CANVAS_RATIO_MAX / dpr));
+  wantCanvasGrowth(g);
+  // Grown to what shows, the canvas then takes its bitmap's own size, so the
+  // screen shows it pixel for pixel: each rounded on its own, the two were a
+  // pixel apart at 1.25x and 2x, and the screen resampled the whole drawing.
+  // (Up to the page's 1/64px, so a 1.25x screen gets the whole pixel too.)
+  const own = g > 1 && g === scale && grownTo(g);
+  const css = (px) => Math.ceil(px / dpr * 64) / 64;
+  const dispW = own ? css(canvas.width) : Math.round(authoredW * scale);
+  const dispH = own ? css(canvas.height) : Math.round(authoredH * scale);
   canvasWrap.style.width = dispW + 'px';
   canvasWrap.style.height = dispH + 'px';
   canvas.style.width = dispW + 'px';

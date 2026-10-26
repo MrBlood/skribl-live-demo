@@ -28,6 +28,10 @@ const DPR = Math.min(window.devicePixelRatio||1, 2);
 // smudged page pays for every pixel on every repaint.
 let RS = DPR;
 const RS_MAX = 2;
+// A layer's side in whole pixels at a ratio (the pad's own by default):
+// floored with a hair of slack, since a side that should be 558 can come out
+// 557.99999, and a canvas told that is 557, a pixel short of what shows.
+function layerPx(n, rs){ return Math.floor(n * (rs || RS) + 1e-6); }
 let CW = 0, CH = 0;              // mutable since v110 — set from FLIP_SIZES[0] below
 // Canvas presets. The payload has ALWAYS carried canvasSize and the player has
 // always honoured it (app.js establishEditorCanvas), so this needed no format
@@ -95,7 +99,7 @@ function applyCanvasSize(w, h, opts){
   for(const pair of layers){
     const cv = pair[0], c = pair[1];
     if(!cv || !c) continue;
-    cv.width = CW * RS; cv.height = CH * RS;
+    cv.width = layerPx(CW); cv.height = layerPx(CH);
     c.setTransform(RS, 0, 0, RS, 0, 0);        // resizing resets the transform
   }
   if(!opts || opts.silent !== true){
@@ -128,15 +132,16 @@ let flipFull = null;
 // once and the lines sharpen when it settles. The Pad does the same
 // (app.js wantCanvasGrowth).
 let _growWant = 1, _growTimer = 0, _grownOnce = false;
-function layersGrownTo(g){ return Math.trunc(CW*DPR*g) === pad.width && Math.trunc(CH*DPR*g) === pad.height; }
+function layersGrownTo(g){ return layerPx(CW, DPR*g) === pad.width && layerPx(CH, DPR*g) === pad.height; }
 function growLayersNow(g){
   RS = DPR * g;
   for(const [cv, c] of [[pad, ctx], [onionCv, octx], [tmpCv, tctx], [frameCv, fctx], [artCv, actx]]){
-    cv.width = CW * RS; cv.height = CH * RS;
+    cv.width = layerPx(CW); cv.height = layerPx(CH);
     c.setTransform(RS, 0, 0, RS, 0, 0);
   }
   playBitmaps = null; underCache = null; _liveCache = null;   // made at the old ratio
   render();
+  fitPad();   // and the pad takes the layers' own size (below)
 }
 function growWhenStill(){
   clearTimeout(_growTimer); _growTimer = 0;
@@ -168,9 +173,26 @@ function fitPad(){
   // with the scale (above), up to RS_MAX, so past 1:1 the page is painted
   // again at the size it shows.
   const scale = Math.max(0.1, Math.min(availW/CW, availH/CH));
-  wantGrow(Math.max(1, Math.min(scale, RS_MAX / DPR)));
-  pad.style.width = Math.round(CW*scale)+'px';
-  pad.style.height = Math.round(CH*scale)+'px';
+  // PAST 1:1 THE DRAWING SHOWS INSIDE THE PAD'S FRAME (its border), so that
+  // is the room the layers grow to, the frame outside it. Grown to the
+  // frame's outside, the layers were squeezed 4px into its inside and the
+  // screen resampled every line: a 1px line came out two, at half.
+  const fr = parseFloat(getComputedStyle(pad).borderLeftWidth) || 0;
+  const inner = Math.min((availW - 2*fr)/CW, (availH - 2*fr)/CH);
+  const g = Math.max(1, Math.min(inner, RS_MAX / DPR));
+  wantGrow(g);
+  if(g > 1){
+    // The drawing's size at once as the window moves; once the layers are
+    // made at it, their own size, so the screen shows them pixel for pixel
+    // (up to the page's 1/64px, so a 1.25x screen gets the whole pixel too).
+    const own = g === inner && layersGrownTo(g);
+    const css = (px) => Math.ceil(px / DPR * 64) / 64;
+    pad.style.width = ((own ? css(pad.width) : Math.round(CW*inner)) + 2*fr)+'px';
+    pad.style.height = ((own ? css(pad.height) : Math.round(CH*inner)) + 2*fr)+'px';
+  } else {
+    pad.style.width = Math.round(CW*scale)+'px';
+    pad.style.height = Math.round(CH*scale)+'px';
+  }
   syncGrid();
   if(ZoomView && ZoomView.isZoomed()) ZoomView.reclamp();
   // The dot moves with the canvas in the same frame (Play hides the strip,
@@ -1846,9 +1868,19 @@ function frameLayerFor(c){
   _frameBaseCtx.setTransform(DPR,0,0,DPR,0,0);
   return _frameBaseCtx;
 }
+/* A LAYER IS LAID ON PIXEL FOR PIXEL when it is the size of what it is laid
+   on (the pad and every layer it is painted through are). CW x CH through
+   the transform is CW*RS pixels, rarely a whole number once the canvas has
+   grown, and a layer laid that way was stretched by a fraction of a pixel:
+   every page softened. Anything else (a file, a thumbnail) as before. */
+function layOn(c, cv){
+  if(c.canvas && cv.width === c.canvas.width && cv.height === c.canvas.height){
+    c.save(); c.setTransform(1,0,0,1,0,0); c.drawImage(cv, 0, 0); c.restore();
+  } else c.drawImage(cv, 0, 0, CW, CH);
+}
 function paintFrame(c, strokes){
   const fl = frameLayerFor(c);
-  fl.clearRect(0,0,CW,CH); paintStatic(fl, strokes); c.drawImage(fl.canvas, 0, 0, CW, CH);
+  fl.clearRect(0,0,CW,CH); paintStatic(fl, strokes); layOn(c, fl.canvas);
 }
 // Centre of mass of a page's ink, in canvas coordinates. Averaging the stroke
 // POINTS (not their bounding box) is what makes the path track the drawing's
@@ -1930,7 +1962,7 @@ function paintUnder(c){
         octx.restore();
       }
       c.globalAlpha = alphas[k-1] || alphas[alphas.length-1];
-      c.drawImage(onionCv, 0, 0, CW, CH);
+      layOn(c, onionCv);
       c.globalAlpha = 1;
     }
   }
@@ -1978,7 +2010,7 @@ function _overBudgetOf(arr){
     : layerableCount(arr, strokeAlphaOf) > LAYER_BUDGET;
 }
 function _liveReady(cv){
-  const w = Math.trunc(CW*RS), h = Math.trunc(CH*RS);
+  const w = layerPx(CW), h = layerPx(CH);
   if(cv.width !== w || cv.height !== h){ cv.width = w; cv.height = h; }
   const c = cv.getContext('2d');
   c.setTransform(RS,0,0,RS,0,0);
@@ -1998,7 +2030,7 @@ function liveBegin(fr){
   paintUnder(u);
   if(flat){
     // The finished ink composited over the backdrop, exactly as render() does it.
-    fctx.clearRect(0,0,CW,CH); paintStatic(fctx, pre, ob); u.drawImage(frameCv, 0, 0, CW, CH);
+    fctx.clearRect(0,0,CW,CH); paintStatic(fctx, pre, ob); layOn(u, frameCv);
   } else {
     paintStatic(_liveReady(_liveDryCv), pre, ob);
   }
@@ -2013,22 +2045,22 @@ function _liveUsable(){
   // replaced (undo, clear and a page swap all fail one of these).
   if(s.length < L.start || (L.start && s[L.start - 1] !== L.last)) return false;
   if(L.flat === erasing) return false;   // the eraser was toggled mid-stroke
-  return _liveUnderCv.width === Math.trunc(CW*RS) && _liveUnderCv.height === Math.trunc(CH*RS);
+  return _liveUnderCv.width === layerPx(CW) && _liveUnderCv.height === layerPx(CH);
 }
 
 function render(){
   ctx.clearRect(0,0,CW,CH);
   if(_liveUsable()){
     const L = _liveCache, live = L.fr.strokes.length > L.start ? L.fr.strokes.slice(L.start) : null;
-    ctx.drawImage(_liveUnderCv, 0, 0, CW, CH);
+    layOn(ctx, _liveUnderCv);
     if(L.flat){
       if(live) paintStatic(ctx, live, L.ob);
     } else {
       fctx.save(); fctx.globalCompositeOperation = 'copy';
-      fctx.drawImage(_liveDryCv, 0, 0, CW, CH);
+      layOn(fctx, _liveDryCv);
       fctx.restore();
       if(live) paintStatic(fctx, live, L.ob);
-      ctx.drawImage(frameCv, 0, 0, CW, CH);
+      layOn(ctx, frameCv);
     }
   } else {
     paintUnder(ctx);
@@ -3967,14 +3999,14 @@ function drawUnderPage(c, i, faint){
     c.save(); c.globalAlpha = UNDER_EDIT_ALPHA; paintFrame(c, f.strokes); c.restore();
     return;
   }
-  if(!underCache || underCache.f !== f || underCache.cv.width !== Math.round(CW * RS)){
+  if(!underCache || underCache.f !== f || underCache.cv.width !== layerPx(CW) || underCache.cv.height !== layerPx(CH)){
     const cv = document.createElement('canvas');
-    cv.width = Math.round(CW * RS); cv.height = Math.round(CH * RS);
+    cv.width = layerPx(CW); cv.height = layerPx(CH);
     const cx = cv.getContext('2d'); cx.scale(RS, RS);
     paintFrame(cx, f.strokes);
     underCache = { f, cv };
   }
-  c.drawImage(underCache.cv, 0, 0, CW, CH);
+  layOn(c, underCache.cv);
 }
 function _validLoop(){
   const H = window.SkriblHold;
@@ -4272,17 +4304,23 @@ function playPaint(){
   const FB = window.SkriblFrameBitmap;
   const hit = FB ? FB.get(playBitmaps, f) : null;
   if(hit){
-    ctx.clearRect(0,0,CW,CH);
-    ctx.drawImage(hit, 0, 0, CW, CH);
+    // Back onto the pad's own pixels, not CW x CH through the transform: grown,
+    // CW*RS is not a whole number of them, and the copy came back stretched by
+    // a fraction of a pixel, so a cached page was not the page painted.
+    ctx.save(); ctx.setTransform(1,0,0,1,0,0);
+    ctx.clearRect(0,0,pad.width,pad.height);
+    ctx.drawImage(hit, 0, 0, pad.width, pad.height);
+    ctx.restore();
     return true;
   }
   render();
   if(FB && f && playBitmaps){
     // Captured from the visible pad AFTER its own render, so the bitmap is the
     // exact composite this playback just showed — at the resolution it was
-    // shown at, which is what bounds the memory (see the lib header).
+    // shown at, which is what bounds the memory (see the lib header). The
+    // backing is the pad's real size (CW*RS rounded up past it, grown).
     const rect = pad.getBoundingClientRect();
-    const sz = FB.captureSize(CW * RS, CH * RS, rect.width * DPR, rect.height * DPR);
+    const sz = FB.captureSize(pad.width, pad.height, rect.width * DPR, rect.height * DPR);
     if(FB.wants(playBitmaps, f.strokes.length, sz.w, sz.h))
       FB.capture(playBitmaps, f, pad, sz.w, sz.h);
   }
