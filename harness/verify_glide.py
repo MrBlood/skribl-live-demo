@@ -13,8 +13,11 @@ watches it the way a person does, frame by frame:
   3. A FLIP PAGE THAT DRAWS ITSELF reveals one point at a time.
   4. NOTHING IS LONGER OR SHORTER: the replay's length is what it was.
 """
+import base64
 import json
+import math
 import os
+import struct
 import sys
 import urllib.error
 import urllib.request
@@ -46,6 +49,22 @@ def bundled(per, gap, groups):
             "canvasSize": {"cssWidth": 816, "cssHeight": 612},
             "frames": [{"strokes": pts, "strokeGroups": [len(pts)], "background": {"color": "#f6f2ea"}}],
             "title": "glide"}
+
+
+def tone(seconds, rate=8000):
+    """A quiet sine, as a WAV: a song for a drawing to keep to."""
+    pcm = b"".join(struct.pack("<h", int(6000 * math.sin(2 * math.pi * 330 * i / rate))) for i in range(int(seconds * rate)))
+    return (b"RIFF" + struct.pack("<I", 36 + len(pcm)) + b"WAVEfmt " + struct.pack("<IHHIIHH", 16, 1, 1, rate, rate * 2, 2, 16)
+            + b"data" + struct.pack("<I", len(pcm)) + pcm)
+
+
+# A browser moves the audio clock a callback at a time; a phone's Bluetooth
+# can make that 40ms. This makes it so here, and notes when a song starts.
+COARSE = """(() => { const d = Object.getOwnPropertyDescriptor(BaseAudioContext.prototype, 'currentTime');
+  Object.defineProperty(BaseAudioContext.prototype, 'currentTime', { configurable: true,
+    get() { return Math.floor(d.get.call(this) / 0.04) * 0.04; } });
+  const real = AudioBufferSourceNode.prototype.start;
+  AudioBufferSourceNode.prototype.start = function () { if (this.loop) window.__song = performance.now(); return real.apply(this, arguments); }; })();"""
 
 
 def post(payload):
@@ -113,6 +132,34 @@ with sync_playwright() as p:
               "the nib moves on nearly every frame, never still for more than two",
               g["moved"] >= 0.8 and g["hold"] <= 2, str(g))
         check(f"[shared player, {label}] no page errors", not errs, "; ".join(errs[:2]))
+        pg.close()
+
+    # 1b. ...WITH ITS SONG. While a song plays in step the drawing keeps to it
+    # (lib/holdtiming.js songClock), and a drawing that read its time off the
+    # audio clock moved only when the clock did: with 40ms steps, on four
+    # frames in ten. It keeps the wall's pace and only waits for the song.
+    music = bundled(12, 48, 60)
+    music["frames"][0]["music"] = {"data": "data:audio/wav;base64," + base64.b64encode(tone(2)).decode(),
+                                   "name": "tone.wav", "trimStart": 0, "trimEnd": 2}
+    st, body = post(music)
+    if st not in (200, 201) or not body.get("url"):
+        check("[shared player] the drawing with its song posted", False, f"{st} {body}")
+    else:
+        pg = b.new_page(viewport={"width": 1100, "height": 900})
+        errs = []
+        pg.on("pageerror", lambda e: errs.append(str(e)))
+        pg.add_init_script(COARSE)
+        pg.goto(BASE + body["url"], wait_until="load")
+        pg.wait_for_function("() => !!document.querySelector('#playerLine .rl-speed')", timeout=10000)
+        pg.wait_for_timeout(300)
+        pg.click("#playerPlayBtn")
+        pg.wait_for_function("() => window.__song", timeout=8000)
+        pg.wait_for_timeout(250)   # the song heard, the start's wait over
+        g = glide(pg.evaluate(WATCH, 1500))
+        check("[shared player] ...and with its song playing, the song's clock moving in 40ms steps (a phone's "
+              "Bluetooth): the nib still moves on nearly every frame, never still for more than two",
+              g["moved"] >= 0.8 and g["hold"] <= 2, str(g))
+        check("[shared player, with its song] no page errors", not errs, "; ".join(errs[:2]))
         pg.close()
 
     # 2. the Pad, with a real touch stroke the browser bundles

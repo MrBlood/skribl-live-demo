@@ -346,6 +346,74 @@
     return (isFinite(f) && f > 0) ? f : 12;
   }
 
+  /* WHILE A SONG PLAYS, THE PLAYER'S CLOCK KEEPS TO THE SONG, AS HEARD (the
+   * owner's yes, after Match the beat). The editor's Flip already waits on it
+   * with Beat as the speed (flip.js runPlayTimer); the link page and a post's
+   * box counted the wall's time alone, so an audio stall (a busy phone, a
+   * Bluetooth hiccup) left the song behind the pages for good: 0.3s held,
+   * measured, and every round after it came 0.34s early on the link page and
+   * 0.31s early in the feed. The song's time is the audio context's, from
+   * where its source began, less the time the sound takes to reach the ear.
+   *
+   * THE DRAWING GOES AT THE WALL'S PACE AND WAITS FOR THE SONG. A browser
+   * moves the audio clock a callback at a time, 9 to 20ms a frame here and
+   * more on a phone, so a drawing that read its time off it stepped where it
+   * should glide. So the drawing keeps the wall's pace, and the song decides
+   * when it waits: from its start until the song is heard (the speaker's
+   * delay), and whenever the song falls more than 50ms behind it (a stall),
+   * until the song comes past it again. It never steps back. 50ms is past the
+   * audio clock's own steps (40ms at most, a phone's Bluetooth), so a song
+   * that is playing is never waited for. A context that has not run yet (an
+   * unlock still on its way) is not the clock; once it runs, the drawing
+   * waits for the song to catch up.
+   *
+   * AND IT EASES ONTO THE SONG. The two clocks drift (2ms a second here), and
+   * a hiccup under 50ms is not waited for, so the drawing would slide off the
+   * beat until the next stall. It eases instead: by a tenth of how far it is
+   * from the song each frame, never more than a tenth of the frame, so it
+   * goes at most a tenth faster or slower while it does. How far is the
+   * least it has been lately (`lead`, let rise 1ms a frame): the audio
+   * clock's own steps only ever add to it.
+   *
+   * IT WAITS A SECOND AT MOST. A song gone longer than that (a call, the lock
+   * screen: its context stops, and nothing here starts it again) is not waited
+   * for: the drawing carries on at the wall's pace, a second behind where it
+   * would have been, and when the song comes back the drawing goes on from
+   * where it is at the song's pace, waiting for the next stall again. Waiting
+   * without end froze a phone's drawing until someone tapped.
+   *
+   *   c = songClock(); c.began(ctx, ms, rate)  a source began on ctx where the
+   *     drawing's time is ms, the drawing moving `rate` ms per ms of the song;
+   *   c.ended(); c.at(wallMs)  the time to show (the wall's when no song is the
+   *     clock): the caller's own time, which goes on from the last one shown. */
+  function songClock() {
+    var a = null, last = 0, free = 0;
+    return {
+      began: function (c, ms, rate) { a = c ? { c: c, t: c.currentTime, ms: ms, rate: rate, wait: true, lead: 0 } : null; last = free = ms; },
+      ended: function () { a = null; },
+      at: function (wall) {
+        free += wall - last;   // where the drawing would be had it not waited
+        if (a && a.c.state === 'running') a.on = true;
+        if (!a || !a.on) return (last = free = wall);
+        var heard = a.c.currentTime - a.t - (a.c.baseLatency || 0) - (a.c.outputLatency || 0),
+            s = a.ms + Math.max(0, heard) * 1000 * a.rate, k = a.rate;
+        if (a.gone != null) {                          // gone: the wall's pace, until it moves
+          if (s > a.gone) { a.ms += wall - s; a.gone = null; }
+          return (last = free = wall);
+        }
+        if (a.wait) {
+          if (s > last) { a.wait = false; a.lead = 0; return (last = free = s); }   // heard: on from here
+          if (free - last > 1000 * k) { a.gone = s; return (last = free = free - 1000 * k); }
+          return last;
+        }
+        var g = wall - s, d = wall - last;
+        if (g > 50 * k) { a.wait = true; return last; }              // the song fell behind
+        a.lead = Math.min(g, a.lead + k);
+        return (last = free = wall - Math.max(-d, Math.min(d, a.lead)) / 10);
+      }
+    };
+  }
+
   var api = {
     MAX_HOLD: MAX_HOLD,
     holdOf: holdOf,
@@ -363,7 +431,8 @@
     plan: plan,
     wrapMs: wrapMs,
     displayAt: displayAt,
-    untie: untie
+    untie: untie,
+    songClock: songClock
   };
 
   if (typeof window !== 'undefined') window.SkriblHold = api;

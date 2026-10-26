@@ -24056,3 +24056,94 @@ own, because the Pad paints a canvas that holds its pixels and Flip paints
 from its pages every time, and the two need different things to make a
 bitmap again. Not tested here: Windows, Edge, Safari, and Segoe UI or SF; a
 real 4K or 5K screen.
+
+## After v329 -- A posted song that stalls keeps the pages with it
+
+The owner said yes to fixing the link page and a post's box the editor's way:
+the pages follow the song's clock. Measured first, on main: a Beat Flip
+posted, its song's audio clock held for 0.3s three seconds in (the context
+suspended, then resumed, which a busy phone or a Bluetooth hiccup does by
+itself), and every round after it came 0.34s early on the link page and 0.31s
+early in the box in the feed, for good: both players counted the wall's time
+alone, and the song had fallen behind it. The editor's Flip was already fine
+(it waits on the song's clock with Beat as the speed, flip.js runPlayTimer).
+
+WHILE A SONG PLAYS IN STEP, THE PLAYER KEEPS TO IT, AS HEARD. lib/holdtiming.js
+songClock(): began(ctx, ms, rate) when a source starts where the drawing is
+ms, ended() when it stops, at(wall) the time to show. The song's time is the
+audio context's from where the source began, less the time the sound takes
+to reach the ear (baseLatency and outputLatency, as the editor allows for).
+The link page (app.js) begins it where the song starts in step (musicRate()
+is the drawing's rate) and ends it in paStop(), so a scrub, a new speed, a
+pause and a restart each begin it again from where the song starts; its
+frame() takes the time from it. A post's box (inlineplayer.js) does the same,
+counted in lap plus elapsed as its song is. With no song, or one at its own
+rate under a faster replay, both count the wall's time as before.
+
+THE DRAWING KEEPS THE WALL'S PACE, AND THE SONG ONLY SAYS WHEN TO WAIT. The
+first build read the drawing's time straight off the audio clock, and a
+browser moves that clock a callback at a time: measured here, 9 to 20ms a
+frame against the screen's 16.7, and 40ms on a phone's Bluetooth is likely.
+A replay that should glide stepped (verify_glide, with a song and the clock in
+40ms steps: the nib moved on 42% of frames). So the drawing goes at the wall's
+pace and waits: from each start until the song is heard (the speaker's
+delay), and whenever the song falls more than 50ms behind it, until the song
+comes past it; it never steps back. 50ms is past the audio clock's own steps,
+so a song that is playing is never waited for. A context that has not run
+yet (an unlock on its way) is not the clock; once it runs, the drawing waits
+for the song to catch up. AND IT EASES ONTO THE SONG: the two clocks drift
+(2ms a second here, so a round slid 25ms in sixteen seconds), and a hiccup
+under 50ms is not waited for, so the drawing eases instead, by a tenth of how
+far it is from the song each frame and never more than a tenth of the frame:
+at most a tenth faster or slower while it does. How far is the least it has
+been lately, which leaves the audio clock's own steps out.
+
+IT WAITS A SECOND AT MOST. A clock that waited without end froze the drawing
+whenever the song's context stopped and nothing here started it again: on a
+phone a call or the lock screen, until someone tapped. Past a second of
+waiting (two of the drawing's seconds at twice the speed) the drawing goes on
+at the wall's pace, and when the song comes back it goes on from where it is
+at the song's pace, waiting for the next stall again; the beat is off by
+however long the song was gone, until the song starts again (a pause and
+Play, or a new speed). And THE LINK PAGE'S SONG STARTS WHERE THE DRAWING IS
+WHEN ITS UNLOCK LANDS. An iPhone's first Play unlocks the sound late; the
+song started where Play was pressed, and its clock then took the drawing
+back to meet it (three pages, with the unlock held 0.25s). paStartAtElapsed()
+reads the drawing's place again once the context runs. A post's box starts
+its song at once, and its clock waits for the unlock, a second at most.
+
+The players now allow for the speaker's delay too (42ms here), as the
+editor does: verify_flipbeat's own words said they did not.
+
+verify_flipbeat's posted part: a 0.3s stall on the link page and in the box,
+every round after it within 60ms of its beat (red on main: -338 to -344, -297
+to -325); a song gone for 2.5s, which holds the link page's drawing a second
+at most; its song's unlock held 0.25s, after which the drawing never goes
+back a page and every round is within 60ms of its beat; a speed the song does
+not follow (4x) picked mid-play, which the drawing takes (without ended() the
+song's clock kept it at 1x); the song a bed there, which does not hold the
+drawing when it stalls; and the clock on its own, a context made up and its
+time set by hand: begun at 1000ms, half a second on, less the speaker's 40ms,
+at twice the speed, is 1920ms; held, it waits and never steps back; a context
+that has not run is not the clock; ended, the wall's time again; a song gone
+is waited for a second, then the drawing goes on, and follows the song from
+there once it is back; with the song's clock in 40ms steps the drawing moves
+on every frame, 16.7ms give or take a tenth, and keeps within 10ms of the
+song as it really plays; a 45ms hiccup is eased out, never more than a tenth
+slower; and a song's clock 1% fast is never more than 20ms ahead of the
+drawing. verify_glide: with its song and the clock in 40ms steps, the nib
+moves on nearly every frame. Twenty-five breaks, each served in place of
+the real file, turned red only the rows that guard them: the players' wiring
+(the link page's follow, its clock begun and ended, the in-step rule, the
+song started where Play was pressed; the box's follow and its clock begun),
+and in the clock the wall's time, the speaker's delay, the never stepping
+back, a context that has not run, the end, the second's wait (without it,
+without the time it counts, at the drawing's speed, at a tenth), the drawing
+read straight off the audio clock, the start's wait, the wait for a song
+fallen behind (gone, and at 400ms), the song followed again once back, the
+ease (gone, uncapped, and without the least lead), and the release onto the
+song. verify_glide's song row, with the drawing read off the audio clock: the
+nib moved on 42% of frames. And the posted part's watcher reads the song
+BEFORE the canvas now: reading the canvas back waits on the GPU, longer the
+busier the box, and the song read after it was that much late (a round came
+"79ms late" beside other suites; alone, never).

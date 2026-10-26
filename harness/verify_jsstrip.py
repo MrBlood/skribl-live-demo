@@ -304,9 +304,12 @@ with sync_playwright() as sp:
     # contrast against what is painted under the bar, so a colour that would
     # not read is ringed (152,703 measured). And RAISED, in both places
     # together, by the glowing dot on a Flip page that draws itself (the
-    # owner's C, after v328), +209 B, all app.js (152,917 measured).
+    # owner's C, after v328), +209 B, all app.js (152,917 measured). And
+    # RAISED, in both places together, by a posted song that stalls keeping
+    # the pages with it (a bug fix, the owner's yes), +1,370 B: lib/holdtiming.js
+    # songClock and app.js's use of it (153,354 measured).
     check("stripping keeps the player's JS under its ratchet",
-          lean_total <= 152_920,
+          lean_total <= 153_357,
           f"{src_total:,} B of source -> {lean_total:,} B parsed")
     # THE MODULE ONLY A RECOLOURED DRAWING FETCHES (lib/recolorplay.js, by
     # app.js on the link page and inlineplayer.js in a post): its own pin, so

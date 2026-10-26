@@ -1602,7 +1602,17 @@ with sync_playwright() as sp:
     #   (`lap`), and the song started where the drawing is. WHICH CALLER PAYS:
     #   every page that shows a post, for every post with music. Spent first:
     #   `lap` joins the clock's own line. 74,311 B measured.
-    EMBED_RATCHET = 74_315
+    # RAISED (a bug fix, the owner's yes: a posted song that stalls keeps the
+    #   pages with it, as the editor's Flip does), for one named cost: +1,267 B,
+    #   lib/holdtiming.js and inlineplayer.js -- songClock, the song's time as
+    #   heard (its context's from where the source began, less the speaker's
+    #   delay), the drawing at the wall's pace waiting for it and easing onto
+    #   it, never stepping back and waiting a second at most, begun where the
+    #   box starts its song and ended where it stops, the frame taking its time
+    #   from it. WHICH CALLER PAYS: every page that shows a post, for every post
+    #   with music. Spent first: one guard where there were two, and the
+    #   clock's flag left unset rather than set false. 75,578 B measured.
+    EMBED_RATCHET = 75_582
     # THE RATCHET MEASURES DISPLAY, NOT COMPOSE, and the two are separate costs
     # paid by separate pages. Excluded here and measured on its own below:
     #   feed.js          the PREVIEW PAGE's own script (fetch the listing, clone
