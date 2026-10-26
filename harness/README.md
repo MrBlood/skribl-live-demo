@@ -684,7 +684,11 @@ stays a sleep.
   with the song's clock in 40ms steps the drawing still moves on every frame,
   16.7ms give or take a tenth, within 10ms of the song as it plays; a 45ms
   hiccup is eased out, never more than a tenth slower; and a song's clock 1%
-  fast never gets 20ms ahead of the drawing.
+  fast never gets 20ms ahead of the drawing. A round late while the box held
+  the page (50ms or more between two looks, after the page fell due) says how
+  long the box held it, not where the drawing was: each row sets one such
+  round aside, the furthest off, and names it, so a drawing late on every
+  round is still late.
   `FLIPBEAT_PART=show` (round, kept, beat, posted) runs a
   part. Each row was shown red by its own break, served in place of the real
   file.
