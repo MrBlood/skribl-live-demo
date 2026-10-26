@@ -3564,6 +3564,10 @@ function showPlayerError(msg, canRetry) {
   // used to be written out here as a literal, a copy of flip.js's MAX_HOLD with
   // nothing forcing them to agree. Inline fallback kept, as the other libs do.
   const _hold = (typeof window !== 'undefined' && window.SkriblHold) ? window.SkriblHold : null;
+  // While the song plays in step with the drawing, the drawing keeps the
+  // song's time, as heard (lib/holdtiming.js songClock: an audio stall left
+  // every page after it early, for good).
+  const songClk = _hold ? _hold.songClock() : null;
   /* PER-PAGE MILLISECONDS, not fps slots. A page carrying `draw` replays its
      own strokes over their recorded timing and is exempt from fps, so its
      duration is not a whole number of slots and the cumulative table cannot be
@@ -3894,6 +3898,7 @@ function showPlayerError(msg, canRetry) {
       try { paSource.disconnect(); } catch (e) {}
       paSource = null;
     }
+    if (songClk) songClk.ended();
   }
   // Start the loop bed aligned to a drawing-elapsed position (ms). Returns false
   // (a no-op) if audio isn't decoded yet — the drawing still plays and a later
@@ -3915,9 +3920,9 @@ function showPlayerError(msg, canRetry) {
   // unlock is awaited, the generation is re-checked after the await (a Stop or
   // a second Play during the wait must win), and only a confirmed 'running'
   // context gets a source. paSource now means "started on a running context".
-  function paStartAtElapsed(elapsedMs) {
+  function paStartAtElapsed(drawAt) {
     if (!audioCtx) return false;
-    elapsedMs = elapsedMs / replayRate * musicRate();   // where the CLIP is: see musicRate()
+    let elapsedMs = drawAt / replayRate * musicRate();   // where the CLIP is: see musicRate()
     const buf = paLoopBuffer();
     if (!buf) return false;
     paStop();
@@ -3925,6 +3930,10 @@ function showPlayerError(msg, canRetry) {
     const mk = () => {
       // Re-check EVERYTHING that could have changed across the await.
       if (gen !== paGen || !audioCtx || audioCtx.state !== 'running') return false;
+      // And start where the drawing is BY NOW. An unlock that lands late (iOS)
+      // started the song where Play was pressed, and the song's clock then
+      // took the drawing back there.
+      if (running) elapsedMs = (drawAt = elapsedBase + segElapsed()) / replayRate * musicRate();
       if (!paGain) { paGain = audioCtx.createGain(); paGain.connect(audioCtx.destination); }
       paGain.gain.value = muted ? 0 : 1;
       const dur = buf.duration;
@@ -3941,6 +3950,8 @@ function showPlayerError(msg, canRetry) {
       src.connect(paGain);
       try { src.start(0, offset); } catch (e) { return false; }
       paSource = src;
+      // In step only while the clip keeps the drawing's rate (musicRate).
+      if (songClk && musicRate() === replayRate) songClk.began(audioCtx, drawAt, replayRate);
       return true;
     };
     if (audioCtx.state === 'running') return mk();
@@ -4059,7 +4070,8 @@ function showPlayerError(msg, canRetry) {
   }
 
   function frame() {
-    const elapsed = elapsedBase + segElapsed();
+    let elapsed = elapsedBase + segElapsed();
+    if (songClk) { const t = songClk.at(elapsed); elapsedBase += t - elapsed; elapsed = t; }
     if (isFlip) {
       const cycT = flipDurMs ? (elapsed % flipDurMs) : 0;
       /* THROUGH displayAt(): no instant of the live clock supplies progress 1

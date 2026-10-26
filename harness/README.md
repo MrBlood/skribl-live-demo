@@ -662,7 +662,21 @@ stays a sleep.
   resume keep them together. Posted, on the link page and in a post's box in
   the feed, every round within 60ms of its beat and none sliding (the box slid
   190ms in sixteen seconds before), and a pause in the box carries the song on
-  from where it was. `FLIPBEAT_PART=show` (round, kept, beat, posted) runs a
+  from where it was. A song that stalls for 0.3s keeps the pages with it, on
+  the link page and in the box, every round after it within 60ms (counting the
+  wall's time they came 0.34s and 0.31s early, for good); a speed the song does
+  not follow (4x) picked mid-play the drawing takes, and the song, a bed there,
+  does not hold it when it stalls. A song gone for 2.5s holds the link page's
+  drawing a second at most, and an unlock that lands 0.25s late (an iPhone's
+  first Play) starts the song where the drawing is, which never goes back a
+  page. The players' clock on its own (lib/holdtiming.js songClock, a context
+  made up): the song's time as heard, waiting and never stepping back, a second
+  at most, not the clock before its context runs, the wall's again once ended;
+  with the song's clock in 40ms steps the drawing still moves on every frame,
+  16.7ms give or take a tenth, within 10ms of the song as it plays; a 45ms
+  hiccup is eased out, never more than a tenth slower; and a song's clock 1%
+  fast never gets 20ms ahead of the drawing.
+  `FLIPBEAT_PART=show` (round, kept, beat, posted) runs a
   part. Each row was shown red by its own break, served in place of the real
   file.
 - `verify_bigcanvas.py` — a bigger canvas, sharp (the owner's B, "All yes"),
@@ -723,8 +737,12 @@ stays a sleep.
 - `verify_glide.py` — a replay glides (lib/holdtiming.js untie()): a stroke
   recorded in bundles of points sharing one time plays point after point,
   read off the nib's place on every animation frame, on the shared player at
-  1/4x and 1x and on the Pad at 1/4x; a Flip page that draws itself reveals
-  one point at a time; the replay's length is what it was.
+  1/4x and 1x and on the Pad at 1/4x; on the shared player with its song
+  playing, the song's clock made to move in 40ms steps (a phone's Bluetooth),
+  the nib still moves on nearly every frame (lib/holdtiming.js songClock keeps
+  the wall's pace; read off the clock, it moved on four frames in ten); a
+  Flip page that draws itself reveals one point at a time; the replay's
+  length is what it was.
 - `verify_contrast.py` — every word on every sheet against what is painted
   behind it (owner, after v323: "check contrasts and consistency on all our
   changes, and future changes"): the menu (main, New, Settings), Your drafts,

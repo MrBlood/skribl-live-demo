@@ -43,11 +43,19 @@ the editor wrote down for itself.
   POSTED. A Beat Flip posted, its pages each a colour of their own, read off
   the middle of the canvas on every frame against the song as heard: on the
   link page and in a post's box in the feed, every round within 60ms of its
-  beat (the players do not allow for the speaker's delay, 42ms here) and none
-  sliding, the last four where the first four were; a pause in the box
-  carries the song on from where it was. The box slid 190ms in sixteen
-  seconds, each pass starting again from zero on the frame that noticed, and
-  started its song from its top after a pause, 340ms off.
+  beat and none sliding, the last four where the first four were; a pause in
+  the box carries the song on from where it was. The box slid 190ms in
+  sixteen seconds, each pass starting again from zero on the frame that
+  noticed, and started its song from its top after a pause, 340ms off. A
+  song that stalls for 0.3s three seconds in (its clock held, as a busy
+  phone holds it) keeps the pages with it, on the link page and in the box:
+  every round after it within 60ms. Counting the wall's time, they came
+  0.34s early on the link page and 0.31s in the box, for good. The players'
+  clock is the song's, as heard (lib/holdtiming.js songClock): a song begun
+  where the drawing was 1000ms, half a second on, less the speaker's 40ms,
+  at twice the speed, is 1920ms; held, the drawing waits and never steps
+  back; a song whose context has not run yet is not the clock, and once it
+  runs the drawing waits for it to catch up; ended, the wall's time again.
 
 On Flip only (the Pad has no pages), on a phone. FLIPBEAT_PART=show (round,
 kept, beat, posted) runs one part, for calibration. Each row was shown red by its
@@ -153,10 +161,48 @@ HEARD = """(() => { const real = AudioBufferSourceNode.prototype.start;
   window.__heard = () => { const s = window.__src; if (!s) return null; const c = s.ctx;
     return ((c.currentTime - s.at) * s.rate + s.off) % s.dur - ((c.baseLatency || 0) + (c.outputLatency || 0)); }; })();"""
 # Each time the canvas's middle changes, its colour and the song as heard.
+# The song is read FIRST: reading the canvas back waits on the GPU, longer the
+# busier the box, and the song read after it was read that much late (rounds
+# came 79ms "late" beside other suites).
 WATCH = """([sel, secs]) => new Promise((done) => { const cv = document.querySelector(sel), g = cv.getContext('2d'), out = [], t0 = performance.now(); let last = null;
-  (function tick() { const now = performance.now(), d = g.getImageData(cv.width >> 1, cv.height >> 1, 1, 1).data, key = d[0] + ',' + d[1] + ',' + d[2];
-    if (key !== last) { last = key; out.push({ page: null, rgb: [d[0], d[1], d[2]], heard: window.__heard() }); }
+  (function tick() { const now = performance.now(), h = window.__heard(), d = g.getImageData(cv.width >> 1, cv.height >> 1, 1, 1).data, key = d[0] + ',' + d[1] + ',' + d[2];
+    if (key !== last) { last = key; out.push({ page: null, rgb: [d[0], d[1], d[2]], heard: h, t: now - t0 }); }
     if (now - t0 < secs * 1000) requestAnimationFrame(tick); else done(out); })(); })"""
+# The song's clock held for ms, at ms into watching: its context suspended,
+# then resumed, what a busy phone does by itself.
+STALL = """([at, ms]) => { setTimeout(() => { const s = window.__src; if (!s) { window.__stalled = 'no song'; return; }
+  window.__stalled = 'held'; s.ctx.suspend().then(() => setTimeout(() => s.ctx.resume(), ms)); }, at); }"""
+# 4x from the link page's speed line, as a viewer picks it.
+PICK4 = "() => { document.querySelector('#playerLine .rl-speed').click(); document.querySelector('#playerLine .rl-chips [data-r=\"4\"]').click(); }"
+# The players' clock on its own: a context made up, its time set by hand.
+# Each at() is given the caller's own time, the last one shown plus a frame's
+# worth, as a player's frame() gives it.
+CLOCK = """() => { const H = window.SkriblHold; if (!H || !H.songClock) return null;
+  const a = { currentTime: 10, baseLatency: 0.01, outputLatency: 0.03, state: 'running' }, c = H.songClock(), o = {};
+  c.began(a, 1000, 2); a.currentTime = 10.5; o.heard = c.at(99999);
+  o.held = c.at(o.heard + 600); a.currentTime = 10.02; o.back = c.at(o.held + 100); o.long = c.at(o.back + 1500);
+  const s = { currentTime: 5, state: 'suspended' }, d = H.songClock();
+  d.began(s, 0, 1); o.notYet = d.at(777);
+  s.state = 'running'; s.currentTime = 5.2; o.catching = d.at(900); s.currentTime = 6; o.follows = d.at(950);
+  d.ended(); o.ended = d.at(4321);
+  const g = { currentTime: 0, state: 'running' }, e = H.songClock(); let t = 0; const step = (ms) => (t = e.at(t + ms));
+  e.began(g, 0, 1); g.currentTime = 0.1; step(100);
+  g.state = 'interrupted'; step(500); o.gone = [step(500), step(500), step(500)];
+  g.state = 'running'; g.currentTime = 0.6; o.gone.push(step(500), step(300));
+  const q = { currentTime: 0, state: 'running' }, h = H.songClock(); let w = 0; o.glide = []; o.near = 0; h.began(q, 0, 1);
+  for (let k = 1; k <= 40; k++) { q.currentTime = Math.floor(k * 16.667 / 40) * 0.04; const n = h.at(w + 16.667); o.glide.push(n - w); w = n;
+    if (k > 8) o.near = Math.max(o.near, Math.abs(n - k * 16.667)); }
+  const y = { currentTime: 0, state: 'running' }, z = H.songClock(); let v = 0, hic = []; z.began(y, 0, 1);
+  for (let k = 1; k <= 180; k++) { const tt = k * 16.667 - Math.max(0, Math.min(k * 16.667 - 1000, 45)); y.currentTime = tt / 1000;
+    const n = z.at(v + 16.667); if (k > 62) hic.push(n - v); v = n; if (k === 180) o.hicEnd = n - tt; }
+  o.hic = [Math.min(...hic), Math.max(...hic)];
+  const f = { currentTime: 0, state: 'running' }, m = H.songClock(); let x = 0; o.behind = 0; m.began(f, 0, 1);
+  for (let k = 1; k <= 1200; k++) { f.currentTime = k * 0.016667 * 1.01; x = m.at(x + 16.667); o.behind = Math.max(o.behind, f.currentTime * 1000 - x); }
+  return o; }"""
+# A song that does not start when Play asks: its context suspended, and its
+# unlock made to land ms late, as an iPhone's first Play can.
+LATE = """(ms) => { const c = window.__src && window.__src.ctx; if (!c) return 'no song'; const r = c.resume.bind(c);
+  return c.suspend().then(() => { c.resume = () => new Promise((ok, no) => setTimeout(() => r().then(ok, no), ms)); return c.state; }); }"""
 # When Play is pressed, by the page's own clock.
 PLAYAT = "() => document.getElementById('play').addEventListener('click', () => { window.__playAt = performance.now(); }, { once: true, capture: true })"
 TAPS = """(o) => new Promise((res) => { const b = document.getElementById('musicTapBtn'); let i = 0, t0 = null, due = 0;
@@ -229,8 +275,7 @@ def page_of(rgb):
 
 
 def steady(off):
-    """Every round within 60ms of its beat (a player that does not allow for
-    the speaker's delay is that much ahead), and none sliding: the last four
+    """Every round within 60ms of its beat, and none sliding: the last four
     where the first four were, within 25ms."""
     mid = lambda xs: sorted(xs)[len(xs) // 2]
     return len(off) >= 8 and max(abs(x) for x in off) <= 60 and abs(mid(off[-4:]) - mid(off[:4])) <= 25
@@ -448,6 +493,111 @@ with sync_playwright() as p:
         off = round_starts(rec, bpm, 0.5)
         check("a pause in a post's box carries the song on from where it was: every round after it within 60ms of its beat",
               len(off) >= 6 and max(abs(x) for x in off) <= 60, " ".join(f"{x:+.0f}" for x in off))
+        # A STALL, on the link page and in the box: every round after it.
+        def after_stall(rec):
+            return round_starts([rec[0]] + [r for r in rec[1:] if r["t"] > 4600], bpm, 0.5) if rec else []
+        pg.close()
+        pg = v.new_page()
+        pg.on("pageerror", lambda e: perrs.append(str(e)))
+        pg.goto(f"{BASE}/s/{pid}", wait_until="load")
+        pg.wait_for_selector("#playerPlayBtn", state="visible", timeout=20000); pg.wait_for_timeout(900)
+        clk = pg.evaluate(CLOCK)
+        check("the players' clock is the song's as heard: begun at 1000ms, half a second on, less the speaker's 40ms, at twice the speed, is 1920ms",
+              bool(clk) and abs(clk["heard"] - 1920) < 0.01, str(clk))
+        check("...held, the drawing waits there and never steps back; a song whose context has not run is not the clock, "
+              "and once it runs the drawing waits for it to catch up, then follows; ended, the wall's time again",
+              bool(clk) and abs(clk["held"] - 1920) < 0.01 and abs(clk["back"] - 1920) < 0.01 and clk["notYet"] == 777
+              and clk["catching"] == 777 and abs(clk["follows"] - 1000) < 0.01 and clk["ended"] == 4321, str(clk))
+        check("...and it waits a second at most: a song gone (its context stopped: a call, the lock screen) is waited for a second "
+              "(two of the drawing's at twice the speed), then the drawing goes on at the wall's pace; the song back, "
+              "the drawing follows it from there and waits for the next stall again",
+              bool(clk) and [round(x) for x in clk["gone"]] == [100, 600, 1100, 1600, 1600] and round(clk["long"]) == 2120,
+              str(clk and [clk["gone"], clk["long"]]))
+        # A browser moves the audio clock a callback at a time (9 to 20ms a
+        # frame here, 40ms with a phone's Bluetooth): read straight off it, a
+        # drawing stepped 0, 0, 40 where it should glide 16.7 a frame.
+        _gl = (clk or {}).get("glide") or []
+        check("...and it glides: with the song's clock moving in 40ms steps, as a phone's can, the drawing moves "
+              "on every frame once the song is heard, 16.7ms give or take a tenth",
+              len(_gl) == 40 and all(15.0 <= x <= 18.34 for x in _gl[4:]) and max(_gl[:4]) <= 40.01,
+              " ".join(f"{x:.1f}" for x in _gl[:12]))
+        check("...and keeps within 10ms of the song as it really plays: the clock's own steps are left out of how far it is",
+              bool(clk) and clk["near"] <= 10, f"at most {clk and clk['near']:.1f}ms from it")
+        check("...and a hiccup under 50ms (45ms), not waited for, is eased out: never more than a tenth slower, "
+              "and the drawing is back on the song", bool(clk) and clk["hic"][0] >= 14.99 and abs(clk["hicEnd"]) <= 2,
+              f"frames {clk and clk['hic'][0]:.2f} to {clk and clk['hic'][1]:.2f}ms; {clk and clk['hicEnd']:.1f}ms off the song at the end")
+        check("...and a drawing that falls behind its song (a song's clock 1% fast, twenty seconds) eases back onto it, "
+              "never more than 20ms behind", bool(clk) and 0 < clk["behind"] <= 20, f"at most {clk and clk['behind']:.1f}ms behind")
+        pg.click("#playerPlayBtn")
+        pg.evaluate(STALL, [3000, 300])
+        rec = [dict(r, page=page_of(r["rgb"])) for r in pg.evaluate(WATCH, ["#canvas", 12])]
+        off = after_stall(rec)
+        check("posted, a song that stalls for 0.3s keeps the link page's rounds with it: every round after it within 60ms of its beat as heard",
+              pg.evaluate("() => window.__stalled") == "held" and len(off) >= 6 and max(abs(x) for x in off) <= 60,
+              f"{len(off)} rounds after it: " + " ".join(f"{x:+.0f}" for x in off))
+        # A song gone for 2.5s, a call's worth: the drawing waits a second for
+        # it, no more, and goes on.
+        pg.evaluate("() => { window.__stalled = null; }")
+        pg.evaluate(STALL, [300, 2500])
+        gone = pg.evaluate(WATCH, ["#canvas", 4.5])
+        gap = max((y["t"] - x["t"] for x, y in zip(gone, gone[1:])), default=9999)
+        check("...and a song gone for 2.5s (its context stopped, as a call stops it) holds the link page's drawing a second at most, "
+              "then the drawing goes on: no page stays up 1.5s",
+              pg.evaluate("() => window.__stalled") == "held" and len(gone) >= 25 and gap < 1500,
+              f"{len(gone)} pages up in 4.5s; the longest a page stayed up {gap:.0f}ms")
+        # A speed the song does not follow (4x: it keeps its own past 2x),
+        # picked mid-play: the song is no longer the clock, and the drawing
+        # takes it.
+        pg.evaluate(PICK4)
+        pg.wait_for_timeout(300)
+        quick = pg.evaluate(WATCH, ["#canvas", 2])
+        check("...and a speed it does not follow, picked mid-play (4x), the drawing takes: about four times the pages a second",
+              len(quick) >= 60 and pg.evaluate("() => musicRate()") == 1,
+              f"{len(quick)} pages up in 2s ({round(2 * 12 * bpm / 120)} at 1x: 12 a round, a round half a bar at {bpm:.0f} bpm)")
+        # There the song is a bed at its own speed, not in step: when it stalls
+        # the drawing does not wait for it (a page comes up every 20ms or so).
+        pg.evaluate("() => { window.__stalled = null; }")
+        pg.evaluate(STALL, [400, 300])
+        bed = pg.evaluate(WATCH, ["#canvas", 2])
+        gap = max((y["t"] - x["t"] for x, y in zip(bed, bed[1:])), default=9999)
+        check("...and the song, a bed at its own speed there, does not hold the drawing when it stalls: no page stays up 0.15s",
+              pg.evaluate("() => window.__stalled") == "held" and len(bed) >= 50 and gap < 150,
+              f"{len(bed)} pages up in 2s with the song held 0.3s; the longest a page stayed up {gap:.0f}ms")
+        pg.close()
+        # Play again with the song's unlock landing 0.25s late, as an
+        # iPhone's first Play can: the song starts where the drawing is by
+        # then. Started where Play was pressed, the song's clock took the
+        # drawing back three pages to meet it.
+        pg = v.new_page()
+        pg.on("pageerror", lambda e: perrs.append(str(e)))
+        pg.goto(f"{BASE}/s/{pid}", wait_until="load")
+        pg.wait_for_selector("#playerPlayBtn", state="visible", timeout=20000); pg.wait_for_timeout(900)
+        pg.click("#playerPlayBtn"); pg.wait_for_timeout(1500); pg.click("#playerPlayBtn")
+        late = pg.evaluate(LATE, 250)
+        pg.click("#playerPlayBtn")
+        rec = [dict(r, page=page_of(r["rgb"])) for r in pg.evaluate(WATCH, ["#canvas", 4])]
+        seen = [r["page"] for r in rec if r["page"] is not None]
+        seen = seen[seen.index(0):] if 0 in seen else []
+        back = [(x, y) for x, y in zip(seen, seen[1:]) if (y - x) % 12 not in (1, 2, 3)]
+        off = round_starts([rec[0]] + [r for r in rec[1:] if r["t"] > 800], bpm, 0.5)
+        check("...and when its song's unlock lands late (an iPhone's first Play), the song starts where the drawing is by then: "
+              "the drawing never goes back a page, and every round after is within 60ms of its beat as heard",
+              late == "suspended" and len(seen) >= 30 and not back and len(off) >= 2 and max(abs(x) for x in off) <= 60,
+              f"{len(seen)} pages from the first, back {back[:3]}; rounds after " + " ".join(f"{x:+.0f}" for x in off))
+        pg.close()
+        pg = v.new_page()
+        pg.on("pageerror", lambda e: perrs.append(str(e)))
+        browsing.goto(pg, BASE, "/feed")
+        pg.wait_for_selector(box, state="attached", timeout=20000)
+        pg.evaluate("(s) => document.querySelector(s).scrollIntoView({ block: 'center' })", box)
+        pg.wait_for_timeout(800)
+        pg.evaluate("(s) => document.querySelector(s).click()", box)
+        pg.evaluate(STALL, [3000, 300])
+        rec = [dict(r, page=page_of(r["rgb"])) for r in pg.evaluate(WATCH, [box + " .skribl-inline-canvas", 12])]
+        off = after_stall(rec)
+        check("...and a post's box's: every round after it within 60ms of its beat as heard",
+              pg.evaluate("() => window.__stalled") == "held" and len(off) >= 6 and max(abs(x) for x in off) <= 60,
+              f"{len(off)} rounds after it: " + " ".join(f"{x:+.0f}" for x in off))
         check("nothing went wrong on the link page or in the feed", not perrs, "; ".join(perrs)[:200])
         v.close()
 

@@ -958,7 +958,17 @@ with sync_playwright() as sp:
     #   dot (showNibAt, split out of showNibAtIndex) while it plays, and
     #   nibRGB reading a Smear's #rrggbbaa as its colour, where it read white.
     #   verify_jsstrip's line moves with it. 152,917 measured.
-    BYTES_RATCHET, BYTES_TARGET = 152_920, 153_800
+    # RAISED (a bug fix, the owner's yes after Match the beat: a posted song
+    #   that stalls keeps the pages with it), for a named cost: +1,370 B --
+    #   lib/holdtiming.js songClock, the song's time as heard, the drawing at
+    #   the wall's pace waiting for it and easing onto it, never stepping back
+    #   and waiting a second at most (+1,026 B, shared with a post's box), and
+    #   app.js's use of it here: begun where the song starts in step, ended in
+    #   paStop(), the frame taking its time from it, and the song started where
+    #   the drawing is when a late unlock lands (+344 B). Spent first: the
+    #   clock's flag left unset rather than set false. verify_jsstrip's line
+    #   moves with it. 153,354 measured.
+    BYTES_RATCHET, BYTES_TARGET = 153_357, 153_800
     # The page's own HTML. The brand is the one-stroke skribl signature INLINE
     # in the page (~1.4KB of paths, a ~0.9KB nonce'd draw-on script, and the
     # <linearGradient> defs), and inline is load-bearing rather than lazy:

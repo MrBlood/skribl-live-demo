@@ -772,6 +772,10 @@
      * them (it is lap + elapsed into its loop); zero when the drawing is put
      * somewhere rather than played there. */
     var elapsed = 0, t0 = 0, raf = null, drawn = 0, lap = 0;
+    /* While the song plays, the drawing keeps its time, as heard
+     * (lib/holdtiming.js songClock): an audio stall left every page after it
+     * early, for good. Counted in lap + elapsed, as the song is. */
+    var songClk = global.SkriblHold ? global.SkriblHold.songClock() : null;
     /* The page and progress this player last PAINTED, which is how
      * lib/holdtiming.js's displayAt() knows a drawing page has not yet been
      * shown whole. Unset, or null after adopt(), means nothing is owed a
@@ -1632,13 +1636,16 @@
       /* Where the drawing is, not the clip's top: after a pause, a new speed
        * or a song decoded after Play, the song carries on in step. */
       var D = buffer.duration;
-      srcNode.start(0, D > 0 ? ((lap + elapsed + (state === 'playing' ? segElapsed() : 0)) / 1000) % D : 0);
+      var from = lap + elapsed + (state === 'playing' ? segElapsed() : 0);
+      srcNode.start(0, D > 0 ? (from / 1000) % D : 0);
+      if (songClk) songClk.began(ac, from, rate);
     }
 
     function stopAudio() {
       if (srcNode) { try { srcNode.stop(0); } catch (e) {} try { srcNode.disconnect(); } catch (e) {} }
       if (gainNode) { try { gainNode.disconnect(); } catch (e) {} }
       srcNode = gainNode = null;
+      if (songClk) songClk.ended();
     }
 
     /* A state class goes on the box AND the line, which holds the controls
@@ -1696,6 +1703,7 @@
 
     function frame() {
       var at = elapsed + segElapsed();
+      if (songClk) { var t = songClk.at(lap + at) - lap; elapsed += t - at; at = t; }
       /* A FOREVER loop never ends and never starts over: past one pass the
        * clock wraps inside the stretch, whatever this post's loop switch says
        * (the stretch is meant to keep going for as long as it is on screen). */
