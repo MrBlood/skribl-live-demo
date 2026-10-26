@@ -108,7 +108,9 @@ with sync_playwright() as p:
         const t = window.SkriblCanvasSizes;
         const el = document.querySelector('.canvas-area');
         const cs = getComputedStyle(el); const r = el.getBoundingClientRect();
-        const aw = r.width - parseFloat(cs.paddingLeft || 0) - parseFloat(cs.paddingRight || 0);
+        // Against the column, as the Pad picks (B, lib/chromefit.js columnWidth).
+        const aw = Math.min(r.width, window.SkriblChromeFit ? SkriblChromeFit.columnWidth(el) : r.width)
+                 - parseFloat(cs.paddingLeft || 0) - parseFloat(cs.paddingRight || 0);
         const ah = r.height - parseFloat(cs.paddingTop || 0) - parseFloat(cs.paddingBottom || 0);
         return { id: t.idFor(authoredW, authoredH), bestId: t.bestFor(aw, ah).id };
     }""")

@@ -45,14 +45,16 @@ with sync_playwright() as p:
     # that its labels are honest is asserted separately below.
     _table = {s["id"]: s for s in pg.evaluate("() => FLIP_SIZES")}
     # A fresh document starts on the preset that DISPLAYS LARGEST in this
-    # device's stage (bestFor), not unconditionally on the first row — a
+    # device's stage (bestFor), measured against the column the stage sits in
+    # even where it reaches past it (B: a new drawing starts in the shape it
+    # always did, lib/chromefit.js columnWidth), not unconditionally on the first row — a
     # portrait phone opens 9:16 instead of a letterboxed 4:3. Still always a
     # real preset from the table, never a viewport-derived pair.
     _boot = pg.evaluate("""() => {
         const st = document.querySelector('.flip-stage');
         const cs = getComputedStyle(st);
         const best = SkriblCanvasSizes.bestFor(
-            st.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight),
+            Math.min(st.clientWidth, SkriblChromeFit.columnWidth(st)) - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight),
             st.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom));
         return { cur: [CW, CH, currentSizeId()], best: [best.w, best.h, best.id] };
     }""")
@@ -181,7 +183,7 @@ with sync_playwright() as _p:
         const st = document.querySelector('.flip-stage');
         const cs = getComputedStyle(st);
         const best = SkriblCanvasSizes.bestFor(
-            st.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight),
+            Math.min(st.clientWidth, SkriblChromeFit.columnWidth(st)) - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight),
             st.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom));
         return { cur: [CW, CH], best: [best.w, best.h], id: currentSizeId() };
     }""")
@@ -210,10 +212,10 @@ with sync_playwright() as _p:
             _pg = _b.new_page(viewport={"width": _w, "height": _h})
             _pg.goto(f"{BASE}{_path}", wait_until="load")
             _pg.wait_for_timeout(1300)
+            # Inside Flip's frame, where the drawing shows (the Pad has none).
             _sizes[_name] = _pg.evaluate(
                 f"() => {{ const c = document.querySelector('{_sel}');"
-                f" const r = c.getBoundingClientRect();"
-                f" return {{ css: [Math.round(r.width), Math.round(r.height)],"
+                f" return {{ css: [c.clientWidth, c.clientHeight],"
                 f"          backing: [c.width, c.height] }}; }}")
             # Which preset did this surface open on, and which is the largest
             # for its measured band? The two must agree.
@@ -222,7 +224,7 @@ with sync_playwright() as _p:
                     const st = document.querySelector('.flip-stage');
                     const cs = getComputedStyle(st);
                     const best = SkriblCanvasSizes.bestFor(
-                        st.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight),
+                        Math.min(st.clientWidth, SkriblChromeFit.columnWidth(st)) - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight),
                         st.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom));
                     return { id: currentSizeId(), bestId: best.id };
                 }""")
@@ -231,7 +233,8 @@ with sync_playwright() as _p:
                     const t = window.SkriblCanvasSizes;
                     const el = document.querySelector('.canvas-area');
                     const cs = getComputedStyle(el); const r = el.getBoundingClientRect();
-                    const aw = r.width - parseFloat(cs.paddingLeft || 0) - parseFloat(cs.paddingRight || 0);
+                    const aw = Math.min(r.width, window.SkriblChromeFit ? SkriblChromeFit.columnWidth(el) : r.width)
+                             - parseFloat(cs.paddingLeft || 0) - parseFloat(cs.paddingRight || 0);
                     const ah = r.height - parseFloat(cs.paddingTop || 0) - parseFloat(cs.paddingBottom || 0);
                     return { id: t.idFor(authoredW, authoredH), bestId: t.bestFor(aw, ah).id };
                 }""")
@@ -254,8 +257,9 @@ with sync_playwright() as _p:
                   _m["fit"]["id"] != "custom" and _m["fit"]["id"] == _m["fit"]["bestId"],
                   str(_m["fit"]))
 
-        # Never above 1:1. Above it, a fixed bitmap is stretched and every line
-        # softens — which is what made the bigger canvas the worse one.
+        # Never stretched past its bitmap. Above it every line softens, which is
+        # what made the bigger canvas the worse one; past 1:1 the bitmap grows
+        # with the canvas now (B, verify_bigcanvas), so this holds there too.
         for _name, _m in (("Flip", _f), ("Pad", _pd)):
             _dpr = _m["backing"][0] / max(1, _m["css"][0])
             check(f"{_name} at {_w}px is not upscaled beyond its bitmap",
