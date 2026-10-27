@@ -1265,6 +1265,37 @@ even. One rule for every place, then `player.css` re-emitted. Brought with
 the drawer's mock; a small PR of its own. The replay line above it, whose
 bars start against its left edge, is checked the same way.
 
+## 6v. How it works, made again once the look settles (owner: "it will be a big project and we should definitely wait on most of it, until things looks and function as we want")
+
+The owner: "once we get to a place where we feel like we have the
+aesthetic we like and the interface isn't going to change again, we need
+to redo all the how it works videos because the entire look of the app has
+pretty much evolved. probably some new ones too. we can perfect those
+videos too (like the speed and effects of a click, etc.). also, double
+check all the how it works folder and make sure it includes all the tools
+and functions as well as nothing being stale."
+
+Today: nineteen clips in `skribl/static/help/clips/` (each light and dark,
+as MP4, WebM and a still), all made on 2026-10-18 by
+`harness/tools/make_help_clips.py` and checked by `verify_helpdemos`, and
+the drawings to watch in `skribl/static/help/demos/`. Since then the
+drawers took the menu's paper and a size up in their words, the music
+drawer gained its timeline, ears, beats and 512x (and D to come), Flip
+gained Match the beat, and a desk got the bigger canvas and full screen.
+
+When the owner says the look has settled, in this order:
+- THE CENSUS: every tool and function on the Pad and Flip against the
+  clips and the How it works words: which have no clip, which clips show
+  an old look, which words name something that changed or is gone.
+- ONE CLIP FIRST, made the new way and shown light and dark for the
+  owner's OK: the pointer's speed and its tap, the pacing, the framing,
+  the same bar as the drawings to watch.
+- THEN ALL OF THEM, the old ones made again and the missing ones made, by
+  the script (polished once, so making them again later is a run, not a
+  project), their weight on a phone checked.
+- A CHECK that every tool has a clip, so a new tool cannot arrive without
+  one.
+
 ## 7. The honest state
 
 The tool is good. It is better than it needs to be for a demo and not yet enough
