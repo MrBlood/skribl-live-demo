@@ -1129,6 +1129,18 @@ left comes after D (6s), each mocked first where it shows:
   cannot show, and it tells a person whether their taps landed. It rides the
   clock the loop plays on, not a timer, and never reaches a post or an
   export. Pad and Flip share the drawer, so both get it at once.
+- THE END SETS THE TEMPO (from the Wizard's "click the end of the first
+  bar"; waits for the owner's yes). Zoomed in, a start let go near a beat
+  stays and the beat moves to it; an end only settles on whole bars at the
+  tempo there is. Let the end do what the start does: zoomed in, an end let
+  go within an eighth of a beat of whole bars stays, and the tempo becomes
+  the one that makes the loop exactly those bars (with a smooth restart,
+  measured to the bar line, a blend's length before the handle). That is
+  the Wizard's two clicks across up to eight bars instead of one. Today the
+  only tempo a hand can set is Tap the beat's, to a whole beat a minute, so
+  a live band or an old record between whole tempos cannot be matched. With
+  the click: hear the ticks drift by the loop's end, zoom in, put the end on
+  the hit. Flip's Match the beat refits to the new tempo as it does to taps.
 - FAST ON A PHONE, MEASURED FIRST. `listen()` mixes the song down to one
   channel at 22.05 kHz in one go before it starts slicing (`mono()`), then
   waits on a timer between slices of 8ms, which some browsers stretch to 4ms
