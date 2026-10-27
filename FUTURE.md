@@ -1102,7 +1102,7 @@ under them; shorter words inside the doors. Pad and Flip share the drawer,
 so both change at once; the suites that open More, the pick or Exact times
 learn the doors, red first, and the help words that say "in More" change.
 
-Two more for the same change (owner, with screenshots):
+Three more for the same change (owner, with screenshots):
 
 - THE DRAW DRAWER'S FOUR TILES SIT LEFT ON A DESK. `.dp` stops at 520px and
   the drawer is wider there, so Brush, Size, Feel and Eraser leave a gap on
@@ -1114,6 +1114,17 @@ Two more for the same change (owner, with screenshots):
   (`.mt-tl-handle::after`). Try the owner's 1.5px and 2px, on a 1x, a 1.25x
   and a 2x screen (half a pixel blurs at 1x), the grip and its 44px drag
   band as they are.
+- THE TIMELINE TALLER (owner, with ACID Pro 7's + and - for track height:
+  "add a little magnifying glass to the loop visual to expand it vertically
+  too so it would become a bigger box showing more of the wave"). Today the
+  timeline is two and a half strips tall, and Magnify's - and + zoom in time
+  only. Mock a small control that makes the box taller, the wave growing
+  with it (one tap taller and one back, or - and + in steps), beside today,
+  phone and desk, light and dark. A second magnifier beside Magnify's could
+  read as the same button, so mock a taller-box glyph beside the magnifier.
+  The handles' drag band, a finger that moves up or down first scrolling
+  the page, and the slim strip that follows you down stay as they are. With
+  512x it shows where a hit begins. Pad and Flip share the timeline.
 
 ## 6t. Skribl's ears, next (owner: "the most powerful and accurate, yet simple (4 pillars) and fast module that we can create")
 
@@ -1128,9 +1139,12 @@ left comes after D (6s), each mocked first where it shows:
   step. An ear hears a wrong beat within a bar, which marks on a timeline
   cannot show, and it tells a person whether their taps landed. It rides the
   clock the loop plays on, not a timer, and never reaches a post or an
-  export. Pad and Flip share the drawer, so both get it at once.
+  export. Pad and Flip share the drawer, so both get it at once. Mock,
+  as an option for the owner, the beat's dot lighting on each tick (ACID
+  counts bar and beat as it plays: 6.2.000).
 - THE END SETS THE TEMPO (from the Wizard's "click the end of the first
-  bar"; waits for the owner's yes). Zoomed in, a start let go near a beat
+  bar"; owner: "all yes", mocked with the click after D). Zoomed in, a
+  start let go near a beat
   stays and the beat moves to it; an end only settles on whole bars at the
   tempo there is. Let the end do what the start does: zoomed in, an end let
   go within an eighth of a beat of whole bars stays, and the tempo becomes
@@ -1141,6 +1155,12 @@ left comes after D (6s), each mocked first where it shows:
   a live band or an old record between whole tempos cannot be matched. With
   the click: hear the ticks drift by the loop's end, zoom in, put the end on
   the hit. Flip's Match the beat refits to the new tempo as it does to taps.
+- THE DRAWING'S LANE SHOWS THE DRAWING (from ACID's video track, the film's
+  frames along the song; waits for the owner's yes). The lane marks each
+  stroke when it was drawn, all in the accent (the Pad), and each page as
+  long as it shows, numbered (Flip). Let Flip's pages show their own little
+  pictures where there is room, and the Pad's strokes their own inks, so a
+  person sliding the song under the drawing sees what is drawn on each beat.
 - FAST ON A PHONE, MEASURED FIRST. `listen()` mixes the song down to one
   channel at 22.05 kHz in one go before it starts slicing (`mono()`), then
   waits on a timer between slices of 8ms, which some browsers stretch to 4ms
