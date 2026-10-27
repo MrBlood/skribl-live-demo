@@ -1314,6 +1314,17 @@ Until then, a change that adds or changes a control brings its tip and its
 hint up to date in the same PR ("words follow what the user does"); only
 the sweep waits.
 
+ALL THE TOOLS, NOT ONLY THE ROW (owner: "make sure you look at ALL the
+tools because I noticed the tools on flip's ^ menu don't have them"). The
+cards (`lib/learncard.js`, its CARDS) cover the Pad's three tools, Flip's
+same three on its shelf and the ^ itself ("More tools"), but none of the
+six in Flip's tray: Select, Liquify, Smudge, Blur, Fill and Stamps. Each of
+the six already has a How it works clip (select, liquify, smudge, blur,
+fill, stamp), and a card names its clip, so a card made now plays the new
+clip when the clips are made again: these need not wait for the sweep. A
+small PR once the owner has said yes to the six sentences; the census then
+walks every control on both editors, not only the tools.
+
 ## 7. The honest state
 
 The tool is good. It is better than it needs to be for a demo and not yet enough
