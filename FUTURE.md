@@ -1132,8 +1132,9 @@ Three more for the same change (owner, with screenshots):
   Rather than a second control, mock as an option the wave filling the box
   when zoomed in deep (64x and up, where the wave itself shows), gliding as
   it changes, and as today at the wider zooms, so loud and quiet still
-  compare. The deepest zoom stays 512x: a pixel there holds a few samples
-  (more for a long loop under a long drawing), between the research's sweet
+  compare (owner: yes). The deepest zoom stays 512x (owner: yes): a pixel
+  there holds a few samples (more for a long loop under a long drawing),
+  between the research's sweet
   spot (16 to 64 a pixel) and its one sample a pixel; past that, to 24
   pixels a sample, is for mending pops by hand, which Cut on silence,
   Smooth restart and the fades already do. The research's cache of levels
