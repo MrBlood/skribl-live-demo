@@ -1117,7 +1117,16 @@ bar in Beat for when the ears hear it wrong); the taller box's control
 beside Magnify's - and +; the lane's height for Flip's page pictures when
 the box is tall; the tiles spanning a desk; the thinner loop line. Shown
 for a song in four and a waltz, the Pad and Flip, light and dark, phone
-and desk. None of it needs a fifth door. From the owner's Wavebox Audio
+and desk. None of it needs a fifth door. Mocked on the app's own code,
+the loop playing and the click heard (https://claude.ai/artifact/KTcnYw6jf2ZzAeikaAtiFe,
+Today and New, the Choices with the picks). What the mock settled on its
+own: the click by Hear the loop is one pill with it (a third column in the
+transport pushed "Play with my drawing" out of its button on a phone); the
+Beat door's picture is the timeline's beat dots, the metronome being the
+click's now; a stroke's ink in the lane moves toward the lane's own words
+only as far as 3:1 takes (a dark ink on the dark lane, a pale one on the
+light lane); growing the box keeps Hear the loop where it was (the page
+scrolls by what the box grew). From the owner's Wavebox Audio
 Editor screenshots ("they may be overcomplicating things too. we want to
 keep with our 4 pillars"): its effects, EQ, pitch, channel mixer, copy and
 paste and recording stay out, a loop under a drawing needs none of them;
@@ -1257,13 +1266,18 @@ and drafts previews; ¼× to 4× in Flip's Tune) are one pill, `.rl-chips`,
 with the Pad's and Tune's own tweaks. The pill keeps 4px inside its edge
 and each speed a few px of its own (4, 6 or 8), so "¼×" and "Fit" sit
 nearer the rounded ends than the speeds sit to each other, and the curve
-makes it look nearer still. Mock today beside the fix on every place it
-shows, light and dark, phone and desk, measured: the end speeds given more
-room on their outer side rather than the pill's sides opened, so a picked
-end speed's fill stays 4px inside the pill's curve and the two curves stay
-even. One rule for every place, then `player.css` re-emitted. Brought with
-the drawer's mock; a small PR of its own. The replay line above it, whose
-bars start against its left edge, is checked the same way.
+makes it look nearer still. Mocked, each place today beside two fixes and
+measured live in the viewer's fonts (https://claude.ai/artifact/8F1nLN8ZUxVCBPb5e1snL8).
+Here, ends against the space between two speeds: the Pad's desk pill
+16.7 and 18.7 against 27.8; Tune's 15.3 and 5.5 against 23 (on a 402px
+phone its eight 44px speeds overflow the row, "Fit" about 5px from the
+edge: a bug today); everywhere else 9 against 10. B opens the pill's sides
+by the shortfall (+10 the Pad, +5 Tune with its speeds 40px on a phone, +4
+the rest), so each speed stays centred in its purple; A gives the end
+speeds the room instead, so a picked end's purple reaches the curve but its
+word sits off centre. My pick B. One rule for every place, then
+`player.css` re-emitted; a small PR of its own. The replay line above it,
+whose bars start against its left edge, is checked the same way.
 
 ## 6v. How it works, made again once the look settles (owner: "it will be a big project and we should definitely wait on most of it, until things looks and function as we want")
 
@@ -1318,12 +1332,15 @@ ALL THE TOOLS, NOT ONLY THE ROW (owner: "make sure you look at ALL the
 tools because I noticed the tools on flip's ^ menu don't have them"). The
 cards (`lib/learncard.js`, its CARDS) cover the Pad's three tools, Flip's
 same three on its shelf and the ^ itself ("More tools"), but none of the
-six in Flip's tray: Select, Liquify, Smudge, Blur, Fill and Stamps. Each of
-the six already has a How it works clip (select, liquify, smudge, blur,
-fill, stamp), and a card names its clip, so a card made now plays the new
-clip when the clips are made again: these need not wait for the sweep. A
-small PR once the owner has said yes to the six sentences; the census then
-walks every control on both editors, not only the tools.
+seven in Flip's tray: Select, Liquify, Smudge, Blur, Fill, Stamps and
+Artwork. Each already has a How it works clip (select, liquify, smudge,
+blur, fill, stamp, artmove), and a card names its clip, so a card made now
+plays the new clip when the clips are made again: these need not wait for
+the sweep. The tools' clips are 4:3, as the drawings Pen, Eraser and Shape
+play are, so their cards take the drawings' stage, not the tall phone
+frame Photo, music and Post use. The seven sentences are mocked with the
+speed pill (the page above); a small PR once the owner has said yes; the
+census then walks every control on both editors, not only the tools.
 
 ## 7. The honest state
 
