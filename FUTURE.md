@@ -1123,8 +1123,9 @@ keep with our 4 pillars"): its effects, EQ, pitch, channel mixer, copy and
 paste and recording stay out, a loop under a drawing needs none of them;
 its lit selection with the rest dimmed, its handles low on the wave, its
 overview strip and its tall wave on a phone are what the drawer already
-has or is getting. Two things in from it: PINCH TO ZOOM as an option in the
-mock (Wavebox gives half its wave to "Zoom & Pan"; the timeline has no
+has or is getting. Two things in from it (owner: "yes, they seem like good
+ideas"): PINCH TO ZOOM in the mock (Wavebox gives half its wave to "Zoom &
+Pan"; the timeline has no
 pinch today): sideways for time, up and down for the taller box, locked to
 whichever way the fingers first move, two fingers so it never fights a
 finger scrolling the page, and Ctrl and the wheel or a trackpad pinch on a
