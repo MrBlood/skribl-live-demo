@@ -1287,6 +1287,16 @@ When the owner says the look has settled, in this order:
 - THE CENSUS: every tool and function on the Pad and Flip against the
   clips and the How it works words: which have no clip, which clips show
   an old look, which words name something that changed or is gone.
+- THE TIPS, in the same census (owner: "the push for tip, or hover for
+  info tip on desktop needs to be expanded and updated too"). On a desk a
+  control's own words show on hover and on keyboard focus
+  (`lib/tooltip.js`, from its title: about 141 in the templates, more made
+  in script), and the first time a control is used a hint says how to
+  drive it, once ever (`lib/hints.js`). A phone has no hover, so it gets
+  only the hints and How it works: weigh a press and hold that shows a
+  tool's words there, mocked, since a tip that fires on a tap covers what
+  was just pressed. Which controls have no words, which words are stale,
+  which new tools want a hint.
 - ONE CLIP FIRST, made the new way and shown light and dark for the
   owner's OK: the pointer's speed and its tap, the pacing, the framing,
   the same bar as the drawings to watch.
@@ -1295,6 +1305,10 @@ When the owner says the look has settled, in this order:
   project), their weight on a phone checked.
 - A CHECK that every tool has a clip, so a new tool cannot arrive without
   one.
+
+Until then, a change that adds or changes a control brings its tip and its
+hint up to date in the same PR ("words follow what the user does"); only
+the sweep waits.
 
 ## 7. The honest state
 
