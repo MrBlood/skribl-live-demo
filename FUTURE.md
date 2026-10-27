@@ -1117,7 +1117,21 @@ bar in Beat for when the ears hear it wrong); the taller box's control
 beside Magnify's - and +; the lane's height for Flip's page pictures when
 the box is tall; the tiles spanning a desk; the thinner loop line. Shown
 for a song in four and a waltz, the Pad and Flip, light and dark, phone
-and desk. None of it needs a fifth door.
+and desk. None of it needs a fifth door. From the owner's Wavebox Audio
+Editor screenshots ("they may be overcomplicating things too. we want to
+keep with our 4 pillars"): its effects, EQ, pitch, channel mixer, copy and
+paste and recording stay out, a loop under a drawing needs none of them;
+its lit selection with the rest dimmed, its handles low on the wave, its
+overview strip and its tall wave on a phone are what the drawer already
+has or is getting. Two things in from it: PINCH TO ZOOM as an option in the
+mock (Wavebox gives half its wave to "Zoom & Pan"; the timeline has no
+pinch today): sideways for time, up and down for the taller box, locked to
+whichever way the fingers first move, two fingers so it never fights a
+finger scrolling the page, and Ctrl and the wheel or a trackpad pinch on a
+desk, the - and + and the taller control staying for anyone who does not
+pinch; not testable here on an iPhone. And THUMB REACH as a check: Wavebox
+keeps play at the foot, so measure where Hear the loop and the click land
+on a 402 x 874 phone and keep them within a thumb's reach.
 
 Three more for the same change (owner, with screenshots):
 
