@@ -1288,15 +1288,19 @@ When the owner says the look has settled, in this order:
   clips and the How it works words: which have no clip, which clips show
   an old look, which words name something that changed or is gone.
 - THE TIPS, in the same census (owner: "the push for tip, or hover for
-  info tip on desktop needs to be expanded and updated too"). On a desk a
-  control's own words show on hover and on keyboard focus
-  (`lib/tooltip.js`, from its title: about 141 in the templates, more made
-  in script), and the first time a control is used a hint says how to
-  drive it, once ever (`lib/hints.js`). A phone has no hover, so it gets
-  only the hints and How it works: weigh a press and hold that shows a
-  tool's words there, mocked, since a tip that fires on a tap covers what
-  was just pressed. Which controls have no words, which words are stale,
-  which new tools want a hint.
+  info tip on desktop needs to be expanded and updated too"; "on a phone
+  its press and hold. on the desktop it's hover for like 2 seconds"). The
+  card on the button (`lib/learncard.js`): held about half a second on a
+  touch screen, rested on two seconds with a mouse; its name, one kind
+  sentence, its example playing itself (a phone recording for Photo, music
+  and Post), More and Got it, and "?" tags every button with its card.
+  Under it a mouse's name on hover and keyboard focus (`lib/tooltip.js`,
+  from each title: about 141 in the templates, more made in script), and
+  a first-use hint once ever (`lib/hints.js`). The cards play the same
+  examples How it works plays, so making the clips again makes theirs
+  again too. Which buttons have no card, which cards' words or recordings
+  are stale (the music one most of all), which new controls want one (the
+  doors, the click, the taller box).
 - ONE CLIP FIRST, made the new way and shown light and dark for the
   owner's OK: the pointer's speed and its tap, the pacing, the framing,
   the same bar as the drawings to watch.
