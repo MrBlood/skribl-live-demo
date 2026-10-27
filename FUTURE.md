@@ -1115,6 +1115,61 @@ Two more for the same change (owner, with screenshots):
   and a 2x screen (half a pixel blurs at 1x), the grip and its 44px drag
   band as they are.
 
+## 6t. Skribl's ears, next (owner: "the most powerful and accurate, yet simple (4 pillars) and fast module that we can create")
+
+The owner's friend sent three plans for hearing a loop's beat: the ACID
+Beatmapper Wizard in Python, a modern one with the drums split out by an AI
+model, and one for a phone, in the page. Read against `lib/musicears.js`,
+most of all three is already in, and parts of it are done better. What is
+left comes after D (6s), each mocked first where it shows:
+
+- THE BEAT CLICK (owner: yes). A soft tick on each beat while Hear the loop
+  plays, a switch beside Tap the beat, off at first: the Wizard's metronome
+  step. An ear hears a wrong beat within a bar, which marks on a timeline
+  cannot show, and it tells a person whether their taps landed. It rides the
+  clock the loop plays on, not a timer, and never reaches a post or an
+  export. Pad and Flip share the drawer, so both get it at once.
+- FAST ON A PHONE, MEASURED FIRST. `listen()` mixes the song down to one
+  channel at 22.05 kHz in one go before it starts slicing (`mono()`), then
+  waits on a timer between slices of 8ms, which some browsers stretch to 4ms
+  or more once timers nest. Measure, on a two-minute stereo song, the longest
+  the page is held and the time to a pick, on this box at full speed and
+  slowed four times as a stand-in for a phone (there is no phone here). If
+  either shows, move the ears into a Web Worker: the page never waits on
+  them, and they run without the pauses.
+- SONGS IN THREE. The ears take a bar as four beats and the Beats row offers
+  4 · 8 · 16 · 32, so a waltz or a 6/8 ballad loops a beat into its bar.
+  Hearing threes (the kicks and chord changes gathering every third beat)
+  and offering 3 · 6 · 12 · 24 for those songs bends the owner's "we only
+  ever want 4,8,16" (said of songs in four), so it waits for their yes, with
+  a waltz among the test songs.
+- THE OWNER'S OWN SONGS, BY EAR. With the click in, ten of the owner's songs
+  played with it on; any that sound off become the ears' next cases, kept as
+  timings and never committed (the real recordings stay out of the repo).
+  That measures the ears on real music, which `verify_musicears`'s songs,
+  every beat known, cannot.
+
+Already in, so not built twice: one channel at 22.05 kHz; a log-spectral
+flux (log(1 + 10 · magnitude), bin by bin); the kick below 150 Hz; drum hits
+as bursts (many bins growing at once) rather than a 2 to 5 kHz band; the
+tempo refined to a thousandth over two minutes, not read from one bar; a
+beat of its own for each stretch of a band that speeds up; loops of whole
+bars, 20 s at most; and the join made by Cut on silence (both ends moved
+together, so the length is kept, matched on every channel) and Smooth
+restart (the end's tail folded under the start, a true crossfade of the
+person's length), not a zero crossing at each end or a fixed 2ms fade.
+
+Asked and not taken, and why: the drums split out by an AI model (Demucs,
+Spleeter or any model run in the page: megabytes to download inside a social
+site, and slow on a phone, unmeasured here; on a server, people's songs
+uploaded to a paid machine); the first downbeat taken as the loudest or the
+first big hit (an intro, a pickup or a crash on bar 2 fools it: the ears
+take the bar where kicks and chord changes gather, and keep intros and fades
+out of the pick); a grid warped to a live drummer (DTW), when a loop is 20 s
+at most. If the ears ever miss real songs that the steps above cannot fix,
+the modern route is a small beat-finding model that hears the whole mix,
+measured against these ears first.
+
 ## 7. The honest state
 
 The tool is good. It is better than it needs to be for a demo and not yet enough
