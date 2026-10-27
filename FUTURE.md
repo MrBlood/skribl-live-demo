@@ -1088,6 +1088,33 @@ each side) wherever flip.js turns a pointer's place into the drawing's units,
 and the eyedropper's lens with it, with a row that puts the pen a pixel in
 from each edge and reads where the ink lands, red on today's mapping first.
 
+## 6s. The music drawer as D, four doors (owner, after #654: "I like D") — next to build
+
+Picked from the mock (Now, D and E, the real drawer on a stand-in song:
+https://claude.ai/artifact/B9Shg9YZX1zmdJ4fsmshfG). The song, Hear the loop
+and the timeline stay on top; under them four tiles in a row, as the draw
+drawer has them (Length, Beat, Restart, Exact times), each saying what it is
+set to and opening its group underneath. More goes: what it held is in the
+four, Tap the beat in Beat. The defaults the owner was offered for the rest,
+not overruled: one door open at a time; Length's three choices (Skribl's
+pick, Fit my drawing, Whole song) as cards with the 4 · 8 · 16 · 32 beats row
+under them; shorter words inside the doors. Pad and Flip share the drawer,
+so both change at once; the suites that open More, the pick or Exact times
+learn the doors, red first, and the help words that say "in More" change.
+
+Two more for the same change (owner, with screenshots):
+
+- THE DRAW DRAWER'S FOUR TILES SIT LEFT ON A DESK. `.dp` stops at 520px and
+  the drawer is wider there, so Brush, Size, Feel and Eraser leave a gap on
+  the right that the colours above them do not. On a desk they should span
+  the drawer evenly, as the colours do; mock both ways (the tiles grow, or
+  the gaps do) beside today, the phone unchanged. D's own tiles are `.dp`
+  too, so they come out the same.
+- THE LOOP'S EDGE LINE ON THE TIMELINE IS TOO THICK: 3px
+  (`.mt-tl-handle::after`). Try the owner's 1.5px and 2px, on a 1x, a 1.25x
+  and a 2x screen (half a pixel blurs at 1x), the grip and its 44px drag
+  band as they are.
+
 ## 7. The honest state
 
 The tool is good. It is better than it needs to be for a demo and not yet enough
