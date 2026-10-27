@@ -1102,6 +1102,23 @@ under them; shorter words inside the doors. Pad and Flip share the drawer,
 so both change at once; the suites that open More, the pick or Exact times
 learn the doors, red first, and the help words that say "in More" change.
 
+BEFORE BUILDING, THE WHOLE DRAWER (owner: "now that we are doing all this
+new stuff, you should probably think about the design for the drawer again
+and make sure it all makes sense before we build it, then have to rebuild
+it after we make changes"). Mock the drawer as it will end up, every piece
+of 6t in its place, and build D only on the owner's OK, in steps toward
+that one picture. What it decides, each with options and a pick: where the
+click's switch sits (pick: beside Hear the loop, since it is used while
+listening and checks every door's work, as a DAW keeps its metronome by
+the transport); the Beat tile's words for where the tempo came from
+(heard, tapped, or set by the end); songs in three (the Length row in
+beats, 3 · 6 · 12 · 24 for a waltz, and a small choice of 4 or 3 beats a
+bar in Beat for when the ears hear it wrong); the taller box's control
+beside Magnify's - and +; the lane's height for Flip's page pictures when
+the box is tall; the tiles spanning a desk; the thinner loop line. Shown
+for a song in four and a waltz, the Pad and Flip, light and dark, phone
+and desk. None of it needs a fifth door.
+
 Three more for the same change (owner, with screenshots):
 
 - THE DRAW DRAWER'S FOUR TILES SIT LEFT ON A DESK. `.dp` stops at 520px and
