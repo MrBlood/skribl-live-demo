@@ -1125,6 +1125,20 @@ Three more for the same change (owner, with screenshots):
   The handles' drag band, a finger that moves up or down first scrolling
   the page, and the slim strip that follows you down stay as they are. With
   512x it shows where a hit begins. Pad and Flip share the timeline.
+  The owner's research on zooming names two vertical controls, the box's
+  height and a visual gain (1x to 16x or 32x). Today the wave is drawn
+  against the song's loudest moment (`peaksOf`), so a soft first note after
+  a quiet intro can be a pixel or two tall, just where a start is placed.
+  Rather than a second control, mock as an option the wave filling the box
+  when zoomed in deep (64x and up, where the wave itself shows), gliding as
+  it changes, and as today at the wider zooms, so loud and quiet still
+  compare. The deepest zoom stays 512x: a pixel there holds a few samples
+  (more for a long loop under a long drawing), between the research's sweet
+  spot (16 to 64 a pixel) and its one sample a pixel; past that, to 24
+  pixels a sample, is for mending pops by hand, which Cut on silence,
+  Smooth restart and the fades already do. The research's cache of levels
+  is already in: the song's loudness once, in blocks of 128, 1,024 and
+  8,192 samples.
 
 ## 6t. Skribl's ears, next (owner: "the most powerful and accurate, yet simple (4 pillars) and fast module that we can create")
 
@@ -1141,7 +1155,7 @@ left comes after D (6s), each mocked first where it shows:
   clock the loop plays on, not a timer, and never reaches a post or an
   export. Pad and Flip share the drawer, so both get it at once. Mock,
   as an option for the owner, the beat's dot lighting on each tick (ACID
-  counts bar and beat as it plays: 6.2.000).
+  counts bar and beat as it plays: 6.2.000; owner: yes, as an option).
 - THE END SETS THE TEMPO (from the Wizard's "click the end of the first
   bar"; owner: "all yes", mocked with the click after D). Zoomed in, a
   start let go near a beat
@@ -1156,7 +1170,7 @@ left comes after D (6s), each mocked first where it shows:
   the click: hear the ticks drift by the loop's end, zoom in, put the end on
   the hit. Flip's Match the beat refits to the new tempo as it does to taps.
 - THE DRAWING'S LANE SHOWS THE DRAWING (from ACID's video track, the film's
-  frames along the song; waits for the owner's yes). The lane marks each
+  frames along the song; owner: yes, after the click). The lane marks each
   stroke when it was drawn, all in the accent (the Pad), and each page as
   long as it shows, numbered (Flip). Let Flip's pages show their own little
   pictures where there is room, and the Pad's strokes their own inks, so a
