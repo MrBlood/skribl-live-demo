@@ -1249,6 +1249,22 @@ at most. If the ears ever miss real songs that the steps above cannot fix,
 the modern route is a small beat-finding model that hears the whole mix,
 measured against these ears first.
 
+## 6u. The speed choice's ends (owner, with a screenshot: "everywhere this strip is the padding on right and left side is off - not enough")
+
+The speeds `lib/replayline.js` opens under a replay (¼× to 16× and Fit, on
+the Pad, the link page, the Gallery, a post's box, full screen and the post
+and drafts previews; ¼× to 4× in Flip's Tune) are one pill, `.rl-chips`,
+with the Pad's and Tune's own tweaks. The pill keeps 4px inside its edge
+and each speed a few px of its own (4, 6 or 8), so "¼×" and "Fit" sit
+nearer the rounded ends than the speeds sit to each other, and the curve
+makes it look nearer still. Mock today beside the fix on every place it
+shows, light and dark, phone and desk, measured: the end speeds given more
+room on their outer side rather than the pill's sides opened, so a picked
+end speed's fill stays 4px inside the pill's curve and the two curves stay
+even. One rule for every place, then `player.css` re-emitted. Brought with
+the drawer's mock; a small PR of its own. The replay line above it, whose
+bars start against its left edge, is checked the same way.
+
 ## 7. The honest state
 
 The tool is good. It is better than it needs to be for a demo and not yet enough
