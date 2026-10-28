@@ -80,7 +80,8 @@
  * as long as its picture or longer is the picture at the lane's height, one
  * centred on the page's time and the rest either side, and a shorter one the
  * whole picture, smaller, each framed in the lane's purple so a short one
- * still reads; the page's number on a badge where there is room.
+ * still reads; the page's number on a small badge in the corner of a picture
+ * at the lane's height.
  * Flip's lane is taller for them (h.laneHeight), and grows with the box in
  * the frame the box does.
  *
@@ -551,15 +552,18 @@
             }
             drawn.marks.push([+A.toFixed(2), +B.toFixed(2), c2]);
             lastX = B;
-            if (numbered && !c2 && B - A > (art ? 34 : 18)) {
-              x.globalAlpha = 1; x.font = '650 11px ' + st.fontFamily; x.textBaseline = 'middle';
+            if (numbered && !c2 && (art ? pw >= tw : B - A > 18)) {
+              x.globalAlpha = 1; x.textBaseline = 'middle';
               if (art) {
-                // Its number on a badge, over its picture.
-                var nb = x.measureText(String(m[2])).width + 9;
-                rr(A + 4, py + 2.5, nb, 15, 7.5); x.fillStyle = fill; x.fill();
-                x.fillStyle = '#fff'; x.fillText(String(m[2]), A + 8.5, py + 10.5);
+                // Its number on a small badge in the picture's corner, where
+                // the page is its picture at the lane's height (on a smaller
+                // one the badge would hide most of it).
+                x.font = '650 10px ' + st.fontFamily;
+                var nb = x.measureText(String(m[2])).width + 8;
+                rr(A + 3.5, 6.5, nb, 13, 6.5); x.fillStyle = fill; x.fill();
+                x.fillStyle = '#fff'; x.fillText(String(m[2]), A + 7.5, 13.5);
               } else {
-                x.fillStyle = '#fff'; x.fillText(String(m[2]), A + 6, laneH / 2 + 0.5);
+                x.font = '650 11px ' + st.fontFamily; x.fillStyle = '#fff'; x.fillText(String(m[2]), A + 6, laneH / 2 + 0.5);
               }
             }
           }

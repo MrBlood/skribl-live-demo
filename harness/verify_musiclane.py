@@ -14,8 +14,9 @@ FUTURE.md 6s, step 7, from ACID's video track; "All yes").
   page's picture (the strip's thumbnail) and no other's, at the lane's height
   and its own shape: one centred on the page's time and the rest either side,
   so a page held long is its picture again and again, and a page shorter than
-  its picture is the whole picture, smaller; its number on a badge where the slot
-  has room and none where it has not; the turns after the first its pictures
+  its picture is the whole picture, smaller; its number on a small badge in
+  the corner of a picture at the lane's height and none on a smaller one, so
+  it never hides a short page's drawing; the turns after the first its pictures
   too, fainter; each framed in the lane's purple, 3:1 and up against the lane;
   past the thumbnail cache's budget, the strip's own tile; a page drawn on
   shows its new picture.
@@ -348,19 +349,19 @@ with sync_playwright() as pw:
                   and 0.5 * sh <= rows_b <= 0.85 * sh + 2,
                   f"the blue page's slot {bk and round(bk[1] - bk[0], 1)}px (its picture {tw:.1f} wide at the lane's height): its bars at {got_b}, "
                   f"the page has them at {want_b}, {rows_b}px tall in a picture {sh:.1f}px tall")
-            # Its number on a badge where the slot has room, none where not.
+            # Its number on a small badge on a picture at the lane's height, none on a smaller one.
             badge = []
             for i, m in enumerate(ms[:len(ART)]):
-                wide = m[1] - m[0] > 34
-                bx = pg.evaluate(BOX, [[m[0] + 5.5, 11, m[0] + 7.5, 17], [m[0] + 8, 9, m[0] + 20, 20], [m[0] + 2, 5, min(m[1] - 2, m[0] + 24), lane - 5]])
+                wide = m[1] - m[0] - 3 >= tw - 0.01
+                bx = pg.evaluate(BOX, [[m[0] + 5, 10.5, m[0] + 7, 16.5], [m[0] + 7.5, 8, m[0] + 20, 19], [m[0] + 2, 5, min(m[1] - 2, m[0] + 24), lane - 5]])
                 on = sum(1 for row in bx[0]["rows"] for px in row if far(px, fill) < 40) / max(1, sum(len(r) for r in bx[0]["rows"]))
                 digit = sum(1 for row in bx[1]["rows"] for px in row if min(px) > 225)
                 anyfill = sum(1 for row in bx[2]["rows"] for px in row if far(px, fill) < 40)
                 badge.append((ART[i][0], round(m[1] - m[0], 1), wide, round(on, 2), digit, anyfill))
-            check(f"Flip ({face}, {scheme}): its number on a badge where the slot has room, and none where it has not",
+            check(f"Flip ({face}, {scheme}): its number on a small badge in the corner where the page is its picture at the lane's height, and none on a smaller picture",
                   any(w for _, _, w, *_ in badge) and any(not w for _, _, w, *_ in badge)
                   and all((on >= 0.8 and dg >= 3) if w else af == 0 for _, _, w, on, dg, af in badge),
-                  "; ".join(f"{nm} ({wd}px, {'room' if w else 'no room'}): badge {on:.0%} its fill, {dg} white of the number, {af} of its fill anywhere"
+                  "; ".join(f"{nm} ({wd}px, {'its picture at the lane height' if w else 'a smaller picture'}): badge {on:.0%} its fill, {dg} white of the number, {af} of its fill anywhere"
                             for nm, wd, w, on, dg, af in badge))
             # Each page's picture framed in the lane's purple, on whole device
             # pixels: across its left edge at the picture's middle, a pixel

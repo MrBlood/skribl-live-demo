@@ -25137,9 +25137,12 @@ pages showed only on the middle ones, and squashed to the lane's height it
 was not its own shape. Each picture is framed in the lane's purple
 (--accent-ink, 8:1 and up against the lane), on whole device pixels as the
 loop's edges are, so a short page's small picture still shows; the card's
-own line was 1.3:1. The number sits on a badge (--accent-fill, white),
-on the picture's corner, where the slot is over 34px, so it reads over any
-drawing; the mock's numbers were dark purple straight on its pictures. The turns after the first are the pictures
+own line was 1.3:1. The number sits on a small badge (--accent-fill,
+white, 10px) in the picture's corner, so it reads over any drawing, on a
+page shown as its picture at the lane's height; a smaller picture has none.
+In the first photos a badge on every page with room hid the ball on the
+short ones. The mock's numbers were dark purple straight on its pictures.
+The turns after the first are the pictures
 at 45%, as the marks were. A stroke on Flip's canvas is a tap away from the
 drawer, which closes it, so the lane shows a page's new picture as the
 drawer opens again.
@@ -25158,8 +25161,8 @@ suite's first run found that it did not: no pictures, and a 26px lane.
 Rows (verify_musiclane, 38): the Pad's inks as drawn, moved with their hue
 kept, at 3:1 and the eraser's, light and dark, phone and desk; Flip's
 pictures, each its own, again and again on a long page with one centred, a
-short one whole and smaller, the frame, the badge where there is room and
-none where there is not, the later turns
+short one whole and smaller, the frame, the badge on a picture at the
+lane's height and none on a smaller one, the later turns
 fainter, past the cache's budget and drawn on; the lane's height short and
 tall, the handles and the song under it; on every frame of the box's glide
 up and back; the press; the lit beat; the Pad's 26px. Calibrated with the

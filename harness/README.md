@@ -628,8 +628,9 @@ stays a sleep.
   centred on the page and the rest either side (a page held long again and
   again), and a page shorter than its picture the whole picture, smaller,
   each framed in the lane's purple on whole pixels, 3:1 and up; the number on a
-  badge where there is room and none where there is not, the turns after the
-  first fainter, a page drawn on its new picture as the drawer opens again;
+  small badge on a picture at the lane's height and none on a smaller one, the
+  turns after the first fainter, a page drawn on its new picture as the drawer
+  opens again;
   Flip's lane 34px over the box at its height and 52 at twice it, on every
   frame of the glide up and back the one for that frame's box, the song and
   the ends' handles 8px under it; a press on the taller lane moving nothing;
