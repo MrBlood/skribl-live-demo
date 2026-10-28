@@ -53,16 +53,46 @@
   // row each under the sentence (owner: Pen "opens a drawer but it's not
   // mentioned what a fast tap does"; the tap rows mock, "All yes"): every
   // button that opens something says so, read off what its tap really does.
+  //
+  // FLIP'S TRAY HOLDS EVERY TOOL (owner: "the tools on flip's ^ menu don't
+  // have them"), so each tool's card opens from its place in the tray as well
+  // as from the bar (the seven past Shape take a place in the bar once used).
+  // In the tray a tap only picks the tool, so a row about the bar's own button
+  // ("Tap again") is left out there: trayDo is the rows the tray's copy shows.
+  // The Pad has no tray; its three tools all fit the bar.
   var CARDS = [
-    { sel: '#penToolBtn', name: 'Pen', tag: 'Pen', demo: 'pen',
+    { sel: '#penToolBtn, .tool-tray-btn[data-tool="pen"]', name: 'Pen', tag: 'Pen', demo: 'pen',
       line: 'Press harder for a thicker line.',
-      do: [['Tap again', 'Colour, brush and size'], ['Drag sideways', 'Size, without opening anything']] },
-    { sel: '#eraserToolBtn', name: 'Eraser', tag: 'Eraser', demo: 'eraser',
+      do: [['Tap again', 'Colour, brush and size'], ['Drag sideways', 'Size, without opening anything']], trayDo: [] },
+    { sel: '#eraserToolBtn, .tool-tray-btn[data-tool="eraser"]', name: 'Eraser', tag: 'Eraser', demo: 'eraser',
       line: 'Rubs out what you drew, and the replay shows it rubbing out.',
-      do: [['Tap again', 'Eraser size']] },
-    { sel: '#shapeToolBtn', name: 'Shape', tag: 'Shape', demo: 'shape', more: 'Shape',
+      do: [['Tap again', 'Eraser size']], trayDo: [] },
+    { sel: '#shapeToolBtn, .tool-tray-btn[data-tool="shape"]', name: 'Shape', tag: 'Shape', demo: 'shape', more: 'Shape',
       line: 'Straight lines, rectangles, ovals and polygons.',
       do: [['Tap', 'Pick line, box, oval or polygon']] },
+    // The tray's own seven (Flip), each with its How it works clip.
+    { sel: '#selectToolBtn, .tool-tray-btn[data-tool="select"]', name: 'Select', tag: 'Select', clip: 'select',
+      line: 'Pick up part of a page to move it, flip it, copy it, or keep it as a stamp.',
+      do: [['Drag', 'A box round what you want'], ['Drag inside', 'Move it']] },
+    { sel: '#liquifyToolBtn, .tool-tray-btn[data-tool="liquify"]', name: 'Liquify', tag: 'Liquify', clip: 'liquify',
+      line: 'Bend the lines you’ve drawn, like pushing wet ink.',
+      do: [['Hold and pull', 'The lines in the ring follow your finger']] },
+    { sel: '#smudgeToolBtn, .tool-tray-btn[data-tool="smudge"]', name: 'Smudge', tag: 'Smudge', clip: 'smudge',
+      line: 'Smear your colours together where you drag, like a finger in wet paint.',
+      do: [['Drag', 'Soften an edge or blend two colours']] },
+    { sel: '#blurToolBtn, .tool-tray-btn[data-tool="blur"]', name: 'Blur', tag: 'Blur', clip: 'blur',
+      line: 'Soften your lines without moving them.',
+      do: [['Brush over', 'Softer each time, up to a point']] },
+    { sel: '#fillToolBtn, .tool-tray-btn[data-tool="fill"]', name: 'Fill', tag: 'Fill', clip: 'fill',
+      line: 'Fill a closed shape with your colour.',
+      do: [['Tap inside', 'Fills out to the lines'], ['Spilled?', 'Undo puts it back']] },
+    { sel: '#stampToolBtn, .tool-tray-btn[data-tool="stamp"]', name: 'Stamps', tag: 'Stamps', clip: 'stamp',
+      line: 'Your saved bits of drawing, to place again anywhere.',
+      do: [['Tap', 'Opens your stamps'], ['To save one', 'Select it, then press the stamp button']] },
+    { sel: '#artmoveToolBtn, .tool-tray-btn[data-tool="artmove"]', name: 'Artwork', tag: 'Artwork', clip: 'artmove',
+      line: 'Move this page’s whole drawing without redrawing it.',
+      do: [['Tap', 'This page, or it and every page after'], ['Drag', 'Slide the drawing to a new spot'],
+           ['Tip', 'Onion skin shows the page before']] },
     { sel: '#toolMoreBtn', name: 'More tools', tag: 'More tools', more: 'Fill',
       line: 'Fill, blur, smudge, select, stamp and more, for this page.',
       do: [['Tap', 'Every tool, in a tray']] },
@@ -140,11 +170,14 @@
     if (spec.clip) {
       var src = watch.querySelector('.learn-clip[data-clip-name="' + spec.clip + '"]');
       if (!src) return null;
-      var frame = document.createElement('div'); frame.className = 'lc-phone';
+      // The clip's own shape, so the outline hugs the whole screen it filmed:
+      // a phone's tall screen stands in the middle of its frame, and a tool's
+      // 4:3 (the tray's) fills the card's width, as a drawing's example does.
+      var ratio = src.getAttribute('data-ratio') || '', wh = ratio.split('/');
+      var wide = wh.length === 2 && +wh[0] >= +wh[1];
+      var frame = document.createElement('div'); frame.className = wide ? 'lc-stage lc-clip' : 'lc-phone';
       var v = document.createElement('video');
       v.muted = true; v.loop = true; v.playsInline = true; v.setAttribute('playsinline', ''); v.setAttribute('aria-hidden', 'true');
-      // The clip's own shape, so the outline hugs the whole screen it filmed.
-      var ratio = src.getAttribute('data-ratio');
       if (ratio) v.style.aspectRatio = ratio;
       v.poster = src.getAttribute(light ? 'data-poster-light' : 'data-poster-dark');
       if (!reduce) { v.src = src.getAttribute('data-clip-' + (light ? 'light' : 'dark') + (h264 ? '' : '-webm')); v.autoplay = true; }
@@ -185,6 +218,13 @@
       if (q) { q.value = spec.more || spec.name; q.dispatchEvent(new Event('input', { bubbles: true })); }
     }, 60);
   }
+  // A TAP ON A CARD IS THE CARD'S OWN: it never reaches the page as a tap
+  // away from the drawer, the tray or the picker it opened over. Got it shut
+  // Flip's tray under it, so the next tool's card was a tap further away, and
+  // a Show me step's Next shut the tray its last step had opened.
+  function keep(card) {
+    ['pointerdown', 'click'].forEach(function (t) { card.addEventListener(t, function (e) { e.stopPropagation(); }); });
+  }
   function place(el) {
     var b = el.getBoundingClientRect();
     var w = cardEl.offsetWidth, h = cardEl.offsetHeight;
@@ -203,6 +243,7 @@
     var desk = how === 'rest';
     cardEl = document.createElement('div');
     cardEl.className = 'lc-card';
+    keep(cardEl);
     cardEl.setAttribute('role', 'dialog');
     cardEl.setAttribute('aria-labelledby', 'lcTitle');
     var pic = document.createElement('div'); pic.className = 'lc-pic';
@@ -213,10 +254,11 @@
       + '</div>';
     body.querySelector('.lc-t').textContent = spec.name;
     body.querySelector('.lc-line').textContent = spec.line;
-    if (spec.do) {
+    var rows = spec.trayDo && el.classList.contains('tool-tray-btn') ? spec.trayDo : spec.do;
+    if (rows && rows.length) {
       var dl = document.createElement('dl');
       dl.className = 'lc-do';
-      spec.do.forEach(function (d) {
+      rows.forEach(function (d) {
         var row = document.createElement('div');
         var dt = document.createElement('dt'); dt.textContent = d[0];
         var dd = document.createElement('dd'); dd.textContent = d[1];
@@ -274,6 +316,7 @@
       var last = i === list.length - 1;
       cardEl = document.createElement('div');
       cardEl.className = 'lc-card lc-step' + (el ? '' : ' lc-free');
+      keep(cardEl);
       cardEl.setAttribute('role', 'dialog');
       cardEl.setAttribute('aria-labelledby', 'lcTitle');
       cardEl.innerHTML = '<div class="lc-body"><div class="lc-kick"><span class="lc-k"></span><span class="lc-dots" aria-hidden="true">'

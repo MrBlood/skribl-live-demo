@@ -1143,6 +1143,46 @@ pinch; not testable here on an iPhone. And THUMB REACH as a check: Wavebox
 keeps play at the foot, so measure where Hear the loop and the click land
 on a 402 x 874 phone and keep them within a thumb's reach.
 
+THE OWNER'S PICKS, "All yes" to all ten (27 October, after the whole
+drawer mock and the speed and cards mock), and the build order:
+the two small PRs first (the speed choice's ends, built in #655, 6u; the
+tray tools' cards, 6v), then the drawer as one PR in steps, toward the
+whole-drawer mock's New:
+1. D's four doors (Length, Beat, Restart, Exact times), More gone.
+2. The draw drawer's tiles, and D's, grow to span a desk (the phone as it
+   is).
+3. The loop's edge line 1.5px and sharp (whole device pixels).
+4. The click in one pill with Hear the loop, and the beat's dot lit on
+   each tick.
+5. The end sets the tempo; the Beat door says where its tempo came from
+   ("83 · heard", tapped, or set by the end).
+6. The taller box: one tap for twice as tall, the arrows glyph beside
+   Magnify's - and +, gliding (below); the wave filling the box zoomed in
+   deep; pinch to zoom.
+7. The drawing's lane shows the drawing (Flip's pages as little pictures,
+   the Pad's strokes in their own inks, at 3:1 against the lane).
+8. Songs in three: the ears hear threes, and a waltz counts 3 · 6 · 12 · 24.
+Then the ears' speed measured at phone pace (a Worker if it shows), and
+ten of the owner's songs by ear with the click on (6t). Each step's
+suites, help words, contrast census and docs ride with it.
+
+THE GROW GLIDES (owner, on the mock: "when the waveform expanded to a
+longer style it was not a smooth transition, it shook and jerked"). Read
+on every frame as it was shown, the mock's grow did four things wrong, and
+the build does each the other way. Its clock began before its first frame,
+so the box shrank 5 to 27px before it grew (the jerk). The timeline paints
+a new size on the frame after (its ResizeObserver asks for one), so every
+frame of the grow showed the frame before stretched to fit (the shake).
+The page caught Hear the loop up only after half a pixel of drift. And
+Flip's lane went to its full height at once. So the clock starts on the
+first frame; the box moves in whole pixels and the page scrolls by exactly
+what it grew, read off Hear itself; the lane grows with the box; and
+`lib/musictimeline.js` paints a new size in the frame it is laid out (its
+ResizeObserver paints rather than asks). The drawer's suite reads the grow
+on every frame, up and back, on the Pad and Flip, a phone and a desk, red
+first the way the mock did it: in the mock, 28 of its 40 rows were red as
+the owner saw it, and each fix undone alone turned its own rows red.
+
 Three more for the same change (owner, with screenshots):
 
 - THE DRAW DRAWER'S FOUR TILES SIT LEFT ON A DESK. `.dp` stops at 520px and
@@ -1278,6 +1318,13 @@ speeds the room instead, so a picked end's purple reaches the curve but its
 word sits off centre. My pick B. One rule for every place, then
 `player.css` re-emitted; a small PR of its own. The replay line above it,
 whose bars start against its left edge, is checked the same way.
+
+BUILT, B, in #655 (owner: "All yes"): 8px inside each end on the Pad's line,
+the link page and the post's box (which keeps its own copy), 14 on the
+desk pill, 11 in Tune. Measuring it found Tune's eight ran off a phone (they
+share the pill evenly now), and that a 320px phone's line held the pill too
+tight (it may reach past its line, never within a twentieth of the screen
+of its edge). verify_replayspeed, THE PILL'S ENDS.
 
 ## 6v. How it works, made again once the look settles (owner: "it will be a big project and we should definitely wait on most of it, until things looks and function as we want")
 

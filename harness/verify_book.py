@@ -119,7 +119,10 @@ ASK = """(id) => { document.getElementById('askAnswer').innerHTML = '';
 PLACES = {
     "Pad": ["book speed", "book music", "book post", "card #mediaOpenBtn photo", "card #postBtn post", "ask music",
             "ask speed", "ask takes", "ask post", "ask export", "ask photo"],
-    "Flip": ["book music", "book post", "card #postBtn post", "ask music", "ask post"],
+    "Flip": ["book music", "book post", "card #postBtn post", "ask music", "ask post",
+             # the tray's own seven (owner: the tools on Flip's ^ "don't have them")
+             "card tray select", "card tray liquify", "card tray smudge", "card tray blur", "card tray fill",
+             "card tray stamp", "card tray artmove"],
 }
 TODAY = {"book": 150, "card": 112, "ask": 150}   # the phone's width before the fix: it grows its frame, not shrinks
 
@@ -165,6 +168,16 @@ def clip_walk(q):
         for m in q.evaluate(WHOLE, ".lc-card .lc-phone video"):
             found[f"card {sel} {m['clip']}"] = m
         q.evaluate("() => SkriblLearnCard.close()"); q.wait_for_timeout(250)
+    # Flip's tray: its own seven tools' cards play their 4:3 clip across the
+    # card's stage, held from their places in the open tray.
+    if q.evaluate("() => { const m = document.getElementById('toolMoreBtn'); return !!m && !!m.getClientRects().length && !!document.getElementById('strip'); }"):
+        q.click("#toolMoreBtn"); q.wait_for_timeout(600)
+        for tool in ("select", "liquify", "smudge", "blur", "fill", "stamp", "artmove"):
+            q.evaluate("(t) => SkriblLearnCard.open('.tool-tray-btn[data-tool=\"' + t + '\"]')", tool); q.wait_for_timeout(600)
+            for m in q.evaluate(WHOLE, ".lc-card .lc-clip video"):
+                found[f"card tray {m['clip']}"] = m
+            q.evaluate("() => SkriblLearnCard.close()"); q.wait_for_timeout(250)
+        q.click("#toolMoreBtn"); q.wait_for_timeout(400)
     q.evaluate("() => openHelpDrawer()"); q.wait_for_timeout(700)
     for aid in ("music", "speed", "takes", "post", "export", "photo"):
         q.evaluate(ASK, aid); q.wait_for_timeout(600)

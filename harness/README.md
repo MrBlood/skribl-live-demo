@@ -773,6 +773,12 @@ stays a sleep.
   waits two seconds), and moving away closes it; `?` tags every button,
   a tag opens its card, Escape closes; How it works' Name every button; the
   first-time note once; automation never meets any of it unless it asks.
+  Flip's tray: every tool in it holds its card (the tray's own seven with
+  their clip across the card's 4:3 stage), the tray staying open under the
+  card and after Got it with that tool in focus, the hold picking no tool;
+  in the tray the Pen's and the Eraser's rows about their bar buttons are
+  left out; a tool used from the tray holds the same card from the bar; and
+  on a desk, resting does the same.
 - `verify_ask.py` — Ask, How it works as one question (lib/ask.js), Pad and
   Flip: it opens on its home every time, the field empty, each editor's own
   four often-asked; a sheet on a phone, a dialog on a desk; typing gives the
