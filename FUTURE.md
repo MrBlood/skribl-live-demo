@@ -1164,7 +1164,8 @@ whole-drawer mock's New:
    deep; pinch to zoom. Built (DECISIONS, the taller box, the wave filling
    it, pinch to zoom); the lane grows with the box in step 7.
 7. The drawing's lane shows the drawing (Flip's pages as little pictures,
-   the Pad's strokes in their own inks, at 3:1 against the lane).
+   the Pad's strokes in their own inks, at 3:1 against the lane). Built
+   (DECISIONS, the drawing in its lane), Flip's lane growing with the box.
 8. Songs in three: the ears hear threes, and a waltz counts 3 · 6 · 12 · 24.
 Then the ears' speed measured at phone pace (a Worker if it shows), and
 ten of the owner's songs by ear with the click on (6t). Each step's

@@ -4,9 +4,10 @@
  * mocked first; the owner: "Yes on all".)
  * YOUR DRAWING STAYS PUT AND THE SONG SLIDES UNDER IT.
  *
- * Above, the drawing's own lane: each stroke when it was drawn (the Pad), or
- * each page as long as it shows, numbered, and its next turns fainter (Flip:
- * an animation goes round on its own, lib/holdtiming.js plan). A dashed line
+ * Above, the drawing's own lane: each stroke when it was drawn, in its own
+ * ink (the Pad), or each page as long as it shows, as its own little picture,
+ * numbered where there is room, and its next turns fainter (Flip: an
+ * animation goes round on its own, lib/holdtiming.js plan). A dashed line
  * wherever the loop comes round under it. Below, the song: its waveform, the
  * loop lit, the beat once there is one (a dot on each, bigger on each bar
  * from the loop's start), a smooth restart's fold coming in at the loop's
@@ -70,6 +71,19 @@
  * go stays where it is let go (the owner, again: exact control); the join is
  * already clean (lib/audioloop.js: a smooth restart, or Cut on silence).
  *
+ * THE DRAWING IN ITS LANE (step 7 of the whole-drawer mock, from ACID's video
+ * track; the owner: "All yes"). The Pad's strokes are each in their own ink,
+ * its hue kept, made only as much darker (or lighter) as it takes to read 3:1
+ * against the lane, as a mark must: a dark ink on the dark lane lifts, a pale
+ * one on the light lane deepens, the rest as drawn. Flip's pages are each
+ * their own little picture, the strip's thumbnail, its own shape kept: a page
+ * as long as its picture or longer is the picture at the lane's height, one
+ * centred on the page's time and the rest either side, and a shorter one the
+ * whole picture, smaller, each framed in the lane's purple so a short one
+ * still reads; the page's number on a badge where there is room.
+ * Flip's lane is taller for them (h.laneHeight), and grows with the box in
+ * the frame the box does.
+ *
  * ZOOMED IN DEEP, THE WAVE FILLS THE BOX (the owner: yes). Where the wave
  * itself shows, it is drawn against the loudest moment in view rather than
  * the song's loudest, so a soft first note after a quiet intro, a pixel or
@@ -107,9 +121,13 @@
  *   hasTrack()
  *   crossfade()         ms
  *   tempo()             { bpm, phase } or null
- *   lane()              { seconds, marks: [[a, b, label?], ...], again }
- *                       (seconds; `again`, Flip's: { from, period } of the
+ *   lane()              { seconds, marks: [[a, b, label?, ink?], ...], again }
+ *                       (seconds; a page's number, Flip's, or a stroke's ink,
+ *                       the Pad's; `again`, Flip's: { from, period } of the
  *                       part that goes round), computed when laneKey() moves
+ *   laneHeight(box, base)  the lane's height in px for a box that tall
+ *                       (optional; 26 without it)
+ *   pageArt(n)          page n's own little picture, a canvas (optional)
  *   laneKey()           a cheap key that changes when the drawing does
  *   name(secs)          the words over the drawing's lane
  *   edge(which, t)      move an end there (during a drag)
@@ -209,6 +227,7 @@
     var magVal = root.querySelector('.mt-tl-mag-val'), nameBox = root.querySelector('.mt-tl-namebox');
     var tallBtn = root.querySelector('.mt-tl-tall'), baseH = 0, tallTo = 0, tallRaf = 0;
     var gain = 0;   // the level the wave is drawn against (fillTo)
+    var laneH = LANE;   // the drawing's lane as painted (h.laneHeight)
     // The rung's words take the widest rung's room (the CSS reads it here),
     // so - and + stay where they are as it steps.
     if (magVal) magVal.setAttribute('data-widest', MAGS[MAGS.length - 1] + '\u00d7');
@@ -370,10 +389,53 @@
       h.edge(g.which, T(Math.max(0, Math.min(w, g.x - rect().left))));
     }
 
+    // A STROKE'S OWN INK ON THE LANE (above): its own hue kept, darker on a
+    // light lane and lighter on a dark one (the way the lane's words are), a
+    // fiftieth at a time until it reads 3:1 against the lane, and no further;
+    // mixed toward the words instead, a yellow went olive. Worked out once
+    // for each ink on each lane; a theme switched is a new lane.
+    var inkMemo = {}, inkLane = '';
+    function rgb(c) {
+      var p = document.createElement('i');
+      p.style.color = c; p.style.display = 'none'; root.appendChild(p);
+      var said = global.getComputedStyle(p).color, n = (said.match(/[\d.]+/g) || [0, 0, 0]).slice(0, 3).map(Number);
+      root.removeChild(p);
+      return /^color\(/.test(said) ? n.map(function (v) { return v * 255; }) : n;
+    }
+    function lum(c) {
+      return c.reduce(function (s, v, k) { v /= 255; v = v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); return s + [0.2126, 0.7152, 0.0722][k] * v; }, 0);
+    }
+    function contrast(a, b) { var p = lum(a), q = lum(b); return (Math.max(p, q) + 0.05) / (Math.min(p, q) + 0.05); }
+    // Where a 1px line lies on whole device pixels, nearest v.
+    function crisp(v, dpr) { return (Math.round(v * dpr - dpr / 2) + dpr / 2) / dpr; }
+    function hsl(c) {
+      var r = c[0] / 255, g = c[1] / 255, b = c[2] / 255, hi = Math.max(r, g, b), lo = Math.min(r, g, b), d = hi - lo, l = (hi + lo) / 2, hu = 0;
+      if (d) { hu = hi === r ? (g - b) / d : hi === g ? (b - r) / d + 2 : (r - g) / d + 4; hu = (hu * 60 + 360) % 360; }
+      return [hu, d ? d / (1 - Math.abs(2 * l - 1)) : 0, l];
+    }
+    function fromHsl(hu, sa, l) {
+      var c = (1 - Math.abs(2 * l - 1)) * sa, q = c * (1 - Math.abs((hu / 60) % 2 - 1)), m = l - c / 2;
+      return [[c, q, 0], [q, c, 0], [0, c, q], [0, q, c], [q, 0, c], [c, 0, q]][Math.floor(hu / 60) % 6].map(function (v) { return Math.round((v + m) * 255); });
+    }
+    function laneInk(c, card, words) {
+      if (card + '|' + words !== inkLane) { inkLane = card + '|' + words; inkMemo = { lane: rgb(card), words: rgb(words) }; }
+      var key = 'k' + c;
+      if (!inkMemo[key]) {
+        var from = rgb(c), out = from, f = hsl(from), way = lum(inkMemo.words) < lum(inkMemo.lane) ? -1 : 1;
+        for (var k = 1; k <= 50 && contrast(out, inkMemo.lane) < 3; k++) out = fromHsl(f[0], f[1], Math.max(0, Math.min(1, f[2] + way * k / 50)));
+        inkMemo[key] = 'rgb(' + out.join(', ') + ')';
+      }
+      return inkMemo[key];
+    }
+
     function paint() {
       var w = width(), hh = stage.clientHeight || 0, ok = h.hasTrack() && view;
       root.classList.toggle('empty', !ok);
       if (!(w > 0) || !(hh > 0)) return;      // shut: painted when it opens (sync)
+      // The lane's height for the box as tall as it is now, in this frame,
+      // and the handles' tops below it (styles.css reads --tl-lane).
+      var lh = h.laneHeight ? Math.round(h.laneHeight(hh, base() || hh)) : LANE;
+      if (lh !== laneH || !root.style.getPropertyValue('--tl-lane')) { laneH = lh; root.style.setProperty('--tl-lane', lh + 'px'); }
       var dpr = global.devicePixelRatio || 1, W = Math.round(w * dpr), H = Math.round(hh * dpr);
       if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; }
       var x = cv.getContext('2d');
@@ -382,12 +444,12 @@
       if (!ok) return;
       // What is painted, as it is painted, for whoever asks (the harness):
       // each mark on the drawing's lane, each comes-round line, each beat.
-      var drawn = root._painted = { marks: [], lines: [], beats: [], turns: 0, beatIn: beatIn };
+      var drawn = root._painted = { marks: [], lines: [], beats: [], turns: 0, beatIn: beatIn, lane: laneH, art: 0, tile: 0 };
       var st = getComputedStyle(root), tok = function (n) { return st.getPropertyValue(n).trim(); };
       var acc = tok('--accent'), ink = tok('--accent-ink'), fill = tok('--accent-fill') || acc;
-      var card = tok('--menu-card'), line = tok('--menu-card-line'), paper = tok('--menu-paper') || card;
+      var card = tok('--menu-card'), line = tok('--menu-card-line'), paper = tok('--menu-paper') || card, strong = tok('--text-strong');
       var t = trim(), s0 = t.start, s1 = t.end, L = s1 - s0, xf = Math.min(h.crossfade() / 1000, L / 2), hl = L - xf;
-      var dur = t.duration, ln = laneNow(), Dd = laneSecs, sTop = LANE + GAP, sH = hh - sTop;
+      var dur = t.duration, ln = laneNow(), Dd = laneSecs, sTop = laneH + GAP, sH = hh - sTop;
       function rr(a, b, c, d, r) { x.beginPath(); if (x.roundRect) x.roundRect(a, b, c, d, r); else x.rect(a, b, c, d); }
       // CLOSE IN, THE WAVE ITSELF (above): both channels as one (their mean),
       // through the middle line at its zero, so where it crosses shows.
@@ -434,8 +496,8 @@
       var a0 = X(s0), a1 = Dd > 0 ? X(s0 + Dd) : a0;
       x.lineWidth = 1;
       if (Dd > 0) {
-        rr(a0, 0.5, Math.max(8, a1 - a0), LANE - 1, 8); x.fillStyle = card; x.fill(); x.strokeStyle = line; x.stroke();
-        var marks = ln && ln.marks || [], again = ln && ln.again, numbered = marks.length && marks[0].length > 2;
+        rr(a0, 0.5, Math.max(8, a1 - a0), laneH - 1, 8); x.fillStyle = card; x.fill(); x.strokeStyle = line; x.stroke();
+        var marks = ln && ln.marks || [], again = ln && ln.again, numbered = marks.length && marks[0][2] != null;
         // The first turn, then (Flip) the next ones, fainter, until the loop has come round.
         var turns = [[0, 0, Infinity]];
         if (again && again.period > 0) {
@@ -447,7 +509,7 @@
           if (c2) {
             var b0 = X(s0 + off + again.from), b1 = Math.min(X(s0 + off + again.from + again.period), X(stop));
             if (b1 - b0 < 2) return;
-            rr(b0, 0.5, b1 - b0, LANE - 1, 8); x.fillStyle = card; x.fill(); x.strokeStyle = line; x.stroke();
+            rr(b0, 0.5, b1 - b0, laneH - 1, 8); x.fillStyle = card; x.fill(); x.strokeStyle = line; x.stroke();
           }
           for (var i = 0; i < marks.length; i++) {
             var m = marks[i];
@@ -458,14 +520,47 @@
             if (B < -2) continue;
             if (!numbered && A < lastX + 1) { A = lastX + 1; if (B < A) continue; }   // strokes closer than a pixel: one mark
             x.globalAlpha = c2 ? 0.45 : 1;
-            x.fillStyle = numbered ? fill : acc;
-            rr(A + (numbered ? 1.5 : 0), numbered ? 4 : 6, Math.max(3, B - A - (numbered ? 3 : 0)), LANE - (numbered ? 8 : 12), numbered ? 4 : 3);
-            x.fill();
+            var art = numbered && h.pageArt ? h.pageArt(m[2]) : null;
+            var py = 4;
+            if (art && art.width && art.height) {
+              // A PAGE AS ITS OWN LITTLE PICTURE (above), its own shape kept:
+              // as long as its picture or longer, the picture at the lane's
+              // height, one centred on the page's time and the rest either
+              // side; shorter, the whole picture, smaller, so where things
+              // are on the page still reads.
+              var pl = A + 1.5, pw = Math.max(3, B - A - 3), ph = laneH - 8, tw = ph * art.width / art.height, sh = ph;
+              if (pw >= tw) {
+                var tx = pl + (pw - tw) / 2; tx -= Math.ceil((tx - pl) / tw) * tw;
+                x.save(); rr(pl, 4, pw, ph, 4); x.clip();
+                for (; tx < pl + pw; tx += tw) x.drawImage(art, tx, 4, tw, ph);
+                x.restore();
+              } else {
+                sh = pw * art.height / art.width; py = 4 + (ph - sh) / 2;
+                x.save(); rr(pl, py, pw, sh, 3); x.clip(); x.drawImage(art, pl, py, pw, sh); x.restore();
+              }
+              // Framed in the lane's purple, on the screen's own pixels so it
+              // is crisp (as the loop's edges are): a short page's picture is
+              // small, and its frame is what shows it is there.
+              var fl = crisp(pl, dpr), ft = crisp(py, dpr);
+              rr(fl, ft, crisp(pl + pw, dpr) - fl, crisp(py + sh, dpr) - ft, sh < ph ? 3 : 4); x.strokeStyle = ink; x.stroke();
+              drawn.art++; drawn.tile = +tw.toFixed(2);
+            } else {
+              x.fillStyle = numbered ? fill : m[3] ? laneInk(m[3], card, strong) : acc;
+              rr(A + (numbered ? 1.5 : 0), numbered ? 4 : 6, Math.max(3, B - A - (numbered ? 3 : 0)), laneH - (numbered ? 8 : 12), numbered ? 4 : 3);
+              x.fill();
+            }
             drawn.marks.push([+A.toFixed(2), +B.toFixed(2), c2]);
             lastX = B;
-            if (numbered && !c2 && B - A > 18) {
-              x.globalAlpha = 1; x.fillStyle = '#fff'; x.font = '650 11px ' + st.fontFamily; x.textBaseline = 'middle';
-              x.fillText(String(m[2]), A + 6, LANE / 2 + 0.5);
+            if (numbered && !c2 && B - A > (art ? 34 : 18)) {
+              x.globalAlpha = 1; x.font = '650 11px ' + st.fontFamily; x.textBaseline = 'middle';
+              if (art) {
+                // Its number on a badge, over its picture.
+                var nb = x.measureText(String(m[2])).width + 9;
+                rr(A + 4, py + 2.5, nb, 15, 7.5); x.fillStyle = fill; x.fill();
+                x.fillStyle = '#fff'; x.fillText(String(m[2]), A + 8.5, py + 10.5);
+              } else {
+                x.fillStyle = '#fff'; x.fillText(String(m[2]), A + 6, laneH / 2 + 0.5);
+              }
             }
           }
           x.globalAlpha = 1;
@@ -481,7 +576,7 @@
           drawn.lines.push(+rx.toFixed(2));
         }
       } else {
-        x.setLineDash([4, 4]); rr(a0, 0.5, Math.max(40, w * 0.25), LANE - 1, 8); x.strokeStyle = line; x.stroke(); x.setLineDash([]);
+        x.setLineDash([4, 4]); rr(a0, 0.5, Math.max(40, w * 0.25), laneH - 1, 8); x.strokeStyle = line; x.stroke(); x.setLineDash([]);
       }
 
       // THE SONG, the loop lit.
@@ -569,7 +664,7 @@
       if (!h.hasTrack() || !view) return null;
       if (e.touches && e.touches.length > 1) return pinch(e);
       var pt = EP.at(e), r = rect(), y = pt.clientY - r.top, hd = e.target.closest && e.target.closest('.mt-tl-handle');
-      if (!hd && y < LANE + GAP / 2) return null;                  // the drawing stays put
+      if (!hd && y < laneH + GAP / 2) return null;                 // the drawing stays put
       var touch = e.type === 'touchstart';
       if (hd || !touch) e.preventDefault();
       var g = { kind: hd ? 'end' : 'slide', which: hd ? hd.dataset.which : null, x: pt.clientX, y0: pt.clientY,
@@ -772,7 +867,7 @@
       if (!lit) { lit = document.createElement('span'); lit.className = 'mt-tl-lit'; lit.setAttribute('aria-hidden', 'true'); stage.appendChild(lit); }
       lit.classList.toggle('bar', !!bar);
       lit.style.left = at.toFixed(2) + 'px';
-      lit.style.top = (LANE + GAP + 8) + 'px';
+      lit.style.top = (laneH + GAP + 8) + 'px';
       if (lit.getAnimations) lit.getAnimations().forEach(function (a) { a.cancel(); });
       var still = h.still && h.still();
       if (lit.animate) {

@@ -131,6 +131,8 @@
  *   refresh()           repaint the drawer (the editor's updateTrimUI)
  *   lane()              the drawing's lane on the timeline, and laneKey(),
  *                       which moves when the drawing does (lib/musictimeline.js)
+ *   pageArt(n)          optional (Flip): page n's little picture for the lane,
+ *                       and laneHeight(box, base), the lane's height for it
  *   changed()           the editor's autosave
  *   drawingSeconds()    the drawing's length, for Fit my drawing
  *   fitsByDefault       Skribl's pick is as long as the drawing (the Pad)
@@ -703,7 +705,7 @@
     }
     var tl = global.SkriblMusicTimeline ? global.SkriblMusicTimeline.create($('musicTimeline'), {
       trim: h.trim, buffer: h.buffer, hasTrack: h.hasTrack, crossfade: h.crossfade, tempo: tempo,
-      lane: h.lane, laneKey: h.laneKey, name: laneName, still: still,
+      lane: h.lane, laneKey: h.laneKey, pageArt: h.pageArt, laneHeight: h.laneHeight, name: laneName, still: still,
       edge: function (which, t) { setEdge(which, t, 'constrain'); },
       slide: slideTo,
       // A tap on the whole song: the loop glides there, starting on a beat.

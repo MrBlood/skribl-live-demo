@@ -6674,6 +6674,19 @@ musicDrawer = window.SkriblMusicDrawer ? window.SkriblMusicDrawer.wire({
     return { seconds:c, marks, again: p.forever ? { from:p.introMs/1000, period:p.stretchMs/1000 } : { from:0, period:c } };
   },
   laneKey: ()=>frames.length+':'+fps+':'+JSON.stringify(docLoop||null)+':'+frames.map(f=>(f.hold||1)+(f.strokes.length?'i':'')).join(','),
+  // Each page in the lane as its own little picture: the strip's thumbnail,
+  // as the strip keeps it (repainted only when the page changes), or past the
+  // cache's budget the strip's own tile, painted when the page last changed
+  // (a lane painted every frame never paints a page itself); and the lane
+  // taller for them, 34px over a box of its own height and 52px over one
+  // twice as tall, growing with it (lib/musictimeline.js).
+  pageArt: (n)=>{
+    const f=frames[n-1]; if(!f) return null;
+    const hit=_thumbCache.get(f); if(hit && hit.sig===_thumbSig(f)) return hit.cv;
+    const el=_tiles()[n-1], cv=el && el.querySelector('canvas');
+    return cv && cv.width ? cv : null;
+  },
+  laneHeight: (box, base)=>Math.round(34 + 18*Math.max(0, Math.min(1, (box-base)/base))),
   changed: scheduleSave,
   // One pass as it plays: each page at its own length (holds, drawing pages),
   // a loop's stretch as many times as it runs (lib/holdtiming.js plan). It was

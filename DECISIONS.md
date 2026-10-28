@@ -25104,3 +25104,86 @@ grows as the Pad's, and every row runs on both.
 
 Not tested here: an iPhone's WebKit (two fingers there, and its own zoom),
 a trackpad's pinch (the events are made to its shape), SF and Segoe UI.
+
+## After v329 -- The drawing in its lane
+
+Step 7 of the whole-drawer mock (FUTURE.md 6s; the owner: "All yes"), from
+ACID's video track: the timeline's lane over the song shows the drawing.
+
+THE PAD'S STROKES, EACH IN ITS OWN INK. editor_music.js gives each stroke's
+mark the ink of its first point as the replay draws it (lib/recolorplay.js
+gives a recoloured line the colour it was drawn in), an eraser's none, and
+lib/musictimeline.js paints it so. An ink that does not read 3:1 against
+the lane (--menu-card) keeps its hue and is made darker on the light lane
+and lighter on the dark, as the lane's words are, a fiftieth at a time
+until it does, and no further; worked out once for each ink on each lane.
+Skribl purple and a near-black are as drawn on the light lane; a coral
+(2.80:1 there) goes two fiftieths darker, and a pale yellow (1.12:1) a dark
+gold, 26. On the dark lane the near-black (1.08:1) goes a slate, 17
+lighter. Mixed toward the lane's words instead (the mock's rule), the
+yellows went olive. An eraser's stroke is the lane's accent.
+
+FLIP'S PAGES, EACH ITS OWN LITTLE PICTURE. flip.js hands the timeline each
+page's picture: the strip's thumbnail as the strip keeps it (_thumbCache,
+repainted only when the page changes), or past the cache's budget the
+strip's own tile, so a lane painted on every frame of a glide never paints a
+page itself (8MB holds about 42 pages at 3x). Its own shape is kept. A page
+as long as its picture or longer is the picture at the lane's height, one
+centred on the page's time and the rest either side, clipped to the page's
+slot, so a page held long is its picture again and again. A shorter page is
+the whole picture, smaller, centred in the lane, as the mock had each page
+whole in its slot; cropped to its middle instead, a ball crossing eight
+pages showed only on the middle ones, and squashed to the lane's height it
+was not its own shape. Each picture is framed in the lane's purple
+(--accent-ink, 8:1 and up against the lane), on whole device pixels as the
+loop's edges are, so a short page's small picture still shows; the card's
+own line was 1.3:1. The number sits on a badge (--accent-fill, white),
+on the picture's corner, where the slot is over 34px, so it reads over any
+drawing; the mock's numbers were dark purple straight on its pictures. The turns after the first are the pictures
+at 45%, as the marks were. A stroke on Flip's canvas is a tap away from the
+drawer, which closes it, so the lane shows a page's new picture as the
+drawer opens again.
+
+FLIP'S LANE TALLER FOR THEM. The lane's height is the editor's
+(laneHeight(box, base)): Flip's is 34px over the box at its own height and
+52 over one twice as tall, growing with the box in the frame the box does,
+since the timeline paints each height as it is laid out. The song sits 8px
+under it, the ends' handles too (--tl-lane, set as it paints), a press on
+it moves nothing, and the beat lit as it is heard stays on its dot. The
+Pad's stays 26px: a stroke reads as a line.
+
+lib/musicdrawer.js hands both hooks through to the timeline. The new
+suite's first run found that it did not: no pictures, and a 26px lane.
+
+Rows (verify_musiclane, 38): the Pad's inks as drawn, moved with their hue
+kept, at 3:1 and the eraser's, light and dark, phone and desk; Flip's
+pictures, each its own, again and again on a long page with one centred, a
+short one whole and smaller, the frame, the badge where there is room and
+none where there is not, the later turns
+fainter, past the cache's budget and drawn on; the lane's height short and
+tall, the handles and the song under it; on every frame of the box's glide
+up and back; the press; the lit beat; the Pad's 26px. Calibrated with the
+page's files served from broken copies (the files on disk untouched), each
+red on its own rows: no ink, the ink as drawn, the ink mixed toward the
+words, the ink taken all the way to black or white, the eraser in its
+colour; no pictures, the first page's picture
+for every page, the pictures from the slot's left, one picture, a picture
+stretched to the slot, a short page cropped to its middle or squashed to the
+lane's height, the frame in the card's line, the frame between pixels, no
+badge, a badge on every slot, the later turns as marks,
+the drawer not handing the hooks on, no tile past the cache, a lane copy of
+each picture kept for ever; no lane height, the handles at 34px, the
+lane a frame late, the song under the old lane, the Pad given Flip's height;
+the press under the old lane; the lit beat under the old lane.
+
+verify_musictimeline's grips and wave rows and verify_musictall's ink and
+pinch rows read the lane's height from what the timeline painted. How it
+works says the lane shows each stroke in its own colour and each page as its
+own little picture, numbered where there is room; verify_helpclaims claims
+it.
+
+WHAT IT DOES TO FLIP: one timeline for both; the inks are the Pad's (a Flip
+page is a picture), the pictures and the taller lane are Flip's (a stroke
+reads as a line).
+
+Not tested here: an iPhone's WebKit, SF and Segoe UI.

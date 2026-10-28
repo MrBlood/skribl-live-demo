@@ -618,6 +618,23 @@ stays a sleep.
   deltas a rung as they add up, the page's zoom called off, the plain wheel the
   page's.
   Skribl's ears are off here.
+- `verify_musiclane.py` — the drawing in its lane (step 7), read off the
+  timeline's pixels: the Pad's strokes each in the ink they were drawn in
+  where it reads 3:1 against the lane, light and dark, phone and desk, and one
+  that would not kept to its own hue, darker on the light lane and lighter on
+  the dark only as far as 3:1 takes it, an eraser's stroke the lane's accent;
+  Flip's pages each their own
+  picture and no other's, their own shape kept, at the lane's height one
+  centred on the page and the rest either side (a page held long again and
+  again), and a page shorter than its picture the whole picture, smaller,
+  each framed in the lane's purple on whole pixels, 3:1 and up; the number on a
+  badge where there is room and none where there is not, the turns after the
+  first fainter, a page drawn on its new picture as the drawer opens again;
+  Flip's lane 34px over the box at its height and 52 at twice it, on every
+  frame of the glide up and back the one for that frame's box, the song and
+  the ends' handles 8px under it; a press on the taller lane moving nothing;
+  the beat lit on its dot; the Pad's lane 26px, tall or not.
+  Skribl's ears are off here.
 - `verify_musictimeline.py` — step 2 of the music plan (the owner: "Yes on
   all"), on the Pad and on Flip: the timeline (lib/musictimeline.js) is the
   drawer's one view, the drawing's lane over the song, two handles and the

@@ -526,7 +526,8 @@ with sync_playwright() as p:
         const h = document.getElementById(id), r = h.getBoundingClientRect(), g = h.querySelector('.mt-tl-grip'), line = r.left + r.width / 2;
         const isGrip = (e) => !!e && !!g && (e === g || g.contains(e));
         let hits = 0, asked = 0;
-        for (let y = st.top + 34 + 2; y <= st.bottom - 10; y += 2)
+        const lane = (document.getElementById('musicTimeline')._painted || {}).lane || 26;
+        for (let y = st.top + lane + 8 + 2; y <= st.bottom - 10; y += 2)
           for (let dx = 3; dx <= 14; dx += 1) for (const sd of [-1, 1]) { asked++; if (isGrip(document.elementFromPoint(line + sd * dx, y))) hits++; }
         const gr = g.getBoundingClientRect(), ty = Math.min(gr.bottom - 2, st.bottom + 5), under = document.elementFromPoint(line, w.top + w.height / 2);
         out[id] = { hits: hits, asked: asked, hit: getComputedStyle(g).pointerEvents !== 'none' && getComputedStyle(g).visibility === 'visible',
@@ -885,7 +886,7 @@ with sync_playwright() as p:
       const img = cv.getContext('2d').getImageData(0, 0, W, cv.height).data;
       const at = (c, r) => { const i = (r * W + c) * 4; return [img[i], img[i + 1], img[i + 2]]; };
       const far = (a, b) => Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]) + Math.abs(a[2] - b[2]);
-      const sTop = 26 + 8, r0 = Math.ceil((sTop + 3) * dpr), r1 = Math.floor((hh - 3) * dpr);
+      const sTop = (P.lane || 26) + 8, r0 = Math.ceil((sTop + 3) * dpr), r1 = Math.floor((hh - 3) * dpr);
       const c0 = Math.ceil(12 * dpr), c1 = W - 12 * dpr;
       let mid = sTop + (hh - sTop) / 2 + 3, line = null;
       if (P.song === 'wave' || P.song === 'samples') {
