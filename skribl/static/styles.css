@@ -5707,7 +5707,18 @@ a.player-btn { text-decoration: none; }
 .replay-line.open .rl-speed svg { transform: rotate(180deg); }
 .rl-skip { flex-basis: 100%; font-size: 13px; }
 .rl-skip[hidden] { display: none; }
-.rl-chips { display: flex; gap: 2px; padding: 4px; max-width: 100%; box-sizing: border-box;
+/* THE PILL'S ENDS (owner: "the padding on right and left side is off - not
+   enough", the mock's B): the end speeds sat nearer the rounded ends than the
+   speeds sit to each other (9px against 10 here, 17 against 28 on the Pad's
+   desk pill), and the curve made it look nearer still. The pill opens at its
+   ends, rather than the end speeds growing, so each speed stays centred in
+   its fill: an end is at least the space between two speeds, and never
+   inside the inner half of the curve (verify_replayspeed, THE PILL'S ENDS).
+   It may reach past its line, never nearer the screen's edge than a
+   twentieth of the screen (16px on a 320px phone, where the eight and their
+   ends are 270px and the line 260: held to the line, "Fit" ran out of the
+   pill). 90vw, not 100vw less 32px: the player's sheet had 2 bytes to spare. */
+.rl-chips { display: flex; gap: 2px; padding: 4px 8px; max-width: 90vw; box-sizing: border-box;
   border-radius: var(--r-pill); background: rgb(var(--surface-control-rgb));
   border: 1px solid var(--hairline-strong); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
   opacity: 1; transform: none;
@@ -5716,7 +5727,7 @@ a.player-btn { text-decoration: none; }
 .rl-chips[hidden] { display: none; opacity: 0; transform: translateY(-4px); }
 /* Each speed shrinks only to its own label (a flex item's own minimum): an even split (flex: 1 1 0,
    min-width: 0) gave every chip 28px and pushed "16×" 5px out of its pill at
-   every width, 320 to 768. Eight across fit the 260px a 320px phone gives. */
+   every width, 320 to 768. Eight across, with the pill's ends, fit a 320px phone. */
 .rl-chips button { position: relative; flex: 1 1 30px; max-width: 48px; height: 34px;
   padding: 0 4px; border: 0; border-radius: var(--r-pill); background: none;
   font: inherit; font-weight: 550; font-variant-numeric: tabular-nums;
@@ -5772,14 +5783,19 @@ a.player-btn { text-decoration: none; }
 .tune-speed { display: contents; }
 .tune-speed .rl-speed { font-size: 16px; padding: 6px 10px 6px 12px; }
 .tune-speed .rl-speed::before { inset: -6px -2px; }   /* a 44px tap at its 33px */
-.tune-speed .rl-chips { flex-basis: auto; width: max-content; max-width: 100%; margin: 6px 0 2px auto; gap: 0; font-size: 16px; order: 3; }
-.tune-speed .rl-chips button { flex: 0 0 auto; min-width: 44px; max-width: none; padding: 0 6px; }
+/* The eight (seven speeds and Fit) share the pill evenly, 44px each where
+   the row has room: 380 holds them and Fit's 4px, as a desk's does. Each was
+   a fixed 44 before, and on a phone the eight were wider than the row (by
+   7px at 402, 89 at 320, where "16x" and Fit ran past the screen's edge);
+   now they narrow together there, still 44px tall to a finger. */
+.tune-speed .rl-chips { flex-basis: auto; width: 100%; max-width: 380px; margin: 6px 0 2px auto; gap: 0; font-size: 16px; order: 3; padding-inline: 11px; }
+.tune-speed .rl-chips button { flex: 1 1 0; min-width: 0; max-width: none; padding: 0 2px; }
 .tune-speed .rl-text { order: 1; margin-left: auto; }
 /* While they are open, a zero-height break puts the chips on a line of their own. */
 #tuneSpeedRow:has(.tune-speed.open)::after { content: ''; flex-basis: 100%; height: 0; order: 2; }
 .pad-speed .rl-speed { margin-left: 0; font-size: 13px; line-height: 1.4; padding: 4px 8px 4px 10px; }
 .pad-speed .rl-speed::before { inset: -9px -2px; }   /* a 44px tap at its 26px */
-.pad-speed .rl-chips { position: absolute; top: calc(100% + 10px); right: -4px; z-index: 60; width: max-content; max-width: none; font-size: 14px; }
+.pad-speed .rl-chips { position: absolute; top: calc(100% + 10px); right: -4px; z-index: 60; width: max-content; max-width: none; font-size: 14px; padding-inline: 14px; }
 .pad-speed .rl-chips button { flex: 0 0 auto; min-width: 44px; max-width: none; padding: 0 8px; }   /* 44 wide; ::before makes it 44 tall */
 .pad-speed.open .rl-speed svg { transform: rotate(180deg); }
 @media (max-width: 640px) { .pad-speed { display: none; } }

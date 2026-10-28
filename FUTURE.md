@@ -1088,6 +1088,260 @@ each side) wherever flip.js turns a pointer's place into the drawing's units,
 and the eyedropper's lens with it, with a row that puts the pen a pixel in
 from each edge and reads where the ink lands, red on today's mapping first.
 
+## 6s. The music drawer as D, four doors (owner, after #654: "I like D") — next to build
+
+Picked from the mock (Now, D and E, the real drawer on a stand-in song:
+https://claude.ai/artifact/B9Shg9YZX1zmdJ4fsmshfG). The song, Hear the loop
+and the timeline stay on top; under them four tiles in a row, as the draw
+drawer has them (Length, Beat, Restart, Exact times), each saying what it is
+set to and opening its group underneath. More goes: what it held is in the
+four, Tap the beat in Beat. The defaults the owner was offered for the rest,
+not overruled: one door open at a time; Length's three choices (Skribl's
+pick, Fit my drawing, Whole song) as cards with the 4 · 8 · 16 · 32 beats row
+under them; shorter words inside the doors. Pad and Flip share the drawer,
+so both change at once; the suites that open More, the pick or Exact times
+learn the doors, red first, and the help words that say "in More" change.
+
+BEFORE BUILDING, THE WHOLE DRAWER (owner: "now that we are doing all this
+new stuff, you should probably think about the design for the drawer again
+and make sure it all makes sense before we build it, then have to rebuild
+it after we make changes"). Mock the drawer as it will end up, every piece
+of 6t in its place, and build D only on the owner's OK, in steps toward
+that one picture. What it decides, each with options and a pick: where the
+click's switch sits (pick: beside Hear the loop, since it is used while
+listening and checks every door's work, as a DAW keeps its metronome by
+the transport); the Beat tile's words for where the tempo came from
+(heard, tapped, or set by the end); songs in three (the Length row in
+beats, 3 · 6 · 12 · 24 for a waltz, and a small choice of 4 or 3 beats a
+bar in Beat for when the ears hear it wrong); the taller box's control
+beside Magnify's - and +; the lane's height for Flip's page pictures when
+the box is tall; the tiles spanning a desk; the thinner loop line. Shown
+for a song in four and a waltz, the Pad and Flip, light and dark, phone
+and desk. None of it needs a fifth door. Mocked on the app's own code,
+the loop playing and the click heard (https://claude.ai/artifact/KTcnYw6jf2ZzAeikaAtiFe,
+Today and New, the Choices with the picks). What the mock settled on its
+own: the click by Hear the loop is one pill with it (a third column in the
+transport pushed "Play with my drawing" out of its button on a phone); the
+Beat door's picture is the timeline's beat dots, the metronome being the
+click's now; a stroke's ink in the lane moves toward the lane's own words
+only as far as 3:1 takes (a dark ink on the dark lane, a pale one on the
+light lane); growing the box keeps Hear the loop where it was (the page
+scrolls by what the box grew). From the owner's Wavebox Audio
+Editor screenshots ("they may be overcomplicating things too. we want to
+keep with our 4 pillars"): its effects, EQ, pitch, channel mixer, copy and
+paste and recording stay out, a loop under a drawing needs none of them;
+its lit selection with the rest dimmed, its handles low on the wave, its
+overview strip and its tall wave on a phone are what the drawer already
+has or is getting. Two things in from it (owner: "yes, they seem like good
+ideas"): PINCH TO ZOOM in the mock (Wavebox gives half its wave to "Zoom &
+Pan"; the timeline has no
+pinch today): sideways for time, up and down for the taller box, locked to
+whichever way the fingers first move, two fingers so it never fights a
+finger scrolling the page, and Ctrl and the wheel or a trackpad pinch on a
+desk, the - and + and the taller control staying for anyone who does not
+pinch; not testable here on an iPhone. And THUMB REACH as a check: Wavebox
+keeps play at the foot, so measure where Hear the loop and the click land
+on a 402 x 874 phone and keep them within a thumb's reach.
+
+Three more for the same change (owner, with screenshots):
+
+- THE DRAW DRAWER'S FOUR TILES SIT LEFT ON A DESK. `.dp` stops at 520px and
+  the drawer is wider there, so Brush, Size, Feel and Eraser leave a gap on
+  the right that the colours above them do not. On a desk they should span
+  the drawer evenly, as the colours do; mock both ways (the tiles grow, or
+  the gaps do) beside today, the phone unchanged. D's own tiles are `.dp`
+  too, so they come out the same.
+- THE LOOP'S EDGE LINE ON THE TIMELINE IS TOO THICK: 3px
+  (`.mt-tl-handle::after`). Try the owner's 1.5px and 2px, on a 1x, a 1.25x
+  and a 2x screen (half a pixel blurs at 1x), the grip and its 44px drag
+  band as they are.
+- THE TIMELINE TALLER (owner, with ACID Pro 7's + and - for track height:
+  "add a little magnifying glass to the loop visual to expand it vertically
+  too so it would become a bigger box showing more of the wave"). Today the
+  timeline is two and a half strips tall, and Magnify's - and + zoom in time
+  only. Mock a small control that makes the box taller, the wave growing
+  with it (one tap taller and one back, or - and + in steps), beside today,
+  phone and desk, light and dark. A second magnifier beside Magnify's could
+  read as the same button, so mock a taller-box glyph beside the magnifier.
+  The handles' drag band, a finger that moves up or down first scrolling
+  the page, and the slim strip that follows you down stay as they are. With
+  512x it shows where a hit begins. Pad and Flip share the timeline.
+  The owner's research on zooming names two vertical controls, the box's
+  height and a visual gain (1x to 16x or 32x). Today the wave is drawn
+  against the song's loudest moment (`peaksOf`), so a soft first note after
+  a quiet intro can be a pixel or two tall, just where a start is placed.
+  Rather than a second control, mock as an option the wave filling the box
+  when zoomed in deep (64x and up, where the wave itself shows), gliding as
+  it changes, and as today at the wider zooms, so loud and quiet still
+  compare (owner: yes). The deepest zoom stays 512x (owner: yes): a pixel
+  there holds a few samples (more for a long loop under a long drawing),
+  between the research's sweet
+  spot (16 to 64 a pixel) and its one sample a pixel; past that, to 24
+  pixels a sample, is for mending pops by hand, which Cut on silence,
+  Smooth restart and the fades already do. The research's cache of levels
+  is already in: the song's loudness once, in blocks of 128, 1,024 and
+  8,192 samples.
+
+## 6t. Skribl's ears, next (owner: "the most powerful and accurate, yet simple (4 pillars) and fast module that we can create")
+
+The owner's friend sent three plans for hearing a loop's beat: the ACID
+Beatmapper Wizard in Python, a modern one with the drums split out by an AI
+model, and one for a phone, in the page. Read against `lib/musicears.js`,
+most of all three is already in, and parts of it are done better. What is
+left comes after D (6s), each mocked first where it shows:
+
+- THE BEAT CLICK (owner: yes). A soft tick on each beat while Hear the loop
+  plays, a switch beside Tap the beat, off at first: the Wizard's metronome
+  step. An ear hears a wrong beat within a bar, which marks on a timeline
+  cannot show, and it tells a person whether their taps landed. It rides the
+  clock the loop plays on, not a timer, and never reaches a post or an
+  export. Pad and Flip share the drawer, so both get it at once. Mock,
+  as an option for the owner, the beat's dot lighting on each tick (ACID
+  counts bar and beat as it plays: 6.2.000; owner: yes, as an option).
+- THE END SETS THE TEMPO (from the Wizard's "click the end of the first
+  bar"; owner: "all yes", mocked with the click after D). Zoomed in, a
+  start let go near a beat
+  stays and the beat moves to it; an end only settles on whole bars at the
+  tempo there is. Let the end do what the start does: zoomed in, an end let
+  go within an eighth of a beat of whole bars stays, and the tempo becomes
+  the one that makes the loop exactly those bars (with a smooth restart,
+  measured to the bar line, a blend's length before the handle). That is
+  the Wizard's two clicks across up to eight bars instead of one. Today the
+  only tempo a hand can set is Tap the beat's, to a whole beat a minute, so
+  a live band or an old record between whole tempos cannot be matched. With
+  the click: hear the ticks drift by the loop's end, zoom in, put the end on
+  the hit. Flip's Match the beat refits to the new tempo as it does to taps.
+- THE DRAWING'S LANE SHOWS THE DRAWING (from ACID's video track, the film's
+  frames along the song; owner: yes, after the click). The lane marks each
+  stroke when it was drawn, all in the accent (the Pad), and each page as
+  long as it shows, numbered (Flip). Let Flip's pages show their own little
+  pictures where there is room, and the Pad's strokes their own inks, so a
+  person sliding the song under the drawing sees what is drawn on each beat.
+- FAST ON A PHONE, MEASURED FIRST. `listen()` mixes the song down to one
+  channel at 22.05 kHz in one go before it starts slicing (`mono()`), then
+  waits on a timer between slices of 8ms, which some browsers stretch to 4ms
+  or more once timers nest. Measure, on a two-minute stereo song, the longest
+  the page is held and the time to a pick, on this box at full speed and
+  slowed four times as a stand-in for a phone (there is no phone here). If
+  either shows, move the ears into a Web Worker: the page never waits on
+  them, and they run without the pauses.
+- SONGS IN THREE. The ears take a bar as four beats and the Beats row offers
+  4 · 8 · 16 · 32, so a waltz or a 6/8 ballad loops a beat into its bar.
+  Hearing threes (the kicks and chord changes gathering every third beat)
+  and offering 3 · 6 · 12 · 24 for those songs bends the owner's "we only
+  ever want 4,8,16" (said of songs in four), so it waits for their yes, with
+  a waltz among the test songs.
+- THE OWNER'S OWN SONGS, BY EAR. With the click in, ten of the owner's songs
+  played with it on; any that sound off become the ears' next cases, kept as
+  timings and never committed (the real recordings stay out of the repo).
+  That measures the ears on real music, which `verify_musicears`'s songs,
+  every beat known, cannot.
+
+Already in, so not built twice: one channel at 22.05 kHz; a log-spectral
+flux (log(1 + 10 · magnitude), bin by bin); the kick below 150 Hz; drum hits
+as bursts (many bins growing at once) rather than a 2 to 5 kHz band; the
+tempo refined to a thousandth over two minutes, not read from one bar; a
+beat of its own for each stretch of a band that speeds up; loops of whole
+bars, 20 s at most; and the join made by Cut on silence (both ends moved
+together, so the length is kept, matched on every channel) and Smooth
+restart (the end's tail folded under the start, a true crossfade of the
+person's length), not a zero crossing at each end or a fixed 2ms fade.
+
+Asked and not taken, and why: the drums split out by an AI model (Demucs,
+Spleeter or any model run in the page: megabytes to download inside a social
+site, and slow on a phone, unmeasured here; on a server, people's songs
+uploaded to a paid machine); the first downbeat taken as the loudest or the
+first big hit (an intro, a pickup or a crash on bar 2 fools it: the ears
+take the bar where kicks and chord changes gather, and keep intros and fades
+out of the pick); a grid warped to a live drummer (DTW), when a loop is 20 s
+at most. If the ears ever miss real songs that the steps above cannot fix,
+the modern route is a small beat-finding model that hears the whole mix,
+measured against these ears first.
+
+## 6u. The speed choice's ends (owner, with a screenshot: "everywhere this strip is the padding on right and left side is off - not enough")
+
+The speeds `lib/replayline.js` opens under a replay (¼× to 16× and Fit, on
+the Pad, the link page, the Gallery, a post's box, full screen and the post
+and drafts previews; ¼× to 4× in Flip's Tune) are one pill, `.rl-chips`,
+with the Pad's and Tune's own tweaks. The pill keeps 4px inside its edge
+and each speed a few px of its own (4, 6 or 8), so "¼×" and "Fit" sit
+nearer the rounded ends than the speeds sit to each other, and the curve
+makes it look nearer still. Mocked, each place today beside two fixes and
+measured live in the viewer's fonts (https://claude.ai/artifact/8F1nLN8ZUxVCBPb5e1snL8).
+Here, ends against the space between two speeds: the Pad's desk pill
+16.7 and 18.7 against 27.8; Tune's 15.3 and 5.5 against 23 (on a 402px
+phone its eight 44px speeds overflow the row, "Fit" about 5px from the
+edge: a bug today); everywhere else 9 against 10. B opens the pill's sides
+by the shortfall (+10 the Pad, +5 Tune with its speeds 40px on a phone, +4
+the rest), so each speed stays centred in its purple; A gives the end
+speeds the room instead, so a picked end's purple reaches the curve but its
+word sits off centre. My pick B. One rule for every place, then
+`player.css` re-emitted; a small PR of its own. The replay line above it,
+whose bars start against its left edge, is checked the same way.
+
+## 6v. How it works, made again once the look settles (owner: "it will be a big project and we should definitely wait on most of it, until things looks and function as we want")
+
+The owner: "once we get to a place where we feel like we have the
+aesthetic we like and the interface isn't going to change again, we need
+to redo all the how it works videos because the entire look of the app has
+pretty much evolved. probably some new ones too. we can perfect those
+videos too (like the speed and effects of a click, etc.). also, double
+check all the how it works folder and make sure it includes all the tools
+and functions as well as nothing being stale."
+
+Today: nineteen clips in `skribl/static/help/clips/` (each light and dark,
+as MP4, WebM and a still), all made on 2026-10-18 by
+`harness/tools/make_help_clips.py` and checked by `verify_helpdemos`, and
+the drawings to watch in `skribl/static/help/demos/`. Since then the
+drawers took the menu's paper and a size up in their words, the music
+drawer gained its timeline, ears, beats and 512x (and D to come), Flip
+gained Match the beat, and a desk got the bigger canvas and full screen.
+
+When the owner says the look has settled, in this order:
+- THE CENSUS: every tool and function on the Pad and Flip against the
+  clips and the How it works words: which have no clip, which clips show
+  an old look, which words name something that changed or is gone.
+- THE TIPS, in the same census (owner: "the push for tip, or hover for
+  info tip on desktop needs to be expanded and updated too"; "on a phone
+  its press and hold. on the desktop it's hover for like 2 seconds"). The
+  card on the button (`lib/learncard.js`): held about half a second on a
+  touch screen, rested on two seconds with a mouse; its name, one kind
+  sentence, its example playing itself (a phone recording for Photo, music
+  and Post), More and Got it, and "?" tags every button with its card.
+  Under it a mouse's name on hover and keyboard focus (`lib/tooltip.js`,
+  from each title: about 141 in the templates, more made in script), and
+  a first-use hint once ever (`lib/hints.js`). The cards play the same
+  examples How it works plays, so making the clips again makes theirs
+  again too. Which buttons have no card, which cards' words or recordings
+  are stale (the music one most of all), which new controls want one (the
+  doors, the click, the taller box).
+- ONE CLIP FIRST, made the new way and shown light and dark for the
+  owner's OK: the pointer's speed and its tap, the pacing, the framing,
+  the same bar as the drawings to watch.
+- THEN ALL OF THEM, the old ones made again and the missing ones made, by
+  the script (polished once, so making them again later is a run, not a
+  project), their weight on a phone checked.
+- A CHECK that every tool has a clip, so a new tool cannot arrive without
+  one.
+
+Until then, a change that adds or changes a control brings its tip and its
+hint up to date in the same PR ("words follow what the user does"); only
+the sweep waits.
+
+ALL THE TOOLS, NOT ONLY THE ROW (owner: "make sure you look at ALL the
+tools because I noticed the tools on flip's ^ menu don't have them"). The
+cards (`lib/learncard.js`, its CARDS) cover the Pad's three tools, Flip's
+same three on its shelf and the ^ itself ("More tools"), but none of the
+seven in Flip's tray: Select, Liquify, Smudge, Blur, Fill, Stamps and
+Artwork. Each already has a How it works clip (select, liquify, smudge,
+blur, fill, stamp, artmove), and a card names its clip, so a card made now
+plays the new clip when the clips are made again: these need not wait for
+the sweep. The tools' clips are 4:3, as the drawings Pen, Eraser and Shape
+play are, so their cards take the drawings' stage, not the tall phone
+frame Photo, music and Post use. The seven sentences are mocked with the
+speed pill (the page above); a small PR once the owner has said yes; the
+census then walks every control on both editors, not only the tools.
+
 ## 7. The honest state
 
 The tool is good. It is better than it needs to be for a demo and not yet enough
