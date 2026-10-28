@@ -24828,7 +24828,8 @@ THE LIGHT AS HEARD. A beat's dot lights when the beat reaches the ear, timed
 from the context's own record of what its speakers play (getOutputTimestamp),
 else the clock plus the output's latency, and asked again as it comes due:
 a first guess made as the sound began was once 59ms early. Read against that
-record, lights came 0 to 13ms after their beats here. Web Animations, so
+record, lights came from half a millisecond before their beats to 13ms after
+here. Web Animations, so
 Reduce Motion fades it without the swell and the player's sheet carries no
 keyframes.
 
@@ -24874,6 +24875,14 @@ lib/audioloop.js, took the link player's JavaScript 50 bytes past its ratchet
 (verify_player_isolation, verify_jsstrip): the drawer works the sound's start
 out itself, and the player's code is as it was. A part run alone hides what
 it shadows for the parts after it.
+
+AND AN EDIT REACHES A RE-RUN. run_parallel re-runs a red suite alone at the
+end, from the files on disk then. The suite's helper and the engine were
+fixed while that run was finishing, so verify_musicbeat (148/148) and
+verify_player_isolation (85/85) came back green alone and were marked
+INTERMITTENT: changed, not load. The tree is not touched until the whole
+run reports; the second run, on the committed fixes, is the evidence (24 of
+24, nothing re-run).
 
 WHAT IT DOES TO FLIP: shared. One drawer and one timeline for both editors.
 
