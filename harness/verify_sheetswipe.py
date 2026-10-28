@@ -624,19 +624,23 @@ with sync_playwright() as p:
             const sw = (id) => document.getElementById(id).closest('.mt-switch').querySelector('.mt-switch-words').getBoundingClientRect();
             const shown = (e) => e && !e.closest('[hidden]') && e.getClientRects().length;
             const R = { length: [['the lengths', q('.mt-lengths')], ['beats', document.getElementById('musicBeatsRow')], ['undo', document.getElementById('musicPickUndo')], ['lock', 'musicLock']],
-                        beat: [['tap', q('.mt-tap-row')], ['snap', document.getElementById('musicSnapRow')]],
+                        beat: [['tap', q('.mt-tap-row')], ['snap', 'musicSnap']],
                         restart: [['smooth restart', 'musicSmooth'], ['restart view', q('#musicRestart')], ['its hint', q('#musicRvHint')],
                                   ['length', q('.crossfade-row')], ['hear the restart', q('#testSeamBtn')], ['cut on silence', 'musicCut']],
                         exact: [['start/end', q('.edge-group')], ['each press', document.getElementById('musicStepSeg').closest('.mt-step')]] }[k];
-            const rows = R.filter(([, e]) => typeof e === 'string' || shown(e)).map(([n, e]) => [n, typeof e === 'string' ? sw(e) : e.getBoundingClientRect()]);
+            const rows = R.filter(([, e]) => shown(typeof e === 'string' ? document.getElementById(e) : e)).map(([n, e]) => [n, typeof e === 'string' ? sw(e) : e.getBoundingClientRect()]);
             return rows.slice(1).map((r, i) => [rows[i][0] + ' -> ' + r[0], Math.round(r[1].top - rows[i][1].bottom)]); }"""
+        # With a beat, so each door holds all it can: Beats in Length, Snap to
+        # the beat under the tap.
+        pg.evaluate("() => { musicTempo = { bpm: 120, phase: 0 }; updateTrimUI(); }")
+        pg.wait_for_timeout(500)
         gaps = {}
         for k in ("length", "beat", "restart", "exact"):
             pg.click(f'#musicDoors .dp-tile[data-dp="{k}"]')
             pg.wait_for_timeout(900)
             gaps[k] = pg.evaluate(ROWS, k)
         check(f"{who}: every row of what each door opens has at least 8px above it",
-              all(g >= 8 for rows in gaps.values() for _, g in rows) and sum(len(r) for r in gaps.values()) >= 8, str(gaps))
+              all(g >= 8 for rows in gaps.values() for _, g in rows) and all(gaps.values()) and sum(len(r) for r in gaps.values()) >= 9, str(gaps))
         pg.click(RESTART)
         pg.wait_for_timeout(1200)
         # NO LEAP WHEN A DOOR CLOSES (owner, of the old Fine-tune: "when you're

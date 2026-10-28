@@ -24613,3 +24613,95 @@ green, setting aside 343px across a 67ms frame (Flip) and 401px across 83ms
 Noted, not changed: while the sheet rises, the page spends most of each frame
 drawing it (a profile here: about 175ms of 300 in the browser's own work, the
 inline replays a few ms), which is why a busy box holds a frame there.
+
+## After v329 -- The music drawer's four doors, in place of More
+
+The owner, of the drawer mock: "I like D", then "All yes" to the ten picks
+after the whole-drawer mock (FUTURE.md 6s). Step 1 of the eight: D's four
+doors, More gone. The view is as it was: the timeline, the one line and the
+pair that plays. Under it, four of the draw drawer's tiles (lib/drawtiles.js's
+`.dp` rules): Length, Beat, Restart and Exact times, each saying what it is
+set to and opening its group under it, one at a time. Length holds Skribl's
+pick, Fit my drawing and Whole song as three cards, Beats, Undo and Lock the
+length; Beat holds Tap the beat and Snap to the beat; Restart, Smooth
+restart, the Restart view, its length, Hear the restart and Cut on silence;
+Exact times, the two times and Each press. `#musicDetail`'s `data-door`
+takes the place of More's level, and lib/drawerdetent.js's growth follow
+watches it as it watched More.
+
+THE TILES' WORDS FIT A 390PX PHONE. Length says the loop's length (in beats
+once there is a beat) with Skribl's mark on its picture while the loop is
+the pick; Beat the tempo, "Listening" or "Tap it"; Restart "Smooth" or "Clean
+cut"; Exact times the two times, to the hundredth, the tenth or the second,
+as the tile has room for, measured per shape of digits and width of tile.
+
+ONE CARD LIT, THE ONE PRESSED WHERE TWO ARE THE SAME LOOP. Skribl's pick
+before Fit before Whole song: the Pad's pick without ears is as long as the
+drawing, and a short song's pick is the whole song, so two cards were often
+the same loop. The full run found Flip's Whole song pressed on a short song
+and Skribl's pick still lit, the press not answered. The card pressed last
+is lit while it is still the loop (for the song it was pressed on), and the
+pick card pressed on a loop that is already the pick lights with no Undo of
+nothing.
+
+THE ONE LINE ON A NARROW PHONE. Its longest words ("19.75s · 39.5 beats ·
+shorter than your animation") are 324px in Inter at 14px, the widest face it
+is drawn in, against 332px of room on a 390px phone and 317 on a 375. Below
+390, what the loop is against the drawing takes its own row, whatever it
+says, so the line's height holds as it changes; a @media, not a @container,
+since harness/tools/cssgraph.py keeps any other at-rule whole and it would
+have landed in the player's sheet.
+
+THE TIMELINE'S COPY UNDER THE HEADER rarely has to come now: Exact times
+opens right under the timeline, so on the owner's phone and a desk the page
+cannot scroll what it edits away (with More's four groups above it, it did).
+Measured door by door, scrolled as far as the page goes: the copy shows on a
+phone held sideways (874x402 with Length or Restart open; an SE's 667x340
+with any door). FUTURE.md 6s keeps it ("the slim strip that follows you down
+stay as they are"), so it stays, and verify_musicdoors checks it where it
+shows, with a row that guards the doors' gain: on a phone and a desk the
+timeline stays on the screen however far the page scrolls.
+
+THE GROWTH FOLLOW LEAVES OUT BEATS' GAP TOO. Beats is left out of the card's
+height so the page does not move as a beat lands (DECISIONS, the Beats row);
+in the Length door's column it also brings an 8px gap, there from its first
+frame while its height glides up from none. On a desk that 8px was followed
+and the page went on after the row, 71px (verify_musicbeat, red on both
+editors); the gap is left out with the height now.
+
+THE SUITES. verify_musicmore became verify_musicdoors (109 rows), and every
+suite that opened More opens the door that holds what it presses, as a
+person does: verify_musicbeat (the pair the same under each door; Beats
+under the three choices and over Lock; Snap's door end and Each press's bar
+each with its own door open; the words read with each door open),
+verify_music, verify_musictimeline, verify_musicears, verify_ux,
+verify_sheetswipe, verify_audio (the Restart view and the typed end, one
+door then the other), verify_flipbeat, verify_onepill, verify_theme,
+verify_parity, verify_tools, verify_contrast (the drawer with each door open;
+the copy on a screen made 340px tall, each surface back at its form's size
+after) and check_centring. How it works says where each control is now,
+and verify_helpclaims points at the doors' rows.
+
+CALIBRATION, the page's files served from mutated copies in each context
+(the files on disk untouched):
+- the card pressed lit, without the last-pressed rule: red on both editors
+  (and Flip's Whole song row); green as built
+- the one line, without the narrow phone's rule: red on both at 320 and 375
+- the timeline kept on the screen, with the Exact door made 700px taller:
+  red on both
+- the copy's rows, with the copy never placed: all fourteen red
+- Beats under the choices and over Lock, with Beats ordered after Lock: red
+- the pair the same under each door, with the Beat door pushing it down: red
+- Snap to the beat's door and Each press's bar opening out, with the drawer's
+  glides taken away: red on both, Reduce Motion's rows green
+- the words read with each door open, Tap the beat's set faint: red in light
+- the census of the Restart door, Smooth restart's words set faint: red in
+  light, on a phone and a desk, on both
+- every row in each door 8px apart, the doors' gaps closed: red; and as
+  first written it was red as built, the Beat door having no second row
+  without a beat, so it reads the doors with one
+
+WHAT IT DOES TO FLIP: shared. The drawer is one template and one module for
+both editors, so Flip has the doors at once; every row runs on both.
+
+Not tested here: an iPhone's WebKit, and SF and Segoe UI themselves.

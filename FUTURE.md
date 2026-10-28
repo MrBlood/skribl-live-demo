@@ -1148,7 +1148,8 @@ drawer mock and the speed and cards mock), and the build order:
 the two small PRs first (the speed choice's ends, built in #655, 6u; the
 tray tools' cards, 6v), then the drawer as one PR in steps, toward the
 whole-drawer mock's New:
-1. D's four doors (Length, Beat, Restart, Exact times), More gone.
+1. D's four doors (Length, Beat, Restart, Exact times), More gone. Built
+   (DECISIONS, the music drawer's four doors).
 2. The draw drawer's tiles, and D's, grow to span a desk (the phone as it
    is).
 3. The loop's edge line 1.5px and sharp (whole device pixels).
