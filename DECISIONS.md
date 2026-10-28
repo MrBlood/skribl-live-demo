@@ -25424,9 +25424,9 @@ tab's 12px before it, at the song's end 12px past it, mid-song the end in the
 middle, phone and desk), and the magnet's own box (exactly when the name
 keeps one line beside it, at 402, 390, 375, 360 and a desk; closing up over
 frames as the name grows; at once under Reduce Motion). Each shown red
-against a broken copy of its own, 25 breaks: whole bars, the magnet always in
-reach, never lit, its words never changing, its purple gone, a new song's in
-reach; no clamp zoomed in, no room for the tab; no fit, always joined, the
+against a broken copy of its own, 14 breaks: whole bars, the magnet always in
+reach (a new song's too), never lit, its words never changing, its purple
+gone; no clamp zoomed in, no room for the tab; no fit, always joined, the
 name measured in a stand-in face, the boxes not closed up, no glide, the old
 name ("1:05s"); and every Reduce Motion rule out. The magnet's own Reduce
 Motion rule, out alone, left the row green: the page's rule already keeps it
