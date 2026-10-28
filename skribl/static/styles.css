@@ -5714,10 +5714,11 @@ a.player-btn { text-decoration: none; }
    ends, rather than the end speeds growing, so each speed stays centred in
    its fill: an end is at least the space between two speeds, and never
    inside the inner half of the curve (verify_replayspeed, THE PILL'S ENDS).
-   It may reach past its line, never nearer the screen's edge than 16px: on a
-   320px phone the eight and their ends are 270px and the line 260, and held
-   to the line, "Fit" ran out of the pill. */
-.rl-chips { display: flex; gap: 2px; padding: 4px 8px; max-width: calc(100vw - 32px); box-sizing: border-box;
+   It may reach past its line, never nearer the screen's edge than a
+   twentieth of the screen (16px on a 320px phone, where the eight and their
+   ends are 270px and the line 260: held to the line, "Fit" ran out of the
+   pill). 90vw, not 100vw less 32px: the player's sheet had 2 bytes to spare. */
+.rl-chips { display: flex; gap: 2px; padding: 4px 8px; max-width: 90vw; box-sizing: border-box;
   border-radius: var(--r-pill); background: rgb(var(--surface-control-rgb));
   border: 1px solid var(--hairline-strong); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
   opacity: 1; transform: none;
