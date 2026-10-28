@@ -35,7 +35,8 @@
  * marks glide when where a beat falls moves (beatTo).
  *
  * EACH END IS A LINE WITH A TAB AT ITS FOOT (styles.css): nothing over the
- * wave beside the line, where the music starts.
+ * wave beside the line, where the music starts. The line is about 1.5px and
+ * sharp, on the screen's own pixels (edge, below).
  *
  * THE FRAMING: 1.28 times the longer of the loop and the drawing, the
  * drawing counted up to three loops (a two-hour piece would make the loop a
@@ -142,6 +143,21 @@
     var blk = LEVELS[l], arr = P.levels[l], a = Math.floor(s0 / blk), b = Math.min(arr.length, Math.ceil(s1 / blk)), m = 0;
     for (var i = a; i < b; i++) if (arr[i] > m) m = arr[i];
     return m / P.top;
+  }
+
+  // THE LOOP'S EDGE LINE IS SHARP (the owner's pick in the whole-drawer
+  // mock, "1.5px sharp", over 3px, 2px and a 1.5px left between the screen's
+  // pixels): about 1.5px, rounded to the screen's own pixels (3 on a 2x
+  // phone, 2 on a desk, 5 on a 3x phone), and laid on whole ones, so it is
+  // one even line and never a blur across two. Where, for a line centred on
+  // x: its left and its width in CSS px, `off` how far the box it is drawn in
+  // sits from the screen's left (the screen's pixels count from there; 0 in
+  // a canvas, whose own pixels are the screen's). The timeline's handles and
+  // the copy under the header (lib/musicdrawer.js) draw theirs with it.
+  function edge(x, dpr, off) {
+    dpr = dpr || 1; off = off || 0;
+    var w = Math.max(1, Math.round(1.5 * dpr)) / dpr;
+    return [Math.round((off + x - w / 2) * dpr) / dpr - off, w];
   }
 
   function create(root, h) {
@@ -436,6 +452,18 @@
       x.globalAlpha = 1;
       x.restore();
 
+      // THE LOOP'S TWO EDGES, painted here, on the screen's own pixels (edge,
+      // above), over the song: a box laid on them as the handle's line was
+      // is snapped to whole CSS pixels first and then moved by its handle's
+      // fraction, so a 1.5px line came out 2px wide and soft at both sides.
+      // Each handle's tab (over the canvas) sits on its line's foot.
+      x.fillStyle = acc;
+      drawn.edges = [s0, s1].map(function (s) {
+        var ln = edge(X(s), dpr, 0);
+        if (ln[0] + ln[1] > 0 && ln[0] < w) x.fillRect(ln[0], sTop, ln[1], sH);
+        return ln;
+      });
+
       // The handles, the words over the drawing and the whole song's line.
       words();
       [[hs, s0], [he, s1]].forEach(function (e) {
@@ -584,5 +612,5 @@
     };
   }
 
-  global.SkriblMusicTimeline = { create: create, peaksOf: peaksOf, peakOf: peakOf };
+  global.SkriblMusicTimeline = { create: create, peaksOf: peaksOf, peakOf: peakOf, edge: edge };
 })(window);

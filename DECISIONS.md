@@ -24729,3 +24729,41 @@ the desk on both editors (the row 310 to 830 against 310 to 970), the phones
 green; green as built.
 
 WHAT IT DOES TO FLIP: shared. One rule for both drawers on both editors.
+
+## After v329 -- The loop's edge line, sharp
+
+Step 3 of the music drawer's eight (FUTURE.md 6s): the loop's two edges, a
+line each, about 1.5px and sharp, the owner's pick in the whole-drawer mock
+("1.5px sharp", over today's 3px, 2px and a 1.5px left between pixels).
+`SkriblMusicTimeline.edge(x, dpr, off)` says where: 1.5px rounded to the
+screen's own pixels (2 on a desk, 3 on a 2x phone, 5 on a 3x phone, as the
+owner's iPhone 17 is), its left on a whole one.
+
+THE LINE IS THE CANVAS'S NOW. It was the handle's ::after, 3px, centred on
+a handle the timeline moves to a fraction of a pixel. Laid on whole pixels
+as a box (a width and a left from the handle's middle, the mock's way), it
+still came out soft: this Chromium snaps a box to whole CSS pixels in its
+own space and then moves it by the handle's fraction, so a 1.5px box was
+2px, half a pixel off, read on the screenshot as four columns with a 5% and
+a 95% at the sides. The timeline paints both lines on its canvas, whose
+pixels are the screen's, over the song, and records them for the harness
+(`_painted.edges`); the handle keeps its tab at the foot and the reach for a
+finger. The copy under the header draws its ends with the same edge(): they
+were 2px on whole CSS pixels, sharp but 4 columns at 2x where the
+timeline's are 3.
+
+Rows: verify_musictimeline, both lines read on the screenshot with each end
+placed between pixels in the quiet of a song (a second of tone, four of
+silence), above its middle: a run of the accent exactly as wide as 1.5px
+rounds to, the ground either side flat, on a desk, a 2x phone and the
+owner's phone at 3x. verify_musicdoors, the copy's ends read off its canvas
+the same way. Calibrated with the page's files served from copies (the files
+on disk untouched): main's timeline and sheet, red on both editors (5
+columns of the accent at 2x with half-lit ones either side; 8 at 3x); the
+canvas line left off whole pixels, red (part-lit columns at every scale);
+main's copy, red (4 columns at 2x); green as built.
+
+Not tested here: an iPhone's WebKit, which snaps boxes to the screen's
+pixels, not CSS pixels; the canvas line is the same there by construction.
+
+WHAT IT DOES TO FLIP: shared. One timeline and one copy for both editors.

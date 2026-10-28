@@ -725,16 +725,18 @@
           x.beginPath(); x.arc(X(tp.phase + kb * p), 8, bar ? 2.6 : 1.8, 0, 7); x.fill();
         }
       }
-      // The two ends, each with its tab at the foot, as the timeline's.
+      // The two ends, each with its tab at the foot, as the timeline's: the
+      // line as sharp as its (SkriblMusicTimeline.edge), on the canvas's pixels.
       x.globalAlpha = 1; x.fillStyle = acc;
-      [t.start, t.end].forEach(function (s) {
-        var xx = Math.round(X(s));
-        x.fillRect(xx - 1, 0, 2, hh);
-        rr(xx - 7, hh - 10, 14, 10, 4); x.fill();
+      var edges = [t.start, t.end].map(function (s) {
+        var ln = MT && MT.edge ? MT.edge(X(s), dpr, 0) : [Math.round(X(s)) - 1, 2], mid = ln[0] + ln[1] / 2;
+        x.fillRect(ln[0], 0, ln[1], hh);
+        rr(mid - 7, hh - 10, 14, 10, 4); x.fill();
+        return ln;
       });
       x.restore();
       // What is painted, for whoever asks (the harness): the framing, the ends, the words.
-      follow._painted = { view: [v0, span], start: X(t.start), end: X(t.end), width: w, words: fwWords ? fwWords.textContent : '' };
+      follow._painted = { view: [v0, span], start: X(t.start), end: X(t.end), edges: edges, width: w, words: fwWords ? fwWords.textContent : '' };
       return easing;
     }
     function fwStep(now) {

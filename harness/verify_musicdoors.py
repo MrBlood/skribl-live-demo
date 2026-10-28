@@ -70,7 +70,9 @@ The rows:
   a desk the page's scrollbar gutter moves where a fixed box's left counts
   from), painted over what passes under it and under the header; with the
   timeline on the screen it stays away. It frames the loop, the loop most of
-  it, and says the one line's length and beats. A press of End + moves its
+  it, its ends the timeline's sharp lines (as wide as 1.5px rounds to on the
+  screen, the ground either side flat, read off its canvas), and says the one
+  line's length and beats. A press of End + moves its
   end at once; then it eases to frame the new loop, frame by frame. It glides
   in. A tap on it goes back up to the timeline, the drawer still open (Flip's
   tap-away rule closed it), and it goes. At once under Reduce Motion.
@@ -857,6 +859,28 @@ with sync_playwright() as pw:
     FOLLOW_REC = """() => { const out = window.__frec = [], t0 = performance.now(), f = document.getElementById('musicFollow');
       (function k() { const p = f._painted; out.push([performance.now() - t0, +getComputedStyle(f).opacity, p ? p.view.slice() : null]);
         if (performance.now() - t0 < 700) requestAnimationFrame(k); })(); }"""
+    # The copy's canvas across each of its ends, at the canvas's own pixels
+    # (the screen's), over two of its top rows: under the beat's dots and
+    # over the song, so only the ground, the loop's light and the line.
+    FOLLOW_EDGES = """() => { const f = document.getElementById('musicFollow'), cv = document.getElementById('musicFollowCanvas'), p = f._painted, d = devicePixelRatio;
+      if (!p) return null;
+      const x = cv.getContext('2d'), h = Math.round(2 * d), y0 = Math.round(2 * d), W = 14;
+      return { d, acc: getComputedStyle(f).getPropertyValue('--accent').trim(), ends: [p.start, p.end].map((at) => {
+        const L = Math.round(at * d) - 7, px = x.getImageData(L, y0, W, h).data;
+        return Array.from({ length: h }, (_, j) => Array.from({ length: W }, (_, i) => Array.from(px.slice((j * W + i) * 4, (j * W + i) * 4 + 4)))); }) }; }"""
+
+    def sharp_cv(rows, acc, n):
+        """A run of the accent n columns wide, and the ground either side of it
+        flat: no column part-lit beside it."""
+        W = len(rows[0])
+        near = lambda a, z, t: max(abs(u - v) for u, v in zip(a, z)) <= t
+        line = [i for i in range(W) if all(near(r[i][:3], acc, 10) and r[i][3] >= 250 for r in rows)]
+        if not line or line != list(range(line[0], line[-1] + 1)) or line[0] < 2 or line[-1] > W - 3:
+            return False, f"the accent's columns {line}"
+        a, z = line[0], line[-1]
+        flat = all(near(r[a - 1], r[a - 2], 3) and near(r[z + 1], r[z + 2], 3) for r in rows)
+        return len(line) == n and flat, f"{len(line)} columns of the accent ({n} wanted), the ground either side {'flat' if flat else 'part-lit'}"
+
     # As far down as the page goes, as a person scrolls to the drawer's end.
     DOWN = "() => scrollTo(0, document.documentElement.scrollHeight)"
     TUNED = "() => { musicTempo = { bpm: 120, phase: 0 }; trimStart = 2; trimEnd = 10.25; loopCrossfadeMs = 250; setCrossfadeUI(); updateTrimUI(); }"
@@ -901,6 +925,14 @@ with sync_playwright() as pw:
                   fill >= 0.7 and dn["words"] == " · ".join(dn["line"].split(" · ")[:2]) == "8.00s · 16 beats",
                   f"the loop {fill:.0%} of it; it says {dn['words']!r}, the line {dn['line']!r}")
             check(f"{_n}: it glides in, frame by frame ({dev})", len(way) >= 3, f"{len(way)} frames on the way: " + ", ".join(f"{f[1]:.2f}" for f in way[:8]))
+            # Its two ends are the timeline's sharp lines (lib/musictimeline.js
+            # edge): as wide as 1.5px rounds to on the screen, on its pixels.
+            fe = pg.evaluate(FOLLOW_EDGES)
+            acc = tuple(int(fe["acc"][k:k + 2], 16) for k in (1, 3, 5)) if fe else None
+            n_want = int(math.floor(1.5 * fe["d"] + 0.5)) if fe else 0
+            ends = [sharp_cv(rows, acc, n_want) for rows in fe["ends"]] if fe else [(False, "nothing painted")]
+            check(f"{_n}: its ends are the timeline's lines, sharp: as wide as 1.5px rounds to on the screen, the ground either side flat, "
+                  f"read off its canvas ({dev})", all(ok for ok, _ in ends), "; ".join(f"{w}: {why}" for w, (ok, why) in zip(("start", "end"), ends)))
             # One press of End +, a bar: the end at once, then the framing eases.
             pg.evaluate(FOLLOW_REC)
             pg.click('.nudge-btn[data-which="end"][data-amount="1"]')

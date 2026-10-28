@@ -26,6 +26,13 @@ plan, mocked first; the owner: "Yes on all").
   edge and keeps clear of the whole song's line, which a tap under it still
   reaches; and the tab, pressed below the song's edge, drags its end.
 
+  THE LOOP'S EDGES ARE SHARP (the owner's pick in the whole-drawer mock, "1.5px
+  sharp"). Read on the screenshot at the screen's own pixels, each end placed
+  between pixels in the quiet of a song: a run of the accent as wide as 1.5px
+  rounds to on that screen (2 on a desk, 3 at 2x, 5 at 3x, the owner's phone),
+  the ground either side flat. The 3px line before was 5 columns at 2x with
+  half-lit ones either side.
+
   MAGNIFY (the owner, looking for Fine-tune's: "All yes but maybe go to
   x64?", then "stay"; then "Like 512x?" to see the wave cross). Magnifier -
   and + at the end of the name's line, its middle on the name's, step 1x to
@@ -106,6 +113,7 @@ except ImportError as exc:
     raise SystemExit(77)
 import browsing  # noqa: E402
 import waits  # noqa: E402
+from PIL import Image  # noqa: E402
 
 # For calibration: MUSICTL_ONLY=Pad (or Flip) runs one editor, and
 # MUSICTL_PART=layout (frame, slide, ends, grip, mag, wave, whole, playhead,
@@ -138,6 +146,22 @@ def _wav(seconds, rate=8000, hz=220.0):
 
 
 TWELVE = {"name": "twelve.wav", "mimeType": "audio/wav", "buffer": _wav(12.0)}
+
+
+def _quiet(rate=8000):
+    """A second of tone, four of silence, a second of tone, six of silence:
+    a loop's ends in the quiet have nothing but the ground beside them."""
+    buf = io.BytesIO()
+    w = wave.open(buf, "wb")
+    w.setnchannels(1); w.setsampwidth(2); w.setframerate(rate)
+    on = lambda i: i < rate or 5 * rate <= i < 6 * rate
+    w.writeframes(b"".join(struct.pack("<h", int(12000 * math.sin(2 * math.pi * 220 * i / rate)) if on(i) else 0)
+                           for i in range(12 * rate)))
+    w.close()
+    return buf.getvalue()
+
+
+QUIET = {"name": "quiet.wav", "mimeType": "audio/wav", "buffer": _quiet()}
 # A 55Hz tone at a real song's rate: it crosses zero every 1/110s, exactly.
 LOW = {"name": "low.wav", "mimeType": "audio/wav", "buffer": _wav(8.0, rate=44100, hz=55.0)}
 SHORT = {"name": "six.wav", "mimeType": "audio/wav", "buffer": _wav(6.0)}
@@ -491,7 +515,7 @@ with sync_playwright() as p:
 
     print("\nMUSIC TIMELINE — the ends' grips, at their foot")
     # What is on top, asked of the page at every other pixel beside each line
-    # (3 to 14px either side, its own 3px left out) from the song's top to
+    # (3 to 14px either side, its own pixels left out) from the song's top to
     # 10px above its foot: never the grip. Then a point of the tab below the
     # song's edge (the tab shows there), the whole song's line under the line
     # (still the whole song's), and the boxes for the words. What is on top is
@@ -536,6 +560,53 @@ with sync_playwright() as p:
                   f"the end {t0['e']:.3f} -> {t1['e']:.3f}, {moved:.1f}px for a 40px drag; the start {t0['s']} -> {t1['s']}")
             check(f"{_n}, {face}: no page errors from the grips", not errs, "; ".join(errs[:2]))
             c.close()
+
+    print("\nMUSIC TIMELINE — the loop's edges, sharp")
+    # THE LOOP'S EDGE LINE IS SHARP (the owner's pick in the whole-drawer
+    # mock, "1.5px sharp"): about 1.5px, rounded to the screen's own pixels,
+    # and laid on whole ones. Read on the screenshot, at the screen's own
+    # pixels, across each end placed between pixels in a quiet stretch of the
+    # song, above its middle: the line is a run of the accent exactly as wide
+    # as 1.5px rounds to on that screen (2 on a desk, 3 at 2x, 5 at 3x, the
+    # owner's phone), and the column either side of it is the ground beyond,
+    # not part-lit. It was 3px, its handle a fraction of a pixel off, so its
+    # sides fell between pixels: 5 columns of the accent at 2x, and half-lit
+    # ones either side.
+    EDGE_AT = """() => { const st = document.getElementById('musicTlStage').getBoundingClientRect();
+        return { top: st.top, acc: getComputedStyle(document.getElementById('musicTimeline')).getPropertyValue('--accent').trim(),
+                 hands: ['tlStart', 'tlEnd'].map((id) => { const r = document.getElementById(id).getBoundingClientRect(); return r.left + r.width / 2; }) }; }"""
+
+    def sharp(img, acc, n):
+        W, H = img.size
+        px = [[img.getpixel((i, j)) for j in range(H)] for i in range(W)]
+        near = lambda a, z, t: max(abs(u - v) for u, v in zip(a, z)) <= t
+        line = [i for i in range(W) if all(near(px[i][j], acc, 10) for j in range(H))]
+        row = " ".join("%02x%02x%02x" % px[i][H // 2] for i in range(W))
+        if not line or line != list(range(line[0], line[-1] + 1)) or line[0] < 2 or line[-1] > W - 3:
+            return False, f"the accent's columns {line}: {row}"
+        a, z = line[0], line[-1]
+        flat = all(near(px[a - 1][j], px[a - 2][j], 3) and near(px[z + 1][j], px[z + 2][j], 3) for j in range(H))
+        return len(line) == n and flat, f"{len(line)} columns of the accent ({n} wanted), the ground either side {'flat' if flat else 'part-lit'}: {row}"
+
+    for _n, _p in eds("sharp"):
+        got = []
+        for face, opts in (("a desk", DESK), ("a 2x phone", PHONE), ("the owner's phone at 3x", dict(PHONE, device_scale_factor=3))):
+            c, pg, errs = editor(b, _n, _p, opts=opts, song=QUIET)
+            pg.evaluate(SET, {"s": 1.437, "e": 4.613, "xf": 0, "tempo": None})
+            into_view(pg, "#musicTimeline")
+            pg.wait_for_timeout(700)
+            dpr = opts.get("device_scale_factor", 1)
+            n = int(math.floor(1.5 * dpr + 0.5))
+            e = pg.evaluate(EDGE_AT)
+            acc = tuple(int(e["acc"][k:k + 2], 16) for k in (1, 3, 5))
+            for which, x in zip(("start", "end"), e["hands"]):
+                shot = pg.screenshot(clip={"x": math.floor(x) - 6, "y": math.floor(e["top"]) + 42, "width": 12, "height": 12})
+                ok, why = sharp(Image.open(io.BytesIO(shot)).convert("RGB"), acc, n)
+                got.append((ok, f"{face}, the {which} at {x:.2f}: {why}"))
+            c.close()
+        check(f"{_n}: the loop's edges are sharp lines: each a run of the accent as wide as 1.5px rounds to on the screen (2 pixels "
+              "on a desk, 3 at 2x, 5 at 3x), the ground either side of it flat, read on the screenshot with each end between pixels",
+              all(ok for ok, _ in got), "; ".join(w for _, w in got))
 
     print("\nMUSIC TIMELINE — magnify")
     MAG = """() => { const q = (id) => document.getElementById(id);

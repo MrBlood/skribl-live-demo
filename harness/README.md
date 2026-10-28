@@ -489,7 +489,8 @@ stays a sleep.
   phone and a desk however far the page scrolls; where it can scroll away (a
   small phone sideways), its copy under the header (on the drawer to the
   pixel; painted over what passes under it and under the header; the loop
-  framed, the one line's length and beats; End + eased to, frame by frame;
+  framed, its ends the timeline's sharp lines, read off its canvas, the one
+  line's length and beats; End + eased to, frame by frame;
   gliding in; a tap back up to the timeline with the drawer still open), at
   once under Reduce Motion; Play with my drawing is the editor's Play, and
   waits with nothing drawn; a door opened as a song lands keeps its tile in
@@ -583,7 +584,10 @@ stays a sleep.
   grip (and the grip can be hit, so what is on top is what is painted), the
   tab shows half under the song's edge clear of the whole song's line, which
   a tap under it still reaches, and the tab pressed below the edge drags its
-  end; magnify
+  end; the loop's two edges are sharp lines (the owner's "1.5px sharp"), read
+  on the screenshot with each end between pixels in the quiet of the song: a
+  run of the accent as wide as 1.5px rounds to on the screen (2 pixels on a
+  desk, 3 at 2x, 5 at 3x) with the ground either side flat; magnify
   (the owner: "All yes but maybe go to x64?", then "stay"; then "Like 512x?",
   and "All yes" to the wave) steps 1x to 512x and says the rung, each button
   stopping at its end of the ladder and - and + staying where they are as its
