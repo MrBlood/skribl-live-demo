@@ -810,7 +810,8 @@ for scheme in ("light", "dark"):
     looks = {(v["px"], v["w"], v["ink"], v["tt"]) for v in sect.values()}
     if not ONLY or "Tune" in ONLY:
         check(f"{scheme}: Tune's name is a drawer's section name, 14px and 600, not in small capitals, one style on both ({len(sect)} read)",
-              len(sect) == len(EDITORS) and len(looks) == 1 and all(v["px"] == "14px" and v["w"] == "600" and v["tt"] == "none" for v in sect.values()),
+              {n for (n, _, _) in sect} == {e[0] for e in EDITORS} and len(looks) == 1
+              and all(v["px"] == "14px" and v["w"] == "600" and v["tt"] == "none" for v in sect.values()),
               "; ".join(f"{n} {l} {sel}: {v['px']} {v['w']} {v['ink']} {v['tt']}" for (n, l, sel), v in sorted(sect.items())))
     # NO SMALL CAPITALS on the menu's sheets or in the dock's drawers: the
     # vibe question (WORKING-AGREEMENTS) named "monospace caps" as the chrome

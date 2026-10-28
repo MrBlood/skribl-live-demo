@@ -100,9 +100,11 @@ PAINTED = """(sel) => { const el = document.querySelector(sel); if (!el) return 
   const at = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
   return !!(at && (el === at || el.contains(at))); }"""
 
-STATE = """() => { const t = {}; document.querySelectorAll('.dp-tile').forEach(b => {
+# The draw drawer's own tiles (#drawTiles): the music drawer's doors are
+# tiles too, the same class.
+STATE = """() => { const t = {}; document.querySelectorAll('#drawTiles .dp-tile').forEach(b => {
   t[b.dataset.dp] = { open: b.getAttribute('aria-expanded'), v: b.querySelector('.dp-v').textContent }; });
-  const shown = [...document.querySelectorAll('.dp-panel')].filter(p => !p.hidden).map(p => p.dataset.dp);
+  const shown = [...document.querySelectorAll('#drawTiles .dp-panel')].filter(p => !p.hidden).map(p => p.dataset.dp);
   return { tiles: t, shown }; }"""
 
 # Resolve a token as the drawer paints it.
@@ -253,7 +255,7 @@ with sync_playwright() as pw:
                 card, paper, tint = (q.evaluate(TOKEN, t) for t in ("--menu-card", "--menu-paper", "--seg-on-fill"))
                 tile(q, "brush", 700)
                 cols = q.evaluate("""() => { const s = el => getComputedStyle(el).backgroundColor;
-                    return { tiles: [...document.querySelectorAll('.dp-tile')].map(s),
+                    return { tiles: [...document.querySelectorAll('#drawTiles .dp-tile')].map(s),
                              panel: s(document.getElementById('dpBrush')),
                              chosen: s(document.querySelector('#brushSeg .active')),
                              other: s(document.querySelector('#brushSeg [data-brush=marker]')),
@@ -366,7 +368,7 @@ with sync_playwright() as pw:
         c, q, errs = fresh(b, route, PHONE)
         open_drawer(q, route); q.wait_for_timeout(600)
         half = q.evaluate(f"""() => ({{ full: document.getElementById('drawPanel').classList.contains('detent-full'),
-            tiles: !!document.querySelector('.dp-tile').offsetParent, clear: !!document.querySelector('{e["clear"]}').offsetParent }})""")
+            tiles: !!document.querySelector('#drawTiles .dp-tile').offsetParent, clear: !!document.querySelector('{e["clear"]}').offsetParent }})""")
         check(f"{nm}: on a phone the drawer opens at half: Color and the tiles, Clear out of the way",
               half == {"full": False, "tiles": True, "clear": False}, str(half))
         tile(q, "size", 1600)
