@@ -25513,7 +25513,9 @@ place, 7 more: the old place in the line, no room made, the line's own shown
 too, no row of its own in the band, the line following the shorter bar, off
 the bar's middle, shown on a desk; and verify_watchfull's way in red on the
 old place and with the way in before the speed, verify_replayspeed's line
-red on the old place and on the line following the shorter bar. Their first
+red on the old place and on the line following the shorter bar, and
+verify_scrub's span (it read the bar alone, 14/16 on the fix) red on the old
+place and on Repeat 10px off its place. Their first
 run served its broken copies at the wrong path: every break was green, so
 the instrument was wrong, and they were run again on the page's own paths. The turn's row
 first measured the time between two frames, which is always a frame: green
