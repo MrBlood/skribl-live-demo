@@ -446,7 +446,7 @@
       if (!ok) return;
       // What is painted, as it is painted, for whoever asks (the harness):
       // each mark on the drawing's lane, each comes-round line, each beat.
-      var drawn = root._painted = { marks: [], lines: [], beats: [], turns: 0, beatIn: beatIn, lane: laneH, art: 0, tile: 0 };
+      var drawn = root._painted = { marks: [], lines: [], beats: [], boxes: [], turns: 0, beatIn: beatIn, lane: laneH, art: 0, tile: 0 };
       var st = getComputedStyle(root), tok = function (n) { return st.getPropertyValue(n).trim(); };
       var acc = tok('--accent'), ink = tok('--accent-ink'), fill = tok('--accent-fill') || acc;
       var card = tok('--menu-card'), line = tok('--menu-card-line'), paper = tok('--menu-paper') || card, strong = tok('--text-strong');
@@ -494,11 +494,23 @@
         x.restore();
       }
 
-      // THE DRAWING, from the loop's start.
+      // THE DRAWING, from the loop's start, in a box of its own: as much of
+      // it as is in view, so where it runs past the timeline's edge it ends
+      // there rounded, as the song's box under it does, not cut flat at the
+      // canvas's edge; and its marks inside it, a dot at the drawing's very
+      // end (drawn 60ms wide, so it can be seen) moved back to fit (the
+      // owner: "things not fitting in the container").
       var a0 = X(s0), a1 = Dd > 0 ? X(s0 + Dd) : a0;
       x.lineWidth = 1;
+      var laneBox = function (l, r) {
+        var bl = Math.max(0.5, l), br = Math.min(w - 0.5, r);
+        if (br - bl < 2) return null;
+        rr(bl, 0.5, br - bl, laneH - 1, 8); x.fillStyle = card; x.fill(); x.strokeStyle = line; x.stroke();
+        drawn.boxes.push([+bl.toFixed(2), +br.toFixed(2)]);
+        return [bl, br];
+      };
       if (Dd > 0) {
-        rr(a0, 0.5, Math.max(8, a1 - a0), laneH - 1, 8); x.fillStyle = card; x.fill(); x.strokeStyle = line; x.stroke();
+        var first = laneBox(a0, Math.max(a1, a0 + 8));
         var marks = ln && ln.marks || [], again = ln && ln.again, numbered = marks.length && marks[0][2] != null;
         // The first turn, then (Flip) the next ones, fainter, until the loop has come round.
         var turns = [[0, 0, Infinity]];
@@ -506,18 +518,25 @@
           for (var c = 1, o = Dd; s0 + o < s0 + hl - 0.02 && c < 64; c++, o += again.period) turns.push([c, o - again.from, s0 + hl]);
         }
         turns.forEach(function (tn) {
-          var c2 = tn[0], off = tn[1], stop = tn[2], lastX = -1;
+          var c2 = tn[0], off = tn[1], stop = tn[2], lastX = -1, box = first, end = a1;
           drawn.turns = c2 + 1;
           if (c2) {
             var b0 = X(s0 + off + again.from), b1 = Math.min(X(s0 + off + again.from + again.period), X(stop));
             if (b1 - b0 < 2) return;
-            rr(b0, 0.5, b1 - b0, laneH - 1, 8); x.fillStyle = card; x.fill(); x.strokeStyle = line; x.stroke();
+            box = laneBox(b0, b1); end = b1;
           }
+          if (!box) return;   // none of this turn is in view
+          x.save(); rr(box[0], 0.5, box[1] - box[0], laneH - 1, 8); x.clip();
           for (var i = 0; i < marks.length; i++) {
             var m = marks[i];
             if (c2 && m[0] < again.from - 1e-9) continue;
             var A = X(s0 + off + m[0]), B = X(Math.min(s0 + off + m[1], stop));
             if (B <= A + 0.25 && c2) continue;
+            // Painted at least 3px wide (a page's mark 6, inset 1.5 each
+            // side): one that would end past the drawing moves back to end
+            // on it.
+            var over = Math.max(B, A + (numbered ? 6 : 3)) - end;
+            if (over > 0) { A -= over; B -= over; }
             if (A > w + 2) break;
             if (B < -2) continue;
             if (!numbered && A < lastX + 1) { A = lastX + 1; if (B < A) continue; }   // strokes closer than a pixel: one mark
@@ -568,6 +587,7 @@
               }
             }
           }
+          x.restore();
           x.globalAlpha = 1;
         });
         // Where the loop comes round under the drawing.

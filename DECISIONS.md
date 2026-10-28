@@ -25303,3 +25303,55 @@ WHAT IT DOES TO FLIP: one drawer and one pair of ears for both; Flip's Beat
 speed counts the song's bar, its rounds 1 or 2 bars in three.
 
 Not tested here: an iPhone's WebKit, SF and Segoe UI, a real waltz.
+
+## After v329 -- The owner's list: the drawing's strip in its box, Flip's time beside Play
+
+The owner, looking at the live drawer: "screenshot 1 shows the things not
+fitting in the container. is that meant to be that way?", and of Flip:
+"when you draw on in slide 1 in flip the time does not show accurately, it
+just flickers". Neither was meant. Bug fixes, in the PR with steps 7 and 8.
+
+THE DRAWING'S STRIP IN ITS BOX (lib/musictimeline.js). Two things. Every
+stroke's mark is drawn at least 60ms wide so a dot can be seen, and a dot at
+the drawing's very end was drawn past the strip's end; a mark that would end
+past it now moves back to end on it. And the strip is laid out in the
+song's time from the loop's start, so zoomed in it runs past the timeline's
+edge, and it was cut flat there by the canvas while the song's box under it
+ends rounded; its box is now as much of it as is in view, ending at the
+timeline's edge rounded as the song's does, its marks clipped inside it.
+Rows (verify_musiclane, the strip part): a drawing that ends on a dot has
+nothing of its ink past the strip's end, the dot inside and every mark
+ending on the drawing's end or before, a phone in light and a desk in dark;
+zoomed in past where the drawing ends, the box's corners at the edge
+unpainted as the song box's are, on the Pad and Flip; a stroke running past
+the edge cut by the box's rounded corner. Each red on main and against a
+break of its own: no clip, no moving back, the box not kept to the view.
+
+FLIP'S TIME BESIDE PLAY (flip.js). It counted pages over fps, as if every
+page were one frame: a page that draws itself lasts as long as its strokes
+took, so with one the pass read 0.3s and, playing, the badge wrapped about
+four times a second. It is one pass as it plays now (lib/holdtiming.js
+plan, as the music drawer counts it), and while playing it reads the page
+on screen: where that page starts in the pass and how long it has been up,
+at the watching speed, no further than its end. So it keeps with the pages
+from the page Play starts on, through a pause, a new speed, a scrub or a
+page the song's beat skips, and waits at a page's end for a late one.
+Found on the way: the page timer takes off what the next page's paint will
+cost, and for a page that draws itself it counted every point, when it
+paints a few a frame, so Play from the page before one cut that page to
+about half its time on the first pass; a drawing page's first paint counts
+as nothing now. Rows (verify_hold, THE LENGTH BESIDE PLAY): the length at
+rest; every frame for 4s, forward but where the pages go round, once a
+pass; every frame between the start and end of the page on screen; Play
+from page 3 at its place; that page up for its own time; a late page (its
+timer 40ms late) waited for; a pause, a new speed and a scrub each carried
+on. Each red on main and against a break of its own: the old total, a
+clock of its own, no wait at a page's end, the pause, the speed and the
+scrub each not carried on, no reading off the page, a drawing page's paint
+counted in full.
+
+WHAT IT DOES TO FLIP: the strip is the shared timeline's, both editors; the
+time beside Play is Flip's own (the Pad counts its replay's time, which
+had no pages to miscount).
+
+Not tested here: an iPhone's WebKit, SF and Segoe UI.

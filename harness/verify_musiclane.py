@@ -29,6 +29,13 @@ FUTURE.md 6s, step 7, from ACID's video track; "All yes").
   under it. The Pad's lane stays 26px, the box tall or not: a stroke reads as
   a line.
 
+  THE STRIP IN ITS BOX (the owner: "things not fitting in the container").
+  A drawing that ends on a dot (every mark is drawn 60ms wide, so a dot
+  shows) has the dot inside its strip, moved back to end on the drawing's
+  end, and none of its ink past it. Zoomed in past where the drawing ends,
+  its box ends at the timeline's edge rounded, as the song's box does, and a
+  stroke running past the edge is cut by that rounded corner.
+
 Each row runs on the editor whose lane it is: the inks are the Pad's and the
 pictures Flip's (the other lane has no inks or no pictures). The lane's
 height is Flip's, and the Pad's staying put is the Pad's row; the handles,
@@ -66,7 +73,7 @@ import browsing  # noqa: E402
 import waits  # noqa: E402
 
 # For calibration: MUSICLANE_PART=inks (pictures, budget, fresh, height,
-# glide, press or lit) runs one part. A real run sets none.
+# glide, press, lit or strip) runs one part. A real run sets none.
 PART = os.environ.get("MUSICLANE_PART", "")
 
 
@@ -549,6 +556,78 @@ with sync_playwright() as pw:
               all(y is not None and d is not None and abs(y - d) <= 1 for _, y, d, _, _ in got),
               "; ".join(f"{k} (lane {ln}): lit at {y}, its dot at {d}" for k, y, d, ln, _ in got))
         check("Flip: no page errors as the beat lights", not any(e for *_, e in got), "; ".join(e for *_, es in got for e in es[:2]))
+
+    print("\nMUSIC LANE — the drawing's strip fits its box (the owner: \"things not fitting in the container\")")
+    if part("strip"):
+        # A drawing that ends on a dot: each mark is drawn 60ms wide so a dot
+        # shows, and the last one was drawn past the strip's end. Read off the
+        # canvas: the lane's row just past the drawing's end holds none of the
+        # dot's ink, and the dot is there, inside.
+        DOTS = """() => { strokes.length = 0; let t = 0;
+          for (let k = 0; k < 3; k++) { for (let j = 0; j <= 10; j++) strokes.push({ x: 60 + j * 10, y: 60 + k * 30, color: '#7c5cff', size: 8, t: t + j * 45, start: j === 0 }); t += 450 + 150; }
+          for (let k = 0; k < 4; k++) { strokes.push({ x: 300, y: 60 + k * 20, color: '#7c5cff', size: 8, t: t, start: true }); t += 300; }
+          updateDrawingTimeLabels(); updateTrimUI(); }"""
+        END = """() => { const v = document.getElementById('musicTimeline').dataset.view.split(' ').map(Number), cv = document.getElementById('musicTlCanvas');
+          return (trimStart + getPlaybackDuration() / 1000 - v[0]) / v[1] * cv.clientWidth; }"""
+        got = []
+        for face, opts, scheme in (("phone", PHONE, "light"), ("desk", DESK, "dark")):
+            c, pg, errs = editor(b, "Pad", "/", opts=opts, scheme=scheme)
+            pg.evaluate(DOTS); pg.wait_for_timeout(500)
+            end, P = pg.evaluate(END), pg.evaluate(PAINT)
+            lane, ms = P["lane"] or 26, first_turn(P["marks"])
+            past = pg.evaluate(AT, [[end + dx, lane / 2] for dx in (2, 3.5, 5, 6.5, 8)])
+            inside = pg.evaluate(AT, [[end - dx, lane / 2] for dx in (2, 3, 4)])
+            ink = (124, 92, 255)
+            # and moved back to end there, not cut off there: every mark ends on the drawing's end or before
+            whole = bool(ms) and all(m[1] <= end + 0.5 for m in ms)
+            got.append((face, scheme, round(end, 2), [p for p in past if far(p, ink) <= 60], any(far(p, ink) <= 60 for p in inside), whole, ms[-1:], errs))
+            c.close()
+        check("Pad: a drawing that ends on a dot has the dot inside its strip, moved back to end there, and nothing of it past the strip's end, phone and desk",
+              all(not out and dot and whole for _, _, _, out, dot, whole, _, _ in got),
+              "; ".join(f"{f} {s}: the drawing ends at {e}px, its ink past it {o or 'none'}, the dot inside {d}, its mark {m}" for f, s, e, o, d, _, m, _ in got))
+        check("Pad: no page errors with the dot", not any(e for *_, e in got), "; ".join(e for *_, es in got for e in es[:2]))
+
+        # Zoomed in past where the drawing ends, its box ends at the
+        # timeline's edge rounded, as the song's box under it does, not cut
+        # flat at the canvas's edge: the box's top right corner is left
+        # unpainted, as the song box's is, and the box's own edge is there.
+        ALPHA = """(pts) => { const cv = document.getElementById('musicTlCanvas'), d = cv.width / cv.clientWidth, x = cv.getContext('2d');
+          return pts.map(([px, py]) => x.getImageData(Math.floor(px * d), Math.floor(py * d), 1, 1).data[3]); }"""
+        got = []
+        for name, path in (("Pad", "/"), ("Flip", "/flip")):
+            c, pg, errs = editor(b, name, path, opts=DESK, scheme="dark")
+            pg.click("#musicTlIn"); pg.wait_for_timeout(700)
+            p = pg.evaluate(PAINT)
+            w, lane = p["w"], p["lane"] or 26
+            # the last reading is inside the box, 6px from the edge: the box
+            # runs there, so the corners read are its own and not where it ended
+            a = pg.evaluate(ALPHA, [[w - 0.5, 0.5], [w - 0.5, lane - 0.5], [w - 0.5, lane + 8 + 0.5], [w - 6, lane / 2]])
+            got.append((name, a, errs))
+            c.close()
+        check("Pad and Flip: zoomed in past where the drawing ends, its box ends at the timeline's edge with its corners rounded, as the song's box does",
+              all(a[0] == 0 and a[1] == 0 and a[2] == 0 and a[3] > 0 for _, a, _ in got),
+              "; ".join(f"{n}: the lane's top and bottom right corners {a[0]}, {a[1]} (0 is rounded), the song's {a[2]}, inside the box {a[3]}" for n, a, _ in got))
+        check("Pad and Flip: no page errors zoomed in", not any(e for *_, e in got), "; ".join(e for *_, es in got for e in es[:2]))
+
+        # A stroke running past the timeline's edge, zoomed in, is cut there by
+        # the box's rounded corner too, not drawn square over it: just outside
+        # the corner's curve, above the mark's middle, the canvas holds no
+        # more than the box's own edge does, on the phone's fine pixels.
+        c, pg, errs = editor(b, "Pad", "/", opts=PHONE, scheme="light")
+        cross = []
+        for _ in range(5):                                  # in until a stroke crosses the edge
+            pg.click("#musicTlIn"); pg.wait_for_timeout(700)
+            P = pg.evaluate(PAINT)
+            w, lane = P["w"], P["lane"] or 26
+            cross = [m for m in first_turn(P["marks"]) if m[0] < w - 10 and m[1] > w]
+            if cross:
+                break
+        a = pg.evaluate(ALPHA, [[w - 0.25, 6.25], [w - 6, lane / 2]])
+        check("Pad: zoomed in, a stroke running past the timeline's edge is cut by the box's rounded corner, not drawn square over it",
+              bool(cross) and a[0] < 200 and a[1] == 255,
+              f"a stroke across the edge {cross[:1]}; just outside the corner's curve {a[0]} (a mark is 255), inside {a[1]}")
+        check("Pad: no page errors with a stroke past the edge", not errs, "; ".join(errs[:2]))
+        c.close()
 
     b.close()
 

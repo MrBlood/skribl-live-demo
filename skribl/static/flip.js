@@ -2716,37 +2716,70 @@ const pbWho=document.getElementById('pbWho'), pbLeft=document.getElementById('pb
       pbDraw=document.getElementById('pbDraw'),
       pbLoop=document.getElementById('pbLoop'), pbUnder=document.getElementById('pbUnder');
 // The Pad shows the recorded length beside Play; Flip can state its animation
-// length exactly — total hold units over fps. Same badge, same m:ss format.
+// length exactly: one pass as it plays (lib/holdtiming.js plan, each page at
+// its own length, a page that draws itself as long as its strokes took, a
+// loop's stretch as many times as it runs), as the music drawer counts it.
+// Same badge, same m:ss format.
 const flipDurationEl=document.getElementById('flipDuration');
 // the Pad counts UP in its badge while playing (editorReplayFrame ->
 // formatDuration(elapsed)), then restores the total on stop. Flip showed a static
 // total, so during playback there was no sense of progress. Same behaviour here,
-// driven by rAF rather than the play timer so the readout is smooth regardless of
-// fps and unaffected by per-page holds.
-let flipElapsedRAF=null, flipPlayStart=0;
+// driven by rAF so the readout is smooth regardless of fps, and read off THE
+// PAGE ON SCREEN (flipBadgeAt: where it starts in the pass, where it ends, and
+// when it went up), so it keeps with the pages from the page Play starts on,
+// through a scrub, a pause, a new speed or a page the song's beat skips, and
+// waits at a page's end for the next. It counted a clock of its own against
+// pages over fps, as if every page were one frame: with a page that draws
+// itself the pass was a tenth of a second, and the badge wrapped ten times a
+// second (the owner: "the time does not show accurately, it just flickers").
+let flipElapsedRAF=null, flipBadgePlan=null, flipBadgeAt=null;
 function fmtFlipSecs(secs){
   if(secs < 60) return (secs < 9.95 ? secs.toFixed(1) : Math.round(secs)) + 's';
   const m=Math.floor(secs/60), r=Math.round(secs%60);
   const mm=(r===60)?m+1:m, ss=(r===60)?0:r;
   return mm+':'+String(ss).padStart(2,'0');
 }
-function flipTotalSecs(){ return totalHoldUnits(0, frames.length-1)/(fps||12); }
+function flipPassPlan(){ return window.SkriblHold ? window.SkriblHold.plan(frames, fps, docLoop) : null; }
+function flipTotalSecs(){ const p=flipPassPlan(); return p ? p.cycle/1000 : totalHoldUnits(0, frames.length-1)/(fps||12); }
+// Play count i's slot in one pass (as _playPage reads it): a forever loop
+// goes round inside its stretch, any other pass whole.
+function _passSlot(p, i){
+  const n=p.slots.length;
+  if(p.forever && i >= n){ const a=p.loop.from, len=p.loop.to-a+1; return a + ((i - a) % len); }
+  return ((i % n) + n) % n;
+}
+// The page play count i puts on screen, now: the badge reads from it.
+function flipBadgeFrom(i){
+  const p=flipBadgePlan; if(!p || !p.slots.length) return;
+  const k=_passSlot(p, i);
+  // Paused (a scrub), it went up at the paused moment: a resume moves that on.
+  flipBadgeAt={ ms:p.starts[k], end:p.starts[k]+p.ms[p.slots[k]], at:playPaused ? flipPausedAt : performance.now() };
+  flipBadgeShow();
+}
+// Where the pages are in the pass, in the animation's own time: the page on
+// screen's start and how long it has been up (at the watching speed), and
+// no further than its end, so the badge never runs ahead of the next page.
+function flipBadgeShow(){
+  const b=flipBadgeAt; if(!b || !flipDurationEl) return;
+  const now=playPaused ? flipPausedAt : performance.now();
+  const ms=Math.min(b.end, b.ms + Math.max(0, now - b.at) * flipRate);
+  flipDurationEl.dataset.ms=ms.toFixed(1);   // to the tenth of a millisecond, for the harness
+  flipDurationEl.textContent=fmtFlipSecs(ms/1000);
+}
 function startFlipElapsed(resume){
   if(!flipDurationEl) return;
-  if(!resume) flipPlayStart=performance.now();   // a resume keeps the start, moved on by the pause
-  const total=flipTotalSecs();
+  if(!resume){ flipBadgePlan=flipPassPlan(); flipBadgeAt=null; }   // the first page sets it (playStep)
   const tick=()=>{
     if(!playing){ flipElapsedRAF=null; return; }
-    const el=(performance.now()-flipPlayStart)/1000*flipRate;   // the animation's own time
-    // The animation loops, so wrap rather than pinning at the total — the badge
-    // tracks position within the loop, which is what a viewer is watching.
-    flipDurationEl.textContent=fmtFlipSecs(total>0 ? (el % total) : el);
+    flipBadgeShow();
     flipElapsedRAF=requestAnimationFrame(tick);
   };
   flipElapsedRAF=requestAnimationFrame(tick);
 }
 function stopFlipElapsed(){
   if(flipElapsedRAF){ cancelAnimationFrame(flipElapsedRAF); flipElapsedRAF=null; }
+  flipBadgePlan=null; flipBadgeAt=null;
+  if(flipDurationEl) delete flipDurationEl.dataset.ms;
   syncFlipDuration();                      // back to the total
 }
 
@@ -4398,6 +4431,7 @@ function startReveal(f, durMs, fromMs){
 }
 function playStep(){ if(scrubbingFrames) return;
   idx=_playPage(playI);
+  flipBadgeFrom(playI);
   const _t0 = performance.now();
   // A drawing page must never blit a cached bitmap: the cache exists because a
   // still page does not change, and this one does. It also must not FILL the
@@ -4488,7 +4522,11 @@ function runPlayTimer(){
     // cost yet — a small constant beats a 200ms lie.
     const cachedNext = playBitmaps && window.SkriblFrameBitmap
       && window.SkriblFrameBitmap.get(playBitmaps, frames[ni]);
-    const est = cachedNext
+    // A page that draws itself paints a few points a frame (startReveal), so
+    // its first paint costs next to nothing: estimated from all its points,
+    // it cut the page before it short, to nothing when Play started there.
+    const est = frames[ni] && frameDraw(frames[ni]) ? 0
+      : cachedNext
       ? (blitMs != null ? blitMs : 8)
       : framePaintMs[ni] != null
         ? framePaintMs[ni]
@@ -4615,7 +4653,7 @@ function setFlipRate(c){
   syncWatchSegs();
   if(!playing) return;
   const t0 = playPaused ? flipPausedAt : now;
-  flipPlayStart = t0 - (t0 - flipPlayStart) * old / c;
+  if(flipBadgeAt) flipBadgeAt.at = t0 - (t0 - flipBadgeAt.at) * old / c;
   if(playPaused){ pausedRemain = pausedRemain * old / c; if(pausedRevealAt != null) pausedRevealAt = pausedRevealAt * old / c; return; }
   const remain = Math.max(0, playDueAt - now) * old / c;
   clearTimeout(playTimer);
@@ -4647,7 +4685,8 @@ function resumePlay(){
   playPaused = false;
   document.body.classList.remove('playback-paused');
   const now = performance.now();
-  flipPlayStart += now - flipPausedAt; startFlipElapsed(true);
+  if(flipBadgeAt) flipBadgeAt.at += now - flipPausedAt;
+  startFlipElapsed(true);
   if(pausedRevealAt != null && frameDraw(frames[idx])) startReveal(frames[idx], _pageMsAt(idx), pausedRevealAt);
   const m = pausedMusicAt; pausedMusicAt = null;
   if(m && m.wa != null) startWebAudioLoop(null, m.wa);
@@ -4713,6 +4752,7 @@ function scrubToPage(i){ const n=frames.length; if(!n) return; idx=Math.max(0, M
   // and revealing strokes under the finger would make the thumbnail you are
   // aiming at depend on how fast you moved.
   playI=_playCountFor(idx); render(); updatePlayProgress();
+  if(playing) flipBadgeFrom(playI);   // the badge says where the page landed on is
   beatTimer=null;   // a scrub moves the pages, not the song: they keep their own time until the next Play
   // Paused, it stays paused: the round Play on the drawing says so. playI now
   // names the page it landed on, so the resume's first step is due at once and
