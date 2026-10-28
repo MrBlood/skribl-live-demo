@@ -354,13 +354,16 @@
    * runs of three. A drift is the few px a glide overshoots; a scroll is a
    * screenful. Past DRIFT the page is where the person put it, and it stays.
    *
-   * NOR BEATS OPENING AS A BEAT LANDS (lib/musicdrawer.js): its height, and
-   * the gap it brings, are left out of the card's, so the page does not move
-   * by itself a moment after Skribl hears the beat or a tap settles it, under
-   * a finger reaching for the timeline (it scrolled 46px on the Pad and 22px
-   * on Flip, and verify_musicbeat's drags on Flip let go a bar off). Beats
-   * glides open, and what is under it glides down; a song landing with it is
-   * followed.
+   * NOR THE ROWS THAT OPEN AS A BEAT LANDS (lib/musicdrawer.js): Beats in
+   * the Length door, Snap to the beat and Beats in a bar in the Beat door.
+   * Their heights, and the gaps they bring, are left out of the card's, so
+   * the page does not move by itself a moment after Skribl hears the beat or
+   * a tap settles it, under a finger reaching for the timeline (Beats
+   * scrolled it 46px on the Pad and 22px on Flip, and verify_musicbeat's
+   * drags on Flip let go a bar off; the Beat door's two, 61-63px on a phone
+   * and 139px on a desk, and verify_musictempo's tap on the end's tab landed
+   * on the whole song's line). Each glides open, and what is under it glides
+   * down; a song landing with them is followed.
    *
    * A PERSON WHO SCROLLS BACK UP IS LEFT THERE TOO. The take-back only ever
    * pushes down, so a scroll up to the drawing as a song landed came straight
@@ -372,16 +375,19 @@
   var ACTS = ['wheel', 'touchstart', 'pointerdown', 'keydown'];
   function followGrowth(card, o) {
     if (!card || typeof ResizeObserver === 'undefined') return;
-    var dock = o.dock || null, lastH = 0, gen = 0, beats = card.querySelector('#musicBeatsRow');
-    // Beats' share of the card: its height and, in the Length door's column,
+    var dock = o.dock || null, lastH = 0, gen = 0;
+    var landing = ['#musicBeatsRow', '#musicSnapRow', '#musicBarRow'].map(function (s) { return card.querySelector(s); });
+    // Their share of the card: each one's height and, in a door's column,
     // the gap it brings with it, there from its first frame while its height
-    // glides up from none (left in, the 8px was followed on a desk, and the
-    // page went on after the row as it opened, 71px).
+    // glides up from none (left in, Beats' 8px was followed on a desk, and
+    // the page went on after the row as it opened, 71px).
     function height() {
       var share = 0;
-      if (beats && !beats.hidden && beats.getClientRects().length) {
-        share = beats.getBoundingClientRect().height + (parseFloat(window.getComputedStyle(beats.parentElement).rowGap) || 0);
-      }
+      landing.forEach(function (r) {
+        if (r && !r.hidden && r.getClientRects().length) {
+          share += r.getBoundingClientRect().height + (parseFloat(window.getComputedStyle(r.parentElement).rowGap) || 0);
+        }
+      });
       return card.getBoundingClientRect().height - share;
     }
     function target() {

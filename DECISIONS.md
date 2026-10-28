@@ -25104,3 +25104,259 @@ grows as the Pad's, and every row runs on both.
 
 Not tested here: an iPhone's WebKit (two fingers there, and its own zoom),
 a trackpad's pinch (the events are made to its shape), SF and Segoe UI.
+
+## After v329 -- The drawing in its lane
+
+Step 7 of the whole-drawer mock (FUTURE.md 6s; the owner: "All yes"), from
+ACID's video track: the timeline's lane over the song shows the drawing.
+
+THE PAD'S STROKES, EACH IN ITS OWN INK. editor_music.js gives each stroke's
+mark the ink of its first point as the replay draws it (lib/recolorplay.js
+gives a recoloured line the colour it was drawn in), an eraser's none, and
+lib/musictimeline.js paints it so. An ink that does not read 3:1 against
+the lane (--menu-card) keeps its hue and is made darker on the light lane
+and lighter on the dark, as the lane's words are, a fiftieth at a time
+until it does, and no further; worked out once for each ink on each lane.
+Skribl purple and a near-black are as drawn on the light lane; a coral
+(2.80:1 there) goes two fiftieths darker, and a pale yellow (1.12:1) a dark
+gold, 26. On the dark lane the near-black (1.08:1) goes a slate, 17
+lighter. Mixed toward the lane's words instead (the mock's rule), the
+yellows went olive. An eraser's stroke is the lane's accent.
+
+FLIP'S PAGES, EACH ITS OWN LITTLE PICTURE. flip.js hands the timeline each
+page's picture: the strip's thumbnail as the strip keeps it (_thumbCache,
+repainted only when the page changes), or past the cache's budget the
+strip's own tile, so a lane painted on every frame of a glide never paints a
+page itself (8MB holds about 42 pages at 3x). Its own shape is kept. A page
+as long as its picture or longer is the picture at the lane's height, one
+centred on the page's time and the rest either side, clipped to the page's
+slot, so a page held long is its picture again and again. A shorter page is
+the whole picture, smaller, centred in the lane, as the mock had each page
+whole in its slot; cropped to its middle instead, a ball crossing eight
+pages showed only on the middle ones, and squashed to the lane's height it
+was not its own shape. Each picture is framed in the lane's purple
+(--accent-ink, 8:1 and up against the lane), on whole device pixels as the
+loop's edges are, so a short page's small picture still shows; the card's
+own line was 1.3:1. The number sits on a small badge (--accent-fill,
+white, 10px) in the picture's corner, so it reads over any drawing, on a
+page shown as its picture at the lane's height; a smaller picture has none.
+In the first photos a badge on every page with room hid the ball on the
+short ones. The mock's numbers were dark purple straight on its pictures.
+The turns after the first are the pictures
+at 45%, as the marks were. A stroke on Flip's canvas is a tap away from the
+drawer, which closes it, so the lane shows a page's new picture as the
+drawer opens again.
+
+FLIP'S LANE TALLER FOR THEM. The lane's height is the editor's
+(laneHeight(box, base)): Flip's is 34px over the box at its own height and
+52 over one twice as tall, growing with the box in the frame the box does,
+since the timeline paints each height as it is laid out. The song sits 8px
+under it, the ends' handles too (--tl-lane, set as it paints), a press on
+it moves nothing, and the beat lit as it is heard stays on its dot. The
+Pad's stays 26px: a stroke reads as a line.
+
+lib/musicdrawer.js hands both hooks through to the timeline. The new
+suite's first run found that it did not: no pictures, and a 26px lane.
+
+Rows (verify_musiclane, 38): the Pad's inks as drawn, moved with their hue
+kept, at 3:1 and the eraser's, light and dark, phone and desk; Flip's
+pictures, each its own, again and again on a long page with one centred, a
+short one whole and smaller, the frame, the badge on a picture at the
+lane's height and none on a smaller one, the later turns
+fainter, past the cache's budget and drawn on; the lane's height short and
+tall, the handles and the song under it; on every frame of the box's glide
+up and back; the press; the lit beat; the Pad's 26px. Calibrated with the
+page's files served from broken copies (the files on disk untouched), each
+red on its own rows: no ink, the ink as drawn, the ink mixed toward the
+words, the ink taken all the way to black or white, the eraser in its
+colour; no pictures, the first page's picture
+for every page, the pictures from the slot's left, one picture, a picture
+stretched to the slot, a short page cropped to its middle or squashed to the
+lane's height, the frame in the card's line, the frame between pixels, no
+badge, a badge on every slot, the later turns as marks,
+the drawer not handing the hooks on, no tile past the cache, a lane copy of
+each picture kept for ever; no lane height, the handles at 34px, the
+lane a frame late, the song under the old lane, the Pad given Flip's height;
+the press under the old lane; the lit beat under the old lane.
+
+verify_musictimeline's grips and wave rows and verify_musictall's ink and
+pinch rows read the lane's height from what the timeline painted. How it
+works says the lane shows each stroke in its own colour and each page as its
+own little picture, numbered where there is room; verify_helpclaims claims
+it.
+
+WHAT IT DOES TO FLIP: one timeline for both; the inks are the Pad's (a Flip
+page is a picture), the pictures and the taller lane are Flip's (a stroke
+reads as a line).
+
+Not tested here: an iPhone's WebKit, SF and Segoe UI.
+
+## After v329 -- Songs in three
+
+Step 8 of the whole-drawer mock (FUTURE.md 6s; the owner: "All yes", of the
+mock's songs in three: the Length row in beats, 3 · 6 · 12 · 24 for a waltz,
+and a small choice of 4 or 3 beats a bar in Beat for when the ears hear it
+wrong). Before it, a waltz looped a beat into its bar: Skribl counted every
+song in fours, and its picks on four made waltzes started 0.35 to 0.65s off a
+bar.
+
+THE EARS HEAR THREES (lib/musicears.js meterOf). Each beat is scored as barOf
+scored it, its kick against the stretch's own and how far the chord moved
+from the beat before, and the song is read a stretch at a time, 16 seconds
+on that stretch's own beat, as the pick reads it: how plainly one beat in
+every three stands out of the others, and one in four, and one in six. In
+three when the threes gather plainly (0.6 of the scores' own spread) and
+twice as plainly as the fours; in four otherwise, as every song was before.
+Sixes far plainer than threes (half again) are a waltz heard at its eighths,
+and the beat is halved: a slow waltz at 84 with its eighths played was heard
+at 168, one at 76 with soft hats between at 152, and at those speeds their
+threes are half bars and gather too. Measured on 17 songs made in the page
+(harness/songsynth.py): in four, the threes gathered 0.07 to 0.31 and the
+fours 1.39 to 2.01; in three, the threes 1.93 to 2.10 and the fours 0.15 to
+0.46. Every song in four is heard as it was, the same beat and the same pick
+to the last digit; the songs the ears suite makes are made byte for byte as they
+were. The six songs in three now start on a bar, 0.5 to 12.9ms off it (the
+band in three plays 8ms off the beat on purpose). Reading the bar adds 15
+to 26ms on this box to the ears' last step for a two-minute song (that step
+took 27 to 111ms), in one go rather than sliced: on a phone perhaps four
+times that, which measuring the ears at a phone's pace (FUTURE.md 6t, next)
+is for, with a Web Worker if it shows. A rule that kept a slow waltz's beat
+from doubling was tried, and changed no song's result once the sixes were
+read: it went.
+
+THE DRAWER COUNTS IN THE BAR (lib/musicdrawer.js). The tempo carries bar: 3
+for a song in three and barBy: 'you' when Beats in a bar set it, both kept
+in the drafts; a song in four saves what it always did. Everything that
+counts bars counts in it: Beats (3 · 6 · 12 · 24, its buttons written in),
+Skribl's pick (which counts in a bar set by you, and keeps it yours), Snap
+to the beat and the end setting the tempo, "a bar" in Each press, the bigger
+dot on each bar (the timeline's and the Restart view's), the click's higher
+tick and the lit beat's bigger light. A tap on the beat keeps the bar: taps
+tell the beat, not how many make a bar.
+
+BEATS IN A BAR, under Snap to the beat in the Beat door once there is a
+beat, as the mock had it: 4 or 3, and where the bar came from, "heard by
+Skribl" for the bar Skribl heard, "set by you" for one set there (set back
+to the one heard, it is Skribl's again), nothing for a four nobody chose (a
+tapped beat Skribl never heard). Setting it moves nothing: the loop stays
+where it is and is counted again, so a 24-beat waltz loop set to four has
+no Beats lit. The words keep the room of the longest, so the 4 and the 3
+never move under the finger as they change; on a narrow phone they go under
+the choice.
+
+FLIP'S BEAT IN THREE. A round of pages is 1 or 2 bars of a song in three: a
+quarter or a half of a bar of three ends between its beats (¾ and 1½ of
+one), which is not on the beat. A round of one beat would need the post's
+`beat` to take a third of a bar, which the server's check does not; it
+waits for the owner's word. The posted file is as it was: `beat.bars` stays
+one of 0.25, 0.5, 1 or 2, and fps carries the speed, so the players need
+nothing new.
+
+Found on the way: Skribl's pick, tapped with the bar set to four, lost "set
+by you" (the pick's tempo is new; it keeps the bar yours now).
+
+THE PAGE STAYS STILL IN THE BEAT DOOR TOO. Found by the run of the affected
+suites: verify_musictempo went red beside the others on the Pad, 49 of 56
+(56 of 56 alone), its tap on the end's tab landing on the whole song's line
+and moving the loop to the song's end. With the Beat door open, a beat
+landing opens Snap to the beat and Beats in a bar, and the drawer's growth
+follow (lib/drawerdetent.js) scrolled the page after them, 61 to 63px on a
+phone and 139 on a desk, under a finger reaching for the timeline: what was
+left out for Beats in the Length door (the Beats row, above). Before step 8,
+Snap alone scrolled it 66px on a desk. Both rows are left out of the card's
+height for the follow now, as Beats is; each glides open and what is under
+it glides down, and a song landing with them is followed. verify_musicbeat's
+still-page rows read the Beat door too, on both editors, phone and desk: red
+with the follow as it was, and with either row followed.
+
+Rows (verify_musicthree, 49): the ears, every song in three heard in three
+at its own beat and every song in four in four; the pick in three, a
+waltz's loop on its bar and 24 of its beats, the line and the tile, Beats,
+the dots, "a bar", the click and the light; Beats in a bar, its 3 and its
+words, a tap on 4 moving nothing and counting in four, "set by you", the
+pick counting in it, 3 again Skribl's, a song in four, a tapped beat; Snap
+in three, let go and zoomed in, and a tapped beat keeping the bar; kept
+over a reload; Flip's rounds in three and back in four; the 4 and the 3 put
+under the finger on two phones and a desk. Every drawer row on the Pad and
+on Flip. Calibrated with the page's files served from broken copies (the
+files on disk untouched), 24 breaks, each red on its own rows (two run
+against a second part too): the ears always in four, without the sixes,
+threes read before sixes, the threes' bar loosened to 0.25 over nothing,
+hearing threes throwing; the pick always in four; the tempo without its
+bar, Beats counted in four, "a bar" four beats, the click's and the
+light's bar four, the timeline's dots every fourth; no Beats in a bar, its
+words always "heard by Skribl", never "set by you", the loop moved by it,
+the pick dropping "set by you", 3 again staying yours; a tap dropping the
+bar, the bar not saved, "set by you" not saved, the drawer throwing in
+three; Flip's round in four, a quarter bar of three offered; the words
+given no room. How it works' Beats, Skribl's pick, Snap to the beat, Tap
+the beat and fps tips say the threes, and a new tip says what Beats in a bar
+is; verify_helpclaims claims them. verify_contrast reads the Beat door in
+three, light and dark, phone and desk, on both editors.
+
+Not yet: a fast jazz waltz, 176, was heard at half its speed and counted in
+bars of two of its own (its loops whole bars still; Tap the beat sets it); a
+song in 6/8 heard at its eighths counts in threes, half its bars. Real
+recordings wait for the owner's songs by ear (6t); the songs here are made.
+
+WHAT IT DOES TO FLIP: one drawer and one pair of ears for both; Flip's Beat
+speed counts the song's bar, its rounds 1 or 2 bars in three.
+
+Not tested here: an iPhone's WebKit, SF and Segoe UI, a real waltz.
+
+## After v329 -- The owner's list: the drawing's strip in its box, Flip's time beside Play
+
+The owner, looking at the live drawer: "screenshot 1 shows the things not
+fitting in the container. is that meant to be that way?", and of Flip:
+"when you draw on in slide 1 in flip the time does not show accurately, it
+just flickers". Neither was meant. Bug fixes, in the PR with steps 7 and 8.
+
+THE DRAWING'S STRIP IN ITS BOX (lib/musictimeline.js). Two things. Every
+stroke's mark is drawn at least 60ms wide so a dot can be seen, and a dot at
+the drawing's very end was drawn past the strip's end; a mark that would end
+past it now moves back to end on it. And the strip is laid out in the
+song's time from the loop's start, so zoomed in it runs past the timeline's
+edge, and it was cut flat there by the canvas while the song's box under it
+ends rounded; its box is now as much of it as is in view, ending at the
+timeline's edge rounded as the song's does, its marks clipped inside it.
+Rows (verify_musiclane, the strip part): a drawing that ends on a dot has
+nothing of its ink past the strip's end, the dot inside and every mark
+ending on the drawing's end or before, a phone in light and a desk in dark;
+zoomed in past where the drawing ends, the box's corners at the edge
+unpainted as the song box's are, on the Pad and Flip; a stroke running past
+the edge cut by the box's rounded corner. Each red on main and against a
+break of its own: no clip, no moving back, the box not kept to the view.
+verify_musictimeline's row for where the lane's marks sit had its last
+stroke as one dot at the drawing's very end, and the run found it still
+wanting that dot at its time, past the end; it wants it ending on the end
+now, and is red on main's timeline, against marks laid from 0:00 and
+against no moving back.
+
+FLIP'S TIME BESIDE PLAY (flip.js). It counted pages over fps, as if every
+page were one frame: a page that draws itself lasts as long as its strokes
+took, so with one the pass read 0.3s and, playing, the badge wrapped about
+four times a second. It is one pass as it plays now (lib/holdtiming.js
+plan, as the music drawer counts it), and while playing it reads the page
+on screen: where that page starts in the pass and how long it has been up,
+at the watching speed, no further than its end. So it keeps with the pages
+from the page Play starts on, through a pause, a new speed, a scrub or a
+page the song's beat skips, and waits at a page's end for a late one.
+Found on the way: the page timer takes off what the next page's paint will
+cost, and for a page that draws itself it counted every point, when it
+paints a few a frame, so Play from the page before one cut that page to
+about half its time on the first pass; a drawing page's first paint counts
+as nothing now. Rows (verify_hold, THE LENGTH BESIDE PLAY): the length at
+rest; every frame for 4s, forward but where the pages go round, once a
+pass; every frame between the start and end of the page on screen; Play
+from page 3 at its place; that page up for its own time; a late page (its
+timer 40ms late) waited for; a pause, a new speed and a scrub each carried
+on. Each red on main and against a break of its own: the old total, a
+clock of its own, no wait at a page's end, the pause, the speed and the
+scrub each not carried on, no reading off the page, a drawing page's paint
+counted in full.
+
+WHAT IT DOES TO FLIP: the strip is the shared timeline's, both editors; the
+time beside Play is Flip's own (the Pad counts its replay's time, which
+had no pages to miscount).
+
+Not tested here: an iPhone's WebKit, SF and Segoe UI.

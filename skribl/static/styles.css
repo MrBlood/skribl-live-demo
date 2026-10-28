@@ -2475,6 +2475,12 @@ body.recoloring #canvas { cursor: crosshair !important; }
 /* BEATS, under the one line, wears Each press's row; its space above is
    padding, so it opens out with the row (glideIn) rather than in one frame. */
 .mt-beats { margin-top: 0; padding-top: 10px; }
+/* BEATS IN A BAR, under Snap to the beat, wears it too. Its words ("heard by
+   Skribl", "set by you", or none) keep the room of the longest, so the 4 and
+   the 3 never move under the finger that sets them; on a narrow phone they
+   go under the choice, a line kept for them. */
+.mt-bar { margin-top: 0; padding-top: 10px; flex-wrap: wrap; row-gap: 6px; }
+.mt-bar .mt-bar-says { min-width: 8em; min-height: 1.3em; text-align: left; }
 /* THE TIMELINE FOLLOWS YOU (lib/musicdrawer.js): a copy of the timeline under
    the header while the real one is scrolled up out of sight, on a card's
    paper, the card's own edge and drop, and its foot a card's corner (its
@@ -2975,7 +2981,7 @@ body.recoloring #canvas { cursor: crosshair !important; }
 .mt-tl-stage { position: relative; height: 118px; touch-action: pan-y; -webkit-user-select: none; user-select: none; cursor: grab; }
 .mt-tl.holding .mt-tl-stage { cursor: grabbing; }
 .mt-tl-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
-.mt-tl-handle { position: absolute; left: 0; top: 34px; bottom: 0; width: 18px; margin-left: -9px; z-index: 2;
+.mt-tl-handle { position: absolute; left: 0; top: calc(var(--tl-lane, 26px) + 8px); bottom: 0; width: 18px; margin-left: -9px; z-index: 2;
   display: flex; align-items: flex-end; justify-content: center; cursor: ew-resize; touch-action: none;
   -webkit-tap-highlight-color: transparent; }
 .mt-tl-handle::before { content: ""; position: absolute; inset: 0 -13px -12px; }

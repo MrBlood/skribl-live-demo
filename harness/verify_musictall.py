@@ -197,7 +197,7 @@ INK = """(o) => {
   const img = cv.getContext('2d').getImageData(0, 0, W, cv.height).data;
   const at = (c, r) => { const i = (r * W + c) * 4; return [img[i], img[i + 1], img[i + 2]]; };
   const far = (a, b) => Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]) + Math.abs(a[2] - b[2]);
-  const sTop = 26 + 8, sH = hh - sTop, mid = sTop + sH / 2 + 3, room = sH / 2 - 10;
+  const sTop = (P.lane || 26) + 8, sH = hh - sTop, mid = sTop + sH / 2 + 3, room = sH / 2 - 10;
   const r0 = Math.ceil((sTop + 3) * dpr), r1 = Math.floor((hh - 3) * dpr), m0 = Math.floor((mid - 1.5) * dpr), m1 = Math.ceil((mid + 1.5) * dpr);
   const edges = (P.edges || []).map((e) => e[0] * dpr);
   const v = (tl.dataset.view || '0 1').split(' ').map(Number), X = (t) => (t - v[0]) / v[1] * w * dpr;
@@ -418,7 +418,8 @@ with sync_playwright() as pw:
     # touch input: both down, moved together, then up.
     def fingers(pg):
         return pg.evaluate("""() => { const s = document.getElementById('musicTlStage').getBoundingClientRect();
-          return { cx: s.left + s.width / 2, cy: s.top + 34 + (s.height - 34) / 2, w: s.width }; }""")
+          const l = ((document.getElementById('musicTimeline')._painted || {}).lane || 26) + 8;
+          return { cx: s.left + s.width / 2, cy: s.top + l + (s.height - l) / 2, w: s.width }; }""")
 
     def touch(cdp, kind, pts):
         cdp.send("Input.dispatchTouchEvent", {"type": kind, "touchPoints": [{"x": x, "y": y, "id": i + 1} for i, (x, y) in enumerate(pts)]})

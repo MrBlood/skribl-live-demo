@@ -42,7 +42,8 @@ the loop, so I'm not at 7 or 9 when I want 8"; "All yes" to the mock; then
   none pressed). It opens out, Lock under it gliding down, at once under
   Reduce Motion, and the page
   stays still as it does (the drawer's growth follow scrolled it 46px under
-  a finger reaching for the timeline). A count tapped
+  a finger reaching for the timeline), as it does in the Beat door as Snap
+  to the beat and Beats in a bar open (61-63px on a phone, 139 on a desk). A count tapped
   on a loop of the person's own keeps the start and makes the loop that
   many beats, smooth restart and all; near the song's end it moves back by
   whole beats, only as far as it must. It glides there, the count lit from
@@ -268,7 +269,7 @@ SPREAD_MS = 4
 # the Restart view's two windows and its beats [side, x, time].
 MARKS = """(id) => { const host = document.getElementById(id), p = host && host._painted; if (!p) return null;
   const cv = host.querySelector('canvas');
-  return { w: cv.clientWidth, h: cv.clientHeight, view: (host.dataset.view || '').split(' ').map(Number), beats: p.beats,
+  return { w: cv.clientWidth, h: cv.clientHeight, view: (host.dataset.view || '').split(' ').map(Number), beats: p.beats, lane: p.lane || 26,
            marks: p.marks || null, lines: p.lines || null, turns: p.turns || 0, end: p.end || null, start: p.start || null }; }"""
 
 # Each new word, and the marks, against what is painted behind them: the
@@ -299,7 +300,8 @@ CONTRAST_DOORS = ((None, ("line", "length", "hear", "tiles")), ("beat", ("tempo"
 # The beat's dots, on the pixels: the timeline paints them on a canvas, so a
 # style says nothing about them. A beat and a bar each, read at its middle
 # (the most contrasting pixel within a pixel of it) against the lane beside
-# it, 6px along, where nothing else is painted at that height.
+# it, 6px along, where nothing else is painted at that height: 16px under the
+# drawing's lane as the timeline painted it (26px on the Pad, 34 on Flip).
 def dot_contrast(pg):
     import io as _io
     from PIL import Image as _Img
@@ -330,14 +332,14 @@ def dot_contrast(pg):
     # Not under a handle: the loop's ends are bars, and the handle's line
     # stands over the dot there.
     hx = pg.evaluate("() => ['tlStart', 'tlEnd'].map(id => { const r = document.getElementById(id).getBoundingClientRect(), s = document.getElementById('musicTlStage').getBoundingClientRect(); return r.left + r.width / 2 - s.left; })")
-    out = {}
+    out, y = {}, (m["lane"] if m else 26) + 16
     for name, want in (("beat", False), ("bar", True)):
         for x, bar, _t in (m["beats"] if m else []):
             if bar != want or x < 12 or x > st[2] - 12 or any(abs(x - h) < 14 for h in hx):
                 continue
             gx = x + 6 if x + 6 < st[2] - 4 else x - 6
-            ground = im.getpixel((int(gx * k), int(42 * k)))
-            out[name] = max(ratio(im.getpixel((int((x + dx) * k), int((42 + dy) * k))), ground) for dx in (-1, 0, 1) for dy in (-1, 0, 1))
+            ground = im.getpixel((int(gx * k), int(y * k)))
+            out[name] = max(ratio(im.getpixel((int((x + dx) * k), int((y + dy) * k))), ground) for dx in (-1, 0, 1) for dy in (-1, 0, 1))
             break
     return out
 
@@ -790,18 +792,25 @@ with sync_playwright() as pw:
               f"the second tap with the start at {mid:.3f}, on its way from 6.0 to 3.5: {t4['s']:.4f}-{t4['e']:.4f}, lit {t4['lit']}; Undo: {t5['s']:.4f}-{t5['e']:.4f}")
         check(f"{_n}: no page errors through Beats", not errs, "; ".join(errs[:2]))
         c.close()
+    # The same in the Beat door, where Snap to the beat and Beats in a bar
+    # open as the beat lands (they scrolled the page 61-63px on a phone and
+    # 139px on a desk, and verify_musictempo's tap on the end's tab, read a
+    # moment before, landed on the whole song's line and moved the loop to
+    # the song's end).
+    OPENS = {"length": "Beats opens", "beat": "Snap to the beat and Beats in a bar open in the Beat door"}
     for _n, _p in eds("beats"):
-        for dev, opts in (("phone", PHONE), ("desk", DESK)):
-            # Where the song's landing left the page (its follow brings the
-            # drawer's end on screen), once that follow is over.
-            c, pg, errs = editor(b, _n, _p, door="length", opts=opts)
-            pg.wait_for_timeout(1500)
-            rec = pg.evaluate(STILL)
-            ys, tops = sorted({round(f[1]) for f in rec}), [f[2] for f in rec]
-            check(f"{_n}: as the beat lands and Beats opens, the page stays still: nothing scrolls it ({dev})",
-                  len(ys) == 1 and max(tops) - min(tops) < 0.5,
-                  f"scrolled to {ys}; the timeline's top moved {max(tops) - min(tops):.1f}px")
-            c.close()
+        for door, opens in OPENS.items():
+            for dev, opts in (("phone", PHONE), ("desk", DESK)):
+                # Where the song's landing left the page (its follow brings the
+                # drawer's end on screen), once that follow is over.
+                c, pg, errs = editor(b, _n, _p, door=door, opts=opts)
+                pg.wait_for_timeout(1500)
+                rec = pg.evaluate(STILL)
+                ys, tops = sorted({round(f[1]) for f in rec}), [f[2] for f in rec]
+                check(f"{_n}: as the beat lands and {opens}, the page stays still: nothing scrolls it ({dev})",
+                      len(ys) == 1 and max(tops) - min(tops) < 0.5,
+                      f"scrolled to {ys}; the timeline's top moved {max(tops) - min(tops):.1f}px")
+                c.close()
     for _n, _p in eds("beats"):
         for still in (False, True):
             c = waits.instrument(b.new_context(reduced_motion="reduce" if still else "no-preference", **DESK))

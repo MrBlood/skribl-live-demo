@@ -315,7 +315,10 @@ const poseRate = () => fps / (subdiv || 1);
 /* MATCH THE BEAT (owner, of the mock: "all yes"): while Beat is the speed,
    how long a round of the pages lasts, in bars of the song (BEAT_BARS); null
    when the speed is a number. Up here with fps, which it sets, because a
-   draft restore reaches the speed control before the control's own code. */
+   draft restore reaches the speed control before the control's own code.
+   A bar is the song's own, four beats or three (the music drawer's Beats in
+   a bar); in three a round is one or two bars, as a quarter or half of a
+   bar of three ends between its beats. */
 let beatBars = null;
 const BEAT_BARS = [0.25, 0.5, 1, 2];
 // Onion skin depth/tint are view-only session state — deliberately NOT persisted
@@ -2713,37 +2716,70 @@ const pbWho=document.getElementById('pbWho'), pbLeft=document.getElementById('pb
       pbDraw=document.getElementById('pbDraw'),
       pbLoop=document.getElementById('pbLoop'), pbUnder=document.getElementById('pbUnder');
 // The Pad shows the recorded length beside Play; Flip can state its animation
-// length exactly — total hold units over fps. Same badge, same m:ss format.
+// length exactly: one pass as it plays (lib/holdtiming.js plan, each page at
+// its own length, a page that draws itself as long as its strokes took, a
+// loop's stretch as many times as it runs), as the music drawer counts it.
+// Same badge, same m:ss format.
 const flipDurationEl=document.getElementById('flipDuration');
 // the Pad counts UP in its badge while playing (editorReplayFrame ->
 // formatDuration(elapsed)), then restores the total on stop. Flip showed a static
 // total, so during playback there was no sense of progress. Same behaviour here,
-// driven by rAF rather than the play timer so the readout is smooth regardless of
-// fps and unaffected by per-page holds.
-let flipElapsedRAF=null, flipPlayStart=0;
+// driven by rAF so the readout is smooth regardless of fps, and read off THE
+// PAGE ON SCREEN (flipBadgeAt: where it starts in the pass, where it ends, and
+// when it went up), so it keeps with the pages from the page Play starts on,
+// through a scrub, a pause, a new speed or a page the song's beat skips, and
+// waits at a page's end for the next. It counted a clock of its own against
+// pages over fps, as if every page were one frame: with a page that draws
+// itself the pass was a tenth of a second, and the badge wrapped ten times a
+// second (the owner: "the time does not show accurately, it just flickers").
+let flipElapsedRAF=null, flipBadgePlan=null, flipBadgeAt=null;
 function fmtFlipSecs(secs){
   if(secs < 60) return (secs < 9.95 ? secs.toFixed(1) : Math.round(secs)) + 's';
   const m=Math.floor(secs/60), r=Math.round(secs%60);
   const mm=(r===60)?m+1:m, ss=(r===60)?0:r;
   return mm+':'+String(ss).padStart(2,'0');
 }
-function flipTotalSecs(){ return totalHoldUnits(0, frames.length-1)/(fps||12); }
+function flipPassPlan(){ return window.SkriblHold ? window.SkriblHold.plan(frames, fps, docLoop) : null; }
+function flipTotalSecs(){ const p=flipPassPlan(); return p ? p.cycle/1000 : totalHoldUnits(0, frames.length-1)/(fps||12); }
+// Play count i's slot in one pass (as _playPage reads it): a forever loop
+// goes round inside its stretch, any other pass whole.
+function _passSlot(p, i){
+  const n=p.slots.length;
+  if(p.forever && i >= n){ const a=p.loop.from, len=p.loop.to-a+1; return a + ((i - a) % len); }
+  return ((i % n) + n) % n;
+}
+// The page play count i puts on screen, now: the badge reads from it.
+function flipBadgeFrom(i){
+  const p=flipBadgePlan; if(!p || !p.slots.length) return;
+  const k=_passSlot(p, i);
+  // Paused (a scrub), it went up at the paused moment: a resume moves that on.
+  flipBadgeAt={ ms:p.starts[k], end:p.starts[k]+p.ms[p.slots[k]], at:playPaused ? flipPausedAt : performance.now() };
+  flipBadgeShow();
+}
+// Where the pages are in the pass, in the animation's own time: the page on
+// screen's start and how long it has been up (at the watching speed), and
+// no further than its end, so the badge never runs ahead of the next page.
+function flipBadgeShow(){
+  const b=flipBadgeAt; if(!b || !flipDurationEl) return;
+  const now=playPaused ? flipPausedAt : performance.now();
+  const ms=Math.min(b.end, b.ms + Math.max(0, now - b.at) * flipRate);
+  flipDurationEl.dataset.ms=ms.toFixed(1);   // to the tenth of a millisecond, for the harness
+  flipDurationEl.textContent=fmtFlipSecs(ms/1000);
+}
 function startFlipElapsed(resume){
   if(!flipDurationEl) return;
-  if(!resume) flipPlayStart=performance.now();   // a resume keeps the start, moved on by the pause
-  const total=flipTotalSecs();
+  if(!resume){ flipBadgePlan=flipPassPlan(); flipBadgeAt=null; }   // the first page sets it (playStep)
   const tick=()=>{
     if(!playing){ flipElapsedRAF=null; return; }
-    const el=(performance.now()-flipPlayStart)/1000*flipRate;   // the animation's own time
-    // The animation loops, so wrap rather than pinning at the total — the badge
-    // tracks position within the loop, which is what a viewer is watching.
-    flipDurationEl.textContent=fmtFlipSecs(total>0 ? (el % total) : el);
+    flipBadgeShow();
     flipElapsedRAF=requestAnimationFrame(tick);
   };
   flipElapsedRAF=requestAnimationFrame(tick);
 }
 function stopFlipElapsed(){
   if(flipElapsedRAF){ cancelAnimationFrame(flipElapsedRAF); flipElapsedRAF=null; }
+  flipBadgePlan=null; flipBadgeAt=null;
+  if(flipDurationEl) delete flipDurationEl.dataset.ms;
   syncFlipDuration();                      // back to the total
 }
 
@@ -4395,6 +4431,7 @@ function startReveal(f, durMs, fromMs){
 }
 function playStep(){ if(scrubbingFrames) return;
   idx=_playPage(playI);
+  flipBadgeFrom(playI);
   const _t0 = performance.now();
   // A drawing page must never blit a cached bitmap: the cache exists because a
   // still page does not change, and this one does. It also must not FILL the
@@ -4485,7 +4522,11 @@ function runPlayTimer(){
     // cost yet — a small constant beats a 200ms lie.
     const cachedNext = playBitmaps && window.SkriblFrameBitmap
       && window.SkriblFrameBitmap.get(playBitmaps, frames[ni]);
-    const est = cachedNext
+    // A page that draws itself paints a few points a frame (startReveal), so
+    // its first paint costs next to nothing: estimated from all its points,
+    // it cut the page before it short, to nothing when Play started there.
+    const est = frames[ni] && frameDraw(frames[ni]) ? 0
+      : cachedNext
       ? (blitMs != null ? blitMs : 8)
       : framePaintMs[ni] != null
         ? framePaintMs[ni]
@@ -4570,7 +4611,7 @@ function play(){
 function beatStartAt(page){
   if(beatBars == null || flipRate !== 1 || !beatBpm() || !musicEnabled || !musicData || !window.SkriblHold) return null;
   const p = window.SkriblHold.plan(frames, fps, docLoop), k = Math.max(0, p.slots.indexOf(page));
-  const round = beatBars * 4 * 60000 / beatBpm(), at = p.starts[k] - (p.forever ? p.introMs : 0);
+  const round = beatBars * beatMeter() * 60000 / beatBpm(), at = p.starts[k] - (p.forever ? p.introMs : 0);
   const off = ((at % round) + round) % round;
   return { off: off / 1000, due: p.starts[k], anchor: p.starts[k] - off };
 }
@@ -4612,7 +4653,7 @@ function setFlipRate(c){
   syncWatchSegs();
   if(!playing) return;
   const t0 = playPaused ? flipPausedAt : now;
-  flipPlayStart = t0 - (t0 - flipPlayStart) * old / c;
+  if(flipBadgeAt) flipBadgeAt.at = t0 - (t0 - flipBadgeAt.at) * old / c;
   if(playPaused){ pausedRemain = pausedRemain * old / c; if(pausedRevealAt != null) pausedRevealAt = pausedRevealAt * old / c; return; }
   const remain = Math.max(0, playDueAt - now) * old / c;
   clearTimeout(playTimer);
@@ -4644,7 +4685,8 @@ function resumePlay(){
   playPaused = false;
   document.body.classList.remove('playback-paused');
   const now = performance.now();
-  flipPlayStart += now - flipPausedAt; startFlipElapsed(true);
+  if(flipBadgeAt) flipBadgeAt.at += now - flipPausedAt;
+  startFlipElapsed(true);
   if(pausedRevealAt != null && frameDraw(frames[idx])) startReveal(frames[idx], _pageMsAt(idx), pausedRevealAt);
   const m = pausedMusicAt; pausedMusicAt = null;
   if(m && m.wa != null) startWebAudioLoop(null, m.wa);
@@ -4710,6 +4752,7 @@ function scrubToPage(i){ const n=frames.length; if(!n) return; idx=Math.max(0, M
   // and revealing strokes under the finger would make the thumbnail you are
   // aiming at depend on how fast you moved.
   playI=_playCountFor(idx); render(); updatePlayProgress();
+  if(playing) flipBadgeFrom(playI);   // the badge says where the page landed on is
   beatTimer=null;   // a scrub moves the pages, not the song: they keep their own time until the next Play
   // Paused, it stays paused: the round Play on the drawing says so. playI now
   // names the page it landed on, so the resume's first step is due at once and
@@ -6674,6 +6717,19 @@ musicDrawer = window.SkriblMusicDrawer ? window.SkriblMusicDrawer.wire({
     return { seconds:c, marks, again: p.forever ? { from:p.introMs/1000, period:p.stretchMs/1000 } : { from:0, period:c } };
   },
   laneKey: ()=>frames.length+':'+fps+':'+JSON.stringify(docLoop||null)+':'+frames.map(f=>(f.hold||1)+(f.strokes.length?'i':'')).join(','),
+  // Each page in the lane as its own little picture: the strip's thumbnail,
+  // as the strip keeps it (repainted only when the page changes), or past the
+  // cache's budget the strip's own tile, painted when the page last changed
+  // (a lane painted every frame never paints a page itself); and the lane
+  // taller for them, 34px over a box of its own height and 52px over one
+  // twice as tall, growing with it (lib/musictimeline.js).
+  pageArt: (n)=>{
+    const f=frames[n-1]; if(!f) return null;
+    const hit=_thumbCache.get(f); if(hit && hit.sig===_thumbSig(f)) return hit.cv;
+    const el=_tiles()[n-1], cv=el && el.querySelector('canvas');
+    return cv && cv.width ? cv : null;
+  },
+  laneHeight: (box, base)=>Math.round(34 + 18*Math.max(0, Math.min(1, (box-base)/base))),
   changed: scheduleSave,
   // One pass as it plays: each page at its own length (holds, drawing pages),
   // a loop's stretch as many times as it runs (lib/holdtiming.js plan). It was
@@ -11616,8 +11672,9 @@ fpsGroup.addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b
 
 /* MATCH THE BEAT. With a song that has a beat, heard by Skribl or tapped,
    Beat is a fourth speed: a round of the pages lasts a quarter, a half, one
-   or two bars of the song, the speed is whatever does that, and the line
-   under it says what it makes ("12 pages in \u00bd bar \u00b7 12.4 a second").
+   or two bars of the song (one or two in a song in three), the speed is
+   whatever does that, and the line under it says what it makes ("12 pages
+   in \u00bd bar \u00b7 12.4 a second").
    A ROUND is what plays before it starts again: every page, a looped stretch
    repeated, or -- a stretch that loops forever -- that stretch alone, its
    pages before playing once. Still pages share the round, each by its hold;
@@ -11636,10 +11693,13 @@ function beatOf(raw){
   return typeof raw.bars === 'number' && BEAT_BARS.indexOf(raw.bars) >= 0 ? raw.bars : null;
 }
 function beatBpm(){ return musicTempo && musicTempo.bpm > 0 ? +musicTempo.bpm : 0; }
+// The beats in the song's bar: three for a song in three, else four.
+function beatMeter(){ return musicTempo && musicTempo.bar === 3 ? 3 : 4; }
 function beatFps(bars){
   const bpm = beatBpm(), H = window.SkriblHold;
   if(!bpm || !H || !frames.length) return null;
-  const target = bars * 4 * 60000 / bpm;
+  if(beatMeter() === 3 && bars < 1) return null;   // between a bar of three's beats
+  const target = bars * beatMeter() * 60000 / bpm;
   // A stretch repeated for about some seconds repeats as often as the speed
   // allows, so the fit is found again until it holds (a few passes at most).
   let f = fps || 12;

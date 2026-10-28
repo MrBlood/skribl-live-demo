@@ -14,6 +14,13 @@ suite is built around one rule: **it must be additive in both directions.**
 Timing is verified off the GIF byte stream: per-frame delays are readable there,
 which makes the exported file the oracle for what "hold" actually means. A state
 check would prove nothing about the encoders.
+
+The length beside Flip's Play is one pass as it plays (lib/holdtiming.js plan:
+a page that draws itself as long as its strokes took), and while playing it is
+read off the page on screen, every frame: forward but where the pages go round,
+from the page Play starts on, through a pause, a new speed and a scrub, waiting
+at a page's end for a late one (it counted pages over fps, and with a drawing
+page it flickered). The page before a drawing page is up for its own time.
 """
 from playwright.sync_api import sync_playwright
 
@@ -736,6 +743,142 @@ with sync_playwright() as _p2:
     hb.close()
 
     check("no JS errors during timed playback", not _terrs, "; ".join(_terrs[:2]))
+
+    # ------------------------------------------------------------------
+    # THE LENGTH BESIDE PLAY (the owner: "when you draw on in slide 1 in flip
+    # the time does not show accurately, it just flickers"). It counted pages
+    # over fps, as if every page were one frame: a page that draws itself
+    # lasts as long as its strokes took, so with one the pass read 0.3s and,
+    # playing, the badge wrapped about four times a second. Now one pass as it
+    # plays (lib/holdtiming.js plan), read off the page on screen. Page 1
+    # draws itself over 1.6s, pages 2 and 3 are plain, at 12 a second.
+    # ------------------------------------------------------------------
+    print("\nTHE LENGTH BESIDE PLAY — one pass as it plays, with the pages")
+    BADGE_PAGES = """() => { frames.length = 0;
+      const f = newFrame(), pts = [];
+      for (let j = 0; j <= 32; j++) pts.push({ x: CW * (0.1 + 0.025 * j), y: CH * 0.5, color: '#7c5cff', size: 12, t: j * 50, start: j === 0 });
+      f.strokes.push(...pts); f.strokeGroups.push(pts.length); f.draw = true; frames.push(f);
+      for (let k = 0; k < 2; k++) { const g = newFrame(), q = [];
+        for (let j = 0; j <= 6; j++) q.push({ x: CW * (0.2 + 0.1 * j), y: CH * (0.3 + 0.2 * k), color: '#e5484d', size: 12, t: j * 5, start: j === 0 });
+        g.strokes.push(...q); g.strokeGroups.push(q.length); frames.push(g); }
+      fps = 12; idx = 0; buildStrip(); render(); updateToolState(); syncFlipDuration();
+      const p = SkriblHold.plan(frames, fps, null);
+      return { cycle: p.cycle, starts: p.starts, ms: p.slots.map((s) => p.ms[s]), words: document.getElementById('flipDuration').textContent }; }"""
+    # Every frame for `ms`: the words, the badge's own reading where it gives
+    # one (else the words, in ms), and the page on screen.
+    BADGE_REC = """(ms) => new Promise((done) => { const el = document.getElementById('flipDuration'), out = [], t0 = performance.now();
+      (function f() { out.push([performance.now() - t0, el.textContent, el.dataset.ms != null ? +el.dataset.ms : parseFloat(el.textContent) * 1000, idx]);
+        if (performance.now() - t0 < ms) requestAnimationFrame(f); else done(out); })(); })"""
+
+    def fmt(secs):
+        return (f"{secs:.1f}" if secs < 9.95 else str(round(secs))) + "s"
+
+    def badge_run(start_page=0, late_ms=0):
+        bp = _b2.new_page(viewport={"width": 1280, "height": 900})
+        errs = []
+        bp.on("pageerror", lambda e: errs.append(str(e)))
+        browsing.goto(bp, BASE, "/flip")
+        if late_ms:
+            # A page that comes late, as on a busy phone: the page timer's
+            # every step fires that much after it was due.
+            bp.evaluate("""(late) => { const st = window.setTimeout;
+              window.setTimeout = function (fn, ms) { return st.call(window, fn, typeof fn === 'function' && fn.name === 'step' ? (ms || 0) + late : ms, ...[].slice.call(arguments, 2)); }; }""", late_ms)
+        plan = bp.evaluate(BADGE_PAGES)
+        bp.wait_for_timeout(300)
+        if start_page:
+            # on that page, and Play pressed from inside the page as the
+            # recording starts: the page is up a twelfth of a second, which a
+            # round trip from here can take on a busy box
+            bp.evaluate("(i) => { idx = i; render(); setTimeout(() => document.getElementById('play').click(), 0); }", start_page)
+        else:
+            bp.click("#play")
+        rec = bp.evaluate(BADGE_REC, 4000)
+        bp.click("#play")
+        bp.close()
+        return plan, rec, errs
+
+    plan, rec, errs = badge_run()
+    check("Flip: the length beside Play is one pass as it plays, a page that draws itself as long as its strokes took (page 1 over 1.6s and two pages at 12 a second), not pages over fps",
+          plan["cycle"] > 1500 and plan["words"] == fmt(plan["cycle"] / 1000),
+          f"the pass {plan['cycle']:.0f}ms; the badge says {plan['words']} (pages over fps would be {fmt(3 / 12)})")
+    wraps = sum(1 for a, z in zip(rec, rec[1:]) if z[2] < a[2] - plan["cycle"] / 2)
+    back = [(round(a[0]), a[2], z[2]) for a, z in zip(rec, rec[1:]) if z[2] < a[2] - 0.5 and not z[2] < a[2] - plan["cycle"] / 2]
+    passes = (rec[-1][0] - rec[0][0]) / plan["cycle"]
+    check("Flip: playing, the badge counts up with the pages and goes back only where they go round, once a pass, never flickering",
+          len(rec) > 60 and abs(wraps - passes) <= 1 and not back,
+          f"{len(rec)} frames over {passes:.1f} passes: it went round {wraps} times; back otherwise {back[:4] or 'never'}")
+    off = []
+    for t, words, ms, i in rec:
+        lo, hi = plan["starts"][i], plan["starts"][i] + plan["ms"][i]
+        if not (lo - 30 <= ms <= hi + 30):
+            off.append((round(t), i, ms))
+    check("Flip: ...and every frame it says where the page on screen is in the pass, between that page's start and its end",
+          not off, f"{len(off)} frames off their page, first {off[:4]}")
+    check("Flip: no page errors as the badge counts", not errs, "; ".join(errs[:2]))
+
+    plan, rec, errs = badge_run(start_page=2)
+    first = [r for r in rec[:12] if r[3] == 2 and r[2] is not None and r[2] == r[2]]   # page 3's frames, once it is up
+    check("Flip: Play from page 3 starts the badge at page 3's place in the pass, not at 0",
+          len(first) >= 2 and all(plan["starts"][2] - 30 <= ms <= plan["starts"][2] + plan["ms"][2] + 30 for _, _, ms, _ in first),
+          f"page 3 starts at {plan['starts'][2]:.0f}ms; its first frames {[(round(t), round(ms)) for t, _, ms, _ in first]}")
+
+    # Play from page 3, the page just before the one that draws itself: it is
+    # up for its own time on the first pass. The page timer takes off what
+    # the next page's paint will cost, and from a drawing page's every point
+    # (it paints a few a frame) that cut page 3 to about half.
+    UPS = """() => new Promise((done) => { const out = [[0, idx]], t0 = performance.now(); let last = idx;
+      (function poll() { if (idx !== last) { last = idx; out.push([performance.now() - t0, idx]); }
+        if (performance.now() - t0 < 400) setTimeout(poll, 1); else done(out); })(); })"""
+    ups_all = []
+    for _ in range(2):
+        bp = _b2.new_page(viewport={"width": 1280, "height": 900})
+        browsing.goto(bp, BASE, "/flip")
+        plan = bp.evaluate(BADGE_PAGES)
+        bp.wait_for_timeout(300)
+        bp.evaluate("() => { idx = 2; render(); }")
+        bp.evaluate("() => setTimeout(() => document.getElementById('play').click(), 0)")
+        ups = bp.evaluate(UPS)
+        bp.click("#play")
+        bp.close()
+        ups_all.append(next((round(t) for t, i in ups[1:] if i != 2), None))
+    check("Flip: Play from the page before one that draws itself, that page is up for its own time on the first pass (83ms at 12 a second), not cut short",
+          all(u is not None and u >= plan["ms"][2] - 15 for u in ups_all), f"page 3 up {ups_all}ms from Play, its time {plan['ms'][2]:.0f}ms")
+
+    plan, rec, errs = badge_run(late_ms=40)
+    back = [(round(a[0]), a[2], z[2]) for a, z in zip(rec, rec[1:]) if z[2] < a[2] - 0.5 and not z[2] < a[2] - plan["cycle"] / 2]
+    check("Flip: a page that comes late (its timer 40ms late, as on a busy phone) has the badge wait at the end of the page on screen, never stepping back",
+          len(rec) > 60 and not back, f"back {len(back)} times, first {back[:4]}")
+
+    # Half a second into the page that draws itself (1.6s long): paused and
+    # resumed, a new speed, a scrub. Each read a moment after, in ms.
+    OPS = """(op) => new Promise((done) => { const el = document.getElementById('flipDuration'), at = () => +el.dataset.ms;
+      const later = (ms, f) => setTimeout(f, ms);
+      later(500, () => { const was = at();
+        if (op === 'pause') { pausePlay(); later(800, () => { resumePlay(); later(60, () => done([was, at()])); }); }
+        else if (op === 'speed') { setFlipRate(2); later(100, () => { const now = at(); setFlipRate(1); done([was, now]); }); }
+        else { scrubToPage(1); requestAnimationFrame(() => done([was, at()])); } }); })"""
+    ops = {}
+    for op in ("pause", "speed", "scrub"):
+        bp = _b2.new_page(viewport={"width": 1280, "height": 900})
+        browsing.goto(bp, BASE, "/flip")
+        plan = bp.evaluate(BADGE_PAGES)
+        bp.wait_for_timeout(300)
+        bp.click("#play")
+        try:
+            ops[op] = bp.evaluate(OPS, op)
+        except Exception as e:      # a build without the badge's reading
+            ops[op] = [None, str(e)[:80]]
+        bp.close()
+    was, now = ops["pause"]
+    check("Flip: paused partway through a page and resumed, the badge carries on from where it stood, not from where the pause would have taken it",
+          was is not None and 0 <= now - was <= 120, f"{was}ms at the pause, {now}ms 60ms after the resume (the pause was 800ms)")
+    was, now = ops["speed"]
+    check("Flip: a new watching speed mid-page carries the badge on from where it is, at the new speed",
+          was is not None and 120 <= now - was <= 320, f"{was}ms, then {now}ms 100ms into 2x (about 200 on)")
+    was, now = ops["scrub"]
+    check("Flip: scrubbed to page 2 while playing, the badge says page 2's place in the pass at once",
+          was is not None and plan["starts"][1] - 30 <= now <= plan["starts"][1] + plan["ms"][1] + 30,
+          f"{was}ms on page 1, then {now}ms (page 2 is {plan['starts'][1]:.0f}-{plan['starts'][1] + plan['ms'][1]:.0f}ms)")
     _b2.close()
 
 ok = sum(1 for o, _ in results if o)

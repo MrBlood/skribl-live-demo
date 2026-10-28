@@ -32,14 +32,15 @@ if (window.SkriblMusicDrawer) padDrawer = window.SkriblMusicDrawer.wire({
   dock: () => document.getElementById('toolBar'),
   // The timeline's drawing lane: each stroke when it replays, at 1x with
   // Pauses as they replay (the replay's own timeline, so a recolour's moment
-  // is in it). Walked again only when the drawing changes (laneKey).
+  // is in it), in the ink it was drawn in (an eraser's, the lane's own).
+  // Walked again only when the drawing changes (laneKey).
   lane: () => {
     if (!strokes.length) return { seconds: 0, marks: [] };
     const tl = buildPlaybackTimeline(), marks = [];
     let cur = null;
-    tl.forEach((p) => { if (p.start || !cur) { if (cur) marks.push(cur); cur = [p.playT, p.playT]; } else cur[1] = p.playT; });
+    tl.forEach((p) => { if (p.start || !cur) { if (cur) marks.push(cur); cur = [p.playT, p.playT, p.erase ? null : p.color]; } else cur[1] = p.playT; });
     if (cur) marks.push(cur);
-    return { seconds: getPlaybackDuration() / 1000, marks: marks.map((m) => [m[0] / 1000, Math.max(m[1], m[0] + 60) / 1000]) };
+    return { seconds: getPlaybackDuration() / 1000, marks: marks.map((m) => [m[0] / 1000, Math.max(m[1], m[0] + 60) / 1000, null, m[2] || null]) };
   },
   laneKey: () => strokes.length + ':' + (strokes.length ? getPlaybackDuration() : 0) + ':' + (typeof recolors !== 'undefined' ? recolors.length : 0),
   changed: () => { if (typeof scheduleAutosave === 'function') scheduleAutosave(); },

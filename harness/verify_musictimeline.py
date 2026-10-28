@@ -5,7 +5,8 @@ plan, mocked first; the owner: "Yes on all").
   THE TIMELINE (lib/musictimeline.js). The drawer's one view: the drawing's
   lane over the song, two handles, and the whole song's line under them. The
   lane says what it is and how long it plays, and its marks sit where the
-  drawing plays, from the loop's start. The view frames the loop: 1.28 times
+  drawing plays, from the loop's start, a dot at the drawing's very end
+  ending on it rather than past it. The view frames the loop: 1.28 times
   the longer of the loop and the drawing, the drawing counted up to three
   loops, the loop's start 9% in.
 
@@ -309,6 +310,9 @@ with sync_playwright() as p:
     for _n, _p in eds("layout"):
         # The lane's marks where the drawing plays, from the loop's start: a
         # stroke every second on the Pad, each page as long as it shows on Flip.
+        # A mark is painted 3px wide at least (a page's 6), and one that would
+        # end past where the drawing ends moves back to end on it: the Pad's
+        # last stroke here is one dot, at the drawing's very end.
         c, pg, errs = editor(b, _n, _p)
         if _n == "Pad":
             pg.evaluate(LONGDRAW, 4)
@@ -318,11 +322,14 @@ with sync_playwright() as p:
         pg.evaluate(SET, {"s": 1.0, "e": 5.0, "xf": 0, "tempo": None})
         pg.wait_for_timeout(700)
         m = pg.evaluate(PAINTED, "musicTimeline")
-        got = [x[0] for x in m["marks"] if x[2] == 0] if m else []
-        wx = [round(at(m["view"], m["w"], 1.0 + t), 2) for t in want] if m else []
-        check(f"{_n}: the lane's marks sit where the {WORK[_n]} plays, from the loop's start",
-              m is not None and len(got) == len(wx) and all(abs(g - x) < 0.6 for g, x in zip(got, wx)),
-              f"marks at {got}, want {wx}")
+        secs = pg.evaluate(DRAWN[_n])
+        got = [x for x in m["marks"] if x[2] == 0] if m else []
+        stop = at(m["view"], m["w"], 1.0 + secs) if m else 0
+        wx = [round(min(at(m["view"], m["w"], 1.0 + t), stop - max(g[1] - g[0], 3 if _n == "Pad" else 6)), 2)
+              for t, g in zip(want, got)] if m else []
+        check(f"{_n}: the lane's marks sit where the {WORK[_n]} plays, from the loop's start, one that would run past its end ending on it",
+              m is not None and len(got) == len(want) and all(abs(g[0] - x) < 0.6 for g, x in zip(got, wx)),
+              f"marks at {[g[0] for g in got]}, want {wx}")
         c.close()
 
     print("\nMUSIC TIMELINE — the framing")
@@ -526,7 +533,8 @@ with sync_playwright() as p:
         const h = document.getElementById(id), r = h.getBoundingClientRect(), g = h.querySelector('.mt-tl-grip'), line = r.left + r.width / 2;
         const isGrip = (e) => !!e && !!g && (e === g || g.contains(e));
         let hits = 0, asked = 0;
-        for (let y = st.top + 34 + 2; y <= st.bottom - 10; y += 2)
+        const lane = (document.getElementById('musicTimeline')._painted || {}).lane || 26;
+        for (let y = st.top + lane + 8 + 2; y <= st.bottom - 10; y += 2)
           for (let dx = 3; dx <= 14; dx += 1) for (const sd of [-1, 1]) { asked++; if (isGrip(document.elementFromPoint(line + sd * dx, y))) hits++; }
         const gr = g.getBoundingClientRect(), ty = Math.min(gr.bottom - 2, st.bottom + 5), under = document.elementFromPoint(line, w.top + w.height / 2);
         out[id] = { hits: hits, asked: asked, hit: getComputedStyle(g).pointerEvents !== 'none' && getComputedStyle(g).visibility === 'visible',
@@ -885,7 +893,7 @@ with sync_playwright() as p:
       const img = cv.getContext('2d').getImageData(0, 0, W, cv.height).data;
       const at = (c, r) => { const i = (r * W + c) * 4; return [img[i], img[i + 1], img[i + 2]]; };
       const far = (a, b) => Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]) + Math.abs(a[2] - b[2]);
-      const sTop = 26 + 8, r0 = Math.ceil((sTop + 3) * dpr), r1 = Math.floor((hh - 3) * dpr);
+      const sTop = (P.lane || 26) + 8, r0 = Math.ceil((sTop + 3) * dpr), r1 = Math.floor((hh - 3) * dpr);
       const c0 = Math.ceil(12 * dpr), c1 = W - 12 * dpr;
       let mid = sTop + (hh - sTop) / 2 + 3, line = null;
       if (P.song === 'wave' || P.song === 'samples') {
