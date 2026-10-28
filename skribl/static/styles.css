@@ -5767,6 +5767,17 @@ a.player-btn { text-decoration: none; }
 .rl-repeat[aria-pressed="true"] { background: var(--seg-on-fill); color: var(--seg-on-ink); outline: 2px solid transparent; outline-offset: -2px; }
 @media (hover: hover) { .rl-repeat:not([aria-pressed="true"]):hover { color: var(--text-primary); } }
 .rl-repeat:focus-visible { outline: 2px solid var(--ui-hi); outline-offset: 1px; }
+/* ...AND ON A PHONE AT THE BAR'S END, the line under the drawing having no
+   room for it: two rows for most drawings ("47 min", "16×", Fit), and at 813
+   the words sat on the drawing (the owner's pick A on the Undo, reach and
+   Repeat page). editor_draw.js place() makes the room and sets it there; in
+   full screen the band's first row is the bar and it, side by side. */
+.rl-repeat.at-bar { position: absolute; z-index: 7; margin: 0; }
+.rl-repeat.at-bar[hidden], #padLine.in-bar .rl-repeat { display: none; }
+.player-bar.watch-band:has(> .rl-repeat.at-bar:not([hidden])) { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 8px; }
+.player-bar.watch-band:has(> .rl-repeat.at-bar:not([hidden])) > :not(.play-scrub, .at-bar) { grid-column: 1 / -1; }
+.player-bar.watch-band:has(> .rl-repeat.at-bar:not([hidden])) > .play-scrub { align-self: center; }
+.watch-band > .rl-repeat.at-bar { position: relative; inset: auto !important; }
 .rl-skip { flex-basis: 100%; font-size: 13px; }
 .rl-skip[hidden] { display: none; }
 /* THE PILL'S ENDS (owner: "the padding on right and left side is off - not

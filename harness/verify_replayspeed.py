@@ -334,14 +334,18 @@ with sync_playwright() as p:
         at_rest = pg.evaluate("() => document.getElementById('padLine').hidden")
         pg.click("#playBtn")
         pg.wait_for_timeout(250)
+        # On a phone the Pad's Repeat sits at the bar's end (verify_padrepeat):
+        # the line spans the two.
         geo = pg.evaluate("""() => { const l = document.getElementById('padLine').getBoundingClientRect(),
-            s = document.getElementById('playScrub').getBoundingClientRect();
+            b = document.getElementById('playScrub').getBoundingClientRect(), rp = document.getElementById('padBarRepeat'),
+            rr = rp && rp.getClientRects().length ? rp.getBoundingClientRect() : null,
+            s = { left: b.left, top: b.top, bottom: b.bottom, width: (rr ? Math.max(b.right, rr.right) : b.right) - b.left };
             return { shown: !document.getElementById('padLine').hidden, lineTop: l.top, lineBottom: l.bottom,
                      scrubTop: s.top, scrubBottom: s.bottom, dl: Math.abs(l.left - s.left), dw: Math.abs(l.width - s.width),
                      text: document.querySelector('#padLine .rl-text').innerText.replace(/\\s+/g, ' ').trim() }; }""")
         where = (geo["lineTop"] >= geo["scrubBottom"]) if label == "desk" else (geo["lineBottom"] <= geo["scrubTop"])
         check(f"[{label}] Play shows the line, " + ("under the scrubber" if label == "desk" else "above the scrubber")
-              + ", as wide as it, and it was hidden before",
+              + ", as wide as it" + (" and Repeat at its end" if label != "desk" else "") + ", and it was hidden before",
               at_rest and geo["shown"] and where and geo["dl"] <= 1 and geo["dw"] <= 1, str(geo))
         check(f"[{label}] ...saying how long it took to draw and how fast the preview runs",
               geo["text"].startswith("Drawn in ") and geo["text"].endswith("watching at 1×"), geo["text"])

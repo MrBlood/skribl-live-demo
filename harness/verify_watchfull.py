@@ -96,13 +96,18 @@ with sync_playwright() as p:
       Object.defineProperty(Document.prototype, 'webkitFullscreenEnabled', { get: () => false, configurable: true }); } catch (e) {}
       try { delete Element.prototype.requestFullscreen; } catch (e) {}
       try { delete Element.prototype.webkitRequestFullscreen; } catch (e) {} })();"""
+    # The way in follows the speed. On a desk the Pad's Repeat sits between
+    # the two; on a phone it is at the bar's end, and the line's own is not
+    # drawn, so what is drawn before the way in is read, not what is there.
     FW = {"/skribl-pad": {"wrap": ".canvas-wrap", "cv": "#canvas", "btn": "#padLine .full-btn",
-                          "carry": ["#playScrub", "#padLine"], "after": "rl-speed"},
+                          "carry": ["#playScrub", "#padBarRepeat", "#padLine"], "after": "rl-speed", "after_desk": "rl-repeat"},
           "/flip": {"wrap": ".flip-wrap", "cv": "#pad", "btn": "#flipSpeeds .full-btn",
                     "carry": ["#flipProgress", "#flipSpeeds"], "after": "seg"}}
     WAY = """(o) => { const b = document.querySelector(o.btn), c = document.querySelector(o.cv); if (!b) return null;
         const r = b.getBoundingClientRect(), cr = c.getBoundingClientRect(), t = getComputedStyle(b, '::before');
-        const h = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2), prev = b.previousElementSibling;
+        const h = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+        let prev = b.previousElementSibling;
+        while (prev && !prev.getClientRects().length) prev = prev.previousElementSibling;
         return { painted: !!h && b.contains(h), after: prev ? prev.className : null,
                  off: r.bottom <= cr.top || r.top >= cr.bottom || r.right <= cr.left || r.left >= cr.right,
                  tap: [Math.round(r.width - 2 * (parseFloat(t.left) || 0)), Math.round(r.height - 2 * (parseFloat(t.top) || 0))] }; }"""
@@ -172,7 +177,8 @@ with sync_playwright() as p:
             _w = _q.evaluate(WAY, _o)
             check(f"{_tag}: the way in sits at the end of the {'line under the drawing' if _name == 'Pad' else 'speed row'}, "
                   "painted, off the drawing and 44px to tap",
-                  bool(_w) and _w["painted"] and _w["off"] and _o["after"] in (_w["after"] or "") and min(_w["tap"]) >= 44, str(_w))
+                  bool(_w) and _w["painted"] and _w["off"] and _o.get("after_" + _dev, _o["after"]) in (_w["after"] or "")
+                  and min(_w["tap"]) >= 44, str(_w))
             _page = _q.evaluate(FS, _o)
             _q.click(_o["btn"]); _q.wait_for_timeout(600)
             _s = _q.evaluate(FS, _o)

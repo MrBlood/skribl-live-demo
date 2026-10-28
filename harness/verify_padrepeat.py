@@ -8,10 +8,16 @@ the speed, off to start and remembered like the speed; posts keep repeating
 as now; not for Flip, whose Play already goes round.
 
 WHAT IS ASKED, AND HOW IT IS READ
-  * Where it is: beside the speed, in the pill beside Play on a desk and in
+  * Where it is: on a desk beside the speed, in the pill beside Play and in
     the line under the drawing while it plays, the speed before it and full
     screen after it in the line; read from the page's own order, and what is
-    painted at its middle (elementFromPoint), not its box.
+    painted at its middle (elementFromPoint), not its box. On a phone at the
+    end of the bar instead (the owner's pick A on the Undo, reach and Repeat
+    page), 8px past the bar's end and centred on it, the bar still a 44px
+    grab, inline and in full screen: in the line it needed two rows for most
+    drawings, and at 813 the words sat on the drawing. So the line is read
+    with the longest words it held on one row before Repeat ("Drawn in 47 min
+    · watching at Fit · 94×"): one row, full screen on it.
   * Off to start, its words its tooltip, lit only while on: aria-pressed, the
     title lib/tooltip.js keeps as data-tip, and its painted fill against a
     probe beside it wearing the chosen choice's purple.
@@ -114,6 +120,28 @@ BTN = """(sel) => { const b = document.querySelector(sel); if (!b) return null;
            says: b.getAttribute('data-tip') || b.title, prev: prev && prev.className, next: next && next.className }; }"""
 
 
+# On a phone, the Repeat at the bar's end: its box, painted at its middle,
+# how far past the bar's end, how far its middle from the bar's, where its
+# right edge sits against the line's (where the bar ended before), the bar's
+# grab, and whether the line's own Repeat shows.
+BAR_END = """() => { const r = document.querySelector('.rl-repeat.at-bar'), s = document.getElementById('playScrub'),
+    ln = document.getElementById('padLine'), own = document.querySelector('#padLine .rl-repeat');
+  if (!r || !s) return null;
+  const a = r.getBoundingClientRect(), q = s.getBoundingClientRect(), t = getComputedStyle(s, '::after'), l = ln.getBoundingClientRect();
+  const at = document.elementFromPoint(a.left + a.width / 2, a.top + a.height / 2);
+  return { w: Math.round(a.width), h: Math.round(a.height), painted: !!at && (at === r || r.contains(at)), pressed: r.getAttribute('aria-pressed'),
+           name: r.getAttribute('aria-label'), gap: Math.round(a.left - q.right), mid: Math.round(((a.top + a.bottom) - (q.top + q.bottom)) / 2),
+           edge: Math.round(a.right - l.right), grab: Math.round(q.height - parseFloat(t.top) - parseFloat(t.bottom)),
+           inLine: !!own && own.getClientRects().length > 0 }; }"""
+# The line under the drawing with words of its own: one row, and the way into
+# full screen on it.
+LINE_ROW = """([a, sp]) => { const t = document.querySelector('#padLine .rl-text'), f = document.querySelector('#padLine .full-btn');
+  t.querySelector('.rl-drawn').innerHTML = '<span class="rl-m">Drawn in </span><b>' + a + '</b><span class="rl-m"> · </span>';
+  t.querySelector('.rl-speed > span').textContent = sp;
+  const r = t.getBoundingClientRect(), b = f.getBoundingClientRect();
+  return { h: Math.round(r.height), onRow: Math.abs((b.top + b.bottom) / 2 - (r.top + r.bottom) / 2) < 4 }; }"""
+
+
 def turns(rec):
     """The frames at which the replay fell back to its start."""
     return [i for i in range(1, len(rec)) if rec[i][2] < rec[i - 1][2] - max(2, rec[i - 1][3] / 2)]
@@ -188,18 +216,31 @@ with sync_playwright() as p:
               and d0["name"] == "Repeat" and d0["says"] == SAYS["off"] and (d0["w"], d0["h"]) == (32, 26), str(d0))
         play(pg)
         l0 = pg.evaluate(BTN, "#padLine .rl-repeat")
-        check("desk: ...and in the line under the drawing while it plays, between the speed and full screen",
-              l0 and l0["painted"] and l0["prev"] == "rl-speed" and l0["next"] == "full-btn" and l0["pressed"] == "false", str(l0))
+        e0 = pg.evaluate(BAR_END)
+        check("desk: ...and in the line under the drawing while it plays, between the speed and full screen, and none at the bar's end",
+              l0 and l0["painted"] and l0["prev"] == "rl-speed" and l0["next"] == "full-btn" and l0["pressed"] == "false"
+              and e0 and e0["w"] == 0 and e0["inLine"], f"{l0}; at the bar's end {e0}")
         check("no page errors where Repeat is", not errs, "; ".join(errs[:2]))
         c.close()
         c, pg, errs = pad(b, opts=PHONE, song=None, rate="1")
         rest = pg.evaluate("() => { const b = document.querySelector('#padSpeed .rl-repeat'); return !!b && b.getClientRects().length > 0; }")
         play(pg)
         pg.wait_for_timeout(200)
-        l1 = pg.evaluate(BTN, "#padLine .rl-repeat")
-        check("phone: Repeat is in the line under the drawing while it plays, after the speed and before full screen, 34 by 27, painted, off",
-              l1 and l1["painted"] and l1["prev"] == "rl-speed" and l1["next"] == "full-btn" and l1["pressed"] == "false"
-              and (l1["w"], l1["h"]) == (34, 27) and not rest, f"{l1}; the desk pill's shown on a phone: {rest}")
+        e1 = pg.evaluate(BAR_END)
+        check("phone: Repeat sits at the end of the bar while it plays, 34 by 27, painted, off, 8px past the bar's end and centred on it, "
+              "where the bar ended; the bar still a 44px grab, and none in the line",
+              e1 and e1["painted"] and (e1["w"], e1["h"]) == (34, 27) and e1["pressed"] == "false" and e1["name"] == "Repeat"
+              and e1["gap"] == 8 and abs(e1["mid"]) <= 1 and e1["edge"] == 0 and e1["grab"] >= 44 and not e1["inLine"] and not rest,
+              f"{e1}; the desk pill's shown on a phone: {rest}")
+        # The longest words the line held on one row before Repeat, at 402.
+        rows = [pg.evaluate(LINE_ROW, w) for w in (["47 min", "8×"], ["59 min", "16×"], ["47 min", "Fit · 94×"])]
+        check("phone: ...so the line under the drawing keeps one row, full screen on it, up to 'Drawn in 47 min · watching at Fit · 94×', as before Repeat",
+              all(r["h"] < 34 and r["onRow"] for r in rows), str(rows))
+        pg.evaluate("() => document.querySelector('#padLine .full-btn').click()"); pg.wait_for_timeout(900)
+        e2 = pg.evaluate(BAR_END)
+        check("phone: in full screen, Repeat is at the bar's end in the band, painted, on the bar's row, 8px past it",
+              e2 and e2["painted"] and e2["gap"] == 8 and abs(e2["mid"]) <= 1 and not e2["inLine"], str(e2))
+        check("no page errors at the bar's end", not errs, "; ".join(errs[:2]))
         c.close()
 
     if part("once"):
@@ -263,8 +304,8 @@ with sync_playwright() as p:
         pg.click("#playBtn"); pg.wait_for_timeout(150)
         browsing.goto(pg, BASE, "/")
         z = pg.evaluate(BTN, "#padSpeed .rl-repeat")
-        check("Repeat is remembered across a reload, on and off, and the pill and the line say the same",
-              a["pressed"] == "true" and a["lit"] and both == ["false", "false"] and kept == "0" and z["pressed"] == "false" and not z["lit"],
+        check("Repeat is remembered across a reload, on and off, and the pill, the line and the bar's end say the same",
+              a["pressed"] == "true" and a["lit"] and both == ["false", "false", "false"] and kept == "0" and z["pressed"] == "false" and not z["lit"],
               f"booted on: {a['pressed']}; the line pressed: {both}, stored {kept!r}; after a reload {z['pressed']}")
         c.close()
 
@@ -328,10 +369,11 @@ with sync_playwright() as p:
           return Math.round(ratio(over(parse(getComputedStyle(el).color), g), g) * 100) / 100; }"""
         seen = {}
         for theme in ("light", "dark"):
-            for label, opts, sel in (("desk pill", DESK, "#padSpeed .rl-repeat"), ("phone line", PHONE, "#padLine .rl-repeat")):
+            for label, opts, sel in (("desk pill", DESK, "#padSpeed .rl-repeat"), ("desk line", DESK, "#padLine .rl-repeat"),
+                                     ("phone, at the bar's end", PHONE, ".rl-repeat.at-bar")):
                 ctx = waits.instrument(b.new_context(color_scheme=theme, **opts))
                 c, pg, errs = pad(b, ctx=ctx, song=None, rate="0.25")
-                if label == "phone line":
+                if label != "desk pill":
                     play(pg); pg.wait_for_timeout(300)
                 pg.mouse.move(2, 2)
                 off = pg.evaluate(INK, sel)
@@ -339,7 +381,7 @@ with sync_playwright() as p:
                 on = pg.evaluate(INK, sel)
                 seen[f"{theme}, {label}"] = (off, on)
                 c.close()
-        check("Repeat's glyph reads at 3:1 or more on what is behind it, off and on, light and dark, the pill and the line",
+        check("Repeat's glyph reads at 3:1 or more on what is behind it, off and on, light and dark, the pill, the line and the bar's end",
               all(min(v) >= 3 for v in seen.values()), "; ".join(f"{k}: off {v[0]}:1, on {v[1]}:1" for k, v in seen.items()))
 
     if part("posts"):
