@@ -1143,6 +1143,23 @@ pinch; not testable here on an iPhone. And THUMB REACH as a check: Wavebox
 keeps play at the foot, so measure where Hear the loop and the click land
 on a 402 x 874 phone and keep them within a thumb's reach.
 
+THE GROW GLIDES (owner, on the mock: "when the waveform expanded to a
+longer style it was not a smooth transition, it shook and jerked"). Read
+on every frame as it was shown, the mock's grow did four things wrong, and
+the build does each the other way. Its clock began before its first frame,
+so the box shrank 5 to 27px before it grew (the jerk). The timeline paints
+a new size on the frame after (its ResizeObserver asks for one), so every
+frame of the grow showed the frame before stretched to fit (the shake).
+The page caught Hear the loop up only after half a pixel of drift. And
+Flip's lane went to its full height at once. So the clock starts on the
+first frame; the box moves in whole pixels and the page scrolls by exactly
+what it grew, read off Hear itself; the lane grows with the box; and
+`lib/musictimeline.js` paints a new size in the frame it is laid out (its
+ResizeObserver paints rather than asks). The drawer's suite reads the grow
+on every frame, up and back, on the Pad and Flip, a phone and a desk, red
+first the way the mock did it: in the mock, 28 of its 40 rows were red as
+the owner saw it, and each fix undone alone turned its own rows red.
+
 Three more for the same change (owner, with screenshots):
 
 - THE DRAW DRAWER'S FOUR TILES SIT LEFT ON A DESK. `.dp` stops at 520px and
