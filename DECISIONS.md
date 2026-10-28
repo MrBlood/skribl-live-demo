@@ -24439,3 +24439,53 @@ dispatched run is the test of the step.
 
 Not changed: the rows that read how long a page stayed up (a song gone 2.5s,
 the 4x bed), which a held page lengthens too. Neither has gone red.
+
+## After v329 -- The speed choice's ends
+
+The owner, on the speed choice: "everywhere this strip is the padding on
+right and left side is off - not enough." It was. The end speeds sat nearer
+the pill's rounded ends than the speeds sit to each other: 9px against 10 on
+the Pad's line and the link page, 8 against 10 in the post's box, 17 against
+28 on the Pad's desk pill, and the curve made it look nearer still. The
+owner's pick was the mock's B: the pill opens at its ends, rather than the
+end speeds growing, so each speed stays centred in its fill when picked.
+The ends are 8px inside the pill's edge now (14 on the desk pill, 11 in
+Tune), and the rule is THE PILL'S ENDS in verify_replayspeed: an end speed's
+word at least as far from the edge as two speeds' words are apart (within
+1.5px), and never inside the inner half of the curve, read in the words' own
+boxes (a Range), not the buttons'.
+
+MEASURING IT FOUND A REAL BUG IN TUNE. Its eight were a fixed 44px each and
+ran wider than the row on every phone: by 7px at 402, 89 at 320, where "16x"
+and Fit went past the screen's edge (at 375 and under). They share the pill
+evenly now, 44px where the row has room (380 holds them and Fit's 4px, as a
+desk's does), still 44px tall to a finger, and the row that held them at 44
+wide holds them at the share.
+
+AND THE NEW ENDS FOUND TWO MORE PLACES. The suite's 320px row went red: held
+to its 260px line, the pill with its ends (270px) ran "Fit" out of its own
+edge. The pill may reach past its line now, never nearer the screen's edge
+than a twentieth of the screen: 90vw, 16px on a 320px phone, where it sits
+25px from each edge. 90vw and not 100vw less 32px because the player's sheet
+had 2 bytes to spare (verify_player_isolation, 40,906): 90vw is as long as
+the 100% it replaced, 40,904 B served, unchanged. The post's box keeps its
+own copy of the pill, because it loads on a host's page, and still had
+today's ends; it opens 8px too, +4 B, which takes the embed's ratchet to its
+76,344 exactly.
+
+CALIBRATION, in a trimmed copy of the suite (the fixture and the section),
+the stylesheets served in place of the files: main's red at every row (the
+Pad's line at 320 and 402, its desk pill, Tune at six widths, the link page
+at three, the post's box at two); the first commit's (the ends, the line
+still holding the pill) red at the two 320 rows and the post's box only; as
+built, green.
+
+WHAT IT DOES TO FLIP: a posted Flip plays in the same link page and post's
+box, so its watching speed there takes the new ends. Flip's editor has its
+own watching speed (#flipSpeedSeg), a five-speed pill like the drawers', not
+this one; it is unchanged.
+
+Not tested here: SF on the owner's iPhone and Segoe UI on Windows, whose
+speeds are a little wider or narrower than this box's; the ends are padding,
+so they hold in any face, and the reach past the line has 18px to spare at
+320 in this one.
