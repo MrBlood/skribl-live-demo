@@ -24489,3 +24489,56 @@ Not tested here: SF on the owner's iPhone and Segoe UI on Windows, whose
 speeds are a little wider or narrower than this box's; the ends are padding,
 so they hold in any face, and the reach past the line has 18px to spare at
 320 in this one.
+
+## After v329 -- Every tool in Flip's tray has its card
+
+The owner: "make sure you look at ALL the tools because I noticed the tools
+on flip's ^ menu don't have them." They did not: a card opened from a
+button the CARDS list names, and the tray's buttons are built on every open
+(lib/toolshelf.js) with no ids, so holding one, or resting on one, opened
+nothing. Not the tray's own seven (Select, Liquify, Smudge, Blur, Fill,
+Stamps, Artwork), and not the Pen, Eraser and Shape the tray holds as well.
+
+EACH TOOL'S CARD OPENS FROM ITS PLACE IN THE TRAY, and from the bar too: a
+tool used from the tray takes a place there (the seven had no card in the
+bar either). The seven are the cards the owner said yes to in the speed and
+cards mock, with their How it works clip, and two words changed where the
+app said otherwise: Artwork's tip is that onion skin shows the page BEFORE
+(the mock said beneath; How it works says before), and Artwork's tap opens
+a bar (this page or every page after, Reset, Done), so its card says what a
+tap does first, as every button that opens something does (the tap rows,
+"All yes"). In the tray a tap only picks the tool, so the Pen's and the
+Eraser's rows about their bar buttons ("Tap again") are left out there
+(trayDo); Shape's tap opens its picker from the tray as from the bar, so
+its row stays.
+
+A TOOL'S CLIP IS 4:3, NOT A PHONE'S SCREEN, so it fills the card's width
+inside the card's line, as a drawing's example does, rather than standing
+small in the phone's frame (110px across). verify_book walks the tray's
+seven with every other recording, and its first run went red at 99.8%: a
+4:3 stage with its line inside left the clip a box half a pixel short of
+4:3, and cut it. The clip carries its own ratio now (its files are 648 by
+486) and the stage wraps it, line and all; the stage's rounded edge is its
+corners (a radius of the clip's own changed nothing the walk or the eye
+could tell, and came out).
+
+A TAP ON A CARD IS THE CARD'S OWN. Flip's tray closes on any tap outside
+it, and Got it was one: the tray shut under the card, so the next tool's
+card was a tap further away, and a Show me step's Next shut a tray its last
+step had opened. The card keeps its taps to itself now (both kinds, one
+module), so Got it leaves the tray open with that tool's place in focus.
+On the Pad the same holds for a drawer a card opens over.
+
+CALIBRATION, in a trimmed copy of the suite's new section (Flip's tray),
+lib/learncard.js served in place of the file: main's, six of six red; the
+card's taps let through to the page, the Got it row red alone; every clip
+in the phone's frame, the clip row red alone; the bar rows shown in the
+tray, the tray-rows row red alone; as built, green. The book's walk, the
+same way: the tray's seven in the phone's frame, red (never walked); as
+built, green.
+
+WHAT IT DOES TO THE PAD: the card keeping its taps (above), and nothing
+else. The Pad's three tools all fit its bar, so its tray is never built;
+the cards' selectors name the tray's copies only where there is one.
+
+Not tested here: a finger (touch is CDP touch events), and WebKit's hold.
