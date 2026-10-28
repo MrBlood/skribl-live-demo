@@ -97,7 +97,9 @@
  * colour, and the words read on any page, whichever theme it has switched
  * to. Every control in the line is 44px to a finger by an invisible
  * ::before/::after, and its speeds open upward over the scrubber, closing on
- * a pick.
+ * a pick. Their pill opens 8px at each rounded end, as the Pad's does
+ * (styles.css, THE PILL'S ENDS), so its end speeds sit no nearer its edge
+ * than two speeds sit to each other.
  *
  * LOOP IS ON BY DEFAULT, so the lit state is the RESTING state and the button
  * dims when switched OFF -- the opposite of mute, whose resting state is muted.

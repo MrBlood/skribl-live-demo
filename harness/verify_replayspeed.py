@@ -1200,28 +1200,40 @@ with sync_playwright() as p:
     # Each place's speed pill, at the widths it is used: an end speed's word is
     # at least the space between two speeds' words from the pill's edge (within
     # 1.5px), and never inside the inner half of the curve; and no speed runs
-    # out of its pill, its row or the screen. Read in the words' own boxes (a
-    # Range), so it is what the eye sees that is measured, not the buttons.
+    # out of its pill. Read in the words' own boxes (a Range), so it is what
+    # the eye sees that is measured, not the buttons. Tune's pill stays inside
+    # its row; the lines' pills may reach past their line (on a 320px phone the
+    # eight and their ends are 270px, the line 260) but never nearer the
+    # screen's edge than 16px; the post's box keeps its pill inside its line.
     # Today's stylesheets failed every place: the Pad's line and the link page
-    # 9px for 11, the Pad's desk pill 17 for 26, Tune's last speeds out of the
-    # pill at every phone width and past the screen's edge at 375 and under.
+    # 9px for 11, the post's box 8 for 10.5, the Pad's desk pill 17 for 26,
+    # Tune's last speeds out of the pill at every phone width and past the
+    # screen's edge at 375 and under. And the ends opened inside a line held
+    # to its width ran "Fit" out of the pill at 320, which the row above found.
     print("\nTHE PILL'S ENDS")
     ENDS = r"""(sel) => { const pill = document.querySelector(sel); if (!pill || pill.hidden || !pill.getClientRects().length) return null;
       const pr = pill.getBoundingClientRect(), cs = getComputedStyle(pill), bs = [...pill.querySelectorAll('button')];
       const t = bs.map((b) => { const r = document.createRange(); r.selectNodeContents(b); return r.getBoundingClientRect(); });
       const gaps = t.slice(1).map((x, i) => x.left - t[i].right).sort((a, c) => a - c);
       let row = pill.parentElement; while (row && getComputedStyle(row).display === 'contents') row = row.parentElement;
-      const rr = row.getBoundingClientRect(), last = bs[bs.length - 1].getBoundingClientRect();
+      const rr = row.getBoundingClientRect(), first = bs[0].getBoundingClientRect(), last = bs[bs.length - 1].getBoundingClientRect();
       return { L: +(t[0].left - pr.left).toFixed(2), R: +(pr.right - t[t.length - 1].right).toFixed(2), between: +gaps[Math.floor(gaps.length / 2)].toFixed(2),
-               radius: Math.min(parseFloat(cs.borderTopLeftRadius), pr.height / 2), spill: +(last.right - (pr.right - parseFloat(cs.borderRightWidth))).toFixed(2),
-               out: +(pr.right - rr.right).toFixed(2), screen: +(Math.max(pr.right, last.right) - innerWidth).toFixed(2) }; }"""
-    def ends_ok(m, fits=True):
+               radius: Math.min(parseFloat(cs.borderTopLeftRadius), pr.height / 2),
+               spill: +Math.max(last.right - (pr.right - parseFloat(cs.borderRightWidth)), (pr.left + parseFloat(cs.borderLeftWidth)) - first.left).toFixed(2),
+               out: +Math.max(pr.right - rr.right, rr.left - pr.left).toFixed(2), screen: +(Math.max(pr.right, last.right) - innerWidth).toFixed(2),
+               edge: +Math.min(pr.left, innerWidth - pr.right).toFixed(2) }; }"""
+    def ends_ok(m, fits="row"):
         if not m:
             return False, "no pill"
         need = max(m["between"] - 1.5, m["radius"] / 2)
-        ok = m["L"] >= need and m["R"] >= need and (not fits or (m["spill"] <= 0.5 and m["out"] <= 0.5 and m["screen"] <= 0.5))
-        return ok, f"ends {m['L']}/{m['R']}, need {need:.1f} (between {m['between']}, half the curve {m['radius'] / 2}); spill {m['spill']} out {m['out']} screen {m['screen']}"
-    for vw, sel, where in ((402, "#padLine", "the Pad's line while it plays"), (1280, "#padSpeed", "the Pad's speed pill on a desk")):
+        held = {"row": m["spill"] <= 0.5 and m["out"] <= 0.5 and m["screen"] <= 0.5,
+                "screen": m["spill"] <= 0.5 and m["edge"] >= 15.5, None: True}[fits]
+        ok = m["L"] >= need and m["R"] >= need and held
+        return ok, (f"ends {m['L']}/{m['R']}, need {need:.1f} (between {m['between']}, half the curve {m['radius'] / 2}); "
+                    f"spill {m['spill']} out {m['out']} screen {m['screen']} edge {m['edge']}")
+    for vw, sel, where, fits in ((320, "#padLine", "the Pad's line while it plays", "screen"),
+                                 (402, "#padLine", "the Pad's line while it plays", "screen"),
+                                 (1280, "#padSpeed", "the Pad's speed pill on a desk", None)):
         pg = b.new_page(viewport={"width": vw, "height": 874})
         browsing.goto(pg, BASE, "/")
         box = pg.locator("#canvas").bounding_box()
@@ -1232,7 +1244,7 @@ with sync_playwright() as p:
             pg.mouse.up(); pg.wait_for_timeout(200)
         pg.click("#recordBtn"); pg.wait_for_timeout(300); pg.click("#playBtn"); pg.wait_for_timeout(400)
         pg.evaluate("(s) => document.querySelector(s + ' .rl-speed').click()", sel); pg.wait_for_timeout(400)
-        ok, said = ends_ok(pg.evaluate(ENDS, sel + " .rl-chips"), fits=(sel != "#padSpeed"))
+        ok, said = ends_ok(pg.evaluate(ENDS, sel + " .rl-chips"), fits)
         check(f"[{vw}] {where}: its end speeds as far from the pill's edge as two speeds are apart", ok, said)
         pg.close()
     for vw in (320, 360, 375, 402, 430, 1280):
@@ -1243,15 +1255,26 @@ with sync_playwright() as p:
         ok, said = ends_ok(pg.evaluate(ENDS, "#tuneSpeed .rl-chips"))
         check(f"[{vw}] Tune's speeds: all eight inside the pill and its row, the ends as far from the edge as two speeds are apart", ok, said)
         pg.close()
-    _st3, _pe = post(drawing(0, "real"))
+    _st3, _pe = post(drawing(0, "real", extra={"visibility": "public"}))   # public: the feed shows it
     if _st3 == 201:
-        for vw in (402, 1280):
+        for vw in (320, 402, 1280):
             pg = b.new_page(viewport={"width": vw, "height": 874})
             pg.goto(BASE + _pe["url"], wait_until="load")
             pg.wait_for_function("() => !!document.querySelector('#playerLine .rl-speed')", timeout=10000)
             pg.evaluate("() => document.querySelector('#playerLine .rl-speed').click()"); pg.wait_for_timeout(400)
-            ok, said = ends_ok(pg.evaluate(ENDS, "#playerLine .rl-chips"))
+            ok, said = ends_ok(pg.evaluate(ENDS, "#playerLine .rl-chips"), "screen")
             check(f"[{vw}] the link page's speeds (player.css): the ends as far from the edge as two speeds are apart", ok, said)
+            pg.close()
+        # The post's box (inlineplayer.css, a copy of its own: it loads on a
+        # host's page), its line at rest on the feed.
+        _box = '[data-skribl-id="' + _pe["id"] + '"] + * '
+        for vw in (402, 1280):
+            pg = b.new_page(viewport={"width": vw, "height": 874})
+            browsing.goto(pg, BASE, "/feed")
+            pg.wait_for_function("(s) => !!document.querySelector(s + '.rl-speed')", arg=_box, timeout=10000)
+            pg.evaluate("(s) => document.querySelector(s + '.rl-speed').click()", _box); pg.wait_for_timeout(400)
+            ok, said = ends_ok(pg.evaluate(ENDS, _box + ".rl-chips"))
+            check(f"[{vw}] the post's box's speeds (inlineplayer.css): the ends as far from the edge as two speeds are apart, inside its line", ok, said)
             pg.close()
     else:
         check("[the pill's ends] the link page's drawing posted", False, f"{_st3} {_pe}")
