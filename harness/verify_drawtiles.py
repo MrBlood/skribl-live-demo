@@ -15,6 +15,9 @@ The rows:
   the four brushes, the size slider and four quick sizes, opacity, the three
   smoothings, the two pressures, the three eraser widths, and Flip's Draw-on.
 
+  THE ROW SPANS THE DRAWER, edge to edge with the colours above it, on a desk
+  as on a phone (the owner's pick, "Tiles grow"; it stopped at 520px).
+
   THE CHOICES DO WHAT THEY SAY. Each one changes the editor's own state (the
   brush, the size and its readout, opacity, smoothing, pressure, the eraser,
   Draw-on) and the tile's words follow.
@@ -100,9 +103,11 @@ PAINTED = """(sel) => { const el = document.querySelector(sel); if (!el) return 
   const at = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
   return !!(at && (el === at || el.contains(at))); }"""
 
-STATE = """() => { const t = {}; document.querySelectorAll('.dp-tile').forEach(b => {
+# The draw drawer's own tiles (#drawTiles): the music drawer's doors are
+# tiles too, the same class.
+STATE = """() => { const t = {}; document.querySelectorAll('#drawTiles .dp-tile').forEach(b => {
   t[b.dataset.dp] = { open: b.getAttribute('aria-expanded'), v: b.querySelector('.dp-v').textContent }; });
-  const shown = [...document.querySelectorAll('.dp-panel')].filter(p => !p.hidden).map(p => p.dataset.dp);
+  const shown = [...document.querySelectorAll('#drawTiles .dp-panel')].filter(p => !p.hidden).map(p => p.dataset.dp);
   return { tiles: t, shown }; }"""
 
 # Resolve a token as the drawer paints it.
@@ -219,6 +224,16 @@ with sync_playwright() as pw:
                 check(f"{who}: the drawer opens on four tiles, none open",
                       sorted(st["tiles"]) == ["brush", "eraser", "feel", "size"]
                       and all(t["open"] == "false" for t in st["tiles"].values()) and not st["shown"], str(st))
+                # THE ROW SPANS THE DRAWER (the owner's pick in the whole-drawer
+                # mock, "Tiles grow"), edge to edge with the colours above it, on
+                # a desk as on a phone. It stopped at 520px, 140px short on a desk.
+                row = q.evaluate("""() => { const r = s => document.querySelector(s).getBoundingClientRect(),
+                    t = r('#drawTiles .dp-tiles'), c = r('#colorGroup');
+                    return { row: [t.left, t.right], colours: [c.left, c.right],
+                             tiles: [...document.querySelectorAll('#drawTiles .dp-tile')].map(e => Math.round(e.getBoundingClientRect().width * 10) / 10) }; }""")
+                check(f"{who}: the four tiles span the drawer, edge to edge with the colours above them, each as wide as the others",
+                      abs(row["row"][0] - row["colours"][0]) <= 0.5 and abs(row["row"][1] - row["colours"][1]) <= 0.5
+                      and max(row["tiles"]) - min(row["tiles"]) <= 0.5, str(row))
 
                 # ---------------------------------------------------- every tool
                 for k, sels in tools.items():
@@ -253,7 +268,7 @@ with sync_playwright() as pw:
                 card, paper, tint = (q.evaluate(TOKEN, t) for t in ("--menu-card", "--menu-paper", "--seg-on-fill"))
                 tile(q, "brush", 700)
                 cols = q.evaluate("""() => { const s = el => getComputedStyle(el).backgroundColor;
-                    return { tiles: [...document.querySelectorAll('.dp-tile')].map(s),
+                    return { tiles: [...document.querySelectorAll('#drawTiles .dp-tile')].map(s),
                              panel: s(document.getElementById('dpBrush')),
                              chosen: s(document.querySelector('#brushSeg .active')),
                              other: s(document.querySelector('#brushSeg [data-brush=marker]')),
@@ -366,7 +381,7 @@ with sync_playwright() as pw:
         c, q, errs = fresh(b, route, PHONE)
         open_drawer(q, route); q.wait_for_timeout(600)
         half = q.evaluate(f"""() => ({{ full: document.getElementById('drawPanel').classList.contains('detent-full'),
-            tiles: !!document.querySelector('.dp-tile').offsetParent, clear: !!document.querySelector('{e["clear"]}').offsetParent }})""")
+            tiles: !!document.querySelector('#drawTiles .dp-tile').offsetParent, clear: !!document.querySelector('{e["clear"]}').offsetParent }})""")
         check(f"{nm}: on a phone the drawer opens at half: Color and the tiles, Clear out of the way",
               half == {"full": False, "tiles": True, "clear": False}, str(half))
         tile(q, "size", 1600)

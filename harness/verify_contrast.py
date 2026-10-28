@@ -69,7 +69,8 @@ EDITORS = (
 # The dock's drawers, and the sheets the menu opens (CONSISTENCY, and the
 # drawers' type).
 DRAWERS = ("Tune", "Tune, with Beat", "The shape picker", "The draw drawer", "The draw drawer, Size", "The draw drawer, Feel", "The draw drawer, Eraser",
-           "Photo, empty", "Photo, with a picture", "Music, empty", "Music", "Music, with a beat", "Music, More open",
+           "Photo, empty", "Photo, with a picture", "Music, empty", "Music", "Music, with a beat",
+           "Music, Length", "Music, Beat", "Music, Restart", "Music, Exact times",
            "The stamp shelf", "The stamp shelf, with stamps")
 SHELF = ("The stamp shelf", "The stamp shelf, with stamps")       # the Pad has no stamps,
 FLIP_ONLY = SHELF + ("Tune, with Beat",)                          # nor pages to put on a song's beat
@@ -186,7 +187,7 @@ CENSUS = r"""(root) => {
   }
   // A section's name, by its size, weight and ink: Tune's and the music drawer's.
   const labels = {};
-  for (const sel of ['.tune-title', '.mt-sect']) {
+  for (const sel of ['.tune-title']) {
     const el = [...R.querySelectorAll(sel)].find(e => e.getClientRects().length);
     if (el) { const cs = getComputedStyle(el); labels[sel] = { px: cs.fontSize, w: cs.fontWeight, ink: cs.color, tt: cs.textTransform }; }
   }
@@ -492,8 +493,8 @@ def surfaces(name, ids, q, canvas, btn):
         return f
 
     # THE DOCK'S DRAWERS AS THEY ARE USED (after v324, the drawers mock): the
-    # draw drawer unfolded, Photo with a picture in it, Music with a song, with
-    # More closed and open. Opened empty, six lines too faint to read were
+    # draw drawer unfolded, Photo with a picture in it, Music with a song, its
+    # doors shut and each open. Opened empty, six lines too faint to read were
     # never in view to be measured.
     # The draw drawer is four tiles now (lib/drawtiles.js), each opening its
     # choices in place: every tile is read open, so every word in it is.
@@ -521,37 +522,42 @@ def surfaces(name, ids, q, canvas, btn):
         q.set_input_files(ids["photo"], {"name": "photo.png", "mimeType": "image/png", "buffer": PNG})
         q.wait_for_timeout(1500)
 
-    # The music drawer as it opens, and with More open (lib/musicdrawer.js):
-    # More adds words of its own (its parts' names, the tap's, the steppers'
-    # line), on its card.
-    def music(more):
+    # The music drawer as it opens, and with each of its four doors open
+    # (lib/musicdrawer.js), one at a time: each adds words of its own (its
+    # choices' and switches' names and what they say, the tap's, the
+    # steppers' line), on its card.
+    def music(door):
         def f():
             browsing.pad_drawer(q, "music"); q.wait_for_timeout(400)
             q.set_input_files("#musicInput", {"name": "song.wav", "mimeType": "audio/wav", "buffer": WAV})
             q.wait_for_function("() => typeof currentAudioBuffer !== 'undefined' && !!currentAudioBuffer", timeout=20000)
             q.wait_for_timeout(700)
-            if more:
-                q.click("#fineTuneToggle"); q.wait_for_timeout(900)
+            if door:
+                q.click(f'#musicDoors .dp-tile[data-dp="{door}"]'); q.wait_for_timeout(900)
         return f
 
-    # And once the song has a beat: Beats under the one line, the loop's own
+    # And once the song has a beat: Beats in the Length door, the loop's own
     # count lit on its pill and the others beside it. The beat is set here as
     # Skribl's ears set it, at 300 a minute so three counts fit this 4-second
     # song (verify_musicears hears real ones); this reads paint, not sound.
     def music_beat():
-        music(False)()
+        music("length")()
         q.evaluate("() => { musicTempo = { bpm: 300, phase: 0, heard: true }; trimStart = 0; trimEnd = 1.85;"
                    " loopCrossfadeMs = 250; setCrossfadeUI(); updateTrimUI(); }")
         q.wait_for_timeout(700)
 
-    # And scrolled down to Exact times, with a beat: the timeline's copy under
+    # And scrolled down at Exact times, with a beat: the timeline's copy under
     # the header (lib/musicdrawer.js), its words and the way back up on the
-    # card's paper, over whatever passes under it.
+    # card's paper, over whatever passes under it. Exact times opens under
+    # the timeline, so it scrolls away only on a short screen (a small phone
+    # held sideways): the screen is made 340px tall for this one, and each
+    # surface starts at its form's own size again.
     def music_down():
-        music(True)()
+        q.set_viewport_size({"width": q.viewport_size["width"], "height": 340})
+        music("exact")()
         q.evaluate("() => { musicTempo = { bpm: 300, phase: 0, heard: true }; trimStart = 0; trimEnd = 1.85;"
                    " loopCrossfadeMs = 250; setCrossfadeUI(); updateTrimUI(); }")
-        q.evaluate("() => { const e = document.querySelector('.finetune-grid'); scrollBy(0, e.getBoundingClientRect().top - innerHeight * 0.6); }")
+        q.evaluate("() => scrollTo(0, document.documentElement.scrollHeight)")
         q.wait_for_timeout(900)
 
     # The card on the button and the name tags (lib/learncard.js), which the
@@ -590,8 +596,10 @@ def surfaces(name, ids, q, canvas, btn):
              ("The draw drawer", drawer("brush"), "#drawPanel"), ("The draw drawer, Size", drawer("size"), "#drawPanel"),
              ("The draw drawer, Feel", drawer("feel"), "#drawPanel"), ("The draw drawer, Eraser", drawer("eraser"), "#drawPanel"),
              ("Photo, empty", empty("photo"), "#mediaCard"), ("Photo, with a picture", photo, "#mediaCard"),
-             ("Music, empty", empty("music"), "#mediaCard"), ("Music", music(False), "#mediaCard"),
-             ("Music, with a beat", music_beat, "#mediaCard"), ("Music, More open", music(True), "#mediaCard"),
+             ("Music, empty", empty("music"), "#mediaCard"), ("Music", music(None), "#mediaCard"),
+             ("Music, with a beat", music_beat, "#mediaCard"),
+             ("Music, Length", music("length"), "#mediaCard"), ("Music, Beat", music("beat"), "#mediaCard"),
+             ("Music, Restart", music("restart"), "#mediaCard"), ("Music, Exact times", music("exact"), "#mediaCard"),
              ("Music, down at Exact times", music_down, "#musicFollow"))
             + (((SHELF[0], stamps(False), "#stampPop"), (SHELF[1], stamps(True), "#stampPop"),
                 ("Tune, with Beat", tune_beat, "#tuneShell")) if name == "Flip" else ())
@@ -625,6 +633,7 @@ with sync_playwright() as p:
                         # (lib/learncard.js rests, which this suite turns on).
                         # On a phone the card rises over the canvas, and beside
                         # other suites the Post opener's stroke landed on it.
+                        q.set_viewport_size(opts["viewport"])
                         q.mouse.move(opts["viewport"]["width"] / 2, opts["viewport"]["height"] / 2)
                         browsing.goto(q, BASE, route)
                         q.wait_for_timeout(700)
@@ -791,16 +800,18 @@ for scheme in ("light", "dark"):
         check(f"{scheme}: Tune's rows are parted by the menu's rule ({len(tunes)} read)",
               bool(rule) and rule != "none" and len(tunes) == 2 and set(tunes.values()) == {rule},
               f"the menu's rule {rule}; " + "; ".join(f"{n}: {v}" for n, v in sorted(tunes.items())))
-    # ONE SECTION NAME. Tune's name is a section's name in a drawer, set as the
-    # music drawer's are (14px since the drawers' type B, 600, the sheet's
-    # ink), not in small capitals.
+    # ONE SECTION NAME. Tune's name is a section's name in a drawer, set as
+    # the music drawer's were (14px since the drawers' type B, 600), not in
+    # small capitals, one style on both editors. (The music drawer's own
+    # went with More: its four doors are named by their tiles.)
     sect = {(n, l, sel): census[(n, sc, l)]["labels"][sel] for (n, sc, l) in census
-            for sel in (".tune-title", ".mt-sect")
+            for sel in (".tune-title",)
             if sc == scheme and census[(n, sc, l)] and sel in census[(n, sc, l)].get("labels", {})}
     looks = {(v["px"], v["w"], v["ink"], v["tt"]) for v in sect.values()}
-    if not ONLY or {"Tune", "Music, More open"} <= set(ONLY):
-        check(f"{scheme}: Tune's name and the music drawer's section names are one style ({len(sect)} read)",
-              {sel for (_, _, sel) in sect} == {".tune-title", ".mt-sect"} and len(looks) == 1,
+    if not ONLY or "Tune" in ONLY:
+        check(f"{scheme}: Tune's name is a drawer's section name, 14px and 600, not in small capitals, one style on both ({len(sect)} read)",
+              {n for (n, _, _) in sect} == {e[0] for e in EDITORS} and len(looks) == 1
+              and all(v["px"] == "14px" and v["w"] == "600" and v["tt"] == "none" for v in sect.values()),
               "; ".join(f"{n} {l} {sel}: {v['px']} {v['w']} {v['ink']} {v['tt']}" for (n, l, sel), v in sorted(sect.items())))
     # NO SMALL CAPITALS on the menu's sheets or in the dock's drawers: the
     # vibe question (WORKING-AGREEMENTS) named "monospace caps" as the chrome

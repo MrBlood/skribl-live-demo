@@ -323,10 +323,10 @@
    * is open brings its end on screen again, the way opening did, and with the
    * same re-asserts. `current()` is the open panel, or null while it is shut.
    *
-   * NOT an open, a tab switch or the music drawer's More: each has its own
-   * reveal already. Each shows or hides one of the panels, or opens or closes
-   * More (#musicDetail's data-level, set before More shows or hides), so
-   * that moves the baseline instead of being followed -- watched
+   * NOT an open, a tab switch or one of the music drawer's doors: each has
+   * its own reveal already. Each shows or hides one of the panels, or opens
+   * or closes a door (#musicDetail's data-door, set before a door shows or
+   * hides), so that moves the baseline instead of being followed -- watched
    * on those elements, not read off the card's size, because Photo and Music
    * empty are the same height and a switch between them resizes nothing (the
    * first draft of this kept the panel's name per resize, missed that switch,
@@ -334,7 +334,7 @@
    *
    * Never so far that the dock slides under the pinned header: that is
    * controls on top of controls (verify_ux's phone audit), and the reason
-   * the music drawer's More stops its own nudge short of the header. Capped
+   * the music drawer's doors stop their own nudge short of the header. Capped
    * there, a short phone may still leave the last row to scroll to; growth
    * only ever scrolls down, but for one thing.
    *
@@ -354,12 +354,13 @@
    * runs of three. A drift is the few px a glide overshoots; a scroll is a
    * screenful. Past DRIFT the page is where the person put it, and it stays.
    *
-   * NOR BEATS OPENING AS A BEAT LANDS (lib/musicdrawer.js): its height is
-   * left out of the card's, so the page does not move by itself a moment
-   * after Skribl hears the beat or a tap settles it, under a finger reaching
-   * for the timeline (it scrolled 46px on the Pad and 22px on Flip, and
-   * verify_musicbeat's drags on Flip let go a bar off). Beats glides open,
-   * and what is under it glides down; a song landing with it is followed.
+   * NOR BEATS OPENING AS A BEAT LANDS (lib/musicdrawer.js): its height, and
+   * the gap it brings, are left out of the card's, so the page does not move
+   * by itself a moment after Skribl hears the beat or a tap settles it, under
+   * a finger reaching for the timeline (it scrolled 46px on the Pad and 22px
+   * on Flip, and verify_musicbeat's drags on Flip let go a bar off). Beats
+   * glides open, and what is under it glides down; a song landing with it is
+   * followed.
    *
    * A PERSON WHO SCROLLS BACK UP IS LEFT THERE TOO. The take-back only ever
    * pushes down, so a scroll up to the drawing as a song landed came straight
@@ -372,8 +373,16 @@
   function followGrowth(card, o) {
     if (!card || typeof ResizeObserver === 'undefined') return;
     var dock = o.dock || null, lastH = 0, gen = 0, beats = card.querySelector('#musicBeatsRow');
+    // Beats' share of the card: its height and, in the Length door's column,
+    // the gap it brings with it, there from its first frame while its height
+    // glides up from none (left in, the 8px was followed on a desk, and the
+    // page went on after the row as it opened, 71px).
     function height() {
-      return card.getBoundingClientRect().height - (beats && !beats.hidden ? beats.getBoundingClientRect().height : 0);
+      var share = 0;
+      if (beats && !beats.hidden && beats.getClientRects().length) {
+        share = beats.getBoundingClientRect().height + (parseFloat(window.getComputedStyle(beats.parentElement).rowGap) || 0);
+      }
+      return card.getBoundingClientRect().height - share;
     }
     function target() {
       var scroller = document.scrollingElement || document.documentElement;
@@ -412,16 +421,20 @@
       });
     }
     // A move of the baseline also calls off the last growth's re-asserts: a
-    // level picked within 1.2s of a song landing (the levels More replaced)
-    // had them chase the taller card's end, the switch just tapped scrolled
-    // away under the header.
+    // level picked within 1.2s of a song landing (the levels More, and then
+    // the doors, replaced) had them chase the taller card's end, the switch
+    // just tapped scrolled away under the header.
     var moves = new MutationObserver(function () { lastH = height(); gen++; });
     [].forEach.call(card.querySelectorAll('#photoPanel, #musicPanel'), function (m) {
       moves.observe(m, { attributes: true, attributeFilter: ['hidden'] });
     });
-    // Only More: #musicDetail un-hiding is a song landing, which IS followed.
+    // Only the doors: #musicDetail un-hiding is a song landing, which IS followed.
     var lv = card.querySelector('#musicDetail');
-    if (lv) moves.observe(lv, { attributes: true, attributeFilter: ['data-level'] });
+    if (lv) moves.observe(lv, { attributes: true, attributeFilter: ['data-door'] });
+    // Nor the taller box (lib/musictimeline.js sets its height on the stage):
+    // the person's own, and it keeps Hear the loop where it is on the screen.
+    var tall = card.querySelector('#musicTlStage');
+    if (tall) moves.observe(tall, { attributes: true, attributeFilter: ['style'] });
     new ResizeObserver(function () {
       var h = height(), grew = !!o.current() && lastH > 0 && h > lastH + 1;
       lastH = h;

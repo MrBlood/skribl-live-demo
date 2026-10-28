@@ -35,7 +35,8 @@
  * marks glide when where a beat falls moves (beatTo).
  *
  * EACH END IS A LINE WITH A TAB AT ITS FOOT (styles.css): nothing over the
- * wave beside the line, where the music starts.
+ * wave beside the line, where the music starts. The line is about 1.5px and
+ * sharp, on the screen's own pixels (edge, below).
  *
  * THE FRAMING: 1.28 times the longer of the loop and the drawing, the
  * drawing counted up to three loops (a two-hour piece would make the loop a
@@ -69,6 +70,33 @@
  * go stays where it is let go (the owner, again: exact control); the join is
  * already clean (lib/audioloop.js: a smooth restart, or Cut on silence).
  *
+ * ZOOMED IN DEEP, THE WAVE FILLS THE BOX (the owner: yes). Where the wave
+ * itself shows, it is drawn against the loudest moment in view rather than
+ * the song's loudest, so a soft first note after a quiet intro, a pixel or
+ * two tall against the whole song, stands as tall as the box just where a
+ * start is placed. It glides there as the view does (fillTo); further out
+ * the song is drawn as before, so loud and quiet still compare.
+ *
+ * THE TALLER BOX (the owner, with ACID's + and - for a track's height:
+ * "expand it vertically too so it would become a bigger box showing more of
+ * the wave"): the button after Magnify's - and + makes the box twice as tall,
+ * and again puts it back. It glides (the owner, of the mock's: it "shook and
+ * jerked"): its clock starts on the first frame it draws, the box moves in
+ * whole pixels, the page scrolls by exactly what it grew so Hear the loop
+ * stays where the thumb is (h.anchor), never so far that the timeline's top
+ * goes under the header (h.ceiling), and each height is painted in the frame
+ * it is laid out (the ResizeObserver, below). At once under Reduce Motion.
+ * The height stays across songs and with the drawer put away.
+ *
+ * PINCH TO ZOOM (from Wavebox's "Zoom & Pan"; the owner: yes). Two fingers
+ * on the timeline: sideways for Magnify, a rung for each doubling of the
+ * distance between them; up and down for the box's height, following them,
+ * up to three times as tall. Locked to whichever way they first move, and
+ * two fingers, so it never fights one finger scrolling the page; a finger
+ * already dragging stops where it is. On a desk, Ctrl and the wheel (a
+ * trackpad's pinch sends the same) zoom in time; - and +, and the taller
+ * box, stay for anyone who does not pinch.
+ *
  * A finger on the song scrolls the page if it moves up or down first
  * (touch-action: pan-y and a 6px lock), as the strip never let it: the
  * timeline is two and a half strips tall.
@@ -91,6 +119,10 @@
  *   letGo(kind, which, zoomed)  a drag that moved something is over ('end' |
  *                       'slide'), magnified past 1x or not
  *   still()             Reduce Motion
+ *   anchor()            what stays put on the screen as the box grows (Hear
+ *                       the loop), or null
+ *   ceiling()           where the header ends on the screen (0 if it is not
+ *                       pinned): the timeline's top stays under it
  * Returns { draw, reset, focus(which), playhead(t), x(t), view(), held() }. */
 (function (global) {
   'use strict';
@@ -102,6 +134,10 @@
   // point, the wave itself; under LINE_AT, the samples joined (below).
   var MAGS = [1, 2, 4, 8, 16, 32, 64, 128, 256, 512], PAN = 1.6, WAVE_AT = 64, LINE_AT = 8;
   var LANE = 26, GAP = 8, LOCK_PX = 6;
+  // THE TALLER BOX: its glide, and as tall as a pinch takes it. Ctrl and the
+  // wheel: a mouse's notch is a rung, a trackpad's pinch a rung each
+  // WHEEL_STEP of its small deltas, as soon as one gesture adds up to it.
+  var TALL_MS = 220, TALLEST = 3, WHEEL_STEP = 35;
 
   // The song's loudness in blocks, once per buffer: the largest |sample|
   // over every channel, per 128 samples and then per 1,024 and 8,192, so a
@@ -144,6 +180,21 @@
     return m / P.top;
   }
 
+  // THE LOOP'S EDGE LINE IS SHARP (the owner's pick in the whole-drawer
+  // mock, "1.5px sharp", over 3px, 2px and a 1.5px left between the screen's
+  // pixels): about 1.5px, rounded to the screen's own pixels (3 on a 2x
+  // phone, 2 on a desk, 5 on a 3x phone), and laid on whole ones, so it is
+  // one even line and never a blur across two. Where, for a line centred on
+  // x: its left and its width in CSS px, `off` how far the box it is drawn in
+  // sits from the screen's left (the screen's pixels count from there; 0 in
+  // a canvas, whose own pixels are the screen's). The timeline's handles and
+  // the copy under the header (lib/musicdrawer.js) draw theirs with it.
+  function edge(x, dpr, off) {
+    dpr = dpr || 1; off = off || 0;
+    var w = Math.max(1, Math.round(1.5 * dpr)) / dpr;
+    return [Math.round((off + x - w / 2) * dpr) / dpr - off, w];
+  }
+
   function create(root, h) {
     if (!root) return null;
     var D = global.SkriblDragTrack, EP = global.SkriblEventPoint;
@@ -156,6 +207,8 @@
     var beatIn = 1;                              // and how far its marks have faded in
     var magOut = root.querySelector('.mt-tl-mag-btn[data-mag="-1"]'), magIn = root.querySelector('.mt-tl-mag-btn[data-mag="1"]');
     var magVal = root.querySelector('.mt-tl-mag-val'), nameBox = root.querySelector('.mt-tl-namebox');
+    var tallBtn = root.querySelector('.mt-tl-tall'), baseH = 0, tallTo = 0, tallRaf = 0;
+    var gain = 0;   // the level the wave is drawn against (fillTo)
     // The rung's words take the widest rung's room (the CSS reads it here),
     // so - and + stay where they are as it steps.
     if (magVal) magVal.setAttribute('data-widest', MAGS[MAGS.length - 1] + '\u00d7');
@@ -198,33 +251,76 @@
         view = { v0: view.v0 + (goal.v0 - view.v0) * k, span: view.span + (goal.span - view.span) * k };
         if (Math.abs(goal.v0 - view.v0) < goal.span * 1e-4 && Math.abs(goal.span - view.span) < goal.span * 1e-4) view = goal;
       }
-      var gliding = beatTo(dt);
+      var gliding = beatTo(dt), filling = fillTo(dt);
       lastT = now;
       paint();
       // The view, for whoever reads it (the harness): the time at the left
       // edge and the seconds across, as painted, to the microsecond (at 512x
       // a phone's view is a few milliseconds across).
       if (view) root.dataset.view = view.v0.toFixed(6) + ' ' + view.span.toFixed(6);
-      if ((!held && view !== goal) || (held && held.kind === 'end' && held.zone) || gliding) request();
+      if ((!held && view !== goal) || (held && held.kind === 'end' && held.zone) || gliding || filling) request();
+    }
+    // ZOOMED IN DEEP, THE WAVE FILLS THE BOX (above): the level the wave is
+    // drawn against eases to the loudest in view where the wave itself shows,
+    // and to the song's loudest further out, with the view's own ease; at
+    // once under Reduce Motion. True while on the way.
+    function fillTo(dt) {
+      var goal = fillGoal();
+      if (!goal) { gain = 0; return false; }
+      if (!gain || h.still()) { gain = goal; return false; }
+      gain += (goal - gain) * (1 - Math.exp(-dt / EASE_MS));
+      if (Math.abs(gain - goal) <= goal * 0.01) { gain = goal; return false; }
+      return true;
+    }
+    function fillGoal() {
+      var buf = h.buffer(), w = width();
+      if (!buf || !peaks || peaks.buffer !== buf || !view || !(w > 0)) return 0;
+      var sr = peaks.sr;
+      if (view.span / w * sr >= WAVE_AT) return peaks.top;
+      // As the wave is drawn: both channels as one (their mean).
+      var d0 = buf.getChannelData(0), d1 = buf.numberOfChannels > 1 ? buf.getChannelData(1) : null, m = 0;
+      for (var j = Math.max(0, Math.floor(view.v0 * sr)), j1 = Math.min(buf.length, Math.ceil((view.v0 + view.span) * sr)); j < j1; j++) {
+        var v = d1 ? (d0[j] + d1[j]) / 2 : d0[j];
+        if (v < 0) v = -v;
+        if (v > m) m = v;
+      }
+      // A little room over the loudest; never so far up that a hush fills it.
+      return Math.max(m * 1.08, peaks.top * 0.02);
     }
     // THE BEAT MARKS GLIDE when where a beat falls moves and the tempo does
     // not (a start let go magnified becomes a beat, lib/musicdrawer.js), with
     // the view's own ease and the shorter way round, so they move as one with
-    // the settle and the reframing after it. A new tempo is there at once; a
-    // beat where there was none (one heard, lib/musicears.js, as the loop
-    // glides to its pick, or the first one tapped) fades in over FADE_MS
-    // rather than appearing in one frame. All of it at once under Reduce
-    // Motion. True while on the way.
+    // the settle and the reframing after it. A tempo moved by a 32nd or less
+    // (an end let go magnified sets it, lib/musicdrawer.js, by an eighth of a
+    // beat over 4 at most) glides too: each mark to its own new place, the
+    // one the new beat counts from (the loop's start) staying put, so the
+    // marks draw in to the end rather than jumping there. A new tempo is
+    // there at once; a beat where there was none (one heard,
+    // lib/musicears.js, as the loop glides to its pick, or the first one
+    // tapped) fades in over FADE_MS rather than appearing in one frame. All
+    // of it at once under Reduce Motion. True while on the way.
     function beatTo(dt) {
       var tp = h.tempo();
       if (!tp) { beat = null; return false; }
       if (!beat) { beat = { bpm: tp.bpm, phase: tp.phase }; beatIn = h.still() ? 1 : 0; return beatIn < 1; }
       if (beatIn < 1) { beatIn = h.still() ? 1 : Math.min(1, beatIn + dt / FADE_MS); if (beatIn < 1) { beat = { bpm: tp.bpm, phase: tp.phase }; return true; } }
-      if (beat.bpm !== tp.bpm || h.still()) { beat = { bpm: tp.bpm, phase: tp.phase }; return false; }
-      var p = 60 / tp.bpm, d = tp.phase - beat.phase;
+      var p = 60 / tp.bpm, p0 = 60 / beat.bpm, k = 1 - Math.exp(-dt / EASE_MS);
+      if (h.still() || Math.abs(p - p0) > p0 / 32 + 1e-5) { beat = { bpm: tp.bpm, phase: tp.phase }; return false; }
+      if (beat.bpm !== tp.bpm) {
+        // The old beat nearest where the new one counts from, and from there
+        // the beat's length and its place together, so beat n of the old is
+        // beat n of the new all the way; there once no mark in the song is a
+        // tenth of a millisecond off.
+        var a0 = beat.phase + Math.round((tp.phase - beat.phase) / p0) * p0, pk = p0 + (p - p0) * k, ak = a0 + (tp.phase - a0) * k;
+        var far = (Math.abs(tp.phase) + trim().duration) / p + 1;
+        if (Math.abs(pk - p) * far + Math.abs(ak - tp.phase) < 1e-4) { beat = { bpm: tp.bpm, phase: tp.phase }; return false; }
+        beat = { bpm: 60 / pk, phase: ak };
+        return true;
+      }
+      var d = tp.phase - beat.phase;
       d -= Math.round(d / p) * p;
       if (Math.abs(d) < 1e-4) { beat = { bpm: tp.bpm, phase: tp.phase }; return false; }
-      beat = { bpm: tp.bpm, phase: beat.phase + d * (1 - Math.exp(-dt / EASE_MS)) };
+      beat = { bpm: tp.bpm, phase: beat.phase + d * k };
       return true;
     }
     function request() { if (!raf) raf = global.requestAnimationFrame(frame); }
@@ -296,10 +392,10 @@
       // CLOSE IN, THE WAVE ITSELF (above): both channels as one (their mean),
       // through the middle line at its zero, so where it crosses shows.
       function wave(sr, spp, mid, room) {
-        var d0 = buf.getChannelData(0), d1 = buf.numberOfChannels > 1 ? buf.getChannelData(1) : null, n = buf.length, top = peaks.top;
+        var d0 = buf.getChannelData(0), d1 = buf.numberOfChannels > 1 ? buf.getChannelData(1) : null, n = buf.length, top = gain || peaks.top;
         var at = function (j) { return d1 ? (d0[j] + d1[j]) / 2 : d0[j]; };
         var xs0 = X(s0), xs1 = X(s1), j;
-        drawn.song = spp < LINE_AT ? 'samples' : 'wave'; drawn.zero = +mid.toFixed(2);
+        drawn.song = spp < LINE_AT ? 'samples' : 'wave'; drawn.zero = +mid.toFixed(2); drawn.top = +top.toFixed(6);
         x.save();
         x.fillStyle = ink; x.globalAlpha = 0.65; x.fillRect(0, mid - 0.5, w, 1);
         x.fillStyle = acc;
@@ -436,6 +532,18 @@
       x.globalAlpha = 1;
       x.restore();
 
+      // THE LOOP'S TWO EDGES, painted here, on the screen's own pixels (edge,
+      // above), over the song: a box laid on them as the handle's line was
+      // is snapped to whole CSS pixels first and then moved by its handle's
+      // fraction, so a 1.5px line came out 2px wide and soft at both sides.
+      // Each handle's tab (over the canvas) sits on its line's foot.
+      x.fillStyle = acc;
+      drawn.edges = [s0, s1].map(function (s) {
+        var ln = edge(X(s), dpr, 0);
+        if (ln[0] + ln[1] > 0 && ln[0] < w) x.fillRect(ln[0], sTop, ln[1], sH);
+        return ln;
+      });
+
       // The handles, the words over the drawing and the whole song's line.
       words();
       [[hs, s0], [he, s1]].forEach(function (e) {
@@ -459,6 +567,7 @@
     /* ---- Fingers. ---------------------------------------------------------- */
     function grab(e) {
       if (!h.hasTrack() || !view) return null;
+      if (e.touches && e.touches.length > 1) return pinch(e);
       var pt = EP.at(e), r = rect(), y = pt.clientY - r.top, hd = e.target.closest && e.target.closest('.mt-tl-handle');
       if (!hd && y < LANE + GAP / 2) return null;                  // the drawing stays put
       var touch = e.type === 'touchstart';
@@ -505,7 +614,43 @@
         }
       };
     }
+    // PINCH TO ZOOM (above): the second finger down on the timeline. The
+    // one already down stops where it is; then sideways is Magnify's rungs,
+    // the nearest to the fingers' spread (twice as far apart, one rung in),
+    // and up and down the box's height, following them.
+    function spread(ev) {
+      var a = ev.touches[0], b = ev.touches[1];
+      return [Math.max(20, Math.abs(a.clientX - b.clientX)), Math.max(20, Math.abs(a.clientY - b.clientY))];
+    }
+    function pinch(e) {
+      if (held) { held.dead = true; held = null; root.classList.remove('holding'); }
+      e.preventDefault();
+      var s0 = spread(e), i0 = MAGS.indexOf(mag), h0 = stage.getBoundingClientRect().height, axis = null;
+      return {
+        move: function (cx, ev) {
+          if (!ev || !ev.touches || ev.touches.length < 2) return;
+          if (ev.cancelable) ev.preventDefault();
+          var s = spread(ev), rx = s[0] / s0[0], ry = s[1] / s0[1];
+          if (!axis && (Math.abs(rx - 1) > 0.08 || Math.abs(ry - 1) > 0.08)) axis = Math.abs(rx - 1) >= Math.abs(ry - 1) ? 'x' : 'y';
+          if (axis === 'x') {
+            var i = Math.max(0, Math.min(MAGS.length - 1, i0 + Math.round(Math.log(rx) / Math.LN2)));
+            if (MAGS[i] !== mag) { mag = MAGS[i]; syncMag(); draw(); }
+          } else if (axis === 'y') tall(h0 * ry, false);
+        },
+        end: function () { draw(); }
+      };
+    }
     if (D && stage) D.bind(stage, grab);
+    // Ctrl and the wheel on a desk, or a trackpad's pinch: Magnify's rungs.
+    var wheelSum = 0, wheelAt = -1e9;
+    if (stage) stage.addEventListener('wheel', function (e) {
+      if (!e.ctrlKey || !h.hasTrack() || !view) return;
+      e.preventDefault();
+      if (e.timeStamp - wheelAt > 300) wheelSum = 0;
+      wheelAt = e.timeStamp;
+      wheelSum += e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 400 : 1);
+      if (Math.abs(wheelSum) >= WHEEL_STEP) { step(wheelSum < 0 ? 1 : -1); wheelSum = 0; }
+    }, { passive: false });
     // The whole song's line: the loop goes where the finger is, its middle
     // under it. A tap glides it there, onto a beat once there is a tempo; a
     // drag follows the finger and, let go, settles as a slid loop does.
@@ -550,6 +695,61 @@
     });
     syncMag();
 
+    // THE TALLER BOX (above). The box's own height is the stylesheet's; any
+    // other is set on it, in whole pixels.
+    function base() {
+      if (!baseH && !stage.style.height) baseH = stage.getBoundingClientRect().height;
+      return baseH;
+    }
+    function heightNow() { return stage.getBoundingClientRect().height; }
+    function syncTall() {
+      if (!tallBtn) return;
+      var b = base(), on = b > 0 && (tallTo || heightNow()) > b + 0.5;
+      if (tallBtn.getAttribute('aria-pressed') !== String(on)) tallBtn.setAttribute('aria-pressed', String(on));
+      tallBtn.disabled = !h.hasTrack();
+    }
+    // To `to` px: gliding (a tap), Hear the loop kept where it is on the
+    // screen; or at once (a pinch, which the box follows as the fingers do).
+    function tall(to, glide) {
+      var b = base();
+      if (!(b > 0)) return;
+      to = Math.round(Math.max(b, Math.min(TALLEST * b, to)));
+      if (tallRaf) global.cancelAnimationFrame(tallRaf);
+      var from = Math.round(heightNow()), D = glide && !h.still() ? TALL_MS : 0, start = null;
+      var anchor = glide && h.anchor ? h.anchor() : null;
+      tallTo = to;
+      syncTall();
+      function frameTall(now) {
+        tallRaf = 0;
+        // The clock starts on the first frame it draws: one taken before it
+        // ran that frame backwards, and the mock's box shrank before it grew.
+        if (start === null) start = now;
+        var f = D ? Math.min(1, (now - start) / D) : 1, e = 1 - Math.pow(1 - f, 3);
+        var hh = Math.round(from + (to - from) * e);
+        if (hh !== Math.round(heightNow())) {
+          var y0 = anchor && anchor.offsetParent !== null ? anchor.getBoundingClientRect().top : null, top0 = root.getBoundingClientRect().top;
+          stage.style.height = hh === b ? '' : hh + 'px';
+          if (y0 !== null) {
+            // Scrolled by exactly what Hear moved, read off Hear itself (a
+            // scroll that waited for half a pixel of drift shook it); growing,
+            // never so far that the timeline's top goes under the header.
+            var dy = anchor.getBoundingClientRect().top - y0;
+            if (dy > 0) dy = Math.min(dy, Math.max(0, Math.floor(top0 - (h.ceiling ? h.ceiling() : 0) - 4)));
+            if (dy) global.scrollBy(0, dy);
+          }
+        }
+        if (f < 1) tallRaf = global.requestAnimationFrame(frameTall);
+        else { tallTo = 0; syncTall(); }
+      }
+      tallRaf = global.requestAnimationFrame(frameTall);
+    }
+    if (tallBtn) tallBtn.addEventListener('click', function () {
+      var b = base();
+      if (tallBtn.disabled || !(b > 0)) return;
+      tall((tallTo || heightNow()) > b + 0.5 ? b : 2 * b, true);
+    });
+    syncTall();
+
     // The playhead: where the song is, on the song, while something plays.
     function playhead(t) {
       if (!ph) return;
@@ -558,8 +758,38 @@
       if (!ph.hidden) ph.style.transform = 'translateX(' + at.toFixed(2) + 'px)';
     }
 
-    // A new layout (the sheet opened, the phone turned): paint at the new size.
-    if (global.ResizeObserver && stage) new global.ResizeObserver(function () { draw(); }).observe(stage);
+    // THE BEAT LIGHTS AS IT IS HEARD (the owner's pick in the whole-drawer
+    // mock): while Hear the loop plays, lib/musicdrawer.js asks for each beat
+    // as it reaches the ear, and a light over its dot glows, bigger on a bar,
+    // and fades. Web Animations, so Reduce Motion is honoured here (it fades,
+    // with no swell) and the player's sheet carries no keyframes for a drawer
+    // it never has. What it lit last, for whoever asks (the harness): root._lit.
+    var lit = null;
+    function pulse(t, bar) {
+      if (!view || !stage) return;
+      var w = width(), at = X(t);
+      if (!(at >= -6 && at <= w + 6)) return;
+      if (!lit) { lit = document.createElement('span'); lit.className = 'mt-tl-lit'; lit.setAttribute('aria-hidden', 'true'); stage.appendChild(lit); }
+      lit.classList.toggle('bar', !!bar);
+      lit.style.left = at.toFixed(2) + 'px';
+      lit.style.top = (LANE + GAP + 8) + 'px';
+      if (lit.getAnimations) lit.getAnimations().forEach(function (a) { a.cancel(); });
+      var still = h.still && h.still();
+      if (lit.animate) {
+        lit.animate(still ? [{ opacity: 1 }, { opacity: 0 }]
+          : [{ opacity: 1, transform: 'scale(1.5)' }, { opacity: 0.85, offset: 0.6 }, { opacity: 0, transform: 'scale(1)' }],
+          { duration: 450, easing: still ? 'linear' : 'cubic-bezier(.2, .8, .2, 1)' });
+      }
+      var was = root._lit;
+      root._lit = { n: (was ? was.n : 0) + 1, x: +at.toFixed(2), bar: !!bar, t: +t.toFixed(4), at: global.performance ? global.performance.now() : 0 };
+    }
+
+    // A new layout (the sheet opened, the phone turned, the box taller):
+    // painted at the new size in the frame it is laid out, for the observer
+    // runs after layout and before the frame is shown. Asked for the next
+    // frame, every frame of the taller box's glide showed the one before
+    // stretched to fit (the owner: it "shook").
+    if (global.ResizeObserver && stage) new global.ResizeObserver(function () { if (view) { words(); paint(); } else draw(); }).observe(stage);
     // A theme switched: the tokens are read as it paints.
     if (global.matchMedia) {
       var mq = global.matchMedia('(prefers-color-scheme: dark)');
@@ -568,7 +798,7 @@
     if (global.MutationObserver) new MutationObserver(draw).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
 
     return {
-      draw: function () { syncMag(); draw(); },
+      draw: function () { syncMag(); syncTall(); draw(); },
       // A new song: the view starts where it belongs, not where the last was,
       // at 1x on its start.
       reset: function () { lane = null; view = null; mag = 1; focus = 'start'; beat = null; syncMag(); draw(); },
@@ -576,6 +806,7 @@
       // magnified, the view goes to it.
       focus: function (which) { if ((which === 'start' || which === 'end') && which !== focus) { focus = which; draw(); } },
       playhead: playhead,
+      pulse: pulse,
       x: function (t) { return view ? X(t) : null; },
       view: function () { return view ? { v0: view.v0, span: view.span } : null; },
       held: function () { return held ? held.kind : null; },
@@ -584,5 +815,5 @@
     };
   }
 
-  global.SkriblMusicTimeline = { create: create, peaksOf: peaksOf, peakOf: peakOf };
+  global.SkriblMusicTimeline = { create: create, peaksOf: peaksOf, peakOf: peakOf, edge: edge };
 })(window);

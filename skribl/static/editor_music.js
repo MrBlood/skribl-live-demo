@@ -2,7 +2,7 @@
 //
 // THE DRAWER'S CONTROLS ARE lib/musicdrawer.js's, one copy shared with Flip
 // (owner: "it needs to be the same music editor on both pad and flip"): the
-// one view and More, Skribl's pick, the timeline and the Restart view
+// one view and its four doors, Skribl's pick, the timeline and the Restart view
 // (lib/musictimeline.js, lib/musicrestart.js), nudges and typed times, Smooth
 // restart, Cut on silence, Fit my drawing, Whole song, the hear buttons, Play
 // with my drawing, Tap the beat and the switch. The Pad hands it its
@@ -55,7 +55,7 @@ if (window.SkriblMusicDrawer) padDrawer = window.SkriblMusicDrawer.wire({
   buffer: () => currentAudioBuffer,
   loop: { start: startWebAudioLoop, stop: stopWebAudioLoop,
           playing: () => _waLoop.playing(), elapsed: () => _waLoop.elapsed(), duration: () => _waLoop.duration(),
-          latency: () => _waLoop.latency() },
+          latency: () => _waLoop.latency(), ctx: () => audioCtx },
   clip: buildTrimmedLoopWav,
   playing: () => playing,
   setPreviewing: (on) => { previewingLoop = on; },
@@ -67,6 +67,9 @@ if (window.SkriblMusicDrawer) padDrawer = window.SkriblMusicDrawer.wire({
   syncRow: () => { syncLayerToggle(document.getElementById('musicToggle'), musicEnabled); padMusicRow(); },
   tempo: () => musicTempo,
   setTempo: (t) => { musicTempo = t; },
+  // The drawer's notes (the end setting the beat, with its Undo): the Pad's
+  // toast, just under the header.
+  say: (words, action) => showToast(words, null, action),
 });
 // app.js reaches these by name, typeof-guarded, because the player has no drawer.
 function stopLoopPreview() { if (padDrawer) padDrawer.stopPreview(); }

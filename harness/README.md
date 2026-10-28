@@ -454,53 +454,65 @@ stays a sleep.
   new track starts at 1x; a photo named song.mp3 is refused by its type; and
   Play stops a preview. A post leaving a switched-off track out, which both
   already did, is kept by rows green before too.
-- `verify_musicmore.py` — the music drawer's one view, and More
-  (lib/musicdrawer.js; the owner: "The music drawer is so complicated...
-  we'll need to streamline it"), on the Pad and on Flip; it was the three
-  levels' suite, renamed with them. A new drawer opens on the timeline,
-  the one line, the pair that plays, Fit and Whole song, and More; More opens
-  the restart (the Restart view among it), the beat, exact times and how it
-  loops (Cut on silence and Lock the length), each under its name,
-  joined to its tile, hides them with `hidden` when closed, keeps the loop,
-  unfolds and folds away (at once under Reduce Motion), and starts closed
-  every time (on a load, the old remembered key too, and every opening of the
-  drawer, Photo and back included); a new song starts on
-  Skribl's pick (the first 20 seconds or the whole song, on the Pad as long as
-  a drawing already there, with a smooth restart), and a draft's song keeps
-  its own loop; the one line says the length heard, its beats and against the
-  drawing, its height the same whatever it says, on a phone and a desk; a
-  change offers Back to Skribl's pick, whose Undo goes after eight seconds,
-  and an Undo of the drawing shows the way back and no more; Fit counts the
-  smooth restart, and its seconds agree with the line's; Whole song says when
-  it is the longest loop; with nothing drawn Fit is off and wakes with a
-  drawing; Smooth restart's switch keeps its last length; typed times, - and +
-  as far as Each press says (untouched 0.1s, or a bar once there is a tempo
-  while Snap to the beat is on; 0.01s or 0.1s picked and kept; a bar there
-  only once there is a tempo; a new song untouched; the buttons' names say
-  the step) and Lock the length;
-  16px fields; scrolled down past the timeline, its copy under the header
-  (on the drawer to the pixel, a desk's scrollbar gutter allowed for; painted
-  over what passes under it and under the header; the loop framed, the one
-  line's length and beats; End + eased to, frame by frame; gliding in; a tap
-  back up to the timeline with the drawer still open), on a phone and a desk,
-  at once under Reduce Motion; Play with my drawing is the editor's Play, and waits with
-  nothing drawn; More opened as a song lands keeps its tile in sight, and
-  closing it from the drawer's end glides; a drawer taller than the screen
-  (on a 390x640 phone) opens at its top, the bar just under the header, one
-  that fits (on the owner's phone) shows its end, and a person who scrolls on
-  as it opens is left where they scrolled to; a song landing as it opens is the
-  newer reveal, and nothing pulls the page back after it; a person who scrolls
-  back up as a song lands (a finger on the owner's phone, a wheel and Page Up
-  on a desk) is left where they scrolled to; a draft opened says its own
-  smooth restart, the switch, its words and its length agreeing with the
-  line.
+- `verify_musicdoors.py` — the music drawer's view and its four doors
+  (lib/musicdrawer.js; the owner, of the mock: "I like D", then "All yes" to
+  the whole drawer), on the Pad and on Flip; it was More's suite, and
+  before that the three levels'. A new drawer
+  opens on the timeline, the one line, the pair that plays and four doors,
+  Length, Beat, Restart and Exact times, each shut; each opens its own group
+  under its tile, one at a time (another's tile swaps them), hides what a
+  shut door holds with `hidden`, keeps the loop, unfolds and folds away
+  joined to its tile with no line where they meet (at once under Reduce
+  Motion), and starts shut every time (on a load, More's old remembered key
+  too, and every opening of the drawer, Photo and back included); each tile
+  says what its door is set to in words that fit it on a 390px phone, the
+  owner's 402 and a desk (the Beat tile where its beat came from, heard,
+  tapped or by hand, where it has room, and its name always), and Skribl's
+  mark is on the Length tile's picture
+  while the loop is Skribl's pick; the row runs edge to edge with the timeline
+  and the pair above it, an open door's group as wide, on a desk as on a
+  phone. A new song starts on Skribl's pick (the
+  first 20 seconds or the whole song, on the Pad as long as a drawing already
+  there, with a smooth restart), lit in the Length door, and a draft's song
+  keeps its own loop; the one line says the length heard, its beats and
+  against the drawing, its height the same whatever it says (one row from a
+  390px phone up, two below it, what the loop is against the drawing on its
+  own row); a change unlights the pick, which is the way back, with an Undo
+  gone after eight seconds, and an Undo of the drawing shows the way back and
+  no more; Fit counts the smooth restart, and its seconds agree with the
+  line's; Whole song says when it is the longest loop; where two cards are
+  the same loop, the one pressed is lit, with no Undo of nothing; with
+  nothing drawn Fit is off and wakes with a drawing; Smooth restart's switch
+  keeps its last length; typed times, - and + as far as Each press says
+  (untouched 0.1s, or a bar once there is a tempo while Snap to the beat is
+  on; 0.01s or 0.1s picked and kept; a bar there only once there is a tempo;
+  a new song untouched; the buttons' names say the step) and Lock the length;
+  16px fields; Exact times under the timeline, which stays on the screen on a
+  phone and a desk however far the page scrolls; where it can scroll away (a
+  small phone sideways), its copy under the header (on the drawer to the
+  pixel; painted over what passes under it and under the header; the loop
+  framed, its ends the timeline's sharp lines, read off its canvas, the one
+  line's length and beats; End + eased to, frame by frame;
+  gliding in; a tap back up to the timeline with the drawer still open), at
+  once under Reduce Motion; Play with my drawing is the editor's Play, and
+  waits with nothing drawn; a door opened as a song lands keeps its tile in
+  sight, and closing one from the drawer's end glides; a drawer taller than
+  the screen (on a 390x640 phone) opens at its top, the bar just under the
+  header, one that fits (on the owner's phone) shows its end, and a person
+  who scrolls on as it opens is left where they scrolled to; a song landing
+  as it opens is the newer reveal, and nothing pulls the page back after it;
+  a person who scrolls back up as a song lands (a finger on the owner's
+  phone, a wheel and Page Up on a desk) is left where they scrolled to; a
+  draft opened says its own smooth restart, the switch, its words and its
+  length agreeing with the line.
 - `verify_musicbeat.py` — the music drawer's pair and its beat (the owner:
   "How do I test the loop without having it show me drawing?... so I'm not at
   7 or 9 when I want 8", then "we only ever want 4,8,16,... beats"), on the Pad
   and on Flip: Play with my drawing and Hear the loop under the timeline in
-  the same place whether More is open or not, the same size, with no second Hear
-  the loop; Hear the loop plays the music alone until Stop, and an end moved
-  while it plays is heard from its next time round; Tap the beat's first tap
+  the same place with any door open or none, the same size (Hear's pill and
+  Play), with no second Hear the loop; Hear the loop plays the music alone
+  until Stop, and an end moved while it plays is heard from its next time
+  round; Tap the beat's first tap
   starts the loop and is not a beat, taps in time settle on the tempo two
   seconds after the last (a stray gap does not move it), the one line counts
   the beats, and where the beat falls is the taps' own on the song's clock as
@@ -521,12 +533,6 @@ stays a sleep.
   there is a tempo, on to start, saying what it does, and opens out with a
   bar in Each press frame by frame (at once under Reduce Motion), and off
   nothing settles, on the timeline, in the Restart view, slid or tapped;
-  zoomed in (the owner: "how do I tell it where the beginning is?"), a start
-  let go on the music's beat, between the marks of a tempo tapped 45ms late,
-  stays exactly there and a beat falls on it, the beats a minute kept and the
-  end following on whole bars, the marks gliding there frame by frame (at
-  once under Reduce Motion), then at 1x a start lands on the new beat, the new
-  beat is kept in the drafts, and tapped again the beat is the taps' own;
   where the music begins after a silence (the owner: "It snaps back to empty
   space"), at 1x a start let go in the silence before it and nearer it than
   the next beat, or with the nearest beat in the silence, or up to half a beat
@@ -553,6 +559,65 @@ stays a sleep.
   more than 4ms (a busy machine) is tapped again on a fresh page, three tries
   at most, and the row says which try it was. Skribl's ears are off here
   (every row is a person with no beat yet; verify_musicears holds the ears).
+  The click is `verify_musicclick.py`'s and the zoomed-in ends
+  `verify_musictempo.py`'s: with the click here this suite went past
+  run_harness.sh's ten minutes a suite on CI, and it took nine before it.
+- `verify_musicclick.py` — the music drawer's click and the beat lit as it is
+  heard (step 4 of the whole-drawer mock), on the Pad and on Flip: the click
+  is the end of Hear the loop's pill (a metronome, a finger wide, the words of
+  both buttons inside them on a 320px phone, the owner's and a desk), off at
+  first and there once there is a beat, and on, Hear ticks on each beat of
+  what plays on the loop's own clock to the millisecond, the bar's tick higher
+  every four beats from the loop's start, the loop's first beat as the music
+  starts, each tick straight to the speakers (never a post or a file), turned
+  on while Hear plays ticking from the very next beat, a tick already set
+  ahead never sounding once it is off or Hear stops, and an end moved while it
+  plays ticking the new loop from its next time round with no tick doubled at
+  the join; each beat's dot lights as it is heard (by the context's record of
+  what its speakers play), a beat apart, at the dot's own place, the bar's
+  bigger, click on or off, swelling and fading, only fading under Reduce
+  Motion. Skribl's ears are off here.
+- `verify_musictempo.py` — zoomed in, the loop's ends set the beat, and the
+  Beat door says where its tempo came from (step 5), on the Pad and on Flip:
+  zoomed in (the owner: "how do I tell it where the beginning is?"), a start
+  let go on the music's beat, between the marks of a tempo tapped 45ms late,
+  stays exactly there and a beat falls on it, the beats a minute kept and the
+  end following on whole bars, the marks gliding there frame by frame (at
+  once under Reduce Motion), then at 1x a start lands on the new beat, the new
+  beat is kept in the drafts, and tapped again the beat is the taps' own; an
+  end let go within an eighth of a beat of 8 stays exactly where it was let
+  go and the beat becomes the one that makes the loop exactly 8 beats,
+  counted from its start and heard to where it comes round (a smooth
+  restart's length before the handle), to the thousandth, by the end and no
+  longer heard; a note says so with Undo, clear of the header and the
+  toolbar right under it on the owner's phone, and Undo puts the beat back,
+  the end where it was let go and the drawer open; further off than an
+  eighth, or at 1x, the end settles on whole bars at the tempo there is; the
+  beat marks glide to the new beat frame by frame (at once under Reduce
+  Motion); the beat is kept in the drafts, Flip's Match the beat refits a
+  round of pages to it, and the Beat tile and its door say "by hand" and
+  "set by the loop's end", the door's line on 375, 390 and 402px phones
+  never starting a line with its dot; a start let go zoomed in, and Snap to
+  the beat off and on, keep where the beat came from; tapped again it is
+  tapped.
+- `verify_musictall.py` — the taller box, the wave filling it zoomed in
+  deep, and pinch to zoom (step 6), on the Pad and on Flip: the box with arrows
+  after Magnify's - and +, the same card and cell, a finger wide, named "Make
+  the box taller" and pressed while tall, there once there is a song, its
+  glyph 3:1 and up; one tap twice as tall and one back, read on every frame
+  on the owner's phone and a desk: only the way it is going, whole pixels,
+  never a leap (one step after a look 50ms late set aside), each frame painted
+  at its height, Hear the loop put to a quarter of a pixel, there within 400ms,
+  the page staying where the grow left it, the drawer's end below the screen
+  or not; at once under Reduce Motion; with the timeline up at the header, its
+  top kept under it; zoomed in deep, a quiet passage standing most of the box,
+  read off the canvas, gliding there, and as before where the song is its
+  loudness; two real touch points, sideways a rung a doubling, up and down the
+  height to three times, locked to the first way, the finger already down
+  stopping; Ctrl and the wheel on a desk, a notch a rung, a trackpad's small
+  deltas a rung as they add up, the page's zoom called off, the plain wheel the
+  page's.
+  Skribl's ears are off here.
 - `verify_musictimeline.py` — step 2 of the music plan (the owner: "Yes on
   all"), on the Pad and on Flip: the timeline (lib/musictimeline.js) is the
   drawer's one view, the drawing's lane over the song, two handles and the
@@ -575,7 +640,10 @@ stays a sleep.
   grip (and the grip can be hit, so what is on top is what is painted), the
   tab shows half under the song's edge clear of the whole song's line, which
   a tap under it still reaches, and the tab pressed below the edge drags its
-  end; magnify
+  end; the loop's two edges are sharp lines (the owner's "1.5px sharp"), read
+  on the screenshot with each end between pixels in the quiet of the song: a
+  run of the accent as wide as 1.5px rounds to on the screen (2 pixels on a
+  desk, 3 at 2x, 5 at 3x) with the ground either side flat; magnify
   (the owner: "All yes but maybe go to x64?", then "stay"; then "Like 512x?",
   and "All yes" to the wave) steps 1x to 512x and says the rung, each button
   stopping at its end of the ladder and - and + staying where they are as its
@@ -885,7 +953,8 @@ stays a sleep.
   was shown red by its own break.
 - `verify_drawtiles.py` — the draw drawer's four tiles (lib/drawtiles.js),
   Brush, Size, Feel and Eraser, on the Pad and Flip, phone and desk, both
-  themes: every control hidden until its tile opens and then painted where a
+  themes: the row edge to edge with the colours above it, on a desk as on a
+  phone; every control hidden until its tile opens and then painted where a
   finger lands; each choice changes the editor's own state and the tile's
   words follow; the open tile and its card one shape, in the menu's tokens;
   nothing in the drawer paints outside it (the stray pill's column); the

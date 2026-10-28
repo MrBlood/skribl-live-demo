@@ -1090,6 +1090,47 @@ with sync_playwright() as p:
               _said.get("shown") and _said["undoPainted"], str(_said))
         _ctx.close()
 
+    # AND WITH THE TOOLBAR UNDER THE HEADER. A drawer scrolled into has the
+    # toolbar (Flip's dock) right under the header, pinned there, and the
+    # fallback just under the header sat on its tools: the music drawer's
+    # note when the loop's end sets the beat, on both editors. Asked with the
+    # page scrolled as far as it goes and the toolbar within a toast's reach
+    # of the header, so the row cannot pass by the toolbar being elsewhere.
+    print("\nLAYOUT — a toast and the chip, with the toolbar right under the header")
+    UNDER = """(sel) => { const t = document.querySelector(sel), box = (el) => { if (!el || !el.getClientRects().length) return null;
+          const r = el.getBoundingClientRect(); return (r.width || r.height) ? r : null; };
+        if (!t || !t.classList.contains('show')) return { shown: false };
+        const a = t.getBoundingClientRect(), hd = box(document.querySelector('.header')),
+              br = box(document.getElementById('toolBar') || document.querySelector('.flip-tools'));
+        const hit = (r) => !!r && a.top < r.bottom && a.bottom > r.top && a.left < r.right && a.right > r.left;
+        return { shown: true, top: Math.round(a.top), bottom: Math.round(a.bottom), header: hit(hd), bar: hit(br),
+                 reach: !!(hd && br) && br.top < hd.bottom + 8 + a.height, barTop: br && Math.round(br.top), headerBottom: hd && Math.round(hd.bottom) }; }"""
+    for _route, _sel, _say in (("/", "#toast", "() => showToast('Saved as a file', null)"),
+                               ("/flip", "#flipChip", "() => chip('Draft restored')")):
+        _ctx = browser.new_context(viewport={"width": 402, "height": 874}, is_mobile=True, has_touch=True)
+        _pg = _ctx.new_page()
+        browsing.goto(_pg, BASE, _route)
+        _pg.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+        browsing.pad_drawer(_pg, "music", settle=1600)
+        # A song in it and its tallest door open (Restart), so the drawer is
+        # taller than the screen as when it is worked in, and the page then
+        # scrolled until the toolbar meets the header's foot. Scrolled to its
+        # end with the Beat door open, CI's fonts left the bar 53px short of
+        # the header (run 40674638110, the Pad on both databases).
+        _pg.set_input_files("#musicInput", {"name": "m.wav", "mimeType": "audio/wav", "buffer": _wav(12.0)})
+        _pg.wait_for_function("() => document.getElementById('musicUploadBtn').classList.contains('loaded')", timeout=20000)
+        _pg.wait_for_timeout(3500)                  # the song's own toast has come and gone
+        _pg.click('#musicDoors .dp-tile[data-dp="restart"]'); _pg.wait_for_timeout(600)
+        _pg.evaluate("""() => { const b = (document.getElementById('toolBar') || document.querySelector('.flip-tools')).getBoundingClientRect();
+          scrollBy(0, b.top - document.querySelector('.header').getBoundingClientRect().bottom - 2); }""")
+        _pg.wait_for_timeout(800)
+        _pg.evaluate(_say); _pg.wait_for_timeout(400)
+        _got = _pg.evaluate(UNDER, _sel)
+        check(f"{'Pad' if _route == '/' else 'Flip'}: with a drawer scrolled into, the toolbar under the header, "
+              f"{'a toast' if _route == '/' else 'the chip'} shows clear of both",
+              _got.get("shown") and _got["reach"] and _got["top"] >= 0 and not _got["header"] and not _got["bar"], str(_got))
+        _ctx.close()
+
     # On a phone a drawer opens below the toolbar and the page scrolls to
     # reveal it; that took Post, Play and ⋯ off the top of the screen (owner,
     # iPhone). The header now pins. Asked of what is PAINTED, not of a rect:

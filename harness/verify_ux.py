@@ -1024,19 +1024,19 @@ with _sp204() as _p:
         mp.goto(BASE + "/", wait_until="load"); waits.settle(mp, 700)
         browsing.pad_drawer(mp, "music"); mp.wait_for_timeout(300)
         mp.set_input_files("#musicInput", {"name": "t.wav", "mimeType": "audio/wav", "buffer": _AUD}); mp.wait_for_timeout(1500)
-        mp.evaluate("() => { const t = document.getElementById('fineTuneToggle'); if (t && t.getAttribute('aria-expanded') !== 'true') t.click(); }")
+        mp.evaluate("() => { const t = document.querySelector('#musicDoors .dp-tile[data-dp=\"exact\"]'); if (t && t.getAttribute('aria-expanded') !== 'true') t.click(); }")
         mp.wait_for_timeout(400)
         fit = mp.evaluate("""() => { const vw = document.documentElement.clientWidth;
-            const grid = document.querySelector('#fineTuneBody .finetune-grid'); if (!grid) return null;
+            const grid = document.querySelector('#musicDoorExact .finetune-grid'); if (!grid) return null;
             const gr = grid.getBoundingClientRect();
-            const b = document.querySelector('#fineTuneBody .nudge-btn').getBoundingClientRect();
+            const b = document.querySelector('#musicDoorExact .nudge-btn').getBoundingClientRect();
             return { over: gr.right > vw + 1, scrollX: document.documentElement.scrollWidth > vw + 1, nudgeW: Math.round(b.width) }; }""")
         check(f"V206: nudge grid fits at {pw}px (no overflow)", fit and not fit["over"] and not fit["scrollX"], str(fit))
         # The pills themselves must not overlap or spill their column. On
         # phone the groups STACK (one per row) — the earlier three-on-a-row
         # squeeze put 120px pills into 93px columns and they overlapped at 390.
-        _ov = mp.evaluate("""() => { const ecs = [...document.querySelectorAll('#fineTuneBody .edge-controls')].map(e => e.getBoundingClientRect());
-            const groups = [...document.querySelectorAll('#fineTuneBody .edge-group')].map(e => e.getBoundingClientRect());
+        _ov = mp.evaluate("""() => { const ecs = [...document.querySelectorAll('#musicDoorExact .edge-controls')].map(e => e.getBoundingClientRect());
+            const groups = [...document.querySelectorAll('#musicDoorExact .edge-group')].map(e => e.getBoundingClientRect());
             let overlap = false;
             for (let i = 0; i < ecs.length; i++) for (let j = i + 1; j < ecs.length; j++) {
                 const a = ecs[i], b = ecs[j];
@@ -1050,15 +1050,16 @@ with _sp204() as _p:
             # third group under them, was Each tap, and is gone (lib/
             # musicdrawer.js). The overlap/spill check above still guards the
             # class at every width.
-            _rows = mp.evaluate("""() => [...document.querySelectorAll('#fineTuneBody .edge-group')]
+            _rows = mp.evaluate("""() => [...document.querySelectorAll('#musicDoorExact .edge-group')]
                 .map(e => Math.round(e.getBoundingClientRect().top))""")
             if pw >= 375:
                 check(f"V210: at {pw}px Start of loop and End of loop share a row",
                       len(_rows) == 2 and _rows[0] == _rows[1], f"group tops {_rows}")
             else:
-                # 363 and 340 cannot hold two 130px groups: inside More's card
-                # the grid is the screen less 104px (it was 78px on the drawer's
-                # paper, two-up from 348), and two need 270. The grid must fall
+                # 363 and 340 cannot hold two 130px groups: inside the Exact
+                # door's card (as inside More's) the grid is the screen less
+                # 104px (it was 78px on the drawer's paper, two-up from 348),
+                # and two need 270. The grid must fall
                 # back to one column rather than spill (v207 bug class).
                 check(f"V210: at {pw}px (too narrow for 2-up) the nudge groups stack one per row",
                       len(_rows) == 2 and _rows[1] > _rows[0], f"group tops {_rows}")
@@ -1068,9 +1069,9 @@ with _sp204() as _p:
             # readout must change, proving the expanded hit region fires the nudge.
             # the fine-tune body sits below the fold; bring the button on-screen
             # first or the coordinate click lands outside the viewport.
-            mp.evaluate("() => document.querySelector('#fineTuneBody .nudge-btn[data-which=\"start\"][data-amount=\"1\"]').scrollIntoView({block: 'center'})")
+            mp.evaluate("() => document.querySelector('#musicDoorExact .nudge-btn[data-which=\"start\"][data-amount=\"1\"]').scrollIntoView({block: 'center'})")
             mp.wait_for_timeout(300)
-            r = mp.evaluate("() => { const b = document.querySelector('#fineTuneBody .nudge-btn[data-which=\"start\"][data-amount=\"1\"]').getBoundingClientRect(); return {x: b.left, y: b.top, w: b.width, h: b.height, r: b.right}; }")
+            r = mp.evaluate("() => { const b = document.querySelector('#musicDoorExact .nudge-btn[data-which=\"start\"][data-amount=\"1\"]').getBoundingClientRect(); return {x: b.left, y: b.top, w: b.width, h: b.height, r: b.right}; }")
             before = mp.evaluate("() => document.getElementById('startReadout').value")
             # click 5px to the RIGHT of the '+' (outside its box, in the tap zone, away from the readout on its left)
             mp.mouse.click(r["r"] + 5, r["y"] + r["h"] / 2); mp.wait_for_timeout(300)
@@ -1583,20 +1584,21 @@ with _sp204() as _p:
     # overflow is not visible, with a minimum clearance so "not yet clipped by
     # 4px" is caught before iOS font metrics eat it. Real vertical scroll is
     # fine (the page scrolls); the horizontal axis and clipping are not.
-    # MORE'S FIRST CONTROL WINS OVER THE DOCK (lib/musicdrawer.js, opening
-    # More): on a phone too short for both, the page scrolls the dock under the
-    # pinned header so that More's first control is on the screen, as it
-    # already did on a 664px phone (verify_sheetswipe). With the drawers' words
-    # a size up (B) a 375x844 phone is one, so with More open ({more: true}) the
-    # dock's controls under the header are tucked, not overlapping -- but only
-    # if the dock kept below the header would have left that control off the
-    # screen; scrolled under for any other reason, they still overlap.
+    # A DOOR'S FIRST CONTROL WINS OVER THE DOCK (lib/musicdrawer.js, opening
+    # one of the music drawer's doors, as it did opening More): on a phone too
+    # short for both, the page scrolls the dock under the pinned header so that
+    # the door's first control is on the screen, as it already did on a 664px
+    # phone (verify_sheetswipe). With the drawers' words a size up (B) a
+    # 375x844 phone is one, so with a door open ({door: true}) the dock's
+    # controls under the header are tucked, not overlapping -- but only if the
+    # dock kept below the header would have left that control off the screen;
+    # scrolled under for any other reason, they still overlap.
     _AUDIT = """(o) => { const vw = document.documentElement.clientWidth, vh = document.documentElement.clientHeight;
         let tucked = new Set();
-        if (o && o.more) {
+        if (o && o.door) {
           const det = window.SkriblDrawerDetent, top = det && det.stuckBottom ? det.stuckBottom() : 0;
           const dock = document.getElementById('toolBar') || document.querySelector('.flip-tools');
-          const first = document.querySelector('#fineTuneBody button, #fineTuneBody input');
+          const first = document.querySelector('#musicDoors .dp-panel:not([hidden]) button, #musicDoors .dp-panel:not([hidden]) input');
           if (dock && first) { const short = top + 4 - dock.getBoundingClientRect().top;
             if (short > 0 && first.getBoundingClientRect().bottom + short > vh - 12) tucked = new Set(dock.querySelectorAll('*')); } }
         const CLEAR = 6;   // px a control must keep from any clipping ancestor's edge
@@ -1683,9 +1685,9 @@ with _sp204() as _p:
                     ux_close(_f, op); _f.wait_for_timeout(200)
             ux_open(_f, openers[3]); _f.wait_for_timeout(300)
             _f.set_input_files("#musicInput", {"name": "t.wav", "mimeType": "audio/wav", "buffer": _AUD}); _f.wait_for_timeout(1400)
-            _f.evaluate("() => { const t = document.getElementById('fineTuneToggle'); if (t && t.getAttribute('aria-expanded') !== 'true') t.click(); }"); _f.wait_for_timeout(600)
-            _r = _f.evaluate(_AUDIT, {"more": True})
-            check(f"PHONE {nm}@{pw}: ...with music loaded + fine-tune open", _AUDIT_OK(_r), str(_r))
+            _f.evaluate("() => { const t = document.querySelector('#musicDoors .dp-tile[data-dp=\"restart\"]'); if (t && t.getAttribute('aria-expanded') !== 'true') t.click(); }"); _f.wait_for_timeout(600)
+            _r = _f.evaluate(_AUDIT, {"door": True})
+            check(f"PHONE {nm}@{pw}: ...with music loaded and its tallest door open", _AUDIT_OK(_r), str(_r))
             _f.close()
     # The header brand vs the control cluster, both states, three widths.
     # State 1 (first load): the wordmark shows and the cluster must clear it —
@@ -3117,12 +3119,13 @@ with sync_playwright() as _gp:
             # the dock and the drawer are what is under it. The ground stayed
             # only while the DRAWING overlapped, so it went, and the dock's
             # icons showed through, stacked on the header's. A song in Music,
-            # More open, scrolled to the end, with the drawing confirmed
-            # above the header first so the check cannot pass on a short page.
+            # the Restart door open, scrolled to the end, with the drawing
+            # confirmed above the header first so the check cannot pass on a
+            # short page.
             browsing.pad_drawer(_g, "music", settle=400)
             _g.set_input_files("#musicInput", {"name": "t.wav", "mimeType": "audio/wav", "buffer": _WAV})
             _g.wait_for_function("() => document.getElementById('musicUploadBtn').classList.contains('loaded')", timeout=15000)
-            _g.click("#fineTuneToggle"); _g.wait_for_timeout(400)
+            _g.click('#musicDoors .dp-tile[data-dp="restart"]'); _g.wait_for_timeout(400)
             _g.evaluate("() => window.scrollTo(0, document.documentElement.scrollHeight)")
             browsing.wait_scroll_still(_g); _g.wait_for_timeout(300)
             _e = _g.evaluate(_GROUND, _dock)

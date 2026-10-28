@@ -1,6 +1,6 @@
-/* THE RESTART VIEW: the loop's end beside its start, in More under The
- * restart, to line the beats up across the join by eye and pull a smooth
- * restart's blend longer or shorter. (Step 2 of the music plan, mocked first;
+/* THE RESTART VIEW: the loop's end beside its start, behind the music
+ * drawer's Restart door, to line the beats up across the join by eye and pull
+ * a smooth restart's blend longer or shorter. (Step 2 of the music plan, mocked first;
  * the owner: "Yes on all".) THE END BESIDE THE START: on the
  * left the loop's last 0.6 seconds up to where it comes round, on the right
  * its first 0.6, and the line between them is the restart. With a smooth
@@ -50,7 +50,7 @@
     function paint() {
       raf = 0;
       var w = root.clientWidth || 0, hh = root.clientHeight || 0;
-      if (!(w > 0) || !(hh > 0) || !cv) return;      // shut: painted when More opens
+      if (!(w > 0) || !(hh > 0) || !cv) return;      // shut: painted when its door opens
       var dpr = global.devicePixelRatio || 1, Wd = Math.round(w * dpr), Hd = Math.round(hh * dpr);
       if (cv.width !== Wd || cv.height !== Hd) { cv.width = Wd; cv.height = Hd; }
       var x = cv.getContext('2d');

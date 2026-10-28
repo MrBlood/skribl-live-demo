@@ -27,17 +27,20 @@
  *
  * Each now does what the better side did, once.
  *
- * ONE VIEW, AND MORE (owner: "The music drawer is so complicated... we'll
- * need to streamline it"). The view is the timeline (step 2; it was the
- * strip), the one line under it, the pair that plays, Fit my drawing and
- * Whole song; More opens the rest in place: the restart (with the Restart
- * view), the beat, exact times and how it loops (Cut on silence, Lock the
- * length). It was three
- * levels, Simple, Adjust and Fine-tune, and before them Trim and Fine-tune;
- * More only shows and hides, and whether it is open is remembered (one key
- * for both editors). Today's names, kept as ids: Fine-tune is More, Match
- * Drawing Time is Fit my drawing, Test Seam is Hear the restart, Preview Loop
- * is Hear the loop, Crossfade is Smooth restart's length.
+ * THE VIEW AND ITS FOUR DOORS (the owner, of the mock: "I like D", then
+ * "All yes" to the whole drawer). The view is the timeline, the one line
+ * under it and the pair that plays; under them Length, Beat, Restart and
+ * Exact times, the draw drawer's four tiles, each saying what it is set to
+ * and opening its group in place, one at a time: Length, Skribl's pick, Fit
+ * my drawing and Whole song with the beats and Lock the length; Beat, Tap
+ * the beat and Snap to the beat; Restart, the restart (with the Restart
+ * view) and Cut on silence; Exact times, the loop's two times. The doors
+ * only show and hide. They were More (the owner: "The music drawer is so
+ * complicated... we'll need to streamline it"), one card over all four, and
+ * before it three levels, Simple, Adjust and Fine-tune, and before them Trim
+ * and Fine-tune. Today's names, kept as ids: Match Drawing Time is Fit my
+ * drawing, Test Seam is Hear the restart, Preview Loop is Hear the loop,
+ * Crossfade is Smooth restart's length.
  *
  * SKRIBL'S PICK is what a new song starts as. Skribl listens first
  * (lib/musicears.js; step 3 of the music plan, "the part that loops best, on
@@ -58,14 +61,16 @@
  * was changed meanwhile: a loop moved or a beat tapped is left as it is.
  * A song a draft brings back keeps its loop and is not listened to. Not on
  * Flip for the drawing's length: an animation goes round in a second or two,
- * and a loop that short is a stutter -- Fit my animation is one tap. The
- * pick line says which it is, and once the loop is changed, offers Back to
- * Skribl's pick (the heard one, with its beat) with an Undo for eight
- * seconds, which brings back the loop and the beat that were there.
+ * and a loop that short is a stutter -- Fit my animation is one tap. In the
+ * Length door Skribl's pick is lit while the loop is it, and once the loop
+ * is changed, a tap on it is the way back (to the heard one, with its beat),
+ * with an Undo for eight seconds, which brings back the loop and the beat
+ * that were there. Its tile says which it is.
  *
  * THE ONE LINE says how long the loop is, in beats once there is a tempo,
- * against the drawing, and then Skribl's pick or the way back to it. It was
- * three: the pick line, Adjust's length line, and Fine-tune's sync line.
+ * and against the drawing. It was three: the pick line, Adjust's length
+ * line, and Fine-tune's sync line; until the doors, Skribl's pick or the
+ * way back to it sat at its end.
  *
  * A SMOOTH RESTART MAKES THE LOOP SHORTER. The crossfade folds the loop's end
  * over its start (lib/audioloop.js), so what is heard comes round sooner than
@@ -76,7 +81,7 @@
  * THE PAIR THAT PLAYS (owner: "How do I test the loop without having it show
  * me drawing?"): Play with my drawing presses the editor's Play, and Hear the
  * loop (it was Preview Loop, then Hear the whole loop) plays the music alone,
- * round and round. Both sit under the strip, More open or not. An end moved
+ * round and round. Both sit under the timeline, a door open or not. An end moved
  * while the loop plays is heard from its next time round: the gapless engine
  * starts the new loop where the old one comes round.
  *
@@ -94,7 +99,10 @@
  * and the loop on whole bars,
  * 4, 8, 16 or 32 beats (the owner: "we only ever want 4,8,16,... beats"), the
  * end where the loop comes round, so with a smooth restart the handle sits
- * that much past the beat. The loop slid along the
+ * that much past the beat. Zoomed in, an end let go near whole bars stays,
+ * and the beat changes to make them exact (THE END SETS THE TEMPO, at snap
+ * below), with a note and its Undo. The Beat door's tile says where the
+ * beat came from: heard, tapped, or by hand from the end. The loop slid along the
  * song starts on a beat, and - and + move a bar unless another step is
  * picked. Off, nothing settles. The tempo is the editor's, saved with the
  * song in its drafts, and the switch with it.
@@ -141,15 +149,19 @@
  *   musicOff()          Play's music, stopped
  *   syncRow()           redraw the file row and its switch
  *   tempo()             the song's tempo { bpm, phase }, with snap: false
- *                       when Snap to the beat is off and heard: true when
- *                       Skribl heard it, or null; setTempo(t), kept with
- *                       the song in the drafts
- *   dock()              the bar right above the drawer, which More's nudge
- *                       leaves under the pinned header while More's first
- *                       control still shows (lib/drawerdetent.js)
+ *                       when Snap to the beat is off, heard: true when
+ *                       Skribl heard it and by: 'end' when the loop's end
+ *                       set it, or null; setTempo(t), kept with the song in
+ *                       the drafts
+ *   say(words, action)  optional: a note, with action { label, onClick } a
+ *                       button in it (the Pad's toast, Flip's chip)
+ *   dock()              the bar right above the drawer, which a door's
+ *                       nudge leaves under the pinned header while the
+ *                       door's first control still shows
+ *                       (lib/drawerdetent.js)
  *
  * Returns { sync, syncCrossfade, resetView, matchDrawing, applyPick,
- * stopPreview, playhead, previewing, more, tempo }. SkriblMusicDrawer.tempoFrom(raw)
+ * stopPreview, playhead, previewing, door, tempo }. SkriblMusicDrawer.tempoFrom(raw)
  * reads a saved tempo back, or null. Editor-only: the player has no drawer and
  * never loads this. */
 (function (global) {
@@ -189,16 +201,25 @@
   }
   // A tempo as saved: { bpm, phase } -- beats a minute, and where a beat falls
   // in the song, in seconds -- with snap: false once Snap to the beat is
-  // turned off for it, and heard: true when Skribl heard it (lib/musicears.js)
-  // rather than taps. Anything else is no tempo.
+  // turned off for it, heard: true when Skribl heard it (lib/musicears.js)
+  // rather than taps, and by: 'end' when the loop's end set it (snap, zoomed
+  // in). Anything else is no tempo.
   function tempoFrom(t) {
     var bpm = t ? +t.bpm : NaN, ph = t ? +t.phase : NaN;
     if (!(bpm >= 30 && bpm <= 300 && isFinite(ph))) return null;
     var out = { bpm: bpm, phase: ph };
     if (t.snap === false) out.snap = false;
     if (t.heard === true) out.heard = true;
+    if (t.by === 'end') out.by = 'end';
     return out;
   }
+  // A copy of a tempo, every field kept, for a change to one of them.
+  function copyOf(tp) { var o = {}; for (var key in tp) o[key] = tp[key]; return o; }
+  // Beats a minute as said: whole, as heard or tapped; to the tenth when the
+  // end set it, which is rarely whole ("83.4").
+  function bpmSays(tp) { return tp.by === 'end' ? (Math.round(tp.bpm * 10) / 10).toFixed(1) : String(Math.round(tp.bpm)); }
+  // Where the beat came from, as the Beat door's tile says it.
+  function bpmFrom(tp) { return tp.by === 'end' ? 'by hand' : tp.heard ? 'heard' : 'tapped'; }
   // "8 beats", "8.8 beats", "1 beat": whole when it is within a twentieth.
   function beatWords(n) {
     var w = Math.abs(n - Math.round(n)) < 0.05 ? String(Math.round(n)) : n.toFixed(1);
@@ -235,20 +256,27 @@
     var detail = $('musicDetail');
     var panel = $('musicPanel'), work = (panel && panel.dataset.work) || 'drawing';
 
-    /* ---- More: the rest of the drawer, in place. ---------------------------
-     * It unfolds joined to its tile and folds away again as the draw drawer's
-     * tiles do (lib/drawtiles.js), at once under Reduce Motion, and the drawer
-     * gets shorter only once the fold is done, gently: scrolled near its end,
-     * the page would clamp and leap under the finger (lib/drawerdetent.js).
-     * MORE STARTS CLOSED, EVERY TIME: on a load, and whenever the music panel
-     * is put away, so the drawer opens on its one view, short enough for a
-     * phone (the owner, finding it open from an old Fine-tune: "More starts
-     * open"; then the pick, always closed). Nothing remembers it.
-     * #musicDetail's data-level says which, set before More shows or hides,
-     * so lib/drawerdetent.js does not follow it as a song landing. `hidden`
-     * takes what More holds out of the Tab order as well as off the screen. */
-    var moreBtn = $('fineTuneToggle'), moreBody = $('fineTuneBody');
-    var open = false, folding = false, foldT = null;
+    /* ---- THE FOUR DOORS: Length, Beat, Restart and Exact times, in place. --
+     * One open at a time. A door unfolds joined to its tile and folds away
+     * again as the draw drawer's tiles do (lib/drawtiles.js), at once under
+     * Reduce Motion; one door for another, the new one unfolds where the old
+     * one was. The drawer gets shorter only gently: scrolled near its end,
+     * the page would clamp and leap under the finger (lib/drawerdetent.js
+     * shrinkGently), so a door folds away before it leaves, and one swapped
+     * for a shorter one swaps inside the same hold.
+     * THE DOORS START CLOSED, EVERY TIME: on a load, and whenever the music
+     * panel is put away, so the drawer opens on its one view, short enough
+     * for a phone (as More did: the owner, finding it open from an old
+     * Fine-tune, "More starts open"; then the pick, always closed). Nothing
+     * remembers them. #musicDetail's data-door says which is open, set
+     * before a door shows or hides, so lib/drawerdetent.js does not follow it
+     * as a song landing. `hidden` takes what a closed door holds out of the
+     * Tab order as well as off the screen. */
+    var doorsRoot = $('musicDoors');
+    var tiles = doorsRoot ? [].slice.call(doorsRoot.querySelectorAll('.dp-tile[data-dp]')) : [];
+    var door = {};
+    tiles.forEach(function (t) { door[t.dataset.dp] = { tile: t, panel: $(t.getAttribute('aria-controls')) }; });
+    var open = null, folding = null, foldT = null;
     function still() { return !!(global.matchMedia && global.matchMedia('(prefers-reduced-motion: reduce)').matches); }
     // What shows once there is a beat (Snap to the beat, and a bar in Each
     // press) opens out from nothing, across ('x') or down, rather than
@@ -263,86 +291,159 @@
       var an = el.animate([from, to], { duration: 240, easing: 'cubic-bezier(.2, .8, .2, 1)' });
       an.onfinish = an.oncancel = function () { el.style.overflow = ''; };
     }
-    function showMore() {
-      if (detail) detail.dataset.level = open ? 'fine' : 'simple';
-      if (moreBtn) {
-        moreBtn.setAttribute('aria-expanded', String(open));
-        moreBtn.classList.toggle('open', open || folding);
+    function showDoors() {
+      if (detail) detail.dataset.door = open || 'none';
+      tiles.forEach(function (t) {
+        var k = t.dataset.dp, p = door[k].panel;
+        t.setAttribute('aria-expanded', String(k === open));
+        t.classList.toggle('dp-open', k === open || k === folding);
+        if (p && k !== folding) p.hidden = k !== open;
+      });
+      var at = open || folding;
+      if (doorsRoot) {
+        if (at) doorsRoot.setAttribute('data-col', String(tiles.indexOf(door[at].tile)));
+        else doorsRoot.removeAttribute('data-col');
       }
-      if (moreBody && !folding) moreBody.hidden = !open;
+      doorWords();
+    }
+    function stopFold(p) {
+      clearTimeout(foldT);
+      if (!p) return;
+      p.classList.remove('dp-folding');
+      if (p.getAnimations) p.getAnimations().forEach(function (a) { a.cancel(); });
     }
     function finishFold() {
       if (!folding) return;
-      clearTimeout(foldT);
-      if (moreBody) {
-        moreBody.classList.remove('mt-folding');
-        if (moreBody.getAnimations) moreBody.getAnimations().forEach(function (a) { a.cancel(); });
-      }
-      var drop = function () { folding = false; showMore(); sync(); };
+      stopFold(door[folding].panel);
+      var drop = function () { folding = null; showDoors(); sync(); };
       var det = global.SkriblDrawerDetent;
       if (det && det.shrinkGently && detail) det.shrinkGently(detail, drop); else drop();
     }
-    function setMore(next) {
-      if (next === open) return;
+    function setDoor(k) {
+      if (k === open) return;
       if (folding) finishFold();
-      open = next;
-      if (!open) {
-        folding = true;
-        showMore();
-        if (!moreBody || still() || !moreBody.animate) { finishFold(); return; }
-        moreBody.classList.add('mt-folding');
-        moreBody.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'scaleY(.94)' }],
-                         { duration: 180, easing: 'ease-in', fill: 'forwards' });
+      var was = open, det = global.SkriblDrawerDetent;
+      open = k;
+      if (!k) {
+        // Closing: it folds away joined to its tile, then leaves.
+        folding = was;
+        showDoors();
+        var old = door[was].panel;
+        if (!old || still() || !old.animate) { finishFold(); return; }
+        old.classList.add('dp-folding');
+        old.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'scaleY(.94)' }],
+                    { duration: 180, easing: 'ease-in', fill: 'forwards' });
         foldT = setTimeout(finishFold, 200);
         return;
       }
-      showMore();
+      if (was && det && det.shrinkGently && detail) det.shrinkGently(detail, showDoors); else showDoors();
       sync();
-      if (moreBody && !still() && moreBody.animate) {
-        moreBody.animate([{ opacity: 0, transform: 'scaleY(.92)' }, { opacity: 1, transform: 'none' }],
-                         { duration: 220, easing: 'cubic-bezier(.2, .8, .2, 1)' });
+      var body = door[k].panel, tile = door[k].tile;
+      if (body && !still() && body.animate) {
+        body.animate([{ opacity: 0, transform: 'scaleY(.92)' }, { opacity: 1, transform: 'none' }],
+                     { duration: 220, easing: 'cubic-bezier(.2, .8, .2, 1)' });
       }
       // The Restart view's canvas was laid out at zero size while hidden.
-      // Then bring what opened into view (a tap that seemed to do nothing was
-      // the old Fine-tune's fault), but never so far that More goes under the
-      // pinned header -- nor the bar above the drawer, the editor's dock(),
-      // as lib/drawerdetent.js caps the drawer's own reveals, unless that
-      // would leave even More's first control below the screen, a tap that
-      // seems to do nothing again: then the first control wins. With the
-      // timeline the drawer is tall enough for both to bind: More's tile
-      // alone let Fit my drawing and Whole song pass under the header on an
-      // 844px phone (verify_ux's phone audit), and the bar alone left Smooth
-      // restart below a 664px one (verify_sheetswipe).
+      // Then bring what opened into view (a tap that seemed to do nothing
+      // was the old Fine-tune's fault), but never so far that the tiles go
+      // under the pinned header -- nor the bar above the drawer, the
+      // editor's dock(), as lib/drawerdetent.js caps the drawer's own
+      // reveals, unless that would leave even the door's first control below
+      // the screen, a tap that seems to do nothing again: then the first
+      // control wins. With the timeline the drawer is tall enough for both to
+      // bind: More's tile alone let Fit my drawing and Whole song pass under
+      // the header on an 844px phone (verify_ux's phone audit), and the bar
+      // alone left Smooth restart below a 664px one (verify_sheetswipe).
       requestAnimationFrame(function () {
         h.refresh();
         if (rv) rv.draw();
-        if (!moreBody || !moreBtn) return;
-        var det = global.SkriblDrawerDetent;
+        if (!body || !tile || open !== k) return;
         var vh = global.visualViewport ? global.visualViewport.height : global.innerHeight;
         var top = det && det.stuckBottom ? det.stuckBottom() : 0;
-        var over = Math.min(moreBody.getBoundingClientRect().bottom - vh + 12, moreBtn.getBoundingClientRect().top - top - 8);
-        var bar = h.dock ? h.dock() : null, first = moreBody.querySelector('button, input, select, textarea');
+        var over = Math.min(body.getBoundingClientRect().bottom - vh + 12, tile.getBoundingClientRect().top - top - 8);
+        var bar = h.dock ? h.dock() : null, first = body.querySelector('button:not([hidden]), input, select, textarea');
         if (bar && bar.offsetParent !== null) {
           var need = first ? first.getBoundingClientRect().bottom - vh + 12 : 0;
           over = Math.min(over, Math.max(bar.getBoundingClientRect().top - top - 4, need));
         }
-        if (over > 0) global.scrollBy({ top: over, behavior: 'smooth' });
+        if (over > 0) global.scrollBy({ top: over, behavior: still() ? 'auto' : 'smooth' });
       });
     }
-    showMore();
-    if (moreBtn) moreBtn.addEventListener('click', function () { setMore(!open); });
-    // Put away (the drawer closed, or Photo picked), More closes with it, at
-    // once: nothing of it is on the screen to fold.
+    tiles.forEach(function (t) {
+      t.addEventListener('click', function () { setDoor(open === t.dataset.dp ? null : t.dataset.dp); });
+    });
+    // Put away (the drawer closed, or Photo picked), the door closes with
+    // it, at once: nothing of it is on the screen to fold.
     if (panel && global.MutationObserver) new global.MutationObserver(function () {
       if (!panel.hidden || !(open || folding)) return;
-      clearTimeout(foldT);
-      if (moreBody) {
-        moreBody.classList.remove('mt-folding');
-        if (moreBody.getAnimations) moreBody.getAnimations().forEach(function (a) { a.cancel(); });
-      }
-      open = folding = false;
-      showMore();
+      stopFold(door[folding || open].panel);
+      open = folding = null;
+      showDoors();
     }).observe(panel, { attributes: true, attributeFilter: ['hidden'] });
+
+    /* What each door says it is set to, on its tile, and its name for a
+     * screen reader, which has Skribl's mark in words: "Length, Skribl's
+     * pick, 8 beats". Length, the loop's length, as the one line counts it
+     * (as its card says while the loop is Skribl's pick, whose mark is on the
+     * tile's picture then); Beat, the tempo and where it came from ("120 ·
+     * heard", tapped, or by hand from the loop's end), where a phone's tile
+     * has room for both, else the tempo alone as it was ("120 bpm"; the
+     * door's own line always says where it came from), or that Skribl is
+     * listening for one; Restart, Smooth or Clean cut; Exact, the loop's two
+     * times, as precisely as the tile has room for: to the hundredth, the
+     * tenth or the second, so on a phone a time past ten seconds loses its
+     * hundredths rather than its end. Each word fits a 390px phone's tile. */
+    var NAMES = { length: 'Length', beat: 'Beat', restart: 'Restart', exact: 'Exact times' };
+    var lengthSpark = $('musicLengthSpark'), tileRoom = {}, fitsMemo = {};
+    function room(tile) {
+      var w = tile.clientWidth, cs = global.getComputedStyle(tile);
+      return w - (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0);
+    }
+    // Whether `s` fits `v`'s room: measured once for each shape of words
+    // (every digit is as wide as any other) and each width of tile.
+    function fitsIn(v, s, r) {
+      var key = s.replace(/\d/g, '0') + '@' + Math.round(r);
+      if (!(key in fitsMemo)) {
+        var was = v.textContent;
+        v.textContent = s;
+        fitsMemo[key] = v.scrollWidth <= r + 0.5;
+        v.textContent = was;
+      }
+      return fitsMemo[key];
+    }
+    function timesFor(v, tile, a, b) {
+      var r = tileRoom[tile.dataset.dp] || (tileRoom[tile.dataset.dp] = room(tile)), s = '';
+      for (var d = 2; d >= 0; d--) {
+        s = a.toFixed(d) + '\u2013' + b.toFixed(d);
+        if (!(r > 0) || fitsIn(v, s, r)) break;
+      }
+      return s;
+    }
+    function tempoFor(v, tile, tp) {
+      var r = tileRoom[tile.dataset.dp] || (tileRoom[tile.dataset.dp] = room(tile)), n = bpmSays(tp);
+      var all = [n + ' \u00b7 ' + bpmFrom(tp), n + ' bpm'];
+      for (var i = 0; i < all.length; i++) if (!(r > 0) || fitsIn(v, all[i], r)) return all[i];
+      return n;
+    }
+    global.addEventListener('resize', function () { tileRoom = {}; fitsMemo = {}; });
+    function doorWords() {
+      if (!tiles.length) return;
+      var ok = h.hasTrack(), t = h.trim(), tp = tempo(), lit = lengthLit(), spark = ok && lit === 'pick';
+      if (lengthSpark && lengthSpark.hidden !== !spark) lengthSpark.hidden = !spark;
+      tiles.forEach(function (tile) {
+        var k = tile.dataset.dp, v = tile.querySelector('.dp-v'), w = '';
+        if (!v) return;
+        if (ok && k === 'length') w = spark && pickSub ? pickSub.textContent : lengthOf(loopNow(), h.crossfade(), tp);
+        else if (ok && k === 'beat') w = tp ? tempoFor(v, tile, tp) : ears ? 'Listening' : 'Tap it';
+        else if (ok && k === 'restart') w = h.crossfade() > 0 ? 'Smooth' : 'Clean cut';
+        else if (ok && k === 'exact') w = timesFor(v, tile, t.start, t.end);
+        if (v.textContent !== w) v.textContent = w;
+        // Read aloud, the beat in words rather than its dot: "120 beats a minute, heard".
+        var said = ok && k === 'beat' && tp ? bpmSays(tp) + ' beats a minute, ' + bpmFrom(tp) : w;
+        var name = NAMES[k] + (k === 'length' && spark ? ", Skribl's pick" : '') + (said ? ', ' + said : '') + (open === k ? '. Tap to close' : '');
+        if (tile.getAttribute('aria-label') !== name) tile.setAttribute('aria-label', name);
+      });
+    }
 
     // A new song: the timeline starts where it belongs, and the last song's
     // Undo and taps are not this one's.
@@ -365,7 +466,7 @@
     var locked = false, glideRaf = 0, aim = null;
     function stopGlide() { if (glideRaf) { global.cancelAnimationFrame(glideRaf); glideRaf = 0; } aim = null; }
     // The loop as it is, or where it lands while a settle glides there: what
-    // the tag and Beats go by, so neither changes its mind on the way.
+    // Skribl's pick and Beats go by, so neither changes its mind on the way.
     function loopNow() { var t = h.trim(); return aim ? { start: aim[0], end: aim[1], duration: t.duration } : t; }
     function setEdge(which, time, mode) {
       stopGlide();
@@ -434,11 +535,22 @@
      *     of the mock, "All yes"). A tapped beat is rarely on the music to the
      *     hundredth (on the mock's song, 45ms off), and zoomed in the note can
      *     be seen. Further off, a lead-in, the beat stays where it was, or
-     *     every mark would leave its drum. The tempo keeps its beats a minute;
-     *     every beat, bar and snap after counts from that start, and the end
-     *     follows as above. Tapped again, the beat is the taps' own;
+     *     every mark would leave its drum. The tempo keeps its beats a minute,
+     *     and where they came from (heard, tapped or the end's): every beat,
+     *     bar and snap after counts from that start, and the end follows as
+     *     above. Tapped again, the beat is the taps' own;
      *   the end on whole bars the same way, counted from the start wherever
-     *     it is: dragging the end never moves a start you have set.
+     *     it is: dragging the end never moves a start you have set;
+     *   magnified, THE END SETS THE TEMPO (from the Wizard's "click the end
+     *     of the first bar"; of the mock, "All yes"): an end let go within an
+     *     eighth of a beat of 4, 8, 16 or 32 beats stays, and the beat
+     *     becomes the one that makes the loop exactly that many, counted
+     *     from its start and heard to where it comes round (a smooth
+     *     restart's length before the handle). A live band or an old record
+     *     between whole tempos can be matched: tapped, a tempo is whole beats
+     *     a minute. It is by: 'end', to the thousandth, no longer the one
+     *     heard; a note says so, and its Undo puts the beat back. Further
+     *     off, it settles as above.
      * In the Restart view, a close-up (`pxPerSec`, its scale), an end let go
      * within SNAP_PX of a beat settles on it instead: the loop detail's rule,
      * which the Restart view took over. The loop slid along the song, or sent
@@ -512,12 +624,28 @@
         var s = zoomed ? t.start : first != null ? first : on;
         if (s < -EPS) s += p;
         s = Math.max(0, s);
-        if (zoomed && h.setTempo && Math.abs(t.start - on) <= p / 8) h.setTempo({ bpm: tp.bpm, phase: Math.round(s * 10000) / 10000 });
+        if (zoomed && h.setTempo && Math.abs(t.start - on) <= p / 8) {
+          var ns = copyOf(tp);
+          ns.phase = Math.round(s * 10000) / 10000;
+          h.setTempo(ns);
+        }
         k = barsFor(heard({ start: s, end: t.end }, h.crossfade()), t.duration - s);
         // No whole bars fit from that beat: the start settles alone.
         n = k ? { start: s, end: s + lenFor(k) } : T.setHandle(state, 'start', s, 'constrain');
       } else if (!pxPerSec) {
-        k = barsFor(heard(t, h.crossfade()), t.duration - t.start);
+        // The loop stays as it is, so the room it needs is already there.
+        var hz = heard(t, h.crossfade()), kz = 0;
+        if (zoomed && h.setTempo) BARS.forEach(function (c) { if (Math.abs(hz - c * p) <= p / 8) kz = c; });
+        var bpm = kz ? Math.round(60 * kz / hz * 1000) / 1000 : 0;
+        if (kz && Math.abs(hz - kz * p) > EPS && bpm >= 30 && bpm <= 300) {
+          var nt = copyOf(tp);
+          nt.bpm = bpm; nt.phase = t.start; nt.by = 'end'; delete nt.heard;
+          h.setTempo(nt);
+          h.refresh();
+          endSaid(tp, nt, kz);
+          return;
+        }
+        k = barsFor(hz, t.duration - t.start);
         if (!k) return;
         n = T.setHandle(state, 'end', t.start + lenFor(k), 'constrain');
       } else {
@@ -529,6 +657,22 @@
       }
       if (near(n.start, t.start) && near(n.end, t.end)) return;
       glideTo(n.start, n.end);
+    }
+    // What the end's tempo says, and the way back: Undo puts the beat back as
+    // it was (heard, tapped or an end's), the end staying where it was let
+    // go, unless the beat has changed again since.
+    function endSaid(was, now, k) {
+      if (!h.say) return;
+      h.say('The beat fits your loop now: ' + bpmSays(now) + ' a minute, ' + k + ' beats.', {
+        label: 'Undo',
+        onClick: function () {
+          var cur = tempo();
+          if (!cur || cur.bpm !== now.bpm || cur.phase !== now.phase) return;
+          h.setTempo(was);
+          h.refresh();
+          h.changed();
+        }
+      });
     }
     // Where a loop of `len` starting near `start` starts on a beat: the
     // nearest beat, or at either end of the song the one on the side there is
@@ -567,12 +711,16 @@
         var t = h.trim(), len = t.end - t.start, s0 = beatFor(Math.max(0, Math.min(t.duration - len, start)), len);
         glideTo(s0, s0 + len);
       },
-      letGo: function (kind, which, zoomed) { if (kind === 'end') snap(which, 0, zoomed); else onBeat(); h.changed(); }
+      letGo: function (kind, which, zoomed) { if (kind === 'end') snap(which, 0, zoomed); else onBeat(); h.changed(); },
+      // The taller box keeps Hear the loop where the thumb is, and the
+      // timeline's top under the header.
+      anchor: function () { return $('previewLoopBtn'); },
+      ceiling: function () { return headerFoot(); }
     }) : null;
 
-    /* ---- The Restart view (lib/musicrestart.js), in More: the end beside the
-     * start. Its sides move the ends as the loop detail's handles did, and
-     * its dot is the smooth restart's length. ------------------------------ */
+    /* ---- The Restart view (lib/musicrestart.js), in the Restart door: the
+     * end beside the start. Its sides move the ends as the loop detail's
+     * handles did, and its dot is the smooth restart's length. ------------ */
     var rv = global.SkriblMusicRestart ? global.SkriblMusicRestart.create($('musicRestart'), {
       trim: h.trim, buffer: h.buffer, hasTrack: h.hasTrack, crossfade: h.crossfade, tempo: tempo,
       cut: cutNow,
@@ -650,16 +798,18 @@
           x.beginPath(); x.arc(X(tp.phase + kb * p), 8, bar ? 2.6 : 1.8, 0, 7); x.fill();
         }
       }
-      // The two ends, each with its tab at the foot, as the timeline's.
+      // The two ends, each with its tab at the foot, as the timeline's: the
+      // line as sharp as its (SkriblMusicTimeline.edge), on the canvas's pixels.
       x.globalAlpha = 1; x.fillStyle = acc;
-      [t.start, t.end].forEach(function (s) {
-        var xx = Math.round(X(s));
-        x.fillRect(xx - 1, 0, 2, hh);
-        rr(xx - 7, hh - 10, 14, 10, 4); x.fill();
+      var edges = [t.start, t.end].map(function (s) {
+        var ln = MT && MT.edge ? MT.edge(X(s), dpr, 0) : [Math.round(X(s)) - 1, 2], mid = ln[0] + ln[1] / 2;
+        x.fillRect(ln[0], 0, ln[1], hh);
+        rr(mid - 7, hh - 10, 14, 10, 4); x.fill();
+        return ln;
       });
       x.restore();
       // What is painted, for whoever asks (the harness): the framing, the ends, the words.
-      follow._painted = { view: [v0, span], start: X(t.start), end: X(t.end), width: w, words: fwWords ? fwWords.textContent : '' };
+      follow._painted = { view: [v0, span], start: X(t.start), end: X(t.end), edges: edges, width: w, words: fwWords ? fwWords.textContent : '' };
       return easing;
     }
     function fwStep(now) {
@@ -871,7 +1021,7 @@
     }
     // Heard: the loop glides to the pick with ears, and the beat is the one
     // heard, if nothing changed meanwhile. A loop moved or a beat tapped, and
-    // the pick is left as it is (Back to Skribl's pick goes to the heard one).
+    // the pick is left as it is (the way back goes to the heard one).
     function heardIt() {
       var tp = tempo(), p = pickedNew && isPick(pickedNew) && !(tp && !tp.heard) ? pickNow() : null;
       if (p && p.tempo) {
@@ -888,35 +1038,95 @@
     function forgetUndo() { undo = null; clearTimeout(undoT); }
     // Any change made here to the loop: an Undo of the way back is stale, and
     // a settle still gliding would undo the change.
-    function touched() { stopGlide(); if (undo) { forgetUndo(); syncPick(); } retime(); }
-    /* ---- The one line: "4.00s · 8 beats · fits your drawing", then Skribl's
-     * pick, or the way back to it. What is heard each time round, to the
-     * hundredth; the beats once there is a tempo; against the drawing once
-     * there is one. A loop that was the pick and is not now, because the
-     * drawing changed, says only that: shorter or longer than the drawing,
-     * and the way back. Nobody is told they did something. `secs`: the
-     * drawing's length when the caller has it (sync, below). */
-    var pickLine = $('musicPickLine'), pickText = $('musicPickText'), pickTag = $('musicPickTag');
-    var back = $('musicBackPick'), undoBtn = $('musicPickUndo');
+    function touched() { stopGlide(); if (undo) { forgetUndo(); syncLength(); } retime(); }
+    /* ---- The one line: "4.00s · 8 beats · fits your drawing". What is heard
+     * each time round, to the hundredth; the beats once there is a tempo;
+     * against the drawing once there is one. A loop that was the pick and is
+     * not now, because the drawing changed, says only that: shorter or longer
+     * than the drawing, and the Length door has the way back. Nobody is told
+     * they did something. `secs`: the drawing's length. */
+    var pickLine = $('musicPickLine'), pickText = $('musicPickText');
     function against(len, secs) {
       if (!(secs > 0)) return '';
       if (near(len, secs)) return 'fits your ' + work;
       return (len < secs ? 'shorter' : 'longer') + ' than your ' + work;
     }
-    function syncPick(secs) {
+    function syncLine(secs) {
       if (!pickLine) return;
       pickLine.hidden = !h.hasTrack();
       if (pickLine.hidden) return;
-      if (secs == null) secs = h.drawingSeconds();
-      var len = heard(h.trim(), h.crossfade()), p = beatSecs();
-      var rest = [p > 0 ? beatWords(len / p) : '', against(len, secs)].filter(Boolean);
-      var html = '<b>' + len.toFixed(2) + 's</b>' + (rest.length ? ' · ' + rest.join(' · ') : ' loop');
+      var len = heard(h.trim(), h.crossfade()), p = beatSecs(), beats = p > 0 ? beatWords(len / p) : '', vs = against(len, secs);
+      // what it is against the drawing in a span of its own: on a narrow
+      // phone it takes its own row, whatever it says (styles.css)
+      var html = '<b>' + len.toFixed(2) + 's</b>' + (beats ? ' · ' + beats : '')
+        + (vs ? '<span class="mt-pick-vs"><span class="mt-pick-sep"> · </span>' + vs + '</span>' : beats ? '' : ' loop');
       if (pickText && pickText._html !== html) { pickText.innerHTML = html; pickText._html = html; }
-      // While a song brought back is heard again, neither: until then the
-      // pick is the one without ears.
-      var mine = !isPick(pickNow(secs)) && !isPick(beatsPick), hold = !!ears && !pickedNew;
-      if (pickTag) pickTag.hidden = mine || hold;
-      if (back) back.hidden = !mine || !!undo || hold;
+    }
+
+    /* ---- LENGTH: Skribl's pick, Fit my drawing and Whole song. ------------
+     * The draw drawer's three choices in the Length door, the one the loop is
+     * lit, as the door's tile says. Where two are the same loop (the Pad's
+     * pick without ears is as long as the drawing, a short song's is the
+     * whole song) the one pressed last is lit, so a press always answers;
+     * otherwise Skribl's pick before Fit before Whole song. One is lit at a
+     * time, and the one line says the rest. Each says what it makes:
+     * the pick its length, in beats when the beat is Skribl's, and lit, the
+     * loop's own (a count tapped on Beats is Skribl's pick for that many
+     * beats); Fit the drawing's; Whole song the song's, or its first 20s.
+     * While a song a draft brought back is heard again, the pick waits,
+     * listening: until then it is the one without ears.
+     * Fit my drawing: what is heard as long as the drawing, its start kept
+     * unless that would run it past the song's end (it was Match Drawing
+     * Time). Whole song: the song from its top, or the longest loop there is
+     * when the song is longer than that. */
+    var pickCard = $('musicPickCard'), pickSub = $('musicPickSub'), undoBtn = $('musicPickUndo');
+    var fit = $('matchDrawingBtn'), fitSub = $('musicFitSub');
+    var whole = $('musicWholeBtn'), wholeName = $('musicWholeName'), wholeSub = $('musicWholeSub');
+    // `chosen`: the card pressed last, lit while it is still the loop, for
+    // the song it was pressed on.
+    var litNow = null, chosen = null, chosenFor = null;
+    function lengthLit() { return litNow; }
+    function choose(k) { chosen = k; chosenFor = h.buffer ? h.buffer() : null; }
+    // A loop's length heard, in beats of `tp`, or in seconds.
+    function lengthOf(t, ms, tp) {
+      var len = heard(t, ms);
+      return tp && tp.bpm > 0 ? beatWords(len * tp.bpm / 60) : says(len) + 's';
+    }
+    function lit(el, on) {
+      if (!el) return;
+      if (el.classList.contains('active') !== on) el.classList.toggle('active', on);
+      el.setAttribute('aria-pressed', String(on));
+    }
+    function syncLength(secs) {
+      var t = h.trim(), ok = h.hasTrack(), d = t.duration, ms = h.crossfade();
+      if (secs == null) secs = ok ? h.drawingSeconds() : 0;
+      syncLine(secs);
+      var longest = Math.min(d, T.MAX_LOOP_SECONDS), P = ok ? pickNow(secs) : null, hold = !!ears && !pickedNew;
+      var is = { pick: !hold && (isPick(P) || isPick(beatsPick)), fit: secs > 0 && near(heard(t, ms), secs),
+                 whole: near(t.start, 0) && near(t.end, longest) };
+      var c = chosen && chosenFor === (h.buffer ? h.buffer() : null) ? chosen : null;
+      litNow = !ok ? null : c && is[c] ? c
+        : is.pick ? 'pick' : is.fit ? 'fit' : is.whole ? 'whole' : null;
+      if (pickCard) {
+        pickCard.disabled = !ok || hold || !P;
+        lit(pickCard, litNow === 'pick');
+        var tp = tempo(), w = !ok ? '' : hold ? 'Listening\u2026'
+          : litNow === 'pick' ? lengthOf(loopNow(), ms, tp && tp.heard ? tp : null)
+          : P ? lengthOf(P, P.ms, P.tempo || null) : '';
+        if (pickSub && pickSub.textContent !== w) pickSub.textContent = w;
+      }
+      if (fit) {
+        fit.disabled = !ok || !(secs > 0);
+        lit(fit, litNow === 'fit');
+        if (fitSub) fitSub.textContent = secs > 0 ? says(secs) + 's' : "once you've drawn";
+      }
+      if (whole) {
+        whole.disabled = !ok;
+        lit(whole, litNow === 'whole');
+        var all = ok && d <= T.MAX_LOOP_SECONDS + EPS;
+        if (wholeName) wholeName.textContent = all || !ok ? 'Whole song' : 'Longest loop';
+        if (wholeSub) wholeSub.textContent = !ok ? '' : all ? says(d) + 's' : 'the first ' + says(longest) + 's';
+      }
       if (undoBtn) undoBtn.hidden = !undo;
     }
     // The loop as Undo puts it back, and what a change that offers Undo
@@ -928,20 +1138,27 @@
     function remember(was) {
       undo = was;
       clearTimeout(undoT);
-      undoT = setTimeout(function () { undo = null; syncPick(); }, UNDO_MS);
+      undoT = setTimeout(function () { undo = null; syncLength(); }, UNDO_MS);
       sync();
     }
-    if (back) back.addEventListener('click', function () {
+    // The way back: Skribl's pick, tapped while the loop is not it. The card
+    // stays where it is, and the Undo shows under the beats.
+    if (pickCard) pickCard.addEventListener('click', function () {
+      if (pickCard.disabled || litNow === 'pick') return;
       var was = state(), p = h.hasTrack() ? pickNow() : null;
       if (!p) return;
+      choose('pick');
+      // the loop is the pick already (pressed after Whole song on a short
+      // song): it lights, and there is nothing to undo
+      if (isPick(p) || isPick(beatsPick)) { sync(); return; }
       setPick(p);
       remember(was);
-      if (undoBtn) undoBtn.focus();   // where the button was: focus is not lost
     });
     if (undoBtn) undoBtn.addEventListener('click', function () {
       if (!undo) return;
       var u = undo, was = h.crossfade();
       forgetUndo();
+      chosen = null;
       stopGlide();
       h.setTrim(u.start, u.end);
       setFade(u.ms);
@@ -951,15 +1168,10 @@
       h.changed();
       if (was !== u.ms) rejoin();
       sync();
-      if (back && !back.hidden) back.focus();
+      // The Undo goes as it is used: focus is not lost, it goes to the way back.
+      if (pickCard && !pickCard.disabled) pickCard.focus();
     });
 
-    /* ---- Fit my drawing and Whole song. -----------------------------------
-     * Fit my drawing: what is heard as long as the drawing, its start kept
-     * unless that would run it past the song's end (it was Match Drawing
-     * Time). Whole song: the song from its top, or the longest loop there is
-     * when the song is longer than that. Each wears the one tint while the
-     * loop is what it makes. */
     function matchDrawing() {
       var secs = h.drawingSeconds();
       if (!h.hasTrack() || !(secs > 0)) return false;
@@ -971,32 +1183,15 @@
       h.changed();
       return true;
     }
-    var fit = $('matchDrawingBtn'), fitSub = $('musicFitSub');
-    var whole = $('musicWholeBtn'), wholeName = $('musicWholeName'), wholeSub = $('musicWholeSub');
-    if (fit) fit.addEventListener('click', matchDrawing);
+    if (fit) fit.addEventListener('click', function () { if (matchDrawing()) { choose('fit'); sync(); } });
     if (whole) whole.addEventListener('click', function () {
       if (!h.hasTrack()) return;
+      choose('whole');
       h.setTrim(0, Math.min(h.trim().duration, T.MAX_LOOP_SECONDS));
       touched();
       h.refresh();
       h.changed();
     });
-    function syncPicks(secs) {
-      var t = h.trim(), ok = h.hasTrack(), d = t.duration;
-      var longest = Math.min(d, T.MAX_LOOP_SECONDS);
-      if (fit) {
-        fit.disabled = !ok || !(secs > 0);
-        setOn(fit, ok && secs > 0 && near(heard(t, h.crossfade()), secs), 'aria-pressed');
-        if (fitSub) fitSub.textContent = secs > 0 ? says(secs) + 's' : "once you've drawn";
-      }
-      if (whole) {
-        whole.disabled = !ok;
-        setOn(whole, ok && near(t.start, 0) && near(t.end, longest), 'aria-pressed');
-        var all = ok && d <= T.MAX_LOOP_SECONDS + EPS;
-        if (wholeName) wholeName.textContent = all || !ok ? 'Whole song' : 'Longest loop';
-        if (wholeSub) wholeSub.textContent = !ok ? '' : all ? says(d) + 's' : 'the first ' + says(longest) + 's';
-      }
-    }
 
     /* ---- Hear the loop and Test Seam. --------------------------------------
      * Hear the loop (Preview Loop) plays the posted clip on the gapless
@@ -1005,6 +1200,10 @@
      * loops by hand. */
     var previewBtn = $('previewLoopBtn'), seamBtn = $('testSeamBtn');
     var pv = { on: false, mode: null, engine: null, el: null, tick: null, backstop: null };
+    // The click and the lit beat (below): whether it clicks, the beats already
+    // sent (by the audio clock's millisecond), and the last half second of
+    // beats set, each with its tick and its light.
+    var clickBtn = $('musicClickBtn'), clickOn = false, beatDone = {}, beatClip = null, beatsSet = [];
     // Where the song is, on the timeline and in the Restart view.
     function showAt(song) {
       if (!(h.trim().duration > 0)) return;
@@ -1030,6 +1229,10 @@
         if (global.SkriblAudioSession) global.SkriblAudioSession.release();
       }
       pv.mode = pv.engine = null;
+      beatsOff();
+      beatsSet = [];
+      pv.from = null;
+      beatDone = {};
       if (tl) tl.playhead(null);
       if (rv) rv.playhead(null);
       syncHear();
@@ -1053,6 +1256,7 @@
         previewBtn.disabled = !h.hasTrack();
       }
       if (seamBtn) seamBtn.textContent = pv.on && pv.mode === 'seam' ? 'Stop' : 'Hear the restart';
+      syncClick();
       syncPlay(secs);
     }
     // An end moved while the loop plays: the new loop starts where this one
@@ -1066,7 +1270,7 @@
       clearTimeout(retimeT);
       retimeT = setTimeout(function () {
         retimeT = null;
-        if (pv.on && pv.mode === 'loop' && pv.engine === 'wa') h.loop.start(function () { if (pv.on) loopNative(); }, 0);
+        if (pv.on && pv.mode === 'loop' && pv.engine === 'wa') { h.loop.start(function () { if (pv.on) loopNative(); }, 0); beatsAgain(0); }
       }, Math.max(0, (dur - h.loop.elapsed()) * 1000 - 10));
     }
     function baked() { return h.buffer() ? h.clip() : null; }
@@ -1112,7 +1316,8 @@
       };
       if (h.loop.start(fallback, offset || 0)) {
         pv.engine = 'wa';
-        every(function () { if (h.loop.playing()) showAt(h.trim().start + h.loop.elapsed()); });
+        every(function () { if (h.loop.playing()) { showAt(h.trim().start + h.loop.elapsed()); beats(); } });
+        beatsAgain(offset);
         return;
       }
       fallback();
@@ -1154,6 +1359,136 @@
     if (seamBtn) seamBtn.addEventListener('click', function () {
       if (pv.on && pv.mode === 'seam') stopPreview(); else startSeam();
     });
+
+    /* ---- The click, and the beat lit as it is heard (the owner's picks in
+     * the whole-drawer mock, FUTURE.md 6s). The click: a soft tick on each
+     * beat while Hear the loop plays, in one pill with it (a third button in
+     * the pair pushed "Play with my drawing" out of its own on a phone), off
+     * at first and never in a post or a file: its own sound, straight to the
+     * speakers. Each beat's dot on the timeline lights as it reaches the ear,
+     * bigger on a bar, the click on or off. Both keep the loop's own audio
+     * clock, so they never drift from it: every 30ms (the playhead's tick),
+     * the beats due in the next 160ms of what plays, each tick set to the
+     * sample and each light to when it is heard (the context's own record of
+     * what the speakers play, or the clock less the time the sound takes to
+     * reach the ear). A bar is every four beats from the loop's start, as the
+     * timeline draws them. The loop's first beat falls in the moment the
+     * engine starts ahead of its sound (lib/audioloop.js LEAD), and it waits
+     * for the music: it ticks as the music starts, not 30ms before it (the
+     * drawer works out when that is: where the start began in the clip, its
+     * top by the loop's clock, and LEAD, kept for the harness on the click
+     * as _soundFrom). What
+     * is set ahead is called off when the loop stops or starts again, and the
+     * ticks when the click goes off, so nothing sounds or lights for a loop
+     * no longer playing; and no beat is set within a tenth of a second of the
+     * last, so a loop started again just after it came round (its timer late)
+     * does not tick its first beat twice. On the gapless engine only: the
+     * fallbacks have no clock to keep. */
+    function syncClick() {
+      if (!clickBtn) return;
+      var can = h.hasTrack() && !!tempo();
+      if (clickBtn.disabled !== !can) clickBtn.disabled = !can;
+      var on = String(clickOn);
+      if (clickBtn.getAttribute('aria-pressed') !== on) clickBtn.setAttribute('aria-pressed', on);
+    }
+    if (clickBtn) clickBtn.addEventListener('click', function () {
+      clickOn = !clickOn;
+      var c = h.loop.ctx ? h.loop.ctx() : null;
+      if (!clickOn) beatsOff(true);
+      // On while the loop plays: the beats already set ahead (lit, not yet
+      // ticked) tick too, so the click starts on the very next beat.
+      else if (c && c.state === 'running') beatsSet.forEach(function (x) { if (!x.tick && x.when > c.currentTime + 0.005) x.tick = tick(c, x.when, x.bar); });
+      syncClick();
+      if (c && c.state === 'suspended' && c.resume) { try { c.resume(); } catch (e) {} }
+    });
+    // One tick, at `at` on the audio clock: a short sine, higher on a bar.
+    function tick(c, at, bar) {
+      try {
+        var o = c.createOscillator(), g = c.createGain();
+        o.type = 'sine';
+        o.frequency.setValueAtTime(bar ? 1568 : 1175, at);
+        g.gain.setValueAtTime(0.0001, at);
+        g.gain.exponentialRampToValueAtTime(bar ? 0.3 : 0.2, at + 0.002);
+        g.gain.exponentialRampToValueAtTime(0.0001, at + 0.055);
+        o.connect(g); g.connect(c.destination);
+        o.start(at); o.stop(at + 0.07);
+        return { o: o, g: g, at: at };
+      } catch (e) { return null; }
+    }
+    // The beats set ahead, called off (their lights kept when only the click
+    // went off); one already sounding stands.
+    function beatsOff(keepLights) {
+      var c = h.loop.ctx ? h.loop.ctx() : null, now = c ? c.currentTime : 0;
+      beatsSet = beatsSet.filter(function (x) {
+        if (x.when <= now) return true;
+        if (x.tick) { try { x.tick.g.disconnect(); x.tick.o.stop(0); } catch (e) {} x.tick = null; }
+        if (!keepLights && x.lit) { clearTimeout(x.lit); x.lit = null; }
+        return !!x.lit;
+      });
+    }
+    // The loop started, or started again `off` seconds into the clip: what
+    // was set ahead was for the loop before, and the first beat may be due
+    // as its sound begins.
+    function beatsAgain(off) { beatsOff(); beatDone = {}; beatClip = null; pv.from = null; pv.off = off || 0; beats(); }
+    function beats() {
+      var c = h.loop.ctx ? h.loop.ctx() : null, tp = tempo();
+      if (!pv.on || pv.mode !== 'loop' || pv.engine !== 'wa' || !c || c.state !== 'running' || !tp || !h.loop.playing()) return;
+      var dur = h.loop.duration ? h.loop.duration() : 0;
+      if (!(dur > 0)) return;
+      // What plays starts where Cut on silence moved the loop's start to:
+      // worked out once for each loop, not each tick.
+      var t = h.trim(), key = t.start + '|' + t.end + '|' + h.crossfade() + '|' + !!(h.cut && h.cut());
+      if (!beatClip || beatClip.key !== key) beatClip = { key: key, start: t.start + cutNow() };
+      var p = 60 / tp.bpm, clip0 = beatClip.start, now = c.currentTime, base = now - h.loop.elapsed();
+      var lead = (global.SkriblAudioLoop && global.SkriblAudioLoop.LEAD) || 0.03;
+      if (pv.from == null) pv.from = base + (pv.off || 0) + lead;      // this start's sound began
+      var s0 = pv.from;
+      if (clickBtn) clickBtn._soundFrom = s0;
+      var k0 = Math.round((t.start - tp.phase) / p), k1 = Math.ceil((clip0 - tp.phase) / p - 1e-6);
+      beatsSet = beatsSet.filter(function (x) { return x.when > now - 0.5; });
+      var last = beatsSet.length ? beatsSet[beatsSet.length - 1].when : -1;
+      for (var pass = 0; pass < 2; pass++) {
+        for (var k = k1; k < k1 + 4096; k++) {
+          var u = tp.phase + k * p - clip0;
+          if (u >= dur - 1e-4) break;
+          var at = base + pass * dur + u, when = at;
+          // The first beat, set as the music starts: only while it is still
+          // to start (it is long past, and forgotten, later in the pass).
+          if (at < s0 && at > s0 - lead - 0.004) { if (now > s0 + 0.004) continue; when = Math.max(s0, now); }
+          if (when < now - 0.004 || when > now + 0.16 || when - last < 0.1) continue;
+          var id = Math.round(at * 1000);
+          if (beatDone[id] || beatDone[id - 1] || beatDone[id + 1]) continue;
+          beatDone[id] = 1;
+          var bar = ((k - k0) % 4 + 4) % 4 === 0, set = { when: when, bar: bar, tick: null, lit: null };
+          if (clickOn) set.tick = tick(c, when, bar);
+          if (tl && tl.pulse) light(set, tp.phase + k * p, bar, heardIn(c, when, now));
+          beatsSet.push(set); last = when;
+        }
+      }
+      var old = Math.round((now - 2) * 1000);
+      for (var kk in beatDone) if (+kk < old) delete beatDone[kk];
+    }
+    // How long until `at` on the audio clock reaches the ear, in ms: from the
+    // context's record of what its speakers play now, else the clock less the
+    // time the sound takes to reach the ear.
+    function heardIn(c, at, now) {
+      var ts = c.getOutputTimestamp ? c.getOutputTimestamp() : null, perf = global.performance;
+      if (ts && ts.contextTime > 0 && ts.performanceTime > 0 && perf) return Math.max(0, ts.performanceTime + (at - ts.contextTime) * 1000 - perf.now());
+      return Math.max(0, (at + (h.loop.latency ? h.loop.latency() : 0) - now) * 1000);
+    }
+    // A beat's light, `ms` from now: asked again as it comes due, from what
+    // the speakers play then (twice at most), so a first guess made as the
+    // sound began, before the context's record of it settled, is not early.
+    function light(x, song, bar, ms) {
+      var tries = 0;
+      x.lit = setTimeout(function due() {
+        if (!(pv.on && pv.mode === 'loop')) return;
+        var c = h.loop.ctx ? h.loop.ctx() : null, left = c ? heardIn(c, x.when, c.currentTime) : 0;
+        if (left > 3 && tries++ < 2) { x.lit = setTimeout(due, left); return; }
+        x.lit = null;
+        tl.pulse(song, bar);
+      }, ms);
+    }
 
     /* ---- Play with my drawing. ---------------------------------------------
      * The editor's own Play, so the drawing replays with its music exactly as
@@ -1250,7 +1585,8 @@
       sync();
     }
     // Every line here is two lines at most on a phone, as tall as the tap
-    // itself: the tap stays put under a finger while its words change.
+    // itself: the tap stays put under a finger while its words change. The
+    // dot holds on to the word before it, so no line starts with one.
     function syncTap() {
       if (!tapBtn) return;
       var listening = !!tapT, tp = tempo(), m = beatOf(taps);
@@ -1260,8 +1596,9 @@
       if (!tempoLine) return;
       var html = listening
         ? (taps.length >= 2 && m > 0 ? taps.length + ' taps, about <b>' + Math.round(60 / m) + '</b> a minute' : 'Keep tapping along with the beat.')
-        : tapNote || (tp ? '<b>' + Math.round(tp.bpm) + ' beats a minute</b>'
-            + (tp.heard ? ', heard by Skribl \u00b7 tap to change it' : ' \u00b7 tap again to change it')
+        : tapNote || (tp ? '<b>' + bpmSays(tp) + ' beats a minute</b>'
+            + (tp.by === 'end' ? ', set by the loop\u2019s end\u00a0\u00b7 tap to change it'
+              : tp.heard ? ', heard by Skribl\u00a0\u00b7 tap to change it' : '\u00a0\u00b7 tap again to change it')
           : ears ? 'Listening for the beat\u2026'
           : earsHeard === false ? 'Skribl didn\u2019t hear a steady beat. Tap along with the music to count one.'
           : 'Tap along with the music to count its beats.');
@@ -1284,10 +1621,11 @@
 
     /* ---- Beats: how many beats the loop is (the owner: "There should be
      * ways to have skribl pick 4 or 8 16 32"; of the mock, "All yes if it's
-     * intuitive"). Under the one line once there is a beat, heard or tapped:
-     * of 4, 8, 16 and 32, the counts the 20s cap and the song have room for,
-     * the loop's own lit, none while it is not whole bars. A count tapped
-     * while the loop is Skribl's (the tag), with ears, is Skribl's pick for
+     * intuitive"). In the Length door, under its three choices, once there
+     * is a beat, heard or tapped: of 4, 8, 16 and 32, the counts the 20s cap
+     * and the song have room for, the loop's own lit, none while it is not
+     * whole bars. A count tapped while the loop is Skribl's (its card lit),
+     * with ears, is Skribl's pick for
      * that many beats where the loop is: the smoothest stretch inside it
      * when shorter, around it when longer, starting on a bar, and the start
      * kept when it is as good. (Picked from the whole song, 8 beats of a
@@ -1331,6 +1669,7 @@
         if (h.setTempo) h.setTempo(P.tempo);
         s = P.start; e = P.end;
         beatsPick = { start: s, end: e, ms: P.ms };
+        choose('pick');
       } else {
         var p = beatSecs(), len = lenFor(c);
         s = t.start;
@@ -1355,9 +1694,9 @@
     if (snapSw) snapSw.addEventListener('click', function () {
       var tp = tempo();
       if (!tp || !h.setTempo) return;
-      var n = { bpm: tp.bpm, phase: tp.phase };
-      if (tp.snap !== false) n.snap = false;
-      if (tp.heard) n.heard = true;
+      // Where the beat came from goes with it, heard or set by the end.
+      var n = copyOf(tp);
+      if (tp.snap !== false) n.snap = false; else delete n.snap;
       h.setTempo(n);
       h.changed();
       sync();
@@ -1389,7 +1728,7 @@
       retimeT = null;
       if (pv.on) {
         if (pv.mode === 'seam') startSeam();
-        else if (pv.engine === 'wa' && h.loop.playing()) h.loop.start(function () { if (pv.on) loopNative(); }, h.loop.elapsed());
+        else if (pv.engine === 'wa' && h.loop.playing()) { var at = h.loop.elapsed(); h.loop.start(function () { if (pv.on) loopNative(); }, at); beatsAgain(at); }
         else startLoop(0);
       } else if (h.loop.playing()) h.loop.start(null, h.loop.elapsed());
     }
@@ -1482,8 +1821,9 @@
       // back with a beat Skribl heard is heard again, quietly: its loop and
       // its beat stay as kept (heardIt moves only a new song's pick), and
       // Skribl's pick, the way back to it and Beats know the heard pick
-      // again. Not heard again, the pick itself said "Back to Skribl's pick",
-      // and that went to the song's first 20 seconds, 40.8 beats from 0:00.
+      // again. Not heard again, the pick itself offered the way back
+      // ("Back to Skribl's pick", then), and that went to the song's first
+      // 20 seconds, 40.8 beats from 0:00.
       if (!h.hasTrack()) { if (earsFor || pickedNew) forgetEars(); }
       else if (h.buffer) {
         var buf = h.buffer(), kept = tempo();
@@ -1496,14 +1836,14 @@
       syncTimes(false);
       syncSteps();
       syncLock();
-      syncPicks(secs);
-      syncPick(secs);
+      syncLength(secs);
       syncBeats();
       syncHear(secs);
       syncTap();
       syncSnap();
       syncCut();
       syncRvHint();
+      doorWords();
       if (tl) tl.draw();
       if (rv) rv.draw();
       fwPlace();
@@ -1516,7 +1856,7 @@
       // Play's music: where the song is (song seconds), or null to hide it.
       playhead: function (t) { if (t == null) { if (tl) tl.playhead(null); if (rv) rv.playhead(null); } else showAt(t); },
       previewing: function () { return pv.on; },
-      more: function () { return open; },
+      door: function () { return open; },
       tempo: tempo
     };
   }

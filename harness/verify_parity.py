@@ -88,7 +88,7 @@ CONTROLS = [
     ("music timeline",     "#musicTlCanvas",   "#musicTlCanvas",  ""),
     ("music loop start",   "#tlStart",         "#tlStart",        ""),
     ("music loop end",     "#tlEnd",           "#tlEnd",          ""),
-    ("music drawer's More", "#fineTuneToggle", "#fineTuneToggle", ""),
+    ("music drawer's doors", "#musicDoors",    "#musicDoors",     ""),
     # --- canvas / system --------------------------------------------------
     ("canvas size control", "#canvasSeg",      "#canvasSeg",      ""),
     ("first-use hints",    "#hintSeg",         "#hintSeg",        ""),
@@ -932,10 +932,10 @@ with sync_playwright() as p:
           pad.evaluate(painted) and flip.evaluate(painted),
           f"pad={pad.evaluate(painted)}, flip={flip.evaluate(painted)}")
 
-    disclose = """() => { document.getElementById('fineTuneToggle').click(); return true; }"""
+    disclose = """() => { document.querySelector('#musicDoors .dp-tile[data-dp="restart"]').click(); return true; }"""
     pad.evaluate(disclose); flip.evaluate(disclose)
     pad.wait_for_timeout(500); flip.wait_for_timeout(500)
-    check("More opens the Restart view on both",
+    check("the Restart door opens the Restart view on both",
           pad.evaluate(vis, "musicRvCanvas") and flip.evaluate(vis, "musicRvCanvas"),
           f"pad={pad.evaluate(vis, 'musicRvCanvas')}, "
           f"flip={flip.evaluate(vis, 'musicRvCanvas')}")
@@ -1557,18 +1557,18 @@ with sync_playwright() as p:
                       and ((_g["below"] <= 1 and _g["endPainted"]) or _g["dockClear"] <= 8),
                       f"before {_before}, after {_g}")
                 if _k == "music":
-                    # More is not this growth. Its own nudge brings what it opens on screen (its
-                    # first control, Smooth restart, at the least: with the timeline the Restart
-                    # view under it no longer fits a phone with the bar under the header), and
-                    # the follower must not chase the card's end past it: showing More's body
-                    # moves the follower's baseline. A break of that turned nothing above red,
-                    # so this is what pins it.
-                    _q.click("#fineTuneToggle"); waits.settle(_q, 1800)
+                    # A door is not this growth. Its own nudge brings what it opens on screen
+                    # (the Restart door's first control, Smooth restart, at the least: with the
+                    # timeline above it the Restart view under it does not fit a phone with the
+                    # bar under the header), and the follower must not chase the card's end past
+                    # it: a door opening moves the follower's baseline. A break of that turned
+                    # nothing above red, so this is what pins it.
+                    _q.click('#musicDoors .dp-tile[data-dp="restart"]'); waits.settle(_q, 1800)
                     _ft = _q.evaluate("""() => { const z = document.getElementById('musicSmooth'), c = document.getElementById('mediaCard');
                         const vh = window.visualViewport ? window.visualViewport.height : innerHeight;
                         return { first: Math.round(z.getBoundingClientRect().bottom - vh),
                                  end: Math.round(c.getBoundingClientRect().bottom - vh) }; }""")
-                    check(f"{_route} at {_w}x{_h}: ...and More keeps its own nudge: its first control comes on "
+                    check(f"{_route} at {_w}x{_h}: ...and a door keeps its own nudge: its first control comes on "
                           "screen and the page does not chase the card's end", _ft["first"] <= 0 and _ft["end"] > 40, str(_ft))
                 _gc.close()
 
@@ -1600,8 +1600,8 @@ with sync_playwright() as p:
     # after any growth and fought whoever scrolled on in that time: a song
     # added and the page scrolled on to its end came straight back to the cap,
     # three runs of three, and verify_ux's end-of-Music check went red with it
-    # whenever its scroll landed inside that window. A song, Fine-tune open, the
-    # growth's own glide let land, then the end -- inside the window, where the
+    # whenever its scroll landed inside that window. A song, the Restart door open,
+    # the growth's own glide let land, then the end -- inside the window, where the
     # last take-back is still to come -- and the page must stay there.
     _gc = b.new_context(viewport={"width": 390, "height": 664}, is_mobile=True, has_touch=True)
     _q = _gc.new_page()
@@ -1611,7 +1611,7 @@ with sync_playwright() as p:
     _q.set_input_files("#musicInput", {"name": "t.wav", "mimeType": "audio/wav", "buffer": wav_bytes(3, 22050)})
     _q.wait_for_function("() => document.getElementById('musicUploadBtn').classList.contains('loaded')", timeout=15000)
     _q.wait_for_timeout(350)
-    _q.click("#fineTuneToggle"); _q.wait_for_timeout(250)
+    _q.click('#musicDoors .dp-tile[data-dp="restart"]'); _q.wait_for_timeout(250)
     _end = _q.evaluate("() => { window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'instant' }); return Math.round(scrollY); }")
     _q.wait_for_timeout(1400)
     _kept = _q.evaluate("() => Math.round(scrollY)")

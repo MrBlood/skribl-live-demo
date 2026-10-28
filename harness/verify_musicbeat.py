@@ -5,9 +5,14 @@ the loop, so I'm not at 7 or 9 when I want 8"; "All yes" to the mock; then
 "we only ever want 4,8,16,... beats").
 
   THE PAIR. Play with my drawing and Hear the loop sit under the timeline in
-  the same place whether More is open or not, the same size, and More has no
-  second Hear. Hear the loop plays the music alone, round and round,
+  the same place whichever door is open, or none, the same size, and no door
+  has a second Hear. Hear the loop plays the music alone, round and round,
   until Stop; an end moved while it plays is heard from its next time round.
+
+  THE CLICK AND THE LIT BEAT are verify_musicclick's, and ZOOMED IN, THE
+  START and THE END SETTING THE TEMPO verify_musictempo's: with the click
+  here this suite went past run_harness.sh's ten minutes a suite on CI and
+  was stopped before it reported, and it had taken nine before the click.
 
   TAP THE BEAT. The first tap starts the loop and is not a beat. Taps in time
   settle on the tempo two seconds after the last, to the nearest whole beat a
@@ -28,38 +33,32 @@ the loop, so I'm not at 7 or 9 when I want 8"; "All yes" to the mock; then
   holds it. The settle glides there frame by frame, at once under Reduce
   Motion. The song slid under the drawing settles the loop's start on a
   beat, its length kept. (Make it went with the streamline; - and + moving a
-  bar is verify_musicmore's.)
+  bar is verify_musicdoors's.)
 
   BEATS (the owner: "There should be ways to have skribl pick 4 or 8 16 32";
-  of the mock, "All yes if it's intuitive"). Under the one line once there
-  is a beat, the counts the song and the 20s cap have room for, the loop's
-  own lit, none while it is not whole bars (and none pressed). It opens out,
-  what is under it gliding down, at once under Reduce Motion, and the page
+  of the mock, "All yes if it's intuitive"). In the Length door, under its
+  three choices, once there is a beat, the counts the song and the 20s cap
+  have room for, the loop's own lit, none while it is not whole bars (and
+  none pressed). It opens out, Lock under it gliding down, at once under
+  Reduce Motion, and the page
   stays still as it does (the drawer's growth follow scrolled it 46px under
   a finger reaching for the timeline). A count tapped
   on a loop of the person's own keeps the start and makes the loop that
   many beats, smooth restart and all; near the song's end it moves back by
   whole beats, only as far as it must. It glides there, the count lit from
   the tap all the way, at once under Reduce Motion; a second tap while it
-  glides counts from where it lands. Each tap offers Undo, the way back to
-  Skribl's pick waiting while it does. (A tap on Skribl's pick, with ears,
-  is verify_musicears'.)
+  glides counts from where it lands. Each tap offers Undo, Skribl's pick
+  beside it as the way back. (A tap on Skribl's pick, with ears, is
+  verify_musicears'.)
 
   SNAP TO THE BEAT (the owner: "I need a free set so it's not all
   automatic"). The switch shows under the tap once there is a tempo, on to
-  start, and says what it does. It opens out, and a bar in Each press with
-  it, frame by frame: what is under them glides, at once under Reduce
-  Motion. Off, nothing settles: the start and the end let go on the
+  start, and says what it does. It opens out, the Beat door's end gliding
+  down, and Exact times' Each press takes a bar in, gliding wider, frame by
+  frame, at once under Reduce Motion. Off, nothing settles: the start and
+  the end let go on the
   timeline, the song slid, a tap on the whole song, an end near a beat in
   the Restart view.
-
-  ZOOMED IN, THE START (the owner, zoomed in on where the music begins: "how
-  do I tell it where the beginning is?"). With the tempo tapped 45ms off the
-  music, at 16x a start let go on the music's beat stays exactly there and a
-  beat falls on it, the tempo's beats a minute kept, and the end follows on
-  whole bars. The marks glide there frame by frame, at once under Reduce
-  Motion. Then at 1x a start lands on the new beat, the new beat is kept
-  with the song in the drafts, and tapped again the beat is the taps' own.
 
   WHERE THE MUSIC BEGINS (the owner, of a song with dead air before it: "It
   snaps back to empty space"; of the mock, "All yes"). At 1x a start let go
@@ -86,11 +85,15 @@ the loop, so I'm not at 7 or 9 when I want 8"; "All yes" to the mock; then
   switch is put away.
 
   WORDS. The pair's words are whole on every phone (one to a row under
-  360px), and the one line and the tap's words read against what is behind
-  them, and the beat's dots against the song's lane, on the pixels.
+  360px), and the one line, the doors' words, Beats and the tap's read
+  against what is behind them, each with its door open, and the beat's dots
+  against the song's lane, on the pixels.
 
 Every row runs on the Pad and on Flip: one drawer (lib/musicdrawer.js), and
-each editor's half is its hooks. Skribl's ears are off here (lib/musicears.js):
+each editor's half is its hooks. A control behind a door is reached as a
+person reaches it, by opening its door (Tap the beat and Snap to the beat in
+Beat, Beats, Undo and Lock in Length, the Restart view in Restart, the typed
+times and Each press in Exact times). Skribl's ears are off here (lib/musicears.js):
 every row is a person with no beat yet, and the pulse below is a beat the ears
 would hear at once; verify_musicears holds the ears to songs of their own.
 """
@@ -125,7 +128,7 @@ import browsing  # noqa: E402
 import waits  # noqa: E402
 
 # For calibration: MUSICBEAT_ONLY=Pad (or Flip) runs one editor, and
-# MUSICBEAT_PART=pair (tap, bars, beats, marks, detail, snap, zoomed, silence, keep, words) one part.
+# MUSICBEAT_PART=pair (tap, bars, beats, marks, detail, snap, silence, keep, words) one part.
 # A real run sets neither.
 ONLY = os.environ.get("MUSICBEAT_ONLY", "")
 PART = os.environ.get("MUSICBEAT_PART", "")
@@ -282,11 +285,15 @@ CONTRAST = """() => {
   const ink = (el, bg) => { const cs = getComputedStyle(el), g = ground(bg ? el.parentElement : el), c = parse(bg ? cs.backgroundColor : cs.color);
     return ratio(over({ ...c, a: c.a * (bg ? +cs.opacity : 1) }, g), g); };
   const q = (s) => document.querySelector(s);
-  return { line: ink(q('#musicPickText')), length: ink(q('#musicPickText b')), pick: ink(q('#musicPickTag')), tempo: ink(q('#musicTempo')),
+  return { line: ink(q('#musicPickText')), length: ink(q('#musicPickText b')), pick: ink(q('#musicPickCard .dp-k')), tempo: ink(q('#musicTempo')),
            tap: ink(q('#musicTapWords')), hear: ink(q('#previewLoopBtn .tp-k')), press: ink(q('#musicStepLbl')),
            snap: ink(q('#musicSnapRow .mt-k')), snapSays: ink(q('#musicSnapSub')),
            beats: ink(q('#musicBeatsLbl')), count: ink(q('#musicBeatsSeg button:not(.on):not([hidden])')),
-           more: ink(q('#fineTuneToggle .mt-v')) }; }"""
+           tiles: Math.min(...[...document.querySelectorAll('#musicDoors .dp-tile .dp-v')].filter((v) => v.textContent).map((v) => ink(v))) }; }"""
+# Which words are read with which door open, as a person sees them: the
+# view's with every door shut, and each door's with it open.
+CONTRAST_DOORS = ((None, ("line", "length", "hear", "tiles")), ("beat", ("tempo", "tap", "snap", "snapSays", "tiles")),
+                  ("length", ("pick", "beats", "count")), ("exact", ("press",)))
 
 
 # The beat's dots, on the pixels: the timeline paints them on a canvas, so a
@@ -341,7 +348,7 @@ def heard(t):
     return n - min(t["xf"] / 1000, n / 2)
 
 
-def editor(b, name, path, *, drawn=True, song=TWELVE, opts=DESK, more=True, ctx=None):
+def editor(b, name, path, *, drawn=True, song=TWELVE, opts=DESK, door="beat", ctx=None):
     c = ctx or waits.instrument(b.new_context(**opts))
     pg = c.new_page()
     errs = []
@@ -360,8 +367,8 @@ def editor(b, name, path, *, drawn=True, song=TWELVE, opts=DESK, more=True, ctx=
             pg.evaluate(PAGES, {"n": 3, "fps": 12, "hold": 8})
     if song:
         add(pg, song)
-    if more:
-        set_more(pg, True)
+    if door:
+        set_door(pg, door)
     return c, pg, errs
 
 
@@ -374,19 +381,38 @@ def add(pg, song):
     waits.settle(pg, 500)
 
 
-def set_more(pg, want):
-    """More open or closed, by its tile, as a person does: Tap the beat and
-    the loop detail are in it."""
-    if (pg.get_attribute("#fineTuneToggle", "aria-expanded") == "true") != want:
-        pg.click("#fineTuneToggle")
-        pg.wait_for_timeout(350)
-        browsing.wait_scroll_still(pg)
+def tile(k):
+    return f'#musicDoors .dp-tile[data-dp="{k}"]'
+
+
+def open_door(pg):
+    """The door that is open, or None."""
+    return pg.evaluate("() => { const t = document.querySelector('#musicDoors .dp-tile[aria-expanded=\"true\"]'); return t ? t.dataset.dp : null; }")
+
+
+def set_door(pg, want):
+    """A door open (its name) or every door shut (None), by the tiles, as a person does."""
+    now = open_door(pg)
+    if now == want:
+        return
+    pg.click(tile(want or now))
+    pg.wait_for_timeout(350)
+    browsing.wait_scroll_still(pg)
+
+
+def door_for(pg, sel):
+    """The door that holds `sel` open, as a person opens it to reach it."""
+    k = pg.evaluate("(s) => { const e = document.querySelector(s), d = e && e.closest('#musicDoors .dp-panel'); return d ? d.dataset.dp : null; }", sel)
+    if k:
+        set_door(pg, k)
 
 
 def press(pg, sel, ms=200):
     """A real click on a control that may be missing from a broken build: a
-    row then says so in red rather than the run stopping on a timeout."""
+    row then says so in red rather than the run stopping on a timeout. Its
+    door is opened first, where it is behind one."""
     try:
+        door_for(pg, sel)
         pg.click(sel, timeout=3000)
     except Exception:
         return False
@@ -429,22 +455,22 @@ with sync_playwright() as pw:
 
     print("\nMUSIC BEAT — the pair that plays")
     for _n, _p in eds("pair"):
-        c, pg, errs = editor(b, _n, _p, more=False)
+        c, pg, errs = editor(b, _n, _p, door=None)
         at = {}
-        for lv in ("closed", "open"):
-            set_more(pg, lv == "open")
-            at[lv] = pg.evaluate("""() => { const r = (id) => document.getElementById(id).getBoundingClientRect(), t = r('musicTimeline');
-                const a = r('musicPlayBtn'), h = r('previewLoopBtn');
+        for lv in (None, "length", "beat", "restart", "exact"):
+            set_door(pg, lv)
+            at[lv or "none"] = pg.evaluate("""() => { const r = (id) => document.getElementById(id).getBoundingClientRect(), t = r('musicTimeline');
+                const a = r('musicPlayBtn'), hp = document.querySelector('#musicPanel .mt-hear'), h = hp ? hp.getBoundingClientRect() : r('previewLoopBtn');
                 const hears = [...document.querySelectorAll('#musicPanel button')].filter(x => /hear the loop/i.test(x.textContent)).length - 1;
                 return { below: Math.round(a.top - t.bottom), side: Math.round(a.top) === Math.round(h.top) && h.left > a.right,
                          same: Math.round(a.width) === Math.round(h.width) && Math.round(a.height) === Math.round(h.height),
                          h: Math.round(a.height), hears }; }""")
         ok = all(v["side"] and v["same"] and v["h"] >= 44 and v["hears"] == 0 for v in at.values())
-        check(f"{_n}: the pair sits under the timeline in the same place, More open or not, the same size, and More has no second Hear",
-              ok and at["closed"]["below"] == at["open"]["below"] and at["closed"]["below"] < 140, str(at))
+        check(f"{_n}: the pair sits under the timeline in the same place whichever door is open, or none, the same size (Hear the loop's pill and Play), and no door has a second Hear",
+              ok and len({v["below"] for v in at.values()}) == 1 and at["none"]["below"] < 140, str(at))
         c.close()
     for _n, _p in eds("pair"):
-        c, pg, errs = editor(b, _n, _p, more=False)
+        c, pg, errs = editor(b, _n, _p, door=None)
         press(pg, "#previewLoopBtn", 1200)
         st = pg.evaluate(SAID)
         wa = pg.evaluate("() => _waLoop.playing()")
@@ -456,7 +482,7 @@ with sync_playwright() as pw:
               f"playing: {dict((k, st[k]) for k in ('pv', 'playing', 'hear', 'play'))}, engine {wa}; stopped: {stop['hear']!r}, {stop['pv']}")
         c.close()
     for _n, _p in eds("pair"):
-        c, pg, errs = editor(b, _n, _p)
+        c, pg, errs = editor(b, _n, _p, door="exact")
         pg.evaluate(SET, {"tempo": None, "s": 0, "e": 2.0, "xf": 0})
         press(pg, "#previewLoopBtn", 500)
         first = pg.evaluate("() => { window.__src = _waLoop.source(); return _waLoop.source().buffer.duration; }")
@@ -490,7 +516,7 @@ with sync_playwright() as pw:
         words = f"{round(n)} beats" if abs(n - round(n)) < 0.05 else f"{n:.1f} beats"
         check(f"{_n}: taps in time settle on the tempo, two seconds after the last, and the one line counts the beats",
               mid["kept"] is None and mid["tap"] == "Keep tapping" and st["kept"] and st["kept"]["bpm"] == 120
-              and st["tempo"] == "120 beats a minute · tap again to change it" and st["tap"] == "Tap the beat"
+              and st["tempo"] == "120 beats a minute\u00a0· tap again to change it" and st["tap"] == "Tap the beat"
               and st["line"].startswith(f"{heard(t):.2f}s · {words}"),
               f"1.5s after: {mid['kept']}, {mid['tap']!r}; settled: {st['kept']}, {st['tempo']!r}; {st['line']!r}"
               f" (taps within {spread:.1f}ms of their marks, try {k})")
@@ -591,7 +617,7 @@ with sync_playwright() as pw:
         return let_go, pg.evaluate(TRIM), (pg.evaluate("() => window.__rec") if rec else None)
 
     for _n, _p in eds("bars"):
-        c, pg, errs = editor(b, _n, _p, more=False)
+        c, pg, errs = editor(b, _n, _p, door=None)
         pg.evaluate(SET, {"tempo": {"bpm": 120, "phase": 0}, "s": 0.5, "e": 4.75, "xf": 250})
         g1, t1, _ = tl_drag(pg, "tlEnd", 0.5 + 5.3 + 0.25)      # 10.6 beats heard: 8 is nearest
         g2, t2, rec = tl_drag(pg, "tlEnd", 0.5 + 6.4 + 0.25, rec=True)   # 12.8: 16 is
@@ -625,7 +651,7 @@ with sync_playwright() as pw:
     for _n, _p in eds("bars"):
         # A 6s song has no room for 16 beats from 0, and 32 at 90 a minute is
         # past the 20s cap: the nearest count there is room for.
-        c, pg, errs = editor(b, _n, _p, song=SHORT, more=False)
+        c, pg, errs = editor(b, _n, _p, song=SHORT, door=None)
         pg.evaluate(SET, {"tempo": {"bpm": 120, "phase": 0}, "s": 0, "e": 3.0, "xf": 250})
         g1, t1, _ = tl_drag(pg, "tlEnd", 5.9)                    # 11.3 beats: 16 would be nearer, but 8.25s is past the song
         add(pg, LONG)
@@ -638,7 +664,7 @@ with sync_playwright() as pw:
         c.close()
     for _n, _p in eds("bars"):
         c = waits.instrument(b.new_context(reduced_motion="reduce", **DESK))
-        c, pg, errs = editor(b, _n, _p, ctx=c, more=False)
+        c, pg, errs = editor(b, _n, _p, ctx=c, door=None)
         pg.evaluate(SET, {"tempo": {"bpm": 120, "phase": 0}, "s": 0.5, "e": 4.75, "xf": 250})
         g, t, rec = tl_drag(pg, "tlEnd", 0.5 + 6.4 + 0.25, rec=True)
         between = [f for f in rec if abs(f[2] - g["e"]) > 1e-6 and abs(f[2] - t["e"]) > 1e-6]
@@ -646,7 +672,7 @@ with sync_playwright() as pw:
               abs(heard(t) - 8.0) < 1e-6 and not between, f"from {g['e']:.3f} to {t['e']:.3f}; {len(between)} frames between")
         c.close()
     for _n, _p in eds("bars"):
-        c, pg, errs = editor(b, _n, _p, more=False)
+        c, pg, errs = editor(b, _n, _p, door=None)
         pg.evaluate(SET, {"tempo": {"bpm": 120, "phase": 0.1}, "s": 0.5, "e": 4.75, "xf": 250})
         pg.evaluate("() => document.getElementById('musicTimeline').scrollIntoView({ block: 'center' })"); pg.wait_for_timeout(300)
         r = pg.evaluate(TL, "tlEnd")
@@ -672,7 +698,8 @@ with sync_playwright() as pw:
       return { shown: !!r && !r.hidden && r.getClientRects().length > 0, offered: bs.filter((x) => !x.hidden).map((x) => +x.dataset.beats),
                lit: bs.filter((x) => x.getAttribute('aria-pressed') === 'true').map((x) => +x.dataset.beats),
                on: bs.filter((x) => x.classList.contains('on')).length, free: !!seg && seg.hasAttribute('data-free'),
-               tag: !q('musicPickTag').hidden, back: !q('musicBackPick').hidden, undo: !q('musicPickUndo').hidden,
+               tag: q('musicPickCard').getAttribute('aria-pressed') === 'true',
+               back: q('musicPickCard').getAttribute('aria-pressed') !== 'true' && !q('musicPickCard').disabled, undo: !q('musicPickUndo').hidden,
                s: trimStart, e: trimEnd, xf: loopCrossfadeMs }; }"""
     # Every frame from just before a tap: the loop's ends and the counts
     # pressed; and when the tap landed.
@@ -682,10 +709,11 @@ with sync_playwright() as pw:
       (function f() { out.push([performance.now() - t0, trimStart, trimEnd,
           [...seg.querySelectorAll('button')].filter((x) => x.getAttribute('aria-pressed') === 'true').map((x) => +x.dataset.beats)]);
         if (performance.now() - t0 < 800) requestAnimationFrame(f); })(); }"""
-    # What is under Beats (the pair) as a beat lands and Beats opens out.
+    # What is under Beats (Lock) as a beat lands and Beats opens out, against
+    # the three choices above it, in the Length door.
     BEATS_OPEN = """() => new Promise((res) => { const out = [], t0 = performance.now(),
-        line = document.getElementById('musicPickLine'), pair = document.getElementById('musicPlayBtn');
-      const read = () => out.push([performance.now() - t0, pair.getBoundingClientRect().top - line.getBoundingClientRect().bottom]);
+        top = document.querySelector('#musicDoorLength .mt-lengths'), lock = document.getElementById('musicLock').closest('.mt-switch');
+      const read = () => out.push([performance.now() - t0, lock.getBoundingClientRect().top - top.getBoundingClientRect().bottom]);
       read(); musicTempo = { bpm: 120, phase: 0 }; updateTrimUI();
       (function f() { read(); if (performance.now() - t0 < 700) requestAnimationFrame(f); else res(out); })(); })"""
 
@@ -700,19 +728,20 @@ with sync_playwright() as pw:
         return press(pg, f'#musicBeatsSeg button[data-beats="{n}"]', ms)
 
     for _n, _p in eds("beats"):
-        c, pg, errs = editor(b, _n, _p, more=False)
+        c, pg, errs = editor(b, _n, _p, door="length")
         b0 = pg.evaluate(BEATS)
         pg.evaluate(SET, {"tempo": {"bpm": 120, "phase": 0}, "s": 0.5, "e": 4.75, "xf": 250})
         pg.wait_for_timeout(400)
         b1 = pg.evaluate(BEATS)
         where = pg.evaluate("""() => { const r = (id) => document.getElementById(id).getBoundingClientRect();
-          return { line: r('musicPickLine').bottom, row: r('musicBeatsRow').top, end: r('musicBeatsRow').bottom, pair: r('musicPlayBtn').top }; }""")
+          return { line: document.querySelector('#musicDoorLength .mt-lengths').getBoundingClientRect().bottom, row: r('musicBeatsRow').top,
+                   end: r('musicBeatsRow').bottom, pair: document.getElementById('musicLock').closest('.mt-switch').getBoundingClientRect().top }; }""")
         add(pg, LONG)
         pg.evaluate(SET, {"tempo": {"bpm": 120, "phase": 0}, "s": 0, "e": 4.25, "xf": 250})
         b2 = pg.evaluate(BEATS)
         pg.evaluate(SET, {"tempo": {"bpm": 90, "phase": 0}})
         b3 = pg.evaluate(BEATS)
-        check(f"{_n}: Beats shows under the one line once there is a beat, with the counts the song and the 20s cap have room for, the loop's own lit",
+        check(f"{_n}: Beats shows in the Length door, under its three choices and over Lock, once there is a beat, with the counts the song and the 20s cap have room for, the loop's own lit",
               not b0["shown"] and b1["shown"] and where["line"] <= where["row"] + 0.5 and where["end"] <= where["pair"] + 0.5
               and b1["offered"] == [4, 8, 16] and b1["lit"] == [8] and b2["offered"] == [4, 8, 16, 32] and b2["lit"] == [8]
               and b3["offered"] == [4, 8, 16],
@@ -724,7 +753,7 @@ with sync_playwright() as pw:
               b4["shown"] and b4["lit"] == [] and b4["on"] == 0 and b4["free"], f"{b4}")
         c.close()
     for _n, _p in eds("beats"):
-        c, pg, errs = editor(b, _n, _p, more=False)
+        c, pg, errs = editor(b, _n, _p, door="length")
         pg.evaluate(SET, {"tempo": {"bpm": 120, "phase": 0}, "s": 0.5, "e": 4.75, "xf": 250})
         pg.wait_for_timeout(300)
         beats(pg, 16)
@@ -737,8 +766,8 @@ with sync_playwright() as pw:
               f"16: {t1['s']}-{t1['e']:.4f}, lit {t1['lit']}; then 4: {t2['s']}-{t2['e']:.4f}, lit {t2['lit']}; smooth restart {t1['xf']}, {t2['xf']}")
         press(pg, "#musicPickUndo", 300)
         u = pg.evaluate(BEATS)
-        check(f"{_n}: each tap offers Undo, the way back to Skribl's pick waiting while it does; Undo puts the loop back, and then the way back shows",
-              t2["undo"] and not t2["back"] and abs(u["s"] - 0.5) < 1e-9 and abs(u["e"] - 8.75) < 1e-9 and u["lit"] == [16]
+        check(f"{_n}: each tap offers Undo, Skribl's pick beside it as the way back; Undo puts the loop back, and goes",
+              t2["undo"] and t2["back"] and not t2["tag"] and abs(u["s"] - 0.5) < 1e-9 and abs(u["e"] - 8.75) < 1e-9 and u["lit"] == [16]
               and not u["undo"] and u["back"],
               f"after the tap: Undo {t2['undo']}, the way back {t2['back']}; Undo: {u['s']}-{u['e']:.4f}, lit {u['lit']}, then Undo {u['undo']}, the way back {u['back']}")
         pg.evaluate(LOOP, {"s": 6.0, "e": 10.25})
@@ -765,7 +794,7 @@ with sync_playwright() as pw:
         for dev, opts in (("phone", PHONE), ("desk", DESK)):
             # Where the song's landing left the page (its follow brings the
             # drawer's end on screen), once that follow is over.
-            c, pg, errs = editor(b, _n, _p, more=False, opts=opts)
+            c, pg, errs = editor(b, _n, _p, door="length", opts=opts)
             pg.wait_for_timeout(1500)
             rec = pg.evaluate(STILL)
             ys, tops = sorted({round(f[1]) for f in rec}), [f[2] for f in rec]
@@ -776,8 +805,8 @@ with sync_playwright() as pw:
     for _n, _p in eds("beats"):
         for still in (False, True):
             c = waits.instrument(b.new_context(reduced_motion="reduce" if still else "no-preference", **DESK))
-            c, pg, errs = editor(b, _n, _p, ctx=c, more=False)
-            pg.evaluate("() => document.getElementById('musicPickLine').scrollIntoView({ block: 'center' })"); pg.wait_for_timeout(300)
+            c, pg, errs = editor(b, _n, _p, ctx=c, door="length")
+            pg.evaluate("() => document.getElementById('musicDoorLength').scrollIntoView({ block: 'center' })"); pg.wait_for_timeout(300)
             rec = pg.evaluate(BEATS_OPEN)
             v = [f[1] for f in rec]
             total, way = v[-1] - v[0], [x for x in v if abs(x - v[0]) > 0.5 and abs(x - v[-1]) > 0.5]
@@ -792,7 +821,7 @@ with sync_playwright() as pw:
             onward = all(y[1] <= x[1] + 1e-9 for x, y in zip(after, after[1:]))
             lit = {tuple(f[3]) for f in after}
             if not still:
-                check(f"{_n}: Beats opens out as the beat lands, what is under it gliding down frame by frame",
+                check(f"{_n}: Beats opens out as the beat lands, Lock under it gliding down frame by frame",
                       total > 30 and len(way) >= 4 and big <= 0.6 * total, f"{total:.1f}px in all, {len(way)} frames on the way, the largest {big:.1f}px")
                 check(f"{_n}: a tap glides the loop there frame by frame, the count lit from the tap all the way",
                       len(moving) >= 5 and onward and lit == {(16,)} and abs(after[-1][1] - 3.5) < 1e-6,
@@ -848,7 +877,7 @@ with sync_playwright() as pw:
               f"{len(m['marks']) if m else 0} marks on the lane; lines at {lines}, every 20s")
         c.close()
     for _n, _p in eds("marks"):
-        c, pg, errs = editor(b, _n, _p)
+        c, pg, errs = editor(b, _n, _p, door="restart")
         pg.evaluate(SET, {"tempo": {"bpm": 120, "phase": 0.1}, "s": 1.0, "e": 3.0, "xf": 0})
         pg.wait_for_timeout(300)
         m = pg.evaluate(MARKS, "musicRestart")
@@ -876,6 +905,7 @@ with sync_playwright() as pw:
     RV = "() => { const r = document.getElementById('musicRestart').getBoundingClientRect(); return { x: r.left, y: r.top, w: r.width, h: r.height }; }"
 
     def rv_drag(pg, t):
+        door_for(pg, "#musicRestart")
         pg.evaluate("() => document.getElementById('musicRestart').scrollIntoView({ block: 'center' })"); pg.wait_for_timeout(250)
         r, g0 = pg.evaluate(RV), pg.evaluate(TRIM)
         half = r["w"] / 2
@@ -891,7 +921,7 @@ with sync_playwright() as pw:
         return px, pg.evaluate(TRIM), g
 
     for _n, _p in eds("detail"):
-        c, pg, errs = editor(b, _n, _p, song=SHORT)
+        c, pg, errs = editor(b, _n, _p, song=SHORT, door="restart")
         pg.evaluate(SET, {"tempo": {"bpm": 120, "phase": 0}, "s": 0, "e": 4.35, "xf": 250})
         pg.wait_for_timeout(300)
         n_px, near, _ = rv_drag(pg, 4.25 + 0.01)                        # just past where the 8th beat comes round
@@ -899,11 +929,12 @@ with sync_playwright() as pw:
         check(f"{_n}: in the Restart view an end let go near a beat settles on it; far from one, it stays",
               n_px <= 8 and abs((near["e"] - 0.25) - 4.0) < 1e-6 and f_px > 8 and abs(far["e"] - 4.5) < 0.05,
               f"let go {n_px:.1f}px from a beat: end {near['e']:.4f} (comes round at {near['e'] - 0.25:.4f}); {f_px:.1f}px from one: {far['e']:.4f}")
+        door_for(pg, "#endReadout")
         pg.fill("#endReadout", "3.27"); pg.press("#endReadout", "Enter"); pg.wait_for_timeout(150)
         typed = pg.evaluate(TRIM)
-        pg.click("#musicLock"); pg.wait_for_timeout(100)
+        press(pg, "#musicLock", 100)
         g, locked, _ = tl_drag(pg, "tlEnd", 4.0)
-        pg.click("#musicLock"); pg.wait_for_timeout(100)
+        press(pg, "#musicLock", 100)
         check(f"{_n}: a typed end never settles, nor a locked loop's",
               abs(typed["e"] - 3.27) < 1e-6 and abs((locked["e"] - locked["s"]) - (typed["e"] - typed["s"])) < 1e-6 and locked == g,
               f"typed 3.27: {typed['e']}; locked, dragged: {g} then {locked}")
@@ -970,124 +1001,41 @@ with sync_playwright() as pw:
         check(f"{_n}: no page errors with Snap to the beat", not errs, "; ".join(errs[:2]))
         c.close()
     # What shows once there is a beat opens out, read on every frame from just
-    # before the tempo lands: the heading under the beat (Exact times) glides
-    # down as Snap to the beat opens, and Each press widens to take a bar in,
-    # neither in one frame; at once under Reduce Motion.
-    OPENS = """() => new Promise((res) => { const out = [], t0 = performance.now(),
-        head = [...document.querySelectorAll('#fineTuneBody .mt-sect')].find((x) => x.textContent === 'Exact times'),
-        seg = document.getElementById('musicStepSeg');
-      const read = () => out.push([performance.now() - t0, head.getBoundingClientRect().top + scrollY, seg.getBoundingClientRect().width]);
+    # before the tempo lands, each door with it open: the Beat door's end
+    # glides down as Snap to the beat opens under the tap, and in Exact times
+    # Each press widens to take a bar in, neither in one frame; at once under
+    # Reduce Motion.
+    OPENS = """(door) => new Promise((res) => { const out = [], t0 = performance.now(),
+        panel = document.getElementById('musicDoorBeat'), seg = document.getElementById('musicStepSeg');
+      const read = () => out.push([performance.now() - t0, door === 'beat' ? panel.getBoundingClientRect().bottom + scrollY : seg.getBoundingClientRect().width]);
       read(); musicTempo = { bpm: 120, phase: 0 }; updateTrimUI();
       (function f() { read(); if (performance.now() - t0 < 700) requestAnimationFrame(f); else res(out); })(); })"""
 
     def opened(rec):
-        """The head's and the pill's moves, each: how far in all, the frames on
-        the way, and the largest one frame's share of it."""
-        out = {}
-        for i, name in ((1, "head"), (2, "pill")):
-            v = [f[i] for f in rec]
-            total = v[-1] - v[0]
-            way = [x for x in v if abs(x - v[0]) > 0.5 and abs(x - v[-1]) > 0.5]
-            big = max((abs(b2 - a2) for a2, b2 in zip(v, v[1:])), default=0)
-            out[name] = (round(total, 1), len(way), round(big / total, 2) if total else 1)
-        return out
+        """A move: how far in all, the frames on the way, and the largest one
+        frame's share of it."""
+        v = [f[1] for f in rec]
+        total = v[-1] - v[0]
+        way = [x for x in v if abs(x - v[0]) > 0.5 and abs(x - v[-1]) > 0.5]
+        big = max((abs(b2 - a2) for a2, b2 in zip(v, v[1:])), default=0)
+        return (round(total, 1), len(way), round(big / total, 2) if total else 1)
     for _n, _p in eds("snap"):
-        c, pg, errs = editor(b, _n, _p)
-        pg.evaluate("() => document.getElementById('musicBeat').scrollIntoView({ block: 'center' })"); pg.wait_for_timeout(300)
-        o = opened(pg.evaluate(OPENS))
-        check(f"{_n}: Snap to the beat and a bar in Each press open out as the tempo lands: what is under them glides, frame by frame",
-              o["head"][0] > 30 and o["head"][1] >= 4 and o["head"][2] <= 0.6 and o["pill"][0] > 20 and o["pill"][1] >= 4 and o["pill"][2] <= 0.6,
-              f"(px in all, frames on the way, the largest frame's share): {o}")
-        c.close()
-        c = waits.instrument(b.new_context(reduced_motion="reduce", **DESK))
-        c, pg, errs = editor(b, _n, _p, ctx=c)
-        pg.evaluate("() => document.getElementById('musicBeat').scrollIntoView({ block: 'center' })"); pg.wait_for_timeout(300)
-        o = opened(pg.evaluate(OPENS))
-        check(f"{_n}: under Reduce Motion they are there at once",
-              o["head"][0] > 30 and o["head"][1] == 0 and o["pill"][0] > 20 and o["pill"][1] == 0, f"{o}")
-        c.close()
-
-    print("\nMUSIC BEAT — zoomed in, the start")
-    # The song's beat is on the half seconds and the tempo tapped 45ms late;
-    # at 16x the start is let go on the music's beat at 2.0, between the
-    # marks. The mark nearest 2.0 is read on every frame from just before the
-    # finger lifts.
-    NEAR = """(o) => { const out = window.__recb = [], t0 = performance.now();
-      (function f() { const b = ((document.getElementById('musicTimeline')._painted || {}).beats || []).map((m) => m[2]);
-        out.push([performance.now() - t0, b.length ? b.reduce((a, c) => Math.abs(c - o.at) < Math.abs(a - o.at) ? c : a) : null]);
-        if (performance.now() - t0 < o.ms) requestAnimationFrame(f); })(); }"""
-    for _n, _p in eds("zoomed"):
         for still in (False, True):
-            ctx = waits.instrument(b.new_context(reduced_motion="reduce", **DESK)) if still else None
-            c, pg, errs = editor(b, _n, _p, more=False, ctx=ctx)
-            pg.evaluate(SET, {"tempo": {"bpm": 120, "phase": 0.045}, "s": 2.045, "e": 6.045, "xf": 0})
-            pg.evaluate("() => document.getElementById('musicTimeline').scrollIntoView({ block: 'center' })"); pg.wait_for_timeout(300)
-            for _ in range(4):
-                press(pg, "#musicTlIn", 260)
-            pg.wait_for_timeout(500)
-            at = pg.evaluate(TL, "tlStart")
-            pg.mouse.move(at["hx"], at["hy"]); pg.mouse.down()
-            pg.mouse.move(at["x"] + (2.0 - at["v0"]) / at["span"] * at["w"], at["hy"], steps=8); pg.wait_for_timeout(100)
-            let_go = pg.evaluate(TRIM)
-            pg.evaluate(NEAR, {"at": 2.0, "ms": 700})
-            pg.mouse.up(); pg.wait_for_timeout(900)
-            got, rec, tp = pg.evaluate(TRIM), pg.evaluate("() => window.__recb"), pg.evaluate("() => musicTempo")
-            # Where the beat nearest 2.0 belongs now: on the start let go.
-            fin = tp["phase"] + round((2.0 - tp["phase"]) / 0.5) * 0.5 if tp else None
-            seen = [f[1] for f in rec if f[1] is not None]
-            between = [v for v in seen if fin is not None and fin + 1.5e-4 < v < 2.045 - 1.5e-4]
-            there = next((f[0] for f in rec if f[1] is not None and fin is not None and abs(f[1] - fin) < 1.5e-4), None)
+            o = {}
+            for name, door in (("door", "beat"), ("pill", "exact")):
+                ctx = waits.instrument(b.new_context(reduced_motion="reduce", **DESK)) if still else None
+                c, pg, errs = editor(b, _n, _p, ctx=ctx, door=door)
+                pg.evaluate("(id) => document.getElementById(id).scrollIntoView({ block: 'center' })", "musicDoorBeat" if door == "beat" else "musicDoorExact")
+                pg.wait_for_timeout(300)
+                o[name] = opened(pg.evaluate(OPENS, door))
+                c.close()
             if not still:
-                k = tp and (tp["phase"] - got["s"]) / 0.5
-                check(f"{_n}: zoomed in, a start let go stays exactly where it was let go, and a beat falls on it, the tempo's beats a minute kept",
-                      abs(got["s"] - let_go["s"]) < 1e-6 and abs(let_go["s"] - 2.0) < 0.01 and tp is not None and tp["bpm"] == 120
-                      and abs(k - round(k)) * 0.5 < 1e-4 and tp.get("snap", True) is not False,
-                      f"let go at {let_go['s']:.4f}: {got['s']:.4f}; the tempo {tp}")
-                n = heard(got) / 0.5
-                check(f"{_n}: ...and the end follows on whole bars from it",
-                      any(abs(n - q) < 1e-6 for q in (4, 8, 16, 32)), f"{got['s']:.4f}-{got['e']:.4f}, {n:.3f} beats heard")
-                check(f"{_n}: the beat marks glide there, frame by frame, the shorter way round",
-                      len(between) >= 4 and all(b2 <= a2 + 1.5e-4 for a2, b2 in zip(seen, seen[1:])) and there is not None and there < 600,
-                      f"{len(between)} frames on the way from 2.045 to {fin}; always back {all(b2 <= a2 + 1.5e-4 for a2, b2 in zip(seen, seen[1:]))}; "
-                      f"there at {there and round(there)}ms")
-                # Then at 1x a start let go lands on the new beat, not the taps' (2.045 + k/2).
-                for _ in range(4):
-                    press(pg, "#musicTlOut", 260)
-                pg.wait_for_timeout(500)
-                g2, t2, _ = tl_drag(pg, "tlStart", 3.13)
-                want = tp["phase"] + round((3.13 - tp["phase"]) / 0.5) * 0.5
-                check(f"{_n}: then at 1x a start let go lands on the new beat",
-                      abs(t2["s"] - want) < 1e-6 and abs(want - 3.0) < 0.01 and abs(g2["s"] - 3.13) < 0.06,
-                      f"let go at {g2['s']:.3f}: {t2['s']:.4f} (the new beat {want:.4f}; the taps' was 3.045)")
-                pg.evaluate("() => (typeof scheduleAutosave === 'function' ? scheduleAutosave : scheduleSave)()")
-                pg.wait_for_timeout(2500)
-                pg.reload()
-                pg.wait_for_function("() => document.getElementById('musicUploadBtn').classList.contains('loaded') && !!currentAudioBuffer", timeout=20000)
-                waits.settle(pg, 600)
-                back = pg.evaluate("() => musicTempo")
-                check(f"{_n}: the new beat is kept with the song in the drafts", back == tp, f"{tp} -> after a reload {back}")
+                check(f"{_n}: Snap to the beat and a bar in Each press open out as the tempo lands: the Beat door's end glides down, and Each press wider, frame by frame",
+                      o["door"][0] > 30 and o["door"][1] >= 4 and o["door"][2] <= 0.6 and o["pill"][0] > 20 and o["pill"][1] >= 4 and o["pill"][2] <= 0.6,
+                      f"(px in all, frames on the way, the largest frame's share): {o}")
             else:
-                check(f"{_n}: under Reduce Motion the start stays and the beat marks are there at once",
-                      abs(got["s"] - let_go["s"]) < 1e-6 and not between and there is not None,
-                      f"let go at {let_go['s']:.4f}: {got['s']:.4f}; {len(between)} frames on the way; there at {there and round(there)}ms")
-            check(f"{_n}: no page errors zoomed in{' under Reduce Motion' if still else ''}", not errs, "; ".join(errs[:2]))
-            c.close()
-
-    for _n, _p in eds("zoomed"):
-        # Tapped again after a start set zoomed in made 2.0 a beat, the beat is
-        # the taps' own: tapped 0.12s past each half second as heard.
-        def start(pg):
-            pg.evaluate(SET, {"tempo": {"bpm": 120, "phase": 1.9999}, "s": 0, "e": 12, "xf": 0})
-            press(pg, "#musicTapBtn", 0)                                       # the start
-            pg.wait_for_function("() => _waLoop.playing() && _waLoop.elapsed() > 0.3", timeout=5000)
-        c, pg, got, k = in_time(b, _n, _p, ON_BEAT, {"off": 0.12, "n": 6}, prep=start)
-        pg.wait_for_timeout(2300)
-        st = pg.evaluate(SAID)
-        ph = st["kept"]["phase"] if st["kept"] else None
-        check(f"{_n}: tapped again after that, the beat is the taps' own",
-              ph is not None and st["kept"]["bpm"] == 120 and phase_gap(ph, 0.12) < 0.04 and phase_gap(ph, 1.9999) > 0.08,
-              f"a beat at 2.0 (1.9999), then tapped 0.12s past each half second: {st['kept']} (taps within {got['spread']:.1f}ms of their marks, try {k})")
-        c.close()
+                check(f"{_n}: under Reduce Motion they are there at once",
+                      o["door"][0] > 30 and o["door"][1] == 0 and o["pill"][0] > 20 and o["pill"][1] == 0, f"{o}")
 
     print("\nMUSIC BEAT — where the music begins")
     # At 1x, each start let go once from a loop of four beats, with the beat
@@ -1111,7 +1059,7 @@ with sync_playwright() as pw:
     def said(g, t, k, p=P90):
         return f"let go at {g['s']:.3f}: {t['s']:.4f}-{t['e']:.4f}, {heard(t) / p:.3f} beats heard; the beat {k}"
     for _n, _p in eds("silence"):
-        c, pg, errs = editor(b, _n, _p, song=LEADIN, more=False)
+        c, pg, errs = editor(b, _n, _p, song=LEADIN, door=None)
         g, t, k = let_go_at(pg, 0.30)
         check(f"{_n}: a start let go in the silence before the music lands where the music begins, the beat kept and the loop whole bars",
               abs(g["s"] - 0.30) < 0.06 and abs(t["s"] - FIRST) < 0.001 and k == T90 and bars_of(t), said(g, t, k) + f" (the music begins at {FIRST})")
@@ -1173,7 +1121,7 @@ with sync_playwright() as pw:
         waits.settle(pg, 600)
         back = pg.evaluate("() => musicTempo")
         c.close()
-        c, pg, errs = editor(b, _n, _p, song=None, more=False)
+        c, pg, errs = editor(b, _n, _p, song=None, door=None)
         browsing.pad_drawer(pg, "music")
         pg.evaluate("() => { pendingMusicMeta = { trimStart: 1, trimEnd: 3, crossfadeMs: 0, enabled: true, tempo: { bpm: 84, phase: 0.3 } }; }")
         add(pg, TWELVE)
@@ -1193,12 +1141,14 @@ with sync_playwright() as pw:
     print("\nMUSIC BEAT — words")
     # The pair's words, whole, from the smallest phone to the owner's: side by
     # side from 360px, one to a row below it.
-    FIT = """() => [...document.querySelectorAll('.mt-transport .mt-play')].map(x => { const r = x.getBoundingClientRect();
-      return { over: x.scrollWidth - x.clientWidth, top: Math.round(r.top), w: Math.round(r.width) }; })"""
+    # Each of the pair as laid out (Play, and Hear's pill with the click at
+    # its end): where it sits, and whether its button's words overflow.
+    FIT = """() => [...document.querySelectorAll('.mt-transport > *')].map(x => { const r = x.getBoundingClientRect(), b = x.matches('.mt-play') ? x : x.querySelector('.mt-play');
+      return { over: b.scrollWidth - b.clientWidth, top: Math.round(r.top), w: Math.round(r.width) }; })"""
     for _n, _p in eds("words"):
         seen = {}
         for w in (320, 360, 402):
-            c, pg, errs = editor(b, _n, _p, opts=dict(PHONE, viewport={"width": w, "height": 874}), more=False)
+            c, pg, errs = editor(b, _n, _p, opts=dict(PHONE, viewport={"width": w, "height": 874}), door=None)
             seen[w] = pg.evaluate(FIT)
             c.close()
         whole = all(x["over"] <= 0 for v in seen.values() for x in v)
@@ -1212,11 +1162,16 @@ with sync_playwright() as pw:
             browsing.goto(pg, BASE, _p)
             pg.evaluate("() => window.SkriblHints && window.SkriblHints.hide && window.SkriblHints.hide()")
             add(pg, TWELVE)
-            set_more(pg, True)
             pg.evaluate(SET, {"tempo": {"bpm": 120, "phase": 0}, "s": 0, "e": 4.25, "xf": 250})
             pg.wait_for_timeout(600)
-            r, dots = pg.evaluate(CONTRAST), dot_contrast(pg)
-            check(f"{_n}: the one line, Beats and the tap's words read against what is behind them, and the beat's dots against the song's lane ({theme})",
+            r = {}
+            for door, keys in CONTRAST_DOORS:
+                set_door(pg, door)
+                got = pg.evaluate(CONTRAST)
+                r.update({k: min(got[k], r.get(k, 99)) for k in keys})
+            set_door(pg, None)
+            dots = dot_contrast(pg)
+            check(f"{_n}: the one line, the doors' words, Beats and the tap's read against what is behind them, each with its door open, and the beat's dots against the song's lane ({theme})",
                   min(r.values()) >= 4.5 and dots.get("beat", 0) >= 3 and dots.get("bar", 0) >= 3,
                   ", ".join(f"{k} {v:.2f}" for k, v in list(r.items()) + [("dot " + k, v) for k, v in dots.items()]))
             c.close()

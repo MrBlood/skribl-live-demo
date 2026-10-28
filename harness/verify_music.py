@@ -107,7 +107,7 @@ def take(pg):
 PLAY = {"Pad": "#playBtn", "Flip": "#play"}
 
 
-def editor(b, name, path, *, init=None, drawn=True, track=True, more=True):
+def editor(b, name, path, *, init=None, drawn=True, track=True, door="restart"):
     pg = b.new_page(viewport={"width": 1280, "height": 900})
     if init:
         pg.add_init_script(init)
@@ -127,14 +127,14 @@ def editor(b, name, path, *, init=None, drawn=True, track=True, more=True):
         # The same loop on both, the whole 6 s track with a clean cut: a new
         # track starts on Skribl's pick (fitted to the Pad's drawing, with a
         # smooth restart), which is right and not what these ask, and the pick
-        # has its own suite (verify_musicmore.py).
+        # has its own suite (verify_musicdoors.py).
         pg.evaluate("() => { trimStart = 0; trimEnd = audioDuration; loopCrossfadeMs = 0; setCrossfadeUI(); updateTrimUI(); }")
-        # Most rows press a control only More shows (Smooth restart's length),
-        # so they open it first, as a person would; Hear the loop is under the
-        # strip either way.
-        if more:
-            fine(pg)
-            browsing.wait_scroll_still(pg)   # More glides what it opens into view
+        # Most rows press a control in the Restart door (Smooth restart's
+        # length, Hear the restart), so they open it first, as a person would;
+        # Fit's are in the Length door, and Hear the loop is under the
+        # timeline whichever is open.
+        if door:
+            set_door(pg, door)
     return pg
 
 
@@ -143,10 +143,13 @@ def slide(pg, sel, value):
                 [sel, value])
 
 
-def fine(pg):
-    """More open (its tile keeps Fine-tune's id)."""
-    pg.evaluate("() => { const t = document.getElementById('fineTuneToggle'); if (t.getAttribute('aria-expanded') !== 'true') t.click(); }")
-    pg.wait_for_timeout(450)
+def set_door(pg, want):
+    """One of the drawer's doors open by its tile, as a person opens it."""
+    t = f'#musicDoors .dp-tile[data-dp="{want}"]'
+    if pg.get_attribute(t, "aria-expanded") != "true":
+        pg.click(t)
+        pg.wait_for_timeout(450)
+        browsing.wait_scroll_still(pg)   # a door glides what it opens into view
 
 
 print("\nMUSIC — one drawer, in the source")
@@ -268,9 +271,9 @@ with sync_playwright() as p:
 
     print("\nMUSIC — the loop's edges are saved where they land")
     for _n, _p in EDITORS:
-        # The timeline only: More open glides what it opens into view, and the
-        # timeline with it out of view, above.
-        pg = editor(b, _n, _p, more=False)
+        # The timeline only: a door opened glides what it opens into view, and
+        # the timeline can go out of view with it, above.
+        pg = editor(b, _n, _p, door=None)
         pg.wait_for_timeout(1800)                        # the add's own save lands first
         before = pg.evaluate(SAVED_END, STOREKEY[_n])
         r = pg.evaluate("() => { const h = document.getElementById('tlEnd').getBoundingClientRect(), t = document.getElementById('musicTlStage').getBoundingClientRect();"
@@ -287,21 +290,21 @@ with sync_playwright() as p:
         pg.close()
 
     print("\nMUSIC — Fit my drawing (it was Match Drawing Time)")
-    pg = editor(b, "Pad", "/")
+    pg = editor(b, "Pad", "/", door="length")
     want = pg.evaluate("() => getPlaybackDuration() / 1000")
     pg.click("#matchDrawingBtn"); pg.wait_for_timeout(200)
     got = pg.evaluate("() => trimEnd - trimStart")
     check("Pad: Fit my drawing sets the loop to the replay's length",
           abs(got - max(0.5, min(want, 6))) < 0.02, f"loop {got:.2f} s for a {want:.2f} s replay")
     pg.close()
-    pg = editor(b, "Flip", "/flip", drawn=False)
+    pg = editor(b, "Flip", "/flip", drawn=False, door="length")
     pg.evaluate(PAGES, {"n": 3, "fps": 12, "hold": 8})
     pg.click("#matchDrawingBtn"); pg.wait_for_timeout(200)
     got = pg.evaluate("() => trimEnd - trimStart")
     check("Flip: Fit my animation counts each page at its own length (three pages held 8 at 12 fps is 2 s)",
           abs(got - 2.0) < 0.02, f"loop {got:.2f} s; pages over fps would say 0.25, and the 0.5 s floor")
     pg.close()
-    pg = editor(b, "Flip", "/flip", drawn=False)
+    pg = editor(b, "Flip", "/flip", drawn=False, door="length")
     before = pg.evaluate("() => trimEnd - trimStart")
     off = pg.evaluate("() => { const f = document.getElementById('matchDrawingBtn'); f.click(); return f.disabled; }")
     pg.wait_for_timeout(200)
@@ -380,7 +383,7 @@ with sync_playwright() as p:
     # 9% in, and 1.28 times the longer of the loop and the drawing across.
     VIEW = "() => (document.getElementById('musicTimeline').dataset.view || '').split(' ').map(Number)"
     for _n, _p in EDITORS:
-        pg = editor(b, _n, _p, track=False, more=False)
+        pg = editor(b, _n, _p, track=False, door=None)
         browsing.pad_drawer(pg, "music")
         pg.set_input_files("#musicInput", TRACK30)
         pg.wait_for_function("() => Math.abs(audioDuration - 30) < 0.05 && !!currentAudioBuffer", timeout=20000)

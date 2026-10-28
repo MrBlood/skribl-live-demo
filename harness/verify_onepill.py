@@ -341,9 +341,13 @@ with sync_playwright() as p:
         q.set_input_files("#musicInput", {"name": "t.wav", "mimeType": "audio/wav", "buffer": AUD})
         q.wait_for_function("() => document.getElementById('musicUploadBtn').classList.contains('loaded')", timeout=20000)
         settle(q, 500)
-        if q.get_attribute("#fineTuneToggle", "aria-expanded") != "true":   # More, open
-            q.click("#fineTuneToggle")
-        settle(q)
+        # The doors, one open at a time: Exact times' Each press, then the
+        # Restart door's switches and its view.
+        q.click('#musicDoors .dp-tile[data-dp="exact"]'); settle(q)
+        q.evaluate("() => document.getElementById('musicStepSeg').scrollIntoView({block: 'center'})")
+        settle(q, 300)
+        yield "music drawer, Exact times"
+        q.click('#musicDoors .dp-tile[data-dp="restart"]'); settle(q)
         q.evaluate("() => { const b = document.getElementById('musicRestart'); if (b) b.scrollIntoView({block: 'center'}); }")
         settle(q, 300)
         yield "music drawer"

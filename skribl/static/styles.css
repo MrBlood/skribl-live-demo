@@ -2396,26 +2396,34 @@ body.recoloring #canvas { cursor: crosshair !important; }
 }
 @media (hover: hover) { .panel-btn:hover { background: var(--surface-control-hover); color: var(--text-bright); } }
 
-.fine-tune-body[hidden], .mt-pick[hidden], .mt-pick-btn[hidden], .mt-pick-tag[hidden] { display: none; }
+.mt-pick[hidden], .mt-pick-btn[hidden] { display: none; }
 
 /* THE ONE LINE, under the timeline: the loop's length, bold, in beats and
-   against the drawing, then Skribl's pick or the way back at its end. Small
-   violet words are --accent-ink, the menu's. It was three lines (the pick,
-   Adjust's length and Fine-tune's sync line). ITS HEIGHT NEVER CHANGES UNDER
-   A DRAG: the words and the end have fixed widths to share (340px, room for
-   the longest words, and 190px, for the way back or the pick with its Undo),
-   so the end goes to a second row below 540px whatever the line says. Sized
-   to what it says, the end wrapped on a phone the moment the way back
-   appeared, and everything under the line dropped 24px with the finger
-   still on the strip. */
-.mt-pick { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; margin-top: 8px;
+   against the drawing. It was three lines (the pick, Adjust's length and
+   Fine-tune's sync line), and until the four doors Skribl's pick or the way
+   back sat at its end. */
+.mt-pick { display: flex; align-items: center; margin-top: 8px;
   font-size: 14px; line-height: 1.35; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
-.mt-pick-text { flex: 1 1 340px; min-width: 0; }
+.mt-pick-text { flex: 1 1 auto; min-width: 0; }
+/* ITS HEIGHT HOLDS AS IT CHANGES. Its longest words ("19.75s · 39.5 beats ·
+   shorter than your animation") are 324px in Inter at 14px, the widest face
+   it is drawn in, and fit one row from a 390px phone up (332px of room).
+   Narrower, what the loop is against the drawing takes a row of its own,
+   whatever it says, so nothing under the line moves as it changes. A page
+   zoomed in is a narrower screen, so it holds there too. (A @media, not a
+   @container: harness/tools/cssgraph.py keeps any other at-rule whole, so
+   it would land in the player's sheet.) */
+@media (max-width: 389px) {
+  .mt-pick-vs { display: block; }
+  .mt-pick-vs .mt-pick-sep { display: none; }
+}
 .mt-pick-text b { color: var(--text-primary); font-weight: 650; }
-.mt-pick-end { flex: 1 1 190px; display: flex; align-items: center; justify-content: flex-end; gap: 6px; min-height: 32px; }
-.mt-pick-tag { display: inline-flex; align-items: center; gap: 5px;
-  color: var(--accent-ink); font-weight: 600; white-space: nowrap; }
+/* Skribl's mark, the two stars in the small violet words' ink (the menu's
+   --accent-ink): before Skribl's pick in the Length door, and before the
+   length it made on the Length tile. */
 .mt-spark { width: 14px; height: 14px; flex: none; color: var(--accent-ink); }
+/* UNDO, under the beats in the Length door, for eight seconds after Skribl's
+   pick or a tap on Beats moved the loop. */
 .mt-pick-btn { display: inline-flex; align-items: center; gap: 5px; min-height: 32px; padding: 4px 10px;
   border: 1px solid var(--menu-card-line); border-radius: 999px; background: var(--menu-card);
   color: var(--accent-ink); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
@@ -2423,67 +2431,41 @@ body.recoloring #canvas { cursor: crosshair !important; }
 .mt-pick-btn svg { width: 14px; height: 14px; flex: none; }
 @media (hover: hover) { .mt-pick-btn:hover { background: color-mix(in srgb, var(--accent) 7%, var(--menu-card)); } }
 
-/* A TYPED TIME (More's Start of loop and End of loop). A field that takes
-   text is 16px, or iOS magnifies the page (A11Y 11b). */
+/* A TYPED TIME (Exact times' Start of loop and End of loop). A field that
+   takes text is 16px, or iOS magnifies the page (A11Y 11b). */
 .mt-time { font: inherit; font-size: 16px; font-variant-numeric: tabular-nums; color: var(--text-primary);
   background: var(--menu-paper); border: 1px solid var(--menu-card-line); border-radius: 10px;
   padding: 5px 8px; width: 78px; box-sizing: border-box; text-align: center; }
 .mt-time:focus-visible { outline: 2px solid var(--ui-hi); outline-offset: 1px; }
 
-/* FIT MY DRAWING and WHOLE SONG: two menu cards, as the draw drawer's tiles
-   are; the one that describes the loop wears the one tint. */
-.mt-picks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 12px; }
-.mt-pick-card { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; min-width: 0; min-height: 48px;
-  padding: 8px 12px; border-radius: 16px; border: 1px solid var(--menu-card-line); background: var(--menu-card);
-  box-shadow: var(--menu-card-drop); font: inherit; text-align: left; cursor: pointer;
-  -webkit-tap-highlight-color: transparent; transition: background .15s ease, border-color .15s ease; }
+/* THE FOUR DOORS: the draw drawer's tiles and choices (.dp, below; its
+   unfold, its fold and the joint of the open tile with its card are the
+   same), each tile a drawn picture of its group in the small violet words'
+   ink over its name and what it is set to. They were More, one card the
+   drawer's width over the restart, the beat, exact times and how it loops,
+   each under its name; a door's tile is its name now. The unfold and the
+   fold are lib/musicdrawer.js's (Web Animations), so Reduce Motion is
+   honoured there. The words of the switch rows (Smooth restart, Snap to the
+   beat, Cut on silence, Lock the length) are .mt-k over .mt-v, the draw
+   drawer's switch row, name over what it does. */
+.mt-doors { margin-top: 12px; }
+.dp-art.mt-door-art { position: relative; display: flex; align-items: center; justify-content: center; height: 34px; color: var(--accent-ink); }
+.dp-art.mt-door-art svg { width: 24px; height: 24px; }
+/* While the loop is Skribl's pick, Skribl's mark sits on the Length tile's
+   picture, up at its right, so the tile's words keep their room. */
+.mt-door-spark { position: absolute; left: calc(50% + 9px); top: 1px; line-height: 0; }
+.dp-art.mt-door-art .mt-door-spark svg { width: 12px; height: 12px; }
+.mt-doors .dp-tile .dp-v { font-variant-numeric: tabular-nums; }
+.mt-lengths .dp-choice { padding: 9px 4px 10px; }
+.mt-lengths .dp-v .mt-spark { width: 12px; height: 12px; margin-right: 3px; vertical-align: -1px; }
+.mt-lengths .dp-choice:disabled { cursor: default; }
+.mt-lengths .dp-choice:disabled .dp-k { color: var(--text-secondary); }
+.mt-doors .dp-panel > .mt-switch { padding: 4px 2px 0; }
+.mt-doors .mt-smooth > .mt-switch:first-child { padding-top: 0; }
+.mt-doors .mt-beats { padding-top: 0; }
+#musicPickUndo { align-self: center; }
 .mt-k { font-size: 15px; font-weight: 650; color: var(--text-primary); line-height: 1.25; }
 .mt-v { font-size: 13px; font-weight: 500; color: var(--text-secondary); line-height: 1.3; }
-.mt-pick-card .mt-k, .mt-pick-card .mt-v { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.mt-pick-card.on { background: var(--seg-on-fill); border-color: transparent; box-shadow: none; outline: 2px solid transparent; outline-offset: -2px; }
-.mt-pick-card.on .mt-k, .mt-pick-card.on .mt-v { color: var(--seg-on-ink); }
-.mt-pick-card:disabled { cursor: default; }
-.mt-pick-card:disabled .mt-k { color: var(--text-secondary); }
-.mt-pick-card:focus-visible { outline: 2px solid var(--ui-hi); outline-offset: 2px; }
-@media (hover: hover) { .mt-pick-card:not(.on):not(.open):not(:disabled):hover { background: color-mix(in srgb, var(--accent) 7%, var(--menu-card)); } }
-
-/* MORE: a menu card the width of the drawer, its name and what it holds on
-   one baseline and a drawn + at its end (a - while open). Open, it JOINS what
-   it opens as the draw drawer's tiles do: the tile reaches 11px down over the
-   10px gap and the card's top edge, its own bottom edge the card's colour,
-   so the seam is not there to see; it is above the card for that, as the
-   tiles are, and covers the card's dark top light as they do (JOINED, at
-   .dp-tile.dp-open). Its words keep their place as it opens: the padding, not a
-   centring, puts them in the middle of the closed tile. Its words are ONE
-   BLOCK, not a flex row: lib/labels.js trims a button's label to cap height
-   over the baseline (labels.css .lbl-own), so the + centres on the letters
-   and not on the font's ascent and descent. A flex row cannot be trimmed: in
-   the first build the + sat 1-2px low and the tile was 56px for 48. They
-   wrap below about 360px rather than be cut short. The block's own size is
-   More's, so the trim is to More's capitals, and its line is the +'s 18px, so
-   the two centre on whole pixels: a size up (B) More was 15px in a 14px block,
-   trimmed to the block's capitals, and in main's CI (its own Liberation Sans
-   and FreeSerif) the + sat 1px off. */
-.mt-more { position: relative; z-index: 1; width: 100%; min-height: 0; margin-top: 8px; padding: 14px 14px;
-  flex-direction: row; align-items: center; gap: 8px; }
-.mt-more-words { flex: 1 1 auto; min-width: 0; font-size: 15px; line-height: 18px; }
-.mt-more .mt-k, .mt-more .mt-v { white-space: normal; }
-.mt-more .mk { flex: none; width: 18px; height: 18px; color: var(--accent-ink); }
-.mt-more .mk-minus, .mt-more[aria-expanded="true"] .mk-plus { display: none; }
-.mt-more[aria-expanded="true"] .mk-minus { display: block; }
-.mt-more.open { border-bottom-color: var(--menu-card); border-radius: 16px 16px 0 0; padding-bottom: 25px; margin-bottom: -11px; box-shadow: 0 2px 0 -1px var(--menu-card); }
-.mt-more.open .mt-k { color: var(--seg-on-ink); }
-.fine-tune-body { margin-top: 10px; padding: 12px 12px 8px; border-radius: 0 0 16px 16px;
-  background: var(--menu-card); border: 1px solid var(--menu-card-line); box-shadow: var(--menu-card-drop); transform-origin: top; }
-/* The unfold and the fold are lib/musicdrawer.js's (Web Animations), so
-   Reduce Motion is honoured there. */
-.fine-tune-body.mt-folding { pointer-events: none; }
-
-/* MORE'S FOUR PARTS, each under its name (The restart, The beat, Exact times,
-   How it loops), and the switch rows (Smooth restart, Cut on silence, Lock
-   the length): the draw drawer's switch row, name over what it does. */
-.mt-sect { margin: 18px 0 4px; font-size: 14px; font-weight: 600; color: var(--text-secondary); }
-.fine-tune-body > .mt-sect:first-child { margin-top: 2px; }
 /* EACH PRESS, under the times: how far - and + move, the one pill beside a
    name in the edge names' style ("Start of loop"); "a bar" shows once there
    is a tempo, opening out on one line (lib/musicdrawer.js glideIn). */
@@ -2525,9 +2507,10 @@ body.recoloring #canvas { cursor: crosshair !important; }
 .mt-switch .layer-toggle { display: inline-block; }
 .mt-smooth #testSeamBtn { margin-top: 6px; }
 /* THE RESTART VIEW (lib/musicrestart.js): the end beside the start, on the
-   paper inside More's card (a card in a card would be a box in a box), its
-   two words in its top corners and the blend's dot at its foot, whose tap
-   band is 44px. A finger that moves up or down first scrolls the page. */
+   paper inside the Restart door's card (a card in a card would be a box in a
+   box), its two words in its top corners and the blend's dot at its foot,
+   whose tap band is 44px. A finger that moves up or down first scrolls the
+   page. */
 .mt-rv { position: relative; height: 112px; margin-top: 8px; border-radius: var(--r-control); background: var(--menu-paper);
   overflow: hidden; touch-action: pan-y; -webkit-user-select: none; user-select: none; cursor: ew-resize; }
 .mt-rv-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
@@ -2541,10 +2524,11 @@ body.recoloring #canvas { cursor: crosshair !important; }
 .mt-rv-dot[hidden] { display: none; }
 .mt-rv-hint { margin: 8px 0 0; font-size: 14px; line-height: 1.35; color: var(--text-secondary); }
 
-/* THE PAIR THAT PLAYS, under the timeline, More open or not: Play with my drawing
-   is the action, so the accent's fill; Hear the loop, the same size beside
-   it, a menu card with the small violet words. Each is its verb over what it
-   plays (15px over 12px), so both fit a 168px half of the owner's phone. */
+/* THE PAIR THAT PLAYS, under the timeline, whichever door is open: Play with
+   my drawing is the action, so the accent's fill; Hear the loop, the same
+   size beside it, a menu card with the small violet words, the click at its
+   end (below). Each is its verb over what it plays (15px over 12px), so both
+   fit a 168px half of the owner's phone. */
 .mt-transport { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 12px; }
 .mt-play { display: flex; align-items: center; justify-content: flex-start; gap: 10px; min-width: 0; min-height: 52px;
   padding: 6px 14px; border: 0; border-radius: 999px; background: var(--accent-fill); color: #fff; font: inherit;
@@ -2567,10 +2551,32 @@ body.recoloring #canvas { cursor: crosshair !important; }
 @media (max-width: 379px) { .mt-play .tp-v { white-space: normal; } }
 @media (hover: hover) { .mt-play:not(:disabled):not(.mt-loop):hover { filter: brightness(1.08); }
   .mt-play.mt-loop:not(:disabled):hover { background: color-mix(in srgb, var(--accent) 7%, var(--menu-card)); } }
+/* THE CLICK, in one pill with Hear the loop (the owner's pick in the
+   whole-drawer mock): the pill is the menu card Hear was, Hear its first
+   part and the click, a metronome, its end, parted by the card's line. The
+   click lit is the one tint, as a chosen choice is. A third button in the pair
+   pushed "Play with my drawing" out of its own on a phone, so Hear gives the
+   click its end. */
+.mt-hear { display: flex; min-width: 0; border-radius: 999px; background: var(--menu-card); border: 1px solid var(--menu-card-line);
+  box-shadow: var(--menu-card-drop); }
+.mt-hear > .mt-play.mt-loop { flex: 1 1 auto; border: 0; box-shadow: none; background: transparent; border-radius: 999px 0 0 999px; padding-right: 6px; }
+.mt-click { flex: none; display: grid; place-items: center; width: 50px; min-height: 52px; padding: 0; border: 0;
+  border-left: 1px solid var(--menu-card-line); border-radius: 0 999px 999px 0; background: transparent; color: var(--accent-ink);
+  font: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.mt-click svg { width: 22px; height: 22px; display: block; }
+.mt-click[aria-pressed="true"] { background: var(--seg-on-fill); color: var(--seg-on-ink); }
+.mt-click:disabled { opacity: .5; cursor: default; }
+.mt-click:focus-visible { outline: 2px solid var(--ui-hi); outline-offset: -3px; }
+@media (hover: hover) { .mt-click:not(:disabled):not([aria-pressed="true"]):hover { background: color-mix(in srgb, var(--accent) 7%, var(--menu-card)); } }
+/* THE LIT BEAT: a beat's dot glowing as it is heard while Hear the loop
+   plays, bigger on a bar (lib/musictimeline.js pulse, which animates it). */
+.mt-tl-lit { position: absolute; width: 9px; height: 9px; margin: -4.5px 0 0 -4.5px; border-radius: 50%; background: var(--accent-ink);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 30%, transparent), 0 0 12px color-mix(in srgb, var(--accent) 70%, transparent);
+  opacity: 0; pointer-events: none; z-index: 3; }
+.mt-tl-lit.bar { width: 12px; height: 12px; margin: -6px 0 0 -6px; }
 
-/* TAP THE BEAT, in More: the tap is a menu card with the small violet words,
-   lit while it listens. */
-.mt-beat { margin-top: 6px; }
+/* TAP THE BEAT, in the Beat door: the tap is a menu card with the small
+   violet words, lit while it listens. */
 /* The tap stays where the finger is while its words change: the row holds
    the tap at its top, and the words start a half-line down, so their first
    line sits level with the tap's middle (44px less a 1.35 line, halved) and
@@ -2942,11 +2948,12 @@ body.recoloring #canvas { cursor: crosshair !important; }
   max-width: 100%; overflow-wrap: anywhere; }
 /* MAGNIFY, at the end of the name's line: the - readout + of Exact times
    (.edge-controls, .nudge-btn), the same card, line and fill, its cells 28px
-   and grown to 44 for a finger, the glyphs the magnifier Fine-tune's had. */
+   and grown to 44 for a finger, the glyphs the magnifier Fine-tune's had.
+   THE TALLER BOX after it, the same card and cell (lib/musictimeline.js). */
 .mt-tl-head { display: flex; align-items: center; gap: 10px; margin: 0 0 6px; }
 .mt-tl-namebox { flex: 1 1 auto; min-width: 0; }
 .mt-tl-head .mt-tl-name { margin: 0; }
-.mt-tl-mag { display: flex; align-items: center; gap: 2px; padding: 3px; flex: none;
+.mt-tl-mag, .mt-tl-tallbox { display: flex; align-items: center; gap: 2px; padding: 3px; flex: none;
   background: var(--menu-card); border: 1px solid var(--menu-card-line); border-radius: var(--r-control); }
 .mt-tl-mag-btn { position: relative; z-index: 1; width: 28px; height: 28px; padding: 0; border: 0; display: grid; place-items: center;
   border-radius: calc(var(--r-seg) - 3px); background: color-mix(in srgb, var(--accent) 7%, var(--menu-card)); color: var(--text-tool);
@@ -2963,6 +2970,8 @@ body.recoloring #canvas { cursor: crosshair !important; }
    whatever face draws them, so - and + stay where they are from 1x to 512x;
    hidden, so it is neither painted nor read out. */
 .mt-tl-mag-val::after { content: attr(data-widest); display: block; height: 0; overflow: hidden; visibility: hidden; }
+/* Taller, it wears the chosen choice's purple, as the click by Hear the loop does. */
+.mt-tl-mag-btn.mt-tl-tall[aria-pressed="true"] { background: var(--seg-on-fill); color: var(--seg-on-ink); }
 .mt-tl-stage { position: relative; height: 118px; touch-action: pan-y; -webkit-user-select: none; user-select: none; cursor: grab; }
 .mt-tl.holding .mt-tl-stage { cursor: grabbing; }
 .mt-tl-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
@@ -2970,8 +2979,10 @@ body.recoloring #canvas { cursor: crosshair !important; }
   display: flex; align-items: flex-end; justify-content: center; cursor: ew-resize; touch-action: none;
   -webkit-tap-highlight-color: transparent; }
 .mt-tl-handle::before { content: ""; position: absolute; inset: 0 -13px -12px; }
-.mt-tl-handle::after { content: ""; position: absolute; top: 0; bottom: 0; left: 50%; width: 3px; margin-left: -1.5px;
-  background: var(--accent); border-radius: 2px; }
+/* The loop's edge line is the timeline's to paint (lib/musictimeline.js),
+   about 1.5px and sharp on the screen's own pixels: it was this handle's
+   ::after, 3px, and a box here is snapped to whole CSS pixels before the
+   handle moves it by a fraction, so its sides fell between pixels. */
 .mt-tl-grip { position: relative; z-index: 1; flex: none; width: 22px; height: 18px; margin-bottom: -9px; border-radius: 6px;
   background: var(--accent); color: #fff; display: grid; place-items: center; box-shadow: 0 1px 3px rgba(20, 10, 60, .25); }
 .mt-tl-grip svg { width: 18px; height: 16px; display: block; }
@@ -3054,12 +3065,10 @@ body.recoloring #canvas { cursor: crosshair !important; }
 @media (hover: hover) { .loop-btn:hover { filter: brightness(1.08); } }
 .loop-btn:disabled { opacity: 0.4; cursor: default; }
 
-/* Start and End of loop, straight under their name, Exact times: the rule
-   that sat above them parted them from the loop detail, which went with step
-   2, and alone it parted the fields from their own name. */
-.finetune-panel {
-  margin-top: 8px;
-}
+/* Start and End of loop, at the top of the Exact times door: the rule that
+   sat above them parted them from the loop detail, which went with step 2,
+   and under More they sat 8px under their section's name, which the door's
+   tile is now. */
 
 .finetune-grid {
   display: flex;
@@ -5092,11 +5101,12 @@ button:not([hidden]):has(> svg.mk:only-child) { display: inline-flex; align-item
      [- 0.000 +] group, where two fit; below that they stack. Each column must
      hold a whole group: 130px with the 16px time (2px gaps and padding, 30px
      buttons). minmax(130) + 10px gap = 270, and the grid is the screen less
-     104px inside More's card (it was 78px on the drawer's paper): two-up from
-     374px (271px at 375, 298 at the owner's 402), one column at 363 and 340
-     rather than spilling the group -- the bug class verify_ux caught at 363.
-     The time is not narrowed to win the 26px back: "19.999" is 53px in this
-     box's face and 62px in DejaVu Sans. */
+     84px inside the Exact times door's card (104 inside More's, 78 on the
+     drawer's paper before it): two-up from 354px (291px at 375, 318 at the
+     owner's 402), one column at 340 and 320 rather than spilling the group --
+     the bug class verify_ux caught at 363. The time is not narrowed to go
+     two-up sooner: "19.999" is 53px in this box's face and 62px in DejaVu
+     Sans. */
   .finetune-grid {
     display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
     gap: 16px 10px; align-items: stretch;
@@ -5999,8 +6009,13 @@ body.player-mode .player-shell { position: static; }
    the drawer and the menu are one family: a tile is a menu card, a choice is
    the one tint, the nesting goes paper, card, paper as the menu's pages do.
    Was: six rows of labelled pills (seven on Flip) in .draw-inline, and on a
-   phone a "Brush, smoothing & more" button in front of them. */
-.dp { width: 100%; max-width: 520px; }
+   phone a "Brush, smoothing & more" button in front of them.
+   ON A DESK THE ROW SPANS THE DRAWER, as the colours above it do and, in the
+   music drawer, the pair that plays (the owner's pick in the whole-drawer
+   mock, "Tiles grow"). It stopped at 520px, 140px short of the drawer's 660
+   on a desk or a tablet, with the space left empty on the right. A phone's
+   drawer is narrower than 520, so a phone is as it was. */
+.dp { width: 100%; }
 .dp-tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; position: relative; z-index: 1; align-items: start; }
 .dp-tile, .dp-choice {
   display: flex; flex-direction: column; align-items: center; gap: 1px; min-width: 0;
@@ -6956,10 +6971,11 @@ body:not(.player-mode) :is(.toolbar, .flip-tools) {
 .compose-lead { display: flex; align-items: center; gap: 2px; min-width: 0; }
 .compose-close { flex: 0 0 auto; margin-left: -4px; }
 .compose-close svg { width: 22px; height: 22px; }
-/* Tune's name is a drawer's section label, as the music drawer's are (.mt-sect),
-   and its rows are parted by the menu's rule: Tune is the menu's paper (the
-   drawers mock), and it wore small capitals and the grey line the menu's
-   sheets do not (the drawers' census, after #630: "all yes"). */
+/* Tune's name is a drawer's section label, as More's were in the music
+   drawer (.mt-sect, 14px and 600 in the sheet's ink, gone with the four
+   doors), and its rows are parted by the menu's rule: Tune is the menu's
+   paper (the drawers mock), and it wore small capitals and the grey line the
+   menu's sheets do not (the drawers' census, after #630: "all yes"). */
 .tune-title { font-size: 14px; font-weight: 600; color: var(--text-secondary); padding: 8px 0 4px; }
 .tune-row { display: flex; align-items: center; gap: 14px; padding: 8px 0; }
 .tune-row + .tune-row { border-top: 1px solid var(--menu-card-rule); }

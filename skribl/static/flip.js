@@ -1466,9 +1466,15 @@ function chip(msg, action){
      the next press is most likely. The Pad took its toast off the controls in
      v315 (app.js showToast: A TOAST NEVER COVERS A CONTROL) and puts it just
      under the header; this is the same place, measured the same way, with the
-     same fallback when the header is off screen. */
+     same fallback when the header is off screen. A drawer scrolled into has
+     the dock right under the header, pinned there (lib/drawerdetent.js),
+     where the chip sat on the dock again: wherever the chip just under the
+     header would reach the dock, it goes under the dock. */
   const h = document.querySelector('.flip-app .header'), r = h && h.getBoundingClientRect();
-  el.style.top = (r && r.bottom > 0) ? Math.round(r.bottom + 8) + 'px' : '';
+  const d = document.querySelector('.flip-tools'), dr = d && d.getClientRects().length ? d.getBoundingClientRect() : null;
+  let y = r && r.bottom > 0 ? r.bottom : 0;
+  if (y && dr && dr.top < y + 8 + el.offsetHeight) y = Math.max(y, dr.bottom);
+  el.style.top = y ? Math.round(y + 8) + 'px' : '';
   el.classList.add('show');
   clearTimeout(el._t); el._t = setTimeout(()=>el.classList.remove('show'), holdMs);
 }
@@ -5328,6 +5334,10 @@ document.addEventListener('click',e=>{ const t=e.target;
   // chosen. Pad never hit this: its inputs sit INSIDE the drawer partial.
   // (v206) Ignore the file inputs here.
   if(t.closest('input[type=file]')) return;
+  // Nor is the chip's button (chip(), New Skribl's Undo and the music
+  // drawer's when the loop's end sets the beat): it answers what was just
+  // done, and Undo closed the drawer it was undoing in.
+  if(t.closest('#flipChip')) return;
   // Play and Stop are not a tap away, and nothing is while a Flip plays: an
   // open drawer RESTS then and wakes at Stop, as the Pad's does (flip.css; the
   // owner, "all yes"). Its taps pass through it to the page, which this would
@@ -6677,7 +6687,7 @@ musicDrawer = window.SkriblMusicDrawer ? window.SkriblMusicDrawer.wire({
   playButton: ()=>playBtn,
   audio: ()=>{ ensureAudio(); return audioEl; },
   buffer: ()=>currentAudioBuffer,
-  loop: { start:startWebAudioLoop, stop:stopWebAudioLoop, playing:()=>_waLoop.playing(), elapsed:()=>_waLoop.elapsed(), duration:()=>_waLoop.duration(), latency:()=>_waLoop.latency() },
+  loop: { start:startWebAudioLoop, stop:stopWebAudioLoop, playing:()=>_waLoop.playing(), elapsed:()=>_waLoop.elapsed(), duration:()=>_waLoop.duration(), latency:()=>_waLoop.latency(), ctx:()=>audioCtx },
   clip: buildTrimmedLoopWav,
   playing: ()=>playing,
   setPreviewing: (on)=>{ previewingLoop=on; },
@@ -6688,6 +6698,8 @@ musicDrawer = window.SkriblMusicDrawer ? window.SkriblMusicDrawer.wire({
   syncRow: syncMusicUI,
   tempo: ()=>musicTempo,
   setTempo: (t)=>{ musicTempo=t; },
+  // The drawer's notes, as the Pad's toast says them: the chip under the header.
+  say: (words, action)=>chip(words, action),
 }) : null;
 function stopLoopPreview(){ if(musicDrawer) musicDrawer.stopPreview(); }
 function setCrossfadeUI(){ if(musicDrawer) musicDrawer.syncCrossfade(); }

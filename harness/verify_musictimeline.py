@@ -26,6 +26,13 @@ plan, mocked first; the owner: "Yes on all").
   edge and keeps clear of the whole song's line, which a tap under it still
   reaches; and the tab, pressed below the song's edge, drags its end.
 
+  THE LOOP'S EDGES ARE SHARP (the owner's pick in the whole-drawer mock, "1.5px
+  sharp"). Read on the screenshot at the screen's own pixels, each end placed
+  between pixels in the quiet of a song: a run of the accent as wide as 1.5px
+  rounds to on that screen (2 on a desk, 3 at 2x, 5 at 3x, the owner's phone),
+  the ground either side flat. The 3px line before was 5 columns at 2x with
+  half-lit ones either side.
+
   MAGNIFY (the owner, looking for Fine-tune's: "All yes but maybe go to
   x64?", then "stay"; then "Like 512x?" to see the wave cross). Magnifier -
   and + at the end of the name's line, its middle on the name's, step 1x to
@@ -106,6 +113,7 @@ except ImportError as exc:
     raise SystemExit(77)
 import browsing  # noqa: E402
 import waits  # noqa: E402
+from PIL import Image  # noqa: E402
 
 # For calibration: MUSICTL_ONLY=Pad (or Flip) runs one editor, and
 # MUSICTL_PART=layout (frame, slide, ends, grip, mag, wave, whole, playhead,
@@ -138,6 +146,22 @@ def _wav(seconds, rate=8000, hz=220.0):
 
 
 TWELVE = {"name": "twelve.wav", "mimeType": "audio/wav", "buffer": _wav(12.0)}
+
+
+def _quiet(rate=8000):
+    """A second of tone, four of silence, a second of tone, six of silence:
+    a loop's ends in the quiet have nothing but the ground beside them."""
+    buf = io.BytesIO()
+    w = wave.open(buf, "wb")
+    w.setnchannels(1); w.setsampwidth(2); w.setframerate(rate)
+    on = lambda i: i < rate or 5 * rate <= i < 6 * rate
+    w.writeframes(b"".join(struct.pack("<h", int(12000 * math.sin(2 * math.pi * 220 * i / rate)) if on(i) else 0)
+                           for i in range(12 * rate)))
+    w.close()
+    return buf.getvalue()
+
+
+QUIET = {"name": "quiet.wav", "mimeType": "audio/wav", "buffer": _quiet()}
 # A 55Hz tone at a real song's rate: it crosses zero every 1/110s, exactly.
 LOW = {"name": "low.wav", "mimeType": "audio/wav", "buffer": _wav(8.0, rate=44100, hz=55.0)}
 SHORT = {"name": "six.wav", "mimeType": "audio/wav", "buffer": _wav(6.0)}
@@ -177,7 +201,7 @@ FRAMES = """(ms) => new Promise((res) => { const tl = document.getElementById('m
   requestAnimationFrame(tick); })"""
 
 
-def editor(b, name, path, *, drawn=True, song=TWELVE, opts=DESK, more=False, ctx=None):
+def editor(b, name, path, *, drawn=True, song=TWELVE, opts=DESK, door=None, ctx=None):
     c = ctx or waits.instrument(b.new_context(**opts))
     pg = c.new_page()
     errs = []
@@ -196,8 +220,8 @@ def editor(b, name, path, *, drawn=True, song=TWELVE, opts=DESK, more=False, ctx
             pg.evaluate(PAGES, {"n": 3, "fps": 12, "hold": 8})
     if song:
         add(pg, song)
-    if more:
-        set_more(pg, True)
+    if door:
+        set_door(pg, door)
     return c, pg, errs
 
 
@@ -210,9 +234,13 @@ def add(pg, song):
     waits.settle(pg, 500)
 
 
-def set_more(pg, want):
-    if (pg.get_attribute("#fineTuneToggle", "aria-expanded") == "true") != want:
-        pg.click("#fineTuneToggle")
+def set_door(pg, want):
+    """One of the drawer's doors open by its tile, as a person opens it: the
+    Restart view and Cut on silence are in Restart, the typed times and their
+    - and + in Exact times."""
+    t = f'#musicDoors .dp-tile[data-dp="{want}"]'
+    if pg.get_attribute(t, "aria-expanded") != "true":
+        pg.click(t)
         pg.wait_for_timeout(350)
         browsing.wait_scroll_still(pg)
 
@@ -487,7 +515,7 @@ with sync_playwright() as p:
 
     print("\nMUSIC TIMELINE — the ends' grips, at their foot")
     # What is on top, asked of the page at every other pixel beside each line
-    # (3 to 14px either side, its own 3px left out) from the song's top to
+    # (3 to 14px either side, its own pixels left out) from the song's top to
     # 10px above its foot: never the grip. Then a point of the tab below the
     # song's edge (the tab shows there), the whole song's line under the line
     # (still the whole song's), and the boxes for the words. What is on top is
@@ -532,6 +560,53 @@ with sync_playwright() as p:
                   f"the end {t0['e']:.3f} -> {t1['e']:.3f}, {moved:.1f}px for a 40px drag; the start {t0['s']} -> {t1['s']}")
             check(f"{_n}, {face}: no page errors from the grips", not errs, "; ".join(errs[:2]))
             c.close()
+
+    print("\nMUSIC TIMELINE — the loop's edges, sharp")
+    # THE LOOP'S EDGE LINE IS SHARP (the owner's pick in the whole-drawer
+    # mock, "1.5px sharp"): about 1.5px, rounded to the screen's own pixels,
+    # and laid on whole ones. Read on the screenshot, at the screen's own
+    # pixels, across each end placed between pixels in a quiet stretch of the
+    # song, above its middle: the line is a run of the accent exactly as wide
+    # as 1.5px rounds to on that screen (2 on a desk, 3 at 2x, 5 at 3x, the
+    # owner's phone), and the column either side of it is the ground beyond,
+    # not part-lit. It was 3px, its handle a fraction of a pixel off, so its
+    # sides fell between pixels: 5 columns of the accent at 2x, and half-lit
+    # ones either side.
+    EDGE_AT = """() => { const st = document.getElementById('musicTlStage').getBoundingClientRect();
+        return { top: st.top, acc: getComputedStyle(document.getElementById('musicTimeline')).getPropertyValue('--accent').trim(),
+                 hands: ['tlStart', 'tlEnd'].map((id) => { const r = document.getElementById(id).getBoundingClientRect(); return r.left + r.width / 2; }) }; }"""
+
+    def sharp(img, acc, n):
+        W, H = img.size
+        px = [[img.getpixel((i, j)) for j in range(H)] for i in range(W)]
+        near = lambda a, z, t: max(abs(u - v) for u, v in zip(a, z)) <= t
+        line = [i for i in range(W) if all(near(px[i][j], acc, 10) for j in range(H))]
+        row = " ".join("%02x%02x%02x" % px[i][H // 2] for i in range(W))
+        if not line or line != list(range(line[0], line[-1] + 1)) or line[0] < 2 or line[-1] > W - 3:
+            return False, f"the accent's columns {line}: {row}"
+        a, z = line[0], line[-1]
+        flat = all(near(px[a - 1][j], px[a - 2][j], 3) and near(px[z + 1][j], px[z + 2][j], 3) for j in range(H))
+        return len(line) == n and flat, f"{len(line)} columns of the accent ({n} wanted), the ground either side {'flat' if flat else 'part-lit'}: {row}"
+
+    for _n, _p in eds("sharp"):
+        got = []
+        for face, opts in (("a desk", DESK), ("a 2x phone", PHONE), ("the owner's phone at 3x", dict(PHONE, device_scale_factor=3))):
+            c, pg, errs = editor(b, _n, _p, opts=opts, song=QUIET)
+            pg.evaluate(SET, {"s": 1.437, "e": 4.613, "xf": 0, "tempo": None})
+            into_view(pg, "#musicTimeline")
+            pg.wait_for_timeout(700)
+            dpr = opts.get("device_scale_factor", 1)
+            n = int(math.floor(1.5 * dpr + 0.5))
+            e = pg.evaluate(EDGE_AT)
+            acc = tuple(int(e["acc"][k:k + 2], 16) for k in (1, 3, 5))
+            for which, x in zip(("start", "end"), e["hands"]):
+                shot = pg.screenshot(clip={"x": math.floor(x) - 6, "y": math.floor(e["top"]) + 42, "width": 12, "height": 12})
+                ok, why = sharp(Image.open(io.BytesIO(shot)).convert("RGB"), acc, n)
+                got.append((ok, f"{face}, the {which} at {x:.2f}: {why}"))
+            c.close()
+        check(f"{_n}: the loop's edges are sharp lines: each a run of the accent as wide as 1.5px rounds to on the screen (2 pixels "
+              "on a desk, 3 at 2x, 5 at 3x), the ground either side of it flat, read on the screenshot with each end between pixels",
+              all(ok for ok, _ in got), "; ".join(w for _, w in got))
 
     print("\nMUSIC TIMELINE — magnify")
     MAG = """() => { const q = (id) => document.getElementById(id);
@@ -698,7 +773,7 @@ with sync_playwright() as p:
               f"60px left: the loop {t0['s']:.4f} -> {t1['s']:.4f} (want +{moved:.4f}s); handles {h0} -> {h1} -> {h2};"
               f" let go, the start off the middle by {max(around(f[1], f[2], v0[1]) for f in slid):.4f} of a span at most")
         # The end's own + in Exact times: the end is the one zoomed around now.
-        set_more(pg, True)
+        set_door(pg, "exact")
         pg.click('.nudge-btn[data-which="end"][data-amount="1"]')
         pg.wait_for_timeout(900)
         t1, v1 = pg.evaluate(TRIM), pg.evaluate(VIEW)
@@ -786,12 +861,14 @@ with sync_playwright() as p:
               const ratio = (x, y) => { const a = lum(x), b = lum(y); return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05); };
               const ink = (el) => { const g = ground(el); return ratio(over(parse(getComputedStyle(el).color), g), g); };
               const q = (s) => document.querySelector(s), n = q('#musicTlName').getBoundingClientRect(), m = q('.mt-tl-mag').getBoundingClientRect(), st = q('#musicTlStage').getBoundingClientRect();
+              // The taller box after it ends the line (verify_musictall).
+              const k = q('.mt-tl-tallbox').getBoundingClientRect();
               return { level: ink(q('#musicTlMag')), glyph: Math.min(ink(q('#musicTlIn')), ink(q('#musicTlOut'))),
-                       middle: (m.top + m.bottom) / 2 - (n.top + n.bottom) / 2, right: m.right - st.right, below: st.top - m.bottom }; }""")
+                       middle: (m.top + m.bottom) / 2 - (n.top + n.bottom) / 2, right: k.right - st.right, after: k.left - m.right, below: st.top - m.bottom }; }""")
             check(f"{_n}: magnify sits at the end of the name's line, its middle on the name's, and its words and glyphs read against what is behind them ({theme})",
-                  abs(r["middle"]) <= 0.5 and abs(r["right"]) <= 0.5 and r["below"] >= 4 and r["level"] >= 4.5 and r["glyph"] >= 3,
-                  f"middle {r['middle']:+.2f}px from the name's, right edge {r['right']:+.2f}px from the song's, {r['below']:.1f}px over the lane;"
-                  f" the level {r['level']:.2f}:1, the glyphs {r['glyph']:.2f}:1")
+                  abs(r["middle"]) <= 0.5 and abs(r["right"]) <= 0.5 and r["after"] >= 4 and r["below"] >= 4 and r["level"] >= 4.5 and r["glyph"] >= 3,
+                  f"middle {r['middle']:+.2f}px from the name's, the taller box after it {r['after']:.1f}px on, its right edge {r['right']:+.2f}px from the song's,"
+                  f" {r['below']:.1f}px over the lane; the level {r['level']:.2f}:1, the glyphs {r['glyph']:.2f}:1")
             c.close()
 
     print("\nMUSIC TIMELINE — close in, the wave itself")
@@ -996,7 +1073,7 @@ with sync_playwright() as p:
 
     print("\nMUSIC TIMELINE — the Restart view")
     for _n, _p in eds("restart"):
-        c, pg, errs = editor(b, _n, _p, more=True)
+        c, pg, errs = editor(b, _n, _p, door="restart")
         pg.evaluate(SET, {"s": 1.0, "e": 3.0, "xf": 0, "cut": False, "tempo": None})
         into_view(pg, "#musicRestart")
         pg.wait_for_timeout(300)
@@ -1076,7 +1153,7 @@ with sync_playwright() as p:
     LOOP = {"s": 0.5, "e": 4.3013, "xf": 0}
     ENDS = (4.3013, 4.3004, 4.2995)
     for _n, _p in eds("cut"):
-        c, pg, errs = editor(b, _n, _p, more=True)
+        c, pg, errs = editor(b, _n, _p, door="restart")
         fresh = pg.evaluate("() => ({ cut: loopCutOnSilence, sw: document.getElementById('musicCut').getAttribute('aria-checked') })")
         pg.evaluate("() => { pendingMusicMeta = { trimStart: 1, trimEnd: 3, crossfadeMs: 0, enabled: true }; }")
         add(pg, SHORT)
@@ -1090,7 +1167,7 @@ with sync_playwright() as p:
         kept = []
         for want in (False, True):
             browsing.pad_drawer(pg, "music")             # a reload shuts the drawer
-            set_more(pg, True)
+            set_door(pg, "restart")
             if pg.evaluate("() => loopCutOnSilence") != want:
                 pg.click("#musicCut"); pg.wait_for_timeout(200)
             pg.evaluate("() => (typeof scheduleAutosave === 'function' ? scheduleAutosave : scheduleSave)()")
@@ -1103,7 +1180,7 @@ with sync_playwright() as p:
               all(w_ == g for w_, g in kept), f"(set, after a reload): {kept}")
         c.close()
     for _n, _p in eds("cut"):
-        c, pg, errs = editor(b, _n, _p, more=True)
+        c, pg, errs = editor(b, _n, _p, door="restart")
         said = []
         for e in ENDS:
             pg.evaluate(SET, dict(LOOP, e=e, cut=True))
@@ -1143,7 +1220,7 @@ with sync_playwright() as p:
                jumpOn: at === null ? null : jump(on, s0 + at), jumpOff: jump(off, s0), step,
                sameOff: on.length === off.length && on.every((v, i) => Math.abs(v - off[i]) < 1e-6) }; }"""
     for _n, _p in eds("bake"):
-        c, pg, errs = editor(b, _n, _p, more=True)
+        c, pg, errs = editor(b, _n, _p, door="restart")
         pg.evaluate(SET, dict(LOOP, cut=True))
         span = pg.evaluate("() => Math.round(SkriblAudioLoop.CUT_MS / 1000 * currentAudioBuffer.sampleRate) + 2")
         on = pg.evaluate(BAKE, {"span": span})
@@ -1182,7 +1259,7 @@ with sync_playwright() as p:
 
     print("\nMUSIC TIMELINE — posted, cut on silence")
     for _n, _p in eds("post"):
-        c, pg, errs = editor(b, _n, _p, more=True)
+        c, pg, errs = editor(b, _n, _p, door="restart")
         pg.evaluate(SET, dict(LOOP, cut=True))
         pg.wait_for_timeout(300)
         bake = pg.evaluate("""() => { const x = buildLoopAudioBuffer().getChannelData(0);

@@ -24613,3 +24613,494 @@ green, setting aside 343px across a 67ms frame (Flip) and 401px across 83ms
 Noted, not changed: while the sheet rises, the page spends most of each frame
 drawing it (a profile here: about 175ms of 300 in the browser's own work, the
 inline replays a few ms), which is why a busy box holds a frame there.
+
+## After v329 -- The music drawer's four doors, in place of More
+
+The owner, of the drawer mock: "I like D", then "All yes" to the ten picks
+after the whole-drawer mock (FUTURE.md 6s). Step 1 of the eight: D's four
+doors, More gone. The view is as it was: the timeline, the one line and the
+pair that plays. Under it, four of the draw drawer's tiles (lib/drawtiles.js's
+`.dp` rules): Length, Beat, Restart and Exact times, each saying what it is
+set to and opening its group under it, one at a time. Length holds Skribl's
+pick, Fit my drawing and Whole song as three cards, Beats, Undo and Lock the
+length; Beat holds Tap the beat and Snap to the beat; Restart, Smooth
+restart, the Restart view, its length, Hear the restart and Cut on silence;
+Exact times, the two times and Each press. `#musicDetail`'s `data-door`
+takes the place of More's level, and lib/drawerdetent.js's growth follow
+watches it as it watched More.
+
+THE TILES' WORDS FIT A 390PX PHONE. Length says the loop's length (in beats
+once there is a beat) with Skribl's mark on its picture while the loop is
+the pick; Beat the tempo, "Listening" or "Tap it"; Restart "Smooth" or "Clean
+cut"; Exact times the two times, to the hundredth, the tenth or the second,
+as the tile has room for, measured per shape of digits and width of tile.
+
+ONE CARD LIT, THE ONE PRESSED WHERE TWO ARE THE SAME LOOP. Skribl's pick
+before Fit before Whole song: the Pad's pick without ears is as long as the
+drawing, and a short song's pick is the whole song, so two cards were often
+the same loop. The full run found Flip's Whole song pressed on a short song
+and Skribl's pick still lit, the press not answered. The card pressed last
+is lit while it is still the loop (for the song it was pressed on), and the
+pick card pressed on a loop that is already the pick lights with no Undo of
+nothing.
+
+THE ONE LINE ON A NARROW PHONE. Its longest words ("19.75s · 39.5 beats ·
+shorter than your animation") are 324px in Inter at 14px, the widest face it
+is drawn in, against 332px of room on a 390px phone and 317 on a 375. Below
+390, what the loop is against the drawing takes its own row, whatever it
+says, so the line's height holds as it changes; a @media, not a @container,
+since harness/tools/cssgraph.py keeps any other at-rule whole and it would
+have landed in the player's sheet.
+
+THE TIMELINE'S COPY UNDER THE HEADER rarely has to come now: Exact times
+opens right under the timeline, so on the owner's phone and a desk the page
+cannot scroll what it edits away (with More's four groups above it, it did).
+Measured door by door, scrolled as far as the page goes: the copy shows on a
+phone held sideways (874x402 with Length or Restart open; an SE's 667x340
+with any door). FUTURE.md 6s keeps it ("the slim strip that follows you down
+stay as they are"), so it stays, and verify_musicdoors checks it where it
+shows, with a row that guards the doors' gain: on a phone and a desk the
+timeline stays on the screen however far the page scrolls.
+
+THE GROWTH FOLLOW LEAVES OUT BEATS' GAP TOO. Beats is left out of the card's
+height so the page does not move as a beat lands (DECISIONS, the Beats row);
+in the Length door's column it also brings an 8px gap, there from its first
+frame while its height glides up from none. On a desk that 8px was followed
+and the page went on after the row, 71px (verify_musicbeat, red on both
+editors); the gap is left out with the height now.
+
+THE SUITES. verify_musicmore became verify_musicdoors (109 rows), and every
+suite that opened More opens the door that holds what it presses, as a
+person does: verify_musicbeat (the pair the same under each door; Beats
+under the three choices and over Lock; Snap's door end and Each press's bar
+each with its own door open; the words read with each door open),
+verify_music, verify_musictimeline, verify_musicears, verify_ux,
+verify_sheetswipe, verify_audio (the Restart view and the typed end, one
+door then the other), verify_flipbeat, verify_onepill, verify_theme,
+verify_parity, verify_tools, verify_contrast (the drawer with each door open;
+the copy on a screen made 340px tall, each surface back at its form's size
+after) and check_centring. How it works says where each control is now,
+and verify_helpclaims points at the doors' rows.
+
+CALIBRATION, the page's files served from mutated copies in each context
+(the files on disk untouched):
+- the card pressed lit, without the last-pressed rule: red on both editors
+  (and Flip's Whole song row); green as built
+- the one line, without the narrow phone's rule: red on both at 320 and 375
+- the timeline kept on the screen, with the Exact door made 700px taller:
+  red on both
+- the copy's rows, with the copy never placed: all fourteen red
+- Beats under the choices and over Lock, with Beats ordered after Lock: red
+- the pair the same under each door, with the Beat door pushing it down: red
+- Snap to the beat's door and Each press's bar opening out, with the drawer's
+  glides taken away: red on both, Reduce Motion's rows green
+- the words read with each door open, Tap the beat's set faint: red in light
+- the census of the Restart door, Smooth restart's words set faint: red in
+  light, on a phone and a desk, on both
+- every row in each door 8px apart, the doors' gaps closed: red; and as
+  first written it was red as built, the Beat door having no second row
+  without a beat, so it reads the doors with one
+
+WHAT IT DOES TO FLIP: shared. The drawer is one template and one module for
+both editors, so Flip has the doors at once; every row runs on both.
+
+Not tested here: an iPhone's WebKit, and SF and Segoe UI themselves.
+
+## After v329 -- The drawer tiles span a desk
+
+Step 2 of the music drawer's eight (FUTURE.md 6s, the owner's "All yes"):
+the draw drawer's four tiles, and the music drawer's four doors, grow to span
+the drawer on a desk, the owner's pick in the whole-drawer mock ("Tiles
+grow", over "Gaps grow" and today). `.dp` had a 520px cap; on a desk or a
+tablet the drawer is 660px inside, so the row stopped 140px short, the space
+left empty on the right under colours, a timeline and a pair that run the
+whole width. The cap is gone and nothing else moves: a tile is 159px on a
+desk (124 before), its picture painted at its own width (lib/drawtiles.js
+repaints on a resize), an open tile's choices as wide as the row. A phone's
+drawer is narrower than 520 (344 inside on the owner's 402), so a phone is as
+it was, to the pixel.
+
+Rows: verify_drawtiles, the four tiles edge to edge with the colours above
+them, each as wide as the others, on a phone and a desk; verify_musicdoors,
+the doors edge to edge with the timeline and the pair above them, an open
+door's group as wide, on a 390 and a 402 phone and a desk. Calibrated with the
+stylesheet served with the cap put back (the file on disk untouched): red on
+the desk on both editors (the row 310 to 830 against 310 to 970), the phones
+green; green as built.
+
+WHAT IT DOES TO FLIP: shared. One rule for both drawers on both editors.
+
+## After v329 -- The loop's edge line, sharp
+
+Step 3 of the music drawer's eight (FUTURE.md 6s): the loop's two edges, a
+line each, about 1.5px and sharp, the owner's pick in the whole-drawer mock
+("1.5px sharp", over today's 3px, 2px and a 1.5px left between pixels).
+`SkriblMusicTimeline.edge(x, dpr, off)` says where: 1.5px rounded to the
+screen's own pixels (2 on a desk, 3 on a 2x phone, 5 on a 3x phone, as the
+owner's iPhone 17 is), its left on a whole one.
+
+THE LINE IS THE CANVAS'S NOW. It was the handle's ::after, 3px, centred on
+a handle the timeline moves to a fraction of a pixel. Laid on whole pixels
+as a box (a width and a left from the handle's middle, the mock's way), it
+still came out soft: this Chromium snaps a box to whole CSS pixels in its
+own space and then moves it by the handle's fraction, so a 1.5px box was
+2px, half a pixel off, read on the screenshot as four columns with a 5% and
+a 95% at the sides. The timeline paints both lines on its canvas, whose
+pixels are the screen's, over the song, and records them for the harness
+(`_painted.edges`); the handle keeps its tab at the foot and the reach for a
+finger. The copy under the header draws its ends with the same edge(): they
+were 2px on whole CSS pixels, sharp but 4 columns at 2x where the
+timeline's are 3.
+
+Rows: verify_musictimeline, both lines read on the screenshot with each end
+placed between pixels in the quiet of a song (a second of tone, four of
+silence), above its middle: a run of the accent exactly as wide as 1.5px
+rounds to, the ground either side flat, on a desk, a 2x phone and the
+owner's phone at 3x. verify_musicdoors, the copy's ends read off its canvas
+the same way. Calibrated with the page's files served from copies (the files
+on disk untouched): main's timeline and sheet, red on both editors (5
+columns of the accent at 2x with half-lit ones either side; 8 at 3x); the
+canvas line left off whole pixels, red (part-lit columns at every scale);
+main's copy, red (4 columns at 2x); green as built.
+
+Not tested here: an iPhone's WebKit, which snaps boxes to the screen's
+pixels, not CSS pixels; the canvas line is the same there by construction.
+
+WHAT IT DOES TO FLIP: shared. One timeline and one copy for both editors.
+
+## After v329 -- The full run on the doors: verify_words still looked for More
+
+The full harness, dispatched on the branch at step 1 (the four doors, run
+40632849390), ran 15 jobs (its other two are for pull requests and for main)
+and 13 were green. The two red were the fifth of six shards on both
+databases, on one row: verify_words' "Smooth restart says where it is, in
+More", 27/28. How it works says "In Restart" since the doors. verify_words
+reads How it works' words and was not among step 1's affected suites, which
+were picked by the drawer's markup and module, not by the help's words. The
+row looks for "In Restart" now and fails on "In More" too.
+
+THE LESSON: fourteen suites read How it works (its help-desc, help-tip and
+help-pill), and a change to its words runs all of them, not only the help's
+own; step 1's run had six of them (contrast, help, helpclaims, helpdemos,
+parity, ux). The other seven of the eight it left out were green on the full
+run. The stale words were in prose too: the harness README still said Play
+with my drawing and Hear the loop sit "whether More is open or not", which no
+check reads.
+
+## After v329 -- The click and the beat lit as heard
+
+Step 4 of the music drawer's eight (FUTURE.md 6s, the owner's "All yes"): a
+soft click on each beat while Hear the loop plays, at the end of Hear's own
+pill, and each beat's dot on the timeline lit as it is heard. The pill is the
+menu card Hear was, Hear its first part and a metronome its end, parted by
+the card's line (a third button in the pair pushed "Play with my drawing" out
+of its own on a phone, which the mock found). Off at first, there once the
+song has a beat; pressed, it wears the chosen choice's tint. Its icon reads
+8.0 to 8.7:1 against its ground, off and on, light and dark, on both editors.
+
+ON THE LOOP'S OWN CLOCK. lib/musicdrawer.js sets each tick to the sample on
+the audio clock the loop plays on: every 30ms, the beats due in the next
+160ms of what plays, a short sine (higher on the first beat of a bar, every
+four from the loop's start as the timeline draws them), straight to the
+speakers and never into a post or a file. Three things the first draft got
+wrong, each found by a row before it went up:
+
+  * THE FIRST BEAT. The engine starts 30ms ahead of its sound
+    (lib/audioloop.js LEAD), and the loop's first beat falls in those 30ms:
+    the draft never ticked it (the click began on beat two), and ticked at
+    once it came 30ms before the music. It waits for the music's start now,
+    which the drawer works out (the loop's top by its clock, where the start
+    began in the clip, and LEAD) and keeps on the click for the harness. And
+    a rule that let it through once let it through every 30ms from two
+    seconds in, when the memory of beats set forgets them: the click rattled
+    until the timing row caught it.
+  * WHAT IS SET AHEAD. A tick set 160ms ahead sounded after Stop, after the
+    click went off, and, when an end moved while it played, for the old
+    loop's next time round beside the new loop's first beat. Each is called
+    off now: its gain let go of, before it sounds.
+  * A RESTART'S TIMER RUNS LATE. The loop starts again from a timer due 10ms
+    before it comes round; a busy page fires it after, when the old loop has
+    already ticked its top, and the new loop ticked the same beat again 30ms
+    later. No beat is set within a tenth of a second of the last now. The
+    row holds the page busy across the moment to make the timer late.
+
+THE LIGHT AS HEARD. A beat's dot lights when the beat reaches the ear, timed
+from the context's own record of what its speakers play (getOutputTimestamp),
+else the clock plus the output's latency, and asked again as it comes due:
+a first guess made as the sound began was once 59ms early. Read against that
+record, lights came from half a millisecond before their beats to 13ms after
+here. Web Animations, so
+Reduce Motion fades it without the swell and the player's sheet carries no
+keyframes.
+
+TURNED ON WHILE IT PLAYS, the click starts on the very next beat: a beat
+already set ahead, lit and not yet ticked, ticks too. Without that it began
+on the beat after, half a second late at 120 a minute.
+
+THUMB REACH (6s, from Wavebox): on the owner's phone, as the drawer opens
+with a song, Hear and the click sit in the screen's lower half (their middle
+at 720 of 874), whole on it.
+
+Rows (verify_musicbeat, the click; MUSICBEAT_PART=click): the pill; the
+thumb's reach; off at first, there once there is a beat; ticks on the beats
+to the millisecond, the bar's higher, the first as the music starts; straight
+to the speakers; a tick set ahead never sounding once the click goes off or
+Hear stops; one tick at the join when an end moves while it plays, the timer
+on time and held late; the lights as heard, at their dots, the bar's bigger,
+click on or off; the swell, and only a fade under Reduce Motion. Calibrated
+with the page's files served from broken copies (the files on disk
+untouched), each red on its own rows on both editors: the first beat's rule
+removed, the call-offs removed one at a time (the click off, Stop, a start
+again), ticks late by the output's latency, bars counted from the song's
+start, the light timed by the clock alone, never a bar, 6px off its dot, the
+swell under Reduce Motion, the click pressable with no beat, routed anywhere
+but the speakers, 36px wide, without its line, the tenth-of-a-second rule
+removed, the pair pushed below the screen and the drawer pinned to its top,
+the sound's start kept from the start before (both join rows), and the beats
+set ahead left unticked when the click goes on (the mid-play row).
+The light's first guess set to "now" stays green with the second asking and
+goes red, 54 to 193ms early, without it. A negative margin on the pair was no
+break: the drawer's follow kept the pair where it was. Green as built, three
+times side by side.
+
+THE AFFECTED SUITES, RUN TOGETHER, caught four of mine that the click part
+run alone could not. The click part named a helper LOOP, which the parts of
+verify_musicbeat after it call with the loop's ends, so twelve rows after it
+set the loop to the click part's 1 to 5 seconds: it is CLICK_LOOP. The pair's
+row took Hear's own top, a pixel below Play's inside the pill's line, for a
+second row: it reads each of the pair as laid out. verify_helpclaims found
+the click's name, "Click on each beat", nowhere in How it works: the tip says
+"tap it to click on each beat". And the engine's soundAt, in
+lib/audioloop.js, took the link player's JavaScript 50 bytes past its ratchet
+(verify_player_isolation, verify_jsstrip): the drawer works the sound's start
+out itself, and the player's code is as it was. A part run alone hides what
+it shadows for the parts after it.
+
+AND AN EDIT REACHES A RE-RUN. run_parallel re-runs a red suite alone at the
+end, from the files on disk then. The suite's helper and the engine were
+fixed while that run was finishing, so verify_musicbeat (148/148) and
+verify_player_isolation (85/85) came back green alone and were marked
+INTERMITTENT: changed, not load. The tree is not touched until the whole
+run reports; the second run, on the committed fixes, is the evidence (24 of
+24, nothing re-run).
+
+WHAT IT DOES TO FLIP: shared. One drawer and one timeline for both editors.
+
+Not tested here: an iPhone's WebKit (its getOutputTimestamp, a speaker's own
+latency), and how the click sounds through a phone's speaker.
+
+## After v329 -- The full run on the click: verify_musicbeat past ten minutes
+
+Run 40658123304, on step 4's tree: 15 jobs ran and 13 were green. The two red
+were shard 5 on both databases, and every suite in them was green but one:
+verify_musicbeat, stopped at run_harness.sh's ten minutes a suite (exit 124)
+before it reported. It had taken 546 seconds on CI before the click (run
+40639574339, 128 rows), so the click's 22 rows took it over, and step 5's
+would have taken it further.
+
+SPLIT BY WHAT EACH PART IS ABOUT, each with its own fixtures, as the music
+suites keep theirs: verify_musicclick (the click and the lit beat, step 4)
+and verify_musictempo (zoomed in, the start and the end set the beat, step
+5). verify_musicbeat keeps the pair, the tap, whole bars, Beats, the marks,
+the Restart view, Snap to the beat, where the music begins, kept and words.
+The parts moved as they were: a script took each part and the top-level
+fixtures it names, and pyflakes finds no name undefined or unused in any of
+the three. The claims in verify_helpclaims follow their rows; release_run
+and shard.py name the new suites (shard's seconds for them are estimates
+until a CI run measures them).
+
+## After v329 -- The loop's end sets the tempo
+
+Step 5 of the whole-drawer mock (FUTURE.md 6s; from the Wizard's "click the
+end of the first bar"; the owner: "All yes"). Zoomed in, an end let go within
+an eighth of a beat of 4, 8, 16 or 32 beats stays exactly where it was let
+go, and the beat becomes the one that makes the loop exactly that many:
+counted from the loop's start (where a beat falls is the start) and heard to
+where the loop comes round, a smooth restart's length before the handle.
+Tapped, a tempo is whole beats a minute; this one is to the thousandth, so a
+live band or an old record between whole tempos can be matched. It is
+by: 'end', no longer the one heard, kept with the song in the drafts
+(tempoFrom keeps it), and Flip's Match the beat refits a round of pages to it
+as it does to taps. Further off than an eighth, or at 1x, or in the Restart
+view, an end settles as before. The eighth is the start's own reach; over 4
+beats it moves the tempo by a 32nd at most.
+
+THE COUNT IS THE ONE WITHIN AN EIGHTH, not the nearest the song has room
+for: the loop stays as it is, so its room is already there. The nearest
+that fits, as an end settling uses, would have dropped to 4 an 8-beat loop
+let go at the song's very end.
+
+A NOTE SAYS SO, with Undo: "The beat fits your loop now: 118.8 a minute, 8
+beats." The Pad's toast and Flip's chip, seven seconds as every Undo offer.
+Undo puts the beat back as it was, heard, tapped or an end's, unless it has
+changed since; the end stays where it was let go, as in the mock.
+
+THE TOAST'S FALLBACK SAT ON THE TOOLBAR. v315's rule keeps a toast off the
+header and the toolbar, and its fallback sits just under the header. A
+drawer scrolled into has the toolbar (Flip's dock) right under the header,
+so the note covered it on both editors, against Flip's own "never on the
+dock". Every toast and chip now goes under the toolbar wherever, just under
+the header, it would reach it (verify_layout, a new row: red on the old
+placement, the note on the bar on both editors). The player loads app.js,
+and its JavaScript had 3 bytes to spare under verify_player_isolation's
+ratchet: the anchor's two placements are one now and the header is looked
+up once, so the player's code is 52 bytes lighter than before (154,485).
+
+FLIP'S UNDO CLOSED THE DRAWER. Flip's tap-away rule took a tap on the
+chip's button for a tap away, and shut the music drawer as its Undo ran. The
+chip is not a tap away now, New Skribl's Undo in it included.
+
+THE BEAT MARKS GLIDE TO THE NEW TEMPO, each to its own place, the one at the
+loop's start staying put, so the marks draw in to the end (the owner: "No
+transitions should be jumpy"). A tempo moved by a 32nd or less glides; a new
+one, tapped, is there at once as before; under Reduce Motion, at once.
+
+WHERE THE BEAT CAME FROM, the owner's pick: the Beat tile says "120 ·
+heard", "120 · tapped" or "118.8 · by hand" (to the tenth when the end set
+it), its name says it in words ("Beat, 120 beats a minute, heard"), and the
+door's line says "118.8 beats a minute, set by the loop's end · tap to
+change it". Where the tile has room: on this box's fonts a phone's tile has
+70px for words at 402, room for "120 bpm" but not "120 · heard" (72) or
+"118.8 · by hand" (98), so a phone says the beat alone as before ("100.4" at
+390), and a desk says all of it. The mock's 83 was two digits. Put to the
+owner.
+
+A START LET GO ZOOMED IN KEEPS WHERE THE BEAT CAME FROM. It dropped `heard`,
+and the line then told a person who had not tapped to "tap again". It keeps
+every field now. Harmless to the ears' logic: heardIt, the Beats row's own
+pick and the pick card each ask whether the loop is still Skribl's pick
+first. Snap to the beat turned off and on keeps them too; tapped again, the
+beat is the taps', tapped.
+
+Rows (verify_musictempo, the end; MUSICTEMPO_PART=end): the end stays and
+the beat makes it 8 beats from the start; the note, the tile, the name and
+the line; the marks' glide frame by frame, and at once under Reduce Motion;
+Undo, the drawer still open; further than an eighth; with a smooth restart;
+kept in the drafts; at 1x; a zoomed start and the Snap switch keeping where
+the beat came from; tapped again; Flip's round refitted; the note clear of
+the header and the toolbar on the owner's phone. Calibrated with the page's
+files served from broken copies (the files on disk untouched), each red on
+its own rows on both editors: the rule removed, at 1x too, a quarter of a
+beat for an eighth, counted to the handle, Undo doing nothing, tempoFrom
+dropping by, the zoomed start's old drop, the Snap switch's old drop, the
+marks at once on a new tempo, the tempo set a moment after Flip refits (Flip
+only), the old toast and chip, the tile's old words, heard kept, the phase
+left where it was, taps keeping by; and Flip's chip a tap away again (Flip
+only; the Undo row, the drawer closed). verify_musicdoors' words row reads
+the Beat tile on two phones and a desk: red with the tile's old words (a
+desk) and with the words never fitted (the phones).
+
+WHAT IT DOES TO FLIP: shared. One drawer and one timeline; the note is each
+editor's own (the toast, the chip), placed by the same rule.
+
+Not tested here: an iPhone's WebKit, and the tile's room in SF and Segoe UI.
+
+## After v329 -- The Beat door's line: its dot with the word before it
+
+On the owner's 402 phone the line set by the loop's end wrapped as "118.8
+beats a minute, / set by the loop's end / · tap to change it", the dot alone
+at the start of a line (found in step 5's own photos). A no-break space
+before the dot, in the line's three sources (by the end, heard, tapped), so
+the dot goes with the word before it. verify_musictempo reads the line as it
+is laid out on 375, 390 and 402px phones, letter by letter, a new line
+wherever a letter's middle is below the line before: red on the old words
+on both editors at 402, green as built. The suites that read the line's
+words exactly read the no-break space.
+
+## After v329 -- The full run on the end: a toast row whose page could not reach
+
+Run 40674638110, on step 5's tree before the dot: 15 jobs ran and 13 were
+green. The two red were shard 4 on both databases, one row each, the same
+row: verify_layout's toast with the toolbar under the header, on the Pad.
+The toast was clear of both (header and bar false); the row's own reach
+was false, the bar 53px under the header's foot. It scrolled the page to its
+end with the Beat door open, and in CI's fonts the page ended before the bar
+met the header (here it did). It opens the Restart door now, the tallest,
+and scrolls by what it measures until the bar sits 2px under the header's
+foot: red on the old placement on both editors (the note at 74, on the bar
+at 68), green as built.
+
+## After v329 -- The taller box, the wave filling it, pinch to zoom
+
+Step 6 of the whole-drawer mock (FUTURE.md 6s; the owner, with ACID's + and -
+for a track's height, then "All yes"). After Magnify's - and +, the same card
+and cell: a box with arrows up and down (the mock's glyph, not a second
+magnifier), "Make the box taller", pressed while the box is tall (the chosen
+choice's purple, as the click by Hear the loop), there once there is a song.
+One tap makes the timeline twice as tall (118 to 236px), one more puts it
+back. The height stays across songs and with the drawer put away; it is not
+saved in the drafts, as the zoom is not.
+
+THE GROW GLIDES, the four ways the mock's did not (the owner: it "shook and
+jerked"), each read on every frame by verify_musictall, up and back, the Pad
+and Flip, the owner's phone and a desk. The clock starts on the first frame
+it draws: started at the tap, the first frame's time can come before it and
+the box went the wrong way first (the mock's 5 to 27px; served back here, 1
+to 26px in six of eight glides over two runs, as it depends on where in a
+frame the tap lands). The box moves in whole pixels. The page scrolls by exactly what Hear
+the loop moved, read off Hear itself in the same frame, so Hear stays put to
+the hundredth of a pixel. And the timeline paints each height in the frame it
+is laid out: its ResizeObserver runs after layout and before the frame is
+shown, and it asked for the next frame, so a frame showed the one before
+stretched to fit. 220ms, easing out; under Reduce Motion, at once.
+
+NEVER UNDER THE HEADER. Kept where it is, Hear would take the timeline's top
+up under the pinned header when the timeline is near it (on a phone with a
+tall door open and the page scrolled). Growing, the page scrolls no further
+than keeps the timeline's top 4px under the header's foot, and Hear moves
+down by the rest. Put to the owner with the step's photos; the bar under the
+header is not pinned, so the header is the ceiling.
+
+NOT FOLLOWED. lib/drawerdetent.js followGrowth brings a drawer's end back on
+screen when it grows, for a song landing; it took the grow for one and
+scrolled on after it (2px at the end of a glide here, as far as the bar's
+room allows on a phone). It is told of the stage's height (its style), as of
+the doors, and takes the grow as the person's own.
+
+ZOOMED IN DEEP, THE WAVE FILLS THE BOX (the owner: yes). Where the wave itself
+shows (under 64 samples a point), it is drawn against the loudest moment in
+view, with a little room over it (1.08), never below 2% of the song's
+loudest so a hush is not blown up; further out, against the song's loudest
+as before, so loud and quiet still compare. It eases there with the view's
+own ease, at once under Reduce Motion. A quiet passage at 5% stands 30 of
+the box's 32px from the middle line, where against the song it was 2.
+
+PINCH TO ZOOM (from Wavebox; the owner: yes). Two fingers on the timeline:
+sideways, Magnify's rungs, the one nearest the fingers' spread (twice as far
+apart, one rung in; the mock stepped at each 1.41 and went two rungs for a
+doubling); up and down, the box's height, following the fingers to three
+times. Locked to whichever way they first move. The finger already down
+stops where it is when the second lands. On a desk, Ctrl and the wheel: a
+notch a rung, a trackpad's pinch (the same events, small deltas) a rung for
+each 35 of them in one gesture, the page's own zoom called off; the wheel
+without Ctrl is the page's. Touch through Chromium's own touch input here;
+not tested on an iPhone.
+
+THE LANE grows with the box in step 7, where Flip's pages become pictures;
+here it stays 26px and the song takes the room.
+
+Rows (verify_musictall, 72, about two minutes): the control's place, words
+and glyph's ink (3:1 and up, off and on, light and dark, phone and desk);
+the glide's four ways and its time, up and back; the page after it, and with
+the drawer's end below the screen; Reduce Motion; the header; the fill, its
+glide and the loudness as before; the pinch both ways, its lock and the
+finger already down; Ctrl and the wheel. Calibrated with the page's files
+served from broken copies (the files on disk untouched), each red on its own
+rows on both editors: the clock started at the tap, the observer asking for
+the next frame, no scroll, fractional pixels, no ceiling, followGrowth not
+told, no fill, the fill at once, the fill at every zoom, the pinch unlocked,
+the mock's pinch rungs, the first finger kept, the wheel's zoom not called
+off, every wheel event a rung, the button never pressed, the glide under
+Reduce Motion, the box before the magnifier. A step that came after a look
+50ms late (verify_flipbeat's HELD) is set aside from the leaps, one at most,
+and named: beside the calibration's other runs one went 60px after 21.
+
+verify_musictimeline's magnify row reads the taller box after it at the
+line's end. How it works has a Taller timeline tip and the fill in
+Magnify's; verify_helpclaims claims both.
+
+WHAT IT DOES TO FLIP: shared. One timeline in one drawer; Flip's drawer
+grows as the Pad's, and every row runs on both.
+
+Not tested here: an iPhone's WebKit (two fingers there, and its own zoom),
+a trackpad's pinch (the events are made to its shape), SF and Segoe UI.

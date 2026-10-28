@@ -869,7 +869,7 @@ with sync_playwright() as p:
             browsing.pad_drawer(_q, "music")
             _q.set_input_files("#musicInput", {"name": "t.wav", "mimeType": "audio/wav", "buffer": _WAV})
             _q.wait_for_function("() => typeof currentAudioBuffer !== 'undefined' && !!currentAudioBuffer", timeout=20000)
-            _q.evaluate("() => { const t = document.getElementById('fineTuneToggle');"   # More, open
+            _q.evaluate("() => { const t = document.querySelector('#musicDoors .dp-tile[data-dp=\"restart\"]');"   # the Restart door, open
                         " if (t && t.getAttribute('aria-expanded') !== 'true') t.click(); }")
             _q.wait_for_timeout(500)
             _q.evaluate("() => { trimStart = 2.5; trimEnd = 3.5; updateTrimUI(); }")

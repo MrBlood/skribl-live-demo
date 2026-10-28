@@ -1148,17 +1148,21 @@ drawer mock and the speed and cards mock), and the build order:
 the two small PRs first (the speed choice's ends, built in #655, 6u; the
 tray tools' cards, 6v), then the drawer as one PR in steps, toward the
 whole-drawer mock's New:
-1. D's four doors (Length, Beat, Restart, Exact times), More gone.
+1. D's four doors (Length, Beat, Restart, Exact times), More gone. Built
+   (DECISIONS, the music drawer's four doors).
 2. The draw drawer's tiles, and D's, grow to span a desk (the phone as it
-   is).
-3. The loop's edge line 1.5px and sharp (whole device pixels).
+   is). Built (DECISIONS, the drawer tiles span a desk).
+3. The loop's edge line 1.5px and sharp (whole device pixels). Built
+   (DECISIONS, the loop's edge line, sharp).
 4. The click in one pill with Hear the loop, and the beat's dot lit on
-   each tick.
+   each tick. Built (DECISIONS, the click and the beat lit as heard).
 5. The end sets the tempo; the Beat door says where its tempo came from
-   ("83 · heard", tapped, or set by the end).
+   ("83 · heard", tapped, or set by the end). Built (DECISIONS, the loop's
+   end sets the tempo).
 6. The taller box: one tap for twice as tall, the arrows glyph beside
    Magnify's - and +, gliding (below); the wave filling the box zoomed in
-   deep; pinch to zoom.
+   deep; pinch to zoom. Built (DECISIONS, the taller box, the wave filling
+   it, pinch to zoom); the lane grows with the box in step 7.
 7. The drawing's lane shows the drawing (Flip's pages as little pictures,
    the Pad's strokes in their own inks, at 3:1 against the lane).
 8. Songs in three: the ears hear threes, and a waltz counts 3 · 6 · 12 · 24.

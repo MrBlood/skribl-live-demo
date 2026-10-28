@@ -2375,7 +2375,7 @@ function showToast(msg, anchorEl, action) {
     toast.appendChild(btn);
     holdMs = 7000;                  // an offer to undo needs time to read and reach
   }
-  toast.style.bottom = '';
+  toast.style.bottom = 'auto';
   toast.style.top = '';
 
   // A TOAST NEVER COVERS A CONTROL (owner's audit, v315). Two things put it
@@ -2392,14 +2392,18 @@ function showToast(msg, anchorEl, action) {
     const r = el.getBoundingClientRect();
     return (r.width || r.height) ? r : null;
   };
-  const anchorRect = box(anchorEl);
+  const anchorRect = box(anchorEl), head = document.querySelector('.header');
+  // And under the toolbar wherever a toast just under the header would
+  // reach it: a drawer scrolled into has it right under the header, pinned
+  // there (lib/drawerdetent.js), and the fallback sat on its tools, the
+  // other place this rule keeps clear. (The player has no toolbar:
+  // toolBarEl is null there.)
   const belowHeader = () => {
-    const h = box(document.querySelector('.header'));
+    const h = box(head), d = box(toolBarEl);
+    let y = h && h.bottom > 0 ? h.bottom : 0;
+    if (y && d && d.top < y + 8 + toast.offsetHeight) y = Math.max(y, d.bottom);
     toast.style.position = 'fixed';
-    toast.style.top = (h && h.bottom > 0)
-      ? Math.round(h.bottom + 8) + 'px'
-      : 'calc(16px + env(safe-area-inset-top))';
-    toast.style.bottom = 'auto';
+    toast.style.top = y ? Math.round(y + 8) + 'px' : 'calc(16px + env(safe-area-inset-top))';
   };
   if (anchorRect) {
     toast.style.position = 'absolute';
@@ -2407,19 +2411,13 @@ function showToast(msg, anchorEl, action) {
     const rect = anchorRect;
     const mid = rect.top - appRect.top + rect.height / 2;
     // Position above or below the anchor depending on space
-    if (mid > appRect.height / 2) {
-      toast.style.top = (rect.top - appRect.top - 50) + 'px';
-      toast.style.bottom = 'auto';
-    } else {
-      toast.style.top = (rect.bottom - appRect.top + 10) + 'px';
-      toast.style.bottom = 'auto';
-    }
+    toast.style.top = (mid > appRect.height / 2 ? rect.top - appRect.top - 50 : rect.bottom - appRect.top + 10) + 'px';
     const t = toast.getBoundingClientRect();
     const hits = (el) => {
       const r = box(el);
       return r && t.top < r.bottom && t.bottom > r.top && t.left < r.right && t.right > r.left;
     };
-    if (hits(document.querySelector('.header')) || hits(document.getElementById('toolBar'))) belowHeader();
+    if (hits(head) || hits(toolBarEl)) belowHeader();
   } else {
     belowHeader();
   }
