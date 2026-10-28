@@ -24786,3 +24786,76 @@ parity, ux). The other seven of the eight it left out were green on the full
 run. The stale words were in prose too: the harness README still said Play
 with my drawing and Hear the loop sit "whether More is open or not", which no
 check reads.
+
+## After v329 -- The click and the beat lit as heard
+
+Step 4 of the music drawer's eight (FUTURE.md 6s, the owner's "All yes"): a
+soft click on each beat while Hear the loop plays, at the end of Hear's own
+pill, and each beat's dot on the timeline lit as it is heard. The pill is the
+menu card Hear was, Hear its first part and a metronome its end, parted by
+the card's line (a third button in the pair pushed "Play with my drawing" out
+of its own on a phone, which the mock found). Off at first, there once the
+song has a beat; pressed, it wears the chosen choice's tint. Its icon reads
+8.0 to 8.7:1 against its ground, off and on, light and dark, on both editors.
+
+ON THE LOOP'S OWN CLOCK. lib/musicdrawer.js sets each tick to the sample on
+the audio clock the loop plays on: every 30ms, the beats due in the next
+160ms of what plays, a short sine (higher on the first beat of a bar, every
+four from the loop's start as the timeline draws them), straight to the
+speakers and never into a post or a file. Three things the first draft got
+wrong, each found by a row before it went up:
+
+  * THE FIRST BEAT. The engine starts 30ms ahead of its sound
+    (lib/audioloop.js LEAD), and the loop's first beat falls in those 30ms:
+    the draft never ticked it (the click began on beat two), and ticked at
+    once it came 30ms before the music. It waits for the music's start now,
+    which the engine says (soundAt). And a rule that let it through once let
+    it through every 30ms from two seconds in, when the memory of beats set
+    forgets them: the click rattled until the timing row caught it.
+  * WHAT IS SET AHEAD. A tick set 160ms ahead sounded after Stop, after the
+    click went off, and, when an end moved while it played, for the old
+    loop's next time round beside the new loop's first beat. Each is called
+    off now: its gain let go of, before it sounds.
+  * A RESTART'S TIMER RUNS LATE. The loop starts again from a timer due 10ms
+    before it comes round; a busy page fires it after, when the old loop has
+    already ticked its top, and the new loop ticked the same beat again 30ms
+    later. No beat is set within a tenth of a second of the last now. The
+    row holds the page busy across the moment to make the timer late.
+
+THE LIGHT AS HEARD. A beat's dot lights when the beat reaches the ear, timed
+from the context's own record of what its speakers play (getOutputTimestamp),
+else the clock plus the output's latency, and asked again as it comes due:
+a first guess made as the sound began was once 59ms early. Read against that
+record, lights came 0 to 13ms after their beats here. Web Animations, so
+Reduce Motion fades it without the swell and the player's sheet carries no
+keyframes.
+
+THUMB REACH (6s, from Wavebox): on the owner's phone, as the drawer opens
+with a song, Hear and the click sit in the screen's lower half (their middle
+at 720 of 874), whole on it.
+
+Rows (verify_musicbeat, the click; MUSICBEAT_PART=click): the pill; the
+thumb's reach; off at first, there once there is a beat; ticks on the beats
+to the millisecond, the bar's higher, the first as the music starts; straight
+to the speakers; a tick set ahead never sounding once the click goes off or
+Hear stops; one tick at the join when an end moves while it plays, the timer
+on time and held late; the lights as heard, at their dots, the bar's bigger,
+click on or off; the swell, and only a fade under Reduce Motion. Calibrated
+with the page's files served from broken copies (the files on disk
+untouched), each red on its own rows on both editors: the first beat's rule
+removed, the call-offs removed one at a time (the click off, Stop, a start
+again), ticks late by the output's latency, bars counted from the song's
+start, the light timed by the clock alone, never a bar, 6px off its dot, the
+swell under Reduce Motion, the click pressable with no beat, routed anywhere
+but the speakers, 36px wide, without its line, the tenth-of-a-second rule
+removed, the pair pushed below the screen and the drawer pinned to its top.
+The light's first guess set to "now" stays green with the second asking and
+goes red, 54 to 193ms early, without it. A negative margin on the pair was no
+break: the drawer's follow kept the pair where it was. Green as built, three
+times side by side.
+
+WHAT IT DOES TO FLIP: shared. One drawer, one timeline and one engine for
+both editors; Flip's loop hook says soundAt as the Pad's does.
+
+Not tested here: an iPhone's WebKit (its getOutputTimestamp, a speaker's own
+latency), and how the click sounds through a phone's speaker.

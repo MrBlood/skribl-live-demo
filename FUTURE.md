@@ -1155,7 +1155,7 @@ whole-drawer mock's New:
 3. The loop's edge line 1.5px and sharp (whole device pixels). Built
    (DECISIONS, the loop's edge line, sharp).
 4. The click in one pill with Hear the loop, and the beat's dot lit on
-   each tick.
+   each tick. Built (DECISIONS, the click and the beat lit as heard).
 5. The end sets the tempo; the Beat door says where its tempo came from
    ("83 · heard", tapped, or set by the end).
 6. The taller box: one tap for twice as tall, the arrows glyph beside

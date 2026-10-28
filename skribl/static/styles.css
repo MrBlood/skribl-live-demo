@@ -2526,9 +2526,9 @@ body.recoloring #canvas { cursor: crosshair !important; }
 
 /* THE PAIR THAT PLAYS, under the timeline, whichever door is open: Play with
    my drawing is the action, so the accent's fill; Hear the loop, the same
-   size beside it, a menu card with the small violet words. Each is its verb
-   over what it plays (15px over 12px), so both fit a 168px half of the
-   owner's phone. */
+   size beside it, a menu card with the small violet words, the click at its
+   end (below). Each is its verb over what it plays (15px over 12px), so both
+   fit a 168px half of the owner's phone. */
 .mt-transport { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 12px; }
 .mt-play { display: flex; align-items: center; justify-content: flex-start; gap: 10px; min-width: 0; min-height: 52px;
   padding: 6px 14px; border: 0; border-radius: 999px; background: var(--accent-fill); color: #fff; font: inherit;
@@ -2551,6 +2551,29 @@ body.recoloring #canvas { cursor: crosshair !important; }
 @media (max-width: 379px) { .mt-play .tp-v { white-space: normal; } }
 @media (hover: hover) { .mt-play:not(:disabled):not(.mt-loop):hover { filter: brightness(1.08); }
   .mt-play.mt-loop:not(:disabled):hover { background: color-mix(in srgb, var(--accent) 7%, var(--menu-card)); } }
+/* THE CLICK, in one pill with Hear the loop (the owner's pick in the
+   whole-drawer mock): the pill is the menu card Hear was, Hear its first
+   part and the click, a metronome, its end, parted by the card's line. The
+   click lit is the one tint, as a chosen choice is. A third button in the pair
+   pushed "Play with my drawing" out of its own on a phone, so Hear gives the
+   click its end. */
+.mt-hear { display: flex; min-width: 0; border-radius: 999px; background: var(--menu-card); border: 1px solid var(--menu-card-line);
+  box-shadow: var(--menu-card-drop); }
+.mt-hear > .mt-play.mt-loop { flex: 1 1 auto; border: 0; box-shadow: none; background: transparent; border-radius: 999px 0 0 999px; padding-right: 6px; }
+.mt-click { flex: none; display: grid; place-items: center; width: 50px; min-height: 52px; padding: 0; border: 0;
+  border-left: 1px solid var(--menu-card-line); border-radius: 0 999px 999px 0; background: transparent; color: var(--accent-ink);
+  font: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.mt-click svg { width: 22px; height: 22px; display: block; }
+.mt-click[aria-pressed="true"] { background: var(--seg-on-fill); color: var(--seg-on-ink); }
+.mt-click:disabled { opacity: .5; cursor: default; }
+.mt-click:focus-visible { outline: 2px solid var(--ui-hi); outline-offset: -3px; }
+@media (hover: hover) { .mt-click:not(:disabled):not([aria-pressed="true"]):hover { background: color-mix(in srgb, var(--accent) 7%, var(--menu-card)); } }
+/* THE LIT BEAT: a beat's dot glowing as it is heard while Hear the loop
+   plays, bigger on a bar (lib/musictimeline.js pulse, which animates it). */
+.mt-tl-lit { position: absolute; width: 9px; height: 9px; margin: -4.5px 0 0 -4.5px; border-radius: 50%; background: var(--accent-ink);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 30%, transparent), 0 0 12px color-mix(in srgb, var(--accent) 70%, transparent);
+  opacity: 0; pointer-events: none; z-index: 3; }
+.mt-tl-lit.bar { width: 12px; height: 12px; margin: -6px 0 0 -6px; }
 
 /* TAP THE BEAT, in the Beat door: the tap is a menu card with the small
    violet words, lit while it listens. */

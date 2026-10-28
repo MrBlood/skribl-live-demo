@@ -1127,6 +1127,10 @@
      * loops by hand. */
     var previewBtn = $('previewLoopBtn'), seamBtn = $('testSeamBtn');
     var pv = { on: false, mode: null, engine: null, el: null, tick: null, backstop: null };
+    // The click and the lit beat (below): whether it clicks, the beats already
+    // sent (by the audio clock's millisecond), and the last half second of
+    // beats set, each with its tick and its light.
+    var clickBtn = $('musicClickBtn'), clickOn = false, beatDone = {}, beatClip = null, beatsSet = [];
     // Where the song is, on the timeline and in the Restart view.
     function showAt(song) {
       if (!(h.trim().duration > 0)) return;
@@ -1152,6 +1156,9 @@
         if (global.SkriblAudioSession) global.SkriblAudioSession.release();
       }
       pv.mode = pv.engine = null;
+      beatsOff();
+      beatsSet = [];
+      beatDone = {};
       if (tl) tl.playhead(null);
       if (rv) rv.playhead(null);
       syncHear();
@@ -1175,6 +1182,7 @@
         previewBtn.disabled = !h.hasTrack();
       }
       if (seamBtn) seamBtn.textContent = pv.on && pv.mode === 'seam' ? 'Stop' : 'Hear the restart';
+      syncClick();
       syncPlay(secs);
     }
     // An end moved while the loop plays: the new loop starts where this one
@@ -1188,7 +1196,7 @@
       clearTimeout(retimeT);
       retimeT = setTimeout(function () {
         retimeT = null;
-        if (pv.on && pv.mode === 'loop' && pv.engine === 'wa') h.loop.start(function () { if (pv.on) loopNative(); }, 0);
+        if (pv.on && pv.mode === 'loop' && pv.engine === 'wa') { h.loop.start(function () { if (pv.on) loopNative(); }, 0); beatsAgain(); }
       }, Math.max(0, (dur - h.loop.elapsed()) * 1000 - 10));
     }
     function baked() { return h.buffer() ? h.clip() : null; }
@@ -1234,7 +1242,8 @@
       };
       if (h.loop.start(fallback, offset || 0)) {
         pv.engine = 'wa';
-        every(function () { if (h.loop.playing()) showAt(h.trim().start + h.loop.elapsed()); });
+        every(function () { if (h.loop.playing()) { showAt(h.trim().start + h.loop.elapsed()); beats(); } });
+        beatsAgain();
         return;
       }
       fallback();
@@ -1276,6 +1285,126 @@
     if (seamBtn) seamBtn.addEventListener('click', function () {
       if (pv.on && pv.mode === 'seam') stopPreview(); else startSeam();
     });
+
+    /* ---- The click, and the beat lit as it is heard (the owner's picks in
+     * the whole-drawer mock, FUTURE.md 6s). The click: a soft tick on each
+     * beat while Hear the loop plays, in one pill with it (a third button in
+     * the pair pushed "Play with my drawing" out of its own on a phone), off
+     * at first and never in a post or a file: its own sound, straight to the
+     * speakers. Each beat's dot on the timeline lights as it reaches the ear,
+     * bigger on a bar, the click on or off. Both keep the loop's own audio
+     * clock, so they never drift from it: every 30ms (the playhead's tick),
+     * the beats due in the next 160ms of what plays, each tick set to the
+     * sample and each light to when it is heard (the context's own record of
+     * what the speakers play, or the clock less the time the sound takes to
+     * reach the ear). A bar is every four beats from the loop's start, as the
+     * timeline draws them. The loop's first beat falls in the moment the
+     * engine starts ahead of its sound (lib/audioloop.js LEAD), and it waits
+     * for the music: it ticks as the music starts, not 30ms before it. What
+     * is set ahead is called off when the loop stops or starts again, and the
+     * ticks when the click goes off, so nothing sounds or lights for a loop
+     * no longer playing; and no beat is set within a tenth of a second of the
+     * last, so a loop started again just after it came round (its timer late)
+     * does not tick its first beat twice. On the gapless engine only: the
+     * fallbacks have no clock to keep. */
+    function syncClick() {
+      if (!clickBtn) return;
+      var can = h.hasTrack() && !!tempo();
+      if (clickBtn.disabled !== !can) clickBtn.disabled = !can;
+      var on = String(clickOn);
+      if (clickBtn.getAttribute('aria-pressed') !== on) clickBtn.setAttribute('aria-pressed', on);
+    }
+    if (clickBtn) clickBtn.addEventListener('click', function () {
+      clickOn = !clickOn;
+      if (!clickOn) beatsOff(true);
+      syncClick();
+      var c = h.loop.ctx ? h.loop.ctx() : null;
+      if (c && c.state === 'suspended' && c.resume) { try { c.resume(); } catch (e) {} }
+    });
+    // One tick, at `at` on the audio clock: a short sine, higher on a bar.
+    function tick(c, at, bar) {
+      try {
+        var o = c.createOscillator(), g = c.createGain();
+        o.type = 'sine';
+        o.frequency.setValueAtTime(bar ? 1568 : 1175, at);
+        g.gain.setValueAtTime(0.0001, at);
+        g.gain.exponentialRampToValueAtTime(bar ? 0.3 : 0.2, at + 0.002);
+        g.gain.exponentialRampToValueAtTime(0.0001, at + 0.055);
+        o.connect(g); g.connect(c.destination);
+        o.start(at); o.stop(at + 0.07);
+        return { o: o, g: g, at: at };
+      } catch (e) { return null; }
+    }
+    // The beats set ahead, called off (their lights kept when only the click
+    // went off); one already sounding stands.
+    function beatsOff(keepLights) {
+      var c = h.loop.ctx ? h.loop.ctx() : null, now = c ? c.currentTime : 0;
+      beatsSet = beatsSet.filter(function (x) {
+        if (x.when <= now) return true;
+        if (x.tick) { try { x.tick.g.disconnect(); x.tick.o.stop(0); } catch (e) {} x.tick = null; }
+        if (!keepLights && x.lit) { clearTimeout(x.lit); x.lit = null; }
+        return !!x.lit;
+      });
+    }
+    // The loop started, or started again: what was set ahead was for the
+    // loop before, and the first beat may be due as its sound begins.
+    function beatsAgain() { beatsOff(); beatDone = {}; beatClip = null; beats(); }
+    function beats() {
+      var c = h.loop.ctx ? h.loop.ctx() : null, tp = tempo();
+      if (!pv.on || pv.mode !== 'loop' || pv.engine !== 'wa' || !c || c.state !== 'running' || !tp || !h.loop.playing()) return;
+      var dur = h.loop.duration ? h.loop.duration() : 0;
+      if (!(dur > 0)) return;
+      // What plays starts where Cut on silence moved the loop's start to:
+      // worked out once for each loop, not each tick.
+      var t = h.trim(), key = t.start + '|' + t.end + '|' + h.crossfade() + '|' + !!(h.cut && h.cut());
+      if (!beatClip || beatClip.key !== key) beatClip = { key: key, start: t.start + cutNow() };
+      var p = 60 / tp.bpm, clip0 = beatClip.start, now = c.currentTime, base = now - h.loop.elapsed();
+      var s0 = h.loop.soundAt ? h.loop.soundAt() : 0, lead = (global.SkriblAudioLoop && global.SkriblAudioLoop.LEAD) || 0.03;
+      var k0 = Math.round((t.start - tp.phase) / p), k1 = Math.ceil((clip0 - tp.phase) / p - 1e-6);
+      beatsSet = beatsSet.filter(function (x) { return x.when > now - 0.5; });
+      var last = beatsSet.length ? beatsSet[beatsSet.length - 1].when : -1;
+      for (var pass = 0; pass < 2; pass++) {
+        for (var k = k1; k < k1 + 4096; k++) {
+          var u = tp.phase + k * p - clip0;
+          if (u >= dur - 1e-4) break;
+          var at = base + pass * dur + u, when = at;
+          // The first beat, set as the music starts: only while it is still
+          // to start (it is long past, and forgotten, later in the pass).
+          if (at < s0 && at > s0 - lead - 0.004) { if (now > s0 + 0.004) continue; when = Math.max(s0, now); }
+          if (when < now - 0.004 || when > now + 0.16 || when - last < 0.1) continue;
+          var id = Math.round(at * 1000);
+          if (beatDone[id] || beatDone[id - 1] || beatDone[id + 1]) continue;
+          beatDone[id] = 1;
+          var bar = ((k - k0) % 4 + 4) % 4 === 0, set = { when: when, tick: null, lit: null };
+          if (clickOn) set.tick = tick(c, when, bar);
+          if (tl && tl.pulse) light(set, tp.phase + k * p, bar, heardIn(c, when, now));
+          beatsSet.push(set); last = when;
+        }
+      }
+      var old = Math.round((now - 2) * 1000);
+      for (var kk in beatDone) if (+kk < old) delete beatDone[kk];
+    }
+    // How long until `at` on the audio clock reaches the ear, in ms: from the
+    // context's record of what its speakers play now, else the clock less the
+    // time the sound takes to reach the ear.
+    function heardIn(c, at, now) {
+      var ts = c.getOutputTimestamp ? c.getOutputTimestamp() : null, perf = global.performance;
+      if (ts && ts.contextTime > 0 && ts.performanceTime > 0 && perf) return Math.max(0, ts.performanceTime + (at - ts.contextTime) * 1000 - perf.now());
+      return Math.max(0, (at + (h.loop.latency ? h.loop.latency() : 0) - now) * 1000);
+    }
+    // A beat's light, `ms` from now: asked again as it comes due, from what
+    // the speakers play then (twice at most), so a first guess made as the
+    // sound began, before the context's record of it settled, is not early.
+    function light(x, song, bar, ms) {
+      var tries = 0;
+      x.lit = setTimeout(function due() {
+        if (!(pv.on && pv.mode === 'loop')) return;
+        var c = h.loop.ctx ? h.loop.ctx() : null, left = c ? heardIn(c, x.when, c.currentTime) : 0;
+        if (left > 3 && tries++ < 2) { x.lit = setTimeout(due, left); return; }
+        x.lit = null;
+        tl.pulse(song, bar);
+      }, ms);
+    }
 
     /* ---- Play with my drawing. ---------------------------------------------
      * The editor's own Play, so the drawing replays with its music exactly as
@@ -1513,7 +1642,7 @@
       retimeT = null;
       if (pv.on) {
         if (pv.mode === 'seam') startSeam();
-        else if (pv.engine === 'wa' && h.loop.playing()) h.loop.start(function () { if (pv.on) loopNative(); }, h.loop.elapsed());
+        else if (pv.engine === 'wa' && h.loop.playing()) { h.loop.start(function () { if (pv.on) loopNative(); }, h.loop.elapsed()); beatsAgain(); }
         else startLoop(0);
       } else if (h.loop.playing()) h.loop.start(null, h.loop.elapsed());
     }

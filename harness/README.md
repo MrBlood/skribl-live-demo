@@ -507,9 +507,21 @@ stays a sleep.
   "How do I test the loop without having it show me drawing?... so I'm not at
   7 or 9 when I want 8", then "we only ever want 4,8,16,... beats"), on the Pad
   and on Flip: Play with my drawing and Hear the loop under the timeline in
-  the same place with any door open or none, the same size, with no second Hear
-  the loop; Hear the loop plays the music alone until Stop, and an end moved
-  while it plays is heard from its next time round; Tap the beat's first tap
+  the same place with any door open or none, the same size (Hear's pill and
+  Play), with no second Hear the loop; Hear the loop plays the music alone
+  until Stop, and an end moved while it plays is heard from its next time
+  round; the click is the end of Hear's pill (a metronome, a finger wide, the
+  words of both buttons inside them on a 320px phone, the owner's and a desk),
+  off at first and there once there is a beat, and on, Hear ticks on each beat
+  of what plays on the loop's own clock to the millisecond, the bar's tick
+  higher every four beats from the loop's start, the loop's first beat as the
+  music starts, each tick straight to the speakers (never a post or a file),
+  a tick already set ahead never sounding once it is off or Hear stops, and
+  an end moved while it plays ticking the new loop from its next time round
+  with no tick doubled at the join; each beat's dot lights as it is heard (by
+  the context's record of what its speakers play), a beat apart, at the dot's
+  own place, the bar's bigger, click on or off, swelling and fading, only
+  fading under Reduce Motion; Tap the beat's first tap
   starts the loop and is not a beat, taps in time settle on the tempo two
   seconds after the last (a stray gap does not move it), the one line counts
   the beats, and where the beat falls is the taps' own on the song's clock as

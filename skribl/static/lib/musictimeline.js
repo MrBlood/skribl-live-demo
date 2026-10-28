@@ -586,6 +586,32 @@
       if (!ph.hidden) ph.style.transform = 'translateX(' + at.toFixed(2) + 'px)';
     }
 
+    // THE BEAT LIGHTS AS IT IS HEARD (the owner's pick in the whole-drawer
+    // mock): while Hear the loop plays, lib/musicdrawer.js asks for each beat
+    // as it reaches the ear, and a light over its dot glows, bigger on a bar,
+    // and fades. Web Animations, so Reduce Motion is honoured here (it fades,
+    // with no swell) and the player's sheet carries no keyframes for a drawer
+    // it never has. What it lit last, for whoever asks (the harness): root._lit.
+    var lit = null;
+    function pulse(t, bar) {
+      if (!view || !stage) return;
+      var w = width(), at = X(t);
+      if (!(at >= -6 && at <= w + 6)) return;
+      if (!lit) { lit = document.createElement('span'); lit.className = 'mt-tl-lit'; lit.setAttribute('aria-hidden', 'true'); stage.appendChild(lit); }
+      lit.classList.toggle('bar', !!bar);
+      lit.style.left = at.toFixed(2) + 'px';
+      lit.style.top = (LANE + GAP + 8) + 'px';
+      if (lit.getAnimations) lit.getAnimations().forEach(function (a) { a.cancel(); });
+      var still = h.still && h.still();
+      if (lit.animate) {
+        lit.animate(still ? [{ opacity: 1 }, { opacity: 0 }]
+          : [{ opacity: 1, transform: 'scale(1.5)' }, { opacity: 0.85, offset: 0.6 }, { opacity: 0, transform: 'scale(1)' }],
+          { duration: 450, easing: still ? 'linear' : 'cubic-bezier(.2, .8, .2, 1)' });
+      }
+      var was = root._lit;
+      root._lit = { n: (was ? was.n : 0) + 1, x: +at.toFixed(2), bar: !!bar, t: +t.toFixed(4), at: global.performance ? global.performance.now() : 0 };
+    }
+
     // A new layout (the sheet opened, the phone turned): paint at the new size.
     if (global.ResizeObserver && stage) new global.ResizeObserver(function () { draw(); }).observe(stage);
     // A theme switched: the tokens are read as it paints.
@@ -604,6 +630,7 @@
       // magnified, the view goes to it.
       focus: function (which) { if ((which === 'start' || which === 'end') && which !== focus) { focus = which; draw(); } },
       playhead: playhead,
+      pulse: pulse,
       x: function (t) { return view ? X(t) : null; },
       view: function () { return view ? { v0: view.v0, span: view.span } : null; },
       held: function () { return held ? held.kind : null; },

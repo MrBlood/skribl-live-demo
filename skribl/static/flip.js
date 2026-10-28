@@ -6677,7 +6677,7 @@ musicDrawer = window.SkriblMusicDrawer ? window.SkriblMusicDrawer.wire({
   playButton: ()=>playBtn,
   audio: ()=>{ ensureAudio(); return audioEl; },
   buffer: ()=>currentAudioBuffer,
-  loop: { start:startWebAudioLoop, stop:stopWebAudioLoop, playing:()=>_waLoop.playing(), elapsed:()=>_waLoop.elapsed(), duration:()=>_waLoop.duration(), latency:()=>_waLoop.latency() },
+  loop: { start:startWebAudioLoop, stop:stopWebAudioLoop, playing:()=>_waLoop.playing(), elapsed:()=>_waLoop.elapsed(), duration:()=>_waLoop.duration(), latency:()=>_waLoop.latency(), soundAt:()=>_waLoop.soundAt(), ctx:()=>audioCtx },
   clip: buildTrimmedLoopWav,
   playing: ()=>playing,
   setPreviewing: (on)=>{ previewingLoop=on; },

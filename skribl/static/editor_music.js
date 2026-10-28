@@ -55,7 +55,7 @@ if (window.SkriblMusicDrawer) padDrawer = window.SkriblMusicDrawer.wire({
   buffer: () => currentAudioBuffer,
   loop: { start: startWebAudioLoop, stop: stopWebAudioLoop,
           playing: () => _waLoop.playing(), elapsed: () => _waLoop.elapsed(), duration: () => _waLoop.duration(),
-          latency: () => _waLoop.latency() },
+          latency: () => _waLoop.latency(), soundAt: () => _waLoop.soundAt(), ctx: () => audioCtx },
   clip: buildTrimmedLoopWav,
   playing: () => playing,
   setPreviewing: (on) => { previewingLoop = on; },
