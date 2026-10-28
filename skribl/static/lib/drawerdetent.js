@@ -354,12 +354,13 @@
    * runs of three. A drift is the few px a glide overshoots; a scroll is a
    * screenful. Past DRIFT the page is where the person put it, and it stays.
    *
-   * NOR BEATS OPENING AS A BEAT LANDS (lib/musicdrawer.js): its height is
-   * left out of the card's, so the page does not move by itself a moment
-   * after Skribl hears the beat or a tap settles it, under a finger reaching
-   * for the timeline (it scrolled 46px on the Pad and 22px on Flip, and
-   * verify_musicbeat's drags on Flip let go a bar off). Beats glides open,
-   * and what is under it glides down; a song landing with it is followed.
+   * NOR BEATS OPENING AS A BEAT LANDS (lib/musicdrawer.js): its height, and
+   * the gap it brings, are left out of the card's, so the page does not move
+   * by itself a moment after Skribl hears the beat or a tap settles it, under
+   * a finger reaching for the timeline (it scrolled 46px on the Pad and 22px
+   * on Flip, and verify_musicbeat's drags on Flip let go a bar off). Beats
+   * glides open, and what is under it glides down; a song landing with it is
+   * followed.
    *
    * A PERSON WHO SCROLLS BACK UP IS LEFT THERE TOO. The take-back only ever
    * pushes down, so a scroll up to the drawing as a song landed came straight
@@ -372,8 +373,16 @@
   function followGrowth(card, o) {
     if (!card || typeof ResizeObserver === 'undefined') return;
     var dock = o.dock || null, lastH = 0, gen = 0, beats = card.querySelector('#musicBeatsRow');
+    // Beats' share of the card: its height and, in the Length door's column,
+    // the gap it brings with it, there from its first frame while its height
+    // glides up from none (left in, the 8px was followed on a desk, and the
+    // page went on after the row as it opened, 71px).
     function height() {
-      return card.getBoundingClientRect().height - (beats && !beats.hidden ? beats.getBoundingClientRect().height : 0);
+      var share = 0;
+      if (beats && !beats.hidden && beats.getClientRects().length) {
+        share = beats.getBoundingClientRect().height + (parseFloat(window.getComputedStyle(beats.parentElement).rowGap) || 0);
+      }
+      return card.getBoundingClientRect().height - share;
     }
     function target() {
       var scroller = document.scrollingElement || document.documentElement;

@@ -2402,16 +2402,18 @@ body.recoloring #canvas { cursor: crosshair !important; }
    against the drawing. It was three lines (the pick, Adjust's length and
    Fine-tune's sync line), and until the four doors Skribl's pick or the way
    back sat at its end. */
-.mt-pick { display: flex; align-items: center; margin-top: 8px; container-type: inline-size;
+.mt-pick { display: flex; align-items: center; margin-top: 8px;
   font-size: 14px; line-height: 1.35; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
 .mt-pick-text { flex: 1 1 auto; min-width: 0; }
 /* ITS HEIGHT HOLDS AS IT CHANGES. Its longest words ("19.75s · 39.5 beats ·
    shorter than your animation") are 324px in Inter at 14px, the widest face
-   it is drawn in, and fit one row from a 390px phone up. Narrower, what the
-   loop is against the drawing takes a row of its own, whatever it says, so
-   nothing under the line moves as it changes. In em, so it holds with the
-   text made bigger. */
-@container (max-width: 23.5em) {
+   it is drawn in, and fit one row from a 390px phone up (332px of room).
+   Narrower, what the loop is against the drawing takes a row of its own,
+   whatever it says, so nothing under the line moves as it changes. A page
+   zoomed in is a narrower screen, so it holds there too. (A @media, not a
+   @container: harness/tools/cssgraph.py keeps any other at-rule whole, so
+   it would land in the player's sheet.) */
+@media (max-width: 389px) {
   .mt-pick-vs { display: block; }
   .mt-pick-vs .mt-pick-sep { display: none; }
 }

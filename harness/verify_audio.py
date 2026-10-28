@@ -182,9 +182,14 @@ with sync_playwright() as _zp:
         zp.wait_for_timeout(4500)
         zp.evaluate("() => _flipDrawerCtl.open('music')")
         zp.wait_for_timeout(700)
-        _t = zp.query_selector("#fineTuneToggle")
-        if _t:
-            _t.click(); zp.wait_for_timeout(800)
+        # The Restart view is behind the Restart door, the typed end behind
+        # Exact times', one open at a time: each opened by its tile, as a
+        # person goes from one to the other.
+        def _door(k):
+            _t = zp.query_selector(f'#musicDoors .dp-tile[data-dp="{k}"]')
+            if _t and _t.get_attribute("aria-expanded") != "true":
+                _t.click(); zp.wait_for_timeout(800)
+        _door("restart")
         zp.evaluate(
             "() => { const c = document.getElementById('musicCut');"
             " if (c && c.getAttribute('aria-checked') === 'true') c.click();"
@@ -200,7 +205,11 @@ with sync_playwright() as _zp:
         before = zp.evaluate(BEAT)
         check("the Restart view paints the end's beat", before["x"] is not None,
               f"{before} \u2014 nothing painted on the end's side to read")
+        _door("exact")
         zp.fill("#endReadout", "4.260"); zp.press("#endReadout", "Enter")
+        zp.wait_for_timeout(500)
+        _door("restart")
+        zp.evaluate("() => document.getElementById('musicRestart').scrollIntoView({ block: 'center' })")
         zp.wait_for_timeout(500)
         after = zp.evaluate(BEAT)
         moved = (before["x"] - after["x"]) if before["x"] is not None and after["x"] is not None else 0

@@ -545,7 +545,8 @@ def editor_common(pg, menu, export_item, canvas):
     except Exception:
         pass
     yield "media card, song"
-    click(pg, "#fineTuneToggle"); yield "media card, song (More open)"
+    for door in ("length", "beat", "restart", "exact"):
+        click(pg, f'#musicDoors .dp-tile[data-dp="{door}"]'); yield f"media card, song ({door} door open)"
     click(pg, "#mediaTabPhoto")
     try:
         pg.set_input_files("#photoInput, #imageInput", {"name": "p.png", "mimeType": "image/png", "buffer": PNG}); pg.wait_for_timeout(1200)

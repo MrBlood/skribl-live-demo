@@ -1403,7 +1403,8 @@ with sync_playwright() as _b14:
     _p14.set_input_files("#musicInput", _TCWAV)
     _p14.wait_for_timeout(3000)
     _p14.evaluate("() => openDrawer('music')"); _p14.wait_for_timeout(600)
-    _p14.click("#fineTuneToggle"); _p14.wait_for_timeout(500)
+    _RESTART = '#musicDoors .dp-tile[data-dp="restart"]'
+    _p14.click(_RESTART); _p14.wait_for_timeout(500)
 
     # Five INDEPENDENT gesture paths, so removing cancellation from one
     # reddens only that one. Mutation-tested per path, per the review. They
@@ -1419,12 +1420,12 @@ with sync_playwright() as _b14:
         # wrong reason, the exact class of vacuous pass this review warned
         # about. So every path starts on a loop in the middle of the song,
         # with a smooth restart for the dot to change.
-        # The timeline and the Restart view (in More, its tile
-        # #fineTuneToggle) are each driven where they are seen: More open for
-        # the Restart view's paths, closed for the timeline's.
+        # The timeline and the Restart view (behind the Restart door) are
+        # each driven where they are seen: the door open for the Restart
+        # view's paths, shut for the timeline's.
         _want = "true" if _psel in ("#musicRestart", "#musicBlendDot") else "false"
-        if _p14.get_attribute("#fineTuneToggle", "aria-expanded") != _want:
-            _p14.click("#fineTuneToggle")
+        if _p14.get_attribute(_RESTART, "aria-expanded") != _want:
+            _p14.click(_RESTART)
             _p14.wait_for_timeout(500)
         _p14.evaluate("() => { trimStart = 2; trimEnd = 6; loopCrossfadeMs = 120; setCrossfadeUI(); updateTrimUI(); }")
         _p14.locator(_psel).scroll_into_view_if_needed()

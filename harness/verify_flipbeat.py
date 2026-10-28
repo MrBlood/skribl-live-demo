@@ -387,7 +387,7 @@ with sync_playwright() as p:
         c, q, errs = editor(b, ears=False)
         q.evaluate(PAGES, {"n": 12}); song(q, listen=False)
         browsing.pad_drawer(q, "music")
-        q.click("#fineTuneToggle"); waits.settle(q, 500)
+        q.click('#musicDoors .dp-tile[data-dp="beat"]'); waits.settle(q, 500)   # Tap the beat is behind the Beat door
         q.evaluate("() => document.getElementById('musicTapBtn').scrollIntoView({ block: 'center' })")
         q.click("#musicTapBtn")                                     # the first tap starts the loop
         q.wait_for_function("() => _waLoop.playing() && _waLoop.elapsed() > 0.3", timeout=5000)

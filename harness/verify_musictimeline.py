@@ -177,7 +177,7 @@ FRAMES = """(ms) => new Promise((res) => { const tl = document.getElementById('m
   requestAnimationFrame(tick); })"""
 
 
-def editor(b, name, path, *, drawn=True, song=TWELVE, opts=DESK, more=False, ctx=None):
+def editor(b, name, path, *, drawn=True, song=TWELVE, opts=DESK, door=None, ctx=None):
     c = ctx or waits.instrument(b.new_context(**opts))
     pg = c.new_page()
     errs = []
@@ -196,8 +196,8 @@ def editor(b, name, path, *, drawn=True, song=TWELVE, opts=DESK, more=False, ctx
             pg.evaluate(PAGES, {"n": 3, "fps": 12, "hold": 8})
     if song:
         add(pg, song)
-    if more:
-        set_more(pg, True)
+    if door:
+        set_door(pg, door)
     return c, pg, errs
 
 
@@ -210,9 +210,13 @@ def add(pg, song):
     waits.settle(pg, 500)
 
 
-def set_more(pg, want):
-    if (pg.get_attribute("#fineTuneToggle", "aria-expanded") == "true") != want:
-        pg.click("#fineTuneToggle")
+def set_door(pg, want):
+    """One of the drawer's doors open by its tile, as a person opens it: the
+    Restart view and Cut on silence are in Restart, the typed times and their
+    - and + in Exact times."""
+    t = f'#musicDoors .dp-tile[data-dp="{want}"]'
+    if pg.get_attribute(t, "aria-expanded") != "true":
+        pg.click(t)
         pg.wait_for_timeout(350)
         browsing.wait_scroll_still(pg)
 
@@ -698,7 +702,7 @@ with sync_playwright() as p:
               f"60px left: the loop {t0['s']:.4f} -> {t1['s']:.4f} (want +{moved:.4f}s); handles {h0} -> {h1} -> {h2};"
               f" let go, the start off the middle by {max(around(f[1], f[2], v0[1]) for f in slid):.4f} of a span at most")
         # The end's own + in Exact times: the end is the one zoomed around now.
-        set_more(pg, True)
+        set_door(pg, "exact")
         pg.click('.nudge-btn[data-which="end"][data-amount="1"]')
         pg.wait_for_timeout(900)
         t1, v1 = pg.evaluate(TRIM), pg.evaluate(VIEW)
@@ -996,7 +1000,7 @@ with sync_playwright() as p:
 
     print("\nMUSIC TIMELINE — the Restart view")
     for _n, _p in eds("restart"):
-        c, pg, errs = editor(b, _n, _p, more=True)
+        c, pg, errs = editor(b, _n, _p, door="restart")
         pg.evaluate(SET, {"s": 1.0, "e": 3.0, "xf": 0, "cut": False, "tempo": None})
         into_view(pg, "#musicRestart")
         pg.wait_for_timeout(300)
@@ -1076,7 +1080,7 @@ with sync_playwright() as p:
     LOOP = {"s": 0.5, "e": 4.3013, "xf": 0}
     ENDS = (4.3013, 4.3004, 4.2995)
     for _n, _p in eds("cut"):
-        c, pg, errs = editor(b, _n, _p, more=True)
+        c, pg, errs = editor(b, _n, _p, door="restart")
         fresh = pg.evaluate("() => ({ cut: loopCutOnSilence, sw: document.getElementById('musicCut').getAttribute('aria-checked') })")
         pg.evaluate("() => { pendingMusicMeta = { trimStart: 1, trimEnd: 3, crossfadeMs: 0, enabled: true }; }")
         add(pg, SHORT)
@@ -1090,7 +1094,7 @@ with sync_playwright() as p:
         kept = []
         for want in (False, True):
             browsing.pad_drawer(pg, "music")             # a reload shuts the drawer
-            set_more(pg, True)
+            set_door(pg, "restart")
             if pg.evaluate("() => loopCutOnSilence") != want:
                 pg.click("#musicCut"); pg.wait_for_timeout(200)
             pg.evaluate("() => (typeof scheduleAutosave === 'function' ? scheduleAutosave : scheduleSave)()")
@@ -1103,7 +1107,7 @@ with sync_playwright() as p:
               all(w_ == g for w_, g in kept), f"(set, after a reload): {kept}")
         c.close()
     for _n, _p in eds("cut"):
-        c, pg, errs = editor(b, _n, _p, more=True)
+        c, pg, errs = editor(b, _n, _p, door="restart")
         said = []
         for e in ENDS:
             pg.evaluate(SET, dict(LOOP, e=e, cut=True))
@@ -1143,7 +1147,7 @@ with sync_playwright() as p:
                jumpOn: at === null ? null : jump(on, s0 + at), jumpOff: jump(off, s0), step,
                sameOff: on.length === off.length && on.every((v, i) => Math.abs(v - off[i]) < 1e-6) }; }"""
     for _n, _p in eds("bake"):
-        c, pg, errs = editor(b, _n, _p, more=True)
+        c, pg, errs = editor(b, _n, _p, door="restart")
         pg.evaluate(SET, dict(LOOP, cut=True))
         span = pg.evaluate("() => Math.round(SkriblAudioLoop.CUT_MS / 1000 * currentAudioBuffer.sampleRate) + 2")
         on = pg.evaluate(BAKE, {"span": span})
@@ -1182,7 +1186,7 @@ with sync_playwright() as p:
 
     print("\nMUSIC TIMELINE — posted, cut on silence")
     for _n, _p in eds("post"):
-        c, pg, errs = editor(b, _n, _p, more=True)
+        c, pg, errs = editor(b, _n, _p, door="restart")
         pg.evaluate(SET, dict(LOOP, cut=True))
         pg.wait_for_timeout(300)
         bake = pg.evaluate("""() => { const x = buildLoopAudioBuffer().getChannelData(0);
