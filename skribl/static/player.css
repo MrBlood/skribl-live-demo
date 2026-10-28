@@ -1775,7 +1775,14 @@ a.player-btn { text-decoration: none; }
 .replay-line.open .rl-speed svg { transform: rotate(180deg); }
 .rl-skip { flex-basis: 100%; font-size: 13px; }
 .rl-skip[hidden] { display: none; }
-.rl-chips { display: flex; gap: 2px; padding: 4px; max-width: 100%; box-sizing: border-box;
+/* THE PILL'S ENDS (owner: "the padding on right and left side is off - not
+   enough", the mock's B): the end speeds sat nearer the rounded ends than the
+   speeds sit to each other (9px against 10 here, 17 against 28 on the Pad's
+   desk pill), and the curve made it look nearer still. The pill opens at its
+   ends, rather than the end speeds growing, so each speed stays centred in
+   its fill: an end is at least the space between two speeds, and never
+   inside the inner half of the curve (verify_replayspeed, THE PILL'S ENDS). */
+.rl-chips { display: flex; gap: 2px; padding: 4px 8px; max-width: 100%; box-sizing: border-box;
   border-radius: var(--r-pill); background: rgb(var(--surface-control-rgb));
   border: 1px solid var(--hairline-strong); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
   opacity: 1; transform: none;

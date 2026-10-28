@@ -385,7 +385,12 @@ with sync_playwright() as p:
               len(ch) == 8 and all(c["hit"] and c["inside"] for c in ch), str(ch))
         taps = [pg.evaluate(TAP, pg.locator("#tuneSpeed .rl-speed").element_handle())] + \
                [pg.evaluate(TAP, h) for h in pg.locator("#tuneSpeed .rl-chips button").element_handles()]
-        check(f"[{label}] ...the button and every speed are at least a 44px tap", all(w >= 44 and h >= 44 for w, h in taps), str(taps))
+        # The eight share the pill evenly (THE PILL'S ENDS, below): 44px each
+        # where the row has room, narrower together on a phone, where 44 apiece
+        # ran out of the pill and, at 375 and under, off the screen.
+        share = pg.evaluate("() => { const p = document.querySelector('#tuneSpeed .rl-chips'), c = getComputedStyle(p); return (p.clientWidth - parseFloat(c.paddingLeft) - parseFloat(c.paddingRight)) / 8; }")
+        check(f"[{label}] ...the button is a 44px tap, and every speed 44px tall and as wide as the eight share the pill (44 where the row has room)",
+              taps[0][0] >= 44 and taps[0][1] >= 44 and all(h >= 44 and w >= min(44, math.floor(share) - 1) for w, h in taps[1:]), f"{taps}; share {share:.1f}")
         pg.click("#tuneSpeed .rl-chips button[data-r='16']"); pg.wait_for_timeout(250)
         check(f"[{label}] ...a pick there is the Pad's speed, and the line (and a desk's pill) say the same",
               pg.evaluate("""() => [localStorage.getItem('skribl_replay_rate'), document.querySelector('#tuneSpeed .rl-speed').textContent,
@@ -1189,6 +1194,67 @@ with sync_playwright() as p:
         _c4.close()
     else:
         check("[shared player, 120,000 points] the two-hour drawing posted", False, f"{_st2} {_body2}")
+
+    # ---- THE PILL'S ENDS (the owner: "everywhere this strip is the padding on
+    # right and left side is off - not enough"; the mock's B) -----------------
+    # Each place's speed pill, at the widths it is used: an end speed's word is
+    # at least the space between two speeds' words from the pill's edge (within
+    # 1.5px), and never inside the inner half of the curve; and no speed runs
+    # out of its pill, its row or the screen. Read in the words' own boxes (a
+    # Range), so it is what the eye sees that is measured, not the buttons.
+    # Today's stylesheets failed every place: the Pad's line and the link page
+    # 9px for 11, the Pad's desk pill 17 for 26, Tune's last speeds out of the
+    # pill at every phone width and past the screen's edge at 375 and under.
+    print("\nTHE PILL'S ENDS")
+    ENDS = r"""(sel) => { const pill = document.querySelector(sel); if (!pill || pill.hidden || !pill.getClientRects().length) return null;
+      const pr = pill.getBoundingClientRect(), cs = getComputedStyle(pill), bs = [...pill.querySelectorAll('button')];
+      const t = bs.map((b) => { const r = document.createRange(); r.selectNodeContents(b); return r.getBoundingClientRect(); });
+      const gaps = t.slice(1).map((x, i) => x.left - t[i].right).sort((a, c) => a - c);
+      let row = pill.parentElement; while (row && getComputedStyle(row).display === 'contents') row = row.parentElement;
+      const rr = row.getBoundingClientRect(), last = bs[bs.length - 1].getBoundingClientRect();
+      return { L: +(t[0].left - pr.left).toFixed(2), R: +(pr.right - t[t.length - 1].right).toFixed(2), between: +gaps[Math.floor(gaps.length / 2)].toFixed(2),
+               radius: Math.min(parseFloat(cs.borderTopLeftRadius), pr.height / 2), spill: +(last.right - (pr.right - parseFloat(cs.borderRightWidth))).toFixed(2),
+               out: +(pr.right - rr.right).toFixed(2), screen: +(Math.max(pr.right, last.right) - innerWidth).toFixed(2) }; }"""
+    def ends_ok(m, fits=True):
+        if not m:
+            return False, "no pill"
+        need = max(m["between"] - 1.5, m["radius"] / 2)
+        ok = m["L"] >= need and m["R"] >= need and (not fits or (m["spill"] <= 0.5 and m["out"] <= 0.5 and m["screen"] <= 0.5))
+        return ok, f"ends {m['L']}/{m['R']}, need {need:.1f} (between {m['between']}, half the curve {m['radius'] / 2}); spill {m['spill']} out {m['out']} screen {m['screen']}"
+    for vw, sel, where in ((402, "#padLine", "the Pad's line while it plays"), (1280, "#padSpeed", "the Pad's speed pill on a desk")):
+        pg = b.new_page(viewport={"width": vw, "height": 874})
+        browsing.goto(pg, BASE, "/")
+        box = pg.locator("#canvas").bounding_box()
+        for k in range(2):
+            pg.mouse.move(box["x"] + 80, box["y"] + 140 + k * 100); pg.mouse.down()
+            for i in range(30):
+                pg.mouse.move(box["x"] + 80 + i * 6, box["y"] + 140 + k * 100 + math.sin(i / 5) * 20); pg.wait_for_timeout(12)
+            pg.mouse.up(); pg.wait_for_timeout(200)
+        pg.click("#recordBtn"); pg.wait_for_timeout(300); pg.click("#playBtn"); pg.wait_for_timeout(400)
+        pg.evaluate("(s) => document.querySelector(s + ' .rl-speed').click()", sel); pg.wait_for_timeout(400)
+        ok, said = ends_ok(pg.evaluate(ENDS, sel + " .rl-chips"), fits=(sel != "#padSpeed"))
+        check(f"[{vw}] {where}: its end speeds as far from the pill's edge as two speeds are apart", ok, said)
+        pg.close()
+    for vw in (320, 360, 375, 402, 430, 1280):
+        pg = b.new_page(viewport={"width": vw, "height": 860})
+        browsing.goto(pg, BASE, "/")
+        pg.click("#tuneBtn"); pg.wait_for_timeout(600)
+        pg.evaluate("() => document.querySelector('#tuneSpeed .rl-speed').click()"); pg.wait_for_timeout(400)
+        ok, said = ends_ok(pg.evaluate(ENDS, "#tuneSpeed .rl-chips"))
+        check(f"[{vw}] Tune's speeds: all eight inside the pill and its row, the ends as far from the edge as two speeds are apart", ok, said)
+        pg.close()
+    _st3, _pe = post(drawing(0, "real"))
+    if _st3 == 201:
+        for vw in (402, 1280):
+            pg = b.new_page(viewport={"width": vw, "height": 874})
+            pg.goto(BASE + _pe["url"], wait_until="load")
+            pg.wait_for_function("() => !!document.querySelector('#playerLine .rl-speed')", timeout=10000)
+            pg.evaluate("() => document.querySelector('#playerLine .rl-speed').click()"); pg.wait_for_timeout(400)
+            ok, said = ends_ok(pg.evaluate(ENDS, "#playerLine .rl-chips"))
+            check(f"[{vw}] the link page's speeds (player.css): the ends as far from the edge as two speeds are apart", ok, said)
+            pg.close()
+    else:
+        check("[the pill's ends] the link page's drawing posted", False, f"{_st3} {_pe}")
     b.close()
 
 print("\n" + "=" * 62)
