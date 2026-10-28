@@ -1231,6 +1231,36 @@ with sync_playwright() as p:
         ok = m["L"] >= need and m["R"] >= need and held
         return ok, (f"ends {m['L']}/{m['R']}, need {need:.1f} (between {m['between']}, half the curve {m['radius'] / 2}); "
                     f"spill {m['spill']} out {m['out']} screen {m['screen']} edge {m['edge']}")
+    # IN MORE THAN ONE FACE. A word is centred in its speed's box, and where
+    # the boxes are at least 44px wide (a desk's pill) or share the pill
+    # (Tune), how far the end word sits from the edge, and two words from each
+    # other, follows how wide the words are in the face the page is drawn in:
+    # "¼×" is wider beside "2×" in Liberation Sans (CI's face) than in Inter
+    # (this box's), and at 1280 the first build's ends were half a pixel to a
+    # pixel short there, red on main after #655 and green here. So each pill
+    # is read in the page's own face and in Inter, Liberation Sans and
+    # FreeSans where they are installed (SF's, Arial's and Helvetica's widths,
+    # near the owner's iPhone and Segoe UI), and passes only in all of them,
+    # three at least. Not DejaVu Sans: wider than any face the app is drawn in
+    # where it is used, it runs Fit 3px out of a 320px phone's line, which no
+    # device of ours shows.
+    FACES = ["Inter", "Liberation Sans", "FreeSans"]
+    HAVE = """(faces) => faces.filter((f) => { const x = document.createElement('canvas').getContext('2d'), t = '\u00bc\u00d7 \u00bd\u00d7 16\u00d7 Fit';
+      x.font = '40px monospace'; const a = x.measureText(t).width; x.font = '40px "' + f + '", monospace'; return Math.abs(x.measureText(t).width - a) > 0.5; })"""
+    FORCE = """([sel, f]) => { let s = document.getElementById('endsFace');
+      if (!s) { s = document.createElement('style'); s.id = 'endsFace'; document.head.appendChild(s); }
+      s.textContent = f ? sel + ', ' + sel + ' * { font-family: "' + f + '", sans-serif !important; }' : ''; }"""
+
+    def ends_faces(pg, sel, fits="row"):
+        faces = [None] + pg.evaluate(HAVE, FACES)
+        good, said = True, []
+        for f in faces:
+            pg.evaluate(FORCE, [sel, f]); pg.wait_for_timeout(120)
+            ok, why = ends_ok(pg.evaluate(ENDS, sel), fits)
+            good = good and ok
+            said.append(f"{f or 'its own face'}: " + ("ok" if ok else why))
+        pg.evaluate(FORCE, [sel, None])
+        return good and len(faces) >= 3, f"{len(faces)} faces; " + "; ".join(said)
     for vw, sel, where, fits in ((320, "#padLine", "the Pad's line while it plays", "screen"),
                                  (402, "#padLine", "the Pad's line while it plays", "screen"),
                                  (1280, "#padSpeed", "the Pad's speed pill on a desk", None)):
@@ -1244,16 +1274,16 @@ with sync_playwright() as p:
             pg.mouse.up(); pg.wait_for_timeout(200)
         pg.click("#recordBtn"); pg.wait_for_timeout(300); pg.click("#playBtn"); pg.wait_for_timeout(400)
         pg.evaluate("(s) => document.querySelector(s + ' .rl-speed').click()", sel); pg.wait_for_timeout(400)
-        ok, said = ends_ok(pg.evaluate(ENDS, sel + " .rl-chips"), fits)
-        check(f"[{vw}] {where}: its end speeds as far from the pill's edge as two speeds are apart", ok, said)
+        ok, said = ends_faces(pg, sel + " .rl-chips", fits)
+        check(f"[{vw}] {where}: its end speeds as far from the pill's edge as two speeds are apart, in each face", ok, said)
         pg.close()
     for vw in (320, 360, 375, 402, 430, 1280):
         pg = b.new_page(viewport={"width": vw, "height": 860})
         browsing.goto(pg, BASE, "/")
         pg.click("#tuneBtn"); pg.wait_for_timeout(600)
         pg.evaluate("() => document.querySelector('#tuneSpeed .rl-speed').click()"); pg.wait_for_timeout(400)
-        ok, said = ends_ok(pg.evaluate(ENDS, "#tuneSpeed .rl-chips"))
-        check(f"[{vw}] Tune's speeds: all eight inside the pill and its row, the ends as far from the edge as two speeds are apart", ok, said)
+        ok, said = ends_faces(pg, "#tuneSpeed .rl-chips")
+        check(f"[{vw}] Tune's speeds: all eight inside the pill and its row, the ends as far from the edge as two speeds are apart, in each face", ok, said)
         pg.close()
     _st3, _pe = post(drawing(0, "real", extra={"visibility": "public"}))   # public: the feed shows it
     if _st3 == 201:
@@ -1262,8 +1292,8 @@ with sync_playwright() as p:
             pg.goto(BASE + _pe["url"], wait_until="load")
             pg.wait_for_function("() => !!document.querySelector('#playerLine .rl-speed')", timeout=10000)
             pg.evaluate("() => document.querySelector('#playerLine .rl-speed').click()"); pg.wait_for_timeout(400)
-            ok, said = ends_ok(pg.evaluate(ENDS, "#playerLine .rl-chips"), "screen")
-            check(f"[{vw}] the link page's speeds (player.css): the ends as far from the edge as two speeds are apart", ok, said)
+            ok, said = ends_faces(pg, "#playerLine .rl-chips", "screen")
+            check(f"[{vw}] the link page's speeds (player.css): the ends as far from the edge as two speeds are apart, in each face", ok, said)
             pg.close()
         # The post's box (inlineplayer.css, a copy of its own: it loads on a
         # host's page), its line at rest on the feed.
@@ -1273,8 +1303,8 @@ with sync_playwright() as p:
             browsing.goto(pg, BASE, "/feed")
             pg.wait_for_function("(s) => !!document.querySelector(s + '.rl-speed')", arg=_box, timeout=10000)
             pg.evaluate("(s) => document.querySelector(s + '.rl-speed').click()", _box); pg.wait_for_timeout(400)
-            ok, said = ends_ok(pg.evaluate(ENDS, _box + ".rl-chips"))
-            check(f"[{vw}] the post's box's speeds (inlineplayer.css): the ends as far from the edge as two speeds are apart, inside its line", ok, said)
+            ok, said = ends_faces(pg, _box + ".rl-chips")
+            check(f"[{vw}] the post's box's speeds (inlineplayer.css): the ends as far from the edge as two speeds are apart, inside its line, in each face", ok, said)
             pg.close()
     else:
         check("[the pill's ends] the link page's drawing posted", False, f"{_st3} {_pe}")

@@ -5784,18 +5784,27 @@ a.player-btn { text-decoration: none; }
 .tune-speed .rl-speed { font-size: 16px; padding: 6px 10px 6px 12px; }
 .tune-speed .rl-speed::before { inset: -6px -2px; }   /* a 44px tap at its 33px */
 /* The eight (seven speeds and Fit) share the pill evenly, 44px each where
-   the row has room: 380 holds them and Fit's 4px, as a desk's does. Each was
-   a fixed 44 before, and on a phone the eight were wider than the row (by
-   7px at 402, 89 at 320, where "16x" and Fit ran past the screen's edge);
-   now they narrow together there, still 44px tall to a finger. */
-.tune-speed .rl-chips { flex-basis: auto; width: 100%; max-width: 380px; margin: 6px 0 2px auto; gap: 0; font-size: 16px; order: 3; padding-inline: 11px; }
+   the row has room: 384 holds them, Fit's 4px and the pill's ends, as a
+   desk's does. Each was a fixed 44 before, and on a phone the eight were
+   wider than the row (by 7px at 402, 89 at 320, where "16x" and Fit ran past
+   the screen's edge); now they narrow together there, still 44px tall to a
+   finger. THE ENDS ARE 13px, NOT 11: a speed's word is centred in its share,
+   so how far the end word sits from the edge, and two words from each other,
+   follows how wide the words are in the face the page is drawn in. At 11,
+   in Liberation Sans (CI's face) "¼×" sat half a pixel nearer the edge than
+   two words sit apart; checked in three faces now (verify_replayspeed). */
+.tune-speed .rl-chips { flex-basis: auto; width: 100%; max-width: 384px; margin: 6px 0 2px auto; gap: 0; font-size: 16px; order: 3; padding-inline: 13px; }
 .tune-speed .rl-chips button { flex: 1 1 0; min-width: 0; max-width: none; padding: 0 2px; }
 .tune-speed .rl-text { order: 1; margin-left: auto; }
 /* While they are open, a zero-height break puts the chips on a line of their own. */
 #tuneSpeedRow:has(.tune-speed.open)::after { content: ''; flex-basis: 100%; height: 0; order: 2; }
 .pad-speed .rl-speed { margin-left: 0; font-size: 13px; line-height: 1.4; padding: 4px 8px 4px 10px; }
 .pad-speed .rl-speed::before { inset: -9px -2px; }   /* a 44px tap at its 26px */
-.pad-speed .rl-chips { position: absolute; top: calc(100% + 10px); right: -4px; z-index: 60; width: max-content; max-width: none; font-size: 14px; padding-inline: 14px; }
+/* The desk pill's ends are 16px: each speed is at least 44px wide, its word
+   centred, so, as in Tune, the room at the ends follows the face. At 14,
+   Liberation Sans (CI's) and FreeSans left "¼×" a pixel nearer the edge than
+   two words sit apart. */
+.pad-speed .rl-chips { position: absolute; top: calc(100% + 10px); right: -4px; z-index: 60; width: max-content; max-width: none; font-size: 14px; padding-inline: 16px; }
 .pad-speed .rl-chips button { flex: 0 0 auto; min-width: 44px; max-width: none; padding: 0 8px; }   /* 44 wide; ::before makes it 44 tall */
 .pad-speed.open .rl-speed svg { transform: rotate(180deg); }
 @media (max-width: 640px) { .pad-speed { display: none; } }
