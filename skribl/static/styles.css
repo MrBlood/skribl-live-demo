@@ -5347,6 +5347,24 @@ body.player-mode .app {
 .player-bar.is-smart :is(.player-btn.active, .full-btn[aria-pressed="true"]).t-light {
   color: var(--on-canvas-violet); border-color: #7c5cff; background: rgba(124, 92, 255, 0.22);
 }
+/* Repeat in the editors' band (lib/watchfull.js tones it as glass): the
+   speed's glass while off, a pressed full screen's light while on, the same
+   values as the rules above, which it never joins: those are the link page's
+   too (player.css keeps them by their words), and Repeat is not. */
+.player-bar.is-smart .rl-repeat:is(.t-dark, .t-light) {
+  -webkit-backdrop-filter: blur(12px) saturate(1.6);
+          backdrop-filter: blur(12px) saturate(1.6);
+}
+.player-bar.is-smart .rl-repeat.t-dark {
+  color: #fff; background: rgba(255, 255, 255, 0.14);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 3px 12px rgba(var(--on-canvas-drop-rgb), 0.4);
+}
+.player-bar.is-smart .rl-repeat.t-light {
+  color: var(--on-canvas-violet); background: rgba(255, 255, 255, 0.68);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 3px 12px rgba(var(--on-canvas-drop-rgb), 0.14);
+}
+.player-bar.is-smart .rl-repeat[aria-pressed="true"].t-dark { color: #fff; background: rgba(124, 92, 255, 0.38); }
+.player-bar.is-smart .rl-repeat[aria-pressed="true"].t-light { color: var(--on-canvas-violet); background: rgba(124, 92, 255, 0.22); }
 @media (hover: hover) {
   .player-bar.is-smart :is(.player-btn, .rl-speed, .full-btn).t-dark:not(.active):hover { background: rgba(255, 255, 255, 0.22); }
   .player-bar.is-smart :is(.player-btn, .rl-speed, .full-btn).t-light:not(.active):hover { background: rgba(255, 255, 255, 0.8); }
@@ -5733,6 +5751,22 @@ a.player-btn { text-decoration: none; }
 .rl-speed svg { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 2.4;
   stroke-linecap: round; stroke-linejoin: round; transition: transform 0.26s var(--ease); }
 .replay-line.open .rl-speed svg { transform: rotate(180deg); }
+/* REPEAT, beside the speed (editor_draw.js; the Pad's, never a post's): the
+   posts' own arrows at the speed's height, bare while off, lit while on in
+   the chosen choice's purple, as the speed and the music drawer's magnet
+   wear it. A 44px tap. */
+.rl-repeat { position: relative; display: inline-grid; place-items: center; flex: none; width: 34px; height: 27px;
+  margin-left: 4px; padding: 0; border: 0; border-radius: var(--r-pill); background: transparent; color: var(--text-muted);
+  cursor: pointer; transition: background .15s ease, color .15s ease; }
+.rl-repeat::before { content: ''; position: absolute; inset: -9px -5px; }
+.rl-repeat svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+/* Lit, with a clear outline that only forced colours paint (they draw a
+   transparent outline in the system's ink), so on stays told from off there
+   as the speed's own rule does; not a forced-colors block, which the link
+   page's sheet would carry whole. */
+.rl-repeat[aria-pressed="true"] { background: var(--seg-on-fill); color: var(--seg-on-ink); outline: 2px solid transparent; outline-offset: -2px; }
+@media (hover: hover) { .rl-repeat:not([aria-pressed="true"]):hover { color: var(--text-primary); } }
+.rl-repeat:focus-visible { outline: 2px solid var(--ui-hi); outline-offset: 1px; }
 .rl-skip { flex-basis: 100%; font-size: 13px; }
 .rl-skip[hidden] { display: none; }
 /* THE PILL'S ENDS (owner: "the padding on right and left side is off - not
@@ -5828,6 +5862,8 @@ a.player-btn { text-decoration: none; }
 #tuneSpeedRow:has(.tune-speed.open)::after { content: ''; flex-basis: 100%; height: 0; order: 2; }
 .pad-speed .rl-speed { margin-left: 0; font-size: 13px; line-height: 1.4; padding: 4px 8px 4px 10px; }
 .pad-speed .rl-speed::before { inset: -9px -2px; }   /* a 44px tap at its 26px */
+.pad-speed .rl-repeat { width: 32px; height: 26px; margin-left: 6px; }
+.pad-speed .rl-repeat::before { inset: -9px -6px; }   /* 44 by 44 at its 32 by 26 */
 /* The desk pill's ends are 16px: each speed is at least 44px wide, its word
    centred, so, as in Tune, the room at the ends follows the face. At 14,
    Liberation Sans (CI's) and FreeSans left "¼×" a pixel nearer the edge than

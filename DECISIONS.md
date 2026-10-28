@@ -25443,3 +25443,41 @@ editors'. Flip's name is a little longer ("Your animation"), so on some
 phones its magnet closes up sooner.
 
 Not tested here: an iPhone's WebKit, SF and Segoe UI.
+
+## After v329 -- The Pad's Repeat, and the music to the drawing's end
+
+The owner, of the Pad's replay: "i wasn't talking about the music looping -
+i was talking about the drawing looping. should there be a loop button?";
+mocked on the Snap, zoom and Repeat page (Now beside Repeat on and off, the
+desk pill and the phone's line, light and dark), "all yes": a Repeat button
+on the Pad, off to start; posts keep repeating as now.
+
+REPEAT (editor_draw.js). Beside the speed: in the pill beside Play on a desk,
+and in the line under the drawing while it plays, between the speed and full
+screen. The posts' own arrows, bare while off and lit in the chosen choice's
+purple while on, a 44px tap, its words its tooltip. Off to start and
+remembered as the speed is (localStorage). On, Play goes round until it is
+stopped: at the drawing's end app.js asks editor_draw.js replayAgain, which
+begins the replay again as Play begins it: the canvas back to what the take
+was drawn on, the clock from 0, the music from its loop's start, as a link
+page's round does (a post's box keeps its song going round instead; that is
+the box's, and unchanged). The round's start is the editor's copy of Play's,
+not shared in app.js, which the link page loads whole: there the hook is 36
+bytes and the player stays under its ratchet; shared, it was 78, and over. Turned off
+mid-round, that round is the last; Stop stops it at once and leaves it on.
+The music drawer's "Play with my drawing" is this Play, so it follows. In
+full screen the band tones it as glass (lib/watchfull.js), the speed's while
+off and a pressed full screen's while on, in rules of its own so the link
+page's sheet carries none of it.
+
+THE MUSIC ENDS BY THE DRAWING'S CLOCK (editor_music.js drawingAt), found
+building Repeat: the music's timer counted its own ticks to the drawing's
+length, and a tick never knew of a scrub. Scrubbed back from three quarters
+to a tenth, the music stopped 1.5s later while the drawing played 5.6s more
+(measured on main). It ends when the drawing's own place does now, and never
+while Repeat is on, where each round begins it again.
+
+WHAT IT DOES TO FLIP: not for Flip, whose Play already goes round until it
+is stopped and whose Loop repeats a stretch of pages. Posts unchanged.
+
+Not tested here: an iPhone's WebKit, SF and Segoe UI.

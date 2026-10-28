@@ -266,6 +266,14 @@ function padMusicOff() {
   if (playPaused) pausedMusic = null;
 }
 
+// THE MUSIC ENDS WHEN THE DRAWING DOES, by the drawing's own clock (its
+// place, in its own time, where a scrub holds it). It counted the timer's
+// ticks before, and a tick never knew of a scrub: from three quarters back to
+// a tenth, the music stopped 1.5s on while the drawing played 5.6s more
+// (measured on the Pad). While Repeat is on it never ends here: each round
+// begins it again (editor_draw.js replayAgain).
+function drawingAt() { return scrubbing ? lastTargetMs : (performance.now() - playStart) * replayRate; }
+
 // fromMs: where in the drawing the music joins it (0, from the top).
 function playMusicLooped(drawingMs, onStarted, fromMs) {
   if (!audioEl) {
@@ -290,14 +298,12 @@ function playMusicLooped(drawingMs, onStarted, fromMs) {
   // and times the music's, is where in the clip it has got to (resumePlayback).
   if (startWebAudioLoop(nativeFallback, from / replayRate * musicRate() / 1000)) {
     if (onStarted) onStarted();
-    let elapsedWA = from;
     if (padPlayTimer) clearInterval(padPlayTimer);
     const loopCheckWA = padPlayTimer = setInterval(() => {
       if (!playing) { stopWebAudioLoop(); if (padDrawer) padDrawer.playhead(null); clearInterval(loopCheckWA); return; }
       if (playPaused) return;   // a pause is not music played
-      elapsedWA += 100 * replayRate;
       if (padDrawer) padDrawer.playhead(webAudioLoopSongTime());
-      if (elapsedWA >= drawingMs) { stopWebAudioLoop(); if (padDrawer) padDrawer.playhead(null); clearInterval(loopCheckWA); }
+      if (!padRepeat && drawingAt() >= drawingMs) { stopWebAudioLoop(); if (padDrawer) padDrawer.playhead(null); clearInterval(loopCheckWA); }
     }, 100);
     return;
   }
@@ -314,7 +320,10 @@ function playNativeLooped(drawingMs, onStarted, fromMs) {
   audioEl.currentTime = trimStart + (len > 0 ? (from / replayRate / 1000) % len : 0);
 
   const playPromise = audioEl.play();
-  const begin = () => { if (onStarted) onStarted(); };
+  // The drawing's clock is the last replay's until it begins (onStarted sets
+  // it), so the end is not read before then.
+  let begun = false;
+  const begin = () => { begun = true; if (onStarted) onStarted(); };
 
   if (playPromise && typeof playPromise.then === 'function') {
     playPromise.then(begin).catch(begin);
@@ -322,7 +331,6 @@ function playNativeLooped(drawingMs, onStarted, fromMs) {
     begin();
   }
 
-  let elapsed = from;
   if (padPlayTimer) clearInterval(padPlayTimer);
   const loopCheck = padPlayTimer = setInterval(() => {
     if (!playing) {
@@ -332,13 +340,12 @@ function playNativeLooped(drawingMs, onStarted, fromMs) {
       return;
     }
     if (playPaused) return;
-    elapsed += 100 * replayRate;
     if (audioEl.currentTime >= trimEnd - 0.05) {
       audioEl.currentTime = trimStart;
       audioEl.play();
     }
     if (padDrawer) padDrawer.playhead(audioEl.currentTime);
-    if (elapsed >= drawingMs) {
+    if (begun && !padRepeat && drawingAt() >= drawingMs) {
       audioEl.pause();
       if (padDrawer) padDrawer.playhead(null);
       clearInterval(loopCheck);

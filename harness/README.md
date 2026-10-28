@@ -1021,6 +1021,15 @@ stays a sleep.
   drawing seen whole, and the way back to the page, focus and all. It was
   verify_parity's last section until the v323 seal found that suite past its
   600-second budget.
+- `verify_padrepeat.py` — the Pad's Repeat (the owner's "should there be a
+  loop button?", the mock's yes): beside the speed in the desk pill and the
+  line under the drawing, off to start, remembered, lit only while on; on,
+  Play goes round with no frame held at a turn and the music begun again from
+  its loop's start each round; off mid-round, that round is the last; Stop
+  leaves it on; "Play with my drawing" follows; a scrub back never stops the
+  music early (it ends by the drawing's clock); in full screen it is toned as
+  the speed and a pressed full screen are; its glyph at 3:1 or more; posts and
+  Flip without it. Each row was shown red by its own break.
 - `verify_framecache.py` — a static page is rasterised at most once per
   playback, on BOTH surfaces. Pins the blit as pixel-identical to the paint it
   replaced (only after asserting the capture is the pad's own pixels one for

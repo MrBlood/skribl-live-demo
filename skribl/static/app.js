@@ -2025,6 +2025,8 @@ function editorReplayFrame() {
     requestAnimationFrame(editorReplayFrame);
   } else {
     if (playComp) { playComp.finish(); playComp.present(); }
+    // The Pad's Repeat (editor_draw.js) rounds again rather than stop.
+    if (window.replayAgain?.()) return;
     stopPlayback();
   }
 }
@@ -2082,6 +2084,8 @@ playBtn.addEventListener('click', () => {
   setReplayRate(replayChoice, playTotal);   // a Fit depends on the length just built
   showScrub();
 
+  // The Pad's Repeat begins each round again as this does (editor_draw.js
+  // replayAgain, there for this file's bytes, which the player pays for).
   clearAndRestore(() => {
     playIndex = 0;
     const beginFrames = () => {
@@ -2090,11 +2094,11 @@ playBtn.addEventListener('click', () => {
       requestAnimationFrame(editorReplayFrame);
     };
     if (audioEl && musicEnabled && typeof playMusicLooped === 'function') {   // editor_music.js's
-      // The DRAWING's length, counted against the drawing's own clock
-      // (each 100ms tick adds 100 x replayRate), so a 2x preview stops the
-      // music when the drawing ends rather than half a take later -- and a
-      // speed changed mid-play, from the line, moves that end with it. The
-      // source's own playbackRate follows musicRate() in startWebAudioLoop().
+      // The DRAWING's length, against the drawing's own clock (editor_music.js
+      // drawingAt), so a 2x preview stops the music when the drawing ends
+      // rather than half a take later -- and a speed changed mid-play, from
+      // the line, or a scrub back moves that end with it. The source's own
+      // playbackRate follows musicRate() in startWebAudioLoop().
       playMusicLooped(playTotal, beginFrames);
     } else {
       beginFrames();

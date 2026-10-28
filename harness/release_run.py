@@ -152,6 +152,7 @@ BATCHES = [
     ["verify_fullsmart.py"],               # measures — what is painted under every full screen's bar; posts to the shared server
     ["verify_onefull.py"],                 # measures — the Gallery's and Library's full screen against the link page's; posts to the shared server
     ["verify_replayspeed.py"],             # measures — progress over wall time at each speed; posts to the shared server
+    ["verify_padrepeat.py"],               # measures — each round read on every frame, the music's starts; posts to the shared server
     ["verify_videoexport.py"],             # measures — records real WebM in Chromium and reads its tracks
     # store: posts through both editors' sheets to the shared server (one
     # unticked, one ticked, per surface) and reads the listing back, so it

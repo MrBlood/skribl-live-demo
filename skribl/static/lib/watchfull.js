@@ -90,7 +90,7 @@
     var smart = global.SkriblSmartFade && o.canvas ? global.SkriblSmartFade.full(band, {
       canvas: o.canvas,
       photo: o.photo,
-      glass: '.player-btn:not(.primary), .rl-speed, .full-btn',
+      glass: '.player-btn:not(.primary), .rl-speed, .rl-repeat, .full-btn',
       words: '.rl-drawn, .rl-m, .rl-skip'
     }) : null, was = null;
 
