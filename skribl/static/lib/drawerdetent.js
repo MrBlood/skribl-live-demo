@@ -323,10 +323,10 @@
    * is open brings its end on screen again, the way opening did, and with the
    * same re-asserts. `current()` is the open panel, or null while it is shut.
    *
-   * NOT an open, a tab switch or the music drawer's More: each has its own
-   * reveal already. Each shows or hides one of the panels, or opens or closes
-   * More (#musicDetail's data-level, set before More shows or hides), so
-   * that moves the baseline instead of being followed -- watched
+   * NOT an open, a tab switch or one of the music drawer's doors: each has
+   * its own reveal already. Each shows or hides one of the panels, or opens
+   * or closes a door (#musicDetail's data-door, set before a door shows or
+   * hides), so that moves the baseline instead of being followed -- watched
    * on those elements, not read off the card's size, because Photo and Music
    * empty are the same height and a switch between them resizes nothing (the
    * first draft of this kept the panel's name per resize, missed that switch,
@@ -334,7 +334,7 @@
    *
    * Never so far that the dock slides under the pinned header: that is
    * controls on top of controls (verify_ux's phone audit), and the reason
-   * the music drawer's More stops its own nudge short of the header. Capped
+   * the music drawer's doors stop their own nudge short of the header. Capped
    * there, a short phone may still leave the last row to scroll to; growth
    * only ever scrolls down, but for one thing.
    *
@@ -412,16 +412,16 @@
       });
     }
     // A move of the baseline also calls off the last growth's re-asserts: a
-    // level picked within 1.2s of a song landing (the levels More replaced)
-    // had them chase the taller card's end, the switch just tapped scrolled
-    // away under the header.
+    // level picked within 1.2s of a song landing (the levels More, and then
+    // the doors, replaced) had them chase the taller card's end, the switch
+    // just tapped scrolled away under the header.
     var moves = new MutationObserver(function () { lastH = height(); gen++; });
     [].forEach.call(card.querySelectorAll('#photoPanel, #musicPanel'), function (m) {
       moves.observe(m, { attributes: true, attributeFilter: ['hidden'] });
     });
-    // Only More: #musicDetail un-hiding is a song landing, which IS followed.
+    // Only the doors: #musicDetail un-hiding is a song landing, which IS followed.
     var lv = card.querySelector('#musicDetail');
-    if (lv) moves.observe(lv, { attributes: true, attributeFilter: ['data-level'] });
+    if (lv) moves.observe(lv, { attributes: true, attributeFilter: ['data-door'] });
     new ResizeObserver(function () {
       var h = height(), grew = !!o.current() && lastH > 0 && h > lastH + 1;
       lastH = h;

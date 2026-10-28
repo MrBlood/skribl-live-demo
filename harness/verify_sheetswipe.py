@@ -553,11 +553,11 @@ with sync_playwright() as p:
         check(f"{who}: no page errors", not errs, "; ".join(errs[:2]))
         ctx.close()
 
-    # 7 THE MUSIC DRAWER'S MORE (owner: "Clicking this moves the arrow but
+    # 7 THE MUSIC DRAWER'S DOORS (owner: "Clicking this moves the arrow but
     # doesn't show you what's there"). Fine-tune was a row under Preview Loop
-    # that opened below the fold, then a level (Simple, Adjust, Fine-tune), and
-    # is More now (lib/musicdrawer.js): the strip stays above it, and opening
-    # More must put what it opens ON SCREEN.
+    # that opened below the fold, then a level (Simple, Adjust, Fine-tune), then
+    # More, and is four doors now (lib/musicdrawer.js): the timeline stays
+    # above them, and opening one must put what it opens ON SCREEN.
     import wave as _wave, struct as _struct, math as _math, io as _io
     _buf = _io.BytesIO()
     with _wave.open(_buf, "wb") as _w:
@@ -591,58 +591,67 @@ with sync_playwright() as p:
         check(f"{who}: the timeline draws the loop's peaks in the accent, solid, and the rest of the song faint",
               ink["inside"] > 110 and 30 < ink["outside"] < ink["inside"] - 40,
               f"blue over red at the most accented pixel: inside the loop {ink['inside']}, before it {ink['outside']} (the card {ink['card']})")
-        # More (it was Fine-tune; its tile keeps the id) opens the Restart
-        # view among the rest: what opened comes ON SCREEN, its first part
-        # painted, without a scroll by hand.
-        pg.click("#fineTuneToggle")
+        # The Restart door (it was in More, and before that Fine-tune) opens
+        # the Restart view among the rest of the restart: what opened comes ON
+        # SCREEN, its first part painted, without a scroll by hand.
+        RESTART = '#musicDoors .dp-tile[data-dp="restart"]'
+        pg.click(RESTART)
         pg.wait_for_timeout(1600)
-        ft = pg.evaluate("""() => { const z = document.getElementById('musicSmooth').getBoundingClientRect(), d = document.getElementById('fineTuneBody').getBoundingClientRect();
+        ft = pg.evaluate("""() => { const z = document.getElementById('musicSmooth').getBoundingClientRect(), d = document.getElementById('musicDoorRestart').getBoundingClientRect();
             const vh = window.visualViewport ? visualViewport.height : innerHeight;
             const hit = document.elementFromPoint(z.left + z.width / 2, z.top + z.height / 2);
-            return { open: document.getElementById('fineTuneToggle').getAttribute('aria-expanded'),
+            return { open: document.querySelector('#musicDoors .dp-tile[data-dp="restart"]').getAttribute('aria-expanded'),
                      strip: document.getElementById('musicTimeline').getBoundingClientRect().height,
                      top: Math.round(d.top), bottom: Math.round(z.bottom), vh: Math.round(vh),
                      painted: !!(hit && hit.closest('#musicSmooth')) }; }""")
-        check(f"{who}: More is open, and the timeline stays above what it opens",
+        check(f"{who}: the Restart door is open, and the timeline stays above what it opens",
               ft["open"] == "true" and ft["strip"] > 0, str(ft))
-        check(f"{who}: ...and what More opens is ON SCREEN, painted, without a scroll by hand",
+        check(f"{who}: ...and what it opens is ON SCREEN, painted, without a scroll by hand",
               ft["top"] >= 0 and ft["bottom"] <= ft["vh"] and ft["painted"], str(ft))
-        pg.click("#fineTuneToggle")
+        pg.click(RESTART)
         pg.wait_for_timeout(700)
         back = pg.evaluate("() => ({ strip: document.getElementById('musicTimeline').getBoundingClientRect().height,"
-                           " hidden: document.getElementById('fineTuneBody').hidden })")
-        check(f"{who}: closing More keeps the timeline and puts what More holds away", back["strip"] > 0 and back["hidden"] is True, str(back))
-        # ROOM BETWEEN THE LOOP PANEL'S ROWS (owner: "things just seem close
-        # together"). Measured before at 390: the loop detail's handle caps
-        # touched its zoom bar (0px) and sat 2px over Scroll. Every gap down
-        # what More opens is >= 8px, the Restart view's own box included.
-        pg.click("#fineTuneToggle")
-        pg.wait_for_timeout(1200)
-        gaps = pg.evaluate("""() => { const q = s => document.querySelector('#musicDetail ' + s).getBoundingClientRect();
-            // A switch row by its words: its 8px of padding above and below is
-            // the row's own air, so two switch rows in a row touch box to box
-            // with 16px between what they say. Each press by its own seg: Beats,
-            // under the one line, wears the same row's class.
+                           " hidden: document.getElementById('musicDoorRestart').hidden })")
+        check(f"{who}: closing it keeps the timeline and puts what it holds away", back["strip"] > 0 and back["hidden"] is True, str(back))
+        # ROOM BETWEEN THE ROWS (owner: "things just seem close together").
+        # Measured before at 390: the loop detail's handle caps touched its
+        # zoom bar (0px) and sat 2px over Scroll. Every gap down what each
+        # door opens is >= 8px, the Restart view's own box included.
+        ROWS = """(k) => { const q = s => document.querySelector('#musicDoors ' + s);
+            // A switch row by its words: its padding is the row's own air, so
+            // two switch rows touch box to box with the air between what they
+            // say. Each press by its own seg: Beats wears the same row's class.
             const sw = (id) => document.getElementById(id).closest('.mt-switch').querySelector('.mt-switch-words').getBoundingClientRect();
-            const rows = [['smooth restart', sw('musicSmooth')], ['restart view', q('#musicRestart')], ['its hint', q('#musicRvHint')],
-                          ['length', q('.crossfade-row')], ['hear the restart', q('#testSeamBtn')], ['tap', q('.mt-tap-row')],
-                          ['start/end', q('.edge-group')], ['each press', document.getElementById('musicStepSeg').closest('.mt-step').getBoundingClientRect()], ['cut on silence', sw('musicCut')], ['lock', sw('musicLock')]];
-            return rows.slice(1).map((r, i) => [rows[i][0] + ' -> ' + r[0], Math.round(r[1].top - rows[i][1].bottom)]); }""")
-        check(f"{who}: every row of what More opens has at least 8px above it",
-              all(g >= 8 for _, g in gaps), str(gaps))
-        # NO LEAP WHEN MORE CLOSES (owner, of the old Fine-tune: "when you're in
-        # fine tune and switch back to trim it snaps back"). More ends below
-        # the screen, so its tile is reached by scrolling back up to it, and
-        # from there closing makes the page several hundred px shorter: the
-        # browser would clamp the scroll in ONE frame. lib/drawerdetent.js's
-        # shrinkGently glides it instead: no frame may move the tile more than
-        # a third of the whole move (it was 120px of a 238-262px glide, back to
-        # Adjust; More's is about 700px, and the browser's own glide over that
-        # moved 171px in one frame at its fastest), nor 120px on a short one.
-        # On the owner's phone, 402x874: at 664 tall a control 400px above the
-        # screen is Playwright scrolling it into view first (a 706px "leap" of
-        # its own), and the clamp is too small there for this rule to see; at
-        # 874 it is hundreds of px.
+            const shown = (e) => e && !e.closest('[hidden]') && e.getClientRects().length;
+            const R = { length: [['the lengths', q('.mt-lengths')], ['beats', document.getElementById('musicBeatsRow')], ['undo', document.getElementById('musicPickUndo')], ['lock', 'musicLock']],
+                        beat: [['tap', q('.mt-tap-row')], ['snap', document.getElementById('musicSnapRow')]],
+                        restart: [['smooth restart', 'musicSmooth'], ['restart view', q('#musicRestart')], ['its hint', q('#musicRvHint')],
+                                  ['length', q('.crossfade-row')], ['hear the restart', q('#testSeamBtn')], ['cut on silence', 'musicCut']],
+                        exact: [['start/end', q('.edge-group')], ['each press', document.getElementById('musicStepSeg').closest('.mt-step')]] }[k];
+            const rows = R.filter(([, e]) => typeof e === 'string' || shown(e)).map(([n, e]) => [n, typeof e === 'string' ? sw(e) : e.getBoundingClientRect()]);
+            return rows.slice(1).map((r, i) => [rows[i][0] + ' -> ' + r[0], Math.round(r[1].top - rows[i][1].bottom)]); }"""
+        gaps = {}
+        for k in ("length", "beat", "restart", "exact"):
+            pg.click(f'#musicDoors .dp-tile[data-dp="{k}"]')
+            pg.wait_for_timeout(900)
+            gaps[k] = pg.evaluate(ROWS, k)
+        check(f"{who}: every row of what each door opens has at least 8px above it",
+              all(g >= 8 for rows in gaps.values() for _, g in rows) and sum(len(r) for r in gaps.values()) >= 8, str(gaps))
+        pg.click(RESTART)
+        pg.wait_for_timeout(1200)
+        # NO LEAP WHEN A DOOR CLOSES (owner, of the old Fine-tune: "when you're
+        # in fine tune and switch back to trim it snaps back"). The Restart
+        # door, the tallest, ends below the screen, so its tile is reached by
+        # scrolling back up to it, and from there closing makes the page some
+        # hundreds of px shorter: the browser would clamp the scroll in ONE
+        # frame. lib/drawerdetent.js's shrinkGently glides it instead: no frame
+        # may move the tile more than a third of the whole move (it was 120px
+        # of a 238-262px glide, back to Adjust; More's was about 700px, and the
+        # browser's own glide over that moved 171px in one frame at its
+        # fastest), nor 120px on a short one. On the owner's phone, 402x874:
+        # at 664 tall a control 400px above the screen is Playwright scrolling
+        # it into view first (a 706px "leap" of its own), and the clamp is too
+        # small there for this rule to see; at 874 it is hundreds of px.
         pg.set_viewport_size({"width": 402, "height": 874})
         pg.wait_for_timeout(300)
         pg.evaluate("() => window.scrollTo(0, 1e6)")
@@ -652,21 +661,21 @@ with sync_playwright() as p:
         # just under the copy, where a person sees it and taps it. Under the
         # copy, the tap landed on the copy, and Playwright scrolled the page to
         # the tile in one frame (670-739px).
-        pg.evaluate("""() => { const s = document.getElementById('fineTuneToggle'), h = document.querySelector('.header'), f = document.getElementById('musicFollow');
+        pg.evaluate("""() => { const s = document.querySelector('#musicDoors .dp-tile[data-dp="restart"]'), h = document.querySelector('.header'), f = document.getElementById('musicFollow');
             const head = h && ['sticky', 'fixed'].includes(getComputedStyle(h).position) ? h.getBoundingClientRect().bottom : 0;
             const top = f && f.classList.contains('on') ? Math.max(head, parseFloat(f.style.top) + f.offsetHeight) : head;
             const over = s.getBoundingClientRect().top - top - 10; if (over < 0) window.scrollBy(0, over); }""")
         pg.wait_for_timeout(600)
-        pg.evaluate("""() => { window._ftLog = []; const t0 = performance.now(), seg = document.getElementById('fineTuneToggle');
+        pg.evaluate("""() => { window._ftLog = []; const t0 = performance.now(), seg = document.querySelector('#musicDoors .dp-tile[data-dp="restart"]');
             const f = () => { _ftLog.push([performance.now(), seg.getBoundingClientRect().top]); if (performance.now() - t0 < 1500) requestAnimationFrame(f); };
             requestAnimationFrame(f); }""")
-        pg.click("#fineTuneToggle")
+        pg.click(RESTART)
         pg.wait_for_timeout(1700)
         log = pg.evaluate("_ftLog")
         steps = [(abs(b2[1] - a2[1]), b2[0] - a2[0]) for a2, b2 in zip(log, log[1:])]
         total = abs(log[-1][1] - log[0][1]) if log else 0
         big = max(steps) if steps else (0, 0)
-        check(f"{who}: closing More from the drawer's end, its tile glides rather than leaps",
+        check(f"{who}: closing a door from the drawer's end, its tile glides rather than leaps",
               len(log) > 10 and big[0] <= max(120, total / 3) and total > 50,
               f"largest single-frame move {round(big[0])}px in a {round(big[1])}ms frame, total {round(total)}px over {len(log)} frames")
         check(f"{who}: no page errors", not errs, "; ".join(errs[:2]))

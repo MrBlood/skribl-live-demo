@@ -1,45 +1,53 @@
 #!/usr/bin/env python3
-"""The music drawer's one view, and More (lib/musicdrawer.js), on the Pad and on Flip.
+"""The music drawer's view and its four doors (lib/musicdrawer.js), on the Pad and on Flip.
 
-The owner, with the drawer at three levels: "The music drawer is so
-complicated. I think I liked it better before you did so much to it," then
-"we'll need to streamline it," and yes to the step 2 mock's five defaults.
-The view is the timeline (step 2; it was the strip), the one line under it,
-the pair that plays, Fit my drawing and Whole song, and More; More holds the
-rest, the Restart view and Cut on silence among it (verify_musictimeline.py
-has how those work). verify_music.py keeps
-how each control works (the previews, the switch, Fit's sum on Flip) and
-verify_musicbeat.py the beat; this keeps where each one lives, what the drawer
-says, and More itself. It was verify_musiclevels.py, the three levels'.
+The owner, of the mock: "I like D", then "All yes" to the whole drawer. The
+view is the timeline, the one line under it and the pair that plays; under
+them four tiles, Length, Beat, Restart and Exact times, the draw drawer's
+(lib/drawtiles.js), each saying what it is set to and opening its group under
+it, one at a time. They were More, one card over all four (and before it,
+three levels): this was verify_musicmore.py, and before that
+verify_musiclevels.py. verify_musictimeline.py has how the timeline, the
+Restart view and Cut on silence work; verify_music.py how each control works
+(the previews, the switch, Fit's sum on Flip) and verify_musicbeat.py the
+beat; this keeps where each one lives, what the drawer says, and the doors
+themselves.
 
 The rows:
 
-  THE VIEW AND MORE. A new drawer opens on the one view. More opens the
-  restart, the beat, exact times and how it loops, each under its name, and
-  what it holds is `hidden` while it is closed (so out of the Tab order too).
-  Opening and closing keep the loop. It unfolds and folds away joined to its
-  tile, as the draw drawer's tiles do, and at once under Reduce Motion. No
-  line shows where they join, read on the screenshot's pixels in light and
-  dark (the card's dark top light, a 1px inset, once showed under the tile),
-  and the card's side edges run unbroken past it.
-  It starts closed every time: on a load (the old remembered key too), and on
-  every opening of the drawer, Photo and back included.
+  THE VIEW AND THE DOORS. A new drawer opens on the view, its four doors shut.
+  Each door opens its own group (Length: Skribl's pick, Fit my drawing, Whole
+  song, Lock the length; Beat: Tap the beat; Restart: Smooth restart, the
+  Restart view, its length, Hear the restart, Cut on silence; Exact times: the
+  two times and Each press), and what a shut door holds is `hidden` (so out of
+  the Tab order too). One door at a time: another's tile swaps them. Opening
+  and closing keep the loop. A door unfolds and folds away joined to its tile,
+  as the draw drawer's do, and at once under Reduce Motion; no line shows
+  where they join, read on the screenshot's pixels in light and dark, and the
+  card's side edges run unbroken past it. The doors start shut every time: on
+  a load (More's old remembered key too), and on every opening of the drawer,
+  Photo and back included. Each tile says what its door is set to, in words
+  that fit it on a 390px phone and a desk, and Skribl's mark is on the Length
+  tile's picture while the loop is Skribl's pick.
 
-  THE ONE LINE. A new song starts on Skribl's pick: the first 20 seconds (the
-  whole song when it is shorter), with a smooth restart; on the Pad a drawing
-  already there sets the length instead, what is heard as long as the
-  drawing. The line says the length heard, the beats once there is a tempo,
-  and against the drawing, then Skribl's pick or the way back; the way back
-  has an Undo, which goes after eight seconds. Nobody is told they did
-  something: a drawing that changed under the pick shows the way back and no
-  more. Its height never changes as it says other things. A song a draft
-  brings back keeps the draft's loop.
+  THE ONE LINE AND SKRIBL'S PICK. A new song starts on Skribl's pick: the
+  first 20 seconds (the whole song when it is shorter), with a smooth
+  restart; on the Pad a drawing already there sets the length instead, what
+  is heard as long as the drawing. The line says the length heard, the beats
+  once there is a tempo, and against the drawing; in the Length door
+  Skribl's pick is lit while the loop is it. Changed, the pick is the way
+  back, which has an Undo, gone after eight seconds. Nobody is told they did
+  something: a drawing that changed under the pick says only that. The
+  line's height never changes as it says other things. A song a draft brings
+  back keeps the draft's loop.
 
-  THE PICKS. Fit counts the smooth restart (what is heard is as long as the
+  THE LENGTHS. Fit counts the smooth restart (what is heard is as long as the
   drawing; Match Drawing Time fell short by the crossfade). Whole song loops
   all of a short song and a long one's first 20 seconds, and says which. The
-  one that describes the loop wears the one tint. With nothing drawn Fit is
-  off and says why, and wakes when a drawing is made with the drawer open.
+  one the loop is wears the one tint, one at a time; where two are the same
+  loop (a short song's pick is the whole song), the one pressed, and neither
+  moves the loop or offers an Undo. With nothing drawn Fit is off and says
+  why, and wakes when a drawing is made with the drawer open.
 
   SMOOTH RESTART. One switch, on at its last length and off to a clean cut;
   the line counts what is heard.
@@ -52,23 +60,25 @@ The rows:
   length moves both ends together. Every field that takes text is 16px (A11Y
   11b; these are built hidden).
 
-  THE TIMELINE FOLLOWS YOU. With the timeline scrolled up past the header, a
-  copy of it shows under the header, on the drawer to the pixel (on a desk
-  the page's scrollbar gutter moves where a fixed box's left counts from),
-  painted over what passes under it and under the header; with the timeline
-  on the screen it stays away. It frames the loop, the loop most of it, and
-  says the one line's length and beats. A press of End + moves its end at
-  once; then it eases to frame the new loop, frame by frame. It glides in.
-  A tap on it goes back up to the timeline, the drawer still open (Flip's
-  tap-away rule closed it), and it goes. On a phone and a desk, and at once
-  under Reduce Motion.
+  THE TIMELINE FOLLOWS YOU. Exact times opens under the timeline, so on a
+  phone and a desk, scrolled as far as the page goes, what it edits is still
+  on the screen, all of it, and the copy stays away. Where it can scroll away
+  (a small phone held sideways), with the timeline scrolled up past the
+  header a copy of it shows under the header, on the drawer to the pixel (on
+  a desk the page's scrollbar gutter moves where a fixed box's left counts
+  from), painted over what passes under it and under the header; with the
+  timeline on the screen it stays away. It frames the loop, the loop most of
+  it, and says the one line's length and beats. A press of End + moves its
+  end at once; then it eases to frame the new loop, frame by frame. It glides
+  in. A tap on it goes back up to the timeline, the drawer still open (Flip's
+  tap-away rule closed it), and it goes. At once under Reduce Motion.
 
   PLAY. Play with my drawing is the editor's own Play and follows it however
   it is pressed; with nothing drawn it waits, and Hear the loop, beside it,
   plays the music on its own (verify_musicbeat has the rest).
 
-  KIND, NOT JUMPY. More opened as a song lands never takes the tile just
-  tapped out of sight, and closing it from the drawer's end glides: the tile
+  KIND, NOT JUMPY. A door opened as a song lands never takes the tile just
+  tapped out of sight, and closing one from the drawer's end glides: the tile
   is read on every frame and never leaps.
 
 Checked red per component: see DECISIONS.md for which mutation turned which
@@ -100,16 +110,16 @@ try:
     from playwright.sync_api import sync_playwright
 except ImportError as exc:
     print(f"SUITE-SKIPPED: {exc}")
-    print("No assertions were executed. This is NOT evidence the music drawer has its one view and More.")
+    print("No assertions were executed. This is NOT evidence the music drawer has its view and its four doors.")
     raise SystemExit(77)
 import browsing  # noqa: E402
 import waits  # noqa: E402
 
-# For calibration: MUSICMORE_ONLY=Pad (or Flip) runs one editor, and
-# MUSICMORE_PART=more (pick, line, picks, smooth, exact, follow, play, kind) one part,
-# so a row can be shown red in seconds. A real run sets neither.
-ONLY = os.environ.get("MUSICMORE_ONLY", "")
-PART = os.environ.get("MUSICMORE_PART", "")
+# For calibration: MUSICDOORS_ONLY=Pad (or Flip) runs one editor, and
+# MUSICDOORS_PART=doors (words, pick, line, picks, smooth, exact, follow, play, kind)
+# one part, so a row can be shown red in seconds. A real run sets neither.
+ONLY = os.environ.get("MUSICDOORS_ONLY", "")
+PART = os.environ.get("MUSICDOORS_PART", "")
 EDITORS = [e for e in (("Pad", "/"), ("Flip", "/flip")) if not ONLY or e[0] == ONLY]
 
 
@@ -123,6 +133,9 @@ def eds(name):
 DESK = dict(viewport={"width": 1280, "height": 900})
 PHONE = dict(viewport={"width": 402, "height": 874}, device_scale_factor=2, is_mobile=True, has_touch=True)
 SIDEWAYS = dict(viewport={"width": 874, "height": 402}, device_scale_factor=2, is_mobile=True, has_touch=True)
+# An iPhone SE held sideways, its 375 less Safari's bar: where the timeline
+# can scroll away under Exact times.
+SMALL_SIDEWAYS = dict(SIDEWAYS, viewport={"width": 667, "height": 340})
 WORK = {"Pad": "drawing", "Flip": "animation"}
 PLAY = {"Pad": "#playBtn", "Flip": "#play"}
 
@@ -149,8 +162,14 @@ PAGES = """(o) => { frames.length = 0;
 DRAWING = {"Pad": "() => strokes.length ? getPlaybackDuration() / 1000 : 0",
            "Flip": "() => window.SkriblHold.plan(frames, fps, docLoop).cycle / 1000"}
 TRIM = "() => ({ s: trimStart, e: trimEnd, d: audioDuration, xf: loopCrossfadeMs })"
-SAID = """() => { const q = (id) => document.getElementById(id);
-  return { line: q('musicPickText').textContent, tag: !q('musicPickTag').hidden, back: !q('musicBackPick').hidden, undo: !q('musicPickUndo').hidden,
+# What the drawer says. `pick`: Skribl's pick is lit, the loop is it; `back`:
+# it is the way back, there to tap; `spark`: Skribl's mark on the Length tile.
+SAID = """() => { const q = (id) => document.getElementById(id), card = q('musicPickCard');
+  const tile = (k) => document.querySelector('#musicDoors .dp-tile[data-dp="' + k + '"]');
+  return { line: q('musicPickText').textContent, pick: card.getAttribute('aria-pressed') === 'true',
+           back: card.getAttribute('aria-pressed') !== 'true' && !card.disabled, undo: !q('musicPickUndo').hidden,
+           pickSub: q('musicPickSub').textContent, spark: !q('musicLengthSpark').hidden,
+           tiles: ['length', 'beat', 'restart', 'exact'].map((k) => tile(k).querySelector('.dp-v').textContent),
            fit: q('matchDrawingBtn').getAttribute('aria-pressed'), fitOff: q('matchDrawingBtn').disabled, fitSub: q('musicFitSub').textContent,
            whole: q('musicWholeBtn').getAttribute('aria-pressed'), wholeName: q('musicWholeName').textContent, wholeSub: q('musicWholeSub').textContent,
            play: q('musicPlayLabel').textContent,
@@ -159,15 +178,19 @@ SAID = """() => { const q = (id) => document.getElementById(id);
 # Shown: no [hidden] on the way up, and a box. Hidden: a [hidden] on the way up.
 SHOWN = """(ids) => ids.filter((id) => { const el = document.getElementById(id);
   return !!el && !el.closest('[hidden]') && el.getClientRects().length > 0; })"""
-# Where More's tile is, against the pinned header (0 where the header scrolls away) and the screen.
-SIGHT = """() => { const s = document.getElementById('fineTuneToggle').getBoundingClientRect(), h = document.querySelector('.header');
+# Where the Restart door's tile is, against the pinned header (0 where the header scrolls away) and the screen.
+TILE = "document.querySelector('#musicDoors .dp-tile[data-dp=\"restart\"]')"
+SIGHT = """() => { const s = """ + TILE + """.getBoundingClientRect(), h = document.querySelector('.header');
   const top = h && ['sticky', 'fixed'].includes(getComputedStyle(h).position) ? h.getBoundingClientRect().bottom : 0;
   return { seg: Math.round(s.top), header: Math.round(top), vh: innerHeight }; }"""
-VIEW = ["musicTimeline", "musicPickLine", "musicPlayBtn", "previewLoopBtn", "matchDrawingBtn", "musicWholeBtn", "fineTuneToggle"]
-MORE = ["fineTuneBody", "musicSmooth", "musicRestart", "crossfadeSlider", "testSeamBtn", "musicTapBtn",
-        "startReadout", "endReadout", "musicStepSeg", "musicCut", "musicLock"]
-ALL = sorted(set(VIEW + MORE))
-SECTIONS = ["The restart", "The beat", "Exact times", "How it loops"]
+VIEW = ["musicTimeline", "musicPickLine", "musicPlayBtn", "previewLoopBtn", "musicDoors"]
+DOORS = {"length": ["musicDoorLength", "musicPickCard", "matchDrawingBtn", "musicWholeBtn", "musicLock"],
+         "beat": ["musicDoorBeat", "musicTapBtn"],
+         "restart": ["musicDoorRestart", "musicSmooth", "musicRestart", "crossfadeSlider", "testSeamBtn", "musicCut"],
+         "exact": ["musicDoorExact", "startReadout", "endReadout", "musicStepSeg"]}
+INSIDE = sorted(i for ids in DOORS.values() for i in ids)
+ALL = sorted(set(VIEW + INSIDE))
+DOOR_NAMES = {"length": "Length", "beat": "Beat", "restart": "Restart", "exact": "Exact"}
 
 
 def heard(t):
@@ -176,7 +199,7 @@ def heard(t):
     return n - min(t["xf"] / 1000, n / 2)
 
 
-def editor(b, name, path, *, drawn=True, song=SHORT, ctx=None, opts=DESK, more=False):
+def editor(b, name, path, *, drawn=True, song=SHORT, ctx=None, opts=DESK, door=None):
     c = ctx or waits.instrument(b.new_context(**opts))
     pg = c.new_page()
     errs = []
@@ -195,8 +218,8 @@ def editor(b, name, path, *, drawn=True, song=SHORT, ctx=None, opts=DESK, more=F
             pg.evaluate(PAGES, {"n": 3, "fps": 12, "hold": 8})
     if song:
         add(pg, song)
-    if more:
-        set_more(pg, True)
+    if door:
+        set_door(pg, door)
     return c, pg, errs
 
 
@@ -209,32 +232,52 @@ def add(pg, song):
     waits.settle(pg, 500)
 
 
-def set_more(pg, want):
-    """More open or closed, by its tile, as a person does."""
-    if (pg.get_attribute("#fineTuneToggle", "aria-expanded") == "true") != want:
-        pg.click("#fineTuneToggle")
-        pg.wait_for_timeout(350)
-        browsing.wait_scroll_still(pg)
+def tile(k):
+    return f'#musicDoors .dp-tile[data-dp="{k}"]'
 
 
-# Where More's tile meets what it opens, as painted (verify_drawtiles reads the
-# draw drawer's tiles the same way): the largest step from the card's colour
-# over the rows from the tile's bottom border to 3px into the card, across the
-# tile's inside, and the smallest on each side edge at the joint (0 is a break,
-# which a cover the tile's whole width paints).
-JOINT = """() => { const t = document.getElementById('fineTuneToggle'), p = document.getElementById('fineTuneBody');
-  t.scrollIntoView({ block: 'center', behavior: 'instant' });
-  const a = t.getBoundingClientRect(), z = p.getBoundingClientRect();
+def open_door(pg):
+    """The door that is open, or None."""
+    return pg.evaluate("() => { const t = document.querySelector('#musicDoors .dp-tile[aria-expanded=\"true\"]'); return t ? t.dataset.dp : null; }")
+
+
+def set_door(pg, want):
+    """A door open (its name) or every door shut (None), by the tiles, as a person does."""
+    now = open_door(pg)
+    if now == want:
+        return
+    pg.click(tile(want or now))
+    pg.wait_for_timeout(350)
+    browsing.wait_scroll_still(pg)
+
+
+# Where an open door's tile meets what it opens, as painted, read as
+# verify_drawtiles reads the draw drawer's tiles (they are the same tiles): the
+# largest step from the card's colour over the rows from the tile's bottom
+# border to 3px into the card, across the tile's inside; and, where the tile
+# is at an end of the row, the smallest step on the card's side edge at the
+# joint (0 is a break in the edge, which a cover the tile's whole width
+# paints). The joint holds still for its photograph: read, photograph, read
+# again, and the photograph counts only when the two reads agree.
+JOINT = """(k) => { const t = document.querySelector('#musicDoors .dp-tile[data-dp="' + k + '"]'), p = document.getElementById(t.getAttribute('aria-controls'));
+  let a = t.getBoundingClientRect();
+  if (a.bottom < 8 || a.bottom > innerHeight - 8) { t.scrollIntoView({ block: 'center', behavior: 'instant' }); a = t.getBoundingClientRect(); }
+  const z = p.getBoundingClientRect();
   return { a: [a.left, a.top, a.right, a.bottom], z: [z.left, z.top, z.right, z.bottom], card: getComputedStyle(p).backgroundColor }; }"""
 
 
-def seam(pg, dpr=1):
+def seam(pg, k, dpr=1):
     from PIL import Image
-    j = pg.evaluate(JOINT)
-    a, z = j["a"], j["z"]
+    for _ in range(8):
+        j = pg.evaluate(JOINT, k)
+        a, z = j["a"], j["z"]
+        x0, y0 = min(a[0], z[0]) - 2, a[3] - 6
+        im = Image.open(io.BytesIO(pg.screenshot(clip={"x": x0, "y": y0, "width": max(a[2], z[2]) + 2 - x0, "height": 14}))).convert("RGB")
+        j2 = pg.evaluate(JOINT, k)
+        if all(abs(u - v) <= 0.5 for u, v in zip(j["a"] + j["z"], j2["a"] + j2["z"])):
+            break
+        pg.wait_for_timeout(250)
     card = [int(v) for v in re.findall(r"\d+", j["card"])[:3]]
-    x0, y0 = min(a[0], z[0]) - 2, a[3] - 6
-    im = Image.open(io.BytesIO(pg.screenshot(clip={"x": x0, "y": y0, "width": max(a[2], z[2]) + 2 - x0, "height": 14}))).convert("RGB")
     w, h = im.size
 
     def step(x, y):
@@ -242,7 +285,9 @@ def seam(pg, dpr=1):
         return max(abs(c[i] - card[i]) for i in range(3))
     inside = [a[0] + 2 + i / dpr for i in range(int((a[2] - a[0] - 4) * dpr))]
     worst = max(step(x, a[3] - 1 + i / dpr) for i in range(int(4 * dpr)) for x in inside)
-    edges = [min(step(col, a[3] - 4 + i / dpr) for i in range(int(8 * dpr))) for col in (a[0] + .5 / dpr, a[2] - .5 / dpr)]
+    edges = {side: min(step(col, a[3] - 4 + i / dpr) for i in range(int(8 * dpr)))
+             for side, xa, xz, col in (("left", a[0], z[0], a[0] + .5 / dpr), ("right", a[2], z[2], a[2] - .5 / dpr))
+             if abs(xa - xz) < .75}
     return worst, edges
 
 
@@ -260,74 +305,80 @@ def press(pg, sel, ms=200):
 with sync_playwright() as pw:
     b = pw.chromium.launch()
 
-    print("\nMUSIC MORE — the one view, and More")
-    for _n, _p in eds("more"):
+    print("\nMUSIC DOORS — the view, and its four doors")
+    TILES = """() => [...document.querySelectorAll('#musicDoors .dp-tile')].map((t) => [t.dataset.dp, t.querySelector('.dp-k').textContent,
+        t.getAttribute('aria-expanded'), t.getAttribute('aria-controls')])"""
+    WHERE = """() => [document.getElementById('musicDoors').dataset.col || null, document.getElementById('musicDetail').dataset.door,
+        [...document.querySelectorAll('#musicDoors .dp-tile')].map((t) => t.getAttribute('aria-expanded') === 'true' ? 1 : 0).join('')]"""
+    for _n, _p in eds("doors"):
         c, pg, errs = editor(b, _n, _p)
         closed = set(pg.evaluate(SHOWN, ALL))
-        tile = pg.evaluate("() => { const t = document.getElementById('fineTuneToggle');"
-                           " return [t.querySelector('.mt-k').textContent, t.querySelector('.mt-v').textContent, t.getAttribute('aria-expanded'), t.getAttribute('aria-controls')]; }")
-        # The drawn mark the tile ends on (lib marks, _skribl_marks.html): + closed, - open.
-        MARK = "() => ['.mk-plus', '.mk-minus'].filter(s => { const m = document.querySelector('#fineTuneToggle ' + s); return m && getComputedStyle(m).display !== 'none'; })"
-        mark_closed = pg.evaluate(MARK)
-        check(f"{_n}: a new drawer opens on the one view: the timeline, the one line, the pair that plays, the two picks and More, and nothing deeper",
-              closed == set(VIEW) and tile == ["More", "The restart, the beat, exact times", "false", "fineTuneBody"],
-              f"extra {sorted(closed - set(VIEW))}, missing {sorted(set(VIEW) - closed)}; the tile {tile}")
-        set_more(pg, True)
-        opened = set(pg.evaluate(SHOWN, ALL))
-        heads = pg.evaluate("() => [...document.querySelectorAll('#fineTuneBody > .mt-sect')].map(p => p.textContent)")
-        mark_open = pg.evaluate(MARK)
-        check(f"{_n}: More opens the restart, the beat, exact times and how it loops, each under its name",
-              opened == set(VIEW + MORE) and heads == SECTIONS and pg.get_attribute("#fineTuneToggle", "aria-expanded") == "true",
-              f"extra {sorted(opened - set(VIEW + MORE))}, missing {sorted(set(VIEW + MORE) - opened)}; {heads}")
-        check(f"{_n}: More's tile ends on a drawn +, and a - while it is open",
-              mark_closed == [".mk-plus"] and mark_open == [".mk-minus"], f"closed {mark_closed}, open {mark_open}")
-        # Joined: the open tile reaches over the card's top edge and is above it,
-        # so the point just inside the card's edge is the tile's.
-        j = pg.evaluate("""() => { const t = document.getElementById('fineTuneToggle'), d = document.getElementById('fineTuneBody');
-            t.scrollIntoView({ block: 'center' }); const a = t.getBoundingClientRect(), r = d.getBoundingClientRect();
-            const at = document.elementFromPoint(r.left + r.width / 2, r.top + 0.5);
-            return { over: +(a.bottom - r.top).toFixed(2), same: Math.abs(a.left - r.left) < 0.5 && Math.abs(a.right - r.right) < 0.5,
-                     tile: !!at && t.contains(at), open: t.classList.contains('open') }; }""")
-        check(f"{_n}: open, More's tile and what it opens are one shape, the tile over the card's edge",
-              j["open"] and j["same"] and j["tile"] and 0.5 <= j["over"] <= 1.5, str(j))
-        painted = {}
-        for scheme in ("light", "dark"):
-            pg.emulate_media(color_scheme=scheme); pg.wait_for_timeout(150)
-            painted[scheme] = seam(pg)
-        pg.emulate_media(color_scheme="light")
-        check(f"{_n}: no line shows where More's tile meets what it opens, light or dark (painted pixels: the rows "
-              "at the joint are the card's colour), and the card's side edges run unbroken past it",
-              all(w <= 2 and min(e) >= 4 for w, e in painted.values()),
-              "; ".join(f"{s}: largest step from the card at the joint {w} (2 at most), the edges' smallest {e} (4 at least)"
-                        for s, (w, e) in painted.items()))
-        set_more(pg, False)
+        tiles = pg.evaluate(TILES)
+        check(f"{_n}: a new drawer opens on the view: the timeline, the one line, the pair that plays and four doors, each shut",
+              closed == set(VIEW) and [t[:3] for t in tiles] == [[k, DOOR_NAMES[k], "false"] for k in DOORS]
+              and all(t[3] == DOORS[t[0]][0] for t in tiles) and pg.evaluate(WHERE) == [None, "none", "0000"],
+              f"extra {sorted(closed - set(VIEW))}, missing {sorted(set(VIEW) - closed)}; the tiles {tiles}; {pg.evaluate(WHERE)}")
+        opened, where = {}, {}
+        for k in DOORS:
+            set_door(pg, k)
+            opened[k] = set(pg.evaluate(SHOWN, ALL)) - set(VIEW)
+            where[k] = pg.evaluate(WHERE)
+        check(f"{_n}: each door opens its own group, one at a time: another's tile swaps them",
+              all(opened[k] == set(DOORS[k]) for k in DOORS)
+              and [where[k] for k in DOORS] == [["0", "length", "1000"], ["1", "beat", "0100"], ["2", "restart", "0010"], ["3", "exact", "0001"]],
+              "; ".join(f"{k}: extra {sorted(opened[k] - set(DOORS[k]))}, missing {sorted(set(DOORS[k]) - opened[k])}, {where[k]}" for k in DOORS))
+        set_door(pg, None)
         pg.wait_for_timeout(300)
-        tab = pg.evaluate("(ids) => ids.filter((id) => !document.getElementById(id).closest('[hidden]'))", MORE)
-        check(f"{_n}: what More holds is hidden while it is closed, so out of the Tab order too",
-              not tab and pg.get_attribute("#fineTuneToggle", "aria-expanded") == "false", f"not [hidden] with More closed: {tab}")
-
-        # Opening and closing keep the loop: an own loop and smooth restart, through twice.
-        set_more(pg, True)
+        tab = pg.evaluate("(ids) => ids.filter((id) => !document.getElementById(id).closest('[hidden]'))", INSIDE)
+        check(f"{_n}: what a shut door holds is hidden, so out of the Tab order too",
+              not tab and pg.evaluate(WHERE) == [None, "none", "0000"], f"not [hidden] with every door shut: {tab}; {pg.evaluate(WHERE)}")
+        # Joined: the open tile reaches over the card's edge and is above it,
+        # so the point just inside the card's edge under it is the tile's, and
+        # at an end of the row the card's corner under it is square.
+        JOIN = """(k) => { const t = document.querySelector('#musicDoors .dp-tile[data-dp="' + k + '"]'), d = document.getElementById(t.getAttribute('aria-controls'));
+            t.scrollIntoView({ block: 'center' }); const a = t.getBoundingClientRect(), r = d.getBoundingClientRect(), cs = getComputedStyle(d);
+            const at = document.elementFromPoint(a.left + a.width / 2, r.top + 0.5);
+            return { over: +(a.bottom - r.top).toFixed(2), tile: !!at && t.contains(at), open: t.classList.contains('dp-open'),
+                     corners: [cs.borderTopLeftRadius, cs.borderTopRightRadius] }; }"""
+        joins, painted = {}, {}
+        for k in ("length", "exact"):
+            set_door(pg, k)
+            joins[k] = pg.evaluate(JOIN, k)
+            for scheme in ("light", "dark"):
+                pg.emulate_media(color_scheme=scheme); pg.wait_for_timeout(150)
+                painted[(k, scheme)] = seam(pg, k)
+        pg.emulate_media(color_scheme="light")
+        check(f"{_n}: open, a door's tile and its group are one shape, the tile over the card's edge, the corner square at the row's ends",
+              all(j["open"] and j["tile"] and 0.5 <= j["over"] <= 1.5 for j in joins.values())
+              and joins["length"]["corners"][0] == "0px" and joins["exact"]["corners"][1] == "0px", str(joins))
+        check(f"{_n}: no line shows where a door's tile meets its group, light or dark (painted pixels: the rows "
+              "at the joint are the card's colour), and at an end the card's edge runs unbroken",
+              all(w <= 2 and len(e) == 1 and min(e.values()) >= 4 for w, e in painted.values()),
+              "; ".join(f"{k} {sc}: largest step from the card at the joint {w} (2 at most), the edge's smallest {e} (4 at least)"
+                        for (k, sc), (w, e) in painted.items()))
+        set_door(pg, None)
+        # Opening, swapping and closing keep the loop: an own loop and smooth restart.
+        set_door(pg, "restart")
         pg.evaluate("() => { trimStart = 0.7; trimEnd = 3.9; updateTrimUI(); }")
         pg.evaluate("() => { const s = document.getElementById('crossfadeSlider'); s.value = '120'; s.dispatchEvent(new Event('input', { bubbles: true })); }")
         before = pg.evaluate(TRIM)
         seen = []
-        for want in (False, True, False):
-            set_more(pg, want)
+        for want in ("length", None, "exact", "beat", None):
+            set_door(pg, want)
             pg.wait_for_timeout(250)
             seen.append(pg.evaluate(TRIM))
-        check(f"{_n}: opening and closing More keeps the loop",
+        check(f"{_n}: opening, swapping and closing the doors keeps the loop",
               all(t == before for t in seen) and before["xf"] == 120, f"{before} then {seen}")
 
-        # It unfolds and folds away: the animations themselves, read as the
-        # tap lands (opacity from 0 in, to 0 out, the draw drawer's 220ms and
-        # 180ms), and the frames, read on every one: some on the way in, and
-        # on the way out with the tile still joined, then hidden. One frame
-        # each way is the most a loaded machine guarantees: beside other
+        # A door unfolds and folds away: the animations themselves, read as
+        # the tap lands (opacity from 0 in, to 0 out, the draw drawer's 220ms
+        # and 180ms), and the frames, read on every one: some on the way in,
+        # and on the way out with the tile still joined, then hidden. One
+        # frame each way is the most a loaded machine guarantees: beside other
         # suites a frame lasted up to 100ms and the unfold's ease is past 98%
         # by half its time.
-        FRAMES = """() => { window.__mf = []; const d = document.getElementById('fineTuneBody'), t = document.getElementById('fineTuneToggle'), t0 = performance.now();
-            (function f() { window.__mf.push([Math.round(performance.now() - t0), d.hidden, +getComputedStyle(d).opacity, t.classList.contains('open')]);
+        FRAMES = """() => { window.__mf = []; const t = """ + TILE + """, d = document.getElementById(t.getAttribute('aria-controls')), t0 = performance.now();
+            (function f() { window.__mf.push([Math.round(performance.now() - t0), d.hidden, +getComputedStyle(d).opacity, t.classList.contains('dp-open')]);
               if (performance.now() - t0 < 600) requestAnimationFrame(f); })();
             t.click();
             return d.getAnimations().map(a => { const k = a.effect.getKeyframes(); return [+k[0].opacity, +k[k.length - 1].opacity, a.effect.getTiming().duration]; }); }"""
@@ -337,93 +388,99 @@ with sync_playwright() as pw:
         down = pg.evaluate("() => window.__mf")
         mid_up = [f for f in up if not f[1] and 0.02 < f[2] < 0.98]
         mid_down = [f for f in down if not f[1] and 0.02 < f[2] < 0.98 and f[3]]
-        check(f"{_n}: More unfolds, and folds away joined to its tile before it goes",
+        check(f"{_n}: a door unfolds, and folds away joined to its tile before it goes",
               a_up == [[0, 1, 220]] and a_down == [[1, 0, 180]] and len(mid_up) >= 1 and len(mid_down) >= 1
               and down[-1][1] and not down[-1][3],
               f"animations {a_up} in, {a_down} out; {len(mid_up)} frames on the way in, {len(mid_down)} on the way out; last {down[-1] if down else None}")
-        check(f"{_n}: no page errors through More", not errs, "; ".join(errs[:2]))
-        c.close()
-
-    # More's + sits on its words' line in any font: a centred line box
-    # centres the font's ascent and descent, not the letters, and fonts split
-    # those differently (the record clock's lesson, verify_ux). The words are
-    # one block, which lib/labels.js trims to cap height (labels.css
-    # .lbl-own; a flex row cannot be trimmed), so the INK is measured, in the page's
-    # own face and in each installed face forced onto the tile: the + within
-    # half a pixel of "More". The faces that split ascent and descent unlike
-    # the app's are the ones that can tell: with the trim taken off, the + sat
-    # 2px low in DejaVu Serif, 1.5 in FreeSerif, 1 in IPAPGothic and Inter
-    # Display, and level in the sans faces; trimmed, within half a pixel in all.
-    from PIL import Image as _Img
-    import io as _io
-    for _n, _p in eds("more"):
-        c = waits.instrument(b.new_context(device_scale_factor=2, **DESK))
-        c, pg, _ = editor(b, _n, _p, ctx=c, drawn=False)
-        faces = [None] + pg.evaluate("""() => ['DejaVu Sans', 'Liberation Sans', 'FreeSans', 'Inter', 'Inter Display',
-            'DejaVu Serif', 'FreeSerif', 'IPAPGothic'].filter(f => {
-            const x = document.createElement('canvas').getContext('2d'), t = 'More The restart';
-            x.font = '40px monospace'; const a = x.measureText(t).width;
-            x.font = '40px "' + f + '", monospace'; return Math.abs(x.measureText(t).width - a) > 0.5; })""")
-        off = {}
-        for f in faces:
-            pg.evaluate("""f => { let s = document.getElementById('moreFace'); if (!s) { s = document.createElement('style'); s.id = 'moreFace';
-                document.head.appendChild(s); } s.textContent = f ? '#fineTuneToggle, #fineTuneToggle * { font-family: "' + f + '", sans-serif !important; }' : ''; }""", f)
-            pg.wait_for_timeout(200)
-            g = pg.evaluate("""() => { const t = document.getElementById('fineTuneToggle'); t.scrollIntoView({ block: 'center' });
-                const r = t.getBoundingClientRect(), k = t.querySelector('.mt-k').getBoundingClientRect();
-                const m = [...t.querySelectorAll('.mk')].find(e => getComputedStyle(e).display !== 'none').getBoundingClientRect();
-                return { r: [r.left, r.top, r.width, r.height], k: [k.left - r.left, k.right - r.left], m: [m.left - r.left, m.right - r.left] }; }""")
-            im = _Img.open(_io.BytesIO(pg.screenshot(clip={"x": g["r"][0], "y": g["r"][1], "width": g["r"][2], "height": g["r"][3]}))).convert("RGB")
-            bg = im.getpixel((int((g["k"][1] + 4) * 2), 6))
-            def centre(x0, x1):
-                ys = [y for y in range(im.height) if any(sum(abs(a - b2) for a, b2 in zip(im.getpixel((x, y)), bg)) > 120
-                                                       for x in range(int(x0 * 2) + 1, int(x1 * 2) - 1))]
-                return (min(ys) + max(ys) + 1) / 4 if ys else None
-            kc, mc = centre(*g["k"]), centre(*g["m"])
-            off[f or "the page's own"] = None if kc is None or mc is None else round(mc - kc, 2)
-        check(f"{_n}: More's + sits on its words' line, in every face there is to try",
-              len(faces) >= 5 and all(v is not None and abs(v) <= 0.5 for v in off.values()),
-              f"the + against the ink of More, px: {off}")
+        check(f"{_n}: no page errors through the doors", not errs, "; ".join(errs[:2]))
         c.close()
 
     # Reduce Motion: at once, both ways; nothing on the way.
-    for _n, _p in eds("more"):
+    for _n, _p in eds("doors"):
         c = waits.instrument(b.new_context(reduced_motion="reduce", **DESK))
         c, pg, _ = editor(b, _n, _p, ctx=c, drawn=False)
-        pg.evaluate("""() => { window.__mf = []; const d = document.getElementById('fineTuneBody'), t0 = performance.now();
+        pg.evaluate("""() => { window.__mf = []; const t = """ + TILE + """, d = document.getElementById(t.getAttribute('aria-controls')), t0 = performance.now();
             (function f() { window.__mf.push([d.hidden, +getComputedStyle(d).opacity]); if (performance.now() - t0 < 2500) requestAnimationFrame(f); })(); }""")
-        pg.click("#fineTuneToggle"); pg.wait_for_timeout(400); pg.click("#fineTuneToggle"); pg.wait_for_timeout(400)
+        pg.click(tile("restart")); pg.wait_for_timeout(400); pg.click(tile("restart")); pg.wait_for_timeout(400)
         pg.wait_for_function("() => window.__mf.length && window.__mf[window.__mf.length - 1][0]", timeout=3000)
         fr = pg.evaluate("() => window.__mf")
-        check(f"{_n}: under Reduce Motion More opens and closes at once, nothing on the way",
+        check(f"{_n}: under Reduce Motion a door opens and closes at once, nothing on the way",
               fr and not [f for f in fr if not f[0] and f[1] < 0.999] and any(not f[0] for f in fr) and fr[-1][0], f"{len(fr)} frames, {fr[:3]} ... {fr[-2:]}")
         c.close()
 
-    # MORE STARTS CLOSED, EVERY TIME (the owner, finding it open from an old
-    # Fine-tune: "More starts open"; then the pick, always closed): on a load,
-    # the old remembered key on file too, and on every opening of the drawer,
-    # whether it was closed or Photo was picked. Nothing remembers it.
-    STATE = "() => [document.getElementById('fineTuneToggle').getAttribute('aria-expanded'), document.getElementById('fineTuneBody').hidden]"
-    for _n, _p in eds("more"):
+    # THE DOORS START SHUT, EVERY TIME (as More did: the owner, finding it
+    # open from an old Fine-tune, "More starts open"; then the pick, always
+    # closed): on a load, the old remembered key on file too, and on every
+    # opening of the drawer, whether it was closed or Photo was picked.
+    # Nothing remembers them.
+    for _n, _p in eds("doors"):
         c = waits.instrument(b.new_context(**DESK))
         _, pg, _ = editor(b, _n, _p, ctx=c, drawn=False)
-        set_more(pg, True)
-        opened = pg.evaluate(STATE)
+        set_door(pg, "exact")
+        opened = pg.evaluate(WHERE)
         pg.evaluate("() => localStorage.setItem('skribl_music_level', 'fine')")
         pg.reload(); browsing.goto(pg, BASE, _p); add(pg, SHORT)
-        loaded = pg.evaluate(STATE)
-        set_more(pg, True)
+        loaded = pg.evaluate(WHERE)
+        set_door(pg, "length")
         browsing.pad_drawer_close(pg); browsing.pad_drawer(pg, "music")
-        reopened = pg.evaluate(STATE)
-        set_more(pg, True)
+        reopened = pg.evaluate(WHERE)
+        set_door(pg, "beat")
         pg.click("#mediaTabPhoto"); pg.wait_for_timeout(300); pg.click("#mediaTabMusic"); pg.wait_for_timeout(300)
-        back = pg.evaluate(STATE)
-        check(f"{_n}: More starts closed every time: on a load, the old remembered key too; the drawer opened again; Photo and back",
-              opened == ["true", False] and loaded == reopened == back == ["false", True],
+        back = pg.evaluate(WHERE)
+        shut = [None, "none", "0000"]
+        check(f"{_n}: the doors start shut every time: on a load, the old remembered key too; the drawer opened again; Photo and back",
+              opened == ["3", "exact", "0001"] and loaded == reopened == back == shut,
               f"opened {opened}; after a reload {loaded}; the drawer opened again {reopened}; Photo and back {back}")
         c.close()
 
-    print("\nMUSIC MORE — Skribl's pick, and the one line")
+    # WHAT EACH TILE SAYS: Length the loop's length (Skribl's mark on its
+    # picture while the loop is Skribl's pick, and in its name for a screen
+    # reader), Beat the tempo or Tap it, Restart Smooth or Clean cut, Exact the
+    # loop's two times, as precisely as the tile has room for; every word
+    # inside its tile (no ellipsis) on a 390px phone, the owner's 402 and a desk.
+    TWORDS = """() => [...document.querySelectorAll('#musicDoors .dp-tile')].map((t) => { const v = t.querySelector('.dp-v');
+        return [t.dataset.dp, v.textContent, v.scrollWidth <= v.clientWidth + 0.5, t.getAttribute('aria-label')]; })"""
+    for _n, _p in eds("words"):
+        got = {}
+        for dev, o in (("390", dict(PHONE, viewport={"width": 390, "height": 844})), ("402", PHONE), ("desk", DESK)):
+            c, pg, _ = editor(b, _n, _p, opts=o)
+            pick = pg.evaluate(TWORDS)
+            pg.evaluate("() => { trimStart = 0.5; trimEnd = 5.75; loopCrossfadeMs = 0; setCrossfadeUI(); updateTrimUI(); }")
+            pg.wait_for_timeout(150)
+            own = pg.evaluate(TWORDS)
+            pg.evaluate("() => { musicTempo = { bpm: 100, phase: 0 }; updateTrimUI(); }")
+            pg.wait_for_timeout(150)
+            beat = pg.evaluate(TWORDS)
+            add(pg, LONG)
+            pg.evaluate("() => { musicTempo = null; trimStart = 12.25; trimEnd = 28.5; updateTrimUI(); }")
+            pg.wait_for_timeout(150)
+            far = pg.evaluate(TWORDS)
+            got[dev] = (pick, own, beat, far, pg.evaluate(SAID))
+            c.close()
+        ok, why = True, []
+        for dev, (pick, own, beat, far, said) in got.items():
+            w = lambda rows: [r[1] for r in rows]
+            fits = all(r[2] for rows in (pick, own, beat, far) for r in rows)
+            good = (fits and w(own)[1:3] == ["Tap it", "Clean cut"] and w(own)[0] == "5.3s"
+                    and w(own)[3] == ("0.50–5.75")
+                    and own[0][3] == "Length, 5.3s" and pick[0][3].startswith("Length, Skribl's pick, ")
+                    and w(beat)[0] == "8.8 beats" and w(beat)[1] == "100 bpm"
+                    and w(far)[3] in ("12.25–28.50", "12.3–28.5")
+                    and (dev != "desk" or w(far)[3] == "12.25–28.50"))
+            ok = ok and good
+            why.append(f"{dev}: the pick {w(pick)}, own {w(own)}, a tempo {w(beat)}, far {w(far)}; every word inside {fits}; labels {pick[0][3]!r}, {own[0][3]!r}")
+        check(f"{_n}: each tile says what its door is set to, every word inside its tile on a 390px phone, the owner's 402 and a desk",
+              ok, "; ".join(why))
+    for _n, _p in eds("words"):
+        c, pg, _ = editor(b, _n, _p)
+        a = pg.evaluate(SAID)
+        pg.evaluate("() => { trimStart = 0.5; trimEnd = 4.5; updateTrimUI(); }"); pg.wait_for_timeout(150)
+        b2 = pg.evaluate(SAID)
+        check(f"{_n}: Skribl's mark is on the Length tile's picture while the loop is Skribl's pick, and goes once it is changed",
+              a["pick"] and a["spark"] and not b2["pick"] and not b2["spark"], f"the pick: lit {a['pick']}, mark {a['spark']}; changed: lit {b2['pick']}, mark {b2['spark']}")
+        c.close()
+
+    print("\nMUSIC DOORS — Skribl's pick, and the one line")
     for _n, _p in eds("pick"):
         got = {}
         for drawn, song in ((True, SHORT), (False, LONG), (True, LONG)):
@@ -443,10 +500,10 @@ with sync_playwright() as pw:
                 good = t["s"] == 0 and abs(t["e"] - 20) < 0.001 and t["xf"] == 250
             else:
                 good = t["s"] == 0 and abs(t["e"] - t["d"]) < 0.001 and t["xf"] == 250
-            good = good and said["line"] == words and said["tag"] and not said["back"] and not said["undo"]
+            good = good and said["line"] == words and said["pick"] and said["spark"] and not said["back"] and not said["undo"]
             ok = ok and good
-            why.append(f"{'drawn' if drawn else 'blank'} {nm}: {t['s']:.2f}-{t['e']:.3f} xf {t['xf']} heard {h_:.3f} (drawing {secs:.3f}) {said['line']!r} tag {said['tag']}")
-        check(f"{_n}: a new song starts on Skribl's pick, and the one line says so", ok, "; ".join(why))
+            why.append(f"{'drawn' if drawn else 'blank'} {nm}: {t['s']:.2f}-{t['e']:.3f} xf {t['xf']} heard {h_:.3f} (drawing {secs:.3f}) {said['line']!r} pick lit {said['pick']}, mark {said['spark']}")
+        check(f"{_n}: a new song starts on Skribl's pick: the one line says its length, and Skribl's pick is lit", ok, "; ".join(why))
 
     # The line's words, from the loop as it is: what is heard, the beats once
     # there is a tempo, against the drawing.
@@ -467,28 +524,32 @@ with sync_playwright() as pw:
         c.close()
 
     for _n, _p in eds("pick"):
-        c, pg, errs = editor(b, _n, _p, more=True)
+        c, pg, errs = editor(b, _n, _p, door="exact")
         pick = pg.evaluate(TRIM)
         pg.click('.nudge-btn[data-which="end"][data-amount="-1"]'); pg.wait_for_timeout(200)
         own, said = pg.evaluate(TRIM), pg.evaluate(SAID)
-        check(f"{_n}: a change shows the way back in place of Skribl's pick",
-              said["back"] and not said["tag"] and not said["undo"], f"{said['line']!r}, tag {said['tag']}, back {said['back']}, undo {said['undo']}")
-        went = press(pg, "#musicBackPick")
+        check(f"{_n}: a change unlights Skribl's pick, which is the way back",
+              said["back"] and not said["pick"] and not said["spark"] and not said["undo"],
+              f"{said['line']!r}, pick lit {said['pick']}, the way back {said['back']}, undo {said['undo']}, mark {said['spark']}")
+        set_door(pg, "length")
+        went = press(pg, "#musicPickCard")
         back, said2 = pg.evaluate(TRIM), pg.evaluate(SAID)
         focus = pg.evaluate("() => document.activeElement && document.activeElement.id")
         undid = press(pg, "#musicPickUndo")
         undone, said3 = pg.evaluate(TRIM), pg.evaluate(SAID)
-        check(f"{_n}: Back to Skribl's pick puts it back, and its Undo undoes that",
-              went and undid and back == pick and said2["tag"] and said2["undo"] and not said2["back"]
-              and focus == "musicPickUndo" and undone == own and said3["back"] and not said3["tag"],
-              f"pick {pick}, own {own}, back {back} (tag {said2['tag']}, undo {said2['undo']}, focus {focus}), undone {undone} (back {said3['back']}); pressed back {went}, undo {undid}")
+        focus3 = pg.evaluate("() => document.activeElement && document.activeElement.id")
+        check(f"{_n}: Skribl's pick, tapped, puts it back, and its Undo undoes that; focus is never lost",
+              went and undid and back == pick and said2["pick"] and said2["spark"] and said2["undo"] and not said2["back"]
+              and focus == "musicPickCard" and undone == own and said3["back"] and not said3["pick"] and not said3["undo"] and focus3 == "musicPickCard",
+              f"pick {pick}, own {own}, back {back} (lit {said2['pick']}, undo {said2['undo']}, focus {focus}), undone {undone} (the way back {said3['back']}, focus {focus3});"
+              f" pressed the pick {went}, undo {undid}")
         if _n == EDITORS[0][0]:
             # One shared timer (lib/musicdrawer.js), so one editor is asked.
-            went = press(pg, "#musicBackPick", 8400)
+            went = press(pg, "#musicPickCard", 8400)
             late = pg.evaluate(SAID)
-            check("the Undo goes after eight seconds, and the line says Skribl's pick again",
-                  went and not late["undo"] and not late["back"] and late["tag"],
-                  str({k: late[k] for k in ('line', 'tag', 'undo', 'back')}) + f"; pressed back {went}")
+            check("the Undo goes after eight seconds, and Skribl's pick stays lit",
+                  went and not late["undo"] and not late["back"] and late["pick"],
+                  str({k: late[k] for k in ('line', 'pick', 'undo', 'back')}) + f"; pressed the pick {went}")
         c.close()
 
     # The Pad's pick follows the drawing. Undo with the drawer open is the
@@ -504,16 +565,17 @@ with sync_playwright() as pw:
             pg.mouse.up(); pg.wait_for_timeout(300)
         pg.click("#recordBtn"); pg.wait_for_timeout(700)
         add(pg, SHORT)
+        set_door(pg, "length")
         two, s0 = pg.evaluate(DRAWING["Pad"]), pg.evaluate(SAID)
         pg.evaluate("() => document.getElementById('undoBtn').click()"); pg.wait_for_timeout(400)
         one, s1 = pg.evaluate(DRAWING["Pad"]), pg.evaluate(SAID)
-        press(pg, "#musicBackPick")
+        press(pg, "#musicPickCard")
         t2, s2 = pg.evaluate(TRIM), pg.evaluate(SAID)
-        check("Pad: an Undo with the drawer open shows the way back, no more, and Back to Skribl's pick fits the drawing again",
-              s0["tag"] and s0["line"].endswith("· fits your drawing") and one < two - 0.5
-              and s1["line"].endswith("· longer than your drawing") and s1["back"] and not s1["tag"] and s1["fit"] == "false"
-              and abs(heard(t2) - one) < 0.002 and s2["fit"] == "true" and s2["tag"] and s2["line"].endswith("· fits your drawing"),
-              f"{two:.2f}s then {one:.2f}s: {s1['line']!r}, back {s1['back']}; after the way back heard {heard(t2):.3f}s, fit {s2['fit']}, {s2['line']!r}")
+        check("Pad: an Undo with the drawer open shows the way back, no more, and Skribl's pick fits the drawing again",
+              s0["pick"] and s0["line"].endswith("· fits your drawing") and one < two - 0.5
+              and s1["line"].endswith("· longer than your drawing") and s1["back"] and not s1["pick"] and s1["fit"] == "false"
+              and abs(heard(t2) - one) < 0.002 and s2["pick"] and s2["line"].endswith("· fits your drawing"),
+              f"{two:.2f}s then {one:.2f}s: {s1['line']!r}, the way back {s1['back']}; after it heard {heard(t2):.3f}s, lit {s2['pick']}, {s2['line']!r}")
         c.close()
 
     # Fit's seconds are rounded from the hundredths the line shows, as a
@@ -531,24 +593,33 @@ with sync_playwright() as pw:
               f"a {secs:.3f}s drawing: {said['line']!r}; Fit says {said['fitSub']!r}")
         c.close()
 
-    # The line's height never changes as it says other things: the pick, the
-    # way back, the pick with its Undo, a tempo's beats, a longer length. Its
-    # end has a share of its own, so it wraps below 540px whatever it says.
+    # The line's height never changes as it says other things: the pick, a
+    # change, the way back with its Undo, a tempo's beats, the longest words
+    # it has ("19.75s · 39.5 beats · longer than your animation"), or
+    # everything under it would move with a finger still on the timeline. One
+    # row where the longest fit (a 390px phone up), two on a narrower one,
+    # what the loop is against the drawing on its own row whatever it says.
+    LONGEST = "() => { musicTempo = { bpm: 120, phase: 0 }; loopCrossfadeMs = 250; setCrossfadeUI(); trimStart = 0; trimEnd = 20; updateTrimUI(); }"
     for _n, _p in eds("line"):
         hs = {}
-        for dev, o in (("phone", PHONE), ("desk", DESK)):
-            c, pg, _ = editor(b, _n, _p, opts=o, more=True)
+        for dev, o in (("320", dict(PHONE, viewport={"width": 320, "height": 700})), ("375", dict(PHONE, viewport={"width": 375, "height": 760})),
+                       ("390", dict(PHONE, viewport={"width": 390, "height": 844})), ("phone", PHONE), ("desk", DESK)):
+            c, pg, _ = editor(b, _n, _p, opts=o, door="exact")
             H = "() => Math.round(document.getElementById('musicPickLine').getBoundingClientRect().height * 10) / 10"
             row = [pg.evaluate(H)]
             pg.click('.nudge-btn[data-which="end"][data-amount="-1"]'); pg.wait_for_timeout(150); row.append(pg.evaluate(H))
-            press(pg, "#musicBackPick"); row.append(pg.evaluate(H))
+            set_door(pg, "length")
+            press(pg, "#musicPickCard"); row.append(pg.evaluate(H))
             pg.evaluate("() => { musicTempo = { bpm: 117, phase: 0.03 }; trimStart = 0.5; trimEnd = 5.9; updateTrimUI(); }")
             pg.wait_for_timeout(150); row.append(pg.evaluate(H))
-            hs[dev] = row
+            add(pg, LONG)
+            pg.evaluate(LONGEST); pg.wait_for_timeout(150); row.append(pg.evaluate(H))
+            hs[dev] = (row, pg.evaluate("() => document.getElementById('musicPickText').textContent"))
             c.close()
-        check(f"{_n}: the one line's height never changes as it says other things, on a phone and a desk",
-              all(len(set(r)) == 1 for r in hs.values()) and hs["phone"][0] > hs["desk"][0],
-              f"pick, own, back with its Undo, a tempo: {hs}")
+        check(f"{_n}: the one line's height never changes as it says other things: two rows on a 320 and a 375px phone, one from 390 to a desk",
+              all(len(set(r)) == 1 for r, _ in hs.values()) and all(30 < hs[d][0][0] < 45 for d in ("320", "375"))
+              and all(hs[d][0][0] < 24 for d in ("390", "phone", "desk")),
+              f"the pick, a change, the way back with its Undo, a tempo, the longest words: {hs}")
 
     # A song the autosave had to drop is re-added from its card: its saved loop
     # comes back with it (pendingMusicMeta), and Skribl's pick stays away.
@@ -576,9 +647,9 @@ with sync_playwright() as pw:
               t["s"] == 1 and t["e"] == 3 and t["xf"] == 0, str(t))
         c.close()
 
-    print("\nMUSIC MORE — Fit my drawing and Whole song")
+    print("\nMUSIC DOORS — Fit my drawing and Whole song")
     for _n, _p in eds("picks"):
-        c, pg, _ = editor(b, _n, _p)
+        c, pg, _ = editor(b, _n, _p, door="length")
         secs = pg.evaluate(DRAWING[_n])
         pg.evaluate("() => { trimStart = 0.5; trimEnd = 5.5; updateTrimUI(); }")
         pg.click("#matchDrawingBtn"); pg.wait_for_timeout(200)
@@ -589,13 +660,15 @@ with sync_playwright() as pw:
         check(f"{_n}: Fit counts the smooth restart: what is heard is as long as the drawing",
               t["xf"] == 250 and abs(heard(t) - secs) < 0.002 and abs(t["s"] - 0.5) < 1e-9,
               f"{t['s']:.2f}-{t['e']:.3f}, smooth {t['xf']}ms: heard {heard(t):.3f}s for a {secs:.3f}s {WORK[_n]}")
-        check(f"{_n}: the pick that describes the loop wears the one tint",
-              said["fit"] == "true" and said["whole"] == "false" and tint[0] == tint[1], f"fit {said['fit']}, whole {said['whole']}, {tint}")
+        check(f"{_n}: the length the loop is wears the one tint, one at a time",
+              said["fit"] == "true" and said["whole"] == "false" and not said["pick"] and tint[0] == tint[1],
+              f"fit {said['fit']}, whole {said['whole']}, the pick {said['pick']}, {tint}")
         pg.click("#musicWholeBtn"); pg.wait_for_timeout(200)
         t2, said2 = pg.evaluate(TRIM), pg.evaluate(SAID)
         add(pg, LONG)
         said3 = pg.evaluate(SAID)
         pg.evaluate("() => { trimStart = 3; trimEnd = 9; updateTrimUI(); }")
+        set_door(pg, "length")
         pg.click("#musicWholeBtn"); pg.wait_for_timeout(200)
         t3 = pg.evaluate(TRIM)
         check(f"{_n}: Whole song loops all of a short song, and a long one's first 20 seconds, and says which",
@@ -605,8 +678,27 @@ with sync_playwright() as pw:
               f"short: {t2['s']:.2f}-{t2['e']:.2f} {said2['wholeName']!r} {said2['wholeSub']!r}; long: {said3['wholeName']!r} {said3['wholeSub']!r}, {t3['s']:.2f}-{t3['e']:.2f}")
         c.close()
 
+    # Two cards can be the same loop: a short song's pick, nothing drawn, is
+    # the whole song. The one pressed is the one lit, so a press answers, and
+    # neither moves the loop or offers an Undo of nothing.
     for _n, _p in eds("picks"):
-        c, pg, _ = editor(b, _n, _p, drawn=False)
+        c, pg, _ = editor(b, _n, _p, drawn=False, door="length")
+        t0, s0 = pg.evaluate(TRIM), pg.evaluate(SAID)
+        press(pg, "#musicWholeBtn")
+        t1, s1 = pg.evaluate(TRIM), pg.evaluate(SAID)
+        press(pg, "#musicPickCard")
+        t2, s2 = pg.evaluate(TRIM), pg.evaluate(SAID)
+        same = all(abs(t["s"] - t0["s"]) < 1e-9 and abs(t["e"] - t0["e"]) < 1e-9 and t["xf"] == t0["xf"] for t in (t1, t2))
+        check(f"{_n}: where Skribl's pick is the whole song, the card pressed is the one lit, the loop stays, and nothing offers an Undo",
+              s0["pick"] and s0["whole"] == "false" and t0["s"] == 0 and abs(t0["e"] - 6) < 0.01
+              and s1["whole"] == "true" and not s1["pick"] and s2["pick"] and s2["whole"] == "false"
+              and same and not s1["undo"] and not s2["undo"],
+              f"the pick {t0['s']:.2f}-{t0['e']:.2f}, lit {s0['pick']}; Whole pressed: whole {s1['whole']}, pick {s1['pick']}, undo {s1['undo']}; "
+              f"the pick pressed: pick {s2['pick']}, whole {s2['whole']}, undo {s2['undo']}; the loop {t1['s']:.2f}-{t1['e']:.2f}, {t2['s']:.2f}-{t2['e']:.2f}")
+        c.close()
+
+    for _n, _p in eds("picks"):
+        c, pg, _ = editor(b, _n, _p, drawn=False, door="length")
         off = pg.evaluate(SAID)
         if _n == "Pad":
             # Up to the canvas, as a person goes. On the Pad the first press on
@@ -631,9 +723,9 @@ with sync_playwright() as pw:
               f"before: off {off['fitOff']} {off['fitSub']!r} {off['play']!r}; after: off {on['fitOff']} {on['fitSub']!r} {on['play']!r}")
         c.close()
 
-    print("\nMUSIC MORE — Smooth restart")
+    print("\nMUSIC DOORS — Smooth restart")
     for _n, _p in eds("smooth"):
-        c, pg, _ = editor(b, _n, _p, more=True)
+        c, pg, _ = editor(b, _n, _p, door="restart")
         pg.click("#musicSmooth"); pg.wait_for_timeout(150)
         a, sa = pg.evaluate(TRIM), pg.evaluate(SAID)
         pg.click("#musicSmooth"); pg.wait_for_timeout(150)
@@ -652,9 +744,9 @@ with sync_playwright() as pw:
               s2["line"].startswith(f"{heard(t):.2f}s · ") and abs(heard(t) - (t["e"] - t["s"] - 0.4)) < 1e-9, f"{s2['line']!r} for {t}")
         c.close()
 
-    print("\nMUSIC MORE — Exact times")
+    print("\nMUSIC DOORS — Exact times")
     for _n, _p in eds("exact"):
-        c, pg, _ = editor(b, _n, _p, more=True)
+        c, pg, _ = editor(b, _n, _p, door="exact")
         pg.fill("#endReadout", "4.25"); pg.press("#endReadout", "Enter"); pg.wait_for_timeout(150)
         t1 = pg.evaluate(TRIM)
         pg.fill("#endReadout", "soon"); pg.press("#endReadout", "Enter"); pg.wait_for_timeout(150)
@@ -675,11 +767,12 @@ with sync_playwright() as pw:
         n1, l1 = pg.evaluate(NAMES), pg.evaluate(SAID)["step"]
         pg.click('.nudge-btn[data-which="end"][data-amount="-1"]'); pg.wait_for_timeout(150)
         e2 = pg.evaluate("() => trimEnd")
-        # Snap to the beat off: the step a free set wants, untouched.
-        pg.evaluate("() => document.getElementById('musicSnap').scrollIntoView({ block: 'center' })"); pg.wait_for_timeout(200)
+        # Snap to the beat off, in the Beat door: the step a free set wants, untouched.
+        set_door(pg, "beat")
         pg.click("#musicSnap"); pg.wait_for_timeout(150)
         n2, l2 = pg.evaluate(NAMES), pg.evaluate(SAID)["step"]
         pg.click("#musicSnap"); pg.wait_for_timeout(150)
+        set_door(pg, "exact")
         check(f"{_n}: untouched, - and + move 0.1s, or a bar once there is a tempo while Snap to the beat is on, and say which",
               abs((e1 - e0) - 0.1) < 1e-9 and abs((e1 - e2) - 2.0) < 1e-9
               and l0 == "0.01s · *0.1s" and l1 == "0.01s · 0.1s · *a bar" and l2 == "0.01s · *0.1s · a bar"
@@ -710,13 +803,14 @@ with sync_playwright() as pw:
         k4 = pg.evaluate(SAID)["step"]
         check(f"{_n}: a new song starts on the untouched step",
               k5.startswith("*0.01s") and k4 == "0.01s · *0.1s", f"0.01s picked ({k5!r}), then a new song: {k4!r}")
+        # Lock the length is in the Length door, the steppers in Exact times.
         pg.evaluate("() => { musicTempo = null; updateTrimUI(); }"); pg.wait_for_timeout(100)
-        pg.click("#musicLock"); pg.wait_for_timeout(100)
+        set_door(pg, "length"); pg.click("#musicLock"); pg.wait_for_timeout(100)
         l0 = pg.evaluate(TRIM)
-        pg.click('.nudge-btn[data-which="start"][data-amount="1"]'); pg.wait_for_timeout(150)
+        set_door(pg, "exact"); pg.click('.nudge-btn[data-which="start"][data-amount="1"]'); pg.wait_for_timeout(150)
         l1 = pg.evaluate(TRIM)
-        pg.click("#musicLock"); pg.wait_for_timeout(100)
-        pg.click('.nudge-btn[data-which="start"][data-amount="1"]'); pg.wait_for_timeout(150)
+        set_door(pg, "length"); pg.click("#musicLock"); pg.wait_for_timeout(100)
+        set_door(pg, "exact"); pg.click('.nudge-btn[data-which="start"][data-amount="1"]'); pg.wait_for_timeout(150)
         l2 = pg.evaluate(TRIM)
         check(f"{_n}: Lock the length moves both ends together",
               abs((l1["s"] - l0["s"]) - 0.1) < 1e-9 and abs((l1["e"] - l0["e"]) - 0.1) < 1e-9
@@ -727,7 +821,7 @@ with sync_playwright() as pw:
               len(sizes) == 2 and all(px >= 16 for _, px in sizes), str(sizes))
         c.close()
 
-    print("\nMUSIC MORE — the timeline follows you")
+    print("\nMUSIC DOORS — the timeline follows you")
     # The copy under the header as it stands: on, where, what is painted at
     # its middle, its canvas and the header's (a rect is not a paint), its
     # framing and words, and whether the drawer is still open.
@@ -745,11 +839,26 @@ with sync_playwright() as pw:
     FOLLOW_REC = """() => { const out = window.__frec = [], t0 = performance.now(), f = document.getElementById('musicFollow');
       (function k() { const p = f._painted; out.push([performance.now() - t0, +getComputedStyle(f).opacity, p ? p.view.slice() : null]);
         if (performance.now() - t0 < 700) requestAnimationFrame(k); })(); }"""
-    DOWN = "() => { const e = document.querySelector('.finetune-grid'); scrollBy(0, e.getBoundingClientRect().top - innerHeight * 0.6); }"
+    # As far down as the page goes, as a person scrolls to the drawer's end.
+    DOWN = "() => scrollTo(0, document.documentElement.scrollHeight)"
     TUNED = "() => { musicTempo = { bpm: 120, phase: 0 }; trimStart = 2; trimEnd = 10.25; loopCrossfadeMs = 250; setCrossfadeUI(); updateTrimUI(); }"
+    # Exact times under the timeline: on a phone and a desk the page cannot
+    # scroll what it edits away (with More's four groups above it, it did).
     for _n, _p in eds("follow"):
+        kept = {}
         for dev, opts in (("phone", PHONE), ("desk", DESK)):
-            c, pg, errs = editor(b, _n, _p, song=LONG, opts=opts, more=True)
+            c, pg, errs = editor(b, _n, _p, song=LONG, opts=opts, door="exact")
+            pg.evaluate(TUNED)
+            pg.evaluate(DOWN); waits.settle(pg, 700); browsing.wait_scroll_still(pg)
+            kept[dev] = pg.evaluate(FOLLOW)
+            c.close()
+        check(f"{_n}: Exact times opens under the timeline: scrolled as far as the page goes, what it edits is still on the screen, all of it, and the copy stays away (phone, desk)",
+              all(k and k["tlTop"] >= k["foot"] - 1 and k["tlBottom"] <= k["vh"] + 1 and not k["on"] for k in kept.values()),
+              "; ".join(f"{d}: the timeline {k['tlTop']:.0f}-{k['tlBottom']:.0f} under a header ending {k['foot']:.0f}, of {k['vh']}px, the copy on {k['on']}"
+                        for d, k in kept.items()))
+    for _n, _p in eds("follow"):
+        for dev, opts in (("a small phone sideways", SMALL_SIDEWAYS),):
+            c, pg, errs = editor(b, _n, _p, song=LONG, opts=opts, door="exact")
             pg.evaluate(TUNED)
             pg.evaluate("() => document.getElementById('musicTimeline').scrollIntoView({ block: 'center' })")
             waits.settle(pg, 700); browsing.wait_scroll_still(pg)
@@ -797,8 +906,8 @@ with sync_playwright() as pw:
             check(f"{_n}: no page errors from the copy ({dev})", not errs, "; ".join(errs[:2]))
             c.close()
     for _n, _p in eds("follow"):
-        c = waits.instrument(b.new_context(reduced_motion="reduce", **PHONE))
-        c, pg, errs = editor(b, _n, _p, song=LONG, ctx=c, more=True)
+        c = waits.instrument(b.new_context(reduced_motion="reduce", **SMALL_SIDEWAYS))
+        c, pg, errs = editor(b, _n, _p, song=LONG, ctx=c, door="exact")
         pg.evaluate(TUNED)
         pg.evaluate("() => document.getElementById('musicTimeline').scrollIntoView({ block: 'center' })")
         waits.settle(pg, 700)
@@ -815,7 +924,7 @@ with sync_playwright() as pw:
               f"on {on}; {len(way)} frames fading, {len(moving)} frames easing, the framing {spans[0] if spans else 0:.2f}s -> {spans[-1] if spans else 0:.2f}s")
         c.close()
 
-    print("\nMUSIC MORE — Play with my drawing")
+    print("\nMUSIC DOORS — Play with my drawing")
     for _n, _p in eds("play"):
         c, pg, errs = editor(b, _n, _p)
         was = pg.evaluate(SAID)["play"]
@@ -845,11 +954,12 @@ with sync_playwright() as pw:
               f"Play: {was}; Hear the loop pressed: {st}; again: {stop}")
         c.close()
 
-    print("\nMUSIC MORE — kind, not jumpy")
-    # More opened as a song lands (as soon as its tile is on the screen, a
-    # quick person): the app's own scrolls are still settling then -- the
-    # drawer's open and the card's growth each re-assert at 300, 700 and
-    # 1200ms -- and More makes the drawer taller under them. The tap is at the
+    print("\nMUSIC DOORS — kind, not jumpy")
+    # A door opened as a song lands (the Restart door, the tallest, as soon as
+    # its tile is on the screen, a quick person): the app's own scrolls are
+    # still settling then -- the drawer's open and the card's growth each
+    # re-assert at 300, 700 and 1200ms -- and the door makes the drawer taller
+    # under them. (It was More, which held all four.) The tap is at the
     # tile's place on the screen: Playwright's own click scrolls a control
     # into view at once first, and on a phone held sideways, where the tile is
     # still below the screen 400ms on, that was a 207px frame of the test's
@@ -859,8 +969,8 @@ with sync_playwright() as pw:
     # so does this. Read the tile on every frame: no frame may
     # carry it more than 160px (a glide's frames measured 44-57px when this
     # was the level switch; a re-assert chasing the new end, 236-684px), and
-    # it ends in sight, on a desk and on a phone held sideways, where More is
-    # taller than the screen. Each frame's time is kept and said. Beside other
+    # it ends in sight, on a desk and on a phone held sideways, where the
+    # drawer is taller than the screen. Each frame's time is kept and said. Beside other
     # suites a frame of the reveal lasted up to 150ms, and a glide seen
     # through one is one big step (165px once, in a run beside two others): a
     # red in a long frame is told apart by a run alone. Allowing a long frame
@@ -876,7 +986,7 @@ with sync_playwright() as pw:
             pg.set_input_files("#musicInput", SHORT)
             pg.wait_for_function("() => document.getElementById('musicUploadBtn').classList.contains('loaded') && !!currentAudioBuffer", timeout=20000)
             pg.wait_for_timeout(400)
-            ON = "() => { const r = document.getElementById('fineTuneToggle').getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight; }"
+            ON = "() => { const r = " + TILE + ".getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight; }"
             for _ in range(30):
                 if pg.evaluate(ON):
                     break
@@ -884,8 +994,8 @@ with sync_playwright() as pw:
             wheel = 0
             while not pg.evaluate(ON) and wheel < 12:
                 pg.mouse.wheel(0, 100); pg.wait_for_timeout(150); wheel += 1
-            at = pg.evaluate("() => { const r = document.getElementById('fineTuneToggle').getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; }")
-            pg.evaluate("""() => { window.__tops = []; const s = document.getElementById('fineTuneToggle'), t0 = performance.now();
+            at = pg.evaluate("() => { const r = " + TILE + ".getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; }")
+            pg.evaluate("""() => { window.__tops = []; const s = """ + TILE + """, t0 = performance.now();
                 (function f() { window.__tops.push([performance.now(), s.getBoundingClientRect().top]);
                   if (performance.now() - t0 < 1900) requestAnimationFrame(f); })(); }""")
             pg.mouse.click(*at)
@@ -893,35 +1003,35 @@ with sync_playwright() as pw:
             tops = pg.evaluate("() => window.__tops")
             r = pg.evaluate(SIGHT)
             big = max((abs(b[1] - a[1]), b[0] - a[0]) for a, b in zip(tops, tops[1:])) if len(tops) > 1 else None
-            check(f"{_n}: More opened as a song lands glides, and keeps its tile in sight ({dev})",
+            check(f"{_n}: a door opened as a song lands glides, and keeps its tile in sight ({dev})",
                   big is not None and big[0] <= 160 and r["header"] <= r["seg"] < r["vh"] - 40,
                   f"the biggest frame {round(big[0]) if big else None}px, in a {round(big[1]) if big else None}ms frame,"
                   f" over {len(tops)} frames; ends at {r}" + (f"; scrolled to it first ({wheel} turns of the wheel)" if wheel else ""))
             c.close()
     for _n, _p in eds("kind"):
-        c, pg, _ = editor(b, _n, _p, drawn=False, opts=PHONE, more=True)
+        c, pg, _ = editor(b, _n, _p, drawn=False, opts=PHONE, door="restart")
         pg.wait_for_timeout(1300)   # past every re-assert there is
-        # Closed with its tile just under the header and More's end below the
-        # screen: the drawer loses most of its height, which near the page's
+        # Closed with its tile just under the header and the door's end below
+        # the screen: the drawer loses a third of its height, which near the page's
         # end is a clamp. Read the tile on every frame. With the timeline up
         # under the header its copy shows there (lib/musicdrawer.js) and covers
         # what passes under it, so the tile goes just under the copy, where a
         # person sees it and taps it: under the copy, the tap landed on the
         # copy, and Playwright scrolled the page to the tile in one 739px frame.
-        UNDER = ("() => { const s = document.getElementById('fineTuneToggle'), h = document.querySelector('.header'), f = document.getElementById('musicFollow');"
+        UNDER = ("() => { const s = " + TILE + ", h = document.querySelector('.header'), f = document.getElementById('musicFollow');"
                  " const head = h && ['sticky', 'fixed'].includes(getComputedStyle(h).position) ? h.getBoundingClientRect().bottom : 0;"
                  " const top = f && f.classList.contains('on') ? Math.max(head, parseFloat(f.style.top) + f.offsetHeight) : head;"
                  " window.scrollBy(0, s.getBoundingClientRect().top - top - 10); }")
         pg.evaluate(UNDER); browsing.wait_scroll_still(pg)
         pg.wait_for_timeout(300); pg.evaluate(UNDER); browsing.wait_scroll_still(pg)
-        pg.evaluate("""() => { window.__tops = []; const s = document.getElementById('fineTuneToggle'), t0 = performance.now();
+        pg.evaluate("""() => { window.__tops = []; const s = """ + TILE + """, t0 = performance.now();
             (function f() { window.__tops.push(s.getBoundingClientRect().top); if (performance.now() - t0 < 1400) requestAnimationFrame(f); })(); }""")
-        pg.click("#fineTuneToggle")
+        pg.click(tile("restart"))
         pg.wait_for_timeout(1500)
         tops = pg.evaluate("() => window.__tops")
         steps = [abs(tops[i] - tops[i - 1]) for i in range(1, len(tops))]
         moved = abs(tops[-1] - tops[0]) if tops else 0
-        check(f"{_n}: closing More from the drawer's end glides: its tile never leaps",
+        check(f"{_n}: closing a door from the drawer's end glides: its tile never leaps",
               len(tops) > 20 and moved > 40 and max(steps) < 0.45 * moved,
               f"moved {moved:.0f}px over {len(tops)} frames, the biggest frame {max(steps) if steps else 0:.0f}px")
         c.close()
@@ -929,7 +1039,7 @@ with sync_playwright() as pw:
     # "When you click the media button and click music it open all the way to
     # the bottom?"). The open scrolled the drawer's end to the screen's foot,
     # which took the tabs, the song and the strip up under the header; More
-    # was open then, remembered, and More starts closed now, but the music
+    # was open then, remembered, and the doors start shut now, but the music
     # drawer is still taller than a 390x640 phone. The bar above the drawer
     # stays under the header, as a song landing already left it
     # (lib/drawerdetent.js); on the owner's phone, where the drawer fits, it
@@ -961,7 +1071,7 @@ with sync_playwright() as pw:
               tall["end"] > tall["vh"] and tall["head"] - 1 <= tall["dock"] <= tall["head"] + 12 and tall["head"] <= tall["tabs"] < tall["vh"]
               and fits["end"] <= fits["vh"] + 1 and fits["dock"] >= fits["head"] - 1,
               f"390x640, the drawer's end at {tall['end']} on a {tall['vh']}px screen: {tall}; 402x874, where it fits: {fits}")
-    # (With More closed the 390x640 page has about 90px left below the
+    # (With the doors shut the 390x640 page has about 90px left below the
     # opening's place, so a scroll on is 40px or more, not the 100 there was.)
     for _n, _p in eds("kind"):
         c, pg, _ = editor(b, _n, _p, opts=SHORT_PHONE)
@@ -1062,7 +1172,7 @@ with sync_playwright() as pw:
     SAVE = {"Pad": "() => JSON.stringify(serializeSkribl())", "Flip": "() => JSON.stringify(serializeFlip())"}
     OPEN = {"Pad": "(s) => loadSkribl(JSON.parse(s))", "Flip": "(s) => applyFlipDraftObject(JSON.parse(s))"}
     for _n, _p in eds("kind"):
-        c, pg, _ = editor(b, _n, _p, opts=PHONE, song=LONG, more=True)
+        c, pg, _ = editor(b, _n, _p, opts=PHONE, song=LONG, door="restart")
         saved = pg.evaluate(SAVE[_n])
         was = pg.evaluate(TRIM)
         pg.click("#musicSmooth"); pg.wait_for_timeout(200)

@@ -56,9 +56,11 @@ rain has sounds on most beats but gathers round no circle.
   by Skribl". The song brought back is heard again, once and quietly: the
   loop and the beat stay as kept, and it is still Skribl's pick (not heard
   again, the pick said "Back to Skribl's pick", and that went to the song's
-  first 20 seconds, 40.8 beats from 0:00); while Skribl hears it, neither the
-  tag nor the way back shows; moved, Back to Skribl's pick goes to the heard
-  pick. Snap to the beat's switch keeps it heard.
+  first 20 seconds, 40.8 beats from 0:00); while Skribl hears it, Skribl's
+  pick is not lit nor the way back offered; moved, the way back (Skribl's
+  pick, in the Length door) goes to the heard pick. Snap to the beat's switch
+  keeps it heard. (`tag` below is Skribl's pick lit, as the pick line's tag
+  said it until the four doors.)
 
 Every row runs on the Pad and on Flip, on a phone: one drawer
 (lib/musicdrawer.js) and one pair of ears (lib/musicears.js).
@@ -190,8 +192,8 @@ SPECS = {
 STATE = """() => { const tl = document.getElementById('musicTimeline'), p = tl && tl._painted;
   return { s: trimStart, e: trimEnd, d: audioDuration, xf: loopCrossfadeMs, tempo: musicTempo,
            line: (document.getElementById('musicPickText') || {}).textContent || '',
-           tag: !(document.getElementById('musicPickTag') || { hidden: true }).hidden,
-           back: !(document.getElementById('musicBackPick') || { hidden: true }).hidden,
+           tag: ((c) => !!c && c.getAttribute('aria-pressed') === 'true')(document.getElementById('musicPickCard')),
+           back: ((c) => !!c && c.getAttribute('aria-pressed') !== 'true' && !c.disabled)(document.getElementById('musicPickCard')),
            undo: !(document.getElementById('musicPickUndo') || { hidden: true }).hidden,
            beat: (document.getElementById('musicTempo') || {}).textContent || '', beatIn: p ? p.beatIn : null }; }"""
 # Every animation frame from now: the loop's ends, how far the marks have
@@ -202,11 +204,13 @@ RECORD = """() => { window.__rec = []; const t0 = performance.now();
                         w: (document.getElementById('musicTempo') || {}).textContent || '', tempo: !!musicTempo });
     if (window.__rec.length < 900) requestAnimationFrame(tick); })(); }"""
 # Every animation frame from just before a tap on Beats: the loop's start,
-# and whether the tag and the way back show; and when the tap landed.
-TAGS = """() => { const out = window.__rec = [], t0 = performance.now(), q = (id) => document.getElementById(id);
+# and whether Skribl's pick is lit (`tag`, as the pick line's tag said until
+# the four doors) and the way back is offered; and when the tap landed.
+TAGS = """() => { const out = window.__rec = [], t0 = performance.now(), q = (id) => document.getElementById(id), card = q('musicPickCard');
   window.__tapAt = null;
   q('musicBeatsSeg').addEventListener('click', () => { window.__tapAt = performance.now() - t0; }, { capture: true, once: true });
-  (function f() { out.push([performance.now() - t0, trimStart, !q('musicPickTag').hidden, !q('musicBackPick').hidden]);
+  (function f() { const lit = card.getAttribute('aria-pressed') === 'true';
+    out.push([performance.now() - t0, trimStart, lit, !lit && !card.disabled]);
     if (performance.now() - t0 < 800) requestAnimationFrame(f); })(); }"""
 # Skribl's answer held until released, so what a person does meanwhile can be done.
 HOLD = """() => { const E = window.SkriblEars, real = E.listen; window.__held = [];
@@ -267,9 +271,18 @@ def add(q, name, wait=True):
     return q.evaluate(STATE)
 
 
+def length_door(q):
+    """The Length door open: Skribl's pick, Beats and their Undo are in it."""
+    t = '#musicDoors .dp-tile[data-dp="length"]'
+    if q.get_attribute(t, "aria-expanded") != "true":
+        q.click(t); waits.settle(q, 400)
+
+
 def tap(q, sel):
-    """A real click on a count of Beats (or on Undo), then the glide: a
-    control a broken build hides makes a row say so in red, not a timeout."""
+    """A real click on a count of Beats (or on Skribl's pick, or on Undo), in
+    the Length door, then the glide: a control a broken build hides makes a
+    row say so in red, not a timeout."""
+    length_door(q)
     try:
         q.click(sel if str(sel).startswith("#") else f'#musicBeatsSeg button[data-beats="{sel}"]', timeout=3000)
     except Exception:
@@ -418,6 +431,7 @@ with sync_playwright() as p:
     for name, path in eds("beats"):
         c, q, errs = editor(b, path)
         st = add(q, "steady")
+        length_door(q)
         q.evaluate("() => document.getElementById('musicBeatsRow').scrollIntoView({ block: 'center' })"); q.wait_for_timeout(300)
         q.evaluate(TAGS)
         tap(q, 8)
@@ -494,13 +508,15 @@ with sync_playwright() as p:
         check(f"{name}: a loop moved before Skribl has listened stays where it was put, and no beat is set",
               abs(st["s"] - before["s"]) < 1e-6 and abs(st["e"] - 12.5) < 1e-6 and st["tempo"] is None,
               f"loop {st['s']:.3f}-{st['e']:.3f}, tempo {st['tempo']}")
-        # and Back to Skribl's pick, then its Undo (each offered only when it applies:
-        # a broken build that moved the loop anyway offers neither, and says so here)
-        offered = q.is_visible("#musicBackPick")
+        # and the way back (Skribl's pick, in the Length door), then its Undo
+        # (each offered only when it applies: a broken build that moved the
+        # loop anyway offers neither, and says so here)
+        length_door(q)
+        offered = q.evaluate(STATE)["back"]
         if offered:
-            q.click("#musicBackPick"); waits.settle(q, 600)
+            q.click("#musicPickCard"); waits.settle(q, 600)
         back = q.evaluate(STATE)
-        check(f"{name}: Back to Skribl's pick goes to the heard pick, with the beat heard",
+        check(f"{name}: the way back goes to the heard pick, with the beat heard",
               offered and abs(back["s"] - T["drums"][0]) <= 0.010 and (back["tempo"] or {}).get("heard") is True,
               f"offered {offered}; loop {back['s']:.3f}-{back['e']:.3f}, tempo {back['tempo']}")
         offered = q.is_visible("#musicPickUndo")
@@ -532,7 +548,7 @@ with sync_playwright() as p:
         q.evaluate(RELEASE)
         q.wait_for_function(EARS_DONE, timeout=20000); waits.settle(q, 600)
         st = q.evaluate(STATE)
-        q.click("#fineTuneToggle"); waits.settle(q, 500)
+        q.click('#musicDoors .dp-tile[data-dp="beat"]'); waits.settle(q, 500)
         if q.is_visible("#musicSnap"):
             q.click("#musicSnap"); waits.settle(q, 300)
         off = q.evaluate(STATE)
@@ -552,7 +568,7 @@ with sync_playwright() as p:
         asked = q.evaluate("() => window.__listens || 0")
         q.evaluate(RELEASE)
         try:
-            q.wait_for_function("() => !document.getElementById('musicPickTag').hidden", timeout=15000)
+            q.wait_for_function("() => document.getElementById('musicPickCard').getAttribute('aria-pressed') === 'true'", timeout=15000)
         except Exception:
             pass
         waits.settle(q, 600)
@@ -565,15 +581,15 @@ with sync_playwright() as p:
               asked == 1 and q.evaluate("() => window.__listens || 0") == 1 and again["tempo"] == st["tempo"]
               and abs(again["s"] - st["s"]) < 1e-9 and abs(again["e"] - st["e"]) < 1e-9 and again["tag"] and not again["back"],
               f"asked to listen {asked} times; loop {again['s']:.4f}-{again['e']:.4f}, tempo {again['tempo']}, tag {again['tag']}, the way back {again['back']}")
-        check(f"{name}: while Skribl hears it again, neither the tag nor the way back shows",
+        check(f"{name}: while Skribl hears it again, Skribl's pick is not lit and the way back is not offered",
               asked == 1 and not mid["tag"] and not mid["back"], f"asked {asked}; while it listened: tag {mid['tag']}, the way back {mid['back']}")
         p = 60 / st["tempo"]["bpm"]
         browsing.pad_drawer(q, "music")
         q.evaluate("(p) => { trimStart += 4 * p; trimEnd += 4 * p; updateTrimUI(); }", p)
         moved = q.evaluate(STATE)
-        went = tap(q, "#musicBackPick")
+        went = tap(q, "#musicPickCard")
         k = q.evaluate(STATE)
-        check(f"{name}: and moved a bar, Back to Skribl's pick goes to the heard pick, not to the song's first 20 seconds",
+        check(f"{name}: and moved a bar, the way back goes to the heard pick, not to the song's first 20 seconds",
               moved["back"] and went and abs(k["s"] - st["s"]) < 1e-6 and abs(k["e"] - st["e"]) < 1e-6 and k["tag"],
               f"moved to {moved['s']:.4f} (the way back {moved['back']}, tapped {went}); Back: {k['s']:.4f}-{k['e']:.4f}, the pick {st['s']:.4f}-{st['e']:.4f}")
         c.close()
