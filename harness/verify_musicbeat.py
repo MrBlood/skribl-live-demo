@@ -268,7 +268,7 @@ SPREAD_MS = 4
 # the Restart view's two windows and its beats [side, x, time].
 MARKS = """(id) => { const host = document.getElementById(id), p = host && host._painted; if (!p) return null;
   const cv = host.querySelector('canvas');
-  return { w: cv.clientWidth, h: cv.clientHeight, view: (host.dataset.view || '').split(' ').map(Number), beats: p.beats,
+  return { w: cv.clientWidth, h: cv.clientHeight, view: (host.dataset.view || '').split(' ').map(Number), beats: p.beats, lane: p.lane || 26,
            marks: p.marks || null, lines: p.lines || null, turns: p.turns || 0, end: p.end || null, start: p.start || null }; }"""
 
 # Each new word, and the marks, against what is painted behind them: the
@@ -299,7 +299,8 @@ CONTRAST_DOORS = ((None, ("line", "length", "hear", "tiles")), ("beat", ("tempo"
 # The beat's dots, on the pixels: the timeline paints them on a canvas, so a
 # style says nothing about them. A beat and a bar each, read at its middle
 # (the most contrasting pixel within a pixel of it) against the lane beside
-# it, 6px along, where nothing else is painted at that height.
+# it, 6px along, where nothing else is painted at that height: 16px under the
+# drawing's lane as the timeline painted it (26px on the Pad, 34 on Flip).
 def dot_contrast(pg):
     import io as _io
     from PIL import Image as _Img
@@ -330,14 +331,14 @@ def dot_contrast(pg):
     # Not under a handle: the loop's ends are bars, and the handle's line
     # stands over the dot there.
     hx = pg.evaluate("() => ['tlStart', 'tlEnd'].map(id => { const r = document.getElementById(id).getBoundingClientRect(), s = document.getElementById('musicTlStage').getBoundingClientRect(); return r.left + r.width / 2 - s.left; })")
-    out = {}
+    out, y = {}, (m["lane"] if m else 26) + 16
     for name, want in (("beat", False), ("bar", True)):
         for x, bar, _t in (m["beats"] if m else []):
             if bar != want or x < 12 or x > st[2] - 12 or any(abs(x - h) < 14 for h in hx):
                 continue
             gx = x + 6 if x + 6 < st[2] - 4 else x - 6
-            ground = im.getpixel((int(gx * k), int(42 * k)))
-            out[name] = max(ratio(im.getpixel((int((x + dx) * k), int((42 + dy) * k))), ground) for dx in (-1, 0, 1) for dy in (-1, 0, 1))
+            ground = im.getpixel((int(gx * k), int(y * k)))
+            out[name] = max(ratio(im.getpixel((int((x + dx) * k), int((y + dy) * k))), ground) for dx in (-1, 0, 1) for dy in (-1, 0, 1))
             break
     return out
 
