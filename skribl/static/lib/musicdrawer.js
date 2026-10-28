@@ -99,7 +99,10 @@
  * and the loop on whole bars,
  * 4, 8, 16 or 32 beats (the owner: "we only ever want 4,8,16,... beats"), the
  * end where the loop comes round, so with a smooth restart the handle sits
- * that much past the beat. The loop slid along the
+ * that much past the beat. Zoomed in, an end let go near whole bars stays,
+ * and the beat changes to make them exact (THE END SETS THE TEMPO, at snap
+ * below), with a note and its Undo. The Beat door's tile says where the
+ * beat came from: heard, tapped, or by hand from the end. The loop slid along the
  * song starts on a beat, and - and + move a bar unless another step is
  * picked. Off, nothing settles. The tempo is the editor's, saved with the
  * song in its drafts, and the switch with it.
@@ -146,9 +149,12 @@
  *   musicOff()          Play's music, stopped
  *   syncRow()           redraw the file row and its switch
  *   tempo()             the song's tempo { bpm, phase }, with snap: false
- *                       when Snap to the beat is off and heard: true when
- *                       Skribl heard it, or null; setTempo(t), kept with
- *                       the song in the drafts
+ *                       when Snap to the beat is off, heard: true when
+ *                       Skribl heard it and by: 'end' when the loop's end
+ *                       set it, or null; setTempo(t), kept with the song in
+ *                       the drafts
+ *   say(words, action)  optional: a note, with action { label, onClick } a
+ *                       button in it (the Pad's toast, Flip's chip)
  *   dock()              the bar right above the drawer, which a door's
  *                       nudge leaves under the pinned header while the
  *                       door's first control still shows
@@ -195,16 +201,25 @@
   }
   // A tempo as saved: { bpm, phase } -- beats a minute, and where a beat falls
   // in the song, in seconds -- with snap: false once Snap to the beat is
-  // turned off for it, and heard: true when Skribl heard it (lib/musicears.js)
-  // rather than taps. Anything else is no tempo.
+  // turned off for it, heard: true when Skribl heard it (lib/musicears.js)
+  // rather than taps, and by: 'end' when the loop's end set it (snap, zoomed
+  // in). Anything else is no tempo.
   function tempoFrom(t) {
     var bpm = t ? +t.bpm : NaN, ph = t ? +t.phase : NaN;
     if (!(bpm >= 30 && bpm <= 300 && isFinite(ph))) return null;
     var out = { bpm: bpm, phase: ph };
     if (t.snap === false) out.snap = false;
     if (t.heard === true) out.heard = true;
+    if (t.by === 'end') out.by = 'end';
     return out;
   }
+  // A copy of a tempo, every field kept, for a change to one of them.
+  function copyOf(tp) { var o = {}; for (var key in tp) o[key] = tp[key]; return o; }
+  // Beats a minute as said: whole, as heard or tapped; to the tenth when the
+  // end set it, which is rarely whole ("83.4").
+  function bpmSays(tp) { return tp.by === 'end' ? (Math.round(tp.bpm * 10) / 10).toFixed(1) : String(Math.round(tp.bpm)); }
+  // Where the beat came from, as the Beat door's tile says it.
+  function bpmFrom(tp) { return tp.by === 'end' ? 'by hand' : tp.heard ? 'heard' : 'tapped'; }
   // "8 beats", "8.8 beats", "1 beat": whole when it is within a twentieth.
   function beatWords(n) {
     var w = Math.abs(n - Math.round(n)) < 0.05 ? String(Math.round(n)) : n.toFixed(1);
@@ -370,11 +385,14 @@
      * screen reader, which has Skribl's mark in words: "Length, Skribl's
      * pick, 8 beats". Length, the loop's length, as the one line counts it
      * (as its card says while the loop is Skribl's pick, whose mark is on the
-     * tile's picture then); Beat, the tempo, or that Skribl is listening for
-     * one; Restart, Smooth or Clean cut; Exact, the loop's two times, as
-     * precisely as the tile has room for: to the hundredth, the tenth or the
-     * second, so on a phone a time past ten seconds loses its hundredths
-     * rather than its end. Each word fits a 390px phone's tile. */
+     * tile's picture then); Beat, the tempo and where it came from ("120 ·
+     * heard", tapped, or by hand from the loop's end), where a phone's tile
+     * has room for both, else the tempo alone as it was ("120 bpm"; the
+     * door's own line always says where it came from), or that Skribl is
+     * listening for one; Restart, Smooth or Clean cut; Exact, the loop's two
+     * times, as precisely as the tile has room for: to the hundredth, the
+     * tenth or the second, so on a phone a time past ten seconds loses its
+     * hundredths rather than its end. Each word fits a 390px phone's tile. */
     var NAMES = { length: 'Length', beat: 'Beat', restart: 'Restart', exact: 'Exact times' };
     var lengthSpark = $('musicLengthSpark'), tileRoom = {}, fitsMemo = {};
     function room(tile) {
@@ -401,6 +419,12 @@
       }
       return s;
     }
+    function tempoFor(v, tile, tp) {
+      var r = tileRoom[tile.dataset.dp] || (tileRoom[tile.dataset.dp] = room(tile)), n = bpmSays(tp);
+      var all = [n + ' \u00b7 ' + bpmFrom(tp), n + ' bpm'];
+      for (var i = 0; i < all.length; i++) if (!(r > 0) || fitsIn(v, all[i], r)) return all[i];
+      return n;
+    }
     global.addEventListener('resize', function () { tileRoom = {}; fitsMemo = {}; });
     function doorWords() {
       if (!tiles.length) return;
@@ -410,11 +434,13 @@
         var k = tile.dataset.dp, v = tile.querySelector('.dp-v'), w = '';
         if (!v) return;
         if (ok && k === 'length') w = spark && pickSub ? pickSub.textContent : lengthOf(loopNow(), h.crossfade(), tp);
-        else if (ok && k === 'beat') w = tp ? Math.round(tp.bpm) + ' bpm' : ears ? 'Listening' : 'Tap it';
+        else if (ok && k === 'beat') w = tp ? tempoFor(v, tile, tp) : ears ? 'Listening' : 'Tap it';
         else if (ok && k === 'restart') w = h.crossfade() > 0 ? 'Smooth' : 'Clean cut';
         else if (ok && k === 'exact') w = timesFor(v, tile, t.start, t.end);
         if (v.textContent !== w) v.textContent = w;
-        var name = NAMES[k] + (k === 'length' && spark ? ", Skribl's pick" : '') + (w ? ', ' + w : '') + (open === k ? '. Tap to close' : '');
+        // Read aloud, the beat in words rather than its dot: "120 beats a minute, heard".
+        var said = ok && k === 'beat' && tp ? bpmSays(tp) + ' beats a minute, ' + bpmFrom(tp) : w;
+        var name = NAMES[k] + (k === 'length' && spark ? ", Skribl's pick" : '') + (said ? ', ' + said : '') + (open === k ? '. Tap to close' : '');
         if (tile.getAttribute('aria-label') !== name) tile.setAttribute('aria-label', name);
       });
     }
@@ -509,11 +535,22 @@
      *     of the mock, "All yes"). A tapped beat is rarely on the music to the
      *     hundredth (on the mock's song, 45ms off), and zoomed in the note can
      *     be seen. Further off, a lead-in, the beat stays where it was, or
-     *     every mark would leave its drum. The tempo keeps its beats a minute;
-     *     every beat, bar and snap after counts from that start, and the end
-     *     follows as above. Tapped again, the beat is the taps' own;
+     *     every mark would leave its drum. The tempo keeps its beats a minute,
+     *     and where they came from (heard, tapped or the end's): every beat,
+     *     bar and snap after counts from that start, and the end follows as
+     *     above. Tapped again, the beat is the taps' own;
      *   the end on whole bars the same way, counted from the start wherever
-     *     it is: dragging the end never moves a start you have set.
+     *     it is: dragging the end never moves a start you have set;
+     *   magnified, THE END SETS THE TEMPO (from the Wizard's "click the end
+     *     of the first bar"; of the mock, "All yes"): an end let go within an
+     *     eighth of a beat of 4, 8, 16 or 32 beats stays, and the beat
+     *     becomes the one that makes the loop exactly that many, counted
+     *     from its start and heard to where it comes round (a smooth
+     *     restart's length before the handle). A live band or an old record
+     *     between whole tempos can be matched: tapped, a tempo is whole beats
+     *     a minute. It is by: 'end', to the thousandth, no longer the one
+     *     heard; a note says so, and its Undo puts the beat back. Further
+     *     off, it settles as above.
      * In the Restart view, a close-up (`pxPerSec`, its scale), an end let go
      * within SNAP_PX of a beat settles on it instead: the loop detail's rule,
      * which the Restart view took over. The loop slid along the song, or sent
@@ -587,12 +624,28 @@
         var s = zoomed ? t.start : first != null ? first : on;
         if (s < -EPS) s += p;
         s = Math.max(0, s);
-        if (zoomed && h.setTempo && Math.abs(t.start - on) <= p / 8) h.setTempo({ bpm: tp.bpm, phase: Math.round(s * 10000) / 10000 });
+        if (zoomed && h.setTempo && Math.abs(t.start - on) <= p / 8) {
+          var ns = copyOf(tp);
+          ns.phase = Math.round(s * 10000) / 10000;
+          h.setTempo(ns);
+        }
         k = barsFor(heard({ start: s, end: t.end }, h.crossfade()), t.duration - s);
         // No whole bars fit from that beat: the start settles alone.
         n = k ? { start: s, end: s + lenFor(k) } : T.setHandle(state, 'start', s, 'constrain');
       } else if (!pxPerSec) {
-        k = barsFor(heard(t, h.crossfade()), t.duration - t.start);
+        // The loop stays as it is, so the room it needs is already there.
+        var hz = heard(t, h.crossfade()), kz = 0;
+        if (zoomed && h.setTempo) BARS.forEach(function (c) { if (Math.abs(hz - c * p) <= p / 8) kz = c; });
+        var bpm = kz ? Math.round(60 * kz / hz * 1000) / 1000 : 0;
+        if (kz && Math.abs(hz - kz * p) > EPS && bpm >= 30 && bpm <= 300) {
+          var nt = copyOf(tp);
+          nt.bpm = bpm; nt.phase = t.start; nt.by = 'end'; delete nt.heard;
+          h.setTempo(nt);
+          h.refresh();
+          endSaid(tp, nt, kz);
+          return;
+        }
+        k = barsFor(hz, t.duration - t.start);
         if (!k) return;
         n = T.setHandle(state, 'end', t.start + lenFor(k), 'constrain');
       } else {
@@ -604,6 +657,22 @@
       }
       if (near(n.start, t.start) && near(n.end, t.end)) return;
       glideTo(n.start, n.end);
+    }
+    // What the end's tempo says, and the way back: Undo puts the beat back as
+    // it was (heard, tapped or an end's), the end staying where it was let
+    // go, unless the beat has changed again since.
+    function endSaid(was, now, k) {
+      if (!h.say) return;
+      h.say('The beat fits your loop now: ' + bpmSays(now) + ' a minute, ' + k + ' beats.', {
+        label: 'Undo',
+        onClick: function () {
+          var cur = tempo();
+          if (!cur || cur.bpm !== now.bpm || cur.phase !== now.phase) return;
+          h.setTempo(was);
+          h.refresh();
+          h.changed();
+        }
+      });
     }
     // Where a loop of `len` starting near `start` starts on a beat: the
     // nearest beat, or at either end of the song the one on the side there is
@@ -1522,8 +1591,9 @@
       if (!tempoLine) return;
       var html = listening
         ? (taps.length >= 2 && m > 0 ? taps.length + ' taps, about <b>' + Math.round(60 / m) + '</b> a minute' : 'Keep tapping along with the beat.')
-        : tapNote || (tp ? '<b>' + Math.round(tp.bpm) + ' beats a minute</b>'
-            + (tp.heard ? ', heard by Skribl \u00b7 tap to change it' : ' \u00b7 tap again to change it')
+        : tapNote || (tp ? '<b>' + bpmSays(tp) + ' beats a minute</b>'
+            + (tp.by === 'end' ? ', set by the loop\u2019s end \u00b7 tap to change it'
+              : tp.heard ? ', heard by Skribl \u00b7 tap to change it' : ' \u00b7 tap again to change it')
           : ears ? 'Listening for the beat\u2026'
           : earsHeard === false ? 'Skribl didn\u2019t hear a steady beat. Tap along with the music to count one.'
           : 'Tap along with the music to count its beats.');
@@ -1619,9 +1689,9 @@
     if (snapSw) snapSw.addEventListener('click', function () {
       var tp = tempo();
       if (!tp || !h.setTempo) return;
-      var n = { bpm: tp.bpm, phase: tp.phase };
-      if (tp.snap !== false) n.snap = false;
-      if (tp.heard) n.heard = true;
+      // Where the beat came from goes with it, heard or set by the end.
+      var n = copyOf(tp);
+      if (tp.snap !== false) n.snap = false; else delete n.snap;
       h.setTempo(n);
       h.changed();
       sync();

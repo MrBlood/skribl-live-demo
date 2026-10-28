@@ -1157,7 +1157,8 @@ whole-drawer mock's New:
 4. The click in one pill with Hear the loop, and the beat's dot lit on
    each tick. Built (DECISIONS, the click and the beat lit as heard).
 5. The end sets the tempo; the Beat door says where its tempo came from
-   ("83 · heard", tapped, or set by the end).
+   ("83 · heard", tapped, or set by the end). Built (DECISIONS, the loop's
+   end sets the tempo).
 6. The taller box: one tap for twice as tall, the arrows glyph beside
    Magnify's - and +, gliding (below); the wave filling the box zoomed in
    deep; pinch to zoom.

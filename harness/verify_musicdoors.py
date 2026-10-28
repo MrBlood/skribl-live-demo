@@ -460,30 +460,43 @@ with sync_playwright() as pw:
             pg.evaluate("() => { trimStart = 0.5; trimEnd = 5.75; loopCrossfadeMs = 0; setCrossfadeUI(); updateTrimUI(); }")
             pg.wait_for_timeout(150)
             own = pg.evaluate(TWORDS)
-            pg.evaluate("() => { musicTempo = { bpm: 100, phase: 0 }; updateTrimUI(); }")
-            pg.wait_for_timeout(150)
-            beat = pg.evaluate(TWORDS)
+            # The beat, tapped, heard, then set by the loop's end.
+            sources = []
+            for tp in ("{ bpm: 100, phase: 0 }", "{ bpm: 100, phase: 0, heard: true }", "{ bpm: 100.437, phase: 0, by: 'end' }"):
+                pg.evaluate(f"() => {{ musicTempo = {tp}; updateTrimUI(); }}")
+                pg.wait_for_timeout(150)
+                sources.append(pg.evaluate(TWORDS))
+            beat = sources[0]
             add(pg, LONG)
             pg.evaluate("() => { musicTempo = null; trimStart = 12.25; trimEnd = 28.5; updateTrimUI(); }")
             pg.wait_for_timeout(150)
             far = pg.evaluate(TWORDS)
-            got[dev] = (pick, own, beat, far, pg.evaluate(SAID))
+            got[dev] = (pick, own, beat, far, pg.evaluate(SAID), sources)
             set_door(pg, "exact")
             span[dev] = pg.evaluate(SPAN)
             c.close()
         ok, why = True, []
-        for dev, (pick, own, beat, far, said) in got.items():
+        for dev, (pick, own, beat, far, said, sources) in got.items():
             w = lambda rows: [r[1] for r in rows]
-            fits = all(r[2] for rows in (pick, own, beat, far) for r in rows)
+            fits = all(r[2] for rows in (pick, own, far, *sources) for r in rows)
+            # THE BEAT TILE SAYS WHERE ITS BEAT CAME FROM (the owner's pick,
+            # "83 · heard"), where the tile has room; else the beat alone, as
+            # before ("100 bpm", or "100.4" where even that has no room). A
+            # desk always has room; its name always says.
+            said_as = [("100", "tapped"), ("100", "heard"), ("100.4", "by hand")]
+            tiles = [w(rows)[1] for rows in sources]
+            whole = all(t == f"{n} · {f}" or (dev != "desk" and t in (f"{n} bpm", n)) for t, (n, f) in zip(tiles, said_as))
+            named = all(rows[1][3] == f"Beat, {n} beats a minute, {f}" for rows, (n, f) in zip(sources, said_as))
             good = (fits and w(own)[1:3] == ["Tap it", "Clean cut"] and w(own)[0] == "5.3s"
                     and w(own)[3] == ("0.50–5.75")
                     and own[0][3] == "Length, 5.3s" and pick[0][3].startswith("Length, Skribl's pick, ")
-                    and w(beat)[0] == "8.8 beats" and w(beat)[1] == "100 bpm"
+                    and w(beat)[0] == "8.8 beats" and whole and named
                     and w(far)[3] in ("12.25–28.50", "12.3–28.5")
                     and (dev != "desk" or w(far)[3] == "12.25–28.50"))
             ok = ok and good
-            why.append(f"{dev}: the pick {w(pick)}, own {w(own)}, a tempo {w(beat)}, far {w(far)}; every word inside {fits}; labels {pick[0][3]!r}, {own[0][3]!r}")
-        check(f"{_n}: each tile says what its door is set to, every word inside its tile on a 390px phone, the owner's 402 and a desk",
+            why.append(f"{dev}: the pick {w(pick)}, own {w(own)}, a tempo {w(beat)}, the beat's tiles {tiles} (named {named}), far {w(far)}; "
+                       f"every word inside {fits}; labels {pick[0][3]!r}, {own[0][3]!r}")
+        check(f"{_n}: each tile says what its door is set to, the Beat tile where its beat came from where it has room, every word inside its tile on a 390px phone, the owner's 402 and a desk",
               ok, "; ".join(why))
         same = lambda a, z: bool(a and z) and all(abs(u - v) <= 0.5 for u, v in zip(a, z))
         check(f"{_n}: the four doors span the drawer, edge to edge with the timeline and the pair above them, each as wide "

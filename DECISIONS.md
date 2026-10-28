@@ -24888,3 +24888,109 @@ WHAT IT DOES TO FLIP: shared. One drawer and one timeline for both editors.
 
 Not tested here: an iPhone's WebKit (its getOutputTimestamp, a speaker's own
 latency), and how the click sounds through a phone's speaker.
+
+## After v329 -- The full run on the click: verify_musicbeat past ten minutes
+
+Run 40658123304, on step 4's tree: 15 jobs ran and 13 were green. The two red
+were shard 5 on both databases, and every suite in them was green but one:
+verify_musicbeat, stopped at run_harness.sh's ten minutes a suite (exit 124)
+before it reported. It had taken 546 seconds on CI before the click (run
+40639574339, 128 rows), so the click's 22 rows took it over, and step 5's
+would have taken it further.
+
+SPLIT BY WHAT EACH PART IS ABOUT, each with its own fixtures, as the music
+suites keep theirs: verify_musicclick (the click and the lit beat, step 4)
+and verify_musictempo (zoomed in, the start and the end set the beat, step
+5). verify_musicbeat keeps the pair, the tap, whole bars, Beats, the marks,
+the Restart view, Snap to the beat, where the music begins, kept and words.
+The parts moved as they were: a script took each part and the top-level
+fixtures it names, and pyflakes finds no name undefined or unused in any of
+the three. The claims in verify_helpclaims follow their rows; release_run
+and shard.py name the new suites (shard's seconds for them are estimates
+until a CI run measures them).
+
+## After v329 -- The loop's end sets the tempo
+
+Step 5 of the whole-drawer mock (FUTURE.md 6s; from the Wizard's "click the
+end of the first bar"; the owner: "All yes"). Zoomed in, an end let go within
+an eighth of a beat of 4, 8, 16 or 32 beats stays exactly where it was let
+go, and the beat becomes the one that makes the loop exactly that many:
+counted from the loop's start (where a beat falls is the start) and heard to
+where the loop comes round, a smooth restart's length before the handle.
+Tapped, a tempo is whole beats a minute; this one is to the thousandth, so a
+live band or an old record between whole tempos can be matched. It is
+by: 'end', no longer the one heard, kept with the song in the drafts
+(tempoFrom keeps it), and Flip's Match the beat refits a round of pages to it
+as it does to taps. Further off than an eighth, or at 1x, or in the Restart
+view, an end settles as before. The eighth is the start's own reach; over 4
+beats it moves the tempo by a 32nd at most.
+
+THE COUNT IS THE ONE WITHIN AN EIGHTH, not the nearest the song has room
+for: the loop stays as it is, so its room is already there. The nearest
+that fits, as an end settling uses, would have dropped to 4 an 8-beat loop
+let go at the song's very end.
+
+A NOTE SAYS SO, with Undo: "The beat fits your loop now: 118.8 a minute, 8
+beats." The Pad's toast and Flip's chip, seven seconds as every Undo offer.
+Undo puts the beat back as it was, heard, tapped or an end's, unless it has
+changed since; the end stays where it was let go, as in the mock.
+
+THE TOAST'S FALLBACK SAT ON THE TOOLBAR. v315's rule keeps a toast off the
+header and the toolbar, and its fallback sits just under the header. A
+drawer scrolled into has the toolbar (Flip's dock) right under the header,
+so the note covered it on both editors, against Flip's own "never on the
+dock". Every toast and chip now goes under the toolbar wherever, just under
+the header, it would reach it (verify_layout, a new row: red on the old
+placement, the note on the bar on both editors). The player loads app.js,
+and its JavaScript had 3 bytes to spare under verify_player_isolation's
+ratchet: the anchor's two placements are one now and the header is looked
+up once, so the player's code is 52 bytes lighter than before (154,485).
+
+FLIP'S UNDO CLOSED THE DRAWER. Flip's tap-away rule took a tap on the
+chip's button for a tap away, and shut the music drawer as its Undo ran. The
+chip is not a tap away now, New Skribl's Undo in it included.
+
+THE BEAT MARKS GLIDE TO THE NEW TEMPO, each to its own place, the one at the
+loop's start staying put, so the marks draw in to the end (the owner: "No
+transitions should be jumpy"). A tempo moved by a 32nd or less glides; a new
+one, tapped, is there at once as before; under Reduce Motion, at once.
+
+WHERE THE BEAT CAME FROM, the owner's pick: the Beat tile says "120 ·
+heard", "120 · tapped" or "118.8 · by hand" (to the tenth when the end set
+it), its name says it in words ("Beat, 120 beats a minute, heard"), and the
+door's line says "118.8 beats a minute, set by the loop's end · tap to
+change it". Where the tile has room: on this box's fonts a phone's tile has
+70px for words at 402, room for "120 bpm" but not "120 · heard" (72) or
+"118.8 · by hand" (98), so a phone says the beat alone as before ("100.4" at
+390), and a desk says all of it. The mock's 83 was two digits. Put to the
+owner.
+
+A START LET GO ZOOMED IN KEEPS WHERE THE BEAT CAME FROM. It dropped `heard`,
+and the line then told a person who had not tapped to "tap again". It keeps
+every field now. Harmless to the ears' logic: heardIt, the Beats row's own
+pick and the pick card each ask whether the loop is still Skribl's pick
+first. Snap to the beat turned off and on keeps them too; tapped again, the
+beat is the taps', tapped.
+
+Rows (verify_musictempo, the end; MUSICTEMPO_PART=end): the end stays and
+the beat makes it 8 beats from the start; the note, the tile, the name and
+the line; the marks' glide frame by frame, and at once under Reduce Motion;
+Undo, the drawer still open; further than an eighth; with a smooth restart;
+kept in the drafts; at 1x; a zoomed start and the Snap switch keeping where
+the beat came from; tapped again; Flip's round refitted; the note clear of
+the header and the toolbar on the owner's phone. Calibrated with the page's
+files served from broken copies (the files on disk untouched), each red on
+its own rows on both editors: the rule removed, at 1x too, a quarter of a
+beat for an eighth, counted to the handle, Undo doing nothing, tempoFrom
+dropping by, the zoomed start's old drop, the Snap switch's old drop, the
+marks at once on a new tempo, the tempo set a moment after Flip refits (Flip
+only), the old toast and chip, the tile's old words, heard kept, the phase
+left where it was, taps keeping by; and Flip's chip a tap away again (Flip
+only; the Undo row, the drawer closed). verify_musicdoors' words row reads
+the Beat tile on two phones and a desk: red with the tile's old words (a
+desk) and with the words never fitted (the phones).
+
+WHAT IT DOES TO FLIP: shared. One drawer and one timeline; the note is each
+editor's own (the toast, the chip), placed by the same rule.
+
+Not tested here: an iPhone's WebKit, and the tile's room in SF and Segoe UI.

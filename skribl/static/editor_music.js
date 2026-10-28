@@ -67,6 +67,9 @@ if (window.SkriblMusicDrawer) padDrawer = window.SkriblMusicDrawer.wire({
   syncRow: () => { syncLayerToggle(document.getElementById('musicToggle'), musicEnabled); padMusicRow(); },
   tempo: () => musicTempo,
   setTempo: (t) => { musicTempo = t; },
+  // The drawer's notes (the end setting the beat, with its Undo): the Pad's
+  // toast, just under the header.
+  say: (words, action) => showToast(words, null, action),
 });
 // app.js reaches these by name, typeof-guarded, because the player has no drawer.
 function stopLoopPreview() { if (padDrawer) padDrawer.stopPreview(); }

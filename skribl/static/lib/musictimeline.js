@@ -226,21 +226,37 @@
     // THE BEAT MARKS GLIDE when where a beat falls moves and the tempo does
     // not (a start let go magnified becomes a beat, lib/musicdrawer.js), with
     // the view's own ease and the shorter way round, so they move as one with
-    // the settle and the reframing after it. A new tempo is there at once; a
-    // beat where there was none (one heard, lib/musicears.js, as the loop
-    // glides to its pick, or the first one tapped) fades in over FADE_MS
-    // rather than appearing in one frame. All of it at once under Reduce
-    // Motion. True while on the way.
+    // the settle and the reframing after it. A tempo moved by a 32nd or less
+    // (an end let go magnified sets it, lib/musicdrawer.js, by an eighth of a
+    // beat over 4 at most) glides too: each mark to its own new place, the
+    // one the new beat counts from (the loop's start) staying put, so the
+    // marks draw in to the end rather than jumping there. A new tempo is
+    // there at once; a beat where there was none (one heard,
+    // lib/musicears.js, as the loop glides to its pick, or the first one
+    // tapped) fades in over FADE_MS rather than appearing in one frame. All
+    // of it at once under Reduce Motion. True while on the way.
     function beatTo(dt) {
       var tp = h.tempo();
       if (!tp) { beat = null; return false; }
       if (!beat) { beat = { bpm: tp.bpm, phase: tp.phase }; beatIn = h.still() ? 1 : 0; return beatIn < 1; }
       if (beatIn < 1) { beatIn = h.still() ? 1 : Math.min(1, beatIn + dt / FADE_MS); if (beatIn < 1) { beat = { bpm: tp.bpm, phase: tp.phase }; return true; } }
-      if (beat.bpm !== tp.bpm || h.still()) { beat = { bpm: tp.bpm, phase: tp.phase }; return false; }
-      var p = 60 / tp.bpm, d = tp.phase - beat.phase;
+      var p = 60 / tp.bpm, p0 = 60 / beat.bpm, k = 1 - Math.exp(-dt / EASE_MS);
+      if (h.still() || Math.abs(p - p0) > p0 / 32 + 1e-5) { beat = { bpm: tp.bpm, phase: tp.phase }; return false; }
+      if (beat.bpm !== tp.bpm) {
+        // The old beat nearest where the new one counts from, and from there
+        // the beat's length and its place together, so beat n of the old is
+        // beat n of the new all the way; there once no mark in the song is a
+        // tenth of a millisecond off.
+        var a0 = beat.phase + Math.round((tp.phase - beat.phase) / p0) * p0, pk = p0 + (p - p0) * k, ak = a0 + (tp.phase - a0) * k;
+        var far = (Math.abs(tp.phase) + trim().duration) / p + 1;
+        if (Math.abs(pk - p) * far + Math.abs(ak - tp.phase) < 1e-4) { beat = { bpm: tp.bpm, phase: tp.phase }; return false; }
+        beat = { bpm: 60 / pk, phase: ak };
+        return true;
+      }
+      var d = tp.phase - beat.phase;
       d -= Math.round(d / p) * p;
       if (Math.abs(d) < 1e-4) { beat = { bpm: tp.bpm, phase: tp.phase }; return false; }
-      beat = { bpm: tp.bpm, phase: beat.phase + d * (1 - Math.exp(-dt / EASE_MS)) };
+      beat = { bpm: tp.bpm, phase: beat.phase + d * k };
       return true;
     }
     function request() { if (!raf) raf = global.requestAnimationFrame(frame); }

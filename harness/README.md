@@ -466,7 +466,9 @@ stays a sleep.
   Motion), and starts shut every time (on a load, More's old remembered key
   too, and every opening of the drawer, Photo and back included); each tile
   says what its door is set to in words that fit it on a 390px phone, the
-  owner's 402 and a desk, and Skribl's mark is on the Length tile's picture
+  owner's 402 and a desk (the Beat tile where its beat came from, heard,
+  tapped or by hand, where it has room, and its name always), and Skribl's
+  mark is on the Length tile's picture
   while the loop is Skribl's pick; the row runs edge to edge with the timeline
   and the pair above it, an open door's group as wide, on a desk as on a
   phone. A new song starts on Skribl's pick (the
@@ -510,19 +512,7 @@ stays a sleep.
   the same place with any door open or none, the same size (Hear's pill and
   Play), with no second Hear the loop; Hear the loop plays the music alone
   until Stop, and an end moved while it plays is heard from its next time
-  round; the click is the end of Hear's pill (a metronome, a finger wide, the
-  words of both buttons inside them on a 320px phone, the owner's and a desk),
-  off at first and there once there is a beat, and on, Hear ticks on each beat
-  of what plays on the loop's own clock to the millisecond, the bar's tick
-  higher every four beats from the loop's start, the loop's first beat as the
-  music starts, each tick straight to the speakers (never a post or a file),
-  turned on while Hear plays ticking from the very next beat, a tick already
-  set ahead never sounding once it is off or Hear stops, and
-  an end moved while it plays ticking the new loop from its next time round
-  with no tick doubled at the join; each beat's dot lights as it is heard (by
-  the context's record of what its speakers play), a beat apart, at the dot's
-  own place, the bar's bigger, click on or off, swelling and fading, only
-  fading under Reduce Motion; Tap the beat's first tap
+  round; Tap the beat's first tap
   starts the loop and is not a beat, taps in time settle on the tempo two
   seconds after the last (a stray gap does not move it), the one line counts
   the beats, and where the beat falls is the taps' own on the song's clock as
@@ -543,12 +533,6 @@ stays a sleep.
   there is a tempo, on to start, saying what it does, and opens out with a
   bar in Each press frame by frame (at once under Reduce Motion), and off
   nothing settles, on the timeline, in the Restart view, slid or tapped;
-  zoomed in (the owner: "how do I tell it where the beginning is?"), a start
-  let go on the music's beat, between the marks of a tempo tapped 45ms late,
-  stays exactly there and a beat falls on it, the beats a minute kept and the
-  end following on whole bars, the marks gliding there frame by frame (at
-  once under Reduce Motion), then at 1x a start lands on the new beat, the new
-  beat is kept in the drafts, and tapped again the beat is the taps' own;
   where the music begins after a silence (the owner: "It snaps back to empty
   space"), at 1x a start let go in the silence before it and nearer it than
   the next beat, or with the nearest beat in the silence, or up to half a beat
@@ -575,6 +559,46 @@ stays a sleep.
   more than 4ms (a busy machine) is tapped again on a fresh page, three tries
   at most, and the row says which try it was. Skribl's ears are off here
   (every row is a person with no beat yet; verify_musicears holds the ears).
+  The click is `verify_musicclick.py`'s and the zoomed-in ends
+  `verify_musictempo.py`'s: with the click here this suite went past
+  run_harness.sh's ten minutes a suite on CI, and it took nine before it.
+- `verify_musicclick.py` — the music drawer's click and the beat lit as it is
+  heard (step 4 of the whole-drawer mock), on the Pad and on Flip: the click
+  is the end of Hear the loop's pill (a metronome, a finger wide, the words of
+  both buttons inside them on a 320px phone, the owner's and a desk), off at
+  first and there once there is a beat, and on, Hear ticks on each beat of
+  what plays on the loop's own clock to the millisecond, the bar's tick higher
+  every four beats from the loop's start, the loop's first beat as the music
+  starts, each tick straight to the speakers (never a post or a file), turned
+  on while Hear plays ticking from the very next beat, a tick already set
+  ahead never sounding once it is off or Hear stops, and an end moved while it
+  plays ticking the new loop from its next time round with no tick doubled at
+  the join; each beat's dot lights as it is heard (by the context's record of
+  what its speakers play), a beat apart, at the dot's own place, the bar's
+  bigger, click on or off, swelling and fading, only fading under Reduce
+  Motion. Skribl's ears are off here.
+- `verify_musictempo.py` — zoomed in, the loop's ends set the beat, and the
+  Beat door says where its tempo came from (step 5), on the Pad and on Flip:
+  zoomed in (the owner: "how do I tell it where the beginning is?"), a start
+  let go on the music's beat, between the marks of a tempo tapped 45ms late,
+  stays exactly there and a beat falls on it, the beats a minute kept and the
+  end following on whole bars, the marks gliding there frame by frame (at
+  once under Reduce Motion), then at 1x a start lands on the new beat, the new
+  beat is kept in the drafts, and tapped again the beat is the taps' own; an
+  end let go within an eighth of a beat of 8 stays exactly where it was let
+  go and the beat becomes the one that makes the loop exactly 8 beats,
+  counted from its start and heard to where it comes round (a smooth
+  restart's length before the handle), to the thousandth, by the end and no
+  longer heard; a note says so with Undo, clear of the header and the
+  toolbar right under it on the owner's phone, and Undo puts the beat back,
+  the end where it was let go and the drawer open; further off than an
+  eighth, or at 1x, the end settles on whole bars at the tempo there is; the
+  beat marks glide to the new beat frame by frame (at once under Reduce
+  Motion); the beat is kept in the drafts, Flip's Match the beat refits a
+  round of pages to it, and the Beat tile and its door say "by hand" and
+  "set by the loop's end"; a start let go zoomed in, and Snap to the beat
+  off and on, keep where the beat came from; tapped again it is tapped.
+  Skribl's ears are off here.
 - `verify_musictimeline.py` — step 2 of the music plan (the owner: "Yes on
   all"), on the Pad and on Flip: the timeline (lib/musictimeline.js) is the
   drawer's one view, the drawing's lane over the song, two handles and the
