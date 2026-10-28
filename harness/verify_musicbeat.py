@@ -960,9 +960,14 @@ with sync_playwright() as pw:
     print("\nMUSIC BEAT — Snap to the beat, the magnet by the zoom")
     # The magnet (the owner, of the switch in the Beat door: "do you think it
     # is hidden down in there"; of the mock, "all yes"): its words are its
-    # tooltip, the title lib/tooltip.js keeps as data-tip.
+    # tooltip, the title lib/tooltip.js keeps as data-tip. Lit is what is
+    # painted: the chosen choice's purple, read against a probe beside it
+    # wearing that fill.
     SNAP = """() => { const s = document.getElementById('musicSnap'), box = s && s.closest('.mt-tl-head .mt-tl-snapbox');
-      return { shown: !!box && box.getClientRects().length > 0, usable: !!s && !s.disabled, on: s && s.getAttribute('aria-pressed'),
+      let lit = false;
+      if (s) { const p = document.createElement('i'); p.style.background = 'var(--seg-on-fill)'; s.parentNode.appendChild(p);
+               lit = getComputedStyle(s).backgroundColor === getComputedStyle(p).backgroundColor; p.remove(); }
+      return { shown: !!box && box.getClientRects().length > 0, usable: !!s && !s.disabled, on: s && s.getAttribute('aria-pressed'), lit,
                says: s && (s.getAttribute('data-tip') || s.title), kept: musicTempo,
                inDoor: !!document.querySelector('#musicDoors #musicSnap, #musicSnapRow') }; }"""
     for _n, _p in eds("snap"):
@@ -977,10 +982,10 @@ with sync_playwright() as pw:
         press(pg, "#musicSnap")
         s3 = pg.evaluate(SNAP)
         check(f"{_n}: the magnet by the zoom is there from the first, out of reach and unlit until there is a tempo, then lit to start, saying what it does; off, that the ends stay where they are let go",
-              s0["shown"] and not s0["usable"] and s0["on"] == "false" and s0["says"] == "Snap to the beat, once there is a beat"
-              and s1["shown"] and s1["usable"] and s1["on"] == "true" and s1["says"] == "Snap to the beat: on. A dragged end lands on the nearest beat."
-              and s2["on"] == "false" and s2["says"] == "Snap to the beat: off. Ends stay where you let them go." and s2["kept"] == {"bpm": 120, "phase": 0, "snap": False}
-              and s3["on"] == "true" and s3["kept"] == {"bpm": 120, "phase": 0} and not s0["inDoor"],
+              s0["shown"] and not s0["usable"] and s0["on"] == "false" and not s0["lit"] and s0["says"] == "Snap to the beat, once there is a beat"
+              and s1["shown"] and s1["usable"] and s1["on"] == "true" and s1["lit"] and s1["says"] == "Snap to the beat: on. A dragged end lands on the nearest beat."
+              and s2["on"] == "false" and not s2["lit"] and s2["says"] == "Snap to the beat: off. Ends stay where you let them go." and s2["kept"] == {"bpm": 120, "phase": 0, "snap": False}
+              and s3["on"] == "true" and s3["lit"] and s3["kept"] == {"bpm": 120, "phase": 0} and not s0["inDoor"],
               f"no tempo: {s0}; a tempo: {s1}; pressed: {s2}; again: {s3['on']}, {s3['kept']}")
         c.close()
     for _n, _p in eds("snap"):
