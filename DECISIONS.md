@@ -24581,3 +24581,35 @@ WHAT IT DOES TO FLIP: nothing. The desk pill and Tune are the Pad's; a posted
 Flip's link page and post's box show the line's pill, which is unchanged.
 
 Not tested here: SF and Segoe UI themselves.
+
+## After v329 -- Main red after #656: How it works' rise, a frame the box held
+
+Main's full run after #656 went red on one row, in sqlite's sixth shard and
+not postgres's: verify_helpdemos, "Flip: ...and the sheet travels up from the
+foot, no frame jumping 40% of the way", with the sheet read at 844, 844, 844,
+733, 390: 45% of the way in one frame. #656 changed only the tool cards.
+
+THE SHEET WAS NOT JUMPY. It rises by a transform the compositor moves, so a
+person sees it glide whatever the page is doing. The row reads where it is
+once a frame, from the page; the places it reads are the transition's own,
+frame by frame (733, 631, 539, 459, 390, the same on every run), and a frame
+held longer reads a stretch of the glide at once. Holding the page 70ms just
+after the sheet first moves gives CI's reading here to the frame (844, 844,
+844, 733, 390, 332, 284, 244), and main's row goes red on it.
+
+THE ROW READS EACH FRAME ON ITS OWN CLOCK now (`document.timeline`, the time
+the sheet's place is worked out for; `performance.now()` at the read can
+come after a hold in the same frame). The ease's fastest stretch is about 15%
+of the way a frame, so a frame under 50ms cannot cover 40%: one step of 40%
+or more across a frame of 50ms or more is set aside, the biggest, named in
+the detail. It still has to be one way and to be seen at three places on the
+way at least, so a snap is red.
+
+CALIBRATION, in a trimmed copy (the fixture and section 8, both editors): as
+built green; held 70ms once, main's row red on CI's reading and the new one
+green, setting aside 343px across a 67ms frame (Flip) and 401px across 83ms
+(Pad); with the transition taken away (a snap), red.
+
+Noted, not changed: while the sheet rises, the page spends most of each frame
+drawing it (a profile here: about 175ms of 300 in the browser's own work, the
+inline replays a few ms), which is why a busy box holds a frame there.
