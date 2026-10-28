@@ -25190,3 +25190,102 @@ page is a picture), the pictures and the taller lane are Flip's (a stroke
 reads as a line).
 
 Not tested here: an iPhone's WebKit, SF and Segoe UI.
+
+## After v329 -- Songs in three
+
+Step 8 of the whole-drawer mock (FUTURE.md 6s; the owner: "All yes", of the
+mock's songs in three: the Length row in beats, 3 · 6 · 12 · 24 for a waltz,
+and a small choice of 4 or 3 beats a bar in Beat for when the ears hear it
+wrong). Before it, a waltz looped a beat into its bar: Skribl counted every
+song in fours, and its picks on four made waltzes started 0.35 to 0.65s off a
+bar.
+
+THE EARS HEAR THREES (lib/musicears.js meterOf). Each beat is scored as barOf
+scored it, its kick against the stretch's own and how far the chord moved
+from the beat before, and the song is read a stretch at a time, 16 seconds
+on that stretch's own beat, as the pick reads it: how plainly one beat in
+every three stands out of the others, and one in four, and one in six. In
+three when the threes gather plainly (0.6 of the scores' own spread) and
+twice as plainly as the fours; in four otherwise, as every song was before.
+Sixes far plainer than threes (half again) are a waltz heard at its eighths,
+and the beat is halved: a slow waltz at 84 with its eighths played was heard
+at 168, one at 76 with soft hats between at 152, and at those speeds their
+threes are half bars and gather too. Measured on 17 songs made in the page
+(harness/songsynth.py): in four, the threes gathered 0.07 to 0.31 and the
+fours 1.39 to 2.01; in three, the threes 1.93 to 2.10 and the fours 0.15 to
+0.46. Every song in four is heard as it was, the same beat and the same pick
+to the last digit; the songs the ears suite makes are made byte for byte as they
+were. The six songs in three now start on a bar, 0.5 to 12.9ms off it (the
+band in three plays 8ms off the beat on purpose). Reading the bar adds 15
+to 26ms on this box to the ears' last step for a two-minute song (that step
+took 27 to 111ms), in one go rather than sliced: on a phone perhaps four
+times that, which measuring the ears at a phone's pace (FUTURE.md 6t, next)
+is for, with a Web Worker if it shows. A rule that kept a slow waltz's beat
+from doubling was tried, and changed no song's result once the sixes were
+read: it went.
+
+THE DRAWER COUNTS IN THE BAR (lib/musicdrawer.js). The tempo carries bar: 3
+for a song in three and barBy: 'you' when Beats in a bar set it, both kept
+in the drafts; a song in four saves what it always did. Everything that
+counts bars counts in it: Beats (3 · 6 · 12 · 24, its buttons written in),
+Skribl's pick (which counts in a bar set by you, and keeps it yours), Snap
+to the beat and the end setting the tempo, "a bar" in Each press, the bigger
+dot on each bar (the timeline's and the Restart view's), the click's higher
+tick and the lit beat's bigger light. A tap on the beat keeps the bar: taps
+tell the beat, not how many make a bar.
+
+BEATS IN A BAR, under Snap to the beat in the Beat door once there is a
+beat, as the mock had it: 4 or 3, and where the bar came from, "heard by
+Skribl" for the bar Skribl heard, "set by you" for one set there (set back
+to the one heard, it is Skribl's again), nothing for a four nobody chose (a
+tapped beat Skribl never heard). Setting it moves nothing: the loop stays
+where it is and is counted again, so a 24-beat waltz loop set to four has
+no Beats lit. The words keep the room of the longest, so the 4 and the 3
+never move under the finger as they change; on a narrow phone they go under
+the choice.
+
+FLIP'S BEAT IN THREE. A round of pages is 1 or 2 bars of a song in three: a
+quarter or a half of a bar of three ends between its beats (¾ and 1½ of
+one), which is not on the beat. A round of one beat would need the post's
+`beat` to take a third of a bar, which the server's check does not; it
+waits for the owner's word. The posted file is as it was: `beat.bars` stays
+one of 0.25, 0.5, 1 or 2, and fps carries the speed, so the players need
+nothing new.
+
+Found on the way: Skribl's pick, tapped with the bar set to four, lost "set
+by you" (the pick's tempo is new; it keeps the bar yours now).
+
+Rows (verify_musicthree, 49): the ears, every song in three heard in three
+at its own beat and every song in four in four; the pick in three, a
+waltz's loop on its bar and 24 of its beats, the line and the tile, Beats,
+the dots, "a bar", the click and the light; Beats in a bar, its 3 and its
+words, a tap on 4 moving nothing and counting in four, "set by you", the
+pick counting in it, 3 again Skribl's, a song in four, a tapped beat; Snap
+in three, let go and zoomed in, and a tapped beat keeping the bar; kept
+over a reload; Flip's rounds in three and back in four; the 4 and the 3 put
+under the finger on two phones and a desk. Every drawer row on the Pad and
+on Flip. Calibrated with the page's files served from broken copies (the
+files on disk untouched), 24 breaks, each red on its own rows (two run
+against a second part too): the ears always in four, without the sixes,
+threes read before sixes, the threes' bar loosened to 0.25 over nothing,
+hearing threes throwing; the pick always in four; the tempo without its
+bar, Beats counted in four, "a bar" four beats, the click's and the
+light's bar four, the timeline's dots every fourth; no Beats in a bar, its
+words always "heard by Skribl", never "set by you", the loop moved by it,
+the pick dropping "set by you", 3 again staying yours; a tap dropping the
+bar, the bar not saved, "set by you" not saved, the drawer throwing in
+three; Flip's round in four, a quarter bar of three offered; the words
+given no room. How it works' Beats, Skribl's pick, Snap to the beat, Tap
+the beat and fps tips say the threes, and a new tip says what Beats in a bar
+is; verify_helpclaims claims them. verify_contrast reads the Beat door in
+three, light and dark, phone and desk, on both editors.
+
+Not yet: a fast jazz waltz, 176, was heard at half its speed and counted in
+bars of two of its own (its loops whole bars still; Tap the beat sets it); a
+song in 6/8 heard at its eighths counts in threes, half its bars. Real
+recordings wait for the owner's songs by ear (6t); the songs here are made.
+
+WHAT IT DOES TO FLIP: one drawer and one pair of ears for both; Flip's Beat
+speed counts the song's bar, its rounds 1 or 2 bars in three.
+
+Not tested here: an iPhone's WebKit, SF and Segoe UI, a real waltz.

@@ -315,7 +315,10 @@ const poseRate = () => fps / (subdiv || 1);
 /* MATCH THE BEAT (owner, of the mock: "all yes"): while Beat is the speed,
    how long a round of the pages lasts, in bars of the song (BEAT_BARS); null
    when the speed is a number. Up here with fps, which it sets, because a
-   draft restore reaches the speed control before the control's own code. */
+   draft restore reaches the speed control before the control's own code.
+   A bar is the song's own, four beats or three (the music drawer's Beats in
+   a bar); in three a round is one or two bars, as a quarter or half of a
+   bar of three ends between its beats. */
 let beatBars = null;
 const BEAT_BARS = [0.25, 0.5, 1, 2];
 // Onion skin depth/tint are view-only session state — deliberately NOT persisted
@@ -4570,7 +4573,7 @@ function play(){
 function beatStartAt(page){
   if(beatBars == null || flipRate !== 1 || !beatBpm() || !musicEnabled || !musicData || !window.SkriblHold) return null;
   const p = window.SkriblHold.plan(frames, fps, docLoop), k = Math.max(0, p.slots.indexOf(page));
-  const round = beatBars * 4 * 60000 / beatBpm(), at = p.starts[k] - (p.forever ? p.introMs : 0);
+  const round = beatBars * beatMeter() * 60000 / beatBpm(), at = p.starts[k] - (p.forever ? p.introMs : 0);
   const off = ((at % round) + round) % round;
   return { off: off / 1000, due: p.starts[k], anchor: p.starts[k] - off };
 }
@@ -11629,8 +11632,9 @@ fpsGroup.addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b
 
 /* MATCH THE BEAT. With a song that has a beat, heard by Skribl or tapped,
    Beat is a fourth speed: a round of the pages lasts a quarter, a half, one
-   or two bars of the song, the speed is whatever does that, and the line
-   under it says what it makes ("12 pages in \u00bd bar \u00b7 12.4 a second").
+   or two bars of the song (one or two in a song in three), the speed is
+   whatever does that, and the line under it says what it makes ("12 pages
+   in \u00bd bar \u00b7 12.4 a second").
    A ROUND is what plays before it starts again: every page, a looped stretch
    repeated, or -- a stretch that loops forever -- that stretch alone, its
    pages before playing once. Still pages share the round, each by its hold;
@@ -11649,10 +11653,13 @@ function beatOf(raw){
   return typeof raw.bars === 'number' && BEAT_BARS.indexOf(raw.bars) >= 0 ? raw.bars : null;
 }
 function beatBpm(){ return musicTempo && musicTempo.bpm > 0 ? +musicTempo.bpm : 0; }
+// The beats in the song's bar: three for a song in three, else four.
+function beatMeter(){ return musicTempo && musicTempo.bar === 3 ? 3 : 4; }
 function beatFps(bars){
   const bpm = beatBpm(), H = window.SkriblHold;
   if(!bpm || !H || !frames.length) return null;
-  const target = bars * 4 * 60000 / bpm;
+  if(beatMeter() === 3 && bars < 1) return null;   // between a bar of three's beats
+  const target = bars * beatMeter() * 60000 / bpm;
   // A stretch repeated for about some seconds repeats as often as the speed
   // allows, so the fit is found again until it holds (a few passes at most).
   let f = fps || 12;

@@ -252,6 +252,8 @@ BATCHES = [
     ["verify_musictall.py"],               # measures — the box read on every frame, the wave's pixels on every frame
     # Step 7: the drawing in its lane (the Pad's inks, Flip's pictures).
     ["verify_musiclane.py"],               # measures — the lane's pixels, its height read on every frame of the box's glide
+    # Step 8: songs in three, the ears hearing them and the drawer counting in them.
+    ["verify_musicthree.py"],              # measures — the click's ticks on the audio clock, where the 4 and the 3 sit as the words change
     # Step 2 of the music plan: the timeline, the Restart view, Cut on silence.
     ["verify_musictimeline.py"],           # measures — the view read on every frame, a preview's playhead over time
     # Step 3: Skribl's ears, the pick on the beat heard.

@@ -165,7 +165,8 @@
               16 32"; of the mock, "All yes if it's intuitive"): how many beats
               the loop is, once there is a beat, the counts that fit lit by the
               loop's own and none while it is not whole bars (data-free, as a seg
-              with a free state). lib/musicdrawer.js says what a tap does. -#}
+              with a free state); 3, 6, 12 and 24 for a song in three, which
+              lib/musicdrawer.js writes in, and says what a tap does. -#}
           <div class="mt-step mt-beats" id="musicBeatsRow" hidden>
             <span class="edge-name" id="musicBeatsLbl">Beats</span>
             <span class="seg mt-step-seg" id="musicBeatsSeg" role="group" aria-labelledby="musicBeatsLbl" data-free><span class="seg-slider"></span><button type="button" data-beats="4">4</button><button type="button" data-beats="8">8</button><button type="button" data-beats="16">16</button><button type="button" data-beats="32">32</button></span>
@@ -183,12 +184,16 @@
             the Restart view. SNAP TO THE BEAT shows with it, on to start: a
             start dragged on the timeline lands on a beat, and the loop on
             whole bars, 4, 8, 16 or 32 beats (the owner: "we only ever want
-            4,8,16"); let go in the quiet before the music, or just into it,
+            4,8,16"), or 3, 6, 12 or 24 in three; let go in the quiet before the music, or just into it,
             the start lands where the music begins (the owner: "It snaps back
             to empty space"); zoomed in, the start stays where it is let go and
             the beat moves to it when it is near one (the owner: "how do I tell
             it where the beginning is?"); off, the ends stay where they are let
-            go (the owner: "I need a free set so it's not all automatic"). -#}
+            go (the owner: "I need a free set so it's not all automatic").
+            BEATS IN A BAR under it, 4 or 3 (songs in three, step 8 of the
+            whole-drawer mock: "All yes"), for when Skribl hears a song's bar
+            wrong, with where the bar came from: "heard by Skribl" or "set by
+            you". -#}
         <div class="dp-panel" id="musicDoorBeat" data-dp="beat" hidden>
           <div class="mt-beat" id="musicBeat">
             <div class="mt-tap-row">
@@ -200,6 +205,11 @@
                 <span class="mt-switch-words"><span class="mt-k">Snap to the beat</span> <span class="mt-v" id="musicSnapSub">The start you drag lands on a beat, or where the music starts, and the loop on whole bars. Zoomed in, it stays where you put it, and the beat follows.</span></span>
                 <button type="button" id="musicSnap" class="layer-toggle on" role="switch" aria-checked="true" aria-label="Snap to the beat"><span class="layer-toggle-knob"></span></button>
               </div>
+            </div>
+            <div class="mt-step mt-bar" id="musicBarRow" hidden>
+              <span class="edge-name" id="musicBarLbl">Beats in a bar</span>
+              <span class="seg mt-step-seg" id="musicBarSeg" role="group" aria-labelledby="musicBarLbl"><span class="seg-slider"></span><button type="button" data-bar="4" class="on">4</button><button type="button" data-bar="3">3</button></span>
+              <span class="mt-v mt-bar-says" id="musicBarSays"></span>
             </div>
           </div>
         </div>

@@ -47,7 +47,8 @@
  * the beat"; the mock and the owner: "all yes"). With a steady beat the loop
  * starts on a bar, in played music, where it comes round smoothly (of joins
  * as good, the first: usually where the beat comes in), and is whole bars,
- * 4, 8, 16 or 32 beats: where the editor asks for the drawing's length
+ * 4, 8, 16 or 32 beats (3, 6, 12 or 24 for a song in three): where the
+ * editor asks for the drawing's length
  * (`fitsByDefault`, the Pad), the count nearest the drawing (the owner's
  * pick; Fit my drawing makes it exact), else the most that fit the 20s. The
  * beat heard is the song's beat at once, marked heard, so the beat count,
@@ -97,15 +98,25 @@
  * (let go in the quiet before the music or just into it, where the music
  * begins; zoomed in, it stays, and the beat moves to it when it is near one)
  * and the loop on whole bars,
- * 4, 8, 16 or 32 beats (the owner: "we only ever want 4,8,16,... beats"), the
- * end where the loop comes round, so with a smooth restart the handle sits
- * that much past the beat. Zoomed in, an end let go near whole bars stays,
+ * 4, 8, 16 or 32 beats (the owner: "we only ever want 4,8,16,... beats"), or
+ * 3, 6, 12 or 24 in three, the end where the loop comes round, so with a
+ * smooth restart the handle sits that much past the beat. Zoomed in, an end let go near whole bars stays,
  * and the beat changes to make them exact (THE END SETS THE TEMPO, at snap
  * below), with a note and its Undo. The Beat door's tile says where the
  * beat came from: heard, tapped, or by hand from the end. The loop slid along the
  * song starts on a beat, and - and + move a bar unless another step is
  * picked. Off, nothing settles. The tempo is the editor's, saved with the
  * song in its drafts, and the switch with it.
+ *
+ * SONGS IN THREE (step 8 of the whole-drawer mock; the owner: "All yes"). A
+ * bar is the tempo's own: four beats, or three for a waltz, as Skribl hears
+ * it (lib/musicears.js) or as Beats in a bar in the Beat door sets it, for
+ * when the ears hear it wrong; its words say which, "heard by Skribl" or
+ * "set by you". Everything that counts bars counts in it: Beats (3 · 6 · 12
+ * · 24 in three), Skribl's pick, Snap to the beat, the end setting the
+ * tempo, "a bar" in Each press, the bigger dot on each bar, the click's
+ * higher tick, and Flip's Beat speed. Setting it moves nothing: the loop
+ * stays where it is, counted again in the new bar.
  *
  * TEST SEAM IS AN <audio> ELEMENT, played inside the tap. On a phone set to
  * silent that is the one that is heard (verify_audiosession's first note),
@@ -175,7 +186,7 @@
   var EPS = 0.0005;                        // two times are one at the thousandth
   var TAP_IDLE_MS = 2000;                  // Tap the beat settles after this long without a tap
   var SNAP_PX = 8;                         // in the loop detail, an end let go this near a beat settles on it
-  var BARS = [4, 8, 16, 32];               // the beats a loop settles on: 1, 2, 4 or 8 bars
+  var BARS = [1, 2, 4, 8];                 // the bars a loop settles on: 4, 8, 16 or 32 beats, or 3, 6, 12 or 24 in three
   var GLIDE_MS = 200;                      // a settle glides there
 
   function fill(el) {
@@ -204,8 +215,10 @@
   // A tempo as saved: { bpm, phase } -- beats a minute, and where a beat falls
   // in the song, in seconds -- with snap: false once Snap to the beat is
   // turned off for it, heard: true when Skribl heard it (lib/musicears.js)
-  // rather than taps, and by: 'end' when the loop's end set it (snap, zoomed
-  // in). Anything else is no tempo.
+  // rather than taps, by: 'end' when the loop's end set it (snap, zoomed
+  // in), bar: 3 for a song in three (a bar is four beats without it, so a
+  // song in four saves what it always did), and barBy: 'you' when Beats in a
+  // bar set it rather than Skribl. Anything else is no tempo.
   function tempoFrom(t) {
     var bpm = t ? +t.bpm : NaN, ph = t ? +t.phase : NaN;
     if (!(bpm >= 30 && bpm <= 300 && isFinite(ph))) return null;
@@ -213,8 +226,12 @@
     if (t.snap === false) out.snap = false;
     if (t.heard === true) out.heard = true;
     if (t.by === 'end') out.by = 'end';
+    if (t.bar === 3) out.bar = 3;
+    if (t.barBy === 'you') out.barBy = 'you';
     return out;
   }
+  // The beats in a tempo's bar: three for a song in three, else four.
+  function inBar(tp) { return tp && tp.bar === 3 ? 3 : 4; }
   // A copy of a tempo, every field kept, for a change to one of them.
   function copyOf(tp) { var o = {}; for (var key in tp) o[key] = tp[key]; return o; }
   // Beats a minute as said: whole, as heard or tapped; to the tenth when the
@@ -606,11 +623,11 @@
       var q = tp.phase + Math.round((o - tp.phase) / p) * p;
       return Math.abs(o - q) <= p / 8 && q >= 0 ? q : o;
     }
-    // Of 4, 8, 16 and 32 beats, the count nearest `len` heard that `room`
-    // seconds hold, or 0.
+    // Of 4, 8, 16 and 32 beats (3, 6, 12 and 24 in three), the count nearest
+    // `len` heard that `room` seconds hold, or 0.
     function barsFor(len, room) {
       var p = beatSecs(), best = 0;
-      BARS.forEach(function (k) {
+      counts().forEach(function (k) {
         var l = lenFor(k);
         if (l > Math.min(T.MAX_LOOP_SECONDS, room) + EPS || l < T.MIN_LOOP_SECONDS - EPS) return;
         if (!best || Math.abs(len - k * p) < Math.abs(len - best * p)) best = k;
@@ -637,7 +654,7 @@
       } else if (!pxPerSec) {
         // The loop stays as it is, so the room it needs is already there.
         var hz = heard(t, h.crossfade()), kz = 0;
-        if (zoomed && h.setTempo) BARS.forEach(function (c) { if (Math.abs(hz - c * p) <= p / 8) kz = c; });
+        if (zoomed && h.setTempo) counts().forEach(function (c) { if (Math.abs(hz - c * p) <= p / 8) kz = c; });
         var bpm = kz ? Math.round(60 * kz / hz * 1000) / 1000 : 0;
         if (kz && Math.abs(hz - kz * p) > EPS && bpm >= 30 && bpm <= 300) {
           var nt = copyOf(tp);
@@ -792,10 +809,10 @@
       }
       // The beat, as the timeline marks it: bigger on each bar from the loop's start.
       if (p > 0) {
-        var k0 = Math.round((t.start - tp.phase) / p);
+        var k0 = Math.round((t.start - tp.phase) / p), nb = inBar(tp);
         x.fillStyle = ink;
         for (var kb = Math.ceil((v0 - tp.phase) / p); tp.phase + kb * p <= v0 + span; kb++) {
-          var bar = ((kb - k0) % 4 + 4) % 4 === 0;
+          var bar = ((kb - k0) % nb + nb) % nb === 0;
           x.globalAlpha = bar ? 0.9 : 0.6;
           x.beginPath(); x.arc(X(tp.phase + kb * p), 8, bar ? 2.6 : 1.8, 0, 7); x.fill();
         }
@@ -874,7 +891,7 @@
       if (stepPick === 'bar') return beatSecs() > 0 ? 'bar' : '0.1';
       return snapOn() ? 'bar' : '0.1';
     }
-    function stepNow() { var k = stepKey(); return k === 'bar' ? 4 * beatSecs() : parseFloat(k); }
+    function stepNow() { var k = stepKey(); return k === 'bar' ? inBar(tempo()) * beatSecs() : parseFloat(k); }
     function syncSteps() {
       var p = beatSecs(), k = stepKey();
       nudges.forEach(function (b) {
@@ -886,7 +903,7 @@
         var on = b.dataset.step === k, gone = b.dataset.step === 'bar' && !(p > 0);
         if (b.classList.contains('on') !== on) b.classList.toggle('on', on);
         if (b.hidden !== gone) { b.hidden = b.disabled = gone; if (!gone) glideIn(b, 'x'); }
-        var t = b.dataset.step === 'bar' && !gone ? 'A bar, ' + (4 * p).toFixed(2) + 's' : '';
+        var t = b.dataset.step === 'bar' && !gone ? 'A bar, ' + (inBar(tempo()) * p).toFixed(2) + 's' : '';
         if ((b.getAttribute('title') || '') !== t) { if (t) b.setAttribute('title', t); else b.removeAttribute('title'); }
       });
     }
@@ -961,19 +978,24 @@
     }
     // Skribl's pick with ears, for the drawing's length as it is: whole bars
     // nearest it on the Pad (the owner's pick), the longest that fits otherwise.
+    // In the tempo's bar once there is a tempo (the one heard, or set in the
+    // Beat door), in the bar heard before.
     function earsPickFor(secs, d) {
       if (!earsHeard) return null;
-      var key = secs.toFixed(3) + '|' + d.toFixed(3);
+      var tp = tempo(), bar = tp ? inBar(tp) : earsHeard.bar, key = secs.toFixed(3) + '|' + d.toFixed(3) + '|' + bar;
       if (key !== earsKey) {
         earsKey = key;
         earsPick = global.SkriblEars.pick(earsHeard, { duration: d, target: secs > 0 ? secs : T.MAX_LOOP_SECONDS,
-          maxLoop: T.MAX_LOOP_SECONDS, minLoop: T.MIN_LOOP_SECONDS, fadeMs: PICK_FADE_MS });
+          maxLoop: T.MAX_LOOP_SECONDS, minLoop: T.MIN_LOOP_SECONDS, fadeMs: PICK_FADE_MS, bar: bar });
       }
       return earsPick;
     }
     function fromEars(P, secs) {
-      return { start: P.start, end: P.end, ms: PICK_FADE_MS, fits: secs > 0 && near(P.heard, secs),
-               tempo: { bpm: Math.round(P.bpm * 1000) / 1000, phase: Math.round(P.phase * 10000) / 10000, heard: true } };
+      var tp = { bpm: Math.round(P.bpm * 1000) / 1000, phase: Math.round(P.phase * 10000) / 10000, heard: true }, was = tempo();
+      if (P.bar === 3) tp.bar = 3;
+      // a bar set by you, which the pick counted in, stays yours
+      if (was && was.barBy === 'you' && inBar(was) === (P.bar || 4)) tp.barBy = 'you';
+      return { start: P.start, end: P.end, ms: PICK_FADE_MS, fits: secs > 0 && near(P.heard, secs), tempo: tp };
     }
     // `drawing`: the drawing's length when the caller has it (sync, below).
     function pickNow(drawing) {
@@ -986,12 +1008,13 @@
       else { end = Math.min(d, T.MAX_LOOP_SECONDS); ms = fadeFor(end); }
       return { start: 0, end: end, ms: ms, fits: secs > 0 && near(heard({ start: 0, end: end }, ms), secs) };
     }
-    // The loop's length in whole bars of the beat, 4, 8, 16 or 32, or 0.
+    // The loop's length in whole bars of the beat, 4, 8, 16 or 32 (3, 6, 12
+    // or 24 in three), or 0.
     function countOf() {
       var p = beatSecs();
       if (!(p > 0) || !h.hasTrack()) return 0;
       var n = heard(loopNow(), h.crossfade()) / p, c = Math.round(n);
-      return BARS.indexOf(c) >= 0 && Math.abs(n - c) < 0.01 ? c : 0;
+      return counts().indexOf(c) >= 0 && Math.abs(n - c) < 0.01 ? c : 0;
     }
     function isPick(p) {
       var t = loopNow();
@@ -1441,7 +1464,7 @@
       // worked out once for each loop, not each tick.
       var t = h.trim(), key = t.start + '|' + t.end + '|' + h.crossfade() + '|' + !!(h.cut && h.cut());
       if (!beatClip || beatClip.key !== key) beatClip = { key: key, start: t.start + cutNow() };
-      var p = 60 / tp.bpm, clip0 = beatClip.start, now = c.currentTime, base = now - h.loop.elapsed();
+      var p = 60 / tp.bpm, nb = inBar(tp), clip0 = beatClip.start, now = c.currentTime, base = now - h.loop.elapsed();
       var lead = (global.SkriblAudioLoop && global.SkriblAudioLoop.LEAD) || 0.03;
       if (pv.from == null) pv.from = base + (pv.off || 0) + lead;      // this start's sound began
       var s0 = pv.from;
@@ -1461,7 +1484,7 @@
           var id = Math.round(at * 1000);
           if (beatDone[id] || beatDone[id - 1] || beatDone[id + 1]) continue;
           beatDone[id] = 1;
-          var bar = ((k - k0) % 4 + 4) % 4 === 0, set = { when: when, bar: bar, tick: null, lit: null };
+          var bar = ((k - k0) % nb + nb) % nb === 0, set = { when: when, bar: bar, tick: null, lit: null };
           if (clickOn) set.tick = tick(c, when, bar);
           if (tl && tl.pulse) light(set, tp.phase + k * p, bar, heardIn(c, when, now));
           beatsSet.push(set); last = when;
@@ -1531,6 +1554,9 @@
     var taps = [], tapT = null, tapNote = '';
     function tempo() { return tempoFrom(h.tempo ? h.tempo() : null); }
     function beatSecs() { var tp = tempo(); return tp ? 60 / tp.bpm : 0; }
+    // The counts a loop of whole bars takes: 4, 8, 16 and 32 beats, or 3, 6,
+    // 12 and 24 in three.
+    function counts() { var n = inBar(tempo()); return BARS.map(function (k) { return k * n; }); }
     // The stretch selected for n beats heard: n of them and the smooth
     // restart's length, or twice n when the restart is longer than that
     // (lib/audioloop.js caps the fold at half the loop).
@@ -1577,8 +1603,11 @@
         });
         run.forEach(function (tp) { var a = 2 * Math.PI * tp.song / p; x += Math.cos(a); y += Math.sin(a); n++; });
         var ph = n ? ((Math.atan2(y, x) / (2 * Math.PI)) * p + p) % p : 0;
-        var next = { bpm: bpm, phase: Math.round(ph * 10000) / 10000 };
-        if (tempo() && !snapOn()) next.snap = false;      // tapped again, the switch stays as it was
+        var next = { bpm: bpm, phase: Math.round(ph * 10000) / 10000 }, was = tempo();
+        if (was && !snapOn()) next.snap = false;      // tapped again, the switch stays as it was
+        // and the bar, and who set it: taps tell the beat, not how many make a bar
+        if ((was ? inBar(was) : earsHeard ? earsHeard.bar : 4) === 3) next.bar = 3;
+        if (was && was.barBy) next.barBy = was.barBy;
         if (h.setTempo) h.setTempo(next);
         tapNote = '';
         h.changed();
@@ -1624,10 +1653,10 @@
     /* ---- Beats: how many beats the loop is (the owner: "There should be
      * ways to have skribl pick 4 or 8 16 32"; of the mock, "All yes if it's
      * intuitive"). In the Length door, under its three choices, once there
-     * is a beat, heard or tapped: of 4, 8, 16 and 32, the counts the 20s cap
-     * and the song have room for, the loop's own lit, none while it is not
-     * whole bars. A count tapped while the loop is Skribl's (its card lit),
-     * with ears, is Skribl's pick for
+     * is a beat, heard or tapped: of 4, 8, 16 and 32 (3, 6, 12 and 24 in
+     * three), the counts the 20s cap and the song have room for, the loop's
+     * own lit, none while it is not whole bars. A count tapped while the
+     * loop is Skribl's (its card lit), with ears, is Skribl's pick for
      * that many beats where the loop is: the smoothest stretch inside it
      * when shorter, around it when longer, starting on a bar, and the start
      * kept when it is as good. (Picked from the whole song, 8 beats of a
@@ -1643,7 +1672,8 @@
     function repick(c, t) {
       var now = heard(t, h.crossfade()), want = c * earsHeard.period, a = t.start + now - want;
       var P = global.SkriblEars.pick(earsHeard, { duration: t.duration, target: want, maxLoop: T.MAX_LOOP_SECONDS,
-        minLoop: T.MIN_LOOP_SECONDS, fadeMs: PICK_FADE_MS, from: Math.max(0, Math.min(t.start, a)), to: Math.max(t.start, a), near: t.start });
+        minLoop: T.MIN_LOOP_SECONDS, fadeMs: PICK_FADE_MS, from: Math.max(0, Math.min(t.start, a)), to: Math.max(t.start, a), near: t.start,
+        bar: inBar(tempo()) });
       return P && P.beats === c ? fromEars(P, 0) : null;
     }
     function roomFor(c) {
@@ -1652,9 +1682,10 @@
     }
     function syncBeats() {
       if (!beatsRow || !beatsSeg) return;
-      var tp = h.hasTrack() ? tempo() : null, c = countOf(), any = false, btns = beatsSeg.querySelectorAll('button');
+      var tp = h.hasTrack() ? tempo() : null, c = countOf(), any = false, btns = beatsSeg.querySelectorAll('button'), cs = counts();
       for (var i = 0; i < btns.length; i++) {
-        var n = +btns[i].dataset.beats, fit = !!tp && roomFor(n);
+        var n = cs[i], fit = !!tp && roomFor(n);
+        if (+btns[i].dataset.beats !== n) { btns[i].dataset.beats = String(n); btns[i].textContent = String(n); }
         if (btns[i].hidden !== !fit) btns[i].hidden = btns[i].disabled = !fit;
         any = any || fit;
         btns[i].classList.toggle('on', fit && n === c);
@@ -1700,6 +1731,41 @@
       var n = copyOf(tp);
       if (tp.snap !== false) n.snap = false; else delete n.snap;
       h.setTempo(n);
+      h.changed();
+      sync();
+    });
+
+    // Beats in a bar, under Snap once there is a tempo: 4 or 3 (SONGS IN
+    // THREE, above), for when Skribl hears a song's bar wrong. Its words say
+    // where the bar came from: "heard by Skribl" for the bar Skribl heard,
+    // "set by you" for one set here (set back to the one heard, it is
+    // Skribl's again), nothing for a four nobody chose (a tapped beat Skribl
+    // never heard). Setting it moves nothing: the loop is counted again.
+    var barRow = $('musicBarRow'), barSeg = $('musicBarSeg'), barSays = $('musicBarSays');
+    function barWords(tp) {
+      if (tp.barBy === 'you') return 'set by you';
+      return inBar(tp) === 3 || tp.heard || (earsHeard && earsHeard.bar === inBar(tp)) ? 'heard by Skribl' : '';
+    }
+    function syncBar() {
+      if (!barRow) return;
+      var tp = h.hasTrack() ? tempo() : null;
+      if (barRow.hidden !== !tp) { barRow.hidden = !tp; if (tp) glideIn(barRow, 'y'); }
+      if (!tp) return;
+      if (barSeg) [].forEach.call(barSeg.querySelectorAll('button[data-bar]'), function (b) {
+        var on = +b.dataset.bar === inBar(tp);
+        if (b.classList.contains('on') !== on) b.classList.toggle('on', on);
+      });
+      var w = barWords(tp);
+      if (barSays && barSays.textContent !== w) barSays.textContent = w;
+    }
+    if (barSeg) barSeg.addEventListener('click', function (ev) {
+      var b = ev.target && ev.target.closest && ev.target.closest('button[data-bar]'), tp = tempo(), k = b ? +b.dataset.bar : 0;
+      if (!b || !tp || !h.setTempo || (k !== 3 && k !== 4) || k === inBar(tp)) return;
+      var n = copyOf(tp);
+      if (k === 3) n.bar = 3; else delete n.bar;
+      if (earsHeard && earsHeard.bar === k) delete n.barBy; else n.barBy = 'you';
+      h.setTempo(n);
+      h.refresh();
       h.changed();
       sync();
     });
@@ -1843,6 +1909,7 @@
       syncHear(secs);
       syncTap();
       syncSnap();
+      syncBar();
       syncCut();
       syncRvHint();
       doorWords();

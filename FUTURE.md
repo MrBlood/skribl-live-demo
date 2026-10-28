@@ -1167,6 +1167,7 @@ whole-drawer mock's New:
    the Pad's strokes in their own inks, at 3:1 against the lane). Built
    (DECISIONS, the drawing in its lane), Flip's lane growing with the box.
 8. Songs in three: the ears hear threes, and a waltz counts 3 · 6 · 12 · 24.
+   Built (DECISIONS, songs in three), with Beats in a bar in the Beat door.
 Then the ears' speed measured at phone pace (a Worker if it shows), and
 ten of the owner's songs by ear with the click on (6t). Each step's
 suites, help words, contrast census and docs ride with it.
@@ -1270,12 +1271,14 @@ left comes after D (6s), each mocked first where it shows:
   slowed four times as a stand-in for a phone (there is no phone here). If
   either shows, move the ears into a Web Worker: the page never waits on
   them, and they run without the pauses.
-- SONGS IN THREE. The ears take a bar as four beats and the Beats row offers
-  4 · 8 · 16 · 32, so a waltz or a 6/8 ballad loops a beat into its bar.
-  Hearing threes (the kicks and chord changes gathering every third beat)
-  and offering 3 · 6 · 12 · 24 for those songs bends the owner's "we only
-  ever want 4,8,16" (said of songs in four), so it waits for their yes, with
-  a waltz among the test songs.
+- SONGS IN THREE. Built in step 8 of the whole-drawer mock, on the owner's
+  "All yes" (DECISIONS, songs in three): the ears hear threes, the drawer
+  counts 3 · 6 · 12 · 24 for them, and Beats in a bar sets four or three by
+  hand. Left over: a round of one beat for Flip's Beat in a waltz (Beat's
+  rounds there are 1 and 2 bars, as a quarter or half of a bar of three
+  ends between beats; a round of a beat needs the post's `beat` to take a
+  third of a bar, which the server's check does not yet), and a fast waltz
+  heard at half its speed, counted in bars of two (Tap the beat sets it).
 - THE OWNER'S OWN SONGS, BY EAR. With the click in, ten of the owner's songs
   played with it on; any that sound off become the ears' next cases, kept as
   timings and never committed (the real recordings stay out of the repo).

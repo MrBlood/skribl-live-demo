@@ -636,6 +636,23 @@ stays a sleep.
   the ends' handles 8px under it; a press on the taller lane moving nothing;
   the beat lit on its dot; the Pad's lane 26px, tall or not.
   Skribl's ears are off here.
+- `verify_musicthree.py` — songs in three (step 8), on songs made in the page
+  (`harness/songsynth.py`, which makes `verify_musicears`'s songs too): every
+  song in three heard in three at its own beat (a waltz at 168, a ballad at
+  92, a band speeding up from 132, a piano's waltz with no drums, and two slow
+  waltzes heard first at their eighths), every song in four in four; on the
+  Pad and on Flip, a new waltz on one of its bars and 24 of its own beats
+  long, its beat heard in three, the one line, the Length tile and Beats
+  (3 · 6 · 12 · 24) counting it, the dots bigger and the click's tick higher
+  every third beat, a bar in Each press three beats; Beats in a bar under
+  Snap, heard by Skribl, a tap on 4 leaving the loop where it is and counting
+  it in four, set by you, Skribl's pick then counting in four, 3 again
+  Skribl's; a song in four 4, a beat Skribl never heard 4 with nothing said;
+  an end let go near 11 beats settling on 12, and zoomed in near 12 setting
+  the beat; a tapped beat kept in three; the bar and who set it kept over a
+  reload; Flip's Beat rounds 1 and 2 bars in three, a round three beats, the
+  four back in four; the 4 and the 3 staying put as the words change, on two
+  phones and a desk.
 - `verify_musictimeline.py` — step 2 of the music plan (the owner: "Yes on
   all"), on the Pad and on Flip: the timeline (lib/musictimeline.js) is the
   drawer's one view, the drawing's lane over the song, two handles and the

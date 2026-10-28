@@ -2475,6 +2475,12 @@ body.recoloring #canvas { cursor: crosshair !important; }
 /* BEATS, under the one line, wears Each press's row; its space above is
    padding, so it opens out with the row (glideIn) rather than in one frame. */
 .mt-beats { margin-top: 0; padding-top: 10px; }
+/* BEATS IN A BAR, under Snap to the beat, wears it too. Its words ("heard by
+   Skribl", "set by you", or none) keep the room of the longest, so the 4 and
+   the 3 never move under the finger that sets them; on a narrow phone they
+   go under the choice, a line kept for them. */
+.mt-bar { margin-top: 0; padding-top: 10px; flex-wrap: wrap; row-gap: 6px; }
+.mt-bar .mt-bar-says { min-width: 8em; min-height: 1.3em; text-align: left; }
 /* THE TIMELINE FOLLOWS YOU (lib/musicdrawer.js): a copy of the timeline under
    the header while the real one is scrolled up out of sight, on a card's
    paper, the card's own edge and drop, and its foot a card's corner (its

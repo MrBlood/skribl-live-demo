@@ -546,6 +546,14 @@ def surfaces(name, ids, q, canvas, btn):
                    " loopCrossfadeMs = 250; setCrossfadeUI(); updateTrimUI(); }")
         q.wait_for_timeout(700)
 
+    # And the Beat door with a beat in three (songs in three): Beats in a bar
+    # under Snap to the beat, its 3 lit and its words, "heard by Skribl".
+    def music_three():
+        music("beat")()
+        q.evaluate("() => { musicTempo = { bpm: 300, phase: 0, heard: true, bar: 3 }; trimStart = 0; trimEnd = 1.85;"
+                   " loopCrossfadeMs = 250; setCrossfadeUI(); updateTrimUI(); }")
+        q.wait_for_timeout(900)
+
     # And scrolled down at Exact times, with a beat: the timeline's copy under
     # the header (lib/musicdrawer.js), its words and the way back up on the
     # card's paper, over whatever passes under it. Exact times opens under
@@ -599,6 +607,7 @@ def surfaces(name, ids, q, canvas, btn):
              ("Music, empty", empty("music"), "#mediaCard"), ("Music", music(None), "#mediaCard"),
              ("Music, with a beat", music_beat, "#mediaCard"),
              ("Music, Length", music("length"), "#mediaCard"), ("Music, Beat", music("beat"), "#mediaCard"),
+             ("Music, Beat in three", music_three, "#mediaCard"),
              ("Music, Restart", music("restart"), "#mediaCard"), ("Music, Exact times", music("exact"), "#mediaCard"),
              ("Music, down at Exact times", music_down, "#musicFollow"))
             + (((SHELF[0], stamps(False), "#stampPop"), (SHELF[1], stamps(True), "#stampPop"),

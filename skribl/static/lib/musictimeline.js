@@ -121,7 +121,8 @@
  *   buffer()            the decoded AudioBuffer, or null
  *   hasTrack()
  *   crossfade()         ms
- *   tempo()             { bpm, phase } or null
+ *   tempo()             { bpm, phase, bar } or null (bar: 3 for a song in
+ *                       three, the dots bigger every third beat; else four)
  *   lane()              { seconds, marks: [[a, b, label?, ink?], ...], again }
  *                       (seconds; a page's number, Flip's, or a stroke's ink,
  *                       the Pad's; `again`, Flip's: { from, period } of the
@@ -609,11 +610,11 @@
       }
       var tp = beat;
       if (tp) {
-        var p = 60 / tp.bpm, ppb = p / view.span * w, k0 = Math.round((s0 - tp.phase) / p);
+        var p = 60 / tp.bpm, ppb = p / view.span * w, k0 = Math.round((s0 - tp.phase) / p), nb = (h.tempo() || {}).bar === 3 ? 3 : 4;
         for (var kb = Math.ceil((Math.max(0, view.v0) - tp.phase) / p); tp.phase + kb * p <= Math.min(dur, view.v0 + view.span); kb++) {
-          var bar = ((kb - k0) % 4 + 4) % 4 === 0;
+          var bar = ((kb - k0) % nb + nb) % nb === 0;
           if (ppb < 6 && !bar) continue;
-          if (ppb * 4 < 6 && ((kb - k0) % 16 + 16) % 16) continue;
+          if (ppb * nb < 6 && ((kb - k0) % (4 * nb) + 4 * nb) % (4 * nb)) continue;
           x.fillStyle = ink; x.globalAlpha = (bar ? 0.9 : 0.75) * beatIn;
           x.beginPath(); x.arc(X(tp.phase + kb * p), sTop + 8, bar ? 2.4 : 1.7, 0, 7); x.fill();
           drawn.beats.push([+X(tp.phase + kb * p).toFixed(2), bar, +(tp.phase + kb * p).toFixed(4)]);

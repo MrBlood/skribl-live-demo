@@ -1,16 +1,22 @@
-/* SKRIBL'S EARS: where a song's beat falls, which beat starts a bar, and
- * which stretch of whole bars comes round most smoothly. Step 3 of the music
- * plan ("the part that loops best, on the beat"), mocked from the real drawer
- * with songs to hear, and picked by the owner: "all yes".
+/* SKRIBL'S EARS: where a song's beat falls, how many beats make its bar
+ * (four, or three), which beat starts one, and which stretch of whole bars
+ * comes round most smoothly. Step 3 of the music plan ("the part that loops
+ * best, on the beat"), mocked from the real drawer with songs to hear, and
+ * picked by the owner: "all yes"; the bar of three is step 8 of the
+ * whole-drawer mock (FUTURE.md 6s).
  *
  *   listen(buffer, done)  reads the song's first two minutes a few
  *                         milliseconds at a time, so the page never stalls,
  *                         then calls done(heard); returns { cancel }.
  *   hear(samples, rate)   the same at once, for a channel already in hand.
+ *                         heard.bar is its bar: 4, or 3 for a song in three.
  *   pick(heard, o)        Skribl's pick, with ears, or null:
  *                         o = { duration, target, maxLoop, minLoop, fadeMs,
- *                               from, to, near }
- *                         -> { start, end, beats, bpm, phase, heard, join }
+ *                               from, to, near, bar }
+ *                         -> { start, end, beats, bar, bpm, phase, heard, join }
+ *                         bar, when given (3 or 4), is the bar the pick
+ *                         counts in, as set in the Beat door; the one heard
+ *                         otherwise
  *                         from and to, when given, hold the start between
  *                         them, to a quarter of a beat; near, when given,
  *                         takes of joins as good the start nearest it, not
@@ -33,8 +39,9 @@
  * was heard at 60. Where the beat falls is where the flux gathers, read round
  * the beat's circle; the flux peaks about 10ms before a sound is heard to
  * start (its window reaches it early), measured on clicks, and put back. A
- * bar is four beats; the beat that starts one is where the kicks and the
- * chord changes gather.
+ * bar is four beats, or three where the kicks and the chord changes gather
+ * every third beat and not every fourth (THE BAR, below); the beat that
+ * starts one is where they gather.
  *
  * NO STEADY BEAT, NO BEAT. A pad, a voice, a steady tone or a sweep has none,
  * and then Skribl says so and picks as it did before it had ears. Two things
@@ -46,8 +53,8 @@
  * lands on no beats.
  *
  * THE PICK. Of 4, 8, 16 and 32 beats (the owner: "we only ever want
- * 4,8,16,..."), the count nearest the length wanted that fits; starting on a
- * bar; where the song after the loop's end would go on as it goes on after
+ * 4,8,16,..."), or in three 3, 6, 12 and 24, the count nearest the length
+ * wanted that fits; starting on a bar; where the song after the loop's end would go on as it goes on after
  * its start, or came to its start as it comes to the end (the same chord,
  * the same things playing, as loud); of joins as good, the earliest (the
  * owner's pick: usually where the beat comes in). An intro or a fade joins
@@ -73,7 +80,9 @@
   var LAG = -0.22;                // the flux's peak before the heard start, in windows (clicks)
   var SURE = 3.5, HITS = 0.5, MIN_HITS = 8;
   var WIDE = 64;                  // of 511 bins growing at once: a beat (drums, a pluck) is a burst
-  var COUNTS = [4, 8, 16, 32];
+  var COUNTS = [4, 8, 16, 32];    // in three, 3, 6, 12 and 24: 1, 2, 4 or 8 bars either way
+  var THREE_AT = 0.6, THREE_OVER = 2;   // a song is in three when its threes gather this plainly, and this much more than its fours
+  var SIX_OVER = 1.5;             // and heard at its eighths when its sixes gather this much more than its threes
   var TIE = 0.03;                 // joins this close are as good: the earlier wins (or the nearer, o.near)
 
   function makeFFT(n) {
@@ -251,14 +260,60 @@
     }
     return out;
   }
-  function barOf(B) {
-    var sc = [0, 0, 0, 0], cn = [0, 0, 0, 0], km = 0, j;
+  // How much each beat looks like a bar's first: its kick, against the
+  // stretch's own, and how far the chord moved from the beat before.
+  // s[j - 1] is beat j's.
+  function scores(B) {
+    var km = 0, s = [], j;
     for (j = 0; j < B.length; j++) km += B[j].kick / B.length;
     km = km || 1;
-    for (j = 1; j < B.length; j++) { sc[j % 4] += B[j].kick / km + 4 * (1 - dot(B[j - 1].chroma, B[j].chroma)); cn[j % 4]++; }
-    var bar = 0;
-    for (j = 1; j < 4; j++) if (sc[j] / (cn[j] || 1) > sc[bar] / (cn[bar] || 1)) bar = j;
+    for (j = 1; j < B.length; j++) s.push(B[j].kick / km + 4 * (1 - dot(B[j - 1].chroma, B[j].chroma)));
+    return s;
+  }
+  // Which of every m beats starts a bar: the one where the kicks and the
+  // chord changes gather.
+  function barOf(B, m) {
+    var s = scores(B), sc = [], cn = [], j, bar = 0;
+    for (j = 0; j < m; j++) { sc.push(0); cn.push(0); }
+    for (j = 1; j < B.length; j++) { sc[j % m] += s[j - 1]; cn[j % m]++; }
+    for (j = 1; j < m; j++) if (sc[j] / (cn[j] || 1) > sc[bar] / (cn[bar] || 1)) bar = j;
     return bar;
+  }
+  // How plainly one of every m beats stands out: its beats' scores against
+  // the others', in the scores' own spread.
+  function gather(s, m) {
+    var sum = [], cn = [], n = s.length, all = 0, sq = 0, j;
+    for (j = 0; j < m; j++) { sum.push(0); cn.push(0); }
+    for (j = 0; j < n; j++) { sum[(j + 1) % m] += s[j]; cn[(j + 1) % m]++; all += s[j]; sq += s[j] * s[j]; }
+    var mean = all / n, sd = Math.sqrt(Math.max(1e-12, sq / n - mean * mean)), top = -Infinity, at = 0, rest = 0, rn = 0;
+    for (j = 0; j < m; j++) if (cn[j] && sum[j] / cn[j] > top) { top = sum[j] / cn[j]; at = j; }
+    for (j = 0; j < m; j++) if (j !== at) { rest += sum[j]; rn += cn[j]; }
+    return (top - rest / (rn || 1)) / sd;
+  }
+  // THE BAR: three beats or four. A song is in three (a waltz, a ballad in
+  // three) when its kicks and chord changes gather every third beat and not
+  // every fourth, read a stretch at a time on that stretch's own beat, as
+  // the pick reads it, so a band that speeds up keeps its bars. Otherwise
+  // four, as most songs are, and as Skribl heard every song before: a song
+  // in four counted in threes would loop a beat into its bar, so three has
+  // to be plain. Six that gather plainly, and more than three, are a song in
+  // three heard at its eighths (6, and finish halves the beat).
+  function meterOf(H) {
+    var d = H.duration, g3 = 0, g4 = 0, g6 = 0, n = 0;
+    for (var w0 = 0; w0 + 8 <= d; w0 += 8) {
+      var w1 = Math.min(d, w0 + 16), g = local(H, w0, w1);
+      if (!(g.sure >= SURE)) continue;
+      var B = beatsOn(H, g, w0, w1);
+      if (B.length < 13) continue;
+      var s = scores(B);
+      g3 += gather(s, 3) * s.length; g4 += gather(s, 4) * s.length; g6 += gather(s, 6) * s.length; n += s.length;
+    }
+    var G = H.gathers = { three: n ? g3 / n : 0, four: n ? g4 / n : 0, six: n ? g6 / n : 0 };
+    var over = function (g) { return g >= THREE_AT && g >= THREE_OVER * G.four; };
+    // Sixes far plainer than threes first: heard at its eighths, a waltz's
+    // threes are half bars, and gather too (1.2 to 1.3 to the sixes' 2.6).
+    if (over(G.six) && G.six >= SIX_OVER * G.three) return 6;
+    return over(G.three) ? 3 : 4;
   }
 
   // Peaks of x, strongest first; the middle of the strongest k of them.
@@ -333,13 +388,25 @@
     // people tap. A rock beat at 120 was heard at 60, on its snares on 2 and
     // 4: its kicks between them, on 1 and 3, are what the flux hears least.
     // It must hold as steady there.
+    var was = T;
     if (H.bpm < 120 / Math.SQRT2 && steady(H)) {
       var hm = hitsOf(H, 0.5);
       if (hm.hits >= HITS * hm.beats) {
-        var c2 = circle(H.o, hop, 2 * T.bpm);
-        beat(H, whole(H.o, hop, { bpm: 2 * T.bpm, peak: c2.peak, phase: c2.phase }));
-        if (!steady(H)) beat(H, T);
+        var c2 = circle(H.o, hop, 2 * T.bpm), T2 = whole(H.o, hop, { bpm: 2 * T.bpm, peak: c2.peak, phase: c2.phase });
+        beat(H, T2);
+        if (!steady(H)) beat(H, T); else was = T2;
       }
+    }
+    H.bar = meterOf(H);
+    // A song in three heard at its eighths (a slow waltz at 84, its eighths
+    // played, was heard at 168, and one at 76 doubled to 152; their bars
+    // gathered in sixes): its beat is half as fast, and in three there, or
+    // it is heard as it was, in four.
+    if (H.bar === 6) {
+      var half = H.bpm / 2, c3 = half >= 40 ? circle(H.o, hop, half) : null;
+      if (c3) beat(H, whole(H.o, hop, { bpm: half, peak: c3.peak, phase: c3.phase }));
+      if (c3 && steady(H) && meterOf(H) === 3) H.bar = 3;
+      else { beat(H, was); meterOf(H); H.bar = 4; }
     }
     return H;
   }
@@ -400,7 +467,9 @@
   function pick(H, o) {
     if (!steady(H)) return null;
     var fade = Math.max(0, o.fadeMs || 0) / 1000, all = [], k = 0, d = Math.min(o.duration, H.duration);
-    COUNTS.forEach(function (c) {
+    var m = o.bar === 3 || o.bar === 4 ? o.bar : H.bar || 4;
+    COUNTS.forEach(function (c4) {
+      var c = c4 / 4 * m;
       var sel = c * H.period + fade;
       if (sel > o.maxLoop + 1e-6 || sel < o.minLoop || sel > d) return;
       if (!k || Math.abs(c * H.period - o.target) < Math.abs(k * H.period - o.target)) k = c;
@@ -417,9 +486,9 @@
       if (w1 < lo) continue;
       var g = local(H, w0, w1);
       if (!(g.sure >= SURE)) continue;
-      var B = beatsOn(H, g, w0, w1), bar = barOf(B), p = g.period;
+      var B = beatsOn(H, g, w0, w1), bar = barOf(B, m), p = g.period;
       for (var i = 0; i < B.length; i++) {
-        if ((i - bar) % 4 !== 0) continue;
+        if ((i - bar) % m !== 0) continue;
         var s = B[i].t;
         if (s + k * p + fade > d - 0.05 || i + k + 2 > B.length) break;
         if (s < lo || s > hi) continue;
@@ -436,7 +505,7 @@
     for (var dL = -0.03; dL <= 0.03 + 1e-9; dL += 0.0005) { var v = overlay(H, start, L0 + dL); if (v > top) { top = v; L = L0 + dL; } }
     var end = start + L + fade;
     if (end > d) return null;
-    return { start: start, end: end, beats: best.beats, heard: L, bpm: 60 * best.beats / L, phase: start, join: best.join };
+    return { start: start, end: end, beats: best.beats, bar: m, heard: L, bpm: 60 * best.beats / L, phase: start, join: best.join };
   }
 
   global.SkriblEars = { listen: listen, hear: hear, pick: pick, steady: steady, COUNTS: COUNTS, MAX_SECONDS: MAX_SECONDS };
