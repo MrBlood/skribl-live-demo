@@ -15,6 +15,9 @@ The rows:
   the four brushes, the size slider and four quick sizes, opacity, the three
   smoothings, the two pressures, the three eraser widths, and Flip's Draw-on.
 
+  THE ROW SPANS THE DRAWER, edge to edge with the colours above it, on a desk
+  as on a phone (the owner's pick, "Tiles grow"; it stopped at 520px).
+
   THE CHOICES DO WHAT THEY SAY. Each one changes the editor's own state (the
   brush, the size and its readout, opacity, smoothing, pressure, the eraser,
   Draw-on) and the tile's words follow.
@@ -221,6 +224,16 @@ with sync_playwright() as pw:
                 check(f"{who}: the drawer opens on four tiles, none open",
                       sorted(st["tiles"]) == ["brush", "eraser", "feel", "size"]
                       and all(t["open"] == "false" for t in st["tiles"].values()) and not st["shown"], str(st))
+                # THE ROW SPANS THE DRAWER (the owner's pick in the whole-drawer
+                # mock, "Tiles grow"), edge to edge with the colours above it, on
+                # a desk as on a phone. It stopped at 520px, 140px short on a desk.
+                row = q.evaluate("""() => { const r = s => document.querySelector(s).getBoundingClientRect(),
+                    t = r('#drawTiles .dp-tiles'), c = r('#colorGroup');
+                    return { row: [t.left, t.right], colours: [c.left, c.right],
+                             tiles: [...document.querySelectorAll('#drawTiles .dp-tile')].map(e => Math.round(e.getBoundingClientRect().width * 10) / 10) }; }""")
+                check(f"{who}: the four tiles span the drawer, edge to edge with the colours above them, each as wide as the others",
+                      abs(row["row"][0] - row["colours"][0]) <= 0.5 and abs(row["row"][1] - row["colours"][1]) <= 0.5
+                      and max(row["tiles"]) - min(row["tiles"]) <= 0.5, str(row))
 
                 # ---------------------------------------------------- every tool
                 for k, sels in tools.items():

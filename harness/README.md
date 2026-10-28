@@ -467,7 +467,9 @@ stays a sleep.
   too, and every opening of the drawer, Photo and back included); each tile
   says what its door is set to in words that fit it on a 390px phone, the
   owner's 402 and a desk, and Skribl's mark is on the Length tile's picture
-  while the loop is Skribl's pick. A new song starts on Skribl's pick (the
+  while the loop is Skribl's pick; the row runs edge to edge with the timeline
+  and the pair above it, an open door's group as wide, on a desk as on a
+  phone. A new song starts on Skribl's pick (the
   first 20 seconds or the whole song, on the Pad as long as a drawing already
   there, with a smooth restart), lit in the Length door, and a draft's song
   keeps its own loop; the one line says the length heard, its beats and
@@ -891,7 +893,8 @@ stays a sleep.
   was shown red by its own break.
 - `verify_drawtiles.py` — the draw drawer's four tiles (lib/drawtiles.js),
   Brush, Size, Feel and Eraser, on the Pad and Flip, phone and desk, both
-  themes: every control hidden until its tile opens and then painted where a
+  themes: the row edge to edge with the colours above it, on a desk as on a
+  phone; every control hidden until its tile opens and then painted where a
   finger lands; each choice changes the editor's own state and the tile's
   words follow; the open tile and its card one shape, in the menu's tokens;
   nothing in the drawer paints outside it (the stray pill's column); the

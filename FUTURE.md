@@ -1151,7 +1151,7 @@ whole-drawer mock's New:
 1. D's four doors (Length, Beat, Restart, Exact times), More gone. Built
    (DECISIONS, the music drawer's four doors).
 2. The draw drawer's tiles, and D's, grow to span a desk (the phone as it
-   is).
+   is). Built (DECISIONS, the drawer tiles span a desk).
 3. The loop's edge line 1.5px and sharp (whole device pixels).
 4. The click in one pill with Hear the loop, and the beat's dot lit on
    each tick.

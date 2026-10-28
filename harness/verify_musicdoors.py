@@ -28,7 +28,9 @@ The rows:
   a load (More's old remembered key too), and on every opening of the drawer,
   Photo and back included. Each tile says what its door is set to, in words
   that fit it on a 390px phone and a desk, and Skribl's mark is on the Length
-  tile's picture while the loop is Skribl's pick.
+  tile's picture while the loop is Skribl's pick. The row runs edge to edge
+  with the timeline and the pair above it, and an open door's group as wide,
+  on a desk as on a phone (it stopped at 520px, short of them on a desk).
 
   THE ONE LINE AND SKRIBL'S PICK. A new song starts on Skribl's pick: the
   first 20 seconds (the whole song when it is shorter), with a smooth
@@ -440,8 +442,16 @@ with sync_playwright() as pw:
     # inside its tile (no ellipsis) on a 390px phone, the owner's 402 and a desk.
     TWORDS = """() => [...document.querySelectorAll('#musicDoors .dp-tile')].map((t) => { const v = t.querySelector('.dp-v');
         return [t.dataset.dp, v.textContent, v.scrollWidth <= v.clientWidth + 0.5, t.getAttribute('aria-label')]; })"""
+    # THE DOORS SPAN THE DRAWER (the owner's pick in the whole-drawer mock,
+    # "Tiles grow"): edge to edge with the timeline and the pair above them, and
+    # an open door's group as wide, on a phone as on a desk. The row stopped at
+    # 520px, 140px short of the pair on a desk.
+    SPAN = """() => { const r = (s) => { const e = document.querySelector(s); if (!e || !e.getClientRects().length) return null;
+        const b = e.getBoundingClientRect(); return [+b.left.toFixed(1), +b.right.toFixed(1)]; };
+      return { timeline: r('#musicTimeline'), pair: r('.mt-transport'), doors: r('#musicDoors .dp-tiles'), open: r('#musicDoors > .dp-panel:not([hidden])'),
+               tiles: [...document.querySelectorAll('#musicDoors .dp-tile')].map((t) => +t.getBoundingClientRect().width.toFixed(1)) }; }"""
     for _n, _p in eds("words"):
-        got = {}
+        got, span = {}, {}
         for dev, o in (("390", dict(PHONE, viewport={"width": 390, "height": 844})), ("402", PHONE), ("desk", DESK)):
             c, pg, _ = editor(b, _n, _p, opts=o)
             pick = pg.evaluate(TWORDS)
@@ -456,6 +466,8 @@ with sync_playwright() as pw:
             pg.wait_for_timeout(150)
             far = pg.evaluate(TWORDS)
             got[dev] = (pick, own, beat, far, pg.evaluate(SAID))
+            set_door(pg, "exact")
+            span[dev] = pg.evaluate(SPAN)
             c.close()
         ok, why = True, []
         for dev, (pick, own, beat, far, said) in got.items():
@@ -471,6 +483,12 @@ with sync_playwright() as pw:
             why.append(f"{dev}: the pick {w(pick)}, own {w(own)}, a tempo {w(beat)}, far {w(far)}; every word inside {fits}; labels {pick[0][3]!r}, {own[0][3]!r}")
         check(f"{_n}: each tile says what its door is set to, every word inside its tile on a 390px phone, the owner's 402 and a desk",
               ok, "; ".join(why))
+        same = lambda a, z: bool(a and z) and all(abs(u - v) <= 0.5 for u, v in zip(a, z))
+        check(f"{_n}: the four doors span the drawer, edge to edge with the timeline and the pair above them, each as wide "
+              "as the others and an open door's group as wide as the row, on a 390px phone, the owner's 402 and a desk",
+              all(same(s["doors"], s["pair"]) and same(s["doors"], s["timeline"]) and same(s["open"], s["doors"])
+                  and max(s["tiles"]) - min(s["tiles"]) <= 0.5 for s in span.values()),
+              "; ".join(f"{dev}: {s}" for dev, s in span.items()))
     for _n, _p in eds("words"):
         c, pg, _ = editor(b, _n, _p)
         a = pg.evaluate(SAID)

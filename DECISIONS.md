@@ -24705,3 +24705,27 @@ WHAT IT DOES TO FLIP: shared. The drawer is one template and one module for
 both editors, so Flip has the doors at once; every row runs on both.
 
 Not tested here: an iPhone's WebKit, and SF and Segoe UI themselves.
+
+## After v329 -- The drawer tiles span a desk
+
+Step 2 of the music drawer's eight (FUTURE.md 6s, the owner's "All yes"):
+the draw drawer's four tiles, and the music drawer's four doors, grow to span
+the drawer on a desk, the owner's pick in the whole-drawer mock ("Tiles
+grow", over "Gaps grow" and today). `.dp` had a 520px cap; on a desk or a
+tablet the drawer is 660px inside, so the row stopped 140px short, the space
+left empty on the right under colours, a timeline and a pair that run the
+whole width. The cap is gone and nothing else moves: a tile is 159px on a
+desk (124 before), its picture painted at its own width (lib/drawtiles.js
+repaints on a resize), an open tile's choices as wide as the row. A phone's
+drawer is narrower than 520 (344 inside on the owner's 402), so a phone is as
+it was, to the pixel.
+
+Rows: verify_drawtiles, the four tiles edge to edge with the colours above
+them, each as wide as the others, on a phone and a desk; verify_musicdoors,
+the doors edge to edge with the timeline and the pair above them, an open
+door's group as wide, on a 390 and a 402 phone and a desk. Calibrated with the
+stylesheet served with the cap put back (the file on disk untouched): red on
+the desk on both editors (the row 310 to 830 against 310 to 970), the phones
+green; green as built.
+
+WHAT IT DOES TO FLIP: shared. One rule for both drawers on both editors.
