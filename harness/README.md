@@ -600,6 +600,23 @@ stays a sleep.
   never starting a line with its dot; a start let go zoomed in, and Snap to
   the beat off and on, keep where the beat came from; tapped again it is
   tapped.
+- `verify_musictall.py` — the taller box, the wave filling it zoomed in
+  deep, and pinch to zoom (step 6), on the Pad and on Flip: the box with arrows
+  after Magnify's - and +, the same card and cell, a finger wide, named "Make
+  the box taller" and pressed while tall, there once there is a song, its
+  glyph 3:1 and up; one tap twice as tall and one back, read on every frame
+  on the owner's phone and a desk: only the way it is going, whole pixels,
+  never a leap (one step after a look 50ms late set aside), each frame painted
+  at its height, Hear the loop put to a quarter of a pixel, there within 400ms,
+  the page staying where the grow left it, the drawer's end below the screen
+  or not; at once under Reduce Motion; with the timeline up at the header, its
+  top kept under it; zoomed in deep, a quiet passage standing most of the box,
+  read off the canvas, gliding there, and as before where the song is its
+  loudness; two real touch points, sideways a rung a doubling, up and down the
+  height to three times, locked to the first way, the finger already down
+  stopping; Ctrl and the wheel on a desk, a notch a rung, a trackpad's small
+  deltas a rung as they add up, the page's zoom called off, the plain wheel the
+  page's.
   Skribl's ears are off here.
 - `verify_musictimeline.py` — step 2 of the music plan (the owner: "Yes on
   all"), on the Pad and on Flip: the timeline (lib/musictimeline.js) is the

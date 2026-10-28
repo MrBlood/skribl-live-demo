@@ -2948,11 +2948,12 @@ body.recoloring #canvas { cursor: crosshair !important; }
   max-width: 100%; overflow-wrap: anywhere; }
 /* MAGNIFY, at the end of the name's line: the - readout + of Exact times
    (.edge-controls, .nudge-btn), the same card, line and fill, its cells 28px
-   and grown to 44 for a finger, the glyphs the magnifier Fine-tune's had. */
+   and grown to 44 for a finger, the glyphs the magnifier Fine-tune's had.
+   THE TALLER BOX after it, the same card and cell (lib/musictimeline.js). */
 .mt-tl-head { display: flex; align-items: center; gap: 10px; margin: 0 0 6px; }
 .mt-tl-namebox { flex: 1 1 auto; min-width: 0; }
 .mt-tl-head .mt-tl-name { margin: 0; }
-.mt-tl-mag { display: flex; align-items: center; gap: 2px; padding: 3px; flex: none;
+.mt-tl-mag, .mt-tl-tallbox { display: flex; align-items: center; gap: 2px; padding: 3px; flex: none;
   background: var(--menu-card); border: 1px solid var(--menu-card-line); border-radius: var(--r-control); }
 .mt-tl-mag-btn { position: relative; z-index: 1; width: 28px; height: 28px; padding: 0; border: 0; display: grid; place-items: center;
   border-radius: calc(var(--r-seg) - 3px); background: color-mix(in srgb, var(--accent) 7%, var(--menu-card)); color: var(--text-tool);
@@ -2969,6 +2970,8 @@ body.recoloring #canvas { cursor: crosshair !important; }
    whatever face draws them, so - and + stay where they are from 1x to 512x;
    hidden, so it is neither painted nor read out. */
 .mt-tl-mag-val::after { content: attr(data-widest); display: block; height: 0; overflow: hidden; visibility: hidden; }
+/* Taller, it wears the chosen choice's purple, as the click by Hear the loop does. */
+.mt-tl-mag-btn.mt-tl-tall[aria-pressed="true"] { background: var(--seg-on-fill); color: var(--seg-on-ink); }
 .mt-tl-stage { position: relative; height: 118px; touch-action: pan-y; -webkit-user-select: none; user-select: none; cursor: grab; }
 .mt-tl.holding .mt-tl-stage { cursor: grabbing; }
 .mt-tl-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }

@@ -24994,3 +24994,113 @@ WHAT IT DOES TO FLIP: shared. One drawer and one timeline; the note is each
 editor's own (the toast, the chip), placed by the same rule.
 
 Not tested here: an iPhone's WebKit, and the tile's room in SF and Segoe UI.
+
+## After v329 -- The Beat door's line: its dot with the word before it
+
+On the owner's 402 phone the line set by the loop's end wrapped as "118.8
+beats a minute, / set by the loop's end / · tap to change it", the dot alone
+at the start of a line (found in step 5's own photos). A no-break space
+before the dot, in the line's three sources (by the end, heard, tapped), so
+the dot goes with the word before it. verify_musictempo reads the line as it
+is laid out on 375, 390 and 402px phones, letter by letter, a new line
+wherever a letter's middle is below the line before: red on the old words
+on both editors at 402, green as built. The suites that read the line's
+words exactly read the no-break space.
+
+## After v329 -- The full run on the end: a toast row whose page could not reach
+
+Run 40674638110, on step 5's tree before the dot: 15 jobs ran and 13 were
+green. The two red were shard 4 on both databases, one row each, the same
+row: verify_layout's toast with the toolbar under the header, on the Pad.
+The toast was clear of both (header and bar false); the row's own reach
+was false, the bar 53px under the header's foot. It scrolled the page to its
+end with the Beat door open, and in CI's fonts the page ended before the bar
+met the header (here it did). It opens the Restart door now, the tallest,
+and scrolls by what it measures until the bar sits 2px under the header's
+foot: red on the old placement on both editors (the note at 74, on the bar
+at 68), green as built.
+
+## After v329 -- The taller box, the wave filling it, pinch to zoom
+
+Step 6 of the whole-drawer mock (FUTURE.md 6s; the owner, with ACID's + and -
+for a track's height, then "All yes"). After Magnify's - and +, the same card
+and cell: a box with arrows up and down (the mock's glyph, not a second
+magnifier), "Make the box taller", pressed while the box is tall (the chosen
+choice's purple, as the click by Hear the loop), there once there is a song.
+One tap makes the timeline twice as tall (118 to 236px), one more puts it
+back. The height stays across songs and with the drawer put away; it is not
+saved in the drafts, as the zoom is not.
+
+THE GROW GLIDES, the four ways the mock's did not (the owner: it "shook and
+jerked"), each read on every frame by verify_musictall, up and back, the Pad
+and Flip, the owner's phone and a desk. The clock starts on the first frame
+it draws: started at the tap, the first frame's time can come before it and
+the box went the wrong way first (the mock's 5 to 27px; served back here, 1
+to 26px in six of eight glides over two runs, as it depends on where in a
+frame the tap lands). The box moves in whole pixels. The page scrolls by exactly what Hear
+the loop moved, read off Hear itself in the same frame, so Hear stays put to
+the hundredth of a pixel. And the timeline paints each height in the frame it
+is laid out: its ResizeObserver runs after layout and before the frame is
+shown, and it asked for the next frame, so a frame showed the one before
+stretched to fit. 220ms, easing out; under Reduce Motion, at once.
+
+NEVER UNDER THE HEADER. Kept where it is, Hear would take the timeline's top
+up under the pinned header when the timeline is near it (on a phone with a
+tall door open and the page scrolled). Growing, the page scrolls no further
+than keeps the timeline's top 4px under the header's foot, and Hear moves
+down by the rest. Put to the owner with the step's photos; the bar under the
+header is not pinned, so the header is the ceiling.
+
+NOT FOLLOWED. lib/drawerdetent.js followGrowth brings a drawer's end back on
+screen when it grows, for a song landing; it took the grow for one and
+scrolled on after it (2px at the end of a glide here, as far as the bar's
+room allows on a phone). It is told of the stage's height (its style), as of
+the doors, and takes the grow as the person's own.
+
+ZOOMED IN DEEP, THE WAVE FILLS THE BOX (the owner: yes). Where the wave itself
+shows (under 64 samples a point), it is drawn against the loudest moment in
+view, with a little room over it (1.08), never below 2% of the song's
+loudest so a hush is not blown up; further out, against the song's loudest
+as before, so loud and quiet still compare. It eases there with the view's
+own ease, at once under Reduce Motion. A quiet passage at 5% stands 30 of
+the box's 32px from the middle line, where against the song it was 2.
+
+PINCH TO ZOOM (from Wavebox; the owner: yes). Two fingers on the timeline:
+sideways, Magnify's rungs, the one nearest the fingers' spread (twice as far
+apart, one rung in; the mock stepped at each 1.41 and went two rungs for a
+doubling); up and down, the box's height, following the fingers to three
+times. Locked to whichever way they first move. The finger already down
+stops where it is when the second lands. On a desk, Ctrl and the wheel: a
+notch a rung, a trackpad's pinch (the same events, small deltas) a rung for
+each 35 of them in one gesture, the page's own zoom called off; the wheel
+without Ctrl is the page's. Touch through Chromium's own touch input here;
+not tested on an iPhone.
+
+THE LANE grows with the box in step 7, where Flip's pages become pictures;
+here it stays 26px and the song takes the room.
+
+Rows (verify_musictall, 72, about two minutes): the control's place, words
+and glyph's ink (3:1 and up, off and on, light and dark, phone and desk);
+the glide's four ways and its time, up and back; the page after it, and with
+the drawer's end below the screen; Reduce Motion; the header; the fill, its
+glide and the loudness as before; the pinch both ways, its lock and the
+finger already down; Ctrl and the wheel. Calibrated with the page's files
+served from broken copies (the files on disk untouched), each red on its own
+rows on both editors: the clock started at the tap, the observer asking for
+the next frame, no scroll, fractional pixels, no ceiling, followGrowth not
+told, no fill, the fill at once, the fill at every zoom, the pinch unlocked,
+the mock's pinch rungs, the first finger kept, the wheel's zoom not called
+off, every wheel event a rung, the button never pressed, the glide under
+Reduce Motion, the box before the magnifier. A step that came after a look
+50ms late (verify_flipbeat's HELD) is set aside from the leaps, one at most,
+and named: beside the calibration's other runs one went 60px after 21.
+
+verify_musictimeline's magnify row reads the taller box after it at the
+line's end. How it works has a Taller timeline tip and the fill in
+Magnify's; verify_helpclaims claims both.
+
+WHAT IT DOES TO FLIP: shared. One timeline in one drawer; Flip's drawer
+grows as the Pad's, and every row runs on both.
+
+Not tested here: an iPhone's WebKit (two fingers there, and its own zoom),
+a trackpad's pinch (the events are made to its shape), SF and Segoe UI.

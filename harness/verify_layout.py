@@ -1112,14 +1112,18 @@ with sync_playwright() as p:
         browsing.goto(_pg, BASE, _route)
         _pg.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
         browsing.pad_drawer(_pg, "music", settle=1600)
-        # A song in it and its Beat door open, so the drawer is as tall as
-        # when it is worked in: taller than the screen, the toolbar climbs to
-        # the header as the page scrolls.
+        # A song in it and its tallest door open (Restart), so the drawer is
+        # taller than the screen as when it is worked in, and the page then
+        # scrolled until the toolbar meets the header's foot. Scrolled to its
+        # end with the Beat door open, CI's fonts left the bar 53px short of
+        # the header (run 40674638110, the Pad on both databases).
         _pg.set_input_files("#musicInput", {"name": "m.wav", "mimeType": "audio/wav", "buffer": _wav(12.0)})
         _pg.wait_for_function("() => document.getElementById('musicUploadBtn').classList.contains('loaded')", timeout=20000)
         _pg.wait_for_timeout(3500)                  # the song's own toast has come and gone
-        _pg.click('#musicDoors .dp-tile[data-dp="beat"]'); _pg.wait_for_timeout(600)
-        _pg.evaluate("() => window.scrollTo(0, document.scrollingElement.scrollHeight)"); _pg.wait_for_timeout(800)
+        _pg.click('#musicDoors .dp-tile[data-dp="restart"]'); _pg.wait_for_timeout(600)
+        _pg.evaluate("""() => { const b = (document.getElementById('toolBar') || document.querySelector('.flip-tools')).getBoundingClientRect();
+          scrollBy(0, b.top - document.querySelector('.header').getBoundingClientRect().bottom - 2); }""")
+        _pg.wait_for_timeout(800)
         _pg.evaluate(_say); _pg.wait_for_timeout(400)
         _got = _pg.evaluate(UNDER, _sel)
         check(f"{'Pad' if _route == '/' else 'Flip'}: with a drawer scrolled into, the toolbar under the header, "

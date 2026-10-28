@@ -1161,7 +1161,8 @@ whole-drawer mock's New:
    end sets the tempo).
 6. The taller box: one tap for twice as tall, the arrows glyph beside
    Magnify's - and +, gliding (below); the wave filling the box zoomed in
-   deep; pinch to zoom.
+   deep; pinch to zoom. Built (DECISIONS, the taller box, the wave filling
+   it, pinch to zoom); the lane grows with the box in step 7.
 7. The drawing's lane shows the drawing (Flip's pages as little pictures,
    the Pad's strokes in their own inks, at 3:1 against the lane).
 8. Songs in three: the ears hear threes, and a waltz counts 3 · 6 · 12 · 24.

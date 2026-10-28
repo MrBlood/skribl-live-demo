@@ -861,12 +861,14 @@ with sync_playwright() as p:
               const ratio = (x, y) => { const a = lum(x), b = lum(y); return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05); };
               const ink = (el) => { const g = ground(el); return ratio(over(parse(getComputedStyle(el).color), g), g); };
               const q = (s) => document.querySelector(s), n = q('#musicTlName').getBoundingClientRect(), m = q('.mt-tl-mag').getBoundingClientRect(), st = q('#musicTlStage').getBoundingClientRect();
+              // The taller box after it ends the line (verify_musictall).
+              const k = q('.mt-tl-tallbox').getBoundingClientRect();
               return { level: ink(q('#musicTlMag')), glyph: Math.min(ink(q('#musicTlIn')), ink(q('#musicTlOut'))),
-                       middle: (m.top + m.bottom) / 2 - (n.top + n.bottom) / 2, right: m.right - st.right, below: st.top - m.bottom }; }""")
+                       middle: (m.top + m.bottom) / 2 - (n.top + n.bottom) / 2, right: k.right - st.right, after: k.left - m.right, below: st.top - m.bottom }; }""")
             check(f"{_n}: magnify sits at the end of the name's line, its middle on the name's, and its words and glyphs read against what is behind them ({theme})",
-                  abs(r["middle"]) <= 0.5 and abs(r["right"]) <= 0.5 and r["below"] >= 4 and r["level"] >= 4.5 and r["glyph"] >= 3,
-                  f"middle {r['middle']:+.2f}px from the name's, right edge {r['right']:+.2f}px from the song's, {r['below']:.1f}px over the lane;"
-                  f" the level {r['level']:.2f}:1, the glyphs {r['glyph']:.2f}:1")
+                  abs(r["middle"]) <= 0.5 and abs(r["right"]) <= 0.5 and r["after"] >= 4 and r["below"] >= 4 and r["level"] >= 4.5 and r["glyph"] >= 3,
+                  f"middle {r['middle']:+.2f}px from the name's, the taller box after it {r['after']:.1f}px on, its right edge {r['right']:+.2f}px from the song's,"
+                  f" {r['below']:.1f}px over the lane; the level {r['level']:.2f}:1, the glyphs {r['glyph']:.2f}:1")
             c.close()
 
     print("\nMUSIC TIMELINE — close in, the wave itself")

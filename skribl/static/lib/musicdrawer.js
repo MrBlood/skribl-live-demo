@@ -711,7 +711,11 @@
         var t = h.trim(), len = t.end - t.start, s0 = beatFor(Math.max(0, Math.min(t.duration - len, start)), len);
         glideTo(s0, s0 + len);
       },
-      letGo: function (kind, which, zoomed) { if (kind === 'end') snap(which, 0, zoomed); else onBeat(); h.changed(); }
+      letGo: function (kind, which, zoomed) { if (kind === 'end') snap(which, 0, zoomed); else onBeat(); h.changed(); },
+      // The taller box keeps Hear the loop where the thumb is, and the
+      // timeline's top under the header.
+      anchor: function () { return $('previewLoopBtn'); },
+      ceiling: function () { return headerFoot(); }
     }) : null;
 
     /* ---- The Restart view (lib/musicrestart.js), in the Restart door: the

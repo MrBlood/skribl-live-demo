@@ -431,6 +431,10 @@
     // Only the doors: #musicDetail un-hiding is a song landing, which IS followed.
     var lv = card.querySelector('#musicDetail');
     if (lv) moves.observe(lv, { attributes: true, attributeFilter: ['data-door'] });
+    // Nor the taller box (lib/musictimeline.js sets its height on the stage):
+    // the person's own, and it keeps Hear the loop where it is on the screen.
+    var tall = card.querySelector('#musicTlStage');
+    if (tall) moves.observe(tall, { attributes: true, attributeFilter: ['style'] });
     new ResizeObserver(function () {
       var h = height(), grew = !!o.current() && lastH > 0 && h > lastH + 1;
       lastH = h;
