@@ -8069,6 +8069,13 @@ body.stroking .toolbar, body.stroking .flip-tools {
 .lc-phone { position: relative; height: 270px; border-radius: 12px; overflow: hidden; background: color-mix(in srgb, var(--accent) 8%, var(--menu-card)); }
 .lc-phone video { position: absolute; left: 50%; top: 50%; box-sizing: content-box; width: 110px; aspect-ratio: 600 / 984; transform: translate(-50%, -50%); object-fit: contain;
   border-radius: 16px; border: 1px solid var(--menu-card-line); box-shadow: 0 8px 22px rgba(40, 25, 110, .18); }
+/* A tool's clip from the tray (4:3) fills the card's width inside the card's
+   line, as the cards mock drew it, the stage's rounded edge its corners. The
+   clip carries its own ratio and the stage wraps it, line and all: a 4:3
+   stage with the line inside it left the clip a box half a pixel short of
+   4:3, and cropped it (verify_book, every recording whole). */
+.lc-clip { aspect-ratio: auto; border: 1px solid var(--menu-card-line); }
+.lc-clip video { display: block; width: 100%; height: auto; object-fit: cover; }
 .lc-body { padding: 0 4px 2px; }
 .lc-card .lc-t, .lc-banner .lc-t { margin: 0 0 4px; font-size: 20px; font-weight: 700; letter-spacing: -.01em; }
 .lc-card .lc-line, .lc-banner .lc-line, .lc-note .lc-line { margin: 0; font-size: 14px; line-height: 1.4; color: var(--text-secondary); }

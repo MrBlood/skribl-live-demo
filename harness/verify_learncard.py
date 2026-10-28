@@ -20,6 +20,9 @@ cards mock, "All yes"). Each row holds a promise, on the Pad and on Flip:
   6. AUTOMATION NEVER MEETS IT unless it asks: without the flag, a hold
      opens nothing (so no other suite is ambushed).
   7. ONE CARD FOR BOTH EDITORS: Pen's card says the same on the Pad and Flip.
+  9. FLIP'S TRAY: every tool in it holds its card (the tray's own seven with
+     their clip, 4:3), the tray stays open under it and after Got it, and a
+     tool used from the tray holds the same card from its place in the bar.
 
 Touch is real touch (CDP touch events), so the browser makes the pointer
 events a finger would. Visible means painted: elementFromPoint.
@@ -307,6 +310,87 @@ with sync_playwright() as p:
                   len(seen) >= 6 and not missing, "; ".join(missing))
             c.close()
         part("tap rows", taps)
+
+        # 9. FLIP'S TRAY (owner: "make sure you look at ALL the tools because
+        # I noticed the tools on flip's ^ menu don't have them"): every tool
+        # in it holds its card, the seven of the tray's own with their How it
+        # works clip filling the card's 4:3 stage. The tray stays open under
+        # the card and after Got it (a tap on a card is the card's own), with
+        # the tool's place in focus, and the hold picks no tool. In the tray a
+        # tap only picks, so Pen's and the Eraser's rows about their bar
+        # buttons are left out there; the ones whose tap opens something say
+        # what it opens. A tool used from the tray takes a place in the bar,
+        # and holds the same card there; on a desk, resting does the same.
+        def tray():
+            if name != "Flip":
+                return
+            TRAY = """() => [...document.querySelectorAll('.tool-tray-btn')].some(e => { const r = e.getBoundingClientRect();
+                return r.width && document.elementFromPoint(r.left + 6, r.top + 6) === e; })"""
+            CLIP = """() => { const st = document.querySelector('.lc-card .lc-clip'), v = st && st.querySelector('video'); if (!v) return null;
+                const sr = st.getBoundingClientRect(), vr = v.getBoundingClientRect(), bw = parseFloat(getComputedStyle(st).borderLeftWidth);
+                return { src: v.getAttribute('src') || v.poster || '', ratio: +(sr.width / sr.height).toFixed(3),
+                         off: +Math.max(Math.abs(vr.width - (sr.width - 2 * bw)), Math.abs(vr.height - (sr.height - 2 * bw))).toFixed(2) }; }"""
+            CLIPS = {"select": "Select", "liquify": "Liquify", "smudge": "Smudge", "blur": "Blur", "fill": "Fill",
+                     "stamp": "Stamps", "artmove": "Artwork"}
+            c, q = fresh(b, PHONE, route)
+            cdp = c.new_cdp_session(q)
+            q.tap("#toolMoreBtn")
+            q.wait_for_timeout(600)
+            seen, wrong, clips, kept = {}, [], [], []
+            for tool, title in [("pen", "Pen"), ("eraser", "Eraser"), ("shape", "Shape")] + list(CLIPS.items()):
+                if not q.evaluate(TRAY):
+                    q.tap("#toolMoreBtn")
+                    q.wait_for_timeout(600)
+                touch_hold(q, cdp, f'.tool-tray-btn[data-tool="{tool}"]', 700)
+                card, clip = q.evaluate(CARD), q.evaluate(CLIP)
+                seen[tool] = card and card["rows"]
+                if not (card and card["name"] == title and card["painted"] and card["example"] and card["ok"] and card["rowsPainted"]):
+                    wrong.append(f"{tool}: {card}")
+                if tool in CLIPS and not (clip and f"/{tool}-" in clip["src"] and abs(clip["ratio"] - 4 / 3) < 0.01 and clip["off"] <= 1):
+                    clips.append(f"{tool}: {clip}")
+                if card:
+                    q.tap(".lc-card .lc-ok")
+                    q.wait_for_timeout(300)
+                    after = q.evaluate("(t) => [!document.querySelector('.lc-card'), document.activeElement && document.activeElement.getAttribute('data-tool'), "
+                                       "((document.querySelector('.tool-tray-btn.active') || {}).dataset || {}).tool]", tool)
+                    kept.append([tool, q.evaluate(TRAY)] + after)
+            check("Flip: every tool in the tray holds its own card, named, painted, with its example and Got it",
+                  len(seen) == 10 and not wrong, "; ".join(wrong) or str(sorted(seen)))
+            check("Flip: the tray's own seven show their How it works clip, filling the card's 4:3 stage",
+                  not clips, "; ".join(clips))
+            check("Flip: Got it leaves the tray open with that tool in focus, and holding picked no tool (the pen stays)",
+                  len(kept) == 10 and all(k[1] and k[2] and k[3] == k[0] and k[4] == "pen" for k in kept), str(kept))
+            check("Flip: in the tray Pen's and the Eraser's cards leave out their bar buttons' rows, and Shape, Stamps "
+                  "and Artwork say what a tap opens",
+                  seen.get("pen") == [] and seen.get("eraser") == []
+                  and all(seen.get(t) and seen[t][0][0] == "Tap" for t in ("shape", "stamp", "artmove")), str(seen))
+            # used from the tray, a tool takes a place in the bar: the same card there
+            if not q.evaluate(TRAY):
+                q.tap("#toolMoreBtn")
+                q.wait_for_timeout(600)
+            q.tap('.tool-tray-btn[data-tool="liquify"]')
+            q.wait_for_timeout(600)
+            touch_hold(q, cdp, "#liquifyToolBtn", 700)
+            card = q.evaluate(CARD)
+            check("Flip: a tool used from the tray holds the same card from its place in the bar",
+                  card and card["name"] == "Liquify" and card["painted"] and card["rows"] == seen.get("liquify"), str(card))
+            c.close()
+            c, q = fresh(b, DESK, route)
+            q.click("#toolMoreBtn")
+            q.wait_for_timeout(600)
+            x, y = center(q, '.tool-tray-btn[data-tool="fill"]')
+            q.mouse.move(x, y)
+            q.wait_for_timeout(2600)
+            card = q.evaluate(CARD)
+            q.mouse.move(40, 300)
+            q.wait_for_timeout(700)
+            gone = q.evaluate("() => !document.querySelector('.lc-card')")
+            check("Flip: on a desk, resting on a tool in the tray grows its card (Move away to close), and moving away "
+                  "closes it with the tray still open",
+                  card and card["name"] == "Fill" and card["hint"] == "Move away to close" and gone and q.evaluate(TRAY),
+                  f"{card}; gone {gone}")
+            c.close()
+        part("the tray", tray)
 
     check("Pen's card says the same on the Pad and Flip", len(pen_lines) == 2 and len(set(pen_lines.values())) == 1, str(pen_lines))
     b.close()
