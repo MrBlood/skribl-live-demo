@@ -330,7 +330,7 @@ with sync_playwright() as p:
         check(f"{name}: the one line counts it under Skribl's pick",
               "32 beats" in st["line"] and st["tag"] and not st["back"], f"line {st['line']!r}, tag {st['tag']}, back {st['back']}")
         check(f"{name}: the beat line says it was heard",
-              st["beat"] == "124 beats a minute, heard by Skribl · tap to change it", repr(st["beat"]))
+              st["beat"] == "124 beats a minute, heard by Skribl\u00a0· tap to change it", repr(st["beat"]))
         said = [r["w"] for r in rec]
         check(f"{name}: while it listened the beat line said so",
               any(w == "Listening for the beat…" for w in said), " | ".join(dict.fromkeys(said))[:200])
@@ -575,7 +575,7 @@ with sync_playwright() as p:
         again = q.evaluate(STATE)
         check(f"{name}: after a reload the loop and the heard beat come back, still heard by Skribl",
               abs(again["s"] - st["s"]) < 1e-3 and abs(again["e"] - st["e"]) < 1e-3 and (again["tempo"] or {}).get("heard") is True
-              and again["beat"] == "124 beats a minute, heard by Skribl · tap to change it",
+              and again["beat"] == "124 beats a minute, heard by Skribl\u00a0· tap to change it",
               f"loop {again['s']:.4f}-{again['e']:.4f}, tempo {again['tempo']}, beat {again['beat']!r}")
         check(f"{name}: the song brought back is heard again, once and quietly: its loop and beat stay as kept, and it is still Skribl's pick",
               asked == 1 and q.evaluate("() => window.__listens || 0") == 1 and again["tempo"] == st["tempo"]

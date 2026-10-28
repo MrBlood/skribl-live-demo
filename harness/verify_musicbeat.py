@@ -516,7 +516,7 @@ with sync_playwright() as pw:
         words = f"{round(n)} beats" if abs(n - round(n)) < 0.05 else f"{n:.1f} beats"
         check(f"{_n}: taps in time settle on the tempo, two seconds after the last, and the one line counts the beats",
               mid["kept"] is None and mid["tap"] == "Keep tapping" and st["kept"] and st["kept"]["bpm"] == 120
-              and st["tempo"] == "120 beats a minute · tap again to change it" and st["tap"] == "Tap the beat"
+              and st["tempo"] == "120 beats a minute\u00a0· tap again to change it" and st["tap"] == "Tap the beat"
               and st["line"].startswith(f"{heard(t):.2f}s · {words}"),
               f"1.5s after: {mid['kept']}, {mid['tap']!r}; settled: {st['kept']}, {st['tempo']!r}; {st['line']!r}"
               f" (taps within {spread:.1f}ms of their marks, try {k})")

@@ -1581,7 +1581,8 @@
       sync();
     }
     // Every line here is two lines at most on a phone, as tall as the tap
-    // itself: the tap stays put under a finger while its words change.
+    // itself: the tap stays put under a finger while its words change. The
+    // dot holds on to the word before it, so no line starts with one.
     function syncTap() {
       if (!tapBtn) return;
       var listening = !!tapT, tp = tempo(), m = beatOf(taps);
@@ -1592,8 +1593,8 @@
       var html = listening
         ? (taps.length >= 2 && m > 0 ? taps.length + ' taps, about <b>' + Math.round(60 / m) + '</b> a minute' : 'Keep tapping along with the beat.')
         : tapNote || (tp ? '<b>' + bpmSays(tp) + ' beats a minute</b>'
-            + (tp.by === 'end' ? ', set by the loop\u2019s end \u00b7 tap to change it'
-              : tp.heard ? ', heard by Skribl \u00b7 tap to change it' : ' \u00b7 tap again to change it')
+            + (tp.by === 'end' ? ', set by the loop\u2019s end\u00a0\u00b7 tap to change it'
+              : tp.heard ? ', heard by Skribl\u00a0\u00b7 tap to change it' : '\u00a0\u00b7 tap again to change it')
           : ears ? 'Listening for the beat\u2026'
           : earsHeard === false ? 'Skribl didn\u2019t hear a steady beat. Tap along with the music to count one.'
           : 'Tap along with the music to count its beats.');

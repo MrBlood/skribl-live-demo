@@ -596,8 +596,10 @@ stays a sleep.
   beat marks glide to the new beat frame by frame (at once under Reduce
   Motion); the beat is kept in the drafts, Flip's Match the beat refits a
   round of pages to it, and the Beat tile and its door say "by hand" and
-  "set by the loop's end"; a start let go zoomed in, and Snap to the beat
-  off and on, keep where the beat came from; tapped again it is tapped.
+  "set by the loop's end", the door's line on 375, 390 and 402px phones
+  never starting a line with its dot; a start let go zoomed in, and Snap to
+  the beat off and on, keep where the beat came from; tapped again it is
+  tapped.
   Skribl's ears are off here.
 - `verify_musictimeline.py` — step 2 of the music plan (the owner: "Yes on
   all"), on the Pad and on Flip: the timeline (lib/musictimeline.js) is the

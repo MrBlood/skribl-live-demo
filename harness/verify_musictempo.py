@@ -29,7 +29,8 @@ the Wizard's "click the end of the first bar"; "All yes").
   WHERE THE BEAT CAME FROM. The Beat tile says it, "120 · heard", tapped or
   "118.8 · by hand", where it has room (verify_musicdoors reads every tile's
   words on two phones and a desk), its name says it in words, and the door's
-  line says the loop's end set it. A start let go zoomed in moves where the
+  line says the loop's end set it, on a phone never starting a line with its
+  dot. A start let go zoomed in moves where the
   beat falls and keeps where the beat came from, and so does Snap to the
   beat turned off and on; tapped again, the beat is the taps', tapped.
 
@@ -392,6 +393,20 @@ with sync_playwright() as pw:
                line: document.getElementById('musicTempo').textContent }; }"""
     HEARD = {"bpm": 120, "phase": 0, "heard": True}
     UNDO = {"Pad": "#toast .toast-action", "Flip": "#flipChip .toast-action"}
+    # The Beat door's line as it is laid out, one string a line: each letter
+    # read where it is painted, a new line wherever one's middle is below the
+    # line before it.
+    LINES = """() => { const el = document.getElementById('musicTempo'), r = document.createRange(), lines = [];
+      const walk = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+      for (let n = walk.nextNode(); n; n = walk.nextNode())
+        for (let i = 0; i < n.length; i++) {
+          r.setStart(n, i); r.setEnd(n, i + 1);
+          const b = r.getBoundingClientRect(), last = lines[lines.length - 1];
+          if (!b.width && !b.height) continue;
+          if (!last || b.top + b.height / 2 > last.bottom) lines.push({ text: n.data[i], bottom: b.bottom });
+          else { last.text += n.data[i]; last.bottom = Math.max(last.bottom, b.bottom); }
+        }
+      return lines.map((l) => l.text.trim()); }"""
 
     def tenth(x):
         """Beats a minute to the tenth, as the drawer says them (half up)."""
@@ -444,7 +459,7 @@ with sync_playwright() as pw:
                       bool(said) and said["shown"] and said["words"] == f"The beat fits your loop now: {tenth(want)} a minute, 8 beats."
                       and said["undo"] == "Undo" and beat["tile"] == f"{tenth(want)} · by hand" and beat["fits"]
                       and beat["name"].startswith(f"Beat, {tenth(want)} beats a minute, by hand")
-                      and beat["line"] == f"{tenth(want)} beats a minute, set by the loop’s end · tap to change it",
+                      and beat["line"] == f"{tenth(want)} beats a minute, set by the loop’s end\u00a0· tap to change it",
                       f"{said}; {beat}")
                 check(f"{_n}: the beat marks glide to the new beat frame by frame, the one at the end drawing in to it",
                       len(between) >= 4 and all(b2 >= a2 - 1.5e-4 for a2, b2 in zip(seen, seen[1:])) and there is not None and there < 600,
@@ -552,7 +567,7 @@ with sync_playwright() as pw:
         st, beat = pg.evaluate(SAID), pg.evaluate(BEAT_SAYS)
         check(f"{_n}: tapped again after the end set the beat, the beat is the taps', tapped",
               st["kept"] is not None and st["kept"]["bpm"] == 120 and "by" not in st["kept"] and beat["tile"] == "120 · tapped"
-              and st["tempo"] == "120 beats a minute · tap again to change it",
+              and st["tempo"] == "120 beats a minute\u00a0· tap again to change it",
               f"{st['kept']}; the tile {beat['tile']!r}; {st['tempo']!r} (taps within {got['spread']:.1f}ms of their marks, try {k})")
         c.close()
 
@@ -585,6 +600,20 @@ with sync_playwright() as pw:
         check(f"{_n}: on the owner's phone the note shows clear of the header and the toolbar right under it",
               bool(said) and said["shown"] and said["onScreen"] and reach and not said["header"] and not said["bar"],
               f"{said}; the toolbar within a note's reach of the header: {reach}")
+        # The door's line on a phone, whichever way the beat came: its dot
+        # stays with the word before it, so no line starts with one (on the
+        # owner's 402, "set by the loop's end" had "· tap to change it" under it).
+        seen = []
+        for w in (375, 390, 402):
+            pg.set_viewport_size({"width": w, "height": 874}); pg.wait_for_timeout(300)
+            for tp0, says in (({"bpm": 118.812, "phase": 2.0, "by": "end"}, "set by the loop’s end"), (HEARD, "heard by Skribl"),
+                              ({"bpm": 120, "phase": 0}, "tap again")):
+                pg.evaluate(SET, {"tempo": tp0}); pg.wait_for_timeout(150)
+                seen.append((w, says, pg.evaluate(LINES)))
+        check(f"{_n}: on a phone the Beat door's line never starts a line with its dot, heard, tapped or set by the loop's end",
+              all(ls and says in " ".join(ls) and not any(l.startswith("·") for l in ls) for _, says, ls in seen),
+              "; ".join(f"{w}: {' / '.join(ls)}" for w, says, ls in seen if not ls or says not in " ".join(ls) or any(l.startswith("·") for l in ls))
+              or f"{len(seen)} lines, each as laid out: " + "; ".join(f"{w}: {' / '.join(ls)}" for w, _, ls in seen[:3]))
         c.close()
 
     b.close()
