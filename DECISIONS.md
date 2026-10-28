@@ -25477,6 +25477,27 @@ to a tenth, the music stopped 1.5s later while the drawing played 5.6s more
 (measured on main). It ends when the drawing's own place does now, and never
 while Repeat is on, where each round begins it again.
 
+ROWS (verify_padrepeat, new): where it is (the pill after the speed, 32 by
+26; the line between the speed and full screen, 34 by 27 on a phone;
+painted; off to start; its words); off, once; on, round after round with no
+frame held at a turn, before or after it, the music begun again from its
+loop's start each round and playing on every frame between; off mid-round,
+the last; Stop, and Repeat left on; remembered, the pill and the line one
+choice; Play with my drawing; a scrub back, Repeat off and on; the band's
+glass; its glyph 3:1 and up (off 7.99 to 10.12:1, on 7.55 to 9.58:1); posts
+and Flip without it. Each shown red against a broken copy of its own, 16
+breaks: no round, never remembered, one button not told of the other, a
+held moment at the round's end and at its start, a round without its music
+begun again, the line's Repeat after full screen, none in the pill, always
+round, the music stopped by its ticks, never lit, no glass in the band, the
+band never toning it, a faint glyph, a Repeat on every line. The turn's row
+first measured the time between two frames, which is always a frame: green
+on a held end, it was wrong, and measures the hold now. The guard that keeps
+the timer from stopping the music while Repeat is on, out alone, left the
+rows green: what it closes is the timer landing in the frame between the
+drawing's end and its next round, which a run cannot time; it costs the
+player nothing, and stays.
+
 WHAT IT DOES TO FLIP: not for Flip, whose Play already goes round until it
 is stopped and whose Loop repeats a stretch of pages. Posts unchanged.
 
