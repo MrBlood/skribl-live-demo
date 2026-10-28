@@ -158,10 +158,10 @@ def play(pg, sel="#playBtn"):
 
 def lap_ok(rec, ts):
     """No frame held at a turn: how long the replay sat at its last place
-    before the next round began, from the first frame it was there to the
-    first frame of the next round, is no more than three frames. (Two frames
-    side by side are always a frame apart: a hold shows as frames that do not
-    move.)"""
+    before the next round began, and at its first place after, each from the
+    first frame it was there to the first frame it moved on, no more than
+    three frames. (Two frames side by side are always a frame apart: a hold
+    shows as frames that do not move.)"""
     gaps = sorted(b2[0] - a2[0] for a2, b2 in zip(rec, rec[1:]))
     frame = gaps[len(gaps) // 2] if gaps else 16
     at = []
@@ -169,7 +169,10 @@ def lap_ok(rec, ts):
         k = i - 1
         while k > 0 and rec[k - 1][2] == rec[i - 1][2]:
             k -= 1
-        at.append(rec[i][0] - rec[k][0])
+        j = i
+        while j + 1 < len(rec) and rec[j + 1][2] == rec[i][2]:
+            j += 1
+        at.append(max(rec[i][0] - rec[k][0], rec[min(j + 1, len(rec) - 1)][0] - rec[i][0]))
     return all(g <= max(50, 3 * frame) for g in at), at, frame
 
 
