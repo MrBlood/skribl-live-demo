@@ -800,19 +800,17 @@ with sync_playwright() as pw:
         n1, l1 = pg.evaluate(NAMES), pg.evaluate(SAID)["step"]
         pg.click('.nudge-btn[data-which="end"][data-amount="-1"]'); pg.wait_for_timeout(150)
         e2 = pg.evaluate("() => trimEnd")
-        # Snap to the beat off, in the Beat door: the step a free set wants, untouched.
-        set_door(pg, "beat")
+        # Snap to the beat off, the magnet by the zoom: the step a free set wants, untouched.
         pg.click("#musicSnap"); pg.wait_for_timeout(150)
         n2, l2 = pg.evaluate(NAMES), pg.evaluate(SAID)["step"]
         pg.click("#musicSnap"); pg.wait_for_timeout(150)
-        set_door(pg, "exact")
         check(f"{_n}: untouched, - and + move 0.1s, or a bar once there is a tempo while Snap to the beat is on, and say which",
               abs((e1 - e0) - 0.1) < 1e-9 and abs((e1 - e2) - 2.0) < 1e-9
               and l0 == "0.01s · *0.1s" and l1 == "0.01s · 0.1s · *a bar" and l2 == "0.01s · *0.1s · a bar"
               and n0 == ["Start of loop, 0.1s earlier", "Start of loop, 0.1s later", "End of loop, 0.1s earlier", "End of loop, 0.1s later"]
               and n1 == ["Start of loop, a bar earlier", "Start of loop, a bar later", "End of loop, a bar earlier", "End of loop, a bar later"]
               and n2 == n0,
-              f"+ moved the end {e1 - e0:.4f}s, then - at 120 a minute {e1 - e2:.4f}s; Each press {l0!r}, then {l1!r}, then with the switch off {l2!r}; {n0} then {n1}")
+              f"+ moved the end {e1 - e0:.4f}s, then - at 120 a minute {e1 - e2:.4f}s; Each press {l0!r}, then {l1!r}, then with the magnet off {l2!r}; {n0} then {n1}")
         # Picked, a step is kept, a tempo or not, and a new song starts untouched.
         pg.evaluate("() => { musicTempo = null; updateTrimUI(); }"); pg.wait_for_timeout(150)
         pg.click('#musicStepSeg button[data-step="0.01"]'); pg.wait_for_timeout(150)

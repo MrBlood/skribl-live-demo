@@ -246,12 +246,17 @@ with sync_playwright() as pw:
       const ratio = (x, y) => { const a = lum(x), b = lum(y); return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05); };
       const t = q('#musicTlTall'), g = ground(t), ink = ratio(over(parse(getComputedStyle(t).color), g), g);
       const m = r('.mt-tl-mag'), k = r('.mt-tl-tallbox'), n = r('#musicTlName'), st = r('#musicTlStage'), b = t.getBoundingClientRect();
-      const cm = getComputedStyle(q('.mt-tl-mag')), ck = getComputedStyle(q('.mt-tl-tallbox'));
+      const cm = getComputedStyle(q('.mt-tl-mag')), ck = getComputedStyle(q('.mt-tl-tallbox')), cs = getComputedStyle(q('.mt-tl-snapbox'));
+      // Closed up with the magnet's box (lib/musictimeline.js fitHead), the
+      // two are one card: its outer corners are the zoom's.
+      const joined = !!q('.mt-tl-head.joined');
       // Where a finger lands on it: the middle and 21px out each way.
       const cx = (b.left + b.right) / 2, cy = (b.top + b.bottom) / 2;
       const hit = [[0, 0], [-21, 0], [21, 0], [0, -21], [0, 21]].every(([dx, dy]) => { const e = document.elementFromPoint(cx + dx, cy + dy); return e === t || t.contains(e); });
       return { right: k.right - st.right, after: k.left - m.right, middle: (k.top + k.bottom) / 2 - (m.top + m.bottom) / 2, nameMid: (k.top + k.bottom) / 2 - (n.top + n.bottom) / 2,
-               same: cm.backgroundColor === ck.backgroundColor && cm.borderTopColor === ck.borderTopColor && cm.borderRadius === ck.borderRadius && Math.abs(b.width - q('#musicTlIn').getBoundingClientRect().width) < 0.5,
+               same: cm.backgroundColor === ck.backgroundColor && cm.borderTopColor === ck.borderTopColor && Math.abs(b.width - q('#musicTlIn').getBoundingClientRect().width) < 0.5
+                 && (joined ? cs.backgroundColor === cm.backgroundColor && cs.borderTopLeftRadius === cm.borderTopLeftRadius && ck.borderTopRightRadius === cm.borderTopRightRadius
+                            : cm.borderRadius === ck.borderRadius),
                hit, ink: +ink.toFixed(2), glyph: !!t.querySelector('svg rect') && t.querySelectorAll('svg path').length === 1 }; }"""
     for _n, _p in eds("control"):
         # Without a song: there, and not pressable.
@@ -273,7 +278,7 @@ with sync_playwright() as pw:
                     pg.click("#musicTlTall"); pg.wait_for_timeout(600)
                     s2 = pg.evaluate(TALL)
                 c.close()
-        check(f"{_n}: the taller box sits after Magnify's - and +, at the end of the name's line, its middle on theirs, the same card and cell, a finger wide",
+        check(f"{_n}: the taller box sits after Magnify's - and +, at the end of the name's line, its middle on theirs, the same card and cell (one card with the magnet's where they close up), a finger wide",
               all(abs(p["right"]) <= 0.5 and p["after"] >= 4 and abs(p["middle"]) <= 0.5 and abs(p["nameMid"]) <= 1 and p["same"] and p["hit"] and p["glyph"]
                   for _, _, p in placed),
               "; ".join(f"{f} {s}: right {p['right']:+.2f}, {p['after']:.1f}px after -/+, middle {p['middle']:+.2f} (name {p['nameMid']:+.2f}),"

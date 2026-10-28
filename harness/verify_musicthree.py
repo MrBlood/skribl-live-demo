@@ -22,7 +22,7 @@ two slow waltzes heard first at their eighths (84 and 76); and in four, the ears
   end that far, and the click's higher tick and the lit beat's bigger light
   fall on every third beat.
 
-  BEATS IN A BAR. Under Snap to the beat, 3 lit, "heard by Skribl". A tap on
+  BEATS IN A BAR. Under the tap, 3 lit, "heard by Skribl". A tap on
   4 leaves the loop where it is, to the millisecond; Beats offers 4 · 8 · 16
   · 32 with none lit (24 beats is not whole bars of four), the dots are
   bigger every fourth beat, and it says "set by you"; Skribl's pick then
@@ -31,9 +31,10 @@ two slow waltzes heard first at their eighths (84 and 76); and in four, the ears
   said, and 3 tapped there, "set by you" and 3 · 6 · 12 · 24. The 4 and the 3
   stay put under the finger whatever the words say, on a phone and a desk.
 
-  SNAP COUNTS IN THREE. An end let go near 11 beats settles on 12 (in four it
-  would be 8); zoomed in, an end let go within an eighth of a beat of 12
-  stays, and the beat becomes the one that makes 12 exactly. A beat tapped
+  SNAP IN THREE. An end let go at 10.8 beats settles on 11, the nearest beat,
+  as in four (whole bars of three took it to 12); zoomed in, an end let go
+  within an eighth of a beat of 12, whole bars of three, stays, and the beat
+  becomes the one that makes 12 exactly. A beat tapped
   on the waltz is the taps', still in three.
 
   KEPT. After a reload the waltz comes back in three, "heard by Skribl", and
@@ -287,9 +288,9 @@ with sync_playwright() as pw:
         st = add(q, "waltz")
         door(q, "beat")
         shown = q.evaluate(STATE)
-        check(f"{name}: under Snap to the beat, Beats in a bar shows 3 lit, heard by Skribl",
+        check(f"{name}: under the tap, Beats in a bar shows 3 lit, heard by Skribl",
               shown["barShown"] and shown["bar"] == [3] and shown["says"] == "heard by Skribl"
-              and q.evaluate("() => { const s = document.getElementById('musicSnapRow'), r = document.getElementById('musicBarRow'); return !!(s.compareDocumentPosition(r) & Node.DOCUMENT_POSITION_FOLLOWING); }"),
+              and q.evaluate("() => { const s = document.querySelector('#musicDoorBeat .mt-tap-row'), r = document.getElementById('musicBarRow'); return !!(s.compareDocumentPosition(r) & Node.DOCUMENT_POSITION_FOLLOWING); }"),
               f"shown {shown['barShown']}, lit {shown['bar']}, says {shown['says']!r}")
         four = q.evaluate(STATE) if not tap_bar(q, 4) else q.evaluate(STATE)
         ok, why = bigger_every(four, 4)
@@ -344,7 +345,7 @@ with sync_playwright() as pw:
               f"before: lit {none['bar']}, says {none['says']!r}; after: lit {three['bar']}, says {three['says']!r}, beats {three['beats']}, tempo {three['tempo']}")
         c.close()
 
-    print("\nSNAP COUNTS IN THREE")
+    print("\nSNAP IN THREE")
     for name, path in eds("snap"):
         c, q, errs = editor(b, path)
         st = add(q, "waltz")
@@ -358,8 +359,8 @@ with sync_playwright() as pw:
         q.mouse.up(); q.wait_for_timeout(900)
         got = q.evaluate(TRIM)
         n = heard(got) / p
-        check(f"{name}: an end let go near 11 beats settles on 12, whole bars of three (in four it would be 8)",
-              abs(n - 12) < 0.01 and abs(got["s"] - st["s"]) < 1e-6, f"let go at {(target - st['s'] - st['xf'] / 1000) / p:.2f} beats; settled at {n:.3f} beats")
+        check(f"{name}: an end let go at 10.8 beats settles on 11, the nearest beat, as in four (whole bars of three took it to 12)",
+              abs(n - 11) < 0.01 and abs(got["s"] - st["s"]) < 1e-6, f"let go at {(target - st['s'] - st['xf'] / 1000) / p:.2f} beats; settled at {n:.3f} beats")
         # Zoomed in: the loop 12.06 beats, the end let go where it is.
         q.evaluate(SET, {"tempo": tp, "s": st["s"], "e": st["s"] + 12.06 * p, "xf": 0})
         waits.settle(q, 300)

@@ -25360,3 +25360,86 @@ time beside Play is Flip's own (the Pad counts its replay's time, which
 had no pages to miscount).
 
 Not tested here: an iPhone's WebKit, SF and Segoe UI.
+
+## After v329 -- Snap by the wave, the nearest beat, the zoom inside the song
+
+The owner, after trying the live drawer: Snap to the beat "is in beat. do
+you think it is hidden down in there - it took me a minute to find it. I
+was trying to change the first and last beat, but the toggle was on and it
+kept snapping"; and of Magnify, "when it is at the very beginning it's a
+little strange that it slides the wave over to the middle". Mocked as Now
+beside the options (the Snap, zoom and Repeat page), "all yes", then "i do
+like the magnet having it's own button. is there a way to have its own
+button if there's room, but merge them if there's not enough room?", and
+its C2.
+
+THE MAGNET BY THE ZOOM (the template's SNAP TO THE BEAT). Snap to the beat
+is a magnet in the timeline's top row, between the zoom and the taller
+button, lit when it is on (the chosen choice's purple, as the taller button
+wears it), so an end that jumps shows why and one tap turns it off. It is
+there from the first, unlit and out of reach until there is a beat; its
+words are its tooltip. The switch and its row are gone from the Beat door,
+which is shorter by them, and the page-still follow has one row fewer to
+leave out (lib/drawerdetent.js).
+
+ITS OWN BOX WHEN THERE'S ROOM (lib/musictimeline.js fitHead). The magnet
+has a box of its own while the name beside it keeps its one line; where it
+would not, its box and the taller button's close up into one, the two cells
+2px apart as the zoom's are. Room is measured, not guessed: the name's
+width on one line in the face it is drawn in, against what the row leaves
+it beside the magnet's own box, so it holds in SF and Segoe as here. On
+this box's faces "Your drawing · 3s" keeps its own box from a 390px phone
+up and on every desk. A later change (the name growing as the drawing
+does) glides, the gap closing over frames; at once under Reduce Motion.
+The magnet keeps its side of the zoom: C1, its own box before the zoom,
+would have hopped across it. Not tested here: SF and Segoe UI, whose
+widths decide where it closes up.
+
+THE NEAREST BEAT (lib/musicdrawer.js beatsFor). With the magnet on, an end
+let go settles on the nearest beat, not on 4, 8, 16 or 32 beats: from 23
+beats whole bars went back to 16, from 13 on to 16; now each stays, and
+none moves more than half a beat, so the first and last beat are the
+person's to set. The start still lands on the nearest beat (or where the
+music begins), and the end follows to whole beats. Zoomed in, an end let go
+within an eighth of a beat of whole bars still makes the beat fit the loop
+exactly; further off, the nearest beat. Whole bars are a tap in Beats, and
+Skribl's pick is whole bars, as before.
+
+ZOOMED IN, THE BOX STAYS INSIDE THE SONG (lib/musictimeline.js target).
+Each zoom keeps the end touched last in the middle, unless that would show
+time before 0:00 or after the song's end; there the end sits off the
+middle, 12px (TAB_ROOM) left for its tab. At 2x with the loop at 0:00 half
+the box had been before the song. A slide or a held end still carries the
+view as it goes, and lets go into the box inside the song. 1x is as it was.
+
+ROWS. verify_musicbeat: the nearest beat (an end let go at 10.6 and 12.8
+beats to 11 and 13, where whole bars took them to 8 and 16; a start let go
+off the beat to it, the end following to whole beats; a start off the beat
+kept; the beats the song or the 20s cap have room for; Reduce Motion at once)
+and the magnet by the zoom (there from the first, out of reach and unlit
+before a tempo, lit as painted, its words, a new song's magnet unlit and out
+of reach). verify_musictempo's 7-beat end zoomed in; verify_musicthree's 10.8
+beats to 11. verify_musictimeline: zoomed in, inside the song (at 0:00 the
+tab's 12px before it, at the song's end 12px past it, mid-song the end in the
+middle, phone and desk), and the magnet's own box (exactly when the name
+keeps one line beside it, at 402, 390, 375, 360 and a desk; closing up over
+frames as the name grows; at once under Reduce Motion). Each shown red
+against a broken copy of its own, 14 breaks: whole bars, the magnet always in
+reach (a new song's too), never lit, its words never changing, its purple
+gone; no clamp zoomed in, no room for the tab; no fit, always joined, the
+name measured in a stand-in face, the boxes not closed up, no glide, the old
+name ("1:05s"); and every Reduce Motion rule out. The magnet's own Reduce
+Motion rule, out alone, left the row green: the page's rule already keeps it
+still, so it went (it was the link page's sheet 136 bytes over its ratchet).
+The affected suites, side by side, found the magnet's box wearing the taller
+box's class to borrow its card, so two rows that read the taller box read
+the magnet's (verify_musictimeline's magnify row, verify_musictall's place
+row); it has its own class now, and verify_musictall reads the two as one
+card where they close up. verify_sheetswipe read Beats in a bar by its box,
+which holds its air as padding to glide open; it reads its 4 | 3 now.
+
+WHAT IT DOES TO FLIP: one drawer and one timeline, so all of it is both
+editors'. Flip's name is a little longer ("Your animation"), so on some
+phones its magnet closes up sooner.
+
+Not tested here: an iPhone's WebKit, SF and Segoe UI.

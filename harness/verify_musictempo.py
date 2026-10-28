@@ -8,7 +8,7 @@ the Wizard's "click the end of the first bar"; "All yes").
   do I tell it where the beginning is?"). With the tempo tapped 45ms off the
   music, at 16x a start let go on the music's beat stays exactly there and a
   beat falls on it, the tempo's beats a minute kept, and the end follows on
-  whole bars. The marks glide there frame by frame, at once under Reduce
+  whole beats. The marks glide there frame by frame, at once under Reduce
   Motion. Then at 1x a start lands on the new beat, the new beat is kept
   with the song in the drafts, and tapped again the beat is the taps' own.
 
@@ -21,7 +21,8 @@ the Wizard's "click the end of the first bar"; "All yes").
   Flip's chip), clear of the header and the toolbar right under it on the
   owner's phone; Undo puts the beat back as it was, the end where it was let
   go and the drawer still open. Further off than an eighth, or at 1x, the end
-  settles on whole bars at the tempo there is. The beat marks glide to the
+  settles on the nearest beat at the tempo there is (on a loop of 7 beats,
+  7, where whole bars took it to 8). The beat marks glide to the
   new beat frame by frame, at once under Reduce Motion. The beat is kept with
   the song in the drafts, and Flip's Match the beat refits a round of pages
   to it.
@@ -328,8 +329,8 @@ with sync_playwright() as pw:
                       and abs(k - round(k)) * 0.5 < 1e-4 and tp.get("snap", True) is not False,
                       f"let go at {let_go['s']:.4f}: {got['s']:.4f}; the tempo {tp}")
                 n = heard(got) / 0.5
-                check(f"{_n}: ...and the end follows on whole bars from it",
-                      any(abs(n - q) < 1e-6 for q in (4, 8, 16, 32)), f"{got['s']:.4f}-{got['e']:.4f}, {n:.3f} beats heard")
+                check(f"{_n}: ...and the end follows on whole beats from it",
+                      abs(n - round(n)) < 1e-6 and n >= 1, f"{got['s']:.4f}-{got['e']:.4f}, {n:.3f} beats heard")
                 check(f"{_n}: the beat marks glide there, frame by frame, the shorter way round",
                       len(between) >= 4 and all(b2 <= a2 + 1.5e-4 for a2, b2 in zip(seen, seen[1:])) and there is not None and there < 600,
                       f"{len(between)} frames on the way from 2.045 to {fin}; always back {all(b2 <= a2 + 1.5e-4 for a2, b2 in zip(seen, seen[1:]))}; "
@@ -475,9 +476,15 @@ with sync_playwright() as pw:
                       f"pressed {ok}: {back}; the loop {t2['s']}-{t2['e']:.4f}; the tile {beat2['tile']!r}; the drawer open {kept_open}")
                 g3, t3 = end_to(pg, 5.90)
                 tp3 = pg.evaluate("() => musicTempo")
-                check(f"{_n}: zoomed in, an end let go further than an eighth of a beat from whole bars settles on them at the tempo there is",
-                      abs(g3["e"] - 5.90) < 0.005 and abs(t3["e"] - 6.0) < 1e-6 and tp3 == HEARD,
-                      f"let go at {g3['e']:.4f}: {t3['e']:.4f}; the tempo {tp3}")
+                # And on a loop of 7 beats, an end let go at 7.16 settles on
+                # 7, in view (whole bars took it to 8, out past the zoom).
+                pg.evaluate(SET, {"tempo": HEARD, "s": 2.0, "e": 5.5, "xf": 0}); pg.wait_for_timeout(700)
+                g4, t4 = end_to(pg, 5.58)
+                tp4 = pg.evaluate("() => musicTempo")
+                check(f"{_n}: zoomed in, an end let go further than an eighth of a beat from whole bars settles on the nearest beat at the tempo there is",
+                      abs(g3["e"] - 5.90) < 0.005 and abs(t3["e"] - 6.0) < 1e-6 and tp3 == HEARD
+                      and abs(g4["e"] - 5.58) < 0.005 and abs(t4["e"] - 5.5) < 1e-6 and tp4 == HEARD,
+                      f"let go at {g3['e']:.4f}: {t3['e']:.4f}; the tempo {tp3}; on 7 beats let go at {g4['e']:.4f}: {t4['e']:.4f}; the tempo {tp4}")
             else:
                 check(f"{_n}: under Reduce Motion the end stays and the beat marks are there at once",
                       abs(t["e"] - g["e"]) < 1e-6 and tp is not None and tp.get("by") == "end" and not between and there is not None,
@@ -544,7 +551,7 @@ with sync_playwright() as pw:
               all(g2 is not None and abs(g2["phase"] - 2.0) < 0.005 and g2["bpm"] == t0["bpm"] and g2.get("heard") == t0.get("heard")
                   and g2.get("by") == t0.get("by") and tile.endswith(says) for t0, g2, tile, says in kept),
               "; ".join(f"{t0} -> {g2}, the tile {tile!r}" for t0, g2, tile, _ in kept))
-        # The Snap switch off and on again keeps it too.
+        # The magnet off and on again keeps it too.
         pg.evaluate(SET, {"tempo": {"bpm": 118.812, "phase": 2.0, "by": "end"}}); pg.wait_for_timeout(150)
         pg.click("#musicSnap"); pg.wait_for_timeout(150)
         off = pg.evaluate("() => musicTempo")

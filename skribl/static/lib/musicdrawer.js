@@ -530,11 +530,17 @@
      * putting the beat in the middle rather than in the right spot. Can I no
      * longer freely adjust start and end?"; then the picks, "if they let me
      * set the starting point. I need a free set so it's not all automatic").
-     * With a tempo and the switch under The beat on, an end let go on the
+     * With a tempo and the magnet by the zoom on, an end let go on the
      * timeline settles:
      *   the start on the nearest beat, and the end follows so the loop is
-     *     whole bars: of 4, 8, 16 and 32 beats, the count nearest what the
-     *     finger left that the song and the 20s cap have room for;
+     *     whole beats: the count nearest what the finger left that the song
+     *     and the 20s cap have room for. NEAREST BEAT, NOT WHOLE BARS (the
+     *     owner: "I was trying to change the first and last beat, but the
+     *     toggle was on and it kept snapping"; of the mock, "all yes"): of 4,
+     *     8, 16 and 32 beats, an end let go at 23 went back to 16, and one
+     *     at 13 on to 16; now each stays, and none moves more than half a
+     *     beat. Whole bars are a tap in Beats, and Skribl's pick is whole
+     *     bars;
      *   where the music begins after a silence instead (soundAt), the beat
      *     kept, when the start is let go in that silence and the music is
      *     nearer than the beat, or the beat is in a silence, or the start is
@@ -558,8 +564,8 @@
      *     and where they came from (heard, tapped or the end's): every beat,
      *     bar and snap after counts from that start, and the end follows as
      *     above. Tapped again, the beat is the taps' own;
-     *   the end on whole bars the same way, counted from the start wherever
-     *     it is: dragging the end never moves a start you have set;
+     *   the end on whole beats the same way, counted from the start
+     *     wherever it is: dragging the end never moves a start you have set;
      *   magnified, THE END SETS THE TEMPO (from the Wizard's "click the end
      *     of the first bar"; of the mock, "All yes"): an end let go within an
      *     eighth of a beat of 4, 8, 16 or 32 beats stays, and the beat
@@ -569,7 +575,7 @@
      *     between whole tempos can be matched: tapped, a tempo is whole beats
      *     a minute. It is by: 'end', to the thousandth, no longer the one
      *     heard; a note says so, and its Undo puts the beat back. Further
-     *     off, it settles as above.
+     *     off, it settles on the nearest beat as above.
      * In the Restart view, a close-up (`pxPerSec`, its scale), an end let go
      * within SNAP_PX of a beat settles on it instead: the loop detail's rule,
      * which the Restart view took over. The loop slid along the song, or sent
@@ -623,16 +629,13 @@
       var q = tp.phase + Math.round((o - tp.phase) / p) * p;
       return Math.abs(o - q) <= p / 8 && q >= 0 ? q : o;
     }
-    // Of 4, 8, 16 and 32 beats (3, 6, 12 and 24 in three), the count nearest
-    // `len` heard that `room` seconds hold, or 0.
-    function barsFor(len, room) {
-      var p = beatSecs(), best = 0;
-      counts().forEach(function (k) {
-        var l = lenFor(k);
-        if (l > Math.min(T.MAX_LOOP_SECONDS, room) + EPS || l < T.MIN_LOOP_SECONDS - EPS) return;
-        if (!best || Math.abs(len - k * p) < Math.abs(len - best * p)) best = k;
-      });
-      return best;
+    // The whole beats nearest `len` heard that `room` seconds and the cap
+    // hold, the loop no shorter than its least, or 0.
+    function beatsFor(len, room) {
+      var top = Math.min(T.MAX_LOOP_SECONDS, room) + EPS, k = Math.max(1, Math.round(len / beatSecs()));
+      while (k > 1 && lenFor(k) > top) k--;
+      while (lenFor(k) < T.MIN_LOOP_SECONDS - EPS) k++;
+      return lenFor(k) <= top ? k : 0;
     }
     function snap(which, pxPerSec, zoomed) {
       if (!snapOn() || locked || !h.hasTrack()) return;
@@ -648,8 +651,8 @@
           ns.phase = Math.round(s * 10000) / 10000;
           h.setTempo(ns);
         }
-        k = barsFor(heard({ start: s, end: t.end }, h.crossfade()), t.duration - s);
-        // No whole bars fit from that beat: the start settles alone.
+        k = beatsFor(heard({ start: s, end: t.end }, h.crossfade()), t.duration - s);
+        // No whole beats fit from that beat: the start settles alone.
         n = k ? { start: s, end: s + lenFor(k) } : T.setHandle(state, 'start', s, 'constrain');
       } else if (!pxPerSec) {
         // The loop stays as it is, so the room it needs is already there.
@@ -664,7 +667,7 @@
           endSaid(tp, nt, kz);
           return;
         }
-        k = barsFor(hz, t.duration - t.start);
+        k = beatsFor(hz, t.duration - t.start);
         if (!k) return;
         n = T.setHandle(state, 'end', t.start + lenFor(k), 'constrain');
       } else {
@@ -716,9 +719,10 @@
     /* ---- The timeline (lib/musictimeline.js): the drawing stays put and the
      * song slides under it. Its ends are the loop's; let go, they settle as
      * above. ---------------------------------------------------------------- */
+    // "3s", "8.4s", and over a minute "1:05" (it read "1:05s").
     function laneName(secs) {
-      var w = work === 'animation' ? 'Your animation' : 'Your drawing';
-      return w + ' \u00b7 ' + (secs > 0 ? says(secs) + 's' : 'nothing drawn yet');
+      var w = work === 'animation' ? 'Your animation' : 'Your drawing', t = says(secs);
+      return w + ' \u00b7 ' + (secs > 0 ? (t.indexOf(':') < 0 ? t + 's' : t) : 'nothing drawn yet');
     }
     var tl = global.SkriblMusicTimeline ? global.SkriblMusicTimeline.create($('musicTimeline'), {
       trim: h.trim, buffer: h.buffer, hasTrack: h.hasTrack, crossfade: h.crossfade, tempo: tempo,
@@ -1712,17 +1716,25 @@
       glideTo(s, e, function () { remember(was); });
     });
 
-    // Snap to the beat, under the tap once there is a tempo, on to start and
-    // kept with it in the drafts (SNAP TO THE BEAT, above, has what it does).
-    var snapRow = $('musicSnapRow'), snapSw = $('musicSnap'), snapSub = $('musicSnapSub');
+    // Snap to the beat, the magnet by the zoom (the template's SNAP TO THE
+    // BEAT): there once there is a tempo, lit while on, on to start and kept
+    // with it in the drafts (SNAP TO THE BEAT, above, has what it does). Its
+    // words are its tooltip, which lib/tooltip.js takes from the title into
+    // data-tip: the words last set are remembered, so a sync never sets them
+    // again only to have them taken again.
+    var snapSw = $('musicSnap');
+    var SNAP_SAYS = { on: 'Snap to the beat: on. A dragged end lands on the nearest beat.',
+                      off: 'Snap to the beat: off. Ends stay where you let them go.',
+                      none: 'Snap to the beat, once there is a beat' };
     function syncSnap() {
-      if (!snapRow) return;
-      var tp = tempo(), on = snapOn();
-      if (snapRow.hidden !== !tp) { snapRow.hidden = !tp; if (tp) glideIn(snapRow, 'y'); }
-      setOn(snapSw, on);
-      var w = on ? 'The start you drag lands on a beat, or where the music starts, and the loop on whole bars. Zoomed in, it stays where you put it, and the beat follows.'
-        : 'Ends stay exactly where you let them go.';
-      if (snapSub && snapSub.textContent !== w) snapSub.textContent = w;
+      if (!snapSw) return;
+      var tp = tempo(), lit = String(!!tp && snapOn()), w = !tp ? SNAP_SAYS.none : lit === 'true' ? SNAP_SAYS.on : SNAP_SAYS.off;
+      if (snapSw.disabled !== !tp) snapSw.disabled = !tp;
+      if (snapSw.getAttribute('aria-pressed') !== lit) snapSw.setAttribute('aria-pressed', lit);
+      if (snapSw._skTitle !== w) {
+        snapSw._skTitle = w;
+        if (snapSw.hasAttribute('data-tip')) snapSw.setAttribute('data-tip', w); else snapSw.title = w;
+      }
     }
     if (snapSw) snapSw.addEventListener('click', function () {
       var tp = tempo();
@@ -1735,7 +1747,7 @@
       sync();
     });
 
-    // Beats in a bar, under Snap once there is a tempo: 4 or 3 (SONGS IN
+    // Beats in a bar, in the Beat door once there is a tempo: 4 or 3 (SONGS IN
     // THREE, above), for when Skribl hears a song's bar wrong. Its words say
     // where the bar came from: "heard by Skribl" for the bar Skribl heard,
     // "set by you" for one set here (set back to the one heard, it is

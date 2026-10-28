@@ -85,13 +85,24 @@
             to see more of the wave, and one more puts it back. Its glyph is
             a box with arrows up and down, not a second magnifier. Two
             fingers pinch either: sideways to zoom, up and down for the
-            height. lib/musictimeline.js. -#}
+            height. lib/musictimeline.js.
+            SNAP TO THE BEAT, THE MAGNET between them (the owner, of the
+            switch in the Beat door: "do you think it is hidden down in there
+            ... it kept snapping"; "i do like the magnet having it's own
+            button"; of the mock's C2, "all yes"): lit when on, so an end that
+            jumps shows why, and one tap off; there once there is a beat. In
+            a box of its own while the name keeps its one line beside it, and
+            otherwise one box with the taller button, the magnet staying put
+            (lib/musictimeline.js fitHead). lib/musicdrawer.js. -#}
         <div class="mt-tl-head">
           <div class="mt-tl-namebox"><p class="mt-tl-name" id="musicTlName"></p></div>
           <span class="mt-tl-mag" role="group" aria-label="Magnify the timeline">
             <button type="button" class="mt-tl-mag-btn" id="musicTlOut" data-mag="-1" aria-label="Zoom the timeline out" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" x2="16.65" y1="21" y2="16.65"/><line x1="8" x2="14" y1="11" y2="11"/></svg></button>
             <span class="mt-tl-mag-val" id="musicTlMag" aria-live="polite">1&times;</span>
             <button type="button" class="mt-tl-mag-btn" id="musicTlIn" data-mag="1" aria-label="Zoom the timeline in"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" x2="16.65" y1="21" y2="16.65"/><line x1="11" x2="11" y1="8" y2="14"/><line x1="8" x2="14" y1="11" y2="11"/></svg></button>
+          </span>
+          <span class="mt-tl-snapbox">
+            <button type="button" class="mt-tl-mag-btn mt-tl-snap" id="musicSnap" aria-pressed="false" aria-label="Snap to the beat" title="Snap to the beat, once there is a beat" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h4v7a3 3 0 0 0 6 0V4h4v7a7 7 0 0 1-14 0z"/><path d="M5 8h4M15 8h4"/></svg></button>
           </span>
           <span class="mt-tl-tallbox">
             <button type="button" class="mt-tl-mag-btn mt-tl-tall" id="musicTlTall" aria-pressed="false" aria-label="Make the box taller" title="Taller, to see more of the wave" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="3.5" width="14" height="17" rx="3"/><path d="M12 7.5v9M9.5 10 12 7.5l2.5 2.5M9.5 14l2.5 2.5 2.5-2.5"/></svg></button>
@@ -181,30 +192,25 @@
             so I'm not at 7 or 9 when I want 8"). Tapped along with Hear the
             loop, which the first tap starts; the tempo it finds counts the
             loop in beats on the one line and marks them on the timeline and
-            the Restart view. SNAP TO THE BEAT shows with it, on to start: a
-            start dragged on the timeline lands on a beat, and the loop on
-            whole bars, 4, 8, 16 or 32 beats (the owner: "we only ever want
-            4,8,16"), or 3, 6, 12 or 24 in three; let go in the quiet before the music, or just into it,
-            the start lands where the music begins (the owner: "It snaps back
-            to empty space"); zoomed in, the start stays where it is let go and
-            the beat moves to it when it is near one (the owner: "how do I tell
-            it where the beginning is?"); off, the ends stay where they are let
-            go (the owner: "I need a free set so it's not all automatic").
-            BEATS IN A BAR under it, 4 or 3 (songs in three, step 8 of the
-            whole-drawer mock: "All yes"), for when Skribl hears a song's bar
-            wrong, with where the bar came from: "heard by Skribl" or "set by
-            you". -#}
+            the Restart view. Its beat is what SNAP TO THE BEAT, the magnet by
+            the zoom (above), snaps to: on to start, a start dragged on the
+            timeline lands on a beat, and an end on the nearest beat (the
+            owner, of whole bars: "it kept snapping"; they were 4, 8, 16 or 32
+            beats, "we only ever want 4,8,16", and Beats keeps those); let go
+            in the quiet before the music, or just into it, the start lands
+            where the music begins (the owner: "It snaps back to empty
+            space"); zoomed in, the start stays where it is let go and the beat
+            moves to it when it is near one (the owner: "how do I tell it where
+            the beginning is?"); off, the ends stay where they are let go (the
+            owner: "I need a free set so it's not all automatic").
+            BEATS IN A BAR, 4 or 3 (songs in three, step 8 of the whole-drawer
+            mock: "All yes"), for when Skribl hears a song's bar wrong, with
+            where the bar came from: "heard by Skribl" or "set by you". -#}
         <div class="dp-panel" id="musicDoorBeat" data-dp="beat" hidden>
           <div class="mt-beat" id="musicBeat">
             <div class="mt-tap-row">
               <button type="button" id="musicTapBtn" class="mt-tap">{{ music_glyph() }}<span id="musicTapWords">Tap the beat</span></button>
               <span class="mt-tempo" id="musicTempo" role="status"></span>
-            </div>
-            <div class="mt-snap" id="musicSnapRow" hidden>
-              <div class="mt-switch">
-                <span class="mt-switch-words"><span class="mt-k">Snap to the beat</span> <span class="mt-v" id="musicSnapSub">The start you drag lands on a beat, or where the music starts, and the loop on whole bars. Zoomed in, it stays where you put it, and the beat follows.</span></span>
-                <button type="button" id="musicSnap" class="layer-toggle on" role="switch" aria-checked="true" aria-label="Snap to the beat"><span class="layer-toggle-knob"></span></button>
-              </div>
             </div>
             <div class="mt-step mt-bar" id="musicBarRow" hidden>
               <span class="edge-name" id="musicBarLbl">Beats in a bar</span>

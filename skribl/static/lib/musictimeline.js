@@ -51,7 +51,9 @@
  * yes" to the mock): - and + at the end of the name's line, 1x to 512x.
  * Each rung is the framing over that many with the end last touched in the
  * middle: the start, until the end is grabbed, or moved anywhere else (- and
- * +, a typed time, the Restart view: focus()). The loop never moves for it,
+ * +, a typed time, the Restart view: focus()). Near 0:00 or the song's end
+ * it sits off the middle instead, so the box never shows time outside the
+ * song but for room for the end's tab (target()). The loop never moves for it,
  * and a step glides there as any reframing does. Magnified, an end held near
  * either edge carries the view along at the zoom, as far as the end can
  * follow, so the loop can shorten past what is in view as well as grow, and a
@@ -148,6 +150,7 @@
   'use strict';
 
   var SPAN = 1.28, LEAD = 0.09, EASE_MS = 70, ZONE = 28, GROW = 1.4, FADE_MS = 200;
+  var TAB_ROOM = 12;   // px kept past 0:00 or the song's end zoomed in: half an end's 22px tab, and a pixel
   // MAGNIFY: the framing over 1 to 512, around the end last touched; zoomed
   // in, an end held near either edge carries the view along (PAN views a
   // second at the edge itself) instead of widening it. Under WAVE_AT samples a
@@ -244,10 +247,23 @@
     }
     // Where the view belongs for the loop as it is: its framing, or
     // magnified, that over `mag` with the end last touched in the middle.
+    // ZOOMED IN, THE BOX STAYS INSIDE THE SONG (the owner: "when I magnify it
+    // scoots the wave (beginning) to the middle ... when it is at the very
+    // beginning it's a little strange"; of the mock, "all yes"): the middle,
+    // unless that shows time before 0:00 or after the song's end, but for
+    // TAB_ROOM px at that edge, where the end's tab sits whole; near either,
+    // the end sits off the middle instead. At 2x with the loop at 0:00 half
+    // the box was before the song. A song shorter than the view is framed as
+    // before, and a slide or a held end still carries the view as it goes.
     function target() {
       var t = trim(), L = Math.max(0.05, t.end - t.start), d = Math.min(laneSecs, 3 * L);
       var span = SPAN * Math.max(L, d);
-      if (mag > 1) { span /= mag; return { v0: focused() - span / 2, span: span }; }
+      if (mag > 1) {
+        span /= mag;
+        var v0 = focused() - span / 2, room = TAB_ROOM / Math.max(1, width()) * span;
+        if (t.duration > span) v0 = Math.max(-room, Math.min(t.duration - span + room, v0));
+        return { v0: v0, span: span };
+      }
       return { v0: t.start - LEAD * span, span: span };
     }
     function focused() { var t = trim(); return focus === 'end' ? t.end : t.start; }
@@ -360,6 +376,30 @@
         var said = h.name(laneSecs);
         if (nameEl.textContent !== said) nameEl.textContent = said;
       }
+      fitHead();
+    }
+    // THE MAGNET'S OWN BOX WHEN THERE'S ROOM (the template's SNAP TO THE
+    // BEAT): a box of its own beside the taller button while the name keeps
+    // its one line with it there, its width read in the face it is drawn
+    // in; otherwise the two boxes close up into one (.joined) and the magnet
+    // stays put. The name's room beside the magnet's own box is the row less
+    // what is not the name, taken while not closed up, so it holds in any
+    // face. Asked as the name's words change and as the row's width does
+    // (the stage's ResizeObserver, below).
+    var head = root.querySelector('.mt-tl-head'), snapBox = root.querySelector('.mt-tl-snapbox'), notName = -1, fitCx = null;
+    function fitHead() {
+      if (!head || !snapBox || !nameEl || !nameBox) return;
+      var w = head.clientWidth, joined = head.classList.contains('joined');
+      if (!(w > 0)) return;
+      if (!joined) notName = w - nameBox.clientWidth;
+      if (notName < 0) return;
+      var cs = global.getComputedStyle(nameEl);
+      fitCx = fitCx || document.createElement('canvas').getContext('2d');
+      fitCx.font = cs.fontStyle + ' ' + cs.fontWeight + ' ' + cs.fontSize + ' ' + cs.fontFamily;
+      var join = fitCx.measureText(nameEl.textContent).width > w - notName + 0.5;
+      if (join !== joined) head.classList.toggle('joined', join);
+      // Fitted once, a later change glides (styles.css); the first is how it opens.
+      if (!head.classList.contains('fitted')) global.requestAnimationFrame(function () { head.classList.add('fitted'); });
     }
 
     // Held near the edge an end is dragged toward, the view widens, the far
