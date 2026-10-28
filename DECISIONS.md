@@ -25412,6 +25412,32 @@ middle, 12px (TAB_ROOM) left for its tab. At 2x with the loop at 0:00 half
 the box had been before the song. A slide or a held end still carries the
 view as it goes, and lets go into the box inside the song. 1x is as it was.
 
+ROWS. verify_musicbeat: the nearest beat (an end let go at 10.6 and 12.8
+beats to 11 and 13, where whole bars took them to 8 and 16; a start let go
+off the beat to it, the end following to whole beats; a start off the beat
+kept; the beats the song or the 20s cap have room for; Reduce Motion at once)
+and the magnet by the zoom (there from the first, out of reach and unlit
+before a tempo, lit as painted, its words, a new song's magnet unlit and out
+of reach). verify_musictempo's 7-beat end zoomed in; verify_musicthree's 10.8
+beats to 11. verify_musictimeline: zoomed in, inside the song (at 0:00 the
+tab's 12px before it, at the song's end 12px past it, mid-song the end in the
+middle, phone and desk), and the magnet's own box (exactly when the name
+keeps one line beside it, at 402, 390, 375, 360 and a desk; closing up over
+frames as the name grows; at once under Reduce Motion). Each shown red
+against a broken copy of its own, 25 breaks: whole bars, the magnet always in
+reach, never lit, its words never changing, its purple gone, a new song's in
+reach; no clamp zoomed in, no room for the tab; no fit, always joined, the
+name measured in a stand-in face, the boxes not closed up, no glide, the old
+name ("1:05s"); and every Reduce Motion rule out. The magnet's own Reduce
+Motion rule, out alone, left the row green: the page's rule already keeps it
+still, so it went (it was the link page's sheet 136 bytes over its ratchet).
+The affected suites, side by side, found the magnet's box wearing the taller
+box's class to borrow its card, so two rows that read the taller box read
+the magnet's (verify_musictimeline's magnify row, verify_musictall's place
+row); it has its own class now, and verify_musictall reads the two as one
+card where they close up. verify_sheetswipe read Beats in a bar by its box,
+which holds its air as padding to glide open; it reads its 4 | 3 now.
+
 WHAT IT DOES TO FLIP: one drawer and one timeline, so all of it is both
 editors'. Flip's name is a little longer ("Your animation"), so on some
 phones its magnet closes up sooner.

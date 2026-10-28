@@ -621,10 +621,12 @@ with sync_playwright() as p:
             // A switch row by its words: its padding is the row's own air, so
             // two switch rows touch box to box with the air between what they
             // say. Each press by its own seg: Beats wears the same row's class.
+            // Beats in a bar by its 4 | 3: its air is its own padding, so it
+            // glides open with the row.
             const sw = (id) => document.getElementById(id).closest('.mt-switch').querySelector('.mt-switch-words').getBoundingClientRect();
             const shown = (e) => e && !e.closest('[hidden]') && e.getClientRects().length;
             const R = { length: [['the lengths', q('.mt-lengths')], ['beats', document.getElementById('musicBeatsRow')], ['undo', document.getElementById('musicPickUndo')], ['lock', 'musicLock']],
-                        beat: [['tap', q('.mt-tap-row')], ['beats in a bar', document.getElementById('musicBarRow')]],
+                        beat: [['tap', q('.mt-tap-row')], ['beats in a bar', document.getElementById('musicBarSeg')]],
                         restart: [['smooth restart', 'musicSmooth'], ['restart view', q('#musicRestart')], ['its hint', q('#musicRvHint')],
                                   ['length', q('.crossfade-row')], ['hear the restart', q('#testSeamBtn')], ['cut on silence', 'musicCut']],
                         exact: [['start/end', q('.edge-group')], ['each press', document.getElementById('musicStepSeg').closest('.mt-step')]] }[k];

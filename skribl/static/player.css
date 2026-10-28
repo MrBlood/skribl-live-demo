@@ -928,7 +928,6 @@ body.playback-paused .tap-paused { display: grid; }
   font-variant-numeric: tabular-nums;
   transition: color .2s var(--ease);
 }
-@media (prefers-reduced-motion: reduce) { .mt-tl-head.fitted :is(.mt-tl-snapbox, .mt-tl-snapbox + .mt-tl-tallbox) { transition: none; } }
 
 .photo-bg-img {
   position: absolute;

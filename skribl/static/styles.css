@@ -2959,7 +2959,7 @@ body.recoloring #canvas { cursor: crosshair !important; }
 .mt-tl-head { --mt-head-gap: 10px; display: flex; align-items: center; gap: var(--mt-head-gap); margin: 0 0 6px; }
 .mt-tl-namebox { flex: 1 1 auto; min-width: 0; }
 .mt-tl-head .mt-tl-name { margin: 0; }
-.mt-tl-mag, .mt-tl-tallbox { display: flex; align-items: center; gap: 2px; padding: 3px; flex: none;
+.mt-tl-mag, .mt-tl-snapbox, .mt-tl-tallbox { display: flex; align-items: center; gap: 2px; padding: 3px; flex: none;
   background: var(--menu-card); border: 1px solid var(--menu-card-line); border-radius: var(--r-control); }
 .mt-tl-mag-btn { position: relative; z-index: 1; width: 28px; height: 28px; padding: 0; border: 0; display: grid; place-items: center;
   border-radius: calc(var(--r-seg) - 3px); background: color-mix(in srgb, var(--accent) 7%, var(--menu-card)); color: var(--text-tool);
@@ -2983,13 +2983,13 @@ body.recoloring #canvas { cursor: crosshair !important; }
    where the name would not keep its one line beside the magnet's own box,
    the two boxes are one, their cells 2px apart as the zoom's are, and the
    magnet stays where it was. Once the row has been fitted the gap closes as
-   it glides; at once under Reduce Motion. */
+   it glides; at once under Reduce Motion, by the page's own rule (a rule of
+   its own here was the link page's 136 bytes for nothing). */
 .mt-tl-head.fitted :is(.mt-tl-snapbox, .mt-tl-snapbox + .mt-tl-tallbox) {
   transition: margin .2s var(--ease), padding .2s var(--ease), border-width .2s var(--ease), border-radius .2s var(--ease); }
 .mt-tl-head.joined .mt-tl-snapbox { border-right-width: 0; border-top-right-radius: 0; border-bottom-right-radius: 0; padding-right: 1px; }
 .mt-tl-head.joined .mt-tl-snapbox + .mt-tl-tallbox { border-left-width: 0; border-top-left-radius: 0; border-bottom-left-radius: 0;
   padding-left: 1px; margin-left: calc(-1 * var(--mt-head-gap)); }
-@media (prefers-reduced-motion: reduce) { .mt-tl-head.fitted :is(.mt-tl-snapbox, .mt-tl-snapbox + .mt-tl-tallbox) { transition: none; } }
 .mt-tl-stage { position: relative; height: 118px; touch-action: pan-y; -webkit-user-select: none; user-select: none; cursor: grab; }
 .mt-tl.holding .mt-tl-stage { cursor: grabbing; }
 .mt-tl-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
