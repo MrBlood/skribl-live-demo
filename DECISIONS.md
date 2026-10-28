@@ -24542,3 +24542,42 @@ else. The Pad's three tools all fit its bar, so its tray is never built;
 the cards' selectors name the tray's copies only where there is one.
 
 Not tested here: a finger (touch is CDP touch events), and WebKit's hold.
+
+## After v329 -- Main red after #655: the speed pill's ends in CI's face
+
+Main's full run after #655 went red on one suite in both databases' sixth
+shard: verify_replayspeed, THE PILL'S ENDS, at 1280. On the Pad's desk pill
+the end word sat 27.1px from the pill's edge for 28.1, and in Tune 22.7 for
+23.2. Green here. The entry for #655 said the ends hold in any face because
+they are padding. On the Pad's line, the link page and the post's box they
+do: each speed there is its word and its padding, so the space at an end and
+between two words is the same in every face. But on the desk pill each speed
+is at least 44px wide, and in Tune the eight share the pill, and there a word
+is centred in its speed: how far the end word sits from the edge, and two
+words from each other, follows how wide the words are in the face the page
+is drawn in. CI draws in Liberation Sans, this box in Inter, and in
+Liberation "¼×" is wider beside "2×".
+
+THE CHECK READS THREE FACES NOW. Each pill is read in the page's own face and
+in Inter, Liberation Sans and FreeSans where they are installed (SF's,
+Arial's and Helvetica's widths, near the owner's iPhone and Segoe UI), and
+passes only in all of them, three at least. Forced onto the desk pill here,
+Liberation Sans gives CI's numbers to the hundredth (27.06 and 28.45 for
+28.1). Not DejaVu Sans: wider than any face the app is drawn in where it is
+used, it runs Fit 3px out of a 320px phone's line, which no device of ours
+shows.
+
+THE ENDS: 16px on the desk pill (it was 14), 13 in Tune (it was 11; its pill
+is 384px for 380, so the eight are still 44px each where the row has room).
+The rest are as they were.
+
+CALIBRATION, in a trimmed copy of the suite (the fixture and the section),
+the stylesheets served in place of the files: main's red at the two rows CI
+found, in Liberation Sans (both) and FreeSans (the desk pill), with its own
+face and Inter green; the stylesheets before #655 red at all fourteen; as
+built, fourteen green in four faces.
+
+WHAT IT DOES TO FLIP: nothing. The desk pill and Tune are the Pad's; a posted
+Flip's link page and post's box show the line's pill, which is unchanged.
+
+Not tested here: SF and Segoe UI themselves.
