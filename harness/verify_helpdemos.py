@@ -528,22 +528,39 @@ with sync_playwright() as p:
         cdp.send("Performance.enable")
         recalc = lambda: next(m["value"] for m in cdp.send("Performance.getMetrics")["metrics"] if m["name"] == "RecalcStyleCount")
         r0 = recalc()
+        # Each frame on its own clock (document.timeline), which is the time
+        # the sheet's place is worked out for: performance.now() at the read
+        # can come after a hold in the same frame, so the hold showed nowhere.
         frames = pg.evaluate("""(item) => new Promise(res => { const d = document.getElementById('helpDrawer'),
-            i = d.querySelector('.help-drawer-inner'), out = [], t0 = performance.now();
+            i = d.querySelector('.help-drawer-inner'), out = [], t0 = performance.now(), t1 = document.timeline.currentTime;
             document.querySelector(item).click();
-            (function tick() { out.push([Math.max(d.scrollLeft, d.scrollTop), i.getBoundingClientRect().top]);
+            (function tick() { out.push([Math.max(d.scrollLeft, d.scrollTop), i.getBoundingClientRect().top, document.timeline.currentTime - t1]);
               if (performance.now() - t0 < 700) requestAnimationFrame(tick); else res(out); })(); })""", opener[1])
         scrolled = max(f[0] for f in frames)
         tops = [f[1] for f in frames]
-        steps = [a_ - b_ for a_, b_ in zip(tops, tops[1:])]
+        total = tops[0] - tops[-1]
+        steps = [(frames[j + 1][2] - frames[j][2], tops[j] - tops[j + 1]) for j in range(len(frames) - 1)]
         # One way, and travelled: a snap from off-screen to home in a single
         # frame is "one way" too, which is how the first draft of this passed
-        # on the broken tree.
-        steady = all(st_ >= -1 for st_ in steps) and max(steps) < 0.4 * (tops[0] - tops[-1])
+        # on the broken tree; so it is seen at three places on the way at least.
+        # A FRAME THE BOX HELD IS NOT A JUMP (main red after #656: 733 to 390,
+        # 45% of the way, on one database's runner and not the other's). The
+        # sheet is a transform the compositor moves, so a person sees it glide
+        # whatever the page is doing; the page reads where it is once a frame,
+        # and a frame held 50ms or more reads a stretch of the glide at once.
+        # The ease's fastest stretch is about 15% of the way a frame, so a
+        # frame under 50ms cannot cover 40%. One such step is set aside, the
+        # biggest, named in the detail.
+        held = [j for j, (dt, dy) in enumerate(steps) if dt >= 50 and dy >= 0.4 * total]
+        aside = max(held, key=lambda j: steps[j][1]) if held else None
+        way = {round(t) for t in tops if tops[-1] + 1 < t < tops[0] - 1}
+        steady = (all(dy >= -1 for _, dy in steps) and len(way) >= 3
+                  and all(dy < 0.4 * total for j, (_, dy) in enumerate(steps) if j != aside))
         check(f"{name}: How it works rises in; its frame never scrolls",
               scrolled == 0, f"drawer scroll peaked at {scrolled}px over {len(frames)} frames")
         check(f"{name}: ...and the sheet travels up from the foot, no frame jumping 40% of the way",
-              steady and tops[0] > tops[-1] + 200, f"sheet top edge by frame: {[round(x) for x in tops]}")
+              steady and total > 200, f"sheet top edge by frame: {[round(x) for x in tops]}"
+              + (f"; set aside: {round(steps[aside][1])}px across a {round(steps[aside][0])}ms frame the box held" if aside is not None else ""))
         # ...AND NOTHING HOLDS IT UP WHILE IT DOES (main red after #571: the
         # sheet jumped 59% of the way in one frame on a busy runner). Opening
         # it rewrote every entry's More and read the next one's height, so the
