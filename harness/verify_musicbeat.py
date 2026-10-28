@@ -42,7 +42,8 @@ the loop, so I'm not at 7 or 9 when I want 8"; "All yes" to the mock; then
   none pressed). It opens out, Lock under it gliding down, at once under
   Reduce Motion, and the page
   stays still as it does (the drawer's growth follow scrolled it 46px under
-  a finger reaching for the timeline). A count tapped
+  a finger reaching for the timeline), as it does in the Beat door as Snap
+  to the beat and Beats in a bar open (61-63px on a phone, 139 on a desk). A count tapped
   on a loop of the person's own keeps the start and makes the loop that
   many beats, smooth restart and all; near the song's end it moves back by
   whole beats, only as far as it must. It glides there, the count lit from
@@ -791,18 +792,25 @@ with sync_playwright() as pw:
               f"the second tap with the start at {mid:.3f}, on its way from 6.0 to 3.5: {t4['s']:.4f}-{t4['e']:.4f}, lit {t4['lit']}; Undo: {t5['s']:.4f}-{t5['e']:.4f}")
         check(f"{_n}: no page errors through Beats", not errs, "; ".join(errs[:2]))
         c.close()
+    # The same in the Beat door, where Snap to the beat and Beats in a bar
+    # open as the beat lands (they scrolled the page 61-63px on a phone and
+    # 139px on a desk, and verify_musictempo's tap on the end's tab, read a
+    # moment before, landed on the whole song's line and moved the loop to
+    # the song's end).
+    OPENS = {"length": "Beats opens", "beat": "Snap to the beat and Beats in a bar open in the Beat door"}
     for _n, _p in eds("beats"):
-        for dev, opts in (("phone", PHONE), ("desk", DESK)):
-            # Where the song's landing left the page (its follow brings the
-            # drawer's end on screen), once that follow is over.
-            c, pg, errs = editor(b, _n, _p, door="length", opts=opts)
-            pg.wait_for_timeout(1500)
-            rec = pg.evaluate(STILL)
-            ys, tops = sorted({round(f[1]) for f in rec}), [f[2] for f in rec]
-            check(f"{_n}: as the beat lands and Beats opens, the page stays still: nothing scrolls it ({dev})",
-                  len(ys) == 1 and max(tops) - min(tops) < 0.5,
-                  f"scrolled to {ys}; the timeline's top moved {max(tops) - min(tops):.1f}px")
-            c.close()
+        for door, opens in OPENS.items():
+            for dev, opts in (("phone", PHONE), ("desk", DESK)):
+                # Where the song's landing left the page (its follow brings the
+                # drawer's end on screen), once that follow is over.
+                c, pg, errs = editor(b, _n, _p, door=door, opts=opts)
+                pg.wait_for_timeout(1500)
+                rec = pg.evaluate(STILL)
+                ys, tops = sorted({round(f[1]) for f in rec}), [f[2] for f in rec]
+                check(f"{_n}: as the beat lands and {opens}, the page stays still: nothing scrolls it ({dev})",
+                      len(ys) == 1 and max(tops) - min(tops) < 0.5,
+                      f"scrolled to {ys}; the timeline's top moved {max(tops) - min(tops):.1f}px")
+                c.close()
     for _n, _p in eds("beats"):
         for still in (False, True):
             c = waits.instrument(b.new_context(reduced_motion="reduce" if still else "no-preference", **DESK))

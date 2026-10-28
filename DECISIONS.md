@@ -25255,6 +25255,20 @@ nothing new.
 Found on the way: Skribl's pick, tapped with the bar set to four, lost "set
 by you" (the pick's tempo is new; it keeps the bar yours now).
 
+THE PAGE STAYS STILL IN THE BEAT DOOR TOO. Found by the run of the affected
+suites: verify_musictempo went red beside the others on the Pad, 49 of 56
+(56 of 56 alone), its tap on the end's tab landing on the whole song's line
+and moving the loop to the song's end. With the Beat door open, a beat
+landing opens Snap to the beat and Beats in a bar, and the drawer's growth
+follow (lib/drawerdetent.js) scrolled the page after them, 61 to 63px on a
+phone and 139 on a desk, under a finger reaching for the timeline: what was
+left out for Beats in the Length door (the Beats row, above). Before step 8,
+Snap alone scrolled it 66px on a desk. Both rows are left out of the card's
+height for the follow now, as Beats is; each glides open and what is under
+it glides down, and a song landing with them is followed. verify_musicbeat's
+still-page rows read the Beat door too, on both editors, phone and desk: red
+with the follow as it was, and with either row followed.
+
 Rows (verify_musicthree, 49): the ears, every song in three heard in three
 at its own beat and every song in four in four; the pick in three, a
 waltz's loop on its bar and 24 of its beats, the line and the tile, Beats,
