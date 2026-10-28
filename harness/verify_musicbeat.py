@@ -16,7 +16,8 @@ the loop, so I'm not at 7 or 9 when I want 8"; "All yes" to the mock; then
   each beat of what plays, on the loop's own audio clock to the millisecond,
   the bar's tick higher every four beats from the loop's start, the loop's
   first beat as the music starts, each tick straight to the speakers, never
-  into a post or a file; a tick already set ahead never sounds once the click
+  into a post or a file; turned on while Hear plays, it ticks from the very
+  next beat; a tick already set ahead never sounds once the click
   goes off or Hear stops; an end moved while it plays ticks the new loop from
   its next time round, no tick doubled at the join. Each beat's dot lights as
   it is heard (by the context's record of what its speakers play), a beat
@@ -591,9 +592,9 @@ with sync_playwright() as pw:
         const ts = audioCtx.getOutputTimestamp ? audioCtx.getOutputTimestamp() : null;
         out.push({ x: l.x, bar: l.bar, t: l.t, at: l.at, ctxT: ts ? ts.contextTime : null, perfT: ts ? ts.performanceTime : null,
                    beats: (tl._painted && tl._painted.beats || []).map((b) => [b[0], b[1], b[2]]) }); } }, 4); }"""
-    CLOCK = "() => ({ now: audioCtx.currentTime, el: _waLoop.elapsed(), dur: _waLoop.duration(), s0: _waLoop.soundAt(), lead: SkriblAudioLoop.LEAD })"
+    CLOCK = "() => ({ now: audioCtx.currentTime, el: _waLoop.elapsed(), dur: _waLoop.duration(), s0: document.getElementById('musicClickBtn')._soundFrom, lead: SkriblAudioLoop.LEAD })"
     PRESSED = "() => document.getElementById('musicClickBtn').getAttribute('aria-pressed')"
-    LOOP = "() => { musicTempo = { bpm: 120, phase: 0 }; trimStart = 1.0; trimEnd = 5.0; loopCrossfadeMs = 0; setCrossfadeUI(); loopCutOnSilence = false; updateTrimUI(); }"
+    CLICK_LOOP = "() => { musicTempo = { bpm: 120, phase: 0 }; trimStart = 1.0; trimEnd = 5.0; loopCrossfadeMs = 0; setCrossfadeUI(); loopCutOnSilence = false; updateTrimUI(); }"
 
     def grid(at, top, dur, p=0.5):
         """Where a time on the audio clock falls in what plays: (the beat's
@@ -608,7 +609,7 @@ with sync_playwright() as pw:
         c = waits.instrument(b.new_context(**DESK))
         c.add_init_script(OSC)
         c, pg, errs = editor(b, _n, _p, door=None, ctx=c)
-        pg.evaluate(LOOP)
+        pg.evaluate(CLICK_LOOP)
         pg.wait_for_timeout(300)
         press(pg, "#musicClickBtn", 100)
         on = pg.evaluate(PRESSED)
@@ -726,7 +727,7 @@ with sync_playwright() as pw:
             c = waits.instrument(b.new_context(**DESK))
             c.add_init_script(OSC)
             c, pg, errs = editor(b, _n, _p, door="exact", ctx=c)
-            pg.evaluate(LOOP)
+            pg.evaluate(CLICK_LOOP)
             pg.wait_for_timeout(300)
             res[late] = restart(pg, late)
             c.close()
@@ -736,6 +737,33 @@ with sync_playwright() as pw:
         ok, early, why = res[True]
         check(f"{_n}: the loop started again late, just after it came round (the page held busy across it): its first beat still "
               "ticks once, as the old loop came round", ok and not early, why)
+
+    # The click turned on while Hear plays ticks from the very next beat: one
+    # already set ahead, lit and not yet ticked, ticks too. Turned on 40 to
+    # 120ms before a beat, which the scheduler (every 30ms, 160ms ahead) has
+    # already set.
+    NEXT = """() => new Promise((res) => { const t0 = performance.now();
+      const id = setInterval(() => { const now = audioCtx.currentTime, d = _waLoop.duration(), top = document.getElementById('musicClickBtn')._soundFrom - SkriblAudioLoop.LEAD;
+        if (!(d > 0)) return;
+        const u = ((now - top) % d + d) % d, next = now + (0.5 - (u % 0.5));
+        if ((next - now > 0.04 && next - now < 0.12) || performance.now() - t0 > 3000) { clearInterval(id);
+          document.getElementById('musicClickBtn').click(); res({ next: next, gap: next - now }); } }, 3); })"""
+    for _n, _p in eds("click"):
+        c = waits.instrument(b.new_context(**DESK))
+        c.add_init_script(OSC)
+        c, pg, errs = editor(b, _n, _p, door=None, ctx=c)
+        pg.evaluate(CLICK_LOOP)
+        pg.wait_for_timeout(300)
+        press(pg, "#previewLoopBtn", 1300)
+        got = pg.evaluate(NEXT)
+        pg.wait_for_timeout(700)
+        ticks = sorted(pg.evaluate(TICKS), key=lambda t: t["at"])
+        press(pg, "#previewLoopBtn", 100)
+        first = ticks[0]["at"] if ticks else None
+        check(f"{_n}: the click turned on while Hear the loop plays ticks from the very next beat, one already set ahead among them",
+              first is not None and abs(first - got["next"]) < 0.0015 and 0.04 < got["gap"] < 0.12,
+              f"turned on {got['gap'] * 1000:.0f}ms before a beat; the first tick {first and round((first - got['next']) * 1000, 2)}ms from it")
+        c.close()
 
     # Under Reduce Motion the light fades with no swell; otherwise it swells.
     for _n, _p in eds("click"):
@@ -1484,8 +1512,10 @@ with sync_playwright() as pw:
     print("\nMUSIC BEAT — words")
     # The pair's words, whole, from the smallest phone to the owner's: side by
     # side from 360px, one to a row below it.
-    FIT = """() => [...document.querySelectorAll('.mt-transport .mt-play')].map(x => { const r = x.getBoundingClientRect();
-      return { over: x.scrollWidth - x.clientWidth, top: Math.round(r.top), w: Math.round(r.width) }; })"""
+    # Each of the pair as laid out (Play, and Hear's pill with the click at
+    # its end): where it sits, and whether its button's words overflow.
+    FIT = """() => [...document.querySelectorAll('.mt-transport > *')].map(x => { const r = x.getBoundingClientRect(), b = x.matches('.mt-play') ? x : x.querySelector('.mt-play');
+      return { over: b.scrollWidth - b.clientWidth, top: Math.round(r.top), w: Math.round(r.width) }; })"""
     for _n, _p in eds("words"):
         seen = {}
         for w in (320, 360, 402):

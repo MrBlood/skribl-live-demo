@@ -383,9 +383,6 @@
       start: start, stop: stop, unlock: unlock,
       playing: function () { return !!source; },
       source: function () { return source; },
-      // When the last start's sound begins on the audio clock (LEAD after
-      // the start, so a beat in that moment can wait for it); 0 when stopped.
-      soundAt: function () { return fade ? fade.at : 0; },
       duration: function () { return duration; },
       // Seconds into the loop clip, by the audio clock; add trimStart for song time.
       elapsed: function () {

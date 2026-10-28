@@ -516,7 +516,8 @@ stays a sleep.
   of what plays on the loop's own clock to the millisecond, the bar's tick
   higher every four beats from the loop's start, the loop's first beat as the
   music starts, each tick straight to the speakers (never a post or a file),
-  a tick already set ahead never sounding once it is off or Hear stops, and
+  turned on while Hear plays ticking from the very next beat, a tick already
+  set ahead never sounding once it is off or Hear stops, and
   an end moved while it plays ticking the new loop from its next time round
   with no tick doubled at the join; each beat's dot lights as it is heard (by
   the context's record of what its speakers play), a beat apart, at the dot's

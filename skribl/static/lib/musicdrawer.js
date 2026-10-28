@@ -1158,6 +1158,7 @@
       pv.mode = pv.engine = null;
       beatsOff();
       beatsSet = [];
+      pv.from = null;
       beatDone = {};
       if (tl) tl.playhead(null);
       if (rv) rv.playhead(null);
@@ -1196,7 +1197,7 @@
       clearTimeout(retimeT);
       retimeT = setTimeout(function () {
         retimeT = null;
-        if (pv.on && pv.mode === 'loop' && pv.engine === 'wa') { h.loop.start(function () { if (pv.on) loopNative(); }, 0); beatsAgain(); }
+        if (pv.on && pv.mode === 'loop' && pv.engine === 'wa') { h.loop.start(function () { if (pv.on) loopNative(); }, 0); beatsAgain(0); }
       }, Math.max(0, (dur - h.loop.elapsed()) * 1000 - 10));
     }
     function baked() { return h.buffer() ? h.clip() : null; }
@@ -1243,7 +1244,7 @@
       if (h.loop.start(fallback, offset || 0)) {
         pv.engine = 'wa';
         every(function () { if (h.loop.playing()) { showAt(h.trim().start + h.loop.elapsed()); beats(); } });
-        beatsAgain();
+        beatsAgain(offset);
         return;
       }
       fallback();
@@ -1300,7 +1301,10 @@
      * reach the ear). A bar is every four beats from the loop's start, as the
      * timeline draws them. The loop's first beat falls in the moment the
      * engine starts ahead of its sound (lib/audioloop.js LEAD), and it waits
-     * for the music: it ticks as the music starts, not 30ms before it. What
+     * for the music: it ticks as the music starts, not 30ms before it (the
+     * drawer works out when that is: where the start began in the clip, its
+     * top by the loop's clock, and LEAD, kept for the harness on the click
+     * as _soundFrom). What
      * is set ahead is called off when the loop stops or starts again, and the
      * ticks when the click goes off, so nothing sounds or lights for a loop
      * no longer playing; and no beat is set within a tenth of a second of the
@@ -1316,9 +1320,12 @@
     }
     if (clickBtn) clickBtn.addEventListener('click', function () {
       clickOn = !clickOn;
-      if (!clickOn) beatsOff(true);
-      syncClick();
       var c = h.loop.ctx ? h.loop.ctx() : null;
+      if (!clickOn) beatsOff(true);
+      // On while the loop plays: the beats already set ahead (lit, not yet
+      // ticked) tick too, so the click starts on the very next beat.
+      else if (c && c.state === 'running') beatsSet.forEach(function (x) { if (!x.tick && x.when > c.currentTime + 0.005) x.tick = tick(c, x.when, x.bar); });
+      syncClick();
       if (c && c.state === 'suspended' && c.resume) { try { c.resume(); } catch (e) {} }
     });
     // One tick, at `at` on the audio clock: a short sine, higher on a bar.
@@ -1346,9 +1353,10 @@
         return !!x.lit;
       });
     }
-    // The loop started, or started again: what was set ahead was for the
-    // loop before, and the first beat may be due as its sound begins.
-    function beatsAgain() { beatsOff(); beatDone = {}; beatClip = null; beats(); }
+    // The loop started, or started again `off` seconds into the clip: what
+    // was set ahead was for the loop before, and the first beat may be due
+    // as its sound begins.
+    function beatsAgain(off) { beatsOff(); beatDone = {}; beatClip = null; pv.from = null; pv.off = off || 0; beats(); }
     function beats() {
       var c = h.loop.ctx ? h.loop.ctx() : null, tp = tempo();
       if (!pv.on || pv.mode !== 'loop' || pv.engine !== 'wa' || !c || c.state !== 'running' || !tp || !h.loop.playing()) return;
@@ -1359,7 +1367,10 @@
       var t = h.trim(), key = t.start + '|' + t.end + '|' + h.crossfade() + '|' + !!(h.cut && h.cut());
       if (!beatClip || beatClip.key !== key) beatClip = { key: key, start: t.start + cutNow() };
       var p = 60 / tp.bpm, clip0 = beatClip.start, now = c.currentTime, base = now - h.loop.elapsed();
-      var s0 = h.loop.soundAt ? h.loop.soundAt() : 0, lead = (global.SkriblAudioLoop && global.SkriblAudioLoop.LEAD) || 0.03;
+      var lead = (global.SkriblAudioLoop && global.SkriblAudioLoop.LEAD) || 0.03;
+      if (pv.from == null) pv.from = base + (pv.off || 0) + lead;      // this start's sound began
+      var s0 = pv.from;
+      if (clickBtn) clickBtn._soundFrom = s0;
       var k0 = Math.round((t.start - tp.phase) / p), k1 = Math.ceil((clip0 - tp.phase) / p - 1e-6);
       beatsSet = beatsSet.filter(function (x) { return x.when > now - 0.5; });
       var last = beatsSet.length ? beatsSet[beatsSet.length - 1].when : -1;
@@ -1375,7 +1386,7 @@
           var id = Math.round(at * 1000);
           if (beatDone[id] || beatDone[id - 1] || beatDone[id + 1]) continue;
           beatDone[id] = 1;
-          var bar = ((k - k0) % 4 + 4) % 4 === 0, set = { when: when, tick: null, lit: null };
+          var bar = ((k - k0) % 4 + 4) % 4 === 0, set = { when: when, bar: bar, tick: null, lit: null };
           if (clickOn) set.tick = tick(c, when, bar);
           if (tl && tl.pulse) light(set, tp.phase + k * p, bar, heardIn(c, when, now));
           beatsSet.push(set); last = when;
@@ -1642,7 +1653,7 @@
       retimeT = null;
       if (pv.on) {
         if (pv.mode === 'seam') startSeam();
-        else if (pv.engine === 'wa' && h.loop.playing()) { h.loop.start(function () { if (pv.on) loopNative(); }, h.loop.elapsed()); beatsAgain(); }
+        else if (pv.engine === 'wa' && h.loop.playing()) { var at = h.loop.elapsed(); h.loop.start(function () { if (pv.on) loopNative(); }, at); beatsAgain(at); }
         else startLoop(0);
       } else if (h.loop.playing()) h.loop.start(null, h.loop.elapsed());
     }

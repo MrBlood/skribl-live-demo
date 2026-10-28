@@ -234,6 +234,7 @@ CLAIMS = {
                   "verify_musicbeat.py::the click is off at first, and there once there is a beat",
                   "verify_musicbeat.py::with the click on, Hear the loop ticks on each beat of what plays",
                   "verify_musicbeat.py::each tick goes straight to the speakers and nowhere else, so never into a post or a file",
+                  "verify_musicbeat.py::the click turned on while Hear the loop plays ticks from the very next beat",
                   "verify_musicbeat.py::a tick already set ahead never sounds once the click goes off or Hear stops",
                   "verify_musicbeat.py::an end moved while the click plays: from the next time round it ticks the new loop",
                   "verify_musicbeat.py::each beat's dot lights as it is heard"],

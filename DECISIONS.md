@@ -24809,9 +24809,11 @@ wrong, each found by a row before it went up:
     (lib/audioloop.js LEAD), and the loop's first beat falls in those 30ms:
     the draft never ticked it (the click began on beat two), and ticked at
     once it came 30ms before the music. It waits for the music's start now,
-    which the engine says (soundAt). And a rule that let it through once let
-    it through every 30ms from two seconds in, when the memory of beats set
-    forgets them: the click rattled until the timing row caught it.
+    which the drawer works out (the loop's top by its clock, where the start
+    began in the clip, and LEAD) and keeps on the click for the harness. And
+    a rule that let it through once let it through every 30ms from two
+    seconds in, when the memory of beats set forgets them: the click rattled
+    until the timing row caught it.
   * WHAT IS SET AHEAD. A tick set 160ms ahead sounded after Stop, after the
     click went off, and, when an end moved while it played, for the old
     loop's next time round beside the new loop's first beat. Each is called
@@ -24829,6 +24831,10 @@ a first guess made as the sound began was once 59ms early. Read against that
 record, lights came 0 to 13ms after their beats here. Web Animations, so
 Reduce Motion fades it without the swell and the player's sheet carries no
 keyframes.
+
+TURNED ON WHILE IT PLAYS, the click starts on the very next beat: a beat
+already set ahead, lit and not yet ticked, ticks too. Without that it began
+on the beat after, half a second late at 120 a minute.
 
 THUMB REACH (6s, from Wavebox): on the owner's phone, as the drawer opens
 with a song, Hear and the click sit in the screen's lower half (their middle
@@ -24848,14 +24854,28 @@ again), ticks late by the output's latency, bars counted from the song's
 start, the light timed by the clock alone, never a bar, 6px off its dot, the
 swell under Reduce Motion, the click pressable with no beat, routed anywhere
 but the speakers, 36px wide, without its line, the tenth-of-a-second rule
-removed, the pair pushed below the screen and the drawer pinned to its top.
+removed, the pair pushed below the screen and the drawer pinned to its top,
+the sound's start kept from the start before (both join rows), and the beats
+set ahead left unticked when the click goes on (the mid-play row).
 The light's first guess set to "now" stays green with the second asking and
 goes red, 54 to 193ms early, without it. A negative margin on the pair was no
 break: the drawer's follow kept the pair where it was. Green as built, three
 times side by side.
 
-WHAT IT DOES TO FLIP: shared. One drawer, one timeline and one engine for
-both editors; Flip's loop hook says soundAt as the Pad's does.
+THE AFFECTED SUITES, RUN TOGETHER, caught four of mine that the click part
+run alone could not. The click part named a helper LOOP, which the parts of
+verify_musicbeat after it call with the loop's ends, so twelve rows after it
+set the loop to the click part's 1 to 5 seconds: it is CLICK_LOOP. The pair's
+row took Hear's own top, a pixel below Play's inside the pill's line, for a
+second row: it reads each of the pair as laid out. verify_helpclaims found
+the click's name, "Click on each beat", nowhere in How it works: the tip says
+"tap it to click on each beat". And the engine's soundAt, in
+lib/audioloop.js, took the link player's JavaScript 50 bytes past its ratchet
+(verify_player_isolation, verify_jsstrip): the drawer works the sound's start
+out itself, and the player's code is as it was. A part run alone hides what
+it shadows for the parts after it.
+
+WHAT IT DOES TO FLIP: shared. One drawer and one timeline for both editors.
 
 Not tested here: an iPhone's WebKit (its getOutputTimestamp, a speaker's own
 latency), and how the click sounds through a phone's speaker.
