@@ -25326,6 +25326,11 @@ zoomed in past where the drawing ends, the box's corners at the edge
 unpainted as the song box's are, on the Pad and Flip; a stroke running past
 the edge cut by the box's rounded corner. Each red on main and against a
 break of its own: no clip, no moving back, the box not kept to the view.
+verify_musictimeline's row for where the lane's marks sit had its last
+stroke as one dot at the drawing's very end, and the run found it still
+wanting that dot at its time, past the end; it wants it ending on the end
+now, and is red on main's timeline, against marks laid from 0:00 and
+against no moving back.
 
 FLIP'S TIME BESIDE PLAY (flip.js). It counted pages over fps, as if every
 page were one frame: a page that draws itself lasts as long as its strokes
