@@ -117,8 +117,8 @@ import waits  # noqa: E402
 from PIL import Image  # noqa: E402
 
 # For calibration: MUSICTL_ONLY=Pad (or Flip) runs one editor, and
-# MUSICTL_PART=layout (frame, slide, ends, grip, mag, wave, whole, playhead,
-# restart, cut, bake, post) one part. A real run sets neither.
+# MUSICTL_PART=layout (frame, slide, ends, grip, mag, inside, head, wave,
+# whole, playhead, restart, cut, bake, post) one part. A real run sets neither.
 ONLY = os.environ.get("MUSICTL_ONLY", "")
 PART = os.environ.get("MUSICTL_PART", "")
 EDITORS = [e for e in (("Pad", "/"), ("Flip", "/flip")) if not ONLY or e[0] == ONLY]
@@ -842,6 +842,122 @@ with sync_playwright() as p:
               f"the start {fr[-1][2]:.3f}s; the view's left edge {v1[0]:.4f}s, {moved:.5f}s from it at most while held")
         check(f"{_n}: no page errors at the edge", not errs, "; ".join(errs[:2]))
         c.close()
+    print("\nMUSIC TIMELINE — zoomed in, inside the song")
+    # ZOOMED IN, THE BOX STAYS INSIDE THE SONG (the owner: "when I magnify it
+    # scoots the wave (beginning) to the middle ... when it is at the very
+    # beginning it's a little strange"; of the mock, "all yes"): at 2x with
+    # the loop at 0:00 the box starts the tab's 12px before the song, the
+    # start off the middle; with the loop at the song's end and the end
+    # touched last, it ends 12px past it; mid-song, the end in the middle.
+    for _n, _p in eds("inside"):
+        for label, opts in (("phone", PHONE), ("desk", DESK)):
+            c, pg, errs = editor(b, _n, _p, opts=opts)
+            pg.evaluate(SET, {"s": 0.0, "e": 2.0, "xf": 0, "tempo": None})
+            into_view(pg, "#musicTimeline")
+            pg.wait_for_timeout(600)
+            mag_to(pg, "2\u00d7"); pg.wait_for_timeout(800)
+            w, v0 = pg.evaluate(BOX, "#musicTlStage")["w"], pg.evaluate(VIEW)
+            d = pg.evaluate("() => audioDuration")
+            # The end touched at 1x, where it is in view, then zoomed in again.
+            mag_to(pg, "1\u00d7"); pg.wait_for_timeout(500)
+            pg.evaluate(SET, {"s": d - 2.0, "e": d}); pg.wait_for_timeout(800)
+            he = pg.evaluate(BOX, "#tlEnd")
+            pg.mouse.click(he["x"] + he["w"] / 2, he["y"] + he["h"] / 2); pg.wait_for_timeout(400)
+            mag_to(pg, "2\u00d7"); pg.wait_for_timeout(800)
+            v1, t1 = pg.evaluate(VIEW), pg.evaluate(TRIM)
+            pg.evaluate(SET, {"s": d / 2 - 1.0, "e": d / 2 + 1.0}); pg.wait_for_timeout(800)
+            v2 = pg.evaluate(VIEW)
+            room0, room1 = 12 / w * v0[1], 12 / w * v1[1]
+            check(f"{_n} ({label}): zoomed in, the box stays inside the song: at 0:00 it starts 12px before it, at the song's end it ends 12px past it, and mid-song the end is in the middle",
+                  abs(v0[0] + room0) < 2e-3 * v0[1] and abs(v1[0] + v1[1] - (d + room1)) < 2e-3 * v1[1] and abs(t1["e"] - d) < 1e-9
+                  and abs(v2[0] + v2[1] / 2 - (d / 2 + 1.0)) < 2e-3 * v2[1],
+                  f"at 2x the loop at 0:00: the view from {v0[0]:.4f}s (want {-room0:.4f}); at the end, {v1[0] + v1[1]:.4f}s (want {d + room1:.4f});"
+                  f" mid-song the middle {v2[0] + v2[1] / 2:.4f} (the end at {d / 2 + 1.0:.4f})")
+            check(f"{_n} ({label}): no page errors zoomed in by the song's edges", not errs, "; ".join(errs[:2]))
+            c.close()
+
+    print("\nMUSIC TIMELINE — the magnet's own box, when there's room")
+    # SNAP TO THE BEAT, THE MAGNET (the owner: "i do like the magnet having
+    # it's own button. is there a way to have its own button if there's
+    # room, but merge them if there's not enough room?"; the mock's C2):
+    # its own box beside the taller button while the name keeps one line
+    # with it there, the two boxes one where it would not. "Room" is the
+    # name's one-line width, read here from a copy of it that never wraps,
+    # against the room it has beside the magnet's own box.
+    HEADFIT = """() => { const h = document.querySelector('.mt-tl-head'), n = document.getElementById('musicTlName');
+      const r = document.createRange(); r.selectNodeContents(n);
+      const one = n.cloneNode(true); one.style.cssText = 'position:absolute;visibility:hidden;white-space:nowrap;max-width:none;width:auto';
+      n.parentNode.appendChild(one); const want = one.getBoundingClientRect().width; one.remove();
+      const R = (e) => e.getBoundingClientRect(), mag = R(h.querySelector('.mt-tl-mag')), sb = R(h.querySelector('.mt-tl-snapbox'));
+      const tb = R(h.querySelector('.mt-tl-snapbox + .mt-tl-tallbox')), sn = R(document.getElementById('musicSnap')), tl = R(document.getElementById('musicTlTall'));
+      const own = h.classList.contains('joined') ? null : h.querySelector('.mt-tl-namebox').getBoundingClientRect().width;
+      return { joined: h.classList.contains('joined'), want: Math.round(want * 10) / 10, own: own && Math.round(own * 10) / 10,
+               lines: new Set([...r.getClientRects()].map((q) => Math.round(q.top))).size, words: n.textContent,
+               between: Math.round((sb.left - mag.right) * 10) / 10, boxes: Math.round((tb.left - sb.right) * 10) / 10,
+               cells: Math.round((tl.left - sn.right) * 10) / 10, wide: Math.round(window.innerWidth) }; }"""
+    for _n, _p in eds("head"):
+        seen = []
+        for w in (402, 390, 375, 360, 1280):
+            opts = DESK if w == 1280 else dict(viewport={"width": w, "height": 874}, device_scale_factor=2, is_mobile=True, has_touch=True)
+            c, pg, errs = editor(b, _n, _p, opts=opts)
+            into_view(pg, "#musicTimeline"); pg.wait_for_timeout(500)
+            f = pg.evaluate(HEADFIT)
+            if f["joined"]:
+                # Closed up, the room it would have had beside its own box, read
+                # once it is taken apart again by hand.
+                pg.evaluate("() => document.querySelector('.mt-tl-head').classList.remove('joined', 'fitted')")
+                f["own"] = pg.evaluate(HEADFIT)["own"]
+            seen.append(f)
+            check(f"{_n} at {w}px: the magnet has its own box exactly when the name keeps one line beside it, and otherwise one box with the taller button",
+                  (not f["joined"]) == (f["want"] <= f["own"] + 0.5)
+                  and (f["lines"] == 1 if not f["joined"] else True)
+                  and abs(f["between"] - 10) < 0.6
+                  and (abs(f["boxes"] - 10) < 0.6 if not f["joined"] else abs(f["boxes"]) < 0.6 and abs(f["cells"] - 2) < 0.6),
+                  str(f))
+            c.close()
+        check(f"{_n}: across a phone's widths and a desk, both: its own box on a desk, closed up on a narrow phone",
+              not seen[-1]["joined"] and seen[3]["joined"], str([(x["wide"], x["joined"], x["want"], x["own"]) for x in seen]))
+    for _n, _p in eds("head"):
+        if _n != "Pad":
+            continue   # drawing on Flip closes the drawer; the glide is the one timeline's, its rows above Flip's too
+        # The name grows as the drawing does: past the room, the boxes close up
+        # over frames, not in one; under Reduce Motion, at once. The phone is
+        # made just wide enough for the name as drawn to keep its line beside
+        # the magnet's own box, from what a 402px phone leaves it, and the
+        # drawing then runs over a minute ("1:05", two figures longer).
+        for still in (False, True):
+            ph = dict(viewport={"width": 402, "height": 874}, device_scale_factor=2, is_mobile=True, has_touch=True)
+            ctx = waits.instrument(b.new_context(reduced_motion="reduce", **ph)) if still else None
+            c, pg, errs = editor(b, _n, _p, opts=ph, ctx=ctx)
+            into_view(pg, "#musicTimeline"); pg.wait_for_timeout(500)
+            f0 = pg.evaluate(HEADFIT)
+            if f0["joined"]:
+                pg.evaluate("() => document.querySelector('.mt-tl-head').classList.remove('joined', 'fitted')")
+                f0 = dict(f0, own=pg.evaluate(HEADFIT)["own"])
+            fit_w = int(402 - f0["own"] + f0["want"] + 4) + 1
+            pg.set_viewport_size({"width": fit_w, "height": 874}); pg.wait_for_timeout(600)
+            before = pg.evaluate(HEADFIT)
+            t = pg.evaluate(TRIM)
+            pg.evaluate("""() => { window.__mg = []; const sn = document.getElementById('musicSnap'), t0 = performance.now();
+              (function f() { window.__mg.push(sn.getBoundingClientRect().left); if (performance.now() - t0 < 700) requestAnimationFrame(f); })(); }""")
+            if _n == "Pad":
+                pg.evaluate(LONGDRAW, 65)
+            else:
+                pg.evaluate(PAGES, {"n": 3, "fps": 12, "hold": 260})
+            pg.evaluate(SET, {"s": t["s"], "e": t["e"]}); pg.wait_for_timeout(800)
+            after, rec = pg.evaluate(HEADFIT), pg.evaluate("() => window.__mg")
+            moved = [round(b2 - a2, 2) for a2, b2 in zip(rec, rec[1:]) if abs(b2 - a2) > 0.05]
+            if not still:
+                check(f"{_n}: the name grown past the room, the boxes close up over frames, the magnet keeping its place beside the zoom",
+                      not before["joined"] and before["lines"] == 1 and after["joined"] and len(moved) >= 4 and max(abs(m) for m in moved) <= 8
+                      and abs(after["between"] - 10) < 0.6 and after["words"].endswith("\u00b7 1:05"),
+                      f"at {fit_w}px: before {before['words']!r} {before['joined']}, after {after['words']!r} {after['joined']}; the magnet's steps {moved}")
+            else:
+                check(f"{_n}: ...under Reduce Motion, at once", not before["joined"] and after["joined"] and len(moved) <= 1,
+                      f"at {fit_w}px: the magnet's steps {moved}")
+            check(f"{_n}: no page errors as the magnet's box closes up{' under Reduce Motion' if still else ''}", not errs, "; ".join(errs[:2]))
+            c.close()
+
     for _n, _p in eds("mag"):
         # Past a block a column the song is drawn from its samples: a single
         # loud sample shows in the column that holds it and in no other.

@@ -462,14 +462,13 @@ with sync_playwright() as p:
         q.evaluate(RELEASE)
         q.wait_for_function(EARS_DONE, timeout=20000); waits.settle(q, 600)
         st = q.evaluate(STATE)
-        q.click('#musicDoors .dp-tile[data-dp="beat"]'); waits.settle(q, 500)
         if q.is_visible("#musicSnap"):
             q.click("#musicSnap"); waits.settle(q, 300)
         off = q.evaluate(STATE)
         if q.is_visible("#musicSnap"):
             q.click("#musicSnap"); waits.settle(q, 300)
         on = q.evaluate(STATE)
-        check(f"{name}: Snap to the beat's switch keeps the beat heard, off and on",
+        check(f"{name}: Snap to the beat's magnet keeps the beat heard, off and on",
               (off["tempo"] or {}).get("heard") is True and (off["tempo"] or {}).get("snap") is False
               and (on["tempo"] or {}).get("heard") is True and "snap" not in (on["tempo"] or {}),
               f"off {off['tempo']}, on {on['tempo']}")

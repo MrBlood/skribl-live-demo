@@ -624,14 +624,14 @@ with sync_playwright() as p:
             const sw = (id) => document.getElementById(id).closest('.mt-switch').querySelector('.mt-switch-words').getBoundingClientRect();
             const shown = (e) => e && !e.closest('[hidden]') && e.getClientRects().length;
             const R = { length: [['the lengths', q('.mt-lengths')], ['beats', document.getElementById('musicBeatsRow')], ['undo', document.getElementById('musicPickUndo')], ['lock', 'musicLock']],
-                        beat: [['tap', q('.mt-tap-row')], ['snap', 'musicSnap']],
+                        beat: [['tap', q('.mt-tap-row')], ['beats in a bar', document.getElementById('musicBarRow')]],
                         restart: [['smooth restart', 'musicSmooth'], ['restart view', q('#musicRestart')], ['its hint', q('#musicRvHint')],
                                   ['length', q('.crossfade-row')], ['hear the restart', q('#testSeamBtn')], ['cut on silence', 'musicCut']],
                         exact: [['start/end', q('.edge-group')], ['each press', document.getElementById('musicStepSeg').closest('.mt-step')]] }[k];
             const rows = R.filter(([, e]) => shown(typeof e === 'string' ? document.getElementById(e) : e)).map(([n, e]) => [n, typeof e === 'string' ? sw(e) : e.getBoundingClientRect()]);
             return rows.slice(1).map((r, i) => [rows[i][0] + ' -> ' + r[0], Math.round(r[1].top - rows[i][1].bottom)]); }"""
-        # With a beat, so each door holds all it can: Beats in Length, Snap to
-        # the beat under the tap.
+        # With a beat, so each door holds all it can: Beats in Length, Beats in
+        # a bar under the tap.
         pg.evaluate("() => { musicTempo = { bpm: 120, phase: 0 }; updateTrimUI(); }")
         pg.wait_for_timeout(500)
         gaps = {}
