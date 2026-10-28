@@ -759,6 +759,72 @@ function setPreviewSpeed(c) {
   playStart = now - at / replayRate;
   if (!playPaused && _waLoop.playing()) startWebAudioLoop(null, _waLoop.elapsed());
 }
+// REPEAT (the owner, of the Pad's replay: "should there be a loop button?";
+// of the mock, "all yes"): beside the speed, in the line under the drawing
+// while it plays and in the pill beside Play on a desk, off to start and
+// remembered as the speed is. On a phone the line has no room for it (two
+// rows for most drawings, onto the drawing at 813), so there it sits at the
+// end of the bar, inline and in full screen (place, below; the owner's pick
+// A on the Undo, reach and Repeat page). On, Play goes round until you stop it, each
+// round from the first point with its music from the loop's start
+// (replayAgain, below), as a link page's round does; off, Play shows it once,
+// as before. The music drawer's "Play with my drawing" is this Play, so it
+// follows. Turned off mid-round, that round is the last. Posts are not this:
+// they repeat unless the person watching stops them. Not for Flip, whose Play
+// already goes round and whose Loop repeats a stretch of pages. Its words are
+// its tooltip (lib/tooltip.js keeps a title as data-tip); the words last set
+// are remembered, so a sync never sets them again only to have them taken.
+const REPEAT_KEY = 'skribl_replay_repeat';
+const REPEAT_SAYS = { true: 'Repeat: on. Play goes round until you stop it.', false: 'Repeat: off. Play shows it once.' };
+const REPEAT_ROOM = 42;   // at the bar's end: Repeat's 34px (styles.css) and 8 between
+let padRepeat = false;
+try { padRepeat = localStorage.getItem(REPEAT_KEY) === '1'; } catch (e) {}
+const repeatBtns = [];
+function syncRepeat(b) {
+  const w = REPEAT_SAYS[padRepeat];
+  b.setAttribute('aria-pressed', String(padRepeat));
+  if (b._skTitle !== w) {
+    b._skTitle = w;
+    if (b.hasAttribute('data-tip')) b.setAttribute('data-tip', w); else b.title = w;
+  }
+}
+function makeRepeat() {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.className = 'rl-repeat';
+  b.setAttribute('aria-label', 'Repeat');
+  // The posts' own arrows (_skribl_inline_player.html, the loop button).
+  b.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 2l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>'
+    + '<path d="M7 22l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>';
+  b.addEventListener('click', () => {
+    padRepeat = !padRepeat;
+    try { localStorage.setItem(REPEAT_KEY, padRepeat ? '1' : '0'); } catch (e) {}
+    repeatBtns.forEach(syncRepeat);
+  });
+  repeatBtns.push(b);
+  syncRepeat(b);
+  return b;
+}
+// At the drawing's end, app.js asks here before it stops: with Repeat on, the
+// replay begins again as Play begins it (app.js, Play's own click; here
+// rather than shared there, for the bytes the player pays for app.js): the
+// canvas back to what the take was drawn on, the clock from 0 and the music
+// from its loop's start.
+function replayAgain() {
+  if (!padRepeat || !playing) return false;
+  lastTargetMs = 0;
+  clearAndRestore(() => {
+    playIndex = 0;
+    const begin = () => {
+      playComp = strokeLayersOn() ? makeStrokeCompositor(ctx, canvas) : null;
+      playStart = performance.now();
+      requestAnimationFrame(editorReplayFrame);
+    };
+    if (audioEl && musicEnabled && typeof playMusicLooped === 'function') playMusicLooped(playTotal, begin);
+    else begin();
+  });
+  return true;
+}
 const padLine = document.getElementById('padLine');
 let padFull = null;   // lib/watchfull.js, attached with the line below
 if (window.SkriblReplayLine) {
@@ -787,6 +853,15 @@ if (padLine && playScrub && window.SkriblReplayLine) {
   // is there only while a drawing plays and never on the drawing.
   const fullBtn = window.SkriblWatchFull ? SkriblWatchFull.makeButton() : null;
   if (fullBtn) padLine.querySelector('.rl-speed').after(fullBtn);
+  // Repeat between the two, next to the speed (REPEAT, above), and on a
+  // phone at the bar's end instead, beside it in the page so the two share
+  // where they are placed from.
+  padLine.querySelector('.rl-speed').after(makeRepeat());
+  const barRepeat = makeRepeat();
+  barRepeat.id = 'padBarRepeat';
+  barRepeat.classList.add('at-bar');
+  barRepeat.hidden = true;
+  playScrub.after(barRepeat);
   // The row and the pill are the same line with its sentence hidden
   // (styles.css, .speed-only): the button and its chips are what show, and
   // the button is named here for what it is as well as what it is at. Built
@@ -806,6 +881,7 @@ if (padLine && playScrub && window.SkriblReplayLine) {
     return h;
   };
   const desk = speedOnly(document.getElementById('padSpeed'));
+  if (desk) desk.button.after(makeRepeat());
   const row = speedOnly(document.getElementById('tuneSpeed'));
   // "Fit" reads in the drawing's own length, which changes as it is drawn:
   // brought up to date as each is about to be used.
@@ -830,8 +906,9 @@ if (padLine && playScrub && window.SkriblReplayLine) {
   const place = () => {
     const hide = playScrub.hidden;
     if (padLine.hidden !== hide) { padLine.hidden = hide; if (!hide) line.update(); else line.close(); }
+    const up = !hide && playScrub.classList.contains('in-bar');
+    if (barRepeat.hidden === up) barRepeat.hidden = !up;
     if (hide) return;
-    const up = playScrub.classList.contains('in-bar');
     padLine.classList.toggle('in-bar', up);
     padLine.style.left = playScrub.style.left;
     padLine.style.width = playScrub.style.width;
@@ -847,7 +924,18 @@ if (padLine && playScrub && window.SkriblReplayLine) {
       const a = playScrub.offsetParent.getBoundingClientRect();
       const band = document.getElementById('toolBar').getBoundingClientRect();
       const want = Math.min(band.bottom, innerHeight - 24) - playScrub.offsetHeight - a.top;
-      if (Math.abs(want - top) > 0.5) { playScrub.style.top = want + 'px'; return; }   // observed: places again
+      /* REPEAT AT THE BAR'S END: the bar gives up REPEAT_ROOM at its right
+         end (Repeat's 34px and 8 between), and the line keeps the band's
+         whole width, positionScrub's (app.js): toolbar-wide less 16px a side. */
+      const span = band.width - 32, bar = span - REPEAT_ROOM;
+      if (Math.abs(want - top) > 0.5 || Math.abs((parseFloat(playScrub.style.width) || 0) - bar) > 0.5) {
+        playScrub.style.top = want + 'px';
+        playScrub.style.width = bar + 'px';
+        return;   // observed: places again
+      }
+      padLine.style.width = span + 'px';
+      barRepeat.style.left = ((parseFloat(playScrub.style.left) || 0) + span - barRepeat.offsetWidth) + 'px';
+      barRepeat.style.top = (top + (playScrub.offsetHeight - barRepeat.offsetHeight) / 2) + 'px';
       const rim = canvasWrap.getBoundingClientRect().bottom - a.top;
       const h = padLine.querySelector('.rl-text').offsetHeight;
       padLine.style.top = '';
@@ -860,7 +948,7 @@ if (padLine && playScrub && window.SkriblReplayLine) {
   // band's Play is this preview's own: Play, then pause and resume as a tap does.
   if (fullBtn) {
     padFull = SkriblWatchFull.attach({
-      wrap: canvasWrap, button: fullBtn, carry: [playScrub, padLine], fit: padFullFit,
+      wrap: canvasWrap, button: fullBtn, carry: [playScrub, barRepeat, padLine], fit: padFullFit,
       playing: () => playing, paused: () => playPaused,
       play: () => { if (!playing) playBtn.click(); }, pause: pausePlayback, resume: resumePlayback,
       // The band's colours, read from the drawing; a photo is a picture of

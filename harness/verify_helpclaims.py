@@ -152,6 +152,14 @@ CLAIMS = {
               "verify_replayspeed.py::Fit lands the whole replay in about 30 seconds and is never slower than as drawn",
               "verify_replayspeed.py::the Post sheet asks where viewers start: Auto (chosen), As drawn, Fit, and Speed (not the speed last previewed)",
               "verify_replayspeed.py::where a post starts: none -> as drawn; Auto -> as drawn under a minute of drawing, Fit over it"],
+    "Repeat": ["verify_padrepeat.py::desk: Repeat sits in the pill beside Play, after the speed, painted, off to start, its words its tooltip",
+               "verify_padrepeat.py::phone: Repeat sits at the end of the bar while it plays, 34 by 27, painted, off, 8px past the bar's end and centred on it, "
+               "where the bar ended; the bar still a 44px grab, and none in the line",
+               "verify_padrepeat.py::on: Play goes round, round after round, playing all the while, no frame held at a turn",
+               "verify_padrepeat.py::...the music begins again from its loop's start with each round, and plays on every frame between",
+               "verify_padrepeat.py::turned off mid-round, that round is its last: it ends, the music with it, and goes round no more",
+               "verify_padrepeat.py::Stop stops it at once, the music with it, and leaves Repeat on for the next Play",
+               "verify_padrepeat.py::a link page and a post's box keep their own loop button and have no Repeat of the Pad's; Flip has none"],
     # Frames (Flip)
     "Move artwork": ["verify_move.py::every point moved by the SAME offset"],
     "Pages": ["verify_pagespan.py::Undo restores every page of the deleted run"],

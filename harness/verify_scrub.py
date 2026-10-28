@@ -40,6 +40,10 @@ MEASURE = """() => {
   if (!s || !wrap || !area) return null;
   const cs = getComputedStyle(s);
   const sb = s.getBoundingClientRect(), wb = wrap.getBoundingClientRect();
+  // On a phone the Pad's Repeat sits at the bar's end (verify_padrepeat): the
+  // two are one span across the band, the bar's start to Repeat's end.
+  const rp = document.getElementById('padBarRepeat'), rr = rp && rp.getClientRects().length ? rp.getBoundingClientRect() : null;
+  const end = rr ? Math.max(sb.right, rr.right) : sb.right;
   return {
     laidOut: s.offsetParent !== null,
     hidden: s.hidden,
@@ -49,7 +53,7 @@ MEASURE = """() => {
     overflow: cs.overflow,
     h: sb.height, w: sb.width,
     insetLeft: sb.left - wb.left,
-    insetRight: wb.right - sb.right,
+    insetRight: wb.right - end, span: end - sb.left, repeat: !!rr,
     gapBelow: sb.top - wb.bottom,
     wrapW: wb.width,
     bandMid: (() => { const t = document.getElementById('toolBar').getBoundingClientRect(); return t.top + t.height / 2; })(),
@@ -133,7 +137,7 @@ with sync_playwright() as b_ctx:
             continue
 
         # --- the geometry itself ---------------------------------------------
-        check(f"[{label}] inset equally at both ends",
+        check(f"[{label}] inset equally at both ends" + (", Repeat at its end" if label == "phone" else ""),
               abs(m["insetLeft"] - m["insetRight"]) <= 1,
               f"left={round(m['insetLeft'], 2)}, right={round(m['insetRight'], 2)}")
 
@@ -150,9 +154,9 @@ with sync_playwright() as b_ctx:
             check(f"[{label}] it sits low in the faded toolbar's band, 24px clear of the screen's foot",
                   abs(m["bottom"] - want) <= 1 and m["bottom"] - m["h"] >= m["band"][0] - 1,
                   f"bar bottom {round(m['bottom'], 1)} vs {round(want, 1)}; band {m['band']}")
-            check(f"[{label}] it spans the toolbar's band, 16px in from each end",
-                  abs(m["w"] - (m["bandW"] - 32)) <= 1.5,
-                  f"w={round(m['w'], 1)}, band={round(m['bandW'], 1)}")
+            check(f"[{label}] it spans the toolbar's band with Repeat at its end, 16px in from each end",
+                  m["repeat"] and abs(m["span"] - (m["bandW"] - 32)) <= 1.5,
+                  f"bar {round(m['w'], 1)}, with Repeat {round(m['span'], 1)}, band={round(m['bandW'], 1)}, Repeat shown {m['repeat']}")
         else:
             check(f"[{label}] the inset is the frame's corner radius, read from the token",
                   abs(m["insetLeft"] - m["rFrame"]) <= 1,
