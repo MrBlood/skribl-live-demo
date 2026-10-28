@@ -25452,9 +25452,9 @@ mocked on the Snap, zoom and Repeat page (Now beside Repeat on and off, the
 desk pill and the phone's line, light and dark), "all yes": a Repeat button
 on the Pad, off to start; posts keep repeating as now.
 
-REPEAT (editor_draw.js). Beside the speed: in the pill beside Play on a desk,
+REPEAT (editor_draw.js). On a desk beside the speed: in the pill beside Play,
 and in the line under the drawing while it plays, between the speed and full
-screen. The posts' own arrows, bare while off and lit in the chosen choice's
+screen; on a phone at the end of the bar (below). The posts' own arrows, bare while off and lit in the chosen choice's
 purple while on, a 44px tap, its words its tooltip. Off to start and
 remembered as the speed is (localStorage). On, Play goes round until it is
 stopped: at the drawing's end app.js asks editor_draw.js replayAgain, which
@@ -25470,6 +25470,22 @@ full screen the band tones it as glass (lib/watchfull.js), the speed's while
 off and a pressed full screen's while on, in rules of its own so the link
 page's sheet carries none of it.
 
+ON A PHONE, AT THE BAR'S END (found by the affected suites before the PR went
+up; my pick A on the Undo, reach and Repeat page, put to the owner). Beside
+the speed, Repeat took 43px the phone's line did not have: two rows for most
+drawings ("47 min", "16×", Fit), the way into full screen under the words,
+and at 813, the owner's height as a Home Screen app, the words 15px onto the
+drawing (verify_replayspeed's ROOM TO BREATHE, red beside the others and
+alone, 164/168). The mock had shown a 6-second drawing at 1×, the one case
+with room. On a phone (the bar in the toolbar's band) Repeat sits at the
+bar's end, inline and in full screen: the bar gives up 42px (place(),
+REPEAT_ROOM), the line keeps the band's width and its one row up to "Drawn
+in 47 min · watching at Fit · 94×", as before Repeat, and in full screen the
+band's first row is the bar and it, side by side (a grid while it shows). A
+desk keeps it beside the speed, where the line has room. verify_watchfull's
+way in reads what is drawn before it now, the speed on a phone and Repeat on
+a desk: it read the line's Repeat on both and went red (74/76).
+
 THE MUSIC ENDS BY THE DRAWING'S CLOCK (editor_music.js drawingAt), found
 building Repeat: the music's timer counted its own ticks to the drawing's
 length, and a tick never knew of a scrub. Scrubbed back from three quarters
@@ -25478,19 +25494,28 @@ to a tenth, the music stopped 1.5s later while the drawing played 5.6s more
 while Repeat is on, where each round begins it again.
 
 ROWS (verify_padrepeat, new): where it is (the pill after the speed, 32 by
-26; the line between the speed and full screen, 34 by 27 on a phone;
-painted; off to start; its words); off, once; on, round after round with no
+26; the desk's line between the speed and full screen; on a phone the bar's
+end, 34 by 27, 8px past it and centred, the bar still a 44px grab, none in
+the line, the line one row with the longest words it held before, and in
+full screen there too; painted; off to start; its words); off, once; on, round after round with no
 frame held at a turn, before or after it, the music begun again from its
 loop's start each round and playing on every frame between; off mid-round,
 the last; Stop, and Repeat left on; remembered, the pill and the line one
 choice; Play with my drawing; a scrub back, Repeat off and on; the band's
-glass; its glyph 3:1 and up (off 7.99 to 10.12:1, on 7.55 to 9.58:1); posts
+glass; its glyph 3:1 and up in all three places (off 7.99 to 10.12:1, on 7.55 to 9.58:1); posts
 and Flip without it. Each shown red against a broken copy of its own, 16
 breaks: no round, never remembered, one button not told of the other, a
 held moment at the round's end and at its start, a round without its music
 begun again, the line's Repeat after full screen, none in the pill, always
 round, the music stopped by its ticks, never lit, no glass in the band, the
-band never toning it, a faint glyph, a Repeat on every line. The turn's row
+band never toning it, a faint glyph, a Repeat on every line. The phone's
+place, 7 more: the old place in the line, no room made, the line's own shown
+too, no row of its own in the band, the line following the shorter bar, off
+the bar's middle, shown on a desk; and verify_watchfull's way in red on the
+old place and with the way in before the speed, verify_replayspeed's line
+red on the old place and on the line following the shorter bar. Their first
+run served its broken copies at the wrong path: every break was green, so
+the instrument was wrong, and they were run again on the page's own paths. The turn's row
 first measured the time between two frames, which is always a frame: green
 on a held end, it was wrong, and measures the hold now. The guard that keeps
 the timer from stopping the music while Repeat is on, out alone, left the
