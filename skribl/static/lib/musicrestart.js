@@ -50,7 +50,7 @@
     function paint() {
       raf = 0;
       var w = root.clientWidth || 0, hh = root.clientHeight || 0;
-      if (!(w > 0) || !(hh > 0) || !cv) return;      // shut: painted when More opens
+      if (!(w > 0) || !(hh > 0) || !cv) return;      // shut: painted when its door opens
       var dpr = global.devicePixelRatio || 1, Wd = Math.round(w * dpr), Hd = Math.round(hh * dpr);
       if (cv.width !== Wd || cv.height !== Hd) { cv.width = Wd; cv.height = Hd; }
       var x = cv.getContext('2d');

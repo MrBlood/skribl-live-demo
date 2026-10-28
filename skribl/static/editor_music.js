@@ -2,7 +2,7 @@
 //
 // THE DRAWER'S CONTROLS ARE lib/musicdrawer.js's, one copy shared with Flip
 // (owner: "it needs to be the same music editor on both pad and flip"): the
-// one view and More, Skribl's pick, the timeline and the Restart view
+// one view and its four doors, Skribl's pick, the timeline and the Restart view
 // (lib/musictimeline.js, lib/musicrestart.js), nudges and typed times, Smooth
 // restart, Cut on silence, Fit my drawing, Whole song, the hear buttons, Play
 // with my drawing, Tap the beat and the switch. The Pad hands it its

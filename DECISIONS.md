@@ -24767,3 +24767,22 @@ Not tested here: an iPhone's WebKit, which snaps boxes to the screen's
 pixels, not CSS pixels; the canvas line is the same there by construction.
 
 WHAT IT DOES TO FLIP: shared. One timeline and one copy for both editors.
+
+## After v329 -- The full run on the doors: verify_words still looked for More
+
+The full harness, dispatched on the branch at step 1 (the four doors, run
+40632849390), ran 15 jobs (its other two are for pull requests and for main)
+and 13 were green. The two red were the fifth of six shards on both
+databases, on one row: verify_words' "Smooth restart says where it is, in
+More", 27/28. How it works says "In Restart" since the doors. verify_words
+reads How it works' words and was not among step 1's affected suites, which
+were picked by the drawer's markup and module, not by the help's words. The
+row looks for "In Restart" now and fails on "In More" too.
+
+THE LESSON: fourteen suites read How it works (its help-desc, help-tip and
+help-pill), and a change to its words runs all of them, not only the help's
+own; step 1's run had six of them (contrast, help, helpclaims, helpdemos,
+parity, ux). The other seven of the eight it left out were green on the full
+run. The stale words were in prose too: the harness README still said Play
+with my drawing and Hear the loop sit "whether More is open or not", which no
+check reads.

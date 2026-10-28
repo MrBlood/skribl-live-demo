@@ -2507,9 +2507,10 @@ body.recoloring #canvas { cursor: crosshair !important; }
 .mt-switch .layer-toggle { display: inline-block; }
 .mt-smooth #testSeamBtn { margin-top: 6px; }
 /* THE RESTART VIEW (lib/musicrestart.js): the end beside the start, on the
-   paper inside More's card (a card in a card would be a box in a box), its
-   two words in its top corners and the blend's dot at its foot, whose tap
-   band is 44px. A finger that moves up or down first scrolls the page. */
+   paper inside the Restart door's card (a card in a card would be a box in a
+   box), its two words in its top corners and the blend's dot at its foot,
+   whose tap band is 44px. A finger that moves up or down first scrolls the
+   page. */
 .mt-rv { position: relative; height: 112px; margin-top: 8px; border-radius: var(--r-control); background: var(--menu-paper);
   overflow: hidden; touch-action: pan-y; -webkit-user-select: none; user-select: none; cursor: ew-resize; }
 .mt-rv-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
@@ -2523,10 +2524,11 @@ body.recoloring #canvas { cursor: crosshair !important; }
 .mt-rv-dot[hidden] { display: none; }
 .mt-rv-hint { margin: 8px 0 0; font-size: 14px; line-height: 1.35; color: var(--text-secondary); }
 
-/* THE PAIR THAT PLAYS, under the timeline, More open or not: Play with my drawing
-   is the action, so the accent's fill; Hear the loop, the same size beside
-   it, a menu card with the small violet words. Each is its verb over what it
-   plays (15px over 12px), so both fit a 168px half of the owner's phone. */
+/* THE PAIR THAT PLAYS, under the timeline, whichever door is open: Play with
+   my drawing is the action, so the accent's fill; Hear the loop, the same
+   size beside it, a menu card with the small violet words. Each is its verb
+   over what it plays (15px over 12px), so both fit a 168px half of the
+   owner's phone. */
 .mt-transport { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 12px; }
 .mt-play { display: flex; align-items: center; justify-content: flex-start; gap: 10px; min-width: 0; min-height: 52px;
   padding: 6px 14px; border: 0; border-radius: 999px; background: var(--accent-fill); color: #fff; font: inherit;
@@ -5073,11 +5075,12 @@ button:not([hidden]):has(> svg.mk:only-child) { display: inline-flex; align-item
      [- 0.000 +] group, where two fit; below that they stack. Each column must
      hold a whole group: 130px with the 16px time (2px gaps and padding, 30px
      buttons). minmax(130) + 10px gap = 270, and the grid is the screen less
-     104px inside More's card (it was 78px on the drawer's paper): two-up from
-     374px (271px at 375, 298 at the owner's 402), one column at 363 and 340
-     rather than spilling the group -- the bug class verify_ux caught at 363.
-     The time is not narrowed to win the 26px back: "19.999" is 53px in this
-     box's face and 62px in DejaVu Sans. */
+     84px inside the Exact times door's card (104 inside More's, 78 on the
+     drawer's paper before it): two-up from 354px (291px at 375, 318 at the
+     owner's 402), one column at 340 and 320 rather than spilling the group --
+     the bug class verify_ux caught at 363. The time is not narrowed to go
+     two-up sooner: "19.999" is 53px in this box's face and 62px in DejaVu
+     Sans. */
   .finetune-grid {
     display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
     gap: 16px 10px; align-items: stretch;

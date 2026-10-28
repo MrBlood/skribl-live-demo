@@ -507,7 +507,7 @@ stays a sleep.
   "How do I test the loop without having it show me drawing?... so I'm not at
   7 or 9 when I want 8", then "we only ever want 4,8,16,... beats"), on the Pad
   and on Flip: Play with my drawing and Hear the loop under the timeline in
-  the same place whether More is open or not, the same size, with no second Hear
+  the same place with any door open or none, the same size, with no second Hear
   the loop; Hear the loop plays the music alone until Stop, and an end moved
   while it plays is heard from its next time round; Tap the beat's first tap
   starts the loop and is not a beat, taps in time settle on the tempo two
