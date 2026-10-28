@@ -176,7 +176,7 @@ CLAIMS = {
                      "verify_musicbeat.py::the drawing's own lane runs under the loop, with a dashed line each time the loop comes round under it",
                      "verify_musiclane.py::each stroke's mark is the ink it was drawn in",
                      "verify_musiclane.py::each page's slot shows its own picture",
-                     "verify_musiclane.py::its number on a badge where the slot has room",
+                     "verify_musiclane.py::its number on a small badge in the corner where the page is its picture at the lane's height",
                      "verify_musiclane.py::the turns after the first are its pictures too, fainter"],
     "Loop ends": ["verify_music.py::a loop's edge dragged and let go off the timeline is saved",
                   "verify_musictimeline.py::an end follows the finger",
