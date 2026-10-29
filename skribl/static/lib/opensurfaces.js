@@ -82,6 +82,4 @@
     subtree: true, childList: true, attributes: true, attributeFilter: ['hidden', 'class']
   });
   sync();
-
-  global.SkriblOpenSurfaces = { sync: sync };
 })(window);
