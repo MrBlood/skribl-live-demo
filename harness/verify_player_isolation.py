@@ -1196,7 +1196,14 @@ with sync_playwright() as sp:
     #   inside the window when the ⋯ wraps to mid-screen (it ran 89px off the
     #   left), and the card is never wider than the window less 16px.
     #   verify_jsstrip's line moves with it. 40,900 measured.
-    CSS_RATCHET, CSS_WAS, CSS_TARGET = 40_906, 119_844, 40_000
+    # RAISED (the owner's "all yes" on the posting mock, the link page), for
+    #   one named cost: +845 B -- the way back to the site that named its home
+    #   (.player-home: a pill fixed at the top left, glass, its 44px tap and
+    #   its hover, and on a phone the room kept clear under it; listed live in
+    #   css_live.json, since only a page whose host named its home has one)
+    #   and the caption a size up in the page's ink under a title a step up.
+    #   verify_jsstrip's line moves with it. 41,745 measured.
+    CSS_RATCHET, CSS_WAS, CSS_TARGET = 41_751, 119_844, 40_000
     total_css = sum(css_bytes.values())
     check(f"the player's CSS does not grow past {CSS_RATCHET:,} bytes "
           f"(was {CSS_WAS:,} at v194; target {CSS_TARGET:,})",

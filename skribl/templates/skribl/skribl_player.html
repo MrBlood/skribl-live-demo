@@ -33,7 +33,12 @@
        verify_cssplit.py fails if this file and styles.css disagree. -->
   <link rel="stylesheet" href="{{ skribl_asset('player.css') }}">
 </head>
-<body class="player-mode">
+<body class="player-mode{% if skribl_home %} has-home{% endif %}">
+  {#- THE WAY BACK to the site this Skribl sits in (the owner's yes on the
+      mock): a small pill at the top left, only when the site has named its
+      home (create_blueprint's home_url). _top, so a host that frames this
+      page goes home whole, not inside the frame. Standalone, nothing. -#}
+  {% if skribl_home %}<a class="player-home" href="{{ skribl_home.url }}" target="_top" aria-label="Back to {{ skribl_home.label }}"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>{{ skribl_home.label }}</a>{% endif %}
 
   <div class="app">
   <div class="header">
