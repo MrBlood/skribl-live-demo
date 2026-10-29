@@ -4468,8 +4468,9 @@ body.player-mode #canvasEmptyHint { display: none !important; }
 .post-done { display: grid; gap: 12px; }
 .post-done[hidden], .post-next[hidden] { display: none; }
 /* The band: Skribl purple, deepening down, with a light where Blooby stands.
-   The same in both themes; white on it is 6.4:1 and up, 6.9 behind "Posted!"
-   (verify_contrast). */
+   The same in both themes. White reads 7:1 and up behind every word on it,
+   7.0 behind "Posted!" and 7.7 behind its line (verify_contrast); the light
+   is behind Blooby, where no word sits. */
 .post-band { position: relative; display: grid; justify-items: center; gap: 4px; padding: 14px 16px 16px;
   border-radius: 18px; text-align: center; color: #fff;
   background: radial-gradient(70% 60% at 50% 26%, rgba(255, 255, 255, 0.30), rgba(255, 255, 255, 0) 68%),
