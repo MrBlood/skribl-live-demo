@@ -25908,3 +25908,92 @@ and repaints that page and its thumbnail: a page of 20,000 points held 253 ms at
 this box's pace (861 at the CPU 4x slower) and one of 60,000 held 441, the time
 in render and refreshThumb. The same kept copy applies per page; it is on the
 list as its own PR.
+
+## After v329 -- Flip's Undo on a busy page, from a kept copy; the tiles follow the photo
+
+Item 2 on the polish list, Flip's half (the Pad's is the entry above). And a
+bug in the strip, found while keeping the tiles: it goes with them.
+
+THE COST. An Undo on Flip painted the page from its strokes, then its tile,
+then, on page 2 and after, the onion skin's ghost of the page before: at this
+box's pace a page of 20,000 points held 160 to 230 ms (720 to 980 with the CPU
+4x slower, about half of it the tile), 250 to 280 over a busy page 1 in the
+onion (1,130 to 1,440), and one of 60,000 points 460 to 610.
+
+WHAT CHANGED (flip.js, UNDO WITHOUT PAINTING THE PAGE AGAIN). A busy page, from
+4,000 points (KEEP_MIN_POINTS), keeps up to three copies of its ink, the one
+used longest ago going first. The frame layer is tagged with the ink's
+signature each time it has just been painted with the page at rest: by
+render() when no stroke, smudge or blur is under way, and by a stroke's start,
+which paints the ink under it. A stroke, a fill, a stamp, an Undo and a Redo
+keep the tagged layer; an Undo or a Redo back to ink a copy holds lays the copy
+where render() would have painted the strokes, and paints the backdrop, the
+page underneath, the onion and the guides as before. A light page keeps
+nothing: it repaints in a few milliseconds and a copy is 8 MB on a phone.
+- BY CONTENT, NOT BY OBJECT. The Pad knows its copies by the point objects,
+  because its edits make new points. Flip's tools move, recolour and liquify
+  points where they lie, so a copy is known by every value its painting reads,
+  hashed twice (_inkSig): positions and widths to a 65,536th of a pixel,
+  colour, eraser, stroke starts, and the stroke-layers setting. Written flat,
+  it is 1 ms for 20,000 points at this box's pace, 5 with the CPU 4x slower.
+- THE TILE keeps a busy page's last three pictures (_thumbBack), known by the
+  same signature as the cached tile.
+- THE ONION. A busy page's ghost is no longer painted again while it is
+  unchanged: the nearest stays on the onion layer, known by its signature, and
+  with the onion two or three pages deep the farther ones keep a canvas each.
+  That also takes the ghost out of every repaint on page 2 of a busy
+  animation, the start of every stroke among them.
+- A new canvas size, or the layers grown with the window, drop every copy and
+  ghost.
+
+MEASURED, before and after taken in turn on this box (a page built in the
+document, one real stroke through the pointer, then Undo, Redo, Undo; the
+press itself, its tile included):
+
+                                  before            after
+  20,000 points                   157 / 157 ms      11 / 6 ms
+    the CPU 4x slower             719 / 739         37 / 29
+  page 2 over a busy page 1       252 / 257         18 / 10
+    the CPU 4x slower           1,441 / 1,150       68 / 37
+  60,000 points                   556 / 607         24 / 11
+    the CPU 4x slower           2,372 / 2,372       58 / 54
+
+(Undo / Redo. What is left is the signature, the backdrop and the onion
+painted again, and the copy laid on.)
+
+ALSO FOUND: THE TILES DID NOT FOLLOW THE PHOTO. The cached tile was known by
+its strokes, the ground colour and whether there was a photo at all, so a
+second photo, the photo's strength, blur or framing, the photo switched off,
+or a new canvas size left every tile showing the old one until its own page
+was drawn on again: after each, the tiles were read against tiles painted
+afresh beside them, on main's tree, and differed. The tile now knows
+everything drawBackdrop reads and the canvas size (_backdropSig); a photo by
+the Image it was loaded into, never its data URL. A strength, blur or zoom
+slider now paints the page at each step and the tiles once it rests (150 ms
+after the last step): with the tiles following the photo, each step painted
+all of them, 66 ms on 31 pages at this box's pace and 284 with the CPU 4x
+slower.
+
+THE ROWS, each shown red against its own break on a served copy of this tree:
+22 breaks, one component each (the four Undo and Redo branches; the signature
+by count alone, and blind to the stroke layers; both drops; the settled test
+always true, and without the smudge; the eraser's tag and the tile's; the
+tile's pictures not looked in, and not kept; the near ghost and the far; the
+keep at a stroke's end, its start, a fill and a stamp; the tile's backdrop as
+it was; the slider painting every tile each step).
+verify_undofast, Flip on a phone: Undo twice and Redo put back every pixel of
+the pad and the tile with no ink painted, and show what a full repaint shows,
+from a copy holding exactly the painted layer; past the copies, one paint;
+three copies and three pictures, reused; nothing painted over a busy page in
+the onion, one and two pages deep; the first Undo on a page just opened (the
+stroke's start kept it) and the Redo straight after (its end kept that); a
+fill and a stamp undone and redone; a light page keeps nothing; an edit in
+place told apart by content; the stroke layers switched off; a new canvas
+size and grown layers drop the copies; the frame layer never taken
+mid-stroke, mid-erase, mid-smudge, or after a tile was painted through it.
+verify_pages: a second photo, the strength (and the tiles once the slider
+rests, not at each step), the photo switched off, and a new canvas size, each
+tile against one painted afresh.
+
+WHAT IT DOES TO THE PAD: the Pad's half came first (the entry above). The tile
+fix is Flip's own: the Pad has no page strip.

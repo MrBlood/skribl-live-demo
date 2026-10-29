@@ -2102,8 +2102,8 @@ function _liveUsable(){
 /* UNDO WITHOUT PAINTING THE PAGE AGAIN (polish list item 2, Flip's half; the
    Pad's is padUndoKeep in editor_draw.js). An Undo painted the page from its
    strokes, then its thumbnail, then the onion skin's page under it: a page of
-   20,000 points held 229 ms at this box's pace and 978 ms with the CPU 4x
-   slower, about half of it the thumbnail; 60,000 points held 538 ms.
+   20,000 points held 160 to 230 ms at this box's pace and 720 to 980 with the
+   CPU 4x slower, about half of it the thumbnail; 60,000 points, 460 to 610.
 
    THE INK. Whenever the frame layer has just been painted with the page as it
    stands -- by render(), when no stroke, smudge or blur is under way

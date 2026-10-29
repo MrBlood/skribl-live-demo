@@ -12,13 +12,14 @@ the ones the copy was taken of (padUndoRestore). Anything else repaints as
 before.
 
 FLIP (flip.js, UNDO WITHOUT PAINTING THE PAGE AGAIN). An Undo painted the page,
-its thumbnail and the onion skin's page under it: 229 ms on a page of 20,000
-points at this box's pace, 978 ms with the CPU 4x slower. A busy page (from
-KEEP_MIN_POINTS) is copied, three copies at most, whenever the frame layer has
-just been painted with it at rest; an Undo or Redo back to ink a copy holds,
-known by content (_inkSig) because Flip's tools edit points where they lie,
-lays the copy. The tile keeps a busy page's last three pictures, and the
-onion's ghost of a busy page stays painted while that page is unchanged.
+its thumbnail and the onion skin's page under it: 160 to 230 ms on a page of
+20,000 points at this box's pace, 720 to 980 with the CPU 4x slower. A busy
+page (from KEEP_MIN_POINTS) is copied, three copies at most, whenever the
+frame layer has just been painted with it at rest; an Undo or Redo back to
+ink a copy holds, known by content (_inkSig) because Flip's tools edit points
+where they lie, lays the copy. The tile keeps a busy page's last three
+pictures, and the onion's ghost of a busy page stays painted while that page
+is unchanged.
 
 WHAT IS ASKED, AND HOW IT IS READ
   * Undo, twice, and Redo, put back exactly the canvas from before: every pixel
