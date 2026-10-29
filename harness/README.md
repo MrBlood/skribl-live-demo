@@ -445,6 +445,15 @@ stays a sleep.
   Undo brings the strokes, the name and the shape back and says Restored with
   a Redo; Redo is Start again, on the shape it picked; the same words in the
   same order on both; and Flip's faded chip takes no tap and no focus.
+- `verify_undofast.py` — the Pad's Undo and Redo without painting the
+  whole drawing again (polish list item 2; editor_draw.js padUndoKeep and
+  padUndoRestore): Undo twice and Redo put back every pixel of the bitmap the
+  canvas held at that moment, with no repaint (paintStrokesStatic counted);
+  past what the three copies reach, one repaint as before; after the window
+  grows, a repaint at the new size, never the old size's copy; an edit with
+  as many points, other ones, repainted on Redo rather than given another
+  drawing's copy; a copy only for its own base and its own stroke layers; and
+  three canvases, reused, however many strokes.
 - `verify_music.py` — one music editor on both editors (lib/musicdrawer.js,
   the owner's "it needs to be the same music editor on both pad and flip"),
   every row driven on the Pad and on Flip and red on one of them before: no
