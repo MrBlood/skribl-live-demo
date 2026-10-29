@@ -1260,7 +1260,7 @@ with sync_playwright() as _spa:
     # came off the picture and joined the head's fact run, the caption stopped
     # deciding how tall a card is, and the unattributed avatar became the
     # Skribl star.
-    _card2 = _pa.evaluate("() => {\n        const t = [...document.querySelectorAll('.tile')];\n        const caps = [...document.querySelectorAll('.tile')].filter(\n            x => x.querySelector('.tcapWrap'));\n        return {\n          tiles: t.length,\n          captioned: caps.length,\n          /* NOTHING OVER THE DRAWING but the idle affordance. */\n          marksOnStage: document.querySelectorAll('.tileStage .tileMarks').length,\n          marksInHead: document.querySelectorAll('.thead .tileMarks').length,\n          soundOnStage: document.querySelectorAll('.tileStage .tileSound').length,\n          kindOnStage: document.querySelectorAll('.tileStage .tileKind').length,\n          /* the cap mark exists exactly where a caption does */\n          capBtns: document.querySelectorAll('.tileCapBtn').length,\n          capBtnsInHead: document.querySelectorAll('.thead .tileCapBtn').length,\n          strayCapBtns: t.filter(x => !!x.querySelector('.tileCapBtn')\n                                   !== !!x.querySelector('.tcapWrap')).length,\n          /* one height for the whole grid, captioned or not */\n          heights: [...new Set(t.map(x => Math.round(\n                     x.getBoundingClientRect().height)))].sort((a, b) => a - b),\n          /* and a closed caption contributes none of it */\n          closedCapH: Math.round(Math.max(0, ...[...document.querySelectorAll(\n                     '.tile:not(.cap-open) .tcapWrap')].map(\n                     x => x.getBoundingClientRect().height))),\n          /* the star, on the accent blend */\n          anonStar: [...document.querySelectorAll('.tavatar-anon')].every(\n                     x => !!x.querySelector('svg')),\n          anonBg: (() => { const a = document.querySelector('.tavatar-anon');\n                     return a ? getComputedStyle(a).backgroundImage : ''; })(),\n        }; }")
+    _card2 = _pa.evaluate("() => {\n        const t = [...document.querySelectorAll('.tile')];\n        const caps = [...document.querySelectorAll('.tile')].filter(\n            x => x.querySelector('.tcap'));\n        return {\n          tiles: t.length,\n          captioned: caps.length,\n          /* NOTHING OVER THE DRAWING but the idle affordance. */\n          marksOnStage: document.querySelectorAll('.tileStage .tileMarks').length,\n          marksInHead: document.querySelectorAll('.thead .tileMarks').length,\n          soundOnStage: document.querySelectorAll('.tileStage .tileSound').length,\n          kindOnStage: document.querySelectorAll('.tileStage .tileKind').length,\n          /* no caption mark in any head: the caption is under the drawing */\n          capMarks: document.querySelectorAll('.tileCapBtn, .thead button:not(.tileMore)').length,\n          /* every caption is there at rest, with words in it */\n          capsAtRest: caps.filter(x => x.querySelector('.tcap').getBoundingClientRect().height > 20).length,\n          /* and no card is taller than what it holds: the dead space at the\n             bottom of a stretched card is what the v310 rows were guarding */\n          deadSpace: Math.round(Math.max(0, ...t.map(x => { const kids = [...x.children].filter(c => c.getClientRects().length);\n                     const last = kids.reduce((a, c) => c.getBoundingClientRect().bottom >= a.getBoundingClientRect().bottom ? c : a);\n                     const xc = getComputedStyle(x);\n                     return x.getBoundingClientRect().bottom - last.getBoundingClientRect().bottom\n                       - parseFloat(getComputedStyle(last).marginBottom) - parseFloat(xc.paddingBottom)\n                       - parseFloat(xc.borderBottomWidth); }))),\n          /* the star, on the accent blend */\n          anonStar: [...document.querySelectorAll('.tavatar-anon')].every(\n                     x => !!x.querySelector('svg')),\n          anonBg: (() => { const a = document.querySelector('.tavatar-anon');\n                     return a ? getComputedStyle(a).backgroundImage : ''; })(),\n        }; }")
     check("the fixture has captioned AND uncaptioned cards to compare",
           _card2["tiles"] >= 3 and 0 < _card2["captioned"] < _card2["tiles"],
           f"{_card2['captioned']} captioned of {_card2['tiles']} \u2014 a grid that "
@@ -1272,20 +1272,21 @@ with sync_playwright() as _spa:
           f"{_card2['kindOnStage']} kind, {_card2['soundOnStage']} sound; "
           f"{_card2['marksInHead']} in the head \u2014 the ask was for the "
           f"canvas back: nothing but drawing")
-    check("...and EVERY card is the same height, captioned or not",
-          len(_card2["heights"]) == 1 and _card2["closedCapH"] == 0,
-          f"heights {_card2['heights']}, tallest closed caption "
-          f"{_card2['closedCapH']}px \u2014 a caption that costs height makes its "
-          f"neighbour's row stretch, which is the dead space at the bottom of "
-          f"the card beside it")
-    check("...the mark that opens a caption is in the head, and only where "
-          "there is one",
-          _card2["capBtns"] == _card2["captioned"] and _card2["strayCapBtns"] == 0
-          and _card2["capBtnsInHead"] == _card2["capBtns"],
-          f"{_card2['capBtns']} marks for {_card2['captioned']} captions, "
-          f"{_card2['strayCapBtns']} mismatched, {_card2['capBtnsInHead']} in the "
-          f"head \u2014 a card with nothing to say draws no mark at all, rather "
-          f"than a control announcing an absence")
+    # THE CAPTION IS UNDER THE DRAWING AT REST NOW (the posting mock, after
+    # v329), and this row is the v310 one inverted: it asserted that every card
+    # was one height, because the caption was shut to nothing. The owner chose
+    # the caption where people look, knowing two cards can then end at
+    # different heights. What every version has guarded is the same: no card
+    # carries space it did not ask for. verify_captions asks the rest.
+    check("...each caption is there at rest, and no card has space under it it did not ask for",
+          _card2["capsAtRest"] == _card2["captioned"] and _card2["deadSpace"] <= 2,
+          f"{_card2['capsAtRest']} of {_card2['captioned']} captions showing at rest, "
+          f"{_card2['deadSpace']}px under the last part of the emptiest card \u2014 a "
+          f"stretched grid row hands the neighbour's height to a card with less in it")
+    check("...and no head carries a caption mark: the \u2261 went on the posting mock",
+          _card2["capMarks"] == 0,
+          f"{_card2['capMarks']} caption marks \u2014 the caption is read where it is "
+          f"now, under the drawing, and a card with nothing to say draws nothing")
     check("...and the anonymous avatar is the Skribl star on the accent blend",
           _card2["anonStar"] and "135deg" in _card2["anonBg"]
           and "124, 92, 255" in _card2["anonBg"],
@@ -1304,9 +1305,9 @@ with sync_playwright() as _spa:
     # THE CAPTION, OVER THE DRAWING. Asserted by PAINT and geometry, not by
     # the class alone: `opacity` is what hides it (the text stays in the
     # accessibility tree), so "hidden" here means a computed opacity of 0.
-    # THE CAPTION IS AN ACCORDION IN THE CARD, NOT A CLAMP ABOVE THE DRAWING
-    # (v310). Three designs have now stood here and each assertion below is the
-    # PREVIOUS one inverted, which is the honest way to retire a row:
+    # THE CAPTION IS UNDER THE DRAWING, TWO LINES AT REST (after v329). Four
+    # designs have now stood here and each assertion below is the PREVIOUS one
+    # inverted, which is the honest way to retire a row:
     #
     #   v307  a scrim OVER the drawing, revealed on hover. Asserted that the
     #         text stayed in the accessibility tree at all times, which is why
@@ -1314,80 +1315,79 @@ with sync_playwright() as _spa:
     #   v308  text under the title, clamped to two lines, "Show more" beneath
     #         it. Asserted the clamp was exactly two lines and that the word
     #         appeared only where the clamp actually bit.
-    #   v310  closed to ZERO at rest, opened by a mark in the head. The clamp
-    #         rows cannot survive this and are not meant to: a clamped caption
-    #         still occupies its two lines, and occupying them is what made one
-    #         card taller than its neighbour ("there has to be a way for
-    #         the cards to be the same size with no weird space at the bottom").
+    #   v310  closed to ZERO at rest, opened by a mark in the head, so every
+    #         card was one height ("there has to be a way for the cards to be
+    #         the same size with no weird space at the bottom").
+    #   now   under the DRAWING, two lines at rest and a "more" beneath them
+    #         where they run longer; the head's mark has gone. The owner's
+    #         call on the posting mock, knowing two cards side by side can
+    #         then end at different heights (no card is stretched: the census
+    #         above asks that). verify_captions asks the rest: the glide, the
+    #         width a caption is asked again at, Reduce Motion.
     #
     # WHAT EVERY VERSION HAS PROTECTED IS THE SAME THING, and it is the only
     # claim that carries across: the description must be reachable. A clamp
-    # kept it reachable by never hiding it; this keeps it reachable by a
-    # control that is always present when there is anything to read.
-    # SETTLED, NOT SAMPLED THE INSTANT THE CLASS CHANGES. This read the
-    # heights synchronously after `btn.click()` and passed, which it could only
-    # do while one of the accordion's two properties was NOT animated: the
-    # instant flip of `content-visibility` was giving the paragraph its height
-    # in the same frame while the track was still at 0fr. Both halves ease now,
-    # so a synchronous read sees the START of the movement -- zero -- and the
-    # row went red on a working accordion. A probe that depends on a jump is a
-    # probe that fails the moment the jump is fixed.
+    # keeps it reachable by never hiding it, and a "more" opens the rest.
+    # SETTLED, NOT SAMPLED THE INSTANT THE CLASS CHANGES: the box glides
+    # between the two heights, so a read in the frame of the click sees the
+    # start of the movement. A probe that depends on a jump is a probe that
+    # fails the moment the jump is fixed.
     _cap = _pa.evaluate("""() => new Promise(resolve => {
         const t = [...document.querySelectorAll('.tile')];
         const one = t[0];
         const cap = one && one.querySelector('.tcap');
-        const wrap = one && one.querySelector('.tcapWrap');
         const st = one && one.querySelector('.tileStage');
-        const btn = one && one.querySelector('.tileCapBtn');
-        if (!cap || !wrap || !st || !btn) { resolve({ missing: true }); return; }
+        const btn = one && one.querySelector('.tcapMore');
+        if (!cap || !st || !btn) { resolve({ missing: true }); return; }
         const h = e => Math.round(e.getBoundingClientRect().height);
-        const shutCard = h(one), shutWrap = h(wrap);
+        const cs = getComputedStyle(cap);
+        const lines = () => (cap.getBoundingClientRect().height - parseFloat(cs.paddingTop)
+                             - parseFloat(cs.paddingBottom)) / parseFloat(cs.lineHeight);
+        const restCard = h(one), restLines = lines(), moreShown = !btn.hidden;
         btn.click();
         setTimeout(() => {
-          const openCard = h(one), openWrap = h(wrap);
-          const pressed = btn.getAttribute('aria-pressed');
+          const openCard = h(one), openLines = lines();
           const expanded = btn.getAttribute('aria-expanded');
+          const word = (btn.textContent || '').trim();
           btn.click();
           setTimeout(() => resolve({
             text: cap.textContent,
             /* the words go BELOW the drawing, so opening does not shove the
                picture down the page under the reader */
-            belowStage: wrap.getBoundingClientRect().top
+            belowStage: cap.getBoundingClientRect().top
                         >= st.getBoundingClientRect().bottom - 1,
+            belowWords: btn.getBoundingClientRect().top >= cap.getBoundingClientRect().bottom - 8,
             inHead: !!btn.closest('.thead'),
-            word: (btn.textContent || '').trim(),
-            labelled: (btn.getAttribute('aria-label') || '').length > 8,
-            reach: (() => { const r = btn.getBoundingClientRect();
-              const b = getComputedStyle(btn, '::before');
-              return Math.round(r.height + Math.abs(parseFloat(b.top) || 0) * 2); })(),
-            shutWrap: shutWrap, openWrap: openWrap,
-            shutCard: shutCard, openCard: openCard,
-            shutAgain: h(wrap), pressed: pressed, expanded: expanded }), 450);
+            restWord: 'more', word: word, moreShown: moreShown,
+            name: btn.getAttribute('aria-label') || '',
+            boxH: Math.round(btn.getBoundingClientRect().height),
+            restCard: restCard, openCard: openCard,
+            restLines: +restLines.toFixed(2), openLines: +openLines.toFixed(2),
+            backLines: +lines().toFixed(2), backCard: h(one), expanded: expanded,
+            backWord: (btn.textContent || '').trim() }), 450);
         }, 450);
       })""")
-    check("the caption opens below the drawing, from a mark in the head",
-          not _cap.get("missing") and _cap["belowStage"] and _cap["inHead"],
+    check("the caption sits below the drawing at rest, and its 'more' under the words, not in the head",
+          not _cap.get("missing") and _cap["belowStage"] and _cap["belowWords"] and not _cap["inHead"]
+          and _cap["moreShown"],
           f"{_cap} \u2014 opening it ABOVE the picture would push the drawing "
-          f"down the page under the reader's cursor; and the mark belongs in the "
-          f"run that already carries the post's other facts ")
-    check("...it costs the card NO height while shut, and opens it when pressed",
-          not _cap.get("missing") and _cap["shutWrap"] == 0
-          and _cap["openWrap"] > 0 and _cap["openCard"] > _cap["shutCard"]
-          and _cap["shutAgain"] == 0,
-          f"{_cap} \u2014 shut must be exactly zero, not a clamp's two lines: a "
-          f"caption that occupies height is what made one card taller than the "
-          f"card beside it")
-    check("...and the mark says which state it is in, and is a control to a finger",
-          not _cap.get("missing") and _cap["pressed"] == "true"
-          and _cap["expanded"] == "true" and _cap["labelled"]
-          and _cap["reach"] >= 34,
+          f"down the page under the reader's cursor")
+    check("...two lines at rest; 'more' opens the rest, and 'less' puts it back as it was",
+          not _cap.get("missing") and 1.9 <= _cap["restLines"] <= 2.05
+          and _cap["openLines"] > 2.5 and _cap["openCard"] > _cap["restCard"]
+          and _cap["backCard"] == _cap["restCard"] and _cap["backLines"] == _cap["restLines"],
+          f"{_cap} \u2014 the v310 row asked for zero at rest; the caption is "
+          f"where people look now, and a clamp hides lines, never the words")
+    check("...and 'more' says which state it is in, and is a control to a finger",
+          not _cap.get("missing") and _cap["expanded"] == "true" and _cap["word"] == "less"
+          and _cap["backWord"] == "more" and "less" in _cap["name"] and _cap["boxH"] >= 44,
           f"{_cap} \u2014 aria-expanded is what a screen reader reads off a "
-          f"disclosure; the glyph is drawn small and banded out to a finger")
-    check("...and it is a GLYPH now, not the words 'Show more'",
-          not _cap.get("missing") and _cap["word"] == "",
-          f"word={_cap.get('word')!r} \u2014 the v308 row asserted the opposite and "
-          f"was right for a control that sat under the sentence; in a fact run "
-          f"beside a pen and a book, a word is the odd one out")
+          f"disclosure, its name holds the word it shows, and its box is 44")
+    check("...and it is the WORD again, under the sentence",
+          not _cap.get("missing") and _cap["restWord"] == "more" and _cap["backWord"] == "more",
+          f"word={_cap.get('backWord')!r} \u2014 the v310 row asserted a glyph, and "
+          f"was right for a mark in a fact run beside a pen and a book; under the "
+          f"sentence it opens, the word is the control, as the v308 row said")
 
     # THE NAME IS NEVER APPROXIMATE. A clipped handle still reads as a handle;
     # a clipped display name reads as a different person. Measured at 390,
@@ -1438,54 +1438,37 @@ with sync_playwright() as _spa:
     # immersive section at the foot of this file, where a stage is already the
     # whole display.
 
-    # A GLYPH WITH A viewBox AND NO SIZE FILLS WHAT CONTAINS IT, which is the
-    # entire defect: `.tileMore svg` has been capped at 16px since it was
+    # A GLYPH WITH A viewBox AND NO SIZE FILLS WHAT CONTAINS IT, which was
+    # the entire defect: `.tileMore svg` had been capped at 16px since it was
     # written and its twin in the same head never was, so the description mark
     # painted a 44px bubble beside a 16px ellipsis ("the enormous chat
-    # bubble"). Both marks are measured, and against EACH OTHER rather than
-    # against a number -- two marks on one line being the same size is the
-    # property, and a number in this file would go stale the day the line's
-    # scale changes.
+    # bubble"). The two were measured against EACH OTHER. The description mark
+    # has gone with the caption's move under the drawing (after v329), so the
+    # pair is one now, and what is left to ask is the property itself: a small
+    # glyph centred in the 44 a finger needs.
     _marks = _pa.evaluate("""() => {
         const t = document.querySelector('.tile');
-        const cap = t.querySelector('.tileCapBtn'), more = t.querySelector('.tileMore');
-        if (!cap || !more) return { missing: true };
+        const more = t.querySelector('.tileMore');
+        if (!more) return { missing: true };
         const box = e => { const r = e.getBoundingClientRect();
                            return [Math.round(r.width), Math.round(r.height)]; };
-        const glyph = e => box(e.querySelector('svg'));
-        /* A SPEECH BUBBLE CANNOT BE DRAWN WITHOUT A CURVE, and lines of text
-           are drawn without one -- so the command letters say which glyph is
-           in there without this file hard-coding path data it would then have
-           to be kept in step with. `a`/`A` is the arc the bubble's body needs
-           and `c`/`C`/`s`/`S`/`q`/`Q` its tail. */
-        const d = [...cap.querySelectorAll('svg path')]
-                    .map(x => x.getAttribute('d') || '').join(' ');
-        return { capBtn: box(cap), moreBtn: box(more),
-                 capGlyph: glyph(cap), moreGlyph: glyph(more),
-                 paths: cap.querySelectorAll('svg path').length,
-                 curved: /[aAcCsSqQtT]/.test(d) }; }""")
-    check("the description mark's glyph is the size of the mark beside it",
-          not _marks.get("missing") and _marks["capGlyph"] == _marks["moreGlyph"],
-          f"{_marks} \u2014 the ellipsis has been capped at 16 since it was "
-          f"written; the mark that shipped beside it had no such rule and drew "
-          f"itself at the full 44 of its box")
+        return { moreBtn: box(more), moreGlyph: box(more.querySelector('svg')),
+                 capMark: !!t.querySelector('.tileCapBtn') }; }""")
+    check("the overflow mark is a 16px glyph, and the description mark beside it has gone",
+          not _marks.get("missing") and _marks["moreGlyph"] == [16, 16] and not _marks["capMark"],
+          f"{_marks} \u2014 an svg with a viewBox and no size draws itself at the "
+          f"full size of its box")
     check("...inside a box that is still the 44 a finger needs",
-          not _marks.get("missing") and _marks["capBtn"] == [44, 44]
-          and _marks["moreBtn"] == [44, 44],
+          not _marks.get("missing") and _marks["moreBtn"] == [44, 44],
           f"{_marks} \u2014 capping the glyph must not cap the target: the three "
           f"touch rules are only satisfiable by a 44px box with a small glyph "
           f"centred in it")
-    check("...and what it draws is a body of text, not a conversation",
-          not _marks.get("missing") and _marks["paths"] == 3
-          and _marks["curved"] is False,
-          f"{_marks} \u2014 a bubble needs an arc for its body and a curve for "
-          f"its tail; ranged straight lines need neither. A bubble promises a "
-          f"reply, and there is nothing on a Skribl to reply to")
 
     # OPENING ONE CARD'S DESCRIPTION MUST NOT GROW THE CARD BESIDE IT. A grid
     # row stretches every item to its tallest, so the dead space the accordion
     # was built to remove was simply handed to the neighbour ("it accordioned
-    # open and it opened the card next to it").
+    # open and it opened the card next to it"). Asked the same way of the
+    # caption's "more" now: the press that opens it is the caption's own.
     #
     # ASSERTED AS THE BEHAVIOUR AND NOT AS `align-items`, because the value
     # that produces the bug is the INITIAL one: a check reading `normal` and
@@ -1500,12 +1483,12 @@ with sync_playwright() as _spa:
         /* the two share a grid row only if they share a top edge */
         const sameRow = Math.abs(a.getBoundingClientRect().top
                                - b.getBoundingClientRect().top) < 2;
-        const btn = a.querySelector('.tileCapBtn');
-        if (!btn) { resolve({ missing: true }); return; }
+        const btn = a.querySelector('.tcapMore');
+        if (!btn || btn.hidden) { resolve({ missing: true }); return; }
         const shutA = h(a), shutB = h(b);
         btn.click();
-        /* SETTLED. The accordion eases in both directions now, so a height
-           read in the same frame as the click is the height it is leaving. */
+        /* SETTLED. The caption eases in both directions, so a height read in
+           the same frame as the click is the height it is leaving. */
         setTimeout(() => {
           const openA = h(a), openB = h(b);
           btn.click();
@@ -1524,82 +1507,66 @@ with sync_playwright() as _spa:
           not _rowmate.get("missing") and _rowmate["grewB"] == 0,
           f"{_rowmate} \u2014 a stretched grid row gave the neighbour the height "
           f"and none of the words, which is the empty space under the drawing "
-          f"this whole accordion exists to remove")
+          f"no card may carry")
 
-    # AND THE SHUT IS AS SMOOTH AS THE OPEN. `content-visibility` has no
-    # interpolable values, so the close used to flip it to `hidden` at once:
-    # the element stopped contributing its CONTENTS' height in one frame, and
-    # the track spent 240ms animating a collapse that had already happened.
+    # AND THE SHUT IS AS SMOOTH AS THE OPEN. Under the v310 accordion the close
+    # flipped `content-visibility` to hidden at once and an empty box eased
+    # down; the first draft of this row went green on exactly that, watching
+    # padding ease. The same trap stands for a clamp: put the two-line clamp
+    # back at the START of the close and the words below the second line
+    # vanish in one frame, while the box goes on easing with nothing in it.
     #
-    # THE FIRST DRAFT OF THIS ROW WENT GREEN ON THAT EXACT MUTATION, and it is
-    # worth writing down why. It asked only whether the wrapper's height was
-    # somewhere between nothing and the open height part way through -- and
-    # `content-visibility: hidden` does NOT remove the element's own padding,
-    # which this sheet also eases. So the row was watching 22px of padding
-    # ease to nothing and calling it an animated close, on a tree where the
-    # words had vanished instantly. A measurement that a broken tree satisfies
-    # is not a measurement.
-    #
-    # Two things are asked now, and the padding can answer neither:
-    #   the height mid-close is still ABOVE what padding alone could produce,
-    #     so the text is still in there taking up room
-    #   `content-visibility` still computes `visible` mid-close, which is the
-    #     mechanism itself -- `transition-behavior: allow-discrete` holding the
-    #     visible value until the end is the entire fix
+    # Two things are asked, and an empty box can answer neither:
+    #   one frame into the close the box is still most of the way open, so it
+    #     is easing and not jumping
+    #   and the words are still whole in it (no clamp yet), which is the
+    #     mechanism: gallery.js keeps the paragraph open while it shrinks and
+    #     clamps it when it lands
     _shut = _pa.evaluate("""() => new Promise(resolve => {
         const t = document.querySelector('.tile');
-        const wrap = t.querySelector('.tcapWrap');
         const cap = t.querySelector('.tcap');
-        const btn = t.querySelector('.tileCapBtn');
-        if (!wrap || !cap || !btn) { resolve({ missing: true }); return; }
-        const h = () => Math.round(wrap.getBoundingClientRect().height);
+        const btn = t.querySelector('.tcapMore');
+        if (!cap || !btn || btn.hidden) { resolve({ missing: true }); return; }
+        const h = () => Math.round(cap.getBoundingClientRect().height);
+        const rest = h();
         btn.click();                         /* open */
         setTimeout(() => {
           const open = h();
-          const cs = getComputedStyle(cap);
-          /* what the box would still measure with its contents skipped: the
-             padding this sheet puts on the paragraph, and nothing else */
-          const padOnly = Math.round((parseFloat(cs.paddingTop) || 0)
-                                   + (parseFloat(cs.paddingBottom) || 0));
           btn.click();                       /* and shut, watched */
-          /* ON THE FRAME AFTER, not on a timer. The track and the padding ease
-             on the same curve, so by 50ms the padding is most of the way down
-             too and the two trees are twenty pixels apart; one frame in they
-             are fifty. Two rAFs because the first is the frame the transition
-             starts on. */
+          /* ON THE FRAME AFTER, not on a timer. Two rAFs because the first
+             is the frame the transition starts on. */
           requestAnimationFrame(() => requestAnimationFrame(() => {
-            const early = h(), vis = getComputedStyle(cap).contentVisibility;
-            setTimeout(() => resolve({ open: open, padOnly: padOnly,
-              early: early, vis: vis, settled: h() }), 400);
+            const early = h(), whole = getComputedStyle(cap).display !== '-webkit-box';
+            setTimeout(() => resolve({ rest: rest, open: open,
+              early: early, whole: whole, settled: h() }), 400);
           }));
         }, 450);
       })""")
     _pa.wait_for_timeout(900)
-    check("closing a description takes the words down with it, gradually",
-          not _shut.get("missing") and _shut["open"] > _shut["padOnly"] + 20
-          and _shut["early"] > _shut["padOnly"] + 10 and _shut["settled"] == 0,
-          f"{_shut} \u2014 a first frame at or near the padding means the words "
-          f"stopped contributing height the instant the class came off, and "
-          f"what is easing is an empty box")
-    check("...because the element keeps rendering its contents until it has",
-          not _shut.get("missing") and _shut["vis"] == "visible",
-          f"{_shut} \u2014 `content-visibility` has no interpolable values, so "
-          f"without `transition-behavior: allow-discrete` it flips at the "
-          f"start of the close and there is nothing left to animate")
+    check("closing a caption takes the words down with it, gradually",
+          not _shut.get("missing") and _shut["open"] > _shut["rest"] + 20
+          and _shut["early"] > _shut["rest"] + 10 and _shut["settled"] == _shut["rest"],
+          f"{_shut} \u2014 a first frame at or near the two lines means the close "
+          f"jumped there, and what follows is a box with nothing left to ease")
+    check("...because the words stay whole in the box until it lands",
+          not _shut.get("missing") and _shut["whole"] is True,
+          f"{_shut} \u2014 clamped at the start of the close, the lines below the "
+          f"second vanish in one frame and the box eases down empty")
 
-    # THE HEAD'S BUTTONS SAY NOTHING ABOUT THE DRAWING. `:focus-within` on the
-    # card matched the whole card, and a button keeps focus after a click --
-    # so reading the description raised the transport, and closing it could
-    # not lower it, because that peek is the sticky kind with no timer behind
-    # it ("when I reclicked the bubble, it closed - but it left the controls
-    # still on screen").
+    # THE CARD'S OTHER BUTTONS SAY NOTHING ABOUT THE DRAWING. `:focus-within`
+    # on the card matched the whole card, and a button keeps focus after a
+    # click -- so reading the description raised the transport, and closing it
+    # could not lower it, because that peek is the sticky kind with no timer
+    # behind it ("when I reclicked the bubble, it closed - but it left the
+    # controls still on screen"). The bubble was the head's caption mark; the
+    # caption's "more" under the drawing is asked the same now.
     #
     # OPACITY AND NOT A CLASS: the bar is in the DOM at every moment by design,
     # so what is being asked is whether it is PAINTED.
     _reveal = _pa.evaluate("""() => new Promise(resolve => {
         const t = document.querySelector('.tile');
         const bar = t.querySelector('.skfull-card');
-        const cap = t.querySelector('.tileCapBtn');
+        const cap = t.querySelector('.tcapMore');
         const more = t.querySelector('.tileMore');
         const inStage = t.querySelector('.tileStage .skfull-card .skfull-play');
         if (!bar || !cap || !more || !inStage) { resolve({ missing: true }); return; }
@@ -1619,11 +1586,11 @@ with sync_playwright() as _spa:
         step(cap, 'cap', () => step(more, 'more',
              () => step(inStage, 'stage', () => resolve(seen))));
       })""")
-    check("focus on a head button leaves the transport where it was",
+    check("focus on the caption's more or the overflow leaves the transport where it was",
           not _reveal.get("missing") and _reveal["cap"] == "0"
           and _reveal["more"] == "0",
-          f"{_reveal} \u2014 the description toggle and the overflow trigger are "
-          f"in the head; neither is a control of the drawing, and a card-wide "
+          f"{_reveal} \u2014 the caption's more and the overflow trigger are off "
+          f"the stage; neither is a control of the drawing, and a card-wide "
           f"`:focus-within` could not tell the difference")
     check("...and focus inside the stage still summons it",
           not _reveal.get("missing") and _reveal["stage"] == "1",
@@ -2597,8 +2564,11 @@ print("\nGALLERY — the title has the card's width, and the bar gets out of the
 # of the title. Measured at 390 on a CAPTIONED card: 49% of the title readable
 # before the count was allowed on a phone, 25% with it. The suite was green
 # throughout, because it asked what the head CONTAINED and never what any of
-# it measured. The fixture here carries a caption for that reason -- a plain
-# post has a shorter fact run and does not reach the failure.
+# it measured. The fixture here carried a caption for that reason -- a plain
+# post had a shorter fact run and did not reach the failure. Since the caption
+# moved under the drawing (after v329) the head is the same on every card, so
+# the caption no longer makes the case harder; the fixture keeps it, and the
+# row below now also asks that the head carries no mark for it.
 #
 # THE TRANSPORT USED TO SIT ON THE DRAWING FOR THE WHOLE REPLAY. A 400ms tick
 # asked for the STICKY peek while playing, and a tap moved focus into the
@@ -2610,11 +2580,9 @@ _CAP_TEXT = ("A study of a ball rolling sideways, drawn over a photo, with a "
 
 
 def _captioned_post(title, caption, seconds=2):
-    """A public post WITH a caption, so the head carries the description mark.
-
-    The mark is a control and stays at every width, unlike the kind glyph and
-    the count -- so it is the fact run's floor, and the case the title has to
-    survive."""
+    """A public post WITH a caption. Until the caption moved under the drawing
+    (after v329) this put the description mark in the head, the fact run's
+    floor and the case the title had to survive."""
     n = 14
     pts = [{"x": 90 + i * 46, "y": 150 + (i % 4) * 44, "color": "#5ac8ff",
             "size": 12, "t": i * (seconds * 1000 / n)} for i in range(n)]
@@ -2664,7 +2632,8 @@ _FIT = r"""() => {
         offset: +(rg.getBoundingClientRect().left
                   - av.getBoundingClientRect().left).toFixed(1),
         playsPainted: seen(pl),
-        capMark: !!t.querySelector(".tileCapBtn"),
+        captioned: !!t.querySelector(".tcap"),
+        capMark: !!t.querySelector(".tileCapBtn, .thead button:not(.tileMore)"),
     };
 }"""
 
@@ -2683,10 +2652,10 @@ with sync_playwright() as _spw:
     _pw.wait_for_timeout(1800)
     _f = _pw.evaluate(_FIT)
 
-    check("the fixture really is the hard case: a captioned card",
-          _f.get("capMark") is True,
-          f"{_f!r} — no description mark means the fact run is short and "
-          f"this section is measuring the easy card it was written to avoid")
+    check("the fixture is a captioned card, and its head carries no mark for the caption",
+          _f.get("captioned") is True and _f.get("capMark") is False,
+          f"{_f!r} — the caption is under the drawing now, so the head's fact "
+          f"run is the same on every card")
     # THE TITLE SPANS THE HEAD'S CONTENT BOX. Against `clientWidth` this could
     # never come out level -- that box includes the 13px gutters -- so it asks
     # for the content width the probe computes.
