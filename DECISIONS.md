@@ -25862,3 +25862,49 @@ first Tab lands in the header on Pad and on Flip.
 WHAT IT DOES TO FLIP: shared. One tips module, one Post sheet and the same
 Shape button serve both editors; the intro and the first Tab were Flip's to
 fix.
+
+## After v329 -- Undo on a long drawing, from a kept copy
+
+Item 2 on the polish list, its first half: the Pad's Undo. The opening and the
+link page's first paint are the second half, a PR of their own.
+
+THE COST. A history state is the stroke list and a reference to its base, never
+pixels: a full canvas copy per stroke once pinned half a gigabyte
+(makeHistoryState, app.js). So every Undo painted the whole drawing again, and
+on a two-hour piece (145,200 points, 6,600 strokes) that was 1.6 to 1.9 s at
+this box's own pace, every press. Painting those points faster with the same
+ink was tried first and is not on offer: pressure changes a stroke's width on
+94% of its segments, so they cannot be joined into one path, and setting each
+brush value only when it changes saved nothing measurable. One filled shape
+per stroke halved the calls (0.9 s against 1.6 to 1.8) but drew slower in all
+(3.2 to 3.4 s) and changed the ink.
+
+WHAT CHANGED. As each stroke is laid (editor_draw.js commitStrokeWithMirrors and
+commitActiveStroke), while the canvas holds exactly the drawing, padUndoKeep
+copies it into one of three canvases kept for the purpose, the oldest first:
+three, reused, never one per stroke. Undo and Redo (editor_menu.js) ask
+padUndoRestore before they repaint. A state whose points are the very objects a
+copy was taken of, in order, on the same base, canvas size and stroke layers, is
+put back with one drawImage: the canvas as it was when that drawing was last on
+it. Identity is enough because the editor never changes a point a state holds
+(the select move and the recolour copy a point before they change it, and say
+why). Anything else repaints as before. Pad's own files only: app.js and the
+link page are unchanged.
+
+MEASURED, the two-hour piece at this box's pace: the first and second Undo after
+drawing held the page 92 and 154 ms against 1,799 and 1,868, with no repaint;
+traced, the Undo is one 18 ms task on the main thread (the rest of the frame is
+this box's software GPU compositing a large canvas). The third Undo, past the
+copies, repaints as before (1.5 s).
+
+THE ROWS, verify_undofast.py, each red against its own break: no fast path in
+Undo or Redo (4 rows), copies never kept (6), no size check (the grown window),
+a count-only match (an edit with as many points, other ones), no base or no
+stroke-layers check (asked of padUndoRestore directly, with its own drawing as
+the control), one copy instead of three (4), a new canvas per copy (2).
+
+WHAT IT DOES TO FLIP: Flip next. Its Undo works on one page (flip.js undoStroke)
+and repaints that page and its thumbnail: a page of 20,000 points held 253 ms at
+this box's pace (861 at the CPU 4x slower) and one of 60,000 held 441, the time
+in render and refreshThumb. The same kept copy applies per page; it is on the
+list as its own PR.

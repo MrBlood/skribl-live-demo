@@ -508,6 +508,53 @@ function commitStrokeWithMirrors() {
     }
   }
   currentStroke = [];
+  padUndoKeep();
+}
+
+// UNDO WITHOUT PAINTING IT ALL AGAIN (polish list item 2). A history state is
+// the stroke list and its base, never pixels (makeHistoryState, app.js: a copy
+// per stroke once pinned half a gigabyte), so every Undo painted the whole
+// drawing again: on a two-hour piece, 145,200 points, about 1.6 s at this
+// box's own pace, every press. So as each stroke is laid, while the canvas
+// holds exactly the drawing, it is copied into one of three canvases kept for
+// it, the oldest first: three, never one per stroke. Undo and Redo ask
+// padUndoRestore before they repaint (editor_menu.js). A state whose points
+// are the very objects a copy was taken of, in order (an edit makes new point
+// objects: the select move and the recolour copy a point before changing it),
+// on the same base, canvas size and stroke layers, is put back with one
+// drawImage: the canvas as it was when that drawing was last on it. Anything
+// else repaints as before.
+const _padKept = [];
+let _padKeptNext = 0;
+function padUndoKeep() {
+  if (unrecordedInk || !canvas.width || !canvas.height) return;
+  const k = _padKept[_padKeptNext] || (_padKept[_padKeptNext] = { c: document.createElement('canvas') });
+  _padKeptNext = (_padKeptNext + 1) % 3;
+  if (k.c.width !== canvas.width || k.c.height !== canvas.height) {
+    k.c.width = canvas.width; k.c.height = canvas.height;
+  }
+  const x = k.c.getContext('2d');
+  x.clearRect(0, 0, k.c.width, k.c.height);
+  x.drawImage(canvas, 0, 0);
+  k.pts = strokes.slice(); k.base = preRecordSnapshot; k.layers = strokeLayersOn();
+}
+function padUndoRestore(state) {
+  if (!state || state.image) return false;
+  const pts = state.strokes;
+  const k = _padKept.find(k => k.pts && k.pts.length === pts.length && k.base === state.base
+    && k.c.width === canvas.width && k.c.height === canvas.height && k.layers === strokeLayersOn()
+    && k.pts.every((p, i) => p === pts[i]));
+  if (!k) return false;
+  ++_histRestoreSeq;   // a repaint still decoding its base must not land on this
+  unrecordedInk = false;
+  ctx.save();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.globalAlpha = 1;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(k.c, 0, 0);
+  ctx.restore();
+  return true;
 }
 
 function endDraw() {
@@ -549,13 +596,15 @@ function commitActiveStroke() {
   drawing = false;
   document.body.classList.remove('stroking');
   _slActive = false;
-  if (recording && currentStroke.length > 0) {
+  const laid = recording && currentStroke.length > 0;
+  if (laid) {
     strokes = strokes.concat(currentStroke);
     strokeGroups.push(currentStroke.length);
   } else if (currentStroke.length > 0) {
     unrecordedInk = true;   // pixels the stroke list can't rebuild — see app.js
   }
   currentStroke = [];
+  if (laid) padUndoKeep();
 }
 
 // ---- Input: POINTER EVENTS, as Flip (SK312-002, v315) -----------------------

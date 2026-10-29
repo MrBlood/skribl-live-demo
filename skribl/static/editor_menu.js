@@ -223,8 +223,10 @@ undoBtn.addEventListener('click', () => {
   redoBtn.disabled = false;
   const prev = undoStack.pop();
   // Pixel states restore their snapshot; ordinary states repaint base +
-  // strokes — see restoreHistoryState (app.js) for why both are exact.
-  restoreHistoryState(prev);
+  // strokes — see restoreHistoryState (app.js) for why both are exact. A
+  // drawing the canvas held a moment ago comes back from its kept copy
+  // instead (padUndoRestore, editor_draw.js), with no repaint.
+  if (!padUndoRestore(prev)) restoreHistoryState(prev);
   strokes = prev.strokes.slice();
   strokeGroups = prev.strokeGroups.slice();
   recolors = (prev.recolors || []).slice();
@@ -242,8 +244,8 @@ redoBtn.addEventListener('click', () => {
   undoStack.push(makeHistoryState());
   undoBtn.disabled = false;
   const next = redoStack.pop();
-  // Same restore as undo — pixel state or base + strokes repaint.
-  restoreHistoryState(next);
+  // Same restore as undo — a kept copy, a pixel state or base + strokes repaint.
+  if (!padUndoRestore(next)) restoreHistoryState(next);
   strokes = next.strokes.slice();
   strokeGroups = next.strokeGroups.slice();
   recolors = (next.recolors || []).slice();
