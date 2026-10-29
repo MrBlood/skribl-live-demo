@@ -25715,6 +25715,18 @@ suite's song is short, so at 1x its ends are never within reach of each other
 under test until they meet, as a loop of a few beats on a long song does by
 itself.
 
+TWO OLDER ROWS, TAUGHT THE NEW DRAWER. The affected suites side by side
+(40, beside two others each) found two rows that still asked for the drawer
+before this: verify_musictimeline's grip row asked that a tap under a tab
+reach the whole song's line, where an end's reach runs now, so it asks that
+the tab keeps clear of the line and that a tap under it, on the line, takes
+the end (red on the old reach on both editors, phone and desk, green as
+built); and verify_helpclaims' census of named controls did not know the
+pair's names, so it maps them to the help's own words for them (red on both
+editors when the help does not say them). verify_musicundo is weighed at 250
+seconds in harness/shard.py, from its 5.1 minutes beside two others here,
+until CI measures it.
+
 WHAT IT DOES TO FLIP: shared. One drawer and one timeline, so all of it is
 both editors'; the bin's way back has a part of its own in each (the Pad's
 draft store, Flip's save), each read by its own rows.
