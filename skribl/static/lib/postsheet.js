@@ -59,7 +59,7 @@
     var jumpImg = $('postJump');
     var cardMedia = $('postCardMedia');
     var cardPic = $('postCardPic');
-    var cardBox = $('postCardPlayer');
+    var cardTpl = $('postCardTpl'), cardBox = null;   // the player's box, put in on the first post
     var cardTitle = $('postCardTitle');
     var cardCaption = $('postCardCaption');
     var cardMeta = $('postCardMeta');
@@ -297,12 +297,23 @@
         if (watchBtn && !watchBtn.hidden) watchBtn.focus({ preventScroll: true });
       }
       jump();
-      playCard(payload);
+      // The card starts on the drawing's own ground and the drawing draws
+      // itself there, after the glide: the player's work on the page would
+      // hold the height's frames. Its picture is the card when there is no
+      // drawing to play, under Reduce Motion, or while a slow one starts.
+      var plays = !!(payload && cardTpl && !still());
+      if (cardMedia) cardMedia.classList.toggle('is-waiting', plays);
+      if (plays) {
+        cardTimer = setTimeout(function () { playCard(payload); }, 400);
+        picTimer = setTimeout(showPic, 1500);
+      }
     }
+    function showPic() { if (cardMedia) cardMedia.classList.remove('is-waiting'); }
 
     function unpost() {
       clearTimeout(jumpTimer);
       clearTimeout(cardTimer);
+      clearTimeout(picTimer);
       if (cardPlayer) { cardPlayer.settle(); cardPlayer = null; }
       if (cardBox) cardBox.classList.remove('is-on');
       if (!sheet) return;
@@ -378,24 +389,36 @@
       return playerComing;
     }
 
-    var cardPlayer = null, cardTimer = 0;
+    var cardPlayer = null, cardTimer = 0, picTimer = 0;
     function playCard(payload) {
-      if (!payload || !cardBox || still()) return;
       loadPlayer().then(function () {
         if (!sheet.classList.contains('is-posted')) return;   // put away meanwhile
+        if (!cardBox) {
+          cardMedia.appendChild(cardTpl.content.cloneNode(true));
+          cardBox = $('postCardPlayer');
+        }
         cardBox.classList.add('is-immersive', 'is-bare');
         var p = window.SkriblInline.attach(cardBox, payload, { ambient: true });
-        if (!p) return;
+        if (!p) { showPic(); return; }
         cardPlayer = p;
         var tries = 0;
         (function start() {
           if (cardPlayer !== p) return;
           var st = p.state();
-          if (!st.loaded) { if (++tries < 200) cardTimer = setTimeout(start, 50); return; }
+          if (!st.loaded) { if (++tries < 200) cardTimer = setTimeout(start, 50); else showPic(); return; }
           if (st.kind === 'flip') {
-            // Twice round, then its first page.
+            // Twice round, then its first page: the turn into the second
+            // round is watched for on the player's own clock, and that round
+            // is its last.
             p.setLoop(true);
-            cardTimer = setTimeout(function () { p.setLoop(false); rest(); }, st.totalMs + 100);
+            var was = 0;
+            (function turn() {
+              if (cardPlayer !== p) return;
+              var s = p.state();
+              if (s.state === 'playing' && s.elapsedMs + 1 < was) { p.setLoop(false); rest(); return; }
+              was = s.elapsedMs;
+              cardTimer = setTimeout(turn, 30);
+            })();
           } else {
             p.setLoop(false);
             p.setRate(Math.max(1, st.totalMs / 3000));
@@ -403,13 +426,14 @@
           p.seek(0);
           p.play();
           cardBox.classList.add('is-on');
+          clearTimeout(picTimer);
         })();
         function rest() {
           if (cardPlayer !== p) return;
           if (p.state().state === 'playing') { cardTimer = setTimeout(rest, 200); return; }
           p.seek(0);
         }
-      }, function () {});
+      }, showPic);
     }
 
     /* THE SOUND MARKER MIRRORS THE TOOLBAR, IT DOES NOT RE-DECIDE.
@@ -511,6 +535,7 @@
       overlay.classList.remove('open');
       clearTimeout(jumpTimer);
       clearTimeout(cardTimer);
+      clearTimeout(picTimer);
       if (cardPlayer) cardPlayer.pause();
       if (sheet) sheet.style.maxHeight = '';
       overlay.style.top = ''; overlay.style.bottom = ''; overlay.style.height = '';

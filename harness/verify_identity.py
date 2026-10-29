@@ -507,24 +507,43 @@ with sync_playwright() as p:
     c.close()
     b.close()
 
-print("\nBLOOBY CHEERS — once a drawing has posted, beside 'Posted!', in both editors")
-# The owner's pick from the Blooby mock ("Cheer is best"): after a real post the
-# sheet shows Blooby cheering beside "Posted!", and the line under it says what
-# is true then -- anyone with the link can watch it (the server's default is
+print("\nBLOOBY CHEERS — once a drawing has posted, on the Posted! band, in both editors")
+# The owner's pick from the Blooby mock ("Cheer is best"), and then the posted
+# moment's ("maybe an animated blooby jumping up with his hands in the
+# air?"; A, the band): after a real post the sheet's band shows Blooby, who
+# jumps and stays cheering over "Posted!", and the line under it says what is
+# true then -- anyone with the link can watch it (the server's default is
 # unlisted; the sheet only ever adds public) -- in each editor's own words: the
 # Pad's drawings draw themselves, Flip's play. Opened again, the sheet is back
 # to how it starts. A save kept on this device only (the post failed) does not
-# cheer, and compose mode, where nothing is posted yet, has no cheer at all.
-# Painted, as above: the share of his box in his badge's colours.
-_POSTED = """() => { const c = document.getElementById('postCheer'), s = document.getElementById('postSub');
-    const h = document.querySelector('#postSheet .export-head'), box = e => { if (!e) return null;
+# cheer, and compose mode, where nothing is posted yet, has no band at all.
+# PAINTED, and painted as HIM: the band is the badge's purple too, so a box
+# showing the bare band would read as lilac. His badge has what the band has
+# not, the white star he stands on and his dark drawn line; both are counted
+# (in his 80px box at 1x, about 7% and 0.5% of it; the bare band has none).
+# The jump itself, pose by pose, is verify_postmoment's.
+_POSTED = """() => { const d = document.getElementById('postDone'), j = document.getElementById('postJump');
+    const box = e => { if (!e || !e.getClientRects().length) return null;
       const r = e.getBoundingClientRect(); return [r.left, r.top, r.width, r.height]; };
-    const t = h && h.firstChild && h.firstChild.nodeType === 3 ? h.firstChild : null;
-    let left = null;
-    if (t) { const rg = document.createRange(); rg.selectNodeContents(t); left = rg.getBoundingClientRect().left; }
-    return { shown: !!c && !c.hidden, src: c ? (c.getAttribute('src') || '').split('?')[0].split('/').pop() : null,
-             done: !!c && c.complete && c.naturalWidth > 0, cheer: box(c && !c.hidden ? c : null),
-             head: t ? t.nodeValue : null, headBox: box(h), words: left, line: s ? s.textContent.trim() : null }; }"""
+    const t = document.querySelector('#postSheet .export-head'), tt = t && t.firstChild && t.firstChild.nodeType === 3 ? t.firstChild : null;
+    return { shown: !!d && !d.hidden, src: j ? (j.getAttribute('src') || '').split('?')[0].split('/').pop() : null,
+             done: !!j && j.complete && j.naturalWidth > 0, cheer: box(j && j.parentElement),
+             head: d && !d.hidden ? document.getElementById('postDoneHead').textContent : (tt ? tt.nodeValue : null),
+             headBox: box(document.getElementById('postDoneHead')),
+             line: d && !d.hidden ? document.getElementById('postDoneLine').textContent.trim()
+                   : (document.getElementById('postSub') || {}).textContent }; }"""
+
+
+def _badge(pg, box):
+    """His badge's own paint in `box`: the share of the white star and of his dark line."""
+    if not box or box[2] < 8 or box[3] < 8:
+        return 0.0, 0.0
+    shot = Image.open(io.BytesIO(pg.screenshot(clip={"x": box[0], "y": box[1], "width": box[2], "height": box[3]}))).convert("RGB")
+    raw = shot.tobytes()
+    px = [raw[i:i + 3] for i in range(0, len(raw), 3)]
+    white = sum(1 for r, g, b_ in px if min(r, g, b_) > 225) / max(1, len(px))
+    dark = sum(1 for r, g, b_ in px if max(r, g, b_) < 70) / max(1, len(px))
+    return white, dark
 
 
 def _post_from(b, path, canvas, theme="light", viewport=None, die=False):
@@ -549,17 +568,17 @@ def _post_from(b, path, canvas, theme="light", viewport=None, die=False):
     pg.fill("#postTitleInput", "Cheer probe")
     pg.click("#postSubmitBtn")
     pg.wait_for_selector("#postResult:not([hidden])" if not die else "#postStatus:not([hidden])", timeout=15000)
-    pg.wait_for_timeout(2500 if die else 600)
+    pg.wait_for_timeout(2500 if die else 1400)   # his jump is 0.8 s; he stays cheering
     return c, pg
 
 
-def _beside(r):
-    """His box left of the words and level with the title, nothing overlapping."""
-    if not (r["cheer"] and r["headBox"] and r["words"] is not None):
+def _over(r):
+    """His box over "Posted!", centred on it, nothing overlapping."""
+    if not (r["cheer"] and r["headBox"]):
         return False
     x, y, w, h = r["cheer"]
-    hy, hh = r["headBox"][1], r["headBox"][3]
-    return x + w <= r["words"] - 6 and y < hy + hh and y + h > hy
+    hx, hy, hw, _ = r["headBox"]
+    return y + h <= hy and abs((x + w / 2) - (hx + hw / 2)) <= 2
 
 
 with sync_playwright() as p:
@@ -567,35 +586,37 @@ with sync_playwright() as p:
     for theme in ("light", "dark"):
         c, pg = _post_from(b, "/skribl-pad", "#canvas", theme)
         r = pg.evaluate(_POSTED)
-        share = _lilac(pg, r["cheer"])
-        check(f"Pad, {theme}: after a post Blooby cheers beside 'Posted!', painted, and the line says anyone "
+        white, dark = _badge(pg, r["cheer"])
+        check(f"Pad, {theme}: after a post Blooby cheers on the band over 'Posted!', painted as his badge, and the line says anyone "
               "with the link can watch it draw itself",
-              r["shown"] and r["src"] == "blooby-cheer.webp" and r["done"] and share > 0.5 and r["head"] == "Posted!"
-              and r["line"] == "Anyone with the link can watch it draw itself." and _beside(r),
-              f"{ {k: r[k] for k in ('shown', 'src', 'head', 'line')} } lilac {share:.0%} beside {_beside(r)}")
+              r["shown"] and r["src"] == "blooby-jump.webp" and r["done"] and white > 0.04 and dark > 0.002 and r["head"] == "Posted!"
+              and r["line"] == "Anyone with the link can watch it draw itself." and _over(r),
+              f"{ {k: r[k] for k in ('shown', 'src', 'head', 'line')} } star {white:.0%} line {dark:.1%} over {_over(r)}")
         if theme == "light":
             pg.keyboard.press("Escape")
             pg.wait_for_timeout(500)
             pg.click("#postBtn")
             pg.wait_for_timeout(600)
             again = pg.evaluate(_POSTED)
-            check("...and opened again, the sheet is back to how it starts: no cheer, its first title and line",
+            check("...and opened again, the sheet is back to how it starts: no band, its first title and line",
                   not again["shown"] and again["head"] == "Post your Skribl"
                   and again["line"] == "Add a title and share it to Skribl",
                   f"{ {k: again[k] for k in ('shown', 'head', 'line')} }")
         c.close()
     c, pg = _post_from(b, "/skribl-pad", "#canvas", "light", {"width": 1280, "height": 900})
     r = pg.evaluate(_POSTED)
-    check("Pad on a desk: the cheer sits beside the words too",
-          r["shown"] and r["head"] == "Posted!" and _beside(r), f"cheer {r['cheer']} head {r['headBox']} words {r['words']}")
+    white, dark = _badge(pg, r["cheer"])
+    check("Pad on a desk: he cheers over the words there too, painted as his badge",
+          r["shown"] and r["head"] == "Posted!" and _over(r) and white > 0.04 and dark > 0.002,
+          f"cheer {r['cheer']} head {r['headBox']} star {white:.0%} line {dark:.1%}")
     c.close()
     c, pg = _post_from(b, "/flip", "#pad", "light")
     r = pg.evaluate(_POSTED)
-    share = _lilac(pg, r["cheer"])
+    white, dark = _badge(pg, r["cheer"])
     check("Flip: the same cheer after a post, and its line says anyone with the link can watch it play",
-          r["shown"] and r["src"] == "blooby-cheer.webp" and r["done"] and share > 0.5 and r["head"] == "Posted!"
-          and r["line"] == "Anyone with the link can watch it play." and _beside(r),
-          f"{ {k: r[k] for k in ('shown', 'src', 'head', 'line')} } lilac {share:.0%} beside {_beside(r)}")
+          r["shown"] and r["src"] == "blooby-jump.webp" and r["done"] and white > 0.04 and dark > 0.002 and r["head"] == "Posted!"
+          and r["line"] == "Anyone with the link can watch it play." and _over(r),
+          f"{ {k: r[k] for k in ('shown', 'src', 'head', 'line')} } star {white:.0%} line {dark:.1%} over {_over(r)}")
     c.close()
     c, pg = _post_from(b, "/skribl-pad", "#canvas", "light", die=True)
     r = pg.evaluate(_POSTED)
@@ -605,14 +626,14 @@ with sync_playwright() as p:
     c.close()
     b.close()
 
-# Compose mode posts nothing, so the sheet carries no cheer and no posted line:
+# Compose mode posts nothing, so the sheet carries no band and no posted line:
 # asked of the served markup's elements, not of words.
 _cmp = {}
 for _path in ("/skribl-pad?compose=1", "/flip?compose=1"):
     _html = urllib.request.urlopen(BASE + _path, timeout=20).read().decode()
-    _cmp[_path] = (bool(re.search(r'<img\b[^>]*\bid="postCheer"', _html)),
-                   bool(re.search(r'<div\b[^>]*\bid="postSub"[^>]*\bdata-posted=', _html)))
-check("compose mode, where nothing is posted yet, has no cheer and no posted line, in either editor",
+    _cmp[_path] = (bool(re.search(r'<div\b[^>]*\bid="postDone"', _html)),
+                   bool(re.search(r'\bid="postDoneLine"', _html)))
+check("compose mode, where nothing is posted yet, has no band and no posted line, in either editor",
       _cmp and all(v == (False, False) for v in _cmp.values()), str(_cmp))
 
 bad = [r for r in results if not r[0]]

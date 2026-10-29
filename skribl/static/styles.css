@@ -4130,9 +4130,11 @@ body.player-mode #canvasEmptyHint { display: none !important; }
   #postSheet .post-preview { max-height: 300px; }
   /* The Pad's sheet carries "Viewers start at" (about 96px), and the preview
      gives that height back on a short desk window, so the sheet still fits a
-     1280x800 screen without scrolling (verify_sheetfit). 552 is everything
-     else in the sheet; 160 is as small as a preview stays readable. */
-  #postSheet:has(.post-speed) .post-preview { max-height: max(160px, min(300px, calc(100dvh - 552px))); }
+     1280x800 screen without scrolling (verify_sheetfit). 569 is everything
+     else in the sheet (545 since its words went up to the menu's sizes) and
+     the 24px it keeps clear of the window; 160 is as small as a preview stays
+     readable. */
+  #postSheet:has(.post-speed) .post-preview { max-height: max(160px, min(300px, calc(100dvh - 569px))); }
   #postSheet .post-submit { padding: 14px; font-size: 15px; margin: 4px 12px 8px; }
 }
 
@@ -4494,6 +4496,7 @@ body.player-mode #canvasEmptyHint { display: none !important; }
 .post-card-media { position: relative; height: 200px; overflow: hidden; }
 .post-card-pic { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; display: block; }
 .post-card-pic:not([src]) { display: none; }
+.post-card-media.is-waiting .post-card-pic { visibility: hidden; }
 #postSheet .post-card-media .skribl-inline { position: absolute; inset: 0; width: 100%; height: 100%; aspect-ratio: auto;
   border: 0; border-radius: 0; background: none; }
 #postSheet .post-card-media .skribl-inline:not(.is-on) { visibility: hidden; }

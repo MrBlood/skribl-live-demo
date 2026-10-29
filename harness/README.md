@@ -1083,6 +1083,23 @@ stays a sleep.
   music early (it ends by the drawing's clock); in full screen it is toned as
   the speed and a pressed full screen are; its glyph at 3:1 or more; posts and
   Flip without it. Each row was shown red by its own break.
+- `verify_postmoment.py` — Posted!, the moment (the owner: "make it more of a
+  moment", "maybe an animated blooby jumping up with his hands in the air?",
+  and of the mock, "all yes"): once a drawing has posted, "Posted!" painted on
+  a band of the brand's purple with each editor's line, the form folded away;
+  the card with the posted title, the caption in full and whether it is in the
+  gallery, on the drawing's own ground where the drawing draws itself, never
+  its finished picture first; the Pad's once in about three seconds to its
+  finished drawing, a Flip's twice round to its first page; Blooby's seven
+  poses in about 0.8 s, resting on the cheer badge's; the sheet's height
+  gliding and the parts rising in; all of that read on every frame, and none
+  of it under Reduce Motion. Make another with New Skribl's Undo, on both
+  editors; Back to the site only when the host named its home
+  (`create_blueprint(home_url, home_label)`), refused at startup unless an
+  http(s) address or a path; the x; focus on Watch; Watch in place from the
+  Home Screen. The reason a post did not go in a card above Try again, Flip's
+  in its own word; nothing in the sheet under 12px; compose mode without any
+  of it. Each row was shown red by its own break.
 - `verify_pagewide.py` — no style rule searches the whole page. No selector in
   a stylesheet or a template's <style> puts :has() on html, body or :root (five
   did, and at phone pace they were 2.9 s of Pad's start and 4.3 s of Flip's);

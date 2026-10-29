@@ -75,7 +75,7 @@ DRAWERS = ("Tune", "Tune, with Beat", "The shape picker", "The draw drawer", "Th
 SHELF = ("The stamp shelf", "The stamp shelf, with stamps")       # the Pad has no stamps,
 FLIP_ONLY = SHELF + ("Tune, with Beat",)                          # nor pages to put on a song's beat
 PAPER = ("the menu", "New", "Settings", "Your drafts", "Export", "Report a problem", "Post",
-         "Ask", "Ask, its answers", "Ask, an answer", "The little book")
+         "Post, posted", "Post, the reason", "Ask", "Ask, its answers", "Ask, an answer", "The little book")
 
 # A picture and a song to load into the photo and music drawers.
 _im = Image.new("RGB", (300, 300), (243, 240, 255))
@@ -141,6 +141,11 @@ WORDS = r"""(root) => {
     const texts = [...el.childNodes].filter(n => n.nodeType === 3 && n.textContent.trim());
     if (!texts.length) continue;
     if (el.closest('[hidden], [aria-hidden="true"], :disabled, [aria-disabled="true"], svg') || unseen(el)) continue;
+    // A DISABLED CONTROL'S OWN LABEL is the control too (WCAG 1.4.3's
+    // inactive component): the Post sheet's gallery tick, dimmed with its box
+    // while a post kept on this device waits for Try again.
+    const lab = el.closest('label');
+    if (lab && lab.control && lab.control.disabled) continue;
     const cs = getComputedStyle(el);
     if (cs.visibility !== 'visible') continue;
     // EACH LINE OF EACH TEXT ITS OWN BOX. One box round all of an element's
@@ -432,6 +437,30 @@ def surfaces(name, ids, q, canvas, btn):
             raise RuntimeError(f"Post stayed disabled (the stroke began on {under}; then {q.evaluate(HELD)})") from None
         q.click("#postBtn"); q.wait_for_timeout(900)
 
+    # POSTED!, THE MOMENT (lib/postsheet.js): the band, the card, what to do
+    # with it and where to go next, the site's home named so its Back is
+    # read too, and the delete key's row. Read once all of it has risen in
+    # and Blooby has landed.
+    def posted():
+        q.evaluate("() => { window.SKRIBL_HOME = { url: '/gallery', label: 'skribls.net' }; }")
+        post()
+        q.fill("#postTitleInput", "A drawing to read")
+        q.fill("#postCaptionInput", "Its caption, in full on the card under the band.")
+        if not q.is_checked("#postPublicInput"):
+            q.locator("#postSheet .post-check").click()
+        q.click("#postSubmitBtn")
+        q.wait_for_selector("#postDone:not([hidden])", timeout=20000)
+        q.wait_for_timeout(1400)
+
+    # THE REASON, in its card right above Try again: a post the network
+    # never took.
+    def refused():
+        q.route("**/api/skribls", lambda r: r.abort("internetdisconnected") if r.request.method == "POST" else r.continue_())
+        post()
+        q.click("#postSubmitBtn")
+        q.wait_for_selector("#postStatus.error:not([hidden])", timeout=20000)
+        q.wait_for_timeout(700)
+
     def answers():
         via(ids["help"], 1200)()
         q.fill("#helpSearch", "loop"); q.wait_for_timeout(700)
@@ -595,7 +624,8 @@ def surfaces(name, ids, q, canvas, btn):
     return ((("the menu", menu, m), ("New", page("new"), m), ("Settings", page("settings"), m),
              ("Your drafts", via("openCloudDraftItem"), "#savedDraftsSheet"),
              ("Export", via(ids["export"]), "#exportSheet"), ("Report a problem", via(ids["report"]), "#reportSheet"),
-             ("Post", post, "#postSheet"),
+             ("Post", post, "#postSheet"), ("Post, posted", posted, "#postSheet"),
+             ("Post, the reason", refused, "#postSheet"),
              ("Ask", via(ids["help"], 1500), "#helpDrawer .help-drawer-inner"),
              ("Ask, its answers", answers, "#helpDrawer .help-drawer-inner"),
              ("Ask, an answer", answer, "#helpDrawer .help-drawer-inner"),

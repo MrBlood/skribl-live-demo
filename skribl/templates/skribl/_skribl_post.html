@@ -116,9 +116,13 @@
           <div class="post-band-line" id="postDoneLine">{{ posted_line|default('Anyone with the link can watch it draw itself.') }}</div>
         </div>
         <div class="post-card">
+          {# The player's box waits in a <template>, inert, and is put in the
+             card when a post comes back: an editor's page is not given a
+             second canvas until then (code and checks that take the page's
+             canvas find the drawing's). #}
           <div class="post-card-media" id="postCardMedia">
             <img class="post-card-pic" id="postCardPic" alt="">
-            {{ skribl_inline_draft('postCardPlayer', controls=false, progress=false, plain=true) }}
+            <template id="postCardTpl">{{ skribl_inline_draft('postCardPlayer', controls=false, progress=false, plain=true) }}</template>
           </div>
           <div class="post-card-words">
             <div class="post-card-title" id="postCardTitle"></div>

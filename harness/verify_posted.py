@@ -1569,7 +1569,8 @@ with sync_playwright() as _pw:
     _pg.evaluate(_FILL_PAD, _cap)
     _pg.click("#postBtn"); _pg.wait_for_timeout(500)
     _pg.click("#postSubmitBtn")
-    _pg.wait_for_function("() => /Posted/.test(document.querySelector('#postSheet .export-head').textContent)"
+    # Posted: the sheet's Posted! band is up (lib/postsheet.js), or it failed.
+    _pg.wait_for_function("() => !document.getElementById('postDone').hidden"
                           " || document.getElementById('postStatus').classList.contains('error')", timeout=120000)
     _rec = _pg.evaluate("() => JSON.parse(localStorage.getItem('skribl_posted_v1') || '[]')[0] || null")
     _held = None
