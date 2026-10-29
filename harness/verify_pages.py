@@ -444,6 +444,66 @@ with sync_playwright() as p:
           f"{_tm and _tm['neighboursHeld']}/{_tm and _tm['n'] - 1} neighbours left "
           f"alone — a cache that never notices an edit shows a drawing nobody has")
 
+    print("\nTHUMBNAILS — painted over the backdrop as it is now, and at the canvas's size")
+    # The signature held the ground colour and whether there was a photo at
+    # all, so a second photo, the photo's strength, the photo switched off or a
+    # new canvas size left every tile showing the old one until its own page
+    # was drawn on again (flip.js _backdropSig). Each case: change it as the
+    # app does, then compare every tile with one painted afresh beside it.
+    flip.evaluate("""() => {
+      const mk = (x) => { const pts = [];
+        for (let k = 0; k < 40; k++) pts.push({ x: x + k * 4, y: 120 + (k % 7) * 9,
+          color: '#ffffff', size: 6, t: k, erase: false, start: k === 0 });
+        return { strokes: pts, strokeGroups: [pts.length], hold: 1 }; };
+      frames.length = 0;
+      for (let i = 0; i < 5; i++) frames.push(mk(60 + i * 70));
+      idx = 0; buildStrip(); render();
+      window.__photo = (col) => { const cv = document.createElement('canvas'); cv.width = 64; cv.height = 48;
+        const x = cv.getContext('2d'); x.fillStyle = col; x.fillRect(0, 0, 64, 48);
+        x.fillStyle = '#ffffff'; x.fillRect(8, 8, 20, 20); return cv.toDataURL('image/png'); };
+      window.__fresh = (i) => { const cv = document.createElement('canvas'); cv.width = 88 * DPR; cv.height = 62 * DPR;
+        const x = cv.getContext('2d'); x.setTransform(88 * DPR / CW, 0, 0, 62 * DPR / CH, 0, 0); x.clearRect(0, 0, CW, CH);
+        drawBackdrop(x); paintFrame(x, frames[i].strokes); return cv.toDataURL(); };
+      window.__stale = () => { const t = strip.querySelectorAll('.frame:not(.ghost-paste)'); let n = 0;
+        for (let i = 0; i < frames.length; i++) if (t[i].querySelector('canvas').toDataURL() !== __fresh(i)) n++;
+        return n; };
+      window.__rat = 0; const r = window.refreshAllThumbs;
+      if (!r.__counted) { window.refreshAllThumbs = function () { window.__rat++; return r.apply(this, arguments); };
+        window.refreshAllThumbs.__counted = true; } }""")
+    bd = {"start": flip.evaluate("() => __stale()")}
+    flip.evaluate("() => setBgImage(__photo('#e04040'))")
+    flip.wait_for_timeout(600)
+    bd["photo"] = flip.evaluate("() => __stale()")
+    flip.evaluate("() => setBgImage(__photo('#30a060'))")
+    flip.wait_for_timeout(600)
+    bd["second photo"] = flip.evaluate("() => __stale()")
+    # The strength slider, eight steps as a drag passes them: the page follows
+    # each, the tiles once the slider rests.
+    steps = flip.evaluate("""() => { window.__rat = 0; const o = document.getElementById('photoOpacity');
+      for (let v = 90; v >= 55; v -= 5) { o.value = v; o.dispatchEvent(new Event('input', { bubbles: true })); }
+      return [window.__rat, photoOpacity]; }""")
+    flip.wait_for_timeout(500)
+    rest = flip.evaluate("() => [window.__rat, __stale()]")
+    flip.evaluate("() => document.getElementById('photoToggle').click()")
+    flip.wait_for_timeout(200)
+    bd["photo off"] = flip.evaluate("() => [photoEnabled, __stale()]")
+    flip.evaluate("() => { window.__was = [CW, CH]; applyCanvasSize(Math.round(CW / 2), CH); }")
+    flip.wait_for_timeout(200)
+    bd["canvas size"] = flip.evaluate("() => __stale()")
+    check("every tile matches a fresh paint to begin with (the instrument reads true)",
+          bd["start"] == 0 and bd["photo"] == 0, str(bd))
+    check("a second photo: every tile is painted over it, not over the first",
+          bd["second photo"] == 0, f"{bd['second photo']} of 5 tiles still show the first photo")
+    check("the photo's strength: the tiles follow it once the slider rests",
+          abs(steps[1] - 0.55) < 1e-9 and rest[1] == 0, f"strength {steps[1]}; {rest[1]} of 5 tiles stale after it rests")
+    check("...and not at each step it passes, which painted every tile eight times",
+          steps[0] == 0 and rest[0] == 1, f"tiles repainted {steps[0]} times during the steps, {rest[0]} once it rested")
+    check("the photo switched off: the tiles lose it too",
+          bd["photo off"] == [False, 0], str(bd["photo off"]))
+    check("a new canvas size: every tile is framed at the new size",
+          bd["canvas size"] == 0, f"{bd['canvas size']} of 5 tiles still framed at the old size")
+    flip.evaluate("() => { removeBgImage(); applyCanvasSize(__was[0], __was[1]); }")
+
     print("\nSTRIP SCROLL — a restored draft opens with its page in view")
     #
     # THE BUG. buildStrip() rebuilds the strip's children, which resets

@@ -445,15 +445,23 @@ stays a sleep.
   Undo brings the strokes, the name and the shape back and says Restored with
   a Redo; Redo is Start again, on the shape it picked; the same words in the
   same order on both; and Flip's faded chip takes no tap and no focus.
-- `verify_undofast.py` — the Pad's Undo and Redo without painting the
-  whole drawing again (polish list item 2; editor_draw.js padUndoKeep and
-  padUndoRestore): Undo twice and Redo put back every pixel of the bitmap the
-  canvas held at that moment, with no repaint (paintStrokesStatic counted);
-  past what the three copies reach, one repaint as before; after the window
-  grows, a repaint at the new size, never the old size's copy; an edit with
-  as many points, other ones, repainted on Redo rather than given another
-  drawing's copy; a copy only for its own base and its own stroke layers; and
-  three canvases, reused, however many strokes.
+- `verify_undofast.py` — Undo and Redo without painting the whole drawing
+  again, on the Pad and on Flip (polish list item 2; editor_draw.js
+  padUndoKeep and padUndoRestore; flip.js flipKeep and _fromKept): Undo twice
+  and Redo put back every pixel of the bitmap the canvas held at that moment,
+  with no repaint (paintStrokesStatic, on Flip paintStatic, counted); past
+  what the three copies reach, one repaint as before; after the window grows,
+  a repaint at the new size, never the old size's copy; an edit with as many
+  points, other ones, repainted on Redo rather than given another drawing's
+  copy; a copy only for its own base and its own stroke layers; and three
+  canvases, reused, however many strokes. On Flip, a busy page on a phone:
+  the tile shows the picture it had, the pad what a full repaint shows, each
+  copy exactly the layer painted; nothing painted at all over a busy page in
+  the onion skin, one or two pages deep; a stroke, a fill and a stamp undone
+  and redone from copies; a light page keeps nothing; an edit in place told
+  apart by content; a new canvas size, or layers grown with the window, drop
+  every copy; and the frame layer never taken mid-stroke, mid-erase,
+  mid-smudge or after a thumbnail was painted through it.
 - `verify_music.py` — one music editor on both editors (lib/musicdrawer.js,
   the owner's "it needs to be the same music editor on both pad and flip"),
   every row driven on the Pad and on Flip and red on one of them before: no
