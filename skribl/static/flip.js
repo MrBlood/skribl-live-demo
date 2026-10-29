@@ -2081,7 +2081,7 @@ function liveBegin(fr){
     // The finished ink composited over the backdrop, exactly as render() does it.
     fctx.clearRect(0,0,CW,CH); paintStatic(fctx, pre, ob); layOn(u, frameCv);
     // ...which is the page an Undo of this stroke comes back to (flipKeep).
-    _fcvTag = _tagOf(fr); flipKeep(true);
+    _fcvTag = _tagOf(fr); flipKeep();
   } else {
     paintStatic(_liveReady(_liveDryCv), pre, ob);
   }
@@ -2108,9 +2108,9 @@ function _liveUsable(){
    THE INK. Whenever the frame layer has just been painted with the page as it
    stands -- by render(), when no stroke, smudge or blur is under way
    (_settled), or by a stroke's start, which paints the ink under it -- it is
-   tagged with that page's _inkSig. flipKeep() copies a tagged layer into one of three
-   canvases kept for it, the one used longest ago going first, after a stroke,
-   a fill, a stamp, an Undo and a Redo. An Undo or a Redo that comes back to
+   tagged with that page's _inkSig. flipKeep() copies a tagged layer into one
+   of three canvases kept for it, the one used longest ago going first, after
+   a stroke, a fill, a stamp, an Undo and a Redo. An Undo or a Redo that comes back to
    ink a copy holds (the same page, and the same points by content, with the
    same stroke-layers setting, at the same layer size) lays the copy where
    render() would have painted the strokes; the backdrop, the page underneath,
@@ -2121,12 +2121,11 @@ function _liveUsable(){
    BY CONTENT, NOT BY OBJECT. The Pad's copies know their points by identity,
    because its edits make new points; Flip's tools move, recolour and liquify
    points where they lie, so a copy here is known by every value its painting
-   reads (_inkSig), and the tag is checked again before a copy is taken, so ink
-   changed after the layer was painted is never kept.
+   reads (_inkSig), taken as the layer was painted.
 
    ONLY WHERE IT PAYS. A page under KEEP_MIN_POINTS repaints in a few
-   milliseconds, and a copy is a canvas the size of the layer (8 MB at the
-   default size on a phone or a desk), so a light animation keeps none. */
+   milliseconds, and a copy is a canvas the size of the layer (8 MB on a phone
+   402 pixels wide), so a light animation keeps none. */
 function _tagOf(f, sig){
   return f.strokes.length < KEEP_MIN_POINTS ? null
     : { f: f, sig: sig || _inkSig(f), w: frameCv.width, h: frameCv.height };
@@ -2161,12 +2160,11 @@ function _keptFor(f, sig){
   return _flipKept.find(k => k.f === f && k.sig === sig
     && k.cv.width === frameCv.width && k.cv.height === frameCv.height) || null;
 }
-// `painted`: the caller painted and tagged the layer this moment, so the page
-// cannot have changed since; anyone else has the tag checked against the ink.
-function flipKeep(painted){
+// A copy is known by the signature the tag took as the layer was painted, so it
+// is a true copy of that ink even when the page has been edited since.
+function flipKeep(){
   const f = frame(), T = _fcvTag;
   if(!T || T.f !== f || T.w !== frameCv.width || T.h !== frameCv.height) return;
-  if(!painted && _inkSig(f) !== T.sig) return;
   const had = _keptFor(f, T.sig);
   if(had){ had.used = ++_keptClock; return; }
   let k = _flipKept.length < 3 ? null : _flipKept.reduce((a, b) => (a.used <= b.used ? a : b));
@@ -2197,7 +2195,7 @@ function _fromKept(){
 /* What an Undo or a Redo calls instead of render(): the page from a copy when
    one holds it, painted in full otherwise (and then kept). */
 function repaintPage(){
-  if(!_fromKept()){ render(); flipKeep(true); }
+  if(!_fromKept()){ render(); flipKeep(); }
 }
 // A new size remakes every layer, and the copies were made at the old one.
 // (A tile's kept pictures are known by the canvas size too, _backdropSig, so
@@ -10920,7 +10918,7 @@ function doFill(p){
        : (_filled / _canvasPx > FILL_ESCAPE_FRACTION
           ? 'Filled past your lines \u2014 the outline has a gap. Undo to go back'
           : 'Filled'));
-  render(); flipKeep(true); refreshThumb(idx); updateToolState(); scheduleSave();
+  render(); flipKeep(); refreshThumb(idx); updateToolState(); scheduleSave();
 }
 
 /* ---- stamps -----------------------------------------------------------------
@@ -11074,7 +11072,7 @@ function doStamp(p){
   redoStack.length = 0;
   noteAction({ type:'fill', label:'Stamp', idx: idx, groups: runs.length });
   chip('Stamped');
-  render(); flipKeep(true); refreshThumb(idx); updateToolState(); scheduleSave();
+  render(); flipKeep(); refreshThumb(idx); updateToolState(); scheduleSave();
 }
 
 function undoStroke(){
