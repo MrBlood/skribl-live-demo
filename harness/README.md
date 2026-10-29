@@ -653,6 +653,26 @@ stays a sleep.
   reload; Flip's Beat rounds 1 and 2 bars in three, a round three beats, the
   four back in four; the 4 and the 3 staying put as the words change, on two
   phones and a desk.
+- `verify_musicundo.py` — the music drawer's own Undo and Redo, the bin's
+  Undo and the ends' reach (the owner: "shouldn't there be an undo button on
+  the editor ... and maybe a redo button too?"; of the mock, "All yes"), on
+  the Pad and on Flip: the pair at the end of the one line, in the zoom's
+  box, painted, named, greyed as the zoom's minus is at 1x, the line two rows
+  on a phone with or without a drawing, one Undo in the drawer; every kind of
+  change made as a person makes it, each undone and done again at once so a
+  change that is not a step reds its own row, then Undo all the way down and
+  Redo all the way up, each putting the loop back exactly; one step per drag and per
+  held slider, a settle with its glide, a change made mid-glide its own step;
+  the zoom, the taller box, the magnet and Lock not steps, nor a new song's
+  pick, a new song a new history, a change after an Undo starting afresh,
+  the keyboard's place kept; the bin's note and its Undo and Redo, the song
+  back with its loop and history, the Pad's bytes back in the draft's store
+  and Flip's next save; New Skribl without a bin note; where a press lands
+  (30px beside an end's line, 16px below its tab, nothing 40px beside a
+  tab, the whole song's line on its own row) on a phone and a desk, real
+  presses keeping an end's distance from the finger, the nearer end, and
+  Flip's drawer staying open after a drag let go past it; the arrows at 3:1
+  or more. Each row was shown red by its own break.
 - `verify_musictimeline.py` — step 2 of the music plan (the owner: "Yes on
   all"), on the Pad and on Flip: the timeline (lib/musictimeline.js) is the
   drawer's one view, the drawing's lane over the song, two handles and the

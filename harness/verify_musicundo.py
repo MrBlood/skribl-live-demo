@@ -24,9 +24,10 @@ WHAT IS ASKED, AND HOW IT IS READ
     and keys): an end dragged, the song slid, a tap on the whole song's line,
     a Length card, Skribl's pick as the way back, a count in Beats, Beats in
     a bar, Smooth restart, Cut on silence, a nudge, a typed time, Tap the
-    beat. One after another, then Undo all the way down, each putting the
-    loop back exactly as the change before left it (its ends, its restart,
-    its cut, its beat), then Redo all the way up.
+    beat. Each is undone and done again as soon as it is made, Undo putting
+    the loop back exactly as the change before left it (its ends, its
+    restart, its cut, its beat), so a change that is not a step reds its own
+    row and no other; then Undo all the way down and Redo all the way up.
   * ONE STEP: however far a drag goes, and however often a held finger
     moves the restart's length. An end let go and settled on the beat is
     one step with its glide; a change made while a settle still glides is a
@@ -355,15 +356,23 @@ with sync_playwright() as pw:
 
     # ------------------------------------------------------------------ steps
     if part("chain"):
-        print("\nEVERY CHANGE IS A STEP — made as a person makes it, then Undo all the way down and Redo all the way up")
+        print("\nEVERY CHANGE IS A STEP — made as a person makes it, undone and done again at once, then Undo all the way down and Redo all the way up")
     for _n, _p in eds("chain"):
         c, pg, errs = editor(b, _n, _p)
         setup(pg, FREE)
         states, made = [st(pg)], []
 
+        # Each change is undone and done again as soon as it is made, so a
+        # change that is not a step reds its own row and no other.
         def did(kind, ok):
-            made.append((kind, ok))
-            states.append(st(pg))
+            before, after = states[-1], st(pg)
+            u = press(pg, "#musicUndo", ms=400)
+            undone = st(pg)
+            r = press(pg, "#musicRedo", ms=400)
+            redone = st(pg)
+            made.append((kind, ok, before, after, u, undone, r, redone))
+            states.append(redone)
+            timeline(pg)
 
         g = grip(pg, "End")
         drag(pg, g[0], g[1], 50); did("an end dragged", True)
@@ -393,19 +402,20 @@ with sync_playwright() as pw:
         did("Tap the beat", True)
         set_door(pg, None)
         timeline(pg)
+        for kind, ok, before, after, pressed_u, undone, pressed_r, redone in made:
+            check(f"{_n}: {kind} is a step: Undo puts the loop back as it was, and Redo takes it again",
+                  ok and not same(before, after) and pressed_u and same(undone, before) and pressed_r and same(redone, after),
+                  f"made {ok}: {says(before)} -> {says(after)}; Undo ({pressed_u}) {says(undone)}; Redo ({pressed_r}) {says(redone)}")
         n = len(made)
         downs, ups = [], []
         for k in range(n):
             downs.append((press(pg, "#musicUndo", ms=400), st(pg)))
         for k in range(n):
             ups.append((press(pg, "#musicRedo", ms=400), st(pg)))
-        for k, (kind, ok) in enumerate(made):
-            before, after = states[k], states[k + 1]
-            pressed_u, undone = downs[n - 1 - k]
-            pressed_r, redone = ups[k]
-            check(f"{_n}: {kind} is a step: Undo puts the loop back as it was, and Redo takes it again",
-                  ok and not same(before, after) and pressed_u and same(undone, before) and pressed_r and same(redone, after),
-                  f"made {ok}: {says(before)} -> {says(after)}; Undo ({pressed_u}) {says(undone)}; Redo ({pressed_r}) {says(redone)}")
+        down_ok = all(pr and same(t, states[n - 1 - k]) for k, (pr, t) in enumerate(downs))
+        up_ok = all(pr and same(t, states[k + 1]) for k, (pr, t) in enumerate(ups))
+        check(f"{_n}: Undo all the way down puts the loop back through every change in turn, and Redo all the way up takes each again",
+              down_ok and up_ok, f"down {[says(t) for _, t in downs]}; up {[says(t) for _, t in ups]}")
         check(f"{_n}: at the bottom Undo is greyed, and at the top Redo",
               not downs[-1][1]["undo"] and downs[-1][1]["redo"] and not ups[-1][1]["redo"] and ups[-1][1]["undo"],
               f"bottom: undo {downs[-1][1]['undo']}, redo {downs[-1][1]['redo']}; top: undo {ups[-1][1]['undo']}, redo {ups[-1][1]['redo']}")
@@ -498,16 +508,19 @@ with sync_playwright() as pw:
         locked = pg.evaluate("() => document.getElementById('musicLock').getAttribute('aria-checked')")
         check(f"{_n}: the zoom, the taller box, the magnet and Lock the length are not steps: Undo stays greyed",
               not look["undo"] and not look["snap"] and locked == "true", f"undo {look['undo']}, magnet {look['snap']}, lock {locked}")
+        # A step that changed the beat, the magnet turned on after it: the beat
+        # goes back and the magnet stays as it is now.
         before = st(pg)
-        press(pg, '.nudge-btn[data-which="end"][data-amount="-1"]', door="exact")
+        press(pg, '#musicBarSeg button[data-bar="3"]', door="beat")
+        changed = st(pg)
         press(pg, "#musicSnap", ms=300)
         snapped = st(pg)["snap"]
         u = press(pg, "#musicUndo", ms=400)
         back = st(pg)
         locked2 = pg.evaluate("() => document.getElementById('musicLock').getAttribute('aria-checked')")
         check(f"{_n}: a step put back leaves the magnet and Lock the length as they are",
-              snapped and u and same(back, before) and back["snap"] and locked2 == "true",
-              f"after the nudge the magnet on {snapped}; Undo ({u}): {says(back)}, magnet {back['snap']}, lock {locked2}")
+              not same(changed, before) and snapped and u and same(back, before) and back["snap"] and locked2 == "true",
+              f"a bar of 3 {says(changed)}, then the magnet on {snapped}; Undo ({u}): {says(back)}, magnet {back['snap']}, lock {locked2}")
         press(pg, '.nudge-btn[data-which="end"][data-amount="-1"]', door="exact")
         had = st(pg)
         add(pg, OTHER)
