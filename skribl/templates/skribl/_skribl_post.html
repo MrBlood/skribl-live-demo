@@ -4,6 +4,7 @@
     chooser is; lib/postsheet.js is its behaviour, and each editor's own post
     code (the Pad's editor_post.js, Flip's shareSkribl) drives it. -#}
 {% from 'skribl/_skribl_music_glyph.html' import music_glyph %}
+{% from 'skribl/_skribl_inline_player.html' import skribl_inline_draft %}
   <div id="postOverlay" class="menu-overlay" hidden>
     <div class="menu-sheet post-sheet" id="postSheet" role="dialog" aria-modal="true" aria-label="Post your Skribl">
       <div class="menu-handle"></div>
@@ -18,22 +19,15 @@
          a second opinion could disagree with it. A <span>, not a button: on the
          toolbar this opens the music drawer, here there is nothing to open, so
          it carries no hover or active state and nothing invites a tap. #}
-      {# BLOOBY CHEERS ONCE IT HAS POSTED (the owner's pick from the Blooby mock,
-         "Cheer is best"): beside "Posted!", and the line under it says what is
-         true then. Anyone with the link can watch it: the server's default is
-         unlisted and the sheet only ever adds public. Hidden until a real post
-         comes back (lib/postsheet.js result()), and not rendered in compose
-         mode, where nothing is posted yet. His badge brings its own lilac, so
-         one picture serves both themes. Each editor says what its drawings do
-         (`posted_line`): the Pad's draw themselves, Flip's play. #}
+      {# The sheet's title and its line. Once a post comes back they fold away
+         with the form, and the Posted! band below says what happened. #}
       <div class="post-top">
-        {% if not compose %}<img class="post-cheer" id="postCheer" src="{{ skribl_asset('brand/blooby-cheer.webp') }}" alt="" width="52" height="52" hidden>{% endif %}
         <div class="post-top-words">
           <div class="export-head">{{ "Add to your post" if compose else "Post your Skribl" }}<span
                class="post-sound" id="postSound" hidden>{{ music_glyph() }}<span
                class="tab-dot" id="postSoundDot"></span><span class="post-sound-sr"
                id="postSoundText"></span></span></div>
-          <div class="export-sub" id="postSub"{% if not compose %} data-posted="{{ posted_line|default('Anyone with the link can watch it draw itself.') }}"{% endif %}>{{ "It goes inline in the post, and plays there"
+          <div class="export-sub" id="postSub">{{ "It goes inline in the post, and plays there"
                                      if compose else "Add a title and share it to Skribl" }}</div>
         </div>
       </div>
@@ -95,7 +89,50 @@
         <svg aria-hidden="true" id="postBackupIcon" hidden viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
         <span id="postSubmitLabel">{{ "Add to post" if compose else "Post to Skribl" }}</span>
       </button>
-      {# THE RESULT IS ONE ROW: Watch, Share, Copy link. Two full-width chips
+      {# POSTED!, THE MOMENT (the owner, of the old one: "you don't really
+         notice the top changing ... maybe think about a way to make it more of
+         a moment"; then A from the mock, "all yes"). Once a real post comes
+         back the form folds away and this rises in: a band of Skribl purple
+         where Blooby jumps with his hands in the air (brand/blooby-jump.webp,
+         harness/tools/blooby.py jump; still under Reduce Motion), "Posted!",
+         and the line that is true then -- anyone with the link can watch it,
+         since the server's default is unlisted and the sheet only ever adds
+         public. Under it, the card: the post as people will see it, drawing
+         itself in the same player a post plays in, its title and its caption
+         in full. Each editor says what its drawings do (`posted_line`): the
+         Pad's draw themselves, Flip's play. Not rendered in compose mode,
+         where nothing is posted. lib/postsheet.js result() shows it. #}
+      {% if not compose %}
+      <div class="post-done" id="postDone" hidden
+           data-player-css="{{ skribl_asset('inlineplayer.css') }}"
+           data-player-js="{{ skribl_asset('inlineplayer.js') }}">
+        <div class="post-band">
+          <button type="button" class="post-x" id="postCloseBtn" aria-label="Close">
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+          </button>
+          <span class="post-jump" role="img" aria-label="Blooby, his hands in the air"><img id="postJump" alt=""
+                data-src="{{ skribl_asset('brand/blooby-jump.webp') }}" width="560" height="80"></span>
+          <div class="post-band-head" id="postDoneHead">Posted!</div>
+          <div class="post-band-line" id="postDoneLine">{{ posted_line|default('Anyone with the link can watch it draw itself.') }}</div>
+        </div>
+        <div class="post-card">
+          {# The player's box waits in a <template>, inert, and is put in the
+             card when a post comes back: an editor's page is not given a
+             second canvas until then (code and checks that take the page's
+             canvas find the drawing's). #}
+          <div class="post-card-media" id="postCardMedia">
+            <img class="post-card-pic" id="postCardPic" alt="">
+            <template id="postCardTpl">{{ skribl_inline_draft('postCardPlayer', controls=false, progress=false, plain=true) }}</template>
+          </div>
+          <div class="post-card-words">
+            <div class="post-card-title" id="postCardTitle"></div>
+            <div class="post-card-caption" id="postCardCaption" hidden></div>
+            <div class="post-card-meta" id="postCardMeta"></div>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+      {# THE RESULT IS ONE ROW: Watch, Copy link, Share. Two full-width chips
          stacked under a dimmed, emptied form read as a broken page on a phone.
          Share is shown only where navigator.share exists (v292; outside review
          of v291, SK-AUD-016); Copy link is for everyone. #}
@@ -104,15 +141,32 @@
           <span class="play-badge"><svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span>
           <span>Watch</span>
         </button>
-        <button type="button" class="post-submit post-watch post-result-soft" id="postShareBtn" hidden>
-          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
-          <span>Share</span>
-        </button>
         <button type="button" class="post-submit post-watch post-result-soft" id="postCopyBtn" hidden>
           <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
           <span>Copy link</span>
         </button>
+        <button type="button" class="post-submit post-watch post-result-soft" id="postShareBtn" hidden>
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+          <span>Share</span>
+        </button>
       </div>
+      {# WHERE TO GO NEXT (the owner: "it just kind of dead ends on the Posted
+         card"). Make another, always: a fresh canvas, with New Skribl's own
+         Undo. And back to the site Skribl lives in, when the site has said
+         where home is (create_blueprint(home_url=...), docs/INTEGRATION.md);
+         standalone Skribl has no home to go back to, so no button. #}
+      {% if not compose %}
+      <div class="post-next" id="postNext" hidden>
+        <button type="button" class="post-quiet" id="postHomeBtn" hidden>
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+          <span id="postHomeLabel">Back</span>
+        </button>
+        <button type="button" class="post-quiet" id="postAnotherBtn">
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+          <span>Make another</span>
+        </button>
+      </div>
+      {% endif %}
       {# THE DELETE KEY, WHERE YOU POST (SK-AUD-009, the owner's pick K1).
          Without an account only this browser can delete a post; the key that
          lets any browser do it was met in the Library, never here. One quiet
@@ -126,7 +180,10 @@
       </div>
       {% endif %}
       {# Posting is the one flow where "did that work?" has a real cost, and
-         it announced nothing: started, succeeded and failed were all silent. #}
+         it announced nothing: started, succeeded and failed were all silent.
+         Last in the markup, so "Posting…" sits under the button that started
+         it; a reason why it did not post is ordered up into a card right above
+         Try again (styles.css, THE REASON). #}
       <div class="post-status" id="postStatus" role="status"
            aria-live="polite" aria-atomic="true" hidden>
         <div class="export-progress-bar"><div class="export-progress-fill" id="postProgressFill"></div></div>

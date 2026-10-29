@@ -2844,20 +2844,24 @@ with _sp() as _pr:
               const r = b.getBoundingClientRect(); const lab = b.querySelector('span:last-child');
             return { id, top: Math.round(r.top), h: Math.round(r.height), right: Math.round(r.right), w: Math.round(r.width),
                      lines: Math.round(10 * lab.getBoundingClientRect().height / parseFloat(getComputedStyle(lab).fontSize)) / 10 }; });
-            return { title: document.getElementById('postTitleInput').value,
-                     bodyOpacity: getComputedStyle(document.getElementById('postBody')).opacity,
+            return { title: document.getElementById('postCardTitle').textContent,
+                     form: document.getElementById('postBody').getClientRects().length,
                      sheetRight: Math.round(sheet.right), btns }; }""")
         # The owner, from the iPhone: "Posted!" sat under the buttons with the
-        # progress bar, cut off at the screen's edge. It is the title now, and
-        # the status line, its job done, goes.
-        _hd = _pg.evaluate("""() => ({ head: document.querySelector('#postSheet .export-head').firstChild.nodeValue.trim(),
+        # progress bar, cut off at the screen's edge. It was the title, and is
+        # now the Posted! band's (the posted moment, verify_postmoment); the
+        # status line, its job done, goes.
+        _hd = _pg.evaluate("""() => ({ head: document.getElementById('postDoneHead').textContent.trim(),
             status: document.getElementById('postStatus').hidden })""")
-        check(f"POST RESULT ({_name}) at {_w}: the sheet's title says Posted!, and no progress bar is left under the buttons",
+        check(f"POST RESULT ({_name}) at {_w}: the sheet's band says Posted!, and no progress bar is left under the buttons",
               _hd["head"] == "Posted!" and _hd["status"], str(_hd))
-        check(f"POST RESULT ({_name}) at {_w}: the posted title is still in its field",
-              _st["title"] == "Result probe", f"field reads {_st['title']!r}")
-        check(f"POST RESULT ({_name}) at {_w}: the form is back at full opacity, not dimmed under the result",
-              _st["bodyOpacity"] == "1", f"opacity {_st['bodyOpacity']}")
+        # It stayed in its field, the form at full strength, as the record of
+        # what was posted (v293: dimmed and wiped read as lost). The form folds
+        # away now, and the card under the band is that record.
+        check(f"POST RESULT ({_name}) at {_w}: the posted title is on the posted card",
+              _st["title"] == "Result probe", f"card reads {_st['title']!r}")
+        check(f"POST RESULT ({_name}) at {_w}: the form folds away, rather than staying dimmed under the result",
+              _st["form"] == 0, f"the form's boxes {_st['form']}")
         _b = [x for x in _st["btns"] if x]
         check(f"POST RESULT ({_name}) at {_w}: Watch, Share and Copy link are all offered",
               [x["id"] for x in _b] == ["postWatchBtn", "postShareBtn", "postCopyBtn"], str(_st["btns"]))

@@ -193,9 +193,10 @@ with sync_playwright() as p:
     # link all hand on.
     url = pg.evaluate("() => (SkriblPosted.list()[0] || {}).url || ''")
     check("the post leaves a player link", "/s/" in url, url)
-    check("the posted title stays in its field, as on the Pad",
-          pg.is_visible("#postTitleInput") and pg.input_value("#postTitleInput") == TITLE,
-          pg.input_value("#postTitleInput"))
+    # The form folds away once it has posted (the Posted! moment,
+    # verify_postmoment); the card under the band is the record of what went.
+    check("the posted title is on the posted card, as on the Pad",
+          pg.inner_text("#postCardTitle") == TITLE, pg.inner_text("#postCardTitle"))
 
     pid = url.rstrip("/").rsplit("/", 1)[-1]
     stored = fetch(pid)
@@ -395,7 +396,7 @@ with sync_playwright() as _p:
               and not _pg.is_visible("#postWatchBtn"),
               f"the sheet says {_said!r}")
         check(f"...and says so, without guessing the cause",
-              _said.startswith("Couldn\u2019t post. Your drawing is still here") and "strange answer" in _said, repr(_said))
+              _said.startswith("Couldn\u2019t post. Your animation is still here") and "strange answer" in _said, repr(_said))
         # THE RETRY: the same button, now Try again.
         _again = _pg.is_visible("#postSubmitBtn") and _pg.is_enabled("#postSubmitBtn")
         if _again:
@@ -441,7 +442,7 @@ with sync_playwright() as _p:
     # Under the first line every failure shares (lib/postsheet.js), since the
     # Pad plan's step 2: how many pages, what a post holds, how many to delete.
     check("too many pages is said on the sheet's status line, as an error",
-          _ref["shown"] and _ref["says"] == "Couldn\u2019t post. Your drawing is still here. It has "
+          _ref["shown"] and _ref["says"] == "Couldn\u2019t post. Your animation is still here. It has "
           + f"{_pb_frames + 1} pages and a post holds {_pb_frames}; delete 1 to post it.", str(_ref))
     check("...nothing is sent, and Post keeps its word rather than offering Try again",
           not _sent and _ref["button"].strip() == "Post to Skribl", f"{_ref}; {len(_sent)} POST(s)")
@@ -501,10 +502,13 @@ with sync_playwright() as _p:
 
     # ONE SET OF WORDS FOR BOTH EDITORS (owner's pick; SK-AUD-010). The same
     # failure on the Pad and on Flip opens with the same line -- nobody
-    # wonders whether their drawing is gone -- then says what happened; only
-    # the recovery may differ (the Pad keeps a copy on this device when the
-    # server cannot be reached). Each failure is made at the network.
-    _FIRST = "Couldn\u2019t post. Your drawing is still here"
+    # wonders whether their work is gone -- in each editor's own word for it,
+    # a drawing or an animation (the owner's yes on the plain words), then
+    # says what happened. When the server could not take it, both say it is
+    # saved on this device: the Pad keeps a copy, and Flip's draft is kept as
+    # it is drawn. Each failure is made at the network.
+    _FIRST = {"/": "Couldn\u2019t post. Your drawing is still here",
+              "/flip": "Couldn\u2019t post. Your animation is still here"}
     _cases = (("server", 503, "application/json", "{}"),
               ("refused", 413, "application/json", '{"error": "It\u2019s bigger than the 24 MB limit."}'),
               ("odd", 200, "text/html", "<html><body>Sign in to the Wi-Fi</body></html>"),
@@ -533,13 +537,13 @@ with sync_playwright() as _p:
             _pg.close()
     for _kind, *_ in _cases:
         _f, _p = _said[("/flip", _kind)], _said[("/", _kind)]
-        check(f"failure words, {_kind}: Pad and Flip open with the same line",
-              _f.startswith(_FIRST) and _p.startswith(_FIRST), repr((_p, _f)))
+        check(f"failure words, {_kind}: Pad and Flip open with the same line, each in its own word",
+              _f.startswith(_FIRST["/flip"]) and _p.startswith(_FIRST["/"]), repr((_p, _f)))
     check("...a refusal carries the server's own reason, on both",
           all("bigger than the 24 MB limit" in _said[(r, "refused")] for r in ("/flip", "/")), str(_said))
-    check("...and only the recovery differs: the Pad says it kept a copy on this device, Flip does not claim one",
-          "saved on this device" in _said[("/", "server")] and "saved on this device" in _said[("/", "offline")]
-          and "saved on this device" not in _said[("/flip", "server")] + _said[("/flip", "offline")], str(_said))
+    check("...and both say it is saved on this device when the server could not take it, and only then",
+          all("saved on this device" in _said[(r, k)] for r in ("/", "/flip") for k in ("server", "offline"))
+          and not any("saved on this device" in _said[(r, k)] for r in ("/", "/flip") for k in ("refused", "odd")), str(_said))
     _b.close()
 
 summarise_and_exit()

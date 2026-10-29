@@ -6403,7 +6403,7 @@ async function shareSkribl(){
   if(_B && _B.overPages && _B.overPages(frames)){
     showShareError(SkriblPostSheet.failure('pages', 'It has ' + frames.length
       + ' pages and a post holds ' + _B.MAX_FRAMES + '; delete '
-      + (frames.length - _B.MAX_FRAMES) + ' to post it.'));
+      + (frames.length - _B.MAX_FRAMES) + ' to post it.', 'animation'));
     chip('Too many pages'); return;
   }
   /* Too long: the Pad's words and its Save as a file button, and then what
@@ -6415,7 +6415,7 @@ async function shareSkribl(){
         + (d.generatedPages === 1 ? ' is ' : 's make up ')
         + Math.round(100 * d.generated / Math.max(1, d.total))
         + '% of it; deleting one frees far more room than deleting a drawing.'
-      : null));
+      : null, 'animation'));
     chip('Too long to post'); return;
   }
   if(playing) stop();
@@ -6447,7 +6447,8 @@ async function shareSkribl(){
     // See the note at the matching call site in editor_post.js.
     // v211 (v210 review F2): decode is part of post readiness — see Pad's submit().
     if(window._skriblDecodePending){ try{ await window._skriblDecodePending; }catch(_){} }
-    const _body=JSON.stringify(buildSharePayload());
+    const _sent=buildSharePayload();   // and the posted card plays it (lib/postsheet.js)
+    const _body=JSON.stringify(_sent);
     // IDEMPOTENCY, AND THE TWO CLIENT CAPABILITIES (SK-AUD-001). Flip never
     // sent an Idempotency-Key at all, so a response lost in transit and a
     // retry was a duplicate post here as surely as on the Pad — and the Pad's
@@ -6486,8 +6487,10 @@ async function shareSkribl(){
       // is the difference between "try again" and "change something". A 500
       // here was an unreachable database, and the old transient chip made that
       // look like the button doing nothing.
-      const why = res.status >= 500 && !data.error ? SkriblPostSheet.failure('server')
-        : SkriblPostSheet.failure('refused', data.error || null);
+      // Its draft is kept on this device as it is drawn (saveNow), so a
+      // server's failure says so, as the Pad's does of the copy it keeps.
+      const why = res.status >= 500 && !data.error ? SkriblPostSheet.failure('server', true, 'animation')
+        : SkriblPostSheet.failure('refused', data.error || null, 'animation');
       showShareFailure(why); chip('Post failed'); sharing=false; return;
     }
     // AN ANSWER THAT IS NOT A POST IS NOT A SUCCESS (preflight PF-028). Any
@@ -6498,7 +6501,7 @@ async function shareSkribl(){
     // for both fields (editor_post.js); so does Flip now, and the key is kept,
     // so Try again finds the post the server may already have made.
     if(!data.id || !data.url){
-      showShareFailure(SkriblPostSheet.failure('odd'));
+      showShareFailure(SkriblPostSheet.failure('odd', null, 'animation'));
       chip('Post failed'); sharing=false; return;
     }
     const url=location.origin + data.url;
@@ -6527,14 +6530,15 @@ async function shareSkribl(){
         window.SkriblRecoveryKey.present({ key: kept.key, url: data.url });
       }
     }
-    showShareResult(url, delKey);
+    showShareResult(url, delKey, _sent);
   }catch(err){
     if(err && err.name==='AbortError'){
-      showShareFailure(SkriblPostSheet.failure('cancelled'));
+      showShareFailure(SkriblPostSheet.failure('cancelled', null, 'animation'));
       chip('Not posted'); sharing=false; return;
     }
     console.error('[skribl] Share failed:', err);
-    showShareFailure(SkriblPostSheet.failure('offline'));
+    // Its draft is kept on this device as it is drawn (saveNow), as above.
+    showShareFailure(SkriblPostSheet.failure('offline', true, 'animation'));
     chip('Post failed');
   }
   sharing=false;
@@ -6555,6 +6559,8 @@ var postUI = window.SkriblPostSheet ? window.SkriblPostSheet.attach({
   submit: () => shareSkribl(),
   backup: () => openSaveBackup(),   // the ⋯ menu's Save as a file, below
   cancel: () => { if(_shareAbort) _shareAbort.abort(); },
+  // Make another, on the posted card: the ⋯ menu's New Skribl, its Undo with it.
+  another: () => { if(playing) stop(); newSkriblWithUndo(); },
   // The poster page, the one the share card shows (posterPage), on the
   // drawing's own ground.
   preview: () => {
@@ -6576,12 +6582,12 @@ function showShareFailure(msg){
   postUI.setState('error');
   postUI.el.statusLabel.textContent = msg;
 }
-function showShareResult(url, key){
+function showShareResult(url, key, payload){
   if(!postUI) return;
   const t = document.getElementById('postTitleInput');
   postUI.setState('success');
-  postUI.result(url, (t && t.value.trim()) || '', { key: key || null });
-  chip('Posted! 🎨');
+  // The sheet's Posted! band says it; the chip peeked out above the sheet.
+  postUI.result(url, (t && t.value.trim()) || '', { key: key || null, payload: payload || null });
 }
 
 /* ---- opening it ------------------------------------------------------------

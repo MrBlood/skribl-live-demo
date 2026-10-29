@@ -4,6 +4,7 @@
     python3 harness/tools/blooby.py card OUTDIR
     python3 harness/tools/blooby.py icon skribl/static [MASTER.png]
     python3 harness/tools/blooby.py badge skribl/static/brand [POSE]
+    python3 harness/tools/blooby.py jump skribl/static/brand
 
 Blooby is built from his own Flip drawing (flipworks.wave: the marker fill, the
 two-sided outline, the feet, the ground), so every pose keeps the hand he was
@@ -636,25 +637,36 @@ def draw_him(base="http://127.0.0.1:5001", dpr=ICON_DPR, name="wave"):
 
     Drawn at a calm tempo: a fast hand captures too few points along each
     curve, and his eyes came out as hexagons the first time."""
-    import browsing
-    from PIL import Image
     from playwright.sync_api import sync_playwright
     with sync_playwright() as p:
         b = p.chromium.launch()
-        pg = b.new_page(viewport={"width": 1100, "height": 900}, device_scale_factor=dpr)
-        browsing.goto(pg, base, "/skribl-pad")
-        pg.wait_for_timeout(800)
-        pg.evaluate("() => { window.SkriblHints && window.SkriblHints.hide(); }")
-        pg.evaluate("""() => { const t = window.SkriblCanvasSizes, id = t.SIZES.find(s => s.label === '4:3').id;
-            document.querySelector(`#canvasSeg button[data-size='${id}']`).click(); }""")
-        pg.wait_for_timeout(300)
-        pg.evaluate("() => { setTool('pen'); if (window.SkriblPressure) SkriblPressure.setEnabled(true); }")
-        artdraw.draw(pg, pose(name, ground=False), tempo=1.2, pause_tempo=6.0)
-        pg.wait_for_timeout(500)
-        url = pg.evaluate("() => document.getElementById('canvas').toDataURL('image/png')")
+        him = _pad_draws(b, base, dpr, pose(name, ground=False))
         b.close()
-    him = Image.open(__import__("io").BytesIO(base64.b64decode(url.split(",")[1]))).convert("RGBA")
-    return him.crop(him.getchannel("A").point(lambda v: 255 if v > 8 else 0).getbbox())
+    return him.crop(_ink_box(him))
+
+
+def _pad_draws(b, base, dpr, strokes):
+    """`strokes` drawn in the real Pad's 4:3 canvas on a transparent ground,
+    on a fresh page of browser `b`: the whole canvas, as RGBA."""
+    import browsing
+    from PIL import Image
+    pg = b.new_page(viewport={"width": 1100, "height": 900}, device_scale_factor=dpr)
+    browsing.goto(pg, base, "/skribl-pad")
+    pg.wait_for_timeout(800)
+    pg.evaluate("() => { window.SkriblHints && window.SkriblHints.hide(); }")
+    pg.evaluate("""() => { const t = window.SkriblCanvasSizes, id = t.SIZES.find(s => s.label === '4:3').id;
+        document.querySelector(`#canvasSeg button[data-size='${id}']`).click(); }""")
+    pg.wait_for_timeout(300)
+    pg.evaluate("() => { setTool('pen'); if (window.SkriblPressure) SkriblPressure.setEnabled(true); }")
+    artdraw.draw(pg, strokes, tempo=1.2, pause_tempo=6.0)
+    pg.wait_for_timeout(500)
+    url = pg.evaluate("() => document.getElementById('canvas').toDataURL('image/png')")
+    pg.close()
+    return Image.open(__import__("io").BytesIO(base64.b64decode(url.split(",")[1]))).convert("RGBA")
+
+
+def _ink_box(im):
+    return im.getchannel("A").point(lambda v: 255 if v > 8 else 0).getbbox()
 
 
 def draw_icons(out, base="http://127.0.0.1:5001", master=None):
@@ -694,10 +706,118 @@ def draw_badge(out, base="http://127.0.0.1:5001", name="wave"):
     return path
 
 
+# THE JUMP (owner: "maybe an animated blooby jumping up with his hands in the
+# air?"), for the post sheet's Posted! moment. Seven poses, each drawn by the
+# real Pad from his own strokes like the badges: he crouches, launches, rises,
+# throws his hands up at the top, falls and lands, and stays in the last pose,
+# which is the cheer badge's. Every pose is laid on the badge's lilac and star
+# at one place and one scale, so only he moves; the settled pose sits where
+# the badge has him. His shadow stays on the star where he would stand,
+# softer and fainter the higher he is. One strip, the poses side by side at
+# BADGE_SIDE each: lib/postsheet.js steps through it (JUMP_MS there are the
+# times below) and shows only the last under Reduce Motion.
+JUMP_FEET = max(y for s in (FOOTL, FOOTR) for _, y in s.pts)
+JUMP_CX = 370
+JUMP_CANVAS_W = 816       # the Pad's 4:3 canvas, which every pose is drawn in
+JUMP_DOWN = arm([(272, 320), (248, 362), (236, 404)], (232, 420), 15) + arm([(468, 320), (492, 362), (504, 404)], (508, 420), -15)
+JUMP_OUT = arm([(272, 316), (236, 300), (214, 266)], (206, 250), -15) + arm([(468, 316), (504, 300), (526, 266)], (534, 250))
+JUMP_HAPPY = [S([(334, 292), (344, 279), (354, 292)], "detail", size=7), S([(376, 292), (386, 279), (396, 292)], "detail", size=7)]
+JUMP_GRIN = S([(326, 318), (342, 340), (362, 350), (382, 340), (396, 316)], "detail", size=7, weight=[(0, 0.6), (0.5, 1.0), (1, 0.6)])
+
+
+def jump_poses():
+    """(name, strokes, squash across, squash up, lift in canvas px, ms shown)."""
+    cheer = pose("cheer", ground=False)
+    body = base(rest=False, ground=False)
+    return [("crouch", body + JUMP_DOWN + JUMP_HAPPY + [SMILE, BLUSH], 1.07, 0.90, 0, 200),
+            ("launch", body + JUMP_OUT + EYES + [JUMP_GRIN, BLUSH], 0.95, 1.08, 16, 80),
+            ("rise", cheer[:-4], 0.97, 1.05, 46, 100),          # the sparks come at the top
+            ("peak", cheer, 1.00, 1.00, 58, 240),
+            ("fall", cheer, 0.98, 1.03, 26, 80),
+            ("land", cheer, 1.06, 0.92, 0, 130),
+            ("settle", cheer, 1.00, 1.00, 0, 0)]
+
+
+def _posed(strokes, sx, sy, lift):
+    out = []
+    for s in strokes:
+        c = copy.copy(s)
+        c.pts = [(JUMP_CX + (x - JUMP_CX) * sx, JUMP_FEET + (y - JUMP_FEET) * sy - lift) for x, y in s.pts]
+        out.append(c)
+    return out
+
+
+def jump_compose(raws, poses, side=BADGE_SIDE):
+    """The strip from the poses' whole-canvas drawings `raws`: each at the
+    settled pose's place and scale on the badge's ground, rounded like it."""
+    from PIL import Image, ImageChops, ImageDraw, ImageFilter
+    big = 2048
+    settle = _ink_box(raws[-1])
+    k = big * BADGE_FILL / (settle[3] - settle[1])
+    union = None
+    for im in raws:
+        bb = _ink_box(im)
+        union = bb if union is None else (min(union[0], bb[0]), min(union[1], bb[1]), max(union[2], bb[2]), max(union[3], bb[3]))
+    ox = (big - (settle[2] - settle[0]) * k) / 2 - settle[0] * k
+    oy = (big - (settle[3] - settle[1]) * k) / 2 - settle[1] * k
+    ground = icon_ground(1024).resize((big, big), Image.BICUBIC).convert("RGBA")
+    star = icon_star(big, BADGE_STAR_R)
+    white = Image.new("L", (big, big), 255)
+    for blur, strength in ICON_GLOW:
+        glow = star.filter(ImageFilter.GaussianBlur(big * blur)).point(lambda v, s=strength: round(v * s))
+        ground.alpha_composite(Image.merge("RGBA", (white, white, white, glow)))
+    ground.paste(Image.new("RGBA", (big, big), (255, 255, 255, 255)), (0, 0), star)
+    blur, drop, strength, col = ICON_SHADOW
+    px = raws[0].width / JUMP_CANVAS_W
+    top = max(p[4] for p in poses)
+    strip = Image.new("RGBA", (side * len(raws), side), (0, 0, 0, 0))
+    for i, (im, p) in enumerate(zip(raws, poses)):
+        crop = im.crop(union)
+        w, h = round(crop.width * k), round(crop.height * k)
+        him = crop.resize((w, h), Image.LANCZOS)
+        at = (round(union[0] * k + ox), round(union[1] * k + oy))
+        t = ground.copy()
+        mk = _enclosed(crop.getchannel("A")).resize((w, h), Image.BILINEAR)
+        u = p[4] / top
+        stand = Image.new("L", (big, big), 0)
+        stand.paste(mk, (at[0], at[1] + round(p[4] * px * k)))
+        shade = Image.new("L", (big, big), 0)
+        shade.paste(stand.filter(ImageFilter.GaussianBlur(big * (blur + 0.02 * u))), (0, round(big * drop)))
+        now = Image.new("L", (big, big), 0)
+        now.paste(mk, at)
+        shade = ImageChops.multiply(shade.point(lambda v: round(v * strength * (1 - 0.55 * u))), ImageChops.invert(now))
+        t.alpha_composite(Image.merge("RGBA", tuple(Image.new("L", (big, big), v) for v in col) + (shade,)))
+        t.alpha_composite(him, at)
+        r4 = side * 4
+        t = t.resize((r4, r4), Image.LANCZOS)
+        m = Image.new("L", (r4, r4), 0)
+        ImageDraw.Draw(m).rounded_rectangle((0, 0, r4 - 1, r4 - 1), radius=round(r4 * BADGE_RADIUS), fill=255)
+        t.putalpha(m)
+        strip.paste(t.resize((side, side), Image.LANCZOS), (side * i, 0))
+    return strip
+
+
+def draw_jump(out, base="http://127.0.0.1:5001"):
+    """Draw the seven poses of his jump and write OUT/blooby-jump.webp, the
+    strip lib/postsheet.js steps through. Needs the local server."""
+    from playwright.sync_api import sync_playwright
+    poses = jump_poses()
+    with sync_playwright() as p:
+        b = p.chromium.launch()
+        raws = [_pad_draws(b, base, 4, _posed(st, sx, sy, lift)) for _, st, sx, sy, lift, _ in poses]
+        b.close()
+    path = pathlib.Path(out) / "blooby-jump.webp"
+    jump_compose(raws, poses).save(path, "WEBP", quality=90, method=6)
+    return path
+
+
 if __name__ == "__main__":
-    if len(sys.argv) not in (3, 4) or sys.argv[1] not in ("card", "icon", "badge") \
+    if len(sys.argv) not in (3, 4) or sys.argv[1] not in ("card", "icon", "badge", "jump") \
             or (len(sys.argv) == 4 and sys.argv[1] not in ("icon", "badge")):
         raise SystemExit(__doc__.split("\n\n")[1])
+    if sys.argv[1] == "jump":
+        print("wrote", draw_jump(sys.argv[2]))
+        raise SystemExit(0)
     if sys.argv[1] == "icon":
         print("wrote", ", ".join(str(x) for x in draw_icons(sys.argv[2], master=(sys.argv[3:] or [None])[0])))
         raise SystemExit(0)

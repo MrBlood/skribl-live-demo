@@ -973,6 +973,8 @@ All are arguments to `create_blueprint()` / `init_skribl()` unless noted.
 | `media_store` | inline | An object storing media out of the payload. See `skribl/storage.py`. |
 | `index_route` | `False` | Register `GET /`. Standalone sites only. |
 | `player_target` | `_blank` | Where the three "watch it" paths send the viewer. See below. |
+| `home_url` | `None` | Your site, for "Back to …" once a drawing has posted. See below. |
+| `home_label` | the address's host | What that button calls your site ("skribls.net"). |
 | `public_media_cache` | `False` | Let a CDN cache public media. See "Shared-cache opt-in" above, and read it before turning it on. |
 
 ### Where the player opens (`player_target`)
@@ -992,6 +994,25 @@ renders `/s/<id>` inside its own shell, say. **Those are the only two values.**
 A named target is rejected, because it would let one embed steal another's tab.
 
 Nothing is required of a host that does not care: the default is the safe one.
+
+### The way back to your site (`home_url`)
+
+Once a drawing has posted, the Post sheet offers what to do next: Watch, Copy
+link, Share, Make another, and, when you name it, **Back to** your site. Pass
+`home_url` (an `https://` address, or a path on your site such as `/home`) and
+`home_label` (what to call it; an address's host name if you leave it out, a
+path needs one):
+
+```python
+init_skribl(app, session=lambda: db.session, ...,
+            home_url="/home", home_label="skribls.net")
+```
+
+Unset, there is no such button, which is right for standalone Skribl. The
+address is yours, given once here and never read from a request, so no link
+can send a person anywhere you did not name; anything but an http(s) address
+or a path, or one with a space or a backslash in it, is refused at startup.
+The editors read it as `window.SKRIBL_HOME` (`{"url", "label"}`, or `null`).
 
 Plus one module-level seam:
 

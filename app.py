@@ -370,6 +370,11 @@ def create_app():
                        public_media_cache=os.environ.get(
                            "SKRIBL_PUBLIC_MEDIA_CACHE", "").strip().lower()
                            in ("1", "true", "yes"),
+                       # Where "Back to ..." goes once a drawing has posted.
+                       # Unset here, as a standalone site has no home but
+                       # itself; a host names its own (docs/INTEGRATION.md).
+                       home_url=os.environ.get("SKRIBL_HOME_URL") or None,
+                       home_label=os.environ.get("SKRIBL_HOME_LABEL") or None,
                        # THIS demo is a standalone site, so it wants Skribl on
                        # its homepage. A host application embedding Skribl does
                        # not, and the default is False for exactly that reason.
