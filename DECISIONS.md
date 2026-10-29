@@ -25568,3 +25568,39 @@ Here, side by side on fresh servers: verify_a11y 437 of 437 in 6.2 minutes,
 verify_a11ypages 158 of 158 in 3.5, the 595 the one suite passed.
 
 WHAT IT DOES TO FLIP: nothing. Both editors are read as before.
+
+## After v329 -- verify_musicbeat in two, at its 600-second budget
+
+MAIN WENT RED AGAIN AFTER #665, on the PostgreSQL shard 3/6, and not where
+#665 worked: run_harness.sh stopped verify_musicbeat at its 600 seconds,
+every check it had reached passing. On #663's run the same shard had passed
+it in 591.4 seconds, nine under; here, alone, it takes 610 for its 114. It is
+the third suite this has happened to (verify_parity at the v323 seal,
+verify_a11y in #665), and it had been split once already, the click to
+verify_musicclick.py and the zoomed-in ends to verify_musictempo.py.
+
+SO IT IS TWO AGAIN. Timed section by section here: the pair 47 seconds, Tap
+the beat 102, the nearest beat 67, Beats 124 | the marks 34, the Restart view
+21, Snap to the beat 86, where the music begins 47, kept with the song 29,
+the words 51. verify_musicbeat.py keeps the first four (about 340 seconds),
+and the last six moved whole to verify_musicsnap.py (about 270), with the
+helpers they read (the songs with a silence before the music, the drag a
+finger makes on the timeline, the contrast read against what is painted
+behind). Every line of the old suite is in one of the two but the comment
+that lists its parts; no check changed in what it asks. Each row opens an
+editor of its own in a fresh context, so no section leaned on one before it.
+
+verify_helpclaims names a check by its suite and its words, read from the
+suite's own check() calls: the sixteen claims whose rows moved name
+verify_musicsnap.py now. Registered where suites are: a batch of its own in
+release_run.py (it measures), harness/shard.py (330 and 260 seconds, from
+the timing here until CI measures them), harness/README.md (the entry split
+along the same line, and its two stale words put right: an end lands on the
+nearest beat, not whole bars, and Snap to the beat is the magnet by the zoom)
+and START-HERE's invariant on the pair and the tempo.
+
+Here, side by side on fresh servers: verify_musicbeat 62 of 62 in 5.9
+minutes, verify_musicsnap 52 of 52 in 4.7, the 114 the one suite passed,
+every row under the same name; verify_helpclaims 45 of 45.
+
+WHAT IT DOES TO FLIP: nothing. Both editors are read as before.
