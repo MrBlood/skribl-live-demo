@@ -26,6 +26,10 @@ WHAT IS ASKED, AND HOW IT IS READ
     its start and climbs again, round after round, with no frame held at the
     turn; the music begins again from its loop's start with each round (the
     loop engine's own start, counted), and is playing on every frame between.
+    And a turn builds no new layers: from the first turn on no canvas is
+    made, the round reseeding the two Play made. A pair for every turn was
+    the turn's biggest cost, and on main after #668 one turn held 208 ms;
+    the count says so on every box, where the time says so only on a slow one.
   * Turned off mid-round, that round is its last; Stop stops it at once and
     leaves Repeat on for the next Play. Remembered across a reload, and the
     pill and the line say the same.
@@ -106,6 +110,24 @@ REC = """(ms) => new Promise((done) => { const out = [], t0 = performance.now();
   (function f() { out.push([Math.round(performance.now() - t0), playing ? 1 : 0, playIndex, playTimeline ? playTimeline.length : 0,
                             _waLoop.playing() ? 1 : 0]);
     if (performance.now() - t0 < ms) requestAnimationFrame(f); else done(out); })(); })"""
+# Canvases made from the first turn on (Play's own layers come before it), and
+# the ink on the drawing as each round ends and two frames into the next: the
+# pixels, on a small copy, that differ from the corner's.
+TURN_CANVASES = """() => { window.__turnCanvases = 0; window.__turnInk = []; let turned = false;
+  const sm = document.createElement('canvas'); sm.width = 96; sm.height = 72;
+  const sx = sm.getContext('2d', { willReadFrequently: true }), cv = document.getElementById('canvas');
+  const ink = () => { sx.clearRect(0, 0, 96, 72); sx.drawImage(cv, 0, 0, 96, 72);
+    const d = sx.getImageData(0, 0, 96, 72).data; let n = 0;
+    for (let i = 0; i < d.length; i += 4) if (Math.abs(d[i] - d[0]) + Math.abs(d[i + 1] - d[1]) + Math.abs(d[i + 2] - d[2]) + Math.abs(d[i + 3] - d[3]) > 60) n++;
+    return n; };
+  const ce = Document.prototype.createElement;
+  Document.prototype.createElement = function (t) {
+    if (turned && String(t).toLowerCase() === 'canvas') window.__turnCanvases++;
+    return ce.apply(this, arguments); };
+  const again = window.replayAgain;
+  window.replayAgain = function () { turned = true; const end = ink(), r = again.apply(this, arguments);
+    requestAnimationFrame(() => requestAnimationFrame(() => window.__turnInk.push([end, ink()])));
+    return r; }; }"""
 # The loop engine's starts, and where in its clip each began.
 STARTS = """() => { window.__wa = []; const s = _waLoop.start;
   _waLoop.start = function (f, off) { window.__wa.push([performance.now(), off || 0]); return s.apply(this, arguments); }; }"""
@@ -259,6 +281,7 @@ with sync_playwright() as p:
         print("\nREPEAT — on, Play goes round")
         c, pg, errs = pad(b)
         pg.click("#padSpeed .rl-repeat"); pg.wait_for_timeout(250)
+        pg.evaluate(TURN_CANVASES)
         d1 = pg.evaluate(BTN, "#padSpeed .rl-repeat")
         kept = pg.evaluate("() => localStorage.getItem('skribl_replay_repeat')")
         check("pressed, Repeat is on and lit, saying so, and remembered",
@@ -276,6 +299,13 @@ with sync_playwright() as p:
               len(wa) == len(ts) + 1 and all(abs(x[1]) < 1e-9 for x in wa) and all(r[4] for r in rec[5:]),
               f"music starts {len(wa)} for {len(ts)} rounds again, from {[round(x[1], 3) for x in wa]}; "
               f"frames with it off {sum(1 for r in rec[5:] if not r[4])}")
+        made = pg.evaluate("() => [window.__turnCanvases, strokeLayersOn(), window.__turnInk]")
+        check("...and a turn builds no new layers: from the first turn on, no canvas is made (the round reseeds Play's two)",
+              len(ts) >= 3 and made[1] and made[0] == 0,
+              f"canvases made over {len(ts)} turns: {made[0]}; layers on {made[1]}")
+        check("...and each round starts from the bare canvas: two frames in, a fifth of the ink the round before ended with, or less",
+              len(made[2]) >= 3 and all(e > 40 and a * 5 <= e for e, a in made[2]),
+              f"ink as a round ended, and two frames into the next: {made[2]}")
         # Off mid-round: this round is the last.
         pg.click("#padSpeed .rl-repeat"); pg.wait_for_timeout(30)
         rec2 = pg.evaluate(REC, int(ms + 900))

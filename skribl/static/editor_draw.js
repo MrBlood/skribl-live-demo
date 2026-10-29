@@ -810,13 +810,22 @@ function makeRepeat() {
 // rather than shared there, for the bytes the player pays for app.js): the
 // canvas back to what the take was drawn on, the clock from 0 and the music
 // from its loop's start.
+// THE SAME TWO LAYERS EACH ROUND, seeded again from the base (the
+// compositor's reseed). A new pair at every turn was two canvases the
+// drawing's size and a copy into one, in the frame the round turns on: about
+// 20 ms of a turn at phone pace (Chromium, the CPU 4x slower), and one turn
+// held 208 ms on main after #668. Reused, a turn at that pace held 40 ms at
+// the median and 56 at most, against 53 and 109. The canvas keeps its bitmap
+// while a replay is under way (canvasBusy), so the layers still fit it.
 function replayAgain() {
   if (!padRepeat || !playing) return false;
   lastTargetMs = 0;
   clearAndRestore(() => {
     playIndex = 0;
     const begin = () => {
-      playComp = strokeLayersOn() ? makeStrokeCompositor(ctx, canvas) : null;
+      if (!strokeLayersOn()) playComp = null;
+      else if (playComp) playComp.reseed();
+      else playComp = makeStrokeCompositor(ctx, canvas);
       playStart = performance.now();
       requestAnimationFrame(editorReplayFrame);
     };
