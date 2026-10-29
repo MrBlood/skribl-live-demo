@@ -25997,3 +25997,107 @@ tile against one painted afresh.
 
 WHAT IT DOES TO THE PAD: the Pad's half came first (the entry above). The tile
 fix is Flip's own: the Pad has no page strip.
+
+## After v329 -- Posted!, the moment; the reason above Try again; the sheet at the menu's sizes
+
+The Post sheet, PR A of the mock the owner answered "all yes". Of the old
+posted state: "the Posted! should be more visible ... (you don't really notice
+the top changing - it's subtle) maybe think about a way to make it more of a
+moment"; "it just kind of dead ends on the Posted card"; and "maybe an animated
+blooby jumping up with his hands in the air?". The link page (the way back and
+the caption), the gallery and the Library, the plain words and the long piece
+at once follow as PRs B to E.
+
+THE MOMENT (lib/postsheet.js posted()). Once a real post comes back the form
+folds away (no box at all for the title, the fields or the button) and the
+sheet glides to its new height, 0.38 s, while the parts rise into place:
+- THE BAND: Skribl purple, deepening down, the same in both themes, with
+  "Posted!" and the line that is true then (the Pad's "Anyone with the link can
+  watch it draw itself.", Flip's "...watch it play."). Blooby jumps once, his
+  hands in the air: seven poses drawn by the real Pad from his own strokes
+  (harness/tools/blooby.py jump, brand/blooby-jump.webp, 0.83 s), and he stays
+  in the last, which is the cheer badge's. Its x closes the sheet.
+- THE CARD: the post as people will see it. The drawing draws itself on its own
+  ground in the in-post player (inlineplayer.js, which the editors do not load,
+  asked for as the post starts going), from the payload just sent: the Pad's
+  once, in about three seconds, resting on the finished drawing; a Flip twice
+  round, resting on its first page. Under it the title, the caption in full,
+  and whether it is in the gallery or shared by its link only. The player
+  starts 400 ms in, once the glide is done, since its work on the page would
+  hold the height's frames; the picture is the card if it has not started by
+  1.5 s. The player's box waits in an inert <template> until the first post:
+  an editor's page has no second canvas before then (verify_drafts took the
+  first canvas on the page and found the card's).
+- WHERE TO GO NEXT: Watch, Copy link and Share as before; then Make another,
+  always (New Skribl and its Undo, which brings this drawing back: the Pad's
+  clearAllWithUndo, Flip's newSkriblWithUndo), and Back to the site when the
+  site has named its home. Focus goes to Watch. Watch on the Home Screen app
+  opens the link page in place, since a new tab there is Safari; in a browser
+  tab, a new tab as before. The toast and Flip's chip that said "Posted!"
+  above the sheet are gone: the band says it.
+- THE HOST NAMES ITS HOME once: create_blueprint(home_url=, home_label=), and
+  app.py from SKRIBL_HOME_URL and SKRIBL_HOME_LABEL. Refused at startup unless
+  it is an http(s) address or a path on the site, with no space or backslash
+  in it (a browser reads "/\x" as "//x"). An address is called by its host
+  unless it is named; a path must be named. Standalone, there is no button.
+- REDUCE MOTION: nothing glides or rises, Blooby is simply there, cheering,
+  and the card is the picture. Decided in the script, not by a media query:
+  harness/tools/cssgraph.py copies every @keyframes and every reduced-motion
+  query in styles.css into the player's CSS, which had 6 bytes to spare under
+  its ratchet. So the motion is transitions, and player.css is unchanged.
+
+THE REASON, when a post does not go: a card in the sheet's own ink with the
+danger's mark, right above Try again (the button and what follows it are
+ordered after it), and the sheet scrolls Try again into view with it. While it
+sends, "Posting…" stays under the button.
+
+THE WORDS AT THE MENU'S SIZES: the field labels 11 to 13 and bold, the speed
+hint and the lines under the gallery tick and the delete key 11 to 13, the
+caption's count 10.5 to 12, the tick's words 13 to 15, the key's 13 to 14, and
+the reason 14. Nothing painted in the sheet is under 12px. With the taller
+words, the preview's reserve on a desk went from 552 to 569px (everything else
+in the sheet is 545 now, and 24 kept clear of the window), so the sheet still
+fits a 1280x800 screen without scrolling (verify_sheetfit).
+
+FLIP'S WORDS: every failure in its own word, "Your animation is still here".
+Offline it says the owner's line: "...saved on this device. Try again when
+you're back online." A server's failure says saved on this device too, as the
+Pad's does of the copy it keeps: Flip's draft is kept as it is drawn (saveNow),
+so it is true. The owner's yes was for the offline line; the server's is the
+same words carried to its sibling, and the PR says so. Cancelled and too long
+say animation as well.
+
+THE CENSUS (verify_contrast): the posted sheet and the reason are read like
+every other sheet, light and dark, phone and desk. One rule changed: a disabled
+control's own label is the control (WCAG 1.4.3's inactive component), so the
+gallery tick's words, dimmed with its box while a post kept on this device
+waits for Try again, are not read. An enabled tick's words still are.
+
+THE ROWS, verify_postmoment.py (new, 56 rows), each red against its own break
+on a served copy of this tree: the band not painted, not purple, the form
+left; Flip saying the Pad's line; the caption cut; always "in the gallery"; the
+picture shown first; the card never playing, the Pad's at its own speed, a Flip
+once round; Blooby not jumping, resting on the landing, his strip never asked
+for, not over the words; no glide, no rise; Reduce Motion ignored, the card
+playing under it; Make another starting nothing; Back never shown, going
+elsewhere; the x doing nothing, a 36px tap; Watch leaving the Home Screen app;
+"//" taken for a path; the editors not told; the reason under the button, in
+pink, without its mark, "Posting…" above the button; Flip saying drawing, its
+server failure claiming no copy; the labels back at 11px; compose rendering
+the band; focus left on nothing; opened again, the band left; a device-only
+save cheering. The glide reads the sheet's height on every frame and sets
+aside one frame this box held (it draws in software: two runs in three had a
+33 ms frame at the start, with nothing of the page's running), never one in
+which the page ran a long task, and still wants six frames moving: a height
+that snaps, and a 140 ms task of the page's in the glide, are both red.
+Changed in older suites, each red against its own break: verify_ux's POST
+RESULT (the band's words, the title on the card, the form folded),
+verify_flipmeta (the title on the card; Flip's word on each failure; saved on
+this device on both editors when the server could not take it, and only then),
+verify_posted (Cancel and too long in each editor's own word), verify_identity
+(Blooby cheers on the band, light and dark, over the words, on Flip), and
+verify_contrast's two new surfaces and the tick's words.
+
+WHAT IT DOES TO FLIP: shared. One Post sheet and one lib/postsheet.js serve
+both editors; the line on the band and the noun in the failures are each
+editor's own.
