@@ -24,8 +24,9 @@ plan, mocked first; the owner: "Yes on all").
   it "kind of gets in the way of seeing where the wave starts for the beat").
   Asked of what is painted on top, on a phone and a desk: beside either line,
   over the song, nothing is the grip; the tab shows half under the song's
-  edge and keeps clear of the whole song's line, which a tap under it still
-  reaches; and the tab, pressed below the song's edge, drags its end.
+  edge and keeps clear of the whole song's line, and a tap under it, on that
+  line, takes the end, whose reach runs 26px below its tab (verify_musicundo
+  reads the reach); and the tab, pressed below the song's edge, drags its end.
 
   THE LOOP'S EDGES ARE SHARP (the owner's pick in the whole-drawer mock, "1.5px
   sharp"). Read on the screenshot at the screen's own pixels, each end placed
@@ -525,7 +526,8 @@ with sync_playwright() as p:
     # (3 to 14px either side, its own pixels left out) from the song's top to
     # 10px above its foot: never the grip. Then a point of the tab below the
     # song's edge (the tab shows there), the whole song's line under the line
-    # (still the whole song's), and the boxes for the words. What is on top is
+    # (the end's: an end reaches 26px below its tab, over the line, and the
+    # line has the press beside it), and the boxes for the words. What is on top is
     # what is painted only while the grip can be hit, so that is asked too.
     GRIPS = """() => { const st = document.getElementById('musicTlStage').getBoundingClientRect(), wl = document.getElementById('musicTlWhole'),
         w = wl.getBoundingClientRect(), out = {};
@@ -539,7 +541,7 @@ with sync_playwright() as p:
         const gr = g.getBoundingClientRect(), ty = Math.min(gr.bottom - 2, st.bottom + 5), under = document.elementFromPoint(line, w.top + w.height / 2);
         out[id] = { hits: hits, asked: asked, hit: getComputedStyle(g).pointerEvents !== 'none' && getComputedStyle(g).visibility === 'visible',
                     line: line, x: gr.left + gr.width / 2, y: ty, below: isGrip(document.elementFromPoint(line, ty)),
-                    top: gr.top, bottom: gr.bottom, edge: st.bottom, wholeTop: w.top, whole: !!under && (under === wl || wl.contains(under)) };
+                    top: gr.top, bottom: gr.bottom, edge: st.bottom, wholeTop: w.top, end: !!under && (under === h || h.contains(under)) };
       }
       return out; }"""
     for _n, _p in eds("grip"):
@@ -553,10 +555,10 @@ with sync_playwright() as p:
             check(f"{_n}, {face}: each end's grip sits at its foot: beside either line, over the song, nothing on top is the grip",
                   all(g[i]["asked"] > 300 and g[i]["hits"] == 0 and g[i]["hit"] for i in ends),
                   "; ".join(f"{i}: the grip on top at {g[i]['hits']} of {g[i]['asked']} points beside the line (it can be hit: {g[i]['hit']})" for i in ends))
-            check(f"{_n}, {face}: ...a tab that shows half under the song's edge and keeps clear of the whole song's line, which a tap under it still reaches",
-                  all(g[i]["below"] and g[i]["top"] < g[i]["edge"] < g[i]["bottom"] and g[i]["bottom"] <= g[i]["wholeTop"] - 2 and g[i]["whole"] for i in ends),
+            check(f"{_n}, {face}: ...a tab that shows half under the song's edge and keeps clear of the whole song's line, and a tap under it, on that line, takes the end",
+                  all(g[i]["below"] and g[i]["top"] < g[i]["edge"] < g[i]["bottom"] and g[i]["bottom"] <= g[i]["wholeTop"] - 2 and g[i]["end"] for i in ends),
                   "; ".join(f"{i}: shown below the edge {g[i]['below']}, the tab {g[i]['top']:.1f}-{g[i]['bottom']:.1f} over the edge at {g[i]['edge']:.1f},"
-                            f" the whole line from {g[i]['wholeTop']:.1f}, reached under it {g[i]['whole']}" for i in ends))
+                            f" the whole line from {g[i]['wholeTop']:.1f}, the end under it {g[i]['end']}" for i in ends))
             # The tab, pressed below the song's edge, drags its end (no tempo, so nothing settles).
             t0, v0, st = pg.evaluate(TRIM), pg.evaluate(VIEW), pg.evaluate(BOX, "#musicTlStage")
             drag(pg, g["tlEnd"]["x"], g["tlEnd"]["y"], g["tlEnd"]["x"] - 40, g["tlEnd"]["y"], steps=10)

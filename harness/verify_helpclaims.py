@@ -944,6 +944,9 @@ CONTROL_ALIASES = {
     "Add music MP3, WAV, M4A or OGG · it loops under every page": "add a track",
     "Toggle music on or off": "turns the music off without removing it",
     "Remove the track": "removes the track",
+    # the loop's own pair, at the end of the one line under the timeline
+    "Undo a change to the loop": "takes back the last change to the loop",
+    "Redo a change to the loop": "and redo takes it again",
     # - and + say how far a press goes (0.1s; a bar once there is a tempo, which this page has not)
     "Start of loop, 0.1s earlier": "move each with − and +", "Start of loop, 0.1s later": "move each with − and +",
     "End of loop, 0.1s earlier": "move each with − and +", "End of loop, 0.1s later": "move each with − and +",
