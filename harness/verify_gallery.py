@@ -1344,6 +1344,7 @@ with sync_playwright() as _spa:
         const lines = () => (cap.getBoundingClientRect().height - parseFloat(cs.paddingTop)
                              - parseFloat(cs.paddingBottom)) / parseFloat(cs.lineHeight);
         const restCard = h(one), restLines = lines(), moreShown = !btn.hidden;
+        const restWord = (btn.textContent || '').trim();
         btn.click();
         setTimeout(() => {
           const openCard = h(one), openLines = lines();
@@ -1358,7 +1359,7 @@ with sync_playwright() as _spa:
                         >= st.getBoundingClientRect().bottom - 1,
             belowWords: btn.getBoundingClientRect().top >= cap.getBoundingClientRect().bottom - 8,
             inHead: !!btn.closest('.thead'),
-            restWord: 'more', word: word, moreShown: moreShown,
+            restWord: restWord, word: word, moreShown: moreShown,
             name: btn.getAttribute('aria-label') || '',
             boxH: Math.round(btn.getBoundingClientRect().height),
             restCard: restCard, openCard: openCard,
