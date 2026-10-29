@@ -268,7 +268,7 @@ BATCHES = [
     # The owner's seven yeses (after v326): one name each, the Post title from
     # the name, New Skribl's way back on both editors.
     ["verify_names.py", "verify_posttitle.py", "verify_newundo.py"],
-    # The Pad's Undo on a long drawing, from a kept copy (polish list item 2).
+    # Undo on a long drawing or a busy Flip page, from a kept copy (polish list item 2).
     ["verify_undofast.py"],
     # After v328: the glowing dot on Flip's Draw on pages, everywhere (the owner's C).
     ["verify_flipnib.py"],                 # store — posts a public Flip and reads it in the feed
