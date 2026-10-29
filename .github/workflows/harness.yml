@@ -136,7 +136,7 @@ jobs:
             verify_backfill.py verify_hostseams.py verify_mediareport.py \
             verify_surfaces.py verify_integration.py verify_mediameta.py \
             verify_takedown.py verify_runreport.py verify_bootstrap.py \
-            verify_draftrace.py
+            verify_draftrace.py verify_pagewide.py
       # run_harness.sh exits 0 on a skip, so a suite that quietly declined to
       # run would leave this job green having proved nothing. None of these is
       # designed to skip, so ANY skip is a failure -- the guard is generalised

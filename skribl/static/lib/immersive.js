@@ -51,10 +51,7 @@
    * the other depending on which is the scrolling element, and a page that
    * still scrolls behind a fixed overlay is how you end up looking at a
    * drawing with somebody else's post sliding past underneath it. */
-  function lock(on) {
-    var root = doc.documentElement;
-    if (on) { root.classList.add(LOCK); } else { root.classList.remove(LOCK); }
-  }
+  function lock(on) { doc.documentElement.classList.toggle(LOCK, on); }
 
   function attach(el, opts) {
     opts = opts || {};
@@ -71,6 +68,15 @@
      * spellings and both mechanisms, so a caller never has to know which one
      * got used. */
     function report() {
+      /* ANYTHING FULL SCREEN, said on <html> as `skribl-fullscreen`: styles.css
+       * drops the scrollbar gutter then. It was `html:has(:fullscreen)`, and a
+       * :has() at the top of the page is checked again on every style pass
+       * (lib/opensurfaces.js has the cost). Said here rather than by a listener
+       * of its own because every full screen on these pages comes through an
+       * attach(), and the player's JavaScript has a byte ratchet
+       * (verify_player_isolation). The event comes before the frame that shows
+       * the change is drawn, so the class is never a frame late. */
+      doc.documentElement.classList.toggle('skribl-fullscreen', !!fsEl());
       var now = on();
       if (now === said) return;
       said = now;

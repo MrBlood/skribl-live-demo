@@ -795,6 +795,7 @@ rather than a shared rule.
 | `newundo.js` | Pad+Flip | NEW SKRIBL, AND THE WAY BACK: one offer for both editors. |
 | `nib.js` | Pad+Flip | The glowing dot that rides the tip of a line while it draws itself: its colour, and its picture in a file. |
 | `offline.js` | Pad+Flip+library | The Home Screen app: opening with no signal, and staying current. |
+| `opensurfaces.js` | Pad+Flip+library+gallery | What is open, said once on <html>, so no style rule has to search the page. |
 | `othertab.js` | Pad+Flip | TWO TABS, TWO DRAWINGS, NOTHING LOST (SK-AUD-006; the owner's pick T1). |
 | `pagemenu.js` | library+gallery | The page menu: the ••• on the gallery and the library, and what it opens. |
 | `pagespan.js` | Flip | Page spans — a contiguous run of Flip pages, and the operations on it. |

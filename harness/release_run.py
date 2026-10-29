@@ -126,7 +126,7 @@ BATCHES = [
     ["verify_amber.py", "verify_posted.py", "verify_report.py", "verify_canvas.py"],
     ["verify_padcanvas.py", "verify_pressure.py", "verify_lib.py", "verify_docs.py",
      "verify_integration.py", "verify_scrub.py", "verify_runreport.py",
-     "verify_bootstrap.py", "verify_draftrace.py"],
+     "verify_bootstrap.py", "verify_draftrace.py", "verify_pagewide.py"],
     ["verify_player_isolation.py"],        # measures, size
     ["verify_inline.py"],                  # measures
     ["verify_compose.py"],                 # measures

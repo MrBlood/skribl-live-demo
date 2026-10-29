@@ -247,9 +247,11 @@ html { scroll-padding-top: 96px; }
   position: relative; cursor: pointer;
 }
 .pm-grab::after { content: ''; position: absolute; inset: -12px -30px; }
-/* A swipe on the open sheet never becomes the browser's pull-to-refresh. */
+/* A swipe on the open sheet never becomes the browser's pull-to-refresh.
+   lib/opensurfaces.js says the sheet is open, on <html> as `skribl-sheet`: a
+   :has() at the top of the page is checked again on every style pass. */
 .pm-sheet { overscroll-behavior: contain; }
-html:has(.pm-overlay:not([hidden])) { overscroll-behavior-y: none; }
+html.skribl-sheet { overscroll-behavior-y: none; }
 
 /* Row weights are 600: Segoe UI has no 500, so a 500 request rendered
    Regular on the owner's Windows machine beside the editors' 600 rows. */

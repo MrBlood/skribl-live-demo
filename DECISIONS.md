@@ -25732,3 +25732,52 @@ both editors'; the bin's way back has a part of its own in each (the Pad's
 draft store, Flip's save), each read by its own rows.
 
 Not tested here: an iPhone's WebKit, SF and Segoe UI.
+
+## After v329 -- No style rule searches the whole page
+
+Item 1 of the polish list (Phase 1 found it, measured; the owner: "all yes").
+
+WHAT WAS SLOW. At phone pace (Chromium with the CPU 4x slower, 4G, 402 x 874
+at 3x) Pad answered a tap only after about 3.7 s and Flip after about 7 s, and
+a trace put most of it in style work, not script: UpdateLayoutTree 2.0 + 0.95 s
+on Pad and 2.4 + 2.2 s on Flip, against 0.3 s and 0.7 s of script. Chrome's
+selector statistics named the cause: five rules that began at the top of the
+page, `html:has(...)` and `body:has(...)`. An editor makes about 235 small
+style passes while it opens, the root is restyled in most of them, and each
+root :has() walks the whole page. A copy of styles.css without just those five
+(1,987 of 1,992 rules; every element's computed style identical at rest, 15
+properties read) opened with style work 2.9 s -> 0.16 s on Pad and
+4.3 s -> 0.23 s on Flip.
+
+WHAT CHANGED. The page says what is open, once, as classes on <html>.
+lib/opensurfaces.js (new: Pad, Flip, the gallery, the Library) watches the
+hidden attribute and the class of the drawers, sheets, menus and cards, and
+sets `skribl-covered` (the Saved pill and its x step away), `skribl-carded`
+(the pill under a button's card) and `skribl-sheet` (no pull to refresh);
+lib/immersive.js sets `skribl-fullscreen` on fullscreenchange (the scrollbar
+gutter). The rules key on those classes, and the lists of surfaces live in the
+module, with the reasons that were in the rules. Three more root :has() rules
+went the same way: pagemenu.css's and the gallery's own (pull to refresh under
+the page menu and the report sheet), and player.css's copy of the full-screen
+rule, re-emitted, its live selector renamed in harness/tools/css_live.json so
+the player keeps it.
+
+MEASURED AS BUILT, the same pace, median of 3. Pad: style work 3,111 -> 158 ms,
+blocked 4,251 -> 394 ms, the longest task 1,989 -> 326 ms, the page still
+from 5.3 s -> 1.7 s after it was asked for. Flip: 4,550 -> 207 ms,
+5,290 -> 905 ms, 3,237 -> 784 ms, 6.2 s -> 2.0 s.
+
+THE GUARD. verify_pagewide.py, source only, on the PR gate: no selector puts
+:has() on html, body or :root (red on main's tree, 29 selectors); every
+`html.skribl-*` class a rule keys on is set by a module (red with a state
+renamed); and every page whose styles read an open-surface class loads
+lib/opensurfaces.js (red with the script tag gone from Flip or the gallery).
+That last row first came back green on Flip's break: it read the module's name
+in the comment beside the tag, so it reads the tag now. The behaviour stays
+pinned where it was: verify_pillfit, verify_sheetswipe, verify_player_isolation.
+
+WHAT IT DOES TO FLIP: shared. One stylesheet and one module, both editors, and
+Flip gains the most.
+
+Not tested here: WebKit (Safari builds :has() differently, so the gain on an
+iPhone is unmeasured), SF and Segoe UI.
