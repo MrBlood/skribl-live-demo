@@ -25781,3 +25781,37 @@ Flip gains the most.
 
 Not tested here: WebKit (Safari builds :has() differently, so the gain on an
 iPhone is unmeasured), SF and Segoe UI.
+
+## After v329 -- A Repeat turn reuses its layers
+
+MAIN WENT RED after #668 (run 40906948983, PostgreSQL 3/6) on verify_padrepeat's
+"no frame held at a turn": the first of three turns held 208 ms, the other two
+23 and 22, a frame 17. #668 moved only the shards' weights, and the row had
+passed on the run before; the turn was always close to its limit.
+
+WHAT A TURN DID. The Pad's Repeat (editor_draw.js replayAgain) made a new stroke
+compositor every round: two canvases the drawing's size and a copy of the
+canvas into one, in the frame the round turns on. At phone pace (Chromium, the
+CPU 4x slower) that was 20 to 29 ms of a 23 to 39 ms turn, and once 89 ms of a
+turn held 216 ms, the music's restart taking 91 of it. Traced, the garbage
+collector took a few ms near a turn at most, so the time was the turn's own.
+
+WHAT CHANGED. A turn reseeds the two layers Play made, with the compositor's
+reseed (which a recolour's moment in a replay already uses), instead of making
+two more. The canvas keeps its bitmap while a replay is under way
+(canvasBusy), so they still fit. Pad's own file only; the link page's
+JavaScript is unchanged. Traced, 24 turns each at that pace: a turn held 40 ms
+at the median and 56 at most, against 53 and 109. What a turn still does is
+restart the music and copy the base into the layer.
+
+THE ROWS, in verify_padrepeat's round. From the first turn on no canvas is made
+(six over three turns with the old turn). And each round starts from the bare
+canvas, two frames in, which is what reusing the layers could break: red with
+them reused and not reseeded, when the next round opened on the finished
+drawing. The count holds on every box; the time held only on a fast one.
+
+WHAT IT DOES TO FLIP: not for Flip. Its Play goes round through its pages and
+makes no canvas at a turn (none in four seconds of rounds, counted). The link
+page's loop does make a compositor each lap (app.js play(), from the start):
+the same reuse there needs a size check and costs bytes under the player's
+ratchet, which has 34 B of headroom, so it is named here and not done.
