@@ -266,8 +266,12 @@ with sync_playwright() as p:
       try { obs = new PerformanceObserver(l => l.getEntries().forEach(e => lt.push([e.startTime, e.duration])));
             obs.observe({ type: 'longtask' }); } catch (e) {}
       const fr = []; const t0 = performance.now();
+      /* WHOLE IS ASKED OF THE CLAMP ITSELF. Chromium reports a clamped box's
+         display as flow-root, not -webkit-box, so a probe of the display was
+         true on every frame of a close that clamped at its start: it could
+         not go red, and its first calibration said so. */
       const read = () => ({ t: performance.now() - t0, h: p.getBoundingClientRect().height,
-                            whole: getComputedStyle(p).display !== '-webkit-box' });
+                            whole: getComputedStyle(p).webkitLineClamp === 'none' });
       fr.push(read());
       m.click();
       fr.push(read());
@@ -337,6 +341,17 @@ with sync_playwright() as p:
         check("Reduce Motion: 'more' just opens, in the frame it is pressed",
               hs[1] > rest + 20 and len(set(round(h, 1) for h in hs[1:])) == 1,
               f"rest {rest:.1f}, then {sorted(set(round(h, 1) for h in hs[1:]))}")
+        # ...AND "LESS" PUTS THE TWO LINES BACK AT ONCE, clamp and all. The page
+        # takes every transition away under Reduce Motion (its own rule), so
+        # the height cannot tell this apart from a glide that was asked for and
+        # refused; the clamp can: a close that went through the glide keeps
+        # the words unclamped until its timer lets go.
+        s2 = pg.evaluate(SAMPLE, "long")
+        f2 = s2["fr"][1:]
+        check("Reduce Motion: ...and 'less' puts the two lines back at once, clamped from the first frame",
+              all(abs(f["h"] - rest) < 0.5 for f in f2) and not any(f["whole"] for f in f2),
+              f"heights {sorted(set(round(f['h'], 1) for f in f2))} (rest {rest:.1f}), "
+              f"unclamped frames {sum(1 for f in f2 if f['whole'])} of {len(f2)}")
         c.close()
 
     # ---- TWO CARDS SIDE BY SIDE -------------------------------------------

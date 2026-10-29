@@ -1537,7 +1537,9 @@ with sync_playwright() as _spa:
           /* ON THE FRAME AFTER, not on a timer. Two rAFs because the first
              is the frame the transition starts on. */
           requestAnimationFrame(() => requestAnimationFrame(() => {
-            const early = h(), whole = getComputedStyle(cap).display !== '-webkit-box';
+            /* asked of the clamp itself: Chromium reports a clamped box's
+               display as flow-root, so a probe of the display could not go red */
+            const early = h(), whole = getComputedStyle(cap).webkitLineClamp === 'none';
             setTimeout(() => resolve({ rest: rest, open: open,
               early: early, whole: whole, settled: h() }), 400);
           }));
