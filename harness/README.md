@@ -258,7 +258,15 @@ stays a sleep.
   suite rather than more of `verify_ux.py`. Presses keys and reads what moved,
   focuses things and reads where focus went; a present-but-inert
   `role="slider"` was the defect it exists for, so the attribute alone is
-  never the assertion. Also holds the AA contrast floor for readable text.
+  never the assertion. The sections that each open a browser of their own
+  are `verify_a11ypages.py`'s, split off at the 600-second budget.
+- `verify_a11ypages.py` — accessibility across every page, out of
+  `verify_a11y.py` when it ran past its 600-second budget on GitHub after
+  #663, each section in a browser of its own and none changed: the AA
+  contrast floor for readable text, the empty-canvas hint and the grid, the
+  pages' own sheets at 4.5:1, Play and Stop as one button, a tap leaving
+  nothing lit, every control named on a desk as on a phone, the hover guard,
+  WAVE's error rules and its very small text.
 - `verify_deletion.py` — `delete_post()` / `set_post_visibility()`: the two
   refusals are indistinguishable, an anonymous post is revocable by its
   capability and by nothing else, and neither function commits.
