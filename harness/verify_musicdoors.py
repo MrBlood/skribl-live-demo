@@ -38,7 +38,9 @@ The rows:
   is heard as long as the drawing. The line says the length heard, the beats
   once there is a tempo, and against the drawing; in the Length door
   Skribl's pick is lit while the loop is it. Changed, the pick is the way
-  back, which has an Undo, gone after eight seconds. Nobody is told they did
+  back, and the loop's Undo takes the way back back (the Undo itself is
+  verify_musicundo's; the Length door's own, for eight seconds, is gone).
+  Nobody is told they did
   something: a drawing that changed under the pick says only that. The
   line's height never changes as it says other things. A song a draft brings
   back keeps the draft's loop.
@@ -171,7 +173,7 @@ TRIM = "() => ({ s: trimStart, e: trimEnd, d: audioDuration, xf: loopCrossfadeMs
 SAID = """() => { const q = (id) => document.getElementById(id), card = q('musicPickCard');
   const tile = (k) => document.querySelector('#musicDoors .dp-tile[data-dp="' + k + '"]');
   return { line: q('musicPickText').textContent, pick: card.getAttribute('aria-pressed') === 'true',
-           back: card.getAttribute('aria-pressed') !== 'true' && !card.disabled, undo: !q('musicPickUndo').hidden,
+           back: card.getAttribute('aria-pressed') !== 'true' && !card.disabled, undo: !q('musicUndo').disabled,
            pickSub: q('musicPickSub').textContent, spark: !q('musicLengthSpark').hidden,
            tiles: ['length', 'beat', 'restart', 'exact'].map((k) => tile(k).querySelector('.dp-v').textContent),
            fit: q('matchDrawingBtn').getAttribute('aria-pressed'), fitOff: q('matchDrawingBtn').disabled, fitSub: q('musicFitSub').textContent,
@@ -561,28 +563,23 @@ with sync_playwright() as pw:
         pick = pg.evaluate(TRIM)
         pg.click('.nudge-btn[data-which="end"][data-amount="-1"]'); pg.wait_for_timeout(200)
         own, said = pg.evaluate(TRIM), pg.evaluate(SAID)
-        check(f"{_n}: a change unlights Skribl's pick, which is the way back",
-              said["back"] and not said["pick"] and not said["spark"] and not said["undo"],
+        check(f"{_n}: a change unlights Skribl's pick, which is the way back, and the loop's Undo can take it back",
+              said["back"] and not said["pick"] and not said["spark"] and said["undo"],
               f"{said['line']!r}, pick lit {said['pick']}, the way back {said['back']}, undo {said['undo']}, mark {said['spark']}")
         set_door(pg, "length")
         went = press(pg, "#musicPickCard")
         back, said2 = pg.evaluate(TRIM), pg.evaluate(SAID)
         focus = pg.evaluate("() => document.activeElement && document.activeElement.id")
-        undid = press(pg, "#musicPickUndo")
+        undid = press(pg, "#musicUndo")
         undone, said3 = pg.evaluate(TRIM), pg.evaluate(SAID)
         focus3 = pg.evaluate("() => document.activeElement && document.activeElement.id")
-        check(f"{_n}: Skribl's pick, tapped, puts it back, and its Undo undoes that; focus is never lost",
+        # The nudge is a step under the way back, so the Undo stays, and with
+        # it the focus.
+        check(f"{_n}: Skribl's pick, tapped, puts it back, and the loop's Undo undoes that; focus is never lost",
               went and undid and back == pick and said2["pick"] and said2["spark"] and said2["undo"] and not said2["back"]
-              and focus == "musicPickCard" and undone == own and said3["back"] and not said3["pick"] and not said3["undo"] and focus3 == "musicPickCard",
-              f"pick {pick}, own {own}, back {back} (lit {said2['pick']}, undo {said2['undo']}, focus {focus}), undone {undone} (the way back {said3['back']}, focus {focus3});"
-              f" pressed the pick {went}, undo {undid}")
-        if _n == EDITORS[0][0]:
-            # One shared timer (lib/musicdrawer.js), so one editor is asked.
-            went = press(pg, "#musicPickCard", 8400)
-            late = pg.evaluate(SAID)
-            check("the Undo goes after eight seconds, and Skribl's pick stays lit",
-                  went and not late["undo"] and not late["back"] and late["pick"],
-                  str({k: late[k] for k in ('line', 'pick', 'undo', 'back')}) + f"; pressed the pick {went}")
+              and focus == "musicPickCard" and undone == own and said3["back"] and not said3["pick"] and said3["undo"] and focus3 == "musicUndo",
+              f"pick {pick}, own {own}, back {back} (lit {said2['pick']}, undo {said2['undo']}, focus {focus}), undone {undone} (the way back {said3['back']},"
+              f" undo {said3['undo']}, focus {focus3}); pressed the pick {went}, undo {undid}")
         c.close()
 
     # The Pad's pick follows the drawing. Undo with the drawer open is the
@@ -627,11 +624,12 @@ with sync_playwright() as pw:
         c.close()
 
     # The line's height never changes as it says other things: the pick, a
-    # change, the way back with its Undo, a tempo's beats, the longest words
-    # it has ("19.75s · 39.5 beats · longer than your animation"), or
-    # everything under it would move with a finger still on the timeline. One
-    # row where the longest fit (a 390px phone up), two on a narrower one,
-    # what the loop is against the drawing on its own row whatever it says.
+    # change, the way back, a tempo's beats, the longest words it has
+    # ("19.75s · 39.5 beats · longer than your animation"), or everything
+    # under it would move with a finger still on the timeline. With the
+    # loop's Undo and Redo at its end: one row and the pair's height where
+    # the longest fit beside them (a desk), two on a phone (to 459px), what
+    # the loop is against the drawing on its own row whatever it says.
     LONGEST = "() => { musicTempo = { bpm: 120, phase: 0 }; loopCrossfadeMs = 250; setCrossfadeUI(); trimStart = 0; trimEnd = 20; updateTrimUI(); }"
     for _n, _p in eds("line"):
         hs = {}
@@ -649,10 +647,10 @@ with sync_playwright() as pw:
             pg.evaluate(LONGEST); pg.wait_for_timeout(150); row.append(pg.evaluate(H))
             hs[dev] = (row, pg.evaluate("() => document.getElementById('musicPickText').textContent"))
             c.close()
-        check(f"{_n}: the one line's height never changes as it says other things: two rows on a 320 and a 375px phone, one from 390 to a desk",
-              all(len(set(r)) == 1 for r, _ in hs.values()) and all(30 < hs[d][0][0] < 45 for d in ("320", "375"))
-              and all(hs[d][0][0] < 24 for d in ("390", "phone", "desk")),
-              f"the pick, a change, the way back with its Undo, a tempo, the longest words: {hs}")
+        check(f"{_n}: the one line's height never changes as it says other things: two rows on a phone, 320 to 402px, one on a desk as tall as the Undo and Redo",
+              all(len(set(r)) == 1 for r, _ in hs.values()) and all(36 < hs[d][0][0] < 45 for d in ("320", "375", "390", "phone"))
+              and abs(hs["desk"][0][0] - 36) < 0.6,
+              f"the pick, a change, the way back, a tempo, the longest words: {hs}")
 
     # A song the autosave had to drop is re-added from its card: its saved loop
     # comes back with it (pendingMusicMeta), and Skribl's pick stays away.

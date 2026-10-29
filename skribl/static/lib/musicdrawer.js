@@ -65,8 +65,8 @@
  * and a loop that short is a stutter -- Fit my animation is one tap. In the
  * Length door Skribl's pick is lit while the loop is it, and once the loop
  * is changed, a tap on it is the way back (to the heard one, with its beat),
- * with an Undo for eight seconds, which brings back the loop and the beat
- * that were there. Its tile says which it is.
+ * and the loop's Undo (UNDO AND REDO, below) brings back the loop and the
+ * beat that were there. Its tile says which it is.
  *
  * THE ONE LINE says how long the loop is, in beats once there is a tempo,
  * and against the drawing. It was three: the pick line, Adjust's length
@@ -174,7 +174,8 @@
  *                       (lib/drawerdetent.js)
  *
  * Returns { sync, syncCrossfade, resetView, matchDrawing, applyPick,
- * stopPreview, playhead, previewing, door, tempo }. SkriblMusicDrawer.tempoFrom(raw)
+ * stopPreview, playhead, previewing, door, tempo, binned }: binned(song), from
+ * each editor's bin, with put() and drop() for its song (THE BIN, below). SkriblMusicDrawer.tempoFrom(raw)
  * reads a saved tempo back, or null. Editor-only: the player has no drawer and
  * never loads this. */
 (function (global) {
@@ -182,7 +183,7 @@
 
   var SEAM = 1.25;                         // seconds either side of the join
   var PICK_FADE_MS = 250;                  // Skribl's pick's smooth restart
-  var UNDO_MS = 8000;
+  var STEPS = 100;                         // the loop's Undo keeps this many
   var EPS = 0.0005;                        // two times are one at the thousandth
   var TAP_IDLE_MS = 2000;                  // Tap the beat settles after this long without a tap
   var SNAP_PX = 8;                         // in the loop detail, an end let go this near a beat settles on it
@@ -468,7 +469,7 @@
     // Undo and taps are not this one's.
     function resetView() {
       if (tl) tl.reset();
-      forgetUndo();
+      forgetSteps();
       stepPick = null;
       taps = [];
       clearTimeout(tapT);
@@ -483,7 +484,19 @@
      * With Lock the length on, any end moves the whole loop instead. Every
      * change is saved when it lands, wherever the finger is let go. */
     var locked = false, glideRaf = 0, aim = null;
-    function stopGlide() { if (glideRaf) { global.cancelAnimationFrame(glideRaf); glideRaf = 0; } aim = null; }
+    // A change still gliding there when it stops (it landed, or another
+    // change began) has landed where it was going: the loop's Undo keeps it
+    // as a step, and what comes next starts from there (UNDO AND REDO).
+    function stopGlide() {
+      if (glideRaf) { global.cancelAnimationFrame(glideRaf); glideRaf = 0; }
+      if (aim && pending && pending === gliding) {
+        var landed = stepNow();
+        gliding = null;
+        keep(pending, landed);
+        pending = quiet ? null : landed;
+      }
+      aim = null;
+    }
     // The loop as it is, or where it lands while a settle glides there: what
     // Skribl's pick and Beats go by, so neither changes its mind on the way.
     function loopNow() { var t = h.trim(); return aim ? { start: aim[0], end: aim[1], duration: t.duration } : t; }
@@ -495,7 +508,7 @@
         var len = t.end - t.start, s = Math.max(0, Math.min(t.duration - len, t.start + time - (which === 'start' ? t.start : t.end)));
         n = { start: s, end: s + len };
       } else n = T.setHandle({ start: t.start, end: t.end, duration: t.duration }, which, time, mode);
-      h.setTrim(n.start, n.end);
+      setTrim(n.start, n.end);
       touched();
       h.refresh();
     }
@@ -503,15 +516,18 @@
     function slideTo(start) {
       var t = h.trim(), len = t.end - t.start, s = Math.max(0, Math.min(t.duration - len, start));
       stopGlide();
-      h.setTrim(s, s + len);
+      setTrim(s, s + len);
       touched();
       h.refresh();
     }
     // A settle glides there, both ends together, frame by frame so the
     // timeline, its handles and the one line move as one; at once under
-    // Reduce Motion. Saved when it lands.
-    function glideTo(s1, e1, then) {
+    // Reduce Motion. Saved when it lands, and with the change that started
+    // it one step; Skribl's own (`auto`) is not a step.
+    function glideTo(s1, e1, then, auto) {
       stopGlide();
+      if (auto) pending = null;
+      else { before(); gliding = pending; }
       var t = h.trim(), s0 = t.start, e0 = t.end, t0 = global.performance.now();
       aim = [s1, e1];
       function step(now) {
@@ -521,7 +537,7 @@
         if (k < 1) { glideRaf = global.requestAnimationFrame(step); return; }
         glideRaf = 0;
         touched();
-        h.changed();
+        changed();
         if (then) then();
       }
       step(t0);
@@ -649,7 +665,7 @@
         if (zoomed && h.setTempo && Math.abs(t.start - on) <= p / 8) {
           var ns = copyOf(tp);
           ns.phase = Math.round(s * 10000) / 10000;
-          h.setTempo(ns);
+          setTempo(ns);
         }
         k = beatsFor(heard({ start: s, end: t.end }, h.crossfade()), t.duration - s);
         // No whole beats fit from that beat: the start settles alone.
@@ -662,7 +678,7 @@
         if (kz && Math.abs(hz - kz * p) > EPS && bpm >= 30 && bpm <= 300) {
           var nt = copyOf(tp);
           nt.bpm = bpm; nt.phase = t.start; nt.by = 'end'; delete nt.heard;
-          h.setTempo(nt);
+          setTempo(nt);
           h.refresh();
           endSaid(tp, nt, kz);
           return;
@@ -690,9 +706,9 @@
         onClick: function () {
           var cur = tempo();
           if (!cur || cur.bpm !== now.bpm || cur.phase !== now.phase) return;
-          h.setTempo(was);
+          setTempo(was);
           h.refresh();
-          h.changed();
+          changed();
         }
       });
     }
@@ -734,7 +750,7 @@
         var t = h.trim(), len = t.end - t.start, s0 = beatFor(Math.max(0, Math.min(t.duration - len, start)), len);
         glideTo(s0, s0 + len);
       },
-      letGo: function (kind, which, zoomed) { if (kind === 'end') snap(which, 0, zoomed); else onBeat(); h.changed(); },
+      letGo: function (kind, which, zoomed) { if (kind === 'end') snap(which, 0, zoomed); else onBeat(); changed(); },
       // The taller box keeps Hear the loop where the thumb is, and the
       // timeline's top under the header.
       anchor: function () { return $('previewLoopBtn'); },
@@ -750,9 +766,9 @@
       edge: function (which, t) { setEdge(which, t, 'slide'); },
       blend: function (ms) { setFade(ms); touched(); h.refresh(); },
       letGo: function (what) {
-        if (what === 'blend') { h.changed(); rejoin(); return; }
+        if (what === 'blend') { changed(); rejoin(); return; }
         snap(what, rv.half() / rv.window);
-        h.changed();
+        changed();
       }
     }) : null;
 
@@ -925,7 +941,7 @@
         if (!h.hasTrack() || (which !== 'start' && which !== 'end') || !isFinite(dir)) return;
         var t = h.trim();
         setEdge(which, (which === 'start' ? t.start : t.end) + dir * stepNow(), 'slide');
-        h.changed();
+        changed();
       });
     });
 
@@ -942,7 +958,7 @@
     times.forEach(function (inp) {
       inp.addEventListener('change', function () {
         var v = parseTime(inp.value);
-        if (h.hasTrack() && v != null) { setEdge(inp.dataset.edge, v, 'slide'); h.changed(); }
+        if (h.hasTrack() && v != null) { setEdge(inp.dataset.edge, v, 'slide'); changed(); }
         syncTimes(true);
       });
       inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); inp.blur(); } });
@@ -1028,11 +1044,11 @@
     function setPick(p) {
       var was = h.crossfade();
       stopGlide();
-      h.setTrim(p.start, p.end);
+      setTrim(p.start, p.end);
       setFade(p.ms);
-      if (p.tempo && h.setTempo) h.setTempo(p.tempo);
+      if (p.tempo && h.setTempo) setTempo(p.tempo);
       h.refresh();
-      h.changed();
+      changed();
       if (was !== p.ms) rejoin();
     }
     // On a new song, from each editor's add (never a restore): today's pick at
@@ -1042,7 +1058,8 @@
       forgetEars();
       var p = pickNow();
       if (!p || !h.hasTrack()) return null;
-      setPick(p);
+      // where a new song starts: not a step
+      quietly(function () { setPick(p); });
       pickedNew = p;
       if (!global.SkriblEars) return p;
       if (h.buffer && h.buffer()) listenTo(h.buffer());
@@ -1055,19 +1072,19 @@
       var tp = tempo(), p = pickedNew && isPick(pickedNew) && !(tp && !tp.heard) ? pickNow() : null;
       if (p && p.tempo) {
         pickedNew = p;
-        if (h.setTempo) h.setTempo(p.tempo);
-        setFade(p.ms);
-        glideTo(p.start, p.end);
+        // Skribl's own: where the song starts, not a step
+        quietly(function () {
+          if (h.setTempo) setTempo(p.tempo);
+          setFade(p.ms);
+        });
+        glideTo(p.start, p.end, null, true);
       }
       // what applyPick held back: the loop is as long as the drawing
       if (p && p.fits && h.fitted) h.fitted();
       sync();
     }
-    var undo = null, undoT = null;
-    function forgetUndo() { undo = null; clearTimeout(undoT); }
-    // Any change made here to the loop: an Undo of the way back is stale, and
-    // a settle still gliding would undo the change.
-    function touched() { stopGlide(); if (undo) { forgetUndo(); syncLength(); } retime(); }
+    // Any change made here to the loop: a settle still gliding would undo it.
+    function touched() { stopGlide(); retime(); }
     /* ---- The one line: "4.00s · 8 beats · fits your drawing". What is heard
      * each time round, to the hundredth; the beats once there is a tempo;
      * against the drawing once there is one. A loop that was the pick and is
@@ -1108,7 +1125,7 @@
      * unless that would run it past the song's end (it was Match Drawing
      * Time). Whole song: the song from its top, or the longest loop there is
      * when the song is longer than that. */
-    var pickCard = $('musicPickCard'), pickSub = $('musicPickSub'), undoBtn = $('musicPickUndo');
+    var pickCard = $('musicPickCard'), pickSub = $('musicPickSub');
     var fit = $('matchDrawingBtn'), fitSub = $('musicFitSub');
     var whole = $('musicWholeBtn'), wholeName = $('musicWholeName'), wholeSub = $('musicWholeSub');
     // `chosen`: the card pressed last, lit while it is still the loop, for
@@ -1156,70 +1173,182 @@
         if (wholeName) wholeName.textContent = all || !ok ? 'Whole song' : 'Longest loop';
         if (wholeSub) wholeSub.textContent = !ok ? '' : all ? says(d) + 's' : 'the first ' + says(longest) + 's';
       }
-      if (undoBtn) undoBtn.hidden = !undo;
-    }
-    // The loop as Undo puts it back, and what a change that offers Undo
-    // leaves to undo, for UNDO_MS.
-    function state() {
-      var t = loopNow();
-      return { start: t.start, end: t.end, ms: h.crossfade(), tempo: h.tempo ? h.tempo() : null, pick: beatsPick };
-    }
-    function remember(was) {
-      undo = was;
-      clearTimeout(undoT);
-      undoT = setTimeout(function () { undo = null; syncLength(); }, UNDO_MS);
-      sync();
     }
     // The way back: Skribl's pick, tapped while the loop is not it. The card
-    // stays where it is, and the Undo shows under the beats.
+    // stays where it is, and the loop's Undo takes the way back back.
     if (pickCard) pickCard.addEventListener('click', function () {
       if (pickCard.disabled || litNow === 'pick') return;
-      var was = state(), p = h.hasTrack() ? pickNow() : null;
+      var p = h.hasTrack() ? pickNow() : null;
       if (!p) return;
       choose('pick');
       // the loop is the pick already (pressed after Whole song on a short
-      // song): it lights, and there is nothing to undo
+      // song): it lights, and nothing changes
       if (isPick(p) || isPick(beatsPick)) { sync(); return; }
       setPick(p);
-      remember(was);
+      sync();
     });
-    if (undoBtn) undoBtn.addEventListener('click', function () {
-      if (!undo) return;
-      var u = undo, was = h.crossfade();
-      forgetUndo();
-      chosen = null;
+
+    /* ---- UNDO AND REDO, the loop's own (the owner, of the timeline:
+     * "sometimes when I go to drag something I move the whole waveform.
+     * shouldn't there be an undo button on the editor (just to go back to
+     * what it was before) and maybe a redo button too?"; of the Undo, reach
+     * and Repeat page, "All yes"). At the end of the one line, in a box like
+     * the zoom's. Every change to the loop is a step: what the loop was when
+     * the change began, kept once it has landed. An end let go and settled
+     * on the beat, the song slid, a tap on the whole song, a Length card,
+     * Beats, the beat tapped or its bar, a smooth restart or a clean cut, Cut
+     * on silence, a nudge, a typed time. However far a drag goes, and however
+     * often a held finger moves the slider, it is one step, and a settle's
+     * glide is the change that started it. Undo puts the loop back as it was:
+     * its ends, its restart, its cut and its beat; Redo takes it again; a
+     * change after an Undo starts afresh, and what Redo held goes. Not steps:
+     * how it is looked at (the zoom, the taller box), Snap to the beat and
+     * Lock the length, which say how the next change is made and stay as they
+     * are when a step comes back, and what Skribl does on its own (a new
+     * song's pick, and the one it glides to once it has listened: where the
+     * song starts). A new song starts a new history; a song the bin takes
+     * away takes its history with it, and brings it back (THE BIN, below). It
+     * took over from the Length door's Undo, which offered the way back from
+     * Skribl's pick or Beats for eight seconds. */
+    var past = [], ahead = [], pending = null, gliding = null, holding = false, quiet = 0;
+    var undoBtn = $('musicUndo'), redoBtn = $('musicRedo');
+    // The loop as a step keeps it. The magnet is not the loop's: a step put
+    // back keeps Snap to the beat as it is now.
+    function stepNow() {
+      var t = loopNow(), tp = h.tempo ? h.tempo() : null, o = tp ? copyOf(tp) : null;
+      if (o) delete o.snap;
+      return { start: t.start, end: t.end, ms: h.crossfade(), cut: !!(h.cut && h.cut()), tempo: o, pick: beatsPick, chosen: chosen };
+    }
+    function sameTempo(a, b) {
+      if (!a || !b) return !a && !b;
+      return a.bpm === b.bpm && a.phase === b.phase && !!a.heard === !!b.heard && a.by === b.by && a.bar === b.bar && a.barBy === b.barBy;
+    }
+    function sameStep(a, b) { return near(a.start, b.start) && near(a.end, b.end) && a.ms === b.ms && a.cut === b.cut && sameTempo(a.tempo, b.tempo); }
+    // A change begins: what the loop was is held until the change lands.
+    function before() { if (!quiet && !pending && h.hasTrack()) pending = stepNow(); }
+    function setTrim(s, e) { before(); h.setTrim(s, e); }
+    function setTempo(tp) { before(); h.setTempo(tp); }
+    function setCut(on) { before(); h.setCut(on); }
+    function quietly(fn) { quiet++; try { return fn(); } finally { quiet--; } }
+    // A step kept: what the loop was, when it is not that now. A change after
+    // an Undo starts afresh, and what Redo held goes.
+    function keep(was, now) {
+      if (!h.hasTrack() || sameStep(now, was)) return;
+      past.push(was);
+      if (past.length > STEPS) past.shift();
+      ahead = [];
+    }
+    // It landed: a step. Not while a settle glides there or a finger is
+    // still down.
+    function commit() {
+      if (holding || aim || !pending) { syncUndo(); return; }
+      var was = pending;
+      pending = null;
+      gliding = null;
+      keep(was, stepNow());
+      syncUndo();
+    }
+    // Every change ends here: kept as a step, then the editor's autosave.
+    function changed() { commit(); h.changed(); }
+    function forgetSteps() { past = []; ahead = []; pending = null; gliding = null; syncUndo(); }
+    function syncUndo() {
+      var ok = h.hasTrack(), u = !(ok && past.length > 0), r = !(ok && ahead.length > 0);
+      if (undoBtn && undoBtn.disabled !== u) undoBtn.disabled = u;
+      if (redoBtn && redoBtn.disabled !== r) redoBtn.disabled = r;
+    }
+    // A step put back as Skribl's pick puts one: the loop, its restart, its
+    // cut and its beat (with the magnet as it is), Beats' count and the card
+    // that was lit.
+    function putStep(st) {
+      var was = h.crossfade(), cutWas = !!(h.cut && h.cut());
       stopGlide();
-      h.setTrim(u.start, u.end);
-      setFade(u.ms);
-      if (h.setTempo && u.tempo !== (h.tempo ? h.tempo() : null)) h.setTempo(u.tempo);
-      beatsPick = u.pick;
+      quietly(function () {
+        h.setTrim(st.start, st.end);
+        setFade(st.ms);
+        if (h.setCut && cutWas !== st.cut) h.setCut(st.cut);
+        if (h.setTempo) {
+          var cur = h.tempo ? h.tempo() : null, tp = st.tempo ? copyOf(st.tempo) : null;
+          if (tp && cur && cur.snap === false) tp.snap = false;
+          if (!sameTempo(cur, tp)) h.setTempo(tp);
+        }
+      });
+      beatsPick = st.pick;
+      chosen = st.chosen;
       h.refresh();
       h.changed();
-      if (was !== u.ms) rejoin();
+      if (was !== st.ms || cutWas !== st.cut) rejoin();
       sync();
-      // The Undo goes as it is used: focus is not lost, it goes to the way back.
-      if (pickCard && !pickCard.disabled) pickCard.focus();
+    }
+    // Undo or Redo while a settle still glides: it lands first, as a step.
+    function land() {
+      if (!aim) return;
+      var a = aim;
+      stopGlide();
+      h.setTrim(a[0], a[1]);
+      h.refresh();
+      changed();
+    }
+    function undoStep() { land(); if (!past.length || !h.hasTrack()) return; ahead.push(stepNow()); putStep(past.pop()); }
+    function redoStep() { land(); if (!ahead.length || !h.hasTrack()) return; past.push(stepNow()); putStep(ahead.pop()); }
+    [[undoBtn, undoStep, redoBtn], [redoBtn, redoStep, undoBtn]].forEach(function (pr) {
+      if (pr[0]) pr[0].addEventListener('click', function () {
+        if (pr[0].disabled) return;
+        pr[1]();
+        // Focus stays with the pair: on the other one when this has nothing left.
+        if (pr[0].disabled && pr[2] && !pr[2].disabled) pr[2].focus();
+      });
     });
+    // A finger held on the drawer is one step, however many changes it makes
+    // on the way; kept once it lifts, after the controls have had the lift
+    // (a let-go settles first, and its glide lands as the same step).
+    if (detail) detail.addEventListener('pointerdown', function () { holding = true; }, true);
+    function lift() { if (!holding) return; holding = false; setTimeout(commit, 0); }
+    document.addEventListener('pointerup', lift, true);
+    document.addEventListener('pointercancel', lift, true);
+    global.addEventListener('blur', lift);
+
+    /* ---- THE BIN (the owner, of the Undo, reach and Repeat page: "All yes";
+     * it took the song away at once, with no way back). Each editor's bin
+     * hands its song over as it goes: put() puts it back as it was, drop()
+     * takes it away again (the bin's own removal, which offers this again).
+     * The note says so with an Undo, in New Skribl's words and order
+     * (lib/newundo.js): Undo brings the song back with its loop and its
+     * history and says "Song restored" with a Redo. Another song or another
+     * drawing in by then, there is nothing to bring back, and it says so. */
+    function binned(song) {
+      if (!song || !h.say) return;
+      var kp = past, ka = ahead;
+      past = []; ahead = []; pending = null;
+      syncUndo();
+      h.say('Song removed', { label: 'Undo', onClick: function () {
+        var ok = !h.hasTrack();   // another song in: this one is not the drawer's now
+        if (ok) { song.put(); ok = h.hasTrack(); }
+        if (!ok) { h.say('Couldn’t restore that'); return; }
+        past = kp; ahead = ka; pending = null;
+        sync();
+        h.say('Song restored', { label: 'Redo', onClick: function () { if (h.hasTrack()) song.drop(); } });
+      } });
+    }
 
     function matchDrawing() {
       var secs = h.drawingSeconds();
       if (!h.hasTrack() || !(secs > 0)) return false;
       var t = h.trim(), len = T.loopLength(secs + h.crossfade() / 1000, t.duration), s = t.start, e = s + len;
       if (e > t.duration) { e = t.duration; s = Math.max(0, e - len); }
-      h.setTrim(s, e);
+      setTrim(s, e);
       touched();
       h.refresh();
-      h.changed();
+      changed();
       return true;
     }
     if (fit) fit.addEventListener('click', function () { if (matchDrawing()) { choose('fit'); sync(); } });
     if (whole) whole.addEventListener('click', function () {
       if (!h.hasTrack()) return;
       choose('whole');
-      h.setTrim(0, Math.min(h.trim().duration, T.MAX_LOOP_SECONDS));
+      setTrim(0, Math.min(h.trim().duration, T.MAX_LOOP_SECONDS));
       touched();
       h.refresh();
-      h.changed();
+      changed();
     });
 
     /* ---- Hear the loop and Test Seam. --------------------------------------
@@ -1612,9 +1741,9 @@
         // and the bar, and who set it: taps tell the beat, not how many make a bar
         if ((was ? inBar(was) : earsHeard ? earsHeard.bar : 4) === 3) next.bar = 3;
         if (was && was.barBy) next.barBy = was.barBy;
-        if (h.setTempo) h.setTempo(next);
+        if (h.setTempo) setTempo(next);
         tapNote = '';
-        h.changed();
+        changed();
       } else tapNote = taps.length ? 'Four taps or more, in time with the music.' : '';
       taps = [];
       sync();
@@ -1699,11 +1828,11 @@
     if (beatsSeg) beatsSeg.addEventListener('click', function (ev) {
       var b = ev.target && ev.target.closest && ev.target.closest('button[data-beats]'), c = b ? +b.dataset.beats : 0;
       if (!b || b.disabled || !h.hasTrack() || !tempo() || c === countOf()) return;
-      var t = loopNow(), was = state(), P = ours() ? repick(c, t) : null, s, e;
+      var t = loopNow(), P = ours() ? repick(c, t) : null, s, e;
       if (P) {
         // a pick's smooth restart, which what is playing takes at once
         if (h.crossfade() !== P.ms) { setFade(P.ms); rejoin(); }
-        if (h.setTempo) h.setTempo(P.tempo);
+        if (h.setTempo) setTempo(P.tempo);
         s = P.start; e = P.end;
         beatsPick = { start: s, end: e, ms: P.ms };
         choose('pick');
@@ -1713,7 +1842,7 @@
         if (s + len > t.duration + EPS) s = Math.max(0, s - Math.ceil((s + len - t.duration) / p - 1e-9) * p);
         e = s + len;
       }
-      glideTo(s, e, function () { remember(was); });
+      glideTo(s, e);
     });
 
     // Snap to the beat, the magnet by the zoom (the template's SNAP TO THE
@@ -1742,8 +1871,8 @@
       // Where the beat came from goes with it, heard or set by the end.
       var n = copyOf(tp);
       if (tp.snap !== false) n.snap = false; else delete n.snap;
-      h.setTempo(n);
-      h.changed();
+      setTempo(n);
+      changed();
       sync();
     });
 
@@ -1776,9 +1905,9 @@
       var n = copyOf(tp);
       if (k === 3) n.bar = 3; else delete n.bar;
       if (earsHeard && earsHeard.bar === k) delete n.barBy; else n.barBy = 'you';
-      h.setTempo(n);
+      setTempo(n);
       h.refresh();
-      h.changed();
+      changed();
       sync();
     });
 
@@ -1790,6 +1919,7 @@
     var cf = $('crossfadeSlider'), cfVal = $('crossfadeVal');
     var smooth = $('musicSmooth'), smoothSub = $('musicSmoothSub'), lastFade = PICK_FADE_MS;
     function setFade(ms) {
+      before();
       h.setCrossfade(ms);
       if (ms > 0) lastFade = ms;
       syncCrossfade();
@@ -1816,7 +1946,7 @@
       setFade(ms);
       touched();
       h.refresh();          // the amber crossfade bands follow it
-      h.changed();
+      changed();
       rejoin();
     }
     if (cf) {
@@ -1857,10 +1987,10 @@
     }
     if (cutSw) cutSw.addEventListener('click', function () {
       if (!h.hasTrack() || !h.setCut) return;
-      h.setCut(!h.cut());
+      setCut(!h.cut());
       touched();
       h.refresh();
-      h.changed();
+      changed();
       rejoin();
     });
 
@@ -1924,6 +2054,7 @@
       syncBar();
       syncCut();
       syncRvHint();
+      syncUndo();
       doorWords();
       if (tl) tl.draw();
       if (rv) rv.draw();
@@ -1938,7 +2069,8 @@
       playhead: function (t) { if (t == null) { if (tl) tl.playhead(null); if (rv) rv.playhead(null); } else showAt(t); },
       previewing: function () { return pv.on; },
       door: function () { return open; },
-      tempo: tempo
+      tempo: tempo,
+      binned: binned
     };
   }
 

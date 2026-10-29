@@ -6764,7 +6764,32 @@ function resetMusicView(){ if(musicDrawer) musicDrawer.resetView(); }
 
 // upload / toggle / remove
 musicUploadBtn.addEventListener('click',(e)=>{ if(e.target.closest('.dropzone-remove')||e.target.closest('.layer-toggle')) return; if(!musicUploadBtn.classList.contains('loaded')) musicInput.click(); });
-musicRemove.addEventListener('click',(e)=>{ e.stopPropagation(); removeMusic(); });
+// THE BIN'S WAY BACK, as the Pad's (editor_music.js, which says why): the
+// person's own tap on the bin offers an Undo that puts the song back as it
+// was, its loop and the loop's own Undo with it (lib/musicdrawer.js binned);
+// the next save writes it again. New Skribl's clear calls removeMusic itself,
+// and has its own Undo.
+let flipBinAgain = false;
+function putMusicBack(k){
+  if(musicData || k.gen!==flipDocGen) return;
+  musicSelectionSeq++;   // a decode still on its way belongs to another song
+  musicData=k.data; musicName=k.name; currentAudioBuffer=k.buffer; audioDuration=k.duration; trimStart=k.start; trimEnd=k.end;
+  loopCrossfadeMs=k.ms; musicTempo=k.tempo; loopCutOnSilence=k.cut; musicEnabled=k.enabled; audioEl=null; musicFresh=false;
+  setCrossfadeUI(); syncMediaUI(); scheduleSave();
+}
+function binMusicAgain(){
+  flipBinAgain = true;
+  try{ if(window.SkriblPendingCards && window.SkriblPendingCards.removeNow) window.SkriblPendingCards.removeNow('music'); else musicRemove.click(); }
+  finally{ flipBinAgain = false; }
+}
+musicRemove.addEventListener('click',(e)=>{ e.stopPropagation();
+  const kept = (e.isTrusted || flipBinAgain) && musicDrawer && musicData && currentAudioBuffer && audioDuration>0
+    ? { data:musicData, name:musicName, buffer:currentAudioBuffer, duration:audioDuration, start:trimStart, end:trimEnd,
+        ms:loopCrossfadeMs, tempo:musicTempo, cut:loopCutOnSilence, enabled:musicEnabled, gen:flipDocGen }
+    : null;
+  removeMusic();
+  if(kept) musicDrawer.binned({ put:()=>putMusicBack(kept), drop:binMusicAgain });
+});
 // Flip had no drag-and-drop at all; the empty rows now say "or drop one here".
 // A drop anywhere on the media card goes to the open drawer's input once it is
 // the right kind of file (lib/pendingcards.js bindDrops, shared with the Pad):

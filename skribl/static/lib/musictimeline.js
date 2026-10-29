@@ -38,6 +38,13 @@
  * EACH END IS A LINE WITH A TAB AT ITS FOOT (styles.css): nothing over the
  * wave beside the line, where the music starts. The line is about 1.5px and
  * sharp, on the screen's own pixels (edge, below).
+ * AN END REACHES 32px EITHER SIDE OF ITS LINE AND 26px BELOW ITS TAB (the
+ * owner: "sometimes when I go to drag something I move the whole waveform";
+ * of the Undo, reach and Repeat page, "All yes"). It was 22px and 12px, and
+ * just past that, beside the tab, was the whole song's line, where a tap
+ * jumps the loop: the row of tabs is the ends' now, a near miss there moves
+ * nothing, and the whole song's line takes a press on its own row. Where the
+ * two ends are close, a press that reaches both takes the nearer (grab).
  *
  * THE FRAMING: 1.28 times the longer of the loop and the drawing, the
  * drawing counted up to three loops (a two-hour piece would make the loop a
@@ -725,11 +732,20 @@
     }
 
     /* ---- Fingers. ---------------------------------------------------------- */
+    // The end whose line is nearer the finger, when the press reaches both:
+    // the one on top was the end, however close the start's line was.
+    function nearer(hd, x) {
+      var o = hd === hs ? he : hd === he ? hs : null;
+      if (!o || o.classList.contains('off')) return hd;
+      var a = hd.getBoundingClientRect(), b = o.getBoundingClientRect();
+      return Math.abs(b.left + b.width / 2 - x) < Math.abs(a.left + a.width / 2 - x) ? o : hd;
+    }
     function grab(e) {
       if (!h.hasTrack() || !view) return null;
       if (e.touches && e.touches.length > 1) return pinch(e);
       var pt = EP.at(e), r = rect(), y = pt.clientY - r.top, hd = e.target.closest && e.target.closest('.mt-tl-handle');
       if (!hd && y < laneH + GAP / 2) return null;                 // the drawing stays put
+      if (hd) hd = nearer(hd, pt.clientX);
       var touch = e.type === 'touchstart';
       if (hd || !touch) e.preventDefault();
       var g = { kind: hd ? 'end' : 'slide', which: hd ? hd.dataset.which : null, x: pt.clientX, y0: pt.clientY,

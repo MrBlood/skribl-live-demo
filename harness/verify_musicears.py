@@ -34,8 +34,8 @@ rain has sounds on most beats but gathers round no circle.
   chords, a tone, a sweep, rain) the pick is today's, the first 20 seconds,
   no beat is set, and the beat line says Skribl didn't hear one. A loop
   moved, or a beat tapped, before Skribl has listened stays as it is. Back to
-  Skribl's pick goes to the heard pick and beat, and its Undo brings back the
-  loop and the beat that were there.
+  Skribl's pick goes to the heard pick and beat, and the loop's Undo brings
+  back the loop and the beat that were there.
 
   THE PAD'S LENGTH. With a drawing, whole bars nearest it (the owner's pick):
   a 7-second drawing gets 16 beats.
@@ -108,7 +108,7 @@ STATE = """() => { const tl = document.getElementById('musicTimeline'), p = tl &
            line: (document.getElementById('musicPickText') || {}).textContent || '',
            tag: ((c) => !!c && c.getAttribute('aria-pressed') === 'true')(document.getElementById('musicPickCard')),
            back: ((c) => !!c && c.getAttribute('aria-pressed') !== 'true' && !c.disabled)(document.getElementById('musicPickCard')),
-           undo: !(document.getElementById('musicPickUndo') || { hidden: true }).hidden,
+           undo: !(document.getElementById('musicUndo') || { disabled: true }).disabled,
            beat: (document.getElementById('musicTempo') || {}).textContent || '', beatIn: p ? p.beatIn : null }; }"""
 # Every animation frame from now: the loop's ends, how far the marks have
 # faded in, and the beat line's words (the glide, the fade and "Listening").
@@ -193,9 +193,9 @@ def length_door(q):
 
 
 def tap(q, sel):
-    """A real click on a count of Beats (or on Skribl's pick, or on Undo), in
-    the Length door, then the glide: a control a broken build hides makes a
-    row say so in red, not a timeout."""
+    """A real click on a count of Beats (or on Skribl's pick, or on the loop's
+    Undo), with the Length door open, then the glide: a control a broken
+    build hides makes a row say so in red, not a timeout."""
     length_door(q)
     try:
         q.click(sel if str(sel).startswith("#") else f'#musicBeatsSeg button[data-beats="{sel}"]', timeout=3000)
@@ -362,7 +362,7 @@ with sync_playwright() as p:
               a8["tag"] and not a8["back"] and a8["undo"] and len(way) >= 3 and all(f[2] and not f[3] for f in after),
               f"tag {a8['tag']}, the way back {a8['back']}, Undo {a8['undo']}; {len(way)} frames on the way, "
               f"{sum(1 for f in after if not f[2] or f[3])} of {len(after)} without the tag or with the way back")
-        tap(q, "#musicPickUndo")
+        tap(q, "#musicUndo")
         u = q.evaluate(STATE)
         check(f"{name}: Undo brings back the pick's 32 beats and their beat",
               abs(u["s"] - st["s"]) < 1e-9 and abs(u["e"] - st["e"]) < 1e-9 and u["tempo"] == st["tempo"] and u["tag"] and not u["back"],
@@ -375,7 +375,7 @@ with sync_playwright() as p:
         check(f"{name}: longer, 16 from that 8 is around it and keeps its start, where it joins as well, 16 of the song's beats long within 10ms",
               abs(a16["s"] - e8["s"]) < 1e-9 and a16["e"] >= e8["e"] - 1e-6 and want16 is not None and abs(L16 - want16) <= 0.010 and a16["tag"],
               f"the 8 {e8['s']:.4f}-{e8['e']:.4f}; 16: {a16['s']:.4f}-{a16['e']:.4f}, heard {L16:.4f}s against {want16}, tag {a16['tag']}")
-        tap(q, "#musicPickUndo")
+        tap(q, "#musicUndo")
         u8 = q.evaluate(STATE)
         check(f"{name}: and Undo of it brings back the 8, still Skribl's pick",
               abs(u8["s"] - e8["s"]) < 1e-9 and abs(u8["e"] - e8["e"]) < 1e-9 and u8["tag"] and not u8["back"],
@@ -422,9 +422,9 @@ with sync_playwright() as p:
         check(f"{name}: a loop moved before Skribl has listened stays where it was put, and no beat is set",
               abs(st["s"] - before["s"]) < 1e-6 and abs(st["e"] - 12.5) < 1e-6 and st["tempo"] is None,
               f"loop {st['s']:.3f}-{st['e']:.3f}, tempo {st['tempo']}")
-        # and the way back (Skribl's pick, in the Length door), then its Undo
-        # (each offered only when it applies: a broken build that moved the
-        # loop anyway offers neither, and says so here)
+        # and the way back (Skribl's pick, in the Length door), then the loop's
+        # Undo (each offered only when it applies: a broken build that moved
+        # the loop anyway offers neither, and says so here)
         length_door(q)
         offered = q.evaluate(STATE)["back"]
         if offered:
@@ -433,11 +433,11 @@ with sync_playwright() as p:
         check(f"{name}: the way back goes to the heard pick, with the beat heard",
               offered and abs(back["s"] - T["drums"][0]) <= 0.010 and (back["tempo"] or {}).get("heard") is True,
               f"offered {offered}; loop {back['s']:.3f}-{back['e']:.3f}, tempo {back['tempo']}")
-        offered = q.is_visible("#musicPickUndo")
+        offered = q.is_enabled("#musicUndo")
         if offered:
-            q.click("#musicPickUndo"); waits.settle(q, 600)
+            q.click("#musicUndo"); waits.settle(q, 600)
         und = q.evaluate(STATE)
-        check(f"{name}: and its Undo brings back the loop and the beat that were there (none)",
+        check(f"{name}: and the loop's Undo brings back the loop and the beat that were there (none)",
               offered and abs(und["s"] - before["s"]) < 1e-6 and abs(und["e"] - 12.5) < 1e-6 and und["tempo"] is None,
               f"offered {offered}; loop {und['s']:.3f}-{und['e']:.3f}, tempo {und['tempo']}")
         c.close()

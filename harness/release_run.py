@@ -243,7 +243,7 @@ BATCHES = [
     ["verify_flipedges.py", "verify_words.py"],
     ["verify_viewedges.py"],               # store — posts public fixtures to the shared server, which verify_gallery and verify_hot count
     ["verify_music.py"],                   # measures — a preview's playhead over time, on both editors
-    ["verify_musicdoors.py"],              # measures — a door's tile read on every frame, an Undo's eight seconds
+    ["verify_musicdoors.py"],              # measures — a door's tile read on every frame
     ["verify_musicbeat.py"],               # measures — taps timed on the page's clock, a loop's next time round
     # Steps 4 and 5 of the whole-drawer mock, out of verify_musicbeat, which
     # went past run_harness.sh's ten minutes a suite on CI with the click.

@@ -107,6 +107,7 @@ musicInput.addEventListener('change', async (e) => {
   const decodeErr = await skriblDecodeCheckAudio(file);
   if (seq !== musicSelectionSeq) return;          // superseded or removed mid-decode
   if (decodeErr) { showToast(decodeErr, musicUploadBtn); musicInput.value = ''; return; }
+  forgetBinned();   // the bin's Undo is for the song before this one
   if (audioEl && audioEl._objectUrl) URL.revokeObjectURL(audioEl._objectUrl);
   const url = URL.createObjectURL(file);
   audioEl = new Audio(url);
@@ -211,15 +212,62 @@ musicInput.addEventListener('change', async (e) => {
 // the server would refuse at post time. (Review round 5, #3)
 function validateMusicFile(file) { return window.SkriblMedia.validateAudioFile(file); }
 
+// THE BIN'S WAY BACK (the owner, of the Undo, reach and Repeat page: "All
+// yes"). A tap on the bin takes the song away at once, and the note under the
+// header says so with an Undo, which puts it back as it was: the song, its
+// loop, the loop's own Undo (lib/musicdrawer.js binned) and its bytes in the
+// draft's store (editor_draft.js padMediaBack). Only the person's own tap
+// offers it: New Skribl clears the song with everything else and has its own
+// Undo. A song still being read has nothing whole to put back, and goes as
+// before. The song's element is kept, its address with it, until another song
+// comes.
+let binnedAudio = null, binAgain = false;
+function forgetBinned() {
+  if (binnedAudio && binnedAudio !== audioEl && binnedAudio._objectUrl) URL.revokeObjectURL(binnedAudio._objectUrl);
+  binnedAudio = null;
+}
+function putSongBack(k) {
+  if (audioEl || binnedAudio !== k.audio || k.seq !== skriblLoadSeq) return;
+  binnedAudio = null;
+  musicSelectionSeq++;   // a decode still on its way belongs to another song
+  audioEl = k.audio; audioDuration = k.duration; trimStart = k.start; trimEnd = k.end; currentAudioBuffer = k.buffer;
+  loopCrossfadeMs = k.ms; musicTempo = k.tempo; loopCutOnSilence = k.cut; musicEnabled = k.enabled;
+  syncLayerToggle(document.getElementById('musicToggle'), musicEnabled);
+  musicDetail.hidden = false;
+  musicUploadBtn.classList.add('loaded');
+  musicTabDot.hidden = false;
+  document.getElementById('musicRemove').hidden = false;
+  setCrossfadeUI();
+  updateTrimUI();
+  padMusicRow();
+  syncMusicDrawer();
+  if (typeof padMediaBack === 'function') padMediaBack('music', k.file, audioEl._draftData, audioEl._fileName);
+  if (typeof scheduleAutosave === 'function') scheduleAutosave();
+}
+// Redo: the bin again, past its question, and its note again.
+function binSongAgain() {
+  binAgain = true;
+  try {
+    if (window.SkriblPendingCards && window.SkriblPendingCards.removeNow) window.SkriblPendingCards.removeNow('music');
+    else musicRemove.click();
+  } finally { binAgain = false; }
+}
 musicRemove.addEventListener('click', (e) => {
   musicSelectionSeq++;   // a pending decode must not restore what was just removed
   e.stopPropagation();
   stopLoopPreview();
   if (typeof pendingMusicMeta !== 'undefined') pendingMusicMeta = null;
   { const c = document.getElementById('musicPending'); if (c) c.hidden = true; }
+  const kept = (e.isTrusted || binAgain) && padDrawer && audioEl && audioEl._draftData && currentAudioBuffer
+    ? { audio: audioEl, duration: audioDuration, start: trimStart, end: trimEnd, buffer: currentAudioBuffer,
+        ms: loopCrossfadeMs, tempo: musicTempo, cut: loopCutOnSilence, enabled: musicEnabled, seq: skriblLoadSeq,
+        file: typeof padMediaFile === 'function' ? padMediaFile('music') : null }
+    : null;
+  forgetBinned();
   if (audioEl) {
     audioEl.pause();
-    if (audioEl._objectUrl) URL.revokeObjectURL(audioEl._objectUrl);
+    if (kept) binnedAudio = audioEl;
+    else if (audioEl._objectUrl) URL.revokeObjectURL(audioEl._objectUrl);
     audioEl = null;
   }
   musicDetail.hidden = true;
@@ -233,6 +281,7 @@ musicRemove.addEventListener('click', (e) => {
   musicTempo = null;
   loopCutOnSilence = false;
   syncMusicDrawer();
+  if (kept) padDrawer.binned({ put: () => putSongBack(kept), drop: binSongAgain });
 });
 
 // ---- Play's music loop ---------------------------------------------------
