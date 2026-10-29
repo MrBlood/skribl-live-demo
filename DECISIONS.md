@@ -25529,3 +25529,42 @@ WHAT IT DOES TO FLIP: not for Flip, whose Play already goes round until it
 is stopped and whose Loop repeats a stretch of pages. Posts unchanged.
 
 Not tested here: an iPhone's WebKit, SF and Segoe UI.
+
+## After v329 -- verify_a11y in two, at its 600-second budget
+
+MAIN WENT RED AFTER #663 ON ONE SHARD OF TWELVE: the PostgreSQL job's 6/6,
+where run_harness.sh stops a suite at 600 seconds. verify_a11y was stopped
+there with every check it had reached passing (exit 124). It took 476 seconds
+on #662's run and 520 on #663's SQLite shard; here, alone, 652 for its 595.
+It had been creeping up on the budget for a while, and Repeat's rows were the
+last of it. Raising the budget would only move the next red.
+
+SO IT IS TWO SUITES, the way verify_watchfull.py left verify_parity.py at the
+v323 seal. verify_a11y.py keeps what shares its one browser: the keyboard and
+assistive-technology contracts (sections 0 to 14, NAMES, 10c and 6c).
+Section 6 and the sweeps after it, each of which opens a browser of its own
+(15, 6d, 16, 17, 18, 17b, 19, 20), moved whole to verify_a11ypages.py, with
+the helpers they read (the contrast sums, the one-second WAV, the
+accessibility tree's name). Every line of the old suite is in one of the two
+but the docstring's line for section 6, which the new docstring says again;
+no check changed in what it asks.
+
+ONE THING DID NOT MOVE BY ITSELF: THE GALLERY'S TILE. Section 2 posts a public
+drawing so a gallery tile can open the Report sheet, and in the one suite that
+post was still there when 6d read the Gallery and the feed for small words
+under 4.5:1. Every suite starts on a fresh database, so the new suite read
+them empty: with a tile's title served at #777, 6d passed 10 of 10 on the
+split as first written. verify_a11ypages now makes the same two posts
+verify_a11y had made by then (that public one, and the share link section 18
+reads), and the same faint title goes red on the Gallery in both themes (3.55
+and 4.48:1), green as built.
+
+Registered where suites are: a batch of its own in release_run.py (it
+measures), harness/shard.py (360 and 210 seconds, from the split here until
+CI measures them), harness/README.md, START-HERE's invariants (the four rows
+whose checks moved) and the header-and-dock rule in WORKING-AGREEMENTS.
+
+Here, side by side on fresh servers: verify_a11y 437 of 437 in 6.2 minutes,
+verify_a11ypages 158 of 158 in 3.5, the 595 the one suite passed.
+
+WHAT IT DOES TO FLIP: nothing. Both editors are read as before.
