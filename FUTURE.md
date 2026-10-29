@@ -1397,6 +1397,23 @@ frame Photo, music and Post use. The seven sentences are mocked with the
 speed pill (the page above); a small PR once the owner has said yes; the
 census then walks every control on both editors, not only the tools.
 
+## 6w. Post it on skribls.net (owner's yes, for later: the Post sheet mock)
+
+The owner, of the posted card: "if this sits in a social media site, how do
+you get back to the timeline? ... it just kind of dead ends on the Posted
+card." The card now says what to do next, Back to skribls.net among it,
+when the site has named its home (`home_url`, docs/INTEGRATION.md). What it
+cannot do yet is put the drawing on the timeline itself.
+
+**Post it on skribls.net**: a button on the posted card that opens the
+site's composer with this drawing already attached, the way the composer's
+own Skribl button attaches one (docs/SKRIBLS-NET.md, item 4), so it lands
+on the author's timeline with their words. It needs a change on the site's
+side: a composer address that takes a posted drawing's id (a drawing the
+person just posted, never one a link names for someone else), and Skribl's
+card shown only when the site says it has one. Not built; mock it beside
+the posted card as it is when the site is ready.
+
 ## 7. The honest state
 
 The tool is good. It is better than it needs to be for a demo and not yet enough

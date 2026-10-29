@@ -213,7 +213,7 @@ def _signed_in(bp):
         return False
 
 
-def register_security(bp, skribl_version, player_target="_blank"):
+def register_security(bp, skribl_version, player_target="_blank", home=None):
     # --- Content Security Policy ---------------------------------------------
     # Deferred until v105 for a good reason: while gifenc/mp4-muxer came from
     # jsdelivr, any workable policy needed a third-party script-src, and the app
@@ -282,7 +282,10 @@ def register_security(bp, skribl_version, player_target="_blank"):
                 "skribl_drafts_limit": max_drafts(),
                 "skribl_api_base": url_for(".create_skribl"),
                 "skribl_player_base": url_for(".skribl_player", public_id="").rstrip("/"),
-                "skribl_player_target": player_target}
+                "skribl_player_target": player_target,
+                # The site Skribl lives in, when the host named it
+                # (create_blueprint(home_url=...)): {"url", "label"} or None.
+                "skribl_home": home}
 
     @bp.before_request
     def _prepare_csrf():

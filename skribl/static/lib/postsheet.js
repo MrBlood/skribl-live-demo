@@ -52,17 +52,22 @@
     var body = $('postBody');
     var toast = cfg.toast || function () {};
     var lastPostUrl = null, lastPostTitle = '';
-    // The sheet's title says what happened once it has (owner's pick: "Posted!"
-    // as the title, and no progress bar left lying under the buttons).
-    var headEl = sheet ? sheet.querySelector('.export-head') : null;
-    var headText = headEl && headEl.firstChild && headEl.firstChild.nodeType === 3 ? headEl.firstChild : null;
-    var HEAD_IDLE = headText ? headText.nodeValue : '';
-    // And Blooby cheers beside it, the line under it saying who can watch
-    // (_skribl_post.html). Neither is rendered in compose mode.
-    var cheer = $('postCheer');
-    var subEl = $('postSub');
-    var SUB_IDLE = subEl ? subEl.textContent : '';
-    var SUB_POSTED = subEl ? subEl.getAttribute('data-posted') : null;
+    // POSTED!, THE MOMENT (_skribl_post.html): the band, the card, and where
+    // to go next. None of it is rendered in compose mode.
+    var done = $('postDone');
+    var next = $('postNext');
+    var jumpImg = $('postJump');
+    var cardMedia = $('postCardMedia');
+    var cardPic = $('postCardPic');
+    var cardBox = $('postCardPlayer');
+    var cardTitle = $('postCardTitle');
+    var cardCaption = $('postCardCaption');
+    var cardMeta = $('postCardMeta');
+    var homeBtn = $('postHomeBtn');
+    var homeLabel = $('postHomeLabel');
+    var anotherBtn = $('postAnotherBtn');
+    var closeBtn = $('postCloseBtn');
+    var previewBg = null;
     var closeTimer = null;
     var posting = false;
     /* A POST THAT NEVER ANSWERS (v321 preflight, PF-029). The sheet cannot be
@@ -87,11 +92,16 @@
        save never calls setState() at all. */
     function revealStatus() {
       if (!sheet || status.hidden || overlay.hidden) return;
+      // A reason is a card right above Try again (styles.css), so the button
+      // under it comes into view too: the press that fixes it, not half of it.
+      var last = status;
+      if (status.classList.contains('error') && submitBtn.getClientRects().length
+          && submitBtn.getBoundingClientRect().bottom > status.getBoundingClientRect().bottom) last = submitBtn;
       var room = Math.min(sheet.getBoundingClientRect().bottom, window.innerHeight) - 12;
-      var over = status.getBoundingClientRect().bottom - room;
+      var over = last.getBoundingClientRect().bottom - room;
       if (over > 0) sheet.scrollTop += Math.ceil(over);
       // A layout where something other than the sheet scrolls: the browser's own way.
-      if (status.getBoundingClientRect().bottom > window.innerHeight) status.scrollIntoView({ block: 'nearest' });
+      if (last.getBoundingClientRect().bottom > window.innerHeight) last.scrollIntoView({ block: 'nearest' });
     }
     if (status && typeof MutationObserver === 'function') {
       var revealFrame = 0;
@@ -123,9 +133,7 @@
       clearSlow();
       if (state === 'idle') {
         posting = false;
-        if (headText) headText.nodeValue = HEAD_IDLE;
-        if (cheer) cheer.hidden = true;
-        if (subEl) subEl.textContent = SUB_IDLE;
+        unpost();
         status.hidden = true;
         status.classList.remove('error');
         progressFill.style.width = '0%';
@@ -161,6 +169,9 @@
         captionInput.disabled = true;
         if (publicInput) publicInput.disabled = true;
         submitBtn.disabled = true;
+        // The card plays the post in the in-post player: asked for now, so it
+        // is here by the time the server answers.
+        if (done && !still()) loadPlayer().catch(function () {});
       } else if (state === 'success') {
         posting = false;
         progressFill.style.width = '100%';
@@ -230,18 +241,175 @@
       // Share, where the device has a share sheet (v292, SK-AUD-016); a local
       // fallback (#skribl=…) is not a link anyone else can open, so not then.
       if (shareBtn && lastPostUrl && !opts.localOnly && lastPostUrl.charAt(0) !== '#' && navigator.share) shareBtn.hidden = false;
-      // A real post: the title says so and the status line, its job done, goes.
-      // A save on this device only keeps its warning in the status line.
-      if (lastPostUrl && !opts.localOnly && lastPostUrl.charAt(0) !== '#') {
-        if (headText) headText.nodeValue = cfg.compose ? 'Added' : 'Posted!';
-        if (cheer) cheer.hidden = false;
-        if (SUB_POSTED) subEl.textContent = SUB_POSTED;
-        status.hidden = true;
-      }
       // The delete key, when the post came back with one (an anonymous post;
       // a signed-in author's account is their key, and the row is not rendered).
       lastKey = (!opts.localOnly && opts.key) || null;
       if (keyRow) keyRow.hidden = !lastKey;
+      // A real post: the moment, and the status line, its job done, goes. A
+      // save on this device only keeps its warning in the status line, and the
+      // form stays, since Try again posts it.
+      if (lastPostUrl && !opts.localOnly && lastPostUrl.charAt(0) !== '#') {
+        status.hidden = true;
+        posted(opts.payload || null);
+      }
+    }
+
+    /* POSTED!, THE MOMENT (the owner's A from the Post sheet mock). The form
+     * folds away and the sheet glides to its new height while the band, the
+     * card, what to do with it and where to go next rise in, one after another
+     * (styles.css). Blooby jumps once. The card is the post as people will see
+     * it: its picture at once, then the drawing drawing itself, in the
+     * in-post player, from the payload the editor just sent (`payload`). The
+     * Pad's plays once, in about three seconds, and rests on the finished
+     * drawing; a Flip plays twice and rests on its first page. Reduce Motion:
+     * nothing glides, rises or jumps, and the card is the picture. Decided
+     * here, not by a media query: styles.css says why. */
+    function posted(payload) {
+      if (!done || !sheet) return;
+      var title = (lastPostTitle || '').trim() || titleInput.placeholder || 'Untitled Skribl';
+      var caption = (captionInput.value || '').trim();
+      cardTitle.textContent = title;
+      cardCaption.textContent = caption;
+      cardCaption.hidden = !caption;
+      cardMeta.textContent = publicInput && publicInput.checked ? 'In the public gallery' : 'Shared by its link only';
+      if (cardMedia) cardMedia.style.background = previewBg || '';
+      if (cardPic) { if (previewImg.src) cardPic.src = previewImg.src; else cardPic.removeAttribute('src'); }
+      var home = window.SKRIBL_HOME || null;
+      if (homeBtn) {
+        homeBtn.hidden = !(home && home.url);
+        if (home && home.url) homeLabel.textContent = 'Back to ' + home.label;
+      }
+      var had = document.activeElement, rise = !still();
+      glide(function () {
+        sheet.classList.add('is-posted');
+        if (rise) sheet.classList.add('is-rising');
+        done.hidden = false;
+        if (next) next.hidden = false;
+      });
+      if (rise) {
+        // Laid out low and clear, then let go: each part comes up into place.
+        void sheet.offsetHeight;
+        requestAnimationFrame(function () { sheet.classList.remove('is-rising'); });
+      }
+      // The press that posted is gone with the form: focus goes to Watch, as
+      // the next thing to do, so a keyboard is not left on nothing.
+      if (!had || had === document.body || !had.getClientRects().length || had.closest('.post-body, #postSubmitBtn')) {
+        if (watchBtn && !watchBtn.hidden) watchBtn.focus({ preventScroll: true });
+      }
+      jump();
+      playCard(payload);
+    }
+
+    function unpost() {
+      clearTimeout(jumpTimer);
+      clearTimeout(cardTimer);
+      if (cardPlayer) { cardPlayer.settle(); cardPlayer = null; }
+      if (cardBox) cardBox.classList.remove('is-on');
+      if (!sheet) return;
+      sheet.classList.remove('is-posted', 'is-rising', 'is-gliding');
+      sheet.style.height = '';
+      if (done) done.hidden = true;
+      if (next) next.hidden = true;
+    }
+
+    function still() {
+      try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; }
+    }
+
+    /* THE GLIDE: from the height the sheet had to the one it has now, in one
+     * movement (lib/sheetswipe.js's sheet keeps its own transform). */
+    var glideTimer = 0;
+    function glide(change) {
+      var from = sheet.getBoundingClientRect().height;
+      change();
+      if (still() || overlay.hidden || !from) return;
+      var to = sheet.getBoundingClientRect().height;
+      if (Math.abs(to - from) < 1) return;
+      sheet.style.height = from + 'px';
+      void sheet.offsetHeight;
+      sheet.classList.add('is-gliding');
+      sheet.style.height = to + 'px';
+      clearTimeout(glideTimer);
+      glideTimer = setTimeout(function () {
+        sheet.classList.remove('is-gliding');
+        sheet.style.height = '';
+      }, 420);
+    }
+
+    /* BLOOBY JUMPS, his hands in the air: the seven poses of one jump
+     * (brand/blooby-jump.webp, drawn by harness/tools/blooby.py jump, whose
+     * jump_poses() holds these times), then he stays in the last, the cheer
+     * badge's. Under Reduce Motion he is simply there, cheering. */
+    var JUMP_MS = [200, 80, 100, 240, 80, 130];
+    var jumpTimer = 0;
+    function pose(k) { if (jumpImg) jumpImg.style.transform = 'translateX(' + (-k * 100 / 7) + '%)'; }
+    function jump() {
+      clearTimeout(jumpTimer);
+      if (still()) { pose(6); return; }
+      var k = 0;
+      pose(0);
+      (function step() {
+        jumpTimer = setTimeout(function () { pose(++k); if (k < 6) step(); }, JUMP_MS[k]);
+      })();
+    }
+
+    /* THE CARD'S PLAYER: the in-post player (inlineplayer.js), which the
+     * editors do not load, asked for once a post starts going. holdtiming.js
+     * it reads is already on both editors' pages. */
+    var playerComing = null;
+    function loadPlayer() {
+      if (window.SkriblInline) return Promise.resolve();
+      if (playerComing) return playerComing;
+      function get(el, ready) {
+        return new Promise(function (ok, fail) {
+          el.onload = function () { if (ready()) ok(); else fail(); };
+          el.onerror = fail;
+          document.head.appendChild(el);
+        });
+      }
+      var css = document.createElement('link');
+      css.rel = 'stylesheet';
+      css.href = done.getAttribute('data-player-css');
+      var js = document.createElement('script');
+      js.src = done.getAttribute('data-player-js');
+      playerComing = Promise.all([get(css, function () { return true; }),
+                                  get(js, function () { return !!window.SkriblInline; })]);
+      playerComing.catch(function () { playerComing = null; });
+      return playerComing;
+    }
+
+    var cardPlayer = null, cardTimer = 0;
+    function playCard(payload) {
+      if (!payload || !cardBox || still()) return;
+      loadPlayer().then(function () {
+        if (!sheet.classList.contains('is-posted')) return;   // put away meanwhile
+        cardBox.classList.add('is-immersive', 'is-bare');
+        var p = window.SkriblInline.attach(cardBox, payload, { ambient: true });
+        if (!p) return;
+        cardPlayer = p;
+        var tries = 0;
+        (function start() {
+          if (cardPlayer !== p) return;
+          var st = p.state();
+          if (!st.loaded) { if (++tries < 200) cardTimer = setTimeout(start, 50); return; }
+          if (st.kind === 'flip') {
+            // Twice round, then its first page.
+            p.setLoop(true);
+            cardTimer = setTimeout(function () { p.setLoop(false); rest(); }, st.totalMs + 100);
+          } else {
+            p.setLoop(false);
+            p.setRate(Math.max(1, st.totalMs / 3000));
+          }
+          p.seek(0);
+          p.play();
+          cardBox.classList.add('is-on');
+        })();
+        function rest() {
+          if (cardPlayer !== p) return;
+          if (p.state().state === 'playing') { cardTimer = setTimeout(rest, 200); return; }
+          p.seek(0);
+        }
+      }, function () {});
     }
 
     /* THE SOUND MARKER MIRRORS THE TOOLBAR, IT DOES NOT RE-DECIDE.
@@ -313,6 +481,8 @@
       // canvas, Flip its poster page. Shaped like the drawing so it shows whole
       // (no crop), on the drawing's own ground so there are never odd bars.
       var preview = cfg.preview ? cfg.preview() : null;
+      previewBg = preview ? preview.bg || null : null;
+      if (jumpImg && !jumpImg.getAttribute('src')) jumpImg.src = jumpImg.getAttribute('data-src');
       if (preview && preview.src) {
         previewImg.src = preview.src;
         if (previewFrame) {
@@ -339,6 +509,9 @@
       // where they were instead of on <body>.
       if (window.SkriblModal) window.SkriblModal.close(sheet || overlay);
       overlay.classList.remove('open');
+      clearTimeout(jumpTimer);
+      clearTimeout(cardTimer);
+      if (cardPlayer) cardPlayer.pause();
       if (sheet) sheet.style.maxHeight = '';
       overlay.style.top = ''; overlay.style.bottom = ''; overlay.style.height = '';
       closeTimer = setTimeout(function () { overlay.hidden = true; }, 350);
@@ -408,8 +581,11 @@
         // Always in place: there is no server URL to open in a tab.
         location.hash = lastPostUrl;
         location.reload();
-      } else if ((window.SKRIBL_PLAYER_TARGET || '_blank') === '_self') {
+      } else if ((window.SKRIBL_PLAYER_TARGET || '_blank') === '_self'
+                 || document.documentElement.hasAttribute('data-skribl-app')) {
         // The host routes the player itself; navigate in place as it asked.
+        // So does Skribl on the Home Screen (lib/homescreen.js marks it): a
+        // new tab there leaves the app for Safari, with no way back to it.
         location.href = lastPostUrl;
       } else {
         // Default. This used to be location.href unconditionally, which inside a
@@ -418,6 +594,21 @@
         // take the same target.
         window.open(lastPostUrl, '_blank', 'noopener');
       }
+    });
+
+    if (closeBtn) closeBtn.addEventListener('click', close);
+    // Make another: the sheet goes and the editor's New Skribl runs, with its
+    // own Undo (lib/newundo.js). The post is safe: it is posted, and in the
+    // Library.
+    if (anotherBtn) anotherBtn.addEventListener('click', function () {
+      close();
+      if (cfg.another) cfg.another();
+    });
+    // Back to the site Skribl lives in, which named its home (SKRIBL_HOME,
+    // create_blueprint(home_url=...)). Never a place a query string chose.
+    if (homeBtn) homeBtn.addEventListener('click', function () {
+      var home = window.SKRIBL_HOME;
+      if (home && home.url) location.href = home.url;
     });
 
     // Recompute the keyboard lift when the viewport changes or a field is focused.
@@ -476,16 +667,19 @@
                                     anything was sent (the owner's pick A for
                                     the Pad plan, step 2); hint: what else the
                                     editor knows would help (Flip's generated
-                                    pages), after the backup */
-  var FIRST = 'Couldn\u2019t post. Your drawing is still here';
-  function failure(what, extra) {
-    if (what === 'cancelled') return 'Not posted. Your drawing is still here; Try again sends it.';
-    if (what === 'offline') return FIRST + (extra ? ', saved on this device' : '') + '. Try again when you\u2019re back online.';
-    if (what === 'server') return FIRST + (extra ? ', saved on this device' : '') + '. The server had a problem; try again in a moment.';
-    if (what === 'odd') return FIRST + '. The connection gave a strange answer (a Wi-Fi sign-in page?); try again.';
-    if (what === 'pages') return FIRST + '. ' + extra;
-    if (what === 'long') return FIRST + '. It\u2019s longer than a post can hold, so save it as a file to keep a copy.' + (extra ? ' ' + extra : '');
-    return FIRST + '. ' + (extra || 'The server turned it down.');
+                                    pages), after the backup
+     `noun` is what the editor makes: a drawing, unless it says otherwise.
+     Flip's say animation (the owner's yes on the plain words: "Your
+     animation is still here, saved on this device"). */
+  function failure(what, extra, noun) {
+    var it = 'Your ' + (noun || 'drawing') + ' is still here', first = 'Couldn\u2019t post. ' + it;
+    if (what === 'cancelled') return 'Not posted. ' + it + '; Try again sends it.';
+    if (what === 'offline') return first + (extra ? ', saved on this device' : '') + '. Try again when you\u2019re back online.';
+    if (what === 'server') return first + (extra ? ', saved on this device' : '') + '. The server had a problem; try again in a moment.';
+    if (what === 'odd') return first + '. The connection gave a strange answer (a Wi-Fi sign-in page?); try again.';
+    if (what === 'pages') return first + '. ' + extra;
+    if (what === 'long') return first + '. It\u2019s longer than a post can hold, so save it as a file to keep a copy.' + (extra ? ' ' + extra : '');
+    return first + '. ' + (extra || 'The server turned it down.');
   }
 
   var api = { attach: attach, failure: failure };

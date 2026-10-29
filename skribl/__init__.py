@@ -32,6 +32,7 @@ its own Alembic setup.
 """
 import hashlib
 import os
+from urllib.parse import urlsplit
 
 from flask import Blueprint, url_for
 
@@ -158,7 +159,8 @@ def build_id(bp):
 def create_blueprint(session=None, url_prefix=None,
                      static_url_path="/static/skribl", current_user_id=None,
                      csrf=None, media_store=None, index_route=False,
-                     player_target="_blank", public_media_cache=False):
+                     player_target="_blank", public_media_cache=False,
+                     home_url=None, home_label=None):
     """Build the Skribl blueprint. See the module docstring for the contract.
 
     `session` is REQUIRED. It defaulted to None, which made the documented
@@ -208,7 +210,18 @@ def create_blueprint(session=None, url_prefix=None,
     setting the global to `_self` and reading the rendered anchor, because with
     the default configured a hardcoded `_blank` and a correct read look
     identical.
+
+    `home_url` is the site Skribl lives in, and `home_label` what to call it
+    ("skribls.net"): once a drawing has posted, the sheet offers "Back to
+    skribls.net", and the link page a way back (the owner: "if this sits in a
+    social media site, how do you get back to the timeline?"). Unset, there is
+    no such button, which is right for standalone Skribl: it has no home but
+    itself. The address is the host's own, given once here, never read from a
+    request, so no link can send a person somewhere the host did not name. An
+    https:// address or a path on this site; the label defaults to an
+    address's host name.
     """
+    home = _home_link(home_url, home_label)
     if player_target not in ("_blank", "_self"):
         raise ValueError(
             "player_target must be '_blank' (open the player in a new tab, the "
@@ -372,8 +385,36 @@ def create_blueprint(session=None, url_prefix=None,
                 # disclosure nothing here asks for.
                 "skribl_signed_in": bp.skribl_current_user_id() is not None}
     register_routes(bp, index_route=index_route)
-    register_security(bp, SKRIBL_VERSION, player_target=player_target)
+    register_security(bp, SKRIBL_VERSION, player_target=player_target, home=home)
     return bp
+
+
+def _home_link(url, label):
+    """create_blueprint's home_url and home_label as the pages read them,
+    {"url", "label"}, or None. Refused at startup rather than at the button:
+    anything but an http(s) address or a path on this site, an address with a
+    space or a backslash in it (a browser reads "/\\x" as "//x"), or a path
+    with nothing to call it."""
+    if url is None:
+        if label is not None:
+            raise ValueError("home_label names the home_url; pass both, or neither.")
+        return None
+    u = str(url).strip()
+    parts = urlsplit(u)
+    absolute = parts.scheme in ("http", "https") and bool(parts.netloc)
+    local = not parts.scheme and not parts.netloc and u.startswith("/") and not u.startswith("//")
+    if not (absolute or local) or any(c in u for c in " \\\t\r\n"):
+        raise ValueError(
+            "home_url must be an http(s) address or a path on this site starting "
+            f"with '/'. Got {url!r}.")
+    name = str(label).strip() if label is not None else (parts.hostname or "")
+    if label is None and name.startswith("www."):
+        name = name[4:]
+    if not name or len(name) > 40:
+        raise ValueError(
+            "home_label is what the button calls home, 1 to 40 characters; a "
+            f"home_url that is a path needs one. Got {label!r}.")
+    return {"url": u, "label": name}
 
 
 def init_skribl(app, **kwargs):

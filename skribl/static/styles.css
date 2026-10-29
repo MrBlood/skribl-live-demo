@@ -3901,14 +3901,10 @@ body.player-mode #canvasEmptyHint { display: none !important; }
   padding: 0 14px 10px;
 }
 
-/* THE POST SHEET'S TOP (_skribl_post.html): its title and line, and once a post
-   has gone up, Blooby cheering beside them, at the words' own inset. #postSheet
-   on the last rule because the desk's padding for the words carries it. */
+/* THE POST SHEET'S TOP (_skribl_post.html): its title and line. Once a post
+   has gone up they fold away with the form, and the Posted! band says it. */
 .post-top { display: flex; align-items: center; }
 .post-top-words { flex: 1; min-width: 0; }
-.post-cheer { flex: none; display: block; width: 52px; height: 52px; margin: 6px 0 4px 14px; }
-.post-cheer[hidden] { display: none; }
-#postSheet .post-cheer:not([hidden]) + .post-top-words > * { padding-left: 12px; }
 
 /* IN styles.css, NOT flip.css, because BOTH editors render it. It was defined
    only in flip.css, which Pad does not load — so Pad's "Background" label in the
@@ -4130,7 +4126,6 @@ body.player-mode #canvasEmptyHint { display: none !important; }
   #postOverlay.open #postSheet { transform: translateY(0) scale(1); }
   #postSheet .export-head { font-size: 17px; padding: 8px 16px 4px; }
   #postSheet .export-sub { padding: 0 16px 12px; }
-  #postSheet .post-cheer { margin-left: 16px; }
   #postSheet .post-body { padding: 4px 16px 12px; }
   #postSheet .post-preview { max-height: 300px; }
   /* The Pad's sheet carries "Viewers start at" (about 96px), and the preview
@@ -4190,11 +4185,13 @@ body.player-mode #canvasEmptyHint { display: none !important; }
   position: relative;
 }
 
+/* THE SHEET'S WORDS AT THE MENU'S SIZES (item 4 of the polish list; the
+   owner's yes on the mock): labels 13 bold, the lines under a choice 13, the
+   gallery tick 15, the count 12, nothing under 12. They were 10.5 to 11. */
 .post-field-label {
-  font-size: 11px;
-  font-weight: 600;
+  font-size: 13px;
+  font-weight: 700;
   color: var(--text-secondary);
-  letter-spacing: 0.02em;
 }
 
 .post-field-optional {
@@ -4206,7 +4203,7 @@ body.player-mode #canvasEmptyHint { display: none !important; }
    pill, full width, and one line under it saying what the choice does. */
 .post-speed .seg { display: flex; width: 100%; --seg-h: 44px; }   /* opted in: a tap target, measured here */
 .post-speed .seg > button { flex: 1 1 0; min-width: 0; padding: 0 6px; white-space: nowrap; }
-.post-speed-hint { font-size: 11px; font-weight: 500; color: var(--text-muted); line-height: 1.35; }
+.post-speed-hint { font-size: 13px; font-weight: 400; color: var(--text-muted); line-height: 1.35; }
 /* "Speed" opens the seven rates on a row of their own under the four (owner's
    pick A); a pick closes it and the button shows the rate. */
 #postSpeedPick { display: inline-flex; align-items: center; justify-content: center; gap: 3px; }
@@ -4273,13 +4270,13 @@ body.player-mode #canvasEmptyHint { display: none !important; }
 .post-check-text {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  font-size: 13px;
+  gap: 3px;
+  font-size: 15px;
   font-weight: 500;
   color: var(--text-primary);
   line-height: 1.3;
 }
-.post-check-sub { font-size: 11px; font-weight: 500; color: var(--text-muted); }
+.post-check-sub { font-size: 13px; font-weight: 400; color: var(--text-muted); line-height: 1.35; }
 @media (forced-colors: active) {
   .post-check-box { border-color: ButtonText; forced-color-adjust: none; }
   .post-check-input:checked + .post-check-box { background: Highlight; border-color: Highlight; }
@@ -4315,7 +4312,7 @@ body.player-mode #canvasEmptyHint { display: none !important; }
 
 .post-char-count {
   align-self: flex-end;
-  font-size: 10.5px;
+  font-size: 12px;
   color: var(--text-muted);
 }
 
@@ -4427,8 +4424,8 @@ body.player-mode #canvasEmptyHint { display: none !important; }
   border-radius: 14px; background: color-mix(in srgb, var(--text-primary) 5%, transparent); }
 .post-key[hidden] { display: none; }
 .post-key-text { display: flex; flex-direction: column; gap: 2px; flex: 1 1 auto; min-width: 0;
-  font-size: 13px; font-weight: 600; color: var(--text-primary); line-height: 1.3; }
-.post-key-sub { font-size: 11px; font-weight: 500; color: var(--text-muted); }
+  font-size: 14px; font-weight: 600; color: var(--text-primary); line-height: 1.3; }
+.post-key-sub { font-size: 13px; font-weight: 400; color: var(--text-muted); line-height: 1.35; }
 .post-key-btn { flex: none; min-height: 44px; padding: 0 14px; border-radius: 12px; border: 1px solid var(--hairline-strong);
   background: var(--surface-control); color: var(--text-primary); font: inherit; font-size: 13px; font-weight: 600;
   white-space: nowrap; cursor: pointer; }
@@ -4436,8 +4433,114 @@ body.player-mode #canvasEmptyHint { display: none !important; }
 @media (min-width: 641px) { .post-key { margin: 0 12px 10px; } }
 .post-status { padding: 4px 14px 8px; }
 .post-status[hidden] { display: none; }
-.post-status.error .export-progress-fill { background: var(--danger); }
-.post-status.error .export-progress-label { color: var(--danger); }
+
+/* THE REASON, IN A CALM CARD RIGHT ABOVE TRY AGAIN (owner's pick B, the Post
+   sheet mock). A post that did not go said why in small pink words under the
+   buttons, the sheet's last row, and on a short window under its edge. Now
+   the reason is in the sheet's own ink on a card, with a small pink mark, and
+   it sits where the eye goes next: over the button that fixes it. The sheet is
+   a column, so the card is ORDERED up between the form and the button rather
+   than moved in the markup; "Posting…" keeps its place under the button the
+   press started it from. The mark is the danger red behind a white "!", an
+   icon (3:1 is its floor); the words say it all (content's alt is empty). */
+#postSubmitBtn, #postSubmitBtn ~ * { order: 2; }
+#postSheet .post-status.error { order: 1; display: flex; gap: 10px; align-items: flex-start;
+  margin: 2px 10px 10px; padding: 12px 14px; border-radius: 14px;
+  background: var(--menu-card); border: 1px solid var(--menu-card-line); }
+#postSheet .post-status.error[hidden] { display: none; }
+#postSheet .post-status.error .export-progress-bar { display: none; }
+#postSheet .post-status.error .export-progress-label { color: var(--text-primary); font-size: 14px; font-weight: 500;
+  line-height: 1.4; text-align: left; }
+#postSheet .post-status.error::before { content: "!"; content: "!" / ""; flex: none; width: 20px; height: 20px;
+  border-radius: 50%; background: var(--danger); color: #fff; font-size: 13px; font-weight: 800; line-height: 20px;
+  text-align: center; }
+@media (min-width: 641px) { #postSheet .post-status.error { margin: 2px 12px 10px; } }
+
+/* POSTED!, THE MOMENT (_skribl_post.html; the owner's A from the mock). Once a
+   real post comes back the sheet is .is-posted: the form folds away, and the
+   band, the card, what to do with it and where to go next rise in, one after
+   another, while the sheet glides to its new height (lib/postsheet.js). Under
+   Reduce Motion it is all simply there. */
+#postSheet.is-posted { gap: 12px; }
+#postSheet.is-posted :is(.post-top, .post-body, #postSubmitBtn) { display: none; }
+.post-done { display: grid; gap: 12px; }
+.post-done[hidden], .post-next[hidden] { display: none; }
+/* The band: Skribl purple, deepening down, with a light where Blooby stands.
+   The same in both themes; white on it is 6.4:1 and up, 6.9 behind "Posted!"
+   (verify_contrast). */
+.post-band { position: relative; display: grid; justify-items: center; gap: 4px; padding: 14px 16px 16px;
+  border-radius: 18px; text-align: center; color: #fff;
+  background: radial-gradient(70% 60% at 50% 26%, rgba(255, 255, 255, 0.30), rgba(255, 255, 255, 0) 68%),
+              linear-gradient(180deg, var(--accent-fill) 0%, #5a3ad8 52%, #4c31c4 100%); }
+.post-band-head { font-size: 28px; font-weight: 800; letter-spacing: -0.01em; line-height: 1.1; }
+.post-band-line { font-size: 15px; font-weight: 500; line-height: 1.35; }
+/* Blooby's jump: the strip's seven poses side by side, the box showing one. */
+.post-jump { display: block; width: 80px; height: 80px; margin-bottom: 6px; border-radius: 18px; overflow: hidden;
+  box-shadow: 0 6px 16px rgba(30, 10, 90, 0.35); }
+.post-jump img { display: block; width: 700%; max-width: none; height: 100%; }
+/* The x: a 36px circle, its tap 44px. */
+.post-x { position: absolute; top: 10px; right: 10px; display: grid; place-items: center; width: 36px; height: 36px;
+  padding: 0; border: 0; border-radius: 50%; background: rgba(255, 255, 255, 0.16); color: #fff; cursor: pointer;
+  -webkit-tap-highlight-color: transparent; }
+.post-x::before { content: ''; position: absolute; inset: -4px; }
+.post-x svg { width: 18px; height: 18px; }
+@media (hover: hover) { .post-x:hover { background: rgba(255, 255, 255, 0.24); } }
+.post-x:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+/* The card: the post as people will see it, on the menu's card. The drawing
+   fills a fixed height on its own ground, drawn by the in-post player
+   (immersive: letterboxed, nothing over it), its picture under it first. */
+.post-card { overflow: hidden; border-radius: 16px; background: var(--menu-card); border: 1px solid var(--menu-card-line);
+  color: var(--text-primary); }
+.post-card-media { position: relative; height: 200px; overflow: hidden; }
+.post-card-pic { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; display: block; }
+.post-card-pic:not([src]) { display: none; }
+#postSheet .post-card-media .skribl-inline { position: absolute; inset: 0; width: 100%; height: 100%; aspect-ratio: auto;
+  border: 0; border-radius: 0; background: none; }
+#postSheet .post-card-media .skribl-inline:not(.is-on) { visibility: hidden; }
+.post-card-words { display: grid; gap: 4px; padding: 12px 14px 14px; }
+.post-card-title { font-size: 18px; font-weight: 700; line-height: 1.25; overflow-wrap: anywhere; }
+.post-card-caption { font-size: 16px; line-height: 1.45; white-space: pre-line; overflow-wrap: anywhere; }
+.post-card-caption[hidden] { display: none; }
+.post-card-meta { margin-top: 2px; font-size: 13px; font-weight: 500; color: var(--text-secondary); }
+@media (min-width: 641px) { .post-card-media { height: 250px; } }
+/* What to do with it, once it is posted: Watch the brand's fill, Copy link
+   and Share the choice's tint, a 48px row edge to edge. Where to go next is
+   the quiet row under it. */
+#postSheet.is-posted .post-result { margin: 0; }
+#postSheet.is-posted .post-result .post-submit { min-height: 48px; margin: 0; padding: 0 6px; border: 0; border-radius: 12px;
+  font-size: 15px; font-weight: 700; gap: 7px; animation: none; }
+#postSheet.is-posted #postWatchBtn { background: var(--accent-fill); color: #fff; }
+#postSheet.is-posted #postWatchBtn .play-badge { width: 22px; height: 22px; background: rgba(255, 255, 255, 0.22); }
+#postSheet.is-posted #postWatchBtn .play-badge svg { width: 11px; height: 11px; }
+#postSheet.is-posted .post-result-soft { background: var(--seg-on-fill); color: var(--seg-on-ink); text-shadow: none; }
+#postSheet.is-posted .post-result-soft svg { width: 17px; height: 17px; }
+.post-next { display: flex; gap: 8px; }
+.post-quiet { flex: 1 1 0; min-width: 0; min-height: 48px; display: flex; align-items: center; justify-content: center; gap: 7px;
+  padding: 0 6px; border: 1px solid var(--menu-card-line); border-radius: 12px; background: transparent;
+  color: var(--text-primary); font: inherit; font-size: 15px; font-weight: 600; white-space: nowrap; cursor: pointer;
+  -webkit-tap-highlight-color: transparent; }
+.post-quiet[hidden] { display: none; }
+.post-quiet > span { overflow: hidden; text-overflow: ellipsis; }
+.post-quiet svg { width: 17px; height: 17px; flex: none; }
+@media (hover: hover) { .post-quiet:hover { background: color-mix(in srgb, var(--text-primary) 5%, transparent); } }
+.post-quiet:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+#postSheet.is-posted .post-key { margin: 0; padding: 8px 8px 8px 12px; }
+/* The rise, one part after another, and the glide, the sheet's height.
+   lib/postsheet.js puts .is-rising on with the parts and takes it off a frame
+   later, so each comes up into place, and sets .is-gliding while the height
+   moves; under Reduce Motion it sets neither. Transitions and no motion media
+   query, because cssgraph carries every @keyframes and every such query into
+   the link page's sheet (player.css), which has no Post sheet. */
+#postSheet.is-posted :is(.post-band, .post-card, .post-result, .post-next, .post-key) {
+  transition: opacity 0.42s cubic-bezier(0.2, 0.7, 0.2, 1), transform 0.42s cubic-bezier(0.2, 0.7, 0.2, 1); }
+#postSheet.is-posted .post-card { transition-delay: 0.07s; }
+#postSheet.is-posted .post-result { transition-delay: 0.14s; }
+#postSheet.is-posted .post-next { transition-delay: 0.2s; }
+#postSheet.is-posted .post-key { transition-delay: 0.26s; }
+#postSheet.is-rising :is(.post-band, .post-card, .post-result, .post-next, .post-key) {
+  opacity: 0; transform: translateY(10px); transition: none; }
+#postSheet.is-gliding { overflow: hidden;
+  transition: height 0.38s cubic-bezier(0.2, 0.7, 0.2, 1), transform 0.35s var(--spring), opacity 0.2s ease; }
 
 .menu-divider {
   height: 1px;

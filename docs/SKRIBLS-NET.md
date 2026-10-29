@@ -129,5 +129,12 @@ says so.
    separate from item 6: a saved Skribl draft outlives any one post; the
    composer's draft of a POST still has to carry its own hidden field.
 
+8. **Name the way home.** Mount with `home_url` set to the timeline and
+   `home_label="skribls.net"` (INTEGRATION.md, "The way back to your site"):
+   once a drawing has posted, the Post sheet then offers "Back to
+   skribls.net" beside Make another. Without it the card has no way back
+   but closing it (the owner: "if this sits in a social media site, how do
+   you get back to the timeline?").
+
 The player needs nothing from `media.skribls.net`: its poster and payload come
 from Skribl's own routes under the site's prefix.

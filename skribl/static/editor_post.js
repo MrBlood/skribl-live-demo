@@ -37,6 +37,12 @@
     submit: () => submit(),
     backup: () => openSaveBackup(),   // editor_menu.js: the ⋯ menu's Save as a file
     cancel: () => { if (sendSkribl._abort) sendSkribl._abort.abort(); },
+    // Make another, on the posted card: the ⋯ menu's New Skribl, its Undo with
+    // it (editor_menu.js clearAllWithUndo).
+    another: () => {
+      if (recording) { showToast('Tap Done to finish this take first'); return; }
+      clearAllWithUndo();
+    },
     onOpen: () => { pendingLocalId = null; openChips(false); renderSpeed(); },
     // Mirror the pad's shape so the snapshot shows whole (no crop), and match
     // the frame background to the canvas color so there are never odd bars.
@@ -551,10 +557,12 @@
           submitBtn.disabled = false;
           submitLabel.textContent = 'Try again';
         }
-      } else {
-        showToast('Posted! 🎨', null);
       }
-      ui.result(lastPostUrl, lastPostTitle, { localOnly, key: (!localOnly && res && res.deleteToken) || null });
+      // A real post says so in the sheet's own Posted! band, whose card plays
+      // what was sent (lib/postsheet.js); a toast peeked out above the sheet,
+      // saying it twice.
+      ui.result(lastPostUrl, lastPostTitle, { localOnly, payload,
+                                              key: (!localOnly && res && res.deleteToken) || null });
     } catch (e) {
       ui.setState('error');
       if (e && e.message) statusLabel.textContent = e.message;
