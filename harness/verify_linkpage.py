@@ -200,8 +200,8 @@ try:
                     # PRESSED, IT GOES THERE. The address is the host's; its
                     # page is stood in for, so nothing leaves this box.
                     pg.route(HOME_URL, lambda r: r.fulfill(status=200, content_type="text/html", body="<p>home</p>"))
-                    pg.click("a.player-home")
-                    try:
+                    try:                                    # a missing link fails the row, not the run
+                        pg.click("a.player-home", timeout=5000)
                         pg.wait_for_url(HOME_URL, timeout=8000)
                     except Exception:                       # noqa: BLE001
                         pass
