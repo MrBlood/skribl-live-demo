@@ -641,7 +641,10 @@
         padding: 8px 20px calc(18px + env(safe-area-inset-bottom, 0px)); }
       .sheet-card .pm-grab { display: block; flex: none; margin: 4px auto 2px; }
     }
-    html:has(.sheet:not([hidden])) { overscroll-behavior-y: none; }
+    /* While the report sheet is open the page does not pull to refresh:
+       pagemenu.css's html.skribl-sheet, which lib/opensurfaces.js puts on
+       for .sheet too (a :has() at the top of the page is checked again on
+       every style pass). */
     .sheet-card h2 { margin: 0; font-size: 16px; font-weight: 600; }
     .sheet-card p { margin: 0; color: var(--text-2); font-size: 13.5px; }
     .reasons { display: flex; flex-direction: column; gap: 2px; margin: 0; padding: 0; border: 0; }
@@ -845,6 +848,9 @@
 <script src="{{ skribl_asset('lib/theme.js') }}" defer></script>
 {# lib/segslider.js: the pill under New / Hot and the menu's Theme. #}
 <script src="{{ skribl_asset('lib/segslider.js') }}" defer></script>
+{# lib/opensurfaces.js: says on <html> which drawer, sheet or card is open, so no
+   style rule has to search the whole page for it. #}
+<script src="{{ skribl_asset('lib/opensurfaces.js') }}" defer></script>
 {# lib/sheetswipe.js: every bottom sheet closes on a swipe down or a tap on
    its grabber. Before report.js and every other script that attaches it. #}
 <script src="{{ skribl_asset('lib/sheetswipe.js') }}" defer></script>

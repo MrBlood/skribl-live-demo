@@ -356,9 +356,13 @@ html { scrollbar-gutter: stable both-edges; }
    1200px screen, sitting 10px in, with the page showing either side --
    measured, in verify_player_isolation's full screen block. The document is
    `overflow: hidden` while an element is fullscreen (the UA does that), so the
-   gutter is reserving room for a scrollbar that cannot appear. Where :has() is
-   not supported the behaviour is what it was, which is the 20px, not a break. */
-html:has(:fullscreen) { scrollbar-gutter: auto; }
+   gutter is reserving room for a scrollbar that cannot appear. lib/immersive.js
+   puts `skribl-fullscreen` on <html> while anything is full screen; a rule that
+   searched the page for :fullscreen (`html:has()`) was checked again on every
+   style pass, and those passes are most of an editor's start (the numbers are
+   in lib/opensurfaces.js). Without the script the behaviour is what it was,
+   which is the 20px, not a break. */
+html.skribl-fullscreen { scrollbar-gutter: auto; }
 /* AND THE SAME FOR FULL SIZE WITHOUT THE API. lib/immersive.js pins an element
    over the screen and puts `skribl-immersive` on <html>; the page behind must
    not scroll (iOS Safari honours that on html or on body, depending on which
@@ -3474,29 +3478,17 @@ body.recoloring #canvas { cursor: crosshair !important; }
    bottom-left, it landed squarely over "Clear all pages" whenever a drawer was
    open — and a pill covering a destructive button is worse than one you cannot
    see. Fades out while any drawer is open; it is advisory, and the drawer is
-   what the user is actually looking at. */
-body:has(.tab-panel:not([hidden])) .autosave-status,
-body:has(#drawPanel:not([hidden])) .autosave-status,
-/* Every surface that COVERS the page suppresses the amber "Media missing"
-   warning, or it sits on top of the thing the user just opened. Same reasoning
-   as the drawers: the surface they just opened is what they are looking at, and
-   the pill -- warning included -- returns the moment it closes.
-   .menu-overlay covers Pad's menu, export and post sheets in one selector;
-   #moreMenu is Flip's. */
-body:has(.menu-overlay:not([hidden])) .autosave-status,
-body:has(#moreMenu:not([hidden])) .autosave-status,
-/* Each entry names the element that CARRIES the hidden attribute. The report
-   sheet is not here because its OVERLAY is what hides, and .menu-overlay above
-   already covers it -- naming #reportSheet matches always and hides the pill for
-   good, which the pin that drives this rule caught on the clean tree. */
-body:has(#helpDrawer:not([hidden])) .autosave-status,
-body:has(#savedDraftsSheet:not([hidden])) .autosave-status,
-body:has(.flip-export:not([hidden])) .autosave-status,
-/* Tune is a drawer too, but its shell never hides: it opens and shuts by its
-   class, so that is what names it (and the name drawer, which wears the same
-   shell). Left off, "Saved", lifted clear of a phone's dock, sat on Tune's
-   onion skin row while it was open (main's CI read the 2 under its edge). */
-body:has(.tune-shell.open) .autosave-status {
+   what the user is actually looking at. Every surface that COVERS the page
+   suppresses the amber "Media missing" warning too, or it sits on top of the
+   thing the user just opened; the pill, warning included, returns the moment
+   it closes.
+   WHICH SURFACES is lib/opensurfaces.js's list, said on <html> as
+   `skribl-covered`. It was a body:has() per surface here, and a :has() at the
+   top of the page is checked again on every style pass, walking the whole page
+   each time: 2.9 s of Pad's start at phone pace and 4.3 s of Flip's, measured.
+   Each entry there names the element that carries hidden; Tune opens by its
+   class. */
+html.skribl-covered .autosave-status {
   opacity: 0;
   pointer-events: none;
 }
@@ -3507,14 +3499,7 @@ body:has(.tune-shell.open) .autosave-status {
    taking taps, which is the exact "invisible button eating taps in the corner
    of the screen" this whole treatment exists to prevent. Found by the pin that
    replaced one measuring an unreachable state (v294 bug check). */
-body:has(.tab-panel:not([hidden])) .autosave-dismiss,
-body:has(#drawPanel:not([hidden])) .autosave-dismiss,
-body:has(.menu-overlay:not([hidden])) .autosave-dismiss,
-body:has(#moreMenu:not([hidden])) .autosave-dismiss,
-body:has(#helpDrawer:not([hidden])) .autosave-dismiss,
-body:has(#savedDraftsSheet:not([hidden])) .autosave-dismiss,
-body:has(.flip-export:not([hidden])) .autosave-dismiss,
-body:has(.tune-shell.open) .autosave-dismiss {
+html.skribl-covered .autosave-dismiss {
   pointer-events: none;
 }
 .autosave-status[hidden] { display: none; }
@@ -5897,8 +5882,9 @@ a.player-btn { text-decoration: none; }
 body.replaying .autosave-status { opacity: 0; pointer-events: none; }
 /* ...and while a button's card is open (lib/learncard.js): with a song just
    loaded, "Saved" sat on the card's title and first line (verify_contrast's
-   7:1 row read it at 6.85, after v324). Pad and Flip share it. */
-body:has(.lc-card:not([hidden])) .autosave-status { opacity: 0; pointer-events: none; }
+   7:1 row read it at 6.85, after v324). Pad and Flip share it, and
+   lib/opensurfaces.js says it on <html> as `skribl-carded`. */
+html.skribl-carded .autosave-status { opacity: 0; pointer-events: none; }
 
 .player-cta {
   display: inline-flex;
@@ -7518,16 +7504,11 @@ body.playing .flip-grid { display: none; }
    the touch while it drags a sheet; these are the rest: a sheet's own list
    stops at its ends instead of handing the swipe to the page, and while any
    menu, sheet or drawer is open the page itself does not pull to refresh.
-   Closed, the page behaves as it always has. */
+   Closed, the page behaves as it always has. Which surfaces count is
+   lib/opensurfaces.js's list, said on <html> as `skribl-sheet` (it was an
+   html:has() per surface, checked again on every style pass). */
 .menu-sheet, .sdrafts-list, #moreMenu { overscroll-behavior: contain; }
-html:has(.menu-overlay:not([hidden])),
-html:has(#moreMenu:not([hidden])),
-html:has(#savedDraftsSheet:not([hidden])),
-html:has(#helpDrawer:not([hidden])),
-html:has(#drawPanel:not([hidden])),
-html:has(#photoPanel:not([hidden])),
-html:has(#musicPanel:not([hidden])),
-html:has(.flip-export:not([hidden])) { overscroll-behavior-y: none; }
+html.skribl-sheet { overscroll-behavior-y: none; }
 
 .leave-scrim {
   position: fixed; inset: 0; z-index: 90;

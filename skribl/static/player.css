@@ -379,9 +379,13 @@ html { scrollbar-gutter: stable both-edges; }
    1200px screen, sitting 10px in, with the page showing either side --
    measured, in verify_player_isolation's full screen block. The document is
    `overflow: hidden` while an element is fullscreen (the UA does that), so the
-   gutter is reserving room for a scrollbar that cannot appear. Where :has() is
-   not supported the behaviour is what it was, which is the 20px, not a break. */
-html:has(:fullscreen) { scrollbar-gutter: auto; }
+   gutter is reserving room for a scrollbar that cannot appear. lib/immersive.js
+   puts `skribl-fullscreen` on <html> while anything is full screen; a rule that
+   searched the page for :fullscreen (`html:has()`) was checked again on every
+   style pass, and those passes are most of an editor's start (the numbers are
+   in lib/opensurfaces.js). Without the script the behaviour is what it was,
+   which is the 20px, not a break. */
+html.skribl-fullscreen { scrollbar-gutter: auto; }
 /* AND THE SAME FOR FULL SIZE WITHOUT THE API. lib/immersive.js pins an element
    over the screen and puts `skribl-immersive` on <html>; the page behind must
    not scroll (iOS Safari honours that on html or on body, depending on which

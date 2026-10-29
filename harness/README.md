@@ -1066,6 +1066,13 @@ stays a sleep.
   music early (it ends by the drawing's clock); in full screen it is toned as
   the speed and a pressed full screen are; its glyph at 3:1 or more; posts and
   Flip without it. Each row was shown red by its own break.
+- `verify_pagewide.py` — no style rule searches the whole page. No selector in
+  a stylesheet or a template's <style> puts :has() on html, body or :root (five
+  did, and at phone pace they were 2.9 s of Pad's start and 4.3 s of Flip's);
+  every `html.skribl-*` class a rule keys on is set by a module in lib/; and
+  every page whose styles read an open-surface class loads lib/opensurfaces.js
+  by its script tag. Source only, on the PR gate. Each row was shown red by its
+  own break, on main's tree and on copies.
 - `verify_framecache.py` — a static page is rasterised at most once per
   playback, on BOTH surfaces. Pins the blit as pixel-identical to the paint it
   replaced (only after asserting the capture is the pad's own pixels one for

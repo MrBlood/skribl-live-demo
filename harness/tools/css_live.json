@@ -176,7 +176,7 @@
   "html",
   "html.skribl-immersive",
   "html.skribl-immersive body",
-  "html:has(:fullscreen)"
+  "html.skribl-fullscreen"
  ],
  "editor": [
   "#canvas",
@@ -649,7 +649,7 @@
   "body:not(.player-mode) .canvas-wrap",
   "body:not(.player-mode) .canvas-wrap #canvas",
   "html",
-  "html:has(:fullscreen)"
+  "html.skribl-fullscreen"
  ],
  "band": [
   ".chrome-asleep",
