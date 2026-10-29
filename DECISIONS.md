@@ -25568,3 +25568,119 @@ Here, side by side on fresh servers: verify_a11y 437 of 437 in 6.2 minutes,
 verify_a11ypages 158 of 158 in 3.5, the 595 the one suite passed.
 
 WHAT IT DOES TO FLIP: nothing. Both editors are read as before.
+
+## After v329 -- The loop's own Undo and Redo, the bin's Undo, and the ends' reach
+
+THE OWNER, of the music timeline: "sometimes when I go to drag something I
+move the whole waveform. shouldn't there be an undo button on the editor
+(just to go back to what it was before) and maybe a redo button too?" Of the
+Undo, reach and Repeat page, "All yes" to calls 2 to 4 (call 1, Repeat at the
+bar's end on a phone, went in with #663).
+
+THE PAIR (call 2, A). Undo and Redo sit at the end of the one line under the
+timeline, in a box like the zoom's, each a 28px cell, greyed while there is
+nothing to take back or again, as the zoom's minus is at 1x; their names are
+"Undo a change to the loop" and "Redo a change to the loop", their tooltips
+the same. On a phone the line is two rows tall with or without a drawing to
+say it is shorter or longer than, the pair in the middle of them, so nothing
+under it moves as the words change; on a desk one row. They take the place of
+the Length door's eight-second Undo, which is gone.
+
+EVERY CHANGE TO THE LOOP IS A STEP, and only those: an end dragged, the song
+slid, a tap on the whole song's line, a Length card, Skribl's pick as the way
+back, a count in Beats, Beats in a bar, Smooth restart and its length, Cut on
+silence, a nudge, a typed time, Tap the beat. A drag is one step however far it goes, a held slider one however often it
+moves; an end let go and settled on the beat is one step with its glide, and
+a change made while a settle still glides is a step of its own, from where
+the settle was going. Not steps: the zoom, the taller box, the magnet and
+Lock the length, which are how a person looks and works (a step put back
+leaves them as they are now), and what Skribl does on its own (its pick for a
+new song, what it does once it has listened). A new song starts a new
+history; a change after an Undo clears what Redo held; a hundred steps are
+kept. lib/musicdrawer.js holds it: every change goes through four setters
+that note the loop as it was at its first touch, and a step is kept when the
+change is over (a finger lifted, a glide landed).
+
+THE BIN'S UNDO (call 3). The person's own tap on the bin offers an Undo in the
+note it shows ("Song removed"), which puts the song back as it was: its
+bytes, its loop, its beat, its restart, and the loop's own Undo and Redo. It
+says "Song restored", with a Redo that takes it away again. On the Pad the
+draft has it again (its bytes back in the draft's store, the draft naming
+it); on Flip the next save writes it. A script's click (New Skribl's clear
+goes through the Pad's bin) offers none: New Skribl has its own Undo.
+
+THE REACH (call 4). An end takes a press 32px either side of its line and 26px
+below its tab (it was 22 and 12), over the row of tabs and the whole song's
+line; the whole song's line takes a press on its own row only, 4px above it
+(it was 14, up into the tabs), so a near miss beside a tab moves nothing.
+Where the two ends' reach meets, the nearer end takes the press
+(lib/musictimeline.js), and an end taken by a press beside its line keeps its
+distance from the finger instead of jumping to it.
+
+FOUND WHILE BUILDING IT, AND FIXED HERE:
+  * Two quick taps on Beats came out as one step: the second landed while the
+    first one's glide was still on its way. A glide's step is closed where it
+    was going when anything else starts, and Undo and Redo land a glide first.
+  * Flip closed its music drawer when an end dragged in it was let go past
+    the drawer's edge (a mouse overshoots; on main too): the tap-away read
+    where the click landed, which was outside. It reads where the press
+    began now, for a click a press made.
+  * Flip closed the drawer when the note's Undo was pressed: the note wrote
+    itself again ("Song restored"), taking away the button that was pressed,
+    and a click on something no longer in the page read as a tap away.
+  * A press beside an end's line made the end jump to the finger.
+  * The drawer's own nudge helper was shadowed by the new step helper of the
+    same name (stepNow, now loopStep), which the new suite's first run found.
+
+CHECKS. verify_musicundo (new) reads all of it on the Pad and on Flip with
+real presses, drags and keys: the pair (where it is, painted, named, greyed;
+the line's rows on a phone and a desk; one Undo); every kind of change as a
+step, each undone and done again as soon as it is made, then Undo all the way
+down and Redo all the way up; one step per drag and per held slider; a settle
+with its glide; a change made mid-glide; what is not a step; a new song's
+history; a change after an Undo; the keyboard's place moving to the other of
+the pair as one runs out; the bin's Undo and Redo, the Pad's draft store and
+Flip's next save; the reach, read where a press lands on a phone and a desk,
+then real presses; the arrows at 3:1 or more on their cell, light and dark,
+phone and desk. verify_musicbeat, verify_musicdoors, verify_musicears and
+verify_sheetswipe moved off the Length door's Undo onto the pair;
+verify_musicears asks that what Skribl does once it has listened is not a
+step; verify_helpclaims claims the help's new words.
+
+EACH ROW WAS SHOWN RED BY A BREAK OF ITS OWN (the page's files served from
+broken copies, the files on disk untouched), 41 breaks. The steps: none kept;
+each setter bypassed in turn (an end's, the slide's, Skribl's pick's, the
+whole song's, Fit's, the bar's, the restart's, the cut's, the tapped beat's);
+a glide's step never begun; the restart's length not noted before it moves; a
+held finger not held; a glide's step left open when the next change starts
+(red in verify_musicbeat's two quick taps too); a new song's pick a step; a new
+song keeping the old history; a step put back taking the magnet with it; Redo
+keeping what it held after a new change; the keyboard's place not moved. The
+bin: no note; the song back without its history; the Pad's bytes not put back;
+a script's click offering the note; Flip's save not written; Flip's drawer
+closing on the note's Undo; and in verify_musicears, what Skribl does once it
+has listened made a step. The reach: the old reach of an end and of the whole
+song's line, each read where a press lands and by real presses; no nearer
+end; the end jumping to the finger; Flip's drawer closing after a drag let go
+past it. The pair: no gap, the phone's line one row, faint arrows, greyed at
+60% rather than as the zoom's minus, the names, the Length door's Undo back,
+the pair out of the line.
+
+The first run ran every change in the chain before undoing any, so a break
+took every row after its own red with it; each change is undone and done
+again as it is made now, and the fourteen breaks re-run on that red their own
+rows. Three first came back green, and each was the instrument: the pair's
+names and the pair out of the line served their broken page at a path the
+suite does not open (the Pad is at /), and the magnet's row put back a nudge,
+which never touches the beat, so a step that took the magnet back could not
+show; it puts back a step that changed the bar now. The nearer end: the
+suite's song is short, so at 1x its ends are never within reach of each other
+(at least 26% of the timeline apart); that row widens the reach in the page
+under test until they meet, as a loop of a few beats on a long song does by
+itself.
+
+WHAT IT DOES TO FLIP: shared. One drawer and one timeline, so all of it is
+both editors'; the bin's way back has a part of its own in each (the Pad's
+draft store, Flip's save), each read by its own rows.
+
+Not tested here: an iPhone's WebKit, SF and Segoe UI.
