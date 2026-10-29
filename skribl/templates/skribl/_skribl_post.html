@@ -48,8 +48,11 @@
           </label>
           <label class="post-field">
             <span class="post-field-label">Caption <span class="post-field-optional">optional</span></span>
-            <textarea id="postCaptionInput" class="post-input post-textarea" maxlength="{{ skribl_limits.caption }}" rows="3" placeholder="Say something about it…"></textarea>
-            <span class="post-char-count" id="postCharCount">0 / {{ skribl_limits.caption }}</span>
+            <textarea id="postCaptionInput" class="post-input post-textarea" maxlength="{{ skribl_limits.caption }}" rows="3" aria-describedby="postCharCount" placeholder="Say something about it…"></textarea>
+            {# The count sits inside the label for its place on the page, so it is
+               aria-hidden there and read as the field's description instead: a
+               screen reader heard "Caption optional 0 / 300" as the name. #}
+            <span class="post-char-count" id="postCharCount" aria-hidden="true">0 / {{ skribl_limits.caption }}</span>
           </label>
           {# WHERE A VIEWER STARTS (the Pad only; the owner's pick D1, set to Auto).
              Rides in the payload as `playSpeed`, read by lib/replayline.js

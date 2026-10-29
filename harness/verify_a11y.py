@@ -1630,6 +1630,84 @@ with sync_playwright() as p:
           f"— a control named on touch and anonymous on desktop is the defect, "
           f"not two acceptable behaviours" if _split else f"{len(_ICON_ONLY) - len(_WIDTH)} controls, both widths")
 
+    # THE TOOLS, THE CAPTION, AND WHERE TAB STARTS (polish list item 5,
+    # measured from this same AX tree). A tool's word is display:none at a
+    # phone's width, and the adopter counts textContent as a name whether it
+    # is painted or not: in a narrow window with a mouse Shape read as a bare
+    # "button", on Pad and on Flip, and on a phone (no adopter) it read its
+    # whole tooltip.
+    # Each tool's name starts with the word it shows on a desk (WCAG 2.5.3,
+    # label in name), on both pointer types.
+    def _ax_node(ctx, pg, sel):
+        cdp = ctx.new_cdp_session(pg)
+        cdp.send("Accessibility.enable")
+        doc = cdp.send("DOM.getDocument", {"depth": -1})
+        node = cdp.send("DOM.querySelector", {"nodeId": doc["root"]["nodeId"], "selector": sel})
+        if not node.get("nodeId"):
+            return None
+        ax = cdp.send("Accessibility.getPartialAXTree", {"nodeId": node["nodeId"], "fetchRelatives": False})
+        for n in ax.get("nodes", []):
+            if not n.get("ignored"):
+                return {"name": (n.get("name") or {}).get("value", ""),
+                        "description": (n.get("description") or {}).get("value", "")}
+        return None
+
+    # Flip has the same three buttons. Its shelf shows the tools last used
+    # (lib/toolshelf.js) and Shape starts in the tray, so Shape is picked first
+    # to bring its button onto the shelf, where it read the same as Pad's.
+    _TOOLS = {"#penToolBtn": "Pen", "#eraserToolBtn": "Eraser", "#shapeToolBtn": "Shape"}
+    for _path, _ed in (("/", "Pad"), ("/flip", "Flip")):
+        for _label, _vp, _touch in (("a narrow window and a mouse", {"width": 402, "height": 874}, False),
+                                    ("a phone", {"width": 390, "height": 844}, True)):
+            _ctx = browser.new_context(viewport=_vp, has_touch=_touch, is_mobile=_touch)
+            _pg = _ctx.new_page()
+            browsing.goto(_pg, BASE, _path)
+            _pg.wait_for_timeout(1200)
+            if _ed == "Flip":
+                _pg.evaluate("() => setTool('shape')")
+                _pg.wait_for_timeout(300)
+            # The tools on the shelf now (Flip's holds three, so Eraser steps
+            # into the tray as Shape comes out); Shape has to be one of them.
+            _shown = _pg.evaluate("(ids) => ids.filter((s) => { const b = document.querySelector(s);"
+                                  " return !!b && b.getClientRects().length > 0; })", list(_TOOLS))
+            _names = {s_: (_ax_node(_ctx, _pg, s_) or {}).get("name", "(absent)") for s_ in _shown}
+            _off = {s_: n for s_, n in _names.items() if not n.lower().startswith(_TOOLS[s_].lower())}
+            _need = {"#shapeToolBtn"} if _ed == "Flip" else set(_TOOLS)
+            check(f"{_ed}'s tools on the shelf each say their word first, Shape among them, on {_label}",
+                  _need <= set(_shown) and not _off,
+                  f"{_off} -- a tool named by nothing, or by its whole tooltip, is not the tool a sighted person sees"
+                  if _off else f"on the shelf {_shown}; {_names}")
+            _ctx.close()
+
+    # The Caption is named by its label; "0 / 300" is the field's description,
+    # not part of its name. Both editors share the sheet.
+    _ctx = browser.new_context(viewport={"width": 1280, "height": 900})
+    _pg = _ctx.new_page()
+    browsing.goto(_pg, BASE, "/")
+    _pg.wait_for_timeout(1000)
+    _drive(_pg, "draw|click:#recordBtn|click:#postBtn")
+    _cap = _ax_node(_ctx, _pg, "#postCaptionInput") or {}
+    check("the Caption is named by its label, and its count is its description",
+          _cap.get("name", "").strip() == "Caption optional" and "0 / 300" in _cap.get("description", ""),
+          f"name {_cap.get('name')!r}, description {_cap.get('description')!r}")
+    _ctx.close()
+
+    # The first Tab after an editor opens lands in its header, on both. Flip
+    # scrolled its strip to the current page at boot with scrollIntoView,
+    # which moves where Tab starts, so the first stop was page 1's hold badge.
+    for _path, _ed in (("/", "Pad"), ("/flip", "Flip")):
+        _ctx = browser.new_context(viewport={"width": 1280, "height": 900})
+        _pg = _ctx.new_page()
+        browsing.goto(_pg, BASE, _path)
+        _pg.wait_for_timeout(1800)
+        _pg.keyboard.press("Tab")
+        _pg.wait_for_timeout(150)
+        _first = _pg.evaluate("() => { const e = document.activeElement;"
+                              " return e ? { inHeader: !!e.closest('.header'), id: e.id || e.className } : null; }")
+        check(f"{_ed}: the first Tab lands in the header",
+              bool(_first) and _first["inHeader"], f"first stop: {_first}")
+        _ctx.close()
+
     # AND THE CLASS, NOT JUST THE FOUR. The four above now carry aria-label in
     # the markup AND are protected by the adopter, so either fix alone keeps
     # them named — which means neither shows up as red when the other is

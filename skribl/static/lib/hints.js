@@ -161,7 +161,12 @@
     }
     node.onclick = function () { hide(); };   // tap anywhere on the toast to dismiss
     node.hidden = false;
-    global.requestAnimationFrame(function () { node.classList.add('in'); });
+    // Only if it is still this hint. One put away before its first frame (a
+    // drawer opening just after it, below) would otherwise fade in with its
+    // timer already cleared, and stay until someone tapped it.
+    global.requestAnimationFrame(function () { if (currentKey === key) node.classList.add('in'); });
+    justShown = true;
+    setTimeout(function () { justShown = false; }, 0);
     // Longer dwell when there is an action to read + tap; still auto-dismisses.
     timer = setTimeout(hide, action ? DURATION * 2 : DURATION);
     return true;
@@ -177,6 +182,35 @@
       if (typeof global._skriblSyncHintToggle === 'function') global._skriblSyncHintToggle();
     }
   });
+
+  /* A TIP STEPS ASIDE WHEN SOMETHING OPENS OVER THE PAGE. Flip's intro ("New
+   * here?") hangs under the header for twelve seconds on a first visit, and
+   * Tune opens in the page rather than as a modal, so opening Tune in that
+   * time put the toast ON TOP of its Speed buttons: on a phone a tap on 6, 12
+   * or 24 opened the help instead (polish list item 3, read with
+   * elementFromPoint). Whatever just opened is what the person is looking at,
+   * and they have found their way in. So the tip that was already up when a
+   * drawer, sheet or menu opens goes, and a tip shown while one is open stays,
+   * because it is about that surface. lib/opensurfaces.js says when something
+   * opens, as classes on <html>; without it nothing here changes.
+   * A tip shown in the same moment as a drawer opening is about that drawer
+   * too, in either order: <html> hears of the drawer a moment later, in
+   * opensurfaces.js's observer, and that must not read as the drawer opening
+   * over the tip. Every change made in one task is heard before the next
+   * task runs, so a timeout of 0 closes that moment. */
+  var root = document.documentElement;
+  function opened() {
+    return root.classList.contains('skribl-covered') || root.classList.contains('skribl-sheet');
+  }
+  var wasOpen = opened();
+  var justShown = false;
+  if (global.MutationObserver) {
+    new MutationObserver(function () {
+      var now = opened();
+      if (now && !wasOpen && currentKey && !justShown) hide(currentKey);
+      wasOpen = now;
+    }).observe(root, { attributes: true, attributeFilter: ['class'] });
+  }
 
   global.SkriblHints = {
     show: show, hide: hide, reset: reset,

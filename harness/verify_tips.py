@@ -352,6 +352,99 @@ with sync_playwright() as p:
           "the person has started; a toast asking if they are new is now in the way")
     ip.close()
 
+    print("\nHINTS — a tip that was up steps aside when Tune or a menu opens")
+    # Polish list item 3 (Phase 1, measured): on a first visit the intro hangs
+    # about 12 s under the header, and Tune opens IN the page, not as a modal,
+    # so the toast sat on top of Tune's Speed buttons: on a phone a tap on 6,
+    # 12 or 24 opened the help instead, and on a desk on 24. Read where a press
+    # lands (elementFromPoint at each button's centre), phone and desk.
+    _TIP_UP = ("() => { const h = document.querySelector('.skribl-hint');"
+               " return !!h && h.classList.contains('in'); }")
+    _SPEEDS = """() => [...document.querySelectorAll('#fps [data-fps]')].map(bt => {
+      const r = bt.getBoundingClientRect();
+      const e = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+      return bt.dataset.fps + ':' + (e === bt || bt.contains(e) ? 'ok'
+        : (e && e.closest('.skribl-hint') ? 'tip' : String((e && (e.id || e.className)) || 'none')));
+    })"""
+    for _w, _h in ((390, 844), (1280, 900)):
+        tp2 = b.new_page(viewport={"width": _w, "height": _h})
+        tp2.goto(f"{BASE}/flip", wait_until="load")
+        tp2.wait_for_timeout(1300)
+        _up = tp2.evaluate(_TIP_UP)
+        tp2.click("#tuneBtn")
+        tp2.wait_for_timeout(450)
+        _hits = tp2.evaluate(_SPEEDS)
+        check(f"Flip at {_w}px: the intro was up, Tune opens, and every Speed button takes the press",
+              _up and len(_hits) == 3 and all(x.endswith(":ok") for x in _hits),
+              f"intro up first: {_up}; where a press lands: {_hits}")
+        tp2.close()
+    # Pad has no intro of its own, and the rule is the shared module's: a tip
+    # put up by hand under Pad's header steps aside the same way, for Tune and
+    # for the menu. And the rule's other half: a tip shown while a drawer is
+    # already open is ABOUT that drawer, and stays.
+    for _btn in ("#tuneBtn", "#menuBtn"):
+        pp2 = b.new_page(viewport={"width": 390, "height": 844})
+        pp2.goto(f"{BASE}/skribl-pad", wait_until="load")
+        pp2.wait_for_timeout(1300)
+        pp2.evaluate("() => { window.SkriblHints.reset(); window.SkriblHints.show('cal-tip',"
+                     " 'A tip under the header', { anchor: 'top-right',"
+                     " action: { label: 'More', onClick: function () {} } }); }")
+        pp2.wait_for_timeout(400)
+        _before = pp2.evaluate(_TIP_UP)
+        pp2.click(_btn)
+        pp2.wait_for_timeout(450)
+        _after = pp2.evaluate(_TIP_UP)
+        check(f"Pad: a tip that was up steps aside when {_btn} opens",
+              _before and not _after, f"up before: {_before}; up after: {_after}")
+        pp2.close()
+    pp3 = b.new_page(viewport={"width": 390, "height": 844})
+    pp3.goto(f"{BASE}/skribl-pad", wait_until="load")
+    pp3.wait_for_timeout(1300)
+    pp3.click("#tuneBtn")
+    pp3.wait_for_timeout(450)
+    pp3.evaluate("() => { window.SkriblHints.reset(); window.SkriblHints.show('cal-tip2',"
+                 " 'A tip about the open drawer'); }")
+    pp3.wait_for_timeout(600)
+    check("Pad: a tip shown while Tune is already open stays up",
+          pp3.evaluate(_TIP_UP), "a tip about the drawer the person is in went away")
+    pp3.close()
+    # ...and one shown in the same moment Tune opens, in either order, is about
+    # Tune too: <html> hears of the drawer a moment after the tip is up, and
+    # that must not read as the drawer opening over it. "Tune opened" is read
+    # too, so a click that did nothing cannot pass for a tip that stayed.
+    _same = []
+    for _first in ("open", "show"):
+        pp4 = b.new_page(viewport={"width": 390, "height": 844})
+        pp4.goto(f"{BASE}/skribl-pad", wait_until="load")
+        pp4.wait_for_timeout(1300)
+        pp4.evaluate("""(first) => {
+          const open = () => document.getElementById('tuneBtn').click();
+          const show = () => { window.SkriblHints.reset();
+            window.SkriblHints.show('cal-tip3', 'A tip about the drawer opening now'); };
+          if (first === 'open') { open(); show(); } else { show(); open(); }
+        }""", _first)
+        pp4.wait_for_timeout(600)
+        _same.append((_first + " first", pp4.evaluate(_TIP_UP),
+                      pp4.evaluate("() => document.documentElement.classList.contains('skribl-covered')")))
+        pp4.close()
+    check("Pad: a tip shown in the same moment Tune opens is about Tune, and stays up (either order)",
+          all(up and opened for _, up, opened in _same),
+          "; ".join(f"{k}: tip up {up}, Tune open {opened}" for k, up, opened in _same))
+    # A tip put away before its first frame (a drawer opening just after it)
+    # used to fade in anyway, with its timer already cleared, and stay until
+    # tapped.
+    pp5 = b.new_page(viewport={"width": 390, "height": 844})
+    pp5.goto(f"{BASE}/skribl-pad", wait_until="load")
+    pp5.wait_for_timeout(1300)
+    pp5.evaluate("() => { window.SkriblHints.reset(); window.SkriblHints.show('cal-tip4', 'Gone at once');"
+                 " window.SkriblHints.hide(); }")
+    pp5.wait_for_timeout(600)
+    _left = pp5.evaluate("() => { const h = document.querySelector('.skribl-hint');"
+                         " return h ? { in: h.classList.contains('in'), hidden: h.hidden } : null; }")
+    check("Pad: a tip put away before its first frame is not left on screen with no timer",
+          bool(_left) and not _left["in"] and _left["hidden"], str(_left))
+    pp5.close()
+
     for width in (1280, 1900):
         dp = b.new_page(viewport={"width": width, "height": 900})
         dp.goto(f"{BASE}/flip", wait_until="load")
