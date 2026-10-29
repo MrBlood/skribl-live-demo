@@ -527,6 +527,11 @@
         var kindMark = kindGlyph
           ? '<span class="posted-kind" aria-hidden="true">' + kindGlyph + '</span>'
           : '';
+        /* THE CAPTION, ONE LINE (the posting mock, after v329): under the
+           title, where somebody looking for a post reads first. Nothing at
+           all for a post without one. */
+        var capLine = e.caption
+          ? '<span class="posted-cap">' + esc(e.caption) + '</span>' : '';
         // NO route literal. A '/s/' fallback here is exactly what v132 removed
         // from flip.js: it silently posts the wrong URL under a url_prefix, and
         // verify_seam.py exists to catch it. The stored entry carries the url
@@ -547,6 +552,7 @@
                reloads into it, because a hash change alone boots nothing. */
             '<a class="posted-main" data-local="1" href="' + esc(url) + '">' +
               '<span class="posted-title">' + esc(e.title || 'Untitled Skribl') + '</span>' +
+              capLine +
               '<span class="posted-sub">' + esc(sub) + '</span>' +
             '</a>' +
             '<button type="button" class="posted-del" data-del="' + esc(e.id) + '" data-local="1" ' +
@@ -623,6 +629,7 @@
             esc(global.SKRIBL_PLAYER_TARGET || '_blank') + '" rel="noopener"' +
             (onSelect ? ' data-select="' + esc(e.id) + '"' : '') + '>' +
             '<span class="posted-title">' + esc(e.title || 'Untitled Skribl') + '</span>' +
+            capLine +
             /* ONCE, NOT TWICE. The gallery switch below is a button that
                both STATES this Skribl's visibility and changes it, so a row
                carrying it said "link only" in the meta line and "Link only"

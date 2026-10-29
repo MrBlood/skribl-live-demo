@@ -488,7 +488,8 @@
         window.SkriblPosted.add({
           id: res.id, kind: 'pad', pages: 1, local: true,
           url: location.pathname + location.search + res.url,
-          title: (titleInput.value || '').trim()
+          title: (titleInput.value || '').trim(),
+          caption: (captionInput.value || '').trim()
         });
         if (window._skriblPostedUI) window._skriblPostedUI.render();
       }
@@ -502,6 +503,7 @@
         const kept = window.SkriblPosted.add({
           id: res.id, url: res.url, kind: 'pad', pages: 1,
           title: (titleInput.value || '').trim(),
+          caption: (captionInput.value || '').trim(),
           visibility: (publicInput && publicInput.checked && window.SKRIBL_MODE !== 'compose') ? 'public' : 'unlisted',
           // The create response carries the revocation capability exactly
           // once for an anonymous post. Stored here, and since v281 also
