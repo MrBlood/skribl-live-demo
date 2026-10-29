@@ -135,8 +135,9 @@ def scribble(pg, sel, k=0):
 def drawn(pg, ed, pages=1):
     """A drawing on the Pad (its take ended) or a Flip of `pages` pages."""
     if ed == "pad":
-        scribble(pg, "#canvas")
-        scribble(pg, "#canvas", 1)
+        for k in range(3):
+            scribble(pg, "#canvas", k)
+            pg.wait_for_timeout(500)
         pg.evaluate("() => { if (typeof recording !== 'undefined' && recording) endRecordingTake(); }")
         pg.wait_for_timeout(300)
     else:
@@ -237,17 +238,21 @@ with sync_playwright() as p:
                 s2 = pg.evaluate(CARD)
                 want = max(1, (s1 or {}).get("totalMs", 0) / 3000)
                 check(f"Pad, {theme}: the card is the in-post player on the drawing just posted, drawing itself, once, in about three seconds",
-                      bool(s1 and s2) and s1["loaded"] and s1["kind"] == "replay" and s2["state"] == "playing"
+                      bool(s1 and s2) and s1["loaded"] and s1["kind"] == "replay" and s2["state"] == "playing" and want > 1
                       and s2["elapsedMs"] > s1["elapsedMs"] and not s1["looping"] and abs(s1["rate"] - want) < 0.01 * want,
                       f"{s1} then {s2}; rate wanted {want:.2f}")
-                pg.wait_for_function("""() => { const p = SkriblInline.players().find(x => x.el.id === 'postCardPlayer');
-                    return p && p.state().state !== 'playing'; }""", timeout=12000)
-                e = pg.evaluate("""() => { const p = SkriblInline.players().find(x => x.el.id === 'postCardPlayer'), s = p.state();
+                try:
+                    pg.wait_for_function("""() => { const p = window.SkriblInline && SkriblInline.players().find(x => x.el.id === 'postCardPlayer');
+                        return p && p.state().state !== 'playing'; }""", timeout=12000)
+                except Exception:                                   # noqa: BLE001
+                    pass
+                e = pg.evaluate("""() => { const p = window.SkriblInline && SkriblInline.players().find(x => x.el.id === 'postCardPlayer');
+                  if (!p) return null; const s = p.state();
                   const cv = p.el.querySelector('canvas'), x = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data;
                   let ink = 0; for (let i = 0; i < x.length; i += 16) if (x[i + 2] > x[i] + 40) ink++;
                   return { state: s.state, at: s.elapsedMs, total: s.totalMs, ink }; }""")
                 check(f"Pad, {theme}: ...and rests on the finished drawing, inked, at its end",
-                      e["at"] >= e["total"] - 1 and e["ink"] > 30, str(e))
+                      bool(e) and e["state"] != "playing" and e["at"] >= e["total"] - 1 and e["ink"] > 30, str(e))
             if part("jump") or part("glide"):
                 pg.wait_for_function("() => window.__pm.length && window.__pm[window.__pm.length - 1].t > 1300", timeout=15000)
             if part("jump"):
@@ -330,15 +335,18 @@ with sync_playwright() as p:
         check("Flip: once posted, the band's line says anyone with the link can watch it play; unlisted, the card says it is shared by its link",
               r["line"] == "Anyone with the link can watch it play." and r["meta"] == "Shared by its link only"
               and r["caption"] == "Two pages, one ball, no rush.", str(r))
-        pg.wait_for_function("""() => { const p = SkriblInline.players().find(x => x.el.id === 'postCardPlayer');
-            if (!p) return false; const s = p.state(); return window.__laps.some(l => l[0] === 'playing') && s.state !== 'playing'; }""", timeout=20000)
+        try:
+            pg.wait_for_function("""() => { const p = window.SkriblInline && SkriblInline.players().find(x => x.el.id === 'postCardPlayer');
+                if (!p) return false; const s = p.state(); return window.__laps.some(l => l[0] === 'playing') && s.state !== 'playing'; }""", timeout=20000)
+        except Exception:                                           # noqa: BLE001
+            pass
         pg.wait_for_timeout(400)
         laps = pg.evaluate("() => window.__laps")
         play = [l for l in laps if l[0] == "playing"]
         wraps = sum(1 for i in range(1, len(play)) if play[i][1] < play[i - 1][1] - 20)
         end = pg.evaluate(CARD)
         check("Flip: the card plays the five pages just posted twice round, counted on every frame, and rests on its first page",
-              bool(play) and end["kind"] == "flip" and wraps == 1 and end["state"] != "playing" and end["elapsedMs"] == 0,
+              bool(play) and bool(end) and end["kind"] == "flip" and wraps == 1 and end["state"] != "playing" and end["elapsedMs"] == 0,
               f"{len(play)} frames playing; turns {wraps}; at rest {end}")
         ctx.close()
 
@@ -359,7 +367,7 @@ with sync_playwright() as p:
               return { painted: !!hit && a.contains(hit), h: Math.round(r.height), words: a.textContent.trim(), home: h.hidden }; }""")
             check(f"{ed}: once posted, Make another is offered, painted, a 44px tap; with no home named there is no Back",
                   r["painted"] and r["h"] >= 44 and r["words"] == "Make another" and r["home"], str(r))
-            pg.click("#postAnotherBtn")
+            pg.click("#postAnotherBtn", timeout=5000)
             pg.wait_for_timeout(600)
             after = pg.evaluate(count)
             gone = pg.evaluate("() => document.getElementById('postOverlay').hidden")
@@ -389,9 +397,15 @@ with sync_playwright() as p:
               return { words: h.textContent.trim(), painted: !!hit && h.contains(hit), row: Math.abs(r.top - q.top) < 1, h: Math.round(r.height) }; }""")
             check(f"{ed}: with the site's home named, Back to skribls.net sits beside Make another, painted, a 44px tap",
                   r["words"] == "Back to skribls.net" and r["painted"] and r["row"] and r["h"] >= 44, str(r))
-            with pg.expect_navigation(timeout=10000):
-                pg.click("#postHomeBtn")
-            check(f"{ed}: ...and goes to the address the site named", pg.url.endswith("/gallery"), pg.url)
+            went = None
+            if r["painted"]:
+                try:
+                    with pg.expect_navigation(timeout=10000):
+                        pg.click("#postHomeBtn")
+                    went = pg.url
+                except Exception as exc:                            # noqa: BLE001
+                    went = f"no navigation: {exc!r}"[:120]
+            check(f"{ed}: ...and goes to the address the site named", bool(went) and went.endswith("/gallery"), str(went))
             ctx.close()
 
     if part("close"):
@@ -405,7 +419,7 @@ with sync_playwright() as p:
         r = pg.evaluate("""() => { const x = document.getElementById('postCloseBtn'), r = x.getBoundingClientRect();
           const edge = document.elementFromPoint(r.left - 3, r.top + r.height / 2);
           return { name: x.getAttribute('aria-label'), w: Math.round(r.width), band: !!edge && x.contains(edge) }; }""")
-        pg.click("#postCloseBtn")
+        pg.click("#postCloseBtn", timeout=5000)
         pg.wait_for_timeout(500)
         hidden = pg.evaluate("() => document.getElementById('postOverlay').hidden")
         check("the band's x is named Close, its tap 44px wide around the 36px circle, and it puts the sheet away",

@@ -258,7 +258,7 @@
      * folds away and the sheet glides to its new height while the band, the
      * card, what to do with it and where to go next rise in, one after another
      * (styles.css). Blooby jumps once. The card is the post as people will see
-     * it: its picture at once, then the drawing drawing itself, in the
+     * it: on the drawing's own ground, the drawing drawing itself, in the
      * in-post player, from the payload the editor just sent (`payload`). The
      * Pad's plays once, in about three seconds, and rests on the finished
      * drawing; a Flip plays twice and rests on its first page. Reduce Motion:
