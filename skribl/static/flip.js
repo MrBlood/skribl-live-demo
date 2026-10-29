@@ -102,6 +102,7 @@ function applyCanvasSize(w, h, opts){
     cv.width = layerPx(CW); cv.height = layerPx(CH);
     c.setTransform(RS, 0, 0, RS, 0, 0);        // resizing resets the transform
   }
+  dropKept();   // what was kept of the pages is at the old size
   if(!opts || opts.silent !== true){
     sizeStage(); buildStrip(); render(); scheduleSave();
   }
@@ -140,6 +141,7 @@ function growLayersNow(g){
     c.setTransform(RS, 0, 0, RS, 0, 0);
   }
   playBitmaps = null; underCache = null; _liveCache = null;   // made at the old ratio
+  dropKept();
   render();
   fitPad();   // and the pad takes the layers' own size (below)
 }
@@ -1792,6 +1794,13 @@ const tctx = tmpCv.getContext('2d'); tctx.scale(RS,RS);
 const frameCv = document.createElement('canvas');
 frameCv.width = CW*RS; frameCv.height = CH*RS;
 const fctx = frameCv.getContext('2d'); fctx.scale(RS,RS);
+// What is kept of a busy page so that an Undo need not paint it again, and what
+// the frame and onion layers hold now (UNDO WITHOUT PAINTING THE PAGE AGAIN,
+// above render()). Declared beside the layers: nothing that paints them can run
+// before these exist.
+const KEEP_MIN_POINTS = 4000;
+const _flipKept = [], _ghosts = [], _thumbBack = [];
+let _fcvTag = null, _onionTag = null, _keptClock = 0;
 
 /* ---- ARTWORK STAGE ------------------------------------------------------
  * What the drawing IS: backdrop, background image, and the current page's
@@ -1824,6 +1833,7 @@ function paintArtwork(){
   actx.setTransform(RS,0,0,RS,0,0);
   actx.clearRect(0,0,CW,CH);
   drawBackdrop(actx);
+  _fcvTag = null;
   fctx.clearRect(0,0,CW,CH);
   paintStatic(fctx, frame().strokes);
   return window.SkriblArtwork.stage({
@@ -1889,6 +1899,7 @@ function layOn(c, cv){
 }
 function paintFrame(c, strokes){
   const fl = frameLayerFor(c);
+  if(fl === fctx) _fcvTag = null;   // the frame layer is about to hold something else (flipKeep)
   fl.clearRect(0,0,CW,CH); paintStatic(fl, strokes); layOn(c, fl.canvas);
 }
 // Centre of mass of a page's ink, in canvas coordinates. Averaging the stroke
@@ -1959,22 +1970,51 @@ function paintUnder(c){
     const alphas = lightTint ? ONION_ALPHAS_LIGHT : ONION_ALPHAS;
     for(let k=depth; k>=1; k--){
       const prev = frames[idx-k]; if(!prev) continue;
-      octx.clearRect(0,0,CW,CH);
-      paintStatic(octx, prev.strokes);
-      if(onionTint){
-        // source-in repaints the strokes' own pixels, leaving transparent areas
-        // untouched — a silhouette tint, which is what onion skinning wants.
-        octx.save();
-        octx.globalCompositeOperation='source-in';
-        octx.fillStyle = tints[k-1] || tints[tints.length-1];
-        octx.fillRect(0,0,CW,CH);
-        octx.restore();
-      }
+      const ghost = _ghostOf(prev, onionTint ? (tints[k-1] || tints[tints.length-1]) : '', k === 1);
       c.globalAlpha = alphas[k-1] || alphas[alphas.length-1];
-      layOn(c, onionCv);
+      layOn(c, ghost);
       c.globalAlpha = 1;
     }
   }
+}
+/* ONE PAGE'S GHOST: its strokes on onionCv, tinted when the tint is on. A busy
+   page's ghost is not painted again while it is unchanged: on page 2 of a busy
+   animation it was a third of every repaint (93 of 284 ms at this box's pace),
+   and the start of every stroke paints it too. The nearest page's ghost is
+   painted last, so it simply stays on onionCv (_onionTag says whose it is);
+   the farther pages', when the onion shows two or three, are kept in a canvas
+   each. Checked by content, as the ink's copies are (_inkSig, below). */
+function _ghostOf(prev, tint, near){
+  const dense = prev.strokes.length >= KEEP_MIN_POINTS;
+  const sig = dense ? _inkSig(prev) + '|' + tint : null;
+  const w = onionCv.width, h = onionCv.height, far = Math.max(0, onionDepth - 1);
+  const same = (g) => !!g && g.f === prev && g.sig === sig && g.w === w && g.h === h;
+  if(_ghosts.length > far) _ghosts.length = far;
+  if(dense && near && same(_onionTag)) return onionCv;
+  if(dense && !near){
+    const g = _ghosts.find(same);
+    if(g){ g.used = ++_keptClock; return g.cv; }
+  }
+  octx.clearRect(0,0,CW,CH);
+  paintStatic(octx, prev.strokes);
+  if(tint){
+    // source-in repaints the strokes' own pixels, leaving transparent areas
+    // untouched — a silhouette tint, which is what onion skinning wants.
+    octx.save();
+    octx.globalCompositeOperation='source-in';
+    octx.fillStyle = tint;
+    octx.fillRect(0,0,CW,CH);
+    octx.restore();
+  }
+  _onionTag = (dense && near) ? { f: prev, sig: sig, w: w, h: h } : null;
+  if(!dense || near || !far) return onionCv;
+  let g = _ghosts.length < far ? null : _ghosts.reduce((a, b) => (a.used <= b.used ? a : b));
+  if(!g){ g = { cv: document.createElement('canvas') }; _ghosts.push(g); }
+  if(g.cv.width !== w || g.cv.height !== h){ g.cv.width = w; g.cv.height = h; }
+  const x = g.cv.getContext('2d');
+  x.globalCompositeOperation = 'copy'; x.drawImage(onionCv, 0, 0);
+  g.f = prev; g.sig = sig; g.w = w; g.h = h; g.used = ++_keptClock;
+  return g.cv;
 }
 
 /* THE LIVE-STROKE CACHE (v317). "It draws the stroke, but it takes 3 seconds,
@@ -2040,6 +2080,8 @@ function liveBegin(fr){
   if(flat){
     // The finished ink composited over the backdrop, exactly as render() does it.
     fctx.clearRect(0,0,CW,CH); paintStatic(fctx, pre, ob); layOn(u, frameCv);
+    // ...which is the page an Undo of this stroke comes back to (flipKeep).
+    _fcvTag = _tagOf(fr); flipKeep(true);
   } else {
     paintStatic(_liveReady(_liveDryCv), pre, ob);
   }
@@ -2057,9 +2099,118 @@ function _liveUsable(){
   return _liveUnderCv.width === layerPx(CW) && _liveUnderCv.height === layerPx(CH);
 }
 
+/* UNDO WITHOUT PAINTING THE PAGE AGAIN (polish list item 2, Flip's half; the
+   Pad's is padUndoKeep in editor_draw.js). An Undo painted the page from its
+   strokes, then its thumbnail, then the onion skin's page under it: a page of
+   20,000 points held 229 ms at this box's pace and 978 ms with the CPU 4x
+   slower, about half of it the thumbnail; 60,000 points held 538 ms.
+
+   THE INK. Whenever the frame layer has just been painted with the page as it
+   stands -- by render(), when no stroke, smudge or blur is under way
+   (_settled), or by a stroke's start, which paints the ink under it -- it is
+   tagged with that page's _inkSig. flipKeep() copies a tagged layer into one of three
+   canvases kept for it, the one used longest ago going first, after a stroke,
+   a fill, a stamp, an Undo and a Redo. An Undo or a Redo that comes back to
+   ink a copy holds (the same page, and the same points by content, with the
+   same stroke-layers setting, at the same layer size) lays the copy where
+   render() would have painted the strokes; the backdrop, the page underneath,
+   the onion skin and the guides are painted as before (_fromKept). Anything
+   else paints in full, as before. The thumbnails and the onion's ghost have
+   their own keeping (drawThumb, _ghostOf).
+
+   BY CONTENT, NOT BY OBJECT. The Pad's copies know their points by identity,
+   because its edits make new points; Flip's tools move, recolour and liquify
+   points where they lie, so a copy here is known by every value its painting
+   reads (_inkSig), and the tag is checked again before a copy is taken, so ink
+   changed after the layer was painted is never kept.
+
+   ONLY WHERE IT PAYS. A page under KEEP_MIN_POINTS repaints in a few
+   milliseconds, and a copy is a canvas the size of the layer (8 MB at the
+   default size on a phone or a desk), so a light animation keeps none. */
+function _tagOf(f, sig){
+  return f.strokes.length < KEEP_MIN_POINTS ? null
+    : { f: f, sig: sig || _inkSig(f), w: frameCv.width, h: frameCv.height };
+}
+// Every value a page's ink is painted from, in order, as two 32-bit hashes of
+// different kinds: points that differ anywhere do not share one. Positions and
+// widths count to a 65,536th of a pixel, finer than the canvas places them.
+// Written out flat because it runs on every Undo of a busy page: 5 ms for
+// 20,000 points with this box's CPU 4x slower, where the first version (two
+// hashes of each number's own bits) took 18.
+function _inkSig(f){
+  const pts = f.strokes;
+  let a = (2166136261 ^ pts.length) | 0, b = pts.length | 0;
+  for(let i = 0; i < pts.length; i++){
+    const p = pts[i];
+    const x = (p.x * 65536) | 0, y = (p.y * 65536) | 0, w = (p.size * 65536) | 0;
+    const c = _colourHash(p.color), e = (p.erase ? 1 : 0) | (p.start ? 2 : 0);
+    a = Math.imul(a ^ x, 16777619); a = Math.imul(a ^ y, 16777619); a = Math.imul(a ^ w, 16777619);
+    a = Math.imul(a ^ c, 16777619); a = Math.imul(a ^ e, 16777619);
+    b = (Math.imul(b, 31) + x) | 0; b = (Math.imul(b, 31) + y) | 0; b = (Math.imul(b, 31) + w) | 0;
+    b = (Math.imul(b, 31) + c) | 0; b = (Math.imul(b, 31) + e) | 0;
+  }
+  return (a >>> 0).toString(36) + '.' + (b >>> 0).toString(36) + '|' + pts.length + '|'
+    + (window.SKRIBL_STROKE_LAYERS === false ? 0 : 1);
+}
+// The frame layer holds the page as it is painted at rest only when no stroke
+// is being drawn (its head is painted as a live segment, drawLine) and no
+// smudge or blur (its runs at a live strength, paintStatic); only then is it
+// tagged, and only then is a page laid from a copy.
+function _settled(){ return !drawing && !fieldActive; }
+function _keptFor(f, sig){
+  return _flipKept.find(k => k.f === f && k.sig === sig
+    && k.cv.width === frameCv.width && k.cv.height === frameCv.height) || null;
+}
+// `painted`: the caller painted and tagged the layer this moment, so the page
+// cannot have changed since; anyone else has the tag checked against the ink.
+function flipKeep(painted){
+  const f = frame(), T = _fcvTag;
+  if(!T || T.f !== f || T.w !== frameCv.width || T.h !== frameCv.height) return;
+  if(!painted && _inkSig(f) !== T.sig) return;
+  const had = _keptFor(f, T.sig);
+  if(had){ had.used = ++_keptClock; return; }
+  let k = _flipKept.length < 3 ? null : _flipKept.reduce((a, b) => (a.used <= b.used ? a : b));
+  if(!k){ k = { cv: document.createElement('canvas') }; _flipKept.push(k); }
+  if(k.cv.width !== frameCv.width || k.cv.height !== frameCv.height){ k.cv.width = frameCv.width; k.cv.height = frameCv.height; }
+  const x = k.cv.getContext('2d');
+  x.globalCompositeOperation = 'copy'; x.drawImage(frameCv, 0, 0);
+  k.f = f; k.sig = T.sig; k.used = ++_keptClock;
+}
+function _fromKept(){
+  if(!_settled()) return false;
+  const f = frame();
+  if(f.strokes.length < KEEP_MIN_POINTS) return false;
+  const sig = _inkSig(f), k = _keptFor(f, sig);
+  if(!k) return false;
+  k.used = ++_keptClock;
+  ctx.clearRect(0,0,CW,CH);
+  // The page underneath is painted through the frame layer too, so the copy
+  // goes in after it.
+  paintUnder(ctx);
+  fctx.save(); fctx.setTransform(1,0,0,1,0,0); fctx.globalCompositeOperation = 'copy';
+  fctx.drawImage(k.cv, 0, 0); fctx.restore();
+  _fcvTag = _tagOf(f, sig);
+  layOn(ctx, frameCv);
+  renderOver();
+  return true;
+}
+/* What an Undo or a Redo calls instead of render(): the page from a copy when
+   one holds it, painted in full otherwise (and then kept). */
+function repaintPage(){
+  if(!_fromKept()){ render(); flipKeep(true); }
+}
+// A new size remakes every layer, and the copies were made at the old one.
+// (A tile's kept pictures are known by the canvas size too, _backdropSig, so
+// one from before can only ever be shown at the size it was painted at.)
+function dropKept(){
+  _flipKept.length = 0; _ghosts.length = 0;
+  _fcvTag = null; _onionTag = null;
+}
+
 function render(){
   ctx.clearRect(0,0,CW,CH);
   if(_liveUsable()){
+    _fcvTag = null;   // the eraser's live path paints the frame layer below
     const L = _liveCache, live = L.fr.strokes.length > L.start ? L.fr.strokes.slice(L.start) : null;
     layOn(ctx, _liveUnderCv);
     if(L.flat){
@@ -2074,7 +2225,12 @@ function render(){
   } else {
     paintUnder(ctx);
     paintFrame(ctx, frame().strokes);
+    // What the frame layer now holds, for a copy of it (flipKeep).
+    _fcvTag = _settled() ? _tagOf(frame()) : null;
   }
+  renderOver();
+}
+function renderOver(){
   // Last, so the guides read on top of the drawing rather than under it. Only
   // ever on the live pad: thumbnails, exports and the player all render through
   // their own contexts, so nothing here can be baked into what is published.
@@ -2465,6 +2621,7 @@ function endStroke(){
     render();
   }
   curCount=0; strokeFrame=null; strokePointerId=null;
+  flipKeep();   // the page with this stroke, for a Redo after its Undo
   refreshThumb(idx); updateToolState(); scheduleSave(); }
 function endMoveDrag(){
   if(!moveDragging) return;
@@ -3421,7 +3578,27 @@ function _thumbSig(f){
     col = (col * 33 + _colourHash(p.color)) % 2147483647;
   }
   // The backdrop is not in the strokes, and neither is the eraser flag pattern.
-  return acc + '|' + col + '|' + pts.length + '|' + (bgColor || '') + '|' + (bgImage ? 1 : 0);
+  return acc + '|' + col + '|' + pts.length + '|' + _backdropSig();
+}
+/* EVERYTHING THE TILE IS PAINTED OVER: what drawBackdrop reads, and the canvas
+   size the page is framed in. This was the ground colour and whether there was
+   a photo at all, so a second photo, the photo's strength, blur or framing,
+   or a new canvas size left every tile showing the old one until its page was
+   drawn on again. The photo is known by the Image it was loaded into (a new
+   photo is a new Image, loadBgImageObj), never by its data URL, which can be
+   megabytes. `var` and made on first use, as _colourHashes below. */
+var _imgIds = null, _imgIdNext = 0;
+function _backdropSig(){
+  const im = (photoEnabled && bgImageObj && bgImageObj.complete && bgImageObj.naturalWidth) ? bgImageObj : null;
+  let photo = '';
+  if(im){
+    if(!_imgIds) _imgIds = new WeakMap();
+    let id = _imgIds.get(im);
+    if(!id){ id = ++_imgIdNext; _imgIds.set(im, id); }
+    photo = '|' + id + '|' + photoFit + '|' + photoZoom + '|' + photoOffX + '|' + photoOffY
+      + '|' + photoOpacity + '|' + photoBlur;
+  }
+  return (bgColor || '') + '|' + CW + 'x' + CH + photo;
 }
 // A colour's number for the signature, worked out once per colour a page uses.
 // `var` and made on first use: a thumbnail can be drawn before this line runs.
@@ -3441,10 +3618,26 @@ function _colourHash(c){
    ~17MB. Past the budget a tile simply paints direct -- slower, never wrong. */
 const THUMB_CACHE_BYTES = 8 * 1024 * 1024;
 let _thumbBytes = 0;
+/* A BUSY PAGE'S LAST FEW PICTURES. When a busy page changes, the picture it
+   had is kept in _thumbBack (three, the oldest going first) rather than
+   dropped, so an Undo or a Redo that brings the page back to it shows it
+   again instead of painting it: on a page of 20,000 points the thumbnail was
+   half of an Undo's time. The same signature decides, so a kept picture is
+   only ever shown for the page it was painted from. */
 function drawThumb(cv,f){
   cv.width=88*DPR; cv.height=62*DPR; cv.style.background='transparent';
   const c=cv.getContext('2d');
-  const sig = _thumbSig(f), hit = _thumbCache.get(f);
+  const sig = _thumbSig(f);
+  let hit = _thumbCache.get(f);
+  if(hit && hit.sig !== sig && f.strokes.length >= KEEP_MIN_POINTS){
+    const b = _thumbBack.findIndex(e => e.f === f && e.sig === sig && e.w === cv.width && e.h === cv.height);
+    if(b >= 0){
+      const back = _thumbBack.splice(b, 1)[0];
+      _thumbBack.push({ f: f, sig: hit.sig, cv: hit.cv, w: hit.w, h: hit.h });
+      hit = { sig: back.sig, cv: back.cv, w: back.w, h: back.h };
+      _thumbCache.set(f, hit);
+    }
+  }
   if(hit && hit.sig === sig && hit.w === cv.width && hit.h === cv.height){
     c.setTransform(1,0,0,1,0,0); c.clearRect(0,0,cv.width,cv.height);
     c.drawImage(hit.cv, 0, 0);
@@ -3459,6 +3652,10 @@ function drawThumb(cv,f){
     off.width = cv.width; off.height = cv.height;
     off.getContext('2d').drawImage(cv, 0, 0);
     if(!hit) _thumbBytes += bytes;
+    else if(f.strokes.length >= KEEP_MIN_POINTS){
+      _thumbBack.push({ f: f, sig: hit.sig, cv: hit.cv, w: hit.w, h: hit.h });
+      if(_thumbBack.length > 3) _thumbBack.shift();
+    }
     _thumbCache.set(f, { sig: sig, cv: off, w: cv.width, h: cv.height });
   } catch(_){ /* canvas allocation may fail under memory pressure; direct is fine */ }
 }
@@ -6690,9 +6887,15 @@ photoRemove.addEventListener('click',(e)=>{ e.stopPropagation(); imageSelectionS
 photoToggle.addEventListener('click',(e)=>{ e.stopPropagation(); photoEnabled=!photoEnabled; redrawAll(); syncPhotoUI(); scheduleSave(); });
 photoFitGroup.addEventListener('click',e=>{ const b=e.target.closest('.photo-fit-btn'); if(!b) return; photoFit=b.dataset.fit; redrawAll(); syncPhotoUI(); scheduleSave(); });
 repositionBtn.addEventListener('click',()=>{ if(photoFit!=='cover') return; reposMode=!reposMode; syncPhotoUI(); });
-photoZoomEl.addEventListener('input',()=>{ photoZoom=(+photoZoomEl.value)/100; photoZoomVal.textContent=photoZoomEl.value+'%'; setFill(photoZoomEl); redrawAll(); scheduleSave(); });
-photoOpacityEl.addEventListener('input',()=>{ photoOpacity=(+photoOpacityEl.value)/100; photoOpacityVal.textContent=photoOpacityEl.value+'%'; setFill(photoOpacityEl); redrawAll(); scheduleSave(); });
-photoBlurEl.addEventListener('input',()=>{ photoBlur=+photoBlurEl.value; photoBlurVal.textContent=photoBlur+'px'; setFill(photoBlurEl); redrawAll(); scheduleSave(); });
+// A slider passes many values on its way, and every tile is painted over the
+// photo (_backdropSig): the page follows each step, the tiles once it rests.
+// Each step painted all of them: 66 ms on 31 pages at this box's pace, 284
+// with the CPU 4x slower.
+let _thumbsSoon = 0;
+function thumbsSoon(){ clearTimeout(_thumbsSoon); _thumbsSoon = setTimeout(refreshAllThumbs, 150); }
+photoZoomEl.addEventListener('input',()=>{ photoZoom=(+photoZoomEl.value)/100; photoZoomVal.textContent=photoZoomEl.value+'%'; setFill(photoZoomEl); render(); thumbsSoon(); scheduleSave(); });
+photoOpacityEl.addEventListener('input',()=>{ photoOpacity=(+photoOpacityEl.value)/100; photoOpacityVal.textContent=photoOpacityEl.value+'%'; setFill(photoOpacityEl); render(); thumbsSoon(); scheduleSave(); });
+photoBlurEl.addEventListener('input',()=>{ photoBlur=+photoBlurEl.value; photoBlurVal.textContent=photoBlur+'px'; setFill(photoBlurEl); render(); thumbsSoon(); scheduleSave(); });
 resetPhotoBtn.addEventListener('click',()=>{ photoFit='cover'; photoOpacity=1; photoBlur=0; photoZoom=1; photoOffX=0.5; photoOffY=0.5; reposMode=false; photoEnabled=true; redrawAll(); syncPhotoUI(); scheduleSave(); });
 
 // ===== music component: the drawer is lib/musicdrawer.js, shared with the Pad =====
@@ -10717,7 +10920,7 @@ function doFill(p){
        : (_filled / _canvasPx > FILL_ESCAPE_FRACTION
           ? 'Filled past your lines \u2014 the outline has a gap. Undo to go back'
           : 'Filled'));
-  render(); refreshThumb(idx); updateToolState(); scheduleSave();
+  render(); flipKeep(true); refreshThumb(idx); updateToolState(); scheduleSave();
 }
 
 /* ---- stamps -----------------------------------------------------------------
@@ -10871,7 +11074,7 @@ function doStamp(p){
   redoStack.length = 0;
   noteAction({ type:'fill', label:'Stamp', idx: idx, groups: runs.length });
   chip('Stamped');
-  render(); refreshThumb(idx); updateToolState(); scheduleSave();
+  render(); flipKeep(true); refreshThumb(idx); updateToolState(); scheduleSave();
 }
 
 function undoStroke(){
@@ -10902,7 +11105,7 @@ function undoStroke(){
     // appended at the end, one action", so it reuses this branch rather than
     // adding a second copy of it that would drift. Only the wording differs.
     chip((m.label || 'Fill') + ' undone');
-    render(); refreshThumb(m.idx); updateToolState(); scheduleSave();
+    repaintPage(); refreshThumb(m.idx); updateToolState(); scheduleSave();
     return;
   }
   // A move is undone only if it was the LAST thing done. Popping strokes past
@@ -10997,7 +11200,7 @@ function undoStroke(){
   const n = f.strokeGroups.pop();
   const removed = f.strokes.splice(f.strokes.length - n, n);
   redoStack.push({ pts: removed, count: n });
-  render(); refreshThumb(idx); updateToolState(); scheduleSave();
+  repaintPage(); refreshThumb(idx); updateToolState(); scheduleSave();
 }
 function redoStroke(){
   if(_recolor) _recolor.settle();   // as undo
@@ -11088,13 +11291,13 @@ function redoStroke(){
     for(const c of m.counts) tf.strokeGroups.push(c);
     noteAction({ type:'fill', label: m.label, idx: m.idx, groups: m.counts.length });
     chip((m.label || 'Fill') + ' redone');
-    render(); refreshThumb(m.idx); updateToolState(); scheduleSave();
+    repaintPage(); refreshThumb(m.idx); updateToolState(); scheduleSave();
     return;
   }
   const f = frame(); const item = redoStack.pop();
   for(const p of item.pts) f.strokes.push(p);
   f.strokeGroups.push(item.count);
-  render(); refreshThumb(idx); updateToolState(); scheduleSave();
+  repaintPage(); refreshThumb(idx); updateToolState(); scheduleSave();
 }
 document.querySelectorAll('#toolGroup .tool-btn').forEach(b=>b.addEventListener('click',()=>{
   if(playing) return;
