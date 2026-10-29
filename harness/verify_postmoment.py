@@ -92,10 +92,14 @@ CAPTION = ("She sits there every morning and tells the birds what she thinks of 
 
 # Every frame from the moment the sheet is .is-posted: the sheet's box, its
 # classes, the band's opacity and Blooby's pose. Installed before Post is
-# pressed, so the first frame of the moment is in it.
+# pressed, so the first frame of the moment is in it. And every long task the
+# page runs, so a frame the page itself held is told from one the box held.
 SAMPLER = """() => {
   const sheet = document.getElementById('postSheet'), img = document.getElementById('postJump');
   window.__pm = []; let on = false, t0 = 0;
+  window.__pmlt = []; window.__pm0 = null;
+  try { new PerformanceObserver(l => l.getEntries().forEach(e => window.__pmlt.push([e.startTime, e.duration])))
+          .observe({ type: 'longtask' }); } catch (e) {}
   const pose = () => { const m = /translateX\\((-?[\\d.]+)%\\)/.exec(img ? img.style.transform : '');
                        return m ? Math.round(-parseFloat(m[1]) * 7 / 100) : null; };
   function tick(t) {
@@ -109,7 +113,7 @@ SAMPLER = """() => {
   }
   new MutationObserver(() => {
     if (on || !sheet.classList.contains('is-posted')) return;
-    on = true; t0 = performance.now(); requestAnimationFrame(tick);
+    on = true; t0 = performance.now(); window.__pm0 = t0; requestAnimationFrame(tick);
   }).observe(sheet, { attributes: true, attributeFilter: ['class'] });
 }"""
 
@@ -278,16 +282,36 @@ with sync_playwright() as p:
                           d_rest < 9 and d_land > d_rest + 3, f"against blooby-cheer.webp: resting {d_rest:.1f}, landing {d_land:.1f}")
             if part("glide"):
                 fr = pg.evaluate("() => window.__pm")
-                hs = [f["h"] for f in fr]
+                hs, ts = [f["h"] for f in fr], [f["t"] for f in fr]
                 h0, h1 = hs[0] if hs else 0, hs[-1] if hs else 0
-                steps = [abs(hs[i] - hs[i - 1]) for i in range(1, len(hs))]
-                moving = [s for s in steps if s > 0.5]
-                big = max(steps) if steps else 0
+                way = abs(h1 - h0)
+                steps = [(ts[i] - ts[i - 1], abs(hs[i] - hs[i - 1]), i) for i in range(1, len(hs))]
+                moving = [s for s in steps if s[1] > 0.5]
                 back = any((hs[i] - hs[i - 1]) * (h1 - h0) < -1 for i in range(1, len(hs)))
                 glide_ms = next((f["t"] for f in fr if "is-gliding" not in f["cls"] and f["t"] > 30), None)
+                # A FRAME THE BOX HELD IS NOT A JUMP. The ease's fastest
+                # stretch is about 16% of the way a frame, so a frame 45ms long
+                # reads 40% of it at once. This box draws in software: two runs
+                # in three here had a 33ms frame at the start, with nothing of
+                # the page's running. A frame the PAGE held is the page's fault
+                # (the height is laid out on the page's own thread), so a step
+                # is set aside only across a frame of 30ms and more in which
+                # the page ran no long task; one, the biggest, named in the
+                # detail. Six frames moving still have to be read.
+                t0 = pg.evaluate("() => window.__pm0") or 0
+                tasks = [(a - t0, a - t0 + d) for a, d in pg.evaluate("() => window.__pmlt || []")]
+                dts = sorted(s[0] for s in steps)
+                usual = dts[len(dts) // 2] if dts else 16.7
+                held = [s for s in steps if s[0] >= max(30, 1.5 * usual) and s[1] > 0.4 * way
+                        and not any(a < ts[s[2]] and b_ > ts[s[2] - 1] for a, b_ in tasks)]
+                aside = max(held, key=lambda s: s[1]) if held else None
+                big = max((s[1] for s in steps if s is not aside), default=0)
+                ours = [(round(a), round(b_ - a)) for a, b_ in tasks if b_ > 0 and a < (ts[-1] if ts else 0)]
                 check(f"Pad, {theme}: the sheet glides to its new height: {len(moving)} frames between, none a jump, never back",
-                      abs(h1 - h0) > 20 and len(moving) >= 6 and big <= 0.4 * abs(h1 - h0) and not back,
-                      f"{round(h0)} -> {round(h1)} px; largest step {big:.1f}; frames moving {len(moving)}; glide done at {glide_ms}")
+                      way > 20 and len(moving) >= 6 and big <= 0.4 * way and not back,
+                      f"{round(h0)} -> {round(h1)} px; largest step {big:.1f}; frames moving {len(moving)}; glide done at {glide_ms}"
+                      + (f"; set aside: {aside[1]:.1f}px across a {round(aside[0])}ms frame the box held" if aside else "")
+                      + (f"; the page's long tasks meanwhile (at, ms) {ours}" if ours else ""))
                 ops = [f["band"] for f in fr if f["band"] is not None]
                 rising = [o for o in ops if 0.02 < o < 0.98]
                 check(f"Pad, {theme}: ...and the band rises in over frames rather than appearing",

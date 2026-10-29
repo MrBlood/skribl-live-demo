@@ -1422,8 +1422,11 @@ with sync_playwright() as _ps:
         if _btn.strip() == "Cancel":
             _pg.click("#postSubmitBtn"); _pg.wait_for_timeout(800)
         _lab2 = _pg.inner_text("#postStatusLabel")
-        check(f"{_ed}: Cancel stops it and says nothing was posted",
-              "not posted" in _lab2.lower() and "still here" in _lab2.lower()
+        # In each editor's own word for what it makes (the owner's yes on the
+        # plain words): a drawing on the Pad, an animation on Flip.
+        _it = "drawing" if _ed == "Pad" else "animation"
+        check(f"{_ed}: Cancel stops it and says nothing was posted, and that the {_it} is still here",
+              _lab2.strip() == f"Not posted. Your {_it} is still here; Try again sends it."
               and _pg.evaluate("() => document.getElementById('postStatus').classList.contains('error')"), _lab2)
         _pg.click("#postSubmitBtn")
         try:
@@ -1494,12 +1497,14 @@ print("\nTOO LONG TO POST — said before anything is sent, and the button saves
 # cap it posts, for real; one point past it, nothing is sent, the reason is the
 # words both editors share (lib/postsheet.js failure('long')), and Post becomes
 # Save as a file -- the ⋯ menu's drawer, and a .skribl file holding every point.
-# Flip says the same when its pages add up past the budget, and then what only
-# it knows: how much of the length its generated pages are.
+# Flip says the same, in its own word for it (an animation), when its pages add
+# up past the budget, and then what only it knows: how much of the length its
+# generated pages are.
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from skribl import validation as _V
 _LONG = ("Couldn’t post. Your drawing is still here. It’s longer than a post can hold, "
          "so save it as a file to keep a copy.")
+_LONG_FLIP = _LONG.replace("Your drawing", "Your animation")   # Flip's own word for it
 _FILL_PAD = """(n) => { const need = n - strokes.length;
   for (let i = 0; i < need; i++) strokes.push({ x: 20 + (i % 700), y: 20 + ((i / 700) | 0) % 500,
     color: '#7c5cff', size: 3, t: 4000 + i * 18, start: i === 0 });
@@ -1616,8 +1621,8 @@ with sync_playwright() as _pw:
     _pg.click("#postBtn"); _pg.wait_for_timeout(500)
     _pg.click("#postSubmitBtn"); _pg.wait_for_timeout(500)
     _s = _pg.evaluate(_SHEET)
-    check("Flip, past the budget: nothing is sent, the same words, then its generated pages",
-          not _sent and _s["error"] and _s["says"].startswith(_LONG + " Its 3 generated pages make up "),
+    check("Flip, past the budget: nothing is sent, the same words in its own word for it, then its generated pages",
+          not _sent and _s["error"] and _s["says"].startswith(_LONG_FLIP + " Its 3 generated pages make up "),
           f"{_s}; {len(_sent)} POST(s)")
     check("...and the same Save as a file button",
           _s["label"] == "Save as a file" and _s["floppy"] and not _s["plane"], str(_s))
