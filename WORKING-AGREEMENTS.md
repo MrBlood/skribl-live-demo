@@ -318,7 +318,7 @@ Liberation Sans.
 ## Mistakes from the dock and readout round: do not repeat them
 
 - **A CHANGE TO THE HEADER OR THE DOCK RUNS `verify_pointerpad`**, with
-  `verify_ux`, `verify_layout`, `verify_sizeclass` and `verify_a11y` (anything
+  `verify_ux`, `verify_layout`, `verify_sizeclass`, `verify_a11y` and `verify_a11ypages` (anything
   touching what `body.stroking` does too).
 - **DO NOT TUNE AN OPTICAL NUDGE TO THIS CONTAINER'S FONTS.** The owner renders
   Segoe UI (Windows) and SF (iPhone); this box has neither. Align with

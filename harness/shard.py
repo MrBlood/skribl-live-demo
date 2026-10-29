@@ -34,7 +34,7 @@ PINNED_FIRST = ("verify_postgres.py",)
 # Seconds on CI (Oct 11, run 38190196594: the slower of the sqlite and
 # postgresql shards), to the nearest ten.
 MEASURED = {
-    "verify_a11y.py": 400, "verify_amber.py": 280, "verify_audiosession.py": 70,
+    "verify_a11y.py": 360, "verify_a11ypages.py": 210, "verify_amber.py": 280, "verify_audiosession.py": 70,
     "verify_audiostate.py": 80, "verify_clouddrafts.py": 120, "verify_compose.py": 120,
     "verify_cssplit.py": 90, "verify_drafts.py": 100, "verify_flipmeta.py": 90,
     "verify_flipspeed.py": 60, "verify_galib.py": 100, "verify_gallery.py": 130,

@@ -112,6 +112,7 @@ GENERATED = {"harness/LAST-RUN.txt", "SHA256SUMS", "README.md",
 BATCHES = [
     ["verify_ux.py"],                      # size
     ["verify_a11y.py"],                    # measures — keys against a playing scrubber
+    ["verify_a11ypages.py"],               # measures — taps on a playing Flip and Pad, read as they settle
     ["verify_tools.py"],                   # size
     ["verify_move.py", "verify_pages.py"],
     ["verify_hold.py"],                    # measures — frame pacing
