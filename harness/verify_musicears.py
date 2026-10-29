@@ -345,6 +345,8 @@ with sync_playwright() as p:
     for name, path in eds("beats"):
         c, q, errs = editor(b, path)
         st = add(q, "steady")
+        check(f"{name}: what Skribl does once it has listened is not a step: the loop's Undo is still greyed",
+              not st["undo"], f"undo {st['undo']} after the pick it glided to, {st['s']:.3f}-{st['e']:.3f}")
         length_door(q)
         q.evaluate("() => document.getElementById('musicBeatsRow').scrollIntoView({ block: 'center' })"); q.wait_for_timeout(300)
         q.evaluate(TAGS)

@@ -44,7 +44,10 @@
  * just past that, beside the tab, was the whole song's line, where a tap
  * jumps the loop: the row of tabs is the ends' now, a near miss there moves
  * nothing, and the whole song's line takes a press on its own row. Where the
- * two ends are close, a press that reaches both takes the nearer (grab).
+ * two ends are close, a press that reaches both takes the nearer (grab). An
+ * end pressed beside its line keeps that distance from the finger as it
+ * moves, so it never jumps to the finger (the owner: "No transitions should
+ * be jumpy").
  *
  * THE FRAMING: 1.28 times the longer of the loop and the drawing, the
  * drawing counted up to three loops (a two-hour piece would make the loop a
@@ -750,7 +753,11 @@
       if (hd || !touch) e.preventDefault();
       var g = { kind: hd ? 'end' : 'slide', which: hd ? hd.dataset.which : null, x: pt.clientX, y0: pt.clientY,
                 x0: pt.clientX, locked: !!hd || !touch, zone: 0, from: trim().start, off: focused() - view.v0 };
-      if (hd) { hd.classList.add('dragging'); focus = hd.dataset.which; }
+      if (hd) {
+        hd.classList.add('dragging'); focus = hd.dataset.which;
+        var hb = hd.getBoundingClientRect();
+        g.dx = hb.left + hb.width / 2 - pt.clientX;   // where its line is from the finger
+      }
       held = g;
       root.classList.add('holding');
       return {
@@ -773,7 +780,7 @@
               var zr = Math.max(0, Math.min(1, (lx - (w - ZONE)) / ZONE)), zl = Math.max(0, Math.min(1, (ZONE - lx) / ZONE));
               g.zone = Math.max(zr, zl); g.side = zr >= zl ? 1 : -1;
             }
-            h.edge(g.which, T(Math.max(0, Math.min(w, lx))));
+            h.edge(g.which, T(Math.max(0, Math.min(w, lx + (g.dx || 0)))));
             if (g.zone) request();
           } else {
             var t = trim(), len = t.end - t.start;

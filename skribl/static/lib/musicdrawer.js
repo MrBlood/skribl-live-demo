@@ -490,7 +490,7 @@
     function stopGlide() {
       if (glideRaf) { global.cancelAnimationFrame(glideRaf); glideRaf = 0; }
       if (aim && pending && pending === gliding) {
-        var landed = stepNow();
+        var landed = loopStep();
         gliding = null;
         keep(pending, landed);
         pending = quiet ? null : landed;
@@ -500,10 +500,11 @@
     // The loop as it is, or where it lands while a settle glides there: what
     // Skribl's pick and Beats go by, so neither changes its mind on the way.
     function loopNow() { var t = h.trim(); return aim ? { start: aim[0], end: aim[1], duration: t.duration } : t; }
+    // A change made while a settle glides starts from where it was going.
     function setEdge(which, time, mode) {
+      var t = loopNow(), n;
       stopGlide();
       if (tl && tl.focus) tl.focus(which);
-      var t = h.trim(), n;
       if (locked) {
         var len = t.end - t.start, s = Math.max(0, Math.min(t.duration - len, t.start + time - (which === 'start' ? t.start : t.end)));
         n = { start: s, end: s + len };
@@ -514,7 +515,7 @@
     }
     // The loop slid along the song, its length kept.
     function slideTo(start) {
-      var t = h.trim(), len = t.end - t.start, s = Math.max(0, Math.min(t.duration - len, start));
+      var t = loopNow(), len = t.end - t.start, s = Math.max(0, Math.min(t.duration - len, start));
       stopGlide();
       setTrim(s, s + len);
       touched();
@@ -939,7 +940,7 @@
         var which = b.dataset.which, dir = parseFloat(b.dataset.amount);
         // A NaN step would corrupt the edge and make the clamp reset the loop.
         if (!h.hasTrack() || (which !== 'start' && which !== 'end') || !isFinite(dir)) return;
-        var t = h.trim();
+        var t = loopNow();
         setEdge(which, (which === 'start' ? t.start : t.end) + dir * stepNow(), 'slide');
         changed();
       });
@@ -1214,7 +1215,7 @@
     var undoBtn = $('musicUndo'), redoBtn = $('musicRedo');
     // The loop as a step keeps it. The magnet is not the loop's: a step put
     // back keeps Snap to the beat as it is now.
-    function stepNow() {
+    function loopStep() {
       var t = loopNow(), tp = h.tempo ? h.tempo() : null, o = tp ? copyOf(tp) : null;
       if (o) delete o.snap;
       return { start: t.start, end: t.end, ms: h.crossfade(), cut: !!(h.cut && h.cut()), tempo: o, pick: beatsPick, chosen: chosen };
@@ -1225,7 +1226,7 @@
     }
     function sameStep(a, b) { return near(a.start, b.start) && near(a.end, b.end) && a.ms === b.ms && a.cut === b.cut && sameTempo(a.tempo, b.tempo); }
     // A change begins: what the loop was is held until the change lands.
-    function before() { if (!quiet && !pending && h.hasTrack()) pending = stepNow(); }
+    function before() { if (!quiet && !pending && h.hasTrack()) pending = loopStep(); }
     function setTrim(s, e) { before(); h.setTrim(s, e); }
     function setTempo(tp) { before(); h.setTempo(tp); }
     function setCut(on) { before(); h.setCut(on); }
@@ -1245,7 +1246,7 @@
       var was = pending;
       pending = null;
       gliding = null;
-      keep(was, stepNow());
+      keep(was, loopStep());
       syncUndo();
     }
     // Every change ends here: kept as a step, then the editor's autosave.
@@ -1288,8 +1289,8 @@
       h.refresh();
       changed();
     }
-    function undoStep() { land(); if (!past.length || !h.hasTrack()) return; ahead.push(stepNow()); putStep(past.pop()); }
-    function redoStep() { land(); if (!ahead.length || !h.hasTrack()) return; past.push(stepNow()); putStep(ahead.pop()); }
+    function undoStep() { land(); if (!past.length || !h.hasTrack()) return; ahead.push(loopStep()); putStep(past.pop()); }
+    function redoStep() { land(); if (!ahead.length || !h.hasTrack()) return; past.push(loopStep()); putStep(ahead.pop()); }
     [[undoBtn, undoStep, redoBtn], [redoBtn, redoStep, undoBtn]].forEach(function (pr) {
       if (pr[0]) pr[0].addEventListener('click', function () {
         if (pr[0].disabled) return;
