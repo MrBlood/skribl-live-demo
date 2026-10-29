@@ -3792,12 +3792,28 @@ function deepCopy(f){ const b = balancedPair(f);
 // refresh, where a restored 62-page animation opened on page 62 with the strip
 // showing page 1. addFrame() was the only caller that scrolled, so the fix
 // existed but was never shared.
-function scrollStripToActive(smooth){
+function scrollStripToActive(smooth, quiet){
   // Correct either way today -- the ghost is appended AFTER the current page, so
   // children[idx] is still idx's tile -- but page indexes go through _tiles() so
   // that stays true if the ghost ever moves.
   const el=_tiles()[idx];
   if(!el) return;
+  /* QUIET, AT BOOT: THE STRIP'S OWN ROW AND NOTHING ELSE. scrollIntoView also
+     moves where the Tab key starts (Chromium), so a Flip that opened by
+     scrolling its strip sent the first Tab to page 1's hold badge, and its
+     header came last; Pad starts at its header (polish list item 5,
+     verify_a11y). Scrolling the row itself, to the same centre, leaves the
+     starting point at the top of the page. */
+  if(quiet){
+    for(let p=el.parentElement; p && p!==document.body; p=p.parentElement){
+      if(p.scrollWidth>p.clientWidth+1 && /auto|scroll/.test(getComputedStyle(p).overflowX)){
+        const er=el.getBoundingClientRect(), pr=p.getBoundingClientRect();
+        p.scrollLeft+=(er.left+er.width/2)-(pr.left+pr.width/2);
+        return;
+      }
+    }
+    return;
+  }
   try{ el.scrollIntoView({behavior: smooth?'smooth':'auto', inline:'center', block:'nearest'}); }
   catch(_){ el.scrollIntoView(); }
 }
@@ -11970,7 +11986,7 @@ if(!restored && window.SkriblCanvasSizes && window.SkriblCanvasSizes.bestFor){
 // there too. Not smooth: on boot an animated scroll from page 1 to page 62 is a
 // second of the strip flying past for no reason. rAF because buildStrip() has
 // only just inserted the tiles and their widths are not laid out yet.
-requestAnimationFrame(()=>scrollStripToActive(false));
+requestAnimationFrame(()=>scrollStripToActive(false, true));
 // Intro toast (v204) — replaces the crammed .flip-hint footer that forced the
 // page to scroll on load. Shown once ever via SkriblHints (honours the Tips
 // toggle, persists 'seen', fails quiet), dismissable by click.

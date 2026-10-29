@@ -25815,3 +25815,50 @@ makes no canvas at a turn (none in four seconds of rounds, counted). The link
 page's loop does make a compositor each lap (app.js play(), from the start):
 the same reuse there needs a size check and costs bytes under the player's
 ratchet, which has 34 B of headroom, so it is named here and not done.
+
+## After v329 -- A tip steps aside when something opens; three names and the first Tab
+
+Items 3 and 5 on the polish list, found in Phase 1 by reading what a press
+lands on (elementFromPoint) and what a screen reader is given (the
+accessibility tree).
+
+A TIP STEPS ASIDE. On a first visit Flip's intro ("New here?") hangs about 12 s
+under the header, and Tune opens in the page rather than as a sheet, so the
+toast sat on top of Tune's Speed buttons: on a phone a tap on 6, 12 or 24
+opened the help instead, and on a desk a tap on 24. lib/hints.js now hears
+lib/opensurfaces.js's classes on <html>: a tip that was up when a drawer, sheet
+or menu opens goes, since whatever just opened is what the person is looking
+at. A tip shown while one is open stays, because it is about that surface, and
+so does one shown in the same moment a drawer opens, in either order (the
+classes arrive a moment after, and must not read as the drawer opening over
+it). On the way: a tip put away before its first frame used to fade in anyway,
+its timer already cleared, and stay until tapped; it now fades in only if it
+is still the current tip.
+
+THREE NAMES AND THE FIRST TAB.
+- The Shape button had no name of its own, on Pad and on Flip (where it comes
+  onto the shelf once Shape is picked). lib/tooltip.js names a button from its
+  tooltip only when it has no words, and Shape's word is in the button but
+  hidden at a phone's width, so in a narrow window with a mouse it had no name,
+  and on a phone it read the whole tooltip. It says "Shape" now, first, as Pen
+  and Eraser do, in both editors.
+- The Caption's count sat inside its label, so the field was named
+  "Caption optional 0 / 300". The count is the field's description now, and its
+  name is "Caption optional".
+- Flip's first Tab went to page 1 in the strip and its header came last.
+  Chromium moves where Tab starts on scrollIntoView, and Flip scrolled its strip
+  that way as it opened. The opening scroll moves the strip's own row to the
+  same centre instead, and the first Tab lands in the header, as on Pad.
+
+THE ROWS, each shown red against its own break. verify_tips: Flip at 390 and
+1280, the intro up, Tune opens and every Speed button takes the press; on Pad
+a tip steps aside for Tune and for the menu, stays when shown with Tune open,
+stays when shown in the same moment Tune opens (either order), and a tip put
+away before its first frame is not left on screen. verify_a11y: the tools on
+each editor's shelf are named by their word, Shape among them, in a narrow
+window with a mouse and on a phone; the Caption's name and description; the
+first Tab lands in the header on Pad and on Flip.
+
+WHAT IT DOES TO FLIP: shared. One tips module, one Post sheet and the same
+Shape button serve both editors; the intro and the first Tab were Flip's to
+fix.
