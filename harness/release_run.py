@@ -244,7 +244,7 @@ BATCHES = [
     ["verify_flipedges.py", "verify_words.py"],
     ["verify_viewedges.py"],               # store — posts public fixtures to the shared server, which verify_gallery and verify_hot count
     ["verify_music.py"],                   # measures — a preview's playhead over time, on both editors
-    ["verify_musicdoors.py"],              # measures — a door's tile read on every frame, an Undo's eight seconds
+    ["verify_musicdoors.py"],              # measures — a door's tile read on every frame
     ["verify_musicbeat.py"],               # measures — taps timed on the page's clock, a loop's next time round
     # Out of verify_musicbeat at its 600 seconds (after #665): the marks, the
     # Restart view, Snap, where the music begins, kept with the song, the words.
@@ -263,6 +263,8 @@ BATCHES = [
     ["verify_musictimeline.py"],           # measures — the view read on every frame, a preview's playhead over time
     # Step 3: Skribl's ears, the pick on the beat heard.
     ["verify_musicears.py"],               # measures — the loop and the beat marks read on every frame, a reload's autosave
+    # The loop's own Undo and Redo, the bin's Undo, the ends' reach.
+    ["verify_musicundo.py"],               # measures — a nudge 40ms into a settle's 200ms glide, the draft's store as it saves
     # The owner's seven yeses (after v326): one name each, the Post title from
     # the name, New Skribl's way back on both editors.
     ["verify_names.py", "verify_posttitle.py", "verify_newundo.py"],

@@ -2396,24 +2396,28 @@ body.recoloring #canvas { cursor: crosshair !important; }
 }
 @media (hover: hover) { .panel-btn:hover { background: var(--surface-control-hover); color: var(--text-bright); } }
 
-.mt-pick[hidden], .mt-pick-btn[hidden] { display: none; }
+.mt-pick[hidden] { display: none; }
 
 /* THE ONE LINE, under the timeline: the loop's length, bold, in beats and
-   against the drawing. It was three lines (the pick, Adjust's length and
-   Fine-tune's sync line), and until the four doors Skribl's pick or the way
-   back sat at its end. */
-.mt-pick { display: flex; align-items: center; margin-top: 8px;
+   against the drawing, and at its end the loop's Undo and Redo, in the
+   zoom's box (.mt-tl-mag, below). It was three lines (the pick, Adjust's
+   length and Fine-tune's sync line), and until the four doors Skribl's pick
+   or the way back sat at its end. */
+.mt-pick { display: flex; align-items: center; gap: 10px; margin-top: 8px;
   font-size: 14px; line-height: 1.35; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
 .mt-pick-text { flex: 1 1 auto; min-width: 0; }
 /* ITS HEIGHT HOLDS AS IT CHANGES. Its longest words ("19.75s · 39.5 beats ·
    shorter than your animation") are 324px in Inter at 14px, the widest face
-   it is drawn in, and fit one row from a 390px phone up (332px of room).
-   Narrower, what the loop is against the drawing takes a row of its own,
-   whatever it says, so nothing under the line moves as it changes. A page
+   it is drawn in, and with the pair (66px) and the gap they fit one row from
+   a 458px screen up (400px of room). Narrower, a phone among them, what the
+   loop is against the drawing takes a row of its own, whatever it says, and
+   the line is two rows tall with or without it, so nothing under the line
+   moves as it changes; the pair sits in the middle of the two. A page
    zoomed in is a narrower screen, so it holds there too. (A @media, not a
    @container: harness/tools/cssgraph.py keeps any other at-rule whole, so
    it would land in the player's sheet.) */
-@media (max-width: 389px) {
+@media (max-width: 459px) {
+  .mt-pick { min-height: 38px; }
   .mt-pick-vs { display: block; }
   .mt-pick-vs .mt-pick-sep { display: none; }
 }
@@ -2422,14 +2426,6 @@ body.recoloring #canvas { cursor: crosshair !important; }
    --accent-ink): before Skribl's pick in the Length door, and before the
    length it made on the Length tile. */
 .mt-spark { width: 14px; height: 14px; flex: none; color: var(--accent-ink); }
-/* UNDO, under the beats in the Length door, for eight seconds after Skribl's
-   pick or a tap on Beats moved the loop. */
-.mt-pick-btn { display: inline-flex; align-items: center; gap: 5px; min-height: 32px; padding: 4px 10px;
-  border: 1px solid var(--menu-card-line); border-radius: 999px; background: var(--menu-card);
-  color: var(--accent-ink); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
-  -webkit-tap-highlight-color: transparent; }
-.mt-pick-btn svg { width: 14px; height: 14px; flex: none; }
-@media (hover: hover) { .mt-pick-btn:hover { background: color-mix(in srgb, var(--accent) 7%, var(--menu-card)); } }
 
 /* A TYPED TIME (Exact times' Start of loop and End of loop). A field that
    takes text is 16px, or iOS magnifies the page (A11Y 11b). */
@@ -2463,7 +2459,6 @@ body.recoloring #canvas { cursor: crosshair !important; }
 .mt-doors .dp-panel > .mt-switch { padding: 4px 2px 0; }
 .mt-doors .mt-smooth > .mt-switch:first-child { padding-top: 0; }
 .mt-doors .mt-beats { padding-top: 0; }
-#musicPickUndo { align-self: center; }
 .mt-k { font-size: 15px; font-weight: 650; color: var(--text-primary); line-height: 1.25; }
 .mt-v { font-size: 13px; font-weight: 500; color: var(--text-secondary); line-height: 1.3; }
 /* EACH PRESS, under the times: how far - and + move, the one pill beside a
@@ -2996,7 +2991,10 @@ body.recoloring #canvas { cursor: crosshair !important; }
 .mt-tl-handle { position: absolute; left: 0; top: calc(var(--tl-lane, 26px) + 8px); bottom: 0; width: 18px; margin-left: -9px; z-index: 2;
   display: flex; align-items: flex-end; justify-content: center; cursor: ew-resize; touch-action: none;
   -webkit-tap-highlight-color: transparent; }
-.mt-tl-handle::before { content: ""; position: absolute; inset: 0 -13px -12px; }
+/* AN END REACHES 32px EITHER SIDE OF ITS LINE AND 26px BELOW ITS TAB, over
+   the row of tabs and the whole song's line (lib/musictimeline.js): it was
+   22px and 12px, and a near miss beside a tab jumped the loop. */
+.mt-tl-handle::before { content: ""; position: absolute; inset: 0 -23px -26px; }
 /* The loop's edge line is the timeline's to paint (lib/musictimeline.js),
    about 1.5px and sharp on the screen's own pixels: it was this handle's
    ::after, 3px, and a box here is snapped to whole CSS pixels before the
@@ -3008,7 +3006,10 @@ body.recoloring #canvas { cursor: crosshair !important; }
 .mt-tl-handle.off, .mt-tl.empty .mt-tl-handle, .mt-tl.empty .mt-tl-part { visibility: hidden; }
 .mt-tl-whole { position: relative; height: 4px; margin: 12px 0 6px; border-radius: 2px; background: var(--menu-card-line);
   cursor: pointer; touch-action: none; }
-.mt-tl-whole::before { content: ""; position: absolute; inset: -14px 0; }
+/* The whole song's line takes a press on its own row: 4px over it, so beside
+   a tab, past an end's reach, nothing moves; it was 14px, up into the row of
+   tabs. */
+.mt-tl-whole::before { content: ""; position: absolute; inset: -4px 0 -14px; }
 .mt-tl-part { position: absolute; top: -1px; height: 6px; border-radius: 3px; background: var(--accent); pointer-events: none; }
 
 .music-playhead {

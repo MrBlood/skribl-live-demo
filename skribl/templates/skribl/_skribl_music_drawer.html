@@ -126,11 +126,22 @@
         <canvas class="mt-follow-canvas" id="musicFollowCanvas" aria-hidden="true"></canvas>
       </button>
       {#- THE ONE LINE: how long the loop is, in beats once there is a tempo,
-          and against the drawing. Skribl's pick, the way back to it and its
-          Undo, which sat at its end, are in the Length door. It was the pick
-          line, Adjust's length line and Fine-tune's sync line. -#}
+          and against the drawing. Skribl's pick and the way back to it, which
+          sat at its end, are in the Length door. It was the pick line,
+          Adjust's length line and Fine-tune's sync line.
+          UNDO AND REDO at its end, the loop's own (the owner: "shouldn't
+          there be an undo button on the editor (just to go back to what it
+          was before) and maybe a redo button too?"; of the mock's A, "All
+          yes"), in a box like the zoom's: every change to the loop, and only
+          the loop, never a stroke. Each is greyed while there is nothing to
+          take back or again, as the zoom's minus is at 1x.
+          lib/musicdrawer.js. -#}
       <div class="mt-pick" id="musicPickLine">
         <span class="mt-pick-text" id="musicPickText"></span>
+        <span class="mt-tl-mag mt-undo" role="group" aria-label="Undo and Redo for the loop">
+          <button type="button" class="mt-tl-mag-btn" id="musicUndo" aria-label="Undo a change to the loop" title="Undo a change to the loop" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-1"/></svg></button>
+          <button type="button" class="mt-tl-mag-btn" id="musicRedo" aria-label="Redo a change to the loop" title="Redo a change to the loop" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 14l5-5-5-5"/><path d="M20 9H10a6 6 0 0 0 0 12h1"/></svg></button>
+        </span>
       </div>
       {#- THE PAIR THAT PLAYS (owner: "How do I test the loop without having it
           show me drawing?"): Play with my drawing, the editor's own Play, and
@@ -163,9 +174,10 @@
             drawer's three choices, the one the loop is lit. Skribl's pick
             carries Skribl's mark, the two stars, which the Length tile's
             picture wears while the loop is the pick; it is the way back to it
-            once the loop is changed, and its Undo shows under the beats for
-            eight seconds after, as it does after a tap on Beats: tuning is
-            never lost. Then Lock the length. -#}
+            once the loop is changed, and the loop's Undo, at the end of the
+            one line, takes the way back back, as it does a tap on Beats:
+            tuning is never lost. It was an Undo under the beats for eight
+            seconds. Then Lock the length. -#}
         <div class="dp-panel" id="musicDoorLength" data-dp="length" hidden>
           <div class="dp-choices dp-three mt-lengths" role="group" aria-label="How long the loop is">
             <button type="button" class="dp-choice" id="musicPickCard" aria-pressed="false"><span class="dp-k">Skribl's pick</span> <span class="dp-v"><svg class="mt-spark" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l1.8 5.6L19.5 9l-5.7 1.5L12 16l-1.8-5.5L4.5 9l5.7-1.4z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg><span id="musicPickSub"></span></span></button>
@@ -182,7 +194,6 @@
             <span class="edge-name" id="musicBeatsLbl">Beats</span>
             <span class="seg mt-step-seg" id="musicBeatsSeg" role="group" aria-labelledby="musicBeatsLbl" data-free><span class="seg-slider"></span><button type="button" data-beats="4">4</button><button type="button" data-beats="8">8</button><button type="button" data-beats="16">16</button><button type="button" data-beats="32">32</button></span>
           </div>
-          <button type="button" class="mt-pick-btn" id="musicPickUndo" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg>Undo</button>
           <div class="mt-switch">
             <span class="mt-switch-words"><span class="mt-k">Lock the length</span> <span class="mt-v" id="musicLockSub">When on, moving one end moves the other.</span></span>
             <button type="button" id="musicLock" class="layer-toggle" role="switch" aria-checked="false" aria-label="Lock the length"><span class="layer-toggle-knob"></span></button>

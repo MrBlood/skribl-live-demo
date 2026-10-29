@@ -625,7 +625,7 @@ with sync_playwright() as p:
             // glides open with the row.
             const sw = (id) => document.getElementById(id).closest('.mt-switch').querySelector('.mt-switch-words').getBoundingClientRect();
             const shown = (e) => e && !e.closest('[hidden]') && e.getClientRects().length;
-            const R = { length: [['the lengths', q('.mt-lengths')], ['beats', document.getElementById('musicBeatsRow')], ['undo', document.getElementById('musicPickUndo')], ['lock', 'musicLock']],
+            const R = { length: [['the lengths', q('.mt-lengths')], ['beats', document.getElementById('musicBeatsRow')], ['lock', 'musicLock']],
                         beat: [['tap', q('.mt-tap-row')], ['beats in a bar', document.getElementById('musicBarSeg')]],
                         restart: [['smooth restart', 'musicSmooth'], ['restart view', q('#musicRestart')], ['its hint', q('#musicRvHint')],
                                   ['length', q('.crossfade-row')], ['hear the restart', q('#testSeamBtn')], ['cut on silence', 'musicCut']],

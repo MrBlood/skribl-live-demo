@@ -5367,7 +5367,17 @@ var _mediaTabs = window.SkriblMediaTabs ? window.SkriblMediaTabs.attach({
 function syncMediaTabs(name){ if(_mediaTabs) _mediaTabs.sync(name); }
 if (toolMoreBtn) toolMoreBtn.addEventListener('click',e=>{ e.stopPropagation(); _flipDrawerCtl.toggle('tools'); });
 function hideToolTray(){ if(_flipDrawerCtl.isOpen('tools')) _flipDrawerCtl.open(null); }
+// Where the press began, for the tap-away below.
+let _pressAt=null;
+document.addEventListener('pointerdown',e=>{ _pressAt=e.target; },true);
 document.addEventListener('click',e=>{ const t=e.target;
+  // WHERE THE PRESS BEGAN COUNTS AS WHERE IT IS. A loop's end dragged in the
+  // music drawer and let go past its edge (a mouse overshoots) clicks what
+  // the two share, which read as a tap away and closed the drawer under the
+  // drag; the Pad's stays. Only for a click a press made (a key's or a
+  // script's has no press, and its own target says where it is).
+  const p=e.detail>0 && _pressAt && _pressAt.closest ? _pressAt : null;
+  const at=(s)=>!!(t.closest(s) || (p && p.closest(s)));
   // The file inputs (#imageInput/#musicInput/#draftInput) live at the PAGE
   // ROOT on Flip, outside the drawer panels (the shared drawer partials omit
   // them for Flip and this template supplies its own). When the OS file dialog
@@ -5376,25 +5386,29 @@ document.addEventListener('click',e=>{ const t=e.target;
   // as "clicked outside" and slammed the drawer shut the instant a file was
   // chosen. Pad never hit this: its inputs sit INSIDE the drawer partial.
   // (v206) Ignore the file inputs here.
-  if(t.closest('input[type=file]')) return;
+  if(at('input[type=file]')) return;
+  // Nor a click on something the click itself took away: the chip's Undo
+  // writes the chip again (its Redo), so the button tapped has left the page
+  // by the time the click reaches here, and it closed the drawer it answered.
+  if(!t.isConnected) return;
   // Nor is the chip's button (chip(), New Skribl's Undo and the music
   // drawer's when the loop's end sets the beat): it answers what was just
   // done, and Undo closed the drawer it was undoing in.
-  if(t.closest('#flipChip')) return;
+  if(at('#flipChip')) return;
   // Play and Stop are not a tap away, and nothing is while a Flip plays: an
   // open drawer RESTS then and wakes at Stop, as the Pad's does (flip.css; the
   // owner, "all yes"). Its taps pass through it to the page, which this would
   // read as a tap away and close it -- the drawer was meant to do nothing.
-  if(playing || t.closest('#play')) return;
-  if(!drawPanel.hidden  && !t.closest('#drawPanel')  && !t.closest('#penToolBtn') && !t.closest('#eraserToolBtn')) closePop();
+  if(playing || at('#play')) return;
+  if(!drawPanel.hidden  && !at('#drawPanel')  && !at('#penToolBtn') && !at('#eraserToolBtn')) closePop();
   // #mediaCard, not only the panel and the tabs: the card holds both, and the
   // seam and padding between them are part of it, not a tap away from it.
   // Nor is the timeline's copy under the header (#musicFollow), which
   // lib/musicdrawer.js moves to the page's end: a tap on it goes back up to
   // the timeline, and it closed the drawer instead.
-  if(!photoPanel.hidden && !t.closest('#photoPanel') && !t.closest('#mediaOpenBtn') && !t.closest('#mediaCard')) hidePhoto();
-  if(!musicPanel.hidden && !t.closest('#musicPanel') && !t.closest('#mediaOpenBtn') && !t.closest('#mediaCard') && !t.closest('#musicFollow')) hideMusic();
-  if(toolTray && !toolTray.hidden && !t.closest('#toolTray') && !t.closest('#toolMoreBtn')) hideToolTray();
+  if(!photoPanel.hidden && !at('#photoPanel') && !at('#mediaOpenBtn') && !at('#mediaCard')) hidePhoto();
+  if(!musicPanel.hidden && !at('#musicPanel') && !at('#mediaOpenBtn') && !at('#mediaCard') && !at('#musicFollow')) hideMusic();
+  if(toolTray && !toolTray.hidden && !at('#toolTray') && !at('#toolMoreBtn')) hideToolTray();
 });
 // Escape closes the tray. The drawers below the row are dismissed by tapping
 // away from them, which is natural for a docked panel; the tray floats over the
@@ -6764,7 +6778,32 @@ function resetMusicView(){ if(musicDrawer) musicDrawer.resetView(); }
 
 // upload / toggle / remove
 musicUploadBtn.addEventListener('click',(e)=>{ if(e.target.closest('.dropzone-remove')||e.target.closest('.layer-toggle')) return; if(!musicUploadBtn.classList.contains('loaded')) musicInput.click(); });
-musicRemove.addEventListener('click',(e)=>{ e.stopPropagation(); removeMusic(); });
+// THE BIN'S WAY BACK, as the Pad's (editor_music.js, which says why): the
+// person's own tap on the bin offers an Undo that puts the song back as it
+// was, its loop and the loop's own Undo with it (lib/musicdrawer.js binned);
+// the next save writes it again. New Skribl's clear calls removeMusic itself,
+// and has its own Undo.
+let flipBinAgain = false;
+function putMusicBack(k){
+  if(musicData || k.gen!==flipDocGen) return;
+  musicSelectionSeq++;   // a decode still on its way belongs to another song
+  musicData=k.data; musicName=k.name; currentAudioBuffer=k.buffer; audioDuration=k.duration; trimStart=k.start; trimEnd=k.end;
+  loopCrossfadeMs=k.ms; musicTempo=k.tempo; loopCutOnSilence=k.cut; musicEnabled=k.enabled; audioEl=null; musicFresh=false;
+  setCrossfadeUI(); syncMediaUI(); scheduleSave();
+}
+function binMusicAgain(){
+  flipBinAgain = true;
+  try{ if(window.SkriblPendingCards && window.SkriblPendingCards.removeNow) window.SkriblPendingCards.removeNow('music'); else musicRemove.click(); }
+  finally{ flipBinAgain = false; }
+}
+musicRemove.addEventListener('click',(e)=>{ e.stopPropagation();
+  const kept = (e.isTrusted || flipBinAgain) && musicDrawer && musicData && currentAudioBuffer && audioDuration>0
+    ? { data:musicData, name:musicName, buffer:currentAudioBuffer, duration:audioDuration, start:trimStart, end:trimEnd,
+        ms:loopCrossfadeMs, tempo:musicTempo, cut:loopCutOnSilence, enabled:musicEnabled, gen:flipDocGen }
+    : null;
+  removeMusic();
+  if(kept) musicDrawer.binned({ put:()=>putMusicBack(kept), drop:binMusicAgain });
+});
 // Flip had no drag-and-drop at all; the empty rows now say "or drop one here".
 // A drop anywhere on the media card goes to the open drawer's input once it is
 // the right kind of file (lib/pendingcards.js bindDrops, shared with the Pad):

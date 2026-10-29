@@ -483,11 +483,11 @@ stays a sleep.
   first 20 seconds or the whole song, on the Pad as long as a drawing already
   there, with a smooth restart), lit in the Length door, and a draft's song
   keeps its own loop; the one line says the length heard, its beats and
-  against the drawing, its height the same whatever it says (one row from a
-  390px phone up, two below it, what the loop is against the drawing on its
-  own row); a change unlights the pick, which is the way back, with an Undo
-  gone after eight seconds, and an Undo of the drawing shows the way back and
-  no more; Fit counts the smooth restart, and its seconds agree with the
+  against the drawing, its height the same whatever it says (two rows on a
+  phone, what the loop is against the drawing on its own row and the loop's
+  Undo and Redo at its end, one row on a desk); a change unlights the pick,
+  which is the way back, and the loop's Undo takes it back, and an Undo of
+  the drawing shows the way back and no more; Fit counts the smooth restart, and its seconds agree with the
   line's; Whole song says when it is the longest loop; where two cards are
   the same loop, the one pressed is lit, with no Undo of nothing; with
   nothing drawn Fit is off and wakes with a drawing; Smooth restart's switch
@@ -539,8 +539,9 @@ stays a sleep.
   Motion) with the page still, on a phone and a desk; a count tapped on a loop of the person's own keeps the start and
   makes the loop that many beats, moved back near the song's end only as far
   as it must, gliding there with the count lit from the tap all the way; a
-  second tap while it glides counts from where it lands, and each tap offers
-  Undo, the way back to Skribl's pick waiting while it does. Taps run on the page's
+  second tap while it glides counts from where it lands, and each tap is a
+  step the loop's Undo takes back, a tap at a time, the way back to Skribl's
+  pick waiting all the while. Taps run on the page's
   own clock, each woken early to land on its mark; a try whose taps strayed
   more than 4ms (a busy machine) is tapped again on a fresh page, three tries
   at most, and the row says which try it was. Skribl's ears are off here
@@ -668,6 +669,26 @@ stays a sleep.
   reload; Flip's Beat rounds 1 and 2 bars in three, a round three beats, the
   four back in four; the 4 and the 3 staying put as the words change, on two
   phones and a desk.
+- `verify_musicundo.py` — the music drawer's own Undo and Redo, the bin's
+  Undo and the ends' reach (the owner: "shouldn't there be an undo button on
+  the editor ... and maybe a redo button too?"; of the mock, "All yes"), on
+  the Pad and on Flip: the pair at the end of the one line, in the zoom's
+  box, painted, named, greyed as the zoom's minus is at 1x, the line two rows
+  on a phone with or without a drawing, one Undo in the drawer; every kind of
+  change made as a person makes it, each undone and done again at once so a
+  change that is not a step reds its own row, then Undo all the way down and
+  Redo all the way up, each putting the loop back exactly; one step per drag and per
+  held slider, a settle with its glide, a change made mid-glide its own step;
+  the zoom, the taller box, the magnet and Lock not steps, nor a new song's
+  pick, a new song a new history, a change after an Undo starting afresh,
+  the keyboard's place kept; the bin's note and its Undo and Redo, the song
+  back with its loop and history, the Pad's bytes back in the draft's store
+  and Flip's next save; New Skribl without a bin note; where a press lands
+  (30px beside an end's line, 16px below its tab, nothing 40px beside a
+  tab, the whole song's line on its own row) on a phone and a desk, real
+  presses keeping an end's distance from the finger, the nearer end, and
+  Flip's drawer staying open after a drag let go past it; the arrows at 3:1
+  or more. Each row was shown red by its own break.
 - `verify_musictimeline.py` — step 2 of the music plan (the owner: "Yes on
   all"), on the Pad and on Flip: the timeline (lib/musictimeline.js) is the
   drawer's one view, the drawing's lane over the song, two handles and the

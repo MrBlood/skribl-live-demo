@@ -53,7 +53,7 @@ the nearest beat and Beats.
 Every row runs on the Pad and on Flip: one drawer (lib/musicdrawer.js), and
 each editor's half is its hooks. A control behind a door is reached as a
 person reaches it, by opening its door (Tap the beat and Beats in a bar in
-Beat, Beats, Undo and Lock in Length, the Restart view in Restart, the typed
+Beat, Beats and Lock in Length, the Restart view in Restart, the typed
 times and Each press in Exact times). Skribl's ears are off here (lib/musicears.js):
 every row is a person with no beat yet, and the pulse below is a beat the ears
 would hear at once; verify_musicears holds the ears to songs of their own.

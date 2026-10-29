@@ -1050,6 +1050,24 @@ Object.keys(_MEDIA_INPUTS).forEach((kind) => {
   });
 });
 
+/* THE BIN'S WAY BACK (editor_music.js putSongBack): a song the bin took and
+   its Undo put back is the attached file again, its bytes back in the store,
+   as when it was picked; the remove listener above had deleted them. The file
+   is asked for before that listener lets it go (padMediaFile). Without it (an
+   opened draft's file still being read), the bytes are the song's own. */
+function padMediaFile(kind) { return _mediaFile[kind]; }
+function padMediaBack(kind, file, data, name) {
+  if (PAD_DRAFT_OFF) return;
+  const mine = ++_mediaSeq[kind];
+  const back = (f) => { _mediaFile[kind] = f; mediaDraft[kind] = 'none'; storeMediaBytes(kind); };
+  if (file) { back(file); return; }
+  if (!data) return;
+  fetch(data).then((r) => r.blob()).then((blob) => {
+    if (mine !== _mediaSeq[kind]) return;   // removed or replaced again first
+    back(new File([blob], name || 'Music from draft', { type: blob.type || '' }));
+  }).catch((e) => { console.error('[skribl] ' + kind + ' bytes: could not read the song put back: ' + _errName(e)); });
+}
+
 function reAddMediaFromStore(kind, inputId, meta) {
   if (!meta || !meta.name) return;
   // Every way the bytes can fail to come back ends here: the pending record

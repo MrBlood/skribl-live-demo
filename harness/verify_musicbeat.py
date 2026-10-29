@@ -49,9 +49,10 @@ the loop, so I'm not at 7 or 9 when I want 8"; "All yes" to the mock; then
   many beats, smooth restart and all; near the song's end it moves back by
   whole beats, only as far as it must. It glides there, the count lit from
   the tap all the way, at once under Reduce Motion; a second tap while it
-  glides counts from where it lands. Each tap offers Undo, Skribl's pick
-  beside it as the way back. (A tap on Skribl's pick, with ears, is
-  verify_musicears'.)
+  glides counts from where it lands. Each tap is a step the loop's Undo
+  takes back, a tap at a time, Skribl's pick beside it as the way back (the
+  Undo itself is verify_musicundo's). (A tap on Skribl's pick, with ears,
+  is verify_musicears'.)
 
   SNAP TO THE BEAT, WHERE THE MUSIC BEGINS, THE MARKS, THE RESTART VIEW,
   KEPT and WORDS are verify_musicsnap's: with them here this suite took 591
@@ -62,7 +63,7 @@ the loop, so I'm not at 7 or 9 when I want 8"; "All yes" to the mock; then
 Every row runs on the Pad and on Flip: one drawer (lib/musicdrawer.js), and
 each editor's half is its hooks. A control behind a door is reached as a
 person reaches it, by opening its door (Tap the beat and Beats in a bar in
-Beat, Beats, Undo and Lock in Length, the Restart view in Restart, the typed
+Beat, Beats and Lock in Length, the Restart view in Restart, the typed
 times and Each press in Exact times). Skribl's ears are off here (lib/musicears.js):
 every row is a person with no beat yet, and the pulse below is a beat the ears
 would hear at once; verify_musicears holds the ears to songs of their own.
@@ -560,7 +561,7 @@ with sync_playwright() as pw:
                lit: bs.filter((x) => x.getAttribute('aria-pressed') === 'true').map((x) => +x.dataset.beats),
                on: bs.filter((x) => x.classList.contains('on')).length, free: !!seg && seg.hasAttribute('data-free'),
                tag: q('musicPickCard').getAttribute('aria-pressed') === 'true',
-               back: q('musicPickCard').getAttribute('aria-pressed') !== 'true' && !q('musicPickCard').disabled, undo: !q('musicPickUndo').hidden,
+               back: q('musicPickCard').getAttribute('aria-pressed') !== 'true' && !q('musicPickCard').disabled, undo: !q('musicUndo').disabled,
                s: trimStart, e: trimEnd, xf: loopCrossfadeMs }; }"""
     # Every frame from just before a tap: the loop's ends and the counts
     # pressed; and when the tap landed.
@@ -625,12 +626,15 @@ with sync_playwright() as pw:
               t1["s"] == 0.5 and abs(heard(t1) - 8.0) < 1e-6 and t1["lit"] == [16] and t2["s"] == 0.5 and abs(heard(t2) - 2.0) < 1e-6
               and t2["lit"] == [4] and t1["xf"] == t2["xf"] == 250,
               f"16: {t1['s']}-{t1['e']:.4f}, lit {t1['lit']}; then 4: {t2['s']}-{t2['e']:.4f}, lit {t2['lit']}; smooth restart {t1['xf']}, {t2['xf']}")
-        press(pg, "#musicPickUndo", 300)
+        press(pg, "#musicUndo", 300)
         u = pg.evaluate(BEATS)
-        check(f"{_n}: each tap offers Undo, Skribl's pick beside it as the way back; Undo puts the loop back, and goes",
+        press(pg, "#musicUndo", 300)
+        u2 = pg.evaluate(BEATS)
+        check(f"{_n}: each tap is a step the loop's Undo takes back, a tap at a time, Skribl's pick beside it as the way back",
               t2["undo"] and t2["back"] and not t2["tag"] and abs(u["s"] - 0.5) < 1e-9 and abs(u["e"] - 8.75) < 1e-9 and u["lit"] == [16]
-              and not u["undo"] and u["back"],
-              f"after the tap: Undo {t2['undo']}, the way back {t2['back']}; Undo: {u['s']}-{u['e']:.4f}, lit {u['lit']}, then Undo {u['undo']}, the way back {u['back']}")
+              and u["undo"] and u["back"] and abs(u2["s"] - 0.5) < 1e-9 and abs(u2["e"] - 4.75) < 1e-9 and not u2["undo"],
+              f"after the taps: Undo {t2['undo']}, the way back {t2['back']}; Undo: {u['s']}-{u['e']:.4f}, lit {u['lit']}, Undo still {u['undo']},"
+              f" the way back {u['back']}; Undo again: {u2['s']}-{u2['e']:.4f}, Undo then {u2['undo']}")
         pg.evaluate(LOOP, {"s": 6.0, "e": 10.25})
         beats(pg, 16)
         t3 = pg.evaluate(BEATS)
@@ -643,7 +647,7 @@ with sync_playwright() as pw:
           q(16).click(); setTimeout(() => { const at = trimStart; q(4).click(); res(at); }, 60); })""")
         pg.wait_for_timeout(450)
         t4 = pg.evaluate(BEATS)
-        press(pg, "#musicPickUndo", 300)
+        press(pg, "#musicUndo", 300)
         t5 = pg.evaluate(BEATS)
         check(f"{_n}: a second tap while the loop glides counts from where it lands, and Undo goes back to where the first put it",
               3.5 + 1e-6 < mid <= 6.0 and abs(t4["s"] - 3.5) < 1e-6 and abs(heard(t4) - 2.0) < 1e-6 and t4["lit"] == [4]
