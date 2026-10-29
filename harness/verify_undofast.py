@@ -303,6 +303,52 @@ with sync_playwright() as p:
     check("no page errors through Flip's Undo and Redo", not errs, "; ".join(errs[:2]))
     ctx.close()
 
+    print("\nFLIP UNDO — a stroke, a fill and a stamp, each undone and redone from copies")
+    # The three things that lay new ink keep the page they leave (endStroke,
+    # doFill, doStamp), which is what a Redo straight after their Undo comes
+    # back to; and a stroke's start keeps the page under it, which is what the
+    # first Undo on a page just opened comes back to.
+    ctx, pg, errs = fopen(b, **PHONE)
+    pg.evaluate("(n) => __busy(1, n)", BUSY)
+    pg.wait_for_timeout(300)
+    s0 = pg.evaluate(FPIX)
+    fstroke(pg, 0)
+    s1 = pg.evaluate(FPIX)
+    a1 = pg.evaluate(FPRESS, "undo"); p1 = pg.evaluate(FPIX)
+    a2 = pg.evaluate(FPRESS, "redo"); p2 = pg.evaluate(FPIX)
+    check("the first Undo on a page just opened comes back from the copy its stroke's start kept",
+          p1 == s0 and a1 == 0, f"pixels {p1 == s0}; paints {a1}")
+    check("...and Redo straight after it, from the copy the stroke's end kept",
+          p2 == s1 and a2 == 0, f"pixels {p2 == s1}; paints {a2}")
+    box = pg.locator("#pad").bounding_box()
+    pg.evaluate("() => setTool('fill')")
+    pg.mouse.click(box["x"] + box["width"] * 0.97, box["y"] + box["height"] * 0.98)
+    pg.wait_for_timeout(300)
+    filled = pg.evaluate("() => [actionLog.length && actionLog[actionLog.length - 1].type, frame().strokes.length]")
+    f1 = pg.evaluate(FPIX)
+    a3 = pg.evaluate(FPRESS, "undo"); p3 = pg.evaluate(FPIX)
+    a4 = pg.evaluate(FPRESS, "redo"); p4 = pg.evaluate(FPIX)
+    check("a fill was laid (the case is real)", filled[0] == "fill", str(filled))
+    check("Undo of a fill on a busy page comes back from a copy, every pixel", p3 == s1 and a3 == 0,
+          f"pixels {p3 == s1}; paints {a3}")
+    check("...and its Redo too, from the copy the fill kept", p4 == f1 and a4 == 0, f"pixels {p4 == f1}; paints {a4}")
+    pg.evaluate("""() => { stampShelf = [SkriblStamps.fromRuns(
+        [[{x:0,y:0,color:'#7c5cff',size:4},{x:40,y:0,color:'#7c5cff',size:4}],
+         [{x:0,y:16,color:'#7c5cff',size:4},{x:40,y:16,color:'#7c5cff',size:4}]])];
+      stampArmed = 0; setTool('stamp'); syncStampPop(); }""")
+    pg.wait_for_timeout(200)
+    pg.mouse.click(box["x"] + box["width"] * 0.5, box["y"] + box["height"] * 0.5)
+    pg.wait_for_timeout(300)
+    stamped = pg.evaluate("() => actionLog.length && actionLog[actionLog.length - 1].label")
+    t1 = pg.evaluate(FPIX)
+    a5 = pg.evaluate(FPRESS, "undo"); p5 = pg.evaluate(FPIX)
+    a6 = pg.evaluate(FPRESS, "redo"); p6 = pg.evaluate(FPIX)
+    check("a stamp was placed (the case is real)", stamped == "Stamp", repr(stamped))
+    check("Undo and Redo of a stamp on a busy page come back from copies, every pixel",
+          p5 == f1 and a5 == 0 and p6 == t1 and a6 == 0, f"undo: pixels {p5 == f1}, paints {a5}; redo: pixels {p6 == t1}, paints {a6}")
+    check("no page errors through the stroke, fill and stamp", not errs, "; ".join(errs[:2]))
+    ctx.close()
+
     print("\nFLIP UNDO — over a busy page in the onion skin, nothing is painted again")
     ctx, pg, errs = fopen(b, **PHONE)
     pg.evaluate("(n) => __busy(2, n)", BUSY)
