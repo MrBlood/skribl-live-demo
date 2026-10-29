@@ -483,11 +483,11 @@ stays a sleep.
   first 20 seconds or the whole song, on the Pad as long as a drawing already
   there, with a smooth restart), lit in the Length door, and a draft's song
   keeps its own loop; the one line says the length heard, its beats and
-  against the drawing, its height the same whatever it says (one row from a
-  390px phone up, two below it, what the loop is against the drawing on its
-  own row); a change unlights the pick, which is the way back, with an Undo
-  gone after eight seconds, and an Undo of the drawing shows the way back and
-  no more; Fit counts the smooth restart, and its seconds agree with the
+  against the drawing, its height the same whatever it says (two rows on a
+  phone, what the loop is against the drawing on its own row and the loop's
+  Undo and Redo at its end, one row on a desk); a change unlights the pick,
+  which is the way back, and the loop's Undo takes it back, and an Undo of
+  the drawing shows the way back and no more; Fit counts the smooth restart, and its seconds agree with the
   line's; Whole song says when it is the longest loop; where two cards are
   the same loop, the one pressed is lit, with no Undo of nothing; with
   nothing drawn Fit is off and wakes with a drawing; Smooth restart's switch
@@ -525,30 +525,13 @@ stays a sleep.
   seconds after the last (a stray gap does not move it), the one line counts
   the beats, and where the beat falls is the taps' own on the song's clock as
   heard (less the time the sound takes to reach the ear); on a phone the tap
-  stays put while its words change; with Snap to the beat on, an end let go
-  on the timeline settles on whole bars, the nearest of 4, 8, 16 and 32
-  beats, smooth restart and all, counted from the start wherever it is (a
-  start set off the beat is never moved), and the start let go lands on the
-  nearest beat with the end following to whole bars, passing over a count the
-  song or the 20s cap has no room for, gliding there (at once under Reduce
-  Motion), and the song slid under the drawing settles the loop's start on a
-  beat; the timeline dots every beat in view (bigger on each bar from the
-  loop's start, no closer than 6px), the drawing's lane runs under the loop
-  with a dashed line each time it comes round, and the Restart view marks the
-  beats in its two windows, where an end let go near a beat settles on it;
-  typed ends never settle, nor a locked loop's; Snap to the beat (the owner:
-  "I need a free set so it's not all automatic") shows under the tap once
-  there is a tempo, on to start, saying what it does, and opens out with a
-  bar in Each press frame by frame (at once under Reduce Motion), and off
-  nothing settles, on the timeline, in the Restart view, slid or tapped;
-  where the music begins after a silence (the owner: "It snaps back to empty
-  space"), at 1x a start let go in the silence before it and nearer it than
-  the next beat, or with the nearest beat in the silence, or up to half a beat
-  into the music, lands where the music begins, the beat kept and the loop
-  whole bars, on the beat when the music begins within an eighth of one,
-  while past half a beat into the music, in a gap too short to be a silence
-  and in the quiet between two drums on beats it lands on the nearest beat,
-  and zoomed in a start let go far from a beat stays, and so does the beat;
+  stays put while its words change; with the magnet by the zoom on, an end let
+  go on the timeline settles on the nearest beat, smooth restart and all,
+  counted from the start wherever it is (a start set off the beat is never
+  moved), and the start let go lands on the nearest beat with the end
+  following to whole beats, passing over a count the song or the 20s cap has
+  no room for, gliding there (at once under Reduce Motion), and the song slid
+  under the drawing settles the loop's start on a beat;
   Beats (the owner: "There should be ways to have skribl pick 4 or 8 16 32")
   shows under the one line once there is a beat, the counts the song and the
   20s cap have room for, the loop's own lit and none (none pressed) while it
@@ -556,20 +539,45 @@ stays a sleep.
   Motion) with the page still, on a phone and a desk; a count tapped on a loop of the person's own keeps the start and
   makes the loop that many beats, moved back near the song's end only as far
   as it must, gliding there with the count lit from the tap all the way; a
-  second tap while it glides counts from where it lands, and each tap offers
-  Undo, the way back to Skribl's pick waiting while it does;
-  the tempo goes with the song into the drafts and a re-add card, the switch with
-  it, tapped again the switch stays, and a new song starts with none and the
-  switch put away; the one line, Beats, the tap's and the switch's words and
-  the marks read against what is behind them, light and dark; the pair's words are
-  whole at 320, 360 and 402px, side by side from 360. Taps run on the page's
+  second tap while it glides counts from where it lands, and each tap is a
+  step the loop's Undo takes back, a tap at a time, the way back to Skribl's
+  pick waiting all the while. Taps run on the page's
   own clock, each woken early to land on its mark; a try whose taps strayed
   more than 4ms (a busy machine) is tapped again on a fresh page, three tries
   at most, and the row says which try it was. Skribl's ears are off here
   (every row is a person with no beat yet; verify_musicears holds the ears).
   The click is `verify_musicclick.py`'s and the zoomed-in ends
   `verify_musictempo.py`'s: with the click here this suite went past
-  run_harness.sh's ten minutes a suite on CI, and it took nine before it.
+  run_harness.sh's ten minutes a suite on CI, and it took nine before it. The
+  beat's marks, the Restart view, Snap to the beat, where the music begins,
+  the beat kept with the song and the words are `verify_musicsnap.py`'s: with
+  them it took 591 of the ten minutes on #663's run and was stopped at them
+  on #665's.
+- `verify_musicsnap.py` — out of `verify_musicbeat.py` at its 600-second
+  budget, each section whole, on the Pad and on Flip: the timeline dots every
+  beat in view (bigger on each bar from the loop's start, no closer than
+  6px), the drawing's lane runs under the loop with a dashed line each time it
+  comes round, and the Restart view marks the beats in its two windows, where
+  an end let go near a beat settles on it; typed ends never settle, nor a
+  locked loop's; Snap to the beat (the owner: "I need a free set so it's not
+  all automatic") is the magnet by the zoom, there from the first, out of
+  reach and unlit until there is a tempo, then lit, saying what it does, Each
+  press opening out with a bar frame by frame (at once under Reduce Motion),
+  and off nothing settles, on the timeline, in the Restart view, slid or
+  tapped; where the music begins after a silence (the owner: "It snaps back to
+  empty space"), at 1x a start let go in the silence before it and nearer it
+  than the next beat, or with the nearest beat in the silence, or up to half a
+  beat into the music, lands where the music begins, the beat kept and the
+  loop whole beats, on the beat when the music begins within an eighth of one,
+  while past half a beat into the music, in a gap too short to be a silence
+  and in the quiet between two drums on beats it lands on the nearest beat,
+  and zoomed in a start let go far from a beat stays, and so does the beat;
+  the tempo goes with the song into the drafts and a re-add card, the switch
+  with it, tapped again the switch stays, and a new song starts with none and
+  the switch put away; the one line, Beats, the tap's and the switch's words
+  and the marks read against what is behind them, light and dark; the pair's
+  words are whole at 320, 360 and 402px, side by side from 360. Skribl's ears
+  are off here too.
 - `verify_musicclick.py` — the music drawer's click and the beat lit as it is
   heard (step 4 of the whole-drawer mock), on the Pad and on Flip: the click
   is the end of Hear the loop's pill (a metronome, a finger wide, the words of

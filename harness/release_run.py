@@ -246,6 +246,9 @@ BATCHES = [
     ["verify_music.py"],                   # measures — a preview's playhead over time, on both editors
     ["verify_musicdoors.py"],              # measures — a door's tile read on every frame
     ["verify_musicbeat.py"],               # measures — taps timed on the page's clock, a loop's next time round
+    # Out of verify_musicbeat at its 600 seconds (after #665): the marks, the
+    # Restart view, Snap, where the music begins, kept with the song, the words.
+    ["verify_musicsnap.py"],               # measures — a settle's glide on every frame, the dots on the pixels
     # Steps 4 and 5 of the whole-drawer mock, out of verify_musicbeat, which
     # went past run_harness.sh's ten minutes a suite on CI with the click.
     ["verify_musicclick.py"],              # measures — each tick on the loop's audio clock, each dot lit as its speakers play it
