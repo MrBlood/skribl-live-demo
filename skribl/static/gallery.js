@@ -50,6 +50,70 @@
   }
   if (oneCol && oneCol.addEventListener) oneCol.addEventListener('change', shapeCards);
 
+  /* THE CAPTION, UNDER THE DRAWING AT REST (the owner's yes on the posting
+     mock: "two lines with more, and the ≡ button goes"). Two lines of it show
+     on every card that has one, and a "more" opens the rest in place; "less"
+     puts it back.
+
+     WHETHER THERE IS MORE IS ASKED OF THE WORDS, at the width they are set
+     at: their own height against two of their own lines. The same answer
+     clamped or open, and asked again whenever the card changes width (a
+     phone turned, a window dragged), so a caption that fits on a desk and
+     not on a phone shows its "more" only on the phone. */
+  var CAP_GLIDE = 'height 0.24s cubic-bezier(0.2, 0.7, 0.2, 1)';
+  var stillMq = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)');
+  function capSync(tc) {
+    var btn = tc._more;
+    if (!btn) return;
+    var cs = getComputedStyle(tc);
+    var line = parseFloat(cs.lineHeight) || 21;
+    var words = tc.scrollHeight - (parseFloat(cs.paddingTop) || 0) - (parseFloat(cs.paddingBottom) || 0);
+    var over = words > line * 2 + 1;
+    if (btn.hidden === over) btn.hidden = !over;
+    /* The button carries the card's bottom air when it shows; the words do
+       when it does not. A class on the card, not a page-wide :has() (item 1). */
+    if (tc.parentNode) tc.parentNode.classList.toggle('cap-more', over);
+  }
+  var capWatch = window.ResizeObserver ? new ResizeObserver(function (rows) {
+    for (var i = 0; i < rows.length; i++) capSync(rows[i].target);
+  }) : null;
+  /* IT GLIDES BOTH WAYS. The box eases from the height it has to the height
+     the other state has, measured with that state's own clamp, then lets go
+     of the number. A close keeps the whole text in the box while it shrinks
+     and clamps only at the end, so the lines go down with the box rather than
+     vanishing and leaving an empty box to ease. Reduce Motion: it just
+     changes. */
+  function capToggle(tc) {
+    var btn = tc._more, open = !tc._open;
+    tc._open = open;
+    var from = tc.getBoundingClientRect().height;
+    tc.style.transition = 'none';
+    tc.style.height = '';
+    tc.classList.toggle('is-open', open);
+    var to = tc.getBoundingClientRect().height;
+    btn.textContent = open ? 'less' : 'more';
+    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    btn.setAttribute('aria-label', open ? 'Show less of the caption' : 'Read more of the caption');
+    var g = tc._glide = {};
+    if ((stillMq && stillMq.matches) || Math.abs(to - from) < 1) { tc.style.transition = ''; return; }
+    tc.classList.add('is-open');
+    tc.style.height = from + 'px';
+    void tc.offsetHeight;
+    tc.style.transition = CAP_GLIDE;
+    tc.style.height = to + 'px';
+    var done = function (e) {
+      if (e && (e.target !== tc || e.propertyName !== 'height')) return;
+      tc.removeEventListener('transitionend', done);
+      if (tc._glide !== g) return;
+      tc._glide = null;
+      tc.style.transition = '';
+      tc.style.height = '';
+      tc.classList.toggle('is-open', tc._open);
+    };
+    tc.addEventListener('transitionend', done);
+    setTimeout(done, 420);
+  }
+
   /* A LINK THE HOST SUPPLIED IS STILL SOMEBODY ELSE'S STRING. `author.url`
      comes from the host's resolver, which a host may well build from a
      database column, so it is not trusted to be a web address: an
@@ -98,16 +162,6 @@
     '<circle cx="5" cy="12" r="1.9" fill="currentColor"/>' +
     '<circle cx="12" cy="12" r="1.9" fill="currentColor"/>' +
     '<circle cx="19" cy="12" r="1.9" fill="currentColor"/></svg>';
-
-  /* LINES OF TEXT, NOT A SPEECH BUBBLE. A bubble is what every product on a
-     phone uses for a CONVERSATION, and what this opens is the author's own
-     description, which nobody can answer -- there are no comments on a Skribl
-     and a post is immutable once made. Three ranged lines is the settled glyph
-     for a body of text, and the shape of the thing the card is hiding. */
-  var ICON_CAP =
-    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"' +
-    ' stroke-linecap="round" aria-hidden="true" focusable="false">' +
-    '<path d="M4 7h16"/><path d="M4 12h16"/><path d="M4 17h9"/></svg>';
 
   /* U+1F7CD, SIX POINTED PINWHEEL STAR -- the skribls.net mark, not a
      generic sparkle.
@@ -543,53 +597,36 @@
 
     /* THE CAPTION CAME OFF THE ART. It was a scrim over the drawing because a
        poster-first card had nowhere else to put it; a post-like card has room
-       for words, so it is text under the title, clamped to two lines, and the
-       toggle EXPANDS it rather than revealing it. Nothing needs to sit on the
-       picture. */
-    /* EVERY CARD IS THE SAME HEIGHT, AND THE CAPTION IS WHY IT WAS NOT.
-       Text between the head and the stage made a captioned card two lines
-       taller, and in a grid the short card's ROW stretches to match, leaving
-       dead space under its drawing.
+       for words. Nothing needs to sit on the picture. */
+    /* UNDER THE DRAWING, TWO LINES AT REST, AND THE CARD IS AS TALL AS WHAT
+       IT HOLDS. From v310 the caption was shut to nothing at rest, behind a
+       mark in the head, so that every card would be the same height; the
+       owner's call on the posting mock was the caption where people look,
+       knowing that two cards side by side can then end at different heights.
+       The grid is start-aligned, so neither card is stretched to the other's
+       and no card has space under its drawing it did not ask for; the
+       drawings stay level, since everything above them is the same.
 
-       So the caption contributes no height at rest: collapsed to zero, opened
-       by a mark in the HEAD's fact run where there is already a row and no
-       vertical cost. A card with nothing to say draws NO mark rather than the
-       words "no msg" -- a label announcing an absence is furniture on every
-       silent card. Absence says it.
-
-       The accordion opens BELOW the drawing, not above it: opening it above
-       would push the picture down the page under the reader's cursor. */
+       BELOW THE DRAWING, NOT ABOVE IT: opening it above would push the picture
+       down the page under the reader's cursor. A card with nothing to say
+       draws nothing here. Absence says it. */
     if (item.caption) {
-      /* The wrapper is the accordion (a 0fr/1fr grid row) and the paragraph is
-         what it collapses; one element cannot be both, because the track that
-         animates has to sit outside the content whose height it is hiding. */
-      var cw = document.createElement('div');
-      cw.className = 'tcapWrap';
       var tc = document.createElement('p');
       tc.className = 'tcap';
       tc.textContent = item.caption;
-      cw.appendChild(tc);
-      art.appendChild(cw);
-
-      var btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'tileCapBtn';
-      btn.setAttribute('aria-pressed', 'false');
-      btn.setAttribute('aria-expanded', 'false');
-      btn.innerHTML = ICON_CAP;
-      meta.appendChild(btn);
-      var label = function (on) {
-        btn.setAttribute('aria-label', on ? 'Hide the description'
-                                          : 'Read the description');
-        btn.title = btn.getAttribute('aria-label');
-      };
-      btn.addEventListener('click', function () {
-        var on = art.classList.toggle('cap-open');
-        btn.setAttribute('aria-pressed', on ? 'true' : 'false');
-        btn.setAttribute('aria-expanded', on ? 'true' : 'false');
-        label(on);
-      });
-      label(false);
+      art.appendChild(tc);
+      var capMore = document.createElement('button');
+      capMore.type = 'button';
+      capMore.className = 'tcapMore';
+      capMore.hidden = true;
+      capMore.textContent = 'more';
+      capMore.setAttribute('aria-expanded', 'false');
+      capMore.setAttribute('aria-label', 'Read more of the caption');
+      capMore.addEventListener('click', function () { capToggle(tc); });
+      art.appendChild(capMore);
+      tc._more = capMore;
+      if (capWatch) capWatch.observe(tc);
+      else requestAnimationFrame(function () { capSync(tc); });
     }
 
     /* THE FOOTER IS THE FULL-SCREEN BAR AT CARD SIZE, from the same builder
@@ -650,7 +687,7 @@
         if (sticky) return;
         hideT = setTimeout(function () {
           /* The stage for the same reason the listeners above use it: focus
-             parked on the description toggle is not somebody using the bar.
+             parked on the caption's "more" is not somebody using the bar.
 
              AND `:focus-visible`, NOT `:focus`. Tapping the artwork to play
              FOCUSES the player element, so plain `:focus` is true on every
@@ -667,12 +704,12 @@
           art.classList.remove('ctl-on');
         }, 2600);
       }
-      /* THE STAGE, NOT THE CARD. On the card, the description toggle and the
-         overflow button live in the HEAD -- and a button keeps focus after a
-         click, so pressing either raised `focusin` on the card and summoned
-         the transport with the STICKY peek, which arms no timer. Reading the
-         description turned the transport on and closing it could not turn it
-         off.
+      /* THE STAGE, NOT THE CARD. On the card, the overflow button lives in the
+         HEAD and the caption's "more" under the drawing -- and a button keeps
+         focus after a click, so pressing either raised `focusin` on the card
+         and summoned the transport with the STICKY peek, which arms no timer.
+         Reading the description (through the head's old mark) turned the
+         transport on, and closing it could not turn it off.
 
          Scoped to the stage, focus means what it should here: somebody has
          tabbed into the transport itself. */
@@ -781,6 +818,8 @@
     more.disabled = true;
     if (reset) {
       cursor = null;
+      /* The captions being taken away stop being watched with them. */
+      if (capWatch) capWatch.disconnect();
       while (list.firstChild) list.removeChild(list.firstChild);
     }
     var url = api + '?limit=' + PAGE + '&sort=' + sort
@@ -919,7 +958,8 @@
      is drawn in. Same four the editor's sheet uses for the same four ideas:
      an arrow leaving a frame for Open, two linked rings for a link, a node
      graph for Share, a flag for Report. `.cmItem svg` caps them at 18px --
-     the mistake the caption mark made is one rule away at all times. */
+     the mistake the old caption mark made (a glyph with no size fills its
+     box) is one rule away at all times. */
   var MENU_ICON = {
     open: '<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>'
         + '<polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>',

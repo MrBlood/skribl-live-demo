@@ -220,6 +220,11 @@
        itself. */
     .pmeta { padding: 13px 16px 4px; }
     .pmeta .ptitle { font-size: 18px; font-weight: 700; letter-spacing: -.01em; text-wrap: balance; }
+    /* THE CAPTION, IN FULL, UNDER THE TITLE (the posting mock, after v329):
+       16px in the page's own ink, the way the link page features it a size
+       up from the row's one line. */
+    .pmeta .pcap { margin: 4px 0 2px; font-size: 16px; line-height: 1.45; color: var(--text);
+      overflow-wrap: anywhere; text-wrap: pretty; }
     .pmeta .prow { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 6px; color: var(--text-2); font-family: var(--font-mono); font-size: 12px; }
     .kind { display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px; border-radius: 999px; font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; border: 1px solid var(--hairline); color: var(--text-2); }
     .kind svg { width: 12px; height: 12px; }
@@ -776,6 +781,7 @@
       </div>
       <div class="pmeta">
         <div class="ptitle" id="pTitle">—</div>
+        <p class="pcap" id="pCap" hidden></p>
         <div class="prow">
           {# Hidden until something is on the stage (#10): empty, its border
              and padding drew a capsule with nothing in it. #}

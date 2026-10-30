@@ -157,6 +157,7 @@ BATCHES = [
     ["verify_postmoment.py"],              # measures — the posted moment read on every frame; posts to the shared server
     ["verify_linkpage.py"],                # measures — the way back and the caption read from the paint; its own server, and posts to the shared one
     ["verify_firstlook.py"],               # measures — a long drawing's first look: the picture, the box, the frames with the CPU 4x slower; posts to the shared server
+    ["verify_captions.py"],                # measures — the caption's glide read on every frame, its paint; posts to the shared server
     ["verify_videoexport.py"],             # measures — records real WebM in Chromium and reads its tracks
     # store: posts through both editors' sheets to the shared server (one
     # unticked, one ticked, per surface) and reads the listing back, so it

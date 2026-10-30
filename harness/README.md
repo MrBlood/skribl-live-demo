@@ -1126,6 +1126,21 @@ stays a sleep.
   one with no picture and a refused payload each leave nothing over the ink.
   A Flip's page and a missing post's carry none of it. Each row was shown red
   by its own break.
+- `verify_captions.py` — the caption where people look (the owner's "all yes"
+  on the posting mock). The gallery, searched down to the suite's own posts,
+  phone and desk, light and dark: the caption under the drawing at rest,
+  painted (elementFromPoint), 15px in the card's ink at 7:1, two lines at most
+  and the whole text in the tree; no caption mark in any head; a "more"
+  exactly where the words run past two lines, asked again when the window
+  narrows; "more" and "less" with their state, their word in their name, a
+  44px box and the accent ink at 7:1; both ways glide, read on every frame,
+  the words whole while the box shrinks; Reduce Motion just changes; two cards
+  side by side end at their own heights with the drawings level. The Library:
+  Pad's and Flip's posts keep the caption in the list; the stage says it in
+  full at 16px, hidden when there is none; each row one line with an ellipsis;
+  a row kept before learns its caption once from /api/skribls/meta, and with
+  that answer refused the stage says it from the post it plays. Each row was
+  shown red by its own break.
 - `verify_pagewide.py` — no style rule searches the whole page. No selector in
   a stylesheet or a template's <style> puts :has() on html, body or :root (five
   did, and at phone pace they were 2.9 s of Pad's start and 4.3 s of Flip's);

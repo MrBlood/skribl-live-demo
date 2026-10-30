@@ -76,6 +76,7 @@
      once. Answered once, at build. */
   stageBox.classList.add('is-bare');
   var pTitle = document.getElementById('pTitle');
+  var pCap = document.getElementById('pCap');
   var pKind = document.getElementById('pKind');
   var pMeta = document.getElementById('pMeta');
   var pVis = document.getElementById('pVis');
@@ -146,6 +147,13 @@
      that fetch is what counts a play. */
   function showMeta(item) {
     pTitle.textContent = item.title || 'Untitled Skribl';
+    /* THE CAPTION, IN FULL, UNDER THE TITLE (the posting mock, after v329).
+       Hidden when there is none, like the pills below: an empty paragraph
+       would still hold its margin under the title. */
+    if (pCap) {
+      pCap.textContent = item.caption || '';
+      pCap.hidden = !item.caption;
+    }
     pMeta.textContent = when(item.created_at);
     /* THREE STATES. `item.has_audio ? 'with sound' : 'silent'` called every
        unknown SILENT, and until the field existed at all that was every
@@ -228,6 +236,9 @@
         if (!pending || pending.id !== item.id) return;
         current = pending;
         pending = null;
+        /* The post's own caption, which this fetch carries anyway: the stage
+           says it even for a row this browser kept before it kept captions. */
+        if (body && typeof body.caption === 'string') current.caption = body.caption;
         var payload = (body && (body.skribl || body.payload)) || body;
         if (stageWrap) stageWrap.style.setProperty('--draw-ratio', drawRatio(payload));
         if (!player) {
@@ -437,7 +448,7 @@
     /* A browser-kept entry from before v304 recorded no visibility, and no
        editor post before v304 sent one, so it is unlisted -- the server's
        default -- not unknown. A host row without one is unknown. */
-    return { id: e.id, title: e.title || '', caption: '',
+    return { id: e.id, title: e.title || '', caption: e.caption || '',
              kind: e.kind || null, pages: e.pages || 0,
              created_at: e.at ? new Date(e.at).toISOString() : (e.created_at || null),
              /* NOT `!!e.has_audio`: that collapsed "no sound" and "nobody
@@ -647,7 +658,11 @@
     var stale = store.list().filter(function (e) {
       return e && e.id && !e.local
           && (!e.kind || typeof e.has_audio !== 'boolean'
-              || !(e.canvas_w > 0 && e.canvas_h > 0));
+              || !(e.canvas_w > 0 && e.canvas_h > 0)
+              /* AND THE CAPTION, which this list did not keep before the
+                 posting mock: once per old row, and an empty answer is an
+                 answer, so a row without one is not asked again. */
+              || typeof e.caption !== 'string');
     }).map(function (e) { return e.id; });
     if (!stale.length) return;
     var chunks = [];
@@ -663,6 +678,7 @@
         (body.items || []).forEach(function (it) {
           if (store.update(it.id, { kind: it.kind, pages: it.pages,
                                     has_audio: it.has_audio,
+                                    caption: typeof it.caption === 'string' ? it.caption : '',
                                     canvas_w: it.canvas_w, canvas_h: it.canvas_h,
                                     visibility: it.visibility })) touched++;
         });
@@ -719,6 +735,7 @@
                           visibility: i.visibility || '',
                           canvas_w: i.canvas_w || 0, canvas_h: i.canvas_h || 0,
                           has_audio: i.has_audio === true ? true : i.has_audio === false ? false : null,
+                          caption: i.caption || '',
                           author: i.author || null,
                           owned: true, tok: null });
         });
