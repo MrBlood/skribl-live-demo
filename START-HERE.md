@@ -318,11 +318,15 @@ persisted. Both are needed and for different reasons.
 
 ### The MP4 attestation — what a seal can honestly say about H.264
 
-`verify_mp4.py` skips wherever Chromium is the browser: Playwright ships the
-open-source build, which has WebCodecs but no H.264 encoder. (Probing
-`VideoEncoder` on `about:blank` reports "no WebCodecs at all" and is
-misleading — the suite checks on a real page, where the API is present and the
-three `avc1.*` profiles are all unsupported.)
+`verify_mp4.py` skips wherever the browser has no H.264 encoder. Until Oct 30
+that was every Chromium the harness drove: Playwright shipped the open-source
+build, which had WebCodecs but no H.264 encoder. Build 1243 (Chrome 153,
+Playwright 1.63) has one, so the suite now runs in this container and in CI's
+shards, and the seal reports it with the rest; the attestation below is then
+evidence from real Chrome beside the local run, rather than the only evidence.
+(Probing `VideoEncoder` on `about:blank` reports "no WebCodecs at all" and is
+misleading — the suite checks on a real page, where the API is present and
+asks each `avc1.*` profile in turn.)
 
 The `mp4 (real Chrome)` CI job covers it, and until v279 its result never
 reached the archive: the seal said `skipped 1 (verify_mp4.py)` and nothing
