@@ -41,6 +41,15 @@ WHAT IS ASKED, AND HOW IT IS READ
     /api/skribls/meta, and an empty answer is kept, so the next visit asks
     nothing; with the meta answer refused, the stage still says the caption,
     from the post it fetches to play.
+  LONG WORDS (the owner's own phone: a caption of long runs of letters ran
+  off both edges of the link page), a title of one 78-letter word and that
+  caption, on a phone and a desk:
+  * The link page, the gallery card, the Library's stage and row, and the
+    Posted! card in the Pad's own sheet keep them inside: the laid-out words
+    (a Range's rects) inside their own box and the page's width, so a word
+    cut off at a card's edge is caught as surely as one off the screen, and
+    the page never scrolls sideways. A line cut with an ellipsis on purpose
+    (the Library's rows) is asked only to keep its box on the page.
 """
 import json
 import os
@@ -69,7 +78,7 @@ except ImportError as exc:
     raise SystemExit(77)
 import browsing  # noqa: E402
 
-# For calibration: CAPTIONS_PART=gallery,glide,pair,library runs only those parts.
+# For calibration: CAPTIONS_PART=gallery,glide,pair,library,long runs only those parts.
 PART = [p for p in (os.environ.get("CAPTIONS_PART") or "").split(",") if p]
 
 
@@ -524,6 +533,98 @@ with sync_playwright() as p:
               (r.get("stage") or {}).get("text") == SHORT and not (r.get("stage") or {}).get("hidden")
               and ((r.get("short") or {}).get("cap")) is None,
               f"stage {(r.get('stage') or {}).get('text')!r}, row {(r.get('short') or {}).get('cap')}")
+        c.close()
+
+    # ---- LONG WORDS ---------------------------------------------------------
+    # The owner, on a phone (after v329): a caption of long runs of letters,
+    # with nowhere to break, ran off both edges of the link page. Wherever a
+    # post's title and caption show, they stay inside: a word too long for its
+    # line breaks where it must. Read from the laid-out words (a Range's
+    # rects) against their own box and the page's width, so a word cut off at
+    # a card's edge is caught as surely as one running off the screen; a line
+    # cut with an ellipsis on purpose (the Library's rows) is asked only to
+    # keep its box on the page.
+    if part("long"):
+        print("\nLONG WORDS STAY INSIDE: a title and a caption with nowhere to break, wherever they show")
+        TAGW = "lw" + os.urandom(3).hex()
+        WT = TAGW + "Ffffffgfgfgfgfgdotttryytoyrggchhicyredinffffgfgfgfgfgdotttryytoyrggchh"
+        WC = ("vivuvuvjvjfuxjcjcjxjxjxjcucuxydjfuducjvjchsujxjckvkvkg c h xhcffiijccixixciicxijxjccjhcujccuuvcijxhxuccjgg "
+              "Gucjcucuccucuufucufuffuffucgghftxhuxyfydydyxyxhxyxg cjfghgggfdjcuchchucjx")
+        WID = make_post(WT, WC)
+        INSIDE = """(sel) => { const vw = document.documentElement.clientWidth, out = [];
+          for (const el of document.querySelectorAll(sel)) {
+            if (!el.getClientRects().length || !el.textContent.trim()) continue;
+            const b = el.getBoundingClientRect(), cs = getComputedStyle(el), r = document.createRange();
+            r.selectNodeContents(el);
+            let lo = Infinity, hi = -Infinity;
+            for (const q of r.getClientRects()) if (q.width) { lo = Math.min(lo, q.left); hi = Math.max(hi, q.right); }
+            const cut = cs.textOverflow === 'ellipsis' && cs.whiteSpace === 'nowrap';
+            out.push({ el: el.id || el.className, words: [Math.round(lo), Math.round(hi)], box: [Math.round(b.left), Math.round(b.right)],
+                       inside: cut ? b.left >= -1 && b.right <= vw + 1
+                                   : lo >= Math.max(0, b.left) - 1 && hi <= Math.min(vw, b.right) + 1 });
+          }
+          return { els: out, wide: document.scrollingElement.scrollWidth, vw }; }"""
+
+        def inside(r, n):
+            return len(r["els"]) >= n and all(e["inside"] for e in r["els"]) and r["wide"] <= r["vw"] + 1
+
+        kept = [{"id": WID, "url": BASE + "/s/" + WID, "title": WT, "caption": WC, "kind": "pad", "pages": 1,
+                 "visibility": "public", "tok": None, "local": False, "has_audio": False,
+                 "canvas_w": 816, "canvas_h": 612, "at": 1700000000000}]
+        for name, view in (("phone", PHONE), ("desk", DESK)):
+            c = b.new_context(color_scheme="dark", **view)
+            c.add_init_script("try { localStorage.setItem('skribl_posted_v1', " + json.dumps(json.dumps(kept)) + "); } catch (e) {}")
+            pg = c.new_page()
+            browsing.goto(pg, BASE, "/s/" + WID)
+            pg.wait_for_function("() => document.body.classList.contains('player-mode')"
+                                 " && !document.getElementById('playerCaption').hidden", timeout=20000)
+            pg.wait_for_timeout(400)
+            r = pg.evaluate(INSIDE, ".player-title, .player-caption")
+            check(f"{name}: the link page keeps a long title and caption inside the page, nothing off its edges",
+                  inside(r, 2), json.dumps(r))
+            browsing.goto(pg, BASE, "/gallery")
+            pg.wait_for_timeout(600)
+            pg.fill("#galleryQ", TAGW)
+            pg.wait_for_function(f"() => [...document.querySelectorAll('.tile .tt')].some(t => t.textContent.indexOf('{TAGW}') === 0)",
+                                 timeout=20000)
+            pg.wait_for_timeout(500)
+            r = pg.evaluate(INSIDE, ".tile .tt, .tile .tcap")
+            check(f"{name}: ...and so does its gallery card", inside(r, 2), json.dumps(r))
+            browsing.goto(pg, BASE, "/library")
+            pg.wait_for_function(f"() => (document.getElementById('pTitle').textContent || '').indexOf('{TAGW}') === 0"
+                                 " && !document.getElementById('pCap').hidden", timeout=15000)
+            pg.wait_for_timeout(500)
+            r = pg.evaluate(INSIDE, "#pTitle, #pCap, .posted-title, .posted-cap")
+            check(f"{name}: ...and the Library, on its stage and in its row", inside(r, 4), json.dumps(r))
+            c.close()
+
+        # THE POSTED! CARD, through the Pad's own sheet, on a phone.
+        c = b.new_context(color_scheme="dark", **PHONE)
+        pg = c.new_page()
+        browsing.goto(pg, BASE, "/")
+        pg.wait_for_timeout(900)
+        pg.evaluate("() => { window.SkriblHints && window.SkriblHints.hide && window.SkriblHints.hide(); }")
+        box = pg.locator("#canvas").bounding_box()
+        x0, y0 = box["x"] + box["width"] * 0.3, box["y"] + box["height"] * 0.4
+        pg.mouse.move(x0, y0)
+        pg.mouse.down()
+        for i in range(1, 22):
+            pg.mouse.move(x0 + i * box["width"] * 0.02, y0 + (i % 5) * box["height"] * 0.03, steps=2)
+            pg.wait_for_timeout(16)
+        pg.mouse.up()
+        pg.wait_for_timeout(400)
+        pg.evaluate("() => { if (typeof recording !== 'undefined' && recording) endRecordingTake(); }")
+        pg.wait_for_timeout(300)
+        pg.click("#postBtn")
+        pg.wait_for_selector("#postSheet", state="visible")
+        pg.wait_for_timeout(450)
+        pg.fill("#postTitleInput", WT)
+        pg.fill("#postCaptionInput", WC)
+        pg.click("#postSubmitBtn")
+        pg.wait_for_selector("#postDone:not([hidden])", timeout=20000)
+        pg.wait_for_timeout(900)
+        r = pg.evaluate(INSIDE, ".post-card-title, .post-card-caption")
+        check("phone: ...and the Posted! card in the Post sheet", inside(r, 2), json.dumps(r))
         c.close()
 
     b.close()

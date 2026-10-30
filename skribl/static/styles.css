@@ -5719,8 +5719,11 @@ body.player-ready .player-bar > * { animation: player-up 0.3s var(--ease); }
 @media (hover: hover) { .player-error-btn.primary:hover { background: var(--accent-bright); } }
 
 /* THE CAPTION, FEATURED (the owner's yes on the mock): the person's own words
-   a size up and in the page's ink, under a title a step up. */
-.player-meta { text-align: center; max-width: 460px; }
+   a size up and in the page's ink, under a title a step up. A word too long
+   for its line breaks where it must (the title and caption inherit it): a
+   caption of long runs of letters, with nowhere to break, held the box at its
+   460px and ran off both edges of the owner's phone. */
+.player-meta { text-align: center; max-width: 460px; overflow-wrap: anywhere; }
 .player-title { font-size: 21px; font-weight: 800; letter-spacing: -0.01em; color: var(--text-primary); margin: 0; /* it is an h1 on the player page */ }
 .player-caption { font-size: 17px; color: var(--text-primary); margin-top: 6px; line-height: 1.45; text-wrap: pretty; }
 .player-caption[hidden] { display: none; }

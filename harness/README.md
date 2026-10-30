@@ -1139,8 +1139,13 @@ stays a sleep.
   Pad's and Flip's posts keep the caption in the list; the stage says it in
   full at 16px, hidden when there is none; each row one line with an ellipsis;
   a row kept before learns its caption once from /api/skribls/meta, and with
-  that answer refused the stage says it from the post it plays. Each row was
-  shown red by its own break.
+  that answer refused the stage says it from the post it plays. Long words (a
+  title of one 78-letter word, a caption of long runs of letters, phone and
+  desk): the link page, the gallery card, the Library's stage and row and the
+  Posted! card keep them inside, the laid-out words read against their own box
+  and the page's width, and the page never scrolls sideways; a line cut with
+  an ellipsis on purpose keeps its box on the page. Each row was shown red by
+  its own break.
 - `verify_pagewide.py` — no style rule searches the whole page. No selector in
   a stylesheet or a template's <style> puts :has() on html, body or :root (five
   did, and at phone pace they were 2.9 s of Pad's start and 4.3 s of Flip's);

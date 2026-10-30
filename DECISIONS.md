@@ -26363,3 +26363,40 @@ every link page, a Flip's included, so its words are there before its data
 too. Not for Flip, the picture and the slices, for the reasons timed above;
 Flip next, the picture first where its card is the page it rests on
 (FUTURE.md 6x). The editors draw as they did.
+
+## After v329 -- A long word stays inside, wherever a post's words show
+
+A bug fix, from the owner's own phone: a caption of long runs of letters
+("vivuvuvjvjfux...", nowhere to break) ran off both edges of the link page,
+the first and last letters of each line out of sight. The words on the link
+page (.player-meta) could break only at a space, so the box took the longest
+run as its narrowest width: 460px, its max-width, centred on a 402px phone,
+and the run past even that.
+
+THE FIX. overflow-wrap: anywhere on the link page's words (the title and the
+caption inherit it from .player-meta; the Pad's own player wears the same
+rules) and on the Library stage's title, the two places a post's words could
+not break. The gallery's card, the Library's caption and the Posted! card
+already broke a long word; the Library's rows and the feed's title line cut
+theirs with an ellipsis, on purpose, and still do. A word breaks only where
+it would otherwise leave its line; ordinary words wrap at their spaces as
+before.
+
+THE ROWS, verify_captions.py LONG WORDS (new): a post whose title is one
+78-letter word and whose caption is the owner's, on a phone and a desk: the
+link page, its gallery card, the Library's stage and row, and, through the
+Pad's own sheet, the Posted! card. Each reads the laid-out words (a Range's
+rects) against their own box and the page's width, so a word cut off at a
+card's edge is caught as surely as one off the screen, and asks that the page
+never scrolls sideways; a line cut with an ellipsis on purpose is asked only
+to keep its box on the page. Each part shown red against its own break on a
+served copy of this tree, 8 of 8: the link page's words, the Library stage's
+title and its caption, the gallery card's title and its caption, the Posted!
+card's title and its caption, and, for the instrument, a row's caption no
+longer cut on one line.
+
+THE COST. The link page's styles +25 B (42,341), raised in writing in
+verify_player_isolation and verify_jsstrip. The Library's page is not counted.
+
+WHAT IT DOES TO FLIP: shared. A Flip's link page, card, Library row and
+Posted! card are the same as a Pad's.

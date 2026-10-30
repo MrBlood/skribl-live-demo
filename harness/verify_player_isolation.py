@@ -1234,7 +1234,13 @@ with sync_playwright() as sp:
     #   clips it), the four rows named three times over, and a Reduce Motion
     #   rule the page's every-element rule already made. verify_jsstrip's
     #   line moves with it. 42,316 measured.
-    CSS_RATCHET, CSS_WAS, CSS_TARGET = 42_322, 119_844, 40_000
+    # RAISED (a bug fix, from the owner's own phone: a caption of long runs
+    #   of letters ran off both edges of the link page), for one named cost:
+    #   +25 B -- overflow-wrap on the link page's words (.player-meta, which
+    #   its title and caption inherit), so a word too long for its line
+    #   breaks where it must. verify_jsstrip's line moves with it. 42,341
+    #   measured.
+    CSS_RATCHET, CSS_WAS, CSS_TARGET = 42_347, 119_844, 40_000
     total_css = sum(css_bytes.values())
     check(f"the player's CSS does not grow past {CSS_RATCHET:,} bytes "
           f"(was {CSS_WAS:,} at v194; target {CSS_TARGET:,})",
