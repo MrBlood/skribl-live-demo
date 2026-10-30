@@ -1527,7 +1527,7 @@
      * speakers. Each beat's dot on the timeline lights as it reaches the ear,
      * bigger on a bar, the click on or off. Both keep the loop's own audio
      * clock, so they never drift from it: every 30ms (the playhead's tick),
-     * the beats due in the next 160ms of what plays, each tick set to the
+     * the beats due in the next half second (BEAT_AHEAD), each tick set to the
      * sample and each light to when it is heard (the context's own record of
      * what the speakers play, or the clock less the time the sound takes to
      * reach the ear). A bar is every four beats from the loop's start, as the
@@ -1589,6 +1589,13 @@
     // was set ahead was for the loop before, and the first beat may be due
     // as its sound begins.
     function beatsAgain(off) { beatsOff(); beatDone = {}; beatClip = null; pv.from = null; pv.off = off || 0; beats(); }
+    /* HOW FAR AHEAD A BEAT IS SET. A beat whose time has passed is never set
+       late, so this is how long the page can be held without a tick dropped.
+       At 160ms a busy box held it past a beat and the click went quiet for
+       that beat (main's full run after #687, the Pad); half a second rides
+       out the longest holds seen on CI, about 350ms. Everything set ahead is
+       still called off when the click goes off, Hear stops or an end moves. */
+    var BEAT_AHEAD = 0.5;
     function beats() {
       var c = h.loop.ctx ? h.loop.ctx() : null, tp = tempo();
       if (!pv.on || pv.mode !== 'loop' || pv.engine !== 'wa' || !c || c.state !== 'running' || !tp || !h.loop.playing()) return;
@@ -1614,7 +1621,7 @@
           // The first beat, set as the music starts: only while it is still
           // to start (it is long past, and forgotten, later in the pass).
           if (at < s0 && at > s0 - lead - 0.004) { if (now > s0 + 0.004) continue; when = Math.max(s0, now); }
-          if (when < now - 0.004 || when > now + 0.16 || when - last < 0.1) continue;
+          if (when < now - 0.004 || when > now + BEAT_AHEAD || when - last < 0.1) continue;
           var id = Math.round(at * 1000);
           if (beatDone[id] || beatDone[id - 1] || beatDone[id + 1]) continue;
           beatDone[id] = 1;

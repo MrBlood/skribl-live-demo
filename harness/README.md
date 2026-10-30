@@ -641,10 +641,11 @@ stays a sleep.
   on while Hear plays ticking from the very next beat, a tick already set
   ahead never sounding once it is off or Hear stops, and an end moved while it
   plays ticking the new loop from its next time round with no tick doubled at
-  the join; each beat's dot lights as it is heard (by the context's record of
-  what its speakers play), a beat apart, at the dot's own place, the bar's
-  bigger, click on or off, swelling and fading, only fading under Reduce
-  Motion. Skribl's ears are off here.
+  the join, and a page held for 300ms from just before a beat dropping no tick
+  (MUSICCLICK_PART=held); each beat's dot lights as it is heard (by the
+  context's record of what its speakers play), a beat apart, at the dot's own
+  place, the bar's bigger, click on or off, swelling and fading, only fading
+  under Reduce Motion. Skribl's ears are off here.
 - `verify_musictempo.py` — zoomed in, the loop's ends set the beat, and the
   Beat door says where its tempo came from (step 5), on the Pad and on Flip:
   zoomed in (the owner: "how do I tell it where the beginning is?"), a start

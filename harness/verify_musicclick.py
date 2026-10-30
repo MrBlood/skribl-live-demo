@@ -342,6 +342,35 @@ with sync_playwright() as pw:
               + "; ".join(f"x {l['x']} ({d:.2f} from its dot, bar {l['bar']}/{bb})" for (d, bb, bt), l in zip(at_dots[:4], lit[:4])))
         c.close()
 
+    # A PAGE HELD WHILE IT PLAYS DROPS NO TICK. A beat whose time has passed
+    # is never set late, so a beat the timer reaches only after its time has
+    # no tick at all: main's full run after #687 (postgres 6/6, the Pad) was a
+    # busy box holding the page past the next beat. Held on purpose here, from
+    # 250ms before a beat to 50ms after it, so no timer runs between: the
+    # beat is set ahead far enough to be there already, and ticks on time.
+    for _n, _p in eds("held"):
+        c = waits.instrument(b.new_context(**DESK))
+        c.add_init_script(OSC)
+        c, pg, errs = editor(b, _n, _p, door=None, ctx=c)
+        pg.evaluate(CLICK_LOOP)
+        pg.wait_for_timeout(300)
+        press(pg, "#musicClickBtn", 100)
+        press(pg, "#previewLoopBtn", 300)
+        clock = pg.evaluate(CLOCK)
+        beat = clock["s0"] - clock["lead"] + 1.0    # the loop's third beat, on its own clock
+        pg.evaluate("""(B) => { const ms = (B - audioCtx.currentTime) * 1000 - 250;
+            setTimeout(() => { const t0 = performance.now(); while (performance.now() - t0 < 300) {} }, Math.max(0, ms)); }""", beat)
+        pg.wait_for_timeout(int((beat - clock["now"]) * 1000) + 900)
+        sounded = sorted((t for t in pg.evaluate(TICKS) if not t["off"]), key=lambda t: t["at"])
+        press(pg, "#previewLoopBtn", 100)
+        on_it = [t for t in sounded if abs(t["at"] - beat) < 0.0015]
+        # The first tick is the music's start, LEAD after the loop's first beat.
+        gaps = [round(z["at"] - a["at"], 4) for a, z in zip(sounded[1:], sounded[2:])]
+        check(f"{_n}: a page held for 300ms from just before a beat drops no tick: that beat ticks once, on time",
+              len(on_it) == 1 and len(sounded) >= 4 and all(abs(g - 0.5) < 0.0015 for g in gaps),
+              f"the beat {round((beat - clock['s0']) * 1000)}ms from the sound's start: {len(on_it)} tick; {len(sounded)} in all, gaps after the first {gaps}")
+        c.close()
+
     # An end moved while it plays: the click follows the new loop from its
     # next time round, and the loop's first beat ticks once at the join: as
     # the new loop's music starts when it starts again before the old loop

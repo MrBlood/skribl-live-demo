@@ -26777,3 +26777,31 @@ the words under 12px (6z). A seal and an auditor's packet were the owner's
 next thought ("we may want to"); docs/SESSION-CONTEXT.md §4 has the
 sequence, v328's packet is in docs/audit/v328/, and nothing has been sealed
 since v329.
+
+## After v329 -- Main red after #687: the click drops no beat when the page is held
+
+Main's full run after #687 failed one row, on postgres 6/6 only:
+verify_musicclick, the Pad's click ("ticks on each beat of what plays ... to
+the millisecond"), 21/22. The first tick was on time; a later beat had none.
+The drawer sets each beat's tick ahead on the loop's audio clock, every 30ms,
+and never sets one whose time has passed (a late tick is off the beat). It set
+them only 160ms ahead, so a page held past a beat, as a busy box holds one,
+dropped that beat. Run beside two heavy suites here it stayed green (6 ticks,
+each on its beat): the hold is the box's, the gap in the click is the
+drawer's.
+
+Now each beat is set half a second ahead (lib/musicdrawer.js BEAT_AHEAD),
+which rides out the longest holds seen on CI, about 350ms. Everything set
+ahead is still called off when the click goes off, Hear stops or an end
+moves, so a longer reach changes nothing heard. Shared by the Pad and Flip.
+
+THE ROW. verify_musicclick.py, a new part "held" (MUSICCLICK_PART=held): the
+page held busy for 300ms from 250ms before the loop's third beat, so no timer
+runs between; that beat ticks once, on time, every gap after the first half a
+second. Red on main's drawer on the Pad and Flip, twice each (that beat with
+no tick, a 1s gap); green with the fix, twice each. Its first draft missed
+twice in the instrument, not the tree: it took the beat from the sound's start
+rather than the loop's clock, which starts LEAD (30ms) before it, and it
+counted the first tick's gap, which LEAD shortens.
+
+WHAT IT DOES TO FLIP AND THE PAD: one module, both editors, the same fix.
