@@ -62,12 +62,13 @@
     var cardTpl = $('postCardTpl'), cardBox = null;   // the player's box, put in on the first post
     var cardTitle = $('postCardTitle');
     var cardCaption = $('postCardCaption');
+    var cardMore = $('postCardMore');
     var cardMeta = $('postCardMeta');
     var homeBtn = $('postHomeBtn');
     var homeLabel = $('postHomeLabel');
     var anotherBtn = $('postAnotherBtn');
     var closeBtn = $('postCloseBtn');
-    var previewBg = null;
+    var previewBg = null, previewRatio = 1.6;
     var closeTimer = null;
     var posting = false;
     /* A POST THAT NEVER ANSWERS (v321 preflight, PF-029). The sheet cannot be
@@ -271,8 +272,17 @@
       cardTitle.textContent = title;
       cardCaption.textContent = caption;
       cardCaption.hidden = !caption;
+      // Two lines and a "more" (lib/capmore.js), shut again for each post:
+      // the card is not shown yet, so toggle() changes it at once.
+      if (cardMore && window.SkriblCapMore) {
+        window.SkriblCapMore.attach(cardCaption, cardMore);
+        if (cardCaption._open) window.SkriblCapMore.toggle(cardCaption);
+      }
       cardMeta.textContent = publicInput && publicInput.checked ? 'In the public gallery' : 'Shared by its link only';
-      if (cardMedia) cardMedia.style.background = previewBg || '';
+      if (cardMedia) {
+        cardMedia.style.background = previewBg || '';
+        cardMedia.style.setProperty('--shape', previewRatio.toFixed(4));
+      }
       if (cardPic) { if (previewImg.src) cardPic.src = previewImg.src; else cardPic.removeAttribute('src'); }
       var home = window.SKRIBL_HOME || null;
       if (homeBtn) {
@@ -282,9 +292,12 @@
       var had = document.activeElement, rise = !still();
       glide(function () {
         sheet.classList.add('is-posted');
-        if (rise) sheet.classList.add('is-rising');
         done.hidden = false;
         if (next) next.hidden = false;
+        // Fitted before the parts are set low: their 10px would read as
+        // the sheet running over.
+        fitCard();
+        if (rise) sheet.classList.add('is-rising');
       });
       if (rise) {
         // Laid out low and clear, then let go: each part comes up into place.
@@ -309,6 +322,26 @@
       }
     }
     function showPic() { if (cardMedia) cardMedia.classList.remove('is-waiting'); }
+
+    /* THE DRAWING'S ROOM (styles.css .post-card-media): its own shape, up to
+     * about half the screen, and no taller than the sheet has room for once
+     * everything else in it is laid out, so Watch and the rest stay on the
+     * screen; never under ROOM_MIN, where the sheet scrolls instead. Asked
+     * with the caption at its two lines: an open caption scrolls the sheet,
+     * it does not take the drawing's room. Again when the window changes. */
+    var ROOM_MIN = 160;
+    function fitCard() {
+      if (!cardMedia || !sheet || !sheet.classList.contains('is-posted')) return;
+      if (cardMore && window.SkriblCapMore) window.SkriblCapMore.sync(cardCaption);
+      cardMedia.style.setProperty('--room', Math.round(innerHeight / 2) + 'px');
+      var open = cardCaption._open && cardCaption._shut ? cardCaption.getBoundingClientRect().height - cardCaption._shut : 0;
+      var over = sheet.scrollHeight - sheet.clientHeight - Math.max(0, open);
+      if (over > 0) {
+        var h = cardMedia.getBoundingClientRect().height;
+        cardMedia.style.setProperty('--room', Math.max(ROOM_MIN, Math.floor(h - over)) + 'px');
+      }
+    }
+    addEventListener('resize', function () { if (sheet && !sheet.classList.contains('is-gliding')) fitCard(); });
 
     function unpost() {
       clearTimeout(jumpTimer);
@@ -506,6 +539,7 @@
       // (no crop), on the drawing's own ground so there are never odd bars.
       var preview = cfg.preview ? cfg.preview() : null;
       previewBg = preview ? preview.bg || null : null;
+      previewRatio = (preview && preview.ratio) || 1.6;
       if (jumpImg && !jumpImg.getAttribute('src')) jumpImg.src = jumpImg.getAttribute('data-src');
       if (preview && preview.src) {
         previewImg.src = preview.src;
@@ -645,9 +679,15 @@
     captionInput.addEventListener('focus', function () { setTimeout(applyKeyboardInset, 100); });
 
     // Backdrop tap / Escape / handle tap all close — but never mid-send.
+    // Judged by the path the press took, not by where its target is by now:
+    // a button that rewrites its own words as it is pressed (the card's
+    // more and less; lib/labels.js keeps a word in a span) has taken the
+    // pressed node out of the page before the press bubbles up to here.
     overlay.addEventListener('click', function (e) {
       if (posting) return;
-      if (!e.target.closest('.menu-sheet')) close();
+      var path = e.composedPath();
+      for (var i = 0; i < path.length; i++) if (path[i].classList && path[i].classList.contains('menu-sheet')) return;
+      close();
     });
     document.addEventListener('keydown', function (e) {
       if (e.key === 'Escape' && !overlay.hidden && !posting) close();

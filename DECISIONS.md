@@ -26461,3 +26461,90 @@ its cost named (verify_player_isolation, verify_jsstrip).
 WHAT IT DOES TO FLIP: shared. A Flip's link page has the same two lines and
 "more", and a Flip of your own says Back to Flip. The Posted! card, in both
 editors' sheets, is the next PR.
+
+## After v329 -- The Posted! card: the drawing in its own shape, two lines of the caption
+
+The owner, from a phone, of the Posted! card with a long caption: "comment
+chokes out canvas". The card's drawing sat in a fixed band, 200px tall on a
+phone and 250 on a desk, letterboxed on its own ground, and the caption ran
+in full under it, so the longer the caption, the more of the card was words.
+Offered the drawing in its own shape, up to about half the screen, and the
+caption at two lines with a "more"; the owner: "all yes, skip the mock and
+just build it".
+
+THE DRAWING IN ITS OWN SHAPE. The card's box is the drawing's shape (the
+editor's own ratio, the one the Post sheet's preview already used), matted
+on the card at the words' inset with the preview's corner and line, as the
+gallery's cards mat theirs ("canvas borders hit card border and it's weird
+looking"), and centred. It is as wide as the words until it would stand
+taller than its room. The room is about half the screen, and never more
+than the sheet has once everything else in it is laid out, so Watch and the
+rest stay on the screen without scrolling; on a window too short for all of
+it the drawing keeps 160px (the Post sheet preview's floor) and the sheet
+scrolls. It is fitted when the card comes up, with the caption at its two
+lines, and again when the window changes. Measured on a phone (402x874) with
+a delete-key row: a tall drawing 142x252 (it was 112x200 in the band), a
+square one 252x252 (was 200x200); on a desk a tall one 169x300 (was 141x250).
+A 16:9 drawing is 348x196, about the 356x200 it was: the mat costs it a
+little width, and a wide drawing has no height to gain.
+
+TWO LINES AND A MORE. The caption shows two lines and a "more" where it runs
+on, lib/capmore.js, the gallery's and the link page's own; "more" glides the
+rest open in place and the sheet scrolls to it, the drawing keeping its size
+(a window change while it is open measures the caption shut). Each post
+starts shut. Flip's sheet loads the module too.
+
+A PRESS INSIDE THE SHEET NEVER CLOSES IT. The sheet closed on the first
+press of "more": lib/labels.js keeps a button's word in a span, the press
+landed on that span, and "more" becoming "less" took the span out of the
+page before the press bubbled to the overlay, whose outside-press check
+asked the span where it was and heard nowhere. The check reads the path the
+press took (composedPath) instead, so no button that rewrites its own words
+can close the sheet it is in. The menu's, Export's and Flip's sheets ask the
+same question the old way; none of them has such a button today.
+
+THE ROWS, verify_postmoment.py SHAPE and WORDS (new parts; CARD inverted):
+tall, wide and square drawings, Pad and Flip, on a phone, a desk and a desk
+window tall enough that half the screen is what holds the drawing back:
+the box the shape of the canvas the suite gave the editor, centred and no
+wider than the words, as big as the sheet has room for up to half the
+screen, all of the sheet on the screen and Watch painted (16 rows); a
+window too short keeping the drawing at 160px, scrolling, and refitting
+when given its height back; two lines of the caption and a painted
+"more", 44px, its state and its word in its name; "more" opening the rest
+in place, the sheet staying up and the drawing at its size, a window
+change while it is open taking none of the drawing's room; "less" back;
+the next post shut again; Flip's long caption the same, its short one
+whole with none; "more" 7:1, light and dark. 26 new rows; the card's two
+rows that asked for the caption in full now ask for two lines and a
+"more".
+
+Each shown red by its own break on a served copy, 16 of 16 (the copy as
+built green, 30 of 30): the shape never set (15 rows red), the room never
+fitted on posting (7), the room not held to the sheet's (6), no
+half-screen cap (1), no floor (1), no refit when the window changes (1),
+not centred on the card (6), the box narrower than the words (2), the
+open caption given the drawing's room (1), the two-line clamp off (6),
+"more" never wired (3), the outside press judged by the pressed node (2),
+a new post's caption not shut (1), "more" in a grey (2), "more" on every
+caption (1), Flip without the module (1). Two rows went red under none of
+the first fourteen breaks (a wide drawing's size on a phone, Flip's short
+caption); the last two breaks are theirs. And the half-screen cap pinned
+nothing where the sheet's room always binds first, which is why the suite
+has a 1,300px window.
+
+THE SHEET'S GLIDE, now that the drawing takes the room. On a phone a tall or
+square drawing leaves the posted sheet as full as the form was, so its
+height does not change and nothing glides; the parts still rise in. The
+glide rows (verify_postmoment) post a wide drawing, whose sheet is shorter
+than the form, and were shown red again with the glide taken out (806 to
+806, nothing moving between) and green as built. How it works' Post tip
+says a long caption shows two lines and a more (it said the caption shows
+in full), and verify_helpclaims names the turned row that backs it.
+
+THE COST. Nothing the link page or a post's box loads: postsheet.js and the
+Post sheet's styles are the editors' own, and capmore.js is unchanged. Flip's
+page loads capmore.js (2,264 B), which the Pad's already did.
+
+WHAT IT DOES TO FLIP: shared. One sheet, one card, one fit: a Flip's card is
+the shape of its pages, and its caption has the same two lines and "more".

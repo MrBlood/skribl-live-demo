@@ -1087,9 +1087,10 @@ stays a sleep.
   moment", "maybe an animated blooby jumping up with his hands in the air?",
   and of the mock, "all yes"): once a drawing has posted, "Posted!" painted on
   a band of the brand's purple with each editor's line, the form folded away;
-  the card with the posted title, the caption in full and whether it is in the
-  gallery, on the drawing's own ground where the drawing draws itself, never
-  its finished picture first; the Pad's once in about three seconds to its
+  the card with the posted title, its whole caption in its words with two
+  lines shown and a "more", and whether it is in the gallery, on the drawing's
+  own ground where the drawing draws itself, never its finished picture
+  first; the Pad's once in about three seconds to its
   finished drawing, a Flip's twice round to its first page; Blooby's seven
   poses in about 0.8 s, resting on the cheer badge's; the sheet's height
   gliding and the parts rising in; all of that read on every frame, and none
@@ -1099,7 +1100,19 @@ stays a sleep.
   http(s) address or a path; the x; focus on Watch; Watch in place from the
   Home Screen. The reason a post did not go in a card above Try again, Flip's
   in its own word; nothing in the sheet under 12px; compose mode without any
-  of it. Each row was shown red by its own break.
+  of it. The card's drawing in its own shape (the owner: "comment chokes out
+  canvas"): tall, wide and square, Pad and Flip, on a phone, a desk and a
+  window tall enough that half the screen holds the drawing back, the box is
+  the shape of the canvas the suite gave the editor, centred and no wider
+  than the words, as big as the sheet has room for up to half the screen,
+  with all of the sheet on the screen and Watch painted; a window too short
+  keeps the drawing at 160px and scrolls, and refits when it has its height
+  back. Two lines of the caption and a painted "more", 44px, its state and
+  its word in its name; it opens the rest in place, the sheet staying up and
+  the drawing at its size, a window change while it is open taking none of
+  the drawing's room; "less" back; the next post starts shut; Flip's long
+  caption the same, and a caption that fits has none; "more" 7:1, light and
+  dark. Each row was shown red by its own break.
 - `verify_linkpage.py` — the link page (the owner's "all yes" on the posting
   mock): the way back to the site, on a server of the suite's own whose host
   named its home (SKRIBL_HOME_URL, SKRIBL_HOME_LABEL): one link at the top left

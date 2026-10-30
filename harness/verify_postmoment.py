@@ -15,11 +15,23 @@ WHAT IS ASKED, AND HOW IT IS READ
     rect), on the brand's purple (the band's own pixels), with the line each
     editor says; the form folded away (no box at all for the title, the
     fields or the button).
-  * THE CARD: the posted title, the caption in full and not cut, and whether
-    it is in the gallery. It starts on the drawing's own ground and the
-    drawing draws itself there, read on every frame: its finished picture is
-    never shown first and then taken away (the picture is the card under
-    Reduce Motion).
+  * THE CARD: the posted title, the whole caption in its words with two
+    lines of it shown and a "more", and whether it is in the gallery. It
+    starts on the drawing's own ground and the drawing draws itself there,
+    read on every frame: its finished picture is never shown first and then
+    taken away (the picture is the card under Reduce Motion).
+  * THE DRAWING IN ITS OWN SHAPE (the owner, of a long caption on the old
+    200px band: "comment chokes out canvas"): tall, wide and square, Pad and
+    Flip, phone and desk, the card's box is the shape of the canvas the suite
+    gave the editor, centred and no wider than the words, as big as the sheet
+    has room for up to half the screen, and all of the sheet on the screen
+    with Watch painted; a window too short for it all keeps the drawing at
+    160px and scrolls, and refits when it has its height back.
+  * TWO LINES OF THE CAPTION: a painted "more", 44px, its state and its word
+    in its name; it opens the rest in place, the sheet staying up and the
+    drawing at its size, even when the window changes while it is open;
+    "less" puts it back; the next post starts at two lines; a caption that
+    fits has none; "more" 7:1, light and dark.
   * IT PLAYS: the card's drawing is the in-post player's, on the payload just
     sent. The Pad's plays once, about three seconds, and rests on the finished
     drawing (inked, at its end); a Flip of two pages goes round twice and
@@ -174,6 +186,43 @@ def shot(pg, sel):
     return Image.open(io.BytesIO(pg.locator(sel).screenshot(animations="disabled"))).convert("RGB")
 
 
+def lum(c):
+    v = [x / 255 for x in c[:3]]
+    v = [x / 12.92 if x <= 0.04045 else ((x + 0.055) / 1.055) ** 2.4 for x in v]
+    return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]
+
+
+def ratio(a, b):
+    la, lb = lum(a), lum(b)
+    return (max(la, lb) + 0.05) / (min(la, lb) + 0.05)
+
+
+def worst(pg, sel, scale):
+    """The word's ink against what is painted behind it, at nine points of its
+    text's box, the words hidden for the photograph (verify_linkpage's)."""
+    box = pg.evaluate("""(s) => { const e = document.querySelector(s); if (!e) return null;
+      const r = document.createRange(); r.selectNodeContents(e); const b = r.getBoundingClientRect();
+      const c = getComputedStyle(e).color.match(/[\\d.]+/g).map(Number);
+      return { l: b.left, t: b.top, r: b.right, b: b.bottom, ink: c }; }""", sel)
+    if not box:
+        return None
+    st = pg.add_style_tag(content="body * { color: transparent !important; }")
+    pg.wait_for_timeout(80)
+    im = Image.open(io.BytesIO(pg.screenshot())).convert("RGB")
+    st.evaluate("s => s.remove()")
+    a = box["ink"][3] if len(box["ink"]) > 3 else 1
+    out = None
+    for i in range(3):
+        for j in range(3):
+            x = int((box["l"] + (box["r"] - box["l"]) * (i + .5) / 3) * scale)
+            y = int((box["t"] + (box["b"] - box["t"]) * (j + .5) / 3) * scale)
+            g = im.getpixel((x, y))
+            ink = [box["ink"][k] * a + g[k] * (1 - a) for k in range(3)]
+            v = ratio(ink, g)
+            out = v if out is None else min(out, v)
+    return out
+
+
 def mean_diff(a, b):
     b = b.resize(a.size)
     pa, pb = a.load(), b.load()
@@ -196,6 +245,11 @@ with sync_playwright() as p:
             ctx = b.new_context(color_scheme=theme, **PHONE)
             pg = ctx.new_page()
             goto(pg, "/")
+            # A WIDE DRAWING, so the sheet has a new height to glide to: the
+            # card's drawing takes the room the sheet has, so a tall one leaves
+            # the posted sheet as full as the form was, and nothing glides.
+            pg.evaluate("() => establishEditorCanvas(944, 531)")
+            pg.wait_for_timeout(400)
             drawn(pg, "pad")
             pg.evaluate(SAMPLER)
             post(pg)
@@ -219,11 +273,15 @@ with sync_playwright() as p:
                       px[2] > 150 and px[2] > px[0] + 30 and px[0] > px[1] and px[1] < 110, f"the band's foot is {px}")
             if part("card"):
                 c = pg.evaluate("""() => { const t = document.getElementById('postCardTitle'), c = document.getElementById('postCardCaption'),
-                  m = document.getElementById('postCardMeta'), pic = document.getElementById('postCardPic'), pv = document.getElementById('postPreviewImg');
-                  return { title: t.textContent, caption: c.hidden ? null : c.textContent, whole: c.scrollHeight <= c.clientHeight + 1,
-                           meta: m.textContent, pic: !!pic.getAttribute('src') && pic.getAttribute('src') === pv.getAttribute('src') }; }""")
-                check(f"Pad, {theme}: the card shows the posted title, the caption in full and not cut, and that it is in the gallery",
-                      c["title"] == "Window cat" and c["caption"] == CAPTION and c["whole"] and c["meta"] == "In the public gallery", str(c))
+                  m = document.getElementById('postCardMeta'), pic = document.getElementById('postCardPic'), pv = document.getElementById('postPreviewImg'),
+                  more = document.getElementById('postCardMore');
+                  return { title: t.textContent, caption: c.hidden ? null : c.textContent,
+                           lines: +(c.getBoundingClientRect().height / parseFloat(getComputedStyle(c).lineHeight)).toFixed(2),
+                           more: !!more && !more.hidden, meta: m.textContent,
+                           pic: !!pic.getAttribute('src') && pic.getAttribute('src') === pv.getAttribute('src') }; }""")
+                check(f"Pad, {theme}: the card shows the posted title, its whole caption in its words with two lines of it shown and a 'more', and that it is in the gallery",
+                      c["title"] == "Window cat" and c["caption"] == CAPTION and c["lines"] <= 2.05 and c["more"]
+                      and c["meta"] == "In the public gallery", str(c))
                 pg.wait_for_function("() => window.__pm.some(f => f.on) || window.__pm.length >= 240", timeout=15000)
                 fr = pg.evaluate("() => window.__pm")
                 first_on = next((i for i, f in enumerate(fr) if f["on"]), None)
@@ -373,6 +431,134 @@ with sync_playwright() as p:
               bool(play) and bool(end) and end["kind"] == "flip" and wraps == 1 and end["state"] != "playing" and end["elapsedMs"] == 0,
               f"{len(play)} frames playing; turns {wraps}; at rest {end}")
         ctx.close()
+
+    # ---------------------------------------------------------------- the card's drawing and words
+    # THE DRAWING IN ITS OWN SHAPE, AND TWO LINES OF THE CAPTION (the owner, of
+    # a long caption on the old 200px band: "comment chokes out canvas"; "all
+    # yes, skip the mock and just build it"). The shape asked of the box is the
+    # canvas size the suite gave the editor, not anything the sheet says.
+    if part("shape") or part("words"):
+        print("\nTHE CARD: THE DRAWING IN ITS OWN SHAPE, TWO LINES OF ITS CAPTION")
+        SHAPES = {"tall": (531, 944), "wide": (944, 531), "square": (707, 707)}
+        CARD_BOX = """() => {
+          const sh = document.getElementById('postSheet'), m = document.getElementById('postCardMedia'),
+                w = sh.querySelector('.post-card-words'), cap = document.getElementById('postCardCaption'),
+                more = document.getElementById('postCardMore'), watch = document.getElementById('postWatchBtn');
+          const hit = (el) => { const r = el.getBoundingClientRect(), e = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+                                return !!e && el.contains(e); };
+          const mb = m.getBoundingClientRect(), cb = m.parentNode.getBoundingClientRect(), ws = getComputedStyle(w);
+          const mr = more.hidden ? null : more.getBoundingClientRect(), ss = getComputedStyle(sh);
+          return { w: mb.width, h: mb.height, left: mb.left - cb.left, right: cb.right - mb.right,
+                   words: w.getBoundingClientRect().width - parseFloat(ws.paddingLeft) - parseFloat(ws.paddingRight),
+                   vh: innerHeight, over: sh.scrollHeight - sh.clientHeight,
+                   full: sh.getBoundingClientRect().height >= parseFloat(ss.maxHeight) - 2,
+                   watch: watch.getBoundingClientRect().bottom <= innerHeight && hit(watch),
+                   lines: cap.hidden ? 0 : cap.getBoundingClientRect().height / parseFloat(getComputedStyle(cap).lineHeight),
+                   whole: cap.scrollHeight <= cap.clientHeight + 1,
+                   more: mr && { h: mr.height, painted: hit(more), word: more.textContent.trim(), name: more.getAttribute('aria-label'),
+                                 expanded: more.getAttribute('aria-expanded') },
+                   posted: sh.classList.contains('is-posted') && !document.getElementById('postOverlay').hidden }; }"""
+
+        # A desk window taller than the sheet needs, where half the screen is
+        # what holds a tall drawing back rather than the sheet's room.
+        TALLWIN = dict(viewport={"width": 1280, "height": 1300}, device_scale_factor=1)
+
+        def shaped(ed, size, shape, theme="light", caption=CAPTION):
+            ctx = b.new_context(color_scheme=theme, **{"phone": PHONE, "desk": DESK, "tall window": TALLWIN}[size])
+            pg = ctx.new_page()
+            goto(pg, "/" if ed == "Pad" else "/flip")
+            w, h = SHAPES[shape]
+            pg.evaluate(f"() => {'establishEditorCanvas' if ed == 'Pad' else 'applyCanvasSize'}({w}, {h})")
+            pg.wait_for_timeout(500)
+            drawn(pg, "pad" if ed == "Pad" else "flip")
+            post(pg, caption=caption)
+            pg.wait_for_timeout(1200)
+            return ctx, pg, w / h
+
+        def fits(ed, size, shape, pg, ar):
+            r = pg.evaluate(CARD_BOX)
+            k = r["w"] / r["h"]
+            room = min(r["words"] / ar, r["vh"] / 2)
+            check(f"{ed}, {size}, a {shape} drawing: the card's box is the drawing's own shape, centred, no wider than the words",
+                  abs(k - ar) / ar < 0.012 and abs(r["left"] - r["right"]) <= 1 and r["w"] <= r["words"] + 0.5,
+                  f"box {r['w']:.1f}x{r['h']:.1f} ({k:.4f}, the drawing {ar:.4f}), {r['left']:.1f} | {r['right']:.1f}, words {r['words']:.1f}")
+            check(f"{ed}, {size}, a {shape} drawing: ...as big as the sheet has room for, up to half the screen, and all of the sheet on it, Watch painted",
+                  r["h"] <= r["vh"] / 2 + 1 and (r["h"] >= room - 1.5 or r["full"]) and r["over"] <= 1 and r["watch"],
+                  f"{r['h']:.1f}px of {r['vh']} (it could be {room:.1f}); the sheet {'full' if r['full'] else 'not full'}, "
+                  f"{r['over']}px over; Watch {'painted on the screen' if r['watch'] else 'NOT on the screen'}")
+            return r
+
+        if part("shape"):
+            for ed, size, shape in (("Pad", "phone", "tall"), ("Pad", "phone", "wide"), ("Pad", "phone", "square"),
+                                    ("Pad", "desk", "tall"), ("Pad", "desk", "wide"), ("Pad", "tall window", "tall"),
+                                    ("Flip", "phone", "tall"), ("Flip", "desk", "square")):
+                ctx, pg, ar = shaped(ed, size, shape)
+                fits(ed, size, shape, pg, ar)
+                ctx.close()
+            # A window too short for all of it: the drawing keeps its floor and
+            # the sheet scrolls to the rest; back to its height, it refits.
+            ctx, pg, ar = shaped("Pad", "desk", "tall")
+            pg.set_viewport_size({"width": 1280, "height": 560})
+            pg.wait_for_timeout(500)
+            s = pg.evaluate(CARD_BOX)
+            pg.set_viewport_size({"width": 1280, "height": 900})
+            pg.wait_for_timeout(500)
+            t = pg.evaluate(CARD_BOX)
+            check("a window too short for all of it: the drawing keeps 160px and the sheet scrolls to the rest; given its height back, it refits",
+                  abs(s["h"] - 160) <= 1 and s["over"] > 1 and t["over"] <= 1 and t["h"] > 250 and abs(t["w"] / t["h"] - ar) / ar < 0.012,
+                  f"short: {s['h']:.1f}px, {s['over']}px to scroll; back: {t['h']:.1f}px, {t['over']}px over")
+            ctx.close()
+
+        if part("words"):
+            ctx, pg, ar = shaped("Pad", "phone", "tall")
+            r = pg.evaluate(CARD_BOX)
+            m = r["more"] or {}
+            check("the card's caption: two lines of it and a painted 'more', 44px, its state and its word in its name",
+                  r["lines"] <= 2.05 and not r["whole"] and m.get("h", 0) >= 44 and m.get("painted") and m.get("word") == "more"
+                  and m.get("expanded") == "false" and m.get("name") == "Read more of the caption", str(r))
+            pg.click("#postCardMore")
+            pg.wait_for_timeout(600)
+            o = pg.evaluate(CARD_BOX)
+            om = o["more"] or {}
+            check("'more' opens the rest in place: the sheet stays up and the drawing keeps its size",
+                  o["posted"] and o["lines"] > 2.5 and o["whole"] and abs(o["w"] - r["w"]) < 0.5 and abs(o["h"] - r["h"]) < 0.5
+                  and om.get("word") == "less" and om.get("expanded") == "true", f"{o}; before {r['w']:.1f}x{r['h']:.1f}")
+            pg.set_viewport_size({"width": 402, "height": 873})
+            pg.wait_for_timeout(500)
+            g = pg.evaluate(CARD_BOX)
+            check("...and with it open, a window change does not give the caption the drawing's room",
+                  abs(g["h"] - r["h"]) <= 1.5 and g["lines"] > 2.5, f"{g['h']:.1f}px, was {r['h']:.1f}")
+            pg.click("#postCardMore")
+            pg.wait_for_timeout(600)
+            z = pg.evaluate(CARD_BOX)
+            check("'less' puts it back to two lines", z["lines"] <= 2.05 and (z["more"] or {}).get("word") == "more", str(z))
+            # Opened again, then another post: its caption starts at two lines.
+            pg.click("#postCardMore")
+            pg.wait_for_timeout(500)
+            pg.click("#postAnotherBtn")
+            pg.wait_for_timeout(900)
+            drawn(pg, "pad")
+            post(pg, title="Window cat, again")
+            pg.wait_for_timeout(1200)
+            n = pg.evaluate(CARD_BOX)
+            check("the next post's caption starts at two lines again, with its 'more'",
+                  n["lines"] <= 2.05 and (n["more"] or {}).get("word") == "more" and (n["more"] or {}).get("expanded") == "false", str(n))
+            ctx.close()
+            ctx, pg, ar = shaped("Flip", "phone", "wide")
+            f = pg.evaluate(CARD_BOX)
+            check("Flip: its long caption is at two lines with its 'more' too",
+                  f["lines"] <= 2.05 and not f["whole"] and (f["more"] or {}).get("painted") and (f["more"] or {}).get("word") == "more", str(f))
+            ctx.close()
+            ctx, pg, ar = shaped("Flip", "phone", "wide", caption="Two pages, one ball, no rush.")
+            s = pg.evaluate(CARD_BOX)
+            check("Flip: a caption that fits in two lines shows whole, with no 'more'",
+                  s["more"] is None and s["whole"] and 0.5 < s["lines"] <= 2.05, str(s))
+            ctx.close()
+            for theme in ("light", "dark"):
+                ctx, pg, ar = shaped("Pad", "phone", "square", theme=theme)
+                v = worst(pg, "#postCardMore", 3)
+                check(f"{theme}: the card's 'more' reads 7:1 on what is painted behind it", v is not None and v >= 7, f"{v and round(v, 2)}:1")
+                ctx.close()
 
     # ---------------------------------------------------------------- where to go next
     if part("next"):
