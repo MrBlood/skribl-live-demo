@@ -27,7 +27,9 @@ WHAT IS ASKED, AND HOW IT IS READ
   * A SHORT FLIP (under 20,000 points, the Pad's PAD_SLICE_FROM) is painted
     whole as it opens, as before.
   * THE DRAFT: the opened Flip is kept as the draft, written in a task of its
-    own after the file's (it was a fifth of the opening).
+    own after the file's (it was a fifth of the opening), and before the
+    editor's own autosave would have written it (scheduleSave waits 800 ms),
+    so a reload just after the opening finds it.
 """
 import json
 import math
@@ -248,12 +250,17 @@ with sync_playwright() as p:
             print("\nTHE DRAFT")
             c, pg, errs = flip(b, DESK)
             t0, opened = pick(pg, LONG)
-            pg.wait_for_timeout(1500)
+            # When the draft holds it, against the end of the file's task: the
+            # editor's own autosave waits 800 ms after a change (scheduleSave),
+            # so a draft there sooner is the opening's own write.
+            soon = waited(pg, "() => (localStorage.getItem(AUTOSAVE_KEY) || '').length > 100000", 3000 if opened else 500)
+            t_kept = pg.evaluate("() => performance.now()")
             fo = pg.evaluate("() => window.__fo")
             kept = pg.evaluate("() => { try { return JSON.parse(localStorage.getItem(AUTOSAVE_KEY)).frames.length; } catch (e) { return -1; } }")
             at = fo["atOpen"] or {}
-            check("the opened Flip is kept as the draft, every page of it",
-                  opened and kept == 60, f"the draft holds {kept} pages")
+            after = round(t_kept - at.get("t", t_kept))
+            check("the opened Flip is kept as the draft, every page of it, before the autosave's own 800 ms",
+                  opened and soon and kept == 60 and after <= 700, f"the draft holds {kept} pages, {after} ms after the file's task")
             check("...written in a task of its own, after the file's",
                   opened and at.get("slot", 0) < 100000, f"the draft was {at.get('slot')} characters as the file's task ended")
             check("no page errors", not errs, "; ".join(errs[:2]))
