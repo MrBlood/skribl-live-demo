@@ -929,10 +929,10 @@ function paintStrokesStatic(strokeArr, whole) {
      that laid the ink), and the last frame's whole length steers the next
      slice toward a frame of about 34 ms: it starts small, grows while frames
      are quick and shrinks at once when one is long, 0.5 to 16 ms. */
-  let budget = 2, last = 0, done = false;
-  const end = () => { if (!done) { done = true; whole(); } };
+  let budget = 2, last = 0;
+  const end = () => { const w = whole; whole = null; if (w) w(); };
   (function next(now) {
-    if (done) return;
+    if (!whole) return;
     if (seq !== restoreSeq) return end();
     if (last) budget = Math.max(0.5, Math.min(16, budget * Math.min(1.5, 20 / Math.max(1, now - last - 14))));
     last = now || 0;
@@ -942,7 +942,7 @@ function paintStrokesStatic(strokeArr, whole) {
   })();
   // The rest at once, for a caller that needs the canvas whole now (the Pad,
   // when the person acts before the ink is laid: editor_draft.js padPaint).
-  return () => { if (!done && seq === restoreSeq) run(Infinity); end(); };
+  return () => { if (whole && seq === restoreSeq) run(Infinity); end(); };
 }
 
 
@@ -3083,7 +3083,7 @@ function loadSkribl(data, said) {
       && data.canvasSize.cssWidth && data.canvasSize.cssHeight) {
     establishEditorCanvas(data.canvasSize.cssWidth, data.canvasSize.cssHeight);
     layoutEditorCanvas();
-    if (typeof growBeforePaint === 'function') growBeforePaint();   // editor_draft.js
+    if (window.growBeforePaint) growBeforePaint();   // editor_draft.js
     // ...and the shape row in Settings says so, as restoreAutosave's does:
     // after New Skribl's Undo it lit the new shape over the old drawing, and
     // a draft or a file of another shape opened under the last one's.
@@ -3106,8 +3106,7 @@ function loadSkribl(data, said) {
 
   // The Pad lays a long drawing in slices (editor_draft.js padPaint); the
   // link page asks for its own (inkWhole).
-  const renderStrokes = () => inkWhole || typeof padPaint !== 'function'
-    ? paintStrokesStatic(strokes, inkWhole) : padPaint(strokes);
+  const renderStrokes = () => (window.padPaint || paintStrokesStatic)(strokes, inkWhole);
 
   const { width: cw, height: ch } = getCanvasLogicalSize();
 
