@@ -489,7 +489,12 @@ with sync_playwright() as sp:
     # menu's card and its point follow --menu-shift, so the card stays inside
     # the window when the ⋯ wraps to mid-screen, and the card is never wider
     # than the window less 16px. Spent value and 25 B again.
-    _css_target = 40_925
+    #
+    # AND 845 B MORE, IN WRITING, at the owner's "all yes" on the posting
+    # mock: the link page's way back to the site that named its home (the
+    # .player-home pill, and on a phone the room kept clear under it) and its
+    # caption a size up under a title a step up. Spent value and 25 B again.
+    _css_target = 41_770
     check(f"the player's stylesheet is served stripped, under the {_css_target:,}-byte target (40,000 once its debt is paid)",
           _href is not None and 0 < len(_served_css) <= _css_target and len(_served_css) < len(_raw_css),
           f"{len(_served_css):,} B served of {len(_raw_css):,} B on disk")

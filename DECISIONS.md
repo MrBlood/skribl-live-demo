@@ -26101,3 +26101,55 @@ verify_contrast's two new surfaces and the tick's words.
 WHAT IT DOES TO FLIP: shared. One Post sheet and one lib/postsheet.js serve
 both editors; the line on the band and the noun in the failures are each
 editor's own.
+
+## After v329 -- The link page: the way back to the site, and the caption a size up
+
+PR B of the posting mock the owner answered "all yes": the link page's way
+back, "a small ‹ skribls.net at the top, shown only when the site has named its
+home", and the caption featured there, "a size up in the page's ink". The
+gallery and the Library follow as PR C.
+
+THE WAY BACK (skribl_player.html). When the host has named its home
+(create_blueprint's home_url and home_label, the same setting as the Post
+sheet's Back), the page opens with one link at its top left: a chevron and the
+site's name, named "Back to skribls.net" for a screen reader, to the host's
+address, `target="_top"` so a host that frames the page goes home whole rather
+than inside the frame. It is the mock's pill as built: fixed at the top left
+inside the safe area, 36px tall, glass over the page, the menu cards' lilac
+edge, 14px 600 in the page's ink, its tap 44px. The drawing's own full screen
+covers it, and so does the page-filling state where the full screen API is
+missing (lib/immersive.js). Standalone there is no link, and no room kept.
+- ON A PHONE IT WOULD HAVE SAT ON THE DRAWING. An iPhone SE's (375x667)
+  drawing starts 20px down the page and the pill runs to 48. With a home
+  named, a phone's page keeps the pill's height clear at its top (body.has-home,
+  set by the template; no page-wide :has(), after item 1), and the drawing's fit
+  already subtracts that room, so nothing moved in app.js. A 402px phone's
+  drawing sits 18px lower than before, where the mock had it. On the smallest
+  size measured, 320x568, the drawing reaches its floor and the page scrolls
+  17px.
+- ITS STYLE IS LISTED LIVE (harness/tools/css_live.json). cssgraph copies only
+  rules the player page matches, and the test page has no home named, so the
+  pill's five selectors are named there by hand, as .player-btn.active is.
+
+THE CAPTION, FEATURED: 17px in the page's own ink (it was 14px in the
+secondary grey) under a title of 21px at 800 (18 at 700); on a phone on its
+side 14 and 17 (12 and 15). 17.0:1 light and 17.5:1 dark. The Pad's local
+player (the #skribl= link a post kept on this device opens) is the same shell,
+so it shows the same sizes; the way back is the link page's own.
+
+THE CSS IT COSTS: +845 B on the player's sheet (40,900 to 41,745), raised in
+writing in verify_player_isolation and verify_jsstrip: the pill, its tap and
+hover, the room on a phone, and the two sizes. The -webkit- prefix on the
+blur and a focus ring of its own were dropped: Safari 18 takes the plain
+property, and the player's other buttons wear the browser's own ring.
+
+THE ROWS, verify_linkpage.py (new, 34 rows, a server of its own with the home
+named), each red against its own break on a served copy of this tree: no way
+back; it going elsewhere; inside the frame; no name; not fixed; a 42px tap;
+under the page; its style never listed live; no room on a phone; room kept
+standalone; painted over the page-filling state; the caption at 14, the
+caption grey, the title as it was, a phone on its side as it was, and the
+pill's words faint.
+
+WHAT IT DOES TO FLIP: shared. A Flip's link page is this page; its caption
+and its way back are the same.

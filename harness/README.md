@@ -1100,6 +1100,16 @@ stays a sleep.
   Home Screen. The reason a post did not go in a card above Try again, Flip's
   in its own word; nothing in the sheet under 12px; compose mode without any
   of it. Each row was shown red by its own break.
+- `verify_linkpage.py` — the link page (the owner's "all yes" on the posting
+  mock): the way back to the site, on a server of the suite's own whose host
+  named its home (SKRIBL_HOME_URL, SKRIBL_HOME_LABEL): one link at the top left
+  saying the site's name and named "Back to" it, to the host's address in the
+  whole tab, painted (elementFromPoint), 36px with a 44px tap, over neither the
+  drawing nor its words on a phone as small as an iPhone SE, light and dark,
+  phone and desk, its words 7:1; pressed, it goes there; the drawing's own full
+  screen and the page-filling fallback cover it. Standalone, none. The caption
+  17px in the page's ink under a title of 21px at 800, 14 and 17 on a phone on
+  its side, painted, whole and 7:1. Each row was shown red by its own break.
 - `verify_pagewide.py` — no style rule searches the whole page. No selector in
   a stylesheet or a template's <style> puts :has() on html, body or :root (five
   did, and at phone pace they were 2.9 s of Pad's start and 4.3 s of Flip's);

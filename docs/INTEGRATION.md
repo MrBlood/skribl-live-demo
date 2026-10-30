@@ -1008,6 +1008,10 @@ init_skribl(app, session=lambda: db.session, ...,
             home_url="/home", home_label="skribls.net")
 ```
 
+The link page (`/s/<id>`) carries the same way back: a small "‹ skribls.net"
+at its top left, which opens your home in the whole tab (`target="_top"`),
+so a page you frame goes home whole rather than inside the frame.
+
 Unset, there is no such button, which is right for standalone Skribl. The
 address is yours, given once here and never read from a request, so no link
 can send a person anywhere you did not name; anything but an http(s) address

@@ -155,6 +155,7 @@ BATCHES = [
     ["verify_replayspeed.py"],             # measures — progress over wall time at each speed; posts to the shared server
     ["verify_padrepeat.py"],               # measures — each round read on every frame, the music's starts; posts to the shared server
     ["verify_postmoment.py"],              # measures — the posted moment read on every frame; posts to the shared server
+    ["verify_linkpage.py"],                # measures — the way back and the caption read from the paint; its own server, and posts to the shared one
     ["verify_videoexport.py"],             # measures — records real WebM in Chromium and reads its tracks
     # store: posts through both editors' sheets to the shared server (one
     # unticked, one ticked, per surface) and reads the listing back, so it
