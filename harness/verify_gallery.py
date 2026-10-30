@@ -2777,6 +2777,9 @@ with sync_playwright() as _spw:
 
 
 print("\nGALLERY — a discarded card stops costing anything")
+# The cards within a screen of view, the ones whose rows keep time.
+NEAR = """() => { const h = innerHeight; return [...document.querySelectorAll('.tile')].filter(t => {
+  const r = t.getBoundingClientRect(); return r.bottom > -h && r.top < 2 * h; }).length; }"""
 # THE BEAT RESCHEDULES FROM INSIDE ITSELF, so nothing outside it ever ends.
 # lib/fullbar.js runs a frame while its drawing plays and a quarter second
 # while it does not; the grid empties and rebuilds on every search and every
@@ -2812,10 +2815,13 @@ with sync_playwright() as _spl:
     _pl.wait_for_selector(".tile", timeout=15000)
     _pl.wait_for_timeout(1000)
 
+    # PER CARD NEAR THE SCREEN: a card's row keeps time only within a screen
+    # of view (gallery.js footWatch), so the cards past that are left out of
+    # the count rather than diluting it.
     def _per_card(page, ms=1500):
         page.evaluate("() => { window.__skTimers = 0; }")
         page.wait_for_timeout(ms)
-        n = page.evaluate("() => document.querySelectorAll('.tile').length")
+        n = page.evaluate(NEAR)
         return page.evaluate("() => window.__skTimers"), n
 
     _t0, _n0 = _per_card(_pl)
@@ -2826,7 +2832,7 @@ with sync_playwright() as _spl:
     # assembled. That tree reads 0 here.
     check("the card transports are beating at all on a fresh grid",
           _n0 > 0 and _rate0 > 3,
-          f"{_t0} timer calls / 1.5s across {_n0} cards ({_rate0:.1f} each) — "
+          f"{_t0} timer calls / 1.5s across the {_n0} cards near the screen ({_rate0:.1f} each) — "
           f"under 3 means the beat stopped before it ever ran, which is a "
           f"frozen scrubber and a frozen play icon on every tile")
 
@@ -2857,8 +2863,6 @@ print("\nGALLERY — a card far from the screen waits, and keeps time when it co
 # block above counts, setTimeout wrapped before any page script runs.
 for _k in range(max(0, 14 - len(listed_ids()))):
     post_public_api(f"{TAG} far {_k}")
-NEAR = """() => { const h = innerHeight; return [...document.querySelectorAll('.tile')].filter(t => {
-  const r = t.getBoundingClientRect(); return r.bottom > -h && r.top < 2 * h; }).length; }"""
 with sync_playwright() as _spf:
     _bf = _spf.chromium.launch()
     _cf = _bf.new_context(color_scheme="dark", viewport={"width": 402, "height": 874},

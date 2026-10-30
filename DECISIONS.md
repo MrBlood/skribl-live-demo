@@ -26680,8 +26680,13 @@ THE GALLERY RESTS. A stopped card's row beats four times a second
 page 96 times a second, 1% of the main thread at this box's pace and 2.3% with
 the CPU 4x slower, and a phone never rests. gallery.js footWatch runs a card's
 row only while the card is within a screen of view, and syncs it as it comes
-back: 16 wake-ups a second at rest, 0.9%. Full screen keeps its own bar and
-stops the card's, as before.
+back: 16 wake-ups a second at rest, 0.9%. A card further off still says what
+it holds from its first sighting (sound or none, from the listing). The first
+build left that to the beat, and a card with a song below the screen said
+"This Skribl has no sound" until it came near: verify_viewedges' two card
+rows went red (17/19, beside others and alone) and are green with the
+sighting's sync (19/19). Full screen keeps its own bar and stops the card's,
+as before.
 
 WHAT IT DOES TO FLIP AND THE PAD: shared rules. The Pad took Flip's 4,000
 points; Flip took the Pad's 20,000 and its way of slicing (the page you are
@@ -26720,4 +26725,9 @@ rows) and on the minimum without the drop (1 row).
 verify_gallery.py, two rows on a phone with 24 cards: the timer calls are
 the near cards' (24 in 1.5 s with 4 of 24 near; 144 on main, every card), and
 the cards at the foot keep time once scrolled to (red with the near cards
-never started: 0 calls).
+never started: 0 calls). Its older pair, "the card transports are beating at
+all" and "four grid rebuilds later it costs the same", counted the calls per
+card of the whole grid, which was every beating card until now; side by side
+on a desk the first read 2.3 a card, under its 3, with only the near ones
+beating. Both now count per card within a screen of view, the cards whose
+rows keep time, which is what "beating at all" asks of them.

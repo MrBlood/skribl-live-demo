@@ -615,11 +615,14 @@
       var box0 = stage.querySelector('.skribl-inline');
       if (box0) box0.classList.add('is-bare');
       if (footWatch) {
-        /* Full screen has its own bar and stops this one (onFs). */
+        /* Full screen has its own bar and stops this one (onFs). A card far
+           from the screen still says what it holds (sound or none, from the
+           listing) from its first sighting, which comes after the grid has
+           mounted it; it only stops keeping time. */
         stage._skFoot = function (near) {
           if (imm && imm.isOn()) return;
+          foot.sync();
           foot.running(near);
-          if (near) foot.sync();
         };
         footWatch.observe(stage);
       } else foot.running(true);
