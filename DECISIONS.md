@@ -26731,3 +26731,49 @@ card of the whole grid, which was every beating card until now; side by side
 on a desk the first read 2.3 a card, under its 3, with only the near ones
 beating. Both now count per card within a screen of view, the cards whose
 rows keep time, which is what "beating at all" asks of them.
+
+## After v329 -- The last words under 12px; where the polish run leaves things
+
+The owner's call 1 from the end of the polish run, answered with "finish
+up": "Raise the last two 11 px words to 12 px (the Library's 'Have a key?
+Use it' and the link page's 'made with')". Both are 12px now. "made with" at
+the link page's foot is styles.css .player-brand, re-emitted into player.css;
+the mark beside it is 15px tall in pixels, so the row keeps its height and
+only the words widen. "Have a key? Use it" is one state of the line under
+the Library's list, and the line went up whole (posted.css .posted-foot and
+.posted-clearbtn): with posts it says "Use a delete key" and "Clear list",
+which were 11px too. The note beside the links is the Library's own 14px.
+
+"THE LAST TWO" WAS TRUE ONLY AS THE PAGES OPEN. The census that found them
+read the five pages at rest with nothing posted. With posts, the Library's
+rows have more under 12px, and so do the sheets and the editors' small
+states: about twenty style rules in all, listed by surface in FUTURE.md 6z.
+They move six sheets' look, so they are the owner's call, put to the owner
+with this entry, and not built here.
+
+THE ROWS. verify_linkpage.py, THE SMALLEST WORDS: nothing on the link page
+under 12px, at rest, playing and with More open, on a phone and a desk; red
+on main's CSS on both, where "made with" at 11px was the only word under 12
+in all three states. verify_library.py: the line's links at 12px on an empty
+list and with posts; red on main's CSS on both (11px each).
+
+WHAT IT DOES TO FLIP AND THE PAD: neither editor changes; the link page and
+the Library serve both.
+
+STILL OPEN, where the polish run leaves things (not sealed since v329). The
+polish list's items 1 to 8 and the owner's follow-ups are built, from "No
+style rule searches the whole page" to "A last look at efficiency" and this
+entry. Held by the owner's yes until after the finish line: items 9 to 12,
+FUTURE.md 6z, each with what was measured. The finish line itself (Skribl
+live in skribls.net, the friends' test, How it works made again) is 6z too,
+not started. Measured and not built: a long Flip's page change (6y), the
+Pad's Undo past its three copies on a two-hour piece, the Pad's own player
+painting a long drawing three times. Asked and waiting on the owner: the
+draw drawer's Feel tile, whose words are cut on a phone ("Smooth low" and
+"Smooth high" in a 70px tile; A "As drawn / Steadier / Smooth", B "Off /
+Low / High", or C as it is; shared by the Pad and Flip); the grey tab at the
+left edge of three screenshots, which Skribl does not draw; and the rest of
+the words under 12px (6z). A seal and an auditor's packet were the owner's
+next thought ("we may want to"); docs/SESSION-CONTEXT.md §4 has the
+sequence, v328's packet is in docs/audit/v328/, and nothing has been sealed
+since v329.

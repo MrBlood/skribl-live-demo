@@ -380,6 +380,35 @@ try:
               bool(held) and same(before, after), f"before {before}, after {after}")
         ctx.close()
 
+        # ---- THE SMALLEST WORDS ----------------------------------------------
+        # The owner, after the polish run: the last words under 12px go up, and
+        # "made with" at the foot was this page's one, at 11px. Every word on
+        # the page is read, at rest, with the controls showing after Play, and
+        # with its More menu open, on a phone and a desk. A word counts when it
+        # is laid out and not hidden or faded, which can only count too many,
+        # never too few.
+        print("\nTHE SMALLEST WORDS")
+        SMALL = """() => { const out = [], w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+          while (w.nextNode()) { const t = w.currentNode, s = t.textContent.trim(), el = t.parentElement;
+            if (!s || !el || !el.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true })) continue;
+            const r = el.getBoundingClientRect(), fs = parseFloat(getComputedStyle(el).fontSize);
+            if (r.width >= 1 && r.height >= 1 && fs < 12) out.push(fs + 'px ' + JSON.stringify(s.slice(0, 30))); }
+          return out; }"""
+        for dev, opts in (("phone", PHONE), ("desk", DESK)):
+            ctx, pg = open_page(b, HOSTED, hosted_url, opts, "light")
+            rest = pg.evaluate(SMALL)
+            brand = pg.evaluate("() => { const m = document.querySelector('.player-brand'); return m && getComputedStyle(m).fontSize; }")
+            pg.click("#playerPlayBtn")
+            pg.wait_for_timeout(700)
+            playing = pg.evaluate(SMALL)
+            pg.click("#playerMoreBtn")
+            pg.wait_for_timeout(400)
+            more = pg.evaluate(SMALL)
+            check(f"{dev}: nothing on the link page is under 12px, at rest, playing or with More open ('made with' at 12px)",
+                  brand == "12px" and not rest and not playing and not more,
+                  f"made with {brand}; at rest {rest[:4]}; playing {playing[:4]}; More {more[:4]}")
+            ctx.close()
+
         print("\nYOUR OWN POST'S WAY BACK")
         CTA = """() => { const a = document.querySelector('.player-cta');
           return { text: a.textContent.trim(), path: new URL(a.href).pathname, flip: new URL(a.dataset.flip, location.href).pathname,

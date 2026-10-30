@@ -301,14 +301,17 @@
 .posted-foot { border-top: 1px solid var(--hairline); padding: 10px 16px;
   flex-wrap: wrap;
   display: flex; align-items: center; justify-content: space-between; gap: 10px;
-  font-size: 11px; color: var(--text-secondary); }
+  font-size: 12px; color: var(--text-secondary); }
 .posted-foot-note { min-width: 0; }
 .posted-foot-acts { flex: 0 0 auto; display: flex; align-items: center; gap: 14px; }
 @media (max-width: 640px) {
   .posted-foot-note { flex: 1 1 100%; }
 }
+/* 12px, not 11 (the owner, after the polish run: the last words under 12px
+   go up). "Have a key? Use it", "Use a delete key" and "Clear list"; the
+   Library sets its own note beside them at 14px. */
 .posted-clearbtn { background: none; border: 0; color: var(--text-secondary);
-  font: inherit; font-size: 11px; cursor: pointer; text-decoration: underline;
+  font: inherit; font-size: 12px; cursor: pointer; text-decoration: underline;
   padding: 0; flex: 0 0 auto; }
 .posted-clearbtn[hidden] { display: none; }
 
