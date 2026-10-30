@@ -373,7 +373,7 @@ file kept inside would change the hash the attestation names.
   before these three sank it. `pip install Pillow`.
 * **PLAYWRIGHT MUST MATCH THE CHROMIUM BUILD ON DISK.** Check with
   `ls /opt/pw-browsers` (or wherever `PLAYWRIGHT_BROWSERS_PATH` points): build
-  1194 wants playwright 1.56.0, and 1.62 fails to launch with an executable-not-
+  1243 wants playwright 1.63, and 1.56 fails to launch with an executable-not-
   found error that reads like a missing browser rather than a version mismatch.
 * **THE INTERPRETER MUST BE THE PINNED 3.12, and a container's default may not
   be.** `verify_docs.py` fails the run outright when `.python-version` and the
