@@ -380,7 +380,7 @@ function updateEmptyHint() {
 // for what only a button can do: STOP a take in progress, and start one over
 // ink that is on the canvas but not in a take (a restored draft's unrecorded
 // pixels), where the auto-arm deliberately does not fire. On an empty canvas
-// and on a finished take it is gone -- the canvas itself, and the "+ Add take"
+// and on a finished take it is gone -- the canvas itself, and the "+ Keep drawing"
 // pill, are the affordances. Called from updateEmptyHint (every hasContent
 // transition) and from the two ends of a take; the player's stub
 // (_authoringCtl) takes the property harmlessly.
@@ -444,7 +444,7 @@ function updateClearVisibility() {
 function updateCanvasLockCue() {
   const locked = finishedRecording && !recording;
   canvasWrap.classList.toggle('locked', locked);
-  // The lock's visible way forward: "+ Add take" floats on the locked canvas
+  // The lock's visible way forward: "+ Keep drawing" floats on the locked canvas
   // (hidden separately during replay preview via body.replaying, in CSS).
   addTakePill.hidden = !locked;
   if (locked) {
@@ -1737,8 +1737,10 @@ function endRecordingTake() {
     updateDrawingTimeLabels();
     durationBadge.hidden = false;
     // Confirm the capture and surface multi-take: the canvas is now locked on
-    // this take; the on-canvas Add take pill (or Record) appends another take.
-    showToast('Take saved — Play to preview, or Add take to draw more', recordBtn);
+    // this take; the on-canvas Keep drawing pill (or Record) appends another take.
+    // The words are the owner's (plain words, the posting mock): what to do
+    // next, so nobody has to learn what a take is.
+    showToast('Saved. Play to watch it, or Keep drawing to add more', recordBtn);
   }
   updateClearVisibility();
 }
@@ -1754,7 +1756,7 @@ recordBtn.addEventListener('click', () => {
   beginRecording(strokes.length > 0);
 });
 
-// The on-canvas "+ Add take" pill is the same append the Record button does.
+// The on-canvas "+ Keep drawing" pill is the same append the Record button does.
 // It only exists while the lock is on (updateCanvasLockCue), so `recording`
 // can't be true here; the playing guard covers a tap racing the replay's end.
 addTakePill.addEventListener('click', () => {
