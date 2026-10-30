@@ -190,7 +190,10 @@ if (typeof loadSkribl === 'function') {
     const r = _loadSkribl.apply(this, arguments);
     // Only a document that actually opened: a refused file changes nothing.
     if (skriblLoadSeq !== before) {
-      try { padAdoptLoadedMedia(normalizeSkribl(data)); } catch (e) { console.error('[skribl] ' + _errName(e)); }
+      // The media only, read where readers read it (app.js currentFrameMedia),
+      // not the whole document normalised a second time: for a long drawing
+      // that was every point rewritten again, a tenth of opening its file.
+      try { padAdoptLoadedMedia(window.SkriblPayload.currentFrameMedia(data)); } catch (e) { console.error('[skribl] ' + _errName(e)); }
       // ...and it is not the saved draft that was open (third review): a
       // backup file kept that id, so Save overwrote the draft with it. The
       // callers that ARE a saved draft -- opening one, Undo -- name it again
@@ -200,6 +203,32 @@ if (typeof loadSkribl === 'function') {
     return r;
   };
 }
+/* OPENING A .SKRIBL FILE, IN TWO TASKS (from app.js, Oct 30: only the editor
+   has #draftInput, and app.js is the link page's script, a ratchet). Reading
+   the file's words is one task and taking the drawing in is the next, so the
+   page can answer between them. Under Chrome 153 a long drawing's file was one
+   task of both, about 600 ms with the CPU 4x slower (357 under Chrome 141),
+   when the paint after it is laid in slices of about 100 (verify_padopen). */
+bindEl('draftInput', 'change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  const unreadable = () => showToast('Couldn\'t read that draft file', menuBtn);
+  reader.onload = () => {
+    let data;
+    try { data = JSON.parse(reader.result); } catch (err) { unreadable(); return; }
+    // A Flip .skribl (playbackMode 'flip') shares the {frames} container but
+    // is a flipbook, not a replay; it loaded here as an EMPTY drawing that
+    // still said "Draft loaded". Refuse with directions. Draft-file path
+    // only — the shared player still opens Flip posts via loadSkribl.
+    if (data && data.playbackMode === 'flip') return showToast('That\'s a Flip Skribl — open it in Flip', menuBtn);
+    setTimeout(() => {
+      try { loadSkribl(data, 'Opened your file'); } catch (err) { unreadable(); }
+    }, 0);
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+});
 function _errName(e) { return e ? ((e.name || 'Error') + (e.message ? ': ' + e.message : '')) : 'unknown'; }
 // For lib/report.js: the media store as this session sees it.
 window.skriblMediaStoreState = () => 'photo ' + mediaDraft.photo + ', music ' + mediaDraft.music;

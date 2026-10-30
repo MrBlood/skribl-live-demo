@@ -91,11 +91,20 @@ WHOLE = """(sel) => Promise.all([...document.querySelectorAll(sel)].filter(v => 
     const [ox, oy] = cs.objectPosition.split(' ').map((p, i) => p.endsWith('%') ? parseFloat(p) / 100 * (i ? bx.h - ch : bx.w - cw) : parseFloat(p));
     const c = { l: bx.l + ox, t: bx.t + oy, r: bx.l + ox + cw, b: bx.t + oy + ch };
     let L = Math.max(c.l, bx.l, 0), T = Math.max(c.t, bx.t, 0), R = Math.min(c.r, bx.l + bx.w, innerWidth), B = Math.min(c.b, bx.t + bx.h, innerHeight);
+    // THE CORNERS ARE THE ROUNDING THEY WEAR: the clip's own, or that of a box
+    // that clips it with its corner on the clip's (Flip's tray cards: the
+    // stage's 12px edge is the clip's corners, by design). Chrome 153 counts an
+    // ancestor's rounded clip when it says what is under a point, and Chrome
+    // 141 did not, so 2px in from the corner now reads the stage. The corner
+    // points stand in by the depth of whichever rounding is there.
+    let rad = parseFloat(cs.borderTopLeftRadius) || 0;
     for (let a = v.parentElement; a; a = a.parentElement) {
       const o = getComputedStyle(a); if (o.overflowX === 'visible' && o.overflowY === 'visible') continue;
       const q = a.getBoundingClientRect(); L = Math.max(L, q.left); T = Math.max(T, q.top); R = Math.min(R, q.right); B = Math.min(B, q.bottom);
+      if (Math.abs(q.left - r.left) <= 2 && Math.abs(q.top - r.top) <= 2 && Math.abs(q.right - r.right) <= 2 && Math.abs(q.bottom - r.bottom) <= 2)
+        rad = Math.max(rad, parseFloat(o.borderTopLeftRadius) || 0);
     }
-    const d = 2 + 0.3 * (parseFloat(cs.borderTopLeftRadius) || 0), mx = (c.l + c.r) / 2, my = (c.t + c.b) / 2;
+    const d = 2 + 0.3 * rad, mx = (c.l + c.r) / 2, my = (c.t + c.b) / 2;
     const pts = [[mx, c.t + 2], [mx, c.b - 2], [c.l + 2, my], [c.r - 2, my], [c.l + d, c.t + d], [c.r - d, c.t + d], [c.l + d, c.b - d], [c.r - d, c.b - d]];
     return { clip: (v.currentSrc || v.src).split('/').pop().split('?')[0].replace(/-(light|dark)[.](mp4|webm)$/, ''), vw, vh,
              w: Math.round(r.width * 10) / 10, seen: Math.round(1000 * Math.max(0, R - L) * Math.max(0, B - T) / (cw * ch)) / 10,

@@ -203,6 +203,14 @@ with sync_playwright() as p:
         out_gap = pg.evaluate(DRAWER, DOCK[name])
         pg.click("#mediaOpenBtn")
         pg.wait_for_timeout(400)
+        # A real full screen makes the window the screen's size; headless
+        # Chrome keeps the window, so this makes it so. BEFORE the press, not
+        # in full screen: since Chrome 153 (Playwright 1.63, Oct 30) a window
+        # in full screen refuses to be resized ("restore it to normal state
+        # first"), and the suite died here. The page ends at the same size in
+        # full screen either way, which is what the rows below read.
+        pg.set_viewport_size({"width": 1920, "height": 1080})
+        pg.wait_for_timeout(400)
         press(pg)
         on = pg.evaluate(FS)
         ch = pg.evaluate(CHROME, DOCK[name])
@@ -212,10 +220,7 @@ with sync_playwright() as p:
         check(f"{name}: ...and the button says how out: Leave full screen (Esc), pressed, on the dock's on tile",
               bool(m) and m["label"] == "Leave full screen" and m["pressed"] == "true" and "Esc" in m["title"] and m["bg"] == tile,
               str(m and [m["label"], m["pressed"], m["title"], m["bg"], tile]))
-        # A real full screen makes the window the screen's size; headless
-        # Chrome keeps the window, so this makes it so.
-        pg.set_viewport_size({"width": 1920, "height": 1080})
-        pg.wait_for_timeout(900)
+        pg.wait_for_timeout(500)
         got = pg.evaluate(SHOWN, CANVAS[name])
         want = FULL[(name, 1920)]
         check(f"{name}: ...and on a 1920x1080 screen the canvas takes the room, at the mock's {want[0]}x{want[1]}",
@@ -228,9 +233,9 @@ with sync_playwright() as p:
         check(f"{name}: ...a drawer opens where it opens out of full screen, under the dock",
               in_gap is not None and out_gap is not None and in_gap >= 0 and abs(in_gap - out_gap) <= 1,
               f"{in_gap}px under the dock in full screen, {out_gap}px out of it")
-        pg.set_viewport_size({"width": 1920, "height": 945})
         press(pg)
         off = pg.evaluate(FS)
+        pg.set_viewport_size({"width": 1920, "height": 945})
         m = pg.evaluate(BTN, DOCK[name])
         check(f"{name}: pressed again, the page comes back out, and the button says so",
               off is None and bool(m) and m["label"] == "Draw in full screen" and m["pressed"] == "false",

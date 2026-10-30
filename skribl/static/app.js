@@ -3304,26 +3304,8 @@ function loadSkribl(data, said) {
   }
 }
 
-bindEl('draftInput', 'change', (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = () => {
-    try {
-      const data = JSON.parse(reader.result);
-      // A Flip .skribl (playbackMode 'flip') shares the {frames} container but
-      // is a flipbook, not a replay; it loaded here as an EMPTY drawing that
-      // still said "Draft loaded". Refuse with directions. Draft-file path
-      // only — the shared player still opens Flip posts via loadSkribl.
-      if (data && data.playbackMode === 'flip') return showToast('That\'s a Flip Skribl — open it in Flip', menuBtn);
-      loadSkribl(data, 'Opened your file');
-    } catch (err) {
-      showToast('Couldn\'t read that draft file', menuBtn);
-    }
-  };
-  reader.readAsText(file);
-  e.target.value = '';
-});
+// ---------- Opening a .skribl file: moved to editor_draft.js ----------
+// (Oct 30.) Only the editor has #draftInput; the link page downloads this file.
 
 // ---------- Autosave wiring: moved to editor_draft.js ----------
 

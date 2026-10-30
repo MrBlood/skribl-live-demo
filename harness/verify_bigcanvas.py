@@ -143,8 +143,28 @@ FIND_INK = """(id) => { const c = document.getElementById(id), g = c.getContext(
   return null; }"""
 
 
-def editor(b, name, w, h, theme="light", demo=True, **extra):
+# THE BROWSER'S WORD THAT THE SCREEN'S RATIO CHANGED. The Pad hears a ratio
+# change with no resize the standard way, a `change` on a resolution media
+# query (app.js watchScreenRatio). Since Chrome 153 (Playwright 1.63, Oct 30)
+# the zoom this suite asks for, Emulation.setDeviceMetricsOverride, changes
+# the ratio and no longer tells those queries: devicePixelRatio and every
+# query read the new ratio, and no `change` fires (the headless shell and full
+# Chrome alike, with frames running). So the page's resolution queries are kept
+# as the page makes them, untouched, and once the ratio really has changed,
+# each whose answer changed is told, as the browser tells it. What a real move
+# to another screen does in Chrome 153 is not tested here.
+KEEP_MQ = """(() => { const real = window.matchMedia.bind(window); window.__resMq = [];
+  window.matchMedia = (q) => { const m = real(q);
+    if (/resolution/.test(q)) window.__resMq.push({ m: m, was: m.matches }); return m; }; })()"""
+TELL_MQ = """() => { let n = 0; for (const k of window.__resMq.slice()) if (k.m.matches !== k.was) {
+  k.was = k.m.matches; k.m.dispatchEvent(new MediaQueryListEvent('change', { media: k.m.media, matches: k.was })); n++; }
+  return n; }"""
+
+
+def editor(b, name, w, h, theme="light", demo=True, init=None, **extra):
     c = b.new_context(viewport={"width": w, "height": h}, color_scheme=theme, accept_downloads=True, **extra)
+    if init:
+        c.add_init_script(init)
     pg = c.new_page()
     errs = []
     pg.on("pageerror", lambda e: errs.append(str(e)))
@@ -578,9 +598,10 @@ with sync_playwright() as sp:
         c.close()
     if "Pad" in eds("settle"):
         # A zoom: the screen's ratio changes with no resize at all.
-        c, pg, errs = editor(b, "Pad", 1920, 945, demo=False)
+        c, pg, errs = editor(b, "Pad", 1920, 945, demo=False, init=KEEP_MQ)
         cdp = c.new_cdp_session(pg)
         cdp.send("Emulation.setDeviceMetricsOverride", {"width": 1920, "height": 945, "deviceScaleFactor": 1.25, "mobile": False})
+        told = pg.evaluate(TELL_MQ)
         # At once, before the bitmap is made again: the pen's point.
         m = pg.evaluate(READ, "canvas")
         L, T, W, H = m["at"]
@@ -594,7 +615,7 @@ with sync_playwright() as sp:
               first and abs(first[0] - want[0]) <= 1 and abs(first[1] - want[1]) <= 1
               and z["dpr"] == 1.25 and abs(z["bitmap"][0] - z["shown"][0] * 1.25) <= 2,
               f"first point {first} under the pen {[round(v, 1) for v in want]}; at {z['dpr']}x the bitmap {z['bitmap'][0]} "
-              f"for {z['shown'][0]} shown (wants {z['shown'][0] * 1.25:.0f})")
+              f"for {z['shown'][0]} shown (wants {z['shown'][0] * 1.25:.0f}); {told} resolution queries told")
         c.close()
 
     # ================= A PHONE, AND THE CEILING =================
