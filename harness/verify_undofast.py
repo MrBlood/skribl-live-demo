@@ -31,6 +31,11 @@ WHAT IS ASKED, AND HOW IT IS READ
     window grows, the canvas is made again at the new size (app.js
     growCanvasNow), and Undo paints rather than lay the old size's pixels on it.
   * The copies are three canvases, reused, however many strokes are laid.
+  * They are for a busy drawing, from 4,000 points (PAD_KEEP_MIN_POINTS, as
+    Flip's KEEP_MIN_POINTS), so the strokes above are laid over one of 4,200
+    points opened through the Pad's own file input. A light drawing keeps no
+    copy at all (three were 54 MB on a phone), and a stroke laid on one drops
+    the copies a busier drawing left.
   * Flip: the page's tile shows the picture it had, the pad shows what a full
     repaint shows (render() is run after, and nothing moves), and each copy
     that matches the page holds exactly the layer a repaint paints. Over a busy
@@ -41,8 +46,10 @@ WHAT IS ASKED, AND HOW IT IS READ
     layer is never taken mid-stroke, mid-smudge or mid-erase, nor after a
     thumbnail has been painted through it.
 """
+import json
 import os
 import sys
+import tempfile
 
 from assertions import make_check
 import browsing
@@ -87,6 +94,31 @@ def undo(pg, which="#undoBtn"):
     return pg.evaluate(PIX), pg.evaluate("() => window.__paints")
 
 
+# A busy drawing, 4,200 points in 70 lines low on the right, away from where
+# stroke() draws; opened through the Pad's own file input, and Keep drawing
+# pressed, because an opened drawing is a finished take until then.
+BUSY_PTS = []
+for _g in range(70):
+    for _i in range(60):
+        BUSY_PTS.append({"x": 430 + _i * 5, "y": 300 + _g * 4 + (_i % 5), "color": "#1d1a2b",
+                         "size": 3, "t": len(BUSY_PTS) * 16})
+_fd, BUSY_FILE = tempfile.mkstemp(suffix=".skribl")
+os.close(_fd)
+with open(BUSY_FILE, "w") as _f:
+    json.dump({"version": 2, "schemaVersion": 2, "playbackMode": "replay", "title": "Busy",
+               "frames": [{"strokes": BUSY_PTS, "strokeGroups": [60] * 70}],
+               "canvasSize": {"cssWidth": 816, "cssHeight": 612}}, _f)
+
+
+def busy(pg):
+    pg.set_input_files("#draftInput", BUSY_FILE)
+    pg.wait_for_function(f"() => typeof strokes !== 'undefined' && strokes.length >= {len(BUSY_PTS)}",
+                         timeout=20000)
+    pg.wait_for_timeout(300)
+    pg.click("#addTakePill")
+    pg.wait_for_timeout(250)
+
+
 with sync_playwright() as p:
     b = p.chromium.launch()
 
@@ -96,6 +128,7 @@ with sync_playwright() as p:
     pg.on("pageerror", lambda e: errs.append(str(e)))
     browsing.goto(pg, BASE, "/")
     pg.evaluate("() => window.SkriblHints && window.SkriblHints.hide && window.SkriblHints.hide()")
+    busy(pg)
     box = pg.locator("#canvas").bounding_box()
     # The canvas as it stood before each stroke, read while it was drawn.
     before = []
@@ -134,6 +167,7 @@ with sync_playwright() as p:
     pg.on("pageerror", lambda e: errs.append(str(e)))
     browsing.goto(pg, BASE, "/")
     pg.evaluate("() => window.SkriblHints && window.SkriblHints.hide && window.SkriblHints.hide()")
+    busy(pg)
     box = pg.locator("#canvas").bounding_box()
     for k in range(3):
         stroke(pg, box, k)
@@ -172,6 +206,7 @@ with sync_playwright() as p:
     pg.on("pageerror", lambda e: errs.append(str(e)))
     browsing.goto(pg, BASE, "/")
     pg.evaluate("() => window.SkriblHints && window.SkriblHints.hide && window.SkriblHints.hide()")
+    busy(pg)
     box = pg.locator("#canvas").bounding_box()
     for k in range(3):
         stroke(pg, box, k)
@@ -187,6 +222,51 @@ with sync_playwright() as p:
     check("...and Undo then paints the drawing at the new size, never the old size's copy",
           ng == 1 and ug[1] == w1, f"repaints {ng}; canvas {ug[1]} wide")
     check("no page errors when the canvas grows", not errs, "; ".join(errs[:2]))
+    pg.close()
+
+    print("\nUNDO — a light drawing keeps no copies (phone)")
+    # A copy is the whole canvas: 18 MB on a phone, so three were 54 MB for a
+    # doodle, and making them held each of the first three strokes' ends. On
+    # a blank Pad, five strokes keep nothing and Undo paints as it always did;
+    # over a busy drawing they keep their three, and once the drawing is
+    # cleared the next stroke drops them, canvases and all.
+    pg = b.new_page(viewport={"width": 402, "height": 874}, device_scale_factor=3, is_mobile=True, has_touch=True)
+    errs = []
+    pg.on("pageerror", lambda e: errs.append(str(e)))
+    browsing.goto(pg, BASE, "/")
+    pg.evaluate("() => window.SkriblHints && window.SkriblHints.hide && window.SkriblHints.hide()")
+    box = pg.locator("#canvas").bounding_box()
+    light = []
+    for k in range(5):
+        light.append(pg.evaluate(PIX))
+        stroke(pg, box, k)
+    kept = pg.evaluate("() => [strokes.length, _padKept.length]")
+    pg.evaluate(COUNT)
+    ul, nl = undo(pg)
+    check("five strokes on a blank Pad keep no copy of the canvas",
+          kept[1] == 0, f"{kept[0]} points; copies {kept[1]}")
+    check("...and Undo paints the drawing from before the last stroke, as it always did",
+          nl == 1 and ul == light[4], f"repaints {nl}; pixels match {ul == light[4]}")
+    check("no page errors through a light drawing", not errs, "; ".join(errs[:2]))
+    pg.close()
+    pg = b.new_page(viewport={"width": 402, "height": 874}, device_scale_factor=3, is_mobile=True, has_touch=True)
+    errs = []
+    pg.on("pageerror", lambda e: errs.append(str(e)))
+    browsing.goto(pg, BASE, "/")
+    pg.evaluate("() => window.SkriblHints && window.SkriblHints.hide && window.SkriblHints.hide()")
+    busy(pg)
+    box = pg.locator("#canvas").bounding_box()
+    for k in range(4):
+        stroke(pg, box, k)
+    heavy = pg.evaluate("() => [strokes.length, _padKept.length, _padKept.map(k => k.c.width * k.c.height)]")
+    pg.evaluate("() => { window.__keptCv = _padKept.map(k => k.c); clearCanvas(); }")
+    stroke(pg, box, 1)
+    after = pg.evaluate("() => [strokes.length, _padKept.length, window.__keptCv.map(c => c.width * c.height)]")
+    check("over a busy drawing the strokes keep their three copies (the case is real)",
+          heavy[1] == 3 and all(a > 0 for a in heavy[2]), f"{heavy[0]} points; copies {heavy[1]}, pixels {heavy[2]}")
+    check("...and the drawing cleared, the next stroke drops them and lets their canvases go",
+          after[1] == 0 and all(a == 0 for a in after[2]), f"{after[0]} points; copies {after[1]}, old canvases' pixels {after[2]}")
+    check("no page errors through a busy drawing cleared", not errs, "; ".join(errs[:2]))
     pg.close()
 
     # ================================================================ FLIP
