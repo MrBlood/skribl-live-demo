@@ -754,7 +754,7 @@ rather than a shared rule.
 | `canvasground.js` | Pad+Flip | The ground a new drawing starts on: Paper in the light theme, the dark canvas in the dark one. |
 | `canvassizes.js` | Pad+Flip+library+in-post | Canvas presets — the one table both editors read. |
 | `canvaszoom.js` | Pad+Flip | The canvas magnifier: zoom, pan, the HUD, its grip, wheel and Space-drag. |
-| `capmore.js` | Pad+player+gallery | A CAPTION AT TWO LINES, AND A "MORE" WHERE THERE IS MORE. |
+| `capmore.js` | Pad+Flip+player+gallery | A CAPTION AT TWO LINES, AND A "MORE" WHERE THERE IS MORE. |
 | `chromefade.js` | Pad+Flip+player+library+gallery | Controls that step back while a drawing plays, and come back the moment someone reaches for them. |
 | `chromefit.js` | Pad+Flip | The editors' fit when the chrome around the canvas changes size and the window says nothing -- Pad's and Flip's, one watch -- and the canvas's row reaching past the column on a wide window (span()). |
 | `colorselect.js` | Pad+Flip | Colour selection — the part both editors must agree on. |
