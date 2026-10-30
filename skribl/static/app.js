@@ -3083,6 +3083,7 @@ function loadSkribl(data, said) {
       && data.canvasSize.cssWidth && data.canvasSize.cssHeight) {
     establishEditorCanvas(data.canvasSize.cssWidth, data.canvasSize.cssHeight);
     layoutEditorCanvas();
+    if (typeof growBeforePaint === 'function') growBeforePaint();   // editor_draft.js
     // ...and the shape row in Settings says so, as restoreAutosave's does:
     // after New Skribl's Undo it lit the new shape over the old drawing, and
     // a draft or a file of another shape opened under the last one's.
@@ -3103,7 +3104,10 @@ function loadSkribl(data, said) {
   strokeGroups = (data.strokeGroups || []).slice();
   { const f0 = data.frames && data.frames[0]; recolors = (f0 && Array.isArray(f0.recolors)) ? f0.recolors.slice() : []; }
 
-  const renderStrokes = () => paintStrokesStatic(strokes, inkWhole);
+  // The Pad lays a long drawing in slices (editor_draft.js padPaint); the
+  // link page asks for its own (inkWhole).
+  const renderStrokes = () => inkWhole || typeof padPaint !== 'function'
+    ? paintStrokesStatic(strokes, inkWhole) : padPaint(strokes);
 
   const { width: cw, height: ch } = getCanvasLogicalSize();
 
