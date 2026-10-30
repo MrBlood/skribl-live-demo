@@ -994,6 +994,16 @@ with sync_playwright() as sp:
     #   pick, which nothing can press while it is unseen. verify_jsstrip's
     #   lines move with it, its target line in writing with the debt named.
     #   156,801 measured (with the plain words' -4 B merged in under it).
+    # RAISED (the owner's "all yes" from the phone, after a long caption made
+    #   the drawing a third smaller: words never shrink the drawing; and
+    #   "Make your own should be back to pad"), for named costs: +3,569 B --
+    #   lib/capmore.js (2,264 B), the caption at two lines and its "more",
+    #   gliding both ways, moved out of gallery.js so the gallery, the link
+    #   page and the Posted! card share one copy; and app.js (+1,305): the
+    #   caption asked before the box is laid out, an open caption taking no
+    #   room from the drawing, and Back to Pad (Back to Flip) on a post this
+    #   browser made, a step back when the editor is the page just left.
+    #   verify_jsstrip's lines move with it. 160,370 measured.
     # RAISED (the posting mock's 2b, the owner's "all yes": "Opening a long
     #   drawing in Pad stops freezing too"), for a named cost, all in app.js:
     #   +223 B -- the sliced paint handing back a way to lay the rest at once
@@ -1002,8 +1012,8 @@ with sync_playwright() as sp:
     #   them (editor_draft.js padPaint and growBeforePaint, which the link
     #   page does not load). Spent first: a flag of its own for the sliced
     #   paint's end, where its `whole` serves. verify_jsstrip's lines move
-    #   with it. 157,024 measured.
-    BYTES_RATCHET, BYTES_TARGET = 157_027, 153_800
+    #   with it. 160,593 measured.
+    BYTES_RATCHET, BYTES_TARGET = 160_596, 153_800
     # The page's own HTML. The brand is the one-stroke skribl signature INLINE
     # in the page (~1.4KB of paths, a ~0.9KB nonce'd draw-on script, and the
     # <linearGradient> defs), and inline is load-bearing rather than lazy:
@@ -1046,7 +1056,12 @@ with sync_playwright() as sp:
     # line's three numbers, null for any other post), and the title and
     # caption the server already reads for the unfurl, said in the shell
     # rather than waiting for the payload. 13,953 measured.
-    HTML_RATCHET = 13_954
+    # RAISED (the owner's "all yes" from the phone: words never shrink the
+    # drawing, and Back to Pad on your own post), for named costs: +184 B --
+    # the caption's "more" button, the script that asks whether there is
+    # more (lib/capmore.js, the gallery's own, shared), and where Flip is,
+    # for a Flip's way back. 14,138 measured.
+    HTML_RATCHET = 14_139
 
     present = pg.evaluate(
         "(names) => names.filter(n => typeof window[n] !== 'undefined')",
@@ -1243,7 +1258,19 @@ with sync_playwright() as sp:
     #   clips it), the four rows named three times over, and a Reduce Motion
     #   rule the page's every-element rule already made. verify_jsstrip's
     #   line moves with it. 42,316 measured.
-    CSS_RATCHET, CSS_WAS, CSS_TARGET = 42_322, 119_844, 40_000
+    # RAISED (a bug fix, from the owner's own phone: a caption of long runs
+    #   of letters ran off both edges of the link page), for one named cost:
+    #   +25 B -- overflow-wrap on the link page's words (.player-meta, which
+    #   its title and caption inherit), so a word too long for its line
+    #   breaks where it must. verify_jsstrip's line moves with it. 42,341
+    #   measured.
+    # RAISED (the same "all yes"), for one named cost: +677 B -- the caption
+    #   at two lines and open (.player-caption, .is-open), its "more"
+    #   (.player-capmore: the gallery's 14px semibold accent ink, a 44px
+    #   tap, its hover), and the way back's chevron (.player-cta svg).
+    #   Listed live in css_live.json. verify_jsstrip's line moves with it.
+    #   43,018 measured.
+    CSS_RATCHET, CSS_WAS, CSS_TARGET = 43_024, 119_844, 40_000
     total_css = sum(css_bytes.values())
     check(f"the player's CSS does not grow past {CSS_RATCHET:,} bytes "
           f"(was {CSS_WAS:,} at v194; target {CSS_TARGET:,})",

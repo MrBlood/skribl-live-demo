@@ -366,7 +366,7 @@ CLAIMS = {
     "Export": ["verify_gifenc.py::Pad exports a valid GIF89a too", "verify_canvas.py::GIF exports at the new canvas size"],
     "Post": ["verify_sheetswipe.py::mid-send, neither a swipe nor the grabber closes the post sheet",
              "verify_createpost.py::the author stamp is the id the host passed",
-             "verify_postmoment.py::the card shows the posted title, the caption in full and not cut",
+             "verify_postmoment.py::the card shows the posted title, its whole caption in its words with two lines of it shown and a 'more'",
              "verify_postmoment.py::it puts the sheet away and starts a new drawing, offering Undo"],
     "Your Skribl Library": ["verify_library.py::it reaches Pad, Flip, Your Skribl Library and the gallery"],
     "Photo & music": ["verify_amber.py::the track itself is restored — bytes, not a re-add card"],

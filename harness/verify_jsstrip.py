@@ -315,12 +315,15 @@ with sync_playwright() as sp:
     # owner's "all yes" on the posting mock, 2b B), +2,268 B, all app.js: the
     # box laid out and the post's picture shown before the data, and the ink
     # laid in slices under it (156,801 measured). And RAISED, in both places
-    # together, by the Pad opening a long drawing without a freeze (the
-    # posting mock's 2b), +223 B, all app.js: the sliced paint's way to lay
-    # the rest at once, and loadSkribl asking the editor's paint and growth
-    # (157,024 measured).
+    # together, by the caption at two lines with a more and your own post's
+    # way back (the owner's "all yes" from the phone), +3,569 B: lib/capmore.js
+    # (2,264 B, the gallery's, shared) and app.js's use of it and Back to Pad
+    # (160,370 measured). And RAISED, in both places together, by the Pad
+    # opening a long drawing without a freeze (the posting mock's 2b), +223 B,
+    # all app.js: the sliced paint's way to lay the rest at once, and
+    # loadSkribl asking the editor's paint and growth (160,593 measured).
     check("stripping keeps the player's JS under its ratchet",
-          lean_total <= 157_027,
+          lean_total <= 160_596,
           f"{src_total:,} B of source -> {lean_total:,} B parsed")
     # THE MODULE ONLY A RECOLOURED DRAWING FETCHES (lib/recolorplay.js, by
     # app.js on the link page and inlineplayer.js in a post): its own pin, so
@@ -409,12 +412,17 @@ with sync_playwright() as sp:
     # is now 3,001 B over 153,800, and the carve named above is still the
     # first candidate.
     #
-    # AND 223 B MORE, IN WRITING, at the same "all yes" (2b: "Opening a long
-    # drawing in Pad stops freezing too"): the sliced paint's way to lay the
-    # rest at once, and loadSkribl asking the editor's own paint and growth,
-    # all app.js. The line is now 3,224 B over 153,800; the carve named above
-    # is still the first candidate.
-    _target = 157_049
+    # AND 3,569 B MORE, IN WRITING, at the owner's "all yes" from the phone:
+    # the caption at two lines with a more (lib/capmore.js, shared with the
+    # gallery) and Back to Pad on your own post. The line is now 6,570 B over
+    # 153,800; the carve named above is still the first candidate.
+    #
+    # AND 223 B MORE, IN WRITING, at the posting mock's "all yes" (2b:
+    # "Opening a long drawing in Pad stops freezing too"): the sliced paint's
+    # way to lay the rest at once, and loadSkribl asking the editor's own
+    # paint and growth, all app.js. The line is now 6,793 B over 153,800; the
+    # carve named above is still the first candidate.
+    _target = 160_618
     _margin = _target - lean_total
     check(f"REACHES the {_target:,} target (strip + whitespace collapse; 153,800 once its debt is paid)",
           lean_total <= _target,
@@ -519,7 +527,15 @@ with sync_playwright() as sp:
     # "all yes"): the post's picture over the canvas while the drawing comes,
     # and the transport waiting unseen and rising when it can play. Spent
     # value and 25 B again.
-    _css_target = 42_341
+    #
+    # AND 25 B MORE, IN WRITING, for a bug fix from the owner's own phone (a
+    # caption of long runs of letters ran off both edges of the link page):
+    # overflow-wrap on the link page's words. Spent value and 25 B again.
+    #
+    # AND 677 B MORE, IN WRITING, at the same "all yes": the caption at two
+    # lines and its more, and the way back's chevron. Spent value and 25 B
+    # again.
+    _css_target = 43_043
     check(f"the player's stylesheet is served stripped, under the {_css_target:,}-byte target (40,000 once its debt is paid)",
           _href is not None and 0 < len(_served_css) <= _css_target and len(_served_css) < len(_raw_css),
           f"{len(_served_css):,} B served of {len(_raw_css):,} B on disk")

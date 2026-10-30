@@ -4497,12 +4497,21 @@ body.player-mode #canvasEmptyHint { display: none !important; }
 .post-x svg { width: 18px; height: 18px; }
 @media (hover: hover) { .post-x:hover { background: rgba(255, 255, 255, 0.24); } }
 .post-x:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
-/* The card: the post as people will see it, on the menu's card. The drawing
-   fills a fixed height on its own ground, drawn by the in-post player
-   (immersive: letterboxed, nothing over it), its picture under it first. */
+/* The card: the post as people will see it, on the menu's card. THE DRAWING
+   IN ITS OWN SHAPE (the owner, of a long caption on a fixed 200px band:
+   "comment chokes out canvas"). The box is the drawing's shape (--shape, its
+   width over its height), matted on the card at the words' inset as the
+   gallery's cards mat theirs, with the Post sheet's preview's corner and line;
+   as wide as the words until it would stand taller than its room (--room):
+   about half the screen, and never so tall that Watch goes under the sheet's
+   edge (lib/postsheet.js fitCard). On its own ground, drawn by the in-post
+   player (immersive, nothing over it), its picture under it first. */
 .post-card { overflow: hidden; border-radius: 16px; background: var(--menu-card); border: 1px solid var(--menu-card-line);
   color: var(--text-primary); }
-.post-card-media { position: relative; height: 200px; overflow: hidden; }
+.post-card-media { position: relative; overflow: hidden; margin: 14px auto 0; border-radius: var(--r-card);
+  width: min(calc(100% - 28px), calc(var(--room, 200px) * var(--shape, 1.6))); aspect-ratio: var(--shape, 1.6); }
+.post-card-media::after { content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  box-shadow: inset 0 0 0 1px var(--hairline); }
 .post-card-pic { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; display: block; }
 .post-card-pic:not([src]) { display: none; }
 .post-card-media.is-waiting .post-card-pic { visibility: hidden; }
@@ -4511,10 +4520,20 @@ body.player-mode #canvasEmptyHint { display: none !important; }
 #postSheet .post-card-media .skribl-inline:not(.is-on) { visibility: hidden; }
 .post-card-words { display: grid; gap: 4px; padding: 12px 14px 14px; }
 .post-card-title { font-size: 18px; font-weight: 700; line-height: 1.25; overflow-wrap: anywhere; }
-.post-card-caption { font-size: 16px; line-height: 1.45; white-space: pre-line; overflow-wrap: anywhere; }
+/* Two lines of the caption, and a "more" where it runs on (the owner's yes:
+   words never shrink the drawing), as the gallery's cards and the link page
+   have them (lib/capmore.js): small violet words with a 44px box, set in to
+   where the words start and drawn up toward the last line. */
+.post-card-caption { font-size: 16px; line-height: 1.45; white-space: pre-line; overflow-wrap: anywhere;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+.post-card-caption.is-open { display: block; -webkit-line-clamp: none; }
 .post-card-caption[hidden] { display: none; }
+.post-card-more { justify-self: start; min-height: 44px; margin: -10px 0 -10px -14px; padding: 0 14px; border: 0;
+  background: none; cursor: pointer; font: inherit; font-size: 14px; font-weight: 600; color: var(--accent-ink);
+  -webkit-tap-highlight-color: transparent; }
+.post-card-more[hidden] { display: none; }
+@media (hover: hover) { .post-card-more:hover { text-decoration: underline; } }
 .post-card-meta { margin-top: 2px; font-size: 13px; font-weight: 500; color: var(--text-secondary); }
-@media (min-width: 641px) { .post-card-media { height: 250px; } }
 /* What to do with it, once it is posted: Watch the brand's fill, Copy link
    and Share the choice's tint, a 48px row edge to edge. Where to go next is
    the quiet row under it. */
@@ -5719,11 +5738,24 @@ body.player-ready .player-bar > * { animation: player-up 0.3s var(--ease); }
 @media (hover: hover) { .player-error-btn.primary:hover { background: var(--accent-bright); } }
 
 /* THE CAPTION, FEATURED (the owner's yes on the mock): the person's own words
-   a size up and in the page's ink, under a title a step up. */
-.player-meta { text-align: center; max-width: 460px; }
+   a size up and in the page's ink, under a title a step up. A word too long
+   for its line breaks where it must (the title and caption inherit it): a
+   caption of long runs of letters, with nowhere to break, held the box at its
+   460px and ran off both edges of the owner's phone. */
+.player-meta { text-align: center; max-width: 460px; overflow-wrap: anywhere; }
 .player-title { font-size: 21px; font-weight: 800; letter-spacing: -0.01em; color: var(--text-primary); margin: 0; /* it is an h1 on the player page */ }
-.player-caption { font-size: 17px; color: var(--text-primary); margin-top: 6px; line-height: 1.45; text-wrap: pretty; }
+/* TWO LINES OF IT AND A "MORE" (the owner's yes after a long caption made the
+   drawing a third smaller: words never shrink the drawing). The box is laid
+   out for two lines; "more" opens the rest in place and the page grows under
+   it, the drawing at its size (lib/capmore.js, the gallery's own). */
+.player-caption { font-size: 17px; color: var(--text-primary); margin-top: 6px; line-height: 1.45; text-wrap: pretty;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+.player-caption.is-open { display: block; -webkit-line-clamp: none; }
 .player-caption[hidden] { display: none; }
+.player-capmore { min-height: 44px; margin: -6px 0 -10px; padding: 0 14px; border: 0; background: none; cursor: pointer;
+  font: inherit; font-size: 14px; font-weight: 600; color: var(--accent-ink); -webkit-tap-highlight-color: transparent; }
+.player-capmore[hidden] { display: none; }
+@media (hover: hover) { .player-capmore:hover { text-decoration: underline; } }
 /* THE WAY BACK to the site, when it has named its home (skribl_player.html):
    a pill at the top left over the page, its tap 44px. The drawing's own full
    screen covers it. */
@@ -6057,6 +6089,8 @@ html.skribl-carded .autosave-status { opacity: 0; pointer-events: none; }
   -webkit-tap-highlight-color: transparent;
 }
 .player-cta .cta-star { font-size: 17px; line-height: 1; }
+/* Your own post's way back (app.js initPlayer): the home pill's own chevron. */
+.player-cta svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
 @media (hover: hover) {
   .player-cta:hover {
     background: var(--accent-bright);

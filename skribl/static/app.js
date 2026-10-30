@@ -3433,6 +3433,29 @@ function showPlayerError(msg, canRetry) {
     const c = post.caption || '';
     capEl.textContent = c;
     capEl.hidden = !c;
+    capWire();
+  }
+  /* YOUR OWN POST TAKES YOU BACK (the owner: "Make your own should be back to
+     pad, cuz that's what it does, and should"). On a post this browser made
+     (its list, lib/posted.js; a post kept only on this device is its own), the
+     way to the editor says so, and is the way back: a step back when the
+     editor is the page just left, so it comes back as it was, else the editor,
+     whose draft brings the drawing back. Anyone else is asked to make one. */
+  {
+    const cta = document.querySelector('.player-cta'), flip = data.playbackMode === 'flip';
+    const pid = (mode === 'player' && window.SKRIBL_PLAYER_ID) || '';
+    let mine = !!hashMatch;
+    try { mine = mine || JSON.parse(localStorage.getItem('skribl_posted_v1') || '[]').some(e => e && e.id === pid); } catch (e) {}
+    if (cta && mine) {
+      const to = new URL(flip ? cta.dataset.flip : cta.getAttribute('href'), location.href);
+      cta.href = to.href;
+      cta.innerHTML = '<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>Back to ' + (flip ? 'Flip' : 'Pad');
+      cta.addEventListener('click', (e) => {
+        let r = null;
+        try { r = new URL(document.referrer); } catch (_) {}
+        if (r && history.length > 1 && r.origin === to.origin && r.pathname === to.pathname) { e.preventDefault(); history.back(); }
+      });
+    }
   }
 
   // Reproduce the authoring canvas dimensions exactly, so recorded (CSS-pixel)
@@ -3463,7 +3486,11 @@ function showPlayerError(msg, canRetry) {
     const cs = getComputedStyle(appEl);
     const padV = (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.paddingBottom) || 0);
     const gap = (parseFloat(cs.rowGap) || parseFloat(cs.gap) || 0);
-    return shellEl.getBoundingClientRect().height + padV + gap;
+    // A caption opened past its two lines takes no room from the drawing:
+    // the page grows under it instead (lib/capmore.js keeps its shut height).
+    const tc = document.getElementById('playerCaption');
+    const open = tc && tc._shut ? Math.max(0, tc.getBoundingClientRect().height - tc._shut) : 0;
+    return shellEl.getBoundingClientRect().height + padV + gap - open;
   }
   // FULL SCREEN IS A DIFFERENT BOX: everything below measures `.app` and caps
   // at 1:1, which sized the canvas to the page while the wrapper filled the
@@ -3539,6 +3566,18 @@ function showPlayerError(msg, canRetry) {
      feed's box, here for a box that is the drawing's own shape. The
      transport waits, laid out and unseen (body.player-pending), until the
      drawing can play; inkWhole lets the picture go once the ink is whole. */
+  /* THE CAPTION AT TWO LINES (the owner's yes: words never shrink the
+     drawing; lib/capmore.js, the gallery's own). Asked before the box is laid
+     out, so the box made for the words is the one they keep, and asked again
+     when their width changes, the box laid out again only when the answer
+     does. "more" opens the rest in place and the page grows under it. */
+  function capWire() {
+    const tc = document.getElementById('playerCaption'), btn = document.getElementById('playerCapMore');
+    if (!tc || !btn || !window.SkriblCapMore) return;
+    SkriblCapMore.attach(tc, btn);
+    SkriblCapMore.sync(tc);
+    if (!tc._watch && (tc._watch = SkriblCapMore.watcher(layoutPlayerCanvas))) tc._watch.observe(tc);
+  }
   function playerPre(pre) {
     const shell = document.getElementById('playerShell'), box = document.getElementById('playerPoster');
     if (shell) shell.hidden = false;
@@ -3553,6 +3592,7 @@ function showPlayerError(msg, canRetry) {
       choice: () => SkriblReplayLine.fromPost(line.speed, line.drawn), playMs: () => line.play, drawnMs: () => line.drawn });
     // Re-fit on a turn of the phone while the data is still coming (the same
     // listener initPlayer adds later, so it is added once).
+    capWire();
     layoutPlayerCanvas();
     addEventListener('resize', layoutPlayerCanvas);
     if (!box) return;

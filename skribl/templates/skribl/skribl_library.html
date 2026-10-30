@@ -219,7 +219,10 @@
        back the stretch inlineplayer.css exists to avoid. The player letterboxes
        itself. */
     .pmeta { padding: 13px 16px 4px; }
-    .pmeta .ptitle { font-size: 18px; font-weight: 700; letter-spacing: -.01em; text-wrap: balance; }
+    /* A word too long for the line breaks where it must, as the caption's
+       does under it: a title of one long word ran out of the stage. */
+    .pmeta .ptitle { font-size: 18px; font-weight: 700; letter-spacing: -.01em; text-wrap: balance;
+      overflow-wrap: anywhere; }
     /* THE CAPTION, IN FULL, UNDER THE TITLE (the posting mock, after v329):
        16px in the page's own ink, the way the link page features it a size
        up from the row's one line. */

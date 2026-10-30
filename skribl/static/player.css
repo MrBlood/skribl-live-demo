@@ -1644,11 +1644,24 @@ body.player-ready .player-bar > * { animation: player-up 0.3s var(--ease); }
 @media (hover: hover) { .player-error-btn.primary:hover { background: var(--accent-bright); }}
 
 /* THE CAPTION, FEATURED (the owner's yes on the mock): the person's own words
-   a size up and in the page's ink, under a title a step up. */
-.player-meta { text-align: center; max-width: 460px; }
+   a size up and in the page's ink, under a title a step up. A word too long
+   for its line breaks where it must (the title and caption inherit it): a
+   caption of long runs of letters, with nowhere to break, held the box at its
+   460px and ran off both edges of the owner's phone. */
+.player-meta { text-align: center; max-width: 460px; overflow-wrap: anywhere; }
 .player-title { font-size: 21px; font-weight: 800; letter-spacing: -0.01em; color: var(--text-primary); margin: 0; /* it is an h1 on the player page */ }
-.player-caption { font-size: 17px; color: var(--text-primary); margin-top: 6px; line-height: 1.45; text-wrap: pretty; }
+/* TWO LINES OF IT AND A "MORE" (the owner's yes after a long caption made the
+   drawing a third smaller: words never shrink the drawing). The box is laid
+   out for two lines; "more" opens the rest in place and the page grows under
+   it, the drawing at its size (lib/capmore.js, the gallery's own). */
+.player-caption { font-size: 17px; color: var(--text-primary); margin-top: 6px; line-height: 1.45; text-wrap: pretty;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+.player-caption.is-open { display: block; -webkit-line-clamp: none; }
 .player-caption[hidden] { display: none; }
+.player-capmore { min-height: 44px; margin: -6px 0 -10px; padding: 0 14px; border: 0; background: none; cursor: pointer;
+  font: inherit; font-size: 14px; font-weight: 600; color: var(--accent-ink); -webkit-tap-highlight-color: transparent; }
+.player-capmore[hidden] { display: none; }
+@media (hover: hover) { .player-capmore:hover { text-decoration: underline; }}
 /* THE WAY BACK to the site, when it has named its home (skribl_player.html):
    a pill at the top left over the page, its tap 44px. The drawing's own full
    screen covers it. */
@@ -1893,6 +1906,8 @@ a.player-btn { text-decoration: none; }
   -webkit-tap-highlight-color: transparent;
 }
 .player-cta .cta-star { font-size: 17px; line-height: 1; }
+/* Your own post's way back (app.js initPlayer): the home pill's own chevron. */
+.player-cta svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
 @media (hover: hover) {
   .player-cta:hover {
     background: var(--accent-bright);

@@ -98,10 +98,12 @@
          and the line that is true then -- anyone with the link can watch it,
          since the server's default is unlisted and the sheet only ever adds
          public. Under it, the card: the post as people will see it, drawing
-         itself in the same player a post plays in, its title and its caption
-         in full. Each editor says what its drawings do (`posted_line`): the
-         Pad's draw themselves, Flip's play. Not rendered in compose mode,
-         where nothing is posted. lib/postsheet.js result() shows it. #}
+         itself in the same player a post plays in, in its own shape, its
+         title, and two lines of its caption with a "more" where it runs on
+         (lib/capmore.js, the gallery's own). Each editor says what its
+         drawings do (`posted_line`): the Pad's draw themselves, Flip's play.
+         Not rendered in compose mode, where nothing is posted.
+         lib/postsheet.js result() shows it. #}
       {% if not compose %}
       <div class="post-done" id="postDone" hidden
            data-player-css="{{ skribl_asset('inlineplayer.css') }}"
@@ -127,6 +129,7 @@
           <div class="post-card-words">
             <div class="post-card-title" id="postCardTitle"></div>
             <div class="post-card-caption" id="postCardCaption" hidden></div>
+            <button type="button" class="post-card-more" id="postCardMore" hidden>more</button>
             <div class="post-card-meta" id="postCardMeta"></div>
           </div>
         </div>

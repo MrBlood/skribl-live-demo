@@ -26363,3 +26363,188 @@ every link page, a Flip's included, so its words are there before its data
 too. Not for Flip, the picture and the slices, for the reasons timed above;
 Flip next, the picture first where its card is the page it rests on
 (FUTURE.md 6x). The editors draw as they did.
+
+## After v329 -- A long word stays inside, wherever a post's words show
+
+A bug fix, from the owner's own phone: a caption of long runs of letters
+("vivuvuvjvjfux...", nowhere to break) ran off both edges of the link page,
+the first and last letters of each line out of sight. The words on the link
+page (.player-meta) could break only at a space, so the box took the longest
+run as its narrowest width: 460px, its max-width, centred on a 402px phone,
+and the run past even that.
+
+THE FIX. overflow-wrap: anywhere on the link page's words (the title and the
+caption inherit it from .player-meta; the Pad's own player wears the same
+rules) and on the Library stage's title, the two places a post's words could
+not break. The gallery's card, the Library's caption and the Posted! card
+already broke a long word; the Library's rows and the feed's title line cut
+theirs with an ellipsis, on purpose, and still do. A word breaks only where
+it would otherwise leave its line; ordinary words wrap at their spaces as
+before.
+
+THE ROWS, verify_captions.py LONG WORDS (new): a post whose title is one
+78-letter word and whose caption is the owner's, on a phone and a desk: the
+link page, its gallery card, the Library's stage and row, and, through the
+Pad's own sheet, the Posted! card. Each reads the laid-out words (a Range's
+rects) against their own box and the page's width, so a word cut off at a
+card's edge is caught as surely as one off the screen, and asks that the page
+never scrolls sideways; a line cut with an ellipsis on purpose is asked only
+to keep its box on the page. Each part shown red against its own break on a
+served copy of this tree, 8 of 8: the link page's words, the Library stage's
+title and its caption, the gallery card's title and its caption, the Posted!
+card's title and its caption, and, for the instrument, a row's caption no
+longer cut on one line.
+
+THE COST. The link page's styles +25 B (42,341), raised in writing in
+verify_player_isolation and verify_jsstrip. The Library's page is not counted.
+
+WHAT IT DOES TO FLIP: shared. A Flip's link page, card, Library row and
+Posted! card are the same as a Pad's.
+
+## After v329 -- The link page: two lines of a long caption, and your own post's way back
+
+The owner, from a phone, on the link page of a post with a long title and
+caption: the drawing was a third smaller than on one with a short caption
+(the page fits the drawing to what the words leave), and "Make your own
+should be back to pad, cuz that's what it does, and should". Offered two
+lines and a "more" so words never shrink the drawing, and Back to Pad on a
+post of your own; the owner: "all yes, skip the mock and just build it".
+
+TWO LINES AND A MORE. The caption shows two lines at rest and a "more" where
+it runs on, as the gallery's cards do; "more" glides the rest open in place
+and "less" back (Reduce Motion: it just changes). The box is laid out for the
+two lines and the "more" before the drawing is asked for (initPlayer
+playerPre), so it is the box the drawing keeps; it is laid out again only
+when the answer changes with the width (a phone turned). Opened, the rest
+pushes the page longer and the drawing keeps its size. The two lines, the
+"more", its glide and its question (the words' own height against two of
+their lines, at the width they are set at) were gallery.js's alone; they are
+lib/capmore.js now, which the gallery, the link page and (next) the Posted!
+card share, the way the full-screen bar is one module.
+
+YOUR OWN POST'S WAY BACK. On a post this browser made (its posted list; a
+post kept only on this device is its own), the button says Back to Pad, or
+Back to Flip on a Flip, and goes there: a step back in history when the
+editor is the page just left (Watch in place, the Home Screen app's way), so
+the editor comes back as it was, its drawing on it; else the editor itself,
+whose draft brings the drawing back. Anyone else's post still asks them to
+make their own.
+
+THE ROWS, verify_linkpage.py (a new section, 22 rows; 56 in all): a long
+caption at two lines and a painted "more", 44px, its state and its word in
+its name, and the drawing as big as beside three lines; "more" opening the
+rest in place with the drawing keeping its size, gliding over several
+frames, none more than 40% of the way, and the drawing's own move gliding
+with it; "less" gliding back; Reduce Motion with no frame between; a
+caption that fits with no "more"; "more" 7:1 light and dark; the box
+standing still while the data is held back; Back to Pad, Back to Flip, and
+someone else's Make your own Skribl; the step back to the Pad as it was
+left (its strokes the same), and the Pad itself on a fresh visit, phone and
+desk. Each shown red by its own break on a served copy, 17 runs: the clamp
+off (9 rows), "more" never shown (2), "more" on every caption (1), the
+caption asked only after the data (1), an open caption taking the drawing's
+room (2), no glide (5), "less" never closing (2), "more" not pressable (7),
+"more" in a grey (2), never yours (3), always yours (1), a Flip taken for
+a Pad (1), no step back (1), a step back with nothing behind (1). Reduce
+Motion went red (12 frames between) only with the module's own check AND
+the page's two Reduce Motion rules taken away; with the check alone gone,
+or the check and the near-instant rule, it stayed green, the page's rules
+keeping the caption still on their own. So the module's check is a second
+guard, and the row pins the user's case rather than that line.
+
+THE COST. The player's JS +3,569 B: lib/capmore.js (2,264, the gallery's
+own code moved, so gallery.js is 58 lines shorter) and app.js +1,305 (the
+caption asked before the box is laid out, the open caption's room, the way
+back). Its CSS +677 B, its HTML +184 B. Each line raised in writing with
+its cost named (verify_player_isolation, verify_jsstrip).
+
+WHAT IT DOES TO FLIP: shared. A Flip's link page has the same two lines and
+"more", and a Flip of your own says Back to Flip. The Posted! card, in both
+editors' sheets, is the next PR.
+
+## After v329 -- The Posted! card: the drawing in its own shape, two lines of the caption
+
+The owner, from a phone, of the Posted! card with a long caption: "comment
+chokes out canvas". The card's drawing sat in a fixed band, 200px tall on a
+phone and 250 on a desk, letterboxed on its own ground, and the caption ran
+in full under it, so the longer the caption, the more of the card was words.
+Offered the drawing in its own shape, up to about half the screen, and the
+caption at two lines with a "more"; the owner: "all yes, skip the mock and
+just build it".
+
+THE DRAWING IN ITS OWN SHAPE. The card's box is the drawing's shape (the
+editor's own ratio, the one the Post sheet's preview already used), matted
+on the card at the words' inset with the preview's corner and line, as the
+gallery's cards mat theirs ("canvas borders hit card border and it's weird
+looking"), and centred. It is as wide as the words until it would stand
+taller than its room. The room is about half the screen, and never more
+than the sheet has once everything else in it is laid out, so Watch and the
+rest stay on the screen without scrolling; on a window too short for all of
+it the drawing keeps 160px (the Post sheet preview's floor) and the sheet
+scrolls. It is fitted when the card comes up, with the caption at its two
+lines, and again when the window changes. Measured on a phone (402x874) with
+a delete-key row: a tall drawing 142x252 (it was 112x200 in the band), a
+square one 252x252 (was 200x200); on a desk a tall one 169x300 (was 141x250).
+A 16:9 drawing is 348x196, about the 356x200 it was: the mat costs it a
+little width, and a wide drawing has no height to gain.
+
+TWO LINES AND A MORE. The caption shows two lines and a "more" where it runs
+on, lib/capmore.js, the gallery's and the link page's own; "more" glides the
+rest open in place and the sheet scrolls to it, the drawing keeping its size
+(a window change while it is open measures the caption shut). Each post
+starts shut. Flip's sheet loads the module too.
+
+A PRESS INSIDE THE SHEET NEVER CLOSES IT. The sheet closed on the first
+press of "more": lib/labels.js keeps a button's word in a span, the press
+landed on that span, and "more" becoming "less" took the span out of the
+page before the press bubbled to the overlay, whose outside-press check
+asked the span where it was and heard nowhere. The check reads the path the
+press took (composedPath) instead, so no button that rewrites its own words
+can close the sheet it is in. The menu's, Export's and Flip's sheets ask the
+same question the old way; none of them has such a button today.
+
+THE ROWS, verify_postmoment.py SHAPE and WORDS (new parts; CARD inverted):
+tall, wide and square drawings, Pad and Flip, on a phone, a desk and a desk
+window tall enough that half the screen is what holds the drawing back:
+the box the shape of the canvas the suite gave the editor, centred and no
+wider than the words, as big as the sheet has room for up to half the
+screen, all of the sheet on the screen and Watch painted (16 rows); a
+window too short keeping the drawing at 160px, scrolling, and refitting
+when given its height back; two lines of the caption and a painted
+"more", 44px, its state and its word in its name; "more" opening the rest
+in place, the sheet staying up and the drawing at its size, a window
+change while it is open taking none of the drawing's room; "less" back;
+the next post shut again; Flip's long caption the same, its short one
+whole with none; "more" 7:1, light and dark. 26 new rows; the card's two
+rows that asked for the caption in full now ask for two lines and a
+"more".
+
+Each shown red by its own break on a served copy, 16 of 16 (the copy as
+built green, 30 of 30): the shape never set (15 rows red), the room never
+fitted on posting (7), the room not held to the sheet's (6), no
+half-screen cap (1), no floor (1), no refit when the window changes (1),
+not centred on the card (6), the box narrower than the words (2), the
+open caption given the drawing's room (1), the two-line clamp off (6),
+"more" never wired (3), the outside press judged by the pressed node (2),
+a new post's caption not shut (1), "more" in a grey (2), "more" on every
+caption (1), Flip without the module (1). Two rows went red under none of
+the first fourteen breaks (a wide drawing's size on a phone, Flip's short
+caption); the last two breaks are theirs. And the half-screen cap pinned
+nothing where the sheet's room always binds first, which is why the suite
+has a 1,300px window.
+
+THE SHEET'S GLIDE, now that the drawing takes the room. On a phone a tall or
+square drawing leaves the posted sheet as full as the form was, so its
+height does not change and nothing glides; the parts still rise in. The
+glide rows (verify_postmoment) post a wide drawing, whose sheet is shorter
+than the form, and were shown red again with the glide taken out (806 to
+806, nothing moving between) and green as built. How it works' Post tip
+says a long caption shows two lines and a more (it said the caption shows
+in full), and verify_helpclaims names the turned row that backs it.
+
+THE COST. Nothing the link page or a post's box loads: postsheet.js and the
+Post sheet's styles are the editors' own, and capmore.js is unchanged. Flip's
+page loads capmore.js (2,264 B), which the Pad's already did.
+
+WHAT IT DOES TO FLIP: shared. One sheet, one card, one fit: a Flip's card is
+the shape of its pages, and its caption has the same two lines and "more".
