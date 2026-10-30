@@ -1463,7 +1463,8 @@ html[data-hello-cover="lift"] body::after { opacity: 0; pointer-events: none; }
   --on-canvas-a1: 0.67; --on-canvas-a2: 0.62;
 }
 
-/* "+ Add take" — the post-record lock, made visible. A finished take locks
+/* "+ Keep drawing" (it said "+ Add take" until the posting mock's plain
+   words) — the post-record lock, made visible. A finished take locks
    the canvas, and until now the only explanation was a toast fired by the
    press that failed (a silent locked canvas otherwise). The pill floats at
    the canvas's bottom edge whenever the lock is on, looks like the button it
@@ -2248,7 +2249,7 @@ body.replaying .tab-panel > * { opacity: var(--drawer-rest); }
 /* The colour running along a line: a canvas laid over the drawing for the
    third of a second it takes (lib/recolor.js runner), never touched. */
 .recolor-run { position: absolute; pointer-events: none; z-index: 2; }
-/* A finished take's Add take pill sits on the drawing: while lines are being
+/* A finished take's Keep drawing pill sits on the drawing: while lines are being
    tapped it steps aside, and is back on Done. */
 body.recoloring #addTakePill { visibility: hidden; }
 /* The mode's pointer is the system's crosshair (the pen's ring is put away),
@@ -2784,6 +2785,13 @@ body.recoloring #canvas { cursor: crosshair !important; }
    row's: 13. It kept 12.5 through the drawers' words going a size up (B),
    which the census read only with a photo or a song in the drawer. */
 .dz-hint { font-size: 13px; font-weight: 400; line-height: 1.35; text-wrap: balance; }  /* a wrap splits evenly, never one stranded word */
+/* THE DROP IS A MOUSE'S PROMISE (the posting mock's plain words): with no
+   hover there is nothing to drop from, so a phone says the file types only.
+   Shown where there is hover rather than hidden where there is none: the
+   player's sheet is emitted from this one, and a touch-only query is kept
+   there unread (cssgraph's UNEXERCISED_MEDIA), for a rule no player needs. */
+.dz-drop { display: none; }
+@media (hover: hover) { .dz-drop { display: inline; } }
 .music-dropzone.loaded > .dz-add,
 .music-dropzone:not(.loaded) > .dz-lead,
 .music-dropzone:not(.loaded) > .dz-file { display: none; }
@@ -5509,7 +5517,7 @@ body.player-mode .app {
   inset: auto;
   transform: none !important;
 }
-/* The drawing's furniture stays on the page: Add take, the magnifier's pill,
+/* The drawing's furniture stays on the page: Keep drawing, the magnifier's pill,
    the empty-canvas words and the grid. */
 .watch-full:is(:fullscreen, .is-immersive-page) :is(#addTakePill, .zoom-hud, .canvas-empty-hint, .flip-grid) {
   display: none !important;

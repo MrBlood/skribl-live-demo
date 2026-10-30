@@ -22,11 +22,16 @@ before. What they had said:
     shortcuts as Flip's alone, which the Pad has too; Smudge saying one
     thing twice; "hold one" to a mouse, which rests;
   * that a drawing's name goes with its posts (the Post title starts empty);
-  * Ask's "Draw more over a replay" beginning with Play, which hides Add take;
+  * Ask's "Draw more over a replay" beginning with Play, which hides the pill
+    that draws more (Add take then, Keep drawing now);
   * Draw along's ending, cut off mid-word in a phone's pill, and "Press Play"
     on a one-page Flip, which has no Play;
   * the Post card telling a Flip it will "draw itself", the Shape card named
-    Shapes, and the book's "sixteen times faster to see an hour in a minute".
+    Shapes, and the book's "sixteen times faster to see an hour in a minute";
+  * and the posting mock's plain words: Stroke layers keeping strokes "from
+    beading", which nobody says, and "Add take" and "Take saved", which ask a
+    person to learn what a take is before they can draw more (it is Keep
+    drawing now, the pill, its toasts, How it works and Ask alike).
 """
 import os
 import pathlib
@@ -158,8 +163,8 @@ with sync_playwright() as p:
           and not any("this browser" in s["text"] for s in signed_steps), str(signed_steps))
     sp.close()
     takes = pad.evaluate(ANSWER, "takes")
-    check("Ask's Draw more over a replay starts where Add take shows, on the canvas between takes",
-          bool(takes) and "Add take" in takes[0]["text"] and takes[0]["sel"] == "#addTakePill"
+    check("Ask's Draw more over a replay starts where Keep drawing shows, on the canvas between takes",
+          bool(takes) and "Keep drawing" in takes[0]["text"] and takes[0]["sel"] == "#addTakePill"
           and not any("Play your drawing" in s["text"] for s in takes), str(takes))
 
     print("\nTHE BUTTON CARDS AND THE BOOK")
@@ -190,8 +195,62 @@ with sync_playwright() as p:
     bk.close()
     check("The little book's speeds add up: Fit shows an hour in half a minute",
           has(line, "Fit to see an hour in half a minute", without=("an hour in a minute",)), line)
+
+    # THE POSTING MOCK'S PLAIN WORDS. Stroke layers says what it saves you
+    # from, in Tune and in its tip, on the Pad and Flip alike (lib/tooltip.js
+    # moves a title into data-tip, so the tip is read where it went).
+    print("\nPLAIN WORDS (the posting mock)")
+    LAYERS = """() => { const h = document.querySelector('#tuneLayersRow .tune-hint'), s = document.getElementById('strokeLayersBtn');
+      return { hint: h ? h.textContent.trim() : null, title: s ? (s.getAttribute('data-tip') || s.getAttribute('title')) : null }; }"""
+    for ed, pg in (("Pad", pad), ("Flip", flip)):
+        ly = pg.evaluate(LAYERS)
+        check(f"{ed}: Stroke layers says no dark spots where see-through ink overlaps, in Tune and in its tip",
+              ly["hint"] == "no dark spots where see-through ink overlaps"
+              and has(ly["title"], "dark spots", without=("beads", "beading")), str(ly))
+    # Keep drawing where it said Add take: what to do next, so nobody has to
+    # learn what a take is first. The tips, the step and the card are read
+    # where How it works says them; the whole sheet must not say the old name.
+    sheet = pad.evaluate("() => document.getElementById('helpDrawer').textContent.replace(/\\s+/g, ' ')")
+    check("Pad: How it works says Keep drawing, in its tips, its step and its card, and never Add take",
+          has(P.get("Keep drawing"), "Tap Keep drawing on the canvas to add more")
+          and has(P.get("Canvas locks between takes"), "Keep drawing on the canvas adds more")
+          and has(P.get("step: Record the replay"), "tap Keep drawing on the canvas to add more")
+          and "Tap Keep drawing to add more." in sheet and not re.search(r"Add (a )?takes?\b", sheet),
+          f"{P.get('Keep drawing')} | {P.get('Canvas locks between takes')} | {P.get('step: Record the replay')}")
     pad.close()
     flip.close()
+
+    # A take ended for real (a stroke, then Done): what the toast says, what
+    # the canvas's pill says, and what a press on the finished drawing says.
+    tk = b.new_page(**DESK)
+    browsing.goto(tk, BASE, "/")
+    tk.wait_for_timeout(900)
+    tk.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+    bx = tk.locator("#canvas").bounding_box()
+    cx, cy = bx["x"] + bx["width"] / 2, bx["y"] + bx["height"] / 2
+    tk.mouse.move(cx - 60, cy)
+    tk.mouse.down()
+    for i in range(24):
+        tk.mouse.move(cx - 60 + i * 5, cy + (i % 5) * 4)
+        tk.wait_for_timeout(12)
+    tk.mouse.up()
+    tk.wait_for_timeout(300)
+    tk.evaluate("() => document.getElementById('recordBtn').click()")
+    tk.wait_for_timeout(450)
+    TOAST = "() => { const t = document.getElementById('toast'); return t && t.classList.contains('show') ? t.textContent.trim() : null; }"
+    ended = tk.evaluate(TOAST)
+    pill = tk.evaluate("() => { const p = document.getElementById('addTakePill'); return p && !p.hidden ? p.innerText.trim() : null; }")
+    tk.mouse.move(cx, cy + 40)
+    tk.mouse.down()
+    tk.mouse.up()
+    tk.wait_for_timeout(300)
+    pressed = tk.evaluate(TOAST)
+    tk.close()
+    check("Pad: a take done, the toast says Saved and what to do next, in plain words",
+          ended == "Saved. Play to watch it, or Keep drawing to add more", repr(ended))
+    check("Pad: ...the canvas's pill says Keep drawing", pill == "Keep drawing", repr(pill))
+    check("Pad: ...and a press on the finished drawing says how to add more, by the pill's own name",
+          pressed == "Saved. Tap Keep drawing to add more, or New Skribl to start over", repr(pressed))
 
     print("\nDRAW ALONG'S LAST WORDS, in a phone's pill")
     for ed, path, want in (("Pad", "/", "Tap Play"), ("Flip", "/flip", "Tap Duplicate")):

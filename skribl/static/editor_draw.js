@@ -290,7 +290,7 @@ function startDraw(e) {
   // take may take it.
   if (window.SkriblPadRecolor && SkriblPadRecolor.isArmed() && SkriblPadRecolor.press(e)) return;
   // Post-record lock: the completed replay can't be drawn over. The visible
-  // answer is the on-canvas "+ Add take" pill — nudge it so the eye lands on
+  // answer is the on-canvas "+ Keep drawing" pill — nudge it so the eye lands on
   // the way forward, right where the press just failed; the toast explains.
   if (finishedRecording && !recording) {
     const pill = document.getElementById('addTakePill');
@@ -300,7 +300,7 @@ function startDraw(e) {
       pill.classList.add('nudge');
     }
     if (!lockToastShown) {
-      showToast('Take saved — tap Add take to draw more, or New Skribl to start over', recordBtn);
+      showToast('Saved. Tap Keep drawing to add more, or New Skribl to start over', recordBtn);
       lockToastShown = true;
       setTimeout(() => { lockToastShown = false; }, 3000);
     }
@@ -947,7 +947,7 @@ if (padLine && playScrub && window.SkriblReplayLine) {
   const tuneBtn = document.getElementById('tuneBtn');
   if (row && tuneBtn) tuneBtn.addEventListener('click', () => row.update());
   // The pill's chips open down over the top of the drawing, where a toast
-  // sits ("Take saved -- ..."); a toast never covers a control being used,
+  // sits ("Saved. Play to watch it ..."); a toast never covers a control being used,
   // so opening the speed sends it away.
   if (desk) desk.button.addEventListener('click', () => {
     if (typeof toast !== 'undefined' && toast) toast.classList.remove('show');
@@ -957,7 +957,7 @@ if (padLine && playScrub && window.SkriblReplayLine) {
      where the scrubber is in the faded toolbar's band and the screen ends
      below it. Its speeds open upward at both (styles.css #padLine) and close
      again on a pick. It goes with the scrubber when the replay ends: kept
-     after the replay (#386), it sat over the frame's edge and under Add take
+     after the replay (#386), it sat over the frame's edge and under Keep drawing
      on the owner's iPhone, so the speed's place at rest is the Canvas
      settings row instead. Observed rather than called, so app.js (the
      player's budget) carries none of this. */
