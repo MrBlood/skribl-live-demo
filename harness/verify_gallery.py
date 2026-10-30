@@ -1350,6 +1350,7 @@ with sync_playwright() as _spa:
           const openCard = h(one), openLines = lines();
           const expanded = btn.getAttribute('aria-expanded');
           const word = (btn.textContent || '').trim();
+          const openName = btn.getAttribute('aria-label') || '';
           btn.click();
           setTimeout(() => resolve({
             text: cap.textContent,
@@ -1360,7 +1361,7 @@ with sync_playwright() as _spa:
             belowWords: btn.getBoundingClientRect().top >= cap.getBoundingClientRect().bottom - 8,
             inHead: !!btn.closest('.thead'),
             restWord: restWord, word: word, moreShown: moreShown,
-            name: btn.getAttribute('aria-label') || '',
+            name: openName, backName: btn.getAttribute('aria-label') || '',
             boxH: Math.round(btn.getBoundingClientRect().height),
             restCard: restCard, openCard: openCard,
             restLines: +restLines.toFixed(2), openLines: +openLines.toFixed(2),
@@ -1381,9 +1382,10 @@ with sync_playwright() as _spa:
           f"where people look now, and a clamp hides lines, never the words")
     check("...and 'more' says which state it is in, and is a control to a finger",
           not _cap.get("missing") and _cap["expanded"] == "true" and _cap["word"] == "less"
-          and _cap["backWord"] == "more" and "less" in _cap["name"] and _cap["boxH"] >= 44,
+          and _cap["backWord"] == "more" and "less" in _cap["name"] and "more" in _cap["backName"]
+          and _cap["boxH"] >= 44,
           f"{_cap} \u2014 aria-expanded is what a screen reader reads off a "
-          f"disclosure, its name holds the word it shows, and its box is 44")
+          f"disclosure, its name holds the word it shows (read open, then shut), and its box is 44")
     check("...and it is the WORD again, under the sentence",
           not _cap.get("missing") and _cap["restWord"] == "more" and _cap["backWord"] == "more",
           f"word={_cap.get('backWord')!r} \u2014 the v310 row asserted a glyph, and "
