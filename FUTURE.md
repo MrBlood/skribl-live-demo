@@ -1431,7 +1431,7 @@ place, kept beside `pages`), show the card at once the way the Pad's page
 does, cropped the same way, and let it go when that page is drawn. Not
 built; mock it beside the Pad's first look when it is next.
 
-## 6y. Flip opens a long Flip without a freeze (Flip next, after the Pad's)
+## 6y. Flip opens a long Flip without a freeze (Flip next, after the Pad's; built)
 
 The Pad now opens a long drawing without a freeze (DECISIONS, after v329,
 "The Pad opens a long drawing without a freeze"). Flip's editor does not
@@ -1447,8 +1447,19 @@ places laid out at once (the strip the right length, so nothing moves),
 then the pictures painted a few a frame, the ones in view first, the rest
 behind them; a press on a page not yet painted paints it then. Its rows
 measure the longest task against the one call on the same page, as
-verify_padopen's do. Not built; it is a bug-sized change, so a small PR when
-it is next.
+verify_padopen's do.
+
+**Built** (DECISIONS, after v329, "A last look at efficiency"), with the
+draft the opening writes moved into a task of its own. The longest task
+went from 1.4 s to 0.33 s on a phone and from 1.2 s to 0.2 s on a desk at
+this box's pace (8.5 s and 5.5 s to about 1.35 s with the CPU 4x slower).
+What is left is the file's own task: reading it, the page you are on.
+
+**Still slow on a long Flip, measured and not built: a page change.**
+buildStrip makes every tile again on each one (its 60 pictures laid from
+the cache, every page's signature read), about 33 ms of a 54 ms change on a
+desk at this box's pace and 250 to 280 ms with the CPU 4x slower. The fix is
+the strip changed in place, its classes moved, rather than made again.
 
 ## 7. The honest state
 

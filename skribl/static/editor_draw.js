@@ -524,10 +524,25 @@ function commitStrokeWithMirrors() {
 // on the same base, canvas size and stroke layers, is put back with one
 // drawImage: the canvas as it was when that drawing was last on it. Anything
 // else repaints as before.
+//
+// A LIGHT DRAWING KEEPS NOTHING, as a light Flip page keeps nothing (flip.js
+// KEEP_MIN_POINTS, the same 4,000 points). A copy is the whole canvas, 18 MB
+// on a phone (1593 x 2832), so three were 54 MB for any doodle, and making
+// them cost each of the first three strokes 62 to 91 ms at its end with the
+// CPU 4x slower, where it had been 2 to 4. Under 4,000 points the repaint an
+// Undo makes is quick. A stroke laid under it drops the copies, so a doodle
+// holds none at all; an Undo from there back to a busier drawing repaints, as
+// every Undo did before.
 const _padKept = [];
 let _padKeptNext = 0;
+const PAD_KEEP_MIN_POINTS = 4000;
 function padUndoKeep() {
   if (unrecordedInk || !canvas.width || !canvas.height) return;
+  if (strokes.length < PAD_KEEP_MIN_POINTS) {
+    for (const k of _padKept) { k.c.width = k.c.height = 0; }
+    _padKept.length = 0; _padKeptNext = 0;
+    return;
+  }
   const k = _padKept[_padKeptNext] || (_padKept[_padKeptNext] = { c: document.createElement('canvas') });
   _padKeptNext = (_padKeptNext + 1) % 3;
   if (k.c.width !== canvas.width || k.c.height !== canvas.height) {

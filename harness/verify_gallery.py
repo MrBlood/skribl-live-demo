@@ -2777,6 +2777,9 @@ with sync_playwright() as _spw:
 
 
 print("\nGALLERY — a discarded card stops costing anything")
+# The cards within a screen of view, the ones whose rows keep time.
+NEAR = """() => { const h = innerHeight; return [...document.querySelectorAll('.tile')].filter(t => {
+  const r = t.getBoundingClientRect(); return r.bottom > -h && r.top < 2 * h; }).length; }"""
 # THE BEAT RESCHEDULES FROM INSIDE ITSELF, so nothing outside it ever ends.
 # lib/fullbar.js runs a frame while its drawing plays and a quarter second
 # while it does not; the grid empties and rebuilds on every search and every
@@ -2812,10 +2815,13 @@ with sync_playwright() as _spl:
     _pl.wait_for_selector(".tile", timeout=15000)
     _pl.wait_for_timeout(1000)
 
+    # PER CARD NEAR THE SCREEN: a card's row keeps time only within a screen
+    # of view (gallery.js footWatch), so the cards past that are left out of
+    # the count rather than diluting it.
     def _per_card(page, ms=1500):
         page.evaluate("() => { window.__skTimers = 0; }")
         page.wait_for_timeout(ms)
-        n = page.evaluate("() => document.querySelectorAll('.tile').length")
+        n = page.evaluate(NEAR)
         return page.evaluate("() => window.__skTimers"), n
 
     _t0, _n0 = _per_card(_pl)
@@ -2826,7 +2832,7 @@ with sync_playwright() as _spl:
     # assembled. That tree reads 0 here.
     check("the card transports are beating at all on a fresh grid",
           _n0 > 0 and _rate0 > 3,
-          f"{_t0} timer calls / 1.5s across {_n0} cards ({_rate0:.1f} each) — "
+          f"{_t0} timer calls / 1.5s across the {_n0} cards near the screen ({_rate0:.1f} each) — "
           f"under 3 means the beat stopped before it ever ran, which is a "
           f"frozen scrubber and a frozen play icon on every tile")
 
@@ -2844,6 +2850,57 @@ with sync_playwright() as _spl:
           f"subtree alive with them")
     _pl.close()
     _bl.close()
+
+
+print("\nGALLERY — a card far from the screen waits, and keeps time when it comes back")
+# THE CARDS NEAR THE SCREEN KEEP TIME; THE REST WAIT (gallery.js footWatch).
+# A stopped card's row beats four times a second, and every card of the grid
+# did: 24 at rest woke the page 96 times a second for cards nobody could see.
+# Now a row runs while its card is within a screen of view. Read on a phone,
+# where one card is most of a screen and the grid runs far past it: the timer
+# calls are those of the cards near the screen, not of all of them, and the
+# cards at the foot keep time once they are scrolled to. Counted the way the
+# block above counts, setTimeout wrapped before any page script runs.
+for _k in range(max(0, 14 - len(listed_ids()))):
+    post_public_api(f"{TAG} far {_k}")
+with sync_playwright() as _spf:
+    _bf = _spf.chromium.launch()
+    _cf = _bf.new_context(color_scheme="dark", viewport={"width": 402, "height": 874},
+                          device_scale_factor=2, is_mobile=True, has_touch=True)
+    _pf = _cf.new_page()
+    _pf.add_init_script("""
+        window.__skTimers = 0;
+        (function () {
+          var st = window.setTimeout;
+          window.setTimeout = function () {
+            window.__skTimers++; return st.apply(this, arguments);
+          };
+        })();
+    """)
+    browsing.goto(_pf, BASE, "/gallery")
+    _pf.wait_for_selector(".tile", timeout=15000)
+    _pf.wait_for_timeout(1500)
+
+    def _near_rate(page, ms=1500):
+        page.evaluate("() => { window.__skTimers = 0; }")
+        page.wait_for_timeout(ms)
+        return (page.evaluate("() => window.__skTimers"), page.evaluate(NEAR),
+                page.evaluate("() => document.querySelectorAll('.tile').length"))
+
+    _tf, _nearf, _allf = _near_rate(_pf)
+    check("on a phone, the cards far from the screen keep no time: the calls are the near cards'",
+          _allf - _nearf >= 3 and _tf <= (_nearf + 1) * 7,
+          f"{_tf} timer calls / 1.5s with {_nearf} of {_allf} cards within a screen of view "
+          f"(each beating card makes about 6); all {_allf} beating would be about {_allf * 6}")
+    _pf.evaluate("() => window.scrollTo(0, document.documentElement.scrollHeight)")
+    _pf.wait_for_timeout(1200)
+    _tb, _nearb, _ = _near_rate(_pf)
+    check("...and the cards at the foot keep time once they are scrolled to",
+          _nearb > 0 and _tb / _nearb > 3,
+          f"{_tb} timer calls / 1.5s across the {_nearb} cards now near the screen "
+          f"({_tb / max(1, _nearb):.1f} each); under 3 is a frozen scrubber on the cards brought into view")
+    _pf.close()
+    _bf.close()
 
 
 print("\nGALLERY — the bar recedes from a POINTER too, and comes back to a move")

@@ -276,6 +276,8 @@ BATCHES = [
     ["verify_undofast.py"],
     # The Pad opening a long drawing without a freeze (the posting mock's 2b).
     ["verify_padopen.py"],                 # measures — the frames and the long tasks while it opens, the CPU 4x slower
+    # Flip opening a long Flip without a freeze (FUTURE.md 6y).
+    ["verify_flipopen.py"],                # measures — the frames and the long tasks while the strip paints, the CPU 4x slower
     # After v328: the glowing dot on Flip's Draw on pages, everywhere (the owner's C).
     ["verify_flipnib.py"],                 # store — posts a public Flip and reads it in the feed
     # Match the beat (after v329, the owner: "all yes"): Flip's Beat speed.

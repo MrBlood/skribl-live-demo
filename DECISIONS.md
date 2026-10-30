@@ -26633,3 +26633,101 @@ page strip is 651 ms of the load's 739: every page's picture painted at
 once. The strip a few pictures a frame, the ones in view first, is FUTURE.md
 6y. The Pad's slicing is not Flip's to share: a Flip's page is one page,
 already a paint of its own size.
+
+## After v329 -- A last look at efficiency: a long Flip opens, a doodle keeps no copies, the Gallery rests
+
+The owner, at the end of the polish run: "finish up and take one last look
+at efficiency." Main measured as it stands, at phone pace (Chromium, the CPU
+4x slower, 4G, 402 x 874) unless named, against what the audit's own fixes
+left.
+
+HELD, side by side. Pad and Flip opening, today's main beside the tree right
+after "No style rule searches the whole page" (#669), interleaved, median of
+five: Pad still 1.7 s to settle with a longest task of 303 against 285 ms;
+Flip 2.15 s against 2.36, 891 against 975 ms. Nothing merged since has cost
+the editors' opening. Every page at rest runs nothing (no style work, no
+script in 3 s of stillness) but the Gallery, below. Weights on a cold load:
+the link page 97 KB, the Gallery 122, the Library 181, the Pad 529 and Flip
+547, as before.
+
+FLIP OPENS A LONG FLIP (FUTURE.md 6y, the owner's call 2). Opening 60 pages
+of 2,400 points through Flip's own input held the page in one task of 1.15 s
+on a desk and 1.4 s on a phone at this box's pace, 5.5 and 8.5 s with the CPU
+4x slower; profiled, the page strip was 81% of it. paintTiles (flip.js) now
+gives every tile its place and its ground at once and lays a picture the
+cache keeps; the rest are painted at once as before unless they come to more
+than the Pad's PAD_SLICE_FROM points, and past that the page you are on is
+painted at once and the others a few a frame (stripSlice, 10 ms a frame),
+nearest to it first. A tap on a tile not yet painted makes it the page you
+are on, so it is painted at once too. The draft the opening writes (a fifth
+of it, 100 ms at this box's pace) moved into a task of its own. The longest
+task: 1,375 -> 327 ms on a phone, 1,151 -> 197 on a desk; 8,460 -> 1,349 and
+5,468 -> 1,334 with the CPU 4x slower. What is left is the file's own task,
+reading it and the page you are on.
+
+THE PAD'S UNDO COPIES ARE FOR A BUSY DRAWING. "Undo on a long drawing, from
+a kept copy" kept three copies of the whole canvas for any drawing: 18 MB
+each on a phone (a 1593 x 2832 bitmap), 54 MB for a doodle, and making them
+held each of the first three strokes' ends 62 to 91 ms with the CPU 4x
+slower, where the tree before it took 2 to 4. Flip keeps its copies only for
+a page of 4,000 points (KEEP_MIN_POINTS); the Pad now does the same
+(PAD_KEEP_MIN_POINTS, editor_draw.js), and a stroke laid under it drops the
+copies a busier drawing left, their canvases emptied. Stroke ends are 1 to 5
+ms again. Under 4,000 points Undo repaints, as every Undo did before.
+
+THE GALLERY RESTS. A stopped card's row beats four times a second
+(lib/fullbar.js IDLE_MS), and every card's did: a grid of 24 at rest woke the
+page 96 times a second, 1% of the main thread at this box's pace and 2.3% with
+the CPU 4x slower, and a phone never rests. gallery.js footWatch runs a card's
+row only while the card is within a screen of view, and syncs it as it comes
+back: 16 wake-ups a second at rest, 0.9%. A card further off still says what
+it holds from its first sighting (sound or none, from the listing). The first
+build left that to the beat, and a card with a song below the screen said
+"This Skribl has no sound" until it came near: verify_viewedges' two card
+rows went red (17/19, beside others and alone) and are green with the
+sighting's sync (19/19). Full screen keeps its own bar and stops the card's,
+as before.
+
+WHAT IT DOES TO FLIP AND THE PAD: shared rules. The Pad took Flip's 4,000
+points; Flip took the Pad's 20,000 and its way of slicing (the page you are
+on first, the rest a frame at a time). The Gallery is neither editor's.
+
+THE ROWS. verify_flipopen.py (new, 19 rows), read where the file's task ends
+(the "Opened your file" chip): every tile in place and the page you are on
+painted; the tiles still to paint showing their page's ground; with the CPU
+4x slower, phone and desk, the other pictures over many frames, nearest
+first, no task from the pick to the strip whole half the strip in one call
+on the same page (half, not the Pad's third: the file's own task is a
+larger share of a Flip's opening, 853 ms against a one call of 3,126 on a
+desk), and each tile pixel for pixel the one call's picture of its page; a
+tap on a tile not yet painted painting it at once; a short Flip whole as it
+opens, in no slices; the draft kept, every page, 266 ms after the file's
+task where the editor's own autosave waits 800 ms, and not inside that task.
+Each red against its own break on a served copy (8 runs, 8 red): never
+sliced (3 rows); the slices never run (3); no ground on the tiles to paint
+(1); the farthest first (1); a short Flip sliced (1); the draft written in
+the file's task (1), and never written (1, at 1,001 ms by the autosave: the
+first draft of that row waited 1.5 s, so the autosave held it and the break
+stayed green). The page you are on not painted at once reddens the tap's row
+only: as a file opens, applyBg refreshes the old strip's tiles with the new
+pages before the new strip is built, and that paints the first page's
+picture into the cache, so the opening's row holds without paintTiles' line
+and the tap's is the one that line answers for.
+
+verify_undofast.py's Pad rows draw over a drawing of 4,200 points, opened
+through the Pad's input and Keep drawing pressed (an opened drawing is a
+finished take until then), and five rows are new: five strokes on a blank
+Pad keep no copy, and Undo repaints as it did; over a busy drawing the
+strokes keep their three; cleared, the next stroke drops them and empties
+their canvases; no page errors, twice. Red on main's rule (no minimum: 3
+rows) and on the minimum without the drop (1 row).
+
+verify_gallery.py, two rows on a phone with 24 cards: the timer calls are
+the near cards' (24 in 1.5 s with 4 of 24 near; 144 on main, every card), and
+the cards at the foot keep time once scrolled to (red with the near cards
+never started: 0 calls). Its older pair, "the card transports are beating at
+all" and "four grid rebuilds later it costs the same", counted the calls per
+card of the whole grid, which was every beating card until now; side by side
+on a desk the first read 2.3 a card, under its 3, with only the near ones
+beating. Both now count per card within a screen of view, the cards whose
+rows keep time, which is what "beating at all" asks of them.

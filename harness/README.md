@@ -461,7 +461,26 @@ stays a sleep.
   and redone from copies; a light page keeps nothing; an edit in place told
   apart by content; a new canvas size, or layers grown with the window, drop
   every copy; and the frame layer never taken mid-stroke, mid-erase,
-  mid-smudge or after a thumbnail was painted through it.
+  mid-smudge or after a thumbnail was painted through it. The Pad's copies
+  are for a busy drawing (PAD_KEEP_MIN_POINTS, 4,000 points, as Flip's), so
+  its rows draw over one of 4,200 points opened through the Pad's input; on a
+  phone, five strokes on a blank Pad keep no copy and Undo repaints as it
+  always did, and a stroke on a cleared drawing drops the copies a busy one
+  left, their canvases emptied.
+- `verify_flipopen.py` — a long Flip opens in Flip's editor without a freeze
+  (FUTURE.md 6y; flip.js paintTiles and stripSlice). 60 pages of 2,400 points
+  opened through Flip's own input, read where the file's task ends (the
+  "Opened your file" chip): every tile in place, the page you are on painted,
+  the tiles still to paint showing their page's ground. With the CPU 4x
+  slower, phone and desk, the other pictures come over many frames, nearest
+  the page you are on first, and no task from the pick to the strip whole is
+  half the strip in one call on the same page; each tile ends with, pixel for
+  pixel, the picture one call paints for its page. A tap on a tile not yet
+  painted makes it the page you are on, its picture there when the tap is
+  done. A short Flip is painted whole as it opens, in no slices; the opened
+  Flip is kept as the draft, written in a task of its own after the file's.
+  `FLIPOPEN_PART=slices,tap,short,draft` and `FLIPOPEN_VIEW=desk|phone` run
+  only those parts.
 - `verify_padopen.py` — a long drawing opens in the Pad without a freeze (the
   posting mock's 2b; editor_draft.js padPaint and growBeforePaint). A
   60,000-point file opened through the Pad's own input is painted once
@@ -1363,7 +1382,10 @@ stays a sleep.
   box, and `/gallery` shows exactly the posts that carried it — cloned from
   the in-post macro, paged by the listing's own cursor, with an error state
   that retries and an empty state that names the tick. Posts through both
-  sheets, so it has a release batch to itself.
+  sheets, so it has a release batch to itself. A card's row keeps time only
+  near the screen (gallery.js footWatch): on a phone the timer calls are the
+  near cards', not every card's, and the cards at the foot keep time once
+  scrolled to.
 - `verify_hot.py` — the gallery's search and Hot: a view is one row per
   (post, client hash, UTC day) written when a payload is fetched to play, so
   two fetches today are one view and the total follows; `sort=hot` ranks by

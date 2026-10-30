@@ -57,6 +57,19 @@
      the Posted! card share, asks whether there is more of the words at the
      width they are set at, and asks again whenever a card changes width. */
   var capWatch = window.SkriblCapMore ? SkriblCapMore.watcher() : null;
+  /* THE CARDS NEAR THE SCREEN KEEP TIME; THE REST WAIT. A stopped card's row
+     still beats four times a second (lib/fullbar.js, IDLE_MS), so a grid of 24
+     at rest woke the page 96 times a second for cards nobody could see: 1% of
+     its time at this box's pace, 3% with the CPU 4x slower, and a phone that
+     never rests. A card's row runs while the card is within a screen of view,
+     and catches up as it comes back. */
+  var footWatch = window.IntersectionObserver ? new IntersectionObserver(function (es) {
+    for (var i = 0; i < es.length; i++) {
+      var t = es[i].target;
+      if (!t.isConnected) footWatch.unobserve(t);
+      else if (t._skFoot) t._skFoot(es[i].isIntersecting);
+    }
+  }, { rootMargin: '100% 0px' }) : null;
 
   /* A LINK THE HOST SUPPLIED IS STILL SOMEBODY ELSE'S STRING. `author.url`
      comes from the host's resolver, which a host may well build from a
@@ -601,7 +614,18 @@
          over, and two of them on one drawing is the defect. */
       var box0 = stage.querySelector('.skribl-inline');
       if (box0) box0.classList.add('is-bare');
-      foot.running(true);
+      if (footWatch) {
+        /* Full screen has its own bar and stops this one (onFs). A card far
+           from the screen still says what it holds (sound or none, from the
+           listing) from its first sighting, which comes after the grid has
+           mounted it; it only stops keeping time. */
+        stage._skFoot = function (near) {
+          if (imm && imm.isOn()) return;
+          foot.sync();
+          foot.running(near);
+        };
+        footWatch.observe(stage);
+      } else foot.running(true);
 
       /* WHEN THE CONTROLS ARE THERE. At rest the card offers one thing to do,
          which is the honest count: at 0:00 there is nothing to scrub, nothing
@@ -760,8 +784,10 @@
     more.disabled = true;
     if (reset) {
       cursor = null;
-      /* The captions being taken away stop being watched with them. */
+      /* The captions being taken away stop being watched with them, and so
+         do their cards. */
       if (capWatch) capWatch.disconnect();
+      if (footWatch) footWatch.disconnect();
       while (list.firstChild) list.removeChild(list.firstChild);
     }
     var url = api + '?limit=' + PAGE + '&sort=' + sort
