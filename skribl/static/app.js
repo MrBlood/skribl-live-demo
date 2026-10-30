@@ -929,15 +929,20 @@ function paintStrokesStatic(strokeArr, whole) {
      that laid the ink), and the last frame's whole length steers the next
      slice toward a frame of about 34 ms: it starts small, grows while frames
      are quick and shrinks at once when one is long, 0.5 to 16 ms. */
-  let budget = 2, last = 0;
+  let budget = 2, last = 0, done = false;
+  const end = () => { if (!done) { done = true; whole(); } };
   (function next(now) {
-    if (seq !== restoreSeq) return whole();
+    if (done) return;
+    if (seq !== restoreSeq) return end();
     if (last) budget = Math.max(0.5, Math.min(16, budget * Math.min(1.5, 20 / Math.max(1, now - last - 14))));
     last = now || 0;
-    if (run(performance.now() + budget)) return whole();
+    if (run(performance.now() + budget)) return end();
     if (comp) comp.present();
     requestAnimationFrame(next);
   })();
+  // The rest at once, for a caller that needs the canvas whole now (the Pad,
+  // when the person acts before the ink is laid: editor_draft.js padPaint).
+  return () => { if (!done && seq === restoreSeq) run(Infinity); end(); };
 }
 
 
