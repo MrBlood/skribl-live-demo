@@ -18,7 +18,11 @@ WHAT IS ASKED, AND HOW IT IS READ
     drawing in one call on the same page. Measured against the one call, not
     a number of milliseconds: the box this runs on sets both.
   * THE SAME INK: what the slices leave is, pixel for pixel, what one call
-    leaves, see-through ink (the stroke layers) included.
+    leaves, see-through ink (the stroke layers) included. The drawing's
+    see-through strokes are few enough to be layered (lib/strokelayers.js
+    BUDGET), and the row says so: one in five of them, the first draft's
+    mix, put the whole paint over the budget, so no slice ever went through
+    the layers and two breaks of them stayed green.
   * A PRESS OR A KEY FINISHES IT AT ONCE: a stroke drawn while the drawing
     is still being laid lands on the whole drawing (the canvas is then the
     drawing and the stroke, as one call paints them, as it is for the same
@@ -28,8 +32,13 @@ WHAT IS ASKED, AND HOW IT IS READ
     too, painted once, no task from the autosave's read to the ink whole as
     long as a third of the one call, and the same ink.
   * A SHORT DRAWING is the one call it always was, whole when it is opened.
-  * THE PAD'S OWN PLAYER (#skribl=, player mode) paints a long drawing in one
-    call, as it did.
+  * THE PAD'S OWN PLAYER (#skribl=, player mode) paints a long drawing in
+    whole calls, never in slices, as it did. (It paints it three times, on
+    main as here: once on load and twice more as its canvas grows. That is
+    the player's own, and this change leaves it as it was.) Two things keep
+    it whole: its paint runs while app.js loads, before editor_draft.js and
+    padPaint exist, and padPaint itself paints in one call in player mode.
+    Either alone holds the row, so its break takes both away.
 """
 import json
 import math
@@ -57,6 +66,13 @@ W, H = 816, 612
 SLICE_FROM = 20000       # editor_draft.js PAD_SLICE_FROM
 LONG_N = 60000
 
+# For calibration: PADOPEN_PART=one,slices,press,reload,short runs only those parts.
+PART = [p for p in (os.environ.get("PADOPEN_PART") or "").split(",") if p]
+
+
+def part(name):
+    return not PART or name in PART
+
 
 def summarise_and_exit():
     bad = [r for r in results if not r[0]]
@@ -67,20 +83,23 @@ def summarise_and_exit():
 
 def drawing(n, seed=11):
     """Strokes shaped like a pointer's (each tapering with pressure), from a
-    fixed seed, one in five of them see-through ink."""
+    fixed seed, one in 64 of them see-through ink: about 21 in the long
+    drawing, under the stroke layers' budget of 24, so they are layered."""
     s = seed
 
     def rnd():
         nonlocal s
         s = (s * 16807) % 2147483647
         return s / 2147483647
-    cols = ["#7c5cff", "#1d1a2b", "#1d1a2b", "#ff7a59", "rgba(124, 92, 255, 0.45)"]
+    cols = ["#7c5cff", "#1d1a2b", "#1d1a2b", "#ff7a59"]
     pts, groups, t = [], [], 0.0
     while len(pts) < n:
         m = 15 + int(rnd() * 60)
         x, y = 60 + rnd() * 690, 50 + rnd() * 510
         ang, curv, step = rnd() * 6.283, (rnd() - 0.5) * 0.12, 3 + rnd() * 5
-        w, col = [2, 3, 4, 6, 10][int(rnd() * 5)], cols[int(rnd() * 5)]
+        w, col = [2, 3, 4, 6, 10][int(rnd() * 5)], cols[int(rnd() * 4)]
+        if len(groups) % 64 == 5:
+            col = "rgba(124, 92, 255, 0.45)"
         k = 0
         for i in range(m):
             if len(pts) >= n:
@@ -116,14 +135,14 @@ def skribl_file(n, title):
 # player's post), and paintStrokesStatic counted on the drawing, with when its
 # ink is whole. The count goes in at that read, so the paint right after it is
 # seen, and by hand (window.__poWrap) before a file is picked.
-WATCH = """(() => { const po = window.__po = { paints: [], whole: null, sliced: null, lt: [], fr: [], read: null };
+WATCH = """(() => { const po = window.__po = { paints: [], modes: [], whole: null, sliced: null, lt: [], fr: [], read: null };
   try { new PerformanceObserver(l => { for (const e of l.getEntries()) po.lt.push([e.startTime, e.duration]); })
     .observe({ type: 'longtask', buffered: true }); } catch (e) {}
   window.__poWrap = () => { if (window.__ps || typeof window.paintStrokesStatic !== 'function') return;
     const f = window.__ps = window.paintStrokesStatic;
     window.paintStrokesStatic = function (arr, whole) {
       if (!arr || arr.length < %d) return f.apply(this, arguments);
-      po.paints.push(performance.now()); po.sliced = !!whole;
+      po.paints.push(performance.now()); po.modes.push(!!whole); po.sliced = !!whole;
       if (!whole) { const r = f.call(this, arr); po.whole = performance.now(); return r; }
       return f.call(this, arr, function () { po.whole = performance.now(); return whole.apply(this, arguments); });
     }; };
@@ -151,14 +170,18 @@ SOME = """() => { const cv = document.getElementById('canvas'), s = document.cre
 
 # The same drawing painted again at once, by the unwrapped function, on the
 # same canvas: the pixels that differ from what was there, and the time it
-# took (the one call, its flush included).
+# took (the one call, its flush included); and whether its see-through ink
+# goes through the stroke layers (on, and under their budget), or the
+# same-ink rows would not be asking about the layers at all.
 AGAIN = """() => { const cv = document.getElementById('canvas'), x = cv.getContext('2d'), f = window.__ps || paintStrokesStatic;
+  const sl = window.SkriblStrokeLayers, layered = strokeLayersOn() && !!sl && !sl.overBudget(strokes, parseStrokeAlpha, anyStrokeAlpha)
+    && strokes.some(p => p.start && parseStrokeAlpha(p.color) < 1);
   const a = x.getImageData(0, 0, cv.width, cv.height).data;
   const t = performance.now(); clearAndRestore(() => f(strokes)); x.getImageData(0, 0, 1, 1); const ms = performance.now() - t;
   const b = x.getImageData(0, 0, cv.width, cv.height).data; let n = 0, ink = 0;
   for (let i = 0; i < a.length; i += 4) { if (b[i + 3]) ink++;
     if (a[i] !== b[i] || a[i + 1] !== b[i + 1] || a[i + 2] !== b[i + 2] || a[i + 3] !== b[i + 3]) n++; }
-  return { differ: n, ink, ms }; }"""
+  return { differ: n, ink, ms, layered }; }"""
 
 
 def waited(pg, cond, timeout):
@@ -186,7 +209,7 @@ def pad(b, view, rate=1, path="/"):
 
 def pick(pg, path):
     """The file opened through the Pad's own input; returns the moment."""
-    pg.evaluate("() => { window.__poWrap(); const po = window.__po; po.paints = []; po.whole = null; po.sliced = null;"
+    pg.evaluate("() => { window.__poWrap(); const po = window.__po; po.paints = []; po.modes = []; po.whole = null; po.sliced = null;"
                 " po.downWhole = null; po.keyWhole = null; po.t0 = performance.now(); }")
     pg.set_input_files("#draftInput", path)
     return waited(pg, "() => window.__po.paints.length > 0", 60000)
@@ -205,147 +228,153 @@ with sync_playwright() as p:
     LONG, _ = skribl_file(LONG_N, "Two hours")
     SHORT, _ = skribl_file(2000, "A doodle")
     try:
-        print("\nONE PAINT, and the canvas at its size")
-        for name, view in (("phone", PHONE), ("desk", DESK)):
-            c, pg, errs = pad(b, view)
-            picked = pick(pg, LONG)
-            whole = waited(pg, "() => window.__po.whole != null", 60000 if picked else 1500)
-            pg.wait_for_timeout(1500)
-            po = pg.evaluate("() => window.__po")
-            size = pg.evaluate("() => ({ growth: canvasGrowth, grown: grownTo(_growWant), w: canvas.width, want: _growWant })")
-            if name == "desk":
-                check("desk: the long drawing is painted once on opening, the canvas grown to its screen first",
-                      whole and len(po["paints"]) == 1 and size["grown"] and size["growth"] > 1,
-                      f"{len(po['paints'])} paints; {size}")
-            else:
-                check("phone: the long drawing is painted once on opening",
-                      whole and len(po["paints"]) == 1 and size["grown"], f"{len(po['paints'])} paints; {size}")
-            again = pg.evaluate(AGAIN)
-            check(f"{name}: the ink laid in slices is, pixel for pixel, what one call lays (see-through ink and all)",
-                  whole and again["ink"] > 10000 and again["differ"] == 0, str(again))
-            check(f"{name}: no page errors while it opens", not errs, "; ".join(errs[:2]))
-            c.close()
+        if part("one"):
+            print("\nONE PAINT, and the canvas at its size")
+            for name, view in (("phone", PHONE), ("desk", DESK)):
+                c, pg, errs = pad(b, view)
+                picked = pick(pg, LONG)
+                whole = waited(pg, "() => window.__po.whole != null", 60000 if picked else 1500)
+                pg.wait_for_timeout(1500)
+                po = pg.evaluate("() => window.__po")
+                size = pg.evaluate("() => ({ growth: canvasGrowth, grown: grownTo(_growWant), w: canvas.width, want: _growWant })")
+                if name == "desk":
+                    check("desk: the long drawing is painted once on opening, the canvas grown to its screen first",
+                          whole and len(po["paints"]) == 1 and size["grown"] and size["growth"] > 1,
+                          f"{len(po['paints'])} paints; {size}")
+                else:
+                    check("phone: the long drawing is painted once on opening",
+                          whole and len(po["paints"]) == 1 and size["grown"], f"{len(po['paints'])} paints; {size}")
+                again = pg.evaluate(AGAIN)
+                check(f"{name}: the ink laid in slices is, pixel for pixel, what one call lays (see-through ink and all)",
+                      whole and again["ink"] > 10000 and again["layered"] and again["differ"] == 0, str(again))
+                check(f"{name}: no page errors while it opens", not errs, "; ".join(errs[:2]))
+                c.close()
 
-        print("\nIN SLICES, the CPU 4x slower")
-        for name, view in (("phone", PHONE), ("desk", DESK)):
-            c, pg, errs = pad(b, view, rate=4)
+        if part("slices"):
+            print("\nIN SLICES, the CPU 4x slower")
+            for name, view in (("phone", PHONE), ("desk", DESK)):
+                c, pg, errs = pad(b, view, rate=4)
+                picked = pick(pg, LONG)
+                # Partway: the canvas holds some of the ink and not all.
+                waited(pg, "() => window.__po.fr.filter(t => t > window.__po.paints[0]).length >= 15 || window.__po.whole != null",
+                       120000 if picked else 1500)
+                mid = pg.evaluate(SOME)
+                whole = waited(pg, "() => window.__po.whole != null", 180000 if picked else 1500)
+                pg.wait_for_timeout(2500)
+                end = pg.evaluate(SOME)
+                po = pg.evaluate("() => window.__po")
+                again = pg.evaluate(AGAIN)
+                first = po["paints"][0] if po["paints"] else 0
+                n_fr = frames(po, first, po["whole"] or 0)
+                tk = tasks(po, po.get("t0", 0), (po["whole"] or 0) + 2500)
+                check(f"{name}: the long drawing's ink is laid over many frames, the page answering between them",
+                      whole and po["sliced"] and n_fr >= 10, f"{n_fr} frames between the paint's start and the ink whole")
+                check(f"{name}: ...shown as it goes: partway, the canvas holds some of the ink, not all",
+                      not mid["whole"] and 0 < mid["n"] < end["n"] * 0.95, f"{mid} of {end['n']} inked cells")
+                check(f"{name}: ...and no task from the file's pick to the ink whole (its autosave too) runs a third of the one call",
+                      whole and max(tk or [0]) <= again["ms"] / 3,
+                      f"one call {again['ms']:.0f} ms; the tasks {[round(x) for x in sorted(tk, reverse=True)[:8]]} ({len(tk)} over 50 ms)")
+                check(f"{name}: no page errors", not errs, "; ".join(errs[:2]))
+                c.close()
+
+        if part("press"):
+            print("\nA PRESS OR A KEY FINISHES IT AT ONCE")
+            # The control: the same stroke drawn once the ink is whole.
+            def stroke(pg):
+                box = pg.locator("#canvas").bounding_box()
+                x0, y0 = box["x"] + box["width"] * 0.3, box["y"] + box["height"] * 0.4
+                pg.mouse.move(x0, y0)
+                pg.mouse.down()
+                for i in range(24):
+                    pg.mouse.move(x0 + i * 9, y0 + math.sin(i / 3) * 18)
+                pg.mouse.up()
+                pg.wait_for_timeout(600)
+            c, pg, errs = pad(b, DESK, rate=4)
             picked = pick(pg, LONG)
-            # Partway: the canvas holds some of the ink and not all.
+            waited(pg, "() => window.__po.whole != null", 180000 if picked else 1500)
+            pg.wait_for_timeout(500)
+            stroke(pg)
+            control = pg.evaluate(AGAIN)
+            c.close()
+            c, pg, errs = pad(b, DESK, rate=4)
+            picked = pick(pg, LONG)
             waited(pg, "() => window.__po.fr.filter(t => t > window.__po.paints[0]).length >= 15 || window.__po.whole != null",
                    120000 if picked else 1500)
-            mid = pg.evaluate(SOME)
-            whole = waited(pg, "() => window.__po.whole != null", 180000 if picked else 1500)
-            pg.wait_for_timeout(2500)
-            end = pg.evaluate(SOME)
+            before = pg.evaluate("() => window.__po.whole != null")
+            stroke(pg)
             po = pg.evaluate("() => window.__po")
-            again = pg.evaluate(AGAIN)
-            first = po["paints"][0] if po["paints"] else 0
-            n_fr = frames(po, first, po["whole"] or 0)
-            tk = tasks(po, po.get("t0", 0), (po["whole"] or 0) + 2500)
-            check(f"{name}: the long drawing's ink is laid over many frames, the page answering between them",
-                  whole and po["sliced"] and n_fr >= 10, f"{n_fr} frames between the paint's start and the ink whole")
-            check(f"{name}: ...shown as it goes: partway, the canvas holds some of the ink, not all",
-                  not mid["whole"] and 0 < mid["n"] < end["n"] * 0.95, f"{mid} of {end['n']} inked cells")
-            check(f"{name}: ...and no task from the file's pick to the ink whole (its autosave too) runs a third of the one call",
-                  whole and max(tk or [0]) <= again["ms"] / 3,
-                  f"one call {again['ms']:.0f} ms; the tasks {[round(x) for x in sorted(tk, reverse=True)[:8]]} ({len(tk)} over 50 ms)")
-            check(f"{name}: no page errors", not errs, "; ".join(errs[:2]))
+            mid = pg.evaluate(AGAIN)
+            check("a stroke drawn while the drawing is still being laid: when the press reaches the page, the ink is whole",
+                  picked and not before and po["downWhole"] is True, f"whole before the press {before}; at the press {po['downWhole']}")
+            check("...and the stroke lands on the whole drawing: the canvas is the drawing and the stroke, as one call paints them",
+                  picked and not before and mid["differ"] <= control["differ"],
+                  f"{mid['differ']} pixels differ from one call (the same stroke once the ink was whole: {control['differ']})")
+            check("no page errors through the stroke", not errs, "; ".join(errs[:2]))
+            c.close()
+            c, pg, errs = pad(b, DESK, rate=4)
+            picked = pick(pg, LONG)
+            waited(pg, "() => window.__po.fr.filter(t => t > window.__po.paints[0]).length >= 15 || window.__po.whole != null",
+                   120000 if picked else 1500)
+            before = pg.evaluate("() => window.__po.whole != null")
+            pg.keyboard.press("Shift")
+            pg.wait_for_timeout(300)
+            po = pg.evaluate("() => window.__po")
+            check("a key pressed while it is being laid finds the canvas whole when its own handlers run",
+                  picked and not before and po["keyWhole"] is True, f"whole before the key {before}; at the key {po['keyWhole']}")
             c.close()
 
-        print("\nA PRESS OR A KEY FINISHES IT AT ONCE")
-        # The control: the same stroke drawn once the ink is whole.
-        def stroke(pg):
-            box = pg.locator("#canvas").bounding_box()
-            x0, y0 = box["x"] + box["width"] * 0.3, box["y"] + box["height"] * 0.4
-            pg.mouse.move(x0, y0)
-            pg.mouse.down()
-            for i in range(24):
-                pg.mouse.move(x0 + i * 9, y0 + math.sin(i / 3) * 18)
-            pg.mouse.up()
-            pg.wait_for_timeout(600)
-        c, pg, errs = pad(b, DESK, rate=4)
-        picked = pick(pg, LONG)
-        waited(pg, "() => window.__po.whole != null", 180000 if picked else 1500)
-        pg.wait_for_timeout(500)
-        stroke(pg)
-        control = pg.evaluate(AGAIN)
-        c.close()
-        c, pg, errs = pad(b, DESK, rate=4)
-        picked = pick(pg, LONG)
-        waited(pg, "() => window.__po.fr.filter(t => t > window.__po.paints[0]).length >= 15 || window.__po.whole != null",
-               120000 if picked else 1500)
-        before = pg.evaluate("() => window.__po.whole != null")
-        stroke(pg)
-        po = pg.evaluate("() => window.__po")
-        mid = pg.evaluate(AGAIN)
-        check("a stroke drawn while the drawing is still being laid: when the press reaches the page, the ink is whole",
-              picked and not before and po["downWhole"] is True, f"whole before the press {before}; at the press {po['downWhole']}")
-        check("...and the stroke lands on the whole drawing: the canvas is the drawing and the stroke, as one call paints them",
-              picked and not before and mid["differ"] <= control["differ"],
-              f"{mid['differ']} pixels differ from one call (the same stroke once the ink was whole: {control['differ']})")
-        check("no page errors through the stroke", not errs, "; ".join(errs[:2]))
-        c.close()
-        c, pg, errs = pad(b, DESK, rate=4)
-        picked = pick(pg, LONG)
-        waited(pg, "() => window.__po.fr.filter(t => t > window.__po.paints[0]).length >= 15 || window.__po.whole != null",
-               120000 if picked else 1500)
-        before = pg.evaluate("() => window.__po.whole != null")
-        pg.keyboard.press("Shift")
-        pg.wait_for_timeout(300)
-        po = pg.evaluate("() => window.__po")
-        check("a key pressed while it is being laid finds the canvas whole when its own handlers run",
-              picked and not before and po["keyWhole"] is True, f"whole before the key {before}; at the key {po['keyWhole']}")
-        c.close()
+        if part("reload"):
+            print("\nA RELOAD brings the long drawing back")
+            c, pg, errs = pad(b, DESK)
+            picked = pick(pg, LONG)
+            waited(pg, "() => window.__po.whole != null", 60000 if picked else 1500)
+            saved = waited(pg, "() => (localStorage.getItem('skribl_autosave_v1') || '').length > 100000", 20000)
+            c.new_cdp_session(pg).send("Emulation.setCPUThrottlingRate", {"rate": 4})
+            pg.reload(wait_until="load")
+            whole = waited(pg, "() => window.__po.read != null && window.__po.whole != null", 180000 if saved else 1500)
+            pg.wait_for_timeout(2500)
+            po = pg.evaluate("() => window.__po")
+            again = pg.evaluate(AGAIN)
+            n_fr = frames(po, po["paints"][0] if po["paints"] else 0, po["whole"] or 0)
+            tk = tasks(po, po["read"] or 0, (po["whole"] or 0) + 2500)
+            check("the drawing came back from the autosave (the case is real)", saved and whole and again["ink"] > 10000,
+                  f"saved {saved}, read at {po['read']}, ink {again['ink']}")
+            check("...laid in slices over many frames, and painted once",
+                  whole and po["sliced"] and n_fr >= 10 and len(po["paints"]) == 1, f"{n_fr} frames; {len(po['paints'])} paints")
+            check("...no task from the autosave's read to the ink whole runs a third of the one call",
+                  whole and max(tk or [0]) <= again["ms"] / 3,
+                  f"one call {again['ms']:.0f} ms; the tasks {[round(x) for x in sorted(tk, reverse=True)[:8]]}")
+            check("...and its ink is what one call lays (see-through ink and all)",
+                  whole and again["layered"] and again["differ"] == 0, str(again))
+            check("no page errors through the reload", not errs, "; ".join(errs[:2]))
+            c.close()
 
-        print("\nA RELOAD brings the long drawing back")
-        c, pg, errs = pad(b, DESK)
-        picked = pick(pg, LONG)
-        waited(pg, "() => window.__po.whole != null", 60000 if picked else 1500)
-        saved = waited(pg, "() => (localStorage.getItem('skribl_autosave_v1') || '').length > 100000", 20000)
-        c.new_cdp_session(pg).send("Emulation.setCPUThrottlingRate", {"rate": 4})
-        pg.reload(wait_until="load")
-        whole = waited(pg, "() => window.__po.read != null && window.__po.whole != null", 180000 if saved else 1500)
-        pg.wait_for_timeout(2500)
-        po = pg.evaluate("() => window.__po")
-        again = pg.evaluate(AGAIN)
-        n_fr = frames(po, po["paints"][0] if po["paints"] else 0, po["whole"] or 0)
-        tk = tasks(po, po["read"] or 0, (po["whole"] or 0) + 2500)
-        check("the drawing came back from the autosave (the case is real)", saved and whole and again["ink"] > 10000,
-              f"saved {saved}, read at {po['read']}, ink {again['ink']}")
-        check("...laid in slices over many frames, and painted once",
-              whole and po["sliced"] and n_fr >= 10 and len(po["paints"]) == 1, f"{n_fr} frames; {len(po['paints'])} paints")
-        check("...no task from the autosave's read to the ink whole runs a third of the one call",
-              whole and max(tk or [0]) <= again["ms"] / 3,
-              f"one call {again['ms']:.0f} ms; the tasks {[round(x) for x in sorted(tk, reverse=True)[:8]]}")
-        check("...and its ink is what one call lays", whole and again["differ"] == 0, str(again))
-        check("no page errors through the reload", not errs, "; ".join(errs[:2]))
-        c.close()
-
-        print("\nA SHORT DRAWING, AND THE PAD'S OWN PLAYER")
-        c, pg, errs = pad(b, DESK)
-        pg.evaluate("() => { window.__poWrap(); const f = window.__ps; window.__calls = [];"
-                    " window.paintStrokesStatic = function (arr, whole) { window.__calls.push([arr ? arr.length : 0, !!whole]); return f.apply(this, arguments); }; }")
-        pg.set_input_files("#draftInput", SHORT)
-        waited(pg, "() => window.__calls.some(c => c[0] === 2000)", 20000)
-        pg.wait_for_timeout(800)
-        calls = [x for x in pg.evaluate("() => window.__calls") if x[0] == 2000]
-        check("a short drawing is the one call it always was: whole when it is opened",
-              calls == [[2000, False]], str(calls))
-        c.close()
-        pts, groups = drawing(25000)
-        post = {"title": "Two hours", "skribl": {"version": 1, "strokes": pts, "strokeGroups": groups,
-                "background": {"color": "#f6f2ea"}, "canvasSize": {"cssWidth": W, "cssHeight": H}}}
-        c, pg, errs = pad(b, DESK)
-        pg.evaluate("(post) => localStorage.setItem('skribl_post_padopen', JSON.stringify(post))", post)
-        pg.goto("about:blank")   # a new page, not a hash change on this one
-        pg.goto(BASE + "/#skribl=padopen", wait_until="load")
-        played = waited(pg, "() => document.body.classList.contains('player-mode') && window.__po.paints.length > 0", 20000)
-        pg.wait_for_timeout(1000)
-        po = pg.evaluate("() => window.__po")
-        check("the Pad's own player (#skribl=) paints a long drawing in one call, as it did",
-              played and len(po["paints"]) == 1 and po["sliced"] is False,
-              f"played {played}; {len(po['paints'])} paints, sliced {po['sliced']}")
-        c.close()
+        if part("short"):
+            print("\nA SHORT DRAWING, AND THE PAD'S OWN PLAYER")
+            c, pg, errs = pad(b, DESK)
+            pg.evaluate("() => { window.__poWrap(); const f = window.__ps; window.__calls = [];"
+                        " window.paintStrokesStatic = function (arr, whole) { window.__calls.push([arr ? arr.length : 0, !!whole]); return f.apply(this, arguments); }; }")
+            pg.set_input_files("#draftInput", SHORT)
+            waited(pg, "() => window.__calls.some(c => c[0] === 2000)", 20000)
+            pg.wait_for_timeout(800)
+            calls = [x for x in pg.evaluate("() => window.__calls") if x[0] == 2000]
+            check("a short drawing is the one call it always was: whole when it is opened",
+                  calls == [[2000, False]], str(calls))
+            c.close()
+            pts, groups = drawing(25000)
+            post = {"title": "Two hours", "skribl": {"version": 1, "strokes": pts, "strokeGroups": groups,
+                    "background": {"color": "#f6f2ea"}, "canvasSize": {"cssWidth": W, "cssHeight": H}}}
+            c, pg, errs = pad(b, DESK)
+            pg.evaluate("(post) => localStorage.setItem('skribl_post_padopen', JSON.stringify(post))", post)
+            pg.goto("about:blank")   # a new page, not a hash change on this one
+            pg.goto(BASE + "/#skribl=padopen", wait_until="load")
+            played = waited(pg, "() => document.body.classList.contains('player-mode') && window.__po.paints.length > 0", 20000)
+            pg.wait_for_timeout(1000)
+            po = pg.evaluate("() => window.__po")
+            check("the Pad's own player (#skribl=) paints a long drawing whole, never in slices, as it did",
+                  played and po["modes"] and not any(po["modes"]),
+                  f"played {played}; {len(po['paints'])} paints, sliced {po['modes']}")
+            c.close()
     finally:
         for f in (LONG, SHORT):
             try:

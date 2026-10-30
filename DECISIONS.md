@@ -26548,3 +26548,88 @@ page loads capmore.js (2,264 B), which the Pad's already did.
 
 WHAT IT DOES TO FLIP: shared. One sheet, one card, one fit: a Flip's card is
 the shape of its pages, and its caption has the same two lines and "more".
+
+## After v329 -- The Pad opens a long drawing without a freeze
+
+The posting mock's 2b, which the owner answered "all yes": "Opening a long
+drawing in Pad stops freezing too." The link page's half shipped as "A long
+drawing's first look"; this is the editor's. Opening a long drawing (the
+suite's is 60,000 points, about two hours of drawing) held the Pad for its
+paint, and on a desk a second time a moment later: the canvas grew to the
+screen and painted the whole drawing again.
+
+ONE PAINT. growBeforePaint (editor_draft.js) gives the bitmap the growth its
+new size asks for before anything is laid on it, where the growth's timer
+grew it a moment after the paint and painted everything again. The canvas
+is still empty then, so growing costs nothing. Both ways a drawing opens
+take it: a file (loadSkribl) and a reload's autosave (restoreAutosave).
+
+IN SLICES. Past 20,000 points the Pad lays the paint a slice a frame
+(padPaint, through the sliced paint the link page already uses, each slice
+shown); under that the paint is the one call it always was. The first press
+or key anywhere on the page before the ink is whole lays the rest at once,
+in that press and before anything it does, so a new take's base, the post's
+card, an export, an undo all meet the whole drawing, never half of it. For
+that the sliced paint now hands back a way to finish it at once.
+
+MEASURED on this box, main beside this tree, the same 60,000-point file
+opened through the Pad's own input, the tasks over 50 ms from the pick until
+the page settles: on a phone (402x874) one of 587 ms became a longest of 103;
+with the CPU 4x slower, 2,560 became 418. On a desk (1280x900) two, 348 and
+296 ms (the paint and the growth's), became one paint and a longest of 96;
+4x slower, 1,757 and 1,495 became 357. What is left of the longest is the
+file's own arrival (reading it and taking it in), not the paint.
+
+THE PAD'S OWN PLAYER (#skribl=, the post kept on this device) is as it was:
+it paints a long drawing three times, on main as here (once on load and
+twice as its canvas grows), all whole. Two things keep it from slicing: its
+paint runs while app.js loads, before editor_draft.js and padPaint exist,
+and padPaint paints in one call in player mode. The three paints are the
+player's own and not this change's.
+
+THE ROWS. verify_padopen.py (new, 25 rows): the long drawing painted once
+on opening, on a desk on a canvas grown to its screen first; the slices'
+ink pixel for pixel one call's, see-through ink and all, phone and desk;
+with the CPU 4x slower, phone and desk, many frames, the ink shown as it
+goes, and no task from the pick to the ink whole (the file's arrival and its
+autosave included) a third of the one call on the same page; a stroke drawn
+while it is being laid finds the ink whole when its press reaches the page
+and lands on the whole drawing, and a key finds it whole too; a reload's
+autosave laid the same way, painted once, the same ink; a short drawing the
+one call it was; the Pad's own player never in slices; no page errors.
+
+Each red against its own break on a served copy, one component each (15
+runs, 13 of them red): no growth before a file's paint (the desk's one-paint row), nor
+before a reload's (2 rows); never sliced (10); a press that does not finish
+it (1), a key that does not (1), a finish that does not lay the rest (1);
+a short drawing sliced (1); no slice shown (2); the slices without the
+stroke layers (3); an error at the paint's end (6, and a long task); the end
+painting the drawing again (7); the autosave never written (4, the case's
+own row first). The Pad's own player row takes two breaks together: its
+paint running after the editor's scripts and padPaint without its
+player-mode case; each alone stays green, which is the two guards holding.
+
+THE BREAKS FOUND TWO FAULTS IN THE INSTRUMENT FIRST. Its drawing had one
+stroke in five of see-through ink, which put the whole paint over the
+stroke layers' budget (24), so no slice ever went through the layers and the
+two breaks of them stayed green; one stroke in 64 is see-through now (about
+21) and the same-ink rows say the layers were used. And the player row's
+first draft asked for one paint, which main does not do either; it now asks
+what this change governs, whole paints and no slices.
+
+THE COST. The link page's script +223 B (160,593 with the two-line caption's
++3,569 merged under it), all app.js: the sliced paint's way to finish at
+once, and loadSkribl asking the editor's paint and growth when the page has
+them. Spent first: a flag of its own for the sliced paint's end, where
+`whole` serves. Raised in writing in verify_player_isolation and
+verify_jsstrip. padPaint and growBeforePaint are the editor's own
+(editor_draft.js), which the link page does not load.
+
+WHAT IT DOES TO FLIP: Flip next, named and on the list. Flip's editor
+opening a long Flip (60 pages of 2,400 points, 144,000 in all, a 10.6 MB
+file) holds the page in one task of 0.9 s on a desk and 1.1 s on a phone
+(3.8 s and 6.0 s with the CPU 4x slower). Timed by step on the desk, the
+page strip is 651 ms of the load's 739: every page's picture painted at
+once. The strip a few pictures a frame, the ones in view first, is FUTURE.md
+6y. The Pad's slicing is not Flip's to share: a Flip's page is one page,
+already a paint of its own size.
