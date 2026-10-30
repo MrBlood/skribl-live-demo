@@ -26215,3 +26215,49 @@ ink. Left for the owner to call.
 WHAT IT DOES TO FLIP: shared. A Flip's card in the gallery and its row in the
 Library are the same as a Pad's, and Flip's sheet keeps the caption as the
 Pad's does.
+
+## After v329 -- Plain words: no dark spots, Keep drawing, the photo box on a phone
+
+PR D of the posting mock the owner answered "all yes": the plain words.
+
+STROKE LAYERS says what it saves you from: "no dark spots where see-through
+ink overlaps" under its name in Tune, and "dark spots" in its tip, where both
+said "beading", a word nobody uses for it. The Pad and Flip alike.
+
+KEEP DRAWING, where it said "+ Add take": the pill on a finished drawing; the
+toast when a take ends, "Saved. Play to watch it, or Keep drawing to add more"
+(it was "Take saved — Play to preview, or Add take to draw more"); the one a
+press on the finished drawing raises, "Saved. Tap Keep drawing to add more, or
+New Skribl to start over"; How it works (the tip, the lock's tip, the step and
+the card) and Ask's answer. The words say what to do next, so nobody has to
+learn what a take is first. Only what a person reads changed: the code keeps
+its own name for it (takes, #addTakePill). The leave sheet's "Keep drawing"
+(stay and carry on) already meant the same.
+
+THE PHOTO BOX ON A PHONE says its file types only, "JPG, PNG, GIF or WebP":
+with no pointer there is nothing to drop from, and a tap on the box already
+opens the photos. A desk still says "· or drop one here". The drop's words are
+shown where there is hover, `(hover: hover)`, rather than hidden where there is
+none, because the player's sheet is emitted from styles.css and cssgraph keeps
+a touch-only query there unread (UNEXERCISED_MEDIA), for a rule no player
+needs. A tablet without a mouse counts as a phone here.
+
+NOT YET: the help film "takes" still shows the pill's old words until How it
+works is filmed again (FUTURE 6v).
+
+THE ROWS. verify_words's new section reads the plain words where a person reads
+them: Tune and its tip on both editors, How it works and Ask, and the two toasts
+and the pill after a real take and a real press on it. verify_parity reads the
+photo box on a phone at 360 and 375 and on a desk, by the words that are laid
+out; its line reader now skips a word that is not laid out, which would have
+thrown on a phone. Each red against its own break on a served copy of this
+tree, 15 of 15: the hint and the tip as they were, on each editor (four);
+the tip, the lock's tip, the step and the card as they were (four); Ask as
+it was; the take's toast; the pill; the press's toast; the drop said on a
+phone; the drop's words not wrapped; the drop never said on a desk.
+verify_helpclaims claims the Keep drawing tip, and
+verify_ux's and verify_layout's rows say the pill's new name.
+
+WHAT IT DOES TO FLIP: shared where Flip has it. Stroke layers and the photo box
+are the same on both. Keep drawing is the Pad's alone, since Flip has no takes:
+its pages are its timing.
