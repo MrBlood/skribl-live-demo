@@ -26805,3 +26805,41 @@ rather than the loop's clock, which starts LEAD (30ms) before it, and it
 counted the first tick's gap, which LEAD shortens.
 
 WHAT IT DOES TO FLIP AND THE PAD: one module, both editors, the same fix.
+
+## After v329 -- Main red after #688: a check pressed a speed no one can see
+
+Main's full run after #688 failed one row, on sqlite 4/6 only:
+verify_replayspeed, "[320] the link page's speeds (player.css)", with no pill
+to measure. The tree is fine; the check's signal had gone stale. Since #679 the
+link page lays its box out before the drawing comes, with a stand-in line from
+the post's own numbers, unseen inside the hidden transport (body.player-pending),
+and makes the line again once the drawing is in. The row waited only for the
+speed button to exist, which the stand-in does at once, and pressed it from
+script, which no person can do to a hidden button. On a busy box the drawing
+came in during the 400ms after the press, and the line made again took the
+open pill with it. With the drawing's data held back by the browser, it fails
+that way every time.
+
+Now the suites that wait for the link page's speed wait for the speed a person
+can press (harness/browsing.py SPEED_READY: there, and seen): verify_replayspeed
+(four waits) and verify_glide (two, one before a speed picked from script).
+With the data held back, the old wait fired on the stand-in and found no pill;
+SPEED_READY waited for the drawing and the pill opened. Nothing in the app
+changed.
+
+A FIRST DRAFT, BACKED OUT. I first had the app keep a pill open when its line
+is made again and gave the stand-in a pick: 167 B of the player's script, over
+its ratchet. Neither is a path anyone has. The stand-in is unseen and out of
+the tab order until the drawing is in, which is why #679 spent its pick ("which
+nothing can press while it is unseen"). The rows written for it pressed from
+script too. Backed out, the bytes unspent.
+
+THE ROW THAT KEEPS IT SO. verify_firstlook's "the transport waits laid out,
+unseen" read only the row of buttons. It reads the speed in the line too, hidden
+while the data is held and seen once the drawing can play: the stand-in's
+missing pick is safe only while no one can press it. Red with only the buttons
+hidden while the drawing comes (the speed seen), red with the speed still hidden
+once it is in, green as built, phone and desk.
+
+WHAT IT DOES TO FLIP AND THE PAD: nothing; these are the link page's checks. A
+Flip's page has no stand-in (a Pad's only).

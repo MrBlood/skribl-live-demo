@@ -1175,7 +1175,9 @@ stays a sleep.
   data held back by the browser, the page alone shows the post's own picture
   where the canvas is, cropped to the drawing (read by its hue: none of the
   card's ground, none of its plate's ring), the title and caption said by the
-  server and the transport laid out unseen; the box stands to the half pixel
+  server and the transport laid out unseen, the speed in its line too (the
+  stand-in line has no pick: safe only while no one can press it), up with
+  its speed once the drawing can play; the box stands to the half pixel
   where it stood once the drawing is in, short and long, phone and desk. The
   picture gives way to ink that looks like it (16px cells) by a fade, no step
   over a third (Reduce Motion: at once), and the ink the slices laid is pixel

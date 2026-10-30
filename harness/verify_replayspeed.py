@@ -148,7 +148,7 @@ with sync_playwright() as p:
 
     def open_player(url):
         pg.goto(BASE + url, wait_until="load")
-        pg.wait_for_function("() => !!document.querySelector('#playerLine .rl-speed')", timeout=10000)
+        pg.wait_for_function(browsing.SPEED_READY, timeout=20000)
         pg.wait_for_timeout(300)
 
     open_player(tight["url"])
@@ -569,7 +569,7 @@ with sync_playwright() as p:
     errs = []
     pg.on("pageerror", lambda e: errs.append(str(e)))
     pg.goto(BASE + keep["url"], wait_until="load")
-    pg.wait_for_function("() => !!document.querySelector('#playerLine .rl-speed')", timeout=10000)
+    pg.wait_for_function(browsing.SPEED_READY, timeout=20000)
     pg.wait_for_timeout(300)
     cdp = pg.context.new_cdp_session(pg)
     finger(pg, cdp, "#playerProgress", "#playerLine", "link page, phone")
@@ -604,7 +604,7 @@ with sync_playwright() as p:
     # not. A pen is a hand on the glass, as a finger is.
     pg = b.new_page(viewport={"width": 1100, "height": 900})
     pg.goto(BASE + keep["url"], wait_until="load")
-    pg.wait_for_function("() => !!document.querySelector('#playerLine .rl-speed')", timeout=10000)
+    pg.wait_for_function(browsing.SPEED_READY, timeout=20000)
     pg.wait_for_timeout(300)
     bx = pg.locator("#playerProgress").bounding_box()
     x, y = bx["x"] + bx["width"] * 0.3, bx["y"] + bx["height"] / 2
@@ -1294,7 +1294,7 @@ with sync_playwright() as p:
         for vw in (320, 402, 1280):
             pg = b.new_page(viewport={"width": vw, "height": 874})
             pg.goto(BASE + _pe["url"], wait_until="load")
-            pg.wait_for_function("() => !!document.querySelector('#playerLine .rl-speed')", timeout=10000)
+            pg.wait_for_function(browsing.SPEED_READY, timeout=20000)
             pg.evaluate("() => document.querySelector('#playerLine .rl-speed').click()"); pg.wait_for_timeout(400)
             ok, said = ends_faces(pg, "#playerLine .rl-chips", "screen")
             check(f"[{vw}] the link page's speeds (player.css): the ends as far from the edge as two speeds are apart, in each face", ok, said)

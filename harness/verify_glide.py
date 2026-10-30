@@ -121,7 +121,7 @@ with sync_playwright() as p:
         errs = []
         pg.on("pageerror", lambda e: errs.append(str(e)))
         pg.goto(BASE + body["url"], wait_until="load")
-        pg.wait_for_function("() => !!document.querySelector('#playerLine .rl-speed')", timeout=10000)
+        pg.wait_for_function(browsing.SPEED_READY, timeout=20000)
         pg.wait_for_timeout(300)
         if rate != 1:
             pick(pg, "#playerLine", rate)
@@ -150,7 +150,7 @@ with sync_playwright() as p:
         pg.on("pageerror", lambda e: errs.append(str(e)))
         pg.add_init_script(COARSE)
         pg.goto(BASE + body["url"], wait_until="load")
-        pg.wait_for_function("() => !!document.querySelector('#playerLine .rl-speed')", timeout=10000)
+        pg.wait_for_function(browsing.SPEED_READY, timeout=20000)
         pg.wait_for_timeout(300)
         pg.click("#playerPlayBtn")
         pg.wait_for_function("() => window.__song", timeout=8000)
