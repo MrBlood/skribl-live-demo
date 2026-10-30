@@ -48,6 +48,15 @@ results = []
 
 check = make_check(results)
 
+# THE LINE UNDER THE LIST, AT 12PX (the owner, after the polish run: the last
+# words under 12px go up). The words of its two links that are shown, each
+# with its size: "Have a key? Use it" on an empty list, "Use a delete key"
+# and "Clear list" once there are posts.
+FOOT_WORDS = """() => [...document.querySelectorAll('#postedRecover, #postedClear')].flatMap(b => {
+  const shown = e => e.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true }) && !!e.textContent.trim();
+  const leaves = [...b.querySelectorAll('span')].filter(s => !s.querySelector('span'));
+  return (leaves.length ? leaves : [b]).filter(shown).map(e => [e.textContent.trim(), parseFloat(getComputedStyle(e).fontSize)]); })"""
+
 
 # THROUGH THE SHEET, IN ONE BROWSER CONTEXT (v304). The fixtures used to be
 # posted with a fetch() evaluated in the Pad's page, marked public, and the
@@ -696,6 +705,9 @@ with sync_playwright() as sp:
     check("...and one honest line about where the list lives, its key action right after it, nothing repeated under the list",
           o_empty["words"].startswith("Kept in this browser.") and "keys that delete your posts" in o_empty["words"]
           and o_empty["rec"] == "Have a key? Use it" and not o_empty["para"], str(o_empty))
+    o_foot = other.evaluate(FOOT_WORDS)
+    check("...its link, 'Have a key? Use it', at 12px",
+          [w[0] for w in o_foot] == ["Have a key? Use it"] and all(w[1] >= 12 for w in o_foot), str(o_foot))
     # ONE EMPTY STATE, NOT TWO. lib/postedui.js renders its own "Nothing
     # posted yet" into the list, and the page renders "Nothing here yet"
     # under it; on the profile both showed, stacked, until the v304
@@ -1799,6 +1811,9 @@ with sync_playwright() as _sp4:
     check("...and the native title is gone, so the browser's own does not stack under it",
           _tips["leftovers"] == 0,
           f"{_tips['leftovers']} controls still carry a title attribute")
+    _foot = _p4.evaluate(FOOT_WORDS)
+    check("the line under the list, with posts: 'Use a delete key' and 'Clear list' at 12px",
+          sorted(w[0] for w in _foot) == ["Clear list", "Use a delete key"] and all(w[1] >= 12 for w in _foot), str(_foot))
     _p4.close()
     _b4.close()
 

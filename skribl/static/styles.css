@@ -6106,7 +6106,7 @@ html.skribl-carded .autosave-status { opacity: 0; pointer-events: none; }
 }
 
 .player-brand {
-  font-size: 11px;
+  font-size: 12px;   /* not 11: the last words under 12px went up (the owner, after the polish run) */
   color: var(--text-muted);
   letter-spacing: 0.03em;
   /* "made with <signature>": the words are quiet type, the mark is real ink.
