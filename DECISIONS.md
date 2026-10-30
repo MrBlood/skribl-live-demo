@@ -26351,7 +26351,7 @@ own Reduce Motion rule was one the page already made (gone), and the shade
 over the picture made its edge darker than the canvas's by 9 of 255 (now at
 0.6, and a row that reads the edge both ways).
 
-THE COST. The link page's script +2,268 B (156,805), its style +571 B
+THE COST. The link page's script +2,268 B (156,801), its style +571 B
 (42,316) and its HTML +94 B (13,953), raised in writing in
 verify_player_isolation and verify_jsstrip; each Pad post's page also fetches
 its 66 KB card. Spent first: the picture's own error handler and clip, the
