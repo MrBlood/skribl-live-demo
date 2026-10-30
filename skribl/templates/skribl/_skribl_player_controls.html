@@ -10,8 +10,8 @@
          the player's HTML is ratcheted by the byte, and two blank lines here
          were the 6 bytes that tripped it. -#}
       {%- set _tt = title_tag|default('div') %}
-      <{{ _tt }} class="player-title" id="playerTitle">Untitled Skribl</{{ _tt }}>
-      <div class="player-caption" id="playerCaption" hidden></div>
+      <{{ _tt }} class="player-title" id="playerTitle">{{ pre_title or 'Untitled Skribl' }}</{{ _tt }}>
+      <div class="player-caption" id="playerCaption"{% if not pre_caption %} hidden{% endif %}>{{ pre_caption or '' }}</div>
     </div>
     {#- THE SCRUBBER AND THE TRANSPORT, IN ONE BOX. `display: contents` at
         rest, so this wrapper changes nothing about the column it sits in;

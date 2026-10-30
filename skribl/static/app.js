@@ -852,7 +852,17 @@ function makeStrokeCompositor(visCtx, visCanvas) {
 // used by loadSkribl and restoreAutosave. Routes through the wet/dry compositor
 // when the flag is on (low-opacity strokes match playback), else the direct path.
 // Uses the same start/continuation dispatch as replayTimelineToCanvas.
-function paintStrokesStatic(strokeArr) {
+//
+// IN SLICES, WHEN ASKED (`whole`): the link page's first paint, under the post's
+// own picture (initPlayer playerPre). A two-hour piece took this one call 0.8 s
+// at this box's pace and 5.6 s at a phone's, and the page could not be touched
+// for all of it. Asked, it lays the same runs in the same order a slice a
+// frame (how big, below), and calls `whole` when the canvas holds the drawing -- or
+// when anything that clears the canvas (clearAndRestore, a seek: restoreSeq)
+// takes over first, since the canvas is then that painter's. Unasked, it is
+// the one call it always was. inkWhole is what the link page hands it.
+let inkWhole = null;
+function paintStrokesStatic(strokeArr, whole) {
   // The player draws a Flip document's frames through here. Flip's editor has
   // capped how much one frame may spend on layering since the playback stall;
   // this path never did, so a frame full of see-through strokes played fine
@@ -867,44 +877,67 @@ function paintStrokesStatic(strokeArr) {
      than carrying a second copy. Absent, a run paints as it did before. */
   const _uni = _sl && _sl.uniformRun;
   const _uniA = _sl && _sl.uniformAlpha;
+  const seq = restoreSeq;
   let i = 0, _ra = 0;
-  while (i < strokeArr.length) {
-    let j = i + 1;
-    while (j < strokeArr.length && !strokeArr[j].start) j++;
-    const seg = strokeArr.slice(i, j);
-    if (_uni && _uni(seg, anyStrokeAlpha)) {
-      if (comp) comp.pathFn(seg);
-      else {
-        const p = seg[0];
-        ctx.strokeStyle = p.color; ctx.lineWidth = p.size;
-        ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-        ctx.beginPath(); ctx.moveTo(p.x, p.y);
-        for (let k = 1; k < seg.length; k++) ctx.lineTo(seg[k].x, seg[k].y);
-        ctx.stroke();
+  const run = (until) => {
+    while (i < strokeArr.length) {
+      if (performance.now() > until) return false;
+      let j = i + 1;
+      while (j < strokeArr.length && !strokeArr[j].start) j++;
+      const seg = strokeArr.slice(i, j);
+      if (_uni && _uni(seg, anyStrokeAlpha)) {
+        if (comp) comp.pathFn(seg);
+        else {
+          const p = seg[0];
+          ctx.strokeStyle = p.color; ctx.lineWidth = p.size;
+          ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+          ctx.beginPath(); ctx.moveTo(p.x, p.y);
+          for (let k = 1; k < seg.length; k++) ctx.lineTo(seg[k].x, seg[k].y);
+          ctx.stroke();
+        }
+      } else if (comp && _uniA && (_ra = _uniA(seg, anyStrokeAlpha)) > 0) {
+        comp.wetRunFn(seg, _ra);
+      } else for (let k = i; k < j; k++) {
+        const p = strokeArr[k], prev = strokeArr[k - 1];
+        if (p.start || k === 0) {
+          if (comp) comp.dotFn(p.x, p.y, p.color, p.size, p.erase);
+          else drawDot(p.x, p.y, p.color, p.size, p.erase);
+        } else if (comp) comp.lineFn(prev.x, prev.y, p.x, p.y, p.color, p.size, p.erase);
+        else {
+          /* FINISHED INK IS NEVER REFLECTED HERE. drawLine's live mirror is for
+             the stroke under the pen, which editor_draw.js paints; everything
+             this function paints is finished, and a mirrored stroke already
+             carries its copies. With stroke layers off, a run of varying width
+             reached drawLine and an undo with the mirror on painted reflections
+             the drawing does not contain (Flip had the same, measured there). */
+          const _pm = _mirrorPainting; _mirrorPainting = true;
+          try { drawLine(prev.x, prev.y, p.x, p.y, p.color, p.size, p.erase); }
+          finally { _mirrorPainting = _pm; }
+        }
       }
-    } else if (comp && _uniA && (_ra = _uniA(seg, anyStrokeAlpha)) > 0) {
-      comp.wetRunFn(seg, _ra);
-    } else for (let k = i; k < j; k++) {
-      const p = strokeArr[k], prev = strokeArr[k - 1];
-      if (p.start || k === 0) {
-        if (comp) comp.dotFn(p.x, p.y, p.color, p.size, p.erase);
-        else drawDot(p.x, p.y, p.color, p.size, p.erase);
-      } else if (comp) comp.lineFn(prev.x, prev.y, p.x, p.y, p.color, p.size, p.erase);
-      else {
-        /* FINISHED INK IS NEVER REFLECTED HERE. drawLine's live mirror is for
-           the stroke under the pen, which editor_draw.js paints; everything
-           this function paints is finished, and a mirrored stroke already
-           carries its copies. With stroke layers off, a run of varying width
-           reached drawLine and an undo with the mirror on painted reflections
-           the drawing does not contain (Flip had the same, measured there). */
-        const _pm = _mirrorPainting; _mirrorPainting = true;
-        try { drawLine(prev.x, prev.y, p.x, p.y, p.color, p.size, p.erase); }
-        finally { _mirrorPainting = _pm; }
-      }
+      i = j;
     }
-    i = j;
-  }
-  if (comp) { comp.finish(); comp.present(); }
+    if (comp) { comp.finish(); comp.present(); }
+    return true;
+  };
+  if (!whole) { run(Infinity); return; }
+  /* THE FRAME, NOT THE SLICE, IS WHAT A PERSON FEELS. The ink a slice lays is
+     turned into pixels after it, when the canvas is flushed, and that takes
+     several times longer than laying it (traced: 10 ms slices made 40-110 ms
+     frames, and a flush left to pile up made one of 400 ms with the CPU 4x
+     slower). So each slice is shown (present: the flush lands in the frame
+     that laid the ink), and the last frame's whole length steers the next
+     slice toward a frame of about 34 ms: it starts small, grows while frames
+     are quick and shrinks at once when one is long, 0.5 to 16 ms. */
+  let budget = 2, last = 0;
+  (function next(now) {
+    if (seq !== restoreSeq) return whole();
+    if (last) budget = Math.max(0.5, Math.min(16, budget * Math.min(1.5, 20 / Math.max(1, now - last - 14))));
+    last = now || 0;
+    if (run(performance.now() + budget)) return whole();
+    if (comp) comp.present();
+    requestAnimationFrame(next);
+  })();
 }
 
 
@@ -3065,7 +3098,7 @@ function loadSkribl(data, said) {
   strokeGroups = (data.strokeGroups || []).slice();
   { const f0 = data.frames && data.frames[0]; recolors = (f0 && Array.isArray(f0.recolors)) ? f0.recolors.slice() : []; }
 
-  const renderStrokes = () => paintStrokesStatic(strokes);
+  const renderStrokes = () => paintStrokesStatic(strokes, inkWhole);
 
   const { width: cw, height: ch } = getCanvasLogicalSize();
 
@@ -3339,12 +3372,17 @@ function showPlayerError(msg, canRetry) {
 (async function initPlayer() {
   const mode = (typeof window !== 'undefined' && window.SKRIBL_MODE) || null;
   const hashMatch = (location.hash || '').match(/^#skribl=(.+)$/);
+  // The drawing's own size, and whether the WRAPPER is the full screen (see
+  // playerFitScale). Up here because playerPre lays the box out before the
+  // drawing has arrived, from the size the page was sent.
+  let authorW = 0, authorH = 0, fsFull = false;
 
   let post;
   if (mode === 'player' && window.SKRIBL_PLAYER_ID) {
     // Flask path player. Enter player-mode immediately so the editor chrome
     // never flashes while the fetch is in flight.
     document.body.classList.add('player-mode');
+    if (window.SKRIBL_PLAYER_PRE) playerPre(window.SKRIBL_PLAYER_PRE);
     const apiBase = window.SKRIBL_API_BASE;
     const pid = window.SKRIBL_PLAYER_ID;
     try {
@@ -3392,8 +3430,8 @@ function showPlayerError(msg, canRetry) {
   // Reproduce the authoring canvas dimensions exactly, so recorded (CSS-pixel)
   // stroke coordinates map 1:1 and every reused draw path stays pixel-accurate.
   const cs = data.canvasSize || {};
-  const authorW = Math.round(cs.cssWidth || canvas.getBoundingClientRect().width || 320);
-  const authorH = Math.round(cs.cssHeight || canvas.getBoundingClientRect().height || 320);
+  authorW = Math.round(cs.cssWidth || canvas.getBoundingClientRect().width || 320);
+  authorH = Math.round(cs.cssHeight || canvas.getBoundingClientRect().height || 320);
   // Fit the authored dimensions into the viewport with ONE uniform scale
   // (aspect locked, never stretched, never upscaled past 1:1). Split in two:
   //   layoutPlayerCanvas() — sets only the CSS *display* size. Safe to re-run;
@@ -3410,8 +3448,6 @@ function showPlayerError(msg, canRetry) {
   // — it measures ~243px bare and ~267px with a caption, and with the 40px app
   // padding + 20px gap on top, that produced 80–100px of overflow and vertical
   // scroll. Falls back to a safe constant if the shell can't be measured yet.
-  /* Whether the WRAPPER is the fullscreen element — see playerFitScale. */
-  let fsFull = false;
   function playerReservedV() {
     const shellEl = document.getElementById('playerShell');
     const appEl = document.querySelector('.app');
@@ -3485,6 +3521,51 @@ function showPlayerError(msg, canRetry) {
     canvas.style.width = dispW + 'px';
     canvas.style.height = dispH + 'px';
   }
+  /* THE PAGE AT ONCE (the posting mock's 2b, B). A Pad post's size, line,
+     title and caption come with the page (routes.py, pre; the title and
+     caption are already in the shell), so the shell shows and the box is laid out before
+     the drawing arrives, and the post's own picture stands where the canvas
+     is: the card made when it was posted, cropped back to the drawing. The
+     crop is lib/sharecard.js drawingRect() with the plate's corner and edge
+     clipped off, the arithmetic inlineplayer.js fitPoster() does for the
+     feed's box, here for a box that is the drawing's own shape. The
+     transport waits, laid out and unseen (body.player-pending), until the
+     drawing can play; inkWhole lets the picture go once the ink is whole. */
+  function playerPre(pre) {
+    const shell = document.getElementById('playerShell'), box = document.getElementById('playerPoster');
+    if (shell) shell.hidden = false;
+    document.body.classList.add('player-pending');
+    authorW = pre.w; authorH = pre.h;
+    // The track and the line at the heights they will have, so the box laid
+    // out here is the box the drawing gets: the scrubber's class, and the
+    // line in the post's own numbers (the real ones replace it).
+    const track = document.getElementById('playerProgress'), line = pre.line;
+    if (track) track.classList.add('rl-scrub');
+    if (line && window.SkriblReplayLine) SkriblReplayLine.attach(document.getElementById('playerLine'), {
+      choice: () => SkriblReplayLine.fromPost(line.speed, line.drawn), playMs: () => line.play, drawnMs: () => line.drawn });
+    // Re-fit on a turn of the phone while the data is still coming (the same
+    // listener initPlayer adds later, so it is added once).
+    layoutPlayerCanvas();
+    addEventListener('resize', layoutPlayerCanvas);
+    if (!box) return;
+    const img = box.firstChild;
+    const k = Math.min(1092 / authorW, 492 / authorH), dw = Math.round(authorW * k), dh = Math.round(authorH * k);
+    const dx = Math.round((1200 - dw) / 2), dy = Math.round((546 - dh) / 2), p = (n, of) => n / of * 100 + '%';
+    Object.assign(img.style, { width: p(1200, dw), height: p(630, dh), left: p(-dx, dw), top: p(-dy, dh),
+      clipPath: `inset(${p(dy + 2, 630)} ${p(1202 - dx - dw, 1200)} ${p(632 - dy - dh, 630)} ${p(dx + 2, 1200)} round ${p(16, 1200)}/${p(16, 630)})` });
+    // The picture goes once the ink is whole: it fades (styles.css), then leaves.
+    inkWhole = () => {
+      inkWhole = null;
+      if (box.hidden) return box.remove();
+      box.classList.add('gone');
+      setTimeout(() => box.remove(), 400);
+    };
+    // Shown only while the ink is still to come: a picture that decodes after
+    // the ink is whole would only cover it.
+    // (One that fails to load is never shown, and goes with the rest.)
+    const show = () => { if (inkWhole) box.hidden = false; };
+    if (img.complete && img.naturalWidth) show(); else img.addEventListener('load', show, { once: true });
+  }
   /* Declared HERE, above sizePlayerCanvas, because that function runs
      immediately on the line after its own definition and resets this -- and a
      `let` read before its declaration is executed is a temporal-dead-zone
@@ -3539,8 +3620,10 @@ function showPlayerError(msg, canRetry) {
     if (shellEl) new ResizeObserver(() => layoutPlayerCanvas()).observe(shellEl);
   }
 
-  // Restore all state and paint the finished drawing as the poster frame.
+  // Restore all state and paint the finished drawing as the poster frame
+  // (under the post's own picture, in slices, when playerPre showed one).
   loadSkribl(data);
+  if (inkWhole && !strokes.length && !data.baseSnapshot) inkWhole();   // nothing to paint
   // A drawing with recolours brings the module that plays them, and only one
   // that has them: most have none (lib/recolorplay.js, SKRIBL_RECOLORPLAY).
   if (recolors.length && !window.SkriblRecolorPlay && window.SKRIBL_RECOLORPLAY) {
@@ -4439,6 +4522,10 @@ function showPlayerError(msg, canRetry) {
 
   setPlayIcon();
   setProgress(0);
+  // The drawing can play: the transport the page laid out (playerPre) comes up.
+  if (document.body.classList.replace('player-pending', 'player-ready')) {
+    setTimeout(() => document.body.classList.remove('player-ready'), 400);
+  }
 })();
 
 // ---------- Image / Music on-off toggles ----------

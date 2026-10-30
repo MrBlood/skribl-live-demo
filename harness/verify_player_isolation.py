@@ -979,7 +979,22 @@ with sync_playwright() as sp:
     #   which stays where it is: the two numbers disagreeing is the record.
     #   verify_jsstrip's lines move with it, its target line in writing with
     #   the debt named. 154,537 measured.
-    BYTES_RATCHET, BYTES_TARGET = 154_540, 153_800
+    # RAISED (the owner's "all yes" on the posting mock, 2b B: a long
+    #   drawing's picture at once, then sharp), for a named cost, all in
+    #   app.js: +2,268 B -- playerPre, which lays the box out from the size
+    #   the page was sent (and again if the phone turns while it waits), lays
+    #   the track and the line at their own heights (the line in the post's
+    #   own numbers) so the box does not move when the drawing comes, and
+    #   shows the post's own picture cropped to the drawing
+    #   (lib/sharecard.js's rectangle, the plate's edge clipped off); and
+    #   paintStrokesStatic laying its runs in slices when asked, each shown,
+    #   a frame's length steering the next, stopping when a play or a seek
+    #   takes the canvas. Spent first: the picture's own error handler (one
+    #   that fails is never shown, and goes with the rest) and the line's
+    #   pick, which nothing can press while it is unseen. verify_jsstrip's
+    #   lines move with it, its target line in writing with the debt named.
+    #   156,801 measured (with the plain words' -4 B merged in under it).
+    BYTES_RATCHET, BYTES_TARGET = 156_804, 153_800
     # The page's own HTML. The brand is the one-stroke skribl signature INLINE
     # in the page (~1.4KB of paths, a ~0.9KB nonce'd draw-on script, and the
     # <linearGradient> defs), and inline is load-bearing rather than lazy:
@@ -1016,7 +1031,13 @@ with sync_playwright() as sp:
     # three-option pill in place of one cycling button. The icons' stroke
     # attributes moved to CSS to keep this down (the first cut was +815).
     # 13,859 measured.
-    HTML_RATCHET = 13_860
+    # RAISED (the posting mock's 2b B, the owner's "all yes"), for named
+    # costs: +94 B -- the post's own picture (one <img> in a box, for a Pad
+    # post only), what the page can lay out before its data (its size and its
+    # line's three numbers, null for any other post), and the title and
+    # caption the server already reads for the unfurl, said in the shell
+    # rather than waiting for the payload. 13,953 measured.
+    HTML_RATCHET = 13_954
 
     present = pg.evaluate(
         "(names) => names.filter(n => typeof window[n] !== 'undefined')",
@@ -1203,7 +1224,17 @@ with sync_playwright() as sp:
     #   css_live.json, since only a page whose host named its home has one)
     #   and the caption a size up in the page's ink under a title a step up.
     #   verify_jsstrip's line moves with it. 41,745 measured.
-    CSS_RATCHET, CSS_WAS, CSS_TARGET = 41_751, 119_844, 40_000
+    # RAISED (the posting mock's 2b B, the owner's "all yes": a long drawing's
+    #   picture at once), for one named cost: +571 B -- the post's picture
+    #   over the canvas wearing the frame's ring and shade at the strength
+    #   that reads as the canvas's (.player-poster, its ::after, its img and
+    #   its fade), and the transport unseen while it waits and rising when
+    #   the drawing can play (.player-bar, one box for its four rows). Listed
+    #   live in css_live.json. Spent first: the picture's own clip (the frame
+    #   clips it), the four rows named three times over, and a Reduce Motion
+    #   rule the page's every-element rule already made. verify_jsstrip's
+    #   line moves with it. 42,316 measured.
+    CSS_RATCHET, CSS_WAS, CSS_TARGET = 42_322, 119_844, 40_000
     total_css = sum(css_bytes.values())
     check(f"the player's CSS does not grow past {CSS_RATCHET:,} bytes "
           f"(was {CSS_WAS:,} at v194; target {CSS_TARGET:,})",

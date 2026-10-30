@@ -1414,6 +1414,23 @@ person just posted, never one a link names for someone else), and Skribl's
 card shown only when the site says it has one. Not built; mock it beside
 the posted card as it is when the site is ready.
 
+## 6x. A long Flip's first look (Flip next, after the posting mock's 2b B)
+
+A Pad post's link page now shows the post's own picture before its data has
+come and lays the ink under it in slices (DECISIONS, after v329, "A long
+drawing's first look"). A Flip's page still waits for its whole payload.
+Timed on a long Flip (60 pages of 2,400 points, a 20 MB payload): its first
+page is on screen 0.2 s after its data has come (0.7 to 0.8 s with the CPU 4x
+slower), so its paint is not the wait; the payload's size is, and on a
+phone's connection 20 MB is seconds of an empty box.
+
+**The picture first, for a Flip**: the card a Flip posts is its first inked
+page, which need not be the page its link page rests on before Play. Where
+the two are the same page (the server can know: the first inked page's
+place, kept beside `pages`), show the card at once the way the Pad's page
+does, cropped the same way, and let it go when that page is drawn. Not
+built; mock it beside the Pad's first look when it is next.
+
 ## 7. The honest state
 
 The tool is good. It is better than it needs to be for a demo and not yet enough

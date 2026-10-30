@@ -465,6 +465,7 @@ def register_routes(bp, *, index_route=False):
         # database's trouble is not the link's — so that path keeps the 200.
         title = caption = None
         found = None            # True: the post is here; False: it is not; None: could not tell
+        pre = None              # what the page can lay out before the drawing arrives
         try:
             # A savepoint, not a rollback: this route is render-always by
             # design, so a database error must not take the page down — but the
@@ -496,6 +497,23 @@ def register_routes(bp, *, index_route=False):
                 found = post is not None
                 if post is not None:
                     title, caption = post.title, post.caption
+                    # THE PAGE AT ONCE (the posting mock's 2b, B). A long
+                    # drawing's payload takes seconds to arrive and to paint,
+                    # and the page stood blank all that time. Its size is a
+                    # column (canvas_w/canvas_h, the tile's reason), so the
+                    # page lays out its box and shows the post's own picture
+                    # before the payload comes. A Pad's only: a Flip's card is
+                    # its first inked page, which need not be the page it
+                    # rests on, and its first paint is one page, not the lot.
+                    # The line's numbers come too (line_json, the in-post
+                    # player's reason), so the line under the track is laid
+                    # out at its own height and the box does not move when
+                    # the drawing comes.
+                    if post.kind == "pad" and post.canvas_w and post.canvas_h:
+                        line = post.line
+                        pre = {"w": post.canvas_w, "h": post.canvas_h,
+                               "line": {k: line[k] for k in ("drawn", "play", "speed") if k in line}
+                                       if "drawn" in line else None}
         except Exception:
             # The savepoint has already unwound; the outer transaction — and
             # anything the host had pending on it — is untouched and remains
@@ -513,6 +531,7 @@ def register_routes(bp, *, index_route=False):
             # stops every shared link from unfurling with the same generic image.
             og_image=url_for(".skribl_card", public_id=public_id, _external=True),
             og_url=url_for(".skribl_player", public_id=public_id, _external=True),
+            pre=pre, pre_title=title, pre_caption=caption,
         ), (404 if found is False else 200)
 
     def _thumbnail_response(public_id):

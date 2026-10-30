@@ -311,8 +311,12 @@ with sync_playwright() as sp:
     # places together, by no click where the sound starts or stops (a bug fix,
     # the owner's "All yes"), +1,181 B: lib/audioloop.js glide, fadeIn and
     # fadeOut and their use in its engine and in app.js (154,537 measured).
+    # And RAISED, in both places together, by a long drawing's first look (the
+    # owner's "all yes" on the posting mock, 2b B), +2,268 B, all app.js: the
+    # box laid out and the post's picture shown before the data, and the ink
+    # laid in slices under it (156,801 measured).
     check("stripping keeps the player's JS under its ratchet",
-          lean_total <= 154_540,
+          lean_total <= 156_804,
           f"{src_total:,} B of source -> {lean_total:,} B parsed")
     # THE MODULE ONLY A RECOLOURED DRAWING FETCHES (lib/recolorplay.js, by
     # app.js on the link page and inlineplayer.js in a post): its own pin, so
@@ -394,7 +398,13 @@ with sync_playwright() as sp:
     # the editors and a post's making call, into a file the link page does
     # not load; that would move this line back to 153,800. Put to the owner,
     # whose choice it is how, or whether, to pay it.
-    _target = 154_562
+    #
+    # AND 2,268 B MORE, IN WRITING, at the owner's "all yes" on the posting
+    # mock (2b B: a long drawing's picture at once, then sharp): playerPre and
+    # the sliced first paint, all app.js. Spent value and 25 B again; the line
+    # is now 3,001 B over 153,800, and the carve named above is still the
+    # first candidate.
+    _target = 156_826
     _margin = _target - lean_total
     check(f"REACHES the {_target:,} target (strip + whitespace collapse; 153,800 once its debt is paid)",
           lean_total <= _target,
@@ -494,7 +504,12 @@ with sync_playwright() as sp:
     # mock: the link page's way back to the site that named its home (the
     # .player-home pill, and on a phone the room kept clear under it) and its
     # caption a size up under a title a step up. Spent value and 25 B again.
-    _css_target = 41_770
+    #
+    # AND 571 B MORE, IN WRITING, at the posting mock's 2b B (the owner's
+    # "all yes"): the post's picture over the canvas while the drawing comes,
+    # and the transport waiting unseen and rising when it can play. Spent
+    # value and 25 B again.
+    _css_target = 42_341
     check(f"the player's stylesheet is served stripped, under the {_css_target:,}-byte target (40,000 once its debt is paid)",
           _href is not None and 0 < len(_served_css) <= _css_target and len(_served_css) < len(_raw_css),
           f"{len(_served_css):,} B served of {len(_raw_css):,} B on disk")
