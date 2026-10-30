@@ -166,15 +166,23 @@ def post_long(b, n=40000):
 
 
 # Watches the page from its first frame: when the picture shows, the box then,
-# the picture's opacity every frame, and when it leaves.
-WATCH = """(() => { window.__fl = { op: [], lt: [] };
+# the picture's opacity every frame, and when it leaves. Asked to (`sample`),
+# it also reads how many cells of the canvas under the picture hold ink, every
+# second frame from the data's release until the picture starts to go.
+WATCH = """(() => { window.__fl = { op: [], lt: [], ns: [] };
   try { new PerformanceObserver(l => { for (const e of l.getEntries()) window.__fl.lt.push([e.startTime, e.duration]); })
     .observe({ type: 'longtask', buffered: true }); } catch (e) {}
   const box = r => [r.x, r.y, r.width, r.height];
+  let s = null;
+  const inked = () => { const cv = document.getElementById('canvas');
+    if (!s) { s = document.createElement('canvas'); s.width = 64; s.height = 48; }
+    const x = s.getContext('2d'); x.clearRect(0, 0, 64, 48); x.drawImage(cv, 0, 0, 64, 48);
+    const d = x.getImageData(0, 0, 64, 48).data; let n = 0; for (let i = 3; i < d.length; i += 4) if (d[i] > 8) n++; return n; };
   const look = () => { const f = window.__fl, p = document.getElementById('playerPoster'), w = document.querySelector('.canvas-wrap');
     const now = performance.now();
     if (p && !p.hidden && f.shown == null) { f.shown = now; f.wrap0 = box(w.getBoundingClientRect()); }
     if (p && p.classList.contains('gone') && f.fade == null) f.fade = now;
+    if (f.sample && f.release != null && f.fade == null && p && (f.k = (f.k || 0) + 1) % 2 === 0 && f.ns.length < 40) f.ns.push(inked());
     if (p) f.op.push([now, +getComputedStyle(p).opacity]);
     if (f.shown != null && !p && f.left == null) { f.left = now; f.wrap1 = box(w.getBoundingClientRect()); }
     requestAnimationFrame(look); };
@@ -414,11 +422,8 @@ with sync_playwright() as p:
     print("\nNEVER A FROZEN PAGE, the CPU 4x slower")
     c, pg, release = open_held(b, LONG, DESK, rate=4)
     shown = waited(pg, "() => window.__fl.shown != null", 30000)
+    pg.evaluate("() => { window.__fl.sample = true; }")
     release()
-    # Partway, the canvas under the picture holds some of the ink and not all.
-    waited(pg, "() => window.__fl.op.filter(o => o[0] >= window.__fl.release).length >= 20 || window.__fl.fade != null",
-           120000 if shown else 1500)
-    mid = pg.evaluate(SOME)
     left = waited(pg, "() => window.__fl.left != null", 120000 if shown else 1500)
     f = pg.evaluate("() => window.__fl")
     end_ = pg.evaluate(SOME)
@@ -429,8 +434,16 @@ with sync_playwright() as p:
       document.getElementById('canvas').getContext('2d').getImageData(0, 0, 1, 1); return performance.now() - t; }""")
     check("the long drawing's ink is laid over many frames, the page answering between them",
           shown and left and frames >= 10, f"{frames} frames between the data and the ink whole")
+    # Partway, the canvas under the picture holds some of the ink and not all,
+    # read on the frames themselves. ONE READ after 20 frames was the first
+    # instrument, and on a quicker box it came after the slices had nearly
+    # finished: 2,546 of 2,647 cells on main's CI (#682's run), red with
+    # nothing wrong. Any frame of the paint's own that shows part of the ink
+    # is the claim; a paint shown only when whole has none.
+    part_ = [n for n in f["ns"] if 0 < n < end_["n"] * 0.95]
     check("...shown as it goes: partway, the canvas under the picture holds some of the ink, not all",
-          mid["mid"] and 0 < mid["n"] < end_["n"] * 0.95, f"{mid['n']} of {end_['n']} inked cells, {mid}")
+          shown and left and bool(part_),
+          f"{len(part_)} of {len(f['ns'])} frames read held part of the {end_['n']} inked cells: {f['ns'][:16]}")
     check("...and no task from the data's arrival to the ink whole runs a third of the one call",
           left and tasks and max(tasks) <= one / 3,
           f"one call {one:.0f} ms; the tasks {[round(x) for x in sorted(tasks, reverse=True)[:8]]} ({len(tasks)} over 50 ms)")

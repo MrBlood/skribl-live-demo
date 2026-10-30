@@ -622,11 +622,18 @@ with sync_playwright() as sp:
         check(f"@{_vp['width']}: the feed floats no close of its own over the editor",
               _hp.locator("#padCloseBtn").count() == 0)
         _hp.click("#padBtn")
-        _hp.wait_for_timeout(3500)
+        # The Pad's own word that it is listening, not 3.5 s: this was the
+        # suite's last fixed wait before a stroke, and on a busy box (main's
+        # CI after #682, 1 shard of 2) the stroke went in first and was never
+        # drawn, so the reopen row below asked for a drawing there was none
+        # of. With the Pad's script held 4 s the fixed wait drew nothing, 2
+        # of 2, and this wait drew the stroke, 2 of 2.
+        frame_booted(_hp, "pad")
         _hf = [x for x in _hp.frames if "compose=1" in x.url][0]
         _hf.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
         _hfr = _hp.frame_locator("#padFrame")
         draw(_hp, _hfr.locator("#canvas").bounding_box(), n=40)
+        _drawn = _hf.evaluate("() => ({ hasContent, strokes: strokes.length })")
         _hf.evaluate("() => { if (recording) document.getElementById('recordBtn').click(); }")
         _hp.wait_for_timeout(600)
         _g = _hf.evaluate("""() => { if (!document.getElementById('composeCloseBtn')) return null;
@@ -652,8 +659,9 @@ with sync_playwright() as sp:
         if _g:
             _hp.click("#padBtn")
             _hp.wait_for_timeout(1200)
+        _back = _hf.evaluate("() => ({ hasContent, strokes: strokes.length })")
         check(f"@{_vp['width']}: ...and the drawing is still there when the Skribl button reopens it",
-              bool(_g) and _hf.evaluate("() => hasContent === true"))
+              bool(_g) and _back["hasContent"] is True, f"drawn {_drawn}; reopened {_back}")
         _hc.close()
     # FLIP, FROM THE SAME BUTTON (owner, v316: "couldn't you just select flip
     # from the menu once you've opened the editor?"). The host has ONE Skribl
