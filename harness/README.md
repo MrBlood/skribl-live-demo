@@ -1084,8 +1084,11 @@ stays a sleep.
   nothing in the drawer paints outside it (the stray pill's column); the
   pictures in the pen's colour; closing folds over frames, at once under
   Reduce Motion; on a phone half shows the tiles and a tile goes to full with
-  Clear; one Tab stop per group, arrows move the choice. Each row shown red
-  by its own break (DRAWTILES_ONLY / DRAWTILES_QUICK run the part that matters).
+  Clear; one Tab stop per group, arrows move the choice; a tap on a tile or a
+  choice leaves the pen's size alone, with a data-size on the page (Flip's
+  own, and one given to the Pad's); the Feel tile's words whole at 402 and 360.
+  Each row shown red by its own break (DRAWTILES_ONLY / DRAWTILES_QUICK run
+  the part that matters).
 - `verify_recolorplay.py` — a recolour in the replay (lib/recolorplay.js):
   the line plays in its old colour until the moment it was recoloured, then
   the new colour runs along it from where it was tapped, on the Pad's Play

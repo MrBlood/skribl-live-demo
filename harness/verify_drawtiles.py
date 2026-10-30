@@ -46,6 +46,13 @@ The rows:
 
   THE KEYS. A group of choices is one Tab stop, and the arrows move the choice.
 
+  A TAP IN THE TILES LEAVES THE SIZE ALONE. Only a quick size sets it: a
+  tap on a tile or on any other choice keeps the pen's size, with a data-size
+  on the page (Flip's own size class; the Pad's page is given one).
+
+  THE FEEL TILE'S WORDS ARE WHOLE on a phone, at 402 and 360: As drawn,
+  Steadier, Smooth (the owner's pick A).
+
 Checked red per component: see DECISIONS.md for which mutation turned which
 row red.
 """
@@ -320,9 +327,9 @@ with sync_playwright() as pw:
               abs(q.evaluate(e["opacity"]) - 0.6) < 1e-6 and st["tiles"]["size"]["v"] == "12px · 60%", str(st["tiles"]["size"]))
         tile(q, "feel"); q.click("[data-smooth=high]"); q.click("[data-pressure=off]"); q.wait_for_timeout(200)
         st = q.evaluate(STATE)
-        check(f"{nm}: High smoothing and pressure Off are the editor's, and the Feel tile says Smooth high",
+        check(f"{nm}: High smoothing and pressure Off are the editor's, and the Feel tile says Smooth",
               q.evaluate(e["smooth"]) == q.evaluate("() => SkriblSmoothing.alphaFor('high')")
-              and q.evaluate("() => SkriblPressure.enabled()") is False and st["tiles"]["feel"]["v"] == "Smooth high", str(st["tiles"]["feel"]))
+              and q.evaluate("() => SkriblPressure.enabled()") is False and st["tiles"]["feel"]["v"] == "Smooth", str(st["tiles"]["feel"]))
         if nm == "Flip":
             q.click("#drawOnBtn"); q.wait_for_timeout(200)
             check("Flip: Draw-on switches on from Feel", q.evaluate("() => document.getElementById('drawOnBtn').getAttribute('aria-checked')") == "true")
@@ -393,6 +400,65 @@ with sync_playwright() as pw:
               full == {"full": True, "onScreen": True, "clear": True}, str(full))
         check(f"{nm}: no page errors", not errs, "; ".join(errs[:2]))
         c.close()
+
+        # ======================================================== a tap leaves the size alone
+        # Only a quick size in the drawer sets the size. Flip's <body> carries a
+        # data-size of its own (lib/sizeclass.js), and from the tiles' first day
+        # (#609) every other tap in them found it: the size read as NaN and the
+        # pen went to the slider's middle, 18px. The Pad's page has no such word,
+        # so it is given one: the row asks both that a data-size outside the
+        # drawer is never a size.
+        print(f"\n{nm.upper()}: A TAP IN THE TILES LEAVES THE SIZE ALONE")
+        c, q, errs = fresh(b, route, PHONE)
+        if nm == "Pad":
+            q.evaluate("() => document.body.setAttribute('data-size', 'outside')")
+        word = q.evaluate("() => document.body.getAttribute('data-size')")
+        open_drawer(q, route)
+        q.evaluate("""(s) => { const el = document.querySelector(s); el.value = '5';
+            el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true })); }""", sizesel)
+        moved = []
+        for k, choice in (("brush", "#brushSeg [data-brush=marker]"), ("feel", "#smoothSeg [data-smooth=low]"),
+                          ("eraser", "#eraserSeg [data-eraser='5']")):
+            tile(q, k, 400)
+            v = q.evaluate("(s) => document.querySelector(s).value", sizesel)
+            q.evaluate("(s) => document.querySelector(s).click()", choice); q.wait_for_timeout(200)
+            w = q.evaluate("(s) => document.querySelector(s).value", sizesel)
+            if v != "5" or w != "5":
+                moved.append(f"{k} tile {v}, a choice in it {w}")
+        tile(q, "size", 400)
+        q.evaluate("""() => document.querySelector("#dpSize [data-size='12']").click()"""); q.wait_for_timeout(200)
+        bold = q.evaluate("(s) => document.querySelector(s).value", sizesel)
+        check(f"{nm}: a tap on Brush, Feel or Eraser, or on a choice in them, leaves the pen's size as it was, "
+              f"with a data-size on the page; Bold still sets 12",
+              bool(word) and not moved and bold == "12" and not errs,
+              f"page data-size {word!r}; moved: {'; '.join(moved) or 'none'}; Bold {bold}; errors {errs[:1]}")
+        c.close()
+
+        # ======================================================== the Feel tile's words, whole
+        # The owner's pick A: the panel's own words, short enough for a phone's
+        # tile. "Smooth low" and "Smooth high" were cut at 402px, all three at
+        # 360. Read as laid out (a Range over the words against the room inside
+        # the tile's box), which an ellipsis cannot hide.
+        print(f"\n{nm.upper()}: THE FEEL TILE'S WORDS, WHOLE ON A PHONE")
+        WHOLE = """() => { const v = document.querySelector('#drawTiles .dp-tile[data-dp=feel] .dp-v'), r = document.createRange();
+          r.selectNodeContents(v); const cs = getComputedStyle(v), box = v.getBoundingClientRect();
+          return { says: v.textContent, need: +r.getBoundingClientRect().width.toFixed(2),
+                   room: +(box.width - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight)).toFixed(2) }; }"""
+        for vw in (402, 360):
+            c, q, errs = fresh(b, route, dict(PHONE, viewport={"width": vw, "height": 874}))
+            open_drawer(q, route)
+            said = []
+            for sm in ("off", "low", "high"):
+                tile(q, "feel", 400)
+                q.evaluate("(m) => document.querySelector(`#smoothSeg [data-smooth=${m}]`).click()", sm)
+                q.wait_for_timeout(200)
+                tile(q, "feel", 500)
+                said.append(q.evaluate(WHOLE))
+            check(f"{nm} at {vw}px: the Feel tile says As drawn, Steadier and Smooth, each whole in its tile",
+                  [w["says"] for w in said] == ["As drawn", "Steadier", "Smooth"]
+                  and all(w["need"] <= w["room"] + 0.5 for w in said) and not errs,
+                  "; ".join(f"{w['says']!r} needs {w['need']} of {w['room']}" for w in said) + (f"; errors {errs[:1]}" if errs else ""))
+            c.close()
 
     b.close()
 

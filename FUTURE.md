@@ -1524,6 +1524,45 @@ painted in the sheet under 12px").
 over a drawing still in progress came up without its Keep drawing pill,
 seen while writing a check and not looked into.
 
+## 6aa. Help cards inside the drawers (owner, after #691, with a screenshot of the eyedropper and Recolor: "shouldn't these have help cards? What other tools don't have help cards?")
+
+A help card (lib/learncard.js: hold on a phone, rest two seconds on a desk)
+opens only from a button its CARDS list names: the bar's tools and Flip's
+tray, Undo and Redo, Photo and music, Post, Tune, the menu, Flip's page
+buttons, and three tags (Pages, Page time, the slider's Steps). Nothing
+inside a drawer has one. Counted Oct 30 on both editors, every drawer open,
+at 402 x 874:
+
+- **The draw drawer** (both): Eyedropper, Recolor, the Pen/Background
+  switch, eight colours and the custom one, the four tiles (Brush, Size,
+  Feel, Eraser) and all inside them (four brushes, the size slider and quick
+  sizes, opacity, smoothing, pressure, Flip's Draw-on, the eraser widths),
+  and Clear.
+- **Shape's picker** (Line, Rect, Oval, Poly), which Shape's own card names.
+- **The photo drawer:** Add a photo (and what a photo brings, not counted).
+- **The music drawer with a song:** on and off, remove, zoom out and in,
+  Snap, the taller box, the loop's Undo and Redo, Play with my drawing, Hear
+  the loop, the click, and the four doors (Length, Beat, Restart, Exact) with
+  the 26 controls inside them.
+- **Tune:** on the Pad 10 (Grid, Stroke layers, Mirror, Pauses, Watching
+  speed); on Flip 22 (with the page speed, Motion guides, Smear's weight,
+  Onion skin and its depth and tint).
+- **Flip only:** the Stamps drawer's size, Artwork's bar (This page, And
+  following, Reset, Done), a page's actions, How it works.
+
+Each card shows an example to watch: a How it works drawing (demo) or a
+screen clip in both themes (harness/tools/make_help_clips.py). The
+Eyedropper and Recolor have neither yet.
+
+The calls put to the owner, defaults in brackets: (1) the draw drawer's six
+first, Eyedropper, Recolor, Brush, Size, Feel and Eraser, each with an
+example, on both editors [yes]; (2) Tune's tools [yes, after 1]; (3) the
+music and photo drawers' (Hear the loop, the click, Snap, the four doors, Add
+a photo) [yes, after 2]; (4) no card for a single choice inside a tool (a
+colour, a quick size, a stepper), its tool's card names it [yes]; (5) the
+seal first, then the cards [seal first]. Mock the cards' words before
+building, as the tray's seven were.
+
 ## 7. The honest state
 
 The tool is good. It is better than it needs to be for a demo and not yet enough

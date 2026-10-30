@@ -172,13 +172,15 @@
     }
 
     // ---------- the words on the tiles, and the quick sizes' state
-    var SMOOTH = { off: 'Smooth off', low: 'Smooth low', high: 'Smooth high' };
+    // Feel in the panel's own words, short enough for a phone's tile ("Smooth
+    // high" was cut at 402px; the owner's pick, A).
+    var SMOOTH = { off: 'As drawn', low: 'Steadier', high: 'Smooth' };
     function words() {
       var S = state();
       var v = {
         brush: S.brushName,
         size: S.size + 'px' + (S.opacity < 100 ? ' · ' + S.opacity + '%' : ''),
-        feel: SMOOTH[S.smooth] || 'Smooth off',
+        feel: SMOOTH[S.smooth] || SMOOTH.off,
         eraser: S.eraser + '× pen'
       };
       var NAME = { brush: 'Brush', size: 'Size', feel: 'Feel', eraser: 'Eraser' };
@@ -255,9 +257,13 @@
     });
 
     // ---------- the quick sizes
+    // Only a quick size in this drawer counts. Flip's <body> carries a
+    // data-size of its own (lib/sizeclass.js, "compact"), and a tap anywhere
+    // else in the tiles found it: the size read as NaN and the pen went to the
+    // slider's middle, 18px.
     root.addEventListener('click', function (e) {
       var b = e.target.closest ? e.target.closest('[data-size]') : null;
-      if (!b || !size) return;
+      if (!b || !root.contains(b) || !size) return;
       var v = Math.max(+size.min || 1, Math.min(+size.max || 30, +b.getAttribute('data-size')));
       size.value = String(v);
       size.dispatchEvent(new Event('input', { bubbles: true }));
