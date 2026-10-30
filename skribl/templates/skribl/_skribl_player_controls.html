@@ -12,6 +12,7 @@
       {%- set _tt = title_tag|default('div') %}
       <{{ _tt }} class="player-title" id="playerTitle">{{ pre_title or 'Untitled Skribl' }}</{{ _tt }}>
       <div class="player-caption" id="playerCaption"{% if not pre_caption %} hidden{% endif %}>{{ pre_caption or '' }}</div>
+      <button type="button" class="player-capmore" id="playerCapMore" hidden>more</button>
     </div>
     {#- THE SCRUBBER AND THE TRANSPORT, IN ONE BOX. `display: contents` at
         rest, so this wrapper changes nothing about the column it sits in;
@@ -72,7 +73,7 @@
       </div>
     </div>
     </div>
-    <a href="{{ url_for('.skribl_editor') }}" class="player-cta">
+    <a href="{{ url_for('.skribl_editor') }}" data-flip="{{ url_for('.skribl_flip') }}" class="player-cta">
       <span class="cta-star" aria-hidden="true">&#x2736;</span>
       Make your own Skribl
     </a>
