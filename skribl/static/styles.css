@@ -5603,14 +5603,16 @@ body.player-mode #canvas {
 
 /* THE POST'S OWN PICTURE while the drawing arrives (the posting mock's 2b, B;
    app.js playerPre places it over the canvas and lets it go once the ink is
-   whole). It wears the frame's own ring and shade over it (::after, the
-   frame's box-shadow inherited), which the canvas has under it, so the edge
-   does not change as the picture goes. The transport waits laid out but
-   unseen, so nothing moves when it comes up, and comes up gently. Reduce
-   Motion: both just change. */
-/* (The frame clips the picture to its own rounded box: .canvas-wrap's overflow.
-   The transport is the four rows of .player-bar, a display: contents box that
-   still hands its visibility down.) */
+   whole). The frame clips it to its own rounded box (.canvas-wrap's
+   overflow). It wears the frame's ring and shade over it (::after, the
+   frame's box-shadow inherited) AT 0.6: the canvas has the shade over its
+   ground and under its ink, and a flat picture can only have it over both,
+   so at full strength its edge read darker than the ink's by 9 of 255 and
+   bare, lighter by 14.5 (verify_firstlook reads the edge). The transport, the
+   four rows of .player-bar (a display: contents box that still hands its
+   visibility down), waits laid out but unseen, so nothing moves when it
+   comes up, and comes up gently. Reduce Motion: the page's every-element
+   rule stills both. */
 .player-poster { position: absolute; inset: 0; z-index: 2; border-radius: inherit; box-shadow: inherit;
   pointer-events: none; transition: opacity 0.3s var(--ease); }
 .player-poster::after { content: ''; position: absolute; inset: 0; border-radius: inherit; box-shadow: inherit; opacity: 0.6; }
