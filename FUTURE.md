@@ -1431,6 +1431,25 @@ place, kept beside `pages`), show the card at once the way the Pad's page
 does, cropped the same way, and let it go when that page is drawn. Not
 built; mock it beside the Pad's first look when it is next.
 
+## 6y. Flip opens a long Flip without a freeze (Flip next, after the Pad's)
+
+The Pad now opens a long drawing without a freeze (DECISIONS, after v329,
+"The Pad opens a long drawing without a freeze"). Flip's editor does not
+yet: opening a long Flip through its own file input (60 pages of 2,400
+points, 144,000 in all, a 10.6 MB file) holds the page in one task of
+0.9 s on a desk and 1.1 s on a phone, 3.8 s and 6.0 s with the CPU 4x
+slower. Timed by step on the desk: the page strip (buildStrip, every
+page's picture painted at once) is 651 ms of the 739 the load takes;
+reading the file is 72 and the page itself 42.
+
+**The strip a few pictures a frame**: the page you are on and the strip's
+places laid out at once (the strip the right length, so nothing moves),
+then the pictures painted a few a frame, the ones in view first, the rest
+behind them; a press on a page not yet painted paints it then. Its rows
+measure the longest task against the one call on the same page, as
+verify_padopen's do. Not built; it is a bug-sized change, so a small PR when
+it is next.
+
 ## 7. The honest state
 
 The tool is good. It is better than it needs to be for a demo and not yet enough

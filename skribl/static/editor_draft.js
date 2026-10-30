@@ -680,7 +680,7 @@ function rebuildHistoryForRestore(maxStrokes, maxGroups, appliedCount, baseHasCo
   // 30 near-full repaints in one synchronous burst at restore time — the
   // owner's "it seemed fine until all of a sudden it just slowed down".
   // restoreHistoryState (app.js) repaints these states on undo/redo.
-  const renderPrefix = (k) => clearAndRestore(() => paintStrokesStatic(maxStrokes.slice(0, starts[k])));
+  const renderPrefix = (k) => clearAndRestore(() => padPaint(maxStrokes.slice(0, starts[k])));
   // Each state keeps the recolours made by then (`n`, the points there were).
   // Its lines carry the colours they ended with, as every rebuilt state's
   // strokes always have; a later one is left out rather than kept for a
@@ -777,6 +777,46 @@ function holdStrokes(pts) {
   if (typeof window.syncCanvasSeg === 'function') window.syncCanvasSeg();
 }
 
+/* A LONG DRAWING OPENS WITHOUT A FREEZE (the posting mock's 2b: "Opening a
+   long drawing in Pad stops freezing too"). Opening the two-hour piece held
+   the page twice on a desk, about a second each: the paint, then the canvas
+   growing to the screen a moment later and painting the whole drawing again;
+   once on a phone, 1.5 s, and 6.2 s with the CPU 4x slower.
+
+   ONE PAINT: growBeforePaint gives the bitmap the growth its new size asks
+   for before anything is laid on it (the canvas is still empty, so growing
+   costs nothing), where the timer grew it after the paint and painted again.
+
+   IN SLICES: past PAD_SLICE_FROM points the paint is laid a slice a frame
+   (paintStrokesStatic's `whole`, as the link page lays it). The first press
+   or key anywhere on the page before the ink is whole lays the rest at once,
+   in that press, before anything it does: a new take's base, the post's
+   card, an export, an undo, all of them meet the whole drawing, never half
+   of it. Under the threshold the paint is the one call it always was. */
+const PAD_SLICE_FROM = 20000;
+function padPaint(strokeArr) {
+  if (strokeArr.length < PAD_SLICE_FROM || document.body.classList.contains('player-mode')) {
+    return paintStrokesStatic(strokeArr);
+  }
+  const rest = () => finish();
+  const done = () => {
+    removeEventListener('pointerdown', rest, true);
+    removeEventListener('keydown', rest, true);
+  };
+  addEventListener('pointerdown', rest, true);
+  addEventListener('keydown', rest, true);
+  const finish = paintStrokesStatic(strokeArr, done);
+}
+function growBeforePaint() {
+  if (grownTo(_growWant)) return;
+  clearTimeout(_growTimer);
+  _growTimer = 0;
+  _grownOnce = true;
+  canvasGrowth = _growWant;
+  establishEditorCanvas(authoredW, authoredH);
+  layoutEditorCanvas();
+}
+
 function restoreAutosave(data) {
   clearCanvas();
   // The drawing's name, its pauses and its viewers' speed, as loadSkribl adopts
@@ -792,6 +832,7 @@ function restoreAutosave(data) {
   if (size && size.cssWidth > 0 && size.cssHeight > 0) {
     establishEditorCanvas(size.cssWidth, size.cssHeight);
     layoutEditorCanvas();
+    growBeforePaint();
     if (typeof window.syncCanvasSeg === 'function') window.syncCanvasSeg();
   }
   if (data.background && data.background.color) {

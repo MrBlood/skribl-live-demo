@@ -318,9 +318,12 @@ with sync_playwright() as sp:
     # together, by the caption at two lines with a more and your own post's
     # way back (the owner's "all yes" from the phone), +3,569 B: lib/capmore.js
     # (2,264 B, the gallery's, shared) and app.js's use of it and Back to Pad
-    # (160,370 measured).
+    # (160,370 measured). And RAISED, in both places together, by the Pad
+    # opening a long drawing without a freeze (the posting mock's 2b), +223 B,
+    # all app.js: the sliced paint's way to lay the rest at once, and
+    # loadSkribl asking the editor's paint and growth (160,593 measured).
     check("stripping keeps the player's JS under its ratchet",
-          lean_total <= 160_373,
+          lean_total <= 160_596,
           f"{src_total:,} B of source -> {lean_total:,} B parsed")
     # THE MODULE ONLY A RECOLOURED DRAWING FETCHES (lib/recolorplay.js, by
     # app.js on the link page and inlineplayer.js in a post): its own pin, so
@@ -413,7 +416,13 @@ with sync_playwright() as sp:
     # the caption at two lines with a more (lib/capmore.js, shared with the
     # gallery) and Back to Pad on your own post. The line is now 6,570 B over
     # 153,800; the carve named above is still the first candidate.
-    _target = 160_395
+    #
+    # AND 223 B MORE, IN WRITING, at the posting mock's "all yes" (2b:
+    # "Opening a long drawing in Pad stops freezing too"): the sliced paint's
+    # way to lay the rest at once, and loadSkribl asking the editor's own
+    # paint and growth, all app.js. The line is now 6,793 B over 153,800; the
+    # carve named above is still the first candidate.
+    _target = 160_618
     _margin = _target - lean_total
     check(f"REACHES the {_target:,} target (strip + whitespace collapse; 153,800 once its debt is paid)",
           lean_total <= _target,
