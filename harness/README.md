@@ -1109,7 +1109,17 @@ stays a sleep.
   phone and desk, its words 7:1; pressed, it goes there; the drawing's own full
   screen and the page-filling fallback cover it. Standalone, none. The caption
   17px in the page's ink under a title of 21px at 800, 14 and 17 on a phone on
-  its side, painted, whole and 7:1. Each row was shown red by its own break.
+  its side, painted, whole and 7:1. A long caption at two lines and a painted
+  "more" (44px, its state and its word in its name), the drawing as big as
+  beside three lines; "more" opens the rest in place and the drawing keeps its
+  size, gliding over several frames, none more than 40% of the way, the
+  drawing's move gliding too, and "less" closes it (Reduce Motion: at once); a
+  caption that fits has none; "more" 7:1, light and dark; with the data held
+  back the box stands where it stands once the drawing is in. On a post this
+  browser made, Back to Pad (Back to Flip on a Flip); anyone else's, Make your
+  own Skribl; pressed after the Pad, a step back to the Pad as it was left,
+  its strokes on it, and with no Pad behind it, the Pad. Each row was shown
+  red by its own break.
 - `verify_firstlook.py` — a long drawing's first look on the link page (the
   posting mock's 2b, B: "the picture at once, then sharp"). With the post's
   data held back by the browser, the page alone shows the post's own picture
