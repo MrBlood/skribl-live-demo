@@ -26533,6 +26533,15 @@ caption); the last two breaks are theirs. And the half-screen cap pinned
 nothing where the sheet's room always binds first, which is why the suite
 has a 1,300px window.
 
+THE SHEET'S GLIDE, now that the drawing takes the room. On a phone a tall or
+square drawing leaves the posted sheet as full as the form was, so its
+height does not change and nothing glides; the parts still rise in. The
+glide rows (verify_postmoment) post a wide drawing, whose sheet is shorter
+than the form, and were shown red again with the glide taken out (806 to
+806, nothing moving between) and green as built. How it works' Post tip
+says a long caption shows two lines and a more (it said the caption shows
+in full), and verify_helpclaims names the turned row that backs it.
+
 THE COST. Nothing the link page or a post's box loads: postsheet.js and the
 Post sheet's styles are the editors' own, and capmore.js is unchanged. Flip's
 page loads capmore.js (2,264 B), which the Pad's already did.

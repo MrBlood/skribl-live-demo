@@ -245,6 +245,11 @@ with sync_playwright() as p:
             ctx = b.new_context(color_scheme=theme, **PHONE)
             pg = ctx.new_page()
             goto(pg, "/")
+            # A WIDE DRAWING, so the sheet has a new height to glide to: the
+            # card's drawing takes the room the sheet has, so a tall one leaves
+            # the posted sheet as full as the form was, and nothing glides.
+            pg.evaluate("() => establishEditorCanvas(944, 531)")
+            pg.wait_for_timeout(400)
             drawn(pg, "pad")
             pg.evaluate(SAMPLER)
             post(pg)
