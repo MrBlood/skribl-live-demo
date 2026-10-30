@@ -3053,6 +3053,7 @@ function buildStrip(){
   armedDel = -1;
   _followPages();
   strip.innerHTML='';
+  const toPaint = [];
   frames.forEach((f,i)=>{
     const el=document.createElement('div'); el.className='frame'+(i===idx?' on':'');
     // A span is drawn as ONE stretch of film, not as N ticked items: the run
@@ -3239,7 +3240,8 @@ function buildStrip(){
       if(!ev.shiftKey) clearSpan(true);
       go(i);
     });
-    strip.appendChild(el); drawThumb(el.querySelector('canvas'), f);
+    // Its picture once every tile is in place (paintTiles, beside drawThumb).
+    strip.appendChild(el); toPaint.push([el.querySelector('canvas'), f, i]);
     // THE PASTE GHOST (stage 2). A button in the add column said WHAT;
     // it could not say WHERE, and "after the current page" is a rule the user
     // had to know rather than see. A dashed tile standing in the gap the pages
@@ -3257,6 +3259,7 @@ function buildStrip(){
       strip.appendChild(g);
     }
   });
+  paintTiles(toPaint);
   const col=document.createElement('div'); col.className='addcol';
   // Built here rather than in the template, which is why a template-wide
   // tooltip pass could not reach them. lib/tooltip.js adopts late markup via a
@@ -3622,7 +3625,9 @@ let _thumbBytes = 0;
    again instead of painting it: on a page of 20,000 points the thumbnail was
    half of an Undo's time. The same signature decides, so a kept picture is
    only ever shown for the page it was painted from. */
-function drawThumb(cv,f){
+// keptOnly: lay the picture only if it is kept; else leave the tile sized and
+// empty and say so (false), for paintTiles to paint it in its turn.
+function drawThumb(cv,f,keptOnly){
   cv.width=88*DPR; cv.height=62*DPR; cv.style.background='transparent';
   const c=cv.getContext('2d');
   const sig = _thumbSig(f);
@@ -3639,12 +3644,13 @@ function drawThumb(cv,f){
   if(hit && hit.sig === sig && hit.w === cv.width && hit.h === cv.height){
     c.setTransform(1,0,0,1,0,0); c.clearRect(0,0,cv.width,cv.height);
     c.drawImage(hit.cv, 0, 0);
-    return;
+    return true;
   }
   c.setTransform(88*DPR/CW,0,0,62*DPR/CH,0,0); c.clearRect(0,0,CW,CH);
+  if(keptOnly) return false;
   drawBackdrop(c); paintFrame(c, f.strokes);
   const bytes = cv.width * cv.height * 4;
-  if(_thumbBytes + bytes > THUMB_CACHE_BYTES) return;   // paint direct from here on
+  if(_thumbBytes + bytes > THUMB_CACHE_BYTES) return true;   // paint direct from here on
   try {
     const off = document.createElement('canvas');
     off.width = cv.width; off.height = cv.height;
@@ -3656,6 +3662,43 @@ function drawThumb(cv,f){
     }
     _thumbCache.set(f, { sig: sig, cv: off, w: cv.width, h: cv.height });
   } catch(_){ /* canvas allocation may fail under memory pressure; direct is fine */ }
+  return true;
+}
+/* A LONG FLIP OPENS WITHOUT A FREEZE (FUTURE.md 6y). The strip painted every
+   page's picture at once: opening 60 pages of 2,400 points held the page 1.2 s
+   on a desk and 1.4 s on a phone at this box's pace, 5.5 and 8.5 s with the
+   CPU 4x slower, nearly all of it these pictures. So every tile takes its
+   place and its ground at once (the strip its full length, nothing moves), a
+   picture the cache keeps is laid then, and the rest are painted at once as
+   before unless they come to more than the Pad's PAD_SLICE_FROM points
+   (editor_draft.js). Past that, the page you are on is painted at once and
+   the others a few a frame, the nearest to it first; a tap on a tile not yet
+   painted makes it the page you are on, so it is painted at once too. A newer
+   strip, or a tile gone from the page, ends the round. */
+const STRIP_SLICE_FROM = 20000, STRIP_SLICE_MS = 10;
+let _stripLater = null, _stripSeq = 0;
+function paintTiles(list){
+  const seq = ++_stripSeq, miss = [];
+  let n = 0;
+  _stripLater = null;
+  for(const t of list) if(!drawThumb(t[0], t[1], true)){ miss.push(t); n += t[1].strokes.length; }
+  if(n <= STRIP_SLICE_FROM){ for(const t of miss) drawThumb(t[0], t[1]); return; }
+  const here = miss.find(t => t[2] === idx);
+  if(here) drawThumb(here[0], here[1]);
+  _stripLater = miss.filter(t => t !== here).sort((a, b) => Math.abs(a[2] - idx) - Math.abs(b[2] - idx));
+  for(const t of _stripLater) drawBackdrop(t[0].getContext('2d'));   // the ground, scaled by drawThumb
+  requestAnimationFrame(() => stripSlice(seq));
+}
+function stripSlice(seq){
+  if(seq !== _stripSeq || !_stripLater) return;
+  const t0 = performance.now();
+  while(_stripLater.length){
+    const t = _stripLater.shift();
+    if(t[0].isConnected) drawThumb(t[0], t[1]);
+    if(performance.now() - t0 >= STRIP_SLICE_MS) break;
+  }
+  if(_stripLater.length) requestAnimationFrame(() => stripSlice(seq));
+  else _stripLater = null;
 }
 /* A TILE IS NOT A CHILD INDEX. The paste ghost is appended INSIDE the page loop,
    immediately after the current page, so whenever the clipboard holds pages every
@@ -3669,7 +3712,7 @@ function drawThumb(cv,f){
    page now STAYS wrong until that page changes. Found while writing the cache's
    own test, which read a neighbouring tile for the same reason. */
 const _tiles = () => strip.querySelectorAll('.frame:not(.ghost-paste)');
-function refreshAllThumbs(){ [..._tiles()].forEach((el,i)=>{ const cv=el.querySelector('canvas'); if(cv && frames[i]) drawThumb(cv, frames[i]); }); }
+function refreshAllThumbs(){ paintTiles([..._tiles()].map((el,i)=>[el.querySelector('canvas'), frames[i], i]).filter(t => t[0] && t[1])); }
 function refreshThumb(i){ const el=_tiles()[i]; if(el && frames[i]) drawThumb(el.querySelector('canvas'),frames[i]); }
 // Reorder by one slot. Keeps `idx` pointing at the SAME page the user was on —
 // moving a page must never silently switch which page you're drawing on.
@@ -6223,7 +6266,9 @@ function loadDraftFile(file){
       // claiming the same 5s loop.
       if (musicData) decodeForWaveform();
       fitPad(); buildStrip(); render(); sizeFill(); setBg(bgColor); syncMediaUI();
-      if(!FLIP_COMPOSE){ try{ slotWrite(JSON.stringify(serializeFlip({ recipes: true, pack: true }))); }catch(_){ } }  // best-effort
+      // Best-effort, and in a task of its own: on a long Flip writing it is a
+      // fifth of the opening (A LONG FLIP OPENS WITHOUT A FREEZE, by paintTiles).
+      if(!FLIP_COMPOSE) setTimeout(() => { try{ slotWrite(JSON.stringify(serializeFlip({ recipes: true, pack: true }))); }catch(_){ } }, 0);
       chip('Opened your file');
     }catch(err){ chip('Could not read file'); }
   };
