@@ -2784,6 +2784,13 @@ body.recoloring #canvas { cursor: crosshair !important; }
    row's: 13. It kept 12.5 through the drawers' words going a size up (B),
    which the census read only with a photo or a song in the drawer. */
 .dz-hint { font-size: 13px; font-weight: 400; line-height: 1.35; text-wrap: balance; }  /* a wrap splits evenly, never one stranded word */
+/* THE DROP IS A MOUSE'S PROMISE (the posting mock's plain words): with no
+   hover there is nothing to drop from, so a phone says the file types only.
+   Shown where there is hover rather than hidden where there is none: the
+   player's sheet is emitted from this one, and a touch-only query is kept
+   there unread (cssgraph's UNEXERCISED_MEDIA), for a rule no player needs. */
+.dz-drop { display: none; }
+@media (hover: hover) { .dz-drop { display: inline; } }
 .music-dropzone.loaded > .dz-add,
 .music-dropzone:not(.loaded) > .dz-lead,
 .music-dropzone:not(.loaded) > .dz-file { display: none; }

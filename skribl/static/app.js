@@ -1737,8 +1737,10 @@ function endRecordingTake() {
     updateDrawingTimeLabels();
     durationBadge.hidden = false;
     // Confirm the capture and surface multi-take: the canvas is now locked on
-    // this take; the on-canvas Add take pill (or Record) appends another take.
-    showToast('Take saved — Play to preview, or Add take to draw more', recordBtn);
+    // this take; the on-canvas Keep drawing pill (or Record) appends another take.
+    // The words are the owner's (plain words, the posting mock): what to do
+    // next, so nobody has to learn what a take is.
+    showToast('Saved. Play to watch it, or Keep drawing to add more', recordBtn);
   }
   updateClearVisibility();
 }
