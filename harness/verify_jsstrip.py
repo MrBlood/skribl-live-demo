@@ -314,9 +314,13 @@ with sync_playwright() as sp:
     # And RAISED, in both places together, by a long drawing's first look (the
     # owner's "all yes" on the posting mock, 2b B), +2,268 B, all app.js: the
     # box laid out and the post's picture shown before the data, and the ink
-    # laid in slices under it (156,801 measured).
+    # laid in slices under it (156,801 measured). And RAISED, in both places
+    # together, by the Pad opening a long drawing without a freeze (the
+    # posting mock's 2b), +223 B, all app.js: the sliced paint's way to lay
+    # the rest at once, and loadSkribl asking the editor's paint and growth
+    # (157,024 measured).
     check("stripping keeps the player's JS under its ratchet",
-          lean_total <= 156_804,
+          lean_total <= 157_027,
           f"{src_total:,} B of source -> {lean_total:,} B parsed")
     # THE MODULE ONLY A RECOLOURED DRAWING FETCHES (lib/recolorplay.js, by
     # app.js on the link page and inlineplayer.js in a post): its own pin, so
@@ -404,7 +408,13 @@ with sync_playwright() as sp:
     # the sliced first paint, all app.js. Spent value and 25 B again; the line
     # is now 3,001 B over 153,800, and the carve named above is still the
     # first candidate.
-    _target = 156_826
+    #
+    # AND 223 B MORE, IN WRITING, at the same "all yes" (2b: "Opening a long
+    # drawing in Pad stops freezing too"): the sliced paint's way to lay the
+    # rest at once, and loadSkribl asking the editor's own paint and growth,
+    # all app.js. The line is now 3,224 B over 153,800; the carve named above
+    # is still the first candidate.
+    _target = 157_049
     _margin = _target - lean_total
     check(f"REACHES the {_target:,} target (strip + whitespace collapse; 153,800 once its debt is paid)",
           lean_total <= _target,

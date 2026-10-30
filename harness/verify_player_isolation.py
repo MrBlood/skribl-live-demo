@@ -994,7 +994,16 @@ with sync_playwright() as sp:
     #   pick, which nothing can press while it is unseen. verify_jsstrip's
     #   lines move with it, its target line in writing with the debt named.
     #   156,801 measured (with the plain words' -4 B merged in under it).
-    BYTES_RATCHET, BYTES_TARGET = 156_804, 153_800
+    # RAISED (the posting mock's 2b, the owner's "all yes": "Opening a long
+    #   drawing in Pad stops freezing too"), for a named cost, all in app.js:
+    #   +223 B -- the sliced paint handing back a way to lay the rest at once
+    #   (the Pad's, when a press or a key comes before the ink is whole), and
+    #   loadSkribl asking the editor's own paint and growth when the page has
+    #   them (editor_draft.js padPaint and growBeforePaint, which the link
+    #   page does not load). Spent first: a flag of its own for the sliced
+    #   paint's end, where its `whole` serves. verify_jsstrip's lines move
+    #   with it. 157,024 measured.
+    BYTES_RATCHET, BYTES_TARGET = 157_027, 153_800
     # The page's own HTML. The brand is the one-stroke skribl signature INLINE
     # in the page (~1.4KB of paths, a ~0.9KB nonce'd draw-on script, and the
     # <linearGradient> defs), and inline is load-bearing rather than lazy:
