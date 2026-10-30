@@ -92,6 +92,11 @@
        post's title for a name (SK-AUD-004). Server-rendered, because app.js
        is on a byte ratchet and its reachable lines sit at their ceiling. #}
     <canvas id="canvas" role="img" aria-label="{{ og_title }} — a Skribl, playing back"></canvas>
+    {#- THE POST'S OWN PICTURE, AT ONCE (the posting mock's 2b, B): the card
+        made when it was posted, cropped back to the drawing where the canvas
+        is, while the drawing itself arrives and paints. app.js places it and
+        lets it go. A Pad post whose size is known only (routes.py, pre). -#}
+    {%- if pre %}<div class="player-poster" id="playerPoster" hidden><img src="{{ url_for('.skribl_poster', public_id=public_id) }}" alt=""></div>{% endif %}
     {#- THE WAY BACK OUT, and it has to live INSIDE the element that goes full
         screen: only that subtree renders, so the transport row -- including
         the button that got you here -- is not on screen at all. Without this
@@ -214,6 +219,7 @@
   <script nonce="{{ csp_nonce }}">
     window.SKRIBL_MODE = "player";
     window.SKRIBL_PLAYER_ID = {{ public_id | tojson }};
+    window.SKRIBL_PLAYER_PRE = {{ pre | tojson }};
     window.SKRIBL_API_BASE = {{ skribl_api_base | tojson }};
   window.SKRIBL_CSRF_TOKEN = {{ skribl_csrf_token | tojson }};
     window.SKRIBL_PLAYER_BASE = {{ skribl_player_base | tojson }};

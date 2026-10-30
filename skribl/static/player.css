@@ -1539,6 +1539,25 @@ body.player-mode #canvas {
   max-height: none;
 }
 
+/* THE POST'S OWN PICTURE while the drawing arrives (the posting mock's 2b, B;
+   app.js playerPre places it over the canvas and lets it go once the ink is
+   whole). It wears the frame's own ring and shade over it (::after, the
+   frame's box-shadow inherited), which the canvas has under it, so the edge
+   does not change as the picture goes. The transport waits laid out but
+   unseen, so nothing moves when it comes up, and comes up gently. Reduce
+   Motion: both just change. */
+/* (The frame clips the picture to its own rounded box: .canvas-wrap's overflow.
+   The transport is the four rows of .player-bar, a display: contents box that
+   still hands its visibility down.) */
+.player-poster { position: absolute; inset: 0; z-index: 2; border-radius: inherit; box-shadow: inherit;
+  pointer-events: none; transition: opacity 0.3s var(--ease); }
+.player-poster::after { content: ''; position: absolute; inset: 0; border-radius: inherit; box-shadow: inherit; opacity: 0.6; }
+.player-poster img { position: absolute; max-width: none; }
+.player-poster.gone { opacity: 0; }
+body.player-pending .player-bar { visibility: hidden; }
+body.player-ready .player-bar > * { animation: player-up 0.3s var(--ease); }
+@keyframes player-up { from { opacity: 0; } }
+
 /* The replay nib: a soft glowing dot that rides the current stroke point while
    the drawing plays back, so watching reads as a hand drawing. Centered on its
    point via the negative margin; positioned in display px by the player JS. */

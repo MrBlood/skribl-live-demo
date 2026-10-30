@@ -1110,6 +1110,22 @@ stays a sleep.
   screen and the page-filling fallback cover it. Standalone, none. The caption
   17px in the page's ink under a title of 21px at 800, 14 and 17 on a phone on
   its side, painted, whole and 7:1. Each row was shown red by its own break.
+- `verify_firstlook.py` — a long drawing's first look on the link page (the
+  posting mock's 2b, B: "the picture at once, then sharp"). With the post's
+  data held back by the browser, the page alone shows the post's own picture
+  where the canvas is, cropped to the drawing (read by its hue: none of the
+  card's ground, none of its plate's ring), the title and caption said by the
+  server and the transport laid out unseen; the box stands to the half pixel
+  where it stood once the drawing is in, short and long, phone and desk. The
+  picture gives way to ink that looks like it (16px cells) by a fade, no step
+  over a third (Reduce Motion: at once), and the ink the slices laid is pixel
+  for pixel one call's. With the CPU 4x slower the ink is laid over many
+  frames and shown as it goes, and no task from the data's arrival to the ink
+  whole is a third of the one call on the same page. Play while it paints
+  starts from nothing and ends on the drawing; a short drawing, an empty one,
+  one with no picture and a refused payload each leave nothing over the ink.
+  A Flip's page and a missing post's carry none of it. Each row was shown red
+  by its own break.
 - `verify_pagewide.py` — no style rule searches the whole page. No selector in
   a stylesheet or a template's <style> puts :has() on html, body or :root (five
   did, and at phone pace they were 2.9 s of Pad's start and 4.3 s of Flip's);

@@ -181,7 +181,13 @@
   "html",
   "html.skribl-immersive",
   "html.skribl-immersive body",
-  "html.skribl-fullscreen"
+  "html.skribl-fullscreen",
+  ".player-poster",
+  ".player-poster::after",
+  ".player-poster img",
+  ".player-poster.gone",
+  "body.player-pending .player-bar",
+  "body.player-ready .player-bar > *"
  ],
  "editor": [
   "#canvas",
