@@ -26215,3 +26215,105 @@ ink. Left for the owner to call.
 WHAT IT DOES TO FLIP: shared. A Flip's card in the gallery and its row in the
 Library are the same as a Pad's, and Flip's sheet keeps the caption as the
 Pad's does.
+
+## After v329 -- A long drawing's first look: its own picture at once, the ink without a freeze
+
+PR E of the posting mock the owner answered "all yes": 2b, B, "the picture at
+once, then sharp". Measured on the two-hour stand-in (145,200 points, 6,600
+strokes) before this: the link page stood blank until the payload had come and
+been painted, 1.5 s on a desk and 1.7 s on a phone at this box's pace, 4.1 and
+6.8 s with the CPU 4x slower, and the paint was one task of up to 5.7 s in which
+nothing on the page could be touched. A real phone also waits for the payload
+itself, 9.6 MB for that piece.
+
+THE PAGE AT ONCE. A Pad post's size is a column (canvas_w/canvas_h, the tile's
+reason), its line's numbers are too (line_json, the in-post player's reason),
+and its title and caption are already read for the Open Graph tags, so the
+route hands the page all of them (routes.py, pre) and the shell renders the
+words. app.js lays the box out before it asks for the payload (initPlayer
+playerPre), from the same fit it always used, with the track at the
+scrubber's height and the line under it in the post's own numbers (the real
+ones replace it), so the box the picture stands in is the box the drawing
+gets (the first cut did not: the shell grew 59 px when the drawing came and
+the box shrank under the picture), and a phone turned while the drawing comes
+re-fits the box then. The post's own picture stands where the canvas is:
+/s/<id>/poster, the card made when it was posted, cropped back to the
+drawing. The crop is lib/sharecard.js drawingRect() with the plate's corner
+and edge clipped off, the arithmetic inlineplayer.js fitPoster() does for the
+feed's box. THE FRAME'S SHADE: the canvas has the frame's vignette over its
+ground and under its ink, and a flat picture can only have it over all of it.
+Bare, the picture's edge was lighter than the ink's by 14.5 of 255; with the
+shade at full strength, darker by 9; at 0.6 it reads the same (within 1). The
+transport is laid out but unseen until the drawing can play, so nothing
+moves when it comes up, and it comes up over 0.3 s.
+
+THE INK WITHOUT A FREEZE. paintStrokesStatic lays its runs in slices when
+asked, the same runs in the same order, so the canvas ends exactly as one
+call leaves it, and the link page asks for it under the picture. TWO THINGS
+THE FIRST CUT GOT WRONG, both traced: a slice's ink is turned into pixels
+after it, when the canvas is flushed, and that takes several times longer
+than laying it (10 ms slices made frames of 40 to 110 ms; a flush left to
+pile up made one of 400 ms with the CPU 4x slower). So each slice is shown
+(the flush lands in the frame that laid it) and the last frame's length
+steers the next slice toward a frame of about 34 ms, starting small. When
+the ink is whole the picture fades over 0.3 s (at once under Reduce Motion,
+which needs no rule of its own here: the page's every-element rule stills the
+fade and the rise). A Play or a seek before then takes the canvas
+(restoreSeq) and the picture goes. Unasked, the function is the one call it
+always was: the editors are unchanged. An empty drawing has nothing to paint,
+so its picture is let go at once.
+
+AFTER, on the same piece, the box loaded as the battery loads it: the
+picture is on screen in 0.3 s, before any of the data; the box stands to the
+pixel where it stood, phone and desk; at this box's pace the one long task is
+the data's own arrival (107 to 123 ms), and with the CPU 4x slower the
+arrival's is 233 to 380 ms and the frames after it 50 to 150 ms, where there
+was one task of 5.7 s. The ink is whole 1.9 to 2.4 s after the data comes at
+this pace, behind the picture.
+
+NOT FOR A FLIP, AND TIMED. A Flip's card is its first inked page, which need
+not be the page its link page rests on, and its first paint is one page, not
+the lot. Timed on a long Flip (60 pages of 2,400
+points, 144,000 in all, a 20 MB payload): its first page is on screen 0.2 s
+after its data has come (0.7 to 0.8 s with the CPU 4x slower), and the one long
+task in that is 59 to 83 ms (247 to 265 ms). The wait is the payload's own
+size, not a paint, so a Flip's page stays as it is; the picture first for a
+Flip, where its card is the page it rests on, is FUTURE.md 6x.
+
+THE ROWS. verify_firstlook.py (new, 35 rows): with the post's data held
+back by the browser, the picture painted where the canvas is and cropped to
+the drawing (read by hue), the words said, the transport unseen; the box
+standing still, short and long, phone and desk, and a phone turned while it
+waits; the swap cell by cell and at the edge's ring; the fade, Reduce Motion;
+the slices' ink against one call's; with the CPU 4x slower, many frames, the
+ink shown as it goes, and no task a third of the one call (THE INSTRUMENT'S
+FIRST DRAFT left the data's arrival out of what it measured, and the arrival's
+task is where the old freeze lived, so it could not have seen the freeze it
+guards against); Play while it paints; a short drawing, an empty one, no
+picture, a refused payload, a Flip, a missing post. Each red against its own
+break on a served copy of this tree, 24 of 24, one component each: the route's
+size, its line, the template's picture, the server's title; the early
+scrubber height, the early line; the picture shown before inkWhole exists
+(the first cut's own bug: a cached picture never showed); no fade (script and
+sheet); Reduce Motion's page-wide rules; the paint unsliced; the slices
+deaf to restoreSeq; no slice shown; the slice fixed at 10 ms (a 243 ms task);
+the transport not hidden, not rising, never made ready; no crop; the shade
+gone and at full strength; the empty drawing never let go; playerPre never
+called; a slice that skips a point; no re-fit on a turn. TWO BREAKS FIRST
+STAYED GREEN, and both times the tree was at fault, not the row: the picture's
+own Reduce Motion rule was one the page already made (gone), and the shade
+over the picture made its edge darker than the canvas's by 9 of 255 (now at
+0.6, and a row that reads the edge both ways).
+
+THE COST. The link page's script +2,268 B (156,805), its style +571 B
+(42,316) and its HTML +94 B (13,953), raised in writing in
+verify_player_isolation and verify_jsstrip; each Pad post's page also fetches
+its 66 KB card. Spent first: the picture's own error handler and clip, the
+line's pick, the four transport rows named three times over, and the
+redundant Reduce Motion rule.
+
+WHAT IT DOES TO FLIP: shared, the title and caption said by the server on
+every link page, a Flip's included, so its words are there before its data
+too. Not for Flip, the picture and the slices, for the reasons timed above;
+Flip next, the picture first where its card is the page it rests on
+(FUTURE.md 6x). The editors draw as they did.
