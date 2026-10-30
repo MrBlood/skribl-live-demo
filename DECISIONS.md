@@ -26843,3 +26843,44 @@ once it is in, green as built, phone and desk.
 
 WHAT IT DOES TO FLIP AND THE PAD: nothing; these are the link page's checks. A
 Flip's page has no stand-in (a Pad's only).
+
+## After v329 -- The draw drawer: Flip's pen keeps its size, and the Feel tile's words fit
+
+Two things in the draw drawer's tiles (lib/drawtiles.js, shared by the Pad and
+Flip).
+
+A TAP IN THE TILES SET FLIP'S PEN TO 18PX (a bug fix). Found while counting
+which controls have no help card: on Flip the Size tile read 7px with the
+drawer open and 18px once Brush was tapped. The quick sizes listen for a tap
+anywhere in the tiles and take the nearest element with a data-size. Flip's
+<body> carries one of its own (lib/sizeclass.js: "compact" on a phone,
+"regular" on a desk), so a tap on any tile or choice found it, read it as no
+number, and the slider went to its middle, 18px. From the tiles' first day
+(#609, Oct 22) until now, every tap on Brush, Size, Feel or Eraser, or on a
+brush, a smoothing, a pressure or an eraser width, set Flip's pen to 18px. The
+Pad's page has no data-size, so the Pad never did. Now only a quick size inside
+the drawer counts.
+
+THE FEEL TILE'S WORDS (the owner's pick A: "Your pick"). "Smooth low" and
+"Smooth high" were cut in a phone's tile ("Smooth off" just fit at 402px, and
+all three were cut at 360). The tile now says As drawn, Steadier or Smooth, the
+panel's own words made short; the panel is as it was. Measured here, not in SF:
+the tile gives its words 70px on a 402px phone and 59.5px at 360; As drawn
+takes 58.7, Steadier 51.8, Smooth 47.9.
+
+THE ROWS, in verify_drawtiles, on both editors:
+- A tap in the tiles leaves the size alone: the size at 5, Brush, Feel and
+  Eraser each tapped and a choice in each, the size still 5, and Bold still
+  sets 12. The Pad's page is given a data-size of its own, so the row asks both
+  editors the same thing: a data-size outside the drawer is never a size.
+- The Feel tile's words are whole, at 402 and 360, each smoothing in turn,
+  read as laid out (a Range over the words against the room the tile gives
+  them), which an ellipsis cannot hide.
+- The choices' row expects "Smooth".
+Calibrated in a trimmed copy, lib/drawtiles.js served in place: main's, all six
+red (the Pad's size went to 16, Flip's to 18, the words cut); without the
+scope, the two size rows red alone; with the old words, the four word rows red
+alone; as built, all green.
+
+WHAT IT DOES TO FLIP AND THE PAD: one module, both editors. The bug was
+Flip's alone; the fix and the rows are both editors'.
