@@ -6512,9 +6512,11 @@ async function shareSkribl(){
     // post, and closing the tab used to lose it permanently.
     if(window.SkriblPosted){
       const _t=document.getElementById('postTitleInput');
+      const _c=document.getElementById('postCaptionInput');
       const _pubBox=document.getElementById('postPublicInput');
       const kept=window.SkriblPosted.add({ id:data.id, url:data.url, kind:'flip',
         pages:frames.length, title:(_t?_t.value:'').trim(),
+        caption:(_c?_c.value:'').trim(),
         visibility:(_pubBox && _pubBox.checked) ? 'public' : 'unlisted',
         // Revocation capability: the server's when the answer carried one, the
         // one this client minted when it did not (a replay) — see lib/posted.js.

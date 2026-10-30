@@ -118,6 +118,11 @@
   gap: 2px; text-decoration: none; color: inherit; }
 .posted-title { font-size: 13px; color: var(--text-primary);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* THE CAPTION, ONE LINE OF IT (the posting mock, after v329), between the
+   title and the facts, in the second ink. The whole of it is on the stage
+   when the row is picked. */
+.posted-cap { font-size: 14px; line-height: 1.35; color: var(--text-secondary);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* ONE LINE, always (v293): the meta is "4 pages · 41 min ago", and on a
    phone the row that holds three actions used to squeeze it to a word per
    line. The actions yield (they stack, below) — the words never do. */

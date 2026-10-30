@@ -126,6 +126,12 @@
       id: String(entry.id),
       url: entry.url || null,
       title: (entry.title || '').slice(0, 80),
+      /* THE CAPTION (after v329, the posting mock): the Library shows it
+         under the title on the stage and as a line on each row, and until
+         now this list never kept it. The sheet's own limit, 300. An entry
+         that does not know it (a recovered key) leaves it out, and the
+         Library's reconcile asks the server, which does know. */
+      caption: typeof entry.caption === 'string' ? entry.caption.slice(0, 300) : undefined,
       kind: entry.kind === 'flip' ? 'flip' : 'pad',
       pages: Math.max(1, parseInt(entry.pages, 10) || 1),
       /* WHICH WAY IT WAS POSTED (v304): the gallery box's answer, so the
@@ -197,6 +203,9 @@
     if (!hit) return false;
     if (patch && (patch.visibility === 'public' || patch.visibility === 'unlisted')) hit.visibility = patch.visibility;
     if (patch && typeof patch.title === 'string') hit.title = patch.title.slice(0, 80);
+    /* A string only, the empty one included: the server's "no caption" is
+       an answer, and a row that has had it is not asked again. */
+    if (patch && typeof patch.caption === 'string') hit.caption = patch.caption.slice(0, 300);
     /* THE THREE FIELDS A ROW CAN BE MISSING (v307). `kind`, `pages` and
        `has_audio` were each added after posts were already being made, so
        every entry written before them reads undefined and every client that

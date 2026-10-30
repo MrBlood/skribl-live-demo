@@ -53,6 +53,7 @@
       --accent: #7c5cff;
       --accent-2: #5b8cff;
       --accent-fill: #6d4cf0;   /* a fill carrying words: AA with white (styles.css) */
+      --accent-ink: #c1b2ff;    /* small violet words: the caption's more (styles.css) */
       --font-ui: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       --font-mono: var(--font-ui);   /* the app's sans (after v324): monospace read as inspected */
       /* tooltip.css's three names, on this palette — the same shape the
@@ -83,6 +84,7 @@
       --text-2: #4b5563;
       --text-3: var(--text-2);   /* TWO INKS: #6b7280 was 4.8:1 */
       --hairline-strong: rgba(0,0,0,0.18);
+      --accent-ink: #4c31c4;
       --danger: #c1104a;
     }
     * { box-sizing: border-box; }
@@ -132,9 +134,9 @@
        looks -- and a pen next to a book is a question you can answer by
        pressing play.
 
-       The CAPTION mark stays at every width. It is the only one of the three
-       that is a control rather than a label, and it is the only way to read
-       the message at all now that the caption is closed at rest. */
+       (The CAPTION mark stayed at every width while it was the only way to
+       read the message. The caption is under the drawing now and the mark
+       has gone.) */
     /* THE COUNT STAYS AT EVERY WIDTH NOW, and the note above records why it
        ever stood down: the name line was packing to the pixel against the
        caption's 44px expander AND the count. The expander moved under the
@@ -168,7 +170,9 @@
        the dead space the accordion was built to remove, handed to the
        neighbour instead ("it accordioned open and it opened the card
        next to it"). Start-aligned, each card is exactly as tall as what it
-       holds, and a card with its description shut is the same height it was. */
+       holds. Now that the caption shows at rest, that is the whole of the
+       layout: two cards side by side end at their own heights, and a caption,
+       at rest or opened, costs only its own card the room. */
     .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px;
       align-items: start; }
     @media (max-width: 860px) { .grid { grid-template-columns: minmax(0, 1fr); gap: 16px; } }
@@ -302,70 +306,35 @@
       white-space: nowrap; min-width: 0; }
     /* THE CAPTION CAME OFF THE ART. It was a scrim over the drawing because a
        poster-first card had nowhere else to put it; a post-like card has room
-       for words. Clamped to two lines, and the toggle EXPANDS rather than
-       reveals -- so the text is always present and always reachable, which is
-       what the opacity trick was protecting, without anything sitting on the
-       picture. */
-    /* CLOSED AT REST, SO IT COSTS NO HEIGHT. A card with a caption used to be
-       two lines taller than one without, and in a grid the neighbour's row
-       stretches to match -- the dead space at the bottom the owner
-       photographed. `grid-template-rows: 0fr -> 1fr` is the accordion: it
-       animates, it needs no measured pixel height, and the closed state is
-       genuinely zero rather than a clamp with `overflow: hidden` (which still
-       occupies its two lines). The inner element needs `min-height: 0` or the
-       0fr track refuses to collapse below its content.
+       for words, and nothing needs to sit on the picture. */
+    /* UNDER THE DRAWING, TWO LINES AT REST (the owner's yes on the posting
+       mock, after v329). From v310 it was shut to nothing behind a mark in the
+       head, so that every card was one height; it is where people look now,
+       15px in the card's own ink, and the card is as tall as what it holds.
 
-       `content-visibility: hidden` on the closed state keeps the text out of
-       the accessibility tree and out of Find-in-page while it is shut, which
-       is what `hidden` would do if we could use it on an animating box.
-
-       BOTH HALVES ARE LOAD-BEARING AND THEY DO DIFFERENT JOBS, which a
-       mutation had to say out loud: flipping the 0fr track to 1fr on its own
-       reddens NOTHING, because `content-visibility: hidden` makes the element
-       skip its contents entirely and contribute no height whatever the track
-       says. The track is what ANIMATES; the content-visibility is what
-       guarantees the zero. Removing either one alone leaves a card that still
-       looks right, which is exactly why the pair is written down here: the
-       calibration that flipped only the track came back green and proved
-       nothing at all. */
-    /* AND THE OPEN HAS TO BE AS SMOOTH AS THE TRACK, which the first cut was
-       not: the track animated and everything else jumped. Two properties were
-       stepping rather than easing, and each on its own was enough to read as a
-       stutter.
-
-       PADDING. The paragraph's 10/12px of vertical air arrived in one frame at
-       the start of the open and left in one frame at the start of the close,
-       so 22px of the movement happened instantly and the remaining track
-       animation looked like it was catching up. It eases on the same curve as
-       the track now.
-
-       CONTENT-VISIBILITY. Its two values are not interpolable, so the close
-       flipped straight to `hidden` and the element stopped contributing height
-       AT ONCE -- the collapse the track was in the middle of animating had
-       already happened. `transition-behavior: allow-discrete` holds the
-       visible value for the length of the transition and flips it at the end,
-       which is what makes the shut as smooth as the open. It is declared
-       SEPARATELY from the `transition` shorthand on purpose: written inline as
-       `content-visibility 0.24s allow-discrete`, a browser that does not know
-       the keyword throws out the WHOLE shorthand and the accordion loses every
-       animation it has. As its own declaration it is ignored in isolation, and
-       such a browser gets the old instant close and nothing worse.
-
-       The pair is still load-bearing in the way the note below describes. */
-    .tile .tcapWrap { display: grid; grid-template-rows: 0fr;
-      transition: grid-template-rows 0.24s cubic-bezier(0.2, 0.7, 0.2, 1); }
-    .tile.cap-open .tcapWrap { grid-template-rows: 1fr; }
-    .tcap { margin: 0; padding: 0 13px; min-height: 0; overflow: hidden;
-      font-size: 13px; line-height: 1.4; color: var(--text-2);
-      overflow-wrap: anywhere; opacity: 0; content-visibility: hidden;
-      transition: padding 0.24s cubic-bezier(0.2, 0.7, 0.2, 1),
-                  opacity 0.18s ease, content-visibility 0.24s;
-      transition-behavior: allow-discrete; }
-    .tile.cap-open .tcap { padding: 10px 13px 12px; opacity: 1;
-      content-visibility: visible; }
-    @media (prefers-reduced-motion: reduce) {
-      .tile .tcapWrap, .tcap { transition: none; }
-    }
+       A LINE CLAMP HIDES LINES, NEVER CHARACTERS. The whole text is in the
+       tree, so a screen reader reads all of it and Find finds it, whatever
+       the clamp shows. "more" opens the rest in place and gallery.js glides
+       the box between the two heights; the clamp itself does not animate. */
+    .tcap { margin: 0; padding: 10px 13px 12px; overflow: hidden;
+      font-size: 15px; line-height: 1.4; color: var(--text);
+      overflow-wrap: anywhere;
+      display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+    .tcap.is-open { display: block; -webkit-line-clamp: none; }
+    /* "more" brings the card's bottom air when it shows (gallery.js sets the
+       class), so the words do not stack theirs on top of its 44. */
+    .tile.cap-more .tcap { padding-bottom: 0; }
+    /* MORE, AND LESS. Small violet words, so the accent ink; and a 44px box
+       of its own, as every control on the card has: the touch floor, with no
+       dead space inside it. Set in to where the words start, and drawn up
+       toward the last line, so it reads as the end of the caption rather
+       than a new row. */
+    .tile .tcapMore { align-self: flex-start; min-height: 44px; margin: -6px 0 0;
+      padding: 0 13px; border: 0; background: none; cursor: pointer;
+      font: inherit; font-size: 14px; font-weight: 600; color: var(--accent-ink);
+      -webkit-tap-highlight-color: transparent; }
+    .tile .tcapMore[hidden] { display: none; }
+    @media (hover: hover) { .tile .tcapMore:hover { text-decoration: underline; } }
 
     /* ---- the card's overflow menu ------------------------------------- */
     .sr-live { position: absolute; width: 1px; height: 1px; margin: -1px;
@@ -416,9 +385,15 @@
        than the run's 6, so the eye reads two facts and then a way in. The
        head is flex-start, so this centres itself against the run's first line
        rather than floating at the top of a two-line head. */
-    /* 34 visible, glyph 16 -- see the caption mark above. `margin-left: 5px`
-       rather than 14: the box now carries its own air, so the old margin on
-       top of it read as a gap twice over. */
+    /* A 44px BOX WITH A 16px GLYPH, NOT 16 WITH A BAND OVER IT. Three rules
+       had to agree:
+         verify_layout  the pill is at least 34px you can SEE
+         verify_layout  every control answers a tap 44px tall
+         verify_a11y    no control leaves dead space inside its 44px box
+       A ::before band out to 44 satisfies the first two and fails the third,
+       because the band is not the element. The box is transparent, so the row
+       looks the same and the target is real; it carries its own air, so no
+       margin is stacked on top of it. */
     .tile .tileMore { position: relative; padding: 0; border: 0; background: none;
       cursor: pointer; color: var(--text-3); width: 44px; height: 44px;
       flex: none; margin-left: 0;
@@ -453,46 +428,10 @@
        touch floor does not apply and a 34px box would only add air. */
     .tile .tileMark { display: inline-grid; place-items: center;
       width: 16px; height: 16px; color: var(--text-3); }
-    /* The two pressable ones do NOT carry this class -- see gallery.js. They
-       are controls with a touch floor, not labels, and borrowing a label's
-       class to get its colour is how the floor was lost. */
+    /* The pressable one, the overflow, does NOT carry this class -- see
+       gallery.js. It is a control with a touch floor, not a label, and
+       borrowing a label's class to get its colour is how the floor was lost. */
     .tile .tileMark svg { width: 15px; height: 15px; display: block; }
-    /* The one mark that is a CONTROL, so it gets a control's affordances: a
-       44px band to a finger, a lit state while the caption is open, and it is
-       the only thing in the run that can be pressed. */
-    /* 34 VISIBLE, NOT 16 WITH A BAND OVER IT. verify_layout's floor is the
-       element's own height, on purpose: "the band is invisible, so a page can
-       answer 44 to a finger with a 22px pill -- a target you cannot see to aim
-       at". These went in at 16px with a ::before out to 44 and the gallery
-       failed at 360, 390 and 430.
-       
-       The GLYPH stays 16. Only the box grows, and it is transparent, so the
-       row looks exactly the same and the target is real. The named exemption
-       in that suite is for the in-post player's pills over a drawing, which
-       these are not: this is a text row.
-
-       44, NOT 34, and three rules had to agree before that was clear:
-         verify_layout  the pill is at least 34px you can SEE
-         verify_layout  every control answers a tap 44px tall
-         verify_a11y    no control leaves dead space inside its 44px box
-       34 visible with a ::before band out to 44 satisfies the first two and
-       fails the third, because the band is not the element. One 44px box with
-       a 16px glyph centred in it satisfies all three, and is exactly what the
-       Report WORD it replaces was. The box is transparent; the air was always
-       there. */
-    .tile .tileCapBtn { position: relative; padding: 0; border: 0;
-      background: none; cursor: pointer; color: var(--text-3);
-      width: 44px; height: 44px; display: inline-grid; place-items: center; }
-    /* THE GLYPH IS CAPPED AND THE BOX IS NOT, which is the one line this
-       control was missing. `.tileMore svg` has carried `width: 16px` since it
-       was written; the caption mark was given the same 44px box and no such
-       rule, so its SVG took the whole grid cell and painted a 44px speech
-       bubble beside a 16px ellipsis ("the enormous chat bubble (why so
-       big?)"). An `<svg aria-hidden="true">` with a viewBox and no size is not small by default
-       -- it fills what contains it. */
-    .tile .tileCapBtn svg { width: 16px; height: 16px; display: block; }
-    .tile .tileCapBtn:hover { color: var(--text); }
-    .tile.cap-open .tileCapBtn { color: var(--accent); }
     /* THE MARKS STAND DOWN ON A ONE-UP CARD, for the reason the play count
        above already does: at 390 the head is measured to the pixel, and
        folding these in cost the display NAME the 44px it needed -- `at 390 the
@@ -504,11 +443,7 @@
        wins -- and `.tile .tileMark { display: inline-grid }` is later. The
        rule was served, matched, and lost: the marks measured 16px wide inside
        a media query that said display: none. Same trap as the star's avatar
-       gradient, twice in one change.
-
-       The CAPTION mark is not in here. It is the only one of the three that is
-       a control rather than a label, and with the caption closed at rest it is
-       the only way to read the message at all. */
+       gradient, twice in one change. */
     @media (max-width: 560px) {
       .tile .tileKind { display: none; }
     }

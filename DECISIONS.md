@@ -26153,3 +26153,65 @@ pill's words faint.
 
 WHAT IT DOES TO FLIP: shared. A Flip's link page is this page; its caption
 and its way back are the same.
+
+## After v329 -- The caption where people look: the gallery's cards, the Library's stage and rows
+
+PR C of the posting mock the owner answered "all yes": the gallery shows the
+caption "under the drawing, two lines with more, and the ≡ button goes"; the
+Library "shows it under the title and on each row", and "from now on the list
+keeps it". The mock said, and the owner took, that two cards side by side can
+then end at different heights, with the drawings level.
+
+THE GALLERY (gallery.js, skribl_gallery.html). The caption is under the
+drawing at rest, 15px in the card's own ink (17.9:1 light, 14.0:1 dark), and
+two lines of it at most. The v310 accordion, shut to nothing behind a mark in
+the head so that every card was one height, is gone with its mark.
+- "MORE" EXACTLY WHERE THE WORDS RUN PAST TWO LINES, asked of the words at the
+  width they are set at (their height against two of their own lines), and
+  asked again whenever the card changes width (a ResizeObserver), so a caption
+  that fits on a desk shows its "more" only on a phone. 14px 600 in the accent
+  ink (8.3:1 light, 8.4:1 dark); the gallery page took --accent-ink, the
+  editors' values. A 44px box of its own, as every control on the card has.
+- IT GLIDES BOTH WAYS, on the old accordion's curve (0.24 s): the box eases
+  from its height to the other state's, measured with that state's clamp. A
+  close keeps the words whole in the box while it shrinks and clamps only when
+  it lands, so the lines go down with the box. "less" puts it back as it was.
+  Reduce Motion: it changes, in the frame it is pressed.
+- THE CARDS END AT THEIR OWN HEIGHTS. The grid has been start-aligned since
+  v310, so no card is stretched to its neighbour's and none has space under
+  its drawing it did not ask for; the drawings stay level, since everything
+  above them is the same.
+
+THE LIBRARY (library.js, lib/postedui.js, lib/posted.js). The stage says the
+caption in full under the title, 16px in the page's ink (17.9:1, 14.0:1), and
+nothing (hidden, not an empty line) for a post with none. Each row says one
+line of it at 14px in the second ink, cut with an ellipsis (posted.css).
+- THE LIST KEEPS IT now: the Pad's and Flip's sheets hand it to
+  SkriblPosted.add(), up to the sheet's 300.
+- ONE THING CARRIED FURTHER THAN THE MOCK, which said posts made before would
+  show none. /api/skribls/meta already answers with the caption, so the
+  Library's reconcile asks once for every row kept without one, and keeps the
+  answer, the empty one included, so the next visit asks nothing. And the
+  stage says it from the post it fetches to play, if that answer never came.
+
+THE ROWS. verify_captions.py (new, 69 rows), each red against its own break on
+a served copy of this tree, 31 of 31. The first pass missed two, and both
+were the check's: the close's "the words stay whole" asked the box's display,
+which Chromium reports as flow-root for a clamped box too, so it could never
+go red (it asks the clamp now, here and in verify_gallery); and Reduce
+Motion's "less" had no row of its own, the page's own Reduce Motion rule
+hiding the gap (it has one now, and a break that takes both away). verify_gallery's v310 rows (every
+card one height, the head's mark, the accordion's close) are inverted to the
+caption at rest and its "more", each red against its own break, 14 of 14:
+shut at rest; the cards stretched; the mark back in the head; above the
+drawing; no clamp; "more" doing nothing; its state unsaid; "more" under 44;
+a glyph for the word; no glide; the close clamping first; the overflow's
+glyph unsized; the overflow at 34; the card's focus raising the bar.
+
+FOUND, NOT CHANGED: the Library's "Use a delete key" and "Clear list" ask for
+--accent-ink, which the Library page never defines, so they draw in the page's
+ink. Left for the owner to call.
+
+WHAT IT DOES TO FLIP: shared. A Flip's card in the gallery and its row in the
+Library are the same as a Pad's, and Flip's sheet keeps the caption as the
+Pad's does.
