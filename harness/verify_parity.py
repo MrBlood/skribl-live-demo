@@ -1717,7 +1717,8 @@ with sync_playwright() as p:
     # Where the hint wraps (a phone, and the break point is the FONT's: this
     # box renders Liberation Sans, the owner's phone SF), it splits evenly --
     # text-wrap: balance -- instead of leaving one word on a line of its own
-    # ("drawing", at 360 and 375). Lines are read from where each WORD paints.
+    # ("drawing", at 360 and 375). Lines are read from where each WORD paints,
+    # and a word that is not laid out at all (the drop, on a phone) is not said.
     print("\nPARITY — a wrapping hint strands no word, on both")
     LINES = """(k) => { const h = document.querySelector('#' + k + 'AddBtn .dz-hint'); if (!h) return null;
         const r = document.createRange(), lines = []; let top = null;
@@ -1726,12 +1727,13 @@ with sync_playwright() as p:
           const re = /\\S+/g; let m;
           while ((m = re.exec(n.data))) {
             r.setStart(n, m.index); r.setEnd(n, m.index + m[0].length);
-            const t = Math.round(r.getClientRects()[0].top);
+            const rs = r.getClientRects(); if (!rs.length) continue;
+            const t = Math.round(rs[0].top);
             if (top === null || Math.abs(t - top) > 3) { lines.push([]); top = t; }
             lines[lines.length - 1].push(m[0]);
           } }
         return lines; }"""
-    _strand = []
+    _strand, _said = [], {}
     for _route in ("/skribl-pad", "/flip"):
         for _vw in (360, 375):
             _ctx = b.new_context(viewport={"width": _vw, "height": 800}, device_scale_factor=2, is_mobile=True, has_touch=True)
@@ -1743,9 +1745,31 @@ with sync_playwright() as p:
                 _ln = _q.evaluate(LINES, _k)
                 if not _ln or (len(_ln) > 1 and len(_ln[-1]) < 2):
                     _strand.append(f"{_route} {_vw} {_k}: {_ln}")
+                if _k == "photo":
+                    _said[f"{_route} {_vw}"] = " ".join(w for _l in (_ln or []) for w in _l)
             _ctx.close()
     check("the empty rows' hints, where they wrap at 360 and 375, never leave one word alone on a line",
           not _strand, "; ".join(_strand))
+
+    # THE DROP IS A MOUSE'S PROMISE (the posting mock's plain words). A phone,
+    # with nothing to drop from, says the photo's file types only, and a tap
+    # on the box already opens the photos; a desk, where there is a pointer
+    # to drag with, says the drop too. Read from the words that are laid out,
+    # since the markup holds both.
+    print("\nPARITY — the photo box says the drop only where there is a pointer, on both")
+    for _route in ("/skribl-pad", "/flip"):
+        _q = b.new_page(viewport={"width": 1280, "height": 900})
+        _q.goto(BASE + _route, wait_until="load"); _q.wait_for_timeout(700)
+        _q.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+        browsing.pad_drawer(_q, "photo")
+        _said[f"{_route} 1280"] = " ".join(w for _l in (_q.evaluate(LINES, "photo") or []) for w in _l)
+        _q.close()
+    check("on a phone, the photo box says its file types only: there is nothing to drop from",
+          all(_said.get(f"{_r} {_w}") == "JPG, PNG, GIF or WebP" for _r in ("/skribl-pad", "/flip") for _w in (360, 375)),
+          str(_said))
+    check("...and on a desk it says the drop too",
+          all(_said.get(f"{_r} 1280") == "JPG, PNG, GIF or WebP · or drop one here" for _r in ("/skribl-pad", "/flip")),
+          str(_said))
 
     # ---- the bin ------------------------------------------------------------
     # The red Remove pill is a quiet bin now, and it asks first, as the

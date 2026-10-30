@@ -947,7 +947,7 @@ if (padLine && playScrub && window.SkriblReplayLine) {
   const tuneBtn = document.getElementById('tuneBtn');
   if (row && tuneBtn) tuneBtn.addEventListener('click', () => row.update());
   // The pill's chips open down over the top of the drawing, where a toast
-  // sits ("Take saved -- ..."); a toast never covers a control being used,
+  // sits ("Saved. Play to watch it ..."); a toast never covers a control being used,
   // so opening the speed sends it away.
   if (desk) desk.button.addEventListener('click', () => {
     if (typeof toast !== 'undefined' && toast) toast.classList.remove('show');

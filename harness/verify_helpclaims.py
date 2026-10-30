@@ -135,7 +135,7 @@ CLAIMS = {
     "Two timers": ["probe:takes"],
     "Pauses": ["verify_tools.py::the Pauses seg writes through to the drawing's own setting"],
     "Canvas locks between takes": ["probe:takes"],
-    "Add more takes": ["verify_ux.py::F4 setup: Add take started a take", "probe:takes"],
+    "Keep drawing": ["verify_ux.py::F4 setup: Keep drawing started a take", "probe:takes"],
     # One pill text on both editors since #410, so its claims cover both.
     "Play & scrub": ["verify_scrub.py::a real replay shows the bar",
                      "verify_scrub.py::it is a rounded bar of the drawing's shape",
@@ -647,7 +647,7 @@ def slow_drag(pg, sel, x0, y0, x1, y1, ms):
 
 
 def probe_takes(b, nm, path):
-    """Pad: the badge counts drawing time not pauses; a stopped take locks; Add take adds one."""
+    """Pad: the badge counts drawing time not pauses; a stopped take locks; Keep drawing adds one."""
     if path == "/flip":
         return True, "Pad only"
     ctx, pg, errs = fresh(b, path)
@@ -677,7 +677,7 @@ def probe_takes(b, nm, path):
     ok = (shown and 2.0 <= play_s < wall - 2.0 and badge_s == int(play_s)
           and locked and n1 == n0 and n2 > n1 and not errs)
     return ok, (f"badge {badge!r} for {play_s:.1f}s of drawing vs {wall:.1f}s on the clock; "
-                f"locked={locked}; strokes after Stop {n0} -> {n1}, after Add take {n2}")
+                f"locked={locked}; strokes after Stop {n0} -> {n1}, after Keep drawing {n2}")
 
 
 def probe_flip_play(b, nm, path):

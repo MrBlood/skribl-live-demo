@@ -661,10 +661,11 @@ branch on `strokeLayersOn()` — never neither.
 
 **THE CANVAS LOCK AFTER A TAKE IS DELIBERATE — do not "fix" it.** When a take
 ends, `updateCanvasLockCue()` sets `cursor: not-allowed` and the canvas is not
-drawable until you tap + Add take or start a New Skribl. This looks like a dead end and is not:
+drawable until you tap + Keep drawing or start a New Skribl. This looks like a dead end and is not:
 it is the multi-take model, and `endRecordingTake()` says so in a toast —
-*"Take saved — Play to preview, or Add take to draw more"* — and the way
-forward is an "+ Add take" pill floating on the locked canvas; since v288 the
+*"Saved. Play to watch it, or Keep drawing to add more"* — and the way
+forward is a "+ Keep drawing" pill floating on the locked canvas (it said
+"+ Add take" until the posting mock's plain words); since v288 the
 header's Record button is not even there on a finished take (it is a Stop
 button while a take runs, and appears idle only over unrecorded ink).
 An external design pass in v215 read the lock as a bug and came close to
