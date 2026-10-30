@@ -1166,8 +1166,9 @@ stays a sleep.
   back the box stands where it stands once the drawing is in. On a post this
   browser made, Back to Pad (Back to Flip on a Flip); anyone else's, Make your
   own Skribl; pressed after the Pad, a step back to the Pad as it was left,
-  its strokes on it, and with no Pad behind it, the Pad. Each row was shown
-  red by its own break.
+  its strokes on it, and with no Pad behind it, the Pad. Nothing on the page
+  under 12px, at rest, playing and with More open, phone and desk ("made
+  with" was 11px). Each row was shown red by its own break.
 - `verify_firstlook.py` — a long drawing's first look on the link page (the
   posting mock's 2b, B: "the picture at once, then sharp"). With the post's
   data held back by the browser, the page alone shows the post's own picture
@@ -1256,6 +1257,8 @@ stays a sleep.
   tested by prefetching every tile), and that the transport reads the player's
   clock rather than keeping one of its own. Two of its source gates were
   substring searches that passed on their own prose — see the note beside them.
+  The line under the list has its links at 12px, empty ("Have a key? Use
+  it") and with posts ("Use a delete key", "Clear list").
 
 - `verify_compose.py` — COMPOSE MODE: the Pad opened from a host's composer
   (`/skribl-pad?compose=1`), driven end to end on the real `/feed` page through

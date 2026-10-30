@@ -1461,6 +1461,69 @@ the cache, every page's signature read), about 33 ms of a 54 ms change on a
 desk at this box's pace and 250 to 280 ms with the CPU 4x slower. The fix is
 the strip changed in place, its classes moved, rather than made again.
 
+## 6z. The polish run's held four, and its finish line (after the audit, Oct 29 to 30)
+
+The owner's auditor's prompt ("Comprehensive Application Code Audit &
+Optimization"), merged with the polish plan, ran as four phases: look and
+measure, a ranked list of twelve (the owner: "all yes"), build, and the
+finish line. Items 1 to 8 are built (DECISIONS, after v329, from "No style
+rule searches the whole page" to "A last look at efficiency"). These four
+were held, by the owner's yes, until after the finish line; each was
+measured at phone pace (Chromium, the CPU 4x slower, 4G, 402 x 874) on main
+at 92bc060.
+
+9. **Flip on a desk: fewer buttons at once** (design, mock first; Flip only).
+   Twelve buttons around the canvas look equally important (Left, Right,
+   Copy, Draw, Loop, Under, Delete, Duplicate, Blank, Tween, Smear), and most
+   do nothing while there is one page. The idea: the page tools stay quiet
+   until there is a second page, then group by what they do.
+10. **On a tablet, the Pad's canvas uses the width** (design, mock first; the
+    Pad, to match Flip). At 820 px wide (an iPad held upright) the Pad opens a
+    tall, narrow canvas about half the screen's width; Flip already fills it.
+11. **Long replays stay smooth on slower phones** (speed; trace first). The
+    two-hour stand-in (145,200 points) replays at 15 to 20 frames a second at
+    phone pace and the cat at 30; at full speed both hold 60 at 1x, 16x and
+    Fit. The cause is not traced.
+12. **Skribl's ears never hold the page** (speed; the shared drawer). A
+    two-minute stereo song at phone pace: 3.2 s to decode and 3.9 s to a
+    pick, and the page held four times for more than 200 ms (the longest
+    0.55 s); at full speed 0.5 s and 1.0 s, the longest hold 0.14 s. The idea
+    is 6t's Worker, "if it shows": it shows on a slower phone, not on the
+    owner's.
+
+**The finish line (Phase 4), not started:** Skribl inside skribls.net for
+real (a Skribl button in the reply box beside GIF, posts made there carrying
+the drawing's thumbnail, the player starting as more posts load while you
+scroll; 6w is the posting half); then the owner and two or three friends
+trying three small tasks on their phones, the only proof that something got
+easier; then How it works made again (6v), once the look has settled. Skribl
+as a reply (the mock the owner has seen) is next in line after that.
+
+**The rest of the words under 12px, the owner's call.** "The last two" (the
+link page's "made with", the Library's "Have a key? Use it") were the last
+two on the five pages as they open with nothing posted; both are 12px now.
+Opened, with posts, about twenty style rules are still under 12px: the
+Library's rows (the line under each title 11px; Copy link, Key, In the
+gallery and Share 11.5px; the kind tag and the stats' and now-playing labels
+10.5px, in monospace caps); Export (the file name's ending, the option notes,
+the progress label, and on Flip the scope and note lines, 11 to 11.5px);
+Report (its details 11.5px, its privacy line 11px); the ⋯ menu (the version
+line 10.5px, the row notes 11px); How it works (the search count 11.5px, the
+numbered circles 11px); and in the editors the autosave status, the zoom
+readout, the pending line, Flip's small + buttons and the music bar's scope
+buttons (11px), with the brand tag and the narrow screen's duration badge at
+10px. Not every rule may show; the census that comes with the change says
+which do. The idea: every word to 12px, sheet by sheet, mocked first since
+it moves six sheets' look, each with a check like the Post sheet's ("nothing
+painted in the sheet under 12px").
+
+**Measured, not built, outside the list:** Flip's page change on a long Flip
+(6y); the Pad's Undo past its three copies on a two-hour piece, a repaint of
+1.5 s; the Pad's own player paints a long drawing three times (DECISIONS,
+"The Pad opens a long drawing without a freeze"); a file opened on the Pad
+over a drawing still in progress came up without its Keep drawing pill,
+seen while writing a check and not looked into.
+
 ## 7. The honest state
 
 The tool is good. It is better than it needs to be for a demo and not yet enough
