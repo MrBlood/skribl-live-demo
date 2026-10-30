@@ -30,7 +30,10 @@
     <button type="button" class="dz-add" id="photoAddBtn">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
       <span class="dz-title">Add a photo</span>
-      <span class="dz-hint">JPG, PNG, GIF or WebP · or drop one here</span>
+      {#- THE DROP IS A MOUSE'S PROMISE: on a phone (no hover, a finger) the
+          words are the file types only, since there is nothing to drop from
+          and tapping the box already opens the photos (the posting mock). #}
+      <span class="dz-hint">JPG, PNG, GIF or WebP<span class="dz-drop"> · or drop one here</span></span>
     </button>
     <img class="dz-lead dz-thumb" id="photoThumb" alt="" decoding="async">
     <div class="dz-file"><span class="dz-name" id="photoBtnLabel"></span><span class="dz-meta" id="photoBtnMeta"></span><span class="dz-ask">Tap the bin again to remove</span></div>

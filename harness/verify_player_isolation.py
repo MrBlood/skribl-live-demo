@@ -993,8 +993,8 @@ with sync_playwright() as sp:
     #   that fails is never shown, and goes with the rest) and the line's
     #   pick, which nothing can press while it is unseen. verify_jsstrip's
     #   lines move with it, its target line in writing with the debt named.
-    #   156,805 measured.
-    BYTES_RATCHET, BYTES_TARGET = 156_808, 153_800
+    #   156,801 measured (with the plain words' -4 B merged in under it).
+    BYTES_RATCHET, BYTES_TARGET = 156_804, 153_800
     # The page's own HTML. The brand is the one-stroke skribl signature INLINE
     # in the page (~1.4KB of paths, a ~0.9KB nonce'd draw-on script, and the
     # <linearGradient> defs), and inline is load-bearing rather than lazy:

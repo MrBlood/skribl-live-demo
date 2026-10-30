@@ -972,10 +972,10 @@ with _sp204() as _p:
     check("F4 setup: tune drawer is open before the take", pg.evaluate("() => document.getElementById('tuneShell').classList.contains('open')"))
     # No idle Record button. This page already holds a finished take (the
     # V205 block above), so the canvas is locked and the way to start another
-    # take is the "+ Add take" pill — the same beginRecording path, which is
+    # take is the "+ Keep drawing" pill — the same beginRecording path, which is
     # what must close the drawer.
     pg.click("#addTakePill"); pg.wait_for_timeout(350)
-    check("F4 setup: Add take started a take", pg.evaluate("() => recording === true"))
+    check("F4 setup: Keep drawing started a take", pg.evaluate("() => recording === true"))
     _st = pg.evaluate("() => { const sh = document.getElementById('tuneShell'), b = document.getElementById('tuneBtn'); return { open: sh.classList.contains('open'), ariaHidden: sh.getAttribute('aria-hidden'), expanded: b.getAttribute('aria-expanded') }; }")
     check("F4: starting a take closes the tune drawer (no .open)", not _st["open"], str(_st))
     check("F4: ...shell aria-hidden='true'", _st["ariaHidden"] == "true", str(_st))
@@ -2228,7 +2228,7 @@ with _sp204() as _ar:
           _s1["recording"] and not _s1["hidden"] and _s1["active"], str(_s1))
     _arp.click("#recordBtn"); _arp.wait_for_timeout(500)
     _s2 = _arp.evaluate(_AR)
-    check("AUTO-RECORD: after Stop the button is gone and the Add take pill is the way on",
+    check("AUTO-RECORD: after Stop the button is gone and the Keep drawing pill is the way on",
           not _s2["recording"] and _s2["hidden"] and _s2["pill"], str(_s2))
     # The exception, driven through the same function: ink with no take (a
     # restored draft's unrecorded pixels) is where the auto-arm does not fire

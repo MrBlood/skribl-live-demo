@@ -684,7 +684,7 @@
      Duplicate/Blank/Motion Smear are ACTIONS, so they wear the page bar's own
      recipe (solid hairline, sheet wash, hover lift, 1px press) and the two rows
      around the strip speak one language. The accent-tinted plus is the same cue
-     as the canvas's Add take pill: violet marks "this adds something". */
+     as the canvas's Keep drawing pill: violet marks "this adds something". */
   .addbtn { width: 88px; border: 1px solid var(--hairline-strong);
     background: rgba(var(--surface-sheet-rgb), 0.9); color: var(--text-secondary);
     border-radius: 10px; padding: 8px 0; font: inherit; font-weight: 600; font-size: 12px; cursor: pointer;

@@ -314,9 +314,9 @@ with sync_playwright() as sp:
     # And RAISED, in both places together, by a long drawing's first look (the
     # owner's "all yes" on the posting mock, 2b B), +2,268 B, all app.js: the
     # box laid out and the post's picture shown before the data, and the ink
-    # laid in slices under it (156,805 measured).
+    # laid in slices under it (156,801 measured).
     check("stripping keeps the player's JS under its ratchet",
-          lean_total <= 156_808,
+          lean_total <= 156_804,
           f"{src_total:,} B of source -> {lean_total:,} B parsed")
     # THE MODULE ONLY A RECOLOURED DRAWING FETCHES (lib/recolorplay.js, by
     # app.js on the link page and inlineplayer.js in a post): its own pin, so
@@ -402,9 +402,9 @@ with sync_playwright() as sp:
     # AND 2,268 B MORE, IN WRITING, at the owner's "all yes" on the posting
     # mock (2b B: a long drawing's picture at once, then sharp): playerPre and
     # the sliced first paint, all app.js. Spent value and 25 B again; the line
-    # is now 3,005 B over 153,800, and the carve named above is still the
+    # is now 3,001 B over 153,800, and the carve named above is still the
     # first candidate.
-    _target = 156_830
+    _target = 156_826
     _margin = _target - lean_total
     check(f"REACHES the {_target:,} target (strip + whitespace collapse; 153,800 once its debt is paid)",
           lean_total <= _target,

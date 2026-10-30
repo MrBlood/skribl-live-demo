@@ -1511,7 +1511,7 @@ with sync_playwright() as p:
         const lines = p ? new Set([...r.getClientRects()].map(b => Math.round(b.top))).size : 0;
         return { shown: !!p && !p.hidden, lines,
                  canvas: Math.round(c.width) + 'x' + Math.round(c.height) }; }""")
-    check("Pad at 150%, a tall drawing: Add take stays on one line",
+    check("Pad at 150%, a tall drawing: Keep drawing stays on one line",
           _t["shown"] and _t["lines"] == 1, str(_t))
 
     # THE POST PAGE'S ⋯ MENU. At 268 the ⋯ wraps onto a row of its own,
