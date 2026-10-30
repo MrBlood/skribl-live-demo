@@ -191,6 +191,11 @@ NO_AAC = """() => { const M = window.SkriblMp4; window.__realMp4 = window.__real
   M.prepare = async (w, h) => ({ w: w, h: h, codec: 'avc1.42001f' });
   M.aacSupported = async () => { window.__aacAsked = true; return false; }; }"""
 REAL_MP4 = """() => { const M = window.SkriblMp4, r = window.__realMp4; if (r) { M.prepare = r.prepare; M.aacSupported = r.aac; } }"""
+# NO MP4 AT ALL: the WebM route, asked for by name. Headless Chromium had no
+# H.264 encoder until Chrome 153 (Playwright 1.63, Oct 30); with one, the Pad's
+# Video button took the MP4 route and these WebM rows read an MP4 as nothing.
+NO_MP4 = """() => { const M = window.SkriblMp4; window.__realMp4 = window.__realMp4 || { prepare: M.prepare, aac: M.aacSupported };
+  M.prepare = async () => null; }"""
 
 
 def flip_page(b):
@@ -357,6 +362,7 @@ with sync_playwright() as p:
         return """() => { document.getElementById('exportItem').click();
             setTimeout(() => document.getElementById('exportVideo').click(), 300); }"""
 
+    pg.evaluate(NO_MP4)
     with pg.expect_download(timeout=30000) as dl:
         pg.evaluate(pad_export_trigger())
     good = webm(open(dl.value.path(), "rb").read())
