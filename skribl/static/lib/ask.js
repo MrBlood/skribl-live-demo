@@ -54,13 +54,14 @@
               ['Pick how many pages play each second.', '#fps', 'Pages per second'],
               ['With a song that has a beat, <b>Beat</b> keeps the pages to it.']],
       related: ['move', 'floop'] },
-    { id: 'takes', ed: 'pad', title: 'Draw more over a replay', sub: 'Add a take', clip: 'takes',
-      words: ['take', 'record', 'again', 'more', 'add'],
-      // Add take is on the canvas between takes, and steps aside while the
-      // replay plays, so the answer starts where it shows.
-      steps: [['When a take is done, tap <b>Add take</b> on the canvas.', '#addTakePill', 'Add take'],
+    { id: 'takes', ed: 'pad', title: 'Draw more over a replay', sub: 'Keep drawing', clip: 'takes',
+      words: ['take', 'record', 'again', 'more', 'add', 'keep drawing'],
+      // Keep drawing is on the canvas between takes, and steps aside while the
+      // replay plays, so the answer starts where it shows. Its words are the
+      // owner's (plain words): what to do, not what a take is.
+      steps: [['When you have finished, tap <b>Keep drawing</b> on the canvas.', '#addTakePill', 'Keep drawing'],
               ['Draw, then tap <b>Done</b>.'],
-              ['Tap <b>Play</b>: the replay plays every take in order.', '#playBtn', 'Play']],
+              ['Tap <b>Play</b>: the replay plays it all in order.', '#playBtn', 'Play']],
       related: ['speed', 'post'] },
     { id: 'post', title: 'Share it as a link', sub: 'Post', clip: 'post',
       words: ['share', 'link', 'post', 'publish', 'send'],
