@@ -454,8 +454,12 @@ with sync_playwright() as p:
                                  expanded: more.getAttribute('aria-expanded') },
                    posted: sh.classList.contains('is-posted') && !document.getElementById('postOverlay').hidden }; }"""
 
+        # A desk window taller than the sheet needs, where half the screen is
+        # what holds a tall drawing back rather than the sheet's room.
+        TALLWIN = dict(viewport={"width": 1280, "height": 1300}, device_scale_factor=1)
+
         def shaped(ed, size, shape, theme="light", caption=CAPTION):
-            ctx = b.new_context(color_scheme=theme, **(PHONE if size == "phone" else DESK))
+            ctx = b.new_context(color_scheme=theme, **{"phone": PHONE, "desk": DESK, "tall window": TALLWIN}[size])
             pg = ctx.new_page()
             goto(pg, "/" if ed == "Pad" else "/flip")
             w, h = SHAPES[shape]
@@ -481,7 +485,8 @@ with sync_playwright() as p:
 
         if part("shape"):
             for ed, size, shape in (("Pad", "phone", "tall"), ("Pad", "phone", "wide"), ("Pad", "phone", "square"),
-                                    ("Pad", "desk", "tall"), ("Pad", "desk", "wide"), ("Flip", "phone", "tall"), ("Flip", "desk", "square")):
+                                    ("Pad", "desk", "tall"), ("Pad", "desk", "wide"), ("Pad", "tall window", "tall"),
+                                    ("Flip", "phone", "tall"), ("Flip", "desk", "square")):
                 ctx, pg, ar = shaped(ed, size, shape)
                 fits(ed, size, shape, pg, ar)
                 ctx.close()
@@ -533,6 +538,11 @@ with sync_playwright() as p:
             n = pg.evaluate(CARD_BOX)
             check("the next post's caption starts at two lines again, with its 'more'",
                   n["lines"] <= 2.05 and (n["more"] or {}).get("word") == "more" and (n["more"] or {}).get("expanded") == "false", str(n))
+            ctx.close()
+            ctx, pg, ar = shaped("Flip", "phone", "wide")
+            f = pg.evaluate(CARD_BOX)
+            check("Flip: its long caption is at two lines with its 'more' too",
+                  f["lines"] <= 2.05 and not f["whole"] and (f["more"] or {}).get("painted") and (f["more"] or {}).get("word") == "more", str(f))
             ctx.close()
             ctx, pg, ar = shaped("Flip", "phone", "wide", caption="Two pages, one ball, no rush.")
             s = pg.evaluate(CARD_BOX)
