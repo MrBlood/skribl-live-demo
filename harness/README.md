@@ -462,6 +462,22 @@ stays a sleep.
   apart by content; a new canvas size, or layers grown with the window, drop
   every copy; and the frame layer never taken mid-stroke, mid-erase,
   mid-smudge or after a thumbnail was painted through it.
+- `verify_padopen.py` — a long drawing opens in the Pad without a freeze (the
+  posting mock's 2b; editor_draft.js padPaint and growBeforePaint). A
+  60,000-point file opened through the Pad's own input is painted once
+  (paintStrokesStatic counted on it), on a desk on a canvas grown to its
+  screen first; the ink the slices lay is pixel for pixel one call's,
+  see-through ink included (few enough strokes of it to go through the stroke
+  layers, and the row says they did). With the CPU 4x slower, phone and desk,
+  it is laid over many frames and shown as it goes, and no task from the pick
+  to the ink whole, the file's arrival and its autosave included, is a third
+  of the one call on the same page. A stroke drawn while it is being laid finds the ink
+  whole when its press reaches the page and lands on the whole drawing (the
+  canvas then what one call paints, as for the same stroke drawn after); a key
+  finds it whole too. A reload's autosave is laid the same way, painted once,
+  the same ink. A short drawing is the one call it always was, and the Pad's
+  own player (#skribl=) paints in whole calls, never in slices.
+  `PADOPEN_PART=one,slices,press,reload,short` runs only those parts.
 - `verify_music.py` — one music editor on both editors (lib/musicdrawer.js,
   the owner's "it needs to be the same music editor on both pad and flip"),
   every row driven on the Pad and on Flip and red on one of them before: no

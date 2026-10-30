@@ -1004,7 +1004,16 @@ with sync_playwright() as sp:
     #   room from the drawing, and Back to Pad (Back to Flip) on a post this
     #   browser made, a step back when the editor is the page just left.
     #   verify_jsstrip's lines move with it. 160,370 measured.
-    BYTES_RATCHET, BYTES_TARGET = 160_373, 153_800
+    # RAISED (the posting mock's 2b, the owner's "all yes": "Opening a long
+    #   drawing in Pad stops freezing too"), for a named cost, all in app.js:
+    #   +223 B -- the sliced paint handing back a way to lay the rest at once
+    #   (the Pad's, when a press or a key comes before the ink is whole), and
+    #   loadSkribl asking the editor's own paint and growth when the page has
+    #   them (editor_draft.js padPaint and growBeforePaint, which the link
+    #   page does not load). Spent first: a flag of its own for the sliced
+    #   paint's end, where its `whole` serves. verify_jsstrip's lines move
+    #   with it. 160,593 measured.
+    BYTES_RATCHET, BYTES_TARGET = 160_596, 153_800
     # The page's own HTML. The brand is the one-stroke skribl signature INLINE
     # in the page (~1.4KB of paths, a ~0.9KB nonce'd draw-on script, and the
     # <linearGradient> defs), and inline is load-bearing rather than lazy:
