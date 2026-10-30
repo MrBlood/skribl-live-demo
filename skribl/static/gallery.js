@@ -53,66 +53,10 @@
   /* THE CAPTION, UNDER THE DRAWING AT REST (the owner's yes on the posting
      mock: "two lines with more, and the ≡ button goes"). Two lines of it show
      on every card that has one, and a "more" opens the rest in place; "less"
-     puts it back.
-
-     WHETHER THERE IS MORE IS ASKED OF THE WORDS, at the width they are set
-     at: their own height against two of their own lines. The same answer
-     clamped or open, and asked again whenever the card changes width (a
-     phone turned, a window dragged), so a caption that fits on a desk and
-     not on a phone shows its "more" only on the phone. */
-  var CAP_GLIDE = 'height 0.24s cubic-bezier(0.2, 0.7, 0.2, 1)';
-  var stillMq = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)');
-  function capSync(tc) {
-    var btn = tc._more;
-    if (!btn) return;
-    var cs = getComputedStyle(tc);
-    var line = parseFloat(cs.lineHeight) || 21;
-    var words = tc.scrollHeight - (parseFloat(cs.paddingTop) || 0) - (parseFloat(cs.paddingBottom) || 0);
-    var over = words > line * 2 + 1;
-    if (btn.hidden === over) btn.hidden = !over;
-    /* The button carries the card's bottom air when it shows; the words do
-       when it does not. A class on the card, not a page-wide :has() (item 1). */
-    if (tc.parentNode) tc.parentNode.classList.toggle('cap-more', over);
-  }
-  var capWatch = window.ResizeObserver ? new ResizeObserver(function (rows) {
-    for (var i = 0; i < rows.length; i++) capSync(rows[i].target);
-  }) : null;
-  /* IT GLIDES BOTH WAYS. The box eases from the height it has to the height
-     the other state has, measured with that state's own clamp, then lets go
-     of the number. A close keeps the whole text in the box while it shrinks
-     and clamps only at the end, so the lines go down with the box rather than
-     vanishing and leaving an empty box to ease. Reduce Motion: it just
-     changes. */
-  function capToggle(tc) {
-    var btn = tc._more, open = !tc._open;
-    tc._open = open;
-    var from = tc.getBoundingClientRect().height;
-    tc.style.transition = 'none';
-    tc.style.height = '';
-    tc.classList.toggle('is-open', open);
-    var to = tc.getBoundingClientRect().height;
-    btn.textContent = open ? 'less' : 'more';
-    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
-    btn.setAttribute('aria-label', open ? 'Show less of the caption' : 'Read more of the caption');
-    var g = tc._glide = {};
-    if ((stillMq && stillMq.matches) || Math.abs(to - from) < 1) { tc.style.transition = ''; return; }
-    tc.classList.add('is-open');
-    tc.style.height = from + 'px';
-    void tc.offsetHeight;
-    tc.style.transition = CAP_GLIDE;
-    tc.style.height = to + 'px';
-    var done = function (e) {
-      if (e && (e.target !== tc || e.propertyName !== 'height')) return;
-      tc.removeEventListener('transitionend', done);
-      if (tc._glide !== g) return;
-      tc._glide = null;
-      tc.style.transition = '';
-      tc.style.height = '';
-      tc.classList.toggle('is-open', tc._open);
-    };
-    tc.addEventListener('transitionend', done);
-    setTimeout(done, 420);
-  }
+     puts it back, gliding both ways. lib/capmore.js, which the link page and
+     the Posted! card share, asks whether there is more of the words at the
+     width they are set at, and asks again whenever a card changes width. */
+  var capWatch = window.SkriblCapMore ? SkriblCapMore.watcher() : null;
 
   /* A LINK THE HOST SUPPLIED IS STILL SOMEBODY ELSE'S STRING. `author.url`
      comes from the host's resolver, which a host may well build from a
@@ -619,14 +563,12 @@
       capMore.type = 'button';
       capMore.className = 'tcapMore';
       capMore.hidden = true;
-      capMore.textContent = 'more';
-      capMore.setAttribute('aria-expanded', 'false');
-      capMore.setAttribute('aria-label', 'Read more of the caption');
-      capMore.addEventListener('click', function () { capToggle(tc); });
       art.appendChild(capMore);
-      tc._more = capMore;
-      if (capWatch) capWatch.observe(tc);
-      else requestAnimationFrame(function () { capSync(tc); });
+      if (window.SkriblCapMore) {
+        SkriblCapMore.attach(tc, capMore);
+        if (capWatch) capWatch.observe(tc);
+        else requestAnimationFrame(function () { SkriblCapMore.sync(tc); });
+      }
     }
 
     /* THE FOOTER IS THE FULL-SCREEN BAR AT CARD SIZE, from the same builder

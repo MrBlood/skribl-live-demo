@@ -26,6 +26,7 @@ import io
 import json
 import math
 import os
+import re
 import socket
 import subprocess
 import sys
@@ -65,15 +66,19 @@ SIDE = dict(viewport={"width": 874, "height": 402}, device_scale_factor=2, is_mo
 DESK = dict(viewport={"width": 1280, "height": 800}, device_scale_factor=1)
 
 
-def post(base):
-    """A drawing with a caption, through the API, as the editors post one."""
+def post(base, caption=CAPTION, flip=False):
+    """A drawing with a caption, through the API, as the editors post one; a
+    Flip of two pages when asked."""
     pts, n = [], 300
     for i in range(n):
         a, r = (i / n) * math.pi * 6, 20 + (i / n) * 200
         pts.append({"x": 408 + math.cos(a) * r, "y": 306 + math.sin(a) * r * 0.7, "color": "#7c5cff",
                     "size": 7, "t": i * 20, "erase": False, "start": i == 0})
-    body = {"title": "Window cat", "caption": CAPTION, "schemaVersion": 2, "visibility": "public",
+    body = {"title": "Window cat", "caption": caption, "schemaVersion": 2, "visibility": "public",
             "canvasSize": {"cssWidth": 816, "cssHeight": 612}, "frames": [{"strokes": pts, "strokeGroups": [n]}]}
+    if flip:
+        body.update(playbackMode="flip", fps=8, frames=[{"strokes": pts[:150], "strokeGroups": [150]},
+                                                         {"strokes": pts, "strokeGroups": [n]}])
     req = urllib.request.Request(base + "/api/skribls", method="POST", data=json.dumps(body).encode(),
                                  headers={"Content-Type": "application/json"})
     return json.loads(urllib.request.urlopen(req, timeout=20).read())["url"]
@@ -171,6 +176,10 @@ else:
 
 try:
     hosted_url, shared_url = post(HOSTED), post(BASE)
+    # Where the page's own button goes, Pad and Flip, as the server wrote it.
+    _cta = re.search(r'<a href="([^"]+)" data-flip="([^"]+)" class="player-cta">',
+                     urllib.request.urlopen(BASE + shared_url, timeout=20).read().decode())
+    PAD_PATH, FLIP_PATH = (_cta.group(1), _cta.group(2)) if _cta else ("?", "?")
     with sync_playwright() as p:
         b = p.chromium.launch()
 
@@ -259,6 +268,214 @@ try:
         c = pg.evaluate(CAP)
         check("a phone on its side: the caption 14px and the title 17px, a size up from 12 and 15, painted and whole",
               c["size"] == "14px" and c["titleSize"] == "17px" and c["painted"] and c["whole"], str(c))
+        ctx.close()
+
+        # ---- TWO LINES, AND YOUR OWN POST'S WAY BACK -------------------------
+        # The owner, from a phone: a long title and caption made the drawing a
+        # third smaller ("words never shrink the drawing": two lines and a
+        # "more"), and "Make your own should be back to pad, cuz that's what it
+        # does, and should" (Back to Pad on a post of your own).
+        print("\nTWO LINES OF A LONG CAPTION, AND A MORE")
+        LONGC = ("Every morning she sits in the one square of sun by the window and tells the birds what she "
+                 "thinks of them, at length, and then she naps there until the sun has moved on and she has "
+                 "to move with it, very slowly, as if it were her idea, while the dog watches from the doorway "
+                 "and decides, again, that it is not worth the trouble of trying.")[:300]
+        THREEC = ("Every morning she sits in the one square of sun by the window and tells the birds what she "
+                  "thinks of them, at length, and then she naps there.")
+        long_url, three_url = post(BASE, LONGC), post(BASE, THREEC)
+        flip_url = post(BASE, THREEC, flip=True)
+        WORDS = """() => { const c = document.getElementById('playerCaption'), m = document.getElementById('playerCapMore');
+          const w = document.querySelector('.canvas-wrap').getBoundingClientRect(), cs = getComputedStyle(c);
+          const lh = parseFloat(cs.lineHeight), r = c.getBoundingClientRect(), q = m.getBoundingClientRect();
+          const at = (e, x, y) => { const h = document.elementFromPoint(x, y); return !!h && (h === e || e.contains(h)); };
+          if (!m.hidden) m.scrollIntoView({ block: 'nearest' });
+          return { text: c.textContent, lines: r.height / lh, more: !m.hidden && at(m, q.left + q.width / 2, q.top + q.height / 2),
+                   moreH: q.height, word: m.textContent.trim(), expanded: m.getAttribute('aria-expanded'), name: m.getAttribute('aria-label'),
+                   wrap: [w.left + scrollX, w.top + scrollY, w.width, w.height] }; }"""
+        # The caption's height on every frame of the glide, and where the
+        # drawing's box stands in the page (a column with room to spare is
+        # centred, so a caption opening under it may move it: that must glide).
+        GLIDE = """() => new Promise(done => { const c = document.getElementById('playerCaption'), hs = [], tops = [];
+          const w = document.querySelector('.canvas-wrap');
+          const t0 = performance.now(); (function f() { hs.push(c.getBoundingClientRect().height);
+            tops.push(w.getBoundingClientRect().top + scrollY);
+            if (performance.now() - t0 < 700) requestAnimationFrame(f); else done({ hs, tops }); })();
+          document.getElementById('playerCapMore').click(); })"""
+
+        def steps(hs):
+            a, z = hs[0], hs[-1]
+            span = abs(z - a) or 1
+            mid = [h for h in hs if min(a, z) + 0.5 < h < max(a, z) - 0.5]
+            big = max([abs(hs[i + 1] - hs[i]) / span for i in range(len(hs) - 1)] or [1])
+            return len(mid), big, a, z
+
+        same = lambda u, v: max(abs(x - y) for x, y in zip(u, v)) <= 0.5
+        for dev, opts in (("phone", PHONE), ("desk", DESK)):
+            ctx, pg = open_page(b, BASE, three_url, opts, "light")
+            three = pg.evaluate(WORDS)
+            ctx.close()
+            ctx, pg = open_page(b, BASE, long_url, opts, "light")
+            w = pg.evaluate(WORDS)
+            check(f"{dev}: a long caption shows two lines of it and a painted 'more', 44px, its state and its word in its name",
+                  w["text"] == LONGC and w["lines"] <= 2.05 and w["more"] and w["moreH"] >= 44 and w["word"] == "more"
+                  and w["expanded"] == "false" and w["name"] == "Read more of the caption", str({k: w[k] for k in w if k != 'text'}))
+            check(f"{dev}: ...and the drawing is as big as beside three lines: the words never shrink it",
+                  same(w["wrap"], three["wrap"]), f"long {w['wrap']}, three lines {three['wrap']}")
+            g = pg.evaluate(GLIDE)
+            o = pg.evaluate(WORDS)
+            n, big, a, z = steps(g["hs"])
+            check(f"{dev}: 'more' opens the rest in place, and the drawing keeps its size",
+                  o["lines"] > 3 and o["expanded"] == "true" and o["word"] == "less" and o["name"] == "Show less of the caption"
+                  and same(o["wrap"][2:], w["wrap"][2:]), f"{o['lines']:.1f} lines, {o['word']!r}; box {o['wrap']} was {w['wrap']}")
+            check(f"{dev}: ...gliding open, over several frames, none more than 40% of the way",
+                  z > a + 20 and n >= 4 and big <= 0.4, f"{a:.0f} -> {z:.0f}px, {n} frames between, the biggest {big:.0%}")
+            tn, tbig, ta, tz = steps(g["tops"])
+            check(f"{dev}: ...and where the drawing moves with it, it glides too",
+                  abs(tz - ta) <= 0.5 or (tn >= 4 and tbig <= 0.4),
+                  f"its top {ta:.1f} -> {tz:.1f}, {tn} frames between, the biggest {tbig:.0%}")
+            g = pg.evaluate(GLIDE)
+            s2 = pg.evaluate(WORDS)
+            n, big, a, z = steps(g["hs"])
+            check(f"{dev}: 'less' glides it back to two lines",
+                  s2["lines"] <= 2.05 and s2["expanded"] == "false" and s2["word"] == "more" and n >= 4 and big <= 0.4,
+                  f"{s2['lines']:.1f} lines, {n} frames between, the biggest {big:.0%}")
+            ctx.close()
+        ctx = b.new_context(color_scheme="light", reduced_motion="reduce", **PHONE)
+        pg = ctx.new_page()
+        pg.goto(BASE + long_url, wait_until="load")
+        pg.wait_for_function("() => !document.getElementById('playerShell').hidden", timeout=20000)
+        pg.wait_for_timeout(900)
+        n, big, a, z = steps(pg.evaluate(GLIDE)["hs"])
+        check("Reduce Motion: 'more' just opens, no frame between", z > a + 20 and n == 0, f"{a:.0f} -> {z:.0f}px, {n} frames between")
+        ctx.close()
+        ctx, pg = open_page(b, BASE, shared_url, PHONE, "light")
+        w = pg.evaluate(WORDS)
+        check("a caption that fits in two lines has no 'more'", not w["more"] and w["lines"] <= 2.05, str({k: w[k] for k in w if k != 'text'}))
+        ctx.close()
+        for theme in ("light", "dark"):
+            ctx, pg = open_page(b, BASE, long_url, PHONE, theme)
+            v = worst(pg, "#playerCapMore", 2)
+            check(f"{theme}: 'more' reads 7:1 on the page", v is not None and v >= 7, f"{v and round(v, 2)}:1")
+            ctx.close()
+        # THE BOX STANDS STILL while the drawing comes, a long caption and all:
+        # its two lines and its "more" are laid out before the data is asked for.
+        ctx = b.new_context(color_scheme="light", **PHONE)
+        pg = ctx.new_page()
+        held = []
+        pid = long_url.rstrip("/").split("/")[-1]
+        pg.route("**/api/skribls/" + pid, lambda r: held.append(r))
+        pg.goto(BASE + long_url, wait_until="load")
+        for _ in range(100):
+            if held:
+                break
+            pg.wait_for_timeout(50)
+        pg.wait_for_timeout(300)
+        before = pg.evaluate("() => { const r = document.querySelector('.canvas-wrap').getBoundingClientRect(); return [r.left, r.top, r.width, r.height]; }")
+        for r in held:
+            r.continue_()
+        pg.wait_for_function("() => document.body.classList.contains('player-ready')", timeout=20000)
+        pg.wait_for_timeout(500)
+        after = pg.evaluate(WORDS)["wrap"]
+        check("phone: the box stands where it stood before the drawing came, a long caption and all",
+              bool(held) and same(before, after), f"before {before}, after {after}")
+        ctx.close()
+
+        print("\nYOUR OWN POST'S WAY BACK")
+        CTA = """() => { const a = document.querySelector('.player-cta');
+          return { text: a.textContent.trim(), path: new URL(a.href).pathname, flip: new URL(a.dataset.flip, location.href).pathname,
+                   pad: new URL(document.querySelector('.player-cta').getAttribute('href'), location.href).pathname }; }"""
+
+        def mine(ctx, url, kind="pad"):
+            pid = url.rstrip("/").split("/")[-1]
+            ctx.add_init_script("try { localStorage.setItem('skribl_posted_v1', " + json.dumps(json.dumps([{
+                "id": pid, "url": BASE + url, "title": "Window cat", "kind": kind, "pages": 1, "visibility": "public",
+                "tok": None, "local": False, "has_audio": False, "canvas_w": 816, "canvas_h": 612, "at": 1700000000000}])) + "); } catch (e) {}")
+        ctx = b.new_context(color_scheme="light", **PHONE)
+        mine(ctx, three_url)
+        pg = ctx.new_page()
+        pg.goto(BASE + three_url, wait_until="load")
+        pg.wait_for_function("() => !document.getElementById('playerShell').hidden", timeout=20000)
+        pg.wait_for_timeout(600)
+        k = pg.evaluate(CTA)
+        check("a post this browser made: the button says 'Back to Pad' and goes to the Pad",
+              k["text"] == "Back to Pad" and k["path"] == PAD_PATH, str(k))
+        ctx.close()
+        ctx = b.new_context(color_scheme="light", **PHONE)
+        mine(ctx, flip_url, "flip")
+        pg = ctx.new_page()
+        pg.goto(BASE + flip_url, wait_until="load")
+        pg.wait_for_function("() => !document.getElementById('playerShell').hidden", timeout=20000)
+        pg.wait_for_timeout(600)
+        k = pg.evaluate(CTA)
+        check("...a Flip of its own: 'Back to Flip', to Flip", k["text"] == "Back to Flip" and k["path"] == FLIP_PATH, str(k))
+        ctx.close()
+        ctx, pg = open_page(b, BASE, three_url, PHONE, "light")
+        k = pg.evaluate(CTA)
+        check("someone else's post: 'Make your own Skribl', to the Pad",
+              " ".join(k["text"].split()) == "\u2736 Make your own Skribl" and k["path"] == PAD_PATH, str(k))
+        ctx.close()
+        # THE REAL WAY: the Pad, a drawing, its Post sheet, Watch in place (as
+        # on the Home Screen, lib/homescreen.js), then Back to Pad: a step back
+        # to the Pad as it was left, its drawing on it.
+        ctx = b.new_context(color_scheme="light", **PHONE)
+        pg = ctx.new_page()
+        pg.goto(BASE + PAD_PATH, wait_until="load")
+        pg.wait_for_function("() => window.__skriblBoot && window.__skriblBoot.pad", timeout=20000)
+        pg.wait_for_timeout(800)
+        pg.evaluate("() => { window.SkriblHints && window.SkriblHints.hide && window.SkriblHints.hide(); document.documentElement.setAttribute('data-skribl-app', ''); }")
+        bx = pg.locator("#canvas").bounding_box()
+        x0, y0 = bx["x"] + bx["width"] * 0.3, bx["y"] + bx["height"] * 0.4
+        pg.mouse.move(x0, y0)
+        pg.mouse.down()
+        for i in range(1, 22):
+            pg.mouse.move(x0 + i * bx["width"] * 0.02, y0 + (i % 5) * bx["height"] * 0.03, steps=2)
+            pg.wait_for_timeout(16)
+        pg.mouse.up()
+        pg.wait_for_timeout(400)
+        pg.evaluate("() => { if (typeof recording !== 'undefined' && recording) endRecordingTake(); }")
+        pg.wait_for_timeout(300)
+        drawn = pg.evaluate("() => strokes.length")
+        pg.click("#postBtn")
+        pg.wait_for_selector("#postSheet", state="visible")
+        pg.wait_for_timeout(450)
+        pg.fill("#postTitleInput", "Back again")
+        pg.click("#postSubmitBtn")
+        pg.wait_for_selector("#postDone:not([hidden])", timeout=20000)
+        pg.wait_for_timeout(600)
+        pg.click("#postWatchBtn")
+        try:
+            pg.wait_for_function("() => document.body.classList.contains('player-mode') && !document.getElementById('playerShell').hidden", timeout=20000)
+        except Exception:                                   # noqa: BLE001
+            pass
+        pg.wait_for_timeout(600)
+        k = pg.evaluate("() => (document.querySelector('.player-cta') || {}).textContent || ''").strip()
+        try:
+            pg.click(".player-cta", timeout=5000)
+            pg.wait_for_function("() => !!window.__skriblBoot && !document.body.classList.contains('player-mode') && typeof strokes !== 'undefined'", timeout=20000)
+        except Exception:                                   # noqa: BLE001
+            pass
+        pg.wait_for_timeout(800)
+        back = pg.evaluate("() => ({ path: location.pathname, nav: (performance.getEntriesByType('navigation')[0] || {}).type,"
+                           " strokes: typeof strokes !== 'undefined' ? strokes.length : -1 })")
+        check("pressed after the Pad: a step back, to the Pad as it was left, its drawing on it",
+              k == "Back to Pad" and back["path"] == PAD_PATH and back["nav"] == "back_forward" and back["strokes"] == drawn > 0,
+              f"button {k!r}; {back}; drawn {drawn}")
+        ctx.close()
+        # With no Pad behind it (opened fresh), it opens the Pad.
+        ctx = b.new_context(color_scheme="light", **PHONE)
+        mine(ctx, three_url)
+        pg = ctx.new_page()
+        pg.goto(BASE + three_url, wait_until="load")
+        pg.wait_for_function("() => !document.getElementById('playerShell').hidden", timeout=20000)
+        pg.wait_for_timeout(600)
+        try:
+            pg.click(".player-cta", timeout=5000)
+            pg.wait_for_function("(p) => location.pathname === p", arg=PAD_PATH, timeout=20000)
+        except Exception:                                   # noqa: BLE001
+            pass
+        pg.wait_for_timeout(500)
+        nav = pg.evaluate("() => ({ path: location.pathname, nav: (performance.getEntriesByType('navigation')[0] || {}).type })")
+        check("...and with no Pad behind it, it opens the Pad", nav["path"] == PAD_PATH and nav["nav"] == "navigate", str(nav))
         ctx.close()
         b.close()
 finally:

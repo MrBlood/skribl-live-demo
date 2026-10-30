@@ -187,7 +187,12 @@
   ".player-poster img",
   ".player-poster.gone",
   "body.player-pending .player-bar",
-  "body.player-ready .player-bar > *"
+  "body.player-ready .player-bar > *",
+  ".player-caption.is-open",
+  ".player-capmore",
+  ".player-capmore[hidden]",
+  ".player-capmore:hover",
+  ".player-cta svg"
  ],
  "editor": [
   "#canvas",
