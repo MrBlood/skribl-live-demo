@@ -26400,3 +26400,64 @@ verify_player_isolation and verify_jsstrip. The Library's page is not counted.
 
 WHAT IT DOES TO FLIP: shared. A Flip's link page, card, Library row and
 Posted! card are the same as a Pad's.
+
+## After v329 -- The link page: two lines of a long caption, and your own post's way back
+
+The owner, from a phone, on the link page of a post with a long title and
+caption: the drawing was a third smaller than on one with a short caption
+(the page fits the drawing to what the words leave), and "Make your own
+should be back to pad, cuz that's what it does, and should". Offered two
+lines and a "more" so words never shrink the drawing, and Back to Pad on a
+post of your own; the owner: "all yes, skip the mock and just build it".
+
+TWO LINES AND A MORE. The caption shows two lines at rest and a "more" where
+it runs on, as the gallery's cards do; "more" glides the rest open in place
+and "less" back (Reduce Motion: it just changes). The box is laid out for the
+two lines and the "more" before the drawing is asked for (initPlayer
+playerPre), so it is the box the drawing keeps; it is laid out again only
+when the answer changes with the width (a phone turned). Opened, the rest
+pushes the page longer and the drawing keeps its size. The two lines, the
+"more", its glide and its question (the words' own height against two of
+their lines, at the width they are set at) were gallery.js's alone; they are
+lib/capmore.js now, which the gallery, the link page and (next) the Posted!
+card share, the way the full-screen bar is one module.
+
+YOUR OWN POST'S WAY BACK. On a post this browser made (its posted list; a
+post kept only on this device is its own), the button says Back to Pad, or
+Back to Flip on a Flip, and goes there: a step back in history when the
+editor is the page just left (Watch in place, the Home Screen app's way), so
+the editor comes back as it was, its drawing on it; else the editor itself,
+whose draft brings the drawing back. Anyone else's post still asks them to
+make their own.
+
+THE ROWS, verify_linkpage.py (a new section, 22 rows; 56 in all): a long
+caption at two lines and a painted "more", 44px, its state and its word in
+its name, and the drawing as big as beside three lines; "more" opening the
+rest in place with the drawing keeping its size, gliding over several
+frames, none more than 40% of the way, and the drawing's own move gliding
+with it; "less" gliding back; Reduce Motion with no frame between; a
+caption that fits with no "more"; "more" 7:1 light and dark; the box
+standing still while the data is held back; Back to Pad, Back to Flip, and
+someone else's Make your own Skribl; the step back to the Pad as it was
+left (its strokes the same), and the Pad itself on a fresh visit, phone and
+desk. Each shown red by its own break on a served copy, 17 runs: the clamp
+off (9 rows), "more" never shown (2), "more" on every caption (1), the
+caption asked only after the data (1), an open caption taking the drawing's
+room (2), no glide (5), "less" never closing (2), "more" not pressable (7),
+"more" in a grey (2), never yours (3), always yours (1), a Flip taken for
+a Pad (1), no step back (1), a step back with nothing behind (1). Reduce
+Motion went red (12 frames between) only with the module's own check AND
+the page's two Reduce Motion rules taken away; with the check alone gone,
+or the check and the near-instant rule, it stayed green, the page's rules
+keeping the caption still on their own. So the module's check is a second
+guard, and the row pins the user's case rather than that line.
+
+THE COST. The player's JS +3,569 B: lib/capmore.js (2,264, the gallery's
+own code moved, so gallery.js is 58 lines shorter) and app.js +1,305 (the
+caption asked before the box is laid out, the open caption's room, the way
+back). Its CSS +677 B, its HTML +184 B. Each line raised in writing with
+its cost named (verify_player_isolation, verify_jsstrip).
+
+WHAT IT DOES TO FLIP: shared. A Flip's link page has the same two lines and
+"more", and a Flip of your own says Back to Flip. The Posted! card, in both
+editors' sheets, is the next PR.
