@@ -231,10 +231,12 @@ def ringish(c):
 
 
 SAY = """() => { const t = document.getElementById('playerTitle'), c = document.getElementById('playerCaption'),
-  k = document.querySelector('.player-controls'), sh = document.getElementById('playerShell');
+  k = document.querySelector('.player-controls'), sh = document.getElementById('playerShell'),
+  s = document.querySelector('#playerLine .rl-speed');
   const seen = e => !!e && !e.hidden && e.getClientRects().length > 0 && getComputedStyle(e).visibility === 'visible';
   return { title: t && t.textContent, caption: c && !c.hidden ? c.textContent : null, shell: seen(sh), title_seen: seen(t),
-           caption_seen: seen(c), controls: k ? getComputedStyle(k).visibility : null }; }"""
+           caption_seen: seen(c), controls: k ? getComputedStyle(k).visibility : null,
+           speed: s ? getComputedStyle(s).visibility : null }; }"""
 
 INK = """() => { const cv = document.getElementById('canvas'), x = cv.getContext('2d');
   const d = x.getImageData(0, 0, cv.width, cv.height).data; let h = 2166136261, ink = 0;
@@ -319,9 +321,13 @@ with sync_playwright() as p:
         check(f"{name}: ...cropped to the drawing: none of the card's ground, none of its plate's ring",
               filled and not ringed, f"{len(ringed)} ring pixels in the edge band")
         say = pg.evaluate(SAY)
-        check(f"{name}: ...the title and caption are said, and the transport waits laid out, unseen",
+        # The speed in the line is read on its own: the line there is a
+        # stand-in from the post's numbers, with no pick (app.js playerPre),
+        # safe only while no one can press it; and the suites wait for it seen
+        # (browsing.SPEED_READY), not merely there.
+        check(f"{name}: ...the title and caption are said, and the transport waits laid out, unseen, the speed in its line too",
               say["title"] == "A spiral" and say["caption"] == "Round and round." and say["title_seen"]
-              and say["caption_seen"] and say["controls"] == "hidden", str(say))
+              and say["caption_seen"] and say["controls"] == "hidden" and say["speed"] == "hidden", str(say))
         release()
         left = waited(pg, "() => window.__fl.left != null", 30000)
         pg.wait_for_timeout(200)
@@ -330,8 +336,8 @@ with sync_playwright() as p:
         check(f"{name}: nothing moves: the box stands where it stood before the data came",
               left and m is not None and m <= 0.5, f"left {left}; before {f.get('wrap0')}, after {f.get('wrap1')}")
         say = pg.evaluate(SAY)
-        check(f"{name}: ...and once the drawing can play the transport is up",
-              say["controls"] == "visible", str(say))
+        check(f"{name}: ...and once the drawing can play the transport is up, its speed with it",
+              say["controls"] == "visible" and say["speed"] == "visible", str(say))
         c.close()
 
     for name, view in (("phone", PHONE), ("desk", DESK)):

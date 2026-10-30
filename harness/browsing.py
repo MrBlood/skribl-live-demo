@@ -39,6 +39,15 @@ BOOT_MARKER = {
 # prefix rather than a fixed path, so it cannot live in the table above.
 PLAYER_PREFIX = "/s/"
 
+# THE LINK PAGE'S SPEED, ONCE A PERSON CAN PRESS IT. The page lays its box out
+# before the drawing comes (app.js playerPre), with a stand-in line from the
+# post's own numbers, unseen in the hidden transport (body.player-pending),
+# and makes the line again once the drawing is in. A wait for the button only
+# to exist found the stand-in on a busy box, and a script's click on it went
+# with it (verify_replayspeed's 320px row, main red after #688).
+SPEED_READY = ("() => { const s = document.querySelector('#playerLine .rl-speed');"
+               " return !!s && s.checkVisibility({ checkVisibilityCSS: true }); }")
+
 
 def boot_key(path):
     """Which __skriblBoot flag a path should wait for, or None if unknown.
