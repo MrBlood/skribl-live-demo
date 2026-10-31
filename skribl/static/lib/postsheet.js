@@ -522,6 +522,80 @@
       typedUnder = window.SkriblName ? window.SkriblName.get() : null;
     });
 
+    /* THE CAPTION SHOWS WHAT YOU WROTE, AND ITS CORNER IS YOURS (owner, after
+     * v330: "maybe a way to expand box in lower right?"; of the mock's B3, "I
+     * like your ideas"). Three lines and a scroll cut a five-line caption's top
+     * line in half. The box now fits its words as they are written, easing to
+     * each height (never a jump; at once under Reduce Motion), and the grip
+     * drawn in its lower-right corner sets the height by hand: down for room,
+     * up for less, never under the three lines it starts with. A drag is the
+     * person's choice, so the box stops fitting itself until the sheet opens
+     * again. A phone's text boxes have no resize corner of their own, so the
+     * grip is ours (styles.css .post-grip: touch-action none, a 44px band). */
+    var capGrip = $('postCaptionGrip'), capHand = false;
+    var capStill = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : { matches: false };
+    // Every measure is taken with the ease off and the box put back before it
+    // comes on again: on while a height was set to read another, the box eased
+    // from that height (it dipped to its padding for a frame before growing).
+    function capFloor() {
+      // The box's own three rows: measured with no height set.
+      var h = captionInput.style.height, tr = captionInput.style.transition;
+      captionInput.style.transition = 'none';
+      captionInput.style.height = '';
+      var f = captionInput.offsetHeight;
+      captionInput.style.height = h;
+      void captionInput.offsetHeight;
+      captionInput.style.transition = tr;
+      return f;
+    }
+    function fitCaption(now) {
+      if (capHand || !captionInput.offsetParent) return;
+      var floor = capFloor(), was = captionInput.offsetHeight;
+      captionInput.style.transition = 'none';
+      captionInput.style.height = '0px';      // its words' own height, nothing kept from before
+      var b = captionInput.offsetHeight - captionInput.clientHeight;
+      var want = Math.max(floor, captionInput.scrollHeight + b);
+      captionInput.style.height = was + 'px';
+      void captionInput.offsetHeight;          // back where it was, nothing easing
+      // Opening, and under Reduce Motion: already its size, no glide.
+      if (now === true || capStill.matches) {
+        captionInput.style.height = want + 'px';
+        void captionInput.offsetHeight;
+        captionInput.style.transition = '';
+        return;
+      }
+      captionInput.style.transition = '';
+      captionInput.style.height = want + 'px';
+    }
+    captionInput.addEventListener('input', fitCaption);
+    window.addEventListener('resize', function () { if (!overlay.hidden) fitCaption(true); });
+    if (capGrip) capGrip.addEventListener('pointerdown', function (e) {
+      if (e.button > 0) return;
+      e.preventDefault();
+      var id = e.pointerId, y0 = e.clientY, h0 = captionInput.offsetHeight, floor = capFloor();
+      var most = Math.max(floor, Math.round((window.visualViewport ? window.visualViewport.height : window.innerHeight) * 0.6));
+      try { capGrip.setPointerCapture(id); } catch (err) {}
+      captionInput.style.transition = 'none';
+      function move(ev) {
+        if (ev.pointerId !== id) return;
+        capHand = true;
+        captionInput.style.height = Math.max(floor, Math.min(most, h0 + ev.clientY - y0)) + 'px';
+      }
+      function up(ev) {
+        if (ev.pointerId !== id) return;
+        capGrip.removeEventListener('pointermove', move);
+        capGrip.removeEventListener('pointerup', up);
+        capGrip.removeEventListener('pointercancel', up);
+        captionInput.style.transition = '';
+      }
+      capGrip.addEventListener('pointermove', move);
+      capGrip.addEventListener('pointerup', up);
+      capGrip.addEventListener('pointercancel', up);
+    });
+    // A drag is not a tap: the grip sits in the field's label, whose click
+    // would put the caret in the box and, on a phone, bring up the keyboard.
+    if (capGrip) capGrip.addEventListener('click', function (e) { e.preventDefault(); });
+
     function open() {
       setState('idle');
       if (cfg.onOpen) cfg.onOpen();
@@ -553,6 +627,7 @@
       }
       clearTimeout(closeTimer);
       overlay.hidden = false;
+      capHand = false; captionInput.style.height = ''; fitCaption(true);   // the caption fits its words again
       requestAnimationFrame(function () {
         overlay.classList.add('open');
         applyKeyboardInset();

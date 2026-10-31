@@ -42,7 +42,9 @@
           </label>
           <label class="post-field">
             <span class="post-field-label">Caption <span class="post-field-optional">optional</span></span>
-            <textarea id="postCaptionInput" class="post-input post-textarea" maxlength="{{ skribl_limits.caption }}" rows="3" aria-describedby="postCharCount" placeholder="Say something about it…"></textarea>
+            {# The box fits its words, and the grip in its corner sets its height by
+               hand (lib/postsheet.js, THE CAPTION SHOWS WHAT YOU WROTE). #}
+            <span class="post-textarea-wrap"><textarea id="postCaptionInput" class="post-input post-textarea" maxlength="{{ skribl_limits.caption }}" rows="3" aria-describedby="postCharCount" placeholder="Say something about it…"></textarea><span class="post-grip" id="postCaptionGrip" aria-hidden="true"><svg aria-hidden="true" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M12.5 4.5l-8 8M12.5 8.5l-4 4"/></svg></span></span>
             {# The count sits inside the label for its place on the page, so it is
                aria-hidden there and read as the field's description instead: a
                screen reader heard "Caption optional 0 / 300" as the name. #}

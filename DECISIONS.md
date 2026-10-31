@@ -27480,3 +27480,82 @@ its side edge now, as Repeat is everywhere.
 WHAT IT DOES TO FLIP: shared for the music drawer (both editors); Repeat is
 the Pad's (Flip's Play already goes round). The player's stylesheet is
 unchanged.
+
+## After v330 -- The Post sheet: a tick box you can see, a caption that fits, and its grip
+
+The owner, with screenshots of the Post sheet: "The little box is almost
+invisible until checked. Also maybe a way to expand box in lower right?" The
+mock (the tick box, the caption, the music toggles; Now beside options, on
+the real Pad, light and dark): "I like your ideas" to A1 and B3.
+
+- THE GALLERY BOX'S EDGE is the sheet's secondary ink, 2px. Unticked it was
+  the card's own faint line, 1.40:1 against the light sheet and 1.38:1
+  against the dark; it is 8.3:1 and 9.7:1, on both editors (one sheet).
+  Ticked, it fills with the accent as before. A2, the app's switch, was not
+  picked: its off track is 1.5:1 against the sheet, like every switch's.
+- THE CAPTION FITS ITS WORDS (lib/postsheet.js): it eases to the height of
+  what is written (0.18s; at once on opening and under Reduce Motion), where
+  three lines and a scroll had cut a five-line caption's top line in half.
+- ITS CORNER IS YOURS: a grip drawn in the lower-right corner sets the height
+  by hand, down for room and up for less, never under the three lines it
+  starts with. A drag stops the fitting until the sheet opens again, and
+  swallows the click that would put the caret in the box (the grip sits in
+  the field's label). A phone's text box has no resize corner of its own, so
+  the grip is ours: touch-action none, a 44px band.
+- EVERY MEASURE IS TAKEN WITH THE EASE OFF. The first build read the words'
+  height by setting the box to 0 with the ease on, and the box eased from
+  there: read on every frame, it dipped to its padding (20px) for a frame
+  before growing. Under Reduce Motion the easing is the script's, not a CSS
+  block's: every Reduce Motion block ships to the player's stylesheet.
+
+verify_ux gains THE POST SHEET'S TICK BOX AND CAPTION: the box's edge off the
+pixels, the caption's height on every frame from the moment the words go in
+(at least one frame between, none outside where it was and where it goes;
+frames come about 70ms apart on this box), a mouse's drag and a finger's on
+the grip, the floor, the height kept, no caret, and the fit on reopening.
+
+CALIBRATION
+in a trimmed copy of verify_ux (the fixture and the new section), each file
+served in place of the real one; each break red on its own rows:
+
+- the box's faint line back: the tick box (1.40:1, 1.38:1);
+- no ease: the caption (no frame between);
+- main's lib/postsheet.js: the caption (45px of words hidden) and both grip
+  rows (nothing moves);
+- the first build's measuring, the ease on: the caption (three frames at
+  20px, outside where it was and where it went);
+- a drag that does not hold the height: what was typed after (back to 132);
+- no floor: the floor (20px);
+- the grip's click let through: the caret (in the box);
+- opening without the reset: the reopened box (45px hidden);
+- the grip without touch-action: the finger (20px of 60, one pointercancel).
+
+The finger row first stayed green without the grip's touch-action: on a full
+phone screen nothing in the sheet scrolls, and the drag was the grip's
+either way. It now runs on a screen 520px tall, as with the keyboard up,
+where the sheet scrolls (asserted), and there a finger lost the drag to it.
+As built, 12 of 12.
+
+WHAT IT DOES TO FLIP: shared; one sheet and one module for both editors,
+the tick box's row is not in compose mode, where the host decides.
+
+Not tested here: an iPhone's keyboard and Safari (no WebKit here); the
+grip's band is 44px, the box's edge the same 2px on every screen.
+
+WHAT THE AFFECTED SUITES CAUGHT on the first build, each fixed here:
+
+- verify_sheetfit and verify_contrast's "Post, the reason": the caption's
+  wrap was a block holding an inline box, which keeps a few pixels under
+  it for descenders; at 1280x800 the sheet's content came to 780px in 776,
+  the sheet scrolled 4px, and its subtitle slid onto the screen's top
+  edge. The wrap is a grid, its box a block: 776 in 776 again.
+- verify_contrast's consistency census: every choice on the sheets is the
+  card's fill with the tiles' lilac line, and that line is why the box
+  could not be seen. The box keeps the card's fill; its edge leaves the
+  lilac rule by name (OWN_EDGE) for a check of its own, 3:1 against the
+  Post sheet's paper. That check first passed the faint box too: it read
+  the line's lilac without its 0.12 alpha. It lays the edge over the paper
+  now: the faint box reads 1.52:1 light and 1.21:1 dark, red; as built,
+  green.
+- verify_a11ypages' WAVE rules: the grip's span was hidden but its svg was
+  not, and every icon here carries its own aria-hidden.

@@ -2298,6 +2298,113 @@ with _sp204() as _rr:
           _pen["run"] == "running" and _pen["plays"] < 0.5, str(_pen))
     _rrp.close(); _rrb.close()
 
+print("\nTHE POST SHEET'S TICK BOX AND CAPTION — the box is there, the caption shows what you wrote, its corner is yours")
+# The owner, after v330, with screenshots: "The little box is almost invisible
+# until checked. Also maybe a way to expand box in lower right?"; of the mock,
+# "I like your ideas". The unticked box was the card's own faint line, 1.40:1
+# against the light sheet and 1.38:1 against the dark; the caption showed
+# three lines and scrolled, cutting a five-line caption's top line in half.
+# Read off the pixels at 2x (the box's edge against the sheet beside it), and
+# from the page (the caption's height on every frame, a mouse's drag and a
+# finger's on the grip), on the Pad and Flip, light and dark.
+import io as _pio
+from PIL import Image as _PImg
+_PLUM = lambda c: sum(w * ((v / 255) / 12.92 if v / 255 <= 0.03928 else (((v / 255) + 0.055) / 1.055) ** 2.4)
+                      for w, v in zip((0.2126, 0.7152, 0.0722), c[:3]))
+_pr = lambda a, b: (max(_PLUM(a), _PLUM(b)) + 0.05) / (min(_PLUM(a), _PLUM(b)) + 0.05)
+_FIVE = "A cat for my sister.\nShe drew the first one\nwhen we were kids,\nso this one is for her.\nHappy birthday, Jo!"
+_CAP = """() => { const t = document.getElementById('postCaptionInput'); return { h: Math.round(t.getBoundingClientRect().height * 10) / 10,
+    hidden: t.scrollHeight - t.clientHeight }; }"""
+# The words go in and the box is read on every frame from that same moment:
+# read after the typing returned, most of the 0.18s ease had already gone by.
+_HEIGHTS = """([text, ms]) => new Promise(done => { const t = document.getElementById('postCaptionInput'), out = [], t0 = performance.now();
+    t.focus(); t.value = text; t.dispatchEvent(new Event('input', { bubbles: true }));
+    (function tick() { out.push(Math.round(t.getBoundingClientRect().height * 10) / 10); if (performance.now() - t0 < ms) requestAnimationFrame(tick); else done(out); })(); })"""
+_GRIP = "() => { const g = document.getElementById('postCaptionGrip'); if (!g) return null; const r = g.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; }"
+
+
+def _sheet(pg, path):
+    if path == "/":
+        draw(pg, "#canvas", 200, 200, n=16); pg.wait_for_timeout(300)
+        pg.click("#recordBtn"); pg.wait_for_timeout(500)
+    else:
+        pg.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+        draw(pg, "#pad", 200, 200, n=16); pg.wait_for_timeout(300)
+    pg.click("#postBtn"); pg.wait_for_timeout(800)
+
+
+with _sp204() as _ps:
+    _psb = waits.instrument(_ps.chromium.launch())
+    _box, _fit, _grip = {}, {}, {}
+    for _name, _path in (("Pad", "/"), ("Flip", "/flip")):
+        for _th in ("light", "dark"):
+            _c = _psb.new_context(viewport={"width": 1280, "height": 860}, device_scale_factor=2)
+            _pg = _c.new_page(); browsing.goto(_pg, BASE, f"{_path}?theme={_th}"); waits.settle(_pg, 500)
+            _sheet(_pg, _path)
+            _im = _PImg.open(_pio.BytesIO(_pg.screenshot())).convert("RGB")
+            _k = _pg.evaluate("() => { const r = document.querySelector('#postSheet .post-check-box').getBoundingClientRect(); return [r.left, r.top, r.width, r.height]; }")
+            _edge = _im.getpixel((int(_k[0] * 2) + 1, int((_k[1] + _k[3] / 2) * 2)))
+            _ground = _im.getpixel((int((_k[0] - 6) * 2), int((_k[1] + _k[3] / 2) * 2)))
+            _box[(_name, _th)] = round(_pr(_edge, _ground), 2)
+            if _th == "light":
+                # The caption: three lines to start; five written ease it to fit them all.
+                _h0 = _pg.evaluate(_CAP)
+                _hs = _pg.evaluate(_HEIGHTS, [_FIVE, 400])
+                _h1 = _pg.evaluate(_CAP)
+                _mid = sorted(set(h for h in _hs if _h0["h"] + 1 < h < _h1["h"] - 1))
+                _out = [h for h in _hs if not (_h0["h"] - 1 <= h <= _h1["h"] + 1)]
+                # The grip: a mouse's drag 60px down, then 300px up to the floor.
+                _gx, _gy = _pg.evaluate(_GRIP) or (0, 0)
+                _pg.mouse.move(_gx, _gy); _pg.mouse.down(); _pg.mouse.move(_gx, _gy + 60, steps=8); _pg.mouse.up(); _pg.wait_for_timeout(250)
+                _h2 = _pg.evaluate(_CAP)
+                _pg.type("#postCaptionInput", " More.")
+                _pg.wait_for_timeout(300)
+                _h3 = _pg.evaluate(_CAP)
+                _pg.evaluate("() => document.activeElement && document.activeElement.blur()")   # the typing's caret put away
+                _gx, _gy = _pg.evaluate(_GRIP)
+                _pg.mouse.move(_gx, _gy); _pg.mouse.down(); _pg.mouse.move(_gx, _gy - 300, steps=8); _pg.mouse.up(); _pg.wait_for_timeout(250)
+                _h4 = _pg.evaluate(_CAP)
+                _focus = _pg.evaluate("() => document.activeElement && document.activeElement.id")
+                _pg.keyboard.press("Escape"); _pg.wait_for_timeout(500)
+                _pg.click("#postBtn"); _pg.wait_for_timeout(800)
+                _h5 = _pg.evaluate(_CAP)
+                _fit[_name] = {"start": _h0, "fitted": _h1, "between": len(_mid), "outside": _out, "dragged": _h2, "typed": _h3, "floor": _h4, "reopened": _h5, "focus": _focus}
+            _c.close()
+    # A finger on the grip, on a phone: the drag is the grip's, not the sheet's
+    # scroll. On a screen 520px tall, as with the keyboard up, so the sheet does
+    # scroll: on a full phone screen nothing in it scrolls, and a finger kept
+    # the drag with or without the grip's touch-action.
+    _c = _psb.new_context(viewport={"width": 402, "height": 520}, device_scale_factor=2, is_mobile=True, has_touch=True)
+    _pg = _c.new_page(); browsing.goto(_pg, BASE, "/"); waits.settle(_pg, 500)
+    _sheet(_pg, "/")
+    _pg.evaluate("() => document.getElementById('postCaptionInput').scrollIntoView({ block: 'center' })"); _pg.wait_for_timeout(300)
+    _pg.evaluate("""() => { window.__gc = 0; document.addEventListener('pointercancel', () => window.__gc++, true); }""")
+    _t0 = _pg.evaluate(_CAP); _gx, _gy = _pg.evaluate(_GRIP) or (0, 0)
+    _cdp = _c.new_cdp_session(_pg)
+    _cdp.send("Input.dispatchTouchEvent", {"type": "touchStart", "touchPoints": [{"x": _gx, "y": _gy}]}); _pg.wait_for_timeout(40)
+    for _k in range(1, 13):
+        _cdp.send("Input.dispatchTouchEvent", {"type": "touchMove", "touchPoints": [{"x": _gx, "y": _gy + 60 * _k / 12}]}); _pg.wait_for_timeout(16)
+    _cdp.send("Input.dispatchTouchEvent", {"type": "touchEnd", "touchPoints": []}); _pg.wait_for_timeout(300)
+    _grip = {"before": _t0, "after": _pg.evaluate(_CAP), "cancels": _pg.evaluate("() => window.__gc"),
+             "sheet scrolls": _pg.evaluate("() => { const s = document.getElementById('postSheet'); return s.scrollHeight > s.clientHeight + 1; }"),
+             "focus": _pg.evaluate("() => document.activeElement && document.activeElement.id")}
+    _c.close()
+    _psb.close()
+check("TICK BOX: unticked, the gallery box is at least 3:1 against the sheet beside it, on the Pad and Flip, light and dark",
+      len(_box) == 4 and all(v >= 3.0 for v in _box.values()), str(_box))
+check("CAPTION: five lines written, the box eases to show them all: no line hidden, every frame between where it was and where it goes (a frame between, none outside), on the Pad and Flip",
+      len(_fit) == 2 and all(v["fitted"]["hidden"] <= 1 and v["fitted"]["h"] > v["start"]["h"] + 20 and v["between"] >= 1 and not v["outside"]
+                             for v in _fit.values()),
+      str({k: (v["start"], v["fitted"], v["between"], v["outside"]) for k, v in _fit.items()}))
+check("CAPTION GRIP: a mouse drags it 60px down and the box is 60px taller; what is typed after keeps that height; up, it stops at the three lines it started with; and the drag puts no caret in the box",
+      len(_fit) == 2 and all(abs(v["dragged"]["h"] - v["fitted"]["h"] - 60) <= 2 and abs(v["typed"]["h"] - v["dragged"]["h"]) <= 1
+                             and abs(v["floor"]["h"] - v["start"]["h"]) <= 1 and v["focus"] != "postCaptionInput" for v in _fit.values()),
+      str({k: (v["fitted"]["h"], v["dragged"]["h"], v["typed"]["h"], v["floor"]["h"], v["focus"]) for k, v in _fit.items()}))
+check("CAPTION GRIP: ...opened again, the box fits its words again; and on a phone a finger's drag moves it 60px, none of it taken by the sheet",
+      len(_fit) == 2 and all(v["reopened"]["hidden"] <= 1 and abs(v["reopened"]["h"] - v["fitted"]["h"]) <= 26 for v in _fit.values())
+      and _grip["sheet scrolls"] and abs(_grip["after"]["h"] - _grip["before"]["h"] - 60) <= 2 and _grip["cancels"] == 0 and _grip["focus"] != "postCaptionInput",
+      f"reopened {[v['reopened'] for v in _fit.values()]}; phone {_grip}")
+
 print("\nDONE, THE DOT AND THE FIRST LINE — you can find Done, and you know you're recording")
 # The owner, after v330: "It's not noticeable. I had to look around to find it
 # and wasn't sure I was even recording." Done was a glass pill in the header's
