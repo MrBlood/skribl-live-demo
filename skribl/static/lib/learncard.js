@@ -41,6 +41,15 @@
   'use strict';
   var HOLD = 500, MOVE = 10, REST = 2000, GRACE = 250;
   var NOTE_KEY = 'skribl.learncard.note.v1';
+  // THE SWITCH (owner, after Tune's cards: "there should be a toggle to shut
+  // off help cards in settings"; the mock's A, "Yes"): Settings' Help cards
+  // row, one key for both editors. Off, a hold or a rest opens nothing and a
+  // tap is just a tap; the first-time note stays away. ? and How it works'
+  // Name every button still name every button and open its card, because
+  // then you asked. Where How it works says to hold a button, it says where
+  // the switch is instead.
+  var OFF_KEY = 'skribl.learncard.off.v1';
+  function cardsOn() { try { return localStorage.getItem(OFF_KEY) !== '1'; } catch (e) { return true; } }
   var force = window.__skriblLearnForce === true;
   var live = force || !navigator.webdriver;
   var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -434,7 +443,7 @@
     if (cardEl && !cardEl.contains(e.target) && !(current && current.el.contains(e.target))) close(false);
     if (e.pointerType === 'mouse') { cancelRest(); return; }
     var hit = specFor(e.target);
-    if (!hit || hit.spec.tagOnly || hit.el.disabled) return;
+    if (!hit || hit.spec.tagOnly || hit.el.disabled || !cardsOn()) return;
     var x = e.clientX, y = e.clientY, id = e.pointerId;
     clearTimeout(hold && hold.t);
     hold = { id: id, x: x, y: y, t: setTimeout(function () {
@@ -458,7 +467,7 @@
   }, true);
   // No system callout or context menu on a button that holds a card.
   document.addEventListener('contextmenu', function (e) {
-    var hit = live && specFor(e.target);
+    var hit = live && cardsOn() && specFor(e.target);
     if (hit && !hit.spec.tagOnly) e.preventDefault();
   }, true);
 
@@ -470,7 +479,7 @@
     rest = null;
   }
   document.addEventListener('pointerover', function (e) {
-    if (!live || e.pointerType !== 'mouse' || document.body.classList.contains('stroking')) return;
+    if (!live || e.pointerType !== 'mouse' || document.body.classList.contains('stroking') || !cardsOn()) return;
     var hit = specFor(e.target);
     if (!hit) return;
     if (current && current.el === hit.el) { clearTimeout(leaveTimer); return; }
@@ -561,6 +570,7 @@
   // ---- the first-time note -------------------------------------------------
   function note(forceShow) {
     try { if (!forceShow && localStorage.getItem(NOTE_KEY) === '1') return false; } catch (e) { return false; }
+    if (!forceShow && !cardsOn()) return false;
     var dock = document.getElementById('penToolBtn');
     if (!dock) return false;
     var n = document.createElement('div');
@@ -600,11 +610,37 @@
   // are hooked up once the page is parsed. Nothing on the page reads
   // window.SkriblLearnCard; it is there for the suites that ask
   // (verify_learncard, verify_contrast), as harness/verify_surfaces records.
+  function setCardsOn(on) {
+    try { localStorage.setItem(OFF_KEY, on ? '0' : '1'); } catch (e) {}
+    if (!on) { close(false); cancelRest(); }
+    syncSwitch();
+  }
+  function syncSwitch() {
+    var on = cardsOn();
+    var seg = document.getElementById('cardSeg');
+    if (seg) Array.prototype.forEach.call(seg.querySelectorAll('button'), function (b) {
+      b.classList.toggle('on', (b.getAttribute('data-cards') === 'on') === on);
+    });
+    var gesture = document.getElementById('cardSegSub');
+    if (gesture) gesture.textContent = touchFirst ? 'Hold a button' : 'Rest on a button';
+    var sub = document.querySelector('#learnNames .learn-names-sub');
+    if (sub) sub.textContent = !on ? 'Help cards are off, in Settings'
+      : touchFirst ? 'Or hold any button to learn it' : 'Or rest on any button, or press ?';
+    var ask = document.getElementById('helpAskButtons');
+    if (ask) ask.textContent = on ? 'Or ask the buttons themselves: hold one, or rest your pointer on it.'
+      : 'Or turn on Help cards, in Settings, and ask the buttons themselves.';
+  }
+  window.addEventListener('storage', function (e) { if (e.key === OFF_KEY) syncSwitch(); });
+
   document.addEventListener('DOMContentLoaded', function () {
+    var cseg = document.getElementById('cardSeg');
+    if (cseg) cseg.addEventListener('click', function (e) {
+      var b = e.target.closest('button');
+      if (b) setCardsOn(b.getAttribute('data-cards') === 'on');
+    });
+    syncSwitch();
     var namesBtn = document.getElementById('learnNames');
     if (namesBtn) {
-      var sub = namesBtn.querySelector('.learn-names-sub');
-      if (sub && !touchFirst) sub.textContent = 'Or rest on any button, or press ?';
       namesBtn.addEventListener('click', function () {
         if (typeof window.closeHelpDrawer === 'function') window.closeHelpDrawer();
         setTimeout(function () { tags(true); }, 420);
@@ -632,6 +668,7 @@
     open: function (t) { return open(t, 'tag'); }, close: function () { close(false); },
     steps: steps, picture: picture,
     tags: tags, note: note, cards: CARDS,
-    isOpen: function () { return !!cardEl; }
+    isOpen: function () { return !!cardEl; },
+    on: cardsOn, setOn: setCardsOn
   };
 }());

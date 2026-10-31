@@ -122,6 +122,14 @@
     <span class="menu-row-label">Tips<span class="menu-row-sub">First-time notes</span></span>
     <span class="seg hint-seg" id="hintSeg" role="group" aria-label="First-use tips"><span class="seg-slider"></span><button type="button" data-hints="on">On</button><button type="button" data-hints="off">Off</button></span>
   </div>
+  {# HELP CARDS (owner, after Tune's cards: "there should be a toggle to shut
+     off help cards in settings"; the mock's A, "Yes"): its own row under
+     Tips, the same switch. lib/learncard.js keeps it under one key for both
+     editors, wires it, and names the gesture under it (a desk rests). #}
+  <div class="menu-row">
+    <span class="menu-row-label">Help cards<span class="menu-row-sub" id="cardSegSub">Hold a button</span></span>
+    <span class="seg hint-seg" id="cardSeg" role="group" aria-label="Help cards"><span class="seg-slider"></span><button type="button" data-cards="on" class="on">On</button><button type="button" data-cards="off">Off</button></span>
+  </div>
   <div class="menu-row">
     <span class="menu-row-label">Canvas</span>
     <span class="seg canvas-seg" id="canvasSeg" role="group" aria-label="Canvas shape"><span class="seg-slider"></span><button type="button" data-size="classic"{% if is_flip %} class="on"{% endif %}>4:3</button><button type="button" data-size="wide">16:9</button><button type="button" data-size="square">1:1</button><button type="button" data-size="tall">9:16</button></span>

@@ -281,10 +281,11 @@ with sync_playwright() as p:
         q.mouse.up(); settle(q, 400)
 
     def menu_rows(q):
-        # Theme, Tips and Canvas are the ⋯ menu's Settings page (after v323);
-        # each row is measured where a thumb would scroll it to.
+        # Theme, Tips, Help cards and Canvas are the ⋯ menu's Settings page
+        # (after v323; Help cards after Tune's cards); each row is measured
+        # where a thumb would scroll it to.
         q.evaluate("() => SkriblMenuPages.show('settings', false)"); settle(q, 300)
-        for sid in ("themeSeg", "hintSeg", "canvasSeg"):
+        for sid in ("themeSeg", "hintSeg", "cardSeg", "canvasSeg"):
             q.evaluate("(i) => document.getElementById(i).scrollIntoView({block: 'center'})", sid)
             settle(q, 450)
             yield "menu"
@@ -417,10 +418,10 @@ with sync_playwright() as p:
         # Brush, smoothing, pressure and eraser left the census with the draw
         # drawer's tiles (lib/drawtiles.js): picture choices, no pill to slide.
         must = {("/skribl-pad", k) for k in ("toolGroup", "paintTargetSeg", "shapeSeg", "gridDensitySeg", "mirrorSeg", "pauseSeg",
-                                              "postSpeedSeg", "photoFitGroup", "themeSeg", "hintSeg", "canvasSeg",
+                                              "postSpeedSeg", "photoFitGroup", "themeSeg", "hintSeg", "cardSeg", "canvasSeg",
                                               "mediaTabs")}
         must |= {("/flip", k) for k in ("toolGroup", "paintTargetSeg", "shapeSeg", "fps", "gridDensitySeg", "mirrorSeg",
-                                         "smearWeightSeg", "onionDepthSeg", "photoFitGroup", "themeSeg", "hintSeg",
+                                         "smearWeightSeg", "onionDepthSeg", "photoFitGroup", "themeSeg", "hintSeg", "cardSeg",
                                          "canvasSeg", "mbScope", "exportSizeSeg", "exportLoopsSeg", "mediaTabs")}
         missing = sorted(m for m in must if m not in seen)
         check("ONE PILL: the census reached every control it names (a control not measured is not passing)",

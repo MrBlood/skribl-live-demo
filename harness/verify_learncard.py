@@ -33,6 +33,10 @@ cards mock, "All yes"). Each row holds a promise, on the Pad and on Flip:
      their rows with the recording whole; ? puts each row's tag on its own
      row, none on another, none under the banner; resting on a desk grows
      the card.
+ 12. THE SWITCH: Settings' Help cards row turns them off for both editors;
+     off, a hold or a rest opens nothing and the first-time note stays
+     away, while ? still names every button; How it works says where the
+     switch is.
 
 For calibration, LEARNCARD_PART=<words of a part's label> runs that part
 alone ("Tune's rows", "the draw drawer's six"). A real run sets none.
@@ -700,6 +704,117 @@ with sync_playwright() as p:
                   not tg["astray"] and not tg["unpainted"] and not tg["over"] and not tg["under"], str(tg))
             c.close()
         part("Tune's rows", tune)
+
+        # 12. THE SWITCH (owner, after Tune's cards: "there should be a toggle
+        # to shut off help cards in settings"; the mock's A, "Yes"). Settings
+        # has a Help cards row under Tips, On to start, saying the gesture
+        # (a phone holds, a desk rests). Off: a hold opens no card and its
+        # lift is a tap (the eraser is picked); a rest opens none; the
+        # first-time note stays away; ? still names every button and a tag
+        # opens its card, because then you asked; How it works says where the
+        # switch is. On again, a hold opens the card. One setting for both
+        # editors: off on the Pad is off on Flip.
+        def switch():
+            OFF_KEY = "skribl.learncard.off.v1"
+            ROWSQ = """() => [...document.querySelectorAll('[data-menu-page="settings"] .menu-row')].map(r => {
+                const l = r.querySelector('.menu-row-label'), s = r.querySelector('.menu-row-sub');
+                return [l.firstChild.textContent.trim(), s ? s.textContent : null]; })"""
+            SEG = """() => { const g = document.getElementById('cardSeg'); if (!g) return null; const on = g.querySelector('button.on');
+                const r = on && on.getBoundingClientRect(), a = r && document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+                return { on: on && on.dataset.cards, painted: !!a && on.contains(a), stored: localStorage.getItem('skribl.learncard.off.v1') }; }"""
+            ERASER = """() => [!!document.querySelector('.lc-card'), document.getElementById('eraserToolBtn').classList.contains('active')
+                || document.getElementById('eraserToolBtn').getAttribute('aria-pressed') === 'true']"""
+            WORDS = """() => [(document.querySelector('#learnNames .learn-names-sub') || {}).textContent, (document.getElementById('helpAskButtons') || {}).textContent]"""
+            MENU = "#menuBtn" if name == "Pad" else "#moreBtn"
+
+            def settings(q):
+                q.click(MENU)
+                q.wait_for_timeout(500)
+                q.click("#menuSettingsItem")
+                q.wait_for_timeout(500)
+
+            def again(q):
+                q.reload()
+                q.wait_for_timeout(900)
+                q.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+            c, q = fresh(b, PHONE, route)
+            cdp = c.new_cdp_session(q)
+            settings(q)
+            rows, seg0 = q.evaluate(ROWSQ), q.evaluate(SEG)
+            check(f"{name}: Settings has a Help cards row under Tips, 'Hold a button' under it, On to start, painted",
+                  [r[0] for r in rows][:3] == ["Theme", "Tips", "Help cards"] and rows[2][1] == "Hold a button"
+                  and bool(seg0) and seg0["on"] == "on" and seg0["painted"], f"{rows}; {seg0}")
+            q.click('#cardSeg [data-cards="off"]')
+            q.wait_for_timeout(300)
+            seg1 = q.evaluate(SEG)
+            again(q)
+            touch_hold(q, cdp, "#eraserToolBtn", 700)
+            held = q.evaluate(ERASER)
+            words = q.evaluate(WORDS)
+            check(f"{name}: Off is kept, and a hold opens no card: its lift is a tap (the eraser is picked)",
+                  bool(seg1) and seg1["on"] == "off" and seg1["stored"] == "1" and not held[0] and held[1], f"{seg1}; {held}")
+            check(f"{name}: ...How it works says where the switch is, in Name every button and when a search finds nothing",
+                  words[0] == "Help cards are off, in Settings" and words[1] == "Or turn on Help cards, in Settings, and ask the buttons themselves.", str(words))
+            q.evaluate("() => window.SkriblLearnCard.tags(true)")
+            q.wait_for_timeout(300)
+            tg = q.locator(".lc-tag", has_text="Tune")
+            if tg.count():
+                tg.first.click()
+                q.wait_for_timeout(300)
+            asked = q.evaluate(CARD)
+            q.evaluate("() => window.SkriblLearnCard.close()")
+            check(f"{name}: ...and ? still names every button, and a tag opens its card",
+                  bool(asked) and asked["name"] == "Tune" and asked["painted"], str(asked))
+            settings(q)
+            q.click('#cardSeg [data-cards="on"]')
+            q.wait_for_timeout(300)
+            again(q)
+            touch_hold(q, cdp, "#penToolBtn", 700)
+            back = q.evaluate(CARD)
+            q.evaluate("() => window.SkriblLearnCard.close()")
+            words = q.evaluate(WORDS)
+            check(f"{name}: On again, a hold opens the card, and How it works says to hold a button",
+                  bool(back) and back["name"] == "Pen" and q.evaluate(f"() => localStorage.getItem('{OFF_KEY}')") == "0"
+                  and words[1] == "Or ask the buttons themselves: hold one, or rest your pointer on it.", f"{back}; {words}")
+            c.close()
+            # The first-time note stays away while off (and comes while on).
+            seen = {}
+            for state in ("1", "0"):
+                c = b.new_context(**PHONE)
+                c.add_init_script(FORCE + f"try {{ localStorage.setItem('{OFF_KEY}', '{state}'); }} catch (e) {{}}")
+                q = c.new_page()
+                browsing.goto(q, BASE, route)
+                q.wait_for_timeout(600)
+                q.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+                q.wait_for_timeout(2600)
+                seen[state] = q.evaluate("() => !!document.querySelector('.lc-note')")
+                c.close()
+            check(f"{name}: the first-time note stays away while help cards are off (and comes while they are on)",
+                  seen == {"1": False, "0": True}, str(seen))
+            # A desk: the row says Rest on a button; off, a rest opens nothing.
+            c, q = fresh(b, DESK, route)
+            settings(q)
+            desk_rows = q.evaluate(ROWSQ)
+            q.click('#cardSeg [data-cards="off"]')
+            q.wait_for_timeout(300)
+            again(q)
+            x, y = center(q, "#eraserToolBtn")
+            q.mouse.move(x - 30, y - 40)
+            q.mouse.move(x, y, steps=4)
+            q.wait_for_timeout(2600)
+            rested = q.evaluate("() => !!document.querySelector('.lc-card')")
+            check(f"{name}: on a desk the row says 'Rest on a button', and off, a rest opens no card",
+                  len(desk_rows) > 2 and desk_rows[2] == ["Help cards", "Rest on a button"] and not rested, f"{desk_rows}; card {rested}")
+            if name == "Pad":
+                # ONE SETTING FOR BOTH EDITORS: off here is off on Flip.
+                browsing.goto(q, BASE, "/flip")
+                q.wait_for_timeout(900)
+                q.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+                fl = q.evaluate(SEG)
+                check("Off on the Pad is off on Flip: one setting for both editors",
+                      bool(fl) and fl["on"] == "off" and fl["stored"] == "1", str(fl))
+            c.close()
+        part("the switch", switch)
 
     if not PART:
         check("Pen's card says the same on the Pad and Flip", len(pen_lines) == 2 and len(set(pen_lines.values())) == 1, str(pen_lines))

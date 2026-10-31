@@ -92,6 +92,7 @@ CONTROLS = [
     # --- canvas / system --------------------------------------------------
     ("canvas size control", "#canvasSeg",      "#canvasSeg",      ""),
     ("first-use hints",    "#hintSeg",         "#hintSeg",        ""),
+    ("help cards switch",  "#cardSeg",         "#cardSeg",        ""),
     ("zoom in",            "#zoomInBtn",       "#zoomInBtn",      ""),
     ("zoom out",           "#zoomOutBtn",      "#zoomOutBtn",     ""),
     ("zoom readout",       "#zoomVal",         "#zoomVal",        ""),
@@ -1023,12 +1024,13 @@ with sync_playwright() as p:
     groups = [("#paintTargetSeg", [(pad, "@pad:draw", "drawPanel"),
                               (flip, "@pad:draw", "drawPanel")]),
               ("#hintSeg",   [(pad, "#menuBtn", "menuSheet"), (flip, "#moreBtn", "moreMenu")]),
+              ("#cardSeg",   [(pad, "#menuBtn", "menuSheet"), (flip, "#moreBtn", "moreMenu")]),
               ("#canvasSeg", [(pad, "#menuBtn", "menuSheet"), (flip, "#moreBtn", "moreMenu")])]
 
     for sel, openers in groups:
         for pg_, opener, panel in openers:
             ensure_open(pg_, opener, panel)
-            if sel in ("#hintSeg", "#canvasSeg"):   # the menu's Settings page (after v323)
+            if sel in ("#hintSeg", "#cardSeg", "#canvasSeg"):   # the menu's Settings page (after v323)
                 pg_.evaluate("() => window.SkriblMenuPages && SkriblMenuPages.show('settings', false)")
         settle(pad, sel)
         settle(flip, sel)
