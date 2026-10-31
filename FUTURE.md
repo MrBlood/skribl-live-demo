@@ -1563,6 +1563,14 @@ colour, a quick size, a stepper), its tool's card names it [yes]; (5) the
 seal first, then the cards [seal first]. Mock the cards' words before
 building, as the tray's seven were.
 
+The words were mocked after the v330 seal (the six on the real card, Pad
+and Flip, phone and desk, light and dark), and the owner said "All yes" to
+them and to an example in every card, built in two steps. **Built**: the six
+cards and their words (DECISIONS, after v330, "The draw drawer's six help
+cards"), the Eraser size card with the eraser drawing. Next: the other five
+examples (Recolor and Brush as drawings that draw themselves; the
+Eyedropper, Size and Feel as phone clips), then calls 2 and 3.
+
 ## 7. The honest state
 
 The tool is good. It is better than it needs to be for a demo and not yet enough

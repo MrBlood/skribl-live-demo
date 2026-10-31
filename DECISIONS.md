@@ -27117,3 +27117,58 @@ whole suite: 168/168 (3.7 min, on its own server).
 
 WHAT IT DOES TO THE APP: nothing; the row is the instrument. It reads the
 Pad's line only; Flip's speeds are not in this row.
+
+## After v330 -- The draw drawer's six help cards
+
+The owner, of the words mock (the six cards on the real card, Pad and Flip,
+phone and desk, light and dark, measured): "All yes", to the words, to
+"Eraser size" as the tile's card, to an example in every card, to two pull
+requests (the cards first, then the examples), and to More opening each
+tool's own entry. FUTURE.md 6aa.
+
+THE SIX are in lib/learncard.js's CARDS, one module for both editors: the
+Eyedropper and Recolor beside the colours, and the four tiles (Brush, Size,
+Feel, Eraser size), each a name, one sentence and a row for each gesture, in
+the words mocked. Flip differs in two places: its Recolor stops at the
+change, since Flip plays pages and has no stroke replay to point to, and its
+Feel row names Draw-on. The tile is "Eraser" and its card "Eraser size": the
+words the Eraser's own card sends you here with, so two cards do not share
+one name. Eraser size shows the eraser drawing How it works plays; the other
+five examples are the next pull request. More searches How it works for the
+entry that answers: "Brush style", "Brush size" and "Eraser" for three of
+them (the card's own name "Eraser size" finds nothing), the others by name.
+
+MEASURED IN THE MOCK, all 48 (six cards, two editors, phone and desk, light
+and dark), opened by a held finger or a resting mouse: whole on the screen,
+clear of their buttons, every word painted and none cut, and the hold
+pressing nothing. Every row on one line in Inter, Liberation Sans and DejaVu
+Sans; the Pad's Recolor sentence takes a third line only in DejaVu. The card
+is the one every button wears, its tokens unchanged.
+
+verify_learncard SECTION 10 holds it: each of the six holds its card in
+those words, painted, whole and clear of its button, which wears the ring;
+none of the holds presses its button (no eyedropper armed, no Recolor, no
+tile's choices, the drawer still up); a quick tap still arms the Eyedropper
+and opens Size's choices; on a desk, resting on Size grows its card and
+moving away closes it; with the drawer open, ? names the six, painted, none
+on another. Whatever a hold set off is put back before the next button, so
+each row reads its own: a pressed Eyedropper veils the drawer, and on main's
+module every later row went red for that, not for its own button. A button
+is pressed once it stands still: a tile's choices take the phone's drawer to
+its full height, and a tap read while it glided there missed Flip's
+Eyedropper once in two runs.
+
+CALIBRATION, in a trimmed copy (the fixture and section 10), the module
+served in place of the file: main's, 18 of 20 red (the quick tap is green
+there, as it should be); Feel's card taken out, Feel's row, the presses row
+and the tags row red, nothing else; Flip given the Pad's Recolor sentence,
+Flip's Recolor row alone; the lift after a card let through, the presses
+row, with the three tiles whose lift opened their choices under the card;
+the card laid over its button, the six card rows. As built, three runs, 20
+of 20.
+
+WHAT IT DOES TO FLIP: shared, one module and the same six buttons, with
+the two differences above.
+
+Not tested here: a real finger (touch is CDP touch events), and WebKit's
+hold; SF and Segoe UI, bracketed by the three faces above.
