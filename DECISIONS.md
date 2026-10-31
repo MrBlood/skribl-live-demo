@@ -27637,3 +27637,21 @@ Not changed here; noted for whoever sees it next.
 
 Not tested here: an iPhone's or Windows' drawing of the inner shadow (no
 WebKit here). It is a drawn shadow, not type, so no font enters it.
+
+## After v330 -- Main red after #706: the groove was read at one pixel
+
+Main's full run after #706 went red in shard 6 on both databases, at one row
+of the new check: verify_ux's "OFF SWITCH: ...pressed in" read Flip's groove
+at 1.044 in light and 1.036 in dark, 1.04 asked, where this box reads 1.086
+and 1.075. The Pad's two read the same on both machines (1.151 and 1.102).
+The switch was fine; the instrument was not. It read one pixel 1.5px inside
+the track's top, in a groove about 3px deep, and with the CI's fonts Flip's
+Draw-on row sits at another fraction of a pixel, so that pixel fell deeper,
+where the shadow has faded.
+
+It reads the darkest of the device rows 1 to 3px inside the top now, clear of
+the edge's own blending, against the middle, and asks 1.02. Shown on this box
+with the switch moved by a fraction of a pixel (0.1, 0.33, 0.6 and 0.85px):
+1.065 to 1.153 in all four cells, green; main's grey, 1.0 in all four, red;
+the groove taken out, 0.98, red; each theme's groove taken out, that theme's
+two cells red and the other's green.
