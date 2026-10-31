@@ -54,7 +54,7 @@ check = make_check(results)
 # the claims cover both.
 CLAIMS = {
     # Drawing tools
-    "Pen": ["probe:pen", "probe:pen_swoosh"],
+    "Pen": ["probe:pen", "probe:pen_swoosh", "probe:pen_finger"],
     "Eraser": ["verify_pointerpad.py::the eraser ring follows the mouse DURING an erase",
                "verify_input.py::with the stabilizer ON, an eraser point lands where the pointer is"],
     "Shape": ["probe:shape",
@@ -839,6 +839,29 @@ def probe_pen_swoosh(b, nm, path):
                 f"drag +60px: size {s0} -> {s1}, drawer {after!r}")
 
 
+def probe_pen_finger(b, nm, path):
+    """A finger's sideways drag on Pen moves the size as far as a mouse's."""
+    # pen_swoosh drags with a mouse, which a browser never pans. A finger's drag
+    # is the browser's to pan unless the button says otherwise: Chrome took it
+    # after about four moves and sent pointercancel, so +60px moved the size 3
+    # where a mouse moves it 10, on both editors.
+    ctx, pg, errs = fresh(b, path, viewport={"width": 402, "height": 874}, has_touch=True, is_mobile=True)
+    bb = pg.locator("#penToolBtn").bounding_box(); x, y = bb["x"] + bb["width"] / 2, bb["y"] + bb["height"] / 2
+    pg.evaluate("""() => { window.__pe = {}; ['pointermove', 'pointerup', 'pointercancel'].forEach(t =>
+        window.addEventListener(t, () => { window.__pe[t] = (window.__pe[t] || 0) + 1; }, true)); }""")
+    cdp = ctx.new_cdp_session(pg)
+    touch = lambda t, px=None: cdp.send("Input.dispatchTouchEvent", {"type": t, "touchPoints": [] if px is None else [{"x": px, "y": y, "id": 1}]})
+    s0 = pg.evaluate("() => size")
+    touch("touchStart", x); pg.wait_for_timeout(40)
+    for k in range(1, 21):
+        touch("touchMove", x + 60 * k / 20); pg.wait_for_timeout(16)
+    touch("touchEnd"); pg.wait_for_timeout(300)
+    s1, pe, after = pg.evaluate("() => size"), pg.evaluate("() => window.__pe"), pg.evaluate(browsing._PAD_CUR)
+    ctx.close()
+    ok = s1 == s0 + 10 and not pe.get("pointercancel") and after is None and not errs
+    return ok, f"finger +60px: size {s0} -> {s1}; pointer events {pe}; drawer {after!r}"
+
+
 def probe_media_tabs(b, nm, path):
     """Media opens Photo or Music behind the drawing; the tabs switch; Media again closes."""
     ctx, pg, errs = fresh(b, path, viewport={"width": 402, "height": 874}, has_touch=True, is_mobile=True)
@@ -856,7 +879,7 @@ def probe_media_tabs(b, nm, path):
     return ok, f"Media -> {a}; Music tab -> {m}; Media again -> {c}"
 
 
-PROBES = {"pen": probe_pen, "pen_swoosh": probe_pen_swoosh, "media_tabs": probe_media_tabs, "shape": probe_shape, "brush_style": probe_brush_style, "grid": probe_grid,
+PROBES = {"pen": probe_pen, "pen_swoosh": probe_pen_swoosh, "pen_finger": probe_pen_finger, "media_tabs": probe_media_tabs, "shape": probe_shape, "brush_style": probe_brush_style, "grid": probe_grid,
           "background": probe_background, "which_tool": probe_which_tool, "select": probe_select,
           "magnifier": probe_magnifier, "dock": probe_dock, "takes": probe_takes,
           "flip_play": probe_flip_play, "photo_adjust": probe_photo_adjust, "loop_window": probe_loop_window,

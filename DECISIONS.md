@@ -27267,3 +27267,35 @@ keeps its way of recolouring many lines at once.
 Not tested here: a real finger and Safari's long press (touch is CDP touch
 events; no WebKit here); how long the hold should feel, 330ms to start and
 to tune on the owner's phone.
+
+## After v330 -- A finger's sideways drag on Pen: the browser took it
+
+Filming the Size help card's example ("Quicker: Drag sideways on Pen") under
+touch, a 140px drag on the Pen button moved the size 5 to 8, where a mouse
+moves it 5 to 28. The button said nothing about touch, so a finger's drag
+was the browser's to pan: Chrome took it after about four moves and sent
+pointercancel, and lib/penswoosh.js's scrub ended with it. On a phone, the
+quick way to change size barely worked, on both editors (Flip's buttons say
+`manipulation`, which allows the same pan).
+
+THE FIX is one rule in styles.css, `#penToolBtn { touch-action: none }`:
+the button keeps the whole drag. An id outweighs Flip's `.flip-app button`
+rule. A tap, the hold that opens the Pen card, and the mouse's drag are
+unchanged; a vertical swipe that starts on the Pen button no longer pans,
+and nothing there scrolled. The player's CSS is unchanged (re-emitted).
+
+verify_helpclaims gains probe:pen_finger beside probe:pen_swoosh (which
+drags with a mouse, which a browser never pans): a CDP finger drag of 60px
+moves the size 10 with no pointercancel, on the Pad and Flip. Calibrated in
+a trimmed copy with styles.css served in place of the file: without the rule
+both editors red ("5 -> 8", "7 -> 10", a pointercancel each); the rule on
+the Pad's dock only, Flip red and the Pad green; as built, both green. The
+first Pad-only run read green on both because the route's pattern missed the
+stylesheet's path and served the real file; a check of the computed
+touch-action caught it before it was believed.
+
+WHAT IT DOES TO FLIP: shared; one rule, both editors.
+
+Not tested here: a real finger and Safari (CDP touch in Chromium; no WebKit
+here). Safari honours `touch-action: none` and fires pointercancel when it
+starts a pan, so the bug and the fix should be the same there.
