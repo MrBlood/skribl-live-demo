@@ -8398,6 +8398,12 @@ body.lc-open .skribl-tip { display: none !important; }   /* the card grows out o
    magnifier on a phone (WebKit's own press-and-hold; not tested here). */
 :is(#penToolBtn, #eraserToolBtn, #shapeToolBtn, #toolMoreBtn, #undoBtn, #redoBtn, #undo, #redo, #mediaOpenBtn, #postBtn, #tuneBtn, #menuBtn, #moreBtn,
     #addcopy, #addblank, #addinbetween, #addtween) { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+/* Dragging the Pen button sideways sets the size (lib/penswoosh.js). A finger's
+   drag belongs to the browser, to pan, unless the button says otherwise: Chrome
+   took it after a few moves and cancelled it, so a finger moved the size 3
+   steps where a mouse moved it 10 (verify_helpclaims, probe:pen_finger). Both
+   editors; an id outweighs Flip's `.flip-app button` manipulation. */
+#penToolBtn { touch-action: none; }
 /* How it works' way in to the name tags, at the top of Watch. */
 .learn-names { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 60px; margin: 0 0 14px; padding: 10px 14px; text-align: left;
   background: var(--menu-card); border: 1px solid var(--menu-card-line); border-radius: 16px; color: var(--text-primary); font: inherit; cursor: pointer; }
