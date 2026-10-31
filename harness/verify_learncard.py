@@ -27,6 +27,15 @@ cards mock, "All yes"). Each row holds a promise, on the Pad and on Flip:
      their cards in the words the owner said yes to, clear of their buttons;
      the hold presses nothing and a quick tap still does; resting on a desk
      grows the card, and ? names all six.
+ 11. TUNE'S ROWS: each row, held on its name or its control, holds its card
+     in the words said yes to, clear of the row; the hold changes no
+     setting and a quick tap still does; Flip's two tall cards end above
+     their rows with the recording whole; ? puts each row's tag on its own
+     row, none on another, none under the banner; resting on a desk grows
+     the card.
+
+For calibration, LEARNCARD_PART=<words of a part's label> runs that part
+alone ("Tune's rows", "the draw drawer's six"). A real run sets none.
 
 Touch is real touch (CDP touch events), so the browser makes the pointer
 events a finger would. Visible means painted: elementFromPoint.
@@ -47,6 +56,7 @@ except ImportError:
     print("SKIP: playwright is not installed")
     sys.exit(0)
 
+PART = os.environ.get("LEARNCARD_PART", "")
 PHONE = dict(viewport={"width": 402, "height": 874}, device_scale_factor=2, is_mobile=True, has_touch=True)
 DESK = dict(viewport={"width": 1333, "height": 906})
 EDITORS = (("Pad", "/skribl-pad"), ("Flip", "/flip"))
@@ -97,6 +107,8 @@ with sync_playwright() as p:
         print(f"\n{name.upper()}")
 
         def part(label, fn):
+            if PART and PART not in label:
+                return
             try:
                 fn()
             except Exception as e:
@@ -532,7 +544,165 @@ with sync_playwright() as p:
             c.close()
         part("the draw drawer's six", drawer)
 
-    check("Pen's card says the same on the Pad and Flip", len(pen_lines) == 2 and len(set(pen_lines.values())) == 1, str(pen_lines))
+        # 11. TUNE'S ROWS (owner, of the words mock: "all yes"; FUTURE.md 6aa,
+        # call 2). Each row, held on its name, opens its card in the words
+        # said yes to, painted, whole and clear of the row, which wears the
+        # ring; held on its control (the switch, a choice), the same card,
+        # and the setting unchanged; a quick tap still changes it. Flip's
+        # Motion guides and Smear weight sit mid-Tune with a phone's clip
+        # that fits on neither side: their cards end above the row, the
+        # recording whole in its frame (the frame gives up its spare height).
+        # ? with Tune open puts each row's tag on its own row: placed above a
+        # row the width of the sheet, each sat in the row before, and the
+        # banner covered the first two.
+        def tune():
+            G = "Lines to help you place things. They’re never part of your " + ("animation." if name == "Flip" else "drawing.")
+            SHARED = [("#tuneGridRow", "#gridBtn", "Grid", G, [["Tap", "The grid on or off"], ["Then", "Coarse, Medium or Fine"]], None),
+                      ("#tuneLayersRow", "#strokeLayersBtn", "Stroke layers", "See-through ink with no dark spots where a line crosses itself.",
+                       [["On", "Crossings stay even"], ["Off", "Crossings build up darker"]], None),
+                      ("#tuneMirrorRow", '#mirrorSeg [data-mirror="vertical"]', "Mirror", "Draw on one side and its mirror image draws itself.",
+                       [["Tap", "Left-right, top-bottom or both"], ["Off", "Back to one line"]], None)]
+            if name == "Pad":
+                ROWS = SHARED + [
+                    ("#tunePauseRow", '#pauseSeg [data-pause="trim"]', "Pauses", "How the replay treats the moments you stopped to think.",
+                     [["Keep", "Every pause, as it was"], ["Trim", "Long ones cut to ¼ second"], ["Tight", "Squeezed right down"]], None),
+                    ("#tuneSpeedRow", "#tuneSpeed .rl-speed", "Watching speed", "How fast Play shows your drawing. It doesn’t change your post.",
+                     [["Tap", "¼× to 16×, or Fit"], ["Fit", "All of it in about 30 seconds"]], None)]
+            else:
+                ROWS = [("#tuneFpsRow", '#fps [data-fps="6"]', "Speed", "How many pages play each second, here and in your post.",
+                         [["6", "Slow and steady"], ["12", "The usual"], ["24", "Smooth, with more pages"], ["Beat", "With a song, keeps its beat"]], None),
+                        ("#tuneWatchRow", '#watchSeg [data-rate="2"]', "Watching speed", "How fast your preview plays. It doesn’t change your post.",
+                         [["Tap", "¼× to 4×"], ["1×", "Just as your post plays"]], None)] + SHARED + [
+                        ("#tuneArcRow", "#arcGuideBtn", "Motion guides", "The path your drawing travels from page to page. Closer dots mean slower.",
+                         [["Tap", "Guides on or off"]], "clips/guides-"),
+                        ("#tuneSmearRow", '#smearWeightSeg [data-smear="light"]', "Smear weight", "How strong your next Smear is. Smears you’ve made keep theirs.",
+                         [["Light", "Faint, behind the drawing"], ["Normal", "The usual"], ["Strong", "Longer and denser"]], "clips/smear-"),
+                        ("#tuneOnionRow", "#onion", "Onion skin", "The pages before this one, faintly, to line up the next drawing.",
+                         [["Tap", "Onion skin on or off"], ["1, 2, 3", "How many pages show"], ["Tint", "Colours them by how far back"]], "clips/onion-")]
+            OPEN = "() => document.getElementById('tuneShell').getAttribute('aria-hidden') === 'false'"
+            STATE = """(sel) => { const e = document.querySelector(sel); if (!e) return null;
+                return [e.getAttribute('aria-checked'), e.classList.contains('on'), e.getAttribute('aria-pressed'), e.getAttribute('aria-expanded'),
+                        !!document.querySelector('.rl-chips:not([hidden])')]; }"""
+            PLACE = """(sel) => { const c = document.querySelector('.lc-card'), b = document.querySelector(sel); if (!c) return null;
+                const R = c.getBoundingClientRect(), B = b.getBoundingClientRect();
+                const words = [...c.querySelectorAll('.lc-t, .lc-line, .lc-do dt, .lc-do dd, .lc-more, .lc-ok, .lc-hint')];
+                const f = c.querySelector('.lc-phone'), v = f && f.querySelector('video');
+                const F = f && f.getBoundingClientRect(), V = v && v.getBoundingClientRect();
+                return { whole: R.left >= 0 && R.top >= 0 && R.right <= innerWidth && R.bottom <= innerHeight,
+                         clear: R.right <= B.left || B.right <= R.left || R.bottom <= B.top || B.bottom <= R.top,
+                         ringed: b.classList.contains('lc-target'),
+                         painted: words.every(e => { const r = e.getBoundingClientRect(), a = document.elementFromPoint(r.left + Math.min(6, r.width / 2), r.top + r.height / 2);
+                           return !!a && e.contains(a); }),
+                         cut: words.filter(e => e.scrollWidth > e.clientWidth + 1).map(e => e.textContent),
+                         recording: v ? [Math.round(V.top - F.top), Math.round(F.bottom - V.bottom), Math.round(F.height)] : null }; }"""
+            STILL = """(sel) => new Promise(done => { const e = document.querySelector(sel); let last = '', n = 0; const t0 = performance.now();
+                (function tick() { const r = e.getBoundingClientRect(), k = r.left + ',' + r.top; n = k === last ? n + 1 : 0; last = k;
+                  if (n >= 3 || performance.now() - t0 > 2000) done(); else requestAnimationFrame(tick); })(); })"""
+
+            def press(q, cdp, sel, ms):
+                q.locator(sel).first.scroll_into_view_if_needed()
+                q.evaluate(STILL, sel)
+                touch_hold(q, cdp, sel, ms)
+
+            def ensure(q):
+                if not q.evaluate(OPEN):
+                    q.click("#tuneBtn")
+                    q.wait_for_timeout(700)
+            c, q = fresh(b, PHONE, route)
+            got = []
+            q.on("response", lambda r: got.append((r.url.split("?")[0], r.status)))
+            cdp = c.new_cdp_session(q)
+            q.click("#tuneBtn")
+            q.wait_for_timeout(700)
+            pressed, closed = {}, []
+            for row, ctl, nm, line, rows, ex in ROWS:
+                ensure(q)
+                got.clear()
+                press(q, cdp, row + " .tune-name", 700)
+                card, at = q.evaluate(CARD), q.evaluate(PLACE, row)
+                shows = []
+                for _ in range(25 if ex else 0):
+                    shows = sorted({u.split("/help/")[1] for u, st in got if st < 400 and "/help/clips/" in u})
+                    if any(u.startswith(ex) for u in shows):
+                        break
+                    q.wait_for_timeout(100)
+                q.evaluate("() => window.SkriblLearnCard.close()")
+                q.wait_for_timeout(200)
+                check(f"{name}: holding Tune's {nm} opens its card in the words said yes to, painted, whole on the screen and clear of its row",
+                      bool(card) and bool(at) and card["name"] == nm and card["line"] == line and card["rows"] == rows
+                      and card["painted"] and card["rowsPainted"]
+                      and at["whole"] and at["clear"] and at["ringed"] and at["painted"] and not at["cut"], f"{card}; {at}")
+                if ex:
+                    rec = at and at["recording"]
+                    check(f"{name}: ...and {nm}'s card plays its clip, the recording whole inside its frame",
+                          bool(card) and card["example"] and any(u.startswith(ex) for u in shows) and bool(rec) and rec[0] >= 0 and rec[1] >= 0,
+                          f"loaded {shows}; recording's room above, below, frame {rec}")
+                ensure(q)
+                before = q.evaluate(STATE, ctl)
+                press(q, cdp, ctl, 700)
+                held = q.evaluate("() => { const t = document.querySelector('.lc-card .lc-t'); return t && t.textContent; }")
+                q.evaluate("() => window.SkriblLearnCard.close()")
+                q.wait_for_timeout(250)
+                after = q.evaluate(STATE, ctl)
+                if held != nm or after != before:
+                    pressed[nm] = {"card": held, "before": before, "after": after}
+                if not q.evaluate(OPEN):
+                    closed.append(nm)
+            check(f"{name}: ...and held on its own control, each row opens that card and changes nothing; Tune stays open",
+                  not pressed and not closed, f"{pressed}; Tune closed after {closed}")
+            # A quick tap is still the control's.
+            ensure(q)
+            tap = ROWS[3] if name == "Pad" else ROWS[0]      # Pauses' Trim; Speed's 6
+            before = q.evaluate(STATE, tap[1])
+            press(q, cdp, tap[1], 80)
+            after = q.evaluate(STATE, tap[1])
+            nocard = not q.evaluate("() => !!document.querySelector('.lc-card')")
+            check(f"{name}: a quick tap in Tune is still a tap: {tap[2]}'s choice is made, and no card opens",
+                  after != before and after[1] and nocard, f"{before} -> {after}; no card {nocard}")
+            # ? with Tune open: each row's tag on its own row.
+            ensure(q)
+            q.evaluate("() => window.SkriblLearnCard.tags(true)")
+            q.wait_for_timeout(400)
+            TAGS = """(rows) => { const t = [...document.querySelectorAll('.lc-tag')].map(e => { const r = e.getBoundingClientRect(),
+                  a = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return { n: e.textContent, r: [r.left, r.top, r.right, r.bottom], painted: !!a && e.contains(a) }; });
+                const over = []; t.forEach((x, i) => t.slice(i + 1).forEach(y => { if (x.r[0] < y.r[2] && y.r[0] < x.r[2] && x.r[1] < y.r[3] && y.r[1] < x.r[3]) over.push(x.n + '/' + y.n); }));
+                const bn = document.querySelector('.lc-banner').getBoundingClientRect();
+                const under = t.filter(x => x.r[0] < bn.right && x.r[2] > bn.left && x.r[1] < bn.bottom && x.r[3] > bn.top).map(x => x.n);
+                const astray = rows.map(([sel, nm]) => { const r = document.querySelector(sel).getBoundingClientRect(), g = t.find(x => x.n === nm);
+                    if (!g) return nm + ': no tag'; const m = (g.r[1] + g.r[3]) / 2; return m >= r.top && m <= r.bottom ? null : nm + ' in ' + Math.round(m) + ', its row ' + Math.round(r.top) + '-' + Math.round(r.bottom); })
+                  .filter(Boolean);
+                return { names: t.map(x => x.n), unpainted: t.filter(x => !x.painted).map(x => x.n), over, under, astray }; }"""
+            tg = q.evaluate(TAGS, [[r[0], r[2]] for r in ROWS])
+            check(f"{name}: with Tune open, ? puts each row's tag on its own row, painted, none on another, none under the banner",
+                  not tg["astray"] and not tg["unpainted"] and not tg["over"] and not tg["under"], str(tg))
+            q.evaluate("() => window.SkriblLearnCard.tags(false)")
+            c.close()
+            # On a desk: resting on a row grows its card; ? the same.
+            c, q = fresh(b, DESK, route)
+            q.click("#tuneBtn")
+            q.wait_for_timeout(700)
+            rest_row = ROWS[3] if name == "Pad" else ROWS[0]
+            x, y = center(q, rest_row[0] + " .tune-name")
+            q.mouse.move(x - 30, y - 40)
+            q.mouse.move(x, y, steps=4)
+            q.wait_for_timeout(2500)
+            card = q.evaluate(CARD)
+            q.mouse.move(40, 840)
+            q.wait_for_timeout(600)
+            gone = q.evaluate("() => !document.querySelector('.lc-card')")
+            check(f"{name}: on a desk, resting on Tune's {rest_row[2]} grows its card (Move away to close), and moving away closes it",
+                  bool(card) and card["name"] == rest_row[2] and card["hint"] == "Move away to close" and card["painted"] and gone, f"{card}; gone {gone}")
+            ensure(q)
+            q.keyboard.press("Shift+Slash")
+            q.wait_for_timeout(400)
+            tg = q.evaluate(TAGS, [[r[0], r[2]] for r in ROWS])
+            check(f"{name}: ...and on a desk too, ? puts each row's tag on its own row, none on another, none under the banner",
+                  not tg["astray"] and not tg["unpainted"] and not tg["over"] and not tg["under"], str(tg))
+            c.close()
+        part("Tune's rows", tune)
+
+    if not PART:
+        check("Pen's card says the same on the Pad and Flip", len(pen_lines) == 2 and len(set(pen_lines.values())) == 1, str(pen_lines))
     b.close()
 
 bad = [r for r in results if not r[0]]

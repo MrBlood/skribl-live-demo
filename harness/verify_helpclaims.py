@@ -167,6 +167,11 @@ CLAIMS = {
     "Pages": ["verify_pagespan.py::Undo restores every page of the deleted run"],
     "Onion skin": ["verify_flipmotion.py::sampling an ONION pixel does not pick the onion's colour",
                    "verify_pages.py::onion depth/tint live there and are reachable"],
+    # Tune's cards send More here (lib/learncard.js); these two had no tip.
+    "Motion guides": ["verify_flipmotion.py::nothing is drawn while the guides are off",
+                      "verify_flipmotion.py::switching them on draws a path"],
+    "Watching speed": ["verify_replayspeed.py::4x turns the pages about four times as fast",
+                       "verify_replayspeed.py::...and a speed picked there is the one Play uses"],
     "fps": ["verify_gifenc.py::frame delay matches the chosen fps",
             "verify_flipbeat.py::with a beat Skribl heard, Beat shows beside 24",
             "verify_flipbeat.py::with a beat tapped (Skribl not listening), Beat shows too",

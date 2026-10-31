@@ -150,7 +150,46 @@
       do: [['Tap', FLIP ? 'Smoothing, pressure, Draw-on' : 'Smoothing and pressure']] },
     { sel: '#drawTiles .dp-tile[data-dp="eraser"]', name: 'Eraser size', tag: 'Eraser size', demo: 'eraser', more: 'Eraser',
       line: 'How wide the eraser rubs. It grows and shrinks with your pen.',
-      do: [['Tap', '2×, 3× or 5× the pen']] }
+      do: [['Tap', '2×, 3× or 5× the pen']] },
+    // TUNE'S ROWS (owner, of the words mock: "all yes"; FUTURE.md 6aa, call
+    // 2): a card per row, held anywhere on it, its name or its control (a
+    // switch, a choice). The hold opens the card and presses nothing, as on
+    // every button; a quick tap is still the control's. A single choice has
+    // no card of its own; its row's card names it (call 4). Each row is
+    // named in words already, so ? puts its tag on that name (tagAt). The ids
+    // are the editors' own: the Pad's Pauses and Watching speed, Flip's
+    // Speed, Watching speed, Motion guides, Smear weight and Onion skin;
+    // Grid, Stroke layers and Mirror are on both.
+    { sel: '#tuneFpsRow', name: 'Speed', tag: 'Speed', tagAt: '.tune-name', more: 'pages per second',
+      line: 'How many pages play each second, here and in your post.',
+      do: [['6', 'Slow and steady'], ['12', 'The usual'], ['24', 'Smooth, with more pages'], ['Beat', 'With a song, keeps its beat']] },
+    { sel: '#tuneWatchRow', name: 'Watching speed', tag: 'Watching speed', tagAt: '.tune-name',
+      line: 'How fast your preview plays. It doesn’t change your post.',
+      do: [['Tap', '¼× to 4×'], ['1×', 'Just as your post plays']] },
+    { sel: '#tuneGridRow', name: 'Grid', tag: 'Grid', tagAt: '.tune-name', more: 'Grid',
+      line: 'Lines to help you place things. They’re never part of your ' + (FLIP ? 'animation.' : 'drawing.'),
+      do: [['Tap', 'The grid on or off'], ['Then', 'Coarse, Medium or Fine']] },
+    { sel: '#tuneLayersRow', name: 'Stroke layers', tag: 'Stroke layers', tagAt: '.tune-name', more: 'Stroke layers',
+      line: 'See-through ink with no dark spots where a line crosses itself.',
+      do: [['On', 'Crossings stay even'], ['Off', 'Crossings build up darker']] },
+    { sel: '#tuneMirrorRow', name: 'Mirror', tag: 'Mirror', tagAt: '.tune-name', more: 'Mirror',
+      line: 'Draw on one side and its mirror image draws itself.',
+      do: [['Tap', 'Left-right, top-bottom or both'], ['Off', 'Back to one line']] },
+    { sel: '#tunePauseRow', name: 'Pauses', tag: 'Pauses', tagAt: '.tune-name', more: 'Pauses',
+      line: 'How the replay treats the moments you stopped to think.',
+      do: [['Keep', 'Every pause, as it was'], ['Trim', 'Long ones cut to ¼ second'], ['Tight', 'Squeezed right down']] },
+    { sel: '#tuneSpeedRow', name: 'Watching speed', tag: 'Watching speed', tagAt: '.tune-name', more: 'Speed',
+      line: 'How fast Play shows your drawing. It doesn’t change your post.',
+      do: [['Tap', '¼× to 16×, or Fit'], ['Fit', 'All of it in about 30 seconds']] },
+    { sel: '#tuneArcRow', name: 'Motion guides', tag: 'Motion guides', tagAt: '.tune-name', clip: 'guides',
+      line: 'The path your drawing travels from page to page. Closer dots mean slower.',
+      do: [['Tap', 'Guides on or off']] },
+    { sel: '#tuneSmearRow', name: 'Smear weight', tag: 'Smear weight', tagAt: '.tune-name', clip: 'smear',
+      line: 'How strong your next Smear is. Smears you’ve made keep theirs.',
+      do: [['Light', 'Faint, behind the drawing'], ['Normal', 'The usual'], ['Strong', 'Longer and denser']] },
+    { sel: '#tuneOnionRow', name: 'Onion skin', tag: 'Onion skin', tagAt: '.tune-name', clip: 'onion', more: 'Onion skin',
+      line: 'The pages before this one, faintly, to line up the next drawing.',
+      do: [['Tap', 'Onion skin on or off'], ['1, 2, 3', 'How many pages show'], ['Tint', 'Colours them by how far back']] }
   ];
 
   function shown(el) {
@@ -255,6 +294,17 @@
   function place(el) {
     var b = el.getBoundingClientRect();
     var w = cardEl.offsetWidth, h = cardEl.offsetHeight;
+    // A CARD NEVER COVERS WHAT IT EXPLAINS (Tune's rows, after v330). Where it
+    // fits on neither side of its button (a phone's clip over a row in the
+    // middle of Flip's Tune), the frame round the clip gives up its spare
+    // height, about 90px of it; the recording itself stays whole.
+    var room = Math.max(b.top - 22, innerHeight - b.bottom - 22);
+    var frame = cardEl.querySelector('.lc-phone');
+    if (h > room && frame) {
+      var v = frame.querySelector('video'), floor = (v ? v.offsetHeight : 182) + 16;
+      frame.style.height = Math.max(floor, frame.offsetHeight - (h - room)) + 'px';
+      h = cardEl.offsetHeight;
+    }
     var above = b.top - h - 14 >= 8 || b.bottom + h + 14 > innerHeight - 8;
     var left = Math.max(12, Math.min(innerWidth - w - 12, b.left + b.width / 2 - w / 2));
     cardEl.style.left = left + 'px';
@@ -453,7 +503,7 @@
       t.setAttribute('aria-label', 'What is ' + spec.name + '?');
       t.addEventListener('click', function () { tags(false); open(el, 'tag'); });
       tagLayer.appendChild(t);
-      placed.push({ t: t, el: el });
+      placed.push({ t: t, el: el, spec: spec });
     });
     var banner = document.createElement('div');
     banner.className = 'lc-banner';
@@ -466,8 +516,19 @@
     document.body.classList.add('lc-open');
     // Each tag above its button (below, for the header's), then nudged up a
     // row while it overlaps one already placed.
+    // A row already named in words (Tune's) has its tag over that name, the
+    // word lit, its foot on the name's so the line under it shows: placed
+    // above a row the width of the sheet, each tag sat in the row before.
     var rects = [];
     placed.forEach(function (p) {
+      var at = p.spec.tagAt && p.el.querySelector(p.spec.tagAt);
+      if (at) {
+        var n = at.getBoundingClientRect(), tw = p.t.offsetWidth, th = p.t.offsetHeight;
+        var nl = Math.max(6, Math.min(innerWidth - tw - 6, n.left - 10)), nt = n.bottom + 1 - th;
+        p.t.style.left = nl + 'px'; p.t.style.top = nt + 'px';
+        rects.push({ l: nl, r: nl + tw, t: nt, b: nt + th });
+        return;
+      }
       var b = p.el.getBoundingClientRect(), w = p.t.offsetWidth, h = p.t.offsetHeight;
       var below = b.top < innerHeight / 3;
       var left = Math.max(6, Math.min(innerWidth - w - 6, b.left + b.width / 2 - w / 2));
@@ -480,6 +541,18 @@
       p.t.style.left = left + 'px'; p.t.style.top = top + 'px';
       rects.push({ l: left, r: left + w, t: top, b: top + h });
     });
+    // THE BANNER GOES WHERE NO TAG IS: under the header's tags as a rule, and
+    // at the foot of the screen when a sheet at the top (Tune) has tags
+    // there; it stays up top if the foot is busier still.
+    var hits = function () {
+      var r = banner.getBoundingClientRect();
+      return rects.filter(function (q) { return q.l < r.right && q.r > r.left && q.t < r.bottom && q.b > r.top; }).length;
+    };
+    var atTop = hits();
+    if (atTop) {
+      banner.style.top = 'auto'; banner.style.bottom = 'calc(20px + env(safe-area-inset-bottom, 0px))';
+      if (hits() > atTop) { banner.style.top = ''; banner.style.bottom = ''; }
+    }
     var first = tagLayer.querySelector('.lc-tag');
     if (first && !touchFirst) first.focus({ preventScroll: true });
     return true;

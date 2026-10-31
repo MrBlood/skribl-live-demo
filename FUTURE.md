@@ -1569,7 +1569,16 @@ cards and their words (DECISIONS, after v330, "The draw drawer's six help
 cards"), the Eraser size card with the eraser drawing; then the other five
 examples (DECISIONS, after v330, "The draw drawer's five examples"): Recolor
 and Brush as drawings that draw themselves, the Eyedropper, Size and Feel as
-phone clips, each also in How it works. Next: calls 2 and 3.
+phone clips, each also in How it works. Call 2's words were mocked the same
+way (Tune's rows, a card per row, held on its name or its control): "I say
+all yes". **Built**: the ten cards, five rows on the Pad and eight on Flip
+(DECISIONS, after v330, "Tune's help cards"), with the two fixes the mock
+found (a tall card's clip frame gives up its spare height so the card never
+covers its row; ? puts a row's tag on its name, and its banner moves off the
+tags). Three play How it works' clips (Motion guides, Smear weight, Onion
+skin); the other seven's examples come next, as the draw drawer's did. The
+owner then asked for a Settings switch to turn the cards off (mocked: a row
+of its own under Tips). Next: the switch, the seven examples, then call 3.
 
 ## 7. The honest state
 
