@@ -27625,5 +27625,15 @@ groove 1.08 to 1.15 times darker at the top; 8 or 9 frames part-way.
 WHAT IT DOES TO FLIP: shared; one class for every switch in both editors,
 and the check reads Flip's Draw-on.
 
+THE AFFECTED SUITES: one red, and it was load. verify_musicdoors' seam row
+(Flip: no line where an open door's tile meets its group) read a step of 7
+from the card, 2 allowed, beside the others, and was green alone: 111/112
+beside, 112/112 alone. The red cell moved between runs (the length door in
+dark, then the exact door in light), and it came up the same with main's
+stylesheet served in this one's place, the box still busy. The row waits
+150ms after a theme change before it photographs the joint, which on a
+busy box is shorter than the theme's ease; given 600ms, it was green twice.
+Not changed here; noted for whoever sees it next.
+
 Not tested here: an iPhone's or Windows' drawing of the inner shadow (no
 WebKit here). It is a drawn shadow, not type, so no font enters it.
