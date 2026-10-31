@@ -27541,3 +27541,21 @@ the tick box's row is not in compose mode, where the host decides.
 
 Not tested here: an iPhone's keyboard and Safari (no WebKit here); the
 grip's band is 44px, the box's edge the same 2px on every screen.
+
+WHAT THE AFFECTED SUITES CAUGHT on the first build, each fixed here:
+
+- verify_sheetfit and verify_contrast's "Post, the reason": the caption's
+  wrap was a block holding an inline box, which keeps a few pixels under
+  it for descenders; at 1280x800 the sheet's content came to 780px in 776,
+  the sheet scrolled 4px, and its subtitle slid onto the screen's top
+  edge. The wrap is a grid, its box a block: 776 in 776 again.
+- verify_contrast's consistency census: every choice on the sheets is the
+  card's fill with the tiles' lilac line, and that line is why the box
+  could not be seen. The box keeps the card's fill; its edge leaves the
+  lilac rule by name (OWN_EDGE) for a check of its own, 3:1 against the
+  Post sheet's paper. That check first passed the faint box too: it read
+  the line's lilac without its 0.12 alpha. It lays the edge over the paper
+  now: the faint box reads 1.52:1 light and 1.21:1 dark, red; as built,
+  green.
+- verify_a11ypages' WAVE rules: the grip's span was hidden but its svg was
+  not, and every icon here carries its own aria-hidden.

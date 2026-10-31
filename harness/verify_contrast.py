@@ -820,15 +820,34 @@ for scheme in ("light", "dark"):
           bool(tile) and len(cardlike) >= (1 if ONLY else 20) and set(cardlike.values()) == {tile},
           f"tile {tile}; " + "; ".join(f"{n} {l} {sel}: {v}" for (n, l, sel), v in sorted(cardlike.items()) if v != tile))
     # AND ITS EDGE IS THE TILES' LILAC. The white alone let a control keep the
-    # page's grey line (Post's fields, Tune's round buttons).
+    # page's grey line (Post's fields, Tune's round buttons). Save one: the
+    # gallery's tick box (owner, after v330: "The little box is almost
+    # invisible until checked"; of the mock's A1, "I like your ideas"). The
+    # lilac line was why, 1.40:1 against the light sheet and 1.38:1 against
+    # the dark; its edge is the sheet's secondary ink, held below to 3:1 on
+    # the Post sheet's paper rather than to the tiles' line.
+    OWN_EDGE = (".post-check-box",)
     rim = ((census.get(("Pad", scheme, "the menu")) or {}).get("cards", {}).get(".menu-tile") or {}).get("edge")
     edged = {(n, l, sel): census[(n, sc, l)]["cards"][sel]["edge"] for (n, sc, l) in census
-             for sel in CARDLIKE
+             for sel in CARDLIKE if sel not in OWN_EDGE
              if sc == scheme and l in ("the menu", "New", "Settings", "Export", "Post") + DRAWERS and census[(n, sc, l)]
              and sel in census[(n, sc, l)]["cards"] and census[(n, sc, l)]["cards"][sel]["edge"] != "none"}
     check(f"{scheme}: and every one with an edge wears the tiles' lilac line ({len(edged)} read)",
           bool(rim) and rim != "none" and len(edged) >= (1 if ONLY else 20) and set(edged.values()) == {rim},
           f"tile {rim}; " + "; ".join(f"{n} {l} {sel}: {v}" for (n, l, sel), v in sorted(edged.items()) if v != rim))
+    # The edge laid over the paper, its alpha and all: the tiles' line is lilac
+    # at 0.12, and read as its solid lilac the faint box passed.
+    def _over(v, g):
+        n = [float(x) for x in v[v.index("(") + 1:v.index(")")].replace(",", " ").replace("/", " ").split()]
+        a = n[3] if len(n) > 3 else 1.0
+        return tuple(a * n[i] + (1 - a) * g[i] for i in range(3))
+    boxed = {(n, l): (census[(n, sc, l)]["cards"][".post-check-box"]["edge"], census[(n, sc, l)]["sheet"]["bg"]) for (n, sc, l) in census
+             if sc == scheme and l == "Post" and census[(n, sc, l)] and ".post-check-box" in census[(n, sc, l)]["cards"]}
+    boxr = {k: round(ratio(_over(e, _over(g, (255, 255, 255))), _over(g, (255, 255, 255))), 2)
+            for k, (e, g) in boxed.items() if e != "none" and "(" in e and "(" in g}
+    check(f"{scheme}: the gallery's tick box keeps its own edge, at least 3:1 against the Post sheet's paper ({len(boxr)} read)",
+          len(boxr) >= (1 if ONLY else 2) and len(boxr) == len(boxed) and all(v >= 3 for v in boxr.values()),
+          "; ".join(f"{n} {l}: {boxed[(n, l)][0]} on {boxed[(n, l)][1]} = {v}:1" for (n, l), v in sorted(boxr.items())) or str(boxed))
     # THE RULE BETWEEN ROWS IS THE MENU'S. Tune's rows are a list on the paper,
     # like the menu's own, and were parted by the page's grey hairline.
     rule = ((census.get(("Pad", scheme, "the menu")) or {}).get("cards", {})

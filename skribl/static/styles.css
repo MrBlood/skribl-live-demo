@@ -4290,7 +4290,9 @@ body.player-mode #canvasEmptyHint { display: none !important; }
    Unticked, its edge is the sheet's secondary ink, 2px (owner, after v330:
    "The little box is almost invisible until checked"): it was the card's own
    faint line, 1.40:1 against the light sheet and 1.38:1 against the dark, and
-   is 8.3:1 and 9.7:1. Ticked, it fills with the accent as before. */
+   is 8.3:1 and 9.7:1. It keeps the card's fill, as every choice on the sheets
+   does; its edge is the one exception to the tiles' lilac line (verify_contrast
+   holds it to 3:1 on the sheet instead). Ticked, it fills with the accent. */
 .post-check {
   display: flex;
   align-items: center;
@@ -4318,7 +4320,7 @@ body.player-mode #canvasEmptyHint { display: none !important; }
   height: 18px;
   border-radius: 5px;
   border: 2px solid var(--text-muted);
-  background: transparent;
+  background: var(--menu-card);
   display: grid;
   place-items: center;
   transition: background 0.15s ease, border-color 0.15s ease;
@@ -4385,7 +4387,7 @@ body.player-mode #canvasEmptyHint { display: none !important; }
    none, or the drag would scroll the sheet). Reduce Motion is the script's:
    a block here would ship to the player's stylesheet. */
 .post-textarea { resize: none; line-height: 1.4; transition: height 0.18s ease, border-color 0.15s ease, background 0.15s ease; }
-.post-textarea-wrap { position: relative; display: block; }
+.post-textarea-wrap { position: relative; display: grid; }   /* grid: the box a block, no inline gap under it */
 .post-grip { position: absolute; right: 3px; bottom: 3px; width: 20px; height: 20px; display: grid; place-items: center;
   color: var(--text-muted); cursor: ns-resize; touch-action: none; -webkit-user-select: none; user-select: none; }
 .post-grip::before { content: ""; position: absolute; inset: -12px; }
