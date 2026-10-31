@@ -27655,3 +27655,62 @@ with the switch moved by a fraction of a pixel (0.1, 0.33, 0.6 and 0.85px):
 1.065 to 1.153 in all four cells, green; main's grey, 1.0 in all four, red;
 the groove taken out, 0.98, red; each theme's groove taken out, that theme's
 two cells red and the other's green.
+
+## After v330 -- Tune's help cards
+
+The owner, of the words mock (Tune's rows on the real card, the Pad and Flip,
+phone and desk, light and dark, measured): "I say all yes", to the words, to
+a hold anywhere on a row, to the two fixes the mock found, and to an example
+in every card after; and "there should be a toggle to shut off help cards in
+settings" (mocked beside them; next). FUTURE.md 6aa, call 2.
+
+- A CARD PER ROW, ten in lib/learncard.js's CARDS: five rows on the Pad and
+  eight on Flip, Grid, Stroke layers and Mirror on both. A name, one
+  sentence and a row for each choice, in the words mocked. Held on the
+  row's name or its control (the switch, a choice), the card opens and the
+  hold changes nothing; a quick tap is still the control's. A single choice
+  (Keep, 12, Coarse) has no card of its own; its row's names it. Grid says
+  "drawing" on the Pad and "animation" on Flip.
+- A CARD NEVER COVERS WHAT IT EXPLAINS. Flip's Motion guides and Smear weight
+  sit mid-Tune, and their cards, with a phone's clip, fit on neither side
+  of the row: placed above, they came down over its name. place() lets the
+  clip's frame give up its spare height (it has about 90px round the phone)
+  until the card fits on the roomier side; the recording itself stays
+  whole.
+- ? PUTS A ROW'S TAG ON ITS NAME (a spec's tagAt), its foot on the name's so
+  the line under it shows: placed above a row the width of the sheet, each
+  tag sat in the row before. The banner sits under the header's tags; it
+  goes to the foot of the screen when it would cover a tag there (Tune), and
+  stays up top if the foot is busier still.
+- MORE OPENS AN ANSWER from every card. Two had none: Flip's Motion guides
+  and its Watching speed get a tip each in How it works, claimed in
+  verify_helpclaims by the checks that try them.
+
+MEASURED IN THE MOCK, all 52 (13 cards, phone and desk, light and dark):
+whole on the screen, none on its row, every word painted and none cut;
+every row on one line in Inter, Liberation Sans and DejaVu Sans (Mirror's
+"Tap a mirror" and Grid's "When it's on" wrapped, and were shortened to
+"Tap" and "Then"); the faintest word 8.3:1 on the card.
+
+verify_learncard SECTION 11 holds it, on both editors: each row held on its
+name opens its card in those words, painted, whole and clear of the row,
+which wears the ring; Flip's three with a clip load it, the recording whole
+in its frame; held on its control, each opens that card and changes
+nothing, and Tune stays open; a quick tap is still a tap; ? puts each row's
+tag on its own row, none on another and none under the banner, on a phone
+and a desk; resting on a desk grows the card. LEARNCARD_PART runs one part,
+for calibration.
+
+CALIBRATION, the part alone, the module served in place of the file: main's,
+25 of 26 red (the Pad's quick tap is green there, as it should be); no fit,
+Flip's Motion guides and Smear weight rows alone; no tagAt, the four tag
+rows; the banner kept up top, the three tag rows where it covered a tag
+(the Pad's desk Tune leaves it room); Pauses' old sentence, Pauses' row
+alone; Grid's "drawing" on Flip, Flip's Grid alone; Mirror's card on its
+name only, Mirror's rows and the presses rows. As built, 26 of 26.
+
+WHAT IT DOES TO FLIP: shared, one module; Flip's Tune has eight rows to the
+Pad's five.
+
+Not tested here: a real finger and WebKit's hold (touch is CDP touch
+events); SF and Segoe UI, bracketed by the three faces above.
