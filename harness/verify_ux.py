@@ -2247,7 +2247,9 @@ with _sp204() as _ar:
 print("\nTHE TAKE'S READOUT — calm while you draw, and lit while the pen is down")
 # The recording header read as an alarm (crimson pill, blinking dot, crimson
 # Stop) on a screen where it is always showing while you draw. It is now a
-# still dot, level bars, the clock and "plays", with a quiet Done. The bars
+# purple dot, level bars, the clock and "plays", with Done (in the action's
+# purple since after v330, and the dot breathing: see DONE, THE DOT AND THE
+# FIRST LINE, below). The bars
 # move only while the pen is down -- and while the pen is down the header's
 # contents recede to 0.1, so the owner asked of the mock: "doesn't it get
 # hidden while you're drawing?" It did. What is asserted is what the eye
@@ -2296,6 +2298,118 @@ with _sp204() as _rr:
           _pen["run"] == "running" and _pen["plays"] < 0.5, str(_pen))
     _rrp.close(); _rrb.close()
 
+print("\nDONE, THE DOT AND THE FIRST LINE — you can find Done, and you know you're recording")
+# The owner, after v330: "It's not noticeable. I had to look around to find it
+# and wasn't sure I was even recording." Done was a glass pill in the header's
+# own ink, 1.15:1 against the light header and 1.18:1 against the dark: its
+# words were plain, the button was not there. The mock's three, all yes: Done
+# in the action's purple; the first take says so once, under Done; the dot
+# breathes. Read off the pixels (the fill against the header just above it,
+# the words against the fill), on a phone and a desk, light and dark; the
+# line's caret against Done's middle, which on a desk is a scrollbar gutter
+# away from the screen's edge (styles.css, `scrollbar-gutter: stable
+# both-edges`); the halo's scale on every frame.
+import io as _dio
+from PIL import Image as _DImg
+_DLUM = lambda c: sum(w * ((v / 255) / 12.92 if v / 255 <= 0.03928 else (((v / 255) + 0.055) / 1.055) ** 2.4)
+                      for w, v in zip((0.2126, 0.7152, 0.0722), c[:3]))
+_dratio = lambda a, b: (max(_DLUM(a), _DLUM(b)) + 0.05) / (min(_DLUM(a), _DLUM(b)) + 0.05)
+_DONE = """() => { const d = document.getElementById('recordBtn'), R = d.getBoundingClientRect(), L = d.querySelector('.btn-label').getBoundingClientRect();
+    return { box: [R.left, R.top, R.width, R.height], label: [L.left, L.top, L.width, L.height], inReadout: d.parentElement.id === 'recIndicator' }; }"""
+_LINE = """() => { const h = document.querySelector('.skribl-hint'), d = document.getElementById('recordBtn');
+    if (!h || h.hidden || !h.classList.contains('in')) return { shown: false };
+    const H = h.getBoundingClientRect(), D = d.getBoundingClientRect(), a = getComputedStyle(h, '::after');
+    const caret = H.left + parseFloat(a.left) + (parseFloat(a.width) + parseFloat(a.borderLeftWidth)) / 2;
+    const at = document.elementFromPoint(D.left + D.width / 2, D.top + D.height / 2);
+    return { shown: true, text: h.textContent, below: Math.round(H.top - D.bottom), caret: Math.round((caret - D.left - D.width / 2) * 10) / 10,
+             inside: H.left >= 15.5 && H.right <= innerWidth - 15.5, donePainted: !!at && d.contains(at) }; }"""
+_BREATH = """() => new Promise(done => { const d = document.querySelector('#recIndicator .dot'), out = [], t0 = performance.now();
+    (function tick() { out.push(new DOMMatrix(getComputedStyle(d, '::before').transform).a);
+      if (performance.now() - t0 < 2700) requestAnimationFrame(tick); else done(out); })(); })"""
+
+
+def _stroke(pg, dy=0):
+    _b = pg.locator("#canvas").bounding_box()
+    pg.mouse.move(_b["x"] + 60, _b["y"] + 120 + dy); pg.mouse.down()
+    pg.mouse.move(_b["x"] + 220, _b["y"] + 150 + dy, steps=16); pg.mouse.up()
+    pg.wait_for_timeout(600)
+
+
+with _sp204() as _dn:
+    _dnb = waits.instrument(_dn.chromium.launch())
+    _dres = {}
+    for _dev, _vp, _kw in (("phone", {"width": 402, "height": 874}, {"is_mobile": True, "has_touch": True}),
+                           ("desk", {"width": 1280, "height": 860}, {})):
+        for _theme in ("light", "dark"):
+            _dc = _dnb.new_context(viewport=_vp, device_scale_factor=2, **_kw)
+            _dc.add_init_script("window.__skriblTakeHintForce = true;")
+            _dp = _dc.new_page()
+            browsing.goto(_dp, BASE, f"/?theme={_theme}")
+            _dp.evaluate("() => localStorage.removeItem('skribl_hints_seen_v1')")
+            _stroke(_dp)
+            _first = _dp.evaluate(_LINE)
+            _g = _dp.evaluate(_DONE)
+            _im = _DImg.open(_dio.BytesIO(_dp.screenshot())).convert("RGB")
+            _x, _y, _w, _h = _g["box"]
+            _fill = _im.getpixel((int((_x + _w - 6) * 2), int((_y + _h / 2) * 2)))
+            _hdr = _im.getpixel((int((_x + _w / 2) * 2), int((_y - 4) * 2)))
+            _lx, _ly, _lw, _lh = _g["label"]
+            _ink = max((_dratio(_im.getpixel((i, j)), _fill), _im.getpixel((i, j)))
+                       for i in range(int(_lx * 2), int((_lx + _lw) * 2)) for j in range(int(_ly * 2), int((_ly + _lh) * 2)))[1]
+            # The first line put away (it stays six seconds), the next stroke
+            # must not bring it back.
+            _dp.evaluate("() => SkriblHints.hide()"); _dp.wait_for_timeout(300)
+            _stroke(_dp, 90)
+            _again = _dp.evaluate(_LINE)
+            _dres[(_dev, _theme)] = {"edge": round(_dratio(_fill, _hdr), 2), "words": round(_dratio(_ink, _fill), 2),
+                                     "inReadout": _g["inReadout"], "first": _first, "again": _again.get("shown")}
+            _dc.close()
+    check("DONE STANDS OUT: while a take records, Done's fill is at least 3:1 against the header and its words at least 4.5:1 on it, on a phone and a desk, light and dark",
+          len(_dres) == 4 and all(v["inReadout"] and v["edge"] >= 3.0 and v["words"] >= 4.5 for v in _dres.values()),
+          str({k: (v["edge"], v["words"]) for k, v in _dres.items()}))
+    _want = {"phone": "You’re recording. Tap Done when you’re finished.", "desk": "You’re recording. Click Done when you’re finished."}
+    check("FIRST LINE: the first stroke of the first take hangs the line under Done (Tap on a phone, Click on a desk), 10-14px below it, its caret within 1px of Done's middle, inside the screen's 16px margins, Done still painted",
+          len(_dres) == 4 and all(v["first"].get("shown") and v["first"]["text"] == _want[k[0]] and 10 <= v["first"]["below"] <= 14
+                                  and abs(v["first"]["caret"]) <= 1 and v["first"]["inside"] and v["first"]["donePainted"]
+                                  for k, v in _dres.items()),
+          str({k: v["first"] for k, v in _dres.items()}))
+    check("FIRST LINE: ...once: the next stroke brings nothing",
+          len(_dres) == 4 and not any(v["again"] for v in _dres.values()), str({k: v["again"] for k, v in _dres.items()}))
+    # Done puts it away (it spoke of a take that has ended); and a suite that
+    # does not ask never meets it.
+    _dc = _dnb.new_context(viewport={"width": 1280, "height": 860})
+    _dc.add_init_script("window.__skriblTakeHintForce = true;")
+    _dp = _dc.new_page(); browsing.goto(_dp, BASE, "/")
+    _dp.evaluate("() => localStorage.removeItem('skribl_hints_seen_v1')")
+    _stroke(_dp)
+    _up = _dp.evaluate(_LINE)["shown"]
+    _dp.click("#recordBtn"); _dp.wait_for_timeout(450)
+    _gone = not _dp.evaluate(_LINE)["shown"]
+    _dc.close()
+    _dc = _dnb.new_context(viewport={"width": 1280, "height": 860})
+    _dp = _dc.new_page(); browsing.goto(_dp, BASE, "/")
+    _dp.evaluate("() => localStorage.removeItem('skribl_hints_seen_v1')")
+    _stroke(_dp)
+    _quiet = not _dp.evaluate(_LINE)["shown"]
+    _dc.close()
+    check("FIRST LINE: Done puts it away, and automation that does not ask (window.__skriblTakeHintForce) never meets it",
+          _up and _gone and _quiet, f"up {_up}, gone after Done {_gone}, quiet unasked {_quiet}")
+    # The dot breathes, and holds still under Reduce Motion.
+    _breath = {}
+    for _rm in ("no-preference", "reduce"):
+        _dc = _dnb.new_context(viewport={"width": 402, "height": 874}, reduced_motion=_rm)
+        _dp = _dc.new_page(); browsing.goto(_dp, BASE, "/")
+        _stroke(_dp)
+        _s = _dp.evaluate(_BREATH)
+        _breath[_rm] = {"min": round(min(_s), 3), "max": round(max(_s), 3), "step": round(max(abs(a - b) for a, b in zip(_s, _s[1:])), 4), "frames": len(_s)}
+        _dc.close()
+    _dnb.close()
+_bm = _breath["no-preference"]
+check("THE DOT BREATHES: while a take records its halo swells and settles (scale 0.64 to 1 in 2.4s, read every frame, no step over 0.03)",
+      _bm["min"] <= 0.66 and _bm["max"] >= 0.98 and _bm["step"] <= 0.03 and _bm["frames"] >= 60, str(_bm))
+check("THE DOT BREATHES: ...and under Reduce Motion it holds still, a 4px ring",
+      _breath["reduce"]["max"] - _breath["reduce"]["min"] < 0.001 and abs(_breath["reduce"]["max"] - 0.727) < 0.01, str(_breath["reduce"]))
+
 print("\nREADOUT ALIGNMENT — the dot, bars, clock, plays and Done share one line, in any font")
 # A centred line box centres the font's ascent and descent, not the digits,
 # and fonts split those differently: a 1px nudge tuned here in Liberation
@@ -2332,9 +2446,17 @@ with _sp204() as _al:
               // "plays" is measured on its digits: the p and y descend by design
               return s === '#recPlays' ? [q.right - o.left - q.width * 0.38, q.right - o.left] : [q.left - o.left, q.right - o.left]; }); }""")
         _bg = _im.getpixel((1, 1)); _c = []
-        for (_x0, _x1) in _parts:
-            _ys = [y for y in range(_im.height) if any(sum(abs(a - b) for a, b in zip(_im.getpixel((x, y)), _bg)) > 150
-                                                      for x in range(int(_x0 * 2) + 1, int(_x1 * 2) - 1))]
+        # Done's words are read against Done's own fill, inside the pill: since
+        # Done wears the action's purple (after v330) the whole pill differs
+        # from the header, and against the header's ground this measured the
+        # pill's middle, not the words.
+        _pill = _alp.evaluate("""() => { const o = document.getElementById('recIndicator').getBoundingClientRect(),
+            R = document.getElementById('recordBtn').getBoundingClientRect(); return [R.right - o.left - 6, R.top - o.top + 8, R.bottom - o.top + 8]; }""")
+        _pfill = _im.getpixel((int(_pill[0] * 2), int((_pill[1] + _pill[2]) * 0.5 * 2)))
+        for _i, (_x0, _x1) in enumerate(_parts):
+            _ref, _rows = (_pfill, range(int(_pill[1] * 2) + 3, int(_pill[2] * 2) - 3)) if _i == 4 else (_bg, range(_im.height))
+            _ys = [y for y in _rows if any(sum(abs(a - b) for a, b in zip(_im.getpixel((x, y)), _ref)) > 150
+                                           for x in range(int(_x0 * 2) + 1, int(_x1 * 2) - 1))]
             _c.append((min(_ys) + max(_ys)) / 4 if _ys else None)
         _align[_f] = {k: (round(v - _c[0], 2) if v is not None else None) for k, v in zip(["dot", "bars", "clock", "plays", "done"], _c)}
     _alp.close(); _alb.close()

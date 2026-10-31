@@ -592,6 +592,7 @@ function endDraw() {
     drawing = false;
     document.body.classList.remove('stroking');
     commitStrokeWithMirrors();
+    if (typeof showTakeHint === 'function') showTakeHint();   // the first take says so, once (app.js)
     return;
   }
   snapStrokeToFinal();
@@ -599,6 +600,7 @@ function endDraw() {
   document.body.classList.remove('stroking');
   _slActive = false;
   commitStrokeWithMirrors();
+  if (typeof showTakeHint === 'function') showTakeHint();   // the first take says so, once (app.js)
 }
 
 // Commit an in-progress stroke into the replay array WITHOUT a normal mouseup —

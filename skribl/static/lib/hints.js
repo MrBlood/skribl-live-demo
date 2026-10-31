@@ -100,7 +100,9 @@
   /* opts.onHide - called when this toast goes away, for anything that has to
    *        live exactly as long as it does.
    * opts.icon - raw SVG markup shown before the text, aria-hidden. Lift it from
-   *        the control being described rather than drawing it again. */
+   *        the control being described rather than drawing it again.
+   * opts.under - an element: the toast hangs just below it with its caret on
+   *        the element's middle (styles.css .skribl-hint--under). */
   function show(key, text, opts) {
     if (!key || !text || !isEnabled()) return false;
     var s = seen();
@@ -117,6 +119,13 @@
     // because the node is reused by every hint.
     var anchored = !!(opts && opts.anchor === 'top-right');
     node.classList.toggle('skribl-hint--anchored', anchored);
+    /* opts.under: an element the hint is about. The toast hangs below it, its
+       caret on the element's middle (Pad's first take: "Tap Done" pointing
+       at Done). Placed once it is laid out, below. */
+    var under = (opts && opts.under && opts.under.getBoundingClientRect) ? opts.under : null;
+    node.classList.toggle('skribl-hint--under', !!under);
+    node.style.left = ''; node.style.top = '';
+    node.style.removeProperty('--hint-caret-x');
     /* Anchored means under the header's right edge — the HEADER's, not the
        browser window's. The app is a 720px column centred with margin auto, so
        on a wide window `right: 14px` hung the toast in the gutter beside the
@@ -161,6 +170,25 @@
     }
     node.onclick = function () { hide(); };   // tap anywhere on the toast to dismiss
     node.hidden = false;
+    // Under its element: 12px below, inside the screen's 16px margins, the
+    // caret on the element's middle wherever the margins put the toast.
+    if (under) {
+      // Measured at the containing block's own left edge: parked at the
+      // default 50% the toast shrink-wraps into half the screen and reads two
+      // lines narrower. And that edge is not always the screen's: on a desk
+      // with classic scrollbars, styles.css's `scrollbar-gutter: stable
+      // both-edges` starts it a gutter in (10px here), so a fixed `left` is
+      // read back from where 0 lands (less any slide still running).
+      node.style.left = '0px'; node.style.top = '0px';
+      var r0 = node.getBoundingClientRect(), tf = global.getComputedStyle(node).transform;
+      var m = (tf && tf !== 'none' && global.DOMMatrix) ? new global.DOMMatrix(tf) : { m41: 0, m42: 0 };
+      var ox = r0.left - m.m41, oy = r0.top - m.m42;
+      var u = under.getBoundingClientRect(), w = node.offsetWidth, mid = u.left + u.width / 2;
+      var left = Math.round(Math.max(16, Math.min(global.innerWidth - 16 - w, mid - w / 2)));
+      node.style.left = (left - ox) + 'px';
+      node.style.top = Math.round(u.bottom + 12 - oy) + 'px';
+      node.style.setProperty('--hint-caret-x', Math.round(mid - left) + 'px');
+    }
     // Only if it is still this hint. One put away before its first frame (a
     // drawer opening just after it, below) would otherwise fade in with its
     // timer already cleared, and stay until someone tapped it.
