@@ -123,7 +123,33 @@
       do: [['Tap', '×2, ×3, ×4 as long']] },
     { sel: '.slider-nudge-btn', name: 'Slider steps', tag: 'Steps', tagOnly: true, more: 'Size',
       line: 'Fine steps for the slider beside them.',
-      do: [['Tap', 'One step'], ['Hold', 'Keep going']] }
+      do: [['Tap', 'One step'], ['Hold', 'Keep going']] },
+    // THE DRAW DRAWER'S SIX (owner, after #691: "shouldn't these have help
+    // cards?"; the words mock, "All yes"; FUTURE.md 6aa): the two colour
+    // tools and the four tiles. A single choice inside a tile has no card;
+    // its tile's card names it. Holding a tile opens its card, not its
+    // choices: the lift is swallowed, as on every button. Recolor's replay
+    // is the Pad's (lib/recolorplay.js); Flip plays pages, so its card stops
+    // at the change. The tile is "Eraser", its card "Eraser size": the words
+    // the Eraser's own card sends you here with, and not the tool's name.
+    { sel: '#eyedropperBtn', name: 'Eyedropper', tag: 'Eyedropper',
+      line: 'Take a colour from your drawing to draw with.',
+      do: [['Tap', 'A lens lands on your drawing'], ['Drag', 'Move the lens onto a colour'], ['Let go', 'Your pen takes that colour']] },
+    { sel: '#recolorBtn', name: 'Recolor', tag: 'Recolor',
+      line: FLIP ? 'Give lines you’ve drawn your pen’s colour.' : 'Give lines you’ve drawn your pen’s colour. The replay shows them change.',
+      do: [['Tap a line', 'It takes your pen’s colour'], ['Drag across', 'Every line you cross'], ['Done', 'Back to the pen']] },
+    { sel: '#drawTiles .dp-tile[data-dp="brush"]', name: 'Brush', tag: 'Brush', more: 'Brush style',
+      line: 'The kind of line you draw, from a clean pen to soft air.',
+      do: [['Tap', 'Pen, Marker, Pencil or Air']] },
+    { sel: '#drawTiles .dp-tile[data-dp="size"]', name: 'Size', tag: 'Size', more: 'Brush size',
+      line: 'How thick your line is, and how strong its colour.',
+      do: [['Tap', 'Size and opacity'], ['Quicker', 'Drag sideways on Pen']] },
+    { sel: '#drawTiles .dp-tile[data-dp="feel"]', name: 'Feel', tag: 'Feel',
+      line: 'Steadier lines, and lines that widen as you press with a stylus.',
+      do: [['Tap', FLIP ? 'Smoothing, pressure, Draw-on' : 'Smoothing and pressure']] },
+    { sel: '#drawTiles .dp-tile[data-dp="eraser"]', name: 'Eraser size', tag: 'Eraser size', demo: 'eraser', more: 'Eraser',
+      line: 'How wide the eraser rubs. It grows and shrinks with your pen.',
+      do: [['Tap', '2×, 3× or 5× the pen']] }
   ];
 
   function shown(el) {

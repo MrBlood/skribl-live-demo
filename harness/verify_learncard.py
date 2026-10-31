@@ -23,6 +23,10 @@ cards mock, "All yes"). Each row holds a promise, on the Pad and on Flip:
   9. FLIP'S TRAY: every tool in it holds its card (the tray's own seven with
      their clip, 4:3), the tray stays open under it and after Got it, and a
      tool used from the tray holds the same card from its place in the bar.
+ 10. THE DRAW DRAWER'S SIX: the Eyedropper, Recolor and the four tiles hold
+     their cards in the words the owner said yes to, clear of their buttons;
+     the hold presses nothing and a quick tap still does; resting on a desk
+     grows the card, and ? names all six.
 
 Touch is real touch (CDP touch events), so the browser makes the pointer
 events a finger would. Visible means painted: elementFromPoint.
@@ -391,6 +395,126 @@ with sync_playwright() as p:
                   f"{card}; gone {gone}")
             c.close()
         part("the tray", tray)
+
+        # 10. THE DRAW DRAWER'S SIX (owner, after #691: "shouldn't these have
+        # help cards?"; the words mock, "All yes"; FUTURE.md 6aa). The two
+        # colour tools and the four tiles each hold their card, in the words
+        # the owner said yes to, Flip's two differences included (Recolor
+        # stops at the change; Feel holds Draw-on): painted, whole on the
+        # screen, clear of its own button, which wears the ring. The hold
+        # presses nothing: no eyedropper armed, no Recolor, no tile's choices
+        # open, the drawer still up. A quick tap still does its job. On a
+        # desk, resting does the same, and ? names all six, none on another.
+        def drawer():
+            DRAWER = "() => openDrawer('draw')" if name == "Pad" else "() => _flipDrawerCtl.open('draw')"
+            SIX = [("#eyedropperBtn", "Eyedropper", "Take a colour from your drawing to draw with.",
+                    [["Tap", "A lens lands on your drawing"], ["Drag", "Move the lens onto a colour"], ["Let go", "Your pen takes that colour"]]),
+                   ("#recolorBtn", "Recolor", "Give lines you’ve drawn your pen’s colour." + ("" if name == "Flip" else " The replay shows them change."),
+                    [["Tap a line", "It takes your pen’s colour"], ["Drag across", "Every line you cross"], ["Done", "Back to the pen"]]),
+                   ('#drawTiles .dp-tile[data-dp="brush"]', "Brush", "The kind of line you draw, from a clean pen to soft air.",
+                    [["Tap", "Pen, Marker, Pencil or Air"]]),
+                   ('#drawTiles .dp-tile[data-dp="size"]', "Size", "How thick your line is, and how strong its colour.",
+                    [["Tap", "Size and opacity"], ["Quicker", "Drag sideways on Pen"]]),
+                   ('#drawTiles .dp-tile[data-dp="feel"]', "Feel", "Steadier lines, and lines that widen as you press with a stylus.",
+                    [["Tap", "Smoothing, pressure, Draw-on" if name == "Flip" else "Smoothing and pressure"]]),
+                   ('#drawTiles .dp-tile[data-dp="eraser"]', "Eraser size", "How wide the eraser rubs. It grows and shrinks with your pen.",
+                    [["Tap", "2×, 3× or 5× the pen"]])]
+            PLACE = """(sel) => { const c = document.querySelector('.lc-card'), b = document.querySelector(sel); if (!c) return null;
+                const R = c.getBoundingClientRect(), B = b.getBoundingClientRect();
+                const words = [...c.querySelectorAll('.lc-t, .lc-line, .lc-do dt, .lc-do dd, .lc-more, .lc-ok, .lc-hint')];
+                return { whole: R.left >= 0 && R.top >= 0 && R.right <= innerWidth && R.bottom <= innerHeight,
+                         clear: R.right <= B.left || B.right <= R.left || R.bottom <= B.top || B.bottom <= R.top,
+                         ringed: b.classList.contains('lc-target'),
+                         painted: words.every(e => { const r = e.getBoundingClientRect(), a = document.elementFromPoint(r.left + Math.min(6, r.width / 2), r.top + r.height / 2);
+                           return !!a && e.contains(a); }),
+                         cut: words.filter(e => e.scrollWidth > e.clientWidth + 1).map(e => e.textContent) }; }"""
+            # A button is pressed where it is once it has stopped moving: a
+            # tile's choices take the phone's drawer to its full height, and
+            # the drawer glides there (a tap read mid-glide missed Flip's
+            # Eyedropper).
+            STILL = """(sel) => new Promise(done => { const e = document.querySelector(sel); let last = '', n = 0; const t0 = performance.now();
+                (function tick() { const r = e.getBoundingClientRect(), k = r.left + ',' + r.top; n = k === last ? n + 1 : 0; last = k;
+                  if (n >= 3 || performance.now() - t0 > 2000) done(); else requestAnimationFrame(tick); })(); })"""
+
+            def press(q, cdp, sel, ms):
+                q.locator(sel).first.scroll_into_view_if_needed()
+                q.evaluate(STILL, sel)
+                touch_hold(q, cdp, sel, ms)
+            SIDE = """() => ({ armed: document.getElementById('eyedropperBtn').getAttribute('aria-pressed') === 'true',
+                recolor: document.body.classList.contains('recoloring'),
+                choices: [...document.querySelectorAll('#drawTiles .dp-panel')].filter(p => !p.hidden).map(p => p.dataset.dp),
+                drawer: !document.getElementById('drawPanel').hidden })"""
+            # Whatever a hold set off is put back before the next button, so
+            # each row reads its own button: a pressed Eyedropper veils the
+            # drawer, and every later button would be gone with it.
+            def put_back(q):
+                side = q.evaluate(SIDE)
+                if side["armed"] or side["recolor"]:
+                    q.keyboard.press("Escape")
+                    q.wait_for_timeout(300)
+                for k in q.evaluate(SIDE)["choices"]:
+                    q.evaluate("(k) => document.querySelector('#drawTiles .dp-tile[data-dp=\"' + k + '\"]').click()", k)
+                    q.wait_for_timeout(300)
+                if q.evaluate(SIDE)["drawer"] is False:
+                    q.evaluate(DRAWER)
+                    q.wait_for_timeout(700)
+            c, q = fresh(b, PHONE, route)
+            cdp = c.new_cdp_session(q)
+            q.evaluate(DRAWER)
+            q.wait_for_timeout(700)
+            pressed = {}
+            for sel, nm, line, rows in SIX:
+                press(q, cdp, sel, 700)
+                card, at = q.evaluate(CARD), q.evaluate(PLACE, sel)
+                q.evaluate("() => window.SkriblLearnCard.close()")
+                q.wait_for_timeout(200)
+                side = q.evaluate(SIDE)
+                if side["armed"] or side["recolor"] or side["choices"] or not side["drawer"]:
+                    pressed[nm] = side
+                    put_back(q)
+                check(f"{name}: holding {nm} in the draw drawer opens its card in the words said yes to, painted, whole on the screen and clear of {nm}",
+                      bool(card) and bool(at) and card["name"] == nm and card["line"] == line and card["rows"] == rows
+                      and card["painted"] and card["rowsPainted"] and card["example"] == (nm == "Eraser size")
+                      and at["whole"] and at["clear"] and at["ringed"] and at["painted"] and not at["cut"], f"{card}; {at}")
+            check(f"{name}: ...and none of the six holds presses its button: no eyedropper armed, no Recolor, no tile's choices, the drawer still up",
+                  not pressed, str(pressed))
+            # A quick tap is still a tap: the Size tile opens its choices, the
+            # Eyedropper arms (last: arming veils the drawer).
+            press(q, cdp, '#drawTiles .dp-tile[data-dp="size"]', 80)
+            tile = q.evaluate(SIDE)["choices"]
+            q.evaluate("() => document.querySelector('#drawTiles .dp-tile[data-dp=\"size\"]').click()")
+            q.wait_for_timeout(400)
+            press(q, cdp, "#eyedropperBtn", 80)
+            armed = q.evaluate(SIDE)["armed"]
+            nocard = not q.evaluate("() => !!document.querySelector('.lc-card')")
+            check(f"{name}: a quick tap is still a tap: Size opens its choices, the Eyedropper arms, and no card opens",
+                  tile == ["size"] and armed and nocard, f"choices {tile}, armed {armed}, no card {nocard}")
+            c.close()
+            # On a desk: resting on a tile grows its card; ? names the six.
+            c, q = fresh(b, DESK, route)
+            q.evaluate(DRAWER)
+            q.wait_for_timeout(700)
+            x, y = center(q, '#drawTiles .dp-tile[data-dp="size"]')
+            q.mouse.move(x - 30, y - 40)
+            q.mouse.move(x, y, steps=4)
+            q.wait_for_timeout(2500)
+            card = q.evaluate(CARD)
+            q.mouse.move(40, 300)
+            q.wait_for_timeout(600)
+            gone = q.evaluate("() => !document.querySelector('.lc-card')")
+            check(f"{name}: on a desk, resting on the Size tile grows its card (Move away to close), and moving away closes it",
+                  bool(card) and card["name"] == "Size" and card["hint"] == "Move away to close" and card["painted"] and gone, f"{card}; gone {gone}")
+            q.keyboard.press("Shift+Slash")
+            q.wait_for_timeout(300)
+            tags = q.evaluate("""() => { const t = [...document.querySelectorAll('.lc-tag')].map(e => { const r = e.getBoundingClientRect(),
+                  a = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return { n: e.textContent, r: [r.left, r.top, r.right, r.bottom], painted: !!a && e.contains(a) }; });
+                const over = []; t.forEach((x, i) => t.slice(i + 1).forEach(y => { if (x.r[0] < y.r[2] && y.r[0] < x.r[2] && x.r[1] < y.r[3] && y.r[1] < x.r[3]) over.push(x.n + '/' + y.n); }));
+                return { names: t.map(x => x.n), unpainted: t.filter(x => !x.painted).map(x => x.n), over }; }""")
+            six = {"Eyedropper", "Recolor", "Brush", "Size", "Feel", "Eraser size"}
+            check(f"{name}: with the drawer open, ? names the six too, each tag painted and none on another",
+                  six <= set(tags["names"]) and not tags["unpainted"] and not tags["over"], str(tags))
+            c.close()
+        part("the draw drawer's six", drawer)
 
     check("Pen's card says the same on the Pad and Flip", len(pen_lines) == 2 and len(set(pen_lines.values())) == 1, str(pen_lines))
     b.close()
