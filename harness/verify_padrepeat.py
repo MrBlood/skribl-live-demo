@@ -414,6 +414,44 @@ with sync_playwright() as p:
         check("Repeat's glyph reads at 3:1 or more on what is behind it, off and on, light and dark, the pill, the line and the bar's end",
               all(min(v) >= 3 for v in seen.values()), "; ".join(f"{k}: off {v[0]}:1, on {v[1]}:1" for k, v in seen.items()))
 
+    if part("ring"):
+        print("\nREPEAT — on is outlined")
+        # The owner, of the mock: "rather than solid purple on snap and taller
+        # click and repeat I like the outline, but not so thick". Lit, Repeat
+        # was told from off by its tint alone; on now wears a 1px ring (the
+        # line's and the pill's in --ui-hi, the band's in the pressed full
+        # screen's edge). Read off the pixels at 2x: the edge on against the
+        # same edge off.
+        from PIL import Image as _RImg
+        import io as _rio
+        _RLUM = lambda c: sum(w * ((v / 255) / 12.92 if v / 255 <= 0.03928 else (((v / 255) + 0.055) / 1.055) ** 2.4)   # noqa: E731
+                              for w, v in zip((0.2126, 0.7152, 0.0722), c[:3]))
+        _rr = lambda a, b: (max(_RLUM(a), _RLUM(b)) + 0.05) / (min(_RLUM(a), _RLUM(b)) + 0.05)   # noqa: E731
+        _RECT = "(s) => { const r = document.querySelector(s).getBoundingClientRect(); return [r.left, r.top, r.width, r.height]; }"
+        # The left edge at mid-height: the band's glass lights its own top edge
+        # when off (an inset highlight), which the ring is not about.
+        _edge = lambda img, r: img.getpixel((int(r[0] * 2) + 1, int((r[1] + r[3] / 2) * 2)))   # noqa: E731
+        rings = {}
+        for theme in ("light", "dark"):
+            for label, opts, sel in (("desk pill", dict(DESK, device_scale_factor=2), "#padSpeed .rl-repeat"),
+                                     ("desk line", dict(DESK, device_scale_factor=2), "#padLine .rl-repeat"),
+                                     ("full screen", dict(PHONE), ".watch-band .rl-repeat")):
+                ctx = waits.instrument(b.new_context(color_scheme=theme, **opts))
+                c, pg, errs = pad(b, ctx=ctx, song=None, rate="0.25")
+                if label != "desk pill":
+                    play(pg); pg.wait_for_timeout(300)
+                if label == "full screen":
+                    pg.evaluate("() => document.querySelector('#padLine .full-btn').click()"); pg.wait_for_timeout(1200)
+                pg.mouse.move(2, 2)
+                r0 = pg.evaluate(_RECT, sel); a0 = _RImg.open(_rio.BytesIO(pg.screenshot())).convert("RGB")
+                pg.evaluate("(s) => document.querySelector(s).click()", sel); pg.wait_for_timeout(350)
+                r1 = pg.evaluate(_RECT, sel); a1 = _RImg.open(_rio.BytesIO(pg.screenshot())).convert("RGB")
+                on = pg.evaluate("(s) => document.querySelector(s).getAttribute('aria-pressed')", sel)
+                rings[f"{theme}, {label}"] = (round(_rr(_edge(a1, r1), _edge(a0, r0)), 2), on)
+                c.close()
+        check("Repeat, on, is outlined: its edge at least 3:1 against the same edge off, in the pill, the line and the full-screen band, light and dark",
+              all(v[1] == "true" and v[0] >= 3 for v in rings.values()), "; ".join(f"{k}: {v[0]}:1 ({v[1]})" for k, v in rings.items()))
+
     if part("posts"):
         print("\nREPEAT — posts as they were, and not on Flip")
         pts = [{"x": 100 + i * 8, "y": 200 + math.sin(i / 5) * 30, "color": "#1f1b2e", "size": 6, "t": i * 25, "start": i == 0} for i in range(60)]

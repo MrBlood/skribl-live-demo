@@ -27430,3 +27430,53 @@ Not tested here: Safari (no WebKit here). Where a browser cannot animate a
 ::before with Web Animations (KeyframeEffect.pseudoElement), the dot keeps
 its still ring rather than breathing. SF and Segoe UI are not on this box;
 Done's words are the same weight and shadow as Post's.
+
+## After v330 -- On is outlined: Snap, Taller, the click and Repeat
+
+The owner, with a screenshot of the music timeline's magnet and taller
+buttons: "can't really tell when the two buttons are highlighted." Measured,
+on and off differed by a deeper tint alone, 7% purple off and 22% on: 1.22:1
+between them on the light card and 1.19:1 on the dark. The mock showed Now,
+on in solid purple (C1, recommended) and on outlined (C2); the owner: "rather
+than solid purple on snap and taller click and repeat I like the outline,
+but not so thick".
+
+- ON WEARS A 1PX RING in --ui-hi over the chosen choice's tint: the magnet,
+  Taller and the click by Hear the loop in the music drawer, and Repeat in
+  the pill and the line under the drawing. The mock's ring was 2px; 1.5px
+  and 1px were laid beside it, and 1px is the thinnest that still reads at a
+  glance, crisp at any scale (1.5px lands on half pixels at 1x).
+- THE GLYPH KEEPS THE TINT'S OWN INK (--seg-on-ink, 8:1). The mock's purple
+  glyph read 2.85:1 on the dark tint, under the 3:1 an icon needs; the ring
+  carries the purple.
+- The magnet and Taller lose the zoom buttons' 7% tint when off: off is
+  plain, on is ringed.
+- In the full-screen band, over the drawing, Repeat's ring is the pressed
+  full screen's own edge (#a593ff on a dark drawing, #7c5cff on a light one),
+  under its glass highlights.
+
+Read off the pixels at 2x, the edge on against the same edge off: 3.4:1 to
+5.2:1 now, 1.1:1 to 1.4:1 before. verify_musicsnap gains ON IS OUTLINED (the
+magnet, Taller and the click, Pad and Flip, light and dark, with the glyph at
+3:1 or more on the tint); verify_padrepeat gains its "ring" part (the pill,
+the line and the band).
+
+CALIBRATION, each break red on its own buttons:
+
+- main's styles.css: every edge 1.1:1 to 1.4:1, all three music buttons and
+  Repeat in all three places;
+- the magnet's and Taller's ring removed: those two (1.28:1), the click
+  green;
+- the click's removed: the click alone (1.26:1);
+- the mock's purple glyph: the glyph on the dark tint (2.85:1);
+- the line's and the pill's ring removed: those (1.23:1 to 1.3:1), the band
+  green;
+- the band's removed: the band alone (1.09:1, 1.41:1).
+
+The band was first read on its top edge and went red in the dark (2.31:1)
+on the built code: its glass lights its own top edge when off. It is read on
+its side edge now, as Repeat is everywhere.
+
+WHAT IT DOES TO FLIP: shared for the music drawer (both editors); Repeat is
+the Pad's (Flip's Play already goes round). The player's stylesheet is
+unchanged.

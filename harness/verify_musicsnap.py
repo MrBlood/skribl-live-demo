@@ -586,6 +586,53 @@ with sync_playwright() as pw:
               and s3["on"] == "true" and s3["lit"] and s3["kept"] == {"bpm": 120, "phase": 0} and not s0["inDoor"],
               f"no tempo: {s0}; a tempo: {s1}; pressed: {s2}; again: {s3['on']}, {s3['kept']}")
         c.close()
+    print("\nON IS OUTLINED — the magnet, Taller and the click: ringed when on, plain when off")
+    # The owner, of the mock: "rather than solid purple on snap and taller
+    # click and repeat I like the outline, but not so thick". On and off
+    # differed by a deeper tint alone, 1.22:1 between them on the light card
+    # and 1.19:1 on the dark. Read off the pixels at 2x: each button's top
+    # edge on against the same edge off, which the 1px ring makes at least
+    # 3:1, and the glyph at least 3:1 on its tint while on; light and dark.
+    from PIL import Image as _RImg
+    _RLUM = lambda c: sum(w * ((v / 255) / 12.92 if v / 255 <= 0.03928 else (((v / 255) + 0.055) / 1.055) ** 2.4)
+                          for w, v in zip((0.2126, 0.7152, 0.0722), c[:3]))
+    _rr = lambda a, b: (max(_RLUM(a), _RLUM(b)) + 0.05) / (min(_RLUM(a), _RLUM(b)) + 0.05)
+    _RGEO = """(id) => { const e = document.getElementById(id), r = e.getBoundingClientRect(), s = e.querySelector('svg').getBoundingClientRect();
+      return { b: [r.left, r.top, r.width, r.height], g: [s.left, s.top, s.width, s.height] }; }"""
+    _RIDS = ("musicSnap", "musicTlTall", "musicClickBtn")
+
+    def _redge(img, b):
+        x, y, w, h = b
+        return img.getpixel((int((x + w / 2) * 2), int(y * 2) + 1))
+
+    def _rglyph(img, b, g):
+        x, y, w, h = b
+        tint = img.getpixel((int((x + 4) * 2), int((y + h / 2) * 2)))
+        gx, gy, gw, gh = g
+        return max(_rr(img.getpixel((i, j)), tint) for i in range(int(gx * 2), int((gx + gw) * 2)) for j in range(int(gy * 2), int((gy + gh) * 2)))
+
+    for _n, _p in eds("ring"):
+        _res = {}
+        for _th in ("light", "dark"):
+            c, pg, errs = editor(b, _n, _p + "?theme=" + _th, opts=dict(DESK, device_scale_factor=2))
+            pg.evaluate(SET, {"tempo": {"bpm": 120, "phase": 0}}); pg.wait_for_timeout(400)      # a tempo: the magnet on
+            pg.evaluate("() => document.getElementById('musicTimeline').scrollIntoView({ block: 'center' })"); pg.wait_for_timeout(300)
+            g1 = {i: pg.evaluate(_RGEO, i) for i in _RIDS}
+            a1 = _RImg.open(io.BytesIO(pg.screenshot())).convert("RGB")                       # the magnet on; Taller and the click off
+            for i in _RIDS:
+                press(pg, "#" + i)
+            pg.wait_for_timeout(300)
+            g2 = {i: pg.evaluate(_RGEO, i) for i in _RIDS}                                      # Taller moves what is under it
+            a2 = _RImg.open(io.BytesIO(pg.screenshot())).convert("RGB")                       # the magnet off; Taller and the click on
+            _on = {"musicSnap": (a1, g1), "musicTlTall": (a2, g2), "musicClickBtn": (a2, g2)}
+            _off = {"musicSnap": (a2, g2), "musicTlTall": (a1, g1), "musicClickBtn": (a1, g1)}
+            _res[_th] = {i: (round(_rr(_redge(_on[i][0], _on[i][1][i]["b"]), _redge(_off[i][0], _off[i][1][i]["b"])), 2),
+                             round(_rglyph(_on[i][0], _on[i][1][i]["b"], _on[i][1][i]["g"]), 2)) for i in _RIDS}
+            _res[_th + " pressed"] = pg.evaluate("(ids) => ids.map(i => document.getElementById(i).getAttribute('aria-pressed'))", list(_RIDS))
+            c.close()
+        check(f"{_n}: ON IS OUTLINED: the magnet, Taller and the click, on, are ringed (the edge at least 3:1 against the same edge off), the glyph at least 3:1 on the tint; light and dark",
+              all(_res[t + " pressed"] == ["false", "true", "true"] and all(e >= 3.0 and gl >= 3.0 for e, gl in _res[t].values()) for t in ("light", "dark")),
+              str(_res))
     for _n, _p in eds("snap"):
         c, pg, errs = editor(b, _n, _p)
         pg.evaluate(SET, {"tempo": {"bpm": 120, "phase": 0.1}, "s": 0.5, "e": 4.75, "xf": 250})

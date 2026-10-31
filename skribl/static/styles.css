@@ -2618,7 +2618,7 @@ body.recoloring #canvas { cursor: crosshair !important; }
   border-left: 1px solid var(--menu-card-line); border-radius: 0 999px 999px 0; background: transparent; color: var(--accent-ink);
   font: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .mt-click svg { width: 22px; height: 22px; display: block; }
-.mt-click[aria-pressed="true"] { background: var(--seg-on-fill); color: var(--seg-on-ink); }
+.mt-click[aria-pressed="true"] { background: var(--seg-on-fill); color: var(--seg-on-ink); box-shadow: inset 0 0 0 1px var(--ui-hi); }   /* on is outlined (ON IS OUTLINED) */
 .mt-click:disabled { opacity: .5; cursor: default; }
 .mt-click:focus-visible { outline: 2px solid var(--ui-hi); outline-offset: -3px; }
 @media (hover: hover) { .mt-click:not(:disabled):not([aria-pressed="true"]):hover { background: color-mix(in srgb, var(--accent) 7%, var(--menu-card)); } }
@@ -3031,9 +3031,16 @@ body.recoloring #canvas { cursor: crosshair !important; }
    whatever face draws them, so - and + stay where they are from 1x to 512x;
    hidden, so it is neither painted nor read out. */
 .mt-tl-mag-val::after { content: attr(data-widest); display: block; height: 0; overflow: hidden; visibility: hidden; }
-/* Taller, and the magnet while it snaps, wear the chosen choice's purple, as
-   the click by Hear the loop does. */
-.mt-tl-mag-btn:is(.mt-tl-tall, .mt-tl-snap)[aria-pressed="true"] { background: var(--seg-on-fill); color: var(--seg-on-ink); }
+/* ON IS OUTLINED (owner, after v330, of the mock: "rather than solid purple
+   on snap and taller click and repeat I like the outline, but not so
+   thick"). Taller and the magnet told on from off by a deeper tint alone:
+   1.22:1 between them on the light card, 1.19:1 on the dark. On wears the
+   chosen choice's tint with a 1px ring in --ui-hi (3.7:1 to 4.4:1 against
+   the card), its glyph in the tint's own ink (8:1; the mock's purple glyph
+   was 2.85:1 on the dark tint); off is plain, without the zoom buttons'
+   tint. The click by Hear the loop and Repeat on the line wear the same. */
+.mt-tl-mag-btn:is(.mt-tl-tall, .mt-tl-snap) { background: transparent; }
+.mt-tl-mag-btn:is(.mt-tl-tall, .mt-tl-snap)[aria-pressed="true"] { background: var(--seg-on-fill); color: var(--seg-on-ink); box-shadow: inset 0 0 0 1px var(--ui-hi); }
 /* THE MAGNET AND THE TALLER BUTTON, CLOSED UP (lib/musictimeline.js fitHead):
    where the name would not keep its one line beside the magnet's own box,
    the two boxes are one, their cells 2px apart as the zoom's are, and the
@@ -5531,8 +5538,11 @@ body.player-mode .app {
   color: var(--on-canvas-violet); background: rgba(255, 255, 255, 0.68);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 3px 12px rgba(var(--on-canvas-drop-rgb), 0.14);
 }
-.player-bar.is-smart .rl-repeat[aria-pressed="true"].t-dark { color: #fff; background: rgba(124, 92, 255, 0.38); }
-.player-bar.is-smart .rl-repeat[aria-pressed="true"].t-light { color: var(--on-canvas-violet); background: rgba(124, 92, 255, 0.22); }
+/* ...outlined when on, in the pressed full screen's own edge, as on the line. */
+.player-bar.is-smart .rl-repeat[aria-pressed="true"].t-dark { color: #fff; background: rgba(124, 92, 255, 0.38);
+  box-shadow: inset 0 0 0 1px #a593ff, inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 3px 12px rgba(var(--on-canvas-drop-rgb), 0.4); }
+.player-bar.is-smart .rl-repeat[aria-pressed="true"].t-light { color: var(--on-canvas-violet); background: rgba(124, 92, 255, 0.22);
+  box-shadow: inset 0 0 0 1px #7c5cff, inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 3px 12px rgba(var(--on-canvas-drop-rgb), 0.14); }
 @media (hover: hover) {
   .player-bar.is-smart :is(.player-btn, .rl-speed, .full-btn).t-dark:not(.active):hover { background: rgba(255, 255, 255, 0.22); }
   .player-bar.is-smart :is(.player-btn, .rl-speed, .full-btn).t-light:not(.active):hover { background: rgba(255, 255, 255, 0.8); }
@@ -5981,7 +5991,8 @@ a.player-btn { text-decoration: none; }
    transparent outline in the system's ink), so on stays told from off there
    as the speed's own rule does; not a forced-colors block, which the link
    page's sheet would carry whole. */
-.rl-repeat[aria-pressed="true"] { background: var(--seg-on-fill); color: var(--seg-on-ink); outline: 2px solid transparent; outline-offset: -2px; }
+.rl-repeat[aria-pressed="true"] { background: var(--seg-on-fill); color: var(--seg-on-ink); outline: 2px solid transparent; outline-offset: -2px;
+  box-shadow: inset 0 0 0 1px var(--ui-hi); }   /* on is outlined, as the music drawer's toggles are (ON IS OUTLINED) */
 @media (hover: hover) { .rl-repeat:not([aria-pressed="true"]):hover { color: var(--text-primary); } }
 .rl-repeat:focus-visible { outline: 2px solid var(--ui-hi); outline-offset: 1px; }
 /* ...AND ON A PHONE AT THE BAR'S END, the line under the drawing having no
