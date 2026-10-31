@@ -4286,7 +4286,11 @@ body.player-mode #canvasEmptyHint { display: none !important; }
    visually replaced by .post-check-box so it reads in both ramps and under
    forced colours; the input stays in the tree, focusable and labelled by the
    wrapping <label>, and :focus-visible on it lights the drawn box. The row is
-   44px tall on its own — a checkbox has no ::before to grow a tap band with. */
+   44px tall on its own — a checkbox has no ::before to grow a tap band with.
+   Unticked, its edge is the sheet's secondary ink, 2px (owner, after v330:
+   "The little box is almost invisible until checked"): it was the card's own
+   faint line, 1.40:1 against the light sheet and 1.38:1 against the dark, and
+   is 8.3:1 and 9.7:1. Ticked, it fills with the accent as before. */
 .post-check {
   display: flex;
   align-items: center;
@@ -4313,8 +4317,8 @@ body.player-mode #canvasEmptyHint { display: none !important; }
   width: 18px;
   height: 18px;
   border-radius: 5px;
-  border: 1.5px solid var(--menu-card-line);
-  background: var(--menu-card);
+  border: 2px solid var(--text-muted);
+  background: transparent;
   display: grid;
   place-items: center;
   transition: background 0.15s ease, border-color 0.15s ease;
@@ -4373,7 +4377,19 @@ body.player-mode #canvasEmptyHint { display: none !important; }
 
 .post-input:disabled { opacity: 0.5; cursor: default; }
 
-.post-textarea { resize: none; line-height: 1.4; }
+/* THE CAPTION'S CORNER (lib/postsheet.js, THE CAPTION SHOWS WHAT YOU WROTE):
+   the box eases to the height of its words, and the grip in its lower-right
+   corner sets the height by hand. Drawn here because a phone's text box has no
+   resize corner of its own: a mark in the field's secondary ink inside the
+   box's corner, and round it a 44px band that takes the finger (touch-action
+   none, or the drag would scroll the sheet). Reduce Motion is the script's:
+   a block here would ship to the player's stylesheet. */
+.post-textarea { resize: none; line-height: 1.4; transition: height 0.18s ease, border-color 0.15s ease, background 0.15s ease; }
+.post-textarea-wrap { position: relative; display: block; }
+.post-grip { position: absolute; right: 3px; bottom: 3px; width: 20px; height: 20px; display: grid; place-items: center;
+  color: var(--text-muted); cursor: ns-resize; touch-action: none; -webkit-user-select: none; user-select: none; }
+.post-grip::before { content: ""; position: absolute; inset: -12px; }
+.post-grip svg { width: 14px; height: 14px; display: block; }
 
 .post-char-count {
   align-self: flex-end;
