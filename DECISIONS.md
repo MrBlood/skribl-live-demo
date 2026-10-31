@@ -27350,3 +27350,83 @@ five new cards are on both editors.
 
 Not tested here: the clips on a real phone and in Safari (no WebKit here);
 How it works' strip is five cards longer, still one row.
+
+## After v330 -- Done in purple, a breathing dot, and the first take says so once
+
+The owner, about Pad's recording header: "It's not noticeable. I had to look
+around to find it and wasn't sure I was even recording." Measured, the
+quiet glass Done (DONE, NOT STOP: the crimson Stop before it "feels
+punitive... warning, failure vibes") was 1.15:1 against the light header and
+1.18:1 against the dark: its words were plain, the button was not there. The
+mock showed Now beside three options on the real Pad, phone and desk, light
+and dark; the owner: "Yes to all and breathing dot is yes".
+
+- DONE WEARS THE ACTION'S PURPLE, as Post does (same role, same token; Post
+  is hidden while a take records): 4.4:1 against the light header, 3.4:1
+  against the dark, its words and square white at 5.3:1, Post's weight and
+  text shadow. It still recedes while the pen is down and comes back as you
+  lift. Red stays out.
+- THE FIRST TAKE SAYS SO, ONCE: the first time a stroke ends in a take,
+  "You're recording. Tap Done when you're finished." (Click, with a mouse)
+  hangs 12px under Done, its caret on Done's middle. It is a lib/hints.js
+  hint, so it shows once ever and the tips switch turns it off; the take
+  ending puts it away. lib/hints.js gains opts.under for it: the toast is
+  measured at its containing block's own edge, which on a desk with classic
+  scrollbars is a gutter in from the screen's (styles.css,
+  `scrollbar-gutter: stable both-edges`: 10px here; the first build's caret
+  was 10px off Done there, and the toast, measured while parked at 50%, ran
+  past a phone's right margin). Automation never meets it unless it asks
+  (window.__skriblTakeHintForce), as with the hello and the help cards.
+- THE DOT BREATHES: its halo swells from a 3px ring at 0.16 to a 7px ring at
+  0.30 and back every 2.4s, while a take records; under Reduce Motion it is
+  the still 4px ring it always was. The halo is the dot's ::before and the
+  dot its ::after, so the halo never tints it, moved by Web Animations from
+  editor_bar.js. The first build used a CSS @keyframes, and the player's
+  stylesheet went 228 bytes over its budget: every @keyframes and every
+  Reduce Motion block ships to the player, which never records. The motion
+  and the line live in editor_bar.js because app.js is every player's
+  download too.
+
+How it works' Auto-record tip says the dot and Done; verify_helpclaims
+holds it to the new checks.
+
+verify_ux gains DONE, THE DOT AND THE FIRST LINE (Done's fill and words off
+the pixels, the line's place and its once, Done putting it away, automation
+not meeting it, the halo's scale on every frame, Reduce Motion), and READOUT
+ALIGNMENT reads Done's words against Done's own fill: against the header's
+ground a filled pill measured the pill's middle, not the words.
+
+CALIBRATION
+CALIBRATION, in a trimmed copy of verify_ux (the fixture, the new section and
+READOUT ALIGNMENT), each file served in place of the real one; each break red
+on its own rows:
+
+- Done back to the glass pill: DONE STANDS OUT alone (1.15:1);
+- no breath: the breath's row alone (a still 0.727);
+- the breath running under Reduce Motion: the Reduce Motion row alone;
+- no line: the line's row, and Done putting it away (nothing went up);
+- no automation guard: the "never meets it" part alone;
+- the take's end not putting it away: the "gone after Done" part alone;
+- a fresh key each stroke: "once", and the putting away (the take's end
+  hides 'take-done', no longer its name);
+- no gutter correction: the line's row, on the desk alone (its caret 10.1px
+  off Done's middle; on the phone, -0.5);
+- the toast measured where it was parked: the line's row, and DONE STANDS
+  OUT too (its offsets read from the default 50% left and 84px top, it
+  landed on Done);
+- no caret: the line's row;
+- Done's words 2px low in the pill: READOUT ALIGNMENT (2.5px); main's
+  instrument, which read against the header, green on the same break.
+
+As built, 8 of 8. The "once" row first went red on the built code: the
+first line stays six seconds and was still up at the second stroke. It now
+puts the first away before asking.
+
+WHAT IT DOES TO FLIP: not for Flip; Flip has no take to record, its pages are
+the drawing, saved as you go. lib/hints.js's opts.under is shared, for Flip
+when it wants it.
+
+Not tested here: Safari (no WebKit here). Where a browser cannot animate a
+::before with Web Animations (KeyframeEffect.pseudoElement), the dot keeps
+its still ring rather than breathing. SF and Segoe UI are not on this box;
+Done's words are the same weight and shadow as Post's.

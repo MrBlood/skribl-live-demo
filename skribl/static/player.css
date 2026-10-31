@@ -632,6 +632,7 @@ body {
 .name-done,
 .post-submit:not(.post-watch),
 .player-cta,
+.btn.record.active,
 /* A dark text-shadow lifts LIGHT text off a busy background. .pending-btn was
    dark text on solid yellow, where the same shadow smeared the glyph edges and
    read as blurry — most visibly on "Re-add". It is white on purple now (v317)
@@ -648,17 +649,16 @@ body {
 
 .rec-indicator[hidden] { display: none; }
 
-/* THE TAKE'S READOUT. A still purple dot, six level bars, the clock, and in
-   secondary ink how long the replay will run. No pill, no red, no blink: the
-   same take used to sit in a crimson pill with a pulsing dot beside a crimson
-   Stop, and read as a warning on a screen where it is ALWAYS showing while
-   you draw.
+/* THE TAKE'S READOUT. A purple dot that breathes, six level bars, the clock,
+   and in secondary ink how long the replay will run. No pill, no red, no
+   blink: the same take used to sit in a crimson pill with a pulsing dot
+   beside a crimson Stop, and read as a warning on a screen where it is
+   ALWAYS showing while you draw.
 
-   The bars are the only motion, and they mean something: they run only while
-   the pen is down (body.stroking) and hold still in a pause, which is exactly
-   the difference between the clock and "plays". Each bar has its own period
-   and a negative delay, so a paused set freezes as an uneven little
-   waveform rather than a flat row. */
+   The bars run only while the pen is down (body.stroking) and hold still in
+   a pause, which is exactly the difference between the clock and "plays".
+   Each bar has its own period and a negative delay, so a paused set freezes
+   as an uneven little waveform rather than a flat row. */
 .rec-indicator {
   display: inline-flex;
   align-items: center;
@@ -667,12 +667,20 @@ body {
   white-space: nowrap;
 }
 
+/* THE DOT BREATHES while a take records (owner, after v330, of the mock:
+   "breathing dot is yes"; the still dot had left them unsure they were
+   recording at all): its halo swells and settles every 2.4s, slow, soft and
+   purple, never the crimson blink it replaces. The halo is the dot's own
+   ::before and ::after is the dot, drawn after the halo so the halo never
+   tints it. editor_bar.js moves the halo (Web Animations: a CSS @keyframes
+   would ship to the player, whose stylesheet has a byte budget and never
+   records). At rest, under Reduce Motion, and here, it is the still 4px ring
+   at 0.18 the dot always had: 22px at 0.30, scaled to 16px and faded. */
 .rec-indicator .dot {
+  position: relative;
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: var(--ui-hi);
-  box-shadow: 0 0 0 4px rgba(124, 92, 255, 0.18);
   flex: none;
 }
 @keyframes rec-level {

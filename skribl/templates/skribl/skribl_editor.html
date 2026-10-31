@@ -64,9 +64,10 @@
 
     {% if compose %}</div>{% endif %}
 
-    {# The take's readout: a still dot, level bars that move only while the pen
-       is down (styles.css, THE TAKE'S READOUT), the clock, and the replay's
-       length after pauses are tightened. #}
+    {# The take's readout: a dot that breathes while a take records
+       (editor_bar.js), level bars that move only while the pen is down
+       (styles.css, THE TAKE'S READOUT), the clock, and the replay's length
+       after pauses are tightened. Done joins it while a take records. #}
     <div id="recIndicator" class="rec-indicator" hidden>
       <span class="dot"></span>
       <span class="rec-bars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></span>

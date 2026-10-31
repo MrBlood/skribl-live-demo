@@ -669,21 +669,29 @@ body.canvas-wide .app { background: transparent; border-left-color: transparent;
   filter: none;
 }
 
-/* DONE, NOT STOP. Recording is simply what drawing does here, so the take's
-   end is a quiet glass pill in the header's own ink -- not the crimson alarm
-   it was ("feels punitive... warning, failure vibes", the owner, on the
-   phone). Red left the recording header entirely; the rounded square keeps
-   the finish-a-take meaning in secondary ink. The .header .actions weight
+/* DONE, NOT STOP, AND IN THE ACCENT. Recording is simply what drawing does
+   here, so the take ends with Done, not the crimson Stop it was ("feels
+   punitive... warning, failure vibes", the owner, on the phone); red left
+   the recording header entirely and the rounded square keeps the
+   finish-a-take meaning. Done was then a quiet glass pill in the header's
+   own ink, and the owner, after v330: "It's not noticeable. I had to look
+   around to find it and wasn't sure I was even recording." Measured, the
+   pill was 1.15:1 against the light header and 1.18:1 against the dark: the
+   words were plain, the button was not there. So it wears the action's
+   purple, as Post does (same role, same token; Post is hidden while a take
+   records, so the two never sit together): 4.4:1 on the light header, 3.4:1
+   on the dark, its words and square white at 5.3:1. It still recedes while
+   the pen is down (body.stroking, below). The .header .actions weight
    matches the phone's `.btn.record` density rules so neither beats it. */
 .btn.record.active,
 .header .actions .btn.record.active {
-  background: rgba(var(--wash-rgb), 0.07);
+  background: var(--accent-fill);
   border-color: transparent;
-  box-shadow: 0 0 0 1px var(--header-rim);
-  color: var(--text-primary);
+  box-shadow: 0 3px 12px var(--accent-glow);
+  color: #fff;
   font-weight: 600;
 }
-.btn.record.active svg { color: var(--text-secondary); width: 14px; height: 14px; }
+.btn.record.active svg { color: #fff; width: 14px; height: 14px; }
 /* Done beside the readout (app.js moves it there while a take records). It
    takes the readout's own gap plus a little more, so the numbers and the
    button read as one unit without touching. The padding restates the
@@ -723,6 +731,7 @@ body.canvas-wide .app { background: transparent; border-left-color: transparent;
 .name-done,
 .post-submit:not(.post-watch),
 .player-cta,
+.btn.record.active,
 /* A dark text-shadow lifts LIGHT text off a busy background. .pending-btn was
    dark text on solid yellow, where the same shadow smeared the glyph edges and
    read as blurry — most visibly on "Re-add". It is white on purple now (v317)
@@ -739,17 +748,16 @@ body.canvas-wide .app { background: transparent; border-left-color: transparent;
 
 .rec-indicator[hidden] { display: none; }
 
-/* THE TAKE'S READOUT. A still purple dot, six level bars, the clock, and in
-   secondary ink how long the replay will run. No pill, no red, no blink: the
-   same take used to sit in a crimson pill with a pulsing dot beside a crimson
-   Stop, and read as a warning on a screen where it is ALWAYS showing while
-   you draw.
+/* THE TAKE'S READOUT. A purple dot that breathes, six level bars, the clock,
+   and in secondary ink how long the replay will run. No pill, no red, no
+   blink: the same take used to sit in a crimson pill with a pulsing dot
+   beside a crimson Stop, and read as a warning on a screen where it is
+   ALWAYS showing while you draw.
 
-   The bars are the only motion, and they mean something: they run only while
-   the pen is down (body.stroking) and hold still in a pause, which is exactly
-   the difference between the clock and "plays". Each bar has its own period
-   and a negative delay, so a paused set freezes as an uneven little
-   waveform rather than a flat row. */
+   The bars run only while the pen is down (body.stroking) and hold still in
+   a pause, which is exactly the difference between the clock and "plays".
+   Each bar has its own period and a negative delay, so a paused set freezes
+   as an uneven little waveform rather than a flat row. */
 .rec-indicator {
   display: inline-flex;
   align-items: center;
@@ -758,13 +766,29 @@ body.canvas-wide .app { background: transparent; border-left-color: transparent;
   white-space: nowrap;
 }
 
+/* THE DOT BREATHES while a take records (owner, after v330, of the mock:
+   "breathing dot is yes"; the still dot had left them unsure they were
+   recording at all): its halo swells and settles every 2.4s, slow, soft and
+   purple, never the crimson blink it replaces. The halo is the dot's own
+   ::before and ::after is the dot, drawn after the halo so the halo never
+   tints it. editor_bar.js moves the halo (Web Animations: a CSS @keyframes
+   would ship to the player, whose stylesheet has a byte budget and never
+   records). At rest, under Reduce Motion, and here, it is the still 4px ring
+   at 0.18 the dot always had: 22px at 0.30, scaled to 16px and faded. */
 .rec-indicator .dot {
+  position: relative;
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: var(--ui-hi);
-  box-shadow: 0 0 0 4px rgba(124, 92, 255, 0.18);
   flex: none;
+}
+.rec-indicator .dot::before,
+.rec-indicator .dot::after { content: ""; position: absolute; border-radius: 50%; }
+.rec-indicator .dot::after { inset: 0; background: var(--ui-hi); }
+.rec-indicator .dot::before {
+  left: -7px; top: -7px; width: 22px; height: 22px;
+  background: rgba(124, 92, 255, 0.30);
+  transform: scale(0.727); opacity: 0.6;
 }
 
 /* Hairline bars, not blocks (owner: "the wave is a little too fat... things
@@ -7110,6 +7134,19 @@ body:not(.player-mode) :is(.toolbar, .flip-tools) {
 .skribl-hint--anchored.in { transform: translate(0, 0); }
 .skribl-hint--anchored::after {
   content: ''; position: absolute; top: -5px; right: 22px;
+  width: 9px; height: 9px; transform: rotate(45deg);
+  background: var(--surface-control-hover);
+  border-left: 1px solid rgba(124, 92, 255, 0.35);
+  border-top: 1px solid rgba(124, 92, 255, 0.35);
+}
+/* Under a button (opts.under, lib/hints.js): the toast hangs 12px below the
+   control it is about, inside the screen's 16px margins, its caret on the
+   control's middle -- Pad's first take says "Tap Done" with the caret on
+   Done. lib/hints.js sets left, top and --hint-caret-x when it shows. */
+.skribl-hint--under { transform: translate(0, -8px); }
+.skribl-hint--under.in { transform: translate(0, 0); }
+.skribl-hint--under::after {
+  content: ''; position: absolute; top: -5px; left: calc(var(--hint-caret-x, 50%) - 5px);
   width: 9px; height: 9px; transform: rotate(45deg);
   background: var(--surface-control-hover);
   border-left: 1px solid rgba(124, 92, 255, 0.35);
