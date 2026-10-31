@@ -27559,3 +27559,71 @@ WHAT THE AFFECTED SUITES CAUGHT on the first build, each fixed here:
   green.
 - verify_a11ypages' WAVE rules: the grip's span was hidden but its svg was
   not, and every icon here carries its own aria-hidden.
+
+## After v330 -- Off switches: a lilac groove, the knob lifted
+
+The owner, of the app's on/off switches when off. A firmer grey and edges
+were mocked first, a loud 1px edge (7.4 to 8.8:1) and a quiet one (3.2 to
+4:1): "Is the outline to contrasting? Seems loud?", then "I don't really
+like those either. If you are going to change it, I want subtle
+sophistication, simple and elegant and kind." Three quiet options followed
+(a grey groove, a flat lilac, both) beside Now, light and dark, phone and
+desk: "Yes" to D3, both, and to the gallery tick box keeping its firm edge.
+
+- OFF IS THE ON COLOUR AT A FRACTION, PRESSED IN. The track was the wash at
+  0.16, a flat grey. It is --ui-active at 16% in light and, in dark, the
+  same colour a third lighter at a fifth (the #a792ff lilac the dark
+  sheets' lines already use), with a soft shadow along its top inside
+  edge. The knob trades its tight dark shadow (0 1px 3px at 0.4) for a
+  soft, wide one (0 2px 6px at 0.20, over a 1px contact shadow). Made from
+  the on colour, so the two cannot drift if the --ui-* dial turns. The two
+  values live on .layer-toggle, with light's beside them: they are one
+  control's, not the ramp's.
+- IT READS BY ITS DEPTH, AND THE NUMBERS SAY SO. Against the row behind it
+  the track measures 1.42:1 in light and 1.41:1 in dark, where the grey was
+  1.45:1 and 1.61:1; in light the white knob reads 1.22 to 1.36:1 on the
+  paler track (it was 1.45 to 1.63), and its soft shadow is what sets it
+  apart. A colour ratio does not count an inner shadow or a lifted knob.
+  The mock said so beside the close-ups; the 3:1 an edge gave was the loud
+  option.
+- ON IS UNCHANGED, AND NOTHING SNAPS. On, the groove is the same shadow at
+  nothing (transparent, not none), and box-shadow joined the background in
+  the switch's transition, so flipping a switch eases the groove out or in
+  with the colour. Under Reduce Motion the app's own block makes every
+  transition immediate, this one too.
+- ONE STYLE, SIX SWITCHES, BOTH EDITORS: music and photo on/off, Lock,
+  Smooth, Cut on silence, and Flip's Draw-on. The player has no switch, and
+  its stylesheet did not change.
+
+verify_ux gains THE OFF SWITCH IS A LILAC GROOVE, on a phone at 2x, light
+and dark, on the Pad (the photo row) and Flip (Draw-on): off, the track's
+middle leans to violet against the row beside it (blue held up over green
+by 10 levels and more; the grey moved all three alike) and its top inside
+edge is darker than its middle, both off the pixels; the knob's shadow as
+computed, the property it governs; and turned off, the groove read on every
+frame from the click, inside the page (none while on, a frame part-way,
+none outside).
+
+CALIBRATION
+in a trimmed copy of verify_ux (the fixture and the new section), each
+stylesheet served in place of the real one; each break red on its own rows
+and no other:
+
+- main's stylesheet, the grey: all four (a lean of -2 and -3, flat, the
+  tight knob, no groove to glide);
+- the grey alone back: the lean;
+- no groove: the groove and the glide;
+- the knob's old shadow: the knob (0.4, 3px);
+- box-shadow out of the transition: the glide (no frame part-way);
+- on keeping the groove: the glide (0.2 and 0.35 while on);
+- light's groove gone: the groove and the glide, light only;
+- dark's groove gone: the groove and the glide, dark only.
+
+As built, 4 of 4: a lean of 24 and 17 on the Pad, 26 and 16 on Flip; the
+groove 1.08 to 1.15 times darker at the top; 8 or 9 frames part-way.
+
+WHAT IT DOES TO FLIP: shared; one class for every switch in both editors,
+and the check reads Flip's Draw-on.
+
+Not tested here: an iPhone's or Windows' drawing of the inner shadow (no
+WebKit here). It is a drawn shadow, not type, so no font enters it.
