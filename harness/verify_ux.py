@@ -2405,6 +2405,104 @@ check("CAPTION GRIP: ...opened again, the box fits its words again; and on a pho
       and _grip["sheet scrolls"] and abs(_grip["after"]["h"] - _grip["before"]["h"] - 60) <= 2 and _grip["cancels"] == 0 and _grip["focus"] != "postCaptionInput",
       f"reopened {[v['reopened'] for v in _fit.values()]}; phone {_grip}")
 
+print("\nTHE OFF SWITCH IS A LILAC GROOVE — the on colour at a fraction, pressed in, the knob lifted; it glides")
+# The owner, after v330, of the on/off switches: "If you are going to change
+# it, I want subtle sophistication, simple and elegant and kind"; of the
+# mock's D3, "Yes". Off was a flat grey (the wash at .16) and the knob sat on
+# a tight dark shadow. Read off the pixels at 2x on a phone, light and dark:
+# the track's middle, against the row beside it, leans to the on colour's
+# violet (blue held up over green, where the grey moved all three alike);
+# its top inside edge is darker than its middle (the groove). The knob's
+# shadow is read as computed, the property it governs: a soft, wide layer and
+# no tight dark one. And turned off, the groove is read on every frame from
+# the click, inside the page: none when on, at least one frame part-way,
+# none outside. On the Pad (the photo row) and Flip (Draw-on): one style,
+# every switch.
+import io as _swio
+import re as _swre
+from PIL import Image as _SwImg
+_SW_LUM = lambda c: sum(w * ((v / 255) / 12.92 if v / 255 <= 0.03928 else (((v / 255) + 0.055) / 1.055) ** 2.4)
+                        for w, v in zip((0.2126, 0.7152, 0.0722), c[:3]))
+_SW_RECT = "(id) => { const r = document.getElementById(id).getBoundingClientRect(); return [r.left, r.top, r.width, r.height]; }"
+_SW_FRAMES = """(id) => new Promise(done => { const e = document.getElementById(id), out = [], t0 = performance.now();
+    const first = getComputedStyle(e).boxShadow; e.click();
+    (function tick() { out.push(getComputedStyle(e).boxShadow); if (performance.now() - t0 < 450) requestAnimationFrame(tick); else done([first, out]); })(); })"""
+_SW_KNOB = "(id) => getComputedStyle(document.getElementById(id).querySelector('.layer-toggle-knob')).boxShadow"
+
+
+def _sw_layers(s):
+    """[(alpha, blur, inset)] for each layer of a computed box-shadow; [] for none."""
+    out = []
+    for lay in _swre.split(r",\s*(?![^()]*\))", s or "none"):
+        if lay.strip() == "none":
+            continue
+        m = _swre.search(r"rgba?\(([^)]*)\)", lay)
+        parts = [float(v) for v in _swre.findall(r"[\d.]+", m.group(1))] if m else [0, 0, 0, 0]
+        lengths = [float(v) for v in _swre.findall(r"(-?[\d.]+)px", lay[m.end():] if m else lay)]
+        out.append((parts[3] if len(parts) > 3 else 1.0, lengths[2] if len(lengths) > 2 else 0.0, "inset" in lay))
+    return out
+
+
+def _sw_groove(s):
+    return max([a for a, _, inset in _sw_layers(s) if inset] or [0.0])
+
+
+def _sw_png():
+    _b = _swio.BytesIO(); _SwImg.new("RGB", (120, 90), (120, 170, 220)).save(_b, "PNG"); return _b.getvalue()
+
+
+with _sp204() as _sw:
+    _swb = waits.instrument(_sw.chromium.launch())
+    _swr = {}
+    for _name, _path, _id in (("Pad", "/", "photoToggle"), ("Flip", "/flip", "drawOnBtn")):
+        for _th in ("light", "dark"):
+            _c = _swb.new_context(viewport={"width": 402, "height": 874}, device_scale_factor=2, is_mobile=True, has_touch=True)
+            _pg = _c.new_page(); browsing.goto(_pg, BASE, f"{_path}?theme={_th}"); waits.settle(_pg, 500)
+            _pg.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+            if _name == "Pad":
+                _pg.click("#mediaOpenBtn"); _pg.wait_for_timeout(400)
+                _pg.set_input_files("#photoInput", {"name": "sky.png", "mimeType": "image/png", "buffer": _sw_png()})
+                _pg.wait_for_function("() => document.getElementById('photoToggle').getAttribute('aria-checked') === 'true'", timeout=10000)
+            else:
+                _pg.evaluate("() => _flipDrawerCtl.open('draw')"); _pg.wait_for_timeout(500)
+                _pg.click('#drawTiles .dp-tile[data-dp="feel"]'); _pg.wait_for_timeout(500)
+            _pg.evaluate(f"() => document.getElementById('{_id}').scrollIntoView({{ block: 'center' }})"); _pg.wait_for_timeout(300)
+            if _pg.evaluate(f"() => document.getElementById('{_id}').getAttribute('aria-checked')") != "true":
+                _pg.click(f"#{_id}"); _pg.wait_for_timeout(450)                     # on first, so it can be turned off
+            _first, _frames = _pg.evaluate(_SW_FRAMES, _id)
+            _pg.wait_for_timeout(250)
+            _r = _pg.evaluate(_SW_RECT, _id)
+            _im = _SwImg.open(_swio.BytesIO(_pg.screenshot())).convert("RGB")
+            _px = lambda x, y: _im.getpixel((int(round(x * 2)), int(round(y * 2))))
+            _mid = _r[1] + _r[3] / 2
+            _ground, _fill = _px(_r[0] + _r[2] + 4, _mid), _px(_r[0] + _r[2] - 6, _mid)
+            _top, _low = _px(_r[0] + 26, _r[1] + 1.5), _px(_r[0] + 26, _r[1] + 12.5)
+            _gs = [_sw_groove(f) for f in _frames]
+            _full = _gs[-1] if _gs else 0.0
+            _swr[(_name, _th)] = {
+                "off": _pg.evaluate(f"() => document.getElementById('{_id}').getAttribute('aria-checked')"),
+                "lean": (_fill[2] - _ground[2]) - (_fill[1] - _ground[1]),
+                "depth": round((_SW_LUM(_low) + 0.05) / (_SW_LUM(_top) + 0.05), 3),
+                "knob": _sw_layers(_pg.evaluate(_SW_KNOB, _id)),
+                "on groove": _sw_groove(_first), "full": _full,
+                "part-way": sum(1 for g in _gs if 0.01 < g < _full - 0.01),
+                "outside": [g for g in _gs if g < -0.001 or g > _full + 0.001],
+                "px": (_ground, _fill, _top, _low)}
+            _c.close()
+    _swb.close()
+check("OFF SWITCH: off, the track leans to the on colour's violet against the row beside it (blue over green by 10 levels and more), on the Pad and Flip, light and dark",
+      len(_swr) == 4 and all(v["off"] == "false" and v["lean"] >= 10 for v in _swr.values()),
+      str({k: (v["off"], v["lean"], v["px"][:2]) for k, v in _swr.items()}))
+check("OFF SWITCH: ...pressed in: its top inside edge is darker than its middle, on the Pad and Flip, light and dark",
+      len(_swr) == 4 and all(v["depth"] >= 1.04 for v in _swr.values()),
+      str({k: (v["depth"], v["px"][2:]) for k, v in _swr.items()}))
+check("OFF SWITCH: the knob sits on a soft, wide shadow (a layer blurred 5px and more), with no tight dark one (no layer at .3 and darker)",
+      len(_swr) == 4 and all(any(b >= 5 for _, b, _i in v["knob"]) and all(a < 0.3 for a, _, _i in v["knob"]) for v in _swr.values()),
+      str({k: v["knob"] for k, v in _swr.items()}))
+check("OFF SWITCH: turned off, the groove glides in: none while on, at least one frame part-way, none outside, on the Pad and Flip, light and dark",
+      len(_swr) == 4 and all(v["on groove"] == 0 and v["full"] > 0.1 and v["part-way"] >= 1 and not v["outside"] for v in _swr.values()),
+      str({k: (v["on groove"], v["full"], v["part-way"], v["outside"]) for k, v in _swr.items()}))
+
 print("\nDONE, THE DOT AND THE FIRST LINE — you can find Done, and you know you're recording")
 # The owner, after v330: "It's not noticeable. I had to look around to find it
 # and wasn't sure I was even recording." Done was a glass pill in the header's
