@@ -12,6 +12,8 @@ avc1 (`isConfigSupported` -> false), so the actual H.264 encode cannot run. That
 makes this a test of the GATE and the fallback, not of the encoder. The gate
 returning false is the same path Firefox takes, which the handoff has listed as
 unverified — so it is worth pinning even though the encode isn't reachable.
+(Since Chrome 153, Playwright 1.63, Oct 30, headless Chromium does encode avc1;
+the rows below drive encode() with stand-in encoders either way.)
 """
 import os, sys
 from playwright.sync_api import sync_playwright
@@ -243,6 +245,56 @@ with sync_playwright() as p:
     got = dsi(flip.evaluate(ENCODE, "1190"))
     check("Chrome's description (already the config) is written exactly as it came",
           got == "1190", f"DecoderSpecificInfo {got!r}")
+
+    # NO B-FRAMES (Firefox 155, Oct 30). Firefox's encoder, given the High
+    # profile the export asked for first, sent frames out of the order they
+    # show in; the vendored muxer threw ("Timestamps must be monotonically
+    # increasing") inside the encoder's own callback, where nothing caught it,
+    # and the export finished a file of 29 frames out of 83. Two things now:
+    # the first profile asked for is Baseline, which has no B-frames; and an
+    # encoder that sends them anyway stops the export as an error, which both
+    # editors answer with a WebM. The stand-in encoder answers on a later tick,
+    # as a real one does: one that answered inside encode() would throw
+    # straight into the loop and could not tell the old code from the new.
+    print("\nMP4 VIDEO — no frame out of order reaches the muxer")
+    PICK = """async (yes) => { const real = VideoEncoder.isConfigSupported;
+      VideoEncoder.isConfigSupported = async (c) => ({ supported: yes === 'all' || yes.includes(c.codec) });
+      try { return await window.SkriblMp4.pickAvcCodec(816, 612); } finally { VideoEncoder.isConfigSupported = real; } }"""
+    got = flip.evaluate(PICK, "all")
+    check("the first H.264 profile asked for is Baseline, which has no B-frames",
+          isinstance(got, str) and got.startswith("avc1.42"), repr(got))
+    got = flip.evaluate(PICK, ["avc1.640028"])
+    check("...and a browser with only High still gets High (and the guard below)", got == "avc1.640028", repr(got))
+    REORDER = """async (swap) => {
+      await window.skriblLoadVendor('mp4muxer');
+      const RealVE = window.VideoEncoder; const errs = []; const onErr = (e) => errs.push(String(e.message || e));
+      window.addEventListener('error', onErr);
+      class LateVE { constructor(o) { this.o = o; this.encodeQueueSize = 0; this.held = []; this.n = 0; } configure(c) { this.c = c; }
+        send(ts, i) { const o = this.o, c = this.c;
+          setTimeout(() => o.output(new EncodedVideoChunk({ type: i === 0 ? 'key' : 'delta', timestamp: ts, duration: 33333, data: new Uint8Array(16) }),
+            i === 0 ? { decoderConfig: { codec: c.codec, codedWidth: c.width, codedHeight: c.height,
+                                         description: new Uint8Array([1, 0x42, 0, 0x1f, 0xff, 0xe0, 0]) } } : undefined), 0); }
+        encode(f) { const i = this.n++;
+          if (!swap || i === 0) { this.send(f.timestamp, i); return; }
+          this.held.push([f.timestamp, i]);
+          if (this.held.length === 2) { const [a, b] = this.held; this.held = []; this.send(b[0], a[1]); this.send(a[0], b[1]); } }
+        async flush() { this.held.forEach(([t, i]) => this.send(t, i)); this.held = []; await new Promise(r => setTimeout(r, 30)); } close() {} }
+      window.VideoEncoder = LateVE;
+      try {
+        const c = document.createElement('canvas'); c.width = 64; c.height = 64;
+        const out = await window.SkriblMp4.encode({ ready: { MM: window.Mp4Muxer, avcCodec: 'avc1.42e028', w: 64, h: 64 },
+          canvas: c, durationSec: 0.3, audio: null, drawFrame: async () => {}, aborted: () => false, progress: () => {} });
+        await new Promise(r => setTimeout(r, 50));
+        return { file: out ? out.byteLength : 0, errs };
+      } catch (e) { await new Promise(r => setTimeout(r, 50)); return { threw: String(e.message || e), errs }; }
+      finally { window.VideoEncoder = RealVE; window.removeEventListener('error', onErr); } }"""
+    got = flip.evaluate(REORDER, True)
+    check("an encoder that sends frames out of order stops the export as an error (the editors then make a WebM)",
+          "threw" in got and "file" not in got, str(got))
+    check("...and nothing throws on the page where no one catches it", not got.get("errs"), str(got))
+    got = flip.evaluate(REORDER, False)
+    check("frames in order, answered on a later tick as a real encoder does, still make the file",
+          got.get("file", 0) > 0 and not got.get("errs") and "threw" not in got, str(got))
 
     br.close()
 

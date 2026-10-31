@@ -26884,3 +26884,114 @@ alone; as built, all green.
 
 WHAT IT DOES TO FLIP AND THE PAD: one module, both editors. The bug was
 Flip's alone; the fix and the rows are both editors'.
+
+## v330 -- the seal of everything since v329, for the auditor's packet
+
+Sealed for a reason: the owner's ask, a seal and an auditor's packet after the
+polish run. Forty-nine merges since the v329 seal (#633 to #692) carry no
+sealed record until this one; what each did is written above, under "After
+v329". In short:
+
+- The music drawer made again: its four doors (Length, Beat, Restart, Exact),
+  the timeline, magnify to 512x, Snap by the wave, the loop's own Undo and
+  Redo, the click and the beat lit as heard, songs in three, the Pad's Repeat,
+  and Skribl's ears hearing a whole bar.
+- The drawers' look and words a size up, Flip's stamp shelf with them, the
+  draw drawer's tiles, and every tool in Flip's tray with its card.
+- A bigger canvas, sharp; drawing in full screen on a desk.
+- The posting mock built (A to E): the Post sheet, Posted!, the link page's
+  way back and caption, captions where people look, the plain words, a long
+  drawing's first look.
+- The polish run's items 1 to 8: no style rule searching the whole page, a
+  Repeat turn reusing its layers, Undo from a kept copy on both editors, a long
+  drawing opening without a freeze on both, and the last words under 12px on
+  the pages as they open.
+- Main's reds put right as they came (#635, #647, #654, #658, #659, #685, #690,
+  #691).
+
+AND THE HARNESS'S PLAYWRIGHT MOVED, in this seal's own pull request. The cloud
+container now ships Chromium build 1243 (Chrome 153), Playwright 1.56 asks
+for 1194, and the old build cannot be fetched here, so no browser suite could
+launch. harness/requirements.txt pins 1.63, the release that drives 1243, by
+its own rule; CI installs the browser for whatever version resolves. Its full
+run on the branch, dispatched before the seal began, is the first evidence of
+the harness on 1.63; this seal is the second.
+
+THAT RUN FOUND TWO THINGS, and the first seal start was stopped in its first
+batch to put them right:
+
+- FIREFOX 155'S MP4 EXPORT MADE A BROKEN FILE (a real bug, found by the new
+  browser). The export asked first for H.264 High; Firefox 155's encoder
+  answers High with B-frames, frames sent out of the order they show in, and
+  the vendored mp4-muxer cannot take them. It threw "Timestamps must be
+  monotonically increasing" inside the encoder's own callback, where nothing
+  caught it, and the export finished a file of 29 frames out of 83
+  (firefox_smoke, "no page threw"). lib/mp4export.js now asks for Constrained
+  Baseline at level 4.0 first (avc1.42e028, the reach High had), which has no
+  B-frames; and a frame that comes back out of order stops the export as an
+  error, which both editors already answer with a WebM. verify_muxer, MP4
+  VIDEO: Baseline asked first; an encoder that answers out of order on a later
+  tick, as a real one does, stops the export and throws nothing uncaught; in
+  order, the file is made. Red on main's mp4export.js with Firefox's own words
+  ("DTS went from 66667 to 33333"), green with the fix. Shared by the Pad and
+  Flip (one module).
+- HEADLESS CHROMIUM NOW ENCODES H.264. Build 1243 has the encoder 1194 lacked,
+  so the Pad's Video button took the MP4 route where verify_videoexport's two
+  WebM rows for the Pad expected a WebM, and read the MP4 as nothing (red on
+  main's code too: the instrument, not the tree). Those rows now ask for the
+  WebM route by name (NO_MP4, the MP4 path declined, as NO_AAC already does
+  for the music row). And verify_mp4 no longer skips here: it ran 24/24 in
+  this container's Chromium, so the seal reports it locally and the real-Chrome
+  attestation is extra evidence rather than the only evidence. START-HERE's
+  MP4 section, release_run.mp4_attestation()'s note and the CI skip guard's
+  comment said it skipped wherever Chromium was the browser; they say why it
+  used to, and what reads the attestation now. The second seal start was
+  stopped in its second batch for this, so the sealed primer and the sealed
+  record agree.
+
+THE FULL BATTERY ON CHROME 153 FOUND FOUR MORE (CI's run on the branch, six
+of twelve shards red, each red on both databases; the third seal start was
+stopped at its seventh batch for them). One was the app, three the checks:
+
+- A LONG DRAWING'S FILE ARRIVED AS ONE TASK TOO LONG (verify_padopen, the
+  app). With the CPU 4x slower, a 60,000-point file's arrival was one task of
+  about 600 ms on a desk, where the "Pad opens a long drawing" entry measured
+  357 under Chrome 141, and the row's line is a third of painting the drawing
+  in one call (about 1,500 ms): red in CI twice and here once in three. The
+  paint's slices were about 100; the arrival had grown. Profiled: reading the
+  file's words a quarter of it, normalising its points a quarter, and the
+  Pad's loadSkribl hook normalising the whole document a second time to read
+  its media, a tenth. The Pad's file open moves from app.js, the link page's
+  script, to editor_draft.js (the link page has no #draftInput), and reads the
+  words in one task and takes the drawing in the next; the hook reads the
+  media through currentFrameMedia, as app.js says every reader should. The
+  longest task is now 188 to 297 ms, phone and desk, three runs of three. The
+  link page's script is smaller by the handler.
+- CHROME 153 WILL NOT RESIZE A WINDOW IN FULL SCREEN ("restore it to normal
+  state first"), and verify_drawfull died where it made the window the
+  screen's size inside full screen. It does so before the press now; the page
+  ends at the same size in full screen. Calibrated: with the window left at
+  the desk's height, the canvas rows go red (1017x763 and 752x564).
+- CHROME 153'S EMULATED ZOOM TELLS NO MEDIA QUERY (verify_bigcanvas). Under
+  Emulation.setDeviceMetricsOverride the ratio changes and every resolution
+  query reads the new answer, but no `change` fires, in the headless shell
+  and in full Chrome alike, with frames running. The Pad hears a ratio change
+  the standard way, a `change` on such a query, so the check keeps the
+  page's resolution queries as they are made and tells each whose answer
+  changed, as the browser tells it. Calibrated: with the Pad's listener
+  removed, red (the bitmap 763 where 954 is wanted). What a real move to
+  another screen does under Chrome 153 is not tested here.
+- CHROME 153 COUNTS AN ANCESTOR'S ROUNDED CLIP when it says what is under a
+  point (verify_book): 2px in from a Flip tray card's clip corner now reads
+  the card's stage, whose 12px rounded edge is the clip's corners by design
+  ("Every tool in Flip's tray has its card"). Nothing painted changed. The
+  corner points stand in by the rounding of whichever box clips the clip at
+  its corner, as they already did for the clip's own. Calibrated: main's
+  suite red on the same two rows; a clip pushed 10px past its stage still
+  red.
+
+WHAT IT DOES TO FLIP AND THE PAD: the file open is the Pad's (Flip's is its
+own, flip.js loadDraftFile, and its long-Flip open is FUTURE.md 6y); the
+three checks read both editors as before.
+
+The record below is generated by the release run; this entry types no counts.

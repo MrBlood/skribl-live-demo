@@ -322,8 +322,12 @@ def tree_files():
 def mp4_attestation(frozen):
     """What the seal can honestly say about H.264, for THIS tree.
 
-    verify_mp4.py SKIPS wherever Chromium is the browser: Playwright ships the
-    open-source build, which has WebCodecs but no H.264 encoder. The CI job
+    verify_mp4.py SKIPS wherever the browser has no H.264 encoder, which was
+    every Chromium the harness drove until build 1243 (Chrome 153, Playwright
+    1.63, Oct 30). Where it runs, it reports with the rest, and neither the
+    hold nor the release status waits on this file (external_coverage() reads
+    skipped suites only); RELEASE.md's `mp4 (H.264)` line still prints it, as
+    real Chrome's evidence beside the local run rather than instead of it. The CI job
     `mp4 (real Chrome)` exists to cover it and does — and an audit of v278
     pointed out that its result never reached the sealed archive, so the seal
     said "skipped 1" and nothing about whether the gap had been closed

@@ -19,7 +19,14 @@
 (function (global) {
   'use strict';
 
-  var AVC = ['avc1.640028', 'avc1.4d0028', 'avc1.42001f', 'avc1.42e01e'];
+  /* BASELINE FIRST: NO B-FRAMES (Firefox 155, Oct 30). High and Main let an
+   * encoder send frames out of the order they show in (B-frames); Chrome's
+   * never did, Firefox 155's does, and the vendored mp4-muxer cannot take
+   * them: it threw on the third frame and the export handed over a file of
+   * 29 frames out of 83. Baseline has no B-frames by definition, and for a
+   * line drawing at 6 Mbit/s it looks the same. 42e028 is Constrained
+   * Baseline at level 4.0, the reach 640028 had; the rest stay behind it. */
+  var AVC = ['avc1.42e028', 'avc1.640028', 'avc1.4d0028', 'avc1.42001f', 'avc1.42e01e'];
   var FPS = 30;
 
   async function pickAvcCodec(w, h) {
@@ -117,8 +124,17 @@
       audio: audio ? { codec: 'aac', numberOfChannels: audio.numberOfChannels, sampleRate: audio.sampleRate } : undefined,
       fastStart: 'in-memory'      // moov at the front: the file plays while it downloads
     });
-    var encErr = null;
-    var vEnc = new VideoEncoder({ output: function (c, m) { muxer.addVideoChunk(c, m); }, error: function (e) { encErr = e; } });
+    var encErr = null, lastTs = -1;
+    /* A frame that comes back out of order (a B-frame, from an encoder that
+     * took a profile with them) stops the export as an error, so the caller
+     * falls back to WebM, instead of throwing inside the encoder's own
+     * callback, where nothing caught it and the export finished a broken file. */
+    var vEnc = new VideoEncoder({ output: function (c, m) {
+      if (encErr) return;
+      if (c.timestamp < lastTs) { encErr = new Error('The encoder sent frames out of order'); return; }
+      lastTs = c.timestamp;
+      try { muxer.addVideoChunk(c, m); } catch (e) { encErr = e; }
+    }, error: function (e) { encErr = e; } });
     vEnc.configure({ codec: rd.avcCodec, width: w, height: h, bitrate: 6000000, framerate: FPS });
     var aEnc = null;
     if (audio) {
@@ -145,6 +161,7 @@
         if ((f & 7) === 0) { o.progress((f / totalFrames) * videoShare); await yieldNow(); }
       }
       await vEnc.flush();
+      if (encErr) throw encErr;
 
       // The music: ONE loop, tiled across the whole clip, in 1024-frame blocks.
       if (audio) {

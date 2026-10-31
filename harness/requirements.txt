@@ -44,10 +44,12 @@ Pillow>=10.0,<14.0
 # In a container that ships a PRE-INSTALLED Chromium (PLAYWRIGHT_BROWSERS_PATH
 # pointing at one, and browser downloads disabled), you cannot fetch — you must
 # instead pin playwright to match what is already there. Check the build number
-# with `ls $PLAYWRIGHT_BROWSERS_PATH`; build 1194 wants playwright 1.56.x, and
-# 1.62 does not launch against it. The range below is deliberately narrow for
-# that reason: widen it only after checking the browser you actually have.
-playwright>=1.55,<1.57
+# with `ls $PLAYWRIGHT_BROWSERS_PATH`; build 1243 (Chrome 153) wants playwright
+# 1.63.x, and 1.56 does not launch against it. (It was 1194 and 1.56 until the
+# container's browser moved, Oct 30; the old build cannot be fetched here.) The
+# range below is deliberately narrow for that reason: widen it only after
+# checking the browser you actually have.
+playwright>=1.63,<1.64
 
 # Flask-WTF — verify_integration runs docs/INTEGRATION.md's recipe for a host
 # that already has CSRFProtect switched on site-wide. Without it that section
