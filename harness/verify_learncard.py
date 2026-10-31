@@ -459,14 +459,26 @@ with sync_playwright() as p:
                 if q.evaluate(SIDE)["drawer"] is False:
                     q.evaluate(DRAWER)
                     q.wait_for_timeout(700)
+            # Each card's example, by what it loads: a drawing from How it
+            # works, or a phone clip in this theme (its poster and its video).
+            EXAMPLE = {"Eyedropper": "clips/eyedropper-", "Recolor": "demos/recolor.json", "Brush": "demos/brushes.json",
+                       "Size": "clips/size-", "Feel": "clips/feel-", "Eraser size": "demos/eraser.json"}
             c, q = fresh(b, PHONE, route)
+            got = []
+            q.on("response", lambda r: got.append((r.url.split("?")[0], r.status)))
             cdp = c.new_cdp_session(q)
             q.evaluate(DRAWER)
             q.wait_for_timeout(700)
             pressed = {}
             for sel, nm, line, rows in SIX:
+                got.clear()
                 press(q, cdp, sel, 700)
                 card, at = q.evaluate(CARD), q.evaluate(PLACE, sel)
+                for _ in range(25):     # a drawing waits on the player, fetched once
+                    shows = sorted({u.split("/help/")[1] for u, st in got if st < 400 and ("/help/demos/" in u or "/help/clips/" in u)})
+                    if any(u.startswith(EXAMPLE[nm]) for u in shows):
+                        break
+                    q.wait_for_timeout(100)
                 q.evaluate("() => window.SkriblLearnCard.close()")
                 q.wait_for_timeout(200)
                 side = q.evaluate(SIDE)
@@ -475,8 +487,11 @@ with sync_playwright() as p:
                     put_back(q)
                 check(f"{name}: holding {nm} in the draw drawer opens its card in the words said yes to, painted, whole on the screen and clear of {nm}",
                       bool(card) and bool(at) and card["name"] == nm and card["line"] == line and card["rows"] == rows
-                      and card["painted"] and card["rowsPainted"] and card["example"] == (nm == "Eraser size")
+                      and card["painted"] and card["rowsPainted"]
                       and at["whole"] and at["clear"] and at["ringed"] and at["painted"] and not at["cut"], f"{card}; {at}")
+                kind, stem = EXAMPLE[nm].split("/")
+                check(f"{name}: ...and {nm}'s card shows its own example, the {stem.replace('.json', '').rstrip('-')} {'drawing' if kind == 'demos' else 'clip'}",
+                      bool(card) and card["example"] and any(u.startswith(EXAMPLE[nm]) for u in shows), f"example {card and card['example']}; loaded {shows}")
             check(f"{name}: ...and none of the six holds presses its button: no eyedropper armed, no Recolor, no tile's choices, the drawer still up",
                   not pressed, str(pressed))
             # A quick tap is still a tap: the Size tile opens its choices, the

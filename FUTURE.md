@@ -1551,8 +1551,7 @@ at 402 x 874:
   following, Reset, Done), a page's actions, How it works.
 
 Each card shows an example to watch: a How it works drawing (demo) or a
-screen clip in both themes (harness/tools/make_help_clips.py). The
-Eyedropper and Recolor have neither yet.
+screen clip in both themes (harness/tools/make_help_clips.py).
 
 The calls put to the owner, defaults in brackets: (1) the draw drawer's six
 first, Eyedropper, Recolor, Brush, Size, Feel and Eraser, each with an
@@ -1567,9 +1566,10 @@ The words were mocked after the v330 seal (the six on the real card, Pad
 and Flip, phone and desk, light and dark), and the owner said "All yes" to
 them and to an example in every card, built in two steps. **Built**: the six
 cards and their words (DECISIONS, after v330, "The draw drawer's six help
-cards"), the Eraser size card with the eraser drawing. Next: the other five
-examples (Recolor and Brush as drawings that draw themselves; the
-Eyedropper, Size and Feel as phone clips), then calls 2 and 3.
+cards"), the Eraser size card with the eraser drawing; then the other five
+examples (DECISIONS, after v330, "The draw drawer's five examples"): Recolor
+and Brush as drawings that draw themselves, the Eyedropper, Size and Feel as
+phone clips, each also in How it works. Next: calls 2 and 3.
 
 ## 7. The honest state
 

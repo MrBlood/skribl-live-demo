@@ -43,7 +43,10 @@ ROLES = {
 
 class Stroke:
     def __init__(self, pts, role="form", color=INK, *, size=None, pace=None, peak=None, taper=(0.12, 0.2), bend=0.0,
-                 weight=None, tool="pen", shape=None, flat=False):
+                 weight=None, tool="pen", shape=None, flat=False, brush="pen"):
+        # `brush`: the draw drawer's brush this stroke is made with ("pen",
+        # "marker", "pencil", "airbrush"), picked as a person picks it.
+        self.brush = brush
         # `tool`: the dock tool this stroke is made with ("pen", "eraser",
         # "shape"), picked as a person taps it. `shape`: for the Shape tool,
         # {"kind": "rect"|"ellipse"|"poly"|"line", "radius": 0..50, "sides": n},
@@ -132,10 +135,12 @@ def draw(page, strokes, *, seed=1, set_ink=None, canvas="#canvas", logical=None,
     cdp = page.context.new_cdp_session(page)
     set_ink = set_ink or (lambda pg, c, s: pg.evaluate("([c, s]) => { color = c; size = s; }", [c, s]))
     timed = plan(strokes, seed, tempo)
-    prev_end, tool = None, None
+    prev_end, tool, brush = None, None, None
     for st, pts in zip(strokes, timed):
         if st.tool != tool:
             page.evaluate("t => setTool(t)", st.tool); tool = st.tool
+        if st.brush != brush:
+            page.evaluate("b => window.SkriblBrush && SkriblBrush.setBrush(b)", st.brush); brush = st.brush
         if st.shape:
             page.evaluate("""s => { document.querySelector(`#shapeSeg [data-shape='${s.kind}']`).click();
                 for (const [id, v] of [['shapeRadius', s.radius], ['shapeSides', s.sides]]) {

@@ -27299,3 +27299,54 @@ WHAT IT DOES TO FLIP: shared; one rule, both editors.
 Not tested here: a real finger and Safari (CDP touch in Chromium; no WebKit
 here). Safari honours `touch-action: none` and fires pointercancel when it
 starts a pan, so the bug and the fix should be the same there.
+
+## After v330 -- The draw drawer's five examples
+
+The second of the two steps the owner said "All yes" to: every one of the
+draw drawer's six help cards shows an example to watch. Eraser size already
+showed the eraser drawing; the other five are new. Each is also a card in
+How it works' tools (after Shape, on both editors), because a help card's
+picture is How it works' own example (lib/learncard.js).
+
+- BRUSH, a drawing that draws itself (help/demos/brushes.json): the same
+  wave in Pen, Marker, Pencil and Air, then a second pass of Air over its
+  middle, the way an airbrush builds up.
+- RECOLOR, a drawing (help/demos/recolor.json): three balloons in ink, with
+  knots, strings and shines; then each balloon takes a colour, pink, purple,
+  pink, and the replay shows it change. Made through the app:
+  harness/tools/make_art.py draws it with a pen's pressure, then arms
+  Recolor and taps each balloon on its far side, where none overlaps.
+  Flip's line stops at the change, as its card does.
+- THE EYEDROPPER, SIZE AND FEEL, phone clips in both themes, filmed under
+  touch (harness/tools/make_help_clips.py): the lens dragged onto the cat's
+  pink nose and a heart drawn in that pink; Fine from the Size tile and a
+  fine wave, then a drag sideways on Pen and a bold one; the same shaky hand
+  drawn with Smoothing off, then High.
+
+Filming Size found a bug: under a finger, the drag on Pen barely moved the
+size (the entry before this one, #701). The clip was filmed after the fix.
+
+verify_learncard's draw drawer rows now ask each card for its own example,
+loaded (a drawing, or a clip's poster and video, each answered under 400),
+on the Pad and Flip. How it works' own suites take the five new cards as
+they take every card: each replay paints and plays, each clip plays and
+follows the theme, each clip's ratio is its poster's.
+
+CALIBRATION, in a trimmed copy (the fixture and section 10), each break red
+on its own rows, on the Pad and Flip alike:
+
+- main's lib/learncard.js, served in place of the file: the five new rows
+  (no example); Eraser size green;
+- Size pointed at Feel's clip: Size alone (it loaded feel's poster and
+  video);
+- the page with How it works' Size card cut out: Size alone (no example);
+- Size's clip files answering 404: Size alone (a frame, nothing loaded).
+
+As built, 32 of 32. The first version asked only what was requested; a
+missing file would have passed, so it asks for an answer now.
+
+WHAT IT DOES TO FLIP: shared. The cards, the examples and How it works'
+five new cards are on both editors.
+
+Not tested here: the clips on a real phone and in Safari (no WebKit here);
+How it works' strip is five cards longer, still one row.

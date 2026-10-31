@@ -766,11 +766,155 @@ def clip_zoom(page, rec):
     return (x0, y0, int(w) // 2 * 2, int(h) // 2 * 2)
 
 
+# ---- the draw drawer's three, under a real finger --------------------------
+# Filmed with touch, not a mouse with a drawn fingertip: under a finger the
+# eyedropper's lens has a handle to drag, so the fingertip never sits on the
+# point being read, and the tiles and the grabber behave as on a phone.
+class Touch:
+    def __init__(self, page):
+        self.page = page
+        self.cdp = page.context.new_cdp_session(page)
+
+    def send(self, kind, pts):
+        self.cdp.send("Input.dispatchTouchEvent", {"type": kind, "touchPoints": [{"x": x, "y": y} for x, y in pts]})
+
+    def tap(self, at, after=520):
+        x, y = center(self.page, at) if isinstance(at, str) else at
+        self.send("touchStart", [(x, y)]); self.page.wait_for_timeout(130)
+        self.send("touchEnd", [])
+        self.page.wait_for_timeout(after + TAP_REST)
+        return x, y
+
+    def drag(self, path, ms, after=400):
+        """A finger down, along `path` (eased), and up."""
+        self.send("touchStart", [path[0]]); self.page.wait_for_timeout(140)
+        n = max(14, ms // 18)
+        seg = [math.hypot(b[0] - a[0], b[1] - a[1]) for a, b in zip(path, path[1:])]
+        L = sum(seg) or 1
+        for k in range(1, n + 1):
+            u = 0.5 - 0.5 * math.cos(math.pi * k / n)
+            d, i = u * L, 0
+            while i < len(seg) - 1 and d > seg[i]:
+                d -= seg[i]; i += 1
+            f = d / (seg[i] or 1)
+            a, b = path[i], path[i + 1]
+            self.send("touchMove", [(a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f)])
+            self.page.wait_for_timeout(ms // n)
+        self.page.wait_for_timeout(90)
+        self.send("touchEnd", [])
+        self.page.wait_for_timeout(after)
+
+
+def drawer_shut(t):
+    """The draw drawer closed, as a person closes it: its grabber."""
+    if t.page.evaluate("() => !document.getElementById('drawPanel').hidden"):
+        t.tap("#drawPanel .drawer-detent-handle", after=600)
+
+
+def tile_open(t, dp):
+    """The draw drawer open on one tile's choices (the drawer remembers none)."""
+    t.tap("#penToolBtn", after=650)
+    if t.page.evaluate("(k) => document.getElementById('dp' + k[0].toUpperCase() + k.slice(1)).hidden", dp):
+        t.tap(f'#drawTiles .dp-tile[data-dp="{dp}"]', after=700)
+
+
+def in_place(page, strokes, keep, tempo=2.6):
+    """Draw `strokes` keeping what the drawer just set: the size (`keep` 'size')
+    or the colour ('color'), the rest from each stroke."""
+    import artdraw
+    if keep == "size":
+        ink = lambda pg, c, s: pg.evaluate("c => { color = c; }", c)
+    else:
+        ink = lambda pg, c, s: pg.evaluate("s => { size = s; }", s)
+    artdraw.draw(page, strokes, set_ink=ink, tempo=tempo, pause_tempo=max(2.0, tempo))
+
+
+def on_canvas(page, x, y):
+    box = page.locator("#canvas").bounding_box()
+    w, h = page.evaluate("() => { const s = getCanvasLogicalSize(); return [s.width, s.height]; }")
+    return box["x"] + x * box["width"] / w, box["y"] + y * box["height"] / h
+
+
+def clip_eyedropper(page, rec):
+    """The Eyedropper: the lens lands on the cat, its handle is dragged till
+    the middle sits on the pink nose, the finger lifts and the pen is pink;
+    a small pink heart says so."""
+    import artworks
+    from artdraw import Stroke as S
+    pad_ready(page)
+    # The take stays open: an ended take locks the drawing until Keep
+    # drawing, and the heart after the pick would not go down.
+    pad_draw(page, artworks.cat(), end=False)
+    t = Touch(page)
+    rec.start(); page.wait_for_timeout(500)
+    t.tap("#penToolBtn", after=700)           # the draw drawer, at its colours
+    t.tap("#eyedropperBtn", after=900)
+    at = page.evaluate("() => _eyedropper.lensState()")
+    nose = on_canvas(page, 365, 249)
+    hx, hy = center(page, ".eyedropper-lens-handle")
+    t.drag([(hx, hy), (hx + nose[0] - at["x"], hy + nose[1] - at["y"])], 1300, after=900)
+    drawer_shut(t)
+    # In the empty corner above the tail, clear of every line of the cat.
+    heart = [(x + 86, y - 300) for x, y in
+             [(612, 470), (596, 450), (606, 434), (624, 444), (642, 434), (652, 450), (636, 470), (624, 486), (612, 470)]]
+    in_place(page, [S(heart, "detail", "#000", size=7, taper=(0.06, 0.1))], "color")
+    page.evaluate("window.__fingerHide()"); page.wait_for_timeout(800)
+    rec.stop()
+    return whole(page)
+
+
+def clip_size(page, rec):
+    """Size: Fine from the tile's quick sizes and a fine line; then the
+    quicker way, a drag sideways on Pen (one size a 6px step, rightward:
+    Pen sits at the dock's left edge) up to Huge, and a bold line."""
+    from artdraw import PURPLE, Stroke as S
+    pad_ready(page)
+    t = Touch(page)
+    rec.start(); page.wait_for_timeout(500)
+    tile_open(t, "size")
+    t.tap('#drawTiles .dp-choice[data-size="2"]', after=700)
+    drawer_shut(t)
+    wave = lambda y: [(170 + 476 * k / 30, y - 26 * math.sin(2 * math.pi * 1.25 * k / 30)) for k in range(31)]
+    in_place(page, [S(wave(210), "form", PURPLE, taper=(0.08, 0.16))], "size")
+    px, py = center(page, "#penToolBtn")
+    t.drag([(px, py), (px + 140, py)], 1200, after=700)
+    in_place(page, [S(wave(400), "form", PURPLE, taper=(0.08, 0.16))], "size")
+    page.evaluate("window.__fingerHide()"); page.wait_for_timeout(800)
+    rec.stop()
+    return whole(page)
+
+
+def clip_feel(page, rec):
+    """Feel: a shaky line as drawn, then Smooth and the same shaky hand, which
+    comes out calm."""
+    import random
+    from artdraw import PURPLE, Stroke as S
+    pad_ready(page)
+    t = Touch(page)
+    rnd = random.Random(7)
+    jit = [(rnd.uniform(-1, 1), rnd.uniform(-1, 1)) for _ in range(46)]
+    shaky = lambda y: [(170 + 476 * k / 45 + 3 * jx, y - 22 * math.sin(2 * math.pi * k / 45) + 9 * jy)
+                       for k, (jx, jy) in enumerate(jit)]
+    rec.start(); page.wait_for_timeout(500)
+    tile_open(t, "feel")
+    t.tap('#smoothSeg [data-smooth="off"]', after=600)
+    drawer_shut(t)
+    in_place(page, [S(shaky(200), "form", PURPLE, size=9, taper=(0.06, 0.12))], "color")
+    tile_open(t, "feel")
+    t.tap('#smoothSeg [data-smooth="high"]', after=600)
+    drawer_shut(t)
+    in_place(page, [S(shaky(400), "form", PURPLE, size=9, taper=(0.06, 0.12))], "color")
+    page.evaluate("window.__fingerHide()"); page.wait_for_timeout(800)
+    rec.stop()
+    return whole(page)
+
+
 CLIPS = {"music": clip_music, "post": clip_post, "select": clip_select, "liquify": clip_liquify,
          "smudge": clip_smudge, "blur": clip_blur, "fill": clip_fill, "stamp": clip_stamp,
          "artmove": clip_artmove, "inbetween": clip_inbetween, "smear": clip_smear, "onion": clip_onion,
          "hold": clip_hold, "guides": clip_guides, "takes": clip_takes, "speed": clip_speed,
-         "photo": clip_photo, "export": clip_export, "zoom": clip_zoom}
+         "photo": clip_photo, "export": clip_export, "zoom": clip_zoom,
+         "eyedropper": clip_eyedropper, "size": clip_size, "feel": clip_feel}
 # The editor a clip is filmed in, when not Pad.
 ROUTE = {k: "/flip" for k in ("select", "liquify", "smudge", "blur", "fill", "stamp", "artmove",
                                "inbetween", "smear", "onion", "hold", "guides")}
@@ -779,7 +923,10 @@ ROUTE = {k: "/flip" for k in ("select", "liquify", "smudge", "blur", "fill", "st
 # phone (390 x 640): still the whole screen, so every tap stays in frame, but
 # less empty page, so they are bigger in their cards (owner: "they're small").
 # Post and Add music keep the tall screen their sheets need.
-STEPS = ("inbetween", "smear", "onion", "hold", "guides", "takes", "speed", "photo", "export")
+STEPS = ("inbetween", "smear", "onion", "hold", "guides", "takes", "speed", "photo", "export",
+         "eyedropper", "size", "feel")
+# Filmed under a real finger (Touch, above), the page a phone's.
+TOUCH = ("eyedropper", "size", "feel")
 VIEWPORT = {k: (390, 844) for k in ("music", "post")}
 VIEWPORT.update({k: (390, 640) for k in STEPS})
 VIEWPORT["zoom"] = (1024, 768)   # a desktop: the magnifier lives in its dock
@@ -865,7 +1012,8 @@ def make(browser, name, dark):
     TAP_REST = 350 if name in SCREEN else 0
     vw, vh = VIEWPORT.get(name, (VW, VH))
     ctx = browser.new_context(viewport={"width": vw, "height": vh}, device_scale_factor=DPR,
-                              color_scheme="dark" if dark else "light")
+                              color_scheme="dark" if dark else "light",
+                              **({"has_touch": True, "is_mobile": True} if name in TOUCH else {}))
     page = ctx.new_page()
     errs = []
     page.on("pageerror", lambda e: errs.append(str(e)))

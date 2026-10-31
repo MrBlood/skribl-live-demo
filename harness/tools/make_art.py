@@ -29,13 +29,34 @@ BASE = os.environ.get("SKRIBL_BASE", "http://127.0.0.1:5001")
 # the gaps between strokes stay brisk.
 TEMPO = {"snail": (1.45, 1.9), "cat": (2.4, 3.0), "scene": (1.35, 1.9),
          "footballer": (2.6, 3.2), "skull": (2.6, 3.2), "pug": (3.0, 7.0),   # 53 strokes: a brisk hand, or it runs a minute
-         "blooby-card": blooby.CARD_TEMPO}
+         "blooby-card": blooby.CARD_TEMPO,
+         "recolor": (2.2, 3.0)}   # nine strokes and three colours: a dozen seconds, not twenty
 # The card is 70 strokes, colouring most of it, and runs 1:18 as drawn. A quicker
 # hand thins the pen's events until the small curves go faceted and lines stop
 # short, so it is drawn at its careful pace and replays that much faster.
 SPEEDUP = {"blooby-card": blooby.CARD_REPLAY_SPEEDUP}
 # A ground other than paper: the ivory card would barely part from paper.
 GROUND = {"blooby-card": blooby.TABLE}
+
+
+def recolor_after(page, taps):
+    """Recolor's drawing: with the take still recording, each tap gives a line
+    the pen's colour, as a person would, so the replay shows it change at
+    that moment (lib/recolorplay.js). A quick click, so it is a tap."""
+    box = page.locator("#canvas").bounding_box()
+    lg = page.evaluate("() => { const s = getCanvasLogicalSize(); return [s.width, s.height]; }")
+    cdp = page.context.new_cdp_session(page)
+    for hexc, (x, y) in taps:
+        page.evaluate("(h) => { setPenColor(h); SkriblPadRecolor.arm(); }", hexc)
+        page.wait_for_timeout(700)
+        cx, cy = box["x"] + x * box["width"] / lg[0], box["y"] + y * box["height"] / lg[1]
+        for t in ("mousePressed", "mouseReleased"):
+            cdp.send("Input.dispatchMouseEvent", {"type": t, "x": cx, "y": cy, "button": "left",
+                                                  "buttons": 1 if t == "mousePressed" else 0, "clickCount": 1, "pointerType": "mouse"})
+        page.wait_for_timeout(900)
+    page.evaluate("() => SkriblPadRecolor.disarm()")
+    cdp.detach()
+    page.wait_for_timeout(300)
 
 
 def make(browser, name):
@@ -57,6 +78,8 @@ def make(browser, name):
     hand, gaps = TEMPO.get(name, (1.35, 1.9))
     artdraw.draw(page, artworks.ART[name](), tempo=hand, pause_tempo=gaps)
     page.wait_for_timeout(300)
+    if name == "recolor":
+        recolor_after(page, artworks.RECOLOR_TAPS)
     payload = page.evaluate("""() => { if (recording) endRecordingTake(); const p = serializeSkribl();
         for (const k of ['draftId', 'createdAt', 'updatedAt', 'title', 'userId']) delete p[k];
         for (const f of p.frames) delete f.baseSnapshot;
