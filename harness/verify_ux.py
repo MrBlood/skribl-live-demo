@@ -2370,8 +2370,11 @@ with _sp204() as _ps:
                 _h5 = _pg.evaluate(_CAP)
                 _fit[_name] = {"start": _h0, "fitted": _h1, "between": len(_mid), "outside": _out, "dragged": _h2, "typed": _h3, "floor": _h4, "reopened": _h5, "focus": _focus}
             _c.close()
-    # A finger on the grip, on a phone: the drag is the grip's, not the sheet's scroll.
-    _c = _psb.new_context(viewport={"width": 402, "height": 874}, device_scale_factor=2, is_mobile=True, has_touch=True)
+    # A finger on the grip, on a phone: the drag is the grip's, not the sheet's
+    # scroll. On a screen 520px tall, as with the keyboard up, so the sheet does
+    # scroll: on a full phone screen nothing in it scrolls, and a finger kept
+    # the drag with or without the grip's touch-action.
+    _c = _psb.new_context(viewport={"width": 402, "height": 520}, device_scale_factor=2, is_mobile=True, has_touch=True)
     _pg = _c.new_page(); browsing.goto(_pg, BASE, "/"); waits.settle(_pg, 500)
     _sheet(_pg, "/")
     _pg.evaluate("() => document.getElementById('postCaptionInput').scrollIntoView({ block: 'center' })"); _pg.wait_for_timeout(300)
@@ -2383,6 +2386,7 @@ with _sp204() as _ps:
         _cdp.send("Input.dispatchTouchEvent", {"type": "touchMove", "touchPoints": [{"x": _gx, "y": _gy + 60 * _k / 12}]}); _pg.wait_for_timeout(16)
     _cdp.send("Input.dispatchTouchEvent", {"type": "touchEnd", "touchPoints": []}); _pg.wait_for_timeout(300)
     _grip = {"before": _t0, "after": _pg.evaluate(_CAP), "cancels": _pg.evaluate("() => window.__gc"),
+             "sheet scrolls": _pg.evaluate("() => { const s = document.getElementById('postSheet'); return s.scrollHeight > s.clientHeight + 1; }"),
              "focus": _pg.evaluate("() => document.activeElement && document.activeElement.id")}
     _c.close()
     _psb.close()
@@ -2398,7 +2402,7 @@ check("CAPTION GRIP: a mouse drags it 60px down and the box is 60px taller; what
       str({k: (v["fitted"]["h"], v["dragged"]["h"], v["typed"]["h"], v["floor"]["h"], v["focus"]) for k, v in _fit.items()}))
 check("CAPTION GRIP: ...opened again, the box fits its words again; and on a phone a finger's drag moves it 60px, none of it taken by the sheet",
       len(_fit) == 2 and all(v["reopened"]["hidden"] <= 1 and abs(v["reopened"]["h"] - v["fitted"]["h"]) <= 26 for v in _fit.values())
-      and abs(_grip["after"]["h"] - _grip["before"]["h"] - 60) <= 2 and _grip["cancels"] == 0 and _grip["focus"] != "postCaptionInput",
+      and _grip["sheet scrolls"] and abs(_grip["after"]["h"] - _grip["before"]["h"] - 60) <= 2 and _grip["cancels"] == 0 and _grip["focus"] != "postCaptionInput",
       f"reopened {[v['reopened'] for v in _fit.values()]}; phone {_grip}")
 
 print("\nDONE, THE DOT AND THE FIRST LINE — you can find Done, and you know you're recording")
