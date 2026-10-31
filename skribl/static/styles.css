@@ -2225,14 +2225,25 @@ body.replaying .tab-panel > * { opacity: var(--drawer-rest); }
   flex: 1; min-width: 0;
   font-size: 15px; font-weight: 600; line-height: 1.2;
   color: var(--text-strong);
+  text-wrap: balance;   /* two even lines on a phone, never a word alone on the second */
 }
-.recolor-undo {
+/* The smallest phones: with Redo beside Undo the words had 65px at 320 and
+   ran to four lines, out of the bar. Closer, and a size smaller (13px, over
+   the 12px floor), they keep every word inside it. */
+@media (max-width: 359px) {
+  .recolor-bar { gap: 4px; }
+  .recolor-say { font-size: 13px; line-height: 1.15; }
+}
+/* Undo and Redo (the owner, with the lens: "add a redo next to undo in
+   recolor mode"), a pair: each presses the editor's own. */
+.recolor-undo, .recolor-redo {
   flex: none; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 12px;
   background: none; color: var(--text-tool-lit); cursor: pointer;
   display: grid; place-items: center;
 }
-.recolor-undo svg { width: 26px; height: 26px; }
-.recolor-undo:disabled { opacity: .32; cursor: default; }
+.recolor-undo + .recolor-redo { margin-left: -6px; }
+.recolor-undo svg, .recolor-redo svg { width: 26px; height: 26px; }
+.recolor-undo:disabled, .recolor-redo:disabled { opacity: .32; cursor: default; }
 /* Done is the bar's one action: the action violet, white words, as Flip's
    Select and Move bars end. */
 .recolor-done {
@@ -2240,15 +2251,28 @@ body.replaying .tab-panel > * { opacity: var(--drawer-rest); }
   background: var(--accent-fill); color: #fff; cursor: pointer;
   font-size: 15px; font-weight: 600;
 }
-.recolor-swatch:focus-visible, .recolor-undo:focus-visible, .recolor-done:focus-visible {
+.recolor-swatch:focus-visible, .recolor-undo:focus-visible, .recolor-redo:focus-visible, .recolor-done:focus-visible {
   outline: 2px solid var(--focus-ring); outline-offset: 2px;
 }
 @media (hover: hover) {
-  .recolor-undo:not(:disabled):hover { color: var(--text-strong); background: rgba(var(--wash-rgb), .04); }
+  .recolor-undo:not(:disabled):hover, .recolor-redo:not(:disabled):hover { color: var(--text-strong); background: rgba(var(--wash-rgb), .04); }
 }
 /* The colour running along a line: a canvas laid over the drawing for the
-   third of a second it takes (lib/recolor.js runner), never touched. */
-.recolor-run { position: absolute; pointer-events: none; z-index: 2; }
+   third of a second it takes (lib/recolor.js runner), never touched. The
+   light (the line a press would take, lit) is laid the same way. */
+.recolor-run, .recolor-light { position: absolute; pointer-events: none; z-index: 2; }
+/* Recolor's lens (lib/recolor.js; the owner, of the lens mock: "All yes"):
+   a finger held still on the drawing brings it up above the finger, the
+   lines at 3x and the one under the finger lit. Drawn into its canvas, over
+   the ARTWORK, so theme-free like the eyedropper's lens above. */
+.recolor-lens {
+  position: fixed;
+  z-index: 10000;
+  border-radius: 50%;
+  pointer-events: none;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+}
+.recolor-lens canvas { display: block; width: 100%; height: 100%; }
 /* A finished take's Keep drawing pill sits on the drawing: while lines are being
    tapped it steps aside, and is back on Done. */
 body.recoloring #addTakePill { visibility: hidden; }

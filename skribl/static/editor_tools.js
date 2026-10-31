@@ -205,6 +205,7 @@
       repaint: () => clearAndRestore(() => paintStrokesStatic(strokes)),
       end: () => { if (typeof scheduleAutosave === 'function') scheduleAutosave(); },
       undoButton: undoBtn,
+      redoButton: redoBtn,
       openColors: () => openDrawer('draw'),
       closeColors: () => openDrawer(null),
       colorsOpen: () => !!(_padDrawerCtl && _padDrawerCtl.isOpen('draw')),

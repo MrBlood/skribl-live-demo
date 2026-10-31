@@ -5521,6 +5521,7 @@ if(window.SkriblRecolor){
       if(b && b.idx === idx) selCommitFrame(b.snap, 'Recolor');
     },
     undoButton: document.getElementById('undo'),
+    redoButton: document.getElementById('redo'),
     openColors: () => _flipDrawerCtl.open('draw'),
     closeColors: () => closePop(),
     colorsOpen: () => _flipDrawerCtl.isOpen('draw'),
