@@ -131,7 +131,9 @@ CLAIMS = {
                             "verify_drawfull.py::pressed again, the page comes back out, and the button says so",
                             "verify_drawfull.py::a drawer opens where it opens out of full screen, under the dock"],
     # Recording (Pad)
-    "Auto-record": ["verify_ux.py::AUTO-RECORD: the first stroke starts the take"],
+    "Auto-record": ["verify_ux.py::AUTO-RECORD: the first stroke starts the take",
+                    "verify_ux.py::THE DOT BREATHES: while a take records",
+                    "verify_ux.py::DONE STANDS OUT: while a take records"],
     "Two timers": ["probe:takes"],
     "Pauses": ["verify_tools.py::the Pauses seg writes through to the drawing's own setting"],
     "Canvas locks between takes": ["probe:takes"],
