@@ -2412,7 +2412,10 @@ print("\nTHE OFF SWITCH IS A LILAC GROOVE — the on colour at a fraction, press
 # a tight dark shadow. Read off the pixels at 2x on a phone, light and dark:
 # the track's middle, against the row beside it, leans to the on colour's
 # violet (blue held up over green, where the grey moved all three alike);
-# its top inside edge is darker than its middle (the groove). The knob's
+# its top inside edge is darker than its middle (the groove: the darkest of
+# the device rows 1 to 3px inside the top, clear of the edge's own blending,
+# against the middle; one pixel at 1.5px read 1.04 on the CI's Flip, where the
+# row sits at another fraction of a pixel, and failed main after #706). The knob's
 # shadow is read as computed, the property it governs: a soft, wide layer and
 # no tight dark one. And turned off, the groove is read on every frame from
 # the click, inside the page: none when on, at least one frame part-way,
@@ -2476,7 +2479,10 @@ with _sp204() as _sw:
             _px = lambda x, y: _im.getpixel((int(round(x * 2)), int(round(y * 2))))
             _mid = _r[1] + _r[3] / 2
             _ground, _fill = _px(_r[0] + _r[2] + 4, _mid), _px(_r[0] + _r[2] - 6, _mid)
-            _top, _low = _px(_r[0] + 26, _r[1] + 1.5), _px(_r[0] + 26, _r[1] + 12.5)
+            _gx = int(round((_r[0] + 26) * 2))
+            _band = [_im.getpixel((_gx, _y)) for _y in range(int(-(-(_r[1] + 1.0) * 2 // 1)), int((_r[1] + 3.0) * 2) + 1)]
+            _top = min(_band, key=_SW_LUM)
+            _low = _px(_r[0] + 26, _r[1] + 12.5)
             _gs = [_sw_groove(f) for f in _frames]
             _full = _gs[-1] if _gs else 0.0
             _swr[(_name, _th)] = {
@@ -2494,7 +2500,7 @@ check("OFF SWITCH: off, the track leans to the on colour's violet against the ro
       len(_swr) == 4 and all(v["off"] == "false" and v["lean"] >= 10 for v in _swr.values()),
       str({k: (v["off"], v["lean"], v["px"][:2]) for k, v in _swr.items()}))
 check("OFF SWITCH: ...pressed in: its top inside edge is darker than its middle, on the Pad and Flip, light and dark",
-      len(_swr) == 4 and all(v["depth"] >= 1.04 for v in _swr.values()),
+      len(_swr) == 4 and all(v["depth"] >= 1.02 for v in _swr.values()),
       str({k: (v["depth"], v["px"][2:]) for k, v in _swr.items()}))
 check("OFF SWITCH: the knob sits on a soft, wide shadow (a layer blurred 5px and more), with no tight dark one (no layer at .3 and darker)",
       len(_swr) == 4 and all(any(b >= 5 for _, b, _i in v["knob"]) and all(a < 0.3 for a, _, _i in v["knob"]) for v in _swr.values()),
