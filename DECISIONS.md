@@ -27172,3 +27172,98 @@ the two differences above.
 
 Not tested here: a real finger (touch is CDP touch events), and WebKit's
 hold; SF and Segoe UI, bracketed by the three faces above.
+
+## After v330 -- Main red after #696, on the postgres machines: three timing rows, watched
+
+Main's full run after #696 went red in three of postgres's six shards and
+in none of sqlite's, which ran the same suites on the same tree:
+
+- verify_replayspeed's pill rows, "FreeSans: no pill": the fault #698 fixed
+  (the replay ended before the third face was read), still in this tree;
+- verify_musictimeline, "each rung frames the loop over that many": one rung
+  off by 0.06 of a span on the Pad and 0.047 on Flip, where every other
+  rung read under 0.001;
+- verify_padrepeat, "no frame held at a turn": a 378ms hold at one turn of
+  three;
+- verify_captions crashed with KeyError: 'long': the gallery's card for the
+  long caption was not on the page when the cards were read.
+
+The postgres machines were slow that hour (a routine checkpoint there wrote
+for 105 seconds), and the next run, #698's, was green on all twelve shards.
+Watched, not touched: if one of these goes red again, measure it at the CPU
+4x slower before changing anything. One instrument note for then:
+verify_captions should fail the row with what was on the page, not crash
+and take the suite's other rows with it.
+
+## After v330 -- Recolor's lens: hold still to aim; a mouse lights the line; Redo
+
+The owner: "the recolor should have the same magnifier as color picker, but
+just so you can pick the stroke". Mocked on the real Pad with the cat from
+How it works, whose whiskers are 0.6px lines about 11px apart on the owner's
+iPhone, all three under one fingertip. The eyedropper's own lens, dropped in
+unchanged, showed why it could not be the same: its 10x grid is for one
+pixel's colour, and a whisker there is one row of dark cells, which whisker
+unknowable. Then "Mock up the good ideas", and "All yes, build the lens
+first and add a redo next to undo in recolor mode".
+
+BUILT, in lib/recolor.js, one module for both editors:
+
+- A FINGER HELD STILL (330ms within the 8px a press may wander) brings up a
+  lens just above it: the eyedropper's body and split ring, showing the
+  drawing at 3x from the same composited picture the colour's run draws
+  from, the line under the finger lit (a glow and a white rim round it, and
+  the line itself over them as the screen shows it, so a part rubbed out
+  stays rubbed out). The ring says before and after: the line's colour now
+  above, the pen's below. Sliding chooses another line; letting go gives the
+  lit line the colour, one step of undo; a second finger or a cancel
+  changes nothing. Near the top of the screen the lens stands beside the
+  finger. A quick tap and a drag that moves at once are what they were.
+- A MOUSE, or a pen that hovers, has nothing in its way, so no lens: the
+  line it would catch lights up as it moves, and a click takes it. It goes
+  by what is pointing, not the device.
+- THE BAR HAS REDO BESIDE UNDO, each pressing the editor's own and off when
+  it is. On a touch screen the bar says "Tap a line, or hold to aim", in two
+  balanced lines; with Redo the words had 65px at 320 and ran to four lines
+  out of the bar, so under 360px the bar is closer and the words 13px.
+- Recolor's help card gains a row for each way (Hold on a touch screen,
+  Point on a desk: lib/learncard.js now takes desk rows for a card that
+  works one way under a finger and another under a mouse), and How it
+  works' Recolor entry says the hold, the pointing and Redo.
+
+THE LIGHT IS ONE PATH A LINE. Drawn segment by segment in a see-through
+colour, every joint where two segments overlap showed as a bead, and the
+first lens, which scaled the drawing's light up 3x, showed a blob; the light
+is now one path a group at its widest, and the lens draws its own at its
+own size. Only the line's opaque footprint goes segment by segment.
+
+CALIBRATION, in a trimmed copy (the fixture and the AIMING section),
+lib/recolor.js served in place of the file, each break red on its own rows,
+on the Pad and Flip alike:
+
+- main's module: the lens, the light and Redo rows (taps, clicks and the
+  bar's layout stay green, as they should);
+- no hold: the hold rows (the lens, above, the ring, sliding, letting go,
+  a second finger, near the top);
+- the lens at once (a hold of 0): "not at once" and the quick tap. A tap
+  read at 60ms could not show this on Flip, whose press keeps the page busy
+  past 60ms, so the tap is read at 150ms, still a quick tap;
+- the lens over the finger: above, and near the top;
+- no rule for the top: near the top;
+- letting go takes the first point: letting go;
+- a second finger ignored: the second finger;
+- no hover: the desk's light;
+- Redo not pressing the editor's: Redo;
+- styles.css without the narrow rule: the two 320 rows.
+
+As built, 26 of 26. The first version of the tap, the second finger and
+Redo rows went red after an earlier row's failure had recoloured their
+lines; each now reads its own gesture against the drawing just before it,
+on a line of its own.
+
+WHAT IT DOES TO FLIP: shared; Flip's Recolor has the lens, the light and
+Redo in the same change (its editor passes its own Redo). Flip's Select bar
+keeps its way of recolouring many lines at once.
+
+Not tested here: a real finger and Safari's long press (touch is CDP touch
+events; no WebKit here); how long the hold should feel, 330ms to start and
+to tune on the owner's phone.
