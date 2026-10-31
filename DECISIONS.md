@@ -27040,3 +27040,52 @@ the next mock starts from what the owner wants the drawing to feel like, not
 from the controls on it. The help cards inside the drawers (FUTURE.md 6aa):
 the owner's "all yes" to the five calls, the seal first; their words are
 mocked next.
+
+## After v330 -- How it works' rise: a start the box held, told from a skip
+
+The next step the entry above names. The seal's fourth start went red on
+verify_helpdemos' rise row, Flip: 844 four times, then 540, 40% of the way
+in a frame the page's clock put under 50ms. Green on CI and in ten runs here.
+
+THE BROWSER CAN START A TRANSITION LATE AND DATE ITS START BACK. The glide's
+own clock (the transform transition's currentTime) then reads, at the first
+frame the sheet moves, the time since it was asked for, so that frame is a
+stretch of the way in while the page's clock saw one frame pass. A start the
+box held: the cousin of the frame the box held (After v329, #656), and the
+row set aside only that one.
+
+THE GLIDE'S CLOCK ALONE IS NOT ENOUGH. A glide pushed on (its currentTime
+moved forward) passes 50ms of its clock in a frame too, and forgiving that
+forgives a skip. So the row reads a third clock, the wall clock since the tap
+(performance.now()), and a step counts as held on the glide's clock only
+while the glide is no further on than the wall clock, a frame's grace (20ms)
+allowed: a late start never gets ahead of real time, and a skip does. Still
+one step at most is set aside, the biggest, named in the detail with both
+clocks; still one way, and seen at three places on the way at least. When
+the row is red, its detail lists by frame how far the glide's clock ran
+ahead of the wall clock.
+
+CALIBRATION, in a trimmed copy (the fixture and section 8, both editors),
+main's row, then the glide's-clock-only version tried during the seal and
+not committed, then this one:
+
+- as built: green, green, green;
+- a snap (the transition taken away): red, red, red;
+- a jump (the sheet shifted 45% of the way for two frames mid-glide): red,
+  red, red;
+- a skip (the glide pushed 150ms on at its second frame): red; GREEN, the
+  skip forgiven (658px set aside on 167ms of the glide's clock); red, the
+  glide's clock 105 to 135ms ahead of the wall clock;
+- a held start (the glide held at 0 for four frames, then given the time
+  since it began, as the browser dates it): red, the seal's red; green;
+  green (478px set aside on 90ms of the glide's clock on the Pad, 585px on
+  127ms on Flip).
+
+As built, five more runs of the trimmed copy: green, nothing set aside. The
+first try at the jump moved the box by margin-top, and the sheet's
+translateY(100%), a share of its own height, took most of it back (51px of
+342): green on all three, an instrument that could not go red. The jump is a
+translate now, which nothing takes back.
+
+WHAT IT DOES TO THE APP: nothing; the row is the instrument. Pad and Flip:
+the same row on both.
