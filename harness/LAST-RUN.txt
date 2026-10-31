@@ -1,48 +1,51 @@
 ================ RUN CONTEXT ================
-UTC timestamp           : 2026-10-22T23:01:32Z
+UTC timestamp           : 2026-10-31T00:03:32Z
 Host                    : Linux x86_64
-Tree SHA-256            : 030a18b6103acfa926651809cf1b9b98935906d7e5ad0d705d95d93ad90e022e
-Git commit              : f128812
+Tree SHA-256            : cdb7d50996ab6b5ac87845d11e3af0499725202a6dc4879c8e07ea334df0932b
+Git commit              : 17d7855
 Source state            : generated-only dirty
                             harness/LAST-RUN.txt
-SKRIBL_VERSION          : v329
+SKRIBL_VERSION          : v330
 Python                  : 3.12.3
 Flask                   : 3.1.3
 SQLAlchemy              : 2.0.51
-Playwright              : 1.56.0
-Chromium                : 141.0.7390.37
+Playwright              : 1.63.0
+Chromium                : 153.0.8010.12
 DATABASE_URL class      : sqlite
-Database reset          : yes (fresh /tmp/tmp.U9SYLdOqxa/harness.db)
+Database reset          : yes (fresh /tmp/tmp.LEgcZvrLhT/harness.db)
 SKRIBL_RATE_MAX_POSTS   : 100000
 SKRIBL_RATE_MAX_ATTEMPTS: (default)
 SKRIBL_TRUSTED_PROXIES  : (default 0)
 SKRIBL_EMBED_ORIGINS    : (unset)
 SKRIBL_CSP              : (default on)
-Command                 : /home/user/skribl-live-demo/harness/run_harness.sh verify_flipnib.py
+Command                 : /home/user/skribl-live-demo/harness/run_harness.sh verify_soundfade.py
 ============================================
 
 ================ AGGREGATE (machine-generated) ================
-# whole release run: 92 batches recorded as one run
-suites requested : 149
-  verify_a11y.py: ok — 595/595 passed
+# whole release run: 117 batches recorded as one run
+suites requested : 175
+  verify_a11y.py: ok — 444/444 passed
+  verify_a11ypages.py: ok — 158/158 passed
   verify_amber.py: ok — 110/110 passed
   verify_apiedges.py: ok — 61/61 passed
   verify_ask.py: ok — 54/54 passed
   verify_assetcache.py: ok — 12/12 passed
-  verify_audio.py: ok — 18/18 passed
+  verify_audio.py: ok — 11/11 passed
   verify_audiosession.py: ok — 41/41 passed
   verify_audiostate.py: ok — 33/33 passed
   verify_backfill.py: ok — 23/23 passed
   verify_beading.py: ok — 34/34 passed
+  verify_bigcanvas.py: ok — 79/79 passed
   verify_book.py: ok — 56/56 passed
   verify_boot.py: ok — 23/23 passed
   verify_bootstrap.py: ok — 7/7 passed
   verify_canvas.py: ok — 48/48 passed
+  verify_captions.py: ok — 76/76 passed
   verify_cardfade.py: ok — 25/25 passed
   verify_clouddrafts.py: ok — 94/94 passed
   verify_compactops.py: ok — 28/28 passed
   verify_compose.py: ok — 86/86 passed
-  verify_contrast.py: ok — 334/334 passed
+  verify_contrast.py: ok — 598/598 passed
   verify_createpost.py: ok — 74/74 passed
   verify_csp.py: ok — 32/32 passed
   verify_csrf.py: ok — 27/27 passed
@@ -50,36 +53,41 @@ suites requested : 149
   verify_deletion.py: ok — 67/67 passed
   verify_deletion_foundation.py: ok — 17/17 passed
   verify_delivery.py: ok — 26/26 passed
-  verify_docs.py: ok — 141/141 passed  (2 not applicable: RELEASE.md and LAST-RUN.txt agree on the assertion count; and on the tree they were produced from)
+  verify_docs.py: ok — 142/142 passed  (2 not applicable: RELEASE.md and LAST-RUN.txt agree on the assertion count; and on the tree they were produced from)
   verify_dots.py: ok — 39/39 passed
   verify_draftrace.py: ok — 4/4 passed
   verify_drafts.py: ok — 99/99 passed
+  verify_drawfull.py: ok — 48/48 passed
+  verify_drawtiles.py: ok — 289/289 passed
   verify_example.py: ok — 32/32 passed
   verify_exopts.py: ok — 26/26 passed
   verify_exportui.py: ok — 60/60 passed
   verify_externalised.py: ok — 13/13 passed
   verify_feed.py: ok — 25/25 passed
   verify_fill.py: ok — 28/28 passed
+  verify_firstlook.py: ok — 35/35 passed
   verify_fix.py: ok — 18/18 passed
+  verify_flipbeat.py: ok — 40/40 passed
   verify_flipdraft.py: ok — 22/22 passed
   verify_flipedges.py: ok — 14/14 passed
   verify_flipmeta.py: ok — 70/70 passed
   verify_flipmotion.py: ok — 27/27 passed
   verify_flipnib.py: ok — 17/17 passed
+  verify_flipopen.py: ok — 19/19 passed
   verify_flipspeed.py: ok — 20/20 passed
   verify_framecache.py: ok — 23/23 passed
   verify_fullfade.py: ok — 70/70 passed
   verify_fullsmart.py: ok — 26/26 passed
   verify_fuzz.py: ok — 7/7 passed
   verify_galib.py: ok — 176/176 passed
-  verify_gallery.py: ok — 207/207 passed
+  verify_gallery.py: ok — 208/208 passed
   verify_gifenc.py: ok — 39/39 passed
-  verify_glide.py: ok — 10/10 passed
+  verify_glide.py: ok — 12/12 passed
   verify_hello.py: ok — 32/32 passed
   verify_help.py: ok — 87/87 passed
   verify_helpclaims.py: ok — 45/45 passed
   verify_helpdemos.py: ok — 124/124 passed
-  verify_hold.py: ok — 64/64 passed
+  verify_hold.py: ok — 74/74 passed
   verify_hostconfig.py: ok — 57/57 passed
   verify_hostseams.py: ok — 69/69 passed
   verify_hot.py: ok — 53/53 passed
@@ -91,10 +99,11 @@ suites requested : 149
   verify_integration.py: ok — 29/29 passed
   verify_jsstrip.py: ok — 35/35 passed
   verify_keys.py: ok — 9/9 passed
-  verify_layout.py: ok — 255/255 passed
-  verify_learncard.py: ok — 37/37 passed
+  verify_layout.py: ok — 257/257 passed
+  verify_learncard.py: ok — 43/43 passed
   verify_lib.py: ok — 8/8 passed
-  verify_library.py: ok — 244/244 passed
+  verify_library.py: ok — 246/246 passed
+  verify_linkpage.py: ok — 58/58 passed
   verify_liquify.py: ok — 32/32 passed
   verify_loop.py: ok — 22/22 passed
   verify_loopcap.py: ok — 22/22 passed
@@ -107,72 +116,89 @@ suites requested : 149
   verify_menu.py: ok — 67/67 passed
   verify_migrations.py: ok — 77/77 passed
   verify_mimeparity.py: ok — 26/26 passed
-  verify_motion.py: ok — 20/20 passed
+  verify_motion.py: ok — 22/22 passed
   verify_move.py: ok — 82/82 passed
-  verify_mp4.py: SKIPPED (0 assertions) — WebCodecs present but no H.264 profile is supported: {'avc1.42001f': False, 'avc1.4d0028': False, 'avc1.640028': False}
+  verify_mp4.py: ok — 24/24 passed
   verify_music.py: ok — 37/37 passed
-  verify_muxer.py: ok — 20/20 passed
+  verify_musicbeat.py: ok — 62/62 passed
+  verify_musicclick.py: ok — 24/24 passed
+  verify_musicdoors.py: ok — 112/112 passed
+  verify_musicears.py: ok — 83/83 passed
+  verify_musiclane.py: ok — 44/44 passed
+  verify_musicsnap.py: ok — 52/52 passed
+  verify_musictall.py: ok — 72/72 passed
+  verify_musictempo.py: ok — 56/56 passed
+  verify_musicthree.py: ok — 49/49 passed
+  verify_musictimeline.py: ok — 182/182 passed
+  verify_musicundo.py: ok — 102/102 passed
+  verify_muxer.py: ok — 25/25 passed
   verify_names.py: ok — 9/9 passed
   verify_nametab.py: ok — 29/29 passed
   verify_newundo.py: ok — 10/10 passed
   verify_offline.py: ok — 28/28 passed
   verify_onefull.py: ok — 57/57 passed
-  verify_onepill.py: ok — 2918/2918 passed
+  verify_onepill.py: ok — 2374/2374 passed
   verify_padcanvas.py: ok — 28/28 passed
   verify_padedges.py: ok — 17/17 passed
-  verify_pages.py: ok — 81/81 passed
+  verify_padopen.py: ok — 25/25 passed
+  verify_padrepeat.py: ok — 24/24 passed
+  verify_pages.py: ok — 87/87 passed
   verify_pagespan.py: ok — 56/56 passed
-  verify_parity.py: ok — 410/410 passed
-  verify_pillfit.py: ok — 24/24 passed
+  verify_pagewide.py: ok — 7/7 passed
+  verify_parity.py: ok — 412/412 passed
+  verify_pillfit.py: ok — 28/28 passed
   verify_player_isolation.py: ok — 85/85 passed
   verify_player_photo.py: ok — 9/9 passed
   verify_pointerpad.py: ok — 55/55 passed
   verify_posted.py: ok — 163/163 passed
   verify_postgres.py: SKIPPED (0 assertions) — cannot connect to PostgreSQL at the configured DSN (OperationalError)
+  verify_postmoment.py: ok — 82/82 passed
   verify_posttitle.py: ok — 18/18 passed
   verify_prefix.py: ok — 36/36 passed
   verify_pressure.py: ok — 27/27 passed
   verify_privacy.py: ok — 54/54 passed
   verify_race.py: ok — 17/17 passed
-  verify_recolor.py: ok — 88/88 passed
+  verify_recolor.py: ok — 92/92 passed
   verify_recolorplay.py: ok — 23/23 passed
-  verify_replayspeed.py: ok — 154/154 passed
+  verify_replayspeed.py: ok — 168/168 passed
   verify_report.py: ok — 35/35 passed
   verify_review.py: ok — 291/291 passed
   verify_runreport.py: ok — 13/13 passed
   verify_s3.py: ok — 30/30 passed
   verify_scrub.py: ok — 16/16 passed
-  verify_seam.py: ok — 427/427 passed
+  verify_seam.py: ok — 442/442 passed
   verify_select.py: ok — 58/58 passed
   verify_sharecard.py: ok — 30/30 passed
-  verify_sharedrules.py: ok — 105/105 passed
+  verify_sharedrules.py: ok — 106/106 passed
   verify_sheetfit.py: ok — 16/16 passed
   verify_sheetswipe.py: ok — 246/246 passed
   verify_sizeclass.py: ok — 89/89 passed
   verify_smudgeblur.py: ok — 95/95 passed
-  verify_stamps.py: ok — 75/75 passed
+  verify_soundfade.py: ok — 25/25 passed
+  verify_stamps.py: ok — 76/76 passed
   verify_storage.py: ok — 38/38 passed
   verify_strokegroups.py: ok — 24/24 passed
   verify_surfaces.py: ok — 12/12 passed
   verify_sweepjob.py: ok — 66/66 passed
   verify_takedown.py: ok — 56/56 passed
   verify_tappause.py: ok — 40/40 passed
-  verify_theme.py: ok — 118/118 passed
+  verify_theme.py: ok — 120/120 passed
   verify_tilereport.py: ok — 32/32 passed
-  verify_tips.py: ok — 61/61 passed
-  verify_tools.py: ok — 136/136 passed
+  verify_tips.py: ok — 68/68 passed
+  verify_tools.py: ok — 142/142 passed
   verify_tray.py: ok — 145/145 passed
   verify_tween.py: ok — 161/161 passed
   verify_txcontract.py: ok — 95/95 passed
   verify_under.py: ok — 29/29 passed
-  verify_ux.py: ok — 491/491 passed
+  verify_undofast.py: ok — 55/55 passed
+  verify_ux.py: ok — 471/471 passed
   verify_version.py: ok — 40/40 passed
   verify_videoexport.py: ok — 26/26 passed
   verify_viewedges.py: ok — 19/19 passed
   verify_visual.py: ok — 78/78 passed
   verify_waits.py: ok — 17/17 passed
   verify_watchfull.py: ok — 76/76 passed
-  verify_words.py: ok — 28/28 passed
-assertions passed: 13211   (skipped suites contribute 0)
-suites skipped   : 2
+  verify_words.py: ok — 34/34 passed
+assertions passed: 14734   (skipped suites contribute 0)
+suites skipped   : 1
 suites with problems: 0
