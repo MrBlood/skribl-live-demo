@@ -1577,8 +1577,9 @@ found (a tall card's clip frame gives up its spare height so the card never
 covers its row; ? puts a row's tag on its name, and its banner moves off the
 tags). Three play How it works' clips (Motion guides, Smear weight, Onion
 skin); the other seven's examples come next, as the draw drawer's did. The
-owner then asked for a Settings switch to turn the cards off (mocked: a row
-of its own under Tips). Next: the switch, the seven examples, then call 3.
+owner then asked for a Settings switch to turn the cards off: **built**, a
+row of its own under Tips (DECISIONS, after v330, "A switch for the help
+cards"). Next: the seven examples, then call 3.
 
 ## 7. The honest state
 

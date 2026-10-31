@@ -27714,3 +27714,55 @@ Pad's five.
 
 Not tested here: a real finger and WebKit's hold (touch is CDP touch
 events); SF and Segoe UI, bracketed by the three faces above.
+
+## After v330 -- A switch for the help cards
+
+The owner, saying yes to Tune's cards: "there should be a toggle to shut off
+help cards in settings, don't you think?" The mock (Settings on the real
+Pad and Flip, phone and desk, light and dark, Now beside A and B) proposed
+A, a row of its own under Tips; B, Tips covering both, would have taken the
+cards from anyone who had already turned Tips off without their choosing
+it. "Yes" to A and to what Off does.
+
+- SETTINGS' HELP CARDS ROW, under Tips: the same switch in the same tokens
+  (the name 16.2:1 light and 16.8:1 dark, its line 8.3:1 and 9.7:1), On to
+  start. Its line names the gesture: "Hold a button" on a touch screen,
+  "Rest on a button" on a desk (set by lib/learncard.js, which knows which
+  it is). On a phone it is exactly Tips' size; a desk's label column is
+  narrow, and it takes four short lines to Tips' three.
+- OFF: a hold or a rest opens nothing, and the lift is just a tap; the
+  system's own callout is not held back on a button that opens no card;
+  the first-time note ("Hold any button...") stays away. ? and How it
+  works' Name every button still name every button and open its card,
+  because then you asked.
+- NO DEAD ENDS: where How it works says to hold a button (Name every
+  button's line, and the line under a search that finds nothing), Off says
+  where the switch is instead.
+- ONE SETTING FOR BOTH EDITORS, one key (skribl.learncard.off.v1),
+  synchronised across tabs; lib/learncard.js wires the row itself, so the
+  two editors cannot wire it differently.
+
+verify_learncard SECTION 12 holds it, on both editors: the row, under Tips,
+On, painted, its line; Off kept, and a held Eraser opening no card but
+picked; How it works' two lines; ? still naming and a tag opening its card;
+On again, a hold opening Pen's card and How it works back to "hold one";
+the first-time note away while Off and there while On; on a desk the row's
+line and a rest opening nothing; Off on the Pad Off on Flip. verify_parity
+and verify_onepill count the new switch among Settings' controls.
+
+CALIBRATION, the part alone, the module served in place of the file:
+main's, 11 of 15 red (the row, which is the template's, and ? work on main
+too: green);
+holding not asked, the two hold rows; resting not asked, the two desk
+rows; the note not asked, the two note rows; How it works' line left, the
+two words rows; ? refusing while Off, the two ? rows; the desk's line not
+set, the two desk rows; a key per editor, Off on the Pad not Off on Flip
+(and Flip's rows that read the one key). The key-per-editor break was
+first written with FLIP before the module sets it, and changed nothing:
+15 of 15 green, the break and not the check at fault. As built, 15 of 15.
+
+WHAT IT DOES TO FLIP: shared, one module and one key; Flip's Settings has
+the same row.
+
+Not tested here: WebKit's callout on a long press with the cards off (no
+WebKit here).
