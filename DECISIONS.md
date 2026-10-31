@@ -27089,3 +27089,31 @@ translate now, which nothing takes back.
 
 WHAT IT DOES TO THE APP: nothing; the row is the instrument. Pad and Flip:
 the same row on both.
+
+## After v330 -- Main red after #695: the Pad's line ended before its third face
+
+Main's full run after #695, which changed only documents, went red on one
+row, in sqlite's fourth shard and not postgres's: verify_replayspeed,
+"[320] the Pad's line while it plays: its end speeds as far from the pill's
+edge as two speeds are apart, in each face", with "its own face: ok;
+Liberation Sans: ok; FreeSans: no pill".
+
+THE PILL WAS GONE, NOT WRONG. The row draws two short lines, plays them,
+opens the speeds and reads the pill in each face in turn. The line goes with
+the scrubber when the replay ends (editor_draw.js), and this drawing replays
+in about a second, so on a slow runner the replay ended before the third
+face was read, and there was no pill to read.
+
+THE REPLAY IS PAUSED BEFORE THE FACES ARE READ (pausePlayback(), as
+verify_recolorplay pauses it), so the line stays, however long the faces
+take. The desk pill at 1280 stays after a replay ends and was never at risk;
+it is paused too, in the same loop.
+
+CALIBRATION, in a trimmed copy (the fixture and the first loop of THE PILL'S
+ENDS): with a slow runner made by waiting 1.5s before the faces are read,
+main's row red at 320 and 402 with "no pill" in every face (CI's red, whole),
+and the desk pill green; paused, all three green; as built, both green. The
+whole suite: 168/168 (3.7 min, on its own server).
+
+WHAT IT DOES TO THE APP: nothing; the row is the instrument. It reads the
+Pad's line only; Flip's speeds are not in this row.

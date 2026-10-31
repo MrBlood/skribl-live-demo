@@ -1277,6 +1277,12 @@ with sync_playwright() as p:
                 pg.mouse.move(box["x"] + 80 + i * 6, box["y"] + 140 + k * 100 + math.sin(i / 5) * 20); pg.wait_for_timeout(12)
             pg.mouse.up(); pg.wait_for_timeout(200)
         pg.click("#recordBtn"); pg.wait_for_timeout(300); pg.click("#playBtn"); pg.wait_for_timeout(400)
+        # HELD WHILE IT IS READ (main red after #695: "FreeSans: no pill"). The
+        # line goes with the scrubber when the replay ends, and this drawing
+        # replays in about a second: on a slow runner it ended before the
+        # third face was read. Paused, the replay stays where it is, and so
+        # does its line, however long the faces take.
+        pg.evaluate("() => pausePlayback()")
         pg.evaluate("(s) => document.querySelector(s + ' .rl-speed').click()", sel); pg.wait_for_timeout(400)
         ok, said = ends_faces(pg, sel + " .rl-chips", fits)
         check(f"[{vw}] {where}: its end speeds as far from the pill's edge as two speeds are apart, in each face", ok, said)
