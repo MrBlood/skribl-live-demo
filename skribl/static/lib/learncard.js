@@ -137,7 +137,8 @@
       do: [['Tap', 'A lens lands on your drawing'], ['Drag', 'Move the lens onto a colour'], ['Let go', 'Your pen takes that colour']] },
     { sel: '#recolorBtn', name: 'Recolor', tag: 'Recolor',
       line: FLIP ? 'Give lines you’ve drawn your pen’s colour.' : 'Give lines you’ve drawn your pen’s colour. The replay shows them change.',
-      do: [['Tap a line', 'It takes your pen’s colour'], ['Drag across', 'Every line you cross'], ['Done', 'Back to the pen']] },
+      do: [['Tap a line', 'It takes your pen’s colour'], ['Hold', 'A lens, to aim at a thin line'], ['Drag across', 'Every line you cross'], ['Done', 'Back to the pen']],
+      deskDo: [['Point', 'The line under it lights up'], ['Click', 'That line takes your pen’s colour'], ['Drag across', 'Every line you cross'], ['Done', 'Back to the pen']] },
     { sel: '#drawTiles .dp-tile[data-dp="brush"]', name: 'Brush', tag: 'Brush', more: 'Brush style',
       line: 'The kind of line you draw, from a clean pen to soft air.',
       do: [['Tap', 'Pen, Marker, Pencil or Air']] },
@@ -281,6 +282,9 @@
     body.querySelector('.lc-t').textContent = spec.name;
     body.querySelector('.lc-line').textContent = spec.line;
     var rows = spec.trayDo && el.classList.contains('tool-tray-btn') ? spec.trayDo : spec.do;
+    // A card whose button works one way under a finger and another under a
+    // mouse says the mouse's way on a desk (Recolor: hold to aim, or point).
+    if (!touchFirst && spec.deskDo && rows === spec.do) rows = spec.deskDo;
     if (rows && rows.length) {
       var dl = document.createElement('dl');
       dl.className = 'lc-do';

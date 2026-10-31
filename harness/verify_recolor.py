@@ -251,8 +251,9 @@ with sync_playwright() as pw:
         check(f"{route}: the dock's own pen is out of reach under the bar, for a finger and for the keyboard",
               not m["penHit"] and m["penVis"] == "hidden", json.dumps(m))
         check(f"{route}: the canvas stays where it was", all(abs(a - b_) <= 0.5 for a, b_ in zip(cv0, m["cv"])), f"{cv0} -> {m['cv']}")
+        # On a touch screen it says the hold too (the lens; the AIMING rows).
         check(f"{route}: the bar says what to do and Recolor is pressed",
-              m["say"] == "Tap a line to recolor" and m["pressed"] == "true", json.dumps(m))
+              m["say"] == "Tap a line, or hold to aim" and m["pressed"] == "true", json.dumps(m))
         q.evaluate(f"() => ({e['pen']})('{PINK}')"); q.wait_for_timeout(150)
         q.click(".recolor-swatch"); q.wait_for_timeout(450)
         opened = q.evaluate(e["drawerOpen"])
@@ -630,6 +631,179 @@ with sync_playwright() as pw:
             c.close()
 
     # ================================================================== the ends
+    # ================================================================ aiming
+    # THE LENS (the owner: "the recolor should have the same magnifier as color
+    # picker, but just so you can pick the stroke"; the lens mock, "All yes").
+    # Three thin lines 12 units apart (about 5px on a phone): a finger covers
+    # all three. A finger held still brings up the lens above it, the line
+    # under it lit; sliding chooses another; letting go recolours the one lit
+    # and no other, one step of undo. A quick tap is still a tap; a second
+    # finger while aiming changes nothing. Near the top of the screen the lens
+    # stands beside the finger. A mouse lights the line it would catch, with
+    # no lens, and a click takes that line. The bar's Redo puts back what its
+    # Undo took.
+    print("\nAIMING — hold still for the lens, slide, let go; a tap is a tap; a mouse lights the line; Redo")
+    AIM_Y = (250, 262, 274, 290, 306)      # three to aim among; one for a tap, one for Redo
+
+    def aiming_drawing():
+        d = drawing()
+        f = d["frames"][0]
+        extra = [_line(100, y, 420, y, INK, 3, 9000 + k * 1000, n=30) for k, y in enumerate(AIM_Y)]
+        extra.append(_line(100, 22, 420, 22, INK, 3, 15000, n=30))        # a line along the top edge
+        for l in extra:
+            f["strokes"] += l
+            f["strokeGroups"].append(len(l))
+        return d
+
+    AIM = """() => { const r = %s; return r && r.aimState ? r.aimState() : { aiming: false, lit: null, lens: null, none: true }; }"""
+    LENSPX = """(which) => { const c = document.querySelector('.recolor-lens canvas'); if (!c || c.closest('[hidden]')) return null;
+        const x = c.getContext('2d'), w = c.width, h = c.height, R = (53 + 5.5 / 2) / (53 + 5.5 + 1) * w / 2;
+        const at = (dy) => [...x.getImageData(Math.round(w / 2), Math.round(h / 2 + dy * R), 1, 1).data].slice(0, 3);
+        return { top: at(-1), bottom: at(1) }; }"""
+
+    def near_rgb(px, hexc, tol=40):
+        return px is not None and sum(abs(a - int(hexc[i:i + 2], 16)) for a, i in zip(px, (1, 3, 5))) <= tol
+
+    def touch_at(cdp, t, pts):
+        cdp.send("Input.dispatchTouchEvent", {"type": t, "touchPoints": [{"x": x, "y": y, "id": k + 1} for k, (x, y) in enumerate(pts)]})
+
+    for route in ED:
+        e = ED[route]
+        rc = e["rc"]
+        c, q = fresh(b, route)
+        load(q, route, aiming_drawing())
+        q.evaluate(f"() => {{ ({e['pen']})('{GREEN}'); {rc}.arm(); }}"); q.wait_for_timeout(300)
+        n0 = len(colours(q, route))
+        gA, gB, gC, gD, gE = n0 - 6, n0 - 5, n0 - 4, n0 - 3, n0 - 2
+        cdp = c.new_cdp_session(q)
+        A, C = screen_of(q, route, 260, AIM_Y[0]), screen_of(q, route, 260, AIM_Y[2])
+        u0 = undo_depth(q, route)
+        touch_at(cdp, "touchStart", [(A["x"], A["y"])]); q.wait_for_timeout(120)
+        early = q.evaluate(AIM % rc)
+        q.wait_for_timeout(450)
+        s1 = q.evaluate(AIM % rc)
+        px = q.evaluate(LENSPX, None)
+        lens = s1 and s1["lens"]
+        check(f"{route}: a finger held still brings up the lens (not at once: a tap is not a hold), the line under it lit",
+              not early["aiming"] and early["lens"] is None and s1["aiming"] and s1["lit"] == [gA, gA] and lens is not None,
+              f"early {early}, then {s1}")
+        check(f"{route}: the lens stands above the finger, clear of the fingertip and whole on the screen",
+              bool(lens) and lens["top"] + lens["height"] <= A["y"] - 22 + 0.5 and lens["top"] >= 0 and lens["left"] >= 0
+              and lens["left"] + lens["width"] <= 402 and abs(lens["left"] + lens["width"] / 2 - A["x"]) <= 1, f"{lens}, finger at {A}")
+        check(f"{route}: its ring says before and after: the line's colour above, the pen's below",
+              px is not None and near_rgb(px["top"], INK) and near_rgb(px["bottom"], GREEN), str(px))
+        steps = 8
+        for k in range(1, steps + 1):
+            touch_at(cdp, "touchMove", [(A["x"], A["y"] + (C["y"] - A["y"]) * k / steps)]); q.wait_for_timeout(16)
+        q.wait_for_timeout(120)
+        s2 = q.evaluate(AIM % rc)
+        mid = colours(q, route)
+        check(f"{route}: sliding chooses another line, and nothing changes while aiming",
+              s2 and s2["aiming"] and s2["lit"] == [gC, gC] and mid[gA] == mid[gB] == mid[gC] == INK, f"{s2}; {mid[gA:gC + 1]}")
+        touch_at(cdp, "touchEnd", []); q.wait_for_timeout(600)
+        s3, c3 = q.evaluate(AIM % rc), colours(q, route)
+        check(f"{route}: letting go gives the lit line the colour, and no other, one step of undo, the lens gone",
+              c3[gC] == GREEN and c3[gA] == INK and c3[gB] == INK and undo_depth(q, route) == u0 + 1
+              and s3 and not s3["aiming"] and s3["lens"] is None and s3["lit"] is None, f"{c3[gA:gC + 1]}, undo {u0} -> {undo_depth(q, route)}, {s3}")
+        # Each row below reads only what its own gesture did, against the
+        # drawing just before it, on a line of its own where it needs one.
+        D = screen_of(q, route, 260, AIM_Y[3])
+        c_before = colours(q, route)
+        # Read at 150ms: still a quick tap (the lens waits 330), and past the
+        # moment Flip's press keeps the page busy (over 60ms), so a lens that
+        # came at once would show here.
+        touch_at(cdp, "touchStart", [(D["x"], D["y"])]); q.wait_for_timeout(150)
+        mid_tap = q.evaluate(AIM % rc)
+        touch_at(cdp, "touchEnd", []); q.wait_for_timeout(600)
+        c4 = colours(q, route)
+        check(f"{route}: a quick tap is still a tap: the line under it, at once, and no lens on the way",
+              c_before[gD] == INK and c4[gD] == GREEN and all(c4[i] == c_before[i] for i in range(len(c4)) if i != gD)
+              and not mid_tap["aiming"] and mid_tap["lens"] is None, f"{c_before[gD]} -> {c4[gD]}, during {mid_tap}")
+        u1, c_before = undo_depth(q, route), colours(q, route)
+        touch_at(cdp, "touchStart", [(A["x"], A["y"])]); q.wait_for_timeout(500)
+        held = q.evaluate(AIM % rc)
+        touch_at(cdp, "touchStart", [(A["x"], A["y"]), (A["x"] + 120, A["y"] + 40)]); q.wait_for_timeout(80)
+        pinch = q.evaluate(AIM % rc)
+        touch_at(cdp, "touchEnd", []); q.wait_for_timeout(500)
+        check(f"{route}: a second finger while aiming changes nothing and puts the lens away",
+              held["aiming"] and not pinch["aiming"] and pinch["lens"] is None
+              and colours(q, route) == c_before and undo_depth(q, route) == u1, f"held {held}, then {pinch}; undo {u1} -> {undo_depth(q, route)}")
+        # THE BAR'S REDO: after a tap of its own and the bar's Undo, on, and it
+        # puts the colour back; then off, with nothing left to put back.
+        E = screen_of(q, route, 260, AIM_Y[4])
+        touch_at(cdp, "touchStart", [(E["x"], E["y"])]); q.wait_for_timeout(60); touch_at(cdp, "touchEnd", []); q.wait_for_timeout(600)
+        r0 = q.evaluate("() => { const r = document.querySelector('.recolor-redo'); return r ? [r.disabled, r.getAttribute('aria-label'), !!r.getClientRects().length] : null; }")
+        ct = colours(q, route)
+        q.click(".recolor-undo"); q.wait_for_timeout(400)
+        r1 = q.evaluate("() => (document.querySelector('.recolor-redo') || {}).disabled")
+        cu = colours(q, route)
+        if q.evaluate("() => !!document.querySelector('.recolor-redo')"):
+            q.click(".recolor-redo"); q.wait_for_timeout(400)
+        r2 = q.evaluate("() => (document.querySelector('.recolor-redo') || {}).disabled")
+        cr = colours(q, route)
+        check(f"{route}: the bar has Redo beside Undo: off with nothing to put back, on after Undo, and it puts the colour back",
+              r0 == [True, "Redo", True] and ct[gE] == GREEN and cu[gE] == INK and r1 is False and cr[gE] == GREEN and r2 is True,
+              f"{r0}, tap {ct[gE]}, undo {cu[gE]} redo-off {r1}, redo {cr[gE]} then off {r2}")
+        c.close()
+        # NEAR THE TOP: a phone on its side, a line along the drawing's top edge.
+        c = b.new_context(viewport={"width": 844, "height": 390}, device_scale_factor=2, is_mobile=True, has_touch=True)
+        q = c.new_page(); browsing.goto(q, BASE, route)
+        q.evaluate("() => { window.SkriblHints && SkriblHints.hide && SkriblHints.hide(); }")
+        load(q, route, aiming_drawing())
+        q.evaluate(f"() => {{ ({e['pen']})('{GREEN}'); {rc}.arm(); }}"); q.wait_for_timeout(300)
+        T = screen_of(q, route, 260, 22)
+        cdp = c.new_cdp_session(q)
+        touch_at(cdp, "touchStart", [(T["x"], T["y"])]); q.wait_for_timeout(500)
+        st = q.evaluate(AIM % rc)
+        touch_at(cdp, "touchEnd", []); q.wait_for_timeout(300)
+        lz = st["lens"]
+        clear = bool(lz) and (lz["left"] >= T["x"] + 22 - 0.5 or lz["left"] + lz["width"] <= T["x"] - 22 + 0.5)
+        check(f"{route}: near the top of the screen the lens stands beside the finger, whole on the screen",
+              bool(lz) and T["y"] - 22 - 153 < 6 and clear and lz["top"] >= 0 and lz["top"] + lz["height"] <= 390
+              and lz["left"] >= 0 and lz["left"] + lz["width"] <= 844, f"finger at {T}, lens {lz}")
+        c.close()
+        # A MOUSE lights the line it would catch, with no lens; a click takes it.
+        c, q = fresh(b, route, ctx_opts=DESK)
+        load(q, route, aiming_drawing())
+        q.evaluate(f"() => {{ ({e['pen']})('{GREEN}'); {rc}.arm(); }}"); q.wait_for_timeout(300)
+        A, C = screen_of(q, route, 260, AIM_Y[0]), screen_of(q, route, 260, AIM_Y[2])
+        q.mouse.move(A["x"] - 40, A["y"] - 40); q.mouse.move(A["x"], A["y"], steps=5); q.wait_for_timeout(150)
+        h1 = q.evaluate(AIM % rc)
+        lit_px = q.evaluate("""([x, y]) => { const c = document.querySelector('.recolor-light'); if (!c || !c.isConnected) return null;
+            const r = c.getBoundingClientRect(), k = c.width / r.width;
+            return c.getContext('2d').getImageData(Math.round((x - r.left) * k), Math.round((y - r.top - 4) * k), 1, 1).data[3]; }""", [A["x"], A["y"]])
+        q.mouse.move(C["x"], C["y"], steps=5); q.wait_for_timeout(150)
+        h2 = q.evaluate(AIM % rc)
+        say = q.evaluate("() => document.querySelector('.recolor-say').textContent")
+        check(f"{route}: on a desk the line under the pointer lights up as it moves, with no lens",
+              h1["lit"] == [gA, gA] and h2["lit"] == [gC, gC] and h2["lens"] is None and not h2["aiming"]
+              and lit_px is not None and lit_px > 0 and say == "Tap a line to recolor", f"{h1}, {h2}, light alpha {lit_px}, says {say!r}")
+        q.mouse.click(C["x"], C["y"]); q.wait_for_timeout(500)
+        c6 = colours(q, route)
+        q.mouse.move(2, 2, steps=3); q.wait_for_timeout(200)
+        h3 = q.evaluate(AIM % rc)
+        check(f"{route}: a click takes the lit line, and the light goes when the pointer leaves the drawing",
+              c6[gC] == GREEN and c6[gA] == INK and h3["lit"] is None, f"{c6[gA:gC + 1]}, {h3}")
+        c.close()
+
+    # The bar's words and buttons stay inside it on the smallest phone, two
+    # lines at most, the words 13px or more.
+    for route in ED:
+        e = ED[route]
+        for w in (320, 402):
+            c = b.new_context(viewport={"width": w, "height": 760}, device_scale_factor=2, is_mobile=True, has_touch=True)
+            q = c.new_page(); browsing.goto(q, BASE, route)
+            q.evaluate("() => { window.SkriblHints && SkriblHints.hide && SkriblHints.hide(); }")
+            q.evaluate(f"() => {e['rc']}.arm()"); q.wait_for_timeout(400)
+            m = q.evaluate("""() => { const bar = document.querySelector('.recolor-bar'), s = bar.querySelector('.recolor-say'), br = bar.getBoundingClientRect();
+                const kids = [...bar.children].filter(k => k.getClientRects().length).map(k => k.getBoundingClientRect());
+                const sr = s.getBoundingClientRect(), cs = getComputedStyle(s);
+                return { inside: kids.every(k => k.left >= br.left - 0.5 && k.right <= br.right + 0.5 && k.top >= br.top - 0.5 && k.bottom <= br.bottom + 0.5),
+                         lines: Math.round(sr.height / parseFloat(cs.lineHeight)), size: parseFloat(cs.fontSize) }; }""")
+            check(f"{route}: [{w}] the bar's words and buttons, Redo with them, all inside it, two lines at most, 13px or more",
+                  m["inside"] and m["lines"] <= 2 and m["size"] >= 13, json.dumps(m))
+            c.close()
+
     print("\nTHE ENDS — a replay and the eraser key end the mode")
     for route in ED:
         e = ED[route]

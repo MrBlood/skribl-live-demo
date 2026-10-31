@@ -36,6 +36,26 @@
  *
  * THE COLOUR KEEPS THE LINE'S OWN OPACITY (tint): a marker line stays a
  * marker line in the new colour, in whichever form its colour was written.
+ *
+ * AIMING AT A THIN LINE (the owner: "the recolor should have the same
+ * magnifier as color picker, but just so you can pick the stroke"; the lens
+ * mock, "All yes"). A finger hides a 2px whisker and its neighbours, so a
+ * finger that HOLDS STILL (HOLD ms, within SLOP) brings up a lens just above
+ * it: the drawing at ZOOM times, from the same composited picture the run
+ * draws from, the line under the finger LIT, a small ring on the point, and
+ * the eyedropper's split ring saying before and after (the line's colour now
+ * above, the pen's below). Sliding chooses another line; lifting gives the
+ * lit line the colour; a second finger, or a cancel, changes nothing. Near
+ * the top of the screen the lens stands beside the finger instead. A quick
+ * tap and a drag that moves at once are what they always were. With a mouse
+ * or a pen that hovers, nothing hides the line, so there is no lens: the
+ * line the pointer would catch lights up as it moves (the same light). It
+ * goes by what is pointing, not by the device. The eyedropper keeps its own
+ * 10x lens; this one shows lines, not pixels (at 10x a whisker is one row of
+ * cells, and which whisker is unknowable).
+ *
+ * THE BAR HAS REDO BESIDE UNDO (the owner, with the lens): both press the
+ * editor's own, and each is off when the editor's is.
  */
 (function () {
   'use strict';
@@ -44,6 +64,12 @@
   var SLOP = 8;       // CSS px a press travels before it is a drag
   var SLACK = 10;     // CSS px of finger around a line that still hits it
   var STEP = 4;       // CSS px between the hit-tests along a drag
+  var HOLD = 330;     // ms a finger stays within SLOP before the lens comes up
+  var ZOOM = 3;       // the lens shows the drawing this many times larger
+  var LENS_R = 53, RING_W = 5.5;   // its window and split ring (the eyedropper's sizes)
+  var TIP = 22, GAP = 14;          // a fingertip's radius, and the lens's clearance above it (CSS px)
+  var MARGIN = 6;                  // the lens keeps this far from the viewport's edge
+  var GLOW = 'rgba(124, 92, 255, 0.34)';   // the light, over the artwork: theme-free, as the lenses are
 
   /* ---- colour ------------------------------------------------------------ */
 
@@ -212,6 +238,7 @@
   /* ---- the mode ---------------------------------------------------------- */
 
   var UNDO_SVG = '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-1"/></svg>';
+  var REDO_SVG = '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14l5-5-5-5"/><path d="M20 9H10a6 6 0 0 0 0 12h1"/></svg>';
 
   function nameOf(hex) {
     var P = window.SkriblPalette && window.SkriblPalette.PEN;
@@ -234,18 +261,232 @@
        repaint()    paint the drawing as it now is
        end()        after the last change of a gesture
        undoButton   the editor's Undo: the bar's presses it, and is off with it
+       redoButton   the editor's Redo, the same way
        openColors()/colorsOpen()/closeColors()  the colour drawer
        focusHome()  where focus goes if what armed the mode has gone
        onChange(on) after the mode turns on or off */
   function create(o) {
     var armed = false, session = null, ix = null, bar = null, live = null, back = null, shown = null;
     var run = runner({ canvas: o.surface, art: o.art, unit: o.unit });
+    var touchFirst = !!(window.matchMedia && window.matchMedia('(hover: none)').matches);
+    var hix = null, hoverAt = null, hoverRaf = 0;          // the hover's lines, and where the pointer is
+    var lightCv = null, lit = null, lens = null;
+    var lightMask = document.createElement('canvas'), lensMask = document.createElement('canvas');
 
     // Drawing units a CSS pixel, for the finger's slack: the canvas is shown
     // fitted, zoomed or both.
     function perCss() {
       var r = o.surface.getBoundingClientRect();
       return r.width ? (o.surface.width / (o.unit() || 1)) / r.width : 1;
+    }
+
+    /* ---- the light: the line a press would take, lit ---- */
+
+    // Laid over the drawing as the run's canvas is (and with it, in the
+    // parent the zoom transforms), at the drawing's backing size.
+    function lightLayer() {
+      var c = o.surface;
+      if (!lightCv) {
+        lightCv = document.createElement('canvas');
+        lightCv.className = 'recolor-light';
+        lightCv.setAttribute('aria-hidden', 'true');
+      }
+      if (lightCv.parentNode !== c.parentNode) c.parentNode.insertBefore(lightCv, c.nextSibling);
+      var b = parseFloat(getComputedStyle(c).borderTopWidth) || 0, s = lightCv.style;
+      s.left = (c.offsetLeft + b) + 'px';
+      s.top = (c.offsetTop + b) + 'px';
+      s.width = Math.max(0, c.offsetWidth - 2 * b) + 'px';
+      s.height = Math.max(0, c.offsetHeight - 2 * b) + 'px';
+      if (lightCv.width !== c.width || lightCv.height !== c.height) { lightCv.width = c.width; lightCv.height = c.height; }
+      return lightCv;
+    }
+    // Groups g0..g1 with `extra` drawing units round them. The line's own
+    // footprint (`each`) goes segment by segment at each point's width, which
+    // only an opaque mask may do; a see-through light is one path a group at
+    // its widest, or every joint where two segments overlap shows as a bead.
+    function strokeLine(x, L, g0, g1, extra, colour, each) {
+      x.strokeStyle = x.fillStyle = colour;
+      for (var g = g0; g <= g1; g++) {
+        var a = L.st[g], z = Math.min(L.st[g + 1], L.pts.length), w = 0, i;
+        if (z - a === 1) {
+          var p0 = L.pts[a];
+          x.beginPath(); x.arc(p0.x, p0.y, ((p0.size || 1) + extra) / 2, 0, 2 * Math.PI); x.fill();
+          continue;
+        }
+        if (each) {
+          for (i = a; i + 1 < z; i++) {
+            var p = L.pts[i], q = L.pts[i + 1];
+            x.beginPath(); x.moveTo(p.x, p.y); x.lineTo(q.x, q.y);
+            x.lineWidth = Math.max(p.size || 1, q.size || 1) + extra;
+            x.stroke();
+          }
+          continue;
+        }
+        x.beginPath();
+        for (i = a; i < z; i++) {
+          var r = L.pts[i];
+          if (i === a) x.moveTo(r.x, r.y); else x.lineTo(r.x, r.y);
+          if ((r.size || 1) > w) w = r.size || 1;
+        }
+        x.lineWidth = w + extra;
+        x.stroke();
+      }
+    }
+    // The light round a line, then the line over it as the screen shows it
+    // (its footprint cut from `art`, drawn with the same transform `t`):
+    // on the drawing's own layer, and again inside the lens at its size.
+    // `u` is drawing units a CSS pixel of the place it is drawn.
+    function lightUp(x, L, line, u, art, t, maskCv) {
+      x.save();
+      x.setTransform(t[0], 0, 0, t[0], t[1], t[2]);
+      x.lineCap = x.lineJoin = 'round';
+      strokeLine(x, L, line[0], line[1], 14 * u, GLOW);
+      strokeLine(x, L, line[0], line[1], 5 * u, 'rgba(255, 255, 255, 0.9)');
+      x.restore();
+      if (!art) return;
+      if (maskCv.width !== x.canvas.width || maskCv.height !== x.canvas.height) { maskCv.width = x.canvas.width; maskCv.height = x.canvas.height; }
+      var m = maskCv.getContext('2d');
+      m.setTransform(1, 0, 0, 1, 0, 0);
+      m.globalCompositeOperation = 'source-over';
+      m.clearRect(0, 0, maskCv.width, maskCv.height);
+      m.setTransform(t[0], 0, 0, t[0], t[1], t[2]);
+      m.lineCap = m.lineJoin = 'round';
+      strokeLine(m, L, line[0], line[1], 0, '#000', true);
+      m.setTransform(1, 0, 0, 1, 0, 0);
+      m.globalCompositeOperation = 'source-in';
+      art(m);
+      m.globalCompositeOperation = 'source-over';
+      x.save();
+      x.setTransform(1, 0, 0, 1, 0, 0);
+      x.drawImage(maskCv, 0, 0);
+      x.restore();
+    }
+    /* Light `line` ([g0, g1] of L), or none. A glow and a white rim round
+       it, and the line itself over them AS THE SCREEN SHOWS IT: its
+       footprint filled from the composited picture, so a part rubbed out
+       stays rubbed out and a line crossing it stays on top. */
+    function light(line, L) {
+      if (line && lit && line[0] === lit[0] && line[1] === lit[1]) return;
+      lit = line ? [line[0], line[1]] : null;
+      if (!line) {
+        if (lightCv) {
+          lightCv.getContext('2d').clearRect(0, 0, lightCv.width, lightCv.height);
+          if (lightCv.parentNode) lightCv.parentNode.removeChild(lightCv);
+        }
+        return;
+      }
+      var cv = lightLayer(), x = cv.getContext('2d');
+      x.setTransform(1, 0, 0, 1, 0, 0);
+      x.clearRect(0, 0, cv.width, cv.height);
+      lightUp(x, L, line, perCss(), function (m) {
+        try { var a = o.art(); m.drawImage(a, 0, 0, m.canvas.width, m.canvas.height); } catch (e) {}
+      }, [o.unit(), 0, 0], lightMask);
+    }
+
+    /* ---- the lens: hold still to aim ---- */
+
+    // The drawing's own box on the page (inside its border), as shown.
+    function shownBox() {
+      var c = o.surface, r = c.getBoundingClientRect(), b = parseFloat(getComputedStyle(c).borderTopWidth) || 0;
+      var s = c.offsetWidth ? r.width / c.offsetWidth : 1;
+      return { left: r.left + b * s, top: r.top + b * s, width: r.width - 2 * b * s, height: r.height - 2 * b * s };
+    }
+    // Part of `img` into the lens. A source rect partly off the picture is
+    // cut to it, and the destination with it: Safari draws nothing at all
+    // for a source rect that reaches past an image's edge.
+    function blit(x, img, sx, sy, sw, sh, dx, dy, dw, dh) {
+      if (!img || !img.width) return;
+      var kx = dw / sw, ky = dh / sh;
+      var x0 = Math.max(0, sx), y0 = Math.max(0, sy), x1 = Math.min(img.width, sx + sw), y1 = Math.min(img.height, sy + sh);
+      if (x1 <= x0 || y1 <= y0) return;
+      x.drawImage(img, x0, y0, x1 - x0, y1 - y0, dx + (x0 - sx) * kx, dy + (y0 - sy) * ky, (x1 - x0) * kx, (y1 - y0) * ky);
+    }
+    // Where the lens stands for a finger at (fx, fy): above it, clear of the
+    // fingertip; near the top of the screen, beside it. Its centre.
+    function lensAt(fx, fy) {
+      var reach = LENS_R + RING_W, off = reach + TIP + GAP;
+      var W = window.innerWidth, H = window.innerHeight;
+      var cx = Math.max(reach + MARGIN, Math.min(W - reach - MARGIN, fx)), cy = fy - off;
+      if (cy - reach < MARGIN) {
+        cy = Math.max(reach + MARGIN, Math.min(H - reach - MARGIN, fy));
+        cx = fx + off + reach <= W - MARGIN ? fx + off : fx - off;
+      }
+      return { x: cx, y: cy };
+    }
+    function hideLens() { if (lens) lens.hidden = true; }
+    function drawLens(p, h, art) {
+      if (!lens) {
+        lens = el('div', 'recolor-lens');
+        lens.setAttribute('aria-hidden', 'true');
+        lens._cv = el('canvas', '', lens);
+        document.body.appendChild(lens);
+      }
+      var reach = LENS_R + RING_W, D = 2 * reach + 2, c0 = D / 2, at = lensAt(p.cx, p.cy);
+      var dpr = window.devicePixelRatio || 1, cv = lens._cv, n = Math.round(D * dpr);
+      lens.hidden = false;
+      lens.style.left = (at.x - c0) + 'px';
+      lens.style.top = (at.y - c0) + 'px';
+      lens.style.width = lens.style.height = D + 'px';
+      if (cv.width !== n) { cv.width = n; cv.height = n; }
+      var x = cv.getContext('2d');
+      x.setTransform(dpr, 0, 0, dpr, 0, 0);
+      x.clearRect(0, 0, D, D);
+      x.save();
+      x.beginPath(); x.arc(c0, c0, LENS_R, 0, 2 * Math.PI); x.clip();
+      x.fillStyle = 'rgb(128, 128, 128)';
+      x.fillRect(0, 0, D, D);
+      // The drawing round the point, ZOOM times larger, the light over it.
+      var B = shownBox(), bx = o.surface.width / (B.width || 1), by = o.surface.height / (B.height || 1), half = LENS_R / ZOOM;
+      var sx = (p.cx - B.left - half) * bx, sy = (p.cy - B.top - half) * by, sw = 2 * half * bx, sh = 2 * half * by;
+      blit(x, art, sx, sy, sw, sh, c0 - LENS_R, c0 - LENS_R, 2 * LENS_R, 2 * LENS_R);
+      // The light at the lens's own size (its glow as wide here as on the
+      // drawing), the drawing's units ZOOM times larger round the point.
+      if (lit && ix) {
+        var k = ZOOM / perCss();
+        lightUp(x, ix, lit, perCss() / ZOOM, function (m) {
+          m.setTransform(dpr, 0, 0, dpr, 0, 0);
+          blit(m, art, sx, sy, sw, sh, c0 - LENS_R, c0 - LENS_R, 2 * LENS_R, 2 * LENS_R);
+        }, [dpr * k, dpr * (c0 - p.x * k), dpr * (c0 - p.y * k)], lensMask);
+      }
+      x.restore();
+      // The point the finger is on: a small ring, light over dark.
+      x.lineWidth = 2.5; x.strokeStyle = 'rgba(255, 255, 255, 0.95)';
+      x.beginPath(); x.arc(c0, c0, 7, 0, 2 * Math.PI); x.stroke();
+      x.lineWidth = 1.2; x.strokeStyle = 'rgba(31, 27, 46, 0.9)';
+      x.beginPath(); x.arc(c0, c0, 7, 0, 2 * Math.PI); x.stroke();
+      // Before and after: the line's colour now above, the pen's below (no
+      // line, a quiet grey above).
+      var now = h && ix && ix.pts[h.i] ? ix.pts[h.i].color : 'rgb(150, 150, 150)';
+      x.lineWidth = RING_W;
+      x.strokeStyle = now;
+      x.beginPath(); x.arc(c0, c0, LENS_R + RING_W / 2, Math.PI, 2 * Math.PI); x.stroke();
+      x.strokeStyle = (o.color && o.color()) || '#7c5cff';
+      x.beginPath(); x.arc(c0, c0, LENS_R + RING_W / 2, 0, Math.PI); x.stroke();
+      x.lineWidth = 1; x.strokeStyle = 'rgba(0, 0, 0, 0.22)';
+      x.beginPath(); x.arc(c0, c0, LENS_R + RING_W + 0.5, 0, 2 * Math.PI); x.stroke();
+    }
+
+    /* ---- the hover: a mouse, or a pen that hovers, lights what it would take ---- */
+    function hover(e) {
+      if (!armed || session || e.pointerType === 'touch' || e.buttons) return;
+      hoverAt = where(e);
+      if (!hoverRaf) hoverRaf = requestAnimationFrame(hoverTick);
+    }
+    function hoverTick() {
+      hoverRaf = 0;
+      if (!armed || session || !hoverAt) return;
+      if (!hix) { var L = o.lines(); hix = index(L.pts || [], L.groups || []); }
+      var h = hit(hix, hoverAt.x, hoverAt.y, SLACK * perCss());
+      light(h ? lineOf(hix, h.g) : null, hix);
+    }
+    function unhover() {
+      hoverAt = null;
+      if (hoverRaf) { cancelAnimationFrame(hoverRaf); hoverRaf = 0; }
+      if (!session) light(null);
+    }
+    if (o.surface) {
+      o.surface.addEventListener('pointermove', hover);
+      o.surface.addEventListener('pointerleave', unhover);
     }
 
     function el(tag, cls, parent) {
@@ -266,12 +507,17 @@
       swatch.type = 'button';
       el('span', 'recolor-dot', swatch);
       var say = el('span', 'recolor-say', bar);
-      say.textContent = 'Tap a line to recolor';
+      say.textContent = touchFirst ? 'Tap a line, or hold to aim' : 'Tap a line to recolor';
       var undo = el('button', 'recolor-undo', bar);
       undo.type = 'button';
       undo.title = 'Undo';
       undo.setAttribute('aria-label', 'Undo');
       undo.innerHTML = UNDO_SVG;
+      var redo = el('button', 'recolor-redo', bar);
+      redo.type = 'button';
+      redo.title = 'Redo';
+      redo.setAttribute('aria-label', 'Redo');
+      redo.innerHTML = REDO_SVG;
       var done = el('button', 'recolor-done', bar);
       done.type = 'button';
       done.textContent = 'Done';
@@ -285,17 +531,25 @@
         run.stop();
         if (o.undoButton && !o.undoButton.disabled) o.undoButton.click();
       });
-      // The editor's Undo says when there is nothing to take back, from every
-      // path that changes it (a keyboard undo included); this one follows.
-      if (o.undoButton && window.MutationObserver) {
-        new MutationObserver(sync).observe(o.undoButton, { attributes: true, attributeFilter: ['disabled'] });
+      redo.addEventListener('click', function (e) {
+        e.stopPropagation();
+        run.stop();
+        if (o.redoButton && !o.redoButton.disabled) o.redoButton.click();
+      });
+      // The editor's Undo and Redo say when there is nothing to take back or
+      // put back, from every path that changes them (a key included); these
+      // follow.
+      if (window.MutationObserver) {
+        [o.undoButton, o.redoButton].forEach(function (btn) {
+          if (btn) new MutationObserver(sync).observe(btn, { attributes: true, attributeFilter: ['disabled'] });
+        });
       }
       done.addEventListener('click', function (e) { e.stopPropagation(); disarm(); });
       live = el('div', 'vis-hidden', bar);
       live.setAttribute('role', 'status');
       live.setAttribute('aria-live', 'polite');
       (o.dock || document.body).appendChild(bar);
-      bar._swatch = swatch; bar._dot = swatch.firstChild; bar._undo = undo; bar._done = done;
+      bar._swatch = swatch; bar._dot = swatch.firstChild; bar._undo = undo; bar._redo = redo; bar._done = done;
       return bar;
     }
     function say(text) {
@@ -322,6 +576,7 @@
       bar._swatch.setAttribute('aria-label', 'Color: ' + nameOf(hex) + '. Change it');
       bar._swatch.title = 'Change the color';
       bar._undo.disabled = !o.undoButton || !!o.undoButton.disabled;
+      bar._redo.disabled = !o.redoButton || !!o.redoButton.disabled;
       if (armed && shown && shown !== hex && o.colorsOpen && o.colorsOpen() && o.closeColors) o.closeColors();
       shown = hex;
     }
@@ -332,6 +587,9 @@
       armed = v;
       if (session) end(false);
       run.stop();
+      hix = null;
+      unhover();
+      hideLens();
       build();
       if (o.button) {
         o.button.classList.toggle('picking', armed);
@@ -355,7 +613,8 @@
             try { bar._done.focus({ preventScroll: true }); } catch (e) {}
           }
         }, 0);
-        say('Recolor is on. Tap a line to give it the pen’s color. Done goes back to the pen.');
+        say(touchFirst ? 'Recolor is on. Tap a line to give it the pen’s color, or hold still to aim at a thin one. Done goes back to the pen.'
+          : 'Recolor is on. The line under the pointer lights up; click it to give it the pen’s color. Done goes back to the pen.');
       } else {
         window.removeEventListener('keydown', keys, true);
         var had = bar.contains(document.activeElement);
@@ -399,17 +658,55 @@
       var L = o.lines();
       ix = index(L.pts || [], L.groups || []);
       var at = where(e);
-      session = { id: e.pointerId, from: at, last: at, moved: false, changed: false, touched: {} };
+      unhover();
+      session = { id: e.pointerId, from: at, last: at, moved: false, changed: false, touched: {}, aim: null, art: null, hold: 0 };
+      // A finger, or a pen, that stays where it went down aims (the lens);
+      // a mouse never needs to.
+      if (e.pointerType !== 'mouse') session.hold = setTimeout(aimStart, HOLD);
       window.addEventListener('pointermove', move, true);
       window.addEventListener('pointerup', up, true);
       window.addEventListener('pointercancel', cancel, true);
       return true;
     }
+    /* Held still: the lens comes up over the point, and the line under it
+       lights. The picture is taken once: nothing changes while aiming. */
+    function aimStart() {
+      var s = session;
+      if (!s || s.moved || !armed) return;
+      s.hold = 0;
+      try {
+        var a = o.art();
+        s.art = document.createElement('canvas');
+        s.art.width = a.width; s.art.height = a.height;
+        s.art.getContext('2d').drawImage(a, 0, 0);
+      } catch (e) { s.art = null; }
+      s.aim = s.last;
+      aimAt(s.last);
+      say('Aiming. Lift to recolor the lit line.');
+    }
+    function aimAt(p) {
+      var s = session;
+      if (!s || !ix) return;
+      var h = hit(ix, p.x, p.y, SLACK * perCss());
+      s.aim = p;
+      light(h ? lineOf(ix, h.g) : null, ix);
+      drawLens(p, h, s.art);
+    }
+    function aimStop() {
+      hideLens();
+      light(null);
+    }
     function move(e) {
       var s = session;
       if (!s || !same(s, e)) return;
+      if (s.aim) {                         // aiming: the lens and the light follow; nothing changes yet
+        s.last = where(e);
+        aimAt(s.last);
+        if (e.cancelable) e.preventDefault();
+        return;
+      }
       if (!s.moved && Math.hypot(e.clientX - s.from.cx, e.clientY - s.from.cy) < SLOP) return;
-      if (!s.moved) { s.moved = true; tryAt(s.from); }
+      if (!s.moved) { clearTimeout(s.hold); s.hold = 0; s.moved = true; tryAt(s.from); }
       var to = where(e), n = Math.max(1, Math.ceil(Math.hypot(to.cx - s.last.cx, to.cy - s.last.cy) / STEP));
       for (var k = 1; k <= n; k++) {
         tryAt({ x: s.last.x + (to.x - s.last.x) * k / n, y: s.last.y + (to.y - s.last.y) * k / n });
@@ -420,7 +717,14 @@
     function up(e) {
       var s = session;
       if (!s || !same(s, e)) return;
-      if (!s.moved) tryAt(s.from);
+      clearTimeout(s.hold);
+      if (s.aim) {                         // let go: the lit line takes the colour
+        var p = s.aim;
+        aimStop();
+        tryAt(p);
+      } else if (!s.moved) {
+        tryAt(s.from);
+      }
       end(false);
     }
     function cancel(e) { if (session && same(session, e)) end(false); }
@@ -431,6 +735,9 @@
       window.removeEventListener('pointerup', up, true);
       window.removeEventListener('pointercancel', cancel, true);
       if (!s) return;
+      clearTimeout(s.hold);
+      if (s.aim) aimStop();                // a second finger, or a cancel, while aiming: nothing changes
+      if (pinch && s.aim) return;
       if (pinch && !s.moved) return;
       if (s.changed) {
         if (o.end) o.end();
@@ -455,6 +762,7 @@
       run.hold();
       if (!o.apply(line[0], line[1], hex, h.i)) return;
       s.changed = true;
+      hix = null;
       // The lines as they now stand: the editor may have put new point
       // objects in place of the old.
       ix.pts = o.lines().pts;
@@ -477,8 +785,15 @@
       press: press,
       sync: sync,
       // The drawing changed under the mode (undo, a page, a load): any run
-      // ends where it was going.
-      settle: function () { run.stop(); },
+      // ends where it was going, and the light is read again when next asked.
+      settle: function () { run.stop(); hix = null; if (!session) light(null); },
+      // For the harness and the owner's screenshots, read-only: whether a
+      // finger is aiming, the line lit ([g0, g1]) and the lens's box.
+      aimState: function () {
+        var r = lens && !lens.hidden ? lens.getBoundingClientRect() : null;
+        return { aiming: !!(session && session.aim), lit: lit ? lit.slice() : null,
+                 lens: r ? { left: r.left, top: r.top, width: r.width, height: r.height } : null };
+      },
       // For a change made outside the mode (Flip's Select bar): hold() the
       // drawing before it, repaint after it, then ran() the lines it changed,
       // each from its middle.
