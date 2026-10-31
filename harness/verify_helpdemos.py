@@ -531,15 +531,26 @@ with sync_playwright() as p:
         # Each frame on its own clock (document.timeline), which is the time
         # the sheet's place is worked out for: performance.now() at the read
         # can come after a hold in the same frame, so the hold showed nowhere.
+        # And on two more: the wall clock since the tap (performance.now()),
+        # and the glide's own (the transform transition's currentTime, null
+        # before it starts and after it ends).
         frames = pg.evaluate("""(item) => new Promise(res => { const d = document.getElementById('helpDrawer'),
             i = d.querySelector('.help-drawer-inner'), out = [], t0 = performance.now(), t1 = document.timeline.currentTime;
             document.querySelector(item).click();
-            (function tick() { out.push([Math.max(d.scrollLeft, d.scrollTop), i.getBoundingClientRect().top, document.timeline.currentTime - t1]);
+            (function tick() { const a = i.getAnimations().find(x => x.transitionProperty === 'transform');
+              out.push([Math.max(d.scrollLeft, d.scrollTop), i.getBoundingClientRect().top, document.timeline.currentTime - t1,
+                        performance.now() - t0, a && a.currentTime != null ? a.currentTime : null]);
               if (performance.now() - t0 < 700) requestAnimationFrame(tick); else res(out); })(); })""", opener[1])
         scrolled = max(f[0] for f in frames)
         tops = [f[1] for f in frames]
         total = tops[0] - tops[-1]
-        steps = [(frames[j + 1][2] - frames[j][2], tops[j] - tops[j + 1]) for j in range(len(frames) - 1)]
+        # Each step: the page's clock across it, how far the sheet moved, the
+        # glide's clock across it (from 0 where it had not started), and how
+        # far the glide's clock was then ahead of the wall clock.
+        steps = [(frames[j + 1][2] - frames[j][2], tops[j] - tops[j + 1],
+                  None if frames[j + 1][4] is None else frames[j + 1][4] - (frames[j][4] or 0),
+                  None if frames[j + 1][4] is None else frames[j + 1][4] - frames[j + 1][3])
+                 for j in range(len(frames) - 1)]
         # One way, and travelled: a snap from off-screen to home in a single
         # frame is "one way" too, which is how the first draft of this passed
         # on the broken tree; so it is seen at three places on the way at least.
@@ -551,16 +562,30 @@ with sync_playwright() as p:
         # The ease's fastest stretch is about 15% of the way a frame, so a
         # frame under 50ms cannot cover 40%. One such step is set aside, the
         # biggest, named in the detail.
-        held = [j for j, (dt, dy) in enumerate(steps) if dt >= 50 and dy >= 0.4 * total]
+        # A START THE BOX HELD IS NOT A JUMP EITHER (the v330 seal, Chrome
+        # 153: 844 four times, then 540, 40% in a frame the page's clock put
+        # under 50ms; green on CI and in ten runs here). The browser may start
+        # a transition a few frames late and date its start back, so the held
+        # start shows on the glide's clock and not on the page's. The glide's
+        # clock alone would also forgive a glide pushed on (a skip), so
+        # it counts only while it is no further on than the wall clock since
+        # the tap, a frame's grace allowed: a late start never gets ahead of
+        # real time, and a skip does.
+        held = [j for j, (dt, dy, dg, ahead) in enumerate(steps) if dy >= 0.4 * total
+                and (dt >= 50 or (dg is not None and dg >= 50 and ahead <= 20))]
         aside = max(held, key=lambda j: steps[j][1]) if held else None
         way = {round(t) for t in tops if tops[-1] + 1 < t < tops[0] - 1}
-        steady = (all(dy >= -1 for _, dy in steps) and len(way) >= 3
-                  and all(dy < 0.4 * total for j, (_, dy) in enumerate(steps) if j != aside))
+        steady = (all(s[1] >= -1 for s in steps) and len(way) >= 3
+                  and all(s[1] < 0.4 * total for j, s in enumerate(steps) if j != aside))
         check(f"{name}: How it works rises in; its frame never scrolls",
               scrolled == 0, f"drawer scroll peaked at {scrolled}px over {len(frames)} frames")
         check(f"{name}: ...and the sheet travels up from the foot, no frame jumping 40% of the way",
               steady and total > 200, f"sheet top edge by frame: {[round(x) for x in tops]}"
-              + (f"; set aside: {round(steps[aside][1])}px across a {round(steps[aside][0])}ms frame the box held" if aside is not None else ""))
+              + (f"; set aside: {round(steps[aside][1])}px across a frame the box held ({round(steps[aside][0])}ms on the page's "
+                 f"clock, {'no glide' if steps[aside][2] is None else str(round(steps[aside][2])) + 'ms'} on the glide's)"
+                 if aside is not None else "")
+              + ("" if steady else "; glide's clock ahead of the wall clock by frame: "
+                 + str([None if s[3] is None else round(s[3]) for s in steps])))
         # ...AND NOTHING HOLDS IT UP WHILE IT DOES (main red after #571: the
         # sheet jumped 59% of the way in one frame on a busy runner). Opening
         # it rewrote every entry's More and read the next one's height, so the
