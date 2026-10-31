@@ -103,6 +103,15 @@
           {{ learn_card('pen', 'Pen', 'Any color, any size. With a stylus, press harder for a thicker line.', 'tools', tool='pen') }}
           {{ learn_card('eraser', 'Eraser', 'Wipe back to the canvas. Tap it again to change its size.', 'tools', tool='eraser') }}
           {{ learn_card('shape', 'Shape', 'Lines, boxes, ovals and polygons, with rounded corners if you like.', 'tools', tool='shape') }}
+          {# The Draw menu's own (after v330): the pen's three tiles, then its two
+             color tools, the order the help cards (lib/learncard.js) find them
+             in. Brush and Recolor are drawings (harness/tools/make_art.py); a
+             finger's taps and drags are screen clips. #}
+          {{ learn_card('brushes', 'Brush', 'The kind of line you draw: Pen, Marker, Pencil or Air.', 'tools') }}
+          {{ learn_card(None, 'Size', 'Pick a size, or drag Pen sideways for a bolder line.', 'tools', clip='size', shape='screen') }}
+          {{ learn_card(None, 'Feel', 'Smoothing turns a shaky hand into a steady line.', 'tools', clip='feel', shape='screen') }}
+          {{ learn_card(None, 'Eyedropper', 'Take a color from your drawing and draw with it.', 'tools', clip='eyedropper', shape='screen') }}
+          {{ learn_card('recolor', 'Recolor', 'Tap a line to give it your pen’s color.' if is_flip else 'Tap a line to give it your pen’s color. The replay shows it change.', 'tools') }}
           {% if is_flip %}
           {# Flip's own tools change strokes already on the page, which a page
              does not record, so these are screen clips of the editor. #}

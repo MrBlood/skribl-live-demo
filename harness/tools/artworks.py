@@ -184,6 +184,78 @@ def tool_shape():
     ]
 
 
+def tool_brushes():
+    """Brush: the same easy wave drawn four times, top to bottom in the
+    drawer's order, Pen, Marker, Pencil and Air, one colour, so the only
+    difference is the brush. Air goes over its middle again, as it builds."""
+    import math
+
+    def wave(y, x0=150, x1=666, n=40):
+        # The one wave across 150..666; a part of it keeps the whole's phase.
+        return [(x, y - 24 * math.sin(2 * math.pi * 1.25 * (x - 150) / 516))
+                for x in (x0 + (x1 - x0) * k / n for k in range(n + 1))]
+    return [
+        S(wave(132), "form", PURPLE, size=16, pace=0.9, taper=(0.08, 0.18), brush="pen"),
+        S(wave(246), "form", PURPLE, size=16, pace=0.9, taper=(0.08, 0.18), brush="marker"),
+        S(wave(360), "form", PURPLE, size=16, pace=0.9, taper=(0.08, 0.18), brush="pencil"),
+        S(wave(474), "form", PURPLE, size=16, pace=0.9, taper=(0.08, 0.18), brush="airbrush"),
+        S(wave(474, 300, 516, 18), "form", PURPLE, size=16, pace=0.9, taper=(0.35, 0.4), brush="airbrush"),
+    ]
+
+
+def tool_recolor():
+    """Recolor: three balloons drawn in ink, outlines first, then the knots
+    and the strings gathered in one hand. RECOLOR_TAPS colours them after,
+    while the take still records, so the replay shows each one change."""
+    import math
+
+    def balloon(cx, cy, rx, ry, tilt):
+        pts = []
+        for k in range(37):
+            a = -math.pi / 2 + 2 * math.pi * 1.04 * k / 36
+            # a little fuller at the top, drawn to a soft point at the knot
+            r = 1.0 - 0.10 * max(0.0, math.sin(a))
+            x, y = rx * r * math.cos(a), ry * r * math.sin(a)
+            pts.append((cx + x * math.cos(tilt) - y * math.sin(tilt), cy + x * math.sin(tilt) + y * math.cos(tilt)))
+        return pts
+
+    hand = (408, 548)
+    tops = [(262, 212, 78, 96, -0.18), (408, 168, 82, 100, 0.0), (556, 222, 76, 94, 0.2)]
+    out = [S(balloon(*b), "contour", INK, size=10, weight=[(0, 0.8), (0.5, 1.0), (1, 0.85)]) for b in tops]
+    for cx, cy, rx, ry, tilt in tops:
+        # The knot: a small closed triangle tied on at the balloon's foot.
+        kx, ky = _on_balloon(cx, cy, rx, ry, tilt, math.pi / 2)
+        ux, uy = -math.sin(tilt), math.cos(tilt)          # down the balloon's own axis
+        px, py = math.cos(tilt), math.sin(tilt)           # across it
+        tip = (kx - ux * 1.5, ky - uy * 1.5)
+        a, b = (kx + ux * 11 - px * 7, ky + uy * 11 - py * 7), (kx + ux * 11 + px * 7, ky + uy * 11 + py * 7)
+        out.append(S([tip, a, b, tip], "detail", INK, size=5, pace=1.2, taper=(0.05, 0.05)))
+        base = (kx + ux * 11, ky + uy * 11)
+        out.append(S([base, (base[0] + 10, base[1] + 80), (base[0] * 0.4 + hand[0] * 0.6 - 8, base[1] * 0.4 + hand[1] * 0.6), hand],
+                     "detail", INK, size=3.5, pace=1.1, taper=(0.05, 0.3)))
+    # A shine on each, last: a short arc inside its upper left.
+    for cx, cy, rx, ry, tilt in tops:
+        arc = [_on_balloon(cx, cy, rx * 0.66, ry * 0.66, tilt, a) for a in (3.55 + 0.11 * k for k in range(8))]
+        out.append(S(arc, "accent", INK, size=4.5, pace=1.3, taper=(0.2, 0.4)))
+    return out
+
+
+# Recolor's drawing: after the lines, each balloon's outline is tapped with
+# Recolor on, in the pen's colour of the moment, on its far side from the
+# others (the middle one at its top): the left balloon's right edge lies
+# inside the middle one's left, and a tap there took the middle balloon.
+def _on_balloon(cx, cy, rx, ry, tilt, a):
+    import math
+    r = 1.0 - 0.10 * max(0.0, math.sin(a))
+    x, y = rx * r * math.cos(a), ry * r * math.sin(a)
+    return (cx + x * math.cos(tilt) - y * math.sin(tilt), cy + x * math.sin(tilt) + y * math.cos(tilt))
+
+
+RECOLOR_TAPS = [("#ff6f91", _on_balloon(262, 212, 78, 96, -0.18, 3.1416)),
+                ("#7c5cff", _on_balloon(408, 168, 82, 100, 0.0, -1.5708)),
+                ("#ff6f91", _on_balloon(556, 222, 76, 94, 0.2, 0.0))]
+
+
 def footballer():
     """A footballer kneeling in celebration -- from a traced line drawing the
     owner supplied, cleaned up (art/footballer.json): 331 traced fragments
@@ -291,4 +363,4 @@ def blooby_card():
 ART = {"cat": cat, "scene": scene, "snail": snail, "footballer": footballer, "skull": skull, "pug": pug,
        "blooby-card": blooby_card,
        # the tool cards' examples (Pen, Eraser, Shape)
-       "pen": tool_pen, "eraser": tool_eraser, "shape": tool_shape}
+       "pen": tool_pen, "eraser": tool_eraser, "shape": tool_shape, "brushes": tool_brushes, "recolor": tool_recolor}
