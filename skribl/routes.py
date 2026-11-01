@@ -313,8 +313,17 @@ def register_routes(bp, *, index_route=False):
         # A query flag rather than a separate route: it is the same editor, with
         # the same drawing surface and the same post-time payload work, ending
         # differently. A second route would be a second page to keep in step.
-        return render_template("skribl/skribl_editor.html",
-                               compose=request.args.get("compose") == "1")
+        #
+        # THE LETTER SHEET. ?letters=1 is the Pad as a page for drawing a font:
+        # one letter at a time on the real canvas with the real pen, so each
+        # letter keeps its speed and pressure, and the whole alphabet posted as
+        # one Skribl at the end (skribl/static/editor_letters.js). Linked from
+        # nowhere: it is the owner's, for the Text tool's own hand. A query
+        # flag for the reason compose is one, and never both at once.
+        compose = request.args.get("compose") == "1"
+        return render_template("skribl/skribl_editor.html", compose=compose,
+                               letters=(not compose
+                                        and request.args.get("letters") == "1"))
 
     @bp.get("/flip")
     def skribl_flip():

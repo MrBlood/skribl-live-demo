@@ -1581,6 +1581,38 @@ owner then asked for a Settings switch to turn the cards off: **built**, a
 row of its own under Tips (DECISIONS, after v330, "A switch for the help
 cards"). Next: the seven examples, then call 3.
 
+## 6ab. Text that writes itself, in the owner's own hand (owner, Oct 31: "How hard would it be to add text to the pad?", then "Can't we have our own font")
+
+Words added to a drawing, written in with the pen's colour, that the replay
+writes out letter by letter the way it draws everything else. The words go
+in as stroke points through the step the pen and Shape already use, so the
+player, a posted link and every export draw them with code they already
+have. Mocked on the real Pad (Oct 31 to Nov 1); the owner's answers:
+
+- **Where:** a fifth kind in Shape's picker, Text, on both editors (a fourth
+  tool in the bar pushed Shape into the tray, and four cells ran 5 to 20px
+  past a 390 to 360px phone; the picker with Text is 258px and fits from
+  360px).
+- **Size** S, M or L, in the pen's colour and thickness.
+- **Placed while a preview, then ink**: moved before Write it, honest timing
+  after (moving recorded ink is why the Pad dropped Select at v219). Undo
+  takes the line back whole; the Eraser rubs it like any ink; Mirror leaves
+  text alone.
+- **Speed**: a slider, 1/4x to 4x, where 1x is the owner's own pace,
+  saying how long the words will take ("there should be a control so you
+  can choose speed").
+- **The owner's own font**, drawn on a letter sheet (92 boxes, a second try
+  at the nine commonest letters), with Print and Script (single-line OFL
+  fonts made for plotters) as extra styles.
+
+The order: (1) the letter sheet, **built** (DECISIONS, after v330, "The
+letter sheet"): `/skribl-pad?letters=1`, ending in Post your letters;
+(2) the owner draws it on their phone and posts it, and Cal reads it back
+(`harness/tools/letterfont.py`, from the post's link: the session needs the
+live site in its network settings' allowed domains); (3) the Text tool,
+with the owner's hand and Speed; (4) the polish (the iPhone's keyboard, the
+typing sheet on a desk).
+
 ## 7. The honest state
 
 The tool is good. It is better than it needs to be for a demo and not yet enough
