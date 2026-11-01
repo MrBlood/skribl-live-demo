@@ -28076,9 +28076,12 @@ words go, and the typing sheet rises. Nothing is ink and no take is armed
 until Write it. The sheet: the words (16px), Style (four cards, each written
 in itself: Yours, or + Make yours with no hand yet; Skribl; Print; Script),
 under it "Your hand, N of 92 letters" and Edit your hand, or "Make your own
-hand in about 10 minutes."; Size S, M, L (the one pill; the letters' cap
-height as a share of the drawing's shorter side, 4.5, 6.5 and 9.5%, chosen so
-"Happy birthday, Jo!" fits one line on a phone at M); Speed, the app's slider
+hand in about 10 minutes."; Size, Small, Medium or Large (the one pill; the
+letters' cap height as a share of the drawing's shorter side, 4.5, 6.5 and
+9.5%, chosen so "Happy birthday, Jo!" fits one line on a phone at Medium; in
+words, not the mock's S, M, L, because verify_a11y holds every option to a
+word: the outside review's rule that renamed the grid's S / M / L, which a
+person could take for a line's width or the canvas's size); Speed, the app's slider
 with - and +, nine stops from 1/4x to 4x, 1x in the middle, beside it how long
 the words take ("1x · 6 s"), and under the word Speed what 1x means for the
 style chosen; Write it. The words show where the press was, in a dashed box
@@ -28156,6 +28159,15 @@ and up from its computed colours, light and dark, phone and desk (the lowest
 5.3:1, Write it), every button 44px, the field 16px, the words above the
 sheet; the rise read on every frame, Reduce Motion, and the dashed box gone
 the frame the words start.
+
+THE OTHER SUITES met four things, each the new sheet against an older rule:
+verify_a11y the S, M, L above; verify_helpclaims the field's own name, "Your
+words", which How it works now says ("tap where your words go");
+verify_tray, which listed the picker's four kinds by hand; and
+verify_contrast, whose reader met the Pad locked on the take its Post row had
+just made, which refuses a tap as it refuses the pen (it presses Keep
+drawing first now, as a person would; it reads the typing sheet on both
+editors from its pixels).
 
 CALIBRATION, each part alone, the file served changed (harness serve-run,
 scratch): 49 breaks, every one red at its own row; part 1 against six changed
