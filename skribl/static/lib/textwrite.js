@@ -764,6 +764,30 @@
   }
 
   function isOpen() { var s = sheetEl(); return !!(s && !s.hidden && s.classList.contains('open')); }
+  // THE SHEET RISES AND SINKS, from below the screen's edge and back, on a
+  // phone and on a desk alike; with reduced motion it is simply there, or
+  // gone. A bottom sheet a finger pulled part way sinks from where it was
+  // left (lib/sheetswipe.js slideOut).
+  function still() {
+    return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  }
+  var AWAY = 'translateY(calc(100% + 32px))';
+  function rise(s) {
+    if (still() || typeof s.animate !== 'function') return;
+    s.animate([{ transform: AWAY }, { transform: 'none' }],
+              { duration: 300, easing: 'cubic-bezier(.2, .8, .2, 1)' });
+  }
+  function sink(s, done) {
+    if (window.SkriblSheetSwipe && window.SkriblSheetSwipe.isBottomSheet(s)) {
+      window.SkriblSheetSwipe.slideOut(s, { done: done });
+      return;
+    }
+    if (still() || typeof s.animate !== 'function') { done(); return; }
+    var a = s.animate([{ transform: 'none' }, { transform: AWAY }],
+                      { duration: 240, easing: 'cubic-bezier(.3, .1, .4, 1)' });
+    a.onfinish = done;
+    a.oncancel = done;
+  }
   /* The tap that says where the words go. */
   function place(pos) {
     if (!editor || !bind()) return;
@@ -776,10 +800,12 @@
     if (!els.field.value) { try { els.field.value = sessionStorage.getItem(WORDS_KEY) || ''; } catch (e) {} }
     syncStyles();
     syncSize();
+    if (window.SkriblSheetSwipe) window.SkriblSheetSwipe.cancelSlide(s);   // reopened mid-sink: from where it is
+    if (typeof s.getAnimations === 'function') s.getAnimations().forEach(function (a) { a.onfinish = a.oncancel = null; a.cancel(); });
     s.hidden = false;
     document.body.classList.add('text-open');
-    void s.offsetHeight;
     s.classList.add('open');
+    rise(s);
     // Every style's lettering, so each can be written in itself; the words'
     // own first.
     var st = styleNow();
@@ -801,15 +827,11 @@
     els.place.hidden = true;
     document.body.classList.remove('text-open');
     if (document.activeElement === els.field) els.field.blur();
-    var finish = function () { s.hidden = true; s.classList.remove('open'); if (then) then(); };
-    if (window.SkriblSheetSwipe && window.SkriblSheetSwipe.isBottomSheet(s)) {
-      window.SkriblSheetSwipe.slideOut(s, { done: finish });
-      return;
-    }
     s.classList.remove('open');
-    var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (reduce) { s.hidden = true; if (then) then(); return; }
-    setTimeout(function () { if (!s.classList.contains('open')) s.hidden = true; if (then) then(); }, 260);
+    sink(s, function () {
+      if (!s.classList.contains('open')) s.hidden = true;
+      if (then) then();
+    });
   }
   function close() {
     if (!els) return;

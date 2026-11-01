@@ -8015,10 +8015,10 @@ html.skribl-sheet { overscroll-behavior-y: none; }
   background: var(--menu-paper); color: var(--text-primary);
   border-radius: 22px 22px 0 0;
   box-shadow: 0 -10px 40px rgba(20, 10, 60, .22);
-  transform: translateY(calc(100% + 24px));
-  transition: transform .3s cubic-bezier(.2, .8, .2, 1);
 }
-.tx-sheet.open { transform: none; }
+/* It rises and it sinks (lib/textwrite.js, by script as lib/sheetswipe.js
+   slides the other sheets, so reduced motion is asked there and the player's
+   stylesheet carries no motion rule for a sheet it never has). */
 .tx-sheet[hidden] { display: none; }
 @media (min-width: 641px) {
   .tx-sheet { left: 50%; right: auto; bottom: 24px; width: 420px; max-height: calc(100dvh - 48px);
@@ -8058,8 +8058,10 @@ html.skribl-sheet { overscroll-behavior-y: none; }
   font: inherit; font-size: 15px; font-weight: 600;
 }
 .tx-style svg { display: block; width: 100%; max-height: 30px; height: auto; overflow: visible; }
+/* The transparent outline is the edge forced colours paint, where a tint
+   says nothing (as the draw drawer's chosen tile does). */
 .tx-style.on { background: var(--seg-on-fill); color: var(--seg-on-ink); border-color: transparent;
-  box-shadow: inset 0 0 0 1.5px var(--ui-hi); }
+  box-shadow: inset 0 0 0 1.5px var(--ui-hi); outline: 2px solid transparent; outline-offset: -3px; }
 .tx-make { display: grid; justify-items: center; gap: 1px; font-size: 13px; font-weight: 700; line-height: 1.15; color: var(--accent-ink); }
 .tx-make b { font-size: 20px; line-height: 1; font-weight: 600; }
 .tx-under { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: -8px; min-height: 44px; }
@@ -8100,12 +8102,6 @@ html.skribl-sheet { overscroll-behavior-y: none; }
   padding: 5px 12px; border-radius: 999px; white-space: nowrap; pointer-events: none;
   background: var(--menu-paper); color: var(--text-primary); font-size: 14px; font-weight: 600;
   box-shadow: 0 2px 10px rgba(20, 10, 60, .18);
-}
-@media (prefers-reduced-motion: reduce) {
-  .tx-sheet { transition: none; }
-}
-@media (forced-colors: active) {
-  .tx-style.on { outline: 2px solid CanvasText; outline-offset: -3px; }
 }
 
 /* ---------- Second phone tier, from 393px ----------
