@@ -847,7 +847,7 @@ function setPreviewSpeed(c) {
 // A on the Undo, reach and Repeat page). On, Play goes round until you stop it, each
 // round from the first point with its music from the loop's start
 // (replayAgain, below), as a link page's round does; off, Play shows it once,
-// as before. The music drawer's "Play my drawing" is this Play, so it
+// as before. The music drawer's "Play with my drawing" is this Play, so it
 // follows. Turned off mid-round, that round is the last. Posts are not this:
 // they repeat unless the person watching stops them. Not for Flip, whose Play
 // already goes round and whose Loop repeats a stretch of pages. Its words are

@@ -816,10 +816,10 @@ with sync_playwright() as pw:
     # Each of the pair as laid out (Play, and Hear's pill with the click at
     # its end): where it sits, and whether its button's words overflow. And
     # Play's words against its ROUND END, the pill's own edge at the height of
-    # the line, not its box: measured to the box, Flip's "with my animation"
-    # passed at 402px with its last letter on the curve, and ran 8px out at
-    # 390, a width no row tried (the owner chose "Play my animation", after
-    # v330). At every common phone width, saying Play and, pressed, Stop.
+    # the line, not its box: Flip's "with my animation" ran 3.4px past it at
+    # 380px and touched it at 390, widths no row tried, and the box hid it
+    # (the owner chose "Play with my flip", after v330). At every common phone
+    # width, as a touch phone, saying Play and, pressed, Stop.
     FIT = """() => { const pair = [...document.querySelectorAll('.mt-transport > *')].map(x => { const r = x.getBoundingClientRect(), b = x.matches('.mt-play') ? x : x.querySelector('.mt-play');
       return { over: b.scrollWidth - b.clientWidth, top: Math.round(r.top), w: Math.round(r.width) }; });
       const p = document.getElementById('musicPlayBtn'), v = p.querySelector('.tp-v'), g = document.createRange(); g.selectNodeContents(v);

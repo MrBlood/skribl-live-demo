@@ -4,7 +4,7 @@ having it show me drawing? It's cumbersome, plus to know how many beats are in
 the loop, so I'm not at 7 or 9 when I want 8"; "All yes" to the mock; then
 "we only ever want 4,8,16,... beats").
 
-  THE PAIR. Play my drawing and Hear the loop sit under the timeline in
+  THE PAIR. Play with my drawing and Hear the loop sit under the timeline in
   the same place whichever door is open, or none, the same size, and no door
   has a second Hear. Hear the loop plays the music alone, round and round,
   until Stop; an end moved while it plays is heard from its next time round.
@@ -114,6 +114,9 @@ def eds(name):
 DESK = dict(viewport={"width": 1280, "height": 900})
 PHONE = dict(viewport={"width": 402, "height": 874}, device_scale_factor=2, is_mobile=True, has_touch=True)
 WORK = {"Pad": "drawing", "Flip": "animation"}
+# Play's own word for it: Flip's says "Play with my flip", "Stop the flip"
+# (the owner, after v330), where the rest of its drawer says animation.
+PLAYWORK = {"Pad": "drawing", "Flip": "flip"}
 PLAY = {"Pad": "#playBtn", "Flip": "#play"}
 
 
@@ -333,7 +336,7 @@ with sync_playwright() as pw:
         press(pg, "#previewLoopBtn", 300)
         stop = pg.evaluate(SAID)
         check(f"{_n}: Hear the loop plays the music alone, round and round, and Stop stops it",
-              st["pv"] and wa and not st["playing"] and st["hear"] == "Stop the loop" and st["play"] == f"Play my {WORK[_n]}"
+              st["pv"] and wa and not st["playing"] and st["hear"] == "Stop the loop" and st["play"] == f"Play with my {PLAYWORK[_n]}"
               and not stop["pv"] and stop["hear"] == "Hear the loop" and not pg.evaluate("() => _waLoop.playing()"),
               f"playing: {dict((k, st[k]) for k in ('pv', 'playing', 'hear', 'play'))}, engine {wa}; stopped: {stop['hear']!r}, {stop['pv']}")
         c.close()
