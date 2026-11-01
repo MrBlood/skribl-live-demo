@@ -314,12 +314,12 @@ def register_routes(bp, *, index_route=False):
         # the same drawing surface and the same post-time payload work, ending
         # differently. A second route would be a second page to keep in step.
         #
-        # THE LETTER SHEET. ?letters=1 is the Pad as a page for drawing a font:
-        # one letter at a time on the real canvas with the real pen, so each
-        # letter keeps its speed and pressure, and the whole alphabet posted as
-        # one Skribl at the end (skribl/static/editor_letters.js). Linked from
-        # nowhere: it is the owner's, for the Text tool's own hand. A query
-        # flag for the reason compose is one, and never both at once.
+        # YOUR HAND. ?letters=1 is the Pad as a page where a person draws their
+        # own letters, one at a time on the real canvas with the real pen, so
+        # each keeps its speed and pressure, and changes any of them later
+        # (skribl/static/editor_letters.js). It began as the owner's letter
+        # sheet; the owner made it everyone's. A query flag for the reason
+        # compose is one, and never both at once.
         compose = request.args.get("compose") == "1"
         return render_template("skribl/skribl_editor.html", compose=compose,
                                letters=(not compose

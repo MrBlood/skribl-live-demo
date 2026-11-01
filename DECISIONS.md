@@ -27929,3 +27929,84 @@ behind: 720 for 655 on the Pad, 376.5 for 311.5 on the link page, 316.2 for
 251.2 in the post), the settled rows green; and with the bubble not riding
 up at all (its lift fixed at 56px), the settled rows red on all three. The
 whole suite, 168 of 168.
+
+## After v330 -- Your hand: every person's own letters, theirs to change
+
+The owner drew the letter sheet on their phone and posted it ("My letters",
+92 letters, 136 strokes; every one read back from the post), said "I might
+want to redo that, I did it fast", then asked "Every user should have their
+own font, right? That they can edit?" and said "Yes to all" to five calls:
+every person their own hand, kept on their device and editable; 30 letters
+to start; a copy to keep; the owner's hand offered to everyone as the style
+Skribl; mock first. The mock (the Text mock, v3) put seven more; "Yes" to all
+seven. This is the first of the two pull requests; the Text tool is the
+second. FUTURE.md 6ab has the plan.
+
+WHAT A PERSON MEETS (editor_letters.js, letters.css, still /skribl-pad
+?letters=1 until the Text sheet's door comes with the Text tool):
+- THE START, for someone with no letters: what happens, how long it takes,
+  Skribl's own "hello" writing itself, Start with a, Open a copy.
+- THE FIRST 30 (a to z, then . , ! ?), then READY, once: Add the rest, or
+  Done. The rest come in the order they are posted (capitals, numbers, the
+  other marks, accents, second tries); Next goes to the next letter not yet
+  drawn.
+- THE TILES (Your hand): every letter in its group with its count, drawn
+  ones in the person's hand, the rest faint in the page's face with a +.
+  Tapping one draws it again with the old one faint behind it; the old one
+  is kept until Done (a reload in the middle leaves it as it was), Cancel
+  keeps it, Redo clears only the new strokes. Tapping a + adds the letter.
+  The last letter drawn in order ends here, the whole line writing itself.
+- ALONG THE BOTTOM: Save a copy (a plain download, my-hand.skriblhand, as
+  the Pad's own Save as a file is, so Safari saves it rather than showing
+  JSON), Open a copy (every letter checked, Undo), Start over (Undo), Post
+  your letters (whatever is drawn).
+
+THE POSTED ORDER DID NOT CHANGE. Letters are drawn in a new order but
+posted in the 92-cell order the owner's post already uses, so letterfont.py
+reads it and every set after it the same way. A set posted before every
+letter is drawn leaves those cells empty; the reader's split now allows a
+letter no strokes (each stroke's letter never before the one before it), and
+reads the owner's post back exactly as before. A store from the letter sheet
+is read as it stands and placed again: the owner's 92 open on the tiles.
+
+What changed from the letter sheet, as built yesterday: the end screen (the
+whole set on the canvas, Back, Post your letters) became the tiles; Back
+from the end went with it; the sheet's progress counts to 30, then to 92.
+
+verify_letters (69 rows, 13 parts) holds it: the start for someone new; the
+sheet's bars painted and the Pad's chrome hidden; a letter a performance; the
+guides and the model; Next, Back, Redo; the line, and the last letter ending
+on the tiles with the line writing itself; the Pad untouched; Finish later
+and coming back; the set posted from the tiles and read back (all 92, and a
+hand of 30 with the other 62 empty); every word 4.5:1 and up on the bars and
+all three pages, phone and desk, light and dark (the lowest 5.3:1, the purple
+buttons), every button 44px; the keys; the first 30 and Ready, once; the
+tiles, drawing again and adding; a copy, Start over and Undo, and a file that
+is not a hand changing nothing.
+
+CALIBRATION, the part alone, the file served changed: 42 breaks, each red at
+its own row: the 30 old ones that still apply, and the start skipped, the
+order not starting with the 30, Ready never, Ready twice, Add the rest from
+a, no letter faint behind, a letter drawn again kept before Done, Done
+ignored, no +, a copy with one letter, Start over's Undo doing nothing, any
+file opened, a set of 30 posted packed together, the tiles not coming back
+after the post sheet. Three did not go red first time, and each said
+something: GAP 0 met a server error, three runs posting to one test
+database at once, and went red run alone; Ready never and the faint letter
+gone made the suite stop on a wait, and one read showed why the second
+passed: its count of faint pixels crossed the guide lines, which are as
+faint, and found a thousand of them with no letter there. It counts away
+from the lines now, and the wait says what came instead.
+
+WHAT IT DOES TO FLIP: shared once the Text tool comes (one hand, one door
+from either editor's Text sheet); nothing on Flip changes now.
+
+THE FOUR: powerful (anyone's own hand, any letter changed later); playful
+(your letters writing themselves on the tiles and the start); simple (30 to
+start, tap a letter to change it); kind (nothing is lost: a letter drawn
+again is kept until Done, Start over and Open a copy can be undone, a copy
+keeps it safe, anything not drawn still has a place).
+
+Not tested here: WebKit (the owner's iPhone, where Save a copy goes to
+Files), SF and Segoe UI for the model's fit (fitted from the face's own
+measurements), the live site (this build is not deployed until it merges).

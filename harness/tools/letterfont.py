@@ -22,10 +22,11 @@ WHICH STROKES ARE WHOSE is not written anywhere in the post: a Skribl's
 strokeGroups are per stroke, and bending them into per letter would change
 what undo and the readers take them to mean. It is read back from where each
 stroke sits, in order: the letters were posted one after another, so each
-stroke belongs to the same letter as the one before it or the next, and the
-split that puts every stroke's middle nearest its cell wins (a dynamic
+stroke belongs to the same letter as the one before it or a later one, and
+the split that puts every stroke's middle nearest its cell wins (a dynamic
 programme, so one stroke drawn wide of its box cannot shift every letter
-after it).
+after it). A set posted before every letter was drawn leaves those cells
+empty, so a letter may have no strokes at all.
 """
 import json
 import math
@@ -97,10 +98,11 @@ def split_strokes(frame):
 
 
 def assign(strokes, cells):
-    """Each stroke's letter, in order, every letter at least one stroke."""
+    """Each stroke's letter, in order: a stroke's letter is never before the
+    one before it, and a letter not drawn has none."""
     S, G = len(strokes), len(cells)
-    if S < G:
-        raise ValueError(f"{S} strokes cannot make {G} letters")
+    if not S:
+        return [], 0.0
     mids = []
     for st in strokes:
         xs = [p["x"] for p in st]
@@ -113,27 +115,26 @@ def assign(strokes, cells):
         dy = max(c["top"] - y, 0, y - c["bottom"])
         return math.hypot(dx, dy)
 
-    INF = float("inf")
-    # best[k][i]: least cost for strokes 0..k with stroke k in letter i.
-    best = [[INF] * G for _ in range(S)]
-    came = [[0] * G for _ in range(S)]
-    best[0][0] = cost(0, 0)
+    # best[k][i]: least cost for strokes 0..k with stroke k in letter i;
+    # came[k][i]: the letter stroke k-1 took then (the best at or before i).
+    best = [[cost(0, i) for i in range(G)]]
+    came = [[0] * G]
     for k in range(1, S):
-        lo = max(0, G - (S - k))          # room left for the letters after
-        for i in range(lo, min(G, k + 1)):
-            stay = best[k - 1][i]
-            step = best[k - 1][i - 1] if i else INF
-            if stay <= step:
-                best[k][i], came[k][i] = stay + cost(k, i), i
-            else:
-                best[k][i], came[k][i] = step + cost(k, i), i - 1
-    if best[S - 1][G - 1] == INF:
-        raise ValueError("no way to give every letter a stroke")
-    out, i = [0] * S, G - 1
+        row, back = [0.0] * G, [0] * G
+        lo, arg = float("inf"), 0
+        for i in range(G):
+            if best[k - 1][i] < lo:
+                lo, arg = best[k - 1][i], i
+            row[i], back[i] = lo + cost(k, i), arg
+        best.append(row)
+        came.append(back)
+    i = min(range(G), key=lambda j: best[S - 1][j])
+    total = best[S - 1][i]
+    out = [0] * S
     for k in range(S - 1, -1, -1):
         out[k] = i
         i = came[k][i]
-    return out, best[S - 1][G - 1]
+    return out, total
 
 
 def decode(doc):

@@ -1607,11 +1607,24 @@ have. Mocked on the real Pad (Oct 31 to Nov 1); the owner's answers:
 
 The order: (1) the letter sheet, **built** (DECISIONS, after v330, "The
 letter sheet"): `/skribl-pad?letters=1`, ending in Post your letters;
-(2) the owner draws it on their phone and posts it, and Cal reads it back
-(`harness/tools/letterfont.py`, from the post's link: the session needs the
-live site in its network settings' allowed domains); (3) the Text tool,
-with the owner's hand and Speed; (4) the polish (the iPhone's keyboard, the
-typing sheet on a desk).
+(2) the owner drew it on their phone and posted it (Oct 31, "My letters"),
+and Cal read all 92 back (`harness/tools/letterfont.py`, from the post's
+link); the owner will draw it again, slower ("I did it fast to see if it
+works").
+
+**Every person's own hand** (owner, Nov 1: "Every user should have their own
+font, right? That they can edit?"; "Yes to all" to the five calls, then
+"Yes" to the seven of the Your hand mock): each person draws their own
+letters, kept on their device; 30 to start (a to z and . , ! ?), the rest
+when they like, anything not drawn written in Print; any letter changed
+later by tapping it; Save a copy and Open a copy; Start over with Undo; the
+owner's own hand offered to everyone as the style **Skribl**, from the set
+drawn again. Two pull requests. (3) **Your hand, built** (DECISIONS, after
+v330, "Your hand"): the start, the first 30, Ready, the tiles, drawing a
+letter again, copies, Start over. (4) **Next: the Text tool**, with its
+style row (Yours or + Make yours, Skribl, Print, Script), the one door to
+Your hand from the Text sheet (Edit your hand), Speed, and the owner's set as
+Skribl. (5) The polish (the iPhone's keyboard, the typing sheet on a desk).
 
 ## 7. The honest state
 
