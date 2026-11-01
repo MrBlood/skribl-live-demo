@@ -16,9 +16,10 @@ Mirror leaving them alone. Each row holds a promise:
      Text chosen, a press opens the sheet again where it was.
   4. PLACED BEFORE INK: typed words show in a box above the sheet, painted
      in the pen's colour, and nothing is ink yet; dragging the box moves the
-     words by the drag; they cannot be dragged under the sheet; a press
-     elsewhere moves them there without the sheet moving; a colour chosen
-     while the sheet is up is the one they show in.
+     words by the drag; dragged down past where the sheet stood, the sheet
+     steps aside and the words are never under it (17); a press elsewhere
+     moves them there and the bar stays still; a colour chosen while the
+     sheet is up is the one they show in.
   5. WRITTEN IN TIME: Write it closes the sheet and the words write
      themselves, stroke by stroke over the time the sheet said; each point
      keeps the time the plan gave it on the take's clock, forward only, where
@@ -57,6 +58,21 @@ Mirror leaving them alone. Each row holds a promise:
      goes, the sheet comes down and the words come back to where they were
      put; the x and Write it pressed with the keyboard up do what they say;
      on a desk, Enter writes.
+ 17. THE SHEET STEPS ASIDE (the owner, on the iPhone: "can't drag the words
+     to the bottom of canvas. Should the text card open under the canvas?";
+     the mock's A, "All yes"): a drag of the words sends the sheet down to
+     its grabber, gliding, and the words reach the drawing's foot (or 12px
+     above the bar, where that comes first); let go and it rises as the bar,
+     the words and Write it, covering none of the drawing, the words where
+     they were let go; the words in the bar tapped (asking for the sheet,
+     not the keyboard), its grabber tapped, a pull up, or the keyboard on a
+     desk bring the whole sheet back, gliding, the words gliding up above
+     it; Write it in the bar writes them where they were put; a press on
+     the drawing with the whole sheet up steps it aside, down and back up;
+     closed from the bar, it opens next time whole, even where a script
+     cannot focus the field (an iPhone); on a desk the bar rests at the
+     window's foot; with Reduce Motion nothing passes between. Each row was
+     shown red by breaking its own piece (13 ways).
 
 For calibration, TEXT_PART=<words of a part's label> runs that part alone.
 A real run sets none.
@@ -181,6 +197,17 @@ def tap(q, x, y):
     else:
         q.mouse.click(x, y)
     q.wait_for_timeout(350)
+
+
+def place_words(q, fx, fy):
+    """A press that says where the words go. With the sheet up it steps aside
+    to its bar (TEXT 17); the words in the bar, tapped, bring the whole sheet
+    back, as a person reaching for Style, Size or Speed does."""
+    tap(q, *at(q, fx, fy))
+    q.wait_for_timeout(600)
+    if q.evaluate("() => document.getElementById('txSheet').classList.contains('tucked')"):
+        q.evaluate("() => document.getElementById('txField').click()")
+        q.wait_for_timeout(450)
 
 
 def draw_line(q, fx0, fy0, fx1, fy1, n=20):
@@ -329,7 +356,7 @@ with sync_playwright() as p:
         s = q.evaluate(SHEET)
         after = q.evaluate("() => [strokes.length, strokeGroups.length, recording, hasContent]")
         check("Close leaves nothing behind", not s["open"] and s["hidden"] and s["place"] is None and after[:3] == n0 + [False], f"{s} {after}")
-        tap(q, *at(q, 0.3, 0.3))
+        place_words(q, 0.3, 0.3)
         s = q.evaluate(SHEET)
         a = q.evaluate("() => SkriblText.anchor()")
         want = q.evaluate("() => { const lg = getCanvasLogicalSize(); return [lg.width * 0.3, lg.height * 0.3]; }")
@@ -349,7 +376,7 @@ with sync_playwright() as p:
         draw_line(q, 0.2, 0.15, 0.8, 0.15)
         choose_text(q)
         n0 = q.evaluate(COUNT["pad"])
-        tap(q, *at(q, 0.5, 0.3))
+        place_words(q, 0.5, 0.3)
         type_words(q, "Hello")
         s = q.evaluate(SHEET)
         ink = q.evaluate("""() => { const c = document.getElementById('txPreview'), d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
@@ -359,6 +386,7 @@ with sync_playwright() as p:
         pen_rgb = [int(hexpen[i:i + 2], 16) for i in (0, 2, 4)] if len(hexpen) == 6 else None
         check("the words show in a box above the sheet", s["place"] is not None and s["place"][3] <= s["top"] + 0.5,
               f"box {s['place']}, sheet top {s['top']}")
+        stood = s["top"]           # the whole sheet, before any drag sends it aside
         check("...painted in the pen's colour", ink["n"] > 200 and pen_rgb is not None and ink["col"] is not None
               and max(abs(a - b2) for a, b2 in zip(ink["col"], pen_rgb)) <= 3, f"{ink}")
         check("...and nothing is ink yet", q.evaluate(COUNT["pad"]) == n0, str(q.evaluate(COUNT["pad"])))
@@ -381,12 +409,13 @@ with sync_playwright() as p:
         for i in range(1, 16):
             q.mouse.move(cx - 60, cy - 90 + 60 * i)
         q.mouse.up()
-        q.wait_for_timeout(120)
+        q.wait_for_timeout(600)
         s = q.evaluate(SHEET)
-        check("...and cannot be dragged under the sheet", s["place"] is not None and s["place"][3] <= s["top"] + 0.5,
-              f"box bottom {s['place'][3] if s['place'] else None}, sheet top {s['top']}")
-        # A press elsewhere on the drawing while the sheet is up moves the
-        # words there, and the sheet stays where it is (no second entrance).
+        check("...and dragged down past where the sheet stood, the sheet steps aside, and the words are never under it",
+              s["place"] is not None and s["place"][3] > stood and s["place"][3] <= s["top"] + 0.5,
+              f"box bottom {s['place'][3] if s['place'] else None}, the sheet stood at {stood}, now at {s['top']}")
+        # A press elsewhere on the drawing with the sheet aside moves the words
+        # there, and the bar stays where it is (no second entrance).
         px, py = at(q, 0.35, 0.22)
         tops = q.evaluate("""([x, y]) => new Promise(res => { const s = document.getElementById('txSheet'), out = [];
           const r = canvas.getBoundingClientRect(), lg = getCanvasLogicalSize();
@@ -395,7 +424,7 @@ with sync_playwright() as p:
           (function f() { out.push(Math.round(s.getBoundingClientRect().top)); if (performance.now() - t0 < 400) requestAnimationFrame(f); else res(out); })(); })""", [px, py])
         a2 = q.evaluate("() => SkriblText.anchor()")
         want = q.evaluate("([x, y]) => { const r = canvas.getBoundingClientRect(), lg = getCanvasLogicalSize(); return [(x - r.left) * lg.width / r.width, (y - r.top) * lg.height / r.height]; }", [px, py])
-        check("a press elsewhere moves the words there, and the sheet stays still",
+        check("a press elsewhere moves the words there, and the bar stays still",
               abs(a2["x"] - want[0]) <= 1 and abs(a2["y"] - want[1]) <= 1 and len(set(tops)) == 1,
               f"words at {round(a2['x'])},{round(a2['y'])} for a press at {round(want[0])},{round(want[1])}; the sheet at {sorted(set(tops))[:4]}")
         # The pen changed while the sheet is up: the words show in its colour.
@@ -414,7 +443,7 @@ with sync_playwright() as p:
     if part("TEXT 5 — written in time"):
         c, q = open_editor(b, "pad", prefs={"style": "print", "size": "M", "speed": 4})
         choose_text(q)
-        tap(q, *at(q, 0.5, 0.35))
+        place_words(q, 0.5, 0.35)
         type_words(q, "Hi there")
         plan = q.evaluate(PLAN)
         n0 = q.evaluate(COUNT["pad"])
@@ -450,7 +479,7 @@ with sync_playwright() as p:
             draw_line(q, 0.2, 0.15, 0.8, 0.15)
             n0 = q.evaluate(COUNT[editor])
             choose_text(q)
-            tap(q, *at(q, 0.5, 0.35))
+            place_words(q, 0.5, 0.35)
             type_words(q, "Hello")
             plan = q.evaluate(PLAN)
             write_and_wait(q)
@@ -473,7 +502,7 @@ with sync_playwright() as p:
             draw_line(q, 0.2, 0.15, 0.4, 0.2)
             n0 = q.evaluate(COUNT[editor])
             choose_text(q)
-            tap(q, *at(q, 0.5, 0.35))
+            place_words(q, 0.5, 0.35)
             type_words(q, "Hello")
             plan = q.evaluate(PLAN)
             write_and_wait(q)
@@ -486,7 +515,7 @@ with sync_playwright() as p:
     if part("TEXT 8 — finished early, honestly"):
         c, q = open_editor(b, "pad", prefs={"style": "print", "size": "M", "speed": 0})
         choose_text(q)
-        tap(q, *at(q, 0.5, 0.35))
+        place_words(q, 0.5, 0.35)
         type_words(q, "Hello there")
         plan = q.evaluate(PLAN)
         q.click("#txGo")
@@ -515,7 +544,7 @@ with sync_playwright() as p:
     if part("TEXT 9 — speed"):
         c, q = open_editor(b, "pad", prefs={"style": "print", "size": "M", "speed": 4})
         choose_text(q)
-        tap(q, *at(q, 0.5, 0.35))
+        place_words(q, 0.5, 0.35)
         type_words(q, "Happy birthday")
         one = q.evaluate(PLAN)["ms"]
         out1 = q.evaluate(SHEET)["out"]
@@ -545,7 +574,7 @@ with sync_playwright() as p:
     if part("TEXT 10 — styles and hands"):
         c, q = open_editor(b, "pad")
         choose_text(q)
-        tap(q, *at(q, 0.5, 0.35))
+        place_words(q, 0.5, 0.35)
         type_words(q, "Ab")
         q.wait_for_function("() => [...document.querySelectorAll('#txStyles [data-style]')].filter(b => b.dataset.face === 'drawn').length === 3",
                             timeout=15000)
@@ -580,7 +609,7 @@ with sync_playwright() as p:
         c.close()
         c, q = open_editor(b, "pad", hand=hand_seed(QUICK))
         choose_text(q)
-        tap(q, *at(q, 0.5, 0.35))
+        place_words(q, 0.5, 0.35)
         type_words(q, "A")
         q.wait_for_function("() => !!document.querySelector('#txStyles [data-style=\"print\"][data-face=\"drawn\"]')", timeout=15000)
         row = q.evaluate("""() => ({ on: [...document.querySelectorAll('#txStyles [data-style]')].filter(b => b.classList.contains('on')).map(b => b.dataset.style),
@@ -601,7 +630,7 @@ with sync_playwright() as p:
     if part("TEXT 11 — the door"):
         c, q = open_editor(b, "pad")
         choose_text(q)
-        tap(q, *at(q, 0.5, 0.35))
+        place_words(q, 0.5, 0.35)
         q.wait_for_timeout(200)
         q.click('#txStyles [data-style="yours"]')
         q.wait_for_url("**letters=1**", timeout=15000)
@@ -620,7 +649,7 @@ with sync_playwright() as p:
         # it stays, with the size and speed they had.
         c, q = open_editor(b, "flip", hand=hand_seed(QUICK), prefs={"style": "skribl", "size": "L", "speed": 6})
         choose_text(q)
-        tap(q, *at(q, 0.5, 0.35))
+        place_words(q, 0.5, 0.35)
         q.wait_for_timeout(200)
         q.click("#txEdit")
         q.wait_for_url("**letters=1**", timeout=15000)
@@ -675,7 +704,7 @@ with sync_playwright() as p:
         q.evaluate("() => go(0)")
         q.wait_for_timeout(200)
         choose_text(q)
-        tap(q, *at(q, 0.5, 0.35))
+        place_words(q, 0.5, 0.35)
         type_words(q, "Hi")
         plan = q.evaluate(PLAN)
         n0 = q.evaluate(COUNT["flip"])
@@ -730,7 +759,7 @@ with sync_playwright() as p:
                 for hand in (None, hand_seed(QUICK)):
                     c, q = open_editor(b, "pad", theme=theme, dev=dev, hand=hand)
                     choose_text(q)
-                    tap(q, *at(q, 0.5, 0.8))
+                    place_words(q, 0.5, 0.8)
                     type_words(q, "Hello")
                     q.wait_for_timeout(350)
                     for k2, v in q.evaluate(RATIOS, [LUM, SELS]).items():
@@ -795,7 +824,7 @@ with sync_playwright() as p:
         choose_text(q)
         q.wait_for_timeout(300)
         opened = q.evaluate("() => SkriblText.isOpen()")
-        tap(q, *at(q, 0.4, 0.3))
+        place_words(q, 0.4, 0.3)
         a = q.evaluate("() => SkriblText.anchor()")
         want = q.evaluate("() => { const lg = getCanvasLogicalSize(); return [lg.width * 0.4, lg.height * 0.3]; }")
         said = q.evaluate("() => { const t = document.getElementById('toast'); return t && !t.hidden ? t.textContent : ''; }")
@@ -844,8 +873,11 @@ with sync_playwright() as p:
         q.evaluate(KEYBOARD)
         n0 = q.evaluate(COUNT["pad"])
         choose_text(q)
-        tap(q, *at(q, 0.4, 0.3))
+        place_words(q, 0.4, 0.3)
         put = q.evaluate("() => { const lg = getCanvasLogicalSize(); return [lg.width * 0.4, lg.height * 0.3]; }")
+        # Placing put the keyboard away (the sheet stepped aside); the field,
+        # tapped, brings it back to type.
+        q.evaluate("() => document.getElementById('txField').focus()")
         type_words(q, "Hello")
         q.wait_for_timeout(300)
         t = q.evaluate(TYPING)
@@ -908,6 +940,195 @@ with sync_playwright() as p:
         waited(q, "() => !SkriblText.isWriting()", 30000)
         n1 = q.evaluate(COUNT["pad"])
         check("desk: Enter writes the words", n1[1] > 0, str(n1))
+        c.close()
+
+    # ------------------------------------------------------------------ 17
+    if part("TEXT 17 — the sheet steps aside"):
+        # Every frame for `ms`: the sheet's top and the words' top.
+        FRAMES = """(ms) => new Promise(res => { const s = document.getElementById('txSheet'), p = document.getElementById('txPlace'), out = [];
+          const t0 = performance.now();
+          (function f() { out.push([s.getBoundingClientRect().top, p.hidden ? null : p.getBoundingClientRect().top]);
+            if (performance.now() - t0 < ms) requestAnimationFrame(f); else res(out); })(); })"""
+        # The drawing is its inner box: the words stop at the canvas's inner edge
+        # (lib/textwrite.js screenBox), inside any border it has.
+        ASIDE = """(sel) => { const s = document.getElementById('txSheet'), r = s.getBoundingClientRect(), el = document.querySelector(sel), cr = el.getBoundingClientRect();
+          const cs = getComputedStyle(el), k = el.offsetHeight ? cr.height / el.offsetHeight : 1;
+          const c = { top: cr.top + (parseFloat(cs.borderTopWidth) || 0) * k, bottom: cr.bottom - (parseFloat(cs.borderBottomWidth) || 0) * k };
+          const p = document.getElementById('txPlace'), w = p.hidden ? null : p.getBoundingClientRect();
+          const shown = [...s.children].filter(e => e.getClientRects().length && getComputedStyle(e).display !== 'none').map(e => e.id || e.className);
+          return { open: SkriblText.isOpen(), bar: s.classList.contains('tucked'), top: r.top, bottom: r.bottom, vh: innerHeight,
+                   canvas: [c.top, c.bottom], words: w && [w.top, w.bottom], shown: shown,
+                   focus: document.activeElement && document.activeElement.id }; }"""
+
+        def glides(seq, down):
+            """Several places on the way, each step the same way, none a leap
+            of more than 45% of the whole move."""
+            pts = [round(v) for v in seq if v is not None]
+            if len(pts) < 2:
+                return False, "no frames"
+            span = abs(pts[-1] - pts[0])
+            steps = [b2 - a2 for a2, b2 in zip(pts, pts[1:])]
+            way = all(st >= -1 for st in steps) if down else all(st <= 1 for st in steps)
+            between = len({v for v in pts if v not in (pts[0], pts[-1])})
+            return (span >= 20 and way and between >= 3 and max(abs(st) for st in steps) <= span * 0.45,
+                    f"{between} places between {pts[0]} and {pts[-1]}, biggest step {max(abs(st) for st in steps)}px")
+
+        def ready(q, words="The man is"):
+            choose_text(q)
+            q.wait_for_function("() => SkriblText.isOpen()")
+            type_words(q, words)
+            q.evaluate("() => document.getElementById('txField').blur()")
+            q.click('#txSize [data-size="L"]')
+            q.wait_for_timeout(400)
+
+        def drag_to_foot(q, sample=True):
+            """The words dragged slowly to the drawing's foot: the frames of the
+            first moments, and the state half way, while the finger is down."""
+            box = q.locator("#txPlace").bounding_box()
+            x, y = box["x"] + box["width"] / 2, box["y"] + box["height"] / 2
+            q.mouse.move(x, y)
+            q.mouse.down()
+            q.mouse.move(x, y + 8)
+            first = q.evaluate(FRAMES, 420) if sample else []
+            for i in range(1, 26):
+                q.mouse.move(x, y + 8 + 32 * i)
+                q.wait_for_timeout(16)
+            return first
+
+        for ed in ("pad", "flip"):
+            c, q = open_editor(b, ed, prefs={"style": "skribl", "size": "L", "speed": 4})
+            ready(q)
+            s0 = q.evaluate(ASIDE, CANVAS[ed])
+            first = drag_to_foot(q)
+            mid = q.evaluate(ASIDE, CANVAS[ed])
+            ok, why = glides([f[0] for f in first], True)
+            check(f"{ed}: a drag of the words sends the sheet aside, gliding down to just its grabber",
+                  ok and mid["top"] >= mid["vh"] - 22 - 1 and not mid["bar"], f"{why}; the sheet's top at {round(mid['top'])} of {mid['vh']}")
+            q.mouse.up()
+            rise = q.evaluate(FRAMES, 420)
+            s1 = q.evaluate(ASIDE, CANVAS[ed])
+            # As far as the drawing goes, or the bar's margin (12px above it) where that comes first.
+            foot = min(mid["canvas"][1], s1["top"] - 12)
+            check(f"{ed}: ...and the words reach the foot of the drawing, under where the sheet stood",
+                  mid["words"] is not None and mid["words"][1] >= foot - 1 and mid["words"][0] > s0["top"],
+                  f"words {[round(v, 1) for v in mid['words'] or []]}, the foot {round(foot, 1)} (drawing {round(mid['canvas'][1], 1)}, bar {round(s1['top'], 1)}), the sheet stood at {round(s0['top'])}")
+            ok, why = glides([f[0] for f in rise], False)
+            check(f"{ed}: let go, and it rises as the bar, gliding: the words and Write it, covering none of the drawing, the words where they were let go",
+                  ok and s1["bar"] and set(s1["shown"]) <= {"tx-grab", "txField", "txGo"} and {"txField", "txGo"} <= set(s1["shown"])
+                  and s1["top"] >= s1["canvas"][1] - 0.5 and s1["words"] == mid["words"],
+                  f"{why}; shown {s1['shown']}; bar at {round(s1['top'])}, drawing ends {round(s1['canvas'][1])}; words {mid['words']} -> {s1['words']}")
+            # The words in the bar, tapped: the whole sheet, the words gliding up above it.
+            # A finger's tap (a script's click moves no focus, and would hide a keyboard that came up).
+            q.evaluate("""(ms) => { window.__fr = new Promise(res => { const s = document.getElementById('txSheet'), pl = document.getElementById('txPlace'), out = [];
+                const t0 = performance.now();
+                (function f() { out.push([s.getBoundingClientRect().top, pl.getBoundingClientRect().top]);
+                  if (performance.now() - t0 < ms) requestAnimationFrame(f); else res(out); })(); }); }""", 520)
+            q.tap("#txField")
+            fr = q.evaluate("() => window.__fr")
+            s2 = q.evaluate(ASIDE, CANVAS[ed])
+            ok1, why1 = glides([f[0] for f in fr], False)
+            ok2, why2 = glides([f[1] for f in fr], False)
+            check(f"{ed}: a tap on the words in the bar brings the whole sheet back, gliding, and the words glide up above it",
+                  ok1 and ok2 and not s2["bar"] and "txStyles" in s2["shown"] and s2["words"][1] <= s2["top"] + 0.5,
+                  f"sheet: {why1}; words: {why2}; shown {s2['shown']}")
+            check(f"{ed}: ...and a tap on the words there asks for the sheet, not the keyboard",
+                  s2["focus"] != "txField", f"focus on {s2['focus']}")
+            c.close()
+
+        # The grabber and a pull up (a phone's), Write it from the bar, a press with the sheet up.
+        c, q = open_editor(b, "pad", prefs={"style": "skribl", "size": "L", "speed": 8})
+        ready(q, "Hi")
+        drag_to_foot(q, sample=False)
+        q.mouse.up()
+        q.wait_for_timeout(500)
+        q.evaluate("() => document.querySelector('#txSheet .tx-grab').click()")
+        q.wait_for_timeout(500)
+        g = q.evaluate(ASIDE, CANVAS["pad"])
+        check("a tap on the bar's grabber brings the whole sheet back (the grabber closes every other sheet)",
+              g["open"] and not g["bar"], f"open {g['open']}, bar {g['bar']}")
+        drag_to_foot(q, sample=False)
+        q.mouse.up()
+        q.wait_for_timeout(500)
+        cdp = c.new_cdp_session(q)
+        r = q.evaluate("() => { const r = document.getElementById('txField').getBoundingClientRect(); return [r.left + 20, r.top + r.height / 2]; }")
+        cdp.send("Input.dispatchTouchEvent", {"type": "touchStart", "touchPoints": [{"x": r[0], "y": r[1]}]})
+        for k in range(1, 6):
+            cdp.send("Input.dispatchTouchEvent", {"type": "touchMove", "touchPoints": [{"x": r[0], "y": r[1] - 8 * k}]})
+            q.wait_for_timeout(16)
+        cdp.send("Input.dispatchTouchEvent", {"type": "touchEnd", "touchPoints": []})
+        q.wait_for_timeout(500)
+        u = q.evaluate(ASIDE, CANVAS["pad"])
+        check("a pull up on the bar brings the whole sheet back", u["open"] and not u["bar"], f"open {u['open']}, bar {u['bar']}")
+        drag_to_foot(q, sample=False)
+        q.mouse.up()
+        q.wait_for_timeout(500)
+        before = q.evaluate(ASIDE, CANVAS["pad"])
+        n0 = q.evaluate(COUNT["pad"])
+        k = q.evaluate("() => { const r = canvas.getBoundingClientRect(); return [r.top, r.height / getCanvasLogicalSize().height]; }")
+        q.click("#txGo")
+        waited(q, "() => !SkriblText.isWriting()", 30000)
+        ys = [p[1] for p in q.evaluate(POINTS["pad"], n0[0])]
+        foot = k[0] + max(ys) * k[1] if ys else None
+        check("Write it in the bar writes the words where they were put, at the foot of the drawing",
+              foot is not None and before["words"][0] - 2 <= foot <= before["words"][1] + 2 and foot >= before["canvas"][1] - 0.2 * (before["canvas"][1] - before["canvas"][0]),
+              f"ink ends at {round(foot) if foot else None}; the box was {[round(v) for v in before['words']]}, the drawing {[round(v) for v in before['canvas']]}")
+        c.close()
+        c, q = open_editor(b, "pad", prefs={"style": "skribl", "size": "M", "speed": 4})
+        ready(q, "Hi")
+        px, py = at(q, 0.5, 0.88)
+        fr = q.evaluate("""([x, y]) => { const p = new Promise(res => { const s = document.getElementById('txSheet'), out = [];
+            const t0 = performance.now();
+            (function f() { out.push(s.getBoundingClientRect().top); if (performance.now() - t0 < 800) requestAnimationFrame(f); else res(out); })(); });
+          const r = canvas.getBoundingClientRect(), lg = getCanvasLogicalSize();
+          SkriblText.place({ x: (x - r.left) * lg.width / r.width, y: (y - r.top) * lg.height / r.height }); return p; }""", [px, py])
+        s3 = q.evaluate(ASIDE, CANVAS["pad"])
+        low = max(range(len(fr)), key=lambda i: fr[i])
+        okd, whyd = glides(fr[:low + 1], True)
+        oku, whyu = glides(fr[low:], False)
+        check("a press on the drawing with the whole sheet up: the words go there, and the sheet steps aside to the bar, down and back up, gliding",
+              okd and oku and s3["bar"] and s3["words"] is not None and s3["words"][0] <= py <= s3["words"][1] + 2,
+              f"down: {whyd}; up: {whyu}; bar {s3['bar']}; words {[round(v) for v in s3['words'] or []]} for a press at {round(py)}")
+        q.evaluate("() => SkriblText.close()")
+        q.wait_for_timeout(600)
+        # Opened again as on an iPhone, which does not focus a field from a script:
+        # nothing but the opening itself may make it whole.
+        q.evaluate("() => { document.getElementById('txField').focus = () => {}; }")
+        choose_text(q)
+        q.wait_for_timeout(500)
+        s4 = q.evaluate(ASIDE, CANVAS["pad"])
+        check("closed from the bar, the sheet opens the next time whole", s4["open"] and not s4["bar"] and "txStyles" in s4["shown"],
+              f"open {s4['open']}, bar {s4['bar']}, shown {s4['shown']}")
+        c.close()
+
+        # A desk: the bar at the window's foot, clear of the drawing.
+        for ed in ("pad", "flip"):
+            c, q = open_editor(b, ed, dev=DESK, prefs={"style": "skribl", "size": "L", "speed": 4})
+            ready(q)
+            drag_to_foot(q, sample=False)
+            mid = q.evaluate(ASIDE, CANVAS[ed])
+            q.mouse.up()
+            q.wait_for_timeout(500)
+            d = q.evaluate(ASIDE, CANVAS[ed])
+            check(f"{ed} desk: the words reach the foot of the drawing, and the bar rests at the window's foot, covering none of it",
+                  d["bar"] and abs(d["bottom"] - d["vh"]) <= 1 and d["top"] >= d["canvas"][1] - 0.5
+                  and mid["words"][1] >= min(mid["canvas"][1], d["top"] - 12) - 1 and d["words"] == mid["words"],
+                  f"bar {round(d['top'])}-{round(d['bottom'])} of {d['vh']}; drawing ends {round(d['canvas'][1])}; words {[round(v) for v in d['words'] or []]}")
+            q.evaluate("() => document.getElementById('txField').focus()")
+            q.wait_for_timeout(500)
+            f = q.evaluate(ASIDE, CANVAS[ed])
+            check(f"{ed} desk: the words in the bar, reached from the keyboard, bring the whole sheet back",
+                  f["open"] and not f["bar"] and "txStyles" in f["shown"], f"bar {f['bar']}, shown {f['shown']}")
+            c.close()
+
+        # Reduce Motion: aside and back, with nothing in between.
+        c, q = open_editor(b, "pad", reduce=True, prefs={"style": "skribl", "size": "L", "speed": 4})
+        ready(q)
+        first = drag_to_foot(q)
+        q.mouse.up()
+        rise = q.evaluate(FRAMES, 300)
+        tops = sorted({round(f[0]) for f in first}), sorted({round(f[0]) for f in rise})
+        check("with Reduce Motion the sheet steps aside and comes back as the bar with nothing in between",
+              len(tops[0]) <= 2 and len(tops[1]) == 1, f"aside {tops[0][:5]}, the bar {tops[1][:5]}")
         c.close()
 
     b.close()

@@ -28630,3 +28630,50 @@ THE FOUR: playful (a butterfly drawing itself); simple (each example is the
 row changed and what it changes, nothing more); kind (a card never covers
 its row, and on a small screen it keeps its words); powerful (every setting
 in Tune shows what it does).
+
+## After v330 -- Text's sheet steps aside: words anywhere on the drawing
+
+The owner, on the iPhone, with a screenshot: "can't drag the words to the
+bottom of canvas. Should the text card open under the canvas?" The sheet
+kept the words above itself and covered 53% of the drawing on a 402px phone,
+so the words reached only its top 46% (the Pad's desk 44%, Flip 59% and 62%).
+The mock showed Now, A (the sheet steps aside while the words are placed)
+and B (the owner's: the drawing steps back to fit above the sheet, to 46% of
+its size on the phone); the owner said "All yes" to A and its three calls.
+
+- A DRAG OF THE WORDS sends the sheet down until only its grabber shows (on
+  a desk, nothing), gliding; the words go anywhere on the drawing, kept 12px
+  above where the bar will rest. LET GO and it rises as THE BAR: the words
+  (the field, read-only there) and Write it, in one row, covering none of
+  the drawing; on a desk it rests at the window's foot. A PRESS on the
+  drawing with the whole sheet up does the same, down and back up.
+- THE WHOLE SHEET COMES BACK on a tap on the words in the bar (asking for
+  the sheet, not the keyboard: the field is let go of on a touch screen), on
+  the bar's grabber (which closes every other sheet, so it is taken first in
+  the bar), on a pull up, or on the keyboard reaching the words on a desk;
+  the words glide up above it where it would cover them, and the next drag
+  puts them where they go. A pull down still closes, as on every sheet.
+- Every move glides (260ms, the sheets' own ease); with Reduce Motion each
+  is simply where it goes. A sheet opened again is the whole sheet: the
+  opening itself resets it, because an iPhone may not focus the field from
+  a script, and the focus was what had reset it in Chromium.
+- make_art.py's Text example places the words last (a press now sends the
+  sheet aside), and draws the same words to 0.0px.
+
+THE CHECKS: verify_text 17, twenty rows on both editors, phone and desk;
+each shown red by breaking its own piece, 13 ways (no stepping aside, no
+glide, no bar, no words' glide, no grabber, no pull up, no press, no reset
+on opening, no letting go of the field, motion under Reduce Motion, no
+keyboard on a desk, the lip as the limit, no foot on a desk), all green
+together. Two rows first passed broken and were remade: a script's click
+moves no focus, so the keyboard row now taps; and the reset row now opens
+the sheet as an iPhone would, with no scripted focus. The parts that placed
+their words with a press now tap them in the bar for the whole sheet after
+(place_words), as a person reaching for Style does.
+
+WHAT IT DOES TO FLIP: shared (lib/textwrite.js and one sheet for both).
+
+THE FOUR: kind (the drawing stays its size, and you see where the words
+will land before Write it); simple (the bar is the one typing shows);
+playful (the sheet gets out of the way as you reach for the words);
+powerful (words anywhere, on every screen).

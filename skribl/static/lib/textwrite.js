@@ -515,13 +515,111 @@
       // Where the sheet RESTS, from its layout box: rising, or pulled by a
       // finger, its painted box is lower, and words kept above that would
       // end under it (lib/sheetswipe.js measures a sheet the same way).
-      var op = sh.offsetParent;
-      var top = (op ? op.getBoundingClientRect().top + op.clientTop : 0) + sh.offsetTop - 12;
+      // Stepped aside for a drag, it will rest as the bar: the words are kept
+      // above where the bar will be, so letting go moves nothing.
+      var top = (aside === 'away' ? window.innerHeight - barH : layoutTop(sh)) - 12;
       var limit = (top - sb.top) / sb.ky - b.y1;
       if (limit < maxY) maxY = Math.max(minY, limit);
     }
     y = minY > maxY ? Math.max(lg.height / 2, minY) : Math.max(minY, Math.min(maxY, y));
     return { x: x, y: y };
+  }
+
+  // ---- The sheet steps aside ----
+  // THE SHEET STEPS ASIDE WHILE THE WORDS ARE PLACED (the owner, on the
+  // iPhone: "can't drag the words to the bottom of canvas. Should the text
+  // card open under the canvas?"; of the mock, A, "All yes"). Up, the sheet
+  // covered half the drawing on a phone (53%), and the words were kept above
+  // it, so they reached only its top 46%. Now a drag of the words, or a
+  // press that says where they go, sends it out of the way: while a drag
+  // lasts only its grabber shows (on a desk, nothing); let go and it rests
+  // as THE BAR, the words and Write it, which covers none of the drawing (on
+  // a desk it sits at the window's foot). A tap on the words in the bar, on
+  // its grabber, or a pull up brings Style, Size and Speed back, and the
+  // words glide up with it if it would cover them; the next drag puts them
+  // where they go. Under the drawing instead was mocked and not chosen: on a
+  // phone the drawing would step back to under half its size. Every move
+  // glides (a sheet that hops is a bug); with Reduce Motion each is simply
+  // where it goes. The bar is .typing's idea, without a keyboard.
+  var aside = '';            // '' the whole sheet; 'away' while a drag lasts; 'bar'
+  var barH = 0;              // the bar's height, measured as it will rest
+  var GLIDE = 260;
+  function lip() { return window.innerWidth <= 640 ? 22 : 0; }   // a phone's grabber
+  function layoutTop(s) {
+    var op = s.offsetParent;
+    return (op ? op.getBoundingClientRect().top + op.clientTop : 0) + s.offsetTop;
+  }
+  function shownOffset(s) { return s.getBoundingClientRect().top - layoutTop(s); }
+  function measureBar(s) {
+    // In one go, before any paint: the class on, its height read, off again.
+    var had = s.classList.contains('tucked');
+    if (!had) s.classList.add('tucked');
+    var h = s.offsetHeight;
+    if (!had) s.classList.remove('tucked');
+    return h;
+  }
+  // Down from where the sheet rests in its present layout, from px to px,
+  // gliding; the end is its style, so nothing changes when the glide ends.
+  function slide(s, from, to, then) {
+    if (typeof s.getAnimations === 'function') s.getAnimations().forEach(function (a) { a.onfinish = a.oncancel = null; a.cancel(); });
+    s.style.transform = to ? 'translateY(' + to + 'px)' : '';
+    if (still() || typeof s.animate !== 'function' || Math.abs(from - to) < 1) { if (then) then(); return; }
+    var a = s.animate([{ transform: 'translateY(' + from + 'px)' }, { transform: to ? 'translateY(' + to + 'px)' : 'none' }],
+                      { duration: GLIDE, easing: 'cubic-bezier(.2, .8, .2, 1)' });
+    a.onfinish = function () { if (then) then(); };
+  }
+  function goAway(then) {
+    var s = els.sheet;
+    if (!isOpen() || aside === 'away') { if (then) then(); return; }
+    if (document.activeElement === els.field) els.field.blur();
+    barH = measureBar(s);
+    var from = shownOffset(s);
+    aside = 'away';
+    slide(s, from, Math.max(0, window.innerHeight - lip() - layoutTop(s)), then);
+  }
+  function toBar() {
+    var s = els.sheet;
+    if (!isOpen() || aside !== 'away') return;
+    var shownAt = layoutTop(s) + shownOffset(s);
+    s.classList.add('tucked');
+    els.field.readOnly = true;
+    aside = 'bar';
+    slide(s, Math.max(0, shownAt - layoutTop(s)), 0);
+    if (want) { anchor = clampAnchor(want); position(); }
+  }
+  // A press on the drawing: down out of the way, and up as the bar.
+  function tuck() {
+    if (aside === 'bar') return;
+    if (aside === 'away') { toBar(); return; }
+    goAway(toBar);
+  }
+  // The bar tapped, or pulled up: the whole sheet again, the words gliding
+  // up with it where it would cover them.
+  function untuck() {
+    var s = els.sheet;
+    if (aside !== 'bar') return;
+    var shownAt = layoutTop(s) + shownOffset(s), p = els.place, was = p.hidden ? null : p.getBoundingClientRect();
+    s.classList.remove('tucked');
+    els.field.readOnly = false;
+    // A finger on the words asked for the sheet, not the keyboard.
+    if (touchFirst() && document.activeElement === els.field) els.field.blur();
+    aside = '';
+    slide(s, Math.max(0, shownAt - layoutTop(s)), 0);
+    if (want) { anchor = clampAnchor(want); position(); }
+    var now = p.hidden ? null : p.getBoundingClientRect();
+    if (was && now && !still() && typeof p.animate === 'function' && Math.abs(was.top - now.top) >= 1) {
+      p.animate([{ transform: 'translateY(' + (was.top - now.top) + 'px)' }, { transform: 'none' }],
+                { duration: GLIDE, easing: 'cubic-bezier(.2, .8, .2, 1)' });
+    }
+  }
+  // The next opening is the whole sheet (open() asks, so a sheet opened again
+  // while it sinks is whole too).
+  function unaside() {
+    var s = els && els.sheet;
+    if (!s) return;
+    aside = '';
+    s.classList.remove('tucked');
+    els.field.readOnly = false;
   }
 
   // ---- The sheet ----
@@ -592,22 +690,46 @@
     [els.go, els.close].forEach(function (b) {
       b.addEventListener('mousedown', function (e) { if (document.activeElement === els.field) e.preventDefault(); });
     });
+    // THE BAR (the sheet stepped aside, above): its words, its grabber, or a
+    // pull up bring the whole sheet back. The grabber's tap closes every
+    // other sheet (lib/sheetswipe.js), so in the bar it is taken first; a
+    // pull down still closes, as on every sheet.
+    s.addEventListener('click', function (e) {
+      if (aside === 'bar' && e.target.closest && e.target.closest('.tx-grab')) { e.stopPropagation(); untuck(); }
+    }, true);
+    els.field.addEventListener('click', function () { if (aside === 'bar') untuck(); });
+    els.field.addEventListener('focus', function () { if (aside === 'bar') untuck(); });
+    var upY = null;
+    s.addEventListener('touchstart', function (e) {
+      upY = aside === 'bar' && e.touches && e.touches.length === 1 ? e.touches[0].clientY : null;
+    }, { passive: true });
+    s.addEventListener('touchmove', function (e) {
+      if (upY === null || !e.touches || !e.touches.length) return;
+      if (upY - e.touches[0].clientY > 12) { upY = null; untuck(); }
+    }, { passive: true });
     if (window.SkriblSheetSwipe) {
       window.SkriblSheetSwipe.attach(s, { handle: s.querySelector('.tx-grab'), close: close });
     }
-    // The words move with a finger, a pen or a mouse, before they are ink.
+    // The words move with a finger, a pen or a mouse, before they are ink;
+    // once the move is a drag the sheet steps aside, and it rests as the bar
+    // when the words are let go.
     var drag = null;
     els.place.addEventListener('pointerdown', function (e) {
       if (!anchor) return;
       e.preventDefault();
       try { els.place.setPointerCapture(e.pointerId); } catch (_) {}
-      drag = { id: e.pointerId, x: e.clientX, y: e.clientY, a: { x: anchor.x, y: anchor.y } };
+      drag = { id: e.pointerId, x: e.clientX, y: e.clientY, a: { x: anchor.x, y: anchor.y }, moved: false };
       els.place.classList.add('dragging');
     });
     els.place.addEventListener('pointermove', function (e) {
       if (!drag || e.pointerId !== drag.id) return;
       var sb = screenBox();
       if (!sb) return;
+      if (!drag.moved) {
+        if (Math.hypot(e.clientX - drag.x, e.clientY - drag.y) < 4) return;
+        drag.moved = true;
+        goAway();
+      }
       want = { x: drag.a.x + (e.clientX - drag.x) / sb.k, y: drag.a.y + (e.clientY - drag.y) / sb.ky };
       anchor = clampAnchor(want);
       position();
@@ -616,6 +738,7 @@
       if (!drag || (e && e.pointerId !== drag.id)) return;
       drag = null;
       els.place.classList.remove('dragging');
+      if (aside === 'away') toBar();
     };
     els.place.addEventListener('pointerup', endDrag);
     els.place.addEventListener('pointercancel', endDrag);
@@ -858,14 +981,17 @@
       if (r > l) x = ((l + r) / 2 - sb.left) / sb.k;
       if (b > t) y = ((t + b) / 2 - sb.top) / sb.ky;
     }
-    place({ x: x, y: y });
+    place({ x: x, y: y }, true);
   }
   /* The tap that says where the words go: it opens the sheet there, or, with
      the sheet up, moves the words there. */
-  function place(pos) {
+  function place(pos, opening) {
     if (!editor || !bind()) return;
     if (job) job.finish();
     want = { x: pos.x, y: pos.y };
+    // A press with the sheet up says where the words go: the sheet steps
+    // aside to the bar (the words are kept above where it will rest).
+    if (!opening && isOpen()) tuck();
     anchor = clampAnchor(want);
     open();
   }
@@ -873,6 +999,8 @@
     var s = els.sheet;
     // Already up: the press moved the words, and that is all it did.
     if (isOpen()) { anchor = clampAnchor(want); position(); return; }
+    unaside();                 // a sheet opened again is the whole sheet
+    s.style.transform = '';
     if (!els.field.value) { try { els.field.value = sessionStorage.getItem(WORDS_KEY) || ''; } catch (e) {} }
     syncStyles();
     syncSize();
@@ -960,7 +1088,7 @@
   window.SkriblText = {
     STYLES: STYLES.slice(), SIZES: SIZES, SPEEDS: SPEEDS.slice(), MAX_CHARS: MAX_CHARS,
     attach: function (hooks) { editor = hooks; resume(); },
-    place: place,
+    place: function (pos) { place(pos); },
     start: start,
     close: close,
     isOpen: isOpen,
