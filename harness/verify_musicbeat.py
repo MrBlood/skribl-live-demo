@@ -113,10 +113,7 @@ def eds(name):
 
 DESK = dict(viewport={"width": 1280, "height": 900})
 PHONE = dict(viewport={"width": 402, "height": 874}, device_scale_factor=2, is_mobile=True, has_touch=True)
-WORK = {"Pad": "drawing", "Flip": "animation"}
-# Play's own word for it: Flip's says "Play with my flip", "Stop the flip"
-# (the owner, after v330), where the rest of its drawer says animation.
-PLAYWORK = {"Pad": "drawing", "Flip": "flip"}
+WORK = {"Pad": "drawing", "Flip": "flip"}
 PLAY = {"Pad": "#playBtn", "Flip": "#play"}
 
 
@@ -336,7 +333,7 @@ with sync_playwright() as pw:
         press(pg, "#previewLoopBtn", 300)
         stop = pg.evaluate(SAID)
         check(f"{_n}: Hear the loop plays the music alone, round and round, and Stop stops it",
-              st["pv"] and wa and not st["playing"] and st["hear"] == "Stop the loop" and st["play"] == f"Play with my {PLAYWORK[_n]}"
+              st["pv"] and wa and not st["playing"] and st["hear"] == "Stop the loop" and st["play"] == f"Play with my {WORK[_n]}"
               and not stop["pv"] and stop["hear"] == "Hear the loop" and not pg.evaluate("() => _waLoop.playing()"),
               f"playing: {dict((k, st[k]) for k in ('pv', 'playing', 'hear', 'play'))}, engine {wa}; stopped: {stop['hear']!r}, {stop['pv']}")
         c.close()

@@ -103,7 +103,7 @@ def eds(name):
 
 DESK = dict(viewport={"width": 1280, "height": 900})
 PHONE = dict(viewport={"width": 402, "height": 874}, device_scale_factor=2, is_mobile=True, has_touch=True)
-WORK = {"Pad": "drawing", "Flip": "animation"}
+WORK = {"Pad": "drawing", "Flip": "flip"}
 NOTE = {"Pad": "#toast", "Flip": "#flipChip"}
 
 
@@ -385,7 +385,7 @@ with sync_playwright() as pw:
             pg.mouse.click(at[0], at[1]); waits.settle(pg, 600)
         did("a tap on the whole song's line", bool(at))
         card = "#musicWholeBtn" if _n == "Pad" else "#matchDrawingBtn"
-        did("a Length card (" + ("Whole song" if _n == "Pad" else "Fit my animation") + ")", press(pg, card, door="length"))
+        did("a Length card (" + ("Whole song" if _n == "Pad" else "Fit my flip") + ")", press(pg, card, door="length"))
         did("Skribl's pick, the way back", press(pg, "#musicPickCard", door="length"))
         did("a count in Beats", press(pg, '#musicBeatsSeg button[data-beats="8"]', door="length", ms=600))
         did("Beats in a bar", press(pg, '#musicBarSeg button[data-bar="3"]', door="beat"))

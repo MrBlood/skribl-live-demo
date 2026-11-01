@@ -890,9 +890,12 @@ with sync_playwright() as p:
                  tint: a.backgroundColor === f && a.color === b.color,
                  tile: [a.backgroundColor, a.color], tab: [f, b.color] }; }"""
     _pmr, _fmr = pad.evaluate(MROW), flip.evaluate(MROW)
-    check("a loaded track's row names it and gives its length, on both",
+    # Each in its editor's word for what the music plays under: "drawing" on
+    # the Pad, "flip" on Flip (the owner, after v330: "Flip it is").
+    check("a loaded track's row names it and gives its length, on both, each in its own word",
           all(r["name"] == "t.wav" and abs(r["secs"] - 1.0) < 0.05 for r in (_pmr, _fmr))
-          and _pmr["meta"] == _fmr["meta"] == "Loops under the drawing · 0:01", f"pad {_pmr}, flip {_fmr}")
+          and _pmr["meta"] == "Loops under the drawing · 0:01" and _fmr["meta"] == "Loops under the flip · 0:01",
+          f"pad {_pmr}, flip {_fmr}")
     check("...and its note is painted on the selected tab's tint, on both",
           all(r["painted"] and r["tint"] for r in (_pmr, _fmr)), f"pad {_pmr}, flip {_fmr}")
     # An element's duration can be Infinity or NaN (a stream, a file the
@@ -905,8 +908,9 @@ with sync_playwright() as p:
     _pn, _fn = pad.evaluate(NOLEN), flip.evaluate(NOLEN)
     pad.evaluate("() => padMusicRow()"); flip.evaluate("() => syncMusicUI()")
     check("a track whose length is not a real number shows no length, on both",
-          _pn == _fn == ["Loops under the drawing"] * 4
-          and pad.text_content("#musicBtnMeta") == flip.text_content("#musicBtnMeta") == "Loops under the drawing · 0:01",
+          _pn == ["Loops under the drawing"] * 4 and _fn == ["Loops under the flip"] * 4
+          and pad.text_content("#musicBtnMeta") == "Loops under the drawing · 0:01"
+          and flip.text_content("#musicBtnMeta") == "Loops under the flip · 0:01",
           f"pad {_pn}, flip {_fn}")
     check("the loop's ends report the same start on both",
           pad.text_content("#tlStart").strip() == flip.text_content("#tlStart").strip(),

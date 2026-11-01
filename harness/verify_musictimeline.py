@@ -132,7 +132,7 @@ def eds(name):
 
 DESK = dict(viewport={"width": 1280, "height": 900})
 PHONE = dict(viewport={"width": 402, "height": 874}, device_scale_factor=2, is_mobile=True, has_touch=True)
-WORK = {"Pad": "drawing", "Flip": "animation"}
+WORK = {"Pad": "drawing", "Flip": "flip"}
 
 
 def _wav(seconds, rate=8000, hz=220.0):
