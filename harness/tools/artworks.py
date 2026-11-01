@@ -256,6 +256,52 @@ RECOLOR_TAPS = [("#ff6f91", _on_balloon(262, 212, 78, 96, -0.18, 3.1416)),
                 ("#ff6f91", _on_balloon(556, 222, 76, 94, 0.2, 0.0))]
 
 
+class Words:
+    """A line of words the Text tool writes, as a person uses it (make_art.py
+    write_words): Shape's picker, Text, the words typed, a style and a size,
+    placed with their middle at `at`, then Write it. They write themselves in
+    at the hand's own pace (1x) while the take records, in the pen's colour
+    and thickness, so the replay writes them again."""
+    def __init__(self, text, at, *, style="skribl", size="L", color=INK, pen=9):
+        self.text, self.at, self.style, self.size, self.color, self.pen = text, at, style, size, color, pen
+
+
+def tool_text():
+    """Text: a speech bubble in purple, its round in one line from the tail's
+    right foot the long way to its left one, then the tail, a V down to its
+    point and back; "hello!" writes itself inside it in Skribl's hand (the
+    owner's own); a small pink heart is flicked on last."""
+    import math
+    cx, cy, a, b, n = 408, 290, 176, 104, 2.4
+
+    def edge(t):
+        c, s = math.cos(t), math.sin(t)
+        return (cx + a * math.copysign(abs(c) ** (2 / n), c), cy + b * math.copysign(abs(s) ** (2 / n), s))
+    # The tail's two feet on the bubble's underside, left of the middle.
+    t_right, t_left = 0.57 * math.pi, 0.70 * math.pi
+    round_ = [edge(t_right - (t_right - (t_left - 2 * math.pi)) * k / 40) for k in range(41)]
+    lf, rf = edge(t_left), edge(t_right)
+    tip = (lf[0] - 46, lf[1] + 84)
+    tail = [lf, (lf[0] - 18, lf[1] + 40), tip, ((rf[0] + tip[0]) / 2 + 4, (rf[1] + tip[1]) / 2 - 6), rf]
+
+    def heart(side, hx=cx + a + 34, hy=cy - b - 22, k=2.1):
+        pts = []
+        for i in range(15):
+            u = min(math.pi, math.pi * i / 12) * side
+            x = 16 * math.sin(u) ** 3
+            y = 13 * math.cos(u) - 5 * math.cos(2 * u) - 2 * math.cos(3 * u) - math.cos(4 * u)
+            pts.append((hx + k * x, hy - k * y))
+        return pts
+    return [
+        S(round_, "contour", PURPLE, size=12, pace=1.3, taper=(0.05, 0.05),
+          weight=[(0, 0.8), (0.35, 0.92), (0.75, 1.0), (1, 0.85)]),
+        S(tail, "form", PURPLE, size=11, pace=1.1, taper=(0.04, 0.04)),
+        Words("hello!", (cx, cy)),
+        S(heart(-1), "accent", PINK, size=8, pace=1.4, taper=(0.1, 0.3)),
+        S(heart(+1), "accent", PINK, size=8, pace=1.4, taper=(0.1, 0.3)),
+    ]
+
+
 def footballer():
     """A footballer kneeling in celebration -- from a traced line drawing the
     owner supplied, cleaned up (art/footballer.json): 331 traced fragments
@@ -362,5 +408,6 @@ def blooby_card():
 
 ART = {"cat": cat, "scene": scene, "snail": snail, "footballer": footballer, "skull": skull, "pug": pug,
        "blooby-card": blooby_card,
-       # the tool cards' examples (Pen, Eraser, Shape)
-       "pen": tool_pen, "eraser": tool_eraser, "shape": tool_shape, "brushes": tool_brushes, "recolor": tool_recolor}
+       # the tool cards' examples (Pen, Eraser, Shape, Brush, Recolor, Text)
+       "pen": tool_pen, "eraser": tool_eraser, "shape": tool_shape, "brushes": tool_brushes, "recolor": tool_recolor,
+       "text": tool_text}

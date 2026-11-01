@@ -30,13 +30,18 @@ BASE = os.environ.get("SKRIBL_BASE", "http://127.0.0.1:5001")
 TEMPO = {"snail": (1.45, 1.9), "cat": (2.4, 3.0), "scene": (1.35, 1.9),
          "footballer": (2.6, 3.2), "skull": (2.6, 3.2), "pug": (3.0, 7.0),   # 53 strokes: a brisk hand, or it runs a minute
          "blooby-card": blooby.CARD_TEMPO,
-         "recolor": (2.2, 3.0)}   # nine strokes and three colours: a dozen seconds, not twenty
+         "recolor": (2.2, 3.0),   # nine strokes and three colours: a dozen seconds, not twenty
+         "text": (1.4, 2.2)}      # one calm line round the bubble; the words keep the hand's own pace
 # The card is 70 strokes, colouring most of it, and runs 1:18 as drawn. A quicker
 # hand thins the pen's events until the small curves go faceted and lines stop
 # short, so it is drawn at its careful pace and replays that much faster.
 SPEEDUP = {"blooby-card": blooby.CARD_REPLAY_SPEEDUP}
 # A ground other than paper: the ivory card would barely part from paper.
 GROUND = {"blooby-card": blooby.TABLE}
+# A taller window: the Text sheet keeps the words clear of itself (lib/textwrite.js
+# clampAnchor), and at 960 it rests over the canvas's lower part, which moved
+# "hello!" 24px up out of the middle of its bubble.
+VIEWPORT = {"text": (1280, 1600)}
 
 
 def recolor_after(page, taps):
@@ -59,8 +64,49 @@ def recolor_after(page, taps):
     page.wait_for_timeout(300)
 
 
+def write_words(page, w):
+    """The Text tool, as a person uses it: Text in Shape's picker opens the
+    sheet; the words typed; the style and size picked; the words placed with
+    their middle at w.at (the tap that says where they go); 1x, the hand's
+    own pace; Write it. They write themselves in while the take records, in
+    the pen's colour and thickness."""
+    page.evaluate("([c, s]) => { color = c; size = s; }", [w.color, w.pen])
+    page.evaluate("() => document.querySelector('#shapeSeg [data-shape=\"text\"]').click()")
+    page.wait_for_function("() => window.SkriblText && SkriblText.isOpen()")
+    page.evaluate("(p) => SkriblText.place(p)", {"x": w.at[0], "y": w.at[1]})
+    page.wait_for_function("(s) => !!document.querySelector('#txStyles [data-style=\"' + s + '\"][data-face=\"drawn\"]')",
+                           arg=w.style, timeout=15000)
+    page.click(f'#txStyles [data-style="{w.style}"]')
+    page.click(f'#txSize [data-size="{w.size}"]')
+    page.evaluate("""() => { const s = document.getElementById('txSpeed'); s.value = String(SkriblText.SPEEDS.indexOf(1));
+        s.dispatchEvent(new Event('input', { bubbles: true })); }""")
+    page.evaluate("(t) => { const f = document.getElementById('txField'); f.value = t; f.dispatchEvent(new Event('input', { bubbles: true })); }",
+                  w.text)
+    page.wait_for_function("() => { const p = SkriblText.plan(); return !!p && p.strokes.length > 0; }", timeout=15000)
+    page.wait_for_timeout(400)
+    page.click("#txGo")
+    page.wait_for_function("() => !SkriblText.isWriting()", timeout=60000)
+    page.wait_for_timeout(500)
+
+
+def perform(page, items, hand, gaps):
+    """Strokes drawn with the pen; a Words written by the Text tool, between."""
+    run = []
+    for it in items + [None]:
+        if isinstance(it, artworks.Words) or it is None:
+            if run:
+                artdraw.draw(page, run, tempo=hand, pause_tempo=gaps)
+                run = []
+            if it is not None:
+                page.wait_for_timeout(500)
+                write_words(page, it)
+        else:
+            run.append(it)
+
+
 def make(browser, name):
-    ctx = browser.new_context(viewport={"width": 1280, "height": 960})
+    w, h = VIEWPORT.get(name, (1280, 960))
+    ctx = browser.new_context(viewport={"width": w, "height": h})
     page = ctx.new_page()
     errs = []
     page.on("pageerror", lambda e: errs.append(str(e)))
@@ -76,7 +122,7 @@ def make(browser, name):
         if (window.SkriblPressure) SkriblPressure.setEnabled(true); }}""")
     # Examples are short: a few seconds of a confident hand, not a study.
     hand, gaps = TEMPO.get(name, (1.35, 1.9))
-    artdraw.draw(page, artworks.ART[name](), tempo=hand, pause_tempo=gaps)
+    perform(page, artworks.ART[name](), hand, gaps)
     page.wait_for_timeout(300)
     if name == "recolor":
         recolor_after(page, artworks.RECOLOR_TAPS)

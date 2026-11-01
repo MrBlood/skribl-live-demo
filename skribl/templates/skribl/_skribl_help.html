@@ -103,6 +103,10 @@
           {{ learn_card('pen', 'Pen', 'Any color, any size. With a stylus, press harder for a thicker line.', 'tools', tool='pen') }}
           {{ learn_card('eraser', 'Eraser', 'Wipe back to the canvas. Tap it again to change its size.', 'tools', tool='eraser') }}
           {{ learn_card('shape', 'Shape', 'Lines, boxes, ovals and polygons, with rounded corners if you like.', 'tools', tool='shape') }}
+          {# Text, the last kind in Shape's picker: a real Skribl drawn through
+             the Pad (harness/tools/make_art.py), its words written by the Text
+             tool itself, so the replay writes them again at the hand's pace. #}
+          {{ learn_card('text', 'Text', 'Words that write themselves, in Skribl’s hand or your own.', 'tools') }}
           {# The Draw menu's own (after v330): the pen's three tiles, then its two
              color tools, the order the help cards (lib/learncard.js) find them
              in. Brush and Recolor are drawings (harness/tools/make_art.py); a
