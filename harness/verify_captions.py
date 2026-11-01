@@ -195,6 +195,13 @@ def gallery(pg, theme):
     browsing.goto(pg, BASE, "/gallery")
     pg.wait_for_timeout(600)
     pg.fill("#galleryQ", TAG)
+    # AND SEARCH NOW, as a person presses Search: the list is cleared at once
+    # for the answer (gallery.js search). Typing alone waits 350ms for more
+    # words, and on a server whose only public posts are these four, the
+    # listing from before the search already showed them: the wait below
+    # passed on it, the search then cleared the list to load, and a read in
+    # that gap found no card (main red after #717, sqlite shard 4).
+    pg.press("#galleryQ", "Enter")
     pg.wait_for_function(f"() => document.querySelectorAll('.tile').length === 4 && "
                          f"[...document.querySelectorAll('.tile .tt')].every(t => t.textContent.indexOf('{TAG}') === 0)",
                          timeout=20000)
@@ -585,6 +592,7 @@ with sync_playwright() as p:
             browsing.goto(pg, BASE, "/gallery")
             pg.wait_for_timeout(600)
             pg.fill("#galleryQ", TAGW)
+            pg.press("#galleryQ", "Enter")   # search now, as gallery() does and for its reason
             pg.wait_for_function(f"() => [...document.querySelectorAll('.tile .tt')].some(t => t.textContent.indexOf('{TAGW}') === 0)",
                                  timeout=20000)
             pg.wait_for_timeout(500)
