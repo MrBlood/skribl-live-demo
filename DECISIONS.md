@@ -28789,6 +28789,7 @@ yes to B, then, before it merged: "Just make it say PLAY with my flip."
   "Play with my flip" on Flip. Nothing moves: the row keeps its halves, its
   height and its two narrow-phone rules (under 360px one to a row; to 379
   the second lines wrap, which Hear's "the loop" beside the click needs).
+  "with my flip" ends 38px clear of the round end at 380px, 43 at 390.
 - THE MOCK MEASURED THE WRONG PHONE. Its pictures were a mouse page at
   phone widths. A touch phone gives the media card 12px side margins, not
   22, so each button is 10px wider. Measured as a touch phone (Inter, this
@@ -28805,9 +28806,9 @@ THE CHECKS: verify_musicsnap's words row now measures Play's last letter
 against the pill's round end (its edge at the height of the line), 4px of
 air at least, at 320, 360, 375, 380, 390, 402 and 430px on a touch phone,
 saying Play and, pressed, Stop. Calibrated: the old words put back, red on
-Flip alone at 380 (-3.4px) and 390 (1.6px), red again alone. verify_musicdoors
-and verify_musicbeat read Play's own word (PLAYWORK); verify_helpclaims,
-Flip's new tip.
+Flip alone at 380 (-3.4px) and 390 (1.6px), red again alone; the new words,
+green on both editors. verify_musicdoors and verify_musicbeat read Play's
+own word (PLAYWORK); verify_helpclaims, Flip's new tip.
 
 WHAT IT DOES TO FLIP: Flip's word only; the Pad's words are as they were.
 One drawer.
