@@ -28236,3 +28236,82 @@ row alone). player.css is unchanged.
 
 Not tested here: WebKit itself (the owner's iPhone): one held row there says
 whether it holds.
+
+## After v330 -- Text on the phone: the sheet comes straight up, and sits on the keyboard
+
+The owner tried Text on the iPhone the morning it went live. Picking Text
+"just closes the menu": the picker stepped aside and waited for a tap on the
+drawing, and nothing said so. The drawing was a finished take (Play and Post
+showing), which refuses a press until Keep drawing, so the tap that was the
+next step would have been refused too. After Keep drawing and a tap, the
+sheet came up with the keyboard, and the bar over the keyboard covered the
+field: the words could not be seen as they were typed. And the keyboard's
+blue done key wrote the words at once (Enter was Write it), before they were
+placed. The owner asked "How can I select and move text though?", and said
+"Yes" to four calls:
+
+1. CHOOSING TEXT OPENS THE SHEET (A), the words in the middle of the drawing
+   that can be seen (lib/textwrite.js start), on both editors. A press with
+   Text chosen opens the sheet there, or moves the words already in it. On
+   the Pad that press now comes before the lock, as the eyedropper and
+   Recolor do (it lays no ink); Write it carries a finished take on, as Keep
+   drawing does (editor_text.js begin).
+2. WHILE THE WORDS ARE TYPED ON A PHONE the sheet sits on the keyboard (the
+   Post sheet's own way: iOS does not shrink the page for its keyboard, so
+   the sheet is lifted to the bottom of the visual viewport) and is only the
+   words and Write it (.typing), so the drawing shows above it with the words
+   on it. Style, Size and Speed come back when the keyboard goes.
+3. THE KEYBOARD'S DONE KEY PUTS IT AWAY. Writing is the Write it button; on
+   a desk, with no keyboard to put away, Enter is still Write it.
+4. A press on the drawing while the sheet is up moves the words there (it
+   already did; it can be found now).
+
+How to move written words was answered in words, as decided in the Text
+mock: before Write it, drag the box or tap where they go; after, they are
+ink: on Flip, Select moves them like any drawing; on the Pad, Undo takes the
+line back whole to place again (the Pad has no Select, since moving recorded
+ink makes the replay draw it in its new place at its old time).
+
+Two things the first build got wrong, found by the suite: the typing view
+came on whenever the field had focus, so with no keyboard up the x and the
+Speed row were taken away; it comes on only with a keyboard up now. And words
+were kept above the sheet where it was painted mid-rise, lower than where it
+rests, so on a phone they could end under it; they are kept above where it
+rests (its layout box, as lib/sheetswipe.js measures a sheet). Write it and
+the x keep the field's focus until their click, so a sheet growing back as
+the keyboard goes cannot move the x from under the press.
+
+verify_text holds it: the sheet straight up from the picker on both editors,
+the words in the drawing that shows (part 2); a press opens it again where
+the press was (3); a finished take (15): the sheet opens, a press moves the
+words with no refusal, Write it carries the take on, one Undo takes back only
+the words; the keyboard (16), as iOS reports it (a visual viewport 336px
+shorter than the page, which is all Chromium can be given): with no keyboard
+the whole sheet shows while typing; with one, the sheet sits on it and is
+only the words and Write it, the words above it; the done key puts it away
+and writes nothing, the rest coming back; the x and Write it pressed with the
+keyboard up do what they say; on a desk Enter writes.
+
+CALIBRATION, each part alone, the file served changed: thirteen breaks, each
+red at its own row: either picker not opening the sheet, the press opening it
+in the middle instead of where it was, the lock first on a finished take,
+Write it not carrying the take on, the sheet not lifted, the typing view in
+the script or in the stylesheet gone, the typing view on focus alone, words
+kept above the painted sheet, the field's focus let go on a press, the done
+key writing, and a desk's Enter not writing. Four did not go red the first
+time, each the instrument: a press in the drawing's middle could not tell
+"where the press was" from "the middle"; a wait stopped the desk's row before
+it could fail; nothing read the whole sheet with no keyboard; and the press
+read with the keyboard up was Write it, at the sheet's foot, which does not
+move when the sheet grows: the x, at its top, does.
+
+WHAT IT DOES TO FLIP: shared; Flip has no lock, and its picker opens the
+sheet the same way.
+
+THE FOUR: simple (one tap to start writing, nothing to discover); kind (the
+words are always in view while typed, the done key never writes before you
+meant it, a finished drawing takes words without a detour); powerful and
+playful as before.
+
+Not tested here: the iPhone's own keyboard (WebKit), which is the point of
+it; the owner's phone will say.

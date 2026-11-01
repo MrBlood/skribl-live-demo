@@ -52,9 +52,9 @@ Mirror leaving them alone. Each row holds a promise:
      Undo takes back only the words.
  16. THE KEYBOARD (the owner's iPhone: the bar over it covered the field):
      with the keyboard up, the sheet sits on it and is only the words and
-     Write it, the words above it; the keyboard's done key puts it away and
-     writes nothing; Write it pressed with the keyboard up writes; on a
-     desk, Enter writes.
+     Write it, the words above it (with no keyboard up, the whole sheet); the
+     keyboard's done key puts it away and writes nothing; the x and Write it
+     pressed with the keyboard up do what they say; on a desk, Enter writes.
 
 For calibration, TEXT_PART=<words of a part's label> runs that part alone.
 A real run sets none.
@@ -327,12 +327,12 @@ with sync_playwright() as p:
         s = q.evaluate(SHEET)
         after = q.evaluate("() => [strokes.length, strokeGroups.length, recording, hasContent]")
         check("Close leaves nothing behind", not s["open"] and s["hidden"] and s["place"] is None and after[:3] == n0 + [False], f"{s} {after}")
-        tap(q, *at(q, 0.5, 0.4))
+        tap(q, *at(q, 0.3, 0.3))
         s = q.evaluate(SHEET)
         a = q.evaluate("() => SkriblText.anchor()")
-        want = q.evaluate("() => { const lg = getCanvasLogicalSize(); return [lg.width * 0.5, lg.height * 0.4]; }")
+        want = q.evaluate("() => { const lg = getCanvasLogicalSize(); return [lg.width * 0.3, lg.height * 0.3]; }")
         check("with Text chosen, a press opens it again where the press was",
-              s["open"] and a is not None and abs(a["x"] - want[0]) <= 2, f"{s['open']} {a} for {want}")
+              s["open"] and a is not None and abs(a["x"] - want[0]) <= 2 and abs(a["y"] - want[1]) <= 2, f"{s['open']} {a} for {want}")
         type_words(q, "Hi")
         q.keyboard.press("Escape")
         q.wait_for_timeout(500)
@@ -812,9 +812,19 @@ with sync_playwright() as p:
         TYPING = """() => { const s = document.getElementById('txSheet'), r = s.getBoundingClientRect(), pl = document.getElementById('txPlace');
           const shown = (sel) => { const e = document.querySelector(sel); return !!e && !!e.getClientRects().length; };
           const b = pl.hidden ? null : pl.getBoundingClientRect();
-          return { typing: s.classList.contains('typing'), bottom: Math.round(r.bottom), top: r.top, edge: innerHeight - 336,
+          return { open: SkriblText.isOpen(), typing: s.classList.contains('typing'), bottom: Math.round(r.bottom), top: r.top, edge: innerHeight - 336,
                    field: shown('#txField'), go: shown('#txGo'), style: shown('#txStyles'), size: shown('#txSize'), speed: shown('#txSpeed'),
                    focus: document.activeElement && document.activeElement.id, words: b && [Math.round(b.top), Math.round(b.bottom)] }; }"""
+        # No keyboard up (a desk-sized phone with a hardware keyboard, or none
+        # shown yet): the whole sheet, the words being typed or not.
+        c, q = open_editor(b, "pad", prefs={"style": "print", "size": "M", "speed": 4})
+        choose_text(q)
+        type_words(q, "Hello")
+        q.wait_for_timeout(300)
+        t0 = q.evaluate(TYPING)
+        check("phone: with no keyboard up, the whole sheet shows while the words are typed",
+              t0["focus"] == "txField" and not t0["typing"] and t0["style"] and t0["size"] and t0["speed"], json.dumps(t0))
+        c.close()
         c, q = open_editor(b, "pad", prefs={"style": "print", "size": "M", "speed": 4})
         q.evaluate(KEYBOARD)
         n0 = q.evaluate(COUNT["pad"])
@@ -832,27 +842,42 @@ with sync_playwright() as p:
         t2 = q.evaluate(TYPING)
         n1 = q.evaluate(COUNT["pad"])
         check("the keyboard's done key puts it away and writes nothing; Style, Size and Speed come back",
-              t2["focus"] != "txField" and not t2["typing"] and t2["style"] and t2["size"] and t2["speed"]
-              and n1 == n0 and q.evaluate("() => SkriblText.isOpen() && !SkriblText.isWriting()"), f"{json.dumps(t2)}, strokes {n0} -> {n1}")
-        # Write it pressed with the keyboard up: the field keeps its focus
-        # until the click, so the sheet does not grow back under the press.
+              t2["open"] and t2["focus"] != "txField" and not t2["typing"] and t2["style"] and t2["size"] and t2["speed"]
+              and n1 == n0 and not q.evaluate("() => SkriblText.isWriting()"), f"{json.dumps(t2)}, strokes {n0} -> {n1}")
+        if not q.evaluate("() => SkriblText.isWriting()"):
+            q.wait_for_function("() => !SkriblText.isWriting()", timeout=30000)
+        # The x and Write it, pressed with the keyboard up: the field keeps
+        # its focus until the click, so the sheet does not grow back under
+        # the press (the x is at its top, which moves; Write it at its foot).
+        if not q.evaluate("() => SkriblText.isOpen()"):
+            choose_text(q)
         q.click("#txField")
         q.wait_for_timeout(300)
         t3 = q.evaluate(TYPING)
+        q.click("#txClose")
+        q.wait_for_timeout(500)
+        closed = q.evaluate("() => !SkriblText.isOpen()")
+        check("...and the x, pressed with the keyboard up, closes the sheet", t3["typing"] and closed,
+              f"typing {t3['typing']}, closed {closed}")
+        choose_text(q)
+        q.wait_for_timeout(300)
+        q.click("#txField")
+        q.wait_for_timeout(300)
+        t4 = q.evaluate(TYPING)
         q.click("#txGo")
         q.wait_for_timeout(300)
         wrote = q.evaluate("() => SkriblText.isWriting() || !SkriblText.isOpen()")
-        q.wait_for_function("() => !SkriblText.isWriting()", timeout=30000)
+        waited(q, "() => !SkriblText.isWriting()", 30000)
         n2 = q.evaluate(COUNT["pad"])
-        check("...and Write it, pressed with the keyboard up, writes", t3["typing"] and wrote and n2[1] > n0[1],
-              f"typing {t3['typing']}, wrote {wrote}, strokes {n0} -> {n2}")
+        check("...and Write it, pressed with the keyboard up, writes", t4["typing"] and wrote and n2[1] > n1[1],
+              f"typing {t4['typing']}, wrote {wrote}, strokes {n1} -> {n2}")
         c.close()
         c, q = open_editor(b, "pad", dev=DESK, prefs={"style": "print", "size": "M", "speed": 8})
         choose_text(q)
         type_words(q, "Hi")
         q.keyboard.press("Enter")
-        q.wait_for_function("() => !SkriblText.isOpen()", timeout=5000)
-        q.wait_for_function("() => !SkriblText.isWriting()", timeout=30000)
+        waited(q, "() => !SkriblText.isOpen()", 5000)
+        waited(q, "() => !SkriblText.isWriting()", 30000)
         n1 = q.evaluate(COUNT["pad"])
         check("desk: Enter writes the words", n1[1] > 0, str(n1))
         c.close()
