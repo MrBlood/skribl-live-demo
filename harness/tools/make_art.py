@@ -31,7 +31,8 @@ TEMPO = {"snail": (1.45, 1.9), "cat": (2.4, 3.0), "scene": (1.35, 1.9),
          "footballer": (2.6, 3.2), "skull": (2.6, 3.2), "pug": (3.0, 7.0),   # 53 strokes: a brisk hand, or it runs a minute
          "blooby-card": blooby.CARD_TEMPO,
          "recolor": (2.2, 3.0),   # nine strokes and three colours: a dozen seconds, not twenty
-         "text": (1.4, 2.2)}      # one calm line round the bubble; the words keep the hand's own pace
+         "text": (1.4, 2.2),      # one calm line round the bubble; the words keep the hand's own pace
+         "mirror": (1.6, 2.2)}    # nine strokes, each drawn twice at once
 # The card is 70 strokes, colouring most of it, and runs 1:18 as drawn. A quicker
 # hand thins the pen's events until the small curves go faceted and lines stop
 # short, so it is drawn at its careful pace and replays that much faster.
@@ -42,6 +43,8 @@ GROUND = {"blooby-card": blooby.TABLE}
 # clampAnchor), and at 960 it rests over the canvas's lower part, which moved
 # "hello!" 24px up out of the middle of its bubble.
 VIEWPORT = {"text": (1280, 1600)}
+# Drawn with Mirror on, as a person sets it in Tune: the right half draws itself.
+MIRROR = {"mirror": "vertical"}
 
 
 def recolor_after(page, taps):
@@ -120,6 +123,8 @@ def make(browser, name):
     page.evaluate(f"""() => {{ bgColor = '{GROUND.get(name, artdraw.PAPER)}'; canvasWrap.style.backgroundColor = bgColor;
         if (typeof updateVignette === 'function') updateVignette(); setTool('pen');
         if (window.SkriblPressure) SkriblPressure.setEnabled(true); }}""")
+    if name in MIRROR:
+        page.evaluate("(m) => document.querySelector('#mirrorSeg [data-mirror=\"' + m + '\"]').click()", MIRROR[name])
     # Examples are short: a few seconds of a confident hand, not a study.
     hand, gaps = TEMPO.get(name, (1.35, 1.9))
     perform(page, artworks.ART[name](), hand, gaps)

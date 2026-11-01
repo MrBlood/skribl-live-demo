@@ -1579,7 +1579,14 @@ tags). Three play How it works' clips (Motion guides, Smear weight, Onion
 skin); the other seven's examples come next, as the draw drawer's did. The
 owner then asked for a Settings switch to turn the cards off: **built**, a
 row of its own under Tips (DECISIONS, after v330, "A switch for the help
-cards"). Next: the seven examples, then call 3.
+cards"). The seven examples, **built** (DECISIONS, after v330, "Tune's seven
+examples"): phone clips of each row changed in Tune and what it changes,
+Grid's and Stroke layers' filmed on each editor; Mirror a butterfly drawing
+itself; the Pad's Watching speed is Speed's clip; each also in How it works.
+Call 3's words were mocked on the real card (Nov 1): Hear the loop, the beat
+click, Snap to the beat, the four doors and Add a photo, with one finding (a
+hold on a grey button opens nothing on a phone, while a rest on a desk
+opens its card); the owner's OK comes first.
 
 ## 6ab. Text that writes itself, in the owner's own hand (owner, Oct 31: "How hard would it be to add text to the pad?", then "Can't we have our own font")
 

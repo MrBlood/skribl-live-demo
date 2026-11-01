@@ -302,6 +302,30 @@ def tool_text():
     ]
 
 
+def tool_mirror():
+    """Mirror: a butterfly drawn on its left side with Mirror left to right on
+    (make_art.py MIRROR), so its right side draws itself beside every stroke.
+    The wings' outlines first, the body, the veins, then the pink spots and
+    the antennae last. Everything here is the left half; the axis is the
+    canvas's middle, x = 408."""
+    up = [(400, 236), (362, 182), (302, 130), (234, 104), (180, 116), (152, 158), (158, 212), (194, 260),
+          (260, 292), (330, 300), (398, 288)]
+    low = [(398, 300), (350, 322), (298, 362), (262, 414), (268, 462), (306, 480), (352, 452), (384, 404), (400, 342)]
+    body = [(408, 194), (397, 200), (393, 216), (400, 232), (396, 252), (391, 292), (393, 352), (400, 402), (408, 426)]
+    return [
+        S(up, "contour", PURPLE, size=12, weight=[(0, 0.7), (0.4, 1.0), (1, 0.8)]),
+        S(low, "contour", PURPLE, size=11, weight=[(0, 0.7), (0.5, 1.0), (1, 0.8)]),
+        S(body, "form", INK, size=8, taper=(0.06, 0.06)),
+        S([(396, 262), (330, 220), (262, 166)], "detail", PURPLE, size=4.5, taper=(0.1, 0.5)),
+        S([(396, 272), (300, 262), (206, 214)], "detail", PURPLE, size=4.5, taper=(0.1, 0.5)),
+        S([(396, 318), (334, 380), (300, 440)], "detail", PURPLE, size=4.5, taper=(0.1, 0.5)),
+        S(_blob(262, 214, 24, 21, turns=3.2, n=34), "fill", PINK, size=15, taper=(0.04, 0.04)),
+        S(_blob(318, 420, 14, 13, turns=2.4, n=22), "fill", PINK, size=12, taper=(0.04, 0.04)),
+        S([(403, 198), (390, 168), (372, 140), (354, 122), (342, 122), (342, 134), (352, 136)], "accent", INK,
+          size=4.5, taper=(0.05, 0.4)),
+    ]
+
+
 def footballer():
     """A footballer kneeling in celebration -- from a traced line drawing the
     owner supplied, cleaned up (art/footballer.json): 331 traced fragments
@@ -408,6 +432,6 @@ def blooby_card():
 
 ART = {"cat": cat, "scene": scene, "snail": snail, "footballer": footballer, "skull": skull, "pug": pug,
        "blooby-card": blooby_card,
-       # the tool cards' examples (Pen, Eraser, Shape, Brush, Recolor, Text)
+       # the tool cards' examples (Pen, Eraser, Shape, Brush, Recolor, Text, Mirror)
        "pen": tool_pen, "eraser": tool_eraser, "shape": tool_shape, "brushes": tool_brushes, "recolor": tool_recolor,
-       "text": tool_text}
+       "text": tool_text, "mirror": tool_mirror}

@@ -192,9 +192,11 @@ INK = """card => { const c = card.querySelector('canvas.skribl-inline-canvas');
 # Flip's animating techniques -> the control that does each one. Hold is the
 # badge on a page in the strip; the first page always has one.
 TECHNIQUES = {"onion": "#onion", "inbetween": "#addinbetween", "smear": "#addtween",
+              "fps": "#fps", "watch": "#watchSeg", "grid-flip": "#gridBtn", "layers-flip": "#strokeLayersBtn",
               "hold": "#strip .frame .holdbadge", "guides": "#arcGuideBtn"}
 # Pad's extras -> the control each one is.
 EXTRAS = {"takes": "#addTakePill", "speed": "#padLine .rl-speed", "photo": "#photoUploadBtn", "export": "#exportItem",
+          "pauses": "#pauseSeg", "grid-pad": "#gridBtn", "layers-pad": "#strokeLayersBtn",
           "zoom": "#magnifyBtn"}
 OPEN = "() => { window.SkriblHints && window.SkriblHints.hide(); openHelpDrawer(); }"
 SHEET = "() => window.SkriblHelpLearn.show('home')"
