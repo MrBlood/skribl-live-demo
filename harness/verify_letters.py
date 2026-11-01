@@ -936,9 +936,11 @@ with sync_playwright() as p:
         check("with Guide off, nothing is under the letter but the lines", u0["font"] < 60 and u0["faint"] < 60, json.dumps(u0))
 
         # 2. Guide: the font under it, gliding in, and kept for the next letter.
-        # Read on every frame, with the time it was read: a glide over a fifth
-        # of a second never moves faster than its own ease allows (twice its
-        # mean pace at the start), however slow the frames come.
+        # Read on every frame, with the time it was read: from the last frame
+        # it was still off to the first it was on takes most of a fifth of a
+        # second (an ease-out reaches 0.95 at 78% of its time), however the
+        # frames come: slow frames only make that longer, and a jump or a
+        # hurried glide makes it a frame or two.
         q.evaluate("""() => { window.__gk = []; const t0 = performance.now();
           (function f() { window.__gk.push([performance.now(), SkriblLetters.guide().k]); if (performance.now() - t0 < 450) requestAnimationFrame(f); })(); }""")
         q.click("#ltGuide")
@@ -947,13 +949,15 @@ with sync_playwright() as p:
         gk = [k for _, k in tk]
         u1 = q.evaluate(UNDER)
         steps = [round(b2 - a2, 3) for a2, b2 in zip(gk, gk[1:])]
-        too_fast = [(round(t2 - t1, 1), round(k2 - k1, 3)) for (t1, k1), (t2, k2) in zip(tk, tk[1:]) if abs(k2 - k1) > (t2 - t1) / 200 * 2 + 0.05]
+        off_t = max((t for t, k in tk if k <= 0.05), default=None)
+        on_t = min((t for t, k in tk if k >= 0.95), default=None)
+        span = round(on_t - off_t, 1) if off_t is not None and on_t is not None else None
         between = [k for k in gk if 0.05 < k < 0.95]
         check("Guide puts the font under the letter, where it was the first time",
               u1["font"] > 400 and q.evaluate(STATE)["gu"] == "true", json.dumps(u1))
-        check("and it glides in, read on every frame: rising, through the middle, never faster than its glide",
-              gk and gk[-1] == 1 and between and all(s >= 0 for s in steps) and not too_fast,
-              f"{len(gk)} frames, {len(between)} between, too fast {too_fast[:3]}")
+        check("and it glides in, read on every frame: rising, through the middle, off to on in most of a fifth of a second",
+              gk and gk[-1] == 1 and between and all(s >= 0 for s in steps) and span is not None and span >= 120,
+              f"{len(gk)} frames, {len(between)} between, off to on in {span} ms")
         q.click("#ltBack")
         q.wait_for_function("() => SkriblLetters.view() === 'tiles'")
         open_letter(q, "h")
