@@ -37,6 +37,9 @@ cards mock, "All yes"). Each row holds a promise, on the Pad and on Flip:
      off, a hold or a rest opens nothing and the first-time note stays
      away, while ? still names every button; How it works says where the
      switch is.
+ 13. HOLDING SELECTS NOTHING: everything a card names, a Flip page added
+     later among them, takes no selection, callout or magnifier when held
+     (the owner's iPhone: a held Tune row selected its words).
 
 For calibration, LEARNCARD_PART=<words of a part's label> runs that part
 alone ("Tune's rows", "the draw drawer's six"). A real run sets none.
@@ -815,6 +818,31 @@ with sync_playwright() as p:
                       bool(fl) and fl["on"] == "off" and fl["stored"] == "1", str(fl))
             c.close()
         part("the switch", switch)
+
+        # 13. HOLDING SELECTS NOTHING (the owner, on the iPhone, of Tune's
+        # rows: a held row selected its words, with Copy and Look Up beside
+        # the card). WebKit's press-and-hold cannot be run here, so this reads
+        # what it obeys: everything a card names computes user-select: none,
+        # a Flip page added after load among them, and the rule that does it
+        # carries -webkit-touch-callout: none, which Chromium does not
+        # compute, so it is read from the rule itself.
+        def nosel():
+            c, q = fresh(b, PHONE, route)
+            if name == "Flip":
+                q.click("#addblank")
+                q.wait_for_timeout(400)
+            r = q.evaluate("""() => { const sels = window.SkriblLearnCard.cards.map(c => c.sel).join(', ');
+              const all = [...document.querySelectorAll(sels)], st = document.getElementById('lcHolds');
+              return { n: all.length, rule: st ? st.textContent : '',
+                       loose: all.filter(el => getComputedStyle(el).userSelect !== 'none')
+                                 .map(el => el.id || (el.getAttribute('class') || '').split(' ')[0]) }; }""")
+            check(f"{name}: everything a card names selects nothing when it is held"
+                  + (", a page added since the start among them" if name == "Flip" else ""),
+                  r["n"] >= 15 and not r["loose"], f"{len(r['loose'])} of {r['n']} would select: {r['loose'][:8]}")
+            check(f"{name}: and the rule that says so brings no system callout either",
+                  "-webkit-touch-callout: none" in r["rule"] and "user-select: none" in r["rule"], r["rule"][-140:])
+            c.close()
+        part("holding selects nothing", nosel)
 
     if not PART:
         check("Pen's card says the same on the Pad and Flip", len(pen_lines) == 2 and len(set(pen_lines.values())) == 1, str(pen_lines))

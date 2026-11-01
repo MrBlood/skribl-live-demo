@@ -437,6 +437,22 @@
   }
 
   // ---- holding (touch) -----------------------------------------------------
+  // HOLDING SELECTS NOTHING (the owner, on the iPhone, of Tune's rows: a held
+  // row selected its words, with Copy and Look Up beside the card). One rule,
+  // written from the cards' own list, takes selection, the system's callout
+  // and its magnifier from everything a card names, and from the tag-only
+  // ones, whose hold keeps an old job (a Flip page lifting). A rule rather
+  // than marks on elements: it matches what is built later (a Flip page is
+  // added), and it is in force before the first touch. It replaced a list of
+  // ids kept by hand in styles.css, which had the bar's buttons and not the
+  // rows, the drawer's tiles or the pages that came later.
+  var HOLDS = CARDS.map(function (c) { return c.sel; }).join(', ');
+  (function () {
+    var st = document.createElement('style');
+    st.id = 'lcHolds';
+    st.textContent = ':is(' + HOLDS + ') { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }';
+    (document.head || document.documentElement).appendChild(st);
+  })();
   var hold = null, swallowUntil = 0;
   document.addEventListener('pointerdown', function (e) {
     if (!live) return;
@@ -667,7 +683,7 @@
   window.SkriblLearnCard = {
     open: function (t) { return open(t, 'tag'); }, close: function () { close(false); },
     steps: steps, picture: picture,
-    tags: tags, note: note, cards: CARDS,
+    tags: tags, note: note, cards: CARDS, holds: HOLDS,
     isOpen: function () { return !!cardEl; },
     on: cardsOn, setOn: setCardsOn
   };
