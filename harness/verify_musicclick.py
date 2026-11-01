@@ -378,20 +378,23 @@ with sync_playwright() as pw:
     # as the old loop came round when the timer that starts it again fired
     # late (the new loop's first beat then not set a second time, a tenth of
     # a second after). Late on purpose too: the page held busy from 60ms
-    # before the old loop comes round to 40ms after, so its timer, due 10ms
-    # before, can only fire after.
-    def restart(pg, late):
+    # before the old loop comes round to `held` ms after (40, and 160), so its
+    # timer, due 10ms before, can only fire after. At 160 it starts again a
+    # fifth of a second late, past the tenth that once kept the first beat
+    # from ticking twice (main red after #723: sqlite 6/6, the Pad, a box slow
+    # enough that 40 came out 43; at the CPU 4x slower, red two runs in three).
+    def restart(pg, held):
         press(pg, "#musicClickBtn", 100)
         press(pg, "#previewLoopBtn", 1000)
         old = pg.evaluate(CLOCK)
         pg.fill("#endReadout", "4"); pg.press("#endReadout", "Enter")
         top0 = old["s0"] - old["lead"]
         came = top0 + old["dur"] * math.ceil((old["now"] - top0) / old["dur"] + 1e-9)   # the old loop's next top
-        if late:
-            # From 60ms before it comes round to 40ms after: the timer that
-            # starts it again (due 10ms before) can only fire after.
-            pg.evaluate("""(T) => { const ms = (T - audioCtx.currentTime) * 1000 - 60;
-                setTimeout(() => { const t0 = performance.now(); while (performance.now() - t0 < 100) {} }, Math.max(0, ms)); }""", came)
+        if held:
+            # From 60ms before it comes round to `held` ms after: the timer
+            # that starts it again (due 10ms before) can only fire after.
+            pg.evaluate("""([T, H]) => { const ms = (T - audioCtx.currentTime) * 1000 - 60;
+                setTimeout(() => { const t0 = performance.now(); while (performance.now() - t0 < 60 + H) {} }, Math.max(0, ms)); }""", [came, held])
         pg.wait_for_timeout(int((came - old["now"]) * 1000) + 1800)
         new = pg.evaluate(CLOCK)
         made = pg.evaluate(TICKS)
@@ -403,8 +406,12 @@ with sync_playwright() as pw:
         # called off when it started again before; sounding (the join's one
         # tick) when it started again after.
         top_tick = [t["off"] for t in made if t["made"] < again - 0.005 and abs(t["at"] - came) < 0.0015]
-        join = [t for t in sounded if abs(t["at"] - new["s0"]) < 0.12]
-        rest = [t for t in sounded if t["at"] >= new["s0"] + 0.12]
+        # The join: from just before the old loop came round to just after the
+        # new one's sound began, whichever is first, so a first beat ticked
+        # twice, at both, is counted however late the start was.
+        lo, hi = min(came, new["s0"]) - 0.05, max(came, new["s0"]) + 0.12
+        join = [t for t in sounded if lo <= t["at"] < hi]
+        rest = [t for t in sounded if t["at"] >= hi]
         want = new["s0"] if early else came
         close = [round(z["at"] - a["at"], 4) for a, z in zip(sounded, sounded[1:]) if z["at"] - a["at"] < 0.3]
         ok = (abs(old["dur"] - 4.0) < 0.01 and abs(new["dur"] - 3.0) < 0.01 and len(join) == 1 and abs(join[0]["at"] - want) < 0.0015
@@ -418,20 +425,23 @@ with sync_playwright() as pw:
 
     for _n, _p in eds("click"):
         res = {}
-        for late in (False, True):
+        for held in (0, 40, 160):
             c = waits.instrument(b.new_context(**DESK))
             c.add_init_script(OSC)
             c, pg, errs = editor(b, _n, _p, door="exact", ctx=c)
             pg.evaluate(CLICK_LOOP)
             pg.wait_for_timeout(300)
-            res[late] = restart(pg, late)
+            res[held] = restart(pg, held)
             c.close()
-        ok, early, why = res[False]
+        ok, early, why = res[0]
         check(f"{_n}: an end moved while the click plays: from the next time round it ticks the new loop, and the loop's first beat "
               "ticks once at the join, never twice", ok, ("started again before it came round: " if early else "started again late: ") + why)
-        ok, early, why = res[True]
+        ok, early, why = res[40]
         check(f"{_n}: the loop started again late, just after it came round (the page held busy across it): its first beat still "
               "ticks once, as the old loop came round", ok and not early, why)
+        ok, early, why = res[160]
+        check(f"{_n}: the loop started again a fifth of a second late (the page held 160ms past it coming round): its first beat "
+              "still ticks once, as the old loop came round, not again as the new one's sound begins", ok and not early, why)
 
     # The click turned on while Hear plays ticks from the very next beat: one
     # already set ahead, lit and not yet ticked, ticks too. Turned on 40 to

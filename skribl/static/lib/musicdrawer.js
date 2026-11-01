@@ -1540,8 +1540,9 @@
      * is set ahead is called off when the loop stops or starts again, and the
      * ticks when the click goes off, so nothing sounds or lights for a loop
      * no longer playing; and no beat is set within a tenth of a second of the
-     * last, so a loop started again just after it came round (its timer late)
-     * does not tick its first beat twice. On the gapless engine only: the
+     * last, nor a start's first beat within most of a beat (0.6) of it, so a
+     * loop started again after it came round (its timer late, by however
+     * much) does not tick its first beat twice. On the gapless engine only: the
      * fallbacks have no clock to keep. */
     function syncClick() {
       if (!clickBtn) return;
@@ -1619,8 +1620,19 @@
           if (u >= dur - 1e-4) break;
           var at = base + pass * dur + u, when = at;
           // The first beat, set as the music starts: only while it is still
-          // to start (it is long past, and forgotten, later in the pass).
-          if (at < s0 && at > s0 - lead - 0.004) { if (now > s0 + 0.004) continue; when = Math.max(s0, now); }
+          // to start (it is long past, and forgotten, later in the pass). And
+          // not when the last tick is closer than most of a beat: that was
+          // the old loop's top, ticked as it came round before this start
+          // (its timer late, the page held), and it was this beat. The tenth
+          // of a second below kept that from ticking twice only for a start
+          // up to 70ms late; on a slower box, or a page held longer, the
+          // first beat ticked again a fifth of a second on (main red after
+          // #723, sqlite 6/6, verify_musicclick).
+          if (at < s0 && at > s0 - lead - 0.004) {
+            if (now > s0 + 0.004) continue;
+            when = Math.max(s0, now);
+            if (when - last < 0.6 * p) continue;
+          }
           if (when < now - 0.004 || when > now + BEAT_AHEAD || when - last < 0.1) continue;
           var id = Math.round(at * 1000);
           if (beatDone[id] || beatDone[id - 1] || beatDone[id + 1]) continue;
