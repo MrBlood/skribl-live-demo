@@ -28389,29 +28389,33 @@ change-a-letter mock.
   which hid it. Done with nothing changed keeps such a letter exactly as it
   came.
 
-verify_letters 14 holds it (27 rows); 12 now taps a letter to change it (a
+verify_letters 14 holds it (26 rows); 12 now taps a letter to change it (a
 stroke added is kept with it; Redo and a stroke draw it again); 9 reads the
 new words on and off (Eraser, Guide, the size and its value, the tint laid
 over the bar it sits on) and their 44 px.
 
-CALIBRATION, the file served changed, each part alone: 29 breaks, each red
+CALIBRATION, the file served changed, each part alone: 30 breaks, each red
 at its own row: the letter not put back as ink (twice: the change part and
 the tiles), the tools hidden, the font never under it, a jump instead of a
-glide, Guide not kept, the line left beside the size, the cut at the middle
-of the line instead of its ink, no repaint, the cut ends' times lost, a ring
-twice the size, no unwinding at a pinch, the size not kept, Redo bringing
-the old letter back, its Undo bringing nothing, the pen not back after Redo,
-the eraser staying on from letter to letter, Cancel writing, Done ignoring a
-change, Done writing an unchanged letter, no ring before a press, no [ ], no
-fitting, the tools while drawing in order, an accent's base letter only with
-Guide, the tile still saying "Draw g again", Redo in the tiles keeping the
-old letter, the on ink of the old #b9a8ff, buttons 36 px. Two did not go red
-the first time, each the instrument: the glide was read by counting frames,
-which four runs at once slowed into false jumps (it is read by the time each
-step took now: never faster than the glide's own ease, and something in
-between), and the settings were read by a parse that threw before the row
-could say red. Two controls with nothing changed, run four at once, had no
-red row.
+glide, a glide of 40 ms, Guide not kept, the line left beside the size, the
+cut at the middle of the line instead of its ink, no repaint, the cut ends'
+times lost, a ring twice the size, no unwinding at a pinch, the size not
+kept, Redo bringing the old letter back, its Undo bringing nothing, the pen
+not back after Redo, the eraser staying on from letter to letter, Cancel
+writing, Done ignoring a change, Done writing an unchanged letter, no ring
+before a press, no [ ], no fitting, the tools while drawing in order, an
+accent's base letter only with Guide, the tile still saying "Draw g again",
+Redo in the tiles keeping the old letter, the on ink of the old #b9a8ff,
+buttons 36 px. Two did not go red the first time, each the instrument: the
+settings were read by a parse that threw before the row could say red, and
+the glide was read by counting frames, which four runs at once slowed into
+false jumps. Read next by the time each step took, it was red once beside
+three other suites and green alone (a frame read 10.1 ms after the last saw
+a step of 0.153 against a bound of 0.151: the reader's clock is a callback's
+jitter from the glide's own frame time). It is read now as a span: off to on
+takes at least 120 ms, with something in between, which slow frames can only
+lengthen. A jump and a 40 ms glide are each red at it; two controls with
+nothing changed, run four at once, have no red row.
 
 WHAT IT DOES TO FLIP: shared. Your hand is one page; Flip's Text opens it.
 
