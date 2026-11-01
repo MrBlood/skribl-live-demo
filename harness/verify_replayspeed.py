@@ -494,6 +494,19 @@ with sync_playwright() as p:
                  barTop: q(bar).getBoundingClientRect().top, words: getComputedStyle(q(line)).opacity,
                  vw: document.documentElement.clientWidth }; }"""
 
+
+    # READ ONCE IT HAS STOPPED (main red after #710). The bubble follows the
+    # finger as the page handles each move, and the rows read it 16ms after
+    # the last move was sent: a busy page that handled that move late was
+    # read a move behind (the foot at 344 for a touch at 367.5, where it
+    # belonged for the move before). A read after a move waits for the same
+    # place three frames running (1.5s at most).
+    SETTLED = """([bar]) => new Promise(done => { const t = document.querySelector(bar + ' .rl-bubble');
+        let last = null, n = 0; const t0 = performance.now();
+        (function f() { const b = t.getBoundingClientRect().bottom + ',' + t.getBoundingClientRect().left;
+          n = b === last ? n + 1 : 0; last = b;
+          if (n >= 3 || performance.now() - t0 > 1500) done(); else requestAnimationFrame(f); })(); })"""
+
     def finger(pg, cdp, bar, line, name):
         """A real finger on the bar: press at a quarter, drag along it, slide up
         into fine scrub, back down and off the right end, then the left end, and
@@ -515,13 +528,16 @@ with sync_playwright() as p:
         on = pg.evaluate(BUB, [bar, line])
         for k in range(1, 5):
             t("touchMove", x, y - 130 * k / 4)
+        pg.evaluate(SETTLED, [bar])
         up = pg.evaluate(BUB, [bar, line])
         vw = on["vw"]
         for k in range(1, 9):
             t("touchMove", x + (vw - 1 - x) * k / 8, y)
+        pg.evaluate(SETTLED, [bar])
         hi = pg.evaluate(BUB, [bar, line])
         for k in range(1, 9):
             t("touchMove", vw - 1 - (vw - 2) * k / 8, y)
+        pg.evaluate(SETTLED, [bar])
         lo = pg.evaluate(BUB, [bar, line])
         t("touchEnd", 0, 0)
         pg.wait_for_timeout(300)
