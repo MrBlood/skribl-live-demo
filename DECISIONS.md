@@ -28197,3 +28197,37 @@ still has a place, in Print).
 
 Not tested here: WebKit (the owner's iPhone, its keyboard over the sheet),
 SF and Segoe UI, the live site (not deployed until it merges).
+
+## After v330 -- Holding selects nothing: one rule from the cards' own list
+
+The owner, on the iPhone, with a screenshot: holding Tune's Watching speed
+row opened its card, and the row's word "speed" was selected under it, with
+Copy and Look Up. "The icons didn't, but the rows do."
+
+Why: a card opens on a hold, and on a phone a hold on words also selects
+them. The bar's buttons were kept from that by a list of ids written by hand
+into styles.css (no selection, no system callout, no magnifier). Every card
+that came after it was left out: Tune's rows on both editors, the draw
+drawer's Eyedropper, Recolor and four tiles, and Flip's pages and x1 badge.
+On the tree as it stood, 11 of the 33 things a card names on the Pad could
+be selected, and 18 of 41 on Flip.
+
+The fix: lib/learncard.js writes one rule from its cards' own list
+(`#lcHolds`): everything a card names, and the tag-only things whose hold
+keeps an old job, bring no selection, callout or magnifier when held. A rule
+matched by selector rather than marks on elements, so a Flip page added
+later is covered, and it is in force before the first touch. The list of
+ids in styles.css is gone; every id on it was already named by a card.
+
+verify_learncard part 13 holds it on both editors: everything a card names
+computes user-select none, a Flip page added since the start among them, and
+the rule carries -webkit-touch-callout: none, which Chromium does not
+compute, so it is read from the rule itself. Chromium's own long press
+selects nothing here, so the owner's scenario cannot be run; the check reads
+what WebKit obeys. Red on the tree before the fix (both rows, both editors),
+and per part: the rule not written (17 of 33 on the Pad, the bar's buttons
+with it now that the old list is gone), the rule without the callout, and a
+rule from a list that leaves Tune's rows out. player.css is unchanged.
+
+Not tested here: WebKit itself (the owner's iPhone): one held row there says
+whether it holds.
