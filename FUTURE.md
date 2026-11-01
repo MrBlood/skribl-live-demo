@@ -1585,8 +1585,10 @@ Grid's and Stroke layers' filmed on each editor; Mirror a butterfly drawing
 itself; the Pad's Watching speed is Speed's clip; each also in How it works.
 Call 3's words were mocked on the real card (Nov 1): Hear the loop, the beat
 click, Snap to the beat, the four doors and Add a photo, with one finding (a
-hold on a grey button opens nothing on a phone, while a rest on a desk
-opens its card); the owner's OK comes first.
+hold on a grey button opened nothing on a phone, while a rest on a desk
+opened its card). "All yes": **built** (DECISIONS, after v330, "The music and
+photo drawers' eight cards"), a grey button's card opening on a hold too.
+Next: an example in each, as Tune's have.
 
 ## 6ab. Text that writes itself, in the owner's own hand (owner, Oct 31: "How hard would it be to add text to the pad?", then "Can't we have our own font")
 

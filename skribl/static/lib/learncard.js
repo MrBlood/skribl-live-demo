@@ -160,6 +160,37 @@
     { sel: '#drawTiles .dp-tile[data-dp="eraser"]', name: 'Eraser size', tag: 'Eraser size', demo: 'eraser', more: 'Eraser',
       line: 'How wide the eraser rubs. It grows and shrinks with your pen.',
       do: [['Tap', '2×, 3× or 5× the pen']] },
+    // THE MUSIC AND PHOTO DRAWERS' EIGHT (FUTURE.md 6aa, call 3; the words
+    // mock on the real card): Hear the loop, the beat click (the metronome
+    // at the end of its pill), Snap to the beat (the magnet), the four
+    // doors, and Add a photo. A hold on a door opens its card, not the door;
+    // on Hear the loop it plays nothing; on Add a photo it opens no picker.
+    { sel: '#previewLoopBtn', name: 'Hear the loop', tag: 'Hear the loop', more: 'Hear the loop',
+      line: 'Just the music, round and round, the way it loops under your ' + (FLIP ? 'animation.' : 'drawing.'),
+      do: [['Tap', 'Play it, or stop'], ['Move an end', 'Heard next time round']] },
+    { sel: '#musicClickBtn', name: 'Beat click', tag: 'Beat click', more: 'click',
+      line: 'A soft tick on each beat while Hear the loop plays. It’s never in your post.',
+      do: [['Tap', 'On or off'], ['Grey', 'Waiting for a beat']] },
+    { sel: '#musicSnap', name: 'Snap to the beat', tag: 'Snap', more: 'Snap to the beat',
+      line: 'Lines the loop’s ends up with the beat, so it comes round in time.',
+      do: [['On', 'A dragged end lands on a beat'], ['Off', 'Ends stay where you let go']] },
+    { sel: '#musicDoors .dp-tile[data-dp="length"]', name: 'Length', tag: 'Length', more: 'loop length',
+      line: 'How long the loop is. Skribl starts with a part that loops well.',
+      do: [['Tap', 'Skribl’s pick, Fit my ' + (FLIP ? 'animation' : 'drawing') + ' or Whole song'], ['Beats', 'How many, like 8 or 16'],
+           ['Lock', 'One end moves the other']] },
+    { sel: '#musicDoors .dp-tile[data-dp="beat"]', name: 'Beat', tag: 'Beat', more: 'Tap the beat',
+      line: 'The song’s beat. Skribl listens for it, or you tap along.',
+      do: [['Tap', 'Tap the beat, and beats in a bar'], ['Then', 'Snap and the click follow it']] },
+    { sel: '#musicDoors .dp-tile[data-dp="restart"]', name: 'Restart', tag: 'Restart', more: 'restart',
+      line: 'How the loop’s end joins its start, so you don’t hear the seam.',
+      do: [['Smooth restart', 'A fade across the join'], ['Cut on silence', 'A cut where it’s quiet'], ['Hear the restart', 'Just the join']] },
+    { sel: '#musicDoors .dp-tile[data-dp="exact"]', name: 'Exact times', tag: 'Exact times', more: 'exact',
+      line: 'The loop’s start and end in seconds, typed or stepped.',
+      do: [['Type', 'A time, like 2.125'], ['− and +', 'A step: 0.01s, 0.1s or a bar']] },
+    { sel: '#photoAddBtn', name: 'Add a photo', tag: 'Add a photo', clip: 'photo', more: 'photo',
+      line: 'A picture behind ' + (FLIP ? 'every page' : 'your drawing') + ', to trace or to draw over.',
+      do: [['Tap', 'Choose a photo'], ['Then', 'Fit it, fade it or soften it']],
+      deskDo: [['Click', 'Choose a photo'], ['Drop', 'Or drag one in here'], ['Then', 'Fit it, fade it or soften it']] },
     // TUNE'S ROWS (owner, of the words mock: "all yes"; FUTURE.md 6aa, call
     // 2): a card per row, held anywhere on it, its name or its control (a
     // switch, a choice). The hold opens the card and presses nothing, as on
@@ -500,7 +531,10 @@
     if (cardEl && !cardEl.contains(e.target) && !(current && current.el.contains(e.target))) close(false);
     if (e.pointerType === 'mouse') { cancelRest(); return; }
     var hit = specFor(e.target);
-    if (!hit || hit.spec.tagOnly || hit.el.disabled || !cardsOn()) return;
+    // A GREY BUTTON'S CARD OPENS TOO (call 3's mock: Snap and the beat click
+    // are grey until there is a beat, and a grey button is where someone asks
+    // why; a desk's rest already opened it, a phone's hold did not).
+    if (!hit || hit.spec.tagOnly || !cardsOn()) return;
     var x = e.clientX, y = e.clientY, id = e.pointerId;
     clearTimeout(hold && hold.t);
     hold = { id: id, x: x, y: y, t: setTimeout(function () {

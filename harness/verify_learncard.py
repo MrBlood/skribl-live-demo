@@ -40,6 +40,14 @@ cards mock, "All yes"). Each row holds a promise, on the Pad and on Flip:
  13. HOLDING SELECTS NOTHING: everything a card names, a Flip page added
      later among them, takes no selection, callout or magnifier when held
      (the owner's iPhone: a held Tune row selected its words).
+ 14. THE MUSIC AND PHOTO DRAWERS' EIGHT (call 3): Hear the loop, the beat
+     click, Snap to the beat, the four doors and Add a photo, held, open
+     their cards in the words said yes to, painted, whole and clear; a hold
+     presses nothing (no loop plays, no door opens, no state changes, no file
+     picker); a quick tap is still a tap; grey before there is a beat, Snap
+     and the click open their cards when held, as a desk's rest already did;
+     Add a photo plays the photo recording on the Pad; on a desk a rest grows
+     Hear the loop's card.
 
 For calibration, LEARNCARD_PART=<words of a part's label> runs that part
 alone ("Tune's rows", "the draw drawer's six"). A real run sets none.
@@ -47,9 +55,13 @@ alone ("Tune's rows", "the draw drawer's six"). A real run sets none.
 Touch is real touch (CDP touch events), so the browser makes the pointer
 events a finger would. Visible means painted: elementFromPoint.
 """
+import io
+import math
 import os
 import re
+import struct
 import sys
+import wave
 from pathlib import Path
 
 from assertions import make_check
@@ -71,6 +83,23 @@ PHONE = dict(viewport={"width": 402, "height": 874}, device_scale_factor=2, is_m
 DESK = dict(viewport={"width": 1333, "height": 906})
 EDITORS = (("Pad", "/skribl-pad"), ("Flip", "/flip"))
 FORCE = "window.__skriblLearnForce = true;"
+# Skribl's ears off (lib/musicears.js), so a song has no beat until one is set:
+# the music drawer's cards are held with and without one.
+NO_EARS = "Object.defineProperty(window, 'SkriblEars', { configurable: true, get() { return undefined; }, set(v) {} });"
+
+
+def _wav(seconds, rate=8000):
+    """A pulse twice a second: 120 beats a minute (verify_musicclick's)."""
+    buf = io.BytesIO()
+    w = wave.open(buf, "wb")
+    w.setnchannels(1); w.setsampwidth(2); w.setframerate(rate)
+    w.writeframes(b"".join(struct.pack("<h", int(11000 * math.sin(2 * math.pi * 220 * i / rate) * math.exp(-((2 * i / rate) % 1) * 7)))
+                           for i in range(int(seconds * rate))))
+    w.close()
+    return buf.getvalue()
+
+
+SONG = {"name": "a-song.wav", "mimeType": "audio/wav", "buffer": _wav(12.0)}
 
 TIP = """() => { const t = document.querySelector('.skribl-tip'); const tipShown = !!t && !t.hidden && getComputedStyle(t).display !== 'none';
   return [!!document.querySelector('.lc-card'), tipShown]; }"""
@@ -99,10 +128,12 @@ def touch_hold(q, cdp, sel, ms, move=0):
     q.wait_for_timeout(250)
 
 
-def fresh(b, opts, route, force=True, scheme="light"):
+def fresh(b, opts, route, force=True, scheme="light", ears=True):
     c = b.new_context(color_scheme=scheme, **opts)
     if force:
         c.add_init_script(FORCE + "try { localStorage.setItem('skribl.learncard.note.v1', '1'); } catch (e) {}")
+    if not ears:
+        c.add_init_script(NO_EARS)
     q = c.new_page()
     browsing.goto(q, BASE, route)
     q.wait_for_timeout(900)
@@ -553,6 +584,139 @@ with sync_playwright() as p:
                   six <= set(tags["names"]) and not tags["unpainted"] and not tags["over"], str(tags))
             c.close()
         part("the draw drawer's six", drawer)
+
+        # 14. THE MUSIC AND PHOTO DRAWERS' EIGHT (FUTURE.md 6aa, call 3; the
+        # words mock on the real card, "All yes"): Hear the loop, the beat
+        # click, Snap to the beat, the four doors and Add a photo, held, open
+        # their cards in those words, painted, whole and clear of the button,
+        # and a hold presses nothing: the loop does not play, no door opens,
+        # Snap and the click keep their state, no file picker opens. A quick
+        # tap is still a tap. Grey (no beat yet), Snap and the click still
+        # open their cards when held, as a desk's rest already did.
+        def music():
+            work = "animation" if name == "Flip" else "drawing"
+            EIGHT = [("#previewLoopBtn", "Hear the loop", f"Just the music, round and round, the way it loops under your {work}.",
+                      [["Tap", "Play it, or stop"], ["Move an end", "Heard next time round"]]),
+                     ("#musicClickBtn", "Beat click", "A soft tick on each beat while Hear the loop plays. It’s never in your post.",
+                      [["Tap", "On or off"], ["Grey", "Waiting for a beat"]]),
+                     ("#musicSnap", "Snap to the beat", "Lines the loop’s ends up with the beat, so it comes round in time.",
+                      [["On", "A dragged end lands on a beat"], ["Off", "Ends stay where you let go"]]),
+                     ('#musicDoors .dp-tile[data-dp="length"]', "Length", "How long the loop is. Skribl starts with a part that loops well.",
+                      [["Tap", f"Skribl’s pick, Fit my {work} or Whole song"], ["Beats", "How many, like 8 or 16"], ["Lock", "One end moves the other"]]),
+                     ('#musicDoors .dp-tile[data-dp="beat"]', "Beat", "The song’s beat. Skribl listens for it, or you tap along.",
+                      [["Tap", "Tap the beat, and beats in a bar"], ["Then", "Snap and the click follow it"]]),
+                     ('#musicDoors .dp-tile[data-dp="restart"]', "Restart", "How the loop’s end joins its start, so you don’t hear the seam.",
+                      [["Smooth restart", "A fade across the join"], ["Cut on silence", "A cut where it’s quiet"], ["Hear the restart", "Just the join"]]),
+                     ('#musicDoors .dp-tile[data-dp="exact"]', "Exact times", "The loop’s start and end in seconds, typed or stepped.",
+                      [["Type", "A time, like 2.125"], ["− and +", "A step: 0.01s, 0.1s or a bar"]]),
+                     ("#photoAddBtn", "Add a photo", "A picture behind " + ("every page" if name == "Flip" else "your drawing") + ", to trace or to draw over.",
+                      [["Tap", "Choose a photo"], ["Then", "Fit it, fade it or soften it"]])]
+            PLACE = """(sel) => { const c = document.querySelector('.lc-card'), b = document.querySelector(sel); if (!c) return null;
+                const R = c.getBoundingClientRect(), B = b.getBoundingClientRect();
+                const words = [...c.querySelectorAll('.lc-t, .lc-line, .lc-do dt, .lc-do dd, .lc-more, .lc-ok, .lc-hint')];
+                return { whole: R.left >= 0 && R.top >= 0 && R.right <= innerWidth && R.bottom <= innerHeight,
+                         clear: R.right <= B.left || B.right <= R.left || R.bottom <= B.top || B.bottom <= R.top,
+                         ringed: b.classList.contains('lc-target'),
+                         painted: words.every(e => { const r = e.getBoundingClientRect(), a = document.elementFromPoint(r.left + Math.min(6, r.width / 2), r.top + r.height / 2);
+                           return !!a && e.contains(a); }),
+                         cut: words.filter(e => e.scrollWidth > e.clientWidth + 1).map(e => e.textContent) }; }"""
+            STATE = """() => { const q = (s) => document.querySelector(s);
+                return { hear: (q('#musicHearLabel .tp-k') || {}).textContent, click: q('#musicClickBtn').getAttribute('aria-pressed'),
+                         snap: q('#musicSnap').getAttribute('aria-pressed'),
+                         doors: [...document.querySelectorAll('#musicDoors .dp-tile')].map(t => t.getAttribute('aria-expanded')).join() }; }"""
+            STILL = """(sel) => new Promise(done => { const e = document.querySelector(sel); let last = '', n = 0; const t0 = performance.now();
+                (function tick() { const r = e.getBoundingClientRect(), k = r.left + ',' + r.top; n = k === last ? n + 1 : 0; last = k;
+                  if (n >= 3 || performance.now() - t0 > 2000) done(); else requestAnimationFrame(tick); })(); })"""
+
+            def song(q, beat=True):
+                browsing.pad_drawer(q, "music")
+                q.set_input_files("#musicInput", SONG)
+                q.wait_for_function("() => document.getElementById('musicUploadBtn').classList.contains('loaded') && !!currentAudioBuffer", timeout=20000)
+                q.wait_for_timeout(400)
+                if beat:
+                    q.evaluate("() => { musicTempo = { bpm: 120, phase: 0 }; updateTrimUI(); }")
+                    q.wait_for_timeout(300)
+
+            def press(q, cdp, sel, ms):
+                q.locator(sel).first.scroll_into_view_if_needed()
+                q.evaluate(STILL, sel)
+                touch_hold(q, cdp, sel, ms)
+
+            c, q = fresh(b, PHONE, route, ears=False)
+            chooser = []
+            q.on("filechooser", lambda fc: chooser.append(1))
+            got = []
+            q.on("response", lambda r: got.append((r.url.split("?")[0], r.status)))
+            cdp = c.new_cdp_session(q)
+            song(q)
+            pressed, wrong = {}, []
+            for sel, nm, line, rows in EIGHT:
+                browsing.pad_drawer(q, "photo" if sel == "#photoAddBtn" else "music")
+                before, n0 = q.evaluate(STATE), len(chooser)
+                got.clear()
+                press(q, cdp, sel, 700)
+                card, at = q.evaluate(CARD), q.evaluate(PLACE, sel)
+                if sel == "#photoAddBtn" and name == "Pad":
+                    for _ in range(25):
+                        if any("/help/clips/photo-" in u and st < 400 for u, st in got):
+                            break
+                        q.wait_for_timeout(100)
+                photo = any("/help/clips/photo-" in u and st < 400 for u, st in got)
+                q.evaluate("() => window.SkriblLearnCard.close()")
+                q.wait_for_timeout(250)
+                after = q.evaluate(STATE)
+                if after != before or len(chooser) != n0:
+                    pressed[nm] = {"before": before, "after": after, "picker": len(chooser) - n0}
+                ok = (bool(card) and bool(at) and card["name"] == nm and card["line"] == line and card["rows"] == rows
+                      and card["painted"] and card["rowsPainted"] and at["whole"] and at["clear"] and at["ringed"] and at["painted"] and not at["cut"])
+                if not ok:
+                    wrong.append(f"{nm}: {card}; {at}")
+                if sel == "#photoAddBtn" and name == "Pad":
+                    check(f"{name}: ...and Add a photo's card plays How it works' photo recording", bool(card) and card["example"] and photo,
+                          f"example {card and card['example']}; photo clip loaded {photo}")
+            check(f"{name}: holding each of the music and photo drawers' eight opens its card in the words said yes to, painted, whole and clear of its button",
+                  not wrong, "; ".join(wrong)[:600])
+            check(f"{name}: ...and no hold presses anything: the loop plays nothing, no door opens, Snap and the click keep their state, no file picker",
+                  not pressed, str(pressed))
+            # A quick tap is still a tap: a door opens its group, Hear the loop plays.
+            browsing.pad_drawer(q, "music")
+            before = q.evaluate(STATE)
+            press(q, cdp, '#musicDoors .dp-tile[data-dp="beat"]', 80)
+            q.wait_for_timeout(300)
+            press(q, cdp, "#previewLoopBtn", 80)
+            q.wait_for_timeout(300)
+            after = q.evaluate(STATE)
+            nocard = not q.evaluate("() => !!document.querySelector('.lc-card')")
+            check(f"{name}: a quick tap is still a tap: the Beat door opens, Hear the loop plays, and no card opens",
+                  after["doors"].split(",")[1] == "true" and after["hear"] != before["hear"] and nocard, f"{before} -> {after}; no card {nocard}")
+            c.close()
+            # Grey: no beat yet. A hold on Snap or the click opens its card all the same.
+            c, q = fresh(b, PHONE, route, ears=False)
+            cdp = c.new_cdp_session(q)
+            song(q, beat=False)
+            grey = {}
+            for sel, nm in (("#musicSnap", "Snap to the beat"), ("#musicClickBtn", "Beat click")):
+                dis = q.evaluate("(s) => document.querySelector(s).disabled", sel)
+                press(q, cdp, sel, 700)
+                card = q.evaluate(CARD)
+                grey[nm] = [dis, card and card["name"]]
+                q.evaluate("() => window.SkriblLearnCard.close()")
+                q.wait_for_timeout(250)
+            check(f"{name}: grey before there is a beat, Snap and the beat click still open their cards when held",
+                  all(v[0] and v[1] == k for k, v in grey.items()), str(grey))
+            c.close()
+            # A desk: resting on Hear the loop grows its card.
+            c, q = fresh(b, DESK, route, ears=False)
+            song(q)
+            x, y = center(q, "#previewLoopBtn")
+            q.mouse.move(x - 30, y - 40)
+            q.mouse.move(x, y, steps=4)
+            q.wait_for_timeout(2500)
+            card = q.evaluate(CARD)
+            check(f"{name}: on a desk, resting on Hear the loop grows its card (Move away to close)",
+                  bool(card) and card["name"] == "Hear the loop" and card["hint"] == "Move away to close" and card["painted"], str(card))
+            c.close()
+        part("the music and photo drawers' eight", music)
 
         # 11. TUNE'S ROWS (owner, of the words mock: "all yes"; FUTURE.md 6aa,
         # call 2). Each row, held on its name, opens its card in the words
