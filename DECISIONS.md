@@ -28771,3 +28771,44 @@ filmed on each editor, since Flip's photo goes behind every page.
 THE FOUR: kind (a card shows what a control does before anyone has to
 try it); simple (one control in each clip); playful (the beat lights, the
 loop comes round); powerful (the deepest drawer shows itself working).
+
+## After v330 -- "Play my drawing": room for Play's words
+
+Found while filming the music drawer's examples: on Flip, the second line of
+the Play button under the timeline, "with my animation", ran past the
+button's round end on some phones. Mocked on the real Pad and Flip (Now; A,
+keep the words and borrow Hear the loop's spare room, folding onto two
+lines where there is none; B, drop "with"), the owner: "Yes" to B.
+
+- THE WORDS: "Play my drawing" on the Pad and "Play my animation" on Flip,
+  and "Stop the drawing" while it plays, as before. The pair reads alike:
+  Play my drawing, Hear the loop, each a verb and what it plays. How it
+  works' two tips say the new words too. Nothing moves: the row keeps its
+  halves, its height and its two narrow-phone rules (under 360px one to a
+  row; to 379 the second lines wrap, which Hear's "the loop" beside the
+  click still needs).
+- THE MOCK MEASURED THE WRONG PHONE. Its pictures were a mouse page at
+  phone widths. A touch phone gives the media card 12px side margins, not
+  22, so each button is 10px wider. Measured as a touch phone (Inter, this
+  box's font), the old words on Flip ended about 8px clear of the round end
+  on the owner's 402px phone, 1.6px at 390 and 3.4px past it at 380; the
+  mock said 2.4px past at 402. The owner was told, and the mock page carries
+  the correction. "my animation" ends 26px clear at 380 and 31 at 390.
+- WHY NO CHECK SAW IT. verify_musicsnap's words row and verify_musicclick's
+  pill row measured words against the button's box, not its round end, and
+  at 320, 360 and 402px only: the box let the last letter sit on the curve,
+  and no row tried 380 or 390.
+
+THE CHECKS: verify_musicsnap's words row now measures Play's last letter
+against the pill's round end (its edge at the height of the line), 4px of
+air at least, at 320, 360, 375, 380, 390, 402 and 430px on a touch phone,
+saying Play and, pressed, Stop. Calibrated: the old words put back, red on
+Flip alone at 380 (-3.4px) and 390 (1.6px), red again alone; the new
+words, green on both editors. verify_musicdoors, verify_musicbeat,
+verify_padrepeat and verify_helpclaims read the new name.
+
+WHAT IT DOES TO FLIP: shared. One drawer, the same words on both editors.
+
+THE FOUR: simple (shorter words, one line on every phone); kind (nothing
+crowds the edge); playful (the pair reads as a pair); powerful (the button
+does what it did).

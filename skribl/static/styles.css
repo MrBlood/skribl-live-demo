@@ -2597,10 +2597,12 @@ body.recoloring #canvas { cursor: crosshair !important; }
 .mt-play.mt-loop .tp-v { color: var(--text-secondary); }
 .mt-play:disabled { opacity: .5; cursor: default; }
 .mt-play:focus-visible { outline: 2px solid var(--ui-hi); outline-offset: 2px; }
-/* Under 360px a half is 127px and "with my animation" needs 160: one each to a row.
-   From 360px to 379 a size up (B) it ran 8px out of its half (Flip, 360):
-   there it wraps under the verb rather than running out of its button. From
-   380 it is one line, reaching into the button's end padding as it did. */
+/* Under 360px a half is under 137px, too little for both: one each to a row.
+   From 360px to 379 the second lines wrap under their verbs rather than run
+   out of their buttons (Hear's "the loop", beside the click, needs it). From
+   380 each is one line. Play's says "my drawing", not "with my" (the owner's
+   yes, after v330): Flip's "with my animation" ran past its round end below
+   about 400px; "my animation" ends 16px clear of it at 380, 27 at 402. */
 @media (max-width: 359px) { .mt-transport { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 379px) { .mt-play .tp-v { white-space: normal; } }
 @media (hover: hover) { .mt-play:not(:disabled):not(.mt-loop):hover { filter: brightness(1.08); }
@@ -2609,7 +2611,7 @@ body.recoloring #canvas { cursor: crosshair !important; }
    whole-drawer mock): the pill is the menu card Hear was, Hear its first
    part and the click, a metronome, its end, parted by the card's line. The
    click lit is the one tint, as a chosen choice is. A third button in the pair
-   pushed "Play with my drawing" out of its own on a phone, so Hear gives the
+   pushed Play's words out of their button on a phone, so Hear gives the
    click its end. */
 .mt-hear { display: flex; min-width: 0; border-radius: 999px; background: var(--menu-card); border: 1px solid var(--menu-card-line);
   box-shadow: var(--menu-card-drop); }
@@ -9612,7 +9614,7 @@ body.drawalong .canvas-empty-hint { display: none; }
 :where(.tab-panel, .media-card, .tool-tray, .tune-shell) .drawer-divider { background: var(--menu-card-line); }
 /* Words in the drawers that were too faint (the drawers mock, measured on the
    loaded photo and music drawers): secondary words take the sheet's ink, and
-   Play with my drawing's white words sit on the action fill (.mt-play);
+   Play my drawing's white words sit on the action fill (.mt-play);
    Hear the loop's are the violet ones. */
 #repositionHint, #clearLabel { color: var(--text-secondary); }
 :where(.tab-panel, .media-card) .clear-drawer-btn { color: var(--text-secondary); }   /* 4.19 on the dark card; hover, armed and disabled still win */

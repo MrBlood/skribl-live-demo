@@ -33,7 +33,7 @@ WHAT IS ASKED, AND HOW IT IS READ
   * Turned off mid-round, that round is its last; Stop stops it at once and
     leaves Repeat on for the next Play. Remembered across a reload, and the
     pill and the line say the same.
-  * The music drawer's "Play with my drawing" is the Pad's Play, so it goes
+  * The music drawer's "Play my drawing" is the Pad's Play, so it goes
     round too.
   * A scrub back mid-play: the music plays on to the drawing's end. It
     counted the timer's ticks before and stopped early (editor_music.js
@@ -340,13 +340,13 @@ with sync_playwright() as p:
         c.close()
 
     if part("drawer"):
-        print("\nREPEAT — the music drawer's Play with my drawing")
+        print("\nREPEAT — the music drawer's Play my drawing")
         c, pg, errs = pad(b, repeat="1")
         browsing.pad_drawer(pg, "music")
         ms = pg.evaluate("() => { const t = buildPlaybackTimeline(); return t.length ? t[t.length - 1].playT / replayRate : 0; }")
         pg.click("#musicPlayBtn"); pg.wait_for_timeout(60)
         rec = pg.evaluate(REC, int(ms * 2.6))
-        check("with Repeat on, the music drawer's Play with my drawing goes round too",
+        check("with Repeat on, the music drawer's Play my drawing goes round too",
               len(turns(rec)) >= 2 and all(r[1] for r in rec), f"rounds again {len(turns(rec))} in {rec[-1][0]}ms (a round {ms:.0f}ms)")
         c.close()
 

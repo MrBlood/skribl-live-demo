@@ -4,7 +4,7 @@ having it show me drawing? It's cumbersome, plus to know how many beats are in
 the loop, so I'm not at 7 or 9 when I want 8"; "All yes" to the mock; then
 "we only ever want 4,8,16,... beats").
 
-  THE PAIR. Play with my drawing and Hear the loop sit under the timeline in
+  THE PAIR. Play my drawing and Hear the loop sit under the timeline in
   the same place whichever door is open, or none, the same size, and no door
   has a second Hear. Hear the loop plays the music alone, round and round,
   until Stop; an end moved while it plays is heard from its next time round.
@@ -333,7 +333,7 @@ with sync_playwright() as pw:
         press(pg, "#previewLoopBtn", 300)
         stop = pg.evaluate(SAID)
         check(f"{_n}: Hear the loop plays the music alone, round and round, and Stop stops it",
-              st["pv"] and wa and not st["playing"] and st["hear"] == "Stop the loop" and st["play"] == f"Play with my {WORK[_n]}"
+              st["pv"] and wa and not st["playing"] and st["hear"] == "Stop the loop" and st["play"] == f"Play my {WORK[_n]}"
               and not stop["pv"] and stop["hear"] == "Hear the loop" and not pg.evaluate("() => _waLoop.playing()"),
               f"playing: {dict((k, st[k]) for k in ('pv', 'playing', 'hear', 'play'))}, engine {wa}; stopped: {stop['hear']!r}, {stop['pv']}")
         c.close()

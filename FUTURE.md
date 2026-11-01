@@ -1541,7 +1541,7 @@ at 402 x 874:
 - **Shape's picker** (Line, Rect, Oval, Poly), which Shape's own card names.
 - **The photo drawer:** Add a photo (and what a photo brings, not counted).
 - **The music drawer with a song:** on and off, remove, zoom out and in,
-  Snap, the taller box, the loop's Undo and Redo, Play with my drawing, Hear
+  Snap, the taller box, the loop's Undo and Redo, Play my drawing, Hear
   the loop, the click, and the four doors (Length, Beat, Restart, Exact) with
   the 26 controls inside them.
 - **Tune:** on the Pad 10 (Grid, Stroke layers, Mirror, Pauses, Watching

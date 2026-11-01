@@ -79,7 +79,7 @@ The rows:
   in. A tap on it goes back up to the timeline, the drawer still open (Flip's
   tap-away rule closed it), and it goes. At once under Reduce Motion.
 
-  PLAY. Play with my drawing is the editor's own Play and follows it however
+  PLAY. Play my drawing is the editor's own Play and follows it however
   it is pressed; with nothing drawn it waits, and Hear the loop, beside it,
   plays the music on its own (verify_musicbeat has the rest).
 
@@ -750,7 +750,7 @@ with sync_playwright() as pw:
         on = pg.evaluate(SAID)
         check(f"{_n}: with nothing drawn Fit is off and says why, and wakes once there is a drawing",
               off["fitOff"] and off["fitSub"] == "once you've drawn" and not on["fitOff"] and on["fitSub"].endswith("s")
-              and on["play"] == f"Play with my {WORK[_n]}",
+              and on["play"] == f"Play my {WORK[_n]}",
               f"before: off {off['fitOff']} {off['fitSub']!r} {off['play']!r}; after: off {on['fitOff']} {on['fitSub']!r} {on['play']!r}")
         c.close()
 
@@ -983,7 +983,7 @@ with sync_playwright() as pw:
               f"on {on}; {len(way)} frames fading, {len(moving)} frames easing, the framing {spans[0] if spans else 0:.2f}s -> {spans[-1] if spans else 0:.2f}s")
         c.close()
 
-    print("\nMUSIC DOORS — Play with my drawing")
+    print("\nMUSIC DOORS — Play my drawing")
     for _n, _p in eds("play"):
         c, pg, errs = editor(b, _n, _p)
         was = pg.evaluate(SAID)["play"]
@@ -995,8 +995,8 @@ with sync_playwright() as pw:
         theirs = pg.evaluate("() => ({ play: playing, label: document.getElementById('musicPlayLabel').textContent })")
         if theirs["play"]:
             pg.click(PLAY[_n]); pg.wait_for_timeout(300)
-        check(f"{_n}: Play with my drawing is the editor's own Play, and follows it however it is pressed",
-              was == f"Play with my {WORK[_n]}" and st["play"] and not st["pv"] and st["label"] == f"Stop the {WORK[_n]}"
+        check(f"{_n}: Play my drawing is the editor's own Play, and follows it however it is pressed",
+              was == f"Play my {WORK[_n]}" and st["play"] and not st["pv"] and st["label"] == f"Stop the {WORK[_n]}"
               and not after["play"] and after["label"] == was and theirs["play"] and theirs["label"] == f"Stop the {WORK[_n]}",
               f"{was!r}; pressed: {st}; the editor's Play stopped it: {after}; the editor's Play started it: {theirs}")
         c.close()
@@ -1007,8 +1007,8 @@ with sync_playwright() as pw:
         st = pg.evaluate("() => ({ play: playing, pv: previewingLoop, hear: document.getElementById('musicHearLabel').textContent })")
         pg.click("#previewLoopBtn"); pg.wait_for_timeout(300)
         stop = pg.evaluate("() => ({ pv: previewingLoop, hear: document.getElementById('musicHearLabel').textContent })")
-        check(f"{_n}: with nothing drawn, Play with my drawing waits, and Hear the loop plays the music on its own",
-              was == {"label": f"Play with my {WORK[_n]}", "off": True} and not st["play"] and st["pv"] and st["hear"] == "Stop the loop"
+        check(f"{_n}: with nothing drawn, Play my drawing waits, and Hear the loop plays the music on its own",
+              was == {"label": f"Play my {WORK[_n]}", "off": True} and not st["play"] and st["pv"] and st["hear"] == "Stop the loop"
               and not stop["pv"] and stop["hear"] == "Hear the loop",
               f"Play: {was}; Hear the loop pressed: {st}; again: {stop}")
         c.close()

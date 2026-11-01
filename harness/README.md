@@ -554,7 +554,7 @@ stays a sleep.
   framed, its ends the timeline's sharp lines, read off its canvas, the one
   line's length and beats; End + eased to, frame by frame;
   gliding in; a tap back up to the timeline with the drawer still open), at
-  once under Reduce Motion; Play with my drawing is the editor's Play, and
+  once under Reduce Motion; Play my drawing is the editor's Play, and
   waits with nothing drawn; a door opened as a song lands keeps its tile in
   sight, and closing one from the drawer's end glides; a drawer taller than
   the screen (on a 390x640 phone) opens at its top, the bar just under the
@@ -568,7 +568,7 @@ stays a sleep.
 - `verify_musicbeat.py` — the music drawer's pair and its beat (the owner:
   "How do I test the loop without having it show me drawing?... so I'm not at
   7 or 9 when I want 8", then "we only ever want 4,8,16,... beats"), on the Pad
-  and on Flip: Play with my drawing and Hear the loop under the timeline in
+  and on Flip: Play my drawing and Hear the loop under the timeline in
   the same place with any door open or none, the same size (Hear's pill and
   Play), with no second Hear the loop; Hear the loop plays the music alone
   until Stop, and an end moved while it plays is heard from its next time
@@ -1118,7 +1118,7 @@ stays a sleep.
   line under the drawing, off to start, remembered, lit only while on; on,
   Play goes round with no frame held at a turn and the music begun again from
   its loop's start each round; off mid-round, that round is the last; Stop
-  leaves it on; "Play with my drawing" follows; a scrub back never stops the
+  leaves it on; "Play my drawing" follows; a scrub back never stops the
   music early (it ends by the drawing's clock); in full screen it is toned as
   the speed and a pressed full screen are; its glyph at 3:1 or more; posts and
   Flip without it. Each row was shown red by its own break.

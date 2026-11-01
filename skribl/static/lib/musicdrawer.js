@@ -80,7 +80,7 @@
  * Drawing Time did not, so with a crossfade set it fell short of the drawing.
  *
  * THE PAIR THAT PLAYS (owner: "How do I test the loop without having it show
- * me drawing?"): Play with my drawing presses the editor's Play, and Hear the
+ * me drawing?"): Play my drawing presses the editor's Play, and Hear the
  * loop (it was Preview Loop, then Hear the whole loop) plays the music alone,
  * round and round. Both sit under the timeline, a door open or not. An end moved
  * while the loop plays is heard from its next time round: the gapless engine
@@ -149,7 +149,7 @@
  *   fitsByDefault       Skribl's pick is as long as the drawing (the Pad)
  *   fitted()            optional: Skribl has listened and the loop is as
  *                       long as the drawing (the Pad's toast says so)
- *   playButton()        the editor's Play, which Play with my drawing presses
+ *   playButton()        the editor's Play, which Play my drawing presses
  *   audio()             the track's <audio> element, or null
  *   buffer()            the decoded AudioBuffer, or null
  *   loop                the gapless engine: start(onFail, offset), stop(),
@@ -1522,7 +1522,7 @@
     /* ---- The click, and the beat lit as it is heard (the owner's picks in
      * the whole-drawer mock, FUTURE.md 6s). The click: a soft tick on each
      * beat while Hear the loop plays, in one pill with it (a third button in
-     * the pair pushed "Play with my drawing" out of its own on a phone), off
+     * the pair pushed Play's words out of their button on a phone), off
      * at first and never in a post or a file: its own sound, straight to the
      * speakers. Each beat's dot on the timeline lights as it reaches the ear,
      * bigger on a bar, the click on or off. Both keep the loop's own audio
@@ -1668,7 +1668,7 @@
       }, ms);
     }
 
-    /* ---- Play with my drawing. ---------------------------------------------
+    /* ---- Play my drawing. --------------------------------------------------
      * The editor's own Play, so the drawing replays with its music exactly as
      * Play plays it (and Play shows the whole drawing, lib/drawerdetent.js
      * revealTop). It follows the editor's Play however that is pressed. With
@@ -1684,7 +1684,7 @@
       var b = drawn(secs), on = h.playing();
       play.disabled = !h.hasTrack() || (!b && !on);
       play.classList.toggle('playing', on);
-      twoLines(play, on ? 'Stop' : 'Play', (on ? 'the ' : 'with my ') + work);
+      twoLines(play, on ? 'Stop' : 'Play', (on ? 'the ' : 'my ') + work);
     }
     if (play) play.addEventListener('click', function () {
       var b = drawn();

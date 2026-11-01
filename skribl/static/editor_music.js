@@ -5,7 +5,7 @@
 // one view and its four doors, Skribl's pick, the timeline and the Restart view
 // (lib/musictimeline.js, lib/musicrestart.js), nudges and typed times, Smooth
 // restart, Cut on silence, Fit my drawing, Whole song, the hear buttons, Play
-// with my drawing, Tap the beat and the switch. The Pad hands it its
+// my drawing, Tap the beat and the switch. The Pad hands it its
 // own state through the hooks below. What is left here is the
 // Pad's own: the file row (add and remove), the hooks, and Play's music loop,
 // which follows the replay's speed.

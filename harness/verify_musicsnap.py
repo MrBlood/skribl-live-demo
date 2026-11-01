@@ -46,9 +46,10 @@ the nearest beat and Beats.
   switch is put away.
 
   WORDS. The pair's words are whole on every phone (one to a row under
-  360px), and the one line, the doors' words, Beats and the tap's read
-  against what is behind them, each with its door open, and the beat's dots
-  against the song's lane, on the pixels.
+  360px), Play's clear of its button's round end saying Play or Stop at
+  every common width, and the one line, the doors' words, Beats and the
+  tap's read against what is behind them, each with its door open, and the
+  beat's dots against the song's lane, on the pixels.
 
 Every row runs on the Pad and on Flip: one drawer (lib/musicdrawer.js), and
 each editor's half is its hooks. A control behind a door is reached as a
@@ -813,19 +814,42 @@ with sync_playwright() as pw:
     # The pair's words, whole, from the smallest phone to the owner's: side by
     # side from 360px, one to a row below it.
     # Each of the pair as laid out (Play, and Hear's pill with the click at
-    # its end): where it sits, and whether its button's words overflow.
-    FIT = """() => [...document.querySelectorAll('.mt-transport > *')].map(x => { const r = x.getBoundingClientRect(), b = x.matches('.mt-play') ? x : x.querySelector('.mt-play');
-      return { over: b.scrollWidth - b.clientWidth, top: Math.round(r.top), w: Math.round(r.width) }; })"""
+    # its end): where it sits, and whether its button's words overflow. And
+    # Play's words against its ROUND END, the pill's own edge at the height of
+    # the line, not its box: measured to the box, Flip's "with my animation"
+    # passed at 402px with its last letter on the curve, and ran 8px out at
+    # 390, a width no row tried (the owner chose "Play my animation", after
+    # v330). At every common phone width, saying Play and, pressed, Stop.
+    FIT = """() => { const pair = [...document.querySelectorAll('.mt-transport > *')].map(x => { const r = x.getBoundingClientRect(), b = x.matches('.mt-play') ? x : x.querySelector('.mt-play');
+      return { over: b.scrollWidth - b.clientWidth, top: Math.round(r.top), w: Math.round(r.width) }; });
+      const p = document.getElementById('musicPlayBtn'), v = p.querySelector('.tp-v'), g = document.createRange(); g.selectNodeContents(v);
+      const I = g.getBoundingClientRect(), P = p.getBoundingClientRect(), r = P.height / 2, cy = P.top + r;
+      const dy = Math.min(r, Math.max(Math.abs(I.bottom - cy), Math.abs(I.top - cy)));
+      return { pair, says: p.textContent.replace(/\\s+/g, ' ').trim(), tall: Math.round(P.height),
+               clear: Math.round((P.right - (r - Math.sqrt(r * r - dy * dy)) - I.right) * 10) / 10 }; }"""
+    CLEAR = 4   # px of air, at least, between Play's last letter and its round end
+    PLAYING = "() => document.getElementById('musicPlayBtn').classList.contains('playing')"
     for _n, _p in eds("words"):
-        seen = {}
-        for w in (320, 360, 402):
+        seen, tight = {}, []
+        for w in (320, 360, 375, 380, 390, 402, 430):
             c, pg, errs = editor(b, _n, _p, opts=dict(PHONE, viewport={"width": w, "height": 874}), door=None)
             seen[w] = pg.evaluate(FIT)
+            # Pressed, it says Stop. (Flip, playing, shows its pages: the page
+            # scrolls up and the drawer takes no taps, so it is measured, not
+            # pressed again; the page closes with it playing.)
+            pg.click("#musicPlayBtn")
+            pg.wait_for_function(PLAYING, timeout=5000)
+            stop = pg.evaluate(FIT)
+            for f in (seen[w], stop):
+                if not f["tall"] or f["clear"] < CLEAR:
+                    tight.append(f"{w}px {f['says']!r} {f['clear']}px")
             c.close()
-        whole = all(x["over"] <= 0 for v in seen.values() for x in v)
-        rows = {w: len({x["top"] for x in v}) for w, v in seen.items()}
-        check(f"{_n}: the pair's words are whole on every phone, side by side from 360px and one to a row below",
-              whole and rows == {320: 2, 360: 1, 402: 1}, f"{seen}")
+        whole = all(x["over"] <= 0 for v in seen.values() for x in v["pair"])
+        rows = {w: len({x["top"] for x in v["pair"]}) for w, v in seen.items()}
+        check(f"{_n}: the pair's words are whole on every phone, side by side from 360px and one to a row below, "
+              f"and Play's end {CLEAR}px or more clear of its round end, saying Play or Stop, from 320px to 430",
+              whole and rows == {w: 2 if w < 360 else 1 for w in seen} and not tight,
+              f"tight: {tight}; rows {rows}; {seen}"[:900])
     for _n, _p in eds("words"):
         for theme in ("light", "dark"):
             c = waits.instrument(b.new_context(color_scheme=theme, **DESK))
