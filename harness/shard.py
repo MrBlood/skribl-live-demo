@@ -68,7 +68,7 @@ MEASURED = {
     "verify_visual.py": 30, "verify_watchfull.py": 110,
     # Not yet measured on CI: the local run, Nov 1, to the nearest ten. CI's
     # own figure replaces it at the next re-measure.
-    "verify_letters.py": 110,
+    "verify_letters.py": 110, "verify_text.py": 90,
 }
 SMALL = 11          # every other suite: the rest averaged 11 seconds
 

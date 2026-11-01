@@ -39,7 +39,7 @@
        pill returns the moment it closes (styles.css). */
     ['skribl-covered', '.tab-panel:not([hidden]), #drawPanel:not([hidden]), .menu-overlay:not([hidden]),'
       + ' #moreMenu:not([hidden]), #helpDrawer:not([hidden]), #savedDraftsSheet:not([hidden]),'
-      + ' .flip-export:not([hidden]), .tune-shell.open'],
+      + ' .flip-export:not([hidden]), .tune-shell.open, #txSheet:not([hidden])'],
     /* ...and out of a button's card (lib/learncard.js), where "Saved" sat on
        the card's title. */
     ['skribl-carded', '.lc-card:not([hidden])'],
@@ -48,11 +48,11 @@
     ['skribl-sheet', '.menu-overlay:not([hidden]), #moreMenu:not([hidden]), #savedDraftsSheet:not([hidden]),'
       + ' #helpDrawer:not([hidden]), #drawPanel:not([hidden]), #photoPanel:not([hidden]),'
       + ' #musicPanel:not([hidden]), .flip-export:not([hidden]), .pm-overlay:not([hidden]),'
-      + ' .sheet:not([hidden])']
+      + ' .sheet:not([hidden]), #txSheet:not([hidden])']
   ];
   /* Any element that could be one of those surfaces, open or shut. */
   var ANY = '.tab-panel, #drawPanel, .menu-overlay, #moreMenu, #helpDrawer, #savedDraftsSheet,'
-    + ' .flip-export, .tune-shell, .lc-card, #photoPanel, #musicPanel, .pm-overlay, .sheet';
+    + ' .flip-export, .tune-shell, .lc-card, #photoPanel, #musicPanel, .pm-overlay, .sheet, #txSheet';
 
   function sync() {
     for (var i = 0; i < STATES.length; i++) {

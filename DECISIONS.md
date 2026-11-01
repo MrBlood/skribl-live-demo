@@ -28061,3 +28061,139 @@ only see the search's answer; under the same conditions the rows pass, 10 of
 10, and the whole suite 76 of 76. The suite's second search (the long words'
 card) waited the same way and searches the same way now. verify_hot's
 searches wait for the request itself and are untouched.
+
+## After v330 -- Text: words that write themselves, on the Pad and Flip
+
+The second of the two pull requests (FUTURE.md 6ab). The owner said yes to the
+Text mock (Text in Shape's picker; S, M, L in the pen's colour and thickness;
+the words moved while a preview, then ink with honest timing; Undo whole; the
+Eraser rubs it; Mirror leaves it alone; our own font; a Speed slider), then to
+the Your hand mock's style row and its one door, and said "Next".
+
+WHAT A PERSON MEETS. Text is Shape's fifth kind, on both editors. Picking it
+puts the picker away (it has no knobs); a press on the canvas says where the
+words go, and the typing sheet rises. Nothing is ink and no take is armed
+until Write it. The sheet: the words (16px), Style (four cards, each written
+in itself: Yours, or + Make yours with no hand yet; Skribl; Print; Script),
+under it "Your hand, N of 92 letters" and Edit your hand, or "Make your own
+hand in about 10 minutes."; Size, Small, Medium or Large (the one pill; the
+letters' cap height as a share of the drawing's shorter side, 4.5, 6.5 and
+9.5%, chosen so "Happy birthday, Jo!" fits one line on a phone at Medium; in
+words, not the mock's S, M, L, because verify_a11y holds every option to a
+word: the outside review's rule that renamed the grid's S / M / L, which a
+person could take for a line's width or the canvas's size); Speed, the app's slider
+with - and +, nine stops from 1/4x to 4x, 1x in the middle, beside it how long
+the words take ("1x · 6 s"), and under the word Speed what 1x means for the
+style chosen; Write it. The words show where the press was, in a dashed box
+with Drag to move, never under the sheet; a drag moves them, a press elsewhere
+on the canvas moves them there. Write it: the sheet sinks, the box goes in the
+same frame, and the words write themselves on the canvas, a stroke at a time.
+
+INK, NOT TYPE. Each letter becomes ordinary stroke points through the step the
+pen and Shape use, so the replay, a posted link and every export write the
+words out with code they already had; the player never learns text exists,
+and a viewer never needs the font. Written in real time on the editor's own
+clock: each point's t is the clock when the words began plus the time the
+plan gave it, forward only, so the take records what the person watched.
+Anything done while they write (a press anywhere, a key) finishes them first,
+each stroke keeping the time it was due, and the Pad's clock is moved on by
+what was left, so the next line comes after them. One history state (Pad) or
+one 'fill' entry, the one a stamp leaves (Flip), so one Undo takes the line
+back and Redo puts it back. commitStrokeWithMirrors takes `plain` for Text;
+Flip's hooks push the points themselves, so neither mirrors words.
+
+THE STYLES (skribl/static/fonts, harness/tools/make_textfonts.py). Print and
+Script are EMS Readability and EMS Allure, single-line fonts made for pen
+plotters (from Source Sans Pro Light and Allura), under the SIL Open Font
+License, which travels with them (fonts/OFL.txt); 160 characters each:
+letters, numbers, punctuation, the Latin accents; no emoji. Their baselines
+and cap heights are read from the letters (a single-line font is the middle
+of a drawn outline, so its baseline sits half a stroke up), timed as a steady
+hand that eases in and out of each line. Skribl is the owner's 92 as posted
+(Oct 31), each point at the time it was drawn; Yours is the person's, read
+from Your hand's store each time. A hand's letter keeps its pace, a pause
+inside it held to a quarter second (as Your hand's own line holds it), and
+spaced by its ink as Your hand spaces it; a second try ("e2") takes every
+other turn; an accent it drew sits over its own letter (raised over a
+capital); a letter it has not drawn comes in Print. 16.5, 24.1 and 58.6 KB,
+4.6, 6.6 and 13.3 KB gzipped, fetched the first time the sheet opens.
+
+THE DOOR. Make yours and Edit your hand go to Your hand with `back=pad` or
+`back=flip`; Close, Done, Finish later and Ready's new Write with it (it was
+Done) come back to that editor with `text=1`, and Text is chosen there with
+"Tap where your words go"; the address loses the flag. Opened any other way,
+Your hand leaves to the Pad as before.
+
+ONE MODULE. lib/textwrite.js is the tool (the sheet, the lettering, layout,
+timing, the preview and its drag, writing in time); editor_text.js and a
+block in flip.js hand it the canvas, the pen, the clock and Undo. The sheet
+is one partial (_skribl_text.html) and one block of styles.css; the Saved
+pill steps aside while it is up (lib/opensurfaces.js). Its rise and sink are
+Web Animations, Reduce Motion asked there, so player.css is unchanged. On a
+desk a T rides by the pointer, as each shape's badge does.
+
+HELP. How it works has a Text tip (on Flip: the page shows the words as it
+plays, and a page set to Draw on writes them again); Shape's tip names it;
+Shape's card says "Straight lines, rectangles, ovals, polygons, and words
+that write themselves." verify_helpclaims claims the tip with verify_text's
+checks.
+
+verify_text (73 rows, 14 parts) holds it: the lettering (each style's
+characters, baseline and cap height read from the files, the owner's 92 with
+their times running forward, the license, all three served); the picker on
+both editors; a press opens the sheet and draws nothing, arms no take, and
+Close and Escape leave nothing; the words placed before ink (above the sheet,
+in the pen's colour, moved by a drag exactly, never under the sheet, moved by
+a second press without the sheet moving, following a colour chosen while it
+is up); written in time (stroke by stroke over the plan, every point at its
+planned time on the take's clock, where the preview showed it, the take
+armed by Write it); one Undo and Redo on both editors; Mirror; finished
+early (every stroke at its due time, the clock moved on, the next line after
+the words); Speed (the label, 2x and 1/4x, the - and + and their ends);
+styles and hands (Make yours a way there and not a choice, Skribl chosen with
+no hand and Yours with one, each style in itself and in its own lettering, a
+hand's pace with its pause held, Print for a letter not drawn); the door, both
+ways, from both editors and from Ready; Flip's page (the page placed on, one
+entry, the times kept, a Draw on page writing them); the sheet's words, 4.5:1
+and up from its computed colours, light and dark, phone and desk (the lowest
+5.3:1, Write it), every button 44px, the field 16px, the words above the
+sheet; the rise read on every frame, Reduce Motion, and the dashed box gone
+the frame the words start.
+
+THE OTHER SUITES met four things, each the new sheet against an older rule:
+verify_a11y the S, M, L above; verify_helpclaims the field's own name, "Your
+words", which How it works now says ("tap where your words go");
+verify_tray, which listed the picker's four kinds by hand; and
+verify_contrast, whose reader met the Pad locked on the take its Post row had
+just made, which refuses a tap as it refuses the pen (it presses Keep
+drawing first now, as a person would; it reads the typing sheet on both
+editors from its pixels).
+
+CALIBRATION, each part alone, the file served changed (harness serve-run,
+scratch): 49 breaks, every one red at its own row; part 1 against six changed
+copies of the lettering (a letter gone from Print, Print's baseline raised,
+Script's capitals cut short, a letter gone from Skribl, a time running
+backwards, the license without Allure). Seven did not go red the first time,
+and each was the instrument, not the tool: a missing Text button, a plan with
+no ink and a way back that never chose Text stopped the suite on a wait
+instead of failing a row (five breaks; they fail their rows now); the check
+that the next line comes after words finished early drew that line with Text
+still chosen, which opens the sheet rather than drawing; and one break called
+the hook that starts the words without laying a stroke. All seven red since.
+The sheet's contrast reader first read the chosen card's see-through tint as
+if it were solid (2.6:1); it lays each see-through ground over the one under
+it now. verify_contrast reads the typing sheet on both editors from its
+pixels as well, as it reads every sheet.
+
+WHAT IT DOES TO FLIP: shared. One module, the same picker and sheet, one hand,
+one door; the words go on the page they were placed on.
+
+THE FOUR: powerful (words join the performance, in your own hand, at your own
+speed); playful (the replay writing your words is a small delight, and so is
+watching them write the first time); simple (one more kind in a picker you
+know, one sheet, one button); kind (nothing is ink until Write it, they can
+be moved until then, Undo takes them back whole, and a letter not drawn yet
+still has a place, in Print).
+
+Not tested here: WebKit (the owner's iPhone, its keyboard over the sheet),
+SF and Segoe UI, the live site (not deployed until it merges).

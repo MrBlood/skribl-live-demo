@@ -73,6 +73,7 @@ here is the rule you can break tomorrow.
 | A 404 from DELETE means UNKNOWN. The client must not turn it into success. | `verify_posted.py` |
 | The player carries no editor-only module. | `verify_player_isolation.py` |
 | Your hand (`/skribl-pad?letters=1`) keeps no Pad draft and leaves the Pad's brush and mirror as they were; a letter drawn again replaces the old one only on Done; a posted set, whole or not, reads back to its letters by the one layout rule `editor_letters.js` and `harness/tools/letterfont.py` share. | `verify_letters.py` |
+| Text is ink, not type: nothing is drawn or recorded until Write it; the words go in as ordinary strokes, each point at the time the plan gave it on the editor's clock, forward only; one Undo takes the line back; Mirror never copies them. One module (`lib/textwrite.js`) for both editors. | `verify_text.py` |
 | The player's JS stays under its ratchet, measured on what is SERVED (comments stripped), not what is on disk. | `verify_jsstrip.py`, `verify_player_isolation.py` |
 | `[hidden]` is honoured on every control that uses it. | `verify_layout.py`, `verify_help.py`, `verify_move.py` |
 | No readable text uses a token that fails WCAG AA. | `verify_a11ypages.py` |
@@ -465,9 +466,10 @@ How it was won, and why the old plan was the wrong plan:
 * **The carves — every `skribl/static/editor_*.js`.** This list was once
   four names, then nine, and was stale both times, so it is the glob now. Each
   is absent from the player. Pad loads every one, `editor_compose` only in a
-  host's composer and `editor_letters` only on Your hand
-  (`/skribl-pad?letters=1`); Flip loads `editor_compose`, and only in a host's
-  composer; the player loads none. `verify_player_isolation.py`
+  host's composer, `editor_letters` only on Your hand
+  (`/skribl-pad?letters=1`) and `editor_text` everywhere but there; Flip loads
+  `editor_compose`, and only in a host's composer (its side of Text is in
+  `flip.js`); the player loads none. `verify_player_isolation.py`
   reads that list OFF DISK rather than from a hardcoded tuple, which is how a
   new carve is covered the day it lands.
 * **The serve-time comment strip** — `skribl/jsstrip.py` removes comments from
@@ -857,6 +859,7 @@ rather than a shared rule.
 | `stamps.js` | Flip | Stamps — the clipboard, but named, persistent and multi-slot. |
 | `strokelayers.js` | Pad+Flip+player | Stroke layers — the see-through-stroke compositor's on/off, shared by both. |
 | `tappause.js` | Pad+Flip+player | Tap to pause: a tap on a drawing while it plays -- an editor's preview, or the shared player -- pauses it where it is, and another tap carries on from there. |
+| `textwrite.js` | Pad+Flip | TEXT: words that write themselves (FUTURE.md 6ab). |
 | `theme.js` | Pad+Flip+library+gallery | Light/dark chrome — the stored setting, and the one place that applies it. |
 | `toolscroll.js` | Pad+Flip | The toolbar on the smallest screens -- Pad's, and Flip's since the dock redesign: one row that scrolls, and says so. |
 | `toolshelf.js` | Pad+Flip | Tool shelf + overflow tray — shared by Pad and Flip. |

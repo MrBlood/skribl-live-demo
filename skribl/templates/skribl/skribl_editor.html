@@ -266,6 +266,9 @@
         <button type="button" class="smooth-btn" data-shape="rect" aria-pressed="false" title="Rectangle &mdash; hold Shift for a square">Rect</button>
         <button type="button" class="smooth-btn" data-shape="ellipse" aria-pressed="false" title="Ellipse &mdash; hold Shift for a circle">Oval</button>
         <button type="button" class="smooth-btn" data-shape="poly" aria-pressed="false" title="Regular polygon &mdash; hold Shift to keep it regular">Poly</button>
+        {# Text: words that write themselves (lib/textwrite.js). A kind of this
+           picker, not a shape: tap where they go and the typing sheet comes up. #}
+        <button type="button" class="smooth-btn" data-shape="text" aria-pressed="false" title="Words that write themselves">Text</button>
       </div>
       {# Same two knobs Flip carries, and for the same reason each hides rather
          than greys out: a control you cannot use is still one to read past. #}
@@ -569,6 +572,14 @@
   <script src="{{ skribl_asset('editor_tune.js') }}" defer></script>
   <script src="{{ skribl_asset('editor_draw.js') }}" defer></script>
   <script src="{{ skribl_asset('editor_shapes.js') }}" defer></script>
+  {% if not letters %}
+  {# Text (lib/textwrite.js, shared with Flip): the typing sheet, and the Pad's
+     hooks for it. An editor_*.js carve, so verify_player_isolation.py keeps
+     it off the player; not on the letter sheet, which writes no words. #}
+  {% with text_from='pad' %}{% include 'skribl/_skribl_text.html' %}{% endwith %}
+  <script src="{{ skribl_asset('lib/textwrite.js') }}" defer></script>
+  <script src="{{ skribl_asset('editor_text.js') }}" defer></script>
+  {% endif %}
   <script src="{{ skribl_asset('editor_music.js') }}" defer></script>
   <script src="{{ skribl_asset('editor_photo.js') }}" defer></script>
   <script src="{{ skribl_asset('editor_export.js') }}" defer></script>

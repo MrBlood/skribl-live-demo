@@ -14,7 +14,7 @@ desk, for each surface a person can open:
   the menu (main, New, Settings), Your drafts, Export, Report a problem,
   Post, How it works (Ask's home, its answers, an answer; lib/ask.js), the
   little book and Draw along (lib/book.js, lib/drawalong.js), Tune (and
-  Flip's with Beat as the speed, its round's choices open), the shape picker, the dock's drawers, a button's card, a Show me step and the
+  Flip's with Beat as the speed, its round's choices open), the shape picker, Text's typing sheet, the dock's drawers, a button's card, a Show me step and the
   name tags (lib/learncard.js).
 
 THE GROUND IS READ FROM PIXELS, NOT STYLES: the surface is photographed once
@@ -509,6 +509,22 @@ def surfaces(name, ids, q, canvas, btn):
         q.click("#shapeSeg [data-shape=poly]")
         q.wait_for_selector("#shapeSidesRow:not([hidden])", timeout=3000); q.wait_for_timeout(300)
 
+    # Text's typing sheet (lib/textwrite.js), the same on both editors: Text
+    # chosen in the picker, a tap where the words go, and words typed, so the
+    # dashed box and its Drag to move are read with it.
+    def typing():
+        # Post, earlier, left the Pad a finished take, which refuses a tap as
+        # it refuses the pen: Keep drawing first, as a person would.
+        q.evaluate("() => { const k = document.getElementById('addTakePill'); if (typeof finishedRecording !== 'undefined' && finishedRecording && k && !k.hidden) k.click(); }")
+        q.wait_for_timeout(200)
+        q.evaluate("() => document.querySelector('#shapeSeg [data-shape=\"text\"]').click()")
+        bx = q.locator(canvas).bounding_box()
+        q.mouse.click(bx["x"] + bx["width"] / 2, bx["y"] + bx["height"] * 0.3)
+        q.wait_for_selector("#txSheet:not([hidden])", timeout=3000)
+        q.evaluate("() => { const f = document.getElementById('txField'); f.value = 'Hello'; f.dispatchEvent(new Event('input', { bubbles: true })); }")
+        q.wait_for_function("() => !document.getElementById('txPlace').hidden && !!document.querySelector('#txStyles [data-face=\"drawn\"]')", timeout=8000)
+        q.wait_for_timeout(500)
+
     # Flip's stamp shelf, the dock's other pop (the owner, after the drawers'
     # words went a size up: "Yes", bring it into the drawers' look and type).
     # Read empty, its words and its way out, and with three stamps, its cells,
@@ -631,6 +647,7 @@ def surfaces(name, ids, q, canvas, btn):
              ("Ask, an answer", answer, "#helpDrawer .help-drawer-inner"),
              ("The little book", book, "#bookRoot .bk"), ("Draw along", along, ".da-pill"),
              ("Tune", tune, "#tuneShell"), ("The shape picker", shapes, "#shapePop"),
+             ("Text's typing sheet", typing, "#txSheet"),
              ("The draw drawer", drawer("brush"), "#drawPanel"), ("The draw drawer, Size", drawer("size"), "#drawPanel"),
              ("The draw drawer, Feel", drawer("feel"), "#drawPanel"), ("The draw drawer, Eraser", drawer("eraser"), "#drawPanel"),
              ("Photo, empty", empty("photo"), "#mediaCard"), ("Photo, with a picture", photo, "#mediaCard"),

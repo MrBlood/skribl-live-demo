@@ -113,7 +113,9 @@ if (shapeSeg && window.SkriblShapes) {
     const b = e.target.closest('[data-shape]');
     if (!b || !shapeSeg.contains(b)) return;
     const kind = b.getAttribute('data-shape');
-    if (SkriblShapes.KINDS.indexOf(kind) === -1) return;
+    // Text is a kind of this picker but not a shape: lib/textwrite.js writes
+    // it, and the geometry in lib/shapes.js never sees it.
+    if (SkriblShapes.KINDS.indexOf(kind) === -1 && !(kind === 'text' && window.SkriblText)) return;
     shapeKind = kind;
     shapeSeg.querySelectorAll('[data-shape]').forEach(x => {
       const on = x === b;

@@ -92,6 +92,8 @@ skribl/                    The blueprint package — everything Skribl owns
     editor_compose.js      Compose mode: attach a Skribl to a host's draft post
     editor_letters.js      Your hand (?letters=1): a person's own letters, drawn and changed one at a time
     letters.css            Your hand's own rules, on that page only
+    editor_text.js         Text on the Pad: its hooks for lib/textwrite.js, the tool both editors share
+    fonts/                 Text's lettering: Print and Script (SIL OFL, OFL.txt) and Skribl, the owner's hand
     lib/sharecard.js       Where the drawing sits inside /s/<id>/card.png
     lib/postedcard.js      Compositing that card — editors only
     styles.css, flip.css   Pad/shared styles, Flip styles

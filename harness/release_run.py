@@ -159,6 +159,7 @@ BATCHES = [
     ["verify_firstlook.py"],               # measures — a long drawing's first look: the picture, the box, the frames with the CPU 4x slower; posts to the shared server
     ["verify_captions.py"],                # measures — the caption's glide read on every frame, its paint; posts to the shared server
     ["verify_letters.py"],                 # measures — the line writing itself read on every frame, the guides' paint; posts to the shared server
+    ["verify_text.py"],                    # measures — words written over real time, the sheet's rise read on every frame
     ["verify_videoexport.py"],             # measures — records real WebM in Chromium and reads its tracks
     # store: posts through both editors' sheets to the shared server (one
     # unticked, one ticked, per surface) and reads the listing back, so it

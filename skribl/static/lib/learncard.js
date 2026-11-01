@@ -77,8 +77,8 @@
       line: 'Rubs out what you drew, and the replay shows it rubbing out.',
       do: [['Tap again', 'Eraser size']], trayDo: [] },
     { sel: '#shapeToolBtn, .tool-tray-btn[data-tool="shape"]', name: 'Shape', tag: 'Shape', demo: 'shape', more: 'Shape',
-      line: 'Straight lines, rectangles, ovals and polygons.',
-      do: [['Tap', 'Pick line, box, oval or polygon']] },
+      line: 'Straight lines, rectangles, ovals, polygons, and words that write themselves.',
+      do: [['Tap', 'Pick line, box, oval, polygon or text']] },
     // The tray's own seven (Flip), each with its How it works clip.
     { sel: '#selectToolBtn, .tool-tray-btn[data-tool="select"]', name: 'Select', tag: 'Select', clip: 'select',
       line: 'Pick up part of a page to move it, flip it, copy it, or keep it as a stamp.',
