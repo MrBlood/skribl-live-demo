@@ -2597,10 +2597,11 @@ body.recoloring #canvas { cursor: crosshair !important; }
 .mt-play.mt-loop .tp-v { color: var(--text-secondary); }
 .mt-play:disabled { opacity: .5; cursor: default; }
 .mt-play:focus-visible { outline: 2px solid var(--ui-hi); outline-offset: 2px; }
-/* Under 360px a half is 127px and "with my animation" needs 160: one each to a row.
-   From 360px to 379 a size up (B) it ran 8px out of its half (Flip, 360):
-   there it wraps under the verb rather than running out of its button. From
-   380 it is one line, reaching into the button's end padding as it did. */
+/* Under 360px a half is under 137px, too little for both: one each to a row.
+   From 360px to 379 the second lines wrap under their verbs rather than run
+   out of their buttons (Hear's "the loop", beside the click, needs it). From
+   380 each is one line. Flip's Play says "with my flip" (the owner, after
+   v330): "with my animation" ran past its round end on 380-390px phones. */
 @media (max-width: 359px) { .mt-transport { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 379px) { .mt-play .tp-v { white-space: normal; } }
 @media (hover: hover) { .mt-play:not(:disabled):not(.mt-loop):hover { filter: brightness(1.08); }

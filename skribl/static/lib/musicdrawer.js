@@ -1673,8 +1673,10 @@
      * Play plays it (and Play shows the whole drawing, lib/drawerdetent.js
      * revealTop). It follows the editor's Play however that is pressed. With
      * nothing to replay it waits, as Fit my drawing does: Hear the loop,
-     * beside it, plays the music on its own. */
-    var play = $('musicPlayBtn');
+     * beside it, plays the music on its own. Its word for the work is its
+     * own, on the button: Flip's says "with my flip" and "the flip" (the
+     * owner, after v330; "with my animation" ran past its round end). */
+    var play = $('musicPlayBtn'), playWork = (play && play.dataset.work) || work;
     function drawn(secs) {
       var b = h.playButton ? h.playButton() : null;
       return b && !b.disabled && (secs != null ? secs : h.drawingSeconds()) > 0 ? b : null;
@@ -1684,7 +1686,7 @@
       var b = drawn(secs), on = h.playing();
       play.disabled = !h.hasTrack() || (!b && !on);
       play.classList.toggle('playing', on);
-      twoLines(play, on ? 'Stop' : 'Play', (on ? 'the ' : 'with my ') + work);
+      twoLines(play, on ? 'Stop' : 'Play', (on ? 'the ' : 'with my ') + playWork);
     }
     if (play) play.addEventListener('click', function () {
       var b = drawn();

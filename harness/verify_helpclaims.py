@@ -337,7 +337,7 @@ CLAIMS = {
                          "verify_music.py::Hear the restart plays the join, smooth restart and all"],
     "Play with my drawing": ["verify_musicdoors.py::Play with my drawing is the editor's own Play",
                              "verify_musicdoors.py::with nothing drawn, Play with my drawing waits"],
-    "Play with my animation": ["verify_musicdoors.py::Play with my drawing is the editor's own Play",
+    "Play with my flip": ["verify_musicdoors.py::Play with my drawing is the editor's own Play",
                                "verify_musicdoors.py::with nothing drawn, Play with my drawing waits"],
     "Beats in a bar": ["verify_musicthree.py::every song in three is heard in three",
                        "verify_musicthree.py::every song in four is heard in four",
