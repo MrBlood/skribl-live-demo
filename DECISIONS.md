@@ -27766,3 +27766,31 @@ the same row.
 
 Not tested here: WebKit's callout on a long press with the cards off (no
 WebKit here).
+
+## After v330 -- Main red after #709: the music timeline read before it settled
+
+Main's full run after #709 went red in one job, postgres shard 3, at two
+rows of verify_musictimeline (180/182): "each rung frames the loop over that
+many" read the 512x rung 0.0044 of a span off (about 3px of the 660px
+timeline; every other rung 0.0008), and Flip (phone)'s "zoomed in, the box
+stays inside the song" read mid-song's middle at 7.0046 for 7.0000. sqlite's
+shard 3 ran the same suites on the same tree and was green. The first of
+the two rows went red the same way after #696 ("watched, not touched: if
+one goes red again, measure it at the CPU 4x slower before changing
+anything").
+
+Measured: with the CPU 4x slower here, both rows green, the rungs 0.0004
+off at most. Not the CPU. The view eases to where it belongs counting each
+frame as 64ms at most (lib/musictimeline.js, so that a frame after a long
+pause does not jump), so where frames come further apart than that the
+glide takes longer, and the rows read the view a fixed 500ms (and 800ms)
+after the step. The app was right; the instrument read it mid-glide.
+
+The rows read the view once it has stopped now (SETTLED: the same reading
+three frames running, or after 4s). Calibrated with every page's frames
+held 110ms apart (sparse_run, scratch): main's rows red the way the CI was
+(the rungs 1 to 2.6% off; mid-song 7.0029 to 7.0073), the new rows green
+and exact (0.0 off; 7.0000); and with the view's framing moved 0.8% of a
+span in the module, the new rows red at every rung and in all four cells.
+The other rows of those parts that time a glide frame by frame went red
+too with frames 110ms apart, as they should, and are left as they are.
