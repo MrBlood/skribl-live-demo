@@ -513,6 +513,10 @@ def surfaces(name, ids, q, canvas, btn):
     # chosen in the picker, a tap where the words go, and words typed, so the
     # dashed box and its Drag to move are read with it.
     def typing():
+        # Post, earlier, left the Pad a finished take, which refuses a tap as
+        # it refuses the pen: Keep drawing first, as a person would.
+        q.evaluate("() => { const k = document.getElementById('addTakePill'); if (typeof finishedRecording !== 'undefined' && finishedRecording && k && !k.hidden) k.click(); }")
+        q.wait_for_timeout(200)
         q.evaluate("() => document.querySelector('#shapeSeg [data-shape=\"text\"]').click()")
         bx = q.locator(canvas).bounding_box()
         q.mouse.click(bx["x"] + bx["width"] / 2, bx["y"] + bx["height"] * 0.3)

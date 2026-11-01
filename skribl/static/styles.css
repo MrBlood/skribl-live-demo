@@ -8070,10 +8070,13 @@ html.skribl-sheet { overscroll-behavior-y: none; }
   font-size: 14px; font-weight: 600; color: var(--accent-ink); text-decoration: none; }
 .tx-link[hidden] { display: none; }
 .tx-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-/* Size: the one pill, on the sheet's cards, its buttons 44px (as Settings'). */
+/* Size: the one pill, on the sheet's cards, its buttons 44px (as Settings').
+   In words, Small, Medium, Large: a lone S, M or L could be read as the
+   pen's width or the canvas's size (verify_a11y A11Y 12, the outside review
+   that renamed the grid's S / M / L). */
 .tx-sheet .seg { background: var(--menu-card); border-color: var(--menu-card-line); }
-.tx-seg { width: 200px; flex: none; --seg-h: 52px; }
-.tx-seg > button { flex: 1; }
+.tx-seg { flex: 0 1 252px; min-width: 0; --seg-h: 52px; }
+.tx-seg > button { flex: 1 1 0; min-width: 0; padding-left: 6px; padding-right: 6px; }
 .tx-speed .tx-k2 { flex: 0 1 auto; min-width: 0; }
 .tx-speed-ctl { flex: 1 1 150px; min-width: 120px; max-width: 220px; display: flex; }
 .tx-speed-ctl input[type="range"] { flex: 1; min-width: 0; accent-color: var(--ui-hi); }

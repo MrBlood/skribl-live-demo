@@ -294,8 +294,9 @@ with sync_playwright() as p:
           "the shelf is unreachable from it")
     kinds = page.evaluate(
         "() => [...document.querySelectorAll('#shapeSeg [data-shape]')].map(b => b.dataset.shape)")
+    # Five since Text (lib/textwrite.js): a kind of the picker, not a shape.
     check("Flip: and it offers every kind, not just the current one",
-          kinds == ["line", "rect", "ellipse", "poly"], str(kinds))
+          kinds == ["line", "rect", "ellipse", "poly", "text"], str(kinds))
     page.click("#shapeSeg [data-shape='ellipse']")
     page.wait_for_timeout(300)
     check("Flip: choosing a kind takes effect and closes the picker",
