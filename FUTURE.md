@@ -1626,10 +1626,11 @@ after v330, "Text"): the picker's Text on both editors, the typing sheet with
 its style row (Yours or + Make yours, Skribl, Print, Script), Size and Speed,
 the words placed before they are ink and written in real time, one Undo, the
 one door to Your hand (Make yours, Edit your hand; Ready's Write with it
-comes back), the owner's set as Skribl until the redrawn one. (5) **Next:**
-the polish (the iPhone's keyboard over the sheet, the typing sheet on a
-desk), an example for Text in How it works, and Skribl from the owner's
-redrawn set.
+comes back), the owner's set as Skribl until the redrawn one. (5) **Text on
+the phone, built** (DECISIONS, after v330, "Text on the phone"): picking Text
+opens the sheet; while typing, the sheet sits on the keyboard, just the words
+and Write it; the done key puts the keyboard away. (6) **Next:** an example
+for Text in How it works, and Skribl from the owner's redrawn set.
 
 ## 7. The honest state
 

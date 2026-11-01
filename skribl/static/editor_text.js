@@ -32,9 +32,13 @@
     logical: getCanvasLogicalSize,
     pen: function () { return { color: penColorFor(color), size: size }; },
     begin: function () {
-      // As startDraw does for a pen: a blank canvas starts its take; one
-      // history state for the whole line.
-      if (!recording && !finishedRecording && !hasContent) beginRecording(false);
+      // As startDraw does for a pen: a blank canvas starts its take. A
+      // finished take carries on, as Keep drawing does (app.js addTakePill):
+      // Write it is as deliberate as that press. One history state for the
+      // whole line.
+      if (playing) stopPlayback();
+      if (finishedRecording && !recording) beginRecording(strokes.length > 0);
+      else if (!recording && !hasContent) beginRecording(false);
       undoStack.push(makeHistoryState());
       if (undoStack.length > 30) undoStack.shift();
       undoBtn.disabled = false;

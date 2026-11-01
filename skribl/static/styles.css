@@ -8020,6 +8020,10 @@ html.skribl-sheet { overscroll-behavior-y: none; }
    slides the other sheets, so reduced motion is asked there and the player's
    stylesheet carries no motion rule for a sheet it never has). */
 .tx-sheet[hidden] { display: none; }
+/* While the words are typed on a phone the sheet is the words and Write it
+   (lib/textwrite.js fitKeyboard): the keyboard takes half the screen, and the
+   drawing with the words on it has to show above what is left. */
+.tx-sheet.typing :is(#txStyleLabel, .tx-styles, .tx-under, .tx-row) { display: none; }
 @media (min-width: 641px) {
   .tx-sheet { left: 50%; right: auto; bottom: 24px; width: 420px; max-height: calc(100dvh - 48px);
     margin-left: -210px; padding: 14px 18px 18px; border-radius: 22px;

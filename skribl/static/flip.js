@@ -5879,6 +5879,8 @@ if(_flipShapeSeg && window.SkriblShapes){
        revealed to stay open for. */
     const pop = document.getElementById('shapePop');
     if(pop && !SkriblShapes.knobs(k).length) pop.hidden = true;
+    // Text's sheet comes straight up (lib/textwrite.js start).
+    if(k === 'text' && window.SkriblText) window.SkriblText.start();
   });
 }
 

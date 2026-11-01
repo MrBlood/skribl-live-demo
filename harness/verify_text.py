@@ -9,10 +9,11 @@ Mirror leaving them alone. Each row holds a promise:
      is the owner's 92, each letter's time starting at 0 and running forward;
      the license travels with the fonts; all three are served.
   2. THE PICKER: Text is Shape's fifth kind on both editors; picking it
-     chooses Shape and Text and puts the picker away.
-  3. A TAP SAYS WHERE: with Text chosen, a press opens the sheet with the
-     field ready, draws nothing and arms no take; Close and Escape leave
-     nothing behind.
+     chooses Shape and Text, puts the picker away, and brings the typing
+     sheet straight up, the words in the middle of the drawing that shows.
+  3. NOTHING UNTIL WRITE IT: the sheet opens with the field ready, draws
+     nothing and arms no take; Close and Escape leave nothing behind; with
+     Text chosen, a press opens the sheet again where it was.
   4. PLACED BEFORE INK: typed words show in a box above the sheet, painted
      in the pen's colour, and nothing is ink yet; dragging the box moves the
      words by the drag; they cannot be dragged under the sheet; a press
@@ -45,6 +46,17 @@ Mirror leaving them alone. Each row holds a promise:
  14. KIND TRANSITIONS: the sheet rises over several frames, never a jump,
      and with Reduce Motion is simply there; the dashed box is gone the
      frame the words start writing.
+ 15. A FINISHED TAKE (the owner's iPhone: the press was refused there):
+     choosing Text opens the sheet and a press moves the words, with no
+     refusal; Write it carries the take on as Keep drawing does, and one
+     Undo takes back only the words.
+ 16. THE KEYBOARD (the owner's iPhone: the bar over it covered the field):
+     with the keyboard up, the sheet sits on it and is only the words and
+     Write it, the words above it (with no keyboard up, the whole sheet); the
+     keyboard's done key puts it away and writes nothing; when the keyboard
+     goes, the sheet comes down and the words come back to where they were
+     put; the x and Write it pressed with the keyboard up do what they say;
+     on a desk, Enter writes.
 
 For calibration, TEXT_PART=<words of a part's label> runs that part alone.
 A real run sets none.
@@ -287,18 +299,29 @@ with sync_playwright() as p:
             pop = q.evaluate("() => document.getElementById('shapePop').hidden")
             check(f"{editor}: picking it chooses Shape and Text, and puts the picker away",
                   now == ["shape", "text"] and pop, f"{now}, picker hidden {pop}")
+            q.wait_for_timeout(300)
+            up = q.evaluate("""(sel) => { const a = SkriblText.anchor(), c = document.querySelector(sel).getBoundingClientRect();
+              const lg = (typeof getCanvasLogicalSize === 'function') ? getCanvasLogicalSize() : { width: CW, height: CH };
+              const k = c.width / lg.width, s = document.getElementById('txSheet').getBoundingClientRect();
+              if (!a) return { open: SkriblText.isOpen(), a: null };
+              const x = c.left + a.x * k, y = c.top + a.y * c.height / lg.height;
+              return { open: SkriblText.isOpen(), focus: document.activeElement && document.activeElement.id,
+                       seen: x > Math.max(c.left, 0) && x < Math.min(c.right, innerWidth) && y > Math.max(c.top, 0) && y < s.top }; }""",
+                            CANVAS[editor])
+            check(f"{editor}: ...and the typing sheet comes straight up, the words in the drawing that shows above it",
+                  up["open"] and up.get("focus") == "txField" and up.get("seen"), str(up))
             check(f"{editor}: no errors", not q._tx_errors, str(q._tx_errors[:2]))
             c.close()
 
     # ------------------------------------------------------------------ 3
-    if part("TEXT 3 — a tap says where"):
+    if part("TEXT 3 — nothing until Write it"):
         c, q = open_editor(b, "pad")
-        choose_text(q)
         n0 = q.evaluate(COUNT["pad"])
-        tap(q, *at(q, 0.5, 0.4))
+        choose_text(q)
+        q.wait_for_timeout(300)
         s = q.evaluate(SHEET)
         after = q.evaluate("() => [strokes.length, strokeGroups.length, recording, hasContent]")
-        check("a press with Text opens the sheet, the words' field ready",
+        check("choosing Text opens the sheet, the words' field ready",
               s["open"] and not s["hidden"] and s["focus"] == "txField", json.dumps(s)[:160])
         check("...and draws nothing and arms no take", after[:2] == n0 and after[2] is False and after[3] is False, str(after))
         q.click("#txClose")
@@ -306,7 +329,12 @@ with sync_playwright() as p:
         s = q.evaluate(SHEET)
         after = q.evaluate("() => [strokes.length, strokeGroups.length, recording, hasContent]")
         check("Close leaves nothing behind", not s["open"] and s["hidden"] and s["place"] is None and after[:3] == n0 + [False], f"{s} {after}")
-        tap(q, *at(q, 0.5, 0.4))
+        tap(q, *at(q, 0.3, 0.3))
+        s = q.evaluate(SHEET)
+        a = q.evaluate("() => SkriblText.anchor()")
+        want = q.evaluate("() => { const lg = getCanvasLogicalSize(); return [lg.width * 0.3, lg.height * 0.3]; }")
+        check("with Text chosen, a press opens it again where the press was",
+              s["open"] and a is not None and abs(a["x"] - want[0]) <= 2 and abs(a["y"] - want[1]) <= 2, f"{s['open']} {a} for {want}")
         type_words(q, "Hi")
         q.keyboard.press("Escape")
         q.wait_for_timeout(500)
@@ -584,8 +612,13 @@ with sync_playwright() as p:
         back1 = q.evaluate("() => [location.pathname + location.search, typeof tool !== 'undefined' ? tool : null, typeof shapeKind !== 'undefined' ? shapeKind : null]")
         check("Pad: + Make yours goes to Your hand, saying which editor", "letters=1" in url1 and "back=pad" in url1, url1)
         check("Pad: and Close comes back with Text chosen, the address clean", back1 == ["/skribl-pad", "shape", "text"], str(back1))
+        kept1 = q.evaluate("(k) => localStorage.getItem(k)", PREFS)
+        check("Pad: back with no hand made, no style is chosen for them", kept1 is None, str(kept1))
         c.close()
-        c, q = open_editor(b, "flip", hand=hand_seed(QUICK))
+        # The owner changed letters and came back to Skribl still chosen, so
+        # the change could not be seen: back from Your hand, it is Yours, and
+        # it stays, with the size and speed they had.
+        c, q = open_editor(b, "flip", hand=hand_seed(QUICK), prefs={"style": "skribl", "size": "L", "speed": 6})
         choose_text(q)
         tap(q, *at(q, 0.5, 0.35))
         q.wait_for_timeout(200)
@@ -598,6 +631,13 @@ with sync_playwright() as p:
         back2 = q.evaluate("() => location.pathname + location.search")
         check("Flip: Edit your hand goes to Your hand, saying Flip, and Done comes back to Flip with Text chosen",
               "back=flip" in url2 and back2 == "/flip" and chosen, f"{url2} -> {back2}, Text chosen {chosen}")
+        waited(q, "() => SkriblText.isOpen() && !!document.querySelector('#txStyles .on')")
+        yours = q.evaluate("""(k) => { const on = document.querySelector('#txStyles .on');
+          return [on && on.getAttribute('data-style'), JSON.parse(localStorage.getItem(k) || 'null')]; }""", PREFS)
+        check("Flip: and it comes back to Yours, the hand they were just working on, over the Skribl they had",
+              yours[0] == "yours", str(yours[0]))
+        check("Flip: and Yours is kept for next time, with their own size and speed",
+              yours[1] == {"style": "yours", "size": "L", "speed": 6}, json.dumps(yours[1]))
         c.close()
         # Write with it, from Ready, after the 30th letter.
         seed = hand_seed(QUICK[:29])
@@ -715,15 +755,12 @@ with sync_playwright() as p:
           (function f() { if (!s.hidden) out.push(Math.round(s.getBoundingClientRect().top));
             if (performance.now() - t0 < 600) requestAnimationFrame(f); else res(out); })(); })"""
         c, q = open_editor(b, "pad")
-        choose_text(q)
-        x, y = at(q, 0.5, 0.35)
-        q.evaluate("([x, y]) => { window.__rise = null; }", [x, y])
-        tops = q.evaluate("""([x, y]) => { const p = new Promise(res => { const s = document.getElementById('txSheet'), out = [];
+        tops = q.evaluate("""() => { const p = new Promise(res => { const s = document.getElementById('txSheet'), out = [];
             const t0 = performance.now();
             (function f() { if (!s.hidden) out.push(Math.round(s.getBoundingClientRect().top));
               if (performance.now() - t0 < 600) requestAnimationFrame(f); else res(out); })(); });
-          SkriblText.place({ x: getCanvasLogicalSize().width / 2, y: getCanvasLogicalSize().height * 0.35 });
-          return p; }""", [x, y])
+          document.querySelector('#shapeSeg [data-shape="text"]').click();
+          return p; }""")
         rest = tops[-1] if tops else None
         moving = [t for t in tops if t != rest]
         steps = [a2 - b2 for a2, b2 in zip(tops, tops[1:])]
@@ -739,14 +776,138 @@ with sync_playwright() as p:
         q.wait_for_function("() => !SkriblText.isWriting()", timeout=30000)
         c.close()
         c, q = open_editor(b, "pad", reduce=True)
-        choose_text(q)
         tops = q.evaluate("""() => { const p = new Promise(res => { const s = document.getElementById('txSheet'), out = [];
             const t0 = performance.now();
             (function f() { if (!s.hidden) out.push(Math.round(s.getBoundingClientRect().top));
               if (performance.now() - t0 < 400) requestAnimationFrame(f); else res(out); })(); });
-          SkriblText.place({ x: getCanvasLogicalSize().width / 2, y: getCanvasLogicalSize().height * 0.35 });
+          document.querySelector('#shapeSeg [data-shape="text"]').click();
           return p; }""")
         check("with Reduce Motion the sheet is simply there", len(set(tops)) == 1, f"{len(set(tops))} places: {sorted(set(tops))[:5]}")
+        c.close()
+
+    # ------------------------------------------------------------------ 15
+    if part("TEXT 15 — a finished take"):
+        c, q = open_editor(b, "pad", prefs={"style": "print", "size": "M", "speed": 8})
+        draw_line(q, 0.2, 0.15, 0.8, 0.15)
+        q.click("#recordBtn")
+        q.wait_for_timeout(500)
+        n0 = q.evaluate("() => [strokes.length, strokeGroups.length, finishedRecording, recording]")
+        choose_text(q)
+        q.wait_for_timeout(300)
+        opened = q.evaluate("() => SkriblText.isOpen()")
+        tap(q, *at(q, 0.4, 0.3))
+        a = q.evaluate("() => SkriblText.anchor()")
+        want = q.evaluate("() => { const lg = getCanvasLogicalSize(); return [lg.width * 0.4, lg.height * 0.3]; }")
+        said = q.evaluate("() => { const t = document.getElementById('toast'); return t && !t.hidden ? t.textContent : ''; }")
+        check("on a finished take, choosing Text opens the sheet and a press moves the words, refused by nothing",
+              n0[2] is True and opened and a is not None and abs(a["x"] - want[0]) <= 2 and abs(a["y"] - want[1]) <= 80
+              and "Tap Keep drawing" not in said, f"{n0}, open {opened}, words at {a} for {want}, toast {said!r}")
+        type_words(q, "Hi")
+        plan = q.evaluate(PLAN)
+        write_and_wait(q)
+        n1 = q.evaluate("() => [strokes.length, strokeGroups.length, finishedRecording, recording]")
+        check("...and Write it carries the take on, as Keep drawing does, the drawing kept",
+              n1[3] is True and n1[2] is False and n1[1] - n0[1] == plan["n"] and n1[0] - n0[0] == plan["pts"], f"{n0} -> {n1}")
+        q.click("#undoBtn")
+        q.wait_for_timeout(300)
+        n2 = q.evaluate(COUNT["pad"])
+        check("...and one Undo takes back only the words", n2 == n0[:2], f"{n0[:2]} -> {n1[:2]} -> undo {n2}")
+        c.close()
+
+    # ------------------------------------------------------------------ 16
+    if part("TEXT 16 — the keyboard"):
+        # A keyboard as iOS has one: what can be seen is 336px shorter, the
+        # page is not. Chromium has no keyboard to open, so this is the
+        # visual viewport iOS reports, put in place before the sheet opens.
+        KEYBOARD = """() => { const real = window.visualViewport; window.__kb = 336; window.__realVV = real;
+          const fake = { get height() { return innerHeight - window.__kb; }, offsetTop: 0, get width() { return innerWidth; },
+                         addEventListener: (...a) => real.addEventListener(...a), removeEventListener: (...a) => real.removeEventListener(...a) };
+          Object.defineProperty(window, 'visualViewport', { configurable: true, get: () => fake }); }"""
+        KEYBOARD_GOES = "() => { window.__kb = 0; window.__realVV.dispatchEvent(new Event('resize')); }"
+        TYPING = """() => { const s = document.getElementById('txSheet'), r = s.getBoundingClientRect(), pl = document.getElementById('txPlace');
+          const shown = (sel) => { const e = document.querySelector(sel); return !!e && !!e.getClientRects().length; };
+          const b = pl.hidden ? null : pl.getBoundingClientRect();
+          return { open: SkriblText.isOpen(), typing: s.classList.contains('typing'), bottom: Math.round(r.bottom), top: r.top, edge: innerHeight - 336,
+                   field: shown('#txField'), go: shown('#txGo'), style: shown('#txStyles'), size: shown('#txSize'), speed: shown('#txSpeed'),
+                   focus: document.activeElement && document.activeElement.id, words: b && [Math.round(b.top), Math.round(b.bottom)] }; }"""
+        # No keyboard up (a desk-sized phone with a hardware keyboard, or none
+        # shown yet): the whole sheet, the words being typed or not.
+        c, q = open_editor(b, "pad", prefs={"style": "print", "size": "M", "speed": 4})
+        choose_text(q)
+        type_words(q, "Hello")
+        q.wait_for_timeout(300)
+        t0 = q.evaluate(TYPING)
+        check("phone: with no keyboard up, the whole sheet shows while the words are typed",
+              t0["focus"] == "txField" and not t0["typing"] and t0["style"] and t0["size"] and t0["speed"], json.dumps(t0))
+        c.close()
+        c, q = open_editor(b, "pad", prefs={"style": "print", "size": "M", "speed": 4})
+        q.evaluate(KEYBOARD)
+        n0 = q.evaluate(COUNT["pad"])
+        choose_text(q)
+        tap(q, *at(q, 0.4, 0.3))
+        put = q.evaluate("() => { const lg = getCanvasLogicalSize(); return [lg.width * 0.4, lg.height * 0.3]; }")
+        type_words(q, "Hello")
+        q.wait_for_timeout(300)
+        t = q.evaluate(TYPING)
+        check("phone: with the keyboard up, the sheet sits on it",
+              abs(t["bottom"] - t["edge"]) <= 1, f"sheet ends at {t['bottom']}, the keyboard starts at {t['edge']}")
+        check("...and is only the words and Write it, the words above it",
+              t["typing"] and t["field"] and t["go"] and not (t["style"] or t["size"] or t["speed"])
+              and t["words"] is not None and t["words"][0] >= 0 and t["words"][1] <= t["top"] + 0.5, json.dumps(t))
+        q.keyboard.press("Enter")
+        q.wait_for_timeout(400)
+        t2 = q.evaluate(TYPING)
+        n1 = q.evaluate(COUNT["pad"])
+        check("the keyboard's done key puts it away and writes nothing; Style, Size and Speed come back",
+              t2["open"] and t2["focus"] != "txField" and not t2["typing"] and t2["style"] and t2["size"] and t2["speed"]
+              and n1 == n0 and not q.evaluate("() => SkriblText.isWriting()"), f"{json.dumps(t2)}, strokes {n0} -> {n1}")
+        # The keyboard goes: the sheet comes back down, and the words, pushed
+        # up while it was lifted, come back to where they were put.
+        high = q.evaluate("() => SkriblText.anchor()")
+        q.evaluate(KEYBOARD_GOES)
+        q.wait_for_timeout(400)
+        back = q.evaluate("() => ({ a: SkriblText.anchor(), bottom: Math.round(document.getElementById('txSheet').getBoundingClientRect().bottom), h: innerHeight })")
+        check("when the keyboard goes, the sheet comes back down and the words back to where they were put",
+              back["bottom"] == back["h"] and back["a"] is not None and abs(back["a"]["x"] - put[0]) <= 1 and abs(back["a"]["y"] - put[1]) <= 1
+              and high is not None and high["y"] < put[1] - 20,
+              f"pushed up to {high}, then at {back['a']} for {put}; sheet ends at {back['bottom']} of {back['h']}")
+        q.evaluate("() => { window.__kb = 336; window.__realVV.dispatchEvent(new Event('resize')); }")
+        if q.evaluate("() => SkriblText.isWriting()"):
+            q.wait_for_function("() => !SkriblText.isWriting()", timeout=30000)
+        # The x and Write it, pressed with the keyboard up: the field keeps
+        # its focus until the click, so the sheet does not grow back under
+        # the press (the x is at its top, which moves; Write it at its foot).
+        if not q.evaluate("() => SkriblText.isOpen()"):
+            choose_text(q)
+        q.click("#txField")
+        q.wait_for_timeout(300)
+        t3 = q.evaluate(TYPING)
+        q.click("#txClose")
+        q.wait_for_timeout(500)
+        closed = q.evaluate("() => !SkriblText.isOpen()")
+        check("...and the x, pressed with the keyboard up, closes the sheet", t3["typing"] and closed,
+              f"typing {t3['typing']}, closed {closed}")
+        choose_text(q)
+        q.wait_for_timeout(300)
+        q.click("#txField")
+        q.wait_for_timeout(300)
+        t4 = q.evaluate(TYPING)
+        q.click("#txGo")
+        q.wait_for_timeout(300)
+        wrote = q.evaluate("() => SkriblText.isWriting() || !SkriblText.isOpen()")
+        waited(q, "() => !SkriblText.isWriting()", 30000)
+        n2 = q.evaluate(COUNT["pad"])
+        check("...and Write it, pressed with the keyboard up, writes", t4["typing"] and wrote and n2[1] > n1[1],
+              f"typing {t4['typing']}, wrote {wrote}, strokes {n1} -> {n2}")
+        c.close()
+        c, q = open_editor(b, "pad", dev=DESK, prefs={"style": "print", "size": "M", "speed": 8})
+        choose_text(q)
+        type_words(q, "Hi")
+        q.keyboard.press("Enter")
+        waited(q, "() => !SkriblText.isOpen()", 5000)
+        waited(q, "() => !SkriblText.isWriting()", 30000)
+        n1 = q.evaluate(COUNT["pad"])
+        check("desk: Enter writes the words", n1[1] > 0, str(n1))
         c.close()
 
     b.close()

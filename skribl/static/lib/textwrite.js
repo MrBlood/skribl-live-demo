@@ -93,6 +93,11 @@
   var loading = {};         // style -> Promise
   var state = { style: null, size: 'M', speed: 4 };
   var anchor = null;        // where the words sit: the middle of their box, in drawing units
+  // ...and where they were PUT (a press, a drag, the start). The words are
+  // kept clear of the sheet from here each time, so a sheet that rises, or
+  // sits on a keyboard for a while, moves them only while it is in the way:
+  // they come back down when there is room again.
+  var want = null;
   var plan = null;          // the words as strokes, at the anchor (0, 0)
   var job = null;           // the words writing themselves now
 
@@ -507,7 +512,11 @@
     x = minX > maxX ? lg.width / 2 : Math.max(minX, Math.min(maxX, x));
     var sb = screenBox(), sh = sheetEl();
     if (sb && sh && !sh.hidden) {
-      var top = sh.getBoundingClientRect().top - 12;
+      // Where the sheet RESTS, from its layout box: rising, or pulled by a
+      // finger, its painted box is lower, and words kept above that would
+      // end under it (lib/sheetswipe.js measures a sheet the same way).
+      var op = sh.offsetParent;
+      var top = (op ? op.getBoundingClientRect().top + op.clientTop : 0) + sh.offsetTop - 12;
       var limit = (top - sb.top) / sb.ky - b.y1;
       if (limit < maxY) maxY = Math.max(minY, limit);
     }
@@ -533,8 +542,20 @@
       refresh();
     });
     els.field.addEventListener('keydown', function (e) {
-      if (e.key === 'Enter') { e.preventDefault(); go(); }
+      if (e.key !== 'Enter') return;
+      e.preventDefault();
+      // THE KEYBOARD'S DONE KEY PUTS IT AWAY (the owner, on the iPhone: the
+      // blue tick wrote the words at once, before they were placed). Writing
+      // is the Write it button; on a desk, with no keyboard to put away,
+      // Enter is Write it.
+      if (touchFirst()) els.field.blur(); else go();
     });
+    els.field.addEventListener('focus', function () { fitKeyboard(); setTimeout(fitKeyboard, 120); });
+    els.field.addEventListener('blur', function () { fitKeyboard(); setTimeout(fitKeyboard, 120); });
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', fitKeyboard);
+      window.visualViewport.addEventListener('scroll', fitKeyboard);
+    }
     s.addEventListener('keydown', function (e) {
       if (e.key === 'Escape') { e.preventDefault(); close(); }
     });
@@ -565,6 +586,12 @@
     if (typeof window.addSliderNudgers === 'function') window.addSliderNudgers(els.speed, { step: 1 });
     els.go.addEventListener('click', go);
     els.close.addEventListener('click', close);
+    // A press on Write it or the x while the words are typed keeps the field's
+    // focus until the click: the keyboard going first would grow the sheet
+    // back under the finger, and the press would land on whatever moved there.
+    [els.go, els.close].forEach(function (b) {
+      b.addEventListener('mousedown', function (e) { if (document.activeElement === els.field) e.preventDefault(); });
+    });
     if (window.SkriblSheetSwipe) {
       window.SkriblSheetSwipe.attach(s, { handle: s.querySelector('.tx-grab'), close: close });
     }
@@ -581,7 +608,8 @@
       if (!drag || e.pointerId !== drag.id) return;
       var sb = screenBox();
       if (!sb) return;
-      anchor = clampAnchor({ x: drag.a.x + (e.clientX - drag.x) / sb.k, y: drag.a.y + (e.clientY - drag.y) / sb.ky });
+      want = { x: drag.a.x + (e.clientX - drag.x) / sb.k, y: drag.a.y + (e.clientY - drag.y) / sb.ky };
+      anchor = clampAnchor(want);
       position();
     });
     var endDrag = function (e) {
@@ -591,7 +619,7 @@
     };
     els.place.addEventListener('pointerup', endDrag);
     els.place.addEventListener('pointercancel', endDrag);
-    window.addEventListener('resize', function () { if (isOpen()) { anchor = clampAnchor(anchor); position(); } });
+    window.addEventListener('resize', function () { fitKeyboard(); if (isOpen() && want) { anchor = clampAnchor(want); position(); } });
     return els;
   }
   function readPrefs() {
@@ -653,16 +681,16 @@
     Array.prototype.forEach.call(els.styles.querySelectorAll('[data-style]'), function (b) {
       var st = b.getAttribute('data-style'), on = st === cur;
       var font = st === 'yours' ? (made ? readHand() : null) : files[st];
-      var want = st === 'yours' && !made ? 'make' : (font ? 'drawn' : 'word');
+      var face = st === 'yours' && !made ? 'make' : (font ? 'drawn' : 'word');
       b.classList.toggle('on', on);
       // + Make yours is a way to somewhere, not a choice: it says nothing
       // about being pressed.
-      if (want === 'make') b.removeAttribute('aria-pressed');
+      if (face === 'make') b.removeAttribute('aria-pressed');
       else b.setAttribute('aria-pressed', String(on));
-      if (b.getAttribute('data-face') === want && want !== 'drawn') return;
-      b.setAttribute('data-face', want);
+      if (b.getAttribute('data-face') === face && face !== 'drawn') return;
+      b.setAttribute('data-face', face);
       b.textContent = '';
-      if (want === 'make') {
+      if (face === 'make') {
         b.setAttribute('aria-label', 'Make your own hand');
         b.innerHTML = '<span class="tx-make"><b aria-hidden="true">+</b>Make yours</span>';
         return;
@@ -716,7 +744,7 @@
     els.go.disabled = !plan || !plan.strokes.length;
     els.speedOut.textContent = SPEED_TEXT[state.speed] + (plan && plan.strokes.length ? ' · ' + seconds(plan.ms) : '');
     if (els.skip) els.skip.hidden = !(plan && plan.skipped);
-    if (anchor) anchor = clampAnchor(anchor);
+    if (want) anchor = clampAnchor(want);
     position();
   }
   function position() {
@@ -768,6 +796,31 @@
   }
 
   function isOpen() { var s = sheetEl(); return !!(s && !s.hidden && s.classList.contains('open')); }
+  function touchFirst() { return !!(window.matchMedia && window.matchMedia('(hover: none)').matches); }
+  // THE KEYBOARD (the owner's iPhone: the bar over the keyboard covered the
+  // field, so the words could not be seen as they were typed). iOS does not
+  // shrink the page for its keyboard, so the sheet is lifted to the bottom of
+  // what can be seen, the Post sheet's own way (lib/postsheet.js), and while
+  // the words are typed on a phone the sheet is only the words and Write it
+  // (.typing), so the drawing shows above it with the words on it. Style,
+  // Size and Speed come back when the keyboard goes.
+  // The keyboard is up when what can be seen ends well above the page's
+  // bottom; the sheet is only the words while the words are typed into it
+  // with a keyboard up, never merely because the field has focus.
+  function fitKeyboard() {
+    var s = els && els.sheet;
+    if (!s) return;
+    var v = window.visualViewport, phone = window.innerWidth <= 640;
+    var lift = (phone && v && !s.hidden) ? Math.max(0, Math.round(window.innerHeight - (v.offsetTop + v.height))) : 0;
+    var typing = lift > 80 && document.activeElement === els.field;
+    s.classList.toggle('typing', typing);
+    if (!phone || !v || s.hidden) { s.style.bottom = ''; s.style.maxHeight = ''; }
+    else {
+      s.style.bottom = lift ? lift + 'px' : '';
+      s.style.maxHeight = Math.max(160, Math.round(v.height - 12)) + 'px';
+    }
+    if (want && isOpen()) { anchor = clampAnchor(want); position(); }
+  }
   // THE SHEET RISES AND SINKS, from below the screen's edge and back, on a
   // phone and on a desk alike; with reduced motion it is simply there, or
   // gone. A bottom sheet a finger pulled part way sinks from where it was
@@ -792,17 +845,34 @@
     a.onfinish = done;
     a.oncancel = done;
   }
-  /* The tap that says where the words go. */
+  /* CHOOSING TEXT OPENS THE SHEET (the owner's "A": picking Text "just closes
+     the menu", and on a finished take the tap that came next was refused).
+     The words start in the middle of the drawing that can be seen; a drag, or
+     a tap where they should go, moves them. */
+  function start() {
+    if (!editor || !bind()) return;
+    var sb = screenBox(), lg = editor.logical(), x = lg.width / 2, y = lg.height / 2;
+    if (sb) {
+      var l = Math.max(sb.left, 0), r = Math.min(sb.left + lg.width * sb.k, window.innerWidth);
+      var t = Math.max(sb.top, 0), b = Math.min(sb.top + lg.height * sb.ky, window.innerHeight);
+      if (r > l) x = ((l + r) / 2 - sb.left) / sb.k;
+      if (b > t) y = ((t + b) / 2 - sb.top) / sb.ky;
+    }
+    place({ x: x, y: y });
+  }
+  /* The tap that says where the words go: it opens the sheet there, or, with
+     the sheet up, moves the words there. */
   function place(pos) {
     if (!editor || !bind()) return;
     if (job) job.finish();
-    anchor = { x: pos.x, y: pos.y };
+    want = { x: pos.x, y: pos.y };
+    anchor = clampAnchor(want);
     open();
   }
   function open() {
     var s = els.sheet;
     // Already up: the press moved the words, and that is all it did.
-    if (isOpen()) { anchor = clampAnchor(anchor); position(); return; }
+    if (isOpen()) { anchor = clampAnchor(want); position(); return; }
     if (!els.field.value) { try { els.field.value = sessionStorage.getItem(WORDS_KEY) || ''; } catch (e) {} }
     syncStyles();
     syncSize();
@@ -823,7 +893,7 @@
     });
     refresh();
     // After the sheet has its height, so the words can sit above it.
-    requestAnimationFrame(function () { if (anchor) { anchor = clampAnchor(anchor); position(); } });
+    requestAnimationFrame(function () { if (want) { anchor = clampAnchor(want); position(); } });
     lastPen = '';
     if (!follow) follow = requestAnimationFrame(followLoop);
     try { els.field.focus({ preventScroll: true }); } catch (e) { els.field.focus(); }
@@ -834,21 +904,21 @@
     els.place.hidden = true;
     document.body.classList.remove('text-open');
     if (document.activeElement === els.field) els.field.blur();
-    s.classList.remove('open');
+    s.classList.remove('open', 'typing');
     sink(s, function () {
-      if (!s.classList.contains('open')) s.hidden = true;
+      if (!s.classList.contains('open')) { s.hidden = true; s.style.bottom = ''; s.style.maxHeight = ''; }
       if (then) then();
     });
   }
   function close() {
     if (!els) return;
-    anchor = null;
+    anchor = null; want = null;
     hide(null);
   }
   function go() {
     if (!els || !plan || !plan.strokes.length || !anchor) return;
     var p = plan, at = { x: anchor.x, y: anchor.y };
-    anchor = null;
+    anchor = null; want = null;
     // The preview goes in the frame the words start writing, so nothing
     // jumps: the sheet slides away, and the ink begins where the words were.
     els.place.hidden = true;
@@ -866,6 +936,12 @@
   // with text=1, and Text is chosen the way the picker chooses it, so the
   // next tap places the words. The address loses the flag, so a reload does
   // not choose it again.
+  //
+  // And the style is Yours, once there is a hand to write with: they have
+  // just been working on it, and the owner, back from changing letters with
+  // Skribl still chosen, saw no change and thought the edit was lost. Kept
+  // as a choice on the sheet is, so the next time is theirs too. The prefs
+  // are read first, so the size and speed kept with it are the person's.
   function resume() {
     var q;
     try { q = new URLSearchParams(window.location.search); } catch (e) { return; }
@@ -874,10 +950,10 @@
     var rest = q.toString();
     try { history.replaceState(history.state, '', window.location.pathname + (rest ? '?' + rest : '') + window.location.hash); }
     catch (e) {}
+    if (handCount() > 0) { readPrefs(); state.style = 'yours'; keepPrefs(); }
     setTimeout(function () {
       var b = document.querySelector('#shapeSeg [data-shape="text"]');
       if (b) b.click();
-      if (editor && editor.say) editor.say('Tap where your words go');
     }, 0);
   }
 
@@ -885,6 +961,7 @@
     STYLES: STYLES.slice(), SIZES: SIZES, SPEEDS: SPEEDS.slice(), MAX_CHARS: MAX_CHARS,
     attach: function (hooks) { editor = hooks; resume(); },
     place: place,
+    start: start,
     close: close,
     isOpen: isOpen,
     isWriting: function () { return !!job; },

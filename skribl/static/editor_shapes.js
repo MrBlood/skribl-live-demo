@@ -129,6 +129,8 @@ if (shapeSeg && window.SkriblShapes) {
        had just revealed, and Poly had to be chosen twice to reach them. */
     const pop = document.getElementById('shapePop');
     if (pop && !window.SkriblShapes.knobs(kind).length) pop.hidden = true;
+    // Text's sheet comes straight up (lib/textwrite.js start).
+    if (kind === 'text' && window.SkriblText) window.SkriblText.start();
   });
   attachSegSlider(shapeSeg);
 }
