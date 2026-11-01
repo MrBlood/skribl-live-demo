@@ -851,6 +851,22 @@ with sync_playwright() as p:
         check("Save a copy makes a file with every letter, as it is kept",
               d.suggested_filename == "my-hand.skriblhand" and copy.get("type") == "skribl-hand"
               and copy.get("g") == full_set["g"], f"{d.suggested_filename}, {len(copy.get('g', {}))} letters")
+        # A copy is also what Skribl's lettering is made from (letterfont.py
+        # from_copy, then make_textfonts.py): read back, it is the letters it
+        # holds, each from its own lines and ink centre, in cap heights.
+        back = letterfont.from_copy(copy)["letters"]
+        worst, misshapen = 0.0, []
+        for bid, g in full_set["g"].items():
+            exp, got = normalise(g), back.get(bid, [])
+            if [len(s) for s in exp] != [len(s) for s in got]:
+                misshapen.append(bid)
+                continue
+            for se, sg in zip(exp, got):
+                for pe, pg in zip(se, sg):
+                    worst = max(worst, max(abs(pe[i] - pg[i]) for i in range(4)))
+        check("a copy read by letterfont.py is the letters it holds, ready to make lettering from",
+              not misshapen and worst < 1e-4 and len(back) == len(letterfont.BOX_IDS),
+              f"{len(back)} letters, worst {worst:.2g}, misshapen {misshapen[:5]}")
         page_button(q, "Start over").click()
         q.wait_for_function("() => SkriblLetters.view() === 'start'")
         empty = len(stored(q)["g"]) == 0
