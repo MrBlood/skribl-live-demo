@@ -755,9 +755,13 @@
   }
   // While the sheet is up, the words follow the drawing if it moves (a
   // pinch, the page scrolling, the keyboard coming up).
-  var follow = 0, lastBox = '';
+  // ...and the pen: a colour or size changed while the sheet is up is the
+  // colour and size the words will be written in.
+  var follow = 0, lastBox = '', lastPen = '';
   function followLoop() {
     if (!isOpen()) { follow = 0; return; }
+    var pen = editor ? editor.pen() : null, penKey = pen ? pen.color + '/' + pen.size : '';
+    if (penKey !== lastPen) { var was = lastPen; lastPen = penKey; if (was) refresh(); }
     var sb = screenBox(), key = sb ? [sb.left, sb.top, sb.k].map(function (v) { return Math.round(v * 10); }).join(',') : '';
     if (key !== lastBox) { lastBox = key; position(); }
     follow = requestAnimationFrame(followLoop);
@@ -797,6 +801,8 @@
   }
   function open() {
     var s = els.sheet;
+    // Already up: the press moved the words, and that is all it did.
+    if (isOpen()) { anchor = clampAnchor(anchor); position(); return; }
     if (!els.field.value) { try { els.field.value = sessionStorage.getItem(WORDS_KEY) || ''; } catch (e) {} }
     syncStyles();
     syncSize();
@@ -818,6 +824,7 @@
     refresh();
     // After the sheet has its height, so the words can sit above it.
     requestAnimationFrame(function () { if (anchor) { anchor = clampAnchor(anchor); position(); } });
+    lastPen = '';
     if (!follow) follow = requestAnimationFrame(followLoop);
     try { els.field.focus({ preventScroll: true }); } catch (e) { els.field.focus(); }
   }

@@ -15,7 +15,9 @@ Mirror leaving them alone. Each row holds a promise:
      nothing behind.
   4. PLACED BEFORE INK: typed words show in a box above the sheet, painted
      in the pen's colour, and nothing is ink yet; dragging the box moves the
-     words by the drag; they cannot be dragged under the sheet.
+     words by the drag; they cannot be dragged under the sheet; a press
+     elsewhere moves them there without the sheet moving; a colour chosen
+     while the sheet is up is the one they show in.
   5. WRITTEN IN TIME: Write it closes the sheet and the words write
      themselves, stroke by stroke over the time the sheet said; each point
      keeps the time the plan gave it on the take's clock, forward only, where
@@ -355,6 +357,28 @@ with sync_playwright() as p:
         s = q.evaluate(SHEET)
         check("...and cannot be dragged under the sheet", s["place"] is not None and s["place"][3] <= s["top"] + 0.5,
               f"box bottom {s['place'][3] if s['place'] else None}, sheet top {s['top']}")
+        # A press elsewhere on the drawing while the sheet is up moves the
+        # words there, and the sheet stays where it is (no second entrance).
+        px, py = at(q, 0.35, 0.22)
+        tops = q.evaluate("""([x, y]) => new Promise(res => { const s = document.getElementById('txSheet'), out = [];
+          const r = canvas.getBoundingClientRect(), lg = getCanvasLogicalSize();
+          SkriblText.place({ x: (x - r.left) * lg.width / r.width, y: (y - r.top) * lg.height / r.height });
+          const t0 = performance.now();
+          (function f() { out.push(Math.round(s.getBoundingClientRect().top)); if (performance.now() - t0 < 400) requestAnimationFrame(f); else res(out); })(); })""", [px, py])
+        a2 = q.evaluate("() => SkriblText.anchor()")
+        want = q.evaluate("([x, y]) => { const r = canvas.getBoundingClientRect(), lg = getCanvasLogicalSize(); return [(x - r.left) * lg.width / r.width, (y - r.top) * lg.height / r.height]; }", [px, py])
+        check("a press elsewhere moves the words there, and the sheet stays still",
+              abs(a2["x"] - want[0]) <= 1 and abs(a2["y"] - want[1]) <= 1 and len(set(tops)) == 1,
+              f"words at {round(a2['x'])},{round(a2['y'])} for a press at {round(want[0])},{round(want[1])}; the sheet at {sorted(set(tops))[:4]}")
+        # The pen changed while the sheet is up: the words show in its colour.
+        q.evaluate("() => { color = '#e0452b'; }")
+        q.wait_for_timeout(200)
+        ink2 = q.evaluate("""() => { const c = document.getElementById('txPreview'), d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+          for (let i = 3; i < d.length; i += 4) if (d[i] > 200) return [d[i-3], d[i-2], d[i-1]]; return null; }""")
+        pen2 = q.evaluate("() => penColorFor(color)").lstrip("#")
+        rgb2 = [int(pen2[i:i + 2], 16) for i in (0, 2, 4)] if len(pen2) == 6 else None
+        check("the words follow the pen: a colour chosen while the sheet is up is the one they show in",
+              ink2 is not None and rgb2 is not None and max(abs(a3 - b3) for a3, b3 in zip(ink2, rgb2)) <= 3, f"preview {ink2}, pen {rgb2}")
         check("no errors", not q._tx_errors, str(q._tx_errors[:2]))
         c.close()
 
