@@ -8585,10 +8585,13 @@ body.lc-open .skribl-tip { display: none !important; }   /* the card grows out o
 .lc-note .lc-line { flex: 1; font-size: 16px; font-weight: 600; color: var(--text-primary); }
 .lc-note-ic { width: 36px; height: 36px; flex: none; display: grid; place-items: center; border-radius: 10px; background: var(--seg-on-fill); color: var(--seg-on-ink); }
 .lc-note-ic svg { width: 18px; height: 18px; }
-/* Holding a button for its card brings no system callout, selection or
-   magnifier on a phone (WebKit's own press-and-hold; not tested here). */
-:is(#penToolBtn, #eraserToolBtn, #shapeToolBtn, #toolMoreBtn, #undoBtn, #redoBtn, #undo, #redo, #mediaOpenBtn, #postBtn, #tuneBtn, #menuBtn, #moreBtn,
-    #addcopy, #addblank, #addinbetween, #addtween) { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+/* HOLDING SELECTS NOTHING: whatever holds a card brings no selection, system
+   callout or magnifier when held on a phone (WebKit's own press-and-hold; not
+   tested here). lib/learncard.js marks it from its cards' own list, as it is
+   built; a list of ids kept here by hand had the bar's buttons and missed
+   Tune's rows (the owner, on the iPhone: the row's words selected, with Copy
+   and Look Up). */
+[data-lc-hold] { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
 /* Dragging the Pen button sideways sets the size (lib/penswoosh.js). A finger's
    drag belongs to the browser, to pan, unless the button says otherwise: Chrome
    took it after a few moves and cancelled it, so a finger moved the size 3
