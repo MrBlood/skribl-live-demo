@@ -19,10 +19,11 @@
  *     and a faint model under the ink, inside the zoom layer as the grid is.
  *     Next keeps the letter and moves on; Back goes to the one before, with
  *     its letter on the canvas to add to; Redo clears this one, and its toast
- *     can bring it back. Finish later goes to the Pad: every stroke is kept as
+ *     can bring it back. Finish later goes back to the editor they came
+ *     from (the Pad, opened any other way): every stroke is kept as
  *     it is drawn. Along the bottom, a line writes itself in the letters
  *     drawn so far.
- *   - READY, after the 30: Add the rest, or Done.
+ *   - READY, after the 30: Add the rest, or Write with it (back to Text).
  *   - THE TILES (Your hand): every letter, drawn ones in ink and the rest
  *     faint with a +. Tap one to draw it again (the old one faint behind it;
  *     Cancel keeps it, Done keeps the new one) or to add it. Save a copy, Open
@@ -695,7 +696,7 @@
   });
   laterBtnEl.addEventListener('click', function () {
     takeStroke();
-    window.location.assign(window.location.pathname);
+    window.location.assign(backTo(false));
   });
 
   // ---- The pages: the start, Ready, and the tiles ----
@@ -732,7 +733,19 @@
     b.addEventListener('click', onClick);
     return b;
   }
-  function leave() { window.location.assign(window.location.pathname); }
+  // WHERE THEY CAME FROM. Make yours and Edit your hand (the Text sheet,
+  // lib/textwrite.js) say which editor (`back`), and leaving goes back there,
+  // with Text chosen (`text=1`), so the words they came to write are one tap
+  // away. Opened any other way, it leaves to the Pad as it always did.
+  var BACK = (function () {
+    try { return new URLSearchParams(window.location.search).get('back'); } catch (e) { return null; }
+  })();
+  function backTo(text) {
+    var flip = topEl.getAttribute('data-flip');
+    var url = (BACK === 'flip' && flip) ? flip : window.location.pathname;
+    return url + ((text || BACK) ? '?text=1' : '');
+  }
+  function leave() { window.location.assign(backTo(false)); }
 
   function showStart() {
     var p = openPage('start', 'Your hand', 'Text that writes the way you write', 'lt-mid');
@@ -781,7 +794,8 @@
     var two = document.createElement('div');
     two.className = 'lt-two';
     two.appendChild(button('Add the rest · ' + (BOXES.length - drawnCount()), 'lt-second', addRest));
-    two.appendChild(button('Done', 'lt-primary', function () { showTiles(); }));
+    // Write with it: back to where they came from, Text chosen (backTo).
+    two.appendChild(button('Write with it', 'lt-primary', function () { window.location.assign(backTo(true)); }));
     foot.appendChild(two);
     p.appendChild(foot);
   }

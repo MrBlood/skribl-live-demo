@@ -2419,6 +2419,13 @@ const _padDown = e=>{ if(playing) return; if(pinching) return;
   // reason: the picker steps aside only for a press that actually draws.
   { const _sp=document.getElementById('shapePop');
     if(_sp && !_sp.hidden) _sp.hidden=true; }
+  // TEXT (lib/textwrite.js, the Pad's twin in editor_draw.js): the press says
+  // WHERE the words go and the typing sheet comes up. Nothing is ink, and
+  // nothing goes on the page, until Write it.
+  if(flipTool==='shape' && shapeKind==='text' && window.SkriblText){
+    window.SkriblText.place(pos(e));
+    return;
+  }
   try{ pad.setPointerCapture(e.pointerId); }catch(_){ }
   drawing=true; strokePointerId=e.pointerId; curCount=1; redoStack.length=0; noteAction('stroke');
   document.body.classList.add('stroking');   // the chrome recedes while the pen is down (flip.css)
@@ -5855,7 +5862,8 @@ if(_flipShapeSeg && window.SkriblShapes){
   _flipShapeSeg.addEventListener('click', e=>{
     const b = e.target.closest('[data-shape]'); if(!b || !_flipShapeSeg.contains(b)) return;
     const k = b.getAttribute('data-shape');
-    if(SkriblShapes.KINDS.indexOf(k) === -1) return;
+    // Text is a kind of this picker but not a shape (lib/textwrite.js).
+    if(SkriblShapes.KINDS.indexOf(k) === -1 && !(k === 'text' && window.SkriblText)) return;
     shapeKind = k;
     _flipShapeSeg.querySelectorAll('[data-shape]').forEach(x=>{
       const on = x===b; x.classList.toggle('on', on); x.classList.toggle('active', on);
@@ -5871,6 +5879,47 @@ if(_flipShapeSeg && window.SkriblShapes){
        revealed to stay open for. */
     const pop = document.getElementById('shapePop');
     if(pop && !SkriblShapes.knobs(k).length) pop.hidden = true;
+  });
+}
+
+/* TEXT, FLIP'S SIDE. lib/textwrite.js is the tool, shared with the Pad (whose
+   side is editor_text.js): the sheet, the lettering, the words as strokes and
+   writing them in time. Here is only what Flip knows. The words go on the
+   page they were placed on, each stroke its own group as a stamp's are, and
+   one Undo takes them all back: the one-action entry a stamp leaves ('fill').
+   Their points go into the page as they fall due, the way the pen's do, so a
+   repaint mid-word keeps them; each keeps the time it was due, so a page that
+   draws itself (Draw on) writes them at the pace they were written. Mirror
+   leaves them alone: mirrored words read backwards. */
+if(window.SkriblText){
+  let _txPage = null, _txT0 = 0, _txN = 0;
+  window.SkriblText.attach({
+    canvas: pad,
+    logical: () => ({ width: CW, height: CH }),
+    pen: () => ({ color: penColorFor(color), size: size }),
+    begin: () => {
+      _txPage = frame(); _txN = 0; _txT0 = performance.now();
+      redoStack.length = 0;
+      return _txT0;
+    },
+    draw: (pts, from, to) => {
+      for(let i=from;i<=to;i++){
+        const p = pts[i];
+        _txPage.strokes.push({ x:p.x, y:p.y, color:p.color, size:p.size, t:_txT0 + p.t, erase:false, start:i===0 });
+        if(_txPage !== frame()) continue;
+        if(i === 0) drawDot(ctx, p.x, p.y, p.color, p.size, false);
+        else drawLine(ctx, pts[i-1].x, pts[i-1].y, p.x, p.y, p.color, p.size, false);
+      }
+    },
+    stroke: (pts) => { _txPage.strokeGroups.push(pts.length); _txN++; },
+    end: () => {
+      const at = frames.indexOf(_txPage);
+      if(at >= 0 && _txN) noteAction({ type:'fill', label:'Text', idx: at, groups: _txN });
+      _txPage = null;
+      render(); flipKeep(); if(at >= 0) refreshThumb(at); updateToolState(); scheduleSave();
+    },
+    skip: () => {},
+    say: (words) => chip(words),
   });
 }
 

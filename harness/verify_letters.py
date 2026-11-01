@@ -662,7 +662,10 @@ with sync_playwright() as p:
                 q.wait_for_function("() => SkriblLetters.view() === 'ready'")
                 words.update({"ready " + k: v for k, v in q.evaluate(RATIOS, [LUM, PAGE]).items()})
                 taps += q.evaluate(TAPS)
-                page_button(q, "Done").click()
+                c.close()
+                # The tiles, as a person with a hand meets them (Ready's Write
+                # with it goes back to Text now, so the page opens on its own).
+                c, q = open_sheet(b, theme=theme, dev=dev, seed=synth_set(BOX, LN, only=QUICK))
                 q.wait_for_function("() => SkriblLetters.view() === 'tiles'")
                 words.update({"tiles " + k: v for k, v in q.evaluate(RATIOS, [LUM, PAGE]).items()})
                 taps += q.evaluate(TAPS)
@@ -719,9 +722,9 @@ with sync_playwright() as p:
             pass   # the check below says what came instead
         r = q.evaluate("""() => ({ view: SkriblLetters.view(), title: (document.querySelector('.lt-ptitle') || {}).textContent,
           buttons: [...document.querySelectorAll('.lt-page button')].map(b => b.textContent) })""")
-        check("the 30th letter opens Ready: Add the rest and Done",
+        check("the 30th letter opens Ready: Add the rest and Write with it",
               on30.startswith("? question mark · 30 of 30") and r["view"] == "ready" and r["title"] == "Your hand is ready"
-              and "Add the rest · 62" in r["buttons"] and "Done" in r["buttons"], f"{on30} / {json.dumps(r)}")
+              and "Add the rest · 62" in r["buttons"] and "Write with it" in r["buttons"], f"{on30} / {json.dumps(r)}")
         if r["view"] == "ready":
             page_button(q, "Add the rest").click()
             q.wait_for_function(DRAWING)

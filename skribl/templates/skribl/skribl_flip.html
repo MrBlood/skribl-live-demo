@@ -229,6 +229,9 @@
         <button type="button" class="smooth-btn" data-shape="rect" aria-pressed="false" title="Rectangle &mdash; hold Shift for a square">Rect</button>
         <button type="button" class="smooth-btn" data-shape="ellipse" aria-pressed="false" title="Ellipse &mdash; hold Shift for a circle">Oval</button>
         <button type="button" class="smooth-btn" data-shape="poly" aria-pressed="false" title="Regular polygon &mdash; hold Shift to keep it regular">Poly</button>
+        {# Text: words that write themselves (lib/textwrite.js). A kind of this
+           picker, not a shape: tap where they go and the typing sheet comes up. #}
+        <button type="button" class="smooth-btn" data-shape="text" aria-pressed="false" title="Words that write themselves">Text</button>
       </div>
       {# Two knobs that only mean something for some kinds, so each row hides
          itself rather than sitting there greyed out: a control you cannot use
@@ -454,6 +457,7 @@
      chooser is; lib/postsheet.js is its behaviour and shareSkribl drives it. #}
   {# Flip's drawings play rather than draw themselves, and the posted line says so. #}
   {% with posted_line='Anyone with the link can watch it play.' %}{% include 'skribl/_skribl_post.html' %}{% endwith %}
+  {% with text_from='flip' %}{% include 'skribl/_skribl_text.html' %}{% endwith %}
 
 <!-- Route config. Flip had NO config block: flip.js hardcoded fetch('/api/skribls')
      and a '/s/' fallback, so it was the one surface a url_prefix would have
@@ -576,6 +580,8 @@
   <script src="{{ skribl_asset('lib/strokelayers.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/framebitmap.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/shapes.js') }}" defer></script>
+  {# Text (lib/textwrite.js, shared with the Pad): flip.js hands it its hooks. #}
+  <script src="{{ skribl_asset('lib/textwrite.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/stamps.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/mirror.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/brushes.js') }}" defer></script>

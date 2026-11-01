@@ -8000,6 +8000,114 @@ html.skribl-sheet { overscroll-behavior-y: none; }
   .shape-pop::after { left: 64px; }
 }
 
+/* ---------- Text: the typing sheet (lib/textwrite.js, _skribl_text.html) ----------
+   Both editors carry the same sheet, so its rules live here, where both load
+   them. The menu's paper and cards, the one pill for Size, the app's slider
+   for Speed, an action in the accent; the words a size up from the drawers',
+   and the field at 16px so an iPhone does not magnify the page. It rises
+   from the bottom on a phone and floats over the dock on a desk, never over
+   the words: they are kept above it (lib/textwrite.js clampAnchor). */
+.tx-sheet {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 150;
+  display: grid; gap: 12px; grid-template-columns: minmax(0, 1fr);
+  padding: 4px 16px calc(16px + env(safe-area-inset-bottom, 0px));
+  max-height: calc(100dvh - 12px); overflow-y: auto; overscroll-behavior: contain;
+  background: var(--menu-paper); color: var(--text-primary);
+  border-radius: 22px 22px 0 0;
+  box-shadow: 0 -10px 40px rgba(20, 10, 60, .22);
+  transform: translateY(calc(100% + 24px));
+  transition: transform .3s cubic-bezier(.2, .8, .2, 1);
+}
+.tx-sheet.open { transform: none; }
+.tx-sheet[hidden] { display: none; }
+@media (min-width: 641px) {
+  .tx-sheet { left: 50%; right: auto; bottom: 24px; width: 420px; max-height: calc(100dvh - 48px);
+    margin-left: -210px; padding: 14px 18px 18px; border-radius: 22px;
+    box-shadow: 0 20px 60px rgba(20, 10, 60, .28); }
+}
+.tx-grab { display: flex; justify-content: center; align-items: center; height: 18px; touch-action: none; cursor: pointer; }
+/* A desk's sheet floats; it has no edge to pull down to. */
+@media (min-width: 641px) { .tx-grab { display: none; } }
+.tx-grab-pill { width: 40px; height: 5px; border-radius: 3px; background: var(--text-secondary); opacity: .45; flex: none; }
+.tx-head { display: flex; align-items: center; justify-content: space-between; min-height: 32px; }
+.tx-title { margin: 0; font-size: 17px; font-weight: 700; line-height: 1.25; color: var(--text-primary); }
+.tx-x { width: 44px; height: 44px; margin: -6px -10px -6px 0; padding: 0; border: 0; border-radius: 22px;
+  background: transparent; color: var(--text-secondary); display: grid; place-items: center; cursor: pointer; }
+.tx-x svg { width: 20px; height: 20px; }
+.tx-field {
+  width: 100%; box-sizing: border-box; padding: 12px 14px; border-radius: 12px;
+  border: 1px solid var(--menu-card-line); background: var(--menu-card); color: var(--text-primary);
+  font: inherit; font-size: 16px; line-height: 1.3;
+}
+.tx-field::placeholder { color: var(--text-secondary); opacity: 1; }
+.tx-skip { margin: -4px 2px 0; font-size: 13px; line-height: 1.35; color: var(--text-secondary); }
+.tx-skip[hidden] { display: none; }
+.tx-k { font-size: 15px; font-weight: 600; color: var(--text-primary); }
+.tx-k2 { display: grid; gap: 1px; }
+.tx-k2 label { font-weight: 600; }
+.tx-hint { font-size: 13px; font-weight: 400; line-height: 1.3; color: var(--text-secondary); }
+/* Style: four choices, each written in itself. A choice wears the one
+   pill's tint and ink; with no track to slide along, the chosen card wears
+   it itself, as the draw drawer's picture choices do, with a ring so it
+   still shows where colours are forced. */
+.tx-styles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin-top: -6px; }
+.tx-style {
+  height: 56px; min-width: 0; padding: 0 6px; border-radius: 12px; cursor: pointer;
+  display: grid; place-items: center; overflow: hidden;
+  border: 1px solid var(--menu-card-line); background: var(--menu-card); color: var(--text-primary);
+  font: inherit; font-size: 15px; font-weight: 600;
+}
+.tx-style svg { display: block; width: 100%; max-height: 30px; height: auto; overflow: visible; }
+.tx-style.on { background: var(--seg-on-fill); color: var(--seg-on-ink); border-color: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--ui-hi); }
+.tx-make { display: grid; justify-items: center; gap: 1px; font-size: 13px; font-weight: 700; line-height: 1.15; color: var(--accent-ink); }
+.tx-make b { font-size: 20px; line-height: 1; font-weight: 600; }
+.tx-under { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: -8px; min-height: 44px; }
+.tx-note { font-size: 13px; line-height: 1.3; color: var(--text-secondary); }
+.tx-link { display: inline-flex; align-items: center; min-height: 44px; padding: 0 2px; flex: none;
+  font-size: 14px; font-weight: 600; color: var(--accent-ink); text-decoration: none; }
+.tx-link[hidden] { display: none; }
+.tx-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+/* Size: the one pill, on the sheet's cards, its buttons 44px (as Settings'). */
+.tx-sheet .seg { background: var(--menu-card); border-color: var(--menu-card-line); }
+.tx-seg { width: 200px; flex: none; --seg-h: 52px; }
+.tx-seg > button { flex: 1; }
+.tx-speed .tx-k2 { flex: 0 1 auto; min-width: 0; }
+.tx-speed-ctl { flex: 1 1 150px; min-width: 120px; max-width: 220px; display: flex; }
+.tx-speed-ctl input[type="range"] { flex: 1; min-width: 0; accent-color: var(--ui-hi); }
+.tx-val { flex: none; min-width: 64px; text-align: right; font-size: 15px; font-weight: 700;
+  color: var(--text-primary); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.tx-go {
+  height: 50px; border: 0; border-radius: 14px; cursor: pointer;
+  background: var(--accent-fill); color: #fff; font: inherit; font-size: 16px; font-weight: 700;
+}
+.tx-go:disabled { opacity: .45; cursor: default; }
+.tx-x:focus-visible, .tx-style:focus-visible, .tx-link:focus-visible, .tx-go:focus-visible, .tx-field:focus-visible {
+  outline: 2px solid var(--focus-ring); outline-offset: 2px;
+}
+/* The words before they are ink: drawn where they will be written, inside a
+   dashed box that moves with a finger. Over the drawing, under the sheet. */
+.tx-place {
+  position: fixed; z-index: 140; box-sizing: border-box; cursor: grab; touch-action: none;
+  border: 1.5px dashed var(--ui-hi); border-radius: 10px;
+  background: color-mix(in srgb, var(--ui-hi) 5%, transparent);
+}
+.tx-place[hidden] { display: none; }
+.tx-place.dragging { cursor: grabbing; background: color-mix(in srgb, var(--ui-hi) 9%, transparent); }
+.tx-preview { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.tx-drag {
+  position: absolute; left: 50%; bottom: calc(100% + 6px); transform: translateX(-50%);
+  padding: 5px 12px; border-radius: 999px; white-space: nowrap; pointer-events: none;
+  background: var(--menu-paper); color: var(--text-primary); font-size: 14px; font-weight: 600;
+  box-shadow: 0 2px 10px rgba(20, 10, 60, .18);
+}
+@media (prefers-reduced-motion: reduce) {
+  .tx-sheet { transition: none; }
+}
+@media (forced-colors: active) {
+  .tx-style.on { outline: 2px solid CanvasText; outline-offset: -3px; }
+}
+
 /* ---------- Second phone tier, from 393px ----------
    The 640px block is sized for the NARROWEST supported phone. Every current
    iPhone is 393px or wider and has measured room the 375px squeeze was denying

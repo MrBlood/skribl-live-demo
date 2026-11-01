@@ -322,6 +322,14 @@ function startDraw(e) {
     const _shapePop = document.getElementById('shapePop');
     if (_shapePop && !_shapePop.hidden) _shapePop.hidden = true;
   }
+  // TEXT (editor_text.js, lib/textwrite.js): the press says WHERE the words
+  // go, and the typing sheet comes up. Nothing is drawn and no take is armed
+  // until Write it; above the auto-arm for that reason, below the lock so a
+  // finished take refuses it as it refuses the pen.
+  if (window.SkriblTextTool && window.SkriblTextTool.wants()) {
+    window.SkriblText.place(getPos(e));
+    return;
+  }
   // Auto-arm: on a blank, unlocked canvas the first stroke starts recording on
   // its own, so a first-time user who "just draws" still gets a replay to post
   // without knowing to press Record first. Only fires when nothing is drawn yet
@@ -484,7 +492,7 @@ function snapStrokeToFinal() {
 //
 // The axis is the CANVAS centre, so it is stable across strokes; a mirror
 // anchored to wherever the stroke began drifts and cannot be aimed.
-function commitStrokeWithMirrors() {
+function commitStrokeWithMirrors(plain) {
   if (!recording || currentStroke.length === 0) {
     // A stroke laid while NOT recording never enters `strokes` — its pixels
     // live only on the canvas, so history states must carry real snapshots
@@ -495,7 +503,8 @@ function commitStrokeWithMirrors() {
   }
   strokes = strokes.concat(currentStroke);
   strokeGroups.push(currentStroke.length);
-  if (window.SkriblMirror && SkriblMirror.active()) {
+  // `plain`: Text's strokes (editor_text.js). Mirrored words read backwards.
+  if (!plain && window.SkriblMirror && SkriblMirror.active()) {
     const { width: cw, height: ch } = getCanvasLogicalSize();
     const n = SkriblMirror.count();
     for (let r = 0; r < n; r++) {
