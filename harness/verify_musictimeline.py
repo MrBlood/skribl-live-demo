@@ -186,6 +186,16 @@ SET = """(o) => { if ('tempo' in o) musicTempo = o.tempo; if ('s' in o) { trimSt
 # The view as painted (the time at the left edge, the seconds across), the
 # stage's box, and each handle's line on screen.
 VIEW = "() => (document.getElementById('musicTimeline').dataset.view || '').split(' ').map(Number)"
+# THE VIEW AT REST. It eases toward where it belongs, each frame counted as
+# 64ms at most (lib/musictimeline.js, so a frame after a long pause does not
+# jump), so where frames come further apart than that the glide takes longer
+# than it does here. A row about where the view LANDS reads it once it has
+# stopped: the same reading three frames running, or after 4s. (Main red
+# after #709, the postgres machines: at 512x the view was read 3px short of
+# where it settles, 500ms after the step.)
+SETTLED = """() => new Promise(done => { const el = document.getElementById('musicTimeline'); let last = el.dataset.view, n = 0; const t0 = performance.now();
+  (function tick() { const v = el.dataset.view; n = v === last ? n + 1 : 0; last = v;
+    if (n >= 3 || performance.now() - t0 > 4000) done(v); else requestAnimationFrame(tick); })(); })"""
 BOX = """(s) => { const r = document.querySelector(s).getBoundingClientRect(); return { x: r.left, y: r.top, w: r.width, h: r.height }; }"""
 HANDS = """() => ['tlStart', 'tlEnd'].map((id) => { const r = document.getElementById(id).getBoundingClientRect(); return +(r.left + r.width / 2).toFixed(2); })"""
 # What a canvas recorded it painted (each keeps it on its root as it paints).
@@ -660,7 +670,8 @@ with sync_playwright() as p:
         for k in range(len(LADDER) - 1):
             if not press(pg, "#musicTlIn"):
                 break
-            pg.wait_for_timeout(500)
+            pg.wait_for_timeout(120)
+            pg.evaluate(SETTLED)
             said.append(pg.evaluate(MAG)); views.append(pg.evaluate(VIEW)); loops.append(pg.evaluate(TRIM))
         for k in range(len(views)):
             press(pg, "#musicTlOut"); pg.wait_for_timeout(80)
@@ -857,7 +868,7 @@ with sync_playwright() as p:
             pg.evaluate(SET, {"s": 0.0, "e": 2.0, "xf": 0, "tempo": None})
             into_view(pg, "#musicTimeline")
             pg.wait_for_timeout(600)
-            mag_to(pg, "2\u00d7"); pg.wait_for_timeout(800)
+            mag_to(pg, "2\u00d7"); pg.wait_for_timeout(800); pg.evaluate(SETTLED)
             w, v0 = pg.evaluate(BOX, "#musicTlStage")["w"], pg.evaluate(VIEW)
             d = pg.evaluate("() => audioDuration")
             # The end touched at 1x, where it is in view, then zoomed in again.
@@ -865,9 +876,9 @@ with sync_playwright() as p:
             pg.evaluate(SET, {"s": d - 2.0, "e": d}); pg.wait_for_timeout(800)
             he = pg.evaluate(BOX, "#tlEnd")
             pg.mouse.click(he["x"] + he["w"] / 2, he["y"] + he["h"] / 2); pg.wait_for_timeout(400)
-            mag_to(pg, "2\u00d7"); pg.wait_for_timeout(800)
+            mag_to(pg, "2\u00d7"); pg.wait_for_timeout(800); pg.evaluate(SETTLED)
             v1, t1 = pg.evaluate(VIEW), pg.evaluate(TRIM)
-            pg.evaluate(SET, {"s": d / 2 - 1.0, "e": d / 2 + 1.0}); pg.wait_for_timeout(800)
+            pg.evaluate(SET, {"s": d / 2 - 1.0, "e": d / 2 + 1.0}); pg.wait_for_timeout(800); pg.evaluate(SETTLED)
             v2 = pg.evaluate(VIEW)
             room0, room1 = 12 / w * v0[1], 12 / w * v1[1]
             check(f"{_n} ({label}): zoomed in, the box stays inside the song: at 0:00 it starts 12px before it, at the song's end it ends 12px past it, and mid-song the end is in the middle",
