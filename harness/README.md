@@ -221,8 +221,8 @@ stays a sleep.
   How it works rises in with no frame jumping, and opening it does not work
   the page's style out again for every entry (counted by the browser, so a
   busy runner cannot decide it). Every example is drawn through the real editor by
-  `tools/make_art.py` (Pad: the tool cards, the quick start's Draw card and
-  Ideas to try) and `tools/make_flip.py` (Flip loops): an illustrator's
+  `tools/make_art.py` (Pad: the tool cards, Text's words written by the Text
+  tool itself, the quick start's Draw card and Ideas to try) and `tools/make_flip.py` (Flip loops): an illustrator's
   strokes, `tools/artworks.py` and `tools/flipworks.py`, performed as real pen
   input by `tools/artdraw.py` on `tools/handmotion.py`'s hand;
   `tools/review_art.py` shows each in the player before it ships. The clips

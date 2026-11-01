@@ -1629,8 +1629,10 @@ one door to Your hand (Make yours, Edit your hand; Ready's Write with it
 comes back), the owner's set as Skribl until the redrawn one. (5) **Text on
 the phone, built** (DECISIONS, after v330, "Text on the phone"): picking Text
 opens the sheet; while typing, the sheet sits on the keyboard, just the words
-and Write it; the done key puts the keyboard away. (6) **Next:** an example
-for Text in How it works. Skribl takes the owner's redrawn letters as they
+and Write it; the done key puts the keyboard away. (6) **An example for
+Text in How it works, built** (DECISIONS, after v330, "Text's example"): a
+speech bubble drawn with the pen, "hello!" written in it by the Text tool in
+Skribl's lettering, then a heart, on both editors. Skribl takes the owner's redrawn letters as they
 send them (a saved copy of their hand; c, s, S, 8 and 9 so far).
 
 ## 7. The honest state

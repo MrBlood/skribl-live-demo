@@ -11,6 +11,9 @@ this holds the cards to what they claim, on both editors:
      THE CARD THAT WAVES draws the card, then Blooby, then loops his wave
      Forever (owner: "draw blooby on slide 1 too, then make him wave in a
      loop"), read off the example itself.
+     THE TEXT EXAMPLE'S WORDS are the Text tool's own: "hello!" in Skribl's
+     lettering at L and 1x, point for point and moment for moment, where
+     make_art.py placed them in the bubble.
   2. EVERY TOOL HAS ONE. Each tool in Pad's dock has a card with Try it; on
      Flip, each tool Flip shares with Pad does (Flip's own tools arrive with
      their examples in the next change, and this census grows to all of them).
@@ -227,6 +230,40 @@ def scroll_all(pg):
         if done:
             break
     pg.wait_for_timeout(1200)
+
+# ---- 1d. the Text example's words are the Text tool's own ---------------------
+# How it works' Text card (the owner: "1 2 and 3", the second an example for
+# Text) is a speech bubble drawn with the pen, then "hello!" written in it by
+# the Text tool, in Skribl's lettering at L and the hand's own pace (1x), then
+# a heart (harness/tools/make_art.py write_words). Asked of the example: its
+# ink strokes are the plan the Text tool makes of those words today, point
+# for point and moment for moment, placed where make_art put them. Words
+# drawn by hand, a size or speed other than said, or a lettering since
+# changed (Skribl's c, s, S, 8 and 9 were redrawn after #723) all differ.
+print("\nTHE TEXT EXAMPLE -- its words written by the Text tool")
+TX = json.loads((DEMOS / "text.json").read_text())["frames"][0]
+_i, _ink = 0, []
+for _n in TX["strokeGroups"]:
+    _g, _i = TX["strokes"][_i:_i + _n], _i + _n
+    if _g[0]["color"] == "#1f1b2e":
+        _ink.append(_g)
+with sync_playwright() as p:
+    b = p.chromium.launch()
+    pg = b.new_page()
+    browsing.goto(pg, BASE, "/skribl-pad")
+    plan = pg.evaluate("""async () => { const f = await SkriblText.load('skribl'), pr = await SkriblText.load('print');
+        const p = SkriblText.makePlan({ text: 'hello!', font: f, print: pr, size: 'L', speed: SkriblText.SPEEDS.indexOf(1),
+                                        canvas: { width: 816, height: 612 }, pen: { size: 9, color: '#1f1b2e' } });
+        return p && p.strokes; }""")
+    b.close()
+_dx = _dt = float("inf")
+if plan and len(plan) == len(_ink) and all(len(a) == len(c) for a, c in zip(plan, _ink)):
+    _t0 = _ink[0][0]["t"] - plan[0][0]["t"]
+    _dx = max(math.dist((q["x"] + 408, q["y"] + 290), (r["x"], r["y"])) for a, c in zip(plan, _ink) for q, r in zip(a, c))
+    _dt = max(abs(q["t"] + _t0 - r["t"]) for a, c in zip(plan, _ink) for q, r in zip(a, c))
+check("text.json: its dark ink is \"hello!\" as the Text tool writes it in Skribl's lettering at L, 1x, placed in the bubble",
+      _dx < 0.6 and _dt <= 2,
+      f"{len(_ink)} ink strokes against the plan's {len(plan or [])}; farthest point {_dx:.2f} px, latest moment {_dt} ms")
 
 with sync_playwright() as p:
     b = p.chromium.launch()

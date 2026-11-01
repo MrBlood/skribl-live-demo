@@ -28530,3 +28530,36 @@ loop's top.
   not touched, since CI has not shown it again.
 
 WHAT IT DOES TO FLIP: shared (lib/musicdrawer.js runs both editors' click).
+
+## After v330 -- Text's example: "hello!" writes itself in a bubble
+
+The owner asked what was left and said "1 2 and 3"; the second was an example
+for Text in How it works, where every tool but Text had one to watch.
+
+- WHAT IT IS: a real Skribl, drawn through the Pad by make_art.py. A speech
+  bubble in Skribl purple, its round in one confident line and its tail a V;
+  then "hello!" written in it by the Text tool itself (Shape's picker, Text,
+  the words typed, Skribl's lettering, L, 1x, placed in the bubble's middle,
+  Write it), so the replay writes the words again at the hand's own pace;
+  then a small pink heart, last. Three colours on paper, about 13 seconds,
+  one idea. The card sits after Shape in "Watch an example", on both
+  editors: "Words that write themselves, in Skribl's hand or your own."
+- THE WINDOW IS TALLER for this drawing (1280 x 1600): the Text sheet keeps
+  words clear of itself (lib/textwrite.js clampAnchor), and in make_art's
+  usual 960 it rested over the canvas's lower part and lifted "hello!" 24 px
+  out of the bubble's middle. Found by the check below, not by eye.
+- THE CHECK: verify_helpdemos 1d holds the example's dark ink to the plan the
+  Text tool makes of "hello!" today (Skribl, L, 1x, the pen's 9), point for
+  point and moment for moment, at the place make_art put it. Calibrated on a
+  trimmed copy against three copies of the file: the words moved 2 px (red,
+  2.00 px), written half as fast again (red, 2291 ms), a hand's wobble of
+  about a pixel (red, 1.27 px); the real file green (0.01 px, 0 ms). A
+  Skribl lettering redrawn later turns it red too, which is the moment to
+  draw the example again (`make_art.py text`).
+
+WHAT IT DOES TO FLIP: shared: How it works is one template, and the same
+example plays on both (the Pad's drawing, as Recolor's is).
+
+THE FOUR: playful (a bubble that says hello to you); simple (one idea, three
+colours, empty paper round it); kind; powerful (the words are the tool's own,
+so what you watch is what Text does).
