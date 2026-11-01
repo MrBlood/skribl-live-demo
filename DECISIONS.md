@@ -28677,3 +28677,39 @@ THE FOUR: kind (the drawing stays its size, and you see where the words
 will land before Write it); simple (the bar is the one typing shows);
 playful (the sheet gets out of the way as you reach for the words);
 powerful (words anywhere, on every screen).
+
+## After v330 -- The music and photo drawers' eight cards
+
+Call 3 of the help cards (FUTURE.md 6aa). The words were mocked on the real
+card, Pad and Flip, phone and desk, light and dark: every card whole and
+clear of its button, every word 8.3:1 or more, every row one line in Inter
+and Liberation Sans. The owner: "All yes" to the words, to "Beat click" as
+the metronome's name, to a grey button's card opening on a hold, and to an
+example in each, next.
+
+- THE EIGHT: Hear the loop, the Beat click, Snap to the beat, the four
+  doors (Length, Beat, Restart, Exact times) and Add a photo, in the mock's
+  words; Flip's say "animation" where the Pad's say "drawing", and its photo
+  goes "behind every page". A hold opens the card and presses nothing: no
+  loop plays, no door opens, Snap and the click keep their state, no file
+  picker opens. Add a photo plays How it works' photo recording on the Pad;
+  Flip's How it works has none yet, so its card has none until the examples.
+- A GREY BUTTON'S CARD OPENS ON A HOLD TOO. The mock found a desk's rest
+  opened a grey button's card and a phone's hold did not (lib/learncard.js
+  skipped a disabled button on pointerdown). Snap and the click are grey
+  until there is a beat, and a grey button is where someone asks why; the
+  click's card says "Grey: waiting for a beat". On this box's Chromium a
+  finger reaches a grey button; an iPhone's Safari is not tested here.
+
+THE CHECKS: verify_learncard 14, eleven rows on both editors, a song loaded
+with Skribl's ears off so the grey state is there to hold. Calibrated: the
+cards taken out, every card row red (9 of 11; a quick tap still a tap);
+the grey skip put back, the grey rows alone; a word changed, the words row;
+the lift's press let through, the presses-nothing row.
+
+WHAT IT DOES TO FLIP: shared (one card module, one music drawer).
+
+THE FOUR: kind (a hold never plays music, opens a door or a file picker, and
+a grey button says what it waits for); simple (the same card everywhere);
+playful ("just the music, round and round"); powerful (the deepest drawer
+explains itself).
