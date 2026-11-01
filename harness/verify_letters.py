@@ -35,12 +35,26 @@ all", then "Yes" to the Your hand mock). Each row holds a promise:
      Pad's letter keys (the eraser, the pen's size) do nothing here.
  11. THE FIRST 30, AND READY: the letters come a to z, then . , ! ?; the
      30th opens Ready, once; Add the rest goes on with A, 31 of 92.
- 12. THE TILES: every letter in its group with its count; tap one to draw it
-     again, the old one faint behind it and kept until Done (Cancel keeps
-     it); tap a + to add one.
+ 12. THE TILES: every letter in its group with its count; tap one to change
+     it, as ink (Cancel keeps it as it was; Done keeps a stroke added to it;
+     Redo and a stroke draw it again); tap a + to add one.
  13. A COPY, AND STARTING OVER: Save a copy makes a file with every letter;
      Start over clears them and Undo brings them back; Open a copy puts a
      saved hand back; a file that is not a hand changes nothing, and says so.
+ 14. CHANGING A LETTER (the owner's "All yes" to the change-a-letter mock):
+     the letter comes up as ink, where and when it was drawn, with Eraser and
+     Guide in Finish later's place; Guide puts the font under it, gliding in
+     (read on every frame), kept for the next letter; the eraser's size takes
+     the line's place with the panel's height kept; a rub takes the ink
+     inside its path and nothing else (its points, and the canvas's pixels),
+     cutting a line in two, every point left keeping its time; the ring is at
+     the press at its real size (and over a desk's letter before a press);
+     a pinch gives back what the first finger rubbed out; the size by its
+     slider and by [ ], kept on this device; Redo clears the letter and
+     leaves the guide with the pen ready, its Undo brings it back; Cancel
+     keeps the letter as it was, Done as it stands, and unchanged leaves it
+     as kept; a hand from another screen is fitted to this one's guides; the
+     tools only while changing; an accent keeps its own letter under it.
 
 For calibration, LETTERS_PART=<words of a part's label> runs that part alone.
 A real run sets none.
@@ -640,7 +654,24 @@ with sync_playwright() as p:
         PAGE = [["ptitle", ".lt-ptitle"], ["psub", ".lt-psub"], ["done", ".lt-pdone"], ["primary", ".lt-primary"], ["second", ".lt-second"],
                 ["link", ".lt-link"], ["head", ".lt-gh"], ["count", ".lt-gh span"], ["tile", ".lt-tile:not(.empty)"], ["intro", ".lt-intro p"],
                 ["small", ".lt-small"], ["step", ".lt-steps li"], ["num", ".lt-steps i"]]
-        TAPS = "() => [...document.querySelectorAll('.lt-page button, .lt-btn, .lt-later')].filter(b => b.checkVisibility()).map(b => { const r = b.getBoundingClientRect(); return Math.min(r.width, r.height); })"
+        TAPS = "() => [...document.querySelectorAll('.lt-page button, .lt-btn, .lt-later, .lt-tool, .lt-size .slider')].filter(b => b.checkVisibility()).map(b => { const r = b.getBoundingClientRect(); return Math.min(r.width, r.height); })"
+        # Changing a letter: on is a see-through tint over the bar, so what is
+        # behind a word is each ground laid over the one under it.
+        RATIOS2 = """([LUM, sels]) => { const lum = eval(LUM);
+          const rgba = (c) => { const m = (c.match(/[\\d.]+/g) || []).map(Number); return [m[0] || 0, m[1] || 0, m[2] || 0, m.length > 3 ? m[3] : 1]; };
+          const ground = (el) => { const stack = [];
+            for (let e = el; e; e = e.parentElement) { const c = rgba(getComputedStyle(e).backgroundColor);
+              if (c[3] > 0) { stack.push(c); if (c[3] >= 0.999) break; } }
+            let out = [255, 255, 255];
+            for (let i = stack.length - 1; i >= 0; i--) { const c = stack[i]; out = out.map((v, j) => v * (1 - c[3]) + c[j] * c[3]); }
+            return 'rgb(' + out.map(Math.round).join(',') + ')'; };
+          const out = {};
+          for (const [k, sel] of sels) { const el = document.querySelector(sel); if (!el) continue;
+            const a = lum(getComputedStyle(el).color), g = lum(ground(el)), r = el.getBoundingClientRect();
+            out[k] = { ratio: (Math.max(a, g) + 0.05) / (Math.min(a, g) + 0.05), h: r.height, w: r.width }; }
+          return out; }"""
+        TOOLS = [["eraser", "#ltEraser"], ["guide", "#ltGuide"]]
+        TOOLS_ON = TOOLS + [["size", "#ltEraserSizeLabel"], ["size value", "#ltEraserSizeOut"]]
         for dev_name, dev in (("phone", PHONE), ("desk", DESK)):
             for theme in ("light", "dark"):
                 words, taps = {}, []
@@ -668,6 +699,15 @@ with sync_playwright() as p:
                 c, q = open_sheet(b, theme=theme, dev=dev, seed=synth_set(BOX, LN, only=QUICK))
                 q.wait_for_function("() => SkriblLetters.view() === 'tiles'")
                 words.update({"tiles " + k: v for k, v in q.evaluate(RATIOS, [LUM, PAGE]).items()})
+                taps += q.evaluate(TAPS)
+                # Changing a letter: Eraser and Guide off, then on, and the eraser's size.
+                q.click(".lt-tile[data-id='a']")
+                q.wait_for_function(DRAWING)
+                words.update({"change " + k: v for k, v in q.evaluate(RATIOS2, [LUM, TOOLS]).items()})
+                q.click("#ltEraser")
+                q.click("#ltGuide")
+                q.wait_for_timeout(300)
+                words.update({"change on " + k: v for k, v in q.evaluate(RATIOS2, [LUM, TOOLS_ON]).items()})
                 taps += q.evaluate(TAPS)
                 c.close()
                 low = {k: round(v["ratio"], 1) for k, v in words.items() if v["ratio"] < 4.5}
@@ -750,22 +790,15 @@ with sync_playwright() as p:
               t["tiles"] == 92 and t["empty"] == 0 and t["drawn"] == 92 and t["heads"][0] == "Letters26 of 26"
               and len(t["heads"]) == 7 and t["sub"].startswith("92 of 92"), json.dumps(t)[:220])
         before = stored(q, "g")
+        label = q.evaluate("document.querySelector('.lt-tile[data-id=\"g\"]').getAttribute('aria-label')")
         q.click(".lt-tile[data-id='g']")
         q.wait_for_function(DRAWING)
         q.wait_for_timeout(200)
         one = q.evaluate("""() => ({ mode: SkriblLetters.mode(), n: strokes.length, sub: document.getElementById('ltSub').textContent,
-          buttons: [...document.querySelectorAll('.lt-btn')].map(b => b.textContent + (b.disabled ? ' (off)' : '')),
-          ghost: (() => { const g = document.getElementById('ltGuides'), d = g.getContext('2d').getImageData(0, 0, g.width, g.height).data;
-            // The old letter's faint ink, read AWAY from the guide lines, which
-            // are as faint (a count across them passed with no letter there).
-            const L = SkriblLetters, b = L.box(), ln = L.lines(), lg = getCanvasLogicalSize(), ky = g.height / lg.height;
-            const ys = Object.values(ln).map(f => (b.y + f * b.h) * ky);
-            let n = 0; for (let y = 0; y < g.height; y++) { if (ys.some(v => Math.abs(v - y) < 5)) continue;
-              for (let x = 0; x < g.width; x += 2) { const a = d[(y * g.width + x) * 4 + 3]; if (a > 70 && a < 140) n++; } }
-            return n; })() })""")
-        check("tap g: it waits to be drawn again, the old one faint behind it, Redo, Cancel, Done",
-              one["mode"] == "one" and one["n"] == 0 and one["sub"].startswith("g · draw it again")
-              and one["buttons"] == ["Redo (off)", "Cancel", "Done (off)"] and one["ghost"] > 200, json.dumps(one))
+          buttons: [...document.querySelectorAll('.lt-btn')].map(b => b.textContent + (b.disabled ? ' (off)' : '')) })""")
+        check("tap g ('Change g'): it comes up as ink to change, with Redo, Cancel and Done",
+              label == "Change g" and one["mode"] == "one" and one["n"] == len(before["p"]) and one["sub"].startswith("g · change it")
+              and one["buttons"] == ["Redo", "Cancel", "Done"], f"{label}: " + json.dumps(one))
         a_line(q)
         kept_mid = stored(q, "g") == before
         q.click("#ltBack")
@@ -777,7 +810,17 @@ with sync_playwright() as p:
         q.click("#ltNext")
         q.wait_for_function("() => SkriblLetters.view() === 'tiles'")
         after = stored(q, "g")
-        check("Done keeps the new g", after and after != before and len(after["n"]) == 1, after and f"strokes {after['n']}")
+        check("Done keeps the g with the stroke added to it", after and len(after["n"]) == len(before["n"]) + 1
+              and after["p"][:len(before["p"])] == before["p"], after and f"strokes {before['n']} -> {after['n']}")
+        q.click(".lt-tile[data-id='g']")
+        q.wait_for_function(DRAWING)
+        q.click("#ltRedo")
+        q.wait_for_timeout(300)
+        a_line(q)
+        q.click("#ltNext")
+        q.wait_for_function("() => SkriblLetters.view() === 'tiles'")
+        again = stored(q, "g")
+        check("Redo, a stroke, Done: the g drawn again is the one kept", again and len(again["n"]) == 1, again and f"strokes {again['n']}")
         c.close()
         thirty = synth_set(BOX, LN, only=QUICK)
         c, q = open_sheet(b, seed=thirty)
@@ -828,6 +871,300 @@ with sync_playwright() as p:
         check("a file that isn't a hand changes nothing, and says so",
               stored(q)["g"] == full_set["g"] and "isn’t a copy of a hand" in said, said)
         c.close()
+
+    # ------------------------------------------------------------------ 14
+    if part("LETTERS 14 — changing a letter"):
+        full_set = synth_set(BOX, LN)
+        # What is painted under the ink: the font (a fill near 11-13% alpha) and
+        # a letter faint (38-42%), read away from the guide lines.
+        UNDER = """() => { const g = document.getElementById('ltGuides'), d = g.getContext('2d').getImageData(0, 0, g.width, g.height).data;
+          const L = SkriblLetters, b = L.box(), ln = L.lines(), lg = getCanvasLogicalSize(), ky = g.height / lg.height;
+          const ys = Object.values(ln).map(f => (b.y + f * b.h) * ky);
+          let font = 0, faint = 0;
+          for (let y = 0; y < g.height; y++) { if (ys.some(v => Math.abs(v - y) < 5)) continue;
+            for (let x = 0; x < g.width; x += 2) { const a = d[(y * g.width + x) * 4 + 3];
+              if (a > 14 && a < 50) font++; else if (a > 70 && a < 140) faint++; } }
+          return { font, faint }; }"""
+        STATE = """() => ({ n: strokes.length, g: strokeGroups.slice(), pts: strokes.map(p => [p.x, p.y, p.size, p.t]),
+          tools: !document.getElementById('ltTools').hidden, later: !document.getElementById('ltLater').hidden,
+          er: document.getElementById('ltEraser').getAttribute('aria-pressed'), gu: document.getElementById('ltGuide').getAttribute('aria-pressed'),
+          size: !document.getElementById('ltSizeRow').hidden, line: !document.getElementById('ltPreview').hidden,
+          foot: document.getElementById('ltFoot').getBoundingClientRect().height, sub: document.getElementById('ltSub').textContent,
+          eraser: SkriblLetters.eraser(), guide: SkriblLetters.guide() })"""
+        # A screen point for a point in canvas units, and back.
+        TO_SCREEN = """([x, y]) => { const r = canvas.getBoundingClientRect(), lg = getCanvasLogicalSize();
+          return [r.left + x * r.width / lg.width, r.top + y * r.height / lg.height]; }"""
+        TO_CANVAS = """([x, y]) => { const r = canvas.getBoundingClientRect(), lg = getCanvasLogicalSize();
+          return [(x - r.left) * lg.width / r.width, (y - r.top) * lg.height / r.height]; }"""
+
+        def open_letter(q, bid):
+            q.click(f".lt-tile[data-id='{bid}']")
+            q.wait_for_function(DRAWING)
+            q.wait_for_timeout(200)
+
+        def stem_rub(q, bid):
+            """A rub across the stem of a synth letter (its second stroke), left to right, high
+            on it, above the bowl the stem meets, so the stem is the one line it crosses."""
+            g = stored(q, bid)
+            n0 = g["n"][0]
+            stem = g["p"][n0:n0 + g["n"][1]]
+            mx, my = stem[len(stem) // 7][0], stem[len(stem) // 7][1]
+            a = q.evaluate(TO_SCREEN, [mx - 40, my])
+            z = q.evaluate(TO_SCREEN, [mx + 40, my])
+            return a, z, (mx - 40, my), (mx + 40, my)
+
+        def dist_seg(px, py, a, z):
+            dx, dy = z[0] - a[0], z[1] - a[1]
+            L = dx * dx + dy * dy
+            t = max(0.0, min(1.0, ((px - a[0]) * dx + (py - a[1]) * dy) / L)) if L else 0.0
+            return math.hypot(a[0] + dx * t - px, a[1] + dy * t - py)
+
+        # 1. Tap a letter: ink, as drawn in this box; the tools in Finish later's place.
+        c, q = open_sheet(b, seed=full_set)
+        q.wait_for_function("() => SkriblLetters.view() === 'tiles'")
+        before = stored(q, "l")
+        open_letter(q, "l")
+        o = q.evaluate(STATE)
+        same = o["g"] == before["n"] and all(abs(u[0] - v[0]) < 0.01 and abs(u[1] - v[1]) < 0.01 and u[3] == v[3]
+                                             for u, v in zip(o["pts"], before["p"]))
+        check("tap l: it comes up as ink, every point where and when it was drawn, to change",
+              same and o["n"] == len(before["p"]) and o["sub"].startswith("l · change it"), json.dumps({k: o[k] for k in ("n", "g", "sub")}))
+        check("Eraser and Guide, both off, in Finish later's place; the line where it was",
+              o["tools"] and not o["later"] and o["er"] == "false" and o["gu"] == "false" and o["line"] and not o["size"],
+              json.dumps({k: o[k] for k in ("tools", "later", "er", "gu", "line", "size")}))
+        u0 = q.evaluate(UNDER)
+        check("with Guide off, nothing is under the letter but the lines", u0["font"] < 60 and u0["faint"] < 60, json.dumps(u0))
+
+        # 2. Guide: the font under it, gliding in, and kept for the next letter.
+        # Read on every frame, with the time it was read: a glide over a fifth
+        # of a second never moves faster than its own ease allows (twice its
+        # mean pace at the start), however slow the frames come.
+        q.evaluate("""() => { window.__gk = []; const t0 = performance.now();
+          (function f() { window.__gk.push([performance.now(), SkriblLetters.guide().k]); if (performance.now() - t0 < 450) requestAnimationFrame(f); })(); }""")
+        q.click("#ltGuide")
+        q.wait_for_timeout(500)
+        tk = q.evaluate("window.__gk")
+        gk = [k for _, k in tk]
+        u1 = q.evaluate(UNDER)
+        steps = [round(b2 - a2, 3) for a2, b2 in zip(gk, gk[1:])]
+        too_fast = [(round(t2 - t1, 1), round(k2 - k1, 3)) for (t1, k1), (t2, k2) in zip(tk, tk[1:]) if abs(k2 - k1) > (t2 - t1) / 200 * 2 + 0.05]
+        between = [k for k in gk if 0.05 < k < 0.95]
+        check("Guide puts the font under the letter, where it was the first time",
+              u1["font"] > 400 and q.evaluate(STATE)["gu"] == "true", json.dumps(u1))
+        check("and it glides in, read on every frame: rising, through the middle, never faster than its glide",
+              gk and gk[-1] == 1 and between and all(s >= 0 for s in steps) and not too_fast,
+              f"{len(gk)} frames, {len(between)} between, too fast {too_fast[:3]}")
+        q.click("#ltBack")
+        q.wait_for_function("() => SkriblLetters.view() === 'tiles'")
+        open_letter(q, "h")
+        o2 = q.evaluate(STATE)
+        check("Guide stays as it was left, for the next letter changed (this device)",
+              o2["gu"] == "true" and q.evaluate(UNDER)["font"] > 400
+              and q.evaluate("(JSON.parse(localStorage.getItem('skribl.letters.prefs')) || {}).guide") is True, o2["gu"])
+        q.click("#ltGuide")
+        q.wait_for_timeout(400)
+        check("and Guide off takes it away", q.evaluate(UNDER)["font"] < 60, json.dumps(q.evaluate(UNDER)))
+        q.click("#ltBack")
+        q.wait_for_function("() => SkriblLetters.view() === 'tiles'")
+        c.close()
+
+        # 3. The eraser: what is inside its circle goes, and nothing else.
+        c, q = open_sheet(b, seed=full_set)
+        q.wait_for_function("() => SkriblLetters.view() === 'tiles'")
+        before = stored(q, "l")
+        open_letter(q, "l")
+        foot0 = q.evaluate(STATE)["foot"]
+        q.click("#ltEraser")
+        q.wait_for_timeout(150)
+        e1 = q.evaluate(STATE)
+        check("Eraser on: its size takes the line's place, and the panel keeps its height",
+              e1["er"] == "true" and e1["size"] and not e1["line"] and abs(e1["foot"] - foot0) < 0.5
+              and q.evaluate("document.getElementById('ltEraserSizeOut').textContent") == "22 px",
+              f"foot {foot0} -> {e1['foot']}, size row {e1['size']}, line {e1['line']}")
+        a, z, ca, cz = stem_rub(q, "l")
+        q.mouse.move(*a)
+        q.mouse.down()
+        steps_n = 12
+        for i in range(1, steps_n + 1):
+            q.mouse.move(a[0] + (z[0] - a[0]) * i / (steps_n * 2), a[1])
+            q.wait_for_timeout(12)
+        ring = q.evaluate("""() => { const r = document.querySelector('.lt-ring'), b = r.getBoundingClientRect();
+          return { shown: !r.hidden && getComputedStyle(r).display !== 'none', cx: b.left + b.width / 2, cy: b.top + b.height / 2, d: b.width }; }""")
+        here = (a[0] + (z[0] - a[0]) / 2, a[1])
+        check("while it rubs, the ring is at the press, its real size (22 px at the drawing's fit)",
+              ring["shown"] and abs(ring["cx"] - here[0]) < 1.5 and abs(ring["cy"] - here[1]) < 1.5 and abs(ring["d"] - 22) < 1,
+              json.dumps({k: round(v, 1) if isinstance(v, float) else v for k, v in ring.items()}) + f" at {[round(v, 1) for v in here]}")
+        for i in range(steps_n + 1, 2 * steps_n + 1):
+            q.mouse.move(a[0] + (z[0] - a[0]) * i / (steps_n * 2), a[1])
+            q.wait_for_timeout(12)
+        q.mouse.up()
+        q.wait_for_timeout(150)
+        e2 = q.evaluate(STATE)
+        R = e2["eraser"]["r"]
+        inside = [p2 for p2 in e2["pts"] if dist_seg(p2[0], p2[1], ca, cz) < R + p2[2] / 2 - 0.05]
+        far = [p2 for p2 in before["p"] if dist_seg(p2[0], p2[1], ca, cz) > R + 12]
+        kept = {(round(p2[0], 2), round(p2[1], 2), p2[3]) for p2 in e2["pts"]}
+        far_kept = all((round(p2[0], 2), round(p2[1], 2), p2[3]) in kept for p2 in far)
+        check("the rub cut the stem in two: no ink left inside its path, every line outside it as it was",
+              not inside and far_kept and len(e2["g"]) == len(before["n"]) + 1 and e2["n"] < len(before["p"]),
+              f"inside {len(inside)}, far kept {far_kept}, lines {before['n']} -> {e2['g']}, points {len(before['p'])} -> {e2['n']}")
+        # The canvas is the points: nothing painted inside the path (short of its edge).
+        clear = q.evaluate("""([a, z, R]) => { const d = ctx.getImageData(0, 0, canvas.width, canvas.height).data, lg = getCanvasLogicalSize();
+          const k = canvas.width / lg.width; let ink = 0, seen = 0;
+          for (let t = 0; t <= 1; t += 0.02) for (let oy = -R + 1.5; oy <= R - 1.5; oy += 1) {
+            const x = Math.round((a[0] + (z[0] - a[0]) * t) * k), y = Math.round((a[1] + oy) * k); seen++;
+            if (d[(y * canvas.width + x) * 4 + 3] > 24) ink++; }
+          return { ink, seen }; }""", [list(ca), list(cz), R])
+        check("and the canvas shows it: nothing painted inside the eraser's path", clear["ink"] == 0 and clear["seen"] > 100, json.dumps(clear))
+        times_ok, k = True, 0
+        for n in e2["g"]:
+            ts = [e2["pts"][k + j][3] for j in range(n)]
+            k += n
+            if any(t2 < t1 for t1, t2 in zip(ts, ts[1:])):
+                times_ok = False
+        orig_t = sorted(p2[3] for p2 in before["p"])
+        new_t = [p2[3] for p2 in e2["pts"]]
+        check("every point left keeps the time it was drawn at; the cut ends fall between their neighbours'",
+              times_ok and min(new_t) >= orig_t[0] and max(new_t) <= orig_t[-1]
+              and sum(1 for t in new_t if t in set(orig_t)) >= len(new_t) - 2 * (len(e2["g"]) - len(before["n"]) + 1),
+              f"{len(new_t)} points, times {min(new_t)}..{max(new_t)} of {orig_t[0]}..{orig_t[-1]}")
+
+        # 4. A pinch while rubbing: what that finger rubbed out comes back.
+        pre = q.evaluate(STATE)
+        g = stored(q, "l")
+        a2 = q.evaluate(TO_SCREEN, [ca[0], ca[1] - 60])
+        z2 = q.evaluate(TO_SCREEN, [cz[0], cz[1] - 60])
+        q.mouse.move(*a2)
+        q.mouse.down()
+        for i in range(1, 13):
+            q.mouse.move(a2[0] + (z2[0] - a2[0]) * i / 12, a2[1])
+            q.wait_for_timeout(10)
+        mid = q.evaluate(STATE)
+        q.evaluate("pinching = true")
+        q.mouse.move(z2[0] + 4, z2[1])
+        q.wait_for_timeout(60)
+        back = q.evaluate(STATE)
+        q.evaluate("pinching = false")
+        q.mouse.up()
+        q.wait_for_timeout(100)
+        check("a second finger is a pinch: what the first finger rubbed out comes back",
+              mid["n"] != pre["n"] and back["n"] == pre["n"] and back["g"] == pre["g"],
+              f"points {pre['n']} -> {mid['n']} mid-rub -> {back['n']} at the pinch")
+
+        # 5. The size: its slider, kept on this device; [ and ] on a desk.
+        q.evaluate("() => { const s = document.getElementById('ltEraserSize'); s.value = '40'; s.dispatchEvent(new Event('input', { bubbles: true })); }")
+        q.wait_for_timeout(100)
+        sz = q.evaluate("""() => { const r = document.querySelector('.lt-ring'), b = r.getBoundingClientRect();
+          return { out: document.getElementById('ltEraserSizeOut').textContent, d: b.width, shown: !r.hidden,
+                   kept: (JSON.parse(localStorage.getItem('skribl.letters.prefs')) || {}).eraser, px: SkriblLetters.eraser().px }; }""")
+        check("the slider sizes it: 40 px, the ring shown that size on the letter, kept on this device",
+              sz["out"] == "40 px" and sz["shown"] and abs(sz["d"] - 40) < 1 and sz["kept"] == 40 and sz["px"] == 40, json.dumps(sz))
+
+        # 6. Redo: the letter goes, the guide stays, the pen is back; Undo brings it back.
+        q.click("#ltGuide")
+        q.wait_for_timeout(350)
+        n_before = q.evaluate("strokes.length")
+        q.click("#ltRedo")
+        q.wait_for_timeout(400)
+        r1 = q.evaluate(STATE)
+        u2 = q.evaluate(UNDER)
+        toast = q.evaluate("(() => { const t = document.getElementById('toast'); return t.hidden ? '' : t.textContent; })()")
+        check("Redo clears the letter and leaves the guide under it, with the pen ready",
+              r1["n"] == 0 and u2["font"] > 400 and r1["er"] == "false" and not r1["size"] and r1["line"] and "Cleared" in toast,
+              json.dumps({"n": r1["n"], "font": u2["font"], "eraser": r1["er"], "toast": toast}))
+        q.click("#toast .toast-action")
+        q.wait_for_timeout(300)
+        check("and its Undo brings the letter back as it stood", q.evaluate("strokes.length") == n_before,
+              f"{q.evaluate('strokes.length')} of {n_before}")
+        q.click("#ltBack")
+        q.wait_for_function("() => SkriblLetters.view() === 'tiles'")
+        check("Cancel keeps the letter as it was, after a rub, a Redo and its Undo", stored(q, "l") == before)
+        open_letter(q, "l")
+        check("Eraser starts off each time a letter opens", q.evaluate(STATE)["er"] == "false")
+        q.click("#ltEraser")
+        a, z, ca, cz = stem_rub(q, "l")
+        stroke(q, [(a[0] + (z[0] - a[0]) * i / 16, a[1]) for i in range(17)], step_ms=10)
+        q.click("#ltNext")
+        q.wait_for_function("() => SkriblLetters.view() === 'tiles'")
+        after = stored(q, "l")
+        check("Done keeps the letter as it stands, the stem cut in two",
+              after and len(after["n"]) == len(before["n"]) + 1 and len(after["p"]) < len(before["p"]),
+              after and f"lines {before['n']} -> {after['n']}")
+        open_letter(q, "h")
+        q.click("#ltNext")
+        q.wait_for_function("() => SkriblLetters.view() === 'tiles'")
+        check("Done with nothing changed leaves the letter exactly as it was kept", stored(q, "h") == full_set["g"]["h"])
+        c.close()
+
+        # 7. A desk: the ring over the letter before a press, and [ ] size it.
+        c, q = open_sheet(b, dev=DESK, seed=full_set)
+        q.wait_for_function("() => SkriblLetters.view() === 'tiles'")
+        open_letter(q, "l")
+        q.click("#ltEraser")
+        a, z, ca, cz = stem_rub(q, "l")
+        q.mouse.move(*a)
+        q.wait_for_timeout(80)
+        hov = q.evaluate("""() => { const r = document.querySelector('.lt-ring'), b = r.getBoundingClientRect();
+          return { shown: !r.hidden, cx: b.left + b.width / 2, cy: b.top + b.height / 2 }; }""")
+        n0 = q.evaluate("strokes.length")
+        q.keyboard.press("]")
+        q.keyboard.press("]")
+        k2 = q.evaluate("SkriblLetters.eraser().px")
+        q.keyboard.press("[")
+        k1 = q.evaluate("SkriblLetters.eraser().px")
+        check("on a desk the ring shows where a press would rub, before it does; [ and ] size it",
+              hov["shown"] and abs(hov["cx"] - a[0]) < 1.5 and abs(hov["cy"] - a[1]) < 1.5 and q.evaluate("strokes.length") == n0
+              and k2 == 26 and k1 == 24, f"{json.dumps(hov)}, ]] {k2}, [ {k1}")
+        c.close()
+
+        # 8. A hand opened from a copy, drawn on another screen: fitted to this box.
+        small = json.loads(json.dumps(full_set))
+        sb = [0, 0, round(BOX["w"] * 0.3, 2), round(BOX["h"] * 0.3, 2)]
+        for bid, g in small["g"].items():
+            kx = sb[2] / g["b"][2]
+            g["p"] = [[round((x - g["b"][0]) * kx, 2), round((y - g["b"][1]) * kx, 2), round(w * kx, 2), t] for x, y, w, t in g["p"]]
+            g["b"] = sb
+        c, q = open_sheet(b, seed=small)
+        q.wait_for_function("() => SkriblLetters.view() === 'tiles'")
+        open_letter(q, "l")
+        fit = q.evaluate(STATE)
+        bx = q.evaluate("SkriblLetters.box()")
+        want = full_set["g"]["l"]
+        worst = max(max(abs(u[0] - v[0]), abs(u[1] - v[1])) for u, v in zip(fit["pts"], want["p"])) if fit["n"] == len(want["p"]) else 99
+        check("a letter from a hand drawn on another screen comes back fitted to this one's guides, not small in a corner",
+              abs(bx["w"] - BOX["w"]) < 0.5 and worst < 0.2 and stored(q, "l") == small["g"]["l"],
+              f"box {round(bx['w'], 1)} of {round(BOX['w'], 1)}, worst {round(worst, 3)} from where this screen draws it")
+        # Fitting it is for the eye: Done with nothing changed keeps it as it came.
+        q.click("#ltNext")
+        q.wait_for_function("() => SkriblLetters.view() === 'tiles'")
+        check("and Done with nothing changed keeps that letter exactly as it came", stored(q, "l") == small["g"]["l"])
+        c.close()
+
+        # 9. Only while changing a letter; an accent keeps its base letter under it.
+        c, q = open_sheet(b, seed=synth_set(BOX, LN, only=QUICK))
+        q.wait_for_function("() => SkriblLetters.view() === 'tiles'")
+        open_letter(q, "Q")
+        add = q.evaluate(STATE)
+        q.click("#ltBack")
+        q.wait_for_function("() => SkriblLetters.view() === 'tiles'")
+        c.close()
+        seq = synth_set(BOX, LN, only=QUICK[:10])
+        seq.update({"mode": "seq", "at": letterfont.BOX_IDS.index("k"), "r": False})
+        c, q = open_sheet(b, seed=seq)
+        q.wait_for_function(DRAWING)
+        drawing_in_order = q.evaluate(STATE)
+        c.close()
+        check("Eraser and Guide are there only while a letter is changed: not adding one, not drawing in order",
+              not add["tools"] and add["sub"].startswith("Q · add it") and not drawing_in_order["tools"] and drawing_in_order["later"],
+              f"adding: tools {add['tools']}; in order: tools {drawing_in_order['tools']}, Finish later {drawing_in_order['later']}")
+        c, q = open_sheet(b, seed=full_set)
+        q.wait_for_function("() => SkriblLetters.view() === 'tiles'")
+        open_letter(q, "´")
+        acc = q.evaluate(UNDER)
+        check("an accent being changed keeps its own e faint under it, Guide or not", acc["faint"] > 200, json.dumps(acc))
+        errs = list(q._lt_errors)
+        c.close()
+        check("no errors on the page while letters are changed", not errs, "; ".join(errs[:3]))
 
     b.close()
 
