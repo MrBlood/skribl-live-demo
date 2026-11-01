@@ -438,21 +438,32 @@
 
   // ---- holding (touch) -----------------------------------------------------
   // HOLDING SELECTS NOTHING (the owner, on the iPhone, of Tune's rows: a held
-  // row selected its words, with Copy and Look Up beside the card). One rule,
-  // written from the cards' own list, takes selection, the system's callout
-  // and its magnifier from everything a card names, and from the tag-only
-  // ones, whose hold keeps an old job (a Flip page lifting). A rule rather
-  // than marks on elements: it matches what is built later (a Flip page is
-  // added), and it is in force before the first touch. It replaced a list of
-  // ids kept by hand in styles.css, which had the bar's buttons and not the
-  // rows, the drawer's tiles or the pages that came later.
+  // row selected its words, with Copy and Look Up beside the card). Everything
+  // a card names is marked (data-lc-hold), and so are the tag-only ones, whose
+  // hold keeps an old job (a Flip page lifting); styles.css takes selection,
+  // the system's callout and the magnifier from what is marked. Marked from
+  // the cards' own list, so a card cannot come without it: a list of ids kept
+  // by hand in styles.css had the bar's buttons and not the rows, the drawer's
+  // tiles or the pages that came later. Marked when the page is whole, and as
+  // anything is added (a Flip page), so it is marked before its first touch.
   var HOLDS = CARDS.map(function (c) { return c.sel; }).join(', ');
-  (function () {
-    var st = document.createElement('style');
-    st.id = 'lcHolds';
-    st.textContent = ':is(' + HOLDS + ') { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }';
-    (document.head || document.documentElement).appendChild(st);
-  })();
+  function markIn(root) {
+    if (!root || root.nodeType !== 1) return;
+    if (root.matches(HOLDS) && !root.hasAttribute('data-lc-hold')) root.setAttribute('data-lc-hold', '');
+    var els = root.querySelectorAll(HOLDS);
+    for (var i = 0; i < els.length; i++) if (!els[i].hasAttribute('data-lc-hold')) els[i].setAttribute('data-lc-hold', '');
+  }
+  function markAll() { markIn(document.documentElement); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', markAll);
+  else markAll();
+  if (typeof MutationObserver !== 'undefined') {
+    new MutationObserver(function (records) {
+      for (var i = 0; i < records.length; i++) {
+        var added = records[i].addedNodes;
+        for (var j = 0; j < added.length; j++) if (added[j].nodeType === 1) markIn(added[j]);
+      }
+    }).observe(document.documentElement, { childList: true, subtree: true });
+  }
   var hold = null, swallowUntil = 0;
   document.addEventListener('pointerdown', function (e) {
     if (!live) return;

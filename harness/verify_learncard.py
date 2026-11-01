@@ -48,12 +48,15 @@ Touch is real touch (CDP touch events), so the browser makes the pointer
 events a finger would. Visible means painted: elementFromPoint.
 """
 import os
+import re
 import sys
+from pathlib import Path
 
 from assertions import make_check
 import browsing
 
 BASE = os.environ.get("SKRIBL_BASE", "http://127.0.0.1:5001")
+STATIC = Path(__file__).resolve().parent.parent / "skribl" / "static"
 results = []
 check = make_check(results, detail_on_pass=False)
 
@@ -823,24 +826,29 @@ with sync_playwright() as p:
         # rows: a held row selected its words, with Copy and Look Up beside
         # the card). WebKit's press-and-hold cannot be run here, so this reads
         # what it obeys: everything a card names computes user-select: none,
-        # a Flip page added after load among them, and the rule that does it
-        # carries -webkit-touch-callout: none, which Chromium does not
-        # compute, so it is read from the rule itself.
+        # a Flip page added after load among them, and what is marked for it
+        # carries -webkit-touch-callout: none in the stylesheet, which
+        # Chromium does not compute, so it is read from the rule itself.
         def nosel():
             c, q = fresh(b, PHONE, route)
             if name == "Flip":
                 q.click("#addblank")
                 q.wait_for_timeout(400)
             r = q.evaluate("""() => { const sels = window.SkriblLearnCard.cards.map(c => c.sel).join(', ');
-              const all = [...document.querySelectorAll(sels)], st = document.getElementById('lcHolds');
-              return { n: all.length, rule: st ? st.textContent : '',
+              const all = [...document.querySelectorAll(sels)];
+              return { n: all.length,
                        loose: all.filter(el => getComputedStyle(el).userSelect !== 'none')
-                                 .map(el => el.id || (el.getAttribute('class') || '').split(' ')[0]) }; }""")
+                                 .map(el => el.id || (el.getAttribute('class') || '').split(' ')[0]),
+                       unmarked: all.filter(el => !el.hasAttribute('data-lc-hold')).length }; }""")
             check(f"{name}: everything a card names selects nothing when it is held"
                   + (", a page added since the start among them" if name == "Flip" else ""),
-                  r["n"] >= 15 and not r["loose"], f"{len(r['loose'])} of {r['n']} would select: {r['loose'][:8]}")
-            check(f"{name}: and the rule that says so brings no system callout either",
-                  "-webkit-touch-callout: none" in r["rule"] and "user-select: none" in r["rule"], r["rule"][-140:])
+                  r["n"] >= 15 and not r["loose"] and not r["unmarked"],
+                  f"{len(r['loose'])} of {r['n']} would select: {r['loose'][:8]}; {r['unmarked']} unmarked")
+            css = (STATIC / "styles.css").read_text(encoding="utf-8")
+            rule = re.search(r"\[data-lc-hold\]\s*\{([^}]*)\}", css)
+            check(f"{name}: and the rule for what is marked brings no system callout either",
+                  bool(rule) and "-webkit-touch-callout: none" in rule.group(1) and "user-select: none" in rule.group(1),
+                  rule.group(0) if rule else "no [data-lc-hold] rule in styles.css")
             c.close()
         part("holding selects nothing", nosel)
 
