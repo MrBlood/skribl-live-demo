@@ -72,7 +72,7 @@ here is the rule you can break tomorrow.
 | Possess the id and the key → revoke through the product, whatever this browser remembers. | `verify_posted.py` |
 | A 404 from DELETE means UNKNOWN. The client must not turn it into success. | `verify_posted.py` |
 | The player carries no editor-only module. | `verify_player_isolation.py` |
-| The letter sheet (`/skribl-pad?letters=1`) keeps no Pad draft and leaves the Pad's brush and mirror as they were; a posted set reads back to its 92 letters by the one layout rule `editor_letters.js` and `harness/tools/letterfont.py` share. | `verify_letters.py` |
+| Your hand (`/skribl-pad?letters=1`) keeps no Pad draft and leaves the Pad's brush and mirror as they were; a letter drawn again replaces the old one only on Done; a posted set, whole or not, reads back to its letters by the one layout rule `editor_letters.js` and `harness/tools/letterfont.py` share. | `verify_letters.py` |
 | The player's JS stays under its ratchet, measured on what is SERVED (comments stripped), not what is on disk. | `verify_jsstrip.py`, `verify_player_isolation.py` |
 | `[hidden]` is honoured on every control that uses it. | `verify_layout.py`, `verify_help.py`, `verify_move.py` |
 | No readable text uses a token that fails WCAG AA. | `verify_a11ypages.py` |
@@ -465,7 +465,7 @@ How it was won, and why the old plan was the wrong plan:
 * **The carves — every `skribl/static/editor_*.js`.** This list was once
   four names, then nine, and was stale both times, so it is the glob now. Each
   is absent from the player. Pad loads every one, `editor_compose` only in a
-  host's composer and `editor_letters` only on the letter sheet
+  host's composer and `editor_letters` only on Your hand
   (`/skribl-pad?letters=1`); Flip loads `editor_compose`, and only in a host's
   composer; the player loads none. `verify_player_isolation.py`
   reads that list OFF DISK rather than from a hardcoded tuple, which is how a

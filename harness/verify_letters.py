@@ -713,14 +713,18 @@ with sync_playwright() as p:
         on30 = sub_text(q)
         a_line(q)
         q.click("#ltNext")
-        q.wait_for_function("() => SkriblLetters.view() !== 'draw'", timeout=5000)
+        try:
+            q.wait_for_function("() => SkriblLetters.view() !== 'draw'", timeout=5000)
+        except Exception:
+            pass   # the check below says what came instead
         r = q.evaluate("""() => ({ view: SkriblLetters.view(), title: (document.querySelector('.lt-ptitle') || {}).textContent,
           buttons: [...document.querySelectorAll('.lt-page button')].map(b => b.textContent) })""")
         check("the 30th letter opens Ready: Add the rest and Done",
               on30.startswith("? question mark · 30 of 30") and r["view"] == "ready" and r["title"] == "Your hand is ready"
               and "Add the rest · 62" in r["buttons"] and "Done" in r["buttons"], f"{on30} / {json.dumps(r)}")
-        page_button(q, "Add the rest").click()
-        q.wait_for_function(DRAWING)
+        if r["view"] == "ready":
+            page_button(q, "Add the rest").click()
+            q.wait_for_function(DRAWING)
         check("Add the rest goes on with A, 31 of 92", sub_text(q).startswith("A · 31 of 92"), sub_text(q))
         q.click("#ltBack")
         q.wait_for_timeout(250)
@@ -749,7 +753,13 @@ with sync_playwright() as p:
         one = q.evaluate("""() => ({ mode: SkriblLetters.mode(), n: strokes.length, sub: document.getElementById('ltSub').textContent,
           buttons: [...document.querySelectorAll('.lt-btn')].map(b => b.textContent + (b.disabled ? ' (off)' : '')),
           ghost: (() => { const g = document.getElementById('ltGuides'), d = g.getContext('2d').getImageData(0, 0, g.width, g.height).data;
-            let n = 0; for (let i = 3; i < d.length; i += 16) if (d[i] > 70 && d[i] < 140) n++; return n; })() })""")
+            // The old letter's faint ink, read AWAY from the guide lines, which
+            // are as faint (a count across them passed with no letter there).
+            const L = SkriblLetters, b = L.box(), ln = L.lines(), lg = getCanvasLogicalSize(), ky = g.height / lg.height;
+            const ys = Object.values(ln).map(f => (b.y + f * b.h) * ky);
+            let n = 0; for (let y = 0; y < g.height; y++) { if (ys.some(v => Math.abs(v - y) < 5)) continue;
+              for (let x = 0; x < g.width; x += 2) { const a = d[(y * g.width + x) * 4 + 3]; if (a > 70 && a < 140) n++; } }
+            return n; })() })""")
         check("tap g: it waits to be drawn again, the old one faint behind it, Redo, Cancel, Done",
               one["mode"] == "one" and one["n"] == 0 and one["sub"].startswith("g · draw it again")
               and one["buttons"] == ["Redo (off)", "Cancel", "Done (off)"] and one["ghost"] > 200, json.dumps(one))
