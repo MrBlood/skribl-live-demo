@@ -66,6 +66,9 @@ MEASURED = {
     "verify_theme.py": 160, "verify_tips.py": 70, "verify_tools.py": 220, "verify_tray.py": 70,
     "verify_ux.py": 470, "verify_videoexport.py": 90, "verify_viewedges.py": 30,
     "verify_visual.py": 30, "verify_watchfull.py": 110,
+    # Not yet measured on CI: the local run, Nov 1, to the nearest ten. CI's
+    # own figure replaces it at the next re-measure.
+    "verify_letters.py": 80,
 }
 SMALL = 11          # every other suite: the rest averaged 11 seconds
 
