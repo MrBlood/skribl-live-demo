@@ -1621,10 +1621,15 @@ later by tapping it; Save a copy and Open a copy; Start over with Undo; the
 owner's own hand offered to everyone as the style **Skribl**, from the set
 drawn again. Two pull requests. (3) **Your hand, built** (DECISIONS, after
 v330, "Your hand"): the start, the first 30, Ready, the tiles, drawing a
-letter again, copies, Start over. (4) **Next: the Text tool**, with its
-style row (Yours or + Make yours, Skribl, Print, Script), the one door to
-Your hand from the Text sheet (Edit your hand), Speed, and the owner's set as
-Skribl. (5) The polish (the iPhone's keyboard, the typing sheet on a desk).
+letter again, copies, Start over. (4) **The Text tool, built** (DECISIONS,
+after v330, "Text"): the picker's Text on both editors, the typing sheet with
+its style row (Yours or + Make yours, Skribl, Print, Script), Size and Speed,
+the words placed before they are ink and written in real time, one Undo, the
+one door to Your hand (Make yours, Edit your hand; Ready's Write with it
+comes back), the owner's set as Skribl until the redrawn one. (5) **Next:**
+the polish (the iPhone's keyboard over the sheet, the typing sheet on a
+desk), an example for Text in How it works, and Skribl from the owner's
+redrawn set.
 
 ## 7. The honest state
 

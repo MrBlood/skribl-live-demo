@@ -109,6 +109,16 @@ and an object that appears is not there until the end. Both are defensible for
 a single pose with no opacity to fade through; the pair is here so that
 changing one moves the other.
 
+## Text's lettering
+
+`make_textfonts.py` makes `skribl/static/fonts/text-*.json`, the lines Text
+(`lib/textwrite.js`) writes words with: Print and Script from two single-line
+plotter fonts in the `hersheytext` npm package (EMS Readability and EMS
+Allure, SIL Open Font License, `skribl/static/fonts/OFL.txt`), and Skribl from
+a hand read back by `letterfont.py` (the owner's set), each point keeping the
+time it was drawn at. Cap heights, y up from the baseline, delta-coded; its
+docstring has the format. `verify_text.py` holds the files to it.
+
 ## Your hand's reader
 
 `letterfont.py` reads a hand posted from Your hand (`/skribl-pad?letters=1`,

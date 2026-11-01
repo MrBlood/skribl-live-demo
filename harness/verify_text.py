@@ -181,9 +181,15 @@ def draw_line(q, fx0, fy0, fx1, fy1, n=20):
 
 
 def type_words(q, words):
+    """The words in the field, as typing puts them there; False if no plan
+    with ink came of them (the checks after say what came instead)."""
     q.evaluate("(w) => { const f = document.getElementById('txField'); f.value = w; f.dispatchEvent(new Event('input', { bubbles: true })); }", words)
-    q.wait_for_function("() => { const p = SkriblText.plan(); return !!p && p.strokes.length > 0; }", timeout=15000)
+    try:
+        q.wait_for_function("() => { const p = SkriblText.plan(); return !!p && p.strokes.length > 0; }", timeout=15000)
+    except Exception:
+        return False
     q.wait_for_timeout(150)
+    return True
 
 
 def set_speed(q, i):
@@ -199,6 +205,15 @@ SHEET = """() => { const s = document.getElementById('txSheet'), pl = document.g
   return { open: SkriblText.isOpen(), hidden: s.hidden, top: r.top, focus: document.activeElement && document.activeElement.id,
            place: pl.hidden ? null : [b.left, b.top, b.right, b.bottom],
            out: document.getElementById('txSpeedOut').textContent, go: !document.getElementById('txGo').disabled }; }"""
+
+
+def waited(q, cond, timeout=15000):
+    """True once `cond` holds; False if it never did (the check after says what came instead)."""
+    try:
+        q.wait_for_function(cond, timeout=timeout)
+        return True
+    except Exception:
+        return False
 
 
 def write_and_wait(q, timeout=60000):
@@ -250,6 +265,11 @@ with sync_playwright() as p:
         for editor in ("pad", "flip"):
             c, q = open_editor(b, editor)
             names = q.evaluate("() => [...document.querySelectorAll('#shapeSeg [data-shape]')].map(b => b.textContent.trim())")
+            check(f"{editor}: Text is Shape's fifth kind", names == ["Line", "Rect", "Oval", "Poly", "Text"], str(names))
+            if "Text" not in names:
+                check(f"{editor}: picking it chooses Shape and Text, and puts the picker away", False, "no Text to pick")
+                c.close()
+                continue
             vis = q.evaluate("() => { const s = document.getElementById('shapeToolBtn'); return !!s && !!s.getClientRects().length; }")
             if vis:
                 q.click("#shapeToolBtn")
@@ -263,7 +283,6 @@ with sync_playwright() as p:
             q.wait_for_timeout(300)
             now = q.evaluate(TOOLNOW[editor])
             pop = q.evaluate("() => document.getElementById('shapePop').hidden")
-            check(f"{editor}: Text is Shape's fifth kind", names == ["Line", "Rect", "Oval", "Poly", "Text"], str(names))
             check(f"{editor}: picking it chooses Shape and Text, and puts the picker away",
                   now == ["shape", "text"] and pop, f"{now}, picker hidden {pop}")
             check(f"{editor}: no errors", not q._tx_errors, str(q._tx_errors[:2]))
@@ -430,10 +449,14 @@ with sync_playwright() as p:
         off = max((abs((pt[2] - t0) - f[2]) for pt, f in zip(pts, flat)), default=99)
         check("a key while the words write finishes them at once, every stroke with the time it was due",
               not r["writing"] and r["n"] == plan["n"] and r["pts"] == plan["pts"] and off <= 1, f"{r}, worst {off}ms")
-        check("...and the Pad's clock moves on past them", r["clock"] >= r["last"], f"clock {r['clock']}ms, last point {r['last']}ms")
+        last = r["last"] if r["last"] is not None else 10 ** 9
+        check("...and the Pad's clock moves on past them", r["clock"] >= last, f"clock {r['clock']}ms, last point {r['last']}ms")
+        # The next line, with the pen: Text would only open the sheet again.
+        q.evaluate("() => setTool('pen')")
+        n_before = q.evaluate("() => strokeGroups.length")
         draw_line(q, 0.2, 0.8, 0.6, 0.8)
-        nxt = q.evaluate("() => strokes[strokes.length - 1].t")
-        check("so the next line comes after the words", nxt >= r["last"], f"next line ends at {nxt}, words at {r['last']}")
+        nxt = q.evaluate("(n) => strokeGroups.length > n ? strokes[strokes.length - strokeGroups[strokeGroups.length - 1]].t : null", n_before)
+        check("so the next line comes after the words", nxt is not None and nxt >= last, f"next line starts at {nxt}, words end at {r['last']}")
         c.close()
 
     # ------------------------------------------------------------------ 9
@@ -533,8 +556,8 @@ with sync_playwright() as p:
         url1 = q.url
         q.wait_for_function("() => !!window.SkriblLetters && SkriblLetters.view() === 'start'", timeout=15000)
         q.click(".lt-ptop .lt-pdone")
-        q.wait_for_function("() => !!window.SkriblText && typeof shapeKind !== 'undefined' && shapeKind === 'text'", timeout=15000)
-        back1 = q.evaluate("() => [location.pathname + location.search, tool, shapeKind]")
+        waited(q, "() => !!window.SkriblText && typeof shapeKind !== 'undefined' && shapeKind === 'text'")
+        back1 = q.evaluate("() => [location.pathname + location.search, typeof tool !== 'undefined' ? tool : null, typeof shapeKind !== 'undefined' ? shapeKind : null]")
         check("Pad: + Make yours goes to Your hand, saying which editor", "letters=1" in url1 and "back=pad" in url1, url1)
         check("Pad: and Close comes back with Text chosen, the address clean", back1 == ["/skribl-pad", "shape", "text"], str(back1))
         c.close()
@@ -547,10 +570,10 @@ with sync_playwright() as p:
         url2 = q.url
         q.wait_for_function("() => !!window.SkriblLetters && SkriblLetters.view() === 'tiles'", timeout=15000)
         q.click(".lt-ptop .lt-pdone")
-        q.wait_for_function("() => !!window.SkriblText && typeof flipTool !== 'undefined' && flipTool === 'shape' && shapeKind === 'text'", timeout=15000)
+        chosen = waited(q, "() => !!window.SkriblText && typeof flipTool !== 'undefined' && flipTool === 'shape' && shapeKind === 'text'")
         back2 = q.evaluate("() => location.pathname + location.search")
         check("Flip: Edit your hand goes to Your hand, saying Flip, and Done comes back to Flip with Text chosen",
-              "back=flip" in url2 and back2 == "/flip", f"{url2} -> {back2}")
+              "back=flip" in url2 and back2 == "/flip" and chosen, f"{url2} -> {back2}, Text chosen {chosen}")
         c.close()
         # Write with it, from Ready, after the 30th letter.
         seed = hand_seed(QUICK[:29])
@@ -573,9 +596,9 @@ with sync_playwright() as p:
         q.click("#ltNext")
         q.wait_for_function("() => SkriblLetters.view() === 'ready'", timeout=10000)
         q.click("text=Write with it")
-        q.wait_for_function("() => !!window.SkriblText && typeof flipTool !== 'undefined' && shapeKind === 'text'", timeout=15000)
+        chosen = waited(q, "() => !!window.SkriblText && typeof flipTool !== 'undefined' && shapeKind === 'text'")
         check("Ready's Write with it goes back to the editor that sent them, Text chosen",
-              q.evaluate("() => location.pathname") == "/flip", q.url)
+              q.evaluate("() => location.pathname") == "/flip" and chosen, f"{q.url}, Text chosen {chosen}")
         c.close()
 
     # ------------------------------------------------------------------ 12
