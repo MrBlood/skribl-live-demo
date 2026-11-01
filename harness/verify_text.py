@@ -612,8 +612,13 @@ with sync_playwright() as p:
         back1 = q.evaluate("() => [location.pathname + location.search, typeof tool !== 'undefined' ? tool : null, typeof shapeKind !== 'undefined' ? shapeKind : null]")
         check("Pad: + Make yours goes to Your hand, saying which editor", "letters=1" in url1 and "back=pad" in url1, url1)
         check("Pad: and Close comes back with Text chosen, the address clean", back1 == ["/skribl-pad", "shape", "text"], str(back1))
+        kept1 = q.evaluate("(k) => localStorage.getItem(k)", PREFS)
+        check("Pad: back with no hand made, no style is chosen for them", kept1 is None, str(kept1))
         c.close()
-        c, q = open_editor(b, "flip", hand=hand_seed(QUICK))
+        # The owner changed letters and came back to Skribl still chosen, so
+        # the change could not be seen: back from Your hand, it is Yours, and
+        # it stays, with the size and speed they had.
+        c, q = open_editor(b, "flip", hand=hand_seed(QUICK), prefs={"style": "skribl", "size": "L", "speed": 6})
         choose_text(q)
         tap(q, *at(q, 0.5, 0.35))
         q.wait_for_timeout(200)
@@ -626,6 +631,13 @@ with sync_playwright() as p:
         back2 = q.evaluate("() => location.pathname + location.search")
         check("Flip: Edit your hand goes to Your hand, saying Flip, and Done comes back to Flip with Text chosen",
               "back=flip" in url2 and back2 == "/flip" and chosen, f"{url2} -> {back2}, Text chosen {chosen}")
+        waited(q, "() => SkriblText.isOpen() && !!document.querySelector('#txStyles .on')")
+        yours = q.evaluate("""(k) => { const on = document.querySelector('#txStyles .on');
+          return [on && on.getAttribute('data-style'), JSON.parse(localStorage.getItem(k) || 'null')]; }""", PREFS)
+        check("Flip: and it comes back to Yours, the hand they were just working on, over the Skribl they had",
+              yours[0] == "yours", str(yours[0]))
+        check("Flip: and Yours is kept for next time, with their own size and speed",
+              yours[1] == {"style": "yours", "size": "L", "speed": 6}, json.dumps(yours[1]))
         c.close()
         # Write with it, from Ready, after the 30th letter.
         seed = hand_seed(QUICK[:29])

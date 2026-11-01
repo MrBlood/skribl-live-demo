@@ -936,6 +936,12 @@
   // with text=1, and Text is chosen the way the picker chooses it, so the
   // next tap places the words. The address loses the flag, so a reload does
   // not choose it again.
+  //
+  // And the style is Yours, once there is a hand to write with: they have
+  // just been working on it, and the owner, back from changing letters with
+  // Skribl still chosen, saw no change and thought the edit was lost. Kept
+  // as a choice on the sheet is, so the next time is theirs too. The prefs
+  // are read first, so the size and speed kept with it are the person's.
   function resume() {
     var q;
     try { q = new URLSearchParams(window.location.search); } catch (e) { return; }
@@ -944,6 +950,7 @@
     var rest = q.toString();
     try { history.replaceState(history.state, '', window.location.pathname + (rest ? '?' + rest : '') + window.location.hash); }
     catch (e) {}
+    if (handCount() > 0) { readPrefs(); state.style = 'yours'; keepPrefs(); }
     setTimeout(function () {
       var b = document.querySelector('#shapeSeg [data-shape="text"]');
       if (b) b.click();

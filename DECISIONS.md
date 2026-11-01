@@ -28305,6 +28305,25 @@ it could fail; nothing read the whole sheet with no keyboard; and the press
 read with the keyboard up was Write it, at the sheet's foot, which does not
 move when the sheet grows: the x, at its top, does.
 
+BACK FROM YOUR HAND, IT IS YOURS. The same morning the owner asked "Where is
+edit": the Text sheet in the Home Screen app showed + Make yours, though
+they had made their hand in Safari. On the iPhone a Home Screen web app
+keeps its own storage, apart from Safari's, so a hand made in one is not in
+the other. A copy of the hand carries it across: Cal sent one made from
+their letters, and Open a copy took it in. Then "I saved it, loaded it,
+changed it, said done. It's still unchanged", most likely because Skribl,
+the built-in lettering, was still the chosen style: it was made from the
+owner's own letters, so it looks like their hand, and editing your hand
+never changes it. Their next picture had Yours chosen, the words written in
+their hand. Now coming back from Your hand (any way back carries `text=1`)
+chooses Yours when there is a hand to write with, and keeps it as a choice
+on the sheet is, with the size and speed already kept (lib/textwrite.js
+resume). verify_text 11 holds it: back on Flip from Edit your hand over a
+kept Skribl, Yours is chosen and kept with the size and speed; back on the
+Pad with no hand, no style is chosen for them. Three breaks, each red at its
+own row: the choice left out, made with no hand, made without reading what
+was kept.
+
 WHAT IT DOES TO FLIP: shared; Flip has no lock, and its picker opens the
 sheet the same way.
 
