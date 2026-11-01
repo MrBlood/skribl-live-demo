@@ -8024,10 +8024,20 @@ html.skribl-sheet { overscroll-behavior-y: none; }
    (lib/textwrite.js fitKeyboard): the keyboard takes half the screen, and the
    drawing with the words on it has to show above what is left. */
 .tx-sheet.typing :is(#txStyleLabel, .tx-styles, .tx-under, .tx-row) { display: none; }
+/* THE BAR: the sheet stepped aside while the words are placed (lib/textwrite.js,
+   "The sheet steps aside"), its words and Write it in one row, which covers
+   none of the drawing; on a desk at the window's foot. The words are the
+   field, read-only here: a tap on them brings the whole sheet back. */
+.tx-sheet.tucked { grid-template-columns: minmax(0, 1fr) auto; align-items: center; column-gap: 10px; row-gap: 4px; }
+.tx-sheet.tucked > :not(.tx-grab, .tx-field, .tx-go) { display: none; }
+.tx-sheet.tucked .tx-grab { grid-column: 1 / -1; }
+.tx-sheet.tucked .tx-field { cursor: pointer; text-overflow: ellipsis; }
+.tx-sheet.tucked .tx-go { padding: 0 22px; }
 @media (min-width: 641px) {
   .tx-sheet { left: 50%; right: auto; bottom: 24px; width: 420px; max-height: calc(100dvh - 48px);
     margin-left: -210px; padding: 14px 18px 18px; border-radius: 22px;
     box-shadow: 0 20px 60px rgba(20, 10, 60, .28); }
+  .tx-sheet.tucked { bottom: 0; border-radius: 22px 22px 0 0; }
 }
 .tx-grab { display: flex; justify-content: center; align-items: center; height: 18px; touch-action: none; cursor: pointer; }
 /* A desk's sheet floats; it has no edge to pull down to. */

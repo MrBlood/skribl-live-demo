@@ -69,14 +69,13 @@ def recolor_after(page, taps):
 
 def write_words(page, w):
     """The Text tool, as a person uses it: Text in Shape's picker opens the
-    sheet; the words typed; the style and size picked; the words placed with
-    their middle at w.at (the tap that says where they go); 1x, the hand's
-    own pace; Write it. They write themselves in while the take records, in
+    sheet; the style, size and 1x (the hand's own pace) picked; the words
+    typed; then placed with their middle at w.at (the press that says where
+    they go, which sends the sheet aside to its bar); Write it. They write themselves in while the take records, in
     the pen's colour and thickness."""
     page.evaluate("([c, s]) => { color = c; size = s; }", [w.color, w.pen])
     page.evaluate("() => document.querySelector('#shapeSeg [data-shape=\"text\"]').click()")
     page.wait_for_function("() => window.SkriblText && SkriblText.isOpen()")
-    page.evaluate("(p) => SkriblText.place(p)", {"x": w.at[0], "y": w.at[1]})
     page.wait_for_function("(s) => !!document.querySelector('#txStyles [data-style=\"' + s + '\"][data-face=\"drawn\"]')",
                            arg=w.style, timeout=15000)
     page.click(f'#txStyles [data-style="{w.style}"]')
@@ -86,7 +85,10 @@ def write_words(page, w):
     page.evaluate("(t) => { const f = document.getElementById('txField'); f.value = t; f.dispatchEvent(new Event('input', { bubbles: true })); }",
                   w.text)
     page.wait_for_function("() => { const p = SkriblText.plan(); return !!p && p.strokes.length > 0; }", timeout=15000)
-    page.wait_for_timeout(400)
+    # Placed last: a press says where the words go, and the sheet steps aside
+    # to its bar (the words and Write it) once it has.
+    page.evaluate("(p) => SkriblText.place(p)", {"x": w.at[0], "y": w.at[1]})
+    page.wait_for_timeout(900)
     page.click("#txGo")
     page.wait_for_function("() => !SkriblText.isWriting()", timeout=60000)
     page.wait_for_timeout(500)

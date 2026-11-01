@@ -1639,7 +1639,12 @@ opens the sheet; while typing, the sheet sits on the keyboard, just the words
 and Write it; the done key puts the keyboard away. (6) **An example for
 Text in How it works, built** (DECISIONS, after v330, "Text's example"): a
 speech bubble drawn with the pen, "hello!" written in it by the Text tool in
-Skribl's lettering, then a heart, on both editors. Skribl takes the owner's redrawn letters as they
+Skribl's lettering, then a heart, on both editors. (7) **The sheet steps
+aside, built** (DECISIONS, after v330, "Text's sheet steps aside"): the
+owner could not drag words to the bottom of the drawing on the iPhone (the
+sheet covered half of it); now a drag or a press sends the sheet down, and it
+rests as a bar, the words and Write it, until the words in it are tapped.
+Skribl takes the owner's redrawn letters as they
 send them (a saved copy of their hand; c, s, S, 8 and 9 so far).
 
 ## 7. The honest state
