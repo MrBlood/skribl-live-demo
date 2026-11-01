@@ -52,7 +52,13 @@ const AUTOSAVE_KEY = 'skribl_autosave_v1';
 // post, and "Add to post" left its drawing to overwrite the author's own Pad
 // draft. So compose neither restores from nor writes to the slot or the media
 // store — the ordinary Pad's draft is untouched by anything done in a post.
-const PAD_DRAFT_OFF = (typeof window !== 'undefined' && window.SKRIBL_MODE === 'compose');
+//
+// NOR DOES THE LETTER SHEET (editor_letters.js). It clears the canvas for
+// every letter and keeps its letters in a store of its own, so the slot would
+// have been overwritten by whichever letter was last on the canvas, and the
+// sheet would have opened on the owner's drawing.
+const PAD_DRAFT_OFF = (typeof window !== 'undefined' &&
+  (window.SKRIBL_MODE === 'compose' || window.SKRIBL_LETTERS === true));
 
 // THE SLOT IS SHARED WITH OTHER TABS, SO IT IS WRITTEN THROUGH lib/othertab.js
 // (SK-AUD-006, T1): a save never replaces another tab's drawing, it moves it

@@ -16,6 +16,9 @@
    time when the browser could not keep the key; the tray it also styles
    lives on the profile page since v304. #}
 <link rel="stylesheet" href="{{ skribl_asset('posted.css') }}">
+{# letters.css: the letter sheet's own rules (editor_letters.js), on that page
+   only, so nothing about it reaches the Pad, Flip or the player. #}
+{% if letters %}<link rel="stylesheet" href="{{ skribl_asset('letters.css') }}">{% endif %}
   {% include 'skribl/_skribl_app_identity.html' %}
 {# The Home Screen app only (lib/offline.js): opening with no signal, and
    offering a reload when the server has a newer build than this page. #}
@@ -23,9 +26,10 @@
         data-scope="{{ url_for('.skribl_sw')[:-5] }}"
         data-build="{{ skribl_build }}" data-build-url="{{ url_for('.skribl_build') }}" defer></script>
   {% include 'skribl/_skribl_theme_boot.html' %}
-  {% include 'skribl/_skribl_hello_boot.html' %}
+  {# Not on the letter sheet: a page with a job of its own, opened on purpose. #}
+  {% if not letters %}{% include 'skribl/_skribl_hello_boot.html' %}{% endif %}
 </head>
-<body>
+<body{% if letters %} class="letters-mode"{% endif %}>
   {# The page's one heading. Visually the brand mark is the title; assistive
      tech gets the same fact as text. #}
   <h1 class="vis-hidden">Skribl Pad</h1>
@@ -179,6 +183,10 @@
       the drawing is recorded with its timing and replays. Drawing itself is not
       available from the keyboard; every tool, setting and action is.</p>
     <canvas class="flip-grid" id="padGrid" aria-hidden="true"></canvas>
+    {# The letter sheet's guide lines and faint model letter: inside the zoom
+       layer as the grid is, so a pinch moves them with the drawing, and never
+       part of it (editor_letters.js). #}
+    {% if letters %}<canvas class="lt-guides" id="ltGuides" aria-hidden="true"></canvas>{% endif %}
     {# THE WORDS ALONE on an empty canvas, at its middle. Blooby with his pen
        stood above them from #474 until the owner took him off after v323
        ("It's too much"); Flip's hint follows. They leave at the first stroke. #}
@@ -210,7 +218,7 @@
   </div>
 
   <!-- Help drawer -->
-  {% include 'skribl/_skribl_hello.html' %}
+  {% if not letters %}{% include 'skribl/_skribl_hello.html' %}{% endif %}
   {% with kind='pad' %}{% include 'skribl/_skribl_help.html' %}
 {% endwith %}
 {# Your Skribls moved to the profile page (/library) in v304; the drawer is not included here. #}
@@ -241,7 +249,7 @@
   {% include 'skribl/_skribl_player_controls.html' %}
 
 
-  {% if not compose %}{{ hs.banner() }}{{ hs.steps() }}{% endif %}
+  {% if not compose and not letters %}{{ hs.banner() }}{{ hs.steps() }}{% endif %}
   <div class="toolbar" id="toolBar">
     {# The shape picker lives ON the Shape button, not buried in the drawer.
        Tapping Shape selects the tool AND opens this; tapping a kind sets it and
@@ -376,6 +384,9 @@
     window.SKRIBL_MODE = {{ ("compose" if compose else "editor") | tojson }};
   window.SKRIBL_DRAFTS = { api: {{ skribl_drafts_api | tojson }}, signedIn: {{ skribl_signed_in | tojson }}, limit: {{ skribl_drafts_limit | tojson }} };
     {% if compose %}window.SKRIBL_COMPOSE = "pad";{% endif %}
+    {# The letter sheet (editor_letters.js). editor_draft.js reads it to keep
+       no Pad draft there, as compose keeps none. #}
+    {% if letters %}window.SKRIBL_LETTERS = true;{% endif %}
     window.SKRIBL_API_BASE = {{ skribl_api_base | tojson }};
   window.SKRIBL_CSRF_TOKEN = {{ skribl_csrf_token | tojson }};
     window.SKRIBL_PLAYER_BASE = {{ skribl_player_base | tojson }};
@@ -509,7 +520,7 @@
   <link rel="stylesheet" href="{{ skribl_asset('labels.css') }}">
   <script src="{{ skribl_asset('lib/tooltip.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/hints.js') }}" defer></script>
-  {% if not compose %}<script src="{{ skribl_asset('lib/homescreen.js') }}" defer></script>{% endif %}
+  {% if not compose and not letters %}<script src="{{ skribl_asset('lib/homescreen.js') }}" defer></script>{% endif %}
   <script src="{{ skribl_asset('lib/theme.js') }}" defer></script>
   {# lib/canvasground.js: a new drawing starts on Paper in the light theme, the dark canvas in the dark. #}
   <script src="{{ skribl_asset('lib/canvasground.js') }}" defer></script>
@@ -568,6 +579,12 @@
   <script src="{{ skribl_asset('editor_compose.js') }}" defer></script>
   {% endif %}
   <script src="{{ skribl_asset('editor_draft.js') }}" defer></script>
+  {% if letters %}
+  {# The letter sheet only, and last, so the Pad is whole when it starts. An
+     editor_*.js carve, so verify_player_isolation.py keeps it off the player. #}
+  {% include 'skribl/_skribl_letters.html' %}
+  <script src="{{ skribl_asset('editor_letters.js') }}" defer></script>
+  {% endif %}
 {{ mark_templates() }}
 </body>
 </html>

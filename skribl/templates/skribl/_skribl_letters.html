@@ -1,0 +1,25 @@
+{# THE LETTER SHEET's bars (skribl/static/editor_letters.js, letters.css): the
+   Pad at /skribl-pad?letters=1, a page for drawing the owner's own font one
+   letter at a time. The canvas between them is the real Pad's, so every
+   letter is drawn with the real pen and keeps its timing and pressure.
+
+   Above: what to draw and how far along. Below: the line that writes itself
+   in the letters drawn so far, and the three moves. The words are the mock's
+   the owner said yes to. #}
+<div class="lt-top" id="ltTop">
+  <div class="lt-head">
+    <h2 class="lt-title" id="ltTitle">Draw your letters</h2>
+    <p class="lt-sub" id="ltSub" aria-live="polite"></p>
+  </div>
+  <button type="button" class="lt-later" id="ltLater">Finish later</button>
+  <div class="lt-bar" id="ltBar" role="progressbar" aria-label="Letters drawn"
+       aria-valuemin="0" aria-valuemax="92" aria-valuenow="0"><i id="ltBarFill"></i></div>
+</div>
+<div class="lt-foot" id="ltFoot">
+  <div class="lt-preview" id="ltPreview" aria-hidden="true"></div>
+  <div class="lt-btns">
+    <button type="button" class="lt-btn" id="ltRedo">Redo</button>
+    <button type="button" class="lt-btn" id="ltBack">Back</button>
+    <button type="button" class="lt-btn lt-next" id="ltNext" disabled>Next</button>
+  </div>
+</div>

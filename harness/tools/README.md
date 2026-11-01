@@ -108,3 +108,12 @@ page's strokes, so an object that disappears lingers through the middle pose
 and an object that appears is not there until the end. Both are defensible for
 a single pose with no opacity to fade through; the pair is here so that
 changing one moves the other.
+
+## The letter sheet's reader
+
+`letterfont.py` reads a posted letter sheet (`/skribl-pad?letters=1`, which
+ends by posting all 92 letters as one Skribl) back into letters: each as
+strokes of x, y, width and time in cap heights, from a `/s/<id>` link or a
+saved payload. It repeats `editor_letters.js`'s layout rule, and
+`verify_letters.py` posts a set and reads it back with this file, so the two
+cannot part company quietly.

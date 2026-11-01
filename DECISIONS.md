@@ -27794,3 +27794,112 @@ and exact (0.0 off; 7.0000); and with the view's framing moved 0.8% of a
 span in the module, the new rows red at every rung and in all four cells.
 The other rows of those parts that time a glide frame by frame went red
 too with frames 110ms apart, as they should, and are left as they are.
+
+## After v330 -- The letter sheet: the owner's own font, drawn on the Pad
+
+The owner asked for text on the Pad, then "Can't we have our own font", and
+said "All yes" to the letter sheet's mock: one letter at a time with guide
+lines and a faint model, Redo, Back, Next, Finish later, a line along the
+bottom that fills in, 92 boxes (a second try at e t a o i n s r h), and the
+set reaching Cal as a post (FUTURE.md 6ab). Built at /skribl-pad?letters=1,
+linked from nowhere: it is the owner's, for the Text tool's own hand.
+
+WHY THE REAL PAD. The Text tool will write words at the pace they were drawn,
+so a letter has to be a performance: each point with its time and its width
+(pressure is folded into the width). The sheet is the Pad's own canvas and
+pen with its chrome put away (visibility, so the canvas keeps its size and
+nothing lays out again under the pen); skribl/static/editor_letters.js runs
+it and letters.css dresses it, both on that page only. A letter is kept in
+localStorage (skribl.letters.v1) after every stroke, so Finish later only
+leaves, and a browser that will not keep it says so once.
+
+WHAT IT LEAVES ALONE. The Pad's draft: editor_draft.js keeps no draft there,
+as compose keeps none (PAD_DRAFT_OFF), or the slot would have been written
+over by each letter in turn. The Pad's settings: the sheet draws with the
+plain pen at size 6 in Skribl purple, unmirrored, by shadowing the brush and
+mirror on their module objects for the page's life; setBrush and setMode
+SAVE a choice, and the owner's Pad would have come back plain.
+
+WHERE IT GOES ON FROM THE MOCK, each for a reason:
+- THE X-HEIGHT LINE sits at 0.70 of the cap height (0.334 of the box, not
+  the mock's 0.44): the mock's faint a stood far above its own line. The
+  model is now sized from the face's own measurements, lowercase to the
+  x-height and capitals to the cap height, so it fits its lines in SF, Segoe
+  or anything else (measured here: the a 4px from its line on a 713px cap,
+  the A 4px). A letter keeps the lines it was drawn to.
+- THE LINE ALONG THE BOTTOM is the pangram while the letters are drawn, then
+  each later group's own: the figures, the marks, the five accented letters
+  (each accent sitting on the owner's own base letter), and each second try
+  beside its first. The pangram alone would have stood still for 40 boxes.
+- AN ACCENT is drawn over the owner's own base letter, faint, with the
+  model's accent alone (its letter knocked out of it), so it sits where it
+  will sit.
+- AT THE END the canvas shows the whole set as it will post, the line writes
+  itself over a faint copy in about four seconds, Redo and Finish later go,
+  and Post your letters takes Next's room.
+- KINDNESS: Redo's toast brings the letter back (and a new stroke takes the
+  offer away); on a desk Ctrl+Z and Ctrl+Y take back and put back a stroke;
+  the arrows move between letters. The Pad's letter keys (the eraser, the
+  pen's size) do nothing here.
+
+HOW THE SET REACHES CAL. Post your letters lays every letter out on the
+canvas, one cell each in a grid as big as the canvas allows, scaled by its
+cap height, on its cell's baseline, centred on its own ink, its width drawn
+five times its scale so the set reads at that size, one after another at its
+own pace and 300ms apart; and posts it as "My letters". harness/tools/
+letterfont.py reads it back from the post's link by the same rule. Which
+strokes are whose is not written anywhere: strokeGroups stay per stroke
+(bending them per letter would change what undo and the readers take them
+to mean), and the reader splits the strokes in order, the split that puts
+every stroke's middle nearest its cell winning (a dynamic programme, so one
+stroke drawn wide of its box cannot shift every letter after it).
+
+verify_letters (57 rows) holds it: the bars painted and the Pad's chrome
+hidden (and nothing of the header beside the desk's panel); the box clear of
+both bars; a letter kept with its time from its first point, its pause, the
+plain pen; four lines, under the ink, painted on screen, and the model fitted
+to them in light and dark; Next, Back and a stroke added later landing after
+the letter's last; Redo, its Undo, and the offer taken away; the line writing
+itself read on every frame, still under Reduce Motion, and the end's whole
+line over its faint copy; the Pad's draft byte for byte and the brush and
+mirror as they were; Finish later and coming back; the set posted and read
+back through the server, 92 letters with their own strokes (R's first stroke
+starting left of its box, W wider than its cell, the dots), to a thousandth
+of a cap height (measured 0.00012), widths to 0.00002, times exact, letters
+300ms apart; Back from the end; every word on the bars 4.5:1 and up (the sub
+line the lowest, 8.3 light and 9.7 dark; Next 5.3), every button 44px; the
+keys.
+
+CALIBRATION, the part alone, the file served changed: 31 breaks, each red at
+its own row and nowhere it should not be: the chrome shown, the box under the
+foot bar, Next always lit, the time not from the first point, the pause lost,
+the model sized by the cap height, the guides over the ink, no time shift
+for a letter taken up again, the offer left standing, Undo not putting the
+letter back, the line not writing, writing under Reduce Motion, no faint
+copy, the draft slot on, the brush and the mirror unshadowed, Finish later
+staying, no coming back to a half-drawn letter, the width's gain, the cell's
+width, letters centred on their box rather than their ink, no gap, a pen on
+the finished set, no title, the set not finished, Back stuck at the end, a
+faint sub line (2.1:1), 40px buttons, the Pad's keys let through, undo
+blocked, the arrows gone. Three breaks first did nothing, each the break's
+fault: one renamed only the last of a list of hidden things; one took away
+one of the mirror's three shadows (count and reflect still made no copies),
+so the mirror break takes the three; and Finish later reloading made the
+suite stop on a timeout instead of saying so, so that row now waits, then
+says where it went. The plain Pad's probe reads all five things on the sheet
+and none on the Pad.
+
+WHAT IT DOES TO FLIP: not for Flip. The sheet records performances to make
+a font, which is the Pad's job; the font will serve the Text tool on both
+editors (one module, the next pull request).
+
+THE FOUR: powerful (every letter a performance, posted and read back exactly);
+playful (the line writes itself in your hand, and at the end the whole set);
+simple (three moves and one way out); kind (nothing is lost: every stroke is
+kept as it is drawn, Redo can be undone, Finish later picks up where you
+stopped, and your Pad and its settings are left as they were).
+
+Not tested here: WebKit (the owner's iPhone), and SF and Segoe UI for the
+model's fit (it is fitted from the face's own measurements, so it does not
+depend on this box's fonts); the live site (not reachable from this
+session).

@@ -90,6 +90,8 @@ skribl/                    The blueprint package — everything Skribl owns
     library.js             The profile's Skribls tab: the stage and whose list it is
     posted.css             The posted list's rules, loaded by the editors and the profile
     editor_compose.js      Compose mode: attach a Skribl to a host's draft post
+    editor_letters.js      The letter sheet (?letters=1): the owner's font, drawn letter by letter
+    letters.css            The letter sheet's own rules, on that page only
     lib/sharecard.js       Where the drawing sits inside /s/<id>/card.png
     lib/postedcard.js      Compositing that card — editors only
     styles.css, flip.css   Pad/shared styles, Flip styles
