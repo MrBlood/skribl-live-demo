@@ -507,7 +507,11 @@
     x = minX > maxX ? lg.width / 2 : Math.max(minX, Math.min(maxX, x));
     var sb = screenBox(), sh = sheetEl();
     if (sb && sh && !sh.hidden) {
-      var top = sh.getBoundingClientRect().top - 12;
+      // Where the sheet RESTS, from its layout box: rising, or pulled by a
+      // finger, its painted box is lower, and words kept above that would
+      // end under it (lib/sheetswipe.js measures a sheet the same way).
+      var op = sh.offsetParent;
+      var top = (op ? op.getBoundingClientRect().top + op.clientTop : 0) + sh.offsetTop - 12;
       var limit = (top - sb.top) / sb.ky - b.y1;
       if (limit < maxY) maxY = Math.max(minY, limit);
     }
@@ -533,8 +537,20 @@
       refresh();
     });
     els.field.addEventListener('keydown', function (e) {
-      if (e.key === 'Enter') { e.preventDefault(); go(); }
+      if (e.key !== 'Enter') return;
+      e.preventDefault();
+      // THE KEYBOARD'S DONE KEY PUTS IT AWAY (the owner, on the iPhone: the
+      // blue tick wrote the words at once, before they were placed). Writing
+      // is the Write it button; on a desk, with no keyboard to put away,
+      // Enter is Write it.
+      if (touchFirst()) els.field.blur(); else go();
     });
+    els.field.addEventListener('focus', function () { fitKeyboard(); setTimeout(fitKeyboard, 120); });
+    els.field.addEventListener('blur', function () { fitKeyboard(); setTimeout(fitKeyboard, 120); });
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', fitKeyboard);
+      window.visualViewport.addEventListener('scroll', fitKeyboard);
+    }
     s.addEventListener('keydown', function (e) {
       if (e.key === 'Escape') { e.preventDefault(); close(); }
     });
@@ -565,6 +581,12 @@
     if (typeof window.addSliderNudgers === 'function') window.addSliderNudgers(els.speed, { step: 1 });
     els.go.addEventListener('click', go);
     els.close.addEventListener('click', close);
+    // A press on Write it or the x while the words are typed keeps the field's
+    // focus until the click: the keyboard going first would grow the sheet
+    // back under the finger, and the press would land on whatever moved there.
+    [els.go, els.close].forEach(function (b) {
+      b.addEventListener('mousedown', function (e) { if (document.activeElement === els.field) e.preventDefault(); });
+    });
     if (window.SkriblSheetSwipe) {
       window.SkriblSheetSwipe.attach(s, { handle: s.querySelector('.tx-grab'), close: close });
     }
@@ -768,6 +790,31 @@
   }
 
   function isOpen() { var s = sheetEl(); return !!(s && !s.hidden && s.classList.contains('open')); }
+  function touchFirst() { return !!(window.matchMedia && window.matchMedia('(hover: none)').matches); }
+  // THE KEYBOARD (the owner's iPhone: the bar over the keyboard covered the
+  // field, so the words could not be seen as they were typed). iOS does not
+  // shrink the page for its keyboard, so the sheet is lifted to the bottom of
+  // what can be seen, the Post sheet's own way (lib/postsheet.js), and while
+  // the words are typed on a phone the sheet is only the words and Write it
+  // (.typing), so the drawing shows above it with the words on it. Style,
+  // Size and Speed come back when the keyboard goes.
+  // The keyboard is up when what can be seen ends well above the page's
+  // bottom; the sheet is only the words while the words are typed into it
+  // with a keyboard up, never merely because the field has focus.
+  function fitKeyboard() {
+    var s = els && els.sheet;
+    if (!s) return;
+    var v = window.visualViewport, phone = window.innerWidth <= 640;
+    var lift = (phone && v && !s.hidden) ? Math.max(0, Math.round(window.innerHeight - (v.offsetTop + v.height))) : 0;
+    var typing = lift > 80 && document.activeElement === els.field;
+    s.classList.toggle('typing', typing);
+    if (!phone || !v || s.hidden) { s.style.bottom = ''; s.style.maxHeight = ''; }
+    else {
+      s.style.bottom = lift ? lift + 'px' : '';
+      s.style.maxHeight = Math.max(160, Math.round(v.height - 12)) + 'px';
+    }
+    if (anchor && isOpen()) { anchor = clampAnchor(anchor); position(); }
+  }
   // THE SHEET RISES AND SINKS, from below the screen's edge and back, on a
   // phone and on a desk alike; with reduced motion it is simply there, or
   // gone. A bottom sheet a finger pulled part way sinks from where it was
@@ -792,7 +839,23 @@
     a.onfinish = done;
     a.oncancel = done;
   }
-  /* The tap that says where the words go. */
+  /* CHOOSING TEXT OPENS THE SHEET (the owner's "A": picking Text "just closes
+     the menu", and on a finished take the tap that came next was refused).
+     The words start in the middle of the drawing that can be seen; a drag, or
+     a tap where they should go, moves them. */
+  function start() {
+    if (!editor || !bind()) return;
+    var sb = screenBox(), lg = editor.logical(), x = lg.width / 2, y = lg.height / 2;
+    if (sb) {
+      var l = Math.max(sb.left, 0), r = Math.min(sb.left + lg.width * sb.k, window.innerWidth);
+      var t = Math.max(sb.top, 0), b = Math.min(sb.top + lg.height * sb.ky, window.innerHeight);
+      if (r > l) x = ((l + r) / 2 - sb.left) / sb.k;
+      if (b > t) y = ((t + b) / 2 - sb.top) / sb.ky;
+    }
+    place({ x: x, y: y });
+  }
+  /* The tap that says where the words go: it opens the sheet there, or, with
+     the sheet up, moves the words there. */
   function place(pos) {
     if (!editor || !bind()) return;
     if (job) job.finish();
@@ -834,9 +897,9 @@
     els.place.hidden = true;
     document.body.classList.remove('text-open');
     if (document.activeElement === els.field) els.field.blur();
-    s.classList.remove('open');
+    s.classList.remove('open', 'typing');
     sink(s, function () {
-      if (!s.classList.contains('open')) s.hidden = true;
+      if (!s.classList.contains('open')) { s.hidden = true; s.style.bottom = ''; s.style.maxHeight = ''; }
       if (then) then();
     });
   }
@@ -877,7 +940,6 @@
     setTimeout(function () {
       var b = document.querySelector('#shapeSeg [data-shape="text"]');
       if (b) b.click();
-      if (editor && editor.say) editor.say('Tap where your words go');
     }, 0);
   }
 
@@ -885,6 +947,7 @@
     STYLES: STYLES.slice(), SIZES: SIZES, SPEEDS: SPEEDS.slice(), MAX_CHARS: MAX_CHARS,
     attach: function (hooks) { editor = hooks; resume(); },
     place: place,
+    start: start,
     close: close,
     isOpen: isOpen,
     isWriting: function () { return !!job; },

@@ -289,6 +289,18 @@ function startDraw(e) {
   // the post-record lock, as the eyedropper is: it adds no ink, so a finished
   // take may take it.
   if (window.SkriblPadRecolor && SkriblPadRecolor.isArmed() && SkriblPadRecolor.press(e)) return;
+  // TEXT (editor_text.js, lib/textwrite.js): the press says WHERE the words
+  // go, opening the typing sheet there or moving the words already in it.
+  // Above the lock, as the eyedropper and Recolor are: it lays no ink, and
+  // Write it carries a finished take on as Keep drawing does (the owner's
+  // iPhone: on a finished drawing the press was refused). Above the auto-arm
+  // too: nothing is recorded until Write it.
+  if (window.SkriblTextTool && window.SkriblTextTool.wants()) {
+    const _sp = document.getElementById('shapePop');
+    if (_sp && !_sp.hidden) _sp.hidden = true;
+    window.SkriblText.place(getPos(e));
+    return;
+  }
   // Post-record lock: the completed replay can't be drawn over. The visible
   // answer is the on-canvas "+ Keep drawing" pill — nudge it so the eye lands on
   // the way forward, right where the press just failed; the toast explains.
@@ -321,14 +333,6 @@ function startDraw(e) {
   {
     const _shapePop = document.getElementById('shapePop');
     if (_shapePop && !_shapePop.hidden) _shapePop.hidden = true;
-  }
-  // TEXT (editor_text.js, lib/textwrite.js): the press says WHERE the words
-  // go, and the typing sheet comes up. Nothing is drawn and no take is armed
-  // until Write it; above the auto-arm for that reason, below the lock so a
-  // finished take refuses it as it refuses the pen.
-  if (window.SkriblTextTool && window.SkriblTextTool.wants()) {
-    window.SkriblText.place(getPos(e));
-    return;
   }
   // Auto-arm: on a blank, unlocked canvas the first stroke starts recording on
   // its own, so a first-time user who "just draws" still gets a replay to post
