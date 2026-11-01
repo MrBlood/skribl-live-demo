@@ -27903,3 +27903,29 @@ Not tested here: WebKit (the owner's iPhone), and SF and Segoe UI for the
 model's fit (it is fitted from the face's own measurements, so it does not
 depend on this box's fonts); the live site (not reachable from this
 session).
+
+## After v330 -- Main red after #710: the fine-scrub bubble read a move early
+
+Main's full run after #710 went red in one job, sqlite shard 4, at one row of
+verify_replayspeed: "[link page, phone] ...and slid up into fine scrub, the
+bubble rides up with the finger" read the bubble's foot at 344 for a touch at
+367.5, which is where it belonged one move earlier (the finger at 400). The
+run after #712 was green on the same row, and the music timeline's fix
+(#712) was not about this one.
+
+Not the CPU: with the CPU 6x and 10x slower here, the bubble's rows green.
+The bubble follows the finger as the page handles each move
+(lib/replayline.js, synchronously in the move), and the rows read it 16ms
+after the last move was sent; a page that handled that move late was read
+behind it. The app was right; the instrument read before the page had moved.
+
+The three rows that read after a move (up into fine scrub, off the right
+end, off the left end) read once the bubble has stopped now (SETTLED: the
+same place three frames running, or after 1.5s). Calibrated on a trimmed
+copy (the fixture and the bubble section) with lib/replayline.js served
+changed to move the bubble 60ms after each move, as a busy page would: main's
+rows red on all three surfaces the way the CI was (the foot a move or two
+behind: 720 for 655 on the Pad, 376.5 for 311.5 on the link page, 316.2 for
+251.2 in the post), the settled rows green; and with the bubble not riding
+up at all (its lift fixed at 56px), the settled rows red on all three. The
+whole suite, 168 of 168.
