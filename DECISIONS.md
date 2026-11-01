@@ -28563,3 +28563,70 @@ example plays on both (the Pad's drawing, as Recolor's is).
 THE FOUR: playful (a bubble that says hello to you); simple (one idea, three
 colours, empty paper round it); kind; powerful (the words are the tool's own,
 so what you watch is what Text does).
+
+## After v330 -- Tune's seven examples
+
+The owner said "1 2 and 3" to what was left; the first was Tune's seven help
+cards still without an example (Motion guides, Smear weight and Onion skin
+played How it works' clips already).
+
+- PHONE CLIPS, each a row changed in Tune and what it changes, filmed by
+  make_help_clips.py as the whole phone screen in both themes, as the extras
+  are:
+  - Grid: Grid on, Fine, then a house drawn edge by edge along the lines
+    (each edge its own straight stroke, so the corners land on the grid).
+  - Stroke layers: a see-through loop that crosses itself. On the Pad,
+    played with it on (even), then off in Tune and played again (dark where
+    it overlaps): the Pad applies it as it draws the drawing (Play, a post,
+    an export), not to the canvas already drawn, so a first take drew two
+    loops, one each way, a state no replay shows, and was put aside. On
+    Flip, which draws the page again as the switch turns: off, then on.
+  - Pauses (the Pad): a wave, a long stop, another wave; played with Keep
+    (set before the clip) the stop plays as it was, then Tight in Tune
+    squeezes it down.
+  - Speed and Watching speed (Flip): the bouncing ball at 6 pages a second,
+    then 24 chosen in Tune; the preview at a quarter, then four times as
+    fast. The first setting is chosen before each clip: with both chosen on
+    camera they ran 24 seconds, too long to watch in a card.
+  - Grid and Stroke layers are filmed on each editor (grid-pad, grid-flip,
+    layers-pad, layers-flip): the two Tune sheets differ, and neither name
+    begins the other, so a check can tell which one a card loaded.
+- MIRROR IS A DRAWING (make_art.py mirror): a butterfly drawn on its left
+  side with Mirror left to right on, so its right side draws itself beside
+  every stroke: the wings' outlines, the body, the veins, then the pink spots
+  and the antennae.
+- THE PAD'S WATCHING SPEED plays Speed's clip: the same setting, under the
+  replay.
+- EACH IS ALSO IN HOW IT WORKS: the Pad's extras gain Pauses, Grid, Stroke
+  layers and Mirror; Flip's techniques Speed, Watching speed, Grid, Stroke
+  layers and Mirror.
+
+- A CARD WITH AN EXAMPLE NOW SHRINKS IT TO FIT (lib/learncard.js shrinkPic),
+  found by verify_learncard's Tune rows on the first run with every row
+  showing an example. Two cards sat over their own rows: Flip's Mirror, a
+  drawing (a 4:3 stage) mid-Tune with room on neither side, and only a
+  phone's frame could give up height, so it was pinned to the top over the
+  row, where the finger lifting pressed its More and opened How it works,
+  and every row after it failed; and the Pad's Watching speed, whose frame
+  shrank to a room of 465.6px and so missed it by 0.4px, and went above.
+  Now any picture gives up height, in whole pixels: a phone's frame its
+  spare room first, then the recording, or the drawing, grows smaller,
+  whole and at its own shape, down to 120px; with less room the card goes
+  without its picture. Calibrated per part on the Tune rows: without the
+  drawing's shrink, red at Flip's Mirror alone (35/36); without the
+  rounding, red at the Pad's Watching speed alone (35/36); both, 36/36. A
+  change to which side a card takes when it fits neither was tried and
+  dropped: green either way, so it pinned nothing.
+
+THE CHECKS: verify_learncard's Tune rows hold every row's card to its own
+example (each clip by a name no other begins; Mirror's drawing),
+verify_helpdemos' census holds each new clip to its control on its own
+editor, and verify_book every recording to its ratio.
+
+WHAT IT DOES TO FLIP: shared (one card module, one How it works); Flip gets
+its own Grid and Stroke layers clips and its two speeds; the Pad its Pauses.
+
+THE FOUR: playful (a butterfly drawing itself); simple (each example is the
+row changed and what it changes, nothing more); kind (a card never covers
+its row, and on a small screen it keeps its words); powerful (every setting
+in Tune shows what it does).

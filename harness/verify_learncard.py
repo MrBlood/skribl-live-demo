@@ -558,31 +558,34 @@ with sync_playwright() as p:
         # call 2). Each row, held on its name, opens its card in the words
         # said yes to, painted, whole and clear of the row, which wears the
         # ring; held on its control (the switch, a choice), the same card,
-        # and the setting unchanged; a quick tap still changes it. Flip's
-        # Motion guides and Smear weight sit mid-Tune with a phone's clip
-        # that fits on neither side: their cards end above the row, the
-        # recording whole in its frame (the frame gives up its spare height).
+        # and the setting unchanged; a quick tap still changes it. Every row's
+        # card shows its own example (the owner: "1 2 and 3"): a phone's clip
+        # of the row changed in Tune (Grid's and Stroke layers' each editor's
+        # own), Mirror's butterfly drawing itself. A clip mid-Tune fits on
+        # neither side: its card ends above the row, the recording whole in
+        # its frame (the frame gives up its spare height).
         # ? with Tune open puts each row's tag on its own row: placed above a
         # row the width of the sheet, each sat in the row before, and the
         # banner covered the first two.
         def tune():
             G = "Lines to help you place things. They’re never part of your " + ("animation." if name == "Flip" else "drawing.")
-            SHARED = [("#tuneGridRow", "#gridBtn", "Grid", G, [["Tap", "The grid on or off"], ["Then", "Coarse, Medium or Fine"]], None),
+            ED = "flip" if name == "Flip" else "pad"
+            SHARED = [("#tuneGridRow", "#gridBtn", "Grid", G, [["Tap", "The grid on or off"], ["Then", "Coarse, Medium or Fine"]], f"clips/grid-{ED}-"),
                       ("#tuneLayersRow", "#strokeLayersBtn", "Stroke layers", "See-through ink with no dark spots where a line crosses itself.",
-                       [["On", "Crossings stay even"], ["Off", "Crossings build up darker"]], None),
+                       [["On", "Crossings stay even"], ["Off", "Crossings build up darker"]], f"clips/layers-{ED}-"),
                       ("#tuneMirrorRow", '#mirrorSeg [data-mirror="vertical"]', "Mirror", "Draw on one side and its mirror image draws itself.",
-                       [["Tap", "Left-right, top-bottom or both"], ["Off", "Back to one line"]], None)]
+                       [["Tap", "Left-right, top-bottom or both"], ["Off", "Back to one line"]], "demos/mirror.json")]
             if name == "Pad":
                 ROWS = SHARED + [
                     ("#tunePauseRow", '#pauseSeg [data-pause="trim"]', "Pauses", "How the replay treats the moments you stopped to think.",
-                     [["Keep", "Every pause, as it was"], ["Trim", "Long ones cut to ¼ second"], ["Tight", "Squeezed right down"]], None),
+                     [["Keep", "Every pause, as it was"], ["Trim", "Long ones cut to ¼ second"], ["Tight", "Squeezed right down"]], "clips/pauses-"),
                     ("#tuneSpeedRow", "#tuneSpeed .rl-speed", "Watching speed", "How fast Play shows your drawing. It doesn’t change your post.",
-                     [["Tap", "¼× to 16×, or Fit"], ["Fit", "All of it in about 30 seconds"]], None)]
+                     [["Tap", "¼× to 16×, or Fit"], ["Fit", "All of it in about 30 seconds"]], "clips/speed-")]
             else:
                 ROWS = [("#tuneFpsRow", '#fps [data-fps="6"]', "Speed", "How many pages play each second, here and in your post.",
-                         [["6", "Slow and steady"], ["12", "The usual"], ["24", "Smooth, with more pages"], ["Beat", "With a song, keeps its beat"]], None),
+                         [["6", "Slow and steady"], ["12", "The usual"], ["24", "Smooth, with more pages"], ["Beat", "With a song, keeps its beat"]], "clips/fps-"),
                         ("#tuneWatchRow", '#watchSeg [data-rate="2"]', "Watching speed", "How fast your preview plays. It doesn’t change your post.",
-                         [["Tap", "¼× to 4×"], ["1×", "Just as your post plays"]], None)] + SHARED + [
+                         [["Tap", "¼× to 4×"], ["1×", "Just as your post plays"]], "clips/watch-")] + SHARED + [
                         ("#tuneArcRow", "#arcGuideBtn", "Motion guides", "The path your drawing travels from page to page. Closer dots mean slower.",
                          [["Tap", "Guides on or off"]], "clips/guides-"),
                         ("#tuneSmearRow", '#smearWeightSeg [data-smear="light"]', "Smear weight", "How strong your next Smear is. Smears you’ve made keep theirs.",
@@ -632,7 +635,7 @@ with sync_playwright() as p:
                 card, at = q.evaluate(CARD), q.evaluate(PLACE, row)
                 shows = []
                 for _ in range(25 if ex else 0):
-                    shows = sorted({u.split("/help/")[1] for u, st in got if st < 400 and "/help/clips/" in u})
+                    shows = sorted({u.split("/help/")[1] for u, st in got if st < 400 and ("/help/clips/" in u or "/help/demos/" in u)})
                     if any(u.startswith(ex) for u in shows):
                         break
                     q.wait_for_timeout(100)
@@ -642,7 +645,10 @@ with sync_playwright() as p:
                       bool(card) and bool(at) and card["name"] == nm and card["line"] == line and card["rows"] == rows
                       and card["painted"] and card["rowsPainted"]
                       and at["whole"] and at["clear"] and at["ringed"] and at["painted"] and not at["cut"], f"{card}; {at}")
-                if ex:
+                if ex and ex.startswith("demos/"):
+                    check(f"{name}: ...and {nm}'s card plays its drawing, {ex.split('/')[1]}",
+                          bool(card) and card["example"] and any(u.startswith(ex) for u in shows), f"loaded {shows}")
+                elif ex:
                     rec = at and at["recording"]
                     check(f"{name}: ...and {nm}'s card plays its clip, the recording whole inside its frame",
                           bool(card) and card["example"] and any(u.startswith(ex) for u in shows) and bool(rec) and rec[0] >= 0 and rec[1] >= 0,

@@ -909,22 +909,176 @@ def clip_feel(page, rec):
     return whole(page)
 
 
+# ---- Tune's rows -----------------------------------------------------------------
+# The examples for Tune's help cards (lib/learncard.js) and How it works: each
+# row changed in Tune, then what it changes, filmed as the whole phone screen
+# like the extras. Grid and Stroke layers are filmed on each editor, whose Tune
+# sheets differ (-pad and -flip, so neither name begins the other); Flip's two
+# speeds on Flip, the Pad's Pauses on the Pad. Mirror is a drawing (make_art.py
+# mirror) and the Pad's Watching speed plays Speed's clip, the same setting
+# under the replay.
+def tune(page, *sels):
+    """Tune opened, each control in it tapped, and Tune closed."""
+    tap(page, "#tuneBtn", after=650, frm=(-90, 30))
+    for sel in sels:
+        tap(page, sel, after=650, frm=(-110, 24))
+    tap(page, "#tuneBtn", after=700, frm=(-90, 30))
+
+
+def on_flip(page, strokes, logical, tempo=2.2):
+    import artdraw
+    artdraw.draw(page, strokes, canvas="#pad", logical=logical, tempo=tempo, pause_tempo=2.2,
+                 set_ink=lambda pg, c, s: pg.evaluate("([c, s]) => { color = c; size = s; }", [c, s]))
+
+
+def house():
+    """A house on Fine's lines (a 4:3 canvas: 68px cells, 34px halves), each
+    edge its own straight stroke, so the corners land on the grid: the walls
+    on the main lines, the roof, the door."""
+    from artdraw import INK, PURPLE, Stroke as S
+    line = lambda a, b, c=INK, w=8, role="contour": S([a, b], role, c, size=w, taper=(0.04, 0.04))
+    return [line((272, 340), (272, 476)), line((272, 476), (544, 476)), line((544, 476), (544, 340)),
+            line((544, 340), (272, 340)),
+            line((238, 340), (408, 204), PURPLE, 9), line((408, 204), (578, 340), PURPLE, 9),
+            line((374, 476), (374, 408), PURPLE, 6, "form"), line((374, 408), (442, 408), PURPLE, 6, "form"),
+            line((442, 408), (442, 476), PURPLE, 6, "form")]
+
+
+def clip_grid(page, rec):
+    """Grid: Tune, Grid on, Fine; then a house drawn along its lines."""
+    pad_ready(page)
+    rec.start(); page.wait_for_timeout(500)
+    tune(page, "#gridBtn", '#gridDensitySeg [data-density="fine"]')
+    pad_draw(page, house(), tempo=2.8, end=False)
+    page.wait_for_timeout(900)
+    rec.stop()
+    return whole(page)
+
+
+def clip_grid_flip(page, rec):
+    logical = flip_ready(page)
+    rec.start(); page.wait_for_timeout(500)
+    tune(page, "#gridBtn", '#gridDensitySeg [data-density="fine"]')
+    on_flip(page, house(), logical, tempo=2.8)
+    page.evaluate("window.__fingerHide()"); page.wait_for_timeout(900)
+    rec.stop()
+    return whole(page)
+
+
+def loops(y, x0=170, turns=2.6):
+    """A run of tall loops, each crossing the line before it: where see-through
+    ink overlaps itself."""
+    from artdraw import PURPLE, Stroke as S
+    n = 90
+    pts = []
+    for k in range(n + 1):
+        u = turns * 2 * math.pi * k / n - 0.6
+        pts.append((x0 + 26 * u + 44 * math.sin(u), y - 104 * (0.5 - 0.5 * math.cos(u)) - 14 * math.sin(u)))
+    return [S(pts, "gesture", PURPLE, size=24, pace=0.9, taper=(0.06, 0.12))]
+
+
+SEE_THROUGH = "() => { const s = document.getElementById('opacitySlider'); s.value = '45'; s.dispatchEvent(new Event('input')); }"
+
+
+def clip_layers(page, rec):
+    """Stroke layers: a see-through loop that crosses itself. Played with it
+    on, the ink is even; off in Tune and played again, it builds up dark
+    where it overlaps. The Pad applies it as it draws the drawing (Play, a
+    post, an export), not to the canvas already drawn, so the clip plays."""
+    pad_ready(page)
+    page.evaluate(SEE_THROUGH)
+    pad_draw(page, loops(330), tempo=2.0, end=True)
+    rec.start(); page.wait_for_timeout(700)
+    tap(page, "#playBtn", after=3200, frm=(-60, 80))
+    tune(page, "#strokeLayersBtn")
+    tap(page, "#playBtn", after=3200, frm=(-60, 80))
+    page.evaluate("window.__fingerHide()"); page.wait_for_timeout(600)
+    rec.stop()
+    return whole(page)
+
+
+def clip_layers_flip(page, rec):
+    """Flip draws the page again as the switch turns: off, the loop builds
+    up dark where it overlaps; on again, even."""
+    logical = flip_ready(page)
+    page.evaluate(SEE_THROUGH)
+    flip_draw(page, loops(330), logical)
+    rec.start(); page.wait_for_timeout(700)
+    tune(page, "#strokeLayersBtn")
+    page.wait_for_timeout(1300)
+    tune(page, "#strokeLayersBtn")
+    page.evaluate("window.__fingerHide()"); page.wait_for_timeout(1300)
+    rec.stop()
+    return whole(page)
+
+
+def clip_pauses(page, rec):
+    """Pauses: a wave, a long stop to think, another wave. Played with Keep
+    (set before the clip), the stop plays as it was; Tight in Tune, and it is
+    squeezed right down."""
+    from artdraw import PURPLE, Stroke as S
+    wave = lambda y: [S([(170 + 476 * k / 30, y - 26 * math.sin(2 * math.pi * 1.25 * k / 30)) for k in range(31)],
+                        "form", PURPLE, size=12, taper=(0.08, 0.16))]
+    pad_ready(page)
+    pad_draw(page, wave(220), tempo=2.0, end=False)
+    page.wait_for_timeout(2600)
+    pad_draw(page, wave(400), tempo=2.0, end=True)
+    page.evaluate("() => document.querySelector('#pauseSeg [data-pause=\"keep\"]').click()")
+    rec.start(); page.wait_for_timeout(500)
+    tap(page, "#playBtn", after=4700, frm=(-60, 80))
+    tune(page, '#pauseSeg [data-pause="tight"]')
+    tap(page, "#playBtn", after=2500, frm=(-60, 80))
+    page.evaluate("window.__fingerHide()"); page.wait_for_timeout(500)
+    rec.stop()
+    return whole(page)
+
+
+def speeds(page, rec, a, b):
+    """Flip's bouncing ball played at one setting (chosen before the clip),
+    then the other chosen in Tune and played again."""
+    flip_example(page)
+    page.evaluate("(s) => document.querySelector(s).click()", a)
+    page.wait_for_timeout(300)
+    rec.start(); page.wait_for_timeout(500)
+    tap(page, "#play", after=2600, frm=(-60, 80))
+    tap(page, "#play", after=400, frm=(-60, 80))
+    tune(page, b)
+    tap(page, "#play", after=2200, frm=(-60, 80))
+    tap(page, "#play", after=400, frm=(-60, 80))
+    page.evaluate("window.__fingerHide()"); page.wait_for_timeout(400)
+    rec.stop()
+    return whole(page)
+
+
+def clip_fps(page, rec):
+    """Speed: 6 pages a second, slow and steady; then 24, smooth."""
+    return speeds(page, rec, '#fps [data-fps="6"]', '#fps [data-fps="24"]')
+
+
+def clip_watch(page, rec):
+    """Watching speed: the preview at a quarter, then four times as fast."""
+    return speeds(page, rec, '#watchSeg [data-rate="0.25"]', '#watchSeg [data-rate="4"]')
+
+
 CLIPS = {"music": clip_music, "post": clip_post, "select": clip_select, "liquify": clip_liquify,
          "smudge": clip_smudge, "blur": clip_blur, "fill": clip_fill, "stamp": clip_stamp,
          "artmove": clip_artmove, "inbetween": clip_inbetween, "smear": clip_smear, "onion": clip_onion,
          "hold": clip_hold, "guides": clip_guides, "takes": clip_takes, "speed": clip_speed,
          "photo": clip_photo, "export": clip_export, "zoom": clip_zoom,
-         "eyedropper": clip_eyedropper, "size": clip_size, "feel": clip_feel}
+         "eyedropper": clip_eyedropper, "size": clip_size, "feel": clip_feel,
+         "grid-pad": clip_grid, "grid-flip": clip_grid_flip, "layers-pad": clip_layers, "layers-flip": clip_layers_flip,
+         "pauses": clip_pauses, "fps": clip_fps, "watch": clip_watch}
 # The editor a clip is filmed in, when not Pad.
 ROUTE = {k: "/flip" for k in ("select", "liquify", "smudge", "blur", "fill", "stamp", "artmove",
-                               "inbetween", "smear", "onion", "hold", "guides")}
+                               "inbetween", "smear", "onion", "hold", "guides",
+                               "grid-flip", "layers-flip", "fps", "watch")}
 # Where a clip is recorded, when not the tall phone screen above.
 # A phone's own screen, all of it. The techniques and extras use a SHORTER
 # phone (390 x 640): still the whole screen, so every tap stays in frame, but
 # less empty page, so they are bigger in their cards (owner: "they're small").
 # Post and Add music keep the tall screen their sheets need.
 STEPS = ("inbetween", "smear", "onion", "hold", "guides", "takes", "speed", "photo", "export",
-         "eyedropper", "size", "feel")
+         "eyedropper", "size", "feel", "grid-pad", "grid-flip", "layers-pad", "layers-flip", "pauses", "fps", "watch")
 # Filmed under a real finger (Touch, above), the page a phone's.
 TOUCH = ("eyedropper", "size", "feel")
 VIEWPORT = {k: (390, 844) for k in ("music", "post")}

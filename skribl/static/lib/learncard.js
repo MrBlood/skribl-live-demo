@@ -168,26 +168,32 @@
     // named in words already, so ? puts its tag on that name (tagAt). The ids
     // are the editors' own: the Pad's Pauses and Watching speed, Flip's
     // Speed, Watching speed, Motion guides, Smear weight and Onion skin;
-    // Grid, Stroke layers and Mirror are on both.
-    { sel: '#tuneFpsRow', name: 'Speed', tag: 'Speed', tagAt: '.tune-name', more: 'pages per second',
+    // Grid, Stroke layers and Mirror are on both. EVERY ROW HAS ITS EXAMPLE
+    // (the owner: "1 2 and 3", the first Tune's seven): a phone clip of the
+    // row changed in Tune and what it changes, Grid's and Stroke layers' filmed
+    // on each editor, whose Tune differs; Mirror a butterfly whose right side
+    // draws itself; the Pad's Watching speed is Speed's clip, the same setting
+    // under the replay. Each is also in How it works.
+    { sel: '#tuneFpsRow', name: 'Speed', tag: 'Speed', tagAt: '.tune-name', clip: 'fps', more: 'pages per second',
       line: 'How many pages play each second, here and in your post.',
       do: [['6', 'Slow and steady'], ['12', 'The usual'], ['24', 'Smooth, with more pages'], ['Beat', 'With a song, keeps its beat']] },
-    { sel: '#tuneWatchRow', name: 'Watching speed', tag: 'Watching speed', tagAt: '.tune-name',
+    { sel: '#tuneWatchRow', name: 'Watching speed', tag: 'Watching speed', tagAt: '.tune-name', clip: 'watch',
       line: 'How fast your preview plays. It doesn’t change your post.',
       do: [['Tap', '¼× to 4×'], ['1×', 'Just as your post plays']] },
-    { sel: '#tuneGridRow', name: 'Grid', tag: 'Grid', tagAt: '.tune-name', more: 'Grid',
+    { sel: '#tuneGridRow', name: 'Grid', tag: 'Grid', tagAt: '.tune-name', clip: FLIP ? 'grid-flip' : 'grid-pad', more: 'Grid',
       line: 'Lines to help you place things. They’re never part of your ' + (FLIP ? 'animation.' : 'drawing.'),
       do: [['Tap', 'The grid on or off'], ['Then', 'Coarse, Medium or Fine']] },
-    { sel: '#tuneLayersRow', name: 'Stroke layers', tag: 'Stroke layers', tagAt: '.tune-name', more: 'Stroke layers',
+    { sel: '#tuneLayersRow', name: 'Stroke layers', tag: 'Stroke layers', tagAt: '.tune-name', clip: FLIP ? 'layers-flip' : 'layers-pad',
+      more: 'Stroke layers',
       line: 'See-through ink with no dark spots where a line crosses itself.',
       do: [['On', 'Crossings stay even'], ['Off', 'Crossings build up darker']] },
-    { sel: '#tuneMirrorRow', name: 'Mirror', tag: 'Mirror', tagAt: '.tune-name', more: 'Mirror',
+    { sel: '#tuneMirrorRow', name: 'Mirror', tag: 'Mirror', tagAt: '.tune-name', demo: 'mirror', more: 'Mirror',
       line: 'Draw on one side and its mirror image draws itself.',
       do: [['Tap', 'Left-right, top-bottom or both'], ['Off', 'Back to one line']] },
-    { sel: '#tunePauseRow', name: 'Pauses', tag: 'Pauses', tagAt: '.tune-name', more: 'Pauses',
+    { sel: '#tunePauseRow', name: 'Pauses', tag: 'Pauses', tagAt: '.tune-name', clip: 'pauses', more: 'Pauses',
       line: 'How the replay treats the moments you stopped to think.',
       do: [['Keep', 'Every pause, as it was'], ['Trim', 'Long ones cut to ¼ second'], ['Tight', 'Squeezed right down']] },
-    { sel: '#tuneSpeedRow', name: 'Watching speed', tag: 'Watching speed', tagAt: '.tune-name', more: 'Speed',
+    { sel: '#tuneSpeedRow', name: 'Watching speed', tag: 'Watching speed', tagAt: '.tune-name', clip: 'speed', more: 'Speed',
       line: 'How fast Play shows your drawing. It doesn’t change your post.',
       do: [['Tap', '¼× to 16×, or Fit'], ['Fit', 'All of it in about 30 seconds']] },
     { sel: '#tuneArcRow', name: 'Motion guides', tag: 'Motion guides', tagAt: '.tune-name', clip: 'guides',
@@ -300,20 +306,44 @@
   function keep(card) {
     ['pointerdown', 'click'].forEach(function (t) { card.addEventListener(t, function (e) { e.stopPropagation(); }); });
   }
+  // A CARD NEVER COVERS WHAT IT EXPLAINS (Tune's rows, after v330). Where it
+  // fits on neither side of its button (an example's card over a row in the
+  // middle of Tune), its picture gives up height: a phone's frame its spare
+  // room first (about 90px), then the recording, or the drawing, grows
+  // smaller, whole and at its own shape, down to PIC_MIN; with less room
+  // than that the card goes without its picture, words and all still clear.
+  // Every Tune row has an example (the owner: "1 2 and 3"), and a drawing's
+  // card, which could not shrink, sat over Flip's Mirror row: the finger
+  // lifting there pressed the card's More.
+  var PIC_MIN = 120;
+  function shrinkPic(pic, need) {
+    // Whole pixels, rounded down: a card shrunk to a fraction over the room
+    // (the Pad's Watching speed, 0.4px) went above, over its own row.
+    var box = pic.firstChild, tall = box.offsetHeight, want = Math.floor(tall - need);
+    if (box.classList.contains('lc-phone')) {
+      var v = box.querySelector('video'), vh = v ? v.offsetHeight : 182;
+      if (want >= vh + 16 || (v && want >= PIC_MIN)) {
+        box.style.height = want + 'px';
+        // The recording is content-box inside its line (2px): its width at
+        // its own ratio for the height that is left.
+        if (want < vh + 16) v.style.width = Math.floor((want - 18) * v.clientWidth / v.clientHeight) + 'px';
+        return cardEl.offsetHeight;
+      }
+    } else if (want >= PIC_MIN) {
+      box.style.width = Math.floor(want * box.offsetWidth / tall) + 'px';
+      box.style.margin = '0 auto';
+      return cardEl.offsetHeight;
+    }
+    if (current && current.ex) current.ex.stop();
+    pic.remove();
+    return cardEl.offsetHeight;
+  }
   function place(el) {
     var b = el.getBoundingClientRect();
     var w = cardEl.offsetWidth, h = cardEl.offsetHeight;
-    // A CARD NEVER COVERS WHAT IT EXPLAINS (Tune's rows, after v330). Where it
-    // fits on neither side of its button (a phone's clip over a row in the
-    // middle of Flip's Tune), the frame round the clip gives up its spare
-    // height, about 90px of it; the recording itself stays whole.
     var room = Math.max(b.top - 22, innerHeight - b.bottom - 22);
-    var frame = cardEl.querySelector('.lc-phone');
-    if (h > room && frame) {
-      var v = frame.querySelector('video'), floor = (v ? v.offsetHeight : 182) + 16;
-      frame.style.height = Math.max(floor, frame.offsetHeight - (h - room)) + 'px';
-      h = cardEl.offsetHeight;
-    }
+    var pic = cardEl.querySelector('.lc-pic');
+    if (h > room && pic && pic.firstChild) h = shrinkPic(pic, h - room);
     var above = b.top - h - 14 >= 8 || b.bottom + h + 14 > innerHeight - 8;
     var left = Math.max(12, Math.min(innerWidth - w - 12, b.left + b.width / 2 - w / 2));
     cardEl.style.left = left + 'px';

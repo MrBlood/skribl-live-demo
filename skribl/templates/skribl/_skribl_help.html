@@ -133,12 +133,26 @@
           {{ learn_card(None, 'Smear', 'A page that shows the whole swing, so the move reads as speed.', 'techniques', clip='smear', shape='screen') }}
           {{ learn_card(None, 'Hold a page', 'Tap a page’s ×1 to make it linger, up to four beats.', 'techniques', clip='hold', shape='screen') }}
           {{ learn_card(None, 'Motion guides', 'See the path a drawing travels. Closer dots mean slower.', 'techniques', clip='guides', shape='screen') }}
+          {# Tune's rows, each also the example on its help card (lib/learncard.js):
+             the setting changed in Tune and what it changes, filmed on Flip; Mirror
+             a drawing whose other half draws itself. #}
+          {{ learn_card(None, 'Speed', 'How many pages play each second: 6 is slow and steady, 24 is smooth.', 'techniques', clip='fps', shape='screen') }}
+          {{ learn_card(None, 'Watching speed', 'Watch your preview slower or faster. Your post keeps its speed.', 'techniques', clip='watch', shape='screen') }}
+          {{ learn_card(None, 'Grid', 'Lines to place things by. They’re never part of your animation.', 'techniques', clip='grid-flip', shape='screen') }}
+          {{ learn_card(None, 'Stroke layers', 'See-through ink stays even where a line crosses itself.', 'techniques', clip='layers-flip', shape='screen') }}
+          {{ learn_card('mirror', 'Mirror', 'Draw one side and the other draws itself.', 'techniques') }}
           {% endif %}
           {% if not is_flip %}
           {# Extras: the rest of what Pad does with a drawing, filmed as the whole
              phone screen. #}
           {{ learn_card(None, 'Keep drawing', 'Tap Keep drawing to add more. The replay plays it all in order.', 'extras', clip='takes', shape='screen') }}
           {{ learn_card(None, 'Speed', 'Watch it slow, real time or as a time-lapse. Tap the speed under the replay.', 'extras', clip='speed', shape='screen') }}
+          {# Tune's rows, each also the example on its help card (lib/learncard.js);
+             Speed above is Watching speed's. #}
+          {{ learn_card(None, 'Pauses', 'Keep every pause as you drew it, or squeeze them right down.', 'extras', clip='pauses', shape='screen') }}
+          {{ learn_card(None, 'Grid', 'Lines to place things by. They’re never part of your drawing.', 'extras', clip='grid-pad', shape='screen') }}
+          {{ learn_card(None, 'Stroke layers', 'See-through ink stays even where a line crosses itself.', 'extras', clip='layers-pad', shape='screen') }}
+          {{ learn_card('mirror', 'Mirror', 'Draw one side and the other draws itself.', 'extras') }}
           {{ learn_card(None, 'Add a photo', 'Put a picture behind your drawing, then fill, fit or move it.', 'extras', clip='photo', shape='screen') }}
           {{ learn_card(None, 'Export', 'Save a still, a video with its music, or a looping GIF.', 'extras', clip='export', shape='screen') }}
           {{ learn_card(None, 'Zoom', 'On a computer, the magnifier zooms in and you scroll to look around. On a phone, pinch.', 'extras', clip='zoom', shape='desk') }}
