@@ -46,7 +46,7 @@
        data-tool: the cards sit before the dock in the page, so anything
        looking for "the [data-tool=eraser]" found a card (main went red on
        verify_pointerpad after #304). #}
-    {% macro learn_card(demo, title, line, group, n=None, tool=None, clip=None, shape=None) -%}
+    {% macro learn_card(demo, title, line, group, n=None, tool=None, clip=None, shape=None, tall=False) -%}
     {% if clip %}
     {# A screen clip (harness/tools/make_help_clips.py), one per theme so it
        matches the app around it; lib/helplearn.js picks and plays it. Its
@@ -54,7 +54,7 @@
        short ones, the 4:3 tools, the zoom), so a frame placed round it by
        lib/learncard.js is the phone's own outline and shows all of it;
        verify_book holds each ratio to its poster. #}
-    {% set ratio = {'music': '600 / 1298', 'post': '600 / 1298', 'zoom': '600 / 540'}.get(clip, '600 / 984' if shape == 'screen' else '4 / 3') %}
+    {% set ratio = '600 / 1298' if tall else {'music': '600 / 1298', 'post': '600 / 1298', 'zoom': '600 / 540'}.get(clip, '600 / 984' if shape == 'screen' else '4 / 3') %}
     <figure class="learn-card learn-clip" data-group="{{ group }}" data-clip-name="{{ clip }}" data-ratio="{{ ratio }}"{% if tool %} data-learn-tool="{{ tool }}"{% endif %}{% if shape %} data-shape="{{ shape }}"{% endif %}
             data-clip-dark="{{ skribl_asset('help/clips/' ~ clip ~ '-dark.mp4') }}"
             data-clip-light="{{ skribl_asset('help/clips/' ~ clip ~ '-light.mp4') }}"
@@ -116,6 +116,20 @@
           {{ learn_card(None, 'Feel', 'Smoothing turns a shaky hand into a steady line.', 'tools', clip='feel', shape='screen') }}
           {{ learn_card(None, 'Eyedropper', 'Take a color from your drawing and draw with it.', 'tools', clip='eyedropper', shape='screen') }}
           {{ learn_card('recolor', 'Recolor', 'Tap a line to give it your pen’s color.' if is_flip else 'Tap a line to give it your pen’s color. The replay shows it change.', 'tools') }}
+          {# Photo and music, each the example on its help card (lib/learncard.js):
+             one control used on the drawer with a song whose beat Skribl heard,
+             the tall phone screen as Add music's. Flip's photo is filmed on Flip;
+             the Pad's is in its extras. #}
+          {{ learn_card(None, 'Hear the loop', 'Just the music, round and round, as it loops under your ' ~ ('animation.' if is_flip else 'drawing.'), 'media', clip='hear', shape='screen', tall=True) }}
+          {{ learn_card(None, 'Beat click', 'A soft tick on each beat while the loop plays. Never in your post.', 'media', clip='click', shape='screen', tall=True) }}
+          {{ learn_card(None, 'Snap to the beat', 'Drag an end of the loop and it lands on a beat.', 'media', clip='snap', shape='screen', tall=True) }}
+          {{ learn_card(None, 'Length', 'Skribl’s pick, as long as your ' ~ ('animation' if is_flip else 'drawing') ~ ', or the whole song.', 'media', clip='length', shape='screen', tall=True) }}
+          {{ learn_card(None, 'Beat', 'Tap along with the loop and Skribl counts the beat.', 'media', clip='beat', shape='screen', tall=True) }}
+          {{ learn_card(None, 'Restart', 'Smooth the join where the loop comes round.', 'media', clip='restart', shape='screen', tall=True) }}
+          {{ learn_card(None, 'Exact times', 'Type the loop’s start and end, to a thousandth of a second.', 'media', clip='exact', shape='screen', tall=True) }}
+          {% if is_flip %}
+          {{ learn_card(None, 'Add a photo', 'Put a picture behind every page, then fill, fit or move it.', 'media', clip='photo-flip', shape='screen') }}
+          {% endif %}
           {% if is_flip %}
           {# Flip's own tools change strokes already on the page, which a page
              does not record, so these are screen clips of the editor. #}

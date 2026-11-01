@@ -1588,7 +1588,10 @@ click, Snap to the beat, the four doors and Add a photo, with one finding (a
 hold on a grey button opened nothing on a phone, while a rest on a desk
 opened its card). "All yes": **built** (DECISIONS, after v330, "The music and
 photo drawers' eight cards"), a grey button's card opening on a hold too.
-Next: an example in each, as Tune's have.
+The eight examples, **built** (DECISIONS, after v330, "The music and photo
+drawers' eight examples"): phone clips of each control used on the drawer,
+shared by both editors as Add music's is, Add a photo filmed on each; each
+also in How it works.
 
 ## 6ab. Text that writes itself, in the owner's own hand (owner, Oct 31: "How hard would it be to add text to the pad?", then "Can't we have our own font")
 
