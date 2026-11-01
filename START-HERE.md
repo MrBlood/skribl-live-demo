@@ -72,7 +72,7 @@ here is the rule you can break tomorrow.
 | Possess the id and the key → revoke through the product, whatever this browser remembers. | `verify_posted.py` |
 | A 404 from DELETE means UNKNOWN. The client must not turn it into success. | `verify_posted.py` |
 | The player carries no editor-only module. | `verify_player_isolation.py` |
-| Your hand (`/skribl-pad?letters=1`) keeps no Pad draft and leaves the Pad's brush and mirror as they were; a letter drawn again replaces the old one only on Done; a posted set, whole or not, reads back to its letters by the one layout rule `editor_letters.js` and `harness/tools/letterfont.py` share. | `verify_letters.py` |
+| Your hand (`/skribl-pad?letters=1`) keeps no Pad draft and leaves the Pad's brush and mirror as they were; a letter changed (put back as ink, fitted to the screen; the eraser cuts its points, every point left keeping its time) replaces the old one only on Done; a posted set, whole or not, reads back to its letters by the one layout rule `editor_letters.js` and `harness/tools/letterfont.py` share. | `verify_letters.py` |
 | Text is ink, not type: nothing is drawn or recorded until Write it; the words go in as ordinary strokes, each point at the time the plan gave it on the editor's clock, forward only; one Undo takes the line back; Mirror never copies them. One module (`lib/textwrite.js`) for both editors. | `verify_text.py` |
 | The player's JS stays under its ratchet, measured on what is SERVED (comments stripped), not what is on disk. | `verify_jsstrip.py`, `verify_player_isolation.py` |
 | `[hidden]` is honoured on every control that uses it. | `verify_layout.py`, `verify_help.py`, `verify_move.py` |

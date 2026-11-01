@@ -28334,3 +28334,95 @@ playful as before.
 
 Not tested here: the iPhone's own keyboard (WebKit), which is the point of
 it; the owner's phone will say.
+
+## After v330 -- Changing a letter: as ink, an eraser that cuts the line, and the font under it
+
+The owner wanted to change a couple of Skribl's letters, which are their own
+first 92. "Is there a way to have the original letters underlay?", then "Not
+the drawings, but the letters that were under when I did it first time" (the
+font under each box: system-ui at 300, on their iPhone SF; their posted set
+came from a 3x screen), then "Maybe a button to put guide under it", "Also
+maybe eraser? I have a couple that just need a tiny bit erased. I like all
+your ideas if when I click redo it erased old letter but leaves underneath",
+"Also a way to adjust eraser size", and "All yes" to the four calls of the
+change-a-letter mock.
+
+- A LETTER TAPPED ON THE TILES COMES UP AS INK, to change ("s · change it",
+  the tile "Change s"): rubbed out with Eraser, added to with the pen, or
+  Redo. It had been a faint picture to draw a new letter over, and a bit
+  rubbed out needs the letter itself. Cancel keeps it as it was; Done keeps
+  it as it stands, and with nothing changed writes nothing.
+- THE ERASER WORKS ON THE LETTER'S POINTS, NOT ITS PIXELS. The ink inside
+  its circle goes, a line it cuts carries on as lines, every point left keeps
+  the time it was drawn at, and a crumb a cut would leave is let go, so what
+  is left is a letter like any other, clean wherever Text writes it. The
+  canvas is painted again from the points as it rubs, so what is seen is what
+  Done keeps, and a line is cut where its ink (half its width past its middle)
+  meets the circle, so nothing painted is left inside the ring. The ring is
+  the real size, at the press, and over a desk's letter before one; the accent
+  on a halo of the paper's lightness (3.9:1 light, 4.4:1 dark, measured in the
+  mock). The Pad's own eraser cursor (white with a dark halo, app.js) would
+  read about 2:1 on this light paper; this one is the mock's. A second finger
+  is the pinch (lib/canvaszoom.js, on touch events): what the first finger
+  rubbed out comes back, as a pinch unwinds a stroke.
+- ITS SIZE, 6 to 48 px across at the drawing's fit and 22 to start, is a
+  slider in the line's place while Eraser is on, so the bottom panel keeps
+  its height (118 px either way) and nothing moves; kept on this device
+  (skribl.letters.prefs, apart from the hand, so a copy never carries it);
+  [ and ] on a desk, as they size the Pad's pen. At fit, because the Pad's
+  eraser is sized in the drawing too: a pinch makes the ring grow with the
+  letter, and the slider is how a bit gets smaller.
+- GUIDE puts the font that was under the letter the first time back under
+  it, gliding in over a fifth of a second, off to start and kept as left. An
+  accent keeps its own base letter faint under it, Guide or not: that is
+  where the accent goes, not the font.
+- REDO clears the letter and leaves the guide, with the pen back (the
+  owner's condition); its toast's Undo brings the letter back as it stood.
+- Eraser and Guide take Finish later's place, which is empty while a letter
+  is changed, on its card at its size; on is the app's on (the chosen tint,
+  its ink, the 1px ring in --ui-hi).
+- FITTED TO THIS SCREEN. A letter is put back fitted to the box this screen
+  measures (its cap height, its baseline, its box's middle), in order and
+  changed alike; the box it was drawn in gives it back as it was. The mock
+  found the owner's hand, opened from the copy made for their phone, coming
+  back as ink small in a corner: the faint picture had always been scaled,
+  which hid it. Done with nothing changed keeps such a letter exactly as it
+  came.
+
+verify_letters 14 holds it (26 rows); 12 now taps a letter to change it (a
+stroke added is kept with it; Redo and a stroke draw it again); 9 reads the
+new words on and off (Eraser, Guide, the size and its value, the tint laid
+over the bar it sits on) and their 44 px.
+
+CALIBRATION, the file served changed, each part alone: 30 breaks, each red
+at its own row: the letter not put back as ink (twice: the change part and
+the tiles), the tools hidden, the font never under it, a jump instead of a
+glide, a glide of 40 ms, Guide not kept, the line left beside the size, the
+cut at the middle of the line instead of its ink, no repaint, the cut ends'
+times lost, a ring twice the size, no unwinding at a pinch, the size not
+kept, Redo bringing the old letter back, its Undo bringing nothing, the pen
+not back after Redo, the eraser staying on from letter to letter, Cancel
+writing, Done ignoring a change, Done writing an unchanged letter, no ring
+before a press, no [ ], no fitting, the tools while drawing in order, an
+accent's base letter only with Guide, the tile still saying "Draw g again",
+Redo in the tiles keeping the old letter, the on ink of the old #b9a8ff,
+buttons 36 px. Two did not go red the first time, each the instrument: the
+settings were read by a parse that threw before the row could say red, and
+the glide was read by counting frames, which four runs at once slowed into
+false jumps. Read next by the time each step took, it was red once beside
+three other suites and green alone (a frame read 10.1 ms after the last saw
+a step of 0.153 against a bound of 0.151: the reader's clock is a callback's
+jitter from the glide's own frame time). It is read now as a span: off to on
+takes at least 120 ms, with something in between, which slow frames can only
+lengthen. A jump and a 40 ms glide are each red at it; two controls with
+nothing changed, run four at once, have no red row.
+
+WHAT IT DOES TO FLIP: shared. Your hand is one page; Flip's Text opens it.
+
+THE FOUR: simple (tap a letter and it is there; what is seen is what is
+kept); kind (Cancel and Undo; a tiny fix no longer means drawing the whole
+letter again); powerful (a real eraser that cuts the line, sized exactly,
+and the font when it helps); playful as before.
+
+Not tested here: WebKit, so the iPhone's touch and its SF under the letter;
+the owner's phone will say.

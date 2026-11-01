@@ -66,7 +66,47 @@ body.letters-done .lt-btns { grid-template-columns: auto 1fr; }
 }
 .lt-btn.lt-next { background: var(--accent-fill); border-color: transparent; color: #fff; }
 .lt-btn:disabled { opacity: .45; cursor: default; }
-.lt-later:focus-visible, .lt-btn:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.lt-later:focus-visible, .lt-btn:focus-visible, .lt-tool:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+
+/* ---- Changing a letter: Eraser and Guide, and the eraser's size ----
+   The two buttons take Finish later's place, at its size, on its card. On is
+   the app's own on: the chosen tint, its ink, and a 1px ring in --ui-hi
+   (styles.css, ON IS OUTLINED, the magnet and Taller). */
+.lt-tools { display: flex; gap: 8px; }
+.lt-tools[hidden] { display: none; }
+.lt-tool {
+  height: 44px; padding: 0 14px; border-radius: 12px; cursor: pointer;
+  border: 1px solid var(--menu-card-line); background: var(--menu-card); color: var(--text-primary);
+  font: inherit; font-size: 15px; font-weight: 700;
+}
+.lt-tool[aria-pressed="true"] {
+  background: var(--seg-on-fill); color: var(--seg-on-ink); border-color: transparent;
+  box-shadow: inset 0 0 0 1px var(--ui-hi);
+}
+/* The size takes the line's place while Eraser is on, as tall as the line,
+   so the panel keeps its height and nothing moves. */
+.lt-preview[hidden], .lt-size[hidden] { display: none; }
+.lt-size { min-height: 34px; display: flex; align-items: center; gap: 12px; }
+.lt-size label { font-size: 14px; color: var(--text-secondary); white-space: nowrap; }
+.lt-size .slider { min-width: 0; }
+.lt-size output {
+  min-width: 48px; text-align: right; font-size: 15px; font-weight: 700;
+  color: var(--text-primary); font-variant-numeric: tabular-nums;
+}
+/* The eraser's ring: what a press takes, at its real size. In the canvas's
+   wrap, as the Pad's eraser cursor is (app.js), so it stays crisp at any
+   zoom; the accent on a thin halo of the paper's own lightness, so it reads
+   on the light paper and the dark (3.9:1 and 4.4:1, measured in the mock). */
+.lt-ring {
+  position: absolute; z-index: 10; pointer-events: none; box-sizing: border-box;
+  border-radius: 50%; border: 1.5px solid var(--ui-hi);
+  box-shadow: 0 0 0 1px var(--lt-ring-halo);
+  transform: translate(-50%, -50%);
+  --lt-ring-halo: rgba(0, 0, 0, .55);
+}
+.light-bg .lt-ring { --lt-ring-halo: rgba(255, 255, 255, .85); }
+.lt-ring[hidden] { display: none; }
+#canvas.lt-erasing { cursor: cell; }   /* the Pad's eraser's own (styles.css .canvas-wrap.eraser) */
 
 /* On a desk the two bars are panels over the canvas's middle, not the width
    of the window. */

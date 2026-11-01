@@ -12,11 +12,26 @@
     <p class="lt-sub" id="ltSub" aria-live="polite"></p>
   </div>
   <button type="button" class="lt-later" id="ltLater">Finish later</button>
+  {# CHANGING A LETTER from the tiles: the eraser, and the font that was under
+     the letter the first time, in the place Finish later has while the
+     letters are drawn in order. Both are on/off, so each says whether it is
+     on (aria-pressed). #}
+  <div class="lt-tools" id="ltTools" hidden>
+    <button type="button" class="lt-tool" id="ltEraser" aria-pressed="false">Eraser</button>
+    <button type="button" class="lt-tool" id="ltGuide" aria-pressed="false">Guide</button>
+  </div>
   <div class="lt-bar" id="ltBar" role="progressbar" aria-label="Letters drawn"
        aria-valuemin="0" aria-valuemax="92" aria-valuenow="0"><i id="ltBarFill"></i></div>
 </div>
 <div class="lt-foot" id="ltFoot">
   <div class="lt-preview" id="ltPreview" aria-hidden="true"></div>
+  {# The eraser's size, in the line's place while Eraser is on: the panel
+     keeps its height, so nothing moves. In px at the drawing's fit. #}
+  <div class="lt-size" id="ltSizeRow" hidden>
+    <label for="ltEraserSize" id="ltEraserSizeLabel">Eraser size</label>
+    <input type="range" class="slider" id="ltEraserSize" min="6" max="48" step="1" value="22">
+    <output for="ltEraserSize" id="ltEraserSizeOut">22 px</output>
+  </div>
   <div class="lt-btns">
     <button type="button" class="lt-btn" id="ltRedo">Redo</button>
     <button type="button" class="lt-btn" id="ltBack">Back</button>

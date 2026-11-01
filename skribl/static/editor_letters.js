@@ -25,9 +25,14 @@
  *     drawn so far.
  *   - READY, after the 30: Add the rest, or Write with it (back to Text).
  *   - THE TILES (Your hand): every letter, drawn ones in ink and the rest
- *     faint with a +. Tap one to draw it again (the old one faint behind it;
- *     Cancel keeps it, Done keeps the new one) or to add it. Save a copy, Open
- *     a copy, Start over (with Undo) and Post your letters along the bottom.
+ *     faint with a +. Tap one to add it, or to change it: it comes up as ink
+ *     (fitted to this screen's box), to rub a bit out with Eraser (its size
+ *     where the line is, while it is on), add to with the pen, or Redo,
+ *     which clears it and leaves the guide; Guide puts the font that was
+ *     under it the first time under it again. Cancel keeps it as it was, Done
+ *     keeps it as it stands (the owner's "All yes" to the change-a-letter
+ *     mock). Save a copy, Open a copy, Start over (with Undo) and Post your
+ *     letters along the bottom.
  *
  * WHERE IT LIVES. On this device, in localStorage (KEY), like a draft; a copy
  * is a file. Words written with it are ink in their drawing, so a viewer never
@@ -108,9 +113,29 @@
   var barEl = $('ltBar'), barFill = $('ltBarFill'), previewEl = $('ltPreview');
   var redoBtnEl = $('ltRedo'), backBtnEl = $('ltBack'), nextBtnEl = $('ltNext'), laterBtnEl = $('ltLater');
   var guidesEl = $('ltGuides');
+  var toolsEl = $('ltTools'), eraserBtnEl = $('ltEraser'), guideBtnEl = $('ltGuide');
+  var sizeRowEl = $('ltSizeRow'), sizeEl = $('ltEraserSize'), sizeOutEl = $('ltEraserSizeOut');
   if (!topEl || !footEl || !guidesEl || typeof clearCanvas !== 'function') return;
   var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)');
   function still() { return !!(reduce && reduce.matches); }
+
+  // ---- This page's own two settings: the font under a letter being changed
+  // (Guide), and the eraser's size, in px across at the drawing's fit. Kept on
+  // this device apart from the hand, so a copy of the hand never carries them.
+  var PREFS_KEY = 'skribl.letters.prefs';
+  var ERASER = { min: 6, max: 48, start: 22 };
+  var prefs = (function () {
+    var p = { guide: false, eraser: ERASER.start };
+    try {
+      var s = JSON.parse(localStorage.getItem(PREFS_KEY) || 'null');
+      if (s && typeof s.guide === 'boolean') p.guide = s.guide;
+      if (s && s.eraser >= ERASER.min && s.eraser <= ERASER.max) p.eraser = Math.round(s.eraser);
+    } catch (e) {}
+    return p;
+  })();
+  function keepPrefs() {
+    try { localStorage.setItem(PREFS_KEY, JSON.stringify(prefs)); } catch (e) {}
+  }
 
   // ---- The store: every letter, kept as it is drawn ----
   // { v: 1, o: 2, at: the letter on the canvas (a BOXES index), mode: 'seq'
@@ -184,9 +209,11 @@
   // ---- What is on screen ----
   // view: 'start' | 'draw' | 'ready' | 'tiles' | 'set'. On 'draw', mode is
   // 'seq' (the letters in order) or 'one' (one letter from the tiles; `old` is
-  // the letter it had, kept until Done, and `pending` what has been drawn).
+  // the letter it had, kept until Done, and `touched` says the one on the
+  // canvas has changed since: a stroke, a rub of the eraser, Redo).
   var view = null, mode = 'seq', at = 0, box = null, lastLen = -1;
-  var old = null, pending = null;
+  var old = null, touched = false;
+  var erasing = false;   // Eraser on, changing a letter: a press rubs out instead of drawing
   function r2(n) { return Math.round(n * 100) / 100; }
   // The canvas's own box on screen, untransformed: a pinch scales the zoom
   // layer, not the wrap, so this is the drawing's place at fit.
@@ -231,6 +258,22 @@
     }
     return out;
   }
+  // A stored letter fitted to this screen's box: its cap height to this box's,
+  // its baseline to this baseline, its box's middle to this box's middle, its
+  // widths with it. The box it was drawn in gives it back as it is; a hand
+  // opened from a copy, drawn on another screen, would otherwise come back the
+  // size of that screen's box, small in a corner, its guides with it (seen in
+  // the change-a-letter mock, on the copy made for the owner's phone).
+  function fitLetter(g, bx) {
+    var gb = boxOf(g), l = g.l || [];
+    if (Math.abs(gb.x - bx.x) < 0.5 && Math.abs(gb.y - bx.y) < 0.5 && Math.abs(gb.w - bx.w) < 0.5 &&
+        Math.abs(gb.h - bx.h) < 0.5 && l[0] === LINES.cap && l[2] === LINES.base) return g;
+    var k = ((LINES.base - LINES.cap) * bx.h) / capOf(g);
+    var ox = gb.x + gb.w / 2, oy = baseOf(g), nx = bx.x + bx.w / 2, ny = bx.y + LINES.base * bx.h;
+    return { p: g.p.map(function (q) { return [r2(nx + (q[0] - ox) * k), r2(ny + (q[1] - oy) * k), r2(q[2] * k), q[3]]; }),
+             n: g.n.slice(), b: [r2(bx.x), r2(bx.y), r2(bx.w), r2(bx.h)],
+             l: [LINES.cap, LINES.x, LINES.base, LINES.desc], c: g.c };
+  }
   // A stored letter back on the canvas, still recording, so a stroke added
   // to it lands after its last one, not at its start.
   function putLetterBack(g) {
@@ -262,6 +305,22 @@
   function capOf(g) { return (g.l[2] - g.l[0]) * g.b[3]; }
   function baseOf(g) { return g.b[1] + g.l[2] * g.b[3]; }
 
+  // How strongly the font is drawn under a letter being changed, 0 to 1:
+  // Guide's own, gliding a fifth of a second when it is pressed, and set at
+  // once when a letter opens (still under Reduce Motion).
+  var guideK = 0, guideRaf = 0;
+  function fontStrength() { return (mode === 'one' && old) ? guideK : 1; }
+  function glideGuide() {
+    var to = prefs.guide ? 1 : 0, from = guideK, t0 = performance.now();
+    cancelAnimationFrame(guideRaf);
+    if (still()) { guideK = to; syncGuides(); return; }
+    (function step(now) {
+      var e = Math.min(1, ((now || performance.now()) - t0) / 200);
+      guideK = from + (to - from) * (1 - Math.pow(1 - e, 2));
+      syncGuides();
+      if (e < 1) guideRaf = requestAnimationFrame(step);
+    })(t0);
+  }
   function syncGuides() {
     var b = parseFloat(getComputedStyle(canvas).borderTopWidth) || 0;
     var w = Math.max(0, canvas.offsetWidth - 2 * b), h = Math.max(0, canvas.offsetHeight - 2 * b);
@@ -284,19 +343,23 @@
     var bx = BOXES[at], capPx = (LINES.base - LINES.cap) * box.h;
     var baseY = box.y + LINES.base * box.h, cx = box.x + box.w / 2;
 
-    if (mode === 'one' && old) {
-      // Drawing a letter again: the one it had, faint behind, is the model.
-      ghostLetter(c, old, cx, baseY, capPx, tok('--lt-ghost', 'rgba(124,92,255,.38)'));
-    } else {
-      // The model: caps, figures and marks fit the cap line; lowercase, second
-      // tries and accents the x-height, so ascenders reach about the cap line.
-      var m = faceMetrics();
-      var lowish = bx.kind === 'lower' || bx.kind === 'again' || bx.kind === 'accent';
-      var fs = lowish ? (LINES.base - LINES.x) * box.h / m.x : capPx / m.cap;
-      var base = bx.base && letterStore.g[bx.base];
-      if (bx.kind === 'accent' && base) {
-        // Over the person's own letter: the model's accent alone (its letter
-        // knocked out of it), and their letter faint where the accent goes on.
+    // THE MODEL, the font under the letter: always while the letters are
+    // drawn in order and when one is added from the tiles; under a letter
+    // being changed, while Guide is on (the owner: "the font that was under
+    // when I made first 92"), gliding in and out (guideK). The letter being
+    // changed is ink on the canvas, so nothing of it is drawn here.
+    // Caps, figures and marks fit the cap line; lowercase, second tries and
+    // accents the x-height, so ascenders reach about the cap line.
+    var fk = fontStrength();
+    var m = faceMetrics();
+    var lowish = bx.kind === 'lower' || bx.kind === 'again' || bx.kind === 'accent';
+    var fs = lowish ? (LINES.base - LINES.x) * box.h / m.x : capPx / m.cap;
+    var base = bx.base && letterStore.g[bx.base];
+    if (bx.kind === 'accent' && base) {
+      // Over the person's own letter: the model's accent alone (its letter
+      // knocked out of it), and their letter faint where the accent goes on,
+      // which stays when Guide is off: it is where the accent goes, not the font.
+      if (fk > 0) {
         var off = document.createElement('canvas');
         off.width = W; off.height = H;
         var oc = off.getContext('2d');
@@ -310,14 +373,17 @@
         oc.lineWidth = fs * 0.06; oc.strokeStyle = '#000';
         oc.fillText(bx.base, cx, baseY);
         oc.strokeText(bx.base, cx, baseY);
-        c.save(); c.setTransform(1, 0, 0, 1, 0, 0); c.drawImage(off, 0, 0); c.restore();
-        ghostLetter(c, base, cx, baseY, capPx, tok('--lt-ghost', 'rgba(124,92,255,.38)'));
-      } else {
-        c.font = '300 ' + fs + 'px ' + FAM;
-        c.textAlign = 'center'; c.textBaseline = 'alphabetic';
-        c.fillStyle = tok('--lt-model', 'rgba(124,92,255,.11)');
-        c.fillText(bx.model, cx, baseY);
+        c.save(); c.setTransform(1, 0, 0, 1, 0, 0); c.globalAlpha = fk; c.drawImage(off, 0, 0); c.restore();
       }
+      ghostLetter(c, base, cx, baseY, capPx, tok('--lt-ghost', 'rgba(124,92,255,.38)'));
+    } else if (fk > 0) {
+      c.save();
+      c.globalAlpha = fk;
+      c.font = '300 ' + fs + 'px ' + FAM;
+      c.textAlign = 'center'; c.textBaseline = 'alphabetic';
+      c.fillStyle = tok('--lt-model', 'rgba(124,92,255,.11)');
+      c.fillText(bx.model, cx, baseY);
+      c.restore();
     }
 
     // The lines: dashed, the baseline solid and a little stronger.
@@ -516,6 +582,7 @@
     barEl.setAttribute('aria-valuenow', String(count));
     barEl.hidden = mode === 'one';
     laterBtnEl.hidden = mode === 'one';
+    renderTools();
     titleEl.textContent = mode === 'one' ? 'Your hand' : 'Draw your letters';
     // Written only when it changes: the line is a live region, and a stroke
     // is not news to someone listening.
@@ -534,9 +601,23 @@
     }
     var more = bx.kind === 'again' ? ' · second try'
       : bx.kind === 'accent' ? ' · the accent in ' + bx.model : '';
-    var where = mode === 'one' ? (old ? ' · draw it again' : ' · add it')
+    var where = mode === 'one' ? (old ? ' · change it' : ' · add it')
       : ' · ' + (ORDER.indexOf(at) + 1) + ' of ' + whole;
     subEl.appendChild(document.createTextNode(more + where));
+  }
+  // Eraser and Guide, only while a letter is being changed; the eraser's size
+  // in the line's place while Eraser is on.
+  function renderTools() {
+    var changing = view === 'draw' && mode === 'one' && !!old;
+    if (!changing) erasing = false;
+    toolsEl.hidden = !changing;
+    eraserBtnEl.setAttribute('aria-pressed', String(erasing));
+    guideBtnEl.setAttribute('aria-pressed', String(prefs.guide));
+    sizeRowEl.hidden = !erasing;
+    previewEl.hidden = erasing;
+    syncSize();
+    if (!erasing) hideRing();
+    canvas.classList.toggle('lt-erasing', erasing);
   }
   function renderButtons() {
     var drew = strokes.length > 0;
@@ -589,8 +670,19 @@
     clearCanvas();
     endTake();
     setPen();
-    var g = mode === 'seq' ? letterStore.g[BOXES[at].id] : null;
-    box = g ? boxOf(g) : measureBox();
+    // The pen, each time a letter opens (and after Redo); Guide as it was left.
+    erasing = false;
+    cancelAnimationFrame(guideRaf);
+    guideK = prefs.guide ? 1 : 0;
+    // The bars as this letter has them, before the box is measured inside them.
+    barEl.hidden = laterBtnEl.hidden = mode === 'one';
+    renderTools();
+    // The letter on the canvas, as ink: in order, the one drawn so far;
+    // changing one, the letter it has (after Redo, none; after Redo's Undo,
+    // the one Redo took). Fitted to this screen's box.
+    var g = mode === 'seq' ? letterStore.g[BOXES[at].id] : ('letter' in opts ? opts.letter : old);
+    box = measureBox() || (g ? boxOf(g) : null);
+    if (g && box) g = fitLetter(g, box);
     if (g) putLetterBack(g);
     else beginRecording(false);
     lastLen = strokes.length;
@@ -600,7 +692,7 @@
     renderLine(opts.animate || null);
   }
   // After every stroke: the letter as it now stands goes into the store, or,
-  // drawing one again, into `pending` until Done.
+  // changing one, stays on the canvas, `touched`, until Done.
   function takeStroke() {
     if (view !== 'draw' || drawing) return;
     var n = strokes.length;
@@ -608,7 +700,7 @@
     lastLen = n;
     var id = BOXES[at].id;
     if (mode === 'one') {
-      pending = n ? packLetter() : null;
+      touched = true;
     } else {
       if (n) letterStore.g[id] = packLetter(); else delete letterStore.g[id];
       keepLetters();
@@ -640,13 +732,225 @@
     if (typeof showToast === 'function') showToast(words, anchor, { label: 'Undo', onClick: undo });
   }
 
+  // ---- The eraser, changing a letter ----
+  // IT TAKES THE INK INSIDE ITS CIRCLE, and a line it cuts carries on as
+  // lines, every point keeping the time it was drawn at. It works on the
+  // letter's points, not its pixels, so what is left is a letter like any
+  // other, clean wherever Text writes it; and the canvas is painted again from
+  // those points as it goes, so what is seen is what Done keeps. A line's ink
+  // reaches half its width past its middle, so a line is cut where its ink
+  // meets the circle; a crumb a cut would leave is let go. The size is px
+  // across at the drawing's fit, so it takes the same bit of a letter however
+  // far a pinch has zoomed, and the ring grows with the zoom, as the Pad's
+  // eraser cursor does (app.js), in the canvas's wrap as that one is.
+  var rub = null;   // the press under way: { id, last, kept }
+  var ringEl = document.createElement('div');
+  ringEl.className = 'lt-ring';
+  ringEl.hidden = true;
+  ringEl.setAttribute('aria-hidden', 'true');
+  canvasWrap.appendChild(ringEl);
+  var ringTimer = 0;
+  function eraseRadius() {
+    var r = canvasScreenBox(), lg = getCanvasLogicalSize();
+    return (prefs.eraser / 2) * (r.width ? lg.width / r.width : 1);
+  }
+  // The ring at a point in canvas units, as big as the bit it takes is now.
+  function showRing(pt) {
+    var cr = canvas.getBoundingClientRect(), wr = canvasWrap.getBoundingClientRect(), lg = getCanvasLogicalSize();
+    if (!cr.width || !lg.width) return;
+    var kx = cr.width / lg.width, ky = cr.height / lg.height;
+    clearTimeout(ringTimer);
+    ringEl.style.width = ringEl.style.height = (2 * eraseRadius() * kx) + 'px';
+    ringEl.style.left = (cr.left - wr.left - canvasWrap.clientLeft + pt.x * kx) + 'px';
+    ringEl.style.top = (cr.top - wr.top - canvasWrap.clientTop + pt.y * ky) + 'px';
+    ringEl.hidden = false;
+  }
+  function hideRing() { clearTimeout(ringTimer); ringEl.hidden = true; }
+  // Where the ring shows while its size is set: on the letter's line, near
+  // its middle, so the size is judged against the line it will cut.
+  function ringOnLetter() {
+    if (strokes.length) { showRing(strokes[Math.floor(strokes.length * 0.45)]); return; }
+    if (box) showRing({ x: box.x + box.w / 2, y: box.y + LINES.base * box.h });
+  }
+
+  // The letter with the ink inside the eraser's path (from a to b, radius R)
+  // taken out. Returns true when anything went.
+  function distToPath(x, y, a, b) {
+    var dx = b.x - a.x, dy = b.y - a.y, L = dx * dx + dy * dy;
+    var t = L ? Math.max(0, Math.min(1, ((x - a.x) * dx + (y - a.y) * dy) / L)) : 0;
+    var ex = a.x + dx * t - x, ey = a.y + dy * t - y;
+    return Math.sqrt(ex * ex + ey * ey);
+  }
+  function between(p, q, t) {
+    return { x: p.x + (q.x - p.x) * t, y: p.y + (q.y - p.y) * t, color: p.color,
+             size: p.size + (q.size - p.size) * t, t: Math.round(p.t + (q.t - p.t) * t), erase: false };
+  }
+  function cutLetter(a, b, R) {
+    // How far inside the eraser a point's ink is: below zero, some of it is.
+    var clear = function (p) { return distToPath(p.x, p.y, a, b) - R - p.size / 2; };
+    // Along p-q, from a clear end (t0) to one that is not (t1): where the ink meets the circle.
+    var meet = function (p, q, t0, t1) {
+      for (var i = 0; i < 22; i++) { var m = (t0 + t1) / 2; if (clear(between(p, q, m)) > 0) t0 = m; else t1 = m; }
+      return t0;
+    };
+    var out = [], groups = [], k = 0, went = false;
+    var run = [], cut = false;
+    var flush = function () {
+      var len = 0;
+      for (var i = 1; i < run.length; i++) len += Math.hypot(run[i].x - run[i - 1].x, run[i].y - run[i - 1].y);
+      // A crumb: what a cut leaves shorter than the line is wide.
+      var crumb = cut && (run.length < 2 || len < (run[0] ? run[0].size : 0) * 0.75);
+      if (run.length && !crumb) {
+        run.forEach(function (q, i) { q.start = i === 0; });
+        Array.prototype.push.apply(out, run);
+        groups.push(run.length);
+      } else if (run.length) went = true;
+      run = []; cut = false;
+    };
+    for (var s = 0; s < strokeGroups.length; s++) {
+      var n = strokeGroups[s];
+      for (var j = 0; j < n; j++, k++) {
+        var q = strokes[k], qc = clear(q) > 0;
+        if (j > 0) {
+          var p = strokes[k - 1], pc = clear(p) > 0;
+          if (pc && !qc) {                       // into the circle: the line ends where its ink meets it
+            run.push(between(p, q, meet(p, q, 0, 1))); cut = true; flush(); went = true;
+          } else if (!pc && qc) {                // out of it: a new line starts there
+            run.push(between(p, q, meet(p, q, 1, 0))); cut = true; went = true;
+          } else if (pc && qc) {                 // both ends clear: does the ink between them pass through it?
+            var lo = 0, hi = 1;
+            for (var i2 = 0; i2 < 30; i2++) {
+              var m1 = lo + (hi - lo) / 3, m2 = hi - (hi - lo) / 3;
+              if (clear(between(p, q, m1)) < clear(between(p, q, m2))) hi = m2; else lo = m1;
+            }
+            var mid = (lo + hi) / 2;
+            if (clear(between(p, q, mid)) <= 0) {
+              run.push(between(p, q, meet(p, q, 0, mid))); cut = true; flush();
+              run.push(between(p, q, meet(p, q, 1, mid))); cut = true; went = true;
+            }
+          }
+        }
+        if (qc) run.push(Object.assign({}, q));
+        else went = true;                        // some of it is inside the circle
+      }
+      flush();
+    }
+    if (!went) return false;
+    strokes = out;
+    strokeGroups = groups;
+    var lg = getCanvasLogicalSize();
+    ctx.clearRect(0, 0, lg.width, lg.height);
+    paintStrokesStatic(strokes);
+    hasContent = strokes.length > 0;
+    updateEmptyHint();
+    lastLen = strokes.length;
+    touched = true;
+    return true;
+  }
+
+  // The press, while Eraser is on: taken in the capture phase at the
+  // canvas's wrap, before the Pad's own pointerdown on the canvas, so the pen
+  // never starts a stroke. A second finger is the pinch (lib/canvaszoom.js,
+  // on touch events, which this leaves alone): what the first finger rubbed
+  // out comes back, as a pinch unwinds the stroke a first finger began.
+  function rubbing(e) { return erasing && view === 'draw' && mode === 'one' && e.target === canvas; }
+  canvasWrap.addEventListener('pointerdown', function (e) {
+    if (!rubbing(e)) return;
+    // While Eraser is on, no press on the canvas reaches the pen: not a
+    // second finger (the pinch takes that one), not a right button.
+    e.stopPropagation();
+    if (rub || pinching || (e.pointerType === 'mouse' && e.button !== 0)) return;
+    e.preventDefault();
+    hideUndoOffer();
+    var pt = getPos(e);
+    rub = { id: e.pointerId, last: pt, kept: { s: strokes.slice(), g: strokeGroups.slice(), t: touched } };
+    try { canvas.setPointerCapture(e.pointerId); } catch (_) { /* synthetic */ }
+    showRing(pt);
+    if (cutLetter(pt, pt, eraseRadius())) renderButtons();
+  }, true);
+  canvasWrap.addEventListener('pointermove', function (e) {
+    if (!rub) {
+      // A mouse or pen held over the letter: the ring shows what a press would take.
+      if (rubbing(e) && e.pointerType !== 'touch') showRing(getPos(e));
+      return;
+    }
+    if (e.pointerId !== rub.id) return;
+    e.stopPropagation();
+    if (pinching) { unrub(); return; }
+    var pt = getPos(e);
+    if (cutLetter(rub.last, pt, eraseRadius())) renderButtons();
+    rub.last = pt;
+    showRing(pt);
+  }, true);
+  function endRub(e) {
+    if (!rub || (e && e.pointerId !== rub.id)) return;
+    if (e) e.stopPropagation();
+    rub = null;
+    if (!e || e.pointerType === 'touch') hideRing();
+  }
+  function unrub() {
+    var k = rub.kept;
+    rub = null;
+    strokes = k.s; strokeGroups = k.g; touched = k.t;
+    var lg = getCanvasLogicalSize();
+    ctx.clearRect(0, 0, lg.width, lg.height);
+    paintStrokesStatic(strokes);
+    hasContent = strokes.length > 0;
+    lastLen = strokes.length;
+    hideRing();
+    renderButtons();
+  }
+  canvasWrap.addEventListener('pointerup', endRub, true);
+  canvasWrap.addEventListener('pointercancel', endRub, true);
+  canvasWrap.addEventListener('pointerleave', function (e) { if (!rub && e.pointerType !== 'touch') hideRing(); }, true);
+
+  // Eraser and Guide: on and off. The eraser's size, by its slider (and [ ]
+  // on a desk), shown as the ring on the letter while it is set.
+  function syncSize() {
+    sizeEl.value = String(prefs.eraser);
+    sizeEl.style.setProperty('--slider-fill', ((prefs.eraser - ERASER.min) / (ERASER.max - ERASER.min) * 100).toFixed(1) + '%');
+    sizeOutEl.textContent = prefs.eraser + ' px';
+  }
+  function setEraserSize(px) {
+    prefs.eraser = Math.max(ERASER.min, Math.min(ERASER.max, Math.round(px)));
+    keepPrefs();
+    syncSize();
+    ringOnLetter();
+    clearTimeout(ringTimer);
+    ringTimer = setTimeout(function () { if (!rub) ringEl.hidden = true; }, 1200);
+  }
+  eraserBtnEl.addEventListener('click', function () {
+    if (view !== 'draw' || mode !== 'one') return;
+    erasing = !erasing;
+    renderTools();
+  });
+  guideBtnEl.addEventListener('click', function () {
+    if (view !== 'draw' || mode !== 'one') return;
+    prefs.guide = !prefs.guide;
+    keepPrefs();
+    renderTools();
+    glideGuide();
+  });
+  sizeEl.addEventListener('input', function () { setEraserSize(parseFloat(sizeEl.value)); });
+
   redoBtnEl.addEventListener('click', function () {
     if (view !== 'draw' || !strokes.length) return;
     if (mode === 'one') {
-      // Drawing one again: only the new strokes go; the old letter is still
-      // the one kept until Done.
-      pending = null;
-      showLetter(at, { mode: 'one' });
+      // Changing one: the letter goes as it stands (rubbed out, added to),
+      // the guide stays, and the pen is ready (the owner: "when I click redo
+      // it erased old letter but leaves underneath"). Its toast brings it
+      // back; Cancel still keeps the letter as it was before any of it.
+      var took = packLetter();
+      showLetter(at, { mode: 'one', letter: null });
+      touched = true;
+      cleared = { at: at, g: took };
+      offerUndo('Cleared', topEl, function () {
+        var c = cleared;
+        cleared = null;
+        if (!c || c.at !== at || view !== 'draw' || mode !== 'one' || strokes.length) return;
+        showLetter(at, { mode: 'one', letter: c.g, fade: false });
+        touched = true;
+      });
       return;
     }
     var id = BOXES[at].id, g = letterStore.g[id] || packLetter();
@@ -665,7 +969,7 @@
   });
   backBtnEl.addEventListener('click', function () {
     if (view !== 'draw') return;
-    if (mode === 'one') { old = null; pending = null; showTiles(); return; }   // Cancel: the letter keeps what it had
+    if (mode === 'one') { old = null; touched = false; erasing = false; hideRing(); showTiles(); return; }   // Cancel: the letter keeps what it had
     var p = ORDER.indexOf(at);
     if (p > 0) showLetter(ORDER[p - 1]);
   });
@@ -674,11 +978,13 @@
     takeStroke();
     var id = BOXES[at].id;
     if (mode === 'one') {
-      if (!pending) return;
-      letterStore.g[id] = pending;
-      keepLetters();
-      old = null; pending = null;
-      showTiles({ animate: id });
+      // Done keeps what is on the canvas; with nothing changed, the letter is
+      // left exactly as it was stored.
+      if (!strokes.length) return;
+      var changed = touched;
+      if (changed) { letterStore.g[id] = packLetter(); keepLetters(); }
+      old = null; touched = false; erasing = false; hideRing();
+      showTiles(changed ? { animate: id } : {});
       return;
     }
     if (!has(id)) return;
@@ -711,7 +1017,7 @@
     stopWriting();
     endTake();
     view = name;
-    old = null; pending = null;
+    old = null; touched = false; erasing = false; hideRing();
     pageEl = document.createElement('section');
     pageEl.className = 'lt-page' + (cls ? ' ' + cls : '');
     pageEl.setAttribute('aria-labelledby', 'ltPageTitle');
@@ -822,7 +1128,7 @@
     letterStore.mode = 'tiles';
     keepLetters();
     var n = drawnCount();
-    var p = openPage('tiles', 'Your hand', n + ' of ' + BOXES.length + ' · tap a letter to draw it again');
+    var p = openPage('tiles', 'Your hand', n + ' of ' + BOXES.length + ' · tap a letter to change it');
     p.querySelector('.lt-ptop').appendChild(button('Done', 'lt-pdone', leave));
     var body = document.createElement('div');
     body.className = 'lt-pbody';
@@ -844,7 +1150,7 @@
         b.className = 'lt-tile' + (on ? '' : ' empty');
         b.setAttribute('data-id', id);
         var label = (NAMES[bx.ch] && bx.kind !== 'again' ? NAMES[bx.ch] : bx.ch) + (bx.kind === 'again' ? ', second try' : '');
-        b.setAttribute('aria-label', (on ? 'Draw ' + label + ' again' : 'Add ' + label));
+        b.setAttribute('aria-label', (on ? 'Change ' + label : 'Add ' + label));
         if (on) b.appendChild(tileSVG(letterStore.g[id]));
         else { var s = document.createElement('span'); s.className = 'lt-tch'; s.setAttribute('aria-hidden', 'true'); s.textContent = bx.kind === 'accent' ? bx.model : bx.ch; b.appendChild(s); }
         b.addEventListener('click', function () { drawOne(id); });
@@ -875,7 +1181,7 @@
     var g = letterStore.g[id] || null;
     closePage();
     old = g;            // the letter it has, kept until Done
-    pending = null;
+    touched = false;
     showLetter(BY_ID[id], { mode: 'one', fade: false });
   }
 
@@ -1057,7 +1363,12 @@
       else setTimeout(takeStroke, 0);
       return;
     }
-    if (view === 'draw' && e.key === 'ArrowRight' && !nextBtnEl.disabled) { e.preventDefault(); nextBtnEl.click(); }
+    // [ and ] size the eraser while it is on, as they size the Pad's pen.
+    if (erasing && view === 'draw' && mode === 'one' && (e.key === '[' || e.key === ']')) {
+      e.preventDefault();
+      setEraserSize(prefs.eraser + (e.key === ']' ? 2 : -2));
+    }
+    else if (view === 'draw' && e.key === 'ArrowRight' && !nextBtnEl.disabled) { e.preventDefault(); nextBtnEl.click(); }
     else if (view === 'draw' && e.key === 'ArrowLeft' && !backBtnEl.disabled) { e.preventDefault(); backBtnEl.click(); }
     e.stopPropagation();
   }, true);
@@ -1100,6 +1411,11 @@
     box: function () { return view === 'draw' && box ? { x: box.x, y: box.y, w: box.w, h: box.h } : null; },
     lines: function () { return { cap: LINES.cap, x: LINES.x, base: LINES.base, desc: LINES.desc }; },
     store: function () { return JSON.parse(JSON.stringify(letterStore)); },
+    // Changing a letter: the eraser (on, its size in px at fit, its radius in
+    // canvas units) and the font under the letter (Guide, and how strongly
+    // it is drawn now, which glides).
+    eraser: function () { return { on: erasing, px: prefs.eraser, r: eraseRadius() }; },
+    guide: function () { return { on: prefs.guide, k: fontStrength() }; },
     grid: gridFor,
     rule: { GAP: GAP, GAIN: GAIN, CELL_W: CELL_W }
   };
