@@ -53,8 +53,10 @@ Mirror leaving them alone. Each row holds a promise:
  16. THE KEYBOARD (the owner's iPhone: the bar over it covered the field):
      with the keyboard up, the sheet sits on it and is only the words and
      Write it, the words above it (with no keyboard up, the whole sheet); the
-     keyboard's done key puts it away and writes nothing; the x and Write it
-     pressed with the keyboard up do what they say; on a desk, Enter writes.
+     keyboard's done key puts it away and writes nothing; when the keyboard
+     goes, the sheet comes down and the words come back to where they were
+     put; the x and Write it pressed with the keyboard up do what they say;
+     on a desk, Enter writes.
 
 For calibration, TEXT_PART=<words of a part's label> runs that part alone.
 A real run sets none.
@@ -805,10 +807,11 @@ with sync_playwright() as p:
         # A keyboard as iOS has one: what can be seen is 336px shorter, the
         # page is not. Chromium has no keyboard to open, so this is the
         # visual viewport iOS reports, put in place before the sheet opens.
-        KEYBOARD = """() => { const real = window.visualViewport;
-          const fake = { get height() { return innerHeight - 336; }, offsetTop: 0, get width() { return innerWidth; },
+        KEYBOARD = """() => { const real = window.visualViewport; window.__kb = 336; window.__realVV = real;
+          const fake = { get height() { return innerHeight - window.__kb; }, offsetTop: 0, get width() { return innerWidth; },
                          addEventListener: (...a) => real.addEventListener(...a), removeEventListener: (...a) => real.removeEventListener(...a) };
           Object.defineProperty(window, 'visualViewport', { configurable: true, get: () => fake }); }"""
+        KEYBOARD_GOES = "() => { window.__kb = 0; window.__realVV.dispatchEvent(new Event('resize')); }"
         TYPING = """() => { const s = document.getElementById('txSheet'), r = s.getBoundingClientRect(), pl = document.getElementById('txPlace');
           const shown = (sel) => { const e = document.querySelector(sel); return !!e && !!e.getClientRects().length; };
           const b = pl.hidden ? null : pl.getBoundingClientRect();
@@ -829,6 +832,8 @@ with sync_playwright() as p:
         q.evaluate(KEYBOARD)
         n0 = q.evaluate(COUNT["pad"])
         choose_text(q)
+        tap(q, *at(q, 0.4, 0.3))
+        put = q.evaluate("() => { const lg = getCanvasLogicalSize(); return [lg.width * 0.4, lg.height * 0.3]; }")
         type_words(q, "Hello")
         q.wait_for_timeout(300)
         t = q.evaluate(TYPING)
@@ -844,7 +849,18 @@ with sync_playwright() as p:
         check("the keyboard's done key puts it away and writes nothing; Style, Size and Speed come back",
               t2["open"] and t2["focus"] != "txField" and not t2["typing"] and t2["style"] and t2["size"] and t2["speed"]
               and n1 == n0 and not q.evaluate("() => SkriblText.isWriting()"), f"{json.dumps(t2)}, strokes {n0} -> {n1}")
-        if not q.evaluate("() => SkriblText.isWriting()"):
+        # The keyboard goes: the sheet comes back down, and the words, pushed
+        # up while it was lifted, come back to where they were put.
+        high = q.evaluate("() => SkriblText.anchor()")
+        q.evaluate(KEYBOARD_GOES)
+        q.wait_for_timeout(400)
+        back = q.evaluate("() => ({ a: SkriblText.anchor(), bottom: Math.round(document.getElementById('txSheet').getBoundingClientRect().bottom), h: innerHeight })")
+        check("when the keyboard goes, the sheet comes back down and the words back to where they were put",
+              back["bottom"] == back["h"] and back["a"] is not None and abs(back["a"]["x"] - put[0]) <= 1 and abs(back["a"]["y"] - put[1]) <= 1
+              and high is not None and high["y"] < put[1] - 20,
+              f"pushed up to {high}, then at {back['a']} for {put}; sheet ends at {back['bottom']} of {back['h']}")
+        q.evaluate("() => { window.__kb = 336; window.__realVV.dispatchEvent(new Event('resize')); }")
+        if q.evaluate("() => SkriblText.isWriting()"):
             q.wait_for_function("() => !SkriblText.isWriting()", timeout=30000)
         # The x and Write it, pressed with the keyboard up: the field keeps
         # its focus until the click, so the sheet does not grow back under

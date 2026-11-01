@@ -93,6 +93,11 @@
   var loading = {};         // style -> Promise
   var state = { style: null, size: 'M', speed: 4 };
   var anchor = null;        // where the words sit: the middle of their box, in drawing units
+  // ...and where they were PUT (a press, a drag, the start). The words are
+  // kept clear of the sheet from here each time, so a sheet that rises, or
+  // sits on a keyboard for a while, moves them only while it is in the way:
+  // they come back down when there is room again.
+  var want = null;
   var plan = null;          // the words as strokes, at the anchor (0, 0)
   var job = null;           // the words writing themselves now
 
@@ -603,7 +608,8 @@
       if (!drag || e.pointerId !== drag.id) return;
       var sb = screenBox();
       if (!sb) return;
-      anchor = clampAnchor({ x: drag.a.x + (e.clientX - drag.x) / sb.k, y: drag.a.y + (e.clientY - drag.y) / sb.ky });
+      want = { x: drag.a.x + (e.clientX - drag.x) / sb.k, y: drag.a.y + (e.clientY - drag.y) / sb.ky };
+      anchor = clampAnchor(want);
       position();
     });
     var endDrag = function (e) {
@@ -613,7 +619,7 @@
     };
     els.place.addEventListener('pointerup', endDrag);
     els.place.addEventListener('pointercancel', endDrag);
-    window.addEventListener('resize', function () { if (isOpen()) { anchor = clampAnchor(anchor); position(); } });
+    window.addEventListener('resize', function () { fitKeyboard(); if (isOpen() && want) { anchor = clampAnchor(want); position(); } });
     return els;
   }
   function readPrefs() {
@@ -675,16 +681,16 @@
     Array.prototype.forEach.call(els.styles.querySelectorAll('[data-style]'), function (b) {
       var st = b.getAttribute('data-style'), on = st === cur;
       var font = st === 'yours' ? (made ? readHand() : null) : files[st];
-      var want = st === 'yours' && !made ? 'make' : (font ? 'drawn' : 'word');
+      var face = st === 'yours' && !made ? 'make' : (font ? 'drawn' : 'word');
       b.classList.toggle('on', on);
       // + Make yours is a way to somewhere, not a choice: it says nothing
       // about being pressed.
-      if (want === 'make') b.removeAttribute('aria-pressed');
+      if (face === 'make') b.removeAttribute('aria-pressed');
       else b.setAttribute('aria-pressed', String(on));
-      if (b.getAttribute('data-face') === want && want !== 'drawn') return;
-      b.setAttribute('data-face', want);
+      if (b.getAttribute('data-face') === face && face !== 'drawn') return;
+      b.setAttribute('data-face', face);
       b.textContent = '';
-      if (want === 'make') {
+      if (face === 'make') {
         b.setAttribute('aria-label', 'Make your own hand');
         b.innerHTML = '<span class="tx-make"><b aria-hidden="true">+</b>Make yours</span>';
         return;
@@ -738,7 +744,7 @@
     els.go.disabled = !plan || !plan.strokes.length;
     els.speedOut.textContent = SPEED_TEXT[state.speed] + (plan && plan.strokes.length ? ' · ' + seconds(plan.ms) : '');
     if (els.skip) els.skip.hidden = !(plan && plan.skipped);
-    if (anchor) anchor = clampAnchor(anchor);
+    if (want) anchor = clampAnchor(want);
     position();
   }
   function position() {
@@ -813,7 +819,7 @@
       s.style.bottom = lift ? lift + 'px' : '';
       s.style.maxHeight = Math.max(160, Math.round(v.height - 12)) + 'px';
     }
-    if (anchor && isOpen()) { anchor = clampAnchor(anchor); position(); }
+    if (want && isOpen()) { anchor = clampAnchor(want); position(); }
   }
   // THE SHEET RISES AND SINKS, from below the screen's edge and back, on a
   // phone and on a desk alike; with reduced motion it is simply there, or
@@ -859,13 +865,14 @@
   function place(pos) {
     if (!editor || !bind()) return;
     if (job) job.finish();
-    anchor = { x: pos.x, y: pos.y };
+    want = { x: pos.x, y: pos.y };
+    anchor = clampAnchor(want);
     open();
   }
   function open() {
     var s = els.sheet;
     // Already up: the press moved the words, and that is all it did.
-    if (isOpen()) { anchor = clampAnchor(anchor); position(); return; }
+    if (isOpen()) { anchor = clampAnchor(want); position(); return; }
     if (!els.field.value) { try { els.field.value = sessionStorage.getItem(WORDS_KEY) || ''; } catch (e) {} }
     syncStyles();
     syncSize();
@@ -886,7 +893,7 @@
     });
     refresh();
     // After the sheet has its height, so the words can sit above it.
-    requestAnimationFrame(function () { if (anchor) { anchor = clampAnchor(anchor); position(); } });
+    requestAnimationFrame(function () { if (want) { anchor = clampAnchor(want); position(); } });
     lastPen = '';
     if (!follow) follow = requestAnimationFrame(followLoop);
     try { els.field.focus({ preventScroll: true }); } catch (e) { els.field.focus(); }
@@ -905,13 +912,13 @@
   }
   function close() {
     if (!els) return;
-    anchor = null;
+    anchor = null; want = null;
     hide(null);
   }
   function go() {
     if (!els || !plan || !plan.strokes.length || !anchor) return;
     var p = plan, at = { x: anchor.x, y: anchor.y };
-    anchor = null;
+    anchor = null; want = null;
     // The preview goes in the frame the words start writing, so nothing
     // jumps: the sheet slides away, and the ink begins where the words were.
     els.place.hidden = true;
