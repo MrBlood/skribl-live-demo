@@ -28010,3 +28010,28 @@ keeps it safe, anything not drawn still has a place).
 Not tested here: WebKit (the owner's iPhone, where Save a copy goes to
 Files), SF and Segoe UI for the model's fit (fitted from the face's own
 measurements), the live site (this build is not deployed until it merges).
+
+## After v330 -- Main red after #715: a /* in a string read as a comment
+
+Main's full run after #715 went red in both shard 4s, sqlite and postgres,
+at one row of verify_music: "both editors load lib/musicdrawer.js and wire
+their drawer through it" read the Pad's wiring as missing. Not a flake: the
+row reads the Pad's code as text, app.js and every editor_*.js joined, with
+one regex taking out /* ... */ comments, and Your hand's file types for Open
+a copy ('.skriblhand,...,text/plain,text/*') put a /* inside a string. The
+regex took it for a comment and took everything up to the next */, in a
+later file, with it: the music drawer's SkriblMusicDrawer.wire( among it. The
+app was right. The rows below it that check for ABSENCE (no editor keeps its
+own copy of a drawer control) would have passed over the same missing code.
+
+verify_music reads each file on its own through the server's tokeniser
+(skribl/jsstrip.py, which knows a string), so a comment can neither start in
+a string nor run on into the next file. Measured on the tree: the old read
+misses the wiring (CI's red), the new one finds it; with the wiring really
+taken out of editor_music.js the new read misses it; before #715 both found
+it. The suite, 37 of 37. No other suite reads the editors joined and
+stripped (verify_surfaces' census strips nothing; its regex is for CSS).
+
+#715's own run of affected suites did not include verify_music: a new
+editor_*.js changes what every reader of the Pad's whole source reads, and
+those suites (verify_music, verify_surfaces) belong among the affected ones.
