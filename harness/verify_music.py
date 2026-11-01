@@ -154,10 +154,17 @@ def set_door(pg, want):
 
 print("\nMUSIC — one drawer, in the source")
 _tpl = {n: (TPL / f).read_text(encoding="utf-8") for n, f in (("Pad", "skribl_editor.html"), ("Flip", "skribl_flip.html"))}
-_js = {"Pad": "\n".join([(STATIC / "app.js").read_text(encoding="utf-8")] +
-                        [f.read_text(encoding="utf-8") for f in sorted(STATIC.glob("editor_*.js"))]),
-       "Flip": (STATIC / "flip.js").read_text(encoding="utf-8")}
-_code = {k: re.sub(r"(?m)^\s*//.*$", "", re.sub(r"/\*.*?\*/", "", v, flags=re.S)) for k, v in _js.items()}
+# THE EDITORS' CODE WITHOUT ITS PROSE, file by file, by the server's own
+# tokeniser (skribl/jsstrip.py). It was one regex over the files joined
+# together, which reads a /* inside a string as a comment: Your hand's file
+# types ('...text/plain,text/*') opened one that the next file's first */
+# closed, and the music drawer's wiring between them went with it (main red
+# after #715). A tokeniser knows a string, and one file at a time a comment
+# can never run on into the next.
+sys.path.insert(0, str(ROOT))
+from skribl.jsstrip import strip_comments  # noqa: E402
+_files = {"Pad": [STATIC / "app.js"] + sorted(STATIC.glob("editor_*.js")), "Flip": [STATIC / "flip.js"]}
+_code = {k: "\n".join(strip_comments(f.read_text(encoding="utf-8")) for f in fs) for k, fs in _files.items()}
 check("both editors load lib/musicdrawer.js and wire their drawer through it",
       all("lib/musicdrawer.js" in _tpl[n] and "SkriblMusicDrawer.wire(" in _code[n] for n in _tpl),
       {n: ("lib/musicdrawer.js" in _tpl[n], "SkriblMusicDrawer.wire(" in _code[n]) for n in _tpl})
