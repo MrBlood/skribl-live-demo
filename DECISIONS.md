@@ -28035,3 +28035,29 @@ stripped (verify_surfaces' census strips nothing; its regex is for CSS).
 #715's own run of affected suites did not include verify_music: a new
 editor_*.js changes what every reader of the Pad's whole source reads, and
 those suites (verify_music, verify_surfaces) belong among the affected ones.
+
+## After v330 -- Main red after #717: the gallery's search read before it answered
+
+Main's full run after #717 went red in one job, sqlite shard 4, where
+verify_captions stopped with KeyError 'long': the card with the long caption
+was not on the gallery when its glide was read. postgres' shard 4, the same
+suites on the same tree, was green.
+
+The suite opens the gallery, types its word in the search box and waits for
+its four cards, then reads them. Typing waits 350ms for more words before
+the search goes (gallery.js), and on a server whose only public posts are
+the suite's four, the listing from BEFORE the search already showed exactly
+those four: the wait passed on it, the search then cleared the list to load
+its answer, and the read 700ms later fell in the gap. It had never had a
+server like that: #715 gave verify_letters its weight, which moved the suites
+between the shards, and this one now runs before any suite that posts to
+the gallery.
+
+Reproduced here as it would happen: a fresh server, the suite's four the only
+public posts, the search's answer held back 900ms (slowq, scratch): the
+glide rows stop with KeyError 'long', as on CI. Fixed by searching as a
+person presses Search (Enter), which clears the list at once, so the wait can
+only see the search's answer; under the same conditions the rows pass, 10 of
+10, and the whole suite 76 of 76. The suite's second search (the long words'
+card) waited the same way and searches the same way now. verify_hot's
+searches wait for the request itself and are untouched.
