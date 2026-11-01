@@ -46,8 +46,9 @@ cards mock, "All yes"). Each row holds a promise, on the Pad and on Flip:
      presses nothing (no loop plays, no door opens, no state changes, no file
      picker); a quick tap is still a tap; grey before there is a beat, Snap
      and the click open their cards when held, as a desk's rest already did;
-     Add a photo plays the photo recording on the Pad; on a desk a rest grows
-     Hear the loop's card.
+     each card plays its own example, a recording of that control used
+     (Flip's photo filmed on Flip); on a desk a rest grows Hear the loop's
+     card.
 
 For calibration, LEARNCARD_PART=<words of a part's label> runs that part
 alone ("Tune's rows", "the draw drawer's six"). A real run sets none.
@@ -649,19 +650,23 @@ with sync_playwright() as p:
             q.on("response", lambda r: got.append((r.url.split("?")[0], r.status)))
             cdp = c.new_cdp_session(q)
             song(q)
-            pressed, wrong = {}, []
+            CLIP = {"Hear the loop": "hear", "Beat click": "click", "Snap to the beat": "snap", "Length": "length", "Beat": "beat",
+                    "Restart": "restart", "Exact times": "exact", "Add a photo": "photo-flip" if name == "Flip" else "photo"}
+            pressed, wrong, nox = {}, [], []
             for sel, nm, line, rows in EIGHT:
                 browsing.pad_drawer(q, "photo" if sel == "#photoAddBtn" else "music")
                 before, n0 = q.evaluate(STATE), len(chooser)
                 got.clear()
                 press(q, cdp, sel, 700)
                 card, at = q.evaluate(CARD), q.evaluate(PLACE, sel)
-                if sel == "#photoAddBtn" and name == "Pad":
-                    for _ in range(25):
-                        if any("/help/clips/photo-" in u and st < 400 for u, st in got):
-                            break
-                        q.wait_for_timeout(100)
-                photo = any("/help/clips/photo-" in u and st < 400 for u, st in got)
+                # Each its own recording, this theme's (light): a name no other begins.
+                want = "/help/clips/" + CLIP[nm] + "-light"
+                for _ in range(25):
+                    if any(want in u and st < 400 for u, st in got):
+                        break
+                    q.wait_for_timeout(100)
+                if not (card and card["example"] and any(want in u and st < 400 for u, st in got)):
+                    nox.append(f"{nm}: example {card and card['example']}, loaded {sorted({u.split('/help/')[1] for u, st in got if '/help/' in u})}")
                 q.evaluate("() => window.SkriblLearnCard.close()")
                 q.wait_for_timeout(250)
                 after = q.evaluate(STATE)
@@ -671,11 +676,10 @@ with sync_playwright() as p:
                       and card["painted"] and card["rowsPainted"] and at["whole"] and at["clear"] and at["ringed"] and at["painted"] and not at["cut"])
                 if not ok:
                     wrong.append(f"{nm}: {card}; {at}")
-                if sel == "#photoAddBtn" and name == "Pad":
-                    check(f"{name}: ...and Add a photo's card plays How it works' photo recording", bool(card) and card["example"] and photo,
-                          f"example {card and card['example']}; photo clip loaded {photo}")
             check(f"{name}: holding each of the music and photo drawers' eight opens its card in the words said yes to, painted, whole and clear of its button",
                   not wrong, "; ".join(wrong)[:600])
+            check(f"{name}: ...and each card plays its own example, a recording of that control used",
+                  not nox, "; ".join(nox)[:600])
             check(f"{name}: ...and no hold presses anything: the loop plays nothing, no door opens, Snap and the click keep their state, no file picker",
                   not pressed, str(pressed))
             # A quick tap is still a tap: a door opens its group, Hear the loop plays.

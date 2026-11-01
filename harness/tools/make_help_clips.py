@@ -23,6 +23,7 @@ import struct
 import subprocess
 import sys
 import tempfile
+import time
 import wave
 
 HERE = pathlib.Path(__file__).resolve().parent
@@ -133,6 +134,22 @@ def tap(page, sel, before=380, after=520, frm=(60, 90)):
     page.mouse.down(); page.wait_for_timeout(170); page.mouse.up()
     page.wait_for_timeout(after + TAP_REST)
     return x, y
+
+
+def until(page, t):
+    """Wait for the clock to read `t` (time.perf_counter): the page's own wait
+    for most of it, so the recorder's frames keep coming, and the last few
+    milliseconds by the clock itself."""
+    left = t - time.perf_counter()
+    if left > 0.02:
+        page.wait_for_timeout(int((left - 0.015) * 1000))
+    while time.perf_counter() < t:
+        pass
+
+
+class Retake(Exception):
+    """A take that came out other than the card says (a beat tapped as 118,
+    not the song's 120): filmed again, from the start."""
 
 
 def center(page, sel):
@@ -1060,6 +1077,214 @@ def clip_watch(page, rec):
     return speeds(page, rec, '#watchSeg [data-rate="0.25"]', '#watchSeg [data-rate="4"]')
 
 
+# ---- The music and photo drawers' cards ---------------------------------------
+# The examples for the eight cards in Photo and music (lib/learncard.js, call 3)
+# and How it works' media cards: each one control, used. Off camera the Pad
+# has a drawing on paper and Music open with the song added and its beat
+# heard (Skribl's ears, lib/musicears.js), so the clip starts on the drawer
+# and shows only what the card says. The tall phone screen, as Add music's.
+def music_ready(page):
+    import artworks
+    pad_ready(page)
+    pad_draw(page, artworks.snail())
+    page.click("#mediaOpenBtn"); page.wait_for_timeout(450)
+    page.click("#mediaTabMusic"); page.wait_for_timeout(450)
+    page.set_input_files("#musicInput", {"name": "Bassline.wav", "mimeType": "audio/wav", "buffer": song()})
+    page.wait_for_function("() => typeof currentAudioBuffer !== 'undefined' && !!currentAudioBuffer", timeout=20000)
+    try:
+        page.wait_for_function("() => !!musicTempo", timeout=8000)
+    except Exception:
+        # The ears did not hear it in time: the beat a tap would set.
+        page.evaluate("() => { musicTempo = { bpm: 120, phase: 0 }; updateTrimUI(); }")
+    page.wait_for_timeout(900)
+    page.evaluate("() => window.__fingerHide && window.__fingerHide()")
+
+
+def door(page, k):
+    tap(page, f'#musicDoors .dp-tile[data-dp="{k}"]', after=700, frm=(-50, 70))
+
+
+def swipe_up(page, x, y, dy, ms=700, steps=24):
+    """A finger's swipe up the screen, the page following it pixel for pixel.
+    The recorder drives a mouse, and a mouse's drag scrolls nothing, so the
+    page is scrolled in step with the finger's glide, which shows pressed
+    while it moves."""
+    press = "() => { const f = document.getElementById('clipFinger'); if (f) f.style.transform = '%s'; }"
+    glide(page, (x + 30, y + 50), (x, y), 380)
+    page.evaluate(press % "scale(.86)"); page.wait_for_timeout(120)
+    done = 0
+    for i in range(1, steps + 1):
+        to = round(dy * (0.5 - 0.5 * math.cos(math.pi * i / steps)))
+        page.mouse.move(x, y - to)
+        page.evaluate(f"() => scrollBy({{ top: {to - done}, behavior: 'instant' }})")
+        done = to
+        page.wait_for_timeout(ms // steps)
+    page.evaluate(press % ""); page.wait_for_timeout(300 + TAP_REST)
+
+
+def drag_handle(page, sel, dx, ms=900, after=500):
+    x, y = center(page, sel)
+    glide(page, (x + 40, y + 70), (x, y), 420)
+    page.mouse.down()
+    glide(page, (x, y), (x + dx, y), ms)
+    page.mouse.up()
+    page.wait_for_timeout(after + TAP_REST)
+
+
+def clip_hear(page, rec):
+    """Hear the loop: the music alone, round and round; an end moved while it
+    plays is heard from its next time round."""
+    music_ready(page)
+    rec.start(); page.wait_for_timeout(500)
+    tap(page, "#previewLoopBtn", after=2600, frm=(-60, 80))
+    drag_handle(page, "#tlEnd", -60, after=2400)
+    tap(page, "#previewLoopBtn", after=700, frm=(-60, 80))
+    page.evaluate("window.__fingerHide()"); page.wait_for_timeout(500)
+    rec.stop()
+    return whole(page)
+
+
+def clip_click(page, rec):
+    """The beat click: on, and the loop's beats light one by one as they play."""
+    music_ready(page)
+    rec.start(); page.wait_for_timeout(500)
+    tap(page, "#musicClickBtn", after=700, frm=(-60, 80))
+    tap(page, "#previewLoopBtn", after=3600, frm=(-60, 80))
+    tap(page, "#previewLoopBtn", after=600, frm=(-60, 80))
+    page.evaluate("window.__fingerHide()"); page.wait_for_timeout(500)
+    rec.stop()
+    return whole(page)
+
+
+def clip_snap(page, rec):
+    """Snap to the beat: an end let go between beats lands on one; off, it
+    stays where it was let go."""
+    music_ready(page)
+    page.evaluate("() => { const s = document.getElementById('musicSnap'); if (s.getAttribute('aria-pressed') !== 'true') s.click(); }")
+    page.wait_for_timeout(300)
+    rec.start(); page.wait_for_timeout(500)
+    drag_handle(page, "#tlEnd", -47, after=1100)
+    tap(page, "#musicSnap", after=700, frm=(-60, 80))
+    drag_handle(page, "#tlEnd", -33, after=1100)
+    page.evaluate("window.__fingerHide()"); page.wait_for_timeout(500)
+    rec.stop()
+    return whole(page)
+
+
+def clip_length(page, rec):
+    """Length: Fit my drawing, Whole song, and back to Skribl's pick."""
+    music_ready(page)
+    rec.start(); page.wait_for_timeout(500)
+    door(page, "length")
+    tap(page, "#matchDrawingBtn", after=1300, frm=(-50, 60))
+    tap(page, "#musicWholeBtn", after=1300, frm=(-50, 60))
+    tap(page, "#musicPickCard", after=1300, frm=(-50, 60))
+    page.evaluate("window.__fingerHide()"); page.wait_for_timeout(500)
+    rec.stop()
+    return whole(page)
+
+
+def clip_beat(page, rec):
+    """Beat: Tap the beat, along with the loop (the first tap starts it), and
+    the line says how many a minute."""
+    music_ready(page)
+    rec.start(); page.wait_for_timeout(500)
+    door(page, "beat")
+    x, y = center(page, "#musicTapBtn")
+    glide(page, (x + 50, y + 70), (x, y), 420)
+    # The taps keep the song's time by the clock, each let go on its half
+    # second: a fixed wait after each tap adds every call's own milliseconds,
+    # and the taps drifted slow (115 a minute, not the song's 120). The beat
+    # is the counted taps' span over their gaps, so only the first and last
+    # one's lateness counts: eight taps (seven counted) let that be 12ms
+    # either way and still say 120, and each goes on its millisecond.
+    t0 = time.perf_counter() + 0.1
+    for k in range(8):
+        up = t0 + k * 0.5
+        until(page, up - 0.09)
+        page.mouse.down()
+        until(page, up)
+        page.mouse.up()
+    page.wait_for_timeout(2200)
+    said = page.evaluate("() => document.getElementById('musicTempo').textContent")
+    if not said.startswith("120 beats"):
+        raise Retake(said)
+    tap(page, "#previewLoopBtn", after=600, frm=(-60, 80))
+    page.evaluate("window.__fingerHide()"); page.wait_for_timeout(500)
+    rec.stop()
+    return whole(page)
+
+
+def clip_restart(page, rec):
+    """Restart: Smooth restart on, the end fading into the start in the
+    Restart view; longer; then Hear the restart."""
+    music_ready(page)
+    # Skribl's pick comes with a smooth restart: off camera it goes off, so
+    # the tap the clip shows is the one that turns it on.
+    page.evaluate("() => { const s = document.getElementById('musicSmooth'); if (s.getAttribute('aria-checked') === 'true') s.click(); }")
+    page.wait_for_timeout(1200)
+    rec.start(); page.wait_for_timeout(500)
+    door(page, "restart")
+    tap(page, "#musicSmooth", after=900, frm=(-60, 60))
+    # The slider and Hear the restart are below a phone's screen with the
+    # door open: a swipe up brings them in, as a person would.
+    over = page.evaluate("() => document.getElementById('testSeamBtn').getBoundingClientRect().bottom - innerHeight + 16")
+    if over > 0:
+        sx, sy = center(page, "#musicSmooth")
+        swipe_up(page, sx - 110, sy + 20, over)
+    # Pressed on its knob: a press beside the knob jumps the value there
+    # first, and pressed near the left end it turned the restart off
+    # mid-clip.
+    x, y = page.evaluate("""() => { const e = document.getElementById('crossfadeSlider'), r = e.getBoundingClientRect(), cs = getComputedStyle(e);
+        const l = r.left + parseFloat(cs.paddingLeft) + parseFloat(cs.borderLeftWidth);
+        const w = r.right - parseFloat(cs.paddingRight) - parseFloat(cs.borderRightWidth) - l;
+        return [l + 12 + (e.value - e.min) / (e.max - e.min) * (w - 24), r.top + r.height / 2]; }""")
+    glide(page, (x + 30, y + 60), (x, y), 420)
+    page.mouse.down()
+    glide(page, (x, y), (x + 26, y), 700)
+    page.mouse.up(); page.wait_for_timeout(600 + TAP_REST)
+    tap(page, "#testSeamBtn", after=2400, frm=(-50, 60))
+    page.evaluate("window.__fingerHide()"); page.wait_for_timeout(500)
+    rec.stop()
+    return whole(page)
+
+
+def clip_exact(page, rec):
+    """Exact times: a start typed to the thousandth, then a step with +."""
+    music_ready(page)
+    rec.start(); page.wait_for_timeout(500)
+    door(page, "exact")
+    tap(page, "#startReadout", after=300, frm=(-50, 60))
+    page.keyboard.press("Control+A")
+    page.keyboard.type("0.500", delay=140)
+    page.keyboard.press("Enter")
+    page.wait_for_timeout(900)
+    tap(page, '#musicDoorExact .nudge-btn[data-which="start"][data-amount="1"]', after=800, frm=(-40, 60))
+    tap(page, '#musicDoorExact .nudge-btn[data-which="start"][data-amount="1"]', after=900, frm=(-40, 60))
+    page.evaluate("window.__fingerHide()"); page.wait_for_timeout(500)
+    rec.stop()
+    return whole(page)
+
+
+def clip_photo_flip(page, rec):
+    """Add a photo on Flip: a picture behind every page; the ball bounces
+    over it."""
+    flip_example(page)
+    rec.start(); page.wait_for_timeout(500)
+    tap(page, "#mediaOpenBtn", after=600, frm=(-70, -60))
+    tap(page, "#mediaTabPhoto", after=500)
+    with page.expect_file_chooser() as fc:
+        tap(page, "#photoUploadBtn", after=200)
+    fc.value.set_files(files=[{"name": "evening.jpg", "mimeType": "image/jpeg", "buffer": sky_photo()}])
+    page.wait_for_timeout(1600)
+    tap(page, "#mediaOpenBtn", after=700, frm=(-70, -60))
+    tap(page, "#play", after=2600, frm=(-60, 80))
+    tap(page, "#play", after=500, frm=(-60, 80))
+    page.evaluate("window.__fingerHide()"); page.wait_for_timeout(500)
+    rec.stop()
+    return whole(page)
+
+
 CLIPS = {"music": clip_music, "post": clip_post, "select": clip_select, "liquify": clip_liquify,
          "smudge": clip_smudge, "blur": clip_blur, "fill": clip_fill, "stamp": clip_stamp,
          "artmove": clip_artmove, "inbetween": clip_inbetween, "smear": clip_smear, "onion": clip_onion,
@@ -1067,25 +1292,31 @@ CLIPS = {"music": clip_music, "post": clip_post, "select": clip_select, "liquify
          "photo": clip_photo, "export": clip_export, "zoom": clip_zoom,
          "eyedropper": clip_eyedropper, "size": clip_size, "feel": clip_feel,
          "grid-pad": clip_grid, "grid-flip": clip_grid_flip, "layers-pad": clip_layers, "layers-flip": clip_layers_flip,
-         "pauses": clip_pauses, "fps": clip_fps, "watch": clip_watch}
+         "pauses": clip_pauses, "fps": clip_fps, "watch": clip_watch,
+         "hear": clip_hear, "click": clip_click, "snap": clip_snap, "length": clip_length, "beat": clip_beat,
+         "restart": clip_restart, "exact": clip_exact, "photo-flip": clip_photo_flip}
 # The editor a clip is filmed in, when not Pad.
 ROUTE = {k: "/flip" for k in ("select", "liquify", "smudge", "blur", "fill", "stamp", "artmove",
                                "inbetween", "smear", "onion", "hold", "guides",
-                               "grid-flip", "layers-flip", "fps", "watch")}
+                               "grid-flip", "layers-flip", "fps", "watch", "photo-flip")}
 # Where a clip is recorded, when not the tall phone screen above.
 # A phone's own screen, all of it. The techniques and extras use a SHORTER
 # phone (390 x 640): still the whole screen, so every tap stays in frame, but
 # less empty page, so they are bigger in their cards (owner: "they're small").
 # Post and Add music keep the tall screen their sheets need.
 STEPS = ("inbetween", "smear", "onion", "hold", "guides", "takes", "speed", "photo", "export",
-         "eyedropper", "size", "feel", "grid-pad", "grid-flip", "layers-pad", "layers-flip", "pauses", "fps", "watch")
+         "eyedropper", "size", "feel", "grid-pad", "grid-flip", "layers-pad", "layers-flip", "pauses", "fps", "watch",
+         "photo-flip")
 # Filmed under a real finger (Touch, above), the page a phone's.
 TOUCH = ("eyedropper", "size", "feel")
-VIEWPORT = {k: (390, 844) for k in ("music", "post")}
+# The music drawer's cards keep Add music's tall screen: the drawer and the
+# drawing above it both show.
+MUSIC = ("hear", "click", "snap", "length", "beat", "restart", "exact")
+VIEWPORT = {k: (390, 844) for k in ("music", "post") + MUSIC}
 VIEWPORT.update({k: (390, 640) for k in STEPS})
 VIEWPORT["zoom"] = (1024, 768)   # a desktop: the magnifier lives in its dock
 # The clips filmed as a whole screen, shown as a phone in a tall card.
-SCREEN = ("music", "post", "zoom") + STEPS
+SCREEN = ("music", "post", "zoom") + STEPS + MUSIC
 
 
 # Driving a 2x page makes every gesture take about half again as long as it
@@ -1165,19 +1396,28 @@ def make(browser, name, dark):
     global TAP_REST
     TAP_REST = 350 if name in SCREEN else 0
     vw, vh = VIEWPORT.get(name, (VW, VH))
-    ctx = browser.new_context(viewport={"width": vw, "height": vh}, device_scale_factor=DPR,
-                              color_scheme="dark" if dark else "light",
-                              **({"has_touch": True, "is_mobile": True} if name in TOUCH else {}))
-    page = ctx.new_page()
-    errs = []
-    page.on("pageerror", lambda e: errs.append(str(e)))
-    browsing.goto(page, BASE, ROUTE.get(name, "/skribl-pad"))
-    page.wait_for_timeout(900)
-    page.evaluate("() => { window.SkriblHints && window.SkriblHints.hide(); }")
-    page.evaluate(FINGER)
-    rec = Recorder(page)
-    crop = CLIPS[name](page, rec)
-    ctx.close()
+    for take in range(3):
+        ctx = browser.new_context(viewport={"width": vw, "height": vh}, device_scale_factor=DPR,
+                                  color_scheme="dark" if dark else "light",
+                                  **({"has_touch": True, "is_mobile": True} if name in TOUCH else {}))
+        page = ctx.new_page()
+        errs = []
+        page.on("pageerror", lambda e: errs.append(str(e)))
+        browsing.goto(page, BASE, ROUTE.get(name, "/skribl-pad"))
+        page.wait_for_timeout(900)
+        page.evaluate("() => { window.SkriblHints && window.SkriblHints.hide(); }")
+        page.evaluate(FINGER)
+        rec = Recorder(page)
+        try:
+            crop = CLIPS[name](page, rec)
+        except Retake as e:
+            ctx.close()
+            print(f"{name}: take {take + 1} said {str(e)[:40]!r}; again")
+            continue
+        ctx.close()
+        break
+    else:
+        raise SystemExit(f"{name}: three takes, none as the card says")
     if errs:
         raise SystemExit(f"{name}: page errors {errs[:2]}")
     out = OUT / f"{name}-{'dark' if dark else 'light'}.mp4"

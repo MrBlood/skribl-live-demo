@@ -165,29 +165,33 @@
     // at the end of its pill), Snap to the beat (the magnet), the four
     // doors, and Add a photo. A hold on a door opens its card, not the door;
     // on Hear the loop it plays nothing; on Add a photo it opens no picker.
-    { sel: '#previewLoopBtn', name: 'Hear the loop', tag: 'Hear the loop', more: 'Hear the loop',
+    // EACH PLAYS ITS EXAMPLE (the owner's yes to the mock's fourth call): a
+    // phone clip of that one control used, on the drawer with a song whose
+    // beat Skribl heard, also in How it works; Flip's Add a photo is filmed
+    // on Flip, behind every page.
+    { sel: '#previewLoopBtn', name: 'Hear the loop', tag: 'Hear the loop', clip: 'hear', more: 'Hear the loop',
       line: 'Just the music, round and round, the way it loops under your ' + (FLIP ? 'animation.' : 'drawing.'),
       do: [['Tap', 'Play it, or stop'], ['Move an end', 'Heard next time round']] },
-    { sel: '#musicClickBtn', name: 'Beat click', tag: 'Beat click', more: 'click',
+    { sel: '#musicClickBtn', name: 'Beat click', tag: 'Beat click', clip: 'click', more: 'click',
       line: 'A soft tick on each beat while Hear the loop plays. It’s never in your post.',
       do: [['Tap', 'On or off'], ['Grey', 'Waiting for a beat']] },
-    { sel: '#musicSnap', name: 'Snap to the beat', tag: 'Snap', more: 'Snap to the beat',
+    { sel: '#musicSnap', name: 'Snap to the beat', tag: 'Snap', clip: 'snap', more: 'Snap to the beat',
       line: 'Lines the loop’s ends up with the beat, so it comes round in time.',
       do: [['On', 'A dragged end lands on a beat'], ['Off', 'Ends stay where you let go']] },
-    { sel: '#musicDoors .dp-tile[data-dp="length"]', name: 'Length', tag: 'Length', more: 'loop length',
+    { sel: '#musicDoors .dp-tile[data-dp="length"]', name: 'Length', tag: 'Length', clip: 'length', more: 'loop length',
       line: 'How long the loop is. Skribl starts with a part that loops well.',
       do: [['Tap', 'Skribl’s pick, Fit my ' + (FLIP ? 'animation' : 'drawing') + ' or Whole song'], ['Beats', 'How many, like 8 or 16'],
            ['Lock', 'One end moves the other']] },
-    { sel: '#musicDoors .dp-tile[data-dp="beat"]', name: 'Beat', tag: 'Beat', more: 'Tap the beat',
+    { sel: '#musicDoors .dp-tile[data-dp="beat"]', name: 'Beat', tag: 'Beat', clip: 'beat', more: 'Tap the beat',
       line: 'The song’s beat. Skribl listens for it, or you tap along.',
       do: [['Tap', 'Tap the beat, and beats in a bar'], ['Then', 'Snap and the click follow it']] },
-    { sel: '#musicDoors .dp-tile[data-dp="restart"]', name: 'Restart', tag: 'Restart', more: 'restart',
+    { sel: '#musicDoors .dp-tile[data-dp="restart"]', name: 'Restart', tag: 'Restart', clip: 'restart', more: 'restart',
       line: 'How the loop’s end joins its start, so you don’t hear the seam.',
       do: [['Smooth restart', 'A fade across the join'], ['Cut on silence', 'A cut where it’s quiet'], ['Hear the restart', 'Just the join']] },
-    { sel: '#musicDoors .dp-tile[data-dp="exact"]', name: 'Exact times', tag: 'Exact times', more: 'exact',
+    { sel: '#musicDoors .dp-tile[data-dp="exact"]', name: 'Exact times', tag: 'Exact times', clip: 'exact', more: 'exact',
       line: 'The loop’s start and end in seconds, typed or stepped.',
       do: [['Type', 'A time, like 2.125'], ['− and +', 'A step: 0.01s, 0.1s or a bar']] },
-    { sel: '#photoAddBtn', name: 'Add a photo', tag: 'Add a photo', clip: 'photo', more: 'photo',
+    { sel: '#photoAddBtn', name: 'Add a photo', tag: 'Add a photo', clip: FLIP ? 'photo-flip' : 'photo', more: 'photo',
       line: 'A picture behind ' + (FLIP ? 'every page' : 'your drawing') + ', to trace or to draw over.',
       do: [['Tap', 'Choose a photo'], ['Then', 'Fit it, fade it or soften it']],
       deskDo: [['Click', 'Choose a photo'], ['Drop', 'Or drag one in here'], ['Then', 'Fit it, fade it or soften it']] },

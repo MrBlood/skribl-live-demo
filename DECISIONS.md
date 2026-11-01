@@ -28713,3 +28713,61 @@ THE FOUR: kind (a hold never plays music, opens a door or a file picker, and
 a grey button says what it waits for); simple (the same card everywhere);
 playful ("just the music, round and round"); powerful (the deepest drawer
 explains itself).
+
+## After v330 -- The music and photo drawers' eight examples
+
+The owner's "Yes to all" to an example in each of call 3's eight cards
+(FUTURE.md 6aa). Each card plays a phone clip of its one control used
+(harness/tools/make_help_clips.py), both themes, and each is also a card in
+How it works. Off camera the Pad has the snail on paper and Music open with
+a song whose beat Skribl's ears heard, so every clip starts on the drawer;
+the tall phone screen (390 x 844), as Add music's.
+
+- WHAT EACH SHOWS. Hear the loop: it plays, an end moved while it plays is
+  heard from the next time round. Beat click: on, and the loop's beats light
+  as they play. Snap: an end let go between beats lands on one; off, it
+  stays where it was let go. Length: Fit my drawing, Whole song, back to
+  Skribl's pick. Beat: eight taps along with the loop, "120 beats a
+  minute". Restart: Smooth restart on, a swipe up to the Restart view, the
+  fade made longer, Hear the restart. Exact times: a start typed, then two
+  steps with +. Add a photo on Flip: a picture behind every page, the ball
+  bouncing over it.
+- THE TAPS DRIFTED. A fixed wait after each tap counted 115 a minute, not
+  the song's 120; taps timed by the clock still read 118 or 121 now and
+  then. Measured in the page: gaps of 490 to 509ms. The beat is the counted
+  taps' span over their gaps, so only the first and last tap's lateness
+  counts. Now each tap is let go on its millisecond (`until`), there are
+  eight (seven counted: 12ms either way still says 120), and a take that
+  says anything else is filmed again, three takes at most (`Retake`).
+  Calibrated: a copy expecting 121 refused three takes and wrote nothing;
+  the real run said 120 at the first take in both themes.
+- RESTART WAS FILMED BACKWARDS. Skribl's pick comes with a smooth restart,
+  so the tap in the clip turned it off. It goes off before the clip now, and
+  the tap turns it on.
+- BELOW THE SCREEN. With the Restart door open on an 844px phone, its
+  slider and Hear the restart are below the screen: a door scrolls into view
+  only as far as the header and the bar allow (lib/musicdrawer.js). The clip
+  swipes up to them as a person would (`swipe_up`, the page scrolled in step
+  with the finger).
+- A PRESS BESIDE A SLIDER'S KNOB JUMPS IT. Pressed left of the knob, the
+  fade went to Off for a moment, the switch flicking off and on mid-clip.
+  Pressed on the knob, the fade glides from 0.25s to 0.46s.
+
+FOUND, NOT CHANGED: on Flip, the music drawer's "Play with my animation"
+runs 3px past its pill at 390px wide and touches the pill's curve at 402px
+(this box's fonts; the Pad's "with my drawing" has room). It is in the
+report, for the owner.
+
+THE CHECKS: verify_learncard 14 gains a row: each card plays its own
+example, the recording of its own name loaded. Calibrated: Beat pointed at
+the Beat click's recording and Exact times' taken away, red on those two
+alone, on both editors (10 of 12); put back, 12 of 12.
+
+WHAT IT DOES TO FLIP: shared. The seven music clips are of the one music
+drawer and play on both editors' cards, as Add music's clip always has; in
+them the drawer says "drawing" where Flip's says "animation". Add a photo is
+filmed on each editor, since Flip's photo goes behind every page.
+
+THE FOUR: kind (a card shows what a control does before anyone has to
+try it); simple (one control in each clip); playful (the beat lights, the
+loop comes round); powerful (the deepest drawer shows itself working).
