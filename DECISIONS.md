@@ -28491,3 +28491,42 @@ WHAT IT DOES TO FLIP: shared: the same icon, in Flip's dock or its tray.
 
 THE FOUR: simple (one look says what lives there); playful and kind as before;
 powerful as before.
+
+## After v330 -- Main red after #723: a loop started again late ticked its first beat twice
+
+Issue #724: main's full run on 0999b43 (#723, Skribl's letters, which
+touched no music) was red in sqlite 6/6, one row of verify_musicclick, the
+Pad: "the loop started again late, just after it came round (the page held
+busy across it): its first beat still ticks once, as the old loop came
+round", started again 43.2 ms after the old loop came round. Green alone
+here, and in postgres 6/6 on the same tree.
+
+MEASURED AT THE CPU 4x SLOWER first, as the entry after #692 asks of this
+suite: the row red two runs in three, both the same: the first beat ticked
+twice, as the old loop came round and again as the new loop's sound began,
+0.10 to 0.11 s apart (the start 72 to 81 ms late). A DEFECT, NOT THE
+INSTRUMENT: lib/musicdrawer.js kept a start's first beat from ticking twice
+only by setting no beat within a tenth of a second of the last, which covers
+a start up to about 70 ms late (the sound begins LEAD, 30 ms, after the
+start). A slower box, or a page held longer, is heard as a stutter at the
+loop's top.
+
+- THE FIX: a start's first beat is not set when the last tick is closer than
+  0.6 of a beat (0.3 s at the suite's 120): that tick was the old loop's top,
+  ticked as it came round, and it was this beat. Every other beat keeps the
+  tenth; a start before the loop came round still ticks its first beat as
+  the music starts (the old top called off, the last tick a whole beat back).
+- THE ROW: verify_musicclick's restart takes how long the page is held past
+  the old loop coming round: 40 ms as before, and a new 160 ms, a start a
+  fifth of a second late, red on the old drawer every time on both editors
+  (the first beat at -189 ms and 0, 0.19 s apart), green on the new; the
+  join counted from just before the old loop came round to just after the
+  new sound began, so a second tick is counted however late the start.
+  Twice green alone; at the CPU 4x, three runs, the restart rows green in
+  all three.
+- ALSO SEEN AT THE CPU 4x, once in three: the row the entry after #692
+  watches ("the click turned on ... ticks from the very next beat"), Flip,
+  its first tick 11.61 ms after the beat. Not this change; still watched,
+  not touched, since CI has not shown it again.
+
+WHAT IT DOES TO FLIP: shared (lib/musicdrawer.js runs both editors' click).
