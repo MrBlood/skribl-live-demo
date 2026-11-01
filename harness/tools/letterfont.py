@@ -9,6 +9,11 @@ width the pen drew, and t in ms from the letter's first point.
 
     python3 harness/tools/letterfont.py https://<site>/s/<id> [out.json]
     python3 harness/tools/letterfont.py saved-payload.json [out.json]
+    python3 harness/tools/letterfont.py my-hand.skriblhand [out.json]
+
+The last is a copy saved from Your hand (Save a copy), which keeps every
+letter in the box it was drawn in, so nothing has to be read back from a
+layout (from_copy).
 
 THE LAYOUT RULE IS editor_letters.js's, repeated here (gridFor, composeSet):
 cells CELL_W cap heights wide and 1 / (base - cap) tall, as big as the canvas
@@ -163,6 +168,36 @@ def decode(doc):
             "misfit": round(total / L["cap"], 4)}
 
 
+def from_copy(copy):
+    """A copy of a hand saved from Your hand (its Save a copy: {"type": "skribl-hand",
+    "v": 1, "g": {id: letter}}) as the same letters decode gives. A copy needs no
+    layout read back: each letter is kept in the canvas units of the box it was
+    drawn in ({p: [[x, y, width, t]], n: points per stroke, b: its box, l: its
+    lines}), so it is measured from its own cap height, its own baseline and its
+    own ink centre, as the posted layout centres it. t is already from the
+    letter's first point."""
+    g = (copy or {}).get("g") or {}
+    out = {}
+    for bid in BOX_IDS:
+        L = g.get(bid)
+        if not L or not L.get("p"):
+            out[bid] = []
+            continue
+        b = L["b"]
+        l = L.get("l") or [LINES["cap"], LINES["x"], LINES["base"], LINES["desc"]]
+        cap = (l[2] - l[0]) * b[3]
+        base = b[1] + l[2] * b[3]
+        xs = [q[0] for q in L["p"]]
+        mid = (min(xs) + max(xs)) / 2
+        strokes, k = [], 0
+        for n in L["n"]:
+            strokes.append([[round((q[0] - mid) / cap, 5), round((base - q[1]) / cap, 5),
+                             round(q[2] / cap, 6), int(q[3])] for q in L["p"][k:k + n]])
+            k += n
+        out[bid] = strokes
+    return {"letters": out, "order": BOX_IDS, "lines": LINES, "misfit": 0}
+
+
 def fetch(url):
     """A /s/<id> link, or an /api/skribls/<id> one, as the post's JSON."""
     if "/s/" in url and "/api/" not in url:
@@ -177,7 +212,8 @@ if __name__ == "__main__":
         sys.exit(__doc__)
     src = sys.argv[1]
     doc = fetch(src) if src.startswith(("http://", "https://")) else open(src, encoding="utf-8").read()
-    res = decode(doc)
+    parsed = payload_of(doc)
+    res = from_copy(parsed) if isinstance(parsed, dict) and parsed.get("type") == "skribl-hand" else decode(doc)
     text = json.dumps(res, ensure_ascii=False, separators=(",", ":"))
     if len(sys.argv) > 2:
         with open(sys.argv[2], "w", encoding="utf-8") as f:

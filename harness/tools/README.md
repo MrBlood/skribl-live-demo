@@ -119,11 +119,19 @@ a hand read back by `letterfont.py` (the owner's set), each point keeping the
 time it was drawn at. Cap heights, y up from the baseline, delta-coded; its
 docstring has the format. `verify_text.py` holds the files to it.
 
+Skribl is the owner's posted set with c, s, S, 8 and 9 from the copy of
+their hand they saved after drawing those again (DECISIONS, "Skribl's c, s,
+S, 8 and 9"): the copy read by `letterfont.py`, those five put in the posted
+set's letters, and `make_textfonts.py` run on the result, so every other
+letter is the file it was.
+
 ## Your hand's reader
 
 `letterfont.py` reads a hand posted from Your hand (`/skribl-pad?letters=1`,
 whose Post your letters posts the letters drawn so far as one Skribl) back
 into letters: each as strokes of x, y, width and time in cap heights, a
-letter not yet drawn as none, from a `/s/<id>` link or a saved payload. It repeats `editor_letters.js`'s layout rule, and
+letter not yet drawn as none, from a `/s/<id>` link or a saved payload, or
+from a copy saved with Your hand's Save a copy, which needs no layout read
+back (`from_copy`). It repeats `editor_letters.js`'s layout rule, and
 `verify_letters.py` posts a set and reads it back with this file, so the two
 cannot part company quietly.

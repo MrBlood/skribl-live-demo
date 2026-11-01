@@ -28426,3 +28426,38 @@ and the font when it helps); playful as before.
 
 Not tested here: WebKit, so the iPhone's touch and its SF under the letter;
 the owner's phone will say.
+
+## After v330 -- Skribl's c, s, S, 8 and 9: the owner's redrawn letters
+
+The owner changed letters in Your hand on their phone, saved a copy
+(my-handNEW.skriblhand) and asked: "Can you make this the new skribl font? I
+changed a couple letters. Or do you want the link?" The copy was enough: it
+keeps every letter, with its times, in the box it was drawn in.
+
+- FIVE LETTERS CHANGED, AND ONLY FIVE. Against the copy Skribl was made from
+  (the posted set, as the file made for the owner's phone), the new copy
+  differs in c, s, S, 8 and 9, each drawn again (8 now one stroke, not two);
+  the other 87 are identical. Skribl's file now has those five from the copy
+  and every other glyph byte for byte as it was; Print and Script unchanged.
+- WHY ONLY THOSE FIVE ARE REBUILT. Rebuilt whole from the copy, 55 glyphs
+  came out different: a unit in 250 of a cap height by rounding, a different
+  few points kept where the thinning's spacing fell, and up to 34 units
+  sideways where the posted read measured x from the cell's middle and the
+  copy from the letter's ink. Text spaces a hand's letters by their ink
+  (lib/textwrite.js layoutLine), so none of it would show; it would only be
+  noise in a change that is five letters.
+- A COPY IS NOW A WAY IN: harness/tools/letterfont.py reads a copy saved
+  from Your hand (from_copy: each letter from its own lines and ink centre,
+  in cap heights), the same letters a posted set reads back to, so
+  make_textfonts.py makes lettering from either. verify_letters 13 reads the
+  copy Save a copy makes and holds it to the letters it holds; calibrated red
+  with the y left unflipped (2.0 cap heights) and with the box's middle for
+  the ink's (0.107), green as it is (5e-6).
+
+What the owner sees: in Text's Skribl, and in Yours on their phone (the same
+letters now), the new c, s, S, 8 and 9, written at the pace they drew them.
+
+WHAT IT DOES TO FLIP: shared. Both editors write with the one lettering file.
+
+THE FOUR: kind (the letters changed are the ones they changed); playful
+(their hand, better); simple and powerful as before.
