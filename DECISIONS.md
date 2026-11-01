@@ -28461,3 +28461,33 @@ WHAT IT DOES TO FLIP: shared. Both editors write with the one lettering file.
 
 THE FOUR: kind (the letters changed are the ones they changed); playful
 (their hand, better); simple and powerful as before.
+
+## After v330 -- The Shape button says words too: a T where the circle was
+
+The owner, with a picture of the Shape button (a triangle over a square and a
+circle): "Do you think this is still good or should there be a T where the
+circle is for text? Or something else. Be creative". The mock showed Now, A (a
+clean T where the circle was), B (Skribl's own T, the owner's hand) and C (the
+button showing the kind picked: a T for Text, an oval for Oval), in the real
+dock, phone and desk, dark and light, at rest and chosen, and Flip's tray. The
+owner: "Yes" to A and the words.
+
+- A, BECAUSE it reads "shapes and words" at a glance, in the icon set's own
+  stroke (2, round), in exactly the circle's box (M14 14h7 M17.5 14v7, beside
+  the square's 3..10 by 14..21): the icon's ink measured 21.7 by 22 px with its
+  centre where today's was, so nothing moves. It is the T the pointer's badge
+  already shows for Text (editor_text.js _SHAPE_GLYPH.text). B's curl read as a
+  wobble at 22 px beside the clean shapes; C made the button stop looking like
+  Shape and change under the thumb.
+- ITS WORDS: the button's hover words said "a line, rectangle, oval or
+  polygon"; they say "or words" now.
+- Both editors' templates carry the icon (Flip's tray copies it), so
+  verify_parity holds them to one icon, with the T and no circle, and the words
+  naming words. Calibrated on the section alone with the server bounced each
+  time: the old templates red at the T and the words, Pad alone changed red at
+  all three, both changed green.
+
+WHAT IT DOES TO FLIP: shared: the same icon, in Flip's dock or its tray.
+
+THE FOUR: simple (one look says what lives there); playful and kind as before;
+powerful as before.

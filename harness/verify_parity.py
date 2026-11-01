@@ -2892,6 +2892,33 @@ with sync_playwright() as p:
     # its 600-second budget with that section unfinished; it moved whole, with
     # the three helpers it borrowed from here (ED, _fresh, _drawn).
 
+    # THE SHAPE BUTTON SAYS WORDS TOO. Text lives in Shape's picker; the owner
+    # said yes to a clean T where the circle was (the mock's A), the same
+    # stroke and box, the T the pointer already shows for Text. The icon is
+    # written twice, once in each editor's template, and Flip's tray copies
+    # it, so the two copies are held to one.
+    print("\nPARITY — the Shape button's icon says words too, one icon on both")
+    _ICON = """() => { const b = document.getElementById('shapeToolBtn'), s = b && b.querySelector('svg');
+      return s ? { svg: s.innerHTML.replace(/\\s+/g, ' ').trim(),
+                   words: b.getAttribute('title') || b.getAttribute('data-tip') || '' } : null; }"""
+    _icons = {}
+    for _name, _path in (("pad", "/skribl-pad"), ("flip", "/flip")):
+        _pg = b.new_page(viewport={"width": 900, "height": 1100})
+        _pg.goto(BASE + _path)
+        _pg.wait_for_selector("#shapeToolBtn", state="attached")
+        _icons[_name] = _pg.evaluate(_ICON)
+        _pg.close()
+    _both = bool(_icons["pad"] and _icons["flip"])
+    check("the Shape button wears one icon on Pad and Flip",
+          _both and _icons["pad"]["svg"] == _icons["flip"]["svg"], str(_icons)[:240])
+    check("and it says words: a T where the circle was, the triangle and the square kept",
+          _both and all('d="M14 14h7M17.5 14v7"' in _icons[n]["svg"] and "<circle" not in _icons[n]["svg"]
+                        and "<rect" in _icons[n]["svg"] and 'd="M8.3 10' in _icons[n]["svg"] for n in _icons),
+          str(_icons)[:240])
+    check("and its words name words too, on both",
+          _both and all("or words" in _icons[n]["words"] for n in _icons),
+          " | ".join((_icons[n] or {}).get("words", "")[:90] for n in _icons))
+
     print("\nPARITY — no surface is silently erroring on load")
     check("Pad loads without JS errors", not errs["pad"], "; ".join(errs["pad"][:2]))
     check("Flip loads without JS errors", not errs["flip"], "; ".join(errs["flip"][:2]))
