@@ -446,70 +446,63 @@
       return n;
     }
     global.addEventListener('resize', function () { tileRoom = {}; fitsMemo = {}; });
-    // LISTENING's motion (the owner, after v330: "Maybe a pulsating wave and
-    // an ear icon?", then Lucide's ear, pasted): Skribl's ear, sound waves
-    // gliding in toward it, and the magnet breathing in the accent's ink.
-    // The browser's own animation (Element.animate), so it is smooth and
-    // nothing in the stylesheet ships to the player (its CSS has a byte
-    // budget; keyframes and Reduce Motion rules always ship). None under
-    // Reduce Motion.
-    var listening = false, breath = null, listenT0 = null;
-    /*! Skribl's ear is Lucide's `ear`, SCALED to the music drawer's doors
-     *  (paths otherwise unaltered; the two sound waves beside it are ours).
-     *  Lucide: ISC (c) Lucide Icons and Contributors, https://lucide.dev */
-    // The one drawing is the Beat tile's (_skribl_music_drawer.html); the line
-    // under the timeline borrows it, so the two are always the same ear.
-    var earMark = null;
-    function earArt() {
-      if (earMark === null) {
-        var t = panel && panel.querySelector('.dp-tile[data-dp="beat"] .mt-ear');
-        earMark = t ? t.outerHTML : '';
-      }
-      return earMark;
-    }
-    // The waves glide in (the owner: "the wave needs to move and be
-    // separated"): each goes 10 units toward the ear in 1.4 seconds at an
-    // even speed, fading in as it sets off and out before it reaches the
-    // ear, the second half a glide behind the first, so one arrives every
-    // 0.7 seconds and the two are always 5 apart. Unseen for its first 5%
-    // and last 10%, so a wave goes back to its start only while it cannot
-    // be seen, even on a busy phone that skips frames. Every ear's waves keep
-    // one clock (startTime), so the tile's and the line's move together,
-    // and the magnet breathes once for every two glides. The line's ear is
-    // drawn anew when its words change, so its waves are started each time
-    // it is (syncLine).
-    var GLIDE = [{ transform: 'translateX(0px)', opacity: 0 }, { opacity: 0, offset: 0.05 }, { opacity: 1, offset: 0.3 },
-                 { opacity: 1, offset: 0.6 }, { opacity: 0, offset: 0.9 }, { transform: 'translateX(10px)', opacity: 0 }];
+    // LISTENING's motion (the owner's C, after v330: "Yes and yes"): while
+    // Skribl listens to a new song, a soft light sweeps the song on the
+    // timeline, where the beats are about to land; the Beat tile's own four
+    // dots dance, stretching into bars and back like a music meter; and the
+    // magnet, grey until there is a beat, breathes in the accent's ink. (An
+    // ear came first; at 24px it could not be made out.) The browser's own
+    // animation (Element.animate), on one clock (startTime), and nothing in
+    // the stylesheet ships to the player (its CSS has a byte budget;
+    // keyframes and Reduce Motion rules always ship). The light and the bars
+    // show only while #musicPanel is .listen-moving, so under Reduce Motion
+    // nothing that would have moved is shown: the dots stay dots, and the
+    // words say it.
+    var listening = false, breath = null, listenT0 = null, listenAnims = [], listenEnd = null;
+    // Each bar keeps its own pace, so they never march together; they set
+    // off one after another from the dots they were (fill: the dot until
+    // then).
+    var METER = [1150, 980, 1270, 1060];
     function onClock(a) { if (listenT0 != null) a.startTime = listenT0; return a; }
-    function earWaves() {
-      if (!listening || still() || !panel) return;
-      [].forEach.call(panel.querySelectorAll('.mt-ear'), function (ear) {
-        [].forEach.call(ear.querySelectorAll('.mt-ear-wave'), function (el, i) {
-          if (el._skWave || !el.animate) return;
-          el._skWave = onClock(el.animate(GLIDE, { duration: 1400, iterations: Infinity, delay: -700 * i }));
-        });
-      });
-    }
-    function earsStill(root) {
-      if (root) [].forEach.call(root.querySelectorAll('.mt-ear-wave'), function (el) {
-        if (el._skWave) { el._skWave.cancel(); el._skWave = null; }
-      });
+    function listenStill() {
+      listenAnims.forEach(function (a) { try { a.cancel(); } catch (e) {} });
+      listenAnims = [];
+      clearTimeout(listenEnd); listenEnd = null;
     }
     function listenMotion(on) {
-      if (on === listening) { if (on) earWaves(); return; }
+      if (on === listening || !panel) return;
       listening = on;
       if (on) {
+        listenStill();
+        if (still()) return;
         var tl = global.document.timeline;
         listenT0 = tl && tl.currentTime != null ? tl.currentTime : null;
-        earWaves();
-        if (snapSw && snapSw.animate && !still()) {
+        [].forEach.call(panel.querySelectorAll('.mt-beat-meter line'), function (el, i) {
+          if (!el.animate) return;
+          listenAnims.push(onClock(el.animate([{ transform: 'scaleY(1)' }, { transform: 'scaleY(18)', offset: 0.3 },
+            { transform: 'scaleY(5)', offset: 0.55 }, { transform: 'scaleY(13)', offset: 0.78 }, { transform: 'scaleY(1)' }],
+            { duration: METER[i % 4], delay: 140 * i, iterations: Infinity, easing: 'ease-in-out', fill: 'backwards' })));
+        });
+        var band = panel.querySelector('.mt-tl-listen i');
+        if (band && band.animate) listenAnims.push(onClock(band.animate([{ transform: 'translateX(-100%)' }, { transform: 'translateX(240%)' }],
+          { duration: 1600, iterations: Infinity, easing: 'ease-in-out' })));
+        if (snapSw && snapSw.animate) {
           var ink = global.getComputedStyle(snapSw).getPropertyValue('--accent-ink').trim() || 'currentColor';
           breath = onClock(snapSw.animate([{ opacity: 0.35, easing: 'ease-in-out' }, { opacity: 0.85, color: ink, easing: 'ease-in-out' },
             { opacity: 0.35 }], { duration: 2800, iterations: Infinity }));
         }
+        panel.classList.add('listen-moving');
       } else {
-        earsStill(panel);
-        if (breath) { breath.cancel(); breath = null; }
+        // Heard (or the song gone): the light and the bars fade out still
+        // moving (styles.css), then stop; the magnet glides from where its
+        // breath was to how it looks now, never a jump.
+        panel.classList.remove('listen-moving');
+        listenEnd = setTimeout(listenStill, 300);
+        if (breath) {
+          var cs = global.getComputedStyle(snapSw), from = { offset: 0, opacity: cs.opacity, color: cs.color };
+          breath.cancel(); breath = null;
+          try { snapSw.animate([from], { duration: 250, easing: 'ease-out' }); } catch (e) {}
+        }
         listenT0 = null;
       }
     }
@@ -523,8 +516,8 @@
         if (ok && k === 'length') w = spark && pickSub ? pickSub.textContent : lengthOf(loopNow(), h.crossfade(), tp);
         else if (ok && k === 'beat') w = tp ? tempoFor(v, tile, tp) : ears ? 'Listening…' : 'Tap it';
         // LISTENING (the owner's yes, after v330): while Skribl listens, the
-        // tile's dots give way to Skribl's ear (styles.css), and the magnet
-        // breathes beside it (listenMotion).
+        // tile says so in the accent's ink, its dots dance, the song shimmers
+        // and the magnet breathes (listenMotion).
         if (k === 'beat') { tile.classList.toggle('listening', ok && !tp && !!ears); listenMotion(ok && !tp && !!ears); }
         else if (ok && k === 'restart') w = h.crossfade() > 0 ? 'Smooth' : 'Clean cut';
         else if (ok && k === 'exact') w = timesFor(v, tile, t.start, t.end);
@@ -1194,16 +1187,16 @@
       var len = heard(h.trim(), h.crossfade()), p = beatSecs(), beats = p > 0 ? beatWords(len / p) : '', vs = against(len, secs);
       // LISTENING, louder (the owner: "if it is significant then accentuate
       // it"; a two-minute song takes a few seconds on a mid-range phone):
-      // where the beats will be, Skribl's ear and "listening for the beat"
-      // in the accent's ink, its waves arriving with the tile's (earWaves).
-      // Under 370px "listening…", so it keeps to its row (styles.css).
-      var listen = !beats && !tempo() && !!ears ? '<span class="mt-pick-listen">' + earArt()
+      // where the beats will be, "listening for the beat" in the accent's
+      // ink; under 350px "listening…", so it keeps to its row
+      // (styles.css).
+      var listen = !beats && !tempo() && !!ears ? '<span class="mt-pick-listen">'
         + '<span class="mt-pick-long">listening for the beat</span><span class="mt-pick-short">listening\u2026</span></span>' : '';
       // what it is against the drawing in a span of its own: on a narrow
       // phone it takes its own row, whatever it says (styles.css)
       var html = '<b>' + len.toFixed(2) + 's</b>' + (beats ? ' · ' + beats : listen ? ' · ' + listen : '')
         + (vs ? '<span class="mt-pick-vs"><span class="mt-pick-sep"> · </span>' + vs + '</span>' : beats || listen ? '' : ' loop');
-      if (pickText && pickText._html !== html) { earsStill(pickText); pickText.innerHTML = html; pickText._html = html; earWaves(); }
+      if (pickText && pickText._html !== html) { pickText.innerHTML = html; pickText._html = html; }
     }
 
     /* ---- LENGTH: Skribl's pick, Fit my drawing and Whole song. ------------

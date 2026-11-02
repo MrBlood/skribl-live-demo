@@ -2461,13 +2461,13 @@ body.recoloring #canvas { cursor: crosshair !important; }
 .mt-pick-text { flex: 1 1 auto; min-width: 0; }
 /* ITS HEIGHT HOLDS AS IT CHANGES. Its longest words, while Skribl listens
    ("119.75s · listening for the beat · shorter than your drawing"), are
-   417px in Inter at 14px, the widest face it is drawn in, and with the pair
-   (66px) and the gap they fit one row from a 571px screen up (a desk's
+   391px in Inter at 14px, the widest face it is drawn in, and with the pair
+   (66px) and the gap they fit one row from a 545px screen up (a desk's
    margins; a phone's are narrower). Under 600px, a phone among them, what
    the loop is against the drawing takes a row of its own, whatever it says,
    and the line is two rows tall with or without it, so nothing under the
    line moves as it changes; the pair sits in the middle of the two. (Under
-   460px until the listening words, after v330: on a 460 to 570px screen
+   460px until the listening words, after v330: on a 460 to 544px screen
    they wrapped the one row, and the beat, heard, unwrapped it.) A page
    zoomed in is a narrower screen, so it holds there too. (A @media, not a
    @container: harness/tools/cssgraph.py keeps any other at-rule whole, so
@@ -2626,31 +2626,37 @@ body.recoloring #canvas { cursor: crosshair !important; }
 .mt-click:disabled { opacity: .5; cursor: default; }
 .mt-click:focus-visible { outline: 2px solid var(--ui-hi); outline-offset: -3px; }
 @media (hover: hover) { .mt-click:not(:disabled):not([aria-pressed="true"]):hover { background: color-mix(in srgb, var(--accent) 7%, var(--menu-card)); } }
-/* LISTENING (the owner's yes, after v330, and their ear: "Maybe a
-   pulsating wave and an ear icon?"): while Skribl listens to a new song (a
-   few seconds for a long one on a phone), the Beat tile's dots give way to
-   Skribl's ear (Lucide's, the owner's pick), its waves gliding in toward it
-   ("the wave needs to move and be separated"), and the magnet, grey until
-   there is a beat, breathes in the accent's ink: it is waiting, not broken. The
-   tile's word is in the accent's ink too, and the line under the timeline,
-   where the beats will be, says "listening for the beat" after an ear of
-   its own. lib/musicdrawer.js moves them (Element.animate), so nothing here
-   is an animation or a Reduce Motion rule, which the player would have to
-   carry (its CSS has a byte budget); under Reduce Motion the ears keep
-   still with both waves drawn, 5 apart. The ear's box is 30 by 24, room
-   for the waves to travel. */
-.dp-tile[data-dp="beat"] .dp-art .mt-beat-dots, .dp-tile[data-dp="beat"] .dp-art .mt-ear { transition: opacity .25s ease-out; }
-.dp-tile[data-dp="beat"] .dp-art .mt-ear { position: absolute; inset: 0; margin: auto; width: 30px; opacity: 0; }
-.dp-tile[data-dp="beat"].listening .dp-art .mt-ear { opacity: 1; }
-.dp-tile[data-dp="beat"].listening .dp-art .mt-beat-dots { opacity: 0; }
+/* LISTENING (the owner's yes, after v330, then their C: "Yes and yes"):
+   while Skribl listens to a new song (a few seconds for a long one on a
+   phone), a soft light sweeps the song on the timeline (.mt-tl-listen, its
+   band 42% of the stage wide), the Beat tile's own four dots dance,
+   stretching into bars and back like a music meter (.mt-beat-meter, over
+   the dots), and the magnet, grey until there is a beat, breathes in the
+   accent's ink: it is waiting, not broken. The tile's word is in the
+   accent's ink, and the line under the timeline, where the beats will be,
+   says "listening for the beat". lib/musicdrawer.js moves them
+   (Element.animate) and marks #musicPanel .listen-moving while they move,
+   so nothing here is an animation or a Reduce Motion rule, which the
+   player would have to carry (its CSS has a byte budget); under Reduce
+   Motion nothing that would move is shown. Each fades in and out, still
+   moving. (An ear came first; at 24px it could not be made out.) */
+.dp-tile[data-dp="beat"] .dp-art .mt-beat-dots, .dp-tile[data-dp="beat"] .dp-art .mt-beat-meter { transition: opacity .25s ease-out; }
+.dp-tile[data-dp="beat"] .dp-art .mt-beat-meter { position: absolute; inset: 0; margin: auto; opacity: 0; }
+.mt-beat-meter line { transform-box: fill-box; transform-origin: 50% 50%; }
+.listen-moving .dp-tile[data-dp="beat"] .dp-art .mt-beat-meter { opacity: 1; }
+.listen-moving .dp-tile[data-dp="beat"] .dp-art .mt-beat-dots { opacity: 0; }
 .dp-tile[data-dp="beat"].listening .dp-v { color: var(--accent-ink); }
+.mt-tl-listen { position: absolute; inset: 0; overflow: hidden; pointer-events: none; border-radius: inherit; opacity: 0; transition: opacity .25s ease-out; }
+.mt-tl-listen i { position: absolute; top: 0; bottom: 0; left: 0; width: 42%;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--accent-ink) 34%, transparent) 50%, transparent); }
+.listen-moving .mt-tl-listen { opacity: 1; }
 .mt-pick-listen { color: var(--accent-ink); font-weight: 600; white-space: nowrap; }
-.mt-pick-listen .mt-ear { width: 21.25px; height: 17px; margin-right: 5px; vertical-align: middle; }   /* on the words' x-height, in any face */
 /* ...on the line's first row, beside the length: "19.75s · listening for the
-   beat" is 226px in Inter (235 for a loop of 100 seconds or more), which a
-   phone has from 369px up. Narrower, it says "listening…". */
+   beat" is 200px in Inter (209 for a loop of 100 seconds or more), which a
+   phone has from 343px up. Under 350px, a few pixels kept, it says
+   "listening…". */
 .mt-pick-short { display: none; }
-@media (max-width: 369px) { .mt-pick-long { display: none; } .mt-pick-short { display: inline; } }
+@media (max-width: 349px) { .mt-pick-long { display: none; } .mt-pick-short { display: inline; } }
 /* THE LIT BEAT: a beat's dot glowing as it is heard while Hear the loop
    plays, bigger on a bar (lib/musictimeline.js pulse, which animates it). */
 .mt-tl-lit { position: absolute; width: 9px; height: 9px; margin: -4.5px 0 0 -4.5px; border-radius: 50%; background: var(--accent-ink);
