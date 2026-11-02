@@ -1190,8 +1190,8 @@
       // where the beats will be, "listening for the beat" in the accent's
       // ink; under 350px "listening…", so it keeps to its row
       // (styles.css).
-      var listen = !beats && !tempo() && !!ears ? '<span class="mt-pick-listen">'
-        + '<span class="mt-pick-long">listening for the beat</span><span class="mt-pick-short">listening\u2026</span></span>' : '';
+      var listen = !beats && !tempo() && !!ears ? '<span class="mt-pick-listen">listening'
+        + '<span class="mt-pick-long"> for the beat</span><span class="mt-pick-short">\u2026</span></span>' : '';
       // what it is against the drawing in a span of its own: on a narrow
       // phone it takes its own row, whatever it says (styles.css)
       var html = '<b>' + len.toFixed(2) + 's</b>' + (beats ? ' · ' + beats : listen ? ' · ' + listen : '')

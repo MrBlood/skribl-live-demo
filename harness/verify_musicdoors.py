@@ -236,6 +236,10 @@ def add(pg, song):
     pg.wait_for_function("(d) => document.getElementById('musicUploadBtn').classList.contains('loaded') && !!currentAudioBuffer"
                          " && Math.abs(audioDuration - d) < 0.2", arg=secs, timeout=20000)
     waits.settle(pg, 500)
+    # Skribl's answer: while it listens the one line says so ("listening for
+    # the beat") and the Beat tile "Listening…", and a long song takes a
+    # second or more; the rows here read what it said.
+    pg.wait_for_function("() => !document.querySelector('#musicDoors .dp-tile[data-dp=\"beat\"]').classList.contains('listening')", timeout=20000)
 
 
 def tile(k):

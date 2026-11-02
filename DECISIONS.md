@@ -28920,3 +28920,65 @@ ear (a tick a block early, once, at the start), and a flaky row with it.
   it reads them together now.
 
 WHAT IT DOES TO FLIP: shared (lib/musicdrawer.js runs both editors' click).
+
+## After v330 -- While Skribl listens: the song shimmers, the dots dance, the beat it hears is kept
+
+The owner, of a song whose beat the Pad found and Flip did not: "I've
+loaded this beat many times. It finds a beat, just not in flip"; then
+"Should we show a 'listening to sample' msg while skribl listens?", "a
+little louder", "Maybe a pulsating wave and an ear icon?", Lucide's ear
+pasted, "the wave needs to move and be separated", "Can't quite make it
+out? Ideas?", and "Yes and yes" to C.
+
+- THE BUG, both editors (one drawer): a beat Skribl heard was dropped when
+  the loop had moved before it answered (heardIt set a beat only through
+  Skribl's pick), so the magnet stayed grey and Beat said "Tap it"; and a
+  song a draft brought back with no beat was never listened to again (sync
+  listened again only to a song whose beat was heard). Now the beat heard
+  is set beside the loop as it was put, quietly (not a step), and a song
+  back with no beat is listened to again, its loop kept. A beat tapped is
+  never listened over. verify_musicears' old KIND row, "no beat is set",
+  reverses.
+- LISTENING, SEEN (the owner's C): while Skribl listens a soft light sweeps
+  the song on the timeline, the Beat tile's own four dots dance like a
+  music meter (lines a hair long, round ends, the stroke not scaled, so a
+  dot stretches into a bar and back), the magnet breathes, the tile says
+  "Listening…" in the accent's ink and the line under the timeline
+  "listening for the beat" ("listening…" under 350px). One clock; each
+  fades in and out still moving, the magnet gliding to its new look;
+  under Reduce Motion only the words. The browser's own animation
+  (Element.animate): a first try with CSS keyframes went 305 bytes over
+  the player stylesheet's budget, since keyframes and Reduce Motion rules
+  always ship; player.css is unchanged.
+- HOW IT GOT THERE: dots counting a bar (smooth in CSS, then stepped once
+  the script kept the time, and the owner saw the difference); an ear with
+  pulsing waves, then Lucide's ear (scaled 0.8 to the doors, as Fill and
+  Stamps are on Flip); waves gliding in, apart. At 24px none of it could
+  be made out, so the signal moved to things already big or already known:
+  the song itself, and the Beat tile's own dots.
+- HOW LONG SKRIBL LISTENS, measured: 0.4s for 30 seconds of song at full
+  speed, 0.7s for a minute, about 1s for two; at a mid-range phone's pace
+  (the CPU 4x slower) 3.7s for 30 seconds and 7s for a minute, 8 to 16s
+  counting the song's opening.
+- THE LINE KEEPS ITS HEIGHT: under 600px what the loop is against the
+  drawing takes its own row (it did under 460px); the listening words
+  wrapped the one row on a 460 to 544px screen, and the beat unwrapped it.
+- THE ROWS, verify_musicears: KIND (the heard beat set; Undo brings back
+  that loop and that beat), BACK (a song back with no beat heard again; a
+  tapped one never), LISTENING (read on every frame from before the song
+  until after the beat: the bars set off as dots, nothing hops, the light
+  goes back to its start only out of sight, the end fades still moving,
+  nothing runs after; Reduce Motion shows nothing that would move). Each
+  calibrated by breaking its own piece alone on the Pad: the word's ink,
+  the light on a clock of its own, the bars setting off already moving,
+  the light going back in sight, everything stopped at once, the magnet
+  snapping, motion under Reduce Motion, the heard beat dropped, a song
+  back never heard again. How it works' Skribl's pick says it.
+- Not tested here: Safari (no WebKit in this box).
+
+WHAT IT DOES TO FLIP: shared (one drawer, the same on both).
+
+THE FOUR: kind (you can see Skribl working, your loop is never moved, and
+what it heard is never lost); playful (the song shimmers, the dots dance);
+simple (no new buttons, the words say what Skribl is doing); powerful (the
+magnet and the metronome ready the moment the beat is heard).
