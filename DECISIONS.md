@@ -28880,3 +28880,43 @@ Still open, the owner's:
   words mocked first); Flip on a desk with fewer buttons at once, and the
   Pad on a tablet using the width (6z, items 9 and 10, mocks first).
 - Declined: a desk copy of the examples (FUTURE 6v).
+
+## After v330 -- Main red after #733: the click read the clock twice
+
+Issue #735: main's full run on 1f0565d (#733, Flip's music drawer saying
+"flip", words only) was red in postgres 6/6, one row of verify_musicclick,
+the Pad: "a page held for 300ms from just before a beat drops no tick",
+with no tick on its beat, five in all, the gaps after the first 0.5116,
+0.5 and 0.5. Green on the next run (#734), and the issue closed itself.
+
+MEASURED AT THE CPU 4x SLOWER first, as this suite asks: the held row green
+four runs in four on each editor, so not the hold and not the load alone.
+
+THE NUMBERS SAID WHERE. The suite records the time the page asks a tick to
+start at, and 11.61ms is one block of the audio clock (512 frames at
+44.1kHz). Every tick after the first two sat on the true grid, so the grid
+itself had moved: lib/musicdrawer.js beats() found the loop's top as the
+audio clock less how far into the loop it was, and the loop's elapsed()
+reads the clock again. A busy box can move the clock on a block between the
+two reads; in the first call that sets the sound's start, the top came out a
+block early, and with it the music's first tick, the next beat, and the
+click's own record of the sound's start, which the row measures from. The
+row then found nothing on its beat. The Flip blip the entry after #723 saw
+at the CPU 4x (a first tick 11.61ms off) was this too. A DEFECT, small to the
+ear (a tick a block early, once, at the start), and a flaky row with it.
+
+- THE FIX: the clock read once. beats() reads the clock, asks elapsed(), and
+  reads again until the clock stood still across it (at most three tries),
+  so both are the same moment. In the drawer alone: lib/audioloop.js ships
+  to the player, whose script is 3 bytes under its ratchet.
+- THE ROW: verify_musicclick's new raced part moves the audio clock on one
+  block, for good, at the moment the scheduler first asks elapsed() (found
+  by the stack). The music's first tick at the sound's start and every tick
+  after on its beat, by the loop's own top. Red without the fix on both
+  editors, twice, the Pad's numbers main's (the first tick and the click's
+  record 11.61ms early, the next beat 11.61ms off, the rest on time); green
+  with it, three runs. Its own first try read the clock and elapsed() apart
+  to find the top, and met the race it is about (half a block on the Pad);
+  it reads them together now.
+
+WHAT IT DOES TO FLIP: shared (lib/musicdrawer.js runs both editors' click).

@@ -371,6 +371,65 @@ with sync_playwright() as pw:
               f"the beat {round((beat - clock['s0']) * 1000)}ms from the sound's start: {len(on_it)} tick; {len(sounded)} in all, gaps after the first {gaps}")
         c.close()
 
+    # THE CLOCK MOVED ON BETWEEN TWO READS SETS NO BEAT EARLY. The scheduler
+    # reads the audio clock, then asks the loop how far in it is, which reads
+    # it again; a busy box can move it on a block (512 frames, 11.61ms at
+    # 44.1kHz) in between, and the loop's top came out a block early, with it
+    # the sound's start and the beats set in that call, the rest on time:
+    # main's full run after #733 (postgres 6/6, the Pad, the held row above:
+    # no tick on its beat, gaps 0.5116, 0.5, 0.5). Moved here on purpose,
+    # once, in the first call the scheduler makes (found by the stack), and
+    # forward for good, as a real clock moves: the music's first tick at the
+    # sound's start and every tick after on its beat, by the loop's own top
+    # (the clock less how far in it is, read together), and the click's
+    # record of the sound's start the same. Red before the drawer read the
+    # clock once, on both editors (the Pad's numbers were main's).
+    RACE = r"""(() => {
+      window.__extra = 0; window.__jumpOnce = true; window.__jumped = 0;
+      const P = (window.BaseAudioContext || window.AudioContext).prototype;
+      const d = Object.getOwnPropertyDescriptor(P, 'currentTime');
+      if (d && d.get) Object.defineProperty(P, 'currentTime', { configurable: true, get() { return d.get.call(this) + window.__extra; } });
+      let L;
+      Object.defineProperty(window, 'SkriblAudioLoop', { configurable: true, get() { return L; }, set(v) {
+        L = v; if (!v || v.__raced) return; const engine = v.engine;
+        v.engine = function (o) { const e = engine.call(v, o), el = e.elapsed;
+          e.elapsed = function () { if (window.__jumpOnce && /\bbeats\b/.test(new Error().stack || '')) {
+            window.__jumpOnce = false; window.__jumped++; window.__extra += 512 / 44100; }
+            return el.apply(e, arguments); };
+          return e; };
+        v.__raced = true; } });
+    })();"""
+    for _n, _p in eds("raced"):
+        c = waits.instrument(b.new_context(**DESK))
+        c.add_init_script(OSC)
+        c.add_init_script(RACE)
+        c, pg, errs = editor(b, _n, _p, door=None, ctx=c)
+        pg.evaluate(CLICK_LOOP)
+        pg.wait_for_timeout(300)
+        press(pg, "#musicClickBtn", 100)
+        press(pg, "#previewLoopBtn", 300)
+        pg.wait_for_timeout(1700)
+        clock = pg.evaluate(CLOCK)
+        # The loop's top as the drawer now reads it: the clock and how far in,
+        # at the same moment (this row's own first try read them apart, and
+        # met the race it is about: 5.8ms, half a block, on the Pad).
+        top = pg.evaluate("""() => { let now, el;
+            for (let k = 0; k < 5; k++) { now = audioCtx.currentTime; el = _waLoop.elapsed(); if (audioCtx.currentTime === now) break; }
+            return now - el; }""")
+        sounded = sorted((t for t in pg.evaluate(TICKS) if not t["off"]), key=lambda t: t["at"])
+        moved = pg.evaluate("() => window.__jumped")
+        press(pg, "#previewLoopBtn", 100)
+        dur, lead = clock["dur"], clock["lead"]
+        first, rest = (sounded[0], sounded[1:]) if sounded else (None, [])
+        start = top - round((top - first["at"]) / dur) * dur + lead if first and dur else None   # the sound's start, by the loop's top
+        offs = [round(grid(t["at"], top, dur)[1] * 1000, 2) for t in rest]
+        check(f"{_n}: the audio clock moved on a block between the scheduler's two reads: every tick still on its beat, the first as the music starts",
+              moved == 1 and first is not None and len(rest) >= 3 and abs(first["at"] - start) < 0.0015
+              and abs(clock["s0"] - start) < 0.0015 and all(o < 1.5 for o in offs),
+              f"moved {moved} time(s); the first tick {first and round((first['at'] - start) * 1000, 2)}ms from the sound's start "
+              f"(the click's own record {start and round((clock['s0'] - start) * 1000, 2)}ms from it); then {len(rest)}, off their beats by {offs}ms")
+        c.close()
+
     # An end moved while it plays: the click follows the new loop from its
     # next time round, and the loop's first beat ticks once at the join: as
     # the new loop's music starts when it starts again before the old loop

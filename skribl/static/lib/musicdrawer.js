@@ -1702,7 +1702,16 @@
       // worked out once for each loop, not each tick.
       var t = h.trim(), key = t.start + '|' + t.end + '|' + h.crossfade() + '|' + !!(h.cut && h.cut());
       if (!beatClip || beatClip.key !== key) beatClip = { key: key, start: t.start + cutNow() };
-      var p = 60 / tp.bpm, nb = inBar(tp), clip0 = beatClip.start, now = c.currentTime, base = now - h.loop.elapsed();
+      // ONE READING OF THE CLOCK (main red after #733, postgres 6/6,
+      // verify_musicclick's held row): the loop's elapsed() reads the audio
+      // clock again, and a busy box can move it on a block (512 frames,
+      // 11.61ms at 44.1kHz) between the two reads. The loop's top then came
+      // out a block early, and with it the sound's start and the beats set
+      // in that call, the rest on time. Read again until the clock stands
+      // still across elapsed(), so both are the same moment.
+      var now = c.currentTime, el = h.loop.elapsed();
+      for (var again = 0; again < 3 && c.currentTime !== now; again++) { now = c.currentTime; el = h.loop.elapsed(); }
+      var p = 60 / tp.bpm, nb = inBar(tp), clip0 = beatClip.start, base = now - el;
       var lead = (global.SkriblAudioLoop && global.SkriblAudioLoop.LEAD) || 0.03;
       if (pv.from == null) pv.from = base + (pv.off || 0) + lead;      // this start's sound began
       var s0 = pv.from;
