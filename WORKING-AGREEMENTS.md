@@ -332,6 +332,11 @@ Liberation Sans.
 - **RESTATE THE TARGET BEFORE MOCKING OPTIONS**, in one line naming the element.
 - **A MOCK MUST MEASURE WHAT THE OWNER SAW**: ink centres and computed weights,
   both themes, phone and desk, before and after.
+- **A PHONE IN A MOCK IS A TOUCH PHONE** (`is_mobile`, `has_touch`). A mouse
+  page at phone width keeps the desk's 22px media-card margins, so each
+  drawer button is 10px narrower than on a phone: the Play mock (after v330)
+  said the words on the owner's phone ran 2.4px past their button, where a
+  touch phone had 8px to spare.
 
 ## Decluttering has a stopping condition
 

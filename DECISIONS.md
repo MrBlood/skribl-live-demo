@@ -28858,3 +28858,25 @@ drawer.
 
 THE FOUR: simple (one word for one thing); playful ("Your flip"); kind
 (the row no longer calls a flip a drawing); powerful (it does what it did).
+
+## After v330 -- Where things stand, Nov 1 (not sealed since v330)
+
+Not sealed since v330, and that is fine: a seal is for an outside audit, a
+release someone is handed, or the owner asking. Since it: the help cards in
+the drawers with an example in each, Text that writes itself and Your hand,
+the recording bar, the off switches, Flip's music drawer saying "flip", and
+the rest in the entries above. At writing, main was green through #732 and
+#733's full run was still running; the branch matched main, with no pull
+request open.
+
+Still open, the owner's:
+- How it works made again (FUTURE 6v): waiting, by the owner's word. Three
+  clips are known stale: Motion guides, Smear weight and Onion skin.
+- "flip" across the rest of Flip (FUTURE 6ac): "let's see".
+- Offered on Nov 1, not yet answered, in the order offered: the Keep
+  drawing pill lost when a file opens over a drawing in progress (a bug,
+  FUTURE 6z); long replays smooth on slower phones (6z, item 11, trace
+  first); Undo on a two-hour piece (6z); Flip's last help cards (6aa, the
+  words mocked first); Flip on a desk with fewer buttons at once, and the
+  Pad on a tablet using the width (6z, items 9 and 10, mocks first).
+- Declined: a desk copy of the examples (FUTURE 6v).
