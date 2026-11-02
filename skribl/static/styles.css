@@ -2638,6 +2638,17 @@ body.recoloring #canvas { cursor: crosshair !important; }
 .dp-tile[data-dp="beat"].listening[data-count="3"] .dp-art circle:nth-child(4) { opacity: 1; }
 .mt-tl-mag-btn.mt-tl-snap.listening:disabled { transition: opacity 1s ease-in-out, color 1s ease-in-out; }
 .mt-tl-mag-btn.mt-tl-snap.listening.breath:disabled { opacity: .85; color: var(--accent-ink); }
+/* ...a little louder (the owner: "if it is significant then accentuate
+   it"): the tile's word in the accent's ink, and in the line under the
+   timeline, where the beats will be, "listening for the beat" with four dots
+   that count with the tile's; still under Reduce Motion, all four half lit. */
+.dp-tile[data-dp="beat"].listening .dp-v { color: var(--accent-ink); }
+.mt-pick-listen { color: var(--accent-ink); font-weight: 600; white-space: nowrap; }
+.mt-listen-dots { display: inline-flex; gap: 3px; margin-right: 6px; vertical-align: 1px; }
+.mt-listen-dots i { width: 5px; height: 5px; border-radius: 50%; background: currentColor; opacity: .55; transition: opacity .18s ease-out; }
+.mt-listen-dots[data-count] i { opacity: .28; }
+.mt-listen-dots[data-count="0"] i:nth-child(1), .mt-listen-dots[data-count="1"] i:nth-child(2),
+.mt-listen-dots[data-count="2"] i:nth-child(3), .mt-listen-dots[data-count="3"] i:nth-child(4) { opacity: 1; }
 /* THE LIT BEAT: a beat's dot glowing as it is heard while Hear the loop
    plays, bigger on a bar (lib/musictimeline.js pulse, which animates it). */
 .mt-tl-lit { position: absolute; width: 9px; height: 9px; margin: -4.5px 0 0 -4.5px; border-radius: 50%; background: var(--accent-ink);

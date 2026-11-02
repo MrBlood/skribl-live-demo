@@ -451,12 +451,18 @@
     // under Reduce Motion. The looks are styles.css's LISTENING.
     var listenTick = null, listenN = 0;
     function listenCount(tile, on) {
+      // the line's dots (syncLine) count with the tile's
+      function count(n) {
+        tile.setAttribute('data-count', String(n));
+        var d = pickText && pickText.querySelector('.mt-listen-dots');
+        if (d) d.setAttribute('data-count', String(n));
+      }
       if (on && !listenTick && !still()) {
         listenN = 0;
-        tile.setAttribute('data-count', '0');
+        count(0);
         listenTick = global.setInterval(function () {
           listenN = (listenN + 1) % 4;
-          tile.setAttribute('data-count', String(listenN));
+          count(listenN);
           if (snapSw && listenN % 2 === 0) snapSw.classList.toggle('breath');
         }, 500);
       } else if (!on && listenTick) {
@@ -1145,10 +1151,16 @@
       pickLine.hidden = !h.hasTrack();
       if (pickLine.hidden) return;
       var len = heard(h.trim(), h.crossfade()), p = beatSecs(), beats = p > 0 ? beatWords(len / p) : '', vs = against(len, secs);
+      // LISTENING, louder (the owner: "if it is significant then accentuate
+      // it"; a two-minute song takes a few seconds on a mid-range phone):
+      // where the beats will be, "listening for the beat" in the accent's
+      // ink, its four dots counting with the Beat tile's (listenCount).
+      var listen = !beats && !tempo() && !!ears
+        ? '<span class="mt-pick-listen"><span class="mt-listen-dots" aria-hidden="true"><i></i><i></i><i></i><i></i></span>listening for the beat</span>' : '';
       // what it is against the drawing in a span of its own: on a narrow
       // phone it takes its own row, whatever it says (styles.css)
-      var html = '<b>' + len.toFixed(2) + 's</b>' + (beats ? ' · ' + beats : '')
-        + (vs ? '<span class="mt-pick-vs"><span class="mt-pick-sep"> · </span>' + vs + '</span>' : beats ? '' : ' loop');
+      var html = '<b>' + len.toFixed(2) + 's</b>' + (beats ? ' · ' + beats : listen ? ' · ' + listen : '')
+        + (vs ? '<span class="mt-pick-vs"><span class="mt-pick-sep"> · </span>' + vs + '</span>' : beats || listen ? '' : ' loop');
       if (pickText && pickText._html !== html) { pickText.innerHTML = html; pickText._html = html; }
     }
 
