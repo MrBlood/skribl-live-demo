@@ -1675,6 +1675,98 @@ and How it works' other tips. The owner already calls one "a Flip" ("the
 Blooby card is a Flip"). The idea: one word across Flip, mocked first on
 the real sheets with the census of every place, when the owner wants it.
 
+## 6ad. The PRE-331 code review: six findings and some performance notes (owner, Nov 2: "don't start fixing it, but make some notes")
+
+An outside static review of the v330 archive (the owner's upload,
+PRE_331_Repository_Review.md). Its author read the code and ran one
+function in memory; nothing else was reproduced, and none of it has been
+checked here yet. Line numbers are v330's. Each fix, when it comes, starts
+by showing the finding red (WORKING-AGREEMENTS: calibrate the instrument),
+and some may turn out not to apply.
+
+The review's own order: 3, then 2 and the metadata ids, then 4; then 1
+and 6; the rest by profiling.
+
+1. **Stroke times that are not numbers get through** (Medium).
+   - Where: `skribl/validation.py` `_validate_points`, about lines 747 to 782.
+   - What: a point's `t` is range-checked only when it is a number, so
+     `"not-a-time"`, `[]`, `{}` and `true` pass. The reviewer ran it in
+     memory: those passed, while `1e20` was refused.
+   - Why it matters: replays subtract neighbouring times
+     (`skribl/static/inlineplayer.js` about line 387,
+     `skribl/static/lib/replayline.js` about line 59), so a bad time can
+     give `NaN` and a wrong length.
+   - Suggested: when `t` is there, require a finite number that is not a
+     boolean, then the existing range; add bad-time cases to the API
+     checks.
+2. **Two drafts made at once can pass the quota** (Medium).
+   - Where: `skribl/drafts.py`, about lines 210 to 255.
+   - What: the count and byte checks run before the insert, outside the
+     row lock (that lock covers updating a draft, not making one). Two
+     requests on PostgreSQL could each see 24 of 25 drafts and both
+     insert; the bytes quota is the same.
+   - Suggested: one lock per owner (a row lock or a PostgreSQL advisory
+     lock) around check and insert, and a parallel `POST /api/drafts`
+     check at both limits. verify_postgres already runs concurrent posts
+     through gunicorn workers, so the draft race can follow its pattern.
+3. **The listing can show what a host's visibility policy hides** (High
+   when it applies).
+   - Where: `skribl/routes.py`, about lines 1018 to 1057 and 1106 to 1116.
+   - What: `GET /api/skribls` filters by the visibility columns and an
+     optional `feed_filter`, not the host's Python `visibility_policy`. A
+     host that installs a policy but no matching feed filter would leak
+     titles, captions, authors and public ids (not payloads: those
+     endpoints refuse).
+   - Already noted: the split is documented in `skribl/models.py` (about
+     lines 225 to 245), so it is a trap for integrators rather than a
+     live leak. It only bites a host app (docs/INTEGRATION.md), not the
+     demo's own policy.
+   - Suggested: refuse a policy without a feed filter at start-up, or one
+     API that sets both.
+4. **Gzip bodies are inflated before the rate limit** (Medium).
+   - Where: `skribl/security.py` `before_request`, about lines 361 to 406;
+     the create route in `skribl/routes.py`, about lines 660 to 685.
+   - What: a client already over its attempts still makes the server
+     decompress before the 429. The decompressed-size cap stays a real
+     safeguard; the cost is CPU and memory under a flood.
+   - Suggested: a cheap admission check before inflating, or a limit at the
+     proxy.
+5. **The demo login's key is in the URL** (Medium when enabled).
+   - Where: `app.py`, about lines 272 to 285, `GET /demo-login?key=…`.
+   - What: a query string ends up in history, proxy logs and referrers;
+     the long key and constant-time compare don't change that.
+   - Suggested: a POST form. First find out whether the demo identity is
+     on in the live deploy.
+6. **Hot's pages can skip a post** (Medium).
+   - Where: `skribl/routes.py`, about lines 1079 to 1095 and 1118 to 1136.
+   - What: the Hot cursor pages by recent views and id, and views change
+     while someone scrolls, so a post that climbs past the cursor between
+     pages is never shown in that pass.
+   - Suggested: a ranking snapshot per browsing pass, or say Hot refreshes
+     and stop promising stable pages.
+
+Performance notes (the review's table):
+
+- **High:** the metadata endpoint splits the whole `ids` string before
+  keeping 50 (`skribl/routes.py`, about lines 1258 to 1264). Bound the raw
+  length first. The same goes for cursors before base64 decoding (about
+  lines 90 to 98 and 121 to 131). It also reads as an availability risk
+  when the proxy does not cap the URL length.
+- **Medium:** Hot sums recent view rows on every request (precomputed
+  daily counts, when it grows).
+- **Medium:** search's `%text%` match scans the table (trigram or FTS5
+  indexes, when it grows).
+- **Medium:** local and S3 media reads load whole objects into memory
+  (`skribl/storage.py`, about lines 327 to 338 and 1034 to 1044); stream
+  them.
+- **Low:** `build_id()` walks the static and template folders
+  (`skribl/__init__.py`, about lines 120 to 156); a build-time fingerprint
+  for big deploys.
+
+It also lists what the code already does well: parameterised queries,
+authorisation on private posts, media and drafts, signed CSRF for
+integrations, server-side validation, CSP and headers, and rate limits.
+
 ## 7. The honest state
 
 The tool is good. It is better than it needs to be for a demo and not yet enough
