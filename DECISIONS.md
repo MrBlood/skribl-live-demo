@@ -28849,7 +28849,9 @@ a narrow phone, and "Your flip · 0.8s" keeps its own box down to about
 closed on Flip, red beside others and alone; it now tries 320px too,
 where both editors close up, and both forms are seen again.
 verify_musicdoors' painted joint (the Exact door) was red beside the
-other suites and green alone: load, not a defect.
+other suites and green alone: load, not a defect. Calibrated: the song
+row put back to "drawing" on both editors, verify_parity red on its two
+song-row rows alone (416 of 418, alone too); the real change, 418 of 418.
 
 WHAT IT DOES TO FLIP: Flip's words only; the Pad's are as they were. One
 drawer.
