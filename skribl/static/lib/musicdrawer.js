@@ -446,6 +446,26 @@
       return n;
     }
     global.addEventListener('resize', function () { tileRoom = {}; fitsMemo = {}; });
+    // The listening count's time: a dot every half second (120 a minute),
+    // the magnet's breath every second, only while Skribl listens, and none
+    // under Reduce Motion. The looks are styles.css's LISTENING.
+    var listenTick = null, listenN = 0;
+    function listenCount(tile, on) {
+      if (on && !listenTick && !still()) {
+        listenN = 0;
+        tile.setAttribute('data-count', '0');
+        listenTick = global.setInterval(function () {
+          listenN = (listenN + 1) % 4;
+          tile.setAttribute('data-count', String(listenN));
+          if (snapSw && listenN % 2 === 0) snapSw.classList.toggle('breath');
+        }, 500);
+      } else if (!on && listenTick) {
+        global.clearInterval(listenTick);
+        listenTick = null;
+        tile.removeAttribute('data-count');
+        if (snapSw) snapSw.classList.remove('breath');
+      }
+    }
     function doorWords() {
       if (!tiles.length) return;
       var ok = h.hasTrack(), t = h.trim(), tp = tempo(), lit = lengthLit(), spark = ok && lit === 'pick';
@@ -456,9 +476,9 @@
         if (ok && k === 'length') w = spark && pickSub ? pickSub.textContent : lengthOf(loopNow(), h.crossfade(), tp);
         else if (ok && k === 'beat') w = tp ? tempoFor(v, tile, tp) : ears ? 'Listening…' : 'Tap it';
         // LISTENING (the owner's yes, after v330): while Skribl listens, its
-        // four dots count a bar, one after another (styles.css), still under
-        // Reduce Motion; the magnet waits beside it (syncSnap).
-        if (k === 'beat') tile.classList.toggle('listening', ok && !tp && !!ears);
+        // four dots count a bar, one after another, and the magnet breathes
+        // beside it (styles.css; listenCount keeps the time).
+        if (k === 'beat') { tile.classList.toggle('listening', ok && !tp && !!ears); listenCount(tile, ok && !tp && !!ears); }
         else if (ok && k === 'restart') w = h.crossfade() > 0 ? 'Smooth' : 'Clean cut';
         else if (ok && k === 'exact') w = timesFor(v, tile, t.start, t.end);
         if (v.textContent !== w) v.textContent = w;
