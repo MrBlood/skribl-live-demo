@@ -28842,7 +28842,14 @@ THE CHECKS: the music suites read WORK["Flip"] = "flip" (verify_musicdoors,
 verify_musicbeat, verify_musictimeline, verify_musicundo, and
 verify_learncard's card words); verify_parity's song-row rows expect each
 editor's own word, where they had held both to "drawing"; verify_music's
-two Fit rows and verify_helpclaims' keys say Fit my flip.
+two Fit rows and verify_helpclaims' keys say Fit my flip. Two reds on the
+way: verify_musictimeline's header row wanted Flip's header closed up on
+a narrow phone, and "Your flip · 0.8s" keeps its own box down to about
+350px ("Your animation" closed up from 375), so the row never saw it
+closed on Flip, red beside others and alone; it now tries 320px too,
+where both editors close up, and both forms are seen again.
+verify_musicdoors' painted joint (the Exact door) was red beside the
+other suites and green alone: load, not a defect.
 
 WHAT IT DOES TO FLIP: Flip's words only; the Pad's are as they were. One
 drawer.
