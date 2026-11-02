@@ -628,7 +628,7 @@ with sync_playwright() as pw:
     # ("19.75s · 39.5 beats · longer than your flip"), or everything
     # under it would move with a finger still on the timeline. With the
     # loop's Undo and Redo at its end: one row and the pair's height where
-    # the longest fit beside them (a desk), two on a phone (to 459px), what
+    # the longest fit beside them (a desk), two on a phone (to 599px), what
     # the loop is against the drawing on its own row whatever it says.
     LONGEST = "() => { musicTempo = { bpm: 120, phase: 0 }; loopCrossfadeMs = 250; setCrossfadeUI(); trimStart = 0; trimEnd = 20; updateTrimUI(); }"
     for _n, _p in eds("line"):

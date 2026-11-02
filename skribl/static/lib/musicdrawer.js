@@ -446,30 +446,56 @@
       return n;
     }
     global.addEventListener('resize', function () { tileRoom = {}; fitsMemo = {}; });
-    // The listening count's time: a dot every half second (120 a minute),
-    // the magnet's breath every second, only while Skribl listens, and none
-    // under Reduce Motion. The looks are styles.css's LISTENING.
-    var listenTick = null, listenN = 0;
-    function listenCount(tile, on) {
-      // the line's dots (syncLine) count with the tile's
-      function count(n) {
-        tile.setAttribute('data-count', String(n));
-        var d = pickText && pickText.querySelector('.mt-listen-dots');
-        if (d) d.setAttribute('data-count', String(n));
-      }
-      if (on && !listenTick && !still()) {
-        listenN = 0;
-        count(0);
-        listenTick = global.setInterval(function () {
-          listenN = (listenN + 1) % 4;
-          count(listenN);
-          if (snapSw && listenN % 2 === 0) snapSw.classList.toggle('breath');
-        }, 500);
-      } else if (!on && listenTick) {
-        global.clearInterval(listenTick);
-        listenTick = null;
-        tile.removeAttribute('data-count');
-        if (snapSw) snapSw.classList.remove('breath');
+    // LISTENING's motion (the owner, after v330: "Maybe a pulsating wave and
+    // an ear icon?"): Skribl's ear, its two sound waves arriving one after
+    // the other, and the magnet breathing in the accent's ink. The browser's
+    // own animation (Element.animate), so it is smooth and nothing in the
+    // stylesheet ships to the player (its CSS has a byte budget; keyframes
+    // and Reduce Motion rules always ship). None under Reduce Motion.
+    var listening = false, breath = null, listenT0 = null;
+    var EAR = '<svg class="mt-ear" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"'
+      + ' stroke-linejoin="round" aria-hidden="true"><path d="M8 9.2a5.2 5.2 0 0 1 10.4 0c0 2.5-1.3 3.9-2.5 5.1-1 1-1.5 2-1.8 3.2a3.1 3.1 0 0 1-6 .3"/>'
+      + '<path d="M10.8 9.4a2.4 2.4 0 0 1 4.8 0c0 1.2-.7 1.9-1.5 2.5-.6.4-1 .9-1 1.7"/>'
+      + '<path class="mt-ear-wave" d="M5.6 8.3a5.5 5.5 0 0 1 0 7.4"/><path class="mt-ear-wave" d="M1.6 6a8.5 8.5 0 0 1 0 12"/></svg>';
+    // A pulse every 1.4 seconds: each wave rises, fades and rests, the far
+    // one (the second drawn) first and the near one 0.3s behind it, so the
+    // sound arrives at the ear. Every ear's waves keep one clock (startTime),
+    // so the tile's and the line's pulse together, and the magnet breathes
+    // once for every two pulses. The line's ear is drawn anew when its words
+    // change, so its waves are started each time it is (syncLine).
+    var PULSE = [{ opacity: 0.18, easing: 'ease-out' }, { opacity: 1, offset: 0.25, easing: 'ease-in-out' },
+                 { opacity: 0.18, offset: 0.6 }, { opacity: 0.18 }];
+    function onClock(a) { if (listenT0 != null) a.startTime = listenT0; return a; }
+    function earWaves() {
+      if (!listening || still() || !panel) return;
+      [].forEach.call(panel.querySelectorAll('.mt-ear'), function (ear) {
+        [].forEach.call(ear.querySelectorAll('.mt-ear-wave'), function (el, i) {
+          if (el._skWave || !el.animate) return;
+          el._skWave = onClock(el.animate(PULSE, { duration: 1400, iterations: Infinity, delay: i === 1 ? 0 : 300, fill: 'backwards' }));
+        });
+      });
+    }
+    function earsStill(root) {
+      if (root) [].forEach.call(root.querySelectorAll('.mt-ear-wave'), function (el) {
+        if (el._skWave) { el._skWave.cancel(); el._skWave = null; }
+      });
+    }
+    function listenMotion(on) {
+      if (on === listening) { if (on) earWaves(); return; }
+      listening = on;
+      if (on) {
+        var tl = global.document.timeline;
+        listenT0 = tl && tl.currentTime != null ? tl.currentTime : null;
+        earWaves();
+        if (snapSw && snapSw.animate && !still()) {
+          var ink = global.getComputedStyle(snapSw).getPropertyValue('--accent-ink').trim() || 'currentColor';
+          breath = onClock(snapSw.animate([{ opacity: 0.35, easing: 'ease-in-out' }, { opacity: 0.85, color: ink, easing: 'ease-in-out' },
+            { opacity: 0.35 }], { duration: 2800, iterations: Infinity }));
+        }
+      } else {
+        earsStill(panel);
+        if (breath) { breath.cancel(); breath = null; }
+        listenT0 = null;
       }
     }
     function doorWords() {
@@ -481,10 +507,10 @@
         if (!v) return;
         if (ok && k === 'length') w = spark && pickSub ? pickSub.textContent : lengthOf(loopNow(), h.crossfade(), tp);
         else if (ok && k === 'beat') w = tp ? tempoFor(v, tile, tp) : ears ? 'Listening…' : 'Tap it';
-        // LISTENING (the owner's yes, after v330): while Skribl listens, its
-        // four dots count a bar, one after another, and the magnet breathes
-        // beside it (styles.css; listenCount keeps the time).
-        if (k === 'beat') { tile.classList.toggle('listening', ok && !tp && !!ears); listenCount(tile, ok && !tp && !!ears); }
+        // LISTENING (the owner's yes, after v330): while Skribl listens, the
+        // tile's dots give way to Skribl's ear (styles.css), and the magnet
+        // breathes beside it (listenMotion).
+        if (k === 'beat') { tile.classList.toggle('listening', ok && !tp && !!ears); listenMotion(ok && !tp && !!ears); }
         else if (ok && k === 'restart') w = h.crossfade() > 0 ? 'Smooth' : 'Clean cut';
         else if (ok && k === 'exact') w = timesFor(v, tile, t.start, t.end);
         if (v.textContent !== w) v.textContent = w;
@@ -1153,15 +1179,16 @@
       var len = heard(h.trim(), h.crossfade()), p = beatSecs(), beats = p > 0 ? beatWords(len / p) : '', vs = against(len, secs);
       // LISTENING, louder (the owner: "if it is significant then accentuate
       // it"; a two-minute song takes a few seconds on a mid-range phone):
-      // where the beats will be, "listening for the beat" in the accent's
-      // ink, its four dots counting with the Beat tile's (listenCount).
-      var listen = !beats && !tempo() && !!ears
-        ? '<span class="mt-pick-listen"><span class="mt-listen-dots" aria-hidden="true"><i></i><i></i><i></i><i></i></span>listening for the beat</span>' : '';
+      // where the beats will be, Skribl's ear and "listening for the beat"
+      // in the accent's ink, its waves arriving with the tile's (earWaves).
+      // Under 370px "listening…", so it keeps to its row (styles.css).
+      var listen = !beats && !tempo() && !!ears ? '<span class="mt-pick-listen">' + EAR
+        + '<span class="mt-pick-long">listening for the beat</span><span class="mt-pick-short">listening\u2026</span></span>' : '';
       // what it is against the drawing in a span of its own: on a narrow
       // phone it takes its own row, whatever it says (styles.css)
       var html = '<b>' + len.toFixed(2) + 's</b>' + (beats ? ' · ' + beats : listen ? ' · ' + listen : '')
         + (vs ? '<span class="mt-pick-vs"><span class="mt-pick-sep"> · </span>' + vs + '</span>' : beats || listen ? '' : ' loop');
-      if (pickText && pickText._html !== html) { pickText.innerHTML = html; pickText._html = html; }
+      if (pickText && pickText._html !== html) { earsStill(pickText); pickText.innerHTML = html; pickText._html = html; earWaves(); }
     }
 
     /* ---- LENGTH: Skribl's pick, Fit my drawing and Whole song. ------------
@@ -1933,9 +1960,6 @@
       if (!snapSw) return;
       var tp = tempo(), lit = String(!!tp && snapOn()), w = !tp ? SNAP_SAYS.none : lit === 'true' ? SNAP_SAYS.on : SNAP_SAYS.off;
       if (snapSw.disabled !== !tp) snapSw.disabled = !tp;
-      // Grey while Skribl listens, it breathes a soft glow: it is waiting
-      // for the beat, not broken (LISTENING, in doorWords).
-      snapSw.classList.toggle('listening', !tp && !!ears && h.hasTrack());
       if (snapSw.getAttribute('aria-pressed') !== lit) snapSw.setAttribute('aria-pressed', lit);
       if (snapSw._skTitle !== w) {
         snapSw._skTitle = w;
