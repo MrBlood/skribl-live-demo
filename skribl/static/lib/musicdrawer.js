@@ -454,7 +454,11 @@
         var k = tile.dataset.dp, v = tile.querySelector('.dp-v'), w = '';
         if (!v) return;
         if (ok && k === 'length') w = spark && pickSub ? pickSub.textContent : lengthOf(loopNow(), h.crossfade(), tp);
-        else if (ok && k === 'beat') w = tp ? tempoFor(v, tile, tp) : ears ? 'Listening' : 'Tap it';
+        else if (ok && k === 'beat') w = tp ? tempoFor(v, tile, tp) : ears ? 'Listening…' : 'Tap it';
+        // LISTENING (the owner's yes, after v330): while Skribl listens, its
+        // four dots count a bar, one after another (styles.css), still under
+        // Reduce Motion; the magnet waits beside it (syncSnap).
+        if (k === 'beat') tile.classList.toggle('listening', ok && !tp && !!ears);
         else if (ok && k === 'restart') w = h.crossfade() > 0 ? 'Smooth' : 'Clean cut';
         else if (ok && k === 'exact') w = timesFor(v, tile, t.start, t.end);
         if (v.textContent !== w) v.textContent = w;
@@ -1011,6 +1015,13 @@
       }
       return earsPick;
     }
+    // The beat as heard, for a loop that is not Skribl's pick: its pace, where
+    // a beat falls, and three to a bar when it was heard so.
+    function heardTempo(H) {
+      var tp = { bpm: Math.round(H.bpm * 1000) / 1000, phase: Math.round(H.phase * 10000) / 10000, heard: true };
+      if (H.bar === 3) tp.bar = 3;
+      return tp;
+    }
     function fromEars(P, secs) {
       var tp = { bpm: Math.round(P.bpm * 1000) / 1000, phase: Math.round(P.phase * 10000) / 10000, heard: true }, was = tempo();
       if (P.bar === 3) tp.bar = 3;
@@ -1069,6 +1080,13 @@
     // Heard: the loop glides to the pick with ears, and the beat is the one
     // heard, if nothing changed meanwhile. A loop moved or a beat tapped, and
     // the pick is left as it is (the way back goes to the heard one).
+    // HEARD IS KEPT (the owner's yes, after v330: "It finds a beat, just not
+    // in flip"): a beat Skribl heard is the song's, not the loop's. A loop
+    // moved before Skribl had listened (a two-minute song takes a few seconds
+    // on a phone), no pick that fits, or a song a draft brought back with no
+    // beat: the loop stays where it is and the beat heard is set, so the
+    // magnet, the click and Beats have it. It was dropped, the magnet stayed
+    // grey, and the line said to tap one. A tapped beat stays the person's.
     function heardIt() {
       var tp = tempo(), p = pickedNew && isPick(pickedNew) && !(tp && !tp.heard) ? pickNow() : null;
       if (p && p.tempo) {
@@ -1079,6 +1097,10 @@
           setFade(p.ms);
         });
         glideTo(p.start, p.end, null, true);
+      } else if (!tp && earsHeard && h.hasTrack()) {
+        quietly(function () { if (h.setTempo) setTempo(heardTempo(earsHeard)); });
+        if (h.refresh) h.refresh();
+        if (h.changed) h.changed();
       }
       // what applyPick held back: the loop is as long as the drawing
       if (p && p.fits && h.fitted) h.fitted();
@@ -1879,6 +1901,9 @@
       if (!snapSw) return;
       var tp = tempo(), lit = String(!!tp && snapOn()), w = !tp ? SNAP_SAYS.none : lit === 'true' ? SNAP_SAYS.on : SNAP_SAYS.off;
       if (snapSw.disabled !== !tp) snapSw.disabled = !tp;
+      // Grey while Skribl listens, it breathes a soft glow: it is waiting
+      // for the beat, not broken (LISTENING, in doorWords).
+      snapSw.classList.toggle('listening', !tp && !!ears && h.hasTrack());
       if (snapSw.getAttribute('aria-pressed') !== lit) snapSw.setAttribute('aria-pressed', lit);
       if (snapSw._skTitle !== w) {
         snapSw._skTitle = w;
@@ -2053,11 +2078,14 @@
       // Skribl's pick, the way back to it and Beats know the heard pick
       // again. Not heard again, the pick itself offered the way back
       // ("Back to Skribl's pick", then), and that went to the song's first
-      // 20 seconds, 40.8 beats from 0:00.
+      // 20 seconds, 40.8 beats from 0:00. A song brought back with no beat
+      // at all is listened to as well, its loop kept and the beat heard set
+      // (HEARD IS KEPT): it was never listened to again, and stayed at "Tap
+      // it" on every open. Only a tapped beat is not listened over.
       if (!h.hasTrack()) { if (earsFor || pickedNew) forgetEars(); }
       else if (h.buffer) {
         var buf = h.buffer(), kept = tempo();
-        if (buf && buf !== earsFor && (pickedNew || (kept && kept.heard))) listenTo(buf);
+        if (buf && buf !== earsFor && (pickedNew || !kept || kept.heard)) listenTo(buf);
       }
       // Smooth restart's switch, words and length too: Flip's draft and file
       // opens set the loop's smooth restart and repainted only the rest, so

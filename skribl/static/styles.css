@@ -2623,6 +2623,23 @@ body.recoloring #canvas { cursor: crosshair !important; }
 .mt-click:disabled { opacity: .5; cursor: default; }
 .mt-click:focus-visible { outline: 2px solid var(--ui-hi); outline-offset: -3px; }
 @media (hover: hover) { .mt-click:not(:disabled):not([aria-pressed="true"]):hover { background: color-mix(in srgb, var(--accent) 7%, var(--menu-card)); } }
+/* LISTENING (the owner's yes, after v330): while Skribl listens to a new
+   song (a few seconds for a long one on a phone), the Beat tile's four dots
+   count a bar, one after another at 120 a minute, and the magnet, grey until
+   there is a beat, breathes in the accent's ink: it is waiting, not broken.
+   Both stop the moment the beat is heard. The delays are negative, so every
+   dot is already in its count when listening begins. Under Reduce Motion
+   both keep still, and the tile says "Listening…". */
+@keyframes skListenDot { 0%, 100% { opacity: .32; } 10%, 28% { opacity: 1; } }
+.dp-tile[data-dp="beat"].listening .dp-art circle { animation: skListenDot 2s ease-in-out infinite; }
+.dp-tile[data-dp="beat"].listening .dp-art circle:nth-child(2) { animation-delay: -1.5s; }
+.dp-tile[data-dp="beat"].listening .dp-art circle:nth-child(3) { animation-delay: -1s; }
+.dp-tile[data-dp="beat"].listening .dp-art circle:nth-child(4) { animation-delay: -.5s; }
+@keyframes skListenBreath { 0%, 100% { opacity: .35; } 50% { opacity: .85; color: var(--accent-ink); } }
+.mt-tl-mag-btn.mt-tl-snap.listening:disabled { animation: skListenBreath 2s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .dp-tile[data-dp="beat"].listening .dp-art circle, .mt-tl-mag-btn.mt-tl-snap.listening:disabled { animation: none; }
+}
 /* THE LIT BEAT: a beat's dot glowing as it is heard while Hear the loop
    plays, bigger on a bar (lib/musictimeline.js pulse, which animates it). */
 .mt-tl-lit { position: absolute; width: 9px; height: 9px; margin: -4.5px 0 0 -4.5px; border-radius: 50%; background: var(--accent-ink);
