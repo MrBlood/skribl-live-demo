@@ -446,6 +446,66 @@
       return n;
     }
     global.addEventListener('resize', function () { tileRoom = {}; fitsMemo = {}; });
+    // LISTENING's motion (the owner's C, after v330: "Yes and yes"): while
+    // Skribl listens to a new song, a soft light sweeps the song on the
+    // timeline, where the beats are about to land; the Beat tile's own four
+    // dots dance, stretching into bars and back like a music meter; and the
+    // magnet, grey until there is a beat, breathes in the accent's ink. (An
+    // ear came first; at 24px it could not be made out.) The browser's own
+    // animation (Element.animate), on one clock (startTime), and nothing in
+    // the stylesheet ships to the player (its CSS has a byte budget;
+    // keyframes and Reduce Motion rules always ship). The light and the bars
+    // show only while #musicPanel is .listen-moving, so under Reduce Motion
+    // nothing that would have moved is shown: the dots stay dots, and the
+    // words say it.
+    var listening = false, breath = null, listenT0 = null, listenAnims = [], listenEnd = null;
+    // Each bar keeps its own pace, so they never march together; they set
+    // off one after another from the dots they were (fill: the dot until
+    // then).
+    var METER = [1150, 980, 1270, 1060];
+    function onClock(a) { if (listenT0 != null) a.startTime = listenT0; return a; }
+    function listenStill() {
+      listenAnims.forEach(function (a) { try { a.cancel(); } catch (e) {} });
+      listenAnims = [];
+      clearTimeout(listenEnd); listenEnd = null;
+    }
+    function listenMotion(on) {
+      if (on === listening || !panel) return;
+      listening = on;
+      if (on) {
+        listenStill();
+        if (still()) return;
+        var tl = global.document.timeline;
+        listenT0 = tl && tl.currentTime != null ? tl.currentTime : null;
+        [].forEach.call(panel.querySelectorAll('.mt-beat-meter line'), function (el, i) {
+          if (!el.animate) return;
+          listenAnims.push(onClock(el.animate([{ transform: 'scaleY(1)' }, { transform: 'scaleY(18)', offset: 0.3 },
+            { transform: 'scaleY(5)', offset: 0.55 }, { transform: 'scaleY(13)', offset: 0.78 }, { transform: 'scaleY(1)' }],
+            { duration: METER[i % 4], delay: 140 * i, iterations: Infinity, easing: 'ease-in-out', fill: 'backwards' })));
+        });
+        var band = panel.querySelector('.mt-tl-listen i');
+        if (band && band.animate) listenAnims.push(onClock(band.animate([{ transform: 'translateX(-100%)' }, { transform: 'translateX(240%)' }],
+          { duration: 1600, iterations: Infinity, easing: 'ease-in-out' })));
+        if (snapSw && snapSw.animate) {
+          var ink = global.getComputedStyle(snapSw).getPropertyValue('--accent-ink').trim() || 'currentColor';
+          breath = onClock(snapSw.animate([{ opacity: 0.35, easing: 'ease-in-out' }, { opacity: 0.85, color: ink, easing: 'ease-in-out' },
+            { opacity: 0.35 }], { duration: 2800, iterations: Infinity }));
+        }
+        panel.classList.add('listen-moving');
+      } else {
+        // Heard (or the song gone): the light and the bars fade out still
+        // moving (styles.css), then stop; the magnet glides from where its
+        // breath was to how it looks now, never a jump.
+        panel.classList.remove('listen-moving');
+        listenEnd = setTimeout(listenStill, 300);
+        if (breath) {
+          var cs = global.getComputedStyle(snapSw), from = { offset: 0, opacity: cs.opacity, color: cs.color };
+          breath.cancel(); breath = null;
+          try { snapSw.animate([from], { duration: 250, easing: 'ease-out' }); } catch (e) {}
+        }
+        listenT0 = null;
+      }
+    }
     function doorWords() {
       if (!tiles.length) return;
       var ok = h.hasTrack(), t = h.trim(), tp = tempo(), lit = lengthLit(), spark = ok && lit === 'pick';
@@ -454,7 +514,11 @@
         var k = tile.dataset.dp, v = tile.querySelector('.dp-v'), w = '';
         if (!v) return;
         if (ok && k === 'length') w = spark && pickSub ? pickSub.textContent : lengthOf(loopNow(), h.crossfade(), tp);
-        else if (ok && k === 'beat') w = tp ? tempoFor(v, tile, tp) : ears ? 'Listening' : 'Tap it';
+        else if (ok && k === 'beat') w = tp ? tempoFor(v, tile, tp) : ears ? 'Listening…' : 'Tap it';
+        // LISTENING (the owner's yes, after v330): while Skribl listens, the
+        // tile says so in the accent's ink, its dots dance, the song shimmers
+        // and the magnet breathes (listenMotion).
+        if (k === 'beat') { tile.classList.toggle('listening', ok && !tp && !!ears); listenMotion(ok && !tp && !!ears); }
         else if (ok && k === 'restart') w = h.crossfade() > 0 ? 'Smooth' : 'Clean cut';
         else if (ok && k === 'exact') w = timesFor(v, tile, t.start, t.end);
         if (v.textContent !== w) v.textContent = w;
@@ -1011,6 +1075,13 @@
       }
       return earsPick;
     }
+    // The beat as heard, for a loop that is not Skribl's pick: its pace, where
+    // a beat falls, and three to a bar when it was heard so.
+    function heardTempo(H) {
+      var tp = { bpm: Math.round(H.bpm * 1000) / 1000, phase: Math.round(H.phase * 10000) / 10000, heard: true };
+      if (H.bar === 3) tp.bar = 3;
+      return tp;
+    }
     function fromEars(P, secs) {
       var tp = { bpm: Math.round(P.bpm * 1000) / 1000, phase: Math.round(P.phase * 10000) / 10000, heard: true }, was = tempo();
       if (P.bar === 3) tp.bar = 3;
@@ -1069,6 +1140,13 @@
     // Heard: the loop glides to the pick with ears, and the beat is the one
     // heard, if nothing changed meanwhile. A loop moved or a beat tapped, and
     // the pick is left as it is (the way back goes to the heard one).
+    // HEARD IS KEPT (the owner's yes, after v330: "It finds a beat, just not
+    // in flip"): a beat Skribl heard is the song's, not the loop's. A loop
+    // moved before Skribl had listened (a two-minute song takes a few seconds
+    // on a phone), no pick that fits, or a song a draft brought back with no
+    // beat: the loop stays where it is and the beat heard is set, so the
+    // magnet, the click and Beats have it. It was dropped, the magnet stayed
+    // grey, and the line said to tap one. A tapped beat stays the person's.
     function heardIt() {
       var tp = tempo(), p = pickedNew && isPick(pickedNew) && !(tp && !tp.heard) ? pickNow() : null;
       if (p && p.tempo) {
@@ -1079,6 +1157,10 @@
           setFade(p.ms);
         });
         glideTo(p.start, p.end, null, true);
+      } else if (!tp && earsHeard && h.hasTrack()) {
+        quietly(function () { if (h.setTempo) setTempo(heardTempo(earsHeard)); });
+        if (h.refresh) h.refresh();
+        if (h.changed) h.changed();
       }
       // what applyPick held back: the loop is as long as the drawing
       if (p && p.fits && h.fitted) h.fitted();
@@ -1103,10 +1185,17 @@
       pickLine.hidden = !h.hasTrack();
       if (pickLine.hidden) return;
       var len = heard(h.trim(), h.crossfade()), p = beatSecs(), beats = p > 0 ? beatWords(len / p) : '', vs = against(len, secs);
+      // LISTENING, louder (the owner: "if it is significant then accentuate
+      // it"; a two-minute song takes a few seconds on a mid-range phone):
+      // where the beats will be, "listening for the beat" in the accent's
+      // ink; under 350px "listening…", so it keeps to its row
+      // (styles.css).
+      var listen = !beats && !tempo() && !!ears ? '<span class="mt-pick-listen">listening'
+        + '<span class="mt-pick-long"> for the beat</span><span class="mt-pick-short">\u2026</span></span>' : '';
       // what it is against the drawing in a span of its own: on a narrow
       // phone it takes its own row, whatever it says (styles.css)
-      var html = '<b>' + len.toFixed(2) + 's</b>' + (beats ? ' · ' + beats : '')
-        + (vs ? '<span class="mt-pick-vs"><span class="mt-pick-sep"> · </span>' + vs + '</span>' : beats ? '' : ' loop');
+      var html = '<b>' + len.toFixed(2) + 's</b>' + (beats ? ' · ' + beats : listen ? ' · ' + listen : '')
+        + (vs ? '<span class="mt-pick-vs"><span class="mt-pick-sep"> · </span>' + vs + '</span>' : beats || listen ? '' : ' loop');
       if (pickText && pickText._html !== html) { pickText.innerHTML = html; pickText._html = html; }
     }
 
@@ -1606,7 +1695,16 @@
       // worked out once for each loop, not each tick.
       var t = h.trim(), key = t.start + '|' + t.end + '|' + h.crossfade() + '|' + !!(h.cut && h.cut());
       if (!beatClip || beatClip.key !== key) beatClip = { key: key, start: t.start + cutNow() };
-      var p = 60 / tp.bpm, nb = inBar(tp), clip0 = beatClip.start, now = c.currentTime, base = now - h.loop.elapsed();
+      // ONE READING OF THE CLOCK (main red after #733, postgres 6/6,
+      // verify_musicclick's held row): the loop's elapsed() reads the audio
+      // clock again, and a busy box can move it on a block (512 frames,
+      // 11.61ms at 44.1kHz) between the two reads. The loop's top then came
+      // out a block early, and with it the sound's start and the beats set
+      // in that call, the rest on time. Read again until the clock stands
+      // still across elapsed(), so both are the same moment.
+      var now = c.currentTime, el = h.loop.elapsed();
+      for (var again = 0; again < 3 && c.currentTime !== now; again++) { now = c.currentTime; el = h.loop.elapsed(); }
+      var p = 60 / tp.bpm, nb = inBar(tp), clip0 = beatClip.start, base = now - el;
       var lead = (global.SkriblAudioLoop && global.SkriblAudioLoop.LEAD) || 0.03;
       if (pv.from == null) pv.from = base + (pv.off || 0) + lead;      // this start's sound began
       var s0 = pv.from;
@@ -2053,11 +2151,14 @@
       // Skribl's pick, the way back to it and Beats know the heard pick
       // again. Not heard again, the pick itself offered the way back
       // ("Back to Skribl's pick", then), and that went to the song's first
-      // 20 seconds, 40.8 beats from 0:00.
+      // 20 seconds, 40.8 beats from 0:00. A song brought back with no beat
+      // at all is listened to as well, its loop kept and the beat heard set
+      // (HEARD IS KEPT): it was never listened to again, and stayed at "Tap
+      // it" on every open. Only a tapped beat is not listened over.
       if (!h.hasTrack()) { if (earsFor || pickedNew) forgetEars(); }
       else if (h.buffer) {
         var buf = h.buffer(), kept = tempo();
-        if (buf && buf !== earsFor && (pickedNew || (kept && kept.heard))) listenTo(buf);
+        if (buf && buf !== earsFor && (pickedNew || !kept || kept.heard)) listenTo(buf);
       }
       // Smooth restart's switch, words and length too: Flip's draft and file
       // opens set the loop's smooth restart and repainted only the rest, so

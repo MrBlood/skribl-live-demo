@@ -236,6 +236,10 @@ def add(pg, song):
     pg.wait_for_function("(d) => document.getElementById('musicUploadBtn').classList.contains('loaded') && !!currentAudioBuffer"
                          " && Math.abs(audioDuration - d) < 0.2", arg=secs, timeout=20000)
     waits.settle(pg, 500)
+    # Skribl's answer: while it listens the one line says so ("listening for
+    # the beat") and the Beat tile "Listening…", and a long song takes a
+    # second or more; the rows here read what it said.
+    pg.wait_for_function("() => !document.querySelector('#musicDoors .dp-tile[data-dp=\"beat\"]').classList.contains('listening')", timeout=20000)
 
 
 def tile(k):
@@ -628,7 +632,7 @@ with sync_playwright() as pw:
     # ("19.75s · 39.5 beats · longer than your flip"), or everything
     # under it would move with a finger still on the timeline. With the
     # loop's Undo and Redo at its end: one row and the pair's height where
-    # the longest fit beside them (a desk), two on a phone (to 459px), what
+    # the longest fit beside them (a desk), two on a phone (to 599px), what
     # the loop is against the drawing on its own row whatever it says.
     LONGEST = "() => { musicTempo = { bpm: 120, phase: 0 }; loopCrossfadeMs = 250; setCrossfadeUI(); trimStart = 0; trimEnd = 20; updateTrimUI(); }"
     for _n, _p in eds("line"):
