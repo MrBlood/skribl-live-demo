@@ -28815,3 +28815,37 @@ One drawer.
 
 THE FOUR: simple (a short word of Flip's own); kind (nothing crowds the
 edge); playful ("my flip"); powerful (the button does what it did).
+
+## After v330 -- Flip's music drawer says "flip"
+
+After "Play with my flip" (#732), the owner asked where else Flip's music
+drawer said "animation", saw the three places and the help that quotes
+them, asked whether "flip" made sense (yes: one word in one drawer; how the
+owner already talks, "the Blooby card is a Flip"; and "Fit my animation"
+was the one Length choice on two lines), and said: "Flip it is."
+
+- THE WORDS, on Flip: "Your flip · 0.8s" over the timeline; "fits",
+  "longer than" or "shorter than your flip" under it; "Fit my flip" in
+  Length, one line now beside Skribl's pick and Whole song; "Play with my
+  flip" and "Stop the flip". One word in the drawer's template (`work`), so
+  Play's own word from #732 folds back into it.
+- THE SONG ROW said "Loops under the drawing" on both editors: the shared
+  row (lib/pendingcards.js) never asked which editor it was in. It reads
+  the drawer's word now, "Loops under the flip" on Flip.
+- THE HELP: How it works' music tips (Add a track, Skribl's pick, The
+  timeline, Move the loop, the loop's Undo and Redo, Fit my flip, Play with
+  my flip) and the Hear the loop and Length cards say "flip" on Flip.
+  Drafts, Post and Tune keep "animation": the word across the rest of Flip
+  is a later call (the owner: "let's see").
+
+THE CHECKS: the music suites read WORK["Flip"] = "flip" (verify_musicdoors,
+verify_musicbeat, verify_musictimeline, verify_musicundo, and
+verify_learncard's card words); verify_parity's song-row rows expect each
+editor's own word, where they had held both to "drawing"; verify_music's
+two Fit rows and verify_helpclaims' keys say Fit my flip.
+
+WHAT IT DOES TO FLIP: Flip's words only; the Pad's are as they were. One
+drawer.
+
+THE FOUR: simple (one word for one thing); playful ("Your flip"); kind
+(the row no longer calls a flip a drawing); powerful (it does what it did).
