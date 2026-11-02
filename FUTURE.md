@@ -1675,11 +1675,12 @@ and How it works' other tips. The owner already calls one "a Flip" ("the
 Blooby card is a Flip"). The idea: one word across Flip, mocked first on
 the real sheets with the census of every place, when the owner wants it.
 
-## 6ad. The PRE-331 code review: six findings and some performance notes (owner, Nov 2: "don't start fixing it, but make some notes")
+## 6ad. The PRE-331 code review: fifteen findings and some performance notes (owner, Nov 2: "don't start fixing it, but make some notes")
 
 An outside static review of the v330 archive (the owner's upload,
-PRE_331_Repository_Review.md). Its author read the code and ran one
-function in memory; nothing else was reproduced, and none of it has been
+PRE_331_Repository_Review.md, then a second pass the owner pasted: 7 to
+15). Its author read the code, ran one function in memory, and reproduced
+11's short PNG; nothing else was reproduced, and none of it has been
 checked here yet. Line numbers are v330's. Each fix, when it comes, starts
 by showing the finding red (WORKING-AGREEMENTS: calibrate the instrument),
 and some may turn out not to apply.
@@ -1744,6 +1745,54 @@ and 6; the rest by profiling.
      pages is never shown in that pass.
    - Suggested: a ranking snapshot per browsing pass, or say Hot refreshes
      and stop promising stable pages.
+
+The second pass (separate from the six above):
+
+7. **Delete and visibility changes are not rate limited** (Medium).
+   - Where: `skribl/routes.py`, about lines 1565 to 1645.
+   - What: the DELETE and PATCH routes don't charge the attempts budget
+     the way posting and draft writes do, so repeated unauthorized
+     requests can load the database unless another layer limits them.
+8. **Media caching and a custom visibility policy disagree** (Medium).
+   - Where: `skribl/routes.py`, about lines 949 to 973.
+   - What: with a host's visibility policy and public media caching on,
+     the cache check can mark an unlisted post's media publicly cacheable;
+     the default-policy branch excludes unlisted posts. A host-app trap,
+     like 3.
+9. **Views count people on one connection as one** (Medium, accuracy).
+   - Where: `skribl/routes.py`, about lines 1189 to 1217.
+   - What: a view's identity is the IP-derived rate key, so a school,
+     office or home on one connection counts as one viewer per post per
+     day. This matters if the number is meant to be people or plays (Hot
+     ranks by it, 6).
+10. **The draft quota leaves out thumbnails** (Low).
+    - Where: `skribl/drafts.py`, about lines 210 to 219.
+    - What: it measures the JSON payload, not the thumbnail stored beside
+      it, which can be up to 200,000 characters a draft.
+11. **A broken thumbnail can be saved** (Medium).
+    - Where: `skribl/drafts.py`, about lines 61 to 72.
+    - What: the draft thumbnail check reads only the first decoded bytes.
+      The reviewer got a truncated 26-byte PNG-like value accepted.
+12. **The service worker trusts any `?v=`** (Low).
+    - Where: `skribl/templates/skribl/sw.js`, about lines 49 to 51 and 110
+      to 129.
+    - What: a static file with any version value is kept cache-first,
+      while the server makes only real version hashes immutable, so a
+      hand-made URL can pin a stale file.
+13. **Gzip ignores `q=0`** (Low).
+    - Where: `skribl/security.py`, about lines 490 to 493.
+    - What: it looks for the word gzip, so `Accept-Encoding: gzip;q=0`
+      (gzip refused) still gets gzip.
+14. **Demo logout is a GET** (Low).
+    - Where: `app.py`, about lines 287 to 290, `/demo-logout`.
+    - What: with demo sign-in on, another site can log someone out by
+      sending them there (logout CSRF, not a takeover). It pairs with 5:
+      one form for both.
+15. **Reading a post needs a database write** (Medium, availability).
+    - Where: `skribl/routes.py`, about lines 1280 to 1304.
+    - What: the view count is written on every read, so a read fails when
+      the database is read-only or that write fails. It should still serve
+      the post and skip the count.
 
 Performance notes (the review's table):
 
