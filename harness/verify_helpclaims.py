@@ -330,8 +330,8 @@ CLAIMS = {
     "Fit my drawing": ["probe:loop_window",
                        "verify_music.py::Fit my drawing sets the loop to the replay's length",
                        "verify_musicdoors.py::Fit counts the smooth restart: what is heard is as long as the drawing"],
-    "Fit my animation": ["probe:loop_window",
-                         "verify_music.py::Fit my animation counts each page at its own length",
+    "Fit my flip": ["probe:loop_window",
+                         "verify_music.py::Fit my flip counts each page at its own length",
                          "verify_musicdoors.py::Whole song loops all of a short song, and a long one's first 20 seconds"],
     "Hear the restart": ["verify_audio.py::no click at the seam",
                          "verify_music.py::Hear the restart plays the join, smooth restart and all"],
@@ -994,7 +994,7 @@ CONTROL_ALIASES = {
     "Smooth restart length": "it makes the loop shorter by its length",
     # named with what they say before there is a drawing
     "Fit my drawing once you've drawn": "makes what you hear as long as your",
-    "Fit my animation once you've drawn": "makes what you hear as long as your",
+    "Fit my flip once you've drawn": "makes what you hear as long as your",
     # the photo drawer
     "Add a photo JPG, PNG, GIF or WebP · or drop one here": "add a photo",
     "Toggle image on or off": "hides the photo without removing it", "Remove the photo": "removes the photo",

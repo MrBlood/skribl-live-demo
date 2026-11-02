@@ -132,7 +132,7 @@ def eds(name):
 
 DESK = dict(viewport={"width": 1280, "height": 900})
 PHONE = dict(viewport={"width": 402, "height": 874}, device_scale_factor=2, is_mobile=True, has_touch=True)
-WORK = {"Pad": "drawing", "Flip": "animation"}
+WORK = {"Pad": "drawing", "Flip": "flip"}
 
 
 def _wav(seconds, rate=8000, hz=220.0):
@@ -908,9 +908,13 @@ with sync_playwright() as p:
                lines: new Set([...r.getClientRects()].map((q) => Math.round(q.top))).size, words: n.textContent,
                between: Math.round((sb.left - mag.right) * 10) / 10, boxes: Math.round((tb.left - sb.right) * 10) / 10,
                cells: Math.round((tl.left - sn.right) * 10) / 10, wide: Math.round(window.innerWidth) }; }"""
+    # The narrowest phone is 320px: Flip's name, "Your flip · 0.8s" since the
+    # owner's "Flip it is" (after v330), keeps its own box down to about
+    # 350px, where "Your animation" closed up from 375; at 320 both editors
+    # close up, so both forms are still seen on each.
     for _n, _p in eds("head"):
         seen = []
-        for w in (402, 390, 375, 360, 1280):
+        for w in (402, 390, 375, 360, 320, 1280):
             opts = DESK if w == 1280 else dict(viewport={"width": w, "height": 874}, device_scale_factor=2, is_mobile=True, has_touch=True)
             c, pg, errs = editor(b, _n, _p, opts=opts)
             into_view(pg, "#musicTimeline"); pg.wait_for_timeout(500)
@@ -928,8 +932,8 @@ with sync_playwright() as p:
                   and (abs(f["boxes"] - 10) < 0.6 if not f["joined"] else abs(f["boxes"]) < 0.6 and abs(f["cells"] - 2) < 0.6),
                   str(f))
             c.close()
-        check(f"{_n}: across a phone's widths and a desk, both: its own box on a desk, closed up on a narrow phone",
-              not seen[-1]["joined"] and seen[3]["joined"], str([(x["wide"], x["joined"], x["want"], x["own"]) for x in seen]))
+        check(f"{_n}: across a phone's widths and a desk, both: its own box on a desk, closed up on the narrowest phone",
+              not seen[-1]["joined"] and seen[-2]["joined"], str([(x["wide"], x["joined"], x["want"], x["own"]) for x in seen]))
     for _n, _p in eds("head"):
         if _n != "Pad":
             continue   # drawing on Flip closes the drawer; the glide is the one timeline's, its rows above Flip's too

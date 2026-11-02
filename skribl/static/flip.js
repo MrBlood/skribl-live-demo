@@ -6962,7 +6962,7 @@ function syncMusicUI(){
   musicDetail.hidden = !hasMus;
   musicTabDot.hidden = !hasMus;
   if(hasMus) updateTrimUI();
-  // The file row: name and "Loops under the drawing · 0:08". The length only
+  // The file row: name and "Loops under the flip · 0:08". The length only
   // once THIS track has decoded: a payload applied over another one nulls the
   // buffer but leaves the old track's audioDuration until its own decode lands.
   if(window.SkriblPendingCards) window.SkriblPendingCards.renderRow('music', { name: musicName, dur: currentAudioBuffer ? audioDuration : 0, on: musicEnabled });

@@ -308,7 +308,7 @@ with sync_playwright() as p:
     pg.evaluate(PAGES, {"n": 3, "fps": 12, "hold": 8})
     pg.click("#matchDrawingBtn"); pg.wait_for_timeout(200)
     got = pg.evaluate("() => trimEnd - trimStart")
-    check("Flip: Fit my animation counts each page at its own length (three pages held 8 at 12 fps is 2 s)",
+    check("Flip: Fit my flip counts each page at its own length (three pages held 8 at 12 fps is 2 s)",
           abs(got - 2.0) < 0.02, f"loop {got:.2f} s; pages over fps would say 0.25, and the 0.5 s floor")
     pg.close()
     pg = editor(b, "Flip", "/flip", drawn=False, door="length")
@@ -316,7 +316,7 @@ with sync_playwright() as p:
     off = pg.evaluate("() => { const f = document.getElementById('matchDrawingBtn'); f.click(); return f.disabled; }")
     pg.wait_for_timeout(200)
     got = pg.evaluate("() => trimEnd - trimStart")
-    check("Flip: with nothing drawn, Fit my animation is off and leaves the loop alone, as the Pad's does",
+    check("Flip: with nothing drawn, Fit my flip is off and leaves the loop alone, as the Pad's does",
           off and abs(got - before) < 0.001, f"disabled {off}; {before:.2f} s -> {got:.2f} s")
     pg.close()
 

@@ -170,7 +170,7 @@
     // beat Skribl heard, also in How it works; Flip's Add a photo is filmed
     // on Flip, behind every page.
     { sel: '#previewLoopBtn', name: 'Hear the loop', tag: 'Hear the loop', clip: 'hear', more: 'Hear the loop',
-      line: 'Just the music, round and round, the way it loops under your ' + (FLIP ? 'animation.' : 'drawing.'),
+      line: 'Just the music, round and round, the way it loops under your ' + (FLIP ? 'flip.' : 'drawing.'),
       do: [['Tap', 'Play it, or stop'], ['Move an end', 'Heard next time round']] },
     { sel: '#musicClickBtn', name: 'Beat click', tag: 'Beat click', clip: 'click', more: 'click',
       line: 'A soft tick on each beat while Hear the loop plays. It’s never in your post.',
@@ -180,7 +180,7 @@
       do: [['On', 'A dragged end lands on a beat'], ['Off', 'Ends stay where you let go']] },
     { sel: '#musicDoors .dp-tile[data-dp="length"]', name: 'Length', tag: 'Length', clip: 'length', more: 'loop length',
       line: 'How long the loop is. Skribl starts with a part that loops well.',
-      do: [['Tap', 'Skribl’s pick, Fit my ' + (FLIP ? 'animation' : 'drawing') + ' or Whole song'], ['Beats', 'How many, like 8 or 16'],
+      do: [['Tap', 'Skribl’s pick, Fit my ' + (FLIP ? 'flip' : 'drawing') + ' or Whole song'], ['Beats', 'How many, like 8 or 16'],
            ['Lock', 'One end moves the other']] },
     { sel: '#musicDoors .dp-tile[data-dp="beat"]', name: 'Beat', tag: 'Beat', clip: 'beat', more: 'Tap the beat',
       line: 'The song’s beat. Skribl listens for it, or you tap along.',

@@ -595,7 +595,7 @@ with sync_playwright() as p:
         # tap is still a tap. Grey (no beat yet), Snap and the click still
         # open their cards when held, as a desk's rest already did.
         def music():
-            work = "animation" if name == "Flip" else "drawing"
+            work = "flip" if name == "Flip" else "drawing"
             EIGHT = [("#previewLoopBtn", "Hear the loop", f"Just the music, round and round, the way it loops under your {work}.",
                       [["Tap", "Play it, or stop"], ["Move an end", "Heard next time round"]]),
                      ("#musicClickBtn", "Beat click", "A soft tick on each beat while Hear the loop plays. It’s never in your post.",

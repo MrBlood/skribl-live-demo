@@ -6,10 +6,10 @@
    differs by nature is gated on `kind`: Flip's .draw-popout dialog root, the
    empty row's hint ("under every page" where the Pad's says "under your
    drawing"), and the one word for what the music plays under -- `work` below,
-   "animation" on Flip as the help says it, "drawing" on the Pad. Both render
-   the #musicPending re-add card. The Photo | Music tabs head the media card
-   this panel sits in (#mediaCard), so it has no heading of its own; the
-   dialog keeps its aria-label. Include with:
+   "flip" on Flip (the owner, after v330: "Flip it is"), "drawing" on the
+   Pad. Both render the #musicPending re-add card. The Photo | Music tabs
+   head the media card this panel sits in (#mediaCard), so it has no heading
+   of its own; the dialog keeps its aria-label. Include with:
      {% with kind='pad'  %}{% include 'skribl/_skribl_music_drawer.html' %}{% endwith %}
      {% with kind='flip' %}{% include 'skribl/_skribl_music_drawer.html' %}{% endwith %}
 
@@ -21,11 +21,9 @@
    its path (verify_compose). #}
 {% from 'skribl/_skribl_music_glyph.html' import music_glyph %}
 {% set kind = kind|default('pad') -%}
-{% set work = 'animation' if kind == 'flip' else 'drawing' -%}
-{#- Play's own word for it, on its button for lib/musicdrawer.js: Flip's Play
-    says "with my flip" (the owner, after v330: "with my animation" ran past
-    its round end on 380-390px phones), and "the flip" while it plays. -#}
-{% set play_work = 'flip' if kind == 'flip' else work -%}
+{#- "flip": Play with my flip, Your flip, Fit my flip. It was "animation", and
+    Flip's "with my animation" ran past Play's round end on 380-390px phones. -#}
+{% set work = 'flip' if kind == 'flip' else 'drawing' -%}
 {% if kind == 'flip' -%}
 <div class="tab-panel draw-popout" id="musicPanel" role="dialog" aria-label="Music loop" data-work="{{ work }}" hidden>
 {%- else -%}
@@ -153,7 +151,7 @@
           an end dragged is an end heard. Each is its verb over what it plays;
           lib/musicdrawer.js swaps the verb for Stop. -#}
       <div class="mt-transport">
-        <button type="button" id="musicPlayBtn" class="mt-play" data-work="{{ play_work }}"><svg class="mt-play-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 4l14 8-14 8z"/></svg><svg class="mt-stop-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2"/></svg><span class="tp" id="musicPlayLabel"><span class="tp-k">Play</span> <span class="tp-v">with my {{ play_work }}</span></span></button>
+        <button type="button" id="musicPlayBtn" class="mt-play"><svg class="mt-play-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 4l14 8-14 8z"/></svg><svg class="mt-stop-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2"/></svg><span class="tp" id="musicPlayLabel"><span class="tp-k">Play</span> <span class="tp-v">with my {{ work }}</span></span></button>
         {#- THE CLICK, in one pill with Hear the loop (the owner's pick in the
             whole-drawer mock): a soft tick on each beat while Hear the loop plays,
             off at first, there once there is a beat. lib/musicdrawer.js. -#}

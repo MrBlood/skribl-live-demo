@@ -100,8 +100,11 @@
     if (kind === 'photo') {
       return (on ? 'Behind the drawing' : 'Hidden') + ' · ' + (FIT[st.fit] || 'Fill');
     }
+    // The drawer's own word for what it loops under: "flip" on Flip, "drawing"
+    // on the Pad (it said "drawing" on both until the owner's "Flip it is").
     var d = st.dur, t = (typeof d === 'number' && isFinite(d) && d > 0) ? fmt(d) : '';
-    return (on ? 'Loops under the drawing' : 'Muted') + (t ? ' · ' + t : '');
+    var panel = $('musicPanel'), work = (panel && panel.dataset.work) || 'drawing';
+    return (on ? 'Loops under the ' + work : 'Muted') + (t ? ' · ' + t : '');
   }
 
   function renderRow(kind, st) {

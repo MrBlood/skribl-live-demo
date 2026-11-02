@@ -142,10 +142,7 @@ SIDEWAYS = dict(viewport={"width": 874, "height": 402}, device_scale_factor=2, i
 # An iPhone SE held sideways, its 375 less Safari's bar: where the timeline
 # can scroll away under Exact times.
 SMALL_SIDEWAYS = dict(SIDEWAYS, viewport={"width": 667, "height": 340})
-WORK = {"Pad": "drawing", "Flip": "animation"}
-# Play's own word for it: Flip's says "Play with my flip", "Stop the flip"
-# (the owner, after v330), where the rest of its drawer says animation.
-PLAYWORK = {"Pad": "drawing", "Flip": "flip"}
+WORK = {"Pad": "drawing", "Flip": "flip"}
 PLAY = {"Pad": "#playBtn", "Flip": "#play"}
 
 
@@ -628,7 +625,7 @@ with sync_playwright() as pw:
 
     # The line's height never changes as it says other things: the pick, a
     # change, the way back, a tempo's beats, the longest words it has
-    # ("19.75s · 39.5 beats · longer than your animation"), or everything
+    # ("19.75s · 39.5 beats · longer than your flip"), or everything
     # under it would move with a finger still on the timeline. With the
     # loop's Undo and Redo at its end: one row and the pair's height where
     # the longest fit beside them (a desk), two on a phone (to 459px), what
@@ -753,7 +750,7 @@ with sync_playwright() as pw:
         on = pg.evaluate(SAID)
         check(f"{_n}: with nothing drawn Fit is off and says why, and wakes once there is a drawing",
               off["fitOff"] and off["fitSub"] == "once you've drawn" and not on["fitOff"] and on["fitSub"].endswith("s")
-              and on["play"] == f"Play with my {PLAYWORK[_n]}",
+              and on["play"] == f"Play with my {WORK[_n]}",
               f"before: off {off['fitOff']} {off['fitSub']!r} {off['play']!r}; after: off {on['fitOff']} {on['fitSub']!r} {on['play']!r}")
         c.close()
 
@@ -999,8 +996,8 @@ with sync_playwright() as pw:
         if theirs["play"]:
             pg.click(PLAY[_n]); pg.wait_for_timeout(300)
         check(f"{_n}: Play with my drawing is the editor's own Play, and follows it however it is pressed",
-              was == f"Play with my {PLAYWORK[_n]}" and st["play"] and not st["pv"] and st["label"] == f"Stop the {PLAYWORK[_n]}"
-              and not after["play"] and after["label"] == was and theirs["play"] and theirs["label"] == f"Stop the {PLAYWORK[_n]}",
+              was == f"Play with my {WORK[_n]}" and st["play"] and not st["pv"] and st["label"] == f"Stop the {WORK[_n]}"
+              and not after["play"] and after["label"] == was and theirs["play"] and theirs["label"] == f"Stop the {WORK[_n]}",
               f"{was!r}; pressed: {st}; the editor's Play stopped it: {after}; the editor's Play started it: {theirs}")
         c.close()
     for _n, _p in eds("play"):
@@ -1011,7 +1008,7 @@ with sync_playwright() as pw:
         pg.click("#previewLoopBtn"); pg.wait_for_timeout(300)
         stop = pg.evaluate("() => ({ pv: previewingLoop, hear: document.getElementById('musicHearLabel').textContent })")
         check(f"{_n}: with nothing drawn, Play with my drawing waits, and Hear the loop plays the music on its own",
-              was == {"label": f"Play with my {PLAYWORK[_n]}", "off": True} and not st["play"] and st["pv"] and st["hear"] == "Stop the loop"
+              was == {"label": f"Play with my {WORK[_n]}", "off": True} and not st["play"] and st["pv"] and st["hear"] == "Stop the loop"
               and not stop["pv"] and stop["hear"] == "Hear the loop",
               f"Play: {was}; Hear the loop pressed: {st}; again: {stop}")
         c.close()
