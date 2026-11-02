@@ -447,12 +447,12 @@
     }
     global.addEventListener('resize', function () { tileRoom = {}; fitsMemo = {}; });
     // LISTENING's motion (the owner, after v330: "Maybe a pulsating wave and
-    // an ear icon?", then Lucide's ear, pasted): Skribl's ear, its two sound
-    // waves arriving one after the other, and the magnet breathing in the
-    // accent's ink. The browser's
-    // own animation (Element.animate), so it is smooth and nothing in the
-    // stylesheet ships to the player (its CSS has a byte budget; keyframes
-    // and Reduce Motion rules always ship). None under Reduce Motion.
+    // an ear icon?", then Lucide's ear, pasted): Skribl's ear, sound waves
+    // gliding in toward it, and the magnet breathing in the accent's ink.
+    // The browser's own animation (Element.animate), so it is smooth and
+    // nothing in the stylesheet ships to the player (its CSS has a byte
+    // budget; keyframes and Reduce Motion rules always ship). None under
+    // Reduce Motion.
     var listening = false, breath = null, listenT0 = null;
     /*! Skribl's ear is Lucide's `ear`, SCALED to the music drawer's doors
      *  (paths otherwise unaltered; the two sound waves beside it are ours).
@@ -467,21 +467,26 @@
       }
       return earMark;
     }
-    // A pulse every 1.4 seconds: each wave rises, fades and rests, the far
-    // one (the second drawn) first and the near one 0.3s behind it, so the
-    // sound arrives at the ear. Every ear's waves keep one clock (startTime),
-    // so the tile's and the line's pulse together, and the magnet breathes
-    // once for every two pulses. The line's ear is drawn anew when its words
-    // change, so its waves are started each time it is (syncLine).
-    var PULSE = [{ opacity: 0.18, easing: 'ease-out' }, { opacity: 1, offset: 0.25, easing: 'ease-in-out' },
-                 { opacity: 0.18, offset: 0.6 }, { opacity: 0.18 }];
+    // The waves glide in (the owner: "the wave needs to move and be
+    // separated"): each goes 10 units toward the ear in 1.4 seconds at an
+    // even speed, fading in as it sets off and out before it reaches the
+    // ear, the second half a glide behind the first, so one arrives every
+    // 0.7 seconds and the two are always 5 apart. Unseen for its first 5%
+    // and last 10%, so a wave goes back to its start only while it cannot
+    // be seen, even on a busy phone that skips frames. Every ear's waves keep
+    // one clock (startTime), so the tile's and the line's move together,
+    // and the magnet breathes once for every two glides. The line's ear is
+    // drawn anew when its words change, so its waves are started each time
+    // it is (syncLine).
+    var GLIDE = [{ transform: 'translateX(0px)', opacity: 0 }, { opacity: 0, offset: 0.05 }, { opacity: 1, offset: 0.3 },
+                 { opacity: 1, offset: 0.6 }, { opacity: 0, offset: 0.9 }, { transform: 'translateX(10px)', opacity: 0 }];
     function onClock(a) { if (listenT0 != null) a.startTime = listenT0; return a; }
     function earWaves() {
       if (!listening || still() || !panel) return;
       [].forEach.call(panel.querySelectorAll('.mt-ear'), function (ear) {
         [].forEach.call(ear.querySelectorAll('.mt-ear-wave'), function (el, i) {
           if (el._skWave || !el.animate) return;
-          el._skWave = onClock(el.animate(PULSE, { duration: 1400, iterations: Infinity, delay: i === 1 ? 0 : 300, fill: 'backwards' }));
+          el._skWave = onClock(el.animate(GLIDE, { duration: 1400, iterations: Infinity, delay: -700 * i }));
         });
       });
     }
