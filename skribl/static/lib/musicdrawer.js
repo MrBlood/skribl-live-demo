@@ -447,16 +447,26 @@
     }
     global.addEventListener('resize', function () { tileRoom = {}; fitsMemo = {}; });
     // LISTENING's motion (the owner, after v330: "Maybe a pulsating wave and
-    // an ear icon?"): Skribl's ear, its two sound waves arriving one after
-    // the other, and the magnet breathing in the accent's ink. The browser's
+    // an ear icon?", then Lucide's ear, pasted): Skribl's ear, its two sound
+    // waves arriving one after the other, and the magnet breathing in the
+    // accent's ink. The browser's
     // own animation (Element.animate), so it is smooth and nothing in the
     // stylesheet ships to the player (its CSS has a byte budget; keyframes
     // and Reduce Motion rules always ship). None under Reduce Motion.
     var listening = false, breath = null, listenT0 = null;
-    var EAR = '<svg class="mt-ear" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"'
-      + ' stroke-linejoin="round" aria-hidden="true"><path d="M8 9.2a5.2 5.2 0 0 1 10.4 0c0 2.5-1.3 3.9-2.5 5.1-1 1-1.5 2-1.8 3.2a3.1 3.1 0 0 1-6 .3"/>'
-      + '<path d="M10.8 9.4a2.4 2.4 0 0 1 4.8 0c0 1.2-.7 1.9-1.5 2.5-.6.4-1 .9-1 1.7"/>'
-      + '<path class="mt-ear-wave" d="M5.6 8.3a5.5 5.5 0 0 1 0 7.4"/><path class="mt-ear-wave" d="M1.6 6a8.5 8.5 0 0 1 0 12"/></svg>';
+    /*! Skribl's ear is Lucide's `ear`, SCALED to the music drawer's doors
+     *  (paths otherwise unaltered; the two sound waves beside it are ours).
+     *  Lucide: ISC (c) Lucide Icons and Contributors, https://lucide.dev */
+    // The one drawing is the Beat tile's (_skribl_music_drawer.html); the line
+    // under the timeline borrows it, so the two are always the same ear.
+    var earMark = null;
+    function earArt() {
+      if (earMark === null) {
+        var t = panel && panel.querySelector('.dp-tile[data-dp="beat"] .mt-ear');
+        earMark = t ? t.outerHTML : '';
+      }
+      return earMark;
+    }
     // A pulse every 1.4 seconds: each wave rises, fades and rests, the far
     // one (the second drawn) first and the near one 0.3s behind it, so the
     // sound arrives at the ear. Every ear's waves keep one clock (startTime),
@@ -1182,7 +1192,7 @@
       // where the beats will be, Skribl's ear and "listening for the beat"
       // in the accent's ink, its waves arriving with the tile's (earWaves).
       // Under 370px "listening…", so it keeps to its row (styles.css).
-      var listen = !beats && !tempo() && !!ears ? '<span class="mt-pick-listen">' + EAR
+      var listen = !beats && !tempo() && !!ears ? '<span class="mt-pick-listen">' + earArt()
         + '<span class="mt-pick-long">listening for the beat</span><span class="mt-pick-short">listening\u2026</span></span>' : '';
       // what it is against the drawing in a span of its own: on a narrow
       // phone it takes its own row, whatever it says (styles.css)
