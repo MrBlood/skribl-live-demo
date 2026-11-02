@@ -1352,6 +1352,16 @@ drawers took the menu's paper and a size up in their words, the music
 drawer gained its timeline, ears, beats and 512x (and D to come), Flip
 gained Match the beat, and a desk got the bigger canvas and full screen.
 
+Since then (to Nov 1) the help cards brought examples of their own, made
+the same way and each also in How it works: the draw drawer's, Tune's,
+Text's and the music and photo drawers' (DECISIONS, after v330). Known
+stale: Motion guides, Smear weight and Onion skin still show the old Tune
+sheet (the owner, Nov 1: "We may have to wait to refilm how it works").
+The examples stay on the phone: a desk copy of Add a photo and Add music,
+a file dropped on the drawer, was offered and declined ("Not important.
+People know to drop files there."). Zoom stays the one desk clip, a pinch
+being the phone's way.
+
 When the owner says the look has settled, in this order:
 - THE CENSUS: every tool and function on the Pad and Flip against the
   clips and the How it works words: which have no clip, which clips show
@@ -1591,7 +1601,9 @@ photo drawers' eight cards"), a grey button's card opening on a hold too.
 The eight examples, **built** (DECISIONS, after v330, "The music and photo
 drawers' eight examples"): phone clips of each control used on the drawer,
 shared by both editors as Add music's is, Add a photo filmed on each; each
-also in How it works.
+also in How it works. Still without a card: Flip's Stamps drawer size,
+Artwork's bar (This page, And following, Reset, Done) and a page's
+actions; offered on Nov 1 (words to mock first), not yet answered.
 
 ## 6ab. Text that writes itself, in the owner's own hand (owner, Oct 31: "How hard would it be to add text to the pad?", then "Can't we have our own font")
 
@@ -1651,6 +1663,17 @@ sheet covered half of it); now a drag or a press sends the sheet down, and it
 rests as a bar, the words and Write it, until the words in it are tapped.
 Skribl takes the owner's redrawn letters as they
 send them (a saved copy of their hand; c, s, S, 8 and 9 so far).
+
+## 6ac. "flip" for what Flip makes, beyond the music drawer (owner, Nov 1: "Flip it is" for the drawer; for the rest, "let's see")
+
+Flip's music drawer says "flip" for what the music plays under ("Your flip",
+"Fit my flip", "Play with my flip", "Loops under the flip"; DECISIONS, after
+v330). The rest of Flip still says "animation": Post's "Couldn't post. Your
+animation is still here", Save's "a copy of this animation", Export's "Your
+animation, with music", Tune's Grid card ("never part of your animation"),
+and How it works' other tips. The owner already calls one "a Flip" ("the
+Blooby card is a Flip"). The idea: one word across Flip, mocked first on
+the real sheets with the census of every place, when the owner wants it.
 
 ## 7. The honest state
 
