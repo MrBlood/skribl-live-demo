@@ -86,7 +86,7 @@ import browsing  # noqa: E402
 import waits  # noqa: E402
 
 # For calibration: MUSICEARS_ONLY=Pad (or Flip) runs one editor, and
-# MUSICEARS_PART=beat (glide, none, pad, beats, kind, kept) one part. A real run sets neither.
+# MUSICEARS_PART=beat (glide, none, pad, beats, kind, kept, back, listening) one part. A real run sets neither.
 ONLY = os.environ.get("MUSICEARS_ONLY", "")
 PART = os.environ.get("MUSICEARS_PART", "")
 EDITORS = [e for e in (("Pad", "/skribl-pad"), ("Flip", "/flip")) if not ONLY or e[0] == ONLY]
@@ -411,7 +411,11 @@ with sync_playwright() as p:
               f"their loop {own['s']:.4f}-{own['e']:.4f} (tag {own['tag']}); 8: {a['s']:.4f}-{a['e']:.4f}, heard {heard_len(a) / p:.3f} beats, tag {a['tag']}")
         c.close()
 
-    print("\nKIND -- what a person does before Skribl has listened stays")
+    # HEARD IS KEPT (the owner's yes, after v330: "It finds a beat, just not
+    # in flip"): a loop moved before Skribl answered stays where it was put,
+    # and the beat Skribl heard is set beside it (it was dropped: no beat,
+    # the magnet grey, "Tap it"). Set quietly, not a step of its own.
+    print("\nKIND -- what a person does before Skribl has listened stays, and the beat it hears is kept")
     for name, path in eds("kind"):
         # a loop moved
         c, q, errs = editor(b, path)
@@ -421,8 +425,9 @@ with sync_playwright() as p:
         q.evaluate(RELEASE)
         q.wait_for_function(EARS_DONE, timeout=20000); waits.settle(q, 600)
         st = q.evaluate(STATE)
-        check(f"{name}: a loop moved before Skribl has listened stays where it was put, and no beat is set",
-              abs(st["s"] - before["s"]) < 1e-6 and abs(st["e"] - 12.5) < 1e-6 and st["tempo"] is None,
+        check(f"{name}: a loop moved before Skribl has listened stays where it was put, and the beat it heard is set",
+              abs(st["s"] - before["s"]) < 1e-6 and abs(st["e"] - 12.5) < 1e-6 and (st["tempo"] or {}).get("heard") is True
+              and abs((st["tempo"] or {}).get("bpm", 0) - 124) < 0.5,
               f"loop {st['s']:.3f}-{st['e']:.3f}, tempo {st['tempo']}")
         # and the way back (Skribl's pick, in the Length door), then the loop's
         # Undo (each offered only when it applies: a broken build that moved
@@ -439,9 +444,9 @@ with sync_playwright() as p:
         if offered:
             q.click("#musicUndo"); waits.settle(q, 600)
         und = q.evaluate(STATE)
-        check(f"{name}: and the loop's Undo brings back the loop and the beat that were there (none)",
-              offered and abs(und["s"] - before["s"]) < 1e-6 and abs(und["e"] - 12.5) < 1e-6 and und["tempo"] is None,
-              f"offered {offered}; loop {und['s']:.3f}-{und['e']:.3f}, tempo {und['tempo']}")
+        check(f"{name}: and the loop's Undo brings back the loop and the beat that were there (the one heard)",
+              offered and abs(und["s"] - before["s"]) < 1e-6 and abs(und["e"] - 12.5) < 1e-6 and und["tempo"] == st["tempo"],
+              f"offered {offered}; loop {und['s']:.3f}-{und['e']:.3f}, tempo {und['tempo']} (heard {st['tempo']})")
         c.close()
         # a beat tapped
         c, q, errs = editor(b, path)
@@ -508,6 +513,141 @@ with sync_playwright() as p:
               moved["back"] and went and abs(k["s"] - st["s"]) < 1e-6 and abs(k["e"] - st["e"]) < 1e-6 and k["tag"],
               f"moved to {moved['s']:.4f} (the way back {moved['back']}, tapped {went}); Back: {k['s']:.4f}-{k['e']:.4f}, the pick {st['s']:.4f}-{st['e']:.4f}")
         c.close()
+    # A SONG BACK FROM A DRAFT WITH NO BEAT IS LISTENED TO AGAIN (the owner's
+    # yes, after v330): one saved while the loop had moved before Skribl
+    # answered came back with no beat and was never heard again, "Tap it"
+    # for good. Now it is listened to again, quietly, its loop kept, and the
+    # beat heard set beside it. A beat tapped is never listened over.
+    print("\nBACK -- a song a draft brings back with no beat is listened to again; a beat tapped never is")
+    SAVE = "() => (typeof scheduleAutosave === 'function' ? scheduleAutosave : scheduleSave)()"
+    RELOADED = "() => document.getElementById('musicUploadBtn').classList.contains('loaded') && !!currentAudioBuffer"
+    for name, path in eds("back"):
+        for kept in (None, {"bpm": 120, "phase": 0.25}):
+            c, q, errs = editor(b, path, init=COUNT_INIT)
+            add(q, "steady", wait=False)
+            q.wait_for_function("() => (window.__listens || 0) >= 1", timeout=20000)
+            # Skribl's answer never let go: the loop moved and the song saved
+            # with no beat (as the build before this kept it), or a beat tapped
+            q.evaluate("(t) => { trimStart = 1.0; trimEnd = 9.0; musicTempo = t; updateTrimUI(); }", kept)
+            q.evaluate(SAVE)
+            q.wait_for_timeout(2500)
+            q.reload()
+            q.wait_for_function(RELOADED, timeout=20000)
+            q.wait_for_timeout(1500)
+            asked = q.evaluate("() => window.__listens || 0")
+            q.evaluate(RELEASE)
+            if kept is None:
+                try:
+                    q.wait_for_function("() => !!musicTempo && musicTempo.heard === true", timeout=15000)
+                except Exception:
+                    pass
+            waits.settle(q, 600)
+            st = q.evaluate(STATE)
+            if kept is None:
+                check(f"{name}: a song a draft brings back with no beat is listened to again, its loop kept, and the beat heard is set",
+                      asked == 1 and abs(st["s"] - 1.0) < 1e-6 and abs(st["e"] - 9.0) < 1e-6 and (st["tempo"] or {}).get("heard") is True
+                      and abs((st["tempo"] or {}).get("bpm", 0) - 124) < 0.5,
+                      f"asked to listen {asked} time(s); loop {st['s']:.3f}-{st['e']:.3f}, tempo {st['tempo']}")
+            else:
+                check(f"{name}: a song a draft brings back with a beat tapped is not listened to again, and its beat and loop stay",
+                      asked == 0 and st["tempo"] == kept and abs(st["s"] - 1.0) < 1e-6 and abs(st["e"] - 9.0) < 1e-6,
+                      f"asked to listen {asked} time(s); loop {st['s']:.3f}-{st['e']:.3f}, tempo {st['tempo']}")
+            c.close()
+
+    # LISTENING (the owner's yes, after v330, then their C: "Yes and yes"):
+    # while Skribl listens to a new song the Beat tile says "Listening…" in
+    # the accent's ink and the line under the timeline "listening for the
+    # beat"; a soft light sweeps the song, the tile's own dots dance like a
+    # music meter, and the magnet breathes, on one clock. Read on every frame
+    # from before the song is added until after the beat is heard: the bars
+    # set off as the dots they were, nothing hops while it moves (the light
+    # goes back to its start only out of sight), and it ends fading, still
+    # moving, the magnet gliding to its new look, nothing of it running
+    # after. Under Reduce Motion nothing that would move is shown, and the
+    # words say it.
+    LISTEN_REC = """() => { const out = window.__lrec = []; window.__lstop = false; const q = (s) => document.querySelector(s);
+      const op = (el) => el ? +getComputedStyle(el).opacity : null;
+      (function f() { const tile = q('#musicDoors .dp-tile[data-dp="beat"]'), meter = tile.querySelector('.mt-beat-meter'), box = q('.mt-tl-listen'), band = box && box.querySelector('i');
+        const B = band ? band.getBoundingClientRect() : null, X = box ? box.getBoundingClientRect() : null;
+        out.push({ moving: q('#musicPanel').classList.contains('listen-moving'), meter: op(meter), dots: op(tile.querySelector('.mt-beat-dots')), light: op(box),
+                   bars: meter ? [...meter.querySelectorAll('line')].map((l) => l.getBoundingClientRect().height) : [],
+                   band: B ? [B.left, B.right] : null, box: X ? [X.left, X.right] : null, snap: op(q('#musicSnap')) });
+        if (!window.__lstop) requestAnimationFrame(f); })(); }"""
+    LISTEN_SEEN = """() => { const q = (s) => document.querySelector(s), panel = q('#musicPanel'), tile = q('#musicDoors .dp-tile[data-dp="beat"]');
+      const ink = document.createElement('span'); ink.style.color = 'var(--accent-ink)'; tile.appendChild(ink); const want = getComputedStyle(ink).color; ink.remove();
+      const bars = [...tile.querySelectorAll('.mt-beat-meter line')], band = q('.mt-tl-listen i'), snap = q('#musicSnap');
+      const run = (el) => el ? el.getAnimations().filter((a) => a.playState === 'running') : [];
+      const anims = [...bars, band, snap].flatMap(run);
+      return { word: tile.querySelector('.dp-v').textContent, wordInk: getComputedStyle(tile.querySelector('.dp-v')).color === want,
+               line: q('#musicPickText').innerText.replace(/\\s+/g, ' '), moving: panel.classList.contains('listen-moving'),
+               meter: +getComputedStyle(tile.querySelector('.mt-beat-meter')).opacity, dots: +getComputedStyle(tile.querySelector('.mt-beat-dots')).opacity,
+               light: +getComputedStyle(q('.mt-tl-listen')).opacity, running: anims.length,
+               clocks: [...new Set(anims.map((a) => Math.round(a.startTime * 1000)))].length,
+               bars: bars.filter((el) => run(el).length).length, band: run(band).length > 0,
+               breath: run(snap).some((a) => a.effect.getTiming().iterations === Infinity) }; }"""
+    print("\nLISTENING -- you can see Skribl listening, and it ends without a jump")
+    for name, path in eds("listening"):
+        for still in (False, True):
+            c, q, errs = editor(b, path, still=still, init=COUNT_INIT)
+            browsing.pad_drawer(q, "music")
+            q.evaluate(LISTEN_REC)
+            add(q, "steady", wait=False)
+            q.wait_for_function("() => (window.__listens || 0) >= 1", timeout=20000)
+            q.wait_for_timeout(1500)
+            seen = q.evaluate(LISTEN_SEEN)
+            q.evaluate(RELEASE)
+            q.wait_for_function("() => !!musicTempo", timeout=20000)
+            q.wait_for_timeout(800)
+            q.evaluate("() => { window.__lstop = true; }")
+            rec = q.evaluate("() => window.__lrec")
+            after = q.evaluate(LISTEN_SEEN)
+            ed = f"{name}{' under Reduce Motion' if still else ''}"
+            check(f"{ed}: while Skribl listens the Beat tile says Listening… in the accent's ink, and the line under the timeline says listening for the beat",
+                  seen["word"] == "Listening…" and seen["wordInk"] and "listening for the beat" in seen["line"],
+                  f"tile {seen['word']!r} (accent ink {seen['wordInk']}); line {seen['line']!r}")
+            if still:
+                check(f"{ed}: nothing that would move is shown: no light, the dots stay dots, no breath",
+                      not any(r["moving"] for r in rec) and all((r["meter"] or 0) == 0 and (r["light"] or 0) == 0 for r in rec)
+                      and seen["running"] == 0 and seen["dots"] == 1,
+                      f"moving in {sum(1 for r in rec if r['moving'])} of {len(rec)} frames; meter seen {sorted({r['meter'] for r in rec})}, "
+                      f"light seen {sorted({r['light'] for r in rec})}; running {seen['running']}; the dots {seen['dots']}")
+                c.close()
+                continue
+            check(f"{ed}: the song shimmers and the Beat tile's dots dance, the magnet breathing, all on one clock",
+                  seen["moving"] and seen["meter"] == 1 and seen["dots"] == 0 and seen["light"] == 1 and seen["bars"] == 4
+                  and seen["band"] and seen["breath"] and seen["clocks"] == 1,
+                  f"moving {seen['moving']}; meter {seen['meter']}, dots {seen['dots']}, light {seen['light']}; running: bars {seen['bars']}, "
+                  f"light {seen['band']}, breath {seen['breath']}, on {seen['clocks']} clock(s)")
+            on = [i for i, r in enumerate(rec) if r["moving"]]
+            if on:
+                first, last = on[0], on[-1]
+                mid = rec[first + 20:last]
+                bar_step = max((abs(z["bars"][k] - a["bars"][k]) for a, z in zip(mid, mid[1:]) for k in range(4)), default=99)
+                hops = [(a, z) for a, z in zip(mid, mid[1:]) if abs(z["band"][0] - a["band"][0]) > 40]
+                out = lambda r: r["band"][0] >= r["box"][1] - 0.5 or r["band"][1] <= r["box"][0] + 0.5
+                band_step = max((abs(z["band"][0] - a["band"][0]) for a, z in zip(mid, mid[1:]) if abs(z["band"][0] - a["band"][0]) <= 40), default=99)
+                check(f"{ed}: read on every frame, the bars set off as the dots they were, and nothing hops: the bars change smoothly, the light sweeps, going back to its start only out of sight",
+                      max(rec[first]["bars"]) <= 1.0 and len(mid) >= 40 and bar_step <= 2.0 and band_step <= 25 and bool(hops) and all(out(a) and out(z) for a, z in hops),
+                      f"bars at the first frame {[round(x, 2) for x in rec[first]['bars']]}px; {len(mid)} frames; most a bar changed in one {bar_step:.2f}px; "
+                      f"most the light moved in one {band_step:.1f}px; went back to its start {len(hops)} time(s), out of sight {all(out(a) and out(z) for a, z in hops) if hops else None}")
+                fade = [r for r in rec[last + 1:] if 0 < r["meter"] < 1]
+                # a step a frame of the fade, by part: a frame the page skips
+                # as it draws the beat just heard doubles one (0.19 on Flip);
+                # a snap is the whole way, 1, in one. The magnet's glide steps
+                # about 0.03; without it, it jumps at least 0.15 (its breath
+                # is 0.35 to 0.85, its look once there is a beat 1)
+                steps = {k: max((abs(z[k] - a[k]) for a, z in zip(rec[last:last + 30], rec[last + 1:last + 31])), default=99) for k in ("meter", "light", "snap")}
+                step = max(steps.values())
+                check(f"{ed}: heard, the light and the dancing dots fade out still moving, the magnet glides to its new look, and nothing of it runs after",
+                      len(fade) >= 8 and len({tuple(r["bars"]) for r in fade}) >= 4 and step <= 0.35 and steps["snap"] <= 0.1
+                      and after["running"] == 0 and after["dots"] == 1 and after["meter"] == 0 and after["light"] == 0 and "beats" in after["line"],
+                      f"faded over {len(fade)} frames, the bars in {len({tuple(r['bars']) for r in fade})} shapes meanwhile; most a step {', '.join(f'{k} {v:.3f}' for k, v in steps.items())}; "
+                      f"after: running {after['running']}, the dots {after['dots']}, meter {after['meter']}, light {after['light']}, line {after['line']!r}")
+            else:
+                check(f"{ed}: read on every frame, the bars set off as the dots they were, and nothing hops", False, "never moving")
+                check(f"{ed}: heard, the light and the dancing dots fade out still moving", False, "never moving")
+            check(f"{ed}: nothing went wrong on the page", not errs, "; ".join(errs)[:200])
+            c.close()
     b.close()
 
 bad = [r for r in results if not r[0]]
