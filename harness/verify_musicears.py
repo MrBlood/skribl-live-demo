@@ -567,9 +567,9 @@ with sync_playwright() as p:
     # words say it.
     LISTEN_REC = """() => { const out = window.__lrec = []; window.__lstop = false; const q = (s) => document.querySelector(s);
       const op = (el) => el ? +getComputedStyle(el).opacity : null;
-      (function f() { const tile = q('#musicDoors .dp-tile[data-dp="beat"]'), meter = tile.querySelector('.mt-beat-meter'), box = q('.mt-tl-listen'), band = box && box.querySelector('i');
+      (function f(ts) { const tile = q('#musicDoors .dp-tile[data-dp="beat"]'), meter = tile.querySelector('.mt-beat-meter'), box = q('.mt-tl-listen'), band = box && box.querySelector('i');
         const B = band ? band.getBoundingClientRect() : null, X = box ? box.getBoundingClientRect() : null;
-        out.push({ moving: q('#musicPanel').classList.contains('listen-moving'), meter: op(meter), dots: op(tile.querySelector('.mt-beat-dots')), light: op(box),
+        out.push({ t: ts == null ? performance.now() : ts, moving: q('#musicPanel').classList.contains('listen-moving'), meter: op(meter), dots: op(tile.querySelector('.mt-beat-dots')), light: op(box),
                    bars: meter ? [...meter.querySelectorAll('line')].map((l) => l.getBoundingClientRect().height) : [],
                    band: B ? [B.left, B.right] : null, box: X ? [X.left, X.right] : null, snap: op(q('#musicSnap')) });
         if (!window.__lstop) requestAnimationFrame(f); })(); }"""
@@ -622,14 +622,19 @@ with sync_playwright() as p:
             if on:
                 first, last = on[0], on[-1]
                 mid = rec[first + 20:last]
-                bar_step = max((abs(z["bars"][k] - a["bars"][k]) for a, z in zip(mid, mid[1:]) for k in range(4)), default=99)
+                # SPEED, not a step a frame: a frame the page skips doubles a
+                # step but not a speed, and a jump is a speed no glide has.
+                # By design a bar is at most about 0.073px a ms (1.2px a
+                # frame), the light about 0.53.
+                dt = lambda a, z: max(z["t"] - a["t"], 1.0)
+                bar_speed = max((abs(z["bars"][k] - a["bars"][k]) / dt(a, z) for a, z in zip(mid, mid[1:]) for k in range(4)), default=99)
                 hops = [(a, z) for a, z in zip(mid, mid[1:]) if abs(z["band"][0] - a["band"][0]) > 40]
                 out = lambda r: r["band"][0] >= r["box"][1] - 0.5 or r["band"][1] <= r["box"][0] + 0.5
-                band_step = max((abs(z["band"][0] - a["band"][0]) for a, z in zip(mid, mid[1:]) if abs(z["band"][0] - a["band"][0]) <= 40), default=99)
+                band_speed = max((abs(z["band"][0] - a["band"][0]) / dt(a, z) for a, z in zip(mid, mid[1:]) if abs(z["band"][0] - a["band"][0]) <= 40), default=99)
                 check(f"{ed}: read on every frame, the bars set off as the dots they were, and nothing hops: the bars change smoothly, the light sweeps, going back to its start only out of sight",
-                      max(rec[first]["bars"]) <= 1.0 and len(mid) >= 40 and bar_step <= 2.0 and band_step <= 25 and bool(hops) and all(out(a) and out(z) for a, z in hops),
-                      f"bars at the first frame {[round(x, 2) for x in rec[first]['bars']]}px; {len(mid)} frames; most a bar changed in one {bar_step:.2f}px; "
-                      f"most the light moved in one {band_step:.1f}px; went back to its start {len(hops)} time(s), out of sight {all(out(a) and out(z) for a, z in hops) if hops else None}")
+                      max(rec[first]["bars"]) <= 1.0 and len(mid) >= 40 and bar_speed <= 0.12 and band_speed <= 1.0 and bool(hops) and all(out(a) and out(z) for a, z in hops),
+                      f"bars at the first frame {[round(x, 2) for x in rec[first]['bars']]}px; {len(mid)} frames; a bar at most {bar_speed:.3f}px a ms; "
+                      f"the light at most {band_speed:.2f}px a ms; went back to its start {len(hops)} time(s), out of sight {all(out(a) and out(z) for a, z in hops) if hops else None}")
                 fade = [r for r in rec[last + 1:] if 0 < r["meter"] < 1]
                 # a step a frame of the fade, by part: a frame the page skips
                 # as it draws the beat just heard doubles one (0.19 on Flip);
