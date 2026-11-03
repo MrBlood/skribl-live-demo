@@ -609,6 +609,32 @@ try:
         check("...while overwriting a draft already inside it still works", _over["title"] == "one again", "")
         _other = _drafts.save_draft("someone-else", _pl, kind="pad", title="theirs")
         check("...and the budget is per author", bool(_other.get("id")), "")
+        # THE THUMBNAIL COUNTS (the PRE-331 review's 10): stored beside the
+        # payload, up to 200,000 characters a draft, it was outside the budget.
+        # A drawing that fits alone, with a whole PNG that does not.
+        import base64 as _b64, json as _json, struct as _st, zlib as _zl  # noqa: E401
+        def _png_url(n):
+            def chunk(t, d):
+                return _st.pack(">I", len(d)) + t + d + _st.pack(">I", _zl.crc32(t + d) & 0xffffffff)
+            rows = b"".join(b"\x00" + os.urandom(n * 3) for _ in range(n))
+            raw = (b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", _st.pack(">IIBBBBB", n, n, 8, 2, 0, 0, 0))
+                   + chunk(b"IDAT", _zl.compress(rows)) + chunk(b"IEND", b""))
+            return "data:image/png;base64," + _b64.b64encode(raw).decode()
+        _pl_chars = len(_json.dumps(_pl, separators=(",", ":")))
+        _n = 16
+        while len(_png_url(_n)) < 64 * 1024 - _pl_chars + 2048:
+            _n += 8
+        _pic = _png_url(_n)
+        _tref = None
+        try:
+            _drafts.save_draft("pictured-user", _pl, kind="pad", title="with its picture", thumbnail=_pic)
+        except _drafts.DraftRejected as e:
+            _tref = (e.status, str(e))
+        check("a thumbnail counts toward the byte budget: a drawing that fits alone, with a picture that does not, is refused (409)",
+              _tref is not None and _tref[0] == 409,
+              f"the drawing {_pl_chars} chars, the picture {len(_pic)}, the budget {64 * 1024}: {_tref!r}")
+        _alone = _drafts.save_draft("pictured-user", _pl, kind="pad", title="without it")
+        check("...while the same drawing without the picture saves", bool(_alone.get("id")), "")
         _stmts = []
         _eng = _appmod.db.engine
         def _grab(conn, cursor, statement, *a):

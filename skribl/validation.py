@@ -776,9 +776,13 @@ def _validate_points(points, label, budget, cap=None):
         size = p.get("size")
         if size is not None and (not _finite(size) or size <= 0 or size > MAX_BRUSH):
             return f"'{label}' has an out-of-range brush size.", budget
+        # A POINT'S TIME IS A NUMBER (the PRE-331 review's 1): it was range-
+        # checked only when it already was one, so "not-a-time", [], {} and
+        # true passed, and a replay subtracting neighbouring times got NaN.
+        # Absent or null (what JSON.stringify writes for NaN) is still fine.
         t = p.get("t")
-        if isinstance(t, (int, float)) and not isinstance(t, bool) and (not _finite(t) or abs(t) > POINT_T_LIMIT):
-            return f"'{label}[{index}].t' is out of range.", budget
+        if t is not None and (not _finite(t) or abs(t) > POINT_T_LIMIT):
+            return f"'{label}[{index}].t' must be a number of milliseconds in range.", budget
     return None, budget
 
 

@@ -56,20 +56,34 @@ def max_draft_bytes():
 # the three raster types the editors make, their bytes checked, as posts do.
 _THUMB = re.compile(r"^data:image/(jpeg|png|webp);base64,([A-Za-z0-9+/]+={0,2})$")
 _THUMB_MAGIC = {"jpeg": (b"\xff\xd8\xff",), "png": (b"\x89PNG\r\n\x1a\n",), "webp": (b"RIFF",)}
+_PNG_END = b"\x00\x00\x00\x00IEND\xaeB`\x82"
 
 
 def _thumbnail_ok(thumbnail):
+    """WHOLE, NOT ONLY ITS FIRST BYTES (the PRE-331 review's 11): the check
+    decoded the first 48 bytes, so a PNG cut off after its signature (26
+    bytes, the reviewer's) was stored. A thumbnail is made by an editor's
+    canvas and is always whole, so it is decoded whole (it is at most
+    MAX_THUMBNAIL_CHARS) and must end as its kind ends: a PNG its IEND chunk
+    after an IHDR first, a JPEG its end-of-image marker, a WebP the length
+    its RIFF header states. A post's image is held to less on purpose
+    (validation.py: an unreadable header is accepted there); a draft's
+    thumbnail is only ever ours."""
     m = _THUMB.match(thumbnail)
     if not m:
         return False
     try:
-        head = base64.b64decode(m.group(2)[:64] + "=" * (-len(m.group(2)[:64]) % 4), validate=True)
+        raw = base64.b64decode(m.group(2), validate=True)
     except (binascii.Error, ValueError):
         return False
     kind = m.group(1)
-    if not head.startswith(_THUMB_MAGIC[kind]):
+    if not raw.startswith(_THUMB_MAGIC[kind]):
         return False
-    return kind != "webp" or head[8:12] == b"WEBP"
+    if kind == "png":
+        return raw[12:16] == b"IHDR" and raw.endswith(_PNG_END)
+    if kind == "jpeg":
+        return raw.endswith(b"\xff\xd9")
+    return raw[8:12] == b"WEBP" and int.from_bytes(raw[4:8], "little") + 8 == len(raw)
 
 
 class DraftRejected(Exception):
@@ -207,7 +221,10 @@ def save_draft(author_id, payload, *, kind, title=None, thumbnail=None, public_i
             raise DraftNotFound()
         if _instant(locked.updated_at) != _instant(base_updated_at):
             raise DraftConflict(_summary(locked))
-    size = len(json.dumps(payload, separators=(",", ":")))
+    # The thumbnail is stored beside the payload, so it counts too (the
+    # PRE-331 review's 10: up to MAX_THUMBNAIL_CHARS a draft, outside the
+    # quota). A draft saved before this keeps its old size until saved again.
+    size = len(json.dumps(payload, separators=(",", ":"))) + len(thumbnail or "")
     now = datetime.now(timezone.utc)
     s = session()
     held = (s.query(sa.func.coalesce(sa.func.sum(SkriblDraft.size_bytes), 0))
