@@ -192,6 +192,14 @@ if (typeof resetAll === 'function') {
 if (typeof loadSkribl === 'function') {
   const _loadSkribl = loadSkribl;
   loadSkribl = function (data) {   // eslint-disable-line no-global-assign
+    // A TAKE STILL RECORDING ENDS FIRST (FUTURE 6z: a file opened over one
+    // came up without its Keep drawing pill). Opening reset the drawing but
+    // not the take: `recording` stayed on, so the opened drawing was neither
+    // locked nor offered Keep drawing, and the take's readout ran on over it.
+    // Ended the way Done ends it, before the load, so the drawing that opens
+    // comes up as every opened drawing does; only for a document the load
+    // will take (its own first test), so a refused file leaves the take be.
+    if (recording && data && (data.version != null || data.schemaVersion != null || data.frames)) endRecordingTake();
     const before = skriblLoadSeq;
     const r = _loadSkribl.apply(this, arguments);
     // Only a document that actually opened: a refused file changes nothing.

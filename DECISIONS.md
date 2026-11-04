@@ -29222,3 +29222,33 @@ THE FOUR: kind (a wrong key says try again and locks nothing; signing out
 says so); simple (one field, one button); playful (Blooby's icon and the
 hand-drawn signature); powerful (the browser keeps the key like any
 password).
+
+## After v330 -- A file opened over a take ends the take first
+
+FUTURE 6z's "seen while writing a check and not looked into", taken first
+on the owner's "yes, start on the bug". A file opened on the Pad while a
+take was still recording (a stroke on a blank Pad arms one; the ⋯ menu's
+Open stays available during a take, unlike New Skribl) came up without
+its Keep drawing pill. Reproduced: opening reset the drawing but not the
+take, so `recording` stayed on; the opened drawing was neither locked nor
+offered Keep drawing, the record readout ran on over it, and the next
+stroke would have joined the old take's clock.
+
+- THE FIX: the editor's loadSkribl wrapper (editor_draft.js) ends a take
+  in progress the way Done ends it, before the load, so the drawing that
+  opens comes up as every opened drawing does: a finished take, locked,
+  its pill on the canvas. Only for a document the load will take (its own
+  first test), so a file it refuses leaves the take as it was. Not in
+  app.js: that is the link page's script too, under its byte ratchet.
+- THE ROWS, verify_padopen's "take" part on a touch phone: the take ended
+  and its readout gone; locked, the pill painted (the element at its
+  middle is the pill); Keep drawing carries the opened drawing on; a
+  refused file leaves the take recording. Red without the fix (no pill,
+  unlocked, readout on) and with the refusal test dropped (the take ended
+  on a refused file). The pill's click is skipped when it is missing, so
+  a break shows as its row rather than a 30-second wait.
+
+WHAT IT DOES TO FLIP: not for Flip (Flip has no takes).
+
+THE FOUR: kind (an opened drawing always offers the way to carry on);
+simple (no new controls); powerful and playful (unchanged).
