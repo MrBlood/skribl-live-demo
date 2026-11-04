@@ -1488,15 +1488,13 @@ at 92bc060.
    do nothing while there is one page. The idea: the page tools stay quiet
    until there is a second page, then group by what they do.
 10. ~~**On a tablet, the Pad's canvas uses the width** (design, mock first; the
-    Pad, to match Flip).~~ **BUILT after v330** (the tablet mock's A, "All
-    yes"; DECISIONS: "The Pad on an iPad held upright starts square"): a touch
-    screen held upright starts square whenever the square fits the row, 562
-    to 796 px wide on an iPad Air. Was: at 820 px wide the Pad opened a tall,
-    narrow canvas about two thirds of the screen's width; Flip already filled
-    it. FLIP NEXT: on a 12.9-inch iPad Pro held upright, Flip still starts
-    tall (554 px wide), where the Pad now starts square (1000 px); the same
-    rule would start it square. A design change for Flip, so it waits for the
-    owner's OK.
+    Pad, to match Flip).~~ **BUILT after v330, in both editors** (the tablet
+    mock's A, "All yes", then "do Flip on the 12.9 too"; DECISIONS: "An iPad
+    held upright starts a new drawing square, in both editors"): a touch
+    screen held upright starts square whenever the square fits the row, one
+    rule in lib/chromefit.js. The Pad on an iPad Air, 562 to 796 px wide;
+    Flip on a 12.9-inch Pro, 554 to 985. Was: at 820 px wide the Pad opened a
+    tall, narrow canvas about two thirds of the screen's width.
 11. ~~**Long replays stay smooth on slower phones** (speed; trace first).~~
     **TRACED AND FIXED after v330** (DECISIONS: "Replays lay back only what
     changed"): the stroke compositor laid the whole canvas back every frame;

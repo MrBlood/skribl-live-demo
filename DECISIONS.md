@@ -29552,51 +29552,64 @@ two things only How it works told you about).
 Not tested here: a real finger and an iPhone's hold (no WebKit in this box;
 the holds are simulated touches).
 
-## After v330 -- The Pad on an iPad held upright starts square
+## After v330 -- An iPad held upright starts a new drawing square, in both editors
 
 The owner's "All yes" to A in the tablet mock (FUTURE.md 6z item 10), after
-asking whether there was any reason not to: a new drawing on an upright iPad
-starts square rather than tall, and the Canvas picker still has Tall.
+asking whether there was any reason not to (a new drawing on an upright iPad
+starts square rather than tall; the Canvas picker still has Tall); then, told
+Flip still started tall on a 12.9-inch Pro: "Yes, do Flip on the 12.9 too."
 
-- WHAT WAS WRONG: a new drawing's shape is picked once, from the room it gets.
-  Both editors sit in a 720 px column, and on an iPad Air or 11-inch Pro held
-  upright the square needs 11 px more than the Pad's column gives (696 of
-  its 707). So the Pad started tall, 562 px wide on the Air's 820 (69% of the
-  width), where Flip, measuring its own row, starts square.
-- THE RULE (app.js resizeCanvas): on a touch screen held upright (a coarse
-  pointer, portrait), a new drawing starts square whenever the square fits at
-  its own size in the row the canvas sits in, the row as it will reach to the
-  screen's edges. Otherwise the column decides, as before (bestFor).
-- THE REACH IS READ, NOT APPLIED (lib/chromefit.js reach, which span now uses
+- WHAT WAS WRONG: a new drawing's shape is picked once, from the room it gets,
+  against a 720 px column in both editors. On an iPad Air or 11-inch Pro held
+  upright the square needs 11 px more than the column gives (696 of its 707),
+  so the Pad started tall, 562 px wide on the Air's 820 (69% of the width).
+  Flip's stage is shorter than the Pad's band, so it started square there, but
+  on a 12.9-inch Pro its stage is tall enough for 9:16 to win: tall, 554 px.
+- ONE RULE FOR BOTH (lib/chromefit.js startShape; each editor measures its own
+  room, the Pad's band with roomOf and Flip's stage with stageAvail): the
+  preset that shows largest in the column (lib/canvassizes.js bestFor), as
+  always, unless a touch screen is held upright (a coarse pointer, portrait)
+  and the square fits at its own size in the whole row as it reaches to the
+  screen's edges; then the square.
+- OUT OF APP.JS, which the link player loads and never needs it from
+  (resizeCanvas returns before it on the link page): the player's script is
+  367 B smaller (160,346 measured), and its ratchet follows it down in
+  verify_player_isolation and verify_jsstrip. Not in lib/canvassizes.js
+  either: the in-post player loads that, under its own ratchet.
+- THE REACH IS READ, NOT APPLIED (lib/chromefit.js reach, which span uses
   too). The first build applied it before measuring, and a row reaching while
   still empty grows taller (on a desk, 949 px where it lays out at 700): the
   desk's own choice tipped from square to tall. The existing row "Pad's
   default canvas is the best-fitting preset" caught it.
-- MEASURED, every screen as the mock's A: iPad mini 535 to 720 px wide, Air
-  562 to 796, 11-inch Pro 570 to 810, 12.9-inch Pro 666 to 1000; the 9.7 and
-  10.2-inch already started square (744, 786). Unchanged: a phone (tall, 378),
-  a desk (square, 678), an iPad on its side (square, 638).
+- MEASURED, every screen: the Pad as the mock's A (iPad mini 535 to 720 px
+  wide, Air 562 to 796, 11-inch Pro 570 to 810, 12.9-inch Pro 666 to 1000; the
+  9.7 and 10.2-inch already square at 744 and 786); Flip on the 12.9-inch Pro
+  554 to 985, every other screen as it was. Unchanged in both: a phone, a desk,
+  an iPad on its side.
 - KIND: nothing already drawn changes shape; a draft brings its own canvas
-  back (editor_draft.js, app.js loadSkribl).
+  back (the Pad's editor_draft.js and app.js loadSkribl; Flip starts a shape
+  only when nothing was restored).
 
-THE CHECKS: verify_padcanvas, nine rows: four iPads held upright start square
-and fill the width; a phone, an iPad on its side, a desk window an iPad Air's
-size and a big touch screen on its side start as the column picks; a tall
-drawing on an upright iPad comes back tall after a reload. CALIBRATED, each
-shown red against its own break: the rule taken out (the four iPads); no
-finger asked for (the desk window); no upright asked for (the big screen on
-its side); the reach applied before measuring (the desk's existing row); a
-draft's restore keeping the start shape (the tall drawing, back 707 x 707).
+THE CHECKS: verify_padcanvas, fourteen rows. The Pad: four iPads held upright
+start square and fill the width; a phone, an iPad on its side, a desk window
+an iPad Air's size and a big touch screen on its side start as the column
+picks; a tall drawing on an upright iPad comes back tall after a reload. Flip:
+the 12.9-inch Pro held upright starts square and fills the width; a phone, an
+iPad on its side and a big touch screen on its side as its column picks; a
+tall Flip comes back tall. CALIBRATED, each shown red against its own break:
+the rule taken out (the Pad's four iPads and Flip's 12.9-inch); no finger
+asked for (the desk window); no upright asked for (the big screen on its
+side); the reach applied before measuring (the desk's existing row); Flip not
+asking the rule (Flip's 12.9-inch); Flip shaping a restored Flip, and the
+Pad's restore keeping the start shape (each tall drawing, back 707 x 707).
 
-WHAT IT DOES TO FLIP: Flip already starts square on the mini, the Air and the
-11-inch. On a 12.9-inch Pro held upright Flip starts tall (554 px wide) where
-the Pad now starts square (1000): Flip next, on the list (FUTURE 6z item 10),
-for the owner's OK.
+WHAT IT DOES TO FLIP: shared, one rule in one module.
 
-THE FOUR: powerful (42% more canvas width on the iPads most people hold);
-simple (no new control; the Canvas picker still offers every shape); kind
-(nothing already drawn changes shape); playful (unchanged).
+THE FOUR: powerful (42% more canvas width on the iPads most people hold, and
+78% more for a Flip on the biggest); simple (no new control; the Canvas
+picker still offers every shape); kind (nothing already drawn changes shape);
+playful (unchanged).
 
 Not tested here: a real iPad (no WebKit in this box; the screens are
 emulated), and Safari's own bars, which may leave less height: then the square
-does not fit and the Pad starts as it did.
+does not fit and the drawing starts as it did.
