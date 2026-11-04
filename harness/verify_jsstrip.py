@@ -332,9 +332,13 @@ with sync_playwright() as sp:
     # together, when a new drawing's shape left app.js for lib/chromefit.js
     # startShape, one rule for both editors that the player never loads (the
     # owner's A for an upright tablet, then "do Flip on the 12.9 too"),
-    # -367 B (160,346 measured): the ratchet follows it down.
+    # -367 B (160,346 measured): the ratchet follows it down. And LOWERED,
+    # in both places together, by a bug fix (Speed 2: the Pad's own player
+    # sized as the editor, three paints, 1 x 1 on a desk): resizeCanvas also
+    # returns on that page, and the editor's fit asks once whether it is in a
+    # player, where two of its callers each asked, -27 B (160,319 measured).
     check("stripping keeps the player's JS under its ratchet",
-          lean_total <= 160_349,
+          lean_total <= 160_322,
           f"{src_total:,} B of source -> {lean_total:,} B parsed")
     # THE MODULE ONLY A RECOLOURED DRAWING FETCHES (lib/recolorplay.js, by
     # app.js on the link page and inlineplayer.js in a post): its own pin, so

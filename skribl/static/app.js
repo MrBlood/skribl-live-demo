@@ -209,8 +209,13 @@ function wantCanvasGrowth(g) {
 // match (above); below it the display shrinks and the bitmap stays. Either way
 // this never clears the canvas on its own or distorts the drawing — rotating
 // just re-fits the display.
+//
+// NEVER IN A PLAYER, asked here where the work is rather than by each caller
+// (a turn of the phone, a new screen ratio and a load each asked; a growth
+// did not): a player sizes its own canvas, and this fit, run in one, measures
+// a .canvas-area the player does not lay out and sets the canvas to 1 x 1.
 function layoutEditorCanvas() {
-  if (!authoredW || !authoredH) return;
+  if (!authoredW || !authoredH || document.body.classList.contains('player-mode')) return;
   if (window._skriblFullFit?.()) return;   // full screen lays it out (editor_draw.js)
   const areaEl = canvasArea || canvasWrap.parentElement || canvasWrap;
   // The row reaches past the column on a wide window (lib/chromefit.js), and
@@ -258,8 +263,13 @@ function layoutEditorCanvas() {
 }
 
 function resizeCanvas() {
-  // Player mode sizes its canvas from the authored dimensions itself.
-  if (document.body.classList.contains('player-mode')) return;
+  // Player mode sizes its canvas from the authored dimensions itself. So does
+  // the Pad's own player (a #skribl=<id> post kept on this device), which is
+  // this page: the call below runs before initPlayer marks it, and sized as the
+  // editor it was, its canvas was then grown twice in player mode, the drawing
+  // painted three times over, and on a desk laid out to 1 x 1, the editor's
+  // fit measuring a .canvas-area the player does not lay out (display: contents).
+  if (document.body.classList.contains('player-mode') || /^#skribl=/.test(location.hash)) return;
   // Establish the authored space once, from the initial available area. After
   // that only the DISPLAY is re-fit on resize/rotate — the backing store (and
   // therefore the drawing and every stroke coordinate) stays fixed, so rotating
@@ -318,9 +328,7 @@ window.addEventListener('resize', () => {
 });
 // Some mobile browsers fire orientationchange without a paired resize; re-fit the
 // letterbox display (backing store untouched, so the drawing is preserved).
-window.addEventListener('orientationchange', () => {
-  if (!document.body.classList.contains('player-mode')) layoutEditorCanvas();
-});
+window.addEventListener('orientationchange', () => layoutEditorCanvas());
 // The screen's ratio can change with no resize at all (a window dragged to a
 // sharper screen, a zoom that leaves the layout as it was). The bitmap was
 // made at the old one, so the layout is asked again and the canvas is made at
@@ -330,7 +338,7 @@ window.addEventListener('orientationchange', () => {
   const mq = window.matchMedia('(resolution: ' + (window.devicePixelRatio || 1) + 'dppx)');
   const on = () => {
     if (mq.removeEventListener) mq.removeEventListener('change', on); else if (mq.removeListener) mq.removeListener(on);
-    if (!document.body.classList.contains('player-mode')) layoutEditorCanvas();
+    layoutEditorCanvas();
     watchScreenRatio();
   };
   if (mq.addEventListener) mq.addEventListener('change', on); else if (mq.addListener) mq.addListener(on);

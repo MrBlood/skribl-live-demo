@@ -1026,7 +1026,14 @@ with sync_playwright() as sp:
     #   (resizeCanvas returns before it on the link page), -367 B with the
     #   upright tablet's square in it. verify_jsstrip's lines move with it.
     #   160,346 measured; the ratchet follows it down.
-    BYTES_RATCHET, BYTES_TARGET = 160_349, 153_800
+    # LOWERED (a bug fix, Speed 2 of the owner's "all yes": the Pad's own
+    #   player, #skribl=, sized as the editor, painted a long drawing three
+    #   times and showed it at 1 x 1 on a desk): resizeCanvas also returns on
+    #   that page (+35 B), and the editor's fit asks whether it is in a
+    #   player once, where the work is, where a turn of the phone and a new
+    #   screen ratio each asked (-62 B). verify_jsstrip's lines move with it.
+    #   160,319 measured; the ratchet follows it down.
+    BYTES_RATCHET, BYTES_TARGET = 160_322, 153_800
     # The page's own HTML. The brand is the one-stroke skribl signature INLINE
     # in the page (~1.4KB of paths, a ~0.9KB nonce'd draw-on script, and the
     # <linearGradient> defs), and inline is load-bearing rather than lazy:
