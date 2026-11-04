@@ -29318,3 +29318,100 @@ shows it there.
 THE FOUR: powerful (an artist's two-hour piece plays smoothly on an
 ordinary phone); kind (nothing on screen changes but the smoothness);
 simple and playful (unchanged).
+
+## After v330 -- Undo on a long drawing: a floor under the history
+
+FUTURE 6z, "measured, not built": the Pad's Undo past its three copies on a
+two-hour piece painted the whole drawing again. Next on the list after the
+replays, on the owner's "do what needs to be done in the best way".
+
+- TRACED, the two-hour stand-in (145,200 points) on a 402 x 874 touch phone
+  at 3x, the CPU 4x slower, the canvas 2448 x 1836: the first two Undos came
+  from the copies (82 and 60 ms of work in the press); the third and every
+  one after it held the page 6.1 to 6.8 s (7.0 to 7.8 s to the frame that
+  showed it), and each Redo past the copies the same. After a reload every
+  Undo did, the first included (7.2 s): a draft comes back with thirty
+  states and no copy.
+- THE IDEA. Undo reaches thirty states down (the history's cap), so one copy
+  of the canvas at or under the deepest of them serves every Undo and Redo:
+  lay it, paint only the strokes above it. That is the FLOOR (editor_draw.js,
+  A FLOOR UNDER UNDO): the canvas as it stood when a state was pushed (a
+  stroke's start, a recolour's, a line of text's), so that state exactly;
+  never under the select tool or a selection, whose outline is painted on
+  the canvas. Once the history is full and its deepest state starts to move
+  up, a NEXT is kept above it, which becomes the floor when the deepest
+  state reaches it; so a press paints under sixty strokes, never the drawing.
+- A FLOOR IS A SHORTCUT, NEVER ANOTHER PICTURE. The strokes above it are
+  painted as the whole repaint paints them (padPaintAbove): the repaint lays
+  see-through strokes in a layer of their own only while the whole drawing
+  has 24 or fewer (lib/strokelayers.js), and the few above a floor would come
+  in under that by themselves, so the whole drawing's count decides. Opaque
+  ink paints the same with the stroke layers or without ("byte-identical",
+  app.js), and without them nothing is set up, where the layers are two more
+  canvases the size of this one: about 200 ms of a 260 ms Undo with the CPU
+  4x slower. So strokes with no see-through ink are painted with the layers'
+  switch off for that one call. The floor itself is the canvas as it was,
+  like the copies: a see-through stroke drawn this session below it comes
+  back as it was drawn, as it does from a copy.
+- WITH NO FLOOR UNDER IT (a recolour or a move made new points under it, the
+  canvas grew, the stroke layers were switched), padUndoRepaint paints from
+  the base as before, in two parts laid as the whole would be, and takes the
+  floor between them at the deepest state left: only that Undo pays. A draft
+  back from a reload takes its floor the same way in its first paint
+  (editor_draft.js renderPrefix), where its first part would be laid as the
+  whole is; so its first Undo is quick too.
+- MEASURED on the final tree, the same phone and drawing (work in the
+  press; the frame that shows it lands 100 to 150 ms after):
+
+                                          before          after
+    Undo 3 to 6, after six strokes        6.1 - 6.8 s     41 - 48 ms
+    Redo past the copies                  6.1 - 6.6 s     40 - 96 ms
+    the first Undo after a reload         7.2 s           77 ms
+
+  And after 56 strokes, thirty Undos in a row: 30 to 104 ms each, where each
+  was a whole repaint. The keeping costs a stroke's start about 4 ms; twice
+  in a session, when a floor's canvas is first made, up to 89 ms (the mean
+  over 56 starts, those two in it, 7.1 ms). Whether a floor still fits the
+  drawing is read from one point in sixteen at a push (it only chooses what
+  to keep: reading them all was 16 ms) and from every point when it is laid.
+- MEMORY. One canvas more for a busy drawing (PAD_KEEP_MIN_POINTS), two once
+  the history is full: 18 MB each on a phone at 3x. A light drawing keeps
+  none, and a cleared one lets them go, as the copies do.
+- THE ROWS, verify_undofast: a hundred strokes, thirty Undos and ten Redos
+  back, every pixel as it was drawn and fewer than sixty strokes painted a
+  press; past the copies, the canvas from before; a reload's first Undos
+  from the floor its paint took; the canvas grown, the repaint takes a floor
+  of the new size and the next Undo paints one stroke; two see-through
+  drawings, past the budget and under it, each Undo the whole repaint's
+  picture; one just past it, its see-through ink on both sides of the floor,
+  grown and reloaded, each picture the one-paint picture; no floor under the
+  select tool's outline; a light drawing keeps none, a cleared one lets its
+  canvas go. CALIBRATED, each shown red against its own break: no floors
+  kept (4 rows), no NEXT (3), a floor matched by length (the edit's row), a
+  reload painted in one go (2), the repaint taking no floor (2) or one at the
+  drawing it painted (1), floors for a light drawing (2), canvases not let go
+  (1), the strokes above a floor not painted (5); and the strokes above a
+  floor layered by their own count (past the budget, 3 of the 4 Undos from a
+  floor differ) or never layered (under it, the same), the repaint's first
+  part laid by its own count (1), a draft's paint split where its parts are
+  laid differently (1), no floor guard under the select tool (1). The
+  layering rows first drew with the pen and caught neither of their breaks:
+  a see-through stroke of one colour and one width is one path with the
+  layers or without (lib/strokelayers.js uniformRun). They draw with the
+  pencil, whose width follows speed, and read that it varies.
+- FOUND, NOT CHANGED: a reload repaints the drawing from its draft, whose
+  points are written to 0.01 px (lib/pointwrite.js), so its edges differ from
+  the canvas before the reload (722 faint pixels on the row's drawing). The
+  reload's rows read Undo against the whole repaint of the drawing as it came
+  back, which is what every Undo painted before.
+- Not tested here: Safari (no WebKit in this box), where a canvas's memory
+  has its own ceiling.
+
+WHAT IT DOES TO FLIP: Flip next. Its Undo keeps three copies of a busy page
+(flip.js, UNDO WITHOUT PAINTING THE PAGE AGAIN); past them it repaints the
+page, as the Pad did. A floor per page would serve it the same way; on the
+list.
+
+THE FOUR: powerful (an artist's two-hour piece undoes thirty steps, each in a
+blink); kind (nothing on screen changes but the wait, after a reload too);
+simple and playful (unchanged).
