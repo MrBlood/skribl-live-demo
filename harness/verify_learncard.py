@@ -49,6 +49,12 @@ cards mock, "All yes"). Each row holds a promise, on the Pad and on Flip:
      each card plays its own example, a recording of that control used
      (Flip's photo filmed on Flip); on a desk a rest grows Hear the loop's
      card.
+ 15. FLIP'S LAST TWELVE: a page's ⋯ (phone), the page bar's six (desk),
+     Artwork's bar and the Stamps drawer's Size, held or rested on, open
+     their cards in the words said yes to, painted, whole and clear; nothing
+     is pressed; Size opens from its word and its value, never the slider;
+     a quick tap on the ⋯ still opens its menu; each More finds its entry in
+     How it works, Pages' own too; ? names the page bar's six.
 
 For calibration, LEARNCARD_PART=<words of a part's label> runs that part
 alone ("Tune's rows", "the draw drawer's six"). A real run sets none.
@@ -111,6 +117,21 @@ CARD = """() => { const c = document.querySelector('.lc-card'); if (!c) return n
            ok: !!c.querySelector('.lc-ok'), hint: (c.querySelector('.lc-hint') || {}).textContent || '',
            rows: [...c.querySelectorAll('.lc-do > div')].map(d => [d.querySelector('dt').textContent, d.querySelector('dd').textContent]),
            rowsPainted: [...c.querySelectorAll('.lc-do dt')].every(e => { const q = e.getBoundingClientRect(), a = document.elementFromPoint(q.left + 4, q.top + q.height / 2); return !!a && e.contains(a); }) }; }"""
+# Where the open card sits against the control it names: whole on the screen,
+# clear of it, the control ringed, every word painted and none cut off.
+PLACE = """(sel) => { const c = document.querySelector('.lc-card'), b = document.querySelector(sel); if (!c) return null;
+    const R = c.getBoundingClientRect(), B = b.getBoundingClientRect();
+    const words = [...c.querySelectorAll('.lc-t, .lc-line, .lc-do dt, .lc-do dd, .lc-more, .lc-ok, .lc-hint')];
+    return { whole: R.left >= 0 && R.top >= 0 && R.right <= innerWidth && R.bottom <= innerHeight,
+             clear: R.right <= B.left || B.right <= R.left || R.bottom <= B.top || B.bottom <= R.top,
+             ringed: b.classList.contains('lc-target'),
+             painted: words.every(e => { const r = e.getBoundingClientRect(), a = document.elementFromPoint(r.left + Math.min(6, r.width / 2), r.top + r.height / 2);
+               return !!a && e.contains(a); }),
+             cut: words.filter(e => e.scrollWidth > e.clientWidth + 1).map(e => e.textContent) }; }"""
+# Until a control has stopped moving (a drawer still rising), three frames still.
+STILL = """(sel) => new Promise(done => { const e = document.querySelector(sel); let last = '', n = 0; const t0 = performance.now();
+    (function tick() { const r = e.getBoundingClientRect(), k = r.left + ',' + r.top; n = k === last ? n + 1 : 0; last = k;
+      if (n >= 3 || performance.now() - t0 > 2000) done(); else requestAnimationFrame(tick); })(); })"""
 
 
 def center(q, sel):
@@ -612,22 +633,10 @@ with sync_playwright() as p:
                       [["Type", "A time, like 2.125"], ["− and +", "A step: 0.01s, 0.1s or a bar"]]),
                      ("#photoAddBtn", "Add a photo", "A picture behind " + ("every page" if name == "Flip" else "your drawing") + ", to trace or to draw over.",
                       [["Tap", "Choose a photo"], ["Then", "Fit it, fade it or soften it"]])]
-            PLACE = """(sel) => { const c = document.querySelector('.lc-card'), b = document.querySelector(sel); if (!c) return null;
-                const R = c.getBoundingClientRect(), B = b.getBoundingClientRect();
-                const words = [...c.querySelectorAll('.lc-t, .lc-line, .lc-do dt, .lc-do dd, .lc-more, .lc-ok, .lc-hint')];
-                return { whole: R.left >= 0 && R.top >= 0 && R.right <= innerWidth && R.bottom <= innerHeight,
-                         clear: R.right <= B.left || B.right <= R.left || R.bottom <= B.top || B.bottom <= R.top,
-                         ringed: b.classList.contains('lc-target'),
-                         painted: words.every(e => { const r = e.getBoundingClientRect(), a = document.elementFromPoint(r.left + Math.min(6, r.width / 2), r.top + r.height / 2);
-                           return !!a && e.contains(a); }),
-                         cut: words.filter(e => e.scrollWidth > e.clientWidth + 1).map(e => e.textContent) }; }"""
             STATE = """() => { const q = (s) => document.querySelector(s);
                 return { hear: (q('#musicHearLabel .tp-k') || {}).textContent, click: q('#musicClickBtn').getAttribute('aria-pressed'),
                          snap: q('#musicSnap').getAttribute('aria-pressed'),
                          doors: [...document.querySelectorAll('#musicDoors .dp-tile')].map(t => t.getAttribute('aria-expanded')).join() }; }"""
-            STILL = """(sel) => new Promise(done => { const e = document.querySelector(sel); let last = '', n = 0; const t0 = performance.now();
-                (function tick() { const r = e.getBoundingClientRect(), k = r.left + ',' + r.top; n = k === last ? n + 1 : 0; last = k;
-                  if (n >= 3 || performance.now() - t0 > 2000) done(); else requestAnimationFrame(tick); })(); })"""
 
             def song(q, beat=True):
                 browsing.pad_drawer(q, "music")
@@ -1025,6 +1034,198 @@ with sync_playwright() as p:
                   rule.group(0) if rule else "no [data-lc-hold] rule in styles.css")
             c.close()
         part("holding selects nothing", nosel)
+
+        # 15. FLIP'S LAST TWELVE (FUTURE.md 6aa; the words mock on the real
+        # card, "All yes"): a page's ⋯, the page bar's six, Artwork's bar and
+        # the Stamps drawer's Size. On a phone each that a phone shows, held,
+        # opens its card in the words said yes to, painted, whole and clear
+        # of its control, which wears the ring. Size opens from its word and
+        # its value, and a hold on the slider itself opens nothing: it just
+        # slides. On a desk the same by resting, Done's card saying Esc's way.
+        # No hold or rest presses anything: no page moves, copies, goes,
+        # loops, draws on or stays under; Artwork's bar keeps its pages, its
+        # numbers and its mode; the stamp size stays. A quick tap on the ⋯
+        # still opens its menu. ? names the page bar's six, painted, none on
+        # another. Each card's More finds its entry in How it works, and so
+        # does Pages' own.
+        def flip_last():
+            if name != "Flip":
+                return
+            # Two pages with a little ink, so every page action is live.
+            SETUP = """() => { window.SkriblHints && SkriblHints.hide && SkriblHints.hide();
+              const ink = (f, k) => { const pts = [], g = []; for (let s = 0; s < 6; s++) { for (let i = 0; i < 20; i++)
+                  pts.push({ x: 60 + i * 9 + k * 20, y: 80 + s * 40 + Math.sin(i / 3) * 8, color: '#7c5cff', size: 4, t: pts.length * 16, start: i === 0 });
+                g.push(20); } f.strokes = pts; f.strokeGroups = g; };
+              ink(frames[0], 0); frames.push(newFrame()); ink(frames[1], 1); buildStrip(); go(0); render(); refreshAllThumbs(); }"""
+            SHOW = {"stamp": """() => { stampShelf = [SkriblStamps.fromRuns([[{x:0,y:0,color:'#7c5cff',size:4},{x:40,y:0,color:'#7c5cff',size:4}],
+                                [{x:0,y:16,color:'#7c5cff',size:4},{x:40,y:16,color:'#7c5cff',size:4}]])];
+                              stampArmed = 0; setTool('stamp'); syncStampPop(); }""",
+                    "art": "() => setTool('artmove')",
+                    "pages": "() => { if (moveMode) document.getElementById('mbDone').click(); setTool('pen'); }"}
+            STATE = """() => ({ pages: frames.length, idx: idx, order: frames.map(f => f.strokes.length).join(','),
+              clip: !!(pageClip && pageClip.length), draw: frames.map(f => !!frameDraw(f)).join(''),
+              under: JSON.stringify(_validUnder() || null), loop: JSON.stringify(_validLoop() || null),
+              move: moveMode, scope: moveScope, off: moveDx + ',' + moveDy, tool: flipTool,
+              scale: (document.getElementById('stampScale') || {}).value || null,
+              menu: !!document.querySelector('.pageops-menu') })"""
+            # control held or rested on, how it is shown, name, sentence, rows, a desk's rows, where
+            TWELVE = [
+                ("#strip .pageops", "pages", "Page actions", "Everything you can do to this page, in one list.",
+                 [["Tap", "Move, Copy, Draw on, Loop, Keep under or Delete"]], None, "phone"),
+                ("#pbRight", "pages", "Move page", "Moves this page one place earlier or later in your flip.",
+                 [["Left", "One place earlier"], ["Right", "One place later"]], None, "desk"),
+                ("#pbCopy", "pages", "Copy page", "Copies this page. A dashed + then waits in the strip, after the page you’re on.",
+                 [["Tap", "Copy it"], ["Then", "Tap the dashed + to paste"]], None, "desk"),
+                ("#pbDraw", "pages", "Draw on", "This page draws itself, stroke by stroke, the way you drew it.",
+                 [["On", "It draws itself in, with a pencil mark in the strip"], ["Off", "It shows all at once"]], None, "desk"),
+                ("#pbLoop", "pages", "Loop this page", "Plays this page more than once before your flip moves on.",
+                 [["Tap", "×2, ×3, ×4, then 2 s, 4 s, 6 s, Forever"], ["Again", "Off after Forever"]], None, "desk"),
+                ("#pbUnder", "pages", "Keep under", "This page stays under the pages after it, like a background you draw once.",
+                 [["On", "It shows under the pages that follow"], ["Off", "Just its own page"]], None, "desk"),
+                ("#pbDel", "pages", "Delete page", "Takes this page out of your flip. Undo brings it back.",
+                 [["Tap", "Delete it"]], None, "desk"),
+                ("#mbOffset", "art", "Where it sits", "How far the drawing has moved: across, then down.",
+                 [["Tap", "Type an exact spot, like 40, -12"]], None, "both"),
+                ("#mbScope", "art", "Which pages move", "Just this page, or this page and every page after it, together.",
+                 [["This page", "Only the one you’re on"], ["And following", "This one and all after it"]], None, "both"),
+                ("#mbReset", "art", "Reset", "Puts the drawing back where it was before you moved it.",
+                 [["Tap", "Back to 0, 0"]], None, "both"),
+                ("#mbDone", "art", "Done", "Keeps the move. Undo can still take it back.",
+                 [["Tap", "Keep it, and the bar goes"]], [["Click", "Keep it, and the bar goes"], ["Esc", "Put it back, and the bar goes"]], "both"),
+                ("#stampSizeRow label", "stamp", "Stamp size", "How big the next stamp lands. Its lines scale too, so a small stamp still looks drawn.",
+                 [["Slide", "From a quarter size to double"], ["Then", "Tap the page to place it"]], None, "both")]
+            SHOWN = "(s) => { const e = document.querySelector(s); return !!e && !!e.getClientRects().length; }"
+
+            def show(q, how):
+                q.evaluate(SHOW[how])
+                q.wait_for_timeout(350)
+
+            def judge(card, at, nm, line, rows, foot):
+                return (bool(card) and bool(at) and card["name"] == nm and card["line"] == line and card["rows"] == rows
+                        and card["painted"] and card["rowsPainted"] and foot(card)
+                        and at["whole"] and at["clear"] and at["ringed"] and at["painted"] and not at["cut"])
+
+            # A phone: hold each.
+            c, q = fresh(b, PHONE, route)
+            cdp = c.new_cdp_session(q)
+            q.evaluate(SETUP)
+            q.wait_for_timeout(300)
+            wrong, pressed, held = [], {}, []
+            for sel, how, nm, line, rows, _desk, where in TWELVE:
+                if where == "desk":
+                    continue
+                show(q, how)
+                if not q.evaluate(SHOWN, sel):
+                    wrong.append(f"{nm}: {sel} is not on a phone's screen")
+                    continue
+                before = q.evaluate(STATE)
+                q.evaluate(STILL, sel)
+                touch_hold(q, cdp, sel, 700)
+                card, at = q.evaluate(CARD), q.evaluate(PLACE, sel)
+                q.evaluate("() => window.SkriblLearnCard.close()")
+                q.wait_for_timeout(250)
+                after = q.evaluate(STATE)
+                if after != before:
+                    pressed[nm] = {k: (before[k], after[k]) for k in before if before[k] != after[k]}
+                if not judge(card, at, nm, line, rows, lambda k: k["ok"]):
+                    wrong.append(f"{nm}: {card}; {at}")
+                held.append(nm)
+            check(f"{name}: on a phone, holding each of the last twelve a phone shows ({len(held)}) opens its card in the words said yes to, "
+                  "painted, whole and clear of it, with Got it", not wrong and len(held) == 6, "; ".join(wrong)[:700])
+            check(f"{name}: ...and no hold presses anything: no page moved, copied, deleted, looped or switched, no menu, "
+                  "Artwork's bar as it was, the stamp size where it was", not pressed, str(pressed)[:500])
+            # Size: its value opens the card too; the slider itself only slides.
+            show(q, "stamp")
+            v0 = q.evaluate("() => document.getElementById('stampScale').value")
+            touch_hold(q, cdp, "#stampScaleOut", 700)
+            by_value = q.evaluate(CARD)
+            q.evaluate("() => window.SkriblLearnCard.close()")
+            q.wait_for_timeout(250)
+            v1 = q.evaluate("() => document.getElementById('stampScale').value")
+            touch_hold(q, cdp, "#stampScale", 700)
+            by_slider = q.evaluate(CARD)
+            v2 = q.evaluate("() => document.getElementById('stampScale').value")
+            q.evaluate("() => window.SkriblLearnCard.close()")
+            check(f"{name}: Size's card opens from its value too, and a hold on the slider itself opens no card: it just slides",
+                  bool(by_value) and by_value["name"] == "Stamp size" and v1 == v0 and by_slider is None,
+                  f"value: {by_value and by_value['name']} ({v0} -> {v1}); slider: {by_slider and by_slider['name']} ({v1} -> {v2})")
+            # A quick tap on the ⋯ still opens its menu. 200 ms, a slow tap and
+            # still well under a hold (HOLD, 500): in this box a timer set as
+            # a finger lands fires about 110 ms late, so an 80 ms tap lifted
+            # before even a 50 ms hold could open, and the row could not see a
+            # hold made too short (calibrated: 50 and 150 go red, 500 green).
+            show(q, "pages")
+            touch_hold(q, cdp, "#strip .pageops", 200)
+            q.wait_for_timeout(250)
+            tap = q.evaluate("() => [!!document.querySelector('.pageops-menu'), !!document.querySelector('.lc-card')]")
+            q.keyboard.press("Escape")
+            check(f"{name}: a quick tap on a page's ⋯ still opens its menu, and no card", tap[0] and not tap[1], str(tap))
+            # More, from the phone's own card and from Pages'.
+            MORE = """async (sel) => { window.SkriblLearnCard.open(sel); await new Promise(r => setTimeout(r, 200));
+              const m = document.querySelector('.lc-card .lc-more'); if (!m) return null; m.click();
+              await new Promise(r => setTimeout(r, 600));
+              const vis = e => e.getClientRects().length && !e.closest('[hidden]');
+              const got = [...document.querySelectorAll('#helpDrawer .help-tip, #helpDrawer .help-step')].filter(vis)
+                .map(e => (e.querySelector('.help-pill, .help-title') || e).textContent.trim());
+              closeHelpDrawer(); await new Promise(r => setTimeout(r, 400)); return got; }"""
+            ENTRY = {"Page actions": "Add pages to animate", "Pages": "Add pages to animate", "Move page": "Add pages to animate",
+                     "Copy page": "Add pages to animate", "Draw on": "Draw-on", "Loop this page": "Loop", "Keep under": "Keep under",
+                     "Delete page": "Pages", "Where it sits": "Move artwork", "Which pages move": "Move artwork", "Reset": "Move artwork",
+                     "Done": "Move artwork", "Stamp size": "Stamps"}
+            lost = []
+            for sel, nm in (("#strip .pageops", "Page actions"), ("#strip .frame", "Pages")):
+                got = q.evaluate(MORE, sel)
+                if not got or ENTRY[nm] not in got:
+                    lost.append(f"{nm}: {got}")
+            c.close()
+
+            # A desk: rest on each.
+            c, q = fresh(b, DESK, route)
+            q.evaluate(SETUP)
+            q.wait_for_timeout(300)
+            wrong, pressed, rested = [], {}, []
+            for sel, how, nm, line, rows, desk_rows, where in TWELVE:
+                if where == "phone":
+                    continue
+                show(q, how)
+                if not q.evaluate(SHOWN, sel):
+                    wrong.append(f"{nm}: {sel} is not on a desk's screen")
+                    continue
+                before = q.evaluate(STATE)
+                x, y = center(q, sel)
+                q.mouse.move(x - 30, y - 40)
+                q.mouse.move(x, y, steps=4)
+                q.wait_for_timeout(2500)
+                card, at = q.evaluate(CARD), q.evaluate(PLACE, sel)
+                q.mouse.move(5, 450)
+                q.wait_for_timeout(400)
+                after = q.evaluate(STATE)
+                if after != before:
+                    pressed[nm] = {k: (before[k], after[k]) for k in before if before[k] != after[k]}
+                if not judge(card, at, nm, line, desk_rows or rows, lambda k: k["hint"] == "Move away to close"):
+                    wrong.append(f"{nm}: {card}; {at}")
+                rested.append(nm)
+                got = q.evaluate(MORE, sel)
+                if not got or ENTRY[nm] not in got:
+                    lost.append(f"{nm}: {got}")
+            check(f"{name}: on a desk, resting on each of the last twelve a desk shows ({len(rested)}) grows its card in the words said yes to "
+                  "(Done's with Esc), painted, whole and clear of it, Move away to close", not wrong and len(rested) == 11, "; ".join(wrong)[:700])
+            check(f"{name}: ...and no rest presses anything", not pressed, str(pressed)[:500])
+            check(f"{name}: each of the twelve's More finds its entry in How it works, and so does Pages' own", not lost, "; ".join(lost)[:600])
+            # ? names the page bar's six.
+            show(q, "pages")
+            q.keyboard.press("Shift+Slash")
+            q.wait_for_timeout(400)
+            tg = q.evaluate("""(six) => { const t = [...document.querySelectorAll('.lc-tag')].map(e => { const r = e.getBoundingClientRect(),
+                  a = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return { n: e.textContent, r: [r.left, r.top, r.right, r.bottom], painted: !!a && e.contains(a) }; });
+                const over = []; t.forEach((x, i) => t.slice(i + 1).forEach(y => { if (x.r[0] < y.r[2] && y.r[0] < x.r[2] && x.r[1] < y.r[3] && y.r[1] < x.r[3]) over.push(x.n + '/' + y.n); }));
+                return { missing: six.filter(n => !t.some(x => x.n === n)), unpainted: t.filter(x => !x.painted).map(x => x.n), over }; }""",
+                            ["Move", "Copy", "Draw", "Loop", "Under", "Delete"])
+            q.keyboard.press("Escape")
+            check(f"{name}: ? names the page bar's six, each tag painted, and no tag on the screen on another",
+                  not tg["missing"] and not tg["unpainted"] and not tg["over"], str(tg))
+            c.close()
+        part("Flip's last twelve", flip_last)
 
     if not PART:
         check("Pen's card says the same on the Pad and Flip", len(pen_lines) == 2 and len(set(pen_lines.values())) == 1, str(pen_lines))

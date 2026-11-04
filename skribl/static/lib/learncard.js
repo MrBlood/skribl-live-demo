@@ -124,7 +124,61 @@
     { sel: '#addblank', name: 'Blank', tag: 'Blank', more: 'Duplicate', line: 'A new empty page after this one.' },
     { sel: '#addinbetween', name: 'Tween', tag: 'Tween', line: 'Draws one page halfway between this page and the next.' },
     { sel: '#addtween', name: 'Smear', tag: 'Smear', line: 'Shows the movement between two drawings, like a long exposure.' },
-    { sel: '#strip .frame', name: 'Pages', tag: 'Pages', tagOnly: true, more: 'Reorder',
+    // FLIP'S LAST TWELVE (FUTURE.md 6aa; the words mock on the real card,
+    // "All yes"): the Stamps drawer's Size, Artwork's bar (where it sits,
+    // which pages move, Reset, Done) and a page's actions. On a desk those
+    // are the page bar's: Left and Right (one card), Copy, Draw, Loop, Under
+    // and Delete. On a phone the page bar lives in each page's ⋯, and one
+    // card for the ⋯ names what is inside it (the owner's yes to one card,
+    // not one per row). THE ⋯ COMES AHEAD OF PAGES: it sits inside its
+    // page's tile, and Pages, tag-only, would answer first and open nothing.
+    // SIZE OPENS FROM ITS WORD AND ITS VALUE, never the slider: a hold on a
+    // slider moves it (the mock's held Size went from 100% to 90%), so the
+    // slider just slides. A hold presses nothing, as on every button: no
+    // page moves, copies, loops or goes, Artwork's bar keeps its pages, its
+    // numbers and its mode. Each More finds its entry in How it works: "Add
+    // pages" is the step that moves, copies and selects pages (Pages' own
+    // "Reorder" found nothing there).
+    { sel: '#strip .pageops', name: 'Page actions', tag: 'Page actions', more: 'Add pages',
+      line: 'Everything you can do to this page, in one list.',
+      do: [['Tap', 'Move, Copy, Draw on, Loop, Keep under or Delete']] },
+    { sel: '#pbLeft, #pbRight', name: 'Move page', tag: 'Move', more: 'Add pages',
+      line: 'Moves this page one place earlier or later in your flip.',
+      do: [['Left', 'One place earlier'], ['Right', 'One place later']] },
+    { sel: '#pbCopy', name: 'Copy page', tag: 'Copy', more: 'Add pages',
+      line: 'Copies this page. A dashed + then waits in the strip, after the page you’re on.',
+      do: [['Tap', 'Copy it'], ['Then', 'Tap the dashed + to paste']] },
+    { sel: '#pbDraw', name: 'Draw on', tag: 'Draw', more: 'Draw-on',
+      line: 'This page draws itself, stroke by stroke, the way you drew it.',
+      do: [['On', 'It draws itself in, with a pencil mark in the strip'], ['Off', 'It shows all at once']] },
+    { sel: '#pbLoop', name: 'Loop this page', tag: 'Loop', more: 'Loop this page',
+      line: 'Plays this page more than once before your flip moves on.',
+      do: [['Tap', '×2, ×3, ×4, then 2 s, 4 s, 6 s, Forever'], ['Again', 'Off after Forever']] },
+    { sel: '#pbUnder', name: 'Keep under', tag: 'Under', more: 'Keep under',
+      line: 'This page stays under the pages after it, like a background you draw once.',
+      do: [['On', 'It shows under the pages that follow'], ['Off', 'Just its own page']] },
+    { sel: '#pbDel', name: 'Delete page', tag: 'Delete', more: 'delete a page',
+      line: 'Takes this page out of your flip. Undo brings it back.',
+      do: [['Tap', 'Delete it']] },
+    { sel: '#mbOffset', name: 'Where it sits', tag: 'Position', more: 'Move artwork',
+      line: 'How far the drawing has moved: across, then down.',
+      do: [['Tap', 'Type an exact spot, like 40, -12']] },
+    { sel: '#mbScope', name: 'Which pages move', tag: 'Which pages', more: 'And following',
+      line: 'Just this page, or this page and every page after it, together.',
+      do: [['This page', 'Only the one you’re on'], ['And following', 'This one and all after it']] },
+    { sel: '#mbReset', name: 'Reset', tag: 'Reset', more: 'Move artwork',
+      line: 'Puts the drawing back where it was before you moved it.',
+      do: [['Tap', 'Back to 0, 0']] },
+    // Esc is Artwork's Cancel: the drawing goes back and the bar goes
+    // (flip.js cancelMove). "Let go of the move" read like lifting a finger.
+    { sel: '#mbDone', name: 'Done', tag: 'Done', more: 'Move artwork',
+      line: 'Keeps the move. Undo can still take it back.',
+      do: [['Tap', 'Keep it, and the bar goes']],
+      deskDo: [['Click', 'Keep it, and the bar goes'], ['Esc', 'Put it back, and the bar goes']] },
+    { sel: '#stampSizeRow label, #stampScaleOut', name: 'Stamp size', tag: 'Size', more: 'Stamps',
+      line: 'How big the next stamp lands. Its lines scale too, so a small stamp still looks drawn.',
+      do: [['Slide', 'From a quarter size to double'], ['Then', 'Tap the page to place it']] },
+    { sel: '#strip .frame', name: 'Pages', tag: 'Pages', tagOnly: true, more: 'Add pages',
       line: 'Every page of your Flip, in order.',
       do: [['Tap', 'Open that page'], ['Hold, then drag', 'Move it']] },
     { sel: '.holdbadge', name: 'How long a page stays', tag: 'Page time', tagOnly: true, more: 'Hold',
