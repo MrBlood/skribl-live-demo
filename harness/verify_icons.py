@@ -189,6 +189,13 @@ with sync_playwright() as p:
         #
         # Ink is whatever departs from the corner's background, so this reads
         # the same in either theme rather than assuming dark-on-light.
+        # TWEEN AND SMEAR WAIT FOR A SECOND PAGE on a desk (FUTURE 6z item 9:
+        # with one page they do nothing, so they are folded away), and an
+        # element screenshot of a folded button waits for it to show and times
+        # out. They are photographed as a person meets them: with two pages,
+        # once they have glided in.
+        page.evaluate("() => addFrame()")
+        page.wait_for_timeout(700)
         _shots = {}
         for _bid in ("addinbetween", "addtween"):
             _el = page.query_selector("#" + _bid + " .addbtn-ic")

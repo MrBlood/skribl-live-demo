@@ -865,15 +865,20 @@ with sync_playwright() as p:
     # Every frame: where Draw is in the bar, and how wide Duplicate is in the
     # add row (it gives Tween and Smear their room).
     GLIDE = """() => { window.__glide = []; const t0 = performance.now();
-      const tick = () => { window.__glide.push([document.getElementById('pbDraw').getBoundingClientRect().left,
+      const tick = (now) => { window.__glide.push([now, document.getElementById('pbDraw').getBoundingClientRect().left,
           document.getElementById('addcopy').getBoundingClientRect().width]);
-        if (performance.now() - t0 < 900) requestAnimationFrame(tick); }; requestAnimationFrame(tick); }"""
+        if (now - t0 < 900) requestAnimationFrame(tick); }; requestAnimationFrame(tick); }"""
 
     def glided(g, k):
-        """Its travel, the frames it moved in, and its largest step."""
+        """Its travel, the frames it moved in, and its largest step in a frame's
+        time (16.7ms). A FRAME DROPPED UNDER LOAD IS NOT A JUMP: beside two other
+        suites the browser skipped one, and Draw's step over it was two frames'
+        travel (49.7px, red against 48); a step is divided by the frames it took,
+        up to three, so a snap after a stall still reads as one."""
         v = [row[k] for row in g]
-        steps = [abs(v[i] - v[i - 1]) for i in range(1, len(v))]
-        return abs(v[-1] - v[0]) if v else 0, len([x for x in steps if x > 0.5]), max(steps or [0])
+        steps = [(abs(v[i] - v[i - 1]), g[i][0] - g[i - 1][0]) for i in range(1, len(v))]
+        per = [d * 16.7 / max(16.7, min(ms, 50)) for d, ms in steps]
+        return abs(v[-1] - v[0]) if v else 0, len([d for d, _ in steps if d > 0.5]), max(per or [0])
 
     def tools_page(view, **extra):
         c = br.new_context(**view, **extra)
@@ -893,12 +898,12 @@ with sync_playwright() as p:
         q.click("#addcopy")
         q.wait_for_timeout(1000)
         g = q.evaluate("() => window.__glide")
-        dt, dn, ds = glided(g, 0)
-        ut, un, us = glided(g, 1)
+        dt, dn, ds = glided(g, 1)
+        ut, un, us = glided(g, 2)
         check(f"desk, {scheme}: a second page brings them in gliding: Draw slides on, and Duplicate gives Tween and Smear their room, "
-              "each over many frames, none a sixth of its way",
+              "each over many frames, no frame's step a sixth of its way",
               dt > 100 and dn >= 8 and ds <= dt / 6 and ut > 100 and un >= 8 and us <= ut / 6,
-              f"Draw slid {dt:.0f}px over {dn} frames (largest step {ds:.1f}); Duplicate {ut:.0f}px narrower over {un} frames (largest {us:.1f})")
+              f"Draw slid {dt:.0f}px over {dn} frames (largest step a frame {ds:.1f}); Duplicate {ut:.0f}px narrower over {un} frames (largest {us:.1f})")
         w2, s2 = q.evaluate(TOOLS, WAITS), q.evaluate(TOOLS, STAYS)
         b = {t["id"]: t for t in w2 + s2}
         gap = lambda a, z: b[z]["l"] - b[a]["r"]
@@ -922,8 +927,8 @@ with sync_playwright() as p:
     q.click("#addcopy")
     q.wait_for_timeout(1000)
     g = q.evaluate("() => window.__glide")
-    dt, dn, _ = glided(g, 0)
-    ut, un, _ = glided(g, 1)
+    dt, dn, _ = glided(g, 1)
+    ut, un, _ = glided(g, 2)
     check("desk, Reduce Motion: a second page brings them at once, no glide",
           dt > 100 and dn <= 2 and ut > 100 and un <= 2, f"Draw moved in {dn} frames, Duplicate in {un}")
     c.close()
