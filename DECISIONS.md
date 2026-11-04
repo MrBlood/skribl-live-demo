@@ -29297,7 +29297,15 @@ phone's pace, the cat to 30, and nobody knew why.
   identity (102 of 148); a line's marks dropped fails both identity rows.
 - THE PLAYER'S SCRIPT grows 120 B (160,713 measured), its ratchet raised in
   both places with the reason; spent first, the box's clamps to the canvas,
-  which the clip holds.
+  which the clip holds. Its reachable lines (verify_seam, spans of the named
+  functions the link page reaches, prose included) went 1838 on the first
+  try; the explanation moved above the function, out of the span, and the
+  box's helper joined onto two lines, 1818; the ceiling 1810 -> 1830 with the
+  reason written beside it.
+- verify_padrepeat was INTERMITTENT on the side-by-side run: 24/25 beside 16
+  other suites (one Repeat turn held a 57 ms frame) and 25/25 alone. Load:
+  the turn's work is unchanged by this (it reseeds as before), and the
+  frames between turns are cheaper.
 - Not tested here: Safari (no WebKit in this box), where the canvas's
   backing differs.
 
