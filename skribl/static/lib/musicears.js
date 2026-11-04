@@ -421,10 +421,44 @@
     return finish(F, samples.length / rate);
   }
 
+  // THE EARS LISTEN IN A WORKER (FUTURE.md 6z item 12; the owner's "all yes"
+  // to the speed fixes, Nov 4). At a phone's pace (this box's Chromium, the
+  // CPU 4x slower) a two-minute stereo song held the page here: the mix-down
+  // at once, about half a second; the last sums, 0.37 s; and the slices, each
+  // waiting behind the page's own drawing, took 11 s where they take 1.1 at
+  // full speed. In a worker the page waits on none of it. This file is the
+  // worker's script too, so what is heard there is heard by this same code.
+  // Where a worker cannot start (a host's policy, an old browser), the ears
+  // listen here as they did, a few milliseconds at a time.
+  var SELF = typeof document !== 'undefined' && document.currentScript ? document.currentScript.src : null;
   function listen(buffer, done) {
+    var stopped = false, began = Date.now(), w = null, here = null, c;
+    var len = Math.min(buffer.length, Math.round(MAX_SECONDS * buffer.sampleRate));
+    function fallback() { if (w) { w.terminate(); w = null; } if (!stopped && !here) here = listenHere(buffer, done, began); }
+    try { if (SELF && typeof global.Worker === 'function') w = new global.Worker(SELF); } catch (e) { w = null; }
+    if (!w) return listenHere(buffer, done, began);
+    w.onmessage = function (e) {
+      var H = e.data && e.data.H;
+      w.terminate(); w = null;
+      if (stopped) return;
+      if (!H) { fallback(); return; }
+      H.ms = Date.now() - began;       // how long it listened, in all
+      done(H);
+    };
+    w.onerror = function (e) { if (e && e.preventDefault) e.preventDefault(); fallback(); };
+    // Copies of the first two minutes, handed over whole (the song's own
+    // channels stay with it, to play).
+    var chans = [];
+    for (c = 0; c < buffer.numberOfChannels; c++) chans.push(buffer.getChannelData(c).slice(0, len));
+    try {
+      w.postMessage({ chans: chans, rate: buffer.sampleRate, duration: buffer.duration }, chans.map(function (x) { return x.buffer; }));
+    } catch (e) { fallback(); }
+    return { cancel: function () { stopped = true; if (w) { w.terminate(); w = null; } if (here) here.cancel(); } };
+  }
+  function listenHere(buffer, done, began) {
     var stopped = false, chans = [], c;
     for (c = 0; c < buffer.numberOfChannels; c++) chans.push(buffer.getChannelData(c));
-    var began = Date.now(), m = mono(chans, buffer.sampleRate), F = framer(m.x, m.rate);
+    var m = mono(chans, buffer.sampleRate), F = framer(m.x, m.rate);
     function go() {
       if (stopped) return;
       if (!F.step(SLICE_MS)) { setTimeout(go, 0); return; }
@@ -435,12 +469,39 @@
     setTimeout(go, 0);
     return { cancel: function () { stopped = true; } };
   }
+  // In the worker: hear the song at once, and hand back what was heard (the
+  // steps' arrays, without the function that read them).
+  if (typeof document === 'undefined' && typeof global.importScripts === 'function') {
+    global.onmessage = function (e) {
+      var d = e.data, m = mono(d.chans, d.rate), F = framer(m.x, m.rate);
+      F.step(0);
+      var H = finish(F, d.duration);
+      delete F.step;
+      if (steady(H)) warm(H);
+      global.postMessage({ H: H });
+    };
+  }
 
   // The beat between t0 and t1, heard there: the song's tempo, refined.
   function local(H, t0, t1) {
     var a = Math.max(0, Math.floor(t0 / H.hop)), b = Math.min(H.o.length, Math.ceil(t1 / H.hop));
+    // KEPT, by the stretch heard (H.stretches): the same stretch is heard the same
+    // every time, and a pick hears up to thirty of them (most of a pick's
+    // time). The worker hears the stretches a pick usually asks for (warm,
+    // below), so the first pick waits on almost none of them.
+    var key = a + ':' + b, memo = H.stretches || (H.stretches = {});
+    if (memo[key]) return memo[key];
     var top = refine(H.o.subarray(a, b), H.hop, H.bpm, 0.04), p = 60 / top.bpm, ph = a * H.hop + top.phase - H.lag;
-    return { bpm: top.bpm, period: p, phase: ((ph % p) + p) % p, sure: top.peak };
+    return (memo[key] = { bpm: top.bpm, period: p, phase: ((ph % p) + p) % p, sure: top.peak });
+  }
+  // The stretches a pick walks for a loop under W - 8 seconds (pick, below):
+  // 24 seconds from every fourth second, the song's end cutting the last.
+  function warm(H) {
+    for (var w0 = 0; w0 < H.duration; w0 += 4) {
+      var w1 = Math.min(H.duration, w0 + 24);
+      if (w1 - w0 < 6) break;
+      local(H, w0, w1);
+    }
   }
 
   function alike(B, i, j, n) {
