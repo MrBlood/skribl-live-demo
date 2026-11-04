@@ -30068,3 +30068,18 @@ THE FOUR: kind, simple; powerful and playful unchanged.
 
 Next, from the same list (FUTURE 6z's words under 12px): the words that
 show only in a state, each read in its state before it changes.
+
+## After v330 -- A frame dropped under load is not a leap (verify_sheetswipe)
+
+The music drawer's door-tile row ("closing a door from the drawer's end, its
+tile glides rather than leaps") went red beside two other suites in #759's
+run: one move of 152 px in a 32 ms frame, a frame the browser dropped
+carrying two frames' travel, against a limit of 139. Alone it moved 81 px in
+17 ms. It now reads each move for a frame's time (16.7 ms), divided by the
+frames it took up to three, as verify_pages' glide row does since #757, so a
+snap after a stall still reads as one. CALIBRATED: the drawer's scroll made
+instant (lib/drawerdetent.js shrinkGently) turns both editors' rows red, 416
+px in one 18 ms frame; with the glide, 246 of 246.
+
+The habit, for any check that reads motion frame by frame: a step is judged
+against the time it took, not the frame it landed in.
