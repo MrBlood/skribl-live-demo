@@ -1466,11 +1466,15 @@ went from 1.4 s to 0.33 s on a phone and from 1.2 s to 0.2 s on a desk at
 this box's pace (8.5 s and 5.5 s to about 1.35 s with the CPU 4x slower).
 What is left is the file's own task: reading it, the page you are on.
 
-**Still slow on a long Flip, measured and not built: a page change.**
-buildStrip makes every tile again on each one (its 60 pictures laid from
-the cache, every page's signature read), about 33 ms of a 54 ms change on a
-desk at this box's pace and 250 to 280 ms with the CPU 4x slower. The fix is
-the strip changed in place, its classes moved, rather than made again.
+~~**Still slow on a long Flip, measured and not built: a page change.**~~
+**FIXED after v330** (the owner's "all yes" to the speed fixes, Nov 4;
+DECISIONS: "A page change on a long Flip moves the strip's mark"): the
+strip's mark moves and no tile is made again, where nothing on it follows
+the page you are on; a change on a desk takes 11 to 28 ms (was 34 to 54), on
+a phone 15 to 35 (was 39 to 60). Was: buildStrip made every tile again on
+each one (its 60 pictures laid from the cache, every page's signature read),
+about 33 ms of a 54 ms change on a desk at this box's pace and 250 to 280 ms
+with the CPU 4x slower.
 
 ## 6z. The polish run's held four, and its finish line (after the audit, Oct 29 to 30)
 
@@ -1543,19 +1547,21 @@ which do. The idea: every word to 12px, sheet by sheet, mocked first since
 it moves six sheets' look, each with a check like the Post sheet's ("nothing
 painted in the sheet under 12px").
 
-**Measured, not built, outside the list:** Flip's page change on a long Flip
-(6y). (The Pad's own player painted a long drawing three times as it opened,
-and on a desk laid it out at 1 x 1, the editor's dock over it: FIXED after
-v330, DECISIONS "The Pad's own player opens a long drawing once". Flip's
-Undo past the three copies a busy page keeps repainted the page, and its
-tile again; and each pen stroke's start on a busy page painted the page:
-FIXED after v330, DECISIONS "Flip on a busy page: a floor under Undo, the
-tile from the layer, a stroke's start". A file opened on the Pad over a take
-still recording came up without its Keep drawing pill: FIXED after v330,
-DECISIONS "A file opened over a take ends the take first". The Pad's Undo
-past its three copies on a two-hour piece painted the whole drawing again, 6
-to 7 s a press at a phone's pace: FIXED after v330, DECISIONS "Undo on a
-long drawing: a floor under the history".)
+**Measured, not built, outside the list:** nothing now. (Flip's page change
+on a long Flip made the whole strip again: FIXED after v330, DECISIONS "A
+page change on a long Flip moves the strip's mark" (6y). The Pad's own
+player painted a long drawing three times as it opened, and on a desk laid
+it out at 1 x 1, the editor's dock over it: FIXED after v330, DECISIONS "The
+Pad's own player opens a long drawing once". Flip's Undo past the three
+copies a busy page keeps repainted the page, and its tile again; and each
+pen stroke's start on a busy page painted the page: FIXED after v330,
+DECISIONS "Flip on a busy page: a floor under Undo, the tile from the layer,
+a stroke's start". A file opened on the Pad over a take still recording came
+up without its Keep drawing pill: FIXED after v330, DECISIONS "A file opened
+over a take ends the take first". The Pad's Undo past its three copies on a
+two-hour piece painted the whole drawing again, 6 to 7 s a press at a
+phone's pace: FIXED after v330, DECISIONS "Undo on a long drawing: a floor
+under the history".)
 
 ## 6aa. Help cards inside the drawers (owner, after #691, with a screenshot of the eyedropper and Recolor: "shouldn't these have help cards? What other tools don't have help cards?")
 
