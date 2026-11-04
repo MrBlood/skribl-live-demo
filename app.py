@@ -59,6 +59,54 @@ _APP_SERVERS = ("gunicorn", "uwsgi", "waitress", "mod_wsgi", "hypercorn",
                 "uvicorn")
 
 
+# The demo's sign-in page (see create_app: /demo-login). Self-contained and
+# small: the app's own tokens for paper, card, ink and accent, the stored
+# theme read before first paint as _skribl_theme_boot.html does, the Home
+# Screen icon and the skribl signature. The key field is 17px: under 16px
+# iOS magnifies the page (WORKING-AGREEMENTS).
+_SIGNIN_PAGE = """<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex"><title>Sign in \u00b7 Skribl</title>
+<script nonce="{{ nonce }}">(function(){try{var t=null;try{t=localStorage.getItem('skribl_theme_v1');}catch(e){}if(t!=='light'&&t!=='dark'){t=(window.matchMedia&&matchMedia('(prefers-color-scheme: light)').matches)?'light':'dark';}if(t==='light'){document.documentElement.setAttribute('data-theme','light');}}catch(e){}})();</script>
+<style>
+:root{color-scheme:dark;--ground:#17142a;--card:#231e3b;--line:rgba(167,146,255,.12);--ink:#e7e9ea;--soft:#b7bfcc;--accent-ink:#c1b2ff;--fill:#6d4cf0;--field:#17142a;--field-line:rgba(167,146,255,.45);--tint:rgba(124,92,255,.18);--drop:0 1px 0 rgba(255,255,255,.04) inset,0 6px 18px rgba(0,0,0,.35)}
+:root[data-theme=light]{color-scheme:light;--ground:#f3f0ff;--card:#fff;--line:rgba(124,92,255,.34);--ink:#1f252f;--soft:#3f4756;--accent-ink:#4c31c4;--field:#fff;--field-line:rgba(124,92,255,.55);--tint:rgba(124,92,255,.12);--drop:0 1px 2px rgba(60,40,140,.08),0 6px 18px rgba(60,40,140,.09)}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;min-height:100dvh;display:grid;place-items:center;background:var(--ground);color:var(--ink);font:16px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;padding:24px max(16px,env(safe-area-inset-right)) 24px max(16px,env(safe-area-inset-left))}
+main{width:100%;max-width:360px;background:var(--card);border:1px solid var(--line);border-radius:24px;box-shadow:var(--drop);padding:28px 24px 24px;display:grid;gap:14px;text-align:center}
+.icon{width:64px;height:64px;border-radius:15px;margin:0 auto}
+.brand-mark{height:30px;width:auto;margin:-4px auto 0;display:block}
+.brand-grad-a{stop-color:#7c5cff}.brand-grad-b{stop-color:#5b8cff}
+h1{font-size:21px;font-weight:700;margin:4px 0 0;letter-spacing:-.01em;text-wrap:balance}
+form{display:grid;gap:10px;text-align:left;margin:0}
+label{font-size:15px;font-weight:600;color:var(--soft)}
+input{font:inherit;font-size:17px;width:100%;min-height:48px;padding:10px 14px;border-radius:14px;border:1.5px solid var(--field-line);background:var(--field);color:var(--ink)}
+input:focus-visible,button:focus-visible,a:focus-visible{outline:2px solid var(--accent-ink);outline-offset:2px}
+.go{display:flex;align-items:center;justify-content:center;width:100%;min-height:48px;border:0;border-radius:14px;background:var(--fill);color:#fff;font:inherit;font-weight:650;text-decoration:none;cursor:pointer}
+.quiet{width:100%;min-height:44px;border-radius:14px;border:1px solid var(--line);background:transparent;color:var(--accent-ink);font:inherit;font-weight:600;cursor:pointer}
+.note{margin:0;padding:10px 12px;border-radius:12px;background:var(--tint);color:var(--ink);font-size:15px}
+.soft{margin:0;color:var(--soft);font-size:14px}
+</style></head><body><main>
+<img class="icon" src="{{ icon }}" alt="" width="64" height="64">
+{% with brand_sweep=65 %}{% include 'skribl/_skribl_brand_mark.html' %}{% endwith %}
+{% if who %}
+<h1>You\u2019re signed in as {{ who }}.</h1>
+<a class="go" href="/">Open Skribl Pad</a>
+<form method="post" action="/demo-logout"><button class="quiet" type="submit">Sign out</button></form>
+{% else %}
+<h1>Sign in</h1>
+{% if note %}<p class="note" role="status">{{ note }}</p>{% endif %}
+<form method="post" action="/demo-login">
+<label for="key">Your key</label>
+<input id="key" name="key" type="password" autocomplete="current-password" required autofocus>
+<button class="go" type="submit">Sign in</button>
+</form>
+<p class="soft">Your browser can remember it for next time.</p>
+{% endif %}
+</main></body></html>"""
+
+
 def _looks_like_production():
     # PURE DETECTION. This used to return False when
     # SKRIBL_ALLOW_EPHEMERAL_SECRET=1, which coupled two unrelated decisions:
@@ -216,9 +264,9 @@ def create_app():
     # read and overwrite their drafts, and post under their name. CSRF never
     # protected against that -- the attacker was not borrowing a cookie, they
     # simply were the user. Now SKRIBL_DEMO_LOGIN_KEY must be set too, and a
-    # browser is signed in only after visiting /demo-login?key=<that key>, which
-    # puts the handle in Flask's signed session cookie; /demo-logout takes it
-    # out. The identity set without a key FAILS SAFE: the demo boots anonymous
+    # browser is signed in only after posting that key from the /demo-login
+    # page, which puts a mark of it in Flask's signed session cookie; the
+    # page's Sign out button (a POST to /demo-logout) takes it out. The identity set without a key FAILS SAFE: the demo boots anonymous
     # and says why in the log, rather than refusing to boot a live service.
     _demo_id = (os.environ.get("SKRIBL_DEMO_IDENTITY") or "").strip()
     _demo_key = (os.environ.get("SKRIBL_DEMO_LOGIN_KEY") or "").strip()
@@ -230,7 +278,7 @@ def create_app():
         app.logger.warning(
             "SKRIBL_DEMO_IDENTITY is set but SKRIBL_DEMO_LOGIN_KEY is %s: nobody "
             "is signed in and the demo runs anonymous. Set a key of 16+ "
-            "characters and visit /demo-login?key=<key> to sign in as %s.",
+            "characters, then open /demo-login and enter it to sign in as %s.",
             "missing" if not _demo_key else "shorter than 16 characters", _demo_id)
     if _demo_id:
         if csrf is None:
@@ -261,7 +309,7 @@ def create_app():
             # leaked SKRIBL_DEMO_LOGIN_KEY signed nobody out, because every
             # cookie it had ever issued still said the same name. Now a new key
             # is a new value, and every sign-in made with the old one is void.
-            # (Replaying a cookie copied before /demo-logout still works until
+            # (Replaying a cookie copied before signing out still works until
             # the key or SECRET_KEY changes: Flask's session lives in the
             # cookie, so there is no server-side record to strike it from.)
             _demo_mark = hmac.new(
@@ -269,25 +317,59 @@ def create_app():
                 ("skribl-demo|" + _demo_id + "|" + _demo_key).encode(),
                 "sha256").hexdigest()
 
-            @app.route("/demo-login")
+            # A KEY IN THE ADDRESS SIGNS NOBODY IN, AND SIGNING OUT IS A
+            # BUTTON (the PRE-331 review's 5 and 14; the owner, Nov 3: "all
+            # yes"). The key travelled as /demo-login?key=..., so it sat in
+            # history, proxy logs and referrers; and /demo-logout was a link,
+            # so another site could sign the owner out with one image tag.
+            # Now /demo-login is a small page whose form POSTs the key (the
+            # browser can remember it, as any password), and signing out is
+            # that page's button, POSTed: the session cookie is SameSite=Lax,
+            # so another site's form arrives without it and signs nobody out.
+            # The page says a sign-in exists, which the old 404 did not; the
+            # key (16+ characters, the attempts budget on every try) is what
+            # keeps it, as it always was.
+            import secrets
+            from flask import g, render_template_string, url_for
+            _demo_shown = (os.environ.get("SKRIBL_DEMO_IDENTITY_NAME") or "").strip() or _demo_id
+
+            def _signin_page(status=200, note=None):
+                # The app-wide CSP reads g.csp_nonce as the response leaves
+                # (skribl.security), so the theme script carries this one.
+                g.csp_nonce = secrets.token_urlsafe(16)
+                resp = app.response_class(render_template_string(
+                    _SIGNIN_PAGE, who=_demo_shown if current_user_id() else None, note=note,
+                    nonce=g.csp_nonce,
+                    icon=url_for("skribl.static", filename="apple-touch-icon.png")),
+                    status=status, mimetype="text/html")
+                resp.headers["Cache-Control"] = "no-store"
+                return resp
+
+            @app.route("/demo-login", methods=["GET", "POST"])
             def demo_login():
+                if request.method == "GET":
+                    # An old bookmark with ?key= in it lands here and is shown
+                    # the form: the address is never read.
+                    return _signin_page(note="You\u2019re signed out." if request.args.get("out") == "1" else None)
                 # Guesses spend the attempts budget every write spends, so the
                 # key cannot be tried at request speed.
                 if _rate_limited(_client_ip(), "attempts"):
-                    abort(429)
-                given = request.args.get("key", "")
-                # Constant-time, and a wrong key is a plain 404: the route does
-                # not confirm to a stranger that there is anything to guess.
+                    return _signin_page(429, "Lots of tries from this connection. Wait a little, then try again.")
+                given = request.form.get("key", "")
+                # Constant-time, so a wrong key says nothing about the right one.
                 if not hmac.compare_digest(given.encode(), _demo_key.encode()):
-                    abort(404)
+                    return _signin_page(403, "That key didn\u2019t match. Try again?")
                 session["skribl_demo"] = _demo_mark
                 session.permanent = True
-                return redirect("/")
+                return redirect("/", 303)
 
-            @app.route("/demo-logout")
+            @app.route("/demo-logout", methods=["GET", "POST"])
             def demo_logout():
-                session.pop("skribl_demo", None)
-                return redirect("/")
+                if request.method == "POST":
+                    session.pop("skribl_demo", None)
+                    return redirect("/demo-login?out=1", 303)
+                # A link signs nobody out; it shows the page with the button.
+                return redirect("/demo-login", 303)
 
             def current_user_id():
                 mark = session.get("skribl_demo")

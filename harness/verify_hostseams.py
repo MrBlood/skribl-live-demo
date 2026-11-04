@@ -512,6 +512,7 @@ try:
     class _Https:
         def __init__(self, c): self.c = c
         def get(self, url): return self.c.get(url, base_url="https://localhost")
+        def post(self, url, **kw): return self.c.post(url, base_url="https://localhost", **kw)
     _stranger = _Https(_on.test_client())
     _owner = _Https(_on.test_client())
     with _on.test_request_context("/"):
@@ -520,13 +521,34 @@ try:
         _pad_url = _u("skribl.skribl_editor")
     check("a stranger is not the owner: their drafts list is refused",
           _stranger.get(_drafts_url).status_code == 401, _drafts_url)
-    check("a wrong key is a plain 404, and signs nobody in",
-          _stranger.get("/demo-login?key=wrong-key-wrong-key").status_code == 404
-          and _stranger.get(_drafts_url).status_code == 401, "")
-    _login = _owner.get("/demo-login?key=" + _KEY)
-    check("the right key signs THAT browser in (and only it)",
-          _login.status_code in (301, 302) and _owner.get(_drafts_url).status_code == 200
-          and _stranger.get(_drafts_url).status_code == 401, f"login {_login.status_code}")
+    # THE KEY IS POSTED FROM A FORM, NEVER READ FROM THE ADDRESS (the
+    # PRE-331 review's 5; the owner, Nov 3: "all yes"). /demo-login?key=
+    # put it in history, proxy logs and referrers; an old bookmark now
+    # lands on the page and signs nobody in.
+    _page = _stranger.get("/demo-login?key=" + _KEY)
+    check("a key in the address signs nobody in: an old bookmark shows the sign-in page",
+          _page.status_code == 200 and b'name="key"' in _page.data and b'method="post"' in _page.data
+          and _stranger.get(_drafts_url).status_code == 401, f"{_page.status_code}")
+    # A TEXT CONTROL UNDER 16px MAKES iOS MAGNIFY THE PAGE (WORKING-AGREEMENTS).
+    # This page is not in verify_a11y's census (it exists only with a demo
+    # identity), so its one field is read here, from the rule that sizes it.
+    import re as _re
+    _sized = _re.search(r"input\{[^}]*font-size:(\d+(?:\.\d+)?)px", _page.data.decode())
+    check("the key field is at least 16px, so iPhone does not magnify the page",
+          bool(_sized) and float(_sized.group(1)) >= 16, _sized.group(0)[-24:] if _sized else "no size")
+    _wrong = _stranger.post("/demo-login", data={"key": "wrong-key-wrong-key"})
+    check("a wrong key is refused on the page (403), kindly, and signs nobody in",
+          _wrong.status_code == 403 and "didn\u2019t match".encode() in _wrong.data
+          and _stranger.get(_drafts_url).status_code == 401, f"{_wrong.status_code}")
+    _login = _owner.post("/demo-login", data={"key": _KEY})
+    check("the right key, posted, signs THAT browser in (and only it), and the address it lands on carries no key",
+          _login.status_code == 303 and _KEY not in (_login.headers.get("Location") or "")
+          and _owner.get(_drafts_url).status_code == 200
+          and _stranger.get(_drafts_url).status_code == 401, f"login {_login.status_code} -> {_login.headers.get('Location')}")
+    _signed_page = _owner.get("/demo-login")
+    check("...and the page says who is signed in, with Sign out as a button that posts",
+          b"signed in as Mr. B" in _signed_page.data and b'action="/demo-logout"' in _signed_page.data
+          and b'<form method="post" action="/demo-logout">' in _signed_page.data, "")
     _ck = _login.headers.get("Set-Cookie", "")
     check("...with a cookie scripts cannot read, other sites cannot send, and plain http never carries",
           "HttpOnly" in _ck and "SameSite=Lax" in _ck and "Secure" in _ck, _ck[-120:])
@@ -603,19 +625,25 @@ try:
                                    environ_base={"REMOTE_ADDR": "198.51.100.22"}).status_code
     check("a forged gzipped write is refused without being inflated (403, not the inflate's 400)",
           _forged_gz == 403, str(_forged_gz))
+    # SIGNING OUT IS A BUTTON (the review's 14): a link, which another site
+    # can make a browser follow, signs nobody out; the posted button does.
     _owner.get("/demo-logout")
-    check("/demo-logout signs it out again", _owner.get(_drafts_url).status_code == 401, "")
+    _still = _owner.get(_drafts_url).status_code
+    _out = _owner.post("/demo-logout")
+    check("a link to /demo-logout signs nobody out; the Sign out button (a POST) does",
+          _still == 200 and _out.status_code == 303 and _owner.get(_drafts_url).status_code == 401,
+          f"after the link {_still}; the button {_out.status_code}")
     # Guesses at the key spend the attempts budget: at the cap, even the right
     # key is turned away, so it cannot be tried at request speed.
     _on.config["SKRIBL_RATE_MAX_ATTEMPTS"] = 3
     _guesser = _on.test_client()
     _from = {"REMOTE_ADDR": "203.0.113.77"}     # a fresh bucket, not this run's
-    _codes = [_guesser.get(f"/demo-login?key=guess-{i:02d}-guess-guess", base_url="https://localhost",
-                           environ_base=_from).status_code for i in range(3)]
-    _codes.append(_guesser.get("/demo-login?key=" + _KEY, base_url="https://localhost",
-                               environ_base=_from).status_code)
+    _codes = [_guesser.post("/demo-login", data={"key": f"guess-{i:02d}-guess-guess"}, base_url="https://localhost",
+                            environ_base=_from).status_code for i in range(3)]
+    _codes.append(_guesser.post("/demo-login", data={"key": _KEY}, base_url="https://localhost",
+                                environ_base=_from).status_code)
     check("guessing the key is rate limited (429 once the attempts budget is spent)",
-          _codes == [404, 404, 404, 429], str(_codes))
+          _codes == [403, 403, 403, 429], str(_codes))
     with _on.app_context():
         _me = skribl.models.author_dict("bigballbaron")
         _other = skribl.models.author_dict("somebody-else")

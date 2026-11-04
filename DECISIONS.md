@@ -29172,3 +29172,53 @@ WHAT IT DOES TO FLIP: shared (the Gallery's Hot lists both).
 THE FOUR: kind (nothing jumps or vanishes mid-scroll); simple (no new
 controls, a refresh is still how new plays arrive); powerful and playful
 (unchanged).
+
+## After v330 -- The demo signs in from a page, and out with a button
+
+The review's 5 and 14 (FUTURE 6ad), the owner's "all yes" on Nov 3 to a
+small sign-in page and Sign out as a button, and the look shown first.
+
+- THE KEY IS POSTED, NEVER IN THE ADDRESS. /demo-login?key=... put the key
+  in browser history, proxy and server logs and referrers. /demo-login is
+  now a page: the Home Screen icon, the skribl signature, one field ("Your
+  key", type password, so the browser can remember it) and a Sign in
+  button that posts it. An old bookmark with ?key= in it lands on the page
+  and signs nobody in. A wrong key is a 403 with "That key didn't match.
+  Try again?"; guesses still spend the attempts budget (429 with its own
+  kind words). Signed in, the page says "You're signed in as Mr. B." with
+  Open Skribl Pad and Sign out.
+- SIGNING OUT IS A BUTTON. /demo-logout was a link, so another site could
+  sign the owner out (an earlier entry above judged that "not worth a form
+  and a token"; the owner chose otherwise). It is the page's button now, a
+  POST: the session cookie is SameSite=Lax, so another site's form arrives
+  without it and signs nobody out, and a link to /demo-logout only shows
+  the page. No token is needed for either form: signing somebody in needs
+  the key, and signing them out needs their cookie.
+- THE PAGE SAYS A SIGN-IN EXISTS, which the old 404 for a wrong key did
+  not. The key (16+ characters, the attempts budget on every try) is what
+  keeps it, as it always was.
+- THE PAGE: the app's own tokens (the menu's lilac paper and white card,
+  the ink, the purple fill), the stored theme read before first paint as
+  _skribl_theme_boot.html does, its script carrying the CSP nonce the
+  app-wide policy reads (an empty one blocked it at first). The key field
+  is 17px. Measured in both themes: every word 5.3:1 or better (white on
+  the purple button, the app's own pair), the rest 8.3:1 and up. Not tested
+  here: Safari (no WebKit), Segoe UI.
+- ROWS, verify_hostseams: an old bookmark shows the page and signs nobody
+  in; a wrong key is a 403 that says so; the right key, posted, signs that
+  browser in and lands on an address with no key; the signed-in page has
+  Sign out as a posting form; a link to /demo-logout signs nobody out, the
+  button does; guesses are 403, 403, 403, then 429; the key field is 16px
+  or more. Calibrated: the address signing in again, a link signing out,
+  a wrong key back to 404, and a 15px field each turn their rows red.
+  verify_postgres's drafts section signs in by posting the key.
+
+AFTER IT IS LIVE: set a new SKRIBL_DEMO_LOGIN_KEY on Render, since the old
+one has travelled in addresses; that also signs every browser out.
+
+WHAT IT DOES TO FLIP: nothing (the demo's own page, beside both editors).
+
+THE FOUR: kind (a wrong key says try again and locks nothing; signing out
+says so); simple (one field, one button); playful (Blooby's icon and the
+hand-drawn signature); powerful (the browser keeps the key like any
+password).
