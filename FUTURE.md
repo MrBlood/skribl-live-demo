@@ -1680,15 +1680,16 @@ the real sheets with the census of every place, when the owner wants it.
 An outside static review of the v330 archive (the owner's upload,
 PRE_331_Repository_Review.md, then a second pass the owner pasted: 7 to
 15). Its author read the code, ran one function in memory, and reproduced
-11's short PNG; nothing else was reproduced, and none of it has been
-checked here yet. Line numbers are v330's. Each fix, when it comes, starts
+11's short PNG; nothing else was reproduced. A finding fixed here says so
+and names its DECISIONS entry; the rest have not been checked here yet. Line numbers are v330's. Each fix, when it comes, starts
 by showing the finding red (WORKING-AGREEMENTS: calibrate the instrument),
 and some may turn out not to apply.
 
 The review's own order: 3, then 2 and the metadata ids, then 4; then 1
 and 6; the rest by profiling.
 
-1. **Stroke times that are not numbers get through** (Medium).
+1. ~~**Stroke times that are not numbers get through** (Medium).~~ **FIXED
+   after v330** (DECISIONS: "The PRE-331 review: the first four fixes").
    - Where: `skribl/validation.py` `_validate_points`, about lines 747 to 782.
    - What: a point's `t` is range-checked only when it is a number, so
      `"not-a-time"`, `[]`, `{}` and `true` pass. The reviewer ran it in
@@ -1700,7 +1701,8 @@ and 6; the rest by profiling.
    - Suggested: when `t` is there, require a finite number that is not a
      boolean, then the existing range; add bad-time cases to the API
      checks.
-2. **Two drafts made at once can pass the quota** (Medium).
+2. ~~**Two drafts made at once can pass the quota** (Medium).~~ **FIXED
+   after v330** (the same entry; shown red on PostgreSQL first).
    - Where: `skribl/drafts.py`, about lines 210 to 255.
    - What: the count and byte checks run before the insert, outside the
      row lock (that lock covers updating a draft, not making one). Two
@@ -1765,11 +1767,13 @@ The second pass (separate from the six above):
      office or home on one connection counts as one viewer per post per
      day. This matters if the number is meant to be people or plays (Hot
      ranks by it, 6).
-10. **The draft quota leaves out thumbnails** (Low).
+10. ~~**The draft quota leaves out thumbnails** (Low).~~ **FIXED after
+    v330** (the same entry).
     - Where: `skribl/drafts.py`, about lines 210 to 219.
     - What: it measures the JSON payload, not the thumbnail stored beside
       it, which can be up to 200,000 characters a draft.
-11. **A broken thumbnail can be saved** (Medium).
+11. ~~**A broken thumbnail can be saved** (Medium).~~ **FIXED after v330**
+    (the same entry).
     - Where: `skribl/drafts.py`, about lines 61 to 72.
     - What: the draft thumbnail check reads only the first decoded bytes.
       The reviewer got a truncated 26-byte PNG-like value accepted.

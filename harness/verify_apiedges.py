@@ -111,6 +111,16 @@ for _label, _pts in (("an infinite t", _ok + [{"x": 2, "y": 2, "t": float("inf")
                      ("a 400-digit x", [{"x": 10 ** 400, "y": 1, "t": 0}, {"x": 2, "y": 2, "t": 5}])):
     st, body = post({"strokes": _pts, "strokeGroups": [2]})
     check(f"{_label} is refused, neither stored nor a crash", st == 400, f"{st} {str(body)[:80]}")
+# A POINT'S TIME IS A NUMBER (the PRE-331 review's 1): it was range-checked
+# only when it already was one, so text, a list, an object and true were
+# stored, and a replay subtracting neighbouring times got NaN. Null is what
+# JSON.stringify writes for a NaN, so an editor can send it: it still posts.
+for _label, _t in (("text", "not-a-time"), ("a list", []), ("an object", {}), ("true", True)):
+    st, body = post({"strokes": _ok + [{"x": 2, "y": 2, "t": _t}], "strokeGroups": [2]})
+    check(f"a t that is {_label} is refused, as no replay could time it", st == 400 and ".t'" in str(body.get("error", "")),
+          f"{st} {str(body)[:80]}")
+st, body = post({"strokes": _ok + [{"x": 2, "y": 2, "t": None}], "strokeGroups": [2]})
+check("...while a null t (JSON.stringify's NaN) still posts", st == 201, f"{st} {str(body)[:80]}")
 st, body = post({"strokes": _ok + [{"x": 2, "y": 2, "t": 40}], "strokeGroups": [2], "note": float("nan")})
 check("a NaN anywhere else in the payload is refused, as no browser could read it back",
       st == 400, f"{st} {str(body)[:80]}")

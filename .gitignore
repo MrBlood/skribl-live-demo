@@ -222,6 +222,7 @@ SHA256SUMS
 # them already; named here so the intent survives an edit to the template.)
 harness/.pg_gunicorn.log
 harness/.pg_f3_gunicorn.log
+harness/.pg_drafts_gunicorn.log
 
 # Alembic writes probe revisions during verify_migrations.py's autogenerate
 # checks; the suite removes them, but never commit a stray one.

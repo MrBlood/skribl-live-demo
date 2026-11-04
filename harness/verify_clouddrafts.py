@@ -274,6 +274,31 @@ try:
         _fake = "data:image/png;base64," + base64.b64encode(b"not a png at all, just text").decode()
         st, _ = api(pa, "POST", "", {"kind": "pad", "payload": payload, "thumbnail": _fake})
         check("a 'PNG' thumbnail whose bytes are not a PNG is 400", st == 400, str(st))
+        # WHOLE, NOT ITS FIRST BYTES (the PRE-331 review's 11): the check read
+        # the first 48 bytes, so a PNG cut off after 26 (the reviewer's) was
+        # stored. A PNG cut short, a JPEG with no end and a WebP shorter than
+        # its header says are refused; a whole PNG, as a canvas makes, saves.
+        def _png(w, h):
+            import struct, zlib
+            def chunk(t, d):
+                return struct.pack(">I", len(d)) + t + d + struct.pack(">I", zlib.crc32(t + d) & 0xffffffff)
+            rows = b"".join(b"\x00" + bytes((x * 7 + y * 13) % 256 for x in range(w * 3)) for y in range(h))
+            return (b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, 2, 0, 0, 0))
+                    + chunk(b"IDAT", zlib.compress(rows)) + chunk(b"IEND", b""))
+        _url = lambda kind, raw: f"data:image/{kind};base64," + base64.b64encode(raw).decode()
+        _whole = _png(8, 8)
+        for _label, _thumb in (("a PNG cut off after 26 bytes", _url("png", _whole[:26])),
+                               ("a whole PNG less its last byte", _url("png", _whole[:-1])),
+                               ("a JPEG with no end-of-image marker", _url("jpeg", b"\xff\xd8\xff\xe0" + b"\x00" * 60)),
+                               ("a WebP shorter than its header says", _url("webp", b"RIFF" + (1000).to_bytes(4, "little") + b"WEBPVP8 " + b"\x00" * 20))):
+            st, _made = api(pa, "POST", "", {"kind": "pad", "payload": payload, "thumbnail": _thumb})
+            check(f"a thumbnail that is {_label} is 400", st == 400, str(st))
+            if st == 201 and (_made or {}).get("id"):
+                api(pa, "DELETE", "/" + _made["id"])   # a broken build's save, so the next row meets its own cause
+        st, _whole_made = api(pa, "POST", "", {"kind": "pad", "payload": payload, "thumbnail": _url("png", _whole), "title": "whole"})
+        check("...while a whole PNG thumbnail saves", st == 201, str(st))
+        if st == 201 and (_whole_made or {}).get("id"):
+            api(pa, "DELETE", "/" + _whole_made["id"])
         # A body nested past the parser's recursion was a 500 on every JSON route.
         _tok = pa.evaluate("() => window.SKRIBL_CSRF_TOKEN || ''")
         _deep = pa.request.fetch(BASE + "/skribl/api/drafts", method="POST",

@@ -324,15 +324,18 @@ check("the caller's own dict is not edited by posting it", json.dumps(body, sort
 
 # ---------------------------------------------------------------- 4. points
 print("\nPOINTS — what a point carries beyond x, y and size is measured too")
-for label, body in (
+# A time that is not a number is refused for being one now, before its size
+# is weighed (the PRE-331 review's 1), so that row reads the time's words.
+for label, body, said in (
         ("a 3 MB string on one point",
-         {"strokes": [{"x": 0, "y": 0, "j": "A" * 3_000_000}], "strokeGroups": [1]}),
+         {"strokes": [{"x": 0, "y": 0, "j": "A" * 3_000_000}], "strokeGroups": [1]}, "extra content"),
         ("a 400 kB colour on a page's point",
-         {"frames": [{"strokes": [{"x": 0, "y": 0, "color": "B" * 400_000}], "strokeGroups": [1]}]}),
+         {"frames": [{"strokes": [{"x": 0, "y": 0, "color": "B" * 400_000}], "strokeGroups": [1]}]}, "extra content"),
         ("an object where a time goes",
-         {"strokes": [{"x": 0, "y": 0, "t": {"k": "C" * 300_000}}], "strokeGroups": [1]})):
+         {"strokes": [{"x": 0, "y": 0, "t": {"k": "C" * 300_000}}], "strokeGroups": [1]},
+         "must be a number of milliseconds")):
     r = client.post("/api/skribls", json=body)
-    check(f"{label} is refused", r.status_code == 400 and "extra content" in r.get_data(as_text=True),
+    check(f"{label} is refused", r.status_code == 400 and said in r.get_data(as_text=True),
           f"HTTP {r.status_code} {r.get_data(as_text=True)[:90]}")
 r = client.post("/api/skribls", json={"strokes": [{"x": 0, "y": 0, "pressure": 0.5}], "strokeGroups": [1]})
 check("a small unknown key an older client wrote still posts", r.status_code == 201, f"HTTP {r.status_code}")
