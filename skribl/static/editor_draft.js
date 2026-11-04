@@ -723,7 +723,24 @@ function rebuildHistoryForRestore(maxStrokes, maxGroups, appliedCount, baseHasCo
   // 30 near-full repaints in one synchronous burst at restore time — the
   // owner's "it seemed fine until all of a sudden it just slowed down".
   // restoreHistoryState (app.js) repaints these states on undo/redo.
-  const renderPrefix = (k) => clearAndRestore(() => padPaint(maxStrokes.slice(0, starts[k])));
+  //
+  // ONE COPY, ON THE WAY (a floor under Undo, editor_draw.js): a busy drawing
+  // is painted up to the deepest state its Undo reaches, the canvas kept there
+  // as that state's floor, and the last strokes painted on it. The first Undo
+  // after a reload then paints those few; it painted the whole drawing, 7 s
+  // on the two-hour piece with the CPU 4x slower.
+  const renderPrefix = (k) => clearAndRestore(() => {
+    const at = starts[Math.max(0, k - 30)], deepest = undoStack[0], seq = restoreSeq;
+    if (at < PAD_KEEP_MIN_POINTS || at >= starts[k] || !deepest || deepest.strokes.length !== at) {
+      padPaint(maxStrokes.slice(0, starts[k]));
+      return;
+    }
+    padPaint(maxStrokes.slice(0, at), () => {
+      if (seq !== restoreSeq) return;   // a newer paint has the canvas
+      padFloorAt(deepest);
+      padPaintAbove(maxStrokes.slice(at, starts[k]));
+    });
+  });
   // Each state keeps the recolours made by then (`n`, the points there were).
   // Its lines carry the colours they ended with, as every rebuilt state's
   // strokes always have; a later one is left out rather than kept for a
@@ -837,14 +854,19 @@ function holdStrokes(pts) {
    card, an export, an undo, all of them meet the whole drawing, never half
    of it. Under the threshold the paint is the one call it always was. */
 const PAD_SLICE_FROM = 20000;
-function padPaint(strokeArr) {
+// `then`, when given, runs once the ink is whole, or once a newer paint has
+// taken the canvas (it asks restoreSeq which).
+function padPaint(strokeArr, then) {
   if (strokeArr.length < PAD_SLICE_FROM || document.body.classList.contains('player-mode')) {
-    return paintStrokesStatic(strokeArr);
+    paintStrokesStatic(strokeArr);
+    if (then) then();
+    return;
   }
   const rest = () => finish();
   const done = () => {
     removeEventListener('pointerdown', rest, true);
     removeEventListener('keydown', rest, true);
+    if (then) then();
   };
   addEventListener('pointerdown', rest, true);
   addEventListener('keydown', rest, true);

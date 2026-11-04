@@ -176,6 +176,7 @@
       begin: () => {
         undoStack.push(makeHistoryState());
         if (undoStack.length > 30) undoStack.shift();
+        padFloorKeep();   // a floor under Undo (editor_draw.js)
         undoBtn.disabled = false;
         redoStack = [];
         redoBtn.disabled = true;

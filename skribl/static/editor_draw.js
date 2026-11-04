@@ -353,6 +353,7 @@ function startDraw(e) {
   currentStroke = [];
   undoStack.push(makeHistoryState());
   if (undoStack.length > 30) undoStack.shift();
+  padFloorKeep();   // a floor under Undo (editor_draw.js)
   undoBtn.disabled = false;
   redoStack = [];
   redoBtn.disabled = true;
@@ -572,7 +573,29 @@ function padUndoRestore(state) {
   const k = _padKept.find(k => k.pts && k.pts.length === pts.length && k.base === state.base
     && k.c.width === canvas.width && k.c.height === canvas.height && k.layers === strokeLayersOn()
     && k.pts.every((p, i) => p === pts[i]));
-  if (!k) return false;
+  if (k) { _padLay(k.c); return true; }
+  const f = _padFloorUnder(state);
+  if (!f) return _padRepaintTakingFloor(state);
+  _padLay(f.c);
+  if (pts.length > f.n) padPaintAbove(pts.slice(f.n));
+  return true;
+}
+// The strokes above a floor. Opaque ink paints the same through the stroke
+// layers or straight onto the canvas ("byte-identical", app.js, above
+// beginWetStroke), and straight costs nothing to set up, where the layers are
+// two more canvases the size of this one, made and seeded for each paint: most
+// of an Undo from a floor, about 200 ms of 260 with the CPU 4x slower. So
+// strokes with no see-through ink are painted with the layers' switch off for
+// that one call, and put back as it was.
+function padPaintAbove(pts) {
+  if (pts.some(p => !p.erase && anyStrokeAlpha(p.color) < 1)) { paintStrokesStatic(pts); return; }
+  const was = window.SKRIBL_STROKE_LAYERS;
+  window.SKRIBL_STROKE_LAYERS = false;
+  try { paintStrokesStatic(pts); } finally {
+    if (was === undefined) delete window.SKRIBL_STROKE_LAYERS; else window.SKRIBL_STROKE_LAYERS = was;
+  }
+}
+function _padLay(c) {
   ++_histRestoreSeq;   // a repaint still decoding its base must not land on this
   unrecordedInk = false;
   ctx.save();
@@ -580,9 +603,122 @@ function padUndoRestore(state) {
   ctx.globalCompositeOperation = 'source-over';
   ctx.globalAlpha = 1;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.drawImage(k.c, 0, 0);
+  ctx.drawImage(c, 0, 0);
   ctx.restore();
+}
+
+// A FLOOR UNDER UNDO (FUTURE 6z, after v330). The copies above serve the last
+// two Undos and the Redo back; the third Undo and every one after it painted
+// the whole drawing again: on the two-hour piece, a phone with the CPU 4x
+// slower, 6 to 7 s a press. But Undo reaches only thirty states down, the
+// deepest of them undoStack[0]. So two more canvases are kept, each the canvas
+// as it stood when a state was pushed (a stroke's start, a recolour's, a line
+// of text's: the canvas is exactly that state then; not a move's, whose
+// outline is painted on the canvas, selOutline above): the FLOOR, at or
+// under the deepest state, and the NEXT, above it, which becomes the floor
+// once the deepest state reaches it, and the next NEXT is taken then. An Undo
+// or a Redo no copy holds lays the highest of them its drawing begins with
+// (the very points, base, canvas size and stroke layers, as a copy is
+// matched) and paints only the strokes above it: about sixty at most, where
+// it had been all of them.
+//
+// THE STROKES ABOVE A FLOOR are painted as paintStrokesStatic paints any
+// drawing, their see-through ones layered by their own count. Opaque ink comes
+// back as the canvas showed it, pixel for pixel (verify_undofast reads it
+// against the canvas as it was drawn). A see-through stroke in a drawing past
+// the layering budget (lib/strokelayers.js, 24) comes back in its layer, as it
+// was drawn, where painting the whole drawing lays every see-through stroke
+// without one.
+//
+// WITH NO FLOOR UNDER IT (the first Undo after a draft comes back with its
+// history, or after a recolour or a move made new points under the floors),
+// the drawing is painted from its base as before, and a floor taken on the
+// way, at the deepest state left, so only that Undo pays.
+//
+// Two canvases more, 36 MB on a phone at 3x, for a busy drawing only
+// (PAD_KEEP_MIN_POINTS): a light one keeps none, as it keeps no copies.
+const _padFloors = [];
+// Every point when a floor is to be laid; at a push, which only chooses what
+// to keep, one point in sixteen and the last (a recolour or a move makes new
+// points stroke by stroke), so a stroke's start is not held reading two
+// drawings through: 16 ms of a press at a phone's pace, read every point.
+function _padFloorFits(f, state, step) {
+  const pts = state.strokes;
+  if (f.base !== state.base || f.layers !== strokeLayersOn() || f.n > pts.length
+      || f.c.width !== canvas.width || f.c.height !== canvas.height) return false;
+  if (f.n && f.pts[f.n - 1] !== pts[f.n - 1]) return false;
+  for (let i = 0; i < f.n; i += step || 1) if (f.pts[i] !== pts[i]) return false;
   return true;
+}
+function _padFloorUnder(state, step) {
+  let best = null;
+  for (const f of _padFloors) if ((!best || f.n > best.n) && _padFloorFits(f, state, step)) best = f;
+  return best;
+}
+// The canvas as it is now, kept as the drawing `state` holds (its first n
+// points); into `c`, a canvas let go a moment ago, when there is one.
+function _padFloorTake(state, n, c) {
+  c = c || document.createElement('canvas');
+  if (c.width !== canvas.width || c.height !== canvas.height) { c.width = canvas.width; c.height = canvas.height; }
+  const x = c.getContext('2d');
+  x.clearRect(0, 0, c.width, c.height);
+  x.drawImage(canvas, 0, 0);
+  _padFloors.push({ c, pts: state.strokes, n, base: state.base, layers: strokeLayersOn() });
+}
+// After a state is pushed: a stroke's start (below), a recolour's
+// (editor_tools.js) and a line of text's (editor_text.js).
+function padFloorKeep() {
+  const s = undoStack[undoStack.length - 1], u = undoStack[0];
+  if (!s || s.image || unrecordedInk || !canvas.width || !canvas.height) return;
+  let spare = null;
+  const free = (f) => {
+    _padFloors.splice(_padFloors.indexOf(f), 1);
+    if (spare) spare.width = spare.height = 0;
+    spare = f.c;
+  };
+  if (s.strokes.length < PAD_KEEP_MIN_POINTS) {
+    while (_padFloors.length) free(_padFloors[0]);
+  } else {
+    for (const f of _padFloors.slice()) if (!_padFloorFits(f, s, 16)) free(f);
+    const floor = _padFloorUnder(u, 16);   // the highest under the deepest: any lower one is no use
+    if (floor) for (const f of _padFloors.slice()) if (f !== floor && f.n <= floor.n) free(f);
+    // The NEXT is taken once the history is full, when the deepest state starts
+    // to move up; until then the floor under it serves every state.
+    if (!_padFloors.some(f => f !== floor)
+        && !(floor && (floor.n === s.strokes.length || undoStack.length < 30))) {
+      _padFloorTake(s, s.strokes.length, spare);
+      spare = null;
+    }
+  }
+  if (spare) spare.width = spare.height = 0;
+}
+function _padRepaintTakingFloor(state) {
+  const pts = state.strokes, u = undoStack[0];
+  if (pts.length < PAD_KEEP_MIN_POINTS || !canvas.width || !canvas.height) return false;
+  // Its base must be at hand, as restoreHistoryState then paints at once.
+  if (state.base && !(_baseImgCache && _baseImgCache.src === state.base && _baseImgCache.img.complete)) return false;
+  const at = u && u !== state && u.base === state.base && u.strokes.length < pts.length
+    && u.strokes.every((p, i) => p === pts[i]) ? u.strokes.length : pts.length;
+  restoreHistoryState(Object.assign({}, state, { strokes: pts.slice(0, at) }));
+  padFloorAt(at === pts.length ? state : u);
+  if (at < pts.length) padPaintAbove(pts.slice(at));
+  return true;
+}
+// The canvas holds `state` now: it becomes the only floor (the others are let
+// go, one canvas reused). The repaint above and a draft's paint
+// (editor_draft.js renderPrefix) call it on their way.
+function padFloorAt(state) {
+  let spare = null;
+  while (_padFloors.length) {
+    const f = _padFloors.pop();
+    if (spare) spare.width = spare.height = 0;
+    spare = f.c;
+  }
+  if (unrecordedInk || !canvas.width || !canvas.height || state.image) {
+    if (spare) spare.width = spare.height = 0;
+    return;
+  }
+  _padFloorTake(state, state.strokes.length, spare);
 }
 
 function endDraw() {
