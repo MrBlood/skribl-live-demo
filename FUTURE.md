@@ -1735,7 +1735,9 @@ and 6; the rest by profiling.
      safeguard; the cost is CPU and memory under a flood.
    - Suggested: a cheap admission check before inflating, or a limit at the
      proxy.
-5. **The demo login's key is in the URL** (Medium when enabled).
+5. ~~**The demo login's key is in the URL** (Medium when enabled).~~
+   **FIXED after v330** (the owner, Nov 3: "all yes" to a sign-in page;
+   DECISIONS: "The demo signs in from a page, and out with a button").
    - Where: `app.py`, about lines 272 to 285, `GET /demo-login?key=…`.
    - What: a query string ends up in history, proxy logs and referrers;
      the long key and constant-time compare don't change that.
@@ -1797,7 +1799,8 @@ The second pass (separate from the six above):
     - Where: `skribl/security.py`, about lines 490 to 493.
     - What: it looks for the word gzip, so `Accept-Encoding: gzip;q=0`
       (gzip refused) still gets gzip.
-14. **Demo logout is a GET** (Low).
+14. ~~**Demo logout is a GET** (Low).~~ **FIXED after v330** (the same
+    entry).
     - Where: `app.py`, about lines 287 to 290, `/demo-logout`.
     - What: with demo sign-in on, another site can log someone out by
       sending them there (logout CSRF, not a takeover). It pairs with 5:

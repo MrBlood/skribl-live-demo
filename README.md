@@ -141,9 +141,11 @@ the handler's own docstring, so a renamed or removed route rewrites its row.
 
 This demo app (`app.py`, not the blueprint) adds two more, and only when
 `SKRIBL_DEMO_IDENTITY` and a `SKRIBL_DEMO_LOGIN_KEY` of 16+ characters are both
-set: `/demo-login?key=<key>` signs the visiting browser in as that identity (a
-signed session cookie), and `/demo-logout` signs it out. Everybody else stays
-anonymous; see `.env.example`.
+set: `/demo-login` is a small page where the key is typed (and posted, never
+put in the address), which signs that browser in as the identity (a signed
+session cookie); signed in, the same page has a Sign out button, which posts to
+`/demo-logout` (a link there signs nobody out). Everybody else stays anonymous;
+see `.env.example`.
 
 ## The in-post player
 

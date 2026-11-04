@@ -32,6 +32,7 @@ import sys
 import threading
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 import uuid
 from pathlib import Path
@@ -626,7 +627,10 @@ try:
     else:
         _jar = http.cookiejar.CookieJar()
         _op = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(_jar))
-        _op.open(dr_base + "/demo-login?key=" + DR_KEY, timeout=10).read()
+        # Signed in as the owner does, by posting the key from the page's
+        # form (a key in the address signs nobody in).
+        _op.open(urllib.request.Request(dr_base + "/demo-login",
+                                        data=urllib.parse.urlencode({"key": DR_KEY}).encode()), timeout=10).read()
         _m = re.search(r'SKRIBL_CSRF_TOKEN = "([^"]+)"', _op.open(dr_base + "/skribl-pad", timeout=10).read().decode())
         _tok = _m.group(1) if _m else ""
 
