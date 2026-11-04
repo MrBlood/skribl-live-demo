@@ -523,6 +523,84 @@ with sync_playwright() as p:
         check("...and Play plays it", not _errs and _at > 0, f"progress {_at}, errors {_errs[:2]}")
         _pp.close()
 
+        print("\nTHE COMPOSITOR LAYS BACK ONLY WHAT CHANGED (FUTURE 6z item 11)")
+        # present() laid the WHOLE dry layer back on every frame: 4.5 million
+        # pixels on a 3x phone for the few segments a frame draws, 11.7 frames a
+        # second at a phone's pace. It lays back the box each frame's strokes
+        # touched now. Two things must hold, read against an independent
+        # reference: the compositor's own dry and wet layers, caught as it makes
+        # them, composed in full the old way (clear, dry, wet at its alpha).
+        # (1) the screen IS that full composite, every few frames of a replay
+        # driven step by step through the replay's own loop, and after a
+        # static paint (its runs take pathFn and wetRunFn); (2) a frame's copies
+        # are a small part of the canvas. Opaque, see-through (one size and
+        # pressured) and eraser strokes, so every op marks or the screen lacks it.
+        _lay = page.evaluate("""() => {
+          const pts = [], groups = []; let t = 0;
+          for (let k = 0; k < 24; k++) {
+            const x0 = 40 + (k * 53) % 560, y0 = 50 + (k * 37) % 380, see = k % 3 === 1, erase = k % 5 === 4;
+            for (let i = 0; i < 14; i++) {
+              const q = { x: x0 + i * 11, y: y0 + Math.sin(i / 2) * 24, t: (t += 20),
+                          color: see ? 'rgba(124, 92, 255, 0.35)' : '#1d1a2b',
+                          size: see && k % 2 ? 4 + (i % 5) * 2 : 6 + (k % 4) * 3 };
+              if (!i) q.start = true; if (erase) q.erase = true;
+              pts.push(q);
+            }
+            groups.push(14); t += 200;
+          }
+          strokes = pts; strokeGroups = groups; recolors = [];
+          const W = canvas.width, H = canvas.height;
+          const wipe = () => { ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, W, H); ctx.restore(); };
+          const made = [], mk = document.createElement.bind(document);
+          const catching = (f) => { document.createElement = (n) => { const e = mk(n); if (n === 'canvas') made.push(e); return e; };
+                                    try { return f(); } finally { document.createElement = mk; } };
+          const ref = mk('canvas'); ref.width = W; ref.height = H; const rx = ref.getContext('2d');
+          const differ = (wetA) => {
+            rx.globalAlpha = 1; rx.clearRect(0, 0, W, H); rx.drawImage(made[0], 0, 0);
+            if (wetA) { rx.globalAlpha = wetA; rx.drawImage(made[1], 0, 0); }
+            const a = ctx.getImageData(0, 0, W, H).data, b = rx.getImageData(0, 0, W, H).data; let n = 0;
+            for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) n++;
+            return n; };
+          // What a frame lays back: the clip's area when a layer is drawn under
+          // a clip (present's rect), else the whole layer.
+          let copied = 0, frames = 0, checks = 0, bad = 0, worst = 0, clipA = null;
+          const dI = ctx.drawImage, rc = ctx.rect, cl = ctx.clip, rs = ctx.restore;
+          let lastRect = null;
+          ctx.rect = function (x, y, w, h) { lastRect = w * h; return rc.apply(this, arguments); };
+          ctx.clip = function () { clipA = lastRect; return cl.apply(this, arguments); };
+          ctx.restore = function () { clipA = null; return rs.apply(this, arguments); };
+          ctx.drawImage = function (img) {
+            if (made.indexOf(img) >= 0) copied += clipA != null ? clipA : arguments.length === 9 ? arguments[3] * arguments[4] : img.width * img.height;
+            return dI.apply(this, arguments); };
+          try {
+            wipe();
+            const tl = buildPlaybackTimeline();
+            made.length = 0; const comp = catching(() => makeStrokeCompositor(ctx, canvas));
+            let ti = 0, at = 0;
+            while (ti < tl.length && frames < 3000) {
+              at += 1000 / 60;
+              ti = replayTimelineToCanvas(tl, ti, at, comp.dotFn, comp.lineFn, comp);
+              comp.present(); frames++;
+              if (frames % 3 === 0 || ti >= tl.length) {
+                const last = tl[ti - 1], wetA = last && !last.erase ? parseStrokeAlpha(last.color) : 1;
+                const n = differ(wetA < 1 ? wetA : 0); checks++; if (n) { bad++; worst = Math.max(worst, n); }
+              }
+            }
+            const perFrame = copied / Math.max(1, frames) / (W * H);
+            wipe(); made.length = 0; copied = 0;
+            catching(() => paintStrokesStatic(strokes));
+            const still = differ(0);
+            return { frames, checks, bad, worst, perFrame, still, layers: made.length };
+          } finally { ctx.drawImage = dI; ctx.rect = rc; ctx.clip = cl; ctx.restore = rs; }
+        }""")
+        check("a replay driven step by step: the screen is the full composite of its layers at every check, pixel for pixel",
+              _lay["checks"] > 50 and _lay["bad"] == 0,
+              f"{_lay['checks']} checks over {_lay['frames']} frames; {_lay['bad']} differed (worst {_lay['worst']} bytes)")
+        check("...and a static paint (its see-through runs as one path and as a baked run): the screen is its dry layer",
+              _lay["layers"] >= 2 and _lay["still"] == 0, f"{_lay['still']} bytes differ; layers caught {_lay['layers']}")
+        check("...while a frame lays back a small part of the canvas, not all of it (under 15% on average)",
+              _lay["perFrame"] < 0.15, f"{_lay['perFrame'] * 100:.1f}% of the canvas a frame")
+
     finally:
         br.close()
 

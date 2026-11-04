@@ -853,12 +853,17 @@ function makeStrokeCompositor(visCtx, visCanvas) {
       const W = Math.min(visCanvas.width, Math.ceil(bX * dpr)) - X, H = Math.min(visCanvas.height, Math.ceil(bY * dpr)) - Y;
       bx = by = 1e9; bX = bY = -1e9;
       if (W < 1 || H < 1) return;
+      // CLIPPED, NOT CUT: the whole layers drawn as before, held to the box.
+      // A source rectangle (drawImage's nine arguments) blends a see-through
+      // stroke a hair differently, 1 or 2 in 255 where it lies over ink, so
+      // the screen was no longer the composite (verify_beading caught it).
       visCtx.save();
       visCtx.setTransform(1, 0, 0, 1, 0, 0);
+      visCtx.beginPath(); visCtx.rect(X, Y, W, H); visCtx.clip();
       visCtx.globalAlpha = 1;
       visCtx.clearRect(X, Y, W, H);
-      visCtx.drawImage(dry, X, Y, W, H, X, Y, W, H);
-      if (wetActive) { visCtx.globalAlpha = wetAlpha; visCtx.drawImage(wet, X, Y, W, H, X, Y, W, H); }
+      visCtx.drawImage(dry, 0, 0);
+      if (wetActive) { visCtx.globalAlpha = wetAlpha; visCtx.drawImage(wet, 0, 0); }
       visCtx.restore();
     },
     finish() { if (wetActive) bakeWet(); },
