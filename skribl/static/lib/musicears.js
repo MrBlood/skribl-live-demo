@@ -5,9 +5,10 @@
  * picked by the owner: "all yes"; the bar of three is step 8 of the
  * whole-drawer mock (FUTURE.md 6s).
  *
- *   listen(buffer, done)  reads the song's first two minutes a few
- *                         milliseconds at a time, so the page never stalls,
- *                         then calls done(heard); returns { cancel }.
+ *   listen(buffer, done)  hears the song's first two minutes in a worker
+ *                         (where none can start, a few milliseconds at a
+ *                         time here), so the page never stalls, then calls
+ *                         done(heard); returns { cancel }.
  *   hear(samples, rate)   the same at once, for a channel already in hand.
  *                         heard.bar is its bar: 4, or 3 for a song in three.
  *   pick(heard, o)        Skribl's pick, with ears, or null:
