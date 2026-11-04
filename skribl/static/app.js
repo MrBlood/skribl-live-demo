@@ -849,10 +849,9 @@ function makeStrokeCompositor(visCtx, visCanvas) {
     },
     present() {
       if (bX < bx) return;                               // nothing drawn since the last
-      const X = Math.max(0, Math.floor(bx * dpr)), Y = Math.max(0, Math.floor(by * dpr));
-      const W = Math.min(visCanvas.width, Math.ceil(bX * dpr)) - X, H = Math.min(visCanvas.height, Math.ceil(bY * dpr)) - Y;
+      // Not clamped to the canvas: the clip and clearRect hold to it anyway.
+      const X = Math.floor(bx * dpr), Y = Math.floor(by * dpr), W = Math.ceil(bX * dpr) - X, H = Math.ceil(bY * dpr) - Y;
       bx = by = 1e9; bX = bY = -1e9;
-      if (W < 1 || H < 1) return;
       // CLIPPED, NOT CUT: the whole layers drawn as before, held to the box.
       // A source rectangle (drawImage's nine arguments) blends a see-through
       // stroke a hair differently, 1 or 2 in 255 where it lies over ink, so
