@@ -29767,3 +29767,61 @@ link's); powerful and playful (unchanged).
 
 Not tested here: a real phone (no phone in this box; the CPU 4x slower stands
 in for one) and Safari (no WebKit here).
+
+## After v330 -- A page change on a long Flip moves the strip's mark
+
+The third of the speed fixes the owner said "all yes" to (Nov 4), FUTURE 6y's
+follow-up: "Still slow on a long Flip, measured and not built: a page change."
+
+- TRACED, a long Flip opened (60 pages of 2,400 points), six taps on its page
+  strip, each timed by its parts. go() made every tile again on each page
+  change (buildStrip): the 60 pictures laid from the cache and every page's
+  signature read. On a desk a change took 34 to 54 ms, the strip 19 to 43 of
+  it; with the CPU 4x slower 122 to 260 ms, the strip 84 to 187. On a phone
+  39 to 60 ms, 22 to 28 of it the strip; slower, 170 to 375, 104 to 197. The
+  rest is the new page painted on the pad.
+- BUILT: a page change moves the strip's mark (turnStrip). When the strip is
+  the one made for these pages, in this order, and nothing on it follows the
+  page you are on (a range of pages, the paste ghost after it, a delete
+  armed), the mark moves, and the page bar, the length and the tools follow;
+  else the strip is made again, as before. The page you leave is laid again
+  from its ink as it is now, as making the strip again did; the page you
+  come to is painted at once if its picture is still to come in slices, as
+  the strip painted the page you are on. The tiles stay the elements they
+  were, so the strip keeps where it is scrolled to, and a page's ⋯ opened
+  from another page keeps its button.
+- MEASURED after, the same Flip and taps: on a desk 11 to 28 ms a change (54
+  to 101 slower), on a phone 15 to 35 (88 to 181 slower); the strip's part is
+  3 to 5 ms at full speed and 12 to 32 slower. No change over 50 ms is left
+  at full speed on either. What is left is the new page's own paint.
+
+THE CHECKS: verify_flipopen, the turn part. On a phone and a desk: a tap on
+another page moves the mark and makes no tile again (the same elements;
+buildStrip not called); the strip is then, tile for tile, picture for picture
+and with its page bar, what making it again gives (read, then made again and
+read the same way); with the CPU 4x slower, the change's strip part (the
+change less the new page's own paint) is under half of the strip made again
+alone on the same page; the page you leave is laid from its ink as it is now.
+On a desk, where the strip follows the page you are on, it is made again and
+is what making it gives: after a range of pages, with a page copied (the
+ghost follows), with a delete armed (the arm goes), with a range anchored
+from a menu or an undo (drawn to the new page), and under a strip made for
+the pages in another order. FOUND WHILE CALIBRATING: the strip read the
+moment it is made still has its buttons' titles (lib/tooltip.js takes them
+into data-tip from a MutationObserver), so each read waits a task; and three
+rows read the ghost, the arm and the range after the check that makes the
+strip again, where nothing can be wrong, so they read first. CALIBRATED, each
+shown red against its own break: the strip always made again (the mark, the
+time and the page-left rows, both screens); the page left not laid again
+(that row, both); each condition taken out alone (a range shown, a range
+anchored, a delete armed, the ghost, the pages' order: each its own row);
+the page to come not painted at once (the tap row: a tile not yet painted is
+painted when the tap is done). With none broken, 15 of 15.
+
+WHAT IT DOES TO THE PAD: not for the Pad, which has no pages.
+
+THE FOUR: kind (a page change on a long Flip no longer holds the page), simple
+and powerful (the strip is the same strip), playful (unchanged).
+
+Not tested here: a real phone (no phone in this box; the CPU 4x slower stands
+in for one) and Safari (no WebKit here).
