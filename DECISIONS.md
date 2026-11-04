@@ -30021,3 +30021,26 @@ powerful and playful (unchanged).
 
 Not tested here: Segoe UI and SF (the sizes do not depend on the font; the
 wrapping was measured in this box's fonts).
+
+## After v330 -- Every word on Report a problem at 12px
+
+The owner's "all yes" (Nov 4) to every word to 12px, sheet by sheet. Sheet
+2 of 3. Only sizes change.
+
+- BUILT: the details (the monospace block a tester copies) 11.5 to 12px, and
+  the line under them that says what is left out 11 to 12px, both editors.
+  The sheet grows 1 px (400 to 401 on a phone, 381 to 382 on a desk); the
+  details keep their 210 px window and scroll a line further; no word is cut
+  off.
+
+THE CHECKS: verify_report, "every word it paints at 12px or more": every
+text the sheet lays out, both editors, phone and desk, after a stroke.
+CALIBRATED: each rule put back alone turns all four rows red, naming its
+word. With neither, 4 of 4.
+
+WHAT IT DOES TO FLIP: shared (one partial, one rule each).
+
+THE FOUR: kind (the words that say what is not sent are the ones to read),
+simple (one floor), powerful and playful (unchanged).
+
+Not tested here: Segoe UI and SF.

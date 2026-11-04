@@ -1555,7 +1555,8 @@ gallery and Share 11.5px; the kind tag and the stats' and now-playing labels
 the progress label, and on Flip the scope and note lines, 11 to 11.5px;
 **all 12px after v330**, DECISIONS: "Every word on the Export sheet at
 12px");
-Report (its details 11.5px, its privacy line 11px); the ⋯ menu (the version
+Report (its details 11.5px, its privacy line 11px; **both 12px after
+v330**, DECISIONS: "Every word on Report a problem at 12px"); the ⋯ menu (the version
 line 10.5px, the row notes 11px); How it works (the search count 11.5px, the
 numbered circles 11px); and in the editors the autosave status, the zoom
 readout, the pending line, Flip's small + buttons and the music bar's scope
