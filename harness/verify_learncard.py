@@ -49,6 +49,12 @@ cards mock, "All yes"). Each row holds a promise, on the Pad and on Flip:
      each card plays its own example, a recording of that control used
      (Flip's photo filmed on Flip); on a desk a rest grows Hear the loop's
      card.
+ 15. FLIP'S LAST TWELVE: a page's ⋯ (phone), the page bar's six (desk),
+     Artwork's bar and the Stamps drawer's Size, held or rested on, open
+     their cards in the words said yes to, painted, whole and clear; nothing
+     is pressed; Size opens from its word and its value, never the slider;
+     a quick tap on the ⋯ still opens its menu; each More finds its entry in
+     How it works, Pages' own too; ? names the page bar's six.
 
 For calibration, LEARNCARD_PART=<words of a part's label> runs that part
 alone ("Tune's rows", "the draw drawer's six"). A real run sets none.
@@ -1143,9 +1149,13 @@ with sync_playwright() as p:
             check(f"{name}: Size's card opens from its value too, and a hold on the slider itself opens no card: it just slides",
                   bool(by_value) and by_value["name"] == "Stamp size" and v1 == v0 and by_slider is None,
                   f"value: {by_value and by_value['name']} ({v0} -> {v1}); slider: {by_slider and by_slider['name']} ({v1} -> {v2})")
-            # A quick tap on the ⋯ still opens its menu.
+            # A quick tap on the ⋯ still opens its menu. 200 ms, a slow tap and
+            # still well under a hold (HOLD, 500): in this box a timer set as
+            # a finger lands fires about 110 ms late, so an 80 ms tap lifted
+            # before even a 50 ms hold could open, and the row could not see a
+            # hold made too short (calibrated: 50 and 150 go red, 500 green).
             show(q, "pages")
-            touch_hold(q, cdp, "#strip .pageops", 80)
+            touch_hold(q, cdp, "#strip .pageops", 200)
             q.wait_for_timeout(250)
             tap = q.evaluate("() => [!!document.querySelector('.pageops-menu'), !!document.querySelector('.lc-card')]")
             q.keyboard.press("Escape")
@@ -1212,7 +1222,7 @@ with sync_playwright() as p:
                 return { missing: six.filter(n => !t.some(x => x.n === n)), unpainted: t.filter(x => !x.painted).map(x => x.n), over }; }""",
                             ["Move", "Copy", "Draw", "Loop", "Under", "Delete"])
             q.keyboard.press("Escape")
-            check(f"{name}: ? names the page bar's six, each tag painted and none on another",
+            check(f"{name}: ? names the page bar's six, each tag painted, and no tag on the screen on another",
                   not tg["missing"] and not tg["unpainted"] and not tg["over"], str(tg))
             c.close()
         part("Flip's last twelve", flip_last)

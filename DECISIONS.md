@@ -29492,3 +29492,62 @@ they lie). The Pad has no tiles, and paints a stroke's start live.
 
 THE FOUR: powerful (a busy page draws and undoes without a hold); kind
 (nothing on screen changes but the wait); simple and playful (unchanged).
+
+## After v330 -- Flip's last twelve cards
+
+The last of the help cards (FUTURE.md 6aa). The words were mocked on the real
+card, phone and desk, light and dark: 34 of 34 cards whole and clear of their
+controls, every word 8.3:1 or more, no hold or rest pressing anything. The
+owner: "All yes" to the twelve in those words, to Size opening from its word,
+to one card on a page's ⋯ on a phone, and, asked whether there was any reason
+not to, to Done's Esc row said plainly.
+
+- THE TWELVE: a page's actions (on a desk the page bar's Left and Right, one
+  card, Copy, Draw, Loop, Under and Delete; on a phone one card on the page's
+  ⋯, naming what is inside it), Artwork's bar (where it sits, which pages
+  move, Reset, Done) and the Stamps drawer's Size. A hold or a rest presses
+  nothing: no page moves, copies, goes, loops, draws on or stays under, and
+  Artwork's bar keeps its pages, its numbers and its mode.
+- THE ⋯ COMES AHEAD OF PAGES in the card list: it sits inside its page's
+  tile, and Pages, tag-only, answered first and opened nothing (the mock
+  found it).
+- SIZE OPENS FROM ITS WORD AND ITS VALUE, never the slider: a hold on a
+  slider moves it (the mock's held Size went from 100% to 90%), so the slider
+  just slides.
+- DONE'S ESC ROW, a desk's: "Put it back, and the bar goes", under "Keep it,
+  and the bar goes". The mock's "Let go of the move instead" read like
+  lifting a finger; Esc is Artwork's Cancel (flip.js cancelMove).
+- EACH MORE FINDS ITS ENTRY in How it works: "Add pages" (the step that
+  moves, copies and selects pages), "Draw-on", "Loop this page", "Keep
+  under", "delete a page", "Move artwork", "And following", "Stamps". FOUND:
+  Pages' own More searched "Reorder", which nothing in How it works says (0
+  of 92 entries); it searches "Add pages" now.
+
+THE CHECKS: verify_learncard 15, eight rows on Flip: the six a phone shows,
+held, in the words said yes to, painted, whole, clear, ringed, Got it; no hold
+pressing anything; Size from its value, and no card from the slider; a quick
+tap on the ⋯ still its menu; the eleven a desk shows, rested on, Done's with
+Esc; no rest pressing anything; every More, Pages' too, finding its entry;
+? naming the page bar's six. CALIBRATED, each shown red against its own break:
+the ⋯ after Pages (the hold rows: no card, and the lift opened the menu); the
+old Esc words (the desk row); the lift's press let through (the presses-nothing
+row); Size keyed to its whole row and to its word alone (the Size row); a rest
+that clicks (the desk's presses-nothing row); Pages back to "Reorder" (More);
+the tags' nudge taken out (?). FOUND, AND CHANGED HERE: the quick tap first
+lasted 80 ms, as the other parts' do, and stayed green with the hold cut to
+50 ms. In this box a timer set as a finger lands fires about 110 ms late, so an
+80 ms tap lifts before even a 50 ms hold can open. This row taps for 200 ms, a
+slow tap and well under the hold, and goes red at 50 and 150. The other parts'
+80 ms taps still prove a tap is a tap; they cannot see a hold made too short.
+
+WHAT IT DOES TO THE PAD: not for the Pad. These are Flip's own controls
+(pages, Artwork, stamps); the Pad has none of them.
+
+THE FOUR: kind (a hold never moves, copies or deletes a page; Delete's card
+says Undo brings it back); simple (one card per control, the card used
+everywhere else); playful ("a background you draw once", "a small stamp still
+looks drawn"); powerful (Artwork's exact numbers and And following were the
+two things only How it works told you about).
+
+Not tested here: a real finger and an iPhone's hold (no WebKit in this box;
+the holds are simulated touches).

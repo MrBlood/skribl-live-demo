@@ -1611,9 +1611,12 @@ photo drawers' eight cards"), a grey button's card opening on a hold too.
 The eight examples, **built** (DECISIONS, after v330, "The music and photo
 drawers' eight examples"): phone clips of each control used on the drawer,
 shared by both editors as Add music's is, Add a photo filmed on each; each
-also in How it works. Still without a card: Flip's Stamps drawer size,
-Artwork's bar (This page, And following, Reset, Done) and a page's
-actions; offered on Nov 1 (words to mock first), not yet answered.
+also in How it works. The last twelve, Flip's Stamps drawer size, Artwork's
+bar (where it sits, which pages move, Reset, Done) and a page's actions (the
+page bar's six on a desk, one card on the ⋯ on a phone), mocked on Nov 4:
+"All yes", **built** (DECISIONS, after v330, "Flip's last twelve cards").
+Every control a card can name now has one. These twelve have no example to
+watch yet; none was asked for.
 
 ## 6ab. Text that writes itself, in the owner's own hand (owner, Oct 31: "How hard would it be to add text to the pad?", then "Can't we have our own font")
 
