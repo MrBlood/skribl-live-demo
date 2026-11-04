@@ -1571,6 +1571,12 @@ def register_routes(bp, *, index_route=False):
             return jsonify({"error": "Skribl not found."}), 404
         if not _csrf_ok():
             return _csrf_refusal()
+        # THE ATTEMPTS BUDGET, AS EVERY OTHER WRITE SPENDS IT (the PRE-331
+        # review's 7): a take-down is a lookup and a key check, and nothing
+        # bounded how many one connection could ask for. After CSRF, so a
+        # forged one spends nothing, as on the drafts' routes.
+        if _rate_limited(_client_ip(), "attempts"):
+            return jsonify({"error": "Too many requests. Try again in a little while."}), 429
         try:
             delete_post(public_id,
                         author_id=bp.skribl_current_user_id(),
@@ -1605,6 +1611,9 @@ def register_routes(bp, *, index_route=False):
             return jsonify({"error": "Skribl not found."}), 404
         if not _csrf_ok():
             return _csrf_refusal()
+        # The attempts budget, as on delete_skribl above (the review's 7).
+        if _rate_limited(_client_ip(), "attempts"):
+            return jsonify({"error": "Too many requests. Try again in a little while."}), 429
         # THE SHAPE IS CHECKED BEFORE ANYTHING IS INDEXED, and the first
         # version of this route did not do that. `"visibility" in body`
         # is true for the JSON array ["visibility"] and for the JSON

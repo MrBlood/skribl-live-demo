@@ -228,6 +228,35 @@ def _rate_limited(ip, kind="posts"):
         return False
 
 
+def _rate_over(ip, kind="attempts"):
+    """WHETHER `ip` IS ALREADY AT ITS CAP FOR `kind`, CHARGING NOTHING.
+
+    For a hook that would otherwise do costly work on a request its route
+    will refuse unread: security's _inflate_request asks before inflating a
+    gzipped body (the PRE-331 review's 4: a client over its attempts still
+    made the server decompress, up to the request limit, before the 429).
+    A peek, not the decision: the route still charges and decides. The two
+    read the same window a moment apart with the same arithmetic (refused
+    at the cap, not past it), so they can differ only at the window's very
+    edge, by the moment between them. A store that cannot be read answers
+    no and leaves the route's own charge to refuse, as it always has.
+    """
+    cap = _rate_cap(kind)
+    if _rate_backend() == "db":
+        try:
+            with _rate_sessionmaker()() as s:
+                _bounded(s)
+                return _db_rate_count(s, kind, _rate_key(ip)) >= cap
+        except sa.exc.OperationalError:
+            return False
+    now = time.monotonic()
+    buckets, lock = _mem_state()
+    with lock:
+        bucket = buckets.get((kind, ip)) or ()
+        return sum(1 for e in bucket
+                   if now - (e[0] if isinstance(e, tuple) else e) <= _RATE_WINDOW_SECONDS) >= cap
+
+
 # Process-wide defaults, resolved at import as before. What is NEW (v200
 # follow-up review, F5): both are overridable PER APP through app.config, and
 # the HMAC fallback reads the app's configured SECRET_KEY — v200's env-only

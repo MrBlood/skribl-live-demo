@@ -20,6 +20,7 @@ from flask import current_app, g, jsonify, request, url_for
 from .core import _env_int
 from .drafts import max_drafts   # the one reading of SKRIBL_MAX_DRAFTS
 from .jsstrip import strip_bytes, strip_css_bytes
+from .ratelimit import _client_ip, _rate_over
 
 # Text-ish types only. Images, audio and video are already compressed;
 # re-gzipping them spends CPU to make them marginally larger.
@@ -380,6 +381,21 @@ def register_security(bp, skribl_version, player_target="_blank", home=None):
         if (request.method not in ("POST", "PUT", "PATCH")
                 or (request.headers.get("Content-Encoding") or "").lower() != "gzip"):
             return None
+        # NOTHING IS INFLATED FOR A REQUEST ITS ROUTE WILL REFUSE UNREAD (the
+        # PRE-331 review's 4). Every route here that takes a body refuses a
+        # forged request, then one over the attempts budget, before it reads
+        # a byte; inflating first spent the CPU and memory a flood is meant to
+        # be denied. A forged one is left compressed for its route's own 403.
+        # One over budget is answered here, charging nothing (the route would
+        # not have charged it either), in the words the composer shows: only
+        # its post is ever sent gzipped (lib/posted.js).
+        if bp.skribl_csrf and not bp.skribl_csrf[2](request):
+            return None
+        if _rate_over(_client_ip(), "attempts"):
+            return jsonify({
+                "error": ("Too many requests from this connection. Nothing was "
+                          "lost — wait a little and try again.")
+            }), 429
         # The SAME resolved limit as _bound_request — see _request_limit (F3).
         limit = _request_limit()
         try:
@@ -487,9 +503,14 @@ def register_security(bp, skribl_version, player_target="_blank", home=None):
         # of CPU for one cold page load of 25 assets, serialised across two sync
         # workers. Compression that costs more than the transfer it saves is not
         # an optimisation.
+        #
+        # GZIP ONLY WHERE IT IS ACCEPTED, by its quality (the PRE-331 review's
+        # 13): the word alone was read, so "gzip;q=0", which refuses it, got
+        # gzip. Werkzeug's parse gives the quality, a wildcard included; a
+        # quality that does not parse is no quality, and plain is always safe.
         if not (resp.status_code == 200
                 and "Content-Encoding" not in resp.headers
-                and "gzip" in (request.headers.get("Accept-Encoding") or "")
+                and request.accept_encodings["gzip"] > 0
                 and _COMPRESSIBLE.match(resp.mimetype or "")):
             resp.vary.add("Accept-Encoding")
             return resp
