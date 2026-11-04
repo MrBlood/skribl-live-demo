@@ -337,8 +337,11 @@ with sync_playwright() as sp:
     # sized as the editor, three paints, 1 x 1 on a desk): resizeCanvas also
     # returns on that page, and the editor's fit asks once whether it is in a
     # player, where two of its callers each asked, -27 B (160,319 measured).
+    # And RAISED, in both places together, by a long Flip's first look (the
+    # owner's "all yes" to B, FUTURE 6x), +18 B, all app.js: the first paint's
+    # slices end where the page at rest is drawn (160,337 measured).
     check("stripping keeps the player's JS under its ratchet",
-          lean_total <= 160_322,
+          lean_total <= 160_340,
           f"{src_total:,} B of source -> {lean_total:,} B parsed")
     # THE MODULE ONLY A RECOLOURED DRAWING FETCHES (lib/recolorplay.js, by
     # app.js on the link page and inlineplayer.js in a post): its own pin, so

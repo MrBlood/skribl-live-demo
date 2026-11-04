@@ -29881,3 +29881,52 @@ playful (unchanged).
 
 Not tested here: a real phone (no phone in this box) and Safari (no WebKit
 here).
+
+## After v330 -- A long Flip's first look: its own card at once
+
+The owner's "all yes" to B (Nov 4), from the three asks' mock: FUTURE 6x,
+which said to mock it beside the Pad's first look first, and the fourth of
+the speed fixes. A Pad post's link page has shown its own picture before its
+data since the posting mock's 2b, B; a Flip's did not.
+
+- FILMED for the mock, a long Flip (60 pages of 2,400 points, a 9.2 MB
+  payload) on a phone at about 12 Mbps: the box stood black for 2 to 5 s,
+  then the whole page jumped 144 px up (142 on a desk) as the Flip arrived.
+  FUTURE 6x had held a Flip back because its card might not be the page its
+  link rests on; since Blooby's link page both are the poster page
+  (lib/holdtiming.js posterOf), so the picture is the page it gives way to.
+- BUILT: the server sends a Flip's size with the page, as it does a Pad's,
+  and its line's words: a Flip has no artist's time and no Fit, and plays at
+  1x, so the line under the track is laid out with the page and nothing moves
+  when the data comes (the mock's prototype, the server's half alone, still
+  moved 8 px on a phone and narrowed 15 on a desk). The page's own code lays
+  out the box and shows the card, cropped as the Pad's is (the same card
+  builder, lib/postedcard.js).
+- FOUND BUILDING IT: under the picture, the first paint lays page 0 in
+  slices, and drawing the page at rest did not stop them (drawFlipFrame
+  clears with clearRect, not clearAndRestore): left running, they laid page 0
+  over the page at rest, its see-through ink twice, or over a page drawn on
+  the page kept under it. app.js ends them there with a new restoreSeq, and
+  their end lets the picture go. +18 B in the player, its ratchet up with it
+  (160,337 measured).
+
+THE CHECKS: verify_firstlook. A Flip's page knows its size, its picture and
+its line (1x, no drawn time); a missing post's knows none. With the data held
+back, a Flip's own card is painted where the canvas is, cropped to the
+drawing (none of the card's ground or ring), phone and desk; nothing moves
+when the data comes, to the half pixel; the picture gives way to the page at
+rest, the transport up. A Flip whose first page is laid in slices (19,500
+points of see-through ink) rests on that page drawn once: pixel for pixel the
+page painted again at once on the same canvas. CALIBRATED, each shown red
+against its own break: a Flip left out of the page's size (the eight Flip
+rows); its line not sent (the line row and both nothing-moves rows: 8.5 px on
+a phone, 22 px narrower on a desk); the slices not ended (the drawn-once
+row). With none broken, 43 of 43.
+
+WHAT IT DOES TO THE PAD: shared; the Pad's own first look, now Flip's too.
+
+THE FOUR: kind (no black box, no jump), simple (one first look for both),
+powerful and playful (unchanged).
+
+Not tested here: a real phone on a real connection (the browser's own
+throttle stands in), and Safari (no WebKit here).

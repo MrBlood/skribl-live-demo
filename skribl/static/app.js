@@ -3882,7 +3882,14 @@ function showPlayerError(msg, canRetry) {
   // and every other surface show. loadSkribl painted page 0, and a Flip that
   // starts on a page meant to stay underneath opened on that page alone:
   // Blooby's link showed his card with nobody on it.
-  if (isFlip && _hold && _hold.posterOf) drawFlipFrame(_hold.posterOf(flipFrames, data.under), 1);
+  //
+  // AND THE FIRST PAINT STOPS HERE. Under the post's picture (a Flip's since
+  // FUTURE 6x) loadSkribl lays page 0 in slices, and drawing a page here does
+  // not clear through clearAndRestore, so the slices went on laying page 0
+  // over the page at rest: its see-through ink twice, or over the page drawn
+  // on the one kept under. A new restoreSeq ends them, and their end lets the
+  // picture go (paintStrokesStatic's `whole`) over the page at rest.
+  if (isFlip && _hold && _hold.posterOf) { restoreSeq++; drawFlipFrame(_hold.posterOf(flipFrames, data.under), 1); }
   const totalMs = isFlip ? flipDurMs : (timeline.length ? timeline[timeline.length - 1].playT : 0);
 
   const pPlay = document.getElementById('playerPlayBtn');

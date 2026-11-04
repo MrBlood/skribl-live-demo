@@ -8,8 +8,16 @@ and the paint was one task in which nothing on the page could be touched.
 
 WHAT IS ASKED, AND HOW IT IS READ
   * THE PAGE KNOWS (the route, read from the HTML): a Pad post's page carries
-    its size, its title and caption in the shell, and its own picture. A
-    Flip's, and a missing post's, carry none.
+    its size, its title and caption in the shell, and its own picture; a
+    Flip's carries its size and picture too (FUTURE 6x, the owner's "all yes"
+    to B), and its line's words (1x, no artist's time). A missing post's
+    carries none.
+  * A FLIP'S FIRST LOOK: its own picture where the canvas is before its data,
+    cropped to the drawing, phone and desk; nothing moves when its data comes
+    (its line is laid out with the page); the picture gives way to the page
+    the link rests on. And THE FIRST PAINT STOPS THERE: a Flip whose first
+    page is laid in slices under the picture rests on that page drawn once,
+    its see-through ink as one call lays it, not laid twice.
   * AT ONCE: the post's data is held back by the browser (a route), and on the
     page alone the picture is painted where the canvas is (a photograph of
     the box, since the picture takes no pointer), cropped to the drawing: the
@@ -282,6 +290,16 @@ with sync_playwright() as p:
     FLIP = api_post({"title": "Two pages", "schemaVersion": 2, "visibility": "public", "playbackMode": "flip", "fps": 8,
                      "canvasSize": {"cssWidth": W, "cssHeight": H},
                      "frames": [{"strokes": spiral(120), "strokeGroups": [120]}, {"strokes": spiral(200), "strokeGroups": [200]}]})
+    FLIPCARD = api_post({"title": "Two pages, a card", "schemaVersion": 2, "visibility": "public", "playbackMode": "flip", "fps": 8,
+                         "canvasSize": {"cssWidth": W, "cssHeight": H}, "thumbnail": card(),
+                         "frames": [{"strokes": spiral(120), "strokeGroups": [120]}, {"strokes": spiral(200), "strokeGroups": [200]}]})
+    # A first page long enough to be laid in slices, in see-through ink: laid
+    # twice, it darkens where one call lays it once.
+    # (A page holds up to 20,000 points; 19,500 is many slices of 2 ms.)
+    _see = [dict(q, color="rgba(124, 92, 255, 0.45)", size=9, start=(i % 150 == 0)) for i, q in enumerate(spiral(19500))]
+    FLIPLONG = api_post({"title": "A long first page", "schemaVersion": 2, "visibility": "public", "playbackMode": "flip", "fps": 8,
+                         "canvasSize": {"cssWidth": W, "cssHeight": H}, "thumbnail": card(),
+                         "frames": [{"strokes": _see, "strokeGroups": [150] * 130}, {"strokes": spiral(200), "strokeGroups": [200]}]})
 
     print("\nTHE PAGE KNOWS (the route)")
     pre = lambda h: (h.split("window.SKRIBL_PLAYER_PRE = ", 1) + ["?"])[1].split(";", 1)[0]
@@ -300,8 +318,15 @@ with sync_playwright() as p:
     check("...and its own picture, the card made when it was posted",
           'id="playerPoster"' in hl and "/s/" + LONG + "/poster" in hl, "")
     hf, hm = html(FLIP), html("zzzzzzzzzzz")
-    check("a Flip's page and a missing post's carry no size and no picture",
-          pre(hf) == "null" and pre(hm) == "null" and 'id="playerPoster"' not in hf + hm, f"{pre(hf)} / {pre(hm)}")
+    try:
+        pf = json.loads(pre(hf)) or {}
+    except ValueError:
+        pf = {}
+    check("a Flip's page carries its size and its own picture too, and its line's words: 1x, no artist's time (FUTURE 6x)",
+          pf.get("w") == W and pf.get("h") == H and pf.get("line") == {"drawn": 0, "play": 0, "speed": 1}
+          and 'id="playerPoster"' in hf and "/s/" + FLIP + "/poster" in hf, pre(hf))
+    check("a missing post's page carries no size and no picture",
+          pre(hm) == "null" and 'id="playerPoster"' not in hm, pre(hm))
 
     print("\nAT ONCE, with the data held back")
     for name, view in (("phone", PHONE), ("desk", DESK)):
@@ -365,6 +390,44 @@ with sync_playwright() as p:
     check("a phone turned while the drawing comes: the box re-fits then, and stands when the drawing lands",
           shown and left and m is not None and m <= 0.5 and abs(turned[2] - f["wrap0"][2]) > 20,
           f"before the turn {f.get('wrap0')}, turned {turned}, after {f.get('wrap1')}")
+    c.close()
+
+    print("\nA FLIP'S FIRST LOOK (FUTURE 6x)")
+    for name, view in (("phone", PHONE), ("desk", DESK)):
+        c, pg, release = open_held(b, FLIPCARD, view)
+        shown = waited(pg, "() => window.__fl.shown != null", 8000)
+        pg.wait_for_timeout(150)
+        im = shot_box(pg)
+        w_, h_ = im.size
+        pts = [(w_ // 2, h_ // 2), (6, h_ // 2), (w_ - 7, h_ // 2), (w_ // 2, 6), (w_ // 2, h_ - 7)]
+        filled = shown and all(magenta(im.getpixel(q)) for q in pts)
+        band = [im.getpixel((x, y)) for x in range(24, w_ - 24, 3) for y in (0, 1, 2, h_ - 3, h_ - 2, h_ - 1)]
+        check(f"{name}: a Flip's own picture is painted where the canvas is before its data, cropped to the drawing",
+              filled and not [q for q in band if ringish(q)], f"shown {shown}; " + str([im.getpixel(q) for q in pts]))
+        release()
+        left = waited(pg, "() => window.__fl.left != null", 30000 if shown else 1500)
+        pg.wait_for_timeout(200)
+        f = pg.evaluate("() => window.__fl")
+        m = moved(f)
+        check(f"{name}: ...nothing moves when its data comes: its line is laid out with the page",
+              left and m is not None and m <= 0.5, f"left {left}; before {f.get('wrap0')}, after {f.get('wrap1')}")
+        say = pg.evaluate(SAY)
+        check(f"{name}: ...and it gives way to the page the link rests on, the transport up",
+              left and say["controls"] == "visible" and say["speed"] == "visible", str(say))
+        c.close()
+    # THE FIRST PAINT STOPS AT THE PAGE AT REST: drawn once, as one call lays
+    # it (the same page painted again at once on the same canvas).
+    c, pg, release = open_held(b, FLIPLONG, DESK)
+    shown = waited(pg, "() => window.__fl.shown != null", 8000)
+    release()
+    left = waited(pg, "() => window.__fl.left != null", 60000 if shown else 1500)
+    pg.wait_for_timeout(800)
+    at_rest = pg.evaluate(INK)
+    pg.evaluate("() => { clearAndRestore(() => paintStrokesStatic(strokes)); }")
+    once = pg.evaluate(INK)
+    check("a Flip whose first page is laid in slices rests on that page drawn once, its see-through ink as one call lays it",
+          shown and left and at_rest["hash"] == once["hash"] and at_rest["ink"] > 1000,
+          f"at rest {at_rest}, drawn once {once}")
     c.close()
 
     print("\nTHE SWAP IS QUIET, on the long drawing")
