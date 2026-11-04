@@ -29415,3 +29415,80 @@ list.
 THE FOUR: powerful (an artist's two-hour piece undoes thirty steps, each in a
 blink); kind (nothing on screen changes but the wait, after a reload too);
 simple and playful (unchanged).
+
+## After v330 -- Flip on a busy page: a floor under Undo, the tile from the layer, a stroke's start
+
+The owner's "All yes" (Nov 4) to "Give Flip the same Undo fix", after the
+Pad's ("Undo on a long drawing: a floor under the history").
+
+- TRACED, a phone 402 x 874 at 3x (Flip's layers at 2x, 1062 x 1888), the
+  CPU 4x slower, one busy page with six strokes drawn on it. Past its three
+  copies, an Undo or a Redo painted the whole page, and from the fourth Undo
+  twice: the pad, then the page's tile, which is painted through the same
+  frame layer.
+
+                    Undo 3     Undo 4 to 6     Redo past the copies
+    6,000 points    171 ms     0.33 - 0.50 s   222 ms
+    20,000          447 ms     1.0 - 1.2 s     450 ms
+    60,000          1.8 s      3.1 - 3.9 s     1.7 s
+
+  And reading the code for it: every pen stroke's start on a busy page
+  painted the page into the layer again (liveBegin), 55 to 262 ms on 6,000
+  points and 0.48 to 0.91 s on 20,000, before the stroke's first point showed.
+- ONE IDEA, THREE PLACES: the frame layer, tagged with the page's ink at
+  rest (_fcvTag), is not painted again.
+  1. THE TILE FROM THE LAYER (_frameHolds, beside drawThumb). A tile is
+     painted through the frame layer itself while the canvas has not grown
+     (frameLayerFor gives a tile fctx when RS is DPR): the ink at full size,
+     then laid on the tile. When the layer holds the page's ink at rest, the
+     tile is laid from it, as paintFrame would lay it after painting it again.
+  2. A STROKE'S START (liveBegin) lays the tagged layer rather than painting
+     the page into it. Checked after the page underneath is painted, which
+     goes through the layer and untags it.
+  3. A FLOOR UNDER A BUSY PAGE (beside repaintPage). Flip's Undo has no cap:
+     it takes a page back to empty. So the floor is the page as it stood at a
+     pen stroke's start, for the page being drawn on, known by the content of
+     its first points (_inkSig with n), the layering it was painted with and
+     the layer's size; a NEXT 30 strokes on (FLOOR_EVERY), which becomes the
+     floor once the page is 60 past the old one. An Undo or a Redo past the
+     copies lays the highest that fits and paints only the strokes above it,
+     by the whole page's layering (paintStatic's third argument, as the live
+     cache paints a page in two halves). With none that fits, the page is
+     painted in two parts and a floor taken between them, 30 strokes under it.
+- MEASURED after, the same phone and pages (work in the press):
+
+                    Undo or Redo past the copies     a stroke's start
+    6,000 points    31 - 44 ms                       3 - 8 ms
+    20,000          40 - 55 ms                       12 - 27 ms
+    60,000          88 - 128 ms
+
+  (A session's first one or two starts on a busy page take 84 to 108 ms on
+  20,000 points: the floor's canvas is made.)
+- MEMORY: two copies of the frame layer for one busy page at a time, 16 MB on
+  a phone 402 pixels wide; a light page keeps none; a new size drops them.
+- THE ROWS, verify_undofast's Flip part: eight strokes on a busy page, none of
+  whose starts paints the page; eight Undos and eight Redos, every pixel as it
+  was and as render() paints, no press painting the page, each tile as one
+  painted afresh with the layer untagged; a tile, and the page from a floor,
+  never laid once the page has changed under them; seventy strokes and thirty
+  Undos, the NEXT taking over, none painting sixty strokes; a page opened and
+  undone before it is drawn on, painted in two parts with a floor between;
+  see-through pencil strokes above a floor, past the layering budget and
+  under it, each Undo what render() paints. The row past the copies now reads
+  a floor and only the strokes above it; the stroke-layers row reads the whole
+  page painted (in two parts) where it read one paint. CALIBRATED, each
+  shown red against its own break: a stroke's start painting the page (1
+  row), the tile painted again (7), the tile's check of the ink dropped (1),
+  no floor kept (4), no NEXT (2), no two-part repaint (3), the strokes above a
+  floor layered by their own count (past the budget) or never (under it),
+  1 each, and a floor matched without the content of its points (2: the point
+  moved under the floors, and the stroke-layers row, the setting being part
+  of that content).
+- Not tested here: Safari (no WebKit in this box).
+
+WHAT IT DOES TO THE PAD: the Pad's floor came first; this is Flip's, by
+content where the Pad's is by the very points (Flip's tools move points where
+they lie). The Pad has no tiles, and paints a stroke's start live.
+
+THE FOUR: powerful (a busy page draws and undoes without a hold); kind
+(nothing on screen changes but the wait); simple and playful (unchanged).
