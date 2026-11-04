@@ -28982,3 +28982,49 @@ THE FOUR: kind (you can see Skribl working, your loop is never moved, and
 what it heard is never lost); playful (the song shimmers, the dots dance);
 simple (no new buttons, the words say what Skribl is doing); powerful (the
 magnet and the metronome ready the moment the beat is heard).
+
+## After v330 -- The PRE-331 review: the first four fixes
+
+The owner, of the outside review in FUTURE 6ad: "Get started cleaning up
+those issues." Four of its fifteen, each confirmed in the code first and
+each row shown red with its own fix undone. None changes what a person sees
+when a save is fine.
+
+- 1, A POINT'S TIME IS A NUMBER. `_validate_points` range-checked `t` only
+  when it already was one, so "not-a-time", [], {} and true were stored,
+  and a replay subtracting neighbouring times got NaN. Now a `t` that is
+  there is a finite number in range; absent or null (what JSON.stringify
+  writes for NaN) still posts. Rows in verify_apiedges.
+- 11, A THUMBNAIL IS WHOLE. The draft check decoded the first 48 bytes, so
+  the reviewer's PNG cut off at 26 was stored. Now the picture is decoded
+  whole and ends as its kind ends: a PNG its IEND after an IHDR first, a
+  JPEG its end-of-image marker, a WebP the length its RIFF header states.
+  Rows in verify_clouddrafts (a PNG cut at 26 bytes, a PNG less its last
+  byte, a JPEG with no end, a short WebP; a whole PNG saves). Each row
+  deletes what a broken build saves, so the next row meets its own cause:
+  the first calibration filled the cap of three and every later row read
+  the cap.
+- 10, THE BYTE BUDGET COUNTS THE PICTURE. A draft's thumbnail (up to
+  200,000 characters) sat outside the budget it is stored under. Row in
+  verify_hostseams: a 47 KB drawing with a 21 KB picture under 64 KB is
+  refused, the same drawing alone saves.
+- 2, ONE SAVE AT A TIME PER AUTHOR. A save read the author's count and
+  bytes, then inserted, with nothing holding the two together; on
+  PostgreSQL saves at once could each see room for one more. save_draft
+  now takes a transaction-scoped advisory lock keyed on the author after
+  validating, as the post limiter does on the poster; on SQLite the one
+  writer already serialises, so it returns at once. verify_postgres's new
+  DRAFTS section signs the demo identity in (CSRF on) on a four-worker host
+  and sends twelve saves at once. Without the lock the 64 KB budget that
+  one 40 KB drawing fits stored two to four (red in five of six runs);
+  with it 28/28, four runs. The cap row held at two even without the
+  lock, so it was shown red by taking the count check out (five stored).
+  The cluster ran here only for this, and was stopped before the other
+  suites (a seal runs without it).
+
+WHAT IT DOES TO FLIP: shared (one server path for both editors' drafts and
+posts).
+
+THE FOUR: kind (a save that fits is never refused, and the refusals say
+why); simple (no new words on screen); powerful (what is stored replays
+and counts as it should); playful (unchanged).
