@@ -278,37 +278,20 @@ function resizeCanvas() {
     // phone starts 9:16 instead of a 4:3 letterbox floating in dead space.
     // Still a preset — two people on the same kind of screen get the same
     // shape — and the Canvas picker can change it while the canvas is empty.
-    const t = window.SkriblCanvasSizes || null;
+    //
+    // Against the column, not the page the row may reach across, so a new
+    // drawing starts in the shape it always did; but a touch screen held
+    // upright starts square whenever the square fits the whole row (the
+    // owner's A, after the tablet mock: an iPad's column is just short of
+    // it). One rule for both editors: lib/chromefit.js startShape, out of
+    // this file, which the link player loads. A degenerate band (display:none
+    // boot states, tests without CSS) keeps the classic default rather than
+    // trusting a 0x0 measurement.
+    const t = window.SkriblCanvasSizes || null, fit = window.SkriblChromeFit;
     let d = t ? t.DEFAULT : null;
-    if (t && t.bestFor) {
-      const areaEl = canvasArea || canvasWrap.parentElement || canvasWrap;
-      const r = areaEl.getBoundingClientRect();
-      const cs = getComputedStyle(areaEl);
-      const padX = parseFloat(cs.paddingLeft || 0) + parseFloat(cs.paddingRight || 0);
-      // Against the column, not the page the row may reach across
-      // (lib/chromefit.js): a new drawing starts in the shape it always did.
-      const colW = (window.SkriblChromeFit && SkriblChromeFit.columnWidth) ? SkriblChromeFit.columnWidth(areaEl) : r.width;
-      const availW = Math.min(r.width, colW) - padX;
-      const availH = r.height - (parseFloat(cs.paddingTop || 0) + parseFloat(cs.paddingBottom || 0));
-      // A TOUCH SCREEN HELD UPRIGHT STARTS SQUARE WHEN THE SQUARE FITS (the
-      // owner's A, after the tablet mock: "All yes"). On an iPad held upright
-      // the column is just short of the square (696 of its 707 on an Air), so
-      // the column chose 9:16 and a new drawing used 69% of the width, where
-      // Flip, measuring its own row, starts square. Against the row, the
-      // square at its own size is the start whenever it fits, filling the
-      // width; otherwise the column decides, as before. A phone (the square
-      // never fits), a desk (no finger) and a tablet on its side start as they
-      // did, and a drawing already made keeps its own shape (loadSkribl). The
-      // row's reach is read, not applied: a row reaching while still empty
-      // grows taller (on a desk, 949 where it lays out at 700) and would tip
-      // the column's own choice.
-      const sq = t.byId ? t.byId('square') : null;
-      const upright = !!(window.matchMedia && window.matchMedia('(pointer: coarse) and (orientation: portrait)').matches);
-      const reach = (window.SkriblChromeFit && SkriblChromeFit.reach) ? SkriblChromeFit.reach(areaEl) : 0;
-      if (sq && upright && colW + 2 * reach - padX >= sq.w && availH >= sq.h) d = sq;
-      // A degenerate band (display:none boot states, tests without CSS) keeps
-      // the classic default rather than trusting a 0x0 measurement.
-      else if (availW > 50 && availH > 50) d = t.bestFor(availW, availH);
+    if (fit && fit.startShape) {
+      const room = fit.roomOf(canvasArea || canvasWrap.parentElement || canvasWrap);
+      d = fit.startShape(room.col, room.row, room.h) || d;
     }
     if (d) establishEditorCanvas(d.w, d.h);
     else {

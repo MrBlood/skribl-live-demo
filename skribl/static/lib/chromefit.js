@@ -81,13 +81,38 @@
   }
   // How far the row reaches out on each side, read without moving it: the
   // Pad picks a new drawing's shape against the row it will be before the
-  // row reaches (app.js resizeCanvas), because a row reaching while it is
-  // still empty grows taller than it will be.
+  // row reaches (roomOf), because a row reaching while it is still empty
+  // grows taller than it will be (on a desk, 949px where it lays out at 700).
   function reach(row) {
     var col = row && row.parentElement, body = global.document.body;
     if (!col || !body) return 0;
     var r = Math.max(0, (body.clientWidth - columnWidth(row)) / 2);
     return r < 0.5 ? 0 : r;
+  }
+  // The room inside a row's padding: in its column, in the whole row as it
+  // will reach, and its height. The Pad's, before its first drawing.
+  function roomOf(row) {
+    var r = row.getBoundingClientRect(), cs = global.getComputedStyle(row);
+    var px = (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.paddingRight) || 0), col = columnWidth(row);
+    return { col: Math.min(r.width, col) - px, row: col + 2 * reach(row) - px,
+             h: r.height - (parseFloat(cs.paddingTop) || 0) - (parseFloat(cs.paddingBottom) || 0) };
+  }
+  // A NEW DRAWING'S SHAPE, one rule for both editors, each measuring its own
+  // room: the preset that shows largest in the column (lib/canvassizes.js
+  // bestFor), unless a touch screen is held upright and the square fits at
+  // its own size in the whole row; then the square. The owner's A after the
+  // tablet mock ("All yes"), then "do Flip on the 12.9 too": an upright
+  // iPad's column is just short of the square (696 of its 707), so the Pad
+  // started tall on an Air and an 11-inch, and Flip, whose stage is taller
+  // there, on a 12.9-inch Pro. A phone (the square never fits), a desk (no
+  // finger) and a tablet on its side start as they did. Here and not in
+  // app.js, which the link player loads and never needs this from.
+  function startShape(col, row, h) {
+    var t = global.SkriblCanvasSizes, mm = global.matchMedia;
+    if (!t || !t.bestFor || !(col > 50 && h > 50)) return null;
+    var sq = t.byId && t.byId('square');
+    if (sq && row >= sq.w && h >= sq.h && mm && mm('(pointer: coarse) and (orientation: portrait)').matches) return sq;
+    return t.bestFor(col, h);
   }
   function span(row) {
     var body = global.document.body;
@@ -99,5 +124,5 @@
     return r;
   }
 
-  global.SkriblChromeFit = { watch: watch, span: span, columnWidth: columnWidth, reach: reach };
+  global.SkriblChromeFit = { watch: watch, span: span, columnWidth: columnWidth, reach: reach, roomOf: roomOf, startShape: startShape };
 })(window);

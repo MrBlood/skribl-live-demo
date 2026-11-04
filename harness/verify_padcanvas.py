@@ -146,6 +146,54 @@ with sync_playwright() as p:
           drew == [True, 531, 944] and back == [True, 531, 944], f"drew {drew}, back {back}")
     ctx.close()
 
+    # FLIP, THE SAME RULE (lib/chromefit.js startShape; the owner: "do Flip on
+    # the 12.9 too"). Flip's stage is shorter than the Pad's band, so it
+    # already started square on the mini, the Air and the 11-inch; on a
+    # 12.9-inch Pro held upright it started tall, 554px wide. Measured as
+    # flip.js picks: its stage's room (stageAvail), against its column.
+    FSHAPE = """() => { const st = document.querySelector('.flip-stage'), a = stageAvail(st), cs = getComputedStyle(st);
+        const colW = SkriblChromeFit.columnWidth(st) - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+        const c = document.getElementById('pad').getBoundingClientRect();
+        return { id: SkriblCanvasSizes.idFor(CW, CH), bestId: SkriblCanvasSizes.bestFor(Math.min(a.w, colW), a.h).id,
+                 shown: Math.round(c.width) }; }"""
+
+    def fresh_flip(w, h, touch):
+        ctx = b.new_context(viewport={"width": w, "height": h}, is_mobile=touch, has_touch=touch)
+        pg = ctx.new_page()
+        pg.goto(f"{BASE}/flip", wait_until="load")
+        pg.wait_for_timeout(1400)
+        return ctx, pg
+
+    ctx, pg = fresh_flip(1024, 1366, True)
+    s = pg.evaluate(FSHAPE)
+    check(f"held upright, a 12.9-inch iPad Pro starts a new Flip square, the page filling the width ({s['shown']}px)",
+          s["id"] == "square" and s["shown"] >= 0.95 * 1024, str(s))
+    ctx.close()
+    for w, h, touch, label in ((402, 874, True, "a phone"), (1180, 820, True, "an iPad Air on its side"),
+                               (1920, 1300, True, "a big touch screen on its side")):
+        ctx, pg = fresh_flip(w, h, touch)
+        s = pg.evaluate(FSHAPE)
+        check(f"Flip on {label} starts as before, in the shape that shows largest in its column ({s['id']})",
+              s["id"] == s["bestId"], str(s))
+        ctx.close()
+    # A Flip already made keeps its shape: tall, drawn on, reloaded, still tall.
+    ctx, pg = fresh_flip(1024, 1366, True)
+    pg.evaluate("() => { applyCanvasSize(531, 944); sizeStage(); render(); }")
+    pg.wait_for_timeout(300)
+    box = pg.locator("#pad").bounding_box()
+    pg.mouse.move(box["x"] + 60, box["y"] + 60)
+    pg.mouse.down()
+    pg.mouse.move(box["x"] + 150, box["y"] + 130, steps=8)
+    pg.mouse.up()
+    pg.wait_for_timeout(1400)
+    drew = pg.evaluate("() => [frames[0].strokes.length > 0, CW, CH]")
+    pg.reload(wait_until="load")
+    pg.wait_for_timeout(1600)
+    back = pg.evaluate("() => [frames[0].strokes.length > 0, CW, CH]")
+    check("held upright, a tall Flip already made comes back tall: only a new one starts square",
+          drew == [True, 531, 944] and back == [True, 531, 944], f"drew {drew}, back {back}")
+    ctx.close()
+
     # -----------------------------------------------------------------------
     print("\nPAD CANVAS — one table, shared with Flip")
     pg = b.new_page(viewport={"width": 1280, "height": 900})
