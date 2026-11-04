@@ -1033,7 +1033,14 @@ with sync_playwright() as sp:
     #   player once, where the work is, where a turn of the phone and a new
     #   screen ratio each asked (-62 B). verify_jsstrip's lines move with it.
     #   160,319 measured; the ratchet follows it down.
-    BYTES_RATCHET, BYTES_TARGET = 160_322, 153_800
+    # RAISED (the owner's "all yes" to B, a long Flip's first look on its
+    #   link, FUTURE 6x), for one named cost: +18 B -- app.js ends the first
+    #   paint's slices where the page at rest is drawn (a new restoreSeq), as
+    #   a Flip now has its picture and a first paint laid in slices under it:
+    #   left running, they laid page 0 over the page at rest, its see-through
+    #   ink twice. The rest is the server's (routes.py sends a Flip's size and
+    #   line). verify_jsstrip's lines move with it. 160,337 measured.
+    BYTES_RATCHET, BYTES_TARGET = 160_340, 153_800
     # The page's own HTML. The brand is the one-stroke skribl signature INLINE
     # in the page (~1.4KB of paths, a ~0.9KB nonce'd draw-on script, and the
     # <linearGradient> defs), and inline is load-bearing rather than lazy:

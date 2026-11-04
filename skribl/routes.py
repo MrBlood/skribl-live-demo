@@ -536,15 +536,22 @@ def register_routes(bp, *, index_route=False):
                     # and the page stood blank all that time. Its size is a
                     # column (canvas_w/canvas_h, the tile's reason), so the
                     # page lays out its box and shows the post's own picture
-                    # before the payload comes. A Pad's only: a Flip's card is
-                    # its first inked page, which need not be the page it
-                    # rests on, and its first paint is one page, not the lot.
-                    # The line's numbers come too (line_json, the in-post
-                    # player's reason), so the line under the track is laid
-                    # out at its own height and the box does not move when
-                    # the drawing comes.
-                    if post.kind == "pad" and post.canvas_w and post.canvas_h:
-                        line = post.line
+                    # before the payload comes. The line's numbers come too
+                    # (line_json, the in-post player's reason), so the line
+                    # under the track is laid out at its own height and the
+                    # box does not move when the drawing comes.
+                    #
+                    # A FLIP'S TOO (FUTURE 6x, the owner's "all yes" to B).
+                    # Its card is its poster page and its link rests on that
+                    # page (lib/holdtiming.js posterOf, one rule for both), so
+                    # the picture is the page it gives way to. Its line says
+                    # only the speed it plays at, 1x (a Flip has no artist's
+                    # time and no Fit), so its words, and their height, are
+                    # known before its data. Measured on a phone at about 12
+                    # Mbps, a 9.2 MB Flip's box stood black 2 to 5 s and then
+                    # jumped 144 px.
+                    if post.kind in ("pad", "flip") and post.canvas_w and post.canvas_h:
+                        line = {"drawn": 0, "play": 0, "speed": 1} if post.kind == "flip" else post.line
                         pre = {"w": post.canvas_w, "h": post.canvas_h,
                                "line": {k: line[k] for k in ("drawn", "play", "speed") if k in line}
                                        if "drawn" in line else None}
