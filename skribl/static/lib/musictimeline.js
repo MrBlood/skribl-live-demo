@@ -177,16 +177,21 @@
   // column is a few reads at any zoom.
   var LEVELS = [128, 1024, 8192];
   function peaksOf(buffer) {
-    var n = buffer.length, ch = [], c, i, k;
-    for (c = 0; c < buffer.numberOfChannels; c++) ch.push(buffer.getChannelData(c));
-    var base = new Float32Array(Math.ceil(n / LEVELS[0])), top = 1e-4;
-    for (i = 0; i < n; i++) {
-      var v = 0;
-      for (c = 0; c < ch.length; c++) { var a = ch[c][i]; if (a < 0) a = -a; if (a > v) v = a; }
-      k = (i / LEVELS[0]) | 0;
-      if (v > base[k]) base[k] = v;
-      if (v > top) top = v;
+    var n = buffer.length, B = LEVELS[0], c, i, k;
+    var base = new Float32Array(Math.ceil(n / B)), top = 1e-4;
+    // A channel at a time, a block at a time: the same loudest of each block
+    // as sample by sample across the channels, without a division and a
+    // channel loop on every sample (a new song's whole length, at once: a
+    // phone's page held about a quarter of a second; the speed fixes, Nov 4).
+    for (c = 0; c < buffer.numberOfChannels; c++) {
+      var d = buffer.getChannelData(c);
+      for (k = 0, i = 0; i < n; k++) {
+        var e = Math.min(n, i + B), m = base[k];
+        for (; i < e; i++) { var a = d[i]; if (a < 0) a = -a; if (a > m) m = a; }
+        base[k] = m;
+      }
     }
+    for (k = 0; k < base.length; k++) if (base[k] > top) top = base[k];
     var levels = [base];
     for (var l = 1; l < LEVELS.length; l++) {
       var f = LEVELS[l] / LEVELS[l - 1], prev = levels[l - 1], next = new Float32Array(Math.ceil(prev.length / f));

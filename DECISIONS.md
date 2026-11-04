@@ -29613,3 +29613,93 @@ playful (unchanged).
 Not tested here: a real iPad (no WebKit in this box; the screens are
 emulated), and Safari's own bars, which may leave less height: then the square
 does not fit and the drawing starts as it did.
+
+## After v330 -- Skribl's ears listen in a worker
+
+The first of the speed fixes the owner said "all yes" to (Nov 4), FUTURE.md 6z
+item 12: Skribl's ears never hold the page.
+
+- TRACED, a phone 402 x 874 at 3x, the CPU 4x slower, a two-minute stereo
+  song at 44.1 kHz with a beat, timed from the moment the file reaches the
+  page (the test tool's own handing over of 21 MB held a slowed page 28 s,
+  so the song is made in the page first). The ears held the page three
+  ways: the mix-down to one channel at once (190 to 520 ms), the last sums
+  (about 370 ms), and each pick (124 to 195 ms); and their 8 ms slices took
+  10 to 12.6 s in all, each waiting behind the page's own drawing, where at
+  full speed they take 1.1 s.
+- THE EARS LISTEN IN A WORKER (lib/musicears.js). The file is also its own
+  worker's script: the page hands it copies of the song's first two minutes
+  and waits on none of it, and the worker hands back what it heard, the same
+  code's numbers and arrays. Where a worker cannot start (a host's policy, an
+  old browser) the ears listen on the page as before. The page's policy
+  already allowed it (worker-src 'self').
+- A PICK KEEPS THE STRETCHES IT HEARS (H.stretches): a pick hears the beat
+  again in up to thirty stretches of the song, most of its time, and the same
+  stretch is heard the same every time. The worker hears the usual ones first
+  (every fourth second, 24 s long), so the first pick waits on almost none.
+- MEASURED after, side by side with main on the same box, three runs each:
+
+                        main                  this
+    Pad   listening     12.0 - 12.6 s         1.1 - 1.5 s
+          beat shown    13.8 - 14.1 s         2.7 - 3.0 s
+          a pick        124 - 159 ms          41 - 84 ms
+          over 200 ms   4 holds               1 - 2
+    Flip  listening     9.7 - 11.7 s          1.5 - 1.8 s
+          beat shown    12.5 - 14.4 s         3.7 - 3.8 s
+          a pick        113 - 195 ms          52 - 130 ms
+          over 200 ms   7 - 8 holds           5 - 7
+
+- WHAT HOLDS THE PAGE NOW is not the ears, and is named here for the next
+  pass (a Chrome trace, the same song): on the Pad the song read into its
+  draft (346 ms); on Flip the song kept as 28 MB of text, read in (641 ms),
+  a task with no script in it (970 ms, the text or the decode handed over),
+  a paint once the song lands (496 ms), and the autosave writing it (275 and
+  406 ms). Flip keeps a song as a data URL where the Pad keeps a file.
+- TWO SMALLER, ON THE WAY: the timeline's waveform reads a new song a channel
+  and a block at a time (lib/musictimeline.js peaksOf: the same loudest of
+  each block, without a division and a channel loop on every sample); and
+  Flip turns its song's text back into bytes with the browser's own reader
+  where it has one (Uint8Array.fromBase64: Safari 18.2, this box's Chromium),
+  the same bytes in about a third of the loop's time. TRIED AND TAKEN OUT:
+  fetch() of the data URL, which the Pad uses for small ones; for a song's
+  28 MB it cost a slowed page more than the loop did (Flip's holds 8 to 9
+  became 10 to 12).
+
+THE CHECKS: verify_musicears, the worker part, three rows on each editor: the
+page's own thread spends next to nothing in the ears' listening while a song
+is added (read with the page's profiler: 0 ms of the mix-down, the steps and
+the last sums); what the worker heard is what the page hears, every number and
+array, and eight picks the same, a steady song's and a band's speeding up, the
+worker's stretches kept and the page's heard as asked; with no worker to be
+had, the beat is heard on the page all the same. CALIBRATED, each shown red
+against its own break: no worker (the off-the-page row: 302 ms of the
+listening on the page's thread); a stretch kept by where it starts alone (the
+same-results row, by the band's picks: the steady song's stretches are all 24
+s, so that break was green until the band, whose 32 beats need 27.5 s, was
+added); the worker hearing part of the song (the same-results row, and no beat
+heard); no listening where no worker can start (the fallback row, and the
+same-results row: the page never answered). With none broken, 4 of 4. FOUND
+WHILE CALIBRATING: the same-results row waited on the ears with no limit and
+hung a run for its 15 minutes; it gives them 20 s now, and the fallback row
+says in red that a song was never heard.
+
+FOUND BY THE AFFECTED SUITES, AND FIXED HERE: a stretch kept by where it is
+alone answered at the wrong beat. Listening can change the beat after a
+stretch is heard: a slow waltz heard at its eighths is heard again at half the
+beat, and its meter counted again; the kept stretches still answered at the
+old beat, so the waltzes at 84 and 76 were heard in four at 168 and 152
+(verify_musicthree, 48 of 49, beside others and alone). The worker and the
+page agreed, each wrong the same way, so the same-results row could not see
+it; the suite that holds every song to its own known beat did. A stretch is
+kept by the beat it is heard against as well now: 49 of 49.
+
+WHAT IT DOES TO FLIP: shared (one ears module, one music drawer); Flip's song
+reader is Flip's own.
+
+THE FOUR: kind (adding a song never freezes the page while Skribl listens,
+and the beat shows in about 3 s on a slower phone, not 14); powerful (the
+same ears, the same picks); simple and playful (unchanged).
+
+Not tested here: a real phone (no phone in this box; the CPU 4x slower stands
+in for one), and Safari (no WebKit here), whose workers are not throttled the
+way this box's Chromium throttles its page.

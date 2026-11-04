@@ -6247,7 +6247,13 @@ imageInput.addEventListener('change',async e=>{ const file=e.target.files&&e.tar
 
 /* ---- music loop (Pad's music component: waveform, trim, loop detail) ---- */
 const musicInput=document.getElementById('musicInput');
-function dataURLToArrayBuffer(u){ const b64=(u||'').split(',')[1]||''; const bin=atob(b64); const n=bin.length; const a=new Uint8Array(n); for(let i=0;i<n;i++) a[i]=bin.charCodeAt(i); return a.buffer; }
+function dataURLToArrayBuffer(u){ const b64=(u||'').split(',')[1]||'';
+  // The browser's own reader where it has one (Safari 18.2, this box's
+  // Chromium): the same bytes in about a third of the loop's time, a song's
+  // 28 MB of text at once (the speed fixes, Nov 4). Not fetch(): a data URL
+  // that long cost a slower phone's page more than the loop did.
+  if (typeof Uint8Array.fromBase64 === 'function') { try { return Uint8Array.fromBase64(b64).buffer; } catch (_) {} }
+  const bin=atob(b64); const n=bin.length; const a=new Uint8Array(n); for(let i=0;i<n;i++) a[i]=bin.charCodeAt(i); return a.buffer; }
 // Media may arrive as a base64 data URL (inline storage) or as a plain URL
 // (object storage). This was the ONLY place either client cracked a data URL
 // open structurally, so it is the only place that had to learn the difference —

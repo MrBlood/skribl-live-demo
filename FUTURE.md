@@ -1263,7 +1263,8 @@ left comes after D (6s), each mocked first where it shows:
   long as it shows, numbered (Flip). Let Flip's pages show their own little
   pictures where there is room, and the Pad's strokes their own inks, so a
   person sliding the song under the drawing sees what is drawn on each beat.
-- FAST ON A PHONE, MEASURED FIRST. `listen()` mixes the song down to one
+- FAST ON A PHONE, MEASURED FIRST. **Built after v330** (6z item 12: the
+  ears listen in a worker). Was: `listen()` mixes the song down to one
   channel at 22.05 kHz in one go before it starts slicing (`mono()`), then
   waits on a timer between slices of 8ms, which some browsers stretch to 4ms
   or more once timers nest. Measure, on a two-minute stereo song, the longest
@@ -1503,12 +1504,18 @@ at 92bc060.
     line's own paint (a next pass, if a phone shows it). Was: the two-hour
     stand-in (145,200 points) replays at 15 to 20 frames a second at phone
     pace and the cat at 30; at full speed both hold 60 at 1x, 16x and Fit.
-12. **Skribl's ears never hold the page** (speed; the shared drawer). A
-    two-minute stereo song at phone pace: 3.2 s to decode and 3.9 s to a
-    pick, and the page held four times for more than 200 ms (the longest
-    0.55 s); at full speed 0.5 s and 1.0 s, the longest hold 0.14 s. The idea
-    is 6t's Worker, "if it shows": it shows on a slower phone, not on the
-    owner's.
+12. ~~**Skribl's ears never hold the page** (speed; the shared drawer).~~
+    **FIXED after v330** (the owner's "all yes" to the speed fixes, Nov 4;
+    DECISIONS: "Skribl's ears listen in a worker"): the ears listen in a
+    worker, and a pick keeps the stretches it hears. At a slower phone's pace
+    the beat shows 2.7 to 3.8 s after a two-minute song is added, where it
+    took 12.5 to 14.4 s, and the ears hold neither page. What still holds the
+    page while a song is added is not the ears: the Pad reading the song into
+    its draft (about a third of a second), and Flip keeping a song as 28 MB of
+    text, read in, painted and autosaved (up to about a second a time); Flip
+    keeping a file, as the Pad does, is next. Was: a two-minute stereo song
+    at phone pace, 3.2 s to decode and 3.9 s to a pick, the page held four
+    times for more than 200 ms (the longest 0.55 s).
 
 **The finish line (Phase 4), not started:** Skribl inside skribls.net for
 real (a Skribl button in the reply box beside GIF, posts made there carrying
