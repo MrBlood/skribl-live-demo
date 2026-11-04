@@ -3369,6 +3369,7 @@ function buildStrip(){
     }
   });
   paintTiles(toPaint);
+  _stripOf = frames.slice();   // the pages this strip was made for, in order (turnStrip)
   const col=document.createElement('div'); col.className='addcol';
   // Built here rather than in the template, which is why a template-wide
   // tooltip pass could not reach them. lib/tooltip.js adopts late markup via a
@@ -4226,7 +4227,41 @@ function go(i){ if(moveMode) return;
   if(typeof selClear === 'function') selClear(true);
   if(picking) setPicking(false);     // the lens would show one page and pick another
   if(i !== idx) _lastPage = idx;
-  idx=i; redoStack.length=0; buildStrip(); render(); }
+  const was = idx;
+  idx=i; redoStack.length=0;
+  if(!turnStrip(was)) buildStrip();
+  render(); }
+/* A PAGE CHANGE MOVES THE STRIP'S MARK; IT DOES NOT MAKE THE STRIP AGAIN
+   (FUTURE 6y, Speed 3 of the owner's "all yes"). buildStrip makes every tile
+   again, and on a long Flip (60 pages of 2,400 points) that is 60 pictures
+   laid from the cache and every page's signature read: about 33 ms of a
+   54 ms change on a desk at this box's pace, 250 to 280 ms with the CPU 4x
+   slower. A page change moves nothing else on the strip. So when the strip
+   is the one made for these pages, in this order, and nothing on it follows
+   the page you are on (a range of pages, the paste ghost after it, a delete
+   armed), the mark moves and what reads the page follows it: the page bar,
+   the length, the tools. Else the strip is made again, as before. The page
+   you leave is laid again from its ink as it is now, as making the strip
+   again did (its picture read, and painted only if stale), and the page you
+   come to is painted at once if its picture is still to come in slices, as
+   paintTiles paints the page you are on. */
+let _stripOf = null;
+function turnStrip(was){
+  const tiles = _tiles();
+  if(!_stripOf || _stripOf.length !== frames.length || tiles.length !== frames.length || !tiles[idx]
+     || spanAnchor != null || armedDel >= 0 || (pageClip && pageClip.length)
+     || strip.querySelector('.inspan')) return false;
+  for(let k = 0; k < frames.length; k++) if(_stripOf[k] !== frames[k]) return false;
+  if(tiles[was]) tiles[was].classList.remove('on');
+  tiles[idx].classList.add('on');
+  if(was !== idx) refreshThumb(was);
+  const k = _stripLater ? _stripLater.findIndex(t => t[2] === idx) : -1;
+  if(k >= 0){ const t = _stripLater.splice(k, 1)[0]; drawThumb(t[0], t[1]); }
+  syncPagebar(); syncFlipDuration();
+  if(typeof syncMoveLabel === 'function') syncMoveLabel();
+  updateToolState();
+  return true;
+}
 
 /* ---- Instant flip scrub -------------------------------------------------
  * Hold a left/right key and the pages flip past like a thumb riffling paper.

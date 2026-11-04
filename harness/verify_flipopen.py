@@ -30,6 +30,19 @@ WHAT IS ASKED, AND HOW IT IS READ
     own after the file's (it was a fifth of the opening), and before the
     editor's own autosave would have written it (scheduleSave waits 800 ms),
     so a reload just after the opening finds it.
+  * A PAGE CHANGE (Speed 3 of the owner's "all yes"): a tap on another page
+    of the long Flip moves the strip's mark and makes no tile again (the
+    same tile elements; buildStrip not called), and the strip is then, tile
+    for tile and picture for picture, with the page bar, what making it
+    again gives. It cost the strip made again, every tile and every page's
+    signature: about 33 ms of a 54 ms change on a desk at this box's pace,
+    250 to 280 ms with the CPU 4x slower. Timed with the CPU 4x slower, the
+    page change less the new page's own paint on the pad (render) is under
+    half of the strip made again alone, on the same page; with the strip made
+    again inside it, it could never be under the whole. Where something on the strip follows the page you are on (a
+    range of pages, the paste ghost after it, a delete armed), the strip is
+    made again as before, and is again what making it gives; and the page
+    you leave is laid from its ink as it is now.
 """
 import json
 import math
@@ -55,7 +68,7 @@ PHONE = dict(viewport={"width": 402, "height": 874}, device_scale_factor=2, is_m
 DESK = dict(viewport={"width": 1280, "height": 900}, device_scale_factor=1)
 GROUND = (246, 242, 234)   # #f6f2ea, the fixture's ground
 
-# For calibration: FLIPOPEN_PART=slices,tap,short,draft runs only those parts,
+# For calibration: FLIPOPEN_PART=slices,tap,short,draft,turn runs only those parts,
 # and FLIPOPEN_VIEW=desk (or phone) the slices on that screen only.
 PART = [p for p in (os.environ.get("FLIPOPEN_PART") or "").split(",") if p]
 VIEW = os.environ.get("FLIPOPEN_VIEW") or ""
@@ -151,6 +164,42 @@ ONE_CALL = """() => { const tiles = [..._tiles()], fresh = [];
   fresh.forEach((cv) => { const d = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data;
     let n = 0; for (let i = 0; i < d.length; i += 16) if (d[i] < 200) n++; if (n > 20) inked++; });
   return { ms, same, inked, n: tiles.length }; }"""
+
+
+# A page change watched: buildStrip's calls counted, go() timed, each tile
+# marked as the element it is now (a tile made again is a new element).
+TURN_WATCH = """() => { const t = window.__turn = { builds: 0, go: [], drawn: 0, inGo: false };
+  if (!window.__turnWrapped) { window.__turnWrapped = true;
+    const b0 = window.buildStrip; window.buildStrip = function () { window.__turn.builds++; return b0.apply(this, arguments); };
+    const r0 = window.render; window.render = function () { const a = performance.now(); const r = r0.apply(this, arguments);
+      if (window.__turn.inGo) window.__turn.drawn += performance.now() - a; return r; };
+    const g0 = window.go; window.go = function () { const T = window.__turn; T.inGo = true; T.drawn = 0;
+      const a = performance.now(); try { return g0.apply(this, arguments); }
+      finally { T.inGo = false; T.go.push([performance.now() - a, T.drawn]); } }; }
+  _tiles().forEach((el, i) => { el.__mark = i + 1; }); }"""
+TURN_READ = """() => { const tiles = [..._tiles()];
+  return { builds: window.__turn.builds, go: window.__turn.go, idx,
+           same: tiles.every((el, i) => el.__mark === i + 1),
+           on: tiles.map((el, i) => el.classList.contains('on') ? i : -1).filter(i => i >= 0) }; }"""
+# The strip as it stands (every child's class and markup but the canvases',
+# each tile's picture, the page bar), then the strip made again and read the
+# same way: the two must be the same. Each read waits a task first: the
+# tooltips (lib/tooltip.js) take a new button's title into data-tip from a
+# MutationObserver, so a strip read the moment it is made still has titles.
+AS_MADE = """async () => { const tick = () => new Promise(r => setTimeout(r, 0)); const snap = () => {
+    const kids = [...strip.children].map(el => el.className + '|' + el.innerHTML.replace(/<canvas[^>]*><\\/canvas>/g, '<canvas>'));
+    const pics = [..._tiles()].map(el => { const cv = el.querySelector('canvas'), d = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data;
+      let x = 2166136261 >>> 0; for (let i = 0; i < d.length; i += 4) x = Math.imul(x ^ d[i] ^ (d[i + 1] << 8) ^ (d[i + 2] << 16) ^ (d[i + 3] << 24), 16777619) >>> 0; return x; });
+    const bar = pagebar ? [...pagebar.querySelectorAll('button')].map(b => (b.id || b.className) + ':' + b.disabled + ':' + (b.getAttribute('aria-pressed') || '') + ':' + b.title).join(',')
+      + '|' + (pbWho ? pbWho.textContent : '') : '';
+    return { kids, pics, bar }; };
+  await tick(); const a = snap(), t = performance.now(); buildStrip(); const ms = performance.now() - t;
+  await tick(); const b = snap(), diff = [];
+  if (a.kids.length !== b.kids.length) diff.push('children ' + a.kids.length + ' vs ' + b.kids.length);
+  a.kids.forEach((k, i) => { if (k !== b.kids[i]) diff.push('child ' + i + ': ' + k.slice(0, 90) + ' vs ' + String(b.kids[i]).slice(0, 90)); });
+  a.pics.forEach((h, i) => { if (h !== b.pics[i]) diff.push('picture ' + (i + 1)); });
+  if (a.bar !== b.bar) diff.push('page bar: ' + a.bar.slice(0, 120) + ' vs ' + b.bar.slice(0, 120));
+  return { same: diff.length === 0, diff: diff.slice(0, 4), n: diff.length, ms }; }"""
 
 
 def waited(pg, cond, timeout):
@@ -265,6 +314,113 @@ with sync_playwright() as p:
                   opened and at.get("slot", 0) < 100000, f"the draft was {at.get('slot')} characters as the file's task ended")
             check("no page errors", not errs, "; ".join(errs[:2]))
             c.close()
+        if part("turn"):
+            # A PAGE CHANGE ON A LONG FLIP MOVES THE STRIP'S MARK (Speed 3).
+            print("\nA PAGE CHANGE ON A LONG FLIP: the strip's mark moves, no tile is made again")
+            for name, view in (("phone", PHONE), ("desk", DESK)):
+                if VIEW and VIEW != name:
+                    continue
+                c, pg, errs = flip(b, view)
+                t0, opened = pick(pg, LONG)
+                whole = waited(pg, WHOLE, 240000 if opened else 1500)
+                pg.wait_for_timeout(600)
+                pg.evaluate(TURN_WATCH)
+                pg.locator("#strip .frame:not(.ghost-paste)").nth(10).click()
+                pg.wait_for_timeout(300)
+                st = pg.evaluate(TURN_READ)
+                check(f"{name}: a tap on another page of a long Flip moves the strip's mark: the same tiles, the tapped one marked, none made again",
+                      opened and whole and st["builds"] == 0 and st["same"] and st["on"] == [10] and st["idx"] == 10,
+                      f"buildStrip {st['builds']} times; the same tiles {st['same']}; marked {st['on']}; on page {st['idx'] + 1}")
+                eq = pg.evaluate(AS_MADE)
+                check(f"{name}: ...and the strip is then, tile for tile, picture for picture and its page bar, what making it again gives",
+                      eq["same"], f"{eq['n']} differences {eq['diff']}")
+                # TIMED, the CPU 4x slower: the whole page change against the
+                # strip made again alone, both on this page.
+                cdp = c.new_cdp_session(pg)
+                cdp.send("Emulation.setCPUThrottlingRate", {"rate": 4})
+                pg.evaluate(TURN_WATCH)
+                pg.locator("#strip .frame:not(.ghost-paste)").nth(11).click()
+                pg.wait_for_timeout(1200)
+                st = pg.evaluate(TURN_READ)
+                made = pg.evaluate(AS_MADE)
+                cdp.send("Emulation.setCPUThrottlingRate", {"rate": 1})
+                g, drawn = st["go"][-1] if st["go"] else (1e9, 0)
+                check(f"{name}: ...its strip's part under half of the strip made again alone, the CPU 4x slower",
+                      st["builds"] == 0 and g - drawn < made["ms"] / 2,
+                      f"the page change {g:.0f} ms, {g - drawn:.0f} of it not the new page's paint; "
+                      f"the strip made again {made['ms']:.0f} ms")
+                # THE PAGE YOU LEAVE, its ink changed and its picture not yet
+                # laid again: a tap away lays it from its ink as it is now.
+                pg.evaluate("""() => { const f = frames[idx], p = f.strokes;
+                  for (let k = 0; k < 40; k++) p.push({ x: 100 + k * 12, y: 300 + (k % 2) * 8, color: '#1d1a2b', size: 9, t: 0, start: k === 0 });
+                  f.strokeGroups = (f.strokeGroups || []).concat([40]); }""")
+                pg.evaluate(TURN_WATCH)
+                pg.locator("#strip .frame:not(.ghost-paste)").nth(3).click()
+                pg.wait_for_timeout(300)
+                st = pg.evaluate(TURN_READ)
+                eq = pg.evaluate(AS_MADE)
+                check(f"{name}: ...and the page you leave is laid from its ink as it is now, as making the strip again did",
+                      st["builds"] == 0 and eq["same"], f"buildStrip {st['builds']} times; {eq['n']} differences {eq['diff']}")
+                if name == "desk":
+                    # WHERE THE STRIP FOLLOWS THE PAGE YOU ARE ON, it is made
+                    # again, as before: a range of pages (Shift and a tap, then
+                    # a plain tap), the paste ghost (a page copied), a delete
+                    # armed (and a page change from anywhere but a tap).
+                    tiles = pg.locator("#strip .frame:not(.ghost-paste)")
+                    tiles.nth(8).click(modifiers=["Shift"])
+                    pg.evaluate(TURN_WATCH)
+                    tiles.nth(20).click()
+                    pg.wait_for_timeout(300)
+                    st = pg.evaluate(TURN_READ)
+                    eq = pg.evaluate(AS_MADE)
+                    check("desk: a tap after a range of pages makes the strip again, the range gone, as before",
+                          st["builds"] >= 1 and st["idx"] == 20 and eq["same"],
+                          f"buildStrip {st['builds']} times; on page {st['idx'] + 1}; {eq['n']} differences {eq['diff']}")
+                    pg.click("#pbCopy")
+                    pg.evaluate(TURN_WATCH)
+                    tiles.nth(25).click()
+                    pg.wait_for_timeout(300)
+                    st = pg.evaluate(TURN_READ)
+                    eq = pg.evaluate(AS_MADE)
+                    ghost = pg.evaluate("() => { const g = strip.querySelector('.ghost-paste'); return g && g.previousElementSibling ? [..._tiles()].indexOf(g.previousElementSibling) : -1; }")
+                    check("desk: with a page copied, a tap makes the strip again and the paste ghost follows the page you are on",
+                          st["builds"] >= 1 and ghost == 25 and eq["same"],
+                          f"buildStrip {st['builds']} times; the ghost after page {ghost + 1}; {eq['n']} differences {eq['diff']}")
+                    pg.evaluate("() => { pageClip = null; buildStrip(); }")
+                    tiles.nth(25).locator(".del").click()   # the page you are on shows its delete
+                    armed = pg.evaluate("() => armedDel")
+                    pg.evaluate(TURN_WATCH)
+                    pg.evaluate("() => go(33)")
+                    st = pg.evaluate(TURN_READ)
+                    eq = pg.evaluate(AS_MADE)
+                    check("desk: a page change with a delete armed makes the strip again, the delete no longer armed, as before",
+                          armed == 25 and st["builds"] >= 1 and pg.evaluate("() => armedDel") == -1 and eq["same"],
+                          f"armed on page {armed + 1}; buildStrip {st['builds']} times; {eq['n']} differences {eq['diff']}")
+                    # A RANGE ANCHORED WHERE A PAGE CHANGE COMES FROM A MENU OR
+                    # AN UNDO (no tap clears it first): the range then runs to
+                    # the new page, so the strip is made again to draw it.
+                    pg.evaluate(TURN_WATCH)
+                    pg.evaluate("() => { setSpanAnchor(idx); go(idx + 4); }")
+                    st = pg.evaluate(TURN_READ)
+                    eq = pg.evaluate(AS_MADE)
+                    lit = pg.evaluate("() => strip.querySelectorAll('.frame.inspan').length")
+                    pg.evaluate("() => clearSpan()")
+                    check("desk: a page change with a range anchored makes the strip again, the range drawn to the new page",
+                          st["builds"] >= 1 and lit == 5 and eq["same"],
+                          f"buildStrip {st['builds']} times; {lit} pages in the range; {eq['n']} differences {eq['diff']}")
+                    # THE STRIP IS TURNED ONLY WHILE IT IS THE ONE MADE FOR THESE
+                    # PAGES IN THIS ORDER. Every change to the pages makes it
+                    # again today; here the order changes under it, and a page
+                    # change must make it again, not mark a strip of other pages.
+                    pg.evaluate(TURN_WATCH)
+                    pg.evaluate("() => { frames.push(frames.shift()); go(7); }")
+                    st = pg.evaluate(TURN_READ)
+                    eq = pg.evaluate(AS_MADE)
+                    check("desk: a page change under a strip made for pages in another order makes the strip again",
+                          st["builds"] >= 1 and eq["same"],
+                          f"buildStrip {st['builds']} times; {eq['n']} differences {eq['diff']}")
+                check(f"{name}: no page errors through the page changes", not errs, "; ".join(errs[:2]))
+                c.close()
     finally:
         b.close()
         for f in (LONG, SHORT):
