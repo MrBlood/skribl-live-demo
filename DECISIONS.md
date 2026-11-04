@@ -28994,7 +28994,11 @@ when a save is fine.
   when it already was one, so "not-a-time", [], {} and true were stored,
   and a replay subtracting neighbouring times got NaN. Now a `t` that is
   there is a finite number in range; absent or null (what JSON.stringify
-  writes for NaN) still posts. Rows in verify_apiedges.
+  writes for NaN) still posts. Rows in verify_apiedges. verify_mediameta's
+  row of an object where a time goes expected the per-point size budget's
+  words, and is refused first as a time now (still 400); it reads the
+  time's words. The smoke job caught it on the first push: I had not
+  named that suite among the affected ones.
 - 11, A THUMBNAIL IS WHOLE. The draft check decoded the first 48 bytes, so
   the reviewer's PNG cut off at 26 was stored. Now the picture is decoded
   whole and ends as its kind ends: a PNG its IEND after an IHDR first, a
