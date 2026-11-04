@@ -3078,6 +3078,9 @@ function syncFlipDuration(){
 function syncPagebar(){
   if(!pagebar) return;
   const f=frames[idx], n=frames.length;
+  // The page tools that need a second page wait for it on a desk (flip.css,
+  // THE PAGE TOOLS WAIT FOR A SECOND PAGE).
+  document.body.classList.toggle('one-page', n < 2);
   /* "21/43", not "Page 21 / 43". The word cost 40px in a bar that was ALREADY
      overflowing: nowrap, and at 360 its contents measured 369px inside 340,
      so the Delete button was being clipped off the end before any of tonight's
@@ -3386,7 +3389,13 @@ function buildStrip(){
   });
   paintTiles(toPaint);
   _stripOf = frames.slice();   // the pages this strip was made for, in order (turnStrip)
-  const col=document.createElement('div'); col.className='addcol';
+  /* THE ADD ROW IS MADE ONCE AND KEPT (FUTURE 6z item 9). A row made again on
+     every build could not glide: its Tween and Smear, waiting while there is
+     one page, would just appear with the second. */
+  const stripWrap = strip.parentNode;
+  let col = stripWrap.querySelector(':scope > .addcol');
+  if(!col){
+  col=document.createElement('div'); col.className='addcol';
   // Built here rather than in the template, which is why a template-wide
   // tooltip pass could not reach them. lib/tooltip.js adopts late markup via a
   // MutationObserver, so a title written here is picked up like any other.
@@ -3404,16 +3413,13 @@ function buildStrip(){
   // edge fixed the reach but still spent strip width on them at every size.
   // Out here they cannot scroll away at any width, need no scrim over the
   // thumbnails sliding under them, and give the strip its full width back.
-  // buildStrip() empties `strip`, which used to sweep the old column away for
-  // free -- out here the previous one has to be removed explicitly.
-  const stripWrap = strip.parentNode;
-  const prevCol = stripWrap.querySelector(':scope > .addcol');
-  if(prevCol) prevCol.remove();
+  // buildStrip() empties `strip`, and the row sits outside it, made once.
   stripWrap.insertBefore(col, strip);
   col.querySelector('#addcopy').addEventListener('click',()=>{ if(playing) return; if(moveMode){ chip('Finish or cancel the move first'); return; } addFrame(true); });
   col.querySelector('#addblank').addEventListener('click',()=>{ if(playing) return; if(moveMode){ chip('Finish or cancel the move first'); return; } addFrame(false); });
   col.querySelector('#addinbetween').addEventListener('click', addInbetween);
   col.querySelector('#addtween').addEventListener('click', addTween);
+  }
   _loopHandles(_lhWas);
   syncPagebar();
   syncFlipDuration();
@@ -12432,6 +12438,9 @@ syncCanvasSeg();
 // it, so the first measure (taken with an empty strip) is too tall until the
 // second one. The best-fit pick below reads the stage, so it must be the real one.
 sizeStage(); buildStrip(); sizeStage(); render(); sizeFill(); setBg(bgColor);
+// The page tools glide when a page is added or the last but one taken away,
+// not as Flip opens (flip.css, THE PAGE TOOLS WAIT FOR A SECOND PAGE).
+requestAnimationFrame(() => requestAnimationFrame(() => document.body.classList.add('tools-glide')));
 updateFlipEmptyHint();
 // Yank the whisper the moment a stroke starts, so it is not sitting under it.
 pad.addEventListener('pointerdown', () => {

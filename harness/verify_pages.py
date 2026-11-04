@@ -841,6 +841,105 @@ with sync_playwright() as p:
               all(l - 1 >= 0.8 * (d - 1) for l, d in zip(seen[name], seen["dark"])),
               f"1, 2 and 3 pages back: {seen[name]} on {name}, {seen['dark']} on the dark canvas")
 
+    # THE PAGE TOOLS WAIT FOR A SECOND PAGE (FUTURE 6z item 9; the owner's B,
+    # Nov 4). On a desk with one page, six of the eleven buttons around the
+    # strip did nothing. Now one page shows Draw, Duplicate and Blank; the
+    # other eight are not painted and cannot take focus. A second page brings
+    # them in gliding (read every frame: Draw slides on, no frame a sixth of
+    # its way), standing in groups: Order · Copy · how it plays · Delete, and
+    # New page · Between. Taking the second page away folds them again. Reduce
+    # Motion: at once. A phone keeps its own (the ⋯ and its four add buttons).
+    print("\nPAGE TOOLS — on a desk, one page shows what one page can use; the rest come with a second, in groups")
+    WAITS = ["pbLeft", "pbRight", "pbCopy", "pbLoop", "pbUnder", "pbDel", "addinbetween", "addtween"]
+    STAYS = ["pbDraw", "addcopy", "addblank"]
+    # Painted: what is at its middle is it (a disabled button takes no
+    # pointer, so it is let take one for the asking), and it is not hidden or
+    # faded out. Focus: whether it can take it.
+    TOOLS = """(ids) => ids.map(id => { const e = document.getElementById(id), r = e.getBoundingClientRect();
+      const pe = e.style.pointerEvents; e.style.pointerEvents = 'auto';
+      const at = r.width >= 4 && r.height >= 4 ? document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2) : null;
+      e.style.pointerEvents = pe;
+      const seen = e.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true });
+      e.focus(); const focused = document.activeElement === e; e.blur();
+      return { id, painted: !!at && e.contains(at) && seen, focused, w: Math.round(r.width), l: r.left, r: r.right }; })"""
+    # Every frame: where Draw is in the bar, and how wide Duplicate is in the
+    # add row (it gives Tween and Smear their room).
+    GLIDE = """() => { window.__glide = []; const t0 = performance.now();
+      const tick = (now) => { window.__glide.push([now, document.getElementById('pbDraw').getBoundingClientRect().left,
+          document.getElementById('addcopy').getBoundingClientRect().width]);
+        if (now - t0 < 900) requestAnimationFrame(tick); }; requestAnimationFrame(tick); }"""
+
+    def glided(g, k):
+        """Its travel, the frames it moved in, and its largest step in a frame's
+        time (16.7ms). A FRAME DROPPED UNDER LOAD IS NOT A JUMP: beside two other
+        suites the browser skipped one, and Draw's step over it was two frames'
+        travel (49.7px, red against 48); a step is divided by the frames it took,
+        up to three, so a snap after a stall still reads as one."""
+        v = [row[k] for row in g]
+        steps = [(abs(v[i] - v[i - 1]), g[i][0] - g[i - 1][0]) for i in range(1, len(v))]
+        per = [d * 16.7 / max(16.7, min(ms, 50)) for d, ms in steps]
+        return abs(v[-1] - v[0]) if v else 0, len([d for d, _ in steps if d > 0.5]), max(per or [0])
+
+    def tools_page(view, **extra):
+        c = br.new_context(**view, **extra)
+        q = c.new_page()
+        browsing.goto(q, BASE, "/flip")
+        q.wait_for_timeout(800)
+        q.evaluate("() => { const h = document.querySelector('.skribl-hint'); if (h) { h.classList.remove('in'); h.hidden = true; } }")
+        return c, q
+
+    for scheme in ("light", "dark"):
+        c, q = tools_page({"viewport": {"width": 1280, "height": 900}}, color_scheme=scheme)
+        w1, s1 = q.evaluate(TOOLS, WAITS), q.evaluate(TOOLS, STAYS)
+        check(f"desk, {scheme}: one page: Draw, Duplicate and Blank are there, the other eight wait (not painted, no focus)",
+              all(t["painted"] for t in s1) and not any(t["painted"] or t["focused"] or t["w"] > 0 for t in w1),
+              f"there {[t['id'] for t in s1 if t['painted']]}; waiting but showing {[t['id'] for t in w1 if t['painted'] or t['focused'] or t['w'] > 0]}")
+        q.evaluate(GLIDE)
+        q.click("#addcopy")
+        q.wait_for_timeout(1000)
+        g = q.evaluate("() => window.__glide")
+        dt, dn, ds = glided(g, 1)
+        ut, un, us = glided(g, 2)
+        check(f"desk, {scheme}: a second page brings them in gliding: Draw slides on, and Duplicate gives Tween and Smear their room, "
+              "each over many frames, no frame's step a sixth of its way",
+              dt > 100 and dn >= 8 and ds <= dt / 6 and ut > 100 and un >= 8 and us <= ut / 6,
+              f"Draw slid {dt:.0f}px over {dn} frames (largest step a frame {ds:.1f}); Duplicate {ut:.0f}px narrower over {un} frames (largest {us:.1f})")
+        w2, s2 = q.evaluate(TOOLS, WAITS), q.evaluate(TOOLS, STAYS)
+        b = {t["id"]: t for t in w2 + s2}
+        gap = lambda a, z: b[z]["l"] - b[a]["r"]
+        inside = max(gap("pbLeft", "pbRight"), gap("pbDraw", "pbLoop"), gap("pbLoop", "pbUnder"))
+        between = min(gap("pbRight", "pbCopy"), gap("pbCopy", "pbDraw"), gap("pbUnder", "pbDel"))
+        check(f"desk, {scheme}: two pages: all eleven painted, in groups: Order · Copy · how it plays · Delete, and New page · Between",
+              all(t["painted"] for t in w2 + s2) and between >= inside + 10
+              and gap("addblank", "addinbetween") >= gap("addcopy", "addblank") + 10,
+              f"not painted {[t['id'] for t in w2 + s2 if not t['painted']]}; gaps within {inside:.0f}px, between {between:.0f}px; "
+              f"add row {gap('addcopy', 'addblank'):.0f} then {gap('addblank', 'addinbetween'):.0f}px")
+        q.evaluate("() => delFrame(1)")
+        q.wait_for_timeout(900)
+        w3 = q.evaluate(TOOLS, WAITS)
+        check(f"desk, {scheme}: the second page taken away, the eight wait again",
+              q.evaluate("() => frames.length") == 1 and not any(t["painted"] or t["focused"] or t["w"] > 0 for t in w3),
+              f"{q.evaluate('() => frames.length')} pages; showing {[t['id'] for t in w3 if t['painted'] or t['w'] > 0]}")
+        c.close()
+
+    c, q = tools_page({"viewport": {"width": 1280, "height": 900}}, reduced_motion="reduce")
+    q.evaluate(GLIDE)
+    q.click("#addcopy")
+    q.wait_for_timeout(1000)
+    g = q.evaluate("() => window.__glide")
+    dt, dn, _ = glided(g, 1)
+    ut, un, _ = glided(g, 2)
+    check("desk, Reduce Motion: a second page brings them at once, no glide",
+          dt > 100 and dn <= 2 and ut > 100 and un <= 2, f"Draw moved in {dn} frames, Duplicate in {un}")
+    c.close()
+
+    c, q = tools_page({"viewport": {"width": 402, "height": 874}, "device_scale_factor": 2, "is_mobile": True, "has_touch": True})
+    ph = q.evaluate(TOOLS, ["addcopy", "addblank", "addinbetween", "addtween"])
+    check("phone: one page keeps its four add buttons and its ⋯, as it was",
+          all(t["painted"] for t in ph) and q.evaluate("() => getComputedStyle(document.getElementById('pagebar')).display") == "none",
+          f"{[(t['id'], t['painted']) for t in ph]}")
+    c.close()
+
     br.close()
 
 ok = sum(1 for o, _ in results if o)

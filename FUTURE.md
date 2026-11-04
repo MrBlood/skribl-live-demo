@@ -1499,11 +1499,15 @@ were held, by the owner's yes, until after the finish line; each was
 measured at phone pace (Chromium, the CPU 4x slower, 4G, 402 x 874) on main
 at 92bc060.
 
-9. **Flip on a desk: fewer buttons at once** (design, mock first; Flip only).
-   Twelve buttons around the canvas look equally important (Left, Right,
-   Copy, Draw, Loop, Under, Delete, Duplicate, Blank, Tween, Smear), and most
-   do nothing while there is one page. The idea: the page tools stay quiet
-   until there is a second page, then group by what they do.
+9. ~~**Flip on a desk: fewer buttons at once** (design, mock first; Flip
+   only).~~ **BUILT after v330** (the three asks' mock, B, "all yes";
+   DECISIONS: "Flip's page tools wait for a second page, then stand in
+   groups"): one page shows Draw, Duplicate and Blank; a second page glides
+   the other eight in, grouped by what they do (Order · Copy · how it plays ·
+   Delete, and New page · Between). A phone stays as it was. Was: every page
+   tool around the canvas at once, equally important (Left, Right, Copy,
+   Draw, Loop, Under, Delete, Duplicate, Blank, Tween, Smear), and most did
+   nothing while there was one page.
 10. ~~**On a tablet, the Pad's canvas uses the width** (design, mock first; the
     Pad, to match Flip).~~ **BUILT after v330, in both editors** (the tablet
     mock's A, "All yes", then "do Flip on the 12.9 too"; DECISIONS: "An iPad

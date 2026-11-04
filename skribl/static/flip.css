@@ -1644,6 +1644,47 @@ body.stroking .strip-wrap {
 }
 @media (hover: hover) { .addcol .addbtn:hover { background: rgba(var(--wash-rgb), .09); color: var(--text-primary); } }
 
+/* THE PAGE TOOLS WAIT FOR A SECOND PAGE (FUTURE 6z item 9; the owner's B from
+   the three asks' mock, Nov 4). On a desk, with one page, six of the eleven
+   buttons around the strip did nothing: four dimmed (Left, Right, Under,
+   Delete) and two that looked ready but only said "add the next pose first"
+   (Tween, Smear). With one page the bar keeps Draw and the add row Duplicate
+   and Blank; the others fold to nothing, out of sight and out of the tab
+   order, and come in with a second page: each grows from nothing as the rest
+   make room, and fades in once it has (flip.js marks body.one-page in
+   syncPagebar). With two pages and more they stand in groups, a gap between:
+   Order (Left, Right) · Copy · how it plays (Draw, Loop, Under) · Delete, and
+   New page (Duplicate, Blank) · Between (Tween, Smear). A phone keeps its own:
+   the page's ⋯, and the add row as it was. Reduce Motion: at once.
+   The add row is a row of four equal parts on a desk, where it was a grid of
+   four equal columns (the same widths): a grid cannot glide from four columns
+   to two. A folded button gives back the row's gap with its own margin. */
+/* Growing the width itself, from nothing to its own (interpolate-size), so a
+   button grows across the whole glide; where a browser cannot, the cap below
+   still lets it grow, if sooner (it reaches its own width in a fifth of the
+   time, and the buttons beside it slide on in one frame or two). */
+body:not([data-size="compact"]) :is(.pagebar, .addcol) { interpolate-size: allow-keywords; }
+body:not([data-size="compact"]) .pagebar .pb { max-width: 240px; }
+body:not([data-size="compact"]) .addcol { display: flex; }
+body:not([data-size="compact"]) .addcol .addbtn { flex: 1 1 0; min-width: 0; max-width: 600px; }
+body:not([data-size="compact"]).one-page :is(#pbLeft, #pbRight, #pbCopy, #pbLoop, #pbUnder, #pbDel, #addinbetween, #addtween) {
+  max-width: 0; min-width: 0; padding-left: 0; padding-right: 0; border-width: 0; flex-grow: 0;
+  opacity: 0; visibility: hidden; overflow: hidden; }
+body:not([data-size="compact"]).one-page .pagebar :is(#pbLeft, #pbRight, #pbCopy, #pbLoop, #pbUnder, #pbDel) { margin-left: -8px; width: 0; }
+body:not([data-size="compact"]).one-page .addcol :is(#addinbetween, #addtween) { margin-left: -6px; }
+body:not([data-size="compact"]):not(.one-page) :is(#pbCopy, #pbDraw, #addinbetween) { margin-left: 12px; }
+@media (prefers-reduced-motion: no-preference) {
+  body.tools-glide:not([data-size="compact"]) :is(.pagebar .pb, .addcol .addbtn) {
+    transition: background .15s ease, border-color .15s ease, color .15s ease,
+      width .3s ease, max-width .3s ease, min-width .3s ease, padding .3s ease, margin .3s ease, border-width .3s ease,
+      flex-grow .3s ease, opacity .2s ease .15s, visibility 0s linear 0s; }
+  /* Folding: it fades first, then gives its room back, then leaves the tab order. */
+  body.tools-glide.one-page:not([data-size="compact"]) :is(#pbLeft, #pbRight, #pbCopy, #pbLoop, #pbUnder, #pbDel, #addinbetween, #addtween) {
+    transition: background .15s ease, border-color .15s ease, color .15s ease,
+      width .3s ease .1s, max-width .3s ease .1s, min-width .3s ease .1s, padding .3s ease .1s, margin .3s ease .1s,
+      border-width .3s ease .1s, flex-grow .3s ease .1s, opacity .12s ease, visibility 0s linear .4s; }
+}
+
 
 /* ---------- THE LOOP, THE PAGE UNDERNEATH, AND PAGES THAT NEVER PLAY ----------
    Blooby's card, PR 3 (flip.js buildStrip). The loop is a bracket along the
