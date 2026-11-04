@@ -1544,17 +1544,18 @@ it moves six sheets' look, each with a check like the Post sheet's ("nothing
 painted in the sheet under 12px").
 
 **Measured, not built, outside the list:** Flip's page change on a long Flip
-(6y); the Pad's own player paints a long drawing three times (DECISIONS,
-"The Pad opens a long drawing without a freeze"). (Flip's Undo past the three
-copies a busy page keeps repainted the page, and its tile again; and each
-pen stroke's start on a busy page painted the page: FIXED after v330,
-DECISIONS "Flip on a busy page: a floor under Undo, the tile from the layer,
-a stroke's start". A file opened on the Pad over a take still recording
-came up without its Keep drawing pill: FIXED after v330, DECISIONS "A file
-opened over a take ends the take first". The Pad's Undo past its three
-copies on a two-hour piece painted the whole drawing again, 6 to 7 s a press
-at a phone's pace: FIXED after v330, DECISIONS "Undo on a long drawing: a
-floor under the history".)
+(6y). (The Pad's own player painted a long drawing three times as it opened,
+and on a desk laid it out at 1 x 1, the editor's dock over it: FIXED after
+v330, DECISIONS "The Pad's own player opens a long drawing once". Flip's
+Undo past the three copies a busy page keeps repainted the page, and its
+tile again; and each pen stroke's start on a busy page painted the page:
+FIXED after v330, DECISIONS "Flip on a busy page: a floor under Undo, the
+tile from the layer, a stroke's start". A file opened on the Pad over a take
+still recording came up without its Keep drawing pill: FIXED after v330,
+DECISIONS "A file opened over a take ends the take first". The Pad's Undo
+past its three copies on a two-hour piece painted the whole drawing again, 6
+to 7 s a press at a phone's pace: FIXED after v330, DECISIONS "Undo on a
+long drawing: a floor under the history".)
 
 ## 6aa. Help cards inside the drawers (owner, after #691, with a screenshot of the eyedropper and Recolor: "shouldn't these have help cards? What other tools don't have help cards?")
 
