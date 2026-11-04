@@ -79,17 +79,25 @@
     var cs = global.getComputedStyle(col);
     return col.clientWidth - (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0);
   }
-  function span(row) {
+  // How far the row reaches out on each side, read without moving it: the
+  // Pad picks a new drawing's shape against the row it will be before the
+  // row reaches (app.js resizeCanvas), because a row reaching while it is
+  // still empty grows taller than it will be.
+  function reach(row) {
     var col = row && row.parentElement, body = global.document.body;
     if (!col || !body) return 0;
-    var inner = columnWidth(row);
-    var reach = Math.max(0, (body.clientWidth - inner) / 2);
-    if (reach < 0.5) reach = 0;
-    var m = reach ? -reach + 'px' : '';
+    var r = Math.max(0, (body.clientWidth - columnWidth(row)) / 2);
+    return r < 0.5 ? 0 : r;
+  }
+  function span(row) {
+    var body = global.document.body;
+    if (!row || !row.parentElement || !body) return 0;
+    var r = reach(row);
+    var m = r ? -r + 'px' : '';
     if (row.style.marginLeft !== m) { row.style.marginLeft = m; row.style.marginRight = m; }
-    body.classList.toggle('canvas-wide', reach > 0);
-    return reach;
+    body.classList.toggle('canvas-wide', r > 0);
+    return r;
   }
 
-  global.SkriblChromeFit = { watch: watch, span: span, columnWidth: columnWidth };
+  global.SkriblChromeFit = { watch: watch, span: span, columnWidth: columnWidth, reach: reach };
 })(window);

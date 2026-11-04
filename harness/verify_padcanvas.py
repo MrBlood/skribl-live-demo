@@ -82,6 +82,71 @@ with sync_playwright() as p:
         pg.close()
 
     # -----------------------------------------------------------------------
+    print("\nPAD CANVAS — a touch screen held upright starts square when the square fits")
+    #
+    # The owner's A, after the tablet mock ("All yes"). An iPad held upright
+    # has a column just short of the square (696 of its 707 on an Air), so the
+    # column chose 9:16 and a new drawing used 69% of the width, where Flip,
+    # measuring its own row, starts square. Against the row the canvas sits
+    # in, which reaches the screen's edges, the square at its own size now
+    # starts whenever it fits, filling the width. A phone (the square never
+    # fits), a desk (no finger) and a tablet on its side start as before, the
+    # shape that shows largest in the column; a drawing already made keeps its
+    # own shape.
+    SHAPE = """() => { const t = window.SkriblCanvasSizes, el = document.querySelector('.canvas-area');
+        const cs = getComputedStyle(el), r = el.getBoundingClientRect();
+        const aw = Math.min(r.width, SkriblChromeFit.columnWidth(el)) - parseFloat(cs.paddingLeft || 0) - parseFloat(cs.paddingRight || 0);
+        const ah = r.height - parseFloat(cs.paddingTop || 0) - parseFloat(cs.paddingBottom || 0);
+        const c = document.getElementById('canvas').getBoundingClientRect();
+        return { id: t.idFor(authoredW, authoredH), bestId: t.bestFor(aw, ah).id, shown: Math.round(c.width) }; }"""
+
+    def fresh_pad(w, h, touch):
+        ctx = b.new_context(viewport={"width": w, "height": h}, is_mobile=touch, has_touch=touch)
+        pg = ctx.new_page()
+        pg.goto(f"{BASE}/skribl-pad", wait_until="load")
+        pg.wait_for_timeout(1400)
+        return ctx, pg
+
+    for w, h, label in ((744, 1133, "an iPad mini"), (820, 1180, "an iPad Air"),
+                        (834, 1194, "an 11-inch iPad Pro"), (1024, 1366, "a 12.9-inch iPad Pro")):
+        ctx, pg = fresh_pad(w, h, True)
+        s = pg.evaluate(SHAPE)
+        check(f"held upright, {label} ({w}x{h}) starts square, the drawing filling the width ({s['shown']}px)",
+              s["id"] == "square" and s["shown"] >= 0.95 * w, str(s))
+        ctx.close()
+    for w, h, touch, label in ((402, 874, True, "a phone"), (1180, 820, True, "an iPad Air on its side"),
+                               (820, 1180, False, "a desk window an iPad Air's size"),
+                               (1920, 1300, True, "a big touch screen on its side")):
+        ctx, pg = fresh_pad(w, h, touch)
+        s = pg.evaluate(SHAPE)
+        check(f"{label} starts as before, in the shape that shows largest in its column ({s['id']})",
+              s["id"] == s["bestId"], str(s))
+        ctx.close()
+    # A drawing already made keeps its shape: tall, drawn on, reloaded, still tall.
+    ctx, pg = fresh_pad(820, 1180, True)
+    pg.evaluate("() => { const m = document.getElementById('menuOverlay');"
+                " if (m) { m.hidden = false; m.classList.add('open'); } SkriblMenuPages.show('settings', false); }")
+    pg.wait_for_timeout(250)
+    pg.click("#canvasSeg button[data-size='tall']")
+    pg.wait_for_timeout(300)
+    pg.evaluate("() => { const m = document.getElementById('menuOverlay');"
+                " if (m) { m.hidden = true; m.classList.remove('open'); } }")
+    pg.wait_for_timeout(200)
+    box = pg.locator("#canvas").bounding_box()
+    pg.mouse.move(box["x"] + 60, box["y"] + 60)
+    pg.mouse.down()
+    pg.mouse.move(box["x"] + 150, box["y"] + 130, steps=8)
+    pg.mouse.up()
+    pg.wait_for_timeout(1200)
+    drew = pg.evaluate("() => [hasContent, authoredW, authoredH]")
+    pg.reload(wait_until="load")
+    pg.wait_for_timeout(1600)
+    back = pg.evaluate("() => [hasContent, authoredW, authoredH]")
+    check("held upright, a tall drawing already made comes back tall: only a new drawing starts square",
+          drew == [True, 531, 944] and back == [True, 531, 944], f"drew {drew}, back {back}")
+    ctx.close()
+
+    # -----------------------------------------------------------------------
     print("\nPAD CANVAS — one table, shared with Flip")
     pg = b.new_page(viewport={"width": 1280, "height": 900})
     perrs = []
