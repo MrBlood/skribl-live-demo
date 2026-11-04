@@ -744,6 +744,23 @@ function beginWetStroke(x, y, drawColor, drawSize) {
 // and eraser strokes draw straight onto dry (byte-identical to drawDot/drawLine).
 // Consumers: build one after the base is on `visCanvas`, pass its dotFn/lineFn to
 // the loop, call present() each frame, and finish() at the end.
+//
+// ONLY WHAT CHANGED IS LAID BACK (FUTURE 6z item 11: long replays on slower
+// phones). present() cleared the whole visible canvas and laid the whole dry
+// layer back on every frame: on a 3x phone 4.5 million pixels for the few
+// segments a frame draws, 11.7 frames a second at a phone's pace whatever the
+// drawing's length, against 35 with layers off. Each stroke op marks the box
+// it touched (its points, half its size and 2 for the round caps and the
+// anti-aliasing), and present() lays the layers back held to that box: the
+// screen is the same pixels. A bake changes nothing on screen (the screen
+// already showed dry plus wet at its alpha), and a reseed makes the dry layer
+// the screen, so neither marks. CLIPPED, NOT CUT: the whole layers are drawn
+// as before under a clip to the box, which is not clamped to the canvas (the
+// clip and clearRect hold to it). A source rectangle (drawImage's nine
+// arguments) blends a see-through stroke a hair differently, 1 or 2 in 255
+// where it lies over ink, so the screen was no longer the composite
+// (verify_beading caught it). The spans here are counted against the
+// player's reachable ceiling (verify_seam), which is why this sits above.
 function makeStrokeCompositor(visCtx, visCanvas) {
   // The canvas's own ratio for the canvas (it may have grown); an export's
   // layer is made at the drawing's own size, the screen's ratio.
@@ -761,6 +778,9 @@ function makeStrokeCompositor(visCtx, visCanvas) {
   wctx.setTransform(1, 0, 0, 1, 0, 0); wctx.scale(dpr, dpr);
   const lgW = visCanvas.width / dpr, lgH = visCanvas.height / dpr;
   let wetActive = false, wetAlpha = 1;
+  let bx = 1e9, by = 1e9, bX = -1e9, bY = -1e9;          // the box changed since present()
+  const mark = (x, y, s) => { const r = s / 2 + 2; if (x - r < bx) bx = x - r; if (y - r < by) by = y - r;
+    if (x + r > bX) bX = x + r; if (y + r > bY) bY = y + r; };
 
   function bakeWet() {
     dctx.save();
@@ -786,6 +806,7 @@ function makeStrokeCompositor(visCtx, visCanvas) {
   }
   return {
     dotFn(x, y, color, size, erase) {
+      mark(x, y, size);
       if (wetActive) bakeWet();                          // close out the previous stroke
       const a = erase ? 1 : parseStrokeAlpha(color);
       if (!erase && a < 1) {
@@ -797,6 +818,7 @@ function makeStrokeCompositor(visCtx, visCanvas) {
       }
     },
     lineFn(x1, y1, x2, y2, color, size, erase) {
+      mark(x1, y1, size); mark(x2, y2, size);
       if (wetActive) drawLineOn(wctx, x1, y1, x2, y2, solidStrokeColor(color), size);
       else dryLine(x1, y1, x2, y2, color, size, erase);
     },
@@ -810,7 +832,7 @@ function makeStrokeCompositor(visCtx, visCanvas) {
       dctx.strokeStyle = p.color; dctx.lineWidth = p.size;
       dctx.lineCap = 'round'; dctx.lineJoin = 'round';
       dctx.beginPath(); dctx.moveTo(p.x, p.y);
-      for (let i = 1; i < seg.length; i++) dctx.lineTo(seg[i].x, seg[i].y);
+      for (let i = 0; i < seg.length; i++) { mark(seg[i].x, seg[i].y, p.size); if (i) dctx.lineTo(seg[i].x, seg[i].y); }
       dctx.stroke();
     },
     /* A run of ONE ALPHA that is not one path: solid on the wet layer, baked
@@ -820,18 +842,22 @@ function makeStrokeCompositor(visCtx, visCanvas) {
       if (wetActive) bakeWet();            // ...which leaves the wet layer clear
       wetActive = true; wetAlpha = a;
       const p = seg[0];
-      drawDotOn(wctx, p.x, p.y, solidStrokeColor(p.color), p.size);
+      drawDotOn(wctx, p.x, p.y, solidStrokeColor(p.color), p.size); mark(p.x, p.y, p.size);
       for (let i = 1; i < seg.length; i++) {
         const q = seg[i], v = seg[i - 1];
-        drawLineOn(wctx, v.x, v.y, q.x, q.y, solidStrokeColor(q.color), q.size);
+        drawLineOn(wctx, v.x, v.y, q.x, q.y, solidStrokeColor(q.color), q.size); mark(q.x, q.y, q.size);
       }
       bakeWet();
     },
     present() {
+      if (bX < bx) return;                               // nothing drawn since the last
+      const X = Math.floor(bx * dpr), Y = Math.floor(by * dpr), W = Math.ceil(bX * dpr) - X, H = Math.ceil(bY * dpr) - Y;
+      bx = by = 1e9; bX = bY = -1e9;
       visCtx.save();
       visCtx.setTransform(1, 0, 0, 1, 0, 0);
+      visCtx.beginPath(); visCtx.rect(X, Y, W, H); visCtx.clip();
       visCtx.globalAlpha = 1;
-      visCtx.clearRect(0, 0, visCanvas.width, visCanvas.height);
+      visCtx.clearRect(X, Y, W, H);
       visCtx.drawImage(dry, 0, 0);
       if (wetActive) { visCtx.globalAlpha = wetAlpha; visCtx.drawImage(wet, 0, 0); }
       visCtx.restore();
@@ -840,6 +866,7 @@ function makeStrokeCompositor(visCtx, visCanvas) {
     // The visible canvas becomes the dry layer again, after something painted
     // it whole (a recolour's moment in a replay, lib/recolorplay.js).
     reseed() {
+      bx = by = 1e9; bX = bY = -1e9;
       wctx.clearRect(0, 0, lgW, lgH); wetActive = false; wetAlpha = 1;
       dctx.save(); dctx.setTransform(1, 0, 0, 1, 0, 0);
       dctx.clearRect(0, 0, dry.width, dry.height); dctx.drawImage(visCanvas, 0, 0);

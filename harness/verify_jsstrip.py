@@ -321,9 +321,16 @@ with sync_playwright() as sp:
     # (160,370 measured). And RAISED, in both places together, by the Pad
     # opening a long drawing without a freeze (the posting mock's 2b), +223 B,
     # all app.js: the sliced paint's way to lay the rest at once, and
-    # loadSkribl asking the editor's paint and growth (160,593 measured).
+    # loadSkribl asking the editor's paint and growth (160,593 measured). And
+    # RAISED, in both places together, by replays laying back only what
+    # changed (FUTURE 6z item 11, the owner's "do what needs to be done in
+    # the best way"), +120 B, all app.js: the stroke compositor marks the box
+    # each stroke op touches and present() lays its layers back under a clip
+    # to that box, 13.9 -> 41.3 frames a second for a two-hour drawing at a
+    # 3x phone's pace. Spent first: the box's clamps to the canvas, which the
+    # clip already holds (160,713 measured).
     check("stripping keeps the player's JS under its ratchet",
-          lean_total <= 160_596,
+          lean_total <= 160_716,
           f"{src_total:,} B of source -> {lean_total:,} B parsed")
     # THE MODULE ONLY A RECOLOURED DRAWING FETCHES (lib/recolorplay.js, by
     # app.js on the link page and inlineplayer.js in a post): its own pin, so
@@ -422,7 +429,12 @@ with sync_playwright() as sp:
     # way to lay the rest at once, and loadSkribl asking the editor's own
     # paint and growth, all app.js. The line is now 6,793 B over 153,800; the
     # carve named above is still the first candidate.
-    _target = 160_618
+    #
+    # AND 120 B MORE, IN WRITING, for replays laying back only what changed
+    # (FUTURE 6z item 11): the stroke compositor's box and its clipped
+    # present, all app.js. The line is now 6,913 B over 153,800; the carve
+    # named above is still the first candidate.
+    _target = 160_738
     _margin = _target - lean_total
     check(f"REACHES the {_target:,} target (strip + whitespace collapse; 153,800 once its debt is paid)",
           lean_total <= _target,

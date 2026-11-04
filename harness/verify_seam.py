@@ -467,9 +467,18 @@ if _marker in _appjs:
     # warning about, and the whole design virtue is that the clock is scaled
     # once. A ceiling is there to make an addition argue for itself, not to
     # buy three lines with a duplication.
+    #
+    # 1810 -> 1830 after v330, measured 1818, for replays laying back only what
+    # changed (FUTURE 6z item 11: a two-hour drawing at a 3x phone's pace,
+    # 13.9 -> 41.3 frames a second). What grew is makeStrokeCompositor: the
+    # box each stroke op marks, its reset, and present() drawing under a clip
+    # to it. PLAYER code in the player, the distinction this assertion polices.
+    # Removed before asking: the explanation (sixteen lines) moved above the
+    # function, out of the counted span, and the box's helper joined onto two
+    # lines; 1838 -> 1818. NOT shaved further: what is left is the change.
     check("the player's reachable set has not ballooned",
-          _player_lines <= 1810,
-          f"{_player_lines} lines reachable against a ceiling of 1,810")
+          _player_lines <= 1830,
+          f"{_player_lines} lines reachable against a ceiling of 1,830")
     # THIS ASSERTION USED TO READ `_editor_lines > _player_lines`, under the
     # name "a split is still worth doing". It was a TODO wearing a test's
     # clothes: it could only pass while the work was OUTSTANDING, and it went

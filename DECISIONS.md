@@ -29252,3 +29252,69 @@ WHAT IT DOES TO FLIP: not for Flip (Flip has no takes).
 
 THE FOUR: kind (an opened drawing always offers the way to carry on);
 simple (no new controls); powerful and playful (unchanged).
+
+## After v330 -- Replays lay back only what changed
+
+FUTURE 6z item 11, "trace first", on the owner's "do what needs to be done
+in the best way": long replays dropped to 15 to 20 frames a second at a
+phone's pace, the cat to 30, and nobody knew why.
+
+- TRACED. A two-hour stand-in (145,200 points in about 6,600 strokes) on a
+  402 x 874 touch phone at 3x, the CPU 4x slower, the Pad's Play: 11.7
+  frames a second with the profiler on, and 94% of the time was the
+  browser's own work, not our script. Turning stroke layers off took it to
+  35; a 2,000-point drawing was no faster than the long one (11.7); a 2x
+  phone was 19.9. A cost per frame that grew with the canvas's pixels and
+  not the drawing: the stroke compositor's present() cleared the whole
+  visible canvas and laid the whole dry layer back on every frame, 4.5
+  million pixels on a 3x phone for the few segments a frame draws.
+- THE FIX, in makeStrokeCompositor (app.js, so the link page, the Pad's
+  Play, Repeat, scrubs, the static paint and the exports all gain): each
+  stroke op marks the box it touched (its points, half its size and 2 for
+  round caps and anti-aliasing), and present() lays the layers back held
+  to that box. A bake changes nothing on screen and a reseed makes the dry
+  layer the screen, so neither marks.
+- THE FIRST VERSION WAS WRONG BY 1 OR 2 IN 255. Copying a source rectangle
+  (drawImage's nine arguments) blends a see-through stroke a hair
+  differently where it lies over ink. The new row caught it, and the old
+  code passed the same row, so the instrument was right: the layers are
+  now drawn whole as before, under a clip to the box, which is the old
+  blend exactly.
+- MEASURED, the profiler off, CPU 4x, layers on: a 3x phone, the two-hour
+  stand-in 13.9 -> 41.3 frames a second and a 2,000-point drawing 15.1 ->
+  41.8; a 2x phone, the stand-in 25.0 -> 46.7. Most frames now land on
+  the 60 Hz cadence. Left per frame: a layout read and the scrub line's
+  own paint, smaller, and a next pass only if a phone shows it.
+- THE ROWS, verify_beading's new section, read against an independent
+  reference: the compositor's own dry and wet layers, caught as it makes
+  them and composed in full the old way. A replay driven step by step
+  through the replay's own loop (opaque, see-through at one size and
+  pressured, eraser strokes): the screen is that composite at every third
+  frame, 148 checks; after a static paint (its runs as one path and as a
+  baked run) the screen is its dry layer; a frame lays back 0.1% of the
+  canvas. Calibrated: the old code passes both identity rows and fails the
+  copy row (125% of the canvas a frame); the nine-argument version fails
+  identity (102 of 148); a line's marks dropped fails both identity rows.
+- THE PLAYER'S SCRIPT grows 120 B (160,713 measured), its ratchet raised in
+  both places with the reason; spent first, the box's clamps to the canvas,
+  which the clip holds. Its reachable lines (verify_seam, spans of the named
+  functions the link page reaches, prose included) went 1838 on the first
+  try; the explanation moved above the function, out of the span, and the
+  box's helper joined onto two lines, 1818; the ceiling 1810 -> 1830 with the
+  reason written beside it.
+- verify_padrepeat was INTERMITTENT on the side-by-side run: 24/25 beside 16
+  other suites (one Repeat turn held a 57 ms frame) and 25/25 alone. Load:
+  the turn's work is unchanged by this (it reseeds as before), and the
+  frames between turns are cheaper.
+- Not tested here: Safari (no WebKit in this box), where the canvas's
+  backing differs.
+
+WHAT IT DOES TO FLIP: shared where a Flip post plays through app.js (the
+link page); Flip's editor paints its own pages and is unchanged. Not
+changed: the in-post player's own compositor (inlineplayer.js), whose
+canvases are a feed's small tiles; the same box would serve it if a phone
+shows it there.
+
+THE FOUR: powerful (an artist's two-hour piece plays smoothly on an
+ordinary phone); kind (nothing on screen changes but the smoothness);
+simple and playful (unchanged).

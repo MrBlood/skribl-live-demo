@@ -1013,7 +1013,14 @@ with sync_playwright() as sp:
     #   page does not load). Spent first: a flag of its own for the sliced
     #   paint's end, where its `whole` serves. verify_jsstrip's lines move
     #   with it. 160,593 measured.
-    BYTES_RATCHET, BYTES_TARGET = 160_596, 153_800
+    # RAISED (FUTURE 6z item 11, the owner's "do what needs to be done in the
+    #   best way"), for a named cost, all in app.js: +120 B -- the stroke
+    #   compositor marking the box each op touches and laying its layers back
+    #   under a clip to it, where it laid the whole canvas back every frame
+    #   (13.9 -> 41.3 frames a second, a two-hour drawing at a 3x phone's
+    #   pace). Spent first: the box's clamps, which the clip holds.
+    #   verify_jsstrip's lines move with it. 160,713 measured.
+    BYTES_RATCHET, BYTES_TARGET = 160_716, 153_800
     # The page's own HTML. The brand is the one-stroke skribl signature INLINE
     # in the page (~1.4KB of paths, a ~0.9KB nonce'd draw-on script, and the
     # <linearGradient> defs), and inline is load-bearing rather than lazy:
