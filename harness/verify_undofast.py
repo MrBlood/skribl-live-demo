@@ -431,7 +431,9 @@ with sync_playwright() as p:
     # picture. Two drawings, opened (the opening paints them as the repaint
     # does), each with six see-through strokes drawn on it: one past the budget
     # (40 see-through lines), where they are laid without a layer, and one under
-    # it (10), where they are laid in theirs.
+    # it (10), where they are laid in theirs. Drawn with the pencil, whose width
+    # follows speed: a see-through stroke of one width is one path with the
+    # layers or without (lib/strokelayers.js uniformRun), so it could not tell.
     for n_see, label in ((40, "past the budget"), (10, "under the budget")):
         SEE_PTS, SEE_GROUPS = [], []
         for _g in range(80):
@@ -457,12 +459,15 @@ with sync_playwright() as p:
         pg.click("#addTakePill")
         pg.wait_for_timeout(250)
         box = pg.locator("#canvas").bounding_box()
-        pg.evaluate("() => { strokeOpacity = 0.45; }")
+        pg.evaluate("() => { strokeOpacity = 0.45; SkriblBrush.setBrush('pencil'); }")
         for k in range(6):
             quick(k)
-        state = pg.evaluate("() => [SkriblStrokeLayers.overBudget(strokes, parseStrokeAlpha, anyStrokeAlpha),"
-                            " strokes.slice(strokes.length - strokeGroups.slice(-6).reduce((a, n) => a + n, 0))"
-                            ".every(p => anyStrokeAlpha(p.color) < 1)]")
+        state = pg.evaluate("""() => { const n = strokeGroups.slice(-6), out = [];
+          let a = strokes.length - n.reduce((x, y) => x + y, 0);
+          for (const g of n) { out.push(strokes.slice(a, a + g)); a += g; }
+          return [SkriblStrokeLayers.overBudget(strokes, parseStrokeAlpha, anyStrokeAlpha),
+                  out.every(r => r.every(p => anyStrokeAlpha(p.color) < 1)),
+                  out.every(r => new Set(r.map(p => p.size)).size > 1)]; }""")
         pg.evaluate(STROKES)
         wrong, painted = [], []
         for j in range(6):
@@ -472,8 +477,9 @@ with sync_playwright() as p:
             if j >= 2 and pg.evaluate(PIX) != pg.evaluate(WHOLE):
                 wrong.append(j + 1)
         os.unlink(see_file)
-        check(f"a drawing {label}, six see-through strokes drawn on it (the case is real)",
-              state == [n_see > 24, True], f"past the budget {state[0]}; the new strokes see-through {state[1]}")
+        check(f"a drawing {label}, six see-through pencil strokes of varying width drawn on it (the case is real)",
+              state == [n_see > 24, True, True],
+              f"past the budget {state[0]}; the new strokes see-through {state[1]}, each of varying width {state[2]}")
         check(f"...and each Undo past the copies, from the floor, shows every pixel the whole repaint shows ({label})",
               not wrong and max(painted[2:]) < 6, f"Undos that differ {wrong}; strokes painted per press {painted}")
         check(f"no page errors through see-through Undos ({label})", not errs, "; ".join(errs[:2]))
