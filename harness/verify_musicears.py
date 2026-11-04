@@ -686,10 +686,12 @@ with sync_playwright() as p:
         ms = sum(d for nid, d in zip(prof["samples"], prof["timeDeltas"]) if listening(nid)) / 1000
         check(f"{ed}: adding a song, the page's own thread spends next to nothing in the ears' listening ({ms:.0f} ms): a worker hears it",
               ms < 15 and bool(st["tempo"]) and abs(st["tempo"]["bpm"] - 124) < 0.05, f"{ms:.0f} ms of the mix-down, the steps and the last sums here; tempo {st['tempo']}")
-        same = q.evaluate("""async () => { const E = window.SkriblEars, buf = currentAudioBuffer;
+        SAME = """async () => { const E = window.SkriblEars, buf = currentAudioBuffer;
           const heard = (noWorker) => new Promise((done) => { const W = window.Worker; if (noWorker) window.Worker = undefined;
-            E.listen(buf, (H) => { window.Worker = W; done(H); }); });
+            const t = setTimeout(() => { window.Worker = W; done(null); }, 20000);
+            E.listen(buf, (H) => { clearTimeout(t); window.Worker = W; done(H); }); });
           const w = await heard(false), h = await heard(true);
+          if (!w || !h) return { never: !w ? 'the worker' : 'the page', nums: ['never answered'], arrays: [], picksDiffer: 0, picks: 0, warmed: 0, some: false };
           const eq = (a, b) => !!a && !!b && a.length === b.length && Array.prototype.every.call(a, (v, i) => v === b[i] || (v !== v && b[i] !== b[i]));
           const nums = ['bpm', 'period', 'phase', 'sure', 'hits', 'beatsPlayed', 'bar', 'duration', 'loud', 'hop', 'lag'].filter((k) => w[k] !== h[k]);
           const arrays = [['o', w.o, h.o], ['raw', w.raw, h.raw], ['low', w.low, h.low], ['flux', w.F.flux, h.F.flux],
@@ -697,17 +699,28 @@ with sync_playwright() as p:
           const o = (bar, target) => ({ duration: buf.duration, target: target, maxLoop: 20, minLoop: 1, fadeMs: 250, bar: bar });
           const picks = [[4, 20], [4, 7], [3, 20], [4, 3]].map(([bar, t]) => [JSON.stringify(E.pick(w, o(bar, t))), JSON.stringify(E.pick(h, o(bar, t)))]);
           return { nums: nums, arrays: arrays, picksDiffer: picks.filter((p) => p[0] !== p[1]).length, picks: picks.length,
-                   warmed: Object.keys(w.stretches || {}).length, some: picks[0][0] !== 'null' }; }""")
-        check(f"{ed}: what the worker heard is what the page hears, every number and array of it, and each of {same['picks']} picks the same",
-              not same["nums"] and not same["arrays"] and same["picksDiffer"] == 0 and same["some"] and same["warmed"] > 0,
-              str(same))
+                   warmed: Object.keys(w.stretches || {}).length, some: picks[0][0] !== 'null' }; }"""
+        same = q.evaluate(SAME)
+        # The band speeding up: its 32 beats need a stretch of 27.5 s, longer
+        # than the 24 s the worker hears first, so a stretch is kept by where
+        # it ends as well as where it starts.
+        add(q, "band")
+        band = q.evaluate(SAME)
+        check(f"{ed}: what the worker heard is what the page hears, every number and array of it, and each of "
+              f"{same['picks'] + band['picks']} picks the same, a steady song's and a band's speeding up",
+              all(not r["nums"] and not r["arrays"] and r["picksDiffer"] == 0 and r["some"] and r["warmed"] > 0 for r in (same, band)),
+              f"steady {same}; band {band}")
         check(f"{ed}: nothing went wrong on the page", not errs, "; ".join(errs)[:200])
         c.close()
         # No worker to be had: the ears listen on the page, as they did.
         c, q, errs = editor(b, path, init="try { window.Worker = undefined; } catch (e) {}")
-        st = add(q, "steady")
+        try:
+            st = add(q, "steady")
+        except Exception as e:  # the ears never answered: the row says so in red, the suite goes on
+            st = {"tempo": None, "never": repr(e)[:120]}
         check(f"{ed}: with no worker to be had, the ears hear the song on the page all the same",
-              bool(st["tempo"]) and st["tempo"].get("heard") is True and abs(st["tempo"]["bpm"] - 124) < 0.05, str(st["tempo"]))
+              bool(st["tempo"]) and st["tempo"].get("heard") is True and abs(st["tempo"]["bpm"] - 124) < 0.05,
+              str(st["tempo"]) + (" " + st["never"] if st.get("never") else ""))
         c.close()
     b.close()
 
