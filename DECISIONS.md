@@ -29360,17 +29360,18 @@ replays, on the owner's "do what needs to be done in the best way".
   back from a reload takes its floor the same way in its first paint
   (editor_draft.js renderPrefix), where its first part would be laid as the
   whole is; so its first Undo is quick too.
-- MEASURED, the same phone and drawing (work in the press; the frame that
-  shows it lands about 100 ms after):
+- MEASURED on the final tree, the same phone and drawing (work in the
+  press; the frame that shows it lands 100 to 150 ms after):
 
                                           before          after
-    Undo 3 to 6, after six strokes        6.1 - 6.8 s     35 - 44 ms
-    Redo past the copies                  6.1 - 6.6 s     32 - 35 ms
-    thirty Undos after 56 strokes         about 6.5 s     34 - 97 ms
-    the first Undo after a reload         7.2 s           98 ms
+    Undo 3 to 6, after six strokes        6.1 - 6.8 s     41 - 48 ms
+    Redo past the copies                  6.1 - 6.6 s     40 - 96 ms
+    the first Undo after a reload         7.2 s           77 ms
 
-  The keeping costs a stroke's start about 4 ms; twice in a session, when a
-  floor's canvas is first made, about 74 ms. Whether a floor still fits the
+  And after 56 strokes, thirty Undos in a row: 30 to 104 ms each, where each
+  was a whole repaint. The keeping costs a stroke's start about 4 ms; twice
+  in a session, when a floor's canvas is first made, up to 89 ms (the mean
+  over 56 starts, those two in it, 7.1 ms). Whether a floor still fits the
   drawing is read from one point in sixteen at a push (it only chooses what
   to keep: reading them all was 16 ms) and from every point when it is laid.
 - MEMORY. One canvas more for a busy drawing (PAD_KEEP_MIN_POINTS), two once
