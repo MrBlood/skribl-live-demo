@@ -29968,7 +29968,11 @@ with elementFromPoint, each let take the pointer for the moment, as a
 disabled button would not) and not focusable; a second page glides them in,
 each over many frames and no frame a sixth of its way; two pages paint all
 eleven in their groups; the second page taken away, the eight wait again.
-Reduce Motion: at once. A phone keeps its four add buttons. CALIBRATED, each
+Reduce Motion: at once. A phone keeps its four add buttons. A step is read
+per frame's time: beside two other suites the browser dropped a frame, and
+the step over it, two frames' travel, read 49.7 px against a limit of 48.
+verify_icons photographed Tween and Smear on a one-page Flip and timed out
+waiting for them; it adds a page first now. CALIBRATED, each
 shown red against its own break: no one-page class (seven rows), nothing
 folded (seven), no groups (both group rows), no glide (both glide rows), the
 add row rebuilt (the Duplicate glide), the width glide taken away (both glide
