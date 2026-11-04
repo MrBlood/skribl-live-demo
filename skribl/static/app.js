@@ -761,6 +761,22 @@ function makeStrokeCompositor(visCtx, visCanvas) {
   wctx.setTransform(1, 0, 0, 1, 0, 0); wctx.scale(dpr, dpr);
   const lgW = visCanvas.width / dpr, lgH = visCanvas.height / dpr;
   let wetActive = false, wetAlpha = 1;
+  // ONLY WHAT CHANGED IS LAID BACK (FUTURE 6z item 11: long replays on
+  // slower phones). present() cleared the whole visible canvas and laid the
+  // whole dry layer back on every frame: on a 3x phone 4.5 million pixels
+  // for the few segments a frame draws, 11.7 frames a second at a phone's
+  // pace whatever the drawing's length, against 35 with layers off. Each
+  // stroke op marks the box it touched (its points, half its size and 2 for
+  // the round caps and the anti-aliasing), and present() lays back that box
+  // only: the screen is the same pixels. A bake changes nothing on screen
+  // (the screen already showed dry plus wet at its alpha), and a reseed makes
+  // the dry layer the screen, so neither marks.
+  let bx = 1e9, by = 1e9, bX = -1e9, bY = -1e9;
+  const mark = (x, y, s) => {
+    const r = s / 2 + 2;
+    if (x - r < bx) bx = x - r; if (y - r < by) by = y - r;
+    if (x + r > bX) bX = x + r; if (y + r > bY) bY = y + r;
+  };
 
   function bakeWet() {
     dctx.save();
@@ -786,6 +802,7 @@ function makeStrokeCompositor(visCtx, visCanvas) {
   }
   return {
     dotFn(x, y, color, size, erase) {
+      mark(x, y, size);
       if (wetActive) bakeWet();                          // close out the previous stroke
       const a = erase ? 1 : parseStrokeAlpha(color);
       if (!erase && a < 1) {
@@ -797,6 +814,7 @@ function makeStrokeCompositor(visCtx, visCanvas) {
       }
     },
     lineFn(x1, y1, x2, y2, color, size, erase) {
+      mark(x1, y1, size); mark(x2, y2, size);
       if (wetActive) drawLineOn(wctx, x1, y1, x2, y2, solidStrokeColor(color), size);
       else dryLine(x1, y1, x2, y2, color, size, erase);
     },
@@ -810,7 +828,7 @@ function makeStrokeCompositor(visCtx, visCanvas) {
       dctx.strokeStyle = p.color; dctx.lineWidth = p.size;
       dctx.lineCap = 'round'; dctx.lineJoin = 'round';
       dctx.beginPath(); dctx.moveTo(p.x, p.y);
-      for (let i = 1; i < seg.length; i++) dctx.lineTo(seg[i].x, seg[i].y);
+      for (let i = 0; i < seg.length; i++) { mark(seg[i].x, seg[i].y, p.size); if (i) dctx.lineTo(seg[i].x, seg[i].y); }
       dctx.stroke();
     },
     /* A run of ONE ALPHA that is not one path: solid on the wet layer, baked
@@ -821,25 +839,33 @@ function makeStrokeCompositor(visCtx, visCanvas) {
       wetActive = true; wetAlpha = a;
       const p = seg[0];
       drawDotOn(wctx, p.x, p.y, solidStrokeColor(p.color), p.size);
+      mark(p.x, p.y, p.size);
       for (let i = 1; i < seg.length; i++) {
         const q = seg[i], v = seg[i - 1];
         drawLineOn(wctx, v.x, v.y, q.x, q.y, solidStrokeColor(q.color), q.size);
+        mark(q.x, q.y, q.size);
       }
       bakeWet();
     },
     present() {
+      if (bX < bx) return;                               // nothing drawn since the last
+      const X = Math.max(0, Math.floor(bx * dpr)), Y = Math.max(0, Math.floor(by * dpr));
+      const W = Math.min(visCanvas.width, Math.ceil(bX * dpr)) - X, H = Math.min(visCanvas.height, Math.ceil(bY * dpr)) - Y;
+      bx = by = 1e9; bX = bY = -1e9;
+      if (W < 1 || H < 1) return;
       visCtx.save();
       visCtx.setTransform(1, 0, 0, 1, 0, 0);
       visCtx.globalAlpha = 1;
-      visCtx.clearRect(0, 0, visCanvas.width, visCanvas.height);
-      visCtx.drawImage(dry, 0, 0);
-      if (wetActive) { visCtx.globalAlpha = wetAlpha; visCtx.drawImage(wet, 0, 0); }
+      visCtx.clearRect(X, Y, W, H);
+      visCtx.drawImage(dry, X, Y, W, H, X, Y, W, H);
+      if (wetActive) { visCtx.globalAlpha = wetAlpha; visCtx.drawImage(wet, X, Y, W, H, X, Y, W, H); }
       visCtx.restore();
     },
     finish() { if (wetActive) bakeWet(); },
     // The visible canvas becomes the dry layer again, after something painted
     // it whole (a recolour's moment in a replay, lib/recolorplay.js).
     reseed() {
+      bx = by = 1e9; bX = bY = -1e9;
       wctx.clearRect(0, 0, lgW, lgH); wetActive = false; wetAlpha = 1;
       dctx.save(); dctx.setTransform(1, 0, 0, 1, 0, 0);
       dctx.clearRect(0, 0, dry.width, dry.height); dctx.drawImage(visCanvas, 0, 0);
