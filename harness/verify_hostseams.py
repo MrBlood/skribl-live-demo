@@ -329,6 +329,48 @@ check("MUTATION — an app WITHOUT the filter does see those same rows",
       any(i["id"] in ids for i in c_g.get("/api/skribls?limit=50").get_json()["items"]),
       "otherwise the rows were absent for some other reason")
 
+# A POLICY WITHOUT A MATCHING FILTER LEAKS NOTHING (the PRE-331 review's 3).
+# The filter is how a host keeps the listing in step, in SQL; a host that
+# installed only a policy listed the titles, ids and authors of posts the
+# policy refuses. Under a policy each row is asked visible_to too, and a
+# page that loses rows is filled from the rows after them, so pages stay
+# full; a cursor names its row's time and id, so it is only ever taken
+# from a row the viewer was shown. New and Hot both, a few rows a page,
+# so the six refused posts fall across a page.
+import base64 as _b64                                             # noqa: E402
+app_p, db_p = host_app(16)
+skribl.set_visibility_policy(lambda post, v: False if post.user_id == str(BLOCKED) else None, app=app_p)
+try:
+    with app_p.app_context():
+        hidden_rows = {str(r.id) for r in db_p.session.query(SkriblPost).filter(SkriblPost.public_id.in_(ids))}
+    c_p = app_p.test_client()
+
+    def _walk(client, sort, size):
+        pg = client.get(f"/api/skribls?limit={size}{sort}").get_json()
+        pages, cursors = [[i["id"] for i in pg["items"]]], []
+        while pg.get("next_cursor") and len(pages) < 60:
+            cursors.append(pg["next_cursor"])
+            pg = client.get(f"/api/skribls?limit={size}{sort}&cursor={pg['next_cursor']}").get_json()
+            pages.append([i["id"] for i in pg["items"]])
+        return pages, cursors
+    for _sort in ("", "&sort=hot"):
+        # Every post the policy allows: what an app with no policy lists, less
+        # the refused. Read from the listing itself so it counts what this
+        # database holds, whatever the sections above posted.
+        allowed = [i for i in sum(_walk(c_g, _sort, 50)[0], []) if i not in ids]
+        pages, cursors = _walk(c_p, _sort, 3)
+        seen_p = sum(pages, [])
+        named = {_b64.urlsafe_b64decode(c + "=" * (-len(c) % 4)).decode().rpartition("|")[2] for c in cursors}
+        _name = "Hot" if _sort else "New"
+        check(f"{_name}: a policy with no matching feed filter keeps the posts it refuses off every page, and lists every other post once, in order",
+              seen_p == allowed and len(allowed) > len(mixed),
+              f"{len(seen_p)} listed over {len(pages)} pages of {len(allowed)} allowed; refused ones listed: {sum(i in ids for i in seen_p)}")
+        check(f"{_name}: ...its pages are full, and no cursor names a row it did not show",
+              all(len(x) == 3 for x in pages[:-1]) and not (named & hidden_rows),
+              f"page sizes {[len(x) for x in pages]}; cursors naming a refused row: {len(named & hidden_rows)}")
+finally:
+    skribl.set_visibility_policy(None, app=app_p)
+
 # Raising is deliberately not caught: a broken feed filter must fail loudly
 # rather than fall back to listing everything.
 def explodes(q, viewer):
@@ -737,6 +779,42 @@ try:
     check("...and a laptop with no DATABASE_URL still boots on SQLite", _dev)
 finally:
     for _k, _v in _saved3.items():
+        _env(**{_k: _v})
+
+# ---------------------------------------------------------------------------
+print("\nA READ-ONLY DATABASE — a post is still served, its play not counted (the PRE-331 review's 15)")
+# A post read counts a play by writing, and a database that would not take
+# the write (read only, a replica) made the read a 500 while the listing
+# beside it served. The count is best effort now: the reader gets the post.
+_saved4 = {k: os.environ.get(k) for k in ("DATABASE_URL", "SECRET_KEY", "SKRIBL_ALLOW_EPHEMERAL_SECRET")}
+try:
+    _ro_file = f"{tempfile.mkdtemp()}/readonly.db"
+    _env(DATABASE_URL=f"sqlite:///{_ro_file}", SECRET_KEY="harness-read-only-" + "x" * 24)
+    _rw = _appmod.create_app()
+    with _rw.app_context():
+        _appmod.db.create_all()
+    _rwc = _rw.test_client()
+    _pid = _rwc.post("/api/skribls", json=body("read only")).get_json()["id"]
+    _env(DATABASE_URL=f"sqlite:///file:{_ro_file}?mode=ro&uri=true")
+    _ro = _appmod.create_app()
+    _ro.logger.setLevel(logging.CRITICAL)    # its one warning is expected here
+    _reads = [_ro.test_client().get(f"/api/skribls/{_pid}", environ_base={"REMOTE_ADDR": f"198.51.100.{50 + _i}"})
+              for _i in range(2)]
+
+    def _plays():
+        return next((i.get("views") for i in _rwc.get("/api/skribls?limit=80").get_json()["items"]
+                     if i["id"] == _pid), None)
+    _after_ro = _plays()
+    _rwc.get(f"/api/skribls/{_pid}", environ_base={"REMOTE_ADDR": "198.51.100.60"})
+    _after_rw = _plays()
+    check("on a database that will not take a write, a post is still served, twice; its plays are not counted",
+          [r.status_code for r in _reads] == [200, 200]
+          and all((r.get_json() or {}).get("id") == _pid for r in _reads) and _after_ro == 0,
+          f"{[r.status_code for r in _reads]}; plays after: {_after_ro}")
+    check("...and the same read where the write is taken counts one, so the zero above measures something",
+          _after_rw == 1, f"plays {_after_rw}")
+finally:
+    for _k, _v in _saved4.items():
         _env(**{_k: _v})
 
 bad = [r for r in results if not r[0]]

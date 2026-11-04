@@ -285,6 +285,22 @@ try:
           r.status_code == 404, str(r.status_code))
 finally:
     skribl.set_visibility_policy(None)
+# ...AND UNDER ANY POLICY ONLY A PUBLIC POST'S MEDIA IS SHARED-CACHEABLE
+# (the PRE-331 review's 8). Asked only whether an anonymous viewer may read
+# it, an unlisted post's media went out `public` behind a policy with no
+# opinion about it, where with no policy it stays private. A policy that
+# defers on everything changes nothing, so both answers must agree.
+r_np = opted.test_client().get(mod_media)
+skribl.set_visibility_policy(lambda post, viewer: None)
+try:
+    r_pol = opted.test_client().get(mod_media)
+finally:
+    skribl.set_visibility_policy(None)
+cc_np, cc_pol = r_np.headers.get("Cache-Control", ""), r_pol.headers.get("Cache-Control", "")
+check("an unlisted post's media is never shared-cacheable, with a policy or without",
+      r_np.status_code == 200 and r_pol.status_code == 200
+      and "no-store" in cc_np and "no-store" in cc_pol and "public" not in cc_pol,
+      f"no policy: {r_np.status_code} {cc_np}; a policy with no opinion: {r_pol.status_code} {cc_pol}")
 
 print("\nSHARE CARD — an externalised thumbnail still renders the drawing")
 st, body = post_as(None, {"visibility": "public", "frames": [FRAME],

@@ -1712,8 +1712,8 @@ and 6; the rest by profiling.
      lock) around check and insert, and a parallel `POST /api/drafts`
      check at both limits. verify_postgres already runs concurrent posts
      through gunicorn workers, so the draft race can follow its pattern.
-3. **The listing can show what a host's visibility policy hides** (High
-   when it applies).
+3. ~~**The listing can show what a host's visibility policy hides** (High
+   when it applies).~~ **FIXED after v330** (DECISIONS: "The PRE-331 review: what a host's policy says, and a read-only database").
    - Where: `skribl/routes.py`, about lines 1018 to 1057 and 1106 to 1116.
    - What: `GET /api/skribls` filters by the visibility columns and an
      optional `feed_filter`, not the host's Python `visibility_policy`. A
@@ -1757,7 +1757,8 @@ The second pass (separate from the six above):
    - What: the DELETE and PATCH routes don't charge the attempts budget
      the way posting and draft writes do, so repeated unauthorized
      requests can load the database unless another layer limits them.
-8. **Media caching and a custom visibility policy disagree** (Medium).
+8. ~~**Media caching and a custom visibility policy disagree** (Medium).~~
+   **FIXED after v330** (the same entry).
    - Where: `skribl/routes.py`, about lines 949 to 973.
    - What: with a host's visibility policy and public media caching on,
      the cache check can mark an unlisted post's media publicly cacheable;
@@ -1795,7 +1796,8 @@ The second pass (separate from the six above):
     - What: with demo sign-in on, another site can log someone out by
       sending them there (logout CSRF, not a takeover). It pairs with 5:
       one form for both.
-15. **Reading a post needs a database write** (Medium, availability).
+15. ~~**Reading a post needs a database write** (Medium, availability).~~
+    **FIXED after v330** (the same entry).
     - Where: `skribl/routes.py`, about lines 1280 to 1304.
     - What: the view count is written on every read, so a read fails when
       the database is read-only or that write fails. It should still serve
