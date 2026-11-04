@@ -4061,7 +4061,7 @@ body.player-mode #canvasEmptyHint { display: none !important; }
    type themselves and get "drawing.gif.gif". */
 .export-nameext {
   flex: none;
-  font-size: 11.5px;
+  font-size: 12px;   /* every word 12px or more (the owner's "all yes", Nov 4; verify_exportui section 6) */
   color: var(--text-muted);
   font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 }
@@ -4110,7 +4110,7 @@ body.player-mode #canvasEmptyHint { display: none !important; }
 
 .export-opt-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .export-opt-title { font-size: 14px; font-weight: 700; color: var(--text-primary); }
-.export-opt-desc { font-size: 11.5px; color: var(--text-secondary); }   /* --text-muted read 4.25:1 on the dark card */
+.export-opt-desc { font-size: 12px; color: var(--text-secondary); }   /* --text-muted read 4.25:1 on the dark card */
 
 /* GIF is a grouped "tray": the option card and its Background/Transparent toggle
    share one bordered box, so the toggle clearly belongs to GIF instead of reading
@@ -4192,7 +4192,7 @@ body.player-mode #canvasEmptyHint { display: none !important; }
 
 .export-progress-label {
   display: block;
-  font-size: 11px;
+  font-size: 12px;   /* shown only while a file is made; 12px like every word on the sheet */
   color: var(--ui-hi);
   font-weight: 600;
   margin-top: 6px;
