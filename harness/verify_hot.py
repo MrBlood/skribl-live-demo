@@ -172,6 +172,34 @@ st, n1 = listing(q=TAG, limit=1)
 st, mixed2 = listing(q=TAG, sort="hot", cursor=n1.get("next_cursor"))
 check("...and a New cursor handed to Hot likewise", st == 400, str(st))
 
+# HOT HOLDS STILL FOR ONE SCROLL-THROUGH (the PRE-331 review's 6). Plays that
+# arrived while somebody scrolled could lift a post past the cursor, and it
+# was never shown in that pass. Three posts nobody has played: a first page
+# of one shows the newest; then the oldest gets two plays; the next page
+# still shows the other two, the climber where it stood, and only a fresh
+# first page puts it on top.
+if have_db:
+    import base64                                                   # noqa: E402
+    STEADY = TAG + " steady"
+    s_one, s_two, s_three = post(STEADY + " one"), post(STEADY + " two"), post(STEADY + " three")
+    st, h1 = listing(q=STEADY, sort="hot", limit=1)
+    plant_view(s_one, 0, "steady-a")
+    plant_view(s_one, 0, "steady-b")
+    st2, h2 = listing(q=STEADY, sort="hot", limit=5, cursor=h1.get("next_cursor"))
+    st3, fresh = listing(q=STEADY, sort="hot", limit=5)
+    check("a post that gains plays mid-scroll is still listed once in that pass, where it stood",
+          titles(h1) == [STEADY + " three"] and titles(h2) == [STEADY + " two", STEADY + " one"],
+          f"{titles(h1)} then {titles(h2)}")
+    check("...and a fresh first page ranks it by its new plays", titles(fresh)[:1] == [STEADY + " one"],
+          str(titles(fresh)))
+    # A cursor written before the moment was carried (three parts) still pages.
+    _c = h1.get("next_cursor") or ""
+    _old = base64.urlsafe_b64encode(base64.urlsafe_b64decode(_c + "=" * (-len(_c) % 4))
+                                    .decode().rsplit("|", 1)[0].encode()).decode().rstrip("=")
+    st4, h4 = listing(q=STEADY, sort="hot", limit=5, cursor=_old)
+    check("a Hot cursor from before (no moment in it) still pages, ranked as of now",
+          st4 == 200 and titles(h4) == [STEADY + " two"], f"{st4} {titles(h4)}")
+
 # ------------------------------------------------------------------ section 4
 print("\nHOT 4 — search is the listing's, on title and caption, with the person's letters kept")
 st, r = listing(q="beta FISH")

@@ -29142,3 +29142,33 @@ THE FOUR: kind (a reader gets the drawing even when the count cannot be
 kept, and a host's "no" is kept everywhere); simple (nothing new on
 screen); powerful (a host's policy is the one word on what shows);
 playful (unchanged).
+
+## After v330 -- Hot holds still for one scroll-through; plays stay per connection
+
+Two of the review's findings the owner decided (FUTURE 6ad), offered with
+defaults and answered "all yes" on Nov 3.
+
+- 6, HOT HOLDS STILL FOR ONE SCROLL-THROUGH. Hot ranks by plays in the last
+  seven days, and plays arrive while somebody scrolls: a post that climbed
+  past the cursor between two pages was never shown in that pass. Now the
+  first page notes the moment it ranked at, its cursor carries that moment
+  (microseconds since 1970, as a fourth part), and every later page counts
+  plays up to it only, so the whole pass is one order. A refresh is a new
+  first page and a new moment; a cursor from before (three parts) still
+  pages, ranked as of now. The longest cursor this server writes grows to
+  about 80 characters, under the 120 the bound allows. Rows in verify_hot:
+  three posts nobody has played, a page of one, then two plays on the
+  oldest; the next page still lists it where it stood, a fresh first page
+  puts it on top. Red with the moment ignored (it was skipped, the
+  review's scenario); the old-cursor row red with three parts refused.
+- 9, PLAYS STAY ONE PER CONNECTION PER POST PER DAY. A classroom on one
+  network counts as one play. Kept on purpose: it cannot be inflated by
+  clearing cookies or opening private windows, and it stores nothing
+  about a person (the viewer is a keyed hash of the connection). Counting
+  per browser would need a cookie of its own. No code changed.
+
+WHAT IT DOES TO FLIP: shared (the Gallery's Hot lists both).
+
+THE FOUR: kind (nothing jumps or vanishes mid-scroll); simple (no new
+controls, a refresh is still how new plays arrive); powerful and playful
+(unchanged).

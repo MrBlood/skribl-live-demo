@@ -80,8 +80,9 @@ def _encode_cursor(post):
 _CURSOR_INT_MAX = 2 ** 63 - 1
 # A CURSOR IS SHORT, so a long one is refused before it is decoded (the
 # PRE-331 review's performance notes: the whole string was base64-decoded
-# first). The longest this server writes is about 70 characters, a time
-# with its zone and a 19-digit id; 120 leaves room and reads no further.
+# first). The longest this server writes is about 80 characters, a Hot
+# cursor of 19-digit numbers and its moment; 120 leaves room and reads no
+# further.
 _CURSOR_MAX_CHARS = 120
 
 
@@ -120,23 +121,38 @@ META_MAX_IDS = 50
 # same window it must never delete inside of. Imported below with the rest.
 
 
-def _encode_hot_cursor(score, post_id):
-    raw = f"hot|{int(score)}|{int(post_id)}".encode("utf-8")
+# HOT HOLDS STILL FOR ONE SCROLL-THROUGH (the PRE-331 review's 6; the
+# owner, Nov 3: "all yes"). Its order is plays in the last seven days, and
+# plays arrive while somebody scrolls: a post that climbed past the cursor
+# between two pages was never shown in that pass. So the first page notes
+# the moment it ranked at, its cursor carries it ("as of", in microseconds
+# since 1970), and every later page counts plays up to that moment only:
+# one order for the whole pass. A fresh first page (a refresh) is a new
+# moment. A cursor written before this (three parts) still pages, ranked
+# as of now, as it always was.
+_EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
+
+
+def _encode_hot_cursor(score, post_id, as_of):
+    tick = (as_of - _EPOCH) // timedelta(microseconds=1)
+    raw = f"hot|{int(score)}|{int(post_id)}|{int(tick)}".encode("utf-8")
     return base64.urlsafe_b64encode(raw).decode("ascii").rstrip("=")
 
 
 def _decode_hot_cursor(cursor):
-    """-> (score, id), or None."""
+    """-> (score, id, as_of or None), or None."""
     if len(cursor) > _CURSOR_MAX_CHARS:
         return None
     try:
         pad = "=" * (-len(cursor) % 4)
         raw = base64.urlsafe_b64decode(cursor + pad).decode("utf-8")
-        tag, score, ident = raw.split("|")
-        if tag != "hot":
+        parts = raw.split("|")
+        if parts[0] != "hot" or len(parts) not in (3, 4):
             return None
-        return _cursor_int(score), _cursor_int(ident)
-    except (ValueError, TypeError, binascii.Error, UnicodeDecodeError):
+        as_of = (_EPOCH + timedelta(microseconds=_cursor_int(parts[3]))
+                 if len(parts) == 4 else None)
+        return _cursor_int(parts[1]), _cursor_int(parts[2]), as_of
+    except (ValueError, TypeError, OverflowError, binascii.Error, UnicodeDecodeError):
         return None
 
 
@@ -1090,21 +1106,29 @@ def register_routes(bp, *, index_route=False):
         if sort not in ("new", "hot"):
             return jsonify({"error": "sort must be new or hot."}), 400
         score = None
+        cursor = request.args.get("cursor")
+        hot_cursor, as_of = None, None
         if sort == "hot":
-            since = datetime.now(timezone.utc) - timedelta(days=HOT_DAYS)
+            # The moment this pass ranks at: the cursor's, or now on a first
+            # page (see _encode_hot_cursor).
+            if cursor:
+                hot_cursor = _decode_hot_cursor(cursor)
+                if hot_cursor is None:
+                    return jsonify({"error": "Invalid cursor."}), 400
+                as_of = hot_cursor[2]
+            if as_of is None:
+                as_of = datetime.now(timezone.utc)
+            since = as_of - timedelta(days=HOT_DAYS)
             recent = (session().query(SkriblView.post_id.label("pid"),
                                       sa.func.count(SkriblView.id).label("n"))
-                      .filter(SkriblView.created_at >= since)
+                      .filter(SkriblView.created_at >= since,
+                              SkriblView.created_at <= as_of)
                       .group_by(SkriblView.post_id).subquery())
             q = q.outerjoin(recent, recent.c.pid == SkriblPost.id)
             score = sa.func.coalesce(recent.c.n, 0)
 
-        cursor = request.args.get("cursor")
         if cursor and sort == "hot":
-            parsed = _decode_hot_cursor(cursor)
-            if parsed is None:
-                return jsonify({"error": "Invalid cursor."}), 400
-            c_score, c_id = parsed
+            c_score, c_id, _ = hot_cursor
             q = q.filter(sa.or_(score < c_score,
                                 sa.and_(score == c_score, SkriblPost.id < c_id)))
         elif cursor:
@@ -1190,7 +1214,7 @@ def register_routes(bp, *, index_route=False):
                 d = post.feed_dict()
                 d["views_recent"] = n
                 items.append(d)
-            nxt = _encode_hot_cursor(scores[-1], rows[-1].id) if (rows and has_more) else None
+            nxt = _encode_hot_cursor(scores[-1], rows[-1].id, as_of) if (rows and has_more) else None
         else:
             rows = fetched
             items = [r.feed_dict() for r in rows]
