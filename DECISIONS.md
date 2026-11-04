@@ -29989,3 +29989,35 @@ from two pages, grouped by what they do), playful (unchanged).
 Not tested here: Safari and Firefox (no WebKit here, and Gecko only in CI's
 smoke): a browser without `interpolate-size` glides the page bar on its cap,
 quicker at the start. Segoe UI (the gaps are set in px, not tuned to a font).
+
+## After v330 -- Every word on the Export sheet at 12px
+
+The owner's "all yes" (Nov 4) to every word to 12px, one sheet per PR, each
+with its own check that nothing painted in it is under 12px, as the Post
+sheet has. Sheet 1 of 3. Only sizes change.
+
+- BUILT: the file name's ending and each format's line (both editors), and
+  Flip's "Applies to video and GIF" with its Size, Pages and Loops readouts,
+  11.5 to 12px. The Pad's sheet stays 407 px on a phone and 372 on a desk;
+  Flip's grows 4 px (690 to 694, 655 to 659); no word is cut off.
+- FOUND BUILDING IT: a word the mock's census could not see, since it shows
+  only while a file is made: the Pad's progress line under its bar
+  ("Rendering GIF…"), 11 to 12px. Flip says its progress in a card of its own,
+  already 13px. The two editors show progress differently; sharing one is a
+  design question, not this change.
+
+THE CHECKS: verify_exportui section 6. Every text the sheet lays out, both
+editors, phone and desk, with a drawing and on Flip two pages: nothing under
+12px. The Pad's progress line, read the moment it shows while a GIF is made:
+12px. CALIBRATED, each of the five rules put back alone turns its own rows
+red: the ending and the format lines all four sheet rows, the progress line
+its two, Flip's two words their two Flip rows. With none, 6 of 6.
+
+WHAT IT DOES TO FLIP: shared (one partial, the same rules), and Flip's own
+two rules with it.
+
+THE FOUR: kind (words a phone can read), simple (one floor for every word),
+powerful and playful (unchanged).
+
+Not tested here: Segoe UI and SF (the sizes do not depend on the font; the
+wrapping was measured in this box's fonts).

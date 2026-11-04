@@ -18,6 +18,10 @@ It also pins the two content decisions, both of which were wrong before:
   * the output dimensions belong under SIZE, the control that changes them,
     not appended to the page-range readout
   * the readouts are sentences ("All 62 pages"), not fragments ("62 of 62 ·")
+
+And every word the sheet paints is 12px or more, in both editors on a phone
+and a desk, the Pad's progress line while a file is made included (section 6;
+the owner's "all yes" to every word at 12px, Nov 4).
 """
 import os
 import re
@@ -481,5 +485,84 @@ with sync_playwright() as p3:
           gif == "lighthouse-at-dusk.gif", gif)
     check("no page errors from the naming path", not nerrs, "; ".join(nerrs[:2]))
     b3.close()
+
+print("\nEXPORT SHEET — section 6: every word it paints at 12px or more")
+#
+# The owner's "all yes" (Nov 4): every word to 12px, one sheet per PR, each
+# with its own check that nothing painted in it is under 12px, as the Post
+# sheet has (verify_postmoment, THE WORDS AT THE MENU'S SIZES). The type
+# census read seven words here at 11.5px: the file name's extension (both
+# editors), each format's line, and Flip's Size, Pages and Loops readouts with
+# the line over them. A word shown only while a file is made was not in it:
+# the Pad's progress line under its bar ("Rendering GIF…"), at 11px. Flip
+# says its progress in a card of its own (#flipExport), at 13px.
+#
+# Every text the sheet lays out is read, in both editors on a phone and a
+# desk, with a drawing so each format is ready (a format waiting for a
+# drawing is dimmed, and its words still count), and on Flip two pages, so the
+# readouts describe a range. The progress line is read the moment it is shown
+# (a MutationObserver on its `hidden`), so a GIF made quickly cannot finish
+# before it is seen.
+SMALL12 = """() => { const out = [], S = document.getElementById('exportSheet'); let n = 0;
+  const w = document.createTreeWalker(S, NodeFilter.SHOW_TEXT);
+  for (let t = w.nextNode(); t; t = w.nextNode()) {
+    const el = t.parentElement;
+    if (!t.nodeValue.trim() || !el.getClientRects().length || getComputedStyle(el).visibility !== 'visible') continue;
+    n++; const f = parseFloat(getComputedStyle(el).fontSize);
+    if (f < 12) out.push((el.id ? '#' + el.id : '.' + el.classList[0]) + ' ' + f + 'px ' + JSON.stringify(t.nodeValue.trim().slice(0, 24))); }
+  return { n, small: out }; }"""
+WATCH = """() => { const p = document.getElementById('exportProgress'); window.__prog = null;
+  const mo = new MutationObserver(() => { if (p.hidden || window.__prog) return;
+    const l = document.getElementById('exportProgressLabel'), cs = getComputedStyle(l);
+    window.__prog = { px: parseFloat(cs.fontSize), laid: l.getClientRects().length > 0, words: l.textContent.trim() }; mo.disconnect(); });
+  mo.observe(p, { attributes: true, attributeFilter: ['hidden'] }); }"""
+PHONE12 = dict(viewport={"width": 402, "height": 874}, device_scale_factor=2, is_mobile=True, has_touch=True)
+DESK12 = dict(viewport={"width": 1280, "height": 900})
+
+with sync_playwright() as p6:
+    b6 = p6.chromium.launch()
+    for ed, path, canvas, menu, item in (("Pad", "/", "#canvas", "#menuBtn", "#exportItem"),
+                                         ("Flip", "/flip", "#pad", "#moreBtn", "#miExport")):
+        for size, view in (("phone", PHONE12), ("desk", DESK12)):
+            c6 = b6.new_context(**view)
+            pg = c6.new_page()
+            browsing.goto(pg, BASE, path)
+            pg.wait_for_timeout(800)
+            pg.evaluate("() => { const h = document.querySelector('.skribl-hint'); if (h) { h.classList.remove('in'); h.hidden = true; } }")
+            box = pg.locator(canvas).bounding_box()
+            cx, cy = box["x"] + box["width"] / 2, box["y"] + box["height"] / 2
+            for k in range(2 if ed == "Flip" else 1):
+                if k:
+                    pg.evaluate("() => addFrame()")
+                    pg.wait_for_timeout(300)
+                pg.mouse.move(cx - 80, cy)
+                pg.mouse.down()
+                for i in range(24):
+                    pg.mouse.move(cx - 80 + i * 7, cy + (i % 6) * 6)
+                    pg.wait_for_timeout(10)
+                pg.mouse.up()
+                pg.wait_for_timeout(250)
+            # The Pad's take ends as a person ends it, with Done; its menu
+            # waits behind the recording bar until then.
+            if ed == "Pad" and pg.is_visible("#recordBtn"):
+                pg.click("#recordBtn")
+                pg.wait_for_timeout(700)
+            pg.click(menu)
+            pg.wait_for_timeout(450)
+            pg.click(item)
+            pg.wait_for_timeout(800)
+            r = pg.evaluate(SMALL12)
+            check(f"{ed}, {size}: nothing the Export sheet paints is under 12px",
+                  r["n"] >= 12 and not r["small"], f"{r['n']} words read; under 12px: {r['small']}")
+            if ed == "Pad":
+                pg.evaluate(WATCH)
+                pg.click("#exportGif")
+                pg.wait_for_function("() => window.__prog", timeout=20000)
+                pr = pg.evaluate("() => window.__prog")
+                pg.evaluate("() => { const x = document.getElementById('exportCancel'); if (x && !document.getElementById('exportProgress').hidden) x.click(); }")
+                check(f"Pad, {size}: and while a GIF is made, its progress line is 12px or more",
+                      pr["laid"] and pr["px"] >= 12, str(pr))
+            c6.close()
+    b6.close()
 
 summarise_and_exit()
