@@ -1726,7 +1726,8 @@ and 6; the rest by profiling.
      demo's own policy.
    - Suggested: refuse a policy without a feed filter at start-up, or one
      API that sets both.
-4. **Gzip bodies are inflated before the rate limit** (Medium).
+4. ~~**Gzip bodies are inflated before the rate limit** (Medium).~~ **FIXED
+   after v330** (DECISIONS: "The PRE-331 review: the second five").
    - Where: `skribl/security.py` `before_request`, about lines 361 to 406;
      the create route in `skribl/routes.py`, about lines 660 to 685.
    - What: a client already over its attempts still makes the server
@@ -1750,7 +1751,8 @@ and 6; the rest by profiling.
 
 The second pass (separate from the six above):
 
-7. **Delete and visibility changes are not rate limited** (Medium).
+7. ~~**Delete and visibility changes are not rate limited** (Medium).~~
+   **FIXED after v330** (the same entry).
    - Where: `skribl/routes.py`, about lines 1565 to 1645.
    - What: the DELETE and PATCH routes don't charge the attempts budget
      the way posting and draft writes do, so repeated unauthorized
@@ -1777,13 +1779,14 @@ The second pass (separate from the six above):
     - Where: `skribl/drafts.py`, about lines 61 to 72.
     - What: the draft thumbnail check reads only the first decoded bytes.
       The reviewer got a truncated 26-byte PNG-like value accepted.
-12. **The service worker trusts any `?v=`** (Low).
+12. ~~**The service worker trusts any `?v=`** (Low).~~ **FIXED after v330**
+    (the same entry).
     - Where: `skribl/templates/skribl/sw.js`, about lines 49 to 51 and 110
       to 129.
     - What: a static file with any version value is kept cache-first,
       while the server makes only real version hashes immutable, so a
       hand-made URL can pin a stale file.
-13. **Gzip ignores `q=0`** (Low).
+13. ~~**Gzip ignores `q=0`** (Low).~~ **FIXED after v330** (the same entry).
     - Where: `skribl/security.py`, about lines 490 to 493.
     - What: it looks for the word gzip, so `Accept-Encoding: gzip;q=0`
       (gzip refused) still gets gzip.
@@ -1800,11 +1803,13 @@ The second pass (separate from the six above):
 
 Performance notes (the review's table):
 
-- **High:** the metadata endpoint splits the whole `ids` string before
-  keeping 50 (`skribl/routes.py`, about lines 1258 to 1264). Bound the raw
-  length first. The same goes for cursors before base64 decoding (about
-  lines 90 to 98 and 121 to 131). It also reads as an availability risk
-  when the proxy does not cap the URL length.
+- ~~**High:** the `ids` string and the cursors are read whole.~~ **FIXED
+  after v330** (the same entry). Was: the metadata endpoint splits the
+  whole `ids` string before keeping 50 (`skribl/routes.py`, about lines
+  1258 to 1264). Bound the raw length first. The same goes for cursors
+  before base64 decoding (about lines 90 to 98 and 121 to 131). It also
+  reads as an availability risk when the proxy does not cap the URL
+  length.
 - **Medium:** Hot sums recent view rows on every request (precomputed
   daily counts, when it grows).
 - **Medium:** search's `%text%` match scans the table (trigram or FTS5
