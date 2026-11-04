@@ -1490,10 +1490,14 @@ at 92bc060.
 10. **On a tablet, the Pad's canvas uses the width** (design, mock first; the
     Pad, to match Flip). At 820 px wide (an iPad held upright) the Pad opens a
     tall, narrow canvas about half the screen's width; Flip already fills it.
-11. **Long replays stay smooth on slower phones** (speed; trace first). The
-    two-hour stand-in (145,200 points) replays at 15 to 20 frames a second at
-    phone pace and the cat at 30; at full speed both hold 60 at 1x, 16x and
-    Fit. The cause is not traced.
+11. ~~**Long replays stay smooth on slower phones** (speed; trace first).~~
+    **TRACED AND FIXED after v330** (DECISIONS: "Replays lay back only what
+    changed"): the stroke compositor laid the whole canvas back every frame;
+    a two-hour drawing at a 3x phone's pace went from 13.9 to 41.3 frames a
+    second. What is left per frame is smaller: a layout read and the scrub
+    line's own paint (a next pass, if a phone shows it). Was: the two-hour
+    stand-in (145,200 points) replays at 15 to 20 frames a second at phone
+    pace and the cat at 30; at full speed both hold 60 at 1x, 16x and Fit.
 12. **Skribl's ears never hold the page** (speed; the shared drawer). A
     two-minute stereo song at phone pace: 3.2 s to decode and 3.9 s to a
     pick, and the page held four times for more than 200 ms (the longest
