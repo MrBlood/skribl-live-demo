@@ -29683,6 +29683,16 @@ WHILE CALIBRATING: the same-results row waited on the ears with no limit and
 hung a run for its 15 minutes; it gives them 20 s now, and the fallback row
 says in red that a song was never heard.
 
+FOUND BY THE AFFECTED SUITES, AND FIXED HERE: a stretch kept by where it is
+alone answered at the wrong beat. Listening can change the beat after a
+stretch is heard: a slow waltz heard at its eighths is heard again at half the
+beat, and its meter counted again; the kept stretches still answered at the
+old beat, so the waltzes at 84 and 76 were heard in four at 168 and 152
+(verify_musicthree, 48 of 49, beside others and alone). The worker and the
+page agreed, each wrong the same way, so the same-results row could not see
+it; the suite that holds every song to its own known beat did. A stretch is
+kept by the beat it is heard against as well now: 49 of 49.
+
 WHAT IT DOES TO FLIP: shared (one ears module, one music drawer); Flip's song
 reader is Flip's own.
 

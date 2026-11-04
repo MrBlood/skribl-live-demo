@@ -486,11 +486,16 @@
   // The beat between t0 and t1, heard there: the song's tempo, refined.
   function local(H, t0, t1) {
     var a = Math.max(0, Math.floor(t0 / H.hop)), b = Math.min(H.o.length, Math.ceil(t1 / H.hop));
-    // KEPT, by the stretch heard (H.stretches): the same stretch is heard the same
-    // every time, and a pick hears up to thirty of them (most of a pick's
-    // time). The worker hears the stretches a pick usually asks for (warm,
-    // below), so the first pick waits on almost none of them.
-    var key = a + ':' + b, memo = H.stretches || (H.stretches = {});
+    // KEPT, by the stretch heard and the beat it is heard against
+    // (H.stretches): the same stretch is heard the same every time at the
+    // same beat, and a pick hears up to thirty of them (most of a pick's
+    // time). The beat is in the key because listening can change it after a
+    // stretch is heard: a slow waltz heard at its eighths is heard again at
+    // half the beat (finish), and kept by the stretch alone, its stretches
+    // still answered at the old beat (verify_musicthree: in four at 168). The
+    // worker hears the stretches a pick usually asks for (warm, below), so
+    // the first pick waits on almost none of them.
+    var key = a + ':' + b + ':' + H.bpm, memo = H.stretches || (H.stretches = {});
     if (memo[key]) return memo[key];
     var top = refine(H.o.subarray(a, b), H.hop, H.bpm, 0.04), p = 60 / top.bpm, ph = a * H.hop + top.phase - H.lag;
     return (memo[key] = { bpm: top.bpm, period: p, phase: ((ph % p) + p) % p, sure: top.peak });
