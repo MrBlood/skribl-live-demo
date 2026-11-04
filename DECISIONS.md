@@ -30044,3 +30044,27 @@ THE FOUR: kind (the words that say what is not sent are the ones to read),
 simple (one floor), powerful and playful (unchanged).
 
 Not tested here: Segoe UI and SF.
+
+## After v330 -- How it works's search count at 12px
+
+The owner's "all yes" (Nov 4) to every word to 12px, sheet by sheet. Sheet
+3 of 3, and the last word the mock's census found on the sheets.
+
+- BUILT: the count under the search field ("25 of 82 entries"), both
+  editors, 11.5 to 12px. Its box keeps its 16 px, so nothing moves.
+- FOUND BUILDING IT: the Library's count wears the same class, and
+  posted.css said the two shared one treatment; the Library does not load
+  styles.css, so its count is its own rule (skribl_library.html, already
+  12px). A check of it added here could not go red with this rule put back,
+  and came out; posted.css's comment now says where the Library's size lives.
+
+THE CHECKS: verify_help, "every word it paints with a search typed": every
+text How it works shows with "loop" typed, both editors, phone and desk.
+CALIBRATED: the rule put back turns all four rows red. With it, 4 of 4.
+
+WHAT IT DOES TO FLIP: shared (one drawer, one rule).
+
+THE FOUR: kind, simple; powerful and playful unchanged.
+
+Next, from the same list (FUTURE 6z's words under 12px): the words that
+show only in a state, each read in its state before it changes.

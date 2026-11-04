@@ -1557,8 +1557,9 @@ the progress label, and on Flip the scope and note lines, 11 to 11.5px;
 12px");
 Report (its details 11.5px, its privacy line 11px; **both 12px after
 v330**, DECISIONS: "Every word on Report a problem at 12px"); the ⋯ menu (the version
-line 10.5px, the row notes 11px); How it works (the search count 11.5px, the
-numbered circles 11px); and in the editors the autosave status, the zoom
+line 10.5px, the row notes 11px); How it works (the search count 11.5px, **12px after
+v330**, DECISIONS: "How it works's search count at 12px"; the numbered
+circles 11px); and in the editors the autosave status, the zoom
 readout, the pending line, Flip's small + buttons and the music bar's scope
 buttons (11px), with the brand tag and the narrow screen's duration badge at
 10px. Not every rule may show; the census that comes with the change says

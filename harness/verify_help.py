@@ -17,6 +17,9 @@ Two guards:
      construction and a guard that is wrong by construction is worse than none.
   2. Each shipped feature has a phrase in the help that could only be there if
      someone updated it.
+
+And with a search typed, nothing it shows is under 12px, its count included
+(the owner's "all yes" to every word at 12px, Nov 4).
 """
 import os
 import sys
@@ -520,6 +523,43 @@ with sync_playwright() as p:
               f"{went}; the browser saw: {under or 'nothing'}")
         bcdp.detach()
         ph.close()
+
+    print("\nHOW IT WORKS — every word it paints with a search typed, at 12px or more")
+    #
+    # The owner's "all yes" (Nov 4): every word to 12px, one sheet per PR,
+    # each with its own check that nothing painted in it is under 12px (as the
+    # Post sheet, Export and Report have). The type census read one here, with
+    # a search typed: the count under the field ("25 of 82 entries"), 11.5px.
+    # The Library's count wears the same class but not this rule: that page
+    # does not load styles.css, and its own .posted-count was 12px already.
+    SMALL12 = """() => { const out = [], S = document.getElementById('helpDrawer'); let n = 0;
+      const w = document.createTreeWalker(S, NodeFilter.SHOW_TEXT);
+      for (let t = w.nextNode(); t; t = w.nextNode()) {
+        const el = t.parentElement;
+        if (!t.nodeValue.trim() || !el.getClientRects().length || getComputedStyle(el).visibility !== 'visible') continue;
+        const r = el.getBoundingClientRect();
+        if (r.bottom < 0 || r.top > innerHeight) continue;   // what a person sees, not every entry laid out below
+        n++; const f = parseFloat(getComputedStyle(el).fontSize);
+        if (f < 12) out.push((el.id ? '#' + el.id : '.' + el.classList[0]) + ' ' + f + 'px ' + JSON.stringify(t.nodeValue.trim().slice(0, 24))); }
+      const c = document.getElementById('helpSearchCount');
+      return { n, small: out, count: c.textContent.trim(), countPx: parseFloat(getComputedStyle(c).fontSize) }; }"""
+    for surface, path in (("Pad", "/skribl-pad"), ("Flip", "/flip")):
+        for size, view in (("phone", dict(viewport={"width": 402, "height": 874}, device_scale_factor=2, is_mobile=True, has_touch=True)),
+                           ("desk", dict(viewport={"width": 1280, "height": 900}))):
+            c = b.new_context(**view)
+            sp = c.new_page()
+            sp.goto(BASE + path, wait_until="load")
+            sp.wait_for_timeout(1200)
+            sp.evaluate("() => { const d = document.getElementById('helpDrawer');"
+                        " if (d) { d.hidden = false; d.classList.add('open'); } }")
+            sp.wait_for_timeout(400)
+            sp.fill("#helpSearch", "loop")
+            sp.wait_for_timeout(350)
+            r = sp.evaluate(SMALL12)
+            check(f"{surface}, {size}: with a search typed, nothing How it works shows is under 12px, its count included",
+                  " of " in r["count"] and r["countPx"] >= 12 and r["n"] >= 8 and not r["small"],
+                  f"count {r['count']!r} at {r['countPx']}px; {r['n']} texts read; under 12px: {r['small']}")
+            c.close()
 
     b.close()
 
