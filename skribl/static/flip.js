@@ -1800,6 +1800,7 @@ const fctx = frameCv.getContext('2d'); fctx.scale(RS,RS);
 // before these exist.
 const KEEP_MIN_POINTS = 4000;
 const _flipKept = [], _ghosts = [], _thumbBack = [];
+const FLOOR_EVERY = 30, _flipFloors = [];   // A FLOOR UNDER A BUSY PAGE, beside repaintPage
 let _fcvTag = null, _onionTag = null, _keptClock = 0;
 
 /* ---- ARTWORK STAGE ------------------------------------------------------
@@ -2078,10 +2079,18 @@ function liveBegin(fr){
   const u = _liveReady(_liveUnderCv);
   paintUnder(u);
   if(flat){
-    // The finished ink composited over the backdrop, exactly as render() does it.
-    fctx.clearRect(0,0,CW,CH); paintStatic(fctx, pre, ob); layOn(u, frameCv);
+    // The finished ink composited over the backdrop, exactly as render() does
+    // it; not painted again when the frame layer already holds this very page
+    // at rest (tagged with its ink, and nothing under it painted through the
+    // layer since: paintFrame untags it). Every stroke on a busy page began
+    // with a full paint, 0.5 to 0.9 s on 20,000 points with the CPU 4x slower
+    // on a phone, before its first point showed.
+    const T = _fcvTag;
+    const sig = (T && T.f === fr && T.w === frameCv.width && T.h === frameCv.height) ? _inkSig(fr) : null;
+    if(!sig || T.sig !== sig){ fctx.clearRect(0,0,CW,CH); paintStatic(fctx, pre, ob); }
+    layOn(u, frameCv);
     // ...which is the page an Undo of this stroke comes back to (flipKeep).
-    _fcvTag = _tagOf(fr); flipKeep();
+    _fcvTag = _tagOf(fr, sig || undefined); flipKeep(); flipFloorKeep(fr, ob);
   } else {
     paintStatic(_liveReady(_liveDryCv), pre, ob);
   }
@@ -2136,10 +2145,11 @@ function _tagOf(f, sig){
 // Written out flat because it runs on every Undo of a busy page: 5 ms for
 // 20,000 points with this box's CPU 4x slower, where the first version (two
 // hashes of each number's own bits) took 18.
-function _inkSig(f){
-  const pts = f.strokes;
-  let a = (2166136261 ^ pts.length) | 0, b = pts.length | 0;
-  for(let i = 0; i < pts.length; i++){
+// `n`, when given: the first n points only (a floor's prefix, below).
+function _inkSig(f, n){
+  const pts = f.strokes, m = n == null ? pts.length : n;
+  let a = (2166136261 ^ m) | 0, b = m | 0;
+  for(let i = 0; i < m; i++){
     const p = pts[i];
     const x = (p.x * 65536) | 0, y = (p.y * 65536) | 0, w = (p.size * 65536) | 0;
     const c = _colourHash(p.color), e = (p.erase ? 1 : 0) | (p.start ? 2 : 0);
@@ -2148,7 +2158,7 @@ function _inkSig(f){
     b = (Math.imul(b, 31) + x) | 0; b = (Math.imul(b, 31) + y) | 0; b = (Math.imul(b, 31) + w) | 0;
     b = (Math.imul(b, 31) + c) | 0; b = (Math.imul(b, 31) + e) | 0;
   }
-  return (a >>> 0).toString(36) + '.' + (b >>> 0).toString(36) + '|' + pts.length + '|'
+  return (a >>> 0).toString(36) + '.' + (b >>> 0).toString(36) + '|' + m + '|'
     + (window.SKRIBL_STROKE_LAYERS === false ? 0 : 1);
 }
 // The frame layer holds the page as it is painted at rest only when no stroke
@@ -2195,13 +2205,105 @@ function _fromKept(){
 /* What an Undo or a Redo calls instead of render(): the page from a copy when
    one holds it, painted in full otherwise (and then kept). */
 function repaintPage(){
-  if(!_fromKept()){ render(); flipKeep(); }
+  if(_fromKept()) return;
+  if(!_fromFloor() && !_renderTakingFloor()) render();
+  flipKeep();
+}
+
+/* A FLOOR UNDER A BUSY PAGE (FUTURE 6z, after v330; the Pad's is A FLOOR UNDER
+   UNDO, editor_draw.js). Past its three copies an Undo painted the whole page
+   again: a page of 20,000 points held 1.0 to 1.2 s a press with the CPU 4x
+   slower on a phone, 0.5 to 0.65 s once the tile was laid from the layer
+   (_frameHolds). Flip's Undo has no cap: it takes a page back stroke by
+   stroke to an empty one. So the floor is the page as it stood at a pen
+   stroke's start, for the page being drawn on: the frame layer liveBegin has
+   just painted, known by its points' content up to there (_inkSig with n) and
+   by the layering it was painted with. Once the page has FLOOR_EVERY strokes
+   more, a NEXT is kept too, which becomes the floor when the page is twice
+   that past the floor. An Undo or a Redo no copy holds lays the highest that
+   fits and paints only the strokes above it, by the whole page's layering
+   (paintStatic's third argument, as the live cache paints a page in two
+   halves): under 60 strokes, never the page. With none that fits (an Undo
+   past the floor; a page opened and undone before it is drawn on), the page
+   is painted in two parts and a floor taken between them, FLOOR_EVERY strokes
+   under it, so only that press paints it all. Two copies of the frame layer,
+   16 MB on a phone 402 pixels wide, for one busy page at a time. */
+// `ob`: the whole page's layering, worked out once by the caller.
+function _floorOk(F, f, ob){
+  return F.f === f && F.n <= f.strokes.length && F.w === frameCv.width && F.h === frameCv.height
+    && F.ob === ob && _inkSig(f, F.n) === F.sig;
+}
+// The frame layer as it is now, kept as the first n points of page f (g strokes).
+function _floorTake(f, n, g, ob, cv){
+  cv = cv || document.createElement('canvas');
+  if(cv.width !== frameCv.width || cv.height !== frameCv.height){ cv.width = frameCv.width; cv.height = frameCv.height; }
+  const x = cv.getContext('2d');
+  x.globalCompositeOperation = 'copy'; x.drawImage(frameCv, 0, 0);
+  _flipFloors.push({ f: f, n: n, g: g, ob: ob, sig: _inkSig(f, n), cv: cv, w: frameCv.width, h: frameCv.height });
+}
+function _floorDrop(F){
+  _flipFloors.splice(_flipFloors.indexOf(F), 1);
+  return F.cv;
+}
+// At a pen stroke's start (liveBegin), the layer tagged with page fr at rest.
+function flipFloorKeep(fr, ob){
+  if(fr.strokes.length < KEEP_MIN_POINTS){ _flipFloors.length = 0; return; }
+  const T = _fcvTag;
+  if(!T || T.f !== fr || T.w !== frameCv.width || T.h !== frameCv.height) return;
+  let spare = null;
+  for(const F of _flipFloors.slice()) if(!_floorOk(F, fr, ob)) spare = _floorDrop(F);
+  _flipFloors.sort((a, b) => a.n - b.n);
+  const floor = _flipFloors[0], next = _flipFloors[1], g = fr.strokeGroups.length;
+  if(floor && next && g - floor.g >= 2 * FLOOR_EVERY) spare = _floorDrop(floor);
+  else if(floor && (next || g - floor.g < FLOOR_EVERY)) return;
+  _floorTake(fr, fr.strokes.length, g, ob, spare);
+}
+function _fromFloor(){
+  if(!_settled()) return false;
+  const f = frame();
+  if(f.strokes.length < KEEP_MIN_POINTS) return false;
+  const ob = _overBudgetOf(f.strokes);
+  let best = null;
+  for(const F of _flipFloors) if((!best || F.n > best.n) && _floorOk(F, f, ob)) best = F;
+  if(!best) return false;
+  ctx.clearRect(0,0,CW,CH);
+  // The page underneath is painted through the frame layer too, so the floor
+  // goes in after it, as a copy does (_fromKept).
+  paintUnder(ctx);
+  fctx.save(); fctx.setTransform(1,0,0,1,0,0); fctx.globalCompositeOperation = 'copy';
+  fctx.drawImage(best.cv, 0, 0); fctx.restore();
+  if(f.strokes.length > best.n) paintStatic(fctx, f.strokes.slice(best.n), ob);
+  _fcvTag = _tagOf(f);
+  layOn(ctx, frameCv);
+  renderOver();
+  return true;
+}
+// render()'s own painting, in two parts with a floor taken between.
+function _renderTakingFloor(){
+  const f = frame(), pts = f.strokes, gs = f.strokeGroups;
+  if(!_settled() || pts.length < KEEP_MIN_POINTS || gs.length <= FLOOR_EVERY) return false;
+  let cut = pts.length;
+  for(let i = 1; i <= FLOOR_EVERY; i++) cut -= gs[gs.length - i];
+  if(!(cut > 0) || !pts[cut] || !pts[cut].start) return false;
+  const ob = _overBudgetOf(pts);
+  ctx.clearRect(0,0,CW,CH);
+  paintUnder(ctx);
+  fctx.clearRect(0,0,CW,CH);
+  paintStatic(fctx, pts.slice(0, cut), ob);
+  let spare = null;
+  while(_flipFloors.length) spare = _floorDrop(_flipFloors[0]);
+  _floorTake(f, cut, gs.length - FLOOR_EVERY, ob, spare);
+  paintStatic(fctx, pts.slice(cut), ob);
+  _fcvTag = _tagOf(f);
+  layOn(ctx, frameCv);
+  renderOver();
+  return true;
 }
 // A new size remakes every layer, and the copies were made at the old one.
 // (A tile's kept pictures are known by the canvas size too, _backdropSig, so
 // one from before can only ever be shown at the size it was painted at.)
 function dropKept(){
-  _flipKept.length = 0; _ghosts.length = 0;
+  _flipKept.length = 0; _ghosts.length = 0; _flipFloors.length = 0;
   _fcvTag = null; _onionTag = null;
 }
 
@@ -3634,6 +3736,20 @@ let _thumbBytes = 0;
    only ever shown for the page it was painted from. */
 // keptOnly: lay the picture only if it is kept; else leave the tile sized and
 // empty and say so (false), for paintTiles to paint it in its turn.
+/* A TILE FROM THE LAYER THE PAD JUST PAINTED (FUTURE 6z, after v330). A tile
+   is painted through the frame layer itself while the canvas has not grown
+   (frameLayerFor gives a tile fctx when RS is DPR): the page's ink painted at
+   full size, then laid on the tile. So right after the pad has painted a page
+   (an Undo, a Redo, a stroke's end), that layer already holds the very ink
+   the tile was about to paint again: a second full paint, half of an Undo on
+   a busy page (6,000 points: 0.33 to 0.50 s a press with the CPU 4x slower on
+   a phone). When the layer is tagged with this page's ink at rest, the tile is
+   laid from it, as paintFrame would lay it after painting the same ink. */
+function _frameHolds(f, c){
+  const T = _fcvTag;
+  return !!T && T.f === f && T.w === frameCv.width && T.h === frameCv.height
+    && frameLayerFor(c) === fctx && T.sig === _inkSig(f);
+}
 function drawThumb(cv,f,keptOnly){
   cv.width=88*DPR; cv.height=62*DPR; cv.style.background='transparent';
   const c=cv.getContext('2d');
@@ -3655,7 +3771,8 @@ function drawThumb(cv,f,keptOnly){
   }
   c.setTransform(88*DPR/CW,0,0,62*DPR/CH,0,0); c.clearRect(0,0,CW,CH);
   if(keptOnly) return false;
-  drawBackdrop(c); paintFrame(c, f.strokes);
+  drawBackdrop(c);
+  if(_frameHolds(f, c)) layOn(c, frameCv); else paintFrame(c, f.strokes);
   const bytes = cv.width * cv.height * 4;
   if(_thumbBytes + bytes > THUMB_CACHE_BYTES) return true;   // paint direct from here on
   try {
