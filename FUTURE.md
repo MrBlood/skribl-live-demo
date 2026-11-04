@@ -1530,9 +1530,9 @@ painted in the sheet under 12px").
 **Measured, not built, outside the list:** Flip's page change on a long Flip
 (6y); the Pad's Undo past its three copies on a two-hour piece, a repaint of
 1.5 s; the Pad's own player paints a long drawing three times (DECISIONS,
-"The Pad opens a long drawing without a freeze"); a file opened on the Pad
-over a drawing still in progress came up without its Keep drawing pill,
-seen while writing a check and not looked into.
+"The Pad opens a long drawing without a freeze"). (A file opened on the Pad
+over a take still recording came up without its Keep drawing pill: FIXED
+after v330, DECISIONS "A file opened over a take ends the take first".)
 
 ## 6aa. Help cards inside the drawers (owner, after #691, with a screenshot of the eyedropper and Recolor: "shouldn't these have help cards? What other tools don't have help cards?")
 
