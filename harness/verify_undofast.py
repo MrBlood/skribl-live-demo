@@ -593,8 +593,9 @@ with sync_playwright() as p:
       return h; }"""
     # paintStatic's calls, counted from here on; and a busy page, made in the
     # document (22-point strokes, two inks), as the bench made it.
-    FSETUP = """() => { window.__fp = 0; const f = window.paintStatic;
-      if (!f.__counted) { window.paintStatic = function () { window.__fp++; return f.apply(this, arguments); };
+    FSETUP = """() => { window.__fp = 0; window.__fn = 0; const f = window.paintStatic;
+      if (!f.__counted) { window.paintStatic = function (c, a) { window.__fp++;
+          window.__fn += (a && a.length) || 0; return f.apply(this, arguments); };
         window.paintStatic.__counted = true; }
       window.__hash = (c) => { const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
         let h = 2166136261 >>> 0; for (let i = 0; i < d.length; i++) h = Math.imul(h ^ d[i], 16777619) >>> 0; return h; };
@@ -609,7 +610,7 @@ with sync_playwright() as p:
         buildStrip(); go(pages - 1); render(); refreshAllThumbs(); }; }"""
     # One press of Undo or Redo, with the paints it made, counted inside the
     # press itself (an autosave later is not the press).
-    FPRESS = "(id) => { window.__fp = 0; document.getElementById(id).click(); return window.__fp; }"
+    FPRESS = "(id) => { window.__fp = 0; window.__fn = 0; document.getElementById(id).click(); return window.__fp; }"
     # What a full repaint shows, after the press: the pad before and after
     # render(), and each copy matching the page against the layer render()
     # has just painted.
@@ -675,10 +676,11 @@ with sync_playwright() as p:
     # Two Undos more: the first is to ink whose copy is still kept, the second
     # is past what three copies reach (its tile is still among the three kept).
     pg.evaluate(FPRESS, "undo")
-    n4 = pg.evaluate(FPRESS, "undo"); u4, t4 = pg.evaluate(FPIX), pg.evaluate(FTILE); v4 = pg.evaluate(FTRUE)
-    check("past what the copies reach, Undo paints the page as before, once, and keeps it",
-          n4 == 1 and u4 == before[2] and t4 == tiles[2] and v4["same"] and v4["copies"] == 1 and v4["copiesTrue"],
-          f"paints {n4}; pixels {u4 == before[2]}; tile {t4 == tiles[2]}; {v4}")
+    n4 = pg.evaluate(FPRESS, "undo"); p4 = pg.evaluate("() => window.__fn")
+    u4, t4 = pg.evaluate(FPIX), pg.evaluate(FTILE); v4 = pg.evaluate(FTRUE)
+    check("past what the copies reach, Undo lays the page's floor and paints only the strokes above it, and keeps the page",
+          n4 == 1 and 0 < p4 < BUSY and u4 == before[2] and t4 == tiles[2] and v4["same"] and v4["copies"] == 1 and v4["copiesTrue"],
+          f"paints {n4}, {p4} points of {BUSY}+; pixels {u4 == before[2]}; tile {t4 == tiles[2]}; {v4}")
     kept = pg.evaluate("() => [_flipKept.length, new Set(_flipKept.map(k => k.cv)).size, _thumbBack.length]")
     check("the copies are three canvases, reused, after five strokes, and the tile keeps three pictures",
           kept == [3, 3, 3], f"copies {kept[0]}, distinct canvases {kept[1]}, pictures {kept[2]}")
@@ -791,10 +793,10 @@ with sync_playwright() as p:
           ue == moved and ne == 0, f"moved {ue == moved}; the ink before the move {ue == unmoved}; paints {ne}")
     # The stroke layers: the copy was made with them on.
     fstroke(pg, 3)
-    nl = pg.evaluate("() => { window.SKRIBL_STROKE_LAYERS = false; window.__fp = 0; document.getElementById('undo').click();"
-                     " const n = window.__fp; delete window.SKRIBL_STROKE_LAYERS; return n; }")
-    check("a copy made with the stroke layers on is not laid with them off: that Undo paints",
-          nl == 1, f"paints {nl}")
+    nl = pg.evaluate("() => { window.SKRIBL_STROKE_LAYERS = false; window.__fp = 0; window.__fn = 0; document.getElementById('undo').click();"
+                     " const n = [window.__fp, window.__fn, frame().strokes.length]; delete window.SKRIBL_STROKE_LAYERS; return n; }")
+    check("a copy or a floor made with the stroke layers on is not laid with them off: that Undo paints the whole page",
+          nl[0] >= 1 and nl[1] == nl[2], f"paints {nl[0]}, {nl[1]} points of {nl[2]}")
     # A new canvas size.
     fstroke(pg, 4)
     had = pg.evaluate("() => _flipKept.length")
@@ -848,6 +850,169 @@ with sync_playwright() as p:
     check("...and the copies made at the old size are dropped", g1[1] == 0, f"{g1[1]} kept")
     check("no page errors as the layers grow", not errs, "; ".join(errs[:2]))
     ctx.close()
+
+    print("\nFLIP UNDO — a floor under a busy page, the tile from the layer, a stroke's start")
+    # Flip's Undo has no cap: it takes a page back stroke by stroke to an empty
+    # one. A busy page keeps a FLOOR (the page as it stood at a pen stroke's
+    # start) and, 30 strokes on, a NEXT (flip.js, A FLOOR UNDER A BUSY PAGE): an
+    # Undo or a Redo past the three copies lays the highest that fits and paints
+    # only the strokes above it. The page's tile, painted through the same frame
+    # layer, is laid from it when the layer already holds the page
+    # (_frameHolds), and a stroke's start no longer paints the page into the
+    # layer when the layer holds it already (liveBegin). Every pixel is read
+    # against render() (FTRUE) and every tile against one painted afresh with
+    # the layer untagged (FTILEREF).
+    FTILEREF = """() => { const f = frame(), T = _fcvTag, hit = _thumbCache.get(f); _fcvTag = null; _thumbCache.delete(f);
+      const cv = document.createElement('canvas'); drawThumb(cv, f); const h = __hash(cv);
+      if (hit) _thumbCache.set(f, hit); else _thumbCache.delete(f); render(); return h; }"""
+
+    def fquick(pg, k, lift=True):
+        """A short stroke on the pad through real pointer events, placed by k."""
+        box = pg.locator("#pad").bounding_box()
+        x0 = box["x"] + box["width"] * (0.1 + 0.07 * (k % 9))
+        y0 = box["y"] + box["height"] * (0.12 + 0.06 * (k % 13))
+        pg.mouse.move(x0, y0)
+        pg.mouse.down()
+        for i in range(1, 7):
+            pg.mouse.move(x0 + i * box["width"] * 0.02, y0 + (i % 3) * box["height"] * 0.008)
+            pg.wait_for_timeout(8)
+        if lift:
+            pg.mouse.up()
+            pg.wait_for_timeout(60)
+
+    ctx, pg, errs = fopen(b, **PHONE)
+    pg.evaluate("(n) => __busy(1, n)", BUSY)
+    pg.wait_for_timeout(300)
+    seen, startpts = {}, []
+    for k in range(8):
+        seen[k] = pg.evaluate(FPIX)
+        pg.evaluate("() => { window.__fn = 0; }")
+        fquick(pg, k, lift=False)            # pressed and moving: the start has run
+        startpts.append(pg.evaluate("() => window.__fn"))
+        pg.mouse.up()
+        pg.wait_for_timeout(120)
+    seen[8] = pg.evaluate(FPIX)
+    check("Flip: each of eight strokes' starts on a busy page paints none of the page again, only the stroke",
+          max(startpts) < BUSY, f"points painted while each stroke was down: {startpts}")
+    wrong, tilewrong, painted, untrue = [], [], [], []
+    for j in range(8):                       # back to the page after 7, 6, ... 0 strokes
+        pg.evaluate(FPRESS, "undo")
+        painted.append(pg.evaluate("() => window.__fn"))
+        if pg.evaluate(FPIX) != seen[7 - j]:
+            wrong.append(7 - j)
+        if pg.evaluate(FTILE) != pg.evaluate(FTILEREF):
+            tilewrong.append(7 - j)
+        v = pg.evaluate(FTRUE)
+        if not v["same"]:
+            untrue.append(7 - j)
+    check("Flip: eight Undos on a busy page, every pixel of the pad as it was, each what render() paints",
+          not wrong and not untrue, f"pixels wrong after {wrong} strokes; unlike render() after {untrue}")
+    check("...painting only strokes above a floor, never the page",
+          max(painted) < BUSY, f"points painted per press {painted}")
+    check("...and each tile the picture a tile painted afresh shows",
+          not tilewrong, f"tiles wrong after {tilewrong} strokes" if tilewrong else "8 of 8")
+    wrong, painted = [], []
+    for j in range(8):                       # forward to the page after 1 ... 8 strokes
+        pg.evaluate(FPRESS, "redo")
+        painted.append(pg.evaluate("() => window.__fn"))
+        if pg.evaluate(FPIX) != seen[j + 1]:
+            wrong.append(j + 1)
+    check("Flip: eight Redos back, every pixel as it was, never painting the page",
+          not wrong and max(painted) < BUSY, f"wrong after {wrong}; points painted per press {painted}")
+    # A tile is laid from the layer only while the layer holds the page as it
+    # is: a point moved in place (as Recolor and the select tools do), the
+    # tile is painted, not laid from the layer as it was.
+    moved = pg.evaluate("""() => { const f = frame(); f.strokes[3] = Object.assign({}, f.strokes[3], { x: f.strokes[3].x + 40 });
+      refreshThumb(idx); const el = _tiles()[idx].querySelector('canvas'); const shown = __hash(el); return shown; }""")
+    moved_ref = pg.evaluate(FTILEREF)
+    check("Flip: a tile is never laid from the layer once the page has changed under it",
+          moved == moved_ref, "the tile shows the page as it was before the point moved")
+    # ...nor the page from a floor: that point lies under every floor, so the
+    # next Undo (past the copies, which held the page before the point moved)
+    # paints the page as it now is.
+    under = pg.evaluate("() => { document.getElementById('undo').click(); return true; }")
+    vu = pg.evaluate(FTRUE)
+    check("Flip: a point moved under the floors, the next Undo shows what render() shows, never the floor as it was",
+          under and vu["same"], str(vu))
+    check("no page errors through the floor", not errs, "; ".join(errs[:2]))
+    ctx.close()
+
+    print("\nFLIP UNDO — seventy strokes, thirty Undos: the NEXT takes over")
+    ctx, pg, errs = fopen(b, **PHONE)
+    pg.evaluate("(n) => __busy(1, n)", BUSY)
+    pg.wait_for_timeout(300)
+    PS = """() => { window.__ps = 0; const f = window.paintStatic;
+      if (!f.__strokes) { window.paintStatic = function (c, a) {
+          for (const q of a || []) if (q.start) window.__ps++; return f.apply(this, arguments); };
+        window.paintStatic.__strokes = true; } }"""
+    seen = {}
+    for k in range(70):
+        if k >= 39:
+            seen[k] = pg.evaluate(FPIX)
+        fquick(pg, k)
+    seen[70] = pg.evaluate(FPIX)
+    fl = pg.evaluate("() => _flipFloors.map(F => F.g)")
+    groups0 = pg.evaluate("() => frame().strokeGroups.length")
+    pg.evaluate(PS)
+    wrong, strokes_painted = [], []
+    for j in range(30):                      # back to the page after 69 ... 40 strokes
+        strokes_painted.append(pg.evaluate("() => { window.__ps = 0; document.getElementById('undo').click(); return window.__ps; }"))
+        if pg.evaluate(FPIX) != seen[69 - j]:
+            wrong.append(69 - j)
+    check("Flip: seventy strokes keep two floors, the NEXT taken thirty strokes on (the case is real)",
+          len(fl) == 2 and fl[1] - fl[0] >= 30, f"floors at {fl} strokes, the page now {groups0}")
+    check("...and thirty Undos put back every pixel, none painting sixty strokes or more",
+          not wrong and max(strokes_painted) < 60, f"wrong after {wrong}; strokes painted per press {strokes_painted}")
+    check("no page errors through seventy strokes", not errs, "; ".join(errs[:2]))
+    ctx.close()
+
+    print("\nFLIP UNDO — a page opened and undone before it is drawn on")
+    # No stroke has started on it, so no floor: the first Undo paints the page
+    # in two parts with a floor taken between, thirty strokes under it, and the
+    # next lays that floor and paints the strokes above it.
+    ctx, pg, errs = fopen(b, **PHONE)
+    pg.evaluate("(n) => __busy(1, n)", BUSY)
+    pg.wait_for_timeout(300)
+    a1 = pg.evaluate(FPRESS, "undo"); q1 = pg.evaluate("() => [window.__fn, frame().strokes.length]")
+    v1 = pg.evaluate(FTRUE)
+    pg.evaluate(FPRESS, "undo"); q2 = pg.evaluate("() => [window.__fn, frame().strokes.length]")
+    v2 = pg.evaluate(FTRUE)
+    check("Flip: the first Undo on a page just opened paints it once, in two parts with a floor between",
+          a1 == 2 and q1[0] == q1[1] and v1["same"], f"paints {a1}, {q1[0]} points of {q1[1]}; {v1}")
+    check("...and the next lays that floor and paints only the strokes above it",
+          0 < q2[0] < 60 * 22 and v2["same"], f"{q2[0]} points of {q2[1]}; {v2}")
+    check("no page errors through a page undone before it is drawn on", not errs, "; ".join(errs[:2]))
+    ctx.close()
+
+    print("\nFLIP UNDO — see-through ink above a floor, past the layering budget and under it")
+    for n_see, label in ((40, "past the budget"), (10, "under the budget")):
+        ctx, pg, errs = fopen(b, **PHONE)
+        pg.evaluate("""(n) => { const f = frame(), pts = [], groups = [];
+          for (let g = 0; g < 80; g++) { const col = g < n ? 'rgba(124, 92, 255, 0.45)' : '#1d1a2b';
+            for (let i = 0; i < 60; i++) pts.push({ x: 30 + i * 4, y: 40 + g * 4 + (i % 4), color: col,
+              size: 4 + (i % 5), t: pts.length * 16, start: i === 0 });
+            groups.push(60); }
+          f.strokes = pts; f.strokeGroups = groups; buildStrip(); render(); refreshAllThumbs(); }""", n_see)
+        pg.wait_for_timeout(300)
+        pg.evaluate("() => { strokeOpacity = 0.45; SkriblBrush.setBrush('pencil'); }")
+        for k in range(6):
+            fquick(pg, k)
+        state = pg.evaluate("""() => { const f = frame(), n = f.strokeGroups.slice(-6); let a = f.strokes.length - n.reduce((x, y) => x + y, 0);
+          const out = []; for (const g of n) { out.push(f.strokes.slice(a, a + g)); a += g; }
+          return [_overBudgetOf(f.strokes), out.every(r => r.every(p => strokeAlphaOf(p.color) < 1)),
+                  out.every(r => new Set(r.map(p => p.size)).size > 1)]; }""")
+        untrue = []
+        for j in range(6):
+            pg.evaluate(FPRESS, "undo")
+            if j >= 2 and not pg.evaluate(FTRUE)["same"]:
+                untrue.append(j + 1)
+        check(f"Flip: a page {label}, six see-through pencil strokes of varying width drawn on it (the case is real)",
+              state == [n_see > 24, True, True], str(state))
+        check(f"...and each Undo past the copies, from the floor, shows every pixel render() shows ({label})",
+              not untrue, f"Undos unlike render(): {untrue}")
+        check(f"no page errors through see-through Undos on Flip ({label})", not errs, "; ".join(errs[:2]))
+        ctx.close()
+
     b.close()
 
 bad = [r for r in results if not r[0]]
