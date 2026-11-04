@@ -29930,3 +29930,58 @@ powerful and playful (unchanged).
 
 Not tested here: a real phone on a real connection (the browser's own
 throttle stands in), and Safari (no WebKit here).
+
+## After v330 -- Flip's page tools wait for a second page, then stand in groups
+
+The owner's "all yes" to B (Nov 4), from the three asks' mock: FUTURE 6z
+item 9. On a desk, Flip showed every page tool around the canvas at once, all
+the same weight, and eight of the eleven do nothing while there is one page:
+Left, Right, Copy, Loop, Under, Delete, Tween and Smear.
+
+- BUILT, on a desk: one page shows what one page can use, Draw, Duplicate
+  and Blank. The other eight wait, folded to nothing: not painted and out of
+  the tab order. A second page brings them in gliding (Draw slides 290 px
+  over 19 frames, its largest step 32 px; Duplicate gives Tween and Smear
+  their room, 173 px narrower over 16 frames), and from two pages on they
+  stand in groups by what they do: Order (Left, Right) · Copy · how it plays
+  (Draw, Loop, Under) · Delete, and New page (Duplicate, Blank) · Between
+  (Tween, Smear). 8 px within a group and 19 between on the page bar; 6 and
+  18 on the add row. Taken back to one page, the eight fold again. A phone
+  stays as it was, its four add buttons and its ⋯.
+- REDUCE MOTION: they come at once, in one frame, held twice over: the glide
+  is written for no-preference only, and styles.css's own reduce rule stops
+  every transition on the page anyway. Either guard alone holds it.
+- FOUND BUILDING IT: the first glide, on a max-width cap alone, jumped 82 px
+  in one frame, since the cap is far wider than a button and the width
+  arrived in the first frames. `interpolate-size: allow-keywords` lets the
+  width itself glide from nothing to its own size; the cap stays as the
+  fallback for a browser without it. The add row was rebuilt with the strip
+  on every page change, so its buttons could never glide: buildStrip keeps
+  it now. On a desk the add row was a grid, which cannot glide from four
+  columns to two; there it is a flex row (a phone keeps its grid). And the
+  glide waits two frames after Flip opens, so a Flip that opens on many
+  pages does not glide its tools in.
+
+THE CHECKS: verify_pages, PAGE TOOLS. Desk, light and dark: one page shows
+Draw, Duplicate and Blank, the other eight not painted (asked at their centre
+with elementFromPoint, each let take the pointer for the moment, as a
+disabled button would not) and not focusable; a second page glides them in,
+each over many frames and no frame a sixth of its way; two pages paint all
+eleven in their groups; the second page taken away, the eight wait again.
+Reduce Motion: at once. A phone keeps its four add buttons. CALIBRATED, each
+shown red against its own break: no one-page class (seven rows), nothing
+folded (seven), no groups (both group rows), no glide (both glide rows), the
+add row rebuilt (the Duplicate glide), the width glide taken away (both glide
+rows), the fold on a phone too (the phone row), and Reduce Motion with both
+its guards taken away (its row; either alone keeps it green). With none
+broken, 97 of 97.
+
+WHAT IT DOES TO THE PAD: not for the Pad, which has no pages.
+
+THE FOUR: simple (three tools until there is something for the rest to do),
+kind (they glide in, and nothing on show does nothing), powerful (all eleven
+from two pages, grouped by what they do), playful (unchanged).
+
+Not tested here: Safari and Firefox (no WebKit here, and Gecko only in CI's
+smoke): a browser without `interpolate-size` glides the page bar on its cap,
+quicker at the start. Segoe UI (the gaps are set in px, not tuned to a font).
