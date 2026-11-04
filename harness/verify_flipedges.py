@@ -13,8 +13,18 @@ the two differ. Each section was red on the code before its fix:
   * "Select through here" works on a phone, from the page you were on;
   * after Cut, Paste is within reach on a blank page, and Ctrl+V pastes;
   * the page strip counts pages, not the paste ghost, while a page is copied;
-  * a tile's x says its arm out loud and names its page.
+  * a tile's x says its arm out loud and names its page;
+  * the pen lands where it is put out to the canvas's edges (FUTURE 6r): the
+    canvas wears a 2px frame and the drawing fills its inside, and the pen was
+    read as a share of the whole box, frame and all, so a pen a pixel in from
+    an edge landed about 2px further in. Each edge on a desk and a phone, the
+    left and top zoomed to 200% (the frame at the zoom's scale); the
+    eyedropper reads the ink under the pen at the edge; artwork dragged moves
+    as far as the pointer went; the replay's dot over the drawing's corner
+    sits on that corner. The drawing's box is read from the frame's own width
+    (getComputedStyle), at the zoom's scale.
 """
+import math
 import os
 import sys
 
@@ -68,6 +78,52 @@ def drag(pg, x0, y0, x1, y1):
         pg.mouse.move(b["x"] + x0 + (x1 - x0) * k / 11, b["y"] + y0 + (y1 - y0) * k / 11)
     pg.mouse.up()
     pg.wait_for_timeout(150)
+
+
+# The drawing's own box on the screen: the canvas's box less its frame (its
+# border, read from the style), at the scale the zoom shows it.
+INNER = """() => { const c = document.getElementById('pad'), r = c.getBoundingClientRect(), cs = getComputedStyle(c);
+  const s = c.offsetWidth ? r.width / c.offsetWidth : 1;
+  const bl = (parseFloat(cs.borderLeftWidth) || 0) * s, br = (parseFloat(cs.borderRightWidth) || 0) * s;
+  const bt = (parseFloat(cs.borderTopWidth) || 0) * s, bb = (parseFloat(cs.borderBottomWidth) || 0) * s;
+  return { left: r.left + bl, top: r.top + bt, right: r.right - br, bottom: r.bottom - bb,
+           width: r.width - bl - br, height: r.height - bt - bb, CW, CH, frame: bl / s }; }"""
+
+
+def edge_points(pg, edges, touch=False):
+    """A pen put one screen pixel in from each named edge of the drawing's own
+    box (at a whole pixel), moved 30px inward; the stroke's first point
+    against where that pixel is in the drawing's units."""
+    out = {}
+    for e in edges:
+        m = pg.evaluate(INNER)
+        ux, uy = m["CW"] / m["width"], m["CH"] / m["height"]
+        mx, my = round(m["left"] + m["width"] * 0.43), round(m["top"] + m["height"] * 0.47)
+        x, y, dx, dy = {"left": (math.ceil(m["left"] + 1), my, 30, 0), "right": (math.floor(m["right"] - 1), my, -30, 0),
+                        "top": (mx, math.ceil(m["top"] + 1), 0, 30), "bottom": (mx, math.floor(m["bottom"] - 1), 0, -30)}[e]
+        want = [(x - m["left"]) * ux, (y - m["top"]) * uy]
+        n = pg.evaluate("() => frame().strokes.length")
+        if touch:
+            pg.touchscreen.tap(x, y)
+        else:
+            pg.mouse.move(x, y)
+            pg.mouse.down()
+            for k in range(1, 7):
+                pg.mouse.move(x + dx * k / 6, y + dy * k / 6)
+            pg.mouse.up()
+        pg.wait_for_timeout(120)
+        got = pg.evaluate("(n) => { const p = frame().strokes[n]; return p ? [p.x, p.y] : null; }", n)
+        out[e] = (got, want)
+    return out
+
+
+def edges_ok(out, tol=0.25):
+    return all(g and abs(g[0] - w[0]) <= tol and abs(g[1] - w[1]) <= tol for g, w in out.values())
+
+
+def edges_say(out):
+    return "; ".join(f"{e}: at {[round(v, 2) for v in g] if g else None}, under the pen {[round(v, 2) for v in w]}"
+                     for e, (g, w) in out.items())
 
 
 def chip(pg):
@@ -309,6 +365,70 @@ with sync_playwright() as sp:
     check("the x is named for its page, and its first press is said and shown",
           name0 == "Delete page 2" and said == "Tap again to delete page 2" and armed == "Tap again to delete page 2",
           f"name {name0!r}; said {said!r}; armed name {armed!r}")
+    ctx.close()
+
+    # ---------------------------------------------------------------------
+    print("\nFLIP — the pen lands where it is put, out to the canvas's edges")
+    ctx, pg, errs = flip(b)
+    pg.evaluate("() => setTool('pen')")
+    out = edge_points(pg, ["left", "right", "top", "bottom"])
+    frame_px = pg.evaluate(INNER)["frame"]
+    check("desk: a pen a pixel in from each edge of the drawing lands a pixel's worth from that edge",
+          frame_px > 0 and edges_ok(out), f"the frame {frame_px}px; " + edges_say(out))
+    # THE EYEDROPPER, the ink under the pen at the edge: a band of red 3 units
+    # wide along the drawing's left edge, read a pixel in from it (about 1 to
+    # 2.3 units in; the frame's 2px put the reading past the band).
+    pg.evaluate("""() => { const f = frame(); const n = 12;
+      for (let k = 0; k < n; k++) f.strokes.push({ x: 1.5, y: 40 + k * 40, color: '#e01010', size: 3, t: 0, start: k === 0 });
+      f.strokeGroups.push(n); render(); }""")
+    m = pg.evaluate(INNER)
+    picked = pg.evaluate("""(at) => { const was = color; sampleColorAt({ clientX: at[0], clientY: at[1] }); const got = color;
+      setColor(was); return got; }""", [math.ceil(m["left"] + 1), round(m["top"] + m["height"] * 0.5)])
+    check("desk: the eyedropper reads the ink under the pen a pixel in from the edge",
+          picked.lower() in ("#e01010",), f"picked {picked} a pixel in from the left edge, over a 3-unit red band")
+    # ARTWORK DRAGGED moves as far as the pointer went, in the drawing's units.
+    pg.evaluate("() => setTool('artmove')")
+    m = pg.evaluate(INNER)
+    x0, y0 = round(m["left"] + m["width"] * 0.3), round(m["top"] + m["height"] * 0.4)
+    pg.mouse.move(x0, y0)
+    pg.mouse.down()
+    for k in range(1, 9):
+        pg.mouse.move(x0 + 320 * k / 8, y0 + 160 * k / 8)
+    pg.mouse.up()
+    pg.wait_for_timeout(150)
+    moved = pg.evaluate("() => [moveDx, moveDy]")
+    want = [320 * m["CW"] / m["width"], 160 * m["CH"] / m["height"]]
+    check("desk: artwork dragged moves as far as the pointer went, in the drawing's units",
+          abs(moved[0] - want[0]) <= 0.25 and abs(moved[1] - want[1]) <= 0.25,
+          f"moved {[round(v, 2) for v in moved]}; the pointer went {[round(v, 2) for v in want]}")
+    pg.keyboard.press("Escape")
+    pg.wait_for_timeout(200)
+    # THE REPLAY'S DOT over the drawing's top-left corner sits on that corner.
+    dot = pg.evaluate("""() => { const was = playing; playing = true;
+      revealNib({ strokes: [{ x: 0, y: 0 }, { x: 0, y: 0 }] }, 1); playing = was;
+      const n = document.querySelector('.flip-wrap .player-nib'), w = n.parentElement.getBoundingClientRect();
+      return [w.left + parseFloat(n.style.left), w.top + parseFloat(n.style.top)]; }""")
+    m = pg.evaluate(INNER)
+    pg.evaluate("() => { const n = document.querySelector('.flip-wrap .player-nib'); if (n) n.hidden = true; }")
+    check("desk: the replay's dot over the drawing's corner sits on that corner",
+          abs(dot[0] - m["left"]) <= 0.25 and abs(dot[1] - m["top"]) <= 0.25,
+          f"the dot at {[round(v, 2) for v in dot]}; the corner {[round(m['left'], 2), round(m['top'], 2)]}")
+    # ZOOMED TO 200%, the left and top edges: the frame at the zoom's scale.
+    pg.evaluate("() => setTool('pen')")
+    pg.evaluate("() => { ZoomView.enable(); ZoomView.zoomAt(2, 0, 0); }")
+    pg.wait_for_timeout(300)
+    zoom = pg.evaluate("() => ZoomView.get().zoom")
+    out = edge_points(pg, ["left", "top"])
+    check("desk, zoomed to 200%: the pen a pixel in from the left and top edges lands a pixel's worth from them",
+          zoom >= 1.99 and edges_ok(out), f"zoom {zoom}; " + edges_say(out))
+    check("no page errors through the edges on a desk", not errs, "; ".join(errs[:2]))
+    ctx.close()
+    ctx, pg, errs = flip(b, PHONE)
+    pg.evaluate("() => setTool('pen')")
+    out = edge_points(pg, ["left", "right", "top", "bottom"], touch=True)
+    check("phone: a finger a pixel in from each edge of the drawing lands a pixel's worth from that edge",
+          edges_ok(out), edges_say(out))
+    check("no page errors through the edges on a phone", not errs, "; ".join(errs[:2]))
     ctx.close()
     b.close()
 
