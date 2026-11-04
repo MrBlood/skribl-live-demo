@@ -15,6 +15,10 @@ AND IT MUST NOT LEAK CONTENT. Titles, captions, stroke data and audio are
 excluded deliberately — a bug report should not quietly carry someone's
 unpublished drawing. The assertions below seed a recognisable title and stroke
 and require neither to appear.
+
+AND EVERY WORD ON IT IS 12px OR MORE, in both editors on a phone and a desk
+(the owner's "all yes" to every word at 12px, Nov 4): the details and the line
+saying what is left out were 11.5 and 11px.
 """
 import os
 import pathlib
@@ -154,6 +158,44 @@ with sync_playwright() as p:
     check("but the page count is still there",
           "Pages:" in text, repr(text))
     pg.close()
+
+    print("\nREPORT — every word it paints at 12px or more")
+    #
+    # The owner's "all yes" (Nov 4): every word to 12px, one sheet per PR,
+    # each with its own check that nothing painted in it is under 12px, as the
+    # Post sheet has (verify_postmoment) and Export (verify_exportui section
+    # 6). The type census read two here: the details (11.5px, monospace) and
+    # the line under them that says what is left out (11px). Every text the
+    # sheet lays out is read, in both editors on a phone and a desk, after a
+    # stroke, so the details have a drawing to describe.
+    SMALL12 = """() => { const out = [], S = document.getElementById('reportSheet'); let n = 0;
+      const w = document.createTreeWalker(S, NodeFilter.SHOW_TEXT);
+      for (let t = w.nextNode(); t; t = w.nextNode()) {
+        const el = t.parentElement;
+        if (!t.nodeValue.trim() || !el.getClientRects().length || getComputedStyle(el).visibility !== 'visible') continue;
+        n++; const f = parseFloat(getComputedStyle(el).fontSize);
+        if (f < 12) out.push((el.id ? '#' + el.id : '.' + el.classList[0]) + ' ' + f + 'px ' + JSON.stringify(t.nodeValue.trim().slice(0, 24))); }
+      return { n, small: out }; }"""
+    for surface, path, canvas in (("Pad", "/skribl-pad", "#canvas"), ("Flip", "/flip", "#pad")):
+        for size, view in (("phone", dict(viewport={"width": 402, "height": 874}, device_scale_factor=2, is_mobile=True, has_touch=True)),
+                           ("desk", dict(viewport={"width": 1280, "height": 900}))):
+            c = b.new_context(**view)
+            pg = c.new_page()
+            pg.goto(BASE + path, wait_until="load")
+            pg.wait_for_timeout(1400)
+            box = pg.locator(canvas).bounding_box()
+            pg.mouse.move(box["x"] + 60, box["y"] + 60)
+            pg.mouse.down()
+            pg.mouse.move(box["x"] + 150, box["y"] + 130, steps=8)
+            pg.mouse.up()
+            pg.wait_for_timeout(400)
+            pg.evaluate("() => window.SkriblReport.init() && null")
+            pg.evaluate("() => document.querySelector('[data-skribl-report]').click()")
+            pg.wait_for_timeout(500)
+            r = pg.evaluate(SMALL12)
+            check(f"{surface}, {size}: nothing the Report sheet paints is under 12px",
+                  r["n"] >= 5 and not r["small"], f"{r['n']} texts read; under 12px: {r['small']}")
+            c.close()
 
     b.close()
 

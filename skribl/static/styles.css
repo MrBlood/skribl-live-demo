@@ -7119,13 +7119,13 @@ body:not(.player-mode) :is(.toolbar, .flip-tools) {
   background: var(--surface-raised);
   border: 1px solid var(--hairline-strong); border-radius: var(--r-control);
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 11.5px; line-height: 1.6; color: var(--text-primary);
+  font-size: 12px; line-height: 1.6; color: var(--text-primary);   /* 12px, every word (the owner's "all yes", Nov 4) */
   /* pre keeps the line breaks; wrapping stops a long user-agent string forcing
      the sheet wider than the window. */
   white-space: pre-wrap; word-break: break-word;
   max-height: 210px; overflow-y: auto;
 }
-.report-privacy { margin: 0 16px 10px; font-size: 11px; color: var(--text-secondary); }
+.report-privacy { margin: 0 16px 10px; font-size: 12px; color: var(--text-secondary); }
 .report-actions { display: flex; gap: 8px; padding: 0 14px 12px; }
 .report-actions .panel-btn { flex: 1 1 0; text-align: center; }
 .report-primary { background: var(--accent-fill); border-color: transparent; color: #fff; }   /* the action fill every primary button wears: white on --ui-active was 4.35:1 */
