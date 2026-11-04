@@ -278,20 +278,20 @@ function resizeCanvas() {
     // phone starts 9:16 instead of a 4:3 letterbox floating in dead space.
     // Still a preset — two people on the same kind of screen get the same
     // shape — and the Canvas picker can change it while the canvas is empty.
-    const t = window.SkriblCanvasSizes || null;
+    //
+    // Against the column, not the page the row may reach across, so a new
+    // drawing starts in the shape it always did; but a touch screen held
+    // upright starts square whenever the square fits the whole row (the
+    // owner's A, after the tablet mock: an iPad's column is just short of
+    // it). One rule for both editors: lib/chromefit.js startShape, out of
+    // this file, which the link player loads. A degenerate band (display:none
+    // boot states, tests without CSS) keeps the classic default rather than
+    // trusting a 0x0 measurement.
+    const t = window.SkriblCanvasSizes || null, fit = window.SkriblChromeFit;
     let d = t ? t.DEFAULT : null;
-    if (t && t.bestFor) {
-      const areaEl = canvasArea || canvasWrap.parentElement || canvasWrap;
-      const r = areaEl.getBoundingClientRect();
-      const cs = getComputedStyle(areaEl);
-      // Against the column, not the page the row may reach across
-      // (lib/chromefit.js): a new drawing starts in the shape it always did.
-      const colW = (window.SkriblChromeFit && SkriblChromeFit.columnWidth) ? SkriblChromeFit.columnWidth(areaEl) : r.width;
-      const availW = Math.min(r.width, colW) - (parseFloat(cs.paddingLeft || 0) + parseFloat(cs.paddingRight || 0));
-      const availH = r.height - (parseFloat(cs.paddingTop || 0) + parseFloat(cs.paddingBottom || 0));
-      // A degenerate band (display:none boot states, tests without CSS) keeps
-      // the classic default rather than trusting a 0x0 measurement.
-      if (availW > 50 && availH > 50) d = t.bestFor(availW, availH);
+    if (fit && fit.startShape) {
+      const room = fit.roomOf(canvasArea || canvasWrap.parentElement || canvasWrap);
+      d = fit.startShape(room.col, room.row, room.h) || d;
     }
     if (d) establishEditorCanvas(d.w, d.h);
     else {

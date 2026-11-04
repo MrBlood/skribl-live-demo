@@ -1020,7 +1020,13 @@ with sync_playwright() as sp:
     #   (13.9 -> 41.3 frames a second, a two-hour drawing at a 3x phone's
     #   pace). Spent first: the box's clamps, which the clip holds.
     #   verify_jsstrip's lines move with it. 160,713 measured.
-    BYTES_RATCHET, BYTES_TARGET = 160_716, 153_800
+    # LOWERED (the tablet mock's A, "All yes", then "do Flip on the 12.9
+    #   too"): a new drawing's shape left app.js for lib/chromefit.js
+    #   startShape, one rule for both editors that the player never loads
+    #   (resizeCanvas returns before it on the link page), -367 B with the
+    #   upright tablet's square in it. verify_jsstrip's lines move with it.
+    #   160,346 measured; the ratchet follows it down.
+    BYTES_RATCHET, BYTES_TARGET = 160_349, 153_800
     # The page's own HTML. The brand is the one-stroke skribl signature INLINE
     # in the page (~1.4KB of paths, a ~0.9KB nonce'd draw-on script, and the
     # <linearGradient> defs), and inline is load-bearing rather than lazy:

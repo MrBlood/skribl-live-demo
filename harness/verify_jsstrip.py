@@ -328,9 +328,13 @@ with sync_playwright() as sp:
     # each stroke op touches and present() lays its layers back under a clip
     # to that box, 13.9 -> 41.3 frames a second for a two-hour drawing at a
     # 3x phone's pace. Spent first: the box's clamps to the canvas, which the
-    # clip already holds (160,713 measured).
+    # clip already holds (160,713 measured). And LOWERED, in both places
+    # together, when a new drawing's shape left app.js for lib/chromefit.js
+    # startShape, one rule for both editors that the player never loads (the
+    # owner's A for an upright tablet, then "do Flip on the 12.9 too"),
+    # -367 B (160,346 measured): the ratchet follows it down.
     check("stripping keeps the player's JS under its ratchet",
-          lean_total <= 160_716,
+          lean_total <= 160_349,
           f"{src_total:,} B of source -> {lean_total:,} B parsed")
     # THE MODULE ONLY A RECOLOURED DRAWING FETCHES (lib/recolorplay.js, by
     # app.js on the link page and inlineplayer.js in a post): its own pin, so

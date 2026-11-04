@@ -12399,7 +12399,13 @@ if(!restored && window.SkriblCanvasSizes && window.SkriblCanvasSizes.bestFor){
     const _cs = getComputedStyle(_st);
     const _colW = (window.SkriblChromeFit && window.SkriblChromeFit.columnWidth)
       ? window.SkriblChromeFit.columnWidth(_st) - parseFloat(_cs.paddingLeft) - parseFloat(_cs.paddingRight) : _avail.w;
-    const _best = window.SkriblCanvasSizes.bestFor(Math.min(_avail.w, _colW), _avail.h);
+    // ...but a touch screen held upright starts square whenever the square
+    // fits the whole stage, which already reaches (sizeStage, above): the
+    // Pad's rule (lib/chromefit.js startShape; the owner: "do Flip on the
+    // 12.9 too", where Flip started tall, 554px wide, and now fills 1000).
+    const _best = (window.SkriblChromeFit && window.SkriblChromeFit.startShape
+      && window.SkriblChromeFit.startShape(Math.min(_avail.w, _colW), _avail.w, _avail.h))
+      || window.SkriblCanvasSizes.bestFor(Math.min(_avail.w, _colW), _avail.h);
     if(applyCanvasSize(_best.w, _best.h, {silent:true})){
       sizeStage(); buildStrip(); render(); syncCanvasSeg();
     }
