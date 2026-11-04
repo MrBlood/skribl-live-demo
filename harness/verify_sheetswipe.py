@@ -678,12 +678,19 @@ with sync_playwright() as p:
         pg.click(RESTART)
         pg.wait_for_timeout(1700)
         log = pg.evaluate("_ftLog")
-        steps = [(abs(b2[1] - a2[1]), b2[0] - a2[0]) for a2, b2 in zip(log, log[1:])]
+        # A FRAME DROPPED UNDER LOAD IS NOT A LEAP. Beside two other suites the
+        # browser skipped one, and the tile's move over it was two frames'
+        # travel: 152px in a 32ms frame, red against 139 (alone, 81px in
+        # 17ms). Each move is read for a frame's time (16.7ms), divided by the
+        # frames it took up to three, as verify_pages' glide row reads its
+        # steps (#757), so a snap after a stall still reads as one.
+        steps = [(abs(b2[1] - a2[1]) * 16.7 / max(16.7, min(b2[0] - a2[0], 50)), abs(b2[1] - a2[1]), b2[0] - a2[0])
+                 for a2, b2 in zip(log, log[1:])]
         total = abs(log[-1][1] - log[0][1]) if log else 0
-        big = max(steps) if steps else (0, 0)
+        big = max(steps) if steps else (0, 0, 0)
         check(f"{who}: closing a door from the drawer's end, its tile glides rather than leaps",
               len(log) > 10 and big[0] <= max(120, total / 3) and total > 50,
-              f"largest single-frame move {round(big[0])}px in a {round(big[1])}ms frame, total {round(total)}px over {len(log)} frames")
+              f"largest move {round(big[1])}px in a {round(big[2])}ms frame ({round(big[0])}px a frame's time), total {round(total)}px over {len(log)} frames")
         check(f"{who}: no page errors", not errs, "; ".join(errs[:2]))
         ctx.close()
     b.close()
