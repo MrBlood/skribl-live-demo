@@ -183,7 +183,8 @@ TURN_READ = """() => { const tiles = [..._tiles()];
            on: tiles.map((el, i) => el.classList.contains('on') ? i : -1).filter(i => i >= 0) }; }"""
 # The strip as it stands (every child's class and markup but the canvases',
 # each tile's picture, the page bar), then the strip made again and read the
-# same way: the two must be the same. Each read waits a task first: the
+# same way: the two must be the same. It makes the strip again, so anything
+# else a row reads off the strip is read before it. Each read waits a task first: the
 # tooltips (lib/tooltip.js) take a new button's title into data-tip from a
 # MutationObserver, so a strip read the moment it is made still has titles.
 AS_MADE = """async () => { const tick = () => new Promise(r => setTimeout(r, 0)); const snap = () => {
@@ -381,8 +382,8 @@ with sync_playwright() as p:
                     tiles.nth(25).click()
                     pg.wait_for_timeout(300)
                     st = pg.evaluate(TURN_READ)
-                    eq = pg.evaluate(AS_MADE)
                     ghost = pg.evaluate("() => { const g = strip.querySelector('.ghost-paste'); return g && g.previousElementSibling ? [..._tiles()].indexOf(g.previousElementSibling) : -1; }")
+                    eq = pg.evaluate(AS_MADE)   # last: it makes the strip again
                     check("desk: with a page copied, a tap makes the strip again and the paste ghost follows the page you are on",
                           st["builds"] >= 1 and ghost == 25 and eq["same"],
                           f"buildStrip {st['builds']} times; the ghost after page {ghost + 1}; {eq['n']} differences {eq['diff']}")
@@ -392,9 +393,10 @@ with sync_playwright() as p:
                     pg.evaluate(TURN_WATCH)
                     pg.evaluate("() => go(33)")
                     st = pg.evaluate(TURN_READ)
+                    after = pg.evaluate("() => armedDel")
                     eq = pg.evaluate(AS_MADE)
                     check("desk: a page change with a delete armed makes the strip again, the delete no longer armed, as before",
-                          armed == 25 and st["builds"] >= 1 and pg.evaluate("() => armedDel") == -1 and eq["same"],
+                          armed == 25 and st["builds"] >= 1 and after == -1 and eq["same"],
                           f"armed on page {armed + 1}; buildStrip {st['builds']} times; {eq['n']} differences {eq['diff']}")
                     # A RANGE ANCHORED WHERE A PAGE CHANGE COMES FROM A MENU OR
                     # AN UNDO (no tap clears it first): the range then runs to
@@ -402,8 +404,8 @@ with sync_playwright() as p:
                     pg.evaluate(TURN_WATCH)
                     pg.evaluate("() => { setSpanAnchor(idx); go(idx + 4); }")
                     st = pg.evaluate(TURN_READ)
-                    eq = pg.evaluate(AS_MADE)
                     lit = pg.evaluate("() => strip.querySelectorAll('.frame.inspan').length")
+                    eq = pg.evaluate(AS_MADE)
                     pg.evaluate("() => clearSpan()")
                     check("desk: a page change with a range anchored makes the strip again, the range drawn to the new page",
                           st["builds"] >= 1 and lit == 5 and eq["same"],
