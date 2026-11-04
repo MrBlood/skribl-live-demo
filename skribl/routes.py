@@ -967,7 +967,12 @@ def register_routes(bp, *, index_route=False):
                 # A policy can refuse a 'public' post, so under a policy the
                 # question is asked the only way it can be answered: is every
                 # referencing post readable by an ANONYMOUS viewer? First
-                # refusal wins.
+                # refusal wins. AND PUBLIC (the PRE-331 review's 8): an
+                # unlisted post is readable by whoever holds its link, so
+                # asked only that, its media went out `public` behind any
+                # policy, where with none it stayed private. Both branches
+                # now ask what the share card asks: public, and readable by
+                # anyone.
                 public_only = True
                 refs = (session().query(SkriblPost)
                         .join(SkriblPostMedia,
@@ -976,7 +981,7 @@ def register_routes(bp, *, index_route=False):
                         .options(sa.orm.defer(SkriblPost.payload_json))
                         .yield_per(100))
                 for ref in refs:
-                    if not ref.visible_to(None):
+                    if ref.visibility != "public" or not ref.visible_to(None):
                         public_only = False
                         break
         if public_only:
@@ -1148,6 +1153,28 @@ def register_routes(bp, *, index_route=False):
             items = [r.feed_dict() for r in rows]
             nxt = _encode_cursor(rows[-1]) if (rows and has_more) else None
 
+        # THE POLICY HAS THE LAST WORD (the PRE-331 review's 3). The feed
+        # filter above is how a host keeps the listing in step with its
+        # visibility policy, in SQL, so pages stay full; a host that installs
+        # a policy and no matching filter listed the titles, captions,
+        # authors and ids of posts the policy refuses. So under a policy each
+        # row is asked visible_to as well, after the cursor was taken from
+        # the last row fetched, so paging still moves on. Where the two agree
+        # nothing is dropped; where they do not, the page is short rather
+        # than leaky, and the log says once what to install.
+        if _visibility_policy() is not None:
+            kept = [d for r, d in zip(rows, items) if r.visible_to(viewer)]
+            if len(kept) < len(items):
+                ext = current_app.extensions.setdefault("skribl", {})
+                if not ext.get("feed_policy_warned"):
+                    ext["feed_policy_warned"] = True
+                    current_app.logger.warning(
+                        "skribl: the listing held a post the visibility policy "
+                        "refuses; it was left out, so that page was short. "
+                        "Install a feed_filter that matches the policy "
+                        "(docs/INTEGRATION.md) to keep pages full. Said once.")
+            items = kept
+
         _attach_authors(items)
         resp = jsonify({"items": items, "next_cursor": nxt})
         # NEVER STORED, for two reasons. It is read through visibility (an
@@ -1196,9 +1223,48 @@ def register_routes(bp, *, index_route=False):
             item["author"] = seen[uid]
 
     def _count_view(post):
+        """Count a play; True when it was a new one.
+
+        BEST EFFORT, AND NEVER AT THE READER'S COST (the PRE-331 review's
+        15). A post read on a database that will not take the write (read
+        only, a replica, a file locked by another writer) was a 500: the
+        play's insert failed and took the read with it, while the listing
+        beside it served. The count runs inside one savepoint now, so a
+        store that refuses it unwinds the count alone; the host's
+        transaction is intact and the reader gets the post. Said once per
+        app in the log, not once per read.
+        """
+        s = session()
+        try:
+            with s.begin_nested():
+                counted = _record_view(s, post)
+        except sa.exc.SQLAlchemyError as exc:
+            ext = current_app.extensions.setdefault("skribl", {})
+            if not ext.get("view_count_warned"):
+                ext["view_count_warned"] = True
+                current_app.logger.warning(
+                    "skribl: a play could not be counted (%s); the post was "
+                    "served without it. Said once.", type(exc).__name__)
+            return False
+        if counted:
+            # THE JANITOR RIDES THE WRITE, not the read: only a NEW row
+            # triggers it, so the work is proportional to plays rather than
+            # to page loads, and it is bounded and best-effort. A deployment
+            # that never schedules purge_views() still does not accumulate
+            # view rows for ever (PRESEAL-003). In its own savepoint and
+            # swallowed on purpose, exactly as the rate limiter's janitor
+            # is: a cleanup inside somebody's request must never take their
+            # request down with it, and the next play tries again.
+            try:
+                with s.begin_nested():
+                    purge_views(s)
+            except Exception:                                # pragma: no cover
+                pass
+        return counted
+
+    def _record_view(s, post):
         who = _rate_key(_client_ip())
         day = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-        s = session()
         seen = (s.query(SkriblView.id)
                 .filter(SkriblView.post_id == post.id, SkriblView.viewer_hash == who,
                         SkriblView.day == day).first())
@@ -1224,17 +1290,6 @@ def register_routes(bp, *, index_route=False):
             {SkriblPost.views_total:
                 sa.func.coalesce(SkriblPost.views_total, 0) + 1},
             synchronize_session=False)
-        # THE JANITOR RIDES THE WRITE, not the read: only a NEW row triggers
-        # it, so the work is proportional to plays rather than to page loads,
-        # and it is bounded and best-effort. A deployment that never schedules
-        # purge_views() still does not accumulate view rows for ever
-        # (PRESEAL-003). Swallowed on purpose, exactly as the rate limiter's
-        # janitor is: a cleanup inside somebody's request must never take
-        # their request down with it, and the next play tries again.
-        try:
-            purge_views(s)
-        except Exception:                                    # pragma: no cover
-            pass
         return True
 
     @bp.get("/api/skribls/meta")
