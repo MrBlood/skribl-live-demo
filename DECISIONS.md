@@ -29094,3 +29094,51 @@ THE FOUR: kind (nobody is refused who was not before, and the refusals
 are in the words people know); simple (nothing new on screen); powerful
 (a flood costs the server less, and a phone keeps only true files);
 playful (unchanged).
+
+## After v330 -- The PRE-331 review: what a host's policy says, and a read-only database
+
+Three more from FUTURE 6ad, each confirmed in the code first (15 reproduced:
+a post read on a read-only SQLite answered 500 while the listing served),
+each piece shown red on its own.
+
+- 3, THE LISTING OBEYS THE POLICY. The feed filters by the visibility
+  column and the host's feed_filter, in SQL; a host that installed a
+  visibility policy and no matching filter listed the titles, captions,
+  authors and ids of posts the policy refuses (the payload never). Under a
+  policy each row is now asked visible_to too, and a page that loses rows
+  is filled from the rows after them, a window at a time, eight at most;
+  the cursor is taken only from a row the viewer was shown, since a cursor
+  names its row's time and id. Where filter and policy agree nothing is
+  dropped. The log says once what to install. The first version only
+  dropped rows (short pages, a cursor that could name a refused row: the
+  objection verify_integration's DECLARED row raised against "a Python
+  filter over a paginated query"); its rows passed, and the row that
+  caught it was that one. The DECLARED row asserted the leak, so it
+  guarded outstanding work; it is inverted. verify_hostseams pages New
+  and Hot three at a time: exactly what an app with no policy lists, less
+  the refused, in order, once, full pages, no cursor naming a refused row.
+  Its first form checked only the eight newest posts and passed a listing
+  that stopped early; it compares the whole list now. Calibrated: no
+  safety net, no filling, Hot's fill without its id tie-break, and the
+  first version each turn their own rows red.
+- 8, A POLICY DOES NOT MAKE UNLISTED MEDIA PUBLIC. Under a policy the
+  media cache asked only whether an anonymous viewer may read the post,
+  and an unlisted post is readable by whoever holds its link, so its
+  media went out `public` behind any policy, where with none it stayed
+  private. It asks what the share card asks now: public, and readable by
+  anyone. Row in verify_mediaauthz (with a policy that has no opinion, as
+  without one: private, no-store).
+- 15, A READ SURVIVES A REFUSED COUNT. Counting a play writes; a database
+  that will not take the write (read only, a replica) made the post read
+  a 500. The count runs in one savepoint now and a refusal costs the count
+  alone; the janitor that rides a new play has its own. Said once per app
+  in the log. Rows in verify_hostseams on a read-only SQLite file (the URI
+  mode=ro, which holds even for root): served twice, no play counted; the
+  same read on the writable file counts one.
+
+WHAT IT DOES TO FLIP: shared (one server for both editors' posts).
+
+THE FOUR: kind (a reader gets the drawing even when the count cannot be
+kept, and a host's "no" is kept everywhere); simple (nothing new on
+screen); powerful (a host's policy is the one word on what shows);
+playful (unchanged).
