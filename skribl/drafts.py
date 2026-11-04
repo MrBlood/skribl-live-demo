@@ -21,6 +21,7 @@ NO COMMIT HERE, as everywhere in this package: the host owns the transaction
 """
 import base64
 import binascii
+import hashlib
 import json
 import re
 import secrets
@@ -84,6 +85,24 @@ def _thumbnail_ok(thumbnail):
     if kind == "jpeg":
         return raw.endswith(b"\xff\xd9")
     return raw[8:12] == b"WEBP" and int.from_bytes(raw[4:8], "little") + 8 == len(raw)
+
+
+def _one_save_at_a_time(owner):
+    """ONE SAVE AT A TIME PER AUTHOR (the PRE-331 review's 2). A save reads
+    the author's draft count and bytes, then writes, and nothing held the
+    two together: on PostgreSQL saves at once could each see room for one
+    more and all write. verify_postgres measured it: twelve 40 KB saves at
+    once under a budget one fits stored two to four. A transaction-scoped
+    advisory lock keyed on the author, as ratelimit takes on a poster, makes
+    each save's reads and write one step; it is held on the host's session
+    until the request commits, so the next save counts this one. Taken after
+    the drawing is validated, so the slow part does not queue. On SQLite the
+    file's one writer already serialises the writes."""
+    s = session()
+    if s.get_bind().dialect.name != "postgresql":
+        return
+    n = int.from_bytes(hashlib.sha256(("skribl-drafts:" + str(owner)).encode()).digest()[:8], "big", signed=True)
+    s.execute(sa.text("SELECT pg_advisory_xact_lock(:n)"), {"n": n})
 
 
 class DraftRejected(Exception):
@@ -212,6 +231,7 @@ def save_draft(author_id, payload, *, kind, title=None, thumbnail=None, public_i
     unconditional, as it always was."""
     owner = _owner(author_id)
     title = _validate(payload, kind, title, thumbnail)
+    _one_save_at_a_time(owner)
     if public_id is not None and base_updated_at is not None:
         if not isinstance(base_updated_at, str):
             raise DraftRejected("'baseUpdatedAt' must be the draft's updatedAt.")

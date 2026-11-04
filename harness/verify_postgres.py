@@ -589,6 +589,115 @@ except Exception as _e9outer:                                     # noqa: BLE001
     check("the backfill is drivable on PostgreSQL", False,
           f"{type(_e9outer).__name__}: {str(_e9outer)[:200]}")
 
+# DRAFTS ARE SAVED ONE AT A TIME PER AUTHOR (the PRE-331 review's 2). A save
+# checked the author's draft count and bytes, then inserted, with nothing
+# holding the two together, so on PostgreSQL saves at once could each see
+# room for one more and all insert. drafts.save_draft now takes a
+# transaction-scoped advisory lock on the author first, as the post limiter
+# does on the poster. Twelve saves at once through four workers by one
+# signed-in author (the demo identity, signed in by its key, CSRF on): at a
+# cap of two drafts two land; then, those deleted, at a 64 KB budget that
+# one 40 KB drawing fits and two do not, one lands. Measured through the
+# author's own list, so what counts is what was stored.
+print("\nDRAFTS — saves at once by one author keep to the cap and the byte budget")
+import http.cookiejar                                             # noqa: E402
+import re                                                         # noqa: E402
+DR_PORT = PORT + 2
+DR_KEY = "pgdrafts-key-" + uuid.uuid4().hex
+dr_env = dict(env, SKRIBL_DEMO_IDENTITY="pgdrafts-" + uuid.uuid4().hex[:8], SKRIBL_DEMO_LOGIN_KEY=DR_KEY,
+              SKRIBL_CSRF_PROTECT="1", SKRIBL_MAX_DRAFTS="2", SKRIBL_MAX_DRAFT_BYTES=str(64 * 1024),
+              SKRIBL_DEMO_INSECURE_COOKIE="1")   # the host is plain http on this box: the sign-in cookie may not be Secure
+dr_log = open(ROOT / "harness" / ".pg_drafts_gunicorn.log", "w+")
+dr = subprocess.Popen(["gunicorn", "-w", str(WORKERS), "-b", f"127.0.0.1:{DR_PORT}",
+                       "--timeout", "60", "--log-level", "info", "app:app"],
+                      cwd=str(ROOT), env=dr_env, stdout=subprocess.DEVNULL, stderr=dr_log)
+dr_base = f"http://127.0.0.1:{DR_PORT}"
+dr_ready = False
+for _ in range(120):
+    if dr.poll() is not None:
+        break
+    try:
+        urllib.request.urlopen(dr_base + "/skribl-pad", timeout=1); dr_ready = True; break
+    except Exception:
+        time.sleep(0.25)
+try:
+    if not dr_ready:
+        check("DRAFTS setup: the four-worker host came up", False, "gunicorn never became ready")
+    else:
+        _jar = http.cookiejar.CookieJar()
+        _op = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(_jar))
+        _op.open(dr_base + "/demo-login?key=" + DR_KEY, timeout=10).read()
+        _m = re.search(r'SKRIBL_CSRF_TOKEN = "([^"]+)"', _op.open(dr_base + "/skribl-pad", timeout=10).read().decode())
+        _tok = _m.group(1) if _m else ""
+
+        def _call(method, path, body=None):
+            req = urllib.request.Request(dr_base + "/api/drafts" + path, method=method,
+                                         data=None if body is None else json.dumps(body).encode(),
+                                         headers={"Content-Type": "application/json", "X-Skribl-CSRF": _tok})
+            try:
+                with _op.open(req, timeout=30) as r:
+                    return r.status, json.loads(r.read() or b"null")
+            except urllib.error.HTTPError as e:
+                return e.code, None
+            except Exception as e:                                # noqa: BLE001
+                return type(e).__name__, None
+
+        def _burst(body):
+            codes, lk, bar = [], threading.Lock(), threading.Barrier(CONCURRENT)
+            def one():
+                bar.wait()
+                c, _ = _call("POST", "", body)
+                with lk:
+                    codes.append(c)
+            ts = [threading.Thread(target=one) for _ in range(CONCURRENT)]
+            for t in ts:
+                t.start()
+            for t in ts:
+                t.join(90)
+            return codes
+
+        def _listed():
+            st, data = _call("GET", "")
+            return (data or {}).get("items", []) if st == 200 else None
+
+        def _clear():
+            for it in _listed() or []:
+                _call("DELETE", "/" + it["id"])
+
+        _st0, _ = _call("GET", "")
+        check("DRAFTS setup: signed in with CSRF, the author's list answers", _st0 == 200 and bool(_tok), f"{_st0}, token {bool(_tok)}")
+        _clear()
+        # 15 KB each, so two fit the 64 KB budget and the count is what binds.
+        # Without the lock this row still held at two in every run (the bytes
+        # row below is the one that went red, storing two to four); it was
+        # shown red by taking the count check out of save_draft (five stored).
+        _pts = []
+        while len(json.dumps(_pts)) < 15 * 1024:
+            _pts.append({"x": len(_pts) % 500, "y": len(_pts) % 400, "t": len(_pts) * 8})
+        _small = {"kind": "pad", "title": "at once", "payload": {"version": 1, "strokes": _pts, "strokeGroups": [len(_pts)]}}
+        _codes = _burst(_small)
+        _items = _listed()
+        check(f"at a cap of two drafts, {CONCURRENT} saves at once by one author: two are stored, the rest refused (409)",
+              _items is not None and len(_items) == 2 and _codes.count(201) == 2 and _codes.count(409) == CONCURRENT - 2,
+              f"answers {sorted(map(str, _codes))}; stored {None if _items is None else len(_items)}")
+        _clear()
+        _pts = []
+        while len(json.dumps(_pts)) < 40 * 1024:
+            _pts.append({"x": len(_pts) % 500, "y": len(_pts) % 400, "t": len(_pts) * 8})
+        _big = {"kind": "pad", "title": "40 KB", "payload": {"version": 1, "strokes": _pts, "strokeGroups": [len(_pts)]}}
+        _codes = _burst(_big)
+        _items = _listed()
+        check(f"at a 64 KB budget one 40 KB drawing fits: {CONCURRENT} saves at once store one, the rest refused (409)",
+              _items is not None and len(_items) == 1 and _codes.count(201) == 1 and _codes.count(409) == CONCURRENT - 1,
+              f"answers {sorted(map(str, _codes))}; stored {None if _items is None else len(_items)}")
+        _clear()
+finally:
+    dr.terminate()
+    try:
+        dr.wait(10)
+    except Exception:                                             # noqa: BLE001
+        dr.kill()
+
 print("\n" + "=" * 60)
 ok = sum(1 for o, _ in results if o)
 print(f"{ok}/{len(results)} passed")
