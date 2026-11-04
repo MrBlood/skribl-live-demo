@@ -70,9 +70,11 @@ PIX = """() => { const c = document.getElementById('canvas');
   const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let h = 2166136261 >>> 0;
   for (let i = 0; i < d.length; i++) h = Math.imul(h ^ d[i], 16777619) >>> 0;
   return [h, c.width, c.height]; }"""
-# paintStrokesStatic's calls, counted from here on.
-COUNT = """() => { window.__paints = 0; const f = window.paintStrokesStatic;
-  if (!f.__counted) { window.paintStrokesStatic = function () { window.__paints++; return f.apply(this, arguments); };
+# paintStrokesStatic's calls, counted from here on, and the points they were
+# handed (window.__painted).
+COUNT = """() => { window.__paints = 0; window.__painted = 0; const f = window.paintStrokesStatic;
+  if (!f.__counted) { window.paintStrokesStatic = function (a) { window.__paints++;
+      window.__painted += (a && a.length) || 0; return f.apply(this, arguments); };
     window.paintStrokesStatic.__counted = true; } }"""
 
 
@@ -89,7 +91,7 @@ def stroke(pg, box, k):
 
 
 def undo(pg, which="#undoBtn"):
-    pg.evaluate("(s) => { window.__paints = 0; document.querySelector(s).click(); }", which)
+    pg.evaluate("(s) => { window.__paints = 0; window.__painted = 0; document.querySelector(s).click(); }", which)
     pg.wait_for_timeout(250)
     return pg.evaluate(PIX), pg.evaluate("() => window.__paints")
 
@@ -150,8 +152,10 @@ with sync_playwright() as p:
     # one Redo just left), the second is past what three copies reach.
     undo(pg)
     u4, n4 = undo(pg)
-    check("past what the copies reach, Undo paints the drawing as before, once",
-          n4 == 1 and u4[1:] == before[2][1:], f"repaints {n4}; size {u4[1:]}")
+    p4 = pg.evaluate("() => window.__painted")
+    check("past what the copies reach, Undo lays a floor and paints only the strokes above it: every pixel from before",
+          n4 == 1 and 0 < p4 < len(BUSY_PTS) and u4 == before[2],
+          f"repaints {n4}, {p4} points painted of {len(BUSY_PTS)}+ in the drawing; pixels match {u4 == before[2]}")
     kept = pg.evaluate("() => [_padKept.length, new Set(_padKept.map(k => k.c)).size]")
     check("the copies are three canvases, reused, after five strokes",
           kept[0] == 3 and kept[1] == 3, f"kept {kept[0]}, distinct canvases {kept[1]}")
@@ -219,8 +223,17 @@ with sync_playwright() as p:
     pg.evaluate(COUNT)
     ug, ng = undo(pg)
     check("the window grew and the canvas with it (the case is real)", w1 > w0, f"{w0} -> {w1}")
-    check("...and Undo then paints the drawing at the new size, never the old size's copy",
-          ng == 1 and ug[1] == w1, f"repaints {ng}; canvas {ug[1]} wide")
+    grown = pg.evaluate("() => [window.__painted, strokes.length, _padFloors.map(f => f.c.width)]")
+    check("...and Undo then paints the drawing at the new size, never the old size's copy or floor (all of it, a floor of the new size taken on the way)",
+          ng >= 1 and ug[1] == w1 and grown[0] == grown[1] and grown[2] == [w1],
+          f"repaints {ng}, {grown[0]} points of {grown[1]}; canvas {ug[1]} wide; floors {grown[2]}")
+    # The floor that repaint took is at the deepest state left (the opened
+    # drawing), not at the drawing it painted: so the next Undo, a stroke
+    # further back, lays it and paints only what is above it.
+    ug2, ng2 = undo(pg)
+    again = pg.evaluate("() => [window.__painted, strokes.length]")
+    check("...and the next Undo, from the floor that repaint took, paints only the stroke above it",
+          ng2 == 1 and 0 < again[0] < len(BUSY_PTS), f"repaints {ng2}, {again[0]} points of {again[1]}")
     check("no page errors when the canvas grows", not errs, "; ".join(errs[:2]))
     pg.close()
 
@@ -240,11 +253,11 @@ with sync_playwright() as p:
     for k in range(5):
         light.append(pg.evaluate(PIX))
         stroke(pg, box, k)
-    kept = pg.evaluate("() => [strokes.length, _padKept.length]")
+    kept = pg.evaluate("() => [strokes.length, _padKept.length, _padFloors.length]")
     pg.evaluate(COUNT)
     ul, nl = undo(pg)
-    check("five strokes on a blank Pad keep no copy of the canvas",
-          kept[1] == 0, f"{kept[0]} points; copies {kept[1]}")
+    check("five strokes on a blank Pad keep no copy of the canvas, and no floor",
+          kept[1] == 0 and kept[2] == 0, f"{kept[0]} points; copies {kept[1]}, floors {kept[2]}")
     check("...and Undo paints the drawing from before the last stroke, as it always did",
           nl == 1 and ul == light[4], f"repaints {nl}; pixels match {ul == light[4]}")
     check("no page errors through a light drawing", not errs, "; ".join(errs[:2]))
@@ -258,15 +271,155 @@ with sync_playwright() as p:
     box = pg.locator("#canvas").bounding_box()
     for k in range(4):
         stroke(pg, box, k)
-    heavy = pg.evaluate("() => [strokes.length, _padKept.length, _padKept.map(k => k.c.width * k.c.height)]")
-    pg.evaluate("() => { window.__keptCv = _padKept.map(k => k.c); clearCanvas(); }")
+    heavy = pg.evaluate("() => [strokes.length, _padKept.length, _padKept.map(k => k.c.width * k.c.height),"
+                        " _padFloors.length, _padFloors.map(f => f.c.width * f.c.height)]")
+    pg.evaluate("() => { window.__keptCv = _padKept.map(k => k.c); window.__floorCv = _padFloors.map(f => f.c); clearCanvas(); }")
     stroke(pg, box, 1)
-    after = pg.evaluate("() => [strokes.length, _padKept.length, window.__keptCv.map(c => c.width * c.height)]")
-    check("over a busy drawing the strokes keep their three copies (the case is real)",
-          heavy[1] == 3 and all(a > 0 for a in heavy[2]), f"{heavy[0]} points; copies {heavy[1]}, pixels {heavy[2]}")
-    check("...and the drawing cleared, the next stroke drops them and lets their canvases go",
-          after[1] == 0 and all(a == 0 for a in after[2]), f"{after[0]} points; copies {after[1]}, old canvases' pixels {after[2]}")
+    after = pg.evaluate("() => [strokes.length, _padKept.length, window.__keptCv.map(c => c.width * c.height),"
+                        " _padFloors.length, window.__floorCv.map(c => c.width * c.height)]")
+    check("over a busy drawing the strokes keep their three copies and a floor (the case is real)",
+          heavy[1] == 3 and all(a > 0 for a in heavy[2]) and heavy[3] == 1 and all(a > 0 for a in heavy[4]),
+          f"{heavy[0]} points; copies {heavy[1]}, pixels {heavy[2]}; floors {heavy[3]}, pixels {heavy[4]}")
+    check("...and the drawing cleared, the next stroke drops them and lets their canvases go, the floor's too",
+          after[1] == 0 and all(a == 0 for a in after[2]) and after[3] == 0 and all(a == 0 for a in after[4]),
+          f"{after[0]} points; copies {after[1]}, old canvases' pixels {after[2]}; floors {after[3]}, old floors' pixels {after[4]}")
     check("no page errors through a busy drawing cleared", not errs, "; ".join(errs[:2]))
+    pg.close()
+
+    print("\nUNDO — a floor under the history: thirty Undos and back, after a hundred strokes")
+    # Undo reaches thirty states down. A floor is kept at or under the deepest
+    # (editor_draw.js, A FLOOR UNDER UNDO) and, once the history is full, a
+    # NEXT above it, which becomes the floor when the deepest state reaches it;
+    # an Undo or Redo the three copies do not hold lays the highest of them and
+    # paints only the strokes above it. After a hundred strokes the deepest
+    # state has moved seventy up from where the drawing opened: every press
+    # must put back every pixel as it was drawn and paint fewer than sixty
+    # strokes (twenty-nine of lag at most, thirty of history), never the
+    # drawing. Painted from the opening's floor alone it would be seventy and
+    # more; from the base, the whole drawing.
+    pg = b.new_page(viewport={"width": 1280, "height": 900})
+    errs = []
+    pg.on("pageerror", lambda e: errs.append(str(e)))
+    browsing.goto(pg, BASE, "/")
+    pg.evaluate("() => window.SkriblHints && window.SkriblHints.hide && window.SkriblHints.hide()")
+    busy(pg)
+    box = pg.locator("#canvas").bounding_box()
+
+    def quick(k):
+        """A short stroke through real pointer events, placed by k."""
+        x0, y0 = box["x"] + 40 + (k % 9) * 32, box["y"] + 40 + (k % 11) * 22
+        pg.mouse.move(x0, y0)
+        pg.mouse.down()
+        for i in range(1, 7):
+            pg.mouse.move(x0 + i * 9, y0 + (i % 3) * 5)
+            pg.wait_for_timeout(8)
+        pg.mouse.up()
+        pg.wait_for_timeout(40)
+
+    # STROKES a press paints: the stroke starts in what it hands the painter.
+    STROKES = """() => { window.__ps = 0; const f = window.paintStrokesStatic;
+      if (!f.__strokes) { window.paintStrokesStatic = function (a) {
+          for (const q of a || []) if (q.start) window.__ps++; return f.apply(this, arguments); };
+        window.paintStrokesStatic.__strokes = true; } }"""
+    PRESS = "(s) => { window.__ps = 0; document.querySelector(s).click(); return window.__ps; }"
+    N = 100
+    seen = {}            # the canvas after k strokes, for the last forty-one
+    for k in range(N):
+        if k >= N - 41:
+            seen[k] = pg.evaluate(PIX)
+        quick(k)
+    seen[N] = pg.evaluate(PIX)
+    state = pg.evaluate("() => ({ undo: undoStack.length, groups: strokeGroups.length, floors: _padFloors.length })")
+    pg.evaluate(STROKES)
+    wrong, painted = [], []
+    for j in range(30):                  # back to the canvas after 99, 98, ... 70 strokes
+        ps = pg.evaluate(PRESS, "#undoBtn")
+        pg.wait_for_timeout(30)
+        painted.append(ps)
+        if pg.evaluate(PIX) != seen[N - 1 - j]:
+            wrong.append(N - 1 - j)
+    check("a hundred strokes over the opened drawing: the history is full and two floors are kept (the case is real)",
+          state["undo"] == 30 and state["floors"] == 2, str(state))
+    check("thirty Undos: each puts back every pixel of the canvas as it was drawn",
+          not wrong, f"wrong after {wrong[:6]} strokes" if wrong else "30 of 30")
+    check("...and none paints sixty strokes or more: only those above a floor, never the drawing",
+          max(painted) < 60, f"strokes painted per press, most {max(painted)}: {painted}")
+    wrong, painted = [], []
+    for j in range(10):                  # forward to the canvas after 71 ... 80 strokes
+        ps = pg.evaluate(PRESS, "#redoBtn")
+        pg.wait_for_timeout(30)
+        painted.append(ps)
+        if pg.evaluate(PIX) != seen[N - 29 + j]:
+            wrong.append(N - 29 + j)
+    check("ten Redos back up: every pixel as it was drawn, and fewer than sixty strokes painted",
+          not wrong and max(painted) < 60, f"wrong {wrong[:6]}; strokes painted per press {painted}")
+    check("no page errors through thirty Undos and back", not errs, "; ".join(errs[:2]))
+    pg.close()
+
+    print("\nUNDO — a drawing back from a reload takes its floor in its first paint")
+    # A draft comes back with its history (editor_draft.js
+    # rebuildHistoryForRestore): thirty states and no copy of any of them, so
+    # the first Undo after a reload painted the whole drawing (7 s on the
+    # two-hour piece with the CPU 4x slower). Its paint now stops at the
+    # deepest state, keeps the canvas there as the floor, and paints the last
+    # strokes on it. 9,000 points in 150 lines, opened, and twelve strokes on
+    # top.
+    BIG_PTS = []
+    for _g in range(150):
+        for _i in range(60):
+            BIG_PTS.append({"x": 300 + _i * 7, "y": 120 + _g * 3 + (_i % 5), "color": "#1d1a2b",
+                            "size": 2, "t": len(BIG_PTS) * 16, "start": _i == 0})
+    _fd, big_file = tempfile.mkstemp(suffix=".skribl")
+    os.close(_fd)
+    with open(big_file, "w") as _f:
+        json.dump({"version": 2, "schemaVersion": 2, "playbackMode": "replay", "title": "Big",
+                   "frames": [{"strokes": BIG_PTS, "strokeGroups": [60] * 150}],
+                   "canvasSize": {"cssWidth": 816, "cssHeight": 612}}, _f)
+    pg = b.new_page(viewport={"width": 1280, "height": 900})
+    errs = []
+    pg.on("pageerror", lambda e: errs.append(str(e)))
+    browsing.goto(pg, BASE, "/")
+    pg.evaluate("() => window.SkriblHints && window.SkriblHints.hide && window.SkriblHints.hide()")
+    pg.set_input_files("#draftInput", big_file)
+    pg.wait_for_function(f"() => typeof strokes !== 'undefined' && strokes.length >= {len(BIG_PTS)}", timeout=20000)
+    pg.wait_for_timeout(300)
+    pg.click("#addTakePill")
+    pg.wait_for_timeout(250)
+    box = pg.locator("#canvas").bounding_box()
+    for k in range(12):
+        quick(k)
+    total = pg.evaluate("() => strokes.length")
+    pg.wait_for_function(f"() => {{ const s = readAutosave(); return !!(s && s.strokes && s.strokes.length === {total}); }}",
+                         timeout=15000)
+    pg.reload(wait_until="load")
+    pg.wait_for_function(f"() => typeof strokes !== 'undefined' && strokes.length === {total}", timeout=20000)
+    pg.wait_for_timeout(600)
+    back = pg.evaluate("() => ({ undo: undoStack.length, deepest: undoStack[0] && undoStack[0].strokes.length,"
+                       " floors: _padFloors.map(f => f.n), copies: _padKept.length })")
+    pg.evaluate(STROKES)
+    # The drawing as it came back is what a reload repaints: its points are
+    # written to 0.01 px (lib/pointwrite.js), so its edges are not the
+    # canvas's before the reload. Each Undo is read against the whole repaint
+    # of the same state on this page, the way every Undo painted before.
+    WHOLE = """() => { restoreHistoryState({ image: null, base: preRecordSnapshot, strokes: strokes.slice() });
+      const c = document.getElementById('canvas'); const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+      let h = 2166136261 >>> 0; for (let i = 0; i < d.length; i++) h = Math.imul(h ^ d[i], 16777619) >>> 0;
+      return [h, c.width, c.height]; }"""
+    wrong, painted = [], []
+    for j in range(3):                   # back to the drawing after 11, 10, 9 strokes
+        ps = pg.evaluate(PRESS, "#undoBtn")
+        pg.wait_for_timeout(30)
+        painted.append(ps)
+        if pg.evaluate(PIX) != pg.evaluate(WHOLE):
+            wrong.append(11 - j)
+    os.unlink(big_file)
+    check("back from a reload: thirty states, no copy, and one floor, at the deepest of them",
+          back["undo"] == 30 and back["copies"] == 0 and back["floors"] == [back["deepest"]], str(back))
+    check("...and the first Undos after it paint only the strokes above it, never the drawing",
+          max(painted) < 31, f"strokes painted per press {painted}")
+    check("...putting back every pixel the whole repaint of each paints",
+          not wrong, f"wrong after {wrong} strokes" if wrong else "3 of 3")
+    check("no page errors through a reload and its Undos", not errs, "; ".join(errs[:2]))
     pg.close()
 
     # ================================================================ FLIP

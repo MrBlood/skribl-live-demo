@@ -575,7 +575,7 @@ function padUndoRestore(state) {
     && k.pts.every((p, i) => p === pts[i]));
   if (k) { _padLay(k.c); return true; }
   const f = _padFloorUnder(state);
-  if (!f) return _padRepaintTakingFloor(state);
+  if (!f) return false;
   _padLay(f.c);
   if (pts.length > f.n) padPaintAbove(pts.slice(f.n));
   return true;
@@ -615,12 +615,12 @@ function _padLay(c) {
 // as it stood when a state was pushed (a stroke's start, a recolour's, a line
 // of text's: the canvas is exactly that state then; not a move's, whose
 // outline is painted on the canvas, selOutline above): the FLOOR, at or
-// under the deepest state, and the NEXT, above it, which becomes the floor
-// once the deepest state reaches it, and the next NEXT is taken then. An Undo
-// or a Redo no copy holds lays the highest of them its drawing begins with
-// (the very points, base, canvas size and stroke layers, as a copy is
-// matched) and paints only the strokes above it: about sixty at most, where
-// it had been all of them.
+// under the deepest state, and, once the history is full and the deepest
+// state starts to move up, the NEXT, which becomes the floor when the deepest
+// state reaches it. An Undo or a Redo no copy holds lays the highest of them
+// its drawing begins with (the very points, base, canvas size and stroke
+// layers, as a copy is matched) and paints only the strokes above it: under
+// sixty strokes, where it had been all of them.
 //
 // THE STROKES ABOVE A FLOOR are painted as paintStrokesStatic paints any
 // drawing, their see-through ones layered by their own count. Opaque ink comes
@@ -630,10 +630,12 @@ function _padLay(c) {
 // was drawn, where painting the whole drawing lays every see-through stroke
 // without one.
 //
-// WITH NO FLOOR UNDER IT (the first Undo after a draft comes back with its
-// history, or after a recolour or a move made new points under the floors),
-// the drawing is painted from its base as before, and a floor taken on the
-// way, at the deepest state left, so only that Undo pays.
+// WITH NO FLOOR UNDER IT (a recolour or a move made new points under the
+// floors, the canvas grew, the stroke layers were switched), padUndoRepaint
+// paints the drawing from its base as before and takes a floor on the way, at
+// the deepest state left, so only that Undo pays. A draft that comes back
+// with its history takes its floor the same way, in its first paint
+// (editor_draft.js renderPrefix).
 //
 // Two canvases more, 36 MB on a phone at 3x, for a busy drawing only
 // (PAD_KEEP_MIN_POINTS): a light one keeps none, as it keeps no copies.
@@ -692,20 +694,25 @@ function padFloorKeep() {
   }
   if (spare) spare.width = spare.height = 0;
 }
-function _padRepaintTakingFloor(state) {
+// What Undo and Redo do when padUndoRestore has no copy: the repaint
+// (restoreHistoryState, app.js), for a busy drawing in two parts with a floor
+// taken between, at the deepest state left when its drawing begins this one.
+function padUndoRepaint(state) {
   const pts = state.strokes, u = undoStack[0];
-  if (pts.length < PAD_KEEP_MIN_POINTS || !canvas.width || !canvas.height) return false;
-  // Its base must be at hand, as restoreHistoryState then paints at once.
-  if (state.base && !(_baseImgCache && _baseImgCache.src === state.base && _baseImgCache.img.complete)) return false;
+  // A pixel state, a light drawing, or a base still to decode: as before.
+  if (state.image || pts.length < PAD_KEEP_MIN_POINTS || !canvas.width || !canvas.height
+      || (state.base && !(_baseImgCache && _baseImgCache.src === state.base && _baseImgCache.img.complete))) {
+    restoreHistoryState(state);
+    return;
+  }
   const at = u && u !== state && u.base === state.base && u.strokes.length < pts.length
     && u.strokes.every((p, i) => p === pts[i]) ? u.strokes.length : pts.length;
   restoreHistoryState(Object.assign({}, state, { strokes: pts.slice(0, at) }));
   padFloorAt(at === pts.length ? state : u);
   if (at < pts.length) padPaintAbove(pts.slice(at));
-  return true;
 }
 // The canvas holds `state` now: it becomes the only floor (the others are let
-// go, one canvas reused). The repaint above and a draft's paint
+// go, one canvas reused). padUndoRepaint above and a draft's paint
 // (editor_draft.js renderPrefix) call it on their way.
 function padFloorAt(state) {
   let spare = null;
