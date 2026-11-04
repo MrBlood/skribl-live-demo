@@ -1741,7 +1741,10 @@ and 6; the rest by profiling.
      the long key and constant-time compare don't change that.
    - Suggested: a POST form. First find out whether the demo identity is
      on in the live deploy.
-6. **Hot's pages can skip a post** (Medium).
+6. ~~**Hot's pages can skip a post** (Medium).~~ **FIXED after v330**
+   (the owner, Nov 3: "all yes" to holding the order for one scroll-through;
+   DECISIONS: "Hot holds still for one scroll-through; plays stay per
+   connection").
    - Where: `skribl/routes.py`, about lines 1079 to 1095 and 1118 to 1136.
    - What: the Hot cursor pages by recent views and id, and views change
      while someone scrolls, so a post that climbs past the cursor between
@@ -1765,6 +1768,9 @@ The second pass (separate from the six above):
      the default-policy branch excludes unlisted posts. A host-app trap,
      like 3.
 9. **Views count people on one connection as one** (Medium, accuracy).
+   **DECIDED: KEPT** (the owner, Nov 3: "all yes" to keeping it; the same
+   entry). It cannot be inflated by clearing cookies and stores nothing
+   about a person; counting per browser would need a cookie.
    - Where: `skribl/routes.py`, about lines 1189 to 1217.
    - What: a view's identity is the IP-derived rate key, so a school,
      office or home on one connection counts as one viewer per post per
