@@ -5385,6 +5385,11 @@ button:not([hidden]):has(> svg.mk:only-child) { display: inline-flex; align-item
 body.player-mode .header,
 body.player-mode .tabs,
 body.player-mode .tab-panel { display: none !important; }
+/* The Pad's own player (#skribl=, a post kept on this device) is the editor's
+   page, so its dock and "Keep drawing" are in it: they stood over the
+   finished drawing on a phone. The link player's page has neither. */
+body.player-mode .toolbar,
+body.player-mode #addTakePill { display: none !important; }
 
 body.player-mode { overflow-x: hidden; }
 

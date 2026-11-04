@@ -33,12 +33,24 @@ WHAT IS ASKED, AND HOW IT IS READ
     long as a third of the one call, and the same ink.
   * A SHORT DRAWING is the one call it always was, whole when it is opened.
   * THE PAD'S OWN PLAYER (#skribl=, player mode) paints a long drawing in
-    whole calls, never in slices, as it did. (It paints it three times, on
-    main as here: once on load and twice more as its canvas grows. That is
-    the player's own, and this change leaves it as it was.) Two things keep
-    it whole: its paint runs while app.js loads, before editor_draft.js and
-    padPaint exist, and padPaint itself paints in one call in player mode.
-    Either alone holds the row, so its break takes both away.
+    whole calls, never in slices, as it did. Two things keep it whole: its
+    paint runs while app.js loads, before editor_draft.js and padPaint exist,
+    and padPaint itself paints in one call in player mode. Either alone holds
+    the row, so its break takes both away.
+  * AND IT PAINTS IT ONCE, at its own shape, with nothing of the editor over
+    it, on a desk and a phone. Its page is the editor's, and the editor sized
+    the canvas as it loaded, before the player marked the page: the canvas
+    then grew twice in player mode, the drawing was painted three times, and
+    on a desk the editor's fit laid the canvas out at 1 x 1 (a blank page
+    under the title); the editor's dock stood over it on both, and Keep
+    drawing over the drawing on a phone. Read: the paints on the drawing, the
+    bitmap (the drawing's own size times the screen's), the canvas's shape
+    and width as shown and what is painted at its middle, and a sweep of the
+    screen for anything of the dock or the pill. And THE EDITOR'S FIT NEVER
+    LAYS OUT A PLAYER'S CANVAS, asked as a property, since the load no longer
+    gives it a size to lay out: with the editor's size put back, a turn of
+    the phone leaves the canvas as it was (the fit asks once, where the work
+    is, where a turn and a new screen ratio each asked before).
 """
 import json
 import math
@@ -182,6 +194,32 @@ AGAIN = """() => { const cv = document.getElementById('canvas'), x = cv.getConte
   for (let i = 0; i < a.length; i += 4) { if (b[i + 3]) ink++;
     if (a[i] !== b[i] || a[i + 1] !== b[i + 1] || a[i + 2] !== b[i + 2] || a[i + 3] !== b[i + 3]) n++; }
   return { differ: n, ink, ms, layered }; }"""
+
+
+# The player's canvas as it stands: its bitmap, its size as shown, the
+# screen's ratio and width, and whether the canvas is what is painted at its
+# own middle (a rect is not a paint).
+SHOWN = """() => { const cv = document.getElementById('canvas'), r = cv.getBoundingClientRect();
+  const at = r.width >= 1 && r.height >= 1 ? document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2) : null;
+  return { bitmap: [cv.width, cv.height], shown: [r.width, r.height], dpr: window.devicePixelRatio || 1,
+           vw: innerWidth, middle: at === cv }; }"""
+
+# Anything of the editor's dock or its Keep drawing pill painted anywhere on
+# the screen: the element at every point of a 12px grid, and which of the two
+# it is inside.
+OVER = """() => { const out = new Set();
+  for (let y = 6; y < innerHeight; y += 12) for (let x = 6; x < innerWidth; x += 12) {
+    const e = document.elementFromPoint(x, y), ed = e && e.closest('#toolBar, #addTakePill');
+    if (ed) out.add('#' + ed.id); }
+  return [...out]; }"""
+
+# The editor's size put back (the one the load set before it knew the page
+# was a player), and the screen turned: the canvas as it was before the turn.
+TURN = """() => { const cv = document.getElementById('canvas');
+  const before = [cv.style.width, cv.style.height, cv.width, cv.height];
+  authoredW = 707; authoredH = 707;
+  window.dispatchEvent(new Event('orientationchange'));
+  return { before }; }"""
 
 
 def waited(pg, cond, timeout):
@@ -364,17 +402,44 @@ with sync_playwright() as p:
             pts, groups = drawing(25000)
             post = {"title": "Two hours", "skribl": {"version": 1, "strokes": pts, "strokeGroups": groups,
                     "background": {"color": "#f6f2ea"}, "canvasSize": {"cssWidth": W, "cssHeight": H}}}
-            c, pg, errs = pad(b, DESK)
-            pg.evaluate("(post) => localStorage.setItem('skribl_post_padopen', JSON.stringify(post))", post)
-            pg.goto("about:blank")   # a new page, not a hash change on this one
-            pg.goto(BASE + "/#skribl=padopen", wait_until="load")
-            played = waited(pg, "() => document.body.classList.contains('player-mode') && window.__po.paints.length > 0", 20000)
-            pg.wait_for_timeout(1000)
-            po = pg.evaluate("() => window.__po")
-            check("the Pad's own player (#skribl=) paints a long drawing whole, never in slices, as it did",
-                  played and po["modes"] and not any(po["modes"]),
-                  f"played {played}; {len(po['paints'])} paints, sliced {po['modes']}")
-            c.close()
+            for name, view in (("desk", DESK), ("phone", PHONE)):
+                c, pg, errs = pad(b, view)
+                pg.evaluate("(post) => localStorage.setItem('skribl_post_padopen', JSON.stringify(post))", post)
+                pg.goto("about:blank")   # a new page, not a hash change on this one
+                pg.goto(BASE + "/#skribl=padopen", wait_until="load")
+                played = waited(pg, "() => document.body.classList.contains('player-mode') && window.__po.paints.length > 0", 20000)
+                # Long enough for the growths the canvas had (a timer, then
+                # 150 ms after it, each a paint of its own).
+                pg.wait_for_timeout(1500)
+                po = pg.evaluate("() => window.__po")
+                if name == "desk":
+                    check("the Pad's own player (#skribl=) paints a long drawing whole, never in slices, as it did",
+                          played and po["modes"] and not any(po["modes"]),
+                          f"played {played}; {len(po['paints'])} paints, sliced {po['modes']}")
+                check(f"{name}: the Pad's own player paints a long drawing once as it opens",
+                      played and len(po["paints"]) == 1, f"played {played}; {len(po['paints'])} paints")
+                sh = pg.evaluate(SHOWN)
+                own = [round(W * sh["dpr"]), round(H * sh["dpr"])]
+                check(f"{name}: ...and shows it at its own shape, its bitmap the drawing's size times the screen's",
+                      sh["bitmap"] == own and sh["shown"][1] > 0 and abs(sh["shown"][0] / sh["shown"][1] - W / H) < 0.01
+                      and sh["shown"][0] >= 0.5 * min(sh["vw"], W) and sh["middle"],
+                      f"bitmap {sh['bitmap']} (its own {own}); shown {sh['shown']} on a {sh['vw']}px window; "
+                      f"the canvas painted at its middle {sh['middle']}")
+                over = pg.evaluate(OVER)
+                check(f"{name}: ...with nothing of the editor over it: no dock, no Keep drawing",
+                      over == [], f"painted: {over}")
+                # THE PROPERTY: the editor's size put back, as the load set it
+                # before it knew the page was a player, and the screen turned.
+                turn = pg.evaluate(TURN)
+                pg.wait_for_timeout(600)   # a growth's timer, had the fit asked for one
+                turn.update(pg.evaluate("() => { const cv = document.getElementById('canvas');"
+                                        " const a = [cv.style.width, cv.style.height, cv.width, cv.height];"
+                                        " authoredW = 0; authoredH = 0; return { after: a, paints: window.__po.paints.length }; }"))
+                check(f"{name}: ...and a turn of the screen never lays it out as the editor's canvas, its size put back or not",
+                      turn["after"] == turn["before"] and turn["paints"] == len(po["paints"]),
+                      f"before {turn['before']}, after {turn['after']}; paints {len(po['paints'])} -> {turn['paints']}")
+                check(f"{name}: no page errors in the Pad's own player", not errs, "; ".join(errs[:2]))
+                c.close()
         if part("take"):
             # A FILE OPENED OVER A TAKE STILL RECORDING (FUTURE 6z). Opening
             # reset the drawing but not the take, so the file came up neither

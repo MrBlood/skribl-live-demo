@@ -29703,3 +29703,67 @@ same ears, the same picks); simple and playful (unchanged).
 Not tested here: a real phone (no phone in this box; the CPU 4x slower stands
 in for one), and Safari (no WebKit here), whose workers are not throttled the
 way this box's Chromium throttles its page.
+
+## After v330 -- The Pad's own player opens a long drawing once
+
+The second of the speed fixes the owner said "all yes" to (Nov 4). The Pad's
+own player (#skribl=, the post kept on this device when posting cannot reach
+a server) painted a long drawing three times as it opened. "The Pad opens a
+long drawing without a freeze" measured that and left it as the player's own.
+
+- TRACED, a 25,000-point drawing kept on the device, on a phone (402 x 874 at
+  3x) and a desk (1333 x 906): each paint of the whole drawing, when, what
+  called it, and the bitmap's size then. The player's page is the editor's
+  own (skribl_editor.html; the link player has its own page), and app.js
+  sizes the editor's canvas as it loads, before initPlayer marks the page a
+  player. The player then sized its canvas at the drawing's own size and
+  painted it, and the editor's growth, set going by that first sizing, grew
+  the canvas twice more in player mode, each growth a paint of the whole
+  drawing (about 100 ms each at full speed; 724 x 724, then 707 x 707). And
+  the editor's fit, measuring the room in a .canvas-area the player does not
+  lay out (display: contents), set the canvas to 1 x 1: on a desk the drawing
+  was never seen, only its title and controls. On a phone the screen asked no
+  growth, so one paint, but the editor's dock stood over the drawing and
+  Keep drawing over its middle. The same on main and on the tree before the
+  posting mock (549ef95).
+- FIXED: resizeCanvas returns on that page, as on the link player's, so only
+  the player sizes the canvas. The editor's fit asks itself whether it is in
+  a player, once, where a turn of the phone and a new screen ratio each asked
+  before it and a growth did not. Player mode hides the dock and the pill,
+  which the link player's page does not have.
+- MEASURED after, the same drawing and screens: one paint on a desk and on a
+  phone, at full speed and with the CPU 4x slower (the desk 97 to 108 ms, 530
+  slower; the phone 289 to 343 ms, 1,323 slower), the canvas at the drawing's
+  shape (678 x 509 on the desk, 402 x 302 on the phone), nothing of the
+  editor painted. WHAT IS LEFT, for a later pass: that one paint is whole. The
+  link player lays its paint in slices under the post's picture; this page
+  has no picture and paints in one call, 1.3 s for 25,000 points on a phone 4x
+  slower.
+- The player's script is 27 B smaller (the check is made once in the fit, not
+  by two of its callers, and the page's own check is new), and its ratchet
+  follows it down (160,319 measured).
+
+THE CHECKS: verify_padopen, the own player's rows on a desk and a phone: one
+paint as it opens; the drawing at its own shape (the bitmap the drawing's size
+times the screen's, shown at its ratio, at least half of the window or the
+drawing, the canvas what is painted at its middle); nothing of the editor
+painted anywhere on the screen (a sweep for the dock and the pill); and, as a
+property, since the load no longer gives the fit a size to lay out: with the
+editor's size put back, a turn of the screen leaves the canvas as it was.
+CALIBRATED, each shown red against its own break: resizeCanvas without its
+check for the page (the desk's paint and shape rows: 2 paints, a 718 x 718
+bitmap); the fit without its own (the turn rows on both screens: 1 x 1, a 707
+bitmap, a paint more); the dock shown (both screens); the pill shown (both).
+With none broken, 12 of 12; on main, 7 of 12 (3 paints and 1 x 1 on the desk,
+the dock on both screens, the pill on the phone).
+
+WHAT IT DOES TO FLIP: not for Flip. Flip keeps no post on the device when
+posting fails (it says so and keeps the animation), so this page plays only
+the Pad's posts, opened from either editor's list.
+
+THE FOUR: kind (a drawing kept on the device opens once and is seen, on a
+desk too, with nothing of the editor over it); simple (one player page, as a
+link's); powerful and playful (unchanged).
+
+Not tested here: a real phone (no phone in this box; the CPU 4x slower stands
+in for one) and Safari (no WebKit here).
