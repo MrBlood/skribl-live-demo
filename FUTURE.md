@@ -1432,7 +1432,7 @@ person just posted, never one a link names for someone else), and Skribl's
 card shown only when the site says it has one. Not built; mock it beside
 the posted card as it is when the site is ready.
 
-## 6x. A long Flip's first look (Flip next, after the posting mock's 2b B)
+## 6x. A long Flip's first look (Flip next, after the posting mock's 2b B; built after v330)
 
 A Pad post's link page now shows the post's own picture before its data has
 come and lays the ink under it in slices (DECISIONS, after v329, "A long
@@ -1447,7 +1447,12 @@ page, which need not be the page its link page rests on before Play. Where
 the two are the same page (the server can know: the first inked page's
 place, kept beside `pages`), show the card at once the way the Pad's page
 does, cropped the same way, and let it go when that page is drawn. Not
-built; mock it beside the Pad's first look when it is next.
+built; mock it beside the Pad's first look when it is next. **BUILT after
+v330** (the owner's "all yes" to B from the three asks' mock, Nov 4;
+DECISIONS: "A long Flip's first look: its own card at once"): its card is
+the poster page its link rests on (posterOf), its size and its line come
+with the page, and the first paint's slices end where the page at rest is
+drawn.
 
 ## 6y. Flip opens a long Flip without a freeze (Flip next, after the Pad's; built)
 
