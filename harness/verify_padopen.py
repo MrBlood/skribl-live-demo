@@ -375,6 +375,64 @@ with sync_playwright() as p:
                   played and po["modes"] and not any(po["modes"]),
                   f"played {played}; {len(po['paints'])} paints, sliced {po['modes']}")
             c.close()
+        if part("take"):
+            # A FILE OPENED OVER A TAKE STILL RECORDING (FUTURE 6z). Opening
+            # reset the drawing but not the take, so the file came up neither
+            # locked nor offered Keep drawing, the take's readout ticking on
+            # over it. The take ends first now, as Done ends it, and the file
+            # comes up as every opened drawing does. Asked of what is painted:
+            # the element at the pill's middle is the pill.
+            print("\nA FILE OPENED OVER A TAKE STILL RECORDING")
+            c, pg, errs = pad(b, PHONE)
+            cv = pg.locator("#canvas").bounding_box()
+            x0, y0 = cv["x"] + cv["width"] * 0.3, cv["y"] + cv["height"] * 0.4
+            pg.mouse.move(x0, y0)
+            pg.mouse.down()
+            for i in range(1, 12):
+                pg.mouse.move(x0 + i * 8, y0 + i * 3)
+            pg.mouse.up()
+            taking = pg.evaluate("() => recording && !document.getElementById('recIndicator').hidden")
+            pg.set_input_files("#draftInput", SHORT)
+            opened = waited(pg, "() => strokes.length === 2000", 20000)
+            pg.wait_for_timeout(400)
+            st = pg.evaluate("""() => { const p = document.getElementById('addTakePill'), r = p.getBoundingClientRect();
+              const at = r.width ? document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2) : null;
+              return { recording, locked: canvasWrap.classList.contains('locked'), pill: !p.hidden,
+                       painted: !!at && p.contains(at), readout: !document.getElementById('recIndicator').hidden,
+                       bodyRec: document.body.classList.contains('recording') }; }""")
+            check("precondition: a stroke on the blank Pad started a take", taking, str(taking))
+            check("a file opened over a take still recording comes up a finished take: the take ended, its readout gone",
+                  opened and not st["recording"] and not st["readout"] and not st["bodyRec"], str(st))
+            check("...locked, with its Keep drawing pill painted on the canvas",
+                  st["locked"] and st["pill"] and st["painted"], str(st))
+            if st["pill"]:   # a break shows as the row it breaks, not a 30 s wait
+                pg.click("#addTakePill")
+            go = pg.evaluate("() => ({ recording, strokes: strokes.length })")
+            check("...and Keep drawing carries the opened drawing on (a take over its 2,000 points)",
+                  go["recording"] and go["strokes"] == 2000, str(go))
+            check("no page errors through it", not errs, "; ".join(errs[:2]))
+            c.close()
+            # A FILE THE PAD REFUSES LEAVES THE TAKE BE: only a document the
+            # load takes ends the take first.
+            c, pg, errs = pad(b, PHONE)
+            cv = pg.locator("#canvas").bounding_box()
+            pg.mouse.move(cv["x"] + 60, cv["y"] + 60)
+            pg.mouse.down()
+            for i in range(1, 10):
+                pg.mouse.move(cv["x"] + 60 + i * 9, cv["y"] + 60 + i * 4)
+            pg.mouse.up()
+            fd, junk = tempfile.mkstemp(suffix=".skribl")
+            with os.fdopen(fd, "w") as f:
+                json.dump({"title": "not a drawing"}, f)
+            try:
+                pg.set_input_files("#draftInput", junk)
+                pg.wait_for_timeout(600)
+                kept = pg.evaluate("() => ({ recording, strokes: strokes.length, readout: !document.getElementById('recIndicator').hidden })")
+            finally:
+                os.unlink(junk)
+            check("a file the Pad refuses leaves a take still recording as it was",
+                  kept["recording"] and kept["readout"] and kept["strokes"] > 0, str(kept))
+            c.close()
     finally:
         for f in (LONG, SHORT):
             try:
