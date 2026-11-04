@@ -589,7 +589,11 @@ the pin, the lock and the interpreter running the harness disagree.
 
 `skribl-live-demo.onrender.com` — a Render Starter web service ($7/mo) deployed
 from GitHub (`MrBlood/skribl-live-demo`, branch `main`), backed by a paid
-Postgres Basic instance ($6/mo), running the `inline` media backend.
+Postgres Basic instance ($6/mo), running the `inline` media backend. It runs
+WITHOUT the demo identity: its environment holds `DATABASE_URL`,
+`MAX_CONTENT_LENGTH`, `SECRET_KEY`, `SKRIBL_TRUSTED_PROXIES` and
+`WEB_CONCURRENCY` and no `SKRIBL_DEMO_*` (read with the owner on Render, Nov 3,
+names only), so `/demo-login` is not there and there is no sign-in key to rotate.
 
 **The deployed code can lag this tree** — Render deploys from `main`, so
 anything merged is live after its build finishes and anything unmerged is not.

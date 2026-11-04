@@ -1738,6 +1738,8 @@ and 6; the rest by profiling.
 5. ~~**The demo login's key is in the URL** (Medium when enabled).~~
    **FIXED after v330** (the owner, Nov 3: "all yes" to a sign-in page;
    DECISIONS: "The demo signs in from a page, and out with a button").
+   The live deploy runs without the demo identity (START-HERE, "The live
+   demo"), so it was never exposed there and no key needed rotating.
    - Where: `app.py`, about lines 272 to 285, `GET /demo-login?key=…`.
    - What: a query string ends up in history, proxy logs and referrers;
      the long key and constant-time compare don't change that.
