@@ -1137,6 +1137,49 @@ def register_routes(bp, *, index_route=False):
         # Over-fetch by one to learn whether another page exists, without a
         # second COUNT query over the whole filtered set.
         fetched = q.limit(limit + 1).all()
+
+        # THE POLICY HAS THE LAST WORD (the PRE-331 review's 3). The feed
+        # filter above is how a host keeps the listing in step with its
+        # visibility policy, in SQL; a host that installed a policy and no
+        # matching filter listed the titles, captions, authors and ids of
+        # posts the policy refuses. So under a policy every row is asked
+        # visible_to too, and a page that loses rows is filled from the rows
+        # after them, a window at a time. The cursor is always taken from a
+        # row the viewer was shown, never from one they were not: a cursor
+        # names its row's time and id. Where filter and policy agree nothing
+        # is dropped and this costs one call per row. Bounded: past eight
+        # windows of refusals the page ends with what it has, and the log
+        # says once what to install.
+        if _visibility_policy() is not None:
+            def _post(row):
+                return row[0] if score is not None else row
+
+            def _after(row):
+                if score is not None:
+                    return q.filter(sa.or_(score < row[1], sa.and_(
+                        score == row[1], SkriblPost.id < row[0].id)))
+                return q.filter(sa.tuple_(SkriblPost.created_at, SkriblPost.id)
+                                < sa.tuple_(row.created_at, row.id))
+
+            batch, kept, windows = fetched, [], 1
+            while True:
+                kept += [row for row in batch if _post(row).visible_to(viewer)]
+                if len(kept) > limit or len(batch) <= limit or windows >= 8:
+                    break
+                batch = _after(batch[-1]).limit(limit + 1).all()
+                windows += 1
+            if windows > 1 or len(kept) < len(fetched):
+                ext = current_app.extensions.setdefault("skribl", {})
+                if not ext.get("feed_policy_warned"):
+                    ext["feed_policy_warned"] = True
+                    current_app.logger.warning(
+                        "skribl: the listing held posts the visibility policy "
+                        "refuses; they were left out and the page filled from "
+                        "the rows after them. Install a feed_filter that "
+                        "matches the policy (docs/INTEGRATION.md) so this is "
+                        "done in the query. Said once.")
+            fetched = kept
+
         has_more = len(fetched) > limit
         fetched = fetched[:limit]
         if score is not None:
@@ -1152,28 +1195,6 @@ def register_routes(bp, *, index_route=False):
             rows = fetched
             items = [r.feed_dict() for r in rows]
             nxt = _encode_cursor(rows[-1]) if (rows and has_more) else None
-
-        # THE POLICY HAS THE LAST WORD (the PRE-331 review's 3). The feed
-        # filter above is how a host keeps the listing in step with its
-        # visibility policy, in SQL, so pages stay full; a host that installs
-        # a policy and no matching filter listed the titles, captions,
-        # authors and ids of posts the policy refuses. So under a policy each
-        # row is asked visible_to as well, after the cursor was taken from
-        # the last row fetched, so paging still moves on. Where the two agree
-        # nothing is dropped; where they do not, the page is short rather
-        # than leaky, and the log says once what to install.
-        if _visibility_policy() is not None:
-            kept = [d for r, d in zip(rows, items) if r.visible_to(viewer)]
-            if len(kept) < len(items):
-                ext = current_app.extensions.setdefault("skribl", {})
-                if not ext.get("feed_policy_warned"):
-                    ext["feed_policy_warned"] = True
-                    current_app.logger.warning(
-                        "skribl: the listing held a post the visibility policy "
-                        "refuses; it was left out, so that page was short. "
-                        "Install a feed_filter that matches the policy "
-                        "(docs/INTEGRATION.md) to keep pages full. Said once.")
-            items = kept
 
         _attach_authors(items)
         resp = jsonify({"items": items, "next_cursor": nxt})

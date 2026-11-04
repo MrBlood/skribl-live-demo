@@ -330,24 +330,44 @@ check("MUTATION — an app WITHOUT the filter does see those same rows",
       "otherwise the rows were absent for some other reason")
 
 # A POLICY WITHOUT A MATCHING FILTER LEAKS NOTHING (the PRE-331 review's 3).
-# The filter is how a host keeps pages full; a host that installed only a
-# policy listed the titles, ids and authors of posts the policy refuses.
-# Under a policy each listed row is asked visible_to as well, after the
-# cursor was taken, so a page is short rather than leaky and paging still
-# reaches every post it may show, once.
-app_p, _ = host_app(16)
+# The filter is how a host keeps the listing in step, in SQL; a host that
+# installed only a policy listed the titles, ids and authors of posts the
+# policy refuses. Under a policy each row is asked visible_to too, and a
+# page that loses rows is filled from the rows after them, so pages stay
+# full; a cursor names its row's time and id, so it is only ever taken
+# from a row the viewer was shown. New and Hot both, a few rows a page,
+# so the six refused posts fall across a page.
+import base64 as _b64                                             # noqa: E402
+app_p, db_p = host_app(16)
 skribl.set_visibility_policy(lambda post, v: False if post.user_id == str(BLOCKED) else None, app=app_p)
 try:
+    with app_p.app_context():
+        hidden_rows = {str(r.id) for r in db_p.session.query(SkriblPost).filter(SkriblPost.public_id.in_(ids))}
     c_p = app_p.test_client()
-    pg = c_p.get("/api/skribls?limit=3").get_json()
-    seen_p, guard = [i["id"] for i in pg["items"]], 0
-    while pg.get("next_cursor") and guard < 60:
-        pg = c_p.get(f"/api/skribls?limit=3&cursor={pg['next_cursor']}").get_json()
-        seen_p += [i["id"] for i in pg["items"]]
-        guard += 1
-    check("a policy with no matching feed filter keeps the posts it refuses out of the listing, on every page",
-          not any(i in ids for i in seen_p) and set(mixed) <= set(seen_p) and len(seen_p) == len(set(seen_p)),
-          f"{len(seen_p)} listed over {guard + 1} pages; refused ones listed: {sum(i in ids for i in seen_p)}")
+
+    def _walk(client, sort, size):
+        pg = client.get(f"/api/skribls?limit={size}{sort}").get_json()
+        pages, cursors = [[i["id"] for i in pg["items"]]], []
+        while pg.get("next_cursor") and len(pages) < 60:
+            cursors.append(pg["next_cursor"])
+            pg = client.get(f"/api/skribls?limit={size}{sort}&cursor={pg['next_cursor']}").get_json()
+            pages.append([i["id"] for i in pg["items"]])
+        return pages, cursors
+    for _sort in ("", "&sort=hot"):
+        # Every post the policy allows: what an app with no policy lists, less
+        # the refused. Read from the listing itself so it counts what this
+        # database holds, whatever the sections above posted.
+        allowed = [i for i in sum(_walk(c_g, _sort, 50)[0], []) if i not in ids]
+        pages, cursors = _walk(c_p, _sort, 3)
+        seen_p = sum(pages, [])
+        named = {_b64.urlsafe_b64decode(c + "=" * (-len(c) % 4)).decode().rpartition("|")[2] for c in cursors}
+        _name = "Hot" if _sort else "New"
+        check(f"{_name}: a policy with no matching feed filter keeps the posts it refuses off every page, and lists every other post once, in order",
+              seen_p == allowed and len(allowed) > len(mixed),
+              f"{len(seen_p)} listed over {len(pages)} pages of {len(allowed)} allowed; refused ones listed: {sum(i in ids for i in seen_p)}")
+        check(f"{_name}: ...its pages are full, and no cursor names a row it did not show",
+              all(len(x) == 3 for x in pages[:-1]) and not (named & hidden_rows),
+              f"page sizes {[len(x) for x in pages]}; cursors naming a refused row: {len(named & hidden_rows)}")
 finally:
     skribl.set_visibility_policy(None, app=app_p)
 

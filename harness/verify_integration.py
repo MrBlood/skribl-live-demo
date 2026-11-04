@@ -327,18 +327,18 @@ try:
     check("and on the share card, which IS the drawing",
           card.status_code in (302, 404), f"HTTP {card.status_code}")
 
-    # DECLARED LIMITATION, pinned so it cannot change silently. The feed
-    # filters visibility == 'public' in SQL and never calls visible_to():
-    # running a Python policy over a keyset-paginated query would break the
-    # pagination. Metadata (title, author, timestamp) can therefore be listed
-    # for a post the policy refuses to serve. No payload leaks.
+    # THE FEED OBEYS THE POLICY (the PRE-331 review's 3). Until then this
+    # row DECLARED the opposite: the feed filtered visibility == 'public' in
+    # SQL and never called visible_to(), so a refused post's title, author
+    # and time were listed (not its payload), and it said a change would
+    # need a feed_filter seam, not a Python filter over a paginated query.
+    # The seam came (verify_hostseams #3); a filter after the fetch now only
+    # backs it up, filling the page from the rows after and taking the
+    # cursor from a row the viewer was shown, so the pagination the old
+    # note feared for is kept (verify_hostseams pins full pages and cursors).
     items = c4.get("/s/api/skribls").get_json()["items"]
-    check("DECLARED: the feed lists by visibility only, not by policy",
-          len(items) == 1 and all("payload" not in i and "strokes" not in i
-                                  for i in items),
-          "metadata for a policy-refused post is listed; the payload is not. "
-          "If this ever needs to change it needs a feed_filter seam, not a "
-          "Python filter over a paginated query")
+    check("the feed lists nothing the policy refuses, not even its title",
+          items == [], f"{len(items)} listed: {[i.get('title') for i in items]}")
 finally:
     skribl.set_visibility_policy(None)
 
