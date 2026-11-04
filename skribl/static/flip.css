@@ -1425,7 +1425,7 @@
      fallback, like the FLIPMODE wordmark's step-down, not a target. */
   @media (max-width: 359px) {
     .movebar { gap: 5px; padding: 7px 8px; }
-    .mb-scope button { min-width: 24px; padding: 0 5px; font-size: 11px; }
+    .mb-scope button { min-width: 24px; padding: 0 5px; font-size: 12px; }
     .mb-offset { min-width: 46px; padding: 0 4px; }
     .movebar #mbReset, .movebar .mb-done { padding: 0 8px; }
   }

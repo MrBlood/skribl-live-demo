@@ -1240,7 +1240,7 @@ body.stroking .autosave-status {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--text-secondary);
   font-variant-numeric: tabular-nums;
   border-top: 1px solid var(--hairline);
@@ -2972,7 +2972,7 @@ body.recoloring #canvas { cursor: crosshair !important; }
 }
 
 .pending-meta {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--warn);
   font-weight: 600;
   white-space: nowrap;
@@ -3553,7 +3553,7 @@ body.recoloring #canvas { cursor: crosshair !important; }
   -webkit-backdrop-filter: blur(16px);
   backdrop-filter: blur(16px);
   border: 1px solid var(--hairline);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--text-muted);
   opacity: 0;

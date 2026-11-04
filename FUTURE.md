@@ -1562,7 +1562,13 @@ v330**, DECISIONS: "How it works's search count at 12px"; the numbered
 circles 11px); and in the editors the autosave status, the zoom
 readout, the pending line, Flip's small + buttons and the music bar's scope
 buttons (11px), with the brand tag and the narrow screen's duration badge at
-10px. Not every rule may show; the census that comes with the change says
+10px. **The editors' half is 12px after v330** (DECISIONS: "The words that
+show only in a state, at 12px"): read in their states, the autosave line on
+a mouse desk, the zoom readout, the re-add lines and Flip's move-bar scope at
+320px went up; the menu's version line, its row note and Flip's add row were
+12px already; the numbered circles and the narrow duration badge never show,
+and the brand tag is drawn now. Left: the Library's rows. Not every rule may
+show; the census that comes with the change says
 which do. The idea: every word to 12px, sheet by sheet, mocked first since
 it moves six sheets' look, each with a check like the Post sheet's ("nothing
 painted in the sheet under 12px").

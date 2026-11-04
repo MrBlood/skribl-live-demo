@@ -30083,3 +30083,44 @@ px in one 18 ms frame; with the glide, 246 of 246.
 
 The habit, for any check that reads motion frame by frame: a step is judged
 against the time it took, not the frame it landed in.
+
+## After v330 -- The words that show only in a state, at 12px
+
+The owner's "all yes" (Nov 4): after the three sheets, "the words that only
+show in a state (a save, a zoom, a song, the Library's rows)", each read in
+its state before it changes. This is the editors' half; the Library's rows
+are next.
+
+- READ IN THEIR STATES, both editors, phone and desk. Under 12px: the
+  autosave line on a mouse desk (11px; a touch screen's own rule makes it
+  13), the zoom readout (11), the re-add card's line in the photo and music
+  drawers (11), and Flip's move-bar scope buttons on a screen 359px wide or
+  less (11). Already 12px or more, where FUTURE's list had gone stale: the
+  ⋯ menu's version line (12), its row note (13), Flip's add row (12).
+- NOT RAISED, because nothing shows them: How it works's numbered circles
+  (Ask's home hides them in its grid, and its viewer leaves the number out)
+  and the narrow screen's duration badge (the width that sizes it at 10px
+  also hides it). The brand tag is drawn, not typed, now.
+- BUILT: the four to 12px. The autosave pill grows 3 px (70 to 73 on a
+  desk); the zoom readout's box is unchanged (44 by 30); the move bar at
+  320px still fits ("This page" 63 to 67 px, nothing spills). The autosave
+  rule ships in the player's CSS too, at the same bytes.
+
+THE CHECKS: verify_a11ypages, A11Y 21, beside A11Y 20's 10px words. Pad and
+Flip, phone and desk: a real
+save's line (read once it has faded in, the pill let take the pointer for
+the moment, as it takes none), the zoom readout (the magnifier's own button
+on a desk; shown as a pinch shows it on a phone) and both re-add lines (each
+card shown in its open drawer, as a restore without its file shows it), all
+painted at 12px or more; Flip on a 320px phone, the move bar's scope buttons
+at 12px with nothing spilling. CALIBRATED, each rule put back alone: the
+autosave line turns the two desk rows red (a phone keeps its 13px), the zoom
+readout and the re-add line all four, the scope buttons the 320px row. With
+none, 5 of 5.
+
+WHAT IT DOES TO FLIP: shared (the same rules), and Flip's own move bar.
+
+THE FOUR: kind (the line saying your drawing is saved is one worth reading),
+simple; powerful and playful unchanged.
+
+Not tested here: Segoe UI and SF, and a real phone's pinch.
