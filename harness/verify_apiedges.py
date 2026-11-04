@@ -413,6 +413,23 @@ check("the id list is capped, so this cannot be used to walk the table",
       f"{len(_body.get('items', []))} items — the 61st id was answered, so the "
       f"cap is not applied before the query")
 
+# BOUNDED BEFORE THE WORK (the PRE-331 review's performance notes), each
+# shown by what reading past its bound would have done. The ids string is
+# cut before it is split, so a real id past its first 3,300 characters is
+# never read. A cursor longer than any this server writes is refused before
+# it is decoded: one padded with zeros decodes to a usable cursor, so
+# without the bound it pages; the same cursor unpadded pages either way.
+_st, _body = get(f"/api/skribls/meta?ids={'a' * 3400},{_pub}")
+check("the ids string is cut before it is split: an id past its first 3,300 characters is not read",
+      _st == 200 and _body.get("items") == [], f"{_st} {len(_body.get('items', []))} items")
+_cur = lambda text: base64.urlsafe_b64encode(text.encode()).decode().rstrip("=")
+_cursors = [("", _cur("2026-01-01T00:00:00|5")), ("&sort=hot", _cur("hot|5|7")),
+            ("", _cur("2026-01-01T00:00:00|" + "0" * 200 + "5")),
+            ("&sort=hot", _cur("hot|" + "0" * 100 + "5|" + "0" * 100 + "7"))]
+_codes = [get(f"/api/skribls?cursor={c}{sort}")[0] for sort, c in _cursors]
+check("a cursor longer than any this server writes is refused before it is decoded, on New and on Hot",
+      _codes == [200, 200, 400, 400], f"short New, short Hot, long New, long Hot: {_codes}")
+
 bad = [(n, d) for ok, n, d in results if not ok]
 print("\n" + "=" * 62)
 print(f"{len(results) - len(bad)}/{len(results)} passed"

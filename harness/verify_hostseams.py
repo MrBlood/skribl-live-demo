@@ -550,6 +550,17 @@ try:
     _on.config.pop("SKRIBL_RATE_MAX_ATTEMPTS", None)
     check("forged writes are refused before they are charged: the owner's budget is intact after them",
           _forged == [403] * 4 and _after_forged not in (403, 429), f"forged {_forged}, then {_after_forged}")
+    # ...AND A FORGED GZIPPED BODY IS NOT INFLATED (the PRE-331 review's 4):
+    # it is left compressed for its route's 403, which reads no body. A body
+    # that inflating refuses tells them apart: 403, not the inflate's 400.
+    _sck = _owner.c.get_cookie("session", domain="localhost")
+    _forged_gz = _bare_client.post(_drafts_url, base_url="https://localhost", data=b"not gzip",
+                                   content_type="application/json",
+                                   headers={"X-Skribl-CSRF": "forged", "Content-Encoding": "gzip",
+                                            "Cookie": f"session={_sck.value}; skribl_csrf=forged"},
+                                   environ_base={"REMOTE_ADDR": "198.51.100.22"}).status_code
+    check("a forged gzipped write is refused without being inflated (403, not the inflate's 400)",
+          _forged_gz == 403, str(_forged_gz))
     _owner.get("/demo-logout")
     check("/demo-logout signs it out again", _owner.get(_drafts_url).status_code == 401, "")
     # Guesses at the key spend the attempts budget: at the cap, even the right
@@ -672,6 +683,17 @@ try:
     _codes = [_dc.post(_durl, json={}, environ_base={"REMOTE_ADDR": "192.0.2.77"}).status_code for _ in range(3)]
     check("draft writes are rate limited like posts (the third inside the window is 429)",
           _codes[2] == 429 and 429 not in _codes[:2], str(_codes))
+    # TAKE-DOWNS AND VISIBILITY CHANGES SPEND IT TOO (the PRE-331 review's 7):
+    # each is a lookup and a key check, and nothing bounded how many one
+    # connection could ask for. An id nobody has, so the first two are the
+    # ordinary 404; a fresh address each, so neither row spends the other's.
+    with _da.test_request_context("/"):
+        _takeurl = _u3("skribl.delete_skribl", public_id="nobody-has-this-id")
+    _del = [_dc.delete(_takeurl, environ_base={"REMOTE_ADDR": "192.0.2.78"}).status_code for _ in range(3)]
+    _vis = [_dc.patch(_takeurl, json={"visibility": "public"},
+                      environ_base={"REMOTE_ADDR": "192.0.2.79"}).status_code for _ in range(3)]
+    check("take-downs and visibility changes are rate limited like other writes (the third is 429)",
+          _del == [404, 404, 429] and _vis == [404, 404, 429], f"DELETE {_del}, PATCH {_vis}")
     # Rate limits key IPv6 by its /64: one subscriber holds the whole block.
     from skribl.ratelimit import _subject as _subj
     check("rate limits count an IPv6 /64 as one client, and an IPv4-mapped address as its IPv4",

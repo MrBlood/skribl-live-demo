@@ -78,6 +78,11 @@ def _encode_cursor(post):
 # past a 64-bit integer made SQLite raise OverflowError, a 500 for a cursor
 # anyone can type (v321 preflight, PF-015). Out of range is unusable, a 400.
 _CURSOR_INT_MAX = 2 ** 63 - 1
+# A CURSOR IS SHORT, so a long one is refused before it is decoded (the
+# PRE-331 review's performance notes: the whole string was base64-decoded
+# first). The longest this server writes is about 70 characters, a time
+# with its zone and a 19-digit id; 120 leaves room and reads no further.
+_CURSOR_MAX_CHARS = 120
 
 
 def _cursor_int(text):
@@ -89,6 +94,8 @@ def _cursor_int(text):
 
 def _decode_cursor(cursor):
     """-> (datetime, int), or None if the cursor is unusable."""
+    if len(cursor) > _CURSOR_MAX_CHARS:
+        return None
     try:
         pad = "=" * (-len(cursor) % 4)
         raw = base64.urlsafe_b64decode(cursor + pad).decode("utf-8")
@@ -120,6 +127,8 @@ def _encode_hot_cursor(score, post_id):
 
 def _decode_hot_cursor(cursor):
     """-> (score, id), or None."""
+    if len(cursor) > _CURSOR_MAX_CHARS:
+        return None
     try:
         pad = "=" * (-len(cursor) % 4)
         raw = base64.urlsafe_b64decode(cursor + pad).decode("utf-8")
@@ -1255,7 +1264,12 @@ def register_routes(bp, *, index_route=False):
         CAPPED, so it cannot be walked. Ids are 11 characters of URL-safe
         base64; a caller who can guess them does not need this endpoint.
         """
-        raw = (request.args.get("ids") or "").strip()
+        # CUT BEFORE IT IS SPLIT (the PRE-331 review's performance notes):
+        # the whole string was split, then kept to fifty, so a long one made
+        # a list as long as its commas. Fifty of the longest ids there can be
+        # (core._PUBLIC_ID_RE: 64 characters), each with a comma and a space,
+        # is all that is read.
+        raw = (request.args.get("ids") or "")[:META_MAX_IDS * 66].strip()
         if not raw:
             return jsonify({"items": []})
         ids = [i for i in (p.strip() for p in raw.split(",")) if i][:META_MAX_IDS]
@@ -1571,6 +1585,12 @@ def register_routes(bp, *, index_route=False):
             return jsonify({"error": "Skribl not found."}), 404
         if not _csrf_ok():
             return _csrf_refusal()
+        # THE ATTEMPTS BUDGET, AS EVERY OTHER WRITE SPENDS IT (the PRE-331
+        # review's 7): a take-down is a lookup and a key check, and nothing
+        # bounded how many one connection could ask for. After CSRF, so a
+        # forged one spends nothing, as on the drafts' routes.
+        if _rate_limited(_client_ip(), "attempts"):
+            return jsonify({"error": "Too many requests. Try again in a little while."}), 429
         try:
             delete_post(public_id,
                         author_id=bp.skribl_current_user_id(),
@@ -1605,6 +1625,9 @@ def register_routes(bp, *, index_route=False):
             return jsonify({"error": "Skribl not found."}), 404
         if not _csrf_ok():
             return _csrf_refusal()
+        # The attempts budget, as on delete_skribl above (the review's 7).
+        if _rate_limited(_client_ip(), "attempts"):
+            return jsonify({"error": "Too many requests. Try again in a little while."}), 429
         # THE SHAPE IS CHECKED BEFORE ANYTHING IS INDEXED, and the first
         # version of this route did not do that. `"visibility" in body`
         # is true for the JSON array ["visibility"] and for the JSON

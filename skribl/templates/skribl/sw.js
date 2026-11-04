@@ -16,7 +16,8 @@
  *
  *   * A STATIC FILE CARRYING ITS CONTENT HASH (?v=..., asset_url): cache
  *     first. The hash is the content, so a cached copy cannot be out of date;
- *     a new build has new URLs. When a new copy of a file is stored, older
+ *     a new build has new URLs. Kept only when the server marked it immutable,
+ *     which it does only for a file's real current hash. When a new copy of a file is stored, older
  *     hashes of the same file are dropped once no kept page names them, so
  *     the cache holds what the kept pages need and nothing older.
  *
@@ -112,7 +113,13 @@ function file(req) {
     return c.match(req.url).then(function (hit) {
       if (hit) return hit;
       return fetch(req).then(function (res) {
-        if (res && res.ok) {
+        /* KEPT ONLY WHEN THE SERVER VOUCHED FOR IT (the PRE-331 review's 12).
+           Any ?v= was kept cache-first, while the server marks a file
+           immutable only when its ?v= is the file's real current hash
+           (security._real_bust), so a version nobody wrote pinned whatever
+           it was answered with. Its verdict is the one read here: anything
+           else is handed over as the network gave it, and not kept. */
+        if (res && res.ok && /\bimmutable\b/.test(res.headers.get('Cache-Control') || '')) {
           var path = new URL(req.url).pathname;
           var copy = res.clone();
           Promise.all([c.keys(), wanted()]).then(function (got) {

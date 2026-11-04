@@ -105,6 +105,18 @@ check("the editor HTML itself is compressed",
       pg.headers.get("Content-Encoding") == "gzip",
       f"{len(pg.data):,} B")
 
+# GZIP ONLY WHERE IT IS ACCEPTED (the PRE-331 review's 13): the word alone
+# was read, so "gzip;q=0", which refuses it, got gzip. Its quality decides,
+# on a page and on a busted asset: refused, plain; any quality above none,
+# gzip; a wildcard counts, and so does its refusal.
+def _enc(path, accept):
+    return c.get(path, headers={"Accept-Encoding": accept}).headers.get("Content-Encoding") or "plain"
+_q_page = {a: _enc("/skribl-pad", a) for a in ("gzip;q=0", "br, gzip; q=0.0", "identity, *;q=0", "gzip;q=0.2", "*")}
+_q_asset = _enc(f"/static/skribl/{js}", "gzip;q=0") if js else "plain"
+check("a client that refuses gzip (q=0) is sent plain; any quality above none gets gzip",
+      list(_q_page.values()) == ["plain", "plain", "plain", "gzip", "gzip"] and _q_asset == "plain",
+      f"page {_q_page}; app.js at q=0: {_q_asset}")
+
 # An already-compressed type must not be re-packed: it costs CPU and grows.
 png = c.get("/static/skribl/img/favicon.png", headers=GZIP)
 if png.status_code == 200:
@@ -224,6 +236,25 @@ check("a decompression bomb is refused",
              headers={"Content-Encoding": "gzip"}).status_code == 400,
       f"{len(_bomb):,} B expanding to 60 MB — MAX_CONTENT_LENGTH bounds the "
       "COMPRESSED bytes, which is no bound at all on what they expand to")
+# OVER ITS BUDGET, NOTHING IS INFLATED (the PRE-331 review's 4): a client
+# already over its attempts made the server decompress, up to the request
+# limit, before the 429. Told apart by a body that inflating refuses: from a
+# client at its cap it is answered 429, not the inflate's 400. Its own
+# addresses, so the budget spent here is nobody else's.
+app.config["SKRIBL_RATE_MAX_ATTEMPTS"] = 2
+try:
+    _at_cap = {"REMOTE_ADDR": "192.0.2.80"}
+    _spent = [c.post("/api/skribls", data=b"not json", content_type="application/json",
+                     environ_base=_at_cap).status_code for _ in range(2)]
+    _over = c.post("/api/skribls", data=b"not gzip", content_type="application/json",
+                   headers={"Content-Encoding": "gzip"}, environ_base=_at_cap).status_code
+    _fresh = c.post("/api/skribls", data=b"not gzip", content_type="application/json",
+                    headers={"Content-Encoding": "gzip"}, environ_base={"REMOTE_ADDR": "192.0.2.81"}).status_code
+finally:
+    app.config.pop("SKRIBL_RATE_MAX_ATTEMPTS", None)
+check("over its budget a gzipped body is refused before it is inflated (429, not the inflate's 400)",
+      _spent == [400, 400] and _over == 429 and _fresh == 400,
+      f"spent {_spent}, then {_over}; a fresh client's {_fresh}")
 
 _posted = (pathlib.Path(__file__).resolve().parent.parent /
            "skribl" / "static" / "lib" / "posted.js").read_text(encoding="utf-8")

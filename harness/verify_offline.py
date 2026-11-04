@@ -158,6 +158,22 @@ try:
               str([k for k in kept if k.startswith("/api")]))
         check("...and the files the Pad loaded are kept, by their content hash",
               any(k.endswith("/app.js") for k in kept), f"{len(kept)} kept")
+        # ONLY WHAT THE SERVER VOUCHED FOR IS KEPT (the PRE-331 review's 12).
+        # Any ?v= was kept cache-first, while the server marks a file
+        # immutable only for its real current hash, so a version nobody wrote
+        # pinned whatever it was answered with. app.js asked for by one:
+        # answered, and not kept, beside its real version, which is.
+        asked = pg.evaluate("""async () => {
+            const real = new URL([...document.scripts].map(s => s.src).find(s => /\\/app\\.js\\?v=/.test(s)));
+            const fake = new URL(real); fake.searchParams.set('v', '0123abcd');
+            const r = await fetch(fake.pathname + fake.search);
+            return { status: r.status, real: real.pathname + real.search, fake: fake.pathname + fake.search }; }""")
+        pg.wait_for_timeout(600)   # as above: a copy is stored after the answer is handed over
+        files = pg.evaluate("""async () => (await (await caches.open('skribl-files-v1')).keys())
+            .map(r => { const u = new URL(r.url); return u.pathname + u.search; })""")
+        check("a file asked for by a version the server did not write is answered, not kept",
+              asked["status"] == 200 and asked["fake"] not in files and asked["real"] in files,
+              f"{asked['status']}; {asked['fake']} kept: {asked['fake'] in files}; {asked['real']} kept: {asked['real'] in files}")
 
         print("\nOFFLINE — the server is gone")
         down()

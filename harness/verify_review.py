@@ -933,6 +933,24 @@ with server(SKRIBL_RATE_BACKEND="db", SKRIBL_RATE_MAX_POSTS=2, SKRIBL_RATE_MAX_A
     # migration that drops the table, or key rotation — all of which reset it.
     check("quota survives an application-process restart (same DB, same key)",
           post_to(restarted, {"frames": [frame]}) == 429)
+# THE PEEK BEFORE AN INFLATE, ON THE SHARED STORE (the PRE-331 review's 4;
+# verify_delivery pins the memory backend). Two attempts spend a budget of
+# two; then a body that inflating refuses is answered 429, not the inflate's
+# 400, so it was never inflated. A fresh key, so a fresh bucket.
+with server(SKRIBL_RATE_BACKEND="db", SKRIBL_RATE_MAX_ATTEMPTS=2,
+            SKRIBL_RATE_HMAC_KEY=f"harness-{secrets_token()}") as peekbase:
+    def _raw(body, headers):
+        rq = urllib.request.Request(peekbase + "/api/skribls", data=body,
+                                    headers=dict({"Content-Type": "application/json"}, **headers))
+        try:
+            with urllib.request.urlopen(rq) as r:
+                return r.status
+        except urllib.error.HTTPError as e:
+            return e.code
+    _spent = [_raw(b"not json", {}) for _ in range(2)]   # refused (400), each charged
+    _over = _raw(b"not gzip", {"Content-Encoding": "gzip"})
+    check("on the shared store too, a gzipped body over its budget is refused before it is inflated (429, not 400)",
+          _spent == [400, 400] and _over == 429, f"spent {_spent}, then {_over}")
 
 print("\n#13b — fresh-bucket concurrency: the race for the LAST slots")
 # The earlier test exhausted the quota first, so it only proved an exhausted

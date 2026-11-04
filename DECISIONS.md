@@ -29032,3 +29032,65 @@ posts).
 THE FOUR: kind (a save that fits is never refused, and the refusals say
 why); simple (no new words on screen); powerful (what is stored replays
 and counts as it should); playful (unchanged).
+
+## After v330 -- The PRE-331 review: the second five
+
+Four more findings from FUTURE 6ad and the review's high performance note,
+each confirmed in the code first and each piece shown red on its own. A
+person saving, posting or taking a drawing down sees nothing new unless
+they are over the hourly budget, and then the words they already know.
+
+- 7, TAKE-DOWNS AND VISIBILITY CHANGES SPEND THE ATTEMPTS BUDGET, after
+  CSRF, as every other write does. Each is a lookup and a key check, and
+  nothing bounded how many one connection could ask for. The budget is
+  200 an hour by default and the clients send one per tap; a refusal
+  shows each button's own words ("Could not delete — try again.", "Could
+  not change it — try again.", "Could not take it down — try again.").
+  Row in
+  verify_hostseams (an id nobody has: 404, 404, 429 for each); red with
+  either route's charge taken out alone.
+- 4, NOTHING IS INFLATED FOR A REQUEST ITS ROUTE WILL REFUSE UNREAD. A
+  client over its attempts made the server decompress, up to the request
+  limit, before the 429. Every route that takes a body refuses a forged
+  request, then one over budget, before it reads a byte, so the inflate
+  hook now asks the same two questions first, charging nothing: a forged
+  body is left compressed for its route's 403, and one over budget is
+  answered 429 in the composer's words (only its post is sent gzipped).
+  The budget is read by ratelimit._rate_over, a peek on either backend
+  that refuses at the cap as the charge does. Rows tell the outcomes apart
+  by a body inflating refuses, so a 429 or 403 where the inflate would
+  have said 400: verify_delivery (memory), verify_review (the shared
+  store, its own server), verify_hostseams (forged). Calibrated piece by
+  piece: no peek turned both stores' rows red, no CSRF skip the forged
+  row, the db branch alone its row, the memory branch alone its row.
+- 13, GZIP BY ITS QUALITY. "gzip;q=0" refuses gzip and was sent it,
+  because the word alone was read. Werkzeug's parse decides now, so a
+  wildcard counts both ways ("*" is gzipped, "*;q=0" is not), and a
+  quality that does not parse is no quality. Row in verify_delivery, a
+  page and a busted asset; red with the word check.
+- THE IDS STRING AND THE CURSORS ARE BOUNDED BEFORE THE WORK (the
+  review's high performance note). /api/skribls/meta split its whole ids
+  string, then kept fifty; it now reads fifty of the longest ids there
+  can be (64 characters, a comma and a space each) and no further. A
+  cursor over 120 characters is refused before it is base64-decoded (the
+  longest this server writes is about 70). Rows in verify_apiedges, each
+  shown by what reading past the bound would have done: a real id after
+  the first 3,300 characters is not read; a cursor padded with zeros,
+  which decodes to a usable one, is a 400 on New and on Hot while its
+  unpadded twin pages. Each bound removed alone turned only its part red.
+- 12, THE WORKER KEEPS WHAT THE SERVER VOUCHED FOR. sw.js kept any ?v=
+  cache-first, while the server marks a static file immutable only for
+  its real current hash, so a version nobody wrote pinned whatever it was
+  answered with. Now a file is kept only when its answer says immutable;
+  anything else is handed over as the network gave it. Row in
+  verify_offline: app.js asked for by a made-up version is answered and
+  not kept, beside its real version, which is. Red with the old rule. A
+  proxy that strips Cache-Control would make files go unkept, which is
+  the safe way to fail: not offline, never stale.
+
+WHAT IT DOES TO FLIP: shared (one server and one worker for both editors).
+
+THE FOUR: kind (nobody is refused who was not before, and the refusals
+are in the words people know); simple (nothing new on screen); powerful
+(a flood costs the server less, and a phone keeps only true files);
+playful (unchanged).
