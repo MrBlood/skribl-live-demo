@@ -2383,7 +2383,23 @@ function bindEl(id, ev, fn, opts){
 }
 
 /* ---- drawing (pad-format points, with timestamps for future replay) ---- */
-function pos(e){ const r=pad.getBoundingClientRect(); return { x:(e.clientX-r.left)*(CW/r.width), y:(e.clientY-r.top)*(CH/r.height) }; }
+/* THE DRAWING'S OWN BOX ON THE PAGE (FUTURE 6r, Speed 5 of the owner's "all
+   yes"). The canvas wears a 2px frame, its border (flip.css), and since B
+   (#648) the drawing fills the inside of it, pixel for pixel. Read as a share
+   of the whole box, frame and all, a pen at the very edge landed up to 2px
+   from where it was put (nothing at the middle, the frame's width at the
+   edges), the eyedropper read the pixel beside the one under it, artwork
+   dragged ran a little ahead of the pointer, and the dot that follows a
+   replay sat off its ink. The box less the frame, at the scale the zoom shows
+   it (the rect is the box as shown, offsetWidth the box as laid out), as
+   Recolor's lens reads it (lib/recolor.js shownBox). Full screen has no frame,
+   and reads 0. */
+function padBox(){
+  const r = pad.getBoundingClientRect(), s = pad.offsetWidth ? r.width / pad.offsetWidth : 1;
+  const bx = pad.clientLeft * s, by = pad.clientTop * s;
+  return { left: r.left + bx, top: r.top + by, width: r.width - 2 * bx, height: r.height - 2 * by };
+}
+function pos(e){ const r=padBox(); return { x:(e.clientX-r.left)*(CW/r.width), y:(e.clientY-r.top)*(CH/r.height) }; }
 
 /* ---- stylus pressure ------------------------------------------------------
    Pressure scales the EXISTING per-point `size`. It is deliberately NOT a new
@@ -2594,7 +2610,7 @@ pad.addEventListener('pointermove', e=>{
     // Screen pixels -> canvas units, so a drag tracks the pointer exactly at
     // any zoom or display scale. Using raw clientX would move the drawing
     // faster or slower than the finger whenever the canvas is not 1:1.
-    const r = pad.getBoundingClientRect();
+    const r = padBox();
     moveDx = moveStart.dx + (e.clientX - moveStart.x) * (CW / r.width);
     moveDy = moveStart.dy + (e.clientY - moveStart.y) * (CH / r.height);
     applyMoveOffset();
@@ -4806,7 +4822,7 @@ function revealNib(f, n){
   const c = document.getElementById('pad'), wrap = c && c.closest('.flip-wrap');
   if(!wrap) return;
   if(!flipNib){ flipNib = document.createElement('div'); flipNib.className = 'player-nib'; flipNib.hidden = true; wrap.appendChild(flipNib); }
-  const r = c.getBoundingClientRect(), wr = wrap.getBoundingClientRect();
+  const r = padBox(), wr = wrap.getBoundingClientRect();   // the drawing's own box (padBox)
   flipNib.style.left = (r.left - wr.left + p.x * r.width / CW) + 'px';
   flipNib.style.top = (r.top - wr.top + p.y * r.height / CH) + 'px';
   flipNib.classList.toggle('erase', !!p.erase);

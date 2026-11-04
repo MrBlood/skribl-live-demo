@@ -384,7 +384,12 @@ with sync_playwright() as sp:
     for name in eds("drawing"):
         c, pg, errs = editor(b, name, 2560, 1300, demo=False)
         m = pg.evaluate(READ, CANVAS[name])
-        L, T, W, H = m["at"]
+        # THE DRAWING'S OWN BOX: inside Flip's 2px frame, where the drawing is
+        # painted (the Pad has none). Put against the whole box, frame and all,
+        # this row held the pen to the mapping FUTURE 6r found wrong, and went
+        # red by 0.62 units when the pen was read through the drawing's box.
+        L, T = m["at"][0] + m["frame"][0], m["at"][1] + m["frame"][1]
+        W, H = m["inner"]
         n0 = pg.evaluate("() => strokes.length" if name == "Pad" else "() => frame().strokes.length")
         stroke(pg, [(L + W * 0.3, T + H * 0.5), (L + W * 0.5, T + H * 0.5), (L + W * 0.7, T + H * 0.6)])
         pg.wait_for_timeout(300)

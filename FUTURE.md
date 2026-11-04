@@ -1073,7 +1073,14 @@ A vector from the owner would make sharper files. The small Blooby pictures
 in the app stay as they are unless the owner asks. Not tested: how iOS 26
 tints and relights it on a real iPhone.
 
-## 6r. Flip's pen lands up to 2px off at the canvas's edges (measured, during #648)
+## 6r. Flip's pen lands up to 2px off at the canvas's edges (measured during #648; fixed after v330)
+
+**FIXED after v330** (the owner's "all yes" to the speed fixes, Nov 4;
+DECISIONS: "Flip's pen lands where it is put, out to the canvas's edges"):
+padBox() is the canvas's box less its frame at the zoom's scale, and pos(),
+the artwork drag and the replay's dot read through it; verify_flipedges puts
+the pen a pixel in from each edge and reads where it lands, red on the old
+mapping first. What was found, as measured then:
 
 Flip's canvas has a 2px frame, and since B (#648) the drawing fills the
 inside of it, pixel for pixel. The pen is still mapped through the frame's

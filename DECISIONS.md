@@ -29825,3 +29825,59 @@ and powerful (the strip is the same strip), playful (unchanged).
 
 Not tested here: a real phone (no phone in this box; the CPU 4x slower stands
 in for one) and Safari (no WebKit here).
+
+## After v330 -- Flip's pen lands where it is put, out to the canvas's edges
+
+The fifth of the speed fixes the owner said "all yes" to (Nov 4): FUTURE 6r,
+measured during #648 and not built till now. (The fourth, a long Flip's first
+look, is mocked first, as 6x says; see the report.)
+
+- MEASURED on a desk (1280 x 860), a phone (402 x 874 at 3x), and the desk
+  zoomed to 200%. A pen put one screen pixel in from each edge of the
+  drawing's own box (inside the canvas's 2px frame) landed 2.5 units further
+  in on the desk (at 4.47 where the pen was at 1.93), 3.3 on the phone and
+  2.6 zoomed. The eyedropper, a pixel in from the left edge over a red line 3
+  units wide, read the ground (#f6f2ea). Artwork dragged 320 px moved 408.64
+  units where the pointer went 411.21. The replay's dot over the drawing's
+  corner sat 2 px up and left of it. The cause: the pen was read as a share of
+  the canvas's whole box, frame and all.
+- FIXED: padBox(), the canvas's box less its frame, at the scale the zoom
+  shows it (the rect over offsetWidth), as Recolor's lens already read it
+  (lib/recolor.js shownBox). pos() reads through it (every tool's point, and
+  the eyedropper and its lens through that), and so do the artwork drag and
+  the replay's dot. Full screen has no frame, and reads 0.
+- AFTER: each lands where it is put, to a hundredth of a unit.
+- LEFT AS THEY ARE: the rings' sizes, which the frame changes by half a
+  percent (a twentieth of a pixel on a 10 px ring); the photo's reposition (a
+  share of the box, the same half percent of a drag); and where the rings and
+  the tool's badge sit, which are offsets from the box they are laid in, not
+  the drawing's units.
+
+THE CHECKS: verify_flipedges, "the pen lands where it is put, out to the
+canvas's edges". A pen a pixel in from each edge of the drawing's box lands a
+pixel's worth from that edge, on a desk and a phone; the left and top edges
+the same zoomed to 200%; the eyedropper reads the ink under the pen at the
+edge; artwork dragged moves as far as the pointer went; the replay's dot over
+the drawing's corner sits on that corner. The drawing's box is read from the
+frame's own width in the style, at the zoom's scale. CALIBRATED, each shown
+red against its own break: pos() through the whole box (the edge rows on the
+desk, zoomed and on the phone, and the eyedropper's); the drag through it (the
+drag row); the dot through it (the dot row); the frame not scaled with the
+zoom (the zoomed row alone). With none broken, 22 of 22; on main, 16 of 22.
+
+FOUND BY THE AFFECTED SUITES, AND THE INSTRUMENT CORRECTED: verify_bigcanvas's
+"a stroke on the grown canvas lands under the pen" put the pen against Flip's
+whole box, frame and all, and so held it to the mapping 6r found wrong; it went
+red by 0.62 units (78 of 79, beside others and alone) when the pen was read
+through the drawing's box. It measures from the drawing's own box now (its
+READ already had the frame and the inside), and the pen lands exactly under
+it: 79 of 79.
+
+WHAT IT DOES TO THE PAD: not for the Pad, whose canvas has no frame.
+
+THE FOUR: kind and powerful (a line drawn to the edge lands at the edge, and
+the colour picked there is the one under the pen: exact control); simple and
+playful (unchanged).
+
+Not tested here: a real phone (no phone in this box) and Safari (no WebKit
+here).
