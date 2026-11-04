@@ -64,7 +64,9 @@
 
 /* ---- Your Skribls tray ----------------------------------------------------
    Reuses .help-search / .help-search-count so the two drawers share one field
-   treatment rather than growing a second one that drifts. */
+   treatment rather than growing a second one that drifts. The Library, where
+   the list lives now, does not load styles.css, where .help-search-count is
+   drawn: its count's size is its own .posted-count rule (skribl_library.html). */
 .posted-list { flex: 1 1 auto; overflow-y: auto; padding: 4px 12px 12px; }
 .posted-row { display: flex; align-items: center; gap: 10px; padding: 9px;
   border-radius: 12px; background: var(--surface-control);
