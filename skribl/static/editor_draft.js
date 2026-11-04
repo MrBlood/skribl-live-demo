@@ -729,16 +729,21 @@ function rebuildHistoryForRestore(maxStrokes, maxGroups, appliedCount, baseHasCo
   // as that state's floor, and the last strokes painted on it. The first Undo
   // after a reload then paints those few; it painted the whole drawing, 7 s
   // on the two-hour piece with the CPU 4x slower.
+  // Split only where the first part lays its see-through ink as the whole
+  // would (the layering budget counts the drawing it is handed), so the
+  // picture is the one-paint picture exactly.
   const renderPrefix = (k) => clearAndRestore(() => {
     const at = starts[Math.max(0, k - 30)], deepest = undoStack[0], seq = restoreSeq;
-    if (at < PAD_KEEP_MIN_POINTS || at >= starts[k] || !deepest || deepest.strokes.length !== at) {
-      padPaint(maxStrokes.slice(0, starts[k]));
+    const all = maxStrokes.slice(0, starts[k]);
+    if (at < PAD_KEEP_MIN_POINTS || at >= starts[k] || !deepest || deepest.strokes.length !== at
+        || _padOverBudget(maxStrokes.slice(0, at)) !== _padOverBudget(all)) {
+      padPaint(all);
       return;
     }
     padPaint(maxStrokes.slice(0, at), () => {
       if (seq !== restoreSeq) return;   // a newer paint has the canvas
       padFloorAt(deepest);
-      padPaintAbove(maxStrokes.slice(at, starts[k]));
+      padPaintAbove(maxStrokes.slice(at, starts[k]), all);
     });
   });
   // Each state keeps the recolours made by then (`n`, the points there were).

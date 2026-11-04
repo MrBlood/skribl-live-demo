@@ -577,21 +577,36 @@ function padUndoRestore(state) {
   const f = _padFloorUnder(state);
   if (!f) return false;
   _padLay(f.c);
-  if (pts.length > f.n) padPaintAbove(pts.slice(f.n));
+  if (pts.length > f.n) padPaintAbove(pts.slice(f.n), pts);
   return true;
 }
-// The strokes above a floor. Opaque ink paints the same through the stroke
-// layers or straight onto the canvas ("byte-identical", app.js, above
-// beginWetStroke), and straight costs nothing to set up, where the layers are
-// two more canvases the size of this one, made and seeded for each paint: most
-// of an Undo from a floor, about 200 ms of 260 with the CPU 4x slower. So
-// strokes with no see-through ink are painted with the layers' switch off for
-// that one call, and put back as it was.
-function padPaintAbove(pts) {
-  if (pts.some(p => !p.erase && anyStrokeAlpha(p.color) < 1)) { paintStrokesStatic(pts); return; }
+// The strokes above a floor (`pts`, the end of `whole`), painted as the
+// whole repaint paints them: a floor is a shortcut, never another picture.
+// Two things decide what the stroke layers do, and both are read here.
+// - WHOSE COUNT. The repaint lays see-through strokes in a layer of their own
+//   only while the whole drawing has 24 or fewer (lib/strokelayers.js
+//   overBudget); past that, none. These few alone would come in under it, so
+//   the whole drawing's count decides, and past the budget they are painted
+//   with the layers off, as the repaint paints them.
+// - OPAQUE INK paints the same through the layers or straight onto the canvas
+//   ("byte-identical", app.js, above beginWetStroke), and straight costs
+//   nothing to set up, where the layers are two more canvases the size of this
+//   one, made and seeded for each paint: about 200 ms of a 260 ms Undo with the
+//   CPU 4x slower. So strokes with no see-through ink are painted with them off.
+function padPaintAbove(pts, whole) {
+  const see = pts.some(p => !p.erase && anyStrokeAlpha(p.color) < 1);
+  if (see && !_padOverBudget(whole)) paintStrokesStatic(pts);
+  else padLayersOff(() => paintStrokesStatic(pts));
+}
+function _padOverBudget(pts) {
+  const sl = window.SkriblStrokeLayers;
+  return !!(sl && sl.overBudget && sl.overBudget(pts, parseStrokeAlpha, anyStrokeAlpha));
+}
+// The layers' switch off for one call (it is synchronous), and put back as it was.
+function padLayersOff(fn) {
   const was = window.SKRIBL_STROKE_LAYERS;
   window.SKRIBL_STROKE_LAYERS = false;
-  try { paintStrokesStatic(pts); } finally {
+  try { fn(); } finally {
     if (was === undefined) delete window.SKRIBL_STROKE_LAYERS; else window.SKRIBL_STROKE_LAYERS = was;
   }
 }
@@ -622,13 +637,13 @@ function _padLay(c) {
 // layers, as a copy is matched) and paints only the strokes above it: under
 // sixty strokes, where it had been all of them.
 //
-// THE STROKES ABOVE A FLOOR are painted as paintStrokesStatic paints any
-// drawing, their see-through ones layered by their own count. Opaque ink comes
-// back as the canvas showed it, pixel for pixel (verify_undofast reads it
-// against the canvas as it was drawn). A see-through stroke in a drawing past
-// the layering budget (lib/strokelayers.js, 24) comes back in its layer, as it
-// was drawn, where painting the whole drawing lays every see-through stroke
-// without one.
+// THE STROKES ABOVE A FLOOR are painted as the whole repaint paints them
+// (padPaintAbove, below): a floor is a shortcut, never another picture. The
+// floor itself is the canvas as it was, like the copies: opaque ink is what
+// the repaint paints too, pixel for pixel (verify_undofast reads both), and a
+// see-through stroke drawn below it this session comes back as it was drawn,
+// as it does from a copy, where the whole repaint of a drawing past the
+// layering budget lays it without its layer.
 //
 // WITH NO FLOOR UNDER IT (a recolour or a move made new points under the
 // floors, the canvas grew, the stroke layers were switched), padUndoRepaint
@@ -671,6 +686,10 @@ function _padFloorTake(state, n, c) {
 // (editor_tools.js) and a line of text's (editor_text.js).
 function padFloorKeep() {
   const s = undoStack[undoStack.length - 1], u = undoStack[0];
+  // Never under the select tool or a selection: a press with the select tool
+  // pushes a state as a stroke's start does, and the selection's outline is
+  // painted on the canvas (selOutline above), so the canvas is not the state.
+  if (tool === 'select' || selGroups.length) return;
   if (!s || s.image || unrecordedInk || !canvas.width || !canvas.height) return;
   let spare = null;
   const free = (f) => {
@@ -707,9 +726,12 @@ function padUndoRepaint(state) {
   }
   const at = u && u !== state && u.base === state.base && u.strokes.length < pts.length
     && u.strokes.every((p, i) => p === pts[i]) ? u.strokes.length : pts.length;
-  restoreHistoryState(Object.assign({}, state, { strokes: pts.slice(0, at) }));
+  // Its first part laid as the whole would be: past the budget, layers off.
+  const part = Object.assign({}, state, { strokes: pts.slice(0, at) });
+  if (at < pts.length && _padOverBudget(pts)) padLayersOff(() => restoreHistoryState(part));
+  else restoreHistoryState(part);
   padFloorAt(at === pts.length ? state : u);
-  if (at < pts.length) padPaintAbove(pts.slice(at));
+  if (at < pts.length) padPaintAbove(pts.slice(at), pts);
 }
 // The canvas holds `state` now: it becomes the only floor (the others are let
 // go, one canvas reused). padUndoRepaint above and a draft's paint

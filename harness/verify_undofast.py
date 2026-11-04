@@ -422,6 +422,159 @@ with sync_playwright() as p:
     check("no page errors through a reload and its Undos", not errs, "; ".join(errs[:2]))
     pg.close()
 
+    print("\nUNDO — strokes above a floor are painted as the whole repaint paints them")
+    # The repaint lays see-through strokes in a layer of their own only while
+    # the whole drawing has 24 or fewer (lib/strokelayers.js overBudget). The
+    # strokes painted above a floor are painted by the whole drawing's count,
+    # not by their own few, so an Undo from a floor shows what the whole repaint
+    # shows, see-through ink included: a floor is a shortcut, never another
+    # picture. Two drawings, opened (the opening paints them as the repaint
+    # does), each with six see-through strokes drawn on it: one past the budget
+    # (40 see-through lines), where they are laid without a layer, and one under
+    # it (10), where they are laid in theirs.
+    for n_see, label in ((40, "past the budget"), (10, "under the budget")):
+        SEE_PTS, SEE_GROUPS = [], []
+        for _g in range(80):
+            _col = "rgba(124, 92, 255, 0.45)" if _g < n_see else "#1d1a2b"
+            for _i in range(60):
+                SEE_PTS.append({"x": 300 + _i * 7, "y": 120 + _g * 5 + (_i % 4), "color": _col,
+                                "size": 4 + (_i % 5), "t": len(SEE_PTS) * 16, "start": _i == 0})
+            SEE_GROUPS.append(60)
+        _fd, see_file = tempfile.mkstemp(suffix=".skribl")
+        os.close(_fd)
+        with open(see_file, "w") as _f:
+            json.dump({"version": 2, "schemaVersion": 2, "playbackMode": "replay", "title": "See",
+                       "frames": [{"strokes": SEE_PTS, "strokeGroups": SEE_GROUPS}],
+                       "canvasSize": {"cssWidth": 816, "cssHeight": 612}}, _f)
+        pg = b.new_page(viewport={"width": 1280, "height": 900})
+        errs = []
+        pg.on("pageerror", lambda e: errs.append(str(e)))
+        browsing.goto(pg, BASE, "/")
+        pg.evaluate("() => window.SkriblHints && window.SkriblHints.hide && window.SkriblHints.hide()")
+        pg.set_input_files("#draftInput", see_file)
+        pg.wait_for_function(f"() => typeof strokes !== 'undefined' && strokes.length >= {len(SEE_PTS)}", timeout=20000)
+        pg.wait_for_timeout(300)
+        pg.click("#addTakePill")
+        pg.wait_for_timeout(250)
+        box = pg.locator("#canvas").bounding_box()
+        pg.evaluate("() => { strokeOpacity = 0.45; }")
+        for k in range(6):
+            quick(k)
+        state = pg.evaluate("() => [SkriblStrokeLayers.overBudget(strokes, parseStrokeAlpha, anyStrokeAlpha),"
+                            " strokes.slice(strokes.length - strokeGroups.slice(-6).reduce((a, n) => a + n, 0))"
+                            ".every(p => anyStrokeAlpha(p.color) < 1)]")
+        pg.evaluate(STROKES)
+        wrong, painted = [], []
+        for j in range(6):
+            ps = pg.evaluate(PRESS, "#undoBtn")
+            pg.wait_for_timeout(30)
+            painted.append(ps)
+            if j >= 2 and pg.evaluate(PIX) != pg.evaluate(WHOLE):
+                wrong.append(j + 1)
+        os.unlink(see_file)
+        check(f"a drawing {label}, six see-through strokes drawn on it (the case is real)",
+              state == [n_see > 24, True], f"past the budget {state[0]}; the new strokes see-through {state[1]}")
+        check(f"...and each Undo past the copies, from the floor, shows every pixel the whole repaint shows ({label})",
+              not wrong and max(painted[2:]) < 6, f"Undos that differ {wrong}; strokes painted per press {painted}")
+        check(f"no page errors through see-through Undos ({label})", not errs, "; ".join(errs[:2]))
+        pg.close()
+
+    print("\nUNDO — a drawing just past the layering budget, its see-through ink on both sides of the floor")
+    # Twenty-four see-through lines, the budget exactly, in an opened drawing,
+    # then two see-through strokes on top: the drawing is past the budget and
+    # its part under the deepest state is not. The repaint in two parts lays
+    # that part as the whole would be laid (layers off), and a draft's paint
+    # does not split where its parts would be laid differently: each picture is
+    # the one-paint picture, read against restoreHistoryState of the same state.
+    EDGE_PTS, EDGE_GROUPS = [], []
+    for _g in range(120):
+        _col = "rgba(124, 92, 255, 0.45)" if _g < 24 else "#1d1a2b"
+        for _i in range(60):
+            EDGE_PTS.append({"x": 300 + _i * 7, "y": 60 + _g * 4 + (_i % 4), "color": _col,
+                             "size": 4 + (_i % 5), "t": len(EDGE_PTS) * 16, "start": _i == 0})
+        EDGE_GROUPS.append(60)
+    _fd, edge_file = tempfile.mkstemp(suffix=".skribl")
+    os.close(_fd)
+    with open(edge_file, "w") as _f:
+        json.dump({"version": 2, "schemaVersion": 2, "playbackMode": "replay", "title": "Edge",
+                   "frames": [{"strokes": EDGE_PTS, "strokeGroups": EDGE_GROUPS}],
+                   "canvasSize": {"cssWidth": 816, "cssHeight": 612}}, _f)
+    pg = b.new_page(viewport={"width": 900, "height": 820})
+    errs = []
+    pg.on("pageerror", lambda e: errs.append(str(e)))
+    browsing.goto(pg, BASE, "/")
+    pg.evaluate("() => window.SkriblHints && window.SkriblHints.hide && window.SkriblHints.hide()")
+    pg.set_input_files("#draftInput", edge_file)
+    pg.wait_for_function(f"() => typeof strokes !== 'undefined' && strokes.length >= {len(EDGE_PTS)}", timeout=20000)
+    pg.wait_for_timeout(300)
+    pg.click("#addTakePill")
+    pg.wait_for_timeout(250)
+    box = pg.locator("#canvas").bounding_box()
+    pg.evaluate("() => { strokeOpacity = 0.45; }")
+    for k in range(3):
+        quick(k)
+    w0 = pg.evaluate("() => document.getElementById('canvas').width")
+    pg.set_viewport_size({"width": 1700, "height": 1000})
+    pg.wait_for_timeout(1500)
+    pg.evaluate(STROKES)
+    pg.evaluate(PRESS, "#undoBtn")       # no copy or floor of the new size: the repaint, in two parts
+    pg.wait_for_timeout(30)
+    budget = pg.evaluate("() => [document.getElementById('canvas').width, SkriblStrokeLayers.overBudget(strokes, parseStrokeAlpha, anyStrokeAlpha),"
+                         " SkriblStrokeLayers.overBudget(undoStack[0].strokes, parseStrokeAlpha, anyStrokeAlpha)]")
+    two = pg.evaluate(PIX) == pg.evaluate(WHOLE)
+    total = pg.evaluate("() => strokes.length")
+    pg.wait_for_function(f"() => {{ const s = readAutosave(); return !!(s && s.strokes && s.strokes.length === {total}); }}",
+                         timeout=15000)
+    pg.reload(wait_until="load")
+    pg.wait_for_function(f"() => typeof strokes !== 'undefined' && strokes.length === {total}", timeout=20000)
+    pg.wait_for_timeout(600)
+    back = pg.evaluate(PIX) == pg.evaluate(WHOLE)
+    os.unlink(edge_file)
+    check("the canvas grew; the drawing is past the budget and its part under the deepest state is not (the case is real)",
+          budget[0] > w0 and budget[1] is True and budget[2] is False, f"{w0} -> {budget[0]}; past the budget: drawing {budget[1]}, under the deepest {budget[2]}")
+    check("...and the repaint in two parts, a floor between, shows every pixel one paint shows",
+          two, f"same as one paint {two}")
+    check("...and back from a reload, the draft's paint shows every pixel one paint shows",
+          back, f"same as one paint {back}")
+    check("no page errors through a drawing just past the budget", not errs, "; ".join(errs[:2]))
+    pg.close()
+
+    print("\nUNDO — no floor is taken with the select tool's outline on the canvas")
+    # A press with the select tool pushes a state as a stroke's start does,
+    # but the selection's dashed outline is painted on the canvas itself
+    # (editor_draw.js selOutline): a floor taken then would carry the outline
+    # back into the drawing on an Undo. Asked of padFloorKeep directly, with
+    # no floor kept beforehand, so that the push is the one that would take it:
+    # under a selection nothing is kept; with the pen and the outline cleared,
+    # the same push keeps one (the control).
+    pg = b.new_page(viewport={"width": 1280, "height": 900})
+    errs = []
+    pg.on("pageerror", lambda e: errs.append(str(e)))
+    browsing.goto(pg, BASE, "/")
+    pg.evaluate("() => window.SkriblHints && window.SkriblHints.hide && window.SkriblHints.hide()")
+    busy(pg)
+    box = pg.locator("#canvas").bounding_box()
+    pg.evaluate("() => setTool('select')")
+    pg.wait_for_timeout(200)
+    lg = pg.evaluate("() => getCanvasLogicalSize()")
+    sx, sy = box["width"] / lg["width"], box["height"] / lg["height"]
+    pg.mouse.move(box["x"] + 420 * sx, box["y"] + 290 * sy)
+    pg.mouse.down()
+    pg.mouse.move(box["x"] + 600 * sx, box["y"] + 400 * sy, steps=8)
+    pg.mouse.up()
+    pg.wait_for_timeout(300)
+    KEEP = """() => { for (const f of _padFloors) f.c.width = f.c.height = 0; _padFloors.length = 0;
+      undoStack.push(makeHistoryState()); padFloorKeep(); return [selGroups.length, _padFloors.length]; }"""
+    under = pg.evaluate(KEEP)
+    pg.evaluate("() => setTool('pen')")
+    pg.wait_for_timeout(300)
+    clear = pg.evaluate(KEEP)
+    check("a selection is on the canvas, its outline with it (the case is real)", under[0] > 0, f"{under[0]} lines selected")
+    check("...and a push then keeps no floor; with the pen, the outline gone, the same push keeps one",
+          under[1] == 0 and clear == [0, 1], f"under the selection {under[1]} floors; with the pen {clear[1]}")
+    check("no page errors around the select tool", not errs, "; ".join(errs[:2]))
+    pg.close()
+
     # ================================================================ FLIP
     # The pad's bitmap, folded into one number, and the current page's tile.
     FPIX = """() => { const c = document.getElementById('pad');
