@@ -30347,3 +30347,98 @@ playful unchanged.
 
 Not tested here: a real phone and Safari (no WebKit here). Blob.arrayBuffer
 came in Safari 14; where a browser lacks it the decode reads the text, as before.
+
+## After v330 -- A song's text and its bytes, made and kept off the page (both editors)
+
+The owner (Nov 5, "do the song speed for both editors"): the next pass the
+entry before this one named, for the Pad and Flip together.
+
+- TRACED on main, a phone 402 x 874 at 3x, the CPU 4x slower, a two-minute
+  stereo song at 44.1 kHz (21.9 MB; 29 MB as text), from the pick until its
+  beat shows and the saves after it are done. Two of the holds were the
+  song's own, and both editors had them: making its text (a data URL, which
+  the post, a backup file and a saved draft carry), one stretch of 0.40 s on
+  Flip and 0.31 s on the Pad; and writing its bytes into the draft store,
+  where IndexedDB takes its copy of them on the page, 0.12 s on Flip and
+  0.10 s on the Pad. A reload that brought the song back made its text
+  again: 0.46 s on Flip, 0.31 s on the Pad.
+- BUILT, one module each, both editors:
+  - lib/songtext.js makes a song's text in a worker (FileReaderSync) and
+    hands it back. SkriblSongText.of(blob) gives what FileReader's
+    readAsDataURL gave, so the Pad's pick, Flip's pick and Flip's restore
+    swapped one for the other and nothing after them changed. The file is
+    its worker's script, as lib/musicears.js is.
+  - lib/draftstore.js writes a record that holds a file from a worker
+    running the same file: the bytes are read and handed to IndexedDB there,
+    and the page waits for the answer. A plain record (a draft's text, the
+    drafts' index) is written on the page, as it was.
+  - NOTHING IS LOST FOR WANT OF A WORKER. Where one cannot be made, its
+    script will not load, it cannot make the text, its store does not
+    answer, or it does not answer at all (20 s for the text; the store's own
+    deadlines for a write), it is given up and the page does the work, as
+    before. A value the store refuses (a full disk, one that will not clone)
+    is still that refusal. A page with no IndexedDB of its own writes nothing
+    through a worker: what it could never read back is not written for it.
+- MEASURED after, a Chrome trace of the same moment on each, main and this:
+
+                                      main      this
+    Flip  making the text             0.40 s    0.19 s, the text handed back
+          writing the bytes           0.12 s    none on the page
+          blocking in all             1.06 s    0.73 s
+    Pad   making the text             0.31 s    0.10 s, the text handed back
+          writing the bytes           0.10 s    none on the page
+          blocking in all             0.94 s    0.56 s
+    a reload, making the text   Flip  0.46 s    0.19 s
+                                Pad   0.31 s    0.11 s
+
+  Over two more runs each, read by the page's own long-task count: the Pad's
+  blocking went from 0.82 - 0.91 s to 0.46 - 0.51 s and its longest hold from
+  0.34 s to 0.15 - 0.17 s; Flip's from 0.84 - 0.88 s to 0.60 - 1.08 s, where in
+  one run the decode's end alone took 0.92 s. That is what varies most, and
+  it is Web Audio's own: it makes the song's 87 MB of samples on the page,
+  0.2 to 0.9 s at this pace. The rest of what still holds the page while a
+  song is added is the waveform's paint, the listening shimmer's frames (40
+  to 75 ms each at this pace) and the text handed back (a copy of 29 MB). On
+  a reload, reading the bytes back out of the store is still on the page,
+  0.2 s: a worker could read them too, the next pass if a phone shows it.
+
+THE CHECKS: verify_songoff (new), 17 rows, both editors, a song added
+through the music drawer's own file input and a stroke drawn. The page's own
+FileReader.readAsDataURL is never called and the text the editor keeps is the
+file's own data URL; the page's own IDBObjectStore.put is never called for the
+song's record and the record holds the same file (its name, size and SHA-256).
+Then the page does both itself, the same text and the same file kept, where no
+worker can be had, where a worker's script will not load, where a worker
+cannot make the text and where its store does not answer; and on the Pad (the
+module is one) where a worker never answers, after its 20 s.
+CALIBRATED, each shown red against its own break: the text made on the page
+again (both editors' rows), the Pad's pick reading it itself (its row), Flip's
+(its row), the Pad's page not loading lib/songtext.js (its row; a server of
+its own, since Flask caches templates), the bytes written on the page again
+(both rows), no text where no worker can be had (both rows, and the bytes rows
+with them: a song with no text is never kept), no bytes written there (both
+rows), a broken worker's text lost (both rows, the bytes with them), a broken
+writer never let go (both rows), a refusing worker's text lost (both rows, the
+bytes with them), a store that did not answer taken as the last word (both
+rows), and no deadline for a worker that never answers (its row). With none
+broken, 17 of 17.
+
+THE WAITS: waits.settle counted the page's file reads and IndexedDB writes as
+work in flight, and those moved into workers, which nothing counted, so a
+suite could read a page mid-save. QUIET_JS now holds settle for each message
+posted to a worker until it is answered, and lets it go when the worker is
+stopped or breaks. verify_waits, three rows: a worker answering 700 ms later,
+and a worker stopped, and one broken, with a message unanswered. CALIBRATED,
+each red against its own break: nothing counted (the first row), an answer not
+counted (held to the window), a stop not counted, a break not counted. With
+none broken, 20 of 20.
+
+WHAT IT DOES TO FLIP: the same as the Pad; one module each, both editors.
+
+THE FOUR: kind (adding a song holds either editor about half as long as it
+did, and a song is never lost for want of a worker); simple, powerful and
+playful unchanged.
+
+Not tested here: a real phone and Safari (no WebKit here). FileReaderSync and
+IndexedDB in a worker are in Safari 14 and every browser the editors run in;
+where one is missing, the page does the work as before.

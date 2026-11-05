@@ -1,5 +1,7 @@
-/* A SONG'S TEXT, MADE OFF THE PAGE (the speed fixes, Nov 5; the owner: "do the
- * song speed for both editors").
+/* A SONG'S TEXT, MADE OFF THE PAGE: the data URL both editors keep beside a
+ * song's bytes, made in a worker so that adding a song does not hold the page
+ * while it is made (the speed fixes, Nov 5; the owner: "do the song speed for
+ * both editors").
  *
  * Both editors keep a song as its bytes and, beside them, as text (a data
  * URL): the post, a backup file and a saved draft carry the text. Making that

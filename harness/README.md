@@ -148,8 +148,9 @@ draft, music back after a reload) and then settles the rest of the old sleep;
 `settle(page, ms)` stands in for a sleep after a load, a click or a reload, on
 a browser passed through `waits.instrument()`. Settling comes back as soon as
 nothing the page has in flight is due inside the old sleep, and never before:
-a timer, a request, a database write, a decode, a chain of animation frames or
-a scroll due inside it holds it (`verify_waits.py` drives each). `browsing.goto`, `pad_drawer` and
+a timer, a request, a database write, a decode, a chain of animation frames, a
+scroll or a message to a worker due inside it holds it (`verify_waits.py`
+drives each). `browsing.goto`, `pad_drawer` and
 `pad_drawer_close` settle this way; on a browser without the counter they are
 the old sleep. A sleep that guards an ABSENCE ("no toast within two seconds")
 stays a sleep.
@@ -742,6 +743,18 @@ stays a sleep.
   presses keeping an end's distance from the finger, the nearer end, and
   Flip's drawer staying open after a drag let go past it; the arrows at 3:1
   or more. Each row was shown red by its own break.
+- `verify_songoff.py` — a song's text and its bytes made and kept off the
+  page (the owner: "do the song speed for both editors"), on the Pad and on
+  Flip, a song added through the music drawer's own file input and a stroke
+  drawn: the page's own FileReader never makes the text (lib/songtext.js's
+  worker does) and the text kept is the file's own data URL; the page's own
+  IndexedDB never writes the song's record (lib/draftstore.js's worker does)
+  and the record holds the same file, its name, size and SHA-256. Then the
+  page does both itself, the same text and the same file kept, where no
+  worker can be had, where a worker's script will not load, where a worker
+  cannot make the text and where its store does not answer; and on the Pad,
+  where a worker never answers, after its 20 s. Each row was shown red by its
+  own break.
 - `verify_musictimeline.py` — step 2 of the music plan (the owner: "Yes on
   all"), on the Pad and on Flip: the timeline (lib/musictimeline.js) is the
   drawer's one view, the drawing's lane over the song, two handles and the
@@ -1437,10 +1450,11 @@ stays a sleep.
 
 - `verify_waits.py` — `harness/waits.py` keeps its promise: each kind of work
   its counter sees (timers, intervals, requests, IndexedDB, file reads,
-  decodes, animation frames, CSS transitions, smooth scrolls) holds `settle`
-  while it is due inside the window, nothing holds it past the window (a
-  navigation included), a quiet page comes back early, and a page without the
-  counter gets the plain sleep.
+  decodes, animation frames, CSS transitions, smooth scrolls, a message to a
+  worker until it is answered) holds `settle` while it is due inside the
+  window, nothing holds it past the window (a navigation included, and a
+  worker stopped or broken with a message unanswered), a quiet page comes
+  back early, and a page without the counter gets the plain sleep.
 
 ### After v320 — motion
 

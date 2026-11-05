@@ -860,6 +860,7 @@ rather than a shared rule.
 | `slidernudge.js` | Pad+Flip | - and + beside a range slider, for exact steps a slider alone cannot land on with a finger. |
 | `smartfade.js` | Pad+Flip+player+library+gallery | The smart fade: one reading of a drawing for every bar that lies over it. |
 | `smoothing.js` | Pad+Flip | Smoothing (the stroke stabilizer) — shared by both editors. |
+| `songtext.js` | Pad+Flip | A SONG'S TEXT, MADE OFF THE PAGE: the data URL both editors keep beside a song's bytes, made in a worker so that adding a song does not hold the page while it is made (the speed fixes, Nov 5; the owner: "do the song speed for both editors"). |
 | `stamps.js` | Flip | Stamps — the clipboard, but named, persistent and multi-slot. |
 | `strokelayers.js` | Pad+Flip+player | Stroke layers — the see-through-stroke compositor's on/off, shared by both. |
 | `tappause.js` | Pad+Flip+player | Tap to pause: a tap on a drawing while it plays -- an editor's preview, or the shared player -- pauses it where it is, and another tap carries on from there. |
