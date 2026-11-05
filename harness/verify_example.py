@@ -189,7 +189,22 @@ try:
 
         print("\n3 — DRAW ONE, IN THE HOST'S OWN COMPOSER")
         pg.click("#padBtn")
-        pg.wait_for_timeout(5000)
+        # WAIT FOR THE PAD TO BOOT, not for a guess at how long booting takes
+        # (browsing.py, WHY): its app.js says so on its last line, read here
+        # in the frame's own window. A fixed five seconds drew before it was
+        # there. The Pad's 119 files take about five seconds from the
+        # example's development server, so the stroke fell on a canvas not
+        # yet made (its default 300 x 150), no take began, and the record
+        # button, shown only while a take is under way, never came: main red
+        # after #763 and #764, the click timing out at 30 s; here every time,
+        # at the last commit main ran green as well.
+        pg.wait_for_function(
+            "() => { const f = document.getElementById('padFrame');"
+            " const w = f && f.contentWindow;"
+            " return !!(w && w.__skriblBoot && w.__skriblBoot.pad); }",
+            timeout=30000)
+        # Booted is not laid out (browsing.py, A SMALL SETTLE).
+        pg.wait_for_timeout(800)
         mode = pg.evaluate(
             "() => document.getElementById('padFrame').contentWindow.SKRIBL_MODE")
         check("the pad opens in compose mode, under the prefix",
