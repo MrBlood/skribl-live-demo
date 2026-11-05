@@ -574,7 +574,9 @@ with sync_playwright() as pw:
     if part("bin"):
         print("\nTHE BIN'S UNDO")
     STORE = {"Pad": """() => new Promise((done) => { SkriblDraftStore.get('pad:music').then((r) => done(r ? { size: r.blob ? r.blob.size : null, name: r.name } : null), () => done('error')); })""",
-             "Flip": """() => new Promise((done) => { SkriblDraftStore.get('flip:draft').then((r) => { try { const d = r && JSON.parse(r.json); done(d ? { music: !!d.music } : null); } catch (e) { done('bad'); } }, () => done('error')); })"""}
+             # Flip keeps the song's bytes beside its draft since the speed fixes
+             # (flip.js musicBlob; 'flip:music'), as the Pad keeps its file.
+             "Flip": """() => new Promise((done) => { SkriblDraftStore.get('flip:music').then((r) => done(r ? { size: r.blob ? r.blob.size : null, name: r.name } : null), () => done('error')); })"""}
     META = "() => { const r = localStorage.getItem('skribl_autosave_v1'); if (!r) return null; const d = JSON.parse(r); return d.musicMeta ? d.musicMeta.name : 'none'; }"
 
     def stored(pg, name, want, ms=8000):
@@ -588,8 +590,8 @@ with sync_playwright() as pw:
                 gone = got["bytes"] is None and got["named"] == "none"
             else:
                 # with no media left the record goes (dropStoredMedia)
-                has = bool(got and got not in ("error", "bad") and got["music"])
-                gone = got is None or (isinstance(got, dict) and not got["music"])
+                has = isinstance(got, dict) and got["size"] == len(SONG["buffer"]) and got["name"] == SONG["name"]
+                gone = got is None
             if (want and has) or (not want and gone):
                 return got, True
             pg.wait_for_timeout(250)

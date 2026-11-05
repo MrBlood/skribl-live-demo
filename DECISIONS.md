@@ -30278,3 +30278,72 @@ suite went red the same way once in two runs ("exact light", 7).
 
 Nothing in the app changed: the tile still fades with the scheme, as it
 should.
+
+## After v330 -- Flip keeps a song as a file, as the Pad does
+
+The owner's yes (Nov 5, "yes do the Flip song fix"): the next step FUTURE 6z
+item 12 named, "Flip keeping a file, as the Pad does, is next."
+
+- TRACED on main, a phone 402 x 874 at 3x, the CPU 4x slower, a two-minute
+  stereo song at 44.1 kHz (21.9 MB; 28 MB as text). Flip kept a song only as
+  text, a data URL, and adding one held the page in long stretches: the text
+  made and handed over (1.1 s), an <audio> element reading the song back out
+  of the text (2.3 s, with no script in it), a paint of 2.5 s, and two
+  autosaves writing all 28 MB again (0.3 and 0.9 s). Over two runs the
+  longest hold was 3.0 to 4.1 s and the blocking 5.7 to 12.3 s in all. Every
+  save after that took 258 to 485 ms of script, a stutter after each stroke;
+  a reload brought the song back at 7.6 to 7.8 s.
+- BUILT: the text stays, since the backup file, a saved draft and the post
+  carry it and every "is there a song" check reads it. Beside it Flip keeps
+  the song's bytes: the file picked, or for a song that came as text, made
+  from the text once (and made again if the text is ever changed by any other
+  way). The <audio> element plays the bytes' own address, the decode reads
+  the bytes off the page, and the autosave keeps them once beside the draft
+  ('flip:music', as the Pad's 'pad:music'), so the draft leaves the text out
+  and each save writes the drawing. A reload reads the bytes and makes the
+  text again for the draft's other readers. A save from before this is read
+  as it was, and its next save moves the song beside the draft. Taking the
+  song away takes its bytes out of the store, and the bin's Undo brings them
+  back with it.
+- MEASURED after, the same two runs each:
+
+                                main             this
+    adding    the longest hold  3.0 - 4.1 s      0.9 - 1.5 s
+              blocking in all   5.7 - 12.3 s     1.9 - 3.6 s
+              the beat shown    5.8 - 11.2 s     3.3 - 6.5 s
+    a save                      258 - 485 ms     7 - 8 ms
+    a reload  the song back     7.6 - 7.8 s      3.9 - 4.1 s
+
+  What still holds the page while a song is added is what the Pad pays too:
+  the song made into text for the post and the drafts (about 0.5 s at this
+  pace) and its bytes written to the store once (0.4 s). The 2.5 s paint went
+  with the <audio> element's text.
+
+THE CHECKS: verify_flipdraft, DRAFT — Flip keeps a song as a file, six rows on
+a real song added by hand: it is played from its bytes (the <audio> element's
+address a blob:) and decoded from them (the page never turns its text into
+bytes); every save writes the drawing and the song's bytes are written once in
+four saves, the draft's text 422 B; a reload brings the same song back from
+its bytes (the same text, both ends), plays it from them and writes it no
+more; taking it away takes its bytes out of the store; an older save, its song
+as text in the draft, comes back and its next save keeps the song as a file.
+Two rows rewritten for it: the full record's (the photo in the draft, the
+song's bytes beside it) and that the draft leaves the song's text out.
+verify_musicundo's Flip bin reads the song's own record, as the Pad's does.
+CALIBRATED, each shown red against its own break: played from its text again
+(both play rows), decoded from its text (the decode row: once), the text in
+every save again (four rows; the draft 1.7 MB), the bytes written on every save
+(four times in four saves), a reload that does not read the bytes (the reload
+rows, both sections), an older save's text not read (its row), the bytes left
+when the song is taken away (its row). With none broken, 28 of 28.
+
+WHAT IT DOES TO THE PAD: nothing; Flip keeps a song the way the Pad already
+did. Both still make the song's text the moment it is added, for the post and
+the drafts: taking that off the moment of adding is the next pass, for both.
+
+THE FOUR: kind (adding a song no longer freezes Flip for seconds, and drawing on
+a Flip with a song no longer stutters at every save); simple, powerful and
+playful unchanged.
+
+Not tested here: a real phone and Safari (no WebKit here). Blob.arrayBuffer
+came in Safari 14; where a browser lacks it the decode reads the text, as before.
