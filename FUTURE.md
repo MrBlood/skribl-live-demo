@@ -1568,8 +1568,9 @@ a mouse desk, the zoom readout and the re-add lines went up; Flip's move-bar
 scope stays 11px at 359px or less, where 12 would make the bar scroll (320 is
 a fallback); the menu's version line, its row note and Flip's add row were
 12px already; the numbered circles and the narrow duration badge never show,
-and the brand tag is drawn now. Left: the Library's rows. Not every rule may
-show; the census that comes with the change says
+and the brand tag is drawn now. **The Library's rows are 12px after v330**
+too (DECISIONS: "The Library's rows at 12px"); its stage's words were 13px
+already. Not every rule may show; the census that comes with the change says
 which do. The idea: every word to 12px, sheet by sheet, mocked first since
 it moves six sheets' look, each with a check like the Post sheet's ("nothing
 painted in the sheet under 12px").
