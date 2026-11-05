@@ -1002,7 +1002,7 @@ body.playback-paused .tap-paused { display: grid; }
   -webkit-backdrop-filter: blur(16px);
   backdrop-filter: blur(16px);
   border: 1px solid var(--hairline);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--text-muted);
   opacity: 0;

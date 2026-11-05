@@ -30083,3 +30083,49 @@ px in one 18 ms frame; with the glide, 246 of 246.
 
 The habit, for any check that reads motion frame by frame: a step is judged
 against the time it took, not the frame it landed in.
+
+## After v330 -- The words that show only in a state, at 12px
+
+The owner's "all yes" (Nov 4): after the three sheets, "the words that only
+show in a state (a save, a zoom, a song, the Library's rows)", each read in
+its state before it changes. This is the editors' half; the Library's rows
+are next.
+
+- READ IN THEIR STATES, both editors, phone and desk. Under 12px: the
+  autosave line on a mouse desk (11px; a touch screen's own rule makes it
+  13), the zoom readout (11), the re-add card's line in the photo and music
+  drawers (11), and Flip's move-bar scope buttons on a screen 359px wide or
+  less (11). Already 12px or more, where FUTURE's list had gone stale: the
+  ⋯ menu's version line (12), its row note (13), Flip's add row (12).
+- NOT RAISED, because nothing shows them: How it works's numbered circles
+  (Ask's home hides them in its grid, and its viewer leaves the number out)
+  and the narrow screen's duration badge (the width that sizes it at 10px
+  also hides it). The brand tag is drawn, not typed, now.
+- KEPT AT 11px, the move-bar scope at 359px or less: at 12 the bar scrolled
+  4 px at 320 with the longest page label Flip can show ("Pages 108-162";
+  verify_move, 81 of 82 in the side-by-side run, a layout measure, not a
+  timing one; 82 of 82 with 11px back). 320 is the first
+  SE, narrower than anything sold, and flip.css calls that width a fallback;
+  every phone from 360 up has 12px there, 13 above 559.
+- BUILT: the three to 12px. The autosave pill grows 3 px (70 to 73 on a
+  desk); the zoom readout's box is unchanged (44 by 30). The autosave rule
+  ships in the player's CSS too, at the same bytes.
+
+THE CHECKS: verify_a11ypages, A11Y 21, beside A11Y 20's 10px words. Pad and
+Flip, phone and desk: a real
+save's line (read once it has faded in, the pill let take the pointer for
+the moment, as it takes none), the zoom readout (the magnifier's own button
+on a desk; shown as a pinch shows it on a phone) and both re-add lines (each
+card shown in its open drawer, as a restore without its file shows it), all
+painted at 12px or more. CALIBRATED, each rule put back alone: the autosave
+line turns the two desk rows red (a phone keeps its 13px), the zoom readout
+and the re-add line all four. With none, 4 of 4. (A fifth row read the move
+bar at 320px and passed with the bar at rest; verify_move's longest label is
+what showed the 4 px, so the row went with the change.)
+
+WHAT IT DOES TO FLIP: shared (the same rules).
+
+THE FOUR: kind (the line saying your drawing is saved is one worth reading),
+simple; powerful and playful unchanged.
+
+Not tested here: Segoe UI and SF, and a real phone's pinch.

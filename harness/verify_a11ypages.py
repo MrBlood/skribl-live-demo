@@ -23,6 +23,8 @@ SECTION 17b — every hover rule sits behind the guard, whatever state would
               show it.
 SECTION 19  — WAVE's error rules find nothing, on every page, fresh or filled.
 SECTION 20  — no words at 10px or under (WAVE's very small text).
+SECTION 21  — the words that show only in a state (a save, a zoom, a re-add
+              card) are 12px or more.
 
 Requires a running server:
     ./harness/run_harness.sh verify_a11ypages.py
@@ -992,6 +994,82 @@ with sync_playwright() as _pw:
               len(_held) == 2 and all(a >= 0 and b >= 0 for a, b in _held), str(_held))
         _ctx.close()
     _b20.close()
+
+print("\nA11Y 21 — the words that show only in a state are 12px or more")
+# The owner's "all yes" (Nov 4): every word to 12px, sheet by sheet, then
+# the words that show only in a state, each read in its state before it
+# changes. Read so, three were under 12px: the autosave line on a mouse
+# desk (11px; a touch screen has 13), the zoom readout (11) and the re-add
+# card's line in the photo and music drawers (11). Each is read here
+# painted, in its state: a real save, the magnifier's real button (a phone
+# pinches for it, so there the readout is shown as the pinch shows it), and
+# the card shown in its open drawer as a restore without its file shows
+# it. Flip's move-bar scope keeps 11px on a screen 359px wide or less: at
+# 12 the bar scrolls 4px at 320 with the longest page label (verify_move),
+# and 320 is the first SE, a fallback. Read and not raised, because
+# nothing shows them: How it works's numbered circles (Ask's home hides
+# them in its grid, and the viewer leaves the number out) and the narrow
+# duration badge (the same width that sizes it hides it).
+with sync_playwright() as _p21:
+    _b21 = _p21.chromium.launch()
+    WORD12 = """(sel) => { const e = document.querySelector(sel); if (!e) return { sel, found: false };
+      const r = e.getBoundingClientRect(), cs = getComputedStyle(e);
+      const at = r.width && r.height ? document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2) : null;
+      return { sel, found: true, px: parseFloat(cs.fontSize), painted: !!at && (at === e || e.contains(at) || at.contains(e)),
+               text: (e.textContent || '').trim().slice(0, 24) }; }"""
+    _phone = dict(viewport={"width": 402, "height": 874}, device_scale_factor=2, is_mobile=True, has_touch=True)
+    _desk = dict(viewport={"width": 1280, "height": 900})
+    for _ed, _path, _canvas in (("Pad", "/skribl-pad", "#canvas"), ("Flip", "/flip", "#pad")):
+        for _size, _view in (("phone", _phone), ("desk", _desk)):
+            _c = _b21.new_context(**_view)
+            _q = _c.new_page()
+            _q.goto(BASE + _path, wait_until="load")
+            _q.wait_for_timeout(1000)
+            _seen = []
+            # A SAVE: the line is read the moment it shows (it fades).
+            # It takes no pointer (a status over a control must not eat the
+            # tap), so the probe lets it take one for the moment it asks what
+            # is painted; and it is asked once its fade-in is done.
+            _q.evaluate("""() => { window.__as = null; const a = document.querySelector('.autosave-status');
+              const read = () => { if (window.__as || !a.classList.contains('show')) return; const pe = a.style.pointerEvents;
+                a.style.pointerEvents = 'auto'; const r = a.getBoundingClientRect(), at = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+                a.style.pointerEvents = pe;
+                window.__as = { sel: '.autosave-status', found: true, px: parseFloat(getComputedStyle(a).fontSize),
+                                painted: !!at && (at === a || a.contains(at)) && parseFloat(getComputedStyle(a).opacity) > 0.5, text: a.textContent.trim().slice(0, 24) }; };
+              new MutationObserver(() => { if (a.classList.contains('show')) setTimeout(read, 400); })
+                .observe(a, { attributes: true, attributeFilter: ['class'] }); }""")
+            _bx = _q.locator(_canvas).bounding_box()
+            _q.mouse.move(_bx["x"] + 60, _bx["y"] + 60)
+            _q.mouse.down()
+            _q.mouse.move(_bx["x"] + 180, _bx["y"] + 130, steps=10)
+            _q.mouse.up()
+            try:
+                _q.wait_for_function("() => window.__as", timeout=8000)
+            except Exception:
+                pass
+            _seen.append(_q.evaluate("() => window.__as") or {"sel": ".autosave-status", "found": False})
+            # A ZOOM: the magnifier's own button where there is one.
+            if _q.is_visible("#magnifyBtn"):
+                _q.click("#magnifyBtn")
+            else:
+                _q.evaluate("() => { document.getElementById('zoomHud').hidden = false; }")
+            _q.wait_for_timeout(400)
+            _seen.append(_q.evaluate(WORD12, "#zoomVal"))
+            _q.evaluate("() => { const h = document.getElementById('zoomHud'); if (h) h.hidden = true; }")
+            # THE RE-ADD CARDS, each in its open drawer.
+            for _which in ("photo", "music"):
+                _q.evaluate("""(w) => { if (typeof openDrawer === 'function') openDrawer(w);
+                  else if (typeof _flipDrawerCtl !== 'undefined') _flipDrawerCtl.open(w);
+                  const c = document.getElementById(w + 'Pending'); if (c) c.hidden = false; }""", _which)
+                _q.wait_for_timeout(600)
+                _q.evaluate("(w) => { const m = document.getElementById(w + 'PendingMeta'); if (m) m.scrollIntoView({ block: 'center' }); }", _which)
+                _q.wait_for_timeout(200)
+                _seen.append(_q.evaluate(WORD12, f"#{_which}PendingMeta"))
+            _small = [s for s in _seen if not s.get("found") or not s.get("painted") or s.get("px", 0) < 12]
+            check(f"{_ed}, {_size}: a save's line, the zoom readout and both re-add lines are painted at 12px or more",
+                  len(_seen) == 4 and not _small, str(_small or [(s["sel"], s["px"]) for s in _seen]))
+            _c.close()
+    _b21.close()
 
 passed = sum(1 for ok, _ in results if ok)
 bad = [n for ok, n in results if not ok]
