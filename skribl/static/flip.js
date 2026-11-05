@@ -6412,10 +6412,13 @@ function forgetMusicBytes(){
   if(musicBlobUrl){ try{ URL.revokeObjectURL(musicBlobUrl); }catch(_){} }
   musicBlobUrl=null; musicBlob=null; musicBlobFor=null;
 }
-// A Blob's bytes as a data URL (a song back from the store, made text again
-// for the draft's other readers).
-function dataURLOf(blob){ return new Promise((resolve, reject)=>{ const r=new FileReader();
-  r.onload=()=>resolve(String(r.result)); r.onerror=()=>reject(r.error||new Error('could not read the song')); r.readAsDataURL(blob); }); }
+// A Blob's bytes as a data URL: a song picked, or back from the store, made
+// text for the draft's other readers. Made off the page (lib/songtext.js, the
+// speed fixes): FileReader made it here, 0.4 s and more at a slower phone's pace.
+function dataURLOf(blob){
+  if(window.SkriblSongText) return window.SkriblSongText.of(blob);
+  return new Promise((resolve, reject)=>{ const r=new FileReader();
+    r.onload=()=>resolve(String(r.result)); r.onerror=()=>reject(r.error||new Error('could not read the song')); r.readAsDataURL(blob); }); }
 function decodeForWaveform(){
   // Same race as Pad's, and worse here: this writes audioDuration and the trim
   // window as well as the buffer, so a superseded decode landing last rewrote
@@ -6503,10 +6506,8 @@ musicInput.addEventListener('change',async e=>{ const file=e.target.files&&e.tar
   if(_seq!==musicSelectionSeq) return;            // superseded or removed mid-decode
   if(_de){ flipReading.music=0; chip(_de); return; }
   musicName=file.name||'';
-  const r=new FileReader();
-  r.onload=()=>{ if(_seq!==musicSelectionSeq) return; flipReading.music=0; setMusic(String(r.result), file); };
-  r.onerror=()=>{ if(_seq!==musicSelectionSeq) return; flipReading.music=0; chip('That audio could not be read.'); };
-  r.readAsDataURL(file); });
+  dataURLOf(file).then((text)=>{ if(_seq!==musicSelectionSeq) return; flipReading.music=0; setMusic(text, file); },
+    ()=>{ if(_seq!==musicSelectionSeq) return; flipReading.music=0; chip('That audio could not be read.'); }); });
 
 /* ---- gapless + crossfaded loop engine (Web Audio, ported from the Pad) --------
    Plays the trimmed [trimStart,trimEnd] region as an AudioBufferSourceNode with

@@ -29,6 +29,9 @@
   'use strict';
 
   var DB_NAME = 'skribl-drafts', STORE = 'media', VERSION = 1;
+  // On a page, or in a worker: this file is its own writer's script (putIdb).
+  var IN_WORKER = typeof document === 'undefined' && typeof self !== 'undefined' && typeof self.importScripts === 'function';
+  var SELF = !IN_WORKER && typeof document !== 'undefined' && document.currentScript ? document.currentScript.src : null;
   var dbPromise = null;
   var liveDb = null;   // the connection dbPromise currently stands for
 
@@ -235,8 +238,73 @@
     return next;
   }
 
-  function putIdb(key, value) {
+  /* A RECORD WITH A FILE IN IT IS WRITTEN OFF THE PAGE (the speed fixes, Nov 5;
+     the owner: "do the song speed for both editors"). Its bytes (BYTES, NOT
+     BLOBS, above) were read and handed to IndexedDB on the page, which takes
+     its copy of them there: a two-minute song's 21.9 MB held a slower phone's
+     page 0.1 to 0.2 s each time one was kept. A worker running this same file
+     reads and writes them, and the page only waits for its answer. Where a
+     worker cannot start, does not answer within a write's own deadlines, or
+     finds the store not answering, it is stopped, taking any write still in it
+     with it (so none can land after a later delete: ONE KEY, ONE QUEUE,
+     below), and the page writes the record, as before. A plain record (a
+     draft's text, the drafts' index) is written here, where it always was,
+     and so is everything on a page with no IndexedDB of its own: what it
+     could never read back is not written for it. */
+  function putHere(key, value) {
     return pack(value).then(function (packed) { return putRaw(key, packed); });
+  }
+  function putIdb(key, value) {
+    var w = !IN_WORKER && !plain(value) && typeof indexedDB !== 'undefined' ? writer() : null;
+    if (!w) return putHere(key, value);
+    return offPage(w, key, value).catch(function (e) {
+      // The writer could not, or the store did not answer it (no answer, a
+      // lost connection: broken(), below), and the page's own may: here, as
+      // before, and nothing more is asked of the writer. A refusal from a
+      // store that answered (a full disk, a value that will not clone) is the
+      // answer, and would be the same here.
+      if (e && (e.skriblNoWriter || broken(e))) { stopWriter(); return putHere(key, value); }
+      throw e;
+    });
+  }
+  var writerW = null, writerGone = false, wseq = 0, wwait = {};
+  function noWriter() { var e = new Error('the writer did not answer'); e.skriblNoWriter = true; return e; }
+  function stopWriter() {
+    writerGone = true;
+    if (writerW) { try { writerW.terminate(); } catch (e) {} writerW = null; }
+    var all = wwait; wwait = {};
+    Object.keys(all).forEach(function (id) { clearTimeout(all[id].timer); all[id].fail(noWriter()); });
+  }
+  function writer() {
+    if (writerW || writerGone) return writerW;
+    if (!SELF || typeof Worker !== 'function') { writerGone = true; return null; }
+    try { writerW = new Worker(SELF); } catch (e) { writerGone = true; return null; }
+    writerW.onmessage = function (e) {
+      var d = e.data || {}, w = wwait[d.id];
+      if (!w) return;
+      delete wwait[d.id]; clearTimeout(w.timer);
+      if (d.ok) { w.ok(true); return; }
+      // The store's own answer, as the page would have had it.
+      var x = d.error || {}, er = new Error(x.message || 'put failed');
+      er.name = x.name || 'Error';
+      if (x.timeout) er.skriblTimeout = true;
+      if (x.open) er.skriblOpen = true;
+      w.fail(er);
+    };
+    writerW.onerror = function (e) { if (e && e.preventDefault) e.preventDefault(); stopWriter(); };
+    return writerW;
+  }
+  function offPage(w, key, value) {
+    return new Promise(function (resolve, reject) {
+      var id = ++wseq;
+      // The writer's own deadlines (an open's, then a write's) answer first.
+      var timer = setTimeout(function () { if (wwait[id]) stopWriter(); }, OPEN_MS + WRITE_MS);
+      wwait[id] = { ok: resolve, fail: reject, timer: timer };
+      // A value that will not go to the writer will not go into the store
+      // either (the same copy is made for both): that refusal is the answer.
+      try { w.postMessage({ id: id, key: key, value: value }); }
+      catch (e) { clearTimeout(timer); delete wwait[id]; reject(e); }
+    });
   }
   function putRaw(key, value) {
     return op('readwrite', function (store, tx, resolve, reject) {
@@ -428,6 +496,17 @@
     if (!health.fails) return 'store answering';
     return 'store ' + (degraded() ? 'NOT answering' : 'answering again') + ', ' + health.fails
       + ' failure(s), last ' + health.last + ', ' + listLs(SHELF).length + ' draft record(s) on the shelf';
+  }
+
+  // The writer (putIdb, above): this file in a worker, writing what the page hands it.
+  if (IN_WORKER) {
+    self.onmessage = function (e) {
+      var d = e.data || {};
+      putHere(d.key, d.value).then(function () { self.postMessage({ id: d.id, ok: true }); }, function (er) {
+        self.postMessage({ id: d.id, error: { name: (er && er.name) || 'Error', message: String((er && er.message) || er),
+          timeout: !!(er && er.skriblTimeout), open: !!(er && er.skriblOpen) } });
+      });
+    };
   }
 
   var api = { put: put, get: get, del: del, keys: keys, degraded: degraded, state: state };
