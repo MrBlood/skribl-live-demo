@@ -420,6 +420,23 @@ let bgImage = null, bgImageObj = null, imageName = '';            // one backgro
 let photoFit = 'cover', photoOpacity = 1, photoBlur = 0, photoZoom = 1;   // image adjustments
 let photoOffX = 0.5, photoOffY = 0.5, photoEnabled = true, reposMode = false;
 let musicData = null, audioEl = null;         // one music loop per animation
+/* THE SONG AS A FILE, BESIDE ITS TEXT (the speed fixes, Nov 5). musicData stays
+   the song as a data URL: the backup file, a saved draft and the post carry it
+   so, and every "is there a song" check reads it. What PLAYS it, DECODES it and
+   KEEPS it in the store is its bytes, a Blob: the file picked, or, for a song
+   that came as text (a draft, a backup), made from the text once. A two-minute
+   song is 28 MB of text, and at a slower phone's pace an <audio> element handed
+   that text held the page 2.3 s reading it back, a decode turned it into bytes
+   again on the page, and every autosave wrote all of it again (0.3 to 0.9 s).
+   The Pad keeps a file the same way (editor_music.js; 'pad:music' in
+   editor_draft.js). */
+let musicBlob = null, musicBlobUrl = null;
+// The text those bytes are, so a song changed by any other way than the ones
+// below (a harness, a later path) is never played or kept as the last one.
+let musicBlobFor = null;
+// The song's bytes in the store ('flip:music'): which Blob, and its write, so a
+// save writes them only when they are not the ones already there or on the way.
+let _musicStoreP = null;
 /* Media the session has LOST — a photo or track whose bytes never landed, kept
    so the same file can be re-added with its settings intact. Declared UP HERE
    with the rest of the media state rather than beside tryRestore(), because
@@ -828,7 +845,9 @@ function serializeFlip(opts){
     editIdx: idx,
     mediaOmitted: ((!withMedia && !!(bgImage || musicData)) || !!(pendingPhotoMeta || pendingMusicMeta)) || undefined,
     bgImage: withMedia ? (bgImage || null) : null,
-    music: withMedia ? (musicData || null) : null,
+    // songText:false, the autosave's: the song's bytes are kept beside the
+    // draft in the store ('flip:music', saveNow), so the draft leaves its text out.
+    music: (withMedia && !(opts && opts.songText === false)) ? (musicData || null) : null,
     photo: bgImage ? { fit:photoFit, opacity:photoOpacity, blur:photoBlur, zoom:photoZoom, offX:photoOffX, offY:photoOffY, enabled:photoEnabled, name:imageName } : (pendingPhotoMeta || null),
     musicMeta: musicData ? { enabled:musicEnabled, trimStart:trimStart, trimEnd:trimEnd, crossfadeMs:loopCrossfadeMs, name:musicName, tempo:musicTempo, cut:loopCutOnSilence } : (pendingMusicMeta || null),
     // writeFrames AFTER the map, never before: genRecipe is keyed on the live
@@ -1066,7 +1085,28 @@ function saveNow(){
       showAutosaveStatus('saved-no-media');
       console.error('[skribl] media spill to IndexedDB timed out after ' + SPILL_TIMEOUT_MS + 'ms');
     }, SPILL_TIMEOUT_MS);
-    SkriblDraftStore.put('flip:draft', { json: JSON.stringify(serializeFlip({ recipes: true })), savedAt: stamp })
+    // THE SONG'S BYTES GO BESIDE THE DRAFT, ONCE (the speed fixes, Nov 5;
+    // musicBlob says why): written when they are not the ones already in the
+    // store or on their way there, and the draft then leaves the song's text
+    // out. A song whose bytes could not be had keeps its text in the draft, as
+    // before. Both writes landing is what makes the media durable.
+    const song = musicData ? musicBytes() : null;
+    let songOp = Promise.resolve();
+    if (song) {
+      if (!_musicStoreP || _musicStoreP.blob !== song) {
+        const mine = { blob: song, promise: null };
+        mine.promise = SkriblDraftStore.put('flip:music', { blob: song, name: musicName, savedAt: stamp })
+          .catch((e) => { if (_musicStoreP === mine) _musicStoreP = null; throw e; });   // the next save tries again
+        _musicStoreP = mine;
+      }
+      songOp = _musicStoreP.promise;
+    } else if (_musicStoreP) {
+      // The song taken away: its bytes leave the store too (a failure here is
+      // not the drawing's; the restore's name check refuses stale bytes anyway).
+      _musicStoreP = null;
+      songOp = SkriblDraftStore.del('flip:music').catch(() => {});
+    }
+    Promise.all([SkriblDraftStore.put('flip:draft', { json: JSON.stringify(serializeFlip({ recipes: true, songText: !song })), savedAt: stamp }), songOp])
       .then(() => { if (settled) return; settled = true; clearTimeout(spillTimer);
                     _mediaSpillState = 'durable';
                     // The session IS fully recoverable now — say so. (Only if
@@ -1157,7 +1197,9 @@ function dropStoredMedia(){
   if(_mediaFetchPending) return;
   if(!_mediaRecordInStore || !window.SkriblDraftStore) return;
   _mediaRecordInStore = false;
+  _musicStoreP = null;
   SkriblDraftStore.del('flip:draft').catch(()=>{});
+  SkriblDraftStore.del('flip:music').catch(()=>{});   // the song's bytes, kept beside it
 }
 // For lib/report.js: the media store as this session sees it.
 window.skriblMediaStoreState = () => 'spill ' + _mediaSpillState;
@@ -1303,6 +1345,7 @@ function applyPayload(d){
   const savedBg = (d.frames[0] && d.frames[0].background) || d.background;
   if (typeof savedBg === 'string' && /^#[0-9a-f]{6}$/i.test(savedBg)) bgColor = savedBg;
   bgImage  = (typeof d.bgImage === 'string' && d.bgImage.slice(0,10) === 'data:image') ? d.bgImage : null;
+  forgetMusicBytes();   // a new document: the last song's bytes were its own
   musicData = (typeof d.music === 'string' && d.music.slice(0,10) === 'data:audio') ? d.music : null;
   musicFresh = false;   // a draft's loop is its own, never Skribl's pick over it
   const ph = d.photo || {};
@@ -1378,6 +1421,9 @@ function tryRestore(){
         // background the app, and the media is gone for good.
         _mediaFetchPending = true;
         const _gen = flipDocGen, _imgSeq = imageSelectionSeq, _musSeq = musicSelectionSeq;
+        // The song's bytes, kept beside the draft since the speed fixes: read
+        // alongside it (a save from before has none, and its draft the text).
+        const songRead = SkriblDraftStore.get('flip:music').catch(() => null);
         SkriblDraftStore.get('flip:draft').then((rec) => {
           if (!rec || !rec.json) return;
           // Another document since the read began: these bytes are not its.
@@ -1410,32 +1456,49 @@ function tryRestore(){
           // NAME against the meta the lite record itself carries — a swapped
           // file has a different name and is refused; same-name bytes from
           // one save earlier are the same file.
-          let touched = false;
-          // ...and a track or photo chosen or removed meanwhile is the user's
-          // newer word on that slot, even before its bytes have landed.
-          if (!musicData && _musSeq === musicSelectionSeq &&
-              typeof full.music === 'string' && full.music.slice(0, 10) === 'data:audio' &&
-              d.musicMeta && full.musicMeta && full.musicMeta.name === d.musicMeta.name) {
-            musicData = full.music;
-            pendingMusicMeta = null; touched = true;
-          }
-          if (!bgImage && _imgSeq === imageSelectionSeq &&
-              typeof full.bgImage === 'string' && full.bgImage.slice(0, 10) === 'data:image' &&
-              d.photo && full.photo && full.photo.name === d.photo.name) {
-            bgImage = full.bgImage;
-            pendingPhotoMeta = null; touched = true;
-          }
-          if (!touched) return;
-          // Mirror the draft-FILE load tail (loadDraftFile below): restore the
-          // image OBJECT and DECODE the audio — without the decode a restored
-          // draft posts the whole sample instead of the cropped loop (measured
-          // there: 3,528,082 B vs 588,082 B for the same 5s loop) and shows a
-          // blank waveform. Then refresh the media UI, or the drawer dots and
-          // re-add cards keep describing the media-less record this replaced.
-          loadBgImageObj(() => { applyBg(); render(); });
-          ensureAudio();
-          if (musicData) decodeForWaveform();
-          fitPad(); buildStrip(); render(); sizeFill(); setBg(bgColor); syncMediaUI();
+          //
+          // The song: its text in the draft (a save from before the speed
+          // fixes), or its bytes beside it ('flip:music', saveNow), made text
+          // again for the draft's other readers. The same name check either way.
+          const songWanted = !!(d.musicMeta && full.musicMeta && full.musicMeta.name === d.musicMeta.name);
+          const songText = (typeof full.music === 'string' && full.music.slice(0, 10) === 'data:audio') ? full.music : null;
+          const songKept = (songWanted && !songText)
+            ? songRead.then((s) => (s && s.blob && s.name === d.musicMeta.name)
+                ? dataURLOf(s.blob).then((t) => ({ blob: s.blob, text: t })) : null).catch(() => null)
+            : Promise.resolve(null);
+          return songKept.then((kept) => {
+            if (_gen !== flipDocGen) return;   // another document while the bytes were read
+            let touched = false;
+            // ...and a track or photo chosen or removed meanwhile is the user's
+            // newer word on that slot, even before its bytes have landed.
+            if (!musicData && _musSeq === musicSelectionSeq && songWanted) {
+              if (songText) {
+                musicData = songText;
+                pendingMusicMeta = null; touched = true;
+              } else if (kept && kept.text.slice(0, 10) === 'data:audio') {
+                forgetMusicBytes(); musicData = kept.text; musicBlob = kept.blob; musicBlobFor = kept.text;
+                _musicStoreP = { blob: kept.blob, promise: Promise.resolve() };   // these bytes are the store's already
+                pendingMusicMeta = null; touched = true;
+              }
+            }
+            if (!bgImage && _imgSeq === imageSelectionSeq &&
+                typeof full.bgImage === 'string' && full.bgImage.slice(0, 10) === 'data:image' &&
+                d.photo && full.photo && full.photo.name === d.photo.name) {
+              bgImage = full.bgImage;
+              pendingPhotoMeta = null; touched = true;
+            }
+            if (!touched) return;
+            // Mirror the draft-FILE load tail (loadDraftFile below): restore the
+            // image OBJECT and DECODE the audio — without the decode a restored
+            // draft posts the whole sample instead of the cropped loop (measured
+            // there: 3,528,082 B vs 588,082 B for the same 5s loop) and shows a
+            // blank waveform. Then refresh the media UI, or the drawer dots and
+            // re-add cards keep describing the media-less record this replaced.
+            loadBgImageObj(() => { applyBg(); render(); });
+            ensureAudio();
+            if (musicData) decodeForWaveform();
+            fitPad(); buildStrip(); render(); sizeFill(); setBg(bgColor); syncMediaUI();
+          });
         }).catch(() => {}).finally(() => { _mediaFetchPending = false; });
       }
     }
@@ -6325,6 +6388,34 @@ function mediaToArrayBuffer(u){
     return r.arrayBuffer();
   });
 }
+// A data URL's own type ('audio/wav' from 'data:audio/wav;base64,...').
+function dataURLType(u){ const c=u.indexOf(','), s=u.indexOf(';');
+  return u.slice(5, s>0 && s<c ? s : c) || 'application/octet-stream'; }
+// The song's bytes (musicBlob, where it is declared, says why): the file
+// picked, or made once from its text and kept.
+function musicBytes(){
+  if(musicBlob && musicBlobFor===musicData) return musicBlob;
+  if(musicBlob) forgetMusicBytes();   // the song changed under them
+  if(typeof musicData!=='string' || musicData.slice(0,5)!=='data:') return null;
+  try{ musicBlob=new Blob([dataURLToArrayBuffer(musicData)], { type:dataURLType(musicData) }); musicBlobFor=musicData; }catch(_){ musicBlob=null; }
+  return musicBlob;
+}
+// What the <audio> element plays: the bytes' own address, never the text.
+function musicSrc(){
+  const b=musicBytes();
+  if(!b) return musicData;
+  if(!musicBlobUrl){ try{ musicBlobUrl=URL.createObjectURL(b); }catch(_){ return musicData; } }
+  return musicBlobUrl;
+}
+// A song gone or replaced: its bytes, and their address, go with it.
+function forgetMusicBytes(){
+  if(musicBlobUrl){ try{ URL.revokeObjectURL(musicBlobUrl); }catch(_){} }
+  musicBlobUrl=null; musicBlob=null; musicBlobFor=null;
+}
+// A Blob's bytes as a data URL (a song back from the store, made text again
+// for the draft's other readers).
+function dataURLOf(blob){ return new Promise((resolve, reject)=>{ const r=new FileReader();
+  r.onload=()=>resolve(String(r.result)); r.onerror=()=>reject(r.error||new Error('could not read the song')); r.readAsDataURL(blob); }); }
 function decodeForWaveform(){
   // Same race as Pad's, and worse here: this writes audioDuration and the trim
   // window as well as the buffer, so a superseded decode landing last rewrote
@@ -6335,7 +6426,11 @@ function decodeForWaveform(){
   try{ if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)(); }catch(_){ return; }
   try{
     // v211 (v210 review F2): retained so shareSkribl can await it — see Pad.
-    window._skriblDecodePending = mediaToArrayBuffer(musicData).then(ab => audioCtx.decodeAudioData(ab)).then(buf=>{
+    // The bytes are read off the page (Blob.arrayBuffer), not turned back from
+    // the song's text on it (musicBlob says why).
+    const bytes=musicBytes();
+    window._skriblDecodePending = ((bytes && typeof bytes.arrayBuffer==='function') ? bytes.arrayBuffer() : mediaToArrayBuffer(musicData))
+      .then(ab => audioCtx.decodeAudioData(ab)).then(buf=>{
       if(_seq !== musicSelectionSeq) return;      // superseded while decoding
       currentAudioBuffer=buf; audioDuration=buf.duration;
       // Default the loop to the FIRST 20s, not the whole file (matches the Pad's
@@ -6366,19 +6461,23 @@ function decodeForWaveform(){
 }
 function ensureAudio(){
   if(musicData && !audioEl){
-    audioEl=new Audio(musicData); audioEl.loop=false;
+    audioEl=new Audio(musicSrc()); audioEl.loop=false;
     audioEl.addEventListener('loadedmetadata',()=>{ if(!audioDuration && isFinite(audioEl.duration)) audioDuration=audioEl.duration;
       if(trimEnd==null || trimEnd>audioDuration) trimEnd=Math.min(audioDuration, trimStart+MAX_LOOP_SECONDS); updateTrimUI(); syncMusicUI(); });
     audioEl.addEventListener('timeupdate',()=>{ const end=trimEnd!=null?trimEnd:audioDuration;
       if(end && audioEl.currentTime >= end-0.02){ audioEl.currentTime=trimStart; } });
   }
 }
-function setMusic(dataURL){ musicData=dataURL; if(audioEl){ try{audioEl.pause();}catch(_){}} audioEl=null;
+// `file`: the song picked, kept as its bytes (musicBlob), retyped from its
+// text when the browser gave it no type.
+function setMusic(dataURL, file){ if(audioEl){ try{audioEl.pause();}catch(_){}} audioEl=null;
+  forgetMusicBytes(); musicData=dataURL;
+  if(file){ musicBlob = file.type ? file : new Blob([file], { type:dataURLType(dataURL) }); musicBlobFor = dataURL; }
   musicEnabled=true; trimStart=0; trimEnd=null; audioDuration=0; loopCrossfadeMs=0; musicTempo=null; loopCutOnSilence=true; currentAudioBuffer=null; musicFresh=true;
   resetMusicView();
   ensureAudio(); decodeForWaveform(); syncMediaUI(); scheduleSave(); }
 function removeMusic(){ musicSelectionSeq++; if(typeof stopLoopPreview==='function') stopLoopPreview(); if(audioEl){ try{audioEl.pause();}catch(_){}} audioEl=null;
-  musicData=null; musicName=''; currentAudioBuffer=null; loopCrossfadeMs=0; musicTempo=null; loopCutOnSilence=false; pendingMusicMeta=null; musicFresh=false;
+  forgetMusicBytes(); musicData=null; musicName=''; currentAudioBuffer=null; loopCrossfadeMs=0; musicTempo=null; loopCutOnSilence=false; pendingMusicMeta=null; musicFresh=false;
   if(typeof setCrossfadeUI==='function') setCrossfadeUI();
   syncMediaUI(); scheduleSave(); }
 function startMusicNative(offset){ ensureAudio(); if(audioEl){ try{ audioEl.currentTime=trimStart+(offset||0); audioEl.play().catch(()=>{}); }catch(_){}} }
@@ -6405,7 +6504,7 @@ musicInput.addEventListener('change',async e=>{ const file=e.target.files&&e.tar
   if(_de){ flipReading.music=0; chip(_de); return; }
   musicName=file.name||'';
   const r=new FileReader();
-  r.onload=()=>{ if(_seq!==musicSelectionSeq) return; flipReading.music=0; setMusic(String(r.result)); };
+  r.onload=()=>{ if(_seq!==musicSelectionSeq) return; flipReading.music=0; setMusic(String(r.result), file); };
   r.onerror=()=>{ if(_seq!==musicSelectionSeq) return; flipReading.music=0; chip('That audio could not be read.'); };
   r.readAsDataURL(file); });
 
@@ -7289,6 +7388,7 @@ let flipBinAgain = false;
 function putMusicBack(k){
   if(musicData || k.gen!==flipDocGen) return;
   musicSelectionSeq++;   // a decode still on its way belongs to another song
+  forgetMusicBytes(); if(k.blob){ musicBlob=k.blob; musicBlobFor=k.data; }   // its bytes come back with it
   musicData=k.data; musicName=k.name; currentAudioBuffer=k.buffer; audioDuration=k.duration; trimStart=k.start; trimEnd=k.end;
   loopCrossfadeMs=k.ms; musicTempo=k.tempo; loopCutOnSilence=k.cut; musicEnabled=k.enabled; audioEl=null; musicFresh=false;
   setCrossfadeUI(); syncMediaUI(); scheduleSave();
@@ -7300,7 +7400,7 @@ function binMusicAgain(){
 }
 musicRemove.addEventListener('click',(e)=>{ e.stopPropagation();
   const kept = (e.isTrusted || flipBinAgain) && musicDrawer && musicData && currentAudioBuffer && audioDuration>0
-    ? { data:musicData, name:musicName, buffer:currentAudioBuffer, duration:audioDuration, start:trimStart, end:trimEnd,
+    ? { data:musicData, blob:musicBlob, name:musicName, buffer:currentAudioBuffer, duration:audioDuration, start:trimStart, end:trimEnd,
         ms:loopCrossfadeMs, tempo:musicTempo, cut:loopCutOnSilence, enabled:musicEnabled, gen:flipDocGen }
     : null;
   removeMusic();

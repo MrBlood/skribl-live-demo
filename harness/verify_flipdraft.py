@@ -47,6 +47,13 @@ check = make_check(results)
 # a decodable file would only add flakiness.
 FAKE_AUDIO = "data:audio/wav;base64," + ("QUJD" * 300000)
 FAKE_IMAGE = "data:image/png;base64," + ("QUJD" * 120000)
+FAKE_AUDIO_BYTES = 300000 * 3   # "QUJD" is "ABC": what the text is, as bytes
+
+# The song's bytes in the store, kept beside the draft since the speed fixes
+# (flip.js musicBlob, saveNow): their size, type and the song's name, or null.
+SONG_STORED = """() => window.SkriblDraftStore.get('flip:music')
+  .then(r => r ? { size: r.blob ? r.blob.size : null, type: r.blob ? r.blob.type : null, name: r.name } : null)
+  .catch(() => 'error')"""
 
 DRAW_AND_SAVE = """(m) => {
   frames = [newFrame()]; idx = 0;
@@ -96,13 +103,15 @@ def clean(page):
     page.evaluate("""() => {
       frames = [newFrame()]; idx = 0;
       musicData = null; musicName = ''; bgImage = null; bgImageObj = null; imageName = '';
+      if (typeof forgetMusicBytes === 'function') { forgetMusicBytes(); _musicStoreP = null; }
       pendingMusicMeta = null; pendingPhotoMeta = null;
       try { buildStrip(); render(); } catch (e) {}
       for (const k of Object.keys(localStorage))
         if (k.indexOf('skribl') === 0) localStorage.removeItem(k);
     }""")
     page.evaluate("() => window.SkriblDraftStore "
-                  "? window.SkriblDraftStore.del('flip:draft').catch(()=>{}) : null")
+                  "? Promise.all([window.SkriblDraftStore.del('flip:draft').catch(()=>{}),"
+                  " window.SkriblDraftStore.del('flip:music').catch(()=>{})]) : null")
     page.wait_for_timeout(300)
     left = page.evaluate("() => (localStorage.getItem('skribl_flip_autosave_v1') || '').length")
     if left:
@@ -147,9 +156,17 @@ with sync_playwright() as p:
                         " hasBg: !!(r && JSON.parse(r.json).bgImage),"
                         " hasMusic: !!(r && JSON.parse(r.json).music),"
                         " claimsOmitted: !!(r && JSON.parse(r.json).mediaOmitted)}))")
-    check("IndexedDB has the full record", rec["present"] and rec["bytes"] > 1_000_000,
-          f"{rec['bytes']:,} B")
-    check("with both media present", rec["hasBg"] and rec["hasMusic"], str(rec))
+    song = page.evaluate(SONG_STORED)
+    # THE SONG IS KEPT AS A FILE (the speed fixes, Nov 5). It was written into
+    # this record as text on every save: a two-minute song's 28 MB, 0.3 to 0.9 s
+    # a save at a slower phone's pace. Its bytes are kept once, beside it.
+    check("IndexedDB has the full record: the photo in the draft, the song's bytes kept beside it",
+          rec["present"] and rec["hasBg"] and isinstance(song, dict) and song["size"] == FAKE_AUDIO_BYTES
+          and song["type"] == "audio/wav" and song["name"] == "track.wav",
+          f"the draft {rec['bytes']:,} B; the song's bytes {song}")
+    check("and the draft leaves the song's text out: a save writes the drawing, not the song",
+          not rec["hasMusic"] and rec["bytes"] < len(FAKE_AUDIO),
+          f"the draft {rec['bytes']:,} B, the song's text {len(FAKE_AUDIO):,} B; {rec}")
     check("and it does not claim its own bytes are missing",
           not rec["claimsOmitted"],
           "pendingPhotoMeta/pendingMusicMeta used to be set on every spill, which "
@@ -234,6 +251,114 @@ with sync_playwright() as p:
           "working or every existing draft loses its media on upgrade")
     check("with the original names", r["imageName"] == "old.png", str(r["imageName"]))
     legacy_page.close()
+
+    # FLIP KEEPS A SONG AS A FILE (the speed fixes, Nov 5; flip.js musicBlob).
+    # A two-minute song is 28 MB of text. At a slower phone's pace an <audio>
+    # element handed that text held the page 2.3 s reading it back, the decode
+    # turned it into bytes again on the page, and every autosave wrote all of
+    # it again. Now the song plays and decodes from its bytes, and a save
+    # keeps them once, beside the draft, as the Pad keeps its file.
+    print("\nDRAFT — Flip keeps a song as a file")
+    import math, struct, tempfile, wave
+    song_path = os.path.join(tempfile.mkdtemp(), "tune.wav")
+    with wave.open(song_path, "wb") as w:   # a real song: 3 s of a tone, 16-bit mono
+        w.setnchannels(1); w.setsampwidth(2); w.setframerate(22050)
+        w.writeframes(b"".join(struct.pack("<h", int(9000 * math.sin(2 * math.pi * 330 * i / 22050))) for i in range(22050 * 3)))
+    song_size = os.path.getsize(song_path)
+    song_page = browser.new_page(viewport={"width": 1000, "height": 800})
+    song_page.on("pageerror", lambda e: errors.append(str(e)))
+    clean(song_page)
+    # Counted from here: the song's text turned back into bytes on the page,
+    # and the song's bytes written to the store.
+    COUNT = """() => { window.__d2ab = 0; window.__songPuts = 0;
+      const d2ab = window.dataURLToArrayBuffer; window.dataURLToArrayBuffer = function () { window.__d2ab++; return d2ab.apply(this, arguments); };
+      const put = SkriblDraftStore.put; SkriblDraftStore.put = function (k) { if (k === 'flip:music') window.__songPuts++; return put.apply(this, arguments); }; }"""
+    DRAFT_TEXT = """() => SkriblDraftStore.get('flip:draft').then(r => r && r.json
+      ? { bytes: r.json.length, music: !!JSON.parse(r.json).music } : null).catch(() => 'error')"""
+
+    def until(pg, expr, ms):
+        """True once `expr` holds, False past `ms`: a broken build reads red, not a stopped run."""
+        try:
+            pg.wait_for_function(expr, timeout=ms)
+            return True
+        except Exception:
+            return False
+
+    def stored_song(pg, want, ms=8000):
+        """The song's record in the store once it is what `want` says (a size, or None)."""
+        got = None
+        for _ in range(ms // 200):
+            got = pg.evaluate(SONG_STORED)
+            if (want is None and got is None) or (isinstance(got, dict) and got["size"] == want):
+                return got
+            pg.wait_for_timeout(200)
+        return got
+
+    song_page.evaluate(COUNT)
+    song_page.set_input_files("#musicInput", song_path)
+    until(song_page, "() => !!currentAudioBuffer && !!audioEl", 20000)
+    got = song_page.evaluate("""() => ({ src: audioEl ? audioEl.src.slice(0, 5) : null,
+      bytes: musicBlob ? musicBlob.size : null, d2ab: window.__d2ab, seconds: currentAudioBuffer ? currentAudioBuffer.duration : 0 })""")
+    check("a song added is played from its bytes, not from its text",
+          got["src"] == "blob:" and got["bytes"] == song_size,
+          f"the <audio> element's address begins {got['src']!r}; the bytes kept {got['bytes']} of {song_size}")
+    check("...and decoded from its bytes: the page never turns its text back into bytes",
+          got["d2ab"] == 0 and abs(got["seconds"] - 3) < 0.05,
+          f"text turned into bytes {got['d2ab']} time(s); decoded {got['seconds']:.2f} s of 3")
+    first = stored_song(song_page, song_size)
+    for _ in range(3):   # three more saves, as three more strokes would make
+        song_page.evaluate("() => saveNow()"); song_page.wait_for_timeout(400)
+    until(song_page, "() => _mediaSpillState === 'durable'", 8000)
+    draft = song_page.evaluate(DRAFT_TEXT)
+    puts = song_page.evaluate("() => window.__songPuts")
+    check("every save writes the drawing; the song's bytes are written once, beside it",
+          isinstance(first, dict) and first["name"] == "tune.wav" and first["type"] == "audio/wav" and puts == 1
+          and isinstance(draft, dict) and not draft["music"] and draft["bytes"] < 50_000,
+          f"the song's bytes {first}, written {puts} time(s) in four saves; the draft {draft}")
+
+    text_was = song_page.evaluate("() => ({ n: musicData.length, head: musicData.slice(0, 64), tail: musicData.slice(-64) })")
+    song_page.reload(wait_until="load")
+    until(song_page, "() => !!currentAudioBuffer && !!musicData && !!audioEl", 20000)
+    song_page.evaluate(COUNT)
+    for _ in range(2):
+        song_page.evaluate("() => saveNow()"); song_page.wait_for_timeout(400)
+    back = song_page.evaluate("""() => ({ name: musicName, n: musicData ? musicData.length : 0, head: musicData ? musicData.slice(0, 64) : null,
+      tail: musicData ? musicData.slice(-64) : null, bytes: musicBlob ? musicBlob.size : null, src: audioEl ? audioEl.src.slice(0, 5) : null,
+      seconds: currentAudioBuffer ? currentAudioBuffer.duration : 0, puts: window.__songPuts })""")
+    check("a reload brings the song back from its bytes: the same song, played from them, and not written again",
+          back["name"] == "tune.wav" and back["n"] == text_was["n"] and back["head"] == text_was["head"] and back["tail"] == text_was["tail"]
+          and back["bytes"] == song_size and back["src"] == "blob:" and abs(back["seconds"] - 3) < 0.05 and back["puts"] == 0,
+          f"{back['name']}, its text {back['n']:,} of {text_was['n']:,} characters, the same at both ends: "
+          f"{back['head'] == text_was['head'] and back['tail'] == text_was['tail']}; bytes {back['bytes']}; "
+          f"played from {back['src']!r}; written {back['puts']} time(s) in two saves")
+
+    song_page.evaluate("() => { removeMusic(); saveNow(); }")
+    gone = stored_song(song_page, None)
+    check("the song taken away takes its bytes out of the store", gone is None, f"the store still holds {gone}")
+    song_page.close()
+
+    # A save from before this change kept the song as text inside the draft in
+    # IndexedDB. It must come back, and the next save keeps it as a file.
+    old_page = browser.new_page(viewport={"width": 1000, "height": 800})
+    old_page.on("pageerror", lambda e: errors.append(str(e)))
+    clean(old_page)
+    lite = dict(legacy, bgImage=None, music=None, photo=None, mediaInIdb=True, mediaOmitted=True,
+                musicMeta=dict(legacy["musicMeta"], name="before.wav"))
+    full = dict(legacy, bgImage=None, photo=None, music=FAKE_AUDIO, musicMeta=dict(legacy["musicMeta"], name="before.wav"))
+    old_page.evaluate("""([lite, full]) => SkriblDraftStore.put('flip:draft', { json: full, savedAt: Date.now() })
+      .then(() => localStorage.setItem('skribl_flip_autosave_v1', lite))""", [json.dumps(lite), json.dumps(full)])
+    old_page.reload(wait_until="load")
+    until(old_page, "() => !!musicData", 10000)
+    r = old_page.evaluate(RESTORED)
+    old_page.evaluate("() => saveNow()")
+    moved = stored_song(old_page, FAKE_AUDIO_BYTES)
+    draft = old_page.evaluate(DRAFT_TEXT)
+    check("an older save, its song as text in the draft, comes back, and the next save keeps the song as a file",
+          r["musicBack"] and r["musicLen"] == len(FAKE_AUDIO) and r["musicName"] == "before.wav"
+          and isinstance(moved, dict) and moved["name"] == "before.wav" and isinstance(draft, dict) and not draft["music"],
+          f"back: {r['musicBack']}, {r['musicLen']:,} of {len(FAKE_AUDIO):,} characters, {r['musicName']!r}; "
+          f"its bytes then {moved}; the draft then {draft}")
+    old_page.close()
 
     check("no page errors anywhere in this suite", not errors, "; ".join(errors[:3]))
     browser.close()
