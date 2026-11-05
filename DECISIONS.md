@@ -30129,3 +30129,36 @@ THE FOUR: kind (the line saying your drawing is saved is one worth reading),
 simple; powerful and playful unchanged.
 
 Not tested here: Segoe UI and SF, and a real phone's pinch.
+
+## After v330 -- The Library's rows at 12px
+
+The owner's "all yes" (Nov 4): the last of the words that show only in a
+state, the Library's rows, read with posts on this device.
+
+- READ WITH POSTS, phone and desk: each row's line ("12 pages · 13 hours
+  ago") was 11px, and a desk row's actions (Copy link, the gallery switch's
+  "Link only" or "In gallery", Copy key) 11.5. The stage's words FUTURE
+  listed at 10.5px (the count's "posted", "Now playing", the kind tag) are
+  13px now, so FUTURE's list had gone stale there too.
+- BUILT: all of them to 12px (posted.css for the line, Copy link and Copy
+  key; the Library's own rules for the gallery switch and Share). Measured
+  with the longest lines a row says ("12 pages · 13 hours ago", "replay · 3
+  weeks ago"): the line stays on one line on a phone (210 px) and a desk,
+  whose line box narrows 327 to 320 as the buttons grow about 2 px each;
+  the actions stay on one line; and the line's mark, nudged for an 11px
+  baseline, sits half a pixel nearer its words (1.5 to 1.0 px above their
+  middle).
+
+THE CHECKS: verify_library, "the rows, with posts": every text the rows lay
+out and show, with a row recorded holding its delete key (as a post through
+the sheet records it), since only such a row shows Copy key and the gallery
+switch; each row's line, Copy link, Copy key and the gallery switch must be
+among what is read, and none under 12px. The first cut read only rows
+without a key, and with Copy key's rule or the switch's put back it stayed
+green: shown so, then fixed. CALIBRATED, each rule put back alone turns the
+row red, naming its word: the line, Copy link, Copy key, "Link only". With
+none, 247 of 247.
+
+Not read here: Share, shown only where the browser has a share sheet
+(headless Chromium has none); its rule went to 12px with the rest.
+Not tested here: Segoe UI and SF.
