@@ -69,6 +69,8 @@ MEASURED = {
     # Not yet measured on CI: the local run, Nov 1, to the nearest ten. CI's
     # own figure replaces it at the next re-measure.
     "verify_letters.py": 110, "verify_text.py": 90,
+    # The local run, Nov 5, beside two others (a worker's 20 s deadline is in it).
+    "verify_songoff.py": 70,
 }
 SMALL = 11          # every other suite: the rest averaged 11 seconds
 

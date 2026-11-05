@@ -30435,9 +30435,10 @@ none broken, 20 of 20.
 
 WHAT IT DOES TO FLIP: the same as the Pad; one module each, both editors.
 
-THE FOUR: kind (adding a song holds either editor about half as long as it
-did, and a song is never lost for want of a worker); simple, powerful and
-playful unchanged.
+THE FOUR: kind (the song's own holds while it is added go from 0.4 - 0.5 s
+to 0.1 - 0.2 s in either editor, the blocking in all down by a third or more,
+and a song is never lost for want of a worker); simple, powerful and playful
+unchanged.
 
 Not tested here: a real phone and Safari (no WebKit here). FileReaderSync and
 IndexedDB in a worker are in Safari 14 and every browser the editors run in;
