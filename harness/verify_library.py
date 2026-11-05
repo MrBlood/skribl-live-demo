@@ -1814,6 +1814,20 @@ with sync_playwright() as _sp4:
     _foot = _p4.evaluate(FOOT_WORDS)
     check("the line under the list, with posts: 'Use a delete key' and 'Clear list' at 12px",
           sorted(w[0] for w in _foot) == ["Clear list", "Use a delete key"] and all(w[1] >= 12 for w in _foot), str(_foot))
+    # AND THE ROWS THEMSELVES (the owner's "all yes": every word to 12px, the
+    # Library's rows last, read with posts): each row's line ("12 pages · 13
+    # hours ago") was 11px, and its actions on a desk, Copy link, In gallery
+    # and Copy key, 11.5. Every text a row lays out and shows is read here.
+    _rows = _p4.evaluate("""() => { const out = [], L = document.getElementById('postedList'); let n = 0, subs = 0, acts = 0;
+      const w = document.createTreeWalker(L, NodeFilter.SHOW_TEXT);
+      for (let t = w.nextNode(); t; t = w.nextNode()) { const e = t.parentElement;
+        if (!t.nodeValue.trim() || !e.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true }) || !e.getClientRects().length) continue;
+        n++; if (e.closest('.posted-sub')) subs++; if (e.closest('.posted-actions button')) acts++;
+        const f = parseFloat(getComputedStyle(e).fontSize);
+        if (f < 12) out.push((e.className || e.tagName) + ' ' + f + 'px ' + JSON.stringify(t.nodeValue.trim().slice(0, 20))); }
+      return { n, subs, acts, small: out, rows: L.querySelectorAll('.posted-row').length }; }""")
+    check("the rows, with posts: each row's line and its actions at 12px or more",
+          _rows["rows"] >= 2 and _rows["subs"] >= _rows["rows"] and _rows["acts"] >= 2 and not _rows["small"], str(_rows))
     _p4.close()
     _b4.close()
 
