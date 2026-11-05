@@ -72,12 +72,9 @@
     return new Promise(function (resolve, reject) {
       var id = ++seq;
       // NOTHING HERE WAITS FOREVER: a worker that has not answered in time
-      // has the text made here (the editors wait on it before a post).
-      var timer = setTimeout(function () {
-        if (!waiting[id]) return;
-        delete waiting[id];
-        onPage(blob).then(resolve, reject);
-      }, ANSWER_MS);
+      // will not do (the editors wait on the text before a post), so what
+      // was asked of it is made here, and nothing more is asked of one.
+      var timer = setTimeout(function () { if (waiting[id]) giveUp(); }, ANSWER_MS);
       waiting[id] = { blob: blob, ok: resolve, fail: reject, timer: timer };
       try { w.postMessage({ id: id, blob: blob }); }
       catch (e) { clearTimeout(timer); delete waiting[id]; onPage(blob).then(resolve, reject); }
