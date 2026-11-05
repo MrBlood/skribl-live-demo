@@ -268,12 +268,19 @@ def set_door(pg, want):
 # is at an end of the row, the smallest step on the card's side edge at the
 # joint (0 is a break in the edge, which a cover the tile's whole width
 # paints). The joint holds still for its photograph: read, photograph, read
-# again, and the photograph counts only when the two reads agree.
+# again, and the photograph counts only when the two reads agree and nothing
+# on the tile or its card is still changing. A change of scheme fades the
+# tile's colours over .15 s (its transition), and a photograph 150 ms after
+# the switch caught the last of the fade: main red after #766, SQLite shard 4,
+# "length dark", a step of 7 at the joint. So each read also asks whether
+# either is still in a transition or an animation.
 JOINT = """(k) => { const t = document.querySelector('#musicDoors .dp-tile[data-dp="' + k + '"]'), p = document.getElementById(t.getAttribute('aria-controls'));
   let a = t.getBoundingClientRect();
   if (a.bottom < 8 || a.bottom > innerHeight - 8) { t.scrollIntoView({ block: 'center', behavior: 'instant' }); a = t.getBoundingClientRect(); }
   const z = p.getBoundingClientRect();
-  return { a: [a.left, a.top, a.right, a.bottom], z: [z.left, z.top, z.right, z.bottom], card: getComputedStyle(p).backgroundColor }; }"""
+  const moving = [t, p].some((e) => { void getComputedStyle(e).backgroundColor;
+    return e.getAnimations().some((x) => x.pending || x.playState === 'running'); });
+  return { a: [a.left, a.top, a.right, a.bottom], z: [z.left, z.top, z.right, z.bottom], card: getComputedStyle(p).backgroundColor, still: !moving }; }"""
 
 
 def seam(pg, k, dpr=1):
@@ -284,7 +291,7 @@ def seam(pg, k, dpr=1):
         x0, y0 = min(a[0], z[0]) - 2, a[3] - 6
         im = Image.open(io.BytesIO(pg.screenshot(clip={"x": x0, "y": y0, "width": max(a[2], z[2]) + 2 - x0, "height": 14}))).convert("RGB")
         j2 = pg.evaluate(JOINT, k)
-        if all(abs(u - v) <= 0.5 for u, v in zip(j["a"] + j["z"], j2["a"] + j2["z"])):
+        if j["still"] and j2["still"] and all(abs(u - v) <= 0.5 for u, v in zip(j["a"] + j["z"], j2["a"] + j2["z"])):
             break
         pg.wait_for_timeout(250)
     card = [int(v) for v in re.findall(r"\d+", j["card"])[:3]]
