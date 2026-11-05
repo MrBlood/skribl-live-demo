@@ -89,7 +89,7 @@ PAD_TRACK_BACK = """() => { const d = document.getElementById('musicTabDot');
 # page can be asked that directly. An init script (QUIET_JS) keeps count of
 # the work it has in flight: timers and intervals, requests and their bodies,
 # IndexedDB, file reads, decodes, image and media loads, chains of animation
-# frames, scrolls. `settle(page, ms)` returns as soon as none of it is due
+# frames, scrolls, and messages to a worker it has not answered yet. `settle(page, ms)` returns as soon as none of it is due
 # inside the old window, fonts are loaded and no finite animation is running.
 #
 # NEVER WEAKER THAN THE SLEEP IT REPLACES. Anything that would have happened
@@ -191,6 +191,24 @@ QUIET_JS = r"""
     if (_r) FileReader.prototype[m] = function () {
       q.busy++; this.addEventListener('loadend', () => { q.busy--; }, { once: true });
       return _r.apply(this, arguments); }; }
+  // WORK HANDED TO A WORKER holds settle until the worker answers (the speed
+  // fixes, Nov 5): a song's text and a file's bytes written moved there from
+  // the file reads and the IndexedDB writes above, and the beat heard before
+  // them. Each message the app posts to one is answered once; a worker that
+  // is stopped, or breaks, owes nothing more.
+  if (window.Worker) { const _W = window.Worker;
+    const W = function () {
+      const w = new _W(...arguments); let owed = 0;
+      const pay = (n) => { const k = Math.min(owed, n); owed -= k; q.busy -= k; };
+      const _pm = w.postMessage, _te = w.terminate;
+      w.postMessage = function () { const r = _pm.apply(this, arguments); owed++; q.busy++; return r; };
+      w.terminate = function () { pay(owed); return _te.apply(this, arguments); };
+      w.addEventListener('message', () => pay(1));
+      w.addEventListener('messageerror', () => pay(1));
+      w.addEventListener('error', () => pay(owed));
+      return w; };
+    W.prototype = _W.prototype;
+    window.Worker = W; }
   // A media or image load holds until it loads or fails, on or off the page.
   const watchSrc = (proto, ok) => {
     const d = Object.getOwnPropertyDescriptor(proto, 'src');

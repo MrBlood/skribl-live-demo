@@ -112,22 +112,19 @@ musicInput.addEventListener('change', async (e) => {
   const url = URL.createObjectURL(file);
   audioEl = new Audio(url);
   audioEl._objectUrl = url;
-  // Keep a base64 copy so drafts can embed the full song
+  // Keep a base64 copy so drafts can embed the full song. Made off the page
+  // (lib/songtext.js, the speed fixes, Nov 5): FileReader made it here, and a
+  // two-minute song's text held a slower phone's page up to 1.9 s.
   const thisAudio = audioEl;
-  const draftReader = new FileReader();
   beginMediaRead();
-  draftReader.onload = () => {
-    try {
-      // Only attach if this is still the same audio object (guards against a
-      // fast remove/replace before the read finished).
-      if (audioEl === thisAudio && thisAudio) thisAudio._draftData = draftReader.result;
-    } finally {
-      endMediaRead();
-    }
-  };
-  draftReader.onerror = () => { endMediaRead(); };
-  draftReader.onabort = () => { endMediaRead(); };
-  draftReader.readAsDataURL(file);
+  const songText = window.SkriblSongText ? window.SkriblSongText.of(file)
+    : new Promise((resolve, reject) => { const r = new FileReader();
+        r.onload = () => resolve(r.result); r.onerror = () => reject(r.error); r.readAsDataURL(file); });
+  songText.then((text) => {
+    // Only attach if this is still the same audio object (guards against a
+    // fast remove/replace before the text was made).
+    if (audioEl === thisAudio && thisAudio) thisAudio._draftData = text;
+  }, () => {}).then(() => { endMediaRead(); });
   audioEl._fileName = file.name;
   audioEl.addEventListener('loadedmetadata', () => {
     audioDuration = audioEl.duration;

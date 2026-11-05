@@ -9,10 +9,11 @@ read a page mid-change -- red for the wrong reason, or green.
 So each kind of work is driven here on a page with nothing else on it, and
 each must hold settle until it is done when it falls inside the window: a
 timer, a chain of timers, a request, a database open and write, a file read,
-a decode, a chain of animation frames, a CSS transition, a smooth scroll.
-Nothing may hold it past the window, which is the old sleep: a timer due
-later, an interval, an animation that never stops, a navigation partway
-through. A quiet page must come back early, or settle saves nothing. until()
+a decode, a chain of animation frames, a CSS transition, a smooth scroll, a
+message to a worker. Nothing may hold it past the window, which is the old
+sleep: a timer due later, an interval, an animation that never stops, a
+navigation partway through, a worker stopped or broken with a message
+unanswered. A quiet page must come back early, or settle saves nothing. until()
 with a window must settle what the sleep would have waited for after its
 state arrives, and a page without the counter gets the plain sleep.
 
@@ -63,6 +64,16 @@ PAGES = {
           const b = document.getElementById('b'); b.style.opacity = '0';
           b.addEventListener('transitionend', () => { window.done = 1; }); }));""",
     "state-then-work": "setTimeout(() => { window.ready = 1; }, 100); setTimeout(() => { window.done = 1; }, 900);",
+    # Work handed to a worker runs no timer, request or file read of the
+    # page's own: the page posts a message and waits for the answer (a
+    # song's text, a file's bytes written, the beat heard).
+    "worker": """const w = new Worker(URL.createObjectURL(new Blob(
+          ['onmessage = (e) => setTimeout(() => postMessage(e.data + 1), 700);'], { type: 'text/javascript' })));
+        w.onmessage = (e) => { window.done = e.data; }; w.postMessage(0);""",
+    "worker-stopped": """const w = new Worker(URL.createObjectURL(new Blob(['onmessage = () => {};'], { type: 'text/javascript' })));
+        w.postMessage(0); setTimeout(() => { w.terminate(); window.done = 1; }, 200);""",
+    "worker-broken": """const w = new Worker(URL.createObjectURL(new Blob(['this is not ( javascript'], { type: 'text/javascript' })));
+        w.onerror = (e) => { e.preventDefault(); window.done = 1; }; w.postMessage(0);""",
     # A smooth scroll runs no timer and no frame of the page's own.
     "smooth-scroll": """document.documentElement.style.scrollBehavior = 'smooth';
         document.body.innerHTML = '<div style="height:20000px"></div>';
@@ -119,10 +130,23 @@ with sync_playwright() as p:
         ms, done = timed(pg, name, 4000)
         check(f"{what}: done before settle returns", bool(done), f"done={done!r} after {ms:.0f} ms")
 
+    # A worker answers on its own clock, so nothing of the page's would hold
+    # settle while it works; and once it has answered, nothing should.
+    ms, done = timed(pg, "worker", 4000)
+    check("a message to a worker, answered 700 ms later: done before settle returns, and let go once it is",
+          done == 1 and ms < 2500, f"done={done!r} after {ms:.0f} ms of 4000")
+
     print("\nNOTHING HOLDS IT PAST THE WINDOW -- the old sleep is the ceiling")
     ms, done = timed(pg, "late-timer", 900)
     check("a timer due after the window does not hold it (the sleep never saw it fire either)",
           ms < 600 and not done, f"{ms:.0f} ms of 900, done={done!r}")
+    # A worker that will never answer owes nothing once it is stopped or broken.
+    ms, done = timed(pg, "worker-stopped", 2500)
+    check("a worker stopped with a message unanswered: let go when it stops, not held to the window",
+          done == 1 and ms < 1200, f"done={done!r} after {ms:.0f} ms of 2500")
+    ms, done = timed(pg, "worker-broken", 2500)
+    check("a worker that breaks with a message unanswered: let go when it breaks, not held to the window",
+          done == 1 and ms < 1200, f"done={done!r} after {ms:.0f} ms of 2500")
     ms, done = timed(pg, "endless-frames", 900)
     check("animation frames that never stop (a replay): held to the window, and no further",
           850 <= ms < 1600, f"{ms:.0f} ms of 900")

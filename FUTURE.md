@@ -1541,9 +1541,16 @@ at 92bc060.
     the longest hold adding the song went from 3 to 4 s to about 1, and a save
     from 258 to 485 ms to 8. What is left is the Pad's too, the song made into
     text the moment it is added (for the post and the drafts), the next pass
-    for both. Was: a two-minute stereo song
-    at phone pace, 3.2 s to decode and 3.9 s to a pick, the page held four
-    times for more than 200 ms (the longest 0.55 s).
+    for both. **Both make it off the page now** (the owner, Nov 5: "do the
+    song speed for both editors"; DECISIONS: "A song's text and its bytes,
+    made and kept off the page"): the text is made in a worker and the bytes
+    written from one, so at that pace adding a two-minute song holds the Pad
+    0.56 s in all where it held 0.94, and Flip 0.73 s where it held 1.06.
+    What is left is Web Audio's own (the decode's end), the waveform's paint
+    and the listening shimmer's frames; and on a reload, reading the bytes
+    back out of the store (0.2 s), the next pass if a phone shows it. Was: a
+    two-minute stereo song at phone pace, 3.2 s to decode and 3.9 s to a
+    pick, the page held four times for more than 200 ms (the longest 0.55 s).
 
 **The finish line (Phase 4), not started:** Skribl inside skribls.net for
 real (a Skribl button in the reply box beside GIF, posts made there carrying
