@@ -30162,3 +30162,25 @@ none, 247 of 247.
 Not read here: Share, shown only where the browser has a share sheet
 (headless Chromium has none); its rule went to 12px with the rest.
 Not tested here: Segoe UI and SF.
+
+## After v330 -- verify_example waits for the Pad to boot (main red after #763 and #764)
+
+Main went red after #763 and again after #764, on one shard, PostgreSQL 4 of
+6: verify_example's click on the Pad's record button timed out at 30 s, the
+button hidden. Neither change touched the example. The suite drew five seconds
+after opening the Pad in the host's composer, and the Pad's 119 files take
+about five seconds to arrive from the example's development server. Drawn
+before app.js had run, the stroke fell on a canvas not yet made (still its
+default 300 x 150), no take began, and the record button, which shows only
+while a take is under way, never came. Here it failed every time, at the last
+commit main ran green (a03d0c6) as well: that run was green on timing alone.
+
+- FIXED, in the suite: it waits for the Pad's own word that it has booted
+  (`__skriblBoot.pad`, set on app.js's last line, read in the frame's window
+  as browsing.goto reads it on a page), then the usual short settle, instead
+  of five seconds. Red without the change (the click times out), 32 of 32
+  with it, twice.
+
+Not changed: how fast the Pad opens in the example. 119 files from Flask's
+development server is a demonstration's pace; a host serves Skribl's static
+files as it serves its own.
