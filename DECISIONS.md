@@ -30255,3 +30255,26 @@ page 2 arrives).
 
 Not tested here: a real iPhone and Safari (no WebKit in this box; CI's WebKit
 smoke runs on main), and SF Pro.
+
+## After v330 -- verify_musicdoors photographs a door's joint only when the tile is still (main red after #766)
+
+Main's run after #766 went red on one shard, SQLite 4 of 6, on a row #766
+did not touch: verify_musicdoors' "no line shows where a door's tile meets
+its group", "length dark", a step of 7 at the joint where 2 is allowed. The
+row switches the scheme, waits 150 ms and photographs the joint, and a change
+of scheme fades the open tile's background and border over .15 s (their
+transition), so the photograph caught the last of the fade. Run here, the old
+suite went red the same way once in two runs ("exact light", 7).
+
+- FIXED, in the suite: each read of the joint also asks whether the tile or
+  its card is still in a transition or an animation, and a photograph counts
+  only when the reads before and after it both say still and agree on where
+  the joint is (the geometry check it had already).
+- CALIBRATED on the doors part, both editors: with the tile's fade ten times
+  slower, the old suite red (steps of 19 to 188) and the new one green; with
+  a real line at the joint (the open tile's bottom border in the card's line
+  colour), the new suite red (steps of 23 to 56); with nothing broken, 20 of
+  20. The whole suite with the fix: 112 of 112, twice.
+
+Nothing in the app changed: the tile still fades with the scheme, as it
+should.
