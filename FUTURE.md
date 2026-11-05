@@ -1504,10 +1504,7 @@ at 92bc060.
    DECISIONS: "Flip's page tools wait for a second page, then stand in
    groups"): one page shows Draw, Duplicate and Blank; a second page glides
    the other eight in, grouped by what they do (Order · Copy · how it plays ·
-   Delete, and New page · Between). A phone's add row waits too (the phone
-   mock, "yes build it but show me how it transitions"; DECISIONS: "Flip's
-   add row on a phone waits for a second page too"): Duplicate and Blank
-   with one page, Tween and Smear growing in with a second. Was: every page
+   Delete, and New page · Between). A phone stays as it was. Was: every page
    tool around the canvas at once, equally important (Left, Right, Copy,
    Draw, Loop, Under, Delete, Duplicate, Blank, Tween, Smear), and most did
    nothing while there was one page.

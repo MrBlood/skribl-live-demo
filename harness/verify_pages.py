@@ -848,8 +848,8 @@ with sync_playwright() as p:
     # them in gliding (read every frame: Draw slides on, no frame a sixth of
     # its way), standing in groups: Order · Copy · how it plays · Delete, and
     # New page · Between. Taking the second page away folds them again. Reduce
-    # Motion: at once. A phone's add row waits too (below).
-    print("\nPAGE TOOLS — one page shows what one page can use; the rest come with a second (in groups on a desk)")
+    # Motion: at once. A phone keeps its own (the ⋯ and its four add buttons).
+    print("\nPAGE TOOLS — on a desk, one page shows what one page can use; the rest come with a second, in groups")
     WAITS = ["pbLeft", "pbRight", "pbCopy", "pbLoop", "pbUnder", "pbDel", "addinbetween", "addtween"]
     STAYS = ["pbDraw", "addcopy", "addblank"]
     # Painted: what is at its middle is it (a disabled button takes no
@@ -933,80 +933,11 @@ with sync_playwright() as p:
           dt > 100 and dn <= 2 and ut > 100 and un <= 2, f"Draw moved in {dn} frames, Duplicate in {un}")
     c.close()
 
-    # A PHONE'S ADD ROW WAITS TOO (the owner's yes to the phone mock, Nov 4).
-    # One page shows Duplicate and Blank; Tween and Smear are not painted and
-    # cannot take focus. A second page grows them in, read every frame:
-    # Duplicate gives them room over many frames, no frame's step a quarter of
-    # its way, and the row's height, the canvas and the strip never move. The
-    # bar's own tools stay in each page's ⋯ (the bar is not shown). At 320px
-    # (Display Zoom) the row is two lines of two and keeps both: Tween and
-    # Smear keep their place on the second, unseen and out of reach with one
-    # page, and fade in, read every frame too.
-    # A QUARTER HERE, NOT A SIXTH: a phone's glide is short (Duplicate gives up
-    # 88 px, against 173 and 290 on a desk) and its steepest frame was 14.5 px,
-    # when a sixth is 14.7; CSS's ease covers up to 19 % of a 200 ms fade in its
-    # steepest frame (the 320 fade's was 18.7 %). A snap is the whole way in one
-    # frame, and a glide four times quicker half of it.
-    PROW = """() => { window.__pr = []; const t0 = performance.now();
-      const tick = (now) => { const w = id => document.getElementById(id).getBoundingClientRect().width;
-        window.__pr.push([now, w('addcopy'), w('addtween'), Math.round(document.querySelector('.addcol').getBoundingClientRect().height),
-          Math.round(document.getElementById('strip').getBoundingClientRect().top), Math.round(document.getElementById('pad').getBoundingClientRect().height),
-          parseFloat(getComputedStyle(document.getElementById('addtween')).opacity) * 100]);
-        if (now - t0 < 900) requestAnimationFrame(tick); }; requestAnimationFrame(tick); }"""
-    PHONE = {"device_scale_factor": 2, "is_mobile": True, "has_touch": True}
-    c, q = tools_page({"viewport": {"width": 402, "height": 874}, **PHONE})
-    one, two = q.evaluate(TOOLS, ["addcopy", "addblank"]), q.evaluate(TOOLS, ["addinbetween", "addtween"])
-    check("phone: one page shows Duplicate and Blank; Tween and Smear wait (not painted, no focus), the bar's tools in each page's ⋯",
-          all(t["painted"] for t in one) and not any(t["painted"] or t["focused"] or t["w"] > 0 for t in two)
-          and q.evaluate("() => getComputedStyle(document.getElementById('pagebar')).display") == "none",
-          f"{[(t['id'], t['painted'], t['w']) for t in one + two]}")
-    q.evaluate(PROW)
-    q.tap("#addcopy")
-    q.wait_for_timeout(1000)
-    g = q.evaluate("() => window.__pr")
-    ut, un, us = glided(g, 1)
-    st, sn, ss = glided(g, 2)
-    still = {k: sorted({row[i] for row in g}) for k, i in (("row", 3), ("strip", 4), ("canvas", 5))}
-    after = q.evaluate(TOOLS, ["addcopy", "addblank", "addinbetween", "addtween"])
-    check("phone: a second page grows Tween and Smear in, Duplicate making room over many frames, none a quarter of its way; "
-          "the row, the canvas and the strip never move",
-          ut > 60 and un >= 8 and us <= ut / 4 and st > 60 and ss <= st / 4 and all(len(v) == 1 for v in still.values())
-          and all(t["painted"] for t in after),
-          f"Duplicate {ut:.0f}px narrower over {un} frames (largest step a frame {us:.1f}); Smear {st:.0f}px wider (largest {ss:.1f}); "
-          f"steady {still}; painted {[t['id'] for t in after if t['painted']]}")
-    q.evaluate("() => delFrame(1)")
-    q.wait_for_timeout(900)
-    two = q.evaluate(TOOLS, ["addinbetween", "addtween"])
-    check("phone: the second page taken away, Tween and Smear wait again",
-          q.evaluate("() => frames.length") == 1 and not any(t["painted"] or t["w"] > 0 for t in two),
-          f"{[(t['id'], t['painted'], t['w']) for t in two]}")
-    c.close()
-
-    c, q = tools_page({"viewport": {"width": 320, "height": 693}, **PHONE})
-    two = q.evaluate(TOOLS, ["addinbetween", "addtween"])
-    q.evaluate(PROW)
-    q.tap("#addcopy")
-    q.wait_for_timeout(1000)
-    g = q.evaluate("() => window.__pr")
-    after = q.evaluate(TOOLS, ["addinbetween", "addtween"])
-    heights = sorted({row[3] for row in g})
-    ot, on, os_ = glided(g, 6)
-    check("phone at 320px: the row keeps its two lines with one page and two, Tween and Smear in their places but unseen and out of "
-          "reach, then fading in over many frames, none a quarter of the way",
-          not any(t["painted"] or t["focused"] for t in two) and all(t["w"] > 60 for t in two) and len(heights) == 1 and heights[0] > 70
-          and ot > 90 and on >= 6 and os_ <= ot / 4 and all(t["painted"] for t in after),
-          f"one page {[(t['id'], t['painted'], t['focused'], t['w']) for t in two]}; row heights {heights}; "
-          f"Smear's opacity {ot:.0f}% over {on} frames (largest step a frame {os_:.1f}); two pages {[(t['id'], t['painted']) for t in after]}")
-    c.close()
-
-    c, q = tools_page({"viewport": {"width": 402, "height": 874}, **PHONE}, reduced_motion="reduce")
-    q.evaluate(PROW)
-    q.tap("#addcopy")
-    q.wait_for_timeout(1000)
-    g = q.evaluate("() => window.__pr")
-    ut, un, _ = glided(g, 1)
-    check("phone, Reduce Motion: a second page brings Tween and Smear at once",
-          ut > 60 and un <= 2, f"Duplicate moved in {un} frames")
+    c, q = tools_page({"viewport": {"width": 402, "height": 874}, "device_scale_factor": 2, "is_mobile": True, "has_touch": True})
+    ph = q.evaluate(TOOLS, ["addcopy", "addblank", "addinbetween", "addtween"])
+    check("phone: one page keeps its four add buttons and its ⋯, as it was",
+          all(t["painted"] for t in ph) and q.evaluate("() => getComputedStyle(document.getElementById('pagebar')).display") == "none",
+          f"{[(t['id'], t['painted']) for t in ph]}")
     c.close()
 
     br.close()
