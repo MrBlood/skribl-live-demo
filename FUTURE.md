@@ -1535,8 +1535,13 @@ at 92bc060.
     took 12.5 to 14.4 s, and the ears hold neither page. What still holds the
     page while a song is added is not the ears: the Pad reading the song into
     its draft (about a third of a second), and Flip keeping a song as 28 MB of
-    text, read in, painted and autosaved (up to about a second a time); Flip
-    keeping a file, as the Pad does, is next. Was: a two-minute stereo song
+    text, read in, painted and autosaved (up to about a second a time).
+    **Flip keeps a file now, as the Pad does** (the owner's yes, Nov 5;
+    DECISIONS: "Flip keeps a song as a file, as the Pad does"): at that pace
+    the longest hold adding the song went from 3 to 4 s to about 1, and a save
+    from 258 to 485 ms to 8. What is left is the Pad's too, the song made into
+    text the moment it is added (for the post and the drafts), the next pass
+    for both. Was: a two-minute stereo song
     at phone pace, 3.2 s to decode and 3.9 s to a pick, the page held four
     times for more than 200 ms (the longest 0.55 s).
 
