@@ -1817,17 +1817,27 @@ with sync_playwright() as _sp4:
     # AND THE ROWS THEMSELVES (the owner's "all yes": every word to 12px, the
     # Library's rows last, read with posts): each row's line ("12 pages · 13
     # hours ago") was 11px, and its actions on a desk, Copy link, In gallery
-    # and Copy key, 11.5. Every text a row lays out and shows is read here.
-    _rows = _p4.evaluate("""() => { const out = [], L = document.getElementById('postedList'); let n = 0, subs = 0, acts = 0;
+    # and Copy key, 11.5. A row shows Copy key and the gallery switch only
+    # where this browser holds its delete key, so one such row is recorded
+    # the way a post through the sheet records it. Every text a row lays out
+    # and shows is read. (Share shows only where the browser has a share
+    # sheet; headless Chromium here has none, so its rule is not read.)
+    _p4.evaluate("""() => { localStorage.setItem('skribl_post_k1', '{"frames":[]}');
+        window.SkriblPosted.add({ id: 'k1', url: '/p#skribl=k1', title: 'Keyed', kind: 'flip', pages: 12, tok: 'key-k1' }); }""")
+    _p4.reload(wait_until="load")
+    _p4.wait_for_timeout(1200)
+    _rows = _p4.evaluate("""() => { const out = [], L = document.getElementById('postedList'); let n = 0, subs = 0, acts = 0, keys = 0, gals = 0;
       const w = document.createTreeWalker(L, NodeFilter.SHOW_TEXT);
       for (let t = w.nextNode(); t; t = w.nextNode()) { const e = t.parentElement;
         if (!t.nodeValue.trim() || !e.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true }) || !e.getClientRects().length) continue;
         n++; if (e.closest('.posted-sub')) subs++; if (e.closest('.posted-actions button')) acts++;
+        if (e.closest('.posted-key')) keys++; if (e.closest('.posted-gallery')) gals++;
         const f = parseFloat(getComputedStyle(e).fontSize);
         if (f < 12) out.push((e.className || e.tagName) + ' ' + f + 'px ' + JSON.stringify(t.nodeValue.trim().slice(0, 20))); }
-      return { n, subs, acts, small: out, rows: L.querySelectorAll('.posted-row').length }; }""")
+      return { n, subs, acts, keys, gals, small: out, rows: L.querySelectorAll('.posted-row').length }; }""")
     check("the rows, with posts: each row's line and its actions at 12px or more",
-          _rows["rows"] >= 2 and _rows["subs"] >= _rows["rows"] and _rows["acts"] >= 2 and not _rows["small"], str(_rows))
+          _rows["rows"] >= 2 and _rows["subs"] >= _rows["rows"] and _rows["acts"] >= 3
+          and _rows["keys"] >= 1 and _rows["gals"] >= 1 and not _rows["small"], str(_rows))
     _p4.close()
     _b4.close()
 
