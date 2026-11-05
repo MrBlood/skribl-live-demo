@@ -1564,8 +1564,9 @@ readout, the pending line, Flip's small + buttons and the music bar's scope
 buttons (11px), with the brand tag and the narrow screen's duration badge at
 10px. **The editors' half is 12px after v330** (DECISIONS: "The words that
 show only in a state, at 12px"): read in their states, the autosave line on
-a mouse desk, the zoom readout, the re-add lines and Flip's move-bar scope at
-320px went up; the menu's version line, its row note and Flip's add row were
+a mouse desk, the zoom readout and the re-add lines went up; Flip's move-bar
+scope stays 11px at 359px or less, where 12 would make the bar scroll (320 is
+a fallback); the menu's version line, its row note and Flip's add row were
 12px already; the numbered circles and the narrow duration badge never show,
 and the brand tag is drawn now. Left: the Library's rows. Not every rule may
 show; the census that comes with the change says

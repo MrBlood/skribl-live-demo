@@ -30101,10 +30101,15 @@ are next.
   (Ask's home hides them in its grid, and its viewer leaves the number out)
   and the narrow screen's duration badge (the width that sizes it at 10px
   also hides it). The brand tag is drawn, not typed, now.
-- BUILT: the four to 12px. The autosave pill grows 3 px (70 to 73 on a
-  desk); the zoom readout's box is unchanged (44 by 30); the move bar at
-  320px still fits ("This page" 63 to 67 px, nothing spills). The autosave
-  rule ships in the player's CSS too, at the same bytes.
+- KEPT AT 11px, the move-bar scope at 359px or less: at 12 the bar scrolled
+  4 px at 320 with the longest page label Flip can show ("Pages 108-162";
+  verify_move, 81 of 82 in the side-by-side run, a layout measure, not a
+  timing one; 82 of 82 with 11px back). 320 is the first
+  SE, narrower than anything sold, and flip.css calls that width a fallback;
+  every phone from 360 up has 12px there, 13 above 559.
+- BUILT: the three to 12px. The autosave pill grows 3 px (70 to 73 on a
+  desk); the zoom readout's box is unchanged (44 by 30). The autosave rule
+  ships in the player's CSS too, at the same bytes.
 
 THE CHECKS: verify_a11ypages, A11Y 21, beside A11Y 20's 10px words. Pad and
 Flip, phone and desk: a real
@@ -30112,13 +30117,13 @@ save's line (read once it has faded in, the pill let take the pointer for
 the moment, as it takes none), the zoom readout (the magnifier's own button
 on a desk; shown as a pinch shows it on a phone) and both re-add lines (each
 card shown in its open drawer, as a restore without its file shows it), all
-painted at 12px or more; Flip on a 320px phone, the move bar's scope buttons
-at 12px with nothing spilling. CALIBRATED, each rule put back alone: the
-autosave line turns the two desk rows red (a phone keeps its 13px), the zoom
-readout and the re-add line all four, the scope buttons the 320px row. With
-none, 5 of 5.
+painted at 12px or more. CALIBRATED, each rule put back alone: the autosave
+line turns the two desk rows red (a phone keeps its 13px), the zoom readout
+and the re-add line all four. With none, 4 of 4. (A fifth row read the move
+bar at 320px and passed with the bar at rest; verify_move's longest label is
+what showed the 4 px, so the row went with the change.)
 
-WHAT IT DOES TO FLIP: shared (the same rules), and Flip's own move bar.
+WHAT IT DOES TO FLIP: shared (the same rules).
 
 THE FOUR: kind (the line saying your drawing is saved is one worth reading),
 simple; powerful and playful unchanged.

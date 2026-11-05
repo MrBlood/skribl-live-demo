@@ -24,7 +24,7 @@ SECTION 17b — every hover rule sits behind the guard, whatever state would
 SECTION 19  — WAVE's error rules find nothing, on every page, fresh or filled.
 SECTION 20  — no words at 10px or under (WAVE's very small text).
 SECTION 21  — the words that show only in a state (a save, a zoom, a re-add
-              card, Flip's move bar at 320px) are 12px or more.
+              card) are 12px or more.
 
 Requires a running server:
     ./harness/run_harness.sh verify_a11ypages.py
@@ -998,14 +998,15 @@ with sync_playwright() as _pw:
 print("\nA11Y 21 — the words that show only in a state are 12px or more")
 # The owner's "all yes" (Nov 4): every word to 12px, sheet by sheet, then
 # the words that show only in a state, each read in its state before it
-# changes. Read so, four were under 12px: the autosave line on a mouse
-# desk (11px; a touch screen has 13), the zoom readout (11), the re-add
-# card's line in the photo and music drawers (11), and Flip's move-bar
-# scope on a screen 359px wide or less (11). Each is read here painted,
-# in its state: a real save, the magnifier's real button (a phone pinches
-# for it, so there the readout is shown as the pinch shows it), the card
-# shown in its open drawer as a restore without its file shows it, and
-# the move bar opened on a 320px phone. Read and not raised, because
+# changes. Read so, three were under 12px: the autosave line on a mouse
+# desk (11px; a touch screen has 13), the zoom readout (11) and the re-add
+# card's line in the photo and music drawers (11). Each is read here
+# painted, in its state: a real save, the magnifier's real button (a phone
+# pinches for it, so there the readout is shown as the pinch shows it), and
+# the card shown in its open drawer as a restore without its file shows
+# it. Flip's move-bar scope keeps 11px on a screen 359px wide or less: at
+# 12 the bar scrolls 4px at 320 with the longest page label (verify_move),
+# and 320 is the first SE, a fallback. Read and not raised, because
 # nothing shows them: How it works's numbered circles (Ask's home hides
 # them in its grid, and the viewer leaves the number out) and the narrow
 # duration badge (the same width that sizes it hides it).
@@ -1068,24 +1069,6 @@ with sync_playwright() as _p21:
             check(f"{_ed}, {_size}: a save's line, the zoom readout and both re-add lines are painted at 12px or more",
                   len(_seen) == 4 and not _small, str(_small or [(s["sel"], s["px"]) for s in _seen]))
             _c.close()
-    # FLIP'S MOVE BAR ON A 320px PHONE: its scope buttons, and nothing spills.
-    _c = _b21.new_context(viewport={"width": 320, "height": 700}, device_scale_factor=2, is_mobile=True, has_touch=True)
-    _q = _c.new_page()
-    _q.goto(BASE + "/flip", wait_until="load")
-    _q.wait_for_timeout(1000)
-    _bx = _q.locator("#pad").bounding_box()
-    _q.mouse.move(_bx["x"] + 60, _bx["y"] + 60)
-    _q.mouse.down()
-    _q.mouse.move(_bx["x"] + 160, _bx["y"] + 110, steps=8)
-    _q.mouse.up()
-    _q.evaluate("() => setTool('artmove')")
-    _q.wait_for_timeout(300)
-    _mb = _q.evaluate("""() => { const bar = document.querySelector('.movebar');
-      const b = [...document.querySelectorAll('.mb-scope button')].map(e => ({ px: parseFloat(getComputedStyle(e).fontSize), over: e.scrollWidth > e.clientWidth + 1 }));
-      return { buttons: b, spills: !bar || bar.scrollWidth > bar.clientWidth + 1 }; }""")
-    check("Flip at 320px: the move bar's scope buttons are 12px or more, and nothing spills",
-          len(_mb["buttons"]) >= 2 and all(x["px"] >= 12 and not x["over"] for x in _mb["buttons"]) and not _mb["spills"], str(_mb))
-    _c.close()
     _b21.close()
 
 passed = sum(1 for ok, _ in results if ok)
