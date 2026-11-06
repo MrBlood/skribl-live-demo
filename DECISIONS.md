@@ -30593,3 +30593,30 @@ rule; Flip's editor has no watching speed. Flip's drafts open the same way.
 
 THE FOUR: kind (no noise, and no question when nothing would be lost); simple
 and powerful unchanged; playful (a time-lapse with its song).
+
+## After v330 -- Text's Speed reaches 16x (the owner's all yes to A)
+
+The owner: "there should be a way to really speed up the text. you don't
+always want the text to be so slow (if you have a lot of text, it takes
+forever)". Measured first: at the old top, 4x, a 35-letter card in Skribl's
+hand took 7.7s, a 100-letter note 21s and the 200 the sheet allows 38s (Print
+3.4s, 9.5s and 17s). The mock "Text, Song and Drafts" offered A, the same
+slider on up to 16x, and B, a slider of seconds instead; the owner said "all
+yes", A.
+
+So the Text sheet's Speed has four more stops past 4x: 6x, 8x, 12x and 16x,
+a replay's own top speed (lib/textwrite.js SPEEDS, the slider's max 12). 1x
+is still the hand's own pace and the sheet still says how long the words will
+take: at 16x the note is 5s, the 200 letters 9s. A speed kept from before is
+the same stop it was (the stops up to 4x did not move).
+
+THE CHECKS: verify_text 9, two rows changed: 16x takes a sixteenth as long as
+1x and a quarter of 4x, and the sheet says "16x · "; - and + stop at 16x and
+1/4x. CALIBRATED, each shown red against its own break: the script's stops
+ending at 4x (both rows), the slider's max left at 8 (both rows). With
+nothing broken, TEXT 9 4 of 4.
+
+WHAT IT DOES TO FLIP: shared; one module and one sheet for both editors.
+
+THE FOUR: powerful (a paragraph in seconds), simple (the slider people know),
+kind (nobody waits through their own note), playful (words that zip on).

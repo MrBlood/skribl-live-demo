@@ -1699,7 +1699,8 @@ have. Mocked on the real Pad (Oct 31 to Nov 1); the owner's answers:
   text alone.
 - **Speed**: a slider, 1/4x to 4x, where 1x is the owner's own pace,
   saying how long the words will take ("there should be a control so you
-  can choose speed").
+  can choose speed"). To 16x since Nov 6 ("there should be a way to really
+  speed up the text"; all yes to A, DECISIONS after v330).
 - **The owner's own font**, drawn on a letter sheet (92 boxes, a second try
   at the nine commonest letters), with Print and Script (single-line OFL
   fonts made for plotters) as extra styles.
