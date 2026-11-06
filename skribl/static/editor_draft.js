@@ -1077,9 +1077,13 @@ function restoreAutosave(data) {
   // "Draft restored" is the offer's to say, once no question is showing: said
   // here at boot it sat on the question's words. The same words Flip says,
   // because it is the same event (v294 audit, finding 5). "Drawing restored"
-  // belongs to Clear's undo, in app.js.
+  // belongs to Clear's undo, in app.js. And a draft on its way from the
+  // Library (?draft=) says nothing of the autosave: that draft is what was
+  // asked for, and the question about it may be showing (lib/savedrafts.js
+  // ask), where "Draft restored" sat on its words too.
+  const draftAsked = /[?&]draft=/.test(location.search);
   if (padSlot) padSlot.offer({
-    restored: !!saved,
+    restored: !!saved && !draftAsked,
     note: (words) => showToast(words, null),
     current: () => (hasContent || strokes.length || redoStack.length) ? JSON.stringify(serializeAutosave()) : null,
     keep: () => window.SkriblSavedDrafts && window.SkriblSavedDrafts.keepShown ? window.SkriblSavedDrafts.keepShown() : false,
@@ -1098,7 +1102,7 @@ function restoreAutosave(data) {
               (e) => { showToast((e && e.message) || 'Couldn’t keep it — it stays waiting', null); return false; });
     }
   });
-  else if (saved) showToast('Draft restored', null);
+  else if (saved && !draftAsked) showToast('Draft restored', null);
 
   // No draft to come back to is a new drawing: it starts on the theme's
   // ground, Paper in the light theme (lib/canvasground.js). A restored draft

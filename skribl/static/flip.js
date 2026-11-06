@@ -6646,6 +6646,8 @@ document.addEventListener('DOMContentLoaded', () => {
     hasContent: () => !nothingToShare() || !!musicData || _mediaFetchPending
       || !!pendingPhotoMeta || !!pendingMusicMeta,
     busy: flipMediaBusy,
+    // ...and media still on its way back (lib/savedrafts.js keepFirst waits for it).
+    pending: () => _mediaFetchPending || !!pendingPhotoMeta || !!pendingMusicMeta || flipMediaBusy(),
     thumbnail: () => { const c=document.createElement('canvas'); c.width=CW; c.height=CH;
       drawFrameTo(c.getContext('2d'), posterPage()); return c; },
     otherUrl: () => { const a=document.getElementById('padBtn'); return a ? a.getAttribute('href') : null; },
@@ -12626,8 +12628,11 @@ refreshPendingCards();
 // files it as it is (a photo or track its tab spilled stays with that tab).
 // "Open it" keeps the animation on screen in Drafts as Save draft would (D2),
 // and "Draft restored" is the offer's to say, once no question is showing.
+// A draft on its way from the Library (?draft=) says nothing of the autosave,
+// as the Pad's does: the question about it may be showing (lib/savedrafts.js).
+const draftAsked = /[?&]draft=/.test(location.search);
 if(flipSlot) flipSlot.offer({
-  restored,
+  restored: restored && !draftAsked,
   note: chip,
   current: () => nothingToShare() && !musicData && !bgImage ? null : JSON.stringify(serializeFlip({ media: false, recipes: true, pack: true })),
   keep: () => window.SkriblSavedDrafts && window.SkriblSavedDrafts.keepShown ? window.SkriblSavedDrafts.keepShown() : false,
@@ -12640,7 +12645,7 @@ if(flipSlot) flipSlot.offer({
             (e) => { chip((e && e.message) || 'Couldn’t keep it — it stays waiting'); return false; });
   }
 });
-else if (restored) chip('Draft restored');
+else if (restored && !draftAsked) chip('Draft restored');
 // A restored animation already near the limit was told so before the reload.
 if (restored && _lengthNote) _lengthNote.prime(window.SkriblPointBudget.docShare(frames));
 window.addEventListener('load', ()=>{ sizeStage(); positionToolSlider(); syncSelBar(); });
