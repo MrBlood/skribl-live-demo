@@ -45,6 +45,14 @@
     return choice === 'fit' ? Math.max(1, (playMs || 0) / FIT_MS) : choice;
   }
 
+  /* THE SONG KEEPS UP BETWEEN HALF AND DOUBLE, and keeps its own speed outside
+     them. At 2x a song pitched up to stay with the drawing is the better
+     trade; at 8x, or a Fit at 94x, it "just sounds like a weird constant
+     noise" (the owner, after the desk test, in a post's player). So past
+     those the song plays as recorded, under the drawing, which still ends
+     it. One rule for the Pad, a link and every post (app.js, inlineplayer.js). */
+  function songRate(r) { return r >= 0.5 && r <= 2 ? r : 1; }
+
   /* The post's `playSpeed`: 'auto', 'drawn', 'fit' or one of RATES. Anything
      else, and a post from before it existed, plays as drawn -- which is
      exactly how every post played until now. */
@@ -389,7 +397,7 @@
   }
 
   global.SkriblReplayLine = {
-    RATES: RATES, FIT_MS: FIT_MS, rate: rate, fromPost: fromPost,
+    RATES: RATES, FIT_MS: FIT_MS, rate: rate, songRate: songRate, fromPost: fromPost,
     drawnMs: drawnMs, words: words, label: label, attach: attach,
     clockMap: clockMap, clock: clock, scrub: scrub
   };

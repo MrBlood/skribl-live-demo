@@ -637,6 +637,42 @@ with sync_playwright() as sp:
     resumed = pg.evaluate("(id) => window.SkriblInline.find(id).state()", id_m)
     check("turning it back on starts it again rather than doing nothing",
           resumed["state"] == "playing", json.dumps(resumed))
+
+    # THE SONG AT SPEED (the owner, after the desk test: at a high speed a
+    # post's song "just sounds like a weird constant noise"). lib/replayline.js
+    # songRate, the Pad's rule: the song keeps up between half and double,
+    # pitched with the drawing, and plays at its own speed past them, from
+    # where it would be had it played from the start at that speed. Read off
+    # each song as it starts: its rate, and where in the clip it starts, from
+    # 1.2s into the drawing.
+    song_at = pg.evaluate("""async (id) => {
+        const p = window.SkriblInline.find(id), seen = [], real = AudioBufferSourceNode.prototype.start;
+        AudioBufferSourceNode.prototype.start = function (when, off) {
+          if (this.loop) seen.push({ rate: this.playbackRate.value, off: off || 0, dur: this.buffer ? this.buffer.duration : 0 });
+          return real.apply(this, arguments); };
+        const out = { rule: [0.25, 0.5, 1, 2, 4, 8, 16, 94].map((r) => window.SkriblReplayLine.songRate(r)) };
+        try {
+          for (const r of [2, 8, 0.25, 1]) {
+            p.seek(1200); p.setRate(r); seen.length = 0; p.play();
+            await new Promise((z) => setTimeout(z, 200));
+            out['x' + r] = seen.length ? seen[0] : null;
+          }
+        } finally { AudioBufferSourceNode.prototype.start = real; }
+        return out; }""", id_m)
+
+    def _song_ok(r):
+        s, sr = song_at.get("x" + str(r)), (r if 0.5 <= r <= 2 else 1)
+        if not s or not s["dur"]:
+            return False
+        want = (1200 / r * sr / 1000 + 0.03 * sr) % s["dur"]
+        return s["rate"] == sr and abs(s["off"] - want) < 0.02
+    check("the rule: a song keeps up between half and double, and keeps its own speed outside them",
+          song_at["rule"] == [1, 0.5, 1, 2, 1, 1, 1, 1], json.dumps(song_at["rule"]))
+    check("a post's song at 2x is pitched with the drawing, from where the drawing is",
+          _song_ok(2) and _song_ok(1), json.dumps({k: song_at.get(k) for k in ("x2", "x1")}))
+    check("...and at 8x and at 1/4x it plays at its own speed, from where it would be had it played "
+          "from the start at that speed: no noise",
+          _song_ok(8) and _song_ok(0.25), json.dumps({k: song_at.get(k) for k in ("x8", "x0.25")}))
     pg.evaluate("() => window.SkriblInline.stopAll()")
     pg.evaluate("() => window.SkriblInline.setSoundOn(false)")
     pg.wait_for_timeout(200)
@@ -1620,7 +1656,16 @@ with sync_playwright() as sp:
     #   post, for every post with music. Spent first: the stop's fallbacks for
     #   a source with no gain of its own, which cannot happen, and a try
     #   around a disconnect, which cannot throw. 76,340 B measured.
-    EMBED_RATCHET = 76_344
+    # RAISED (the owner's "all yes" after the desk test: a post's song past
+    #   2x "just sounds like a weird constant noise"), for one named cost:
+    #   +147 B -- lib/replayline.js songRate, the one rule the Pad and a link
+    #   keep too, and inlineplayer.js asking it: the song pitched with the
+    #   drawing between half and double and at its own speed past them, from
+    #   where it would be, the song's clock kept only while they share a pace.
+    #   WHICH CALLER PAYS: every page that shows a post, for every post with
+    #   music. Spent first: nothing to spend; the rule is one comparison.
+    #   76,487 B measured.
+    EMBED_RATCHET = 76_490
     # THE RATCHET MEASURES DISPLAY, NOT COMPOSE, and the two are separate costs
     # paid by separate pages. Excluded here and measured on its own below:
     #   feed.js          the PREVIEW PAGE's own script (fetch the listing, clone
