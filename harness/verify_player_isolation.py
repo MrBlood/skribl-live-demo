@@ -2001,7 +2001,11 @@ with sync_playwright() as sp:
     # which opens one row of speeds and closes on a pick. The pressed chip and
     # the button's own words must both follow the choice -- aria-pressed is
     # what a screen reader hears, the button's label is what everyone reads.
-    _RATE_GET = """() => [...document.querySelectorAll('#playerLine .rl-chips button')]
+    # The speeds' own chips (data-r): this drawing has a song, so the Song
+    # choice's two sit in the line too, lit by what the song does
+    # (verify_replayspeed, THE SONG'S CHOICE), and read here they were a
+    # second lit chip ("1×,With the drawing").
+    _RATE_GET = """() => [...document.querySelectorAll('#playerLine .rl-chips button[data-r]')]
         .filter(b => b.getAttribute('aria-pressed') === 'true').map(b => b.textContent.trim()).join(',')
         + '|' + document.querySelector('#playerLine .rl-speed').textContent.trim()"""
     def _pick(rate):

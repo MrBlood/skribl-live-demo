@@ -132,32 +132,23 @@
       host.classList.toggle('open', on);
     }
     function update() {
-      var c = o.choice(), p = o.playMs(), d = o.drawnMs ? o.drawnMs() : null;
-      btn.firstChild.textContent = (c === 'fit' ? 'Fit · ' : '') + label(rate(c, p));
+      var c = o.choice(), p = o.playMs(), d = o.drawnMs ? o.drawnMs() : null, r = rate(c, p);
+      btn.firstChild.textContent = (c === 'fit' ? 'Fit · ' : '') + label(r);
       drawn.innerHTML = d ? '<span class="rl-m">Drawn in </span><b>' + words(d) + '</b><span class="rl-m"> · </span>'
         : o.lead ? o.lead() || '' : '';
       skip.hidden = !(d && d - p >= d / 10 && d - p >= 1000);
-      chips.querySelectorAll('button').forEach(function (b) {
-        b.setAttribute('aria-pressed', '' + (b.dataset.r === String(c)));
+      // The speeds lit by the choice, the song's two (data-s) by what it is doing.
+      var s = song && (o.songPick() || (songRate(r) === r ? 'with' : 'own'));
+      host.querySelectorAll('.rl-chips button').forEach(function (b) {
+        b.setAttribute('aria-pressed', '' + (b.dataset.s ? b.dataset.s === s : b.dataset.r === String(c)));
       });
-      if (song) {
-        var r = rate(c, p), s = (o.songPick && o.songPick()) || (songRate(r) === r ? 'with' : 'own');
-        song.querySelectorAll('button').forEach(function (b) { b.setAttribute('aria-pressed', '' + (b.dataset.s === s)); });
-      }
     }
     btn.addEventListener('click', function () { open(chips.hidden); });
-    chips.addEventListener('click', function (e) {
-      var b = e.target.closest('button');
+    // One tap picks and closes, a speed or the song's choice.
+    host.addEventListener('click', function (e) {
+      var b = e.target.closest('.rl-chips button');
       if (!b) return;
-      o.pick(b.dataset.r === 'fit' ? 'fit' : +b.dataset.r);
-      update();
-      open(false);
-      btn.focus();
-    });
-    if (song) song.addEventListener('click', function (e) {
-      var b = e.target.closest('button');
-      if (!b) return;
-      o.pickSong(b.dataset.s);
+      if (b.dataset.s) o.pickSong(b.dataset.s); else o.pick(b.dataset.r === 'fit' ? 'fit' : +b.dataset.r);
       update();
       open(false);
       btn.focus();

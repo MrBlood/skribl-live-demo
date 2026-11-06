@@ -2021,8 +2021,8 @@
           pick: pick,
           song: function () { return !!music; },
           songPick: function () { return songPick; },
-          // As a new speed's (applyRate): a lost audio graph never stops the pill closing.
-          pickSong: function (p) { songPick = p; if (state === 'playing') { try { startAudio(); } catch (e) {} } },
+          // Restarted as a new speed restarts it (applyRate, at the rate it has).
+          pickSong: function (p) { songPick = p; applyRate(rate); },
           playMs: function () { return payload ? totalMs : info ? info.play : 0; },
           drawnMs: function () { return payload ? drawnMs : info ? info.drawn : null; },
           lead: function () {
