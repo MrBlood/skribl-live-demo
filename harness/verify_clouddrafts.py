@@ -669,6 +669,79 @@ try:
               anon.locator("#draftsList .draft-row").count() == 1 and "browser" in aw,
               f"{anon.locator('#draftsList .draft-row').count()} rows; {aw!r}")
 
+        # ---------------------------------------------------------------- 6b
+        print("\n6b — THE SAME DRAFT, UNCHANGED, JUST OPENS")
+        # The owner, after the desk test: "it loads the file, but shows you the
+        # drafts menu over the draft you just picked"; then "all yes". Saved,
+        # then opened from the Library, the editor already holds that draft:
+        # nothing would be replaced, so it opens with no question. Changed
+        # since, it asks, at once. With a photo and a song too: those come back
+        # from the store a moment after the page, and the same drawing waits
+        # for them (lib/savedrafts.js whenSame).
+        SHEET = "() => (e => !!e && !e.hidden && !!e.querySelector('.sdrafts-row.armed'))(document.getElementById('savedDraftsSheet'))"
+
+        def from_library(pg, name, editor):
+            """Open a draft from the Library, as a person does, and see what the editor does: the
+            question (and when it came, from the page's start), or the draft adopted."""
+            browsing.goto(pg, BASE, "/skribl/library#drafts", require_boot=False)
+            pg.locator("#draftsList .draft-row", has_text=name).first.wait_for(timeout=8000)
+            href = pg.locator("#draftsList .draft-row", has_text=name).first.locator(".draft-open").get_attribute("href")
+            pg.locator("#draftsList .draft-row", has_text=name).first.locator(".draft-open").click()
+            pg.wait_for_url("**" + href.split("?")[0] + "*", timeout=10000)
+            asked_at = None
+            for _ in range(45):   # 4.5s: the longest the same drawing waits is 3s
+                if pg.evaluate(SHEET):
+                    asked_at = pg.evaluate("() => Math.round(performance.now())")
+                    break
+                pg.wait_for_timeout(100)
+            ser = "serializeSkribl()" if editor == "pad" else "serializeFlip({ recipes: true })"
+            return {"asked": asked_at is not None, "asked_ms": asked_at, "id": href.split("draft=")[1],
+                    "current": pg.evaluate("() => window.SkriblSavedDrafts.current()"),
+                    "url": pg.evaluate("() => location.pathname + location.search"),
+                    "name": pg.evaluate("() => window.SkriblName ? SkriblName.get() : null"),
+                    "strokes": pg.evaluate("() => " + PRINT.replace("s.frames", "(s.frames || [])") + "(" + ser + ")")}
+
+        # The account's: the Pad holds Composer wave, as just opened.
+        s1 = from_library(pa, "Composer wave", "pad")
+        check("the same draft, unchanged, opened from the Library over itself: the Pad opens it with no question, "
+              "and the next Save updates it",
+              not s1["asked"] and s1["current"] == s1["id"] and s1["name"] == "Composer wave"
+              and s1["url"] == "/skribl/skribl-pad" and canon(s1["strokes"]) == saved_print, str({k: v for k, v in s1.items() if k != "strokes"}))
+        pa.evaluate("() => document.querySelector('.bg-swatch[data-bg=\"#0d0f14\"]').click()")
+        pa.wait_for_timeout(400)
+        s2 = from_library(pa, "Composer wave", "pad")
+        check("...and changed since (a new ground), it asks, at once: within 1.5s of the page",
+              s2["asked"] and s2["asked_ms"] < 1500 and s2["current"] != s2["id"], str({k: v for k, v in s2.items() if k != "strokes"}))
+
+        # This browser's, with a photo and a song, in both editors.
+        _wav_b = __import__("io").BytesIO()
+        with __import__("wave").open(_wav_b, "wb") as _w:
+            _w.setnchannels(1); _w.setsampwidth(2); _w.setframerate(8000)
+            _w.writeframes(b"".join(__import__("struct").pack("<h", int(9000 * __import__("math").sin(i / 9))) for i in range(24000)))
+        SONG6 = {"name": "same.wav", "mimeType": "audio/wav", "buffer": _wav_b.getvalue()}
+        PIC6 = {"name": "same.png", "mimeType": "image/png",
+                "buffer": base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAEAAAAAwCAIAAADVOy4iAAAASElEQVR42u3PQQ0AAAgEoMv+/U9zLTeJBwlIK0Hd4yQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCSkDw8tAAHvTX+YAAAAAElFTkSuQmCC")}
+        mine = b.new_context(viewport={"width": 1180, "height": 900})
+        for ed, path, canvas, photo in (("pad", "/skribl/skribl-pad", "#canvas", "#photoInput"),
+                                        ("flip", "/skribl/flip", "#pad", "#imageInput")):
+            pm = watch(mine.new_page(), "same-" + ed)
+            browsing.goto(pm, BASE, path, require_boot=False); pm.wait_for_timeout(1200)
+            draw(pm, pm.locator(canvas).bounding_box())
+            pm.set_input_files(photo, PIC6); pm.wait_for_timeout(900)
+            pm.set_input_files("#musicInput", SONG6); pm.wait_for_timeout(2200)
+            pm.evaluate("(n) => window.SkriblName && SkriblName.set(n)", "Same " + ed)
+            pm.evaluate("() => window.SkriblSavedDrafts.save()"); pm.wait_for_timeout(900)
+            s3 = from_library(pm, "Same " + ed, ed)
+            check(f"{ed.title()}: the same draft with its photo and song, opened from the Library over itself, opens with no question",
+                  not s3["asked"] and s3["current"] == s3["id"], str({k: v for k, v in s3.items() if k != "strokes"}))
+            if ed == "flip":
+                draw(pm, pm.locator(canvas).bounding_box(), turns=1, n=20); pm.wait_for_timeout(500)
+                s4 = from_library(pm, "Same " + ed, ed)
+                check("Flip: changed since (a stroke), it asks, at once: within 1.5s of the page",
+                      s4["asked"] and s4["asked_ms"] < 1500, str({k: v for k, v in s4.items() if k != "strokes"}))
+            pm.close()
+        mine.close()
+
 
         # ---------------------------------------------------------------- 7
         print("\n7 — WHEN THIS BROWSER'S STORAGE STOPS ANSWERING (v317)")

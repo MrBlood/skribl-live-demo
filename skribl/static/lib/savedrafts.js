@@ -571,17 +571,57 @@
          draft from the Library lands on an editor that may be holding its own
          autosaved drawing, and loading over it lost that drawing without a
          word. So the sheet opens with this draft's row already asking "Tap
-         again -- this replaces...", the question the sheet always asks. */
+         again -- this replaces...", the question the sheet always asks.
+         UNLESS IT IS THIS DRAFT, UNCHANGED (the owner, after the desk test:
+         "it loads the file, but shows you the drafts menu over the draft you
+         just picked"; their "all yes"). Saved, then opened from the Library,
+         the canvas already holds it: nothing would be replaced, so it just
+         opens. */
       if (opts.hasContent && opts.hasContent()) {
-        armOnRender = id;
-        show(null);
-        return;
+        return whenSame(rec.payload).then(function (same) {
+          if (same) { adopt(id, rec); return; }
+          armOnRender = id;
+          show(null);
+        });
       }
       opts.load(rec.payload);
-      opts._current = id;
-      opts._base = rec.updatedAt || null;
-      if (global.SkriblName && rec.title) global.SkriblName.set(rec.title);
+      adopt(id, rec);
     }, function (e) { opts.toast(e.message); });
+  }
+  function adopt(id, rec) {
+    opts._current = id;
+    opts._base = rec.updatedAt || null;
+    if (global.SkriblName && rec.title) global.SkriblName.set(rec.title);
+  }
+  /* WHAT A DRAWING IS, to tell one from another: what the editor would save,
+     less what is stamped when it is saved (the moments editor_post.js leaves
+     out of "unchanged", Flip's savedAt, and the name a Flip without one is
+     given by the minute), with a file known by its size and type. A reloaded
+     draft serialises to exactly what was saved, in both editors, once its
+     photo and song are back (verify_clouddrafts, THE SAME DRAFT). */
+  var STAMPED = { draftId: 1, createdAt: 1, updatedAt: 1, savedAt: 1, title: 1 };
+  var MEDIA = { music: 1, photo: 1, bgImage: 1, musicMeta: 1, photoMeta: 1, mediaOmitted: 1 };
+  function work(p, inkOnly) {
+    return JSON.stringify(p, function (k, v) {
+      if (STAMPED[k] || (inkOnly && MEDIA[k])) return undefined;
+      return (typeof Blob !== 'undefined' && v instanceof Blob) ? { blob: v.size, type: v.type } : v;
+    });
+  }
+  /* A different drawing is told at once. The same drawing whose photo or song
+     is still on its way back from the store (the Pad's lands about 0.1s
+     after the page, Flip's too, and neither says it is busy all that time)
+     is looked at again for 3s at most before it is asked about. */
+  function whenSame(payload) {
+    var want = work(payload), ink = work(payload, true), n = 0;
+    return new Promise(function (done) {
+      (function look() {
+        var now;
+        try { now = opts.serialize(); } catch (e) { done(false); return; }
+        if (work(now) === want) { done(true); return; }
+        if (work(now, true) !== ink || ++n > 30) { done(false); return; }
+        setTimeout(look, 100);
+      })();
+    });
   }
 
   /* ---- a draft row's end (D3) ------------------------------------------ */

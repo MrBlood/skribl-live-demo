@@ -1660,18 +1660,23 @@
       srcNode = ac.createBufferSource();
       srcNode.buffer = buffer;
       srcNode.loop = true;
-      /* A clip at its own rate under a 2x drawing drifts a whole take out of
-       * sync, and a drawing that finishes while its music is halfway through is
-       * worse to watch than a chipmunk. One playback's rate; the stored clip is
-       * untouched. */
-      try { srcNode.playbackRate.value = rate; } catch (e) {}
+      /* THE SONG KEEPS UP BETWEEN HALF AND DOUBLE (lib/replayline.js
+       * songRate, the Pad's rule): pitched with the drawing up to 2x, so a
+       * take stays in step, and at its own speed past that, where a pitched
+       * song "just sounds like a weird constant noise" (the owner, after the
+       * desk test). One playback's rate; the stored clip is untouched. */
+      var sr = RL ? RL.songRate(rate) : rate;
+      try { srcNode.playbackRate.value = sr; } catch (e) {}
       gainNode = fadeIn(ac, srcNode, ac.destination, soundOn() ? 1 : 0);
       /* Where the drawing is, not the clip's top: after a pause, a new speed
-       * or a song decoded after Play, the song carries on in step. */
+       * or a song decoded after Play, the song carries on in step. At its own
+       * speed it is where it would be had it played from the start at that
+       * speed, as the Pad's is. */
       var D = buffer.duration;
       var from = lap + elapsed + (state === 'playing' ? segElapsed() : 0);
-      srcNode.start(gainNode.at, D > 0 ? (from / 1000 + LEAD * rate) % D : 0);
-      if (songClk) songClk.began(ac, from, rate);
+      srcNode.start(gainNode.at, D > 0 ? (from / rate * sr / 1000 + LEAD * sr) % D : 0);
+      // The drawing keeps the song's time only while the two share a pace.
+      if (songClk && sr === rate) songClk.began(ac, from, rate);
     }
 
     function stopAudio() {

@@ -2015,12 +2015,10 @@ function setReplayRate(c, playMs) {
   replayChoice = c;
   return (replayRate = window.SkriblReplayLine ? SkriblReplayLine.rate(c, playMs) : 1);
 }
-// THE MUSIC KEEPS UP BETWEEN HALF AND DOUBLE, and is a bed outside them. At 2x
-// a clip pitch-shifting to stay with the drawing is the better trade (see the
-// player's loop bed); at 16x, or a Fit at 94x, it is a noise, so past those
-// two the clip plays at its own rate and loops under the drawing. The drawing
-// still ends the music (WALL-CLOCK durations everywhere).
-function musicRate() { return replayRate >= 0.5 && replayRate <= 2 ? replayRate : 1; }
+// THE MUSIC KEEPS UP BETWEEN HALF AND DOUBLE, and is a bed outside them
+// (lib/replayline.js songRate, the rule a post's player keeps too). The
+// drawing still ends the music (WALL-CLOCK durations everywhere).
+function musicRate() { return window.SkriblReplayLine ? SkriblReplayLine.songRate(replayRate) : replayRate; }
 // The author's pick for viewers, as loadSkribl() found it ('auto', 'drawn',
 // 'fit' or a rate; undefined on a post from before it existed).
 let authorSpeed;
