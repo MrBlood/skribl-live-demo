@@ -30443,3 +30443,89 @@ unchanged.
 Not tested here: a real phone and Safari (no WebKit here). FileReaderSync and
 IndexedDB in a worker are in Safari 14 and every browser the editors run in;
 where one is missing, the page does the work as before.
+
+## After v330 -- The owner's desk test: a take undone to nothing, a blank base, a canvas that never grew back
+
+The owner tested the checklist (the Skribl Test Checklist page, Nov 6) on a
+Windows desk, the iPhone items included: 17 of 20 worked, and three were off.
+"The biggest issues were with canvas resizing and timing and logistics
+surrounding the text and recording and timing - as well as undo."
+
+- UNDO ALL THE WAY THROUGH A TAKE ("i can undo all the way (even words), but
+  it doesn't get to the home screen"). Reproduced: words or a stroke start a
+  take on a blank canvas, and Undo back to nothing left the take running over
+  the empty canvas, its clock counting and Done showing. Now a take with
+  nothing in it, over an empty canvas, ends as if it never began
+  (unwindEmptyTake, editor_draw.js): no take, the clock at rest, the empty
+  canvas's hint, no Record button. The pinch's own unwinding of a phantom
+  first stroke moved there from app.js (the player never records): it left a
+  Record button standing over the blank canvas, fixed with it.
+- THE WORDS THAT WERE NOT RECORDED ("it does not register the amount of time
+  it took for the letters to write themselves ... I have to manually click
+  record"). Reproduced, and it is the same take's doing: its saves kept the
+  blank canvas the take began on as a base, and a reload read that base as
+  ink left out of any take, so an empty canvas came back as one the Pad
+  thought was drawn on. Words written there, and the strokes after them, were
+  ink in no take (the auto-arm does not fire over such ink, by design), and
+  Record stood over nothing. Saves keep a base only under lines now (the
+  autosave and a file alike); a restore forgets a base saved before that has
+  nothing on it, with nothing drawn since (forgetBlankBase, editor_draft.js),
+  so the owner's own autosave from the test comes back fresh. A base with ink
+  in it stays ink.
+- RECOLOR "doesn't recolor after text and undo": lib/recolor.js works on the
+  lines of a take, and those strokes were in none. With the two above it finds
+  them. (On a desk it lights the line under the mouse and shows no lens, by the
+  owner's choice of the hover-to-light mock; the lens is for a finger.)
+- THE CANVAS THAT NEVER GREW BACK (a draft opened with the music drawer open
+  "shrinks because of open drawer, then when closed drawer - it stays small";
+  a new 4:3 Pad "just never goes back to be as big as it can be"). Measured on
+  a 1536 x 864 desk: opening a drawer only scrolls the page and the canvas
+  keeps its 682px, but a fit that ran while one was open gave the canvas only
+  the room it left -- 423px with the music drawer, 345 with the draw drawer,
+  331 with Tune, 204 x 363 of 378 x 672 on a phone with Tune -- and nothing
+  fit it again when it closed. A fit runs when a draft or a New Skribl is laid
+  out, the window is resized, or a phone's toolbar slides away. The Pad's fit
+  now measures the room as it is with them shut (editor_bar.js, drawersAside):
+  the drawers below the dock lifted out of the page's flow for the measuring
+  and put back before anything paints, and Tune's height given back (lifting
+  it took its 10px tuck under the header too). Flip had the same, 24px of it:
+  its stage took off an open drawer's content but not the room under the
+  drawer's last row that the container wears only while one is open
+  (flip.css); it takes off all of it now, against the container as last seen
+  with nothing open.
+
+THE CHECKS: verify_emptytake (new), 12 rows: a stroke's and words' take
+undone to nothing end, the next stroke starts a fresh take (its first point
+at 1 to 3 ms, where the old take's clock was past 3 s), Redo brings the words
+back to watch; a reload after it is fresh, words written then are recorded,
+a stroke joins their take and Recolor finds it; a save of an empty canvas
+keeps no base; an autosave and a file holding a blank base come back fresh,
+and one with ink in its base comes back as ink; a second finger on a blank
+canvas leaves no take and no Record button. verify_drawerfit (new), 7 rows:
+the Pad's canvas through a draft opened, and a window resized, with the music
+drawer, the draw drawer or Tune open (Tune on a phone too), and Flip's with
+the music and draw drawers.
+CALIBRATED, each shown red against its own break. verify_emptytake: no
+unwinding on Undo (the four Undo rows), the base saved again (its row),
+nothing forgotten on a restore (the autosave's and the file's rows), a
+forgetting that drops any base (the ink row), the file's or the autosave's
+forgetting left out (each its row), the pinch not unwinding (its row), the
+unwinding leaving Record shown (the pinch row: the old pinch's own fault);
+the old build's three together red ten of twelve, the reload, the words and
+Recolor among them, "the stroke's colour None -> None". verify_drawerfit: no
+drawers aside (five rows), the drawers not lifted (three), Tune's height not
+given back (two), Flip's old subtraction (two). A row that a field in a drawer
+keeps its focus through the fit could not be shown red here (Chromium gives
+the focus back even to a field hidden and shown in one task) and was dropped.
+With none broken, 12 of 12 and 7 of 7. The player's JavaScript went down 276
+B (160,337 to 160,061) and its ratchet with it.
+
+WHAT IT DOES TO FLIP: the fit, the same rule in both editors. Flip has no
+takes, so the first three are the Pad's alone.
+
+THE FOUR: kind (Undo all the way is a fresh start, words and strokes are
+always in the drawing's replay, and the canvas stays as big as the window
+allows); simple, powerful and playful unchanged.
+
+Not tested here: the owner's iPhone (the checklist's iPhone items were run on
+a desk this time) and Safari (no WebKit here).

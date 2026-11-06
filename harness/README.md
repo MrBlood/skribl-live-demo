@@ -755,6 +755,26 @@ stays a sleep.
   cannot make the text and where its store does not answer; and on the Pad,
   where a worker never answers, after its 20 s. Each row was shown red by its
   own break.
+- `verify_emptytake.py` — a take with nothing in it ends, and a blank base is
+  not ink (the owner's desk test: "i can undo all the way (even words), but
+  it doesn't get to the home screen", then words and strokes not recorded
+  until Record was pressed): a stroke's take and words' take undone to
+  nothing leave the Pad as it opened (no clock, no Done or Record, the empty
+  canvas's hint), the next stroke starts a fresh take, Redo brings the words
+  back to watch; a reload after it is fresh, words written then are recorded,
+  a stroke joins their take and Recolor finds it; a save of an empty canvas
+  keeps no base; an autosave or a file holding a blank base (an old build's)
+  comes back fresh and one with ink in its base comes back as ink; a second
+  finger on a blank canvas leaves no take and no Record button. Each row was
+  shown red by its own break, and all of them by the old build's three.
+- `verify_drawerfit.py` — the canvas is the size it would be with every
+  drawer shut, whenever it is fit (the owner's desk test: a draft opened with
+  the music drawer open "shrinks because of open drawer, then when closed
+  drawer - it stays small"): on the Pad a draft opened with the music drawer
+  open, and the window resized with the music drawer, the draw drawer or Tune
+  open (desk, and Tune on a phone), keep the canvas its size, and shutting
+  them leaves it there; on Flip the same for the music and draw drawers. Each
+  row was shown red by its own break.
 - `verify_musictimeline.py` — step 2 of the music plan (the owner: "Yes on
   all"), on the Pad and on Flip: the timeline (lib/musictimeline.js) is the
   drawer's one view, the drawing's lane over the song, two handles and the
