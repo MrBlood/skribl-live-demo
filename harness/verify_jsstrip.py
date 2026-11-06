@@ -344,9 +344,12 @@ with sync_playwright() as sp:
     # owner's desk test, Nov 6): the pinch's unwinding moved to editor_draw.js,
     # -276 B (160,061 measured). And RAISED, in both places together, by the
     # song's one rule (the owner's "all yes": a post's song keeps its own speed
-    # past 2x), +64 B, lib/replayline.js songRate (160,125 measured).
+    # past 2x), +64 B, lib/replayline.js songRate (160,125 measured). And
+    # RAISED, in both places together, by the Song choice with the speeds (the
+    # owner's "all yes" to A of "Text, Song and Drafts"), +762 B:
+    # lib/replayline.js +581, app.js +181 (160,887 measured).
     check("stripping keeps the player's JS under its ratchet",
-          lean_total <= 160_128,
+          lean_total <= 160_890,
           f"{src_total:,} B of source -> {lean_total:,} B parsed")
     # THE MODULE ONLY A RECOLOURED DRAWING FETCHES (lib/recolorplay.js, by
     # app.js on the link page and inlineplayer.js in a post): its own pin, so
@@ -450,7 +453,12 @@ with sync_playwright() as sp:
     # (FUTURE 6z item 11): the stroke compositor's box and its clipped
     # present, all app.js. The line is now 6,913 B over 153,800; the carve
     # named above is still the first candidate.
-    _target = 160_738
+    #
+    # AND 762 B MORE, IN WRITING, at the owner's "all yes" to A of "Text,
+    # Song and Drafts": the Song choice with the speeds (lib/replayline.js
+    # +581, app.js +181). The line is now 7,700 B over 153,800; the carve
+    # named above is still the first candidate.
+    _target = 161_500
     _margin = _target - lean_total
     check(f"REACHES the {_target:,} target (strip + whitespace collapse; 153,800 once its debt is paid)",
           lean_total <= _target,
@@ -563,7 +571,11 @@ with sync_playwright() as sp:
     # AND 677 B MORE, IN WRITING, at the same "all yes": the caption at two
     # lines and its more, and the way back's chevron. Spent value and 25 B
     # again.
-    _css_target = 43_043
+    #
+    # AND 440 B MORE, IN WRITING, at the owner's "all yes" to A of "Text,
+    # Song and Drafts": the Song choice's pill on the link page, whole on one
+    # line from a 320px phone up. Spent value and 25 B again.
+    _css_target = 43_483
     check(f"the player's stylesheet is served stripped, under the {_css_target:,}-byte target (40,000 once its debt is paid)",
           _href is not None and 0 < len(_served_css) <= _css_target and len(_served_css) < len(_raw_css),
           f"{len(_served_css):,} B served of {len(_raw_css):,} B on disk")
