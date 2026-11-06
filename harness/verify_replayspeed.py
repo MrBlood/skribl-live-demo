@@ -1413,8 +1413,27 @@ with sync_playwright() as p:
         return pg.evaluate(LAST)
 
     def placed(m, gap, edge=15.5):
-        ok = bool(m.get("shown")) and abs(m["gap"] - gap) <= 1 and m["edge"] >= edge and m["one"] and m["inside"] and m["px"] >= 12
+        ok = (bool(m.get("shown")) and (gap is None or abs(m["gap"] - gap) <= 1) and m["edge"] >= edge
+              and m["one"] and m["inside"] and m["px"] >= 12)
         return ok, json.dumps(m)
+
+    def placed_faces(pg, sel, gap):
+        """placed(), in the page's own face and in each of Inter, Liberation Sans,
+        FreeSans and DejaVu Sans that is here (THE PILL'S ENDS' faces, and
+        DejaVu's too). CI draws a post's words in DejaVu Sans, system-ui on
+        Linux, and at 320 there a choice spilled out of its pill (main red after
+        #776) while this box, drawing in Inter, saw it whole."""
+        faces = [None] + pg.evaluate(HAVE, FACES + ["DejaVu Sans"])
+        pg.evaluate("(s) => document.querySelector(s + ' .rl-speed').click()", sel); pg.wait_for_timeout(350)
+        good, said = True, []
+        for f in faces:
+            pg.evaluate(FORCE, [sel, f]); pg.wait_for_timeout(150)
+            ok, why = placed(pg.evaluate(SONG, sel), gap)
+            good = good and ok
+            said.append(f"{f or 'its own face'}: " + ("ok" if ok else why))
+        pg.evaluate(FORCE, [sel, None])
+        pg.evaluate("(s) => document.querySelector(s + ' .rl-speed').click()", sel); pg.wait_for_timeout(150)
+        return good and len(faces) >= 3, f"{len(faces)} faces; " + "; ".join(said)
 
     def pad(vw, vh, touch, song=True):
         ctx = b.new_context(viewport={"width": vw, "height": vh}, is_mobile=touch, has_touch=touch)
@@ -1475,14 +1494,13 @@ with sync_playwright() as p:
     # A 320px phone: the line's and Tune's, whole on one line, their words 12px or more.
     ctx, pg = pad(320, 640, True)
     speed(pg, "#padLine", 8)
-    ok, said = placed(song_open(pg, "#padLine"), 14)
-    check("[320] the Pad's line: the Song choice whole, on one line and on the screen, its words 12px or more", ok, said)
+    ok, said = placed_faces(pg, "#padLine", 14)
+    check("[320] the Pad's line: the Song choice whole, each choice on one line and on the screen, its words 12px or more, in each face", ok, said)
     pg.click("#playBtn"); pg.wait_for_timeout(300)
     pg.click("#tuneBtn"); pg.wait_for_timeout(600)
     pg.evaluate("() => document.getElementById('tuneSpeedRow').scrollIntoView({block: 'center'})"); pg.wait_for_timeout(300)
-    m = song_open(pg, "#tuneSpeed")
-    check("[320] Tune's Watching speed row: the Song choice with its speeds, whole and on one line in its row",
-          bool(m.get("shown")) and m["one"] and m["inside"] and m["edge"] >= 15.5 and m["px"] >= 12, json.dumps(m))
+    ok, said = placed_faces(pg, "#tuneSpeed", None)
+    check("[320] Tune's Watching speed row: the Song choice with its speeds, whole, each choice on one line in its row, in each face", ok, said)
     ctx.close()
     # A desk: the pill beside Play, and the pick said in all three places.
     ctx, pg = pad(1280, 860, False)
@@ -1516,7 +1534,7 @@ with sync_playwright() as p:
             pg.wait_for_function("() => window.__songs.length > 0", timeout=15000)
             speed(pg, "#playerLine", 8)
             m = song_open(pg, "#playerLine")
-            ok, said = placed(m, 14)
+            ok, said = placed(m, 14) if vw == 402 else placed_faces(pg, "#playerLine", 14)
             if vw == 402:
                 got, closed = song_pick(pg, "#playerLine", "with")
                 at4 = speed(pg, "#playerLine", 4)
@@ -1527,7 +1545,7 @@ with sync_playwright() as p:
                 check("[402] ...With the drawing plays its song at 8x at once and holds at 4x; Normal speed at 2x plays it at its own",
                       got == 8 and at4 == 4 and own == 1, f"with at 8x: {got}; at 4x: {at4}; normal at 2x: {own}")
             else:
-                check("[320] a link page: the Song choice whole, on one line and on the screen, its words 12px or more", ok, said)
+                check("[320] a link page: the Song choice whole, each choice on one line and on the screen, its words 12px or more, in each face", ok, said)
             ctx.close()
         ctx = b.new_context(viewport={"width": 402, "height": 874}, is_mobile=True, has_touch=True)
         pg = ctx.new_page()
@@ -1548,7 +1566,7 @@ with sync_playwright() as p:
             pg.wait_for_function("() => window.__songs.length > 0", timeout=15000)
             speed(pg, box, 8)
             m = song_open(pg, box)
-            ok, said = placed(m, 14)
+            ok, said = placed(m, 14) if vw == 402 else placed_faces(pg, box, 14)
             if vw == 402:
                 got, closed = song_pick(pg, box, "with")
                 at4 = speed(pg, box, 4)
@@ -1564,7 +1582,7 @@ with sync_playwright() as p:
                 m = song_open(pg, nb)
                 check("[402] a post with no song: the speeds open alone", m == {"shown": False}, json.dumps(m))
             else:
-                check("[320] a post: the Song choice whole, on one line and on the screen, its words 12px or more", ok, said)
+                check("[320] a post: the Song choice whole, each choice on one line and on the screen, its words 12px or more, in each face", ok, said)
             ctx.close()
     else:
         check("[the song's choice] the drawings posted", False, f"{_sp} {_st4} {_pn}")
