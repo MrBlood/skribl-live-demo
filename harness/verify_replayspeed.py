@@ -1483,10 +1483,12 @@ with sync_playwright() as p:
     check("[1280] the Pad's desk pill: the Song choice opens 8px under the speeds, Normal speed lit at 8x",
           ok and m["lit"] == ["Normal speed"], said)
     got, closed = song_pick(pg, "#padSpeed", "with")
+    ml = song_open(pg, "#padLine")
     pg.click("#tuneBtn"); pg.wait_for_timeout(600)
     m = song_open(pg, "#tuneSpeed")
-    check("[1280] With the drawing picked there plays the song at 8x, and Tune's row says so too",
-          got == 8 and m.get("lit") == ["With the drawing"], f"song at {got}; Tune lit {m.get('lit')}")
+    check("[1280] With the drawing picked there plays the song at 8x, and the line under the drawing and Tune's row say so too",
+          got == 8 and ml.get("lit") == ["With the drawing"] and m.get("lit") == ["With the drawing"],
+          f"song at {got}; the line lit {ml.get('lit')}; Tune lit {m.get('lit')}")
     pg.click("#tuneBtn"); pg.wait_for_timeout(300)
     # This drawing, song and all, posted for the link page and the feed.
     pg.wait_for_function("() => { const f = serializeSkribl().frames[0]; return !!(f.music && typeof f.music.data === 'string'); }", timeout=20000)
