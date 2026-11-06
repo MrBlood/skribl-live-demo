@@ -235,7 +235,12 @@ undoBtn.addEventListener('click', () => {
   // A colour still running along a line ends where it was going: the drawing
   // under it has just changed (lib/recolor.js).
   if (window.SkriblPadRecolor) SkriblPadRecolor.settle();
-  syncStateAfterHistoryChange(prev.hasContent === undefined ? strokes.length > 0 : prev.hasContent);
+  // A take undone to nothing ends there (unwindEmptyTake, editor_draw.js): an
+  // empty canvas with nothing in its take is a fresh one. Before the sync, so
+  // the header it lays out is the fresh Pad's.
+  const restored = prev.hasContent === undefined ? strokes.length > 0 : prev.hasContent;
+  if (recording && !strokes.length && !restored) unwindEmptyTake();
+  syncStateAfterHistoryChange(restored);
   if (undoStack.length === 0) undoBtn.disabled = true;
 });
 

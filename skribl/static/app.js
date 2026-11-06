@@ -227,6 +227,8 @@ function layoutEditorCanvas() {
   // shrink it: zoomed to 150% without a reload, the dock went 102px past the
   // bottom of the screen (L3). The size set below is the only one painted.
   canvasWrap.style.height = '0px';
+  // As if no drawer were open below the dock (editor_bar.js, drawersAside).
+  const aside = window._skriblDrawersAside ? _skriblDrawersAside() : null;
   const area = areaEl.getBoundingClientRect();
   // Subtract the padding. getBoundingClientRect() reports the BORDER box, so
   // the breathing room .canvas-area reserves was being handed straight back to
@@ -234,8 +236,9 @@ function layoutEditorCanvas() {
   const cs = getComputedStyle(areaEl);
   const padX = parseFloat(cs.paddingLeft || 0) + parseFloat(cs.paddingRight || 0);
   const padY = parseFloat(cs.paddingTop || 0) + parseFloat(cs.paddingBottom || 0);
+  if (aside) aside.back();
   const availW = Math.max(1, area.width - padX);
-  const availH = Math.max(1, area.height - padY);
+  const availH = Math.max(1, area.height - padY + (aside ? aside.h : 0));
   // Not capped at 1 any more. It was, because canvas.width was authoredW x dpr
   // and any scale above 1 stretched a fixed bitmap and softened every line
   // (Flip allowed 1.4 and was visibly softer than Pad for the same drawing).
@@ -2779,7 +2782,10 @@ function captureCurrentFrame() {
   let baseSnapshot = null;
   try {
     if (hasContent && strokes.length === 0) baseSnapshot = drawingPixels().toDataURL();
-    else if (preRecordSnapshot) baseSnapshot = preRecordSnapshot;
+    // The base under a take, only while the take has lines on it: an empty
+    // canvas's is the blank it began on, and a restore read that as ink
+    // (unwindEmptyTake, editor_draw.js).
+    else if (preRecordSnapshot && strokes.length) baseSnapshot = preRecordSnapshot;
   } catch (e) { baseSnapshot = null; }
   // A track switched off stays in the draft, marked so, as Flip's does; a
   // post leaves it out (editor_post.js). Dropping it lost the song.
@@ -3181,6 +3187,9 @@ function loadSkribl(data, said) {
     durationBadge.hidden = false;
   } else if (data.baseSnapshot) {
     hasContent = true;
+    // A blank base is not ink (forgetBlankBase, editor_draft.js; the player
+    // never opens a drawing with no lines).
+    if (typeof forgetBlankBase === 'function') forgetBlankBase(data.baseSnapshot);
   }
 
   // Photo
@@ -4659,25 +4668,9 @@ function abortStrokeForPinch() {
     updateClearVisibility();
     updateEmptyHint();
   }
-  // Roll back an auto-armed recording that captured nothing (blank-canvas pinch).
-  if (wasAutoArmed && recording && strokes.length === 0) {
-    clearInterval(recTimerInterval);
-    recording = false;
-    recorded = false;
-    finishedRecording = false;
-    startTime = null;
-    preRecordSnapshot = null;
-    recordBtn.innerHTML = ICON_RECORD + LABEL_RECORD;
-    recordBtn.classList.remove('active');
-    recordBtn.title = 'Start recording';
-    _recordBtnHome();
-    canvasWrap.classList.remove('recording');
-  document.body.classList.remove('recording');
-    recIndicator.hidden = true;
-    document.querySelector('.header').classList.remove('compact');
-    updateCanvasLockCue();
-    updateClearVisibility();
-  }
+  // Roll back an auto-armed recording that captured nothing (blank-canvas
+  // pinch), as a take undone to nothing is (unwindEmptyTake, editor_draw.js).
+  if (wasAutoArmed && recording && strokes.length === 0) unwindEmptyTake();
   _autoArmedThisStroke = false;
 }
 

@@ -43,6 +43,33 @@ if (window.SkriblPendingCards && window.SkriblPendingCards.bindDrops && _padDraw
     say: (msg, anchor) => showToast(msg, anchor)
   });
 }
+// THE ROOM IS MEASURED AS IF NO DRAWER WERE OPEN (the owner, Nov 6, on a desk:
+// a draft opened with the music drawer open "shrinks because of open drawer,
+// then when closed drawer - it stays small"; a new 4:3 Pad "just never goes
+// back to be as big as it can be"). A drawer open below the dock, and Tune
+// open under the header, take the page's height, and opening one only scrolls
+// the page: the canvas keeps its size. But a fit that ran while one was open
+// (a draft or a New Skribl laid out, the window resized, a phone's toolbar
+// sliding away) gave the canvas only the room it left, 423 px of 682 on a
+// 1536 x 864 desk with the music drawer open and 331 with Tune, and nothing
+// fit it again when it closed. So layoutEditorCanvas (app.js) measures the
+// room as it is with them shut, whenever the fit runs: the drawers below the
+// dock lifted out of the page's flow for the measuring and put back before
+// anything paints (lifted, not hidden: nothing in them changes but where they
+// sit), and Tune's height given back (shut, it has none; its tuck under the
+// header is the same either way, and lifting it took that too, 10px).
+window._skriblDrawersAside = () => {
+  const tune = document.getElementById('tuneShell');
+  const h = tune && getComputedStyle(tune).position === 'static' ? tune.offsetHeight : 0;
+  const open = ['mediaCard', 'drawPanel'].map((id) => document.getElementById(id))
+    .filter((el) => el && el.offsetHeight > 0 && getComputedStyle(el).position === 'static');
+  const was = open.map((el) => [el.style.getPropertyValue('position'), el.style.getPropertyPriority('position')]);
+  open.forEach((el) => el.style.setProperty('position', 'absolute', 'important'));
+  return { h: h, back: () => open.forEach((el, i) => {
+    if (was[i][0]) el.style.setProperty('position', was[i][0], was[i][1]);
+    else el.style.removeProperty('position');
+  }) };
+};
 // The canvas re-fits when the header or the dock changes size, whether or not
 // the window says so: a Page Zoom changed while Safari sat in the background
 // arrived with no resize event, and the drawing kept its 150% size at 100%

@@ -1040,7 +1040,13 @@ with sync_playwright() as sp:
     #   left running, they laid page 0 over the page at rest, its see-through
     #   ink twice. The rest is the server's (routes.py sends a Flip's size and
     #   line). verify_jsstrip's lines move with it. 160,337 measured.
-    BYTES_RATCHET, BYTES_TARGET = 160_340, 153_800
+    # LOWERED (the owner's desk test, Nov 6: a take undone to nothing, a canvas
+    #   fit with a drawer open): the pinch's unwinding of a take with nothing
+    #   in it moved out of app.js into editor_draw.js (unwindEmptyTake), which
+    #   the Undo button calls too; app.js keeps one guarded hook each for the
+    #   fit's drawers and a blank base. -276 B; verify_jsstrip's lines move
+    #   with it. 160,061 measured.
+    BYTES_RATCHET, BYTES_TARGET = 160_064, 153_800
     # The page's own HTML. The brand is the one-stroke skribl signature INLINE
     # in the page (~1.4KB of paths, a ~0.9KB nonce'd draw-on script, and the
     # <linearGradient> defs), and inline is load-bearing rather than lazy:

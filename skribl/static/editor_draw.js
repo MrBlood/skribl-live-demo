@@ -45,6 +45,38 @@
 // skribl_player.html.
 
 
+// ---- A take with nothing in it ------------------------------------------------
+// A TAKE WITH NOTHING IN IT, OVER AN EMPTY CANVAS, ENDS AS IF IT NEVER BEGAN:
+// a pinch's phantom first stroke (abortStrokeForPinch, app.js), and a take
+// undone to nothing (the Undo button, editor_menu.js; the owner, Nov 6: "i can
+// undo all the way (even words), but it doesn't get to the home screen"). That
+// take ran on over the empty canvas, its clock counting and Done showing, and
+// its saves kept the blank canvas it began on as if it were ink, so a reload
+// brought back a Pad that thought it was drawn on: words and strokes were not
+// recorded until Record was pressed. The Pad is as it opened now: no take, the
+// clock at rest, the empty canvas's hint, and no Record button. Here, not in
+// app.js: the player never records.
+function unwindEmptyTake() {
+  clearInterval(recTimerInterval);
+  recording = false;
+  recorded = false;
+  finishedRecording = false;
+  startTime = null;
+  preRecordSnapshot = null;
+  recordBtn.innerHTML = ICON_RECORD + LABEL_RECORD;
+  recordBtn.classList.remove('active');
+  recordBtn.title = 'Start recording';
+  _recordBtnHome();
+  canvasWrap.classList.remove('recording');
+  document.body.classList.remove('recording');
+  recIndicator.hidden = true;
+  document.querySelector('.header').classList.remove('compact');
+  updateCanvasLockCue();
+  updateClearVisibility();
+  syncRecordBtn();
+}
+
+
 // ---- Select tool ------------------------------------------------------------
 // Two phases in one tool. With nothing selected, a drag draws a marquee and
 // picks the stroke groups it touches. With a selection live, a drag MOVES it.
