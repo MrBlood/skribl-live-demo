@@ -1325,7 +1325,12 @@ with sync_playwright() as sp:
     #   line, 14px from the speeds, and the room and words a phone under 400px
     #   wide gives up so a 320px one holds it whole). Listed live in
     #   css_live.json. verify_jsstrip's line moves with it. 43,458 measured.
-    CSS_RATCHET, CSS_WAS, CSS_TARGET = 43_464, 119_844, 40_000
+    # RAISED (a bug fix: main red after #776, a choice spilling out of its
+    #   pill at 320 in DejaVu Sans, which CI draws a post in), for one named
+    #   cost: +57 B -- the pill wraps a whole choice to a second row where a
+    #   face cannot hold it on one (flex-wrap, centred, 10px between rows).
+    #   verify_jsstrip's line moves with it. 43,515 measured.
+    CSS_RATCHET, CSS_WAS, CSS_TARGET = 43_521, 119_844, 40_000
     total_css = sum(css_bytes.values())
     check(f"the player's CSS does not grow past {CSS_RATCHET:,} bytes "
           f"(was {CSS_WAS:,} at v194; target {CSS_TARGET:,})",

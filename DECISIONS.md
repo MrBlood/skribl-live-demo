@@ -30777,3 +30777,33 @@ and 6x CPU throttling (8 of 8, four times).
   8. With nothing forced, the whole suite with the fix: 62 of 62.
 
 Nothing in the app changed.
+
+## After v330 -- The Song choice in a wide face, and the full screen's speeds (main red after #776)
+
+Main's run after #776 went red on four shards, SQLite and PostgreSQL 2 and 4,
+on two things #776 brought (issue #778):
+
+- A POST'S SONG CHOICE AT 320px IN DEJAVU SANS. CI draws the feed page in
+  system-ui, which on Linux is DejaVu Sans, wider than any face the app is
+  drawn in where it is used; there the two choices were 20px too wide for the
+  post's box at 320 and one spilled out of the pill (edge 18, inside false,
+  exactly the numbers measured here once DejaVu was forced). This box draws
+  in Inter, where it fits with room to spare, and so does every face THE
+  PILL'S ENDS reads (Inter, Liberation Sans, FreeSans). Fixed for any face:
+  the pill wraps a whole choice to a second row where a face cannot hold it
+  on one, centred and 10px down so their taps never overlap; in the faces
+  the app is drawn in it stays one row, as the mock had it. And the 320 rows
+  of THE SONG'S CHOICE (the Pad's line, Tune, a link, a post) read every face
+  that is here now, DejaVu Sans included, so this box sees what CI sees.
+  CALIBRATED: without the wrap, the four 320 rows red in DejaVu Sans (a
+  post: edge 18, inside false, CI's own numbers); with it, 18 of 18 in five
+  faces.
+- THE GALLERY'S AND LIBRARY'S FULL SCREEN listed every chip in the band's
+  line and found the Song choice's two beside the speeds (verify_onefull,
+  three rows). It reads the speeds' own chips (data-r) now, as
+  verify_player_isolation and the Watching speed rows came to; not run with
+  #776's affected suites, and it should have been: it is the suite for the
+  band's line.
+
+THE BYTES: a link's CSS +57 B (43,515 measured) and a post's embed +51 B
+(77,806), in writing.

@@ -6100,8 +6100,11 @@ a.player-btn { text-decoration: none; }
    them on a desk, as the mock had them. Its label is quiet words (8.2:1
    light, 9.3:1 dark, measured in the mock); its two choices are as wide as
    their words. Under 400px wide the room goes first and then the words
-   shrink with the screen, so a 320px phone holds it whole (12.5px there). */
-.rl-song { align-items: center; padding-inline: 14px 8px; }
+   shrink with the screen, so a 320px phone holds it whole (12.5px there). A
+   face wider than any the app is drawn in where it is used (DejaVu Sans,
+   Linux's own, which CI's feed page is drawn in) wraps a whole choice to a
+   second row, 10px down so their taps never overlap, rather than spill one. */
+.rl-song { align-items: center; padding-inline: 14px 8px; flex-wrap: wrap; justify-content: center; row-gap: 10px; }
 .rl-song-k { padding-right: 8px; font-weight: 600; color: var(--text-secondary); }
 .rl-chips.rl-song button { flex: 0 0 auto; max-width: none; padding: 0 12px; white-space: nowrap; }
 #padLine .rl-song { margin-bottom: 6px; }

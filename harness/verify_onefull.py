@@ -290,7 +290,9 @@ with sync_playwright() as p:
                 try:
                     pg.click(P["line"] + " .rl-speed", timeout=4000)
                     pg.wait_for_timeout(300)
-                    chips = pg.evaluate("(s) => [...document.querySelectorAll(s + ' .rl-chips button')].filter(b => !b.hidden).map(b => b.textContent)", P["line"])
+                    # The speeds' own chips (data-r): the Song choice's two sit
+                    # beside them when the drawing has a song (lib/replayline.js).
+                    chips = pg.evaluate("(s) => [...document.querySelectorAll(s + ' .rl-chips button[data-r]')].filter(b => !b.hidden).map(b => b.textContent)", P["line"])
                     pg.click(P["line"] + " .rl-chips [data-r='4']", timeout=4000)
                     pg.wait_for_timeout(300)
                     rate = pg.evaluate("(F) => document.querySelector(F + ' .skribl-inline')._skriblInline.rate()", P["frame"])
@@ -315,7 +317,7 @@ with sync_playwright() as p:
     try:
         pg.click(GAL["line"] + " .rl-speed", timeout=4000)
         pg.wait_for_timeout(400)
-        fl = pg.evaluate("""(F) => ({ chips: [...document.querySelectorAll(F + ' .rl-chips button')].filter(b => !b.hidden).map(b => b.textContent),
+        fl = pg.evaluate("""(F) => ({ chips: [...document.querySelectorAll(F + ' .rl-chips button[data-r]')].filter(b => !b.hidden).map(b => b.textContent),
             words: document.querySelector(F + ' .rl-text').innerText.replace(/\\s+/g, ' ').trim() })""", GAL["frame"])
     except Exception as exc:
         fl = {"chips": [], "words": f"no words: {str(exc)[:80]}"}

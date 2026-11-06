@@ -575,7 +575,11 @@ with sync_playwright() as sp:
     # AND 440 B MORE, IN WRITING, at the owner's "all yes" to A of "Text,
     # Song and Drafts": the Song choice's pill on the link page, whole on one
     # line from a 320px phone up. Spent value and 25 B again.
-    _css_target = 43_483
+    #
+    # AND 57 B MORE, IN WRITING, for a bug fix (main red after #776): the
+    # pill wraps a whole choice to a second row in a face too wide to hold it
+    # on one. Spent value and 25 B again.
+    _css_target = 43_540
     check(f"the player's stylesheet is served stripped, under the {_css_target:,}-byte target (40,000 once its debt is paid)",
           _href is not None and 0 < len(_served_css) <= _css_target and len(_served_css) < len(_raw_css),
           f"{len(_served_css):,} B served of {len(_raw_css):,} B on disk")
