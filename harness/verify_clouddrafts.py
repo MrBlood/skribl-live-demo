@@ -659,7 +659,10 @@ try:
               and ask["words"] == "Open \u201cComposer wave\u201d? What\u2019s on your canvas now goes to Drafts first.",
               f"{ask}; canvas {'is' if before == saved_print else 'is not'} the draft")
         check("and the id is off the address", ask["url"] == "/skribl/skribl-pad", ask["url"])
-        pa.locator(".sdrafts-ask .othertab-later").click()
+        try:
+            pa.locator(".sdrafts-ask .othertab-later").click(timeout=5000)
+        except Exception:
+            pass   # no question to answer: the row below says so
         pa.wait_for_timeout(500)
         kept_look = pa.evaluate(ASK)
         check("Keep drawing puts the question away and changes nothing: the drawing is still there, and Drafts as it was",
@@ -669,9 +672,12 @@ try:
         browsing.goto(pa, BASE, "/skribl/library#drafts", require_boot=False)
         pa.locator("#draftsList .draft-row", has_text="Composer wave").first.wait_for(timeout=8000)
         pa.locator("#draftsList .draft-row", has_text="Composer wave").first.locator(".draft-open").click()
-        pa.wait_for_function("() => { var b = document.querySelector('.sdrafts-ask'); return !!b && !b.hidden; }", timeout=10000)
-        pa.locator(".sdrafts-ask .othertab-open").click()
-        pa.wait_for_function("() => !!window.SkriblSavedDrafts.current()", timeout=15000)
+        try:
+            pa.wait_for_function("() => { var b = document.querySelector('.sdrafts-ask'); return !!b && !b.hidden; }", timeout=10000)
+            pa.locator(".sdrafts-ask .othertab-open").click(timeout=5000)
+            pa.wait_for_function("() => !!window.SkriblSavedDrafts.current()", timeout=15000)
+        except Exception:
+            pass   # asked nothing, or opened nothing: the rows below say which
         pa.wait_for_timeout(500)
         kept_row = durable("SELECT payload_json FROM skribl_drafts WHERE user_id='1' ORDER BY id DESC LIMIT 1")
         try:
@@ -747,11 +753,15 @@ try:
         n_now = durable("SELECT COUNT(*) FROM skribl_drafts WHERE user_id='1'")
         s1b = from_library(pa, ("id", _other[0]["id"]), "pad") if _other else {"asked": False}
         if s1b["asked"]:
-            pa.locator(".sdrafts-ask .othertab-open").click()
-            pa.wait_for_function("(id) => window.SkriblSavedDrafts.current() === id", arg=s1b["id"], timeout=15000)
+            try:
+                pa.locator(".sdrafts-ask .othertab-open").click(timeout=5000)
+                pa.wait_for_function("(id) => window.SkriblSavedDrafts.current() === id", arg=s1b["id"], timeout=15000)
+            except Exception:
+                pass   # not opened (a copy refused at the cap, say): the row below says so
+        _opened = s1b["asked"] and pa.evaluate("() => window.SkriblSavedDrafts.current()") == s1b["id"]
         check("an unchanged saved draft on the canvas is not copied when another opens over it: asked, opened, and Drafts as it was",
-              s1b["asked"] and durable("SELECT COUNT(*) FROM skribl_drafts WHERE user_id='1'") == n_now,
-              f"asked {s1b['asked']}; {durable('SELECT COUNT(*) FROM skribl_drafts WHERE user_id=' + chr(39) + '1' + chr(39))} drafts, {n_now} before")
+              _opened and durable("SELECT COUNT(*) FROM skribl_drafts WHERE user_id='1'") == n_now,
+              f"asked {s1b['asked']}, opened {_opened}; {durable('SELECT COUNT(*) FROM skribl_drafts WHERE user_id=' + chr(39) + '1' + chr(39))} drafts, {n_now} before")
         pa.evaluate("() => document.querySelector('.bg-swatch[data-bg=\"#0d0f14\"]').click()")
         pa.wait_for_timeout(400)
         s2 = from_library(pa, "Composer wave", "pad")

@@ -30620,3 +30620,54 @@ WHAT IT DOES TO FLIP: shared; one module and one sheet for both editors.
 
 THE FOUR: powerful (a paragraph in seconds), simple (the slider people know),
 kind (nobody waits through their own note), playful (words that zip on).
+
+## After v330 -- A draft from the Library over a different drawing asks in one line (the owner's all yes to A)
+
+The owner, of opening a draft from the Library: "it loads the file, but shows
+you the drafts menu over the draft you just picked". The same draft,
+unchanged, already just opens (the entry above). For a different drawing on
+the canvas the mock "Text, Song and Drafts" offered A, one short question
+under the header, and B, the drafts list with the question on top; the owner
+said "all yes", A.
+
+So lib/savedrafts.js asks in one line, in the glass "Another drawing is
+waiting" wears (lib/othertab.js, the owner's T1 and D2): "Open "Cat"? What's on
+your canvas now goes to Drafts first." Open it keeps the drawing on the canvas
+in Drafts first, as Save draft makes one, then opens the draft and says
+"Opened "Cat". The drawing you had open is in Drafts." Keep drawing puts the
+question away and changes nothing. The drafts list no longer opens over the
+drawing to ask (armOnRender is gone); inside the editor, the list's own rows
+still ask "Tap again" as before.
+
+- NOTHING LOST. A photo or song still on its way back from the store when
+  Open it is tapped is waited for (5s at most; each editor's new pending()
+  says what is still coming), so it is kept with the drawing. Measured first
+  on Flip, whose busy() never says so: kept without the wait, a photo-only
+  autosave still loading was filed with no photo. If the drawing cannot be
+  kept (Drafts full, the store not answering), nothing is replaced and the
+  line says why.
+- NO COPY OF A DRAFT THAT IS ALREADY ONE. The draft the canvas was opened as
+  or last saved to is remembered across a reload (localStorage, per editor),
+  and Open it compares the canvas with it: the same, nothing is saved again.
+- "Draft restored" is not said on a page that arrives with ?draft=: that draft
+  is what was asked for, and the question sat under its words on the Pad.
+
+THE CHECKS: verify_clouddrafts 6 and 6b (5 rows new or changed): the Pad asks
+in one line with no list; Keep drawing changes nothing; Open it keeps the
+drawing in Drafts first, then opens the draft with its name; an unchanged
+saved draft on the canvas is not copied; changed, it asks in one line at once.
+verify_amber's Flip row: asks in one line over an autosave still loading, and
+what Open it kept holds its photo. CALIBRATED, each shown red against its own
+break: the list in place of the line (the line rows, Pad and Flip), keeping
+nothing (the keep row, the no-copy row and the kept photo), copying a draft
+that is already one (the no-copy row: refused at the account's limit, so not
+opened), no wait for media still on its way (the kept photo), Keep drawing
+opening the draft (its row). With nothing broken, verify_clouddrafts 107 of
+107 and verify_amber's Flip block 4 of 4.
+
+WHAT IT DOES TO FLIP: shared; one module for both editors, each telling it
+what media is still coming.
+
+THE FOUR: kind (nothing lost, nothing to puzzle out), simple (one line, two
+buttons), powerful (straight to what you picked), playful (out of the way of
+the drawing).
