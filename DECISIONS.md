@@ -30529,3 +30529,67 @@ allows); simple, powerful and playful unchanged.
 
 Not tested here: the owner's iPhone (the checklist's iPhone items were run on
 a desk this time) and Safari (no WebKit here).
+
+## After v330 -- The owner's all yes: a post's song keeps its own speed past 2x, and the same draft just opens
+
+The owner answered the desk test's two questions "all yes" (Nov 6), and the
+parts of each that needed no new look are built here. The looks (a Song choice
+with the speeds, and one short question for a draft opened over a different
+drawing) wait on their mock, "Text, Song and Drafts", with the Text sheet's
+faster speeds.
+
+- A POST'S SONG AT SPEED ("with music at high replay speed the music changes
+  and just sounds like a weird constant noise"). The Pad's own replay and a
+  link (app.js musicRate) already kept the song in step only between half and
+  double and played it at its own speed outside them; a post's player
+  (inlineplayer.js) pitched it with the drawing at every speed, 16x and a
+  Fit's 94x included, which is the noise the owner heard. The rule is now
+  one function, lib/replayline.js songRate, read by both players. Off the
+  drawing's pace the song starts where it would be had it played from the
+  start at its own speed, as the Pad's does, and the drawing no longer keeps
+  the song's time there (the song clock is not started).
+- THE SAME DRAFT, UNCHANGED, JUST OPENS ("it loads the file, but shows you the
+  drafts menu over the draft you just picked"). A draft saved, then opened
+  from the Library, landed on an editor whose autosave was that same drawing,
+  and the drafts list opened over it, asking "Tap again -- this replaces what
+  is on your canvas". lib/savedrafts.js now compares what the editor would
+  save with the draft, less what is stamped at saving (the times, Flip's
+  savedAt, and the name a Flip without one gets by the minute): the same, it
+  opens with no question and the next Save updates it. Measured first: both
+  editors serialise a reloaded draft to exactly what was saved, once its
+  photo and song are back, and those come back about 0.1s after the page
+  without either editor saying it is busy all that time (the Pad's "busy"
+  drops between the store's read and the attach). So a different drawing is
+  told at once, and the same drawing whose media is late is looked at again
+  for 3s at most. And an account's draft comes back from the server with its
+  keys sorted (Flask's JSON), so every object is compared in one order: the
+  check's first run found that, the account's same draft still asking. Pad
+  and Flip share it.
+
+THE PLAYERS' BYTES, raised for the rule, each with its named cost: a link's
+JavaScript +64 B (lib/replayline.js songRate; app.js's own copy went, -5 B),
+160,125 measured; a post's embed +147 B (songRate and inlineplayer.js asking
+it), 76,487 measured.
+
+THE CHECKS: verify_inline, the song at speed (3 rows): the rule's table; a
+post's song at 2x and 1x pitched with the drawing from where the drawing is;
+at 8x and at 1/4x at its own speed, from where it would be. verify_clouddrafts
+6b (5 rows): the account's Pad draft opened over itself opens with no question
+and is adopted; changed (a new ground) it asks within 1.5s; this browser's
+Pad and Flip drafts with a photo and a song open with no question; Flip
+changed (a stroke) asks within 1.5s.
+CALIBRATED, each shown red against its own break: a post's song pitched
+with the drawing at every speed (the 8x and 1/4x row: rates 8 and 0.25); the
+song at its own speed but started where the drawing is (the same row, 1.23s
+into the clip where 0.18 was due); the old hand-off that always asks (the
+three same-draft rows); one look with no waiting for the photo and the song
+(the two media rows, Pad and Flip); a different drawing waited on as if only
+its media were late (the two "at once" rows, 3.2s); keys left in the order
+they came (the account's row). With nothing broken, 3 of 3 and
+verify_clouddrafts 104 of 104.
+
+WHAT IT DOES TO FLIP: both shared. A Flip's post plays its song by the same
+rule; Flip's editor has no watching speed. Flip's drafts open the same way.
+
+THE FOUR: kind (no noise, and no question when nothing would be lost); simple
+and powerful unchanged; playful (a time-lapse with its song).
