@@ -274,7 +274,10 @@ function serializeAutosave() {
   try {
     if (hasContent && strokes.length === 0) {
       baseSnapshot = drawingPixels().toDataURL();
-    } else if (preRecordSnapshot) {
+    } else if (preRecordSnapshot && strokes.length) {
+      // The base under a take, only while the take has lines on it: an empty
+      // canvas's is the blank it began on, and a restore read that as ink
+      // (unwindEmptyTake, editor_draw.js; forgetBlankBase, below).
       baseSnapshot = preRecordSnapshot;
     }
   } catch (e) {
@@ -887,6 +890,42 @@ function growBeforePaint() {
   layoutEditorCanvas();
 }
 
+/* A BLANK BASE IS NOT INK (the owner, Nov 6, after Undo all the way through
+   a take: words and strokes "not recorded until I click record"). A take
+   undone to nothing kept the blank canvas it began on as its base, saves wrote
+   that base, and a restore read it as ink left out of any take, so an empty
+   canvas came back as one the Pad thought was drawn on: no take armed on the
+   first stroke, and a Record button over nothing. Saves leave such a base out
+   now (serializeAutosave, captureCurrentFrame in app.js); one saved before is
+   read here, from the autosave and from a file or saved draft (loadSkribl). A
+   base with nothing on it, under no line, on a canvas with nothing drawn on it
+   since, is no content, and the Pad is a fresh one. Any ink, in the base or
+   drawn while it decoded, and the Pad is left as it is. */
+function blankPixels(src) {
+  const c = document.createElement('canvas');
+  c.width = Math.max(1, src.naturalWidth || src.width);
+  c.height = Math.max(1, src.naturalHeight || src.height);
+  const x = c.getContext('2d');
+  x.drawImage(src, 0, 0);
+  let d;
+  try { d = x.getImageData(0, 0, c.width, c.height).data; } catch (e) { return false; }
+  for (let i = 3; i < d.length; i += 4) if (d[i]) return false;
+  return true;
+}
+function forgetBlankBase(src) {
+  const img = new Image();
+  img.onload = () => {
+    if (strokes.length || recording || drawing || !hasContent) return;
+    if (!blankPixels(img) || !blankPixels(drawingPixels())) return;   // ink: it stays
+    hasContent = false;
+    unrecordedInk = false;
+    preRecordSnapshot = null;
+    updateEmptyHint();
+    updateClearVisibility();
+  };
+  img.src = src;
+}
+
 function restoreAutosave(data) {
   clearCanvas();
   // The drawing's name, its pauses and its viewers' speed, as loadSkribl adopts
@@ -966,6 +1005,7 @@ function restoreAutosave(data) {
   updateEmptyHint();
   updateCanvasLockCue();
   updateClearVisibility();
+  if (!strokes.length && data.baseSnapshot) forgetBlankBase(data.baseSnapshot);
 
   // Set pending media and show the placeholder cards with their saved settings.
   pendingMusicMeta = (data.musicMeta && data.musicMeta.name) ? data.musicMeta : null;
