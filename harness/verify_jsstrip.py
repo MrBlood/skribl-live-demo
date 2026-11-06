@@ -340,8 +340,11 @@ with sync_playwright() as sp:
     # And RAISED, in both places together, by a long Flip's first look (the
     # owner's "all yes" to B, FUTURE 6x), +18 B, all app.js: the first paint's
     # slices end where the page at rest is drawn (160,337 measured).
+    # And LOWERED, in both places together, by a take undone to nothing (the
+    # owner's desk test, Nov 6): the pinch's unwinding moved to editor_draw.js,
+    # -276 B (160,061 measured).
     check("stripping keeps the player's JS under its ratchet",
-          lean_total <= 160_340,
+          lean_total <= 160_064,
           f"{src_total:,} B of source -> {lean_total:,} B parsed")
     # THE MODULE ONLY A RECOLOURED DRAWING FETCHES (lib/recolorplay.js, by
     # app.js on the link page and inlineplayer.js in a post): its own pin, so
