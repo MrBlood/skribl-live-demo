@@ -1864,6 +1864,21 @@ a.player-btn { text-decoration: none; }
 .rl-chips button::before { content: ''; position: absolute; inset: -5px 0; }   /* 44px */
 .rl-chips button[data-r="fit"] { max-width: 54px; flex-grow: 1.3; margin-left: 4px; }
 .rl-chips button[aria-pressed="true"] { background: var(--seg-on-fill); color: var(--seg-on-ink); font-weight: 700; }
+/* THE SONG'S PILL (lib/replayline.js; the owner's all yes to A of "Text, Song
+   and Drafts"): a second pill with the speeds, for a drawing with a song, 14px
+   from them in a line (the Pad's above them, a link's under) and 8px under
+   them on a desk, as the mock had them. Its label is quiet words (8.2:1
+   light, 9.3:1 dark, measured in the mock); its two choices are as wide as
+   their words. Under 400px wide the room goes first and then the words
+   shrink with the screen, so a 320px phone holds it whole (12.5px there). */
+.rl-song { align-items: center; padding-inline: 14px 8px; }
+.rl-song-k { padding-right: 8px; font-weight: 600; color: var(--text-secondary); }
+.rl-chips.rl-song button { flex: 0 0 auto; max-width: none; padding: 0 12px; white-space: nowrap; }
+.player-bar .rl-song { margin-top: 6px; }   /* a link's, and the Gallery's and Library's full screen */
+@media (max-width: 400px) {
+  .rl-chips.rl-song { padding-inline: 10px 6px; font-size: min(1em, 3.9vw); }
+  .rl-chips.rl-song button { padding: 0 8px; }
+  .rl-song-k { padding-right: 4px; }}
 @media (forced-colors: active) {
   .rl-speed, .rl-chips button[aria-pressed="true"] { outline: 2px solid ButtonText; outline-offset: -2px; }
 }

@@ -2018,7 +2018,10 @@ function setReplayRate(c, playMs) {
 // THE MUSIC KEEPS UP BETWEEN HALF AND DOUBLE, and is a bed outside them
 // (lib/replayline.js songRate, the rule a post's player keeps too). The
 // drawing still ends the music (WALL-CLOCK durations everywhere).
-function musicRate() { return SkriblReplayLine.songRate(replayRate); }
+function musicRate() { return SkriblReplayLine.songRate(replayRate, songPick); }
+// The viewer's own pick for the song's speed ('with', 'own' or null: the rule),
+// from the Song pill with the speeds (lib/replayline.js).
+let songPick = null;
 // The author's pick for viewers, as loadSkribl() found it ('auto', 'drawn',
 // 'fit' or a rate; undefined on a post from before it existed).
 let authorSpeed;
@@ -4539,6 +4542,8 @@ function showPlayerError(msg, canRetry) {
   setReplayRate(isFlip ? 1 : SkriblReplayLine.fromPost(authorSpeed, _drawn), totalMs);
   SkriblReplayLine.attach(document.getElementById('playerLine'), {
     choice: () => replayChoice, playMs: () => totalMs, drawnMs: () => _drawn, fit: !isFlip,
+    song: () => !!post.hasAudio, songPick: () => songPick,
+    pickSong: (p) => { songPick = p; if (running) paStartAtElapsed(elapsedBase + segElapsed()); },
     pick: (c) => {
       const at = running ? elapsedBase + segElapsed() : elapsedBase;
       setReplayRate(c, totalMs);

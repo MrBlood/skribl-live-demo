@@ -799,7 +799,7 @@
     /* What the speed button says: 'fit' or a rate. `rate` is what it comes
      * to; `picked` is the viewer having chosen, which the drawing arriving
      * must not undo. */
-    var choice = 1, picked = false;
+    var choice = 1, picked = false, songPick = null;
     var RL = global.SkriblReplayLine, lineUI = null, scrubUI = null, bar = null, sayEl = null;
     var info = null, pagesN = 0, shapeCols = null, drawnMs = null, held = false, pendingF = null;
     var clockFn = null;   // replay ms -> the artist's, for the scrubber's bubble
@@ -1665,7 +1665,7 @@
        * take stays in step, and at its own speed past that, where a pitched
        * song "just sounds like a weird constant noise" (the owner, after the
        * desk test). One playback's rate; the stored clip is untouched. */
-      var sr = RL ? RL.songRate(rate) : rate;
+      var sr = RL ? RL.songRate(rate, songPick) : rate;
       try { srcNode.playbackRate.value = sr; } catch (e) {}
       gainNode = fadeIn(ac, srcNode, ac.destination, soundOn() ? 1 : 0);
       /* Where the drawing is, not the clip's top: after a pause, a new speed
@@ -2019,6 +2019,10 @@
         lineUI = RL.attach(sayEl, {
           choice: function () { return choice; },
           pick: pick,
+          song: function () { return !!music; },
+          songPick: function () { return songPick; },
+          // As a new speed's (applyRate): a lost audio graph never stops the pill closing.
+          pickSong: function (p) { songPick = p; if (state === 'playing') { try { startAudio(); } catch (e) {} } },
           playMs: function () { return payload ? totalMs : info ? info.play : 0; },
           drawnMs: function () { return payload ? drawnMs : info ? info.drawn : null; },
           lead: function () {

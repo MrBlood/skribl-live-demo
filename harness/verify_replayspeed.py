@@ -29,12 +29,15 @@ WHAT IS ASKED, AND HOW IT IS READ
   * The author's pick is read from the payload serializeSkribl() writes, the
     server's answer to a bad one, and where each player starts with it.
 """
+import io
 import json
 import math
 import os
+import struct
 import sys
 import urllib.error
 import urllib.request
+import wave
 
 from assertions import make_check
 import browsing
@@ -77,6 +80,17 @@ def post(payload):
         return r.status, json.loads(r.read())
     except urllib.error.HTTPError as e:
         return e.code, json.loads(e.read() or b"{}")
+
+
+def tone(seconds=6.0, rate=22050, f0=220.0):
+    """A plain tone as a WAV file, for a drawing with a song (THE SONG'S CHOICE)."""
+    buf = io.BytesIO()
+    w = wave.open(buf, "wb")
+    w.setnchannels(1); w.setsampwidth(2); w.setframerate(rate)
+    w.writeframes(b"".join(struct.pack("<h", int(9000 * math.sin(2 * math.pi * f0 * i / rate)))
+                           for i in range(int(seconds * rate))))
+    w.close()
+    return buf.getvalue()
 
 
 LINE = "() => document.querySelector('#playerLine .rl-text').innerText.replace(/\\s+/g, ' ').trim()"
@@ -1334,6 +1348,215 @@ with sync_playwright() as p:
             pg.close()
     else:
         check("[the pill's ends] the link page's drawing posted", False, f"{_st3} {_pe}")
+
+    # ---- THE SONG'S CHOICE -----------------------------------------------------
+    # The owner, of a post's song at 8x ("just sounds like a weird constant
+    # noise"), then "maybe should have the option of music replay speed too?";
+    # all yes to A of "Text, Song and Drafts": when the drawing has a song, a
+    # second pill opens with the speeds, With the drawing or Normal speed. The
+    # lit one says what the song is doing at this speed (the rule,
+    # lib/replayline.js songRate) until the viewer picks; their pick then holds
+    # at every speed, and the Pad keeps it as it keeps the speed. On the Pad's
+    # line, its desk pill and Tune, a link page and a post.
+    #
+    # READ AS IT IS HEARD AND SEEN: the rate of each song the page starts
+    # (AudioBufferSourceNode.prototype.start, as verify_inline reads a post's),
+    # which pill a person can see (checkVisibility) and which choice is lit
+    # (aria-pressed), and where it sits from its own box against the speeds'
+    # and the screen's: 14px from the speeds in a line and 8px under them on a
+    # desk, as the mock had them; whole and on one line from a 320px phone up,
+    # its words never under 12px.
+    print("\nTHE SONG'S CHOICE")
+    HEAR = """(() => { window.__songs = []; const real = AudioBufferSourceNode.prototype.start;
+      AudioBufferSourceNode.prototype.start = function () { if (this.loop) window.__songs.push(this.playbackRate.value);
+        return real.apply(this, arguments); }; })();"""
+    SONG = r"""(sel) => { const h = document.querySelector(sel), s = h && h.querySelector('.rl-song'), c = h && h.querySelector('.rl-chips:not(.rl-song)');
+      if (!s || !s.checkVisibility()) return { shown: false };
+      const r = s.getBoundingClientRect(), k = c.getBoundingClientRect(), bs = [...s.querySelectorAll('button')];
+      const one = bs.every((x) => { const g = document.createRange(); g.selectNodeContents(x); const ts = [...g.getClientRects()].map((q) => q.top);
+        return Math.max(...ts) - Math.min(...ts) < 8 && x.scrollWidth <= x.clientWidth + 1; });
+      return { shown: true, lit: bs.filter((x) => x.getAttribute('aria-pressed') === 'true').map((x) => x.textContent),
+               gap: +Math.max(k.top - r.bottom, r.top - k.bottom).toFixed(1), edge: +Math.min(r.left, innerWidth - r.right).toFixed(1),
+               one: one, inside: bs.every((x) => { const q = x.getBoundingClientRect(); return q.left >= r.left - 0.5 && q.right <= r.right + 0.5; }),
+               px: Math.min(...bs.map((x) => parseFloat(getComputedStyle(x).fontSize))) }; }"""
+    LAST = "() => window.__songs.length ? window.__songs[window.__songs.length - 1] : null"
+    TRACK = {"name": "tone.wav", "mimeType": "audio/wav", "buffer": tone()}
+
+    def song_open(pg, sel):
+        """The speeds opened, their Song choice read, and closed again."""
+        pg.evaluate("(s) => document.querySelector(s + ' .rl-speed').click()", sel); pg.wait_for_timeout(350)
+        m = pg.evaluate(SONG, sel)
+        pg.evaluate("(s) => document.querySelector(s + ' .rl-speed').click()", sel); pg.wait_for_timeout(150)
+        return m
+
+    def song_pick(pg, sel, which):
+        """With the drawing ('with') or Normal speed ('own') tapped, as a person
+        does: the speeds opened, the choice, the rate of the song it starts."""
+        pg.evaluate("(s) => document.querySelector(s + ' .rl-speed').click()", sel); pg.wait_for_timeout(350)
+        pg.evaluate("() => { window.__songs.length = 0; }")
+        pg.evaluate("([s, w]) => document.querySelector(s + ' .rl-song [data-s=\"' + w + '\"]').click()", [sel, which])
+        pg.wait_for_timeout(400)
+        return pg.evaluate(LAST), pg.evaluate("(s) => document.querySelector(s + ' .rl-chips').hidden", sel)
+
+    def speed(pg, sel, r):
+        pg.evaluate("() => { window.__songs.length = 0; }")
+        pick(pg, sel, r); pg.wait_for_timeout(400)
+        return pg.evaluate(LAST)
+
+    def placed(m, gap, edge=15.5):
+        ok = bool(m.get("shown")) and abs(m["gap"] - gap) <= 1 and m["edge"] >= edge and m["one"] and m["inside"] and m["px"] >= 12
+        return ok, json.dumps(m)
+
+    def pad(vw, vh, touch, song=True):
+        ctx = b.new_context(viewport={"width": vw, "height": vh}, is_mobile=touch, has_touch=touch)
+        pg = ctx.new_page()
+        # Repeat on, so the replay, and its song, go round while the rows look.
+        pg.add_init_script("try { localStorage.setItem('skribl_replay_repeat', '1'); } catch (e) {}")
+        pg.add_init_script(HEAR)
+        browsing.goto(pg, BASE, "/")
+        pg.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+        box = pg.locator("#canvas").bounding_box()
+        for k in range(2):
+            pg.mouse.move(box["x"] + 60, box["y"] + 120 + k * 100); pg.mouse.down()
+            for i in range(30):
+                pg.mouse.move(box["x"] + 60 + i * 7, box["y"] + 120 + k * 100 + math.sin(i / 5) * 20); pg.wait_for_timeout(16)
+            pg.mouse.up(); pg.wait_for_timeout(200)
+        pg.click("#recordBtn"); pg.wait_for_timeout(400)
+        if song:
+            browsing.pad_drawer(pg, "music")
+            pg.set_input_files("#musicInput", TRACK)
+            pg.wait_for_function("() => document.getElementById('musicUploadBtn').classList.contains('loaded') && !!currentAudioBuffer",
+                                 timeout=20000)
+            pg.wait_for_timeout(400)
+            browsing.pad_drawer_close(pg)
+        pg.click("#playBtn"); pg.wait_for_timeout(600)
+        return ctx, pg
+
+    # The Pad on a phone: its line under the drawing while it plays.
+    ctx, pg = pad(402, 874, True, song=False)
+    m = song_open(pg, "#padLine")
+    check("[402] the Pad's line: with no song, the speeds open alone, no Song choice", m == {"shown": False}, json.dumps(m))
+    ctx.close()
+    ctx, pg = pad(402, 874, True)
+    lit = {}
+    for r in (8, 2, 0.25):
+        speed(pg, "#padLine", r)
+        lit[r] = song_open(pg, "#padLine").get("lit")
+    check("[402] the Pad's line, with a song: the Song choice opens with the speeds, and its lit one is what the song "
+          "does at each speed: Normal speed at 8x and 1/4x, With the drawing at 2x",
+          lit == {8: ["Normal speed"], 2: ["With the drawing"], 0.25: ["Normal speed"]}, json.dumps(lit))
+    speed(pg, "#padLine", 8)
+    ok, said = placed(song_open(pg, "#padLine"), 14)
+    check("[402] ...14px over the speeds, whole, on one line and on the screen", ok, said)
+    got, closed = song_pick(pg, "#padLine", "with")
+    at4 = speed(pg, "#padLine", 4)
+    check("[402] With the drawing at 8x plays the song at 8x at once, and the pill closes; it holds at 4x",
+          got == 8 and closed and at4 == 4, f"song at {got}, closed {closed}; at 4x the song at {at4}")
+    speed(pg, "#padLine", 2)
+    got, closed = song_pick(pg, "#padLine", "own")
+    m = song_open(pg, "#padLine")
+    check("[402] Normal speed at 2x plays the song at its own speed, where the rule kept it with the drawing, and is lit",
+          got == 1 and m.get("lit") == ["Normal speed"], f"song at {got}; lit {m.get('lit')}")
+    kept = pg.evaluate("() => localStorage.getItem('skribl_replay_song')")
+    pg.reload(wait_until="load"); pg.wait_for_timeout(600)
+    back = pg.evaluate("() => songPick")
+    check("[402] ...and the Pad keeps the pick as it keeps the speed: Normal speed after a reload",
+          kept == "own" and back == "own", f"stored {kept!r}, after a reload {back!r}")
+    ctx.close()
+    # A 320px phone: the line's and Tune's, whole on one line, their words 12px or more.
+    ctx, pg = pad(320, 640, True)
+    speed(pg, "#padLine", 8)
+    ok, said = placed(song_open(pg, "#padLine"), 14)
+    check("[320] the Pad's line: the Song choice whole, on one line and on the screen, its words 12px or more", ok, said)
+    pg.click("#playBtn"); pg.wait_for_timeout(300)
+    pg.click("#tuneBtn"); pg.wait_for_timeout(600)
+    pg.evaluate("() => document.getElementById('tuneSpeedRow').scrollIntoView({block: 'center'})"); pg.wait_for_timeout(300)
+    m = song_open(pg, "#tuneSpeed")
+    check("[320] Tune's Watching speed row: the Song choice with its speeds, whole and on one line in its row",
+          bool(m.get("shown")) and m["one"] and m["inside"] and m["edge"] >= 15.5 and m["px"] >= 12, json.dumps(m))
+    ctx.close()
+    # A desk: the pill beside Play, and the pick said in all three places.
+    ctx, pg = pad(1280, 860, False)
+    speed(pg, "#padSpeed", 8)
+    m = song_open(pg, "#padSpeed")
+    ok, said = placed(m, 8)
+    check("[1280] the Pad's desk pill: the Song choice opens 8px under the speeds, Normal speed lit at 8x",
+          ok and m["lit"] == ["Normal speed"], said)
+    got, closed = song_pick(pg, "#padSpeed", "with")
+    pg.click("#tuneBtn"); pg.wait_for_timeout(600)
+    m = song_open(pg, "#tuneSpeed")
+    check("[1280] With the drawing picked there plays the song at 8x, and Tune's row says so too",
+          got == 8 and m.get("lit") == ["With the drawing"], f"song at {got}; Tune lit {m.get('lit')}")
+    pg.click("#tuneBtn"); pg.wait_for_timeout(300)
+    # This drawing, song and all, posted for the link page and the feed.
+    pg.wait_for_function("() => { const f = serializeSkribl().frames[0]; return !!(f.music && typeof f.music.data === 'string'); }", timeout=20000)
+    _sp = pg.evaluate("""async () => { const p = serializeSkribl(); p.title = 'Song choice'; p.visibility = 'public';
+        const r = await fetch(window.SKRIBL_API_BASE, { method: 'POST', headers: skriblPostHeaders(), body: JSON.stringify(p) });
+        return r.ok ? await r.json() : { error: r.status }; }""")
+    ctx.close()
+    _st4, _pn = post(drawing(0, "real", extra={"visibility": "public", "title": "no song"}))
+    if _sp.get("id") and _st4 == 201:
+        for vw, vh in ((402, 874), (320, 640)):
+            ctx = b.new_context(viewport={"width": vw, "height": vh}, is_mobile=True, has_touch=True)
+            pg = ctx.new_page(); pg.add_init_script(HEAR)
+            pg.goto(BASE + _sp["url"], wait_until="load")
+            pg.wait_for_function(browsing.SPEED_READY, timeout=20000)
+            pg.click("#playerPlayBtn")
+            pg.wait_for_function("() => window.__songs.length > 0", timeout=15000)
+            speed(pg, "#playerLine", 8)
+            m = song_open(pg, "#playerLine")
+            ok, said = placed(m, 14)
+            if vw == 402:
+                got, closed = song_pick(pg, "#playerLine", "with")
+                at4 = speed(pg, "#playerLine", 4)
+                speed(pg, "#playerLine", 2)
+                own, _c = song_pick(pg, "#playerLine", "own")
+                check("[402] a link page: the Song choice opens with the speeds, 14px under them, Normal speed lit at 8x",
+                      ok and m["lit"] == ["Normal speed"], said)
+                check("[402] ...With the drawing plays its song at 8x at once and holds at 4x; Normal speed at 2x plays it at its own",
+                      got == 8 and at4 == 4 and own == 1, f"with at 8x: {got}; at 4x: {at4}; normal at 2x: {own}")
+            else:
+                check("[320] a link page: the Song choice whole, on one line and on the screen, its words 12px or more", ok, said)
+            ctx.close()
+        ctx = b.new_context(viewport={"width": 402, "height": 874}, is_mobile=True, has_touch=True)
+        pg = ctx.new_page()
+        pg.goto(BASE + _pn["url"], wait_until="load")
+        pg.wait_for_function(browsing.SPEED_READY, timeout=20000)
+        m = song_open(pg, "#playerLine")
+        check("[402] a link page with no song: the speeds open alone", m == {"shown": False}, json.dumps(m))
+        ctx.close()
+        # A post in the feed: its line under the box.
+        for vw, vh in ((402, 874), (320, 640)):
+            ctx = b.new_context(viewport={"width": vw, "height": vh}, is_mobile=True, has_touch=True)
+            pg = ctx.new_page(); pg.add_init_script(HEAR)
+            browsing.goto(pg, BASE, "/feed")
+            box = '[data-skribl-id="' + _sp["id"] + '"] + * '
+            pg.wait_for_function("(s) => !!document.querySelector(s + '.rl-speed')", arg=box, timeout=10000)
+            pg.evaluate("(id) => document.querySelector('[data-skribl-id=\"' + id + '\"]').scrollIntoView({block: 'center'})", _sp["id"])
+            pg.evaluate("(id) => { const p = window.SkriblInline.find(id); p.setLoop(true); p.play(); }", _sp["id"])
+            pg.wait_for_function("() => window.__songs.length > 0", timeout=15000)
+            speed(pg, box, 8)
+            m = song_open(pg, box)
+            ok, said = placed(m, 14)
+            if vw == 402:
+                got, closed = song_pick(pg, box, "with")
+                at4 = speed(pg, box, 4)
+                speed(pg, box, 2)
+                own, _c = song_pick(pg, box, "own")
+                check("[402] a post: the Song choice opens with the speeds, 14px over them, Normal speed lit at 8x",
+                      ok and m["lit"] == ["Normal speed"], said)
+                check("[402] ...With the drawing plays its song at 8x at once and holds at 4x; Normal speed at 2x plays it at its own",
+                      got == 8 and at4 == 4 and own == 1, f"with at 8x: {got}; at 4x: {at4}; normal at 2x: {own}")
+                nb = '[data-skribl-id="' + _pn["id"] + '"] + * '
+                pg.evaluate("(id) => { const p = window.SkriblInline.find(id); p.play(); }", _pn["id"])
+                pg.wait_for_function("(id) => window.SkriblInline.find(id).state().loaded", arg=_pn["id"], timeout=10000)
+                m = song_open(pg, nb)
+                check("[402] a post with no song: the speeds open alone", m == {"shown": False}, json.dumps(m))
+            else:
+                check("[320] a post: the Song choice whole, on one line and on the screen, its words 12px or more", ok, said)
+            ctx.close()
+    else:
+        check("[the song's choice] the drawings posted", False, f"{_sp} {_st4} {_pn}")
     b.close()
 
 print("\n" + "=" * 62)
