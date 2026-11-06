@@ -6,7 +6,7 @@
  * tap where the words go, and the typing sheet rises: the words, a Style
  * (Yours, or + Make yours; Skribl; Print; Script, each written in itself),
  * a Size (S, M, L: the height of the letters, in the pen's colour and
- * thickness) and a Speed (1/4x to 4x; 1x is the hand's own pace, and the
+ * thickness) and a Speed (1/4x to 16x; 1x is the hand's own pace, and the
  * sheet says how long the words will take). The words show where the tap
  * was, above the sheet, inside a dashed box that says Drag to move. Write it
  * puts them in: the sheet goes and the words write themselves on the canvas,
@@ -56,9 +56,14 @@
   var LABEL = { yours: 'Yours', skribl: 'Skribl', print: 'Print', script: 'Script' };
   // Cap height, as a share of the drawing's shorter side.
   var SIZES = { S: 0.045, M: 0.065, L: 0.095 };
-  // The speed slider's stops: 1x is the middle, 1/4x and 4x the ends.
-  var SPEEDS = [0.25, 1 / 3, 0.5, 2 / 3, 1, 1.5, 2, 3, 4];
-  var SPEED_TEXT = ['¼×', '⅓×', '½×', '⅔×', '1×', '1½×', '2×', '3×', '4×'];
+  // The speed slider's stops, 1/4x to 16x: 1x is the hand's own pace, and
+  // 16x is a replay's own top speed. A WAY TO REALLY SPEED UP THE WORDS (the
+  // owner: "you don't always want the text to be so slow (if you have a lot
+  // of text, it takes forever)"; then "all yes" to A of the mock): at 4x a
+  // 100-letter note in Skribl's hand took 21s, at 16x it takes 5. A stop
+  // kept from before 6x is the same speed it was.
+  var SPEEDS = [0.25, 1 / 3, 0.5, 2 / 3, 1, 1.5, 2, 3, 4, 6, 8, 12, 16];
+  var SPEED_TEXT = ['¼×', '⅓×', '½×', '⅔×', '1×', '1½×', '2×', '3×', '4×', '6×', '8×', '12×', '16×'];
   var HAND_KEY = 'skribl.letters.v1';     // Your hand's store (editor_letters.js)
   var PREFS_KEY = 'skribl.text.v1';       // the sheet's last style, size and speed
   var WORDS_KEY = 'skribl.text.words';    // the words, for this tab (sessionStorage)

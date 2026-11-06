@@ -555,18 +555,28 @@ with sync_playwright() as p:
         check("the sheet says how long the words take at 1×", out1 == "1× · %d s" % max(1, round(one / 1000)), f"{out1!r} for {one}ms")
         check("2× takes half as long and ¼× four times", abs(two * 2 - one) <= 4 and abs(quarter - one * 4) <= 8,
               f"1× {one}, 2× {two}, ¼× {quarter}")
+        # A WAY TO REALLY SPEED UP THE WORDS (the owner, "all yes" to A): the
+        # top is 16x, a replay's own, past 4x's old end, and the sheet says it.
+        set_speed(q, 12)
+        sixteen, out16 = q.evaluate(PLAN)["ms"], q.evaluate(SHEET)["out"]
+        set_speed(q, 8)
+        four = q.evaluate(PLAN)["ms"]
+        check("16× takes a sixteenth as long, four times faster than 4×, and the sheet says so",
+              abs(sixteen * 16 - one) <= 16 and abs(sixteen * 4 - four) <= 8 and out16.startswith("16× · "),
+              f"1× {one}, 4× {four}, 16× {sixteen}, {out16!r}")
         set_speed(q, 4)
         btns = q.evaluate("() => [...document.querySelectorAll('.tx-speed .slider-nudge-btn')].length")
         q.click(".tx-speed .slider-nudge-btn:last-of-type")
         up = q.evaluate("() => [document.getElementById('txSpeed').value, document.getElementById('txSpeedOut').textContent]")
-        for _ in range(6):
+        for _ in range(10):
             q.click(".tx-speed .slider-nudge-btn:last-of-type")
-        top = q.evaluate("() => document.getElementById('txSpeed').value")
-        for _ in range(12):
+        top = q.evaluate("() => [document.getElementById('txSpeed').value, document.getElementById('txSpeedOut').textContent]")
+        for _ in range(14):
             q.click(".tx-speed .slider-nudge-btn:first-of-type")
         bottom = q.evaluate("() => [document.getElementById('txSpeed').value, document.getElementById('txSpeedOut').textContent]")
-        check("- and + step the stops, and stop at 4× and ¼×",
-              btns == 2 and up[0] == "5" and up[1].startswith("1½×") and top == "8" and bottom[0] == "0" and bottom[1].startswith("¼×"),
+        check("- and + step the stops, and stop at 16× and ¼×",
+              btns == 2 and up[0] == "5" and up[1].startswith("1½×") and top[0] == "12" and top[1].startswith("16×")
+              and bottom[0] == "0" and bottom[1].startswith("¼×"),
               f"{btns} buttons, + gives {up}, top {top}, bottom {bottom}")
         c.close()
 
