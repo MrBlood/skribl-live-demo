@@ -50,8 +50,11 @@
      trade; at 8x, or a Fit at 94x, it "just sounds like a weird constant
      noise" (the owner, after the desk test, in a post's player). So past
      those the song plays as recorded, under the drawing, which still ends
-     it. One rule for the Pad, a link and every post (app.js, inlineplayer.js). */
-  function songRate(r) { return r >= 0.5 && r <= 2 ? r : 1; }
+     it. One rule for the Pad, a link and every post (app.js, inlineplayer.js).
+     And the viewer's own pick, when there is one ("maybe should have the
+     option of music replay speed too?"; all yes to A): 'with' the drawing at
+     every speed, or 'own', its normal speed at every speed. */
+  function songRate(r, pick) { return pick === 'with' ? r : pick === 'own' ? 1 : r >= 0.5 && r <= 2 ? r : 1; }
 
   /* The post's `playSpeed`: 'auto', 'drawn', 'fit' or one of RATES. Anything
      else, and a post from before it existed, plays as drawn -- which is
@@ -85,7 +88,7 @@
   var CARET = '<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 4.5 6 8l3.5-3.5"/></svg>';
   var n = 0;
 
-  /* attach(host, { choice, pick, playMs, drawnMs, fit, lead })
+  /* attach(host, { choice, pick, playMs, drawnMs, fit, lead, song, songPick, pickSong })
    *   choice()   the current choice ('fit' or a rate)
    *   pick(c)    the caller applies a new choice (re-anchoring its own clock)
    *   playMs()   the replay's length at 1×, for Fit and its number
@@ -93,6 +96,10 @@
    *   fit        false to leave Fit out (a Flip loops; it has no "whole")
    *   lead()     what the line opens with when there is no drawn time -- the
    *              in-post player's "<b>12 pages</b> · " for a Flip -- or omitted
+   *   song()     the drawing has a song: a second pill opens with the speeds,
+   *              With the drawing or Normal speed (THE SONG'S PILL, below);
+   *              songPick() the viewer's pick, 'with', 'own' or null, and
+   *              pickSong(p) the caller applies one (restarting its song)
    * Returns { update, close }. The caller calls update() whenever the
    * drawing or the choice changes under it. */
   function attach(host, o) {
@@ -108,34 +115,48 @@
       '<span class="rl-chips" id="' + id + '" role="group" aria-label="Speed" hidden>' +
       RATES.map(function (r) { return '<button type="button" data-r="' + r + '">' + label(r) + '</button>'; }).join('') +
       (o.fit === false ? '' : '<button type="button" data-r="fit" title="The whole replay in about 30 seconds">Fit</button>') +
-      '</span>';
-    var btn = host.querySelector('.rl-speed'), chips = host.querySelector('.rl-chips');
+      '</span>' +
+      /* THE SONG'S PILL (the owner's all yes to A of "Text, Song and Drafts"):
+         with the speeds, for a drawing with a song. The lit choice is what
+         the song is doing at this speed (the rule, songRate) until the viewer
+         picks; their pick then holds at every speed. */
+      (o.song ? '<span class="rl-chips rl-song" role="group" aria-label="Song" hidden><span class="rl-song-k" aria-hidden="true">Song</span>' +
+        '<button type="button" data-s="with">With the drawing</button><button type="button" data-s="own">Normal speed</button></span>' : '');
+    var btn = host.querySelector('.rl-speed'), chips = host.querySelector('.rl-chips'), song = host.querySelector('.rl-song');
     var drawn = host.querySelector('.rl-drawn'), skip = host.querySelector('.rl-skip');
 
     function open(on) {
       chips.hidden = !on;
+      if (song) song.hidden = !on || !o.song();
       btn.setAttribute('aria-expanded', '' + on);
       host.classList.toggle('open', on);
     }
     function update() {
-      var c = o.choice(), p = o.playMs(), d = o.drawnMs ? o.drawnMs() : null;
-      btn.firstChild.textContent = (c === 'fit' ? 'Fit · ' : '') + label(rate(c, p));
+      var c = o.choice(), p = o.playMs(), d = o.drawnMs ? o.drawnMs() : null, r = rate(c, p);
+      btn.firstChild.textContent = (c === 'fit' ? 'Fit · ' : '') + label(r);
       drawn.innerHTML = d ? '<span class="rl-m">Drawn in </span><b>' + words(d) + '</b><span class="rl-m"> · </span>'
         : o.lead ? o.lead() || '' : '';
       skip.hidden = !(d && d - p >= d / 10 && d - p >= 1000);
-      chips.querySelectorAll('button').forEach(function (b) {
-        b.setAttribute('aria-pressed', '' + (b.dataset.r === String(c)));
+      // The speeds lit by the choice, the song's two (data-s) by what it is doing.
+      var s = song && (o.songPick() || (songRate(r) === r ? 'with' : 'own'));
+      host.querySelectorAll('.rl-chips button').forEach(function (b) {
+        b.setAttribute('aria-pressed', '' + (b.dataset.s ? b.dataset.s === s : b.dataset.r === String(c)));
       });
     }
     btn.addEventListener('click', function () { open(chips.hidden); });
-    chips.addEventListener('click', function (e) {
+    // One tap picks and closes, a speed or the song's choice. On the pills, not
+    // the host: a line built again on the same host (the link page's stand-in,
+    // then its own) takes its pills, and their taps, with it.
+    function tap(e) {
       var b = e.target.closest('button');
       if (!b) return;
-      o.pick(b.dataset.r === 'fit' ? 'fit' : +b.dataset.r);
+      if (b.dataset.s) o.pickSong(b.dataset.s); else o.pick(b.dataset.r === 'fit' ? 'fit' : +b.dataset.r);
       update();
       open(false);
       btn.focus();
-    });
+    }
+    chips.addEventListener('click', tap);
+    if (song) song.addEventListener('click', tap);
     host.addEventListener('keydown', function (e) {
       if (e.key === 'Escape' && !chips.hidden) { open(false); btn.focus(); e.stopPropagation(); }
     });

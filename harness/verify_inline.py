@@ -1665,7 +1665,17 @@ with sync_playwright() as sp:
     #   WHICH CALLER PAYS: every page that shows a post, for every post with
     #   music. Spent first: nothing to spend; the rule is one comparison.
     #   76,487 B measured.
-    EMBED_RATCHET = 76_490
+    # RAISED (the owner's "all yes" to A of "Text, Song and Drafts": "maybe
+    #   should have the option of music replay speed too?"), for one named
+    #   cost: +1,268 B -- the Song choice with the speeds: lib/replayline.js
+    #   +626 (its pill, the rule with the viewer's pick, what is lit),
+    #   inlineplayer.js +169 (the post's three hooks), inlineplayer.css +473
+    #   (its place 14px over the speeds, its quiet label, its two choices on
+    #   one line, a narrow phone's room and words). WHICH CALLER PAYS: every
+    #   page that shows a post. Spent first: the choice shares the speeds' tap
+    #   and lit loop (-175 B), and its restart is applyRate's (-47 B).
+    #   77,755 B measured.
+    EMBED_RATCHET = 77_758
     # THE RATCHET MEASURES DISPLAY, NOT COMPOSE, and the two are separate costs
     # paid by separate pages. Excluded here and measured on its own below:
     #   feed.js          the PREVIEW PAGE's own script (fetch the listing, clone

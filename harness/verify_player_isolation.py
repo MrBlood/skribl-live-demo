@@ -1053,7 +1053,16 @@ with sync_playwright() as sp:
     #   first: app.js's own copy of the rule (musicRate asks it now, -5 B).
     #   WHICH CALLER PAYS: every player page, for a drawing with a song.
     #   verify_jsstrip's lines move with it. 160,125 measured.
-    BYTES_RATCHET, BYTES_TARGET = 160_128, 153_800
+    # RAISED (the owner's "all yes" to A of "Text, Song and Drafts": "maybe
+    #   should have the option of music replay speed too?"), for one named
+    #   cost: +807 B -- the Song choice with the speeds: lib/replayline.js
+    #   +626 (its pill, the rule with the viewer's pick, what is lit) and
+    #   app.js +181 (the link's three hooks, and musicRate asking with the
+    #   pick). Spent first: the choice shares the speeds' tap and their lit
+    #   loop rather than a copy of each (-175 B). WHICH CALLER PAYS: every
+    #   player page; the pill is built only where it can be used.
+    #   verify_jsstrip's lines move with it. 160,932 measured.
+    BYTES_RATCHET, BYTES_TARGET = 160_935, 153_800
     # The page's own HTML. The brand is the one-stroke skribl signature INLINE
     # in the page (~1.4KB of paths, a ~0.9KB nonce'd draw-on script, and the
     # <linearGradient> defs), and inline is load-bearing rather than lazy:
@@ -1310,7 +1319,13 @@ with sync_playwright() as sp:
     #   tap, its hover), and the way back's chevron (.player-cta svg).
     #   Listed live in css_live.json. verify_jsstrip's line moves with it.
     #   43,018 measured.
-    CSS_RATCHET, CSS_WAS, CSS_TARGET = 43_024, 119_844, 40_000
+    # RAISED (the owner's "all yes" to A of "Text, Song and Drafts"), for one
+    #   named cost: +440 B -- the Song choice's pill on the link page (.rl-song:
+    #   its quiet label, its two choices as wide as their words and on one
+    #   line, 14px from the speeds, and the room and words a phone under 400px
+    #   wide gives up so a 320px one holds it whole). Listed live in
+    #   css_live.json. verify_jsstrip's line moves with it. 43,458 measured.
+    CSS_RATCHET, CSS_WAS, CSS_TARGET = 43_464, 119_844, 40_000
     total_css = sum(css_bytes.values())
     check(f"the player's CSS does not grow past {CSS_RATCHET:,} bytes "
           f"(was {CSS_WAS:,} at v194; target {CSS_TARGET:,})",
@@ -2001,7 +2016,11 @@ with sync_playwright() as sp:
     # which opens one row of speeds and closes on a pick. The pressed chip and
     # the button's own words must both follow the choice -- aria-pressed is
     # what a screen reader hears, the button's label is what everyone reads.
-    _RATE_GET = """() => [...document.querySelectorAll('#playerLine .rl-chips button')]
+    # The speeds' own chips (data-r): this drawing has a song, so the Song
+    # choice's two sit in the line too, lit by what the song does
+    # (verify_replayspeed, THE SONG'S CHOICE), and read here they were a
+    # second lit chip ("1×,With the drawing").
+    _RATE_GET = """() => [...document.querySelectorAll('#playerLine .rl-chips button[data-r]')]
         .filter(b => b.getAttribute('aria-pressed') === 'true').map(b => b.textContent.trim()).join(',')
         + '|' + document.querySelector('#playerLine .rl-speed').textContent.trim()"""
     def _pick(rate):

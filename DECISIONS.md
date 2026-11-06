@@ -30671,3 +30671,82 @@ what media is still coming.
 THE FOUR: kind (nothing lost, nothing to puzzle out), simple (one line, two
 buttons), powerful (straight to what you picked), playful (out of the way of
 the drawing).
+
+## After v330 -- The Song choice with the speeds (the owner's all yes to A)
+
+The owner, of a post's song at 8x: "just sounds like a weird constant noise",
+and then "maybe should have the option of music replay speed too?". The rule
+(an entry above) keeps a song with the drawing between half and double and at
+its own speed past them; the mock "Text, Song and Drafts" offered A, a Song
+choice that opens with the speeds, and B, the song's speed as a second button
+in the line. The owner said "all yes", A.
+
+So when the drawing has a song, a second pill opens with the speeds: "Song",
+quiet, then With the drawing and Normal speed (lib/replayline.js attach, its
+new song, songPick and pickSong). The lit one says what the song is doing at
+this speed, by the rule, until the viewer picks; a pick then holds at every
+speed (songRate(r, pick): 'with' the drawing's rate, 'own' 1), restarts the
+song at once from where it would be had it played from the start at that
+speed, and closes the pill, as a speed does.
+
+- EVERYWHERE THE SPEEDS ARE: the Pad's line under the drawing, its desk pill
+  beside Play and Tune's Watching speed row (one pick, said in all three, and
+  kept in this browser as the speed is: skribl_replay_song); a link page and
+  the Gallery's and Library's full screen (app.js); every post
+  (inlineplayer.js). A viewer's pick on a link or a post is theirs for that
+  visit, as their speed is; nothing of it is posted.
+- WHERE IT SITS, as the mock had it: 14px from the speeds in a line (over them
+  on the Pad and in a post, under them on a link) and 8px under them on a
+  desk. On a phone under 400px wide the room between goes first and then the
+  words shrink with the screen, so a 320px phone holds it whole, on one line,
+  at 12.5px (Tune's at 12.8). The owner's 402px phone sees the mock's sizes.
+- A POST KNOWS ITS SONG ONCE ITS DRAWING HAS COME: the line's summary on the
+  page carries no song, so before the first Play its speeds open alone.
+- Its label is --text-secondary on the pill, 8.2:1 light and 9.3:1 dark, as
+  the mock measured (a post's, the quiet words' .62, 7.6:1); its choices are
+  the speeds' own ink and lit fill. On short phones (375x667, 320x568) every
+  choice is painted, nothing over it.
+
+THE CHECKS: verify_replayspeed, THE SONG'S CHOICE (18 rows): with no song the
+speeds open alone (the Pad, a link, a post); with one, the lit choice at 8x,
+2x and 1/4x; With the drawing at 8x plays the song at 8x at once, closes, and
+holds at 4x; Normal speed at 2x plays it at 1x and is lit; the Pad keeps the
+pick after a reload; on a desk a pick in the pill is said by the line and
+Tune; a link and a post the same, read off the rate of each song the page
+starts; and where it sits, from its own box, at 402 and 320, Tune at 320 and
+the desk.
+CALIBRATED, each shown red against its own break: the pill shown with no song
+(the three no-song rows: the Pad, a link, a post); the lit one always With the
+drawing (the four lit rows); the pick ignored by the rule (the five rate
+rows); the pill left open after a tap (the closing row, and the rows that open
+it again); the Pad's pick not restarting its song (its three at-once rows);
+not kept (the reload row); the other places not told (the desk row: the line
+under the drawing still lit Normal speed); a link's and a post's pick not
+restarting theirs (each one's rate row); no narrow-phone rule (the three 320
+rows), nor Tune's (its 320 row); no 14px (the six gap rows); the desk pill
+over the speeds (its row, -44px). The first run found two of these green: a
+short drawing that repeats starts its song again every round, at 8x every
+eighth of a second, and that round passed for a pick that restarted nothing
+(the Pad's and a link's). Only a song started by the tap itself counts now,
+and both went red. With nothing broken, 18 of 18.
+
+THE PLAYERS' BYTES: a link's JavaScript +807 B (lib/replayline.js +626, app.js
++181), 160,932 measured; its CSS +440 B, 43,458 measured; a post's embed
++1,268 B (lib/replayline.js +626, inlineplayer.js +169, inlineplayer.css
++473), 77,755 measured. Spent first: the choice shares the speeds' tap and
+their lit loop rather than a copy of each (-175 B), and a post's restart is
+applyRate's (-47 B). The tap is on the two pills, not the line: the link page
+builds its line twice on one host (a stand-in from the post's own numbers,
+then the real one), and a tap left on the host by the first answered to the
+second's pills with no pick of its own, which verify_replayspeed's "no page
+errors on the shared player" found. verify_player_isolation and the Watching
+speed rows read the speeds' own chips now (data-r): the Song choice's two sit
+beside them, lit, or hidden while there is no song.
+
+WHAT IT DOES TO FLIP: shared. A Flip's post and link play their song by the
+same rule and show the same choice; Flip's editor has no watching speed (its
+pages per second are the animation), so nothing changes there.
+
+THE FOUR: kind (no more noise, and nothing to undo), powerful and exact (the
+viewer chooses, and it holds), simple (only there when a song is, only when
+the speeds are open), playful (a time-lapse with its music).

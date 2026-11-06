@@ -1025,6 +1025,18 @@ playBtn.addEventListener('click', () => {
   if (playing && window.SkriblPadRecolor) SkriblPadRecolor.disarm();
 });
 const SPEED_KEY = 'skribl_replay_rate';
+/* THE SONG'S PICK (lib/replayline.js, the Song pill): kept as the speed is, and
+   a song playing now restarts at its new speed, from where it would be had it
+   played from the start at that speed (musicRate), as a resume does. */
+const SONG_KEY = 'skribl_replay_song';
+function setSongPick(p) {
+  songPick = p;
+  try { localStorage.setItem(SONG_KEY, p || ''); } catch (e) {}
+  if (!playing || playPaused || !_waLoop.playing()) return;
+  const at = scrubbing ? lastTargetMs : Math.min(playTotal, (performance.now() - playStart) * replayRate);
+  const clip = _waLoop.duration();
+  startWebAudioLoop(null, clip > 0 ? (at / replayRate * musicRate() / 1000) % clip : 0);
+}
 function setPreviewSpeed(c) {
   const now = performance.now();
   const at = (playPaused || scrubbing) ? lastTargetMs : Math.min(playTotal, (now - playStart) * replayRate);
@@ -1116,6 +1128,8 @@ if (window.SkriblReplayLine) {
   try {
     const v = localStorage.getItem(SPEED_KEY), c = v === 'fit' ? v : parseFloat(v);
     if (c === 'fit' || SkriblReplayLine.RATES.indexOf(c) >= 0) setReplayRate(c, getPlaybackDuration());
+    const s = localStorage.getItem(SONG_KEY);
+    if (s === 'with' || s === 'own') songPick = s;
   } catch (e) {}
 }
 if (padLine && playScrub && window.SkriblReplayLine) {
@@ -1126,12 +1140,16 @@ if (padLine && playScrub && window.SkriblReplayLine) {
      Whichever is used, all three say so. */
   const hosts = [];
   const all = (c) => { setPreviewSpeed(c); hosts.forEach(h => h.update()); };
-  const line = SkriblReplayLine.attach(padLine, {
+  // THE SONG'S PILL, in all three places as the speed is: for a drawing whose
+  // replay plays its song, and remembered as the speed is.
+  const songs = { song: () => !!(audioEl && musicEnabled), songPick: () => songPick,
+                  pickSong: (p) => { setSongPick(p); hosts.forEach(h => h.update()); } };
+  const line = SkriblReplayLine.attach(padLine, Object.assign({
     choice: () => replayChoice,
     playMs: () => playTotal || getPlaybackDuration(),
     drawnMs: () => SkriblReplayLine.drawnMs(strokes),
     pick: all,
-  });
+  }, songs));
   hosts.push(line);
   // FULL SCREEN WHILE IT PLAYS (lib/watchfull.js, Flip's too; the owner's
   // picks): the way in sits at the end of this line, beside the speed, so it
@@ -1154,9 +1172,9 @@ if (padLine && playScrub && window.SkriblReplayLine) {
   // byte budget.
   const speedOnly = (host) => {
     if (!host) return null;
-    const l = SkriblReplayLine.attach(host, {
+    const l = SkriblReplayLine.attach(host, Object.assign({
       choice: () => replayChoice, playMs: () => playTotal || getPlaybackDuration(), pick: all,
-    });
+    }, songs));
     const b = host.querySelector('.rl-speed');
     // "Watching speed", Flip's word for its own row (the owner's, "all yes").
     const name = () => b.setAttribute('aria-label', 'Watching speed, ' + b.textContent);
