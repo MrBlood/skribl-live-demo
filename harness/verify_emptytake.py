@@ -233,6 +233,18 @@ with sync_playwright() as pw:
     check("...where words written are recorded, and a stroke after them joins their take",
           w["rec"] and w["n"] > 0 and w["maxT"] > 500 and s2["rec"] and s2["n"] > w["n"] and s2["maxT"] > w["maxT"],
           f"after the words: {says(w)}, last point at {w['maxT']} ms; after the stroke: {says(s2)}, last point at {s2['maxT']} ms")
+    # The owner: "it doesn't recolor after text and undo". lib/recolor.js works
+    # on the lines of a take, and a stroke left out of every take was not one.
+    q.evaluate("() => { if (recording) recordBtn.click(); }")
+    q.wait_for_timeout(400)
+    before = q.evaluate("() => strokes.length ? strokes[strokes.length - 1].color : null")
+    q.evaluate("() => { setPenColor('#00a95c'); SkriblPadRecolor.arm(); }")
+    q.wait_for_timeout(300)
+    q.mouse.click(*at(q, 0.45, 0.725))   # the middle of the stroke above
+    q.wait_for_timeout(600)
+    after = q.evaluate("() => strokes.length ? strokes[strokes.length - 1].color : null")
+    check("...and Recolor finds that stroke: a press on it gives it the new colour",
+          before is not None and after is not None and after != before, f"the stroke's colour {before} -> {after}")
     c.close()
 
     print("\nA SAVE OF AN EMPTY CANVAS KEEPS NO BASE")

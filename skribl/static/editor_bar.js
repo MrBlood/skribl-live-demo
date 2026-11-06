@@ -55,8 +55,8 @@ if (window.SkriblPendingCards && window.SkriblPendingCards.bindDrops && _padDraw
 // fit it again when it closed. So layoutEditorCanvas (app.js) measures the
 // room as it is with them shut, whenever the fit runs: the drawers below the
 // dock lifted out of the page's flow for the measuring and put back before
-// anything paints (lifted, not hidden, so a field in a drawer keeps its
-// focus), and Tune's height given back (shut, it has none; its tuck under the
+// anything paints (lifted, not hidden: nothing in them changes but where they
+// sit), and Tune's height given back (shut, it has none; its tuck under the
 // header is the same either way, and lifting it took that too, 10px).
 window._skriblDrawersAside = () => {
   const tune = document.getElementById('tuneShell');

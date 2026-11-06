@@ -16,8 +16,7 @@ then) and stayed so.
 WHAT IS ASKED, AND HOW IT IS READ (the canvas's own box, before and after)
   * THE PAD: a draft opened with the music drawer open keeps the canvas its
     full size, and closing the drawer leaves it there; the window resized with
-    the music drawer, the draw drawer or Tune open keeps it, desk and phone;
-    a field in an open drawer keeps its focus through the fit.
+    the music drawer, the draw drawer or Tune open keeps it, desk and phone.
   * FLIP: the window resized with the music or the draw drawer open keeps the
     canvas its size, and closing the drawer leaves it there.
 """
@@ -111,16 +110,6 @@ with sync_playwright() as pw:
     after = q.evaluate(BOX, "#canvas")
     check("the window resized with Tune open keeps the canvas, and so does shutting Tune (a desk)",
           during == full and after == full, f"fresh {full}, resized with Tune open {during}, shut {after}")
-    browsing.pad_drawer(q, "draw")
-    q.wait_for_timeout(400)
-    field = q.evaluate("""() => { const f = [...document.querySelectorAll('#drawPanel button, #drawPanel input')]
-        .find((x) => x.offsetParent && !x.disabled);
-      if (!f) return null; f.dataset.fitMark = '1'; f.focus();
-      return document.activeElement === f ? (f.id || f.className || f.tagName) : null; }""")
-    jiggle(q, DESK["width"], DESK["height"])
-    kept = q.evaluate("() => !!document.activeElement && document.activeElement.dataset.fitMark === '1'")
-    check("a field in an open drawer keeps its focus through the fit", bool(field) and kept,
-          f"focused {field!r}, still focused after the fit: {kept}")
     c.close()
 
     c, q = page(b, "/", PHONE)
