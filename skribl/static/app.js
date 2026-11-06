@@ -2018,7 +2018,7 @@ function setReplayRate(c, playMs) {
 // THE MUSIC KEEPS UP BETWEEN HALF AND DOUBLE, and is a bed outside them
 // (lib/replayline.js songRate, the rule a post's player keeps too). The
 // drawing still ends the music (WALL-CLOCK durations everywhere).
-function musicRate() { return window.SkriblReplayLine ? SkriblReplayLine.songRate(replayRate) : replayRate; }
+function musicRate() { return SkriblReplayLine.songRate(replayRate); }
 // The author's pick for viewers, as loadSkribl() found it ('auto', 'drawn',
 // 'fit' or a rate; undefined on a post from before it existed).
 let authorSpeed;

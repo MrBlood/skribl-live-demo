@@ -596,15 +596,21 @@
   /* WHAT A DRAWING IS, to tell one from another: what the editor would save,
      less what is stamped when it is saved (the moments editor_post.js leaves
      out of "unchanged", Flip's savedAt, and the name a Flip without one is
-     given by the minute), with a file known by its size and type. A reloaded
-     draft serialises to exactly what was saved, in both editors, once its
-     photo and song are back (verify_clouddrafts, THE SAME DRAFT). */
+     given by the minute), with a file known by its size and type, and every
+     object's keys in one order: an account's draft comes back from the
+     server with them sorted. A reloaded draft serialises to exactly what was
+     saved, in both editors, once its photo and song are back
+     (verify_clouddrafts, THE SAME DRAFT). */
   var STAMPED = { draftId: 1, createdAt: 1, updatedAt: 1, savedAt: 1, title: 1 };
   var MEDIA = { music: 1, photo: 1, bgImage: 1, musicMeta: 1, photoMeta: 1, mediaOmitted: 1 };
   function work(p, inkOnly) {
     return JSON.stringify(p, function (k, v) {
       if (STAMPED[k] || (inkOnly && MEDIA[k])) return undefined;
-      return (typeof Blob !== 'undefined' && v instanceof Blob) ? { blob: v.size, type: v.type } : v;
+      if (typeof Blob !== 'undefined' && v instanceof Blob) return { blob: v.size, type: v.type };
+      if (!v || typeof v !== 'object' || Array.isArray(v)) return v;
+      var o = {};
+      Object.keys(v).sort().forEach(function (key) { o[key] = v[key]; });
+      return o;
     });
   }
   /* A different drawing is told at once. The same drawing whose photo or song

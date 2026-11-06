@@ -1046,7 +1046,14 @@ with sync_playwright() as sp:
     #   the Undo button calls too; app.js keeps one guarded hook each for the
     #   fit's drawers and a blank base. -276 B; verify_jsstrip's lines move
     #   with it. 160,061 measured.
-    BYTES_RATCHET, BYTES_TARGET = 160_064, 153_800
+    # RAISED (the owner's "all yes" after the desk test: a post's song past
+    #   2x "just sounds like a weird constant noise"), for one named cost:
+    #   +64 B -- lib/replayline.js songRate, the one rule the Pad, a link and
+    #   every post now read for the song's speed beside the drawing's. Spent
+    #   first: app.js's own copy of the rule (musicRate asks it now, -5 B).
+    #   WHICH CALLER PAYS: every player page, for a drawing with a song.
+    #   verify_jsstrip's lines move with it. 160,125 measured.
+    BYTES_RATCHET, BYTES_TARGET = 160_128, 153_800
     # The page's own HTML. The brand is the one-stroke skribl signature INLINE
     # in the page (~1.4KB of paths, a ~0.9KB nonce'd draw-on script, and the
     # <linearGradient> defs), and inline is load-bearing rather than lazy:

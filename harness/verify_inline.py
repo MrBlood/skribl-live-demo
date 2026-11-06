@@ -1656,7 +1656,16 @@ with sync_playwright() as sp:
     #   post, for every post with music. Spent first: the stop's fallbacks for
     #   a source with no gain of its own, which cannot happen, and a try
     #   around a disconnect, which cannot throw. 76,340 B measured.
-    EMBED_RATCHET = 76_344
+    # RAISED (the owner's "all yes" after the desk test: a post's song past
+    #   2x "just sounds like a weird constant noise"), for one named cost:
+    #   +147 B -- lib/replayline.js songRate, the one rule the Pad and a link
+    #   keep too, and inlineplayer.js asking it: the song pitched with the
+    #   drawing between half and double and at its own speed past them, from
+    #   where it would be, the song's clock kept only while they share a pace.
+    #   WHICH CALLER PAYS: every page that shows a post, for every post with
+    #   music. Spent first: nothing to spend; the rule is one comparison.
+    #   76,487 B measured.
+    EMBED_RATCHET = 76_490
     # THE RATCHET MEASURES DISPLAY, NOT COMPOSE, and the two are separate costs
     # paid by separate pages. Excluded here and measured on its own below:
     #   feed.js          the PREVIEW PAGE's own script (fetch the listing, clone

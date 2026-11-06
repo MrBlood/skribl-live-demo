@@ -342,9 +342,11 @@ with sync_playwright() as sp:
     # slices end where the page at rest is drawn (160,337 measured).
     # And LOWERED, in both places together, by a take undone to nothing (the
     # owner's desk test, Nov 6): the pinch's unwinding moved to editor_draw.js,
-    # -276 B (160,061 measured).
+    # -276 B (160,061 measured). And RAISED, in both places together, by the
+    # song's one rule (the owner's "all yes": a post's song keeps its own speed
+    # past 2x), +64 B, lib/replayline.js songRate (160,125 measured).
     check("stripping keeps the player's JS under its ratchet",
-          lean_total <= 160_064,
+          lean_total <= 160_128,
           f"{src_total:,} B of source -> {lean_total:,} B parsed")
     # THE MODULE ONLY A RECOLOURED DRAWING FETCHES (lib/recolorplay.js, by
     # app.js on the link page and inlineplayer.js in a post): its own pin, so
