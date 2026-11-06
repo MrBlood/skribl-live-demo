@@ -338,6 +338,16 @@ document.addEventListener('DOMContentLoaded', function () {
                 || (typeof _inFlight !== 'undefined' && _inFlight.photo)
                 || (typeof _restoring !== 'undefined' && (_restoring.photo || _restoring.music)));
     },
+    // ...and media still on its way back from the store, or named by the
+    // autosave and not yet put back: what Open it keeps over a Library draft
+    // waits for it (lib/savedrafts.js keepFirst), so it is kept, not lost.
+    pending: function () {
+      return !!((typeof _restoring !== 'undefined' && (_restoring.photo || _restoring.music))
+                || (typeof _inFlight !== 'undefined' && _inFlight.photo)
+                || (typeof mediaBusy !== 'undefined' && mediaBusy > 0)
+                || (typeof pendingPhotoMeta !== 'undefined' && pendingPhotoMeta)
+                || (typeof pendingMusicMeta !== 'undefined' && pendingMusicMeta));
+    },
     thumbnail: function () { return window.skriblPreviewCanvas ? window.skriblPreviewCanvas() : document.getElementById('canvas'); },
     otherUrl: function () { var a = document.getElementById('flipBtn'); return a ? a.getAttribute('href') : null; },
     closeMenu: function () { if (typeof closeMenu === 'function') closeMenu(true); },

@@ -1011,15 +1011,25 @@ with sync_playwright() as p:
           return k === 'flip:draft' ? pr.then(r => new Promise(res => setTimeout(() => res(r), 3000))) : pr; }; v = x; } }); })();""")
     pgF.close()
     pgF2.goto(BASE + "/flip?draft=" + sidF, wait_until="load"); pgF2.wait_for_timeout(900)
-    asked = pgF2.evaluate("""() => { const s = document.getElementById('savedDraftsSheet');
-        const row = s && s.querySelector('.sdrafts-row.armed'); return { shown: !!(s && !s.hidden), armed: !!row,
-        strokes: frames[0].strokes.length }; }""")
-    check("Flip: a Library link over an autosaved photo still on its way asks first",
-          asked["shown"] and asked["armed"] and asked["strokes"] == 0, str(asked))
-    pgF2.click("#savedDraftsSheet .sdrafts-row.armed .sdrafts-open"); pgF2.wait_for_timeout(4000)
+    asked = pgF2.evaluate("""() => { const b = document.querySelector('.sdrafts-ask');
+        return { shown: !!(b && !b.hidden), strokes: frames[0].strokes.length }; }""")
+    check("Flip: a Library link over an autosaved photo still on its way asks first, in one line",
+          asked["shown"] and asked["strokes"] == 0, str(asked))
+    pgF2.click(".sdrafts-ask .othertab-open")
+    pgF2.wait_for_function("(id) => window.SkriblSavedDrafts.current() === id", arg=sidF, timeout=20000)
+    pgF2.wait_for_timeout(1500)
     landed = pgF2.evaluate("() => ({ strokes: frames[0].strokes.length, photo: !!bgImage, name: imageName, current: SkriblSavedDrafts.current() })")
     check("Flip: ...and opened anyway, the draft does not collect the autosave's late photo",
           landed["strokes"] > 0 and not landed["photo"] and landed["current"] == sidF, str(landed))
+    # NOTHING LOST (the one-line question's promise, lib/savedrafts.js
+    # keepFirst): Open it was tapped while the autosave and its photo were
+    # still on their way back, so what it kept in Drafts waited for them and
+    # holds the photo.
+    keptF = pgF2.evaluate("""async (sid) => { const l = await SkriblSavedDrafts.list(); const k = l.find(d => d.id !== sid);
+        if (!k) return null; const r = await SkriblDraftStore.get('saved:' + k.id), p = r && r.payload;
+        return { title: k.title, photo: !!(p && (p.bgImage || (p.photo && p.photo.data))) }; }""", sidF)
+    check("Flip: ...and what was on the canvas, its photo still on its way when Open it was tapped, is kept in Drafts with the photo",
+          bool(keptF) and keptF["photo"], str(keptF))
     ctxF.close()
 
     check("no uncaught page errors", not errs, "; ".join(errs[:3]))

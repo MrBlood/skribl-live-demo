@@ -201,7 +201,6 @@
 
   /* ---- the sheet ------------------------------------------------------- */
   var sheet = null, scrim = null, listEl = null, opts = null, opener = null, thisPic = null;
-  var armOnRender = null;   // a ?draft=<id> that arrived over work on the canvas
 
   function build() {
     scrim = el('div', 'sdrafts-scrim');
@@ -381,11 +380,6 @@
         }
       });
       listEl.appendChild(row);
-      if (armOnRender === it.id) {
-        armOnRender = null;
-        openBtn.click();   // arms, because the canvas has work on it
-        openBtn.focus();
-      }
     });
     lane();
   }
@@ -456,9 +450,7 @@
     backend.load(it.id).then(function (rec) {
       hide();
       opts.load(rec.payload);
-      opts._current = it.id;
-      opts._base = rec.updatedAt || null;
-      if (global.SkriblName && rec.title) global.SkriblName.set(rec.title);
+      adopt(it.id, rec);
       opts.toast('Opened \u201C' + (rec.title || 'Untitled Skribl') + '\u201D');
     }, function (e) { opts.toast(e.message); });
   }
@@ -485,6 +477,7 @@
     return backend.save(was, body).then(function (sum) {
       opts._current = sum.id;
       opts._base = sum.updatedAt || null;
+      held(sum.id);
       // "Updated" only when it was: a local store answers a vanished id with a
       // new draft rather than an error.
       opts.toast(was && sum.id === was ? 'Draft updated' : (backend.where === 'account' ? 'Saved to your drafts' : 'Saved to drafts on this browser'));
@@ -499,6 +492,7 @@
         return backend.save(null, body).then(function (sum) {
           opts._current = sum.id;
           opts._base = sum.updatedAt || null;
+          held(sum.id);
           opts.toast('This draft changed on another device, so yours was saved as a copy.');
           return sum;
         }, function (e2) { opts.toast(e2.message); return null; });
@@ -576,12 +570,12 @@
          "it loads the file, but shows you the drafts menu over the draft you
          just picked"; their "all yes"). Saved, then opened from the Library,
          the canvas already holds it: nothing would be replaced, so it just
-         opens. */
+         opens. A different drawing is asked about in one line (ask, below),
+         no longer with the whole list. */
       if (opts.hasContent && opts.hasContent()) {
         return whenSame(rec.payload).then(function (same) {
           if (same) { adopt(id, rec); return; }
-          armOnRender = id;
-          show(null);
+          ask(id, rec);
         });
       }
       opts.load(rec.payload);
@@ -592,6 +586,85 @@
     opts._current = id;
     opts._base = rec.updatedAt || null;
     if (global.SkriblName && rec.title) global.SkriblName.set(rec.title);
+    held(id);
+  }
+  /* THE DRAFT THE CANVAS WAS LAST, kept across a reload (this editor's kind,
+     this browser), so a drawing that is already a saved draft, unchanged, is
+     not saved again as a copy when another draft opens over it. A guess
+     until proved: keepFirst compares it with the canvas before trusting it. */
+  function heldKey() { return 'skribl.drafts.held.' + opts.kind; }
+  function held(id) {
+    try { if (id) global.localStorage.setItem(heldKey(), id); else global.localStorage.removeItem(heldKey()); } catch (e) {}
+  }
+
+  /* ONE SHORT QUESTION (the owner's "all yes" to A of the mock "Text, Song
+     and Drafts"). A draft opened from the Library over a different drawing
+     asks in one line under the header, in the glass "Another drawing is
+     waiting" wears (lib/othertab.js, the owner's T1 and D2), with the same
+     promise: Open it keeps what is on the canvas in Drafts first, as Save
+     draft makes one, and says where it went; Keep drawing leaves everything
+     as it was. If the drawing cannot be kept (Drafts full, the store not
+     answering), nothing is replaced and the line says why. */
+  var askBar = null;
+  function ask(id, rec) {
+    if (!askBar) {
+      askBar = el('div', 'othertab sdrafts-ask');
+      askBar.setAttribute('role', 'status');
+      askBar.setAttribute('aria-live', 'polite');
+      askBar.appendChild(el('span', 'othertab-words'));
+      var b1 = el('button', 'othertab-open', 'Open it'), b2 = el('button', 'othertab-later', 'Keep drawing');
+      b1.type = b2.type = 'button';
+      askBar.appendChild(b1);
+      askBar.appendChild(b2);
+      doc.body.appendChild(askBar);
+    }
+    var words = askBar.querySelector('.othertab-words');
+    var openBtn = askBar.querySelector('.othertab-open'), keepBtn = askBar.querySelector('.othertab-later');
+    var name = rec.title || 'Untitled Skribl';
+    words.textContent = 'Open \u201C' + name + '\u201D? What\u2019s on your canvas now goes to Drafts first.';
+    openBtn.disabled = keepBtn.disabled = false;
+    askBar.hidden = false;
+    keepBtn.onclick = function () { askBar.hidden = true; };
+    openBtn.onclick = function () {
+      openBtn.disabled = keepBtn.disabled = true;
+      keepFirst().then(function () {
+        askBar.hidden = true;
+        opts.load(rec.payload);
+        adopt(id, rec);
+        opts.toast('Opened \u201C' + name + '\u201D. The drawing you had open is in Drafts.');
+      }, function (e) {
+        openBtn.disabled = keepBtn.disabled = false;
+        words.textContent = (e && e.message ? e.message + ' ' : '') + 'Nothing was replaced.';
+      });
+    };
+  }
+  /* What is on the canvas, kept in Drafts before it is replaced: not again if
+     it is the draft it was opened as or saved to, unchanged (compared, not
+     assumed); its photo and song waited for first, 5s at most, read or still
+     on their way back from the store (the editor's pending()), so a photo the
+     restore has not put back yet is kept with the drawing, not lost. */
+  function waiting() { return !!((opts.busy && opts.busy()) || (opts.pending && opts.pending())); }
+  function keepFirst() {
+    var was = null;
+    try { was = global.localStorage.getItem(heldKey()); } catch (e) {}
+    var already = was ? backend.load(was).then(function (r) {
+      try { return work(r.payload) === work(opts.serialize()); } catch (e) { return false; }
+    }, function () { return false; }) : Promise.resolve(false);
+    return already.then(function (same) {
+      if (same) return true;
+      return new Promise(function (done) {
+        var n = 0;
+        (function look() {
+          if (!waiting() || ++n > 50) { done(); return; }
+          setTimeout(look, 100);
+        })();
+      }).then(function () {
+        if (waiting()) throw new Error('Your photo or song is still loading.');
+        var title = (global.SkriblName && global.SkriblName.get()) || 'Untitled Skribl';
+        return backend.save(null, { kind: opts.kind, title: title, payload: opts.serialize(),
+                                    thumbnail: thumbFrom(opts.thumbnail && opts.thumbnail()) });
+      });
+    });
   }
   /* WHAT A DRAWING IS, to tell one from another: what the editor would save,
      less what is stamped when it is saved (the moments editor_post.js leaves
@@ -884,10 +957,10 @@
     // and the next Save updates that draft instead of making a copy (v317).
     forget: function () {
       var was = opts ? opts._current : null;
-      if (opts) { opts._forgotBase = opts._base; opts._current = null; opts._base = null; }
+      if (opts) { opts._forgotBase = opts._base; opts._current = null; opts._base = null; held(null); }
       return was;
     },
-    resume: function (id) { if (opts && id) { opts._current = id; opts._base = opts._forgotBase || null; } },
+    resume: function (id) { if (opts && id) { opts._current = id; opts._base = opts._forgotBase || null; held(id); } },
     current: function () { return opts ? opts._current : null; },
     where: function () { return backend.where; },
     /* For a page that lists drafts without editing one (the Library's Drafts

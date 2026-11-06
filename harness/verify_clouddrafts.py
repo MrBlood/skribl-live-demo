@@ -642,21 +642,54 @@ try:
               and victim not in pa.locator("#draftsList .draft-name").all_inner_texts(),
               f"{victim!r} {pa.locator('#draftsList .draft-name').all_inner_texts()}")
         # Open a Pad draft over a Pad that already holds work (section 1 drew
-        # on it): the editor asks, it does not replace.
+        # on it): the editor asks, it does not replace. IN ONE LINE (the
+        # owner's "all yes" to A of the mock "Text, Song and Drafts"): under
+        # the header, in the glass "Another drawing is waiting" wears, and the
+        # whole drafts list no longer opens over the drawing to ask.
+        ASK = """() => { var b = document.querySelector('.sdrafts-ask'), s = document.getElementById('savedDraftsSheet');
+            return { bar: !!b && !b.hidden, words: b ? b.querySelector('.othertab-words').textContent : null,
+                     sheet: !!s && !s.hidden, url: location.pathname + location.search }; }"""
         pad_link = pa.locator("#draftsList .draft-row", has_text="Composer wave").locator(".draft-open")
         pad_link.click()
         pa.wait_for_timeout(3500)
         before = canon(pa.evaluate("() => " + PRINT + "(serializeSkribl())"))
-        ask = pa.evaluate("""() => { var s = document.getElementById('savedDraftsSheet');
-            var m = s && s.querySelector('.sdrafts-row.armed .sdrafts-meta');
-            return { open: !!s && !s.hidden, meta: m ? m.textContent : null, url: location.pathname + location.search }; }""")
-        check("opened over work on the canvas, the Pad ASKS instead of replacing it",
-              ask["open"] and ask["meta"] and "replaces" in ask["meta"] and before != saved_print,
+        ask = pa.evaluate(ASK)
+        check("opened over work on the canvas, the Pad ASKS instead of replacing it, in one line, with no drafts list over the drawing",
+              ask["bar"] and not ask["sheet"] and before != saved_print
+              and ask["words"] == "Open \u201cComposer wave\u201d? What\u2019s on your canvas now goes to Drafts first.",
               f"{ask}; canvas {'is' if before == saved_print else 'is not'} the draft")
         check("and the id is off the address", ask["url"] == "/skribl/skribl-pad", ask["url"])
-        pa.locator("#savedDraftsSheet .sdrafts-row.armed .sdrafts-open").click()
-        pa.wait_for_timeout(1500)
-        check("the second tap opens the draft, with its name",
+        try:
+            pa.locator(".sdrafts-ask .othertab-later").click(timeout=5000)
+        except Exception:
+            pass   # no question to answer: the row below says so
+        pa.wait_for_timeout(500)
+        kept_look = pa.evaluate(ASK)
+        check("Keep drawing puts the question away and changes nothing: the drawing is still there, and Drafts as it was",
+              not kept_look["bar"] and canon(pa.evaluate("() => " + PRINT + "(serializeSkribl())")) == before
+              and durable("SELECT COUNT(*) FROM skribl_drafts WHERE user_id='1'") == n_acct - 1,
+              f"{kept_look}; {durable('SELECT COUNT(*) FROM skribl_drafts WHERE user_id=' + chr(39) + '1' + chr(39))} drafts")
+        browsing.goto(pa, BASE, "/skribl/library#drafts", require_boot=False)
+        pa.locator("#draftsList .draft-row", has_text="Composer wave").first.wait_for(timeout=8000)
+        pa.locator("#draftsList .draft-row", has_text="Composer wave").first.locator(".draft-open").click()
+        try:
+            pa.wait_for_function("() => { var b = document.querySelector('.sdrafts-ask'); return !!b && !b.hidden; }", timeout=10000)
+            pa.locator(".sdrafts-ask .othertab-open").click(timeout=5000)
+            pa.wait_for_function("() => !!window.SkriblSavedDrafts.current()", timeout=15000)
+        except Exception:
+            pass   # asked nothing, or opened nothing: the rows below say which
+        pa.wait_for_timeout(500)
+        kept_row = durable("SELECT payload_json FROM skribl_drafts WHERE user_id='1' ORDER BY id DESC LIMIT 1")
+        try:
+            _kp = json.loads(kept_row) if isinstance(kept_row, str) else kept_row
+            kept_print = canon(json.dumps([f.get("strokes") for f in _kp.get("frames", [])]))
+        except Exception:
+            kept_print = None
+        check("Open it keeps what was on the canvas in Drafts first: one more draft in the account, holding that drawing",
+              durable("SELECT COUNT(*) FROM skribl_drafts WHERE user_id='1'") == n_acct and kept_print == before,
+              f"{durable('SELECT COUNT(*) FROM skribl_drafts WHERE user_id=' + chr(39) + '1' + chr(39))} drafts (was {n_acct - 1}); "
+              f"the newest {'holds' if kept_print == before else 'does not hold'} the drawing")
+        check("Open it opens the draft, with its name",
               canon(pa.evaluate("() => " + PRINT + "(serializeSkribl())")) == saved_print
               and pa.evaluate("() => SkriblName.get()") == "Composer wave",
               _diff_detail(canon(pa.evaluate("() => " + PRINT + "(serializeSkribl())")), saved_print,
@@ -678,15 +711,20 @@ try:
         # since, it asks, at once. With a photo and a song too: those come back
         # from the store a moment after the page, and the same drawing waits
         # for them (lib/savedrafts.js whenSame).
-        SHEET = "() => (e => !!e && !e.hidden && !!e.querySelector('.sdrafts-row.armed'))(document.getElementById('savedDraftsSheet'))"
+        SHEET = "() => (e => !!e && !e.hidden)(document.querySelector('.sdrafts-ask'))"
 
         def from_library(pg, name, editor):
             """Open a draft from the Library, as a person does, and see what the editor does: the
-            question (and when it came, from the page's start), or the draft adopted."""
+            question (and when it came, from the page's start), or the draft adopted. `name` is a
+            draft's name, or ("id", its id)."""
             browsing.goto(pg, BASE, "/skribl/library#drafts", require_boot=False)
-            pg.locator("#draftsList .draft-row", has_text=name).first.wait_for(timeout=8000)
-            href = pg.locator("#draftsList .draft-row", has_text=name).first.locator(".draft-open").get_attribute("href")
-            pg.locator("#draftsList .draft-row", has_text=name).first.locator(".draft-open").click()
+            if isinstance(name, tuple):
+                link = pg.locator('#draftsList .draft-open[href*="draft=' + name[1] + '"]').first
+            else:
+                link = pg.locator("#draftsList .draft-row", has_text=name).first.locator(".draft-open")
+            link.wait_for(timeout=8000)
+            href = link.get_attribute("href")
+            link.click()
             pg.wait_for_url("**" + href.split("?")[0] + "*", timeout=10000)
             asked_at = None
             for _ in range(45):   # 4.5s: the longest the same drawing waits is 3s
@@ -707,10 +745,27 @@ try:
               "and the next Save updates it",
               not s1["asked"] and s1["current"] == s1["id"] and s1["name"] == "Composer wave"
               and s1["url"] == "/skribl/skribl-pad" and canon(s1["strokes"]) == saved_print, str({k: v for k, v in s1.items() if k != "strokes"}))
+        # NO COPY OF A DRAFT THAT IS ALREADY ONE: Composer wave is on the
+        # canvas, unchanged, and another draft opens over it. Open it keeps
+        # nothing new: Composer wave is already in Drafts as it is.
+        _cw = s1["id"]
+        _other = [r for r in (api(pa, "GET", "")[1] or {}).get("items", []) if r.get("kind") == "pad" and r.get("id") != _cw]
+        n_now = durable("SELECT COUNT(*) FROM skribl_drafts WHERE user_id='1'")
+        s1b = from_library(pa, ("id", _other[0]["id"]), "pad") if _other else {"asked": False}
+        if s1b["asked"]:
+            try:
+                pa.locator(".sdrafts-ask .othertab-open").click(timeout=5000)
+                pa.wait_for_function("(id) => window.SkriblSavedDrafts.current() === id", arg=s1b["id"], timeout=15000)
+            except Exception:
+                pass   # not opened (a copy refused at the cap, say): the row below says so
+        _opened = s1b["asked"] and pa.evaluate("() => window.SkriblSavedDrafts.current()") == s1b["id"]
+        check("an unchanged saved draft on the canvas is not copied when another opens over it: asked, opened, and Drafts as it was",
+              _opened and durable("SELECT COUNT(*) FROM skribl_drafts WHERE user_id='1'") == n_now,
+              f"asked {s1b['asked']}, opened {_opened}; {durable('SELECT COUNT(*) FROM skribl_drafts WHERE user_id=' + chr(39) + '1' + chr(39))} drafts, {n_now} before")
         pa.evaluate("() => document.querySelector('.bg-swatch[data-bg=\"#0d0f14\"]').click()")
         pa.wait_for_timeout(400)
         s2 = from_library(pa, "Composer wave", "pad")
-        check("...and changed since (a new ground), it asks, at once: within 1.5s of the page",
+        check("...and changed since (a new ground), it asks, in one line, at once: within 1.5s of the page",
               s2["asked"] and s2["asked_ms"] < 1500 and s2["current"] != s2["id"], str({k: v for k, v in s2.items() if k != "strokes"}))
 
         # This browser's, with a photo and a song, in both editors.
