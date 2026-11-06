@@ -30730,14 +30730,18 @@ eighth of a second, and that round passed for a pick that restarted nothing
 (the Pad's and a link's). Only a song started by the tap itself counts now,
 and both went red. With nothing broken, 18 of 18.
 
-THE PLAYERS' BYTES: a link's JavaScript +762 B (lib/replayline.js +581, app.js
-+181), 160,887 measured; its CSS +440 B, 43,458 measured; a post's embed
-+1,223 B (lib/replayline.js +581, inlineplayer.js +169, inlineplayer.css
-+473), 77,710 measured. Spent first: the choice shares the speeds' tap and
-their lit loop rather than a copy of each (-220 B), and a post's restart is
-applyRate's (-47 B). verify_player_isolation reads the speeds' own chips now
-(data-r): its drawing has a song, and the Song choice's lit one read as a
-second lit speed.
+THE PLAYERS' BYTES: a link's JavaScript +807 B (lib/replayline.js +626, app.js
++181), 160,932 measured; its CSS +440 B, 43,458 measured; a post's embed
++1,268 B (lib/replayline.js +626, inlineplayer.js +169, inlineplayer.css
++473), 77,755 measured. Spent first: the choice shares the speeds' tap and
+their lit loop rather than a copy of each (-175 B), and a post's restart is
+applyRate's (-47 B). The tap is on the two pills, not the line: the link page
+builds its line twice on one host (a stand-in from the post's own numbers,
+then the real one), and a tap left on the host by the first answered to the
+second's pills with no pick of its own, which verify_replayspeed's "no page
+errors on the shared player" found. verify_player_isolation and the Watching
+speed rows read the speeds' own chips now (data-r): the Song choice's two sit
+beside them, lit, or hidden while there is no song.
 
 WHAT IT DOES TO FLIP: shared. A Flip's post and link play their song by the
 same rule and show the same choice; Flip's editor has no watching speed (its

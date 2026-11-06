@@ -144,15 +144,19 @@
       });
     }
     btn.addEventListener('click', function () { open(chips.hidden); });
-    // One tap picks and closes, a speed or the song's choice.
-    host.addEventListener('click', function (e) {
-      var b = e.target.closest('.rl-chips button');
+    // One tap picks and closes, a speed or the song's choice. On the pills, not
+    // the host: a line built again on the same host (the link page's stand-in,
+    // then its own) takes its pills, and their taps, with it.
+    function tap(e) {
+      var b = e.target.closest('button');
       if (!b) return;
       if (b.dataset.s) o.pickSong(b.dataset.s); else o.pick(b.dataset.r === 'fit' ? 'fit' : +b.dataset.r);
       update();
       open(false);
       btn.focus();
-    });
+    }
+    chips.addEventListener('click', tap);
+    if (song) song.addEventListener('click', tap);
     host.addEventListener('keydown', function (e) {
       if (e.key === 'Escape' && !chips.hidden) { open(false); btn.focus(); e.stopPropagation(); }
     });

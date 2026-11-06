@@ -383,7 +383,9 @@ with sync_playwright() as p:
             const n = v => parseFloat(v) || 0, has = b.content !== 'none' && b.position === 'absolute';
             return [Math.round(r.width - (has ? Math.min(0, n(b.left)) + Math.min(0, n(b.right)) : 0)),
                     Math.round(r.height - (has ? Math.min(0, n(b.top)) + Math.min(0, n(b.bottom)) : 0))]; }"""
-        CHIPS = """(s) => [...document.querySelectorAll(s + ' .rl-chips button')].map(b => {
+        # The speeds' own chips (data-r), not the Song choice's two, which sit in
+        # the same row, hidden while there is no song (THE SONG'S CHOICE, below).
+        CHIPS = """(s) => [...document.querySelectorAll(s + ' .rl-chips button[data-r]')].map(b => {
             const r = b.getBoundingClientRect(), e = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
             return { t: b.textContent, hit: e === b, inside: r.left >= 0 && r.right <= innerWidth }; })"""
         # REPLAY SPEED IN CANVAS SETTINGS (owner's pick 2): the speed at rest,
@@ -402,7 +404,7 @@ with sync_playwright() as p:
         check(f"[{label}] ...its speeds open inside the panel, each one on top and on screen",
               len(ch) == 8 and all(c["hit"] and c["inside"] for c in ch), str(ch))
         taps = [pg.evaluate(TAP, pg.locator("#tuneSpeed .rl-speed").element_handle())] + \
-               [pg.evaluate(TAP, h) for h in pg.locator("#tuneSpeed .rl-chips button").element_handles()]
+               [pg.evaluate(TAP, h) for h in pg.locator("#tuneSpeed .rl-chips button[data-r]").element_handles()]
         # The eight share the pill evenly (THE PILL'S ENDS, below): 44px each
         # where the row has room, narrower together on a phone, where 44 apiece
         # ran out of the pill and, at 375 and under, off the screen.
@@ -428,7 +430,7 @@ with sync_playwright() as p:
             chips = pg.evaluate(CHIPS, "#padSpeed")
             check(f"[{label}] ...tapping it opens every speed, each one on top and on screen",
                   len(chips) == 8 and all(c["hit"] and c["inside"] for c in chips), str(chips))
-            taps = [pg.evaluate(TAP, sp.element_handle())] + [pg.evaluate(TAP, h) for h in pg.locator("#padSpeed .rl-chips button").element_handles()]
+            taps = [pg.evaluate(TAP, sp.element_handle())] + [pg.evaluate(TAP, h) for h in pg.locator("#padSpeed .rl-chips button[data-r]").element_handles()]
             check(f"[{label}] ...and the button and every speed are at least a 44px tap",
                   all(w >= 44 and h >= 44 for w, h in taps), str(taps))
             pg.click("#padSpeed .rl-chips button[data-r='2']"); pg.wait_for_timeout(250)

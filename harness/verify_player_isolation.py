@@ -1055,14 +1055,14 @@ with sync_playwright() as sp:
     #   verify_jsstrip's lines move with it. 160,125 measured.
     # RAISED (the owner's "all yes" to A of "Text, Song and Drafts": "maybe
     #   should have the option of music replay speed too?"), for one named
-    #   cost: +762 B -- the Song choice with the speeds: lib/replayline.js
-    #   +581 (its pill, the rule with the viewer's pick, what is lit) and
+    #   cost: +807 B -- the Song choice with the speeds: lib/replayline.js
+    #   +626 (its pill, the rule with the viewer's pick, what is lit) and
     #   app.js +181 (the link's three hooks, and musicRate asking with the
     #   pick). Spent first: the choice shares the speeds' tap and their lit
-    #   loop rather than a copy of each (-220 B). WHICH CALLER PAYS: every
+    #   loop rather than a copy of each (-175 B). WHICH CALLER PAYS: every
     #   player page; the pill is built only where it can be used.
-    #   verify_jsstrip's lines move with it. 160,887 measured.
-    BYTES_RATCHET, BYTES_TARGET = 160_890, 153_800
+    #   verify_jsstrip's lines move with it. 160,932 measured.
+    BYTES_RATCHET, BYTES_TARGET = 160_935, 153_800
     # The page's own HTML. The brand is the one-stroke skribl signature INLINE
     # in the page (~1.4KB of paths, a ~0.9KB nonce'd draw-on script, and the
     # <linearGradient> defs), and inline is load-bearing rather than lazy:

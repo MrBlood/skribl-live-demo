@@ -346,10 +346,10 @@ with sync_playwright() as sp:
     # song's one rule (the owner's "all yes": a post's song keeps its own speed
     # past 2x), +64 B, lib/replayline.js songRate (160,125 measured). And
     # RAISED, in both places together, by the Song choice with the speeds (the
-    # owner's "all yes" to A of "Text, Song and Drafts"), +762 B:
-    # lib/replayline.js +581, app.js +181 (160,887 measured).
+    # owner's "all yes" to A of "Text, Song and Drafts"), +807 B:
+    # lib/replayline.js +626, app.js +181 (160,932 measured).
     check("stripping keeps the player's JS under its ratchet",
-          lean_total <= 160_890,
+          lean_total <= 160_935,
           f"{src_total:,} B of source -> {lean_total:,} B parsed")
     # THE MODULE ONLY A RECOLOURED DRAWING FETCHES (lib/recolorplay.js, by
     # app.js on the link page and inlineplayer.js in a post): its own pin, so
@@ -454,11 +454,11 @@ with sync_playwright() as sp:
     # present, all app.js. The line is now 6,913 B over 153,800; the carve
     # named above is still the first candidate.
     #
-    # AND 762 B MORE, IN WRITING, at the owner's "all yes" to A of "Text,
+    # AND 807 B MORE, IN WRITING, at the owner's "all yes" to A of "Text,
     # Song and Drafts": the Song choice with the speeds (lib/replayline.js
-    # +581, app.js +181). The line is now 7,700 B over 153,800; the carve
+    # +626, app.js +181). The line is now 7,745 B over 153,800; the carve
     # named above is still the first candidate.
-    _target = 161_500
+    _target = 161_545
     _margin = _target - lean_total
     check(f"REACHES the {_target:,} target (strip + whitespace collapse; 153,800 once its debt is paid)",
           lean_total <= _target,
