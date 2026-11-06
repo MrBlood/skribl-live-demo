@@ -30750,3 +30750,30 @@ pages per second are the animation), so nothing changes there.
 THE FOUR: kind (no more noise, and nothing to undo), powerful and exact (the
 viewer chooses, and it holds), simple (only there when a song is, only when
 the speeds are open), playful (a time-lapse with its music).
+
+## After v330 -- verify_musicbeat's timeline drag aims, reads and corrects (main red after #773)
+
+Main's run after #773 went red on one shard, SQLite 6 of 6, on a row #773 did
+not touch: verify_musicbeat's "an end let go counts whole beats from the
+start wherever it is". The app did the right thing: let go at 9.20 beats, the
+end settled on 9 whole beats from the start, and the start stayed where it
+was. The drag did not: it aimed at 8.8 beats and let go at 9.20, 0.2s later on
+the song. The run after #774 was green on every shard, that row included
+(issue #775).
+
+The drag (tl_drag) works out where the finger goes from one reading of the
+timeline's view and of where its stage is, then moves there. Anything that
+moves after that reading, such as a view still widening on a busy runner or a
+page that shifts, moves where the finger lands. Not reproduced here under 4x
+and 6x CPU throttling (8 of 8, four times).
+
+- FIXED, in the suite: after it moves, the drag reads where the handle says it
+  is, as a finger watching the line does. When that is more than 0.02s from
+  where it was sent, it reads the view again and moves again, four times at
+  most.
+- CALIBRATED with the condition forced, in a scratch copy only (the
+  timeline's stage moved 30px after the drag read it): the old drag let go at
+  2.836s where 3.15 was aimed (a row red); the new one landed every row, 8 of
+  8. With nothing forced, the whole suite with the fix: 62 of 62.
+
+Nothing in the app changed.

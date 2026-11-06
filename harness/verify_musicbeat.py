@@ -466,6 +466,20 @@ with sync_playwright() as pw:
             at = pg.evaluate(TL, handle)
         x = x_of(at)
         pg.mouse.move(x, at["hy"], steps=6)
+        # AIMED, READ, CORRECTED, as a finger watching the line is (main red
+        # after #773, issue #775: let go at 9.20 beats where 8.8 was aimed, the
+        # settle itself right). The aim is worked out from one reading of the
+        # view, and on a busy runner the view was still widening when it was
+        # read, so the same point on the screen meant 0.2s later. So where the
+        # handle says it is, against where it was sent, a few times at most,
+        # with the view read again each time.
+        key = "e" if handle == "tlEnd" else "s"
+        for _ in range(4):
+            if abs(pg.evaluate(TRIM)[key] - t) <= 0.02:
+                break
+            pg.wait_for_timeout(80)
+            at = pg.evaluate(TL, handle)
+            pg.mouse.move(x_of(at), at["hy"], steps=2)
         let_go = pg.evaluate(TRIM)
         if rec:
             pg.evaluate(REC)
