@@ -204,6 +204,7 @@ function fitPad(){
 // Give the canvas stage a stable height = viewport minus the fixed chrome (header,
 // toolbar, chip, strip). Drawers live in .flip-drawers (not measured here), so an
 // opened drawer never changes this — the canvas stays untouched and the page scrolls.
+let _drawersRestH = null;   // #flipDrawers with nothing open, as sizeStage last saw it
 function sizeStage(){
   const stage = document.querySelector('.flip-stage');
   const px = sel => { const el=document.querySelector(sel); return el?el.offsetHeight:0; };
@@ -242,8 +243,19 @@ function sizeStage(){
     }
     extent += parseFloat(getComputedStyle(app).paddingBottom || 0);
     if(drawers){
+      // ALL OF WHAT AN OPEN DRAWER ADDS (the owner, Nov 6, of the Pad: "shrinks
+      // because of open drawer, then when closed drawer - it stays small").
+      // Its content was taken off, and not the 24px under a drawer's last row
+      // that the container wears only while one is open (flip.css): a stage
+      // sized with a drawer open came out 24px short, and closing the drawer
+      // sized nothing again. What the container is with nothing open, as last
+      // seen, is what the page has at rest.
+      const open = !!drawers.querySelector(':scope > .tab-panel:not([hidden]), :scope > .media-card > .tab-panel:not([hidden])');
+      if(!open) _drawersRestH = drawers.offsetHeight;
       const dcs = getComputedStyle(drawers);
-      extent -= Math.max(0, drawers.offsetHeight - parseFloat(dcs.paddingTop || 0) - parseFloat(dcs.paddingBottom || 0));
+      const rest = (open && _drawersRestH != null) ? _drawersRestH
+        : parseFloat(dcs.paddingTop || 0) + parseFloat(dcs.paddingBottom || 0);
+      extent -= Math.max(0, drawers.offsetHeight - rest);
     }
     // Slack both ways: grow into room under the strip, and give back what the
     // page runs past the window, so the dock ends inside it like the Pad's.

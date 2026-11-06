@@ -227,6 +227,8 @@ function layoutEditorCanvas() {
   // shrink it: zoomed to 150% without a reload, the dock went 102px past the
   // bottom of the screen (L3). The size set below is the only one painted.
   canvasWrap.style.height = '0px';
+  // As if no drawer were open below the dock (editor_bar.js, drawersAside).
+  const aside = window._skriblDrawersAside ? _skriblDrawersAside() : null;
   const area = areaEl.getBoundingClientRect();
   // Subtract the padding. getBoundingClientRect() reports the BORDER box, so
   // the breathing room .canvas-area reserves was being handed straight back to
@@ -234,8 +236,9 @@ function layoutEditorCanvas() {
   const cs = getComputedStyle(areaEl);
   const padX = parseFloat(cs.paddingLeft || 0) + parseFloat(cs.paddingRight || 0);
   const padY = parseFloat(cs.paddingTop || 0) + parseFloat(cs.paddingBottom || 0);
+  if (aside) aside.back();
   const availW = Math.max(1, area.width - padX);
-  const availH = Math.max(1, area.height - padY);
+  const availH = Math.max(1, area.height - padY + (aside ? aside.h : 0));
   // Not capped at 1 any more. It was, because canvas.width was authoredW x dpr
   // and any scale above 1 stretched a fixed bitmap and softened every line
   // (Flip allowed 1.4 and was visibly softer than Pad for the same drawing).
