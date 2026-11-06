@@ -1675,7 +1675,11 @@ with sync_playwright() as sp:
     #   page that shows a post. Spent first: the choice shares the speeds' tap
     #   and lit loop (-175 B), and its restart is applyRate's (-47 B).
     #   77,755 B measured.
-    EMBED_RATCHET = 77_758
+    # RAISED (a bug fix: main red after #776, a choice spilling out of the
+    #   Song pill at 320 in DejaVu Sans, the face CI draws a post in), for one
+    #   named cost: +51 B -- inlineplayer.css wraps a whole choice to a second
+    #   row where a face cannot hold it on one. 77,806 B measured.
+    EMBED_RATCHET = 77_809
     # THE RATCHET MEASURES DISPLAY, NOT COMPOSE, and the two are separate costs
     # paid by separate pages. Excluded here and measured on its own below:
     #   feed.js          the PREVIEW PAGE's own script (fetch the listing, clone
