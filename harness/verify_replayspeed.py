@@ -1361,14 +1361,18 @@ with sync_playwright() as p:
     #
     # READ AS IT IS HEARD AND SEEN: the rate of each song the page starts
     # (AudioBufferSourceNode.prototype.start, as verify_inline reads a post's),
-    # which pill a person can see (checkVisibility) and which choice is lit
+    # and only a song started BY THE TAP ITSELF counts as "at once": a short
+    # drawing that repeats starts its song again every round, at 8x every
+    # eighth of a second, and the first calibration found that round passing
+    # for a pick that restarted nothing (the Pad's and a link's breaks went
+    # green). Which pill a person can see (checkVisibility) and which choice is lit
     # (aria-pressed), and where it sits from its own box against the speeds'
     # and the screen's: 14px from the speeds in a line and 8px under them on a
     # desk, as the mock had them; whole and on one line from a 320px phone up,
     # its words never under 12px.
     print("\nTHE SONG'S CHOICE")
-    HEAR = """(() => { window.__songs = []; const real = AudioBufferSourceNode.prototype.start;
-      AudioBufferSourceNode.prototype.start = function () { if (this.loop) window.__songs.push(this.playbackRate.value);
+    HEAR = """(() => { window.__songs = []; window.__now = false; const real = AudioBufferSourceNode.prototype.start;
+      AudioBufferSourceNode.prototype.start = function () { if (this.loop) window.__songs.push({ r: this.playbackRate.value, now: window.__now });
         return real.apply(this, arguments); }; })();"""
     SONG = r"""(sel) => { const h = document.querySelector(sel), s = h && h.querySelector('.rl-song'), c = h && h.querySelector('.rl-chips:not(.rl-song)');
       if (!s || !s.checkVisibility()) return { shown: false };
@@ -1379,7 +1383,8 @@ with sync_playwright() as p:
                gap: +Math.max(k.top - r.bottom, r.top - k.bottom).toFixed(1), edge: +Math.min(r.left, innerWidth - r.right).toFixed(1),
                one: one, inside: bs.every((x) => { const q = x.getBoundingClientRect(); return q.left >= r.left - 0.5 && q.right <= r.right + 0.5; }),
                px: Math.min(...bs.map((x) => parseFloat(getComputedStyle(x).fontSize))) }; }"""
-    LAST = "() => window.__songs.length ? window.__songs[window.__songs.length - 1] : null"
+    # The rate of the last song started by the tap itself, or None.
+    LAST = "() => { const s = window.__songs.filter((x) => x.now); return s.length ? s[s.length - 1].r : null; }"
     TRACK = {"name": "tone.wav", "mimeType": "audio/wav", "buffer": tone()}
 
     def song_open(pg, sel):
@@ -1393,14 +1398,16 @@ with sync_playwright() as p:
         """With the drawing ('with') or Normal speed ('own') tapped, as a person
         does: the speeds opened, the choice, the rate of the song it starts."""
         pg.evaluate("(s) => document.querySelector(s + ' .rl-speed').click()", sel); pg.wait_for_timeout(350)
-        pg.evaluate("() => { window.__songs.length = 0; }")
-        pg.evaluate("([s, w]) => document.querySelector(s + ' .rl-song [data-s=\"' + w + '\"]').click()", [sel, which])
-        pg.wait_for_timeout(400)
+        pg.evaluate("""([s, w]) => { window.__songs.length = 0; window.__now = true;
+            try { document.querySelector(s + ' .rl-song [data-s="' + w + '"]').click(); } finally { window.__now = false; } }""", [sel, which])
+        pg.wait_for_timeout(300)
         return pg.evaluate(LAST), pg.evaluate("(s) => document.querySelector(s + ' .rl-chips').hidden", sel)
 
     def speed(pg, sel, r):
-        pg.evaluate("() => { window.__songs.length = 0; }")
-        pick(pg, sel, r); pg.wait_for_timeout(400)
+        """A speed picked from the line, and the rate of the song that tap starts."""
+        pg.evaluate("""([s, r]) => { document.querySelector(s + ' .rl-speed').click(); window.__songs.length = 0; window.__now = true;
+            try { document.querySelector(s + ' .rl-chips [data-r="' + r + '"]').click(); } finally { window.__now = false; } }""", [sel, r])
+        pg.wait_for_timeout(300)
         return pg.evaluate(LAST)
 
     def placed(m, gap, edge=15.5):
