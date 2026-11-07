@@ -30876,3 +30876,44 @@ promises), powerful (every drawing stays one tap away in the list), playful
 (trying another drawing costs nothing).
 
 Not tested here: WebKit (the owner's iPhone), and Segoe UI or SF.
+
+## After v330 -- Flip's message bubble is the Pad's (the owner's pick A)
+
+Seen while showing the drafts list's one tap: Flip's chip said 'Opened
+"Bounce". The drawing you had open is in Drafts.' in three lines on a phone,
+where the Pad's toast takes two. The chip sat at left: 50% with no width of
+its own, so it could use only half the screen; its words were 12.5px in the
+secondary ink, and it went after 2.2s where the Pad's stays 2.8s. The mock
+(Now, A the Pad's bubble, B the width only, the Pad beside) measured it: on a
+402px phone Flip's was 201px wide and three lines; A and the Pad 378px and
+two; contrast 9.1 light and 10.5 dark now, 14.8 and 14.1 for A and the Pad.
+The owner: "Your picks", so A.
+
+- ONE BUBBLE. Flip's chip wears the Pad's .toast (the class on #flipChip, in
+  the template): its ground, blur, edge, shadow, 13px words in the primary
+  ink, padding, width rule (as wide as its words, up to 94% of the screen or
+  520px) and its glide and fade. What stays Flip's is where it sits: fixed,
+  just under the header as chip() places it, under Flip's sheets (z-index 30).
+- THE SAME TIME TO READ IT: chip() holds 2.8s, the Pad's (7s with Undo, as
+  both already did).
+- NOTHING MOVES. Flip's stage counts the chip's height in its first guess,
+  but sizes itself from the page as it is laid out (sizeStage's slack), and
+  the chip floats: the stage and the canvas measured the same with the chip
+  16px, 22px, a two-line message, and 300px tall (phone, desk, a 640px
+  window).
+
+THE CHECKS (verify_parity, "the message bubble is one design, on both"): on a
+phone and a desk, light and dark, Flip's bubble has the Pad's look property
+by property, the long message is as wide and as many lines on both, and its
+words read at 4.5 or more against what is painted behind them (the bubble
+photographed with its words hidden); and both hold a message 2.8s, timed in
+each page's own clock. CALIBRATED against three scratch trees: main's Flip
+chip turned the look, width and time rows red (9 of 13), the old 2.2s only
+the time row, unreadable words the look and contrast rows (8); the tree
+itself 13 of 13.
+
+THE FOUR: kind (a message read in one glance, in brighter words), simple (one
+bubble for both editors), powerful (room for the longer messages Drafts now
+says), playful (the Pad's soft glide in).
+
+Not tested here: WebKit (the owner's iPhone), and Segoe UI or SF.
