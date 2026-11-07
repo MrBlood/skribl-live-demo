@@ -56,8 +56,8 @@
 
   /* AND THE MOMENT SOMETHING OPENS, said once, as 'skribl:opened' on the
      document: the page went from nothing open to a drawer, a sheet or a menu.
-     The message bubble listens (the Pad's toast in app.js, Flip's chip in
-     flip.js: one bubble since the owner's pick A). A bubble that was up when
+     The message bubble listens (the Pad's toast in editor_menu.js, Flip's
+     chip in flip.js: one bubble since the owner's pick A). A bubble that was up when
      Tune opened on a phone sat on Tune's first row, and on Flip, the bubble
      now the Pad's size, on its Speed buttons: main's verify_contrast after
      #782 read the 6 on it. So the bubble steps aside as a tip does

@@ -1560,7 +1560,9 @@ function chip(msg, action){
   chipFresh = true; setTimeout(()=>{ chipFresh = false; }, 0);
 }
 /* A CHIP THAT WAS UP STEPS ASIDE WHEN SOMETHING OPENS OVER THE PAGE, as the
-   Pad's toast does (app.js, the reason there) and a tip does (lib/hints.js).
+   Pad's toast does (editor_menu.js, the reason there) and a tip does
+   (lib/hints.js). Its Undo, if it has one, goes with it: hidden once it has
+   faded (flip.css, .flip-chip:not(.show) .toast-action).
    "Draft restored" was still up when Tune opened on a phone, on its Speed
    buttons (main's verify_contrast after #782). One shown while a drawer or
    sheet is open stays, and so does one shown in the same task as it opening:

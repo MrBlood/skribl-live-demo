@@ -30936,12 +30936,19 @@ faces are not this box's). Real, if small: a message never covers a control.
 - THE BUBBLE STEPS ASIDE WHEN SOMETHING OPENS, the rule a tip already follows
   (lib/hints.js, written for the same Speed buttons). lib/opensurfaces.js says
   'skribl:opened' when the page goes from nothing open to a drawer, sheet or
-  menu, and the Pad's toast (app.js) and Flip's chip (flip.js chip()) put
-  themselves away on it. One said while the surface is open stays, and so
-  does one said in the same task as it opening, in either order: those are
-  about that surface. SHARED: one signal for both; each editor's listener is
-  its own because each bubble hides its own way (the Pad's toast takes its
-  hidden after the fade, and its frame that adds .show is cancelled too).
+  menu. One said while the surface is open stays, and so does one said in the
+  same moment as it opening, in either order: those are about that surface.
+  An Undo in one that steps aside takes no tap over what opened.
+  FLIP (flip.js chip()): marks a chip said in this task, puts away one that
+  was up; its faded Undo was already hidden (flip.css).
+  THE PAD (editor_menu.js, NOT app.js): the first build put the listener in
+  app.js and took the player's JavaScript 446 B past its ceiling
+  (verify_player_isolation, verify_jsstrip), for code the player never runs:
+  it opens no sheet. So app.js is as it was, and the Pad's listener lives in
+  its menu's script. It fades a message that was up; one said in the same
+  moment has no .show yet (app.js adds it on the next frame), so that frame
+  brings it back; and a faded one's Undo stops taking taps. The player's
+  JavaScript is unchanged.
   Still as before: a message said WHILE Tune is open sits under the header,
   over Tune's first row. No Tune control on either editor says one today; if
   one starts to, where the bubble goes while Tune is open is a mock.
@@ -30957,23 +30964,26 @@ faces are not this box's). Real, if small: a message never covers a control.
 - docs/SKRIBLS-NET.md item 9 (the owner's yes): join the site's light/dark
   choice to Skribl's, by having the site's toggle write Skribl's key too.
 
-THE CHECKS. verify_parity, beside the bubble's design rows: a bubble up when
-Tune opens is gone 600ms later on both (touch phone); one said while Tune is
-open, or as it opens in either order, is still up. verify_tips: on a desk, a
-sheet closed with the mouse gives focus back to the ⋯ and no tooltip comes
+THE CHECKS. verify_parity, beside the bubble's design rows, on a touch phone:
+a bubble up when Tune opens is gone 600ms later, on both; an Undo in one that
+stepped aside is not what is hit at its centre, on both; one said while Tune
+is open, or as it opens in either order, is still up. verify_tips: on a desk,
+a sheet closed with the mouse gives focus back to the ⋯ and no tooltip comes
 up, read at 300ms (before a hover's 380ms) and 900ms, Pad and Flip; reached
 with keys (Shift+Tab, Tab), the same ⋯ shows its words at once.
 
 CALIBRATED, each mutation in its own copy of the tree, the rows cut from the
-suites: main's four files turned the steps-aside row and both mouse rows red;
-no signal, the steps-aside row (both editors still up); the Pad's listener
-gone, that row red with the Pad still up and Flip's gone; Flip's the same the
-other way round; either editor's same-task mark gone, the stays row red for
-that editor alone; tooltips on any focus, the two mouse rows; never on focus,
-the two keyboard rows. The tree: 6 of 6. verify_contrast's "Tune, with Beat"
-with "Draft restored" up before Tune opened passed in this box on main's
-code too (the label's samples sit lower here than CI's); measured directly,
-as above, the bubble's shadow on the 6 is what CI read.
+suites. Main's files: the steps-aside, Undo and both mouse rows red. No
+signal: steps-aside and Undo red, both editors. The Pad's listener gone: those
+two red, the Pad's half only; Flip's gone, Flip's half only. The Pad's faded
+Undo left tappable: the Undo row, the Pad's half; Flip's flip.css rule gone,
+Flip's half. The Pad's bubble put away at once, whatever it is: the stays row
+(a message said with Tune lost). Flip's same-task mark gone: the stays row.
+Tooltips on any focus: the two mouse rows; never on focus: the two keyboard
+rows. The tree: 7 of 7. verify_contrast's "Tune, with Beat" with "Draft
+restored" up before Tune opened passed in this box on main's code too (the
+label's samples sit lower here than CI's); measured directly, as above, the
+bubble's shadow on the 6 is what CI read.
 
 THE FOUR: kind (nothing left over the control someone reaches for next, and a
 message about the open surface still stays), simple (one rule for tips,
