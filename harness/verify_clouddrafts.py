@@ -1196,10 +1196,10 @@ try:
             const out = [];
             for (const it of items) {
               const r = await SkriblDraftStore.get('saved:' + it.id);
-              const p = (r && r.payload) || {};
+              const p = (r && r.payload) || {}, f0 = (p.frames || [])[0] || {};
               out.push({ id: it.id, title: it.title,
                          strokes: (p.frames || []).reduce((n, f) => n + (f.strokes || []).length, 0),
-                         photo: !!(p.photoMeta || p.photo || p.bgImage) });
+                         photo: !!(f0.photo || p.photo) });   // the photo rides on page one (app.js currentFrameMedia)
             }
             return out; }"""
         BLANK = "() => ({ strokes: strokes.length, ink: !!hasContent, photo: !!(photoBgImg && photoBgImg._fileName) })"
@@ -1255,6 +1255,22 @@ try:
               bool(other) and waited["said"] == "Your photo or song is still loading. Nothing was replaced."
               and waited["open"] and waited["strokes"] == 0 and waited["current"] == cur_wait and waited["pending"]
               and len(pp.evaluate(LOCAL)) == n_wait, f"{waited} (current was {cur_wait}); {n_wait} -> {len(pp.evaluate(LOCAL))} drafts")
+        # ...and with the sheet closed while it waits, the same words come as a
+        # toast: the row is not on screen to say them.
+        pp.evaluate("() => { const t = document.getElementById('toast'); window.__toasts = [];"
+                    " new MutationObserver(() => window.__toasts.push(t.textContent)).observe(t, { childList: true, characterData: true, subtree: true }); }")
+        if other:
+            pp.locator('#savedDraftsSheet .sdrafts-open[data-draft-id="' + other["id"] + '"]').click()
+        pp.wait_for_timeout(300)
+        pp.evaluate("() => SkriblSavedDrafts.close()")
+        try:
+            pp.wait_for_function("() => (window.__toasts || []).some(t => t.includes('Nothing was replaced.'))", timeout=10000)
+        except Exception:
+            pass   # no toast: the row below says what came instead
+        closed = pp.evaluate("() => ({ toasts: window.__toasts, strokes: strokes.length, current: SkriblSavedDrafts.current() })")
+        check("...and with the sheet closed while it waits, a toast says it instead of the row",
+              any(t == "Your photo or song is still loading. Nothing was replaced." for t in closed["toasts"])
+              and closed["strokes"] == 0 and closed["current"] == cur_wait, str(closed))
         # A BLANK CANVAS KEEPS NOTHING: one tap opens, and Drafts are as they were.
         pp.evaluate("""() => { SkriblSavedDrafts.close(); _restoring.photo = false; pendingPhotoMeta = null; resetAll(); }""")
         pp.wait_for_timeout(400)
