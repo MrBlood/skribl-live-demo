@@ -238,11 +238,34 @@ def _idempotent_replay(idem_hash, fingerprint):
         sa.orm.defer(SkriblPost.payload_json)).filter_by(id=row.post_id).first()
     if post is None:
         return None
-    return jsonify({
+    body = {
         "id": post.public_id,
         "url": url_for(".skribl_player", public_id=post.public_id),
         "idempotentReplay": True,
-    }), 200
+    }
+    # The same post found again answers as it did the first time.
+    body.update(_as_shown(post))
+    return jsonify(body), 200
+
+
+def _as_shown(post):
+    """What a page needs to show a post it has just made, as the listing will.
+
+    WHETHER IT HAS SOUND, from the server's own reading of the payload: the
+    client that just posted cannot be trusted to answer this and was never
+    asked (lib/posted.js stored no audio flag at all, so every browser-kept
+    row rendered `has_audio` as undefined and the profile labelled every one
+    SILENT, music and all). And THE DRAWING'S SIZE AND LINE, so the box takes
+    the drawing's shape and says "Drawn in 15 sec" at once: /feed put a post
+    it had just made in with its id alone, so it sat in the 16:9 box with the
+    card's ground at its sides and a line that only said "watching at 1x",
+    until a reload (the owner's phone, after #786). Every value is the
+    listing's own for the row (feed_dict), so the two cannot disagree; none
+    of them reads the payload.
+    """
+    listed = post.feed_dict()
+    return {"hasAudio": bool(post.has_audio), "canvas_w": listed["canvas_w"],
+            "canvas_h": listed["canvas_h"], "line": listed["line"]}
 
 
 def register_routes(bp, *, index_route=False):
@@ -847,15 +870,9 @@ def register_routes(bp, *, index_route=False):
         #
         # Absent for an owned post: that one is authorised by its owner and a
         # second credential would only be something else to leak.
-        # WHETHER IT HAS SOUND, from the server's own reading of the payload.
-        # The client that just posted cannot be trusted to answer this and was
-        # never asked: lib/posted.js stored no audio flag at all, so every
-        # browser-kept row rendered `has_audio` as undefined and the profile
-        # page labelled every one of them SILENT -- including the ones with
-        # music (from /library). Same value _payload_has_audio() computed
-        # a moment ago and the same one feed_dict() reports, so the row and the
-        # listing cannot disagree.
-        body["hasAudio"] = bool(made.post.has_audio)
+        # WHETHER IT HAS SOUND, ITS SIZE AND ITS LINE: what a page needs to
+        # show the post at once, the listing's own values (_as_shown says why).
+        body.update(_as_shown(made.post))
         if made.delete_token:
             body["deleteToken"] = made.delete_token
         return jsonify(body), 201

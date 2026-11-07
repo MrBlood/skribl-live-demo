@@ -770,6 +770,29 @@ with sync_playwright() as sp:
           _codes == 0, f"{_codes} code element(s) in the two consumer states")
     dp.close()
 
+    # NOTHING UNDER THE HEADER SHOWS THROUGH IT (the owner's phone, after
+    # #786): its ground was 82% solid, so with the page scrolled a little the
+    # composer's "What's happening?" was written under "Latest Skribls". Asked
+    # of the paint: the header photographed with the placeholder under it and
+    # again with the placeholder gone has to be the same picture.
+    hp = b.new_page(viewport={"width": 402, "height": 874}, is_mobile=True, has_touch=True)
+    browsing.goto(hp, BASE, "/feed")
+    hp.evaluate("() => window.scrollTo(0, 40)")
+    hp.wait_for_timeout(300)
+    _hh = hp.evaluate("""() => { const h = document.querySelector('.fhead').getBoundingClientRect(),
+        t = document.getElementById('composerText').getBoundingClientRect();
+        return { head: Math.round(h.bottom), text: Math.round(t.top), y: scrollY }; }""")
+    _clip = {"x": 0, "y": 0, "width": 402, "height": max(1, _hh["head"])}
+    _with = hp.screenshot(clip=_clip)
+    hp.evaluate("() => { document.getElementById('composerText').placeholder = ''; }")
+    hp.wait_for_timeout(150)
+    _without = hp.screenshot(clip=_clip)
+    check("with the page scrolled, the composer's words under the feed's header do not show through it",
+          _hh["text"] < _hh["head"] and _with == _without,
+          f"header ends at {_hh['head']}px, the composer starts at {_hh['text']}px (scrolled {_hh['y']}); "
+          f"the header {'is' if _with == _without else 'is NOT'} the same picture with and without the words under it")
+    hp.close()
+
     # THE ERROR STATE, WITH A WAY OUT. The listing fails on the wire, the page
     # says so with a Retry; the wire recovers, Retry is pressed, the feed loads.
     ep = b.new_page(viewport={"width": 620, "height": 900})

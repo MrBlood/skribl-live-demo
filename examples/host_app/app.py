@@ -138,8 +138,17 @@ def create_app(database_url=None):
         posts = (db.session.query(Post)
                  .order_by(Post.created_at.desc(), Post.id.desc())
                  .limit(30).all())
-        return render_template("feed.html", posts=posts, me=current_user(),
-                               users=db.session.query(User).all())
+        # EACH DRAWING'S SIZE AND LINE, so the player takes the drawing's
+        # shape and says "Drawn in 15 sec" before anybody presses play
+        # (INTEGRATION.md). With the id alone a 4:3 or a tall drawing sat in
+        # the 16:9 box with the share card's ground at its sides. One query
+        # for the page's Skribls, by the public id each post stores; a
+        # drawing deleted since is simply absent, and its box still renders.
+        ids = [p.skribl_id for p in posts if p.skribl_id]
+        drawings = ({s.public_id: s for s in db.session.query(skribl.models.SkriblPost)
+                     .filter(skribl.models.SkriblPost.public_id.in_(ids))} if ids else {})
+        return render_template("feed.html", posts=posts, drawings=drawings,
+                               me=current_user(), users=db.session.query(User).all())
 
     @app.post("/login")
     def login():

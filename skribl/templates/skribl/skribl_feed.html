@@ -35,10 +35,13 @@
     a { color: #b7a8ff; }
     .shell { max-width: 600px; margin: 0 auto; border-inline: 1px solid rgba(255,255,255,0.075); min-height: 100vh; }
     @media (max-width: 620px) { .shell { border-inline: none; } }
+    /* THE HEADER'S GROUND IS SOLID: at 82% the composer's "What's
+       happening?" showed through it, under "Latest Skribls", once the page
+       had scrolled a little (the owner's phone, after #786). */
     .fhead {
       position: sticky; top: 0; z-index: 5;
       display: flex; align-items: baseline; gap: 12px;
-      padding: 13px 18px; background: rgba(13,15,20,0.82);
+      padding: 13px 18px; background: #0d0f14;
       border-bottom: 1px solid rgba(255,255,255,0.075);
     }
     .fhead h1 { font-size: 16px; font-weight: 800; letter-spacing: -0.01em; margin: 0; }

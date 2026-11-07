@@ -259,9 +259,13 @@
       return r.json();
     }).then(function (res) {
       /* A real host stores res.id on THEIR post row here and renders it with
-         {{ skribl_inline(post.skribl_id) }}. This page just prepends it. */
+         {{ skribl_inline(post.skribl_id, canvas_w=..., canvas_h=...,
+         line_info=...) }}. This page just prepends it, with the size and the
+         line the answer carries, so the post is in its own shape and says how
+         long it was drawn now, not after a reload (the owner's phone). */
       list.insertBefore(row({ id: res.id, title: body.title, caption: body.caption,
-                              created_at: new Date().toISOString(), user_id: null }),
+                              created_at: new Date().toISOString(), user_id: null,
+                              canvas_w: res.canvas_w, canvas_h: res.canvas_h, line: res.line }),
                         list.firstChild);
       window.SkriblInline.mount(list);
       empty.hidden = true;

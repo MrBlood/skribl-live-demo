@@ -123,8 +123,13 @@
       {% if post.body %}<div>{{ post.body }}</div>{% endif %}
       {#  4. THE PLAYER, INSIDE THE HOST'S OWN POST. One call, the public id,
           and the server-rendered markup degrades to the drawing's share card
-          if the script never arrives. #}
-      {% if post.skribl_id %}{{ skribl_inline(post.skribl_id) }}{% endif %}
+          if the script never arrives. The drawing's size and line, when the
+          view found it, put the box in the drawing's shape with its numbers
+          under it; without them it is the 16:9 box. #}
+      {% if post.skribl_id %}{% set sk = drawings.get(post.skribl_id) %}
+        {%- if sk %}{{ skribl_inline(post.skribl_id, canvas_w=sk.canvas_w, canvas_h=sk.canvas_h, line_info=sk.line) }}
+        {%- else %}{{ skribl_inline(post.skribl_id) }}{% endif %}
+      {%- endif %}
     </article>
   {% else %}
     <div class="muted">Nothing posted yet.</div>

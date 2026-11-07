@@ -31084,3 +31084,46 @@ THE FOUR: kind (no bars, and Post stays where the thumb expects it), simple
 seen, not a strip), playful (the drawing fills its own frame).
 
 Not tested here: WebKit (the owner's iPhone), and SF or Segoe UI.
+
+## After v330 -- A post just made is in its own shape at once (owner's phone)
+
+The owner, posting a square drawing on the live demo's /feed after #786, with
+a screenshot: "Is it supposed to have the screen look (sides)?" No. The post
+sat in the 16:9 box with the share card's ground at its sides and its line
+said only "watching at 1x", where the post under it, from the listing, was
+in its own shape. feed.js put a post it had just made in with its id alone;
+the listing carries `canvas_w`, `canvas_h` and `line`, the create answer did
+not. A reload showed it right. The example host had the same gap for every
+post: it rendered `skribl_inline(post.skribl_id)` and nothing else.
+
+- THE CREATE ANSWER CARRIES THE SIZE AND THE LINE (routes.py `_as_shown`):
+  `canvas_w`, `canvas_h` and `line` beside `hasAudio`, the listing's own
+  values for the row (feed_dict), and a retry found again by its
+  Idempotency-Key answers the same (it carried no `hasAudio` either).
+  /feed passes them to the post it puts in.
+- THE EXAMPLE HOST PASSES THEM (examples/host_app): one query for the page's
+  Skribls by public id, and each post's `canvas_w`, `canvas_h` and
+  `line_info`; a drawing deleted since renders the plain box.
+- AND /feed's HEADER IS SOLID: at 82% the composer's "What's happening?"
+  showed through it under "Latest Skribls" once the page had scrolled a
+  little (the same screenshot). The page's own ground, #0d0f14.
+- INTEGRATION.md says the answer carries the three and that `made.post` has
+  them for a server-side host.
+
+THE CHECKS: verify_apiedges (the answer's size and line equal the listing's;
+the replay's equal the answer's), verify_compose (the post just made is
+shaped, with "Drawn in" in its line, and the same post read from the listing
+in a fresh page has the same shape, size and line), verify_example (the
+host's post has its drawing's size from skribl_posts and a line with
+`drawn`), verify_inline (the header photographed with the placeholder under
+it and without is the same picture). CALIBRATED, each in a copy of the tree
+with its own server: the answer without the size and line: the answer row
+and both /feed rows red; a replay answering as before: the replay row;
+feed.js passing the id alone: the two /feed rows; the host's view finding no
+drawings, or its template passing the id alone: the two host rows; the
+header at 82%: the header row. The copy as it is: 70/70, 88/88, 34/34.
+
+THE FOUR: kind (a post looks the same before and after a reload), simple (the
+answer says what the listing will), powerful and playful (unchanged).
+
+Not tested here: WebKit (the owner's iPhone, in Chrome, where it was seen).

@@ -276,6 +276,24 @@ try:
         check("the post is on the host's feed",
               pg.locator("article.post").count() == 1)
         check("with a Skribl in it", pg.locator("[data-skribl-inline]").count() == 1)
+        # IN ITS DRAWING'S SHAPE, WITH ITS NUMBERS (INTEGRATION.md): the host
+        # passes canvas_w, canvas_h and line_info from the Skribl's own row.
+        # With the id alone a 4:3 or tall drawing sat in the 16:9 box with the
+        # share card's ground at its sides (the owner's phone, after #786).
+        _dw = durable("SELECT canvas_w FROM skribl_posts LIMIT 1")
+        _dh = durable("SELECT canvas_h FROM skribl_posts LIMIT 1")
+        _hb = pg.evaluate("""() => { const b = document.querySelector('article.post [data-skribl-inline]');
+            const r = b.getBoundingClientRect(); let line = null;
+            try { line = JSON.parse(b.getAttribute('data-skribl-line')); } catch (e) {}
+            return { w: +b.getAttribute('data-skribl-w') || 0, h: +b.getAttribute('data-skribl-h') || 0,
+                     shaped: b.classList.contains('is-shaped'), ar: +(r.width / r.height).toFixed(3),
+                     line: line }; }""")
+        check("the post is in its drawing's shape: the host passes the drawing's size",
+              bool(_dw) and bool(_dh) and _hb["shaped"] and _hb["w"] == _dw and _hb["h"] == _dh
+              and abs(_hb["ar"] - _dw / _dh) < 0.02,
+              f"drawing {_dw} x {_dh}; box {json.dumps(_hb)}")
+        check("...and its line knows the drawing before anybody presses play (line_info)",
+              bool(_hb["line"]) and (_hb["line"] or {}).get("drawn", 0) > 0, json.dumps(_hb["line"]))
         pg.wait_for_timeout(1500)
         st = pg.evaluate("""() => { var ps = window.SkriblInline.players();
             var p = ps && ps[0]; return p ? p.state() : null; }""")
