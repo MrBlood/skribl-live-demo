@@ -35,6 +35,21 @@
     return global.matchMedia && global.matchMedia('(pointer: coarse)').matches;
   }
 
+  /* A KEYBOARD'S FOCUS, NOT THE ONE A CLOSING SHEET GIVES BACK. A sheet or
+     menu closed with the mouse puts focus back on the button that opened it
+     (lib/modalfocus.js), and the bubble came up there and stayed: "More"
+     under the ⋯ after a draft opened, on a desk (the skribls.net pictures).
+     So focus shows the bubble only when the page was last used with keys,
+     which is the rule the focus ring follows: lib/modalfocus.js notes it on
+     <html> (data-input), and the stylesheets hide the rings on "pointer".
+     Before the page has been used either way, the browser's :focus-visible
+     says; where that is unknown, it shows as before. */
+  function keyed(n) {
+    var how = document.documentElement.getAttribute('data-input');
+    if (how) return how === 'key';
+    try { return n.matches(':focus-visible'); } catch (e) { return true; }
+  }
+
   function ensure() {
     if (el) return el;
     el = document.createElement('div');
@@ -161,7 +176,7 @@
     // control by tabbing to it, so a delay is just a wait.
     document.addEventListener('focusin', function (e) {
       var t = e.target.closest && e.target.closest('[data-tip]');
-      if (t) show(t);
+      if (t && keyed(e.target)) show(t);
     });
     document.addEventListener('focusout', hide);
     // Any of these can move the control out from under the bubble.

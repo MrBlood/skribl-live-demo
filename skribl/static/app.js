@@ -2431,6 +2431,25 @@ const toast = document.getElementById('toast');
 
 let toastTimer = null;
 let toastHideTimer = null;   // the 200ms post-fade hidden=true; must be cancellable
+let toastFrame = 0;          // the frame that adds .show: put away before it, it must not come
+let toastFresh = false;      // shown in this very task: it is about whatever opens with it
+
+/* A BUBBLE THAT WAS UP STEPS ASIDE WHEN SOMETHING OPENS OVER THE PAGE, as a
+   tip does (lib/hints.js). "Draft restored" was still up when Tune opened on
+   a phone, on Tune's first row; whatever just opened is what the person is
+   looking at. One shown while a drawer or sheet is open stays: it is about
+   that surface. And one shown in the same task as the surface opening is
+   about it too, in either order (lib/opensurfaces.js hears the surface a
+   moment later, before the next task). Flip's chip does the same (flip.js
+   chip()). */
+document.addEventListener('skribl:opened', () => {
+  if (toastFresh || !toast || toast.hidden) return;
+  cancelAnimationFrame(toastFrame);
+  clearTimeout(toastTimer);
+  clearTimeout(toastHideTimer);
+  toast.classList.remove('show');
+  toastHideTimer = setTimeout(() => { toast.hidden = true; }, 200);
+});
 
 function showToast(msg, anchorEl, action) {
   // `action` is an optional { label, onClick } that renders a tappable button
@@ -2505,7 +2524,10 @@ function showToast(msg, anchorEl, action) {
     belowHeader();
   }
 
-  requestAnimationFrame(() => toast.classList.add('show'));
+  cancelAnimationFrame(toastFrame);
+  toastFrame = requestAnimationFrame(() => toast.classList.add('show'));
+  toastFresh = true;
+  setTimeout(() => { toastFresh = false; }, 0);
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => {
     toast.classList.remove('show');
