@@ -30833,6 +30833,10 @@ Library's one line already does ("Open it" keeps it first); the owner: "Yes".
 - The row's lilac "armed" look went with the question (styles.css; the re-emit
   changed neither the player's CSS nor the band's). The sheet's one question
   left is Delete's, still one row at a time.
+- A DOUBLE TAP KEEPS ONE COPY, AND A STUCK OPEN GIVES WAY. A second tap while
+  the first keeps and opens does nothing; an open that never answers (a store
+  that hangs) is given up after 20s and its late answer opens nothing, so the
+  list never stops listening.
 
 FLIP: shared. The sheet is the same module in both editors, so Flip opens in
 one tap too; verify_clouddrafts 4c drives it in Flip, with room in Drafts and
@@ -30844,8 +30848,10 @@ at the account's cap replaces nothing and the row says the server's words;
 Flip with room keeps and opens; a Pad holding only a photo keeps it; a photo
 still loading replaces nothing (on the row, and as a toast with the sheet
 closed); a blank canvas keeps nothing; an unchanged draft is not copied; one
-Delete asks at a time in the sheet. How it works says it too ("keeps that
-work in Your drafts first"), claimed by those rows (verify_helpclaims).
+Delete asks at a time in the sheet; a double tap keeps one copy; an open
+that never answers does not stop the list (the page's clock moved on 30s
+rather than the suite waiting). How it works says it too ("keeps that work
+in Your drafts first"), claimed by those rows (verify_helpclaims).
 
 CALIBRATED in scratch copies of the tree, one break each. Main's
 lib/savedrafts.js (the old Tap again): the composer's four one-tap rows red,
@@ -30855,7 +30861,11 @@ photo, the photo still loading, the closed sheet). Keeping a blank canvas:
 the blank row. Copying an unchanged draft: both no-copy rows (the Library's
 and the list's). Saying it only on the row: the closed-sheet row. A Delete
 that never puts another back: the sheet's and the Library's one-at-a-time
-rows. With nothing broken, 114 of 114.
+rows. No guard on a second tap: the double tap kept two copies. A guard
+with no time limit: after a hung open the next tap was ignored. With nothing
+broken, 116 of 116. (The double tap's row first went red on the fixed code:
+the browser's Drafts were full at the host's limit of 3, and the tap rightly
+kept nothing; the row now makes room first.)
 
 FLIP NEXT, offered: Flip's chip is narrower than the Pad's toast, so the same
 words take three lines on a phone in Flip and one in the Pad.

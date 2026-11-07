@@ -445,18 +445,23 @@
      for the other editor replaces nothing here, and that editor asks over its
      own work (?draft=, the one line). If the drawing cannot be kept, nothing
      is replaced and the row says why (say: its second line, a live region;
-     a toast when the row is not on screen, the sheet closed while it kept). */
-  var opening = false;
+     a toast when the row is not on screen, the sheet closed while it kept).
+     A second tap while one keeps and opens does nothing, so a double tap
+     keeps one copy, not two; an open that never answers (a store that hangs)
+     is given up after 20s, and its late answer opens nothing, so the list
+     never stops listening. */
+  var opening = null;
   function openDraft(it, say) {
     if (it.kind !== opts.kind) { hide(); handOff(it); return; }
-    if (opening) return;
-    opening = true;
+    if (opening && Date.now() - opening.at < 20000) return;
+    var mine = opening = { at: Date.now() };
     var keep = !!(opts.hasContent && opts.hasContent());
     if (keep && say) say('Keeping your drawing in Drafts\u2026');
     (keep ? keepFirst() : Promise.resolve()).then(function () {
       return backend.load(it.id);
     }).then(function (rec) {
-      opening = false;
+      if (opening !== mine) return;   // given up on: a later tap opens instead
+      opening = null;
       if (say) say('');
       hide();
       opts.load(rec.payload);
@@ -464,7 +469,8 @@
       opts.toast('Opened \u201C' + (rec.title || 'Untitled Skribl') + '\u201D'
         + (keep ? '. The drawing you had open is in Drafts.' : ''));
     }, function (e) {
-      opening = false;
+      if (opening !== mine) return;
+      opening = null;
       var w = (e && e.message ? e.message + ' ' : '') + (keep ? 'Nothing was replaced.' : '');
       if (!(say && say(w))) opts.toast(w);
     });

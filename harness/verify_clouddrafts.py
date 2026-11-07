@@ -36,7 +36,8 @@ the cap can be reached in a few saves.
      row asks at a time, in the sheet and in the Library; and a row's one tap
      keeps a photo on its own, waits for one still loading (and replaces
      nothing), keeps nothing from a blank canvas, and no copy of a draft that
-     is already one.
+     is already one; a double tap keeps one copy, and an open that never
+     answers does not stop the list.
 """
 import base64
 import json
@@ -1318,6 +1319,54 @@ try:
               bool(pick) and pp.evaluate("() => SkriblSavedDrafts.current()") == pick["id"]
               and len(pp.evaluate(LOCAL)) == n_blank,
               f"pick {pick}; now {pp.evaluate('() => SkriblSavedDrafts.current()')}; {n_blank} -> {len(pp.evaluate(LOCAL))} drafts")
+        # A DOUBLE TAP KEEPS ONE COPY: the second tap, while the first keeps
+        # and opens, does nothing. The canvas changed by its ground (drawing
+        # on it would start a take, and the take puts the ⋯ away).
+        # Room in Drafts first: this browser's limit is the host's (3), and the
+        # photo kept above filled it; full, the tap rightly keeps nothing.
+        if newest.get("id"):
+            pp.evaluate("(id) => SkriblSavedDrafts.remove(id)", newest["id"])
+        pp.evaluate("""() => { const b = [...document.querySelectorAll('.bg-swatch')]
+            .find(x => x.dataset.bg && x.dataset.bg !== bgColor); if (b) b.click(); }""")
+        pp.wait_for_timeout(400)
+        n_dbl = len(pp.evaluate(LOCAL))
+        sheet_again(pp)
+        if other:
+            pp.locator('#savedDraftsSheet .sdrafts-open[data-draft-id="' + other["id"] + '"]').dblclick()
+        try:
+            pp.wait_for_function("(id) => SkriblSavedDrafts.current() === id", arg=other["id"] if other else "", timeout=10000)
+        except Exception:
+            pass
+        pp.wait_for_timeout(900)
+        n_dbl2 = len(pp.evaluate(LOCAL))
+        check("a double tap keeps one copy, not two, and opens the draft",
+              bool(other) and pp.evaluate("() => SkriblSavedDrafts.current()") == other["id"] and n_dbl2 == n_dbl + 1,
+              f"{n_dbl} -> {n_dbl2} drafts; now {pp.evaluate('() => SkriblSavedDrafts.current()')}")
+        # AN OPEN THAT NEVER ANSWERS DOES NOT STOP THE LIST: a store that hangs
+        # on the draft is given up after 20s (the page's clock moved on here,
+        # rather than the suite waiting), and the next tap opens. A blank
+        # canvas, so the tap goes straight to the read that hangs.
+        pp.evaluate("() => { SkriblSavedDrafts.close(); resetAll(); }")
+        pp.wait_for_timeout(400)
+        sheet_again(pp)
+        pp.evaluate("""() => { const S = SkriblDraftStore; window.__realGet = S.get;
+            S.get = function (k) { return /^saved:/.test(k) && k !== 'saved:index'
+              ? new Promise(() => {}) : window.__realGet.apply(this, arguments); }; }""")
+        if pick:
+            pp.locator('#savedDraftsSheet .sdrafts-open[data-draft-id="' + pick["id"] + '"]').click()
+        pp.wait_for_timeout(600)
+        hung_cur = pp.evaluate("() => SkriblSavedDrafts.current()")
+        pp.evaluate("() => { SkriblDraftStore.get = window.__realGet; const real = Date.now; Date.now = () => real() + 30000; }")
+        if pick:
+            pp.locator('#savedDraftsSheet .sdrafts-open[data-draft-id="' + pick["id"] + '"]').click()
+        try:
+            pp.wait_for_function("(id) => SkriblSavedDrafts.current() === id", arg=pick["id"] if pick else "", timeout=10000)
+        except Exception:
+            pass
+        hung_now = pp.evaluate("() => SkriblSavedDrafts.current()")
+        check("an open that never answers does not stop the list: 20 s on, the next tap opens",
+              bool(pick) and hung_cur != pick["id"] and hung_now == pick["id"],
+              f"while hung {hung_cur}; after {hung_now}; wanted {pick and pick['id']}")
         pp.close()
 
 
