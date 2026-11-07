@@ -30807,3 +30807,62 @@ on two things #776 brought (issue #778):
 
 THE BYTES: a link's CSS +57 B (43,515 measured) and a post's embed +51 B
 (77,806), in writing.
+
+## After v330 -- The drafts list opens a draft in one tap, what is on the canvas kept first (the owner's yes)
+
+The owner asked which made more sense: the list in the editors' Your drafts
+sheet asking "Tap again -- this replaces what is on your canvas", where the
+second tap replaced it and a drawing never saved was gone, or keeping what is
+on the canvas in Drafts first. The recommendation was the second, as the
+Library's one line already does ("Open it" keeps it first); the owner: "Yes".
+
+- ONE TAP OPENS IT (lib/savedrafts.js openDraft, both editors: one module).
+  What is on the canvas is kept first by the same keepFirst the Library's
+  Open it uses: not again when it is the draft it was opened as, unchanged
+  (compared, not assumed); its photo and song waited for, 5s at most. A blank
+  canvas keeps nothing. A draft for the other editor still hands over to it,
+  which asks over its own work in its one line.
+- IT SAYS WHAT IT DID. The row's second line says "Keeping your drawing in
+  Drafts..." while it keeps (a live region, as the row's Delete question is);
+  the toast says 'Opened "Cat". The drawing you had open is in Drafts.', the
+  Library's words. Nothing is asked, so there is nothing to tap twice.
+- WHEN IT CANNOT KEEP IT (Drafts full, a photo or song still loading, a store
+  not answering), NOTHING IS REPLACED and the row says why, in the store's
+  own words then "Nothing was replaced."; if the sheet was closed while it
+  waited, a toast says it instead.
+- The row's lilac "armed" look went with the question (styles.css; the re-emit
+  changed neither the player's CSS nor the band's). The sheet's one question
+  left is Delete's, still one row at a time.
+
+FLIP: shared. The sheet is the same module in both editors, so Flip opens in
+one tap too; verify_clouddrafts 4c drives it in Flip, with room in Drafts and
+with Drafts full.
+
+THE CHECKS (verify_clouddrafts): one tap opens in the composer's Pad, the
+drawing it replaced is the newest draft, the row and the toast say so; Flip
+at the account's cap replaces nothing and the row says the server's words;
+Flip with room keeps and opens; a Pad holding only a photo keeps it; a photo
+still loading replaces nothing (on the row, and as a toast with the sheet
+closed); a blank canvas keeps nothing; an unchanged draft is not copied; one
+Delete asks at a time in the sheet. How it works says it too ("keeps that
+work in Your drafts first"), claimed by those rows (verify_helpclaims).
+
+CALIBRATED in scratch copies of the tree, one break each. Main's
+lib/savedrafts.js (the old Tap again): the composer's four one-tap rows red,
+then the suite stops at Post, the take still recording. Opening without
+keeping: six rows (the composer's keep, Flip at the cap and with room, the
+photo, the photo still loading, the closed sheet). Keeping a blank canvas:
+the blank row. Copying an unchanged draft: both no-copy rows (the Library's
+and the list's). Saying it only on the row: the closed-sheet row. A Delete
+that never puts another back: the sheet's and the Library's one-at-a-time
+rows. With nothing broken, 114 of 114.
+
+FLIP NEXT, offered: Flip's chip is narrower than the Pad's toast, so the same
+words take three lines on a phone in Flip and one in the Pad.
+
+THE FOUR: kind (nothing is lost and nothing is asked: the drawing you had is
+in Drafts, and the words say where), simple (one tap does what the row
+promises), powerful (every drawing stays one tap away in the list), playful
+(trying another drawing costs nothing).
+
+Not tested here: WebKit (the owner's iPhone), and Segoe UI or SF.
