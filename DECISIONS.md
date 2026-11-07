@@ -30993,3 +30993,35 @@ powerful and playful (unchanged: every message is still said).
 Not tested here: WebKit (the owner's iPhone, which shows no tooltips, and
 Safari on a Mac, where reading data-input first is meant to matter), and
 Segoe UI or SF.
+
+## After v330 -- Nothing of a draft shows under "As a file" while the list scrolls (owner's iPhone)
+
+The owner, with a screenshot of Your drafts on the iPhone: "It's small but. I
+noticed as a file": the top edge of the next draft card ran through the words
+"As a file". The list keeps 14px inside its own clip for the last card's drop
+(after v324: its shadow was cut flat) and pulls the next heading up 14px over
+that strip, which is right while the list holds still: only the drop is
+there. While the list scrolls, cards slide through the strip, under the
+heading. Reproduced here at 390px with six drafts: a card under the heading's
+words at 176 of 179 scroll positions, and mid-scroll "As a file" written on a
+card.
+
+- WHILE THE LIST SCROLLS IT GIVES THE STRIP BACK (.sdrafts-list.sdrafts-scrolls,
+  margin-bottom 0; lib/savedrafts.js already marks a list that scrolls, for
+  iOS's bar lane). Cards are cut at the list's edge, 4px above the heading,
+  as they are cut at its top under "Saved on this browser only."; at the end
+  of the scroll the last card's drop still has its 14px. A list that does not
+  scroll is as it was. SHARED: the one sheet, so Flip's Your drafts too.
+
+THE CHECK (verify_sheetswipe, beside the scroll bar's lane, Pad, a touch
+phone, six drafts): at every 2px of the list's scroll, fifteen points across
+"As a file" have no draft card under them, asked of what is painted
+(elementsFromPoint honours the list's clip). CALIBRATED in two copies of the
+tree: the stylesheet as it was, red (a card under the heading at 176 of 179
+positions); the fix, green (0 of 186). The scroll bar's lane row beside it
+stayed green in both.
+
+THE FOUR: kind (the words read clean), simple (one line), powerful and
+playful (unchanged).
+
+Not tested here: WebKit (the owner's iPhone, where it was seen), and SF.
