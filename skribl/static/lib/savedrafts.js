@@ -335,14 +335,17 @@
         // Drafts first, so there is nothing to ask. A Delete asking on another
         // row is put back, as any row's tap puts it back.
         disarmOthers(null);
-        openDraft(it, function (w) { meta.textContent = w || metaText; });
+        openDraft(it, function (w) {
+          meta.textContent = w || metaText;
+          return meta.isConnected && !sheet.hidden;   // false: nobody sees the row
+        });
       });
       row.appendChild(openBtn);
       /* ITS END IS THE LIBRARY'S (D3): one ⋯ with Open in Pad (or Flip), Save
          a .skribl file and Delete. At every width, because the sheet is a
          phone's width even on a desk (460px), and the menu floats over the
          list, which would cut it off. Open in the menu is the card's own tap,
-         so it asks first over work on the canvas. */
+         so it keeps work on the canvas in Drafts first. */
       rowEnd(row, it, {
         open: function () { openBtn.click(); },
         meta: meta,
@@ -441,7 +444,8 @@
      for), so there is nothing to ask. A blank canvas keeps nothing. A draft
      for the other editor replaces nothing here, and that editor asks over its
      own work (?draft=, the one line). If the drawing cannot be kept, nothing
-     is replaced and the row says why (say: its second line, a live region). */
+     is replaced and the row says why (say: its second line, a live region;
+     a toast when the row is not on screen, the sheet closed while it kept). */
   var opening = false;
   function openDraft(it, say) {
     if (it.kind !== opts.kind) { hide(); handOff(it); return; }
@@ -462,7 +466,7 @@
     }, function (e) {
       opening = false;
       var w = (e && e.message ? e.message + ' ' : '') + (keep ? 'Nothing was replaced.' : '');
-      if (say) say(w); else opts.toast(w);
+      if (!(say && say(w))) opts.toast(w);
     });
   }
 

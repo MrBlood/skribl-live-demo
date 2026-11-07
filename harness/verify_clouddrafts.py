@@ -18,7 +18,10 @@ the cap can be reached in a few saves.
   3  The editors say where drafts go: the account when signed in, this browser
      when not, and the limit on the page is the server's.
   4  The composer: draw, ⋯ Save draft, close, open the pen again (blank),
-     ⋯ Open a draft, Add to post, Post. The post is the saved drawing.
+     ⋯ Open a draft, Add to post, Post. The post is the saved drawing. One tap
+     on a row opens it, what was on the canvas kept in Drafts first.
+  4c Flip: the same one tap; with Drafts full, nothing is replaced and the row
+     says why, in the server's words.
   5  Signed out, drafts live in this browser and survive a reload.
   6  The Library's Drafts tab (v317): the account's list or this browser's,
      Open to the right editor, Delete asks first, and an editor holding work
@@ -29,8 +32,11 @@ the cap can be reached in a few saves.
   8  Drafts that stay (v317): a failed index read writes nothing over the list;
      a draft its index lost is listed again; a delete that stops half-way
      neither brings it back nor leaves a dead row; media is stored as bytes and
-     comes back a Blob; a refused write keeps the working connection; and one
-     row asks at a time, in the sheet and in the Library.
+     comes back a Blob; a refused write keeps the working connection; one
+     row asks at a time, in the sheet and in the Library; and a row's one tap
+     keeps a photo on its own, waits for one still loading (and replaces
+     nothing), keeps nothing from a blank canvas, and no copy of a draft that
+     is already one.
 """
 import base64
 import json
@@ -500,16 +506,49 @@ try:
         rows = fr.locator("#savedDraftsSheet .sdrafts-name").all_inner_texts()
         check("⋯ Open a draft lists the account's drafts, newest first",
               rows[:1] == ["Composer wave"] and len(rows) == 2, str(rows))
+        # ONE TAP OPENS IT (the owner's "yes", after the Library's one line).
+        # The row asked "Tap again -- this replaces what is on your canvas",
+        # and the second tap did. Now what is on the canvas is kept in Drafts
+        # first, so there is nothing to ask and nothing is lost; the row says
+        # so while it keeps, and the toast says where the drawing went.
+        busy_print = canon(pa.evaluate("() => " + PRINT
+                                       + "(document.getElementById('padFrame').contentWindow.serializeSkribl())"))
+        n_before = durable("SELECT COUNT(*) FROM skribl_drafts")
+        fr.locator("#savedDraftsSheet .sdrafts-meta").first.evaluate("""m => { const w = m.ownerDocument.defaultView;
+            w.__said = []; new w.MutationObserver(() => w.__said.push(m.textContent))
+              .observe(m, { childList: true, characterData: true, subtree: true });
+            w.__toasts = []; const t = m.ownerDocument.getElementById('toast');
+            if (t) new w.MutationObserver(() => w.__toasts.push(t.textContent))
+              .observe(t, { childList: true, characterData: true, subtree: true }); }""")
         fr.locator("#savedDraftsSheet .sdrafts-open").first.click()
+        try:
+            pa.wait_for_function("() => document.getElementById('padFrame').contentDocument"
+                                 ".getElementById('savedDraftsSheet').hidden", timeout=10000)
+        except Exception:
+            pass   # still open: the rows below say what it did instead
         pa.wait_for_timeout(600)
-        meta = fr.locator("#savedDraftsSheet .sdrafts-meta").first.inner_text()
-        check("with work on the canvas, the first tap only ASKS",
-              "replaces" in meta and pad_strokes(pa) == busy, f"{meta!r} {pad_strokes(pa)}")
-        fr.locator("#savedDraftsSheet .sdrafts-open").first.click()
-        pa.wait_for_timeout(1500)
         got = pad_strokes(pa)
-        check("the second tap puts the saved drawing on the canvas",
+        check("with work on the canvas, ONE tap puts the saved drawing on the canvas",
               got == saved_strokes and got > 0, f"{got} vs saved {saved_strokes}")
+        _kr = durable("SELECT payload_json FROM skribl_drafts ORDER BY id DESC LIMIT 1")
+        try:
+            _kp = json.loads(_kr) if isinstance(_kr, str) else _kr
+            kept4 = canon(json.dumps([f.get("strokes") for f in _kp.get("frames", [])]))
+        except Exception:
+            kept4 = None
+        n_after = durable("SELECT COUNT(*) FROM skribl_drafts")
+        check("...after keeping what was on the canvas in Drafts: one more draft, holding that drawing",
+              n_after == n_before + 1 and kept4 == busy_print,
+              f"{n_before} -> {n_after} drafts; the newest {'holds' if kept4 == busy_print else 'does not hold'} the drawing")
+        said = pa.evaluate("() => document.getElementById('padFrame').contentWindow.__said || []")
+        toasts = pa.evaluate("() => document.getElementById('padFrame').contentWindow.__toasts || []")
+        check("the row says it is keeping the drawing, and the toast says where it went",
+              "Keeping your drawing in Drafts…" in said
+              and any("The drawing you had open is in Drafts." in t for t in toasts), f"row {said}; toast {toasts}")
+        # The kept copy goes again, so the cap and the counts below are as they were.
+        if n_after == n_before + 1:
+            pa.evaluate("(id) => document.getElementById('padFrame').contentWindow.SkriblSavedDrafts.remove(id)",
+                        durable("SELECT public_id FROM skribl_drafts ORDER BY id DESC LIMIT 1"))
         sheet_hidden = pa.evaluate("() => document.getElementById('padFrame').contentDocument"
                                    ".getElementById('savedDraftsSheet').hidden")
         check("and closes the sheet", sheet_hidden is True, str(sheet_hidden))
@@ -579,6 +618,78 @@ try:
                      frames: v ? JSON.parse(v).frames.length : 0 }; }""")
         check("Add to post attaches the two-page animation",
               att["shown"] and att["frames"] == 2, str(att))
+
+        # --------------------------------------------------------------- 4c
+        print("\n4c — FLIP: ONE TAP OPENS, WHAT IS ON THE CANVAS KEPT FIRST")
+        # The same module opens a draft in both editors (lib/savedrafts.js).
+        # The account is at its cap now (two Pad drafts and Bounce), so a Flip
+        # with work on it CANNOT keep it: nothing is replaced, and the row
+        # says why, in the server's own words.
+        FLIP_PRINT = "() => JSON.stringify((serializeFlip({ recipes: true }).frames || []).map(f => f.strokes))"
+        browsing.goto(pa, BASE, "/skribl/flip", require_boot=False)
+        pa.wait_for_timeout(1500)
+        pa.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+        draw(pa, pa.locator("#pad").bounding_box(), turns=1, n=24)
+        pa.wait_for_timeout(300)
+        flip_before = pa.evaluate(FLIP_PRINT)
+        menu_click(pa, "#openCloudDraftItem", btn="#moreBtn")
+        bounce = pa.locator("#savedDraftsSheet .sdrafts-row", has_text="Bounce").first
+        bounce.wait_for(timeout=5000)
+        bounce.locator(".sdrafts-open").click()
+        try:
+            pa.wait_for_function("""() => [...document.querySelectorAll('#savedDraftsSheet .sdrafts-row')]
+                .some(r => r.textContent.includes('Nothing was replaced.'))""", timeout=10000)
+        except Exception:
+            pass   # said nothing, or opened: the row below shows which
+        capped = pa.evaluate("""() => {
+            const r = [...document.querySelectorAll('#savedDraftsSheet .sdrafts-row')].find(r => r.textContent.includes('Bounce'));
+            return { said: r ? r.querySelector('.sdrafts-meta').textContent : null,
+                     open: !document.getElementById('savedDraftsSheet').hidden }; }""")
+        n_acct4 = durable("SELECT COUNT(*) FROM skribl_drafts WHERE user_id='1'")
+        check("Flip, Drafts full: one tap replaces nothing, and the row says why, in the server's words",
+              capped["open"] and (capped["said"] or "").endswith("Delete one to save another. Nothing was replaced.")
+              and pa.evaluate(FLIP_PRINT) == flip_before and n_acct4 == CAP, f"{capped}; {n_acct4} drafts")
+        pa.keyboard.press("Escape")
+        # With room in Drafts (this browser's, signed out): one tap keeps the
+        # Flip on the canvas, then opens the draft.
+        fc = b.new_context(viewport={"width": 1180, "height": 900})
+        pf = watch(fc.new_page(), "flip-one-tap")
+        browsing.goto(pf, BASE, "/skribl/flip", require_boot=False)
+        pf.wait_for_timeout(1500)
+        pf.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+        draw(pf, pf.locator("#pad").bounding_box(), turns=2, n=30)
+        pf.evaluate("() => SkriblName.set('Flip one')")
+        pf.evaluate("() => SkriblSavedDrafts.save()")
+        pf.wait_for_timeout(800)
+        flip_one = pf.evaluate(FLIP_PRINT)
+        pf.evaluate("() => { SkriblSavedDrafts.forget(); SkriblName.set('Flip two'); }")
+        draw(pf, pf.locator("#pad").bounding_box(), turns=1, n=24)
+        pf.wait_for_timeout(300)
+        flip_two = pf.evaluate(FLIP_PRINT)
+        pf.evaluate("""() => { const t = document.getElementById('flipChip'); window.__chips = [];
+            new MutationObserver(() => window.__chips.push(t.textContent)).observe(t, { childList: true, characterData: true, subtree: true }); }""")
+        menu_click(pf, "#openCloudDraftItem", btn="#moreBtn")
+        one = pf.locator("#savedDraftsSheet .sdrafts-row", has_text="Flip one").first
+        one.wait_for(timeout=5000)
+        one.locator(".sdrafts-open").click()
+        try:
+            pf.wait_for_function("() => document.getElementById('savedDraftsSheet').hidden", timeout=10000)
+        except Exception:
+            pass
+        pf.wait_for_timeout(600)
+        fl = pf.evaluate("""async () => { const items = await SkriblSavedDrafts.list();
+            const recs = [];
+            for (const it of items) { const r = await SkriblDraftStore.get('saved:' + it.id);
+              recs.push({ title: it.title, print: JSON.stringify(((r && r.payload && r.payload.frames) || []).map(f => f.strokes)) }); }
+            return { recs, name: SkriblName.get(), chips: window.__chips }; }""")
+        kept_two = next((r for r in fl["recs"] if r["title"] == "Flip two"), None)
+        check("Flip: one tap opens the draft, its drawing and its name",
+              pf.evaluate(FLIP_PRINT) == flip_one and fl["name"] == "Flip one", f"name {fl['name']!r}")
+        check("Flip: ...after keeping what was on the canvas in Drafts, and the chip says where it went",
+              len(fl["recs"]) == 2 and kept_two is not None and kept_two["print"] == flip_two
+              and any("The drawing you had open is in Drafts." in c for c in fl["chips"]),
+              f"{[r['title'] for r in fl['recs']]}; kept {'holds' if kept_two and kept_two['print'] == flip_two else 'does not hold'} the drawing; chips {fl['chips']}")
+        fc.close()
 
         # ---------------------------------------------------------------- 5
         print("\n5 — SIGNED OUT: THIS BROWSER, AND IT SURVIVES A RELOAD")
@@ -982,23 +1093,21 @@ try:
               and "Keep me one" in halfway["listed"], str(halfway))
 
         # ONE ROW ASKS AT A TIME (v317): the owner's sheet showed two rows both
-        # saying "Tap again". pd's canvas has ink, so the first tap on a row asks.
+        # saying "Tap again". A row's tap opens it now (one tap, the canvas
+        # kept in Drafts first), so what asks is Delete, in the row's ⋯ (D3),
+        # asked once as the bin was: asking on one row puts the other back.
+        # The second row first, so its menu (under its ⋯) covers nothing of
+        # the first row's.
         menu_click(pd, "#openCloudDraftItem")
         pd.locator("#savedDraftsSheet .sdrafts-open").nth(1).wait_for(timeout=5000)
-        pd.locator("#savedDraftsSheet .sdrafts-open").nth(0).click()
-        pd.wait_for_timeout(200)
-        pd.locator("#savedDraftsSheet .sdrafts-open").nth(1).click()
-        pd.wait_for_timeout(200)
-        armed = pd.evaluate("() => [...document.querySelectorAll('#savedDraftsSheet .sdrafts-row')].map(r => r.classList.contains('armed'))")
-        check("the sheet: arming a second row puts the first one back", armed[:2] == [False, True], str(armed))
-        # Delete is in the row's ⋯ menu (D3), asked once as the bin was.
-        pd.locator("#savedDraftsSheet .sdrafts-row").nth(0).locator(".draft-more").click()
-        pd.wait_for_timeout(200)
-        pd.locator("#savedDraftsSheet .sdrafts-row").nth(0).locator(".draft-del").click()
-        pd.wait_for_timeout(200)
+        for _i in (1, 0):
+            pd.locator("#savedDraftsSheet .sdrafts-row").nth(_i).locator(".draft-more").click()
+            pd.wait_for_timeout(200)
+            pd.locator("#savedDraftsSheet .sdrafts-row").nth(_i).locator(".draft-del").click()
+            pd.wait_for_timeout(200)
         armed2 = pd.evaluate("""() => [...document.querySelectorAll('#savedDraftsSheet .sdrafts-row')].map(r =>
-            r.classList.contains('armed') || r.querySelector('.draft-del').classList.contains('armed'))""")
-        check("...and asking to delete one row puts back the row that asked to open",
+            r.querySelector('.draft-del').classList.contains('armed'))""")
+        check("the sheet: one Delete asks at a time (asking on a second row puts the first one back)",
               armed2[:2] == [True, False], str(armed2))
         lab = pd.evaluate("""() => { const d = document.querySelectorAll('#savedDraftsSheet .draft-del');
             return [d[0].getAttribute('aria-label'), d[1].getAttribute('aria-label'),
@@ -1069,7 +1178,8 @@ try:
             return { role: h.getAttribute('role'), tabs: h.querySelectorAll('[role=tablist] [role=tab]').length }; }""")
         check("the Library's tab heading is still a heading, with its tabs inside it",
               head["role"] is None and head["tabs"] == 2, str(head))
-        # A Pad holding only a photo is work: opening a draft over it asks first.
+        # A Pad holding only a photo is work: a draft opened over it keeps it in
+        # Drafts first (one tap, as any work on the canvas is kept).
         pp = watch(pd.context.new_page(), "photo")   # the same browser, so the same drafts
         browsing.goto(pp, BASE, "/skribl/skribl-pad", require_boot=False); pp.wait_for_timeout(1200)
         pp.evaluate("() => { window.SkriblHints && window.SkriblHints.hide(); }")
@@ -1081,25 +1191,106 @@ try:
         _png.write_bytes(base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="))
         pp.set_input_files("#photoInput", str(_png)); pp.wait_for_timeout(1500)
         _png.unlink(missing_ok=True)
+        # THIS BROWSER'S DRAFTS, newest first, each with what it holds.
+        LOCAL = """async () => { const items = await SkriblSavedDrafts.list();
+            const out = [];
+            for (const it of items) {
+              const r = await SkriblDraftStore.get('saved:' + it.id);
+              const p = (r && r.payload) || {};
+              out.push({ id: it.id, title: it.title,
+                         strokes: (p.frames || []).reduce((n, f) => n + (f.strokes || []).length, 0),
+                         photo: !!(p.photoMeta || p.photo || p.bgImage) });
+            }
+            return out; }"""
+        BLANK = "() => ({ strokes: strokes.length, ink: !!hasContent, photo: !!(photoBgImg && photoBgImg._fileName) })"
+        held_photo = pp.evaluate(BLANK)
+        local0 = pp.evaluate(LOCAL)
+        # Two drafts with ink (Keep me one and two): a tap that replaced the
+        # canvas would show in its strokes and in which draft is current.
+        pick = next((d for d in local0 if d["strokes"] > 0), None)
+        other = next((d for d in local0 if pick and d["strokes"] > 0 and d["id"] != pick["id"]), None)
         menu_click(pp, "#openCloudDraftItem")
         pp.locator("#savedDraftsSheet .sdrafts-open").nth(0).wait_for(timeout=5000)
-        pp.locator("#savedDraftsSheet .sdrafts-open").nth(0).click(); pp.wait_for_timeout(200)
-        asked = pp.evaluate("""() => ({ armed: document.querySelector('#savedDraftsSheet .sdrafts-row').classList.contains('armed'),
-            strokes: strokes.length, ink: !!hasContent, photo: !!(photoBgImg && photoBgImg._fileName) })""")
-        check("a Pad holding only a photo asks before a draft replaces it",
-              asked["armed"] is True and asked["strokes"] == 0 and not asked["ink"] and asked["photo"], str(asked))
-        # ...and so does one whose photo is still on its way (pending, restoring):
-        # the draft must not replace the autosave mid-restore.
+        if pick:
+            pp.locator('#savedDraftsSheet .sdrafts-open[data-draft-id="' + pick["id"] + '"]').click()
+        try:
+            pp.wait_for_function("() => document.getElementById('savedDraftsSheet').hidden", timeout=10000)
+        except Exception:
+            pass   # still open: the row below says what it did instead
+        pp.wait_for_timeout(400)
+        local1 = pp.evaluate(LOCAL)
+        newest = local1[0] if local1 else {}
+        got_p = pp.evaluate("() => ({ strokes: strokes.length, current: SkriblSavedDrafts.current() })")
+        check("a Pad holding only a photo keeps it in Drafts before a draft replaces it: one more draft, holding the photo and no ink",
+              held_photo["strokes"] == 0 and not held_photo["ink"] and held_photo["photo"]
+              and len(local1) == len(local0) + 1 and newest.get("photo") and newest.get("strokes") == 0,
+              f"held {held_photo}; {len(local0)} -> {len(local1)} drafts; newest {newest}")
+        check("...and then the draft opens", bool(pick) and got_p["current"] == pick["id"]
+              and got_p["strokes"] == pick["strokes"], f"picked {pick}; now {got_p}")
+        # ...and one whose photo is still on its way (pending, restoring): the
+        # drawing cannot be kept yet, so NOTHING IS REPLACED (the autosave is
+        # not overwritten mid-restore), and the row says why, on its second
+        # line, after waiting 5s for the photo.
         pp.evaluate("""() => { SkriblSavedDrafts.close && SkriblSavedDrafts.close(); resetAll();
             pendingPhotoMeta = { name: 'coming.png' }; _restoring.photo = true; }""")
         pp.wait_for_timeout(400)
+        n_wait = len(pp.evaluate(LOCAL))
+        cur_wait = pp.evaluate("() => SkriblSavedDrafts.current()")
         menu_click(pp, "#openCloudDraftItem")
         pp.locator("#savedDraftsSheet .sdrafts-open").nth(0).wait_for(timeout=5000)
         pp.wait_for_timeout(300)
-        pp.locator("#savedDraftsSheet .sdrafts-open").nth(0).click(); pp.wait_for_timeout(200)
-        asked2 = pp.evaluate("""() => ({ armed: document.querySelector('#savedDraftsSheet .sdrafts-row').classList.contains('armed'),
-            strokes: strokes.length })""")
-        check("a Pad whose photo is still being restored asks too", asked2["armed"] is True and asked2["strokes"] == 0, str(asked2))
+        OTHER_META = ('() => (document.querySelector(\'#savedDraftsSheet .sdrafts-open[data-draft-id="'
+                      + (other["id"] if other else "") + '"] .sdrafts-meta\') || {}).textContent')
+        if other:
+            pp.locator('#savedDraftsSheet .sdrafts-open[data-draft-id="' + other["id"] + '"]').click()
+        try:
+            pp.wait_for_function(OTHER_META + " === 'Your photo or song is still loading. Nothing was replaced.'",
+                                 timeout=10000)
+        except Exception:
+            pass   # said something else, or nothing: the row below shows what
+        waited = pp.evaluate("""() => ({ open: !document.getElementById('savedDraftsSheet').hidden,
+            strokes: strokes.length, current: SkriblSavedDrafts.current(), pending: !!pendingPhotoMeta })""")
+        waited["said"] = pp.evaluate(OTHER_META)
+        check("a Pad whose photo is still being restored: nothing is replaced, and the row says why",
+              bool(other) and waited["said"] == "Your photo or song is still loading. Nothing was replaced."
+              and waited["open"] and waited["strokes"] == 0 and waited["current"] == cur_wait and waited["pending"]
+              and len(pp.evaluate(LOCAL)) == n_wait, f"{waited} (current was {cur_wait}); {n_wait} -> {len(pp.evaluate(LOCAL))} drafts")
+        # A BLANK CANVAS KEEPS NOTHING: one tap opens, and Drafts are as they were.
+        pp.evaluate("""() => { SkriblSavedDrafts.close(); _restoring.photo = false; pendingPhotoMeta = null; resetAll(); }""")
+        pp.wait_for_timeout(400)
+        n_blank = len(pp.evaluate(LOCAL))
+        pp.evaluate("() => { const t = document.getElementById('toast'); window.__toasts = [];"
+                    " new MutationObserver(() => window.__toasts.push(t.textContent)).observe(t, { childList: true, characterData: true, subtree: true }); }")
+        menu_click(pp, "#openCloudDraftItem")
+        pp.locator("#savedDraftsSheet .sdrafts-open").nth(0).wait_for(timeout=5000)
+        if other:
+            pp.locator('#savedDraftsSheet .sdrafts-open[data-draft-id="' + other["id"] + '"]').click()
+        try:
+            pp.wait_for_function("(id) => SkriblSavedDrafts.current() === id", arg=other["id"] if other else "", timeout=10000)
+        except Exception:
+            pass
+        pp.wait_for_timeout(300)
+        blank = pp.evaluate("() => ({ current: SkriblSavedDrafts.current(), strokes: strokes.length, toasts: window.__toasts })")
+        check("a blank canvas keeps nothing: one tap opens the draft, Drafts as they were, and the toast says only that it opened",
+              bool(other) and blank["current"] == other["id"] and blank["strokes"] == other["strokes"]
+              and len(pp.evaluate(LOCAL)) == n_blank
+              and any(t.startswith("Opened") for t in blank["toasts"])
+              and not any("in Drafts" in t for t in blank["toasts"]), f"{blank}; {n_blank} -> {len(pp.evaluate(LOCAL))} drafts")
+        # NO COPY OF A DRAFT THAT IS ALREADY ONE: that draft is on the canvas,
+        # unchanged, and another opens over it: nothing new is kept.
+        menu_click(pp, "#openCloudDraftItem")
+        pp.locator("#savedDraftsSheet .sdrafts-open").nth(0).wait_for(timeout=5000)
+        if pick:
+            pp.locator('#savedDraftsSheet .sdrafts-open[data-draft-id="' + pick["id"] + '"]').click()
+        try:
+            pp.wait_for_function("(id) => SkriblSavedDrafts.current() === id", arg=pick["id"] if pick else "", timeout=10000)
+        except Exception:
+            pass
+        pp.wait_for_timeout(300)
+        check("an unchanged saved draft on the canvas is not copied when another opens over it from the list",
+              bool(pick) and pp.evaluate("() => SkriblSavedDrafts.current()") == pick["id"]
+              and len(pp.evaluate(LOCAL)) == n_blank,
+              f"pick {pick}; now {pp.evaluate('() => SkriblSavedDrafts.current()')}; {n_blank} -> {len(pp.evaluate(LOCAL))} drafts")
         pp.close()
 
 
