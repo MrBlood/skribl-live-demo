@@ -1531,7 +1531,7 @@ function tryRestore(){
 function chip(msg, action){
   const el = document.getElementById('flipChip');
   el.textContent = msg;
-  let holdMs = 2200;
+  let holdMs = 2800;   // the Pad's (app.js showToast): one bubble, one time to read it
   if(action && action.label && typeof action.onClick === 'function'){
     const btn = document.createElement('button');
     btn.type = 'button'; btn.className = 'toast-action'; btn.textContent = action.label;

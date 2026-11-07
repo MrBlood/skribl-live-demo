@@ -856,15 +856,15 @@
   @media (hover: hover) { .pageops-item.danger:hover:not(:disabled) { color: var(--danger-soft-2); background: rgba(244, 50, 111, .12); } }
 
   /* The transient chip: "Draft restored", "Blur undone", a blocked action.
-     chip() sets `top` just under the header; this is its fallback when the
-     header is off screen. Not `bottom`: on a phone the bottom is the dock, and
-     the chip sat on Undo (flip.js chip()). */
-  .flip-chip { position: fixed; left: 50%; transform: translateX(-50%);
-    top: calc(16px + env(safe-area-inset-top)); z-index: 30;
-    background: rgba(var(--glass-deep-2-rgb), .85); border: 1px solid var(--hairline-strong); color: var(--text-secondary);
-    border-radius: var(--r-pill); padding: 7px 14px; font-size: 12.5px; font-weight: 600;
-    opacity: 0; pointer-events: none; transition: opacity .3s var(--ease); }
-  .flip-chip.show { opacity: 1; }
+     IT WEARS THE PAD'S BUBBLE (.toast in styles.css; the owner's pick A, after
+     the drafts list's one tap). Flip's own could use only half the screen's
+     width, so "Opened ... is in Drafts." took three lines on a phone where the
+     Pad's takes two, in smaller, greyer words. Its look, width, glide and fade
+     are the Pad's now; what stays Flip's is where it sits: fixed, chip() puts
+     it just under the header, and this `top` is the fallback when the header
+     is off screen. Not `bottom`: on a phone the bottom is the dock, and the
+     chip sat on Undo (flip.js chip()). Under Flip's sheets, as it was. */
+  .flip-chip { position: fixed; top: calc(16px + env(safe-area-inset-top)); z-index: 30; }
   /* An Undo or a Redo in the chip (New Skribl's, lib/newundo.js) is the Pad's
      .toast-action, which takes taps back from the chip. Once the chip has
      faded, the button goes as well: an unseen button must not take a tap meant

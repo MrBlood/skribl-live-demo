@@ -2923,6 +2923,99 @@ with sync_playwright() as p:
           _both and all("or words" in _icons[n]["words"] for n in _icons),
           " | ".join((_icons[n] or {}).get("words", "")[:90] for n in _icons))
 
+    # ONE BUBBLE (the owner's pick A, after the drafts list's one tap). Flip's
+    # chip could use only half the screen's width (left: 50% and no width of
+    # its own), so "Opened ... is in Drafts." took three lines on a phone where
+    # the Pad's toast takes two, in smaller, greyer words, and it went after
+    # 2.2s where the Pad's stays 2.8s. It wears the Pad's bubble now (.toast).
+    # Read on a phone and a desk, light and dark: the look, property by
+    # property; the long message's width and lines; its words against what is
+    # painted behind them; and, in each page's own clock, how long it stays.
+    print("\nPARITY — the message bubble is one design, on both")
+    import io
+    import statistics
+    from PIL import Image
+    _BUB = """(sel) => { const t = document.querySelector(sel); if (!t) return null;
+      const s = getComputedStyle(t), r = t.getBoundingClientRect();
+      const lh = parseFloat(s.lineHeight) || parseFloat(s.fontSize) * 1.2;
+      const inner = r.height - parseFloat(s.paddingTop) - parseFloat(s.paddingBottom)
+        - parseFloat(s.borderTopWidth) - parseFloat(s.borderBottomWidth);
+      return { look: [s.backgroundColor, s.color, s.fontSize, s.fontWeight, s.paddingTop, s.paddingLeft,
+                      s.borderTopWidth, s.borderTopColor, s.borderTopLeftRadius, s.boxShadow,
+                      s.backdropFilter || s.webkitBackdropFilter || '', s.maxWidth, s.textAlign].join(' | '),
+               w: Math.round(r.width), lines: Math.max(1, Math.round(inner / lh)), color: s.color,
+               x: r.left, top: r.top, h: r.height, shown: t.classList.contains('show') }; }"""
+    _SAYS = (("pad", "/skribl-pad", "#toast", "(m) => showToast(m)"), ("flip", "/flip", "#flipChip", "(m) => chip(m)"))
+    _LONG = "Opened “Bounce”. The drawing you had open is in Drafts."
+
+    def _lum(c):
+        def ch(v):
+            v = v / 255
+            return v / 12.92 if v <= 0.03928 else ((v + 0.055) / 1.055) ** 2.4
+        return 0.2126 * ch(c[0]) + 0.7152 * ch(c[1]) + 0.0722 * ch(c[2])
+
+    def _behind(pg, sel, m):
+        """The bubble photographed with its words hidden: the median colour
+        inside it, clear of the round ends, is what the words are read on."""
+        pg.evaluate("(s) => { const t = document.querySelector(s); t.style.color = 'transparent'; }", sel)
+        pg.wait_for_timeout(60)
+        png = pg.screenshot(clip={"x": m["x"] + m["h"] / 2, "y": m["top"] + 3,
+                                  "width": max(4, m["w"] - m["h"]), "height": max(4, m["h"] - 6)})
+        pg.evaluate("(s) => { document.querySelector(s).style.color = ''; }", sel)
+        px = list(Image.open(io.BytesIO(png)).convert("RGB").getdata())
+        return [statistics.median(p[i] for p in px) for i in range(3)]
+
+    for _dev, _vp, _mob in (("phone", {"width": 402, "height": 874}, True), ("desk", {"width": 1280, "height": 900}, False)):
+        for _theme in ("light", "dark"):
+            _got = {}
+            for _name, _path, _sel, _say in _SAYS:
+                _c = b.new_context(viewport=_vp, is_mobile=_mob, has_touch=_mob)
+                _pg = _c.new_page()
+                _pg.goto(f"{BASE}{_path}?theme={_theme}", wait_until="load")
+                _pg.wait_for_timeout(900)
+                _pg.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+                _pg.evaluate(f"(m) => ({_say})(m)", _LONG)
+                _pg.wait_for_timeout(700)   # faded and glided in
+                _m = _pg.evaluate(_BUB, _sel)
+                if _m and _m["shown"]:
+                    _fg = [float(v) for v in _m["color"][_m["color"].index("(") + 1:_m["color"].index(")")].split(",")[:3]]
+                    _hi, _lo = sorted((_lum(_fg), _lum(_behind(_pg, _sel, _m))), reverse=True)
+                    _m["contrast"] = round((_hi + 0.05) / (_lo + 0.05), 2)
+                _got[_name] = _m
+                _c.close()
+            _p, _f = _got["pad"], _got["flip"]
+            _ok = bool(_p and _f and _p["shown"] and _f["shown"])
+            check(f"{_dev} {_theme}: Flip's bubble wears the Pad's look (ground, words, padding, edge, radius, shadow, blur, width rule)",
+                  _ok and _p["look"] == _f["look"], f"pad {_p and _p['look']}\n      flip {_f and _f['look']}")
+            check(f"{_dev} {_theme}: the long message is as wide, in as many lines, on both",
+                  _ok and abs(_p["w"] - _f["w"]) <= 1 and _p["lines"] == _f["lines"],
+                  f"pad {_p and (_p['w'], _p['lines'])} flip {_f and (_f['w'], _f['lines'])}")
+            check(f"{_dev} {_theme}: its words read clearly against what is painted behind them, on both (4.5 or more)",
+                  _ok and _p.get("contrast", 0) >= 4.5 and _f.get("contrast", 0) >= 4.5,
+                  f"pad {_p and _p.get('contrast')} flip {_f and _f.get('contrast')}")
+    # ...and the same time to read it, each in its own page's clock (from the
+    # call to the moment `show` comes off): the Pad's 2.8s on both.
+    _held = {}
+    for _name, _path, _sel, _say in _SAYS:
+        _pg = b.new_page(viewport={"width": 1280, "height": 900})
+        _pg.goto(BASE + _path, wait_until="load")
+        _pg.wait_for_timeout(900)
+        _pg.evaluate("""(sel) => { const t = document.querySelector(sel); let seen = false; window.__held = null;
+            new MutationObserver(() => { if (t.classList.contains('show')) seen = true;
+              else if (seen && window.__held == null) window.__held = performance.now() - window.__t0; })
+              .observe(t, { attributes: true, attributeFilter: ['class'] }); }""", _sel)
+        _pg.evaluate(f"() => {{ window.__t0 = performance.now(); ({_say})('Blur undone'); }}")
+        try:
+            _pg.wait_for_function("() => window.__held != null", timeout=8000)
+        except Exception:
+            pass   # never went: the row below says so
+        _held[_name] = _pg.evaluate("() => window.__held == null ? null : Math.round(window.__held)")
+        _pg.close()
+    check("both keep a message up as long, 2.8s (each page's own clock)",
+          all(v is not None and 2650 <= v <= 3150 for v in _held.values())
+          and _held["pad"] is not None and _held["flip"] is not None and abs(_held["pad"] - _held["flip"]) <= 150,
+          f"pad {_held.get('pad')}ms, flip {_held.get('flip')}ms")
+
     print("\nPARITY — no surface is silently erroring on load")
     check("Pad loads without JS errors", not errs["pad"], "; ".join(errs["pad"][:2]))
     check("Flip loads without JS errors", not errs["flip"], "; ".join(errs["flip"][:2]))
