@@ -78,7 +78,9 @@
  * 4:3 drawing has no bars beside it, and a tall drawing is narrowed to fit a
  * screen (70vh, at most 640px tall) rather than given bars. A surface with its
  * own transport leaves the line out (line=false: the gallery's cards) and
- * keeps the old 16:9 box with its mute and loop on it, as a draft does.
+ * keeps the old 16:9 box with its mute and loop on it, as the Library's stage
+ * does. A draft in a post box takes its drawing's shape too, kept shorter
+ * (`is-preview`, below).
  *
  * THE STYLESHEET'S SIDE OF IT, said here with the rest of the reasoning, so
  * the sheet stays values a host can read before overriding one. The play
@@ -212,6 +214,20 @@
  * composer: the wash and the big Play go, because they hid which drawing was
  * attached, and the duration chip takes a play mark so "this moves" is still
  * said. skribl_inline_draft(plain=true) adds it (owner, mock P1).
+ *
+ * `is-preview` -- THE DRAWING IN A HOST'S POST BOX, before it is posted (the
+ * owner's B, after the skribls.net mock). It was the 16:9 box, so a 4:3
+ * drawing sat between bars 41px wide on a phone and a tall one was a strip
+ * 100px wide. adopt() gives the box the drawing's shape, from the payload's
+ * canvas size, as the post will have, each time a drawing is attached or
+ * changed. A post's rule (is-shaped, up to 70vh) would let a tall drawing
+ * fill the phone and push the composer's Post off the screen, so a preview
+ * stops at min(45vh, 360px) tall (203 x 360 for a 9:16 drawing, where its
+ * post is 318 x 565). And it starts at the left edge the words above it and
+ * Edit drawing under it start at: centred, a narrow one sat 58px in from its
+ * own buttons. skribl_inline_draft() adds it unless shaped=false, which keeps
+ * the 16:9 box for a surface laid out around it: the Library's stage, the
+ * Post sheet's card, the help cards, the hello.
  */
 (function (global) {
   'use strict';
@@ -1040,6 +1056,9 @@
       seekCache = null;
       var frames = framesOf(payload);
       size = logicalSize(payload);
+      /* A COMPOSER'S PREVIEW TAKES THIS DRAWING'S SHAPE, each time one is
+       * attached, a changed drawing's too (`is-preview`, in the header). */
+      if (el.classList.contains('is-preview')) me.shape(1, size.w, size.h);
 
       /* At most 2 pixels a point: a feed holds many players and a third
        * pixel is half again the memory and paint for each. One player alone
@@ -1887,10 +1906,13 @@
      * box with a line) TAKES THAT SHAPE (v322): no bars beside the drawing,
      * and the poster's drawing fills it. The macro writes the same when it
      * is given the size; a page that clones it fills the size in after.
-     * me.shape(on) switches later, framing the poster again (gallery.js). */
+     * me.shape(on) switches later, framing the poster again (gallery.js);
+     * me.shape(on, w, h) names the size first: a post box's preview, from
+     * adopt(), which always has one (logicalSize). */
     var pw = +el.getAttribute('data-skribl-w');
     var ph = +el.getAttribute('data-skribl-h');
-    me.shape = function (on) {
+    me.shape = function (on, w, h) {
+      if (w) { pw = w; ph = h; }
       var s = el.style, ok = pw > 0 && ph > 0;
       on = !!on && ok;
       s.aspectRatio = on ? pw + '/' + ph : '';

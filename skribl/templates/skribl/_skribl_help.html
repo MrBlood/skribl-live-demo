@@ -65,7 +65,7 @@
       <div class="learn-stage" role="button" tabindex="0" aria-label="Watch {{ title }} full screen"><video class="learn-video" muted playsinline loop preload="none" aria-hidden="true"></video></div>
     {% else %}
     <figure class="learn-card" data-group="{{ group }}" data-demo="{{ skribl_asset('help/demos/' ~ demo ~ '.json') }}" data-demo-name="{{ demo }}"{% if tool %} data-learn-tool="{{ tool }}"{% endif %}>
-      <div class="learn-stage" role="button" tabindex="0" aria-label="Watch {{ title }} full screen">{{ skribl_inline_draft(controls=false, progress=false) }}</div>
+      <div class="learn-stage" role="button" tabindex="0" aria-label="Watch {{ title }} full screen">{{ skribl_inline_draft(controls=false, progress=false, shaped=false) }}</div>
     {% endif %}
       <figcaption class="learn-cap">
         <span class="learn-title">{% if n %}<span class="learn-n" aria-hidden="true">{{ n }}</span>{% endif %}{{ title }}</span>

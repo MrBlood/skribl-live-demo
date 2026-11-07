@@ -417,6 +417,14 @@ the mute/loop cluster for a page that has its own transport, and
 `progress=false` hides the player's own progress hairline for a page that
 draws its own scrub track — `/library` passes both.
 
+The draft takes its drawing's shape, as the post will: each time `attach` or
+`adopt` hands it a drawing, the box follows that drawing's canvas, so a 4:3 or
+a tall drawing has no bars beside it. It stays at most `min(45vh, 360px)` tall,
+so a tall drawing leaves your Post button on the screen, and it starts at the
+left edge of whatever holds it, like the words above it. Nothing to add for
+it. A page laid out around a 16:9 box passes `shaped=false` and keeps that box
+(`/library` does).
+
 **Posting.** One `POST /api/skribls` with the payload, plus whatever your post
 needs: `title` (what `/s/<id>` unfurls with), `caption`, and
 `"visibility": "public"` — the API defaults to `unlisted`, and a feed's composer
