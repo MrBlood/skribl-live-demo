@@ -3015,6 +3015,66 @@ with sync_playwright() as p:
           all(v is not None and 2650 <= v <= 3150 for v in _held.values())
           and _held["pad"] is not None and _held["flip"] is not None and abs(_held["pad"] - _held["flip"]) <= 150,
           f"pad {_held.get('pad')}ms, flip {_held.get('flip')}ms")
+    # ...AND IT STEPS ASIDE WHEN SOMETHING OPENS, on both, as a tip does
+    # (lib/hints.js; lib/opensurfaces.js says when). Main after #782: a
+    # bubble still up when Tune opened on a phone sat on Tune's first row, and
+    # on Flip, the bubble now the Pad's size, on its Speed buttons
+    # (verify_contrast read the 6 on it). One said while Tune is open stays,
+    # and so does one said in the same task as Tune opening, in either order:
+    # those are about Tune. And an Undo in one that stepped aside takes no tap
+    # over Tune, read as what is hit at the Undo's centre (an invisible button
+    # taking a tap meant for Tune is the hints' old bug). On a touch phone,
+    # where Tune hangs under the header.
+    _UP = "(sel) => { const t = document.querySelector(sel); return !!t && !t.hidden && t.classList.contains('show'); }"
+    _UNDO = {"pad": "() => showToast('New Skribl', null, { label: 'Undo', onClick: () => { window.__undone = 1; } })",
+             "flip": "() => chip('New Skribl', { label: 'Undo', onClick: () => { window.__undone = 1; } })"}
+    _aside = {}
+    for _name, _path, _sel, _say in _SAYS:
+        _aside[_name] = {}
+        for _case in ("up before", "while open", "open then say", "say then open", "undo up before"):
+            _c = b.new_context(viewport={"width": 402, "height": 874}, is_mobile=True, has_touch=True)
+            _pg = _c.new_page()
+            _pg.goto(BASE + _path, wait_until="load")
+            _pg.wait_for_timeout(900)
+            _pg.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+            _before = True
+            if _case == "up before":
+                _pg.evaluate(f"() => ({_say})('Draft restored')")
+                _pg.wait_for_timeout(400)
+                _before = _pg.evaluate(_UP, _sel)
+                _pg.click("#tuneBtn")
+            elif _case == "while open":
+                _pg.click("#tuneBtn")
+                _pg.wait_for_timeout(450)
+                _pg.evaluate(f"() => ({_say})('About Tune')")
+            elif _case == "undo up before":
+                _pg.evaluate(_UNDO[_name])
+                _pg.wait_for_timeout(400)
+                _at = _pg.evaluate(f"""() => {{ const b = document.querySelector('{_sel} .toast-action'); if (!b) return null;
+                    const r = b.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; }}""")
+                _before = bool(_at) and _pg.evaluate("([x, y]) => { const e = document.elementFromPoint(x, y); return !!(e && e.closest('.toast-action')); }", _at)
+                _pg.click("#tuneBtn")
+            else:
+                _pg.evaluate(f"""(first) => {{ const open = () => document.getElementById('tuneBtn').click();
+                    const say = () => ({_say})('About Tune');
+                    if (first === 'open') {{ open(); say(); }} else {{ say(); open(); }} }}""", _case.split()[0])
+            _pg.wait_for_timeout(600)
+            _aside[_name][_case] = (_before, _pg.evaluate("() => !!document.querySelector('.tune-shell.open')"),
+                                    _pg.evaluate(_UP, _sel) if _case != "undo up before" else
+                                    (_at is not None and _pg.evaluate("([x, y]) => { const e = document.elementFromPoint(x, y); return !!(e && e.closest('.toast-action')); }", _at)))
+            _c.close()
+    check("a bubble that was up steps aside when Tune opens, on both (it sat on Tune's first row, and on Flip's Speed buttons)",
+          all(r["up before"][0] and r["up before"][1] and not r["up before"][2] for r in _aside.values()),
+          "; ".join(f"{n}: up before {r['up before'][0]}, Tune open {r['up before'][1]}, still up {r['up before'][2]}"
+                    for n, r in _aside.items()))
+    check("an Undo in a bubble that stepped aside takes no tap over Tune, on both (what is hit at its centre)",
+          all(r["undo up before"][0] and r["undo up before"][1] and not r["undo up before"][2] for r in _aside.values()),
+          "; ".join(f"{n}: Undo hit before {r['undo up before'][0]}, Tune open {r['undo up before'][1]}, Undo hit after {r['undo up before'][2]}"
+                    for n, r in _aside.items()))
+    check("one said while Tune is open, or as it opens (either order), stays on both: it is about Tune",
+          all(r[k][1] and r[k][2] for r in _aside.values() for k in ("while open", "open then say", "say then open")),
+          "; ".join(f"{n} {k}: Tune open {r[k][1]}, up {r[k][2]}"
+                    for n, r in _aside.items() for k in ("while open", "open then say", "say then open")))
 
     print("\nPARITY — no surface is silently erroring on load")
     check("Pad loads without JS errors", not errs["pad"], "; ".join(errs["pad"][:2]))

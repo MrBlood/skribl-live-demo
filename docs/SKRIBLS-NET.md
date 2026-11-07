@@ -136,5 +136,19 @@ says so.
    but closing it (the owner: "if this sits in a social media site, how do
    you get back to the timeline?").
 
+9. **Join the two light/dark switches.** The site keeps its choice in
+   `localStorage` as `skribl-theme` (its toggle, and the script in its
+   `<head>`); Skribl keeps its own as `skribl_theme_v1` (`lib/theme.js`:
+   light, dark or system). Mounted on the same origin they sit side by side
+   and never meet. While nobody has picked, both follow the phone; but someone
+   who picks dark on the site while their phone is light gets the Pad and Flip
+   in light, inside a dark site. The simple join: the site's toggle writes
+   Skribl's key too, beside its own (`localStorage.setItem('skribl_theme_v1',
+   next)`), and every Skribl page follows, Flip included when a Flip draft is
+   opened from the Pad's list inside the composer. Passing `?theme=` on the
+   composer's `src` covers the Pad only: that hand-over to Flip drops it, and
+   Flip comes up in the phone's own setting. (Seen in the mock of Skribl
+   inside skribls.net, Nov 2026; the owner asked for it on this list.)
+
 The player needs nothing from `media.skribls.net`: its poster and payload come
 from Skribl's own routes under the site's prefix.

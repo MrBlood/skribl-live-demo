@@ -54,10 +54,25 @@
   var ANY = '.tab-panel, #drawPanel, .menu-overlay, #moreMenu, #helpDrawer, #savedDraftsSheet,'
     + ' .flip-export, .tune-shell, .lc-card, #photoPanel, #musicPanel, .pm-overlay, .sheet, #txSheet';
 
+  /* AND THE MOMENT SOMETHING OPENS, said once, as 'skribl:opened' on the
+     document: the page went from nothing open to a drawer, a sheet or a menu.
+     The message bubble listens (the Pad's toast in editor_menu.js, Flip's
+     chip in flip.js: one bubble since the owner's pick A). A bubble that was up when
+     Tune opened on a phone sat on Tune's first row, and on Flip, the bubble
+     now the Pad's size, on its Speed buttons: main's verify_contrast after
+     #782 read the 6 on it. So the bubble steps aside as a tip does
+     (lib/hints.js, the same rule for the same reason). Not said for what is
+     already open when the page loads. */
+  var wasOpen = null;
   function sync() {
     for (var i = 0; i < STATES.length; i++) {
       root.classList.toggle(STATES[i][0], !!doc.querySelector(STATES[i][1]));
     }
+    var open = root.classList.contains('skribl-covered') || root.classList.contains('skribl-sheet');
+    if (open && wasOpen === false && typeof global.CustomEvent === 'function') {
+      doc.dispatchEvent(new global.CustomEvent('skribl:opened'));
+    }
+    wasOpen = open;
   }
 
   function holds(nodes) {

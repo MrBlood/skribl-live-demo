@@ -30917,3 +30917,79 @@ bubble for both editors), powerful (room for the longer messages Drafts now
 says), playful (the Pad's soft glide in).
 
 Not tested here: WebKit (the owner's iPhone), and Segoe UI or SF.
+
+## After v330 -- A bubble steps aside when something opens, and a tooltip waits for the keyboard (main red after #782)
+
+MAIN RED (issue #783). Main's full run after #782 failed on both 2/6 shards
+with the same numbers: verify_contrast, "Flip, light, phone: Tune, with Beat:
+every word off the brand purple reads 7:1", the Speed row's 6 at 6.12 on
+rgb(209, 209, 209), white 0.6s later. A bubble was still up when Tune opened
+(the suite reloads Flip over the draft its earlier surfaces saved, and Flip
+says "Draft restored"). On a phone Tune hangs under the header, and the bubble
+sits just under the header: over Tune's first row, on both editors. On the
+Pad nothing is under it; on Flip that row is Speed, and the bubble, the Pad's
+size since #782 (6px taller than Flip's chip was), reaches its buttons:
+measured here, the 6's ground is (200, 200, 200), the bubble's shadow, 5.59:1,
+and 9.35:1 with no bubble. CI read the 6's words a few pixels closer (its
+faces are not this box's). Real, if small: a message never covers a control.
+
+- THE BUBBLE STEPS ASIDE WHEN SOMETHING OPENS, the rule a tip already follows
+  (lib/hints.js, written for the same Speed buttons). lib/opensurfaces.js says
+  'skribl:opened' when the page goes from nothing open to a drawer, sheet or
+  menu. One said while the surface is open stays, and so does one said in the
+  same moment as it opening, in either order: those are about that surface.
+  An Undo in one that steps aside takes no tap over what opened.
+  FLIP (flip.js chip()): marks a chip said in this task, puts away one that
+  was up; its faded Undo was already hidden (flip.css).
+  THE PAD (editor_menu.js, NOT app.js): the first build put the listener in
+  app.js and took the player's JavaScript 446 B past its ceiling
+  (verify_player_isolation, verify_jsstrip), for code the player never runs:
+  it opens no sheet. So app.js is as it was, and the Pad's listener lives in
+  its menu's script. It fades a message that was up; one said in the same
+  moment has no .show yet (app.js adds it on the next frame), so that frame
+  brings it back; and a faded one's Undo stops taking taps. The player's
+  JavaScript is unchanged.
+  Still as before: a message said WHILE Tune is open sits under the header,
+  over Tune's first row. No Tune control on either editor says one today; if
+  one starts to, where the bubble goes while Tune is open is a mock.
+- THE "MORE" LABEL (the owner's yes, from the skribls.net pictures): after a
+  draft opened on a desk, the tooltip "More" sat under the ⋯ and stayed. A
+  sheet closed with the mouse puts focus back on its opener
+  (lib/modalfocus.js), and lib/tooltip.js showed its tooltip on any focus. It
+  shows on focus now only when the page was last used with keys: data-input
+  on <html>, the rule the focus rings follow (Safari draws :focus-visible for
+  a script's focus even after a tap, so the page's own note comes first);
+  :focus-visible before the page has been used; as before where neither is
+  known. One module: both editors, the Gallery and the Library.
+- docs/SKRIBLS-NET.md item 9 (the owner's yes): join the site's light/dark
+  choice to Skribl's, by having the site's toggle write Skribl's key too.
+
+THE CHECKS. verify_parity, beside the bubble's design rows, on a touch phone:
+a bubble up when Tune opens is gone 600ms later, on both; an Undo in one that
+stepped aside is not what is hit at its centre, on both; one said while Tune
+is open, or as it opens in either order, is still up. verify_tips: on a desk,
+a sheet closed with the mouse gives focus back to the ⋯ and no tooltip comes
+up, read at 300ms (before a hover's 380ms) and 900ms, Pad and Flip; reached
+with keys (Shift+Tab, Tab), the same ⋯ shows its words at once.
+
+CALIBRATED, each mutation in its own copy of the tree, the rows cut from the
+suites. Main's files: the steps-aside, Undo and both mouse rows red. No
+signal: steps-aside and Undo red, both editors. The Pad's listener gone: those
+two red, the Pad's half only; Flip's gone, Flip's half only. The Pad's faded
+Undo left tappable: the Undo row, the Pad's half; Flip's flip.css rule gone,
+Flip's half. The Pad's bubble put away at once, whatever it is: the stays row
+(a message said with Tune lost). Flip's same-task mark gone: the stays row.
+Tooltips on any focus: the two mouse rows; never on focus: the two keyboard
+rows. The tree: 7 of 7. verify_contrast's "Tune, with Beat" with "Draft
+restored" up before Tune opened passed in this box on main's code too (the
+label's samples sit lower here than CI's); measured directly, as above, the
+bubble's shadow on the 6 is what CI read.
+
+THE FOUR: kind (nothing left over the control someone reaches for next, and a
+message about the open surface still stays), simple (one rule for tips,
+bubbles and labels: what just opened is what the person is looking at),
+powerful and playful (unchanged: every message is still said).
+
+Not tested here: WebKit (the owner's iPhone, which shows no tooltips, and
+Safari on a Mac, where reading data-input first is meant to matter), and
+Segoe UI or SF.

@@ -1557,7 +1557,22 @@ function chip(msg, action){
   el.style.top = y ? Math.round(y + 8) + 'px' : '';
   el.classList.add('show');
   clearTimeout(el._t); el._t = setTimeout(()=>el.classList.remove('show'), holdMs);
+  chipFresh = true; setTimeout(()=>{ chipFresh = false; }, 0);
 }
+/* A CHIP THAT WAS UP STEPS ASIDE WHEN SOMETHING OPENS OVER THE PAGE, as the
+   Pad's toast does (editor_menu.js, the reason there) and a tip does
+   (lib/hints.js). Its Undo, if it has one, goes with it: hidden once it has
+   faded (flip.css, .flip-chip:not(.show) .toast-action).
+   "Draft restored" was still up when Tune opened on a phone, on its Speed
+   buttons (main's verify_contrast after #782). One shown while a drawer or
+   sheet is open stays, and so does one shown in the same task as it opening:
+   both are about that surface. lib/opensurfaces.js says when. */
+var chipFresh;   // var with no value: hoisted, so a chip said before this line keeps its mark
+document.addEventListener('skribl:opened', ()=>{
+  const el = document.getElementById('flipChip');
+  if(chipFresh || !el || !el.classList.contains('show')) return;
+  clearTimeout(el._t); el.classList.remove('show');
+});
 // The blank-page whisper (Pad's .canvas-empty-hint, same treatment): visible
 // only while the document is genuinely empty — one page, no strokes, no photo.
 // Re-evaluated on every scheduled save, and yanked on pointerdown so it is not

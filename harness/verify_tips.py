@@ -214,6 +214,48 @@ with sync_playwright() as p:
     tp.close()
     touch.close()
 
+    print("\nTOOLTIPS — a keyboard's focus shows one, not the focus a closing sheet gives back")
+    # On a desk, a sheet closed with the mouse puts focus back on the button
+    # that opened it (lib/modalfocus.js), and the tooltip came up there and
+    # stayed: "More" under the ⋯ after a draft opened (the skribls.net
+    # pictures). Focus shows it now only when the page was last used with
+    # keys, the rule the focus ring follows (lib/tooltip.js keyed()). Read
+    # twice, before a hover's 380ms could show anything and well after; and
+    # "focus is back on the ⋯" is read too, so a close that sent focus
+    # elsewhere cannot pass for a tooltip that stayed away. The cursor rests
+    # where the sheet's x was, over the canvas on both editors at this size.
+    _TIPNOW = """() => { const t = document.querySelector('.skribl-tip'), a = document.activeElement;
+      return { tip: t && !t.hidden ? t.textContent : null,
+               focus: a && a.id ? '#' + a.id : (a ? a.tagName.toLowerCase() : null) }; }"""
+    for _surface, _path, _more in (("Pad", "/skribl-pad", "#menuBtn"), ("Flip", "/flip", "#moreBtn")):
+        kp = b.new_page(viewport={"width": 1200, "height": 900})
+        kp.goto(BASE + _path, wait_until="load")
+        kp.wait_for_timeout(1400)
+        dismiss_intro(kp)
+        kp.click(_more)
+        kp.wait_for_timeout(400)
+        kp.click("#openCloudDraftItem")
+        kp.wait_for_timeout(900)
+        kp.click("#savedDraftsSheet .sdrafts-close")
+        kp.wait_for_timeout(300)
+        _early = kp.evaluate(_TIPNOW)
+        kp.wait_for_timeout(600)
+        _late = kp.evaluate(_TIPNOW)
+        check(f"{_surface}: a sheet closed with the mouse gives focus back to the ⋯, and no tooltip comes up on it",
+              all(m["focus"] == _more and m["tip"] is None for m in (_early, _late)),
+              f"at 300ms {_early}; at 900ms {_late}")
+        # Reached with keys, the same ⋯ says what it is: away and back again.
+        kp.keyboard.press("Shift+Tab")
+        kp.wait_for_timeout(150)
+        kp.keyboard.press("Tab")
+        kp.wait_for_timeout(250)
+        _keys = kp.evaluate(_TIPNOW)
+        _words = kp.get_attribute(_more, "data-tip")
+        check(f"{_surface}: reached with keys, the same ⋯ shows its tooltip at once",
+              _keys["focus"] == _more and bool(_words) and _keys["tip"] == _words,
+              f"{_keys}; its words {_words!r}")
+        kp.close()
+
     print("\nHINTS — once, and only once")
     # PAD, not Flip: this whole block drives #magnifyBtn, which is in Pad's
     # template only (see the note at the first hover assertion). It ran against

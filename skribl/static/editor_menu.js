@@ -354,3 +354,26 @@ document.addEventListener('DOMContentLoaded', function () {
     toast: function (m) { showToast(m, document.getElementById('menuBtn')); }
   });
 });
+
+/* A MESSAGE ALREADY UP STEPS ASIDE WHEN SOMETHING OPENS OVER THE PAGE, as a
+   tip does (lib/hints.js) and Flip's chip does (flip.js chip()). "Draft
+   restored" was still up when Tune opened on a phone, on Tune's first row;
+   on Flip, on its Speed buttons (main's verify_contrast after #782). Whatever
+   just opened is what the person is looking at. lib/opensurfaces.js says
+   when. Here, not in app.js: the player opens no sheet, and app.js is the
+   player's to download (verify_player_isolation's ratchet).
+   It fades the way it fades at the end of its hold (app.js still hides it
+   then). A message said with the surface, in the same moment, is about it
+   and stays: app.js puts .show on a message on the frame after it is said,
+   so that frame brings it back, and nothing here has to tell the two apart.
+   And an Undo in one that has stepped aside takes no taps it cannot be seen
+   to take, over the sheet that just opened. */
+document.addEventListener('skribl:opened', function () {
+  var t = document.getElementById('toast');
+  if (!t || t.hidden || !t.classList.contains('show')) return;
+  t.classList.remove('show');
+  requestAnimationFrame(function () {
+    if (t.classList.contains('show')) return;   // said again as the surface opened: it stays
+    t.querySelectorAll('.toast-action').forEach(function (b) { b.style.pointerEvents = 'none'; });
+  });
+});
