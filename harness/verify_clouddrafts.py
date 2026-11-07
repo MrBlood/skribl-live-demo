@@ -554,6 +554,10 @@ try:
         check("and closes the sheet", sheet_hidden is True, str(sheet_hidden))
         name = pa.evaluate("() => document.getElementById('padFrame').contentWindow.SkriblName.get()")
         check("with the draft's name", name == "Composer wave", repr(name))
+        # A tap that did not open leaves the sheet up over the Post button: put
+        # it away, so the rows below still run and say what was attached.
+        pa.evaluate("() => document.getElementById('padFrame').contentWindow.SkriblSavedDrafts.close()")
+        pa.wait_for_timeout(400)
 
         fr.locator("#postBtn").click()
         pa.wait_for_timeout(1000)
@@ -1203,6 +1207,16 @@ try:
             }
             return out; }"""
         BLANK = "() => ({ strokes: strokes.length, ink: !!hasContent, photo: !!(photoBgImg && photoBgImg._fileName) })"
+
+        def sheet_again(pg):
+            """The list, opened afresh: a tap that did not open (a red row above)
+            leaves the sheet up over the ⋯, so it is put away first."""
+            pg.evaluate("() => SkriblSavedDrafts.close()")
+            pg.wait_for_function("() => document.getElementById('savedDraftsSheet').hidden", timeout=5000)
+            menu_click(pg, "#openCloudDraftItem")
+            pg.locator("#savedDraftsSheet .sdrafts-open").nth(0).wait_for(timeout=5000)
+            pg.wait_for_timeout(300)
+
         held_photo = pp.evaluate(BLANK)
         local0 = pp.evaluate(LOCAL)
         # Two drafts with ink (Keep me one and two): a tap that replaced the
@@ -1236,9 +1250,7 @@ try:
         pp.wait_for_timeout(400)
         n_wait = len(pp.evaluate(LOCAL))
         cur_wait = pp.evaluate("() => SkriblSavedDrafts.current()")
-        menu_click(pp, "#openCloudDraftItem")
-        pp.locator("#savedDraftsSheet .sdrafts-open").nth(0).wait_for(timeout=5000)
-        pp.wait_for_timeout(300)
+        sheet_again(pp)
         OTHER_META = ('() => (document.querySelector(\'#savedDraftsSheet .sdrafts-open[data-draft-id="'
                       + (other["id"] if other else "") + '"] .sdrafts-meta\') || {}).textContent')
         if other:
@@ -1259,6 +1271,7 @@ try:
         # toast: the row is not on screen to say them.
         pp.evaluate("() => { const t = document.getElementById('toast'); window.__toasts = [];"
                     " new MutationObserver(() => window.__toasts.push(t.textContent)).observe(t, { childList: true, characterData: true, subtree: true }); }")
+        sheet_again(pp)
         if other:
             pp.locator('#savedDraftsSheet .sdrafts-open[data-draft-id="' + other["id"] + '"]').click()
         pp.wait_for_timeout(300)
@@ -1277,8 +1290,7 @@ try:
         n_blank = len(pp.evaluate(LOCAL))
         pp.evaluate("() => { const t = document.getElementById('toast'); window.__toasts = [];"
                     " new MutationObserver(() => window.__toasts.push(t.textContent)).observe(t, { childList: true, characterData: true, subtree: true }); }")
-        menu_click(pp, "#openCloudDraftItem")
-        pp.locator("#savedDraftsSheet .sdrafts-open").nth(0).wait_for(timeout=5000)
+        sheet_again(pp)
         if other:
             pp.locator('#savedDraftsSheet .sdrafts-open[data-draft-id="' + other["id"] + '"]').click()
         try:
@@ -1294,8 +1306,7 @@ try:
               and not any("in Drafts" in t for t in blank["toasts"]), f"{blank}; {n_blank} -> {len(pp.evaluate(LOCAL))} drafts")
         # NO COPY OF A DRAFT THAT IS ALREADY ONE: that draft is on the canvas,
         # unchanged, and another opens over it: nothing new is kept.
-        menu_click(pp, "#openCloudDraftItem")
-        pp.locator("#savedDraftsSheet .sdrafts-open").nth(0).wait_for(timeout=5000)
+        sheet_again(pp)
         if pick:
             pp.locator('#savedDraftsSheet .sdrafts-open[data-draft-id="' + pick["id"] + '"]').click()
         try:
