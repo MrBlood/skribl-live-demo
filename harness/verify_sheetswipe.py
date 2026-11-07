@@ -421,6 +421,27 @@ with sync_playwright() as p:
         return { rows, scrolls: l.scrollHeight > l.clientHeight }; }""")
     check("Pad: every draft card stops at least 10 px short of the list's right edge, where iOS draws its bar",
           len(lane["rows"]) >= 6 and min(lane["rows"]) >= 10, str(lane))
+    # ...AND NOTHING SHOWS UNDER "AS A FILE" WHILE IT SCROLLS (owner's
+    # iPhone, after #782: the next draft's edge ran through the heading's
+    # words). The list keeps 14px inside its own clip for the last card's drop
+    # and pulled the heading up over that strip; scrolling, cards slid through
+    # it, under the heading. Asked of what is painted, not of boxes: at every
+    # 2px of the list's scroll, fifteen points across the heading list no
+    # draft card under them (elementsFromPoint honours the list's clip).
+    under = pg.evaluate("""async () => { const s = document.getElementById('savedDraftsSheet'), l = s.querySelector('.sdrafts-list');
+        const hd = [...s.querySelectorAll('.sdrafts-label')].find(e => e.textContent.trim() === 'As a file');
+        const max = l.scrollHeight - l.clientHeight, at = [];
+        for (let top = 0; top <= max; top += 2) {
+          l.scrollTop = top; await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+          const h = hd.getBoundingClientRect();
+          const hit = [.1, .3, .5, .7, .9].some(fx => [.15, .5, .85].some(fy =>
+            document.elementsFromPoint(h.left + h.width * fx, h.top + h.height * fy).some(e => e.closest && e.closest('.sdrafts-row'))));
+          if (hit) at.push(top);
+        }
+        l.scrollTop = 0;
+        return { scrolls: max > 0, positions: Math.floor(max / 2) + 1, under: at.length, first: at.slice(0, 4) }; }""")
+    check("Pad: while your drafts scroll, no draft card shows under 'As a file' (read every 2px of the scroll)",
+          under["scrolls"] and under["positions"] > 20 and under["under"] == 0, str(under))
     ctx.close()
 
     # 5 the draw drawer's grip

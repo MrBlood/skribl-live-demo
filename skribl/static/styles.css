@@ -7753,7 +7753,15 @@ body.playing .flip-grid { display: none; }
    lib/savedrafts.js marks .sdrafts-scrolls. */
 .sdrafts-list { overflow-y: auto; display: flex; flex-direction: column; gap: 8px;
   padding: 0 0 14px; margin-bottom: -14px; }
-.sdrafts-list.sdrafts-scrolls { padding-right: 12px; }
+/* ...AND THE STRIP STAYS THE LIST'S OWN WHILE IT SCROLLS (owner's iPhone,
+   after #782: the next draft's edge ran through "As a file"). The 14px kept
+   for the last card's drop sits inside the list's clip, and the -14px above
+   pulls the next heading up over it, which is right while the list holds
+   still; while it scrolls, cards slide through that strip, under the
+   heading's words. Scrolling, the list gives the strip back: cards are cut
+   at its edge, above the heading, and at the end of the scroll the last
+   card's drop still has its 14px. */
+.sdrafts-list.sdrafts-scrolls { padding-right: 12px; margin-bottom: 0; }
 .sdrafts-empty { margin: 18px 4px; font-size: 14px; color: var(--text-muted); text-align: center; }
 .sdrafts-retry { align-self: center; min-height: 44px; padding: 0 20px; border-radius: 999px;
   border: 1px solid var(--hairline, #252a35); background: transparent; color: var(--text-heading);
