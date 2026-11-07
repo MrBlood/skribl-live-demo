@@ -329,25 +329,13 @@
       words.appendChild(meta);
       openBtn.appendChild(pic);
       openBtn.appendChild(words);
-      var armedOpen = false, metaText = meta.textContent;
-      function disarm() {
-        if (!armedOpen) return;
-        armedOpen = false;
-        meta.textContent = metaText;
-        row.classList.remove('armed');
-      }
-      disarmers.push(disarm);
+      var metaText = meta.textContent;
       openBtn.addEventListener('click', function () {
-        // Opening REPLACES the canvas. Work on it is asked about once, on the
-        // row itself, the way New Skribl asks: a second tap confirms.
-        if (!armedOpen && opts.hasContent && opts.hasContent()) {
-          disarmOthers(disarm);
-          armedOpen = true;
-          meta.textContent = 'Tap again — this replaces what is on your canvas';
-          row.classList.add('armed');
-          return;
-        }
-        openDraft(it);
+        // ONE TAP OPENS IT (openDraft, below): what is on the canvas goes to
+        // Drafts first, so there is nothing to ask. A Delete asking on another
+        // row is put back, as any row's tap puts it back.
+        disarmOthers(null);
+        openDraft(it, function (w) { meta.textContent = w || metaText; });
       });
       row.appendChild(openBtn);
       /* ITS END IS THE LIBRARY'S (D3): one ⋯ with Open in Pad (or Flip), Save
@@ -445,14 +433,37 @@
     global.location.href = url + (url.indexOf('?') >= 0 ? '&' : '?') + 'draft=' + encodeURIComponent(it.id);
   }
 
-  function openDraft(it) {
+  /* ONE TAP OPENS IT (the owner's "yes", after the Library's one line). It
+     asked "Tap again -- this replaces what is on your canvas", and the second
+     tap did: a drawing never saved was gone. Now what is on the canvas is kept
+     in Drafts first, as the Library's Open it keeps it (keepFirst: not again
+     if it is the draft it was opened as, unchanged; its photo and song waited
+     for), so there is nothing to ask. A blank canvas keeps nothing. A draft
+     for the other editor replaces nothing here, and that editor asks over its
+     own work (?draft=, the one line). If the drawing cannot be kept, nothing
+     is replaced and the row says why (say: its second line, a live region). */
+  var opening = false;
+  function openDraft(it, say) {
     if (it.kind !== opts.kind) { hide(); handOff(it); return; }
-    backend.load(it.id).then(function (rec) {
+    if (opening) return;
+    opening = true;
+    var keep = !!(opts.hasContent && opts.hasContent());
+    if (keep && say) say('Keeping your drawing in Drafts\u2026');
+    (keep ? keepFirst() : Promise.resolve()).then(function () {
+      return backend.load(it.id);
+    }).then(function (rec) {
+      opening = false;
+      if (say) say('');
       hide();
       opts.load(rec.payload);
       adopt(it.id, rec);
-      opts.toast('Opened \u201C' + (rec.title || 'Untitled Skribl') + '\u201D');
-    }, function (e) { opts.toast(e.message); });
+      opts.toast('Opened \u201C' + (rec.title || 'Untitled Skribl') + '\u201D'
+        + (keep ? '. The drawing you had open is in Drafts.' : ''));
+    }, function (e) {
+      opening = false;
+      var w = (e && e.message ? e.message + ' ' : '') + (keep ? 'Nothing was replaced.' : '');
+      if (say) say(w); else opts.toast(w);
+    });
   }
 
   function save() {
