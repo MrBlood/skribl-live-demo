@@ -31025,3 +31025,62 @@ THE FOUR: kind (the words read clean), simple (one line), powerful and
 playful (unchanged).
 
 Not tested here: WebKit (the owner's iPhone, where it was seen), and SF.
+
+## After v330 -- A post box's preview takes its drawing's shape, kept short (owner's B)
+
+The owner, looking at a drawing posted in the skribls.net mock: "When a canvas
+is posted, why is there blank space to the right and left of the player?" A
+post takes its drawing's shape when the site passes the size (v322), so the
+bars were in the post box: the drawing's preview under the words before Post
+was the 16:9 box, so a 4:3 drawing sat between bars 41px wide on a phone (55px
+on a desk) and a tall one was a strip about 100px wide. Mocked on the site's
+own Home page, each drawing put in through the real post box: Now, A (the
+post's rule) and B (the same shape, shorter), wide, 4:3 and tall, phone and
+desk, dark and light. A let a tall drawing fill the phone (318 x 565) and push
+Post off the bottom; B stops it at 203 x 360. The owner: "Yes" to B.
+
+- THE PREVIEW TAKES ITS DRAWING'S SHAPE (inlineplayer.js adopt): a box marked
+  `is-preview` follows the canvas of each drawing it is handed, by attach()
+  or by adopt() when the drawing is changed, so no drawing has bars beside it.
+  shape() now takes the size it is given (adopt's own `ph` is the photo).
+- IT STOPS AT min(45vh, 360px) TALL (inlineplayer.css, beside the post's 70vh
+  rule), so a tall drawing leaves the composer's Post on the screen, and it
+  starts at the left edge of what holds it, where the words above and Edit
+  drawing below start: centred, a narrow one sat 58px in from its buttons. On
+  a desk post box wider than 480px a 4:3 drawing stops at 480 x 360 too.
+- skribl_inline_draft() MARKS IT unless `shaped=false`: the Library's stage,
+  the Post sheet's card, the hello and the help cards pass it and keep the
+  16:9 box they are laid out around. Skribl's /feed composer and the example
+  host take the default, as a host following INTEGRATION.md does: nothing to
+  add, said in INTEGRATION.md and SKRIBLS-NET.md item 4.
+- SHARED: Pad and Flip post through the same box, so a Flip's preview follows
+  the same rule. Nothing in either editor changes.
+
+THE CHECK (verify_inline, /feed's own composer through attach and adopt): a
+4:3 drawing in its own shape with no bars (phone); a tall one in its shape and
+no taller than min(45vh, 360px); its left edge on Edit drawing's; a changed
+drawing (tall, then wide) taking the new shape; Post on the screen of a
+402 x 700 phone with a tall drawing attached (at 874px tall even the post's
+rule leaves /feed's Post showing, so the check uses the height with the
+browser's bars); a 4:3 drawing on a desk stopping at 360px; and, read from the
+class each page renders, keyed by (route, box), the composer's box carrying
+is-preview and none of the 33 others on /skribl-pad, /flip and /library.
+CALIBRATED, ten mutations, each in a copy of the tree with its own server:
+adopt not shaping, or shape() ignoring its size: the 4:3, tall, changed, Post
+and desk rows red; the macro's class gone: those five and the composer's
+class row; the cap rule gone: the tall, edge, Post and desk rows; centred: the
+edge and desk rows; shaped on the first drawing only: the tall and changed
+rows; each of the four stages unmarked: the stages row. The copy as it is: 8
+of 8.
+
+THE PLAYER'S WEIGHT: +218 B (inlineplayer.css +115, inlineplayer.js +103),
+raised in verify_inline's ratchet with who pays: every page that shows a post,
+for a box only a composer has. The ratchet's note said the stylesheet ships
+its comments; it has been stripped since v315, so moving its prose buys
+nothing now, and the note says so.
+
+THE FOUR: kind (no bars, and Post stays where the thumb expects it), simple
+(one rule: the preview has the drawing's shape), powerful (a tall drawing is
+seen, not a strip), playful (the drawing fills its own frame).
+
+Not tested here: WebKit (the owner's iPhone), and SF or Segoe UI.

@@ -236,7 +236,7 @@
 {%- endif %}
 {%- endmacro %}
 
-{% macro skribl_inline_draft(id='', controls=true, progress=true, plain=false) -%}
+{% macro skribl_inline_draft(id='', controls=true, progress=true, plain=false, shaped=true) -%}
 {#  A DRAFT: the same player, on a payload that has not been posted.
 
     Three deliberate absences, each load-bearing:
@@ -267,7 +267,15 @@
     no wash and no big Play over their own drawing, and the length chip says
     "this moves" instead. The feed's composer is the one in this tree (owner,
     mock P1); what the class means is inlineplayer.css's.
+
+    shaped=true, the default, is a post box's preview (`is-preview`, the
+    owner's B): attach() gives the box its drawing's shape, as the post will
+    have, kept to min(45vh, 360px) tall so a tall drawing leaves the
+    composer's Post on the screen, and on the left edge the words start at.
+    shaped=false keeps the 16:9 box, for a surface laid out around one: the
+    Library's stage, the Post sheet's card, the help cards, the hello. Why:
+    inlineplayer.js, `is-preview`.
 #}
-<div class="skribl-inline is-muted is-silent{% if plain %} is-plain{% endif %}"{% if id %} id="{{ id }}"{% endif %}>
+<div class="skribl-inline is-muted is-silent{% if plain %} is-plain{% endif %}{% if shaped %} is-preview{% endif %}"{% if id %} id="{{ id }}"{% endif %}>
 {{ _skribl_inline_insides(controls=controls, progress=progress) }}</div>
 {%- endmacro %}

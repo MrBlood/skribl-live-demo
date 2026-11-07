@@ -102,6 +102,11 @@ says so.
    * The view behind `/compose/thread` calls `skribl.create_post()` for each
      part that carries one.
 
+   The drawing's preview in the part, `skribl_inline_draft()` filled by
+   `SkriblInline.attach()`, takes the drawing's shape by itself and stays
+   short enough to keep Post on the screen (the owner's B, after the post box
+   mock): nothing to add for it.
+
    Leave the part's words alone: the drawing follows them the way a photo does
    (as Skribl's own demo feed has since v321), so there is no `[skribl]`
    marker to keep out of the 1,000 characters.

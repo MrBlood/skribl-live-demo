@@ -1376,26 +1376,19 @@ with sync_playwright() as sp:
     # host downloads is a third of that. A ratchet on the unstripped number
     # would price every explanatory comment as if it shipped.
     #
-    # THE CSS IS NOT STRIPPED and is a third of the figure. jsstrip.py is
-    # JavaScript-only and cssgraph.py only derives player.css from styles.css,
-    # so inlineplayer.css ships every word of its own reasoning. That is a real
-    # 8 KB and it is left alone deliberately: it is the smaller half, it is the
-    # part a host is most likely to read before overriding something, and
-    # inventing a third asset pipeline to save 5 KB is not a trade this project
-    # should make twice.
-    #
-    # AND THE CSS IS WHERE THIS RATCHET BITES FIRST -- a paragraph there is
-    # bandwidth somebody else pays for. Product reasoning belongs in
-    # inlineplayer.js's header, where jsstrip removes it from the response; the
-    # stylesheet keeps the numbers and a pointer. That carve has twice been the
-    # difference between a raise and none.
+    # THE CSS IS STRIPPED TOO, since v315 (SK312-004 in security.py: the same
+    # cache and the same busted-only rule), so a comment in inlineplayer.css
+    # costs a host nothing, and moving prose out of it no longer pays for a
+    # raise (this said otherwise until the post box preview's raise found it
+    # out). Product reasoning still belongs in inlineplayer.js's header, where
+    # one reader finds it; the stylesheet keeps the numbers and a pointer.
     #
     # THE RULES, which are what survives of the per-raise history git holds:
     #
     #   PIN JUST ABOVE THE MEASURED FLOOR, every time.
     #
-    #   SPEND AGAINST A RAISE BEFORE ASKING FOR IT -- move prose out of the CSS,
-    #   compact the module, delete what the new code replaces.
+    #   SPEND AGAINST A RAISE BEFORE ASKING FOR IT -- compact the module,
+    #   delete what the new code replaces.
     #
     #   SAY WHICH CALLER PAYS. The transport on the player handle is used by
     #   /library, not by a feed, so a feed pays for something it never runs:
@@ -1679,7 +1672,18 @@ with sync_playwright() as sp:
     #   Song pill at 320 in DejaVu Sans, the face CI draws a post in), for one
     #   named cost: +51 B -- inlineplayer.css wraps a whole choice to a second
     #   row where a face cannot hold it on one. 77,806 B measured.
-    EMBED_RATCHET = 77_809
+    # RAISED (the owner's "Yes" to B of the post box preview mock: the drawing
+    #   in a post box takes its own shape, kept short), for one named cost:
+    #   +218 B -- inlineplayer.css +115 (the preview's cap at min(45vh, 360px)
+    #   and its left edge), inlineplayer.js +103 (adopt() shaping an
+    #   is-preview box from the payload, and shape() taking the size it is
+    #   given). WHICH CALLER PAYS: every page that shows a post, for a box only
+    #   a composer has; a stylesheet of the composer's own would be a tenth
+    #   asset to save a tenth of a kilobyte. Spent first: shape() reads the
+    #   size it is given without a second test (-13 B); the stylesheet's
+    #   comments are stripped from the response now, so moving prose out of
+    #   it buys nothing. 78,024 B measured.
+    EMBED_RATCHET = 78_027
     # THE RATCHET MEASURES DISPLAY, NOT COMPOSE, and the two are separate costs
     # paid by separate pages. Excluded here and measured on its own below:
     #   feed.js          the PREVIEW PAGE's own script (fetch the listing, clone
@@ -3105,6 +3109,113 @@ with sync_playwright() as _sp2:
     check("a box that doesn't know its drawing's size stays 16:9 when asked to take its shape",
           bool(_un) and _un["can"] and not _un["shaped"] and abs(_un["ar"] / (16 / 9) - 1) < 0.01, str(_un))
     _sb.close()
+
+
+print("\nIN-POST — a post box's preview takes its drawing's shape, kept short, on the words' edge (the owner's B)")
+# The drawing in a host's post box before it is posted (`is-preview`,
+# inlineplayer.js). It was the 16:9 box, so a 4:3 drawing sat between bars
+# and a tall one was a strip. It takes the drawing's shape from the payload
+# each time one is attached or changed, but stops at min(45vh, 360px) tall,
+# where a post's rule (70vh) would push a tall drawing's Post off a phone,
+# and it starts where Edit drawing under it starts rather than centred.
+# Driven on /feed's own composer through attach() and adopt(), the two calls
+# a host makes. "Bars" is the widest gap between the box and its canvas: the
+# 1px border and rounding when the shapes agree.
+_PV_READ = r"""() => {
+  const b = document.getElementById('composerSkribl'), c = b.querySelector('.skribl-inline-canvas');
+  const R = e => e.getBoundingClientRect(), br = R(b), cr = R(c);
+  return { shaped: b.classList.contains('is-shaped'), w: +br.width.toFixed(1), h: +br.height.toFixed(1),
+           ar: +(br.width / br.height).toFixed(4),
+           bars: +Math.max(cr.left - br.left, br.right - cr.right, cr.top - br.top, br.bottom - cr.bottom).toFixed(1),
+           left: +(br.left - R(document.getElementById('editSkriblBtn')).left).toFixed(1),
+           cap: +Math.min(innerHeight * 0.45, 360).toFixed(1),
+           post: Math.round(R(document.getElementById('postBtn')).bottom), vh: innerHeight }; }"""
+_PV_PUT = r"""(p) => { document.getElementById('composerAttach').hidden = false;
+  const box = document.getElementById('composerSkribl');
+  if (!window.__pv) window.__pv = SkriblInline.attach(box, p); else window.__pv.adopt(p); }"""
+_pv_cat = json.loads((ROOT / "skribl" / "static" / "help" / "demos" / "cat.json").read_text())
+
+
+def _pv_sized(w, h):
+    p = json.loads(json.dumps(_pv_cat))
+    p["canvasSize"] = {"cssWidth": w, "cssHeight": h, "dpr": 1}
+    return p
+
+
+def _pv_open(sp, **ctx):
+    pg = sp.chromium.launch().new_page(**ctx)
+    browsing.goto(pg, BASE, "/feed")
+    return pg
+
+
+with sync_playwright() as _pvp:
+    _pv = _pv_open(_pvp, viewport={"width": 402, "height": 874}, is_mobile=True, has_touch=True)
+    _pv.evaluate(_PV_PUT, _pv_cat)
+    _pv.wait_for_timeout(250)
+    _p43 = _pv.evaluate(_PV_READ)
+    check("a 4:3 drawing in the post box shows in its own shape, no bars beside it (phone)",
+          _p43["shaped"] and abs(_p43["ar"] / (4 / 3) - 1) < 0.01 and _p43["bars"] <= 2.5, json.dumps(_p43))
+    _pv.evaluate(_PV_PUT, _pv_sized(531, 944))
+    _pv.wait_for_timeout(250)
+    _ptall = _pv.evaluate(_PV_READ)
+    check("a tall drawing keeps its shape and stops at min(45vh, 360px) tall (phone)",
+          _ptall["shaped"] and abs(_ptall["ar"] / (531 / 944) - 1) < 0.01 and _ptall["bars"] <= 2.5
+          and _ptall["h"] <= _ptall["cap"] + 0.5, json.dumps(_ptall))
+    check("...and starts where Edit drawing under it starts, not centred",
+          abs(_ptall["left"]) <= 0.5, json.dumps(_ptall))
+    _pv.evaluate(_PV_PUT, _pv_sized(944, 531))
+    _pv.wait_for_timeout(250)
+    _pwide = _pv.evaluate(_PV_READ)
+    check("a changed drawing's preview takes the new drawing's shape (tall, then wide)",
+          _pwide["shaped"] and abs(_pwide["ar"] / (944 / 531) - 1) < 0.01 and _pwide["bars"] <= 2.5,
+          json.dumps(_pwide))
+    _pv.context.browser.close()
+
+    # POST STAYS ON THE SCREEN. On /feed Post sits just under the preview, so
+    # at 874px tall even a post's 70vh box leaves it showing; with the
+    # browser's bars taking 174px of the owner's phone it does not, and the
+    # owner's reason for B is exactly that case.
+    _pv = _pv_open(_pvp, viewport={"width": 402, "height": 700}, is_mobile=True, has_touch=True)
+    _pv.evaluate(_PV_PUT, _pv_sized(531, 944))
+    _pv.wait_for_timeout(250)
+    _pbar = _pv.evaluate(_PV_READ)
+    check("with a tall drawing attached, Post stays on the screen of a phone whose browser bars show",
+          _pbar["shaped"] and _pbar["post"] <= _pbar["vh"], json.dumps(_pbar))
+    _pv.context.browser.close()
+
+    _pv = _pv_open(_pvp, viewport={"width": 1280, "height": 860})
+    _pv.evaluate(_PV_PUT, _pv_cat)
+    _pv.wait_for_timeout(250)
+    _pdesk = _pv.evaluate(_PV_READ)
+    check("on a desk, a 4:3 drawing in a post box wider than it stops at 360px tall too",
+          _pdesk["shaped"] and abs(_pdesk["ar"] / (4 / 3) - 1) < 0.01 and _pdesk["h"] <= _pdesk["cap"] + 0.5
+          and abs(_pdesk["left"]) <= 0.5, json.dumps(_pdesk))
+    _pv.context.browser.close()
+
+# THE SURFACES LAID OUT AROUND A 16:9 BOX KEEP IT (shaped=false): the
+# Library's stage, the Post sheet's card, the hello and the help cards, on
+# both editors. Read from the class each page renders, keyed by (route, box),
+# and the composer's box shown to carry it, so the read can tell them apart.
+_pv_boxes = {}
+for _route in ("/feed", "/skribl-pad", "/flip", "/library"):
+    _html = urllib.request.urlopen(BASE + _route, timeout=20).read().decode("utf-8")
+    for _n, _m in enumerate(re.finditer(r"<div\b([^>]*)>", _html)):
+        _cls = re.search(r'\bclass="([^"]*)"', _m.group(1))
+        if not _cls or "skribl-inline" not in _cls.group(1).split():
+            continue
+        _id = re.search(r'\bid="([^"]*)"', _m.group(1))
+        _pv_boxes[(_route, _id.group(1) if _id else f"#{_n}")] = set(_cls.group(1).split())
+check("the post box's own preview carries is-preview (/feed's composer)",
+      "is-preview" in _pv_boxes.get(("/feed", "composerSkribl"), set()), str(_pv_boxes.get(("/feed", "composerSkribl"))))
+_pv_stages = {k: v for k, v in _pv_boxes.items() if k[0] != "/feed"}
+_pv_named = {("/skribl-pad", "postCardPlayer"), ("/skribl-pad", "skriblHelloBox"), ("/flip", "postCardPlayer"),
+             ("/flip", "skriblHelloBox"), ("/library", "stageBox")}
+check("the Library's stage, the Post sheet's card, the hello and the help cards keep the 16:9 box",
+      _pv_named <= set(_pv_stages) and len(_pv_stages) > len(_pv_named)
+      and not [k for k, v in _pv_stages.items() if "is-preview" in v],
+      f"{len(_pv_stages)} boxes read; carrying is-preview: "
+      f"{sorted(k for k, v in _pv_stages.items() if 'is-preview' in v)}; "
+      f"missing: {sorted(_pv_named - set(_pv_stages))}")
 
 
 passed = sum(1 for ok, _ in results if ok)
