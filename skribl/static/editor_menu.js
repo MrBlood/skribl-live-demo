@@ -317,8 +317,8 @@ document.addEventListener('DOMContentLoaded', function () {
     kind: 'pad',
     serialize: function () { return serializeSkribl(); },
     load: function (d) { loadSkribl(d); },
-    // A photo or a track on its own is work too: replacing it asks first, and
-    // it can be saved (v317 review).
+    // A photo or a track on its own is work too: a draft opened over it keeps
+    // it in Drafts first, and it can be saved (v317 review).
     // ...and so is media still on its way: a pending record, a restore still
     // reading the store, a photo still decoding. Counting only what had landed
     // let a draft opened from the Library replace the autosaved photo mid-
