@@ -25,6 +25,7 @@
         data-scope="{{ url_for('.skribl_sw')[:-5] }}"
         data-build="{{ skribl_build }}" data-build-url="{{ url_for('.skribl_build') }}" defer></script>
 {% include 'skribl/_skribl_theme_boot.html' %}
+{% include 'skribl/_skribl_hand_boot.html' %}
 {% include 'skribl/_skribl_hello_boot.html' %}
 </head>
 <body class="flip-app">
@@ -116,10 +117,12 @@
           {# Same whisper Pad's blank canvas carries — Flip's was a silent dark
              rectangle. Hidden the moment the document has any content. #}
           <div id="flipEmptyHint" class="canvas-empty-hint">
-            {# The words alone, as on the Pad (see skribl_editor.html). #}
+            {# The words, written in your hand, as on the Pad (see
+               skribl_editor.html); in a post box, once, the bouncing ball. #}
             <span>Draw page 1</span>
             <span class="canvas-empty-sub">Add pages below — they flip into an animation</span>
           </div>
+          {% if compose %}{% with once_src='brand/hint-ball.json', once_rate=0.8, once_loop=3600, once_share=0.5, once_max=240 %}{% include 'skribl/_skribl_hint_once.html' %}{% endwith %}{% endif %}
         </div>
         <!-- Zoom HUD / magnify pill (shared partial — Pad + Flip) -->
         {% include 'skribl/_skribl_zoom_hud.html' %}
@@ -652,6 +655,7 @@
   {# lib/chromefit.js: the stage re-fits when the chrome changes size, window or no window (the Pad's too). #}
   <script src="{{ skribl_asset('lib/chromefit.js') }}" defer></script>
   <script src="{{ skribl_asset('flip.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/handwords.js') }}" defer></script>
   {% if compose %}<script src="{{ skribl_asset('editor_compose.js') }}" defer></script>{% endif %}
   {% if not compose %}{{ hs.steps() }}{% endif %}
 {{ mark_templates() }}

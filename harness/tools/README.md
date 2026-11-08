@@ -38,6 +38,13 @@ mark, read from `_skribl_brand_mark.html`, written by the pen in its sweep of
 colour, then its dot bouncing in, saved as the payload the app plays
 (`skribl/static/brand/hello.json`).
 
+`make_handwords.py` writes the empty canvas's words in the owner's hand
+(lib/handwords.js: "Draw anything", "Draw page 1") with the real Text tool in
+Skribl's style, and writes what the Pad recorded into that file's MARK block,
+timed to about two seconds. It also trims How it works' snail and Flip's
+bouncing ball to their strokes for a post box's first look
+(`skribl/static/brand/hint-snail.json`, `hint-ball.json`).
+
 ## Measurement
 
 `cssgraph.py` emits `player.css` (run it after any `styles.css` change — the

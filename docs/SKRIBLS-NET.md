@@ -107,6 +107,12 @@ says so.
    short enough to keep Post on the screen (the owner's B, after the post box
    mock): nothing to add for it.
 
+   The first time someone opens it on a device, once the Pad's empty canvas
+   has written its words, the snail draws itself faintly above them (Flip: a
+   bouncing ball) and goes at the first stroke: the editor decides that in
+   compose mode and fetches the drawing only then (lib/handwords.js), so
+   nothing to add for that either.
+
    Leave the part's words alone: the drawing follows them the way a photo does
    (as Skribl's own demo feed has since v321), so there is no `[skribl]`
    marker to keep out of the 1,000 characters.

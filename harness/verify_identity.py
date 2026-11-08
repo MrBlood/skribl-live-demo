@@ -396,11 +396,14 @@ print("\nBLOOBY AROUND THE APP — the words alone on an empty canvas, Blooby th
 # badge blooby.py draws, the Home Screen icon in small with the whole star, so
 # his own lilac comes with him onto any ground. Asked of what is PAINTED: the
 # share of the picture's box that is his lilac and purple, in a screenshot.
-# THE EMPTY CANVAS HAS THE WORDS ALONE: Blooby with his pen stood above them
-# (#474) until the owner took him off after v323 ("It's too much"), on the Pad
-# and Flip. Asked of the hint itself (no picture in it), of its words' place
-# (the canvas's middle; 40px below it while he stood there) and of their ink,
-# in a screenshot: the hint takes no pointer events, so elementFromPoint sees
+# THE EMPTY CANVAS HAS THE WORDS AND NO PICTURE: Blooby with his pen stood
+# above them (#474) until the owner took him off after v323 ("It's too much"),
+# on the Pad and Flip; since the owner's pick after the "Empty canvas ideas"
+# mock, your hand writes them (YOUR HAND WRITES THE WORDS, below), and that
+# drawing of the words is the only svg the hint holds. Asked of the hint itself
+# (no other picture in it), of its words' place (the canvas's middle; 40px
+# below it while he stood there) and of their ink once written, in a
+# screenshot: the hint takes no pointer events, so elementFromPoint sees
 # straight through it. They leave at the first stroke.
 _SHOWN = """(sel) => { const i = document.querySelector(sel); if (!i) return null;
     i.scrollIntoView({ block: 'center' }); const r = i.getBoundingClientRect();
@@ -422,11 +425,22 @@ def _lilac(pg, box):
 # canvas's middle, and their box to look for ink in.
 _HINT = """(o) => { const h = document.getElementById(o.hint), c = document.querySelector(o.cv); if (!h || !c) return null;
     const cr = c.getBoundingClientRect(), r = [...h.querySelectorAll('span')].map(s => s.getBoundingClientRect()).filter(x => x.width);
-    if (!r.length) return { pictures: h.querySelectorAll('img, svg, picture').length, off: null, box: null };
+    const pics = h.querySelectorAll('img, svg:not(.canvas-empty-hand), picture').length;
+    if (!r.length) return { pictures: pics, off: null, box: null };
     const top = Math.min(...r.map(x => x.top)), bot = Math.max(...r.map(x => x.bottom));
     const left = Math.min(...r.map(x => x.left)), right = Math.max(...r.map(x => x.right));
-    return { pictures: h.querySelectorAll('img, svg, picture').length,
+    return { pictures: pics,
              off: Math.round((top + bot) / 2 - (cr.top + cr.height / 2)), box: [left, top, right - left, bot - top] }; }"""
+
+
+def _written(pg, timeout=8000):
+    """Once your hand has written the words (lib/handwords.js), or at once where it has not."""
+    try:
+        pg.wait_for_function("""() => { const s = document.querySelector('.canvas-empty-hand');
+            return !s || s.getAttribute('data-state') === 'done'; }""", timeout=timeout)
+    except Exception:
+        pass
+    pg.wait_for_timeout(200)
 
 
 def _inked(pg, box):
@@ -447,10 +461,10 @@ with sync_playwright() as p:
         pg = c.new_page()
         browsing.goto(pg, BASE, "/skribl-pad")
         pg.evaluate("() => window.SkriblHints && window.SkriblHints.hide && window.SkriblHints.hide()")
-        pg.wait_for_timeout(400)
+        _written(pg)
         s = pg.evaluate(_HINT, {"hint": "canvasEmptyHint", "cv": "#canvas"})
         ink = _inked(pg, s and s["box"])
-        check(f"Pad, {theme}: 'Draw anything' alone on the empty canvas, painted at its middle",
+        check(f"Pad, {theme}: 'Draw anything' on the empty canvas, no other picture, painted at its middle",
               bool(s) and s["pictures"] == 0 and s["off"] is not None and abs(s["off"]) <= 3 and ink > 0.02,
               f"{s} ink {ink:.1%}")
         if theme == "light":
@@ -469,10 +483,10 @@ with sync_playwright() as p:
     pg = c.new_page()
     browsing.goto(pg, BASE, "/flip")
     pg.evaluate("() => window.SkriblHints && window.SkriblHints.hide && window.SkriblHints.hide()")
-    pg.wait_for_timeout(400)
+    _written(pg)
     s = pg.evaluate(_HINT, {"hint": "flipEmptyHint", "cv": "#pad"})
     ink = _inked(pg, s and s["box"])
-    check("Flip: 'Draw page 1' alone the same way, painted at the canvas's middle",
+    check("Flip: 'Draw page 1' the same way, no other picture, painted at the canvas's middle",
           bool(s) and s["pictures"] == 0 and s["off"] is not None and abs(s["off"]) <= 3 and ink > 0.02,
           f"{s} ink {ink:.1%}")
     c.close()
@@ -504,6 +518,260 @@ with sync_playwright() as p:
     share = _lilac(pg, s and s["box"])
     check("the Library when its list didn't load: the same thinking Blooby, painted",
           bool(s) and s["src"] == "blooby-think.webp" and s["done"] and share > 0.5, f"{s} lilac {share:.0%}")
+    c.close()
+    b.close()
+
+print("\nYOUR HAND WRITES THE WORDS — on an empty canvas, every time; the snail once in a site's post box")
+# The owner's pick after the "Empty canvas ideas" mock ("Go, all yes";
+# lib/handwords.js): "Draw anything" (Flip: "Draw page 1") writes itself in the
+# owner's own hand, recorded through the real Text tool
+# (harness/tools/make_handwords.py), every time the words appear, and the
+# first stroke un-writes it. Asked of the drawing's own path and state (it
+# grows while it writes), of what is PAINTED in its box (a screenshot), of its
+# colour against the words' and of the words a screen reader is given. In a
+# site's post box, once on a device, How it works' snail (Flip: the ball) draws
+# itself faintly above them; automation meets it only when it asks
+# (window.__skriblOnceForce), as with the hello.
+_HAND = """() => { const h = document.getElementById('canvasEmptyHint') || document.getElementById('flipEmptyHint');
+    const s = h && h.querySelector('svg.canvas-empty-hand'); if (!s) return null;
+    const p = s.querySelector('path'), r = s.getBoundingClientRect(), said = h.firstElementChild.querySelector('.vis-hidden');
+    return { state: s.getAttribute('data-state'), d: (p.getAttribute('d') || '').length, box: [r.left, r.top, r.width, r.height],
+             said: said ? said.textContent.trim() : null, aria: s.getAttribute('aria-hidden'),
+             stroke: getComputedStyle(p).stroke, words: getComputedStyle(h.firstElementChild).color,
+             hidden: h.classList.contains('hidden'), opacity: +getComputedStyle(h).opacity }; }"""
+_ONCE = """() => { const o = document.getElementById('hintOnce'); if (!o) return null; const r = o.getBoundingClientRect();
+    const t = (document.getElementById('canvasEmptyHint') || document.getElementById('flipEmptyHint')).firstElementChild.getBoundingClientRect();
+    const cv = (document.getElementById('canvas') || document.getElementById('pad')).getBoundingClientRect();
+    const b = o.querySelector('.skribl-inline'), pl = b && b._skriblInline, st = pl ? pl.state() : null;
+    return { on: o.classList.contains('is-on'), hidden: o.hidden, opacity: +getComputedStyle(o).opacity,
+             box: [r.left, r.top, r.width, r.height], above: Math.round(t.top - r.bottom),
+             centre: Math.round((r.left + r.width / 2) - (cv.left + cv.width / 2)),
+             src: (o.getAttribute('data-src') || '').split('?')[0].split('/').pop(),
+             player: st ? { state: st.state, at: Math.round(st.elapsedMs), total: Math.round(st.totalMs) } : null }; }"""
+_FIRST_LOOK = """() => { const s = document.querySelector('.canvas-empty-hand'), o = document.getElementById('hintOnce');
+    return [s && s.getAttribute('data-state'), !!o && o.classList.contains('is-on')]; }"""
+
+
+def _rewrite(pg):
+    """The words hide and show again, as the editors do it (the class they set):
+    your hand writes them from the start. Two steps, so the module sees both."""
+    h = "(document.getElementById('canvasEmptyHint') || document.getElementById('flipEmptyHint'))"
+    pg.evaluate(f"() => {h}.classList.add('hidden')")
+    pg.wait_for_timeout(60)
+    pg.evaluate(f"() => {h}.classList.remove('hidden')")
+
+
+def _scribble(pg, sel, q=None):
+    """A short stroke low on the canvas, as a finger would make it (`q`: the frame it is in)."""
+    cv = (q or pg).locator(sel).bounding_box()
+    x, y = cv["x"] + cv["width"] * 0.25, cv["y"] + cv["height"] * 0.8
+    pg.mouse.move(x, y); pg.mouse.down()
+    for k in range(1, 10):
+        pg.mouse.move(x + cv["width"] * 0.05 * k, y - 3 * k)
+    pg.mouse.up()
+
+
+def _compose(pg, ed="pad"):
+    """A site's post box (/feed's composer), the Pad in its frame, or Flip as the Pad's own row takes it there."""
+    browsing.goto(pg, BASE, "/feed")
+    pg.click("#padBtn")
+    pg.wait_for_function("() => { const f = document.getElementById('padFrame'); const w = f && f.contentWindow;"
+                         " return !!(w && w.__skriblBoot && w.__skriblBoot.pad); }", timeout=30000)
+    fr = next(f for f in pg.frames if "compose=1" in f.url)
+    if ed == "flip":
+        fr.evaluate("() => { location.href = '/flip?compose=1'; }")
+        pg.wait_for_function("() => { const w = document.getElementById('padFrame').contentWindow;"
+                             " return !!(w && w.__skriblBoot && w.__skriblBoot.flip && /flip/.test(w.location.pathname)); }", timeout=30000)
+        fr = next(f for f in pg.frames if "/flip" in f.url and "compose=1" in f.url)
+    return fr
+
+
+def _in_page(pg, box):
+    """A box in the post box's frame, where it is on the page."""
+    if not box:
+        return None
+    f = pg.evaluate("() => { const r = document.getElementById('padFrame').getBoundingClientRect(); return [r.left, r.top]; }")
+    return [box[0] + f[0], box[1] + f[1], box[2], box[3]]
+
+
+def _first_look(pg, fr):
+    """The words' state and the snail's, every 50 ms until the snail shows."""
+    seq = []
+    for _ in range(200):
+        seq.append(tuple(fr.evaluate(_FIRST_LOOK)))
+        if seq[-1][1]:
+            break
+        pg.wait_for_timeout(50)
+    return seq
+
+
+with sync_playwright() as p:
+    b = p.chromium.launch()
+    for route, name, sel, words in (("/skribl-pad", "Pad", "#canvas", "Draw anything"), ("/flip", "Flip", "#pad", "Draw page 1")):
+        c = b.new_context(viewport={"width": 402, "height": 874}, color_scheme="dark")
+        pg = c.new_page()
+        browsing.goto(pg, BASE, route)
+        pg.evaluate("() => window.SkriblHints && window.SkriblHints.hide && window.SkriblHints.hide()")
+        _written(pg)
+        _rewrite(pg)
+        pg.wait_for_timeout(400)
+        early = pg.evaluate(_HAND)
+        _written(pg)
+        late = pg.evaluate(_HAND)
+        painted = _inked(pg, late and late["box"])
+        check(f"{name}: your hand writes '{words}' (it grows as it writes) and it stays, painted",
+              bool(early) and bool(late) and early["state"] == "writing" and 0 < early["d"] < late["d"] * 0.7
+              and late["state"] == "done" and painted > 0.03,
+              f"{early and (early['state'], early['d'])} at 400 ms, {late and (late['state'], late['d'])} written; painted {painted:.1%}")
+        check(f"{name}: ...in the words' own grey, and a screen reader is still given the words",
+              bool(late) and late["stroke"] == late["words"] and late["said"] == words and late["aria"] == "true",
+              str(late and {k: late[k] for k in ("stroke", "words", "said", "aria")}))
+        _scribble(pg, sel)
+        pg.wait_for_timeout(120)
+        mid = pg.evaluate(_HAND)
+        pg.wait_for_timeout(700)
+        gone = pg.evaluate(_HAND)
+        left = _inked(pg, late and late["box"])
+        check(f"{name}: ...the first stroke un-writes them, seen, and then they go",
+              bool(mid) and bool(gone) and late is not None and mid["state"] == "unwriting" and 0 < mid["d"] < late["d"]
+              and mid["opacity"] > 0.95 and gone["state"] == "away" and gone["d"] == 0 and gone["hidden"] and left < 0.005,
+              f"{mid and (mid['state'], mid['d'], mid['opacity'])} at 120 ms, {gone and (gone['state'], gone['d'])} at 820 ms; painted {left:.1%}")
+        if name == "Pad":
+            pg.click("#undoBtn")
+            pg.wait_for_timeout(300)
+            again = pg.evaluate(_HAND)
+            _written(pg)
+            again2 = pg.evaluate(_HAND)
+            check("Pad: when the canvas is empty again (Undo), your hand writes them again from the start",
+                  bool(again) and bool(again2) and again["state"] == "writing" and again["d"] < again2["d"] * 0.7
+                  and again2["state"] == "done" and _inked(pg, again2["box"]) > 0.03,
+                  f"{again and (again['state'], again['d'])} at 300 ms, {again2 and (again2['state'], again2['d'])} written")
+        c.close()
+    c = b.new_context(viewport={"width": 402, "height": 874}, color_scheme="dark", reduced_motion="reduce")
+    pg = c.new_page()
+    browsing.goto(pg, BASE, "/skribl-pad")
+    pg.evaluate("() => window.SkriblHints && window.SkriblHints.hide && window.SkriblHints.hide()")
+    _rewrite(pg)
+    pg.wait_for_timeout(40)
+    now_ = pg.evaluate(_HAND)
+    check("Reduce Motion: the words are there whole at once, not written",
+          bool(now_) and now_["state"] == "done" and now_["d"] > 4000, str(now_ and (now_["state"], now_["d"])))
+    c.close()
+    # THE FIRST-OPEN HELLO covers the canvas: under it your hand waits, blank,
+    # and writes once the hello has gone (lib/hello.js takes its element out).
+    c = b.new_context(viewport={"width": 402, "height": 874}, color_scheme="dark")
+    pg = c.new_page()
+    pg.goto(BASE + "/skribl-pad?hello=again")
+    under, after = [], []
+    for _ in range(140):
+        r = pg.evaluate("() => { const s = document.querySelector('.canvas-empty-hand'); return { hello: !!document.getElementById('skriblHello'),"
+                        " state: s && s.getAttribute('data-state'), d: s ? (s.querySelector('path').getAttribute('d') || '').length : -1 }; }")
+        (under if r["hello"] else after).append((r["state"], r["d"]))
+        if any(st == "done" for st, _ in after):
+            break
+        pg.wait_for_timeout(100)
+    check("with the first-open hello on screen your hand waits, blank, and writes once the hello has gone",
+          bool(under) and all(d <= 0 for _, d in under) and any(st == "writing" for st, _ in after) and any(st == "done" for st, _ in after),
+          f"under the hello {sorted(set(under), key=str)[:3]}; after it {after[:4]} ... {after[-1:]}")
+    c.close()
+    # IF IT NEVER COMES (the module not served): the typed words wait unseen
+    # for it, then show on their own -- asked of the stylesheet's own clock.
+    c = b.new_context(viewport={"width": 402, "height": 874}, color_scheme="dark")
+    c.route("**/lib/handwords.js*", lambda r: r.fulfill(status=404, body="", content_type="text/plain"))
+    pg = c.new_page()
+    browsing.goto(pg, BASE, "/skribl-pad")
+    pg.evaluate("() => window.SkriblHints && window.SkriblHints.hide && window.SkriblHints.hide()")
+    r = pg.evaluate("""() => { const t = document.getElementById('canvasEmptyHint').firstElementChild;
+        const alpha = () => { const m = getComputedStyle(t).color.match(/[\\d.]+/g); return m.length > 3 ? +m[3] : 1; };
+        const a = t.getAnimations().find(x => x.animationName === 'canvas-empty-late');
+        if (!a) return { animation: false, now: alpha() };
+        a.pause(); a.currentTime = 600; const at600 = alpha(); a.currentTime = 1600; const at1600 = alpha(); a.finish();
+        return { animation: true, at600, at1600, hand: !!document.querySelector('.canvas-empty-hand') }; }""")
+    pg.wait_for_timeout(200)
+    s = pg.evaluate(_HINT, {"hint": "canvasEmptyHint", "cv": "#canvas"})
+    ink = _inked(pg, s and s["box"])
+    check("if your hand never comes, the typed words wait unseen for it, then show on their own, painted",
+          r.get("animation") and r["at600"] == 0 and r["at1600"] > 0.3 and not r["hand"] and ink > 0.02, f"{r} ink {ink:.1%}")
+    c.close()
+    # WORDS IT HAS NO RECORDING OF keep their typed letters, at once.
+    c = b.new_context(viewport={"width": 402, "height": 874}, color_scheme="dark")
+
+    def _other_words(route):
+        r = route.fetch()
+        route.fulfill(response=r, body=r.text().replace("<span>Draw anything</span>", "<span>Draw something</span>"))
+    c.route("**/skribl-pad", _other_words)
+    pg = c.new_page()
+    browsing.goto(pg, BASE, "/skribl-pad")
+    r = pg.evaluate("""() => { const h = document.getElementById('canvasEmptyHint'), t = h.firstElementChild, cs = getComputedStyle(t);
+        const m = cs.color.match(/[\\d.]+/g); return { typed: h.classList.contains('is-typed'), hand: !!h.querySelector('.canvas-empty-hand'),
+        animation: cs.animationName, alpha: m.length > 3 ? +m[3] : 1, text: t.textContent.trim() }; }""")
+    check("words it has no recording of keep their typed letters, at once",
+          r["text"] == "Draw something" and r["typed"] and not r["hand"] and r["animation"] == "none" and r["alpha"] > 0.3, str(r))
+    c.close()
+    # THE SNAIL, ONCE, IN A SITE'S POST BOX.
+    c = b.new_context(viewport={"width": 402, "height": 874}, color_scheme="dark")
+    c.add_init_script("window.__skriblOnceForce = true;")
+    pg = c.new_page()
+    fr = _compose(pg, "pad")
+    seq = _first_look(pg, fr)
+    on_at = next((i for i, (_, on) in enumerate(seq) if on), None)
+    check("in a site's post box, the first time: your hand writes the words, then the snail comes",
+          on_at is not None and seq[on_at][0] == "done" and any(st == "writing" for st, _ in seq[:on_at]),
+          f"{len(seq)} looks; the snail at {on_at}; the words then {seq[on_at][0] if on_at is not None else None}")
+    pg.wait_for_timeout(5600)
+    o = fr.evaluate(_ONCE)
+    drawn = _inked(pg, _in_page(pg, o and o["box"]))
+    check("...it draws itself above them, centred, faint, and rests",
+          bool(o) and o["on"] and 20 <= o["above"] <= 40 and abs(o["centre"]) <= 2 and abs(o["opacity"] - 0.45) < 0.02
+          and bool(o["player"]) and o["player"]["state"] != "playing" and o["player"]["at"] >= o["player"]["total"] - 30 and drawn > 0.01,
+          f"{o and {k: o[k] for k in ('on', 'above', 'centre', 'opacity', 'player', 'src')}}; drawn {drawn:.1%}")
+    _scribble(pg, "#canvas", fr)
+    pg.wait_for_timeout(800)
+    o2 = fr.evaluate(_ONCE)
+    swept = _inked(pg, _in_page(pg, o and o["box"]))
+    check("...and the first stroke sweeps it away",
+          bool(o2) and not o2["on"] and o2["hidden"] and swept < 0.005, f"{o2 and (o2['on'], o2['hidden'])}; drawn {swept:.1%}")
+    fr.evaluate("() => location.reload()")
+    pg.wait_for_function("() => { const w = document.getElementById('padFrame').contentWindow;"
+                         " return !!(w && w.__skriblBoot && w.__skriblBoot.pad); }", timeout=30000)
+    fr = next(f for f in pg.frames if "compose=1" in f.url)
+    _written(fr)
+    pg.wait_for_timeout(1500)
+    o3 = fr.evaluate(_ONCE)
+    check("...once on a device: opened again, it does not come",
+          bool(o3) and not o3["on"] and o3["hidden"], str(o3 and (o3["on"], o3["hidden"])))
+    c.close()
+    c = b.new_context(viewport={"width": 402, "height": 874}, color_scheme="dark")
+    c.add_init_script("window.__skriblOnceForce = true;")
+    pg = c.new_page()
+    browsing.goto(pg, BASE, "/skribl-pad")
+    _written(pg)
+    pg.wait_for_timeout(1500)
+    check("outside a post box it never comes (the editor alone carries none of it)",
+          pg.evaluate("() => !document.getElementById('hintOnce') && !window.SkriblInline"), "")
+    c.close()
+    c = b.new_context(viewport={"width": 402, "height": 874}, color_scheme="dark")
+    c.add_init_script("window.__skriblOnceForce = true;")
+    pg = c.new_page()
+    fr = _compose(pg, "flip")
+    seq = _first_look(pg, fr)
+    pg.wait_for_timeout(600)
+    o = fr.evaluate(_ONCE)
+    check("Flip in a post box: 'Draw page 1' in your hand, then the bouncing ball above it",
+          bool(seq) and seq[-1][1] and seq[-1][0] == "done" and bool(o) and o["src"] == "hint-ball.json" and 20 <= o["above"] <= 40,
+          f"{seq[-1:]}; {o and {k: o[k] for k in ('above', 'src', 'opacity')}}")
+    c.close()
+    c = b.new_context(viewport={"width": 402, "height": 874}, color_scheme="dark", reduced_motion="reduce")
+    c.add_init_script("window.__skriblOnceForce = true;")
+    pg = c.new_page()
+    fr = _compose(pg, "pad")
+    _first_look(pg, fr)
+    pg.wait_for_timeout(400)
+    o = fr.evaluate(_ONCE)
+    check("Reduce Motion: the snail is there whole, still, and faint",
+          bool(o) and o["on"] and bool(o["player"]) and o["player"]["state"] != "playing"
+          and o["player"]["at"] >= o["player"]["total"] - 30 and abs(o["opacity"] - 0.45) < 0.02,
+          str(o and {k: o[k] for k in ("on", "player", "opacity")}))
     c.close()
     b.close()
 

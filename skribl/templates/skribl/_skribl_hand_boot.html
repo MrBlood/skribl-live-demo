@@ -1,0 +1,17 @@
+{# YOUR HAND WRITES THE WORDS (lib/handwords.js), decided before first paint:
+   until it takes over, the empty canvas's typed words wait unseen, so a slow
+   phone never shows them and then swaps them for the hand; should it never
+   come, they fade in on their own after 1.2 s. Words it has no recording of
+   (is-typed) show at once. The global Reduce Motion rule shortens the fade
+   and keeps the wait.
+
+   HERE, NOT IN styles.css: cssgraph keeps every @keyframes block it finds
+   there in the link player's stylesheet, which has no use for this one and a
+   budget it would break. Only the two editors include this, in <head>, as
+   they do the theme's and the hello's. The editors' words are the hint's
+   first span; the link page's hint starts with its pencil. #}
+<style>
+  .canvas-empty-hint > span:first-child { animation: canvas-empty-late 0.3s ease 1.2s backwards; }
+  .canvas-empty-hint:is(.is-hand, .is-typed) > span:first-child { animation: none; }
+  @keyframes canvas-empty-late { from { color: transparent; } }
+</style>
