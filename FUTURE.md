@@ -1737,6 +1737,12 @@ aside, built** (DECISIONS, after v330, "Text's sheet steps aside"): the
 owner could not drag words to the bottom of the drawing on the iPhone (the
 sheet covered half of it); now a drag or a press sends the sheet down, and it
 rests as a bar, the words and Write it, until the words in it are tapped.
+(8) **The dials and the recorder, built** (DECISIONS, after v330, "Text's
+dials"; the owner, Nov 8: "shouldn't we have control of thickness on text
+editor, and font size?" and "Shouldn't the editor shut the recorder off once
+it's written the words?", then "all yes"): Size and Thickness are sliders
+beside Speed, Thickness for the words alone; and on the Pad a recording that
+Write it started stops when the words are done.
 Skribl takes the owner's redrawn letters as they
 send them (a saved copy of their hand; c, s, S, 8 and 9 so far).
 
@@ -2031,6 +2037,38 @@ Render, so the lasting fix belongs to Pad and Flip themselves.
      background for next time.
   5. Inside skribls.net, start loading the moment a finger touches the Skribl
      button, and serve the files from the site's own fast network.
+
+## 6ag. Selling a Skribl: numbered editions, prints and rights, as an artists' co-op (owner, Nov 8: "idea for future")
+
+The owner: "make .skribl proprietary and the owner can sell rights, or
+prints (numbered editions)... We can monetize skribl down the road. As a coop
+for artists." Cal's answer, which the owner said yes to keeping here: it
+makes sense, and Skribl has something rare to sell, the performance rather
+than the picture: a replay of the artist's own hand, with their timing, which
+in a time of AI pictures is also a record that a person drew it.
+
+- **Numbered editions.** An artist releases a drawing as, say, 25; each
+  buyer's copy plays the real replay and says "3 of 25" with the artist's
+  name; Skribl keeps the record of who holds which number.
+- **Prints.** The finished drawing printed, with a code that plays it
+  drawing itself; perhaps a print of its stages, a strip of how it came
+  together.
+- **Rights.** The artist chooses, drawing by drawing: free to share, all
+  rights reserved, or licensed at a price they set.
+
+Keep the file open, and make the ownership record the scarce thing. A
+secret format cannot stop copying (a replay can be filmed off a screen); a
+signed record of who holds edition 3 is what makes a number mean something,
+and an artist who can always take their own work with them is what makes a
+co-op worth trusting. No blockchain is needed: a plain record on Skribl's
+own server.
+
+The co-op fits "powerful, playful, simple, and kind": artists are its
+members, a small share runs the place and the rest is theirs. Not started,
+and nothing here is built. What it would need first: a lawyer for the co-op
+itself, and for payments, sales tax and shipping; a payment service, which
+would cost money and so waits for the owner's yes (WORKING-AGREEMENTS,
+"Spending"); and the artist's choices above, made in the Post sheet.
 
 ## 7. The honest state
 
