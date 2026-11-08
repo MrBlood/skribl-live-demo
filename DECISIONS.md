@@ -31710,3 +31710,106 @@ each break red on its own rows:
   together (the second's wait, Reduce Motion, the hello, automation): red on
   the five rows, each pinned by its own scenario (an everyday open on both,
   Reduce Motion, the hello, automation that does not ask).
+
+## After v330 -- The calm open, part 2: the canvas in its place from the first frame
+
+The rest of the owner's "Yes calm" (part 1 is the words and the pen's hop):
+"I want pad and flip to be the same... it has to be subtle cuz it happens a
+lot." On a slow open Flip showed a 300 x 150 box that jumped to full size
+when its scripts were done, and its page row changed under it; the Pad's
+canvas settled (a 9:16 guess 26 px too tall on a phone; on a desk a 4:3
+guess that turned square).
+
+- **The canvas is laid out before anything paints.** lib/canvassizes.js and
+  lib/chromefit.js load in the head (`_skribl_fit_boot.html`): small, globals
+  only, render-blocking beside the stylesheets. Right after each editor's
+  column an inline script (`_skribl_fit_early.html`) does the editor's own
+  sums with them: Flip's sizeStage() and fitPad() at rest and the shape a new
+  drawing starts in; the Pad's resizeCanvas() and layoutEditorCanvas(). The
+  editors' scripts then find nothing to change. Until it has run the canvas
+  is unseen, so a slow line that paints the page in pieces never shows it at
+  a size it will leave; should it never run, the canvas shows on its own at
+  4 s, and each editor's boot shows it too.
+- **Flip's page row starts in its first-page look**: the add row is in the
+  template now (flip.js wires it once, and makes it only on a page without
+  one), the size class is stamped as lib/sizeclass.js would stamp it (the
+  page bar hides on a compact one-page Flip), body.one-page as flip.js marks
+  it, and one page's tile in the strip, so the row is as tall as it will be.
+- **A draft you come back to is in its own shape from the first frame.**
+  Each editor notes its drawing's shape beside its draft (lib/chromefit.js
+  note: the size, Flip's page count, whether there is ink) and drops the note
+  with the draft. The page lays the canvas out in it, and the Pad starts in
+  it (app.js, through lib/chromefit.js padShape): its restore is a later
+  script (editor_draft.js), and at a slower phone's pace a frame was drawn
+  between the two, a new drawing's tall shape between the draft's square and
+  the square again. With ink on it, the words are not shown at all (they
+  would only go when the drawing comes), and at once: hidden by their class
+  alone, they faded out over the canvas for 0.3 s, a frame before having
+  styled them unseen. A note left without its draft is dropped by the open
+  that finds it.
+- **A site's post box and the letter sheet keep no draft**, so they start as
+  a new drawing whatever is noted: the template's word in the early script
+  (the page's own SKRIBL_COMPOSE comes after it) and noted()'s for the Pad's
+  start, which also reads SKRIBL_LETTERS.
+
+Pad and Flip: shared. One head partial, one early partial with a branch for
+each editor's own sums, one note in lib/chromefit.js. The link player loads
+neither library nor either partial, and app.js, which it does load, is 69 B
+lighter: the Pad's first shape left it for padShape (verify_jsstrip and
+verify_player_isolation follow it down to 160,863 B measured).
+
+Two instruments learned to see partials. verify_surfaces' "every script tag
+is deferred" read the editor templates alone, so a script moved into a
+partial was out of its sight; it follows includes now and names the two
+early-layout scripts as the one exception, in both editors (red with a
+partial's script made blocking, red on Flip alone without the head partial,
+red on the Pad alone with one of its own scripts not deferred). gen_docs'
+module index read the templates alone too and would have said no page loads
+lib/chromefit.js; it follows includes, and lib/hello.js's row, which said
+"—", says Pad+Flip.
+
+verify_identity's calm section reads every animation frame from the first
+paint on the slow phone network: the canvas from the first frame it is shown
+(its place and size; shown before the editor was ready, within 400 ms of
+being in the page), the bar under it, Flip's page row (its height and which
+controls show), and the words by their paint, not their class. Fresh opens
+on a phone (dark) and a desk (light), a square draft drawn on and opened
+again at CPU 4x, a post box with a square draft noted on the device, the
+letter sheet with one noted, and a note left behind. Calibrated in scratch
+copies of the tree, the section on its own (51 rows), each break red on its
+own rows:
+
+- As it is: 51/51.
+- The early script left out of both editors: red on all eight first-frame
+  rows (both editors' phone and desk, both drafts, both post boxes).
+- Flip's add row left to flip.js, the placeholder tile gone, or the one-page
+  look not marked: red on Flip's rows only (its phone and desk, and the post
+  box; the draft too for the first two). The size class not stamped: red on
+  Flip's phone rows only (phone, draft, post box), the desk being regular
+  either way.
+- The canvas not hidden until laid out: red on the Pad's phone, desk and post
+  box and on both drafts. Flip's fresh opens stay green here: the early
+  script ran before the first paint, so there was no frame to show; its
+  draft, at CPU 4x, pins the rule.
+- The note ignored by the early script, or never written: red on both
+  drafts. The Pad's start ignoring it (the original defect): red on the Pad's
+  draft alone.
+- The words hidden by their class alone (their fade), or not hidden: red on
+  both drafts.
+- The post box's guard taken from the early script: red on both post boxes;
+  from noted(): red on the Pad's post box alone (Flip's start never reads a
+  note). noted()'s letter-sheet guard: red on the letter sheet's row.
+- A left-behind note not dropped: red on that editor's row alone.
+
+Also found on the way: the Pad's draft row failed once in a run of 48 at
+full speed, with its detail cut off in the log, and passed on every rerun.
+At CPU 4x a frame of the new drawing's shape showed on every reopen (6 of
+6), which is how it was traced to the gap between app.js and
+editor_draft.js, and why the draft rows run at 4x. That the one failure at
+full speed was the same frame is likely, not shown.
+
+Not pinned, and said rather than claimed: the editors' own boot marks and
+the 4 s fallback, a safety net for a page where the early script did not run
+(a host's own CSP refusing it, say); no row can tell them from the early
+script's own mark. Not tested here: Safari and the owner's iPhone (no WebKit
+in this box).

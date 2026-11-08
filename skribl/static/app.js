@@ -300,12 +300,15 @@ function resizeCanvas() {
     // this file, which the link player loads. A degenerate band (display:none
     // boot states, tests without CSS) keeps the classic default rather than
     // trusting a 0x0 measurement.
-    const t = window.SkriblCanvasSizes || null, fit = window.SkriblChromeFit;
+    //
+    // A DRAFT YOU COME BACK TO starts in its own shape, noted beside it, as
+    // the page laid it out before it painted (_skribl_fit_early.html): the
+    // restore (editor_draft.js) is a later script, and on a slower phone a
+    // frame was drawn between the two, showing a new drawing's shape for a
+    // moment (the calm open, part 2). Both in lib/chromefit.js padShape.
+    const t = window.SkriblCanvasSizes, fit = window.SkriblChromeFit;
     let d = t ? t.DEFAULT : null;
-    if (fit && fit.startShape) {
-      const room = fit.roomOf(canvasArea || canvasWrap.parentElement || canvasWrap);
-      d = fit.startShape(room.col, room.row, room.h) || d;
-    }
+    if (fit && fit.padShape) d = fit.padShape(canvasArea || canvasWrap.parentElement || canvasWrap) || d;
     if (d) establishEditorCanvas(d.w, d.h);
     else {
       const area = (canvasArea || canvasWrap.parentElement || canvasWrap).getBoundingClientRect();
@@ -4898,5 +4901,4 @@ function currentPaintTarget() {
    verify_boot.py asserts this flag. It is the cheapest possible check for the
    most expensive possible bug, and unlike a page-error listener it also catches
    the case where something swallowed the throw. Keep it last. */
-document.documentElement.classList.add('skribl-fit');   // the canvas shows, laid out early or not (_skribl_fit_boot.html)
 window.__skriblBoot = Object.assign(window.__skriblBoot || {}, { pad: true });

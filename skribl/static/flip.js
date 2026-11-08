@@ -965,20 +965,21 @@ let _sessionOwnedDraft = false;   // set on the first non-empty save this sessio
 // drawing, it moves it aside, and the next visit offers it. A host's composer
 // keeps no Flip draft, so no slot.
 const flipSlot = (window.SkriblOtherTab && !FLIP_COMPOSE) ? window.SkriblOtherTab.slot(AUTOSAVE_KEY) : null;
-// THE DRAFT'S SHAPE, NOTED BESIDE IT (the calm open, part 2): its size, its
-// pages and whether there is ink, small enough to read before anything paints,
-// so _skribl_fit_early.html lays a draft you come back to out in its own shape
-// and keeps the words off a page that has a drawing coming. Kept and dropped
-// with the draft itself, below.
-const SHAPE_KEY = 'skribl.shape.v1.flip';
-function noteShape(){
-  try {
-    const ink = !(frames.length === 1 && (!frames[0] || !frames[0].strokes || !frames[0].strokes.length) && !bgImage);
-    localStorage.setItem(SHAPE_KEY, JSON.stringify({ w: CW, h: CH, pages: frames.length, ink: ink }));
-  } catch (_) {}
+// THE DRAFT'S SHAPE, NOTED BESIDE IT (the calm open, part 2; lib/chromefit.js
+// note, which the head loads): its size, its pages and whether there is ink,
+// small enough to read before anything paints, so _skribl_fit_early.html lays
+// a draft you come back to out in its own shape and keeps the words off a page
+// that has a drawing coming. Kept and dropped with the draft itself, below.
+const shapeNote = window.SkriblChromeFit;
+function slotWrite(text){
+  if(flipSlot) flipSlot.write(text); else localStorage.setItem(AUTOSAVE_KEY, text);
+  const ink = !(frames.length === 1 && (!frames[0] || !frames[0].strokes || !frames[0].strokes.length) && !bgImage);
+  if (shapeNote) shapeNote.note('flip', { w: CW, h: CH, pages: frames.length, ink: ink });
 }
-function slotWrite(text){ if(flipSlot) flipSlot.write(text); else localStorage.setItem(AUTOSAVE_KEY, text); noteShape(); }
-function slotRemove(){ if(flipSlot) flipSlot.remove(); else localStorage.removeItem(AUTOSAVE_KEY); try { localStorage.removeItem(SHAPE_KEY); } catch (_) {} }
+function slotRemove(){
+  if(flipSlot) flipSlot.remove(); else localStorage.removeItem(AUTOSAVE_KEY);
+  if (shapeNote) shapeNote.note('flip', null);
+}
 function saveNow(){
   if (FLIP_COMPOSE) return;   // compose keeps no draft (see FLIP_COMPOSE)
   if (flipSlot && flipSlot.frozen()) return;   // "Open it" is reloading this page (lib/othertab.js)
@@ -12572,6 +12573,10 @@ function mediaBytesAtRisk(){
 
 /* ---- boot ---- */
 const restored = tryRestore();
+// A shape noted with no Flip to bring back (one left behind) is dropped, so the
+// next open lays out a new Flip's shape. A post box keeps no draft, and leaves
+// the author's note alone.
+if (!restored && !FLIP_COMPOSE && shapeNote) shapeNote.note('flip', null);
 // No draft to come back to is a new Flip: it starts on the theme's ground,
 // Paper in the light theme (lib/canvasground.js), as the Pad's does. A
 // restored draft brought its own, and is never moved by the theme.

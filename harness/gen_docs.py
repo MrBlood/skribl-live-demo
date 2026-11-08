@@ -63,12 +63,21 @@ def _lead_comment(src):
     return m.group(1) if m else ""
 
 
-def _scripts(path):
-    """Script assets a template loads. Jinja comments are stripped first: a note
-    saying a module is NOT loaded names it too, and that false positive turned
-    up the first time this was done by hand."""
+def _scripts(path, seen=None):
+    """Script assets a template loads, its partials' included: a module loaded
+    from a partial (lib/chromefit.js, from _skribl_fit_boot.html in both
+    editors' heads) is still on the page. Jinja comments are stripped first: a
+    note saying a module is NOT loaded names it too, and that false positive
+    turned up the first time this was done by hand."""
+    seen = set() if seen is None else seen
+    if path in seen:
+        return []
+    seen.add(path)
     body = re.sub(r"\{#.*?#\}", "", path.read_text(encoding="utf-8"), flags=re.S)
-    return re.findall(r"skribl_asset\('([^']+)'\)", body)
+    found = re.findall(r"skribl_asset\('([^']+)'\)", body)
+    for part in re.findall(r"\{%\s*include\s+['\"]skribl/([\w.]+)['\"]", body):
+        found += [a for a in _scripts(TPL / part, seen) if a not in found]
+    return found
 
 
 # The column vocabulary, and the template each token means. skribl_feed.html is

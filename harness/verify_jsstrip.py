@@ -347,9 +347,13 @@ with sync_playwright() as sp:
     # past 2x), +64 B, lib/replayline.js songRate (160,125 measured). And
     # RAISED, in both places together, by the Song choice with the speeds (the
     # owner's "all yes" to A of "Text, Song and Drafts"), +807 B:
-    # lib/replayline.js +626, app.js +181 (160,932 measured).
+    # lib/replayline.js +626, app.js +181 (160,932 measured). And LOWERED,
+    # in both places together, by the calm open's part 2 (the owner's "Yes
+    # calm"): the Pad's first shape left app.js for lib/chromefit.js
+    # padShape, which also reads a draft's noted shape, -69 B (160,863
+    # measured).
     check("stripping keeps the player's JS under its ratchet",
-          lean_total <= 160_935,
+          lean_total <= 160_865,
           f"{src_total:,} B of source -> {lean_total:,} B parsed")
     # THE MODULE ONLY A RECOLOURED DRAWING FETCHES (lib/recolorplay.js, by
     # app.js on the link page and inlineplayer.js in a post): its own pin, so

@@ -772,7 +772,7 @@ rather than a shared rule.
 | `canvaszoom.js` | Pad+Flip | The canvas magnifier: zoom, pan, the HUD, its grip, wheel and Space-drag. |
 | `capmore.js` | Pad+Flip+player+gallery | A CAPTION AT TWO LINES, AND A "MORE" WHERE THERE IS MORE. |
 | `chromefade.js` | Pad+Flip+player+library+gallery | Controls that step back while a drawing plays, and come back the moment someone reaches for them. |
-| `chromefit.js` | Pad+Flip | The editors' fit when the chrome around the canvas changes size and the window says nothing -- Pad's and Flip's, one watch -- and the canvas's row reaching past the column on a wide window (span()). |
+| `chromefit.js` | Pad+Flip | The editors' fit when the chrome around the canvas changes size and the window says nothing -- Pad's and Flip's, one watch -- the canvas's row reaching past the column on a wide window (span()), and the shape the canvas starts in (a new drawing's, startShape; a draft's own, noted beside it). |
 | `colorselect.js` | Pad+Flip | Colour selection — the part both editors must agree on. |
 | `composehost.js` | HOST | The pad button's lifecycle, for a HOST's composer. |
 | `constrain.js` | Pad+Flip | Shift-to-constrain — snap a stroke to the nearest axis, shared by both editors. |
@@ -793,7 +793,7 @@ rather than a shared rule.
 | `gridoverlay.js` | Pad+Flip | Grid overlay — the alignment guides both editors draw over the canvas. |
 | `handwords.js` | Pad+Flip | YOUR HAND'S WORDS on an empty canvas (the owner's pick after the "Empty canvas ideas" mock): "Draw anything" on the Pad and "Draw page 1" on Flip, in the owner's own hand. |
 | `headerglass.js` | Pad+Flip | The header's ground, only while the drawing is under it. |
-| `hello.js` | — | Skribl says hi: the first time Skribl opens, on any screen (FUTURE.md 6m). |
+| `hello.js` | Pad+Flip | Skribl says hi: the first time Skribl opens, on any screen (FUTURE.md 6m). |
 | `helplearn.js` | Pad+Flip | How it works, shown: the Watch tab of the help panel, and its two tabs. |
 | `helpsearch.js` | Pad+Flip | Help drawer search + live section counts. |
 | `hints.js` | Pad+Flip | First-use hints — one short toast the first time a control is used. |
