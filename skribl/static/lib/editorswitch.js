@@ -57,6 +57,11 @@
     });
 
     // Ahead of time, once this editor has settled: the other one's page.
+    // SETTLED MEANS LOADED, THEN IDLE (FUTURE 6af, Nov 8). Idle alone came
+    // too early: on a slow phone the page sits idle while its own scripts
+    // download, so the other editor's page (about 55 KB) was fetched in the
+    // middle of this one's first open and took its bandwidth. It now waits for
+    // this page's load event first (verify_menu).
     var ahead = function () {
       if (document.querySelector('link[rel="prefetch"][data-editor-ahead]')) return;
       var l = document.createElement('link');
@@ -65,8 +70,12 @@
       l.setAttribute('data-editor-ahead', '');
       document.head.appendChild(l);
     };
-    if ('requestIdleCallback' in window) window.requestIdleCallback(ahead, { timeout: 6000 });
-    else setTimeout(ahead, 3000);
+    var idle = function () {
+      if ('requestIdleCallback' in window) window.requestIdleCallback(ahead, { timeout: 6000 });
+      else setTimeout(ahead, 3000);
+    };
+    if (document.readyState === 'complete') idle();
+    else window.addEventListener('load', idle, { once: true });
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wire);
