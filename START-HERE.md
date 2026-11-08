@@ -959,6 +959,11 @@ in git history, and were already out of date when this section closed.
     python -m alembic upgrade head                     # NOT create_all()
     gunicorn app:app
 
+`gunicorn` reads `gunicorn.conf.py` from the repo root by its name: 8 threads a
+worker (`GUNICORN_THREADS` changes it), so an editor's first open of about 120
+files is not answered one file at a time. `WEB_CONCURRENCY` still sets the
+number of workers.
+
 On Render, the middle two run together from the dashboard **Start Command**
 (`python -m alembic upgrade head && gunicorn app:app`) — set in v270, when it
 emerged that Render never reads the `Procfile` v267 had wired the same line

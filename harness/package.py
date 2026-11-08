@@ -39,8 +39,10 @@ ROOT = Path(__file__).resolve().parents[1]
 #   requirements.txt / constraints.txt   the pinned dependency set
 #   alembic.ini      migrations config; skribl/migrations is useless without it
 #   .python-version  the interpreter the lock was resolved for
+#   gunicorn.conf.py how many requests each worker answers at once; gunicorn
+#                    reads it by name, so a package without it serves one at a time
 RUNTIME_ROOT = ["app.py", "Procfile", "requirements.txt", "constraints.txt",
-                "alembic.ini", ".python-version"]
+                "alembic.ini", ".python-version", "gunicorn.conf.py"]
 
 # .env.example ships because a deployer configures from it; it is 4 KB and its
 # absence is the kind of thing discovered at 2am.
