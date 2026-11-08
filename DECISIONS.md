@@ -31596,3 +31596,47 @@ under, and the same row was green on main's run before it.
     112/112. The same with the row's old fixed look: red on this row, as
     main was.
   - The typed words shown and then swapped for the hand: red on this row.
+
+## After v330 -- A quieter first open: two downloads wait for the page to load
+
+What a first open downloads was listed biggest first (slow phone, HTTP/2).
+Two of the downloads were not for drawing at all, and they took bandwidth
+from the editor's own scripts:
+
+- **The other editor's page** (about 55 KB), fetched ahead so switching is
+  quick. `lib/editorswitch.js` asked for it at the first idle moment, and a
+  page waiting on its own scripts is idle, so on a slow phone it came in the
+  middle of the first open. It now waits for the page's load event, then
+  for idle. Switching is as quick as before.
+- **The Home Screen card's icon** (26 KB). The card and its sheet start
+  hidden, but a hidden image still downloads. Both images are
+  `loading="lazy"` now (`_skribl_homescreen.html`), `lib/homescreen.js`
+  fetches them once the page has loaded, and the timed card waits for its
+  icon to be decoded (400 ms at most) so it never shows an empty square. A
+  tap on the ⋯ row opens the sheet at once, as before.
+
+Measured, slow phone over HTTP/2, warmed server, three opens each:
+
+| ready to draw | before | after |
+|---------------|--------|-------|
+| Pad           | 3.20 s | 3.05 s |
+| Flip          | 3.67 s | 3.31 s |
+
+Downloaded before the editor was ready: Pad 402 to 375 KB, Flip 472 to
+396 KB.
+
+This came first because it is two small edits with nothing rewired. Loading
+music, Text, export and the How it works book after the editor is up was
+measured too (FUTURE 6af): about 0.4 s more on the Pad and 0.25 s on Flip,
+but it changes how both editors start, so it waits.
+
+New rows, calibrated in scratch copies (each break red on its own rows only):
+
+- verify_menu, Pad and Flip: on a slowed network the other editor's page is
+  still fetched ahead, but only after this one has loaded. The prefetch at
+  the first idle moment, as before: red on both.
+- verify_identity: the card's icon is not downloaded during the first open
+  (icons eager, as before: red), and when the card shows, its icon is there.
+  The test holds the icon until the card asks for it to be decoded and lets
+  it through 150 ms later, so a card that does not wait shows an empty
+  square (the card not waiting: red).
