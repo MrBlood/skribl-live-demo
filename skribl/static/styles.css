@@ -1375,6 +1375,16 @@ body.playback-paused .tap-paused { display: grid; }
   opacity: 0;
 }
 
+/* The one stroke under the words (lib/hintstroke.js): out of the column, so
+   the words stay at the canvas's middle; its top is set from the smaller
+   line's bottom, and it goes with the words. */
+.canvas-empty-stroke {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
 /* SKRIBL SAYS HI (lib/hello.js, FUTURE.md 6m): the first open, on any screen.
    The page's own ground in both themes, as under the header's mark, and on it
    the mark writing itself in its own sweep of colour (the drawing has no
