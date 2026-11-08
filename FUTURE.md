@@ -1969,6 +1969,31 @@ Render, so the lasting fix belongs to Pad and Flip themselves.
   About two thirds of it is waiting on the network (the trips and the
   bytes), and a third is the phone working through the scripts. Both have to
   shrink.
+- **THE LIVE SITE, the server's part** (Nov 8, from this box, each file's
+  wait for its first byte above the quickest): the Pad's files took 8.8 s of
+  server work on a first open, and 5.9 s again on a second. After #799 and
+  #801 a first open is down to the network's own jitter (1.7 s summed over
+  123 files, the same as a repeat), and a big script from a page not opened
+  from here that day came back as fast as a small one (66 KB in 0.26 s, a
+  16 KB file in 0.25 s, where a cold 66 KB one adds about 0.2 s).
+- **THAT TABLE IS HTTP/1.1, AND PHONES GET HTTP/2.** The local server speaks
+  HTTP/1.1, where a browser opens six connections and 120 files queue behind
+  them. The live site reaches phones over HTTP/2 through Cloudflare, one
+  connection for every file at once. Measured both ways (Nov 8, the same slow
+  phone, a warmed server; HTTP/2 through hypercorn with TLS), one combined
+  file per editor against today's files:
+
+  | ready to draw | HTTP/1.1 today | HTTP/1.1 one file | HTTP/2 today | HTTP/2 one file |
+  |---------------|----------------|-------------------|--------------|-----------------|
+  | Pad           | 4.4 s          | 2.6 s             | 3.2 s        | 2.5 s           |
+  | Flip          | 5.2 s          | 2.9 s             | 3.6 s        | 2.8 s           |
+
+  So over HTTP/2 one file saves about 0.7 s on a slow phone, not 2 s, and
+  about a fifth of the bytes (Pad 451 to 373 KB). And it costs something
+  the separate files do not: a deploy that changes one script makes a
+  returning phone fetch the whole combined file again, where today it
+  fetches just that script (every file is cached for a year under its own
+  content bust).
 - **WHAT "INSTANT" MEANS** (owner, Nov 8: "Do you have a bigger picture plan
   to make it load instantly eventually?"):
   - Every visit after the first is truly instant: under half a second, even
@@ -1981,6 +2006,8 @@ Render, so the lasting fix belongs to Pad and Flip themselves.
   1. Measure, and keep a speed budget: a check that fails when a first open
      grows past it.
   2. Fewer files: each editor's ~115 scripts as one or two, on any host.
+     Worth about 0.7 s over HTTP/2 (above); weigh it against the whole
+     file coming down again after each deploy.
   3. Load what drawing needs first: the canvas, the pen, undo and saving.
      Music, the Text tool, export, Tune and the help cards load quietly right
      after, usually before anyone reaches for them.
