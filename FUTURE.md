@@ -1955,7 +1955,22 @@ Render, so the lasting fix belongs to Pad and Flip themselves.
   and the Pad and Flip together ask for 146 (DECISIONS: "The server stops
   redoing its work"). Each worker does that work before its first visitor,
   so the first open after a deploy does not wait for it (DECISIONS: "Each
-  worker does the file work before its first visitor").
+  worker does the file work before its first visitor"). The other editor's
+  page and the Home Screen icon no longer download during a first open
+  (DECISIONS: "A quieter first open"): Pad 3.20 to 3.05 s, Flip 3.67 to
+  3.31 s on the slow phone over HTTP/2.
+- **MEASURED, NOT BUILT** (Nov 8, the same slow phone over HTTP/2):
+  - Drawing first, everything that is not drawing loaded right after the
+    editor is up: Pad 3.2 to 2.3 s, Flip 3.6 to 2.9 s. Loading those pieces
+    later as they are broke 7 of 10 features (most of them on Flip, whose
+    one file wires everything at start-up) and lost a tap on Add a song in
+    the second before its code came. Each piece would have to plug itself in
+    when it arrives.
+  - The safe part of it (music, Text, export, the How it works book, which
+    need the least rewiring): Pad 3.2 to 2.8 s, Flip 3.5 to 3.3 s.
+  - Brotli instead of gzip for scripts and styles: Pad 3.19 to 3.04 s, Flip
+    3.60 to 3.35 s, for a new dependency and a warm-up of 9 s instead of 4 s
+    here.
 - **THE BASELINE** (Nov 8, the local server, a cold cache, a slow phone: the
   CPU slowed 4x and a 1.6 Mbps network with 150 ms round trips;
   `harness/tools/firstopen.py`, three runs each, medians):

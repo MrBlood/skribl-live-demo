@@ -11,7 +11,11 @@
      * banner() -- a one-time card above the tools on the Pad, gone for good
                    once closed, opened, or drawn under.
    steps() is the sheet both open: three steps and the icon you will get.
-   None of it renders in compose mode, where the editor is a host's overlay. #}
+   None of it renders in compose mode, where the editor is a host's overlay.
+   The two icons are loading="lazy": both start hidden, and a hidden image
+   still downloads, so the icon (26 KB) took bandwidth from a slow phone's
+   first open. lib/homescreen.js fetches it once the page has loaded, and the
+   banner waits for it, a moment at most, so it never shows without it. #}
 
 {% macro row() -%}
 <button type="button" class="menu-item" id="homeScreenItem" hidden>
@@ -37,7 +41,7 @@
 {% macro banner() -%}
 <aside class="hs-banner" id="homeScreenBanner" aria-label="Add Skribl to your Home Screen" hidden>
   <button type="button" class="hs-banner-open" id="homeScreenBannerOpen">
-    <img src="{{ skribl_asset('icon-192.png') }}" alt="" width="40" height="40">
+    <img src="{{ skribl_asset('icon-192.png') }}" loading="lazy" alt="" width="40" height="40">
     <span class="hs-banner-text"><b>Keep Skribl on your Home Screen</b>
       <span class="hs-banner-sub">Tap {{ share_glyph() }} Share, then Add to Home Screen</span></span>
   </button>
@@ -51,7 +55,7 @@
 <div class="hs-scrim" id="homeScreenScrim" hidden>
   <div class="hs-steps" id="homeScreenSteps" role="dialog" aria-modal="true" aria-labelledby="homeScreenTitle">
     <div class="hs-steps-head">
-      <img src="{{ skribl_asset('icon-192.png') }}" alt="" width="52" height="52">
+      <img src="{{ skribl_asset('icon-192.png') }}" loading="lazy" alt="" width="52" height="52">
       <div><h2 id="homeScreenTitle">Add Skribl to your Home Screen</h2>
         <p>It opens full screen, like an app.</p></div>
     </div>

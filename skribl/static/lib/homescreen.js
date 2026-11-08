@@ -13,6 +13,13 @@
  * draw under it each put it away for good (localStorage). Storage that throws
  * -- Safari private mode -- means it can come back on the next visit, which is
  * the right failure for a hint: never load-bearing, never broken.
+ *
+ * ITS ICON WAITS FOR THE PAGE (FUTURE 6af, Nov 8). The banner's and the
+ * sheet's icon are loading="lazy" in the markup, so a first open does not
+ * download them; they are fetched once the page has loaded and gone idle,
+ * and the banner, when its time comes, waits for its icon to be decoded (a
+ * moment at most, ICON_WAIT_MS) so it never shows an empty square.
+ * verify_identity asks both.
  */
 (function (global) {
   'use strict';
@@ -20,6 +27,7 @@
   var doc = global.document;
   var SEEN_KEY = 'skribl_homescreen_hint_v1';
   var SHOW_AFTER_MS = 1200;   // after the page settles, not over its first paint
+  var ICON_WAIT_MS = 400;     // the most the banner waits for its icon
 
   function read(k) { try { return global.localStorage.getItem(k); } catch (e) { return null; } }
   function write(k, v) { try { global.localStorage.setItem(k, v); } catch (e) { /* fails quiet */ } }
@@ -27,6 +35,20 @@
   function standalone() {
     if (global.navigator.standalone === true) return true;
     try { return global.matchMedia('(display-mode: standalone)').matches; } catch (e) { return false; }
+  }
+  /* The icons in the banner and the sheet: fetched now (they are lazy, and
+     hidden), and a promise that settles when IMG is decoded or after WAIT ms,
+     whichever comes first; a broken image settles it too. */
+  function icons() { return doc.querySelectorAll('#homeScreenBanner img, #homeScreenSteps img'); }
+  function fetchIcons() {
+    var all = icons();
+    for (var i = 0; i < all.length; i++) all[i].loading = 'eager';
+  }
+  function iconReady(img, wait) {
+    if (!img) return Promise.resolve();
+    img.loading = 'eager';
+    var decoded = img.decode ? img.decode().catch(function () {}) : Promise.resolve();
+    return Promise.race([decoded, new Promise(function (done) { global.setTimeout(done, wait); })]);
   }
   function apple() {
     var n = global.navigator;
@@ -43,6 +65,12 @@
     var scrim = doc.getElementById('homeScreenScrim');
     var sheet = doc.getElementById('homeScreenSteps');
     if (!scrim || !sheet || standalone()) return;
+    var settled = function () {
+      if ('requestIdleCallback' in global) global.requestIdleCallback(fetchIcons, { timeout: 3000 });
+      else global.setTimeout(fetchIcons, 1000);
+    };
+    if (doc.readyState === 'complete') settled();
+    else global.addEventListener('load', settled, { once: true });
     var Modal = global.SkriblModal;
     var ios = apple();
     api.open = function () { openSteps(); };
@@ -59,6 +87,7 @@
         ev.prompt();
         return;
       }
+      iconReady(sheet.querySelector('img'), 0);   // a tap opens it at once; the icon follows if it must
       scrim.hidden = false;
       if (Modal) Modal.open(sheet, opener || menuButton());
     }
@@ -111,10 +140,12 @@
     var canvas = doc.getElementById('canvas');
     if (canvas) canvas.addEventListener('pointerdown', putAway, { once: true });
     global.setTimeout(function () {
-      if (read(SEEN_KEY) || doc.body.classList.contains('stroking')) return;
-      place();
-      banner.hidden = false;
-      global.addEventListener('resize', place);
+      iconReady(banner.querySelector('img'), ICON_WAIT_MS).then(function () {
+        if (read(SEEN_KEY) || doc.body.classList.contains('stroking')) return;
+        place();
+        banner.hidden = false;
+        global.addEventListener('resize', place);
+      });
     }, SHOW_AFTER_MS);
   }
 

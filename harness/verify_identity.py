@@ -365,6 +365,54 @@ with sync_playwright() as p:
           and hp.evaluate("() => localStorage.getItem('skribl_homescreen_hint_v1')") == "1")
     hc.close()
 
+    # THE CARD'S ICON WAITS FOR THE PAGE (FUTURE 6af, Nov 8). Hidden, it still
+    # downloaded during a first open: 26 KB a slow phone needed for scripts.
+    # It is now asked for once the page has loaded, and the card waits for it
+    # (a moment at most). Asked exactly: the icon is held until the card asks
+    # for it to be decoded, then let through 150 ms later, so a card that does
+    # not wait shows an empty square, and one that waits shows the icon.
+    hc = _phone()
+    hc.add_init_script("""(() => {
+        const dec = HTMLImageElement.prototype.decode;
+        HTMLImageElement.prototype.decode = function () {
+          if (this.closest && this.closest('#homeScreenBanner') && !window.__iconAsked) window.__iconAsked = performance.now();
+          return dec.apply(this, arguments);
+        };
+        document.addEventListener('DOMContentLoaded', () => {
+          const b = document.getElementById('homeScreenBanner'); if (!b) return;
+          new MutationObserver(() => {
+            if (b.hidden || window.__cardShown) return;
+            const i = b.querySelector('img');
+            window.__cardShown = { complete: i.complete, width: i.naturalWidth };
+          }).observe(b, { attributes: true, attributeFilter: ['hidden'] });
+        });
+      })()""")
+    hp = hc.new_page()
+    _held = []
+    hp.route("**/icon-192.png*", lambda r: _held.append(r))
+    hp.goto(BASE + "/skribl-pad", wait_until="commit")
+    _t0 = time.monotonic()
+    while time.monotonic() - _t0 < 6:
+        _st = hp.evaluate("() => [window.__iconAsked || null, !!window.__cardShown, performance.now()]")
+        if _held and ((_st[0] is not None and _st[2] - _st[0] >= 150) or time.monotonic() - _t0 > 4):
+            for _r in _held:
+                _r.continue_()
+            _held.clear()
+        if _st[1]:
+            break
+        hp.wait_for_timeout(50)
+    for _r in _held:
+        _r.continue_()
+    hp.wait_for_timeout(200)
+    _ic = hp.evaluate("""() => { const e = performance.getEntriesByType('resource').find(r => /icon-192/.test(r.name));
+        return { asked: e ? Math.round(e.startTime) : null, load: Math.round(performance.getEntriesByType('navigation')[0].loadEventStart),
+                 shown: window.__cardShown || null }; }""")
+    check("the card's icon is not downloaded during the first open: it is asked for once the page has loaded",
+          _ic["asked"] is not None and _ic["asked"] >= _ic["load"], f"icon asked for at {_ic['asked']} ms, the page loaded at {_ic['load']} ms")
+    check("...and the card waits for it: when the card shows, its icon is there",
+          bool(_ic["shown"]) and _ic["shown"]["complete"] and _ic["shown"]["width"] > 0, str(_ic["shown"]))
+    hc.close()
+
     hc = _phone(standalone=True)
     hp = hc.new_page()
     browsing.goto(hp, BASE, "/skribl-pad")

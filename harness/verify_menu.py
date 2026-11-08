@@ -292,6 +292,34 @@ with sync_playwright() as p:
         check(f"{name}: no page errors", not errs, "; ".join(errs[:2]))
         c.close()
 
+        # 3b. ...AND NOT DURING THE FIRST OPEN (FUTURE 6af, Nov 8). On a slow
+        # phone the page is idle while its own scripts download, and an
+        # idle-time prefetch of the other editor ran in the middle of this
+        # one's first open, taking about 55 KB of its bandwidth. Asked on a
+        # slowed network, where that idle comes before the load event: the
+        # other page is still fetched ahead, but only once this one has loaded.
+        c = b.new_context(**PHONE)
+        q = c.new_page()
+        _cdp = c.new_cdp_session(q)
+        _cdp.send("Network.enable")
+        _cdp.send("Network.emulateNetworkConditions", {"offline": False, "latency": 150,
+                                                       "downloadThroughput": 1.6 * 1024 * 1024 / 8,
+                                                       "uploadThroughput": 750 * 1024 / 8})
+        q.goto(BASE + route, wait_until="load", timeout=90000)
+        _when = None
+        for _ in range(100):
+            _when = q.evaluate("""() => { const l = document.querySelector('link[rel="prefetch"][data-editor-ahead]');
+                if (!l) return null;
+                const e = performance.getEntriesByType('resource').find(r => r.name === l.href);
+                return e ? { start: Math.round(e.startTime), load: Math.round(performance.getEntriesByType('navigation')[0].loadEventStart) } : null; }""")
+            if _when:
+                break
+            q.wait_for_timeout(100)
+        check(f"{name}: ...and only once this one has fully loaded, so a slow phone's first open has the bandwidth to itself",
+              bool(_when) and _when["start"] >= _when["load"],
+              f"other page asked for at {_when and _when['start']} ms, this page loaded at {_when and _when['load']} ms")
+        c.close()
+
         # 4. THE SWITCH GLIDES BEFORE IT GOES (owner's iPhone, after v323:
         # "never shows the button move, then boom you're in flip"). A tap on
         # the other editor puts the pill under it while this page is still
