@@ -18,7 +18,10 @@
    Until it has been laid out, the canvas is not shown, so a slow line that
    paints the page in pieces never shows it at a size it will leave; should
    the early fit never run, it shows on its own at 4 s (and each editor's
-   boot marks it laid out too). The letter sheet keeps its own layout. #}
+   boot marks it laid out too). Under Reduce Motion, which turns every
+   animation off (styles.css), there is no 4 s: the early fit's own mark and
+   each editor's boot are what show it. The letter sheet keeps its own
+   layout. #}
 <script src="{{ skribl_asset('lib/canvassizes.js') }}"></script>
 <script src="{{ skribl_asset('lib/chromefit.js') }}"></script>
 <style>

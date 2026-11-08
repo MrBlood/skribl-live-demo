@@ -967,6 +967,17 @@ function restoreAutosave(data) {
   strokeGroups = (data.strokeGroups || []).slice();
   recolors = Array.isArray(data.recolors) ? data.recolors.slice() : [];
   if (!(size && size.cssWidth > 0 && size.cssHeight > 0)) {
+    // AN OLDER PAGE'S DRAFT holds no size, and the shape noted beside the
+    // slot is this page's last save's, which the older page then saved over:
+    // the canvas this window chose is a new drawing's, as it always was, not
+    // that note's (lib/chromefit.js padShape, fresh). Then holdStrokes looks.
+    const fit = window.SkriblChromeFit;
+    const first = fit && fit.padShape ? fit.padShape(canvasArea || canvasWrap.parentElement || canvasWrap, true) : null;
+    if (first && (first.w !== authoredW || first.h !== authoredH)) {
+      establishEditorCanvas(first.w, first.h);
+      layoutEditorCanvas();
+      if (typeof window.syncCanvasSeg === 'function') window.syncCanvasSeg();
+    }
     holdStrokes(data.redoStrokes && data.redoStrokes.length ? data.redoStrokes : strokes);
   }
 

@@ -116,11 +116,13 @@
     return t.bestFor(col, h);
   }
   // THE SHAPE THE PAD STARTS IN (app.js resizeCanvas): a draft's own, noted
-  // beside it (below), else a new drawing's for the room its row has. Here,
-  // with the rest of the rule, where the link player never loads it.
-  function padShape(row) {
+  // beside it (below), else a new drawing's for the room its row has. FRESH:
+  // a new drawing's, whatever is noted (editor_draft.js, for a draft an older
+  // page saved, which holds no size, and whose note may be another drawing's).
+  // Here, with the rest of the rule, where the link player never loads it.
+  function padShape(row, fresh) {
     var room = roomOf(row);
-    return noted('pad') || startShape(room.col, room.row, room.h);
+    return (!fresh && noted('pad')) || startShape(room.col, room.row, room.h);
   }
   function span(row) {
     var body = global.document.body;

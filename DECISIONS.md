@@ -31729,7 +31729,8 @@ guess that turned square).
   editors' scripts then find nothing to change. Until it has run the canvas
   is unseen, so a slow line that paints the page in pieces never shows it at
   a size it will leave; should it never run, the canvas shows on its own at
-  4 s, and each editor's boot shows it too.
+  4 s (not under Reduce Motion, which turns every animation off), and each
+  editor's boot shows it too.
 - **Flip's page row starts in its first-page look**: the add row is in the
   template now (flip.js wires it once, and makes it only on a page without
   one), the size class is stamped as lib/sizeclass.js would stamp it (the
@@ -31746,7 +31747,12 @@ guess that turned square).
   would only go when the drawing comes), and at once: hidden by their class
   alone, they faded out over the canvas for 0.3 s, a frame before having
   styled them unseen. A note left without its draft is dropped by the open
-  that finds it.
+  that finds it. A draft an older page saved holds no size, and the note
+  beside the slot may then be another drawing's (this page's last save,
+  saved over): it goes on the shape this window chooses for a new drawing,
+  as it always did (padShape's fresh), before holdStrokes looks.
+  verify_drafts caught that one: its "an autosave with no size" row went
+  red beside the other suites and alone (98/99) until the restore did so.
 - **A site's post box and the letter sheet keep no draft**, so they start as
   a new drawing whatever is noted: the template's word in the early script
   (the page's own SKRIBL_COMPOSE comes after it) and noted()'s for the Pad's
