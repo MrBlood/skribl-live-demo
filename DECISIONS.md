@@ -31684,3 +31684,29 @@ slow open; part 2 takes it.
 
 Pad and Flip: shared, one module each (the words' drawing, the hop), and the
 two templates draw the same way.
+
+verify_identity's section is THE CALM OPEN now: the words read on every
+animation frame from the first paint (their drawing's state and path, the
+hint's fade), the hop read from the pen button's place on every frame.
+Calibrated in scratch copies of the tree, the section on its own (40 rows),
+each break red on its own rows:
+
+- As it is: 40/40.
+- The words not drawn into the page (both templates typed): red on the
+  first-frame rows (Pad and Flip), the module-missing row, Flip's slow open
+  and the late module. The Pad's slow open stays green there: its module,
+  let through first, draws them whole before the first look, so the
+  first-frame rows are the ones that pin the page's drawing.
+- The words written every time, the old way: red on the eight "never
+  written" rows (first frame on both, Undo, the next open after the hello,
+  the post box, both slow opens, the late module).
+- The words vanishing at the first stroke, and seen under the hello (the
+  boot rule taken out): red on the two fade rows and the hello row. No fade,
+  and never written under the hello: the same three.
+- The fallbacks broken (the module not drawing a page's missing words, the
+  typed words' wait gone, no is-typed for words without a recording): red
+  on those three rows.
+- No hop: red on the two waited-open rows. Its four guards taken out
+  together (the second's wait, Reduce Motion, the hello, automation): red on
+  the five rows, each pinned by its own scenario (an everyday open on both,
+  Reduce Motion, the hello, automation that does not ask).
