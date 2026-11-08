@@ -910,14 +910,22 @@ with sync_playwright() as p:
         c.close()
     c = b.new_context(viewport={"width": 402, "height": 874}, color_scheme="dark")
     pg = c.new_page()
-    looks = _slow_open(pg, "/skribl-pad", "hand", 2000, until=lambda l: l and l["t"] > 3.2)
+    # UNTIL THE HAND HAS DECIDED, not a fixed time after its file is let go:
+    # keep the words (is-typed) or write them (a hand state). On a busy runner
+    # its script ran later than 1.2 s after release (main red after #796,
+    # sqlite 6/6: no class yet at 3.2 s, the words still standing), and a
+    # look that ends before the decision cannot tell "not yet" from "never".
+    looks = _slow_open(pg, "/skribl-pad", "hand", 2000,
+                       until=lambda l: l and l["t"] > 3.2 and ("is-typed" in l["cls"] or l["hand"] != "-"))
     shown_at = next((l["t"] for l in looks if l and l["typed"] > 0.3), None)
     after = [l for l in looks if l and shown_at is not None and l["t"] > shown_at]
+    kept_at = next((l["t"] for l in after if "is-typed" in l["cls"]), None)
     check("...and where they had shown first (the hand's own file late), they stay: no swap",
           shown_at is not None and shown_at < 2.0 and bool(after) and all(l["typed"] > 0.3 and l["hand"] == "-" for l in after)
           and "is-typed" in after[-1]["cls"],
           f"typed shown at {shown_at} s; after it: hand {sorted(set(l['hand'] for l in after))}, "
-          f"typed at least {min((l['typed'] for l in after), default=None)}, class {after[-1]['cls'] if after else None}")
+          f"typed at least {min((l['typed'] for l in after), default=None)}, kept (is-typed) at {kept_at} s, "
+          f"class {after[-1]['cls'] if after else None}")
     c.close()
     # The snail waits for the editor: the Pad's canvas moved 11 px when its
     # scripts ran, and Flip's stage was 154 px tall until flip.js laid it out.

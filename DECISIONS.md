@@ -31574,3 +31574,25 @@ verify_hostconfig's new section alone):
 - No guard: red on the "warms nothing and does not fail" row only.
 - gunicorn.conf.py without the hook, or with a warm-up that fails: red on
   the gunicorn row only.
+
+## After v330 -- Main red after #796 (issue #800): verify_identity looked before the hand decided
+
+Main's full run at d790bff (#796, the gunicorn threads) went red on one row
+in sqlite 6/6, a row #795 added: "where the typed words had shown first (the
+hand's own file late), they stay: no swap". The words did stay and no hand
+came; what was missing at the last look was `is-typed`, the class the hand's
+script adds when it decides to keep them. The row let the hand's file go at
+2.0 s and looked for 1.2 s more. On that runner the script had not run by
+then, and a look that ends before the decision cannot tell "not yet" from
+"never". #796 changed only the gunicorn setup, which no browser suite runs
+under, and the same row was green on main's run before it.
+
+- **The row now waits for the decision**, up to its 10 s: until the class
+  comes (kept) or a hand starts writing (swapped), past the 3.2 s it already
+  waited. The detail says when the class came.
+- **Calibrated** in tree copies, whole verify_identity each:
+  - As it is: 112/112.
+  - The hand's decision 1.5 s late (a slow runner, made in handwords.js):
+    112/112. The same with the row's old fixed look: red on this row, as
+    main was.
+  - The typed words shown and then swapped for the hand: red on this row.
