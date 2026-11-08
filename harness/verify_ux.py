@@ -3599,6 +3599,15 @@ with sync_playwright() as _ip:
         _ic.add_init_script(_RAF_COUNT)
         _ipg = _ic.new_page()
         browsing.goto(_ipg, BASE, "/")
+        # YOUR HAND WRITES THE WORDS FIRST (lib/handwords.js): an empty Pad
+        # draws "Draw anything" a frame at a time for about two seconds, then
+        # stops. settle() gives up at its deadline, so the idle second used to
+        # count the hand's last frames (12 in main's run after #791). Wait for
+        # the words to be written, then count: left alone after its first
+        # look, the page still has to go quiet. No hand (the module missing,
+        # or words it has no recording of) is nothing to wait for.
+        _wrote = waits.until(_ipg, """() => { const s = document.querySelector('#canvasEmptyHint .canvas-empty-hand');
+            return !s || s.getAttribute('data-state') === 'done'; }""", "your hand's words written", ms=10000)
         waits.settle(_ipg, 1500)
         _ipg.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
         _blank = _frames_per_second(_ipg)
@@ -3631,6 +3640,7 @@ with sync_playwright() as _ip:
             _still = True
         _ipg.wait_for_timeout(300)
         _done = _frames_per_second(_ipg)
+        check(f"Pad {_vw}: your hand finished writing the words by itself (the fixture)", _wrote)
         check(f"Pad {_vw}: a blank page left alone asks for no frames", _blank <= 5,
               f"{_blank} requestAnimationFrame calls in one idle second")
         check(f"Pad {_vw}: ...nor once a take is saved", _take <= 5,

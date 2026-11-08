@@ -31296,3 +31296,30 @@ reproduced here: the census, dark phone, twice on #788's tree and twice on
 #790's, green each time; and a probe opening the menu as the suite does
 placed all four pills in 4 to 64 ms at CPU 1x, 4x and 6x, inside the suite's
 750 ms. Intermittent; nothing changed.
+
+## After v330 -- Main red after #791 (issue #792): verify_ux counted the hand's last frames
+
+Main's run after #791 failed verify_ux on both databases (shard 6/6,
+483/485): "Pad 1280: a blank page left alone asks for no frames", 12
+requestAnimationFrame calls in one idle second, and 13 at 402. Nothing was
+stuck. Your hand writes "Draw anything" a frame at a time for 1.9 s after the
+Pad opens, and the row counted its idle second after `waits.settle(1500)`,
+which gives up at its deadline, so the last of the writing landed in the
+count. Reproduced here twice with a trimmed copy (12 each). #791's affected
+suites did not include verify_ux; they should have, because this row reads
+the empty Pad's first look.
+
+The fix follows the precedent beside it, "WAIT FOR THE END, THEN COUNT". The
+row now waits for the hand's drawing to say `data-state="done"` (no hand means
+nothing to wait for), then settles and counts as before. A new fixture row
+says the hand finished writing by itself. Calibrated in a copy of the tree,
+with its own server for each case:
+
+- As it is, the new check: 14/14, with 0 frames in the idle second.
+- As it is, the old check (no wait): red, 12 and 12, which is main's failure.
+- The hand asking for frames forever once written: the blank row red (61,
+  60), the fixture green. The wait does not hide a hand that won't stop.
+- The hand never finishing: the fixture red at both sizes, and the blank
+  row too (60).
+- The header's fit hearing itself again (`takeRecords` removed, the bug this
+  row was written for): red at 180 and 183, the number its comment quotes.
