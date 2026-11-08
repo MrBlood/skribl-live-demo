@@ -37,6 +37,7 @@ import os
 import pathlib
 import re
 import sys
+import time
 import urllib.error
 import urllib.request
 from assertions import make_check
@@ -594,6 +595,56 @@ def _in_page(pg, box):
     return [box[0] + f[0], box[1] + f[1], box[2], box[3]]
 
 
+_SLOW_LOOK = """() => { const h = document.getElementById('canvasEmptyHint') || document.getElementById('flipEmptyHint');
+    if (!h) return null; const t = h.firstElementChild, m = getComputedStyle(t).color.match(/[\\d.]+/g);
+    const a = m && m.length > 3 ? +m[3] : 1, s = h.querySelector('.canvas-empty-hand'), o = document.getElementById('hintOnce');
+    return { typed: !t.querySelector('.vis-hidden') && a > 0.05 ? +a.toFixed(2) : 0, hand: s ? s.getAttribute('data-state') : '-',
+             cls: h.className, boot: !!(window.__skriblBoot && (window.__skriblBoot.pad || window.__skriblBoot.flip)),
+             once: o ? (o.hidden ? 'hidden' : (o.classList.contains('is-on') ? 'is-on' : 'shown')) : '-' }; }"""
+
+
+def _slow_open(pg, route, hold, ms, until, secs=10, free_also=("/inlineplayer.js",)):
+    """Open ROUTE with scripts HELD back MS ms (HOLD "others": every script but
+    the hand's and FREE_ALSO; "hand": the hand's alone), reading the words
+    every 50 ms until UNTIL(look) or SECS. Held, not slowed: the requests wait
+    until released, as late as a slow first open made them. The in-post
+    player is never held, so a snail that does not wait for the editor shows
+    early, where it would have."""
+    held, free = [], [False]
+
+    def _gate(r):
+        u = r.request.url
+        mine = "/lib/handwords.js" in u
+        if free[0] or (hold == "others" and (mine or any(f in u for f in free_also))) or (hold == "hand" and not mine):
+            r.continue_()
+        else:
+            held.append(r)
+    pg.route("**/static/skribl/**/*.js*", _gate)
+    t0 = time.monotonic()
+    pg.goto(BASE + route, wait_until="commit")
+    looks = []
+    while time.monotonic() - t0 < secs:
+        if not free[0] and (time.monotonic() - t0) * 1000 >= ms:
+            free[0] = True
+            for r in held:
+                r.continue_()
+        try:
+            look = pg.evaluate(_SLOW_LOOK)
+        except Exception:
+            look = None
+        if look is not None:
+            look["t"] = round(time.monotonic() - t0, 2)
+        looks.append(look)
+        if look and until(look):
+            break
+        pg.wait_for_timeout(50)
+    if not free[0]:
+        free[0] = True
+        for r in held:
+            r.continue_()
+    return looks
+
+
 def _reopened(pg, ed):
     """The post box's editor opened again (its frame reloaded), once the NEW
     page has booted and your hand has written the words. The page being left
@@ -810,6 +861,45 @@ with sync_playwright() as p:
           and o["player"]["at"] >= o["player"]["total"] - 30 and abs(o["opacity"] - 0.45) < 0.02,
           str(o and {k: o[k] for k in ("on", "player", "opacity")}))
     c.close()
+    # A SLOW FIRST OPEN (the owner: "it shows the old draw anything while it
+    # loads"). Behind the editors' hundred-odd deferred scripts, the live site
+    # wrote the words 5 to 9 s in, after the typed ones' 1.2 s safety net had
+    # shown them, and then took those away. The hand loads on its own now.
+    # Scripts here are HELD, not slowed: their requests wait until released.
+    for route, name in (("/skribl-pad", "Pad"), ("/flip", "Flip")):
+        c = b.new_context(viewport={"width": 402, "height": 874}, color_scheme="dark")
+        pg = c.new_page()
+        looks = _slow_open(pg, route, "others", 3000, until=lambda l: l and l["hand"] == "done")
+        first = next((l for l in looks if l and l["hand"] != "-"), None)
+        seen = max((l["typed"] for l in looks if l), default=0)
+        check(f"{name}, its scripts held back 3 s: your hand writes before the typed words' 1.2 s wait is out, and they never show",
+              bool(first) and first["t"] < 1.2 and not first["boot"] and seen == 0,
+              f"the hand at {first and first['t']} s (editor booted then: {first and first['boot']}); typed words at most {seen}")
+        c.close()
+    c = b.new_context(viewport={"width": 402, "height": 874}, color_scheme="dark")
+    pg = c.new_page()
+    looks = _slow_open(pg, "/skribl-pad", "hand", 2000, until=lambda l: l and l["t"] > 3.2)
+    shown_at = next((l["t"] for l in looks if l and l["typed"] > 0.3), None)
+    after = [l for l in looks if l and shown_at is not None and l["t"] > shown_at]
+    check("...and where they had shown first (the hand's own file late), they stay: no swap",
+          shown_at is not None and shown_at < 2.0 and bool(after) and all(l["typed"] > 0.3 and l["hand"] == "-" for l in after)
+          and "is-typed" in after[-1]["cls"],
+          f"typed shown at {shown_at} s; after it: hand {sorted(set(l['hand'] for l in after))}, "
+          f"typed at least {min((l['typed'] for l in after), default=None)}, class {after[-1]['cls'] if after else None}")
+    c.close()
+    # The snail waits for the editor: the Pad's canvas moved 11 px when its
+    # scripts ran, and Flip's stage was 154 px tall until flip.js laid it out.
+    for route, name in (("/skribl-pad?compose=1", "Pad"), ("/flip?compose=1", "Flip")):
+        c = b.new_context(viewport={"width": 402, "height": 874}, color_scheme="dark")
+        c.add_init_script("window.__skriblOnceForce = true;")
+        pg = c.new_page()
+        _slow_open(pg, route, "others", 3000, until=lambda l: l and l["once"] == "is-on")
+        pg.wait_for_timeout(400)
+        o = pg.evaluate(_ONCE)
+        check(f"{name}, its scripts held back 3 s: the {'snail' if name == 'Pad' else 'ball'} still comes, above the words and centred",
+              bool(o) and o["on"] and 20 <= o["above"] <= 40 and abs(o["centre"]) <= 2,
+              str(o and {k: o[k] for k in ("on", "above", "centre", "box")}))
+        c.close()
     b.close()
 
 print("\nBLOOBY CHEERS — once a drawing has posted, on the Posted! band, in both editors")

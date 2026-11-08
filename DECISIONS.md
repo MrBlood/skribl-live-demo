@@ -31361,3 +31361,50 @@ Calibrated in tree copies, each with its own server, verify_identity 105 rows:
 - One mark for both (as #791 shipped): red on the ball row only.
 - Flip's ball every time: red on Flip's once row only.
 - No mark at all: red on both once rows.
+
+## After v330 -- Your hand loads on its own: no old words while a slow first open loads (owner)
+
+The owner: "it shows the old draw anything while it loads." On the live
+site's first open of a post box, the hand's script ran last, behind the
+editor's 115 or so deferred scripts. The server sent those one at a time, so
+they took 5 to 9 s. Meanwhile the typed words' safety net
+(`_skribl_hand_boot.html`, 1.2 s) showed them first, and then the hand took
+them away to write them. Reproduced here by holding the editor's scripts back
+4 s: the typed words at 1.41 s, the hand at 6.63 s. Even a fresh local load
+runs the deferred scripts past 1.2 s.
+
+- **The hand loads first.** `lib/handwords.js` now loads async, just after
+  the words and the hello in both editors, and needs nothing the editor's
+  scripts make. With those held back 3 s, the hand wrote at 0.17 s (Pad) and
+  0.22 s (Flip), and the typed words never showed. The editor's scripts do not
+  wait for it either: with the hand held back, the Pad still booted at 2.47 s.
+- **Typed words that have shown stay.** If they showed anyway (the hand's own
+  file was late), they stay, with no swap, and a fade under way finishes
+  first. That visit has no hand and no snail; the snail is not spent.
+- **The snail waits for the editor's scripts** (DOMContentLoaded, then two
+  frames). The Pad's canvas moved 11 px when they ran, and Flip's stage was
+  154 px tall until flip.js laid it out, too short for the ball.
+- **Not changed:** on Flip, a slow first open still moves the words up when
+  flip.js lays out the stage (31 px here), as it moved the typed words before.
+
+Five new rows in verify_identity. The scripts are held, not slowed: their
+requests wait until released. With its scripts held back 3 s:
+
+- Pad: your hand writes before the 1.2 s wait is out, and the typed words
+  never show.
+- Flip: the same.
+- With only the hand's own file late, the typed words stay.
+- Pad: the snail comes above the words and centred.
+- Flip: the ball comes above the words and centred.
+
+Calibrated in tree copies, each with its own server (verify_identity, 110
+rows):
+
+- As it is: 110/110.
+- #791 as shipped: red on the three slow-open rows only.
+- No keeping: red on its own row only.
+- The snail not waiting: red on the two placement rows only.
+- The hand last but keeping: red on 13 rows. Keeping needs the hand early;
+  the two changes go together.
+
+Shared: one module, both editors.
