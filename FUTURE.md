@@ -1925,9 +1925,12 @@ B, the one stroke under the words, came down until this is built.
   "Draw page 1"), in the words' own grey, in about 2 seconds, and un-writes at
   the first stroke. The snail draws itself once, above the words, on the first
   empty canvas inside a site's post box, where the hello never plays (Flip:
-  the bouncing ball, once of its own; one shared once spent the ball on the
-  Pad's snail until the owner asked where they were). The mark stays the
-  hello. The smaller line stays as it was.
+  the ball, once of its own; one shared once spent the ball on the Pad's
+  snail until the owner asked where they were). The ball bounces three times
+  and on the fourth landing splats into drops that disappear, and its box
+  fades (owner: "Maybe on last bounce it splatters into small parts that
+  disappear?", then "Yes, build it, all yes"); with Reduce Motion it does not
+  come. The mark stays the hello. The smaller line stays as it was.
 - **IF WE NEED SOMETHING ELSE:** a little doodle under the words that changes
   each visit (the owner likes the spiral), but "we'd need tons of Skribls to
   keep them fresh": it waits for a big set of recorded doodles.

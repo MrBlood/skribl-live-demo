@@ -66,6 +66,55 @@ def bounce():
             "pages": [pages[i] for i in range(len(poses))], "order": order}
 
 
+# The splat's drops, one tuple per splat page: (dx from the ball's centre, height
+# above the floor, radius). Three a side, not mirrored: up and out, then down and
+# smaller, to nothing; all inside the floor's ends, so the ball's crop is unchanged.
+_DROPS = [
+    [(-60, 48, 11), (-86, 94, 10), (-106, 118, 8), (-122, 106, 6), (-134, 78, 4), (-142, 46, 2.2)],
+    [(-96, 38, 9), (-134, 100, 9), (-164, 120, 7), (-188, 106, 5), (-208, 78, 3.4), (-222, 46, 2)],
+    [(-126, 24, 8), (-168, 68, 7), (-204, 86, 6), (-232, 70, 4.4), (-252, 40, 3), (-262, 14, 1.8)],
+    [(56, 52, 10), (82, 100, 9), (102, 124, 8), (118, 112, 6), (128, 84, 4), (136, 52, 2.2)],
+    [(98, 36, 9), (138, 96, 9), (170, 116, 7), (196, 100, 5), (214, 72, 3.4), (226, 40, 2)],
+    [(128, 22, 7), (172, 62, 7), (208, 78, 5.4), (238, 60, 4), (254, 32, 2.8), (262, 10, 1.6)],
+]
+_PUDDLE = [(126, 24), (136, 13), (98, 7), (54, 4), None, None]   # the ball flat on landing, then gone
+
+
+def bounce_splat():
+    """A site's post box, once (lib/handwords.js; owner: "Maybe on last bounce
+    it splatters into small parts that disappear?", then "all yes"): How it
+    works' ten bounce pages, played three times by Flip's own loop; the five
+    falling poses again; then the splat, six pages and an empty one, held so
+    the drops are seen (the landing three beats, the rest two)."""
+    b = bounce()
+    splat = []
+    for k in range(6):
+        out = []
+        if _PUDDLE[k]:
+            rx, ry = _PUDDLE[k]; cy = GROUND - ry
+            out.append(S(_fill(408, cy, max(6, rx - 8), max(2, ry - 4), turns=2.6, n=34), "fill", PURPLE,
+                         size=min(24, ry * 1.2 + 4), peak=0.95, pace=2.4, taper=(0.03, 0.04)))
+            out.append(S(_ellipse(408, cy, rx, ry, a0=-120), "contour", size=6,
+                         weight=[(0, 0.45), (0.3, 1.0), (0.55, 1.0), (0.8, 0.5), (1, 0.4)]))
+            out.append(S([(408 - rx * 0.92, GROUND + 7), (408, GROUND + 8), (408 + rx * 0.92, GROUND + 7)], "detail", INK,
+                         size=max(5, ry * 0.5 + 6), peak=0.7, taper=(0.3, 0.3)))
+        for path in _DROPS:
+            dx, up, r = path[k]
+            x, y = 408 + dx, GROUND - up
+            if r >= 3.4:
+                out.append(S(_fill(x, y, r * 0.8, r * 0.86, turns=1.6, n=10), "fill", PURPLE,
+                             size=max(3.2, r * 0.95), peak=0.9, pace=1.8, taper=(0.05, 0.05)))
+            else:
+                out.append(S([(x - r * 0.35, y), (x + r * 0.35, y + 0.3)], "accent", PURPLE, size=r * 2.1,
+                             peak=0.8, taper=(0.1, 0.1)))
+        splat.append(out)
+    splat.append([])                                # all gone; the floor goes as the box fades
+    pages = b["pages"] + b["pages"][:5] + splat     # bounce 0-9, the fall again 10-14, the splat 15-21
+    holds = {15: 3, **{i: 2 for i in range(16, 22)}}
+    return {"fps": 12, "base": b["base"], "pages": pages, "order": b["order"] + list(range(10, len(pages))),
+            "loop": {"from": 0, "to": 9, "times": 3}, "holds": holds}
+
+
 def _offset(path, d):
     """The polyline moved `d` px to its left: one side of a drawn tube."""
     out = []

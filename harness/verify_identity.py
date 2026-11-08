@@ -848,6 +848,38 @@ with sync_playwright() as p:
     check("Flip in a post box: 'Draw page 1' in your hand, then the bouncing ball above it",
           bool(seq) and seq[-1][1] and seq[-1][0] == "done" and bool(o) and o["src"] == "hint-ball.json" and 20 <= o["above"] <= 40,
           f"{seq[-1:]}; {o and {k: o[k] for k in ('above', 'src', 'opacity')}}")
+    # THE BALL'S ENDING (owner: "Maybe on last bounce it splatters into small
+    # parts that disappear?", then "Yes, build it, all yes"): three bounces by
+    # the drawing's own Flip loop, a splat on the fourth landing, and then the
+    # box itself goes, floor and all. Asked of the recording (what plays) and
+    # of the page (the box gone, nothing PAINTED where it was).
+    rec = fr.evaluate("""async () => { const d = await (await fetch(document.getElementById('hintOnce').getAttribute('data-src'))).json();
+        return { pages: d.frames.length, loop: d.loop || null, held: d.frames.slice(15).map(f => f.hold || 1),
+                 lastPts: d.frames[d.frames.length - 1].strokes.length, firstPts: d.frames[0].strokes.length }; }""")
+    box = _in_page(pg, o and o["box"])
+    gone_at = None
+    for _ in range(100):                     # the whole of it plays in about 5 s at its speed
+        oo = fr.evaluate(_ONCE)
+        if oo and not oo["on"]:
+            gone_at = oo; break
+        pg.wait_for_timeout(100)
+    pg.wait_for_timeout(500)
+    left = _inked(pg, box)
+    oo = fr.evaluate(_ONCE)
+    check("...three bounces by its own loop, a splat on the fourth landing, and then it is gone: the box fades, nothing left",
+          rec["pages"] == 22 and rec["loop"] == {"from": 0, "to": 9, "times": 3} and rec["held"][0] == 3 and min(rec["held"]) >= 2
+          and rec["lastPts"] < rec["firstPts"] and bool(gone_at) and bool(oo) and oo["hidden"] and left < 0.005,
+          f"recording {rec}; gone {bool(gone_at)}, hidden {oo and oo['hidden']}; painted where it was {left:.2%}")
+    c.close()
+    c = b.new_context(viewport={"width": 402, "height": 874}, color_scheme="dark", reduced_motion="reduce")
+    c.add_init_script("window.__skriblOnceForce = true;")
+    pg = c.new_page()
+    fr = _compose(pg, "flip")
+    _written(fr)
+    o = _stays_away(pg, fr)
+    kept = fr.evaluate("() => { try { return localStorage.getItem('skribl.once.v1.flip'); } catch (e) { return 'unreadable'; } }")
+    check("Reduce Motion: Flip's ball does not come (it ends gone, so there is no still picture of it), and its once is kept",
+          bool(o) and not o["on"] and o["hidden"] and kept is None, f"{o and (o['on'], o['hidden'])}; once mark {kept!r}")
     c.close()
     c = b.new_context(viewport={"width": 402, "height": 874}, color_scheme="dark", reduced_motion="reduce")
     c.add_init_script("window.__skriblOnceForce = true;")

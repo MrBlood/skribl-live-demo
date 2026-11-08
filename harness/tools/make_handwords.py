@@ -14,9 +14,13 @@ owner chose ("about 2 seconds, as filmed": 1.9 s and 1.7 s). The result is
 written between lib/handwords.js's MARK:BEGIN and MARK:END markers.
 
 It also writes what a site's post box shows once (lib/handwords.js, the snail):
-How it works' snail and Flip's bouncing ball, cropped to their ink, without
-their paper, page pictures or sound, thinned the same way, the ball in Skribl
-purple, to skribl/static/brand/hint-snail.json and hint-ball.json.
+How it works' snail, cropped to its ink, without its paper, page pictures or
+sound, thinned the same way, to skribl/static/brand/hint-snail.json; and Flip's
+ball, drawn fresh through the real Flip (flipworks.bounce_splat: How it works'
+bounce three times by Flip's own loop, then the splat the owner asked for),
+trimmed the same way, in Skribl purple, to hint-ball.json.
+
+    python3 harness/tools/make_handwords.py ball     # the ball alone
 
 Needs the local server.
 """
@@ -99,7 +103,12 @@ def fitted(payload, ms):
 
 def trimmed(name, recolor=None, step=1.5, pad=14):
     """How it works' recording, cropped to its ink, with nothing but its strokes, `step` apart."""
-    d = json.loads((DEMOS / f"{name}.json").read_text())
+    return trim(json.loads((DEMOS / f"{name}.json").read_text()), recolor, step, pad)
+
+
+def trim(d, recolor=None, step=1.5, pad=14):
+    """A recording (a post's payload) cropped to its ink, with nothing but its strokes, `step` apart.
+    Its own page settings (a page's hold, Flip's loop) are kept."""
     frames = d.get("frames") or [d]
     xs = [q["x"] for f in frames for q in f.get("strokes") or []]
     ys = [q["y"] for f in frames for q in f.get("strokes") or []]
@@ -128,11 +137,29 @@ def trimmed(name, recolor=None, step=1.5, pad=14):
     return d
 
 
+def ball(browser):
+    """Flip's once in a post box: the bounce, then the splat (flipworks.bounce_splat),
+    drawn through the real Flip as How it works' loops are, trimmed as the snail is,
+    in Skribl purple."""
+    import flipworks
+    import make_flip
+    d = trim(make_flip.draw_flip(browser, flipworks.bounce_splat(), "bounce-splat"), PURPLE, 4)
+    (BRAND / "hint-ball.json").write_text(json.dumps(d, separators=(",", ":")))
+    print(f"hint-ball.json: {len(d['frames'])} pages, loop {d.get('loop')}, "
+          f"{sum(len(f['strokes']) for f in d['frames'])} points, "
+          f"{(BRAND / 'hint-ball.json').stat().st_size // 1024} KB, {d['canvasSize']}")
+
+
 def main():
     from playwright.sync_api import sync_playwright
+    if sys.argv[1:] == ["ball"]:          # the ball alone: the words and the snail stay as they are
+        with sync_playwright() as p:
+            b = p.chromium.launch(); ball(b); b.close()
+        return
     marks = {}
     with sync_playwright() as p:
         b = p.chromium.launch()
+        ball(b)
         for text, ms in WORDS.items():
             ctx = b.new_context(viewport={"width": 1280, "height": 960})
             page = ctx.new_page()
@@ -154,9 +181,9 @@ def main():
     for text, m in marks.items():
         pts = sum(len(s) // 3 for s in m["strokes"])
         print(f"{text!r}: {len(m['strokes'])} strokes, {pts} points, box {m['box']}, {m['ms']} ms")
-    # The ball's pages are shown whole, ten of them, at 0.43 of their size: points two
-    # screen pixels apart keep its round, at a third of the weight.
-    for name, out, recolor, step in (("snail", "hint-snail.json", None, 1.5), ("flip-bounce", "hint-ball.json", PURPLE, 4)):
+    # The ball (ball(), above) has its pages shown whole at 0.43 of their size:
+    # points four apart keep its round at a third of the weight. The snail draws.
+    for name, out, recolor, step in (("snail", "hint-snail.json", None, 1.5),):
         d = trimmed(name, recolor, step)
         (BRAND / out).write_text(json.dumps(d, separators=(",", ":")))
         n = sum(len(f["strokes"]) for f in (d.get("frames") or [d]))

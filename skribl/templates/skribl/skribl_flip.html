@@ -122,7 +122,7 @@
             <span>Draw page 1</span>
             <span class="canvas-empty-sub">Add pages below — they flip into an animation</span>
           </div>
-          {% if compose %}{% with once_src='brand/hint-ball.json', once_rate=0.8, once_loop=3600, once_share=0.5, once_max=240 %}{% include 'skribl/_skribl_hint_once.html' %}{% endwith %}{% endif %}
+          {% if compose %}{% with once_src='brand/hint-ball.json', once_rate=0.8, once_end='go', once_share=0.5, once_max=240 %}{% include 'skribl/_skribl_hint_once.html' %}{% endwith %}{% endif %}
         </div>
         <!-- Zoom HUD / magnify pill (shared partial — Pad + Flip) -->
         {% include 'skribl/_skribl_zoom_hud.html' %}
