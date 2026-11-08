@@ -1375,6 +1375,34 @@ body.playback-paused .tap-paused { display: grid; }
   opacity: 0;
 }
 
+/* YOUR HAND WRITES THE WORDS (lib/handwords.js; the owner's pick after the
+   "Empty canvas ideas" mock). Until it takes over, the typed words wait
+   unseen, so a slow phone never shows them and then swaps them for the hand;
+   should it never come, they fade in on their own. Words it has no recording
+   of (is-typed) show at once. The global Reduce Motion rule shortens the fade
+   and keeps the wait. The editors' words are the hint's first span; the link
+   page's hint starts with its pencil, which this leaves alone, and the
+   drawing outranks that pencil's size (.canvas-empty-hint svg). */
+.canvas-empty-hint > span:first-child { animation: canvas-empty-late 0.3s ease 1.2s backwards; }
+.canvas-empty-hint:is(.is-hand, .is-typed) > span:first-child { animation: none; }
+@keyframes canvas-empty-late { from { color: transparent; } }
+.canvas-empty-hint.is-hand > span:first-child { display: block; position: relative; }
+.canvas-empty-hint .canvas-empty-hand { display: block; width: 100%; height: auto; overflow: visible; opacity: 1; }
+/* The first stroke: the words un-write themselves before the hint's own fade
+   takes them, and the smaller line fades as it always has. */
+.canvas-empty-hint.hidden.is-unwriting { opacity: 1; }
+.canvas-empty-hint.is-unwriting .canvas-empty-sub { opacity: 0; transition: opacity 0.3s ease; }
+/* The snail, once, in a site's post box (_skribl_hint_once.html): above the
+   words, faint, gone at the first stroke. */
+.canvas-empty-once {
+  position: absolute;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+.canvas-empty-once.is-on { opacity: 0.45; }
+
 /* SKRIBL SAYS HI (lib/hello.js, FUTURE.md 6m): the first open, on any screen.
    The page's own ground in both themes, as under the header's mark, and on it
    the mark writing itself in its own sweep of colour (the drawing has no

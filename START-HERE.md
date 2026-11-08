@@ -791,6 +791,7 @@ rather than a shared rule.
 | `framebitmap.js` | Flip+player | Frame bitmaps — a painted page is rasterised once per playback, shared rule. |
 | `fullbar.js` | library+gallery | The full-screen bar: one transport, and the SAME one on both surfaces. |
 | `gridoverlay.js` | Pad+Flip | Grid overlay — the alignment guides both editors draw over the canvas. |
+| `handwords.js` | Pad+Flip | YOUR HAND WRITES THE WORDS on an empty canvas (the owner's pick after the "Empty canvas ideas" mock, filmed together: "Go, all yes"). |
 | `headerglass.js` | Pad+Flip | The header's ground, only while the drawing is under it. |
 | `hello.js` | — | Skribl says hi: the first time Skribl opens, on any screen (FUTURE.md 6m). |
 | `helplearn.js` | Pad+Flip | How it works, shown: the Watch tab of the help panel, and its two tabs. |

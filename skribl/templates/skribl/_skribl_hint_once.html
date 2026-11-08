@@ -1,0 +1,22 @@
+{#
+   THE SNAIL, ONCE, IN A SITE'S POST BOX (the owner's pick after the "Empty
+   canvas ideas" mock): the hello never plays inside a post box, so there,
+   the first time on a device, once your hand has written the words, How it
+   works' snail draws itself faintly above them and rests (Flip: the bouncing
+   ball), and the first stroke sweeps it away. lib/handwords.js decides
+   whether it comes at all, and fetches nothing when it does not. Included in
+   compose mode only, beside the words, with:
+     once_src    the recording, trimmed to its strokes
+                 (harness/tools/make_handwords.py)
+     once_rate   its speed; once_loop, the ms a Flip loops before it rests
+                 (0: it plays once)
+     once_share, once_max   its width: a share of the canvas, up to a cap
+#}
+{% from 'skribl/_skribl_inline_player.html' import skribl_inline_draft %}
+<div id="hintOnce" class="canvas-empty-once" aria-hidden="true" hidden
+     data-src="{{ skribl_asset(once_src) }}"
+     data-player-css="{{ skribl_asset('inlineplayer.css') }}"
+     data-player-js="{{ skribl_asset('inlineplayer.js') }}"
+     data-rate="{{ once_rate }}" data-loop="{{ once_loop }}" data-share="{{ once_share }}" data-max="{{ once_max }}">
+  {{ skribl_inline_draft('hintOnceBox', controls=false, progress=false, plain=true, shaped=false) }}
+</div>
