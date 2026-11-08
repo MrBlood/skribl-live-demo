@@ -791,7 +791,7 @@ rather than a shared rule.
 | `framebitmap.js` | Flip+player | Frame bitmaps — a painted page is rasterised once per playback, shared rule. |
 | `fullbar.js` | library+gallery | The full-screen bar: one transport, and the SAME one on both surfaces. |
 | `gridoverlay.js` | Pad+Flip | Grid overlay — the alignment guides both editors draw over the canvas. |
-| `handwords.js` | Pad+Flip | YOUR HAND WRITES THE WORDS on an empty canvas (the owner's pick after the "Empty canvas ideas" mock, filmed together: "Go, all yes"). |
+| `handwords.js` | Pad+Flip | YOUR HAND'S WORDS on an empty canvas, in the owner's own hand; since the calm open, drawn into the page already written (skribl_hand_words), written once under the first-open hello, faded at the first stroke. |
 | `headerglass.js` | Pad+Flip | The header's ground, only while the drawing is under it. |
 | `hello.js` | — | Skribl says hi: the first time Skribl opens, on any screen (FUTURE.md 6m). |
 | `helplearn.js` | Pad+Flip | How it works, shown: the Watch tab of the help panel, and its two tabs. |
@@ -829,7 +829,7 @@ rather than a shared rule.
 | `painttarget.js` | Pad+Flip | The draw drawer's paint-target seg (Pen or Background): wired once for both editors (SK312-003, v315). |
 | `palette.js` | Pad+Flip | The pen palette — one list, both editors. |
 | `pendingcards.js` | Pad+Flip | The file rows of the Photo and Music drawers -- the drop area until a file is added, then the file itself and its bin -- with the "re-add your file" cards and the tab dots that hint media is waiting: one implementation for both editors. |
-| `penswoosh.js` | Pad+Flip | The pen SWOOSH — the pen button drawn as the stroke it will make. |
+| `penswoosh.js` | Pad+Flip | The pen SWOOSH — the pen button drawn as the stroke it will make; and its one tiny hop when an open was a wait (the calm open). |
 | `photofit.js` | Pad+Flip+library+in-post | Photo fit geometry — the part both editors and the player must agree on. |
 | `pillfit.js` | Pad+Flip | The autosave pill yields to the controls it would sit on. |
 | `pinchgesture.js` | Pad+Flip | Pinch contact tracking — the two editors only, never the player. |

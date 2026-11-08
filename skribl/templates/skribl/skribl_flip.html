@@ -116,10 +116,11 @@
         <div class="zoom-layer" id="zoomLayer"><canvas id="pad" role="img" aria-roledescription="drawing canvas" aria-label="Drawing canvas, page 1" aria-describedby="flipCanvasDesc"></canvas><p id="flipCanvasDesc" class="vis-hidden">Draw this page with a finger, mouse or stylus; the pages play back in order. Drawing itself is not available from the keyboard; every tool, page action and setting is.</p><canvas class="flip-grid" id="flipGrid" aria-hidden="true"></canvas>
           {# Same whisper Pad's blank canvas carries — Flip's was a silent dark
              rectangle. Hidden the moment the document has any content. #}
-          <div id="flipEmptyHint" class="canvas-empty-hint">
-            {# The words, written in your hand, as on the Pad (see
-               skribl_editor.html); in a post box, once, the bouncing ball. #}
-            <span>Draw page 1</span>
+          {# The words, already written in your hand, as on the Pad (see
+             skribl_editor.html); in a post box, once, the bouncing ball. #}
+          {% set hand = skribl_hand_words('Draw page 1') if skribl_hand_words is defined else None %}
+          <div id="flipEmptyHint" class="canvas-empty-hint{{ ' is-hand' if hand }}">
+            {% if hand %}<span style="width: {{ hand.width }}px">{{ hand.svg }}</span>{% else %}<span>Draw page 1</span>{% endif %}
             <span class="canvas-empty-sub">Add pages below — they flip into an animation</span>
           </div>
           {% if compose %}{% with once_src='brand/hint-ball.json', once_rate=0.8, once_end='go', once_share=0.5, once_max=240 %}{% include 'skribl/_skribl_hint_once.html' %}{% endwith %}{% endif %}

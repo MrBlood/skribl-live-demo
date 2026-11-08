@@ -31640,3 +31640,47 @@ New rows, calibrated in scratch copies (each break red on its own rows only):
   The test holds the icon until the card asks for it to be decoded and lets
   it through 150 ms later, so a card that does not wait shows an empty
   square (the card not waiting: red).
+
+## After v330 -- The calm open, part 1: your words already written, and the pen's hop after a wait
+
+The owner, after a week of the empty canvas's words writing themselves on
+every open: "I want pad and flip to be the same. What would be best?
+Remember it has to be subtle cuz it happens a lot. And the letters drawing
+themselves is already starting to get annoying. I like the font though."
+The calm open was filmed beside Now (an everyday open and a slow one, the
+first stroke, Pad and Flip), and the owner said "Yes calm", taking the
+recommended answer to each of the rest.
+
+What filming it showed first: an everyday open, the files already on the
+device, is ready in about 0.2 s here, so Flip's little box never shows on
+one. What showed every time was the words, writing themselves for 1.7 s
+(1.9 s on the Pad) and un-writing at the first stroke. The box shows on a
+slow open; part 2 takes it.
+
+- **The words are already written.** The editors draw them into the page
+  from lib/handwords.js's own recording (`skribl_hand_words`,
+  skribl/__init__.py, read from the line between MARK:BEGIN and MARK:END),
+  so they are there on the first frame with no script to wait for. The
+  module takes that drawing over as it is: the page's path and the
+  module's whole path are the same string, so not a pixel moves.
+- **They write themselves once**, as a welcome: under the first-open hello,
+  once it has gone. The hello comes once on a device, so after that the
+  words are simply there, on an open, after Undo back to nothing, on a new
+  Skribl. Under Reduce Motion they are whole, hello or not. The page's
+  drawing waits unseen under the hello until the module blanks it to write
+  it (`_skribl_hand_boot.html`; on its own at 9 s if the module never comes).
+- **The first stroke fades them** with the line under them, in the hint's
+  own 0.3 s fade, whole while they fade. They no longer un-write first.
+- **The pen hops when you had to wait for it** (lib/penswoosh.js, which both
+  editors carry): one tiny hop, 5 px up and 1 px under in 0.38 s, as the
+  editor is ready, when that was more than a second after the page began.
+  On an everyday open nothing moves. Not under Reduce Motion, not under the
+  hello (the welcome there is the words), not once a stroke has begun.
+  Automation meets it only when it asks (`window.__skriblHopForce`, as the
+  hello and the snail), so no other suite catches the pen in the air.
+- A page that does not draw the words (a template without the helper) still
+  gets them from the module, whole, and keeps the typed words' 1.2 s safety
+  net for when the module never comes.
+
+Pad and Flip: shared, one module each (the words' drawing, the hop), and the
+two templates draw the same way.
