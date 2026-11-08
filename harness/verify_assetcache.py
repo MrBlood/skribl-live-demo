@@ -201,8 +201,16 @@ check(f"after it, every page's files are already done: serving all {len(set().un
       "adds nothing to either cache and redoes nothing",
       not added and not redone and len(s3) >= len(lexed),
       f"{len(added)} added ({', '.join(added[:4])}), {len(redone)} redone; strip {len(s3)}, gzip {len(g3)}")
+def _quiet(target):
+    try:
+        return skribl.warm_assets(target)
+    except Exception as e:                                  # a crash is this row's red
+        return f"{type(e).__name__}: {e}"
+
+
+_bare, _thing = _quiet(Flask("bare")), _quiet(object())
 check("a host without Skribl mounted, or anything that is not a Flask app, warms nothing and does not fail",
-      skribl.warm_assets(Flask("bare")) == 0 and skribl.warm_assets(object()) == 0)
+      _bare == 0 and _thing == 0, f"bare Flask: {_bare}; not an app: {_thing}")
 
 bad = [(n, d) for ok, n, d in results if not ok]
 print("\n" + "=" * 62)

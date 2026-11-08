@@ -31526,3 +31526,51 @@ Four rows in verify_assetcache, red at 128 and green at 512:
 - the Pad again, after every other page: not one of its files done twice;
 - each cap sits above every file it could hold (a drawer's script fetched on
   demand is on no page, so the page rows alone would miss it).
+
+## After v330 -- Each worker does the file work before its first visitor
+
+#799 kept the server's stripped and compressed files once made. But each
+server process starts with none of it done, so the first visitor after every
+deploy paid for all of it: on the live demo the Pad's files took 8.8 s of
+server work the first time. The owner usually opens the site soon after a
+deploy, so that is the open they see.
+
+- **`skribl.warm_assets(app, tick=None)`** asks the app for every script,
+  style and other compressible file (172 today) at the URL a page builds,
+  with gzip accepted, through the app's own test client. Going through the
+  app's own route makes the kept keys and bytes exactly the ones a visitor's
+  request looks for; a second copy of the strip-and-compress code would drift
+  from it. It returns how many files it asked for, and 0 for anything that is
+  not a Flask app with Skribl mounted.
+- **`gunicorn.conf.py`** calls it in each worker's `post_worker_init`, after
+  the app loads and before the worker takes a request. It ticks
+  `worker.notify` after each file, so gunicorn's timeout never takes a long
+  warm-up for a hung worker. A warm-up that fails is logged and the worker
+  serves anyway, doing each file on its first request as before.
+- **Measured** with gunicorn here, one worker and 8 threads: the warm-up took
+  4.0 s at boot. A first open's files then took 0.22 s of server time against
+  3.07 s cold, and Flip's 0.25 s against 1.15 s.
+- **A host** calls it the same way (INTEGRATION.md, "The file work before the
+  first visitor"; docs/SKRIBLS-NET.md, item 10).
+
+New rows:
+
+- verify_assetcache (4): it asks for every file either cache could hold; it
+  ticks once per file; after it, serving every page's files adds and redoes
+  nothing; a host without Skribl, or anything not a Flask app, warms nothing
+  and does not fail.
+- verify_hostconfig (1): gunicorn, started as the host starts it, logs every
+  file warmed before its first visitor.
+
+Calibrated in a scratch copy of the tree (verify_assetcache whole,
+verify_hostconfig's new section alone):
+
+- As it is: 20/20 and 1/1.
+- The warm-up's requests without gzip, or its URLs without the bust: red on
+  "adds and redoes nothing" only.
+- No tick: red on the tick row only.
+- Only the top folder warmed: red on "every file", "adds and redoes nothing"
+  and the gunicorn row.
+- No guard: red on the "warms nothing and does not fail" row only.
+- gunicorn.conf.py without the hook, or with a warm-up that fails: red on
+  the gunicorn row only.

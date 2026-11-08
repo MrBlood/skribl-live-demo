@@ -163,5 +163,14 @@ says so.
    Flip comes up in the phone's own setting. (Seen in the mock of Skribl
    inside skribls.net, Nov 2026; the owner asked for it on this list.)
 
+10. **Do Skribl's file work when the server starts.** Skribl strips and
+    compresses its own scripts and styles once in each server process, and
+    the first person to open the composer after a deploy waits for all of it
+    (8.8 s of server work for the Pad's files on the live demo). Where the
+    site runs gunicorn, its `post_worker_init` calls
+    `skribl.warm_assets(worker.wsgi, tick=worker.notify)`; the site's server
+    code was not seen, so this is said as an if (INTEGRATION.md, "The file
+    work before the first visitor").
+
 The player needs nothing from `media.skribls.net`: its poster and payload come
 from Skribl's own routes under the site's prefix.

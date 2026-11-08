@@ -962,7 +962,10 @@ in git history, and were already out of date when this section closed.
 `gunicorn` reads `gunicorn.conf.py` from the repo root by its name: 8 threads a
 worker (`GUNICORN_THREADS` changes it), so an editor's first open of about 120
 files is not answered one file at a time. `WEB_CONCURRENCY` still sets the
-number of workers.
+number of workers. Each worker also strips and compresses every Skribl file
+before it takes a request (`skribl.warm_assets`, a few seconds; the log says
+how many files and how long), so the first visitor after a deploy does not
+wait for it.
 
 On Render, the middle two run together from the dashboard **Start Command**
 (`python -m alembic upgrade head && gunicorn app:app`) — set in v270, when it
