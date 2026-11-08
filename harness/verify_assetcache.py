@@ -167,6 +167,43 @@ check(f"each cap sits above every file it could hold ({n_lex} scripts and styles
       _sec._STRIP_CACHE_MAX > n_lex and _sec._GZIP_CACHE_MAX > n_zip,
       f"strip cap {_sec._STRIP_CACHE_MAX}, gzip cap {_sec._GZIP_CACHE_MAX}")
 
+print("\nWARM BEFORE THE FIRST VISITOR — skribl.warm_assets, as gunicorn.conf.py calls it")
+# The caches above are kept, but each server process starts with them empty,
+# and the first visitor after a start paid for every file: on the live demo the
+# Pad's files took 8.8 s of server work the first time. warm_assets does it
+# before the worker takes a request. Asked of a fresh app: after it, serving
+# every page's files must find all of it done, the same bytes, nothing added.
+# verify_hostconfig asks gunicorn that it really calls it.
+app3 = build_app()
+s3 = app3.extensions["skribl"].setdefault("strip_cache", {})
+g3 = app3.extensions["skribl"].setdefault("gzip_cache", {})
+ticks = []
+n3 = skribl.warm_assets(app3, tick=lambda: ticks.append(1))
+n_either = sum(1 for f in on_disk
+               if f.suffix in (".js", ".css")
+               or _sec._COMPRESSIBLE.match(mimetypes.guess_type(f.name)[0] or ""))
+check(f"it asks for every file either cache could hold ({n_either})",
+      n3 == n_either, f"asked for {n3}")
+check("and ticks once per file (gunicorn's worker.notify, so a long warm-up is not a hung worker)",
+      len(ticks) == n3, f"{len(ticks)} ticks for {n3} files")
+before = {"strip": dict(s3), "gzip": dict(g3)}
+c3 = app3.test_client()
+added, redone = [], []
+for path, v in sorted(set().union(*asked.values())):
+    c3.get(f"{path}?v={v}", headers=GZIP)
+for name, now in (("strip", s3), ("gzip", g3)):
+    for k, val in now.items():
+        if k not in before[name]:
+            added.append(f"{name} {k[0].rsplit('/', 1)[-1]}")
+        elif val is not before[name][k]:
+            redone.append(f"{name} {k[0].rsplit('/', 1)[-1]}")
+check(f"after it, every page's files are already done: serving all {len(set().union(*asked.values()))} "
+      "adds nothing to either cache and redoes nothing",
+      not added and not redone and len(s3) >= len(lexed),
+      f"{len(added)} added ({', '.join(added[:4])}), {len(redone)} redone; strip {len(s3)}, gzip {len(g3)}")
+check("a host without Skribl mounted, or anything that is not a Flask app, warms nothing and does not fail",
+      skribl.warm_assets(Flask("bare")) == 0 and skribl.warm_assets(object()) == 0)
+
 bad = [(n, d) for ok, n, d in results if not ok]
 print("\n" + "=" * 62)
 print(f"{len(results) - len(bad)}/{len(results)} passed"

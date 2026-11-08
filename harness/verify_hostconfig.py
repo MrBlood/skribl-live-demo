@@ -268,6 +268,54 @@ check("gunicorn, started as the host starts it, gives each worker threads (an ed
       _threads >= 4, f"threads = {_threads}; exit {_g.returncode}{'' if _m else ' — ' + (_g.stderr or _g.stdout)[-200:]}")
 
 
+
+print("\nWARM — each worker does the file work before its first visitor")
+# The server strips and compresses each script and style once and keeps it,
+# but every process starts empty, and the first visitor after a start paid for
+# every file: on the live demo the Pad's files took 8.8 s of server work the
+# first time. gunicorn.conf.py's post_worker_init has each worker do it before
+# it takes a request (skribl.warm_assets; verify_assetcache asks the function
+# itself). STARTED FOR REAL, as the host starts it, one worker on a port of its
+# own: the hook's own line is the proof that gunicorn called it, and its count
+# that it did every file.
+import mimetypes                                   # noqa: E402
+import time                                        # noqa: E402
+from skribl.security import _COMPRESSIBLE          # noqa: E402
+_static = os.path.join(ROOT, "skribl", "static")
+_expected = sum(1 for _r, _d, _fs in os.walk(_static) for _f in _fs
+                if not _f.startswith(".")
+                and (_f.endswith((".js", ".css")) or _COMPRESSIBLE.match(mimetypes.guess_type(_f)[0] or "")))
+_glog = tempfile.NamedTemporaryFile("w+", suffix=".log", delete=False)
+_gp = subprocess.Popen([sys.executable, "-m", "gunicorn", "-b", "127.0.0.1:0", "--no-control-socket",
+                        "--log-level", "info", "app:app"], cwd=ROOT, stdout=_glog, stderr=subprocess.STDOUT,
+                       env=dict(os.environ, DATABASE_URL="sqlite:///" + os.path.join(tempfile.gettempdir(), "skribl-gwarm.db"),
+                                SKRIBL_ALLOW_EPHEMERAL_SECRET="1"))
+_WARMED = re.compile(r"skribl: (\d+) files stripped and compressed before the first visitor \(([\d.]+) s\)")
+_warm, _gtxt, _until = None, "", time.monotonic() + 120
+try:
+    while time.monotonic() < _until and _gp.poll() is None:
+        with open(_glog.name) as _fh:
+            _gtxt = _fh.read()
+        _warm = _WARMED.search(_gtxt)
+        if _warm or "warming the files failed" in _gtxt:
+            break
+        time.sleep(0.25)
+finally:
+    _gp.terminate()
+    try:
+        _gp.wait(15)
+    except subprocess.TimeoutExpired:
+        _gp.kill()
+    with open(_glog.name) as _fh:
+        _gtxt = _fh.read()
+    os.unlink(_glog.name)
+check(f"gunicorn, started as the host starts it, has each worker strip and compress every file "
+      f"({_expected}) before it takes its first visitor",
+      bool(_warm) and int(_warm.group(1)) == _expected and "warming the files failed" not in _gtxt,
+      (f"{_warm.group(1)} files in {_warm.group(2)} s" if _warm
+       else "no warm-up line: " + " | ".join(_gtxt.strip().splitlines()[-3:])[-300:]))
+
+
 bad = [r for r in results if not r[0]]
 print(f"\n{'=' * 62}\n{len(results) - len(bad)}/{len(results)} passed"
       + ("" if not bad else "  FAILURES: " + ", ".join(r[1] for r in bad)))

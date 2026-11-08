@@ -66,7 +66,10 @@ __all__ = ["create_blueprint", "init_skribl", "SKRIBL_VERSION",
            # for why an unauthenticated DELETE route would be a mistake, and
            # docs/INTEGRATION.md for wiring them up.
            "delete_post", "set_post_visibility",
-           "SkriblNotFound", "SkriblRefused"]
+           "SkriblNotFound", "SkriblRefused",
+           # Speed: do every file's strip-and-compress before the first
+           # visitor (gunicorn.conf.py calls it in each worker).
+           "warm_assets"]
 
 
 _ASSET_CACHE = {}
@@ -112,6 +115,51 @@ def asset_url(bp, filename):
         _ASSET_CACHE[path] = (key, digest)
         cached = _ASSET_CACHE[path]
     return url_for(bp.name + ".static", filename=filename, v=cached[1])
+
+
+def warm_assets(app, tick=None):
+    """Strip and compress every Skribl script, style and other compressible
+    file now, so the first visitor after the server starts does not wait on it.
+
+    The server strips a busted file's comments and gzips it once per file
+    version, then keeps the bytes (security._cache_and_compress). The first
+    visitor after each start paid for all of it: the Pad's files took 3 s of a
+    worker on the dev box and about 9 s on the live demo, where a warm cache
+    answers the same files in 0.1 s. Each worker process has its own caches,
+    so each warms its own (gunicorn.conf.py calls this in every worker before
+    it takes a request).
+
+    THROUGH THE APP ITSELF, one GET per file by its own test client, at the URL
+    a page builds (asset_url) with gzip accepted. Only that makes the keys and
+    the bytes certainly the ones a visitor's request will find; a second copy
+    of the strip-and-compress logic would drift from it. A host's own request
+    hooks run for each GET as they do for any visitor's.
+
+    `tick` is called after each file: gunicorn's worker.notify, so a warm-up
+    longer than its worker timeout is not taken for a hung worker. Returns the
+    number of files asked for (0 for anything that is not a Flask app with
+    Skribl mounted)."""
+    import mimetypes
+    from .security import _COMPRESSIBLE
+    bp = getattr(app, "blueprints", {}).get("skribl")
+    if bp is None or not hasattr(app, "test_client"):
+        return 0
+    names = []
+    for root, dirs, files in os.walk(bp.static_folder):
+        dirs[:] = sorted(d for d in dirs if not d.startswith("."))
+        for f in sorted(files):
+            if f.startswith("."):
+                continue
+            if f.endswith((".js", ".css")) or _COMPRESSIBLE.match(mimetypes.guess_type(f)[0] or ""):
+                names.append(os.path.relpath(os.path.join(root, f), bp.static_folder).replace(os.sep, "/"))
+    with app.test_request_context():
+        urls = [asset_url(bp, n) for n in names]
+    client = app.test_client()
+    for u in urls:
+        client.get(u, headers={"Accept-Encoding": "gzip"})
+        if tick is not None:
+            tick()
+    return len(urls)
 
 
 _BUILD_CACHE = {}
