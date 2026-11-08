@@ -532,6 +532,15 @@ def _near(rgb, want, tol=24):
     return bool(rgb) and all(abs(rgb[i] - want[i]) <= tol for i in range(3))
 
 
+def _rewrite(pg):
+    """The words hide and show again, as the editors do it (the class they set):
+    the stroke writes from the start. Two steps, so the module sees both."""
+    h = "(document.getElementById('canvasEmptyHint') || document.getElementById('flipEmptyHint'))"
+    pg.evaluate(f"() => {h}.classList.add('hidden')")
+    pg.wait_for_timeout(60)
+    pg.evaluate(f"() => {h}.classList.remove('hidden')")
+
+
 def _scribble(pg, sel):
     """A short stroke low on the canvas, as a finger would make it."""
     cv = pg.locator(sel).bounding_box()
@@ -549,7 +558,7 @@ with sync_playwright() as p:
         pg = c.new_page()
         browsing.goto(pg, BASE, route)
         pg.evaluate("() => window.SkriblHints && window.SkriblHints.hide && window.SkriblHints.hide()")
-        pg.evaluate("() => window.SkriblHintStroke && window.SkriblHintStroke.write()")
+        _rewrite(pg)
         pg.wait_for_timeout(150)
         early = pg.evaluate(_STROKE)
         pg.wait_for_timeout(1300)
@@ -580,12 +589,14 @@ with sync_playwright() as p:
     pg = c.new_page()
     browsing.goto(pg, BASE, "/skribl-pad")
     pg.evaluate("() => window.SkriblHints && window.SkriblHints.hide && window.SkriblHints.hide()")
-    pg.evaluate("() => { color = '#ff6f91'; window.SkriblHintStroke && window.SkriblHintStroke.write(); }")
+    pg.evaluate("() => { color = '#ff6f91'; }")
+    _rewrite(pg)
     pg.wait_for_timeout(1300)
     pink = pg.evaluate(_STROKE)
     check("Pad: it writes in the pen's colour (a pink pen, a pink stroke)",
           bool(pink) and _near(pink["rgb"], (255, 111, 145)), str(pink and pink["rgb"]))
-    pg.evaluate("() => { color = '#14161c'; window.SkriblHintStroke && window.SkriblHintStroke.write(); }")
+    pg.evaluate("() => { color = '#14161c'; }")
+    _rewrite(pg)
     pg.wait_for_timeout(1300)
     dark = pg.evaluate(_STROKE)
     check("...and a pen that would not show on the ground (dark on dark) writes in Skribl purple",
@@ -595,7 +606,7 @@ with sync_playwright() as p:
     pg = c.new_page()
     browsing.goto(pg, BASE, "/skribl-pad")
     pg.evaluate("() => window.SkriblHints && window.SkriblHints.hide && window.SkriblHints.hide()")
-    pg.evaluate("() => window.SkriblHintStroke && window.SkriblHintStroke.write()")
+    _rewrite(pg)
     pg.wait_for_timeout(30)
     now_ = pg.evaluate(_STROKE)
     pg.wait_for_timeout(1300)

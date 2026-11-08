@@ -164,7 +164,6 @@
    * repainted whole only once it has been written (resizing clears it). */
   if (window.ResizeObserver) new ResizeObserver(function () { place(); if (state === 'done') paint(END); }).observe(hint);
 
-  window.SkriblHintStroke = { write: write, mark: function () { return MARK; } };
   if (doc.readyState === 'loading') doc.addEventListener('DOMContentLoaded', sync);
   else sync();
 })();
