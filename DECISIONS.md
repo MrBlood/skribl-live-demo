@@ -31869,3 +31869,14 @@ in scratch copies of the tree, each break red on its own rows:
   Hurrying ignored: the hurried row. A take that was already recording
   ended too: its row.
 - As it is: 11/11, 3/3, 3/3.
+
+Two older rows still expected what this changes, and the whole of
+verify_text found them (each round above ran only its own parts): TEXT 5's
+blank Pad now starts its take when the words do and ends it when they are
+written (the take's clock can tick a millisecond between its start and the
+first point, so the start is read within 50 ms), and TEXT 11 reads the
+Large kept from before as its stop (0.095 of the drawing) and Thickness,
+never moved, as the pen's (null). Calibrated the same way, each break red
+on its own row: the take never ended, the words a second off the take's
+start, the words written as ink outside any take, a Large not brought back
+as its stop, the size not kept, the speed not kept. As it is: 6/6 and 7/7.

@@ -23,7 +23,8 @@ Mirror leaving them alone. Each row holds a promise:
   5. WRITTEN IN TIME: Write it closes the sheet and the words write
      themselves, stroke by stroke over the time the sheet said; each point
      keeps the time the plan gave it on the take's clock, forward only, where
-     the preview showed it; a blank Pad's take starts when the words do.
+     the preview showed it; a blank Pad's take starts when the words do
+     and stops when they are written (19).
   6. ONE UNDO: Undo takes the whole line back, on the Pad and on Flip, and
      Redo puts it back.
   7. MIRROR LEAVES WORDS ALONE: with Mirror on, the words are written once.
@@ -472,7 +473,7 @@ with sync_playwright() as p:
         mid = q.evaluate("() => [strokes.length, strokeGroups.length, SkriblText.isWriting(), SkriblText.isOpen()]")
         q.wait_for_function("() => !SkriblText.isWriting()", timeout=60000)
         q.wait_for_timeout(150)
-        end = q.evaluate("() => [strokes.length, strokeGroups.length, recording]")
+        end = q.evaluate("() => [strokes.length, strokeGroups.length, recording, finishedRecording]")
         pts = q.evaluate(POINTS["pad"], n0[0])
         check("Write it closes the sheet and the words write themselves, stroke by stroke",
               mid[2] and not mid[3] and n0[1] < mid[1] < n0[1] + plan["n"], f"half way: {mid[1] - n0[1]} of {plan['n']} strokes")
@@ -486,7 +487,8 @@ with sync_playwright() as p:
               off <= 1 and forward and t0 >= 0, f"worst {off}ms off, forward {forward}, t0 {t0}")
         where = max((max(abs(pt[0] - (f[0] + plan["anchor"]["x"])), abs(pt[1] - (f[1] + plan["anchor"]["y"]))) for pt, f in zip(pts, flat)), default=99)
         check("...where the preview showed it", where <= 0.01, f"furthest {where} drawing units")
-        check("a blank Pad's take starts when the words do", end[2] is True and n0 == [0, 0], f"{n0} -> {end}")
+        check("a blank Pad's take starts when the words do, and stops when they are written",
+              n0 == [0, 0] and 0 <= t0 <= 50 and end[2] is False and end[3] is True, f"{n0} -> {end}, t0 {t0}")
         dur = q.evaluate("() => getPlaybackDuration()")
         check("the replay writes them over about the time the sheet said, pauses tightened",
               plan["ms"] * 0.5 <= dur <= plan["ms"] + 50, f"replay {dur}ms, the sheet's {plan['ms']}ms")
@@ -695,8 +697,10 @@ with sync_playwright() as p:
           return [on && on.getAttribute('data-style'), JSON.parse(localStorage.getItem(k) || 'null')]; }""", PREFS)
         check("Flip: and it comes back to Yours, the hand they were just working on, over the Skribl they had",
               yours[0] == "yours", str(yours[0]))
+        # Their Large from before the slider is kept as that stop (0.095 of
+        # the drawing), and Thickness, never moved, as the pen's (null).
         check("Flip: and Yours is kept for next time, with their own size and speed",
-              yours[1] == {"style": "yours", "size": "L", "speed": 6}, json.dumps(yours[1]))
+              yours[1] == {"style": "yours", "size": 0.095, "weight": None, "speed": 6}, json.dumps(yours[1]))
         c.close()
         # Write with it, from Ready, after the 30th letter.
         seed = hand_seed(QUICK[:29])
