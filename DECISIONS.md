@@ -31439,3 +31439,53 @@ over 0.3 s, one after another.
 
 The live site's before and after are to be measured once this deploys.
 FUTURE 6af holds the rest of the speed work.
+
+## After v330 -- The ball's ending: three bounces, a splat, then gone (owner's idea)
+
+The ball used to bounce about 3½ times and then stop on its last page, in the
+air ("Shouldn't the flip ball keep bouncing?"). The owner then gave the idea:
+"Maybe on last bounce it splatters into small parts that disappear?" It was
+filmed beside the old ending ("The ball's ending" mock) and built on "Yes,
+build it, all yes", with 3 bounces and no ball under Reduce Motion.
+
+- **The recording** (`brand/hint-ball.json`) is now drawn fresh through the
+  real Flip with real pen input, as How it works' loops are
+  (`flipworks.bounce_splat`, `make_flip.draw_flip`,
+  `make_handwords.py ball`). It has 22 pages:
+  - pages 1-10 are How it works' ten bounce pages, played three times by
+    Flip's own loop (`times: 3`);
+  - pages 11-15 are the five falling poses again;
+  - pages 16-21 are the splat: the ball lands flat and six drops fly up and
+    out, shrink, and are gone;
+  - page 22 holds only the floor.
+
+  The landing page is held 3 beats and the splat pages 2, so the drops can be
+  seen. At the ball's 0.8× speed the whole thing takes 5.2 s. The file is
+  35 KB compressed, up from 18 KB, and is fetched once per device, only in a
+  post box.
+- **`_skribl_hint_once.html`** gives each once an ending instead of a loop
+  time:
+  - `once_end` `'rest'`: the snail, a drawing, which stays drawn.
+  - `once_end` `'go'`: the ball. `lib/handwords.js` plays it once (Flip's own
+    loop is inside it), asks the player when it has ended (the player tells
+    nobody), and then fades the box, floor and all. With Reduce Motion a
+    `'go'` drawing does not come at all, since it has no still picture, and
+    its once is not spent.
+- **Unchanged:** the first stroke still sweeps it away, and the Pad's snail
+  is as it was.
+
+Two new rows in verify_identity:
+
+- Three bounces by its own loop, a splat on the fourth landing, then gone:
+  asked of the recording (22 pages, the loop, the holds, a last page lighter
+  than the first) and of the page (the box faded and hidden, nothing painted
+  where it was).
+- With Reduce Motion, Flip's ball does not come and its once is kept.
+
+Calibrated in tree copies, each with its own server (verify_identity, 112
+rows):
+
+- As it is: 112/112.
+- The box never going: red on the ending row only.
+- Reduce Motion showing the ball: red on its row only.
+- The old one-bounce ball: red on the ending row only.

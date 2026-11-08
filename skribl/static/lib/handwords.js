@@ -32,8 +32,10 @@
  * those scripts, because the canvas can move as they lay it out.
  *
  * THE SNAIL, ONCE, IN A SITE'S POST BOX, where the hello never plays: after
- * the words, How it works' snail (Flip: the bouncing ball) draws itself
- * faintly above them and rests, and the first stroke sweeps it away. Once per
+ * the words, How it works' snail draws itself faintly above them and rests;
+ * on Flip a ball bounces three times and on the fourth landing splats into
+ * drops that fly out and are gone, and then its box fades (data-end "go";
+ * with Reduce Motion it does not come). The first stroke sweeps either away. Once per
  * device in each editor, as the hello is once (?once=again plays it again):
  * a post box opens on the Pad and Flip is its ⋯ row away, so one mark for
  * both spent the snail's once and the ball never came. The templates add
@@ -206,6 +208,9 @@
   });
   function after() {
     if (!once || began || !shown) return;
+    // A drawing that ends gone has no still picture: with Reduce Motion the
+    // ball does not come, and is not spent.
+    if (reduce() && ends()) return;
     // As the hello: ?once=again plays it seen or not; automation meets it
     // only when it asks (window.__skriblOnceForce), and then only once.
     if (!/[?&]once=again(&|$)/.test(location.search)) {
@@ -263,17 +268,27 @@
     var box = once.querySelector('.skribl-inline');
     box.classList.add('is-immersive', 'is-bare');
     player = window.SkriblInline.attach(box, payload, { ambient: true });
-    var loop = parseFloat(once.getAttribute('data-loop')) || 0;
     player.setRate(parseFloat(once.getAttribute('data-rate')) || 1);
+    var p = player;
     requestAnimationFrame(function () {
       once.classList.add('is-on');
-      if (reduce()) { player.seek(Infinity); return; }
-      player.setLoop(loop > 0);
-      player.play();
-      if (loop > 0) setTimeout(function () { if (player) player.setLoop(false); }, loop);
+      if (reduce()) { p.seek(Infinity); return; }
+      p.setLoop(false);   // once: a Flip's own loop plays inside it (the ball's three bounces)
+      p.play();
+      // THE BALL ENDS GONE (owner: "on last bounce it splatters into small
+      // parts that disappear"): its last page is empty, and then the box
+      // fades, floor and all. The player tells nobody when it ends, so ask it.
+      if (ends()) {
+        var watch = setInterval(function () {
+          if (player !== p) { clearInterval(watch); return; }   // swept away already
+          var s = p.state();
+          if (s.state !== 'playing' && s.elapsedMs >= s.totalMs - 30) { clearInterval(watch); gone(); }
+        }, 200);
+      }
     });
     window.addEventListener('resize', replace);
   }
+  function ends() { return once.getAttribute('data-end') === 'go'; }
   function replace() { if (player && !once.hidden && !place(shape)) gone(); }
   function gone() {
     if (!player) return;

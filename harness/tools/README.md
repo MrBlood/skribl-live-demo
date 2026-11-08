@@ -41,9 +41,12 @@ colour, then its dot bouncing in, saved as the payload the app plays
 `make_handwords.py` writes the empty canvas's words in the owner's hand
 (lib/handwords.js: "Draw anything", "Draw page 1") with the real Text tool in
 Skribl's style, and writes what the Pad recorded into that file's MARK block,
-timed to about two seconds. It also trims How it works' snail and Flip's
-bouncing ball to their strokes for a post box's first look
-(`skribl/static/brand/hint-snail.json`, `hint-ball.json`).
+timed to about two seconds. It also trims How it works' snail to its strokes
+for a post box's first look (`skribl/static/brand/hint-snail.json`), and draws
+Flip's ball fresh through the real Flip (`flipworks.bounce_splat`, by
+`make_flip.draw_flip`, which also sets a spec's page holds and Flip loop): the
+bounce three times by its own loop, then the splat, to `hint-ball.json`.
+`make_handwords.py ball` redraws the ball alone.
 
 ## Measurement
 

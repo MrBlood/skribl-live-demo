@@ -199,7 +199,7 @@
       <span>Draw anything</span>
       <span class="canvas-empty-sub">Skribl records as you go — post it and it replays</span>
     </div>
-    {% if compose %}{% with once_src='brand/hint-snail.json', once_rate=2, once_loop=0, once_share=0.62, once_max=320 %}{% include 'skribl/_skribl_hint_once.html' %}{% endwith %}{% endif %}
+    {% if compose %}{% with once_src='brand/hint-snail.json', once_rate=2, once_end='rest', once_share=0.62, once_max=320 %}{% include 'skribl/_skribl_hint_once.html' %}{% endwith %}{% endif %}
     </div>
     <!-- The post-record lock, made visible: a finished take can't be drawn
          over, and this pill is the way forward — tap to append another take.

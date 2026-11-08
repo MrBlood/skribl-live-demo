@@ -26,8 +26,11 @@ OUT = ROOT / "skribl" / "static" / "help" / "demos"
 BASE = os.environ.get("SKRIBL_BASE", "http://127.0.0.1:5001")
 
 
-def make(browser, name):
-    spec = flipworks.FLIPS[name]()
+def draw_flip(browser, spec, name="flip", pages_dir=None):
+    """Draw SPEC through the real Flip and return what its Share would post.
+    A spec may also carry the artist's own page settings: "holds" ({page:
+    beats}, as Flip's hold control sets them) and "loop" (Flip's loop, e.g.
+    {"from": 0, "to": 9, "times": 3})."""
     ctx = browser.new_context(viewport={"width": 1280, "height": 960})
     page = ctx.new_page()
     errs = []
@@ -50,14 +53,21 @@ def make(browser, name):
         page.evaluate("() => addFrame(true)")
     page.wait_for_timeout(300)
     for k, i in enumerate(spec["order"]):
+        if not spec["pages"][i]:      # a page left empty on purpose (the splat's last)
+            continue
         page.evaluate("i => go(i)", i)
         page.wait_for_timeout(150)
         draw(spec["pages"][i], 10 + i)
     page.wait_for_timeout(300)
+    if spec.get("holds"):
+        page.evaluate("h => { for (const [i, n] of Object.entries(h)) frames[+i].hold = n; }",
+                      {str(k): v for k, v in spec["holds"].items()})
+    if spec.get("loop"):
+        page.evaluate("l => { docLoop = l; idx = 0; buildStrip(); render(); }", spec["loop"])
     # Every page as it is, onion off: the squash on a one-page contact is
     # exactly what a sampled replay GIF skips, so review reads these.
-    if os.environ.get("FLIP_PAGES"):
-        d = pathlib.Path(os.environ["FLIP_PAGES"]); d.mkdir(parents=True, exist_ok=True)
+    if pages_dir or os.environ.get("FLIP_PAGES"):
+        d = pathlib.Path(pages_dir or os.environ["FLIP_PAGES"]); d.mkdir(parents=True, exist_ok=True)
         page.evaluate("() => { onion = false; }")
         for i in range(n):
             page.evaluate("i => go(i)", i); page.wait_for_timeout(120)
@@ -71,6 +81,13 @@ def make(browser, name):
     ctx.close()
     if errs:
         raise SystemExit(f"{name}: page errors {errs[:2]}")
+    if spec.get("loop") and payload.get("loop") != spec["loop"]:
+        raise SystemExit(f"{name}: the post lost its loop: {payload.get('loop')}")
+    return payload
+
+
+def make(browser, name):
+    payload = draw_flip(browser, flipworks.FLIPS[name](), name)
     path = OUT / f"flip-{name}.json"
     path.write_text(json.dumps(payload, separators=(",", ":")))
     print(f"flip-{name}: {len(payload['frames'])} pages at {payload.get('fps')} fps, "

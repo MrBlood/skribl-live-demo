@@ -8,8 +8,11 @@
    compose mode only, beside the words, with:
      once_src    the recording, trimmed to its strokes
                  (harness/tools/make_handwords.py)
-     once_rate   its speed; once_loop, the ms a Flip loops before it rests
-                 (0: it plays once)
+     once_rate   its speed. It plays once; a Flip's own loop plays inside it
+                 (the ball's three bounces)
+     once_end    'rest' (the snail: a drawing, it stays drawn) or 'go' (the
+                 ball: it ends on an empty page, then the box fades, floor
+                 and all; with Reduce Motion it does not come, unspent)
      once_share, once_max   its width: a share of the canvas, up to a cap
 #}
 {% from 'skribl/_skribl_inline_player.html' import skribl_inline_draft %}
@@ -17,6 +20,6 @@
      data-src="{{ skribl_asset(once_src) }}"
      data-player-css="{{ skribl_asset('inlineplayer.css') }}"
      data-player-js="{{ skribl_asset('inlineplayer.js') }}"
-     data-rate="{{ once_rate }}" data-loop="{{ once_loop }}" data-share="{{ once_share }}" data-max="{{ once_max }}">
+     data-rate="{{ once_rate }}" data-end="{{ once_end or 'rest' }}" data-share="{{ once_share }}" data-max="{{ once_max }}">
   {{ skribl_inline_draft('hintOnceBox', controls=false, progress=false, plain=true, shaped=false) }}
 </div>
