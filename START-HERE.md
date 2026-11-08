@@ -796,7 +796,6 @@ rather than a shared rule.
 | `helplearn.js` | Pad+Flip | How it works, shown: the Watch tab of the help panel, and its two tabs. |
 | `helpsearch.js` | Pad+Flip | Help drawer search + live section counts. |
 | `hints.js` | Pad+Flip | First-use hints — one short toast the first time a control is used. |
-| `hintstroke.js` | Pad+Flip | THE EMPTY CANVAS'S ONE STROKE (the owner's B, after the "Skribl's first look" mock: "it's gonna happen every time so it should be subtle but magic"). |
 | `holdtiming.js` | Pad+Flip+player+library+in-post | Per-page timing — the ONE definition of how long a page lasts and how much of a drawing page has been revealed, shared by the Flip editor and every surface that plays one. |
 | `homescreen.js` | Pad+Flip | Getting Skribl onto the Home Screen: the ⋯ row, the one-time banner, and the steps sheet both open. |
 | `immersive.js` | Pad+Flip+player+library+gallery | Full size on the devices that have a Fullscreen API, and on the one that does not. |

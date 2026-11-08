@@ -1914,6 +1914,22 @@ It also lists what the code already does well: parameterised queries,
 authorisation on private posts, media and drafts, signed CSRF for
 integrations, server-side validation, CSP and headers, and rate limits.
 
+## 6ae. The empty canvas's first look (owner, Nov 7: "I'm liking your hand and the mark and the snail ideas", then "Film it, all yes")
+
+From the "Empty canvas ideas" mock (seven ideas beside the words alone and B).
+B, the one stroke under the words, came down until this is built.
+
+- **CHOSEN, to be filmed together; built only on the owner's go:** "Draw
+  anything" writes itself in the owner's Skribl hand every time the words
+  show (Flip: "Draw page 1"), in the words' own grey, in about 2 seconds, and
+  un-writes at the first stroke. The snail draws itself once, above the words,
+  on the first empty canvas inside a site's post box, where the hello never
+  plays (Flip: the bouncing ball). The mark stays the hello. The smaller line
+  stays as it was.
+- **IF WE NEED SOMETHING ELSE:** a little doodle under the words that changes
+  each visit (the owner likes the spiral), but "we'd need tons of Skribls to
+  keep them fresh": it waits for a big set of recorded doodles.
+
 ## 7. The honest state
 
 The tool is good. It is better than it needs to be for a demo and not yet enough

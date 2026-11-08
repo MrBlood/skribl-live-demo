@@ -187,14 +187,12 @@
        layer as the grid is, so a pinch moves them with the drawing, and never
        part of it (editor_letters.js). #}
     {% if letters %}<canvas class="lt-guides" id="ltGuides" aria-hidden="true"></canvas>{% endif %}
-    {# THE WORDS on an empty canvas, at its middle, and under them one stroke
-       that writes itself (lib/hintstroke.js, the owner's B after the "Skribl's
-       first look" mock: "subtle but magic"). Blooby with his pen stood above
-       them from #474 until the owner took him off after v323 ("It's too
-       much"); Flip's hint follows. They leave at the first stroke. #}
+    {# THE WORDS ALONE on an empty canvas, at its middle. Blooby with his pen
+       stood above them from #474 until the owner took him off after v323
+       ("It's too much"); Flip's hint follows. They leave at the first stroke. #}
     <div id="canvasEmptyHint" class="canvas-empty-hint">
       <span>Draw anything</span>
-      <span class="canvas-empty-sub">It plays back just the way you drew it.</span>
+      <span class="canvas-empty-sub">Skribl records as you go — post it and it replays</span>
     </div>
     </div>
     <!-- The post-record lock, made visible: a finished take can't be drawn
@@ -595,7 +593,6 @@
   <script src="{{ skribl_asset('editor_compose.js') }}" defer></script>
   {% endif %}
   <script src="{{ skribl_asset('editor_draft.js') }}" defer></script>
-  <script src="{{ skribl_asset('lib/hintstroke.js') }}" defer></script>
   {% if letters %}
   {# The letter sheet only, and last, so the Pad is whole when it starts. An
      editor_*.js carve, so verify_player_isolation.py keeps it off the player. #}

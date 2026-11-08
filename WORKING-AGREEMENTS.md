@@ -41,6 +41,10 @@ not. Never make the owner feel slow for asking.
 - Batch the owner's choices into one short list with defaults, so "all yes" is a
   complete answer. Before bedtime, ask for everything at once.
 - Design changes need the owner's OK; bug fixes merge on green.
+- **A question is not an OK.** "…right?" or "What do you think?" asks for a
+  view; a design change waits for a plain yes. (B, the empty canvas's stroke,
+  was built on "…right?" and taken down: "I wanted to okay it before you
+  changed it.")
 - "Put up" means open the PR, not merge it. Say when something has merged.
 
 **Honesty, always.** Never claim a run that did not report. Say "not tested here"
