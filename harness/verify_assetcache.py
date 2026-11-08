@@ -36,6 +36,7 @@ check = make_check(results, with_detail=True)
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 import skribl
+import skribl.security as _sec
 
 
 def build_app():
@@ -114,6 +115,57 @@ app2.test_client().get(f"/static/skribl/{NAME}?v={REAL}", headers=GZIP)
 check("app B warming its cache leaves app A's untouched",
       len(s2) == 1 and len(strip_cache) == 1,
       f"B strip {len(s2)}, A strip {len(strip_cache)}")
+
+print("\nEVERY PAGE'S FILES STAY CACHED — the caps sit above what the app ships")
+# THE THRASH (after #798). The caps were 128, from when an editor pulled 25
+# files, and both caches empty WHOLESALE when full. The Pad alone now asks for
+# 123 scripts and styles and Flip for 117, so opening one and then the other
+# emptied the strip cache, and the next open re-lexed every file it had lexed a
+# minute before (the Pad again after Flip: 1.5 s of a worker on this box against
+# 0.1 s kept; all CPU, so more threads could not help). Pinned twice, as the rows can
+# fail apart: the visitor's path through the pages, and the property that keeps
+# it true when files are added (a drawer's script fetched on demand is on no
+# page, so the page census alone would miss it).
+import mimetypes
+PAGES = ("/skribl-pad", "/flip", "/feed", "/skribl-pad?compose=1",
+         "/flip?compose=1", "/skribl-pad?letters=1", "/library", "/gallery")
+BUSTED = re.compile(r"""(/static/skribl/[^"'\s?]+)\?v=([0-9a-f]{8})""")
+asked = {pg: set(BUSTED.findall(c.get(pg).get_data(as_text=True))) for pg in PAGES}
+lexed = {k for k in set().union(*asked.values()) if k[0].endswith((".js", ".css"))}
+zipped = set()
+
+
+def serve(keys):
+    for path, v in sorted(keys):
+        if c.get(f"{path}?v={v}", headers=GZIP).headers.get("Content-Encoding") == "gzip":
+            zipped.add((path, v))
+
+
+strip_cache.clear(); gzip_cache.clear()
+serve(asked["/skribl-pad"])
+pad = {k: (strip_cache.get(k), gzip_cache.get(k)) for k in asked["/skribl-pad"]}
+for pg in PAGES[1:]:
+    serve(asked[pg])
+check(f"every page's scripts and styles stay stripped together ({len(lexed)} files, "
+      f"{len(PAGES)} pages): nothing emptied",
+      set(strip_cache) == lexed,
+      f"{len(set(strip_cache) & lexed)} of {len(lexed)} kept, cap {_sec._STRIP_CACHE_MAX}")
+check(f"...and every file sent compressed stays compressed ({len(zipped)} files)",
+      bool(zipped) and zipped <= set(gzip_cache),
+      f"{len(zipped & set(gzip_cache))} of {len(zipped)} kept, cap {_sec._GZIP_CACHE_MAX}")
+serve(asked["/skribl-pad"])
+redone = sorted(k[0].rsplit("/", 1)[-1] for k, (s0, g0) in pad.items()
+                if strip_cache.get(k) is not s0 or gzip_cache.get(k) is not g0)
+check("the Pad again, after every other page: not one of its files stripped or compressed twice",
+      not redone, f"{len(redone)} redone: {', '.join(redone[:6])}")
+STATIC = ROOT / "skribl" / "static"
+on_disk = [f for f in STATIC.rglob("*") if f.is_file()]
+n_lex = sum(1 for f in on_disk if f.suffix in (".js", ".css"))
+n_zip = sum(1 for f in on_disk if _sec._COMPRESSIBLE.match(mimetypes.guess_type(f.name)[0] or ""))
+check(f"each cap sits above every file it could hold ({n_lex} scripts and styles, "
+      f"{n_zip} compressible): a real bust is one entry per file, so a running server never empties them",
+      _sec._STRIP_CACHE_MAX > n_lex and _sec._GZIP_CACHE_MAX > n_zip,
+      f"strip cap {_sec._STRIP_CACHE_MAX}, gzip cap {_sec._GZIP_CACHE_MAX}")
 
 bad = [(n, d) for ok, n, d in results if not ok]
 print("\n" + "=" * 62)

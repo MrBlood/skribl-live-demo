@@ -31489,3 +31489,40 @@ rows):
 - The box never going: red on the ending row only.
 - Reduce Motion showing the ball: red on its row only.
 - The old one-bounce ball: red on the ending row only.
+
+## After v330 -- The server stops redoing its work: its file caches hold every file
+
+Part of the owner's slow first opens ("over 5 seconds"). The server strips
+the comments out of each script and style and compresses it, once per file
+version, and keeps the result. It kept 128 files and emptied all of them when
+full. That cap dates from when an editor asked for 25 files. The Pad now asks
+for 123 scripts and styles, Flip for 117, and the pages together for 146. So
+opening the Pad and then Flip emptied the caches, and the next open did every
+file again.
+
+- **Measured** in-process on this box, each page's files in turn:
+
+  | in turn                | cap 128 | cap 512 |
+  |------------------------|---------|---------|
+  | Pad, the first open    | 3.1 s   | 3.2 s   |
+  | then Flip              | 2.4 s   | 1.1 s   |
+  | then the Pad again     | 1.5 s   | 0.1 s   |
+  | then the post box Flip | 3.2 s   | 0.1 s   |
+  | then the post box Pad  | 2.9 s   | 0.1 s   |
+
+  It is all CPU, so the threads (#796) could not help, and a slower server
+  takes longer.
+- **The fix:** both caps are 512. The caches keep only a file's real current
+  version, so a running server holds at most one entry per file: 147 scripts
+  and styles and 172 compressible files today. Everything kept is under 3 MB.
+- **Still slow:** the very first open after each deploy. Each server process
+  starts with empty caches, so its first visitor pays the 3 s above. The
+  combined files (FUTURE 6af, step 2) can be built when the server starts.
+
+Four rows in verify_assetcache, red at 128 and green at 512:
+
+- every page's scripts and styles stay stripped together;
+- every file sent compressed stays compressed;
+- the Pad again, after every other page: not one of its files done twice;
+- each cap sits above every file it could hold (a drawer's script fetched on
+  demand is on no page, so the page rows alone would miss it).
