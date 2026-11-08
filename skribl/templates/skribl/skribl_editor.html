@@ -188,15 +188,20 @@
        layer as the grid is, so a pinch moves them with the drawing, and never
        part of it (editor_letters.js). #}
     {% if letters %}<canvas class="lt-guides" id="ltGuides" aria-hidden="true"></canvas>{% endif %}
-    {# THE WORDS on an empty canvas, at its middle, and your hand writes them
-       (lib/handwords.js, the owner's pick after the "Empty canvas ideas"
-       mock): "Draw anything" in the owner's own letters, every time they
-       appear, un-written at the first stroke. Blooby with his pen stood above
-       them from #474 until the owner took him off after v323 ("It's too
-       much"); Flip's hint follows. In a site's post box, once on a device, the
-       snail draws itself above them (_skribl_hint_once.html). #}
-    <div id="canvasEmptyHint" class="canvas-empty-hint">
-      <span>Draw anything</span>
+    {# THE WORDS on an empty canvas, at its middle, in your hand: "Draw
+       anything" in the owner's own letters (the owner's pick after the "Empty
+       canvas ideas" mock), ALREADY WRITTEN, drawn into the page from the
+       hand's own recording (skribl_hand_words, lib/handwords.js), so they are
+       there on the first frame. The calm open (owner: "it has to be subtle cuz
+       it happens a lot... I like the font though"): they write themselves
+       only under the first-open hello, and fade with the line under them at
+       the first stroke. Blooby with his pen stood above them from #474 until
+       the owner took him off after v323 ("It's too much"); Flip's hint
+       follows. In a site's post box, once on a device, the snail draws itself
+       above them (_skribl_hint_once.html). #}
+    {% set hand = skribl_hand_words('Draw anything') if skribl_hand_words is defined else None %}
+    <div id="canvasEmptyHint" class="canvas-empty-hint{{ ' is-hand' if hand }}">
+      {% if hand %}<span style="width: {{ hand.width }}px">{{ hand.svg }}</span>{% else %}<span>Draw anything</span>{% endif %}
       <span class="canvas-empty-sub">Skribl records as you go — post it and it replays</span>
     </div>
     {% if compose %}{% with once_src='brand/hint-snail.json', once_rate=2, once_end='rest', once_share=0.62, once_max=320 %}{% include 'skribl/_skribl_hint_once.html' %}{% endwith %}{% endif %}

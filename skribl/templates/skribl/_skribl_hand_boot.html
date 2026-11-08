@@ -1,9 +1,16 @@
-{# YOUR HAND WRITES THE WORDS (lib/handwords.js), decided before first paint:
-   until it takes over, the empty canvas's typed words wait unseen, so a slow
-   phone never shows them and then swaps them for the hand; should it never
-   come, they fade in on their own after 1.2 s. Words it has no recording of
-   (is-typed) show at once. The global Reduce Motion rule shortens the fade
-   and keeps the wait.
+{# YOUR HAND'S WORDS (lib/handwords.js), decided before first paint. The
+   editors draw them into the page already written (the calm open), so the
+   hint is is-hand from the start and nothing here waits for them, except
+   UNDER THE FIRST-OPEN HELLO, where they are written once, as a welcome: the
+   page's drawing waits unseen until the module blanks it to write it (it
+   gives the drawing a data-state); should the module never come, the drawing
+   shows on its own at 9 s, after the hello's ground has gone by itself.
+
+   A page that did not draw them: until the module takes over, the typed words
+   wait unseen, so a slow phone never shows them and then swaps them for the
+   hand; should it never come, they fade in on their own after 1.2 s. Words it
+   has no recording of (is-typed) show at once. The global Reduce Motion rule
+   shortens the fades and keeps the waits.
 
    HERE, NOT IN styles.css: cssgraph keeps every @keyframes block it finds
    there in the link player's stylesheet, which has no use for this one and a
@@ -14,4 +21,6 @@
   .canvas-empty-hint > span:first-child { animation: canvas-empty-late 0.3s ease 1.2s backwards; }
   .canvas-empty-hint:is(.is-hand, .is-typed) > span:first-child { animation: none; }
   @keyframes canvas-empty-late { from { color: transparent; } }
+  html[data-hello-comes] .canvas-empty-hand:not([data-state]) { animation: canvas-hand-late 0.3s ease 9s backwards; }
+  @keyframes canvas-hand-late { from { opacity: 0; } }
 </style>

@@ -570,17 +570,24 @@ with sync_playwright() as p:
     c.close()
     b.close()
 
-print("\nYOUR HAND WRITES THE WORDS — on an empty canvas, every time; the snail once in a site's post box")
-# The owner's pick after the "Empty canvas ideas" mock ("Go, all yes";
-# lib/handwords.js): "Draw anything" (Flip: "Draw page 1") writes itself in the
-# owner's own hand, recorded through the real Text tool
-# (harness/tools/make_handwords.py), every time the words appear, and the
-# first stroke un-writes it. Asked of the drawing's own path and state (it
-# grows while it writes), of what is PAINTED in its box (a screenshot), of its
-# colour against the words' and of the words a screen reader is given. In a
-# site's post box, once on a device, How it works' snail (Flip: the ball) draws
-# itself faintly above them; automation meets it only when it asks
-# (window.__skriblOnceForce), as with the hello.
+print("\nTHE CALM OPEN — your hand's words already written, written once under the hello; the pen hops after a wait; the snail once in a post box")
+# The owner's pick after the "Empty canvas ideas" mock (lib/handwords.js):
+# "Draw anything" (Flip: "Draw page 1") in the owner's own hand, recorded
+# through the real Text tool (harness/tools/make_handwords.py). Then THE CALM
+# OPEN (owner: "it has to be subtle cuz it happens a lot. And the letters
+# drawing themselves is already starting to get annoying. I like the font
+# though"; then "Yes calm"): the editors draw the words into the page already
+# written (skribl_hand_words), so they are there on the first frame; they
+# write themselves only under the first-open hello, once; the first stroke
+# fades them with the line under them instead of un-writing them; and the pen
+# gives one tiny hop when the editor was a wait to open (lib/penswoosh.js).
+# Asked of the drawing's own path and state on every frame from the first
+# paint, of what is PAINTED in its box (a screenshot), of its colour against
+# the words' and of the words a screen reader is given; the hop, of the pen
+# button's place on every frame. In a site's post box, once on a device, How
+# it works' snail (Flip: the ball) draws itself faintly above the words;
+# automation meets it, and the hop, only when it asks (window.__skriblOnceForce,
+# window.__skriblHopForce), as with the hello.
 _HAND = """() => { const h = document.getElementById('canvasEmptyHint') || document.getElementById('flipEmptyHint');
     const s = h && h.querySelector('svg.canvas-empty-hand'); if (!s) return null;
     const p = s.querySelector('path'), r = s.getBoundingClientRect(), said = h.firstElementChild.querySelector('.vis-hidden');
@@ -599,6 +606,29 @@ _ONCE = """() => { const o = document.getElementById('hintOnce'); if (!o) return
              player: st ? { state: st.state, at: Math.round(st.elapsedMs), total: Math.round(st.totalMs) } : null }; }"""
 _FIRST_LOOK = """() => { const s = document.querySelector('.canvas-empty-hand'), o = document.getElementById('hintOnce');
     return [s && s.getAttribute('data-state'), !!o && o.classList.contains('is-on')]; }"""
+# The words on every animation frame from the first paint: the drawing's state,
+# its path's length (0 while blank) and the hint's opacity (its fade).
+_HAND_FRAMES = """(() => { const rows = []; window.__handRows = rows;
+  const tick = (t) => { const h = document.getElementById('canvasEmptyHint') || document.getElementById('flipEmptyHint');
+    const s = h && h.querySelector('svg.canvas-empty-hand'), p = s && s.querySelector('path');
+    rows.push({ t: Math.round(t), hint: !!h, state: s ? s.getAttribute('data-state') : null,
+                d: p ? (p.getAttribute('d') || '').length : -1, op: h ? +(+getComputedStyle(h).opacity).toFixed(3) : null,
+                seen: s ? +getComputedStyle(s).opacity : 0,
+                hello: !!document.getElementById('skriblHello') && document.documentElement.hasAttribute('data-hello-comes') });
+    if (rows.length < 3000) requestAnimationFrame(tick); };
+  requestAnimationFrame(tick); })();"""
+# A PAGE THAT DID NOT DRAW THEM (a template without skribl_hand_words): the
+# editors' markup with the drawing taken back out, the typed words (or WORDS)
+# where it was.
+_DRAWN = re.compile(r'<span style="width: \d+px"><svg class="canvas-empty-hand".*?</svg><span class="vis-hidden">(.*?)</span></span>', re.S)
+
+
+def _undrawn(words=None):
+    def handler(route):
+        r = route.fetch()
+        body = _DRAWN.sub(lambda m: f"<span>{words or m.group(1)}</span>", r.text()).replace("canvas-empty-hint is-hand", "canvas-empty-hint")
+        route.fulfill(response=r, body=body)
+    return handler
 
 
 def _rewrite(pg):
@@ -646,8 +676,8 @@ def _in_page(pg, box):
 _SLOW_LOOK = """() => { const h = document.getElementById('canvasEmptyHint') || document.getElementById('flipEmptyHint');
     if (!h) return null; const t = h.firstElementChild, m = getComputedStyle(t).color.match(/[\\d.]+/g);
     const a = m && m.length > 3 ? +m[3] : 1, s = h.querySelector('.canvas-empty-hand'), o = document.getElementById('hintOnce');
-    return { typed: !t.querySelector('.vis-hidden') && a > 0.05 ? +a.toFixed(2) : 0, hand: s ? s.getAttribute('data-state') : '-',
-             cls: h.className, boot: !!(window.__skriblBoot && (window.__skriblBoot.pad || window.__skriblBoot.flip)),
+    return { typed: !t.querySelector('.vis-hidden') && a > 0.05 ? +a.toFixed(2) : 0, hand: s ? (s.getAttribute('data-state') || 'page') : '-',
+             d: s && +getComputedStyle(s).opacity > 0.01 ? (s.querySelector('path').getAttribute('d') || '').length : 0, cls: h.className, boot: !!(window.__skriblBoot && (window.__skriblBoot.pad || window.__skriblBoot.flip)),
              once: o ? (o.hidden ? 'hidden' : (o.classList.contains('is-on') ? 'is-on' : 'shown')) : '-' }; }"""
 
 
@@ -733,43 +763,51 @@ with sync_playwright() as p:
     b = p.chromium.launch()
     for route, name, sel, words in (("/skribl-pad", "Pad", "#canvas", "Draw anything"), ("/flip", "Flip", "#pad", "Draw page 1")):
         c = b.new_context(viewport={"width": 402, "height": 874}, color_scheme="dark")
+        c.add_init_script(_HAND_FRAMES)
         pg = c.new_page()
         browsing.goto(pg, BASE, route)
         pg.evaluate("() => window.SkriblHints && window.SkriblHints.hide && window.SkriblHints.hide()")
         _written(pg)
-        _rewrite(pg)
-        pg.wait_for_timeout(400)
-        early = pg.evaluate(_HAND)
-        _written(pg)
         late = pg.evaluate(_HAND)
+        rows = pg.evaluate("() => window.__handRows")
+        first = next((r for r in rows if r["hint"]), None)
+        wrote = [r for r in rows if r["state"] == "writing"]
         painted = _inked(pg, late and late["box"])
-        check(f"{name}: your hand writes '{words}' (it grows as it writes) and it stays, painted",
-              bool(early) and bool(late) and early["state"] == "writing" and 0 < early["d"] < late["d"] * 0.7
-              and late["state"] == "done" and painted > 0.03,
-              f"{early and (early['state'], early['d'])} at 400 ms, {late and (late['state'], late['d'])} written; painted {painted:.1%}")
+        check(f"{name}: '{words}' is there already written in your hand on its first frame, never written in front of you, painted",
+              bool(first) and bool(late) and late["state"] == "done" and late["d"] > 4000 and first["d"] == late["d"]
+              and first["seen"] > 0.99 and not wrote and painted > 0.03,
+              f"first frame {first and (first['state'], first['d'], first['seen'])}; {len(wrote)} frames writing; "
+              f"then {late and (late['state'], late['d'])}; painted {painted:.1%}")
         check(f"{name}: ...in the words' own grey, and a screen reader is still given the words",
               bool(late) and late["stroke"] == late["words"] and late["said"] == words and late["aria"] == "true",
               str(late and {k: late[k] for k in ("stroke", "words", "said", "aria")}))
+        # THE FIRST STROKE: the words go with the line under them, in the
+        # hint's own fade, whole while they fade (they used to un-write).
+        n0 = pg.evaluate("() => window.__handRows.length")
         _scribble(pg, sel)
-        pg.wait_for_timeout(120)
-        mid = pg.evaluate(_HAND)
-        pg.wait_for_timeout(700)
+        pg.wait_for_timeout(800)
+        fade = pg.evaluate("(n) => window.__handRows.slice(n)", n0)
         gone = pg.evaluate(_HAND)
         left = _inked(pg, late and late["box"])
-        check(f"{name}: ...the first stroke un-writes them, seen, and then they go",
-              bool(mid) and bool(gone) and late is not None and mid["state"] == "unwriting" and 0 < mid["d"] < late["d"]
-              and mid["opacity"] > 0.95 and gone["state"] == "away" and gone["d"] == 0 and gone["hidden"] and left < 0.005,
-              f"{mid and (mid['state'], mid['d'], mid['opacity'])} at 120 ms, {gone and (gone['state'], gone['d'])} at 820 ms; painted {left:.1%}")
+        showing = [r for r in fade if r["op"] is not None and r["op"] > 0.02]
+        steps = [a["op"] - z["op"] for a, z in zip(fade, fade[1:]) if a["op"] is not None and z["op"] is not None]
+        check(f"{name}: ...the first stroke fades them with the line under them, whole while they fade, and then they go",
+              bool(fade) and bool(gone) and late is not None and all(r["d"] == late["d"] for r in showing)
+              and not any(r["state"] == "unwriting" for r in fade) and sum(1 for s in steps if s > 0.001) >= 4
+              and max(steps, default=1) < 0.5 and gone["state"] == "away" and gone["hidden"] and gone["opacity"] == 0 and left < 0.005,
+              f"while showing: path {sorted(set(r['d'] for r in showing))[:3]} (whole {late and late['d']}); "
+              f"states {sorted(set(str(r['state']) for r in fade))}; {sum(1 for s in steps if s > 0.001)} frames fading, "
+              f"biggest step {max(steps, default=1):.2f}; then {gone and (gone['state'], gone['hidden'], gone['opacity'])}; painted {left:.1%}")
         if name == "Pad":
+            n1 = pg.evaluate("() => window.__handRows.length")
             pg.click("#undoBtn")
-            pg.wait_for_timeout(300)
+            pg.wait_for_timeout(700)
+            back = pg.evaluate("(n) => window.__handRows.slice(n)", n1)
             again = pg.evaluate(_HAND)
-            _written(pg)
-            again2 = pg.evaluate(_HAND)
-            check("Pad: when the canvas is empty again (Undo), your hand writes them again from the start",
-                  bool(again) and bool(again2) and again["state"] == "writing" and again["d"] < again2["d"] * 0.7
-                  and again2["state"] == "done" and _inked(pg, again2["box"]) > 0.03,
-                  f"{again and (again['state'], again['d'])} at 300 ms, {again2 and (again2['state'], again2['d'])} written")
+            check("Pad: when the canvas is empty again (Undo), the words come back whole, not written again",
+                  bool(again) and late is not None and again["state"] == "done" and again["d"] == late["d"]
+                  and not any(r["state"] == "writing" for r in back) and _inked(pg, again["box"]) > 0.03,
+                  f"{again and (again['state'], again['d'])}; {sum(1 for r in back if r['state'] == 'writing')} frames writing")
         c.close()
     c = b.new_context(viewport={"width": 402, "height": 874}, color_scheme="dark", reduced_motion="reduce")
     pg = c.new_page()
@@ -781,27 +819,84 @@ with sync_playwright() as p:
     check("Reduce Motion: the words are there whole at once, not written",
           bool(now_) and now_["state"] == "done" and now_["d"] > 4000, str(now_ and (now_["state"], now_["d"])))
     c.close()
-    # THE FIRST-OPEN HELLO covers the canvas: under it your hand waits, blank,
-    # and writes once the hello has gone (lib/hello.js takes its element out).
+    # THE FIRST-OPEN HELLO covers the canvas, and is the one time your words
+    # write themselves (a welcome): under it the page's drawing waits unseen,
+    # and your hand writes it once the hello has gone (lib/hello.js takes its
+    # element out). The hello comes once on a device (its own key), so the
+    # next open has them simply there. Asked as a person meets it: the hello
+    # called for (window.__skriblHelloForce), not played again by ?hello=again.
     c = b.new_context(viewport={"width": 402, "height": 874}, color_scheme="dark")
+    c.add_init_script("window.__skriblHelloForce = true;")
+    c.add_init_script(_HAND_FRAMES)
     pg = c.new_page()
-    pg.goto(BASE + "/skribl-pad?hello=again")
+    # The module held back 0.6 s, so there are frames before it takes over, as
+    # on a slow open: the page's drawing must wait unseen through them too.
+    held = []
+    pg.route("**/lib/handwords.js*", lambda r: held.append(r))
+    pg.goto(BASE + "/skribl-pad", wait_until="commit")
+    t_go = time.monotonic()
     under, after = [], []
     for _ in range(140):
+        if held and time.monotonic() - t_go > 0.6:
+            for r in held:
+                r.continue_()
+            held.clear()
         r = pg.evaluate("() => { const s = document.querySelector('.canvas-empty-hand'); return { hello: !!document.getElementById('skriblHello'),"
-                        " state: s && s.getAttribute('data-state'), d: s ? (s.querySelector('path').getAttribute('d') || '').length : -1 }; }")
-        (under if r["hello"] else after).append((r["state"], r["d"]))
+                        " state: s && s.getAttribute('data-state'), d: s ? (s.querySelector('path').getAttribute('d') || '').length : -1,"
+                        " seen: s ? +getComputedStyle(s).opacity : 0 }; }")
+        (under if r["hello"] else after).append((r["state"], r["d"] if r["seen"] > 0.01 else 0))
         if any(st == "done" for st, _ in after):
             break
         pg.wait_for_timeout(100)
-    check("with the first-open hello on screen your hand waits, blank, and writes once the hello has gone",
-          bool(under) and all(d <= 0 for _, d in under) and any(st == "writing" for st, _ in after) and any(st == "done" for st, _ in after),
-          f"under the hello {sorted(set(under), key=str)[:3]}; after it {after[:4]} ... {after[-1:]}")
+    early = [(r["state"], r["d"]) for r in pg.evaluate("() => window.__handRows") if r["hello"] and r["seen"] > 0.01 and r["d"] > 0]
+    check("the first time on a device, under the hello the words wait unseen, and your hand writes them once it has gone",
+          bool(under) and all(d <= 0 for _, d in under) and not early and any(st == "writing" for st, _ in after) and any(st == "done" for st, _ in after),
+          f"under the hello (state, path seen) {sorted(set(under), key=str)[:3]}; frames they showed under it {len(early)} {early[:2]}; "
+          f"after it {after[:4]} ... {after[-1:]}")
+    for r in held:
+        r.continue_()
+    pg.unroute("**/lib/handwords.js*")
+    pg.goto(BASE + "/skribl-pad")
+    pg.wait_for_function("() => window.__skriblBoot && window.__skriblBoot.pad", timeout=30000)
+    _written(pg)
+    rows = pg.evaluate("() => window.__handRows")
+    nxt = pg.evaluate(_HAND)
+    comes = pg.evaluate("() => document.documentElement.hasAttribute('data-hello-comes')")
+    check("...once: the next open (the hello seen) has them simply there, never written",
+          not comes and bool(nxt) and nxt["state"] == "done" and nxt["d"] > 4000 and not any(r["state"] in ("writing", "waiting") for r in rows),
+          f"hello coming {comes}; {nxt and (nxt['state'], nxt['d'])}; states {sorted(set(str(r['state']) for r in rows))}")
     c.close()
-    # IF IT NEVER COMES (the module not served): the typed words wait unseen
+    # IF THE MODULE NEVER COMES (not served): the words are in the page, drawn
+    # whole, and nothing waits for it.
+    c = b.new_context(viewport={"width": 402, "height": 874}, color_scheme="dark")
+    c.route("**/lib/handwords.js*", lambda r: r.fulfill(status=404, body="", content_type="text/plain"))
+    pg = c.new_page()
+    browsing.goto(pg, BASE, "/skribl-pad")
+    pg.evaluate("() => window.SkriblHints && window.SkriblHints.hide && window.SkriblHints.hide()")
+    pg.wait_for_timeout(300)
+    s = pg.evaluate(_HAND)
+    ink = _inked(pg, s and s["box"])
+    check("if the module never comes, the words are still there: drawn into the page, whole, painted",
+          bool(s) and s["state"] is None and s["d"] > 4000 and s["said"] == "Draw anything" and ink > 0.02,
+          f"{s and (s['state'], s['d'], s['said'])}; ink {ink:.1%}")
+    c.close()
+    # A PAGE THAT DID NOT DRAW THEM (a template without the helper): the module
+    # draws them itself, whole, at once.
+    c = b.new_context(viewport={"width": 402, "height": 874}, color_scheme="dark")
+    c.route("**/skribl-pad", _undrawn())
+    pg = c.new_page()
+    browsing.goto(pg, BASE, "/skribl-pad")
+    _written(pg)
+    s = pg.evaluate(_HAND)
+    check("a page that did not draw them: the module draws them itself, whole at once, not written",
+          bool(s) and s["state"] == "done" and s["d"] > 4000 and s["said"] == "Draw anything",
+          str(s and (s["state"], s["d"], s["said"])))
+    c.close()
+    # ...AND IF THE MODULE NEVER COMES THERE EITHER: the typed words wait unseen
     # for it, then show on their own -- asked of the stylesheet's own clock.
     c = b.new_context(viewport={"width": 402, "height": 874}, color_scheme="dark")
     c.route("**/lib/handwords.js*", lambda r: r.fulfill(status=404, body="", content_type="text/plain"))
+    c.route("**/skribl-pad", _undrawn())
     pg = c.new_page()
     browsing.goto(pg, BASE, "/skribl-pad")
     pg.evaluate("() => window.SkriblHints && window.SkriblHints.hide && window.SkriblHints.hide()")
@@ -814,16 +909,13 @@ with sync_playwright() as p:
     pg.wait_for_timeout(200)
     s = pg.evaluate(_HINT, {"hint": "canvasEmptyHint", "cv": "#canvas"})
     ink = _inked(pg, s and s["box"])
-    check("if your hand never comes, the typed words wait unseen for it, then show on their own, painted",
+    check("...and if the module never comes there, the typed words wait unseen for it, then show on their own, painted",
           r.get("animation") and r["at600"] == 0 and r["at1600"] > 0.3 and not r["hand"] and ink > 0.02, f"{r} ink {ink:.1%}")
     c.close()
     # WORDS IT HAS NO RECORDING OF keep their typed letters, at once.
     c = b.new_context(viewport={"width": 402, "height": 874}, color_scheme="dark")
 
-    def _other_words(route):
-        r = route.fetch()
-        route.fulfill(response=r, body=r.text().replace("<span>Draw anything</span>", "<span>Draw something</span>"))
-    c.route("**/skribl-pad", _other_words)
+    c.route("**/skribl-pad", _undrawn("Draw something"))
     pg = c.new_page()
     browsing.goto(pg, BASE, "/skribl-pad")
     r = pg.evaluate("""() => { const h = document.getElementById('canvasEmptyHint'), t = h.firstElementChild, cs = getComputedStyle(t);
@@ -839,8 +931,8 @@ with sync_playwright() as p:
     fr = _compose(pg, "pad")
     seq = _first_look(pg, fr)
     on_at = next((i for i, (_, on) in enumerate(seq) if on), None)
-    check("in a site's post box, the first time: your hand writes the words, then the snail comes",
-          on_at is not None and seq[on_at][0] == "done" and any(st == "writing" for st, _ in seq[:on_at]),
+    check("in a site's post box, the first time: the words are there, already written, then the snail comes",
+          on_at is not None and seq[on_at][0] == "done" and not any(st == "writing" for st, _ in seq[:on_at]),
           f"{len(seq)} looks; the snail at {on_at}; the words then {seq[on_at][0] if on_at is not None else None}")
     pg.wait_for_timeout(5600)
     o = fr.evaluate(_ONCE)
@@ -944,17 +1036,20 @@ with sync_playwright() as p:
     # A SLOW FIRST OPEN (the owner: "it shows the old draw anything while it
     # loads"). Behind the editors' hundred-odd deferred scripts, the live site
     # wrote the words 5 to 9 s in, after the typed ones' 1.2 s safety net had
-    # shown them, and then took those away. The hand loads on its own now.
+    # shown them, and then took those away. Since the calm open the words are
+    # in the page itself, already written, from the first look.
     # Scripts here are HELD, not slowed: their requests wait until released.
     for route, name in (("/skribl-pad", "Pad"), ("/flip", "Flip")):
         c = b.new_context(viewport={"width": 402, "height": 874}, color_scheme="dark")
         pg = c.new_page()
-        looks = _slow_open(pg, route, "others", 3000, until=lambda l: l and l["hand"] == "done")
-        first = next((l for l in looks if l and l["hand"] != "-"), None)
+        looks = _slow_open(pg, route, "others", 3000, until=lambda l: l and l["hand"] == "done" and l["boot"])
+        first = next((l for l in looks if l), None)
         seen = max((l["typed"] for l in looks if l), default=0)
-        check(f"{name}, its scripts held back 3 s: your hand writes before the typed words' 1.2 s wait is out, and they never show",
-              bool(first) and first["t"] < 1.2 and not first["boot"] and seen == 0,
-              f"the hand at {first and first['t']} s (editor booted then: {first and first['boot']}); typed words at most {seen}")
+        wrote = [l["t"] for l in looks if l and l["hand"] == "writing"]
+        check(f"{name}, its scripts held back 3 s: the words are there already written from the first look, and typed ones never show",
+              bool(first) and not first["boot"] and first["d"] > 4000 and all(l["d"] == first["d"] for l in looks if l) and not wrote and seen == 0,
+              f"first look at {first and first['t']} s: {first and (first['hand'], first['d'])} (editor booted then: {first and first['boot']}); "
+              f"paths seen {sorted(set(l['d'] for l in looks if l))}; writing at {wrote[:3]}; typed words at most {seen}")
         c.close()
     c = b.new_context(viewport={"width": 402, "height": 874}, color_scheme="dark")
     pg = c.new_page()
@@ -963,17 +1058,14 @@ with sync_playwright() as p:
     # its script ran later than 1.2 s after release (main red after #796,
     # sqlite 6/6: no class yet at 3.2 s, the words still standing), and a
     # look that ends before the decision cannot tell "not yet" from "never".
-    looks = _slow_open(pg, "/skribl-pad", "hand", 2000,
-                       until=lambda l: l and l["t"] > 3.2 and ("is-typed" in l["cls"] or l["hand"] != "-"))
-    shown_at = next((l["t"] for l in looks if l and l["typed"] > 0.3), None)
-    after = [l for l in looks if l and shown_at is not None and l["t"] > shown_at]
-    kept_at = next((l["t"] for l in after if "is-typed" in l["cls"]), None)
-    check("...and where they had shown first (the hand's own file late), they stay: no swap",
-          shown_at is not None and shown_at < 2.0 and bool(after) and all(l["typed"] > 0.3 and l["hand"] == "-" for l in after)
-          and "is-typed" in after[-1]["cls"],
-          f"typed shown at {shown_at} s; after it: hand {sorted(set(l['hand'] for l in after))}, "
-          f"typed at least {min((l['typed'] for l in after), default=None)}, kept (is-typed) at {kept_at} s, "
-          f"class {after[-1]['cls'] if after else None}")
+    looks = _slow_open(pg, "/skribl-pad", "hand", 2000, until=lambda l: l and l["t"] > 3.2 and l["hand"] == "done")
+    first = next((l for l in looks if l), None)
+    took = next((l["t"] for l in looks if l and l["hand"] == "done"), None)
+    check("...and the hand's own file held back 2 s: the words are there, whole, all along, and it takes them over as they are",
+          bool(first) and first["d"] > 4000 and all(l["d"] == first["d"] and l["typed"] == 0 and l["hand"] in ("page", "done") for l in looks if l)
+          and took is not None and took >= 2.0,
+          f"first look {first and (first['t'], first['hand'], first['d'])}; states {sorted(set(l['hand'] for l in looks if l))}; "
+          f"paths {sorted(set(l['d'] for l in looks if l))}; taken over at {took} s")
     c.close()
     # The snail waits for the editor: the Pad's canvas moved 11 px when its
     # scripts ran, and Flip's stage was 154 px tall until flip.js laid it out.
@@ -988,6 +1080,74 @@ with sync_playwright() as p:
               bool(o) and o["on"] and 20 <= o["above"] <= 40 and abs(o["centre"]) <= 2,
               str(o and {k: o[k] for k in ("on", "above", "centre", "box")}))
         c.close()
+
+    # THE PEN HOPS WHEN YOU HAD TO WAIT FOR IT (lib/penswoosh.js; the calm
+    # open): one tiny hop as the editor is ready, when that was more than a
+    # second after the page began; on an everyday open, nothing moves. Asked
+    # of the pen button's place on every frame. Automation meets it only when
+    # it asks (window.__skriblHopForce), so these ask, but one.
+    _PEN = """(() => { const rows = []; window.__penRows = rows; const tick = (t) => { const b = document.getElementById('penToolBtn');
+        if (b) rows.push([Math.round(t), +b.getBoundingClientRect().top.toFixed(2)]); if (rows.length < 900) requestAnimationFrame(tick); };
+      requestAnimationFrame(tick); })();"""
+    _BOOTED = "() => !!(window.__skriblBoot && (window.__skriblBoot.pad || window.__skriblBoot.flip))"
+
+    def _hop(route, force=True, held_ms=1500, reduce=False, hello=False):
+        """The pen button on every frame of an open: HELD_MS > 0 holds the editor's
+        own script back that long (a wait); 0 is an everyday open, the second
+        visit, its files from the cache. {"up", "down" (px), "ms" in the air, "ready" ms}."""
+        c = b.new_context(viewport={"width": 402, "height": 874}, color_scheme="dark", reduced_motion="reduce" if reduce else "no-preference")
+        if hello:
+            c.add_init_script("window.__skriblHelloForce = true;")
+        else:
+            c.add_init_script("try { localStorage.setItem('skribl.hello.v2', '1'); } catch (e) {}")
+        if force:
+            c.add_init_script("window.__skriblHopForce = true;")
+        c.add_init_script(_PEN)
+        pg = c.new_page()
+        if held_ms:
+            held, free = [], [False]
+
+            def _gate(r):
+                if free[0]:
+                    r.continue_()
+                else:
+                    held.append(r)
+            pg.route("**/static/skribl/app.js*", _gate)
+            pg.route("**/static/skribl/flip.js*", _gate)
+            pg.goto(BASE + route, wait_until="commit")
+            pg.wait_for_timeout(held_ms)
+            free[0] = True
+            for r in held:
+                r.continue_()
+        else:
+            pg.goto(BASE + route)
+            pg.wait_for_function(_BOOTED, timeout=30000)
+            pg.goto("about:blank")
+            pg.goto(BASE + route)
+        pg.wait_for_function(_BOOTED, timeout=30000)
+        pg.wait_for_timeout(900)
+        rows = pg.evaluate("() => window.__penRows")
+        ready = pg.evaluate("() => Math.round(performance.getEntriesByType('navigation')[0].domContentLoadedEventStart)")
+        c.close()
+        rest = rows[-1][1]
+        air = [t for t, y in rows if abs(y - rest) > 0.25]
+        return {"up": round(rest - min(y for _, y in rows), 2), "down": round(max(y for _, y in rows) - rest, 2),
+                "ms": (air[-1] - air[0]) if air else 0, "ready": ready}
+    for route, name in (("/skribl-pad", "Pad"), ("/flip", "Flip")):
+        h = _hop(route)
+        check(f"{name}, an open that made you wait (its script held 1.5 s): the pen gives one tiny hop as it is ready, and is home within half a second",
+              4 <= h["up"] <= 6 and h["down"] <= 1.5 and 100 <= h["ms"] <= 500 and h["ready"] > 1000, str(h))
+        h = _hop(route, held_ms=0)
+        check(f"{name}, an everyday open (the second visit, its files already here): nothing moves (a hop only after a second's wait)",
+              (h["up"] == 0 and h["down"] == 0) if h["ready"] <= 1000 else h["up"] >= 4, str(h))
+    h = _hop("/flip", reduce=True)
+    check("Reduce Motion: no hop, even after a wait", h["up"] == 0 and h["down"] == 0 and h["ready"] > 1000, str(h))
+    h = _hop("/skribl-pad", hello=True)
+    check("under the first-open hello: no hop (the hello is the welcome, and the words write themselves)",
+          h["up"] == 0 and h["down"] == 0 and h["ready"] > 1000, str(h))
+    h = _hop("/skribl-pad", force=False)
+    check("automation that does not ask never meets it, so nothing else measures the pen in the air",
+          h["up"] == 0 and h["down"] == 0 and h["ready"] > 1000, str(h))
     b.close()
 
 print("\nBLOOBY CHEERS — once a drawing has posted, on the Posted! band, in both editors")

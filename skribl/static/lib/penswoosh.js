@@ -193,5 +193,39 @@
     return repaint;
   }
 
+  /* THE PEN HOPS WHEN YOU HAD TO WAIT FOR IT (the owner's "calm open": "it
+   * has to be subtle cuz it happens a lot"; then "Yes calm"). An open that
+   * takes a while is the one moment worth a word that the editor is ready,
+   * so the pen gives one tiny hop then: up 5px, a hair below, home, in under
+   * half a second. On an everyday open (the files already on the device, the
+   * editor ready in a fraction of a second) nothing moves at all. The same on
+   * the Pad and Flip, both of which carry this file.
+   *
+   * READY is DOMContentLoaded: it fires once every deferred script has run,
+   * and each editor's last one sets its boot mark (__skriblBoot) as it ends.
+   * A WAIT is that moment more than WAIT ms after the page began.
+   * NOT: under Reduce Motion; while the first-open hello is up (it is the
+   * welcome there, and your words write themselves as it goes); once a stroke
+   * has begun. Automation never meets it unless it asks
+   * (window.__skriblHopForce, as the hello and the snail), so no measurement
+   * elsewhere catches the button in the air; window.__skriblHopWait sets the
+   * wait for a check of it. */
+  var WAIT = 1000;
+  function hop() {
+    var b = document.getElementById('penToolBtn');
+    if (!b || !b.animate) return;
+    if (navigator.webdriver && window.__skriblHopForce !== true) return;
+    var wait = typeof window.__skriblHopWait === 'number' ? window.__skriblHopWait : WAIT;
+    if (performance.now() <= wait) return;
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    // The hello is coming when the head said so and its element is still here (lib/hello.js).
+    if (document.documentElement.hasAttribute('data-hello-comes') && document.getElementById('skriblHello')) return;
+    if (document.body && document.body.classList.contains('stroking')) return;
+    b.animate([{ translate: '0 0' }, { translate: '0 -5px', offset: 0.38 }, { translate: '0 1px', offset: 0.72 }, { translate: '0 0' }],
+              { duration: 380, easing: 'cubic-bezier(.3,.7,.4,1)' });
+  }
+  // A deferred script runs before DOMContentLoaded (the page is 'interactive' by then, not 'loading').
+  if (document.readyState !== 'complete') document.addEventListener('DOMContentLoaded', hop, { once: true });
+
   window.SkriblPenSwoosh = { paint: paint, scrub: scrub, wire: wire };
 })();

@@ -204,6 +204,68 @@ def build_id(bp):
     return cached[1]
 
 
+_HAND_CACHE = {}
+
+
+def _js_num(v):
+    """A number as JavaScript writes it into a string (57.0 is "57")."""
+    v = float(v)
+    return str(int(v)) if v.is_integer() else repr(v)
+
+
+def hand_words(bp, text):
+    """THE WORDS ALREADY WRITTEN (the owner's "calm open": "it has to be subtle
+    cuz it happens a lot. And the letters drawing themselves is already
+    starting to get annoying. I like the font though."): the empty canvas's
+    words drawn whole in the owner's hand, for the editors to put straight into
+    the page, so they are there on the first frame with no script to wait for.
+
+    Drawn from lib/handwords.js's own recording (the line between MARK:BEGIN
+    and MARK:END, harness/tools/make_handwords.py's), point for point the path
+    that module draws when the words are whole, so one recording serves both
+    and the module takes over the drawing it finds without a pixel moving.
+    Returns {"svg": the drawing, "width": its px} or None for words it has no
+    recording of (or a file it cannot read): those keep their typed letters."""
+    from markupsafe import Markup, escape
+    path = os.path.join(bp.static_folder, "lib", "handwords.js")
+    try:
+        st = os.stat(path)
+    except OSError:
+        return None
+    cached = _HAND_CACHE.get(path)
+    if cached is None or cached[0] != (st.st_mtime_ns, st.st_size):
+        import json
+        import re
+        words, scale = {}, 0.31
+        try:
+            with open(path, encoding="utf-8") as fh:
+                src = fh.read()
+            line = src.split("// MARK:BEGIN", 1)[1].split("\n", 2)[1].strip()
+            words = json.loads(line[len("var WORDS = "):].rstrip(";"))
+            m = re.search(r"var SCALE = ([\d.]+);", src)
+            scale = float(m.group(1)) if m else scale
+        except (IndexError, ValueError):
+            words = {}
+        drawn = {}
+        for said, mark in words.items():
+            d = []
+            for s in mark["strokes"]:
+                d.append(f"M{_js_num(s[0])} {_js_num(s[1])}")
+                if len(s) == 3:
+                    d.append(f"L{_js_num(s[0])} {_js_num(s[1])}")    # a stroke of one point is a dot
+                    continue
+                for j in range(3, len(s), 3):
+                    d.append(f"L{_js_num(s[j])} {_js_num(s[j + 1])}")
+            w, h = mark["box"]
+            svg = (f'<svg class="canvas-empty-hand" viewBox="0 0 {_js_num(w)} {_js_num(h)}" aria-hidden="true" focusable="false">'
+                   f'<path fill="none" stroke="currentColor" stroke-width="{_js_num(mark["size"])}" stroke-linecap="round" '
+                   f'stroke-linejoin="round" d="{"".join(d)}"/></svg><span class="vis-hidden">{escape(said)}</span>')
+            drawn[said] = {"svg": Markup(svg), "width": round(w * scale)}
+        cached = ((st.st_mtime_ns, st.st_size), drawn)
+        _HAND_CACHE[path] = cached
+    return cached[1].get(text)
+
+
 def create_blueprint(session=None, url_prefix=None,
                      static_url_path="/static/skribl", current_user_id=None,
                      csrf=None, media_store=None, index_route=False,
@@ -431,7 +493,10 @@ def create_blueprint(session=None, url_prefix=None,
                 # not the id: templates only ever need to pick which sentence
                 # is true, and putting a user id into every rendered page is a
                 # disclosure nothing here asks for.
-                "skribl_signed_in": bp.skribl_current_user_id() is not None}
+                "skribl_signed_in": bp.skribl_current_user_id() is not None,
+                # The empty canvas's words, already written in the owner's
+                # hand (hand_words above; lib/handwords.js takes them over).
+                "skribl_hand_words": lambda text: hand_words(bp, text)}
     register_routes(bp, index_route=index_route)
     register_security(bp, SKRIBL_VERSION, player_target=player_target, home=home)
     return bp

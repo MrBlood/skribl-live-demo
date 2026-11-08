@@ -3599,13 +3599,15 @@ with sync_playwright() as _ip:
         _ic.add_init_script(_RAF_COUNT)
         _ipg = _ic.new_page()
         browsing.goto(_ipg, BASE, "/")
-        # YOUR HAND WRITES THE WORDS FIRST (lib/handwords.js): an empty Pad
-        # draws "Draw anything" a frame at a time for about two seconds, then
-        # stops. settle() gives up at its deadline, so the idle second used to
-        # count the hand's last frames (12 in main's run after #791). Wait for
-        # the words to be written, then count: left alone after its first
-        # look, the page still has to go quiet. No hand (the module missing,
-        # or words it has no recording of) is nothing to wait for.
+        # YOUR HAND'S WORDS FIRST (lib/handwords.js): an empty Pad used to
+        # draw "Draw anything" a frame at a time for about two seconds, and
+        # settle() gave up at its deadline, so the idle second counted the
+        # hand's last frames (12 in main's run after #791). Since the calm open
+        # the words are in the page already written and the module only takes
+        # them over ('done'); under the first-open hello they are still
+        # written. Wait for that, then count: left alone after its first look,
+        # the page still has to go quiet. No hand (the module missing, or
+        # words it has no recording of) is nothing to wait for.
         _wrote = waits.until(_ipg, """() => { const s = document.querySelector('#canvasEmptyHint .canvas-empty-hand');
             return !s || s.getAttribute('data-state') === 'done'; }""", "your hand's words written", ms=10000)
         waits.settle(_ipg, 1500)
