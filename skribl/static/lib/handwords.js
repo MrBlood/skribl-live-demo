@@ -26,7 +26,9 @@
  * THE SNAIL, ONCE, IN A SITE'S POST BOX, where the hello never plays: after
  * the words, How it works' snail (Flip: the bouncing ball) draws itself
  * faintly above them and rests, and the first stroke sweeps it away. Once per
- * device, as the hello is (?once=again plays it again); the templates add
+ * device in each editor, as the hello is once (?once=again plays it again):
+ * a post box opens on the Pad and Flip is its ⋯ row away, so one mark for
+ * both spent the snail's once and the ball never came. The templates add
  * it in compose mode only (_skribl_hint_once.html), and automation never
  * meets it unless it asks (window.__skriblOnceForce), as with the hello.
  * Played by the in-post player, fetched only then.
@@ -159,7 +161,9 @@
   }).observe(hint, { attributes: true, attributeFilter: ['class'] });
 
   /* ---- the snail, once, in a site's post box ---- */
-  var once = document.getElementById('hintOnce'), KEY = 'skribl.once.v1', player = null, began = false, shape = null;
+  // One mark each: the Pad keeps the one it has always had, Flip has its own.
+  var once = document.getElementById('hintOnce'), KEY = 'skribl.once.v1' + (hint.id === 'flipEmptyHint' ? '.flip' : ''),
+      player = null, began = false, shape = null;
   function after() {
     if (!once || began || !shown) return;
     // As the hello: ?once=again plays it seen or not; automation meets it

@@ -594,6 +594,31 @@ def _in_page(pg, box):
     return [box[0] + f[0], box[1] + f[1], box[2], box[3]]
 
 
+def _reopened(pg, ed):
+    """The post box's editor opened again (its frame reloaded), once the NEW
+    page has booted and your hand has written the words. The page being left
+    keeps its boot mark until the new one replaces it, so a wait for the mark
+    alone can pass on the old page and read the new one too early: a "does not
+    come" row that cannot go red. Marking the old page first rules that out."""
+    pg.evaluate("() => { const w = document.getElementById('padFrame').contentWindow; w.__skStale = 1; w.location.reload(); }")
+    pg.wait_for_function("(ed) => { const w = document.getElementById('padFrame').contentWindow; return !!(w && !w.__skStale"
+                         " && w.__skriblBoot && w.__skriblBoot[ed] && w.document.readyState === 'complete'); }", arg=ed, timeout=30000)
+    fr = next(f for f in pg.frames if "compose=1" in f.url)
+    _written(fr)
+    return fr
+
+
+def _stays_away(pg, fr, ms=3000):
+    """The snail's state MS after the words are written, or the moment it
+    shows: where it would come, it is on within a second of them."""
+    for _ in range(ms // 100):
+        o = fr.evaluate(_ONCE)
+        if o and o["on"]:
+            return o
+        pg.wait_for_timeout(100)
+    return fr.evaluate(_ONCE)
+
+
 def _first_look(pg, fr):
     """The words' state and the snail's, every 50 ms until the snail shows."""
     seq = []
@@ -731,15 +756,27 @@ with sync_playwright() as p:
     swept = _inked(pg, _in_page(pg, o and o["box"]))
     check("...and the first stroke sweeps it away",
           bool(o2) and not o2["on"] and o2["hidden"] and swept < 0.005, f"{o2 and (o2['on'], o2['hidden'])}; drawn {swept:.1%}")
-    fr.evaluate("() => location.reload()")
-    pg.wait_for_function("() => { const w = document.getElementById('padFrame').contentWindow;"
-                         " return !!(w && w.__skriblBoot && w.__skriblBoot.pad); }", timeout=30000)
-    fr = next(f for f in pg.frames if "compose=1" in f.url)
-    _written(fr)
-    pg.wait_for_timeout(1500)
-    o3 = fr.evaluate(_ONCE)
+    fr = _reopened(pg, "pad")
+    o3 = _stays_away(pg, fr)
     check("...once on a device: opened again, it does not come",
           bool(o3) and not o3["on"] and o3["hidden"], str(o3 and (o3["on"], o3["hidden"])))
+    # ONE EACH. A post box opens on the Pad and Flip is its ⋯ row away, so
+    # with one mark for both the snail spent the ball's once and the ball never
+    # came there (the owner: "I don't see snail or ball"). Same device, same
+    # post box: the snail seen, Flip still has its ball, once.
+    fr.evaluate("() => { location.href = '/flip?compose=1'; }")
+    pg.wait_for_function("() => { const w = document.getElementById('padFrame').contentWindow;"
+                         " return !!(w && w.__skriblBoot && w.__skriblBoot.flip && /flip/.test(w.location.pathname)); }", timeout=30000)
+    fr = next(f for f in pg.frames if "/flip" in f.url and "compose=1" in f.url)
+    seq = _first_look(pg, fr)
+    o4 = fr.evaluate(_ONCE)
+    check("...and the snail seen, Flip in the same post box still has its ball",
+          bool(seq) and seq[-1][1] and bool(o4) and o4["src"] == "hint-ball.json",
+          f"{seq[-1:]}; {o4 and (o4['on'], o4['hidden'], o4['src'])}")
+    fr = _reopened(pg, "flip")
+    o5 = _stays_away(pg, fr)
+    check("...once too: Flip opened again, the ball does not come",
+          bool(o5) and not o5["on"] and o5["hidden"], str(o5 and (o5["on"], o5["hidden"])))
     c.close()
     c = b.new_context(viewport={"width": 402, "height": 874}, color_scheme="dark")
     c.add_init_script("window.__skriblOnceForce = true;")
