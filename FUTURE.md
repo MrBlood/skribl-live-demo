@@ -1951,12 +1951,39 @@ Render, so the lasting fix belongs to Pad and Flip themselves.
 - **DONE:** your hand loads on its own and writes from about 0.2 s (DECISIONS:
   "Your hand loads on its own"). The live demo's gunicorn answers 8 requests
   at once instead of one (`gunicorn.conf.py`).
-- **THE PLAN, the owner's "all yes":**
-  1. Measure a first open at a slow phone's speed, both editors: what loads,
-     how long the phone spends starting up, and when it can draw.
-  2. Fewer files: the ~115 scripts as a handful, on any host.
-  3. The heavy drawers (music, the Text tool, export) load when first opened.
-  4. Trim the start-up work the measurement shows.
+- **THE BASELINE** (Nov 8, the local server, a cold cache, a slow phone: the
+  CPU slowed 4x and a 1.6 Mbps network with 150 ms round trips;
+  `harness/tools/firstopen.py`, three runs each, medians):
+
+  | first open    | files | downloaded | first paint | ready to draw | phone busy |
+  |---------------|-------|------------|-------------|---------------|------------|
+  | Pad           | 122   | 508 KB     | 0.8 s       | 4.5 s         | 1.5 s      |
+  | Flip          | 116   | 529 KB     | 0.9 s       | 5.4 s         | 1.7 s      |
+  | post box Pad  | 121   | 480 KB     | 0.8 s       | 5.1 s         | 1.6 s      |
+
+  About two thirds of it is waiting on the network (the trips and the
+  bytes), and a third is the phone working through the scripts. Both have to
+  shrink.
+- **WHAT "INSTANT" MEANS** (owner, Nov 8: "Do you have a bigger picture plan
+  to make it load instantly eventually?"):
+  - Every visit after the first is truly instant: under half a second, even
+    offline, from the phone's own copy.
+  - The very first visit feels instant: the canvas and your hand's words in
+    under half a second, and ready to draw by the time the words finish
+    (about 2 s).
+- **THE PLAN, biggest payoff first** (1 and 2 are the owner's "all yes"; 3 to 5
+  change when things appear, so each is measured and shown first):
+  1. Measure, and keep a speed budget: a check that fails when a first open
+     grows past it.
+  2. Fewer files: each editor's ~115 scripts as one or two, on any host.
+  3. Load what drawing needs first: the canvas, the pen, undo and saving.
+     Music, the Text tool, export, Tune and the help cards load quietly right
+     after, usually before anyone reaches for them.
+  4. Keep a copy on the phone (the Home Screen app's service worker): later
+     opens are instant and work offline, and an update downloads in the
+     background for next time.
+  5. Inside skribls.net, start loading the moment a finger touches the Skribl
+     button, and serve the files from the site's own fast network.
 
 ## 7. The honest state
 

@@ -53,7 +53,9 @@ bounce three times by its own loop, then the splat, to `hint-ball.json`.
 `cssgraph.py` emits `player.css` (run it after any `styles.css` change — the
 command is in WORKING-AGREEMENTS.md), `editordup.py` measures what Pad and Flip
 still duplicate, and `mainwatch.py` reads main's battery for the CI job that
-opens an issue on red. The rest are below.
+opens an issue on red. `firstopen.py` times a first open of each editor at a
+slow phone's speed (files, bytes, first paint, ready to draw, the phone's busy
+time; FUTURE.md 6af). The rest are below.
 
 ## refgraph.js
 
