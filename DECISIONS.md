@@ -31168,7 +31168,9 @@ under the hello it is blank and writes after. The rows that pinned "the words
 alone" now pin no picture (still none) and the words at the middle. CALIBRATED,
 each in a copy of the tree with its own server: the Pad not loading it (the
 Pad's rows, the colour, motion and hello rows), Flip not loading it (Flip's
-three), no watch on the words (Undo), the stroke in the column (the words off
+three), no watch on the words (Undo, and the pink pen, which the rows write
+afresh by hiding and showing the words as the editors do), the stroke in the
+column (the words off
 the middle on both editors), always purple (pink), no fallback (dark on dark),
 Reduce Motion ignored, no wait for the hello, the stroke outside the words
 (every stroke row). The copy as it is: 96/96.
