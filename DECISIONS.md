@@ -31180,3 +31180,37 @@ simple (one stroke), powerful (a replay in miniature, in your own ink),
 playful (the little loop).
 
 Not tested here: WebKit (the owner's iPhone, Safari and Chrome), SF or Segoe UI.
+
+## After v330 -- The empty canvas has its words alone again, until the owner's pick is built
+
+B (#788, above) was built on a question. The owner had written "it's gonna
+happen everytime so it should be subtle but magic right", and that "right"
+was taken as a yes. The owner: "I wanted to okay it before you changed it. I
+want something different." Then: "Show me all of your ideas."
+
+The "Empty canvas ideas" mock filmed seven on the real Pad beside the words
+alone and B: E, "Draw anything" writing itself in the owner's Skribl hand; F,
+a little doodle that changes each visit; A, the snail once; A2, a small snail
+every time that fades by itself; C, the mark from the hello, small; D, your
+last drawing, faint; G, "Watch one being drawn" on a tap. The owner: "I'm
+liking your hand and the mark and the snail ideas. What do you think?" The
+answer: all three, but each at its own moment (your hand every time, the
+snail once inside a site's post box where the hello never plays, the mark
+stays the hello). The owner: "Film it, all yes", and the last of those yeses
+was to put the canvas back as it was before B today, until the pick is built
+(FUTURE.md 6ae).
+
+- THE WORDS ALONE, as before #788: Pad "Draw anything / Skribl records as you
+  go — post it and it replays", Flip "Draw page 1 / Add pages below — they
+  flip into an animation".
+- GONE WITH B: the stroke's module, the tool that recorded it, its rule in
+  styles.css (player.css unchanged) and its eleven rows in verify_identity;
+  the rows that pinned "the words alone" read as they did. Every one of those
+  files is byte for byte the tree before #788 (70c9e08^).
+- HOW WE WORK: a question is not an OK (WORKING-AGREEMENTS.md, "How decisions
+  happen").
+- LATER, IF NEEDED: the changing doodle ("I like the spiral"), which "would
+  need tons of Skribls to keep them fresh" (FUTURE.md 6ae).
+
+THE FOUR: kind (the owner's canvas is the one they approved), simple (the words
+alone), powerful and playful (wait for the pick).

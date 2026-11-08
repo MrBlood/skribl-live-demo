@@ -389,21 +389,19 @@ with sync_playwright() as p:
     b.close()
 
 # --------------------------------------------------------------------------
-print("\nBLOOBY AROUND THE APP — no picture on an empty canvas, Blooby thinking where something can't be shown")
+print("\nBLOOBY AROUND THE APP — the words alone on an empty canvas, Blooby thinking where something can't be shown")
 # THE OWNER'S PICKS from the Blooby mock: where a link's drawing can't be
 # shown, and where the Library's list didn't load, Blooby thinking, his
 # question mark, where the circled ! and the crossed cloud were. Each is the
 # badge blooby.py draws, the Home Screen icon in small with the whole star, so
 # his own lilac comes with him onto any ground. Asked of what is PAINTED: the
 # share of the picture's box that is his lilac and purple, in a screenshot.
-# THE EMPTY CANVAS HAS NO PICTURE: Blooby with his pen stood above the words
+# THE EMPTY CANVAS HAS THE WORDS ALONE: Blooby with his pen stood above them
 # (#474) until the owner took him off after v323 ("It's too much"), on the Pad
-# and Flip; since the owner's B ("subtle but magic") one stroke writes itself
-# under them (THE EMPTY CANVAS'S ONE STROKE, below). Asked of the hint itself
-# (no picture in it), of its words' place (the canvas's middle; 40px below it
-# while he stood there) and of their ink, in a screenshot: the hint takes no
-# pointer events, so elementFromPoint sees straight through it. They leave at
-# the first stroke.
+# and Flip. Asked of the hint itself (no picture in it), of its words' place
+# (the canvas's middle; 40px below it while he stood there) and of their ink,
+# in a screenshot: the hint takes no pointer events, so elementFromPoint sees
+# straight through it. They leave at the first stroke.
 _SHOWN = """(sel) => { const i = document.querySelector(sel); if (!i) return null;
     i.scrollIntoView({ block: 'center' }); const r = i.getBoundingClientRect();
     return { src: (i.getAttribute('src') || '').split('?')[0].split('/').pop(),
@@ -452,7 +450,7 @@ with sync_playwright() as p:
         pg.wait_for_timeout(400)
         s = pg.evaluate(_HINT, {"hint": "canvasEmptyHint", "cv": "#canvas"})
         ink = _inked(pg, s and s["box"])
-        check(f"Pad, {theme}: 'Draw anything' on the empty canvas with no picture, painted at its middle",
+        check(f"Pad, {theme}: 'Draw anything' alone on the empty canvas, painted at its middle",
               bool(s) and s["pictures"] == 0 and s["off"] is not None and abs(s["off"]) <= 3 and ink > 0.02,
               f"{s} ink {ink:.1%}")
         if theme == "light":
@@ -474,7 +472,7 @@ with sync_playwright() as p:
     pg.wait_for_timeout(400)
     s = pg.evaluate(_HINT, {"hint": "flipEmptyHint", "cv": "#pad"})
     ink = _inked(pg, s and s["box"])
-    check("Flip: 'Draw page 1' the same way, no picture, painted at the canvas's middle",
+    check("Flip: 'Draw page 1' alone the same way, painted at the canvas's middle",
           bool(s) and s["pictures"] == 0 and s["off"] is not None and abs(s["off"]) <= 3 and ink > 0.02,
           f"{s} ink {ink:.1%}")
     c.close()
@@ -506,133 +504,6 @@ with sync_playwright() as p:
     share = _lilac(pg, s and s["box"])
     check("the Library when its list didn't load: the same thinking Blooby, painted",
           bool(s) and s["src"] == "blooby-think.webp" and s["done"] and share > 0.5, f"{s} lilac {share:.0%}")
-    c.close()
-    b.close()
-
-print("\nTHE EMPTY CANVAS'S ONE STROKE — it writes itself under the words, every time, in the pen's colour")
-# The owner's B after the "Skribl's first look" mock: "it's gonna happen every
-# time so it should be subtle but magic" (lib/hintstroke.js). A recording made
-# through the real Pad (harness/tools/make_hintstroke.py), drawn on a small
-# canvas under the smaller line. Asked of its own pixels while it writes (the
-# ink grows), of what is PAINTED where it sits (its box in a screenshot: ink
-# at rest, none once the first stroke is down), of its place (under the words,
-# centred on the canvas) and of its colour; on the Pad and Flip.
-_STROKE = """() => { const h = document.getElementById('canvasEmptyHint') || document.getElementById('flipEmptyHint');
-    const c = h && h.querySelector('.canvas-empty-stroke'); if (!c) return null;
-    const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let n = 0, r = 0, g = 0, bl = 0;
-    for (let i = 3; i < d.length; i += 4) if (d[i] > 200) { n++; r += d[i - 3]; g += d[i - 2]; bl += d[i - 1]; }
-    const cr = c.getBoundingClientRect(), sr = h.querySelector('.canvas-empty-sub').getBoundingClientRect();
-    const cv = (document.getElementById('canvas') || document.getElementById('pad')).getBoundingClientRect();
-    return { ink: n, rgb: n ? [Math.round(r / n), Math.round(g / n), Math.round(bl / n)] : null,
-             box: [cr.left, cr.top, cr.width, cr.height], below: Math.round(cr.top - sr.bottom),
-             centre: Math.round((cr.left + cr.width / 2) - (cv.left + cv.width / 2)) }; }"""
-
-
-def _near(rgb, want, tol=24):
-    return bool(rgb) and all(abs(rgb[i] - want[i]) <= tol for i in range(3))
-
-
-def _rewrite(pg):
-    """The words hide and show again, as the editors do it (the class they set):
-    the stroke writes from the start. Two steps, so the module sees both."""
-    h = "(document.getElementById('canvasEmptyHint') || document.getElementById('flipEmptyHint'))"
-    pg.evaluate(f"() => {h}.classList.add('hidden')")
-    pg.wait_for_timeout(60)
-    pg.evaluate(f"() => {h}.classList.remove('hidden')")
-
-
-def _scribble(pg, sel):
-    """A short stroke low on the canvas, as a finger would make it."""
-    cv = pg.locator(sel).bounding_box()
-    x, y = cv["x"] + cv["width"] * 0.25, cv["y"] + cv["height"] * 0.8
-    pg.mouse.move(x, y); pg.mouse.down()
-    for k in range(1, 10):
-        pg.mouse.move(x + cv["width"] * 0.05 * k, y - 3 * k)
-    pg.mouse.up()
-
-
-with sync_playwright() as p:
-    b = p.chromium.launch()
-    for route, name, sel in (("/skribl-pad", "Pad", "#canvas"), ("/flip", "Flip", "#pad")):
-        c = b.new_context(viewport={"width": 402, "height": 874}, color_scheme="dark")
-        pg = c.new_page()
-        browsing.goto(pg, BASE, route)
-        pg.evaluate("() => window.SkriblHints && window.SkriblHints.hide && window.SkriblHints.hide()")
-        _rewrite(pg)
-        pg.wait_for_timeout(150)
-        early = pg.evaluate(_STROKE)
-        pg.wait_for_timeout(1300)
-        late = pg.evaluate(_STROKE)
-        painted = _inked(pg, late and late["box"])
-        check(f"{name}: one stroke writes itself under the words (its ink grows as it writes) and stays, painted",
-              bool(early) and bool(late) and 0 < early["ink"] < late["ink"] * 0.6 and late["ink"] > 300 and painted > 0.03,
-              f"ink {early and early['ink']} at 150 ms, {late and late['ink']} at 1450 ms; painted {painted:.1%}")
-        check(f"{name}: ...under the smaller line, centred on the canvas",
-              bool(late) and 0 <= late["below"] <= 12 and abs(late["centre"]) <= 2, str(late and {k: late[k] for k in ("below", "centre")}))
-        _scribble(pg, sel)
-        pg.wait_for_timeout(700)
-        gone = _inked(pg, late and late["box"])
-        check(f"{name}: ...and it goes with the words at the first stroke",
-              bool(late) and gone < 0.005, f"painted {gone:.1%} after a stroke")
-        if name == "Pad":
-            pg.click("#undoBtn")
-            pg.wait_for_timeout(150)
-            again = pg.evaluate(_STROKE)
-            pg.wait_for_timeout(1300)
-            again2 = pg.evaluate(_STROKE)
-            check("Pad: when the canvas is empty again (Undo), it writes again from the start",
-                  bool(again) and bool(again2) and again["ink"] < again2["ink"] * 0.6 and again2["ink"] > 300
-                  and _inked(pg, again2["box"]) > 0.03,
-                  f"ink {again and again['ink']} at 150 ms, {again2 and again2['ink']} at 1450 ms")
-        c.close()
-    c = b.new_context(viewport={"width": 402, "height": 874}, color_scheme="dark")
-    pg = c.new_page()
-    browsing.goto(pg, BASE, "/skribl-pad")
-    pg.evaluate("() => window.SkriblHints && window.SkriblHints.hide && window.SkriblHints.hide()")
-    pg.evaluate("() => { color = '#ff6f91'; }")
-    _rewrite(pg)
-    pg.wait_for_timeout(1300)
-    pink = pg.evaluate(_STROKE)
-    check("Pad: it writes in the pen's colour (a pink pen, a pink stroke)",
-          bool(pink) and _near(pink["rgb"], (255, 111, 145)), str(pink and pink["rgb"]))
-    pg.evaluate("() => { color = '#14161c'; }")
-    _rewrite(pg)
-    pg.wait_for_timeout(1300)
-    dark = pg.evaluate(_STROKE)
-    check("...and a pen that would not show on the ground (dark on dark) writes in Skribl purple",
-          bool(dark) and _near(dark["rgb"], (124, 92, 255)), str(dark and dark["rgb"]))
-    c.close()
-    c = b.new_context(viewport={"width": 402, "height": 874}, color_scheme="dark", reduced_motion="reduce")
-    pg = c.new_page()
-    browsing.goto(pg, BASE, "/skribl-pad")
-    pg.evaluate("() => window.SkriblHints && window.SkriblHints.hide && window.SkriblHints.hide()")
-    _rewrite(pg)
-    pg.wait_for_timeout(30)
-    now_ = pg.evaluate(_STROKE)
-    pg.wait_for_timeout(1300)
-    then_ = pg.evaluate(_STROKE)
-    check("Reduce Motion: the stroke is there whole at once, not written",
-          bool(now_) and bool(then_) and then_["ink"] > 300 and now_["ink"] >= then_["ink"] * 0.95,
-          f"ink {now_ and now_['ink']} at 30 ms, {then_ and then_['ink']} at 1330 ms")
-    c.close()
-    # THE FIRST-OPEN HELLO covers the canvas: under it the stroke waits, blank,
-    # and writes once the hello has gone (lib/hello.js takes its element out).
-    c = b.new_context(viewport={"width": 402, "height": 874}, color_scheme="dark")
-    pg = c.new_page()
-    pg.goto(BASE + "/skribl-pad?hello=again")
-    under, after = [], []
-    for _ in range(90):
-        r = pg.evaluate("() => ({ hello: !!document.getElementById('skriblHello'), ink: (() => { const c = document.querySelector('.canvas-empty-stroke');"
-                        " if (!c) return -1; const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let n = 0;"
-                        " for (let i = 3; i < d.length; i += 4) if (d[i] > 200) n++; return n; })() })")
-        (under if r["hello"] else after).append(r["ink"])
-        if len(after) >= 20:
-            break
-        pg.wait_for_timeout(100)
-    full = max(after) if after else 0
-    check("with the first-open hello on screen the stroke waits, blank, and writes once the hello has gone",
-          bool(under) and max(under) == 0 and full > 300 and any(0 < v < full * 0.8 for v in after),
-          f"ink under the hello {sorted(set(under))[:4]}; after it {after[:12]}")
     c.close()
     b.close()
 
