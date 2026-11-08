@@ -1,0 +1,29 @@
+{# THE CANVAS IN ITS PLACE FROM THE FIRST FRAME (the calm open, part 2; the
+   owner: "I want pad and flip to be the same... it has to be subtle cuz it
+   happens a lot", then "Yes calm"). Flip used to open on a 300x150 box that
+   jumped to full size when its scripts were done; the Pad's canvas settled
+   (a 9:16 guess 26px too tall on a phone; on a desk a 4:3 guess that turned
+   into a square).
+
+   _skribl_fit_early.html, right after each editor's column, now lays the
+   canvas out before anything paints, with the editor's own sums. What it
+   needs from the two libraries those sums use comes HERE, in the head, before
+   the column is read: lib/canvassizes.js (which shape a new drawing starts
+   in) and lib/chromefit.js (the row's reach on a wide window; and the watch
+   that re-fits the canvas when the chrome changes size, window or no window).
+   They are small and define globals only; render-blocking here, they arrive
+   with the stylesheets. The editors' deferred scripts find them already
+   there.
+
+   Until it has been laid out, the canvas is not shown, so a slow line that
+   paints the page in pieces never shows it at a size it will leave; should
+   the early fit never run, it shows on its own at 4 s (and each editor's
+   boot marks it laid out too). The letter sheet keeps its own layout. #}
+<script src="{{ skribl_asset('lib/canvassizes.js') }}"></script>
+<script src="{{ skribl_asset('lib/chromefit.js') }}"></script>
+<style>
+  html:not(.skribl-fit) :is(.flip-stage .flip-wrap, body:not(.letters-mode) .canvas-area .canvas-wrap) {
+    visibility: hidden; animation: skribl-fit-late 0s linear 4s forwards;
+  }
+  @keyframes skribl-fit-late { to { visibility: visible; } }
+</style>

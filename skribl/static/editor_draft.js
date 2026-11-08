@@ -64,8 +64,17 @@ const PAD_DRAFT_OFF = (typeof window !== 'undefined' &&
 // (SK-AUD-006, T1): a save never replaces another tab's drawing, it moves it
 // aside, and the next visit offers it. Compose keeps no draft, so no slot.
 const padSlot = (window.SkriblOtherTab && !PAD_DRAFT_OFF) ? window.SkriblOtherTab.slot(AUTOSAVE_KEY) : null;
-function slotWrite(text) { if (padSlot) padSlot.write(text); else localStorage.setItem(AUTOSAVE_KEY, text); }
-function slotRemove() { if (padSlot) padSlot.remove(); else localStorage.removeItem(AUTOSAVE_KEY); }
+// THE DRAFT'S SHAPE, NOTED BESIDE IT (the calm open, part 2): its size and
+// whether there is ink, small enough to read before anything paints, so
+// _skribl_fit_early.html lays a draft you come back to out in its own shape and
+// keeps the words off a canvas that has a drawing coming. Kept and dropped with
+// the draft itself.
+const SHAPE_KEY = 'skribl.shape.v1.pad';
+function noteShape() {
+  try { localStorage.setItem(SHAPE_KEY, JSON.stringify({ w: authoredW, h: authoredH, ink: !!hasContent })); } catch (e) {}
+}
+function slotWrite(text) { if (padSlot) padSlot.write(text); else localStorage.setItem(AUTOSAVE_KEY, text); noteShape(); }
+function slotRemove() { if (padSlot) padSlot.remove(); else localStorage.removeItem(AUTOSAVE_KEY); try { localStorage.removeItem(SHAPE_KEY); } catch (e) {} }
 
 // ---- The durability model (external review P0-2 / #19) ----------------------
 // Every mutating edit bumps draftRev (in scheduleAutosave — the same triggers

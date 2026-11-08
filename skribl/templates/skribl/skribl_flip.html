@@ -26,6 +26,7 @@
         data-build="{{ skribl_build }}" data-build-url="{{ url_for('.skribl_build') }}" defer></script>
 {% include 'skribl/_skribl_theme_boot.html' %}
 {% include 'skribl/_skribl_hand_boot.html' %}
+{% include 'skribl/_skribl_fit_boot.html' %}
 {% include 'skribl/_skribl_hello_boot.html' %}
 </head>
 <body class="flip-app">
@@ -219,6 +220,9 @@
       </div>
       <div class="player-progress flip-timeline" id="flipProgress" role="slider" aria-label="Scrub pages" aria-valuemin="0" aria-valuemax="100"><div class="player-progress-fill" id="flipProgressFill"></div></div>
       <div class="flip-speeds" id="flipSpeeds"><span class="seg" id="flipSpeedSeg" role="group" aria-label="Watching speed"><span class="seg-slider"></span><button type="button" data-rate="0.25">¼×</button><button type="button" data-rate="0.5">½×</button><button type="button" data-rate="1" class="on">1×</button><button type="button" data-rate="2">2×</button><button type="button" data-rate="4">4×</button></span></div>
+      {# THE ADD ROW IN THE PAGE (the calm open, part 2): here from the first frame, so the row under the canvas is
+         as tall as it will be before flip.js comes; flip.js wires it (buildStrip) and makes it only if a page lacks it. #}
+      <div class="addcol"><button class="addbtn" id="addcopy" title="Add a page that copies this one, so you can nudge and redraw"><svg class="addbtn-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Duplicate</button><button class="addbtn mini" id="addblank" title="Add an empty page"><svg class="addbtn-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Blank</button><button class="addbtn mini" id="addinbetween" title="Add one drawing halfway between this page and the next"><svg class="addbtn-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 6v12"/><path d="M19 6v12"/><path d="M12 8.5v7"/></svg>Tween</button><button class="addbtn mini" id="addtween" title="Show the movement between two drawings, the way a long exposure catches a moving puppet"><svg class="addbtn-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6v12"/><path d="M14 7.5v9" opacity=".5"/><path d="M10.5 9v6" opacity=".3"/><path d="M7.5 10v4" opacity=".18"/><path d="M5 11v2" opacity=".1"/></svg>Smear</button></div>
       <div class="strip" id="strip"></div>
     </div>
 
@@ -426,6 +430,8 @@
        nothing (the music drawer's own input is display:none, as the Pad's are). #}
     <input type="file" id="imageInput" aria-label="Choose an image file" accept="image/jpeg,image/png,image/gif,image/webp" class="vis-hidden" tabindex="-1">
     <input type="file" id="draftInput" aria-label="Open a saved .skribl file" accept=".skribl,application/json,text/plain,application/octet-stream,text/*" class="vis-hidden" tabindex="-1">
+    {# The canvas laid out before anything paints (the calm open, part 2). #}
+    {% with kind='flip' %}{% include 'skribl/_skribl_fit_early.html' %}{% endwith %}
     {% include 'skribl/_skribl_hello.html' %}
     {# YOUR HAND loads on its own (async), here after the words and the hello it
        waits under: it needs nothing the deferred scripts make, and behind them a
@@ -635,7 +641,6 @@
   <script src="{{ skribl_asset('lib/canvasground.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/palette.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/pillfit.js') }}" defer></script>
-  <script src="{{ skribl_asset('lib/canvassizes.js') }}" defer></script>
   {# lib/audiosession.js: iOS silences Web Audio when the ringer switch is off
      but not an <audio> element, so a Skribl's music is inaudible on a phone set
      to silent. Holds a playback session, claimed only on a gesture that asks
@@ -658,8 +663,7 @@
   <script src="{{ skribl_asset('lib/draftstore.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/othertab.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/savedrafts.js') }}" defer></script>
-  {# lib/chromefit.js: the stage re-fits when the chrome changes size, window or no window (the Pad's too). #}
-  <script src="{{ skribl_asset('lib/chromefit.js') }}" defer></script>
+  {# lib/chromefit.js and lib/canvassizes.js load in the head (_skribl_fit_boot.html): the canvas is laid out before it paints. #}
   <script src="{{ skribl_asset('flip.js') }}" defer></script>
   {% if compose %}<script src="{{ skribl_asset('editor_compose.js') }}" defer></script>{% endif %}
   {% if not compose %}{{ hs.steps() }}{% endif %}

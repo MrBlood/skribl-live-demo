@@ -1,0 +1,122 @@
+{# THE CANVAS LAID OUT BEFORE ANYTHING PAINTS (the calm open, part 2; see
+   _skribl_fit_boot.html for why). Here, right after the editor's column (KIND:
+   'pad' or 'flip'), everything the editor's own fit measures is in the page,
+   so this does the same sums the editor will do once its scripts are in, and
+   leaves it nothing to change:
+
+   - Flip: sizeStage() and fitPad() at rest (flip.js), the shape a new drawing
+     starts in as flip.js picks it (lib/chromefit.js startShape, else
+     lib/canvassizes.js bestFor), the page row in its first-page look
+     (body.one-page, as flip.js marks it) and one page's tile in the strip, so
+     the row is already as tall as it will be.
+   - The Pad: resizeCanvas() and layoutEditorCanvas() at rest (app.js).
+
+   A DRAFT YOU COME BACK TO: each editor notes its drawing's shape beside its
+   draft (skribl.shape.v1.pad / .flip: the size, Flip's page count, and
+   whether there is ink), and this lays the canvas out in that shape; with ink
+   on it, the words are not shown, since they would only go when the drawing
+   comes. Compose mode keeps no draft, so it starts as a new drawing.
+
+   KEEP IN STEP with the sums it mirrors; verify_identity's first-frame rows
+   read the canvas on every frame from the first paint and fail on a move. #}
+<script nonce="{{ csp_nonce }}">
+(function () {
+  var root = document.documentElement;
+  try {
+    var note = null;
+    if (!/[?&]compose=1\b/.test(location.search)) {
+      try { note = JSON.parse(localStorage.getItem('skribl.shape.v1.{{ kind }}') || 'null'); } catch (e) { note = null; }
+    }
+    if (note && !(note.w === Math.round(note.w) && note.h === Math.round(note.h) && note.w > 0 && note.h > 0 && note.w <= 4096 && note.h <= 4096)) note = null;
+    var fit = window.SkriblChromeFit, sizes = window.SkriblCanvasSizes;
+    var num = function (v) { return parseFloat(v) || 0; };
+{% if kind == 'flip' %}
+    var stage = document.querySelector('.flip-stage'), pad = document.getElementById('pad'), strip = document.getElementById('strip');
+    if (!stage || !pad) return;
+    // lib/sizeclass.js's class, as it stamps it when flip.js starts it (the body's width against 640): the page bar
+    // hides on a compact one-page Flip, and the row under the canvas is that much shorter.
+    if (!document.body.hasAttribute('data-size')) document.body.setAttribute('data-size', document.body.getBoundingClientRect().width > 640 ? 'regular' : 'compact');
+    document.body.classList.toggle('one-page', !(note && note.pages > 1));
+    if (strip && !strip.firstElementChild) {
+      var tile = document.createElement('div');
+      tile.className = 'frame on';
+      tile.setAttribute('aria-hidden', 'true');
+      strip.appendChild(tile);
+    }
+    if (note && note.ink) { var hint = document.getElementById('flipEmptyHint'); if (hint) hint.classList.add('hidden'); }
+    // sizeStage(), at rest: the chrome's heights, then the slack in the column.
+    var px = function (sel) { var el = document.querySelector(sel); return el ? el.offsetHeight : 0; };
+    var h = Math.max(220, window.innerHeight - (px('.header') + px('.tune-shell') + px('.flip-tools') + px('.flip-chip') + px('.strip-wrap') + 30));
+    stage.style.flex = '0 0 auto';
+    stage.style.height = h + 'px';
+    var app = stage.parentElement, drawers = document.getElementById('flipDrawers');
+    if (app) {
+      var top = app.getBoundingClientRect().top, extent = 0;
+      for (var i = 0; i < app.children.length; i++) {
+        var el = app.children[i], cs = getComputedStyle(el);
+        if (cs.position === 'fixed' || cs.position === 'absolute' || cs.display === 'none') continue;
+        extent = Math.max(extent, el.getBoundingClientRect().bottom + num(cs.marginBottom) - top);
+      }
+      extent += num(getComputedStyle(app).paddingBottom);
+      if (drawers) {
+        var dcs = getComputedStyle(drawers);
+        extent -= Math.max(0, drawers.offsetHeight - (num(dcs.paddingTop) + num(dcs.paddingBottom)));
+      }
+      h = Math.max(220, h + Math.round(window.innerHeight - extent));
+    }
+    stage.style.height = h + 'px';
+    // fitPad(): the stage's reach on a wide window, then the page fitted to the room.
+    if (fit && fit.span) fit.span(stage);
+    var scs = getComputedStyle(stage);
+    var availW = stage.clientWidth - num(scs.paddingLeft) - num(scs.paddingRight);
+    var availH = stage.clientHeight - num(scs.paddingTop) - num(scs.paddingBottom);
+    var CW = 0, CH = 0;
+    if (note) { CW = note.w; CH = note.h; }
+    else if (sizes && stage.clientWidth > 50 && stage.clientHeight > 50) {
+      var colW = (fit && fit.columnWidth) ? fit.columnWidth(stage) - num(scs.paddingLeft) - num(scs.paddingRight) : availW;
+      var best = (fit && fit.startShape && fit.startShape(Math.min(availW, colW), availW, availH)) || sizes.bestFor(Math.min(availW, colW), availH);
+      CW = best.w; CH = best.h;
+    }
+    if (!CW || !CH) return;
+    var DPR = Math.min(window.devicePixelRatio || 1, 2), RS_MAX = 2;
+    var scale = Math.max(0.1, Math.min(availW / CW, availH / CH));
+    var fr = num(getComputedStyle(pad).borderLeftWidth);
+    var inner = Math.min((availW - 2 * fr) / CW, (availH - 2 * fr) / CH);
+    if (Math.max(1, Math.min(inner, RS_MAX / DPR)) > 1) {
+      pad.style.width = (Math.round(CW * inner) + 2 * fr) + 'px';
+      pad.style.height = (Math.round(CH * inner) + 2 * fr) + 'px';
+    } else {
+      pad.style.width = Math.round(CW * scale) + 'px';
+      pad.style.height = Math.round(CH * scale) + 'px';
+    }
+{% else %}
+    var area = document.querySelector('.canvas-area'), wrap = document.querySelector('.canvas-wrap'), canvas = document.getElementById('canvas');
+    if (!area || !wrap || !canvas) return;
+    if (document.body.classList.contains('player-mode') || /^#skribl=/.test(location.hash)) return;
+    if (note && note.ink) { var hint = document.getElementById('canvasEmptyHint'); if (hint) hint.classList.add('hidden'); }
+    // resizeCanvas(): the drawing's shape, its own if there is a draft.
+    var W = 0, H = 0;
+    if (note) { W = note.w; H = note.h; }
+    else {
+      var d = sizes ? sizes.DEFAULT : null;
+      if (fit && fit.startShape && fit.roomOf) { var room = fit.roomOf(area); d = fit.startShape(room.col, room.row, room.h) || d; }
+      if (d) { W = d.w; H = d.h; }
+    }
+    if (!W || !H) return;
+    // layoutEditorCanvas(): the row's reach, then the room with the drawing out of the way.
+    if (fit && fit.span) fit.span(area);
+    wrap.style.height = '0px';
+    var r = area.getBoundingClientRect(), acs = getComputedStyle(area);
+    var aw = Math.max(1, r.width - num(acs.paddingLeft) - num(acs.paddingRight));
+    var ah = Math.max(1, r.height - num(acs.paddingTop) - num(acs.paddingBottom));
+    var s = Math.min(aw / W, ah / H), w = Math.round(W * s), hh = Math.round(H * s);
+    wrap.style.width = w + 'px'; wrap.style.height = hh + 'px';
+    canvas.style.width = w + 'px'; canvas.style.height = hh + 'px'; canvas.style.minHeight = '0';
+{% endif %}
+  } catch (e) {
+    if (window.console) console.warn('[skribl] the early fit did not run:', e);
+  } finally {
+    root.classList.add('skribl-fit');
+  }
+})();
+</script>

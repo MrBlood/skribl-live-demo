@@ -1148,6 +1148,97 @@ with sync_playwright() as p:
     h = _hop("/skribl-pad", force=False)
     check("automation that does not ask never meets it, so nothing else measures the pen in the air",
           h["up"] == 0 and h["down"] == 0 and h["ready"] > 1000, str(h))
+
+    # THE CANVAS IN ITS PLACE FROM THE FIRST FRAME (the calm open, part 2;
+    # _skribl_fit_boot.html, _skribl_fit_early.html). Flip opened on a
+    # 300x150 box that jumped to full size when its scripts were done, and its
+    # page row changed under it; the Pad's canvas settled (26px on a phone, a
+    # 4:3 guess turning square on a desk). On the slow phone network, read on
+    # every animation frame from the first paint: the canvas from the first
+    # frame it is shown (its place and size), the bar under it, and Flip's
+    # page row (its height and which of its controls show).
+    _NET = {"offline": False, "latency": 100, "downloadThroughput": 3 * 1024 * 1024 / 8, "uploadThroughput": 750 * 1024 / 8}
+    _FIRST_FRAMES = """(() => { const rows = []; window.__fitRows = rows;
+      const tick = (t) => { const c = document.getElementById('pad') || document.getElementById('canvas');
+        const w = document.querySelector('.flip-wrap') || document.querySelector('.canvas-wrap');
+        const dk = document.querySelector('.flip-tools') || document.getElementById('toolBar'), sw = document.querySelector('.strip-wrap');
+        const h = document.getElementById('flipEmptyHint') || document.getElementById('canvasEmptyHint'), r = c && c.getBoundingClientRect();
+        const row = sw ? [...sw.querySelectorAll('.pagebar .pb, .addcol .addbtn')].filter(e => e.getBoundingClientRect().width > 1).map(e => e.id).join(',') : '';
+        rows.push({ t: Math.round(t), shown: !!w && getComputedStyle(w).visibility === 'visible',
+          r: r ? [r.left, r.top, r.width, r.height].map(v => Math.round(v * 10) / 10) : null,
+          dock: dk ? Math.round(dk.getBoundingClientRect().top) : null, strip: sw ? Math.round(sw.getBoundingClientRect().height) : null, row: row,
+          words: !!h && !h.classList.contains('hidden') && +getComputedStyle(h).opacity > 0.02,
+          ready: !!(window.__skriblBoot && (window.__skriblBoot.pad || window.__skriblBoot.flip)) });
+        if (rows.length < 1200) requestAnimationFrame(tick); };
+      requestAnimationFrame(tick); })();"""
+    _DEVS = {"phone": dict(viewport={"width": 402, "height": 874}, is_mobile=True, has_touch=True), "desk": dict(viewport={"width": 1280, "height": 820})}
+
+    def _first_frames(c, route):
+        """ROUTE opened on the slow phone network in context C; every frame from the first paint to 1.5 s after the editor is ready."""
+        c.add_init_script(_FIRST_FRAMES)
+        pg = c.new_page()
+        cdp = c.new_cdp_session(pg)
+        cdp.send("Network.enable")
+        cdp.send("Network.emulateNetworkConditions", _NET)
+        pg.goto(BASE + route, wait_until="commit")
+        pg.wait_for_function(_BOOTED, timeout=60000)
+        pg.wait_for_timeout(1500)
+        rows = pg.evaluate("() => window.__fitRows")
+        pg.close()
+        return rows
+
+    def _held_still(rows):
+        """{"first": the canvas on the first frame it is shown, "moves", "bar", "strips", "rows": the page row's controls seen, "words"}."""
+        shown = [x for x in rows if x["shown"] and x["r"]]
+        # SHOWN EARLY, not merely still: a canvas kept hidden until the editor is ready would never move either,
+        # and the page would show an empty space for seconds. Frames it existed and was hidden, before it showed.
+        early = next((i for i, x in enumerate(rows) if x["shown"] and x["r"]), len(rows))
+        return {"first": shown[0]["r"] if shown else None, "ready_seen": any(x["ready"] for x in shown),
+                "shown_before_ready": bool(shown) and not shown[0]["ready"],
+                "hidden_frames": sum(1 for x in rows[:early] if x["r"] and not x["shown"]),
+                "moves": [(a["t"], a["r"], z["r"]) for a, z in zip(shown, shown[1:]) if a["r"] != z["r"]][:3],
+                "bar": sorted(set(x["dock"] for x in shown if x["dock"] is not None)),
+                "strips": sorted(set(x["strip"] for x in shown if x["strip"] is not None)),
+                "rows": sorted(set(x["row"] for x in shown)), "words": sum(1 for x in shown if x["words"])}
+    for route, name in (("/flip", "Flip"), ("/skribl-pad", "Pad")):
+        for dev, theme in (("phone", "dark"), ("desk", "light")):
+            c = b.new_context(color_scheme=theme, service_workers="block", **_DEVS[dev])
+            c.add_init_script("try { localStorage.setItem('skribl.hello.v2', '1'); } catch (e) {}")
+            s = _held_still(_first_frames(c, route))
+            c.close()
+            check(f"{name} on a slow {dev}, {theme}: from the first frame it is shown, the canvas is in its place at its size and never moves; "
+                  + ("the bar and the page row (its height and its controls) hold still" if name == "Flip" else "the bar holds still"),
+                  bool(s["first"]) and s["ready_seen"] and s["shown_before_ready"] and s["hidden_frames"] <= 3 and not s["moves"]
+                  and len(s["bar"]) == 1 and (name != "Flip" or (len(s["strips"]) == 1 and len(s["rows"]) == 1)), str(s))
+    # A DRAFT YOU COME BACK TO, in another shape and with a drawing on it: its
+    # own shape from the first frame (the shape note beside the draft), and the
+    # words never shown over a canvas whose drawing is coming.
+    for route, name, sel in (("/skribl-pad", "Pad", "#canvas"), ("/flip", "Flip", "#pad")):
+        c = b.new_context(color_scheme="dark", service_workers="block", **_DEVS["phone"])
+        c.add_init_script("try { localStorage.setItem('skribl.hello.v2', '1'); } catch (e) {}")
+        pg = c.new_page()
+        browsing.goto(pg, BASE, route)
+        pg.evaluate("() => window.SkriblHints && window.SkriblHints.hide && window.SkriblHints.hide()")
+        pg.evaluate("() => document.querySelector('#canvasSeg button[data-size=\"square\"]').click()")
+        pg.wait_for_timeout(400)
+        _scribble(pg, sel)
+        pg.wait_for_timeout(2500)          # the autosave, and the shape noted beside it
+        drawn = pg.evaluate(f"() => {{ const r = document.querySelector('{sel}').getBoundingClientRect(); return [r.width, r.height]; }}")
+        pg.close()
+        s = _held_still(_first_frames(c, route))
+        c.close()
+        check(f"{name}: a draft you come back to (square, drawn on) is in its own shape from the first frame, never moves, and the words never show",
+              bool(s["first"]) and s["shown_before_ready"] and abs(s["first"][2] - drawn[0]) < 1 and abs(s["first"][3] - drawn[1]) < 1
+              and not s["moves"] and s["words"] == 0,
+              f"drawn at {drawn}; {s}")
+    # A SITE'S POST BOX (compose): a new drawing every time, in its place from the first frame.
+    for route, name in (("/flip?compose=1", "Flip"), ("/skribl-pad?compose=1", "Pad")):
+        c = b.new_context(color_scheme="dark", service_workers="block", **_DEVS["phone"])
+        s = _held_still(_first_frames(c, route))
+        c.close()
+        check(f"{name} in a post box: in its place from the first frame it is shown, and nothing under it moves",
+              bool(s["first"]) and s["ready_seen"] and s["shown_before_ready"] and s["hidden_frames"] <= 3 and not s["moves"]
+              and len(s["bar"]) == 1 and (name != "Flip" or (len(s["strips"]) == 1 and len(s["rows"]) == 1)), str(s))
     b.close()
 
 print("\nBLOOBY CHEERS — once a drawing has posted, on the Posted! band, in both editors")

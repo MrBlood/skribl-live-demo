@@ -4898,4 +4898,5 @@ function currentPaintTarget() {
    verify_boot.py asserts this flag. It is the cheapest possible check for the
    most expensive possible bug, and unlike a page-error listener it also catches
    the case where something swallowed the throw. Keep it last. */
+document.documentElement.classList.add('skribl-fit');   // the canvas shows, laid out early or not (_skribl_fit_boot.html)
 window.__skriblBoot = Object.assign(window.__skriblBoot || {}, { pad: true });
