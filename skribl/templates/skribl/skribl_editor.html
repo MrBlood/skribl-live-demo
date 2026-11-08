@@ -225,6 +225,11 @@
 
   <!-- Help drawer -->
   {% if not letters %}{% include 'skribl/_skribl_hello.html' %}{% endif %}
+  {# YOUR HAND loads on its own (async), here after the words and the hello it
+     waits under: it needs nothing the deferred scripts make, and behind them a
+     slow first open wrote the words 5 to 9 s in, after their safety net had
+     shown the typed ones ("it shows the old draw anything while it loads"). #}
+  <script src="{{ skribl_asset('lib/handwords.js') }}" async></script>
   {% with kind='pad' %}{% include 'skribl/_skribl_help.html' %}
 {% endwith %}
 {# Your Skribls moved to the profile page (/library) in v304; the drawer is not included here. #}
@@ -599,7 +604,6 @@
   <script src="{{ skribl_asset('editor_compose.js') }}" defer></script>
   {% endif %}
   <script src="{{ skribl_asset('editor_draft.js') }}" defer></script>
-  <script src="{{ skribl_asset('lib/handwords.js') }}" defer></script>
   {% if letters %}
   {# The letter sheet only, and last, so the Pad is whole when it starts. An
      editor_*.js carve, so verify_player_isolation.py keeps it off the player. #}

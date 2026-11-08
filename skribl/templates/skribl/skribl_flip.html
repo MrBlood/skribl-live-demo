@@ -426,6 +426,11 @@
     <input type="file" id="imageInput" aria-label="Choose an image file" accept="image/jpeg,image/png,image/gif,image/webp" class="vis-hidden" tabindex="-1">
     <input type="file" id="draftInput" aria-label="Open a saved .skribl file" accept=".skribl,application/json,text/plain,application/octet-stream,text/*" class="vis-hidden" tabindex="-1">
     {% include 'skribl/_skribl_hello.html' %}
+    {# YOUR HAND loads on its own (async), here after the words and the hello it
+       waits under: it needs nothing the deferred scripts make, and behind them a
+       slow first open wrote the words 5 to 9 s in, after their safety net had
+       shown the typed ones ("it shows the old draw anything while it loads"). #}
+    <script src="{{ skribl_asset('lib/handwords.js') }}" async></script>
     {% with kind='flip' %}{% include 'skribl/_skribl_help.html' %}
 {% endwith %}
 {# Your Skribls moved to the profile page (/library) in v304; the drawer is not included here. #}
@@ -655,7 +660,6 @@
   {# lib/chromefit.js: the stage re-fits when the chrome changes size, window or no window (the Pad's too). #}
   <script src="{{ skribl_asset('lib/chromefit.js') }}" defer></script>
   <script src="{{ skribl_asset('flip.js') }}" defer></script>
-  <script src="{{ skribl_asset('lib/handwords.js') }}" defer></script>
   {% if compose %}<script src="{{ skribl_asset('editor_compose.js') }}" defer></script>{% endif %}
   {% if not compose %}{{ hs.steps() }}{% endif %}
 {{ mark_templates() }}

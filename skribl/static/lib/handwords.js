@@ -19,9 +19,17 @@
  * WHEN: it watches the class the editors already set on the words (hidden
  * once there is ink), so app.js, which the link player loads, gains nothing.
  * Under the first-open hello it waits, blank, and writes once the hello has
- * gone. Reduce Motion: the words are there whole, at once. styles.css keeps
- * the typed letters unseen until this takes over, and shows them on their own
- * if it never does.
+ * gone. Reduce Motion: the words are there whole, at once. The editors' head
+ * (_skribl_hand_boot.html) keeps the typed letters unseen until this takes
+ * over, and fades them in on their own at 1.2 s in case it never does.
+ *
+ * IT LOADS ON ITS OWN (async, just after the words and the hello in both
+ * editors), not behind their hundred-odd deferred scripts: on a slow first
+ * open those took 5 to 9 s, the typed words showed at 1.2 s, and then the
+ * hand took them away to write them (the owner: "it shows the old draw
+ * anything while it loads"). It needs nothing they make. Where the typed
+ * words have shown all the same, they stay: no swap. The snail waits for
+ * those scripts, because the canvas can move as they lay it out.
  *
  * THE SNAIL, ONCE, IN A SITE'S POST BOX, where the hello never plays: after
  * the words, How it works' snail (Flip: the bouncing ball) draws itself
@@ -50,6 +58,26 @@
   var UNWRITE = 380;       // ms the first stroke takes them back in
   var mark = WORDS[(title.textContent || '').trim()];
   if (!mark) { hint.classList.add('is-typed'); return; }
+
+  /* Shown already? The head's wait keeps them transparent for 1.2 s, then
+   * fades them in; past that, writing them would take back words someone has
+   * read. They stay, as typed (once their fade has finished, so it never
+   * jumps), and the snail waits for another visit. */
+  function typedShown() {
+    var cs = getComputedStyle(title);
+    if (cs.animationName !== 'canvas-empty-late') return false;   // no wait on this page: nothing to keep
+    var m = cs.color.match(/[\d.]+/g);
+    return !!m && (m.length < 4 || +m[3] > 0.05);
+  }
+  if (typedShown()) {
+    var fading = title.getAnimations ? title.getAnimations()[0] : null;
+    if (fading && fading.playState === 'running' && fading.finished) {
+      fading.finished.then(function () { hint.classList.add('is-typed'); }, function () { hint.classList.add('is-typed'); });
+    } else {
+      hint.classList.add('is-typed');
+    }
+    return;
+  }
 
   var NS = 'http://www.w3.org/2000/svg';
   var svg = document.createElementNS(NS, 'svg');
@@ -164,6 +192,18 @@
   // One mark each: the Pad keeps the one it has always had, Flip has its own.
   var once = document.getElementById('hintOnce'), KEY = 'skribl.once.v1' + (hint.id === 'flipEmptyHint' ? '.flip' : ''),
       player = null, began = false, shape = null;
+  // Placed once the editor has laid itself out: its deferred scripts end
+  // before DOMContentLoaded ('load' where that has passed), and on a slow
+  // first open the Pad's canvas moved 11 px when they ran. Two frames on,
+  // anything they measure in a frame has landed too.
+  var settled = new Promise(function (done) {
+    function go() { requestAnimationFrame(function () { requestAnimationFrame(done); }); }
+    if (document.readyState === 'complete') go();
+    else {
+      document.addEventListener('DOMContentLoaded', go, { once: true });
+      window.addEventListener('load', go, { once: true });
+    }
+  });
   function after() {
     if (!once || began || !shown) return;
     // As the hello: ?once=again plays it seen or not; automation meets it
@@ -193,7 +233,8 @@
       document.head.appendChild(css);
     }
     Promise.all([script(once.getAttribute('data-player-js'), 'SkriblInline'),
-                 fetch(once.getAttribute('data-src')).then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })])
+                 fetch(once.getAttribute('data-src')).then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); }),
+                 settled])
       .then(function (got) { if (shown) play(got[1]); })
       .catch(function () {});
   }
