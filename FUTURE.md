@@ -1932,6 +1932,29 @@ B, the one stroke under the words, came down until this is built.
   each visit (the owner likes the spiral), but "we'd need tons of Skribls to
   keep them fresh": it waits for a big set of recorded doodles.
 
+## 6af. Speed wherever Skribl lives (owner, Nov 8: "eventually skribl will sit inside a social media site not on render, so eventually we need to look at overall efficiency and speed of pad/flip")
+
+The owner timed a first open of the post box at "over 5 seconds" ("It's a long
+time"). Their wish: the rest loads while the words write themselves, "so you
+don't notice". Render's edge caching would hide it only while Skribl lives on
+Render, so the lasting fix belongs to Pad and Flip themselves.
+
+- **WHAT A FIRST OPEN COSTS** (Nov 8, the tree as it was): the Pad loads 115
+  script files, 661 KB compressed, plus four stylesheets (162 KB). Flip loads
+  108 script files, 719 KB compressed, plus five stylesheets (200 KB). The
+  biggest are flip.js (692 KB before compression), app.js (249 KB) and the
+  music drawer (lib/musicdrawer.js 116 KB with lib/musictimeline.js 56 KB),
+  which loads whether or not it is opened.
+- **DONE:** your hand loads on its own and writes from about 0.2 s (DECISIONS:
+  "Your hand loads on its own"). The live demo's gunicorn answers 8 requests
+  at once instead of one (`gunicorn.conf.py`).
+- **THE PLAN, the owner's "all yes":**
+  1. Measure a first open at a slow phone's speed, both editors: what loads,
+     how long the phone spends starting up, and when it can draw.
+  2. Fewer files: the ~115 scripts as a handful, on any host.
+  3. The heavy drawers (music, the Text tool, export) load when first opened.
+  4. Trim the start-up work the measurement shows.
+
 ## 7. The honest state
 
 The tool is good. It is better than it needs to be for a demo and not yet enough

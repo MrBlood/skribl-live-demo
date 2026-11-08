@@ -31408,3 +31408,34 @@ rows):
   the two changes go together.
 
 Shared: one module, both editors.
+
+## After v330 -- The live demo answers 8 requests at once (gunicorn threads)
+
+The owner timed a first open of the post box at "over 5 seconds", and said yes
+to the server fix ("all yes"). The live demo's gunicorn ran one sync worker
+with one thread, so it answered one request at a time. An editor's first open
+asks for about 120 files, and on the live site their first bytes came 25 to
+40 ms apart: 5 to 9 s in all. Twelve requests sent together came back spread
+over 0.3 s, one after another.
+
+- **`gunicorn.conf.py`** (new, at the root) sets 8 threads a worker, or
+  `GUNICORN_THREADS` if it is set. `gunicorn app:app` reads it by name from the
+  folder it runs in, so neither the Procfile nor Render's dashboard start
+  command changes. `WEB_CONCURRENCY` still sets the workers. Same instance, so
+  no cost.
+- **Safe with threads.** The app already runs threaded under every harness run
+  (the dev server is threaded). The in-memory limiter takes a lock, and
+  production's limiter is the database.
+- **Measured here** with gunicorn itself, the one-thread run and the eight-thread
+  run side by side. While a slow client downloaded flip.js at 20 KB/s, a small
+  file took 2.35 s with one thread (the worker was busy) and 0.05 s with eight.
+  Pad, Flip, the post box's Pad and the feed all booted under the threaded
+  worker with no errors.
+- **Shipped in the package.** `harness/package.py` now ships the file in the
+  runtime package, since a package without it serves one request at a time.
+- **verify_hostconfig asks gunicorn** (`--print-config`, run as the host runs
+  it) and fails under 4 threads. Red without the file and red with
+  `GUNICORN_THREADS=1`; green at 8.
+
+The live site's before and after are to be measured once this deploys.
+FUTURE 6af holds the rest of the speed work.

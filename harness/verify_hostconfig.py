@@ -250,6 +250,24 @@ check("the library default really is 'memory' — this is what the host override
       _rl._RATE_BACKEND == "memory", _rl._RATE_BACKEND)
 
 
+print("\nTHREADS — gunicorn answers several requests at once")
+# The owner, Nov 8: "it takes over 5 seconds to load on first time". One sync
+# worker answered one request at a time, and an editor's first open asks for
+# about 120 files: on the live demo their first bytes came 25 to 40 ms apart.
+# gunicorn.conf.py gives each worker threads. ASKED OF GUNICORN, as the host's
+# start command runs it (`gunicorn app:app` from the repo root): what it
+# resolves, not the file's text, so a file it stopped reading, or a setting
+# it overrode, reads as it would run.
+_g = subprocess.run([sys.executable, "-m", "gunicorn", "--print-config", "app:app"], cwd=ROOT,
+                    capture_output=True, text=True, timeout=120,
+                    env=dict(os.environ, DATABASE_URL="sqlite:///" + os.path.join(tempfile.gettempdir(), "skribl-gconf.db"),
+                             SKRIBL_ALLOW_EPHEMERAL_SECRET="1"))   # under gunicorn the app reads as production; let it boot
+_m = re.search(r"^threads\s*=\s*(\d+)", _g.stdout, re.M)
+_threads = int(_m.group(1)) if _m else 0
+check("gunicorn, started as the host starts it, gives each worker threads (an editor's ~120 files are not answered one at a time)",
+      _threads >= 4, f"threads = {_threads}; exit {_g.returncode}{'' if _m else ' — ' + (_g.stderr or _g.stdout)[-200:]}")
+
+
 bad = [r for r in results if not r[0]]
 print(f"\n{'=' * 62}\n{len(results) - len(bad)}/{len(results)} passed"
       + ("" if not bad else "  FAILURES: " + ", ".join(r[1] for r in bad)))
