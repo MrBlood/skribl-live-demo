@@ -1953,7 +1953,9 @@ Render, so the lasting fix belongs to Pad and Flip themselves.
   at once instead of one (`gunicorn.conf.py`). The server keeps every file
   it has stripped and compressed; it used to empty them all at 128 files,
   and the Pad and Flip together ask for 146 (DECISIONS: "The server stops
-  redoing its work").
+  redoing its work"). Each worker does that work before its first visitor,
+  so the first open after a deploy does not wait for it (DECISIONS: "Each
+  worker does the file work before its first visitor").
 - **THE BASELINE** (Nov 8, the local server, a cold cache, a slow phone: the
   CPU slowed 4x and a 1.6 Mbps network with 150 ms round trips;
   `harness/tools/firstopen.py`, three runs each, medians):

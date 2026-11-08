@@ -1032,6 +1032,31 @@ can send a person anywhere you did not name; anything but an http(s) address
 or a path, or one with a space or a backslash in it, is refused at startup.
 The editors read it as `window.SKRIBL_HOME` (`{"url", "label"}`, or `null`).
 
+### The file work before the first visitor (`warm_assets`)
+
+Skribl strips the comments out of its scripts and styles and compresses them,
+once per file version, and keeps the result in each server process. A process
+starts with none of it done, so its first visitor waits for all of it: about
+3 s of server work for the Pad's files on a fast machine, 8.8 s on the live
+demo's. `skribl.warm_assets(app, tick=None)` does it ahead of time. Call it in
+each worker before the worker takes a request; with gunicorn, that is
+`post_worker_init` in your `gunicorn.conf.py`:
+
+```python
+import skribl
+
+def post_worker_init(worker):
+    skribl.warm_assets(worker.wsgi, tick=worker.notify)
+```
+
+`tick=worker.notify` stops gunicorn taking a long warm-up for a hung worker.
+It makes one GET through your app for each of Skribl's scripts, styles and
+other compressible files, so your own request hooks run as they do for any
+visitor's, and returns how many it asked for. If gunicorn loads a wrapper
+around your Flask app (middleware), pass the Flask app itself; for anything
+that is not a Flask app with Skribl mounted it does nothing and returns 0.
+Skribl's own `gunicorn.conf.py` does this and logs the count and the time.
+
 Plus one module-level seam:
 
 ```python
