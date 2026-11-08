@@ -31237,11 +31237,16 @@ snail" and built on "Go, all yes" (about 2 seconds, as filmed).
   needs nothing from the module, and crossing strokes never lay their grey
   twice. The typed words stay in the page, out of sight (.vis-hidden), for a
   screen reader; the drawing is aria-hidden.
-- NO SWAP ON A SLOW PHONE: styles.css keeps the typed words unseen until the
-  hand takes over, and if it never does, they fade in on their own after
-  1.2 s. Aimed at the editors' first span, so the link page's hint (its
-  pencil first) is left alone; the drawing outranks that pencil's 22 px rule.
-  player.css gains the 60-byte keyframes only.
+- NO SWAP ON A SLOW PHONE: the typed words wait unseen until the hand takes
+  over, and if it never does, they fade in on their own after 1.2 s. That
+  rule and its keyframes are set before first paint in the editors' <head>
+  (_skribl_hand_boot.html, beside the theme's and the hello's), not in
+  styles.css: cssgraph keeps every @keyframes block of styles.css in the link
+  player's stylesheet, and those 60 bytes broke its budget (verify_jsstrip,
+  verify_player_isolation, red until they moved). player.css is unchanged.
+  The rest is styles.css's, aimed at the editors' first span, so the link
+  page's hint (its pencil first) is left alone; the drawing outranks that
+  pencil's 22 px rule.
 - UNDER THE FIRST-OPEN HELLO it waits, blank, and writes once the hello has
   gone. Reduce Motion: whole at once.
 - THE SNAIL, ONCE, IN A SITE'S POST BOX (_skribl_hint_once.html, compose mode
@@ -31281,3 +31286,13 @@ already see; one picture, once), kind (both get out of the way at the first
 stroke; nothing to read twice).
 
 Not tested here: WebKit (the owner's iPhone, Safari and Chrome).
+
+## After v330 -- Main red after #788 (issue #789): verify_onepill, once
+
+One shard (sqlite 1/6) found four of Flip's ⋯ Settings pills not yet placed
+(dark phone, "PLACED"); the same suites passed on PostgreSQL in the same run,
+and main after #790 was green on every job, so the issue closed itself. Not
+reproduced here: the census, dark phone, twice on #788's tree and twice on
+#790's, green each time; and a probe opening the menu as the suite does
+placed all four pills in 4 to 64 ms at CPU 1x, 4x and 6x, inside the suite's
+750 ms. Intermittent; nothing changed.

@@ -1376,16 +1376,12 @@ body.playback-paused .tap-paused { display: grid; }
 }
 
 /* YOUR HAND WRITES THE WORDS (lib/handwords.js; the owner's pick after the
-   "Empty canvas ideas" mock). Until it takes over, the typed words wait
-   unseen, so a slow phone never shows them and then swaps them for the hand;
-   should it never come, they fade in on their own. Words it has no recording
-   of (is-typed) show at once. The global Reduce Motion rule shortens the fade
-   and keeps the wait. The editors' words are the hint's first span; the link
-   page's hint starts with its pencil, which this leaves alone, and the
-   drawing outranks that pencil's size (.canvas-empty-hint svg). */
-.canvas-empty-hint > span:first-child { animation: canvas-empty-late 0.3s ease 1.2s backwards; }
-.canvas-empty-hint:is(.is-hand, .is-typed) > span:first-child { animation: none; }
-@keyframes canvas-empty-late { from { color: transparent; } }
+   "Empty canvas ideas" mock): the words' box at the hand's size, and the
+   drawing filling it. The typed words' wait before first paint is
+   _skribl_hand_boot.html's, in the editors' <head>, so its keyframes stay out
+   of the link player's stylesheet. The editors' words are the hint's first
+   span; the link page's hint starts with its pencil, which this leaves alone,
+   and the drawing outranks that pencil's size (.canvas-empty-hint svg). */
 .canvas-empty-hint.is-hand > span:first-child { display: block; position: relative; }
 .canvas-empty-hint .canvas-empty-hand { display: block; width: 100%; height: auto; overflow: visible; opacity: 1; }
 /* The first stroke: the words un-write themselves before the hint's own fade
