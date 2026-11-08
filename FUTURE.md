@@ -1919,13 +1919,14 @@ integrations, server-side validation, CSP and headers, and rate limits.
 From the "Empty canvas ideas" mock (seven ideas beside the words alone and B).
 B, the one stroke under the words, came down until this is built.
 
-- **CHOSEN, to be filmed together; built only on the owner's go:** "Draw
-  anything" writes itself in the owner's Skribl hand every time the words
-  show (Flip: "Draw page 1"), in the words' own grey, in about 2 seconds, and
-  un-writes at the first stroke. The snail draws itself once, above the words,
-  on the first empty canvas inside a site's post box, where the hello never
-  plays (Flip: the bouncing ball). The mark stays the hello. The smaller line
-  stays as it was.
+- **BUILT after "Your hand and the snail" was filmed (owner: "Go, all yes";
+  DECISIONS: "Your hand writes the empty canvas's words"):** "Draw anything"
+  writes itself in the owner's Skribl hand every time the words show (Flip:
+  "Draw page 1"), in the words' own grey, in about 2 seconds, and un-writes at
+  the first stroke. The snail draws itself once, above the words, on the first
+  empty canvas inside a site's post box, where the hello never plays (Flip:
+  the bouncing ball). The mark stays the hello. The smaller line stays as it
+  was.
 - **IF WE NEED SOMETHING ELSE:** a little doodle under the words that changes
   each visit (the owner likes the spiral), but "we'd need tons of Skribls to
   keep them fresh": it waits for a big set of recorded doodles.

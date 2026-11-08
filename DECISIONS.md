@@ -31214,3 +31214,70 @@ was to put the canvas back as it was before B today, until the pick is built
 
 THE FOUR: kind (the owner's canvas is the one they approved), simple (the words
 alone), powerful and playful (wait for the pick).
+
+## After v330 -- Your hand writes the empty canvas's words; the snail once in a post box
+
+The owner's pick after the "Empty canvas ideas" mock ("I'm liking your hand
+and the mark and the snail ideas"), filmed together as "Your hand and the
+snail" and built on "Go, all yes" (about 2 seconds, as filmed).
+
+- YOUR HAND, EVERY TIME (lib/handwords.js, both editors): "Draw anything"
+  (Flip: "Draw page 1") writes itself in the owner's own letters in 1.9 s
+  (Flip 1.7 s) each time the words appear: an empty canvas on open, Undo back
+  to nothing, a new Skribl. The first stroke un-writes them in 0.38 s, seen:
+  the words' own fade waits for it while the smaller line fades as it always
+  has. Flip's words are the same letter size as the Pad's (0.31 px a point of
+  the recording), so they are 147 px wide to the Pad's 164.
+- A RECORDING, NOT A FONT: harness/tools/make_handwords.py writes the words
+  with the real Text tool in Skribl's style on the real Pad and keeps what it
+  recorded (560 and 483 points), with the player's tight pauses between
+  strokes, in the module's MARK block. Words it has no recording of keep
+  their typed letters.
+- ONE PATH IN currentColor, the words' own grey: a theme or a canvas colour
+  needs nothing from the module, and crossing strokes never lay their grey
+  twice. The typed words stay in the page, out of sight (.vis-hidden), for a
+  screen reader; the drawing is aria-hidden.
+- NO SWAP ON A SLOW PHONE: styles.css keeps the typed words unseen until the
+  hand takes over, and if it never does, they fade in on their own after
+  1.2 s. Aimed at the editors' first span, so the link page's hint (its
+  pencil first) is left alone; the drawing outranks that pencil's 22 px rule.
+  player.css gains the 60-byte keyframes only.
+- UNDER THE FIRST-OPEN HELLO it waits, blank, and writes once the hello has
+  gone. Reduce Motion: whole at once.
+- THE SNAIL, ONCE, IN A SITE'S POST BOX (_skribl_hint_once.html, compose mode
+  only): after the words, How it works' snail (Flip: the bouncing ball, in
+  Skribl purple) draws itself at 0.45 above them, 28 px clear, rests, and goes
+  at the first stroke. Once on a device, as the hello is (?once=again plays it
+  again; automation meets it only when it asks, window.__skriblOnceForce).
+  The in-post player plays it, fetched only then, with the drawing trimmed to
+  its strokes (brand/hint-snail.json 28 KB, hint-ball.json 143 KB; 5 and
+  19 KB as served, compressed). Reduce Motion: whole, still, faint.
+- The mark stays the hello. The smaller line stays as it was. SHARED: one
+  module, both editors.
+
+THE CHECKS (verify_identity, YOUR HAND WRITES THE WORDS, phone dark, 18 rows):
+on the Pad and Flip the drawing grows as it writes and stays, painted; it is
+in the words' grey and the words are still given to a screen reader; the
+first stroke un-writes them, seen, then they go; Undo writes them again;
+Reduce Motion has them whole at once; under the hello they wait, blank; if
+the module never comes the typed words show on their own (asked of the
+stylesheet's own clock); words with no recording stay typed. In the post box
+the words come first, then the snail, above them, centred, at 0.45, resting
+at its end; the first stroke sweeps it away; opened again it does not come;
+outside a post box nothing of it is there; Flip's is the ball; Reduce Motion
+has the snail whole. The rows that pinned "the words alone" now pin no other
+picture and wait for the words to be written. CALIBRATED, each in a copy of
+the tree with its own server: the Pad or Flip not loading it (their 10 and 4
+rows), no watch on the words, no un-write, the words' fade not waiting,
+Reduce Motion ignored, no wait for the hello, no fallback, the typed words
+not kept, unknown words left unseen, the snail every time, the snail outside
+a post box, the snail not faint, the snail staying at the first stroke, the
+snail before the words, a colour not the words' own: each red on its own
+rows. The copy as it is: 103/103.
+
+THE FOUR: powerful (the replay idea in the first second, before anyone
+draws), playful (your hand; the snail's surprise), simple (the words you
+already see; one picture, once), kind (both get out of the way at the first
+stroke; nothing to read twice).
+
+Not tested here: WebKit (the owner's iPhone, Safari and Chrome).
