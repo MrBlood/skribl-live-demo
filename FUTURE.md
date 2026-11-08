@@ -1950,7 +1950,10 @@ Render, so the lasting fix belongs to Pad and Flip themselves.
   which loads whether or not it is opened.
 - **DONE:** your hand loads on its own and writes from about 0.2 s (DECISIONS:
   "Your hand loads on its own"). The live demo's gunicorn answers 8 requests
-  at once instead of one (`gunicorn.conf.py`).
+  at once instead of one (`gunicorn.conf.py`). The server keeps every file
+  it has stripped and compressed; it used to empty them all at 128 files,
+  and the Pad and Flip together ask for 146 (DECISIONS: "The server stops
+  redoing its work").
 - **THE BASELINE** (Nov 8, the local server, a cold cache, a slow phone: the
   CPU slowed 4x and a 1.6 Mbps network with 150 ms round trips;
   `harness/tools/firstopen.py`, three runs each, medians):

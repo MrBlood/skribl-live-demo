@@ -24,14 +24,27 @@ from .ratelimit import _client_ip, _rate_over
 
 # Text-ish types only. Images, audio and video are already compressed;
 # re-gzipping them spends CPU to make them marginally larger.
-_GZIP_CACHE_MAX = 128     # editor pulls 25; this is slack, not a budget
+#
+# THE CAPS SIT ABOVE EVERY FILE THE APP SHIPS (after #798). Both caches keep
+# only a file's REAL current bust (_real_bust, below), so a running server can
+# never hold more than one entry per file: 147 scripts and styles and 172
+# compressible files today. They were 128, from when an editor pulled 25, and
+# they empty wholesale when full; once the Pad alone asked for 123 files and
+# Flip for 117, opening one and then the other emptied them, and the next open
+# lexed and compressed every file again (the Pad again after Flip: 1.5 s of a
+# worker on this box, where a kept cache answers in 0.1 s; all CPU, so more
+# threads could not help). 512 keeps everything, under 3 MB, with room to grow;
+# verify_assetcache pins every page's files staying cached together and each
+# cap above the files it could hold.
+_GZIP_CACHE_MAX = 512
 
 # Comment-stripped JavaScript is cached on exactly the same key and for exactly
 # the same reason: a busted URL names one immutable byte sequence, so its
 # stripped form is immutable too. Lexing app.js costs ~90 ms, which is a
 # non-starter per request and a rounding error once per file version — the same
 # arithmetic that decided gzip level 6 for busted assets and level 1 otherwise.
-_STRIP_CACHE_MAX = 128
+# The same cap, for the same reason (above).
+_STRIP_CACHE_MAX = 512
 
 # The strip/gzip caches themselves live PER APPLICATION, in
 # app.extensions["skribl"] — they used to be module globals, which was
