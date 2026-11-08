@@ -31127,3 +31127,54 @@ THE FOUR: kind (a post looks the same before and after a reload), simple (the
 answer says what the listing will), powerful and playful (unchanged).
 
 Not tested here: WebKit (the owner's iPhone, in Chrome, where it was seen).
+
+## After v330 -- The empty canvas writes one stroke under its words (owner's B)
+
+The owner, with the Pad on a phone from the feed, the Home Screen app and
+Chrome: "Is this skribl's best face forward?" Mocked ("Skribl's first look"):
+A, a faint recorded drawing (the snail; Flip's bouncing ball) that draws
+itself above the words and leaves at the first stroke; B, warmer words and one
+stroke that writes itself under them. A was shaped by two earlier calls (Blooby
+off this spot, "It's too much"; the hello "the only thing shown uninvited").
+The owner: "like a but b might be more of a skribl.. it's gonna happen
+everytime so it should be subtle but magic right".
+
+- THE WORDS: Pad "Draw anything / It plays back just the way you drew it.",
+  Flip "Draw page 1 / Add pages below, and watch them flip."
+- THE STROKE (lib/hintstroke.js, both editors): a line with one loop, written
+  in a second with a soft nib at its head, then kept, under the smaller line
+  and out of the column, so the words stay at the canvas's middle. It is a
+  recording: harness/tools/make_hintstroke.py performs it on the real Pad with
+  pen pressure (artdraw.py, as every example), three times its size, and
+  writes the 190 recorded points into the module (the hand's 3.4 s kept as
+  1 s). It writes every time the words appear (an empty canvas on open, Undo
+  back to nothing, a new Skribl) and goes with them at the first stroke: it
+  watches the class the editors already set, so app.js, which the link player
+  loads, gains nothing.
+- IN THE PEN'S COLOUR, purple until another is picked; a pen under 3:1 on the
+  canvas's ground writes in Skribl purple, and where purple would not show,
+  in the words' own colour.
+- UNDER THE FIRST-OPEN HELLO it waits, blank, and writes once the hello has
+  gone, so the hello lifts onto words and never onto a finished stroke that
+  starts over. Reduce Motion: it is there whole at once.
+- A stays a mock. SHARED: one module, both editors.
+
+THE CHECKS (verify_identity, THE EMPTY CANVAS'S ONE STROKE, phone dark): on the
+Pad and Flip, its ink grows as it writes and stays, painted; it sits under the
+smaller line, centred on the canvas; it goes with the words at the first
+stroke; on the Pad it writes again after Undo; a pink pen writes pink and a
+dark pen on a dark ground writes purple; Reduce Motion has it whole at once;
+under the hello it is blank and writes after. The rows that pinned "the words
+alone" now pin no picture (still none) and the words at the middle. CALIBRATED,
+each in a copy of the tree with its own server: the Pad not loading it (the
+Pad's rows, the colour, motion and hello rows), Flip not loading it (Flip's
+three), no watch on the words (Undo), the stroke in the column (the words off
+the middle on both editors), always purple (pink), no fallback (dark on dark),
+Reduce Motion ignored, no wait for the hello, the stroke outside the words
+(every stroke row). The copy as it is: 96/96.
+
+THE FOUR: kind (the words stay put and it clears at your first stroke),
+simple (one stroke), powerful (a replay in miniature, in your own ink),
+playful (the little loop).
+
+Not tested here: WebKit (the owner's iPhone, Safari and Chrome), SF or Segoe UI.

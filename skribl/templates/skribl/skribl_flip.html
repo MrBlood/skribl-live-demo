@@ -118,7 +118,7 @@
           <div id="flipEmptyHint" class="canvas-empty-hint">
             {# The words alone, as on the Pad (see skribl_editor.html). #}
             <span>Draw page 1</span>
-            <span class="canvas-empty-sub">Add pages below — they flip into an animation</span>
+            <span class="canvas-empty-sub">Add pages below, and watch them flip.</span>
           </div>
         </div>
         <!-- Zoom HUD / magnify pill (shared partial — Pad + Flip) -->
@@ -652,6 +652,7 @@
   {# lib/chromefit.js: the stage re-fits when the chrome changes size, window or no window (the Pad's too). #}
   <script src="{{ skribl_asset('lib/chromefit.js') }}" defer></script>
   <script src="{{ skribl_asset('flip.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/hintstroke.js') }}" defer></script>
   {% if compose %}<script src="{{ skribl_asset('editor_compose.js') }}" defer></script>{% endif %}
   {% if not compose %}{{ hs.steps() }}{% endif %}
 {{ mark_templates() }}

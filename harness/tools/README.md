@@ -38,6 +38,11 @@ mark, read from `_skribl_brand_mark.html`, written by the pen in its sweep of
 colour, then its dot bouncing in, saved as the payload the app plays
 (`skribl/static/brand/hello.json`).
 
+`make_hintstroke.py` draws the empty canvas's one stroke (lib/hintstroke.js:
+the line with a loop that writes itself under "Draw anything") the same way,
+three times its size, and writes what the Pad recorded into that file's MARK
+block.
+
 ## Measurement
 
 `cssgraph.py` emits `player.css` (run it after any `styles.css` change — the
