@@ -108,8 +108,9 @@ says so.
    mock): nothing to add for it.
 
    The first time someone opens it on a device, once the Pad's empty canvas
-   has written its words, the snail draws itself faintly above them (Flip: a
-   bouncing ball) and goes at the first stroke: the editor decides that in
+   has written its words, the snail draws itself faintly above them (Flip,
+   the first time it is opened there: a bouncing ball, once of its own) and
+   goes at the first stroke: the editor decides that in
    compose mode and fetches the drawing only then (lib/handwords.js), so
    nothing to add for that either.
 

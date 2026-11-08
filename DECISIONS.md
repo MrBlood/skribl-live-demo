@@ -31323,3 +31323,41 @@ with its own server for each case:
   row too (60).
 - The header's fit hearing itself again (`takeRecords` removed, the bug this
   row was written for): red at 180 and 183, the number its comment quotes.
+
+## After v330 -- The snail and the ball, one each (owner: "I don't see snail or ball")
+
+The owner looked for the snail and the ball after #791 and saw neither. Here is
+what each found on the live site (Chromium; WebKit not tested here):
+
+- **The ball could not come.** The Pad and Flip shared one "once" mark on the
+  device. A post box opens on the Pad, and Flip is its ⋯ row away, so the
+  snail spent the mark and Flip's ball never came there. #791's Flip row used
+  a fresh browser for Flip alone, so it never met the real order. Fixed: Flip
+  keeps a mark of its own (`skribl.once.v1.flip`), and the Pad keeps the one
+  it has always had.
+- **The snail is post-box only, and slow the first time.** It never comes on
+  the Pad or Flip opened on their own; that is as filmed, because there the
+  first open is the hello. Through the feed's Skribl button on a phone, the
+  post box's first open loaded the Pad's scripts behind the feed's own, so
+  the hand started 6.6 to 9.6 s after the tap and the snail about 2.5 s
+  later. A stroke before then leaves it for next time; it is not spent until
+  it plays. Opened again, with the files saved, the hand started 0.6 s after
+  the tap. Nothing changed for this.
+- `?once=again` on either editor's post-box address plays it, seen or not.
+
+Two rows in verify_identity, in the same browser after the Pad's snail rows:
+
+- Flip in the same post box still has its ball.
+- Once too: Flip opened again, the ball does not come.
+
+Both "opened again" rows, the Pad's and Flip's, now mark the page they leave
+and wait for the new one. A wait for the boot mark alone could pass on the
+page being left and read the new one too early. In the first calibration,
+Flip's "once" row stayed green with no mark at all.
+
+Calibrated in tree copies, each with its own server, verify_identity 105 rows:
+
+- As it is: 105/105.
+- One mark for both (as #791 shipped): red on the ball row only.
+- Flip's ball every time: red on Flip's once row only.
+- No mark at all: red on both once rows.
