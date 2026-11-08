@@ -27,6 +27,7 @@
         data-build="{{ skribl_build }}" data-build-url="{{ url_for('.skribl_build') }}" defer></script>
   {% include 'skribl/_skribl_theme_boot.html' %}
   {% include 'skribl/_skribl_hand_boot.html' %}
+  {% include 'skribl/_skribl_fit_boot.html' %}
   {# Not on the letter sheet: a page with a job of its own, opened on purpose. #}
   {% if not letters %}{% include 'skribl/_skribl_hello_boot.html' %}{% endif %}
 </head>
@@ -394,6 +395,8 @@
     {% with kind='pad' %}{% include 'skribl/_skribl_image_drawer.html' %}{% endwith %}
   </div>
 
+  {# The canvas laid out before anything paints (the calm open, part 2). #}
+  {% if not letters %}{% with kind='pad' %}{% include 'skribl/_skribl_fit_early.html' %}{% endwith %}{% endif %}
 </div>
 
   <script nonce="{{ csp_nonce }}">
@@ -501,8 +504,7 @@
   {# lib/toolscroll.js: on a screen too narrow for one row, the toolbar scrolls
      and glides once to show there is more (SK312-005, v315). #}
   <script src="{{ skribl_asset('lib/toolscroll.js') }}" defer></script>
-  {# lib/chromefit.js: the canvas re-fits when the chrome changes size, window or no window (Flip's too). #}
-  <script src="{{ skribl_asset('lib/chromefit.js') }}" defer></script>
+  {# lib/chromefit.js and lib/canvassizes.js load in the head (_skribl_fit_boot.html): the canvas is laid out before it paints. #}
   <!-- Editors only: the player never posts. See the header of postedaudio.js. -->
   <script src="{{ skribl_asset('lib/postedaudio.js') }}" defer></script>
   <!-- Editors only, same reason: the share card is composited at POST time.
@@ -548,7 +550,6 @@
   <script src="{{ skribl_asset('lib/canvasground.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/palette.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/pillfit.js') }}" defer></script>
-  <script src="{{ skribl_asset('lib/canvassizes.js') }}" defer></script>
   {# lib/audiosession.js: iOS silences Web Audio when the ringer switch is off
      but not an <audio> element, so a Skribl's music is inaudible on a phone set
      to silent. Holds a playback session, claimed only on a gesture that asks

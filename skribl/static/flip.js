@@ -965,8 +965,21 @@ let _sessionOwnedDraft = false;   // set on the first non-empty save this sessio
 // drawing, it moves it aside, and the next visit offers it. A host's composer
 // keeps no Flip draft, so no slot.
 const flipSlot = (window.SkriblOtherTab && !FLIP_COMPOSE) ? window.SkriblOtherTab.slot(AUTOSAVE_KEY) : null;
-function slotWrite(text){ if(flipSlot) flipSlot.write(text); else localStorage.setItem(AUTOSAVE_KEY, text); }
-function slotRemove(){ if(flipSlot) flipSlot.remove(); else localStorage.removeItem(AUTOSAVE_KEY); }
+// THE DRAFT'S SHAPE, NOTED BESIDE IT (the calm open, part 2; lib/chromefit.js
+// note, which the head loads): its size, its pages and whether there is ink,
+// small enough to read before anything paints, so _skribl_fit_early.html lays
+// a draft you come back to out in its own shape and keeps the words off a page
+// that has a drawing coming. Kept and dropped with the draft itself, below.
+const shapeNote = window.SkriblChromeFit;
+function slotWrite(text){
+  if(flipSlot) flipSlot.write(text); else localStorage.setItem(AUTOSAVE_KEY, text);
+  const ink = !(frames.length === 1 && (!frames[0] || !frames[0].strokes || !frames[0].strokes.length) && !bgImage);
+  if (shapeNote) shapeNote.note('flip', { w: CW, h: CH, pages: frames.length, ink: ink });
+}
+function slotRemove(){
+  if(flipSlot) flipSlot.remove(); else localStorage.removeItem(AUTOSAVE_KEY);
+  if (shapeNote) shapeNote.note('flip', null);
+}
 function saveNow(){
   if (FLIP_COMPOSE) return;   // compose keeps no draft (see FLIP_COMPOSE)
   if (flipSlot && flipSlot.frozen()) return;   // "Open it" is reloading this page (lib/othertab.js)
@@ -3484,11 +3497,13 @@ function buildStrip(){
      one page, would just appear with the second. */
   const stripWrap = strip.parentNode;
   let col = stripWrap.querySelector(':scope > .addcol');
+  // The template has it (the calm open, part 2: in the page from the first frame); wired once, here.
+  if(!col || !col.dataset.wired){
   if(!col){
   col=document.createElement('div'); col.className='addcol';
-  // Built here rather than in the template, which is why a template-wide
-  // tooltip pass could not reach them. lib/tooltip.js adopts late markup via a
-  // MutationObserver, so a title written here is picked up like any other.
+  // The template has the row (since the calm open); this makes it only for a
+  // page without it. lib/tooltip.js adopts late markup via a MutationObserver,
+  // so a title written here is picked up like any other.
   // SVG plus, not the U+FF0B fullwidth '＋' text glyph — that character
   // renders at different weights across fonts/platforms and did not match the
   // SVG icons in the page bar beside it.
@@ -3505,6 +3520,8 @@ function buildStrip(){
   // thumbnails sliding under them, and give the strip its full width back.
   // buildStrip() empties `strip`, and the row sits outside it, made once.
   stripWrap.insertBefore(col, strip);
+  }
+  col.dataset.wired = '1';
   col.querySelector('#addcopy').addEventListener('click',()=>{ if(playing) return; if(moveMode){ chip('Finish or cancel the move first'); return; } addFrame(true); });
   col.querySelector('#addblank').addEventListener('click',()=>{ if(playing) return; if(moveMode){ chip('Finish or cancel the move first'); return; } addFrame(false); });
   col.querySelector('#addinbetween').addEventListener('click', addInbetween);
@@ -12556,6 +12573,10 @@ function mediaBytesAtRisk(){
 
 /* ---- boot ---- */
 const restored = tryRestore();
+// A shape noted with no Flip to bring back (one left behind) is dropped, so the
+// next open lays out a new Flip's shape. A post box keeps no draft, and leaves
+// the author's note alone.
+if (!restored && !FLIP_COMPOSE && shapeNote) shapeNote.note('flip', null);
 // No draft to come back to is a new Flip: it starts on the theme's ground,
 // Paper in the light theme (lib/canvasground.js), as the Pad's does. A
 // restored draft brought its own, and is never moved by the theme.
@@ -12696,4 +12717,5 @@ if (window.SkriblTooltip) window.SkriblTooltip.init();
    verify_boot.py asserts this flag. It is the cheapest possible check for the
    most expensive possible bug, and unlike a page-error listener it also catches
    the case where something swallowed the throw. Keep it last. */
+document.documentElement.classList.add('skribl-fit');   // the canvas shows, laid out early or not (_skribl_fit_boot.html)
 window.__skriblBoot = Object.assign(window.__skriblBoot || {}, { flip: true });

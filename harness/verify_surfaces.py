@@ -41,23 +41,42 @@ results = []
 check = make_check(results)
 
 
-def scripts(template):
-    return re.findall(r'<script src="[^"]*"[^>]*>',
-                      (TPL / template).read_text(encoding="utf-8"))
+INCLUDE = re.compile(r"\{%\s*include\s+['\"]skribl/([\w.]+)['\"]")
 
 
+def scripts(template, seen=None):
+    """The template's script tags, and those of every partial it includes:
+    a tag moved into a partial is still on the page."""
+    seen = set() if seen is None else seen
+    if template in seen:
+        return []
+    seen.add(template)
+    text = (TPL / template).read_text(encoding="utf-8")
+    tags = re.findall(r'<script src="[^"]*"[^>]*>', text)
+    for part in INCLUDE.findall(text):
+        tags += scripts(part, seen)
+    return tags
+
+
+# THE CANVAS'S EARLY LAYOUT (the calm open, part 2) needs two small libraries
+# before the editor's column is read, so they load in the head and block it,
+# beside the stylesheets: one partial, _skribl_fit_boot.html, the same in both
+# editors. They and only they.
+EARLY = ("lib/canvassizes.js", "lib/chromefit.js")
 print("SURFACES — the two editors load their scripts the same way")
 for tpl in ("skribl_editor.html", "skribl_flip.html"):
     tags = scripts(tpl)
     blocking = [t for t in tags
                 if not re.search(r'\b(defer|async)\b|type="module"', t)]
-    check(f"{tpl}: every script tag is deferred",
-          not blocking,
+    early = sorted(e for t in blocking for e in EARLY if f"'{e}'" in t)
+    blocking = [t for t in blocking if not any(f"'{e}'" in t for e in EARLY)]
+    check(f"{tpl}: every script tag is deferred, but the two the canvas's early layout needs in the head",
+          not blocking and early == sorted(EARLY),
           f"{len(blocking)} of {len(tags)} block the parser: "
           + ", ".join(re.search(r"'([^']+)'", t).group(1)
                       for t in blocking[:3] if re.search(r"'([^']+)'", t))
           + " — the editor deferred all of its and Flip deferred none, which is "
-            "the drift this suite exists for")
+            "the drift this suite exists for; the early layout's: " + (", ".join(early) or "none"))
 
 print("\nSURFACES — how far apart app.js and flip.js have grown")
 FN = re.compile(r"^\s{0,2}(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(")

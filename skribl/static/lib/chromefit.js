@@ -1,6 +1,7 @@
 /* The editors' fit when the chrome around the canvas changes size and the
- * window says nothing -- Pad's and Flip's, one watch -- and the canvas's row
- * reaching past the column on a wide window (span()).
+ * window says nothing -- Pad's and Flip's, one watch -- the canvas's row
+ * reaching past the column on a wide window (span()), and the shape the canvas
+ * starts in (a new drawing's, startShape; a draft's own, noted beside it).
  *
  * WHY. The chrome around the stage changes size without the window changing:
  * on Flip the header's play control widens once there are two pages (2px
@@ -114,6 +115,15 @@
     if (sq && row >= sq.w && h >= sq.h && mm && mm('(pointer: coarse) and (orientation: portrait)').matches) return sq;
     return t.bestFor(col, h);
   }
+  // THE SHAPE THE PAD STARTS IN (app.js resizeCanvas): a draft's own, noted
+  // beside it (below), else a new drawing's for the room its row has. FRESH:
+  // a new drawing's, whatever is noted (editor_draft.js, for a draft an older
+  // page saved, which holds no size, and whose note may be another drawing's).
+  // Here, with the rest of the rule, where the link player never loads it.
+  function padShape(row, fresh) {
+    var room = roomOf(row);
+    return (!fresh && noted('pad')) || startShape(room.col, room.row, room.h);
+  }
   function span(row) {
     var body = global.document.body;
     if (!row || !row.parentElement || !body) return 0;
@@ -124,5 +134,34 @@
     return r;
   }
 
-  global.SkriblChromeFit = { watch: watch, span: span, columnWidth: columnWidth, reach: reach, roomOf: roomOf, startShape: startShape };
+  /* A DRAFT'S SHAPE, NOTED BESIDE IT (the calm open, part 2). Each editor
+   * notes its drawing's shape beside its draft as it saves it, and drops the
+   * note with the draft: the size, Flip's page count, and whether there is
+   * ink. It is small enough to read before anything paints, so
+   * _skribl_fit_early.html lays a draft you come back to out in its own
+   * shape, and the Pad starts in it (app.js resizeCanvas) rather than in a
+   * new drawing's shape that the draft replaced a moment later: on a slower
+   * phone a frame was drawn between the two (verify_identity). A site's post
+   * box and the letter sheet keep no draft, so they start as a new drawing.
+   *
+   *   SkriblChromeFit.note('pad' | 'flip', { w, h, pages, ink } | null)
+   *   SkriblChromeFit.noted('pad' | 'flip')  ->  that shape, or null
+   */
+  var NOTE = 'skribl.shape.v1.';
+  function note(kind, shape) {
+    try {
+      if (shape) global.localStorage.setItem(NOTE + kind, JSON.stringify(shape));
+      else global.localStorage.removeItem(NOTE + kind);
+    } catch (e) {}
+  }
+  function noted(kind) {
+    if (global.SKRIBL_COMPOSE || global.SKRIBL_LETTERS) return null;
+    var n = null;
+    try { n = JSON.parse(global.localStorage.getItem(NOTE + kind) || 'null'); } catch (e) { return null; }
+    var px = function (v) { return v === Math.round(v) && v > 0 && v <= 4096; };
+    return n && px(n.w) && px(n.h) ? n : null;
+  }
+
+  global.SkriblChromeFit = { watch: watch, span: span, columnWidth: columnWidth, reach: reach, roomOf: roomOf, startShape: startShape,
+                             padShape: padShape, note: note, noted: noted };
 })(window);

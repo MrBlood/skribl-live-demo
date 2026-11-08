@@ -1062,7 +1062,14 @@ with sync_playwright() as sp:
     #   loop rather than a copy of each (-175 B). WHICH CALLER PAYS: every
     #   player page; the pill is built only where it can be used.
     #   verify_jsstrip's lines move with it. 160,932 measured.
-    BYTES_RATCHET, BYTES_TARGET = 160_935, 153_800
+    # LOWERED (the owner's "Yes calm", the calm open's part 2): the shape the
+    #   Pad starts in left app.js for lib/chromefit.js padShape, which the
+    #   player never loads; it also reads a draft's noted shape, so a draft
+    #   you come back to starts in its own (a slower phone drew a frame of a
+    #   new drawing's shape between app.js and editor_draft.js). -69 B;
+    #   verify_jsstrip's lines move with it. 160,863 measured; the ratchet
+    #   follows it down.
+    BYTES_RATCHET, BYTES_TARGET = 160_865, 153_800
     # The page's own HTML. The brand is the one-stroke skribl signature INLINE
     # in the page (~1.4KB of paths, a ~0.9KB nonce'd draw-on script, and the
     # <linearGradient> defs), and inline is load-bearing rather than lazy:

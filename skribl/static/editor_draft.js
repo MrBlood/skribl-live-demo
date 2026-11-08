@@ -64,8 +64,21 @@ const PAD_DRAFT_OFF = (typeof window !== 'undefined' &&
 // (SK-AUD-006, T1): a save never replaces another tab's drawing, it moves it
 // aside, and the next visit offers it. Compose keeps no draft, so no slot.
 const padSlot = (window.SkriblOtherTab && !PAD_DRAFT_OFF) ? window.SkriblOtherTab.slot(AUTOSAVE_KEY) : null;
-function slotWrite(text) { if (padSlot) padSlot.write(text); else localStorage.setItem(AUTOSAVE_KEY, text); }
-function slotRemove() { if (padSlot) padSlot.remove(); else localStorage.removeItem(AUTOSAVE_KEY); }
+// THE DRAFT'S SHAPE, NOTED BESIDE IT (the calm open, part 2; lib/chromefit.js
+// note, which the head loads): its size and whether there is ink, small enough
+// to read before anything paints, so _skribl_fit_early.html lays a draft you
+// come back to out in its own shape and keeps the words off a canvas that has
+// a drawing coming, and app.js starts the Pad in that shape. Kept and dropped
+// with the draft.
+const shapeNote = window.SkriblChromeFit;
+function slotWrite(text) {
+  if (padSlot) padSlot.write(text); else localStorage.setItem(AUTOSAVE_KEY, text);
+  if (shapeNote) shapeNote.note('pad', { w: authoredW, h: authoredH, ink: !!hasContent });
+}
+function slotRemove() {
+  if (padSlot) padSlot.remove(); else localStorage.removeItem(AUTOSAVE_KEY);
+  if (shapeNote) shapeNote.note('pad', null);
+}
 
 // ---- The durability model (external review P0-2 / #19) ----------------------
 // Every mutating edit bumps draftRev (in scheduleAutosave — the same triggers
@@ -954,6 +967,17 @@ function restoreAutosave(data) {
   strokeGroups = (data.strokeGroups || []).slice();
   recolors = Array.isArray(data.recolors) ? data.recolors.slice() : [];
   if (!(size && size.cssWidth > 0 && size.cssHeight > 0)) {
+    // AN OLDER PAGE'S DRAFT holds no size, and the shape noted beside the
+    // slot is this page's last save's, which the older page then saved over:
+    // the canvas this window chose is a new drawing's, as it always was, not
+    // that note's (lib/chromefit.js padShape, fresh). Then holdStrokes looks.
+    const fit = window.SkriblChromeFit;
+    const first = fit && fit.padShape ? fit.padShape(canvasArea || canvasWrap.parentElement || canvasWrap, true) : null;
+    if (first && (first.w !== authoredW || first.h !== authoredH)) {
+      establishEditorCanvas(first.w, first.h);
+      layoutEditorCanvas();
+      if (typeof window.syncCanvasSeg === 'function') window.syncCanvasSeg();
+    }
     holdStrokes(data.redoStrokes && data.redoStrokes.length ? data.redoStrokes : strokes);
   }
 
@@ -1067,6 +1091,13 @@ function restoreAutosave(data) {
     // Write a fresh autosave reflecting the restored state.
     setTimeout(writeAutosave, 200);
   }
+  // A shape noted with no drawing to bring back (one left behind) is dropped,
+  // so the next open lays out a new drawing's shape. A post box and the letter
+  // sheet keep no draft, and leave the Pad's note alone.
+  else if (!PAD_DRAFT_OFF && shapeNote) shapeNote.note('pad', null);
+  // The canvas shows, laid out early or not (_skribl_fit_boot.html; the early
+  // script's own mark comes first): here, with a draft back in its own shape.
+  document.documentElement.classList.add('skribl-fit');
 
   // ANOTHER TAB'S DRAWING IS WAITING (lib/othertab.js, T1): offered once the
   // newest has opened. "Keep for later" files it under Drafts as it is: its

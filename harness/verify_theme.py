@@ -17,8 +17,9 @@ liability.
    nearly shipped in v232.
 
 2. IT DOES NOT FLASH. The setting lives in localStorage, which no stylesheet can
-   read. Every script in both templates is deferred (verify_surfaces.py pins
-   that), so if the attribute were stamped by lib/theme.js the browser would
+   read. Every script in both templates is deferred but the two small ones the
+   canvas's early layout needs (verify_surfaces.py pins that, and neither
+   reads the theme), so if the attribute were stamped by lib/theme.js the browser would
    already have painted a dark frame — a black flash on every navigation, for
    the users who chose light specifically to avoid one. The inline boot script
    in <head> is what prevents it, and the test for it is to serve the page with
