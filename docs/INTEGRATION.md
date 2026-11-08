@@ -429,7 +429,11 @@ it. A page laid out around a 16:9 box passes `shaped=false` and keeps that box
 needs: `title` (what `/s/<id>` unfurls with), `caption`, and
 `"visibility": "public"` — the API defaults to `unlisted`, and a feed's composer
 is exactly the caller that means otherwise. Store the returned `id` on your post
-row and render it with `{{ skribl_inline(post.skribl_id) }}`.
+row and render it with `{{ skribl_inline(post.skribl_id) }}`, its size and its
+line as above. The answer carries those three as well (`canvas_w`, `canvas_h`,
+`line`: the listing's own values for the post), so a page that puts the new
+post in without a reload, as `/feed` does, can give it its shape and its
+numbers at once; with the id alone it sits in the 16:9 box until a reload.
 
 `GET /feed` is all of the above, working, in
 `skribl/static/feed.js` — that file is written to be read as the host-side
@@ -566,7 +570,9 @@ both. `harness/verify_createpost.py` asserts exactly that, in both directions.
 
 **What you get back.** `made.public_id` is the string for
 `{{ skribl_inline(post.skribl_id) }}`. `made.post` is the flushed `SkriblPost`,
-so `made.post.id` is available if you would rather hold a foreign key. There is
+so `made.post.id` is available if you would rather hold a foreign key, and its
+`canvas_w`, `canvas_h` and `line` are the macro's `canvas_w`, `canvas_h` and
+`line_info` (`examples/host_app` looks them up by public id for its feed). There is
 no `url` on it: building one needs `url_for`, which outside a request needs a
 configured `SERVER_NAME`, and this function should not require either — call
 `url_for("skribl.skribl_player", public_id=made.public_id)` yourself when you

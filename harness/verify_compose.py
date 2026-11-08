@@ -266,6 +266,34 @@ with sync_playwright() as sp:
         return el ? el.getAttribute('data-skribl-id') : null; }""")
     check("the posted skribl has an id the host can store on its own row",
           bool(posted_id), str(posted_id))
+
+    # THE POST JUST MADE IS IN ITS DRAWING'S SHAPE AT ONCE (the owner's phone,
+    # after #786). It was put in with its id alone, so it sat in the 16:9 box
+    # with the share card's ground at its sides and a line that said only
+    # "watching at 1x", until a reload. Read now, and read again in a fresh
+    # page from the listing: the two have to be the same post.
+    _SEEN = """(id) => { const b = document.querySelector('#feedList [data-skribl-id="' + id + '"]');
+        if (!b) return null; const r = b.getBoundingClientRect(), say = b.parentNode.querySelector('.skribl-inline-say');
+        let line = null; try { line = JSON.parse(b.getAttribute('data-skribl-line')); } catch (e) {}
+        return { w: +b.getAttribute('data-skribl-w') || 0, h: +b.getAttribute('data-skribl-h') || 0,
+                 shaped: b.classList.contains('is-shaped'), ar: +(r.width / r.height).toFixed(3),
+                 line: line, say: say ? say.textContent.replace(/\\s+/g, ' ').trim() : null }; }"""
+    _now = pg.evaluate(_SEEN, posted_id)
+    check("the post just made is in its drawing's shape at once, and its line says how long it was drawn",
+          bool(_now) and _now["shaped"] and _now["w"] > 0 and _now["h"] > 0
+          and abs(_now["ar"] - _now["w"] / _now["h"]) < 0.02
+          and bool(_now["line"]) and "drawn" in (_now["say"] or "").lower(), json.dumps(_now))
+    _pg2 = b.new_page(viewport={"width": 1240, "height": 980}, color_scheme="dark")
+    browsing.goto(_pg2, BASE, "/feed")
+    _pg2.wait_for_function("""(id) => { const b = document.querySelector('#feedList [data-skribl-id="' + id + '"]');
+        const s = b && b.parentNode.querySelector('.skribl-inline-say');
+        return !!(s && s.textContent.trim()); }""", arg=posted_id, timeout=15000)
+    _then = _pg2.evaluate(_SEEN, posted_id)
+    check("...the same as the listing shows it after a reload: shape, size and line",
+          bool(_now) and bool(_then) and all(_now[k] == _then[k] for k in ("w", "h", "shaped", "line", "say"))
+          and abs(_now["ar"] - _then["ar"]) < 0.01,
+          f"now {json.dumps(_now)}; after a reload {json.dumps(_then)}")
+    _pg2.close()
     pg.close()
 
     # ---- WHAT WAS PUBLISHED IS WHAT PAD WOULD HAVE PUBLISHED ---------------

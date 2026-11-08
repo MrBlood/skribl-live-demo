@@ -325,6 +325,36 @@ check("a small unknown key still rides along, as it is meant to", st10 == 201,
       f"every client change need a server release")
 
 
+print("\nSHOWN AT ONCE — a new post's answer carries what the listing will show")
+# /feed put a post it had just made in with its id alone, so it sat in the
+# 16:9 box with the share card's ground at its sides, and its line said only
+# "watching at 1x", until a reload (the owner's phone, after #786). The answer
+# carries the drawing's size and the line now, the listing's own values for
+# the row (routes.py _as_shown), and a retry found again by its key answers
+# the same.
+_tall = {"frames": [{"strokes": [{"x": 40 + i * 4.0, "y": 60 + i * 9.0, "size": 6,
+                                  "color": "#7c5cff", "t": i * 40, "start": i == 0}
+                                 for i in range(40)],
+                     "strokeGroups": [40], "background": {"color": "#101418"}}],
+         "canvasSize": {"cssWidth": 531, "cssHeight": 944},
+         "title": "shown at once", "visibility": "public"}
+C3 = {"X-Skribl-Client": _secrets.token_urlsafe(32)}
+K3 = {"Idempotency-Key": str(uuid.uuid4())}
+st_a, b_a = post(_tall, headers={**K3, **C3})
+_lst, _lb = get("/api/skribls?limit=50")
+_item = next((i for i in (_lb.get("items") or []) if i.get("id") == b_a.get("id")), None) or {}
+_SHOWN = ("canvas_w", "canvas_h", "line")
+check("a new post's answer carries the drawing's size and its line, as the listing gives them",
+      st_a == 201 and b_a.get("canvas_w") == 531 and b_a.get("canvas_h") == 944
+      and bool(b_a.get("line")) and all(b_a.get(k) == _item.get(k) for k in _SHOWN),
+      f"{st_a} answer {[b_a.get(k) for k in _SHOWN]}, listing {[_item.get(k) for k in _SHOWN]}")
+st_b, b_b = post(_tall, headers={**K3, **C3})
+check("...and the same post, found again by its key, answers with them too",
+      st_b == 200 and b_b.get("idempotentReplay") is True
+      and all(b_b.get(k) == b_a.get(k) for k in _SHOWN + ("hasAudio",)),
+      f"{st_b} replay {[b_b.get(k) for k in _SHOWN + ('hasAudio',)]}")
+
+
 print("\nMETA — a listing is not a play")
 # WHY THIS ENDPOINT EXISTS. `kind`, `pages` and `has_audio` were each added
 # after posts were already being made, so every row a BROWSER wrote before them
