@@ -235,8 +235,9 @@ with sync_playwright() as pw:
     # Their take ends when they are written, as Done ends one; Keep drawing
     # carries the drawing on, and the stroke after is recorded into it, its
     # clock starting again as every Keep drawing's does (so the replay grows).
-    q.click("#addTakePill")
-    q.wait_for_timeout(200)
+    if q.evaluate("() => !document.getElementById('addTakePill').hidden"):   # with no pill, the row says why
+        q.click("#addTakePill")
+        q.wait_for_timeout(200)
     line(q)
     s2 = q.evaluate(STATE)
     t_new = q.evaluate("(n0) => strokes.slice(n0).reduce((m, p) => Math.max(m, p.t || 0), 0)", w["n"])
