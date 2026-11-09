@@ -95,16 +95,17 @@
     }
   }
 
-  /* The title and caption fields are HIDDEN here, not removed. The host's own
-   * composer already has the text box for this post; a second title field
-   * inside the overlay asks the same question twice and the answers then
-   * disagree. buildPostPayload() still reads the inputs — they are empty, so
-   * the payload gets the "Untitled Skribl" default — and the host sets a real
-   * title from their post's text when they publish, which is what /s/<id>
-   * unfurls with. */
+  /* WHAT THE SHEET ASKS HERE is the template's to say (_skribl_post.html),
+   * from the first frame: no title, because the host's own composer already
+   * has the words for this post and a second title field asks the same
+   * question twice; "Viewers start at", which is part of the drawing; and,
+   * when the host asked for it (?gallery=1), "Show in the Skribls gallery"
+   * with the gallery caption that opens under it (lib/postsheet.js). It used
+   * to hide the whole block from here, "Viewers start at" with it. The title
+   * input is still in the page, hidden: buildPostPayload() reads it, gets the
+   * "Untitled Skribl" default, and the host sets a real title from their
+   * post's text when they publish, which is what /s/<id> unfurls with. */
   function hideDuplicateFields() {
-    var fields = doc.querySelector('#postSheet .post-fields');
-    if (fields) fields.hidden = true;
     /* "Watch your Skribl" is a link to a post that does not exist yet. */
     var watch = doc.getElementById('postWatchBtn');
     if (watch) watch.hidden = true;

@@ -30,7 +30,7 @@
     var previewImg = $('postPreviewImg');
     var previewFrame = $('postPreview');
     var submitBtn = $('postSubmitBtn');
-    var publicInput = $('postPublicInput');   // absent in compose mode
+    var publicInput = $('postPublicInput');   // in compose mode only with the host's ?gallery=1
     var submitLabel = $('postSubmitLabel');
     var postIcon = $('postSubmitIcon');
     var backupIcon = $('postBackupIcon');
@@ -601,6 +601,7 @@
       if (cfg.onOpen) cfg.onOpen();
       syncSoundMark();
       syncPublicSub();
+      unfoldGalleryCaption(false);
       // Ask before creating server state, not after — see lib/recoverykey.js.
       if (window.SkriblRecoveryKey) window.SkriblRecoveryKey.warnIfVolatile(sheet);
       // Field values persist across a close within the session, a post's too
@@ -701,6 +702,53 @@
       if (publicInput && publicSub) publicSub.textContent = publicInput.checked ? publicSub.dataset.on : publicSub.dataset.off;
     }
     if (publicInput) publicInput.addEventListener('change', syncPublicSub);
+
+    /* ADDED TO A POST, THE CAPTION IS THE GALLERY'S (the owner's pick A, FUTURE
+     * 6ah). It opens under "Show in the Skribls gallery" once that is ticked
+     * and folds away when it is not, and the sheet grows and shrinks with it
+     * in a glide rather than a jump; straight there under Reduce Motion. What
+     * was typed stays while it is folded, and travels only with the tick
+     * (editor_post.js, flip.js). Only in compose mode with the host's gallery
+     * choice: posting for itself, the caption is always there. */
+    var galleryCaption = cfg.compose && publicInput ? $('postCaptionField') : null;
+    // The stylesheet's --ease: a slow start and a slow end, so the sheet
+    // begins to grow gently rather than leaping most of the way at once.
+    var EASE = 'cubic-bezier(0.4, 0, 0.2, 1)';
+    function unfoldGalleryCaption(glide) {
+      var f = galleryCaption;
+      if (!f) return;
+      var want = publicInput.checked;
+      // Where it is now, a glide turned back half way included, so the turn
+      // starts from there rather than jumping to either end first.
+      var cs = f.hidden ? null : getComputedStyle(f);
+      var fromH = cs ? f.getBoundingClientRect().height : 0, fromO = cs ? +cs.opacity : 0;
+      if (f.__fold) { f.__fold.cancel(); f.__fold = null; }
+      var still = !glide || !f.animate || capStill.matches;
+      if (want) {
+        f.hidden = false;
+        fitCaption(true);
+        if (still) return;
+        var h = f.offsetHeight;
+        if (Math.abs(h - fromH) < 1) return;
+        f.style.overflow = 'hidden';
+        var a = f.animate([{ height: fromH + 'px', opacity: fromO, marginTop: (fromH ? 0 : -10) + 'px' },
+                           { height: h + 'px', opacity: 1, marginTop: '0px' }],
+                          { duration: 260, easing: EASE });
+        f.__fold = a;
+        a.onfinish = a.oncancel = function () { f.style.overflow = ''; if (f.__fold === a) f.__fold = null; };
+      } else {
+        if (f.hidden) return;
+        if (still) { f.hidden = true; return; }
+        f.style.overflow = 'hidden';
+        var b = f.animate([{ height: fromH + 'px', opacity: fromO, marginTop: '0px' },
+                           { height: '0px', opacity: 0, marginTop: '-10px' }],
+                          { duration: 200, easing: EASE, fill: 'forwards' });
+        f.__fold = b;
+        b.oncancel = function () { f.style.overflow = ''; if (f.__fold === b) f.__fold = null; };
+        b.onfinish = function () { f.hidden = true; b.cancel(); };
+      }
+    }
+    if (galleryCaption) publicInput.addEventListener('change', function () { unfoldGalleryCaption(true); });
 
     if (copyBtn) copyBtn.addEventListener('click', async function () {
       if (!lastPostUrl) return;

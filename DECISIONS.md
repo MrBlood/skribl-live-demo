@@ -32299,3 +32299,68 @@ it opens now glides to what it opened, so the suite waits through each
 glide. The budget is 1800s (run_harness.sh, the one suite with more than
 600s) and its weight in shard.py the 1490s measured. Nothing on the page was
 wrong; the budget was a coin toss at 99%.
+
+## After v330 -- Add to post asks about the Skribls gallery
+
+The owner's pick A for Add to post ("All yes", after FUTURE 6ah and a mock of
+the sheet, Now beside A and B, phone and desk, light and dark): one tick,
+"Show in the Skribls gallery", off unless it is turned on; turned on, a
+gallery caption opens under it; and "Viewers start at" comes back.
+
+ONLY WHEN THE HOST ASKS (?gallery=1). Skribl's own /feed is the gallery: its
+composer posts public, and a tick there would ask what the page has already
+answered. A host that keeps its own feed (the example host; skribls.net,
+docs/SKRIBLS-NET.md item 10) opens the editor with compose=1&gallery=1, and
+only then does the sheet ask. The ⋯ switch to the other editor keeps both.
+
+WHAT TRAVELS. Ticked, the payload says visibility "public" and carries the
+gallery caption; left off, neither travels, whatever the folded box still
+holds. Both editors (editor_post.js, flip.js). The host keeps what the
+payload says: examples/host_app/app.py compose() drops any other visibility,
+so a drawing left unticked is in the post only (unlisted, listed nowhere),
+and takes the post's words for an empty caption. The title is still the
+post's words. Until now the example host made every drawing public.
+
+RENDERED, NOT HIDDEN BY SCRIPT. editor_compose.js hid the sheet's whole block
+of fields in compose mode, "Viewers start at" with it, though the template
+said it shows there. The template now renders the compose sheet as it is
+from the first frame: no title field (kept in the page, hidden, because both
+editors read it), the tick and the caption under it with the host's flag,
+and "Viewers start at" on the Pad either way.
+
+KIND. The caption glides open under the tick and folds away again
+(lib/postsheet.js), the sheet growing with it, on the stylesheet's --ease, a
+slow start and a slow end: on the drawers' fast-start curve it reached 73% of
+its height in one frame. Under Reduce Motion it is simply there.
+
+THE CHECKS. verify_gallery 4, Pad and Flip: no box without the host's flag
+(and no title or caption laid out, "Viewers start at" there, nothing in the
+payload); with it, the box off, the caption folded, the switch keeping the
+flag; ticked, the caption painted and gliding, whole after about 280ms
+(judged by time: a busy machine draws fewer, longer frames of the same
+glide); the payload without the tick and with it; under Reduce Motion, whole
+at once. verify_example: the first drawing, added unticked, is unlisted with
+the post's words; a second, ticked with a gallery caption, is public with
+that caption, and the listing has it and not the first.
+
+CALIBRATED in a tree copy with its own server, 16 breaks, each red on its
+own rows: the box without the flag; no box with it; a snap for the glide; a
+tick that opens nothing; Reduce Motion gliding; the Pad and Flip each
+sending the folded caption; the Pad never sending public in compose; Flip
+always dropping it; the fields block hidden again; the switch dropping the
+flag; a title field in compose; the caption open from the start with the
+sheet not folding it; the host forcing public; the host ignoring the
+gallery caption; the host not asking. The template's own hidden on the
+caption, broken alone, stayed green: the sheet folds the caption to the
+tick each time it opens, so no one can see the difference (an equivalent
+break, not a blind row). With nothing broken: verify_gallery 232/232,
+verify_example 42/42.
+
+VERIFY_CLOUDDRAFTS' HAND-OVER ROW, red beside the others and alone (115/116):
+a Flip draft opened from the Pad's list inside the example host's composer
+asked for Flip's address to be exactly ?compose=1. The hand-over follows the
+⋯ switch's link, which now keeps the host's gallery=1, so Flip in that
+composer asks the gallery question too, as it should. The row now asks for
+the draft's id cleaned off and the host's flags kept. Calibrated: 116/116 as
+built; red when the switch drops the flag; red when the id is left on (with
+the two rows that already pinned the id).

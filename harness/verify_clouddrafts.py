@@ -48,6 +48,7 @@ import subprocess
 import sys
 import tempfile
 import time
+from urllib.parse import parse_qs, urlsplit
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 EXAMPLE = ROOT / "examples" / "host_app"
@@ -609,8 +610,13 @@ try:
         flip_frame = next(f for f in pa.frames if "/skribl/flip" in f.url)
         inner = flip_frame.evaluate("""() => ({ path: location.pathname + location.search,
             pages: frames.length, name: SkriblName.get(), mode: window.SKRIBL_COMPOSE })""")
-        check("one tap hands over to Flip IN THE COMPOSER, the id cleaned off the URL",
-              inner["path"] == "/skribl/flip?compose=1" and inner["mode"] == "flip", str(inner))
+        # The host's own flags ride across, the draft's id does not. This
+        # host's composer asks the gallery question (gallery=1, feed.html),
+        # so Flip, opened from the Pad's list inside it, asks it too.
+        _hand = urlsplit(inner["path"])
+        check("one tap hands over to Flip IN THE COMPOSER, the id cleaned off the URL, the host's gallery question kept",
+              _hand.path == "/skribl/flip" and parse_qs(_hand.query) == {"compose": ["1"], "gallery": ["1"]}
+              and inner["mode"] == "flip", str(inner))
         check("holding the saved animation and its name",
               inner["pages"] == 2 and inner["name"] == "Bounce", str(inner))
         pa.evaluate("() => document.getElementById('padFrame').contentDocument.getElementById('postBtn').click()")

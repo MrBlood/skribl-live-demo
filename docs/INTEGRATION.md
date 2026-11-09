@@ -259,8 +259,14 @@ nowhere — because that is what a link-sharing product should default to. Skrib
 own post sheets (the Pad's and Flip's) send `"visibility": "public"` only when
 the author ticks "Show in the public gallery", and omit the key otherwise, so a
 post made without the tick never appears in `GET /api/skribls`. In compose mode
-(`?compose=1`) the Pad renders no such control at all: your composer decides,
-and if your feed is meant to list posts, it sends `"visibility": "public"`.
+(`?compose=1`) the editors render no such control: your composer decides, and
+if your feed is meant to list posts, it sends `"visibility": "public"`. A site
+that keeps its own feed and wants the author to choose adds `&gallery=1`: the
+sheet then shows "Show in the Skribls gallery", off, with a gallery caption
+that opens under it once it is ticked, and the payload it hands back says
+`"visibility": "public"` and carries that caption only when ticked. Keep what
+it says: drop any other `visibility`, and fall back to your post's words for
+an empty caption (`examples/host_app/app.py` `compose()` does both).
 `/gallery` is that listing rendered by Skribl itself, on the in-post player.
 The listing takes `q` (a substring of title or caption, up to 80 characters)
 and `sort=hot` (plays in the last seven days, most first; its `next_cursor`
@@ -330,7 +336,8 @@ posting quota; and an abandoned draft would leave a published, shareable skribl
 behind that you have no way to withdraw. Hold the payload, exactly as you hold
 an image attachment, and post once.
 
-**The editor.** `GET /skribl-pad?compose=1`, in an iframe. An iframe even
+**The editor.** `GET /skribl-pad?compose=1` (with `&gallery=1` to let the
+author choose the Skribls gallery, above), in an iframe. An iframe even
 though it is your own origin: the Pad is a whole application with its own
 stylesheet and some seventy scripts, and putting that inline in your feed has the
 two fight over every generic class name. Set the `src` when the button is

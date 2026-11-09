@@ -6857,7 +6857,11 @@ async function shareSkribl(){
     try{
       if(window._skriblDecodePending){ try{ await window._skriblDecodePending; }catch(_){} }
       const _payload=buildSharePayload();
-      delete _payload.visibility;           // the host's composer decides
+      // The host's composer decides, unless it asked the author (?gallery=1):
+      // then "Show in the Skribls gallery" ticked sends visibility "public"
+      // with the gallery caption, and unticked sends neither, as on the Pad.
+      const _gal=document.getElementById('postPublicInput');
+      if(!(_gal && _gal.checked)){ delete _payload.visibility; _payload.caption=''; }
       const _flat=document.createElement('canvas'); _flat.width=CW; _flat.height=CH;
       const _pick=posterPage();
       drawFrameTo(_flat.getContext('2d'), _pick);

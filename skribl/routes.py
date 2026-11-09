@@ -368,8 +368,17 @@ def register_routes(bp, *, index_route=False):
         # (skribl/static/editor_letters.js). It began as the owner's letter
         # sheet; the owner made it everyone's. A query flag for the reason
         # compose is one, and never both at once.
+        #
+        # THE GALLERY CHOICE. ?gallery=1 (with compose=1) is a host that keeps
+        # its own feed asking the author whether the drawing also goes in the
+        # Skribls gallery: the sheet shows "Show in the Skribls gallery", off,
+        # and a gallery caption under it once it is on (the owner's pick A,
+        # FUTURE 6ah). The payload then says so, and the host keeps what it
+        # says (examples/host_app/app.py compose). Without it, the host's
+        # composer decides alone, as Skribl's own /feed does.
         compose = request.args.get("compose") == "1"
         return render_template("skribl/skribl_editor.html", compose=compose,
+                               gallery_choice=compose and request.args.get("gallery") == "1",
                                letters=(not compose
                                         and request.args.get("letters") == "1"))
 
@@ -382,8 +391,10 @@ def register_routes(bp, *, index_route=False):
         # is (see skribl_editor above): "Add to post" hands the animation back
         # and publishes nothing. Reached from the Pad's ⋯ "Flip Mode" row while
         # composing, so a host needs one Skribl button, not two (owner, v316).
-        return render_template("skribl/skribl_flip.html",
-                               compose=request.args.get("compose") == "1")
+        # ?gallery=1 is the host's gallery choice, as on the Pad.
+        compose = request.args.get("compose") == "1"
+        return render_template("skribl/skribl_flip.html", compose=compose,
+                               gallery_choice=compose and request.args.get("gallery") == "1")
 
     @bp.get("/library")
     def skribl_library():

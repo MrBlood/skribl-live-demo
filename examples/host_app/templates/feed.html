@@ -171,8 +171,11 @@ window.addEventListener('DOMContentLoaded', function () {
 
   var pad = SkriblComposeHost.create({
     frame: document.getElementById('padFrame'),
-    /* From url_for, because only the server knows the mount prefix. */
-    src: {{ url_for('skribl.skribl_editor', compose=1) | tojson }},
+    /* From url_for, because only the server knows the mount prefix.
+       gallery=1: this site keeps its own feed, so the author is asked
+       whether the drawing also goes in the Skribls gallery ("Show in the
+       Skribls gallery", off), and compose() below keeps the answer. */
+    src: {{ url_for('skribl.skribl_editor', compose=1, gallery=1) | tojson }},
     onOpen:  function () { overlay.hidden = false; },
     onClose: function () { overlay.hidden = true; },
     onDone:  function (drawing) {

@@ -5,6 +5,17 @@
     code (the Pad's editor_post.js, Flip's shareSkribl) drives it. -#}
 {% from 'skribl/_skribl_music_glyph.html' import music_glyph %}
 {% from 'skribl/_skribl_inline_player.html' import skribl_inline_draft %}
+{#- THE GALLERY TICK. One box, two questions: posting for itself, whether the
+    drawing goes in Skribl's public gallery; added to a host's post (compose
+    mode, when the host asked with ?gallery=1), whether it also goes in that
+    site's Skribls gallery, the post keeping it either way. -#}
+{% macro gallery_tick(label, off, on) -%}
+          <label class="post-check">
+            <input type="checkbox" id="postPublicInput" class="post-check-input">
+            <span class="post-check-box" aria-hidden="true"></span>
+            <span class="post-check-text">{{ label }}<span class="post-check-sub" id="postPublicSub" data-off="{{ off }}" data-on="{{ on }}">{{ off }}</span></span>
+          </label>
+{%- endmacro %}
   <div id="postOverlay" class="menu-overlay" hidden>
     <div class="menu-sheet post-sheet" id="postSheet" role="dialog" aria-modal="true" aria-label="Post your Skribl">
       <div class="menu-handle"></div>
@@ -35,13 +46,23 @@
         <div class="post-preview" id="postPreview">
           <img id="postPreviewImg" class="post-preview-img" alt="Preview of your Skribl">
         </div>
-        <div class="post-fields">
-          <label class="post-field">
+        {# ADDED TO A POST (compose mode), the host's composer already has the
+           words for the post, so the sheet asks no title: the field stays in
+           the page, hidden, because both editors read it, and the host titles
+           the drawing from its post. The caption is the GALLERY's (the owner's
+           pick A): it opens under the gallery tick once that is on
+           (lib/postsheet.js) and travels only with it. Without the host's
+           ?gallery=1 there is no tick, and the caption stays hidden too.
+           Rendered here rather than hidden by script, so the sheet never shows
+           a field for a frame that it then takes away. #}
+        <div class="post-fields"{% if compose and not gallery_choice and not speed_row %} hidden{% endif %}>
+          <label class="post-field"{% if compose %} hidden{% endif %}>
             <span class="post-field-label">Title</span>
             <input type="text" id="postTitleInput" class="post-input" maxlength="{{ skribl_limits.title }}" placeholder="Untitled Skribl" autocomplete="off">
           </label>
-          <label class="post-field">
-            <span class="post-field-label">Caption <span class="post-field-optional">optional</span></span>
+          {% if compose and gallery_choice %}{{ gallery_tick("Show in the Skribls gallery", "Off, it shows in your post only", "On, it shows in your post and in the Skribls gallery") }}{% endif %}
+          <label class="post-field" id="postCaptionField"{% if compose %} hidden{% endif %}>
+            <span class="post-field-label">{{ "Gallery caption" if compose else "Caption" }} <span class="post-field-optional">optional</span></span>
             {# The box fits its words, and the grip in its corner sets its height by
                hand (lib/postsheet.js, THE CAPTION SHOWS WHAT YOU WROTE). #}
             <span class="post-textarea-wrap"><textarea id="postCaptionInput" class="post-input post-textarea" maxlength="{{ skribl_limits.caption }}" rows="3" aria-describedby="postCharCount" placeholder="Say something about it…"></textarea><span class="post-grip" id="postCaptionGrip" aria-hidden="true"><svg aria-hidden="true" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M12.5 4.5l-8 8M12.5 8.5l-4 4"/></svg></span></span>
@@ -71,16 +92,12 @@
              the payload carries visibility "public" and the post appears in
              /gallery for everyone. Unticked, the key is OMITTED rather than
              sent as "unlisted", so the server's default stays the one
-             authority on what an unmarked post is. Not rendered in compose
-             mode: there the HOST's composer decides visibility, and a control
-             here would be a second answer. verify_gallery.py pins all three. #}
-          {% if not compose %}
-          <label class="post-check">
-            <input type="checkbox" id="postPublicInput" class="post-check-input">
-            <span class="post-check-box" aria-hidden="true"></span>
-            <span class="post-check-text">Show in the public gallery<span class="post-check-sub" id="postPublicSub" data-off="Off, it is shared by its link only" data-on="{{ 'On, anyone can find it in the gallery' if skribl_signed_in else 'Public. You’ll get a key to delete it from anywhere' }}">Off, it is shared by its link only</span></span>
-          </label>
-          {% endif %}
+             authority on what an unmarked post is. In compose mode it is the
+             tick above, and only when the host asked for the choice
+             (?gallery=1); otherwise the HOST's composer decides visibility,
+             and a control here would be a second answer. verify_gallery.py
+             pins all of it. #}
+          {% if not compose %}{{ gallery_tick("Show in the public gallery", "Off, it is shared by its link only", 'On, anyone can find it in the gallery' if skribl_signed_in else 'Public. You’ll get a key to delete it from anywhere') }}{% endif %}
         </div>
       </div>
       {# A drawing too long to post turns this into Save as a file, with the ⋯

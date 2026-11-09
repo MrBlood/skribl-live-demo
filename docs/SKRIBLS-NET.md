@@ -163,7 +163,19 @@ says so.
    Flip comes up in the phone's own setting. (Seen in the mock of Skribl
    inside skribls.net, Nov 2026; the owner asked for it on this list.)
 
-10. **Do Skribl's file work when the server starts.** Skribl strips and
+10. **Let the author choose the Skribls gallery** (the owner's pick A, Nov
+    2026, FUTURE 6ah). Open the Pad with `?compose=1&gallery=1` (Flip keeps
+    it on the ⋯ switch). The sheet then shows "Show in the Skribls gallery",
+    off, and once it is ticked a gallery caption opens under it; "Viewers
+    start at" is there either way. The payload handed back says
+    `"visibility": "public"` and carries the caption only when it is ticked.
+    The view behind `/compose/thread` keeps what it says: it drops any other
+    `visibility`, so an unticked drawing is in the post only (reachable by its
+    link, listed nowhere), and takes the part's words for an empty caption.
+    `examples/host_app/app.py` `compose()` is that view, and
+    `harness/verify_example.py` posts one each way.
+
+11. **Do Skribl's file work when the server starts.** Skribl strips and
     compresses its own scripts and styles once in each server process, and
     the first person to open the composer after a deploy waits for all of it
     (8.8 s of server work for the Pad's files on the live demo). Where the
