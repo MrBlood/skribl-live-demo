@@ -32135,3 +32135,89 @@ rather than the suite hanging. Six runs here on a local PostgreSQL 16, the
 pair split every time, 28/28; with one worker, the setup row, the pair's row
 and the cross-worker row went red, the suite done in 30 s. The local cluster
 was stopped after (with it up, browser suites' frame pacing suffers).
+
+## After v330 -- Every drawer shows what a tap opens
+
+The owner: "is there any reason that all drawers shouldn't open all the way
+(scroll to bottom) when a selection is made that shows below the screen? I
+know this happens on several drawers (at least on desktop). Is there a way
+to check that or do I need to be specific about all the affected drawers?"
+
+A sweep pressed every tile and door in every drawer, 44 of them, on the Pad
+and on Flip, on a 402x874 touch phone and a 1280x800 desk, and read where
+what opened ended. Twenty ended below the screen. On a desk the pen
+drawer's four tiles and Text's three opened their choices 21-241px below
+the foot and the page did not move at all: lib/drawerdetent.js answered a
+tile only where the detent's grabber shows, on a phone. The music drawer's
+Restart door (phone and desk) and Length door (phone) moved the page, but
+not far enough: Restart's choices ended up to 264px below. The phones' pen
+and Text tiles, and the photo drawer, were fine. The owner's pick ("All
+yes"): one rule for every drawer -- the page glides just far enough to show
+all of what opened, without going past the top of the drawer; with Reduce
+Motion it goes straight there; and the check stays in the suites, so a new
+drawer cannot miss it.
+
+THE RULE, ON A DESK. SkriblDrawerDetent.showOpened: the 'drawtile' event a
+tile sends (lib/drawtiles.js, and Text's in lib/textwrite.js) now names what
+opened, and where there is no detent the page glides until its end is 12px
+above the foot of the screen. Its end is read as laid out (its top plus its
+height): it unfolds from its top as a scale, so the box it is drawn in on
+the first frame stops 8% short. Never past the top of the drawer -- the bar
+right above it stays below the header, as every reveal in the module keeps
+it -- and only ever down: a choice that already shows moves nothing.
+A newer reveal, or a press on the drawing (hush), calls it off.
+
+TEXT'S WORDS STAY IN VIEW. Their sliders change them while you watch, so
+the words, when they are on screen, hold the page as the drawer's top does
+(on a 560px desk the Pad's slider stops with the words at the top). Words
+Text's own reveal has already let go above the screen (Flip, on a short
+desk, where the drawer's first row wins) hold nothing: holding for them only
+left the slider below the screen.
+
+ONE TILE FOR ANOTHER, found on the way. The new tile's choices replace the
+old ones at once, and a shorter set made the drawer shorter in the same
+frame; scrolled to the drawer's end, where the page had just brought the
+old choices, the browser clamped the page in one frame. Feel for Eraser
+leapt 217px on the Pad's phone and 234px on Flip's (already, before this
+change), and 93-118px on a desk (new with it). The swap is held and glided
+(shrinkGently), as a close is and as the music drawer's doors swap: 7-15
+frames, the most 20-62px in one. Under Reduce Motion it is simply done.
+Text's swap is the same code; its choices differ by 11px, too little for a
+row to tell a glide from a leap, so no row pins it.
+
+THE MUSIC DRAWER'S DOORS are left as they were, and asked of the owner.
+Restart's choices are taller than the room the drawer's top leaves on these
+screens (the song and its timeline sit above the doors): kept below the
+header, the bar above the drawer stops the page with Restart up to 264px
+short on a phone and 212px on a desk, and Length up to 39px short on a
+phone. That is the approved rule's own limit, and the check accepts it.
+Showing all of it means the bar, the song and the timeline go up under the
+header (on a desk, off the top), the tapped door's tile staying on screen.
+
+WHAT IT DOES TO FLIP. Shared: one module, one event, both editors.
+
+THE CHECK. verify_drawerreveal presses all 44 for real (a tap, a click) and
+reads the page on every frame: what opened shows, or the page stopped at the
+drawer's top (or at Text's words); just far enough; what was tapped stays on
+screen; it glides, never back up (no frame's step more than 60% of the move,
+or 24px, for a frame's time: the browser glides on its own thread, and a
+frame read on the page's can carry two of its steps, 41+25px of the Length
+door's 118 in one 18ms frame); Reduce Motion goes straight there; Feel for
+Eraser glides up; Feel for Brush, already in view, moves nothing; on a 560px
+desk the bar and the words hold the page; and every .dp-tile in the page is
+one it pressed. Calibrated in a tree copy with its own server, thirteen
+breaks, each red on its own rows and otherwise only on rows that need what
+it broke: the glide made a jump (the seven desk glide rows, 33-205px in one
+frame); the desk's answer taken away, as it was before (the seven desk rows,
+and the seven that need the page to move there: Reduce Motion, the swap, the
+short desk); no cap at the drawer's top (the short desk's Feel); not only
+down (Feel for Brush); Text's words not kept (the Pad's words on the short
+desk); words held even when gone (Flip's slider on the short desk); the swap
+not held (Feel for Eraser, phone and desk); Text naming nothing (Text's desk
+rows); Reduce Motion ignored, here and by the music door (their rows); the
+phone's reveal taken away (the phone's pen rows); the music door's reveal
+taken away (all four doors on the phone); and the census, with Exact times
+left off the suite's list (both editors, naming musicDoors:exact). The copy
+with nothing broken: 212/212. Not tested here: an iPhone or Safari (no
+WebKit in this box), whose own smooth scrolling this leans on as the phone's
+reveals already did.

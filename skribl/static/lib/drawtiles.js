@@ -27,8 +27,10 @@
  *
  * THE DETENT. Opening a tile tells the panel (a 'drawtile' event), and
  * lib/drawerdetent.js answers on a phone: the drawer goes to full and brings
- * the open choices on screen. A drawer hidden by any route closes its tile, so
- * every open starts with four tiles, predictable.
+ * the open choices on screen. On a desk, with no detent, the page glides just
+ * far enough to show them (the owner: all drawers "open all the way"). A
+ * drawer hidden by any route closes its tile, so every open starts with four
+ * tiles, predictable.
  *
  * KIND TRANSITIONS. The choices unfold and fold away again (Web Animations) before they
  * leave, and the page never jumps as they go (SkriblDrawerDetent.shrinkGently).
@@ -228,10 +230,20 @@
         if (on) t.classList.add('dp-open');
         else if (t.getAttribute('data-dp') !== was || k) t.classList.remove('dp-open');
       });
-      if (old && k) old.hidden = true;   // one tile for another: the new one unfolds where the old one was
+      // One tile for another: the new one unfolds where the old one was. A
+      // shorter one makes the drawer shorter at once, and scrolled near its end
+      // (where the page has just brought the old one's choices) the browser
+      // clamped the page in one frame: Feel for Eraser leapt 217px on a phone
+      // and 93px on a desk. So the swap is held and glided, as a close is
+      // (shrinkGently), and as the music drawer swaps its doors; under Reduce
+      // Motion it is simply done.
+      var swap = function () {
+        if (old && k) old.hidden = true;
+        if (now) { root.setAttribute('data-col', String(col(k))); now.hidden = false; }
+      };
+      var D = window.SkriblDrawerDetent;
+      if (old && now && !instant && !still() && D && D.shrinkGently) D.shrinkGently(panel, swap); else swap();
       if (now) {
-        root.setAttribute('data-col', String(col(k)));
-        now.hidden = false;
         paint(now);
         if (!instant && !still() && now.animate) {
           now.animate([{ opacity: 0, transform: 'scaleY(.92)' }, { opacity: 1, transform: 'none' }],
@@ -250,7 +262,8 @@
         }
       }
       words();
-      if (!instant) panel.dispatchEvent(new CustomEvent('drawtile', { detail: { open: k } }));
+      // `el`, what opened: a desk's page glides to show it (lib/drawerdetent.js).
+      if (!instant) panel.dispatchEvent(new CustomEvent('drawtile', { detail: { open: k, el: now } }));
     }
     tiles.forEach(function (t) {
       t.addEventListener('click', function () { show(t.getAttribute('data-dp')); });
