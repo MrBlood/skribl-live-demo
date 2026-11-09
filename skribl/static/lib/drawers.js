@@ -111,7 +111,17 @@
       open: open,
       toggle: function (name) { open(currentName === name ? null : name); },
       current: function () { return currentName; },
-      isOpen: function (name) { return currentName === name; }
+      isOpen: function (name) { return currentName === name; },
+      // A drawer an editor-only script brings (Text's, editor_text.js), joined
+      // after the machine was made: the Pad's machine is made in app.js, which
+      // the link player loads too, and the player has no Text to carry.
+      add: function (name, d) {
+        var panel = _el(d && d.panel);
+        if (!panel || panels[name]) return;
+        panels[name] = { panel: panel, button: _el(d.button), openClass: d.openClass || null, aria: !!d.aria,
+                         onOpen: d.onOpen || null, onClose: d.onClose || null };
+        order.push(name);
+      }
     };
     machines.push(api);
     return api;

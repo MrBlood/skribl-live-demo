@@ -8105,54 +8105,47 @@ html.skribl-sheet { overscroll-behavior-y: none; }
   .shape-pop::after { left: 64px; }
 }
 
-/* ---------- Text: the typing sheet (lib/textwrite.js, _skribl_text.html) ----------
-   Both editors carry the same sheet, so its rules live here, where both load
-   them. The menu's paper and cards, the app's slider for Size, Thickness and
-   Speed, an action in the accent; the words a size up from the drawers',
-   and the field at 16px so an iPhone does not magnify the page. It rises
-   from the bottom on a phone and floats over the dock on a desk, never over
-   the words: they are kept above it (lib/textwrite.js clampAnchor). */
-.tx-sheet {
-  position: fixed; left: 0; right: 0; bottom: 0; z-index: 150;
-  display: grid; gap: 12px; grid-template-columns: minmax(0, 1fr);
-  padding: 4px 16px calc(16px + env(safe-area-inset-bottom, 0px));
-  max-height: calc(100dvh - 12px); overflow-y: auto; overscroll-behavior: contain;
-  background: var(--menu-paper); color: var(--text-primary);
-  border-radius: 22px 22px 0 0;
+/* ---------- Text: the drawer (lib/textwrite.js, _skribl_text.html) ----------
+   Text's controls live in a drawer under the tools, as the pen's do (the
+   owner: "Shouldn't text be a drawer? Not a popup?", then yes to A3 compact
+   of the mock): the drawers' card (.tab-panel) and grabber, the words and
+   Write it in one row, Style, and Size, Thickness and Speed as the pen
+   drawer's tiles, each opening its slider right under it. Both editors carry
+   the same drawer, so its rules live here, where both load them. The words a
+   size up from the drawers', and the field at 16px so an iPhone does not
+   magnify the page. */
+.tx-drawer { gap: 12px; }
+.tx-top { display: flex; gap: 8px; align-items: stretch; }
+.tx-top .tx-field { flex: 1; min-width: 0; }
+.tx-top .tx-go { flex: none; padding: 0 22px; }
+.tx-under[hidden] { display: none; }
+/* Three tiles where the pen has four: the open tile's panel squares the
+   corner under it at either end, as the pen's does at its first and fourth. */
+.tx-tiles .dp-tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.tx-tiles[data-col="2"] > .dp-panel { border-top-right-radius: 0; }
+/* Each tile's picture is a drawn mark in the accent, as the music drawer's
+   doors are: what the tile holds, not a value it would have to repaint. */
+.tx-art { display: flex; align-items: center; justify-content: center; color: var(--accent-ink); }
+.tx-art svg { width: 24px; height: 24px; overflow: visible; }
+.tx-art text { font-family: inherit; }
+/* WHILE THE WORDS ARE DRAGGED the drawer steps out of the way (lib/textwrite.js
+   veil): unseen and untouched, its room kept, while the page goes home so the
+   words reach the whole drawing; let go, and it is back. */
+.tx-drawer.tx-veiled { visibility: hidden; pointer-events: none; }
+/* While the words are typed on a phone, with the keyboard up, the drawer sits
+   on the keyboard (lib/textwrite.js fitKeyboard) out of the page's flow
+   (#txSpacer keeps its room, so nothing above moves), and is the grabber, the
+   words and Write it, so the drawing shows above it with the words on it.
+   The menu's paper there, not the glass: a fixed card's glass would show the
+   page moving under it. */
+.tx-spacer[hidden] { display: none; }
+.tx-drawer.typing {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 150; margin: 0;
+  padding: 4px 16px 12px; border-radius: 22px 22px 0 0; border-width: 1px 0 0;
+  background: var(--menu-paper); -webkit-backdrop-filter: none; backdrop-filter: none;
   box-shadow: 0 -10px 40px rgba(20, 10, 60, .22);
 }
-/* It rises and it sinks (lib/textwrite.js, by script as lib/sheetswipe.js
-   slides the other sheets, so reduced motion is asked there and the player's
-   stylesheet carries no motion rule for a sheet it never has). */
-.tx-sheet[hidden] { display: none; }
-/* While the words are typed on a phone the sheet is the words and Write it
-   (lib/textwrite.js fitKeyboard): the keyboard takes half the screen, and the
-   drawing with the words on it has to show above what is left. */
-.tx-sheet.typing :is(#txStyleLabel, .tx-styles, .tx-under, .tx-dials, .tx-row) { display: none; }
-/* THE BAR: the sheet stepped aside while the words are placed (lib/textwrite.js,
-   "The sheet steps aside"), its words and Write it in one row, which covers
-   none of the drawing; on a desk at the window's foot. The words are the
-   field, read-only here: a tap on them brings the whole sheet back. */
-.tx-sheet.tucked { grid-template-columns: minmax(0, 1fr) auto; align-items: center; column-gap: 10px; row-gap: 4px; }
-.tx-sheet.tucked > :not(.tx-grab, .tx-field, .tx-go) { display: none; }
-.tx-sheet.tucked .tx-grab { grid-column: 1 / -1; }
-.tx-sheet.tucked .tx-field { cursor: pointer; text-overflow: ellipsis; }
-.tx-sheet.tucked .tx-go { padding: 0 22px; }
-@media (min-width: 641px) {
-  .tx-sheet { left: 50%; right: auto; bottom: 24px; width: 420px; max-height: calc(100dvh - 48px);
-    margin-left: -210px; padding: 14px 18px 18px; border-radius: 22px;
-    box-shadow: 0 20px 60px rgba(20, 10, 60, .28); }
-  .tx-sheet.tucked { bottom: 0; border-radius: 22px 22px 0 0; }
-}
-.tx-grab { display: flex; justify-content: center; align-items: center; height: 18px; touch-action: none; cursor: pointer; }
-/* A desk's sheet floats; it has no edge to pull down to. */
-@media (min-width: 641px) { .tx-grab { display: none; } }
-.tx-grab-pill { width: 40px; height: 5px; border-radius: 3px; background: var(--text-secondary); opacity: .45; flex: none; }
-.tx-head { display: flex; align-items: center; justify-content: space-between; min-height: 32px; }
-.tx-title { margin: 0; font-size: 17px; font-weight: 700; line-height: 1.25; color: var(--text-primary); }
-.tx-x { width: 44px; height: 44px; margin: -6px -10px -6px 0; padding: 0; border: 0; border-radius: 22px;
-  background: transparent; color: var(--text-secondary); display: grid; place-items: center; cursor: pointer; }
-.tx-x svg { width: 20px; height: 20px; }
+.tx-drawer.typing > :not(.drawer-detent-handle, .tx-top) { display: none; }
 .tx-field {
   width: 100%; box-sizing: border-box; padding: 12px 14px; border-radius: 12px;
   border: 1px solid var(--menu-card-line); background: var(--menu-card); color: var(--text-primary);
@@ -8206,11 +8199,12 @@ html.skribl-sheet { overscroll-behavior-y: none; }
   background: var(--accent-fill); color: #fff; font: inherit; font-size: 16px; font-weight: 700;
 }
 .tx-go:disabled { opacity: .45; cursor: default; }
-.tx-x:focus-visible, .tx-style:focus-visible, .tx-link:focus-visible, .tx-go:focus-visible, .tx-field:focus-visible {
+.tx-style:focus-visible, .tx-link:focus-visible, .tx-go:focus-visible, .tx-field:focus-visible {
   outline: 2px solid var(--focus-ring); outline-offset: 2px;
 }
 /* The words before they are ink: drawn where they will be written, inside a
-   dashed box that moves with a finger. Over the drawing, under the sheet. */
+   dashed box that moves with a finger. Over the drawing, under the drawer
+   when it sits on a phone's keyboard. */
 .tx-place {
   position: fixed; z-index: 140; box-sizing: border-box; cursor: grab; touch-action: none;
   border: 1.5px dashed var(--ui-hi); border-radius: 10px;

@@ -5850,6 +5850,9 @@ const _flipDrawerCtl = skriblDrawers({
              onClose(){ syncMediaTabs(null); } },
     music: { panel: musicPanel, button: mediaOpenBtn, openClass: 'open', aria: true,
              onOpen(){ syncMediaTabs('music'); syncMediaUI(); }, onClose(){ syncMediaTabs(null); } },
+    // Text is a drawer too, as on the Pad (lib/textwrite.js): another drawer
+    // opening closes it, and the words with it.
+    text:  { panel: document.getElementById('txSheet'), onClose(){ if(window.SkriblText) window.SkriblText.closed(); } },
     // The tray joins the drawer set so it is mutually exclusive with colour,
     // photo and music — opening it closes them, and vice versa. Rebuilt on
     // every open; see toolShelf.buildTray().
@@ -6203,6 +6206,9 @@ if(window.SkriblText){
     },
     skip: () => {},
     say: (words) => chip(words),
+    drawer: (open) => { if(open) _flipDrawerCtl.open('text'); else if(_flipDrawerCtl.isOpen('text')) _flipDrawerCtl.open(null); },
+    dock: () => document.querySelector('.flip-tools'),
+    active: () => flipTool === 'shape' && shapeKind === 'text',
   });
 }
 

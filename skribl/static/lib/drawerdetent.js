@@ -72,7 +72,14 @@
    * acts: a press or a key in the drawer, or a wheel or trackpad anywhere.
    */
   var revealGen = 0;   // a newer reveal calls off an older one's re-asserts
-  function revealPanelEnd(panel, behavior, dock) {
+  /* KEEP, when given, is something on the drawing that has to stay in view:
+   * Text's words, just let go of (lib/textwrite.js). The page never goes so
+   * far that it passes under the header, the drawer's end waiting below the
+   * fold if it must -- but never so short that AT LEAST (the drawer's first
+   * row: Text's words and Write it) is not on screen. Where the two cannot
+   * both be had on a phone, the row wins: Write it writes them where they
+   * are, and the page goes home to show them writing. */
+  function revealPanelEnd(panel, behavior, dock, keep, atLeast) {
     var mine = ++revealGen;
     function target() {
       var r = panel.getBoundingClientRect();
@@ -81,6 +88,16 @@
       var want = top + r.bottom - viewH() + 8;
       var lid = dock && dock.offsetParent !== null ? dock.getBoundingClientRect().top - 4 : r.top - 8;
       want = Math.min(want, top + lid - stuckBottom());
+      if (keep && !keep.hidden) {
+        // ...with what it carries above it (the words' Drag to move label).
+        var kr = keep.getBoundingClientRect(), kc = keep.firstElementChild;
+        var kTop = kc ? Math.min(kr.top, kc.getBoundingClientRect().top) : kr.top;
+        if (kr.height) {
+          var cap = want;
+          want = Math.min(want, top + kTop - stuckBottom() - 8);
+          if (atLeast) want = Math.max(want, Math.min(cap, top + atLeast.getBoundingClientRect().bottom - viewH() + 8));
+        }
+      }
       var max = scroller.scrollHeight - window.innerHeight;
       return Math.max(0, Math.min(want, max));
     }

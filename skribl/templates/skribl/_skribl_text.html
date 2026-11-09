@@ -1,23 +1,43 @@
-{# TEXT: the typing sheet, and the box the words sit in before they are ink
-   (lib/textwrite.js). One copy for both editors: Pad and Flip include this,
-   and each hands the module its own hooks (editor_text.js, flip.js).
+{# TEXT: the drawer, and the box the words sit in before they are ink
+   (lib/textwrite.js). One copy for both editors: Pad and Flip include this
+   twice, `part` saying which piece goes where. The drawer goes with the
+   other drawers, under the tools (the owner: "Shouldn't text be a drawer?
+   Not a popup?", then yes to A3 compact of the mock); the box goes at the
+   page's end, outside every drawer, because it is fixed over the drawing and
+   a drawer's glass would hold it. Each editor hands the module its own hooks
+   (editor_text.js, flip.js).
 
-   The lettering is fetched the first time the sheet opens, from the files
+   The lettering is fetched the first time the drawer opens, from the files
    named here (harness/tools/make_textfonts.py makes them). Make yours and
    Edit your hand go to Your hand (editor_letters.js), which comes back here
    with Write with it. `text_from` is the editor this is in. #}
-<div class="tx-sheet" id="txSheet" role="dialog" aria-labelledby="txTitle" hidden
+{% set part = part|default('drawer') %}
+{% if part == 'place' %}
+<div class="tx-place" id="txPlace" hidden>
+  <span class="tx-drag" aria-hidden="true">Drag to move</span>
+  <canvas class="tx-preview" id="txPreview" aria-hidden="true"></canvas>
+</div>
+{% else %}
+{# While the words are typed on a phone the drawer sits on the keyboard, out
+   of the page's flow; this keeps its room, so the page does not move. #}
+<div class="tx-spacer" id="txSpacer" hidden aria-hidden="true"></div>
+<div class="tab-panel tx-drawer" id="txSheet" role="region" aria-label="Text" hidden
      data-print="{{ skribl_asset('fonts/text-print.json') }}"
      data-script="{{ skribl_asset('fonts/text-script.json') }}"
      data-skribl="{{ skribl_asset('fonts/text-skribl.json') }}"
      data-hand="{{ url_for('.skribl_editor', letters=1, back=text_from) }}">
-  <div class="tx-grab" aria-hidden="true"><div class="tx-grab-pill"></div></div>
-  <div class="tx-head">
-    <h2 class="tx-title" id="txTitle">Text</h2>
-    <button type="button" class="tx-x" id="txClose" aria-label="Close"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+  {# The drawers' grabber (lib/drawerdetent.js), on a phone as every
+     drawer's: a tap closes, a pull down closes. On a desk it stays hidden,
+     as theirs does there, and Text goes as a drawer goes: another tool,
+     another drawer, Escape, or Write it. #}
+  <div class="drawer-detent-handle" role="button" tabindex="0" aria-label="Close Text"><div class="drawer-detent-pill"></div></div>
+  {# The words and Write it, one row: the row the drawer keeps on a phone's
+     keyboard while the words are typed. #}
+  <div class="tx-top">
+    <input class="tx-field" id="txField" type="text" autocomplete="off" autocapitalize="sentences"
+           spellcheck="true" enterkeyhint="done" aria-label="Your words" placeholder="Type your words">
+    <button type="button" class="tx-go" id="txGo" disabled>Write it</button>
   </div>
-  <input class="tx-field" id="txField" type="text" autocomplete="off" autocapitalize="sentences"
-         spellcheck="true" enterkeyhint="done" aria-label="Your words" placeholder="Type your words">
   <p class="tx-skip" id="txSkip" hidden>Emoji and some symbols aren&rsquo;t written.</p>
   <span class="tx-k" id="txStyleLabel">Style</span>
   <div class="tx-styles" id="txStyles" role="group" aria-labelledby="txStyleLabel">
@@ -26,35 +46,44 @@
     <button type="button" class="tx-style" data-style="print">Print</button>
     <button type="button" class="tx-style" data-style="script">Script</button>
   </div>
-  <div class="tx-under" id="txUnder">
-    <span class="tx-note" id="txNote">Make your own hand in about 10 minutes.</span>
-    <a class="tx-link" id="txEdit" href="{{ url_for('.skribl_editor', letters=1, back=text_from) }}" hidden>Edit your hand</a>
+  {# With a hand made: how many of its letters, and the way back to them. #}
+  <div class="tx-under" id="txUnder" hidden>
+    <span class="tx-note" id="txNote"></span>
+    <a class="tx-link" id="txEdit" href="{{ url_for('.skribl_editor', letters=1, back=text_from) }}">Edit your hand</a>
   </div>
-  {# SIZE, THICKNESS AND SPEED, three dials in one grid so their sliders line
-     up (the owner: "shouldn't we have control of thickness on text editor,
-     and font size?", then "all yes"). Size is the letters' height, said in
+  {# SIZE, THICKNESS AND SPEED as the pen drawer's tiles: each says what it
+     holds, and a tap opens its slider right under it, joined to it, as the
+     pen's Size does (the owner picked these tiles for the pen; a chevron was
+     "easy to forget and cheap-looking"). Size is the letters' height, said in
      this drawing's px; Thickness is the words' own line, the pen's until it
      is moved, and moving it leaves the pen as it was. #}
-  <div class="tx-dials">
-  <div class="tx-row">
-    <span class="tx-k tx-k2"><label for="txSize" id="txSizeLabel">Size</label></span>
-    <span class="tx-ctl"><input type="range" class="slider" id="txSize" min="25" max="200" step="1" value="65"></span>
-    <output class="tx-val" id="txSizeOut" for="txSize"></output>
+  <div class="dp tx-tiles" id="txTiles">
+    <div class="dp-tiles" role="group" aria-label="Size, thickness and speed">
+      <button type="button" class="dp-tile" data-dp="size" aria-expanded="false" aria-controls="txSizePanel"><span class="dp-art tx-art" aria-hidden="true"><svg viewBox="0 0 24 24"><text x="1" y="20" font-size="19" font-weight="700" fill="currentColor">A</text><text x="14.5" y="20" font-size="11" font-weight="700" fill="currentColor">a</text></svg></span><span class="dp-k">Size</span> <span class="dp-v" id="txSizeTile"></span></button>
+      <button type="button" class="dp-tile" data-dp="weight" aria-expanded="false" aria-controls="txWeightPanel"><span class="dp-art tx-art" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round"><path d="M4 6.5h16" stroke-width="1.4"/><path d="M4 12h16" stroke-width="2.8"/><path d="M4 18h16" stroke-width="4.6"/></svg></span><span class="dp-k">Thickness</span> <span class="dp-v" id="txWeightTile"></span></button>
+      <button type="button" class="dp-tile" data-dp="speed" aria-expanded="false" aria-controls="txSpeedPanel"><span class="dp-art tx-art" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 17a8 8 0 0 1 16 0"/><path d="M12 17l4.5-5.5"/></svg></span><span class="dp-k">Speed</span> <span class="dp-v" id="txSpeedTile"></span></button>
+    </div>
+    <div class="dp-panel" id="txSizePanel" data-dp="size" hidden>
+      <div class="tx-dials"><div class="tx-row">
+        <span class="tx-k tx-k2"><label for="txSize" id="txSizeLabel">Size</label></span>
+        <span class="tx-ctl"><input type="range" class="slider" id="txSize" min="25" max="200" step="1" value="65"></span>
+        <output class="tx-val" id="txSizeOut" for="txSize"></output>
+      </div></div>
+    </div>
+    <div class="dp-panel" id="txWeightPanel" data-dp="weight" hidden>
+      <div class="tx-dials"><div class="tx-row">
+        <span class="tx-k tx-k2"><label for="txWeight" id="txWeightLabel">Thickness</label><span class="tx-hint" id="txWeightHint">for the words only</span></span>
+        <span class="tx-ctl"><input type="range" class="slider" id="txWeight" min="1" max="34" step="1" value="5" aria-describedby="txWeightHint"></span>
+        <output class="tx-val" id="txWeightOut" for="txWeight"></output>
+      </div></div>
+    </div>
+    <div class="dp-panel" id="txSpeedPanel" data-dp="speed" hidden>
+      <div class="tx-dials"><div class="tx-row tx-speed">
+        <span class="tx-k tx-k2"><label for="txSpeed" id="txSpeedLabel">Speed</label><span class="tx-hint" id="txSpeedHint">1× is your own speed</span></span>
+        <span class="tx-speed-ctl"><input type="range" class="slider" id="txSpeed" min="0" max="12" step="1" value="4" aria-describedby="txSpeedHint"></span>
+        <output class="tx-val" id="txSpeedOut" for="txSpeed" aria-live="polite">1×</output>
+      </div></div>
+    </div>
   </div>
-  <div class="tx-row">
-    <span class="tx-k tx-k2"><label for="txWeight" id="txWeightLabel">Thickness</label><span class="tx-hint" id="txWeightHint">for the words only</span></span>
-    <span class="tx-ctl"><input type="range" class="slider" id="txWeight" min="1" max="34" step="1" value="5" aria-describedby="txWeightHint"></span>
-    <output class="tx-val" id="txWeightOut" for="txWeight"></output>
-  </div>
-  <div class="tx-row tx-speed">
-    <span class="tx-k tx-k2"><label for="txSpeed" id="txSpeedLabel">Speed</label><span class="tx-hint" id="txSpeedHint">1× is your own speed</span></span>
-    <span class="tx-speed-ctl"><input type="range" class="slider" id="txSpeed" min="0" max="12" step="1" value="4" aria-describedby="txSpeedHint"></span>
-    <output class="tx-val" id="txSpeedOut" for="txSpeed" aria-live="polite">1×</output>
-  </div>
-  </div>
-  <button type="button" class="tx-go" id="txGo" disabled>Write it</button>
 </div>
-<div class="tx-place" id="txPlace" hidden>
-  <span class="tx-drag" aria-hidden="true">Drag to move</span>
-  <canvas class="tx-preview" id="txPreview" aria-hidden="true"></canvas>
-</div>
+{% endif %}
