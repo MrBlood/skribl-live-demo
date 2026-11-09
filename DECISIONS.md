@@ -32436,3 +32436,12 @@ tile not reading the link it was given. Five of those first stopped the
 suite at a wait or a click instead of reporting the next row; every wait in
 section 7 now reports a red row and the rest still run. With nothing
 broken: verify_example 58/58, verify_hostseams 88/88.
+
+VERIFY_INLINE CAUGHT THE PAGE NAMING THE PLAYER'S INSIDES (191/192): its
+rule that no template outside the macro file writes the player's internal
+class names found the Skribls page filling in the poster's address by the
+poster's class. The page now fills every '__ID__' the macro wrote, whatever
+attribute holds it, and finds the image by its tag for its alt. verify_example
+asks that each tile shows its own drawing's poster: calibrated red with the
+address left unfilled (58/59; the placeholder's address still loads an
+image, so the row reads the id, not the load), 59/59 as built.
