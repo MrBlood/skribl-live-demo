@@ -32039,3 +32039,61 @@ dropped frame. The glide rows read each step for a frame's time now,
 divided by the frames it took up to three, as verify_sheetswipe and
 verify_pages read theirs; a snap still has no places between, and the three
 breaks that jump or yank the page were run again and are still red.
+
+## After v330 -- Text's tiles draw what they hold
+
+The owner, of the Text drawer's first tile pictures (an Aa, three bars and a
+dial, fixed, in the accent): "Do better icons? Show me the icons you chose".
+The mock (https://claude.ai/artifact/R3g2VHexiErTWDr86pEN8R, version 1)
+showed them beside A, live in the pen's ink as the pen drawer's tiles are,
+and B, the same drawings fixed in purple. The owner: "Size thickness speed
+icons aren't great. Thickness is okay, but speed is not great." Version 2
+kept A's line and offered Size as a small, the words' own and a large A, an
+A with a height mark, or Aa; and Speed as a snail and a rabbit with a little
+slider between them, a dial, or a rabbit alone. The owner: "All yes", the
+picks: small, yours and large; the snail and the rabbit.
+
+WHAT CHANGED. The three tiles' pictures are canvases drawn by
+lib/textwrite.js (paintTiles), as the pen drawer's are by lib/drawtiles.js:
+
+- Size: three A's in the words' own style, a small one and a large one at
+  the ends, faint (the ink at 35% over the tile), and the words' own between
+  them in the ink, as tall as the Size (9px at the smallest, 28 at the
+  largest), its line the words' thickness against that height. Placed at a
+  fifth, a half and four fifths, as the pen drawer's Size dots are; a wide
+  hand (Script's A) would run one into the next there, so they close up as a
+  group, smaller only if they must be.
+- Thickness: a line as thick as the words' line, 1.5px and half of it, no
+  thicker past 30.
+- Speed: Lucide's snail and rabbit in the tile's grey, and between them a
+  little slider in the ink, its dot at the speed: a quarter by the snail,
+  16x by the rabbit. Apple puts a tortoise and a hare at the ends of the
+  iPhone's speaking-speed slider; Skribl's slow one is a snail. The two are
+  Lucide's paths, scaled, under the ISC banner jsstrip keeps, as flip.js's
+  Lucide glyphs are.
+
+What holds a value is the ink at full strength (a see-through ink drawn in
+short pieces beads where they meet); an ink too near the tile's ground, as
+white is on the light theme, is drawn over a soft edge, as the pen drawer
+draws one. The pictures repaint with the dials, the style, the pen, the
+tiles' width and the theme (at the switch and again after the tile's .15s
+fade); a closed drawer's canvases have no size and are drawn when it opens.
+
+WHAT IT DOES TO FLIP. Shared: one template, one module, the same pictures.
+
+THE CHECKS. verify_text 22, Pad and Flip: each tile has a picture in the
+ink; Size's own A grows with the Size and is written in the words' style
+(Script's is not Print's); Thickness's line is the words' line, read at its
+crest where it runs level (2.5px at 2, 11.5px at 20); the Speed dot sits at
+the speed, a third of the way at 1x; the snail and the rabbit are the
+tile's grey, either side of the slider; dark's grey after a switch to dark;
+an orange pen draws the pictures orange; a white pen on the light tile
+still shows. Calibrated in tree copies, each with its own server, nine
+breaks went red on their own rows: no painting (2/20, only the rows that
+read the console), Size's height fixed,
+Print's A whatever the style, the line fixed, the dot fixed, the ink fixed
+purple, no soft edge, and no repaint on a theme change; and the snail and
+the rabbit drawn in the ink, which reddens the dot and theme rows too,
+since they find the slider and the animals by colour. The copy with nothing
+broken: 20/20. player.css is unchanged; gen_docs is current. Not tested
+here: an iPhone or Safari (no WebKit in this box).

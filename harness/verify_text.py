@@ -105,6 +105,15 @@ Thickness and Speed as tiles. Each row holds a promise:
      brings it on screen; the same tile closes it and another takes its
      place, one at a time; a tile says what its slider holds as it moves.
      Pad and Flip.
+ 22. THE TILES' PICTURES (the owner, of the first ones: "Size thickness
+     speed icons aren't great. Thickness is okay, but speed is not great",
+     then "All yes" to the second round): each tile draws what it holds, in
+     the pen's ink. Size's own A, between a small and a large one, grows
+     with the Size and is written in the words' style; Thickness's line is
+     the words' line; Speed's dot sits at the speed on a little slider, the
+     snail and the rabbit either side of it in the tile's grey; the pictures
+     follow the theme and the pen, and a white pen on the light tile still
+     shows. Pad and Flip.
 
 For calibration, TEXT_PART=<words of a part's label> runs that part alone.
 A real run sets none.
