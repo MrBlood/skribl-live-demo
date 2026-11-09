@@ -121,9 +121,6 @@ def words(q, w="hi there"):
     x, y = at(q, 0.3, 0.35)
     q.mouse.click(x, y)
     q.wait_for_timeout(600)
-    if q.evaluate("() => document.getElementById('txSheet').classList.contains('tucked')"):
-        q.evaluate("() => document.getElementById('txField').click()")
-        q.wait_for_timeout(400)
     q.evaluate("(w) => { const f = document.getElementById('txField'); f.value = w; f.dispatchEvent(new Event('input', { bubbles: true })); }", w)
     q.wait_for_function("() => { const p = SkriblText.plan(); return !!p && p.strokes.length > 0; }", timeout=15000)
     q.click("#txGo")

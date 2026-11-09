@@ -1742,7 +1742,13 @@ dials"; the owner, Nov 8: "shouldn't we have control of thickness on text
 editor, and font size?" and "Shouldn't the editor shut the recorder off once
 it's written the words?", then "all yes"): Size and Thickness are sliders
 beside Speed, Thickness for the words alone; and on the Pad a recording that
-Write it started stops when the words are done.
+Write it started stops when the words are done. (9) **Text is a drawer,
+built** (DECISIONS, after v330, "Text is a drawer"; the owner, Nov 8:
+"Shouldn't text be a drawer? Not a popup?", then yes to A3 compact): one of
+the drawers under the tools, on both editors; the words and Write it in one
+row, Style, and Size, Thickness and Speed as tiles that open their sliders;
+while the words are dragged the drawer steps aside, so they reach the whole
+drawing, and comes back when they are let go. It replaces (7)'s bar.
 Skribl takes the owner's redrawn letters as they
 send them (a saved copy of their hand; c, s, S, 8 and 9 so far).
 

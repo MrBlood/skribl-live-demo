@@ -259,6 +259,25 @@ def place_words(q, fx, fy):
     tap(q, x, y)
 
 
+def press_grabber(q):
+    """The drawer's grabber, pressed; False when there is none on screen to
+    press (the rows after say what was there instead)."""
+    loc = q.locator("#txSheet .drawer-detent-handle")
+    if not loc.is_visible():
+        return False
+    loc.click(timeout=5000)
+    return True
+
+
+def press_go(q):
+    """Write it, pressed; False when it is not on screen to press."""
+    loc = q.locator("#txGo")
+    if not loc.is_visible():
+        return False
+    loc.click(timeout=5000)
+    return True
+
+
 def draw_line(q, fx0, fy0, fx1, fy1, n=20):
     x0, y0 = at(q, fx0, fy0)
     x1, y1 = at(q, fx1, fy1)
@@ -447,13 +466,15 @@ with sync_playwright() as p:
               s["open"] and not s["hidden"] and s["focus"] == "txField", json.dumps(s)[:160])
         check("...and draws nothing and arms no take", after[:2] == n0 and after[2] is False and after[3] is False, str(after))
         settle(q)
-        q.click("#txSheet .drawer-detent-handle")
-        q.wait_for_timeout(300)
+        y0 = q.evaluate("() => scrollY")
+        press_grabber(q)
+        home = q.evaluate(SCROLLS, 1100)
         settle(q)
         s = q.evaluate(SHEET)
         after = q.evaluate("() => [strokes.length, strokeGroups.length, recording, hasContent]")
-        check("its grabber closes it and leaves nothing behind, the page going home",
-              not s["open"] and s["hidden"] and s["place"] is None and after[:3] == n0 + [False] and s["y"] == 0, f"{s} {after}")
+        ok, why = glides([y0] + [f[0] for f in home], False)
+        check("its grabber closes it and leaves nothing behind, the page gliding home",
+              not s["open"] and s["hidden"] and s["place"] is None and after[:3] == n0 + [False] and s["y"] == 0 and ok, f"{s} {after}; {why}")
         place_words(q, 0.3, 0.3)
         s = q.evaluate(SHEET)
         a = q.evaluate("() => SkriblText.anchor()")
@@ -461,13 +482,16 @@ with sync_playwright() as p:
         check("with Text chosen, a press opens it again where the press was",
               s["open"] and a is not None and abs(a["x"] - want[0]) <= 2 and abs(a["y"] - want[1]) <= 2, f"{s['open']} {a} for {want}")
         type_words(q, "Hi")
+        settle(q)
+        y0 = q.evaluate("() => scrollY")
         q.keyboard.press("Escape")
-        q.wait_for_timeout(300)
+        home = q.evaluate(SCROLLS, 1100)
         settle(q)
         s = q.evaluate(SHEET)
         after = q.evaluate("() => [strokes.length, strokeGroups.length, recording]")
-        check("Escape closes it the same way, the typed words still not ink, the page going home",
-              not s["open"] and after == n0 + [False] and s["y"] == 0, f"{s['open']} {after}, scrolled {s['y']}")
+        ok, why = glides([y0] + [f[0] for f in home], False)
+        check("Escape closes it the same way, the typed words still not ink, the page gliding home",
+              not s["open"] and after == n0 + [False] and s["y"] == 0 and ok, f"{s['open']} {after}, scrolled {s['y']}; {why}")
         c.close()
         # One of the drawers, on both editors: another opening closes it, and
         # another tool does.
@@ -1091,6 +1115,10 @@ with sync_playwright() as p:
         check("...its room in the page kept, so nothing above it moves",
               t["room"] is not None and abs(t["room"] - room0) <= 1 and t["dock"] == before["dock"],
               f"room {t['room']} for a drawer of {room0}; the tools at {before['dock']} -> {t['dock']}")
+        # While typing, the page scrolled up to see the top of the drawing; the
+        # drawer, back in the page when the keyboard goes, must come on screen.
+        q.evaluate("() => window.scrollTo({ top: 0, behavior: 'instant' })")
+        q.wait_for_timeout(200)
         q.keyboard.press("Enter")
         q.wait_for_timeout(400)
         settle(q)
@@ -1111,7 +1139,7 @@ with sync_playwright() as p:
         q.evaluate("() => document.getElementById('txField').focus()")
         q.wait_for_timeout(300)
         t3 = q.evaluate(TYPING, [DOCK["pad"], STUCK])
-        q.click("#txSheet .drawer-detent-handle")
+        press_grabber(q)
         q.wait_for_timeout(500)
         closed = q.evaluate("() => !SkriblText.isOpen()")
         check("...and the grabber, pressed with the keyboard up, closes the drawer", t3["typing"] and closed,
@@ -1194,7 +1222,7 @@ with sync_playwright() as p:
                   ok and fr[-1][0] <= 0.5 and len(tops) <= 2, f"{why}; the words' top at {tops[:4]}")
             # On up to the top of the drawing, which was under the header.
             for i in range(1, 40):
-                q.mouse.move(x, y + 8 - 20 * i)
+                q.mouse.move(x, max(2, y + 8 - 20 * i))   # a finger stays on the screen
                 q.wait_for_timeout(16)
             q.wait_for_timeout(200)
             g2 = q.evaluate(GEO, [CANVAS[ed], DOCK[ed]])
@@ -1235,7 +1263,7 @@ with sync_playwright() as p:
                   f"the words' label from {round(g4['label'][0]) if g4['label'] else None}, the header to {round(g4['stuck'])}; the row ends {round(g4['row'][1])} of {g4['vh']}")
             n0 = q.evaluate(COUNT[ed])
             k = q.evaluate("(sel) => { const el = document.querySelector(sel), r = el.getBoundingClientRect(); return [r.top, r.height / (%s)()[1]]; }" % LOGICAL[ed], CANVAS[ed])
-            q.click("#txGo")
+            press_go(q)
             waited(q, "() => !SkriblText.isWriting()", 30000)
             ys = [p2[1] for p2 in q.evaluate(POINTS[ed], n0[0])]
             foot = k[0] + max(ys) * k[1] if ys else None
@@ -1369,7 +1397,7 @@ with sync_playwright() as p:
             shown = q.evaluate("() => !document.getElementById('txPlace').hidden")
             check(f"{ed}: while Text's words are placed, the empty canvas's words step back, in their own fade",
                   o0 > 0.9 and shown and o1 < 0.02, f"{o0} -> {o1}, Text's words shown {shown}")
-            q.click("#txSheet .drawer-detent-handle")
+            press_grabber(q)
             q.wait_for_timeout(450)
             o2 = q.evaluate(OPACITY, HINT[ed])
             check(f"{ed}: ...and come back when Text closes with nothing written", o2 > 0.9, f"{o1} -> {o2}")
