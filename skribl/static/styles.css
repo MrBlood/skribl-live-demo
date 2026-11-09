@@ -1374,6 +1374,12 @@ body.playback-paused .tap-paused { display: grid; }
 .canvas-empty-hint.hidden {
   opacity: 0;
 }
+/* WORDS STEP BACK FOR WORDS (lib/textwrite.js): while Text's words are
+   placed and while they write themselves, the empty canvas's words (and the
+   post box's snail) go in their own fade, so the two are never read through
+   each other; closed with nothing written, they come back. Once the words
+   are ink, each editor's own rule keeps them gone (.hidden). */
+body:is(.text-placing, .text-writing) :is(.canvas-empty-hint, .canvas-empty-once) { opacity: 0; }
 
 /* YOUR HAND'S WORDS (lib/handwords.js; the owner's pick after the "Empty
    canvas ideas" mock): the words' box at the hand's size, and the drawing

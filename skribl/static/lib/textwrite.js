@@ -921,15 +921,21 @@
     if (want) anchor = clampAnchor(want);
     position();
   }
+  // THE EMPTY CANVAS STEPS BACK while Text's words show, so the two are
+  // never read through each other (the owner's Flip: "Draw page 1" under
+  // the words); styles.css fades its words while the body says so, and
+  // while the words write themselves (text-writing), until they are ink.
+  function placing(on) { document.body.classList.toggle('text-placing', !!on); }
   function position() {
     var place = els && els.place;
     if (!place) return;
     var sb = screenBox();
-    if (!plan || !plan.strokes.length || !anchor || !sb || !isOpen()) { place.hidden = true; return; }
+    if (!plan || !plan.strokes.length || !anchor || !sb || !isOpen()) { place.hidden = true; placing(false); return; }
     var b = plan.box;
     var left = sb.left + (anchor.x + b.x0) * sb.k, top = sb.top + (anchor.y + b.y0) * sb.ky;
     var w = (b.x1 - b.x0) * sb.k, h = (b.y1 - b.y0) * sb.ky;
     place.hidden = false;
+    placing(true);
     place.style.left = left + 'px';
     place.style.top = top + 'px';
     place.style.width = w + 'px';
@@ -1081,6 +1087,7 @@
     var s = els.sheet;
     if (!s || s.hidden) { if (then) then(); return; }
     els.place.hidden = true;
+    placing(false);
     document.body.classList.remove('text-open');
     if (document.activeElement === els.field) els.field.blur();
     s.classList.remove('open', 'typing');

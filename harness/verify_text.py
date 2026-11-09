@@ -88,6 +88,11 @@ Mirror leaving them alone. Each row holds a promise:
      Done ends one, with Keep drawing to add more; a take that was
      recording before goes on, and so does one whose words a press hurried
      along (that press is often the next stroke).
+ 20. THE EMPTY CANVAS STEPS BACK (the owner's Flip: "Draw page 1" read
+     through the words): while Text's words are placed, the empty
+     canvas's words fade, and come back when Text closes with nothing
+     written; from Write it until the words are ink they never come back
+     between, on any frame. Pad and Flip.
 
 For calibration, TEXT_PART=<words of a part's label> runs that part alone.
 A real run sets none.
@@ -1239,6 +1244,40 @@ with sync_playwright() as p:
             else:
                 check("...and so does one whose words were hurried along: the person is already at the next thing",
                       t0 == [False, False, False] and t1[0] is True and t1[1] is False, f"{t0} -> {t1}")
+            c.close()
+
+    # ------------------------------------------------------------------ 20
+    if part("TEXT 20 — the empty canvas steps back"):
+        HINT = {"pad": "canvasEmptyHint", "flip": "flipEmptyHint"}
+        OPACITY = "(id) => +getComputedStyle(document.getElementById(id)).opacity"
+        for ed in ("pad", "flip"):
+            c, q = open_editor(b, ed, prefs={"style": "print", "size": "M", "speed": 12})
+            o0 = q.evaluate(OPACITY, HINT[ed])
+            choose_text(q)
+            type_words(q, "Hi there")
+            q.wait_for_timeout(450)   # the hint's own fade is 0.3s
+            o1 = q.evaluate(OPACITY, HINT[ed])
+            shown = q.evaluate("() => !document.getElementById('txPlace').hidden")
+            check(f"{ed}: while Text's words are placed, the empty canvas's words step back, in their own fade",
+                  o0 > 0.9 and shown and o1 < 0.02, f"{o0} -> {o1}, Text's words shown {shown}")
+            q.click("#txClose")
+            q.wait_for_timeout(450)
+            o2 = q.evaluate(OPACITY, HINT[ed])
+            check(f"{ed}: ...and come back when Text closes with nothing written", o2 > 0.9, f"{o1} -> {o2}")
+            choose_text(q)
+            type_words(q, "Hi there")
+            q.wait_for_timeout(450)
+            # Read on every frame from before Write it until the words are ink and settled.
+            q.evaluate("""(id) => { const el = document.getElementById(id); window._hintMost = 0; window._hintStop = false;
+              (function f() { window._hintMost = Math.max(window._hintMost, +getComputedStyle(el).opacity);
+                if (!window._hintStop) requestAnimationFrame(f); })(); }""", HINT[ed])
+            q.click("#txGo")
+            q.wait_for_function("() => !SkriblText.isWriting()", timeout=60000)
+            q.wait_for_timeout(450)
+            most, o3 = q.evaluate("(id) => { window._hintStop = true; return [window._hintMost, +getComputedStyle(document.getElementById(id)).opacity]; }", HINT[ed])
+            check(f"{ed}: from Write it until the words are ink, the empty canvas's words never come back between",
+                  most < 0.02 and o3 < 0.02, f"most on any frame {most}, after {o3}")
+            check(f"{ed}: the empty canvas: no errors", not q._tx_errors, str(q._tx_errors[:2]))
             c.close()
 
     b.close()
