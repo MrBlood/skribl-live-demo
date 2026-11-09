@@ -31912,3 +31912,20 @@ editors), and the rule without the writing (Flip's writing row only: the
 Pad's own rule hides its words at Write it, so the Pad cannot fail that
 way, and its row pins that they are already gone then rather than fading
 after). As it is: 8/8.
+
+ALSO HERE, a miss from the dials (#807): verify_emptytake writes Text's
+words on a blank Pad too, and was not in that change's affected suites, so
+three of its rows still expected the recorder left on after the words (main's
+run after #807 is red on them). Now: the words' take, ended when they are
+written (verify_text 19), is undone to the same fresh Pad; and after a
+reload, words written are a take of their own, and after Keep drawing a
+stroke joins it. Keep drawing starts the take's clock again, as it always
+has, so the row reads the stroke's own times and a longer replay, not a
+later clock. verify_helpdemos writes Text's words as well and was not run
+for #807 either; it is green. Calibrated in tree copies, each break red on
+its own rows: the take Write it began never ending (the words' rows), and
+Keep drawing starting a fresh take (the stroke's row). One calibration
+round was thrown away: a server left from a stopped round still held the
+port, so the "as it is" run talked to a broken copy; it was run again on a
+port no server held. As it is: 12/12, and three times on the harness's own
+servers.

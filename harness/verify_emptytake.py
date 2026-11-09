@@ -19,8 +19,9 @@ WHAT IS ASKED, AND HOW IT IS READ (the Pad, real presses and keys)
     starts a fresh take (its first point near the clock's start, not where
     the old take's clock had got to); Redo brings the words back as a take
     to watch.
-  * A RELOAD AFTER IT is a fresh Pad, where words written are recorded and a
-    stroke after them joins their take.
+  * A RELOAD AFTER IT is a fresh Pad, where words written are recorded, a
+    take of their own that ends when they are written (as Done ends one,
+    verify_text 19), and after Keep drawing a stroke joins their take.
   * A SAVE OF AN EMPTY CANVAS KEEPS NO BASE, even with a take's base held.
   * SAVES WRITTEN BEFORE THIS: an autosave holding a blank base (and the words
     to Redo), and a file holding one, come back as a fresh Pad; a base with ink
@@ -208,8 +209,10 @@ with sync_playwright() as pw:
     armed = q.evaluate(STATE)
     undo_all(q)
     s = q.evaluate(STATE)
+    # The words' take ends when they are written (verify_text 19), so it is
+    # a finished take that is undone here, to the same fresh Pad.
     check("words' take undone to nothing ends the same way",
-          armed["rec"] and armed["n"] > 0 and fresh(s), f"after the words: {says(armed)}; after Undo: {says(s)}")
+          armed["fin"] and not armed["rec"] and armed["n"] > 0 and fresh(s), f"after the words: {says(armed)}; after Undo: {says(s)}")
     q.keyboard.press("Control+y")
     q.wait_for_timeout(600)
     s3 = q.evaluate(STATE)
@@ -228,11 +231,20 @@ with sync_playwright() as pw:
           fresh(s), says(s))
     words(q)
     w = q.evaluate(STATE)
+    d0 = q.evaluate("() => getPlaybackDuration()")
+    # Their take ends when they are written, as Done ends one; Keep drawing
+    # carries the drawing on, and the stroke after is recorded into it, its
+    # clock starting again as every Keep drawing's does (so the replay grows).
+    q.click("#addTakePill")
+    q.wait_for_timeout(200)
     line(q)
     s2 = q.evaluate(STATE)
-    check("...where words written are recorded, and a stroke after them joins their take",
-          w["rec"] and w["n"] > 0 and w["maxT"] > 500 and s2["rec"] and s2["n"] > w["n"] and s2["maxT"] > w["maxT"],
-          f"after the words: {says(w)}, last point at {w['maxT']} ms; after the stroke: {says(s2)}, last point at {s2['maxT']} ms")
+    t_new = q.evaluate("(n0) => strokes.slice(n0).reduce((m, p) => Math.max(m, p.t || 0), 0)", w["n"])
+    d1 = q.evaluate("() => getPlaybackDuration()")
+    check("...where words written are recorded, and after Keep drawing a stroke joins their take",
+          w["fin"] and not w["rec"] and w["n"] > 0 and w["maxT"] > 500 and s2["rec"] and s2["n"] > w["n"] and t_new > 0 and d1 > d0,
+          f"after the words: {says(w)}, last point at {w['maxT']} ms, the replay {d0} ms; after Keep drawing and a stroke: {says(s2)}, "
+          f"the stroke recorded to {t_new} ms, the replay {d1} ms")
     # The owner: "it doesn't recolor after text and undo". lib/recolor.js works
     # on the lines of a take, and a stroke left out of every take was not one.
     q.evaluate("() => { if (recording) recordBtn.click(); }")
