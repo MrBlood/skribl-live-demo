@@ -1482,6 +1482,125 @@ with sync_playwright() as p:
             check(f"{ed}: the tiles: no errors", not q._tx_errors, str(q._tx_errors[:2]))
             c.close()
 
+    if part("TEXT 22 — the tiles' pictures"):
+        # One tile's picture as painted: how much ink, and of that, where the
+        # pixels near each colour asked for lie (CSS px); the rows a line
+        # covers at a fraction of the width; a coarse map of what is inked.
+        ART = """([k, cols, xf]) => { const c = document.querySelector('#txTiles canvas.tx-art[data-art="' + k + '"]');
+          if (!c || !c.width || !c.clientWidth) return null;
+          const W = c.width, H = c.height, s = W / c.clientWidth, d = c.getContext('2d').getImageData(0, 0, W, H).data;
+          const rgb = (t) => { const m = /rgba?\\(([^)]+)\\)/.exec(t); if (m) return m[1].split(',').slice(0, 3).map(Number);
+            const h = /^#([0-9a-f]{6})$/i.exec(t.trim()); return h ? [0, 2, 4].map(i => parseInt(h[1].slice(i, i + 2), 16)) : null; };
+          const want = cols.map(rgb), near = want.map(() => ({ n: 0, x0: 1e9, x1: -1e9, y0: 1e9, y1: -1e9 }));
+          let n = 0, dark = 0; const grid = new Array(Math.ceil(H / s) * Math.ceil(W / s)).fill(0), gw = Math.ceil(W / s);
+          for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+            const i = (y * W + x) * 4; if (d[i + 3] < 128) continue;
+            n++; grid[Math.floor(y / s) * gw + Math.floor(x / s)] = 1;
+            if (0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2] < 205) dark++;
+            want.forEach((w, j) => { if (w && Math.abs(d[i] - w[0]) + Math.abs(d[i + 1] - w[1]) + Math.abs(d[i + 2] - w[2]) <= 36) {
+              const o = near[j]; o.n++; o.x0 = Math.min(o.x0, x / s); o.x1 = Math.max(o.x1, (x + 1) / s); o.y0 = Math.min(o.y0, y / s); o.y1 = Math.max(o.y1, (y + 1) / s); } });
+          }
+          let run = 0; if (xf != null) { const cx = Math.round(xf * W); for (let y = 0; y < H; y++) if (d[(y * W + cx) * 4 + 3] >= 128) run++; }
+          return { n, dark, near, run: run / s, w: c.clientWidth, h: c.clientHeight, grey: getComputedStyle(c).color, grid: grid.join('') }; }"""
+        INK = {"pad": "() => penColorFor(color)", "flip": "() => penColorFor(color)"}
+        SETINK = {"pad": "(h) => setPenColor(h)", "flip": "(h) => setColor(h)"}
+
+        def art(q, k, cols=(), xf=None):
+            return q.evaluate(ART, [k, list(cols), xf])
+
+        def drawn(q):
+            return waited(q, "() => [...document.querySelectorAll('#txTiles canvas.tx-art')].every(c => { if (!c.width) return false;"
+                             " const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; for (let i = 3; i < d.length; i += 4) if (d[i] > 128) return true; return false; })", 15000)
+
+        for ed in ("pad", "flip"):
+            c, q = open_editor(b, ed, prefs={"style": "print", "size": "M", "speed": 4})
+            choose_text(q)
+            ok = drawn(q)
+            ink = q.evaluate(INK[ed])
+            pics = {k: art(q, k, [ink]) for k in ("size", "weight", "speed")}
+            check(f"{ed}: each tile draws what it holds: Size, Thickness and Speed each have a picture, in the pen's ink",
+                  ok and all(v and v["n"] > 60 and v["near"][0]["n"] > 30 for v in pics.values()),
+                  "; ".join(f"{k}: {v['n'] if v else None} inked, {v['near'][0]['n'] if v else None} in the ink {ink}" for k, v in pics.items()))
+            # Size: the words' own A, in the ink, as tall as the Size.
+            set_dial(q, "txSize", 25)
+            q.wait_for_timeout(150)
+            lo = art(q, "size", [ink])["near"][0]
+            set_dial(q, "txSize", 150)
+            q.wait_for_timeout(150)
+            hi = art(q, "size", [ink])["near"][0]
+            check(f"{ed}: Size's own A, in the ink between a small one and a large one, grows with the Size",
+                  hi["n"] and lo["n"] and (hi["y1"] - hi["y0"]) > (lo["y1"] - lo["y0"]) + 8,
+                  f"its A {round(lo['y1'] - lo['y0'], 1)}px tall at the smallest, {round(hi['y1'] - hi['y0'], 1)}px at 150")
+            set_dial(q, "txSize", 65)
+            q.wait_for_timeout(150)
+            g_print = art(q, "size")["grid"]
+            q.click('#txStyles [data-style="script"]')
+            waited(q, "() => document.querySelector('#txStyles [data-style=\"script\"]').classList.contains('on')", 5000)
+            q.wait_for_timeout(600)
+            g_script = art(q, "size")["grid"]
+            union = sum(1 for a, z in zip(g_print, g_script) if a == "1" or z == "1")
+            differ = sum(1 for a, z in zip(g_print, g_script) if a != z)
+            check(f"{ed}: ...written in the words' own style (Script's A is not Print's)",
+                  union and differ / union > 0.3, f"{differ} of {union} inked places differ")
+            # Thickness: a line as thick as the words' line (1.5 + half of it, past 30 no thicker).
+            runs = {}
+            for t in (2, 20):
+                set_dial(q, "txWeight", t)
+                q.wait_for_timeout(150)
+                # the crest, where the line runs level: a quarter of the way along its 10px-inset run
+                a = art(q, "weight", [], 0.25 + 5 / max(1, q.evaluate("() => document.querySelector('#txTiles canvas.tx-art[data-art=\"weight\"]').clientWidth")))
+                runs[t] = a["run"]
+            check(f"{ed}: Thickness's line is as thick as the words' line",
+                  abs(runs[2] - 2.5) <= 1.5 and abs(runs[20] - 11.5) <= 1.5,
+                  f"at 2px it is {round(runs[2], 1)}px (2.5 meant), at 20px {round(runs[20], 1)}px (11.5 meant)")
+            # Speed: the dot on the little slider at the speed, a quarter by the snail, 16x by the rabbit.
+            xs = {}
+            for i in (0, 4, 12):
+                set_speed(q, i)
+                q.wait_for_timeout(120)
+                xs[i] = art(q, "speed", [ink])["near"][0]["x1"]
+            span = xs[12] - xs[0]
+            check(f"{ed}: Speed's dot sits at the speed, from the snail to the rabbit",
+                  span > 25 and abs((xs[4] - xs[0]) / span - 4 / 12) <= 0.08,
+                  f"its right edge at {round(xs[0], 1)} (a quarter), {round(xs[4], 1)} (1x), {round(xs[12], 1)} (16x)")
+            sp = art(q, "speed", [q.evaluate("() => getComputedStyle(document.querySelector('#txTiles canvas.tx-art[data-art=\"speed\"]')).color"), ink])
+            check(f"{ed}: the snail and the rabbit are the tile's own grey, either side of the slider",
+                  sp["near"][0]["n"] > 60 and sp["near"][0]["x0"] < sp["near"][1]["x0"] - 4 and sp["near"][0]["x1"] > sp["near"][1]["x1"] + 4,
+                  f"grey {sp['grey']}: {sp['near'][0]['n']} places from {round(sp['near'][0]['x0'], 1)} to {round(sp['near'][0]['x1'], 1)}; the ink's from {round(sp['near'][1]['x0'], 1)} to {round(sp['near'][1]['x1'], 1)}")
+            # The theme changes the tile's grey: the pictures follow it.
+            g0 = sp["grey"]
+            q.evaluate("() => SkriblTheme.set('dark')")
+            q.wait_for_timeout(600)
+            g1 = q.evaluate("() => getComputedStyle(document.querySelector('#txTiles canvas.tx-art[data-art=\"speed\"]')).color")
+            sd = art(q, "speed", [g1, g0])
+            check(f"{ed}: the pictures follow the theme: dark, the snail and the rabbit are dark's grey",
+                  g1 != g0 and sd["near"][0]["n"] > 60 and sd["near"][1]["n"] < 10,
+                  f"{g0} -> {g1}: {sd['near'][0]['n']} places in the new grey, {sd['near'][1]['n']} still in the old")
+            check(f"{ed}: the pictures: no errors", not q._tx_errors, str(q._tx_errors[:2]))
+            c.close()
+            # Another ink, chosen before Text: the pictures are in it.
+            c, q = open_editor(b, ed, prefs={"style": "print", "size": "M", "speed": 4})
+            q.evaluate(SETINK[ed], "#ff6c2f")
+            choose_text(q)
+            drawn(q)
+            q.wait_for_timeout(300)
+            pics = {k: art(q, k, ["#ff6c2f", "#7c5cff"]) for k in ("size", "weight", "speed")}
+            check(f"{ed}: an orange pen draws the pictures in orange",
+                  all(v and v["near"][0]["n"] > 30 and v["near"][1]["n"] < 5 for v in pics.values()),
+                  "; ".join(f"{k}: {v['near'][0]['n']} orange, {v['near'][1]['n']} purple" for k, v in pics.items() if v))
+            c.close()
+            # A white pen on the light tile: drawn over a soft edge, so it shows.
+            c, q = open_editor(b, ed, prefs={"style": "print", "size": "M", "speed": 4})
+            q.evaluate(SETINK[ed], "#ffffff")
+            choose_text(q)
+            drawn(q)
+            q.wait_for_timeout(300)
+            pics = {k: art(q, k) for k in ("size", "weight")}
+            check(f"{ed}: a white pen on the light tile still shows, over a soft edge",
+                  all(v and v["dark"] > 40 for v in pics.values()),
+                  "; ".join(f"{k}: {v['dark']} places darker than the tile" for k, v in pics.items() if v))
+            c.close()
+
     b.close()
 
 failed = [r for r in results if not r[0]]
