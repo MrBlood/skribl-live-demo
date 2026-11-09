@@ -32355,3 +32355,12 @@ caption, broken alone, stayed green: the sheet folds the caption to the
 tick each time it opens, so no one can see the difference (an equivalent
 break, not a blind row). With nothing broken: verify_gallery 232/232,
 verify_example 42/42.
+
+VERIFY_CLOUDDRAFTS' HAND-OVER ROW, red beside the others and alone (115/116):
+a Flip draft opened from the Pad's list inside the example host's composer
+asked for Flip's address to be exactly ?compose=1. The hand-over follows the
+⋯ switch's link, which now keeps the host's gallery=1, so Flip in that
+composer asks the gallery question too, as it should. The row now asks for
+the draft's id cleaned off and the host's flags kept. Calibrated: 116/116 as
+built; red when the switch drops the flag; red when the id is left on (with
+the two rows that already pinned the id).
