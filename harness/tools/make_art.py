@@ -39,9 +39,11 @@ TEMPO = {"snail": (1.45, 1.9), "cat": (2.4, 3.0), "scene": (1.35, 1.9),
 SPEEDUP = {"blooby-card": blooby.CARD_REPLAY_SPEEDUP}
 # A ground other than paper: the ivory card would barely part from paper.
 GROUND = {"blooby-card": blooby.TABLE}
-# A taller window: the Text sheet keeps the words clear of itself (lib/textwrite.js
-# clampAnchor), and at 960 it rests over the canvas's lower part, which moved
-# "hello!" 24px up out of the middle of its bubble.
+# A taller window: the Text sheet, when it was a sheet, kept the words clear of
+# itself (lib/textwrite.js clampAnchor), and at 960 it rested over the canvas's
+# lower part, which moved "hello!" 24px up out of the middle of its bubble. Text
+# is a drawer under the tools now and keeps clear of nothing on a desk; the
+# window stays as the drawing was made.
 VIEWPORT = {"text": (1280, 1600)}
 # Drawn with Mirror on, as a person sets it in Tune: the right half draws itself.
 MIRROR = {"mirror": "vertical"}
@@ -68,10 +70,10 @@ def recolor_after(page, taps):
 
 
 def write_words(page, w):
-    """The Text tool, as a person uses it: Text in Shape's picker opens the
-    sheet; the style, size and 1x (the hand's own pace) picked; the words
+    """The Text tool, as a person uses it: Text in Shape's picker opens its
+    drawer; the style, size and 1x (the hand's own pace) picked; the words
     typed; then placed with their middle at w.at (the press that says where
-    they go, which sends the sheet aside to its bar); Write it. They write themselves in while the take records, in
+    they go); Write it. They write themselves in while the take records, in
     the pen's colour and thickness."""
     page.evaluate("([c, s]) => { color = c; size = s; }", [w.color, w.pen])
     page.evaluate("() => document.querySelector('#shapeSeg [data-shape=\"text\"]').click()")
@@ -79,14 +81,16 @@ def write_words(page, w):
     page.wait_for_function("(s) => !!document.querySelector('#txStyles [data-style=\"' + s + '\"][data-face=\"drawn\"]')",
                            arg=w.style, timeout=15000)
     page.click(f'#txStyles [data-style="{w.style}"]')
-    page.click(f'#txSize [data-size="{w.size}"]')
+    # Size and Speed are sliders under their tiles (#807): Small, Medium and
+    # Large are stops on Size, and 1x is the hand's own pace.
+    page.evaluate("""(k) => { const s = document.getElementById('txSize'); s.value = String(Math.round(SkriblText.SIZES[k] * 1000));
+        s.dispatchEvent(new Event('input', { bubbles: true })); }""", w.size)
     page.evaluate("""() => { const s = document.getElementById('txSpeed'); s.value = String(SkriblText.SPEEDS.indexOf(1));
         s.dispatchEvent(new Event('input', { bubbles: true })); }""")
     page.evaluate("(t) => { const f = document.getElementById('txField'); f.value = t; f.dispatchEvent(new Event('input', { bubbles: true })); }",
                   w.text)
     page.wait_for_function("() => { const p = SkriblText.plan(); return !!p && p.strokes.length > 0; }", timeout=15000)
-    # Placed last: a press says where the words go, and the sheet steps aside
-    # to its bar (the words and Write it) once it has.
+    # Placed last: a press says where the words go.
     page.evaluate("(p) => SkriblText.place(p)", {"x": w.at[0], "y": w.at[1]})
     page.wait_for_timeout(900)
     page.click("#txGo")

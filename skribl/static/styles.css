@@ -8137,10 +8137,12 @@ html.skribl-sheet { overscroll-behavior-y: none; }
    (#txSpacer keeps its room, so nothing above moves), and is the grabber, the
    words and Write it, so the drawing shows above it with the words on it.
    The menu's paper there, not the glass: a fixed card's glass would show the
-   page moving under it. */
+   page moving under it. As tall as that row and no taller: a phone's drawers
+   keep 240px whatever they hold, and on the keyboard that was 150px of empty
+   paper over the drawing. */
 .tx-spacer[hidden] { display: none; }
 .tx-drawer.typing {
-  position: fixed; left: 0; right: 0; bottom: 0; z-index: 150; margin: 0;
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 150; margin: 0; min-height: 0;
   padding: 4px 16px 12px; border-radius: 22px 22px 0 0; border-width: 1px 0 0;
   background: var(--menu-paper); -webkit-backdrop-filter: none; backdrop-filter: none;
   box-shadow: 0 -10px 40px rgba(20, 10, 60, .22);

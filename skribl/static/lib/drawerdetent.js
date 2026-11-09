@@ -128,6 +128,10 @@
       }, ms);
     });
   }
+  // A press the drawer cannot see is the person acting too: Text's words
+  // placed on the drawing, a second after the drawer came back from a drag,
+  // had the last re-assert carry the page to the drawer's end under them.
+  function hush() { revealGen++; }
 
   /* PLAY SHOWS THE WHOLE DRAWING. With a drawer open the page can sit scrolled
    * down to it while Play is still in reach -- the phone's header is sticky,
@@ -466,6 +470,6 @@
     }).observe(card);
   }
 
-  window.SkriblDrawerDetent = { attach: attach, revealPanelEnd: revealPanelEnd, revealTop: revealTop, veil: veil,
+  window.SkriblDrawerDetent = { attach: attach, revealPanelEnd: revealPanelEnd, revealTop: revealTop, veil: veil, hush: hush,
                                 shrinkGently: shrinkGently, followGrowth: followGrowth, stuckBottom: stuckBottom };
 }());

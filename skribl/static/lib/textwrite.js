@@ -574,22 +574,27 @@
   // the words is a drag, the drawer is unseen and untouched (its room kept,
   // so nothing jumps) and the page glides home, the words staying under the
   // finger as the drawing moves, so they reach the whole drawing. Let go and
-  // the drawer is back, the page gliding to show it again, never so far that
-  // the words go under the header. With Reduce Motion each is simply where
-  // it goes.
+  // the drawer is back, the page gliding to show it again, no further than
+  // the words and Write it need (comeBack). With Reduce Motion each is simply
+  // where it goes.
   var veiled = false;
   function still() {
     return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   }
   function veil(on) {
-    var s = els && els.sheet;
+    var s = els && els.sheet, D = window.SkriblDrawerDetent;
     if (!s || on === veiled) return;
     veiled = on;
     s.classList.toggle('tx-veiled', on);
     var how = still() ? 'auto' : 'smooth';
     if (on) {
       if (document.activeElement === els.field) els.field.blur();
-      window.scrollTo({ top: 0, behavior: how });
+      // The whole drawing on screen, as Play shows it (lib/drawerdetent.js
+      // revealTop), which also calls off the drawer's re-asserts of where it
+      // opened: a drag begun within a second of the drawer opening had them
+      // carry the page back down under the finger, 260px in one frame.
+      if (D && D.revealTop) D.revealTop(editor && editor.canvas, how);
+      else window.scrollTo({ top: 0, behavior: how });
       return;
     }
     if (isOpen()) comeBack(how);
@@ -1067,6 +1072,11 @@
   function place(pos, opening) {
     if (!editor || !bind()) return;
     if (job) job.finish();
+    // A press is the person acting: the page is theirs, so a reveal still
+    // settling (the drawer opening, or back from a drag) moves it no more
+    // (lib/drawerdetent.js hush). Before open(), which may start its own.
+    var D = window.SkriblDrawerDetent;
+    if (!opening && D && D.hush) D.hush();
     want = { x: pos.x, y: pos.y };
     anchor = clampAnchor(want);
     open();
