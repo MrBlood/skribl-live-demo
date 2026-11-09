@@ -32469,3 +32469,38 @@ start (a jump to 1234ms), when the badge ignores the speed (it went back),
 and when its frames stop at the change (the painted badge stuck at 519ms).
 With the page's frames held back 150ms after the change, the old row went
 red as CI did (504ms then 526ms) and the new one stayed green.
+
+## After v330 -- Main red after #818: a drawer's reveal wrote the page while it was still gliding
+
+Main at a24ae80 (run 42690020936), sqlite 4/6 only: verify_drawerreveal
+213/214, "Flip phone pen: feel ... gliding there, never back up": 404px
+over 18 frames, then 3px back up. Green on the runs after #814, #815 and
+#817; nothing in #818 touches the drawers.
+
+A REAL JUMP, ON A SLOWER PHONE. Reproduced at CPU 4x without the probe's
+hooks, every time: Flip's Feel went back 8 to 15px. Every drawer that opens
+goes through lib/drawerdetent.js revealPanelEnd, which glides the page to
+the drawer's end and re-asserts at 300, 700 and 1200ms with a plain
+scrollTop write (the iPhone's own settling, see the comment there). The
+browser glides on its own thread, and on a slower phone the glide was still
+going at 300ms: the write landed on top of it (read at 660 on the way to
+726, the page went on to 754), and the 700ms re-assert snapped it 28px back
+up. A lurch past and a jump back. At full speed here the glide ends just at
+300ms, a pixel or two short, which the re-assert leaves alone; a busy
+runner made it 3px.
+
+THE RE-ASSERTS WAIT FOR THE PAGE TO BE STILL (whenStill): two frames
+without a move, then the same check and write as before; still moving after
+a second, it is someone's scroll, and it is left alone. The press and wheel
+listeners that call them off stay on to 2300ms, to cover the wait. Shared:
+the Pad, Flip and Text all reveal through it. At CPU 4x, Brush, Size, Feel
+and Eraser four times each: the old file went back on 6 of 16 presses on
+each editor (Brush, Size and Feel, 3 to 15px), the new one on none, landing
+in the same places (Flip 170, 303, 311 and 430px; the Pad 170, 303, 317 and
+391px). At 1x and 6x, none either.
+
+A SLOWER PHONE IN THE SUITE: verify_drawerreveal presses the pen's Feel
+three times on each editor at CPU 4x, and asks that it glides there and
+never back up. Calibrated against the old file in a tree copy with its own
+server: both rows red in all six rounds (the Pad back on 14 of 18 presses,
+Flip on 15 of 18, 3 to 19px), both green in all six as built.

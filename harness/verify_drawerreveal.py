@@ -63,11 +63,19 @@ And on a short phone, 402x664, where Restart cannot all show: the page goes
 as far as it can, the tile stopping below the header and the timeline's
 copy.
 
+And on a slower phone (CPU 4x), the pen's Feel three times on each editor:
+
+  IT STILL GLIDES THERE, AND NEVER BACK UP. The reveal's re-asserts wait for
+  the page to be still (lib/drawerdetent.js whenStill): written while the
+  browser was still gliding, the page went on past where it was going, and
+  the next re-assert snapped it back up.
+
 And NO DRAWER IS MISSED: every tile in the editor's page (.dp-tile) is one this
 suite pressed, so a new drawer's tiles fail here until they are listed.
 
 For calibration, DRAWERREVEAL_ONLY="Pad desk" (an editor, a device, a drawer,
-any of them) runs that part alone. A real run sets nothing.
+any of them; "slow" for the slower phone alone) runs that part alone. A real
+run sets nothing.
 
 Checked red per component: see DECISIONS.md for which mutation turned which
 row red.
@@ -395,6 +403,32 @@ with sync_playwright() as p:
                           g["open"] and g["bottom"] <= g["vh"] - 12 and abs(m["total"]) <= 1,
                           f"moved {round(m['total'])}px; Brush's choices end at {round(g['bottom'])} of {round(g['vh'])}")
                 c.close()
+
+    # A SLOWER PHONE, CPU 4x. The reveal's re-asserts (lib/drawerdetent.js
+    # revealPanelEnd, at 300, 700 and 1200ms) caught the browser still gliding
+    # the page there, and a write then lands on top of the glide: Flip's Feel
+    # went on past 726 to 754 and the next re-assert snapped it 28px back up
+    # (main's run after #818 caught 3px of it, at full speed on a busy
+    # runner). They wait for the page to be still now. The pen's Feel, three
+    # times on each editor, the page read on every frame.
+    for ed in EDITORS:
+        if not wanted(ed, "phone", "pen", "slow"):
+            continue
+        c, q, errs = boot(b, ed, "phone", "pen")
+        cdp = c.new_cdp_session(q)
+        cdp.send("Emulation.setCPUThrottlingRate", {"rate": 4})
+        sel = '#drawTiles .dp-tile[data-dp="feel"]'
+        seen = []
+        for _ in range(3):
+            open_drawer(q, ed, "pen")
+            seen.append(motion(press(q, "phone", sel)))
+            close_drawer(q, ed)
+        cdp.send("Emulation.setCPUThrottlingRate", {"rate": 1})
+        check(f"{ed} slower phone (CPU 4x) pen: Feel glides there and never back up, three times",
+              all(m["total"] > 12 and glided(m) and m["back"] >= -2 for m in seen),
+              "; ".join(f"{round(m['total'])}px over {m['frames']} frames, the most {round(m['big'][1])}px "
+                        f"in a {round(m['big'][2])}ms frame, the most back {round(m['back'])}px" for m in seen))
+        c.close()
 
     # NO DRAWER IS MISSED: every tile in the page is one pressed above.
     if not ONLY:
