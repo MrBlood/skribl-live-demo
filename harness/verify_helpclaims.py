@@ -970,6 +970,7 @@ CONTROL_ALIASES = {
     "Watching speed": "the speeds sit where", "Undo last stroke": "the undo button",
     "Redo last stroke": "redo puts it back", "Toggle magnify controls": "toggles the zoom pill",
     "Close the drawer (drag up for more)": "a tap on the grey bar at its top",
+    "Close Text": "a tap on the grey bar at its top",   # Text's drawer's grabber (lib/textwrite.js)
     # the draw drawer
     "Pick a color from the canvas": "pick any color already on the canvas",
     "Recolor lines": "tap recolor beside the eyedropper", "Custom drawing color": "the rainbow one to mix your own",

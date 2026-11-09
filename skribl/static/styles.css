@@ -8124,10 +8124,10 @@ html.skribl-sheet { overscroll-behavior-y: none; }
 .tx-tiles .dp-tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .tx-tiles[data-col="2"] > .dp-panel { border-top-right-radius: 0; }
 /* Each tile's picture is a drawn mark in the accent, as the music drawer's
-   doors are: what the tile holds, not a value it would have to repaint. */
+   doors are: what the tile holds, not a value it would have to repaint. Drawn,
+   not set in type: Size's Aa is lines, so it is the same in every face. */
 .tx-art { display: flex; align-items: center; justify-content: center; color: var(--accent-ink); }
 .tx-art svg { width: 24px; height: 24px; overflow: visible; }
-.tx-art text { font-family: inherit; }
 /* WHILE THE WORDS ARE DRAGGED the drawer steps out of the way (lib/textwrite.js
    veil): unseen and untouched, its room kept, while the page goes home so the
    words reach the whole drawing; let go, and it is back. */
