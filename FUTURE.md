@@ -2076,6 +2076,53 @@ itself, and for payments, sales tax and shipping; a payment service, which
 would cost money and so waits for the owner's yes (WORKING-AGREEMENTS,
 "Spending"); and the artist's choices above, made in the Post sheet.
 
+## 6ah. One Skribl, two doors: the app and skribls.net (owner, Nov 9: "Is this becoming more of a standalone app, or can it be both, or what should we be doing here?")
+
+The owner: "when I post to skribl, as opposed to adding to post on feed
+there is a place to check for public gallery, and add a comment to the post
+that show in the gallery. on add to post, there is no place to add a comment
+to the skribl and there is nowhere to make it public... we are essentially
+building a standalone skribl pad/flip and one that exists in the post
+editor for the skribls.net website... whether it will have a gallery
+section for just skribls (I think it should) and when we eventually
+monetize the skribls with rights and signed editions." Cal's answer, which
+the owner said "All yes" to: both, as one Skribl with two front doors.
+
+- **Every skribl is its own artwork, with its own page,** whichever door it
+  came in by: the Pad or Flip on their own (the Post sheet), or the Skribl
+  button in the skribls.net composer (Add to post). A skribls.net post holds
+  a skribl the way it holds a photo.
+- **Add to post gets the Post sheet's two settings, kept small:** "Show in
+  the Skribls gallery", off unless it is turned on, and an optional gallery
+  caption. Today a skribl added to a post takes what the site's view gives
+  it: `create_post` makes it unlisted unless the view says public, and the
+  example host's view says public for every post and uses the post's words
+  as its title (docs/INTEGRATION.md). With the two settings, the payload Add to
+  post hands back carries them, and the site's view keeps them instead of
+  setting its own (a new item for docs/SKRIBLS-NET.md when it is built).
+  The post's words and audience stay the post's. Found while looking: Add
+  to post hides the sheet's whole block of fields (editor_compose.js,
+  hideDuplicateFields), so "Viewers start at", which the template says
+  shows in compose mode too, does not show there either.
+- **A Skribls section on skribls.net.** The gallery Skribl already has
+  (`/skribl/gallery`: New, Hot, search, Report on every tile), in the site's
+  look and under its navigation, showing public skribls from both doors.
+  Each one links back to the post it came from, which needs the post's
+  address handed to `create_post` by the site's view (new).
+- **Editions and rights belong to the skribl, not the post** (6ag). "Signed
+  edition 3 of 25" lives on the skribl's page and as a badge in the gallery,
+  and a skribl drawn inside a post can become an edition later, like one
+  drawn in the app.
+- **The app is the studio; skribls.net is the home.** The app keeps its
+  Home Screen icon and works on its own; the site is where skribls are seen
+  and, later, sold. Signed in, the app posts to the person's skribls.net
+  account. Without the site the app still stands alone, as it does today.
+
+Next, in order, and nothing built until the owner says yes to the mocks:
+this note; a mock of Add to post with the two settings beside the Post sheet
+as it is, phone and desk, light and dark; and a mock of the Skribls section
+on skribls.net, on the site's own markup (docs/SKRIBLS-NET.md's saved copy).
+
 ## 7. The honest state
 
 The tool is good. It is better than it needs to be for a demo and not yet enough
