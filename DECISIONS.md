@@ -31929,3 +31929,113 @@ round was thrown away: a server left from a stopped round still held the
 port, so the "as it is" run talked to a broken copy; it was run again on a
 port no server held. As it is: 12/12, and three times on the harness's own
 servers.
+
+## After v330 -- Text is a drawer
+
+The owner, of Text's typing sheet (a card fixed over the foot of the
+screen): "Shouldn't text be a drawer? Not a popup?" The mock showed it as one
+of the drawers under the tools in four ways; the owner: "I like your idea of
+only opening the drawer a little but you need to know it opens more right?",
+which A3 compact answers (the sliders behind tiles that say what they hold,
+the pen drawer's way), and then "Yes" to: Text becomes a drawer, A3 compact;
+and while you drag your words, the drawer drops down and comes back when you
+let go.
+
+- Text's drawer sits with the others under the tools, on both editors, and
+  is one of them (lib/drawers.js): one open at a time, so another drawer
+  opening closes it and the words with it, and the page comes to it and goes
+  home after, gliding. The Pad's drawer machine is made in app.js, which the
+  link player loads too, so editor_text.js joins Text to it with a new add()
+  and the player carries nothing for it. Another tool closes it, as does
+  Escape, its grabber on a phone (a desk keeps the drawers' rule: no
+  grabber), and Write it.
+- In it: the words and Write it in one row; Style; and three tiles, Size,
+  Thickness and Speed, each saying what it holds (35px, the pen's 5px, 1x)
+  and opening its slider under it, joined to it, one at a time; on a phone
+  the opened slider is brought on screen as the pen's is ('drawtile',
+  lib/drawerdetent.js). Gone: the sheet's title and its x, and the bar it
+  stepped aside to ("Text's sheet steps aside", above).
+- WHILE THE WORDS ARE DRAGGED the drawer steps aside: unseen and untouched,
+  its room kept so nothing jumps, while the page glides home with the words
+  under the finger all the way, so they reach the top of the drawing (with
+  the drawer up, a phone shows 57% of the Pad's drawing and 42% of a Flip's,
+  the mock's numbers). Let go and it is back, the page gliding to show it no
+  further than the words and Write it need: the words kept clear of the
+  header, unless that would leave Write it off the screen, and then Write it
+  wins (lib/drawerdetent.js revealPanelEnd, two new arguments: what to keep
+  clear of the header, and the row that must show whatever).
+- Typing on a phone, with the keyboard up, the drawer leaves the page and
+  sits on the keyboard as the grabber, the words and Write it (#txSpacer
+  keeps its room), and comes back into the page, on screen, when the
+  keyboard goes.
+
+FOUND ON THE WAY, each a bug fix:
+- A drag begun within 1.2 s of the drawer opening had the drawer's own
+  re-asserts of where it opened carry the page back down under the finger,
+  260px in one frame. The step-aside now goes through revealTop (Play's "show
+  the whole drawing"), which calls them off.
+- A press on the drawing within 1.2 s of the drawer's return had its last
+  re-assert carry the page to the drawer's end under the words just placed.
+  A press is the person's own: lib/drawerdetent.js hush() calls the
+  re-asserts off, as a press inside the drawer already did.
+- On a phone the keyboard's bar kept the drawers' 240px: 150px of empty
+  paper over the drawing. It is as tall as its row now.
+- harness/tools/make_art.py's Text path still clicked the Small, Medium and
+  Large buttons #807 made a slider; it sets the slider now.
+
+WHAT IT DOES TO FLIP: shared. One template (_skribl_text.html, its drawer
+in each editor's drawers), one module (lib/textwrite.js), and the drawer
+joined to each editor's own machine. The one difference is each editor's
+existing rule for any drawer: on the Pad, a press on the drawing with
+another drawer open only closes it, and the next press brings Text; on Flip
+the one press does both.
+
+THE CHECKS: verify_text 2, 3, 4, 13, 14, 16 and 17 remade for the drawer,
+21 new (the tiles); How it works' Text tip and verify_helpclaims' claims
+follow; verify_contrast reads "Text's drawer" and "Text's drawer, Speed".
+Calibrated in tree copies, each with its own server: 40 breaks, each red
+on its own rows. 2: the Pad's or Flip's drawer not joined to its machine,
+and the words started at the top of the drawing. 3: no grabber, no Escape,
+a close that leaves the words, another tool that leaves it open, a close
+the machine is not told of, and the Pad's drawer opened around its machine.
+4: the words riding the page instead of the finger, a let-go that moves
+them, no hush, and the box drawn over the drawer. 9: the Speed tile not
+following. 13: the tiles' values dimmed. 14: the page jumping to the
+drawer, gliding under Reduce Motion, and the tiles popping open, vanishing
+shut, and moving under Reduce Motion. 16: the bar on the screen's floor,
+the bar 240px tall, no room kept, no return on screen after the done key,
+the words left pushed up, and Write it letting the field go first. 17: no
+step-aside, one that gives up its room, one without the glide home, the old
+yank, no return, Write it allowed off the screen, the words allowed under
+the header, Write it writing elsewhere, a tap taken for a drag, and a glide
+under Reduce Motion. 21: the tiles saying nothing, the slider not joined, no
+reveal on a phone, and two sliders open at once.
+
+Calibrating taught the rows four things. A drag to the top of the drawing
+stays on the screen: one past its top reached the top with the step-aside
+broken, and no finger can. A close is read by the page gliding home, not
+only by where it ends: with the machine never told, the page still ended
+home, in one jump as the drawer went. The keyboard's return is read with
+the page scrolled while typing, the one time it has work to do. And a
+drawer that never comes back is a red row, not a crash: its grabber and
+Write it are pressed only when they show. Two breaks were duds and were
+redone: a 10px gap under the tiles is the gap the open tile already
+reaches over, and the old yank never reaches TEXT 4, whose flow is slower
+than the drawer's 1.2 s (TEXT 17 is the row that holds it).
+
+As it is, in the calibration copies: TEXT 2 10/10, 3 13/13, 4 8/8, 9 5/5,
+14 9/9, 16 9/9, 17 23/23, 21 12/12.
+
+The affected suites side by side caught two more, both fixed. The tiles'
+pictures were hidden only by their wrappers, which WAVE does not count
+(verify_a11ypages): each svg carries aria-hidden now, as the pen drawer's
+do. And Size's Aa was set in type, so its letters joined the tile's name,
+"AaSize", which How it works never says (verify_helpclaims): it is drawn in
+lines now, the same in every face, Segoe UI and SF included. The grabber's
+name, Close Text, is the grey bar How it works already describes for
+everything that slides up. One glide row went red beside two other suites
+and green alone: the drawer's return on Flip, 107px with one 56px step, a
+dropped frame. The glide rows read each step for a frame's time now,
+divided by the frames it took up to three, as verify_sheetswipe and
+verify_pages read theirs; a snap still has no places between, and the three
+breaks that jump or yank the page were run again and are still red.

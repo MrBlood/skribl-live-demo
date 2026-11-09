@@ -37,6 +37,15 @@
   // stroke that same press begins, and a finished take would refuse it.
   let begun = false;
 
+  // TEXT IS ONE OF THE PAD'S DRAWERS (the owner: "Shouldn't text be a
+  // drawer? Not a popup?", then yes): joined to the drawers app.js made, so
+  // one is open at a time, the page comes to it and goes home after, and
+  // another drawer opening closes it (the words with it).
+  const drawers = (typeof _padDrawerCtl !== 'undefined') ? _padDrawerCtl : null;
+  if (drawers && drawers.add) {
+    drawers.add('text', { panel: 'txSheet', onClose: () => window.SkriblText.closed() });
+  }
+
   window.SkriblText.attach({
     canvas: canvas,
     logical: getCanvasLogicalSize,
@@ -84,6 +93,13 @@
     },
     skip: function (ms) { if (recording) startTime -= ms; },
     say: function (words) { if (typeof showToast === 'function') showToast(words, null); },
+    drawer: function (open) {
+      if (!drawers || !drawers.add) { document.getElementById('txSheet').hidden = !open; return; }
+      if (open) drawers.open('text');
+      else if (drawers.isOpen('text')) drawers.open(null);
+    },
+    dock: function () { return document.getElementById('toolBar'); },
+    active: function () { return tool === 'shape' && shapeKind === 'text'; },
   });
 
   // The badge by a mouse pointer says what a press makes (app.js

@@ -378,6 +378,9 @@
 
   <!-- Draw drawer (shared partial — Pad + Flip) -->
   {% with kind='pad' %}{% include 'skribl/_skribl_draw_drawer.html' %}{% endwith %}
+  {# Text's drawer, with the other drawers under the tools (lib/textwrite.js,
+     shared with Flip); not on the letter sheet, which writes no words. #}
+  {% if not letters %}{% with text_from='pad', part='drawer' %}{% include 'skribl/_skribl_text.html' %}{% endwith %}{% endif %}
 
 
   {# THE MEDIA CARD: the Photo | Music tabs and the open media drawer are ONE
@@ -593,10 +596,11 @@
   <script src="{{ skribl_asset('editor_draw.js') }}" defer></script>
   <script src="{{ skribl_asset('editor_shapes.js') }}" defer></script>
   {% if not letters %}
-  {# Text (lib/textwrite.js, shared with Flip): the typing sheet, and the Pad's
-     hooks for it. An editor_*.js carve, so verify_player_isolation.py keeps
+  {# Text (lib/textwrite.js, shared with Flip): the box the words sit in
+     before they are ink (its drawer is with the others, above), and the
+     Pad's hooks. An editor_*.js carve, so verify_player_isolation.py keeps
      it off the player; not on the letter sheet, which writes no words. #}
-  {% with text_from='pad' %}{% include 'skribl/_skribl_text.html' %}{% endwith %}
+  {% with text_from='pad', part='place' %}{% include 'skribl/_skribl_text.html' %}{% endwith %}
   <script src="{{ skribl_asset('lib/textwrite.js') }}" defer></script>
   <script src="{{ skribl_asset('editor_text.js') }}" defer></script>
   {% endif %}

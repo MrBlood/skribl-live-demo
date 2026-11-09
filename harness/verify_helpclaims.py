@@ -60,8 +60,14 @@ CLAIMS = {
     "Shape": ["probe:shape",
               "verify_tools.py::a pentagon drawn from a drag 15% taller than wide comes out with its sides EQUAL"],
     "Text": ["verify_text.py::picking it chooses Shape and Text",
+             "verify_text.py::Text's drawer comes straight up under the tools",
              "verify_text.py::dragging the box moves the words by the drag",
-             "verify_text.py::Write it closes the sheet and the words write themselves",
+             "verify_text.py::once the words are dragged, the drawer steps aside",
+             "verify_text.py::so the words reach the top of the drawing",
+             "verify_text.py::let go, and the drawer comes back",
+             "verify_text.py::is only the words and Write it",
+             "verify_text.py::a tap on a tile opens its slider right under it",
+             "verify_text.py::Write it closes the drawer and the words write themselves",
              "verify_text.py::one Undo takes the whole line back",
              "verify_text.py::with Mirror on, a pen line is mirrored and the words are written once",
              "verify_text.py::2× takes half as long and ¼× four times",
@@ -964,6 +970,7 @@ CONTROL_ALIASES = {
     "Watching speed": "the speeds sit where", "Undo last stroke": "the undo button",
     "Redo last stroke": "redo puts it back", "Toggle magnify controls": "toggles the zoom pill",
     "Close the drawer (drag up for more)": "a tap on the grey bar at its top",
+    "Close Text": "a tap on the grey bar at its top",   # Text's drawer's grabber (lib/textwrite.js)
     # the draw drawer
     "Pick a color from the canvas": "pick any color already on the canvas",
     "Recolor lines": "tap recolor beside the eyedropper", "Custom drawing color": "the rainbow one to mix your own",

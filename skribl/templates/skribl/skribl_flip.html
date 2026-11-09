@@ -388,6 +388,8 @@
     <div class="flip-drawers" id="flipDrawers">
       <!-- Draw drawer (shared partial — Pad + Flip) -->
       {% with kind='flip' %}{% include 'skribl/_skribl_draw_drawer.html' %}{% endwith %}
+      {# Text's drawer, as on the Pad (lib/textwrite.js). #}
+      {% with text_from='flip', part='drawer' %}{% include 'skribl/_skribl_text.html' %}{% endwith %}
 
       {# THE MEDIA CARD, as on the Pad (see skribl_editor.html): the Photo |
          Music tabs and the open media drawer are one card. The panels keep
@@ -473,7 +475,8 @@
      chooser is; lib/postsheet.js is its behaviour and shareSkribl drives it. #}
   {# Flip's drawings play rather than draw themselves, and the posted line says so. #}
   {% with posted_line='Anyone with the link can watch it play.' %}{% include 'skribl/_skribl_post.html' %}{% endwith %}
-  {% with text_from='flip' %}{% include 'skribl/_skribl_text.html' %}{% endwith %}
+  {# The box Text's words sit in before they are ink (its drawer is with the others). #}
+  {% with text_from='flip', part='place' %}{% include 'skribl/_skribl_text.html' %}{% endwith %}
 
 <!-- Route config. Flip had NO config block: flip.js hardcoded fetch('/api/skribls')
      and a '/s/' fallback, so it was the one surface a url_prefix would have

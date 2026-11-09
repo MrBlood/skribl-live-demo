@@ -2,16 +2,19 @@
  * editors: the Pad (editor_text.js) and Flip (flip.js) each hand it a few
  * hooks, and everything a person meets is here, so the two cannot drift.
  *
- * WHAT A PERSON MEETS. Text is the fifth kind in Shape's picker. Pick it,
- * tap where the words go, and the typing sheet rises: the words, a Style
- * (Yours, or + Make yours; Skribl; Print; Script, each written in itself),
- * a Size and a Thickness (sliders: the letters' height, kept a share of the
- * drawing and said in its px, and the line's width, in the pen's own px and
- * for the words alone; in the pen's colour) and a Speed (1/4x to 16x; 1x is
- * the hand's own pace, and the sheet says how long the words will take). The words show where the tap
- * was, above the sheet, inside a dashed box that says Drag to move. Write it
- * puts them in: the sheet goes and the words write themselves on the canvas,
- * a stroke at a time, at the speed chosen.
+ * WHAT A PERSON MEETS. Text is the fifth kind in Shape's picker. Pick it and
+ * Text's drawer opens under the tools, as the pen's does (the owner:
+ * "Shouldn't text be a drawer? Not a popup?", then yes to A3 compact): the
+ * words and Write it in one row, a Style (Yours, or + Make yours; Skribl;
+ * Print; Script, each written in itself), and three tiles, Size, Thickness
+ * and Speed, each saying what it holds and opening its slider under it (the
+ * letters' height, kept a share of the drawing and said in its px; the
+ * line's width, in the pen's own px and for the words alone; 1/4x to 16x,
+ * where 1x is the hand's own pace, and how long the words will take). The
+ * words show in the middle of the drawing that can be seen, inside a dashed
+ * box that says Drag to move; a tap on the drawing moves them there. Write it
+ * puts them in: the drawer goes and the words write themselves on the
+ * canvas, a stroke at a time, at the speed chosen.
  *
  * INK, NOT TYPE. Each letter becomes pen strokes, each point with its time,
  * through the same step the pen and Shape use to add a line. So the replay,
@@ -34,7 +37,7 @@
  * person's (Your hand, editor_letters.js, kept on this device): each letter
  * at the pace it was drawn, with a pause inside a letter held to HOLD as
  * Your hand's own line holds it. A letter a hand has not drawn yet comes in
- * Print. The lettering files are loaded the first time the sheet opens
+ * Print. The lettering files are loaded the first time the drawer opens
  * (harness/tools/make_textfonts.py makes them).
  *
  * THE HOOKS (attach):
@@ -51,6 +54,14 @@
  *                  the next thing)
  *   skip(ms)       the words were finished early, ms ahead of the clock
  *   say(words)     a short line to the person (the editor's own toast)
+ *   drawer(open)   open or close Text's drawer through the editor's own
+ *                  drawers (lib/drawers.js), so it is one of them: one open
+ *                  at a time, the page scrolled to show it and home after;
+ *                  the editor tells the module when its drawers closed it
+ *                  (SkriblText.closed)
+ *   dock()         the bar right above the drawers (the drawers' grabber
+ *                  and reveal keep it under the header)
+ *   active()       Text is still the tool: picking another closes the drawer
  */
 (function () {
   'use strict';
@@ -79,7 +90,7 @@
   var SPEEDS = [0.25, 1 / 3, 0.5, 2 / 3, 1, 1.5, 2, 3, 4, 6, 8, 12, 16];
   var SPEED_TEXT = ['¼×', '⅓×', '½×', '⅔×', '1×', '1½×', '2×', '3×', '4×', '6×', '8×', '12×', '16×'];
   var HAND_KEY = 'skribl.letters.v1';     // Your hand's store (editor_letters.js)
-  var PREFS_KEY = 'skribl.text.v1';       // the sheet's last style, size, thickness and speed
+  var PREFS_KEY = 'skribl.text.v1';       // the drawer's last style, size, thickness and speed
   var WORDS_KEY = 'skribl.text.words';    // the words, for this tab (sessionStorage)
   var MAX_CHARS = 200;
   var HAND_OF = 92;                        // letters in a whole hand
@@ -113,8 +124,8 @@
   var state = { style: null, size: SIZES.M, weight: null, speed: 4 };
   var anchor = null;        // where the words sit: the middle of their box, in drawing units
   // ...and where they were PUT (a press, a drag, the start). The words are
-  // kept clear of the sheet from here each time, so a sheet that rises, or
-  // sits on a keyboard for a while, moves them only while it is in the way:
+  // kept clear of the drawer from here each time, so a drawer that sits on a
+  // phone's keyboard for a while moves them only while it is in the way:
   // they come back down when there is room again.
   var want = null;
   var plan = null;          // the words as strokes, at the anchor (0, 0)
@@ -389,7 +400,7 @@
     }
     return out;
   }
-  /* THE WORDS, READY TO WRITE. text, style and size as the sheet has them;
+  /* THE WORDS, READY TO WRITE. text, style and size as the drawer has them;
    * `lettering` the style's file (and Print, for a hand's missing letters);
    * `canvas` the drawing's size; `pen` the ink. Points are in drawing units
    * from the middle of the words' box, so moving the words moves nothing
@@ -532,127 +543,76 @@
     var h = r.height - bt - (parseFloat(cs.borderBottomWidth) || 0) * k0;
     return { left: r.left + bl, top: r.top + bt, k: w / lg.width, ky: h / lg.height, lg: lg };
   }
-  // Keep the words inside the drawing and, while the sheet is up, above it.
+  // Keep the words inside the drawing and, while the drawer sits on a phone's
+  // keyboard, above it. Under the tools it covers none of the drawing.
   function clampAnchor(a) {
     var lg = editor.logical(), b = plan ? plan.box : { x0: 0, x1: 0, y0: 0, y1: 0 };
     var x = a.x, y = a.y;
     var minX = -b.x0, maxX = lg.width - b.x1, minY = -b.y0, maxY = lg.height - b.y1;
     x = minX > maxX ? lg.width / 2 : Math.max(minX, Math.min(maxX, x));
     var sb = screenBox(), sh = sheetEl();
-    if (sb && sh && !sh.hidden) {
-      // Where the sheet RESTS, from its layout box: rising, or pulled by a
-      // finger, its painted box is lower, and words kept above that would
-      // end under it (lib/sheetswipe.js measures a sheet the same way).
-      // Stepped aside for a drag, it will rest as the bar: the words are kept
-      // above where the bar will be, so letting go moves nothing.
-      var top = (aside === 'away' ? window.innerHeight - barH : layoutTop(sh)) - 12;
-      var limit = (top - sb.top) / sb.ky - b.y1;
+    if (sb && sh && !sh.hidden && sh.classList.contains('typing')) {
+      // Where the drawer RESTS on the keyboard, from its layout box (a box
+      // being moved paints lower, and words kept above that would end under
+      // it; lib/sheetswipe.js measures a sheet the same way).
+      var limit = (layoutTop(sh) - 12 - sb.top) / sb.ky - b.y1;
       if (limit < maxY) maxY = Math.max(minY, limit);
     }
     y = minY > maxY ? Math.max(lg.height / 2, minY) : Math.max(minY, Math.min(maxY, y));
     return { x: x, y: y };
   }
-
-  // ---- The sheet steps aside ----
-  // THE SHEET STEPS ASIDE WHILE THE WORDS ARE PLACED (the owner, on the
-  // iPhone: "can't drag the words to the bottom of canvas. Should the text
-  // card open under the canvas?"; of the mock, A, "All yes"). Up, the sheet
-  // covered half the drawing on a phone (53%), and the words were kept above
-  // it, so they reached only its top 46%. Now a drag of the words, or a
-  // press that says where they go, sends it out of the way: while a drag
-  // lasts only its grabber shows (on a desk, nothing); let go and it rests
-  // as THE BAR, the words and Write it, which covers none of the drawing (on
-  // a desk it sits at the window's foot). A tap on the words in the bar, on
-  // its grabber, or a pull up brings Style, Size and Speed back, and the
-  // words glide up with it if it would cover them; the next drag puts them
-  // where they go. Under the drawing instead was mocked and not chosen: on a
-  // phone the drawing would step back to under half its size. Every move
-  // glides (a sheet that hops is a bug); with Reduce Motion each is simply
-  // where it goes. The bar is .typing's idea, without a keyboard.
-  var aside = '';            // '' the whole sheet; 'away' while a drag lasts; 'bar'
-  var barH = 0;              // the bar's height, measured as it will rest
-  var GLIDE = 260;
-  function lip() { return window.innerWidth <= 640 ? 22 : 0; }   // a phone's grabber
   function layoutTop(s) {
     var op = s.offsetParent;
     return (op ? op.getBoundingClientRect().top + op.clientTop : 0) + s.offsetTop;
   }
-  function shownOffset(s) { return s.getBoundingClientRect().top - layoutTop(s); }
-  function measureBar(s) {
-    // In one go, before any paint: the class on, its height read, off again.
-    var had = s.classList.contains('tucked');
-    if (!had) s.classList.add('tucked');
-    var h = s.offsetHeight;
-    if (!had) s.classList.remove('tucked');
-    return h;
+
+  // ---- The drawer steps aside ----
+  // WHILE THE WORDS ARE DRAGGED THE DRAWER STEPS ASIDE (the owner, of the
+  // drawer: "While you drag your words, the drawer drops down and comes back
+  // when you let go", yes). On a phone a drawer slides the page up to show
+  // itself, so the top of the drawing sits under the header: once a move of
+  // the words is a drag, the drawer is unseen and untouched (its room kept,
+  // so nothing jumps) and the page glides home, the words staying under the
+  // finger as the drawing moves, so they reach the whole drawing. Let go and
+  // the drawer is back, the page gliding to show it again, no further than
+  // the words and Write it need (comeBack). With Reduce Motion each is simply
+  // where it goes.
+  var veiled = false;
+  function still() {
+    return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   }
-  // Down from where the sheet rests in its present layout, from px to px,
-  // gliding; the end is its style, so nothing changes when the glide ends.
-  function slide(s, from, to, then) {
-    if (typeof s.getAnimations === 'function') s.getAnimations().forEach(function (a) { a.onfinish = a.oncancel = null; a.cancel(); });
-    s.style.transform = to ? 'translateY(' + to + 'px)' : '';
-    if (still() || typeof s.animate !== 'function' || Math.abs(from - to) < 1) { if (then) then(); return; }
-    var a = s.animate([{ transform: 'translateY(' + from + 'px)' }, { transform: to ? 'translateY(' + to + 'px)' : 'none' }],
-                      { duration: GLIDE, easing: 'cubic-bezier(.2, .8, .2, 1)' });
-    a.onfinish = function () { if (then) then(); };
-  }
-  function goAway(then) {
-    var s = els.sheet;
-    if (!isOpen() || aside === 'away') { if (then) then(); return; }
-    if (document.activeElement === els.field) els.field.blur();
-    barH = measureBar(s);
-    var from = shownOffset(s);
-    aside = 'away';
-    slide(s, from, Math.max(0, window.innerHeight - lip() - layoutTop(s)), then);
-  }
-  function toBar() {
-    var s = els.sheet;
-    if (!isOpen() || aside !== 'away') return;
-    var shownAt = layoutTop(s) + shownOffset(s);
-    s.classList.add('tucked');
-    els.field.readOnly = true;
-    aside = 'bar';
-    slide(s, Math.max(0, shownAt - layoutTop(s)), 0);
-    if (want) { anchor = clampAnchor(want); position(); }
-  }
-  // A press on the drawing: down out of the way, and up as the bar.
-  function tuck() {
-    if (aside === 'bar') return;
-    if (aside === 'away') { toBar(); return; }
-    goAway(toBar);
-  }
-  // The bar tapped, or pulled up: the whole sheet again, the words gliding
-  // up with it where it would cover them.
-  function untuck() {
-    var s = els.sheet;
-    if (aside !== 'bar') return;
-    var shownAt = layoutTop(s) + shownOffset(s), p = els.place, was = p.hidden ? null : p.getBoundingClientRect();
-    s.classList.remove('tucked');
-    els.field.readOnly = false;
-    // A finger on the words asked for the sheet, not the keyboard.
-    if (touchFirst() && document.activeElement === els.field) els.field.blur();
-    aside = '';
-    slide(s, Math.max(0, shownAt - layoutTop(s)), 0);
-    if (want) { anchor = clampAnchor(want); position(); }
-    var now = p.hidden ? null : p.getBoundingClientRect();
-    if (was && now && !still() && typeof p.animate === 'function' && Math.abs(was.top - now.top) >= 1) {
-      p.animate([{ transform: 'translateY(' + (was.top - now.top) + 'px)' }, { transform: 'none' }],
-                { duration: GLIDE, easing: 'cubic-bezier(.2, .8, .2, 1)' });
+  function veil(on) {
+    var s = els && els.sheet, D = window.SkriblDrawerDetent;
+    if (!s || on === veiled) return;
+    veiled = on;
+    s.classList.toggle('tx-veiled', on);
+    var how = still() ? 'auto' : 'smooth';
+    if (on) {
+      if (document.activeElement === els.field) els.field.blur();
+      // The whole drawing on screen, as Play shows it (lib/drawerdetent.js
+      // revealTop), which also calls off the drawer's re-asserts of where it
+      // opened: a drag begun within a second of the drawer opening had them
+      // carry the page back down under the finger, 260px in one frame.
+      if (D && D.revealTop) D.revealTop(editor && editor.canvas, how);
+      else window.scrollTo({ top: 0, behavior: how });
+      return;
     }
+    if (isOpen()) comeBack(how);
   }
-  // The next opening is the whole sheet (open() asks, so a sheet opened again
-  // while it sinks is whole too).
-  function unaside() {
-    var s = els && els.sheet;
-    if (!s) return;
-    aside = '';
-    s.classList.remove('tucked');
-    els.field.readOnly = false;
+  // The drawer on screen again (after a drag, or the keyboard going): its end
+  // at the foot of what can be seen, the words kept clear of the header, and
+  // its first row, the words and Write it, on screen whatever (lib/drawerdetent.js).
+  function comeBack(how) {
+    var s = els && els.sheet, D = window.SkriblDrawerDetent;
+    if (!s || !D || !D.revealPanelEnd) return;
+    var dock = editor && editor.dock ? editor.dock() : null;
+    D.revealPanelEnd(s, how || (still() ? 'auto' : 'smooth'), dock, els.place.hidden ? null : els.place, s.querySelector('.tx-top'));
   }
 
-  // ---- The sheet ----
+  // ---- The drawer ----
   var $ = function (id) { return document.getElementById(id); };
   var els = null;
+  var drag = null;          // the words under a finger: where it is, and where on the words it holds them
   function bind() {
     if (els) return els;
     var s = sheetEl();
@@ -660,8 +620,9 @@
     els = { sheet: s, field: $('txField'), styles: $('txStyles'), under: $('txUnder'),
             note: $('txNote'), edit: $('txEdit'), size: $('txSize'), sizeOut: $('txSizeOut'),
             weight: $('txWeight'), weightOut: $('txWeightOut'), speed: $('txSpeed'),
-            speedOut: $('txSpeedOut'), hint: $('txSpeedHint'), go: $('txGo'), close: $('txClose'),
-            skip: $('txSkip'), place: $('txPlace'), preview: $('txPreview') };
+            speedOut: $('txSpeedOut'), hint: $('txSpeedHint'), go: $('txGo'),
+            skip: $('txSkip'), place: $('txPlace'), preview: $('txPreview'), spacer: $('txSpacer'),
+            tiles: $('txTiles'), sizeTile: $('txSizeTile'), weightTile: $('txWeightTile'), speedTile: $('txSpeedTile') };
     readPrefs();
     els.field.setAttribute('maxlength', String(MAX_CHARS));
     els.field.addEventListener('input', function () {
@@ -718,68 +679,122 @@
       window.addSliderNudgers(els.weight, { step: 1 });
       window.addSliderNudgers(els.speed, { step: 1 });
     }
+    if (els.tiles) {
+      Array.prototype.forEach.call(els.tiles.querySelectorAll('.dp-tile'), function (t) {
+        t.addEventListener('click', function () { showTile(t.getAttribute('data-dp')); });
+      });
+    }
     els.go.addEventListener('click', go);
-    els.close.addEventListener('click', close);
-    // A press on Write it or the x while the words are typed keeps the field's
-    // focus until the click: the keyboard going first would grow the sheet
-    // back under the finger, and the press would land on whatever moved there.
-    [els.go, els.close].forEach(function (b) {
-      b.addEventListener('mousedown', function (e) { if (document.activeElement === els.field) e.preventDefault(); });
-    });
-    // THE BAR (the sheet stepped aside, above): its words, its grabber, or a
-    // pull up bring the whole sheet back. The grabber's tap closes every
-    // other sheet (lib/sheetswipe.js), so in the bar it is taken first; a
-    // pull down still closes, as on every sheet.
-    s.addEventListener('click', function (e) {
-      if (aside === 'bar' && e.target.closest && e.target.closest('.tx-grab')) { e.stopPropagation(); untuck(); }
-    }, true);
-    els.field.addEventListener('click', function () { if (aside === 'bar') untuck(); });
-    els.field.addEventListener('focus', function () { if (aside === 'bar') untuck(); });
-    var upY = null;
-    s.addEventListener('touchstart', function (e) {
-      upY = aside === 'bar' && e.touches && e.touches.length === 1 ? e.touches[0].clientY : null;
-    }, { passive: true });
-    s.addEventListener('touchmove', function (e) {
-      if (upY === null || !e.touches || !e.touches.length) return;
-      if (upY - e.touches[0].clientY > 12) { upY = null; untuck(); }
-    }, { passive: true });
-    if (window.SkriblSheetSwipe) {
-      window.SkriblSheetSwipe.attach(s, { handle: s.querySelector('.tx-grab'), close: close });
+    // A press on Write it while the words are typed keeps the field's focus
+    // until the click: the keyboard going first would bring the drawer back
+    // under the finger, and the press would land on whatever moved there.
+    els.go.addEventListener('mousedown', function (e) { if (document.activeElement === els.field) e.preventDefault(); });
+    // The drawers' grabber: a tap closes Text, a pull down closes it, as
+    // every drawer's does (lib/drawerdetent.js).
+    if (window.SkriblDrawerDetent) {
+      window.SkriblDrawerDetent.attach(s, { close: close, dock: editor && editor.dock ? editor.dock() : null });
     }
     // The words move with a finger, a pen or a mouse, before they are ink;
-    // once the move is a drag the sheet steps aside, and it rests as the bar
-    // when the words are let go.
-    var drag = null;
+    // once the move is a drag the drawer steps aside (above), and it is back
+    // when the words are let go. The words stay where the finger holds them,
+    // also while the page glides home under it (followLoop).
     els.place.addEventListener('pointerdown', function (e) {
-      if (!anchor) return;
+      var sb = screenBox();
+      if (!anchor || !sb) return;
       e.preventDefault();
       try { els.place.setPointerCapture(e.pointerId); } catch (_) {}
-      drag = { id: e.pointerId, x: e.clientX, y: e.clientY, a: { x: anchor.x, y: anchor.y }, moved: false };
+      drag = { id: e.pointerId, x: e.clientX, y: e.clientY, px: e.clientX, py: e.clientY, moved: false,
+               dx: (e.clientX - sb.left) / sb.k - anchor.x, dy: (e.clientY - sb.top) / sb.ky - anchor.y };
       els.place.classList.add('dragging');
     });
     els.place.addEventListener('pointermove', function (e) {
       if (!drag || e.pointerId !== drag.id) return;
-      var sb = screenBox();
-      if (!sb) return;
       if (!drag.moved) {
         if (Math.hypot(e.clientX - drag.x, e.clientY - drag.y) < 4) return;
         drag.moved = true;
-        goAway();
+        veil(true);
       }
-      want = { x: drag.a.x + (e.clientX - drag.x) / sb.k, y: drag.a.y + (e.clientY - drag.y) / sb.ky };
-      anchor = clampAnchor(want);
-      position();
+      drag.px = e.clientX; drag.py = e.clientY;
+      dragTo();
     });
     var endDrag = function (e) {
       if (!drag || (e && e.pointerId !== drag.id)) return;
+      var was = drag;
       drag = null;
       els.place.classList.remove('dragging');
-      if (aside === 'away') toBar();
+      if (was.moved) veil(false);
     };
     els.place.addEventListener('pointerup', endDrag);
     els.place.addEventListener('pointercancel', endDrag);
     window.addEventListener('resize', function () { fitKeyboard(); if (isOpen() && want) { anchor = clampAnchor(want); position(); } });
     return els;
+  }
+  // The words where the finger holds them, on the drawing as it is now.
+  function dragTo() {
+    var sb = screenBox();
+    if (!drag || !sb) return;
+    want = { x: (drag.px - sb.left) / sb.k - drag.dx, y: (drag.py - sb.top) / sb.ky - drag.dy };
+    anchor = clampAnchor(want);
+    position();
+  }
+
+  // ---- Size, Thickness and Speed: the tiles ----
+  // As the pen drawer's (lib/drawtiles.js): a tap opens the tile's slider
+  // right under it, joined to it; the same tile, or another, closes it. Each
+  // unfolds and folds; with Reduce Motion it is simply there, or gone. The
+  // drawer is told ('drawtile'), so on a phone it brings the slider on screen
+  // as the pen's does (lib/drawerdetent.js).
+  var tileOpen = null, folding = null;
+  function panelOf(k) { return k && els.tiles ? els.tiles.querySelector('.dp-panel[data-dp="' + k + '"]') : null; }
+  function finishFold() {
+    if (!folding) return;
+    var p = folding; folding = null;
+    clearTimeout(p.__foldT);
+    p.classList.remove('dp-folding');
+    if (p.getAnimations) p.getAnimations().forEach(function (a) { a.cancel(); });
+    var drop = function () {
+      p.hidden = true;
+      if (tileOpen !== p.getAttribute('data-dp')) {
+        var t = els.tiles.querySelector('.dp-tile[data-dp="' + p.getAttribute('data-dp') + '"]');
+        if (t) t.classList.remove('dp-open');
+      }
+      if (!tileOpen) els.tiles.removeAttribute('data-col');
+    };
+    var D = window.SkriblDrawerDetent;
+    if (D && D.shrinkGently && !still()) D.shrinkGently(els.sheet, drop); else drop();
+  }
+  function showTile(k, instant) {
+    if (!els || !els.tiles) return;
+    var was = tileOpen;
+    if (was === k) k = null;
+    tileOpen = k;
+    if (folding) finishFold();
+    var tiles = els.tiles.querySelectorAll('.dp-tile'), old = panelOf(was), now = panelOf(k);
+    Array.prototype.forEach.call(tiles, function (t, i) {
+      var on = t.getAttribute('data-dp') === k;
+      t.setAttribute('aria-expanded', String(on));
+      if (on) { t.classList.add('dp-open'); els.tiles.setAttribute('data-col', String(i)); }
+      else if (t.getAttribute('data-dp') !== was || k) t.classList.remove('dp-open');
+    });
+    if (old && k) old.hidden = true;   // one tile for another: the new one unfolds where the old one was
+    if (now) {
+      now.hidden = false;
+      if (!instant && !still() && now.animate) {
+        now.animate([{ opacity: 0, transform: 'scaleY(.92)' }, { opacity: 1, transform: 'none' }],
+                    { duration: 220, easing: 'cubic-bezier(.2, .8, .2, 1)' });
+      }
+    }
+    if (old && !k) {
+      folding = old;
+      if (instant || still() || !old.animate) finishFold();
+      else {
+        old.classList.add('dp-folding');
+        old.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'scaleY(.94)' }],
+                    { duration: 180, easing: 'ease-in', fill: 'forwards' });
+        old.__foldT = setTimeout(finishFold, 200);
+      }
+    }
+    if (!instant) els.sheet.dispatchEvent(new CustomEvent('drawtile', { detail: { open: k } }));
   }
   function readPrefs() {
     try {
@@ -853,21 +868,20 @@
       b.textContent = '';
       if (face === 'make') {
         b.setAttribute('aria-label', 'Make your own hand');
+        b.title = 'Make your own hand in about 10 minutes';
         b.innerHTML = '<span class="tx-make"><b aria-hidden="true">+</b>Make yours</span>';
         return;
       }
+      b.removeAttribute('title');
       b.setAttribute('aria-label', LABEL[st]);
       var svg = font ? labelSVG(LABEL[st], font, print) : null;
       if (svg) b.appendChild(svg);
       else { var w = document.createElement('span'); w.className = 'tx-word'; w.textContent = LABEL[st]; b.appendChild(w); }
     });
-    if (made) {
-      els.note.textContent = 'Your hand, ' + made + ' of ' + HAND_OF + ' letters';
-      if (els.edit) els.edit.hidden = false;
-    } else {
-      els.note.textContent = 'Make your own hand in about 10 minutes.';
-      if (els.edit) els.edit.hidden = true;
-    }
+    // With a hand made, how many of its letters and the way back to them; with
+    // none, + Make yours is the way there, and the drawer stays short.
+    els.under.hidden = !made;
+    els.note.textContent = made ? 'Your hand, ' + made + ' of ' + HAND_OF + ' letters' : '';
     els.hint.textContent = cur === 'yours' ? '1× is your own speed'
       : cur === 'skribl' ? '1× is Skribl’s speed' : '1× is a steady hand';
   }
@@ -888,6 +902,10 @@
     els.weight.value = String(w);
     els.weight.setAttribute('aria-valuetext', w + ' pixels');
     if (els.weightOut) els.weightOut.textContent = w + 'px';
+    // ...and the tiles say the same, before they are opened.
+    if (els.sizeTile) els.sizeTile.textContent = px + 'px';
+    if (els.weightTile) els.weightTile.textContent = w + 'px';
+    if (els.speedTile) els.speedTile.textContent = SPEED_TEXT[state.speed];
   }
   function seconds(ms) {
     var s = Math.max(1, Math.round(ms / 1000));
@@ -961,17 +979,21 @@
       });
     }
   }
-  // While the sheet is up, the words follow the drawing if it moves (a
+  // While the drawer is up, the words follow the drawing if it moves (a
   // pinch, the page scrolling, the keyboard coming up).
-  // ...and the pen: a colour or size changed while the sheet is up is the
+  // ...and the pen: a colour or size changed while the drawer is up is the
   // colour and size the words will be written in.
   var follow = 0, lastBox = '', lastPen = '';
   function followLoop() {
     if (!isOpen()) { follow = 0; return; }
+    // Another tool picked (the pen, the eraser, another shape): Text's drawer
+    // goes with it, as a drawer goes when another opens.
+    if (editor && editor.active && !editor.active()) { follow = 0; close(); return; }
     var pen = editor ? editor.pen() : null, penKey = pen ? pen.color + '/' + pen.size : '';
     if (penKey !== lastPen) { var was = lastPen; lastPen = penKey; if (was) refresh(); }
     var sb = screenBox(), key = sb ? [sb.left, sb.top, sb.k].map(function (v) { return Math.round(v * 10); }).join(',') : '';
-    if (key !== lastBox) { lastBox = key; position(); }
+    // A drag: the words stay under the finger while the drawing moves under it.
+    if (key !== lastBox) { lastBox = key; if (drag && drag.moved) dragTo(); else position(); }
     follow = requestAnimationFrame(followLoop);
   }
 
@@ -979,94 +1001,102 @@
   function touchFirst() { return !!(window.matchMedia && window.matchMedia('(hover: none)').matches); }
   // THE KEYBOARD (the owner's iPhone: the bar over the keyboard covered the
   // field, so the words could not be seen as they were typed). iOS does not
-  // shrink the page for its keyboard, so the sheet is lifted to the bottom of
-  // what can be seen, the Post sheet's own way (lib/postsheet.js), and while
-  // the words are typed on a phone the sheet is only the words and Write it
-  // (.typing), so the drawing shows above it with the words on it. Style,
-  // Size and Speed come back when the keyboard goes.
+  // shrink the page for its keyboard, so while the words are typed on a phone
+  // the drawer leaves the page's flow and sits on what can be seen, the Post
+  // sheet's own way (lib/postsheet.js), as the grabber, the words and Write
+  // it (.typing), so the drawing shows above it with the words on it; its
+  // room in the page is kept (#txSpacer), so nothing above it moves. Style
+  // and the tiles come back with the drawer when the keyboard goes.
   // The keyboard is up when what can be seen ends well above the page's
-  // bottom; the sheet is only the words while the words are typed into it
+  // bottom; the drawer is only the words while the words are typed into it
   // with a keyboard up, never merely because the field has focus.
   function fitKeyboard() {
     var s = els && els.sheet;
     if (!s) return;
     var v = window.visualViewport, phone = window.innerWidth <= 640;
     var lift = (phone && v && !s.hidden) ? Math.max(0, Math.round(window.innerHeight - (v.offsetTop + v.height))) : 0;
-    var typing = lift > 80 && document.activeElement === els.field;
+    var typing = lift > 80 && document.activeElement === els.field && !s.hidden;
+    if (typing !== s.classList.contains('typing') && els.spacer) {
+      if (typing) {
+        var cs = getComputedStyle(s);
+        els.spacer.style.height = (s.offsetHeight + (parseFloat(cs.marginTop) || 0) + (parseFloat(cs.marginBottom) || 0)) + 'px';
+      }
+      els.spacer.hidden = !typing;
+    }
+    var was = s.classList.contains('typing');
     s.classList.toggle('typing', typing);
-    if (!phone || !v || s.hidden) { s.style.bottom = ''; s.style.maxHeight = ''; }
-    else {
-      s.style.bottom = lift ? lift + 'px' : '';
-      s.style.maxHeight = Math.max(160, Math.round(v.height - 12)) + 'px';
-    }
+    s.style.bottom = typing ? lift + 'px' : '';
+    s.style.maxHeight = typing ? Math.max(160, Math.round(v.height - 12)) + 'px' : '';
     if (want && isOpen()) { anchor = clampAnchor(want); position(); }
+    // Back in the page from the keyboard: on screen again, where the page left it.
+    if (was && !typing && isOpen()) comeBack();
   }
-  // THE SHEET RISES AND SINKS, from below the screen's edge and back, on a
-  // phone and on a desk alike; with reduced motion it is simply there, or
-  // gone. A bottom sheet a finger pulled part way sinks from where it was
-  // left (lib/sheetswipe.js slideOut).
-  function still() {
-    return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
-  }
-  var AWAY = 'translateY(calc(100% + 32px))';
-  function rise(s) {
-    if (still() || typeof s.animate !== 'function') return;
-    s.animate([{ transform: AWAY }, { transform: 'none' }],
-              { duration: 300, easing: 'cubic-bezier(.2, .8, .2, 1)' });
-  }
-  function sink(s, done) {
-    if (window.SkriblSheetSwipe && window.SkriblSheetSwipe.isBottomSheet(s)) {
-      window.SkriblSheetSwipe.slideOut(s, { done: done });
-      return;
-    }
-    if (still() || typeof s.animate !== 'function') { done(); return; }
-    var a = s.animate([{ transform: 'none' }, { transform: AWAY }],
-                      { duration: 240, easing: 'cubic-bezier(.3, .1, .4, 1)' });
-    a.onfinish = done;
-    a.oncancel = done;
-  }
-  /* CHOOSING TEXT OPENS THE SHEET (the owner's "A": picking Text "just closes
+  /* CHOOSING TEXT OPENS THE DRAWER (the owner's "A": picking Text "just closes
      the menu", and on a finished take the tap that came next was refused).
      The words start in the middle of the drawing that can be seen; a drag, or
-     a tap where they should go, moves them. */
+     a tap where they should go, moves them. The drawer is opened first, so
+     "can be seen" is with it open. */
   function start() {
     if (!editor || !bind()) return;
+    open();
     var sb = screenBox(), lg = editor.logical(), x = lg.width / 2, y = lg.height / 2;
     if (sb) {
+      var D = window.SkriblDrawerDetent, stuck = D && D.stuckBottom ? D.stuckBottom() : 0;
+      var v = window.visualViewport, vh = v && v.height ? v.height : window.innerHeight;
+      var top = sb.top - revealShift();   // where the drawing settles once the drawer shows
       var l = Math.max(sb.left, 0), r = Math.min(sb.left + lg.width * sb.k, window.innerWidth);
-      var t = Math.max(sb.top, 0), b = Math.min(sb.top + lg.height * sb.ky, window.innerHeight);
+      var t = Math.max(top, stuck, 0), b = Math.min(top + lg.height * sb.ky, vh);
       if (r > l) x = ((l + r) / 2 - sb.left) / sb.k;
-      if (b > t) y = ((t + b) / 2 - sb.top) / sb.ky;
+      if (b > t) y = ((t + b) / 2 - top) / sb.ky;
     }
     place({ x: x, y: y }, true);
   }
-  /* The tap that says where the words go: it opens the sheet there, or, with
-     the sheet up, moves the words there. */
+  // How far the page will scroll to show the drawer, from where it is now:
+  // the drawer's end at the foot of what can be seen, never the dock under
+  // the header (lib/drawerdetent.js revealPanelEnd, the same sum).
+  function revealShift() {
+    var s = els && els.sheet;
+    if (!s || s.hidden) return 0;
+    var v = window.visualViewport, viewH = v && v.height ? v.height : window.innerHeight;
+    var scroller = document.scrollingElement || document.documentElement;
+    var r = s.getBoundingClientRect(), want = r.bottom - viewH + 8;
+    var dock = editor && editor.dock ? editor.dock() : null, D = window.SkriblDrawerDetent;
+    var stuck = D && D.stuckBottom ? D.stuckBottom() : 0;
+    var lid = dock && dock.offsetParent !== null ? dock.getBoundingClientRect().top - 4 : r.top - 8;
+    want = Math.min(want, lid - stuck);
+    var max = scroller.scrollHeight - window.innerHeight - scroller.scrollTop;
+    return Math.max(-scroller.scrollTop, Math.min(want, max));
+  }
+  /* The tap that says where the words go: it opens the drawer there, or, with
+     the drawer up, moves the words there. */
   function place(pos, opening) {
     if (!editor || !bind()) return;
     if (job) job.finish();
+    // A press is the person acting: the page is theirs, so a reveal still
+    // settling (the drawer opening, or back from a drag) moves it no more
+    // (lib/drawerdetent.js hush). Before open(), which may start its own.
+    var D = window.SkriblDrawerDetent;
+    if (!opening && D && D.hush) D.hush();
     want = { x: pos.x, y: pos.y };
-    // A press with the sheet up says where the words go: the sheet steps
-    // aside to the bar (the words are kept above where it will rest).
-    if (!opening && isOpen()) tuck();
     anchor = clampAnchor(want);
     open();
   }
+  var closing = false;      // the module is closing the drawer itself
   function open() {
     var s = els.sheet;
     // Already up: the press moved the words, and that is all it did.
-    if (isOpen()) { anchor = clampAnchor(want); position(); return; }
-    unaside();                 // a sheet opened again is the whole sheet
-    s.style.transform = '';
+    if (isOpen()) { if (want) anchor = clampAnchor(want); position(); return; }
+    veiled = false;
+    s.classList.remove('tx-veiled', 'typing');
     if (!els.field.value) { try { els.field.value = sessionStorage.getItem(WORDS_KEY) || ''; } catch (e) {} }
     syncStyles();
     syncSize();
-    if (window.SkriblSheetSwipe) window.SkriblSheetSwipe.cancelSlide(s);   // reopened mid-sink: from where it is
-    if (typeof s.getAnimations === 'function') s.getAnimations().forEach(function (a) { a.onfinish = a.oncancel = null; a.cancel(); });
-    s.hidden = false;
-    document.body.classList.add('text-open');
+    showTile(null, true);
     s.classList.add('open');
-    rise(s);
+    document.body.classList.add('text-open');
+    // Through the editor's own drawers: one open at a time, the page brought
+    // to it (and home again after).
+    if (editor.drawer) editor.drawer(true); else s.hidden = false;
     // Every style's lettering, so each can be written in itself; the words'
     // own first.
     var st = styleNow();
@@ -1077,36 +1107,53 @@
       load(k).then(function () { if (isOpen()) syncStyles(); });
     });
     refresh();
-    // After the sheet has its height, so the words can sit above it.
     requestAnimationFrame(function () { if (want) { anchor = clampAnchor(want); position(); } });
     lastPen = '';
     if (!follow) follow = requestAnimationFrame(followLoop);
     try { els.field.focus({ preventScroll: true }); } catch (e) { els.field.focus(); }
   }
-  function hide(then) {
-    var s = els.sheet;
-    if (!s || s.hidden) { if (then) then(); return; }
+  // What closing leaves, whoever closed it: no words waiting, no keyboard.
+  function tidy() {
+    var s = els && els.sheet;
+    if (!s) return;
     els.place.hidden = true;
     placing(false);
     document.body.classList.remove('text-open');
     if (document.activeElement === els.field) els.field.blur();
-    s.classList.remove('open', 'typing');
-    sink(s, function () {
-      if (!s.classList.contains('open')) { s.hidden = true; s.style.bottom = ''; s.style.maxHeight = ''; }
-      if (then) then();
-    });
+    s.classList.remove('open', 'typing', 'tx-veiled');
+    veiled = false;
+    drag = null;
+    s.style.bottom = ''; s.style.maxHeight = '';
+    if (els.spacer) els.spacer.hidden = true;
+    showTile(null, true);
+  }
+  function hide(then) {
+    var s = els && els.sheet;
+    if (!s || !s.classList.contains('open')) { if (then) then(); return; }
+    tidy();
+    closing = true;
+    try { if (editor && editor.drawer) editor.drawer(false); else s.hidden = true; }
+    finally { closing = false; }
+    if (then) then();
   }
   function close() {
     if (!els) return;
     anchor = null; want = null;
     hide(null);
   }
+  // The editor's drawers closed it (another drawer opened, or the page's own
+  // close): the words go with it, as Close's do.
+  function closed() {
+    if (closing || !els || !els.sheet.classList.contains('open')) return;
+    anchor = null; want = null;
+    tidy();
+  }
   function go() {
     if (!els || !plan || !plan.strokes.length || !anchor) return;
     var p = plan, at = { x: anchor.x, y: anchor.y };
     anchor = null; want = null;
     // The preview goes in the frame the words start writing, so nothing
-    // jumps: the sheet slides away, and the ink begins where the words were.
+    // jumps: the drawer goes, and the ink begins where the words were.
     els.place.hidden = true;
     hide(null);
     write(p, at);
@@ -1126,7 +1173,7 @@
   // And the style is Yours, once there is a hand to write with: they have
   // just been working on it, and the owner, back from changing letters with
   // Skribl still chosen, saw no change and thought the edit was lost. Kept
-  // as a choice on the sheet is, so the next time is theirs too. The prefs
+  // as a choice in the drawer is, so the next time is theirs too. The prefs
   // are read first, so the size and speed kept with it are the person's.
   function resume() {
     var q;
@@ -1152,11 +1199,13 @@
     place: function (pos) { place(pos); },
     start: start,
     close: close,
+    // The editor's drawers closed Text's (another drawer opened): tidy up.
+    closed: closed,
     isOpen: isOpen,
     isWriting: function () { return !!job; },
     finish: function () { if (job) job.finish(); },
     load: load,
-    // For the checks (verify_text): the plan the sheet would write now.
+    // For the checks (verify_text): the plan the drawer would write now.
     plan: function () { return plan; },
     anchor: function () { return anchor ? { x: anchor.x, y: anchor.y } : null; },
     makePlan: makePlan,
