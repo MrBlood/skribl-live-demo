@@ -315,9 +315,12 @@ for suite in "$@"; do
   # holding the pipe or a port.
   # verify_contrast reads every word on every sheet and drawer, both editors,
   # both themes, phone and desk; since the drawers joined it (v324) it takes
-  # longer than 600s on CI, so it alone has a longer budget.
+  # longer than 600s on CI, so it alone has a longer budget. 1500s held until
+  # every tile and door it opens began to glide to what it opened (after
+  # v330): 1429s on CI before, 1488s after, and one run cut off at 1500 with
+  # every row it had read green (main after #814). A hang still ends here.
   budget=600
-  [ "$suite" = "verify_contrast.py" ] && budget=1500
+  [ "$suite" = "verify_contrast.py" ] && budget=1800
   t0="$(date +%s%N)"
   setsid timeout -k 15 "$budget" python3 "$suite" >"$log" 2>&1 &
   suite_pid=$!

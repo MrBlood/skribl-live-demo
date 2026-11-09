@@ -2143,6 +2143,7 @@
     // at the end of every repaint (their updateTrimUI) and when the drawing's
     // length changes. The length is one walk over every point on the Pad, so
     // it is measured once here, and not at all with no song.
+    var hadBeat = false;
     function sync() {
       var secs = h.hasTrack() ? h.drawingSeconds() : 0;
       // The Pad picks when the song's length is known, before it is decoded:
@@ -2161,19 +2162,29 @@
         var buf = h.buffer(), kept = tempo();
         if (buf && buf !== earsFor && (pickedNew || !kept || kept.heard)) listenTo(buf);
       }
-      // Smooth restart's switch, words and length too: Flip's draft and file
-      // opens set the loop's smooth restart and repainted only the rest, so
-      // the line said 19.75s under a switch that said Off (the owner's phone).
-      syncCrossfade();
-      syncTimes(false);
-      syncSteps();
-      syncLock();
-      syncLength(secs);
-      syncBeats();
-      syncHear(secs);
-      syncTap();
-      syncSnap();
-      syncBar();
+      // A BEAT LANDING OR LEAVING changes the drawer's height in two ways at
+      // once: the tap's row gets shorter or taller in one frame while Beats
+      // and Beats in a bar glide in or out. The page is held through it
+      // (lib/drawerdetent.js holdThrough), or at its end it clamps and hops.
+      var hasBeat = !!(h.hasTrack() && tempo()), det = global.SkriblDrawerDetent;
+      var turn = hasBeat !== hadBeat && det && det.holdThrough && detail && detail.offsetParent !== null;
+      hadBeat = hasBeat;
+      var writes = function () {
+        // Smooth restart's switch, words and length too: Flip's draft and file
+        // opens set the loop's smooth restart and repainted only the rest, so
+        // the line said 19.75s under a switch that said Off (the owner's phone).
+        syncCrossfade();
+        syncTimes(false);
+        syncSteps();
+        syncLock();
+        syncLength(secs);
+        syncBeats();
+        syncHear(secs);
+        syncTap();
+        syncSnap();
+        syncBar();
+      };
+      if (turn) det.holdThrough(detail, writes, 320); else writes();
       syncCut();
       syncRvHint();
       syncUndo();
