@@ -32263,3 +32263,39 @@ box, the Length and Restart rows (Restart ending 16-21px below the screen);
 and verify_ux's old door rule, with this reveal, both 390px phones'
 tallest-door rows (the header's buttons over the timeline's zoom, now under
 the header). The copy with nothing broken: verify_drawerreveal green.
+
+A BEAT LANDING HOLDS THE PAGE. verify_musicbeat, side by side and alone, on
+the Pad's phone: as the beat landed with the Beat door open the page moved
+(661 to 665 there; 661 to 684 here). The door shows all of itself now, so the
+page sits at its end, and the tap's row lost a line at once (88px to 50:
+"Skribl didn't hear a steady beat..." under the tap, then "120 beats a
+minute..." beside it) while Beats in a bar glided in from nothing. The page's
+end came up 38px, the scroll clamped 23px up in one frame, and the browser's
+scroll anchoring carried it back down as the row grew; with anchoring off it
+stayed 23px up. lib/drawerdetent.js holdThrough holds the page's height
+across the change and the row's glide and measures it only after: 12px
+taller here, so it lets go and nothing has moved; still shorter, it would
+glide to the new end. lib/musicdrawer.js calls it as a beat lands or leaves
+with the drawer open. Red before (61/62 beside others and alone), 62/62
+after.
+
+VERIFY_PARITY'S DOOR ROW pinned the rule before this one: after a song lands
+in the open card, Restart's first control on screen and the page stopping
+short of the card's end, more than 40px of it below the screen. With the new
+reveal it went red on all four 390x844 and 402x874 rows, as it should. It now
+asks what the owner chose: the first control on screen, the door's end too
+or its tile at the header, and the tile never under the header or the
+timeline's copy. Calibrated in the tree copy: green as built on all six rows;
+the old cap red on all six (the door's end 253-346px below the screen and
+its tile 417-569px below the header: neither shown whole nor stopped at the
+header); the copy left out red on the two 390x640 rows (the tile at 125,
+under the copy to 173).
+
+MAIN'S RED AFTER #814 (issue #816, closed by the green run after #815, the
+same code). verify_contrast ran past its 1500s budget on postgres 2/6 and was
+killed with every row it had reached green; on sqlite 2/6 it took 1487.5s,
+where the run before #814 took 1428.8s. It reads every drawer, and every tile
+it opens now glides to what it opened, so the suite waits through each
+glide. The budget is 1800s (run_harness.sh, the one suite with more than
+600s) and its weight in shard.py the 1490s measured. Nothing on the page was
+wrong; the budget was a coin toss at 99%.
