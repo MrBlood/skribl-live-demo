@@ -146,8 +146,10 @@
    * sliders change while you watch. Only ever down, and not at all when it
    * already shows; straight there under Reduce Motion; and a newer reveal, or
    * the person pressing (hush), calls it off. The music drawer's doors keep
-   * their own sum (lib/musicdrawer.js), which is this one with one exception:
-   * a door's first control is on screen even if the bar goes under. */
+   * their own sum (lib/musicdrawer.js): all of what a door opens, the tile
+   * tapped kept on screen while the drawer's top goes up under the header
+   * (the owner's pick for the Restart door, which is taller than the room
+   * the drawer's top leaves). */
   function showOpened(el, o) {
     if (!el) return;
     o = o || {};

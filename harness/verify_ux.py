@@ -1584,23 +1584,25 @@ with _sp204() as _p:
     # overflow is not visible, with a minimum clearance so "not yet clipped by
     # 4px" is caught before iOS font metrics eat it. Real vertical scroll is
     # fine (the page scrolls); the horizontal axis and clipping are not.
-    # A DOOR'S FIRST CONTROL WINS OVER THE DOCK (lib/musicdrawer.js, opening
-    # one of the music drawer's doors, as it did opening More): on a phone too
-    # short for both, the page scrolls the dock under the pinned header so that
-    # the door's first control is on the screen, as it already did on a 664px
-    # phone (verify_sheetswipe). With the drawers' words a size up (B) a
-    # 375x844 phone is one, so with a door open ({door: true}) the dock's
-    # controls under the header are tucked, not overlapping -- but only if the
-    # dock kept below the header would have left that control off the screen;
-    # scrolled under for any other reason, they still overlap.
+    # A DOOR SHOWS ALL OF WHAT IT OPENS (lib/musicdrawer.js; the owner's pick
+    # for the Restart door, after #814): the tile tapped stays on the screen
+    # and what is above it -- the dock, the tabs, the song, the timeline --
+    # goes up under the pinned header, as when a person scrolls there. There
+    # the header keeps its ground (the ground rows below: "the header keeps
+    # its ground over the dock and the drawer"), and the timeline's copy shows
+    # under it and covers what passes under it. So with a door open
+    # ({door: true}) a control under the header's ground, or under the copy,
+    # is tucked, not overlapping: only while the ground is there (its class),
+    # never the header's own controls, and never the copy itself.
     _AUDIT = """(o) => { const vw = document.documentElement.clientWidth, vh = document.documentElement.clientHeight;
         let tucked = new Set();
         if (o && o.door) {
-          const det = window.SkriblDrawerDetent, top = det && det.stuckBottom ? det.stuckBottom() : 0;
-          const dock = document.getElementById('toolBar') || document.querySelector('.flip-tools');
-          const first = document.querySelector('#musicDoors .dp-panel:not([hidden]) button, #musicDoors .dp-panel:not([hidden]) input');
-          if (dock && first) { const short = top + 4 - dock.getBoundingClientRect().top;
-            if (short > 0 && first.getBoundingClientRect().bottom + short > vh - 12) tucked = new Set(dock.querySelectorAll('*')); } }
+          const h = document.querySelector('.header'), f = document.getElementById('musicFollow');
+          if (h && h.classList.contains('over-canvas')) {
+            let lid = h.getBoundingClientRect().bottom;
+            if (f && f.classList.contains('on')) lid = Math.max(lid, f.getBoundingClientRect().bottom);
+            tucked = new Set([...document.querySelectorAll('button, a[href], input[type=range], [role=switch], .color-dot, .brand')]
+              .filter(e => !h.contains(e) && e !== f && !(f && f.contains(e)) && e.getBoundingClientRect().top < lid)); } }
         const CLEAR = 6;   // px a control must keep from any clipping ancestor's edge
         const els = [...document.querySelectorAll('button, a[href], input[type=range], [role=switch], .color-dot, .brand')]
           .filter(e => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0 && getComputedStyle(e).visibility !== 'hidden'; });
