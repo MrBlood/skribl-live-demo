@@ -321,7 +321,13 @@ F3_PORT = PORT + 1
 F3_KEY = "pgf3-" + uuid.uuid4().hex[:12]
 f3_env = dict(env, SKRIBL_RATE_HMAC_KEY=F3_KEY, SKRIBL_RATE_MAX_POSTS="2")
 f3_log = open(ROOT / "harness" / ".pg_f3_gunicorn.log", "w+")
-f3 = subprocess.Popen(["gunicorn", "-w", "2", "-b", f"127.0.0.1:{F3_PORT}",
+# ONE REQUEST PER PROCESS. gunicorn.conf.py gives every worker 8 threads
+# (#796), and this host starts from the repo root, so it read that file: one
+# process could then answer both retries at once, and "a different process"
+# was a coin flip (main after #811, postgres 1/6: ['67879', '67879']).
+# `--threads 1` makes these two sync workers again, one request each, which
+# is what a claim about two processes needs.
+f3 = subprocess.Popen(["gunicorn", "-w", "2", "--threads", "1", "-b", f"127.0.0.1:{F3_PORT}",
                        "--timeout", "60", "--log-level", "info",
                        "--pythonpath", str(ROOT / "harness"), "f3_host:app"],
                       cwd=str(ROOT), env=f3_env, stdout=subprocess.DEVNULL, stderr=f3_log)
@@ -410,22 +416,56 @@ else:
     # reservation were counted by any worker, only ONE retry could succeed
     # before a 429. (A first draft asserted "B's retry is 201" and broke when
     # A happened to take both slots first — B's 429 was correct then.)
-    # Fire the two retries CONCURRENTLY so both workers are busy at once and
-    # each takes one — sequential retries let a single worker answer both
-    # before the other ever saw a request, which made "a success on the
-    # other worker" a coin flip. Two threads, two posts, same instant.
-    import threading
-    outcomes = []
-    def _one():
-        outcomes.append(f3_post(fail=False))
-    ts = [threading.Thread(target=_one) for _ in range(2)]
-    for t in ts: t.start()
-    for t in ts: t.join(timeout=40)
+    # THE TWO RETRIES LAND ON BOTH WORKERS BY CONSTRUCTION. Sequential retries
+    # let one worker answer both before the other saw a request; two threads
+    # fired "at the same instant" only made that less likely: a post takes
+    # milliseconds, and on main after #811 (postgres 1/6) one worker answered
+    # both again, ['67879', '67879'], the contract rows green beside it. So
+    # the first retry is HELD: its headers and the first byte of its body go,
+    # and the worker that takes it waits for the rest (gunicorn's sync workers
+    # serve one request at a time, below). The second retry, sent whole
+    # meanwhile, can only be taken by the other worker. Then the first is let go.
+    import socket
+    f3_body = json.dumps({"frames": [{"strokes": [], "strokeGroups": [], "background": {"color": "#101418"}}]}).encode()
+
+    def _held_open():
+        s = socket.create_connection(("127.0.0.1", F3_PORT), timeout=30)
+        s.sendall((f"POST /api/skribls HTTP/1.1\r\nHost: 127.0.0.1:{F3_PORT}\r\n"
+                   f"Content-Type: application/json\r\nContent-Length: {len(f3_body)}\r\n"
+                   "Connection: close\r\n\r\n").encode() + f3_body[:1])
+        return s
+
+    def _let_go(s):
+        s.sendall(f3_body[1:])
+        data = b""
+        while True:
+            chunk = s.recv(65536)
+            if not chunk:
+                break
+            data += chunk
+        s.close()
+        head = data.split(b"\r\n\r\n", 1)[0].decode("latin-1").split("\r\n")
+        worker = next((ln.split(":", 1)[1].strip() for ln in head[1:]
+                       if ln.lower().startswith("x-skribl-worker:")), None)
+        return int(head[0].split(" ")[1]), worker
+
+    # The second goes on its own thread: were one process ever to serve both,
+    # it would wait behind the held one, and the row says so instead of the
+    # suite hanging on it.
+    pair = {}
+    held = _held_open()
+    time.sleep(0.5)                       # a worker has it, and waits for its body
+    second = threading.Thread(target=lambda: pair.__setitem__("second", f3_post(fail=False)))
+    second.start()                        # so this one goes to the other worker
+    second.join(timeout=5)
+    pair["held"] = _let_go(held)
+    second.join(timeout=40)
+    outcomes = [pair.get("second", (None, None)), pair["held"]]
     # then one more, sequential, to show the cap is now full
     outcomes.append(f3_post(fail=False))
     succ = [(st, w) for st, w in outcomes if st == 201]
     workers_seen = {w for _, w in outcomes}
-    check("F3: the two concurrent retries were handled by BOTH workers",
+    check("F3: the two retries were handled by BOTH workers (one held open while the other was answered)",
           len({w for _, w in outcomes[:2]}) == 2, f"workers {[w for _, w in outcomes[:2]]}")
     check("F3 THE CONTRACT (PostgreSQL): EXACTLY the cap's worth of retries succeed across "
           "all workers — A's failed reservation is not counted by anyone (a counted stranded "

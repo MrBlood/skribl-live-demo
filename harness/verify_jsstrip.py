@@ -495,7 +495,9 @@ with sync_playwright() as sp:
         // SORTED: Chromium enumerates custom properties in a different order on
         // each load, which made every element "differ" before this -- the
         // instrument, not the strip, going red.
-        return el.tagName + '|' + kv.sort().join('|'); })"""
+        // With a name for the element, so a red can say which one it was.
+        const name = el.tagName + (el.id ? '#' + el.id : '') + ((el.getAttribute('class') || '').trim() ? '.' + el.getAttribute('class').trim().split(/\\s+/).join('.') : '');
+        return [name, el.tagName + '|' + kv.sort().join('|')]; })"""
     CALM = "*,*::before,*::after{transition:none!important;animation:none!important;caret-color:auto!important}"
     # ONE CLOCK FOR BOTH LOADS. The gallery prints each post's age ("now",
     # "1m"), and the fixture above is seconds old: when the minute turned
@@ -522,13 +524,38 @@ with sync_playwright() as sp:
         ctx.close()
         return out
 
+    # WHICH ELEMENT, AND WHAT ABOUT IT: the properties that differ, so a red
+    # says what the strip changed (the one red on main, after #810, could only
+    # say "25 differ" and the first element's opening custom properties).
+    def _said(a, z, i):
+        ka = dict(kv.split(":", 1) for kv in a[i][1].split("|")[1:] if ":" in kv)
+        kz = dict(kv.split(":", 1) for kv in z[i][1].split("|")[1:] if ":" in kv)
+        props = sorted(k for k in set(ka) | set(kz) if ka.get(k) != kz.get(k))
+        return a[i][0][:60] + ": " + "; ".join(f"{k} {ka.get(k)!r} vs {kz.get(k)!r}" for k in props[:4])
+
+    def _pair(path):
+        a, z = _sig(path, False), _sig(path, True)
+        return a, z, [i for i, (x, y) in enumerate(zip(a, z)) if x[1] != y[1]]
+
+    # A STRIP CHANGES A STYLE ON EVERY LOAD; the page's own timing does not.
+    # The gallery went red once on main after #810 (sqlite 2/6 only: 25 of its
+    # 1,800 elements; the postgres twin and the next run green, and none in
+    # thirteen loads here of a gallery filled as CI fills it, slowed to 6x):
+    # something on one load still settling. So a pair that differs is loaded
+    # again, stripped and raw. A stylesheet the strip changed differs in both
+    # pairs and stays red; a difference the second pair does not repeat was
+    # the page's own timing, and the row says so beside its pass.
     for _path in ("/skribl-pad", "/flip", "/gallery", "/s/" + _pid):
-        lean_sig, raw_sig = _sig(_path, False), _sig(_path, True)
-        _diff = [i for i, (x, y) in enumerate(zip(lean_sig, raw_sig)) if x != y]
+        lean_sig, raw_sig, _diff = _pair(_path)
+        _first = ""
+        if _diff or len(lean_sig) != len(raw_sig):
+            _first = (f"; a first pair differed ({len(lean_sig)} vs {len(raw_sig)} elements, {len(_diff)} differ"
+                      + (f", first {_said(lean_sig, raw_sig, _diff[0])}" if _diff else "") + ") and was loaded again")
+            lean_sig, raw_sig, _diff = _pair(_path)
         check(f"{_path.split('/')[1] or _path}: every element computes the same style, stripped or raw",
               len(lean_sig) == len(raw_sig) and not _diff and len(lean_sig) > 20,
               f"{len(lean_sig)} vs {len(raw_sig)} elements; {len(_diff)} differ"
-              + (f" (first: {lean_sig[_diff[0]][:80]}...)" if _diff else ""))
+              + (f" (first: {_said(lean_sig, raw_sig, _diff[0])})" if _diff else "") + _first)
 
     _raw_css = (ROOT / "skribl" / "static" / "player.css").read_bytes()
     with urllib.request.urlopen(BASE + "/s/" + _pid) as _r:
