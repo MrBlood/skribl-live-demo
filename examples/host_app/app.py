@@ -192,15 +192,23 @@ def create_app(database_url=None):
                 flash("That drawing did not arrive intact. Try again.")
                 return redirect(url_for("feed"))
 
-            # The host decides these three, not Skribl:
-            #   visibility  the API defaults to "unlisted" (reachable by link,
-            #               listed nowhere) because that is right for a
-            #               link-sharing product. A feed means otherwise.
-            #   title       what /s/<id> unfurls with.
-            #   caption     the words, so the Skribl carries its own context.
-            drawing["visibility"] = "public"
+            # The host decides these three, with the author:
+            #   visibility  what the author ticked in the editor ("Show in the
+            #               Skribls gallery", there because feed.html opens it
+            #               with gallery=1). Ticked, the payload says
+            #               "public" and the drawing is in the gallery too;
+            #               otherwise the key is dropped and the API's
+            #               "unlisted" default stands: in this post, reachable
+            #               by its link, listed nowhere.
+            #   title       what /s/<id> unfurls with: the post's words.
+            #   caption     the gallery caption the author wrote under the
+            #               tick, or the post's words, so the Skribl carries
+            #               its own context.
+            gallery = drawing.pop("visibility", None) == "public"
+            if gallery:
+                drawing["visibility"] = "public"
             drawing["title"] = body[:80] or "Untitled Skribl"
-            drawing["caption"] = body
+            drawing["caption"] = (str(drawing.get("caption") or "")).strip() or body
 
             try:
                 made = create_post(drawing, author_id=me.id)

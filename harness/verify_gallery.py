@@ -10,9 +10,14 @@ pin here:
      server's default is the one statement of what an unmarked post is. Read
      from the request body the browser actually sent, on both surfaces.
   2. TICKED, THE KEY IS "public", and the post is in GET /api/skribls.
-  3. IN COMPOSE MODE THERE IS NO BOX. The host's composer decides; a control
-     here would be a second answer. The MECHANISM is the element's absence,
-     never a search for the words (WORKING-AGREEMENTS.md: match the mechanism).
+  3. IN COMPOSE MODE THERE IS NO BOX unless the host asks the author. The
+     host's composer decides; a control here would be a second answer. The
+     MECHANISM is the element's absence, never a search for the words
+     (WORKING-AGREEMENTS.md: match the mechanism). A host with its own feed
+     asks with ?gallery=1 (the owner's pick A, FUTURE 6ah): then the box is
+     there, off, a gallery caption glides open under it once it is ticked,
+     and the payload handed back carries "public" and the caption only with
+     the tick.
 
 THE PAGE IS THE HOST'S RECIPE WITHOUT A COMPOSER (feed.js): clone the in-post
 macro per item, mount, page by the listing's own cursor. So the page's pins
@@ -301,18 +306,138 @@ with sync_playwright() as sp:
           f"pad={pad_plain in ids} flip={flip_plain in ids}")
 
     # ------------------------------------------------------------ section 4
-    print("\nGALLERY 4 — compose mode renders no box: the host decides")
-    pg = b.new_page(viewport={"width": 1280, "height": 900})
-    browsing.goto(pg, BASE, "/skribl-pad?compose=1")
-    # The element, not the words: a comment explaining the absence would
-    # contain the words. And the sheet's own inputs are there, so the sheet
-    # rendered and the box's absence is the box's.
-    has = pg.evaluate("""() => ({ box: !!document.getElementById('postPublicInput'),
-                                 title: !!document.getElementById('postTitleInput'),
-                                 mode: window.SKRIBL_MODE })""")
-    check("compose mode: the sheet rendered (its title field is there)", has["title"], str(has))
-    check("compose mode: there is no public box in the document", not has["box"], str(has))
-    pg.close()
+    print("\nGALLERY 4 — compose mode: the host decides, unless it asks the author (?gallery=1)")
+    # The sheet opened over a drawing, in a page whose hand-back is caught: the
+    # editors call window.SkriblCompose.deliver(payload) when Add is pressed.
+    LAID = "(id) => { const e = document.getElementById(id); return !!(e && e.getClientRects().length); }"
+    CATCH = """() => { window.__got = []; const C = window.SkriblCompose, d = C.deliver;
+        C.deliver = function (p) { window.__got.push(p); return d.apply(this, arguments); }; }"""
+
+    def compose_sheet(route, flip, reduce=False):
+        ctx = b.new_context(viewport={"width": 1280, "height": 900},
+                            reduced_motion="reduce" if reduce else "no-preference")
+        pg = ctx.new_page()
+        browsing.goto(pg, BASE, route)
+        pg.evaluate("() => { if (window.SkriblHints) window.SkriblHints.hide(); }")
+        pg.evaluate(CATCH)
+        draw(pg, "#pad" if flip else "#canvas")
+        if not flip:
+            pg.click("#recordBtn")
+            pg.wait_for_timeout(400)
+        pg.click("#postBtn")
+        pg.wait_for_function("() => { const o = document.getElementById('postOverlay'); return o && !o.hidden; }",
+                             timeout=5000)
+        pg.wait_for_timeout(500)
+        return ctx, pg
+
+    def add(pg):
+        """Press Add; the payload the editor handed back to the host."""
+        n = pg.evaluate("() => window.__got.length")
+        pg.click("#postSubmitBtn")
+        try:
+            pg.wait_for_function("(n) => window.__got.length > n", arg=n, timeout=15000)
+        except PWTimeout:
+            return None
+        return pg.evaluate("() => { const p = window.__got[window.__got.length - 1];"
+                           " return { visibility: p.visibility === undefined ? null : p.visibility,"
+                           " has: 'visibility' in p, caption: p.caption }; }")
+
+    # The tick pressed from the page, and the gallery caption's height read on
+    # every frame after it (verify_glide's way), each with its time: a glide
+    # climbs through heights and is whole only after its time has passed; a
+    # snap is whole on the first frame. Judged by time, because a busy machine
+    # draws fewer, longer frames of the same glide and its steps grow with them
+    # (73px of 126 in one frame here, beside three other suites).
+    UNFOLD = """() => new Promise(res => {
+        const f = document.getElementById('postCaptionField'), hs = [];
+        const t0 = performance.now();
+        document.querySelector('#postSheet .post-check').click();
+        (function tick() { const t = performance.now() - t0;
+          hs.push([Math.round(t), f.hidden ? 0 : Math.round(f.getBoundingClientRect().height * 10) / 10]);
+          if (t < 600) requestAnimationFrame(tick); else res(hs); })();
+      })"""
+
+    def glide(hs):
+        """(heights on the way, ms until whole, the largest step, whole height)."""
+        full = max(h for _, h in hs) if hs else 0
+        mid = [h for _, h in hs if 0 < h < full - 1]
+        whole = next((t for t, h in hs if h >= full - 0.5), None)
+        step = max((abs(b2[1] - a2[1]) for a2, b2 in zip(hs, hs[1:])), default=0)
+        return len(mid), whole, step, full
+    PAINTED = """() => { const t = document.getElementById('postCaptionInput'); if (!t || !t.getClientRects().length) return false;
+        const r = t.getBoundingClientRect(), hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+        return hit === t; }"""
+
+    for name, route, flip, other in (("Pad", "/skribl-pad", False, "flipBtn"), ("Flip", "/flip", True, "padBtn")):
+        # Without the host's question: Skribl's own /feed composer, which
+        # keeps the feed and sets visibility itself.
+        ctx, pg = compose_sheet(route + "?compose=1", flip)
+        has = pg.evaluate("""() => ({ box: !!document.getElementById('postPublicInput'),
+                                     title: !!document.getElementById('postTitleInput'),
+                                     mode: window.SKRIBL_MODE })""")
+        check(f"{name}, compose: the sheet rendered (its title field is in the page)", has["title"], str(has))
+        check(f"{name}, compose without the host's gallery=1: there is no gallery box in the document",
+              not has["box"], str(has))
+        laid = {k: pg.evaluate(LAID, k) for k in ("postTitleInput", "postCaptionInput", "postSpeedSeg")}
+        check(f"{name}, compose: no title or caption field is laid out (the host's post has the words)",
+              not laid["postTitleInput"] and not laid["postCaptionInput"], str(laid))
+        if not flip:
+            check("Pad, compose: where a viewer starts shows (it hid with the fields until the gallery choice)",
+                  laid["postSpeedSeg"], str(laid))
+        got = add(pg)
+        check(f"{name}, compose without gallery=1: the payload carries no visibility and no caption",
+              got is not None and not got["has"] and not got["caption"], str(got))
+        ctx.close()
+
+        # With it: the example host and skribls.net, which keep their own feed.
+        ctx, pg = compose_sheet(route + "?compose=1&gallery=1", flip)
+        box = pg.evaluate("() => { const e = document.getElementById('postPublicInput'); return e ? e.checked : null; }")
+        check(f"{name}, compose with gallery=1: the box is there and starts unticked", box is False, str(box))
+        if box is None:
+            ctx.close()   # nothing below can be asked of a box that is not there
+            continue
+        check(f"{name}, gallery=1, unticked: the gallery caption is folded away",
+              not pg.evaluate(LAID, "postCaptionInput"))
+        href = pg.evaluate(f"() => {{ const a = document.getElementById('{other}'); return a ? a.getAttribute('href') : null; }}")
+        check(f"{name}, gallery=1: the switch to the other editor keeps it (compose=1 and gallery=1)",
+              bool(href) and "compose=1" in href and "gallery=1" in href, str(href))
+        hs = pg.evaluate(UNFOLD)
+        mid, whole, step, full = glide(hs)
+        opened = full > 40 and pg.evaluate(PAINTED)
+        check(f"{name}, ticked: the gallery caption opens, painted (the point at its middle is the box)",
+              opened, f"heights {hs[-1:]}")
+        if not opened:
+            ctx.close()   # no box to type in, so nothing below can be asked
+            continue
+        check(f"{name}, it opens in a glide, not a jump: whole after {whole}ms, {mid} heights on the way"
+              f" (the largest step {round(step)} of {round(full)}px)",
+              mid >= 3 and whole is not None and whole >= 200, str(hs))
+        pg.fill("#postCaptionInput", TAG + " words kept while folded")
+        pg.click("#postSheet .post-check")
+        pg.wait_for_timeout(500)
+        check(f"{name}, unticked again: it folds away", not pg.evaluate(LAID, "postCaptionInput"))
+        got = add(pg)
+        check(f"{name}, gallery=1 unticked: the payload carries no visibility, and not the folded caption",
+              got is not None and not got["has"] and not got["caption"], str(got))
+        pg.click("#postBtn")
+        pg.wait_for_function("() => { const o = document.getElementById('postOverlay'); return o && !o.hidden; }",
+                             timeout=5000)
+        pg.wait_for_timeout(400)
+        pg.click("#postSheet .post-check")
+        pg.wait_for_timeout(500)
+        pg.fill("#postCaptionInput", TAG + " for the gallery")
+        got = add(pg)
+        check(f"{name}, gallery=1 ticked: the payload says 'public' and carries the gallery caption",
+              got is not None and got["visibility"] == "public" and got["caption"] == TAG + " for the gallery",
+              str(got))
+        ctx.close()
+
+    # Reduce Motion keeps things still: the caption is whole on the first frame.
+    ctx, pg = compose_sheet("/skribl-pad?compose=1&gallery=1", False, reduce=True)
+    hs = pg.evaluate(UNFOLD) if pg.evaluate("() => !!document.getElementById('postPublicInput')") else []
+    check("Pad, Reduce Motion: ticked, the gallery caption is there at once, no glide",
+          bool(hs) and hs[0][1] > 40 and max(h for _, h in hs) - hs[0][1] < 1, str(hs[:6]))
+    ctx.close()
 
     # ------------------------------------------------------------ section 5
     print("\nGALLERY 5 — /gallery shows the listing on the in-post player, through the macro")

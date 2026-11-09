@@ -2123,6 +2123,20 @@ this note; a mock of Add to post with the two settings beside the Post sheet
 as it is, phone and desk, light and dark; and a mock of the Skribls section
 on skribls.net, on the site's own markup (docs/SKRIBLS-NET.md's saved copy).
 
+Both mocked; the owner said "All yes" to A for each (Nov 9). **Add to post
+is built:** a host that keeps its own feed opens the editor with
+`?compose=1&gallery=1`, and the sheet shows "Show in the Skribls gallery",
+off, a gallery caption that glides open under it once it is on, and
+"Viewers start at" (which shows in compose mode now, with or without the
+choice). The payload carries "public" and the caption only with the tick;
+the example host keeps them (docs/SKRIBLS-NET.md item 10). Skribl's own
+/feed asks nothing: it is the gallery. **Next: the Skribls section** (A, a
+grid in the site's frame): the authors' names from the host (the gallery
+says "Anonymous" for the site's people today), the post's address kept
+with each skribl so its tile links back, and on a phone each tile's line
+trimmed to its time. Where Skribls lives on the site's phone bar (under
+Explore, or a tab) is the owner's call, later.
+
 ## 7. The honest state
 
 The tool is good. It is better than it needs to be for a demo and not yet enough

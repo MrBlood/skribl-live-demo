@@ -18,7 +18,7 @@
   const titleInput = document.getElementById('postTitleInput');
   const captionInput = document.getElementById('postCaptionInput');
   const submitBtn = document.getElementById('postSubmitBtn');
-  const publicInput = document.getElementById('postPublicInput');   // absent in compose mode
+  const publicInput = document.getElementById('postPublicInput');   // in compose mode only with the host's ?gallery=1
   const submitLabel = document.getElementById('postSubmitLabel');
   let lastPostUrl = null, lastPostTitle = '';
   // The device-only save this open sheet made when the server did not answer
@@ -377,17 +377,19 @@
     // the crop can never be skipped for a buffer that is merely late.
     if (window._skriblDecodePending) { try { await window._skriblDecodePending; } catch (e) {} }
     const payload = serializeSkribl();
+    const gallery = !!(publicInput && publicInput.checked);
     payload.title = (titleInput.value || '').trim() || 'Untitled Skribl';
-    payload.caption = (captionInput.value || '').trim();
-    // THE PUBLIC CHOICE (v304). Sent only when the author ticked it and only
-    // when this Pad is posting for itself: in compose mode the checkbox is not
-    // rendered and the HOST's composer sets visibility on the body it posts.
-    // Unticked, the key is left out — the server's "unlisted" default is the
-    // one statement of what an unmarked post is, and repeating it here would
-    // be a second copy to drift.
-    if (publicInput && publicInput.checked && window.SKRIBL_MODE !== 'compose') {
-      payload.visibility = 'public';
-    }
+    // ADDED TO A POST, the caption is the gallery's: it travels with the tick
+    // and not without it, whatever the folded box still holds.
+    payload.caption = window.SKRIBL_MODE === 'compose' && !gallery ? '' : (captionInput.value || '').trim();
+    // THE PUBLIC CHOICE (v304). Sent only when the author ticked it. In
+    // compose mode the box is rendered only when the host asked for the choice
+    // (?gallery=1, "Show in the Skribls gallery") and keeps what the payload
+    // says; otherwise the HOST's composer sets visibility on the body it
+    // posts. Unticked, the key is left out — the server's "unlisted" default
+    // is the one statement of what an unmarked post is, and repeating it here
+    // would be a second copy to drift.
+    if (gallery) payload.visibility = 'public';
     // Per-Skribl share card for link unfurls. Post-only (kept out of
     // serializeSkribl so drafts stay lean); the server serves it at
     // /s/<id>/card.png and drops it from the player GET envelope. Best-effort —

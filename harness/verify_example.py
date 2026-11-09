@@ -216,6 +216,20 @@ try:
         pg.wait_for_timeout(700)
         fr.locator("#postBtn").click()
         pg.wait_for_timeout(1200)
+        # THE SHEET ASKS WHAT THIS HOST ASKED FOR (feed.html opens the editor
+        # with gallery=1): the gallery tick, off; no title of its own, as the
+        # post's words are its title; and where a viewer starts. Read off the
+        # elements, laid out or not, never off the words.
+        sheet = pg.evaluate("""() => { const d = document.getElementById('padFrame').contentDocument;
+            const shown = id => { const e = d.getElementById(id); return !!(e && e.getClientRects().length); };
+            const box = d.getElementById('postPublicInput');
+            return { box: !!box, ticked: box ? box.checked : null, title: shown('postTitleInput'),
+                     caption: shown('postCaptionInput'), speed: shown('postSpeedSeg') }; }""")
+        check("the sheet asks: the gallery tick is there, and off", sheet["box"] and sheet["ticked"] is False,
+              json.dumps(sheet))
+        check("...no title field shows (the post's words are its title), nor the gallery caption while the tick is off",
+              not sheet["title"] and not sheet["caption"], json.dumps(sheet))
+        check("...and where a viewer starts does", sheet["speed"], json.dumps(sheet))
         fr.locator("#postSubmitBtn").click()
         pg.wait_for_timeout(4000)
 
@@ -266,8 +280,11 @@ try:
         check("the author stamp on the Skribl is the host's user",
               str(durable("SELECT user_id FROM skribl_posts LIMIT 1")) ==
               str(durable("SELECT author_id FROM host_posts LIMIT 1")))
-        check("the host set it public, so it is feed content not a hidden link",
-              durable("SELECT visibility FROM skribl_posts LIMIT 1") == "public")
+        # The tick was left off: in this post only. The host dropped the key
+        # and the API's default stood, reachable by its link, listed nowhere.
+        check("left off, the drawing is in the post only: unlisted, not in the gallery",
+              durable("SELECT visibility FROM skribl_posts LIMIT 1") == "unlisted",
+              str(durable("SELECT visibility FROM skribl_posts LIMIT 1")))
         check("the words became the caption",
               durable("SELECT caption FROM skribl_posts LIMIT 1")
               == "drew this in a host composer")
@@ -333,6 +350,49 @@ try:
         check("and there is ink on the canvas, not an empty box", ink > 200,
               f"{ink} opaque pixels")
         check("no page errors anywhere in the flow", not errs, "; ".join(errs[:2]))
+
+        print("\n6 — TICKED: IN THE POST AND IN THE SKRIBLS GALLERY, WITH ITS OWN CAPTION")
+        first = durable("SELECT public_id FROM skribl_posts LIMIT 1")
+        pg.click("#padBtn")
+        pg.wait_for_function(
+            "() => { const f = document.getElementById('padFrame');"
+            " const w = f && f.contentWindow;"
+            " return !!(w && w.__skriblBoot && w.__skriblBoot.pad); }",
+            timeout=30000)
+        pg.wait_for_timeout(800)
+        fr = pg.frame_locator("#padFrame")
+        draw(pg, fr.locator("#canvas").bounding_box())
+        pg.wait_for_timeout(400)
+        fr.locator("#recordBtn").click()
+        pg.wait_for_timeout(700)
+        fr.locator("#postBtn").click()
+        pg.wait_for_timeout(1200)
+        fr.locator("#postSheet .post-check").click()
+        pg.wait_for_timeout(600)
+        fr.locator("#postCaptionInput").fill("a snail for the gallery")
+        fr.locator("#postSubmitBtn").click()
+        pg.wait_for_timeout(4000)
+        pg.fill("#body", "and one for everyone")
+        # The feed posts to itself and comes back to "/", where it already
+        # is, so wait for the navigation itself, not for the address.
+        with pg.expect_navigation(timeout=20000):
+            pg.click("#postBtn")
+        pg.wait_for_timeout(1500)
+        second = durable("SELECT public_id FROM skribl_posts WHERE public_id != '%s'" % first)
+        check("the second post made a second skribl", bool(second) and durable("SELECT COUNT(*) FROM skribl_posts") == 2,
+              f"{durable('SELECT COUNT(*) FROM skribl_posts')} row(s)")
+        check("ticked, it is in the gallery too: public",
+              durable("SELECT visibility FROM skribl_posts WHERE public_id = '%s'" % second) == "public",
+              str(durable("SELECT visibility FROM skribl_posts WHERE public_id = '%s'" % second)))
+        check("...with the gallery caption the author wrote, not the post's words",
+              durable("SELECT caption FROM skribl_posts WHERE public_id = '%s'" % second) == "a snail for the gallery",
+              str(durable("SELECT caption FROM skribl_posts WHERE public_id = '%s'" % second)))
+        with urllib.request.urlopen(BASE + "/skribl/api/skribls?limit=50", timeout=15) as r:
+            listed = [i["id"] for i in json.loads(r.read().decode()).get("items", [])]
+        check("the listing has the ticked one and not the one left off",
+              second in listed and first not in listed,
+              f"second={second in listed} first={first in listed}")
+        check("no page errors in the second post", not errs, "; ".join(errs[:2]))
 
         b.close()
 finally:
