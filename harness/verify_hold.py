@@ -855,7 +855,13 @@ with sync_playwright() as _p2:
       const later = (ms, f) => setTimeout(f, ms);
       later(500, () => { const was = at();
         if (op === 'pause') { pausePlay(); later(800, () => { resumePlay(); later(60, () => done([was, at()])); }); }
-        else if (op === 'speed') { setFlipRate(2); later(100, () => { const now = at(); setFlipRate(1); done([was, now]); }); }
+        else if (op === 'speed') {
+          // THE BADGE'S OWN READING, AT THE MOMENT OF THE READ (flipBadgeShow), and the real
+          // time between the reads: the painted value is only as fresh as the last frame, and
+          // a runner that drew no frame for 70ms read it 70ms old (main red after #817).
+          flipBadgeShow(); const w = at(), t0 = performance.now(); setFlipRate(2);
+          later(100, () => { const painted = at(); flipBadgeShow(); const now = at(), dt = performance.now() - t0;
+            setFlipRate(1); done([w, now, dt, painted]); }); }
         else { scrubToPage(1); requestAnimationFrame(() => done([was, at()])); } }); })"""
     ops = {}
     for op in ("pause", "speed", "scrub"):
@@ -872,9 +878,14 @@ with sync_playwright() as _p2:
     was, now = ops["pause"]
     check("Flip: paused partway through a page and resumed, the badge carries on from where it stood, not from where the pause would have taken it",
           was is not None and 0 <= now - was <= 120, f"{was}ms at the pause, {now}ms 60ms after the resume (the pause was 800ms)")
-    was, now = ops["speed"]
+    was, now, dt, painted = (list(ops["speed"]) + [None, None])[:4]
+    # Twice the real time between the two reads, to within a timer's grain, whatever a
+    # busy runner did to the 100ms; and the painted badge moving on too, so a badge
+    # whose frames stopped at the new speed is still caught.
     check("Flip: a new watching speed mid-page carries the badge on from where it is, at the new speed",
-          was is not None and 120 <= now - was <= 320, f"{was}ms, then {now}ms 100ms into 2x (about 200 on)")
+          was is not None and dt is not None and abs((now - was) - 2 * dt) <= 15 and painted is not None and painted > was + 5,
+          f"{was}ms, then {now}ms {dt if dt is None else round(dt)}ms into 2x (twice that is "
+          f"{None if dt is None else round(2 * dt)} on); the painted badge at {painted}ms")
     was, now = ops["scrub"]
     check("Flip: scrubbed to page 2 while playing, the badge says page 2's place in the pass at once",
           was is not None and plan["starts"][1] - 30 <= now <= plan["starts"][1] + plan["ms"][1] + 30,

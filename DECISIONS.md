@@ -32445,3 +32445,27 @@ attribute holds it, and finds the image by its tag for its alt. verify_example
 asks that each tile shows its own drawing's poster: calibrated red with the
 address left unfilled (58/59; the placeholder's address still loads an
 image, so the row reads the id, not the load), 59/59 as built.
+
+## After v330 -- Main red after #817: verify_hold read a frame the runner never drew
+
+Issue #819, main at fbbf8f0, postgresql 6/6 only (sqlite 6/6 and every
+other shard green): verify_hold 73/74, "a new watching speed mid-page
+carries the badge on from where it is, at the new speed", 505ms then 562.6ms
+100ms into 2x, where about 200 on was asked. #817 did not touch Flip's badge.
+
+THE PRODUCT IS RIGHT. Measured here, ten times at CPU 1x and ten at 4x: the
+badge's own reading moves exactly twice the real time between two reads
+(to within 1.5ms), setFlipRate takes 1 to 10ms even at 8x, and frames keep
+coming at 4x. The row read the badge's PAINTED value, which is only as
+fresh as the last frame: one frame old here (2 to 16ms), and on a runner
+that drew no frame for about 70ms after the speed change, 70ms old.
+
+THE ROW NOW READS THE BADGE AT THE MOMENT OF THE READ (flipBadgeShow, then
+data-ms) and compares it with twice the real time between the reads, and
+asks that the painted badge moved on too, so a badge whose frames stop at a
+new speed is still caught. Calibrated in a tree copy with its own server:
+green as built (74/74); red when a speed change does not move the badge's
+start (a jump to 1234ms), when the badge ignores the speed (it went back),
+and when its frames stop at the change (the painted badge stuck at 519ms).
+With the page's frames held back 150ms after the change, the old row went
+red as CI did (504ms then 526ms) and the new one stayed green.
