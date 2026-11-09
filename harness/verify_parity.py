@@ -1563,19 +1563,30 @@ with sync_playwright() as p:
                       and ((_g["below"] <= 1 and _g["endPainted"]) or _g["dockClear"] <= 8),
                       f"before {_before}, after {_g}")
                 if _k == "music":
-                    # A door is not this growth. Its own nudge brings what it opens on screen
-                    # (the Restart door's first control, Smooth restart, at the least: with the
-                    # timeline above it the Restart view under it does not fit a phone with the
-                    # bar under the header), and the follower must not chase the card's end past
-                    # it: a door opening moves the follower's baseline. A break of that turned
+                    # A door is not this growth. Its own reveal shows all of what it opens,
+                    # its tile kept below the header and the timeline's copy (the owner's
+                    # pick A, after #814: the Restart view is taller than the room the
+                    # drawer's top leaves on a phone, so the song and the timeline go up
+                    # under the header), and the follower must not chase the card past
+                    # that: a door opening moves the follower's baseline. This row pinned the
+                    # rule before it (the page stopped short of the card's end, the bar kept
+                    # below the header) until the owner changed it. A break of either turned
                     # nothing above red, so this is what pins it.
                     _q.click('#musicDoors .dp-tile[data-dp="restart"]'); waits.settle(_q, 1800)
-                    _ft = _q.evaluate("""() => { const z = document.getElementById('musicSmooth'), c = document.getElementById('mediaCard');
+                    _ft = _q.evaluate("""() => { const z = document.getElementById('musicSmooth');
+                        const t = document.querySelector('#musicDoors .dp-tile[data-dp="restart"]');
+                        const v = document.getElementById(t.getAttribute('aria-controls'));
+                        const D = window.SkriblDrawerDetent, f = document.getElementById('musicFollow');
                         const vh = window.visualViewport ? window.visualViewport.height : innerHeight;
+                        let lid = D && D.stuckBottom ? D.stuckBottom() : 0;
+                        if (f && f.classList.contains('on')) lid = Math.max(lid, f.getBoundingClientRect().bottom);
                         return { first: Math.round(z.getBoundingClientRect().bottom - vh),
-                                 end: Math.round(c.getBoundingClientRect().bottom - vh) }; }""")
-                    check(f"{_route} at {_w}x{_h}: ...and a door keeps its own nudge: its first control comes on "
-                          "screen and the page does not chase the card's end", _ft["first"] <= 0 and _ft["end"] > 40, str(_ft))
+                                 end: Math.round(v.getBoundingClientRect().top + v.offsetHeight - vh),
+                                 tile: Math.round(t.getBoundingClientRect().top), lid: Math.round(lid) }; }""")
+                    check(f"{_route} at {_w}x{_h}: ...and a door shows all it opens: its first control on screen, its"
+                          " end too or its tile at the header, never under it",
+                          _ft["first"] <= 0 and _ft["tile"] >= _ft["lid"] - 1
+                          and (_ft["end"] <= 0 or _ft["tile"] <= _ft["lid"] + 11), str(_ft))
                 _gc.close()
 
     # THE CAP IS HELD, NOT ONLY AIMED AT (lib/drawerdetent.js followGrowth). The

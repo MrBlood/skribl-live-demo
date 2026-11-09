@@ -146,8 +146,10 @@
    * sliders change while you watch. Only ever down, and not at all when it
    * already shows; straight there under Reduce Motion; and a newer reveal, or
    * the person pressing (hush), calls it off. The music drawer's doors keep
-   * their own sum (lib/musicdrawer.js), which is this one with one exception:
-   * a door's first control is on screen even if the bar goes under. */
+   * their own sum (lib/musicdrawer.js): all of what a door opens, the tile
+   * tapped kept on screen while the drawer's top goes up under the header
+   * (the owner's pick for the Restart door, which is taller than the room
+   * the drawer's top leaves). */
   function showOpened(el, o) {
     if (!el) return;
     o = o || {};
@@ -386,6 +388,41 @@
     }());
   }
 
+  /* HELD THROUGH A CHANGE THAT GLIDES. shrinkGently, for a change where one
+   * part gets shorter at once while another glides open after it: a beat
+   * landing in the music drawer's Beat door. The tap's row loses a line of
+   * words in one frame (on a phone, "Skribl didn't hear a steady beat..." sat
+   * under the tap and went beside it: 88px to 50) while Beats in a bar glides
+   * in from nothing to 50. A door shows all of what it opens, so the page sits
+   * at its end, and that instant 38px clamped it 23px up in one frame before
+   * the row's growth and the browser's scroll anchoring carried it back down.
+   * So the page is held at its height across the change and the glide, and
+   * measured only once that is over: taller or the same, it is let go and
+   * nothing has moved; still shorter, it glides to where it now ends, as
+   * shrinkGently does, and then lets go. */
+  function holdThrough(box, change, ms) {
+    var scroller = document.scrollingElement || document.documentElement;
+    var root = document.documentElement;
+    if (root.style.minHeight) { change(); return; }   // a hold already under way keeps the page
+    var before = box.getBoundingClientRect().height;
+    var held = scroller.scrollHeight;
+    root.style.minHeight = held + 'px';
+    change();
+    setTimeout(function () {
+      var lost = before - box.getBoundingClientRect().height;
+      var from = scroller.scrollTop;
+      var to = Math.max(0, Math.min(from, held - lost - window.innerHeight));
+      if (lost <= 0 || to >= from - 1) { root.style.minHeight = ''; return; }
+      var still = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      window.scrollTo({ top: to, behavior: still ? 'auto' : 'smooth' });
+      var t0 = Date.now();
+      (function wait() {
+        if (Math.abs(scroller.scrollTop - to) < 2 || Date.now() - t0 > 900) { root.style.minHeight = ''; return; }
+        requestAnimationFrame(wait);
+      }());
+    }, ms || 0);
+  }
+
   /* FOLLOW A CARD THAT GROWS WHILE OPEN. The media card is revealed as it
    * opens, and then a song or a photo lands in it: the file row, the trim
    * strip or the fit controls appear below what was revealed. Measured on
@@ -522,5 +559,5 @@
   }
 
   window.SkriblDrawerDetent = { attach: attach, revealPanelEnd: revealPanelEnd, revealTop: revealTop, veil: veil, hush: hush,
-                                showOpened: showOpened, shrinkGently: shrinkGently, followGrowth: followGrowth, stuckBottom: stuckBottom };
+                                showOpened: showOpened, shrinkGently: shrinkGently, holdThrough: holdThrough, followGrowth: followGrowth, stuckBottom: stuckBottom };
 }());

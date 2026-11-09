@@ -17,14 +17,19 @@ desk), from the drawer just opened, and the page is read on every frame until
 it is still. Then:
 
   WHAT OPENED SHOWS: its end is on the screen, and inside any box that clips
-  it (a drawer fitted under the header scrolls inside itself) -- or the page
-  stopped at the top of the drawer, the bar right above it reaching the
-  header, because the drawer is taller than the screen (the music drawer's
-  Restart door, with the song and its timeline above it), or at Text's
-  words, which stay in view while their sliders change them.
+  it (a drawer fitted under the header scrolls inside itself) -- or, for a
+  pen or Text tile, the page stopped at the top of the drawer, the bar right
+  above it reaching the header, or at Text's words, which stay in view while
+  their sliders change them. A music drawer's door shows ALL of what it
+  opens (the owner's pick for the Restart door, after #814: with the song
+  and its timeline above the doors it is taller than the room the drawer's
+  top leaves, and stopping there left up to 264px of it below a phone's
+  screen), or stops only with its tile at the header -- or under the
+  timeline's copy, which shows there once the timeline has gone up past it.
   JUST FAR ENOUGH: when the page moved, what opened (or, on a phone, the
-  drawer it is in) ends near the foot of the screen, not far above it.
-  WHAT WAS TAPPED STAYS ON SCREEN, below the header.
+  pen or Text drawer it is in) ends near the foot of the screen, not far
+  above it.
+  WHAT WAS TAPPED STAYS ON SCREEN, below the header (and the copy).
   IT GLIDES: the page moves over three frames or more, never more in one
   frame's time than 60% of the way (24px at the least: the browser's own
   glide of 33px moves 16px in its fastest frame), and never back up. Not
@@ -53,6 +58,10 @@ And on a short desk, 1280x560, where the holds bind:
   with the words at the top -- words in view stay in view (the Pad). Words
   Text's own reveal has already let go above the screen hold nothing, and
   the slider shows (Flip).
+
+And on a short phone, 402x664, where Restart cannot all show: the page goes
+as far as it can, the tile stopping below the header and the timeline's
+copy.
 
 And NO DRAWER IS MISSED: every tile in the editor's page (.dp-tile) is one this
 suite pressed, so a new drawer's tiles fail here until they are listed.
@@ -97,6 +106,7 @@ PHONE = dict(viewport={"width": 402, "height": 874}, device_scale_factor=1, is_m
 DESK = dict(viewport={"width": 1280, "height": 800}, device_scale_factor=1)
 DEVICES = {"phone": PHONE, "desk": DESK}
 SHORT = dict(viewport={"width": 1280, "height": 560}, device_scale_factor=1)   # a short desk, where the holds bind
+SHORTPHONE = dict(viewport={"width": 402, "height": 664}, device_scale_factor=1, is_mobile=True, has_touch=True)
 EDITORS = {"Pad": {"route": "/skribl-pad", "ctl": "_padDrawerCtl", "dock": "#toolBar"},
            "Flip": {"route": "/flip", "ctl": "_flipDrawerCtl", "dock": ".flip-tools"}}
 # Each drawer: its row of tiles, the drawer they are in, and the tiles.
@@ -147,12 +157,13 @@ GEOM = """([tile, dock, drawer]) => {
   return { open: !el.hidden && t.getAttribute('aria-expanded') === 'true', top: r.top, bottom: r.bottom, foot, vh, stuck,
            dockTop: dk ? dk.top : null, tileTop: tr.top, tileBottom: tr.bottom, drawerBottom: pr.bottom,
            wordsTop: wr ? Math.min(wr.top, wc == null ? wr.top : wc) : null,
+           copyFoot: (() => { const f = document.getElementById('musicFollow'); return f && f.classList.contains('on') ? f.getBoundingClientRect().bottom : null; })(),
            y: sc.scrollTop, max: sc.scrollHeight - innerHeight }; }"""
 
 
 def boot(b, ed, dev, drawer, reduce=False):
     c = b.new_context(color_scheme="light", reduced_motion="reduce" if reduce else "no-preference",
-                      **(SHORT if dev == "short" else DEVICES[dev]))
+                      **({"short": SHORT, "shortphone": SHORTPHONE}.get(dev) or DEVICES[dev]))
     q = c.new_page()
     errs = []
     q.on("pageerror", lambda e: errs.append(str(e)))
@@ -218,21 +229,31 @@ def glided(m):
 def judge(who, dev, drawer, g, m):
     """The rows for one press."""
     shows = g["bottom"] <= min(g["vh"], g["foot"]) + 1
-    at_lid = g["dockTop"] is not None and g["dockTop"] <= g["stuck"] + 6
-    at_words = g["wordsTop"] is not None and g["wordsTop"] <= g["stuck"] + 10
-    check(f"{who}: what opened shows, all of it, or the page stopped at the drawer's top",
+    lid = max(g["stuck"], g["copyFoot"] or 0)
+    if drawer == "music":
+        # A door: all of it, or the tile tapped at the header (or the copy).
+        at_lid = g["tileTop"] <= lid + 8 + 3
+        at_words = False
+        said = "or stopped with the tile at the header"
+    else:
+        at_lid = g["dockTop"] is not None and g["dockTop"] <= g["stuck"] + 6
+        at_words = g["wordsTop"] is not None and g["wordsTop"] <= g["stuck"] + 10
+        said = "or the page stopped at the drawer's top"
+    check(f"{who}: what opened shows, all of it, {said}",
           g["open"] and (shows or at_lid or at_words),
           f"opened {round(g['top'])}..{round(g['bottom'])} of a screen to {round(g['vh'])} (seen to {round(g['foot'])}); "
-          f"bar above the drawer at {None if g['dockTop'] is None else round(g['dockTop'])}, header to {round(g['stuck'])}; "
+          f"bar above the drawer at {None if g['dockTop'] is None else round(g['dockTop'])}, header to {round(g['stuck'])}"
+          f"{'' if g['copyFoot'] is None else ', the timeline copy to ' + str(round(g['copyFoot']))}; tile at {round(g['tileTop'])}; "
           f"page {round(g['y'])} of {round(g['max'])}")
     if m["total"] > 1:
-        ends = [g["bottom"]] + ([g["drawerBottom"]] if dev == "phone" else [])
+        ends = [g["bottom"]] + ([g["drawerBottom"]] if dev == "phone" and drawer != "music" else [])
         snug = any(g["vh"] - 44 <= e <= g["vh"] + 1 for e in ends) or at_lid or at_words or g["y"] >= g["max"] - 1
         check(f"{who}: ...just far enough", snug,
               f"moved {round(m['total'])}px; opened ends at {round(g['bottom'])}, the drawer at {round(g['drawerBottom'])}, of {round(g['vh'])}")
-    check(f"{who}: ...and what was tapped stays on screen",
-          g["tileTop"] >= g["stuck"] - 1 and g["tileBottom"] <= g["vh"] + 1,
-          f"tile {round(g['tileTop'])}..{round(g['tileBottom'])}, header to {round(g['stuck'])}, screen to {round(g['vh'])}")
+    check(f"{who}: ...and what was tapped stays on screen" + (", below the timeline's copy" if drawer == "music" else ""),
+          g["tileTop"] >= lid - 1 and g["tileBottom"] <= g["vh"] + 1,
+          f"tile {round(g['tileTop'])}..{round(g['tileBottom'])}, header to {round(g['stuck'])}"
+          f"{'' if g['copyFoot'] is None else ', copy to ' + str(round(g['copyFoot']))}, screen to {round(g['vh'])}")
     if m["total"] > 12:
         big = m["big"]
         check(f"{who}: ...gliding there, never back up",
@@ -310,6 +331,26 @@ with sync_playwright() as p:
                   g["wordsTop"] is not None and (not seen or g["wordsTop"] >= g["stuck"] - 1),
                   f"words at {g0['wordsTop'] and round(g0['wordsTop'])} then {g['wordsTop'] and round(g['wordsTop'])}")
             c.close()
+
+    # A SHORT PHONE, 402x664, where Restart cannot all show: the page goes as
+    # far as it can and the tile stops below the header -- and below the
+    # timeline's copy, which shows there once the timeline has gone up past
+    # it and covers what passes under it.
+    for ed in EDITORS:
+        if not wanted(ed, "phone", "music"):
+            continue
+        c, q, errs = boot(b, ed, "shortphone", "music")
+        open_drawer(q, ed, "music")
+        sel = '#musicDoors .dp-tile[data-dp="restart"]'
+        m = motion(press(q, "phone", sel))
+        g = q.evaluate(GEOM, [sel, EDITORS[ed]["dock"], "#musicPanel"])
+        lid = max(g["stuck"], g["copyFoot"] or 0)
+        check(f"{ed} short phone music: Restart goes as far as it can, its tile below the header and the timeline's copy",
+              m["total"] > 12 and g["open"] and g["copyFoot"] is not None and lid - 1 <= g["tileTop"] <= lid + 12
+              and g["bottom"] > g["vh"],
+              f"moved {round(m['total'])}px; tile at {round(g['tileTop'])}, header to {round(g['stuck'])}, the copy "
+              f"{'off' if g['copyFoot'] is None else 'to ' + str(round(g['copyFoot']))}; Restart to {round(g['bottom'])} of {round(g['vh'])}")
+        c.close()
 
     # REDUCE MOTION: once per drawer, on a desk.
     for ed in EDITORS:

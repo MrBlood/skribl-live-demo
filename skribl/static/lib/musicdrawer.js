@@ -364,28 +364,29 @@
                      { duration: 220, easing: 'cubic-bezier(.2, .8, .2, 1)' });
       }
       // The Restart view's canvas was laid out at zero size while hidden.
-      // Then bring what opened into view (a tap that seemed to do nothing
-      // was the old Fine-tune's fault), but never so far that the tiles go
-      // under the pinned header -- nor the bar above the drawer, the
-      // editor's dock(), as lib/drawerdetent.js caps the drawer's own
-      // reveals, unless that would leave even the door's first control below
-      // the screen, a tap that seems to do nothing again: then the first
-      // control wins. With the timeline the drawer is tall enough for both to
-      // bind: More's tile alone let Fit my drawing and Whole song pass under
-      // the header on an 844px phone (verify_ux's phone audit), and the bar
-      // alone left Smooth restart below a 664px one (verify_sheetswipe).
+      // Then bring ALL of what opened into view, the tile tapped kept on the
+      // screen (the owner's pick A, after #814: "show all of Restart"). With
+      // a song in, the drawer's top -- the tabs, the song, the timeline -- sits
+      // above the doors, and Restart is taller than the room it leaves, so
+      // kept below the header the bar above the drawer stopped the page with
+      // up to 264px of Restart below a phone's screen. Now the bar and the song
+      // go up under the header, whose ground covers them, as when a person
+      // scrolls there; the tile stays below it, and below the timeline's copy
+      // (THE TIMELINE FOLLOWS YOU, below), which shows under the header once
+      // the timeline has gone up past it and covers what passes under it. Its
+      // end is read as laid out: it unfolds from its top as a scale, so the
+      // box it is drawn in on the first frame stops short.
       requestAnimationFrame(function () {
         h.refresh();
         if (rv) rv.draw();
         if (!body || !tile || open !== k) return;
         var vh = global.visualViewport ? global.visualViewport.height : global.innerHeight;
         var top = det && det.stuckBottom ? det.stuckBottom() : 0;
-        var over = Math.min(body.getBoundingClientRect().bottom - vh + 12, tile.getBoundingClientRect().top - top - 8);
-        var bar = h.dock ? h.dock() : null, first = body.querySelector('button:not([hidden]), input, select, textarea');
-        if (bar && bar.offsetParent !== null) {
-          var need = first ? first.getBoundingClientRect().bottom - vh + 12 : 0;
-          over = Math.min(over, Math.max(bar.getBoundingClientRect().top - top - 4, need));
-        }
+        var need = body.getBoundingClientRect().top + body.offsetHeight - vh + 12;
+        var room = tile.getBoundingClientRect().top - top - 8;
+        if (need > 0 && follow && tlRoot && tlRoot.offsetParent !== null && h.hasTrack()
+            && tlRoot.getBoundingClientRect().bottom - Math.min(need, room) < top + 4) room -= follow.offsetHeight;
+        var over = Math.min(need, room);
         if (over > 0) global.scrollBy({ top: over, behavior: still() ? 'auto' : 'smooth' });
       });
     }
@@ -2142,6 +2143,7 @@
     // at the end of every repaint (their updateTrimUI) and when the drawing's
     // length changes. The length is one walk over every point on the Pad, so
     // it is measured once here, and not at all with no song.
+    var hadBeat = false;
     function sync() {
       var secs = h.hasTrack() ? h.drawingSeconds() : 0;
       // The Pad picks when the song's length is known, before it is decoded:
@@ -2160,19 +2162,29 @@
         var buf = h.buffer(), kept = tempo();
         if (buf && buf !== earsFor && (pickedNew || !kept || kept.heard)) listenTo(buf);
       }
-      // Smooth restart's switch, words and length too: Flip's draft and file
-      // opens set the loop's smooth restart and repainted only the rest, so
-      // the line said 19.75s under a switch that said Off (the owner's phone).
-      syncCrossfade();
-      syncTimes(false);
-      syncSteps();
-      syncLock();
-      syncLength(secs);
-      syncBeats();
-      syncHear(secs);
-      syncTap();
-      syncSnap();
-      syncBar();
+      // A BEAT LANDING OR LEAVING changes the drawer's height in two ways at
+      // once: the tap's row gets shorter or taller in one frame while Beats
+      // and Beats in a bar glide in or out. The page is held through it
+      // (lib/drawerdetent.js holdThrough), or at its end it clamps and hops.
+      var hasBeat = !!(h.hasTrack() && tempo()), det = global.SkriblDrawerDetent;
+      var turn = hasBeat !== hadBeat && det && det.holdThrough && detail && detail.offsetParent !== null;
+      hadBeat = hasBeat;
+      var writes = function () {
+        // Smooth restart's switch, words and length too: Flip's draft and file
+        // opens set the loop's smooth restart and repainted only the rest, so
+        // the line said 19.75s under a switch that said Off (the owner's phone).
+        syncCrossfade();
+        syncTimes(false);
+        syncSteps();
+        syncLock();
+        syncLength(secs);
+        syncBeats();
+        syncHear(secs);
+        syncTap();
+        syncSnap();
+        syncBar();
+      };
+      if (turn) det.holdThrough(detail, writes, 320); else writes();
       syncCut();
       syncRvHint();
       syncUndo();
