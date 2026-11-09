@@ -27,6 +27,16 @@
   'use strict';
   if (!window.SkriblText || window.SKRIBL_LETTERS === true) return;
 
+  // TEXT LEAVES THE RECORDER AS IT FOUND IT (the owner: "Shouldn't the editor
+  // shut the recorder off once it's written the words?", then "all yes"). A
+  // take Write it began, on a blank canvas or a finished take, ends when the
+  // words have written themselves out, as Done ends one ("Saved. Play to
+  // watch it, or Keep drawing to add more"). A take that was recording before
+  // is the person's, and goes on. So does one whose words were hurried along
+  // by a press or a key: the person is already at the next thing, often a
+  // stroke that same press begins, and a finished take would refuse it.
+  let begun = false;
+
   window.SkriblText.attach({
     canvas: canvas,
     logical: getCanvasLogicalSize,
@@ -37,8 +47,10 @@
       // Write it is as deliberate as that press. One history state for the
       // whole line.
       if (playing) stopPlayback();
+      const was = recording;
       if (finishedRecording && !recording) beginRecording(strokes.length > 0);
       else if (!recording && !hasContent) beginRecording(false);
+      begun = !was && recording;
       undoStack.push(makeHistoryState());
       if (undoStack.length > 30) undoStack.shift();
       padFloorKeep();   // a floor under Undo (editor_draw.js)
@@ -63,8 +75,11 @@
       }));
       commitStrokeWithMirrors(true);
     },
-    end: function () {
-      if (typeof showTakeHint === 'function') showTakeHint();   // the first take says so, once (editor_bar.js)
+    end: function (n, ms, hurried) {
+      const stop = begun && recording && !hurried;
+      begun = false;
+      if (stop) endRecordingTake();   // as Done does: Saved, and Keep drawing to add more
+      else if (typeof showTakeHint === 'function') showTakeHint();   // the first take says so, once (editor_bar.js)
       if (typeof scheduleAutosave === 'function') scheduleAutosave();
     },
     skip: function (ms) { if (recording) startTime -= ms; },

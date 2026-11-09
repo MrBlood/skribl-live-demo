@@ -30,14 +30,27 @@
     <span class="tx-note" id="txNote">Make your own hand in about 10 minutes.</span>
     <a class="tx-link" id="txEdit" href="{{ url_for('.skribl_editor', letters=1, back=text_from) }}" hidden>Edit your hand</a>
   </div>
+  {# SIZE, THICKNESS AND SPEED, three dials in one grid so their sliders line
+     up (the owner: "shouldn't we have control of thickness on text editor,
+     and font size?", then "all yes"). Size is the letters' height, said in
+     this drawing's px; Thickness is the words' own line, the pen's until it
+     is moved, and moving it leaves the pen as it was. #}
+  <div class="tx-dials">
   <div class="tx-row">
-    <span class="tx-k" id="txSizeLabel">Size</span>
-    <span class="seg tx-seg" id="txSize" role="group" aria-labelledby="txSizeLabel"><span class="seg-slider"></span><button type="button" data-size="S">Small</button><button type="button" data-size="M" class="on">Medium</button><button type="button" data-size="L">Large</button></span>
+    <span class="tx-k tx-k2"><label for="txSize" id="txSizeLabel">Size</label></span>
+    <span class="tx-ctl"><input type="range" class="slider" id="txSize" min="25" max="200" step="1" value="65"></span>
+    <output class="tx-val" id="txSizeOut" for="txSize"></output>
+  </div>
+  <div class="tx-row">
+    <span class="tx-k tx-k2"><label for="txWeight" id="txWeightLabel">Thickness</label><span class="tx-hint" id="txWeightHint">for the words only</span></span>
+    <span class="tx-ctl"><input type="range" class="slider" id="txWeight" min="1" max="34" step="1" value="5" aria-describedby="txWeightHint"></span>
+    <output class="tx-val" id="txWeightOut" for="txWeight"></output>
   </div>
   <div class="tx-row tx-speed">
     <span class="tx-k tx-k2"><label for="txSpeed" id="txSpeedLabel">Speed</label><span class="tx-hint" id="txSpeedHint">1× is your own speed</span></span>
     <span class="tx-speed-ctl"><input type="range" class="slider" id="txSpeed" min="0" max="12" step="1" value="4" aria-describedby="txSpeedHint"></span>
     <output class="tx-val" id="txSpeedOut" for="txSpeed" aria-live="polite">1×</output>
+  </div>
   </div>
   <button type="button" class="tx-go" id="txGo" disabled>Write it</button>
 </div>

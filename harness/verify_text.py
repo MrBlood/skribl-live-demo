@@ -23,7 +23,8 @@ Mirror leaving them alone. Each row holds a promise:
   5. WRITTEN IN TIME: Write it closes the sheet and the words write
      themselves, stroke by stroke over the time the sheet said; each point
      keeps the time the plan gave it on the take's clock, forward only, where
-     the preview showed it; a blank Pad's take starts when the words do.
+     the preview showed it; a blank Pad's take starts when the words do
+     and stops when they are written (19).
   6. ONE UNDO: Undo takes the whole line back, on the Pad and on Flip, and
      Redo puts it back.
   7. MIRROR LEAVES WORDS ALONE: with Mirror on, the words are written once.
@@ -49,8 +50,9 @@ Mirror leaving them alone. Each row holds a promise:
      frame the words start writing.
  15. A FINISHED TAKE (the owner's iPhone: the press was refused there):
      choosing Text opens the sheet and a press moves the words, with no
-     refusal; Write it carries the take on as Keep drawing does, and one
-     Undo takes back only the words.
+     refusal; Write it records the words as a take of their own and leaves
+     the recorder off again, as it found it (19), and one Undo takes back
+     only the words.
  16. THE KEYBOARD (the owner's iPhone: the bar over it covered the field):
      with the keyboard up, the sheet sits on it and is only the words and
      Write it, the words above it (with no keyboard up, the whole sheet); the
@@ -73,6 +75,19 @@ Mirror leaving them alone. Each row holds a promise:
      cannot focus the field (an iPhone); on a desk the bar rests at the
      window's foot; with Reduce Motion nothing passes between. Each row was
      shown red by breaking its own piece (13 ways).
+ 18. THE DIALS (the owner: "shouldn't we have control of thickness on text
+     editor, and font size?", then "all yes"): Size is a slider, the
+     letters' height a share of the drawing and said in its px; Thickness is
+     a slider for the words alone, the pen's size until it is moved and the
+     pen as it was after; both are kept for next time, and a Small, Medium
+     or Large kept from before the slider comes back as that stop. Pad and
+     Flip, one sheet.
+ 19. THE RECORDER AS IT WAS FOUND (the owner: "Shouldn't the editor shut
+     the recorder off once it's written the words?", then "all yes"): a take
+     Write it began ends when the words have written themselves out, as
+     Done ends one, with Keep drawing to add more; a take that was
+     recording before goes on, and so does one whose words a press hurried
+     along (that press is often the next stroke).
 
 For calibration, TEXT_PART=<words of a part's label> runs that part alone.
 A real run sets none.
@@ -231,6 +246,12 @@ def type_words(q, words):
         return False
     q.wait_for_timeout(150)
     return True
+
+
+def set_dial(q, el, v):
+    """A slider on the sheet moved to V, as a drag leaves it."""
+    q.evaluate("([el, v]) => { const s = document.getElementById(el); s.value = String(v); s.dispatchEvent(new Event('input', { bubbles: true })); }", [el, v])
+    q.wait_for_timeout(80)
 
 
 def set_speed(q, i):
@@ -452,7 +473,7 @@ with sync_playwright() as p:
         mid = q.evaluate("() => [strokes.length, strokeGroups.length, SkriblText.isWriting(), SkriblText.isOpen()]")
         q.wait_for_function("() => !SkriblText.isWriting()", timeout=60000)
         q.wait_for_timeout(150)
-        end = q.evaluate("() => [strokes.length, strokeGroups.length, recording]")
+        end = q.evaluate("() => [strokes.length, strokeGroups.length, recording, finishedRecording]")
         pts = q.evaluate(POINTS["pad"], n0[0])
         check("Write it closes the sheet and the words write themselves, stroke by stroke",
               mid[2] and not mid[3] and n0[1] < mid[1] < n0[1] + plan["n"], f"half way: {mid[1] - n0[1]} of {plan['n']} strokes")
@@ -466,7 +487,8 @@ with sync_playwright() as p:
               off <= 1 and forward and t0 >= 0, f"worst {off}ms off, forward {forward}, t0 {t0}")
         where = max((max(abs(pt[0] - (f[0] + plan["anchor"]["x"])), abs(pt[1] - (f[1] + plan["anchor"]["y"]))) for pt, f in zip(pts, flat)), default=99)
         check("...where the preview showed it", where <= 0.01, f"furthest {where} drawing units")
-        check("a blank Pad's take starts when the words do", end[2] is True and n0 == [0, 0], f"{n0} -> {end}")
+        check("a blank Pad's take starts when the words do, and stops when they are written",
+              n0 == [0, 0] and 0 <= t0 <= 50 and end[2] is False and end[3] is True, f"{n0} -> {end}, t0 {t0}")
         dur = q.evaluate("() => getPlaybackDuration()")
         check("the replay writes them over about the time the sheet said, pauses tightened",
               plan["ms"] * 0.5 <= dur <= plan["ms"] + 50, f"replay {dur}ms, the sheet's {plan['ms']}ms")
@@ -675,8 +697,10 @@ with sync_playwright() as p:
           return [on && on.getAttribute('data-style'), JSON.parse(localStorage.getItem(k) || 'null')]; }""", PREFS)
         check("Flip: and it comes back to Yours, the hand they were just working on, over the Skribl they had",
               yours[0] == "yours", str(yours[0]))
+        # Their Large from before the slider is kept as that stop (0.095 of
+        # the drawing), and Thickness, never moved, as the pen's (null).
         check("Flip: and Yours is kept for next time, with their own size and speed",
-              yours[1] == {"style": "yours", "size": "L", "speed": 6}, json.dumps(yours[1]))
+              yours[1] == {"style": "yours", "size": 0.095, "weight": None, "speed": 6}, json.dumps(yours[1]))
         c.close()
         # Write with it, from Ready, after the 30th letter.
         seed = hand_seed(QUICK[:29])
@@ -759,7 +783,7 @@ with sync_playwright() as p:
           return out; }"""
         SELS = [["title", "#txTitle"], ["close", "#txClose"], ["field", "#txField"], ["label", ".tx-k"], ["hint", ".tx-hint"],
                 ["style", ".tx-style:not(.on)"], ["chosen", ".tx-style.on"], ["make", ".tx-make"], ["note", "#txNote"],
-                ["link", "#txEdit"], ["size", "#txSize button:not(.on)"], ["size on", "#txSize button.on"], ["speed", "#txSpeedOut"],
+                ["link", "#txEdit"], ["size", "#txSizeOut"], ["thickness", "#txWeightOut"], ["speed", "#txSpeedOut"],
                 ["write", "#txGo"], ["drag", ".tx-drag"]]
         TAPS = """() => [...document.querySelectorAll('#txSheet button:not(.slider-nudge-btn), #txSheet a')].filter(b => b.checkVisibility())
           .map(b => { const r = b.getBoundingClientRect(); return [b.id || b.dataset.style || b.dataset.size || b.textContent.trim(), Math.min(r.width, r.height)]; })"""
@@ -845,8 +869,8 @@ with sync_playwright() as p:
         plan = q.evaluate(PLAN)
         write_and_wait(q)
         n1 = q.evaluate("() => [strokes.length, strokeGroups.length, finishedRecording, recording]")
-        check("...and Write it carries the take on, as Keep drawing does, the drawing kept",
-              n1[3] is True and n1[2] is False and n1[1] - n0[1] == plan["n"] and n1[0] - n0[0] == plan["pts"], f"{n0} -> {n1}")
+        check("...and Write it records the words as a take of their own, then leaves the recorder off as it found it, the drawing kept",
+              n1[3] is False and n1[2] is True and n1[1] - n0[1] == plan["n"] and n1[0] - n0[0] == plan["pts"], f"{n0} -> {n1}")
         q.click("#undoBtn")
         q.wait_for_timeout(300)
         n2 = q.evaluate(COUNT["pad"])
@@ -988,7 +1012,7 @@ with sync_playwright() as p:
             q.wait_for_function("() => SkriblText.isOpen()")
             type_words(q, words)
             q.evaluate("() => document.getElementById('txField').blur()")
-            q.click('#txSize [data-size="L"]')
+            set_dial(q, "txSize", 95)   # Large's stop
             q.wait_for_timeout(400)
 
         def drag_to_foot(q, sample=True):
@@ -1140,6 +1164,82 @@ with sync_playwright() as p:
         check("with Reduce Motion the sheet steps aside and comes back as the bar with nothing in between",
               len(tops[0]) <= 2 and len(tops[1]) == 1, f"aside {tops[0][:5]}, the bar {tops[1][:5]}")
         c.close()
+
+    # ------------------------------------------------------------------ 18
+    if part("TEXT 18 — the dials"):
+        DIALS = """() => { const p = SkriblText.plan(), d = SkriblText.dials();
+          const lg = %s; const w = p.strokes.flat().map(q => q.size);
+          return { cap: p.cap, short: Math.min(lg[0], lg[1]), lo: Math.min(...w), hi: Math.max(...w), dials: d,
+                   size: document.getElementById('txSizeOut').textContent, weight: document.getElementById('txWeightOut').textContent,
+                   slider: [+document.getElementById('txSize').value, +document.getElementById('txWeight').value] }; }"""
+        PEN = {"pad": "() => size", "flip": "() => +document.getElementById('size').value"}   # each editor's own pen (_skribl_draw_drawer.html)
+        for ed in ("pad", "flip"):
+            c, q = open_editor(b, ed, prefs={"style": "print", "speed": 4})
+            choose_text(q)
+            type_words(q, "Hi there")
+            read = lambda: q.evaluate(DIALS % (LOGICAL[ed].replace("() => ", "(() => ", 1) + ")()"))
+            pen0 = q.evaluate(PEN[ed])
+            d0 = read()
+            check(f"{ed}: until it is moved, Thickness is the pen's size, and the words are written at it",
+                  d0["dials"]["weight"] == round(pen0) and not d0["dials"]["own"] and d0["lo"] == d0["hi"] == round(pen0)
+                  and d0["weight"] == f"{round(pen0)}px", f"pen {pen0}; {d0}")
+            set_dial(q, "txSize", 140)
+            d1 = read()
+            check(f"{ed}: Size is a slider: the letters' height is its share of the drawing, said in the drawing's px",
+                  abs(d1["cap"] - 0.14 * d1["short"]) < 0.01 and d1["size"] == f"{round(0.14 * d1['short'])}px"
+                  and d1["cap"] > d0["cap"] * 2, f"{d0['cap']:.1f} -> {d1['cap']:.1f} of {d1['short']}, says {d1['size']}")
+            set_dial(q, "txWeight", 21)
+            d2 = read()
+            pen1 = q.evaluate(PEN[ed])
+            check(f"{ed}: Thickness is a slider for the words alone: every point at it, the pen as it was",
+                  d2["lo"] == d2["hi"] == 21 and d2["dials"]["own"] and d2["weight"] == "21px" and pen1 == pen0,
+                  f"points {d2['lo']}-{d2['hi']}, says {d2['weight']}, pen {pen0} -> {pen1}")
+            q.reload()
+            q.wait_for_function("() => !!window.SkriblText")
+            q.wait_for_timeout(300)
+            q.evaluate("() => window.SkriblHints && SkriblHints.hide()")
+            choose_text(q)
+            type_words(q, "Hi there")
+            d3 = read()
+            check(f"{ed}: both are kept for next time", d3["slider"] == [140, 21] and d3["lo"] == 21 and abs(d3["dials"]["size"] - 0.14) < 1e-9,
+                  f"{d3['slider']}, points {d3['lo']}")
+            check(f"{ed}: the dials: no errors", not q._tx_errors, str(q._tx_errors[:2]))
+            c.close()
+        c, q = open_editor(b, "pad", prefs={"style": "print", "size": "L", "speed": 4})
+        choose_text(q)
+        type_words(q, "Hi")
+        d = q.evaluate("() => [SkriblText.dials().size, +document.getElementById('txSize').value]")
+        check("a Large kept from before the slider comes back as that stop", d == [0.095, 95], str(d))
+        c.close()
+
+    # ------------------------------------------------------------------ 19
+    if part("TEXT 19 — the recorder as it was found"):
+        TAKE = "() => [recording, finishedRecording, !document.getElementById('addTakePill').hidden]"
+        for case in ("blank", "recording", "hurried"):
+            c, q = open_editor(b, "pad", prefs={"style": "print", "size": "M", "speed": 4 if case == "hurried" else 12})
+            if case == "recording":
+                draw_line(q, 0.2, 0.15, 0.8, 0.15)
+            t0 = q.evaluate(TAKE)
+            choose_text(q)
+            type_words(q, "Hello there, all of you" if case == "hurried" else "Hi")
+            q.click("#txGo")
+            if case == "hurried":
+                q.wait_for_function("() => SkriblText.isWriting()", timeout=5000)
+                q.evaluate("() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Shift', bubbles: true }))")
+            q.wait_for_function("() => !SkriblText.isWriting()", timeout=60000)
+            q.wait_for_timeout(250)
+            t1 = q.evaluate(TAKE)
+            said = q.evaluate("() => { const t = document.getElementById('toast'); return t && !t.hidden ? t.textContent : ''; }")
+            if case == "blank":
+                check("on a blank Pad, the take Write it began ends when the words are written out, as Done ends one, Keep drawing to add more",
+                      t0 == [False, False, False] and t1 == [False, True, True] and "Keep drawing" in said, f"{t0} -> {t1}, {said!r}")
+            elif case == "recording":
+                check("...a take that was recording before goes on after the words",
+                      t0[0] is True and t1 == [True, False, False], f"{t0} -> {t1}")
+            else:
+                check("...and so does one whose words were hurried along: the person is already at the next thing",
+                      t0 == [False, False, False] and t1[0] is True and t1[1] is False, f"{t0} -> {t1}")
+            c.close()
 
     b.close()
 

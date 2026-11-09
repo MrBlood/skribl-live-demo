@@ -31819,3 +31819,64 @@ the 4 s fallback, a safety net for a page where the early script did not run
 (a host's own CSP refusing it, say); no row can tell them from the early
 script's own mark. Not tested here: Safari and the owner's iPhone (no WebKit
 in this box).
+
+## After v330 -- Text's dials, and the recorder as it was found
+
+The owner, on the Text sheet: "Shouldn't the editor shut the recorder off
+once it's written the words? Also, shouldn't we have control of thickness on
+text editor, and font size?" Cal answered with what happens now and two ways
+for the recorder, and the owner said "all yes" to the defaults.
+
+- **Size is a slider.** It was three buttons (Small, Medium, Large). The
+  letters' height is still kept as a share of the drawing's shorter side, so
+  one setting suits every shape, and the sheet says it in this drawing's px
+  (Medium is 35px on a phone's 9:16 and 46px on the square). 2.5% to 20%
+  of the shorter side; its - and + step it by half a percent. The three old
+  sizes are stops on it, and a choice of one kept from before comes back as
+  that stop.
+- **Thickness is a slider, for the words alone.** It was out of sight: the
+  words took the pen's size. Now it is the pen's size until it is moved;
+  moved, it is the words' own, kept for next time, and the pen stays as it
+  was (a real pen's line does not grow with the letters, and a caption
+  should not change the pen that draws). In the pen's own px, 1 to 34.
+- **The three dials line up** in one grid: Size, Thickness ("for the words
+  only") and Speed, each the app's slider with its - and +, the numbers on
+  the right.
+- **Text leaves the recorder as it found it** (the Pad). A take Write it
+  began, on a blank canvas or a finished take, ends when the words have
+  written themselves out, as Done ends one ("Saved. Play to watch it, or
+  Keep drawing to add more"). A take that was recording before goes on. So
+  does one whose words a press or a key hurried along: that press is often
+  the next stroke, and a finished take would refuse it.
+
+Pad and Flip: shared, one sheet (lib/textwrite.js); the recorder is the
+Pad's alone, Flip has none.
+
+verify_text has two new parts (18, the dials, on both editors; 19, the
+recorder) and one changed row (15: Write it on a finished take records the
+words as a take of their own and leaves the recorder off); the contrast
+census reads the two new numbers. How it works says it all, and
+verify_helpclaims holds its three new sentences to their checks. Calibrated
+in scratch copies of the tree, each break red on its own rows:
+
+- The Size slider not wired: Size's row and the kept row, both editors.
+- The words not written at the Thickness: Thickness's row and the kept row,
+  both editors. Thickness moving the pen too: the "pen as it was" rows.
+- The dials not kept: the kept rows. A Large kept from before not coming
+  back as its stop: its row. Thickness not the pen's until moved: the
+  "until it is moved" rows.
+- The take Write it began never ended: the blank-canvas row and 15's.
+  Hurrying ignored: the hurried row. A take that was already recording
+  ended too: its row.
+- As it is: 11/11, 3/3, 3/3.
+
+Two older rows still expected what this changes, and the whole of
+verify_text found them (each round above ran only its own parts): TEXT 5's
+blank Pad now starts its take when the words do and ends it when they are
+written (the take's clock can tick a millisecond between its start and the
+first point, so the start is read within 50 ms), and TEXT 11 reads the
+Large kept from before as its stop (0.095 of the drawing) and Thickness,
+never moved, as the pen's (null). Calibrated the same way, each break red
+on its own row: the take never ended, the words a second off the take's
+start, the words written as ink outside any take, a Large not brought back
+as its stop, the size not kept, the speed not kept. As it is: 6/6 and 7/7.

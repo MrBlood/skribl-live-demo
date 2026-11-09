@@ -5,9 +5,10 @@
  * WHAT A PERSON MEETS. Text is the fifth kind in Shape's picker. Pick it,
  * tap where the words go, and the typing sheet rises: the words, a Style
  * (Yours, or + Make yours; Skribl; Print; Script, each written in itself),
- * a Size (S, M, L: the height of the letters, in the pen's colour and
- * thickness) and a Speed (1/4x to 16x; 1x is the hand's own pace, and the
- * sheet says how long the words will take). The words show where the tap
+ * a Size and a Thickness (sliders: the letters' height, kept a share of the
+ * drawing and said in its px, and the line's width, in the pen's own px and
+ * for the words alone; in the pen's colour) and a Speed (1/4x to 16x; 1x is
+ * the hand's own pace, and the sheet says how long the words will take). The words show where the tap
  * was, above the sheet, inside a dashed box that says Drag to move. Write it
  * puts them in: the sheet goes and the words write themselves on the canvas,
  * a stroke at a time, at the speed chosen.
@@ -45,7 +46,9 @@
  *   draw(pts, from, to)   paint points from..to of the stroke being written
  *   stroke(pts, t0)       keep one finished stroke; each point's t is from
  *                  the start of the words, so the editor's own is t0 + t
- *   end(strokes, ms)      every stroke is kept
+ *   end(strokes, ms, hurried)   every stroke is kept; hurried when a press
+ *                  or a key finished them early (the person is already at
+ *                  the next thing)
  *   skip(ms)       the words were finished early, ms ahead of the clock
  *   say(words)     a short line to the person (the editor's own toast)
  */
@@ -54,8 +57,19 @@
 
   var STYLES = ['yours', 'skribl', 'print', 'script'];
   var LABEL = { yours: 'Yours', skribl: 'Skribl', print: 'Print', script: 'Script' };
-  // Cap height, as a share of the drawing's shorter side.
+  // Cap height, as a share of the drawing's shorter side, so one setting
+  // suits every shape. EXACT CONTROL (the owner: "shouldn't we have control
+  // of thickness on text editor, and font size?", then "all yes"): the Size
+  // slider's stops are thousandths of it, SIZE_MIN to SIZE_MAX, and Small,
+  // Medium and Large, the three buttons it replaced, are stops on it (a
+  // choice of one kept from before comes back as that stop).
   var SIZES = { S: 0.045, M: 0.065, L: 0.095 };
+  var SIZE_MIN = 0.025, SIZE_MAX = 0.2;
+  // THICKNESS: the words' own line, in the pen's px. Until it is moved it is
+  // the pen's size; once moved it is the words' alone, and the pen stays as
+  // it was (the owner's pick: a real pen's line does not grow with the
+  // letters, and a caption should not change the pen that draws).
+  var WEIGHT_MIN = 1, WEIGHT_MAX = 34;
   // The speed slider's stops, 1/4x to 16x: 1x is the hand's own pace, and
   // 16x is a replay's own top speed. A WAY TO REALLY SPEED UP THE WORDS (the
   // owner: "you don't always want the text to be so slow (if you have a lot
@@ -65,7 +79,7 @@
   var SPEEDS = [0.25, 1 / 3, 0.5, 2 / 3, 1, 1.5, 2, 3, 4, 6, 8, 12, 16];
   var SPEED_TEXT = ['¼×', '⅓×', '½×', '⅔×', '1×', '1½×', '2×', '3×', '4×', '6×', '8×', '12×', '16×'];
   var HAND_KEY = 'skribl.letters.v1';     // Your hand's store (editor_letters.js)
-  var PREFS_KEY = 'skribl.text.v1';       // the sheet's last style, size and speed
+  var PREFS_KEY = 'skribl.text.v1';       // the sheet's last style, size, thickness and speed
   var WORDS_KEY = 'skribl.text.words';    // the words, for this tab (sessionStorage)
   var MAX_CHARS = 200;
   var HAND_OF = 92;                        // letters in a whole hand
@@ -96,7 +110,7 @@
   var editor = null;        // the hooks (attach)
   var files = {};           // style -> lettering, once loaded
   var loading = {};         // style -> Promise
-  var state = { style: null, size: 'M', speed: 4 };
+  var state = { style: null, size: SIZES.M, weight: null, speed: 4 };
   var anchor = null;        // where the words sit: the middle of their box, in drawing units
   // ...and where they were PUT (a press, a drag, the start). The words are
   // kept clear of the sheet from here each time, so a sheet that rises, or
@@ -380,12 +394,19 @@
    * `canvas` the drawing's size; `pen` the ink. Points are in drawing units
    * from the middle of the words' box, so moving the words moves nothing
    * else; `ms` is how long they take at this speed. */
+  // A size as a share of the drawing's shorter side: a number, or the name
+  // of a stop kept from before the slider (S, M, L).
+  function shareOf(size) {
+    var v = typeof size === 'number' ? size : (SIZES[size] || SIZES.M);
+    return Math.max(SIZE_MIN, Math.min(SIZE_MAX, v));
+  }
+  function weightOf(w) { return Math.max(WEIGHT_MIN, Math.min(WEIGHT_MAX, Math.round(w) || WEIGHT_MIN)); }
   function makePlan(o) {
     var font = o.font, print = o.print || null;
     if (!font) return null;
     var text = clean(o.text || '').slice(0, MAX_CHARS);
     var short = Math.min(o.canvas.width, o.canvas.height);
-    var cap = Math.max(6, (SIZES[o.size] || SIZES.M) * short);
+    var cap = Math.max(6, shareOf(o.size) * short);
     var maxW = (WRAP * o.canvas.width) / cap;
     var rows = text ? wrap(text, font, print, maxW) : [];
     var speed = SPEEDS[o.speed] || 1;
@@ -455,19 +476,21 @@
         j.si++; j.pi = 0;
       }
     }
-    function done() {
+    // HURRIED: finished by a press or a key (finish), not written out. The
+    // editor is told, since the person is already at the next thing.
+    function done(hurried) {
       if (j.done) return;
       j.done = true;
       cancelAnimationFrame(j.raf);
       unguard();
       job = null;
       document.body.classList.remove('text-writing');
-      editor.end(strokes.length, p.ms);
+      editor.end(strokes.length, p.ms, !!hurried);
     }
     function tick(now) {
       if (j.done) return;
       advance(now - j.start);
-      if (j.si >= strokes.length) done();
+      if (j.si >= strokes.length) done(false);
       else j.raf = requestAnimationFrame(tick);
     }
     j.finish = function () {
@@ -475,7 +498,7 @@
       var ahead = p.ms - (performance.now() - j.start);
       advance(Infinity);
       if (ahead > 0 && editor.skip) editor.skip(Math.round(ahead));
-      done();
+      done(true);
     };
     job = j;
     document.body.classList.add('text-writing');
@@ -635,7 +658,8 @@
     var s = sheetEl();
     if (!s) return null;
     els = { sheet: s, field: $('txField'), styles: $('txStyles'), under: $('txUnder'),
-            note: $('txNote'), edit: $('txEdit'), size: $('txSize'), speed: $('txSpeed'),
+            note: $('txNote'), edit: $('txEdit'), size: $('txSize'), sizeOut: $('txSizeOut'),
+            weight: $('txWeight'), weightOut: $('txWeightOut'), speed: $('txSpeed'),
             speedOut: $('txSpeedOut'), hint: $('txSpeedHint'), go: $('txGo'), close: $('txClose'),
             skip: $('txSkip'), place: $('txPlace'), preview: $('txPreview') };
     readPrefs();
@@ -673,12 +697,15 @@
       refresh();
     });
     if (els.edit) els.edit.addEventListener('click', function (e) { e.preventDefault(); toHand(); });
-    els.size.addEventListener('click', function (e) {
-      var b = e.target.closest('[data-size]');
-      if (!b) return;
-      state.size = b.getAttribute('data-size');
+    els.size.addEventListener('input', function () {
+      state.size = shareOf((parseInt(els.size.value, 10) || 0) / 1000);
       keepPrefs();
-      syncSize();
+      refresh();
+    });
+    // Moved, the words' thickness is theirs: the pen stays as it was.
+    els.weight.addEventListener('input', function () {
+      state.weight = weightOf(parseInt(els.weight.value, 10));
+      keepPrefs();
       refresh();
     });
     els.speed.addEventListener('input', function () {
@@ -686,7 +713,11 @@
       keepPrefs();
       refresh();
     });
-    if (typeof window.addSliderNudgers === 'function') window.addSliderNudgers(els.speed, { step: 1 });
+    if (typeof window.addSliderNudgers === 'function') {
+      window.addSliderNudgers(els.size, { step: 5 });
+      window.addSliderNudgers(els.weight, { step: 1 });
+      window.addSliderNudgers(els.speed, { step: 1 });
+    }
     els.go.addEventListener('click', go);
     els.close.addEventListener('click', close);
     // A press on Write it or the x while the words are typed keeps the field's
@@ -754,12 +785,14 @@
     try {
       var p = JSON.parse(localStorage.getItem(PREFS_KEY) || 'null');
       if (p && STYLES.indexOf(p.style) >= 0) state.style = p.style;
-      if (p && SIZES[p.size]) state.size = p.size;
+      if (p && typeof p.size === 'string' && SIZES[p.size]) state.size = SIZES[p.size];
+      else if (p && typeof p.size === 'number' && p.size >= SIZE_MIN && p.size <= SIZE_MAX) state.size = p.size;
+      if (p && p.weight === (p.weight | 0) && p.weight >= WEIGHT_MIN && p.weight <= WEIGHT_MAX) state.weight = p.weight;
       if (p && p.speed >= 0 && p.speed < SPEEDS.length) state.speed = p.speed | 0;
     } catch (e) {}
   }
   function keepPrefs() {
-    try { localStorage.setItem(PREFS_KEY, JSON.stringify({ style: state.style, size: state.size, speed: state.speed })); }
+    try { localStorage.setItem(PREFS_KEY, JSON.stringify({ style: state.style, size: state.size, weight: state.weight, speed: state.speed })); }
     catch (e) {}
   }
   // The style a person meets: theirs once they have a hand, else Skribl, and
@@ -838,12 +871,23 @@
     els.hint.textContent = cur === 'yours' ? '1× is your own speed'
       : cur === 'skribl' ? '1× is Skribl’s speed' : '1× is a steady hand';
   }
+  // The two dials, and what they say for this drawing: the letters' height
+  // in its px (the share it is kept as suits every shape, the px is what it
+  // is here) and the line's width, the pen's until the words have their own.
+  function thickness() {
+    if (state.weight != null) return state.weight;
+    var pen = editor ? editor.pen() : null;
+    return weightOf(pen ? pen.size : 4);
+  }
   function syncSize() {
-    Array.prototype.forEach.call(els.size.querySelectorAll('[data-size]'), function (b) {
-      var on = b.getAttribute('data-size') === state.size;
-      b.classList.toggle('on', on);
-      b.setAttribute('aria-pressed', String(on));
-    });
+    var lg = editor ? editor.logical() : null, short = lg ? Math.min(lg.width, lg.height) : 0;
+    var px = Math.round(state.size * short), w = thickness();
+    els.size.value = String(Math.round(state.size * 1000));
+    els.size.setAttribute('aria-valuetext', px + ' pixels tall');
+    if (els.sizeOut) els.sizeOut.textContent = px + 'px';
+    els.weight.value = String(w);
+    els.weight.setAttribute('aria-valuetext', w + ' pixels');
+    if (els.weightOut) els.weightOut.textContent = w + 'px';
   }
   function seconds(ms) {
     var s = Math.max(1, Math.round(ms / 1000));
@@ -859,6 +903,7 @@
     var font = st === 'yours' ? readHand() : files[st];
     els.speed.value = String(state.speed);
     els.speed.setAttribute('aria-valuetext', SPEED_TEXT[state.speed]);
+    syncSize();
     if (!font) {
       plan = null;
       els.speedOut.textContent = SPEED_TEXT[state.speed];
@@ -867,8 +912,9 @@
       load(st).then(function (f) { if (f && isOpen()) { syncStyles(); refresh(); } });
       return;
     }
+    var pen = editor.pen();
     plan = makePlan({ text: els.field.value, font: font, print: files.print, size: state.size,
-                      speed: state.speed, canvas: editor.logical(), pen: editor.pen() });
+                      speed: state.speed, canvas: editor.logical(), pen: { color: pen.color, size: thickness() } });
     els.go.disabled = !plan || !plan.strokes.length;
     els.speedOut.textContent = SPEED_TEXT[state.speed] + (plan && plan.strokes.length ? ' · ' + seconds(plan.ms) : '');
     if (els.skip) els.skip.hidden = !(plan && plan.skipped);
@@ -1092,6 +1138,9 @@
 
   window.SkriblText = {
     STYLES: STYLES.slice(), SIZES: SIZES, SPEEDS: SPEEDS.slice(), MAX_CHARS: MAX_CHARS,
+    SIZE_RANGE: [SIZE_MIN, SIZE_MAX], WEIGHT_RANGE: [WEIGHT_MIN, WEIGHT_MAX],
+    // For the checks: the words' size (a share of the drawing) and thickness now.
+    dials: function () { return { size: state.size, weight: thickness(), own: state.weight != null }; },
     attach: function (hooks) { editor = hooks; resume(); },
     place: function (pos) { place(pos); },
     start: start,
