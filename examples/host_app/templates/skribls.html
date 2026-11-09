@@ -101,11 +101,17 @@ window.addEventListener('DOMContentLoaded', function () {
       box.setAttribute('data-skribl-h', item.canvas_h);
     }
     if (item.line) box.setAttribute('data-skribl-line', JSON.stringify(item.line));
-    var poster = box.querySelector('.skribl-inline-poster');
-    if (poster) {
-      poster.setAttribute('src', poster.getAttribute('src').replace('__ID__', encodeURIComponent(item.id)));
-      poster.setAttribute('alt', item.title || 'A Skribl');
-    }
+    /* The macro wrote '__ID__' wherever the public id goes (the poster's
+       address among them). Fill each in without naming the player's insides,
+       which are the macro's to change (verify_inline: no template writes
+       them). */
+    Array.prototype.forEach.call(art.querySelectorAll('*'), function (e) {
+      Array.prototype.forEach.call(e.attributes, function (a) {
+        if (a.value.indexOf('__ID__') >= 0) e.setAttribute(a.name, a.value.split('__ID__').join(encodeURIComponent(item.id)));
+      });
+    });
+    var poster = box.querySelector('img');
+    if (poster) poster.setAttribute('alt', item.title || 'A Skribl');
     card.appendChild(art);
 
     var meta = el('div', 'sk-meta');

@@ -454,6 +454,18 @@ try:
               {second, pug, bounce} <= set(by_id) and first not in by_id, json.dumps(tiles))
         check("...each one a player, mounted where it sits",
               all(t["mounted"] for t in tiles), json.dumps(tiles))
+        # ITS OWN POSTER: the page fills in the id wherever the macro wrote the
+        # placeholder, so the idle tile shows its drawing, not a 404 hidden.
+        # Read on the tiles in view: the poster is loading="lazy".
+        _posters = pg.evaluate("""() => [...document.querySelectorAll('#skGrid .sk-card')].map(c => {
+            const b = c.querySelector('[data-skribl-inline]'), i = b && b.querySelector('img');
+            return { id: b && b.getAttribute('data-skribl-id'), src: i ? i.getAttribute('src') : null,
+                     inView: !!i && i.getBoundingClientRect().top < innerHeight,
+                     loaded: !!(i && !i.hidden && i.complete && i.naturalWidth > 0) }; })""")
+        check("...each showing its own drawing's poster: the id where the macro wrote the placeholder",
+              bool(_posters) and all(p["src"] and p["id"] in p["src"] and "__ID__" not in p["src"] for p in _posters)
+              and any(p["inView"] for p in _posters)
+              and all(p["loaded"] for p in _posters if p["inView"]), json.dumps(_posters))
         _ts, _tp, _tb = by_id.get(second, {}), by_id.get(pug, {}), by_id.get(bounce, {})
         check("the one from a post: its title, @ada, and 'From a post' linking to that post",
               _ts.get("title") == "and one for everyone" and _ts.get("who") == "@ada"
