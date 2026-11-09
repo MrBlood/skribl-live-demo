@@ -32221,3 +32221,45 @@ left off the suite's list (both editors, naming musicDoors:exact). The copy
 with nothing broken: 212/212. Not tested here: an iPhone or Safari (no
 WebKit in this box), whose own smooth scrolling this leans on as the phone's
 reveals already did.
+
+## After v330 -- A door shows all of what it opens
+
+The owner's pick A for the music drawer's Restart door ("All yes", after
+#814 and a mock of the door opened, Now beside A, Pad and Flip, phone and
+desk, light and dark). With a song in, the drawer's top -- the tabs, the
+song, the timeline -- sits above the four doors, and Restart is taller than
+the room it leaves: kept below the header, the bar above the drawer stopped
+the page with Restart's last 253-264px below a phone's screen and 208-212px
+below a desk's, and Length's last 11-39px below a phone's.
+
+THE RULE FOR A DOOR (lib/musicdrawer.js, setDoor). All of what opened comes
+on screen, its laid-out end 12px above the foot (it unfolds from its top as
+a scale, so the box it is drawn in on the first frame stops short), and the
+tile tapped stays on screen: never above the header, and never under the
+timeline's copy, which shows under the header once the timeline has gone up
+past it and covers what passes under it (its height is read before the page
+moves; it is laid out while hidden). The bar, the tabs and the song go up
+under the header's ground, as when a person scrolls there. Measured after:
+every door ends at 862 of 874 on the phone and 788 of 800 on the desk;
+Restart's tile at 359 and 336. The pen and Text tiles keep the rule as
+approved before, the drawer's top below the header.
+
+THE PHONE AUDIT (verify_ux). With a door open, a control under the header's
+ground, or under the timeline's copy, is tucked, not overlapping: only while
+the ground is there (the header's over-canvas class), never the header's own
+controls, never the copy itself. The old exception (the dock tucked only when
+the door's first control would otherwise be off the screen) described the
+old cap.
+
+THE CHECK (verify_drawerreveal). A door shows all of what it opens, or stops
+only with its tile at the header or the copy; on a 402x664 phone, where
+Restart cannot all show, the page goes as far as it can and the tile stops
+below the copy. Calibrated in a tree copy with its own server, four breaks,
+each red on its own rows: the old cap (the bar above the drawer) turned the
+door rows red, Length and Restart on the phone and Restart on the desk, and
+the short phone's; the copy left out of the cap, the short phone's rows only
+(the tile at 149, under the copy to 173); the end read off the unfolding
+box, the Length and Restart rows (Restart ending 16-21px below the screen);
+and verify_ux's old door rule, with this reveal, both 390px phones'
+tallest-door rows (the header's buttons over the timeline's zoom, now under
+the header). The copy with nothing broken: verify_drawerreveal green.
