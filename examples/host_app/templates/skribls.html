@@ -1,0 +1,195 @@
+{#  THE SKRIBLS PAGE (FUTURE 6ah, the owner's pick A): every public skribl,
+    from both doors, as a grid in this site's frame and colours. Each tile
+    plays where it is, says who drew it, and links back to the post it came
+    from ("From a post") or says it was made in the app.
+
+    DRAWN FROM SKRIBL'S OWN LISTING, in the browser, the way Skribl's /feed
+    preview does it (skribl/static/feed.js): GET the listing, put a
+    skribl_inline() block in the grid for each item, SkriblInline.mount().
+    So the page pages, sorts and searches as the listing does, and shows
+    only what it shows: public skribls, through the site's feed filter if
+    it has one. The names and the links are the site's, through the two
+    resolvers app.py hands init_skribl: Skribl stores an id for each and
+    knows nothing else. #}
+{% extends "base.html" %}
+{% from 'skribl/_skribl_inline_player.html' import skribl_inline %}
+
+{% block title %}Skribls — Example host{% endblock %}
+
+{% block style %}
+<style>
+  .sk-bar { display:flex; align-items:center; gap:8px; margin-bottom:14px; }
+  .sk-sort { padding:6px 14px; }
+  .sk-sort[aria-pressed="false"] { background:transparent; border:1px solid var(--line);
+                                   color:var(--ink); font-weight:500; }
+  .sk-search { margin-left:auto; min-width:0; flex:0 1 190px; font-size:16px;
+               background:var(--elev); border:1px solid var(--line); border-radius:999px;
+               padding:6px 14px; }
+  .sk-grid { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:12px; }
+  .sk-card { display:flex; flex-direction:column; min-width:0; overflow:hidden;
+             background:var(--elev); border:1px solid var(--line); border-radius:14px; }
+  .sk-card .skribl-inline { border:0; border-radius:0; }
+  .sk-card .skribl-inline-line { margin:8px 8px 0; }
+  .sk-meta { display:flex; flex-direction:column; gap:4px; min-width:0; padding:8px 12px 12px; }
+  .sk-title { margin:0; font-size:inherit; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .sk-by { display:flex; flex-wrap:wrap; align-items:center; gap:6px; color:var(--dim); font-size:14px; }
+  .sk-av { display:inline-grid; place-items:center; width:20px; height:20px; border-radius:50%;
+           background:var(--accent); color:#fff; font-size:11px; font-weight:700; }
+  .sk-from { color:var(--accent-ink); font-weight:600; text-decoration:none; }
+  .sk-more { display:block; margin:16px auto 0; }
+  @media (max-width: 600px) {
+    .sk-grid { gap:8px; }
+    .sk-meta { padding:6px 8px 10px; }
+    .sk-by { font-size:13px; }
+  }
+</style>
+{% endblock %}
+
+{% block main %}
+  <div class="sk-bar">
+    <button class="btn sk-sort" type="button" data-sort="new" aria-pressed="true">New</button>
+    <button class="btn sk-sort" type="button" data-sort="hot" aria-pressed="false">Hot</button>
+    <input class="sk-search" id="skSearch" type="search" placeholder="Search" aria-label="Search skribls">
+  </div>
+  <div class="sk-grid" id="skGrid"></div>
+  <p class="muted" id="skEmpty" hidden>No skribls here yet.</p>
+  <button class="btn ghost sk-more" type="button" id="skMore" hidden>More</button>
+
+  {#  THE SHIPPED MARKUP, cloned: skribl_inline() rendered once with '__ID__'
+      where the public id goes, so the grid shows exactly what the macro
+      makes. <template> content is inert: the placeholder's poster is never
+      fetched. #}
+  <template id="skTileTpl">{{ skribl_inline('__ID__') }}</template>
+{% endblock %}
+
+{% block after %}
+<script>
+/*  DOMContentLoaded: Skribl's player script loads with `defer` and has run by
+    then (see feed.html's pad button for the story). */
+window.addEventListener('DOMContentLoaded', function () {
+  var grid = document.getElementById('skGrid');
+  var empty = document.getElementById('skEmpty');
+  var more = document.getElementById('skMore');
+  var search = document.getElementById('skSearch');
+  var tpl = document.getElementById('skTileTpl');
+  var api = {{ url_for('skribl.list_skribls') | tojson }};
+  var sort = 'new', q = '', cursor = null, asked = 0;
+
+  /* A link the listing carries is still a string somebody else wrote: only
+     http(s), after the URL parser agrees (Skribl checks it too). */
+  function safeHref(raw) {
+    if (typeof raw !== 'string') return null;
+    try { var u = new URL(raw, document.baseURI); } catch (e) { return null; }
+    return (u.protocol === 'http:' || u.protocol === 'https:') ? u.href : null;
+  }
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    e.className = cls;
+    if (text != null) e.textContent = text;
+    return e;
+  }
+
+  function tile(item) {
+    var card = el('article', 'sk-card');
+    var art = tpl.content.cloneNode(true);
+    var box = art.querySelector('[data-skribl-inline]');
+    box.setAttribute('data-skribl-id', item.id);
+    /* The drawing's shape and its line, only when the listing answered:
+       the player says what it can without them, never a guess. */
+    if (item.canvas_w && item.canvas_h) {
+      box.setAttribute('data-skribl-w', item.canvas_w);
+      box.setAttribute('data-skribl-h', item.canvas_h);
+    }
+    if (item.line) box.setAttribute('data-skribl-line', JSON.stringify(item.line));
+    var poster = box.querySelector('.skribl-inline-poster');
+    if (poster) {
+      poster.setAttribute('src', poster.getAttribute('src').replace('__ID__', encodeURIComponent(item.id)));
+      poster.setAttribute('alt', item.title || 'A Skribl');
+    }
+    card.appendChild(art);
+
+    var meta = el('div', 'sk-meta');
+    meta.appendChild(el('h2', 'sk-title', item.title || 'Untitled Skribl'));
+    var by = el('div', 'sk-by');
+    /* WHO DREW IT: this site's name for Skribl's user id (app.py's
+       _author). An id with no name gets no byline rather than a made-up one. */
+    var who = item.author && item.author.username;
+    if (who) {
+      var av = el('span', 'sk-av', who.charAt(0).toUpperCase());
+      av.setAttribute('aria-hidden', 'true');
+      by.appendChild(av);
+      by.appendChild(el('span', 'sk-who', '@' + who));
+      var dot = el('span', 'sk-dot', '·');
+      dot.setAttribute('aria-hidden', 'true');
+      by.appendChild(dot);
+    }
+    /* WHERE IT CAME FROM: the post that holds it (app.py's _posted_in), or
+       the app it was made in. */
+    var href = item.source && safeHref(item.source.url);
+    if (href) {
+      var a = el('a', 'sk-from', 'From a post');
+      a.href = href;
+      by.appendChild(a);
+    } else {
+      by.appendChild(el('span', 'sk-app', item.kind === 'flip' ? 'Made in Flip' : 'Made in Skribl Pad'));
+    }
+    meta.appendChild(by);
+    card.appendChild(meta);
+    return card;
+  }
+
+  /* One page of the listing. A newer ask (a tab, a search) wins over an
+     older answer still on its way. */
+  function load(fresh) {
+    var mine = ++asked;
+    var url = api + '?limit=24&sort=' + sort + (q ? '&q=' + encodeURIComponent(q) : '') +
+              (!fresh && cursor ? '&cursor=' + encodeURIComponent(cursor) : '');
+    more.disabled = true;
+    fetch(url, { credentials: 'same-origin' }).then(function (r) {
+      if (!r.ok) throw new Error(r.status);
+      return r.json();
+    }).then(function (page) {
+      if (mine !== asked) return;
+      if (fresh) grid.textContent = '';
+      var frag = document.createElement('div');
+      page.items.forEach(function (item) { frag.appendChild(tile(item)); });
+      var cards = Array.prototype.slice.call(frag.children);
+      cards.forEach(function (c) { grid.appendChild(c); });
+      cards.forEach(function (c) { window.SkriblInline.mount(c); });
+      cursor = page.next_cursor;
+      more.hidden = !cursor;
+      more.disabled = false;
+      empty.hidden = grid.children.length > 0;
+    }).catch(function () {
+      if (mine !== asked) return;
+      more.disabled = false;
+      empty.textContent = 'The skribls did not load. Try again in a moment.';
+      empty.hidden = false;
+    });
+  }
+
+  document.querySelectorAll('.sk-sort').forEach(function (b) {
+    b.addEventListener('click', function () {
+      if (sort === b.dataset.sort) return;
+      sort = b.dataset.sort;
+      document.querySelectorAll('.sk-sort').forEach(function (o) {
+        o.setAttribute('aria-pressed', String(o === b));
+      });
+      load(true);
+    });
+  });
+  var typing = null;
+  search.addEventListener('input', function () {
+    clearTimeout(typing);
+    typing = setTimeout(function () {
+      var next = search.value.trim();
+      if (next === q) return;
+      q = next;
+      load(true);
+    }, 250);
+  });
+  more.addEventListener('click', function () { load(false); });
+  load(true);
+});
+</script>
+{% endblock %}

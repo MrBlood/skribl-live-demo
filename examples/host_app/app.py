@@ -23,6 +23,10 @@ THE FIVE THINGS A HOST DOES, all visible below:
     4. render the player inside its own post              templates/feed.html
     5. drive the pad button from its own composer         templates/feed.html
 
+AND ONE IT MAY: a page of every public skribl in its own frame, each linking
+back to its post (templates/skribls.html), with the two resolvers below
+telling Skribl the names and the posts it cannot know.
+
 MOUNTED UNDER A PREFIX ON PURPOSE. `url_prefix="/skribl"` is not the easy
 setting — it is the one that catches route literals in client JavaScript and
 relative endpoint names in templates, both of which have been real bugs here.
@@ -88,6 +92,24 @@ def current_user():
     return db.session.get(User, uid) if uid else None
 
 
+def _author(user_id):
+    """WHO DREW IT, for Skribl's listing and gallery: this site's handle for
+    the id Skribl stored. Skribl has no user table; without this its gallery
+    calls everybody "Anonymous". Called once per author on a page."""
+    u = db.session.get(User, int(user_id)) if str(user_id).isdigit() else None
+    return {"username": u.handle} if u else None
+
+
+def _posted_in(public_ids):
+    """WHERE EACH WAS POSTED: this site's page for the post that holds it.
+    Skribl knows a skribl's public id and nothing of the post; the post keeps
+    the id (Post.skribl_id), so the site answers. One query for a page of
+    them. A skribl made in the app is in no post and is simply absent."""
+    rows = (db.session.query(Post.id, Post.skribl_id)
+            .filter(Post.skribl_id.in_(public_ids)).all())
+    return {sid: url_for("post", post_id=pid) for pid, sid in rows}
+
+
 def create_app(database_url=None):
     app = Flask(__name__)
     app.config["SQLALCHEMY_DATABASE_URI"] = (
@@ -114,6 +136,9 @@ def create_app(database_url=None):
         url_prefix="/skribl",
         current_user_id=lambda: flask_session.get("uid"),
         csrf=skribl.security.double_submit_csrf(),
+        # The names and the posts, which only this site knows (above).
+        author_resolver=_author,
+        source_resolver=_posted_in,
     )
     # One db.create_all() then covers Skribl's five tables as well as the two
     # above. An Alembic host migrates skribl.models.SkriblBase.metadata instead.
@@ -133,22 +158,44 @@ def create_app(database_url=None):
     def _rollback(exc):
         db.session.rollback()
 
+    def _drawings(posts):
+        """EACH DRAWING'S SIZE AND LINE, so the player takes the drawing's
+        shape and says "Drawn in 15 sec" before anybody presses play
+        (INTEGRATION.md). With the id alone a 4:3 or a tall drawing sat in
+        the 16:9 box with the share card's ground at its sides. One query
+        for the page's Skribls, by the public id each post stores; a
+        drawing deleted since is simply absent, and its box still renders."""
+        ids = [p.skribl_id for p in posts if p.skribl_id]
+        return ({s.public_id: s for s in db.session.query(skribl.models.SkriblPost)
+                 .filter(skribl.models.SkriblPost.public_id.in_(ids))} if ids else {})
+
     @app.get("/")
     def feed():
         posts = (db.session.query(Post)
                  .order_by(Post.created_at.desc(), Post.id.desc())
                  .limit(30).all())
-        # EACH DRAWING'S SIZE AND LINE, so the player takes the drawing's
-        # shape and says "Drawn in 15 sec" before anybody presses play
-        # (INTEGRATION.md). With the id alone a 4:3 or a tall drawing sat in
-        # the 16:9 box with the share card's ground at its sides. One query
-        # for the page's Skribls, by the public id each post stores; a
-        # drawing deleted since is simply absent, and its box still renders.
-        ids = [p.skribl_id for p in posts if p.skribl_id]
-        drawings = ({s.public_id: s for s in db.session.query(skribl.models.SkriblPost)
-                     .filter(skribl.models.SkriblPost.public_id.in_(ids))} if ids else {})
-        return render_template("feed.html", posts=posts, drawings=drawings,
-                               me=current_user(), users=db.session.query(User).all())
+        return render_template("feed.html", posts=posts, drawings=_drawings(posts),
+                               me=current_user(), users=db.session.query(User).all(),
+                               here="feed")
+
+    @app.get("/posts/<int:post_id>")
+    def post(post_id):
+        """One post on a page of its own: where a skribl's "From a post"
+        leads (_posted_in), and the address its #id links to on the feed."""
+        p = db.session.get(Post, post_id)
+        if p is None:
+            abort(404)
+        return render_template("feed.html", posts=[p], drawings=_drawings([p]),
+                               me=current_user(), users=db.session.query(User).all(),
+                               single=True)
+
+    @app.get("/skribls")
+    def skribls():
+        """THE SKRIBLS PAGE (templates/skribls.html): every public skribl,
+        from both doors, in this site's frame. The grid comes from Skribl's
+        own listing in the browser, so nothing is queried here."""
+        return render_template("skribls.html", me=current_user(),
+                               users=db.session.query(User).all(), here="skribls")
 
     @app.post("/login")
     def login():

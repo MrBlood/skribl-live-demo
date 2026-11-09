@@ -24,7 +24,7 @@ from .core import (HOT_DAYS, MAX_REPORT_NOTE_CHARS, REPORT_REASONS,
                    THEME_GROUND, _og_meta, _valid_public_id)
 from .models import (SkriblIdempotency, SkriblPost, SkriblPostMedia, SkriblReport, SkriblView,
                      _visibility_policy, as_utc, normalise_user_id,
-                     session, feed_filter, author_dict)
+                     session, feed_filter, author_dict, sources_for)
 from .views import purge_views
 from .mediameta import STRIPPED, strip_payload
 from .storage import KEY_RE
@@ -1256,6 +1256,14 @@ def register_routes(bp, *, index_route=False):
             nxt = _encode_cursor(rows[-1]) if (rows and has_more) else None
 
         _attach_authors(items)
+        # WHERE EACH ONE WAS POSTED, when the host says (models.set_source_
+        # resolver): "From a post" on a page of skribls, linking to it. One
+        # call with the page's ids, so one query on the host's side, not one
+        # per tile. Absent means made in the app, and the key is left out.
+        found = sources_for([item.get("id") for item in items])
+        for item in items:
+            if item.get("id") in found:
+                item["source"] = found[item["id"]]
         resp = jsonify({"items": items, "next_cursor": nxt})
         # NEVER STORED, for two reasons. It is read through visibility (an
         # author's own listing carries their private posts, and a host's
@@ -1467,7 +1475,7 @@ def register_routes(bp, *, index_route=False):
         # doesn't need it in the envelope — drop it to keep the GET lean.
         payload.pop("thumbnail", None)
 
-        resp = jsonify({
+        body = {
             "id": post.public_id,
             "title": post.title,
             "caption": post.caption,
@@ -1479,7 +1487,12 @@ def register_routes(bp, *, index_route=False):
             # knows through models.set_author_resolver().
             "author": author_dict(post.user_id),
             "skribl": payload
-        })
+        }
+        # Where it was posted, as the listing says it (set_source_resolver).
+        src = sources_for([post.public_id]).get(post.public_id)
+        if src:
+            body["source"] = src
+        resp = jsonify(body)
         # Read through visible_to(), so never kept by a cache another viewer
         # shares -- what docs/INTEGRATION.md has always said of every response
         # behind an authorisation check, and what this one did not send

@@ -32364,3 +32364,75 @@ composer asks the gallery question too, as it should. The row now asks for
 the draft's id cleaned off and the host's flags kept. Calibrated: 116/116 as
 built; red when the switch drops the flag; red when the id is left on (with
 the two rows that already pinned the id).
+
+## After v330 -- A Skribls page on the host's site
+
+The owner's pick A for a Skribls section ("All yes", after FUTURE 6ah and a
+mock on skribls.net's saved stylesheet, Now beside A and B, phone and desk,
+light and dark): every public skribl, from both doors, as a grid in the
+site's own frame and colours; each tile says who drew it and links back to
+the post it came from, or says it was made in the app.
+
+BUILT IN THE REFERENCE HOST, for skribls.net to copy (docs/SKRIBLS-NET.md
+item 12). examples/host_app gains a frame (templates/base.html: the head,
+the colours, the header and two tabs, Feed and Skribls), a page for one post
+(/posts/<id>, where "From a post" leads and each post's #id now links), and
+the Skribls page (/skribls). The page is drawn in the browser from Skribl's
+own listing, the way /feed's preview does it (feed.js): clone the
+skribl_inline('__ID__') template, set its size and line, mount. So it pages,
+sorts (New, Hot) and searches as the listing does, and shows only what the
+listing shows: public skribls, through the host's feed filter.
+
+TWO THINGS ONLY THE HOST KNOWS. Skribl has no user table and no post table.
+The names come through author_resolver, which the example host had never
+installed (so Skribl's own gallery called its people "Anonymous"). The way
+back to the post is new: source_resolver(public_ids) -> {public_id: url},
+called ONCE PER PAGE of the listing with every id on it, so the host's side
+is one WHERE skribl_id IN (...) and not a query per tile (the authors' memo
+cannot help: tiles share authors, but every tile is its own skribl). The
+listing and GET /api/skribls/<id> then carry "source": {"url": ...}; a
+skribl made in the app has none and its tile says "Made in Skribl Pad", or
+"Made in Flip" for a Flip (the mock said Skribl Pad under a Flip too).
+FUTURE 6ah had planned the post's address handed to create_post; a
+resolver keeps no copy of an address that could go stale and needs no new
+column. Only an http(s) address or a path on the site is passed on (the
+URL parser's reading, no backslash, space or control character), because
+the listing is public and every viewer sees it as a link; an answer that is
+not a mapping says nothing. The page checks the link again before it uses
+it.
+
+A NARROW TILE SAYS ITS TIME. Two across on a phone (about 185px a tile), the
+whole line took two rows and cut the title off; the mock said "I'd trim
+each tile's line to just its time". inlineplayer.css makes the line a
+container and, under 240px of its own width, keeps "Drawn in 15 sec" (a
+Flip's "10 pages") and hides the speeds and the words before them. Its own
+width, not the screen's: a post on a 320px phone keeps the whole line
+(258px in the example host's feed). +164 B to every page that shows a post
+(verify_inline's ratchet, 78,188 B measured).
+
+THE CHECKS. verify_example 7: the listing names each author as the host
+does and says where the ticked one was posted, nothing for one made in the
+app, and the single read the same; the page shows the public ones from both
+doors and not the one left off, each a mounted player, with its title,
+@name and "From a post" to that post or the editor it was made in;
+searching finds the ticked one by its gallery caption; "From a post" opens
+that post with its drawing and no composer; Skribl's own gallery names the
+site's people; on the desk every tile keeps the whole line, on a phone each
+says its time, and a post on a 320px phone keeps the whole line.
+verify_hostseams #6ah: one resolver call for a page of thirteen tiles; a
+path and an https address passed on; a script, another site's //, a
+backslash path, a space, a number and nothing not; the single read; a
+non-mapping answer says nothing rather than a 500; app-local.
+
+CALIBRATED in a tree copy, 15 breaks, each red on its own rows. In
+verify_hostseams: a resolver call per tile (13 calls for 13 tiles); any
+address passed on; the single read saying nothing; a non-mapping answer
+trusted (a 500); one resolver for every app. In verify_example: the host
+naming no post; the host naming nobody; the link going to the feed; a post's
+own page keeping the composer; every tile saying Skribl Pad; the search
+words never asked; the tiles never mounted; no narrow line; the screen's
+width instead of the tile's (a post on a 320px phone lost its speeds); the
+tile not reading the link it was given. Five of those first stopped the
+suite at a wait or a click instead of reporting the next row; every wait in
+section 7 now reports a red row and the rest still run. With nothing
+broken: verify_example 58/58, verify_hostseams 88/88.

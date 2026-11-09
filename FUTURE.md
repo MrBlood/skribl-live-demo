@@ -2130,12 +2130,16 @@ off, a gallery caption that glides open under it once it is on, and
 "Viewers start at" (which shows in compose mode now, with or without the
 choice). The payload carries "public" and the caption only with the tick;
 the example host keeps them (docs/SKRIBLS-NET.md item 10). Skribl's own
-/feed asks nothing: it is the gallery. **Next: the Skribls section** (A, a
-grid in the site's frame): the authors' names from the host (the gallery
-says "Anonymous" for the site's people today), the post's address kept
-with each skribl so its tile links back, and on a phone each tile's line
-trimmed to its time. Where Skribls lives on the site's phone bar (under
-Explore, or a tab) is the owner's call, later.
+/feed asks nothing: it is the gallery. **The Skribls section is built in
+the reference host** (A, `examples/host_app`'s Skribls page; docs/SKRIBLS-NET.md
+item 12): every public skribl from both doors, a grid in the host's frame;
+the authors' names from the host (`author_resolver`, so Skribl's own gallery
+stops saying "Anonymous" for them too); "From a post" linking back to it,
+said by the host through `source_resolver` a page at a time, rather than an
+address handed to `create_post` as planned above, so Skribl keeps no copy of
+an address that could go stale; and on a phone each tile's line trimmed to
+its time. Next, on skribls.net itself: item 12, and where Skribls lives on
+the site's phone bar (under Explore, or a tab), the owner's call.
 
 ## 7. The honest state
 
