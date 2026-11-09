@@ -32097,3 +32097,41 @@ the rabbit drawn in the ink, which reddens the dot and theme rows too,
 since they find the slider and the animals by colour. The copy with nothing
 broken: 20/20. player.css is unchanged; gen_docs is current. Not tested
 here: an iPhone or Safari (no WebKit in this box).
+
+## After v330 -- Two reds on main, both the instruments
+
+Main's runs after #810 and #811 each went red on one lane, in suites neither
+change touched; the twin lanes and the next runs were green on the same rows.
+
+VERIFY_JSSTRIP, THE GALLERY (after #810, sqlite 2/6 only). "Every element
+computes the same style, stripped or raw": 25 of the gallery's 1,800
+elements differed, and the row could say only the first one's opening custom
+properties. It did not come back: not on the postgres twin, not on main's
+next run, and not in thirteen loads here of a gallery filled as CI fills it
+(thirty posts, verify_captions' long captions, the CPU slowed to 6x). A strip
+that changes a style changes it on every load; the page's own settling does
+not. So a pair that differs is loaded again, stripped and raw: a stylesheet
+the strip changed differs in both pairs and stays red; a difference the
+second pair does not repeat is said beside the pass. The row now names the
+element and the properties that differ. Calibrated in tree copies with their
+own servers: the strip made to drop font-weight is red on all four pages in
+both pairs, naming it (DIV.brand: font-weight '400' vs '800'); one gallery
+load given a stray margin passes on its second pair and says what the first
+pair saw; the copy with nothing broken is green.
+
+VERIFY_POSTGRES F3 (after #811, postgres 1/6 only). "The two concurrent
+retries were handled by BOTH workers": one worker answered both,
+['67879', '67879'], the contract rows green beside it. The cause was not the
+timing of the two threads. gunicorn.conf.py gives every worker 8 threads
+(#796), and F3's host starts from the repo root, so it read that file: one
+process could answer both retries at once. Holding the first retry open
+proved it here: with the threads, the pair still landed on one worker in 2
+of 5 runs. F3's host now runs `--threads 1`, two sync workers, one request
+each, which is what a claim about two processes needs; and the first retry
+is held open (its headers and a byte of its body) while the second is sent,
+so the second can only go to the other worker. It goes on its own thread: one
+worker serving both would wait behind the held one, and the row says so
+rather than the suite hanging. Six runs here on a local PostgreSQL 16, the
+pair split every time, 28/28; with one worker, the setup row, the pair's row
+and the cross-worker row went red, the suite done in 30 s. The local cluster
+was stopped after (with it up, browser suites' frame pacing suffers).
