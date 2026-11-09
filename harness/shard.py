@@ -43,7 +43,7 @@ MEASURED = {
     "verify_bigcanvas.py": 160, "verify_book.py": 130, "verify_cardfade.py": 30,
     "verify_clouddrafts.py": 150, "verify_compose.py": 110, "verify_contrast.py": 1460,
     "verify_cssplit.py": 100, "verify_dots.py": 50, "verify_drafts.py": 230,
-    "verify_drawfull.py": 70, "verify_drawtiles.py": 100, "verify_fix.py": 60,
+    "verify_drawerreveal.py": 250, "verify_drawfull.py": 70, "verify_drawtiles.py": 100, "verify_fix.py": 60,
     "verify_flipbeat.py": 180, "verify_flipedges.py": 70, "verify_flipmeta.py": 100,
     "verify_flipspeed.py": 60, "verify_fullfade.py": 180, "verify_fullsmart.py": 80,
     "verify_galib.py": 210, "verify_gallery.py": 160, "verify_hello.py": 110, "verify_help.py": 40,

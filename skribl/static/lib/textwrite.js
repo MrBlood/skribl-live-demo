@@ -751,8 +751,8 @@
   // As the pen drawer's (lib/drawtiles.js): a tap opens the tile's slider
   // right under it, joined to it; the same tile, or another, closes it. Each
   // unfolds and folds; with Reduce Motion it is simply there, or gone. The
-  // drawer is told ('drawtile'), so on a phone it brings the slider on screen
-  // as the pen's does (lib/drawerdetent.js).
+  // drawer is told ('drawtile'), so it brings the slider on screen as the
+  // pen's does, on a phone and on a desk (lib/drawerdetent.js).
   var tileOpen = null, folding = null;
   function panelOf(k) { return k && els.tiles ? els.tiles.querySelector('.dp-panel[data-dp="' + k + '"]') : null; }
   function finishFold() {
@@ -785,9 +785,16 @@
       if (on) { t.classList.add('dp-open'); els.tiles.setAttribute('data-col', String(i)); }
       else if (t.getAttribute('data-dp') !== was || k) t.classList.remove('dp-open');
     });
-    if (old && k) old.hidden = true;   // one tile for another: the new one unfolds where the old one was
+    // One tile for another: the new one unfolds where the old one was, the
+    // swap held and glided as the pen drawer's is (lib/drawtiles.js), so a
+    // shorter one never clamps the page in one frame at the drawer's end.
+    var swap = function () {
+      if (old && k) old.hidden = true;
+      if (now) now.hidden = false;
+    };
+    var D = window.SkriblDrawerDetent;
+    if (old && now && !instant && !still() && D && D.shrinkGently) D.shrinkGently(els.sheet, swap); else swap();
     if (now) {
-      now.hidden = false;
       if (!instant && !still() && now.animate) {
         now.animate([{ opacity: 0, transform: 'scaleY(.92)' }, { opacity: 1, transform: 'none' }],
                     { duration: 220, easing: 'cubic-bezier(.2, .8, .2, 1)' });
@@ -803,7 +810,9 @@
         old.__foldT = setTimeout(finishFold, 200);
       }
     }
-    if (!instant) els.sheet.dispatchEvent(new CustomEvent('drawtile', { detail: { open: k } }));
+    // What opened, and the words, which its slider changes while you watch:
+    // on a desk the page glides to show the one and keeps the other in view.
+    if (!instant) els.sheet.dispatchEvent(new CustomEvent('drawtile', { detail: { open: k, el: now, keep: els.place && !els.place.hidden ? els.place : null } }));
   }
   function readPrefs() {
     try {

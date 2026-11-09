@@ -133,6 +133,52 @@
   // had the last re-assert carry the page to the drawer's end under them.
   function hush() { revealGen++; }
 
+  /* WHAT OPENED IS SHOWN, ALL OF IT. The owner: "is there any reason that all
+   * drawers shouldn't open all the way when a selection is made that shows
+   * below the screen?" On a desk a tile's choices opened under it and the page
+   * did not move: every tile in the pen drawer and in Text's, on the Pad and
+   * on Flip, left them 33-253px below the foot of a 1280x800 screen, where a
+   * phone's detent (below) already brought them up. So the page glides just
+   * far enough for the end of what opened to be on screen, and never past the
+   * top of the drawer: the bar right above it (`dock`), or the drawer's own top
+   * without one, stays below the header, as every reveal here keeps it.
+   * `keep`, when given, stays on screen as well: Text's words, which its
+   * sliders change while you watch. Only ever down, and not at all when it
+   * already shows; straight there under Reduce Motion; and a newer reveal, or
+   * the person pressing (hush), calls it off. The music drawer's doors keep
+   * their own sum (lib/musicdrawer.js), which is this one with one exception:
+   * a door's first control is on screen even if the bar goes under. */
+  function showOpened(el, o) {
+    if (!el) return;
+    o = o || {};
+    var mine = ++revealGen;
+    requestAnimationFrame(function () {
+      if (mine !== revealGen || el.hidden || !el.getClientRects().length) return;
+      var scroller = document.scrollingElement || document.documentElement;
+      var top = scroller.scrollTop, stuck = stuckBottom();
+      // Where it ENDS, laid out: it unfolds from its top (transform-origin:
+      // top, a scale), so the box it is drawn in now stops short of that.
+      var want = top + el.getBoundingClientRect().top + el.offsetHeight - viewH() + 12;
+      var dock = o.dock && o.dock.offsetParent !== null ? o.dock : null;
+      var lid = dock ? dock.getBoundingClientRect().top - 4 : (o.panel ? o.panel.getBoundingClientRect().top - 8 : null);
+      if (lid != null) want = Math.min(want, top + lid - stuck);
+      var keep = o.keep;
+      if (keep && !keep.hidden && keep.getClientRects().length) {
+        // ...with what it carries above it (the words' Drag to move label).
+        // Already gone above the header (a short screen, where Text's own
+        // reveal let its first row win), it cannot be kept, and holding the
+        // page for it would only leave the choices below the screen.
+        var kr = keep.getBoundingClientRect(), kc = keep.firstElementChild;
+        var kTop = kc ? Math.min(kr.top, kc.getBoundingClientRect().top) : kr.top;
+        if (kTop >= stuck - 1) want = Math.min(want, top + kTop - stuck - 8);
+      }
+      want = Math.min(want, scroller.scrollHeight - window.innerHeight);
+      if (want <= top + 1) return;
+      var still = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      window.scrollTo({ top: want, behavior: still ? 'auto' : 'smooth' });
+    });
+  }
+
   /* PLAY SHOWS THE WHOLE DRAWING. With a drawer open the page can sit scrolled
    * down to it while Play is still in reach -- the phone's header is sticky,
    * and Flip's Space starts a Flip from anywhere -- and the drawing then played
@@ -256,13 +302,18 @@
     }
     (window.visualViewport || window).addEventListener('resize', function () { if (isFull()) fit(); });
 
-    /* A TILE OPENED (lib/drawtiles.js). On a phone its choices need the full
-     * drawer, and they need to be on screen: from half, go full (which
-     * reveals); already full, re-fit to the new height and reveal again,
-     * since the choices just added height below the fold. A tile closing only
-     * re-fits. Desktop has no detent, and the page is left where it is. */
+    /* A TILE OPENED (lib/drawtiles.js, and Text's in lib/textwrite.js). On a
+     * phone its choices need the full drawer, and they need to be on screen:
+     * from half, go full (which reveals); already full, re-fit to the new
+     * height and reveal again, since the choices just added height below the
+     * fold. A tile closing only re-fits. A desk (or a tablet) has no detent:
+     * the page glides to show what opened (showOpened, above), which the
+     * event names (`el`), with whatever has to stay in view (`keep`). */
     panel.addEventListener('drawtile', function (e) {
-      if (handle.offsetParent === null) return;
+      if (handle.offsetParent === null) {
+        if (e.detail && e.detail.open && e.detail.el) showOpened(e.detail.el, { dock: dock, panel: panel, keep: e.detail.keep });
+        return;
+      }
       if (!(e.detail && e.detail.open)) { requestAnimationFrame(fit); return; }
       if (!isFull()) { setFull(true); return; }
       fit();
@@ -471,5 +522,5 @@
   }
 
   window.SkriblDrawerDetent = { attach: attach, revealPanelEnd: revealPanelEnd, revealTop: revealTop, veil: veil, hush: hush,
-                                shrinkGently: shrinkGently, followGrowth: followGrowth, stuckBottom: stuckBottom };
+                                showOpened: showOpened, shrinkGently: shrinkGently, followGrowth: followGrowth, stuckBottom: stuckBottom };
 }());
