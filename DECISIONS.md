@@ -31880,3 +31880,52 @@ never moved, as the pen's (null). Calibrated the same way, each break red
 on its own row: the take never ended, the words a second off the take's
 start, the words written as ink outside any take, a Large not brought back
 as its stop, the size not kept, the speed not kept. As it is: 6/6 and 7/7.
+
+## After v330 -- The empty canvas steps back for Text's words
+
+Found in the screenshots made for the owner's question about the Text card
+("Shouldn't text be a drawer? Not a popup?"): on Flip, "Draw page 1" and
+"Add pages below" read through "Happy birthday!" while the words were being
+placed. The Pad did the same with the words dragged to the middle of a
+blank drawing, and Flip went on showing its empty words under the words as
+they wrote themselves, until the last stroke.
+
+- While Text's words show (the box they sit in before they are ink),
+  lib/textwrite.js says so on the body (text-placing), and styles.css fades
+  the empty canvas's words, and the post box's snail or ball, in their own
+  0.3 s fade, the same as at a first stroke. Closed with nothing written,
+  they come back the same way.
+- While the words write themselves (text-writing, already there) they stay
+  gone, and once the words are ink each editor's own rule (.hidden) keeps
+  them gone. The Pad's rule took them at Write it already; Flip's only at
+  the last stroke.
+
+WHAT IT DOES TO FLIP: shared, one module and one rule; Flip was the one
+that showed it both ways.
+
+THE CHECKS: verify_text 20, both editors: the empty words step back while
+Text's are placed, come back on close, and never come back on any frame
+from Write it until the words are ink. Calibrated in tree copies, each
+break red on its own rows: no rule (placing and writing, both editors), the
+body never told (the same), never told it is over (the coming back, both
+editors), and the rule without the writing (Flip's writing row only: the
+Pad's own rule hides its words at Write it, so the Pad cannot fail that
+way, and its row pins that they are already gone then rather than fading
+after). As it is: 8/8.
+
+ALSO HERE, a miss from the dials (#807): verify_emptytake writes Text's
+words on a blank Pad too, and was not in that change's affected suites, so
+three of its rows still expected the recorder left on after the words (main's
+run after #807 is red on them). Now: the words' take, ended when they are
+written (verify_text 19), is undone to the same fresh Pad; and after a
+reload, words written are a take of their own, and after Keep drawing a
+stroke joins it. Keep drawing starts the take's clock again, as it always
+has, so the row reads the stroke's own times and a longer replay, not a
+later clock. verify_helpdemos writes Text's words as well and was not run
+for #807 either; it is green. Calibrated in tree copies, each break red on
+its own rows: the take Write it began never ending (the words' rows), and
+Keep drawing starting a fresh take (the stroke's row). One calibration
+round was thrown away: a server left from a stopped round still held the
+port, so the "as it is" run talked to a broken copy; it was run again on a
+port no server held. As it is: 12/12, and three times on the harness's own
+servers.
