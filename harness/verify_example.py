@@ -394,6 +394,151 @@ try:
               f"second={second in listed} first={first in listed}")
         check("no page errors in the second post", not errs, "; ".join(errs[:2]))
 
+        print("\n7 — THE SKRIBLS PAGE: EVERY PUBLIC SKRIBL, IN THE HOST'S FRAME, EACH BACK TO ITS POST")
+        # Two made in the app, by grace, ticked for the gallery there: a
+        # drawing and a Flip, through create_post as the app's own Post sheet
+        # makes them (public, in no post of the host's). Their own process,
+        # as the seed.
+        subprocess.run(
+            [sys.executable, "-c",
+             "import json, pathlib, app as ex; from skribl import create_post;"
+             " a = ex.create_app(); ctx = a.app_context(); ctx.push();"
+             " d = pathlib.Path(%r);"
+             " g = ex.db.session.query(ex.User).filter_by(handle='grace').one();"
+             " [create_post(dict(json.loads((d / f).read_text()), title=t, visibility='public'), author_id=g.id)"
+             "  for f, t in (('pug.json', 'Pug, in one go'), ('flip-bounce.json', 'Bounce'))];"
+             " ex.db.session.commit()" % str(ROOT / "skribl" / "static" / "help" / "demos")],
+            cwd=str(EXAMPLE), env=env, check=True, capture_output=True)
+        pug = durable("SELECT public_id FROM skribl_posts WHERE title = 'Pug, in one go'")
+        bounce = durable("SELECT public_id FROM skribl_posts WHERE title = 'Bounce'")
+        second_post = durable("SELECT id FROM host_posts WHERE skribl_id = '%s'" % second)
+        with urllib.request.urlopen(BASE + "/skribl/api/skribls?limit=50", timeout=15) as r:
+            items = {i["id"]: i for i in json.loads(r.read().decode()).get("items", [])}
+        _s, _p = items.get(second, {}), items.get(pug, {})
+        # THE TWO RESOLVERS (app.py): the names and the posts Skribl cannot know.
+        check("the listing says where the ticked one was posted: the host's page for its post",
+              (_s.get("source") or {}).get("url") == "/posts/%s" % second_post, json.dumps(_s.get("source")))
+        check("...and nothing for one made in the app", "source" not in _p and pug in items,
+              json.dumps(_p.get("source")))
+        check("...and who drew each, by the host's name for them",
+              (_s.get("author") or {}).get("username") == "ada"
+              and (_p.get("author") or {}).get("username") == "grace",
+              f"{_s.get('author')} {_p.get('author')}")
+        with urllib.request.urlopen(BASE + "/skribl/api/skribls/" + second, timeout=15) as r:
+            one = json.loads(r.read().decode())
+        check("a skribl read on its own says the same post", one.get("source") == _s.get("source"),
+              json.dumps(one.get("source")))
+
+        # EVERY WAIT BELOW REPORTS RATHER THAN STOPS: a page that never fills
+        # (or never finds, or has no link to follow) is a red row with what
+        # it showed, and the rows after it still run.
+        def settle(page, cond, ms):
+            try:
+                page.wait_for_function(cond, timeout=ms)
+                return True
+            except PWTimeout:
+                return False
+
+        browsing.goto(pg, BASE, "/skribls", require_boot=False)
+        settle(pg, "() => document.querySelectorAll('#skGrid .sk-card').length >= 3", 15000)
+        pg.wait_for_timeout(800)
+        tiles = pg.evaluate("""() => [...document.querySelectorAll('#skGrid .sk-card')].map(c => {
+            const box = c.querySelector('[data-skribl-inline]'), a = c.querySelector('.sk-from');
+            return { id: box && box.getAttribute('data-skribl-id'), mounted: !!(box && box._skriblInline),
+                     title: c.querySelector('.sk-title').textContent,
+                     who: (c.querySelector('.sk-who') || {}).textContent || '',
+                     from: a ? a.getAttribute('href') : null,
+                     app: (c.querySelector('.sk-app') || {}).textContent || '' }; })""")
+        by_id = {t["id"]: t for t in tiles}
+        check("the page shows the public ones, from both doors, and not the one left off",
+              {second, pug, bounce} <= set(by_id) and first not in by_id, json.dumps(tiles))
+        check("...each one a player, mounted where it sits",
+              all(t["mounted"] for t in tiles), json.dumps(tiles))
+        # ITS OWN POSTER: the page fills in the id wherever the macro wrote the
+        # placeholder, so the idle tile shows its drawing, not a 404 hidden.
+        # Read on the tiles in view: the poster is loading="lazy".
+        _posters = pg.evaluate("""() => [...document.querySelectorAll('#skGrid .sk-card')].map(c => {
+            const b = c.querySelector('[data-skribl-inline]'), i = b && b.querySelector('img');
+            return { id: b && b.getAttribute('data-skribl-id'), src: i ? i.getAttribute('src') : null,
+                     inView: !!i && i.getBoundingClientRect().top < innerHeight,
+                     loaded: !!(i && !i.hidden && i.complete && i.naturalWidth > 0) }; })""")
+        check("...each showing its own drawing's poster: the id where the macro wrote the placeholder",
+              bool(_posters) and all(p["src"] and p["id"] in p["src"] and "__ID__" not in p["src"] for p in _posters)
+              and any(p["inView"] for p in _posters)
+              and all(p["loaded"] for p in _posters if p["inView"]), json.dumps(_posters))
+        _ts, _tp, _tb = by_id.get(second, {}), by_id.get(pug, {}), by_id.get(bounce, {})
+        check("the one from a post: its title, @ada, and 'From a post' linking to that post",
+              _ts.get("title") == "and one for everyone" and _ts.get("who") == "@ada"
+              and (_ts.get("from") or "").endswith("/posts/%s" % second_post), json.dumps(_ts))
+        check("the ones made in the app say so, by the editor they were made in, and link nowhere",
+              _tp.get("who") == "@grace" and _tp.get("app") == "Made in Skribl Pad" and _tp.get("from") is None
+              and _tb.get("app") == "Made in Flip" and _tb.get("from") is None, f"{_tp} {_tb}")
+        # The words ask the listing, as Skribl's own gallery does.
+        pg.fill("#skSearch", "snail")
+        settle(pg, "() => document.querySelectorAll('#skGrid .sk-card').length === 1", 8000)
+        _found = pg.evaluate("() => [...document.querySelectorAll('#skGrid [data-skribl-inline]')].map(b => b.getAttribute('data-skribl-id'))")
+        check("searching finds the ticked one by the gallery caption its author wrote", _found == [second], json.dumps(_found))
+        pg.fill("#skSearch", "")
+        settle(pg, "() => document.querySelectorAll('#skGrid .sk-card').length >= 3", 8000)
+
+        _link = pg.locator(f"#skGrid .sk-card:has([data-skribl-id='{second}']) .sk-from")
+        _post = {"posts": [], "skribl": None, "composer": None, "why": "no 'From a post' link on its tile"}
+        if _link.count():
+            _link.click()
+            try:
+                pg.wait_for_url(BASE + "/posts/%s" % second_post, timeout=15000)
+            except PWTimeout:
+                pass
+            pg.wait_for_timeout(800)
+            _post = pg.evaluate("""() => ({ at: location.pathname, posts: [...document.querySelectorAll('article.post')].map(a => a.id),
+                skribl: (document.querySelector('article.post [data-skribl-inline]') || {getAttribute: () => null}).getAttribute('data-skribl-id'),
+                composer: !!document.getElementById('composer') })""")
+        check("'From a post' opens that post, with its drawing in it and no composer",
+              _post["posts"] == ["post-%s" % second_post] and _post["skribl"] == second and not _post["composer"],
+              json.dumps(_post))
+
+        # SKRIBL'S OWN GALLERY knows the names too, through the same resolver:
+        # it said "Anonymous" for the site's people before.
+        browsing.goto(pg, BASE, "/skribl/gallery", require_boot=False)
+        settle(pg, "() => document.querySelectorAll('.tdn').length >= 3", 15000)
+        _names = pg.evaluate("() => [...document.querySelectorAll('.tdn')].map(e => e.textContent.trim())")
+        check("Skribl's own gallery names them as the site does, not 'Anonymous'",
+              "Anonymous" not in _names and any("ada" in n for n in _names) and any("grace" in n for n in _names),
+              json.dumps(_names))
+        check("no page errors on the Skribls pages", not errs, "; ".join(errs[:2]))
+
+        # ON A PHONE, TWO ACROSS: each tile's line says its time and leaves the
+        # speeds to the full size (the narrow tile's own width, under 240px);
+        # on the desk the tiles keep the whole line, and so does a post on the
+        # narrowest phone.
+        def lines(page):
+            return page.evaluate("""() => [...document.querySelectorAll('#skGrid .skribl-inline-line, article.post .skribl-inline-line')].map(l => {
+                const shown = s => { const e = l.querySelector(s); return !!(e && e.getClientRects().length); };
+                return { w: Math.round(l.getBoundingClientRect().width), on: l.classList.contains('is-on'),
+                         time: shown('.rl-drawn b'), speed: shown('.rl-speed'), watching: shown('.rl-text > .rl-m') }; })""")
+        browsing.goto(pg, BASE, "/skribls", require_boot=False)
+        settle(pg, "() => document.querySelectorAll('#skGrid .skribl-inline-line.is-on').length >= 3", 15000)
+        _desk = lines(pg)
+        check("on the desk each tile keeps the whole line, the speeds with it",
+              len(_desk) >= 3 and all(x["w"] >= 240 and x["speed"] and x["watching"] for x in _desk), json.dumps(_desk))
+        ph = b.new_context(viewport={"width": 402, "height": 874}, is_mobile=True, has_touch=True)
+        pp = ph.new_page()
+        pp.on("pageerror", lambda e: errs.append(str(e)))
+        browsing.goto(pp, BASE, "/skribls", require_boot=False)
+        settle(pp, "() => document.querySelectorAll('#skGrid .skribl-inline-line.is-on').length >= 3", 15000)
+        _phone = lines(pp)
+        check("on a phone each tile's line says its time, not the speeds",
+              len(_phone) >= 3 and all(x["w"] < 240 and x["time"] and not x["speed"] and not x["watching"] for x in _phone),
+              json.dumps(_phone))
+        pp.set_viewport_size({"width": 320, "height": 640})
+        browsing.goto(pp, BASE, "/posts/%s" % second_post, require_boot=False)
+        settle(pp, "() => !!document.querySelector('article.post .skribl-inline-line.is-on')", 15000)
+        _narrow = lines(pp)
+        check("...and a post on a 320px phone keeps the whole line",
+              _narrow and all(x["speed"] and x["watching"] for x in _narrow), json.dumps(_narrow))
+        ph.close()
+        check("no page errors on a phone", not errs, "; ".join(errs[:2]))
+
         b.close()
 finally:
     proc.terminate()

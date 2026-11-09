@@ -215,6 +215,60 @@ check("AND IT IS APP-LOCAL — the first app is unaffected", "username" not in a
       json.dumps(author))
 
 
+print("\n#6ah — set_source_resolver: where each skribl was posted, said by the host")
+# "From a post" on a page of skribls (FUTURE 6ah, the owner's pick A for the
+# Skribls section): Skribl knows a public id and nothing of the host's posts,
+# so the host says, through a resolver handed the PAGE'S ids at once.
+_src_calls = []
+
+
+def _posts_of(ids):
+    _src_calls.append(list(ids))
+    out = {}
+    for _n, _i in enumerate(ids):
+        out[_i] = ["/posts/%d" % _n, "https://site.example/p/%d" % _n, "javascript:alert(1)",
+                   "//elsewhere.example/x", "/\\elsewhere.example", " /posts/ x", 42, None][_n % 8]
+    return out
+
+
+app_s, _ = host_app(7, source_resolver=_posts_of)
+c_s = app_s.test_client()
+for _i in range(8):
+    assert c_s.post("/api/skribls", json=body(f"sourced-{_i}")).status_code == 201
+_src_calls.clear()
+_page = c_s.get("/api/skribls?limit=50").get_json()["items"]
+_sent = {i["id"]: i.get("source") for i in _page}
+check("ONE CALL FOR THE PAGE, with every id on it, not a call per tile",
+      len(_src_calls) == 1 and sorted(_src_calls[0]) == sorted(_sent),
+      f"{len(_src_calls)} call(s) for {len(_sent)} tiles")
+_given = _posts_of(list(_src_calls[0])) if _src_calls else {}
+_kept = {i: u for i, u in _given.items() if _sent.get(i)}
+check("a path on the site and an http(s) address are passed on as `source`",
+      all(_sent[i] == {"url": _given[i]} for i in _kept)
+      and {u.split("/")[0] for u in _kept.values()} >= {"", "https:"}, json.dumps(_kept))
+check("...and a script, another site's //, a backslash path, a space, a number or nothing are not",
+      all(_sent[i] is None for i, u in _given.items()
+          if not (isinstance(u, str) and (u.startswith("/posts/") and " " not in u or u.startswith("https://")))),
+      json.dumps({i: _given[i] for i in _given if _sent.get(i) is None}))
+_one = next(iter(_kept), None)
+_single = c_s.get(f"/api/skribls/{_one}").get_json() if _one else {}
+check("a skribl read on its own says where it was posted, as the listing does",
+      bool(_one) and _single.get("source") == {"url": _given[_one]}, json.dumps(_single.get("source")))
+# Before any other app installs one: a resolver kept for every app would be
+# the last one installed, and this asks the first app with that one live.
+check("AND IT IS APP-LOCAL: an app without the seam carries no `source`",
+      all("source" not in i for i in c_a.get("/api/skribls?limit=50").get_json()["items"])
+      and "source" not in c_a.get(f"/api/skribls/{_one}").get_json())
+app_s2, _ = host_app(7, source_resolver=lambda ids: ["/posts/1"])
+try:
+    _r2 = app_s2.test_client().get("/api/skribls?limit=50")
+    _ok2, _why2 = (_r2.status_code == 200 and all("source" not in i for i in _r2.get_json()["items"]),
+                   str(_r2.status_code))
+except Exception as _exc:                       # a host's bug must not take the listing down
+    _ok2, _why2 = False, f"{type(_exc).__name__}: {_exc}"
+check("a resolver that answers with something other than a mapping says nothing, not a 500", _ok2, _why2)
+
+
 print("\n#7 — a host can add a visibility state without a migration")
 r = c_a.post("/api/skribls", json=body("a draft", visibility="draft"))
 check("an unextended app still rejects an unknown visibility",

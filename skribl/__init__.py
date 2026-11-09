@@ -541,6 +541,7 @@ def init_skribl(app, **kwargs):
     _feed = kwargs.pop("feed_filter", None)
     _vis_values = kwargs.pop("visibility_values", None)
     _author = kwargs.pop("author_resolver", None)
+    _source = kwargs.pop("source_resolver", None)
     bp = create_blueprint(**kwargs)
     # THE ONE NAME SKRIBL PUTS IN THE HOST'S JINJA ENVIRONMENT, and it is here
     # because the in-post player needs it. _skribl_inline_player.html's macros
@@ -572,6 +573,9 @@ def init_skribl(app, **kwargs):
     if _author is not None:
         from .models import set_author_resolver
         set_author_resolver(_author, app=app)
+    if _source is not None:
+        from .models import set_source_resolver
+        set_source_resolver(_source, app=app)
     # Store the session factory PER APPLICATION. A module-level global meant the
     # most recently initialised app won for the whole process; see
     # skribl.models.session().

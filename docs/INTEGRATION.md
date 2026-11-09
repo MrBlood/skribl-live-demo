@@ -1124,7 +1124,7 @@ it can deny a **public** post — a block list, a moderation queue — then with
 a filter that post still appears as metadata (title, caption, author id,
 timestamp; never payload or image). `verify_hostseams.py` pins both directions.
 
-**Two smaller seams alongside it.**
+**Three smaller seams alongside it.**
 
 ```python
 skribl.init_skribl(
@@ -1138,8 +1138,24 @@ skribl.init_skribl(
     # nothing else. Add what you know. The id is not overridable: it is the
     # value your own visibility policy is handed.
     author_resolver=lambda uid: {"username": name_of(uid)},
+    # Skribl has no post table either: a skribl added to one of YOUR posts
+    # knows nothing of it. Say where each was posted, for a page of skribls
+    # to link back ("From a post"). Called once per page of the listing with
+    # every public id on it; return {public_id: url} for those in a post.
+    source_resolver=lambda ids: {p.skribl_id: url_for("post", post_id=p.id)
+                                 for p in Post.query.filter(Post.skribl_id.in_(ids))},
 )
 ```
+
+`source_resolver` puts `"source": {"url": ...}` on each listed skribl you
+answered for, and on `GET /api/skribls/<id>`; a skribl made in the app has
+none. Only an http(s) address or a path on your site is passed on, because
+the listing is public and every viewer sees it as a link: anything else is
+dropped, and so is an answer that is not a mapping. Return only posts any
+viewer may open. `examples/host_app/app.py` has both resolvers, and its
+`templates/skribls.html` draws a grid of public skribls from the listing with
+each one's name and its post (`verify_example.py` drives it;
+`verify_hostseams.py` pins the seam).
 
 **CSRF is required once you pass `current_user_id`, and refusing is the point.**
 Cookie authentication plus no CSRF verifier means any third-party page can post

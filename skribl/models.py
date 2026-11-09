@@ -18,6 +18,7 @@ import json
 import os
 import weakref
 from datetime import datetime, timezone
+from urllib.parse import urlsplit
 
 from flask import current_app
 
@@ -360,6 +361,97 @@ def author_dict(user_id):
         if isinstance(extra, dict):
             out.update(extra)
             out["id"] = user_id      # authoritative — see the docstring
+    return out
+
+
+
+#: A host-supplied link back to where a skribl was posted. Skribl knows a
+#: public id and nothing of the host's posts.
+_SOURCE_RESOLVER = None
+
+#: Longer than any post address a host makes; a longer string is not one.
+SOURCE_URL_MAX = 2048
+
+
+def set_source_resolver(fn, app=None):
+    """Install `fn(public_ids) -> {public_id: url}` to say where skribls were posted.
+
+    THE OTHER HALF OF "ONE SKRIBL, TWO DOORS" (FUTURE 6ah). A skribl added to
+    a post on the host's site is the host's to point back to: the host keeps
+    the public id on its own post (examples/host_app's Post.skribl_id), so the
+    host is the one that knows the post. Skribl has no table of the host's
+    posts and does not invent one, the same answer as set_author_resolver's.
+    The listing and GET /api/skribls/<id> then carry `"source": {"url": ...}`,
+    and a page of skribls can say "From a post" and link to it; a skribl made
+    in the app has none, and the key is left out.
+
+    ONE CALL FOR A PAGE OF THEM, with every public id on it. A host's natural
+    resolver is a SELECT on its own posts, and the authors' memo
+    (routes._attach_authors) cannot help here: tiles share authors, but every
+    tile is its own skribl, so a call per id would be a query per tile. With
+    the page's ids at once it is one `WHERE skribl_id IN (...)`. Ids the host
+    does not know are simply absent from what it returns.
+
+    Return only what any viewer of the listing may follow: the listing is
+    public. Only an http(s) URL or a path on the site is passed on, because
+    whatever the resolver returns is put in front of every viewer as a link
+    (sources_for).
+    """
+    if fn is not None and not callable(fn):
+        raise TypeError("source resolver must be callable or None")
+    if app is not None:
+        app.extensions.setdefault("skribl", {})["source_resolver"] = fn
+        return
+    global _SOURCE_RESOLVER
+    _SOURCE_RESOLVER = fn
+
+
+def _safe_source_url(url):
+    """The address as given if it is safe to put behind a link, else None.
+
+    An absolute http(s) URL, or a path on the site. Not a scheme the browser
+    would run (javascript:, data:), not protocol-relative (//host), and not a
+    path a browser reads as protocol-relative: it turns a backslash into a
+    slash in a web address, so /\\host is //host. No whitespace or control
+    characters anywhere, which a URL never needs and a smuggled one does.
+    """
+    if not isinstance(url, str):
+        return None
+    u = url.strip()
+    if not u or len(u) > SOURCE_URL_MAX or any(
+            c == "\\" or c.isspace() or ord(c) < 32 or ord(c) == 127 for c in u):
+        return None
+    try:
+        parts = urlsplit(u)
+    except ValueError:
+        return None
+    absolute = parts.scheme.lower() in ("http", "https") and bool(parts.netloc)
+    local = not parts.scheme and not parts.netloc and u.startswith("/") and not u.startswith("//")
+    return u if (absolute or local) else None
+
+
+def sources_for(public_ids):
+    """{public_id: {"url": ...}} for those the host says were posted, safe ones only."""
+    fn = _SOURCE_RESOLVER
+    try:
+        from flask import current_app
+        local = current_app.extensions.get("skribl", {}).get(
+            "source_resolver", _POLICY_UNSET)
+        if local is not _POLICY_UNSET:
+            fn = local
+    except (ImportError, RuntimeError):
+        pass
+    ids = [i for i in dict.fromkeys(public_ids) if i]
+    if fn is None or not ids:
+        return {}
+    got = fn(ids)
+    if not isinstance(got, dict):
+        return {}
+    out = {}
+    for pid in ids:
+        url = _safe_source_url(got.get(pid))
+        if url:
+            out[pid] = {"url": url}
     return out
 
 

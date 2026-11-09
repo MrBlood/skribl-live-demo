@@ -1706,7 +1706,16 @@ with sync_playwright() as sp:
     #   size it is given without a second test (-13 B); the stylesheet's
     #   comments are stripped from the response now, so moving prose out of
     #   it buys nothing. 78,024 B measured.
-    EMBED_RATCHET = 78_027
+    # RAISED (the owner's pick A for a Skribls page on a host's site: two
+    #   across on a phone, each tile's line trimmed to its time), for one named
+    #   cost: +164 B, all inlineplayer.css -- the line a container, and under
+    #   240px of its own width the speeds and the words before them hidden,
+    #   "Drawn in 15 sec" (a Flip's "10 pages") kept. WHICH CALLER PAYS: every
+    #   page that shows a post, for a look only a narrow tile takes; a post's
+    #   own width keeps the whole line (258px on a 320px phone). Spent first:
+    #   one selector for the words after the time, not one for each kind
+    #   (-11 B). 78,188 B measured.
+    EMBED_RATCHET = 78_191
     # THE RATCHET MEASURES DISPLAY, NOT COMPOSE, and the two are separate costs
     # paid by separate pages. Excluded here and measured on its own below:
     #   feed.js          the PREVIEW PAGE's own script (fetch the listing, clone

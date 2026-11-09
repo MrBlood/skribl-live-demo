@@ -7,9 +7,9 @@
 Then open <http://127.0.0.1:5055/>, sign in as `ada`, press the ✎ button,
 draw something, and post it.
 
-It is about 200 lines of application and one template. Read `app.py` first —
-its docstring lists the five things a host does and points at the line where
-each one happens.
+It is about 300 lines of application and three templates (the frame, the
+feed, the Skribls page). Read `app.py` first — its docstring lists the five
+things a host does and points at the line where each one happens.
 
 **What it demonstrates that the standalone `app.py` at the repo root does not:**
 
@@ -22,6 +22,11 @@ each one happens.
   and the host's view calls `skribl.create_post()`, so the Skribl and the
   host's own row are made durable by ONE commit. The browser never talks to
   `POST /api/skribls` at all.
+* **A Skribls page** (`/skribls`): every public skribl, from the composer and
+  from the app, as a grid in the host's own frame, each tile naming who drew
+  it and linking back to its post. Skribl has no user table and no post
+  table, so the host says both through `author_resolver` and
+  `source_resolver` (docs/INTEGRATION.md, "Three smaller seams").
 
 That last point is the shape skribls.net has, and it is the one the JSON
 endpoint alone does not serve. A host whose composer posts JSON from the

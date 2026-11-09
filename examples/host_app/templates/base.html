@@ -1,0 +1,78 @@
+{#  The host's frame: its head, its colours, its header and its tabs, around
+    each of its pages (the feed, one post, the Skribls page). One Skribl thing
+    happens here: the assets macro in <head>, once for every page, which is
+    where docs/SKRIBLS-NET.md tells a site to put it (its base template). The
+    rest is the pages' own: skribl_inline() where a page shows a drawing.
+
+    NOTE WHAT IS ABSENT. No Skribl stylesheet is imported by hand, no script
+    path is typed, no /s/<id> or /skribl/api/... appears anywhere. Every URL
+    comes from a macro or from url_for, which is the only reason these pages
+    work with the blueprint mounted at /skribl rather than at the root.
+#}
+{% from 'skribl/_skribl_inline_player.html' import skribl_inline_assets %}
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}Example host — Skribl drop-in{% endblock %}</title>
+
+{# ONE LINE, once per page, for every Skribl on it. #}
+{{ skribl_inline_assets() }}
+{% block head %}{% endblock %}
+
+<style>
+  :root { --bg:#0d0f14; --elev:#12151c; --line:#232936; --ink:#e8ecf4;
+          --dim:#8b93a7; --accent:#7c5cff; --accent-ink:#a99bff; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.5
+         ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  .wrap { max-width: 620px; margin: 0 auto; padding: 20px 16px 80px; }
+  header { display:flex; align-items:center; gap:12px; margin-bottom:12px; }
+  h1 { font-size:19px; margin:0; flex:1; }
+  .muted { color:var(--dim); font-size:13px; }
+  form.inline { display:inline; }
+  select, button, textarea, input { font: inherit; color: inherit; }
+  select { background:var(--elev); border:1px solid var(--line); border-radius:8px;
+           padding:6px 10px; }
+  .btn { background:var(--accent); border:0; color:#fff; border-radius:999px;
+         padding:8px 18px; font-weight:600; cursor:pointer; }
+  .btn:disabled { opacity:.45; cursor:default; }
+  .btn.ghost { background:transparent; border:1px solid var(--line);
+               color:var(--ink); font-weight:500; }
+  .tabs { display:flex; gap:4px; margin-bottom:20px; border-bottom:1px solid var(--line); }
+  .tabs a { color:var(--dim); text-decoration:none; font-weight:600;
+            padding:8px 12px; border-bottom:2px solid transparent; margin-bottom:-1px; }
+  .tabs a[aria-current="page"] { color:var(--ink); border-bottom-color:var(--accent); }
+  .flash { background:#3a1d24; border:1px solid #6d2c38; border-radius:10px;
+           padding:10px 12px; margin-bottom:14px; }
+</style>
+{% block style %}{% endblock %}
+
+<div class="wrap">
+  <header>
+    <h1>Example host</h1>
+    {% if me %}
+      <span class="muted">signed in as <b>{{ me.handle }}</b></span>
+      <form class="inline" method="post" action="{{ url_for('logout') }}">
+        <button class="btn ghost" type="submit">Sign out</button></form>
+    {% else %}
+      <form class="inline" method="post" action="{{ url_for('login') }}">
+        <select name="uid">
+          {% for u in users %}<option value="{{ u.id }}">{{ u.handle }}</option>{% endfor %}
+        </select>
+        <button class="btn" type="submit">Sign in</button></form>
+    {% endif %}
+  </header>
+
+  <nav class="tabs">
+    <a href="{{ url_for('feed') }}"{% if here == 'feed' %} aria-current="page"{% endif %}>Feed</a>
+    <a href="{{ url_for('skribls') }}"{% if here == 'skribls' %} aria-current="page"{% endif %}>Skribls</a>
+  </nav>
+
+  {% with msgs = get_flashed_messages() %}
+    {% for m in msgs %}<div class="flash">{{ m }}</div>{% endfor %}
+  {% endwith %}
+
+  {% block main %}{% endblock %}
+</div>
+
+{% block after %}{% endblock %}
