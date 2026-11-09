@@ -727,6 +727,15 @@
     els.place.addEventListener('pointerup', endDrag);
     els.place.addEventListener('pointercancel', endDrag);
     window.addEventListener('resize', function () { fitKeyboard(); if (isOpen() && want) { anchor = clampAnchor(want); position(); } });
+    // The tiles' pictures follow the tiles' width and the theme: the tile's
+    // grey and ground change with it, the ground over the tile's .15s fade,
+    // so once now and once after it.
+    window.addEventListener('resize', function () { paintTiles(); });
+    var themed = function () { paintTiles(true); setTimeout(function () { paintTiles(true); }, 220); };
+    try { window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', themed); } catch (e) {}
+    if (typeof MutationObserver !== 'undefined') {
+      new MutationObserver(themed).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    }
     return els;
   }
   // The words where the finger holds them, on the drawing as it is now.
@@ -906,6 +915,168 @@
     if (els.sizeTile) els.sizeTile.textContent = px + 'px';
     if (els.weightTile) els.weightTile.textContent = w + 'px';
     if (els.speedTile) els.speedTile.textContent = SPEED_TEXT[state.speed];
+    paintTiles();
+  }
+
+  /* ---- The tiles' pictures ----
+   * EACH TILE DRAWS WHAT IT HOLDS, as the pen drawer's tiles do
+   * (lib/drawtiles.js), in the pen's ink. The owner, of the first pictures
+   * (fixed marks: an Aa, three bars and a dial): "Size thickness speed icons
+   * aren't great. Thickness is okay, but speed is not great", then "All yes"
+   * to the second round's picks:
+   *   Size       three A's in the words' own style: a small and a large at
+   *              the ends, faint, and the words' own between them, as tall as
+   *              the Size, as the pen drawer's Size shows its dots.
+   *   Thickness  a line as thick as the words' own line.
+   *   Speed      a snail and a rabbit with a little slider between them, its
+   *              dot at the speed: a quarter by the snail, 16x by the rabbit
+   *              (Apple puts a tortoise and a hare at the ends of the
+   *              iPhone's speaking-speed slider; Skribl's slow one is a snail).
+   * The snail, the rabbit and the slider's track are the tile's own grey;
+   * what holds a value is the ink, at full strength (a see-through ink drawn
+   * in short pieces would bead where they meet). An ink too near the tile's
+   * ground to see is drawn over a soft edge, as the pen drawer draws a pale
+   * one. A closed drawer's canvases have no size and are painted when it
+   * opens (open() refreshes once it is shown). */
+  /*! The snail and the rabbit below are Lucide icons, SCALED (paths otherwise
+   *  unaltered; the snail's circle written as a path): lucide-static 1.37.0,
+   *  ISC (c) 2026 Lucide Icons and Contributors,
+   *  https://github.com/lucide-icons/lucide */
+  var LUCIDE = {
+    snail: ['M2 13a6 6 0 1 0 12 0 4 4 0 1 0-8 0 2 2 0 0 0 4 0', 'M18 13a8 8 0 1 1-16 0 8 8 0 1 1 16 0',
+            'M2 21h12c4.4 0 8-3.6 8-8V7a2 2 0 1 0-4 0v6', 'M18 3 19.1 5.2', 'M22 3 20.9 5.2'],
+    rabbit: ['M13 16a3 3 0 0 1 2.24 5', 'M18 12h.01',
+             'M18 21h-8a4 4 0 0 1-4-4 7 7 0 0 1 7-7h.2L9.6 6.4a1 1 0 1 1 2.8-2.8L15.8 7h.2c3.3 0 6 2.7 6 6v1a2 2 0 0 1-2 2h-1a3 3 0 0 0-3 3',
+             'M20 8.54V4a2 2 0 1 0-4 0v3', 'M7.612 12.524a3 3 0 1 0-1.6 4.3']
+  };
+  function rgbOf(s) {
+    s = (s || '').trim();
+    var m = /^#([0-9a-f]{6})$/i.exec(s);
+    if (m) return [parseInt(m[1].slice(0, 2), 16), parseInt(m[1].slice(2, 4), 16), parseInt(m[1].slice(4, 6), 16)];
+    m = /rgba?\(([^)]+)\)/.exec(s);
+    return m ? m[1].split(',').slice(0, 3).map(function (v) { return parseFloat(v) || 0; }) : null;
+  }
+  function lum(c) {
+    var f = function (v) { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+    return 0.2126 * f(c[0]) + 0.7152 * f(c[1]) + 0.0722 * f(c[2]);
+  }
+  function css(c) { return 'rgb(' + c.map(Math.round).join(',') + ')'; }
+  // `c` laid over `g` at `k`, as one opaque colour.
+  function over(c, g, k) { return c.map(function (v, i) { return v * k + g[i] * (1 - k); }); }
+  // The ground a tile's picture sits on: the nearest box with a solid fill.
+  function groundOf(el) {
+    for (; el && el.nodeType === 1; el = el.parentElement) {
+      var bg = getComputedStyle(el).backgroundColor, a = /rgba\([^)]*,\s*([\d.]+)\)/.exec(bg);
+      if (rgbOf(bg) && !(a && parseFloat(a[1]) < 0.5)) return rgbOf(bg);
+    }
+    return [255, 255, 255];
+  }
+  // The words' letters, as the words are written: the style's own strokes
+  // and pressure, `width` the line at full pressure, `cap` a capital's
+  // height, the ink's middle at x and its foot at `foot`.
+  function inkOf(plan) {
+    var b = { x0: Infinity, x1: -Infinity, y1: -Infinity };
+    plan.strokes.forEach(function (s) { s.forEach(function (p) { b.x0 = Math.min(b.x0, p.x); b.x1 = Math.max(b.x1, p.x); b.y1 = Math.max(b.y1, p.y); }); });
+    return b;
+  }
+  function letters(x, plan, b, cx, foot, cap, width, col, edge) {
+    var k = cap / plan.cap, ox = cx - (b.x0 + b.x1) / 2 * k, oy = foot - b.y1 * k;
+    [edge, col].forEach(function (c, pass) {
+      if (!c) return;
+      x.strokeStyle = c;
+      plan.strokes.forEach(function (pts) {
+        for (var i = 1; i < pts.length; i++) {
+          x.lineWidth = Math.max(0.9, width * (pts[i].size || 1)) + (pass ? 0 : 2);
+          x.beginPath(); x.moveTo(ox + pts[i - 1].x * k, oy + pts[i - 1].y * k); x.lineTo(ox + pts[i].x * k, oy + pts[i].y * k); x.stroke();
+        }
+      });
+    });
+  }
+  function lucide(x, name, ox, oy, size, col) {
+    var k = size / 24;
+    x.save();
+    x.translate(ox, oy); x.scale(k, k);
+    x.strokeStyle = col; x.lineWidth = 1.5 / k;
+    LUCIDE[name].forEach(function (d) { x.stroke(new Path2D(d)); });
+    x.restore();
+  }
+  var tilesKey = '';
+  function paintTiles(again) {
+    if (!els || !els.tiles || !editor) return;
+    var arts = els.tiles.querySelectorAll('canvas.tx-art');
+    var st = styleNow(), font = st === 'yours' ? readHand() : files[st];
+    var pen = editor.pen(), ink = rgbOf(pen && pen.color) || [124, 92, 255];
+    var d = Math.min(3, window.devicePixelRatio || 1), sizes = [];
+    for (var i = 0; i < arts.length; i++) sizes.push(arts[i].clientWidth + 'x' + arts[i].clientHeight);
+    var grey0 = arts.length ? getComputedStyle(arts[0]).color : '';
+    var key = [st, !!font, !!files.print, state.size, thickness(), state.speed, ink.join(','), grey0,
+               css(arts.length ? groundOf(arts[0]) : [0, 0, 0]), sizes.join(','), d].join('|');
+    if (key === tilesKey && !again) return;
+    tilesKey = key;
+    var A = font ? makePlan({ text: 'A', font: font, print: files.print, size: 0.1, speed: 4,
+                              canvas: { width: 1000, height: 1000 }, pen: { color: '#000', size: 1 } }) : null;
+    Array.prototype.forEach.call(arts, function (c) {
+      var w = c.clientWidth, h = c.clientHeight;
+      if (!w || !h) { tilesKey = ''; return; }   // closed: painted when it opens
+      c.width = Math.round(w * d); c.height = Math.round(h * d);
+      var x = c.getContext('2d');
+      x.setTransform(d, 0, 0, d, 0, 0);
+      x.clearRect(0, 0, w, h);
+      x.lineCap = 'round'; x.lineJoin = 'round';
+      var ground = groundOf(c), grey = rgbOf(getComputedStyle(c).color) || [90, 90, 100];
+      var la = lum(ink), lb = lum(ground);
+      var pale = (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05) < 1.6;
+      var col = css(ink), edge = pale ? css(over(grey, ground, 0.35)) : null;
+      var kind = c.getAttribute('data-art');
+      if (kind === 'size') {
+        if (!A || !A.strokes.length) return;
+        var f = Math.pow(Math.max(0, (state.size - SIZE_MIN) / (SIZE_MAX - SIZE_MIN)), 0.6);
+        var cap = Math.min(h - 8, 9 + 19 * f);
+        var lg = editor.logical(), real = state.size * (lg ? Math.min(lg.width, lg.height) : 540);
+        var faint = css(over(ink, ground, 0.35)), foot = h / 2 + 14;
+        // Where they sit: a fifth, a half and four fifths of the way, as the
+        // pen's dots; where a wide hand (Script's A) would run one into the
+        // next, close together as a group, smaller only if they must be.
+        var b = inkOf(A), r = (b.x1 - b.x0) / A.cap + 0.08, gap = 4;
+        var caps = [9, cap, 27], at = [w * 0.2, w * 0.5, w * 0.8];
+        var span = function (i) { return r * caps[i] / 2; };
+        if (at[1] - span(1) - at[0] - span(0) < gap || at[2] - span(2) - at[1] - span(1) < gap) {
+          var all = r * (caps[0] + caps[1] + caps[2]) + 2 * gap, fit = Math.min(1, (w - 4) / all);
+          caps = caps.map(function (v) { return v * fit; });
+          var left = (w - (r * (caps[0] + caps[1] + caps[2]) + 2 * gap)) / 2;
+          at = [left + span(0), left + 2 * span(0) + gap + span(1), left + 2 * span(0) + 2 * span(1) + 2 * gap + span(2)];
+        }
+        letters(x, A, b, at[0], foot, caps[0], 1.4, faint, edge);
+        letters(x, A, b, at[2], foot, caps[2], 2.2, faint, edge);
+        letters(x, A, b, at[1], foot, caps[1], Math.max(1.2, Math.min(caps[1] * 0.2, thickness() / real * caps[1])), col, edge);
+      } else if (kind === 'weight') {
+        var lw = 1.5 + 0.5 * Math.min(thickness(), 30);
+        [edge, col].forEach(function (cc, pass) {
+          if (!cc) return;
+          x.strokeStyle = cc; x.lineWidth = lw + (pass ? 0 : 2);
+          x.beginPath();
+          for (var j = 0; j <= 64; j++) {
+            var t = j / 64, px = 10 + t * (w - 20), py = h / 2 + Math.sin(t * Math.PI * 2) * h * 0.16;
+            if (j) x.lineTo(px, py); else x.moveTo(px, py);
+          }
+          x.stroke();
+        });
+      } else if (kind === 'speed') {
+        var S = 18, gap = 5, run = Math.min(52, w - 2 * S - 2 * gap - 8);
+        var left = w / 2 - (2 * S + 2 * gap + run) / 2;
+        lucide(x, 'snail', left, h / 2 - S / 2 - 0.5, S, css(grey));
+        lucide(x, 'rabbit', left + S + gap + run + gap, h / 2 - S / 2 - 1, S, css(grey));
+        var t0 = left + S + gap + 2, t1 = t0 + run - 4, ty = h / 2 + 1;
+        var dot = t0 + (t1 - t0) * state.speed / (SPEEDS.length - 1);
+        x.lineWidth = 2.4;
+        x.strokeStyle = css(over(grey, ground, 0.45));
+        x.beginPath(); x.moveTo(t0, ty); x.lineTo(t1, ty); x.stroke();
+        x.strokeStyle = col;
+        x.beginPath(); x.moveTo(t0, ty); x.lineTo(dot, ty); x.stroke();
+        if (edge) { x.fillStyle = edge; x.beginPath(); x.arc(dot, ty, 5.3, 0, Math.PI * 2); x.fill(); }
+        x.fillStyle = col; x.beginPath(); x.arc(dot, ty, 4.3, 0, Math.PI * 2); x.fill();
+      }
+    });
   }
   function seconds(ms) {
     var s = Math.max(1, Math.round(ms / 1000));
