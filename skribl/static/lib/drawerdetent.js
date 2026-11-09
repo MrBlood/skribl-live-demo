@@ -115,18 +115,43 @@
     setTimeout(function () {
       panel.removeEventListener('pointerdown', act); panel.removeEventListener('keydown', act);
       window.removeEventListener('wheel', act, { passive: true });
-    }, 1300);
+    }, 2300);
     requestAnimationFrame(function () {
       if (mine !== revealGen) return;
       window.scrollTo({ top: target(), behavior: behavior || 'smooth' });
     });
     [300, 700, 1200].forEach(function (ms) {
       setTimeout(function () {
-        if (mine !== revealGen || acted || panel.hidden || panel.classList.contains('eyedropper-veiled')) return;
-        var scroller = document.scrollingElement || document.documentElement, t = target();
-        if (Math.abs(t - scroller.scrollTop) > 2) scroller.scrollTop = t;
+        whenStill(function () {
+          if (mine !== revealGen || acted || panel.hidden || panel.classList.contains('eyedropper-veiled')) return;
+          var scroller = document.scrollingElement || document.documentElement, t = target();
+          if (Math.abs(t - scroller.scrollTop) > 2) scroller.scrollTop = t;
+        });
       }, ms);
     });
+  }
+
+  /* A RE-ASSERT WAITS FOR THE GLIDE TO END. The browser glides the page on
+   * its own thread, and a write to scrollTop while it moves lands on top of
+   * it. On a slower phone (CPU 4x) the 300ms re-assert above caught Flip's
+   * pen drawer still gliding to 726 (at 660), the page went on past it to
+   * 754, and the 700ms one snapped it 28px back up: a lurch past and a jump
+   * back, where the glide alone ends exactly there (main's run after #818,
+   * 3px of it on a busy runner). So each re-assert waits until the page has
+   * been still for two frames, then puts it where it belongs; still moving
+   * after a second, it is someone's scroll, and it is left alone. */
+  function whenStill(fn) {
+    var scroller = document.scrollingElement || document.documentElement;
+    var last = scroller.scrollTop, calm = 0, t0 = Date.now();
+    (function look() {
+      requestAnimationFrame(function () {
+        var y = scroller.scrollTop;
+        calm = Math.abs(y - last) <= 0.5 ? calm + 1 : 0;
+        last = y;
+        if (calm >= 2) { fn(); return; }
+        if (Date.now() - t0 < 1000) look();
+      });
+    })();
   }
   // A press the drawer cannot see is the person acting too: Text's words
   // placed on the drawing, a second after the drawer came back from a drag,
