@@ -336,25 +336,38 @@ GEO = """([cs, ds]) => { const r = (e) => { if (!e || !e.getClientRects().length
            words: pl.hidden ? null : r(pl), label: pl.hidden ? null : r(pl.querySelector('.tx-drag')),
            stuck: h && (hs.position === 'sticky' || hs.position === 'fixed') ? (parseFloat(hs.top) || 0) + h.getBoundingClientRect().height : 0,
            anchor: SkriblText.anchor(), focus: document.activeElement && document.activeElement.id }; }"""
-# Every frame for `ms`: the page's scroll and the words' top on screen.
+# Every frame for `ms`: the page's scroll, the words' top on screen, and when.
 SCROLLS = """(ms) => new Promise(res => { const p = document.getElementById('txPlace'), out = [];
   const t0 = performance.now();
-  (function f() { out.push([scrollY, p.hidden ? null : p.getBoundingClientRect().top]);
+  (function f() { out.push([scrollY, p.hidden ? null : p.getBoundingClientRect().top, performance.now()]);
     if (performance.now() - t0 < ms) requestAnimationFrame(f); else res(out); })(); })"""
 
 
 def glides(seq, down):
     """Several places on the way, each step the same way, none a leap of more
-    than 45% of the whole move."""
-    pts = [round(v) for v in seq if v is not None]
+    than 45% of the whole move. `seq` is places, or (place, ms) pairs.
+
+    A FRAME DROPPED UNDER LOAD IS NOT A LEAP: beside two other suites Flip's
+    drawer came back over 107px with one 56px step, one frame's travel and the
+    next's. With times, a step is read for a frame's time (16.7ms), divided by
+    the frames it took up to three, as verify_sheetswipe and verify_pages read
+    theirs; a snap still has no places between, and still fails."""
+    pts = []
+    for v in seq:
+        place, at = (v[0], v[1]) if isinstance(v, (list, tuple)) else (v, None)
+        if place is not None:
+            pts.append((round(place), at))
     if len(pts) < 2:
         return False, "no frames"
-    span = abs(pts[-1] - pts[0])
-    steps = [b2 - a2 for a2, b2 in zip(pts, pts[1:])]
+    span = abs(pts[-1][0] - pts[0][0])
+    steps = [b2[0] - a2[0] for a2, b2 in zip(pts, pts[1:])]
+    reads = [abs(b2[0] - a2[0]) * 16.7 / (max(16.7, min(b2[1] - a2[1], 50)) if a2[1] is not None and b2[1] is not None else 16.7)
+             for a2, b2 in zip(pts, pts[1:])]
     way = all(st >= -1 for st in steps) if down else all(st <= 1 for st in steps)
-    between = len({v for v in pts if v not in (pts[0], pts[-1])})
-    return (span >= 20 and way and between >= 3 and max(abs(st) for st in steps) <= span * 0.45,
-            f"{between} places between {pts[0]} and {pts[-1]}, biggest step {max(abs(st) for st in steps)}px")
+    between = len({v for v, _ in pts if v not in (pts[0][0], pts[-1][0])})
+    big = max(range(len(steps)), key=lambda i: reads[i])
+    return (span >= 20 and way and between >= 3 and reads[big] <= span * 0.45,
+            f"{between} places between {pts[0][0]} and {pts[-1][0]}, biggest step {abs(steps[big])}px ({round(reads[big])}px a frame's time)")
 
 
 def waited(q, cond, timeout=15000):
@@ -472,7 +485,7 @@ with sync_playwright() as p:
         settle(q)
         s = q.evaluate(SHEET)
         after = q.evaluate("() => [strokes.length, strokeGroups.length, recording, hasContent]")
-        ok, why = glides([y0] + [f[0] for f in home], False)
+        ok, why = glides([y0] + [(f[0], f[2]) for f in home], False)
         check("its grabber closes it and leaves nothing behind, the page gliding home",
               not s["open"] and s["hidden"] and s["place"] is None and after[:3] == n0 + [False] and s["y"] == 0 and ok, f"{s} {after}; {why}")
         place_words(q, 0.3, 0.3)
@@ -489,7 +502,7 @@ with sync_playwright() as p:
         settle(q)
         s = q.evaluate(SHEET)
         after = q.evaluate("() => [strokes.length, strokeGroups.length, recording]")
-        ok, why = glides([y0] + [f[0] for f in home], False)
+        ok, why = glides([y0] + [(f[0], f[2]) for f in home], False)
         check("Escape closes it the same way, the typed words still not ink, the page gliding home",
               not s["open"] and after == n0 + [False] and s["y"] == 0 and ok, f"{s['open']} {after}, scrolled {s['y']}; {why}")
         c.close()
@@ -974,7 +987,7 @@ with sync_playwright() as p:
     if part("TEXT 14 — kind transitions"):
         # Every frame from the pick: the page's scroll, bringing the drawer up.
         OPEN = """(ms) => { const p = new Promise(res => { const out = []; const t0 = performance.now();
-            (function f() { out.push(scrollY); if (performance.now() - t0 < ms) requestAnimationFrame(f); else res(out); })(); });
+            (function f() { out.push([scrollY, performance.now()]); if (performance.now() - t0 < ms) requestAnimationFrame(f); else res(out); })(); });
           document.querySelector('#shapeSeg [data-shape="text"]').click();
           return p; }"""
         # Every frame from a tap on a tile: its slider's opacity, or None while
@@ -1017,7 +1030,7 @@ with sync_playwright() as p:
             c.close()
         c, q = open_editor(b, "pad", reduce=True)
         ys = q.evaluate(OPEN, 1200)
-        pts = [round(y) for y in ys]
+        pts = [round(y) for y, _ in ys]
         steps = [abs(b2 - a2) for a2, b2 in zip(pts, pts[1:])]
         span = abs(pts[-1] - pts[0])
         check("with Reduce Motion the page goes straight to the drawer",
@@ -1213,7 +1226,7 @@ with sync_playwright() as p:
             q.mouse.move(x, y + 8)
             fr = q.evaluate(SCROLLS, 1100)
             g1 = q.evaluate(GEO, [CANVAS[ed], DOCK[ed]])
-            ok, why = glides([y0] + [f[0] for f in fr], False)
+            ok, why = glides([y0] + [(f[0], f[2]) for f in fr], False)
             tops = sorted({round(f[1]) for f in fr if f[1] is not None})
             check(f"{ed}: once the words are dragged, the drawer steps aside: unseen and untouched, its room kept",
                   g1["veiled"] and g1["seen"] == "hidden" and g1["touch"] == "none" and abs(g1["height"] - g0["height"]) <= 1,
@@ -1235,7 +1248,7 @@ with sync_playwright() as p:
             fr = q.evaluate(SCROLLS, 1100)
             settle(q)
             g3 = q.evaluate(GEO, [CANVAS[ed], DOCK[ed]])
-            ok, why = glides([y0] + [f[0] for f in fr], True)
+            ok, why = glides([y0] + [(f[0], f[2]) for f in fr], True)
             row_seen = g3["row"] is not None and g3["row"][0] >= g3["stuck"] - 0.5 and g3["row"][1] <= g3["vh"] + 0.5
             check(f"{ed}: let go, and the drawer comes back, the page gliding to show it with its words and Write it on screen",
                   ok and not g3["veiled"] and g3["seen"] == "visible" and row_seen,

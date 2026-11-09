@@ -32025,3 +32025,17 @@ than the drawer's 1.2 s (TEXT 17 is the row that holds it).
 
 As it is, in the calibration copies: TEXT 2 10/10, 3 13/13, 4 8/8, 9 5/5,
 14 9/9, 16 9/9, 17 23/23, 21 12/12.
+
+The affected suites side by side caught two more, both fixed. The tiles'
+pictures were hidden only by their wrappers, which WAVE does not count
+(verify_a11ypages): each svg carries aria-hidden now, as the pen drawer's
+do. And Size's Aa was set in type, so its letters joined the tile's name,
+"AaSize", which How it works never says (verify_helpclaims): it is drawn in
+lines now, the same in every face, Segoe UI and SF included. The grabber's
+name, Close Text, is the grey bar How it works already describes for
+everything that slides up. One glide row went red beside two other suites
+and green alone: the drawer's return on Flip, 107px with one 56px step, a
+dropped frame. The glide rows read each step for a frame's time now,
+divided by the frames it took up to three, as verify_sheetswipe and
+verify_pages read theirs; a snap still has no places between, and the three
+breaks that jump or yank the page were run again and are still red.
