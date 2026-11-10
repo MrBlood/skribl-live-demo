@@ -95,7 +95,11 @@ LATER = "(() => { const real = Date.now; Date.now = () => real() + 3 * 86400000;
 # the width it had where it sat. The same spot matters: a gradient's dither and
 # an icon's edges follow the screen's own pixels, and the host's card sat at a
 # fractional y on a phone (465.297px), so in place every pixel of it differed
-# by a hair, the same card or not.
+# by a hair, the same card or not. And a LAYER OF ITS OWN on both pages
+# (will-change): whether a pinned card got one otherwise depended on what else
+# was on the page. After the suite's own posts, the phone's card was drawn from
+# another origin on one door, its avatar's dither and its corners 404 pixels
+# apart, while the same card on a page of two drawings matched to the pixel.
 PIN = """(sels) => {
   const els = sels.map(s => document.querySelector(s));
   if (els.some(e => !e)) return null;
@@ -108,7 +112,7 @@ PIN = """(sels) => {
   for (const e of els) {
     const r = e.getBoundingClientRect();
     out.push([r.width, r.height]);
-    e.style.cssText += ';position:fixed;left:8px;top:' + top + 'px;margin:0;width:' + r.width + 'px';
+    e.style.cssText += ';position:fixed;left:8px;top:' + top + 'px;margin:0;width:' + r.width + 'px;will-change:transform';
     top += Math.ceil(r.height) + 16;
   }
   return out;
@@ -490,7 +494,11 @@ with sync_playwright() as p:
             hw, hsz, hshots = shoot("host", screen, scheme)
             gw, gsz, gshots = shoot("gallery", screen, scheme, width=hw)
             diffs = []
+            # STANDIN_PICTURES=<folder> keeps the pictures, to see what differs.
             for name, a, z in zip(("card", "bar"), gshots, hshots):
+                if os.environ.get("STANDIN_PICTURES"):
+                    for door, im in (("gallery", a), ("host", z)):
+                        im.save(os.path.join(os.environ["STANDIN_PICTURES"], f"{screen}-{scheme}-{name}-{door}.png"))
                 if a.size != z.size:
                     diffs.append(f"{name} {a.size} on /gallery, {z.size} on the host")
                     continue

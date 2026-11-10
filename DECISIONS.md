@@ -32987,10 +32987,16 @@ calibration took a minute.
   and every box the same, and each page drawing them the same run after run.
   The pill is composited on its own (it blurs what is under it), and Chromium
   had kept the host's first raster of it; made anew on both pages before the
-  picture, 0 differ. Calibrated: the title's rule taken out of the generated
-  sheet, all four rows red; the reset emptied, all four red (the host's bar
-  64px tall, not 44: the stand-in's `.tabs` margin reaching New and Hot); as
-  built, 0 px differ in all four (phone and desk, dark and light).
+  picture, 0 differ. And each pinned element gets a layer of its own on both
+  pages: run after the suite's own posts (more cards, one with a real
+  poster), the phone's card was drawn from another origin on one door, its
+  avatar's dither and its corners 404 pixels apart, while on a page of two
+  drawings it matched; whether it got a layer had depended on what else was
+  there. Calibrated: the title's rule taken out of the generated sheet, all
+  four rows red; the title's colour alone changed (no size moves), red, about
+  7,500 pixels in the title's box; the reset emptied, all four red (the
+  host's bar 64px tall, not 44: the stand-in's `.tabs` margin reaching New and
+  Hot); as built, 0 px differ in all four (phone and desk, dark and light).
 - verify_standin 9, NOTHING LEAKS OUT: the host's own elements with the
   section's files and without (the page's HTML rewritten in the browser,
   every tag the macro writes taken out, 13 of 13), their styles as computed
