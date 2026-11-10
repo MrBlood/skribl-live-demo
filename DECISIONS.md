@@ -32909,3 +32909,31 @@ Skribl and reaches it only through the public seams; the stand-in stays the
 skribls.net stand-in; "Skribl" for now; passkeys with a link by email; 13 and
 over; private messages later; B first, then the phases in order; no public
 sign-ups before a lawyer has read the terms. Nothing in it is built yet.
+
+## After v330 -- Main red after #837: a late glide that held a look gets one more try (verify_musictall)
+
+Run 42853157073 (main after #836 and #837, the stand-in's host pages and a
+document): one suite red, verify_musictall on SQLite 1/6, "Flip (desk): one
+tap and the box glides to twice as tall, and one more back, each within
+400ms", the way up there at 245ms and the way back at 429ms. Nothing in either
+change is near Flip's music drawer, and the same tree's suite was green an
+hour before (run 42844810742). The box's glide is 220ms on its own clock from
+its first frame (lib/musictimeline.js TALL_MS), so 429ms is a page the runner
+held, not a glide that got slower.
+
+The instrument now tells the two apart the way the morning's other reds did
+(HELD, a look 50ms or more after the one before): a trip late with a look held
+gets one more try, and that try is the one every row about the glide's frames
+reads (when it got there, the way it went, its pixels, what it painted, Hear's
+drift); both tries are named in the row. A trip late with no look held is red
+at once, and one late on both tries is red.
+
+Calibrated on Flip's glide section alone (MUSICTALL_PART=glide
+MUSICTALL_ONLY=Flip), phone and desk, in copies of the suite: a 400ms stall
+put into the page 60ms into the first trip back, the old row red on both faces
+(back at 589 and 551ms, the CI shape) and the new one green on its second try
+(the held look named, 418 and 431ms; twice); the same stall on every try, red
+on both; the glide itself made slow (TALL_MS 600 in the product, the server
+bounced, then restored), red with no second try (there at about 570ms); as
+built, green. The whole suite on the tree, 72/72, on a box busy with another
+build (one look held 51ms on the way up, on time).
