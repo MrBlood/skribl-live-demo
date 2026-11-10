@@ -114,16 +114,24 @@ def registration_options(challenge, *, rp_id, user_handle, handle, display_name,
     return json.loads(options_to_json(options))
 
 
+#: Everything a browser's answer can make the library raise. A body can say
+#: anything; it is refused, never a 500.
+_BAD_ANSWER = (ValueError, TypeError, KeyError, AttributeError, IndexError)
+
+
 def verify_registration(credential, challenge, *, rp_id, origin):
     """The new passkey, checked: the challenge, the origin, the address, a
-    user who was verified. Raises Refused('failed') otherwise."""
+    user who was verified. Raises Refused('failed') otherwise, and for
+    anything that is not an answer at all (only a JSON object can be one)."""
     from webauthn import verify_registration_response
     from webauthn.helpers.exceptions import WebAuthnException
+    if not isinstance(credential, dict):
+        raise Refused("failed")
     try:
         return verify_registration_response(credential=credential, expected_challenge=challenge,
                                             expected_rp_id=rp_id, expected_origin=origin,
                                             require_user_verification=True)
-    except (WebAuthnException, ValueError, TypeError, KeyError) as exc:
+    except (WebAuthnException,) + _BAD_ANSWER as exc:
         raise Refused("failed") from exc
 
 
@@ -141,9 +149,11 @@ def read_assertion(credential):
     credential, and which account it says it is for."""
     from webauthn.helpers import parse_authentication_credential_json
     from webauthn.helpers.exceptions import WebAuthnException
+    if not isinstance(credential, dict):
+        raise Refused("failed")
     try:
         return parse_authentication_credential_json(credential)
-    except (WebAuthnException, ValueError, TypeError, KeyError) as exc:
+    except (WebAuthnException,) + _BAD_ANSWER as exc:
         raise Refused("failed") from exc
 
 
@@ -156,7 +166,7 @@ def verify_assertion(parsed, challenge, *, rp_id, origin, public_key, sign_count
                                               credential_public_key=public_key,
                                               credential_current_sign_count=sign_count,
                                               require_user_verification=True)
-    except (WebAuthnException, ValueError, TypeError, KeyError) as exc:
+    except (WebAuthnException,) + _BAD_ANSWER as exc:
         raise Refused("failed") from exc
 
 

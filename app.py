@@ -437,9 +437,13 @@ def create_app():
                     return who
             return _demo_who() if _demo_who is not None else None
     elif _site_on:
-        app.logger.info("the site at %s signs people in, but SKRIBL_CSRF_PROTECT is off, so "
-                        "Skribl is not told who they are: the Pad posts as nobody until it "
-                        "is 1.", SOCIAL_PATH)
+        # Said where it matters: a deployment (the live demo runs with CSRF
+        # off today), where the owner reads the log; quietly elsewhere (the
+        # harness's shared server runs with it off on purpose).
+        (app.logger.warning if _looks_like_production() else app.logger.info)(
+            "the site at %s signs people in, but SKRIBL_CSRF_PROTECT is off, so Skribl "
+            "is not told who they are: the Pad and Flip post as nobody until it is 1.",
+            SOCIAL_PATH)
 
     # Media backend. 'inline' (default) is v131: base64 data URLs stay inside
     # payload_json. 'local' externalises them to content-addressed files served

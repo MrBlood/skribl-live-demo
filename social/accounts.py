@@ -141,7 +141,7 @@ def _safe_next(raw):
 # ---- what a person types ----------------------------------------------------
 
 def check_handle(raw):
-    h = (raw or "").strip()
+    h = (raw if isinstance(raw, str) else "").strip()
     if h.startswith("@"):
         h = h[1:]
     if not HANDLE_RE.fullmatch(h):
@@ -152,7 +152,9 @@ def check_handle(raw):
 
 
 def check_name(raw, limit=40):
-    n = " ".join(unicodedata.normalize("NFC", raw or "").split())
+    """A name as people will see it, or why not. Anything but text is no name
+    (a body can say anything; it is answered, never a 500)."""
+    n = " ".join(unicodedata.normalize("NFC", raw if isinstance(raw, str) else "").split())
     if not n:
         return None, "name_empty"
     if len(n) > limit:

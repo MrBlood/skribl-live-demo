@@ -241,6 +241,20 @@ class Client:
     def cookie(self, name="social_session"):
         return next((c for c in self.jar if c.name == name), None)
 
+    def post_chunked(self, path, body):
+        """A JSON post that declares no length (Transfer-Encoding: chunked):
+        only what is read can tell how big it is."""
+        raw = json.dumps(body).encode()
+        h = {"X-Forwarded-For": self.xff, "Content-Type": "application/json", "Origin": self.origin,
+             "X-Social-CSRF": self.token}
+        req = urllib.request.Request(BASE + path, data=iter([raw[i:i + 8192] for i in range(0, len(raw), 8192)]),
+                                     method="POST", headers=h)
+        try:
+            with self.op.open(req, timeout=20) as r:
+                return r.status
+        except urllib.error.HTTPError as e:
+            return e.code
+
 
 import urllib.parse  # noqa: E402
 
@@ -378,6 +392,34 @@ def join(p, link, name, handle, age=True):
 def signin(p):
     p.pg.goto(BASE + "/social/signin")
     return press(p, "[data-passkey=signin]", "/social/signin")
+
+
+def text_of(pg, sel):
+    """The first `sel`'s words, or "" when the page has none: a page that is
+    not the one expected must read as a red row, not stop the suite."""
+    try:
+        loc = pg.locator(sel)
+        return loc.first.text_content(timeout=3000) if loc.count() else ""
+    except Exception:
+        return ""
+
+
+def sign_out_here(p, everywhere=False):
+    """Press You's Sign out (or Sign out everywhere) and land wherever the site
+    sends: a sign-out that does not happen shows red in its own row, rather
+    than stopping the suite while it waits for a page that never comes."""
+    p.pg.goto(BASE + "/social/you")
+    sel = "form[action$='/social/signout" + ("/everywhere" if everywhere else "") + "'] button"
+    try:
+        with p.pg.expect_navigation(timeout=15000):
+            p.pg.click(sel, timeout=5000)
+    except Exception:
+        pass
+    try:
+        p.pg.wait_for_load_state()
+    except Exception:
+        pass
+    return p.pg.url
 
 
 def new_member(b, handle, name=None, **kw):
@@ -582,13 +624,17 @@ with sync_playwright() as p_:
         u = Person(b)
         join(u, used, "Used Once", "used_once")
         expired, _ = cli("invite")
-        db("update social_invites set expires_at = '2020-01-01 00:00:00.000000' where code_hash = ?",
-           (hashed(code_of(expired)),), write=True)
         revoked, _ = cli("invite")
         owner.pg.goto(BASE + "/social/invites")
         rid = db("select public_id from social_invites where code_hash = ?", (hashed(code_of(revoked)),))[0][0]
         owner.pg.click(f"form[action$='/invites/{rid}/revoke'] button")
         owner.pg.wait_for_load_state()
+        # Run out AFTER Invites was read: reading it deletes links that ran out
+        # unused, and a deleted link is the never-made case, not this one.
+        db("update social_invites set expires_at = '2020-01-01 00:00:00.000000' where code_hash = ?",
+           (hashed(code_of(expired)),), write=True)
+        ran_out = db("select count(*) from social_invites where code_hash = ? and used_at is null",
+                     (hashed(code_of(expired)),))[0][0]
         never = BASE + "/social/join#" + secrets.token_urlsafe(16)
         rec_used, _ = cli("recover", "used_once")
         rv = Person(b)
@@ -610,7 +656,7 @@ with sync_playwright() as p_:
         words = {s["words"] for s in seen.values() if s}
         check("used, run out, revoked, never made, and a spent recovery link: each shows the one kind card"
               " (\"This link doesn't work anymore\", ask for a new one, Look around, Sign in), never the form",
-              all(s and s["gone"] and not s["ok"] for s in seen.values()) and len(words) == 1
+              ran_out == 1 and all(s and s["gone"] and not s["ok"] for s in seen.values()) and len(words) == 1
               and "doesn’t work anymore" in next(iter(words)) and "Ask whoever sent it for a new one" in next(iter(words))
               and "Look around Skribl" in next(iter(words)),
               "; ".join(f"{k}: {v}" for k, v in seen.items())[:600])
@@ -627,10 +673,8 @@ with sync_playwright() as p_:
     if part(4, "sign out, and sign in with the passkey: nothing typed"):
         p, said = new_member(b, "nadia")
         before = p.cookie()
-        p.pg.goto(BASE + "/social/you")
-        p.pg.click("form[action$='/social/signout'] button")
-        p.pg.wait_for_url("**/social/signin?out=1")
-        note = p.pg.locator(".note").text_content()
+        sign_out_here(p)
+        note = text_of(p.pg, ".note")
         # The sign-in page gives a signed-out browser a session id of its own
         # (its form's token is bound to it); the person is what must be gone.
         held = session_data((p.cookie() or {}).get("value", "")) or {}
@@ -662,9 +706,7 @@ with sync_playwright() as p_:
               and replay.status == 403 and p.who() == "nadia",
               f"before {pre and pre.get('s')}; after {post and post.get('s')}; old token {replay.status}")
         db("update social_passkeys set sign_count = 100000 where person_id = (select id from social_people where handle_key = 'nadia')", write=True)
-        p.pg.goto(BASE + "/social/you")
-        p.pg.click("form[action$='/social/signout'] button")
-        p.pg.wait_for_url("**/social/signin?out=1")
+        sign_out_here(p)
         cloned = signin(p)
         check("an authenticator whose count did not go up (a copied key) is refused, kindly, and nobody is signed in",
               cloned.get("path") == "/social/signin" and "didn’t check out" in cloned["say"] and p.who() is None,
@@ -796,9 +838,7 @@ with sync_playwright() as p_:
         check("and the Gallery's card on the site's Explore says who drew it: their name and @handle",
               bool(card) and "Priya Raman" in card and "@priya" in card, str(card))
         g.close()
-        p.pg.goto(BASE + "/social/you")
-        p.pg.click("form[action$='/social/signout'] button")
-        p.pg.wait_for_url("**/social/signin?out=1")
+        sign_out_here(p)
         anon = pad_post(p.ctx, "Nobody's skribl " + tag)
         a_item = listed("Nobody's skribl " + tag)
         demo = b.new_context(**DESK, extra_http_headers={"X-Forwarded-For": address()})
@@ -834,7 +874,7 @@ with sync_playwright() as p_:
         owner.pg.click("form[action$='/social/invites/recover'] button[type=submit]")
         owner.pg.wait_for_load_state()
         rec_link = owner.pg.input_value("[data-made-link]")
-        rec_title = owner.pg.locator("#madeTitle").text_content()
+        rec_title = text_of(owner.pg, "#madeTitle")
         listed_rec = owner.pg.evaluate("() => [...document.querySelectorAll('.links .key-name')].map(e => e.textContent.trim())")
         owner.pg.goto(BASE + "/social/invites")
         shown_again = owner.pg.evaluate("(c) => document.body.innerHTML.includes(c)", code_of(rec_link))
@@ -851,7 +891,7 @@ with sync_playwright() as p_:
         owner.pg.fill("#recHandle", "nobody_here")
         owner.pg.click("form[action$='/social/invites/recover'] button[type=submit]")
         owner.pg.wait_for_load_state()
-        unknown = owner.pg.locator(".note").text_content()
+        unknown = text_of(owner.pg, ".note")
         check("a recovery link for a handle nobody has makes nothing, and says so kindly",
               "No one has the handle @nobody_here" in unknown and not owner.pg.locator("[data-made-link]").count(),
               unknown)
@@ -920,9 +960,7 @@ with sync_playwright() as p_:
         spent = link_state(again.pg)
         check("the recovery link is spent: opened again, it is the kind card", spent and spent["gone"], str(spent))
         again.close()
-        fresh.pg.goto(BASE + "/social/you")
-        fresh.pg.click("form[action$='/social/signout'] button")
-        fresh.pg.wait_for_url("**/social/signin?out=1")
+        sign_out_here(fresh)
         back = signin(fresh)
         check("and the new passkey signs Rosa in on its own", back.get("path") == "/social/" and fresh.who() == "rosa",
               str(back))
@@ -969,9 +1007,7 @@ with sync_playwright() as p_:
         pg.click(f"form[action$='/{second[0]}/remove'] button[type=submit]")
         pg.wait_for_url("**/social/you?note=removed")
         left = db("select count(*) from social_passkeys k join social_people p on p.id = k.person_id where p.handle_key = 'rosa'")[0][0]
-        fresh.pg.goto(BASE + "/social/you")
-        fresh.pg.click("form[action$='/social/signout'] button")
-        fresh.pg.wait_for_url("**/social/signin?out=1")
+        sign_out_here(fresh)
         gone = signin(fresh)
         check("one of two is removed: gone from the list and the table, and that passkey no longer signs anybody in"
               " (the page says the passkey is not on an account here anymore)",
@@ -1004,10 +1040,8 @@ with sync_playwright() as p_:
         both = signin(bee)
         copied = dict(a.cookie())
         drafts_before = bee.ctx.request.get(BASE + "/api/drafts")
-        a.pg.goto(BASE + "/social/you")
-        a.pg.click("form[action$='/social/signout/everywhere'] button")
-        a.pg.wait_for_url("**/social/signin?out=all")
-        note = a.pg.locator(".note").text_content()
+        sign_out_here(a, everywhere=True)
+        note = text_of(a.pg, ".note")
         bee.pg.goto(BASE + "/social/you")
         bee_at = bee.pg.url
         drafts_after = bee.ctx.request.get(BASE + "/api/drafts")
@@ -1048,14 +1082,14 @@ with sync_playwright() as p_:
         p.pg.fill("#delConfirm", "zoey")
         p.pg.click("form[action$='/social/you/delete'] button[type=submit]")
         p.pg.wait_for_load_state()
-        wrong = p.pg.locator(".err").text_content() if p.pg.locator(".err").count() else ""
+        wrong = text_of(p.pg, ".err")
         still = db("select count(*) from social_people where id = ?", (pid[0],))[0][0]
         check("a handle typed wrong deletes nothing and says what to type, kindly",
               "Type @zoe to confirm" in wrong and still == 1, f"{wrong!r} {still}")
         p.pg.fill("#delConfirm", "@zoe")
         p.pg.click("form[action$='/social/you/delete'] button[type=submit]")
         p.pg.wait_for_load_state()
-        title = p.pg.locator("h1").first.text_content()
+        title = text_of(p.pg, "h1")
         left = {t: db(f"select count(*) from {t} where {w}", a)[0][0] for t, w, a in (
             ("social_people", "id = ?", (pid[0],)),
             ("social_passkeys", "person_id = ?", (pid[0],)),
@@ -1147,6 +1181,39 @@ with sync_playwright() as p_:
         r = p.ctx.request.post(BASE + "/social/signout/everywhere", form={"csrf": good_token},
                                headers={"Origin": "https://evil.example"}, max_redirects=0)
         outs["everywhere, this page's token, another origin"] = (r.status, "didn’t go through" in r.text())
+        # WHATEVER A BODY SAYS IS ANSWERED, NEVER A 500: a number for a name,
+        # a list for a handle, no answer or the wrong shape of one where a
+        # passkey's answer goes, and more than the site takes at all.
+        m = Client()
+        m.get("/social/signin")
+        link, _ = cli("invite")
+        odd = {}
+        odd["name and handle not text"] = m.post("/social/join/options", {"code": code_of(link), "name": 5,
+                                                                           "handle": ["x"], "age13": True})
+        m.post("/social/signin/options", {})
+        odd["no answer"] = m.post("/social/signin/verify", {"credential": None})
+        m.post("/social/signin/options", {})
+        odd["an answer that is a string"] = m.post("/social/signin/verify", {"credential": "x"})
+        m.post("/social/join/options", {"code": code_of(link), "name": "Odd", "handle": "odd_one", "age13": True})
+        odd["a list for a new passkey"] = m.post("/social/join/verify", {"code": code_of(link), "credential": [1, 2]})
+        m.post("/social/join/options", {"code": code_of(link), "name": "Odd", "handle": "odd_one", "age13": True})
+        odd["no new passkey"] = m.post("/social/join/verify", {"code": code_of(link)})
+        odd["65 KiB"] = m.post("/social/signin/options", {"pad": "x" * (65 * 1024)})
+        # Saying no length (chunked), a body is read only to 64 KiB, as a
+        # WSGI server cuts it there: a good invite's code sent past that is
+        # never read, so it does not count (the check answers as for no code).
+        odd["a good code past 64 KiB, no length said"] = (
+            m.post_chunked("/social/join/check", {"pad": "x" * (65 * 1024), "code": code_of(link)}), None)
+        odd["the same code, short"] = m.post("/social/join/check", {"code": code_of(link)})
+        want = {"name and handle not text": (400, {"name": "name_empty", "handle": "handle_shape"}),
+                "no answer": (400, "failed"), "an answer that is a string": (400, "failed"),
+                "a list for a new passkey": (400, "failed"), "no new passkey": (400, "failed"), "65 KiB": (413, None),
+                "a good code past 64 KiB, no length said": (404, None), "the same code, short": (200, None)}
+        got = {k: (st, (j.get("fields") or j.get("error")) if isinstance(j, dict) else None) for k, (st, j) in odd.items()}
+        check("whatever a body says is answered, never a 500: a number for a name and a list for a handle are"
+              " field messages, an answer missing or the wrong shape is refused (400); past 64 KiB a body is refused"
+              " by the length it says (413), or, saying none, read no further (a good code past it does not count)",
+              got == want, str(got))
         check("the site's forms (sign out everywhere, delete my account, rename) without the token, or from another"
               " origin, are refused with the kind page, and change nothing",
               all(st == 403 and kind for st, kind in outs.values())
@@ -1173,15 +1240,21 @@ with sync_playwright() as p_:
         ck = p.cookie()
         days = (ck["expires"] - time.time()) / 86400 if ck else 0
         data = session_data(ck["value"]) if ck else None
+        # A FORGERY THAT ONLY ITS SIGNATURE CAN STOP: this cookie's signature
+        # under a payload naming somebody else (the admin), with their own
+        # current generation, so nothing but the signature is wrong.
+        boss = admin(b)
+        other = db("select public_id, session_gen from social_people where handle_key = ?", (boss.handle.lower(),))[0]
         bad = dict(ck)
-        bad["value"] = base64.urlsafe_b64encode(json.dumps({"s": data["s"], "p": data["p"], "g": data["g"] + 1}).encode()).rstrip(b"=").decode() \
+        bad["value"] = base64.urlsafe_b64encode(json.dumps({"s": data["s"], "p": other[0], "g": other[1]},
+                                                           separators=(",", ":")).encode()).rstrip(b"=").decode() \
             + "." + ck["value"].split(".", 1)[1]
         forged = b.new_context(**DESK, extra_http_headers={"X-Forwarded-For": address()})
-        forged.add_cookies([{k: v for k, v in bad.items() if k in ("name", "value", "domain", "path", "httpOnly", "sameSite", "secure", "expires")}])
+        forged.add_cookies([pw_cookie(bad)])
         f = forged.request.get(BASE + "/social/you", max_redirects=0)
         forged.close()
-        check("signed in, it lasts 30 days, HttpOnly and Lax in the browser too, and it is signed: one changed"
-              " (its generation raised by hand) signs nobody in",
+        check("signed in, it lasts 30 days, HttpOnly and Lax in the browser too, and it is signed: one rewritten to"
+              " name somebody else (with their own generation) signs nobody in",
               ck is not None and ck["httpOnly"] and ck["sameSite"] == "Lax" and 29.5 < days < 30.5
               and data and data.get("p", "").startswith("site:") and f.status == 303,
               f"{ck and {k: ck[k] for k in ('httpOnly', 'sameSite', 'secure', 'path')}}; {days:.1f} days; payload {data}; forged {f.status}")

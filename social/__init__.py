@@ -54,7 +54,7 @@ import hashlib
 import importlib.util
 import os
 
-from flask import (Blueprint, current_app, g, has_app_context, has_request_context,
+from flask import (Blueprint, abort, current_app, g, has_app_context, has_request_context,
                    render_template, request, url_for)
 
 from .models import PERSON_PREFIX, attach_to_metadata
@@ -107,6 +107,10 @@ SITE_CSP = "; ".join([
     "object-src 'none'",
     "frame-ancestors 'self'",
 ])
+
+
+#: The most a request to the site's own pages may send (64 KiB).
+SITE_MAX_BODY = 64 * 1024
 
 
 def init_social(app, *, session=None, url_prefix="/social", skribl_blueprint="skribl"):
@@ -183,6 +187,18 @@ def init_social(app, *, session=None, url_prefix="/social", skribl_blueprint="sk
     if site is not None:
         from . import accounts
         accounts.register(bp)
+
+        @bp.before_request
+        def _small_bodies():
+            """A passkey's answer is a few kilobytes and a form's fields fewer:
+            anything sent to the site past 64 KiB is refused (413) before it
+            is read, rather than parsed at the app's 25 MB limit. By the
+            length it declares, whichever page it was sent to (some never
+            read their body), and by what is read where it declares none."""
+            if request.method == "POST":
+                request.max_content_length = SITE_MAX_BODY
+                if (request.content_length or 0) > SITE_MAX_BODY:
+                    abort(413)
 
     # Context for the site's own pages only (a blueprint processor, not an
     # app-wide one): Skribl's pages never see these names.
