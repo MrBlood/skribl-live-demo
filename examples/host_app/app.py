@@ -24,8 +24,9 @@ THE FIVE THINGS A HOST DOES, all visible below:
     5. drive the pad button from its own composer         templates/feed.html
 
 AND ONE IT MAY: a page of every public skribl in its own frame, each linking
-back to its post (templates/skribls.html), with the two resolvers below
-telling Skribl the names and the posts it cannot know.
+back to its post (templates/skribls.html: Skribl's own Gallery section, two
+macros), with the two resolvers below telling Skribl the names and the posts
+it cannot know.
 
 MOUNTED UNDER A PREFIX ON PURPOSE. `url_prefix="/skribl"` is not the easy
 setting — it is the one that catches route literals in client JavaScript and
@@ -201,8 +202,10 @@ def create_app(database_url=None, *, secret_key=None, mounted_at=None):
     @app.get("/skribls")
     def skribls():
         """THE SKRIBLS PAGE (templates/skribls.html): every public skribl,
-        from both doors, in this site's frame. The grid comes from Skribl's
-        own listing in the browser, so nothing is queried here."""
+        from both doors, in this site's frame, as Skribl's own Gallery
+        section. The cards come from Skribl's own listing in the browser,
+        and the report sheet's token and reasons from init_skribl's globals,
+        so nothing is queried or passed here."""
         return render_template("skribls.html", me=current_user(),
                                users=db.session.query(User).all(), here="skribls")
 

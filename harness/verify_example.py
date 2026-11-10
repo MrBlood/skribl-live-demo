@@ -444,16 +444,20 @@ try:
             except PWTimeout:
                 return False
 
+        # THE PAGE IS SKRIBL'S OWN GALLERY SECTION (after v330, the owner's B):
+        # its cards, read where /gallery's are read. Who drew it is the host's
+        # name in the card's head (the handle, `.tun`); what it was made in is
+        # the card's kind, said in words for a screen reader (`.tileSr`).
         browsing.goto(pg, BASE, "/skribls", require_boot=False)
-        settle(pg, "() => document.querySelectorAll('#skGrid .sk-card').length >= 3", 15000)
+        settle(pg, "() => document.querySelectorAll('#galleryList > article.tile').length >= 3", 15000)
         pg.wait_for_timeout(800)
-        tiles = pg.evaluate("""() => [...document.querySelectorAll('#skGrid .sk-card')].map(c => {
-            const box = c.querySelector('[data-skribl-inline]'), a = c.querySelector('.sk-from');
+        tiles = pg.evaluate("""() => [...document.querySelectorAll('#galleryList > article.tile')].map(c => {
+            const box = c.querySelector('[data-skribl-inline]'), a = c.querySelector('a.tfrom');
             return { id: box && box.getAttribute('data-skribl-id'), mounted: !!(box && box._skriblInline),
-                     title: c.querySelector('.sk-title').textContent,
-                     who: (c.querySelector('.sk-who') || {}).textContent || '',
+                     title: c.querySelector('.tt').textContent,
+                     who: (c.querySelector('.tun') || {}).textContent || '',
                      from: a ? a.getAttribute('href') : null,
-                     app: (c.querySelector('.sk-app') || {}).textContent || '' }; })""")
+                     kind: (c.querySelector('.tileSr') || {}).textContent || '' }; })""")
         by_id = {t["id"]: t for t in tiles}
         check("the page shows the public ones, from both doors, and not the one left off",
               {second, pug, bounce} <= set(by_id) and first not in by_id, json.dumps(tiles))
@@ -462,7 +466,7 @@ try:
         # ITS OWN POSTER: the page fills in the id wherever the macro wrote the
         # placeholder, so the idle tile shows its drawing, not a 404 hidden.
         # Read on the tiles in view: the poster is loading="lazy".
-        _posters = pg.evaluate("""() => [...document.querySelectorAll('#skGrid .sk-card')].map(c => {
+        _posters = pg.evaluate("""() => [...document.querySelectorAll('#galleryList > article.tile')].map(c => {
             const b = c.querySelector('[data-skribl-inline]'), i = b && b.querySelector('img');
             return { id: b && b.getAttribute('data-skribl-id'), src: i ? i.getAttribute('src') : null,
                      inView: !!i && i.getBoundingClientRect().top < innerHeight,
@@ -475,18 +479,22 @@ try:
         check("the one from a post: its title, @ada, and 'From a post' linking to that post",
               _ts.get("title") == "and one for everyone" and _ts.get("who") == "@ada"
               and (_ts.get("from") or "").endswith("/posts/%s" % second_post), json.dumps(_ts))
-        check("the ones made in the app say so, by the editor they were made in, and link nowhere",
-              _tp.get("who") == "@grace" and _tp.get("app") == "Made in Skribl Pad" and _tp.get("from") is None
-              and _tb.get("app") == "Made in Flip" and _tb.get("from") is None, f"{_tp} {_tb}")
+        # A drawing made in the app is in no post, so its card says nothing
+        # more (the A tiles' "Made in Skribl Pad" went with them); its kind is
+        # the card's own, the pen or the book, said in words too.
+        check("the ones made in the app link nowhere, and their cards say what they are (a replay, a flip)",
+              _tp.get("who") == "@grace" and _tp.get("from") is None and "replay" in _tp.get("kind", "")
+              and _tb.get("from") is None and ("pages" in _tb.get("kind", "") or "a flip" in _tb.get("kind", "")),
+              f"{_tp} {_tb}")
         # The words ask the listing, as Skribl's own gallery does.
-        pg.fill("#skSearch", "snail")
-        settle(pg, "() => document.querySelectorAll('#skGrid .sk-card').length === 1", 8000)
-        _found = pg.evaluate("() => [...document.querySelectorAll('#skGrid [data-skribl-inline]')].map(b => b.getAttribute('data-skribl-id'))")
+        pg.fill("#galleryQ", "snail")
+        settle(pg, "() => document.querySelectorAll('#galleryList > article.tile').length === 1", 8000)
+        _found = pg.evaluate("() => [...document.querySelectorAll('#galleryList [data-skribl-inline]')].map(b => b.getAttribute('data-skribl-id'))")
         check("searching finds the ticked one by the gallery caption its author wrote", _found == [second], json.dumps(_found))
-        pg.fill("#skSearch", "")
-        settle(pg, "() => document.querySelectorAll('#skGrid .sk-card').length >= 3", 8000)
+        pg.fill("#galleryQ", "")
+        settle(pg, "() => document.querySelectorAll('#galleryList > article.tile').length >= 3", 8000)
 
-        _link = pg.locator(f"#skGrid .sk-card:has([data-skribl-id='{second}']) .sk-from")
+        _link = pg.locator(f"#galleryList > article.tile[data-id='{second}'] a.tfrom")
         _post = {"posts": [], "skribl": None, "composer": None, "why": "no 'From a post' link on its tile"}
         if _link.count():
             _link.click()
@@ -512,29 +520,34 @@ try:
               json.dumps(_names))
         check("no page errors on the Skribls pages", not errs, "; ".join(errs[:2]))
 
-        # ON A PHONE, TWO ACROSS: each tile's line says its time and leaves the
-        # speeds to the full size (the narrow tile's own width, under 240px);
-        # on the desk the tiles keep the whole line, and so does a post on the
-        # narrowest phone.
+        # THE GALLERY'S OWN LAYOUT IN THE HOST'S FRAME (the owner's B, as its
+        # mock showed it): two cards across on the desk, one on a phone, as
+        # /gallery lays them out, each with the card's own transport under its
+        # drawing (lib/fullbar.js) rather than the in-post player's line. A
+        # post keeps the line, whole even on the narrowest phone.
         def lines(page):
-            return page.evaluate("""() => [...document.querySelectorAll('#skGrid .skribl-inline-line, article.post .skribl-inline-line')].map(l => {
+            return page.evaluate("""() => [...document.querySelectorAll('article.post .skribl-inline-line')].map(l => {
                 const shown = s => { const e = l.querySelector(s); return !!(e && e.getClientRects().length); };
                 return { w: Math.round(l.getBoundingClientRect().width), on: l.classList.contains('is-on'),
                          time: shown('.rl-drawn b'), speed: shown('.rl-speed'), watching: shown('.rl-text > .rl-m') }; })""")
+        CARDS = """() => { const cards = [...document.querySelectorAll('#galleryList > article.tile')];
+            return { cards: cards.length, across: new Set(cards.map(c => Math.round(c.getBoundingClientRect().x))).size,
+                     bars: cards.filter(c => c.querySelector('.tileStage .skfull-card')).length,
+                     lines: document.querySelectorAll('#galleryList .skribl-inline-line').length }; }"""
         browsing.goto(pg, BASE, "/skribls", require_boot=False)
-        settle(pg, "() => document.querySelectorAll('#skGrid .skribl-inline-line.is-on').length >= 3", 15000)
-        _desk = lines(pg)
-        check("on the desk each tile keeps the whole line, the speeds with it",
-              len(_desk) >= 3 and all(x["w"] >= 240 and x["speed"] and x["watching"] for x in _desk), json.dumps(_desk))
+        settle(pg, "() => document.querySelectorAll('#galleryList .skfull-card').length >= 3", 15000)
+        _desk = pg.evaluate(CARDS)
+        check("on the desk the cards go two across, each with the card's own transport",
+              _desk["cards"] >= 3 and _desk["across"] == 2 and _desk["bars"] == _desk["cards"] and _desk["lines"] == 0,
+              json.dumps(_desk))
         ph = b.new_context(viewport={"width": 402, "height": 874}, is_mobile=True, has_touch=True)
         pp = ph.new_page()
         pp.on("pageerror", lambda e: errs.append(str(e)))
         browsing.goto(pp, BASE, "/skribls", require_boot=False)
-        settle(pp, "() => document.querySelectorAll('#skGrid .skribl-inline-line.is-on').length >= 3", 15000)
-        _phone = lines(pp)
-        check("on a phone each tile's line says its time, not the speeds",
-              len(_phone) >= 3 and all(x["w"] < 240 and x["time"] and not x["speed"] and not x["watching"] for x in _phone),
-              json.dumps(_phone))
+        settle(pp, "() => document.querySelectorAll('#galleryList .skfull-card').length >= 3", 15000)
+        _phone = pp.evaluate(CARDS)
+        check("on a phone they go one across",
+              _phone["cards"] >= 3 and _phone["across"] == 1 and _phone["bars"] == _phone["cards"], json.dumps(_phone))
         pp.set_viewport_size({"width": 320, "height": 640})
         browsing.goto(pp, BASE, "/posts/%s" % second_post, require_boot=False)
         settle(pp, "() => !!document.querySelector('article.post .skribl-inline-line.is-on')", 15000)

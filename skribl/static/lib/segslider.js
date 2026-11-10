@@ -56,6 +56,9 @@
 (function (global) {
   'use strict';
 
+  /* A host's page names the piece of Skribl this works in (see watchDocument);
+     read now, while this script is the one running. Null on Skribl's own. */
+  var scope = document.currentScript && document.currentScript.getAttribute('data-skribl-scope');
   var SEGS = '.seg, .smooth-seg, .gif-seg, .photo-fit-group';
   var TRACKS = SEGS + ', .seg-track, .media-tabs';
   /* PICTURE CHOICES. The draw drawer's tiles open grids of picture buttons
@@ -205,7 +208,7 @@
     var b = e.target;
     if (!b || b.tagName !== 'BUTTON' || !b.closest) return;
     var g = b.closest(PICKS);
-    if (!g) return;
+    if (!g || (scope && !b.closest(scope))) return;
     var all = [].slice.call(g.querySelectorAll('button'));
     var btns = [];
     for (var i = 0; i < all.length; i++) if (!all[i].disabled) btns.push(all[i]);
@@ -228,14 +231,22 @@
   function watchDocument() {
     if (global.__skriblSegPressed) return;
     global.__skriblSegPressed = true;
-    syncAll();
+    /* WHERE IT WORKS: the whole document on Skribl's own pages; on a host's
+       page that holds a piece of Skribl, only that piece, which the script
+       tag names (data-skribl-scope, the Gallery section's assets, after
+       v330), so a host's own .seg or .media-tabs is never written to. */
+    var roots = scope ? [].slice.call(document.querySelectorAll(scope)) : [null];
+    roots.forEach(watchRoot);
+  }
+  function watchRoot(root) {
+    syncAll(root);
     // EVERY TRACK GETS ITS PILL, not only the ones a surface remembered to
     // track: each editor used to track its groups one by one, and the ones
     // nobody listed -- Pad's Mirror, Pauses, Preview speed and grid density,
     // Flip's Mirror and smear weight -- showed their selection by ink alone
     // (owner, on the phone: "not bright enough to tell what's selected").
     // Tracks built later by script are picked up as they arrive, below.
-    trackAll();
+    trackAll(root);
     if (typeof MutationObserver === 'undefined') return;
     new MutationObserver(function (muts) {
       for (var i = 0; i < muts.length; i++) {
@@ -256,7 +267,7 @@
           }
         }
       }
-    }).observe(document.documentElement, { subtree: true, childList: true, attributes: true, attributeFilter: ['class'] });
+    }).observe(root || document.documentElement, { subtree: true, childList: true, attributes: true, attributeFilter: ['class'] });
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', watchDocument);
   else watchDocument();

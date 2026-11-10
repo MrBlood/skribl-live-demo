@@ -184,9 +184,10 @@ says so.
     code was not seen, so this is said as an if (INTEGRATION.md, "The file
     work before the first visitor").
 
-12. **A Skribls section** (the owner's pick A, Nov 2026, FUTURE 6ah): every
-    public skribl, from both doors, as a grid in the site's own frame and
-    colours. Three parts, all worked in `examples/host_app`:
+12. **A Skribls section** (FUTURE 6ah; the owner's B, after v330: "one
+    gallery, two doors"): Skribl's own Gallery, every public skribl from both
+    doors, in the site's own frame. Three parts, all worked in
+    `examples/host_app`:
     - **Names.** Mount with `author_resolver` returning what the post head
       already shows (`display_name`, `username`, `avatar_url`, `url`,
       `verified`). Without it Skribl's own gallery calls the site's people
@@ -195,16 +196,23 @@ says so.
       the public ids on a page of the listing at once and returns
       `{public_id: post URL}`: one `WHERE skribl_id IN (...)` on the site's
       own posts, by the public id each keeps (`post.skribl_id`, item 3).
-      Return only posts any viewer may open; a skribl drawn in the app has
-      no post and says "Made in Skribl Pad" (or Flip).
+      Return only posts any viewer may open. A card whose drawing is in a
+      post says "From a post" and links to it; a skribl drawn in the app has
+      no post, and its card says nothing more.
     - **The page.** Under the site's navigation (where it sits on the phone
       bar, under Explore or a tab of its own, is the owner's call, later),
-      draw the grid from `GET /skribl/api/skribls` in the browser the way
-      `templates/skribls.html` does: clone `skribl_inline('__ID__')`, set its
-      size and line from the listing, `SkriblInline.mount()`. New, Hot and
-      Search are the listing's `sort` and `q`; More is its `next_cursor`.
-      Two across on a phone; each tile's line then says just its time,
-      which the player does by itself below 240px.
+      two macros and nothing else: `{{ skribl_gallery_assets() }}` once in
+      `<head>` after `skribl_inline_assets()` (item 3), and
+      `{{ skribl_gallery_section() }}` where the gallery goes, both from
+      `skribl/_skribl_gallery_section.html` (INTEGRATION.md, "Skribl's own
+      Gallery on your page"). That is `/gallery`'s own section: New, Hot and
+      search, the cards with the ⋯ menu and Report, the caption with its
+      "more", Load more. Its sheet is written to the section's own id, so the
+      site's rules and its look stay out of it and it stays out of theirs;
+      it follows the site's `data-theme` on `<html>`. Report works from the
+      site's page as it is: `init_skribl` gives the page its token and sets
+      the cookie it pairs with. One card across on a phone, two on a desk,
+      as on `/gallery`. `templates/skribls.html` is exactly this.
 
 The player needs nothing from `media.skribls.net`: its poster and payload come
 from Skribl's own routes under the site's prefix.

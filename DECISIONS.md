@@ -32937,3 +32937,150 @@ on both; the glide itself made slow (TALL_MS 600 in the product, the server
 bounced, then restored), red with no second try (there at about 570ms); as
 built, green. The whole suite on the tree, 72/72, on a box busy with another
 build (one look held 51ms on the way up, on time).
+## After v330 -- The Skribls tab is Skribl's own Gallery, in the host's frame (B)
+
+The owner's B from the stand-in's look-over ("all yes", Nov 10; FUTURE 6ah,
+docs/SOCIAL-SITE.md phase 0): the stand-in's Skribls tab stops drawing tiles
+of its own and shows Skribl's own Gallery under the host's header and tabs.
+One gallery, two doors: /gallery and a host's page hold the same section.
+
+- ONE PARTIAL. `_skribl_gallery_section.html` holds what is the gallery: New
+  and Hot, the search box, the list, the three states, Load more, the report
+  sheet, the card's template and the live region. /gallery includes it inside
+  its own page (the header, the heading, the foot); a host holds it with two
+  macros, `skribl_gallery_assets()` in <head> and `skribl_gallery_section()`
+  where the gallery goes. gallery.js finds its parts inside the section and
+  its settings on the section's root (the listing, the player's address, the
+  CSRF token), where they were on <body>, and builds the card's menu inside
+  it.
+- /GALLERY IS AS IT WAS. Its <style> is untouched but for one new rule
+  (`.tfrom`, below), its scripts are the same in the same order, its ids are
+  the same; the report sheet, the template and the live region now sit in the
+  section inside <main>. Measured against the starting commit served beside
+  it on the same database, the clocks held: /gallery the same pixel for pixel
+  on a phone and a desk, dark and light, at rest, with a card's menu open and
+  with the report sheet open (12 of 12).
+- FROM A POST. A card whose listing item carries `source` (the host's
+  source_resolver) says "From a post" at its foot, where the mock had it:
+  small violet words in a 44px box, set in to where the caption starts.
+  Skribl alone knows no posts, so /gallery shows none.
+- LOAD MORE ASKS ONLY FOR A NEXT PAGE. Skribl's own had the second half of
+  the stand-in's bug (#833): a press with no cursor fetched page one again.
+- A HOST'S REPORT IS TAKEN. A host's page gets nothing from Skribl's context
+  processors, so init_skribl adds two app-wide globals beside skribl_asset:
+  `skribl_report` (the reasons and the note's limit) and `skribl_csrf()`,
+  which on a page Skribl's own hooks never saw runs the CSRF `prepare`; an
+  app-wide after_request then sets the cookie that token pairs with
+  (security.page_csrf_token). The gallery view no longer passes the reasons.
+- A STYLESHEET MADE FROM /GALLERY'S. `gallerysection.css` is written by the
+  command that writes player.css and fullband.css (cssgraph.py --emit), from
+  /gallery's own sheets in /gallery's order (fullband, fullbar, tooltip,
+  labels, pagemenu's glass and grab bar, segslider, the page's <style>), every
+  selector under `#skriblGallery`. The root starts from nothing and takes what
+  /gallery's page gives the section (its body's type and ink, its <html>'s
+  language); every part of it starts from the browser's defaults, but the
+  player's box, which keeps inlineplayer.css, and an <svg> or a <canvas>,
+  whose attributes a revert would undo; every custom property the section
+  reads is defined on the root as /gallery defines it, or cut off there.
+  Light follows `data-theme="light"` or, with no data-theme, the device. AN
+  ID, NOT THE CLASS THE PLAN NAMED: a class-scoped rule ties a host's own
+  class rule, and the later one wins; the stand-in's nav is `.tabs`, which New
+  and Hot wear too, and in the approved mock (the host's CSS laid over
+  /gallery) its margin had pushed the pill 10px above the search box.
+- THE SCRIPTS KEEP TO THE SECTION. lib/tooltip.js takes a root; lib/labels.js
+  and lib/segslider.js read `data-skribl-scope` off their own script tag.
+  Without either, as on every Skribl page, they do what they did. Not loaded
+  on a host's page: the page menu, the theme switch, opensurfaces, Report a
+  problem, the marks; so under the report sheet the second belt against
+  pull-to-refresh is the host's own (sheetswipe's first belt is there).
+- WHAT IT DOES TO PAD AND FLIP: nothing in the editors. The three libraries
+  are theirs too and behave as before without the new argument or attribute
+  (verify_ux, verify_parity, verify_onepill and verify_tips below). The card
+  is the one Pad's and Flip's skribls already had on /gallery.
+
+THE CHECKS, each shown red first, one part at a time, the server bounced
+after every template and Python change. A small runner ran the suite's own
+section code on a fixture (a post through the host's form, no Pad), so a
+calibration took a minute.
+
+- verify_standin 8, THE SAME CARD ON BOTH DOORS: one drawing posted to each
+  door alike, signed out; the host's section width given to /gallery's; the
+  clocks three days on; the page grey under both; the card and the New / Hot
+  bar pinned at the same spot and photographed at 2x. In place, every pixel
+  of the phone's card differed by a hair: it sat at y 465.297 on the host, and
+  a gradient's dither and an icon's edges follow the screen's pixels. Pinned,
+  one difference was left: the play pill's words, 1624 pixels of glyph edges
+  on a phone only, with every computed style, the face (Inter SemiBold, both)
+  and every box the same, and each page drawing them the same run after run.
+  The pill is composited on its own (it blurs what is under it), and Chromium
+  had kept the host's first raster of it; made anew on both pages before the
+  picture, 0 differ. And each pinned element gets a layer of its own on both
+  pages: run after the suite's own posts (more cards, one with a real
+  poster), the phone's card was drawn from another origin on one door, its
+  avatar's dither and its corners 404 pixels apart, while on a page of two
+  drawings it matched; whether it got a layer had depended on what else was
+  there. Calibrated: the title's rule taken out of the generated sheet, all
+  four rows red; the title's colour alone changed (no size moves), red, about
+  7,500 pixels in the title's box; the reset emptied, all four red (the
+  host's bar 64px tall, not 44: the stand-in's `.tabs` margin reaching New and
+  Hot); as built, 0 px differ in all four (phone and desk, dark and light).
+- verify_standin 9, NOTHING LEAKS OUT: the host's own elements with the
+  section's files and without (the page's HTML rewritten in the browser,
+  every tag the macro writes taken out, 13 of 13), their styles as computed
+  (the Typed OM: getComputedStyle answered the frame's `margin: 0 auto` with
+  0px on one load and 330px on another, the frame at x 330 both times), their
+  boxes and their markup. Calibrated: one rule written without the scope
+  (`.btn`), red (the host's header 44px tall, not 38.5); labels.js without its
+  scope, red (the host's Sign in wrapped in a span); as built, green.
+- verify_standin 10, A REPORT FROM THE HOST: from a new browser that lands
+  first on the Skribls page, ⋯, Report, a reason, Send: 202, thanks,
+  Reported. Calibrated: signed in through the feed first, it stayed green
+  with the cookie's hook taken out, because a poster on the feed had already
+  set a sound cookie; landing first on the Skribls page, without the hook it
+  is 403, red; the section's token empty, 403, red; as built, 202.
+- verify_standin 11, FROM A POST: the drawing posted through the composer
+  links to /host/posts/<id> and opens it; a drawing in no post says nothing;
+  the demo's /gallery has none. Calibrated: never drawn, its two rows red;
+  drawn on every card, the other two red.
+- verify_standin 5, LOAD MORE, re-pointed to Skribl's own: shown with no next
+  page, that row red (painted 1; the press row green); the guard gone, the
+  press row red (4 cards, then 12). A first try ran where this session's
+  runs had filled the stand-in past one page, and both rows went red for that
+  reason; redone on a fresh server.
+- verify_standin 7 reads the section's words too: "From a post" made a dim
+  grey, red (2.30:1). Section 6 reads its two text fields (16px).
+- verify_seam pins gallerysection.css byte for byte: /gallery's caption made
+  16px and not re-emitted, red (the same length, different bytes).
+- verify_surfaces holds the host's macro to /gallery's section scripts, in
+  /gallery's order (capmore.js dropped from the macro, red), and counts the
+  partial among the surfaces; gen_docs' module index says "host gallery".
+- verify_example reads the Skribls page as the section: two across on a desk
+  (the generated sheet made one column, red, 58/59), one on a phone; the
+  drawings made in the app link nowhere and their cards say what they are.
+- Not a row: full screen compared on both doors, element by element. It found
+  the root's `all: initial` dropping the language lang="en" gives the browser,
+  and the reset dropping a canvas's width and height; the root now says
+  /gallery's language as a property and a canvas is left out of the reset,
+  and every element of the frame then computes the same on both doors (phone
+  and desk, dark and light), but for where each replay was paused.
+
+Side by side (run_parallel -j 3, before the language and canvas commit):
+verify_gallery 232/232, verify_tilereport 32/32, verify_captions 76/76,
+verify_hot 56/56, verify_cardfade 25/25, verify_fullsmart 26/26,
+verify_onefull 57/57, verify_fullfade 70/70, verify_viewedges 19/19,
+verify_galib 176/176, verify_a11y 444/444, verify_layout 257/257,
+verify_onepill 2860/2860, verify_icons 60/60, verify_contrast 628/628,
+verify_sheetswipe 247/247, verify_library 247/247, verify_theme 120/120,
+verify_surfaces 13/13, verify_docs 144/144, verify_seam 458/458,
+verify_inline 192/192, verify_jsstrip 35/35, verify_assetcache 20/20,
+verify_example 59/59, verify_standin 21/21, verify_hostseams 88/88,
+verify_integration 29/29, verify_tips 72/72, verify_csrf 27/27,
+verify_txcontract 95/95, verify_parity 434/434, verify_ux 487/487; and
+verify_a11ypages INTERMITTENT, 161/162 beside the others and 162/162 alone:
+load, not a defect (a fixture's precondition, Flip's media drawer not yet the
+current one after its 500 ms settle; the census just after found its 20
+controls, and nothing here reaches Flip's drawers). After the language and
+canvas commit and section 8's layers, the suites those touch, side by side:
+verify_standin 21/21, verify_example 59/59, verify_inline 192/192,
+verify_seam 458/458, verify_docs 144/144, verify_surfaces 13/13 (/gallery's
+own markup, sheet and scripts did not change in them).

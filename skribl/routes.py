@@ -430,10 +430,10 @@ def register_routes(bp, *, index_route=False):
         # invent: what it shows is what people chose. verify_gallery.py drives
         # the choice from both sheets and reads the page.
         # The report sheet's reasons are the API's closed set, rendered from
-        # the same tuple, so the sheet cannot offer one the server refuses.
-        return render_template("skribl/skribl_gallery.html",
-                               report_reasons=REPORT_REASONS,
-                               report_note_max=MAX_REPORT_NOTE_CHARS)
+        # the same tuple, so the sheet cannot offer one the server refuses:
+        # the section reads them from the app-wide `skribl_report` global
+        # (init_skribl), which a host's Skribls page has too (after v330, B).
+        return render_template("skribl/skribl_gallery.html")
 
     @bp.get("/feed")
     def skribl_feed():

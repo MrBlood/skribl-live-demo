@@ -1,0 +1,182 @@
+{#  THE GALLERY SECTION: Skribl's own Gallery, as one piece a page can hold
+    (after v330, the owner's B: "one gallery, two doors").
+
+    /gallery is Skribl's page around it: its header, its heading and its
+    foot. Everything that IS the gallery is here, once: New and Hot, the
+    search box, the cards, the three states, Load more, the report sheet the
+    cards' menus open, the card's own markup to clone, and the line a screen
+    reader hears. A host's page holds the same piece in its own frame:
+
+        {% from 'skribl/_skribl_inline_player.html' import skribl_inline_assets %}
+        {% from 'skribl/_skribl_gallery_section.html'
+             import skribl_gallery_assets, skribl_gallery_section %}
+
+        {{ skribl_inline_assets() }}       once per page, in <head> (the player)
+        {{ skribl_gallery_assets() }}      once per page, in <head>, after it
+        ...
+        {{ skribl_gallery_section() }}     where the gallery goes, once per page
+
+    ONE PER PAGE. gallery.js finds the section by its root, and the parts
+    inside keep the ids /gallery has always had (galleryList, reportSheet...),
+    so a page holds one. The root's id is also what scopes its stylesheet.
+
+    WHAT A HOST GETS IS /GALLERY'S, NOT A COPY. The markup is this file, the
+    script is gallery.js, and gallerysection.css is generated from /gallery's
+    own rules (harness/tools/cssgraph.py --emit), every selector under the
+    root's id, so nothing in it reaches the host's page and the host's own
+    rules do not reach the cards (that sheet's header says how). The macro
+    writes the player only through skribl_inline(), like every page.
+
+    THE SECTION'S SETTINGS ARE ON ITS ROOT, not on <body>: the listing to
+    read, the player's address to link to, and the CSRF token a report sends.
+    Every URL is built from an absolute endpoint name, as the player's macros
+    are, so it is right under any url_prefix and from a host's own view.
+    skribl_csrf() and skribl_report are app-wide globals init_skribl() adds,
+    as it adds skribl_asset: a host's page gets no Skribl context of its own,
+    and on a page that is not Skribl's, skribl_csrf() also has the response
+    carry the cookie its token pairs with (skribl/security.py page_csrf_token).
+
+    `page` says the section IS the page (/gallery): page-wide helpers, the
+    styled tooltips, then cover the whole page, as they always have there. On
+    a host they keep to the section. #}
+{% from 'skribl/_skribl_inline_player.html' import skribl_inline %}
+
+{#  The section's files, for a page that is not Skribl's. /gallery loads its
+    own (its <style> and the component sheets, and the same scripts in the
+    same order around its page's own), so this list is /gallery's minus the
+    page's: verify_surfaces holds the two together. lib/labels.js and
+    lib/segslider.js are told the section is their scope (data-skribl-scope),
+    so they trim and place what is inside it and leave the page's own buttons
+    and controls alone; gallery.js keeps the tooltips to it the same way. #}
+{% macro skribl_gallery_assets() -%}
+<link rel="stylesheet" href="{{ skribl_asset('gallerysection.css') }}">
+<script src="{{ skribl_asset('lib/chromefade.js') }}" defer></script>
+<script src="{{ skribl_asset('lib/smartfade.js') }}" defer></script>
+<script src="{{ skribl_asset('lib/fullbar.js') }}" defer></script>
+<script src="{{ skribl_asset('lib/immersive.js') }}" defer></script>
+<script src="{{ skribl_asset('lib/tooltip.js') }}" defer></script>
+<script src="{{ skribl_asset('lib/modalfocus.js') }}" defer></script>
+<script src="{{ skribl_asset('lib/segslider.js') }}" data-skribl-scope="#skriblGallery" defer></script>
+<script src="{{ skribl_asset('lib/sheetswipe.js') }}" defer></script>
+<script src="{{ skribl_asset('lib/labels.js') }}" data-skribl-scope="#skriblGallery" defer></script>
+<script src="{{ skribl_asset('lib/postedui.js') }}" defer></script>
+<script src="{{ skribl_asset('lib/capmore.js') }}" defer></script>
+<script src="{{ skribl_asset('gallery.js') }}" defer></script>
+{%- endmacro %}
+
+{% macro skribl_gallery_section(bp='skribl', page=false) -%}
+{#  THE WHOLE TEMPLATED URL for the player, placeholder and all, which is the
+    shape the poster uses: "the real one is that same server-built path with
+    the id substituted -- no path is assembled here, which keeps this correct
+    under a url_prefix." Slicing the base off in the template needed `len`,
+    which is not a Jinja builtin, and reassembling a route in JavaScript is the
+    thing the poster's note exists to forbid.
+
+    lang="en": the section's own words are English, as /gallery's <html>
+    says of the whole page, and a host's page may say another language, or
+    none. This is what a screen reader goes by. The browser's own choice of
+    fonts goes by it too, but the section's sheet starts its root from nothing,
+    which drops what the attribute says to it there; so gallerysection.css says
+    the language again, from /gallery's <html> (harness/tools/cssgraph.py). #}
+<div class="skribl-gallery" id="skriblGallery" lang="en" data-skribl-gallery
+     data-skribl-api="{{ url_for(bp ~ '.list_skribls') }}"
+     data-skribl-player="{{ url_for(bp ~ '.skribl_player', public_id='__ID__') }}"
+     data-skribl-csrf="{{ skribl_csrf() }}"{% if page %} data-skribl-page{% endif %}>
+  {# NEW / HOT AND SEARCH (v304). New is the listing as it always was; Hot is
+     plays in the last seven days, most first (GET /api/skribls?sort=hot,
+     counted once per client per post per day). Search is the listing's own
+     q, title and caption. Both are the server's: this section adds no
+     filtering or ranking of its own. #}
+  <div class="bar">
+    <div class="tabs seg-track" role="group" aria-label="Order">
+      <span class="seg-slider" aria-hidden="true"></span>
+      {# The titles say what "New" and "Hot" cannot; lib/tooltip.js draws
+         them, on a pointer that hovers. #}
+      <button type="button" class="tab active" data-sort="new" aria-pressed="true"
+              title="Newest first">New</button>
+      <button type="button" class="tab" data-sort="hot" aria-pressed="false"
+              title="Most played in the last seven days">Hot</button>
+    </div>
+    <form class="find" id="galleryFind" role="search">
+      <input type="search" id="galleryQ" placeholder="Search titles, captions" aria-label="Search the gallery" autocomplete="off" maxlength="80">
+    </form>
+  </div>
+
+  <div class="grid" id="galleryList"></div>
+
+  {# THE STATES, in the language of the page. The empty state says what
+     puts something here — the tick on the post sheet — because a person
+     who just posted and does not see it needs that sentence, not a route. #}
+  <p class="state" id="galleryEmpty" hidden>
+    <b>Nothing here yet.</b><br>
+    Skribls appear here when their author ticks
+    <b>Show in the public gallery</b> as they post, or turns it on later
+    in their Library.
+  </p>
+  <p class="state" id="galleryNone" hidden>
+    <b>Nothing matches that.</b> Try part of a title.
+  </p>
+  <p class="state" id="galleryError" hidden>
+    <b>Couldn't load the gallery.</b> Check your connection and try again.<br>
+    <button type="button" class="btn" id="galleryRetry">Retry</button>
+  </p>
+  <div class="more-wrap">
+    <button type="button" class="btn" id="galleryMore" hidden>Load more</button>
+  </div>
+
+  {# REPORT ON EVERY TILE (v304): one sheet, opened by any tile's Report button
+     with that tile's id. A DIALOG that says so -- role + aria-modal are what
+     verify_a11y's census counts and what a screen reader announces -- and
+     lib/modalfocus.js keeps Tab inside and hands focus back to the button that
+     opened it. The reasons are the API's closed set, rendered from the same
+     tuple (skribl.core.REPORT_REASONS, through the skribl_report global), so
+     this sheet cannot offer one the server refuses. A report is a row in an
+     operator's queue, and the sheet says so: nothing is promised that the
+     product does not do. #}
+  <div class="sheet" id="reportSheet" role="dialog" aria-modal="true" aria-labelledby="reportTitle" hidden>
+    <form class="sheet-card" id="reportForm">
+      {# The grab bar: a phone's bottom sheet closes on a tap here or a swipe
+         down (lib/sheetswipe.js). The page menu's pill, so it is drawn once. #}
+      <div class="pm-grab" aria-hidden="true"></div>
+      <h2 id="reportTitle">Report this Skribl</h2>
+      <p>Tell us what is wrong with it. Reports go to the people who run this site; nothing is taken down automatically.</p>
+      <fieldset class="reasons">
+        <legend>Reason</legend>
+        {% for r in skribl_report.reasons %}
+        <label class="reason"><input type="radio" name="reason" value="{{ r }}"{% if loop.first %} checked{% endif %}> {{ {'spam': 'Spam or misleading', 'abuse': 'Abusive or hateful', 'copyright': 'Copies someone else\'s work', 'other': 'Something else'}[r] }}</label>
+        {% endfor %}
+      </fieldset>
+      <label>
+        <span class="sheet-status">Anything else? <span style="color: var(--text-3)">optional</span></span>
+        <textarea class="note" id="reportNote" maxlength="{{ skribl_report.note_max }}" rows="2" placeholder="What should we know?"></textarea>
+      </label>
+      <p class="sheet-status" id="reportStatus" role="status" hidden></p>
+      <div class="sheet-actions">
+        <button type="button" class="btn" id="reportCancel">Cancel</button>
+        <button type="submit" class="btn primary" id="reportSend">Send report</button>
+      </div>
+    </form>
+  </div>
+
+  {# The macro's own output with the id left as a placeholder; gallery.js clones
+     it per item, as feed.js does, so this section can never render markup the
+     macro does not produce. <template> content is inert. #}
+  {# progress=false: the card's own transport overlays the drawing's bottom edge
+     with a real scrubber since v310, so the component's hairline would be a
+     second progress line under the first. The macro HIDES it rather than
+     omitting it -- inlineplayer.js requires the element and keeps writing its
+     width -- which is the supported way to say this, and the reason no rule in
+     the section's sheet reaches for it by class name. The profile made the
+     same call for the same reason in v304.
+
+     AND THIS NOTE DOES NOT SPELL THAT CLASS, for the second time in one change:
+     verify_inline scans every template for the component's internal names,
+     and both comments explaining the absence originally NAMED the thing they
+     were explaining. The gate read the explanation as the thing it forbids,
+     exactly as it has three times before in this tree. #}
+  <template id="skriblTileTpl">{{ skribl_inline('__ID__', bp=bp, progress=false, line=false) }}</template>
+  {# What the menu says out loud. A copy that reports itself only by retitling
+     a button tells a screen reader nothing. #}
+  <p id="galleryStatus" class="sr-live" role="status" aria-live="polite"></p>
+</div>
+{%- endmacro %}
