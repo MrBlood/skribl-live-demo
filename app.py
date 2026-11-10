@@ -462,6 +462,9 @@ def create_app():
                        # not, and the default is False for exactly that reason.
                        index_route=True)
 
+    # The site, beside Skribl in this same app (see _mount_social below).
+    _mount_social(app)
+
     # So a single db.create_all() covers Skribl's tables too. Optional — see
     # skribl.models.attach_to_metadata; an Alembic host would migrate
     # SkriblBase.metadata separately instead.
@@ -503,6 +506,35 @@ def create_app():
         print("Initialized database.")
 
     return app
+
+
+# ---- THE SITE, AT /social ----------------------------------------------------
+#
+# docs/SOCIAL-SITE.md: the Skribl social site is its own package, social/, a
+# host of Skribl through the same public seams any host uses. The owner's yes
+# (Nov 10): it lives on the demo at /social until it has a domain, and it
+# SHARES this app's Skribl -- one Skribl, one database -- so a drawing made in
+# the Pad is a skribl on the site. Hence init_social(app) on this app, after
+# init_skribl, and not a second app beside it the way the stand-in below is.
+# Phase 1, piece 1 is its frame, read-only: Home, Explore, and Make's sheet
+# into the Pad and Flip; no accounts and no tables yet.
+#
+# A site that fails to start is logged and left out, as the stand-in is: the
+# demo never depends on it. init_social asks everything that can fail before
+# it registers anything, so a site left out leaves the app as it was.
+# SKRIBL_SOCIAL=0 leaves it out on purpose.
+SOCIAL_PATH = "/social"
+
+
+def _mount_social(app):
+    if os.environ.get("SKRIBL_SOCIAL", "1").strip() == "0":
+        return
+    try:
+        import social
+        social.init_social(app, url_prefix=SOCIAL_PATH)
+    except Exception:
+        app.logger.exception("the site at %s did not start; the demo runs without it",
+                             SOCIAL_PATH)
 
 
 # ---- THE SKRIBLS.NET STAND-IN, AT /host --------------------------------------

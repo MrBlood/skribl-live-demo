@@ -1,0 +1,61 @@
+{#  THE SITE'S FRAME (docs/SOCIAL-SITE.md, phase 1; the owner's A, Sketchbook).
+
+    A phone gets the wordmark at the top of the page, which scrolls away with
+    it, and a bar along the bottom: Home, Explore, Make. A desk gets a rail
+    down the left: the wordmark, Home, Explore, and Make as the big purple
+    button. The page you are on is marked with a pen's line under its name.
+    No You until there is a sign-in (piece 2).
+
+    SKRIBL'S PARTS, THROUGH ITS SEAMS ONLY (docs/INTEGRATION.md): the
+    in-post player's files, Skribl's signature (the wordmark, coloured here
+    with the accent purple), and its two pages Make opens. Light and dark
+    follow the device: the site has no switch of its own yet, and Skribl's
+    own choice is kept where only Skribl's pages read it.
+
+    NO SCRIPT IN THE PAGE. The demo sends Skribl's standalone policy on every
+    page that is not Skribl's (script-src 'self' and a nonce the site never
+    needs), so every script here is a file. #}
+{% from 'skribl/_skribl_inline_player.html' import skribl_inline_assets %}
+{% import 'social/_icons.html' as ic %}
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+{# The browser's own bar in the page's ground, as Skribl's pages do it
+   (skribl.core.THEME_GROUND). #}
+<meta name="theme-color" content="#fbfcfd" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0b0d12" media="(prefers-color-scheme: dark)">
+<title>{% block title %}Skribl{% endblock %}</title>
+<link rel="icon" type="image/png" sizes="192x192" href="{{ skribl_asset('icon-192.png') }}">
+<link rel="apple-touch-icon" sizes="180x180" href="{{ skribl_asset('apple-touch-icon.png') }}">
+{{ skribl_inline_assets() }}
+{% block head %}{% endblock %}
+<link rel="stylesheet" href="{{ social_asset('social.css') }}">
+<script src="{{ social_asset('social.js') }}" defer></script>
+{% block scripts %}{% endblock %}
+</head>
+<body>
+{# Two wordmarks, one shown at a time: the phone's at the top of the page,
+   the desk's at the top of the rail. Each carries its own sweep, so the two
+   gradients have two ids (a page with one id twice is a page verify_a11y
+   fails); the colour is the same, the site's accent purple. #}
+<header class="top">
+  <a class="brand" href="{{ url_for('social.home') }}" aria-label="Skribl, home">{% with brand_sweep=65 %}{% include 'skribl/_skribl_brand_mark.html' %}{% endwith %}</a>
+</header>
+<nav class="nav" aria-label="Main">
+  <a class="brand" href="{{ url_for('social.home') }}" aria-label="Skribl, home">{% with brand_sweep=66 %}{% include 'skribl/_skribl_brand_mark.html' %}{% endwith %}</a>
+  <a class="tab" href="{{ url_for('social.home') }}"{% if here == 'home' %} aria-current="page"{% endif %}>
+    <span class="tab-ic">{{ ic.home(here == 'home') }}</span><span class="tab-name">Home{% if here == 'home' %}{{ ic.underline() }}{% endif %}</span></a>
+  <a class="tab" href="{{ url_for('social.explore') }}"{% if here == 'explore' %} aria-current="page"{% endif %}>
+    <span class="tab-ic">{{ ic.explore(here == 'explore') }}</span><span class="tab-name">Explore{% if here == 'explore' %}{{ ic.underline() }}{% endif %}</span></a>
+  <button class="tab tab-make" type="button" data-make aria-haspopup="dialog" aria-controls="makeSheet" aria-expanded="false">
+    <span class="tab-ic">{{ ic.pen() }}</span><span class="tab-name">Make</span></button>
+</nav>
+<main class="main" id="main"><div class="col">
+{% block main %}{% endblock %}
+</div></main>
+{% include 'social/_make.html' %}
+</body>
+</html>

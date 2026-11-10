@@ -1,0 +1,17 @@
+{#  EXPLORE: Skribl's own Gallery, in the site's frame. The section as
+    /gallery and the stand-in's Skribls page hold it: New and Hot, the search
+    box, the cards with who drew each and when, the ⋯ with Report, Load more.
+    Two macros and nothing else; the site adds a heading and a line. #}
+{% extends 'social/base.html' %}
+{% from 'skribl/_skribl_gallery_section.html' import skribl_gallery_assets, skribl_gallery_section %}
+
+{% block title %}Explore · Skribl{% endblock %}
+{% block head %}{{ skribl_gallery_assets() }}{% endblock %}
+
+{% block main %}
+<div class="page-head">
+  <h1 class="page-title">Explore</h1>
+  <p class="page-sub">Skribls people chose to show. Tap one to watch it come alive.</p>
+</div>
+{{ skribl_gallery_section(bp=skribl_bp) }}
+{% endblock %}

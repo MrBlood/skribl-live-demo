@@ -1,0 +1,271 @@
+/* THE SITE'S LOOK: A, SKETCHBOOK (the owner's "all yes" on phase 1's mocks,
+ * Nov 10; docs/SOCIAL-SITE.md section 5).
+ *
+ * SKRIBL'S OWN TOKENS, SAME ROLE, SAME TOKEN (WORKING-AGREEMENTS): the page's
+ * ground is the editors' (skribl.core.THEME_GROUND), the two inks are the
+ * Gallery's, an action is --accent-fill with white on it, small violet words
+ * are --accent-ink, a sheet is --menu-paper and the rows on it --menu-card.
+ * Written out here because the site loads none of Skribl's stylesheets but
+ * the player's and the Gallery section's, which keep to themselves. The pen's
+ * touch is the site's: the wordmark in the accent purple, a drawn line under
+ * the page you are on, and the first visit's drawn headline.
+ *
+ * Light and dark follow the device. The site has no switch of its own yet.
+ *
+ * NOTHING HERE REACHES INTO SKRIBL'S PARTS. The Gallery section starts from
+ * nothing at its own edge (gallerysection.css), and the player reads only the
+ * five tokens set on .hello-art below; no rule here names a class of either.
+ * The frame's own classes are written under .nav, .top, .hello and .make. */
+
+:root {
+  color-scheme: light;
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --page: #fbfcfd;                  /* THEME_GROUND light: the editors' page */
+  --ink: #14171d;                   /* the Gallery's first ink */
+  --ink-2: #4b5563;                 /* its second */
+  --accent-ink: #4c31c4;            /* small violet words */
+  --brand: #7c5cff;                 /* the wordmark, and the pen's line */
+  --fill: #6d4cf0;                  /* --accent-fill: an action, white on it */
+  --on-fill: #ffffff;
+  --fill-drop: 0 1px 0 rgba(255, 255, 255, 0.22) inset, 0 6px 16px rgba(109, 76, 240, 0.30);
+  --focus: #6d4cf0;
+  --btn2-bg: #ffffff;               /* the second button: a --menu-card */
+  --btn2-line: rgba(124, 92, 255, 0.34);
+  --btn2-ink: #14171d;
+  --nav-bg: rgba(251, 252, 253, 0.94);
+  --nav-line: rgba(20, 23, 29, 0.08);
+  --nav-ink: #4b5563;
+  --nav-on: #14171d;
+  --nav-hover: rgba(124, 92, 255, 0.08);
+  --sheet-paper: #f3f0ff;           /* --menu-paper */
+  --row-bg: #ffffff;                /* --menu-card */
+  --grip: rgba(20, 23, 29, 0.2);
+  --scrim: rgba(23, 20, 42, 0.36);
+  --draw-line: rgba(20, 23, 29, 0.08);
+  --draw-wait: #f1f3f7;             /* where a drawing will be, before it is */
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --page: #0b0d12;                /* THEME_GROUND dark */
+    --ink: #eef1f6;
+    --ink-2: #b7bfcc;
+    --accent-ink: #c1b2ff;
+    --brand: #8f74ff;
+    --focus: #c1b2ff;
+    --btn2-bg: rgba(167, 146, 255, 0.10);
+    --btn2-line: rgba(167, 146, 255, 0.26);
+    --btn2-ink: #eef1f6;
+    --nav-bg: rgba(11, 13, 18, 0.92);
+    --nav-line: rgba(255, 255, 255, 0.09);
+    --nav-ink: #b7bfcc;
+    --nav-on: #ffffff;
+    --sheet-paper: #17142a;
+    --row-bg: #231e3b;
+    --grip: rgba(255, 255, 255, 0.22);
+    --scrim: rgba(0, 0, 0, 0.5);
+    --draw-line: rgba(255, 255, 255, 0.08);
+    --draw-wait: #13161c;
+  }
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--page);
+  color: var(--ink);
+  font: 16px/1.45 var(--font);
+  -webkit-font-smoothing: antialiased;
+}
+.ic { display: block; flex: none; width: 24px; height: 24px; }
+:is(a, button):focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+/* The wordmark: Skribl's signature, its gradient's two ends one colour. */
+.brand { display: flex; align-items: center; min-height: 44px; min-width: 76px; color: var(--brand); }
+.brand .brand-mark { display: block; height: 32px; width: auto; overflow: visible; }
+.brand .brand-grad-a, .brand .brand-grad-b { stop-color: var(--brand); }
+
+/* ---- buttons -------------------------------------------------------------- */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 44px; padding: 0 18px; border-radius: 999px;
+  border: 1px solid var(--btn2-line); background: var(--btn2-bg); color: var(--btn2-ink);
+  font: 600 15px/1.2 var(--font); text-decoration: none; white-space: nowrap; cursor: pointer;
+}
+.btn .ic { width: 20px; height: 20px; }
+.btn-primary { background: var(--fill); color: var(--on-fill); border-color: transparent; box-shadow: var(--fill-drop); }
+.btn-big { min-height: 52px; padding: 0 24px; font-size: 16px; }
+.btn-wide { width: 100%; }
+
+/* ---- the frame, a phone first --------------------------------------------- */
+/* The wordmark at the top of the page scrolls away with it: the bar below
+   already holds the way home, and the drawings get the height. */
+.top { display: flex; align-items: center; height: 56px; padding: 0 16px; }
+.main { padding-bottom: calc(88px + env(safe-area-inset-bottom)); }
+.col { width: 100%; max-width: 1100px; margin: 0 auto; padding: 0 16px; }
+
+/* THE BAR along the bottom of a phone: Home, Explore, Make. */
+.nav {
+  position: fixed; z-index: 30; left: 0; right: 0; bottom: 0;
+  display: grid; grid-template-columns: repeat(3, 1fr); align-items: stretch;
+  padding: 0 8px env(safe-area-inset-bottom);
+  background: var(--nav-bg); border-top: 1px solid var(--nav-line);
+  -webkit-backdrop-filter: saturate(1.4) blur(16px); backdrop-filter: saturate(1.4) blur(16px);
+}
+.nav .brand { display: none; }
+.nav .tab {
+  position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 3px; min-height: 64px; margin: 0; padding: 0; border: 0; background: none;
+  color: var(--nav-ink); font: 600 12px/1.45 var(--font); letter-spacing: 0.01em;
+  text-decoration: none; cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.nav .tab-ic { display: grid; place-items: center; height: 30px; }
+.nav .tab .ic { width: 26px; height: 26px; }
+.nav .tab-name { position: relative; }
+.nav .tab[aria-current="page"] { color: var(--nav-on); }
+.nav .tab[aria-current="page"] .tab-name { font-weight: 700; }
+.nav .ic-cut { fill: var(--page); stroke: var(--page); }
+/* The pen's line under the page you are on, as wide as its name. */
+.nav .pen-line { position: absolute; left: -2px; bottom: -5px; width: calc(100% + 4px); height: 6px; color: var(--brand); }
+/* Make is the one action in the bar: its icon sits on the action purple. */
+.nav .tab-make .tab-ic { width: 52px; height: 32px; border-radius: 999px; background: var(--fill); color: var(--on-fill); box-shadow: var(--fill-drop); }
+.nav .tab-make .ic { width: 22px; height: 22px; }
+
+/* ---- the frame on a desk: THE RAIL -------------------------------------- */
+@media (min-width: 900px) {
+  .top { display: none; }
+  .main { margin-left: 248px; padding-bottom: 64px; }
+  .col { padding: 32px 28px 0; }
+  .nav {
+    top: 0; right: auto; width: 248px;
+    display: flex; flex-direction: column; gap: 4px;
+    padding: 22px 16px 20px; border-top: 0; border-right: 1px solid var(--nav-line);
+  }
+  .nav .brand { display: flex; padding: 6px 12px 22px; }
+  .nav .brand .brand-mark { height: 38px; }
+  .nav .tab {
+    flex-direction: row; justify-content: flex-start; gap: 14px;
+    min-height: 52px; padding: 0 12px; border-radius: 14px; font-size: 17px; letter-spacing: 0;
+  }
+  .nav .tab-ic { width: 28px; height: 28px; }
+  .nav .tab-make {
+    margin-top: 14px; justify-content: center; gap: 10px; border-radius: 999px;
+    background: var(--fill); color: var(--on-fill); box-shadow: var(--fill-drop);
+  }
+  .nav .tab-make .tab-ic { width: auto; height: auto; background: none; box-shadow: none; }
+  .nav .tab-make .ic { width: 22px; height: 22px; }
+}
+@media (min-width: 900px) and (hover: hover) {
+  .nav .tab:not(.tab-make):hover { background: var(--nav-hover); }
+  .nav .tab-make:hover { filter: brightness(1.08); }
+}
+
+/* ---- Home: the first visit ------------------------------------------------ */
+.hello { max-width: 600px; margin: 8px auto 0; text-align: center; }
+/* BLOOBY'S CARD. The box is held at the card's own shape (816 x 612) and the
+   size the player gives a draft's preview (min(45vh, 360px) tall), so the
+   drawing arrives into room already made for it and nothing below moves. The
+   player's five tokens are set here and nowhere else. */
+.hello-art {
+  width: min(100%, 420px, calc(min(45vh, 360px) * 816 / 612));
+  aspect-ratio: 816 / 612;
+  margin: 0 auto;
+  border-radius: 14px;
+  background: var(--draw-wait);
+  --border: var(--draw-line); --radius: 14px; --bg-elev: var(--draw-wait);
+  --accent: #7c5cff; --accent-2: #7c5cff; --text-dim: var(--ink-2);
+}
+.hello-fade { opacity: 0; transition: opacity 0.32s ease; }
+.hello-art.is-ready .hello-fade { opacity: 1; }
+.hello-title { margin: 22px 0 10px; font: 700 31px/1.12 var(--font); letter-spacing: -0.02em; text-wrap: balance; }
+.hand { position: relative; display: inline-block; white-space: nowrap; }
+.hand .pen-line { position: absolute; left: 0; bottom: -10px; width: 100%; height: 12px; color: var(--brand); }
+.lede { margin: 0 auto 18px; max-width: 34em; color: var(--ink-2); font-size: 17px; line-height: 1.5; }
+.cta { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+.fine { margin: 12px 0 0; color: var(--ink-2); font-size: 14px; line-height: 1.45; }
+.sec { margin: 32px 0 14px; font-size: 20px; font-weight: 700; line-height: 1.3; }
+
+/* ---- Explore -------------------------------------------------------------- */
+.page-head { margin: 4px 0 18px; }
+.page-title { margin: 0 0 4px; font: 700 26px/1.2 var(--font); letter-spacing: -0.015em; }
+.page-sub { margin: 0; color: var(--ink-2); font-size: 15px; line-height: 1.45; }
+@media (min-width: 900px) { .page-title { font-size: 30px; } }
+
+/* ---- MAKE: the sheet with two doors --------------------------------------- */
+/* It glides up from the bottom of a phone; on a desk it is a card in the
+   middle of the screen that rises a little as it fades in. Nothing behind it
+   scrolls while it is up (touch-action), and a drag on it is its own. */
+.make {
+  position: fixed; inset: 0; z-index: 55;
+  display: flex; align-items: flex-end; justify-content: center;
+  touch-action: none; overscroll-behavior: contain;
+}
+.make[hidden] { display: none; }
+.make-scrim { position: absolute; inset: 0; background: var(--scrim); opacity: 0; transition: opacity 0.3s ease; }
+.make-sheet {
+  position: relative; width: 100%; max-width: 440px;
+  padding: 0 16px calc(16px + env(safe-area-inset-bottom));
+  background: var(--sheet-paper); color: var(--ink);
+  border-radius: 22px 22px 0 0; box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.25);
+  transform: translateY(100%); transition: transform 0.34s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.make.is-open .make-scrim { opacity: 1; }
+.make.is-open .make-sheet { transform: none; }
+.make.is-closing .make-sheet { transition-duration: 0.24s; transition-timing-function: cubic-bezier(0.4, 0, 1, 1); }
+.make.is-dragging .make-sheet { transition: none; }
+/* The grip: a tap on it closes the sheet, and a drag from anywhere on the
+   sheet follows the finger down (the owner: "menus should always go down or
+   away easily"). Its strip runs the sheet's width; the pill is its middle. */
+.make-grip { position: relative; height: 25px; margin: 0 -16px; cursor: pointer; }
+.make-grip::before {
+  content: ""; position: absolute; top: 10px; left: 50%; width: 36px; height: 5px; margin-left: -18px;
+  border-radius: 3px; background: var(--grip);
+}
+.make-title { margin: 0 4px 8px; color: var(--ink-2); font-size: 15px; font-weight: 600; line-height: 1.45; }
+.make-door {
+  display: flex; align-items: center; gap: 14px; min-height: 76px; margin-bottom: 8px; padding: 12px 14px;
+  border-radius: 18px; background: var(--row-bg); color: var(--ink); text-decoration: none;
+}
+.make-ic {
+  display: grid; place-items: center; flex: none; width: 48px; height: 48px; border-radius: 14px;
+  background: var(--fill); color: var(--on-fill); box-shadow: var(--fill-drop);
+}
+.make-words { display: flex; flex-direction: column; gap: 2px; line-height: 1.3; }
+.make-words b { font-size: 17px; font-weight: 700; }
+.make-words span { color: var(--ink-2); font-size: 15px; }
+.make-cancel { margin-top: 10px; }
+@media (min-width: 900px) {
+  .make { align-items: center; }
+  .make-sheet {
+    padding-bottom: 16px; border-radius: 22px; opacity: 0; transform: translateY(28px);
+    transition: transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.2s ease;
+  }
+  .make.is-open .make-sheet { opacity: 1; transform: none; }
+  .make-grip { cursor: default; }
+}
+@media (min-width: 900px) and (hover: hover) {
+  .make-door:hover { box-shadow: 0 0 0 1px var(--btn2-line); }
+}
+
+/* KIND TRANSITIONS BETWEEN PAGES, Skribl's own rule (styles.css, after v323:
+   "No transitions should be jumpy"): from Home to Explore, and from Make's
+   door into the Pad or Flip and back, the next page fades in over this one.
+   Both pages must ask for it, and Skribl's do; a page that did not left the
+   editors' half of the fade with nothing to meet it, and Chrome reported the
+   aborted transition as an error. Reduced motion keeps the plain cut, as
+   Skribl's pages do. */
+@media (prefers-reduced-motion: no-preference) {
+  @view-transition { navigation: auto; }
+  ::view-transition-old(root), ::view-transition-new(root) { animation-duration: 0.28s; animation-timing-function: ease; }
+}
+
+/* REDUCE MOTION: nothing moves. The sheet and the page behind it fade where
+   they sit, which is still and never abrupt. */
+@media (prefers-reduced-motion: reduce) {
+  .make-sheet, .make.is-open .make-sheet { transform: none; }
+  .make-sheet { opacity: 0; transition: opacity 0.2s ease; }
+  .make.is-open .make-sheet { opacity: 1; }
+}

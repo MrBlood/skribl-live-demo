@@ -1,0 +1,39 @@
+{#  HOME, which in piece 1 is the FIRST VISIT for everyone (there is no
+    sign-in to tell a returning person by yet).
+
+    BLOOBY DRAWS HIS CARD: How it works' own example (help/demos/
+    flip-blooby-card.json, a Flip drawn through the real Flip), played by
+    Skribl's in-post player as a draft, so it needs no row in anybody's
+    database. It draws the card, then loops him waving. hello.js starts it;
+    under Reduce Motion it rests finished. The box is held at the card's
+    shape (816 x 612) before the drawing arrives, so nothing below it moves.
+
+    UNDER IT, THE NEWEST PUBLIC SKRIBLS: Skribl's own Gallery section, its
+    cards and its New first, as /gallery and Explore show them. One section to
+    a page; this page holds one. #}
+{% extends 'social/base.html' %}
+{% from 'skribl/_skribl_inline_player.html' import skribl_inline_draft %}
+{% from 'skribl/_skribl_gallery_section.html' import skribl_gallery_assets, skribl_gallery_section %}
+{% import 'social/_icons.html' as ic %}
+
+{% block head %}{{ skribl_gallery_assets() }}{% endblock %}
+{% block scripts %}<script src="{{ social_asset('hello.js') }}" defer></script>{% endblock %}
+
+{% block main %}
+<section class="hello" aria-labelledby="helloTitle">
+  <div class="hello-art" data-hello="{{ skribl_asset('help/demos/flip-blooby-card.json') }}"
+       data-hello-label="Play Blooby drawing his card">
+    <div class="hello-fade">{{ skribl_inline_draft('helloCard', controls=false, progress=false) }}</div>
+  </div>
+  <h1 class="hello-title" id="helloTitle">Drawings that <span class="hand">draw themselves{{ ic.underline('hand-line') }}</span></h1>
+  <p class="lede">Make one in a minute. Then watch it come alive, line by line, at the speed it was drawn, or faster.</p>
+  <div class="cta">
+    <button class="btn btn-primary btn-big" type="button" data-make aria-haspopup="dialog" aria-controls="makeSheet" aria-expanded="false">{{ ic.pen() }}<span>Make a skribl</span></button>
+    <a class="btn btn-big" href="{{ url_for('social.explore') }}">Look around</a>
+  </div>
+  <p class="fine">No account needed to look, or to make one.</p>
+</section>
+
+<h2 class="sec">Fresh from everyone</h2>
+{{ skribl_gallery_section(bp=skribl_bp) }}
+{% endblock %}

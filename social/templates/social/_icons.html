@@ -1,0 +1,30 @@
+{#  The site's line icons: 24 x 24, drawn in the words' own colour
+    (currentColor), round ends, so they sit beside Skribl's own. The page you
+    are on fills its icon; the rest stay drawn. Each is decoration beside a
+    word that says the same, so each is hidden from a screen reader. #}
+{% macro _svg(d) -%}
+<svg class="ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">{{ d|safe }}</svg>
+{%- endmacro %}
+
+{% macro home(filled=false) -%}
+{{ _svg('<path d="M4 10.4 12 4l8 6.4V19a1.5 1.5 0 0 1-1.5 1.5H15v-5.5H9v5.5H5.5A1.5 1.5 0 0 1 4 19z"' ~ (' fill="currentColor"' if filled else '') ~ '/>') }}
+{%- endmacro %}
+
+{# Filled, the needle is cut out of the disc in the bar's own ground. #}
+{% macro explore(filled=false) -%}
+{{ _svg('<circle cx="12" cy="12" r="8.6"' ~ (' fill="currentColor"' if filled else '') ~ '/><path d="m15.6 8.4-2.2 5-5 2.2 2.2-5z"' ~ (' class="ic-cut"' if filled else '') ~ '/>') }}
+{%- endmacro %}
+
+{% macro pen() -%}
+{{ _svg('<path d="M15 5.5 18.5 9"/><path d="M4.5 19.5l1-4.2L16.2 4.6a2.4 2.4 0 0 1 3.4 3.4L8.9 18.7z"/>') }}
+{%- endmacro %}
+
+{% macro flip() -%}
+{{ _svg('<rect x="7.5" y="3.5" width="12" height="15" rx="2"/><path d="M4.5 7v11.5a2 2 0 0 0 2 2h9"/>') }}
+{%- endmacro %}
+
+{#  THE PEN'S TOUCH: one stroke under the page you are on, and under "draw
+    themselves" on the first visit. It stretches to the word above it. #}
+{% macro underline(cls='') -%}
+<svg class="pen-line {{ cls }}" viewBox="0 0 44 8" aria-hidden="true" focusable="false" preserveAspectRatio="none"><path d="M2 5.2C7 2.6 10.5 6.6 15.5 4.6S24 2.4 28.5 4.8 37 6.2 42 3.2" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>
+{%- endmacro %}
