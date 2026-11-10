@@ -15,18 +15,31 @@
 (function () {
   'use strict';
 
-  var list = document.getElementById('galleryList');
-  var empty = document.getElementById('galleryEmpty');
-  var errEl = document.getElementById('galleryError');
-  var more = document.getElementById('galleryMore');
-  var tpl = document.getElementById('skriblTileTpl');
-  var api = document.body.getAttribute('data-skribl-api');
+  /* THE SECTION, NOT THE PAGE (after v330, the owner's B: "one gallery, two
+     doors"). This file runs Skribl's own Gallery wherever it sits: /gallery,
+     which is the section with Skribl's page around it, and a host's Skribls
+     page, which holds the same section in its own frame
+     (_skribl_gallery_section.html). So it finds its parts inside the
+     section's root, and its settings on that root -- the listing, the
+     player's address, the CSRF token -- where they used to be on <body>. One
+     section to a page. */
+  var root = document.querySelector('[data-skribl-gallery]');
+  if (!root) return;
+  function part(id) { return root.querySelector('#' + id); }
+  var list = part('galleryList');
+  var empty = part('galleryEmpty');
+  var errEl = part('galleryError');
+  var more = part('galleryMore');
+  var tpl = part('skriblTileTpl');
+  var api = root.getAttribute('data-skribl-api');
   var PAGE = 24;
   var cursor = null;       /* the keyset cursor for the next page, or null */
   var loading = false;
   var sort = 'new';        /* new | hot -- the server's orders */
   var query = '';          /* the search box's words, sent as q */
-  var noneEl = document.getElementById('galleryNone');
+  var noneEl = part('galleryNone');
+  /* The heading's line under it is /gallery's page, not the section: a host's
+     page has its own heading, or none. */
   var subEl = document.getElementById('gallerySub');
   /* WHICH REQUEST IS STILL WANTED. Bumped by every load; a response may only
      touch the page while its own number is still the current one. See load(). */
@@ -258,8 +271,13 @@
     + '<path d="M17 3.5a2.1 2.1 0 0 1 3 3L8.5 18 4 20l2-4.5z"/></svg>';
 
   /* The module is loaded by the page and started here; it suppresses itself
-     on coarse pointers, so on a phone this call does nothing by design. */
-  if (window.SkriblTooltip) window.SkriblTooltip.init();
+     on coarse pointers, so on a phone this call does nothing by design. On
+     /gallery the section IS the page (data-skribl-page) and its tooltips cover
+     the whole page, header and all, as they always have; on a host's page
+     they keep to the section, so the host's own titles stay the host's. */
+  if (window.SkriblTooltip) {
+    window.SkriblTooltip.init(root.hasAttribute('data-skribl-page') ? undefined : root);
+  }
 
   /* capToggles() WAS HERE AND IS NOT NEEDED ANY MORE. It measured, for every
      captioned card, whether a two-line clamp was actually cutting the text --
@@ -584,6 +602,21 @@
       }
     }
 
+    /* FROM A POST (after v330, the owner's B): the post on the host's site
+       this drawing was posted in, when the site says (its source_resolver,
+       through the listing's `source`), at the card's foot as the mock had it.
+       A drawing made in the app is in no post, and Skribl on its own knows of
+       no posts at all, so there the card says nothing more. The address is the
+       site's string: safeHref, as an author's link is. */
+    var from = item.source && safeHref(item.source.url);
+    if (from) {
+      var fa = document.createElement('a');
+      fa.className = 'tfrom';
+      fa.href = from;
+      fa.textContent = 'From a post';
+      art.appendChild(fa);
+    }
+
     /* THE FOOTER IS THE FULL-SCREEN BAR AT CARD SIZE, from the same builder
        (lib/fullbar.js) with a different control list. A second transport
        written here would contradict the reason that module exists inside a day
@@ -882,12 +915,12 @@
      never an action on the post, and the sheet's words say so. One sheet for
      the page, opened per tile; lib/modalfocus.js owns focus. 429 and any
      other refusal are said in the sheet, which stays open for another try. */
-  var sheet = document.getElementById('reportSheet');
-  var form = document.getElementById('reportForm');
-  var note = document.getElementById('reportNote');
-  var status = document.getElementById('reportStatus');
-  var send = document.getElementById('reportSend');
-  var csrf = document.body.getAttribute('data-skribl-csrf');
+  var sheet = part('reportSheet');
+  var form = part('reportForm');
+  var note = part('reportNote');
+  var status = part('reportStatus');
+  var send = part('reportSend');
+  var csrf = root.getAttribute('data-skribl-csrf');
   var reporting = null;       /* { id, button } while the sheet is open */
 
   function say(msg, bad) {
@@ -983,7 +1016,11 @@
         if (items[n]) items[n].focus();
       }
     });
-    document.body.appendChild(m);
+    /* IN THE SECTION, NOT ON <body>: on a host's page the menu wears the
+       section's own look (its sheet is scoped to the section's root), and on
+       /gallery nothing between the two is positioned, so it sits where it
+       always did. */
+    root.appendChild(m);
     return m;
   }
 
@@ -1007,7 +1044,7 @@
     var rest = button._rest;
     button.title = msg;
     button.setAttribute('aria-label', msg);
-    var live = document.getElementById('galleryStatus');
+    var live = part('galleryStatus');
     if (live) live.textContent = msg;
     clearTimeout(button._t);
     button._t = setTimeout(function () {
@@ -1023,7 +1060,7 @@
     /* Substituted, not assembled -- the same move the poster makes, so a host
        running the blueprint under a url_prefix gets a correct link without
        this file knowing the route. */
-    var tpl = document.body.getAttribute('data-skribl-player') || '';
+    var tpl = root.getAttribute('data-skribl-player') || '';
     var url = location.origin + tpl.replace('__ID__', encodeURIComponent(item.id));
 
     menuEl.appendChild(menuItem('Open', function () {
@@ -1065,8 +1102,19 @@
     var top = r.bottom + 6;
     if (top + mh > window.innerHeight - 8) top = Math.max(8, r.top - mh - 6);
     var left = Math.min(r.right - mw, window.innerWidth - mw - 8);
-    menuEl.style.top = (top + window.scrollY) + 'px';
-    menuEl.style.left = (Math.max(8, left) + window.scrollX) + 'px';
+    /* Written against the page -- or, on a host's page that holds the section
+       inside a box with a position of its own, against that box, whose edges
+       are taken off so the menu still opens at its button. On /gallery nothing
+       is positioned, so it is the page, as it always was. */
+    var cb = menuEl.offsetParent, ox = window.scrollX, oy = window.scrollY;
+    if (cb && cb !== document.documentElement
+        && !(cb === document.body && getComputedStyle(cb).position === 'static')) {
+      var cr = cb.getBoundingClientRect();
+      ox = cb.scrollLeft - cr.left - cb.clientLeft;
+      oy = cb.scrollTop - cr.top - cb.clientTop;
+    }
+    menuEl.style.top = (top + oy) + 'px';
+    menuEl.style.left = (Math.max(8, left) + ox) + 'px';
 
     menuFor = item.id; menuOpener = button;
     button.setAttribute('aria-expanded', 'true');
@@ -1115,7 +1163,7 @@
     window.SkriblSheetSwipe.attach(form, { handle: form.querySelector('.pm-grab'), close: closeReport });
   }
 
-  document.getElementById('reportCancel').addEventListener('click', closeReport);
+  part('reportCancel').addEventListener('click', closeReport);
   sheet.addEventListener('click', function (e) { if (e.target === sheet) closeReport(); });
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape' && !sheet.hidden) { e.preventDefault(); closeReport(); }
@@ -1159,7 +1207,7 @@
   });
 
   /* ---- New / Hot, and the search box --------------------------------- */
-  var tabs = document.querySelectorAll('.tabs .tab[data-sort]');
+  var tabs = root.querySelectorAll('.tabs .tab[data-sort]');
   Array.prototype.forEach.call(tabs, function (tab) {
     tab.addEventListener('click', function () {
       var want = tab.getAttribute('data-sort') === 'hot' ? 'hot' : 'new';
@@ -1176,8 +1224,8 @@
       load(true);
     });
   });
-  var find = document.getElementById('galleryFind');
-  var qEl = document.getElementById('galleryQ');
+  var find = part('galleryFind');
+  var qEl = part('galleryQ');
   var qTimer = null;
   function search() {
     var words = (qEl.value || '').trim().slice(0, 80);
@@ -1188,8 +1236,13 @@
   find.addEventListener('submit', function (e) { e.preventDefault(); clearTimeout(qTimer); search(); });
   qEl.addEventListener('input', function () { clearTimeout(qTimer); qTimer = setTimeout(search, 350); });
 
-  document.getElementById('galleryRetry').addEventListener('click', function () { load(true); });
-  more.addEventListener('click', function () { load(false); });
+  part('galleryRetry').addEventListener('click', function () { load(true); });
+  /* LOAD MORE ASKS FOR THE NEXT PAGE, so with no cursor there is none to ask
+     for. load(false) without one sent no cursor, fetched page one again and
+     appended it: the owner's "it just adds another copy" on the stand-in's own
+     More (Nov 10), which this button would do too to a press that comes while
+     it is hidden (a script's, a stale tap's). */
+  more.addEventListener('click', function () { if (cursor) load(false); });
   /* WORDS ALREADY IN THE BOX COUNT. The box is in the page's own HTML and
    * this script is deferred, so on a slow phone a person can type before
    * anything here listens, and a browser that restores fields on Back puts

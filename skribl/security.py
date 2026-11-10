@@ -816,3 +816,38 @@ def double_submit_csrf(cookie_name=CSRF_COOKIE, header_name=CSRF_HEADER):
     # growing a fourth element every host would have to unpack.
     prepare._skribl_bind = lambda fn: _bind.__setitem__(0, fn)
     return prepare, issue, validate
+
+
+# ---- THE TOKEN FOR A PAGE THAT IS NOT SKRIBL'S (after v330, the owner's B) --
+# Skribl's own pages get the token from the blueprint's before_request, which
+# runs `prepare` and leaves it on `g` for the template, and from its
+# after_request, which sets the cookie. A host's page that holds a piece of
+# Skribl (the Gallery section, whose report sheet POSTs to Skribl's API) is
+# rendered by the HOST's view, where neither hook runs: the page would carry no
+# token, and every report from it would be refused with a 403.
+#
+# So init_skribl() adds `skribl_csrf()` as an app-wide Jinja global (beside
+# skribl_asset) and one app-wide after_request. Called from a host's template,
+# the global runs the same `prepare` Skribl's own requests run -- the host's
+# cookie is reused while it is sound for whoever is signed in, minted
+# otherwise -- and notes it on `g`; the hook then lets the same `issue` set the
+# cookie on that page's response, so the token the page carries and the cookie
+# the browser sends are the pair `validate` expects. Inside a Skribl request
+# the global only reads what before_request already put on `g`, and the hook
+# does nothing: Skribl's own after_request has issued it.
+def page_csrf_token(bp):
+    """The CSRF token a page's own markup should carry for `bp`, or ''."""
+    token = getattr(g, "skribl_csrf_token", None)
+    if token is None and bp.skribl_csrf:
+        bp.skribl_csrf[0]()
+        g.skribl_csrf_page = bp.name
+        token = getattr(g, "skribl_csrf_token", None)
+    return token or ""
+
+
+def issue_page_csrf(bp, response):
+    """after_request for the host's app: the cookie for a token a page rendered."""
+    if (getattr(g, "skribl_csrf_page", None) == bp.name and bp.skribl_csrf
+            and request.blueprint != bp.name):
+        response = bp.skribl_csrf[1](response)
+    return response

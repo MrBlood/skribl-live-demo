@@ -522,6 +522,13 @@ _fresh = _out.read_text(encoding="utf-8") if _out.exists() else ""
 # page's full screen for the Gallery and the Library), from the same source.
 _band_committed = (ROOT / "skribl" / "static" / "fullband.css").read_text(encoding="utf-8")
 _band_fresh = (_dir / "fullband.css").read_text(encoding="utf-8") if (_dir / "fullband.css").exists() else ""
+# And the Gallery section's (gallerysection.css: /gallery's own rules under the
+# section's root, for a host's Skribls page; the owner's B, after v330), made
+# by the same command from /gallery's <style> and component sheets and that
+# band. An edit to /gallery's look not re-emitted here is a host whose cards
+# no longer match: red on the pull request, as the band is.
+_section_committed = (ROOT / "skribl" / "static" / "gallerysection.css").read_text(encoding="utf-8")
+_section_fresh = (_dir / "gallerysection.css").read_text(encoding="utf-8") if (_dir / "gallerysection.css").exists() else ""
 _sh.rmtree(_dir, ignore_errors=True)
 check("player.css is byte for byte what cssgraph emits from styles.css "
       "(after editing styles.css: python3 harness/tools/cssgraph.py --emit "
@@ -532,6 +539,10 @@ check("player.css is byte for byte what cssgraph emits from styles.css "
 check("...and so is fullband.css, the band's sheet the same command writes beside it",
       _rc == 0 and _band_committed == _band_fresh,
       f"committed {len(_band_committed):,} vs regenerated {len(_band_fresh):,} chars")
+check("...and so is gallerysection.css, /gallery's own rules for a host's Skribls page "
+      "(after editing skribl_gallery.html's <style> or a sheet it loads, the same command)",
+      _rc == 0 and bool(_section_fresh) and _section_committed == _section_fresh,
+      f"committed {len(_section_committed):,} vs regenerated {len(_section_fresh):,} chars")
 
 # ---------------------------------------------------------------------------
 print("\nWARNING-CLEAN — every tracked Python file compiles without a SyntaxWarning")

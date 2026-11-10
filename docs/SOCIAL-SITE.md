@@ -151,7 +151,9 @@ here is tested (a check shown red before it is believed).
 
 - **Phase 0, now.** This layout, and the owner's B: Skribl's Gallery card as
   a piece any page can embed, used first by the stand-in's Skribls tab. It is
-  the first building block for both doors.
+  the first building block for both doors. *Have (after v330):* the whole
+  Gallery section, `skribl_gallery_section()` with `skribl_gallery_assets()`
+  (docs/INTEGRATION.md, "Skribl's own Gallery on your page").
 - **Phase 1, foundations.** The site's skeleton (`social/`), mounted on the
   demo at an address of its own, with Skribl mounted inside it as a host;
   accounts and sign-in; profiles with a drawn avatar; posts with skribls;

@@ -726,6 +726,13 @@ else's page. It is not in `skribl_inline_assets()` and carries its own byte
 ratchet in `verify_inline.py`, separate from the embed's: a page that only
 DISPLAYS Skribls never composes one and must not be charged for it.
 
+"host gallery" is Skribl's own Gallery section on a host's page (after v330,
+the owner's B): `skribl_gallery_assets()` in
+`templates/skribl/_skribl_gallery_section.html`, which loads /gallery's own
+modules without its page's (the ••• menu, the theme switch, Report a problem),
+beside the player's and `skribl/static/gallerysection.css`. `verify_surfaces.py`
+holds that list to /gallery's, in /gallery's order.
+
 "in-post" is the fourth surface: the player a host embeds in a feed post (`skribl/static/inlineplayer.js`, `templates/skribl/_skribl_inline_player.html`).
 It loads FOUR of these — `canvassizes.js` for a legacy payload's default
 shape, `holdtiming.js` for how long a page lasts and how much of one that
@@ -771,8 +778,8 @@ rather than a shared rule.
 | `canvasground.js` | Pad+Flip | The ground a new drawing starts on: Paper in the light theme, the dark canvas in the dark one. |
 | `canvassizes.js` | Pad+Flip+library+in-post | Canvas presets — the one table both editors read. |
 | `canvaszoom.js` | Pad+Flip | The canvas magnifier: zoom, pan, the HUD, its grip, wheel and Space-drag. |
-| `capmore.js` | Pad+Flip+player+gallery | A CAPTION AT TWO LINES, AND A "MORE" WHERE THERE IS MORE. |
-| `chromefade.js` | Pad+Flip+player+library+gallery | Controls that step back while a drawing plays, and come back the moment someone reaches for them. |
+| `capmore.js` | Pad+Flip+player+gallery+host gallery | A CAPTION AT TWO LINES, AND A "MORE" WHERE THERE IS MORE. |
+| `chromefade.js` | Pad+Flip+player+library+gallery+host gallery | Controls that step back while a drawing plays, and come back the moment someone reaches for them. |
 | `chromefit.js` | Pad+Flip | The editors' fit when the chrome around the canvas changes size and the window says nothing -- Pad's and Flip's, one watch -- the canvas's row reaching past the column on a wide window (span()), and the shape the canvas starts in (a new drawing's, startShape; a draft's own, noted beside it). |
 | `colorselect.js` | Pad+Flip | Colour selection — the part both editors must agree on. |
 | `composehost.js` | HOST | The pad button's lifecycle, for a HOST's composer. |
@@ -790,7 +797,7 @@ rather than a shared rule.
 | `eyedropper.js` | Pad+Flip | Eyedropper — the armed-state machine, shared by both editors. |
 | `floodfill.js` | Flip | Flood fill, expressed in the only vocabulary this project has: strokes. |
 | `framebitmap.js` | Flip+player | Frame bitmaps — a painted page is rasterised once per playback, shared rule. |
-| `fullbar.js` | library+gallery | The full-screen bar: one transport, and the SAME one on both surfaces. |
+| `fullbar.js` | library+gallery+host gallery | The full-screen bar: one transport, and the SAME one on both surfaces. |
 | `gridoverlay.js` | Pad+Flip | Grid overlay — the alignment guides both editors draw over the canvas. |
 | `handwords.js` | Pad+Flip | YOUR HAND'S WORDS on an empty canvas (the owner's pick after the "Empty canvas ideas" mock): "Draw anything" on the Pad and "Draw page 1" on Flip, in the owner's own hand. |
 | `headerglass.js` | Pad+Flip | The header's ground, only while the drawing is under it. |
@@ -800,11 +807,11 @@ rather than a shared rule.
 | `hints.js` | Pad+Flip | First-use hints — one short toast the first time a control is used. |
 | `holdtiming.js` | Pad+Flip+player+library+in-post | Per-page timing — the ONE definition of how long a page lasts and how much of a drawing page has been revealed, shared by the Flip editor and every surface that plays one. |
 | `homescreen.js` | Pad+Flip | Getting Skribl onto the Home Screen: the ⋯ row, the one-time banner, and the steps sheet both open. |
-| `immersive.js` | Pad+Flip+player+library+gallery | Full size on the devices that have a Fullscreen API, and on the one that does not. |
+| `immersive.js` | Pad+Flip+player+library+gallery+host gallery | Full size on the devices that have a Fullscreen API, and on the one that does not. |
 | `inputlog.js` | Pad+Flip | The input log: what the screen said, for a bug only a phone shows. |
 | `inputsamples.js` | Pad+Flip | The points the browser already captured and the handler was throwing away. |
 | `keyregistry.js` | Flip | lib/keyregistry.js — what is bound to which key, and whether two things answer at once. |
-| `labels.js` | Pad+Flip+library+gallery | WORDS IN A BUTTON SIT IN THE MIDDLE BY THEIR CAPITALS, in any font. |
+| `labels.js` | Pad+Flip+library+gallery+host gallery | WORDS IN A BUTTON SIT IN THE MIDDLE BY THEIR CAPITALS, in any font. |
 | `learncard.js` | Pad+Flip | The card on the button: help where the question is (owner, after v323: "Can we combine them so we get the best, most helpful yet unobtrusive?", then "All yes" to the button cards mock). |
 | `looptrim.js` | Pad+Flip+player | Loop trim clamping — the rule both editors apply six times between them. |
 | `lostlift.js` | Pad+Flip | A stroke whose lift never came — the two editors only, never the player. |
@@ -813,7 +820,7 @@ rather than a shared rule.
 | `mediatabs.js` | Pad+Flip | The Media button and its Photo and Music tabs -- shared by Pad and Flip. |
 | `menupages.js` | Pad+Flip | The ⋯ menu's pages: the main page, New Skribl and Settings, one sheet (templates/skribl/_skribl_menu.html; owner, after v323, from the menu mock). |
 | `mirror.js` | Pad+Flip | Mirror drawing — reflect each point across the canvas centre, shared by both. |
-| `modalfocus.js` | Pad+Flip+library+gallery | Focus for surfaces that declare aria-modal="true". |
+| `modalfocus.js` | Pad+Flip+library+gallery+host gallery | Focus for surfaces that declare aria-modal="true". |
 | `mp4export.js` | Pad+Flip | MP4 export through WebCodecs + the vendored mp4-muxer: one encoder pipeline for both editors (SK312-003, v315). |
 | `musicdrawer.js` | Pad+Flip | THE MUSIC DRAWER'S CONTROLS, one copy for the Pad and for Flip. |
 | `musicears.js` | Pad+Flip | SKRIBL'S EARS: where a song's beat falls, how many beats make its bar (four, or three), which beat starts one, and which stretch of whole bars comes round most smoothly. |
@@ -840,7 +847,7 @@ rather than a shared rule.
 | `posted.js` | Pad+Flip+library | Your Skribls — a local record of what you have posted. |
 | `postedaudio.js` | Pad+Flip | What a POST stores, which is deliberately not what an EXPORT downloads. |
 | `postedcard.js` | Pad+Flip | Compositing /s/<id>/card.png — the post-time half of lib/sharecard.js. |
-| `postedui.js` | library+gallery | Your Skribls — rendering. |
+| `postedui.js` | library+gallery+host gallery | Your Skribls — rendering. |
 | `postsheet.js` | Pad+Flip | The Post sheet — shared by Pad and Flip (skribl/_skribl_post.html). |
 | `pressure.js` | Pad+Flip | Stylus pressure — the curve, the floor, and the on/off, shared by both editors. |
 | `recentcolors.js` | Pad+Flip | Recent colours — the first controller shared by both editors. |
@@ -852,15 +859,15 @@ rather than a shared rule.
 | `savedrafts.js` | Pad+Flip+library | Saved drafts — ⋯ "Save draft" and "Open a draft…" on both editors (v316), and the Library's Drafts tab (v317). |
 | `scrubkeys.js` | Pad+Flip+player+library+in-post | Keyboard operation and live value for the three playback scrubbers. |
 | `seekcache.js` | Pad+player+library+in-post | SCRUBBING STARTS NEAR WHERE YOU POINT: a few snapshots of a replay's canvas, so a seek draws only what lies between the nearest one and the target (v322 plan, step 3). |
-| `segslider.js` | Pad+Flip+library+gallery | THE PILL. Every pick-one control in the product slides one soft tint under its selected option, and this is the one thing that places it (the owner, choosing between four mocked shapes: "a on the pill"). |
+| `segslider.js` | Pad+Flip+library+gallery+host gallery | THE PILL. Every pick-one control in the product slides one soft tint under its selected option, and this is the one thing that places it (the owner, choosing between four mocked shapes: "a on the pill"). |
 | `selection.js` | Pad+Flip | Selection — pick a region, then move what is inside it. |
 | `shapecard.js` | Pad+Flip | The shape card -- the picker that opens above the Shape tool -- one implementation, both editors. |
 | `shapes.js` | Pad+Flip | Shapes — line, rectangle and ellipse, expressed as ordinary stroke points. |
 | `sharecard.js` | Pad+Flip+library | /s/<id>/card.png: WHERE THE DRAWING SITS INSIDE IT. |
-| `sheetswipe.js` | Pad+Flip+library+gallery | Sheets that go away — one swipe, every bottom sheet. |
+| `sheetswipe.js` | Pad+Flip+library+gallery+host gallery | Sheets that go away — one swipe, every bottom sheet. |
 | `sizeclass.js` | Flip | One size decision, made once, for the whole app. |
 | `slidernudge.js` | Pad+Flip | - and + beside a range slider, for exact steps a slider alone cannot land on with a finger. |
-| `smartfade.js` | Pad+Flip+player+library+gallery | The smart fade: one reading of a drawing for every bar that lies over it. |
+| `smartfade.js` | Pad+Flip+player+library+gallery+host gallery | The smart fade: one reading of a drawing for every bar that lies over it. |
 | `smoothing.js` | Pad+Flip | Smoothing (the stroke stabilizer) — shared by both editors. |
 | `songtext.js` | Pad+Flip | A SONG'S TEXT, MADE OFF THE PAGE: the data URL both editors keep beside a song's bytes, made in a worker so that adding a song does not hold the page while it is made (the speed fixes, Nov 5; the owner: "do the song speed for both editors"). |
 | `stamps.js` | Flip | Stamps — the clipboard, but named, persistent and multi-slot. |
@@ -870,7 +877,7 @@ rather than a shared rule.
 | `theme.js` | Pad+Flip+library+gallery | Light/dark chrome — the stored setting, and the one place that applies it. |
 | `toolscroll.js` | Pad+Flip | The toolbar on the smallest screens -- Pad's, and Flip's since the dock redesign: one row that scrolls, and says so. |
 | `toolshelf.js` | Pad+Flip | Tool shelf + overflow tray — shared by Pad and Flip. |
-| `tooltip.js` | Pad+Flip+library+gallery | Styled tooltips, replacing the browser's. |
+| `tooltip.js` | Pad+Flip+library+gallery+host gallery | Styled tooltips, replacing the browser's. |
 | `videorecord.js` | Pad+Flip | The video both editors make where WebCodecs cannot make an MP4: ONE exporter. |
 | `watchfull.js` | Pad+Flip | Full screen in the editors: the drawing as big as the screen goes, while it plays. |
 <!-- /GEN:MODULE-INDEX -->
