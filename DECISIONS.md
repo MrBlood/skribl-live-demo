@@ -32731,3 +32731,9 @@ in WORKING-AGREEMENTS and in FUTURE 6ah.
   verify_hostconfig starts gunicorn as the host does and now also asks that
   the stand-in's line names every file, after the demo's, and that the demo's
   Pad opened while it warms takes at most 4x one opened after, plus 0.3 s.
+  Calibrated in tree copies, the warm-up section alone, one part at a time:
+  no stand-in warm-up, no line and the files row red; unrested, 1.85 s
+  against 0.21 s and the not-held row red; warmed before the worker takes a
+  visitor, the stand-in done before the demo could be opened and the not-held
+  row red; as built, 3/3 (0.37 s while it warmed, 0.23 s after). The whole
+  suite on the tree, 61/61.
