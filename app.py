@@ -421,10 +421,11 @@ def create_app():
     # their public id, "site:..."); while nobody is, the demo's own stand-in
     # identity is asked, as before, so the owner's /demo-login still works.
     # Only where CSRF is on: the site's sign-in is a cookie, and Skribl rightly
-    # refuses a cookie identity without CSRF (init_skribl raises on it). The
-    # live demo has it on (its stand-in identity needs it); where it is off
-    # (the harness's shared server) the site's people still sign in, and the
-    # Pad posts as nobody, as it always has there.
+    # refuses a cookie identity without CSRF (init_skribl raises on it).
+    # Where it is off (the harness's shared server, and the live demo until
+    # the owner sets SKRIBL_CSRF_PROTECT=1 on Render: read off the live
+    # /gallery on Nov 10, its data-skribl-csrf empty) the site's people still
+    # sign in, and the Pad posts as nobody, as it always has there.
     _site_on = os.environ.get("SKRIBL_SOCIAL", "1").strip() != "0"
     if _site_on and csrf is not None:
         _demo_who = current_user_id
