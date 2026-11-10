@@ -33107,3 +33107,31 @@ Two answers from the owner, "all yes" to both.
   8, decision 9: our own, with skribls.net's saved pages as a checklist and
   the stand-in as the drop-in door's test. Phase 1's mocks start from
   Skribl's own look.
+
+## After v330 -- Phase 1's mocks, shown: the site's look in three directions
+
+Phase 1 of docs/SOCIAL-SITE.md starts with mocks (decision 9: our own site,
+from Skribl's own look). Shown to the owner on a private page,
+https://claude.ai/artifact/6uHGpDeSxheJusXK8iqL1N ("Skribl Site Looks"):
+Home, a first visit, a profile, a post, sign-in, Make and the ⋯ on a post,
+each with Now beside three looks (A Sketchbook, B Purple glass, C Studio), on
+a touch phone (402) and a desk, light and dark, 94 pictures. Every drawing
+is a real skribl in the real player (How it works' examples, drawn through
+the real Pad and Flip), and the five faces were drawn through the real Pad
+for it. Rendered from a throwaway Flask app mounting Skribl with
+init_skribl and the stand-in (outside the repo, not kept). Contrast read
+against what is painted, the instrument first checked on known cases (#777
+on white 4.48, white on #6d4cf0 5.33): lowest word A 5.0 / 5.3, B 4.8 / 5.1,
+C 5.3 / 5.3, light / dark; every phone control 44px or more; text fields
+16px.
+
+The six questions, with Cal's recommendations: (1) the look A, Sketchbook,
+the tokens the Gallery, the Library and the editors' sheets already wear,
+so Explore is the Gallery as built and the Pad and Flip open without a
+change of world; (2) a rail down the left on a desk; (3) Make opens a small
+sheet with two doors, Draw and Flip; (4) faces that draw themselves once,
+at 4x, on a profile; (5) a post starts by itself on its own page, sound
+off, never under Reduce Motion; (6) a first visit where Blooby draws his
+card above the newest skribls. Mocked, not built: a face is the real player
+with its controls hidden; built, it would be a small new Skribl piece.
+Waiting for the owner's answer before anything is built.
