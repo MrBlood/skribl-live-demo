@@ -86,7 +86,10 @@ def _scripts(path, seen=None):
 SURFACES = [("Pad", "skribl_editor.html"), ("Flip", "skribl_flip.html"),
             ("player", "skribl_player.html"), ("library", "skribl_library.html"),
             ("gallery", "skribl_gallery.html"),
-            ("in-post", "_skribl_inline_player.html"), ("HOST", "skribl_feed.html")]
+            ("in-post", "_skribl_inline_player.html"), ("HOST", "skribl_feed.html"),
+            # The Gallery section a host's page holds (skribl_gallery_assets(),
+            # after v330, the owner's B). A macro, not an include, so read here.
+            ("host gallery", "_skribl_gallery_section.html")]
 
 
 def module_index():

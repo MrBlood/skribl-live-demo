@@ -301,7 +301,10 @@ _ST = ROOT / "skribl" / "static"
 _SURFACES = {"editor": "skribl_editor.html", "flip": "skribl_flip.html",
              "player": "skribl_player.html", "feed": "skribl_feed.html",
              "library": "skribl_library.html",
-             "in-post": "_skribl_inline_player.html"}
+             "in-post": "_skribl_inline_player.html",
+             # The Gallery section a host's page holds (after v330, the
+             # owner's B): skribl_gallery_assets() is a list of its own.
+             "host gallery": "_skribl_gallery_section.html"}
 
 def _scripts(path):
     """Script SRCs only — Jinja comments are stripped first, because a note
@@ -375,6 +378,22 @@ check("every self-installing exemption still earns its place",
       not _stale, "; ".join(_stale) or
       f"{len(_SELF_INSTALLING)} exemption(s), each loaded, self-wiring, and "
       "load-bearing — an entry here is a claim that the module runs itself")
+
+# A HOST'S GALLERY SECTION LOADS WHAT /GALLERY'S DOES, AND ONLY THAT (after
+# v330, the owner's B). /gallery keeps its own script tags, because its page's
+# own modules sit among the section's and gallery.js must run last there (the
+# boot flag); a host's page loads the section through skribl_gallery_assets().
+# Two lists of one thing drift, so they are held together: the macro's scripts
+# are /gallery's, in /gallery's order, without the page's own (the ••• menu,
+# the theme switch, what is open, Report a problem, the marks). The player's
+# nine are neither's: every page that shows a post loads them, with
+# skribl_inline_assets().
+_PAGE_ONLY = {"lib/pagemenu.js", "lib/theme.js", "lib/opensurfaces.js", "lib/report.js", "lib/marks.js"}
+_gal_section = [a for a in _scripts(_TPL / "skribl_gallery.html") if a not in _PAGE_ONLY]
+_host_section = _scripts(_TPL / "_skribl_gallery_section.html")
+check("a host's Gallery section loads /gallery's section scripts, in /gallery's order, and nothing else",
+      bool(_host_section) and _host_section == _gal_section,
+      f"/gallery's, without its page's own: {_gal_section}; the host's macro: {_host_section}")
 
 # THE SHARED-MODULE INDEX CENSUS LIVED HERE AND IS GONE, which is the point.
 # It checked that START-HERE.md's table agreed with the templates, and it found

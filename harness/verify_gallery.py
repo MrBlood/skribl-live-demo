@@ -3514,13 +3514,14 @@ _TILES = "() => Array.from(document.querySelectorAll('#galleryList > article.til
 _SETTLED = ("() => ({ ids: Array.from(document.querySelectorAll('#galleryList > article.tile'))"
             ".map(t => t.dataset.id), idle: !document.getElementById('galleryMore').disabled })")
 # What the Library's own Delete sends, sent from the page (the gallery
-# carries the token the Library would).
+# carries the token the Library would, on its section's root since the
+# section became one piece a host's page can hold too: after v330, B).
 _TAKE_DOWN = """async ([id, tok, how]) => {
-    const h = { 'Content-Type': 'application/json' };
-    const csrf = document.body.getAttribute('data-skribl-csrf');
+    const h = { 'Content-Type': 'application/json' }, sec = document.getElementById('skriblGallery');
+    const csrf = sec.getAttribute('data-skribl-csrf');
     if (csrf) h['X-Skribl-CSRF'] = csrf;
     const body = how === 'delete' ? { deleteToken: tok } : { visibility: 'unlisted', deleteToken: tok };
-    const r = await fetch(document.body.getAttribute('data-skribl-api') + '/' + id,
+    const r = await fetch(sec.getAttribute('data-skribl-api') + '/' + id,
       { method: how === 'delete' ? 'DELETE' : 'PATCH', headers: h, credentials: 'same-origin',
         body: JSON.stringify(body) });
     return r.status; }"""
