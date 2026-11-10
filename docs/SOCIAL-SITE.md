@@ -159,6 +159,41 @@ here is tested (a check shown red before it is believed).
   accounts and sign-in; profiles with a drawn avatar; posts with skribls;
   report anything, the admin's queue, block; the legal pages in draft; media
   to object storage (when said yes to).
+
+  **Its look, the owner's "all yes" on the mocks (Nov 10):** A, Sketchbook
+  (the tokens the Gallery, the Library and the editors' sheets already wear,
+  plus a pen's touch); a rail down the left on a desk, a bar along the
+  bottom on a phone; Make opens a small sheet with two doors, Draw and Flip;
+  faces that are skribls and draw themselves once on a profile; a post that
+  starts by itself on its own page (sound off, never under Reduce Motion);
+  and a first visit where Blooby draws his card above the newest skribls.
+  The mocks: https://claude.ai/artifact/6uHGpDeSxheJusXK8iqL1N.
+
+  **One Skribl, shared.** A drawing made in the Pad is a skribl on the site,
+  and the site's people are the people the Pad posts as. So `social/` is a
+  package the host process plugs in beside Skribl (`init_social(app)`, at
+  /social on the demo), not a second Skribl: one database, the site's tables
+  under their own names (`social_...`) with their own migration chain, so
+  Skribl's chain and Skribl alone are untouched. It still reaches Skribl only
+  through the public seams, and Skribl never imports it. Once the site has a
+  domain, the same process answers there with the site at the top.
+
+  **The build order, one piece at a time, each something to look at:**
+  1. *The frame, read-only.* `social/` at /social: the Sketchbook look, the
+     bar and the rail, Home as the first visit (Blooby's card above the
+     newest public skribls), Explore as the Gallery section, Make's sheet
+     into the Pad and Flip. No accounts yet, so no You.
+  2. *Sign-in.* Accounts with passkeys and an emailed link, 13 and over;
+     the site's people become the people the Pad posts as. Asks first: the
+     email service (it may cost), and the domain (passkeys are tied to the
+     address they are made on).
+  3. *Profiles and drawn faces.* "Draw your face", a face that draws itself
+     once (a small new Skribl piece, the face player), the person's skribls.
+  4. *Posts.* Words and a skribl, posted from the site; a post's own page
+     that starts by itself; the ⋯ with Report.
+  5. *Safety.* Report anything, the admin's queue, block; the legal pages
+     in draft.
+  6. *Media to storage.* When the owner says yes to its cost.
 - **Phase 2, the social core.** Follow, the Following feed, comments and
   replies, likes, in-app notifications, mute.
 - **Phase 3, growing.** Search and tags, push and email notifications, reply

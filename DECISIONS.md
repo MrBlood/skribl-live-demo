@@ -33135,3 +33135,23 @@ off, never under Reduce Motion; (6) a first visit where Blooby draws his
 card above the newest skribls. Mocked, not built: a face is the real player
 with its controls hidden; built, it would be a small new Skribl piece.
 Waiting for the owner's answer before anything is built.
+
+## After v330 -- Phase 1: the owner's all yes on the mocks, and the build order
+
+The owner said "all yes" to the six phase 1 questions (the mocks above): A
+Sketchbook, the rail on a desk, Make's sheet with Draw and Flip, faces that
+draw themselves, a post that starts by itself on its own page, and the first
+visit with Blooby's card. docs/SOCIAL-SITE.md section 5 records them, and
+two things decided with them:
+
+- ONE SKRIBL, SHARED. The site and the Pad share one Skribl: social/ is a
+  package the host process plugs in beside Skribl (init_social, at /social
+  on the demo), with its tables under their own names and their own
+  migration chain in the same database. It reaches Skribl only through the
+  public seams (the rule of section 1), and Skribl never imports it. A
+  second Skribl for the site (as the stand-in has) would have split the
+  skribls in two.
+- THE BUILD ORDER: the read-only frame; sign-in (asking first about the
+  email service's cost and the domain, since passkeys are tied to the
+  address they are made on); profiles and drawn faces; posts; safety; media
+  to storage. Each piece is something to look at.
