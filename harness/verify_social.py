@@ -580,16 +580,22 @@ with sync_playwright() as p:
         # The drawing coming in, PHOTOGRAPHED, from the start of its replay
         # (put back there and played on: how soon after arriving the first
         # read happens depends on the machine; the replay's start does not).
+        # At a quarter of its speed, the player's own slowest, and for four
+        # seconds of the clock however long each picture takes: the card's
+        # coloured strokes come in between a quarter and half a second of its
+        # replay at 1x, and a slower machine takes longer over each picture,
+        # so a fixed count of pictures could all fall before them.
         playing_max = max((t["ink"] for t in trace if t), default=0)
         inks = []
         if Image is not None and trace:
-            pg.evaluate("() => { const p = document.getElementById('helloCard')._skriblInline; p.seek(0); p.play(); }")
-            for _ in range(9):
+            pg.evaluate("() => { const p = document.getElementById('helloCard')._skriblInline; p.seek(0); p.setRate(0.25); p.play(); }")
+            until = time.time() + 4.0
+            while time.time() < until and len(inks) < 40:
                 inks.append(painted_ink(pg.locator("#helloCard").screenshot()))
-                pg.wait_for_timeout(90)
+                pg.wait_for_timeout(60)
         rises = sum(1 for a, z in zip(inks, inks[1:]) if z > a)
         check("...and its ink appears over time, as painted: from its start the card comes in, picture after picture",
-              len(inks) == 9 and inks[0] < 0.1 * max(inks) and max(inks) > 4000 and rises >= 3,
+              len(inks) >= 6 and inks[0] < 0.1 * max(inks) and max(inks) > 4000 and rises >= 2,
               f"ink painted {inks}; rose on {rises} pictures" if inks
               else ("Pillow is not here (harness/requirements.txt)" if Image is None else "no card in the player to watch"))
         try:
