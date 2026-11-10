@@ -32890,3 +32890,22 @@ the theme row red; the old button purple, the contrast row red (the buttons
 named); the bar back, the Pad row red (padClose at the top). As built, 11/11.
 Side by side: verify_standin 11/11, verify_example 59/59, verify_clouddrafts
 116/116, verify_docs 144/144.
+
+## After v330 -- The social site, laid out before it is built
+
+The owner, after "all yes" on the look-over: "we are beginning to build the
+social media site... This may be the beginning of a social media site that
+will have millions of users... Let's lay this out well so we don't have to
+later fix stuff... I hope we can just drop the pad/flip into skribls.net, but
+we may have to go it alone." docs/SOCIAL-SITE.md is the layout, and FUTURE
+6ai points to it: three layers (Skribl owns everything about a drawing, the
+site owns everything about people, and the site is a host of Skribl through
+the public seams only, as skribls.net would be); everything a social site
+has against what Skribl has today; fifteen scale rules taken now because
+they are cheap now; the phases, with the Gallery card (the owner's B) first;
+and eight decisions with defaults. Asked "what answers do you need", then
+shown the eight, the owner said "all yes": the site is its own app beside
+Skribl and reaches it only through the public seams; the stand-in stays the
+skribls.net stand-in; "Skribl" for now; passkeys with a link by email; 13 and
+over; private messages later; B first, then the phases in order; no public
+sign-ups before a lawyer has read the terms. Nothing in it is built yet.

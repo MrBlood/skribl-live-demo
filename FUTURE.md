@@ -2150,6 +2150,16 @@ an address that could go stale; and on a phone each tile's line trimmed to
 its time. Next, on skribls.net itself: item 12, and where Skribls lives on
 the site's phone bar (under Explore, or a tab), the owner's call.
 
+## 6ai. The social site, aimed at on purpose (owner, Nov 10: "This may be the beginning of a social media site that will have millions of users... Let's do this right")
+
+The owner turned §3's "back into a network" into aiming at one, keeping both
+doors: Pad and Flip dropped into skribls.net, or Skribl as its own social
+site. The layout is docs/SOCIAL-SITE.md: three layers (Skribl owns drawings,
+the site owns people, hosts mount Skribl), the full list of what a social
+site has against what Skribl has today, the scale rules taken now because
+they are cheap now, the phases, and the owner's decisions, all eight answered "all yes" the
+same morning. Next: the Gallery card as a piece any page can embed (B).
+
 ## 7. The honest state
 
 The tool is good. It is better than it needs to be for a demo and not yet enough
