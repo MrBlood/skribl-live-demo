@@ -32708,4 +32708,9 @@ in WORKING-AGREEMENTS and in FUTURE 6ah.
   /host with its Skribl under /host/skribl; Add to post's tick and caption on
   a phone (the frame opens with compose=1&gallery=1); a post that lands in its
   own feed and Skribls page and not in the demo's public list; every cookie it
-  sets named skribl_host_..., its session on /host.
+  sets named skribl_host_..., its session on /host. Calibrated in tree copies
+  with their own server, one part at a time: left out (SKRIBL_STAND_IN=0),
+  /host a 404 and the suite stops there; its cookies unnamed, a `session`
+  cookie on / and the cookie row red; the demo's own database, the demo's
+  list 0 then 1 and the posts row red; its composer without gallery=1, no tick
+  and the asking row red. As built, 5/5.
