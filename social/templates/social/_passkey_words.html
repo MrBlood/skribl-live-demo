@@ -1,0 +1,29 @@
+{#  WHAT A PASSKEY CEREMONY SAYS, in one place for every page that runs one
+    (docs/SOCIAL-SITE.md: words live in one place per page). passkey.js reads
+    them by key and writes none of its own. Kind, never blaming: a passkey
+    that was not picked, a page that went stale and a busy connection are
+    nobody's fault, and each says what to do next. {handle} is filled in. #}
+<div class="words" hidden>
+  <span data-word="working">Waiting for your passkey…</span>
+  <span data-word="done">You’re in. One moment…</span>
+  <span data-word="cancelled">No passkey was picked. Try again when you’re ready.</span>
+  <span data-word="failed">That passkey didn’t check out. Try again?</span>
+  <span data-word="unknown">That passkey isn’t on an account here anymore. If you need a way back in, ask us for a one-time link.</span>
+  <span data-word="expired">That took a little too long. Try again?</span>
+  <span data-word="already">This phone or computer already has a passkey for your account.</span>
+  <span data-word="gone">This link has just been used, or has run out. Ask for a new one.</span>
+  <span data-word="limited">Lots of tries from here. Wait a little, then try again.</span>
+  <span data-word="stale">This page went stale. Reload it and try again.</span>
+  <span data-word="resting">Sign-in is resting for a moment. Try again soon.</span>
+  <span data-word="signed_out">You’ve been signed out. Sign in again to add a passkey.</span>
+  <span data-word="network">That didn’t reach us. Check your connection and try again.</span>
+  <span data-word="unsupported">This browser can’t use passkeys. Try a recent Safari, Chrome, Edge or Firefox.</span>
+  <span data-word="no_name">Passkeys need this site’s name in the address, not a number.</span>
+  <span data-word="name_empty">Add a name, so people know who drew it.</span>
+  <span data-word="name_long">That name is a little long: 40 characters at most.</span>
+  <span data-word="name_chars">That name has a character we can’t show. Try another?</span>
+  <span data-word="handle_shape">Handles are 3 to 20 letters, numbers or underscores, starting with a letter.</span>
+  <span data-word="handle_reserved">That handle is kept for Skribl itself. Try another?</span>
+  <span data-word="handle_taken">Someone already has @{handle}. Try another?</span>
+  <span data-word="age">Skribl accounts are for people 13 and older. You’re welcome to look around without one.</span>
+</div>

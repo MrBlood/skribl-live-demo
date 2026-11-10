@@ -1,0 +1,6 @@
+{#  Past a limit (429): the site's limits count tries per address, per
+    invite and per person (security.LIMITS). #}
+{% extends 'social/base.html' %}
+{% from 'social/_kind.html' import card %}
+{% block title %}Lots of tries · Skribl{% endblock %}
+{% block main %}{{ card("Lots of tries from here", "Wait a little, then try again.") }}{% endblock %}

@@ -189,6 +189,8 @@ here is the rule you can break tomorrow.
 | "Your Skribls" is the profile page, not a drawer: both editors' menu row links to `/library`, the list renders there through the same module with the same custody rules, and a row's gallery switch changes the post's visibility on the server and in the record. | `verify_posted.py`, `verify_library.py`, `verify_a11y.py` |
 | The demo signs in only a browser that posted `SKRIBL_DEMO_LOGIN_KEY` (16+ characters) from the `/demo-login` page (a key in the address signs nobody in, and only the posted Sign out button signs out); unkeyed it is anonymous, never everyone. The cookie holds a mark of the key, so rotating the key signs every browser out, and guesses spend the attempts budget. | `verify_hostseams.py` |
 | A CSRF token is signed and bound to the signed-in user through `init_skribl`'s own wiring; a forged write is refused before it is charged to anybody's rate budget. | `verify_csrf.py`, `verify_hostseams.py` |
+| The site at `/social` lets people in by invite only, with passkeys (discoverable, user verification required, the sign count stored and checked, the address the request's own); a link's code is after its `#`, so no log holds it, and only its hash is stored; every state-changing request to the site carries its token and its own Origin; sign-ins, joins, link checks and an invite's tries are limited in the database; "Sign out everywhere" ends every cookie made before; deleting an account deletes the person, their passkeys and their invites; Invites is a 404 like a missing page to anyone but an admin. While somebody is signed in to the site, the Pad posts as them. | `verify_socialauth.py` |
+| The site's tables are `social_...` on a migration chain of their own (`social/alembic.ini`, stamped in `social_alembic_version`), run once per start by `gunicorn.conf.py`; Skribl's chain and tables are never touched by it, and a chain that fails is logged while the demo serves on. | `verify_socialauth.py` |
 | Saved drafts on the server have a per-author byte budget (`SKRIBL_MAX_DRAFT_BYTES`), raster-only thumbnails, and a list that reads no payloads. | `verify_hostseams.py`, `verify_clouddrafts.py` |
 | Work on the canvas, including media still on its way back from the store, is asked about before a draft replaces it; a late store answer never lands on a different document; Save draft waits for a file still being read. | `verify_amber.py`, `verify_clouddrafts.py` |
 | Every bottom sheet closes on a tap of its grabber or a swipe down, owns the touch from its first pixel (no pull-to-refresh), and eases away. | `verify_sheetswipe.py` |
@@ -530,7 +532,8 @@ platform.
 Beside it, `social/` is the start of that platform, the Skribl site
 (docs/SOCIAL-SITE.md): a host of Skribl through the same public seams any
 host uses, plugged into the demo's own app at `/social` so it shares the
-demo's Skribl. Phase 1's first piece is its frame: Home, Explore and Make
+demo's Skribl. Phase 1's first piece is its frame: Home, Explore and Make;
+its second is sign-in, invite-only, with passkeys, in tables of its own
 (section 9 of that document). Skribl never imports it.
 
     SKRIBL_VERSION   see skribl/core.py — the archive name derives from it.
@@ -982,16 +985,22 @@ how many files and how long), so the first visitor after a deploy does not
 wait for it. The stand-in that `app.py` mounts at `/host` (examples/host_app,
 with a Skribl of its own) is warmed after that, on a thread that rests after
 each file, so the demo's own visitors are not held for it. The site at
-`/social` needs nothing of its own here: it shares the demo's Skribl, whose
-files are the ones warmed first (`SKRIBL_SOCIAL=0` leaves it out).
+`/social` shares the demo's Skribl, whose files are the ones warmed first
+(`SKRIBL_SOCIAL=0` leaves it out); its own tables are on a migration chain of
+their own, which `gunicorn.conf.py`'s `on_starting` brings up to date once,
+in gunicorn's master before any worker loads the app
+(`python -m alembic -c social/alembic.ini upgrade head` by hand). A site chain
+that fails or takes over two minutes is logged and left: the demo serves, and
+the site's sign-in answers a kind 503 until its tables are there.
 
 On Render, the middle two run together from the dashboard **Start Command**
 (`python -m alembic upgrade head && gunicorn app:app`) — set in v270, when it
 emerged that Render never reads the `Procfile` v267 had wired the same line
 into, and production had therefore never run a migration on deploy (DECISIONS
 v270). The Procfile keeps the same command for Heroku-style hosts and as local
-reference only. If you ever run more than one web instance, move the migrate to
-a Render `preDeployCommand` so two boots cannot race the same `upgrade head`.
+reference only. Neither needs a word for the site's chain: both start gunicorn,
+which runs it. If you ever run more than one web instance, move both migrates
+to a Render `preDeployCommand` so two boots cannot race the same `upgrade head`.
 
     ./harness/run_harness.sh verify_move.py            # name them, or run bare for everything
     python3 harness/stamp_docs.py                      # docs from LAST-RUN.txt

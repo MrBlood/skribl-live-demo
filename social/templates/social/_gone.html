@@ -1,0 +1,13 @@
+{#  A LINK THAT DOES NOT WORK: used, run out, revoked, or never one of ours.
+    One answer for all of them (the server says 404 to each alike), so a code
+    that was never made reads like one that was, and none of it is the
+    person's fault. Shown in place of the link page's form by passkey.js. #}
+<div class="link-gone" data-link-gone hidden>
+  <h1 class="si-title" id="goneTitle">This link doesn’t work anymore</h1>
+  <p class="si-lede">Invite links work once, for 14 days, and sign-in links once, for an hour. Ask whoever sent it for a new one.</p>
+  <div class="cta">
+    <a class="btn btn-primary btn-big" href="{{ url_for('social.home') }}">Look around Skribl</a>
+    <a class="btn btn-big" href="{{ url_for('social.signin') }}">Sign in</a>
+  </div>
+</div>
+<noscript><p class="note">Skribl’s passkeys need JavaScript. Turn it on, then open the link again.</p></noscript>

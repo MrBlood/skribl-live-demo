@@ -1,0 +1,58 @@
+{#  JOIN, from an invite link (phase 1, piece 2): /social/join#<code>. The
+    code is after the #, which a browser never sends to a server, so no log
+    on the way holds it: passkey.js reads it, asks the server whether it
+    still works (the form fades in, or the kind "doesn't work anymore" card
+    takes its place), and sends it in the body of each step.
+
+    A name, a handle, "I'm 13 or older" (the site's minimum age, said kindly
+    and required), and a passkey; then signed in, and You is in the bar. The
+    fields are checked as each is left and again by the server, which has the
+    last word (a handle somebody took a moment ago). Text fields are 17px:
+    under 16px a phone magnifies the page (WORKING-AGREEMENTS). #}
+{% extends 'social/base.html' %}
+{% import 'social/_icons.html' as ic %}
+
+{% block title %}Join · Skribl{% endblock %}
+{% block scripts %}<script src="{{ social_asset('passkey.js') }}" defer></script>{% endblock %}
+
+{% block main %}
+<div class="si si-solo">
+  <section class="si-card is-checking" aria-labelledby="joinTitle" data-link="{{ url_for('social.join_check') }}">
+    <img class="si-icon" src="{{ skribl_asset('apple-touch-icon.png') }}" alt="" width="64" height="64">
+    <div class="link-ok" data-link-ok>
+      <h1 class="si-title" id="joinTitle">Welcome to Skribl</h1>
+      <p class="si-lede">You’re invited. Pick your name and handle, then make a passkey. No password, ever.</p>
+      <p class="note" data-link-first hidden>You’re the first one here, so this account looks after the site: it makes the invites.</p>
+      <form class="form" data-passkey="join" novalidate
+            data-options="{{ url_for('social.join_options') }}"
+            data-verify="{{ url_for('social.join_verify') }}">
+        <div class="field">
+          <label for="joinName">Your name</label>
+          <input id="joinName" name="name" type="text" autocomplete="name" maxlength="40" required
+                 aria-describedby="joinNameHint joinNameErr">
+          <p class="hint" id="joinNameHint">Shown beside your drawings.</p>
+          <p class="err" id="joinNameErr" data-err="name" hidden></p>
+        </div>
+        <div class="field">
+          <label for="joinHandle">Your handle</label>
+          <div class="at"><span class="at-sign" aria-hidden="true">@</span><input id="joinHandle" name="handle" type="text"
+               autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" maxlength="20" required
+               pattern="[A-Za-z][A-Za-z0-9_]{2,19}" aria-describedby="joinHandleHint joinHandleErr"></div>
+          <p class="hint" id="joinHandleHint">3 to 20 letters, numbers or underscores, starting with a letter.</p>
+          <p class="err" id="joinHandleErr" data-err="handle" hidden></p>
+        </div>
+        <div class="field">
+          <label class="check"><input id="joinAge" name="age13" type="checkbox" required aria-describedby="joinAgeHint joinAgeErr"><span>I’m 13 or older</span></label>
+          <p class="hint" id="joinAgeHint">Skribl accounts are for people 13 and up. Looking around is for everyone.</p>
+          <p class="err" id="joinAgeErr" data-err="age13" hidden></p>
+        </div>
+        <button class="btn btn-primary btn-big btn-wide" type="submit">{{ ic.passkey() }}<span>Join with a passkey</span></button>
+        <p class="say" data-say role="status" hidden></p>
+        <p class="fine center">Your phone or computer keeps it: Face ID, Touch ID or Windows Hello.</p>
+      </form>
+    </div>
+    {% include 'social/_gone.html' %}
+  </section>
+</div>
+{% include 'social/_passkey_words.html' %}
+{% endblock %}

@@ -271,6 +271,15 @@ def create_app():
     _demo_id = (os.environ.get("SKRIBL_DEMO_IDENTITY") or "").strip()
     _demo_key = (os.environ.get("SKRIBL_DEMO_LOGIN_KEY") or "").strip()
     current_user_id = None
+    _demo_author_resolver = None
+    # The site's people are named "site:..." (social.PERSON_PREFIX), and a
+    # drawing's author is that name: a demo identity that began the same way
+    # could one day be somebody else's. Refused here, in the demo's words.
+    if _demo_id.startswith(_SITE_PERSON_PREFIX):
+        raise RuntimeError(
+            f"SKRIBL_DEMO_IDENTITY may not start with {_SITE_PERSON_PREFIX!r}: that is how the "
+            "site at /social names its people (docs/SOCIAL-SITE.md), and a drawing's author "
+            "must never be two people. Pick another handle.")
     # Said only when the demo does boot: with CSRF off it refuses just below,
     # and the log said it would run anonymous first (after v326, the server
     # review). verify_hostseams pins the refusal; verify_hostconfig the order.
@@ -402,7 +411,39 @@ def create_app():
             """
             return dict(_d) if user_id == _who else None
 
-        skribl.models.set_author_resolver(_resolve_author, app)
+        # Installed below, after the site, which names its own people first.
+        _demo_author_resolver = _resolve_author
+
+    # ---- ONE SKRIBL, SHARED: the site's people post as themselves ----------
+    #
+    # docs/SOCIAL-SITE.md, phase 1, piece 2. While somebody is signed in to the
+    # site at /social, the Pad and Flip post as them (Skribl's current user is
+    # their public id, "site:..."); while nobody is, the demo's own stand-in
+    # identity is asked, as before, so the owner's /demo-login still works.
+    # Only where CSRF is on: the site's sign-in is a cookie, and Skribl rightly
+    # refuses a cookie identity without CSRF (init_skribl raises on it). The
+    # live demo has it on (its stand-in identity needs it); where it is off
+    # (the harness's shared server) the site's people still sign in, and the
+    # Pad posts as nobody, as it always has there.
+    _site_on = os.environ.get("SKRIBL_SOCIAL", "1").strip() != "0"
+    if _site_on and csrf is not None:
+        _demo_who = current_user_id
+
+        def current_user_id():
+            if app.extensions.get("social") is not None:
+                import social
+                who = social.current_user_id()
+                if who:
+                    return who
+            return _demo_who() if _demo_who is not None else None
+    elif _site_on:
+        # Said where it matters: a deployment (the live demo runs with CSRF
+        # off today), where the owner reads the log; quietly elsewhere (the
+        # harness's shared server runs with it off on purpose).
+        (app.logger.warning if _looks_like_production() else app.logger.info)(
+            "the site at %s signs people in, but SKRIBL_CSRF_PROTECT is off, so Skribl "
+            "is not told who they are: the Pad and Flip post as nobody until it is 1.",
+            SOCIAL_PATH)
 
     # Media backend. 'inline' (default) is v131: base64 data URLs stay inside
     # payload_json. 'local' externalises them to content-addressed files served
@@ -465,6 +506,24 @@ def create_app():
     # The site, beside Skribl in this same app (see _mount_social below).
     _mount_social(app)
 
+    # WHO DREW IT: the site names its own people (name and handle), the demo
+    # its one stand-in identity; anybody else stays a bare id, as Skribl's
+    # own default answers. First answer wins; each answers only for its own.
+    _resolvers = []
+    if app.extensions.get("social") is not None:
+        import social
+        _resolvers.append(social.describe_author)
+    if _demo_author_resolver is not None:
+        _resolvers.append(_demo_author_resolver)
+    if _resolvers:
+        def _resolve_any_author(user_id, _fns=tuple(_resolvers)):
+            for fn in _fns:
+                got = fn(user_id)
+                if got:
+                    return got
+            return None
+        skribl.models.set_author_resolver(_resolve_any_author, app)
+
     # So a single db.create_all() covers Skribl's tables too. Optional — see
     # skribl.models.attach_to_metadata; an Alembic host would migrate
     # SkriblBase.metadata separately instead.
@@ -516,14 +575,21 @@ def create_app():
 # SHARES this app's Skribl -- one Skribl, one database -- so a drawing made in
 # the Pad is a skribl on the site. Hence init_social(app) on this app, after
 # init_skribl, and not a second app beside it the way the stand-in below is.
-# Phase 1, piece 1 is its frame, read-only: Home, Explore, and Make's sheet
-# into the Pad and Flip; no accounts and no tables yet.
+# Phase 1, piece 1 is its frame: Home, Explore, and Make's sheet into the Pad
+# and Flip. Piece 2 is sign-in: invite-only, with passkeys, in tables of the
+# site's own (social_..., on a migration chain of its own, which
+# gunicorn.conf.py runs at each start; `flask init-db` makes them too, beside
+# Skribl's). It is handed this app's database session, as Skribl is.
 #
 # A site that fails to start is logged and left out, as the stand-in is: the
 # demo never depends on it. init_social asks everything that can fail before
 # it registers anything, so a site left out leaves the app as it was.
 # SKRIBL_SOCIAL=0 leaves it out on purpose.
 SOCIAL_PATH = "/social"
+#: social.PERSON_PREFIX, said here too because the demo checks its own
+#: identity against it whether or not the site starts (verify_socialauth
+#: holds the two equal).
+_SITE_PERSON_PREFIX = "site:"
 
 
 def _mount_social(app):
@@ -531,7 +597,10 @@ def _mount_social(app):
         return
     try:
         import social
-        social.init_social(app, url_prefix=SOCIAL_PATH)
+        social.init_social(app, session=lambda: db.session, url_prefix=SOCIAL_PATH)
+        # So `flask init-db` (and the harness's fresh databases) make the
+        # site's tables beside Skribl's; a deploy migrates them instead.
+        social.attach_to_metadata(db.metadata)
     except Exception:
         app.logger.exception("the site at %s did not start; the demo runs without it",
                              SOCIAL_PATH)

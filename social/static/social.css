@@ -43,6 +43,16 @@
   --scrim: rgba(23, 20, 42, 0.36);
   --draw-line: rgba(20, 23, 29, 0.08);
   --draw-wait: #f1f3f7;             /* where a drawing will be, before it is */
+  /* Sign-in and the account pages (piece 2): Skribl's own roles again. */
+  --card: #ffffff;                  /* --menu-card */
+  --card-line: rgba(124, 92, 255, 0.34);   /* --menu-card-line */
+  --card-drop: 0 1px 2px rgba(60, 40, 140, 0.08), 0 6px 18px rgba(60, 40, 140, 0.09);
+  --rule: rgba(80, 60, 170, 0.12);  /* --menu-card-rule */
+  --field: #ffffff;
+  --field-line: rgba(124, 92, 255, 0.75);  /* 3:1 against the card, as a field's edge must be */
+  --tint: rgba(124, 92, 255, 0.12); /* a note: words in the first ink on it */
+  --danger-ink: #7a0a2d;            /* the drafts sheet's Delete (--row-danger-ink) */
+  --danger-fill: #b3283f;           /* --danger-fill: white on it, in both themes */
 }
 
 @media (prefers-color-scheme: dark) {
@@ -67,6 +77,14 @@
     --scrim: rgba(0, 0, 0, 0.5);
     --draw-line: rgba(255, 255, 255, 0.08);
     --draw-wait: #13161c;
+    --card: #231e3b;
+    --card-line: rgba(167, 146, 255, 0.12);
+    --card-drop: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 6px 18px rgba(0, 0, 0, 0.35);
+    --rule: rgba(167, 146, 255, 0.14);
+    --field: #17142a;
+    --field-line: rgba(167, 146, 255, 0.7);
+    --tint: rgba(124, 92, 255, 0.18);
+    --danger-ink: #ffb3c6;
   }
 }
 
@@ -107,10 +125,11 @@ body {
 .main { padding-bottom: calc(88px + env(safe-area-inset-bottom)); }
 .col { width: 100%; max-width: 1100px; margin: 0 auto; padding: 0 16px; }
 
-/* THE BAR along the bottom of a phone: Home, Explore, Make. */
+/* THE BAR along the bottom of a phone: Home, Explore, Make, and You (Sign
+   in before it), each place the same width. */
 .nav {
   position: fixed; z-index: 30; left: 0; right: 0; bottom: 0;
-  display: grid; grid-template-columns: repeat(3, 1fr); align-items: stretch;
+  display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; align-items: stretch;
   padding: 0 8px env(safe-area-inset-bottom);
   background: var(--nav-bg); border-top: 1px solid var(--nav-line);
   -webkit-backdrop-filter: saturate(1.4) blur(16px); backdrop-filter: saturate(1.4) blur(16px);
@@ -133,6 +152,14 @@ body {
 /* Make is the one action in the bar: its icon sits on the action purple. */
 .nav .tab-make .tab-ic { width: 52px; height: 32px; border-radius: 999px; background: var(--fill); color: var(--on-fill); box-shadow: var(--fill-drop); }
 .nav .tab-make .ic { width: 22px; height: 22px; }
+/* You says whose it is only on a desk's rail; the bar says You. */
+.nav .tab-who { display: none; }
+/* Before sign-in, a phone's first screen says Sign in at its top right too,
+   as the approved mock does; it scrolls away with the wordmark. */
+.top-signin {
+  display: flex; align-items: center; min-height: 44px; margin-left: auto; padding: 0 4px;
+  color: var(--accent-ink); font-size: 16px; font-weight: 600; text-decoration: none;
+}
 
 /* ---- the frame on a desk: THE RAIL -------------------------------------- */
 @media (min-width: 900px) {
@@ -157,6 +184,17 @@ body {
   }
   .nav .tab-make .tab-ic { width: auto; height: auto; background: none; box-shadow: none; }
   .nav .tab-make .ic { width: 22px; height: 22px; }
+  /* You at the rail's foot: whose it is, name over handle; Sign in there
+     before it. */
+  .nav .tab-you { margin-top: auto; }
+  .nav .tab-me { min-height: 60px; }
+  .nav .tab-me .tab-name { display: none; }
+  .nav .tab-me .tab-who { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
+  .nav .tab-who b { position: relative; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+                    color: var(--nav-on); font-size: 15px; font-weight: 700; }
+  .nav .tab-who small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+                        color: var(--nav-ink); font-size: 14px; font-weight: 400; }
+  .nav .tab-who .pen-line { bottom: -3px; }
 }
 @media (min-width: 900px) and (hover: hover) {
   .nav .tab:not(.tab-make):hover { background: var(--nav-hover); }
@@ -248,6 +286,122 @@ body {
 }
 @media (min-width: 900px) and (hover: hover) {
   .make-door:hover { box-shadow: 0 0 0 1px var(--btn2-line); }
+}
+
+/* ---- SIGN-IN AND THE ACCOUNT PAGES (phase 1, piece 2) ---------------------
+ * The approved sign-in mock (A): on a phone the page itself, on a desk a
+ * card on the page's ground with Blooby drawing his card beside it. Join and
+ * a recovery link wear the same card; so do the small kind pages (a link
+ * that does not work, a page gone stale, sign-in resting). They are FOCUSED:
+ * no bar and no rail, only the wordmark home. Text fields are 17px (under
+ * 16px a phone magnifies the page) and every target is 44px or more. */
+body.focus .main { padding-bottom: 40px; }
+body.focus .top { justify-content: center; }
+.si { display: flex; justify-content: center; gap: 56px; padding: 4px 0 24px; }
+.si-art { display: none; }
+.si-card { display: flex; flex-direction: column; width: 100%; max-width: 400px; }
+.si-icon { display: block; width: 64px; height: 64px; margin: 8px auto 14px; border-radius: 16px; box-shadow: var(--card-drop); }
+.si-title { margin: 0 0 8px; text-align: center; font: 700 28px/1.15 var(--font); letter-spacing: -0.015em; text-wrap: balance; }
+.si-lede { margin: 0 0 20px; text-align: center; color: var(--ink-2); font-size: 16px; line-height: 1.5; }
+.si-lede b { color: var(--ink); }
+.si-go { display: flex; flex-direction: column; }
+.si-or { display: flex; align-items: center; gap: 12px; margin: 24px 0 6px; font-size: 14px; font-weight: 600; line-height: 1.45; }
+.si-or::before, .si-or::after { content: ""; flex: 1; height: 1px; background: var(--rule); }
+.si-or span { color: var(--ink-2); }
+.si-new { margin-top: 22px; padding-top: 16px; border-top: 1px solid var(--rule); text-align: center; }
+.si-new p { margin: 0; }
+.si-card .cta { margin-top: 4px; }
+.si-new .fine { margin-top: 6px; }
+.center { text-align: center; }
+/* A link page's form waits, unseen in the room it takes, while the code
+   after the # is checked, then fades in; a link that does not work gets the
+   kind card in its place, faded in too. Reduce Motion: no fade, no move. */
+.si-card[data-link] .link-ok { transition: opacity 0.16s ease; }
+.si-card.is-checking .link-ok { opacity: 0; }
+@media (prefers-reduced-motion: no-preference) {
+  .link-gone:not([hidden]) { animation: link-in 0.16s ease both; }
+}
+@keyframes link-in { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .si-card[data-link] .link-ok { transition: none; }
+}
+@media (min-width: 900px) {
+  body.focus .top { display: flex; justify-content: flex-start; height: auto; padding: 22px 32px; }
+  body.focus .top .brand-mark { height: 38px; }
+  body.focus .main { margin-left: 0; }
+  .si { align-items: center; min-height: calc(100vh - 160px); padding-top: 0; }
+  .si-art { display: block; flex: none; width: 440px; }
+  .si-art .hello-art { width: 100%; }
+  .si-card { padding: 32px 32px 26px; background: var(--card); border: 1px solid var(--card-line);
+             border-radius: 24px; box-shadow: var(--card-drop); }
+}
+
+/* What happened, said where it happened: a note on the lilac tint, in the
+   first ink; and the line under a passkey button while its prompt is up, or
+   after it. Never red: nothing here is anybody's fault. */
+.note { margin: 0 0 14px; padding: 10px 14px; border-radius: 12px; background: var(--tint); color: var(--ink); font-size: 15px; line-height: 1.45; }
+.say { margin: 10px 0 0; color: var(--ink); font-size: 15px; line-height: 1.45; text-align: center; }
+.btn[disabled] { cursor: progress; opacity: 0.7; }
+
+/* Fields. A field's own problem is said under it, and goes as it changes. */
+.form { display: flex; flex-direction: column; gap: 16px; }
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field > label, .key-form label { color: var(--ink); font-size: 15px; font-weight: 600; line-height: 1.4; }
+.field input[type="text"], .key-form input, .linkfield {
+  width: 100%; min-height: 52px; padding: 0 14px; border: 1.5px solid var(--field-line); border-radius: 14px;
+  background: var(--field); color: var(--ink); font: 17px/1.3 var(--font);
+}
+.at { display: flex; align-items: center; min-height: 52px; padding-left: 14px; border: 1.5px solid var(--field-line);
+      border-radius: 14px; background: var(--field); }
+.at-sign { color: var(--ink-2); font-size: 17px; }
+.field .at input[type="text"] { flex: 1; min-width: 0; min-height: 49px; padding: 0 14px 0 2px; border: 0; background: transparent; }
+.at:focus-within { outline: 2px solid var(--focus); outline-offset: 2px; }
+.at input:focus-visible { outline: none; }
+:is(input, button, summary):focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.hint { margin: 0; color: var(--ink-2); font-size: 14px; line-height: 1.45; }
+.err { margin: 0; color: var(--danger-ink); font-size: 14px; font-weight: 600; line-height: 1.45; }
+.field input[aria-invalid="true"], .at:has(input[aria-invalid="true"]) { border-color: var(--danger-ink); }
+.check { display: flex; align-items: center; gap: 12px; min-height: 44px; color: var(--ink); font-size: 16px; font-weight: 600; cursor: pointer; }
+.check input { flex: none; width: 24px; height: 24px; margin: 0; accent-color: var(--fill); }
+
+/* YOU, INVITES, DELETE: the account's pages, in the frame. Each part is a
+   card (--menu-card), its rows split by the card's rule. */
+.acct { max-width: 560px; margin: 0 auto; }
+.panel { display: flex; flex-direction: column; gap: 12px; margin: 0 0 16px; padding: 18px 16px;
+         background: var(--card); border: 1px solid var(--card-line); border-radius: 20px; box-shadow: var(--card-drop); }
+.panel form { margin: 0; }
+.panel-title { margin: 0; font-size: 18px; font-weight: 700; line-height: 1.3; }
+.panel-sub, .panel-text { margin: 0; color: var(--ink-2); font-size: 15px; line-height: 1.45; }
+.panel-made { border-color: var(--brand); }
+.panel-go { display: flex; flex-direction: column; }
+.keys, .links { display: flex; flex-direction: column; margin: 0; padding: 0; list-style: none; }
+.key, .link-row { display: flex; align-items: flex-start; gap: 12px; padding: 12px 0; border-top: 1px solid var(--rule); }
+.link-row { align-items: center; }
+.link-row form { flex: none; }
+.key-ic { display: grid; flex: none; place-items: center; width: 40px; height: 40px; border-radius: 12px;
+          background: var(--tint); color: var(--accent-ink); }
+.key-ic .ic { width: 22px; height: 22px; }
+.key-body { flex: 1; min-width: 0; }
+.key-name { margin: 0; font-size: 16px; font-weight: 700; line-height: 1.35; overflow-wrap: anywhere; }
+.key-meta { margin: 2px 0 0; color: var(--ink-2); font-size: 14px; line-height: 1.45; }
+.key-acts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.key-more > summary { list-style: none; }
+.key-more > summary::-webkit-details-marker { display: none; }
+.key-more[open] { flex-basis: 100%; }
+.key-form { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+.key-form p { margin: 0; color: var(--ink); font-size: 15px; line-height: 1.45; }
+.key-last { margin: 8px 0 0; color: var(--ink-2); font-size: 14px; line-height: 1.45; }
+.btn-small { min-height: 44px; padding: 0 16px; font-size: 15px; }
+.btn-danger { background: var(--danger-fill); border-color: transparent; color: #ffffff; }
+.btn-quiet-danger { color: var(--danger-ink); }
+.danger-link { display: inline-flex; align-items: center; align-self: flex-start; min-height: 44px; color: var(--danger-ink);
+               font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
+.bullets { margin: 0; padding-left: 20px; color: var(--ink); font-size: 15px; line-height: 1.5; }
+.copyrow { display: flex; gap: 8px; }
+.linkfield { flex: 1; min-width: 0; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+@media (hover: hover) {
+  .btn-danger:hover { filter: brightness(1.08); }
 }
 
 /* KIND TRANSITIONS BETWEEN PAGES, Skribl's own rule (styles.css, after v323:

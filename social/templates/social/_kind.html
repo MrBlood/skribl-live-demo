@@ -1,0 +1,16 @@
+{#  THE SMALL KIND PAGES: something did not go through, and it is nobody's
+    fault. One card, what happened, what to do next. Each page that uses it
+    gives its words; this is the card they sit on. #}
+{% macro card(title, words, home=true, again=false, signin=false) -%}
+<div class="si si-solo">
+  <section class="si-card" aria-labelledby="kindTitle">
+    <img class="si-icon" src="{{ skribl_asset('apple-touch-icon.png') }}" alt="" width="64" height="64">
+    <h1 class="si-title" id="kindTitle">{{ title }}</h1>
+    <p class="si-lede">{{ words }}</p>
+    <div class="cta">
+      {% if home %}<a class="btn btn-primary btn-big" href="{{ url_for('social.home') }}">Back to Skribl</a>{% endif %}
+      {% if signin %}<a class="btn btn-big" href="{{ url_for('social.signin') }}">Sign in</a>{% endif %}
+    </div>
+  </section>
+</div>
+{%- endmacro %}
