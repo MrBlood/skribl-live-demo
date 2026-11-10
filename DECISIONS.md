@@ -32903,5 +32903,9 @@ site owns everything about people, and the site is a host of Skribl through
 the public seams only, as skribls.net would be); everything a social site
 has against what Skribl has today; fifteen scale rules taken now because
 they are cheap now; the phases, with the Gallery card (the owner's B) first;
-and eight decisions with defaults. Proposed: nothing in it is built, and the
-decisions wait for the owner's answer.
+and eight decisions with defaults. Asked "what answers do you need", then
+shown the eight, the owner said "all yes": the site is its own app beside
+Skribl and reaches it only through the public seams; the stand-in stays the
+skribls.net stand-in; "Skribl" for now; passkeys with a link by email; 13 and
+over; private messages later; B first, then the phases in order; no public
+sign-ups before a lawyer has read the terms. Nothing in it is built yet.

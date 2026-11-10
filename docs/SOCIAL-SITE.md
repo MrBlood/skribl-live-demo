@@ -1,7 +1,7 @@
 # The Skribl social site: how it is laid out
 
-**Status: proposed, Nov 10. The owner's decisions in section 8 are open.**
-Nothing here is built yet except where it says "have".
+**Status: agreed, Nov 10. The owner said "all yes" to every default in
+section 8.** Nothing here is built yet except where it says "have".
 
 The owner, Nov 10: "we are beginning to build the social media site, so we
 need to take care to keep it straight. This may be the beginning of a social
@@ -194,7 +194,7 @@ change is checked, and every check is shown red first.
 
 ## 8. The owner's decisions
 
-"All yes" takes every default.
+The owner answered "all yes" on Nov 10: every default below is the decision.
 
 1. **Three layers:** the site is its own app, `social/`, beside Skribl, and is
    a host of Skribl through the public seams only. Not grown inside

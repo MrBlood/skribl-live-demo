@@ -2157,8 +2157,8 @@ doors: Pad and Flip dropped into skribls.net, or Skribl as its own social
 site. The layout is docs/SOCIAL-SITE.md: three layers (Skribl owns drawings,
 the site owns people, hosts mount Skribl), the full list of what a social
 site has against what Skribl has today, the scale rules taken now because
-they are cheap now, the phases, and the owner's decisions. Proposed; the
-decisions are open until the owner answers them.
+they are cheap now, the phases, and the owner's decisions, all eight answered "all yes" the
+same morning. Next: the Gallery card as a piece any page can embed (B).
 
 ## 7. The honest state
 
