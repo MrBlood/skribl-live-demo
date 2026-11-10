@@ -214,3 +214,17 @@ The owner answered "all yes" on Nov 10: every default below is the decision.
 8. **No public sign-ups before** a lawyer has read the terms and privacy
    policy and child-safety reporting is set up. Building and testing with
    invited people can start before that. *Default: yes.*
+
+**And one more, asked later the same day.** The owner: "can we try to
+duplicate skribls.net? ... or should we just build our own. maybe just
+building our own would be better." Then "all yes":
+
+9. **Build our own, not a copy of skribls.net.** A saved page holds only the
+   outside of a site (its look and its scripts); the accounts, database,
+   feeds and moderation run on its server, so a copy saves the easy part and
+   none of the hard part. A copy would also bring its problems with it (the
+   ones docs/SKRIBLS-NET.md records), would make the scale rules in section 3
+   a retrofit, and is not ours to make: someone else decides what happens on
+   skribls.net. Features belong to no one, so its saved pages stay welcome as
+   a checklist of what a page needs, and they keep the drop-in door tested
+   through the stand-in. Phase 1's mocks start from Skribl's own look.

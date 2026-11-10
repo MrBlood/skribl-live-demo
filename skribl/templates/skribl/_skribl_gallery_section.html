@@ -106,12 +106,23 @@
 
   {# THE STATES, in the language of the page. The empty state says what
      puts something here — the tick on the post sheet — because a person
-     who just posted and does not see it needs that sentence, not a route. #}
+     who just posted and does not see it needs that sentence, not a route.
+     IN THE WORDS OF THAT DOOR'S OWN TICK (the owner, Nov 10: "all yes"):
+     Skribl's own Post sheet says "Show in the public gallery", and a host's
+     composer (compose=1&gallery=1, _skribl_post.html) "Show in the Skribls
+     gallery". The Library is Skribl's own page's to mention: a host's people
+     have no Library to turn it on in. verify_standin section 12 holds each
+     door's words to its tick's label. #}
   <p class="state" id="galleryEmpty" hidden>
     <b>Nothing here yet.</b><br>
+    {% if page -%}
     Skribls appear here when their author ticks
     <b>Show in the public gallery</b> as they post, or turns it on later
     in their Library.
+    {%- else -%}
+    Skribls appear here when their author ticks
+    <b>Show in the Skribls gallery</b> as they post.
+    {%- endif %}
   </p>
   <p class="state" id="galleryNone" hidden>
     <b>Nothing matches that.</b> Try part of a title.
