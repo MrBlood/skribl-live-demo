@@ -202,9 +202,22 @@ The owner answered "all yes" on Nov 10: every default below is the decision.
    a host of Skribl through the public seams only. Not grown inside
    `examples/host_app`. *Default: yes.*
 2. **The stand-in at /host stays the skribls.net stand-in;** the site gets its
-   own address on the demo until it has a domain. *Default: yes.*
+   own address on the demo until it has a domain. *Default: yes.* The
+   address, the owner's yes (Nov 10): **/social** on the demo
+   (skribl-live-demo.onrender.com/social).
 3. **Name and domain:** the owner's call. *Default: "Skribl" for now, domain
    later.*
+   **A domain is best bought before sign-in is built (phase 1).** Passkeys
+   are tied to the address they are made on, so passkeys made on the demo's
+   address would have to be made again after a move; a Home Screen icon
+   saved from the demo stays tied to the demo's address too; and the emailed
+   sign-in links are best sent from the site's own domain. What the owner
+   sets up then: the domain itself (auto-renew and two-step sign-in on the
+   registrar's account), the domain added to the Render service (Render
+   shows the DNS records to add and makes the HTTPS certificate), and later
+   the email service's few DNS records. What Cal sets up: the site answering
+   at the top of the new domain while the demo keeps its own address, and
+   the checks that both answer.
 4. **Sign-in:** passkeys (Face ID, Windows Hello), with a link by email for a
    new device; no passwords to leak. Sending email needs a service (a free
    tier is likely enough at first; asked at phase 1). *Default: yes.*
