@@ -19,6 +19,19 @@ each start: on the live demo, the Pad's files took 8.8 s of server work the
 first time. A worker that is warming queues its first requests for those few
 seconds instead, and every open after is quick.
 
+THE SITE'S OWN TABLES, ONCE PER START, BEFORE ANY WORKER (on_starting). The
+site at /social keeps its tables on a migration chain of its own
+(social/alembic.ini). Render does not read the Procfile, and its start
+command lives in its dashboard (`python -m alembic upgrade head && gunicorn
+app:app`, Skribl's chain), so the site's chain is run from here, which both
+that command and the Procfile reach: in gunicorn's master, once, before any
+worker loads the app. CAREFULLY: a site chain that fails or hangs never
+stops the demo. It is logged, loudly, with alembic's own last lines (any
+database address in them blanked), the server starts anyway, and the site's
+sign-in rests (a kind 503 on its pages) until the tables are there, while
+the Pad, Flip and the rest of the demo serve as before. SKRIBL_SOCIAL=0, or a
+package without social/, skips it.
+
 THE STAND-IN BESIDE THE DEMO, AFTER IT AND IN THE BACKGROUND. app.py mounts
 examples/host_app at /host: a second Flask app with a Skribl of its own, so
 caches of its own that start empty, and the first open of its Pad paid what
@@ -31,6 +44,9 @@ stand-in is done in about 22 s). A request that arrives mid-warm-up does its
 file itself, which is what every request did before there was a warm-up.
 """
 import os
+import re
+import subprocess
+import sys
 import threading
 import time
 
@@ -39,6 +55,50 @@ threads = int(os.environ.get("GUNICORN_THREADS") or 8)
 #: The rest after each of the stand-in's files (the docstring's last paragraph).
 #: Underscored, so gunicorn never reads it as one of its settings.
 _BESIDE_REST = 0.1
+#: How long the site's chain may take before the server starts without it.
+_SITE_CHAIN_SECONDS = 120
+
+
+def on_starting(server):
+    """Bring the site's own tables up to date, once, before any worker (the
+    docstring's last paragraph). Never raises: the demo starts whatever
+    happens here."""
+    try:
+        _site_chain(server.log)
+    except Exception:
+        server.log.exception("social: the site's tables were not brought up to date; the demo "
+                             "serves on, and the site's sign-in rests until they are")
+
+
+def _site_chain(log):
+    if os.environ.get("SKRIBL_SOCIAL", "1").strip() == "0":
+        return
+    here = os.path.dirname(os.path.abspath(__file__))
+    ini = os.path.join(here, "social", "alembic.ini")
+    if not os.path.isfile(ini):
+        log.info("social: no site in this package (social/alembic.ini); nothing to migrate")
+        return
+    try:
+        done = subprocess.run([sys.executable, "-m", "alembic", "-c", ini, "upgrade", "head"],
+                              cwd=here, capture_output=True, text=True, timeout=_SITE_CHAIN_SECONDS)
+    except subprocess.TimeoutExpired:
+        log.error("social: the site's tables took over %d s to bring up to date and were left; "
+                  "the demo serves on, and the site's sign-in rests until they are",
+                  _SITE_CHAIN_SECONDS)
+        return
+    said = _blank_addresses((done.stderr or "") + (done.stdout or ""))
+    if done.returncode == 0:
+        log.info("social: the site's tables are up to date (social_alembic_version at head)")
+    else:
+        last = " | ".join(line.strip() for line in said.strip().splitlines()[-4:])
+        log.error("social: the site's tables could not be brought up to date (alembic exited %d); "
+                  "the demo serves on, and the site's sign-in rests until they are: %s",
+                  done.returncode, last[-600:])
+
+
+def _blank_addresses(text):
+    """A database address can carry its password: none reaches the log."""
+    return re.sub(r"\b[a-zA-Z][a-zA-Z0-9+.-]*://\S+", "<database address>", text)
 
 
 def post_worker_init(worker):

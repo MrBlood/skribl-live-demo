@@ -18,9 +18,18 @@ the left of a desk, and three things to do there:
                         and Flip into Skribl's Flip, from the bar, the rail or
                         Home's button. It is not a page.
 
-No accounts yet, so no You, no tables and no migrations. When the site has
-tables they are named social_... with their own migration chain, so Skribl's
-chain stays Skribl's alone.
+PHASE 1, PIECE 2: SIGN-IN, invite-only, with passkeys (accounts.py; the
+owner's "all yes", Nov 10). Given the host's database session, the site has
+accounts: /join#<code>, /signin, /you, /invites (admins), /recover#<code>,
+the bar's You (Sign in until then), and its own tables, social_..., built by
+a migration chain of their own (social/migrations, social/alembic.ini, its
+stamp in social_alembic_version), so Skribl's chain stays Skribl's alone.
+Without a session it is the frame alone, as in piece 1.
+
+ONE SKRIBL, SHARED, PEOPLE TOO. The host hands Skribl the site's signed-in
+person as its current user (current_user_id() below) and names them with
+describe_author(), so a drawing made in the Pad while signed in is theirs.
+The demo's app.py composes both with its own stand-in identity.
 
 ONE SKRIBL, SHARED. init_social() plugs the site into the app Skribl is
 already mounted on, so a drawing made in its Pad is a skribl on the site. It is
@@ -37,16 +46,40 @@ files the site names.
 
     import skribl, social
     skribl.init_skribl(app, session=lambda: db.session, ...)
-    social.init_social(app)                       # after it; at /social
+    social.init_social(app, session=lambda: db.session)   # after it; at /social
 
 The demo's app.py does exactly this (SKRIBL_SOCIAL=0 leaves the site out).
 """
 import hashlib
+import importlib.util
 import os
 
-from flask import Blueprint, render_template, request, url_for
+from flask import (Blueprint, current_app, g, has_app_context, has_request_context,
+                   render_template, request, url_for)
 
-__all__ = ["init_social"]
+from .models import PERSON_PREFIX, attach_to_metadata
+
+__all__ = ["init_social", "current_user_id", "describe_author", "attach_to_metadata",
+           "PERSON_PREFIX"]
+
+
+def current_user_id():
+    """The public id of the person signed in to the site in this request, or
+    None (nobody, no request, or no site with accounts on this app). What a
+    host hands Skribl as its current user."""
+    if not has_request_context() or "social" not in current_app.extensions:
+        return None
+    from .security import current_user_id as _who
+    return _who()
+
+
+def describe_author(user_id):
+    """{"username": handle, "display_name": name} for one of the site's
+    people, else None: for Skribl's author resolver."""
+    if not has_app_context() or "social" not in current_app.extensions:
+        return None
+    from .accounts import describe_author as _describe
+    return _describe(user_id)
 
 #: The globals init_skribl() puts in the app's Jinja environment that the
 #: site's pages use: skribl_asset for the player's and the Gallery's files,
@@ -76,9 +109,14 @@ SITE_CSP = "; ".join([
 ])
 
 
-def init_social(app, *, url_prefix="/social", skribl_blueprint="skribl"):
+def init_social(app, *, session=None, url_prefix="/social", skribl_blueprint="skribl"):
     """Register the site on `app`, where Skribl is mounted already. Returns
     the blueprint.
+
+    `session` is a callable returning the host's SQLAlchemy session (the one
+    Skribl was handed): with it the site has accounts and its own tables;
+    without it, the frame alone. The host owns the transaction, as it does
+    for Skribl: the site flushes and never commits a request's work.
 
     `skribl_blueprint` is the name Skribl was registered under, for a host
     that renamed it; the macros take it as `bp` and url_for builds Skribl's
@@ -95,6 +133,15 @@ def init_social(app, *, url_prefix="/social", skribl_blueprint="skribl"):
         raise RuntimeError(
             "init_social(app) needs the template globals init_skribl() adds "
             f"({', '.join(missing)} missing); was Skribl mounted with init_skribl?")
+    site = None
+    if session is not None:
+        # Passkeys are checked by py_webauthn (constraints.txt); without it
+        # the site does not start, rather than offering a sign-in that fails.
+        if importlib.util.find_spec("webauthn") is None:
+            raise RuntimeError("the site's sign-in needs the webauthn package "
+                               "(pip install -r constraints.txt --require-hashes)")
+        from .security import Site
+        site = Site(app, session, url_prefix)
 
     bp = Blueprint("social", __name__, url_prefix=url_prefix,
                    template_folder="templates", static_folder="static")
@@ -133,18 +180,38 @@ def init_social(app, *, url_prefix="/social", skribl_blueprint="skribl"):
         """Explore: Skribl's own Gallery section, in the site's frame."""
         return render_template("social/explore.html", here="explore")
 
+    if site is not None:
+        from . import accounts
+        accounts.register(bp)
+
     # Context for the site's own pages only (a blueprint processor, not an
     # app-wide one): Skribl's pages never see these names.
     @bp.context_processor
     def _site_context():
-        return {"social_asset": social_asset,
-                "skribl_bp": skribl_blueprint,
-                # Make's two doors, Skribl's own pages, from its own routes.
-                "pad_url": url_for(skribl_blueprint + ".skribl_editor"),
-                "flip_url": url_for(skribl_blueprint + ".skribl_flip")}
+        ctx = {"social_asset": social_asset,
+               "skribl_bp": skribl_blueprint,
+               # Make's two doors, Skribl's own pages, from its own routes.
+               "pad_url": url_for(skribl_blueprint + ".skribl_editor"),
+               "flip_url": url_for(skribl_blueprint + ".skribl_flip"),
+               "accounts": site is not None,
+               "me": None}
+        if site is not None:
+            from .models import as_utc
+            from .security import current_person
+            ctx["me"] = current_person()
+            # Times are kept in UTC; a page writes them so (an ISO stamp
+            # for you.js to show in the person's own zone, and a plain
+            # UTC day for a page without scripts).
+            ctx["when_iso"] = lambda t: as_utc(t).isoformat() if t else ""
+            ctx["when_day"] = lambda t: f"{as_utc(t):%b} {as_utc(t).day}, {as_utc(t).year}" if t else ""
+        return ctx
 
     @bp.after_request
     def _headers(resp):
+        if g.get("social_hidden"):
+            # A page the asker may not know is there (Invites, to anyone but
+            # an admin): its 404 leaves as a missing page's does.
+            return resp
         if request.endpoint == "social.static":
             name = (request.view_args or {}).get("filename")
             if (resp.status_code == 200 and name and request.args.get("v")
@@ -162,4 +229,14 @@ def init_social(app, *, url_prefix="/social", skribl_blueprint="skribl"):
         return resp
 
     app.register_blueprint(bp)
+    if site is not None:
+        from .cli import group
+        from .security import finish_cookie
+        app.extensions["social"] = site
+        # App-wide, so a cookie whose sign-in ended elsewhere is cleared on
+        # whichever page notices (a Skribl one included), and so the site's
+        # own pages set theirs. One look at `g` on every other response.
+        app.after_request(finish_cookie)
+        if "social" not in app.cli.commands:
+            app.cli.add_command(group)
     return bp

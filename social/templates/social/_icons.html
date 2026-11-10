@@ -23,6 +23,21 @@
 {{ _svg('<rect x="7.5" y="3.5" width="12" height="15" rx="2"/><path d="M4.5 7v11.5a2 2 0 0 0 2 2h9"/>') }}
 {%- endmacro %}
 
+{# You, and Sign in before it: a head and shoulders. Filled on You's own page. #}
+{% macro person(filled=false) -%}
+{{ _svg('<circle cx="12" cy="8.5" r="3.8"' ~ (' fill="currentColor"' if filled else '') ~ '/><path d="M4.5 20a7.5 7.5 0 0 1 15 0' ~ ('z" fill="currentColor"' if filled else '"') ~ '/>') }}
+{%- endmacro %}
+
+{# A passkey: somebody, and the key that is theirs (the sign-in mock's). #}
+{% macro passkey() -%}
+{{ _svg('<circle cx="9" cy="7.5" r="3.5"/><path d="M3 20a6 6 0 0 1 9.5-4.9"/><circle cx="17.5" cy="13.5" r="2.5"/><path d="M17.5 16v5M17.5 18.5h2"/>') }}
+{%- endmacro %}
+
+{# A link, for the invite links an admin makes. #}
+{% macro link() -%}
+{{ _svg('<path d="M10 14a4.5 4.5 0 0 0 6.4 0l3-3a4.5 4.5 0 0 0-6.4-6.4l-1 1"/><path d="M14 10a4.5 4.5 0 0 0-6.4 0l-3 3a4.5 4.5 0 0 0 6.4 6.4l1-1"/>') }}
+{%- endmacro %}
+
 {#  THE PEN'S TOUCH: one stroke under the page you are on, and under "draw
     themselves" on the first visit. It stretches to the word above it. #}
 {% macro underline(cls='') -%}

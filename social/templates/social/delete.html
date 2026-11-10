@@ -1,0 +1,41 @@
+{#  DELETE MY ACCOUNT: a kind confirm that says what goes and what stays,
+    before anything goes. Deleting is real (docs/SOCIAL-SITE.md, section 3):
+    the person, their passkeys and the invite links they made are removed,
+    not hidden. Their skribls are Skribl's, and Skribl has no seam yet for a
+    host to take an author's drawings with them, so this page says they stay,
+    and where to delete them first. Typing the handle is the confirm. #}
+{% extends 'social/base.html' %}
+
+{% block title %}Delete your account · Skribl{% endblock %}
+
+{% block main %}
+<div class="acct">
+  <div class="page-head">
+    <h1 class="page-title">Delete your account?</h1>
+    <p class="page-sub">Take a moment: this can’t be undone.</p>
+  </div>
+  <section class="panel" aria-labelledby="goesTitle">
+    <h2 class="panel-title" id="goesTitle">What goes, right away and for good</h2>
+    <ul class="bullets">
+      <li>Your account: your name, {{ me.display_name }}, and your handle, @{{ me.handle }}</li>
+      <li>Your passkeys ({{ n_keys }})</li>
+      <li>{% if n_links %}The invite links you made that nobody has used yet ({{ n_links }}){% else %}Any invite links you made{% endif %}</li>
+    </ul>
+    <h2 class="panel-title" id="staysTitle">What stays, for now</h2>
+    <p class="panel-text">Your skribls and saved drafts stay where they are: deleting your account doesn’t take them down yet. If you want them gone too, delete them in your Library first.</p>
+    <a class="btn" href="{{ url_for(skribl_bp ~ '.skribl_library') }}">Open your Library</a>
+  </section>
+  <form class="panel" method="post" action="{{ url_for('social.delete_account_now') }}">
+    <input type="hidden" name="csrf" value="{{ token }}">
+    <div class="field">
+      <label for="delConfirm">Type your handle to confirm</label>
+      <div class="at"><span class="at-sign" aria-hidden="true">@</span><input id="delConfirm" name="confirm" type="text"
+           autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" maxlength="21" required
+           {% if wrong %}aria-invalid="true" aria-describedby="delErr"{% endif %}></div>
+      {% if wrong %}<p class="err" id="delErr">That’s not quite it. Type @{{ me.handle }} to confirm.</p>{% endif %}
+    </div>
+    <button class="btn btn-danger btn-big btn-wide" type="submit">Delete my account</button>
+    <a class="btn btn-big btn-wide" href="{{ url_for('social.you') }}">Keep my account</a>
+  </form>
+</div>
+{% endblock %}
