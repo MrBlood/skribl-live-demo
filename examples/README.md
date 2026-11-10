@@ -7,6 +7,15 @@
 Then open <http://127.0.0.1:5055/>, sign in as `ada`, press the ✎ button,
 draw something, and post it.
 
+**It is also on the demo, at `/host`.** `app.py` at the repo root mounts it
+there, beside Skribl, so Add to post's gallery tick can be tried on a phone
+(Skribl's own `/feed` posts everything publicly and never asks). It keeps its
+own database (a SQLite file: test posts, gone on a redeploy) and its own
+cookies, named `skribl_host_…` and its session pathed to `/host`, so its
+pretend sign-in never touches the demo's. It is a host beside Skribl, not a
+part of it: `SKRIBL_STAND_IN=0` leaves it out, and the demo starts without it
+if it ever fails. `harness/verify_standin.py` checks the mount.
+
 It is about 300 lines of application and three templates (the frame, the
 feed, the Skribls page). Read `app.py` first — its docstring lists the five
 things a host does and points at the line where each one happens.

@@ -165,7 +165,11 @@ up from under him.
 **It lives in skribls.net too.** Pad, the Library and the Gallery will sit inside
 the owner's site. Pad acts like an app on the phone: it opens full screen, has a
 Home Screen icon, and returns to the site after posting. Anything built has to
-work inside the site and on its own.
+work inside the site and on its own. **And Skribl must always be able to be its
+own site:** "if someday skribl needs to be its own site (say the skribls.net
+owner doesn't want to merge this) it can be - its own social media site that is
+independent of skribls.net" (the owner, Nov 10). A host borrows Skribl; Skribl
+never needs a host. Nothing in it may depend on skribls.net, or on any one host.
 
 **The vibe question** ("are we expressing any kind of vibe? We want a good vibe")
 is always open. Today the drawings say *sketchbook* and the chrome around them says

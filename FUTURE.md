@@ -2117,6 +2117,15 @@ the owner said "All yes" to: both, as one Skribl with two front doors.
   Home Screen icon and works on its own; the site is where skribls are seen
   and, later, sold. Signed in, the app posts to the person's skribls.net
   account. Without the site the app still stands alone, as it does today.
+- **And Skribl can become its own social site** (the owner, Nov 10: "if
+  someday skribl needs to be its own site (say the skribls.net owner doesn't
+  want to merge this) it can be"). The same package with a host app of its
+  own in place of skribls.net: what that takes beyond today's app is accounts
+  of its own (the demo identity stands in), people's pages, a home feed of
+  the people someone follows, and comments. None of it is built; nothing
+  built may make it harder, which is why the skribls.net stand-in at /host on
+  the demo (examples/host_app, Nov 10) is a host beside Skribl, never a part
+  of it.
 
 Next, in order, and nothing built until the owner says yes to the mocks:
 this note; a mock of Add to post with the two settings beside the Post sheet

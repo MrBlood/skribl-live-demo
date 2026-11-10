@@ -32675,3 +32675,65 @@ naming the drawer as add() left it and as it is now: which drawer, the card,
 the panel, the song, where the page is. Calibrated in a copy that shuts the
 drawer after the song lands: "the drawer now None ... as add() left it
 'music'", in 5s rather than 30; as built, the line part 2/2.
+
+## After v330 -- The skribls.net stand-in on the demo, at /host
+
+The owner looked on the live demo's /feed for Add to post's gallery tick
+(#818) and found none. /feed never asks, by design: it posts everything
+publicly, so its list is the public gallery. The host that does ask
+(examples/host_app, opening the Pad with compose=1&gallery=1) ran only on a
+laptop. Shown the difference, the owner said "I want the stand-in", and then:
+"make sure you do this so if someday skribl needs to be its own site (say the
+skribls.net owner doesn't want to merge this) it can be". That is now a line
+in WORKING-AGREEMENTS and in FUTURE 6ah.
+
+- MOUNTED, NOT MERGED. app.py puts examples/host_app at /host with werkzeug's
+  DispatcherMiddleware, in the same process. Skribl was built for two apps in
+  one process: every seam init_skribl takes is the app's own. The stand-in has
+  its own database (a SQLite file beside the demo's where that is SQLite, one
+  per test server; in the temp directory where it is PostgreSQL, gone on a
+  redeploy), a secret derived from the demo's, and its own cookies: its
+  session `skribl_host_session` on /host (the demo keeps a Flask session for
+  its demo identity, so a shared name would have overwritten it) and its CSRF
+  cookie `skribl_host_csrf`. A stand-in that fails to start is logged and
+  left out; SKRIBL_STAND_IN=0 leaves it out on purpose. Nothing in Skribl or
+  the demo's own pages links to it or knows of it.
+- WHAT ELSE WAS CHECKED BEFORE MOUNTING. Compose mode keeps no Pad draft, so
+  the two Pads on one origin cannot restore each other's drawing; the demo's
+  service worker answers only its own pages and /static/skribl files; the
+  stand-in's media stays inline in its own database; gunicorn does not
+  preload, so each worker opens its own connections; attach_to_metadata copies
+  Skribl's tables, never moves them.
+- THE CHECK: verify_standin, through the demo's own server: the stand-in at
+  /host with its Skribl under /host/skribl; Add to post's tick and caption on
+  a phone (the frame opens with compose=1&gallery=1); a post that lands in its
+  own feed and Skribls page and not in the demo's public list; every cookie it
+  sets named skribl_host_..., its session on /host. Calibrated in tree copies
+  with their own server, one part at a time: left out (SKRIBL_STAND_IN=0),
+  /host a 404 and the suite stops there; its cookies unnamed, a `session`
+  cookie on / and the cookie row red; the demo's own database, the demo's
+  list 0 then 1 and the posts row red; its composer without gallery=1, no tick
+  and the asking row red. As built, 5/5.
+- ITS FILES ARE DONE AFTER A START, BESIDE THE DEMO'S VISITORS. The
+  stand-in's Skribl keeps caches of its own, so every start left them empty
+  and the first open of its Pad paid what the demo's did before the warm-up
+  (#801: 8.8 s of server work on the live demo). gunicorn.conf.py now warms
+  each app mounted beside the demo once the demo's files are done, on a
+  thread of its own that rests 0.1 s after each file. The rest is the point:
+  Python runs one thread at a time, and unrested the stand-in's five seconds
+  of work held the demo's own visitors. On the dev box, three runs each, the
+  demo's Pad opened while the stand-in warmed (after one open thrown away) in
+  0.22-0.23 s with no stand-in warm-up, 1.4-1.8 s unrested, 0.35-0.39 s
+  rested; the stand-in's 172 files are done in about 22 s. The live demo is
+  one Starter instance that does not sleep, so this runs once per deploy. The
+  stand-in costs a worker about 10 MB in all: 68 MB without it, 69-71
+  mounted, 77-80 with its files kept (which a first /host open did anyway).
+  verify_hostconfig starts gunicorn as the host does and now also asks that
+  the stand-in's line names every file, after the demo's, and that the demo's
+  Pad opened while it warms takes at most 4x one opened after, plus 0.3 s.
+  Calibrated in tree copies, the warm-up section alone, one part at a time:
+  no stand-in warm-up, no line and the files row red; unrested, 1.85 s
+  against 0.21 s and the not-held row red; warmed before the worker takes a
+  visitor, the stand-in done before the demo could be opened and the not-held
+  row red; as built, 3/3 (0.37 s while it warmed, 0.23 s after). The whole
+  suite on the tree, 61/61.
