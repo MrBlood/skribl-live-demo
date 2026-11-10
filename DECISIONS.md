@@ -32648,3 +32648,30 @@ speed, the race itself: a write at 329-331ms, then the 20 and 7px clamps);
 the hold letting go at once red on both (a 31px clamp, no glide); as built,
 green. Not tested: WebKit. The Restart door's first-frame hitch (above) is
 still for later.
+
+## After v330 -- Main red after #827: a music door's tile with no box (verify_musicdoors, not reproduced)
+
+Issue #828, main at cab2cbb, sqlite 4/6 only: verify_musicdoors crashed
+before it reported, its 36 rows to then all passing. The "line" part's first
+editor (the Pad, the Exact door) clicked the Exact tile, and Playwright waited
+30s on "element is not visible": the tile was there, labelled with the song's
+loop, but had no box. The media card has none while neither of its panels is
+open, so the music drawer was shut. postgresql 4/6 ran the same suites on the
+same commit green, and here the suite was 116/116 twice with #827 in.
+
+NOT REPRODUCED. The same steps (a stroke, Record, the drawer through the bar,
+the song, Skribl's answer, the Exact tile) on the part's five screens: 115
+tries, alone, four at once and at CPU 4x and 6x, the tile there every time
+and the drawer open after the bar's two taps every time. The likeliest story,
+the Music tab's tap landing on the canvas while Photo glides in (a tap on the
+canvas puts an open drawer away), did not happen in 48 tries of the harness's
+opener at 6x. Read and ruled out: nothing else in the flow puts the drawer
+away (Recolor turning on, Tune, the tool tray, Escape and the autosave pill
+are each a person's own act), and #827 only decides whether the growth
+follow scrolls.
+
+SO THE NEXT ONE SAYS WHICH. set_door waits 5s for the tile, then fails
+naming the drawer as add() left it and as it is now: which drawer, the card,
+the panel, the song, where the page is. Calibrated in a copy that shuts the
+drawer after the song lands: "the drawer now None ... as add() left it
+'music'", in 5s rather than 30; as built, the line part 2/2.
