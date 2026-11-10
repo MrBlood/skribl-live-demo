@@ -32795,3 +32795,22 @@ files are the memory). What a new session needs:
 
 Also open: main's full run after #830 is run 42830024763 (started 7:02 AM
 MST); check it first. Not sealed since v330.
+
+## After v330 -- More on the stand-in's Skribls page adds nothing it already shows
+
+The owner's first bug on the live stand-in: on /host/skribls with one
+skribl, More "just adds another copy. It will do this repeatedly." Two parts,
+as the handoff said. The listing had no next page and the script hid More,
+but `.sk-more { display:block }` beat the browser's own `[hidden]` rule, so it
+stayed on screen; and its press called load(false), which with no cursor
+fetched page one again and appended it. Now base.html says what Skribl's own
+sheets say, `[hidden] { display:none !important; }`, for every page of the
+host, and More's press asks for a next page only when there is one.
+
+verify_standin's new section 5, on the page the suite already posts to: More
+has no painted box when the listing answers no next_cursor, and two presses
+of it (by script, as a stale tap would) leave the tile count as it was.
+Calibrated on the server, bounced for each template change: as it was, both
+rows red (painted boxes 1; tiles 1 then 3, the owner's symptom); the CSS
+alone, the first green and the second red (1 then 3); both, 7/7.
+verify_example (the host booted on its own) 59/59.

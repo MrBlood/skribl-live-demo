@@ -194,7 +194,10 @@ window.addEventListener('DOMContentLoaded', function () {
       load(true);
     }, 250);
   });
-  more.addEventListener('click', function () { load(false); });
+  /* More asks for the NEXT page, so with no cursor there is none to ask for:
+     load(false) without one would fetch page one again and append it (the
+     owner's "adds another copy", Nov 10). */
+  more.addEventListener('click', function () { if (cursor) load(false); });
   load(true);
 });
 </script>
