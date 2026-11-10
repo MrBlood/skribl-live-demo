@@ -36,6 +36,9 @@
   .muted { color:var(--dim); font-size:13px; }
   form.inline { display:inline; }
   select, button, textarea, input { font: inherit; color: inherit; }
+  /* A text field under 16px makes an iPhone zoom the page when it is tapped
+     (the sign-in picker and "Say something" were the page's 15px). */
+  select, textarea, input { font-size: 16px; }
   select { background:var(--elev); border:1px solid var(--line); border-radius:8px;
            padding:6px 10px; }
   .btn { background:var(--accent); border:0; color:#fff; border-radius:999px;
