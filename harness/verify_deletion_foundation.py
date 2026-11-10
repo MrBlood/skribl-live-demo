@@ -359,10 +359,34 @@ with app.app_context():
               "— a blueprint must not reach past its own seam")
         _host_engine.dispose()
     else:
+        # ASKED OF THE LISTENER ITSELF, ENGINE BY ENGINE. This used to ask that
+        # no SQLite engine in the process carried one at all, which was the
+        # property while Skribl was the only one here. Since #830 the demo
+        # mounts the stand-in (examples/host_app at /host) in this process with
+        # a Skribl and a SQLite database of its own, whose engine rightly
+        # enforces foreign keys, and main's PostgreSQL shard went red on that.
+        # The property is the seam: the engine Skribl was given here has no
+        # pragma listener, and every engine that has one is the engine some
+        # Skribl was given (the stand-in's), never one nobody handed it.
+        def _pragma_on(engine):
+            pool = getattr(engine, "pool", None)
+            fns = list(pool.dispatch.connect) if pool is not None else []
+            return any(getattr(f, "__name__", "") == "_set_sqlite_pragma" for f in fns)
+
+        _own = db.session.get_bind().engine
+        _given = {id(_own)}
+        _stand_in = getattr(app.wsgi_app, "mounts", {}).get(app.config.get("SKRIBL_STAND_IN") or "")
+        _host_mod = sys.modules.get("skribl_stand_in")
+        if _stand_in is not None and _host_mod is not None:
+            with _stand_in.app_context():
+                _given.add(id(_host_mod.db.engine))
+        _listened = [e for e in list(_m._FK_ENGINES) if _pragma_on(e)]
         check(f"no pragma listener is installed on {_dialect}",
-              not _m._FK_ENGINES or all(
-                  e.dialect.name != "sqlite" for e in _m._FK_ENGINES),
-              "the SQLite pragma path should be inert on other engines")
+              not _pragma_on(_own) and all(id(e) in _given for e in _listened),
+              f"Skribl's own {_dialect} engine listening: {_pragma_on(_own)}; engines listening "
+              f"{[e.url.render_as_string(hide_password=True) for e in _listened]}, "
+              f"of which given to a Skribl {sum(id(e) in _given for e in _listened)}"
+              " -- the SQLite pragma path should be inert on other engines")
         check("the cascade is enforced by the engine itself here", True,
               f"{_dialect} enforces foreign keys natively")
 

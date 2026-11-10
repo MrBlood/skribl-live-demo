@@ -313,8 +313,13 @@ def prepare(app):
                 db.session.rollback()
 
 
-app = create_app()
-
+# NO APP IS BUILT ON IMPORT. `flask --app app run` finds create_app() itself,
+# and `python app.py` builds one below. The live demo imports this module to
+# mount the stand-in at /host and builds the one it wants; an app built here
+# too was a second, unused Skribl in every worker, on an example.db nobody
+# asked for, and verify_deletion_foundation's blast-radius row found its
+# engine (main red after #830, PostgreSQL shard).
 if __name__ == "__main__":
+    app = create_app()
     prepare(app)
     app.run(port=int(os.environ.get("PORT", 5055)), debug=False)
