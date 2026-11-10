@@ -370,8 +370,10 @@ check(f"...and the stand-in beside it (/host) has every file done too ({_expecte
 check("...without holding the demo for it: the demo's Pad opened while the stand-in warms takes at most "
       "4x one opened after, plus 0.3 s",
       _a is not None and _b is not None and bool(_a_during) and _a <= 4 * _b + 0.3,
-      (f"while it warmed {_a:.2f} s, after {_b:.2f} s ({_a / max(_b, 1e-6):.1f}x); still warming during "
-       f"the first: {_a_during}" if _a is not None and _b is not None
+      (("the stand-in was done before the demo's Pad could be opened beside it: the demo was held for it, "
+        f"or it warmed with no rest ({_a:.2f} s, then {_b:.2f} s)" if not _a_during
+        else f"while it warmed {_a:.2f} s, after {_b:.2f} s ({_a / max(_b, 1e-6):.1f}x)")
+       if _a is not None and _b is not None
        else "the demo's Pad was never opened: no warm-up line or no port"))
 
 
