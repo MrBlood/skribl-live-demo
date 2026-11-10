@@ -38,7 +38,15 @@
 
     `page` says the section IS the page (/gallery): page-wide helpers, the
     styled tooltips, then cover the whole page, as they always have there. On
-    a host they keep to the section. #}
+    a host they keep to the section.
+
+    `door` says which way the page's people post, so the empty state names
+    the tick they will see: 'app' when they post from Skribl's own Pad and
+    Flip (their Post sheet's "Show in the public gallery", and the Library
+    that can turn it on later), 'host' when they post from a host's own
+    composer opened with gallery=1 ("Show in the Skribls gallery"). Unsaid,
+    it is 'app' on Skribl's own page and 'host' on a host's. The Skribl site
+    (social/) says 'app': its Make opens Skribl's own editors. #}
 {% from 'skribl/_skribl_inline_player.html' import skribl_inline %}
 
 {#  The section's files, for a page that is not Skribl's. /gallery loads its
@@ -64,7 +72,7 @@
 <script src="{{ skribl_asset('gallery.js') }}" defer></script>
 {%- endmacro %}
 
-{% macro skribl_gallery_section(bp='skribl', page=false) -%}
+{% macro skribl_gallery_section(bp='skribl', page=false, door=none) -%}
 {#  THE WHOLE TEMPLATED URL for the player, placeholder and all, which is the
     shape the poster uses: "the real one is that same server-built path with
     the id substituted -- no path is assembled here, which keeps this correct
@@ -111,11 +119,12 @@
      Skribl's own Post sheet says "Show in the public gallery", and a host's
      composer (compose=1&gallery=1, _skribl_post.html) "Show in the Skribls
      gallery". The Library is Skribl's own page's to mention: a host's people
-     have no Library to turn it on in. verify_standin section 12 holds each
-     door's words to its tick's label. #}
+     have no Library to turn it on in. `door` picks (see the macro's note):
+     verify_standin section 12 holds each door's words to its tick's label,
+     and verify_social the site's. #}
   <p class="state" id="galleryEmpty" hidden>
     <b>Nothing here yet.</b><br>
-    {% if page -%}
+    {% if (door or ('app' if page else 'host')) == 'app' -%}
     Skribls appear here when their author ticks
     <b>Show in the public gallery</b> as they post, or turns it on later
     in their Library.

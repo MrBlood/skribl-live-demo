@@ -386,6 +386,14 @@ card's ⋯ menu opens at its button inside a positioned box too.)
 If you registered the blueprint under another name, pass it:
 `{{ skribl_gallery_section(bp='drawings') }}`.
 
+**Say which way your people post.** When the gallery is empty it tells people
+which tick puts a skribl there, in the words they will see. If they post from
+your own composer (opened with `compose=1&gallery=1`), the default is right:
+"Show in the Skribls gallery". If they post from Skribl's own Pad and Flip,
+pass `door='app'`, and it names their Post sheet's "Show in the public
+gallery" and the Library that can turn it on later:
+`{{ skribl_gallery_section(door='app') }}`.
+
 `examples/host_app/templates/skribls.html` is this and nothing else, in the
 stand-in's frame. `verify_standin.py` holds it to `/gallery`: one drawing
 posted to both is the same card, pixel for pixel, on a phone and a desk, dark
@@ -393,6 +401,29 @@ and light; the stand-in's own elements compute the same styles with the
 section's files as without them; a report from it is taken; and "From a post"
 leads to its post. `verify_seam.py` holds `gallerysection.css` to `/gallery`'s
 sheets byte for byte.
+
+## Skribl's signature on your page
+
+The wordmark Skribl's own pages wear, "skribl" written in one stroke of the
+app's own pen, is a partial a page can include, so a site that says Skribl
+says it in the same hand:
+
+```jinja
+<a href="/" aria-label="Skribl, home">{% include 'skribl/_skribl_brand_mark.html' %}</a>
+```
+
+It is an inline SVG with the class `brand-mark`. Size it with a height in your
+CSS (its width follows), and colour it on its gradient's two ends,
+`.brand-grad-a` and `.brand-grad-b` (`stop-color`); one colour on both is one
+ink. It is hidden from a screen reader, for a link or a heading that already
+says the name; where the mark is the only place the name is written, name it:
+`{% with brand_label='Skribl' %}...{% endwith %}`. Two on one page take two
+sweeps, `{% with brand_sweep=66 %}`, so their gradients have two ids (a page
+with one id twice is invalid, and the second mark would draw with the
+first's). The site at `/social` wears it this way, at the top of a phone's
+page and at the top of a desk's rail (docs/SOCIAL-SITE.md), and
+`verify_social.py` holds the site's templates to the partials this page
+documents.
 
 ## Drawing one from your own composer
 

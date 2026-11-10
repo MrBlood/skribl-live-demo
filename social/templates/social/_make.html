@@ -1,0 +1,27 @@
+{#  MAKE: a small sheet with two doors (the owner's "all yes" on the mocks,
+    Nov 10). Each door says in one line what it makes, and opens Skribl's own
+    editor as it is: Draw the Pad, Flip the Flip. The sheet glides up from
+    the bottom of a phone, and on a desk rises a little in the middle of the
+    screen; under Reduce Motion it fades in where it sits. It closes once a
+    door is picked, and on Cancel, a tap outside it, a tap on its grip, a
+    swipe down, or Esc. social.js holds the moving parts, focus included.
+
+    A DIALOG THAT SAYS SO: role and aria-modal, and while it is open the page
+    behind it is inert, so a keyboard or a screen reader stays inside. #}
+{% import 'social/_icons.html' as ic %}
+<div class="make" id="makeSheet" hidden>
+  <div class="make-scrim" data-make-close></div>
+  <div class="make-sheet" role="dialog" aria-modal="true" aria-labelledby="makeTitle">
+    <div class="make-grip" data-make-close aria-hidden="true"></div>
+    <h2 class="make-title" id="makeTitle">Make something</h2>
+    <a class="make-door" href="{{ pad_url }}">
+      <span class="make-ic">{{ ic.pen() }}</span>
+      <span class="make-words"><b>Draw</b><span>It plays back the way you drew it.</span></span>
+    </a>
+    <a class="make-door" href="{{ flip_url }}">
+      <span class="make-ic">{{ ic.flip() }}</span>
+      <span class="make-words"><b>Flip</b><span>A flip book: draw page by page, and it moves.</span></span>
+    </a>
+    <button class="btn btn-wide make-cancel" type="button" data-make-close>Cancel</button>
+  </div>
+</div>
