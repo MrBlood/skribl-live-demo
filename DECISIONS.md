@@ -32737,3 +32737,61 @@ in WORKING-AGREEMENTS and in FUTURE 6ah.
   visitor, the stand-in done before the demo could be opened and the not-held
   row red; as built, 3/3 (0.37 s while it warmed, 0.23 s after). The whole
   suite on the tree, 61/61.
+
+## After v330 -- The owner's first look at the live stand-in, and where things stand
+
+#830 merged at 7:02 AM MST on Nov 10 (ce36631); /host answered on the live
+site at 7:03. A read-only check there in a phone browser went as far as the
+post sheet and stopped before posting: the Pad opened under
+/host/skribl/skribl-pad?compose=1&gallery=1, the gallery tick was there and
+off, ticking it opened the caption, the cookies were skribl_host_csrf and
+skribl_host_session (on /host), and nothing threw. Timed the same way from
+the container, the stand-in's Pad and the demo's own opened alike (about 6 s
+each with a fresh browser, 120 files: the distance to Render, not the
+stand-in). The owner then posted one drawing there and asked three things,
+and for "a thorough look-over". This session had run long and been
+summarised, so the look-over goes to a fresh one (WORKING-AGREEMENTS: the
+files are the memory). What a new session needs:
+
+1. MORE ADDS ANOTHER COPY (a bug, reproduced on the live site; not fixed).
+   "When I go to skribls and push more when there is only one skribl, it just
+   adds another copy. It will do this repeatedly." On the stand-in's Skribls
+   page (examples/host_app/templates/skribls.html) the listing answered one
+   item and no next_cursor, so the script set `more.hidden = true`, but
+   `.sk-more { display:block }` beats the browser's own `[hidden]` rule (base.html
+   has none of its own), so More stays on screen. Its click calls
+   load(false), which sends no cursor when there is none, fetches page one
+   again, and appends it: 1, 2, 3 tiles on the live page. Two fixes, each
+   with a row shown red without it: More hidden when there is no next page
+   (`.sk-more[hidden]{display:none}` or a `[hidden]` rule in base.html), and a
+   press with no cursor adds nothing. verify_standin is the natural home (it
+   already posts one drawing through /host). Skribl's own Gallery is not
+   affected: the "more" under a long caption opened the caption and added no
+   card (checked live).
+2. WHERE DOES THE CAPTION GO? It is saved with the drawing (the listing's
+   item carries it) and Skribl's own Gallery shows it under the drawing, with
+   "more" (/host/skribl/gallery). The stand-in's Skribls tiles show only the
+   title ("Untitled Skribl"), and the host's post shows the post's own words,
+   so inside the stand-in the caption shows nowhere. The owner's caption was
+   itself the question: "lets see the caption in the gallery, but no caption
+   in the post, but they both go in the feed? one without the caption, one
+   with? how does that work?" The model as built: one post in the feed, with
+   the post's words and the drawing playing in it; one tile in the gallery,
+   with the drawing and its gallery caption. The tile should show the
+   caption: that is a change to how the tile looks, so mock it first.
+3. "I AM LOOKING ON A DESKTOP NOW. WHY DOES IT NOT JUST PULL THE GALLERY
+   MODULE UP?" The Skribls tab is the host's own grid in its narrow frame
+   (option A, #820: the host's names and "From a post" links), two columns,
+   no caption, no plays, no menu. Skribl's Gallery card has the author, time,
+   plays, the ⋯ menu with Report, the caption with "more", and Make one. A
+   design question: mock Now beside B (the Skribls tab shows Skribl's Gallery
+   cards in the host's frame, keeping the host's names and links) and C (the
+   tab opens Skribl's own Gallery page), phone and desk, light and dark.
+   Recommend B: one gallery, two doors. Wait for a plain yes.
+4. THE LOOK-OVER: walk /host on a phone and a desk, light and dark, every
+   page and step (Feed, Skribls, the composer, the Pad, the post sheet, a
+   posted post, a tile's "From a post" link), list what is off, fix bugs and
+   merge on green, mock everything that changes how it looks or works.
+
+Also open: main's full run after #830 is run 42830024763 (started 7:02 AM
+MST); check it first. Not sealed since v330.
