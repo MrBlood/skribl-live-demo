@@ -20,8 +20,20 @@
 {% block head %}{% endblock %}
 
 <style>
+  /* DARK, AND LIGHT WHEN THE DEVICE IS (the owner's yes, Nov 10): the Pad and
+     the players inside follow the device, so the site does too. Contrast on a
+     card, dark then light: ink 15.4 and 18.2, secondary words 5.9 and 6.9,
+     violet words 7.7 and 6.7. --accent-fill is Skribl's own fill for an
+     action: white on it is 5.2:1 (on --accent it was 4.35, under AA). */
   :root { --bg:#0d0f14; --elev:#12151c; --line:#232936; --ink:#e8ecf4;
-          --dim:#8b93a7; --accent:#7c5cff; --accent-ink:#a99bff; }
+          --dim:#8b93a7; --accent:#7c5cff; --accent-ink:#a99bff;
+          --accent-fill:#6d4cf0; --scrim:rgba(4,6,10,.86);
+          --flash-bg:#3a1d24; --flash-line:#6d2c38; color-scheme: dark; }
+  @media (prefers-color-scheme: light) {
+    :root { --bg:#f6f5fb; --elev:#ffffff; --line:#e2dfee; --ink:#17141f;
+            --dim:#5b5770; --accent-ink:#5a3fd8; --scrim:rgba(246,245,251,.92);
+            --flash-bg:#fde8ec; --flash-line:#f3b8c3; color-scheme: light; }
+  }
   * { box-sizing: border-box; }
   /* [hidden] means hidden, whatever a page's own display says. A class with
      display (the Skribls page's More was display:block) otherwise beats the
@@ -41,7 +53,7 @@
   select, textarea, input { font-size: 16px; }
   select { background:var(--elev); border:1px solid var(--line); border-radius:8px;
            padding:6px 10px; }
-  .btn { background:var(--accent); border:0; color:#fff; border-radius:999px;
+  .btn { background:var(--accent-fill); border:0; color:#fff; border-radius:999px;
          padding:8px 18px; font-weight:600; cursor:pointer; }
   .btn:disabled { opacity:.45; cursor:default; }
   .btn.ghost { background:transparent; border:1px solid var(--line);
@@ -50,7 +62,7 @@
   .tabs a { color:var(--dim); text-decoration:none; font-weight:600;
             padding:8px 12px; border-bottom:2px solid transparent; margin-bottom:-1px; }
   .tabs a[aria-current="page"] { color:var(--ink); border-bottom-color:var(--accent); }
-  .flash { background:#3a1d24; border:1px solid #6d2c38; border-radius:10px;
+  .flash { background:var(--flash-bg); border:1px solid var(--flash-line); border-radius:10px;
            padding:10px 12px; margin-bottom:14px; }
 </style>
 {% block style %}{% endblock %}

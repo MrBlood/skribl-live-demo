@@ -27,10 +27,12 @@
   .phead { display:flex; gap:8px; align-items:baseline; margin-bottom:6px; }
   .dn { font-weight:650; }
   .back { color:var(--accent-ink); text-decoration:none; font-weight:600; }
-  .overlay { position:fixed; inset:0; background:rgba(4,6,10,.86); z-index:50;
+  /* The Pad fills the screen and its own ✕ ("Close — back to your post") is
+     the way back: the host draws no bar of its own over it (the owner's yes,
+     Nov 10), so the canvas gets the room. */
+  .overlay { position:fixed; inset:0; background:var(--bg); z-index:50;
              display:flex; flex-direction:column; }
   .overlay[hidden] { display:none; }
-  .overlay .bar { display:flex; justify-content:flex-end; padding:8px; }
   .overlay iframe { flex:1; width:100%; border:0; background:var(--bg); }
 </style>
 {% endblock %}
@@ -95,7 +97,6 @@
 {% block after %}
 {% if me and not single %}
 <div class="overlay" id="padOverlay" hidden>
-  <div class="bar"><button class="btn ghost" type="button" id="padClose">Close</button></div>
   {# src is set by composehost.js on first open, never here: the Pad is a whole
      application and a composer that loads it on every page view has charged
      every visitor for a drawing tool they never opened. #}
@@ -147,7 +148,6 @@ window.addEventListener('DOMContentLoaded', function () {
 
   document.getElementById('padBtn').addEventListener('click', pad.open);
   document.getElementById('editSkribl').addEventListener('click', pad.open);
-  document.getElementById('padClose').addEventListener('click', pad.close);
   document.getElementById('removeSkribl').addEventListener('click', function () {
     payloadField.value = '';
     attach.hidden = true;

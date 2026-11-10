@@ -285,9 +285,14 @@ try:
         check("left off, the drawing is in the post only: unlisted, not in the gallery",
               durable("SELECT visibility FROM skribl_posts LIMIT 1") == "unlisted",
               str(durable("SELECT visibility FROM skribl_posts LIMIT 1")))
-        check("the words became the caption",
-              durable("SELECT caption FROM skribl_posts LIMIT 1")
-              == "drew this in a host composer")
+        # The post's words are its title; the caption is only what the author
+        # wrote under the gallery tick (the owner, Nov 10: "say the post's
+        # words once"). Copied in, a gallery card said them twice.
+        check("the words became the title, and no caption was made up from them",
+              durable("SELECT title FROM skribl_posts LIMIT 1") == "drew this in a host composer"
+              and durable("SELECT caption FROM skribl_posts LIMIT 1") in (None, ""),
+              "title %r, caption %r" % (durable("SELECT title FROM skribl_posts LIMIT 1"),
+                                        durable("SELECT caption FROM skribl_posts LIMIT 1")))
 
         print("\n5 — AND IT PLAYS, INSIDE THE HOST'S POST")
         check("the post is on the host's feed",

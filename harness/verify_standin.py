@@ -23,6 +23,9 @@ server:
      there is none, and a press then adds nothing (the owner's "it just adds
      another copy", on the live stand-in).
   6. NO TEXT FIELD ON IT MAKES A PHONE ZOOM: every one at least 16px.
+  7. ITS LOOK: it follows the device, light or dark; every word of its own
+     reads at 4.5:1 on what is painted behind it; and the Pad has the whole
+     screen, its own close the way back.
 
 What the stand-in does as a host is verify_example's, which boots it on its
 own; this suite is the mount. SKRIBL_STAND_IN=0 leaves it out of the demo, and
@@ -222,6 +225,67 @@ with sync_playwright() as p:
     check("every text field on the stand-in is at least 16px, so a phone never zooms on a tap",
           len(seen) >= 3 and not small, f"{len(seen)} fields read; under 16px: {small}")
     c2.close()
+
+    print("\nSTAND-IN 7 — its look: both themes, every word readable, the Pad given the screen")
+    # The owner's yes on the look-over (Nov 10): the stand-in follows the
+    # device as the Pad inside it does; its action buttons wear Skribl's
+    # action fill (white on the old #7c5cff was 4.35:1); and the host draws no
+    # bar of its own over the Pad, whose own close is the way back.
+    READ = """() => {
+      const rgb = s => (s.match(/[\\d.]+/g) || []).slice(0, 3).map(Number);
+      const lum = c => { const v = c.map(x => { x /= 255; return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); });
+                         return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]; };
+      const ratio = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+      const ground = e => { for (let n = e; n; n = n.parentElement) { const b = getComputedStyle(n).backgroundColor;
+                              if (b && !/rgba\\(0, 0, 0, 0\\)|transparent/.test(b)) return rgb(b); } return [255, 255, 255]; };
+      const out = { page: Math.round(lum(ground(document.body)) * 100) / 100, low: [] , read: 0 };
+      document.querySelectorAll('h1, .muted, .tabs a, .btn, .dn, .post > div, .sk-title, .sk-by > span, .sk-from, .back').forEach(e => {
+        if (!e.getClientRects().length || !e.textContent.trim()) return;
+        const r = ratio(rgb(getComputedStyle(e).color), ground(e)); out.read++;
+        if (r < 4.5) out.low.push((e.className || e.tagName) + ' "' + e.textContent.trim().slice(0, 14) + '" ' + r.toFixed(2));
+      });
+      return out; }"""
+    looks = {}
+    for scheme in ("dark", "light"):
+        c3 = b.new_context(color_scheme=scheme, **PHONE)
+        p3 = c3.new_page()
+        p3.goto(HOST + "/")
+        p3.select_option("select[name=uid]", index=0)
+        p3.click("button:has-text('Sign in')")
+        p3.wait_for_timeout(700)
+        seen3 = {"feed": p3.evaluate(READ)}
+        p3.goto(HOST + "/skribls")
+        p3.wait_for_timeout(1500)
+        seen3["skribls"] = p3.evaluate(READ)
+        looks[scheme] = (seen3, c3, p3)
+    page_ok = all(looks["dark"][0][k]["page"] < 0.05 and looks["light"][0][k]["page"] > 0.85 for k in ("feed", "skribls"))
+    check("the stand-in follows the device: a dark page on a dark phone, a light one on a light phone (feed and Skribls)",
+          page_ok, "; ".join(f"{sc} {k} ground luminance {v['page']}" for sc in looks for k, v in looks[sc][0].items()))
+    low = [f"{sc} {k}: {x}" for sc in looks for k, v in looks[sc][0].items() for x in v["low"]]
+    reads = sum(v["read"] for sc in looks for v in looks[sc][0].values())
+    check("every word of the stand-in's own reads at 4.5:1 or more on what is painted behind it, both themes"
+          " (buttons included)", reads >= 20 and not low, f"{reads} read; under 4.5: {low[:4]}")
+    for scheme in ("light", "dark"):
+        _, c3, p3 = looks[scheme]
+        if scheme == "dark":
+            p3.goto(HOST + "/")
+            p3.wait_for_timeout(500)
+            p3.click("#padBtn")
+            p3.wait_for_function("() => { const f = document.getElementById('padFrame'); const w = f && f.contentWindow;"
+                                 " return !!(w && w.__skriblBoot && w.__skriblBoot.pad); }", timeout=40000)
+            p3.wait_for_timeout(800)
+            top = p3.evaluate("() => [[201, 8], [380, 24], [20, 24]].map(([x, y]) => { const e = document.elementFromPoint(x, y);"
+                              " return e ? (e.id || e.tagName) : null; })")
+            frame_box = p3.locator("#padFrame").bounding_box()
+            p3.frame_locator("#padFrame").locator("#composeCloseBtn").click()
+            p3.wait_for_timeout(700)
+            gone = p3.evaluate("() => document.getElementById('padOverlay').hidden")
+            check("the Pad has the whole screen in the host, nothing of the host's drawn over its top,"
+                  " and its own close takes you back to the post",
+                  all(t == "padFrame" for t in top) and frame_box and frame_box["y"] <= 0.5
+                  and frame_box["height"] >= 873 and gone,
+                  f"at the top {top}; the frame {frame_box}; closed {gone}")
+        c3.close()
     check("no page errors on the stand-in", not errs, "; ".join(errs[:2]))
     c.close()
     b.close()
