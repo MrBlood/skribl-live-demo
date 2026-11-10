@@ -252,8 +252,21 @@ def editor(b, name, path, *, drawn=True, song=SHORT, ctx=None, opts=DESK, door=N
     return c, pg, errs
 
 
+# The drawer as add() left it, kept to say where a door's tile went. On main
+# after #827 a sqlite shard's click on the Exact tile waited 30s on a tile with
+# no box (the "line" part, the Pad: the media card shut, the song landed), and
+# nothing said whether the drawer had never opened or had shut since. Not
+# reproduced here in 115 tries, four at once and at CPU 4x and 6x.
+DRAWER = """() => { const c = (typeof _padDrawerCtl !== 'undefined' && _padDrawerCtl) || (typeof _flipDrawerCtl !== 'undefined' && _flipDrawerCtl);
+  const shown = (id) => { const e = document.getElementById(id); return e ? !e.hidden && e.getClientRects().length > 0 : null; };
+  return { drawer: c ? c.current() : null, card: shown('mediaCard'), panel: shown('musicPanel'), song: shown('musicDetail'),
+           y: Math.round(scrollY), body: document.body.className }; }"""
+OPENED = {}
+
+
 def add(pg, song):
     browsing.pad_drawer(pg, "music")
+    OPENED[id(pg)] = pg.evaluate(DRAWER)
     secs = len(song["buffer"]) / 16000
     pg.set_input_files("#musicInput", song)
     pg.wait_for_function("(d) => document.getElementById('musicUploadBtn').classList.contains('loaded') && !!currentAudioBuffer"
@@ -279,7 +292,13 @@ def set_door(pg, want):
     now = open_door(pg)
     if now == want:
         return
-    pg.click(tile(want or now))
+    sel = tile(want or now)
+    try:
+        pg.wait_for_selector(sel, state="visible", timeout=5000)
+    except Exception:
+        raise AssertionError(f"set_door({want!r}): the {want or now!r} tile has no box after 5s; the drawer now {pg.evaluate(DRAWER)},"
+                             f" as add() left it {OPENED.get(id(pg))}") from None
+    pg.click(sel)
     pg.wait_for_timeout(350)
     browsing.wait_scroll_still(pg)
 
