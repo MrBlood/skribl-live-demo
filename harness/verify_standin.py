@@ -125,8 +125,9 @@ with sync_playwright() as p:
     SHEET = """() => { const box = document.getElementById('postPublicInput'), cap = document.getElementById('postCaptionInput');
         return { box: !!box, on: box ? box.checked : null, caption: !!(cap && cap.getClientRects().length) }; }"""
     off = fr.locator("body").evaluate(SHEET)
-    fr.locator("label.post-check").click()
-    pg.wait_for_timeout(900)
+    if off["box"]:   # a sheet that does not ask has no tick to press; the row says so
+        fr.locator("label.post-check").click()
+        pg.wait_for_timeout(900)
     on = fr.locator("body").evaluate(SHEET)
     check("Add to post asks: the Pad opens under /host with compose=1&gallery=1, the gallery tick there and off,"
           " the gallery caption opening once it is ticked (phone)",
