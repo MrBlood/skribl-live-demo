@@ -70,6 +70,12 @@ And on a slower phone (CPU 4x), the pen's Feel three times on each editor:
   browser was still gliding, the page went on past where it was going, and
   the next re-assert snapped it back up.
 
+And on a slower, short phone (CPU 6x, 402x664), a song added to the Pad's
+music drawer, eight times:
+
+  THE PAGE FOLLOWS IT DOWN AND NEVER BACK UP. The follow's re-asserts
+  (followGrowth) wait for the page to be still as well.
+
 And NO DRAWER IS MISSED: every tile in the editor's page (.dp-tile) is one this
 suite pressed, so a new drawer's tiles fail here until they are listed.
 
@@ -429,6 +435,37 @@ with sync_playwright() as p:
               "; ".join(f"{round(m['total'])}px over {m['frames']} frames, the most {round(m['big'][1])}px "
                         f"in a {round(m['big'][2])}ms frame, the most back {round(m['back'])}px" for m in seen))
         c.close()
+
+    # A SONG ADDED ON A SLOWER, SHORT PHONE (CPU 6x, 402x664). The page
+    # follows the music drawer as a song lands in it (lib/drawerdetent.js
+    # followGrowth), and its re-asserts, at 300, 700 and 1200ms, caught that
+    # glide still going too: the 300ms one wrote at 383 on the way to 406, the
+    # page went on to 423, and the 700ms one took it 17px back up under the
+    # header (3 of 6 adds at 6x). They wait for the page to be still now.
+    # Added as a person adds one, a tap on Add music and then the file, eight
+    # times, each on a fresh page; only the step back is asked, since a frame
+    # the busy page never drew (it is decoding the song) is not a leap the
+    # person sees. Flip's song lands in two steps, and its add never went back
+    # in twelve tries before the fix or after, so the Pad's row pins the code
+    # both editors share.
+    if wanted("Pad", "phone", "music", "slow"):
+        seen = []
+        for _ in range(8):
+            c, q, errs = boot(b, "Pad", "shortphone", "pen")
+            cdp = c.new_cdp_session(q)
+            cdp.send("Emulation.setCPUThrottlingRate", {"rate": 6})
+            open_drawer(q, "Pad", "music")
+            q.evaluate(LOG.replace("1900", "3200"))
+            with q.expect_file_chooser() as fc:
+                q.locator("#musicAddBtn").tap()
+            fc.value.set_files(SONG)
+            q.wait_for_timeout(3300)
+            browsing.wait_scroll_still(q, 3000)
+            seen.append(motion(q.evaluate("() => window.__rv")))
+            c.close()
+        check("Pad slower short phone (CPU 6x) music: a song added glides to the drawer's end and never back up, eight times",
+              all(m["total"] > 12 and m["back"] >= -2 for m in seen),
+              "; ".join(f"{round(m['total'])}px, the most back {round(m['back'])}px" for m in seen))
 
     # NO DRAWER IS MISSED: every tile in the page is one pressed above.
     if not ONLY:

@@ -545,19 +545,26 @@
       function act() { if (mine === gen) gen++; }
       var opts = { capture: true, passive: true };
       ACTS.forEach(function (n) { window.addEventListener(n, act, opts); });
-      setTimeout(function () { ACTS.forEach(function (n) { window.removeEventListener(n, act, opts); }); }, 1300);
+      setTimeout(function () { ACTS.forEach(function (n) { window.removeEventListener(n, act, opts); }); }, 2300);
       var b = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches
         ? 'auto' : 'smooth';
       requestAnimationFrame(function () { window.scrollTo({ top: target(), behavior: b }); });
+      // Each re-assert waits for the glide to end (whenStill, above), as the
+      // opening's do: on a slower phone the 300ms one wrote while the page
+      // was still gliding to a song's end (at 383 on the way to 406, a
+      // 402x664 phone at CPU 4x), the page went on to 423, and the 700ms one
+      // took it 17px back up under the header.
       [300, 700, 1200].forEach(function (ms) {
         setTimeout(function () {
-          if (mine !== gen || card.offsetParent === null) return;
-          var scroller = document.scrollingElement || document.documentElement;
-          var t = target();
-          if (t > scroller.scrollTop + 1) { scroller.scrollTop = t; return; }
-          if (!dock || dock.offsetParent === null) return;
-          var over = stuckBottom() + 4 - dock.getBoundingClientRect().top;
-          if (over > 1 && over <= DRIFT) scroller.scrollTop -= over;
+          whenStill(function () {
+            if (mine !== gen || card.offsetParent === null) return;
+            var scroller = document.scrollingElement || document.documentElement;
+            var t = target();
+            if (t > scroller.scrollTop + 1) { scroller.scrollTop = t; return; }
+            if (!dock || dock.offsetParent === null) return;
+            var over = stuckBottom() + 4 - dock.getBoundingClientRect().top;
+            if (over > 1 && over <= DRIFT) scroller.scrollTop -= over;
+          });
         }, ms);
       });
     }
