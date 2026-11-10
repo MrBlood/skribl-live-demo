@@ -30,6 +30,14 @@
   var DELAY = 380;     // long enough not to flicker while crossing a toolbar
 
   var el = null, timer = null, current = null, seq = 0;
+  /* WHERE IT WORKS. Every Skribl page hands init() nothing: the module takes
+     the whole page, and its bubble goes on <body>. A host's page that holds a
+     piece of Skribl (the Gallery section, after v330) hands it that piece:
+     only titles inside it are taken, only controls inside it show a bubble,
+     and the bubble is drawn inside it, where the piece's own sheet styles it.
+     The host's own titles stay the browser's. */
+  var home = null;
+  function mine(n) { return !home || home.contains(n); }
 
   function coarse() {
     return global.matchMedia && global.matchMedia('(pointer: coarse)').matches;
@@ -56,7 +64,7 @@
     el.className = 'skribl-tip';
     el.setAttribute('role', 'tooltip');
     el.hidden = true;
-    document.body.appendChild(el);
+    (home || document.body).appendChild(el);
     return el;
   }
 
@@ -156,27 +164,28 @@
     }
   }
 
-  function init() {
+  function init(root) {
     if (coarse()) return null;   // no hover: nothing to show
-    adopt(document);
+    home = root && root.nodeType === 1 ? root : null;
+    adopt(home || document);
 
     // Delegated, so controls built later (the zoom bar, the pan slider, any
     // future drawer) are covered without re-running anything.
     document.addEventListener('mouseover', function (e) {
       var t = e.target.closest && e.target.closest('[data-tip]');
-      if (!t || t === current) return;
+      if (!t || t === current || !mine(t)) return;
       clearTimeout(timer);
       timer = setTimeout(function () { show(t); }, DELAY);
     });
     document.addEventListener('mouseout', function (e) {
       var t = e.target.closest && e.target.closest('[data-tip]');
-      if (t) hide();
+      if (t && mine(t)) hide();
     });
     // Keyboard users get it immediately: they have already committed to the
     // control by tabbing to it, so a delay is just a wait.
     document.addEventListener('focusin', function (e) {
       var t = e.target.closest && e.target.closest('[data-tip]');
-      if (t && keyed(e.target)) show(t);
+      if (t && mine(t) && keyed(e.target)) show(t);
     });
     document.addEventListener('focusout', hide);
     // Any of these can move the control out from under the bubble.
@@ -213,8 +222,8 @@
             if (added[j].nodeType === 1) adopt(added[j]);
           }
         }
-      }).observe(document.body, { childList: true, subtree: true,
-                                  attributes: true, attributeFilter: ['title'] });
+      }).observe(home || document.body, { childList: true, subtree: true,
+                                          attributes: true, attributeFilter: ['title'] });
     }
 
     return { show: show, hide: hide, adopt: adopt };

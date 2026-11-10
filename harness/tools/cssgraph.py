@@ -336,6 +336,187 @@ def emit_band(live_path, out_path):
     return len(body)
 
 
+# --- the Gallery section: /gallery's own rules, for a page that is not Skribl's ---
+# THE OWNER'S B (after v330): a host's Skribls page holds Skribl's own Gallery
+# section (_skribl_gallery_section.html) in its own frame. /gallery keeps its
+# <style> and its component sheets exactly as they are; a host loads this one
+# sheet, made from them. Every rule is the one /gallery has, in /gallery's
+# order, under the section's root, so it styles nothing outside it; and the
+# root starts from nothing, so the host's own rules do not reach in. The
+# header says the whole of it (gallerysection_css_header.txt).
+SECTION = "#skriblGallery"
+SECTION_HEADER = Path(__file__).with_name("gallerysection_css_header.txt").read_text()
+GALLERY_TPL = ROOT / "skribl" / "templates" / "skribl" / "skribl_gallery.html"
+# What /gallery links, in its order, after the player's own sheet (a host's
+# page loads that itself, with skribl_inline_assets()), then its <style>.
+SECTION_SHEETS = ("fullband.css", "fullbar.css", "tooltip.css", "labels.css",
+                  "pagemenu.css", "segslider.css")
+# pagemenu.css is the page's header, its lockup and its ••• menu. The section
+# takes its tokens (the glass) and only these: the glass's ink on the report
+# sheet and a card's menu, the grab bar, and no ring after a pointer.
+PAGEMENU_TAKES = {":root", ':root[data-theme="light"]', ".sheet-card", ".cardMenu",
+                  ".pm-grab", ".pm-grab::after", 'html[data-input="pointer"] :focus-visible'}
+# THE RESET: every element the section's sheets style starts from the
+# browser's defaults, as it does on /gallery, whatever the host's rules say.
+# Not the player's box (inlineplayer.css, which a host loads unscoped, styles
+# it) and not an <svg> (its fill and stroke are attributes, which a revert
+# would undo).
+SECTION_FRESH = ":where(:not(.skribl-inline, .skribl-inline *, svg, svg *))"
+LIGHT_ROOT = ':root[data-theme="light"]'
+
+
+def _decomment(css):
+    """CSS without its comments, strings kept whole."""
+    out, i, n = [], 0, len(css)
+    while i < n:
+        if css.startswith("/*", i):
+            j = css.find("*/", i + 2)
+            i = n if j < 0 else j + 2
+            continue
+        c = css[i]
+        if c in "\"'":
+            j = i + 1
+            while j < n and css[j] != c:
+                j += 2 if css[j] == "\\" else 1
+            out.append(css[i:j + 1])
+            i = j + 1
+            continue
+        out.append(c)
+        i += 1
+    return "".join(out)
+
+
+def _scope_one(sel):
+    """One selector under the section. Returns (selectors, twins): what the rule
+    is written with here, and the same for a page that says light only through
+    prefers-color-scheme, when the selector is the light theme's."""
+    s = " ".join(sel.split())
+    if s == ":root":
+        return [SECTION], []
+    if s.startswith(LIGHT_ROOT):
+        rest = s[len(LIGHT_ROOT):].strip()
+        tail = " " + rest if rest else ""
+        return [f"{LIGHT_ROOT} {SECTION}{tail}"], [f":root:not([data-theme]) {SECTION}{tail}"]
+    if s.startswith(":root") or s == "body":
+        raise SystemExit(f"cssgraph: the section cannot place the selector {s!r}")
+    if s == "*":
+        return [SECTION, f"{SECTION} *"], []
+    m = re.match(r"html((?:\.[\w-]+|\[[^\]]*\])*)(?:\s+(.*))?$", s)
+    if m:
+        # The page itself, while Skribl says so on <html>: a drawing full
+        # screen holds the page still (html.skribl-immersive), as on /gallery.
+        if not m.group(2) or m.group(2) == "body":
+            return [s], []
+        return [f"html{m.group(1)} {SECTION} {m.group(2)}"], []
+    return [f"{SECTION} {s}"], []
+
+
+def _section_rules(region, take, depth=0):
+    """The region's rules under the section, one by one, in order; at-rules
+    that hold rules are walked, @keyframes kept as they are. `take(sel)` says
+    which selectors a source gives (None: all of them)."""
+    out, pad = [], "  " * depth
+    for _s, _e, h, b in blocks(region):
+        h = " ".join(h.split())
+        if not h:
+            continue
+        if h.startswith(("@media", "@supports", "@starting-style")):
+            inner = _section_rules(b, take, depth + 1)
+            if inner:
+                out.append(f"{pad}{h} {{\n{inner}{pad}}}\n")
+            continue
+        if h.startswith("@"):
+            if take is None and re.match(r"@(-webkit-)?keyframes\b", h):
+                body = "\n".join(f"{pad}  {ln.strip()}" for ln in b.strip().splitlines() if ln.strip())
+                out.append(f"{pad}{h} {{\n{body}\n{pad}}}\n")
+            continue
+        sels = [x for x in _rule_selectors(h) if take is None or " ".join(x.split()) in take]
+        if not sels:
+            continue
+        body = " ".join(" ".join(ln.split()) for ln in b.strip().splitlines() if ln.strip())
+        if [" ".join(x.split()) for x in sels] == ["body"]:
+            continue    # the page's own; what the section inherits from it is the root's (below)
+        normal, twins = [], []
+        for x in sels:
+            a, t = _scope_one(x)
+            normal += a
+            twins += t
+        out.append(f"{pad}{', '.join(normal)} {{ {body} }}\n")
+        if twins:
+            out.append(f"{pad}@media (prefers-color-scheme: light) {{\n"
+                       f"{pad}  {', '.join(twins)} {{ {body} }}\n{pad}}}\n")
+    return "".join(out)
+
+
+def _gallery_style():
+    """/gallery's own <style>, its two Jinja values filled from where they live."""
+    src = GALLERY_TPL.read_text(encoding="utf-8")
+    # The element on lines of its own: the page's opening note names "<style>"
+    # in its prose.
+    m = re.search(r"^[ \t]*<style>[ \t]*\n(.*?)^[ \t]*</style>", src, re.S | re.M)
+    if not m:
+        raise SystemExit("cssgraph: no <style> in skribl_gallery.html")
+    # Read out of skribl/core.py rather than imported: this runs on the PR gate
+    # (verify_seam), and the package's import pulls in the whole app.
+    import ast
+    core = (ROOT / "skribl" / "core.py").read_text(encoding="utf-8")
+    THEME_GROUND = ast.literal_eval(re.search(r"^THEME_GROUND\s*=\s*(\{.*?\})", core, re.M).group(1))
+    css = _decomment(m.group(1))
+    for k, v in THEME_GROUND.items():
+        css = re.sub(r"\{\{\s*skribl_theme_ground\." + k + r"\s*\}\}", v, css)
+    if "{{" in css or "{%" in css:
+        raise SystemExit("cssgraph: skribl_gallery.html's <style> holds Jinja the section cannot fill")
+    return css
+
+
+def emit_section(band_text, out_path):
+    """gallerysection.css: /gallery's section, scoped, for a host's page."""
+    style = _gallery_style()
+    sources = [(name, _decomment(band_text if name == "fullband.css"
+                                 else (ROOT / "skribl" / "static" / name).read_text(encoding="utf-8")),
+                PAGEMENU_TAKES if name == "pagemenu.css" else None)
+               for name in SECTION_SHEETS] + [("skribl_gallery.html's <style>", style, None)]
+    parts = []
+    for name, css, take in sources:
+        rules = _section_rules(css, take)
+        if rules:
+            parts.append(f"\n/* ---- from {name} ---- */\n{rules}")
+    rules = "".join(parts)
+    # WHAT THE SECTION INHERITS on /gallery is the page's body: its type and
+    # ink, the browser's size where the body sets none, and every other
+    # inherited property at its initial value. The root says exactly that.
+    inherit = {}
+    for _s, _e, h, b in blocks(style):
+        if h.strip() == "body":
+            for m in re.finditer(r"([a-z-]+)\s*:\s*([^;]+);", b):
+                if m.group(1) in INHERITED:
+                    inherit[m.group(1)] = " ".join(m.group(2).split())
+    inherit.setdefault("font-size", "medium")
+    inherit.setdefault("line-height", "normal")
+    # EVERY NAME THE SECTION READS IS THE SECTION'S. A name /gallery's root
+    # defines is defined on the section's root by the token rules below; a name
+    # it leaves undefined (the player's, the band's, a card's own) is cut off
+    # here, so a property of the same name on the host's page cannot reach in.
+    player = _decomment((ROOT / "skribl" / "static" / "inlineplayer.css").read_text(encoding="utf-8"))
+    read = set(re.findall(r"var\(\s*(--[\w-]+)", rules + player))
+    defined = set()
+    for _name, css, take in sources:
+        for _s, _e, h, b in blocks(css):
+            if " ".join(h.split()) in (":root", LIGHT_ROOT):
+                defined |= set(re.findall(r"(--[\w-]+)\s*:", b))
+    cut = sorted(read - defined)
+    base = (f"{SECTION} {{\n  all: initial;\n  display: block;\n"
+            + "".join(f"  {k}: {v};\n" for k, v in sorted(inherit.items()))
+            + "".join(f"  {n}: initial;\n" for n in cut) + "}\n")
+    fresh = ",\n".join(f"{SECTION} {SECTION_FRESH}{p}" for p in ("", "::before", "::after", "::placeholder"))
+    out = (SECTION_HEADER
+           + "\n/* The root: what /gallery's page gives the section, and nothing of the host's. */\n" + base
+           + "/* Every part of it starts from the browser's own defaults, as on /gallery. */\n"
+           + fresh + " { all: revert; }\n" + rules)
+    Path(out_path).write_text(out)
+    return len(out)
+
+
 def band_census(base, live_path):
     """Ask the Gallery, in every state its full screen has, which selectors
     match inside the frame and which match anything outside it; ask the
@@ -467,3 +648,8 @@ if len(sys.argv) > 2 and sys.argv[1] == "--emit":
     nb = emit_band(sys.argv[2], out.with_name("fullband.css"))
     if nb:
         print(f"emitted {nb:,} chars of the band (fullband.css)")
+        # And the Gallery section's, for a host's page, from /gallery's own
+        # sheets and that band: the same command keeps all three current.
+        ns = emit_section(out.with_name("fullband.css").read_text(encoding="utf-8"),
+                          out.with_name("gallerysection.css"))
+        print(f"emitted {ns:,} chars of the Gallery section (gallerysection.css)")

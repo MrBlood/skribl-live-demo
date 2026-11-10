@@ -543,7 +543,7 @@ def init_skribl(app, **kwargs):
     _author = kwargs.pop("author_resolver", None)
     _source = kwargs.pop("source_resolver", None)
     bp = create_blueprint(**kwargs)
-    # THE ONE NAME SKRIBL PUTS IN THE HOST'S JINJA ENVIRONMENT, and it is here
+    # THE FIRST NAME SKRIBL PUTS IN THE HOST'S JINJA ENVIRONMENT, and it is here
     # because the in-post player needs it. _skribl_inline_player.html's macros
     # render inside the HOST's post template, on the host's own view, where the
     # blueprint context processor below (which is what supplies skribl_asset to
@@ -553,14 +553,32 @@ def init_skribl(app, **kwargs):
     # The objection recorded on that context processor — that an app-wide
     # helper builds a RELATIVE endpoint from outside the blueprint and raises
     # BuildError — was answered by making asset_url() name the blueprint
-    # outright (see its docstring). What is left is namespace: exactly one
-    # `skribl_`-prefixed global, added rather than overwritten, so a host that
-    # already defines the name keeps theirs and simply cannot use the macros
-    # until they rename. Inside Skribl's own templates the context processor
-    # still wins, so nothing about those pages changes.
+    # outright (see its docstring). What is left is namespace: `skribl_`-
+    # prefixed globals (this one and the two below), each added rather than
+    # overwritten, so a host that already defines a name keeps theirs and
+    # simply cannot use the macros until they rename. Inside Skribl's own
+    # templates the context processor still wins, so nothing about those pages
+    # changes.
     if "skribl_asset" not in app.jinja_env.globals:
         app.add_template_global(lambda filename: asset_url(bp, filename),
                                 "skribl_asset")
+    # AND TWO MORE, FOR THE GALLERY SECTION (after v330, the owner's B: a
+    # host's Skribls page holds Skribl's own Gallery, _skribl_gallery_section
+    # .html). Its report sheet needs the reasons the API accepts and a CSRF
+    # token, and a host's page gets neither from Skribl's context processors.
+    # Added the same way, never overwriting a host's own name.
+    #   skribl_csrf()   the page's token (security.page_csrf_token); on a
+    #                   host's page the hook below sets the cookie it pairs with.
+    #   skribl_report   the report's closed set of reasons and the note's limit.
+    if "skribl_csrf" not in app.jinja_env.globals:
+        from .security import issue_page_csrf, page_csrf_token
+        app.add_template_global(lambda: page_csrf_token(bp), "skribl_csrf")
+        app.after_request(lambda response: issue_page_csrf(bp, response))
+    if "skribl_report" not in app.jinja_env.globals:
+        from .core import MAX_REPORT_NOTE_CHARS, REPORT_REASONS
+        app.add_template_global({"reasons": REPORT_REASONS,
+                                 "note_max": MAX_REPORT_NOTE_CHARS},
+                                "skribl_report")
     if _policy is not None:
         from .models import set_visibility_policy
         set_visibility_policy(_policy, app=app)

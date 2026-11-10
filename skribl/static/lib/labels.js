@@ -65,15 +65,25 @@
     if (root.matches(SEL)) wrap(root);
     root.querySelectorAll(SEL).forEach(wrap);
   }
+  /* WHERE IT WORKS. On Skribl's own pages, the whole page. On a host's page
+     that holds a piece of Skribl (the Gallery section's assets, after v330),
+     the script tag names that piece (data-skribl-scope, a selector), and only
+     the labels inside it are touched: the host's own buttons keep their words
+     exactly as the host wrote them. Read now, while this script is the one
+     running. */
+  var scope = doc.currentScript && doc.currentScript.getAttribute('data-skribl-scope');
   function start() {
-    all(doc.body);
-    new MutationObserver(function (list) {
-      for (var i = 0; i < list.length; i++) {
-        var m = list[i], t = m.target;
-        if (t.nodeType === 1 && t.matches(SEL)) wrap(t);
-        for (var j = 0; j < m.addedNodes.length; j++) all(m.addedNodes[j]);
-      }
-    }).observe(doc.body, { childList: true, subtree: true });
+    var roots = scope ? [].slice.call(doc.querySelectorAll(scope)) : [doc.body];
+    roots.forEach(function (root) {
+      all(root);
+      new MutationObserver(function (list) {
+        for (var i = 0; i < list.length; i++) {
+          var m = list[i], t = m.target;
+          if (t.nodeType === 1 && t.matches(SEL)) wrap(t);
+          for (var j = 0; j < m.addedNodes.length; j++) all(m.addedNodes[j]);
+        }
+      }).observe(root, { childList: true, subtree: true });
+    });
   }
   if (doc.readyState === 'loading') doc.addEventListener('DOMContentLoaded', start); else start();
 })(window);

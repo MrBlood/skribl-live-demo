@@ -18,7 +18,8 @@
      nonce'd theme boot), so the logic is the self-hosted gallery.js. #}
   {% include 'skribl/_skribl_app_identity.html' %}
   {% include 'skribl/_skribl_theme_boot.html' %}
-  {% from 'skribl/_skribl_inline_player.html' import skribl_inline_assets, skribl_inline %}
+  {% from 'skribl/_skribl_inline_player.html' import skribl_inline_assets %}
+  {% from 'skribl/_skribl_gallery_section.html' import skribl_gallery_section %}
   {{ skribl_inline_assets() }}
   {# fullband.css: the link page's full screen, its band and its x, in
      styles.css's own rules (harness/tools/cssgraph.py emits it, as it does
@@ -335,6 +336,19 @@
       -webkit-tap-highlight-color: transparent; }
     .tile .tcapMore[hidden] { display: none; }
     @media (hover: hover) { .tile .tcapMore:hover { text-decoration: underline; } }
+    /* FROM A POST (after v330, the owner's B): the post on a host's site this
+       drawing came from, when the site says (gallery.js). Small violet words,
+       as "more" is, set in to where the caption's words start, at the card's
+       foot where the approved mock put them; a 44px box of its own, drawn up
+       toward what is above it. The ring goes inside the box: the card clips
+       what lies outside it. Skribl standing alone knows of no posts, so no
+       card on this page shows one. */
+    .tile .tfrom { align-self: flex-start; display: inline-flex; align-items: center;
+      min-height: 44px; margin: -8px 0 0; padding: 0 13px;
+      font-size: 14px; font-weight: 600; color: var(--accent-ink); text-decoration: none;
+      -webkit-tap-highlight-color: transparent; }
+    .tile .tfrom:focus-visible { outline-offset: -2px; }
+    @media (hover: hover) { .tile .tfrom:hover { text-decoration: underline; } }
 
     /* ---- the card's overflow menu ------------------------------------- */
     .sr-live { position: absolute; width: 1px; height: 1px; margin: -1px;
@@ -636,16 +650,12 @@
     @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
   </style>
 </head>
-<body data-skribl-api="{{ url_for('.list_skribls') }}"{% if skribl_shared_cache %} data-skribl-shared-cache="1"{% endif %}
-      {# THE WHOLE TEMPLATED URL, PLACEHOLDER AND ALL, which is the shape this
-         page already uses for the poster: "the real one is that same
-         server-built path with the id substituted -- no path is assembled
-         here, which keeps this correct under a url_prefix." Slicing the base
-         off in the template needed `len`, which is not a Jinja builtin, and
-         reassembling a route in JavaScript is the thing the poster's note
-         exists to forbid. #}
-      data-skribl-player="{{ url_for('.skribl_player', public_id='__ID__') }}"
-      data-skribl-csrf="{{ skribl_csrf_token }}">
+{# THE SECTION'S SETTINGS ARE ON ITS ROOT NOW (after v330, the owner's B): the
+   listing, the player's address and the CSRF token moved from this <body> to
+   the section in _skribl_gallery_section.html, which a host's page holds too.
+   What stays here is the page's own: lib/postedui.js reads the shared-cache
+   flag off <body>. #}
+<body{% if skribl_shared_cache %} data-skribl-shared-cache="1"{% endif %}>
 <div class="wrap">
   <header class="top">
     <a class="brand" href="{{ url_for('.skribl_editor') }}" aria-label="Skribl">
@@ -669,109 +679,25 @@
   <main>
     <h1>Public gallery</h1>
     <p class="sub" id="gallerySub">Skribls people chose to show. Tap one to watch it come alive.</p>
-    {# NEW / HOT AND SEARCH (v304). New is the listing as it always was; Hot is
-       plays in the last seven days, most first (GET /api/skribls?sort=hot,
-       counted once per client per post per day). Search is the listing's own
-       q, title and caption. Both are the server's: this page adds no
-       filtering or ranking of its own. #}
-    <div class="bar">
-      <div class="tabs seg-track" role="group" aria-label="Order">
-        <span class="seg-slider" aria-hidden="true"></span>
-        {# The titles say what "New" and "Hot" cannot; lib/tooltip.js draws
-           them, on a pointer that hovers. #}
-        <button type="button" class="tab active" data-sort="new" aria-pressed="true"
-                title="Newest first">New</button>
-        <button type="button" class="tab" data-sort="hot" aria-pressed="false"
-                title="Most played in the last seven days">Hot</button>
-      </div>
-      <form class="find" id="galleryFind" role="search">
-        <input type="search" id="galleryQ" placeholder="Search titles, captions" aria-label="Search the gallery" autocomplete="off" maxlength="80">
-      </form>
-    </div>
-
-    <div class="grid" id="galleryList"></div>
-
-    {# THE STATES, in the language of the page. The empty state says what
-       puts something here — the tick on the post sheet — because a person
-       who just posted and does not see it needs that sentence, not a route. #}
-    <p class="state" id="galleryEmpty" hidden>
-      <b>Nothing here yet.</b><br>
-      Skribls appear here when their author ticks
-      <b>Show in the public gallery</b> as they post, or turns it on later
-      in their Library.
-    </p>
-    <p class="state" id="galleryNone" hidden>
-      <b>Nothing matches that.</b> Try part of a title.
-    </p>
-    <p class="state" id="galleryError" hidden>
-      <b>Couldn't load the gallery.</b> Check your connection and try again.<br>
-      <button type="button" class="btn" id="galleryRetry">Retry</button>
-    </p>
-    <div class="more-wrap">
-      <button type="button" class="btn" id="galleryMore" hidden>Load more</button>
-    </div>
+    {# THE GALLERY ITSELF IS A SECTION (after v330, the owner's B): New / Hot
+       and search, the cards, the states, Load more, the report sheet, the
+       card's template and the live region, in _skribl_gallery_section.html,
+       which a host's page holds too ("one gallery, two doors"). `page`: here
+       the section is the page, so the styled tooltips cover all of it. `bp`
+       is this request's own blueprint, so its routes resolve as this page's
+       relative ones always did. The look is still this page's own <style>
+       above, untouched; a host's comes from gallerysection.css, generated
+       from it. #}
+    {{ skribl_gallery_section(bp=request.blueprint, page=true) }}
 
     <p class="foot">Every Skribl here is shared by its author, and stays theirs.</p>
   </main>
 </div>
 
-{# REPORT ON EVERY TILE (v304): one sheet, opened by any tile's Report button
-   with that tile's id. A DIALOG that says so -- role + aria-modal are what
-   verify_a11y's census counts and what a screen reader announces -- and
-   lib/modalfocus.js keeps Tab inside and hands focus back to the button that
-   opened it. The reasons are the API's closed set, rendered from the same
-   tuple (skribl.core.REPORT_REASONS), so this sheet cannot offer one the
-   server refuses. A report is a row in an operator's queue, and the sheet
-   says so: nothing is promised that the product does not do. #}
-<div class="sheet" id="reportSheet" role="dialog" aria-modal="true" aria-labelledby="reportTitle" hidden>
-  <form class="sheet-card" id="reportForm">
-    {# The grab bar: a phone's bottom sheet closes on a tap here or a swipe
-       down (lib/sheetswipe.js). The page menu's pill, so it is drawn once. #}
-    <div class="pm-grab" aria-hidden="true"></div>
-    <h2 id="reportTitle">Report this Skribl</h2>
-    <p>Tell us what is wrong with it. Reports go to the people who run this site; nothing is taken down automatically.</p>
-    <fieldset class="reasons">
-      <legend>Reason</legend>
-      {% for r in report_reasons %}
-      <label class="reason"><input type="radio" name="reason" value="{{ r }}"{% if loop.first %} checked{% endif %}> {{ {'spam': 'Spam or misleading', 'abuse': 'Abusive or hateful', 'copyright': 'Copies someone else\'s work', 'other': 'Something else'}[r] }}</label>
-      {% endfor %}
-    </fieldset>
-    <label>
-      <span class="sheet-status">Anything else? <span style="color: var(--text-3)">optional</span></span>
-      <textarea class="note" id="reportNote" maxlength="{{ report_note_max }}" rows="2" placeholder="What should we know?"></textarea>
-    </label>
-    <p class="sheet-status" id="reportStatus" role="status" hidden></p>
-    <div class="sheet-actions">
-      <button type="button" class="btn" id="reportCancel">Cancel</button>
-      <button type="submit" class="btn primary" id="reportSend">Send report</button>
-    </div>
-  </form>
-</div>
-
-{# The macro's own output with the id left as a placeholder; gallery.js clones
-   it per item, as feed.js does, so this page can never render markup the
-   macro does not produce. <template> content is inert. #}
-{# progress=false: the card's own transport overlays the drawing's bottom edge
-   with a real scrubber since v310, so the component's hairline would be a
-   second progress line under the first. The macro HIDES it rather than
-   omitting it -- inlineplayer.js requires the element and keeps writing its
-   width -- which is the supported way to say this, and the reason no rule in
-   this page's sheet reaches for it by class name. The profile made the same
-   call for the same reason in v304.
-
-   AND THIS NOTE DOES NOT SPELL THAT CLASS, for the second time in one change:
-   verify_inline scans this file for the component's internal names, and both
-   comments explaining the absence originally NAMED the thing they were
-   explaining. The gate read the explanation as the thing it forbids, exactly
-   as it has three times before in this tree. #}
-<template id="skriblTileTpl">{{ skribl_inline('__ID__', progress=false, line=false) }}</template>
 {# lib/modalfocus.js: the report sheet's focus management -- the same module
    every aria-modal surface on the editors uses. #}
 {# See the note in skribl_library.html: the controls carry titles and
    nothing was drawing them. Desktop only, by the module's design. #}
-{# What the menu says out loud. A copy that reports itself only by retitling
-   a button tells a screen reader nothing. #}
-<p id="galleryStatus" class="sr-live" role="status" aria-live="polite"></p>
 <script src="{{ skribl_asset('lib/chromefade.js') }}" defer></script>
 {# lib/smartfade.js: the bars' fade takes its colours from the drawing, on the card and in full screen. #}
 <script src="{{ skribl_asset('lib/smartfade.js') }}" defer></script>

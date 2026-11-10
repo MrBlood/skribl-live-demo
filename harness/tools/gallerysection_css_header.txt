@@ -1,0 +1,43 @@
+/* gallerysection.css — DERIVED FROM /gallery's own sheets. Do not edit by hand.
+
+   SKRIBL'S OWN GALLERY, ON A PAGE THAT IS NOT SKRIBL'S (the owner's B, after
+   v330: "one gallery, two doors"). A host's page holds the Gallery section
+   (_skribl_gallery_section.html: skribl_gallery_assets() and
+   skribl_gallery_section()) and loads this one sheet for it, beside the
+   player's own (skribl_inline_assets()). /gallery itself never loads it: it
+   keeps its <style> and its component sheets, untouched.
+
+   WHAT IS IN IT. The rules /gallery styles the section with, one by one, in
+   the order /gallery loads them: fullband.css (the full screen), fullbar.css
+   (the card's bar), tooltip.css, labels.css, pagemenu.css's glass and grab bar
+   (only those: the rest of it is the page's header and its ••• menu),
+   segslider.css (New / Hot), and skribl_gallery.html's own <style>.
+
+   NOTHING LEAKS OUT. Every selector is written under the section's root,
+   #skriblGallery, so no rule here can match the host's own page. Two are
+   about the page itself, and only while Skribl says so on <html>: a drawing
+   full screen holds the page still (html.skribl-immersive), and after a
+   pointer the section's focus rings step back (html[data-input]).
+
+   NOTHING LEAKS IN. The root starts from nothing (all: initial) and takes
+   what /gallery's <body> gives the section: its type, its ink, the browser's
+   size. Every part of it starts from the browser's own defaults (all:
+   revert), as it does on /gallery, before the rules below; an id outweighs
+   every rule a page writes with classes and elements, so a host's `.btn`, its
+   `.tabs`, its `button` or its `h2` cannot add to what the section shows.
+   The player's box keeps inlineplayer.css, which every host page loads. And
+   every custom property the section reads is the section's: the ones
+   /gallery's root defines are defined on this root, both themes, and the rest
+   are cut off at it (initial), so a host's name cannot reach in either.
+
+   LIGHT AND DARK. /gallery's light theme is :root[data-theme="light"], which
+   a host that stamps data-theme on <html> also says. A host that follows the
+   device instead (prefers-color-scheme) and sets no data-theme gets the same
+   light rules through the media query, beside each one.
+
+   THE COST IS DUPLICATION, paid for by an assertion: verify_seam.py, on every
+   pull request, regenerates this file and fails if it differs by one byte
+   from what those sheets produce. A rule edited on /gallery and not re-emitted
+   here is a red suite; the one command that re-emits player.css re-emits this
+   too:  python3 harness/tools/cssgraph.py --emit harness/tools/css_live.json
+   skribl/static/player.css */
