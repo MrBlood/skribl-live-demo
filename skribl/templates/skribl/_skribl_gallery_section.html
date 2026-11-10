@@ -44,9 +44,10 @@
 {#  The section's files, for a page that is not Skribl's. /gallery loads its
     own (its <style> and the component sheets, and the same scripts in the
     same order around its page's own), so this list is /gallery's minus the
-    page's: verify_surfaces holds the two together. lib/labels.js is told the
-    section is its scope (data-skribl-scope), so it trims the section's
-    labels and leaves the page's own buttons alone. #}
+    page's: verify_surfaces holds the two together. lib/labels.js and
+    lib/segslider.js are told the section is their scope (data-skribl-scope),
+    so they trim and place what is inside it and leave the page's own buttons
+    and controls alone; gallery.js keeps the tooltips to it the same way. #}
 {% macro skribl_gallery_assets() -%}
 <link rel="stylesheet" href="{{ skribl_asset('gallerysection.css') }}">
 <script src="{{ skribl_asset('lib/chromefade.js') }}" defer></script>
@@ -71,11 +72,12 @@
     which is not a Jinja builtin, and reassembling a route in JavaScript is the
     thing the poster's note exists to forbid.
 
-    lang="en": the section's words are English, as /gallery's <html> says of
-    the whole page. A host's page may say another language, or none; the
-    browser picks fonts and shapes text by it, so without this the same card
-    rendered its glyphs differently on the two doors (measured: the play
-    pill's words on a phone). #}
+    lang="en": the section's own words are English, as /gallery's <html>
+    says of the whole page, and a host's page may say another language, or
+    none. This is what a screen reader goes by. The browser's own choice of
+    fonts goes by it too, but the section's sheet starts its root from nothing,
+    which drops what the attribute says to it there; so gallerysection.css says
+    the language again, from /gallery's <html> (harness/tools/cssgraph.py). #}
 <div class="skribl-gallery" id="skriblGallery" lang="en" data-skribl-gallery
      data-skribl-api="{{ url_for(bp ~ '.list_skribls') }}"
      data-skribl-player="{{ url_for(bp ~ '.skribl_player', public_id='__ID__') }}"

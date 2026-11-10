@@ -378,10 +378,10 @@ token pairs with on that same response. The reasons come from `skribl_report`,
 the same way. A page that carries a token is somebody's: do not let a shared
 cache keep it.
 
-**Not inside a transformed box.** The report sheet, the card's menu and full
-screen are placed against the screen. Put the section in your page's flow, not
-inside an element with `transform`, `filter` or `contain`, which would become
-their frame.
+**Not inside a transformed box.** The report sheet and full screen are placed
+against the screen. Put the section in your page's flow, not inside an element
+with `transform`, `filter` or `contain`, which would become their frame. (A
+card's ⋯ menu opens at its button inside a positioned box too.)
 
 If you registered the blueprint under another name, pass it:
 `{{ skribl_gallery_section(bp='drawings') }}`.
@@ -389,7 +389,7 @@ If you registered the blueprint under another name, pass it:
 `examples/host_app/templates/skribls.html` is this and nothing else, in the
 stand-in's frame. `verify_standin.py` holds it to `/gallery`: one drawing
 posted to both is the same card, pixel for pixel, on a phone and a desk, dark
-and light; your page's own elements compute the same styles with the
+and light; the stand-in's own elements compute the same styles with the
 section's files as without them; a report from it is taken; and "From a post"
 leads to its post. `verify_seam.py` holds `gallerysection.css` to `/gallery`'s
 sheets byte for byte.

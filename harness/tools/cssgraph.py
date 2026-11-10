@@ -359,9 +359,9 @@ PAGEMENU_TAKES = {":root", ':root[data-theme="light"]', ".sheet-card", ".cardMen
 # THE RESET: every element the section's sheets style starts from the
 # browser's defaults, as it does on /gallery, whatever the host's rules say.
 # Not the player's box (inlineplayer.css, which a host loads unscoped, styles
-# it) and not an <svg> (its fill and stroke are attributes, which a revert
-# would undo).
-SECTION_FRESH = ":where(:not(.skribl-inline, .skribl-inline *, svg, svg *))"
+# it), and not an <svg> or a <canvas>: their attributes (fill and stroke, width
+# and height) reach the cascade as hints a revert would undo.
+SECTION_FRESH = ":where(:not(.skribl-inline, .skribl-inline *, svg, svg *, canvas))"
 LIGHT_ROOT = ':root[data-theme="light"]'
 
 
@@ -493,6 +493,13 @@ def emit_section(band_text, out_path):
                     inherit[m.group(1)] = " ".join(m.group(2).split())
     inherit.setdefault("font-size", "medium")
     inherit.setdefault("line-height", "normal")
+    # AND ITS LANGUAGE, by which the browser picks fonts and shapes text.
+    # /gallery's <html lang> reaches the cascade as a hint the root's
+    # `all: initial` would discard, so the root says it as a property.
+    # (A browser without the property ignores it, and keeps the attribute.)
+    lang = re.search(r'<html lang="([\w-]+)"', GALLERY_TPL.read_text(encoding="utf-8"))
+    if lang:
+        inherit["-webkit-locale"] = f'"{lang.group(1)}"'
     # EVERY NAME THE SECTION READS IS THE SECTION'S. A name /gallery's root
     # defines is defined on the section's root by the token rules below; a name
     # it leaves undefined (the player's, the band's, a card's own) is cut off
