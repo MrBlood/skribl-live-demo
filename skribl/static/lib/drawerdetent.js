@@ -583,8 +583,18 @@
     // the person's own, and it keeps Hear the loop where it is on the screen.
     var tall = card.querySelector('#musicTlStage');
     if (tall) moves.observe(tall, { attributes: true, attributeFilter: ['style'] });
+    // NOR WHAT GROWS WHILE THE PAGE IS HELD (holdThrough and shrinkGently
+    // above, a drawer closing: the root's min-height). It is part of that
+    // change, and the hold has the page. As a beat leaves, the tap's row
+    // takes its line of words back in one frame while Beats in a bar folds
+    // away; followed, the 300ms take-back found the page still in the instant
+    // between holdThrough's glide being asked for and its first frame, wrote
+    // 11px, and so called the glide off: the page sat a second under the
+    // hold, then clamped the 20px left (Pad and Flip on a 402x874 phone at
+    // CPU 4x, two runs of twelve).
     new ResizeObserver(function () {
-      var h = height(), grew = !!o.current() && lastH > 0 && h > lastH + 1;
+      var held = !!document.documentElement.style.minHeight;
+      var h = height(), grew = !!o.current() && lastH > 0 && h > lastH + 1 && !held;
       lastH = h;
       if (grew) reveal();
     }).observe(card);

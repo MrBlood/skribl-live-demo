@@ -44,7 +44,11 @@ the loop, so I'm not at 7 or 9 when I want 8"; "All yes" to the mock; then
   stays still as it does (the drawer's growth follow scrolled it 46px under
   a finger reaching for the timeline), as it does in the Beat door as Beats
   in a bar opens (with Snap to the beat's row there, 61-63px on a phone and
-  139 on a desk). A count tapped
+  139 on a desk). As a beat leaves, the drawer gets shorter: the page at its
+  end glides up to where it now ends, and only that glide moves it (the
+  drawer's growth follow, armed by the tap's row taking its words back,
+  called the glide off on a slower phone, and the page sat a second, then
+  clamped). A count tapped
   on a loop of the person's own keeps the start and makes the loop that
   many beats, smooth restart and all; near the song's end it moves back by
   whole beats, only as far as it must. It glides there, the count lit from
@@ -99,7 +103,7 @@ import browsing  # noqa: E402
 import waits  # noqa: E402
 
 # For calibration: MUSICBEAT_ONLY=Pad (or Flip) runs one editor, and
-# MUSICBEAT_PART=pair (tap, bars, beats) one part.
+# MUSICBEAT_PART=pair (tap, bars, beats, leaves) one part.
 # A real run sets neither.
 ONLY = os.environ.get("MUSICBEAT_ONLY", "")
 PART = os.environ.get("MUSICBEAT_PART", "")
@@ -599,6 +603,24 @@ with sync_playwright() as pw:
       const read = () => out.push([performance.now() - t0, scrollY, tl.getBoundingClientRect().top]);
       read(); musicTempo = { bpm: 120, phase: 0 }; updateTrimUI();
       (function f() { read(); if (performance.now() - t0 < 1600) requestAnimationFrame(f); else res(out); })(); })"""
+    # The page as a beat leaves, every frame for 2.4s: where it is scrolled to,
+    # where it can scroll to now, and whether it is held (the root's
+    # min-height); and every write to it, smooth or not, from anything.
+    LEAVE = """() => new Promise((res) => { const sc = document.scrollingElement || document.documentElement, out = [], writes = [];
+      const t0 = performance.now(), d = Object.getOwnPropertyDescriptor(Element.prototype, 'scrollTop');
+      const st = window.scrollTo, sb = window.scrollBy, si = Element.prototype.scrollIntoView;
+      Object.defineProperty(sc, 'scrollTop', { configurable: true, get() { return d.get.call(this); },
+        set(v) { writes.push(['scrollTop=', performance.now() - t0, d.get.call(this), v]); d.set.call(this, v); } });
+      window.scrollTo = function () { const o = arguments[0], smooth = !!o && typeof o === 'object' && o.behavior === 'smooth';
+        writes.push(['scrollTo' + (smooth ? ' smooth' : ''), performance.now() - t0, sc.scrollTop, o && typeof o === 'object' ? o.top : arguments[1]]);
+        return st.apply(window, arguments); };
+      window.scrollBy = function () { writes.push(['scrollBy', performance.now() - t0, sc.scrollTop, 0]); return sb.apply(window, arguments); };
+      Element.prototype.scrollIntoView = function () { writes.push(['scrollIntoView', performance.now() - t0, sc.scrollTop, this.id || 'element']); return si.apply(this, arguments); };
+      const read = () => out.push([performance.now() - t0, sc.scrollTop, sc.scrollHeight - innerHeight, document.documentElement.style.minHeight ? 1 : 0]);
+      read(); musicTempo = null; updateTrimUI();
+      (function f() { read(); if (performance.now() - t0 < 2400) { requestAnimationFrame(f); return; }
+        delete sc.scrollTop; window.scrollTo = st; window.scrollBy = sb; Element.prototype.scrollIntoView = si;
+        res({ out, writes }); })(); })"""
 
     def beats(pg, n, ms=450):
         return press(pg, f'#musicBeatsSeg button[data-beats="{n}"]', ms)
@@ -688,6 +710,36 @@ with sync_playwright() as pw:
                       len(ys) == 1 and max(tops) - min(tops) < 0.5,
                       f"scrolled to {ys}; the timeline's top moved {max(tops) - min(tops):.1f}px")
                 c.close()
+    # AS A BEAT LEAVES (an Undo, a new song) the drawer gets shorter: Beats in
+    # a bar folds away as the tap's row takes its line of words back. At the
+    # drawer's end, where shorter would clamp the page, it is held through the
+    # change and glides up to where the drawer now ends (lib/drawerdetent.js
+    # holdThrough), and nothing else moves it: the tap's row growing armed the
+    # drawer's growth follow, whose take-back wrote 11px in the instant between
+    # the glide being asked for and its first frame, which called the glide
+    # off; the page sat a second under the hold, then clamped the 20px left (a
+    # 402x874 phone at CPU 4x, two runs of twelve, Pad and Flip). The race is
+    # the machine's; the follow armed is not, so every write to the page is
+    # read: the hold's glide, and nothing else.
+    for _n, _p in eds("leaves"):
+        c, pg, errs = editor(b, _n, _p, door="beat", opts=PHONE)
+        pg.evaluate(SET, {"tempo": {"bpm": 120, "phase": 0}})
+        pg.wait_for_timeout(2600)            # the beat landed, and what it set going is over
+        pg.evaluate("() => { const sc = document.scrollingElement || document.documentElement; sc.scrollTop = sc.scrollHeight; }")
+        browsing.wait_scroll_still(pg)
+        pg.wait_for_timeout(300)
+        got = pg.evaluate(LEAVE)
+        fr, ws = got["out"], got["writes"]
+        start, end, rest = fr[0][1], fr[-1][1], fr[-1][2]
+        clamps = [(round(a[1] - b2[1]), round(b2[0])) for a, b2 in zip(fr, fr[1:]) if b2[2] < a[2] - 0.5 and a[1] - b2[1] > 2]
+        check(f"{_n}: as the beat leaves and Beats in a bar folds away, the page at the drawer's end glides up to where it now ends,"
+              f" and only that glide moves it: no other write, no clamp (phone)",
+              start - end > 10 and abs(end - rest) <= 2 and not fr[-1][3] and not clamps
+              and len(ws) == 1 and ws[0][0] == "scrollTo smooth",
+              f"from {start:.0f} to {end:.0f}, where the drawer now ends {rest:.0f}; held at the end {bool(fr[-1][3])}; clamps {clamps};"
+              f" writes {[(w[0], round(w[1]), round(w[2]), round(w[3]) if isinstance(w[3], (int, float)) else w[3]) for w in ws]}")
+        check(f"{_n}: no page errors as the beat leaves", not errs, "; ".join(errs[:2]))
+        c.close()
     for _n, _p in eds("beats"):
         for still in (False, True):
             c = waits.instrument(b.new_context(reduced_motion="reduce" if still else "no-preference", **DESK))

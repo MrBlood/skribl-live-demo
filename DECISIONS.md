@@ -32604,3 +32604,47 @@ desk pen rows red, each step an instant write; one tile for a shorter one
 without the held height, all four "Feel for Eraser ... never leaps" rows red,
 the phones' 217 and 232px over three frames and more caught as clamps. As
 built 217/217.
+
+## After v330 -- The herky-jerky check's last gap: a beat leaving called its own glide off
+
+The check above left one thing untested: the music drawer's hold through a
+beat landing or leaving (lib/drawerdetent.js holdThrough). A landing never
+moves the page (verify_musicbeat pins that). A leaving does: the drawer gets
+shorter, so the page at its end is held and, 320ms later, glides up to
+where the drawer now ends.
+
+THE PROBE. Pad and Flip, a 402x874 phone at CPU 4x and a 402x664 one at 6x,
+the Beat door open and the page at the drawer's end, the beat taken away
+(the state an Undo or a new song leaves), with every frame and every write
+to the page's scroll recorded with who made it. A new song as the trigger,
+three Pad runs at 4x: clean.
+
+THE JUMP: 3 runs of 18 on the 874px phone at 4x (Pad twice, Flip once), none
+of 6 on the 664px one at 6x. The page sat a second under the hold, then
+clamped 20px (Pad) or 7px (Flip). As the beat leaves, the tap's row takes
+its line of words back in one frame while Beats in a bar folds away. The
+growth follow (followGrowth) leaves Beats and Beats in a bar out of the
+card's height, but not the tap's row, so the leaving armed it, and its 300ms
+take-back, which waits for a still page (#823), found one in the instant
+between holdThrough's glide being asked for and its first frame. It pulled
+the page back 11px (Flip 24px: the dock under the header by that much at
+the drawer's end), an instant write, which calls a smooth scroll off; the
+hold's wait for its glide to land never ended, and its 900ms net let the page
+go, which clamped the rest.
+
+THE FIX: what grows while the page is held (the root's min-height, which
+only holdThrough, shrinkGently and a closing drawer set) is part of that
+change, and the follow leaves it to the hold. One shared module, so Pad and
+Flip together. After: 12 runs of 12 at 4x glided, the hold's glide the only
+write.
+
+THE CHECK: verify_musicbeat, on a phone, both editors: the Beat door open,
+a beat landed, the page at the drawer's end, the beat leaves; the page
+glides to where the drawer now ends, with no clamp, and the hold's glide is
+the only write. The follow armed was a second write in every run of the old
+code, so the row does not wait for the race to land. Calibrated in a tree
+copy with its own server: the old file red on both editors (there, at full
+speed, the race itself: a write at 329-331ms, then the 20 and 7px clamps);
+the hold letting go at once red on both (a 31px clamp, no glide); as built,
+green. Not tested: WebKit. The Restart door's first-frame hitch (above) is
+still for later.
