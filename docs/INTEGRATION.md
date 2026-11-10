@@ -298,13 +298,14 @@ author, and nobody but the tool can set or lift it. (Until v321 the answer was
 `--visibility private`, which is a state the author owns, and an anonymous
 author's key set it straight back to public.)
 
-*The macros need one name in your Jinja environment.* `init_skribl()` adds
-`skribl_asset` as an app-wide template global — the only name Skribl puts in your
-environment — because the macros render on YOUR view, where Skribl's blueprint
-context processor does not run. It is added, never overwritten: if you already
-define `skribl_asset`, yours survives and the macros will not build. If you
-registered the blueprint under a name other than `skribl`, pass it:
-`{{ skribl_inline(id, bp='drawings') }}`.
+*The macros need names in your Jinja environment.* `init_skribl()` adds
+`skribl_asset` as an app-wide template global — with `skribl_csrf` and
+`skribl_report`, which the Gallery section below uses, the only names Skribl
+puts in your environment — because the macros render on YOUR view, where
+Skribl's blueprint context processor does not run. Each is added, never
+overwritten: if you already define one, yours survives and the macros that
+need it will not build. If you registered the blueprint under a name other
+than `skribl`, pass it: `{{ skribl_inline(id, bp='drawings') }}`.
 
 *The poster is the share card, cropped, and the crop is imperfect.*
 `/s/<id>/card.png` is a 1200x630 Open Graph card — the drawing inside a bordered
@@ -322,6 +323,76 @@ the picture. A narrower drawing therefore still shows some of the card's frame
 either side. A tight per-post crop is what `canvas_w` and `canvas_h` give the
 macro (above): real columns on the post since v309, so the listing carries them
 without opening `payload_json`. Without them the poster keeps this 16:9 window.
+
+## Skribl's own Gallery on your page
+
+A page of every public skribl, as Skribl's own `/gallery` shows it, inside
+your site's frame: New and Hot, the search box, the cards (who drew it and
+when, the ⋯ menu with Report, the title, the drawing, the caption with its
+"more"), Load more, and on a card whose drawing was posted in one of your
+posts, "From a post" linking back to it (your `source_resolver`, below). It is
+the section `/gallery` is made of, not a copy of it: one partial, one script,
+and a stylesheet generated from `/gallery`'s own.
+
+```jinja
+{% from 'skribl/_skribl_inline_player.html' import skribl_inline_assets %}
+{% from 'skribl/_skribl_gallery_section.html'
+     import skribl_gallery_assets, skribl_gallery_section %}
+
+{{ skribl_inline_assets() }}       {# once per page, in <head>: the player #}
+{{ skribl_gallery_assets() }}      {# once per page, in <head>, after it #}
+...
+{{ skribl_gallery_section() }}     {# where the gallery goes #}
+```
+
+**One to a page.** Its parts keep `/gallery`'s ids, and its stylesheet is
+written to the section's own id, `#skriblGallery`.
+
+**It keeps to itself.** Every rule in `gallerysection.css` is written under
+`#skriblGallery`, so nothing in it can restyle your page. And the section
+starts from nothing: your page's type and colours stop at its edge, your own
+rules for `button`, `.btn`, `.tabs`, `h2` and the like cannot add to it (a
+rule written with an id outweighs any written with classes and elements),
+and a custom property of yours with a name the section reads is cut off at
+its edge. Its scripts keep to it too: the styled tooltips, the labels and the
+New / Hot pill touch only what is inside. Two things are about the page
+itself, and only while Skribl says so on `<html>`: a drawing in full screen
+holds the page still (`skribl-immersive`), and after a tap the section's focus
+rings step back (`data-input`). What can still reach in: a rule of yours with
+an id or `!important` in it, and the player box inside each card, which is the
+in-post player as it is everywhere (above).
+
+**Light and dark.** It follows `data-theme="light"` on `<html>`, as Skribl's
+own pages and skribls.net say it; on a page that sets no `data-theme`, it
+follows the device.
+
+**Its layout is the Gallery's.** Two cards across on a screen wider than
+860px, one on a narrower one, as on `/gallery`. Give the section the width you
+want by where you put it; it fills its container.
+
+**Report works from your page, with nothing passed from your view.** The
+report sheet sends Skribl's CSRF token. `skribl_csrf()`, an app-wide template
+global `init_skribl()` adds, puts it in the page; when your view rendered the
+page (not Skribl's), `init_skribl`'s own `after_request` sets the cookie the
+token pairs with on that same response. The reasons come from `skribl_report`,
+the same way. A page that carries a token is somebody's: do not let a shared
+cache keep it.
+
+**Not inside a transformed box.** The report sheet, the card's menu and full
+screen are placed against the screen. Put the section in your page's flow, not
+inside an element with `transform`, `filter` or `contain`, which would become
+their frame.
+
+If you registered the blueprint under another name, pass it:
+`{{ skribl_gallery_section(bp='drawings') }}`.
+
+`examples/host_app/templates/skribls.html` is this and nothing else, in the
+stand-in's frame. `verify_standin.py` holds it to `/gallery`: one drawing
+posted to both is the same card, pixel for pixel, on a phone and a desk, dark
+and light; your page's own elements compute the same styles with the
+section's files as without them; a report from it is taken; and "From a post"
+leads to its post. `verify_seam.py` holds `gallerysection.css` to `/gallery`'s
+sheets byte for byte.
 
 ## Drawing one from your own composer
 
@@ -1155,9 +1226,10 @@ none. Only an http(s) address or a path on your site is passed on, because
 the listing is public and every viewer sees it as a link: anything else is
 dropped, and so is an answer that is not a mapping. Return only posts any
 viewer may open. `examples/host_app/app.py` has both resolvers, and its
-`templates/skribls.html` draws a grid of public skribls from the listing with
-each one's name and its post (`verify_example.py` drives it;
-`verify_hostseams.py` pins the seam).
+`templates/skribls.html` is Skribl's own Gallery section ("Skribl's own
+Gallery on your page", above), which shows each one's name and links its post
+(`verify_example.py` and `verify_standin.py` drive it; `verify_hostseams.py`
+pins the seam).
 
 **CSRF is required once you pass `current_user_id`, and refusing is the point.**
 Cookie authentication plus no CSRF verifier means any third-party page can post

@@ -2147,8 +2147,11 @@ stops saying "Anonymous" for them too); "From a post" linking back to it,
 said by the host through `source_resolver` a page at a time, rather than an
 address handed to `create_post` as planned above, so Skribl keeps no copy of
 an address that could go stale; and on a phone each tile's line trimmed to
-its time. Next, on skribls.net itself: item 12, and where Skribls lives on
-the site's phone bar (under Explore, or a tab), the owner's call.
+its time. Since the owner's B (after v330) that page is Skribl's own Gallery
+section in the host's frame instead, its cards the ones /gallery shows, with
+"From a post" on each that was posted in one (6ai). Next, on skribls.net
+itself: item 12, and where Skribls lives on the site's phone bar (under
+Explore, or a tab), the owner's call.
 
 ## 6ai. The social site, aimed at on purpose (owner, Nov 10: "This may be the beginning of a social media site that will have millions of users... Let's do this right")
 
@@ -2158,7 +2161,9 @@ site. The layout is docs/SOCIAL-SITE.md: three layers (Skribl owns drawings,
 the site owns people, hosts mount Skribl), the full list of what a social
 site has against what Skribl has today, the scale rules taken now because
 they are cheap now, the phases, and the owner's decisions, all eight answered "all yes" the
-same morning. Next: the Gallery card as a piece any page can embed (B).
+same morning. B is built (after v330): Skribl's own Gallery section, one partial any page can
+hold (`skribl_gallery_section()` and `skribl_gallery_assets()`, docs/INTEGRATION.md), is the
+stand-in's Skribls tab, pixel for pixel the cards /gallery shows. Next: phase 1.
 
 ## 7. The honest state
 
