@@ -11,8 +11,9 @@ what it promises, through the demo's own server:
   1. IT IS THERE, AND ONLY WHEN WANTED: /social answers with the site's page;
      SKRIBL_SOCIAL=0 leaves it out, and a site that cannot start is logged
      and left out, the demo's own pages answering either way.
-  2. THE BAR AND THE RAIL: on a touch phone the bar holds Home, Explore and
-     Make, and on a desk the rail holds the wordmark and the same three; the
+  2. THE BAR AND THE RAIL: on a touch phone the bar holds Home, Explore,
+     Make and Sign in (You once signed in, piece 2: verify_socialauth), and
+     on a desk the rail holds the wordmark and the same four; the
      page you are on carries the pen's line (painted, not merely there);
      every target is 44px or more; nothing of the frame covers the page; and
      no id is on a page twice.
@@ -370,11 +371,14 @@ with sync_playwright() as p:
         def names(screen, page):
             return [i["name"] for i in seen[(screen, page)][0]]
         ph, dk = names("phone", "home"), names("desk", "home")
-        check("on a touch phone the bar holds Home, Explore and Make, and nothing else (no You before sign-in)",
-              ph == ["Home", "Explore", "Make"] and seen[("phone", "home")][2] is not None,
+        # Signed out, You's place says Sign in (piece 2, as the approved mock
+        # has it); You itself, signed in, is verify_socialauth's to hold.
+        check("on a touch phone the bar holds Home, Explore, Make and Sign in, and nothing else (You's place,"
+              " before sign-in)",
+              ph == ["Home", "Explore", "Make", "Sign in"] and seen[("phone", "home")][2] is not None,
               f"the bar {ph}; the wordmark at the top {seen[('phone', 'home')][2]}")
-        check("on a desk the rail holds the wordmark, Home, Explore and Make, and nothing else",
-              dk == ["Skribl, home", "Home", "Explore", "Make"] and seen[("desk", "home")][2] is None,
+        check("on a desk the rail holds the wordmark, Home, Explore, Make and Sign in, and nothing else",
+              dk == ["Skribl, home", "Home", "Explore", "Make", "Sign in"] and seen[("desk", "home")][2] is None,
               f"the rail {dk}; the phone's wordmark {seen[('desk', 'home')][2]}")
         marks = []
         for screen in ("phone", "desk"):

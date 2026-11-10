@@ -1497,6 +1497,25 @@ stays a sleep.
   of the site's own at 4.5:1; no page, console or CSP errors; and the layers,
   read from the source. `SOCIAL_PART=<n>` runs one section.
 
+### After v330 — the site's sign-in
+
+- `verify_socialauth.py` — sign-in at `/social`, invite-only, with passkeys
+  (docs/SOCIAL-SITE.md section 9, piece 2), through the demo's own app on a
+  server of its own (CSRF on, a first-invite code, the demo's identity, one
+  trusted proxy so each section speaks from its own address), driven at
+  `localhost` with Chromium's virtual authenticator: the first person comes
+  in once, as an admin; joining (13 or older, the handle's rules); links that
+  do not work, one kind card and one answer; sign out and in, nothing typed,
+  the sign count and user verification checked, a new session id at sign-in;
+  the Pad posting as the signed-in person and the demo's identity still
+  working; invites an admin's and a 404 like a missing page to anyone else; a
+  recovery link; passkeys renamed and removed, never the last; sign out
+  everywhere; deleting an account for real; the limits' 429s; CSRF and Origin
+  refusals; the cookie's flags; the site's own migration chain beside
+  Skribl's, and gunicorn running it (a failing one logged, the demo up); the
+  new screens' words at 4.5:1, 44px targets, 16px fields; no page or CSP
+  errors. `SOCIALAUTH_PART=<n>` runs one section.
+
 ## Where a suite's rationale lives
 
 **In the suite's own docstring, next to the assertions it explains.**

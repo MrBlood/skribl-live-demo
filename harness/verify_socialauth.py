@@ -730,6 +730,38 @@ with sync_playwright() as p_:
             pg.close()
             return got
 
+        def flip_post(ctx, title):
+            """The same through Flip's own Post sheet (Pad and Flip move together)."""
+            fresh = b.new_context(**DESK, extra_http_headers={"X-Forwarded-For": address()})
+            fresh.add_cookies([pw_cookie(c) for c in ctx.cookies(BASE)])
+            pg = fresh.new_page()
+            pg.on("pageerror", lambda e: ERRS.append(f"flip pageerror: {e}"))
+            try:
+                browsing.goto(pg, BASE, "/flip")
+                pg.evaluate("() => { try { localStorage.clear(); } catch (e) {} if (window.SkriblHints) window.SkriblHints.hide(); }")
+                box = pg.locator("#pad").bounding_box()
+                cx, cy = box["x"] + box["width"] / 2, box["y"] + box["height"] / 2
+                pg.mouse.move(cx - 100, cy)
+                pg.mouse.down()
+                for i in range(30):
+                    pg.mouse.move(cx - 100 + i * 7, cy + (i % 5) * 6)
+                    pg.wait_for_timeout(15)
+                pg.mouse.up()
+                pg.wait_for_timeout(400)
+                pg.click("#postBtn")
+                pg.wait_for_timeout(500)
+                pg.fill("#postTitleInput", title)
+                if pg.evaluate("() => !!document.getElementById('postPublicInput')"):
+                    pg.click("#postSheet .post-check")
+                with pg.expect_response(lambda r: r.request.method == "POST"
+                                        and r.url.split("?")[0].endswith("/api/skribls"), timeout=20000) as got:
+                    pg.click("#postSubmitBtn")
+                return got.value.status
+            except Exception as exc:
+                return f"no post: {str(exc).splitlines()[0][:120]}"
+            finally:
+                fresh.close()
+
         def listed(title):
             with urllib.request.urlopen(BASE + "/api/skribls?limit=50", timeout=20) as r:
                 items = json.loads(r.read().decode())["items"]
@@ -746,6 +778,11 @@ with sync_playwright() as p_:
               got.get("status") == 201 and author.get("id") == pid and pid.startswith("site:")
               and author.get("username") == "priya" and author.get("display_name") == "Priya Raman",
               f"post {got.get('status')} {got.get('label')!r}; author {author}; person {pid}")
+        flipped = flip_post(p.ctx, "Priya's flip " + tag)
+        f_author = ((listed("Priya's flip " + tag) or {}).get("author") or {})
+        check("and Flip's own Post sheet posts as them too (Pad and Flip move together)",
+              flipped == 201 and f_author.get("id") == pid and f_author.get("username") == "priya",
+              f"post {flipped}; author {f_author}")
         g = p.ctx.new_page()
         g.goto(BASE + "/social/explore")
         try:
