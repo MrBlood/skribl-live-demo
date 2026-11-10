@@ -143,6 +143,20 @@ and so waiting for the owner's yes with an estimate (WORKING-AGREEMENTS,
 bigger database; a cache server; more web servers. None are needed for
 phases 1 and 2 with a few hundred people.
 
+**The setup Cal recommends for the long run (Nov 10, asked by the owner):
+Render and Cloudflare.** Render keeps running the app and its PostgreSQL
+(no server to patch or back up by hand; the harness and the deploy already
+target it), with a background worker added when the job queue arrives.
+Cloudflare holds the domain (its registrar sells at cost), its DNS, the CDN
+in front, R2 for drawings and music (S3-compatible, so Skribl's S3 store
+works with it, and no fees for downloads), and Email Routing for a free
+hello@ address. A sending service (Resend or Postmark) comes with the
+emailed sign-in link, and Sentry's free tier watches for errors. A rented
+server would be cheaper on paper and is a second job: no. Prices were given
+to the owner from memory, flagged as such (this container cannot reach those
+sites): roughly $15 to $25 a month plus the domain at first, $50 to $100 a
+month at thousands of people. Each step waits for the owner's yes.
+
 ---
 
 ## 5. The phases
@@ -187,7 +201,11 @@ here is tested (a check shown red before it is believed).
   2. *Sign-in.* Accounts with passkeys and an emailed link, 13 and over;
      the site's people become the people the Pad posts as. Asks first: the
      email service (it may cost), and the domain (passkeys are tied to the
-     address they are made on).
+     address they are made on). *The owner's "all yes" (Nov 10):* built on
+     the demo's address first, for invited people (their passkeys are made
+     again after the move to the domain); passkeys alone first, the emailed
+     link once an email service is picked and its price compared;
+     invite-only until a lawyer has read the terms.
   3. *Profiles and drawn faces.* "Draw your face", a face that draws itself
      once (a small new Skribl piece, the face player), the person's skribls.
   4. *Posts.* Words and a skribl, posted from the site; a post's own page
