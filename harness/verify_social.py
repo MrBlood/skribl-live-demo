@@ -14,12 +14,15 @@ what it promises, through the demo's own server:
   2. THE BAR AND THE RAIL: on a touch phone the bar holds Home, Explore and
      Make, and on a desk the rail holds the wordmark and the same three; the
      page you are on carries the pen's line (painted, not merely there);
-     every target is 44px or more; and nothing of the frame covers the page.
+     every target is 44px or more; nothing of the frame covers the page; and
+     no id is on a page twice.
   3. MAKE: the sheet opens from the bar on a phone, the rail on a desk and
      Home's button; its doors are Skribl's own Pad and Flip (url_for's own
-     addresses, and they open); Esc, a tap outside, a tap on its grip and a
-     swipe down close it, giving focus back; it glides, read on every frame,
-     never a jump, up and down; under Reduce Motion it does not move.
+     addresses, and they open); a door picked, Esc, a tap outside, a tap on
+     its grip and a swipe down close it, giving focus back, and Tab stays
+     inside it meanwhile; the page the back button keeps comes back with it
+     closed; it glides, read on every frame, never a jump, up and down; under
+     Reduce Motion it does not move, opening or closing.
   4. THE FIRST VISIT: Blooby's card plays in Skribl's real player, ink
      appearing over time; under Reduce Motion it rests, finished; and the
      newest public skribls are under it (one is posted through the API).
@@ -27,7 +30,8 @@ what it promises, through the demo's own server:
   6. EVERY WORD OF THE SITE'S OWN reads at 4.5:1 or more on what is painted
      behind it: phone and desk, light and dark, the Make sheet included.
   7. NO PAGE ERRORS AND NO CSP ERRORS on the site's pages, Make and the
-     first visit's player running.
+     first visit's player running, and through Draw's door into the Pad and
+     back.
   8. THE LAYERS: no module under skribl/ imports social; social/ imports
      from skribl only documented public names (none, today); its templates
      reach only the Skribl partials docs/INTEGRATION.md documents; and every
@@ -169,6 +173,9 @@ COVER_PHONE = """() => new Promise(res => {
     const y = col.bottom - 4, c = document.elementFromPoint(col.left + col.width / 2, y);
     res({ cta: cta, foot: Math.round(y), barTop: Math.round(nav.top), inMain: !!c && !!c.closest('main'),
           what: c ? (c.id || c.className || c.tagName) : null }); })); })"""
+# Every id the page holds, and those it holds more than once.
+TWICE = """() => { const n = {}; document.querySelectorAll('[id]').forEach(e => { n[e.id] = (n[e.id] || 0) + 1; });
+  return Object.keys(n).filter(k => n[k] > 1); }"""
 COVER_DESK = """() => { const m = document.querySelector('main .col').getBoundingClientRect();
   return [120, 400, 700].map(y => { const c = document.elementFromPoint(m.left + 6, y);
     return { y: y, x: Math.round(m.left + 6), inMain: !!c && !!c.closest('main'), what: c ? (c.id || c.className || c.tagName) : null }; }); }"""
@@ -337,7 +344,7 @@ with sync_playwright() as p:
 
     # ------------------------------------------------------------------ 2
     if part(2, "the bar on a phone, the rail on a desk"):
-        seen = {}
+        seen, twice = {}, {}
         for screen, ctx in (("phone", PHONE), ("desk", DESK)):
             c = b.new_context(**ctx)
             pg = c.new_page()
@@ -350,6 +357,7 @@ with sync_playwright() as p:
                 top = pg.evaluate("() => { const a = document.querySelector('body > .top .brand'); if (!a || !a.getClientRects().length) return null;"
                                   " const r = a.getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height)]; }")
                 seen[(screen, page)] = (items, pens, top)
+                twice[(screen, page)] = pg.evaluate(TWICE)
             pg.goto(SITE + "/")
             pg.wait_for_timeout(500)
             cover = pg.evaluate(COVER_PHONE if screen == "phone" else COVER_DESK)
@@ -389,6 +397,9 @@ with sync_playwright() as p:
               " above the bar at the end of the page; on a desk the column's edge beside the rail",
               all(pc["cta"]) and len(pc["cta"]) == 2 and pc["inMain"] and pc["foot"] < pc["barTop"]
               and all(d["inMain"] for d in dc), f"phone {json.dumps(pc)}; desk {json.dumps(dc)}")
+        dup = {f"{s} {pg_}": v for (s, pg_), v in twice.items() if v}
+        check("no id is on a page of the site twice (the two wordmarks' gradients have one each), phone and desk",
+              len(twice) == 4 and not dup, f"repeated: {dup}")
 
     # ------------------------------------------------------------------ 3
     if part(3, "Make: two doors into Skribl's Pad and Flip"):
@@ -420,6 +431,21 @@ with sync_playwright() as p:
               shut["hidden"] and not shut["open"] and shut["focus"] == "tab tab-make" and "true" not in shut["expanded"]
               and not any(shut["inert"]) and down["positions"] >= 6 and down["one way"]
               and down["biggest step"] <= 0.35 * down["travel"], f"{json.dumps(down)}; focus {shut['focus']}")
+        # Tab stays inside, both ways round: from the first door (where opening
+        # puts focus) forward past Cancel back to Draw, and backward past Draw
+        # to Cancel. Nothing behind the sheet takes a turn.
+        fresh(pg, "/explore")
+        press(pg, ".nav .tab-make")
+        pg.wait_for_timeout(600)
+        FOCUSED = """() => { const a = document.activeElement, s = document.querySelector('#makeSheet .make-sheet');
+          if (!a || !s.contains(a)) return a ? a.tagName : null;
+          const b = a.querySelector('b'); return (b ? b.textContent : a.textContent).trim(); }"""
+        ring = []
+        for key in ("Tab", "Tab", "Tab", "Tab", "Shift+Tab", "Shift+Tab"):
+            pg.keyboard.press(key)
+            ring.append(pg.evaluate(FOCUSED))
+        check("Tab stays inside it, both ways round: Flip, Cancel, Draw, Flip, then back to Draw and Cancel",
+              ring == ["Flip", "Cancel", "Draw", "Flip", "Draw", "Cancel"], f"focus went {ring}")
         closers = {}
         for how in ("outside", "grip", "swipe"):
             fresh(pg, "/explore")
@@ -444,29 +470,57 @@ with sync_playwright() as p:
         check("a tap outside it, a tap on its grip and a swipe down each close it; a short drag lets it glide back up",
               all(v is True for v in closers.values()) and held["open"] and held["top"] == opened["top"],
               f"closed: {closers}; after a short drag open {held['open']} at {held['top']} (rests at {opened['top']})")
-        # Home's own Make a skribl, and a door picked: the Pad opens, and the
-        # page the back button returns to has the sheet closed.
+        # Home's own Make a skribl, and a door picked. The sheet goes down as
+        # the door opens Skribl's Pad, so the page a phone's back button brings
+        # back whole has it closed. Read twice: with the door's navigation held
+        # back, the sheet as the door leaves it; and through the door and back
+        # in a browser that keeps pages for the back button, as a phone's does.
+        # (Playwright starts its headless shell with that cache switched off,
+        # and there the page came back new, and closed, whatever the door did;
+        # Chromium's own build, the cache allowed, keeps it.)
         fresh(pg, "/")
         press(pg, ".cta [data-make]")
         pg.wait_for_timeout(600)
         from_home = pg.evaluate(SHEET)
-        landed, back = None, None
-        if from_home["open"]:
+        pg.evaluate("""() => new Promise(res => {
+            const hold = e => { if (e.target.closest('.make-door')) e.preventDefault(); };
+            document.addEventListener('click', hold, true);
+            const d = document.querySelector('#makeSheet a.make-door'); if (d) d.click();
+            setTimeout(() => { document.removeEventListener('click', hold, true); res(); }, 700); })""")
+        picked = pg.evaluate(SHEET)
+        c.close()
+        landed, back, kept = None, None, None
+        try:
+            kb = p.chromium.launch(channel="chromium", ignore_default_args=["--disable-back-forward-cache"])
+        except Exception as exc:
+            kb, landed = None, {"no Chromium build to keep pages with": str(exc).splitlines()[0][:80]}
+        if kb is not None:
+            kc = kb.new_context(**PHONE)
+            kc.add_init_script("addEventListener('pageshow', e => { if (e.persisted) window.__kept = true; });")
+            q = kc.new_page()
+            q.on("pageerror", lambda e: errs.append(f"make, the kept page: {e}"))
             try:
-                with pg.expect_navigation(timeout=30000):
-                    pg.click("#makeSheet a.make-door >> nth=0", timeout=5000)
-                landed = pg.evaluate("() => ({ at: location.pathname,"
-                                     " pad: document.title === 'Skribl Pad' && !!document.getElementById('canvas') })")
-                pg.go_back()
-                pg.wait_for_timeout(900)
-                back = pg.evaluate(SHEET)
+                fresh(q, "/")
+                press(q, ".cta [data-make]")
+                q.wait_for_timeout(600)
+                with q.expect_navigation(timeout=30000):
+                    q.click("#makeSheet a.make-door >> nth=0", timeout=5000)
+                landed = q.evaluate("() => ({ at: location.pathname,"
+                                    " pad: document.title === 'Skribl Pad' && !!document.getElementById('canvas') })")
+                # A page the cache gives back fires no load: wait for the commit.
+                q.go_back(wait_until="commit")
+                q.wait_for_timeout(1200)
+                back = q.evaluate(SHEET)
+                kept = q.evaluate("() => !!window.__kept")
             except Exception as exc:
                 landed = {"could not": str(exc).splitlines()[0][:80]}
-        check("Home's Make a skribl opens it too; Draw opens Skribl's Pad, and back on the page the sheet is closed",
-              from_home["open"] and bool(landed) and landed.get("at") == pad_url and landed.get("pad")
-              and bool(back) and back["hidden"],
-              f"from Home {from_home['open']}; Draw landed {landed}; back, hidden {back and back['hidden']}")
-        c.close()
+            kb.close()
+        check("Home's Make a skribl opens it too; a door picked closes it as Draw opens Skribl's Pad, and the page"
+              " the back button keeps comes back with it closed",
+              from_home["open"] and picked["hidden"] and bool(landed) and landed.get("at") == pad_url
+              and landed.get("pad") and bool(back) and back["hidden"] and kept,
+              f"from Home {from_home['open']}; a door picked, hidden {picked['hidden']}; Draw landed {landed};"
+              f" back, kept by the browser {kept}, hidden {back and back['hidden']}")
         c = b.new_context(**DESK)
         pg = c.new_page()
         pg.on("pageerror", lambda e: errs.append(f"make desk: {e}"))
@@ -493,10 +547,21 @@ with sync_playwright() as p:
         fresh(pg, "/")
         frames = pg.evaluate(GLIDE, [".nav .tab-make", 700])
         still = pg.evaluate(SHEET)
-        tops = sorted({f[0] for f in frames})
-        check("under Reduce Motion it does not move: it shows where it rests, every frame, and fades in",
-              still["open"] and len(tops) == 1 and abs(tops[0] - still["top"]) <= 0.5 and frames[-1][1] >= 0.99,
-              f"tops read {tops[:5]}; rests at {still['top']}; opacity at the end {frames[-1][1]}")
+        gone = pg.evaluate(GLIDE, ["Escape", 700])
+        # Read on every frame, opening AND closing: where it is while it can
+        # be seen at all, and how its opacity goes (a fade has many steps).
+        # Opening alone could not fail: with only opacity transitioned, the
+        # sheet stands where it rests from the first frame either way; it is
+        # on the way out that it would drop off the bottom in one frame.
+        seen_up = sorted({f[0] for f in frames})
+        seen_down = [f for f in gone if not f[2] and f[1] > 0.02]
+        tops_down = sorted({f[0] for f in seen_down})
+        fades = (len({round(f[1], 2) for f in frames}), len({round(f[1], 2) for f in seen_down}))
+        check("under Reduce Motion it does not move: it fades in where it rests, and fades out there, every frame",
+              still["open"] and len(seen_up) == 1 and abs(seen_up[0] - still["top"]) <= 0.5 and frames[-1][1] >= 0.99
+              and tops_down == seen_up and min(fades) >= 3,
+              f"opening, its tops {seen_up[:4]}; closing, its tops while seen {tops_down[:4]}; rests at {still['top']};"
+              f" opacities in the fades {fades}")
         c.close()
 
     # ------------------------------------------------------------------ 4
