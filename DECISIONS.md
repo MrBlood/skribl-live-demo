@@ -32504,3 +32504,45 @@ three times on each editor at CPU 4x, and asks that it glides there and
 never back up. Calibrated against the old file in a tree copy with its own
 server: both rows red in all six rounds (the Pad back on 14 of 18 presses,
 Flip on 15 of 18, 3 to 19px), both green in all six as built.
+
+## After v330 -- The herky-jerky check: every timed correction after a glide, on a slower phone
+
+The owner had seen "little herky jerky movements here and there", and after
+#822 said "Yes, do the check": every place that corrects the page on a timer
+after a glide, read on every frame on a slowed-down phone, fixing only what
+actually jumps.
+
+THE SWEEP. A probe opened and closed each drawer (pen, photo, music, Text),
+added a song, opened each music door and swapped Feel for Eraser, on the Pad
+and Flip, on a 402x874 phone and a 402x664 one at CPU 4x and 6x, and a
+1280x800 desk at 4x, recording every write to the page's scroll and who
+made it. Closing a drawer (lib/drawers.js holds the page's height for 800ms
+while it glides home), one tile for a shorter one (shrinkGently), the doors
+and every opening glided and never went back, before and after.
+
+ONE REAL JUMP: A SONG ADDED ON A SHORT, SLOWER PHONE, THE PAD. The page
+follows the music drawer as a song lands (lib/drawerdetent.js followGrowth),
+and its re-asserts at 300, 700 and 1200ms are the same blunt writes #822
+found in the opening's: the 300ms one wrote at 383 on the way to 406, the
+page went on to 423, and the 700ms one took it 17px back up under the
+header. Added as a person adds one (a tap on Add music, then the file):
+back on 2 of 5 adds at CPU 4x and 3 of 6 at 6x on the 402x664 phone; on the
+874px phone the drawer's end is not held at the header, and it only went
+4px past. They wait for the page to be still now (whenStill), and the
+listeners that call them off stay on to 2300ms. After: none in 12 adds at
+4x and 6x. Flip's song lands in two steps and never went back in 12 adds
+before the fix or after.
+
+NOT JUMPS. A song dropped in by code, with no tap, let the opening's last
+re-assert snap Flip 249px to the drawer's new end; a person's tap on Add
+music calls those re-asserts off, so a person cannot reach it. And some
+moves were seen in only two frames because the slowed page drew no frame
+for 114-284ms while it decoded a song or opened a door on a desk: never a
+step back, and the same on the old code. Not tested: a beat landing in the
+Beat door (holdThrough needs a heard beat).
+
+THE CHECK: verify_drawerreveal adds a song to the Pad on a 402x664 phone at
+CPU 6x, as a person does, eight times on fresh pages, and asks that the
+page never goes back. Calibrated against the old file in a tree copy with
+its own server: red in all three rounds (back on 12 of 24 adds, 3 to 15px),
+green in all three as built.
