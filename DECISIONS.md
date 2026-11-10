@@ -32814,3 +32814,34 @@ Calibrated on the server, bounced for each template change: as it was, both
 rows red (painted boxes 1; tiles 1 then 3, the owner's symptom); the CSS
 alone, the first green and the second red (1 then 3); both, 7/7.
 verify_example (the host booted on its own) 59/59.
+
+## After v330 -- Main red after #830: the stand-in built a second host on import
+
+Run 42830024763 (main after #830): every lane green but the PostgreSQL
+shard 6/6, where verify_deletion_foundation's blast-radius row said "no
+pragma listener is installed on postgresql" was false. Reproduced here on a
+PostgreSQL 16 cluster in the scratch area (stopped after): red with the
+stand-in mounted, 17/17 with SKRIBL_STAND_IN=0.
+
+Two things, one of each kind.
+- THE INSTRUMENT asked that no SQLite engine in the process carried Skribl's
+  pragma listener. That was the property while Skribl was alone; since #830
+  the stand-in brings a Skribl and a SQLite database of its own, which
+  rightly enforce foreign keys. The row now asks the seam, of each engine's
+  own connect listeners: the engine Skribl was given here has none, and
+  every engine that has one is an engine some Skribl was given (the
+  stand-in's, read through the mount).
+- THE TREE: asked that way, a third engine carried one,
+  examples/host_app/example.db. The host's module ended in
+  `app = create_app()`, so app.py's import of it to mount the stand-in also
+  built a second, unused host with its own Skribl in every worker. No app is
+  built on import now: `flask --app app run` finds create_app() itself (as
+  verify_example and verify_clouddrafts start it) and `python app.py` builds
+  one in its __main__.
+
+Calibrated on PostgreSQL in tree copies of the suite: a stray SQLite engine
+handed the listener, red; the listener put on the demo's own engine, red;
+the module still building its app on import, red (the example.db engine
+named in the row); as built, 17/17. On SQLite, side by side:
+verify_deletion_foundation 17/17, verify_standin 7/7, verify_example 59/59,
+verify_hostconfig 61/61, verify_clouddrafts 116/116.
