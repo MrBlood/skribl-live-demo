@@ -527,6 +527,12 @@ replays it with its timing), **Flip** (frame-by-frame animation) and a
 read-only **Player** — packaged as a Flask blueprint to drop into a social
 platform.
 
+Beside it, `social/` is the start of that platform, the Skribl site
+(docs/SOCIAL-SITE.md): a host of Skribl through the same public seams any
+host uses, plugged into the demo's own app at `/social` so it shares the
+demo's Skribl. Phase 1's first piece is its frame: Home, Explore and Make
+(section 9 of that document). Skribl never imports it.
+
     SKRIBL_VERSION   see skribl/core.py — the archive name derives from it.
                      This line used to hand-type it, and read v191 while the
                      code said v211: four releases stale, in the file whose
@@ -975,7 +981,9 @@ before it takes a request (`skribl.warm_assets`, a few seconds; the log says
 how many files and how long), so the first visitor after a deploy does not
 wait for it. The stand-in that `app.py` mounts at `/host` (examples/host_app,
 with a Skribl of its own) is warmed after that, on a thread that rests after
-each file, so the demo's own visitors are not held for it.
+each file, so the demo's own visitors are not held for it. The site at
+`/social` needs nothing of its own here: it shares the demo's Skribl, whose
+files are the ones warmed first (`SKRIBL_SOCIAL=0` leaves it out).
 
 On Render, the middle two run together from the dashboard **Start Command**
 (`python -m alembic upgrade head && gunicorn app:app`) — set in v270, when it
