@@ -22,6 +22,7 @@ server:
   5. MORE ON ITS SKRIBLS PAGE asks only for a next page: not on screen when
      there is none, and a press then adds nothing (the owner's "it just adds
      another copy", on the live stand-in).
+  6. NO TEXT FIELD ON IT MAKES A PHONE ZOOM: every one at least 16px.
 
 What the stand-in does as a host is verify_example's, which boots it on its
 own; this suite is the mount. SKRIBL_STAND_IN=0 leaves it out of the demo, and
@@ -194,6 +195,33 @@ with sync_playwright() as p:
           bool(named) and all(n.startswith("skribl_host_") for n, _ in named) and session and all(s == "/host" for s in session)
           and all(n.startswith("skribl_host_") for n, _ in jar),
           f"set {named}; the browser holds {jar}")
+
+    print("\nSTAND-IN 6 — no text control makes a phone zoom")
+    # A text control under 16px makes iOS magnify the page when it is tapped
+    # (WORKING-AGREEMENTS; verify_a11y 11b asks it of Skribl's own pages).
+    # The look-over found the stand-in's sign-in picker and its composer's
+    # "Say something" box at the page's 15px. Read on a touch phone, signed
+    # out and signed in, on every page of the host, fields built later too.
+    FIELDS = """() => [...document.querySelectorAll('input, textarea, select')].filter(e => {
+        const t = (e.type || '').toLowerCase();
+        return !['hidden', 'checkbox', 'radio', 'range', 'button', 'submit', 'reset', 'color', 'file', 'image'].includes(t);
+      }).map(e => [location.pathname + ' ' + (e.id || e.name || e.tagName.toLowerCase()), parseFloat(getComputedStyle(e).fontSize)])"""
+    c2 = b.new_context(**PHONE)
+    p2 = c2.new_page()
+    seen = []
+    p2.goto(HOST + "/")
+    seen += p2.evaluate(FIELDS)
+    p2.select_option("select[name=uid]", index=0)
+    p2.click("button:has-text('Sign in')")
+    p2.wait_for_timeout(800)
+    for path in ("/", "/skribls", "/posts/1"):
+        p2.goto(HOST + path)
+        p2.wait_for_timeout(600)
+        seen += p2.evaluate(FIELDS)
+    small = [f"{k} {v:g}px" for k, v in seen if v < 16]
+    check("every text field on the stand-in is at least 16px, so a phone never zooms on a tap",
+          len(seen) >= 3 and not small, f"{len(seen)} fields read; under 16px: {small}")
+    c2.close()
     check("no page errors on the stand-in", not errs, "; ".join(errs[:2]))
     c.close()
     b.close()

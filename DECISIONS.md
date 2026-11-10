@@ -32845,3 +32845,13 @@ the module still building its app on import, red (the example.db engine
 named in the row); as built, 17/17. On SQLite, side by side:
 verify_deletion_foundation 17/17, verify_standin 7/7, verify_example 59/59,
 verify_hostconfig 61/61, verify_clouddrafts 116/116.
+
+## After v330 -- The stand-in's text fields are 16px
+
+From the look-over of /host on a touch phone: the sign-in picker and the
+composer's "Say something" box took the page's 15px, so an iPhone zooms the
+page when either is tapped (WORKING-AGREEMENTS: a text control under 16px).
+base.html now sets every select, textarea and input to 16px. verify_standin
+section 6 reads every text field's computed size on a fresh phone, signed out
+and signed in, on the feed, the Skribls page and a post: red as it was
+(`uid` and `body` at 15px), 8/8 with the rule.
