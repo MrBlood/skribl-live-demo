@@ -258,13 +258,19 @@ def create_app(database_url=None, *, secret_key=None, mounted_at=None):
             #               by its link, listed nowhere.
             #   title       what /s/<id> unfurls with: the post's words.
             #   caption     the gallery caption the author wrote under the
-            #               tick, or the post's words, so the Skribl carries
-            #               its own context.
+            #               tick, and nothing else. The post's words are the
+            #               title already; copied in here too, a gallery card
+            #               said them twice (the owner's yes, Nov 10: "say the
+            #               post's words once").
             gallery = drawing.pop("visibility", None) == "public"
             if gallery:
                 drawing["visibility"] = "public"
             drawing["title"] = body[:80] or "Untitled Skribl"
-            drawing["caption"] = (str(drawing.get("caption") or "")).strip() or body
+            caption = str(drawing.get("caption") or "").strip()
+            if caption:
+                drawing["caption"] = caption
+            else:
+                drawing.pop("caption", None)
 
             try:
                 made = create_post(drawing, author_id=me.id)

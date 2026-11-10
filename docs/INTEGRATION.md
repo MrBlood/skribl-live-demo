@@ -265,8 +265,10 @@ that keeps its own feed and wants the author to choose adds `&gallery=1`: the
 sheet then shows "Show in the Skribls gallery", off, with a gallery caption
 that opens under it once it is ticked, and the payload it hands back says
 `"visibility": "public"` and carries that caption only when ticked. Keep what
-it says: drop any other `visibility`, and fall back to your post's words for
-an empty caption (`examples/host_app/app.py` `compose()` does both).
+it says: drop any other `visibility`, and leave the caption empty when the
+author wrote none (`examples/host_app/app.py` `compose()` does both). Your
+post's words make a good title; copied into the caption as well, a gallery
+card says them twice.
 `/gallery` is that listing rendered by Skribl itself, on the in-post player.
 The listing takes `q` (a substring of title or caption, up to 80 characters)
 and `sort=hot` (plays in the last seven days, most first; its `next_cursor`

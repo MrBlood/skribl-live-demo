@@ -32855,3 +32855,38 @@ base.html now sets every select, textarea and input to 16px. verify_standin
 section 6 reads every text field's computed size on a fresh phone, signed out
 and signed in, on the feed, the Skribls page and a post: red as it was
 (`uid` and `body` at 15px), 8/8 with the rule.
+
+## After v330 -- The stand-in's look-over: the owner's yeses, the small four
+
+The look-over of /host (phone and desk, light and dark, every step) put six
+choices to the owner beside Now, mocked; the owner said "all yes". Four are
+the host's own and small, and land here; the Skribls tab as Skribl's Gallery
+cards (B) is a piece of Skribl and comes next; the tiles' caption (2) went
+with B.
+
+- SAY THE POST'S WORDS ONCE. The host copied the post's words into the
+  caption when the author wrote none, and they were the title already, so a
+  gallery card said them twice. compose() now keeps only a caption the author
+  wrote; INTEGRATION.md says the same to any host. verify_example's row that
+  pinned the copy now pins the title and no made-up caption.
+- LIGHT AND DARK. The stand-in was always dark around a Pad that follows the
+  device. It now follows the device too, one set of tokens with a light
+  answer. Contrast on a card, dark then light: ink 15.4 and 18.2, secondary
+  words 5.9 and 6.9, violet words 7.7 and 6.7.
+- THE ACTION FILL. White on the host's #7c5cff buttons was 4.35:1; they wear
+  Skribl's own --accent-fill (#6d4cf0), 5.2:1.
+- THE PAD HAS THE SCREEN. The host drew a bar with its own Close over the
+  top of the Pad, a second way out beside the Pad's own close (which already
+  worked) and 56px less canvas on a phone. The bar is gone. The mock said Esc
+  would still close it: wrong, Esc never did (the bar was only a button), and
+  this changes nothing there.
+
+verify_standin section 7, on a touch phone in both themes: the page's ground
+dark and light; every word of the host's own at 4.5:1 or more on what is
+painted behind it (46 read); and the Pad's frame the whole screen, the frame
+under three points along its top, its close hiding the overlay. Calibrated on
+the server, bounced for each, one piece put back at a time: no light answer,
+the theme row red; the old button purple, the contrast row red (the buttons
+named); the bar back, the Pad row red (padClose at the top). As built, 11/11.
+Side by side: verify_standin 11/11, verify_example 59/59, verify_clouddrafts
+116/116, verify_docs 144/144.
