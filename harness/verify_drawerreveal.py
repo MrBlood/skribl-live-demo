@@ -36,7 +36,11 @@ it is still. Then:
   half: the browser glides the page on its own thread, and a frame read on
   the page's can carry two of its steps -- the music drawer's Length door,
   10 frames peaking at 41px alone, read once as 41 and 25 together, 66px of
-  118 in an 18ms frame.
+  118 in an 18ms frame. And on a busy runner whose own glide stalled and
+  caught up, three (main after #825: Flip's Restart door, 218px of 353 in a
+  15ms frame, no write to the scroll): so a step past 60% is a leap only
+  when we made it, an instant write to the scroll landing in it (SNAPS) or
+  the page getting shorter under it (a clamp).
 
 And once each for the pen drawer, Text and the music drawer, on a desk:
 
@@ -148,9 +152,33 @@ def _song(seconds=6.0, rate=8000, f0=220.0):
 
 SONG = _song()
 
-# The page's place on every frame from before the press, for 1.9s.
+# Every INSTANT write to the page's scroll that moves it more than 2px -- a
+# scrollTop set, or a scrollTo or scrollBy that is not smooth -- counted as it
+# lands. (The page has no scroll-behavior of its own, so those are instant.)
+SNAPS = """() => {
+  if (window.__snapsOn) return; window.__snapsOn = true; window.__snapn = 0;
+  const sc = document.scrollingElement || document.documentElement;
+  const note = (from, to) => { if (Math.abs(to - from) > 2) window.__snapn++; };
+  const d = Object.getOwnPropertyDescriptor(Element.prototype, 'scrollTop');
+  Object.defineProperty(sc, 'scrollTop', { configurable: true,
+    get() { return d.get.call(this); },
+    set(v) { note(d.get.call(this), v); d.set.call(this, v); } });
+  for (const name of ['scrollTo', 'scrollBy']) {
+    const f = window[name].bind(window);
+    window[name] = function (a, b) {
+      const o = typeof a === 'object' && a ? a : { top: b };
+      if (o.behavior !== 'smooth' && o.top != null) { const from = sc.scrollTop; note(from, name === 'scrollBy' ? from + o.top : o.top); }
+      return arguments.length > 1 ? f(a, b) : f(a); };
+  }
+}"""
+
+# The page's place on every frame from before the press, for 1.9s: when, where,
+# how tall the page was, and how many instant writes (SNAPS) landed since the
+# frame before.
 LOG = """() => { window.__rv = []; const t0 = performance.now(), sc = document.scrollingElement || document.documentElement;
-  const f = () => { __rv.push([performance.now(), sc.scrollTop]); if (performance.now() - t0 < 1900) requestAnimationFrame(f); };
+  let seen = window.__snapn || 0;
+  const f = () => { const n = window.__snapn || 0; __rv.push([performance.now(), sc.scrollTop, sc.scrollHeight, n - seen]); seen = n;
+    if (performance.now() - t0 < 1900) requestAnimationFrame(f); };
   f(); }"""
 
 # Where everything is once the page is still. What opened is the tile's own
@@ -210,6 +238,7 @@ def close_drawer(q, ed):
 
 def press(q, dev, sel):
     """Press the tile for real and read the page on every frame until still."""
+    q.evaluate(SNAPS)
     q.evaluate(LOG)
     loc = q.locator(sel)
     if dev == "phone":
@@ -225,19 +254,27 @@ def motion(log):
     """The page's moves: each frame's step read for a frame's time (a dropped
     frame's two frames of travel is not a leap, as verify_sheetswipe reads its
     glides), the whole move, how many frames it took, and the furthest back."""
-    steps = [((b[1] - a[1]) * 16.7 / max(16.7, min(b[0] - a[0], 50)), b[1] - a[1], b[0] - a[0])
+    # Each step also says whether WE moved the page in it: an instant write
+    # landed (SNAPS), or the page got shorter under it (a clamp).
+    steps = [((b[1] - a[1]) * 16.7 / max(16.7, min(b[0] - a[0], 50)), b[1] - a[1], b[0] - a[0],
+              len(b) > 3 and (b[3] > 0 or b[2] < a[2]))
              for a, b in zip(log, log[1:])]
     moving = [s for s in steps if abs(s[1]) > 0.5]
     total = (log[-1][1] - log[0][1]) if log else 0
-    big = max(moving, key=lambda s: abs(s[0])) if moving else (0, 0, 0)
+    big = max(moving, key=lambda s: abs(s[0])) if moving else (0, 0, 0, False)
     back = min([s[1] for s in steps] + [0])
-    return {"total": total, "frames": len(moving), "big": big, "back": back}
+    bound = max(24, 0.6 * abs(total))
+    leaps = [s for s in moving if abs(s[0]) > bound and s[3]]
+    return {"total": total, "frames": len(moving), "big": big, "back": back, "leaps": leaps}
 
 
 def glided(m):
     """Over three frames or more, and no frame's step (for a frame's time)
-    more than 60% of the whole move, or 24px."""
-    return m["frames"] >= 3 and abs(m["big"][0]) <= max(24, 0.6 * abs(m["total"]))
+    more than 60% of the whole move, or 24px, that an instant write or a
+    clamp made. A bigger step with neither is the browser's own glide caught
+    up after a stall (main after #825: 218px of 353 in a 15ms frame, no
+    write), not a leap."""
+    return m["frames"] >= 3 and not m.get("leaps", [])
 
 
 def judge(who, dev, drawer, g, m):
@@ -273,7 +310,8 @@ def judge(who, dev, drawer, g, m):
         check(f"{who}: ...gliding there, never back up",
               glided(m) and m["back"] >= -2,
               f"{round(m['total'])}px over {m['frames']} frames, the most {round(big[1])}px in a {round(big[2])}ms frame "
-              f"({round(big[0])}px a frame's time); the most back {round(m['back'])}px")
+              f"({round(big[0])}px a frame's time{', an instant write or a clamp in it' if big[3] else ''}); "
+              f"the most back {round(m['back'])}px; leaps we made {[(round(s[1]), round(s[2])) for s in m['leaps']]}")
 
 
 pressed = {}

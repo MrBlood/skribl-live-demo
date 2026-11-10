@@ -32576,3 +32576,31 @@ caught it); the opening's re-asserts never called off, the snap row red on
 the Pad and Flip on a desk in two rounds of two (scrollTop from 940 to 816
 and 820, 120-124px: under the old 160px rule, and under the glide row on
 Flip). As built, the kind part 24/24.
+
+## After v330 -- Main red after #825: a stalled glide catching up read as a leap (verify_drawerreveal)
+
+Main at 4aa9fa3, postgresql 4/6: verify_drawerreveal 216/217, "Flip desk
+music: restart: ...gliding there, never back up": 353px over 14 frames, the
+most 218px in a 15ms frame, where 60% of the move (212px) was the bound.
+(The same run's sqlite 4/6 sat 55 minutes installing Chromium: the runner.)
+
+NOT A WRITE. Traced with every write to the page's scroll recorded, ten
+presses at 1x and 2x: the door's smooth scrollBy is the only write, and at 2x
+one press read the same 218px, in a 91ms frame. A 15ms frame carrying it
+means the browser's own glide, on its own thread, stalled on the busy runner
+and caught up between two of the page's frames; dividing by the frame's time
+cannot tell that from a leap. (At full speed here the Restart door's glide
+drops a frame too, 131px in a 25-30ms frame: it draws its Restart view in the
+frame its glide starts. A hitch for later, not a leap.)
+
+A LEAP IS ONE WE MADE: a step past 60% of the move fails the glide only when an
+instant write to the page's scroll landed in it (SNAPS: a scrollTop set, or a
+scrollTo or scrollBy that is not smooth, moving it more than 2px; the page
+has no scroll-behavior of its own) or the page got shorter under it (a
+clamp). The log keeps both on every frame. Calibrated: the CI trace's shape
+green with neither, red with a write or a clamp in its big frame; in a tree
+copy with its own server, the desk tiles' reveal made instant, all four Pad
+desk pen rows red, each step an instant write; one tile for a shorter one
+without the held height, all four "Feel for Eraser ... never leaps" rows red,
+the phones' 217 and 232px over three frames and more caught as clamps. As
+built 217/217.
