@@ -165,6 +165,13 @@ TALL = """() => { const t = document.getElementById('musicTlTall'), s = document
 HELD = 50
 
 
+def held_before(rows, h1):
+    """The longest look HELD late (ms) before the box got there, or 0."""
+    end = next((i for i, r in enumerate(rows) if abs(r["h"] - h1) < 0.5), len(rows) - 1)
+    gaps = [rows[i + 1]["t"] - rows[i]["t"] for i in range(end)]
+    return max([g for g in gaps if g >= HELD], default=0)
+
+
 def glide(rows, h0, h1):
     """What the frames say: (the way it goes and never leaps, whole pixels,
     painted at its height, Hear's drift, when it got there). One step at most
@@ -300,10 +307,30 @@ with sync_playwright() as pw:
             y_up = (up[-1]["y"], pg.evaluate("() => scrollY"))
             down = pg.evaluate(REC); pg.wait_for_timeout(300)
             gu, gd = glide(up, 118, 236), glide(down, 236, 118)
+            # A LATE TRIP THAT HELD A LOOK GETS ONE MORE TRY (main red after
+            # #837: back "at 429ms" on CI, where the way up took 245ms). The
+            # box's glide is 220ms on its own clock from its first frame, so a
+            # trip that comes in late with a look held 50ms or more is the
+            # runner's pause, and a box that is slow is slow on every try: a
+            # trip late with no look held is red at once, and one late on both
+            # tries is red. Both tries are named.
+            def on_time(g, h1):
+                return g["end"] is not None and g["end"] <= 400 and abs(g["last"] - h1) < 0.5
+            tries = [(gu, gd, held_before(up, 236), held_before(down, 118))]
+            if not (on_time(gu, 236) and on_time(gd, 118)) and (tries[0][2] or tries[0][3]):
+                up2 = pg.evaluate(REC); pg.wait_for_timeout(1500)
+                down2 = pg.evaluate(REC); pg.wait_for_timeout(300)
+                tries.append((glide(up2, 118, 236), glide(down2, 236, 118), held_before(up2, 236), held_before(down2, 118)))
+            # The try set aside as the runner's is set aside for the rows after
+            # this one too: what the glide's frames say is read off the try
+            # that counts.
+            gu, gd = tries[-1][0], tries[-1][1]
             check(f"{_n} ({face}): one tap and the box glides to twice as tall, and one more back, each within 400ms",
-                  gu["end"] is not None and gu["end"] <= 400 and gd["end"] is not None and gd["end"] <= 400
-                  and abs(gu["last"] - 236) < 0.5 and abs(gd["last"] - 118) < 0.5,
-                  f"up: there at {gu['end']}ms, {gu['last']}px; back: at {gd['end']}ms, {gd['last']}px")
+                  on_time(gu, 236) and on_time(gd, 118),
+                  "; then, as a look was held, one more try: ".join(
+                      f"up: there at {u['end']}ms, {u['last']}px" + (f" (a look held {hu}ms)" if hu else "")
+                      + f"; back: at {d['end']}ms, {d['last']}px" + (f" (a look held {hd}ms)" if hd else "")
+                      for u, d, hu, hd in tries))
             check(f"{_n} ({face}): ...only the way it is going, in whole pixels, never a leap",
                   gu["way"] and gd["way"] and not gu["frac"] and not gd["frac"],
                   f"up: steps {gu['steps']}, against the way {gu['back']}, leaps {gu['leaps']}, between pixels {gu['frac']}"
