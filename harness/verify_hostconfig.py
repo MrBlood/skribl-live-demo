@@ -291,15 +291,62 @@ _gp = subprocess.Popen([sys.executable, "-m", "gunicorn", "-b", "127.0.0.1:0", "
                        env=dict(os.environ, DATABASE_URL="sqlite:///" + os.path.join(tempfile.gettempdir(), "skribl-gwarm.db"),
                                 SKRIBL_ALLOW_EPHEMERAL_SECRET="1"))
 _WARMED = re.compile(r"skribl: (\d+) files stripped and compressed before the first visitor \(([\d.]+) s\)")
+_BESIDE = re.compile(r"skribl: (\d+) files stripped and compressed for (/\S+), beside the first visitors \(([\d.]+) s\)")
+
+
+def _glog_text():
+    with open(_glog.name) as _fh:
+        return _fh.read()
+
+
+def _pad_open(base):
+    """The demo's Pad opened as a browser opens it: the page, then every busted
+    file it names, six at a time, gzip accepted. Its wall-clock in seconds."""
+    from concurrent.futures import ThreadPoolExecutor
+    t = time.monotonic()
+    html = urllib.request.urlopen(base + "/skribl-pad", timeout=120).read().decode()
+    urls = sorted(set(re.findall(r'(?:src|href)="(/[^"]+\?v=[^"]+)"', html)))
+
+    def get(u):
+        req = urllib.request.Request(base + u, headers={"Accept-Encoding": "gzip"})
+        with urllib.request.urlopen(req, timeout=120) as r:
+            r.read()
+    with ThreadPoolExecutor(6) as ex:
+        list(ex.map(get, urls))
+    return time.monotonic() - t
+
+
 _warm, _gtxt, _until = None, "", time.monotonic() + 120
+_beside, _a, _b, _a_during = None, None, None, None
 try:
     while time.monotonic() < _until and _gp.poll() is None:
-        with open(_glog.name) as _fh:
-            _gtxt = _fh.read()
+        _gtxt = _glog_text()
         _warm = _WARMED.search(_gtxt)
         if _warm or "warming the files failed" in _gtxt:
             break
         time.sleep(0.25)
+    # THE STAND-IN BESIDE THE DEMO (app.py mounts examples/host_app at /host)
+    # has a Skribl and caches of its own, so the worker warms it too: on a
+    # thread of its own once the demo's files are done, resting after each
+    # file. Measured on the dev box, three runs each, the demo's Pad opened
+    # while the stand-in warmed in 1.4-1.8 s unrested, 0.35-0.39 s rested,
+    # 0.22-0.23 s with no stand-in warm-up at all. A Pad open is the visitor's
+    # scenario, so it is the measure: one thrown away first (a first request's
+    # own work), one while the stand-in warms, one after, on the same machine.
+    _port = re.search(r"Listening at: http://127\.0\.0\.1:(\d+)", _gtxt)
+    if _warm and _port and _gp.poll() is None:
+        _base = "http://127.0.0.1:" + _port.group(1)
+        _pad_open(_base)
+        _a = _pad_open(_base)
+        _a_during = not _BESIDE.search(_glog_text())
+        _until = time.monotonic() + 120
+        while time.monotonic() < _until and _gp.poll() is None:
+            _gtxt = _glog_text()
+            _beside = _BESIDE.search(_gtxt)
+            if _beside or "files failed; each is done" in _gtxt.split(_warm.group(0), 1)[-1]:
+                break
+            time.sleep(0.25)
+        _b = _pad_open(_base)
 finally:
     _gp.terminate()
     try:
@@ -314,6 +361,18 @@ check(f"gunicorn, started as the host starts it, has each worker strip and compr
       bool(_warm) and int(_warm.group(1)) == _expected and "warming the files failed" not in _gtxt,
       (f"{_warm.group(1)} files in {_warm.group(2)} s" if _warm
        else "no warm-up line: " + " | ".join(_gtxt.strip().splitlines()[-3:])[-300:]))
+check(f"...and the stand-in beside it (/host) has every file done too ({_expected}), on a thread of its own "
+      f"once the demo's are",
+      bool(_warm and _beside) and int(_beside.group(1)) == _expected and _beside.group(2) == "/host"
+      and _gtxt.find(_beside.group(0)) > _gtxt.find(_warm.group(0)) and "/host's files failed" not in _gtxt,
+      (f"{_beside.group(1)} files for {_beside.group(2)} in {_beside.group(3)} s" if _beside
+       else "no stand-in warm-up line: " + " | ".join(_gtxt.strip().splitlines()[-3:])[-300:]))
+check("...without holding the demo for it: the demo's Pad opened while the stand-in warms takes at most "
+      "4x one opened after, plus 0.3 s",
+      _a is not None and _b is not None and bool(_a_during) and _a <= 4 * _b + 0.3,
+      (f"while it warmed {_a:.2f} s, after {_b:.2f} s ({_a / max(_b, 1e-6):.1f}x); still warming during "
+       f"the first: {_a_during}" if _a is not None and _b is not None
+       else "the demo's Pad was never opened: no warm-up line or no port"))
 
 
 bad = [r for r in results if not r[0]]

@@ -32714,3 +32714,20 @@ in WORKING-AGREEMENTS and in FUTURE 6ah.
   cookie on / and the cookie row red; the demo's own database, the demo's
   list 0 then 1 and the posts row red; its composer without gallery=1, no tick
   and the asking row red. As built, 5/5.
+- ITS FILES ARE DONE AFTER A START, BESIDE THE DEMO'S VISITORS. The
+  stand-in's Skribl keeps caches of its own, so every start left them empty
+  and the first open of its Pad paid what the demo's did before the warm-up
+  (#801: 8.8 s of server work on the live demo). gunicorn.conf.py now warms
+  each app mounted beside the demo once the demo's files are done, on a
+  thread of its own that rests 0.1 s after each file. The rest is the point:
+  Python runs one thread at a time, and unrested the stand-in's five seconds
+  of work held the demo's own visitors. On the dev box, three runs each, the
+  demo's Pad opened while the stand-in warmed (after one open thrown away) in
+  0.22-0.23 s with no stand-in warm-up, 1.4-1.8 s unrested, 0.35-0.39 s
+  rested; the stand-in's 172 files are done in about 22 s. The live demo is
+  one Starter instance that does not sleep, so this runs once per deploy. The
+  stand-in costs a worker about 10 MB in all: 68 MB without it, 69-71
+  mounted, 77-80 with its files kept (which a first /host open did anyway).
+  verify_hostconfig starts gunicorn as the host does and now also asks that
+  the stand-in's line names every file, after the demo's, and that the demo's
+  Pad opened while it warms takes at most 4x one opened after, plus 0.3 s.

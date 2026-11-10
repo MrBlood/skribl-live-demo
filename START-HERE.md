@@ -966,7 +966,9 @@ files is not answered one file at a time. `WEB_CONCURRENCY` still sets the
 number of workers. Each worker also strips and compresses every Skribl file
 before it takes a request (`skribl.warm_assets`, a few seconds; the log says
 how many files and how long), so the first visitor after a deploy does not
-wait for it.
+wait for it. The stand-in that `app.py` mounts at `/host` (examples/host_app,
+with a Skribl of its own) is warmed after that, on a thread that rests after
+each file, so the demo's own visitors are not held for it.
 
 On Render, the middle two run together from the dashboard **Start Command**
 (`python -m alembic upgrade head && gunicorn app:app`) — set in v270, when it
