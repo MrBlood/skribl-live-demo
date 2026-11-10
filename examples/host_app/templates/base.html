@@ -23,6 +23,11 @@
   :root { --bg:#0d0f14; --elev:#12151c; --line:#232936; --ink:#e8ecf4;
           --dim:#8b93a7; --accent:#7c5cff; --accent-ink:#a99bff; }
   * { box-sizing: border-box; }
+  /* [hidden] means hidden, whatever a page's own display says. A class with
+     display (the Skribls page's More was display:block) otherwise beats the
+     browser's own rule, and the control stays on screen (the owner, Nov 10:
+     More "just adds another copy"). Skribl's own sheets say the same. */
+  [hidden] { display:none !important; }
   body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.5
          ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
   .wrap { max-width: 620px; margin: 0 auto; padding: 20px 16px 80px; }

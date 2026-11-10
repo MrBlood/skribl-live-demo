@@ -19,6 +19,9 @@ server:
   4. ITS POSTS ARE ITS OWN: a post made there is in its own feed, the ticked
      drawing on its own Skribls page, and not in the demo's public list (its
      own database).
+  5. MORE ON ITS SKRIBLS PAGE asks only for a next page: not on screen when
+     there is none, and a press then adds nothing (the owner's "it just adds
+     another copy", on the live stand-in).
 
 What the stand-in does as a host is verify_example's, which boots it on its
 own; this suite is the mount. SKRIBL_STAND_IN=0 leaves it out of the demo, and
@@ -157,6 +160,30 @@ with sync_playwright() as p:
           bool(sid) and tiled and before is not None and after is not None and sid not in after and after == before,
           f"its drawing {sid!r}; on its Skribls page {tiled}; the demo's list {len(before or [])} before,"
           f" {len(after or [])} after, holding it {bool(after) and sid in after}")
+
+    print("\nSTAND-IN 5 — More on the Skribls page")
+    # The owner, on the live stand-in (Nov 10): "When I go to skribls and push
+    # more when there is only one skribl, it just adds another copy. It will do
+    # this repeatedly." The listing had no next page, the script set
+    # more.hidden, `.sk-more { display:block }` beat the browser's own [hidden]
+    # rule, and a press with no cursor fetched page one again and appended it.
+    # Two rows, one per part of the fix: More is not there without a next
+    # page, and a press of it then (a script's, a stale tap's) adds nothing.
+    pg.wait_for_timeout(800)
+    page1 = pg.request.get(HOST + "/skribl/api/skribls?limit=24&sort=new").json()
+    shown = pg.evaluate("() => { const m = document.getElementById('skMore');"
+                        " return { rects: m ? m.getClientRects().length : -1, hiddenAttr: m ? m.hidden : null }; }")
+    check("More is not on the Skribls page when the listing has no next page",
+          page1.get("next_cursor") is None and shown["hiddenAttr"] is True and shown["rects"] == 0,
+          f"next_cursor {page1.get('next_cursor')!r}; More hidden {shown['hiddenAttr']}, painted boxes {shown['rects']}")
+    TILES = "() => document.querySelectorAll('#skGrid .sk-card').length"
+    n0 = pg.evaluate(TILES)
+    for _ in range(2):
+        pg.evaluate("() => document.getElementById('skMore').click()")
+        pg.wait_for_timeout(1500)
+    n1 = pg.evaluate(TILES)
+    check("a press of More with no next page adds nothing (no second copy of page one)",
+          n0 >= 1 and n1 == n0, f"tiles {n0} before two presses, {n1} after")
 
     print("\nSTAND-IN 2 — its cookies are its own")
     jar = sorted((k["name"], k["path"]) for k in c.cookies())
