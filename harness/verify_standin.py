@@ -42,6 +42,9 @@ after v330: "one gallery, two doors"):
  11. "FROM A POST" leads to the post a drawing was posted in, and only there:
      not on a drawing made in the app, and never on the demo's own /gallery,
      which knows of no posts.
+ 12. THE EMPTY GALLERY NAMES ITS DOOR'S TICK: the words of the tick that door
+     shows (a host's composer's, or Skribl's own Post sheet's), and the
+     Library only on Skribl's own page.
 
 What the stand-in does as a host is verify_example's, which boots it on its
 own; this suite is the mount. SKRIBL_STAND_IN=0 leaves it out of the demo, and
@@ -621,6 +624,42 @@ with sync_playwright() as p:
           answers == [202] and "thanks" in (said or "").lower() and marked == "1" and word == "Reported",
           f"answers {answers}; the sheet {said!r}; the ⋯ marked {marked!r}; the menu {word!r}")
     c6.close()
+
+    print("\nSTAND-IN 12 — the empty Gallery names its own door's tick")
+    # The owner, Nov 10 ("all yes"): the empty state says what puts a skribl
+    # here in the words of the tick that door shows. Skribl's own Post sheet
+    # says "Show in the public gallery" (and the Library can turn it on
+    # later); a host's composer, opened with compose=1&gallery=1, says "Show
+    # in the Skribls gallery", and a host's people have no Library to find.
+    # Read from what each server sends: the empty state's second <b> (the
+    # first is "Nothing here yet.") against the label of the tick on the
+    # sheet that door opens.
+    import html as _html
+    import re as _re
+
+    def _empty_words(url):
+        t = pg.request.get(url).text()
+        m = _re.search(r'id="galleryEmpty"[^>]*>(.*?)</p>', t, _re.S)
+        bs = _re.findall(r"<b>(.*?)</b>", m.group(1), _re.S) if m else []
+        return (_html.unescape(bs[1]).strip() if len(bs) > 1 else None), bool(m and "Library" in m.group(1))
+
+    def _tick_label(url):
+        t = pg.request.get(url).text()
+        m = _re.search(r'<span class="post-check-text">([^<]*)<span class="post-check-sub"', t)
+        return _html.unescape(m.group(1)).strip() if m else None
+
+    feed = pg.request.get(HOST + "/").text()
+    composer = _re.search(r"src:\s*\"(/[^\"]*compose=1[^\"]*)\"", feed)
+    host_said, host_lib = _empty_words(HOST + "/skribls")
+    host_tick = _tick_label(BASE + composer.group(1).replace("\\u0026", "&")) if composer else None
+    own_said, own_lib = _empty_words(BASE + "/gallery")
+    own_tick = _tick_label(BASE + "/")
+    check("the empty Gallery names the tick its own door shows: the host's Skribls page its composer's"
+          " (and no Library), Skribl's own /gallery its Post sheet's (and the Library)",
+          bool(host_tick) and host_said == host_tick and not host_lib
+          and bool(own_tick) and own_said == own_tick and own_lib,
+          f"host: says {host_said!r}, its tick {host_tick!r}, Library {host_lib};"
+          f" Skribl's own: says {own_said!r}, its tick {own_tick!r}, Library {own_lib}")
     check("no page errors on the stand-in", not errs, "; ".join(errs[:2]))
     c.close()
     b.close()

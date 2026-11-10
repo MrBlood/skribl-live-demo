@@ -33084,3 +33084,26 @@ canvas commit and section 8's layers, the suites those touch, side by side:
 verify_standin 21/21, verify_example 59/59, verify_inline 192/192,
 verify_seam 458/458, verify_docs 144/144, verify_surfaces 13/13 (/gallery's
 own markup, sheet and scripts did not change in them).
+
+## After v330 -- The empty Gallery names its own door's tick; the site is built, not copied
+
+Two answers from the owner, "all yes" to both.
+
+- THE EMPTY GALLERY'S WORDS. The Gallery section (#840) said, on every page,
+  that skribls appear when their author ticks "Show in the public gallery"
+  (Skribl's own Post sheet's words) "or turns it on later in their Library".
+  On a host's Skribls page the tick its people see is the composer's, "Show
+  in the Skribls gallery", and they have no Library to find there. The
+  section now says its own door's words: Skribl's own page as before, a
+  host's page "Show in the Skribls gallery" and no Library (the Library part
+  went beyond the owner's words, and the PR says so). verify_standin section
+  12 reads both from what each server sends: the empty state's tick against
+  the label of the tick that door's sheet shows. Calibrated on the server,
+  bounced for each: the old words on the host, red (it said "public", and the
+  Library); the host composer's tick renamed, red (the words no longer
+  matched); as built, 22/22.
+- BUILD OUR OWN. The owner asked whether to duplicate skribls.net from saved
+  pages, then "or should we just build our own". docs/SOCIAL-SITE.md section
+  8, decision 9: our own, with skribls.net's saved pages as a checklist and
+  the stand-in as the drop-in door's test. Phase 1's mocks start from
+  Skribl's own look.
