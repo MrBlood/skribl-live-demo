@@ -38,6 +38,7 @@ breaking one part of the site and green as built: DECISIONS.md, "The site's
 frame at /social".
 """
 import ast
+import io
 import json
 import math
 import os
@@ -80,6 +81,10 @@ except ImportError as exc:
     print(f"SUITE-SKIPPED: {exc}")
     print("No assertions were executed. This is NOT evidence the site is mounted.")
     raise SystemExit(77)
+try:
+    from PIL import Image
+except ImportError:      # declared in harness/requirements.txt; the row that needs it fails, saying so
+    Image = None
 
 PHONE = dict(viewport={"width": 402, "height": 874}, device_scale_factor=1, is_mobile=True, has_touch=True)
 DESK = dict(viewport={"width": 1280, "height": 860}, device_scale_factor=1)
@@ -186,7 +191,9 @@ SHEET = """() => { const w = document.getElementById('makeSheet'), s = w.querySe
            doors: [...s.querySelectorAll('a.make-door')].map(d => [d.querySelector('b').textContent, d.getAttribute('href')]),
            top: Math.round(r.top), bottom: Math.round(r.bottom), left: Math.round(r.left), right: Math.round(r.right),
            opacity: +getComputedStyle(s).opacity }; }"""
-TOUCH = """([dys]) => new Promise(res => { const s = document.querySelector('#makeSheet .make-sheet'), r = s.getBoundingClientRect();
+# A finger on the sheet: down 60px from its top, moved by each of `dys` in
+# turn, `every` ms apart, and lifted. Slow enough to be a drag, not a flick.
+TOUCH = """([dys, every]) => new Promise(res => { const s = document.querySelector('#makeSheet .make-sheet'), r = s.getBoundingClientRect();
   const x = r.left + r.width / 2, y = r.top + 60;
   const fire = (type, yy) => { const t = new Touch({ identifier: 7, target: s, clientX: x, clientY: yy });
     const end = type === 'touchend';
@@ -194,7 +201,7 @@ TOUCH = """([dys]) => new Promise(res => { const s = document.querySelector('#ma
                                            bubbles: true, cancelable: true, view: window })); };
   fire('touchstart', y);
   let i = 0;
-  (function step() { if (i < dys.length) { fire('touchmove', y + dys[i++]); setTimeout(step, 40); }
+  (function step() { if (i < dys.length) { fire('touchmove', y + dys[i++]); setTimeout(step, every); }
                      else { fire('touchend', y + dys[dys.length - 1]); setTimeout(res, 700); } })(); })"""
 
 
@@ -246,12 +253,22 @@ INK = """() => { const e = document.getElementById('helloCard'), p = e && e._skr
   const s = p.state(); return { ink: n, state: s.state, at: Math.round(s.elapsedMs), kind: s.kind, loaded: s.loaded }; }"""
 TRACE = """([ms, every]) => new Promise(res => { const out = [], t0 = performance.now(), read = %s;
   (function f() { out.push(read()); if (performance.now() - t0 < ms) setTimeout(f, every); else res(out); })(); })""" % INK
-# The drawing coming in, watched from its own start: put back to the start of
-# its replay and played on, read every 100 ms. (How soon after arriving the
-# first read happens depends on the machine; the replay's own start does not.)
-FROM_START = """() => new Promise(res => { const p = document.getElementById('helloCard')._skriblInline, read = %s;
-  p.seek(0); const out = [read()]; p.play(); const t0 = performance.now();
-  (function f() { out.push(read()); if (performance.now() - t0 < 1600) setTimeout(f, 100); else res(out); })(); })""" % INK
+
+
+def painted_ink(png):
+    """The card's ink as PAINTED on the screen (a photograph of the box, not
+    the canvas's own bitmap): every 2nd pixel that is a colour (the card's
+    lilac, its gold) or a dark line (Blooby's outline). The card's paper, the
+    page and the grey a box shows before its drawing arrives are none of them."""
+    im = Image.open(io.BytesIO(png)).convert("RGB")
+    px = im.load()
+    n = 0
+    for y in range(0, im.height, 2):
+        for x in range(0, im.width, 2):
+            r, g, bl = px[x, y]
+            if max(r, g, bl) - min(r, g, bl) > 60 or (r + g + bl) < 240:
+                n += 1
+    return n
 
 
 def first_visit(ctx):
@@ -259,13 +276,28 @@ def first_visit(ctx):
     run a while."""
     pg = ctx.new_page()
     pg.goto(SITE + "/", wait_until="domcontentloaded")
-    pg.wait_for_function("() => { const e = document.getElementById('helloCard'); return !!(e && e._skriblInline && e._skriblInline.state().loaded); }",
-                         timeout=30000)
+    try:
+        pg.wait_for_function("() => { const e = document.getElementById('helloCard'); return !!(e && e._skriblInline && e._skriblInline.state().loaded); }",
+                             timeout=30000)
+    except Exception:
+        return pg, [], None, False         # the card never reached the player: every row on it says so
     trace = pg.evaluate(TRACE, [4000, 200])
     label = pg.evaluate("() => document.getElementById('helloCard').getAttribute('aria-label')")
     shown = pg.evaluate("() => { const a = document.querySelector('.hello-art'); return !a.hidden && a.classList.contains('is-ready')"
                         " && +getComputedStyle(a.querySelector('.hello-fade')).opacity > 0.99; }")
     return pg, trace, label, shown
+
+
+def fresh(pg, path):
+    """A page of the site, loaded anew: each step of a section starts here."""
+    pg.goto(SITE + path)
+    pg.wait_for_timeout(400)
+
+
+def press(pg, sel):
+    """A button's own click, without waiting for it to be pressable: a step
+    must be able to find that it is not."""
+    pg.evaluate("(s) => { const e = document.querySelector(s); if (e) e.click(); }", sel)
 
 
 with sync_playwright() as p:
@@ -360,11 +392,13 @@ with sync_playwright() as p:
 
     # ------------------------------------------------------------------ 3
     if part(3, "Make: two doors into Skribl's Pad and Flip"):
+        # EACH STEP FROM A PAGE OF ITS OWN, freshly loaded: a part that fails
+        # (a sheet that will not close) must show red in its own row and not
+        # leave the next step pressing at a page it has made inert.
         c = b.new_context(**PHONE)
         pg = c.new_page()
         pg.on("pageerror", lambda e: errs.append(f"make: {e}"))
-        pg.goto(SITE + "/")
-        pg.wait_for_timeout(400)
+        fresh(pg, "/")
         frames = pg.evaluate(GLIDE, [".nav .tab-make", 900])
         opened = pg.evaluate(SHEET)
         up = glide(frames, opened["top"], 874)
@@ -388,46 +422,56 @@ with sync_playwright() as p:
               and down["biggest step"] <= 0.35 * down["travel"], f"{json.dumps(down)}; focus {shut['focus']}")
         closers = {}
         for how in ("outside", "grip", "swipe"):
-            pg.click(".nav .tab-make")
+            fresh(pg, "/explore")
+            press(pg, ".nav .tab-make")
             pg.wait_for_timeout(600)
-            if how == "outside":
-                pg.mouse.click(200, 120)
-            elif how == "grip":
-                pg.click("#makeSheet .make-grip")
-            else:
-                pg.evaluate(TOUCH, [[12, 40, 90, 160, 220]])
+            try:
+                if how == "outside":
+                    pg.mouse.click(200, 120)
+                elif how == "grip":
+                    pg.click("#makeSheet .make-grip", timeout=3000)
+                else:
+                    pg.evaluate(TOUCH, [[12, 40, 90, 160, 220], 90])
+            except Exception as exc:
+                closers[how + " (could not)"] = str(exc).splitlines()[0][:80]
             pg.wait_for_timeout(700)
             closers[how] = pg.evaluate(SHEET)["hidden"]
-        pg.click(".nav .tab-make")
+        fresh(pg, "/explore")
+        press(pg, ".nav .tab-make")
         pg.wait_for_timeout(600)
-        pg.evaluate(TOUCH, [[10, 24, 30]])
+        pg.evaluate(TOUCH, [[10, 16, 20], 90])
         held = pg.evaluate(SHEET)
         check("a tap outside it, a tap on its grip and a swipe down each close it; a short drag lets it glide back up",
-              all(closers.values()) and held["open"] and held["top"] == opened["top"],
+              all(v is True for v in closers.values()) and held["open"] and held["top"] == opened["top"],
               f"closed: {closers}; after a short drag open {held['open']} at {held['top']} (rests at {opened['top']})")
-        pg.keyboard.press("Escape")
-        pg.wait_for_timeout(600)
         # Home's own Make a skribl, and a door picked: the Pad opens, and the
         # page the back button returns to has the sheet closed.
-        pg.click(".cta [data-make]")
+        fresh(pg, "/")
+        press(pg, ".cta [data-make]")
         pg.wait_for_timeout(600)
         from_home = pg.evaluate(SHEET)
-        with pg.expect_navigation(timeout=30000):
-            pg.click("#makeSheet a.make-door >> nth=0")
-        landed = pg.evaluate("() => ({ at: location.pathname, pad: !!document.getElementById('canvas') })")
-        pg.go_back()
-        pg.wait_for_timeout(900)
-        back = pg.evaluate(SHEET)
+        landed, back = None, None
+        if from_home["open"]:
+            try:
+                with pg.expect_navigation(timeout=30000):
+                    pg.click("#makeSheet a.make-door >> nth=0", timeout=5000)
+                landed = pg.evaluate("() => ({ at: location.pathname,"
+                                     " pad: document.title === 'Skribl Pad' && !!document.getElementById('canvas') })")
+                pg.go_back()
+                pg.wait_for_timeout(900)
+                back = pg.evaluate(SHEET)
+            except Exception as exc:
+                landed = {"could not": str(exc).splitlines()[0][:80]}
         check("Home's Make a skribl opens it too; Draw opens Skribl's Pad, and back on the page the sheet is closed",
-              from_home["open"] and landed["at"] == pad_url and landed["pad"] and back["hidden"],
-              f"from Home {from_home['open']}; Draw landed {landed}; back, hidden {back['hidden']}")
+              from_home["open"] and bool(landed) and landed.get("at") == pad_url and landed.get("pad")
+              and bool(back) and back["hidden"],
+              f"from Home {from_home['open']}; Draw landed {landed}; back, hidden {back and back['hidden']}")
         c.close()
         c = b.new_context(**DESK)
         pg = c.new_page()
         pg.on("pageerror", lambda e: errs.append(f"make desk: {e}"))
-        pg.goto(SITE + "/explore")
-        pg.wait_for_timeout(400)
-        pg.click(".nav .tab-make")
+        fresh(pg, "/explore")
+        press(pg, ".nav .tab-make")
         pg.wait_for_timeout(600)
         desk = pg.evaluate(SHEET)
         pg.keyboard.press("Escape")
@@ -438,14 +482,15 @@ with sync_playwright() as p:
               desk["open"] and desk["focusIn"] and desk["doors"] == doors and abs(mid[0] - 640) <= 2
               and abs(mid[1] - 430) <= 2 and desk_shut["hidden"] and desk_shut["focus"] == "tab tab-make",
               f"open {desk['open']}, centre {mid}, doors {desk['doors']}; after Esc hidden {desk_shut['hidden']}, focus {desk_shut['focus']}")
-        flip_page = pg.request.get(BASE + (flip_url or "/flip"))
-        check("Flip's door opens Skribl's Flip", flip_page.ok and "flip" in flip_page.text()[:4000].lower(),
-              f"{flip_url} -> {flip_page.status}")
+        flip_door = dict(desk["doors"]).get("Flip") or "/nowhere"
+        flip_page = pg.request.get(BASE + flip_door)
+        flip_title = re.search(r"<title>([^<]*)", flip_page.text()) if flip_page.ok else None
+        check("Flip's door opens Skribl's Flip", bool(flip_title) and flip_title.group(1).strip() == "Skribl · Flip",
+              f"{flip_door} -> {flip_page.status}, titled {flip_title.group(1) if flip_title else None!r}")
         c.close()
         c = b.new_context(reduced_motion="reduce", **PHONE)
         pg = c.new_page()
-        pg.goto(SITE + "/")
-        pg.wait_for_timeout(400)
+        fresh(pg, "/")
         frames = pg.evaluate(GLIDE, [".nav .tab-make", 700])
         still = pg.evaluate(SHEET)
         tops = sorted({f[0] for f in frames})
@@ -463,19 +508,30 @@ with sync_playwright() as p:
         moving = [t for t in trace if t and t["state"] == "playing"]
         check("Blooby's card starts by itself in Skribl's own player: a Flip, playing from the first read on,"
               " its clock running, shown, and named for what a tap does (Pause)",
-              len(moving) == len(trace) and moving[0]["kind"] == "flip" and moving[-1]["at"] - moving[0]["at"] >= 2500
-              and shown and (label or "").startswith("Pause"),
+              bool(trace) and len(moving) == len(trace) and moving[0]["kind"] == "flip"
+              and moving[-1]["at"] - moving[0]["at"] >= 2500 and shown and (label or "").startswith("Pause"),
               f"{len(moving)} of {len(trace)} reads playing; clock {moving[0]['at'] if moving else None} ->"
               f" {moving[-1]['at'] if moving else None} ms; shown {shown}; named {label!r}")
-        grow = pg.evaluate(FROM_START)
-        inks = [g["ink"] for g in grow if g]
+        # The drawing coming in, PHOTOGRAPHED, from the start of its replay
+        # (put back there and played on: how soon after arriving the first
+        # read happens depends on the machine; the replay's start does not).
+        playing_max = max((t["ink"] for t in trace if t), default=0)
+        inks = []
+        if Image is not None and trace:
+            pg.evaluate("() => { const p = document.getElementById('helloCard')._skriblInline; p.seek(0); p.play(); }")
+            for _ in range(9):
+                inks.append(painted_ink(pg.locator("#helloCard").screenshot()))
+                pg.wait_for_timeout(90)
         rises = sum(1 for a, z in zip(inks, inks[1:]) if z > a)
-        playing_max = max([t["ink"] for t in trace if t] + inks) if inks else 0
-        check("...and its ink appears over time: from its start, the card comes in, read after read",
-              len(inks) == len(grow) >= 10 and inks[0] < 0.1 * max(inks) and max(inks) > 20000 and rises >= 3,
-              f"ink {inks[:8]}... (max {max(inks) if inks else None}); rose on {rises} reads")
-        pg.wait_for_function("(id) => !!document.querySelector('#galleryList > article.tile[data-id=\"' + id + '\"]')",
-                             arg=newest, timeout=20000)
+        check("...and its ink appears over time, as painted: from its start the card comes in, picture after picture",
+              len(inks) == 9 and inks[0] < 0.1 * max(inks) and max(inks) > 4000 and rises >= 3,
+              f"ink painted {inks}; rose on {rises} pictures" if inks
+              else ("Pillow is not here (harness/requirements.txt)" if Image is None else "no card in the player to watch"))
+        try:
+            pg.wait_for_function("(id) => !!document.querySelector('#galleryList > article.tile[data-id=\"' + id + '\"]')",
+                                 arg=newest, timeout=20000)
+        except Exception:
+            pass                           # the row below says what is there instead
         under = pg.evaluate("""(id) => { const s = document.getElementById('skriblGallery');
             const h = document.querySelector('main .sec'), first = s && s.querySelector('#galleryList > article.tile');
             return { section: !!s, heading: h ? h.textContent.trim() : null, first: first ? first.getAttribute('data-id') : null,
@@ -488,15 +544,23 @@ with sync_playwright() as p:
         c = b.new_context(reduced_motion="reduce", **PHONE)
         pg = c.new_page()
         pg.goto(SITE + "/", wait_until="domcontentloaded")
-        pg.wait_for_function("() => { const e = document.getElementById('helloCard'); return !!(e && e._skriblInline && e._skriblInline.state().loaded); }",
-                             timeout=30000)
+        try:
+            pg.wait_for_function("() => { const e = document.getElementById('helloCard'); return !!(e && e._skriblInline && e._skriblInline.state().loaded); }",
+                                 timeout=30000)
+        except Exception:
+            pass                           # INK reads null, and the row says so
+        pg.wait_for_timeout(500)
         rest = [pg.evaluate(INK)]
+        pics = [painted_ink(pg.locator("#helloCard").screenshot())] if Image is not None else []
         pg.wait_for_timeout(1500)
         rest.append(pg.evaluate(INK))
-        check("under Reduce Motion it does not start: it rests, finished, the card with Blooby on it",
+        if Image is not None:
+            pics.append(painted_ink(pg.locator("#helloCard").screenshot()))
+        check("under Reduce Motion it does not start: it rests, finished, the card with Blooby on it,"
+              " painted and still",
               all(r and r["state"] == "idle" and r["at"] == 0 for r in rest) and rest[0]["ink"] == rest[1]["ink"]
-              and rest[0]["ink"] >= 0.98 * playing_max,
-              f"{rest}; the playing card's most ink {playing_max}")
+              and rest[0]["ink"] >= 0.98 * playing_max and len(pics) == 2 and pics[0] == pics[1] and pics[0] > 4000,
+              f"{rest}; the playing card's most ink {playing_max}; painted {pics}")
         c.close()
 
     # ------------------------------------------------------------------ 5
@@ -506,8 +570,11 @@ with sync_playwright() as p:
         pg = c.new_page()
         pg.on("pageerror", lambda e: errs.append(f"explore: {e}"))
         pg.goto(SITE + "/explore")
-        pg.wait_for_function("(id) => !!document.querySelector('#galleryList > article.tile[data-id=\"' + id + '\"]')",
-                             arg=sid, timeout=20000)
+        try:
+            pg.wait_for_function("(id) => !!document.querySelector('#galleryList > article.tile[data-id=\"' + id + '\"]')",
+                                 arg=sid, timeout=20000)
+        except Exception:
+            pass                           # the rows below say what is there instead
         sec = pg.evaluate("""() => { const s = document.getElementById('skriblGallery');
             return { section: !!s && s.hasAttribute('data-skribl-gallery'), sorts: [...(s ? s.querySelectorAll('[data-sort]') : [])].map(t => t.textContent.trim()),
                      search: !!document.getElementById('galleryQ'), sheet: !!document.getElementById('reportSheet'),
@@ -516,7 +583,10 @@ with sync_playwright() as p:
               sec["section"] and sec["sorts"] == ["New", "Hot"] and sec["search"] and sec["sheet"]
               and sec["title"] == "Explore", json.dumps(sec))
         box = f'#galleryList > article.tile[data-id="{sid}"] [data-skribl-inline]'
-        pg.click(box)
+        try:
+            pg.click(box, timeout=5000)
+        except Exception:
+            pass                           # no card to press: the row below reads nothing playing
         reads = []
         for _ in range(4):
             pg.wait_for_timeout(450)
@@ -582,13 +652,16 @@ with sync_playwright() as p:
                 noted += [f"{screen} {path} violation: {x}" for x in v]
             # Through a door into Skribl's Pad and back: the way between the
             # site and Skribl's own pages is the site's too.
-            pg.click(".nav .tab-make")
+            press(pg, ".nav .tab-make")
             pg.wait_for_timeout(500)
-            with pg.expect_navigation(timeout=30000):
-                pg.click("#makeSheet a.make-door >> nth=0")
-            pg.wait_for_timeout(1200)
-            pg.go_back()
-            pg.wait_for_timeout(1200)
+            try:
+                with pg.expect_navigation(timeout=30000):
+                    pg.click("#makeSheet a.make-door >> nth=0", timeout=5000)
+                pg.wait_for_timeout(1200)
+                pg.go_back()
+                pg.wait_for_timeout(1200)
+            except Exception as exc:
+                noted.append(f"{screen} could not go through Draw's door and back: {str(exc).splitlines()[0][:100]}")
             noted += [f"{screen} back from the Pad, violation: {x}" for x in pg.evaluate("() => window.__csp || []")]
             heads = pg.request.get(SITE + "/").headers
             c.close()
