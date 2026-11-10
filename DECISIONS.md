@@ -32546,3 +32546,33 @@ CPU 6x, as a person does, eight times on fresh pages, and asks that the
 page never goes back. Calibrated against the old file in a tree copy with
 its own server: red in all three rounds (back on 12 of 24 adds, 3 to 15px),
 green in all three as built.
+
+## After v330 -- Main red after #823: a long frame read as a leap (verify_musicdoors)
+
+Issue #824, main at 48d8775, postgresql 4/6 only: verify_musicdoors 111/112,
+"Pad: a door opened as a song lands glides, and keeps its tile in sight
+(desk)", the biggest frame 165px in a 45ms frame, where the row allowed no
+frame more than 160px. The same 165px it went red with beside other suites
+before #822, green alone, and its comment had a 165px case from long ago.
+
+THE DOOR'S OWN GLIDE, SEEN THROUGH A LONG FRAME. Traced on every frame with
+every write to the page's scroll recorded: the door's smooth scrollBy is the
+only write, and the big frame is its fastest, seen through one long frame
+(at CPU 3x: 33, 184 in a 46ms frame, 79, 33, 16, 5px). At 3x the old rule
+was red in 6 of 6 runs (165-244px in 42-86ms frames), at full speed never
+(77-132px). The flat cap was kept because a chase is instant and dividing it
+by a long frame would hide it.
+
+SO THE ROW IS TWO NOW. It glides: three moving frames or more, and no step,
+read for a frame's time up to three frames (as verify_sheetswipe's door
+reads its glide, #112), more than 120px; and it ends in sight. And nothing
+snaps the page while it opens: no instant write (scrollTop, or a scrollTo or
+scrollBy that is not smooth) moves it more than 24px, caught by what made it
+however long its frame. Calibrated in a tree copy with its own server: the
+3x traces red by the old rule in 6 of 6, green by both new ones in 6 of 6;
+the door made instant (scrollBy 'auto'), both red on a desk and on a phone
+held sideways (there the leap read 91px a frame's time, and the frame count
+caught it); the opening's re-asserts never called off, the snap row red on
+the Pad and Flip on a desk in two rounds of two (scrollTop from 940 to 816
+and 820, 120-124px: under the old 160px rule, and under the glide row on
+Flip). As built, the kind part 24/24.

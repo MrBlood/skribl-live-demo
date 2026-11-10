@@ -189,6 +189,29 @@ TILE = "document.querySelector('#musicDoors .dp-tile[data-dp=\"restart\"]')"
 SIGHT = """() => { const s = """ + TILE + """.getBoundingClientRect(), h = document.querySelector('.header');
   const top = h && ['sticky', 'fixed'].includes(getComputedStyle(h).position) ? h.getBoundingClientRect().bottom : 0;
   return { seg: Math.round(s.top), header: Math.round(top), vh: innerHeight }; }"""
+# Every INSTANT write to the page's scroll from now on -- a scrollTop set, or
+# a scrollTo or scrollBy that is not smooth -- with where it moved the page
+# from and to, and who made it. A smooth one is the browser's own glide.
+SNAPS = """() => {
+  window.__snaps = window.__snaps || [];
+  if (window.__snapsOn) return; window.__snapsOn = true;
+  const sc = document.scrollingElement || document.documentElement;
+  const who = () => ((new Error().stack || '').split('\\n')[3] || '').trim().replace(/https?:\\/\\/[^/]+/g, '');
+  const d = Object.getOwnPropertyDescriptor(Element.prototype, 'scrollTop');
+  Object.defineProperty(sc, 'scrollTop', { configurable: true,
+    get() { return d.get.call(this); },
+    set(v) { __snaps.push(['scrollTop', d.get.call(this), v, who()]); d.set.call(this, v); } });
+  for (const name of ['scrollTo', 'scrollBy']) {
+    const f = window[name].bind(window);
+    window[name] = function (a, b) {
+      const o = typeof a === 'object' && a ? a : { top: b };
+      if (o.behavior !== 'smooth' && o.top != null) {
+        const from = sc.scrollTop;
+        __snaps.push([name, from, name === 'scrollBy' ? from + o.top : o.top, who()]);
+      }
+      return arguments.length > 1 ? f(a, b) : f(a); };
+  }
+}"""
 VIEW = ["musicTimeline", "musicPickLine", "musicPlayBtn", "previewLoopBtn", "musicDoors"]
 DOORS = {"length": ["musicDoorLength", "musicPickCard", "matchDrawingBtn", "musicWholeBtn", "musicLock"],
          "beat": ["musicDoorBeat", "musicTapBtn"],
@@ -1036,16 +1059,21 @@ with sync_playwright() as pw:
     # own making. On Flip held sideways the growth's reveal stops short of the
     # tile for the dock (lib/drawerdetent.js: "a short phone may still leave
     # the last row to scroll to"), so there a person scrolls to it first, and
-    # so does this. Read the tile on every frame: no frame may
-    # carry it more than 160px (a glide's frames measured 44-57px when this
-    # was the level switch; a re-assert chasing the new end, 236-684px), and
-    # it ends in sight, on a desk and on a phone held sideways, where the
-    # drawer is taller than the screen. Each frame's time is kept and said. Beside other
-    # suites a frame of the reveal lasted up to 150ms, and a glide seen
-    # through one is one big step (165px once, in a run beside two others): a
-    # red in a long frame is told apart by a run alone. Allowing a long frame
-    # more would hide a chase: one measured 424px in a 176ms frame, under the
-    # 3px a millisecond tried.
+    # so does this. Read the tile on every frame, and every write to the
+    # page's scroll: the door GLIDES (three frames or more, and no frame's
+    # step, read for a frame's time up to three frames, more than 120px, as
+    # verify_sheetswipe reads its door, #112), it ends in sight, on a desk and
+    # on a phone held sideways, where the drawer is taller than the screen,
+    # and NOTHING SNAPS THE PAGE while it opens: no instant write (scrollTop,
+    # or a scrollTo or scrollBy that is not smooth) moves it more than 24px.
+    # A re-assert chasing the new end was one (236-684px). This was one row,
+    # no frame carrying the tile more than 160px, and a busy runner's long
+    # frame failed it on main after #823: the door's own glide, seen through a
+    # 45ms frame at its fastest, 165px (at CPU 3x here, 165-244px in 42-86ms
+    # frames, the door's smooth scrollBy the only write). Read for a frame's
+    # time those are 61-81px; a door that leaps is one frame, however long;
+    # and a chase is caught by what made it, not by how long the frame was
+    # (one measured 424px in a 176ms frame).
     for _n, _p in eds("kind"):
         for dev, o in (("desk", DESK), ("phone sideways", SIDEWAYS)):
             c = waits.instrument(b.new_context(**o))
@@ -1065,18 +1093,27 @@ with sync_playwright() as pw:
             while not pg.evaluate(ON) and wheel < 12:
                 pg.mouse.wheel(0, 100); pg.wait_for_timeout(150); wheel += 1
             at = pg.evaluate("() => { const r = " + TILE + ".getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; }")
-            pg.evaluate("""() => { window.__tops = []; const s = """ + TILE + """, t0 = performance.now();
+            pg.evaluate(SNAPS)
+            pg.evaluate("""() => { window.__tops = []; window.__snaps.length = 0; const s = """ + TILE + """, t0 = performance.now();
                 (function f() { window.__tops.push([performance.now(), s.getBoundingClientRect().top]);
                   if (performance.now() - t0 < 1900) requestAnimationFrame(f); })(); }""")
             pg.mouse.click(*at)
             pg.wait_for_timeout(2100)
-            tops = pg.evaluate("() => window.__tops")
+            tops, snaps = pg.evaluate("() => [window.__tops, window.__snaps]")
             r = pg.evaluate(SIGHT)
-            big = max((abs(b[1] - a[1]), b[0] - a[0]) for a, b in zip(tops, tops[1:])) if len(tops) > 1 else None
+            steps = [(abs(b[1] - a[1]) * 16.7 / max(16.7, min(b[0] - a[0], 50)), abs(b[1] - a[1]), b[0] - a[0])
+                     for a, b in zip(tops, tops[1:])]
+            moving = [s for s in steps if s[1] > 0.5]
+            big = max(steps) if steps else None
             check(f"{_n}: a door opened as a song lands glides, and keeps its tile in sight ({dev})",
-                  big is not None and big[0] <= 160 and r["header"] <= r["seg"] < r["vh"] - 40,
-                  f"the biggest frame {round(big[0]) if big else None}px, in a {round(big[1]) if big else None}ms frame,"
-                  f" over {len(tops)} frames; ends at {r}" + (f"; scrolled to it first ({wheel} turns of the wheel)" if wheel else ""))
+                  big is not None and len(moving) >= 3 and big[0] <= 120 and r["header"] <= r["seg"] < r["vh"] - 40,
+                  f"the biggest frame {round(big[1]) if big else None}px, in a {round(big[2]) if big else None}ms frame "
+                  f"({round(big[0]) if big else None}px a frame's time), over {len(moving)} moving frames of {len(tops)}; "
+                  f"ends at {r}" + (f"; scrolled to it first ({wheel} turns of the wheel)" if wheel else ""))
+            jumps = [s for s in snaps if abs(s[2] - s[1]) > 24]
+            check(f"{_n}: ...and nothing snaps the page while it opens ({dev})",
+                  not jumps,
+                  f"instant writes moving it more than 24px: {[(s[0], round(s[1]), round(s[2]), s[3][:60]) for s in jumps]}")
             c.close()
     for _n, _p in eds("kind"):
         c, pg, _ = editor(b, _n, _p, drawn=False, opts=PHONE, door="restart")
