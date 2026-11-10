@@ -36,6 +36,9 @@ what it promises, through the demo's own server:
      from skribl only documented public names (none, today); its templates
      reach only the Skribl partials docs/INTEGRATION.md documents; and every
      Skribl file it names is there.
+  9. THE EMPTY GALLERY'S WORDS: the site's Home and Explore name the tick on
+     the Pad's own Post sheet, and the Library (the site's Make opens
+     Skribl's own editors), not a host composer's.
 
 SOCIAL_PART=<n> runs one section (calibration). Every row was shown red by
 breaking one part of the site and green as built: DECISIONS.md, "The site's
@@ -798,6 +801,35 @@ with sync_playwright() as p:
               asked and not tpl_out, f"reached {sorted(set(asked))}; undocumented: {tpl_out}")
         check("every Skribl file the site names (skribl_asset) is there",
               files and not missing, f"{sorted(files)}; missing {missing}")
+
+    if part(9, "the empty Gallery names the tick the site's people see"):
+        # The site's Make opens Skribl's own Pad and Flip, so its people post
+        # from Skribl's own Post sheet: the Gallery's empty state names that
+        # sheet's tick, "Show in the public gallery", and the Library that can
+        # turn it on later, not a host composer's "Show in the Skribls
+        # gallery" (verify_standin section 12 holds a host's). The macro's
+        # `door` says which; the site passes door='app'. Read from what the
+        # server sends: the empty state's second <b> (the first is "Nothing
+        # here yet.") against the label of the tick on the Pad's Post sheet.
+        import html as _html
+
+        def _fetch(url):
+            with urllib.request.urlopen(url, timeout=20) as r:
+                return r.read().decode("utf-8", "replace")
+
+        def _empty_words(url):
+            m = re.search(r'id="galleryEmpty"[^>]*>(.*?)</p>', _fetch(url), re.S)
+            bs = re.findall(r"<b>(.*?)</b>", m.group(1), re.S) if m else []
+            return (_html.unescape(bs[1]).strip() if len(bs) > 1 else None), bool(m and "Library" in m.group(1))
+
+        pad_page = _fetch(BASE + "/")
+        tick = re.search(r'<span class="post-check-text">([^<]*)<span class="post-check-sub"', pad_page)
+        tick = _html.unescape(tick.group(1)).strip() if tick else None
+        said = {path: _empty_words(SITE + path) for path in ("/", "/explore")}
+        check("the empty Gallery on the site's Home and Explore names the tick on the Pad's Post sheet,"
+              " and the Library",
+              bool(tick) and all(w == tick and lib for w, lib in said.values()),
+              f"the Pad's tick {tick!r}; " + "; ".join(f"{p}: {w!r}, Library {lib}" for p, (w, lib) in said.items()))
 
     check("no page errors on the site's pages", not errs, "; ".join(errs[:2]))
     b.close()

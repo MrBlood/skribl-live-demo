@@ -33336,3 +33336,21 @@ gunicorn and no PostgreSQL in this container (its CI job runs it). After the
 quarter-speed pictures, the one change since: verify_social 35/35 and
 verify_docs 144/144 again, gen_docs.py --check current. The full battery
 was not run; main's run after the merge is.
+
+## After v330 -- The site's empty Gallery names the Pad's tick (the Gallery section's door)
+
+Found reviewing piece 1: the Gallery section on the site's Home and Explore
+said, when empty, to tick "Show in the Skribls gallery", a host composer's
+words (#841 gave every page that is not Skribl's own those words). The site's
+Make opens Skribl's own Pad and Flip, whose Post sheet says "Show in the
+public gallery", and the Pad's menu has the Library. skribl_gallery_section()
+takes `door` now ('app' or 'host'; unsaid, 'app' on Skribl's own page and
+'host' on a host's), docs/INTEGRATION.md tells a host which to pass, and the
+site passes door='app'. verify_social section 9 reads Home's and Explore's
+empty state against the Pad's tick: red with the site's door='app' taken out
+(both said the host's words, and no Library; the server bounced), green with
+it. Side by side on the merged tree: verify_social 36/36, verify_standin
+22/22, verify_docs 144/144, verify_gallery 232/232, verify_viewedges 19/19,
+verify_example 59/59, verify_seam 458/458, verify_surfaces 13/13,
+verify_inline 192/192, verify_hostconfig 61/61, verify_boot 23/23,
+verify_csp 32/32, verify_a11ypages 162/162.

@@ -386,6 +386,14 @@ card's ⋯ menu opens at its button inside a positioned box too.)
 If you registered the blueprint under another name, pass it:
 `{{ skribl_gallery_section(bp='drawings') }}`.
 
+**Say which way your people post.** When the gallery is empty it tells people
+which tick puts a skribl there, in the words they will see. If they post from
+your own composer (opened with `compose=1&gallery=1`), the default is right:
+"Show in the Skribls gallery". If they post from Skribl's own Pad and Flip,
+pass `door='app'`, and it names their Post sheet's "Show in the public
+gallery" and the Library that can turn it on later:
+`{{ skribl_gallery_section(door='app') }}`.
+
 `examples/host_app/templates/skribls.html` is this and nothing else, in the
 stand-in's frame. `verify_standin.py` holds it to `/gallery`: one drawing
 posted to both is the same card, pixel for pixel, on a phone and a desk, dark
