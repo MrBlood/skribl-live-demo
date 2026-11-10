@@ -33052,4 +33052,8 @@ verify_txcontract 95/95, verify_parity 434/434, verify_ux 487/487; and
 verify_a11ypages INTERMITTENT, 161/162 beside the others and 162/162 alone:
 load, not a defect (a fixture's precondition, Flip's media drawer not yet the
 current one after its 500 ms settle; the census just after found its 20
-controls, and nothing here reaches Flip's drawers).
+controls, and nothing here reaches Flip's drawers). After the language and
+canvas commit and section 8's layers, the suites those touch, side by side:
+verify_standin 21/21, verify_example 59/59, verify_inline 192/192,
+verify_seam 458/458, verify_docs 144/144, verify_surfaces 13/13 (/gallery's
+own markup, sheet and scripts did not change in them).
