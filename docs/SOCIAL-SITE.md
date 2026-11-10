@@ -1,7 +1,8 @@
 # The Skribl social site: how it is laid out
 
 **Status: agreed, Nov 10. The owner said "all yes" to every default in
-section 8.** Nothing here is built yet except where it says "have".
+section 8.** Nothing here is built yet except where it says "have", and phase
+1's first piece, the frame, which section 9 describes.
 
 The owner, Nov 10: "we are beginning to build the social media site, so we
 need to take care to keep it straight. This may be the beginning of a social
@@ -276,3 +277,40 @@ building our own would be better." Then "all yes":
    skribls.net. Features belong to no one, so its saved pages stay welcome as
    a checklist of what a page needs, and they keep the drop-in door tested
    through the stand-in. Phase 1's mocks start from Skribl's own look.
+
+---
+
+## 9. Built: phase 1, piece 1, the frame
+
+The site's frame, read-only, in the owner's A (Sketchbook), at **/social** on
+the demo. `social/` is its package: `init_social(app)` in
+`social/__init__.py`, its pages in `social/templates/social/`, its own files
+in `social/static/`. The demo's `app.py` plugs it into its own app right after
+`init_skribl`, so the site and the Pad share one Skribl and one database.
+`SKRIBL_SOCIAL=0` leaves it out, and a site that cannot start is logged and
+left out: the demo never depends on it.
+
+| Where | What it is |
+|---|---|
+| `/social/` | **Home.** For now the first visit, for everyone: Blooby draws his card (How it works' own Flip, in Skribl's own player, resting finished under Reduce Motion), "Drawings that draw themselves", **Make a skribl** and **Look around**, and the newest public skribls under it, in Skribl's own Gallery section. |
+| `/social/explore` | **Explore:** Skribl's own Gallery section, New and Hot, search, Report, Load more. |
+| Make | Not a page: a small sheet with two doors, **Draw** (Skribl's Pad) and **Flip** (Skribl's Flip), from the bar on a phone, the rail on a desk and Home's button. |
+
+A phone has a bar along the bottom (Home, Explore, Make; You comes with
+sign-in), a desk a rail down the left (the wordmark in the accent purple,
+Home, Explore, Make), and the page you are on has a pen's line under its
+name. Light and dark follow the device: the site has no switch of its own
+yet, and Skribl's own choice is kept where only Skribl's pages read it.
+
+It reaches Skribl only through the seams any host uses: the in-post player's
+and the Gallery section's macros, Skribl's signature (now documented for every
+host, docs/INTEGRATION.md), `skribl_asset()`, and the addresses of the Pad and
+Flip. It imports nothing from the `skribl` package, and Skribl never imports
+it. Its pages carry their own security policy (every script a file), and ask
+for Skribl's fade between pages, so going into the Pad and back is a fade, not
+a cut. Pad and Flip are unchanged: Make opens them as they are.
+
+`harness/verify_social.py` holds all of it through the demo's own server, and
+DECISIONS.md ("The site's frame at /social") says what each check was shown
+red by. Not yet, on purpose: accounts and You, posts, and tables (when they
+come, named `social_...` with their own migration chain).

@@ -33155,3 +33155,184 @@ two things decided with them:
   email service's cost and the domain, since passkeys are tied to the
   address they are made on); profiles and drawn faces; posts; safety; media
   to storage. Each piece is something to look at.
+## After v330 -- The site's frame at /social (phase 1, piece 1)
+
+docs/SOCIAL-SITE.md's build order, item 1, "the frame, read-only", in the
+look the owner said "all yes" to on Nov 10 (A, Sketchbook; the rail on a
+desk; Make's sheet with Draw and Flip; the first visit with Blooby's card).
+Built to the mock's sources and pictures, with Skribl's own tokens.
+
+- ONE SKRIBL, SHARED. `social/` is a package, `init_social(app)`, that
+  app.py plugs into the demo's own app right after init_skribl (at
+  /social), not a second app beside it as the stand-in at /host is: a
+  drawing made in the Pad is a skribl on the site. SKRIBL_SOCIAL=0 leaves it
+  out, and a site that cannot start is logged and left out (init_social asks
+  everything that can fail before it registers anything). No accounts, no
+  tables, no migrations yet.
+- HOME IS THE FIRST VISIT, for everyone, since there is no sign-in to know a
+  returning person by. Blooby draws his card: How it works' own Flip
+  (help/demos/flip-blooby-card.json), played by Skribl's in-post player as a
+  draft (the draft macro and SkriblInline.attach), so it needs no row in
+  anybody's database. It starts by itself, a tap pauses it, one drawing plays
+  at a time, and under Reduce Motion it rests finished: the card with Blooby
+  on it. Its box is held at the card's shape before the drawing arrives and
+  fades in, so nothing below it moves. Then "Drawings that draw themselves",
+  Make a skribl and Look around, and under "Fresh from everyone" the newest
+  public skribls: Skribl's own Gallery section.
+- EXPLORE is Skribl's own Gallery section, under a heading and a line.
+- MAKE IS A SHEET, NOT A PAGE: two doors, Draw (Skribl's Pad) and Flip
+  (Skribl's Flip), at url_for's own addresses, from the bar, the rail and
+  Home's button. It glides up on a phone, rises a little as it fades in on a
+  desk, and fades where it sits under Reduce Motion. It closes on a door (so
+  the page the back button returns to has it closed), Cancel, a tap outside,
+  a tap on its grip, a swipe down that follows the finger (the owner, v317:
+  "menus should always go down or away easily"), or Esc. A dialog that says
+  so: focus to the first door, the page behind inert, Tab kept inside, focus
+  back to what opened it.
+- THE BAR on a phone (Home, Explore, Make; no You before sign-in) and THE
+  RAIL on a desk (the wordmark in the accent purple, Home, Explore, Make as
+  the big purple button), the page you are on marked with a pen's line under
+  its name. The phone's wordmark at the top of the page scrolls away with it:
+  the bar already holds the way home, and the drawings get the height (at
+  rest, as the mock showed it, the two look the same).
+- SKRIBL'S SEAMS ONLY. The site imports nothing from the skribl package. Its
+  pages use the in-post player's and the Gallery section's macros,
+  skribl_asset() (two icons and Blooby's card), url_for of the Pad and Flip,
+  and Skribl's signature, the wordmark partial, which docs/INTEGRATION.md now
+  documents for every host ("Skribl's signature on your page"): anything the
+  site needs from Skribl, every host gets.
+- ITS OWN SECURITY POLICY. The demo's standalone baseline stamps every page
+  that is not Skribl's with Skribl's policy and an empty nonce
+  (`script-src 'self' 'nonce-'`; the demo's own 404 page has it too, not
+  changed here), which Chrome reports as an invalid source, a console error,
+  on every load. The site's pages carry their own policy instead, as
+  INTEGRATION.md says a host's pages keep theirs: script-src 'self', since
+  every script is a file.
+- SKRIBL'S FADE BETWEEN PAGES. The editors ask for a cross-document fade
+  (styles.css, after v323, "kind transitions"), and both pages must ask. The
+  site's did not, and a door into the Pad and back threw "Transition was
+  aborted because of invalid state" (found by this suite's page-error row).
+  The site asks under the same rule, so the site and the editors fade into
+  each other; Reduce Motion keeps the plain cut.
+- LIGHT AND DARK FOLLOW THE DEVICE. INTEGRATION.md documents no seam for
+  Skribl's own stored choice, so the site does not read it: somebody who
+  chose light in the Pad on a dark phone sees the site dark.
+- WHAT IT DOES TO PAD AND FLIP: nothing. Make opens them as they are, at
+  their own addresses, one sheet with a door for each; no file of theirs
+  changed.
+- verify_docs READS THE SITE TOO. Its route gate reads social/ beside app.py
+  and skribl/ (/social/explore taken out of SOCIAL-SITE.md: red, "/explore"),
+  and its file-name gate reads social/ paths, a Jinja name such as
+  social/home.html resolving through social/templates as skribl/'s do (a
+  social/static/site.js that is not there, named in START-HERE: red).
+- NOT IN THE RUNTIME PACKAGE. harness/package.py's runtime set is still
+  skribl/ and the root files, so a package boots without the site (logged
+  and left out), as it boots without the stand-in. Whether the site travels
+  in it is a question for when the site is deployed on its own.
+
+FOR THE OWNER, where the build could not be the mock, or the mock's words
+are not yet true:
+
+- Blooby's card has no line under it ("12 pages · watching at 1×" and its
+  scrubber): it plays as a draft, with no post behind it, and the draft
+  player has no line. A post of the card in the demo's database would give it
+  one, at the cost of a post somebody owns.
+- Under it are the Gallery's cards (who drew it and when, the title, the
+  caption, the ⋯ with Report), not the mock's post cards: there are no posts
+  yet, and the Gallery's card is Skribl's card for a public skribl. With New
+  and Hot and the search box, two across on a desk, as on /gallery, so the
+  desk's Home is the Gallery's width under a centred first visit.
+- "No account needed to look. Posting takes one tap with a passkey." is not
+  true until sign-in exists. It says "No account needed to look, or to make
+  one." until then.
+- The empty Gallery on the site says to tick "Show in the Skribls gallery"
+  (a host composer's words), but Make opens Skribl's own Pad, whose tick says
+  "Show in the public gallery". Saying the right words needs a seam in
+  Skribl's Gallery section (the words of the door's tick); not done here.
+
+THE CHECKS: harness/verify_social.py, through the demo's own server, eight
+sections, 35 rows. Every row was shown red by breaking one part of the site,
+one at a time (a driver copied the file aside, broke one string, bounced the
+server after a template or Python change, ran only that section, and put
+the file back), and green as built:
+
+- 1, THERE: the server run with SKRIBL_SOCIAL=0, red (404); app.py reading
+  the switch as "never", red (mounted anyway); app.py catching only
+  RuntimeError, red (the failed import took the demo's app down with it);
+  init_social looking for a blueprint named skribl_, red (left out, logged).
+- 2, THE BAR AND THE RAIL: the Explore tab taken out, red (phone and desk,
+  and the marks); the pen's line display:none, red (there, not painted);
+  aria-current taken off Home, red; the rail's tabs 30px tall, red; the
+  phone's foot padding taken out, red (the column's foot under the bar); the
+  rail's margin taken out, red (the rail over the column's edge); both
+  wordmarks on one sweep, red (skink-m65 twice on every page).
+- 3, MAKE: the first door's focus taken out, red (phone and desk); Flip's
+  door sent to the Pad, red (both its rows); the sheet's transition taken
+  out, red; Esc's handler taken out, red; the scrim's close, the grip's
+  close, the swipe's distance (four sheets' height) and a drag that always
+  closes, each red; the Tab trap taken out, red (focus fell to BODY); Home's
+  button without data-make, red; the door's own close taken out, red (the
+  sheet stayed up, and the kept page came back with it open); the desk's
+  centring taken out, red; Flip's door sent to /flipbook, red (404); the
+  Reduce Motion rule made to match nothing, red (it glided); its transform:
+  none taken out, red (closing, it dropped to the screen's foot in one
+  frame); a script error in social.js, red in the page-error row.
+- 4, THE FIRST VISIT: play() taken out of hello.js, red; the box never
+  marked ready (it stays faded out), red (and the two rows that read the box
+  as painted); the Gallery section taken out of Home, red; the Reduce Motion
+  guard taken out, red.
+- 5, EXPLORE: the Gallery section taken out, red (both rows); the player's
+  files taken out of the frame, red (the card cannot play).
+- 6, THE WORDS: the dark ramp's media query made to match nothing, red (a
+  light page on a dark screen); the second ink made #8b93a3, red.
+- 7, NO ERRORS: an inline script in the frame, red (blocked, and reported);
+  the site's own policy taken off, red (the baseline's empty nonce, a
+  console error on every load), its policy row red too; the fade's opt-in
+  taken out, red (the door into the Pad and back threw); 'unsafe-inline' in
+  the site's script-src, red.
+- 8, THE LAYERS: `import social` in skribl/core.py, red; a `from
+  skribl.routes import register_routes` in social/__init__.py, red; an
+  undocumented Skribl partial (_skribl_marks.html) included in the frame,
+  red; Blooby's card under a file name that is not there, red.
+
+THREE GREENS THAT COULD NOT HAVE BEEN RED, found by that calibration and
+fixed in the instrument, not the site:
+
+- With the scrim's close taken out, the sheet stayed up, the next step
+  pressed into a page it had made inert, Playwright waited out its 30 s, and
+  the suite died before it printed the red row. Each step of section 3 now
+  starts from a page of its own.
+- With the door's close taken out, the row stayed green: Playwright starts
+  its headless shell with the back-forward cache switched off, so the page
+  came back new, and closed, whatever the door did. The door is now pressed
+  with its navigation held back, and the round trip runs in Chromium's own
+  build with the cache allowed: the page comes back kept (pageshow
+  persisted), read after the commit, since a kept page fires no load.
+- With Reduce Motion's transform: none taken out, the row stayed green: it
+  read only the opening, where with opacity alone transitioned the sheet
+  stands at rest from the first frame either way. It reads the closing too.
+
+And the first visit's pictures are taken at a quarter of the replay's speed,
+for four seconds of the clock however long each takes: at full speed the
+card's coloured strokes come in within half a second, and a slower machine
+could have taken every picture before them.
+
+Side by side (run_parallel -j 3, 8.1 min: the twelve the brief named, every
+suite that imports app.py, and those that read the security headers):
+verify_social 35/35, verify_a11ypages 162/162, verify_inline 192/192,
+verify_gallery 232/232, verify_standin 22/22, verify_hot 56/56,
+verify_example 59/59, verify_linkpage 58/58, verify_tilereport 32/32,
+verify_seam 458/458, verify_cssplit 18/18, verify_csrf 27/27,
+verify_clouddrafts 116/116, verify_csp 32/32, verify_prefix 36/36,
+verify_delivery 28/28, verify_review 292/292, verify_hostseams 88/88,
+verify_integration 29/29, verify_txcontract 95/95, verify_surfaces 13/13,
+verify_docs 144/144, verify_offline 29/29, verify_backfill 23/23,
+verify_externalised 13/13, verify_deletion_foundation 17/17, verify_boot
+23/23, verify_mediameta 61/61, verify_storage 38/38, verify_mediareport
+15/15, verify_hostconfig 61/61, verify_sweepjob 66/66, verify_takedown
+56/56, verify_strokegroups 24/24, verify_s3 30/30, verify_sheetfit 16/16;
+none red, nothing intermittent. verify_postgres NOT RUN: skipped, no
+gunicorn and no PostgreSQL in this container (its CI job runs it). After the
+quarter-speed pictures, the one change since: verify_social 35/35 and
+verify_docs 144/144 again, gen_docs.py --check current. The full battery
+was not run; main's run after the merge is.

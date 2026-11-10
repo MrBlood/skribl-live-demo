@@ -143,6 +143,7 @@ BATCHES = [
     ["verify_createpost.py", "verify_deletion.py", "verify_mediameta.py"],
     ["verify_example.py"],                 # measures — records a real drawing
     ["verify_standin.py"],                 # a real drawing through the stand-in at /host, on the demo's server
+    ["verify_social.py"],                  # measures — the Make sheet read on every frame, the first visit's ink; posts to the shared server
     ["verify_clouddrafts.py"],             # measures — real drawings in its own host app (v316)
     ["verify_flipspeed.py"],               # measures — pixels mid-stroke on Flip (v317)
     ["verify_sheetswipe.py"],              # touch — every sheet swipes away (v317)

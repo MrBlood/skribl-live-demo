@@ -47,9 +47,12 @@ DOCS = [ROOT / "README.md", ROOT / "harness" / "README.md",
 SESSION = ROOT / "docs" / "SESSION-CONTEXT.md"
 
 def _py_sources():
-    """Every Python file that can register a route or read a knob."""
+    """Every Python file that can register a route or read a knob: the demo's
+    app, Skribl, and the site beside it (social/, after v330), whose routes are
+    as public as Skribl's."""
     out = [Path("app.py")]
-    out += [p.relative_to(ROOT) for p in (ROOT / "skribl").rglob("*.py")]
+    for pkg in ("skribl", "social"):
+        out += [p.relative_to(ROOT) for p in (ROOT / pkg).rglob("*.py")]
     return [p for p in out if (ROOT / p).is_file()]
 
 
@@ -168,7 +171,7 @@ for doc in DOCS + [ROOT / "ARCHIVE-README.md", SESSION]:
         # Lookbehind, not \b: the docs name `static/skribl/gifenc.min.js`,
         # which is the SERVED url path and not a file in the tree. Matching
         # mid-path turns every correct reference into a false failure.
-        paths |= set(re.findall(r"(?<![A-Za-z0-9_/-])((?:docs|skribl|harness)/"
+        paths |= set(re.findall(r"(?<![A-Za-z0-9_/-])((?:docs|skribl|harness|social)/"
                                 r"[A-Za-z0-9_./-]+"
                                 r"\.(?:py|md|patch|css|js|html|txt|sh))", body))
 # A JINJA TEMPLATE NAME IS A NAMESPACE, NOT A PATH — and the docs have to be
@@ -202,8 +205,11 @@ def _resolves(rel):
         return True
     if rel in _PRODUCED:
         return True
-    return (rel.startswith("skribl/") and rel.endswith(".html")
-            and (ROOT / "skribl" / "templates" / rel).is_file())
+    # The site's templates are namespaced the same way (social/templates/
+    # social/...), so 'social/home.html' is a Jinja name a doc may quote.
+    pkg = rel.split("/", 1)[0]
+    return (pkg in ("skribl", "social") and rel.endswith(".html")
+            and (ROOT / pkg / "templates" / rel).is_file())
 
 
 gone = sorted(p for p in paths if not _resolves(p))

@@ -1483,6 +1483,20 @@ stays a sleep.
   drops frames and shows smooth fades as cuts). The dock's pops fade: the
   shape picker in and out, the tool tray in, the stamp shelf in and out.
 
+### After v330 — the site's frame
+
+- `verify_social.py` — the Skribl site at `/social` (social/,
+  docs/SOCIAL-SITE.md section 9), through the demo's own server: it is there,
+  and left out with `SKRIBL_SOCIAL=0` or when it cannot start; the bar on a
+  touch phone and the rail on a desk (the page you are on marked with a
+  painted pen's line, 44px targets, nothing covering the page); Make's sheet
+  (its doors at url_for's own addresses, every way it closes, its glide read
+  on every frame, still under Reduce Motion); the first visit (Blooby's card
+  playing, its ink photographed coming in, finished at rest under Reduce
+  Motion, the newest public skribls under it); Explore's Gallery; every word
+  of the site's own at 4.5:1; no page, console or CSP errors; and the layers,
+  read from the source. `SOCIAL_PART=<n>` runs one section.
+
 ## Where a suite's rationale lives
 
 **In the suite's own docstring, next to the assertions it explains.**
