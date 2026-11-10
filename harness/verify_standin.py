@@ -19,22 +19,44 @@ server:
   4. ITS POSTS ARE ITS OWN: a post made there is in its own feed, the ticked
      drawing on its own Skribls page, and not in the demo's public list (its
      own database).
-  5. MORE ON ITS SKRIBLS PAGE asks only for a next page: not on screen when
-     there is none, and a press then adds nothing (the owner's "it just adds
-     another copy", on the live stand-in).
+  5. LOAD MORE ON ITS SKRIBLS PAGE asks only for a next page: not on screen
+     when there is none, and a press then adds nothing (the owner's "it just
+     adds another copy", on the live stand-in; Skribl's own Load more since
+     the page became Skribl's Gallery section).
   6. NO TEXT FIELD ON IT MAKES A PHONE ZOOM: every one at least 16px.
-  7. ITS LOOK: it follows the device, light or dark; every word of its own
-     reads at 4.5:1 on what is painted behind it; and the Pad has the whole
-     screen, its own close the way back.
+  7. ITS LOOK: it follows the device, light or dark; every word on it reads
+     at 4.5:1 on what is painted behind it; and the Pad has the whole screen,
+     its own close the way back.
+
+And, since its Skribls page holds Skribl's own Gallery section (the owner's B,
+after v330: "one gallery, two doors"):
+
+  8. THE SAME CARD ON BOTH DOORS: one drawing, posted to the demo and to the
+     stand-in alike, is pixel for pixel the same card (and New / Hot the same
+     bar) on /gallery and on /host/skribls, phone and desk, dark and light.
+  9. NOTHING LEAKS OUT: the host's own page (its header, its tabs, its
+     buttons, <html> and <body>) computes the same styles and keeps the same
+     markup with the section's files as without them.
+ 10. A REPORT FROM THE HOST IS TAKEN: ⋯, Report, a reason, Send, and the
+     server answers 202; the card shows it was reported.
+ 11. "FROM A POST" leads to the post a drawing was posted in, and only there:
+     not on a drawing made in the app, and never on the demo's own /gallery,
+     which knows of no posts.
 
 What the stand-in does as a host is verify_example's, which boots it on its
 own; this suite is the mount. SKRIBL_STAND_IN=0 leaves it out of the demo, and
 then every row here is red, which is how it was calibrated.
 """
+import io
+import json
 import math
 import os
+import re
 import sys
 import time
+import urllib.request
+from http.cookiejar import CookieJar
+from pathlib import Path
 
 from assertions import make_check
 
@@ -59,6 +81,74 @@ except ImportError as exc:
     raise SystemExit(77)
 
 PHONE = dict(viewport={"width": 402, "height": 874}, device_scale_factor=1, is_mobile=True, has_touch=True)
+ROOT = Path(__file__).resolve().parents[1]
+TAG = "standin %d" % int(time.time() * 1000)
+
+# ---- the same card on both doors (section 8) --------------------------------
+# Two pixels of a drawing at 2x, phone and desk, as the owner sees them.
+SCREENS = {"phone": dict(viewport={"width": 402, "height": 874}, device_scale_factor=2, is_mobile=True, has_touch=True),
+           "desk": dict(viewport={"width": 1280, "height": 860}, device_scale_factor=2)}
+# Both doors say the same age for a drawing posted a second apart: three days on.
+LATER = "(() => { const real = Date.now; Date.now = () => real() + 3 * 86400000; })();"
+# WHAT IS COMPARED IS THE ELEMENT ITSELF. Everything around it is hidden (its
+# own subtree is untouched), and it is pinned at the same spot on both pages at
+# the width it had where it sat. The same spot matters: a gradient's dither and
+# an icon's edges follow the screen's own pixels, and the host's card sat at a
+# fractional y on a phone (465.297px), so in place every pixel of it differed
+# by a hair, the same card or not.
+PIN = """(sels) => {
+  const els = sels.map(s => document.querySelector(s));
+  if (els.some(e => !e)) return null;
+  const keep = new Set();
+  for (const e of els) for (let n = e; n; n = n.parentElement) keep.add(n);
+  for (const e of els) for (let n = e; n.parentElement; n = n.parentElement)
+    for (const s of n.parentElement.children) if (!keep.has(s)) s.style.visibility = 'hidden';
+  scrollTo(0, 0);
+  let top = 8; const out = [];
+  for (const e of els) {
+    const r = e.getBoundingClientRect();
+    out.push([r.width, r.height]);
+    e.style.cssText += ';position:fixed;left:8px;top:' + top + 'px;margin:0;width:' + r.width + 'px';
+    top += Math.ceil(r.height) + 16;
+  }
+  return out;
+}"""
+# A LAYER DRAWN ON ITS OWN IS DRAWN AGAIN, on both pages, before the picture.
+# The play pill's words are composited apart from the card (it blurs what is
+# under it), and Chromium had kept the host's first raster of them from before
+# the page settled: 1624 pixels of their edges differed on a phone, while every
+# computed style, the face (Inter SemiBold, both) and every box measured the
+# same, and each page drew them the same way run after run. Taking the blur off
+# for two frames and putting it back makes the layer anew; with that, 0 differ.
+FRESH = """(sels) => new Promise(res => {
+  const ps = [];
+  for (const s of sels) for (const e of document.querySelectorAll(s + ', ' + s + ' *'))
+    if (getComputedStyle(e).backdropFilter !== 'none') ps.push(e);
+  ps.forEach(e => { e.style.setProperty('backdrop-filter', 'none'); e.style.setProperty('-webkit-backdrop-filter', 'none'); });
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    ps.forEach(e => { e.style.removeProperty('backdrop-filter'); e.style.removeProperty('-webkit-backdrop-filter'); });
+    requestAnimationFrame(() => requestAnimationFrame(() => res(ps.length)));
+  }));
+})"""
+
+
+def post_public(base, api, title, caption, cookie=None):
+    """One public drawing through a Skribl's own API, signed out, the same
+    payload whichever door; a site with CSRF on gets its own pair back."""
+    jar = CookieJar()
+    op = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(jar))
+    op.open(base + api + "?limit=1", timeout=20).read()
+    tok = next((k.value for k in jar if k.name == cookie), "") if cookie else ""
+    pts = [{"x": round(408 + math.cos(i / 59 * 4 * math.pi) * (20 + i * 2.3), 1),
+            "y": round(306 + math.sin(i / 59 * 4 * math.pi) * (20 + i * 2.3), 1),
+            "color": "#7c5cff", "size": 6 + (i % 5), "t": i * 40, "start": i == 0} for i in range(60)]
+    body = {"title": title, "caption": caption, "version": 2, "schemaVersion": 2, "visibility": "public",
+            "playbackMode": "replay", "canvasSize": {"cssWidth": 816, "cssHeight": 612},
+            "frames": [{"strokes": pts, "strokeGroups": [len(pts)], "background": {"color": "#101418"}}]}
+    req = urllib.request.Request(base + api, data=json.dumps(body).encode(),
+                                 headers={"Content-Type": "application/json", **({"X-Skribl-CSRF": tok} if tok else {})})
+    with op.open(req, timeout=20) as r:
+        return json.loads(r.read().decode())["id"]
 
 
 def draw(pg, box, turns=3, n=60):
@@ -165,29 +255,92 @@ with sync_playwright() as p:
           f"its drawing {sid!r}; on its Skribls page {tiled}; the demo's list {len(before or [])} before,"
           f" {len(after or [])} after, holding it {bool(after) and sid in after}")
 
-    print("\nSTAND-IN 5 — More on the Skribls page")
+    # SECTION 8's DRAWING, posted now that section 4 has counted the demo's
+    # list: one payload, through each door's own Skribl, signed out, so both
+    # cards say "Anonymous" and nothing else differs. Its caption runs past
+    # two lines, so its "more" is on the card too. On the stand-in it is in no
+    # post, which section 11 asks about.
+    same_title = TAG + " the same card"
+    same_cap = ("Drawn once and posted twice, through each door's own Skribl: the long way round, so this "
+                "caption needs its more to be read to the end.")
+    demo_same = post_public(BASE, "/api/skribls", same_title, same_cap, cookie="skribl_csrf")
+    host_same = post_public(BASE, "/host/skribl/api/skribls", same_title, same_cap, cookie="skribl_host_csrf")
+
+    print("\nSTAND-IN 5 — Load more on the Skribls page")
     # The owner, on the live stand-in (Nov 10): "When I go to skribls and push
     # more when there is only one skribl, it just adds another copy. It will do
     # this repeatedly." The listing had no next page, the script set
     # more.hidden, `.sk-more { display:block }` beat the browser's own [hidden]
     # rule, and a press with no cursor fetched page one again and appended it.
-    # Two rows, one per part of the fix: More is not there without a next
-    # page, and a press of it then (a script's, a stale tap's) adds nothing.
-    pg.wait_for_timeout(800)
+    # The page is Skribl's Gallery section now (after v330, B), and Skribl's
+    # own Load more had the second half of the same bug: its press with no
+    # cursor fetched page one again too. Two rows, one per part: Load more is
+    # not there without a next page, and a press of it then (a script's, a
+    # stale tap's) adds nothing.
+    pg.wait_for_function("() => document.querySelectorAll('#galleryList > article.tile').length >= 1"
+                         " && !document.getElementById('galleryMore').disabled", timeout=15000)
+    pg.wait_for_timeout(500)
     page1 = pg.request.get(HOST + "/skribl/api/skribls?limit=24&sort=new").json()
-    shown = pg.evaluate("() => { const m = document.getElementById('skMore');"
+    shown = pg.evaluate("() => { const m = document.getElementById('galleryMore');"
                         " return { rects: m ? m.getClientRects().length : -1, hiddenAttr: m ? m.hidden : null }; }")
-    check("More is not on the Skribls page when the listing has no next page",
+    check("Load more is not on the Skribls page when the listing has no next page",
           page1.get("next_cursor") is None and shown["hiddenAttr"] is True and shown["rects"] == 0,
-          f"next_cursor {page1.get('next_cursor')!r}; More hidden {shown['hiddenAttr']}, painted boxes {shown['rects']}")
-    TILES = "() => document.querySelectorAll('#skGrid .sk-card').length"
+          f"next_cursor {page1.get('next_cursor')!r}; Load more hidden {shown['hiddenAttr']}, painted boxes {shown['rects']}")
+    TILES = "() => document.querySelectorAll('#galleryList > article.tile').length"
     n0 = pg.evaluate(TILES)
     for _ in range(2):
-        pg.evaluate("() => document.getElementById('skMore').click()")
+        pg.evaluate("() => document.getElementById('galleryMore').click()")
         pg.wait_for_timeout(1500)
     n1 = pg.evaluate(TILES)
-    check("a press of More with no next page adds nothing (no second copy of page one)",
-          n0 >= 1 and n1 == n0, f"tiles {n0} before two presses, {n1} after")
+    check("a press of Load more with no next page adds nothing (no second copy of page one)",
+          n0 >= 1 and n1 == n0, f"cards {n0} before two presses, {n1} after")
+
+    print("\nSTAND-IN 11 — \"From a post\" leads to the post, and only there")
+    # The card's link back (gallery.js, from the listing's `source`, which the
+    # host's source_resolver says): the drawing posted in section 4 links to
+    # that post's own page, the host's /posts/<id>; a drawing in no post says
+    # nothing more. The post's id is read off the host's feed, where its
+    # article carries it.
+    pg.goto(HOST + "/")
+    pg.wait_for_timeout(600)
+    pid = pg.evaluate("""(sid) => { const a = [...document.querySelectorAll('article.post')]
+        .find(x => x.querySelector('[data-skribl-id="' + sid + '"]')); return a ? a.id.replace('post-', '') : null; }""", sid)
+    pg.goto(HOST + "/skribls")
+    pg.wait_for_function("(sid) => !!document.querySelector('#galleryList > article.tile[data-id=\"' + sid + '\"]')",
+                         arg=sid, timeout=15000)
+    pg.wait_for_timeout(400)
+    links = pg.evaluate("""() => [...document.querySelectorAll('#galleryList > article.tile')].map(t => {
+        const a = t.querySelector('a.tfrom'); return [t.getAttribute('data-id'), a ? a.href : null, a ? a.textContent : null]; })""")
+    mine = [x for x in links if x[0] == sid]
+    others = [x for x in links if x[0] != sid]
+    page1 = {i["id"]: i for i in (pg.request.get(HOST + "/skribl/api/skribls?limit=50").json().get("items") or [])}
+    check("on the Skribls page, the card of the drawing posted in a post says \"From a post\", linking to that post",
+          bool(pid) and mine and mine[0][1] == HOST + "/posts/" + pid and mine[0][2] == "From a post",
+          f"its post {pid!r}; its card {mine}")
+    check("...and a card whose drawing is in no post says nothing more",
+          all(x[1] is None for x in others if not page1.get(x[0], {}).get("source")) and
+          any(not page1.get(x[0], {}).get("source") for x in others) if others else False,
+          f"{len(others)} other cards: {[x for x in others if x[1]][:3]}")
+    if mine and mine[0][1]:
+        pg.click(f'#galleryList > article.tile[data-id="{sid}"] a.tfrom')
+        pg.wait_for_timeout(1200)
+    landed = pg.evaluate("""(sid) => ({ at: location.pathname,
+        posts: [...document.querySelectorAll('article.post')].map(a => a.id),
+        holds: !!document.querySelector('article.post [data-skribl-id="' + sid + '"]') })""", sid)
+    check("...and following it opens that post, its drawing in it",
+          bool(pid) and landed["at"] == "/host/posts/" + pid and landed["posts"] == ["post-" + pid] and landed["holds"],
+          json.dumps(landed))
+    g_links = None
+    try:
+        pg.goto(BASE + "/gallery")
+        pg.wait_for_function("() => document.querySelectorAll('#galleryList > article.tile').length >= 1", timeout=15000)
+        pg.wait_for_timeout(600)
+        g_links = pg.evaluate("() => [document.querySelectorAll('#galleryList > article.tile').length,"
+                              " document.querySelectorAll('#galleryList a.tfrom').length]")
+    except Exception as exc:
+        g_links = str(exc)[:120]
+    check("the demo's own /gallery, which knows of no posts, shows no \"From a post\" on any card",
+          isinstance(g_links, list) and g_links[0] >= 1 and g_links[1] == 0, f"cards, links: {g_links}")
 
     print("\nSTAND-IN 2 — its cookies are its own")
     jar = sorted((k["name"], k["path"]) for k in c.cookies())
@@ -239,7 +392,11 @@ with sync_playwright() as p:
       const ground = e => { for (let n = e; n; n = n.parentElement) { const b = getComputedStyle(n).backgroundColor;
                               if (b && !/rgba\\(0, 0, 0, 0\\)|transparent/.test(b)) return rgb(b); } return [255, 255, 255]; };
       const out = { page: Math.round(lum(ground(document.body)) * 100) / 100, low: [] , read: 0 };
-      document.querySelectorAll('h1, .muted, .tabs a, .btn, .dn, .post > div, .sk-title, .sk-by > span, .sk-from, .back').forEach(e => {
+      // The host's own words, and on the Skribls page Skribl's Gallery
+      // section's: who and when, the title, the caption and its more, From a
+      // post, New and Hot, the search box's hint is the field's own.
+      document.querySelectorAll('h1, .muted, nav.tabs a, .btn, .dn, .post > div, .back, ' +
+          '#skriblGallery :is(.tdn, .tun, .tm, .plays, .tt, .tcap, .tcapMore, .tfrom, .tab, .state)').forEach(e => {
         if (!e.getClientRects().length || !e.textContent.trim()) return;
         const r = ratio(rgb(getComputedStyle(e).color), ground(e)); out.read++;
         if (r < 4.5) out.low.push((e.className || e.tagName) + ' "' + e.textContent.trim().slice(0, 14) + '" ' + r.toFixed(2));
@@ -263,8 +420,8 @@ with sync_playwright() as p:
           page_ok, "; ".join(f"{sc} {k} ground luminance {v['page']}" for sc in looks for k, v in looks[sc][0].items()))
     low = [f"{sc} {k}: {x}" for sc in looks for k, v in looks[sc][0].items() for x in v["low"]]
     reads = sum(v["read"] for sc in looks for v in looks[sc][0].values())
-    check("every word of the stand-in's own reads at 4.5:1 or more on what is painted behind it, both themes"
-          " (buttons included)", reads >= 20 and not low, f"{reads} read; under 4.5: {low[:4]}")
+    check("every word on the stand-in, its own and its Gallery section's, reads at 4.5:1 or more on what is"
+          " painted behind it, both themes (buttons included)", reads >= 20 and not low, f"{reads} read; under 4.5: {low[:4]}")
     for scheme in ("light", "dark"):
         _, c3, p3 = looks[scheme]
         if scheme == "dark":
@@ -286,6 +443,176 @@ with sync_playwright() as p:
                   and frame_box["height"] >= 873 and gone,
                   f"at the top {top}; the frame {frame_box}; closed {gone}")
         c3.close()
+
+    print("\nSTAND-IN 8 — the same card on both doors")
+    # THE OWNER'S B (after v330): the Skribls tab is Skribl's own Gallery in
+    # the host's frame, so a card there is the card /gallery shows, to the
+    # pixel. One drawing, posted to each door's Skribl alike (above), read on
+    # each: the section the host's width (its frame is narrower than
+    # /gallery's page; the media queries ask the screen, which is the same),
+    # both clocks three days on, the page under both the same grey, then the
+    # card and the New / Hot bar pinned at the same spot (PIN, FRESH above) and
+    # photographed. Phone and desk, dark and light, at 2x.
+    try:
+        from PIL import Image, ImageChops
+    except ImportError as exc:
+        Image = None
+        check("Pillow is here to compare the pictures", False, str(exc))
+
+    def shoot(door, screen, scheme, width=None):
+        ctx = b.new_context(color_scheme=scheme, reduced_motion="reduce", **SCREENS[screen])
+        ctx.add_init_script(LATER)
+        page = ctx.new_page()
+        page.on("pageerror", lambda e: errs.append(f"{door} {screen} {scheme}: {e}"))
+        item = host_same if door == "host" else demo_same
+        page.goto(HOST + "/skribls" if door == "host" else BASE + "/gallery")
+        page.wait_for_function("(id) => !!document.querySelector('#galleryList > article.tile[data-id=\"' + id + '\"]')"
+                               " && !document.getElementById('galleryMore').disabled", arg=item, timeout=20000)
+        w = page.evaluate("() => document.getElementById('skriblGallery').getBoundingClientRect().width")
+        if width:
+            page.evaluate("(w) => { document.getElementById('skriblGallery').style.width = w + 'px'; }", width)
+        page.add_style_tag(content="html, body { background: #777 !important; }")
+        page.mouse.move(1, 1)
+        page.wait_for_timeout(1200)
+        sels = [f'#galleryList > article.tile[data-id="{item}"]', "#skriblGallery > .bar"]
+        sizes = page.evaluate(PIN, sels)
+        page.wait_for_timeout(400)
+        page.evaluate(FRESH, sels)
+        page.wait_for_timeout(200)
+        shots = [Image.open(io.BytesIO(page.locator(s).screenshot())).convert("RGB") for s in sels] if sizes else []
+        ctx.close()
+        return w, sizes, shots
+
+    for screen in ("phone", "desk"):
+        for scheme in ("dark", "light"):
+            if Image is None:
+                break
+            hw, hsz, hshots = shoot("host", screen, scheme)
+            gw, gsz, gshots = shoot("gallery", screen, scheme, width=hw)
+            diffs = []
+            for name, a, z in zip(("card", "bar"), gshots, hshots):
+                if a.size != z.size:
+                    diffs.append(f"{name} {a.size} on /gallery, {z.size} on the host")
+                    continue
+                d = ImageChops.difference(a, z)
+                if d.getbbox():
+                    n = d.convert("L").point(lambda v: 255 if v else 0).histogram()[255]
+                    diffs.append(f"{name}: {n} px differ, in {d.getbbox()}")
+            check(f"one drawing is the same card, pixel for pixel, on /gallery and on /host/skribls, and New / Hot"
+                  f" the same bar ({screen}, {scheme})",
+                  bool(hshots) and len(gshots) == 2 and not diffs,
+                  f"the host's section {hw:g}px wide; card and bar {hsz} on the host, {gsz} on /gallery; "
+                  + ("; ".join(diffs) if diffs else "0 px differ"))
+
+    print("\nSTAND-IN 9 — nothing of the section reaches the host's own page")
+    # The Skribls page with the section's files, and the same page without
+    # them: its HTML rewritten in the browser, every tag skribl_gallery_assets()
+    # writes taken out (read off the macro itself, so a file added to it is
+    # counted). Everything of the host's own -- <html>, <body>, its frame, its
+    # header, its sign-in, its tabs -- must compute the same styles and keep
+    # the same markup either way: the section's sheet styles nothing outside
+    # its root, and its scripts (the labels, the tooltips, the pill) keep to it.
+    part = (ROOT / "skribl" / "templates" / "skribl" / "_skribl_gallery_section.html").read_text(encoding="utf-8")
+    start = part.index("macro skribl_gallery_assets")
+    own = re.findall(r"skribl_asset\('([^']+)'\)", part[start:part.index("endmacro", start)])
+    # COMPUTED, NOT RESOLVED. getComputedStyle answers some properties with
+    # what layout made of them: the host's frame, `margin: 0 auto`, read 0px
+    # on the feed (which loads none of the section's files) and 330px on the
+    # Skribls page without them, centred at x=330 both times. The Typed OM's
+    # computedStyleMap() is the style itself (auto is auto); where each element
+    # of the host's sits is asked separately, as its box (only across, for the
+    # three that hold the section, whose height is the section's).
+    HOSTS_OWN = """() => {
+      const sec = document.getElementById('skriblGallery');
+      const out = [];
+      for (const e of [document.documentElement, document.body, ...document.body.querySelectorAll('*')]) {
+        if (sec && (e === sec || sec.contains(e))) continue;
+        const st = {};
+        for (const [k, v] of e.computedStyleMap()) if (!k.startsWith('--')) st[k] = v.map(String).join(' ');
+        const holds = !!sec && e.contains(sec), r = e.getBoundingClientRect();
+        st['(its box)'] = (holds ? [r.x, r.width] : [r.x, r.y, r.width, r.height]).join(', ');
+        out.push([e.tagName.toLowerCase() + (e.id ? '#' + e.id : '') + (typeof e.className === 'string' && e.className ? '.' + e.className.split(' ').join('.') : ''),
+                  holds ? [...e.attributes].map(a => a.name + '=' + a.value).join(' ') : e.outerHTML, st]);
+      }
+      return out;
+    }"""
+    taken = {"n": 0}
+
+    def without(route):
+        resp = route.fetch()
+        html = resp.text()
+        for asset in own:
+            html, k = re.subn(r"<(link|script)\b[^>]*/" + re.escape(asset) + r"\?[^>]*>(</script>)?\s*", "", html)
+            taken["n"] += k
+        route.fulfill(response=resp, body=html)
+
+    seen9 = {}
+    for how in ("with", "without"):
+        c5 = b.new_context(**SCREENS["desk"])
+        p5 = c5.new_page()
+        p5.on("pageerror", lambda e: errs.append(f"leak {how}: {e}"))
+        if how == "without":
+            p5.route(HOST + "/skribls", without)
+        p5.goto(HOST + "/skribls")
+        p5.wait_for_timeout(2500)
+        seen9[how] = p5.evaluate(HOSTS_OWN)
+        c5.close()
+    moved = []
+    for (wl, wm, ws), (ol, om, os_) in zip(seen9["with"], seen9["without"]):
+        if wl != ol or wm != om:
+            moved.append(f"{wl}: markup {wm[:90]!r} vs {om[:90]!r}")
+        else:
+            props = [f"{k} {ws.get(k)!r} vs {os_.get(k)!r}" for k in sorted(set(ws) | set(os_)) if ws.get(k) != os_.get(k)]
+            if props:
+                moved.append(f"{wl}: " + ", ".join(props[:3]))
+    check("nothing of the section reaches the host's own page: with its files and without, every element of the"
+          " host's computes the same style and keeps the same markup",
+          taken["n"] == len(own) and len(seen9["with"]) == len(seen9["without"]) >= 10 and not moved,
+          f"{len(own)} files in the macro, {taken['n']} taken out; {len(seen9['with'])} elements of the host's read; "
+          + ("; ".join(moved[:3]) if moved else "none moved"))
+
+    print("\nSTAND-IN 10 — a report from the host is taken")
+    # The card's ⋯, Report, a reason, Send, from the host's own page: the token
+    # the section carries (skribl_csrf(), on a page Skribl's hooks never saw)
+    # and the cookie the page's response set with it are the pair the server
+    # checks, so the report is taken (202), and the card says it was.
+    # A NEW BROWSER THAT COMES STRAIGHT HERE. One that has been anywhere Skribl
+    # answers (a post's poster on the feed) already holds a sound cookie, and
+    # the page's token is that cookie's: so did this row, signed in through the
+    # feed first, with the cookie for the page's token taken out (202 all the
+    # same). Landing first on the Skribls page, the page's own response has to
+    # set it.
+    c6 = b.new_context(**SCREENS["desk"])
+    p6 = c6.new_page()
+    p6.on("pageerror", lambda e: errs.append(f"report: {e}"))
+    answers = []
+    p6.on("response", lambda r: answers.append(r.status)
+          if r.request.method == "POST" and r.url.split("?")[0].endswith("/report") else None)
+    p6.goto(HOST + "/skribls")
+    p6.wait_for_function("(id) => !!document.querySelector('#galleryList > article.tile[data-id=\"' + id + '\"]')",
+                         arg=host_same, timeout=15000)
+    p6.wait_for_timeout(500)
+    opener = f'#galleryList > article.tile[data-id="{host_same}"] .tileMore'
+    p6.click(opener)
+    p6.wait_for_timeout(250)
+    p6.click(".cardMenu .cmReport")
+    p6.wait_for_timeout(400)
+    p6.click('#reportSheet input[value="copyright"]')
+    p6.fill("#reportNote", "posted twice, by the stand-in's suite")
+    p6.click("#reportSend")
+    p6.wait_for_timeout(1500)
+    said = p6.evaluate("() => document.getElementById('reportStatus').textContent")
+    marked = p6.evaluate(f"() => document.querySelector('{opener}').getAttribute('data-reported')")
+    p6.keyboard.press("Escape")
+    p6.wait_for_timeout(500)
+    p6.click(opener)
+    p6.wait_for_timeout(250)
+    word = p6.evaluate("() => { const i = document.querySelector('.cardMenu .cmReport'); return i ? i.textContent.trim() : null; }")
+    check("a report from the host's Skribls page is taken: the server answers 202, the sheet says thanks,"
+          " and the card's menu says Reported",
+          answers == [202] and "thanks" in (said or "").lower() and marked == "1" and word == "Reported",
+          f"answers {answers}; the sheet {said!r}; the ⋯ marked {marked!r}; the menu {word!r}")
+    c6.close()
     check("no page errors on the stand-in", not errs, "; ".join(errs[:2]))
     c.close()
     b.close()
