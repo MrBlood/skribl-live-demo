@@ -32675,3 +32675,37 @@ naming the drawer as add() left it and as it is now: which drawer, the card,
 the panel, the song, where the page is. Calibrated in a copy that shuts the
 drawer after the song lands: "the drawer now None ... as add() left it
 'music'", in 5s rather than 30; as built, the line part 2/2.
+
+## After v330 -- The skribls.net stand-in on the demo, at /host
+
+The owner looked on the live demo's /feed for Add to post's gallery tick
+(#818) and found none. /feed never asks, by design: it posts everything
+publicly, so its list is the public gallery. The host that does ask
+(examples/host_app, opening the Pad with compose=1&gallery=1) ran only on a
+laptop. Shown the difference, the owner said "I want the stand-in", and then:
+"make sure you do this so if someday skribl needs to be its own site (say the
+skribls.net owner doesn't want to merge this) it can be". That is now a line
+in WORKING-AGREEMENTS and in FUTURE 6ah.
+
+- MOUNTED, NOT MERGED. app.py puts examples/host_app at /host with werkzeug's
+  DispatcherMiddleware, in the same process. Skribl was built for two apps in
+  one process: every seam init_skribl takes is the app's own. The stand-in has
+  its own database (a SQLite file beside the demo's where that is SQLite, one
+  per test server; in the temp directory where it is PostgreSQL, gone on a
+  redeploy), a secret derived from the demo's, and its own cookies: its
+  session `skribl_host_session` on /host (the demo keeps a Flask session for
+  its demo identity, so a shared name would have overwritten it) and its CSRF
+  cookie `skribl_host_csrf`. A stand-in that fails to start is logged and
+  left out; SKRIBL_STAND_IN=0 leaves it out on purpose. Nothing in Skribl or
+  the demo's own pages links to it or knows of it.
+- WHAT ELSE WAS CHECKED BEFORE MOUNTING. Compose mode keeps no Pad draft, so
+  the two Pads on one origin cannot restore each other's drawing; the demo's
+  service worker answers only its own pages and /static/skribl files; the
+  stand-in's media stays inline in its own database; gunicorn does not
+  preload, so each worker opens its own connections; attach_to_metadata copies
+  Skribl's tables, never moves them.
+- THE CHECK: verify_standin, through the demo's own server: the stand-in at
+  /host with its Skribl under /host/skribl; Add to post's tick and caption on
+  a phone (the frame opens with compose=1&gallery=1); a post that lands in its
+  own feed and Skribls page and not in the demo's public list; every cookie it
+  sets named skribl_host_..., its session on /host.

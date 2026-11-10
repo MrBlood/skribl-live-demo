@@ -505,4 +505,64 @@ def create_app():
     return app
 
 
+# ---- THE SKRIBLS.NET STAND-IN, AT /host --------------------------------------
+#
+# examples/host_app is the worked host: pretend people and posts of its own, the
+# Pad in its composer asking whether a drawing also goes in the Skribls gallery
+# (compose=1&gallery=1), and a Skribls page. /feed never asks -- it posts
+# everything publicly -- so the owner, looking for Add to post's gallery tick
+# on the live demo, found none, and asked for this (Nov 10): "I want the
+# stand-in." It rides beside the demo at /host, in this process, with its own
+# database (a SQLite file: beside this app's own where that is one, in the temp
+# directory where it is PostgreSQL; test posts, gone on a redeploy), a secret
+# derived from this app's, and its own cookies, named and pathed to /host so its
+# pretend sign-in never touches this app's session. Skribl was built for two
+# apps in one process: every seam init_skribl takes is the app's own
+# (skribl/__init__.py). A stand-in that fails to start is logged and left out:
+# the demo never depends on it. SKRIBL_STAND_IN=0 leaves it out on purpose.
+STAND_IN_PATH = "/host"
+
+
+def _stand_in_database(app):
+    explicit = os.environ.get("SKRIBL_STAND_IN_DATABASE_URL")
+    if explicit:
+        return explicit
+    main = app.config.get("SQLALCHEMY_DATABASE_URI", "")
+    if main.startswith("sqlite:///") and ":memory:" not in main:
+        stem, dot, ext = main.rpartition(".")
+        return (stem + "-standin." + ext) if dot and "/" not in ext else (main + "-standin")
+    import tempfile
+    return "sqlite:///" + os.path.join(tempfile.gettempdir(), "skribl-stand-in.db")
+
+
+def _mount_stand_in(app):
+    if os.environ.get("SKRIBL_STAND_IN", "1").strip() == "0":
+        return
+    try:
+        import hashlib
+        import hmac
+        import importlib.util
+        import pathlib
+        import sys
+        from werkzeug.middleware.dispatcher import DispatcherMiddleware
+        here = pathlib.Path(__file__).resolve().with_name("examples") / "host_app" / "app.py"
+        spec = importlib.util.spec_from_file_location("skribl_stand_in", here)
+        mod = importlib.util.module_from_spec(spec)
+        # In sys.modules BEFORE it runs: Flask finds an app's templates through
+        # its module's file, and a module it cannot find puts them in the cwd.
+        sys.modules["skribl_stand_in"] = mod
+        spec.loader.exec_module(mod)
+        secret = hmac.new(str(app.secret_key).encode(), b"skribl stand-in",
+                          hashlib.sha256).hexdigest()
+        host = mod.create_app(_stand_in_database(app), secret_key=secret,
+                              mounted_at=STAND_IN_PATH)
+        mod.prepare(host)
+        app.wsgi_app = DispatcherMiddleware(app.wsgi_app, {STAND_IN_PATH: host})
+        app.config["SKRIBL_STAND_IN"] = STAND_IN_PATH
+    except Exception:
+        app.logger.exception("the stand-in at %s did not start; the demo runs without it",
+                             STAND_IN_PATH)
+
+
 app = create_app()
+_mount_stand_in(app)

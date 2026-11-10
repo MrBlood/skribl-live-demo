@@ -110,14 +110,22 @@ def _posted_in(public_ids):
     return {sid: url_for("post", post_id=pid) for pid, sid in rows}
 
 
-def create_app(database_url=None):
+def create_app(database_url=None, *, secret_key=None, mounted_at=None):
+    """The host. `mounted_at` is a path when this app shares a process and an
+    origin with another app (app.py at the repo root puts it at /host on the
+    live demo): its cookies then carry their own names and that path, so its
+    sign-in and Skribl's CSRF cookie never overwrite the other app's session."""
     app = Flask(__name__)
     app.config["SQLALCHEMY_DATABASE_URI"] = (
         database_url or os.environ.get("EXAMPLE_DATABASE_URL")
         or "sqlite:///" + str(pathlib.Path(__file__).with_name("example.db")))
-    # A real host has a real secret. This one is fine because the whole app is
-    # a demonstration that gets thrown away.
-    app.config["SECRET_KEY"] = os.environ.get("EXAMPLE_SECRET", "example-host-key")
+    # A real host has a real secret. The fallback is fine because the whole app
+    # is a demonstration that gets thrown away; mounted on the live demo, it is
+    # handed one derived from that app's own.
+    app.config["SECRET_KEY"] = secret_key or os.environ.get("EXAMPLE_SECRET", "example-host-key")
+    if mounted_at:
+        app.config["SESSION_COOKIE_NAME"] = "skribl_host_session"
+        app.config["SESSION_COOKIE_PATH"] = mounted_at
     db.init_app(app)
 
     # ---- 2. MOUNT SKRIBL ---------------------------------------------------
@@ -135,7 +143,8 @@ def create_app(database_url=None):
         session=lambda: db.session,
         url_prefix="/skribl",
         current_user_id=lambda: flask_session.get("uid"),
-        csrf=skribl.security.double_submit_csrf(),
+        csrf=(skribl.security.double_submit_csrf(cookie_name="skribl_host_csrf") if mounted_at
+              else skribl.security.double_submit_csrf()),
         # The names and the posts, which only this site knows (above).
         author_resolver=_author,
         source_resolver=_posted_in,
@@ -285,12 +294,27 @@ def create_app(database_url=None):
     return app
 
 
+def prepare(app):
+    """The tables and the two pretend people, once. Safe to call on every
+    start, and when two workers start at once: the loser of a race finds the
+    tables, or the people, already there."""
+    with app.app_context():
+        for attempt in range(3):
+            try:
+                db.create_all()
+                break
+            except sa.exc.OperationalError:
+                db.session.rollback()
+        if not db.session.query(User).count():
+            db.session.add_all([User(handle="ada"), User(handle="grace")])
+            try:
+                db.session.commit()
+            except sa.exc.IntegrityError:
+                db.session.rollback()
+
+
 app = create_app()
 
 if __name__ == "__main__":
-    with app.app_context():
-        db.create_all()
-        if not db.session.query(User).count():
-            db.session.add_all([User(handle="ada"), User(handle="grace")])
-            db.session.commit()
+    prepare(app)
     app.run(port=int(os.environ.get("PORT", 5055)), debug=False)
