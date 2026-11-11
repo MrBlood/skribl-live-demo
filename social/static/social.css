@@ -531,6 +531,83 @@ body.facepad-open { overflow: hidden; }
   .facepad.is-open .facepad-sheet { opacity: 1; }
 }
 
+/* ---- YOUR FACE: two doors, then a skribl you made, placed (after v330) ----
+ * The owner's "all yes" on mock A, Nov 11. Make's own sheet (its paper, its
+ * rows, its glide: social.js), a step at a time. The doors are buttons here,
+ * for each leads on inside the sheet or to the Pad above. A step that changes
+ * the sheet's height glides to it (is-resizing) as the new step fades in;
+ * under Reduce Motion the height is put there and only the fade remains.
+ * The circle is the face's own: 88% of the stage, the drawing beyond it
+ * dimmed, a white ring on it (as a profile's face sits on its card). */
+button.make-door { width: 100%; border: 0; font: inherit; text-align: left; cursor: pointer; }
+.face-card { max-width: 560px; }
+.face-card.is-resizing {
+  overflow: hidden;
+  transition: transform 0.34s cubic-bezier(0.2, 0.8, 0.2, 1), height 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.face-step.is-in { animation: face-in 0.22s ease both; }
+@keyframes face-in { from { opacity: 0; } to { opacity: 1; } }
+.face-scroll {
+  max-height: min(56vh, 520px); overflow: auto; overscroll-behavior: contain; touch-action: pan-y;
+  margin: 0 -4px 8px; padding: 0 4px;
+}
+.face-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.face-tile {
+  display: flex; flex-direction: column; gap: 6px; min-width: 0; min-height: 44px; padding: 8px;
+  border: 0; border-radius: 16px; background: var(--row-bg); color: var(--ink);
+  font: inherit; text-align: left; cursor: pointer;
+}
+.face-pic {
+  position: relative; display: block; overflow: hidden; aspect-ratio: 4 / 3;
+  border-radius: 10px; background: var(--draw-wait);
+}
+.face-pic-in { position: absolute; overflow: hidden; }
+.face-pic img { position: absolute; display: block; max-width: none; height: auto; }
+.face-tile b {
+  overflow: hidden; padding: 0 4px 2px; font-size: 15px; font-weight: 600; line-height: 1.3;
+  text-overflow: ellipsis; white-space: nowrap;
+}
+.face-none { margin: 8px 4px 12px; color: var(--ink-2); font-size: 15px; line-height: 1.45; }
+.face-more { margin: 10px 0 2px; }
+.face-say { margin: 4px 4px 10px; }
+.face-stage {
+  position: relative; width: min(100%, 380px); margin: 2px auto 0; aspect-ratio: 1 / 1; overflow: hidden;
+  border-radius: 18px; background: #f6f2ea; touch-action: none; cursor: grab;
+}
+.face-stage.is-moving { cursor: grabbing; }
+.face-art { position: absolute; left: 0; top: 0; }
+.face-art .skribl-inline {
+  position: absolute; inset: 0; width: 100%; height: 100%; max-width: none; max-height: none;
+  aspect-ratio: auto; margin: 0; border: 0; border-radius: 0; background: transparent;
+}
+.face-art .skribl-inline-canvas {
+  position: absolute; inset: 0; width: 100%; height: 100%; max-width: none; max-height: none; transform: none;
+}
+.face-art .skribl-inline-nib, .face-art .skribl-inline-prog { display: none; }
+.face-mask {
+  position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(circle closest-side at 50% 50%, transparent 87.8%, rgba(23, 20, 42, 0.5) 88%);
+}
+.face-ring {
+  position: absolute; left: 6%; top: 6%; width: 88%; height: 88%; border-radius: 50%; pointer-events: none;
+  box-shadow: 0 0 0 2px #ffffff, 0 0 0 3.5px rgba(23, 20, 42, 0.35);
+}
+.face-size { display: flex; align-items: center; gap: 12px; width: min(100%, 380px); min-height: 44px; margin: 6px auto 0; }
+.face-size label { color: var(--ink); font-size: 15px; font-weight: 600; }
+.face-size input[type=range] { flex: 1; height: 44px; margin: 0; accent-color: var(--fill); }
+.face-hint { margin: 2px 0 12px; color: var(--ink-2); font-size: 15px; line-height: 1.4; text-align: center; }
+.face-acts { display: flex; gap: 10px; }
+.face-acts .btn { flex: 1; }
+@media (min-width: 900px) {
+  .face-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (min-width: 900px) and (hover: hover) {
+  .face-tile:hover { box-shadow: 0 0 0 1px var(--btn2-line); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .face-card.is-resizing { transition: opacity 0.2s ease; }
+}
+
 /* KIND TRANSITIONS BETWEEN PAGES, Skribl's own rule (styles.css, after v323:
    "No transitions should be jumpy"): from Home to Explore, and from Make's
    door into the Pad or Flip and back, the next page fades in over this one.
