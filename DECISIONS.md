@@ -33624,3 +33624,26 @@ What tripped it, each a lesson for the words and the instructions:
 START-HERE's "The live demo" now names the two new settings. The database is
 Render's paid Postgres Basic, so the free-tier expiry warning given to the
 owner that afternoon does not apply.
+
+## After v330 -- Sign-in says where joining starts; the first invite code is an invite code
+
+The owner's yes to both word fixes from the first evening, and a principle
+with them: "Make it make sense. Simple and kind means intuitive and fun."
+(WORKING-AGREEMENTS, "Powerful, playful, simple, and kind", and
+docs/SOCIAL-SITE.md section 6 now carry it: simple is "would a person get it
+without being told?", kind is "does it feel good to use?".)
+
+- On the sign-in page, a passkey not picked now says "No passkey was picked.
+  Haven't joined yet? Open the invite link you were sent." (a word of its
+  own, `cancelled_signin`, in _passkey_words.html; passkey.js uses it only
+  on sign-in, so joining, adding a passkey and recovery keep "Try again when
+  you're ready.").
+- SKRIBL_SOCIAL_FIRST_INVITE is called the first person's invite code, "not
+  a passkey", in .env.example, docs/SOCIAL-SITE.md and the log line that
+  warns of a short one.
+
+verify_socialauth section 4: a fresh browser with no passkey presses Sign in
+with a passkey and is told where joining starts. Red with passkey.js's
+choice of words taken out (it said "No passkey was picked. Try again when
+you're ready.", what the owner saw), green with it. Side by side:
+verify_socialauth 60/60, verify_social 36/36, verify_docs 144/144.
