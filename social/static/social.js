@@ -34,7 +34,7 @@
  * Options: openers (marked aria-expanded), first (what takes focus on open),
  * doorCloses (a .make-door closes the sheet, as Make's links do; Your face's
  * doors lead on inside it), ownTouch (a selector for the parts above),
- * onSettled (called once it has gone).
+ * onOpen (called as it begins to rise), onSettled (called once it has gone).
  */
 (function () {
   'use strict';
@@ -77,6 +77,7 @@
       void sheet.offsetHeight;
       wrap.classList.add('is-open');
       mark(true);
+      if (o.onOpen) o.onOpen();
       var first = o.first ? o.first() : sheet.querySelector('.make-door');
       if (first) first.focus({ preventScroll: true });
     }

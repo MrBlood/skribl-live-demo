@@ -2165,6 +2165,31 @@ same morning. B is built (after v330): Skribl's own Gallery section, one partial
 hold (`skribl_gallery_section()` and `skribl_gallery_assets()`, docs/INTEGRATION.md), is the
 stand-in's Skribls tab, pixel for pixel the cards /gallery shows. Next: phase 1.
 
+## 6aj. A name of its own, shelved (owner, Nov 11: "if we have to go it alone, we probably can't use skribl since it's already taken")
+
+Skribl sits between skribls.net (someone else's site) and skribbl.io (a big
+drawing game spelled with two b's), so a Skribl that stands alone may need a
+name of its own. Two were mocked in place, each lettered in the signature's
+own pen (one stroke, the dot of the i its only lift; the b, l, i and k the
+signature's own): Linewalk (Paul Klee's drawing as "taking a line for a
+walk", a drawing as something that happens in time) and Blooby (the face of
+the brand). Nothing is chosen. The owner shelved the trademark search ("not
+sure about the trademark search quite yet. shelve it for now"). The two
+lettered marks are kept in docs/brand/wordmark-linewalk.svg and
+docs/brand/wordmark-blooby.svg. Before any name is used: a real trademark
+search, then a domain (it costs money, so it is asked first); then Blooby's
+card and the first hello redrawn, and the name people see changed in the
+few hundred places it is written (the code's own name can stay).
+
+## 6ak. Make's sheet in the pen's icons (owner, Nov 11: "Make's sheet gets mocked next")
+
+Your face's doors and the bar's Home and Explore are drawn in our pen
+(after v330, the owner's "all yes" on mock C); Make's sheet still has its two
+doors, Draw and Flip, on the solid tiles with the old line icons, so the
+family drifts until they join it. Mock them in the same pen (faint is what is
+already there, solid is your new line) beside Now, light and dark, phone and
+desk, before building.
+
 ## 7. The honest state
 
 The tool is good. It is better than it needs to be for a demo and not yet enough

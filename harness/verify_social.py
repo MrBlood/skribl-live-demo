@@ -349,7 +349,14 @@ with sync_playwright() as p:
 
     # ------------------------------------------------------------------ 2
     if part(2, "the bar on a phone, the rail on a desk"):
-        seen, twice = {}, {}
+        seen, twice, drawn = {}, {}, {}
+        # Home and Explore drawn in our pen (the owner's "all yes" after v330):
+        # each tab's icon, whether it is the pen's (.pen-ic), and whether any of
+        # its shapes is filled (the page you are on fills its own).
+        DRAWN = """() => Object.fromEntries([['Home', '/social/'], ['Explore', '/social/explore']].map(([n, h]) => {
+          const s = document.querySelector('nav.nav a[href$="' + h + '"] svg.ic');
+          return [n, { pen: !!s && s.classList.contains('pen-ic'), star: !!s && !!s.querySelector('path[d^="M 12.0,3.4"]'),
+                       filled: !!s && !!s.querySelector('[fill="currentColor"]') }]; }))"""
         for screen, ctx in (("phone", PHONE), ("desk", DESK)):
             c = b.new_context(**ctx)
             pg = c.new_page()
@@ -363,6 +370,7 @@ with sync_playwright() as p:
                                   " const r = a.getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height)]; }")
                 seen[(screen, page)] = (items, pens, top)
                 twice[(screen, page)] = pg.evaluate(TWICE)
+                drawn[(screen, page)] = pg.evaluate(DRAWN)
             pg.goto(SITE + "/")
             pg.wait_for_timeout(500)
             cover = pg.evaluate(COVER_PHONE if screen == "phone" else COVER_DESK)
@@ -405,6 +413,13 @@ with sync_playwright() as p:
               " above the bar at the end of the page; on a desk the column's edge beside the rail",
               all(pc["cta"]) and len(pc["cta"]) == 2 and pc["inMain"] and pc["foot"] < pc["barTop"]
               and all(d["inMain"] for d in dc), f"phone {json.dumps(pc)}; desk {json.dumps(dc)}")
+        pens_ok = [f"{s} {pg_}: {v}" for (s, pg_), v in drawn.items()
+                   if not (v["Home"]["pen"] and v["Explore"]["pen"] and v["Explore"]["star"]
+                           and v["Home"]["filled"] == (pg_ == "home") and v["Explore"]["filled"] == (pg_ == "explore"))]
+        check("Home and Explore are drawn in our pen, Explore a star to follow; the page you are on fills its own"
+              " icon and the other stays drawn (phone and desk, Home and Explore)",
+              len(drawn) == 4 and not pens_ok,
+              f"wrong: {pens_ok}; read {json.dumps({f'{k[0]} {k[1]}': v for k, v in drawn.items()})[:300]}")
         dup = {f"{s} {pg_}": v for (s, pg_), v in twice.items() if v}
         check("no id is on a page of the site twice (the two wordmarks' gradients have one each), phone and desk",
               len(twice) == 4 and not dup, f"repeated: {dup}")

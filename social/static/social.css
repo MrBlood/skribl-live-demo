@@ -611,6 +611,44 @@ button.make-door { width: 100%; border: 0; font: inherit; text-align: left; curs
   .face-card.is-resizing { transition: opacity 0.2s ease; }
 }
 
+/* YOUR FACE FIRST, AND ICONS DRAWN IN OUR PEN (the owner's "all yes" on mock
+ * C, after v330). The face you have leads, the sheet's one big door; the
+ * other ways sit side by side under it, as tiles. Their icons are drawn in
+ * the signature's pen (_icons.html, .pen-ic) in the small violet ink on the
+ * note's tint: 7.1:1 light and 6.83:1 dark against the tile (a graphic needs
+ * 3:1), where the brand's own purple read 3.7:1. Each icon draws itself once
+ * as the sheet rises, a stroke at a time (every path one unit long); under
+ * Reduce Motion each is there, drawn. Make's sheet keeps its tiles for now. */
+.face-lead {
+  gap: 16px; min-height: 112px; margin-bottom: 8px; padding: 14px 16px; border-radius: 20px;
+  box-shadow: 0 0 0 1px var(--card-line), var(--card-drop);
+}
+.face-lead .make-words b { font-size: 19px; }
+.face-lead-me {
+  display: grid; place-items: center; flex: none; width: 84px; height: 84px; border-radius: 50%;
+  overflow: hidden; background: var(--tint); color: var(--accent-ink);
+}
+.face-lead-me .skribl-face { width: 84px; height: 84px; }
+.face-lead-me .pen-ic { width: 60px; height: 60px; }
+.face-ways { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-bottom: 8px; }
+.face-ways.is-two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.face-ways .make-door {
+  flex-direction: column; justify-content: center; gap: 8px; min-width: 0; min-height: 104px; margin: 0;
+  padding: 12px 6px; text-align: center;
+}
+.face-ways .make-words b { font-size: 15px; line-height: 1.25; }
+.make-ic.is-pen { background: var(--tint); color: var(--accent-ink); box-shadow: none; }
+.make-ic.is-pen .pen-ic { width: 28px; height: 28px; }
+.make.is-open .face-step .pen-ic path {
+  stroke-dasharray: 1; animation: pen-in 0.55s cubic-bezier(0.3, 0.7, 0.3, 1) both;
+}
+.make.is-open .face-ways .make-door:nth-child(2) .pen-ic path { animation-delay: 70ms; }
+.make.is-open .face-ways .make-door:nth-child(3) .pen-ic path { animation-delay: 140ms; }
+@keyframes pen-in { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .make.is-open .face-step .pen-ic path { animation: none; }
+}
+
 /* KIND TRANSITIONS BETWEEN PAGES, Skribl's own rule (styles.css, after v323:
    "No transitions should be jumpy"): from Home to Explore, and from Make's
    door into the Pad or Flip and back, the next page fades in over this one.

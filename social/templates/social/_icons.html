@@ -6,33 +6,68 @@
 <svg class="ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">{{ d|safe }}</svg>
 {%- endmacro %}
 
-{% macro home(filled=false) -%}
-{{ _svg('<path d="M4 10.4 12 4l8 6.4V19a1.5 1.5 0 0 1-1.5 1.5H15v-5.5H9v5.5H5.5A1.5 1.5 0 0 1 4 19z"' ~ (' fill="currentColor"' if filled else '') ~ '/>') }}
+{#  DRAWN IN OUR PEN (the owner's "all yes" after v330: "do you think those
+    icons represent skribl ... the 4 in a column look kinda weak"): the
+    signature's rounded pen, one idea across the set, faint is what is already
+    there (the empty circle, the photo) and solid is your new line. Every path
+    is one unit long (pathLength), so a sheet can draw each one in as it rises
+    (social.css, .pen-ic). Your face's doors and the bar's Home and Explore. #}
+{% macro _pen(paths, size=None) -%}
+<svg class="ic pen-ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"{% if size %} width="{{ size }}" height="{{ size }}"{% endif %}>
+{%- for d in paths -%}
+{%- if d.startswith('@faint ') %}<path class="faint" pathLength="1" opacity=".4" d="{{ d[7:] }}"/>{% else %}<path pathLength="1" d="{{ d }}"/>{% endif -%}
+{%- endfor -%}
+</svg>
 {%- endmacro %}
 
-{# Filled, the needle is cut out of the disc in the bar's own ground. #}
+{# Your face, the pen still going: a face that does not quite close, running
+   on into a curl (Edit this face). #}
+{% macro face_edit() -%}
+{{ _pen(['M 16.9,6.2 C 14.2,3.9 8.9,4.4 6.6,7.9 C 4.3,11.4 5.0,16.4 8.4,18.6 C 11.6,20.7 16.4,19.8 18.3,16.3 C 19.6,13.9 19.5,10.6 18.3,8.4 C 17.6,7.1 17.9,4.9 19.4,4.0 C 20.6,3.3 21.5,4.4 20.6,5.4',
+         'M 9.6,11.0 L 9.6,11.1', 'M 14.4,11.0 L 14.4,11.1', 'M 9.6,14.6 C 10.9,16.0 13.3,16.0 14.5,14.5']) }}
+{%- endmacro %}
+
+{# A new line looping into the empty circle (Draw a new one; big, it is the
+   lead before there is a face). #}
+{% macro face_new(size=None) -%}
+{{ _pen(['@faint M 12.0,3.6 C 16.6,3.6 20.4,7.4 20.4,12.0 C 20.4,16.6 16.6,20.4 12.0,20.4 C 7.4,20.4 3.6,16.6 3.6,12.0 C 3.6,7.4 7.4,3.6 12.0,3.6',
+         'M 6.4,15.4 C 8.2,13.2 9.8,9.4 9.0,8.4 C 8.2,7.4 6.8,9.4 7.8,11.6 C 8.8,13.8 12.4,15.8 14.6,13.6 C 16.2,12.0 16.2,9.2 15.0,9.2 C 13.8,9.2 13.8,12.6 16.4,13.8 C 17.6,14.3 18.8,13.8 19.6,12.6'], size) }}
+{%- endmacro %}
+
+{# A photo of a person, faint as the Pad's guide is, and your line tracing
+   them (Trace a photo). #}
+{% macro face_trace() -%}
+{{ _pen(['M 7.2,3.8 L 16.8,3.8 C 18.8,3.8 20.2,5.2 20.2,7.2 L 20.2,16.8 C 20.2,18.8 18.8,20.2 16.8,20.2 L 7.2,20.2 C 5.2,20.2 3.8,18.8 3.8,16.8 L 3.8,7.2 C 3.8,5.2 5.2,3.8 7.2,3.8',
+         '@faint M 7.6,20.0 C 8.1,16.6 9.8,14.8 12.0,14.8 C 14.2,14.8 15.9,16.6 16.4,20.0',
+         '@faint M 12.0,13.2 C 10.2,13.2 9.0,11.8 9.0,10.2 C 9.0,8.5 10.3,7.2 12.0,7.2 C 13.7,7.2 15.0,8.5 15.0,10.2 C 15.0,11.8 13.8,13.2 12.0,13.2',
+         'M 6.6,18.2 C 7.6,15.6 9.2,14.0 11.6,13.9 C 9.4,13.4 8.2,11.6 8.4,9.8 C 8.7,7.4 10.6,6.2 12.6,6.4']) }}
+{%- endmacro %}
+
+{# Two drawings you made, one on the other, a loop on the front one (Use one
+   you made). #}
+{% macro face_made() -%}
+{{ _pen(['M 8.4,6.2 L 8.4,5.4 C 8.4,4.4 9.2,3.6 10.2,3.6 L 18.6,3.6 C 19.6,3.6 20.4,4.4 20.4,5.4 L 20.4,13.8 C 20.4,14.8 19.6,15.6 18.6,15.6 L 17.8,15.6',
+         'M 5.4,8.4 L 13.8,8.4 C 14.8,8.4 15.6,9.2 15.6,10.2 L 15.6,18.6 C 15.6,19.6 14.8,20.4 13.8,20.4 L 5.4,20.4 C 4.4,20.4 3.6,19.6 3.6,18.6 L 3.6,10.2 C 3.6,9.2 4.4,8.4 5.4,8.4',
+         'M 6.4,17.4 C 7.6,16.6 9.0,14.6 8.6,13.2 C 8.3,12.2 7.2,12.6 7.5,13.8 C 7.9,15.6 10.4,17.2 12.8,14.0']) }}
+{%- endmacro %}
+
+{# Home, in the pen: the roof, the walls, a rounded door. Filled (the page
+   you are on), the house is solid and its door cut out in the bar's ground. #}
+{% macro home(filled=false) -%}
+<svg class="ic pen-ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+{%- if filled %}<path d="M 6.2,10.2 L 12.0,5.4 L 17.8,10.2 L 17.8,18.6 C 17.8,19.4 17.2,20.0 16.4,20.0 L 7.6,20.0 C 6.8,20.0 6.2,19.4 6.2,18.6 Z" fill="currentColor"/>{% endif -%}
+<path d="M 3.8,11.2 L 12.0,4.4 L 20.2,11.2"/>
+{%- if not filled %}<path d="M 6.2,9.4 L 6.2,18.6 C 6.2,19.4 6.8,20.0 7.6,20.0 L 16.4,20.0 C 17.2,20.0 17.8,19.4 17.8,18.6 L 17.8,9.4"/>{% endif -%}
+<path{% if filled %} class="ic-cut"{% endif %} d="M 10.0,20.0 L 10.0,16.2 C 10.0,15.0 10.9,14.0 12.0,14.0 C 13.1,14.0 14.0,15.0 14.0,16.2 L 14.0,20.0"/></svg>
+{%- endmacro %}
+
+{# Explore, in the pen: a star to follow, drawn in one go; solid on its own page. #}
 {% macro explore(filled=false) -%}
-{{ _svg('<circle cx="12" cy="12" r="8.6"' ~ (' fill="currentColor"' if filled else '') ~ '/><path d="m15.6 8.4-2.2 5-5 2.2 2.2-5z"' ~ (' class="ic-cut"' if filled else '') ~ '/>') }}
+<svg class="ic pen-ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M 12.0,3.4 C 12.6,8.2 14.2,10.4 20.0,11.2 C 14.4,12.0 12.8,14.2 12.0,20.6 C 11.2,14.2 9.6,12.0 4.0,11.2 C 9.8,10.4 11.4,8.2 12.0,3.4 Z"{% if filled %} fill="currentColor"{% endif %}/></svg>
 {%- endmacro %}
 
 {% macro pen() -%}
 {{ _svg('<path d="M15 5.5 18.5 9"/><path d="M4.5 19.5l1-4.2L16.2 4.6a2.4 2.4 0 0 1 3.4 3.4L8.9 18.7z"/>') }}
-{%- endmacro %}
-
-{# A drawing you already have: a picture in its frame (Your face's second door). #}
-{% macro picture() -%}
-{{ _svg('<rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><path d="M7 15.5c1.6-3.2 3.4-3.6 5-1.2 1.2 1.8 2.6 1.6 4.5-1.3"/><circle cx="15.5" cy="9" r="1.4"/>') }}
-{%- endmacro %}
-
-{# A photo with a person in it, outlined in dashes, as it is traced
-   (Your face's Trace a photo). #}
-{% macro trace() -%}
-{{ _svg('<rect x="3.5" y="3.5" width="17" height="17" rx="3"/><circle cx="12" cy="10" r="3.2" stroke-dasharray="2.2 2.2"/><path d="M6.6 18.4c1.2-2.6 3.1-3.7 5.4-3.7s4.2 1.1 5.4 3.7" stroke-dasharray="2.2 2.2"/>') }}
-{%- endmacro %}
-
-{# A pen going back over a line it drew (Your face's Edit this face). #}
-{% macro redraw() -%}
-{{ _svg('<path d="M3.5 19.5c2.5-1.6 4.6-1.6 6.6 0s4 1.6 6.4-.2"/><path d="M13.6 5.9 16.6 8.9"/><path d="M7 15.4l.8-3.4 8.4-8.4a2 2 0 0 1 2.9 2.9l-8.4 8.4z"/>') }}
 {%- endmacro %}
 
 {# A file you saved (Open a file..., as the editors' own menu draws it). #}
