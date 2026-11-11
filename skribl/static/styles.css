@@ -1377,9 +1377,9 @@ body.playback-paused .tap-paused { display: grid; }
 /* A FACE'S PHOTO TO TRACE (the Pad's ?face=1, editor_face.js): the guide's
    two lines sit on one soft backing of the canvas's own lightness, so they
    read over whatever the photo has under them. In the canvas's see-through
-   ink alone they measured 2.8:1 over dark hair at the guide's 40% and 3.7:1
-   over darker skin in ordinary light; on the backing, over any photo, they
-   read as they do on the bare canvas. */
+   ink alone, over a photo's dark middle at the guide's 40%, they read 3.5:1
+   (verify_socialprofile section 12, read off the paint); on the backing, 5.7
+   light and 5.9 dark. */
 .canvas-empty-hint .face-guide-words {
   display: flex;
   flex-direction: column;
