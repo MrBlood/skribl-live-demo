@@ -18,17 +18,26 @@ Each passkey keeps the address it was made on (rp_id) and only signs in there.
 A host that is a bare IP address cannot hold a passkey at all (browsers refuse
 it), so the site says so rather than letting the browser fail obscurely.
 
+THE SITE'S OWN ADDRESSES (after v330; the review of piece 2, on the owner's
+yes): when they are named, a passkey is made and used only there.
+SKRIBL_SOCIAL_HOSTS names them (comma-separated: the demo's onrender name, and
+the domain once there is one, set at the move to it). A request whose address
+is not one of them begins no ceremony and is told kindly (`Elsewhere`).
+Unnamed (a laptop, CI, the demo until it is set), it is each request's own
+address, as it always was: a site reached by one name only loses nothing.
+
 THE SIGN COUNT is checked by the library and stored after every sign-in: an
 authenticator that counts must count up, or the sign-in is refused (a copied
 key). Many passkeys (synced ones) always say 0, which the library allows.
 """
 import ipaddress
 import json
+import os
 import secrets
 from datetime import timedelta
 
 import sqlalchemy as sa
-from flask import request
+from flask import current_app, request
 
 from .models import Challenge, as_utc, utcnow
 from .security import browser_sid, is_https, sid_hash, site
@@ -44,12 +53,24 @@ class NoName(Exception):
     """The page's address is a bare IP address: no passkey can belong to it."""
 
 
+class Elsewhere(Exception):
+    """The page's address is not one of the site's own (own_hosts())."""
+
+
 class Refused(Exception):
     """The browser's answer did not check out. `key` names what to say."""
 
     def __init__(self, key):
         super().__init__(key)
         self.key = key
+
+
+def own_hosts():
+    """The site's own addresses, lower case, or None when nothing names them:
+    the app's config or SKRIBL_SOCIAL_HOSTS (comma-separated)."""
+    raw = current_app.config.get("SKRIBL_SOCIAL_HOSTS") or os.environ.get("SKRIBL_SOCIAL_HOSTS", "")
+    hosts = {h.strip().lower().rstrip(".") for h in str(raw).split(",") if h.strip()}
+    return hosts or None
 
 
 def rp():
@@ -61,6 +82,9 @@ def rp():
         raise NoName(name)
     except ValueError:
         pass
+    own = own_hosts()
+    if own is not None and name.lower() not in own:
+        raise Elsewhere(name)
     return name.lower(), ("https" if is_https() else request.scheme) + "://" + host
 
 

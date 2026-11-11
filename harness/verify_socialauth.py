@@ -115,7 +115,10 @@ ENV = dict(os.environ, DATABASE_URL=f"sqlite:///{DB}", SECRET_KEY="verify-social
            SKRIBL_CSRF_PROTECT="1", SKRIBL_SOCIAL_FIRST_INVITE=FIRST, SKRIBL_STAND_IN="0",
            SKRIBL_TRUSTED_PROXIES="1", SKRIBL_DEMO_IDENTITY="demo-owner", SKRIBL_DEMO_LOGIN_KEY=DEMO_KEY,
            SKRIBL_DEMO_IDENTITY_NAME="Demo Owner", SKRIBL_DEMO_INSECURE_COOKIE="1",
-           SKRIBL_RATE_MAX_POSTS="100000", SKRIBL_RATE_MAX_ATTEMPTS="100000")
+           SKRIBL_RATE_MAX_POSTS="100000", SKRIBL_RATE_MAX_ATTEMPTS="100000",
+           # The site's own address, so a passkey from any other is refused
+           # (section 18). Every other section is at localhost, as before.
+           SKRIBL_SOCIAL_HOSTS="localhost")
 for k in ("SKRIBL_SOCIAL", "SKRIBL_URL_PREFIX", "SKRIBL_FORCE_SECURE_COOKIES"):
     ENV.pop(k, None)
 subprocess.run([sys.executable, "-c", "from app import app, db; app.app_context().push(); db.create_all()"],
@@ -1551,6 +1554,24 @@ print("PROBE " + json.dumps({"burst": got, "burst_rows": burst_rows, "after": af
               and let <= 5 and got["burst_rows"] == let and let + more == 5
               and after == [False] * more + [True] * (8 - more) and got["rows"] == 5,
               f"{got or (out.stdout[-300:] + out.stderr[-600:])}")
+
+    # ------------------------------------------------------------------ 18
+    if part(18, "a passkey is made and used only at the site's own address"):
+        other = f"elsewhere.test:{PORT}"
+        far = Client(origin=f"http://{other}")
+        far.get("/social/signin", headers={"Host": other})
+        st_far, body_far = far.post("/social/signin/options", {}, headers={"Host": other})[:2]
+        home = Client()
+        home.get("/social/signin")
+        st_home, body_home = home.post("/social/signin/options", {})[:2]
+        jfar = body_far if isinstance(body_far, dict) else {}
+        jhome = body_home if isinstance(body_home, dict) else {}
+        check("a passkey is begun only at the site's own address (SKRIBL_SOCIAL_HOSTS): from another, no ceremony,"
+              " and the page is told so (its own words); at its own, as ever",
+              st_far == 400 and jfar.get("error") == "elsewhere" and "options" not in jfar
+              and st_home == 200 and bool(jhome.get("options"))
+              and ((jhome.get("options") or {}).get("rpId") in (None, "localhost")),
+              f"elsewhere {st_far} {str(jfar)[:120]}; home {st_home} {str(jhome)[:120]}")
 
     if part(16, "no page errors, no console errors, no CSP violations"):
         check("no page errors, console errors or CSP violations on the site's sign-in pages, through every"
