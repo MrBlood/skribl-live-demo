@@ -14,6 +14,28 @@
 {% import 'social/_icons.html' as ic %}
 {% set p = card.post %}{% set who = card.who %}
 
+{#  More from's tile shows the drawing alone, cut out of its poster (the share
+    card: the drawing on a plate, on the card's own dark ground, over a strip
+    with the wordmark, which "reads as an advert twenty times down a
+    timeline": lib/sharecard.js). The plate as lib/sharecard.js drawingRect()
+    places it (the card 1200 x 630, its area 1092 x 492, the footer 84; its
+    Math.round as x + 0.5 floored), 3 card pixels in from the plate's
+    hairline, as Skribl's face macro frames its square. The drawing's shape
+    (--more-a) and where the poster sits behind it, as shares of the plate. #}
+{% macro more_frame(sk) -%}
+{%- set w = (sk.canvas_w or 0)|int -%}
+{%- set h = (sk.canvas_h or 0)|int -%}
+{%- if not (w > 0 and h > 0 and w <= 8192 and h <= 8192) %}{% set w = 1092 %}{% set h = 492 %}{% endif -%}
+{%- set sc = [1092 / w, 492 / h]|min -%}
+{%- set dw = (w * sc + 0.5)|round(0, 'floor')|int -%}
+{%- set dh = (h * sc + 0.5)|round(0, 'floor')|int -%}
+{%- if [dw, dh]|min < 13 %}{% set dw = 1092 %}{% set dh = 492 %}{% endif -%}
+{%- set x = ((1200 - dw) / 2 + 0.5)|round(0, 'floor')|int + 3 -%}
+{%- set y = ((546 - dh) / 2 + 0.5)|round(0, 'floor')|int + 3 -%}
+{%- set cw = dw - 6 -%}{%- set ch = dh - 6 -%}
+--more-a: {{ '%.4f'|format(cw / ch) }}; --more-w: {{ '%.4f'|format(120000 / cw) }}%; --more-x: {{ '%.4f'|format(-100 * x / cw) }}%; --more-y: {{ '%.4f'|format(-100 * y / ch) }}%
+{%- endmacro %}
+
 {% block title %}{{ who.display_name }} on Skribl{% endblock %}
 {% block scripts %}<script src="{{ social_asset('posts.js') }}" defer></script>{% endblock %}
 
@@ -56,7 +78,7 @@
     <div class="more-grid">
       {% for m in more %}
       <a class="more-tile" href="{{ m.url }}">
-        <span class="more-pic"><img src="{{ url_for(skribl_bp ~ '.skribl_poster', public_id=m.post.skribl_id) }}" alt="" loading="lazy" decoding="async"></span>
+        <span class="more-pic">{% if m.sk %}<span class="more-plate" style="{{ more_frame(m.sk) }}"><img src="{{ url_for(skribl_bp ~ '.skribl_poster', public_id=m.post.skribl_id) }}" alt="" loading="lazy" decoding="async"></span>{% endif %}</span>
         <b class="more-words">{{ m.post.words.split('\n')[0] if m.post.words else 'A drawing' }}</b>
         {% if m.plays %}<span class="more-plays">{{ m.plays }}</span>{% endif %}
       </a>

@@ -79,6 +79,11 @@ try:
 except ImportError as exc:
     print(f"SUITE-SKIPPED: {exc} (pip install -r constraints.txt --require-hashes)")
     raise SystemExit(77)
+try:
+    from PIL import Image, ImageDraw
+except ImportError:      # declared in harness/requirements.txt; the row that needs it fails, saying so
+    Image = ImageDraw = None
+import io  # noqa: E402
 import artdraw  # noqa: E402
 
 
@@ -156,13 +161,13 @@ def cli(*args):
     return out.stdout.strip().splitlines()[-1] if out.returncode == 0 else None
 
 
-def drawing(n=40, seed=0, flip=False):
+def drawing(n=40, seed=0, flip=False, size=(816, 612)):
     """A small drawing, as the Pad's Add hands one back (or a Flip's)."""
     pts = [{"x": round(408 + math.cos((i + seed) / 9) * (30 + i * 3), 1),
             "y": round(306 + math.sin((i + seed) / 9) * (30 + i * 3), 1),
             "color": "#7c5cff", "size": 6 + (i % 4), "t": i * 30, "start": i == 0} for i in range(n)]
     body = {"version": 2, "schemaVersion": 2, "playbackMode": "flip" if flip else "replay",
-            "canvasSize": {"cssWidth": 816, "cssHeight": 612},
+            "canvasSize": {"cssWidth": size[0], "cssHeight": size[1]},
             "frames": [{"strokes": pts, "strokeGroups": [len(pts)], "background": {"color": "#f6f2ea"}}]}
     if flip:
         body["fps"] = 12
@@ -305,11 +310,43 @@ def someone(b, handle, name, **kw):
     return _people.get(handle) or member(b, handle, name, **kw)
 
 
-def make_post(who, words, gallery=False, flip=False, seed=0):
-    """A post as the composer sends one: (status, answer)."""
+# THE SHARE CARD, in colours nothing else on a page wears: the card's own
+# ground magenta, its wordmark's strip cyan, the plate's hairline green (3 card
+# pixels, 0 to 2 inside the plate's edge), the drawing's paper with a blue mark
+# in each corner; the plate where lib/sharecard.js drawingRect() puts it.
+CARD_GROUND, CARD_FOOT, CARD_LINE, CARD_MARK = (255, 0, 255), (0, 255, 255), (0, 160, 0), (0, 0, 255)
+
+
+def plate_of(w, h):
+    """lib/sharecard.js drawingRect(w, h): (x, y, w, h) in the 1200 x 630 card."""
+    sc = min(1092 / w, 492 / h)
+    dw, dh = int(w * sc + 0.5), int(h * sc + 0.5)
+    return int((1200 - dw) / 2 + 0.5), int((546 - dh) / 2 + 0.5), dw, dh
+
+
+def share_card(w, h):
+    if Image is None:
+        return None
+    x, y, dw, dh = plate_of(w, h)
+    im = Image.new("RGB", (1200, 630), CARD_GROUND)
+    d = ImageDraw.Draw(im)
+    d.rectangle([0, 546, 1199, 629], fill=CARD_FOOT)
+    d.rectangle([x, y, x + dw - 1, y + dh - 1], fill=(246, 242, 234), outline=CARD_LINE, width=3)
+    for mx, my in ((x + 14, y + 14), (x + dw - 54, y + 14), (x + 14, y + dh - 54), (x + dw - 54, y + dh - 54)):
+        d.rectangle([mx, my, mx + 39, my + 39], fill=CARD_MARK)
+    buf = io.BytesIO()
+    im.save(buf, "PNG")
+    return "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode()
+
+
+def make_post(who, words, gallery=False, flip=False, seed=0, size=(816, 612), card=False):
+    """A post as the composer sends one: (status, answer). `card`: with a
+    share card (share_card), as the editors' Add hands one back."""
     c = who.client()
     c.get("/social/")
-    body = drawing(seed=seed, flip=flip)
+    body = drawing(seed=seed, flip=flip, size=size)
+    if card:
+        body["thumbnail"] = share_card(*size)
     if gallery:
         body["visibility"] = "public"
         body["caption"] = "From the gallery tick"
@@ -582,6 +619,52 @@ with sync_playwright() as p:
               and gsk[2] == "From the gallery tick"
               and any(i["id"] == post_row(j["post"])[1] for i in listed),
               f"reduced {still}; gallery skribl {gsk}; status {st}")
+
+        # MORE FROM, ON A DESK: each tile the drawing alone, whole, cut out of
+        # its share card, read off the paint (the card's own colours: share_card).
+        tiles, tall, wide = [], (531, 944), (816, 612)
+        for words, size in (("Card, tall", tall), ("Card, wide", wide)):
+            make_post(mira, words, seed=7, size=size, card=True)
+        dctx, dpg = browser_as(b, mira, "desk", "light")
+        dpg.goto(BASE + url)
+        try:
+            dpg.wait_for_function("""() => [...document.querySelectorAll('.more-plate img')].length >= 2 &&
+              [...document.querySelectorAll('.more-plate img')].every(i => i.complete && i.naturalWidth > 0)""", timeout=15000)
+            dpg.evaluate("() => Promise.all([...document.querySelectorAll('.more-plate img')].map(i => i.decode().catch(() => null)))")
+        except Exception as exc:
+            tiles.append({"stopped": str(exc).splitlines()[0][:100]})
+        dpg.wait_for_timeout(300)
+        for words, size in (("Card, tall", tall), ("Card, wide", wide)):
+            tile = dpg.locator(".more-tile", has_text=words)
+            box = dpg.evaluate("""(words) => { const t = [...document.querySelectorAll('.more-tile')].find(e => e.textContent.includes(words));
+              const pl = t && t.querySelector('.more-plate'), i = pl && pl.querySelector('img');
+              if (!i) return null; const p = pl.getBoundingClientRect(), r = i.getBoundingClientRect();
+              const k = r.width / 1200;   // CSS pixels to one card pixel
+              return { at: [(p.left - r.left) / k, (p.top - r.top) / k, p.width / k, p.height / k] }; }""", words)
+            png = tile.locator(".more-pic").screenshot(timeout=5000) if tile.count() and Image else None
+            card, marks = None, None
+            if png:
+                im = Image.open(io.BytesIO(png)).convert("RGB")
+                W, H = im.size
+                near = lambda c, t: abs(c[0] - t[0]) + abs(c[1] - t[1]) + abs(c[2] - t[2]) < 120
+                card, marks = 0, [0, 0, 0, 0]
+                for n, c in enumerate(im.getdata()):
+                    if near(c, CARD_GROUND) or near(c, CARD_FOOT) or near(c, CARD_LINE):
+                        card += 1
+                    elif near(c, CARD_MARK):
+                        marks[(2 if n // W >= H / 2 else 0) + (1 if n % W >= W / 2 else 0)] += 1
+            x, y, dw, dh = plate_of(*size)
+            want = [x + 3, y + 3, dw - 6, dh - 6]
+            tiles.append({"words": words, "card": card, "marks": marks, "want": want,
+                          "at": [round(v, 1) for v in box["at"]] if box else None})
+        close_ctx(dctx, dpg)
+        check("on a desk, More from shows each of the author's other drawings whole and alone, cut out of its share"
+              " card: none of the card's own ground, wordmark strip or plate line painted, the drawing's four"
+              " corners painted, its plate 3 card pixels in from the line, a tall drawing and a wide one",
+              len(tiles) == 2 and all(t.get("card") == 0 and t.get("marks") and min(t["marks"]) >= 20
+                                      and t.get("at") and all(abs(a - w) <= 1.0 for a, w in zip(t["at"], t["want"]))
+                                      for t in tiles),
+              f"{tiles}")
 
     # ------------------------------------------------------------------ 4
     if part(4, "the feed: everyone's, newest first, still until tapped; Load more in place"):

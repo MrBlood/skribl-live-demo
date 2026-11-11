@@ -782,11 +782,22 @@ button.make-door { width: 100%; border: 0; font: inherit; text-align: left; curs
 .more-title { margin: 0 0 10px; font-size: 18px; font-weight: 700; }
 .more-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .more-tile { display: flex; flex-direction: column; gap: 4px; min-width: 0; color: var(--ink); text-decoration: none; }
+/* The drawing whole, in its own shape, on the tile's ground: the plate as
+   large as the tile allows less 8px each side; the poster behind it placed so
+   only the drawing shows (post.html more_frame: none of the share card's
+   ground, hairline or wordmark). */
 .more-pic {
-  display: block; aspect-ratio: 4 / 3; overflow: hidden; border: 1px solid var(--card-line); border-radius: 14px;
-  background: var(--draw-wait);
+  display: grid; place-items: center; aspect-ratio: 4 / 3; overflow: hidden; border: 1px solid var(--card-line);
+  border-radius: 14px; background: var(--draw-wait); container-type: size;
 }
-.more-pic img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.more-plate {
+  position: relative; overflow: hidden; border-radius: 6px; aspect-ratio: var(--more-a);
+  width: min(100cqw - 16px, (100cqh - 16px) * var(--more-a));
+}
+.more-plate img {
+  position: absolute; left: var(--more-x); top: var(--more-y);
+  display: block; width: var(--more-w); max-width: none; height: auto;
+}
 .more-words { overflow: hidden; font-size: 15px; text-overflow: ellipsis; white-space: nowrap; }
 .more-plays { color: var(--ink-2); font-size: 14px; }
 .post-page .desk-only { display: none; }
