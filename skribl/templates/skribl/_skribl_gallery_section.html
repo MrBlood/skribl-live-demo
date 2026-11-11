@@ -55,6 +55,9 @@
     visibility=public). Public for everybody, the author included, so a
     person looking at their own profile sees what their visitors see, and
     nothing unlisted: a face drawn for it (_skribl_face.html) is unlisted.
+    `mine` (with `author`) says the person looking is that author: an
+    empty section then tells them what puts a skribl there, and to
+    anybody else only that there are none yet.
 
     A FACE ON THE CARD. When the host's author resolver says an author has
     a drawn face ("face": {"id", "w", "h"}: a skribl's public id and its
@@ -86,7 +89,7 @@
 <script src="{{ skribl_asset('gallery.js') }}" defer></script>
 {%- endmacro %}
 
-{% macro skribl_gallery_section(bp='skribl', page=false, door=none, author=none) -%}
+{% macro skribl_gallery_section(bp='skribl', page=false, door=none, author=none, mine=false) -%}
 {#  THE WHOLE TEMPLATED URL for the player, placeholder and all, which is the
     shape the poster uses: "the real one is that same server-built path with
     the id substituted -- no path is assembled here, which keeps this correct
@@ -137,8 +140,25 @@
      gallery". The Library is Skribl's own page's to mention: a host's people
      have no Library to turn it on in. `door` picks (see the macro's note):
      verify_standin section 12 holds each door's words to its tick's label,
-     and verify_social the site's. #}
+     and verify_social the site's.
+     ONE PERSON'S SKRIBLS (`author`) say it to whoever is looking (the
+     owner's yes, Nov 10, of a profile that said "their author" to its own
+     author): to that person, `mine`, what puts a skribl there, in their
+     door's words; to anybody else, only that there are none yet.
+     verify_socialprofile section 1 holds both. #}
   <p class="state" id="galleryEmpty" hidden>
+    {%- if author and not mine %}
+    <b>No skribls here yet.</b>
+    {%- elif author %}
+    <b>Nothing here yet.</b><br>
+    {% if (door or ('app' if page else 'host')) == 'app' -%}
+    Your skribls show here when you tick
+    <b>Show in the public gallery</b> as you post, or later in your Library.
+    {%- else -%}
+    Your skribls show here when you tick
+    <b>Show in the Skribls gallery</b> as you post.
+    {%- endif %}
+    {%- else %}
     <b>Nothing here yet.</b><br>
     {% if (door or ('app' if page else 'host')) == 'app' -%}
     Skribls appear here when their author ticks
@@ -147,6 +167,7 @@
     {%- else -%}
     Skribls appear here when their author ticks
     <b>Show in the Skribls gallery</b> as they post.
+    {%- endif %}
     {%- endif %}
   </p>
   <p class="state" id="galleryNone" hidden>

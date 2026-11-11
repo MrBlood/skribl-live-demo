@@ -760,8 +760,35 @@ with sync_playwright() as p_:
               f"bio saved {st_bio}; seen by Juno {seen_by_juno}; by nobody {seen_by_nobody}; ids: newer {newer},"
               f" older {older}, link-only {hidden}, Juno's {theirs}")
         own = profile_view(mira.pg, "mira")
-        check("on her own profile she sees what her visitors see: her public skribls, not the link-only one",
+        check("on your own profile you see what your visitors see: your public skribls, not the link-only one",
               own["tiles"] == [newer, older], f"{own['tiles']}; link-only {hidden}")
+        # AN EMPTY PROFILE IN ITS OWN WORDS (the owner's yes, Nov 10): to its
+        # own person, what puts a skribl there, in the Pad's tick's words; to
+        # anybody else, signed in or not, only that there are none yet. It
+        # said "their author" to its own author before.
+        ines = member(b, "ines", "Ines Vale")
+
+        def empty_words(pg):
+            pg.goto(BASE + "/social/@ines")
+            try:
+                pg.wait_for_function("() => !document.getElementById('galleryEmpty').hidden", timeout=15000)
+            except Exception:
+                pass
+            return pg.evaluate("""() => { const e = document.getElementById('galleryEmpty');
+                return e && !e.hidden ? e.innerText.replace(/\\s+/g, ' ').trim() : null; }""")
+        own_empty = empty_words(ines.pg)
+        ectx, epg = browser_as(b, juno)
+        their_empty = empty_words(epg)
+        close_ctx(ectx, epg)
+        nctx, npg = browser_as(b, None)
+        nobodys_empty = empty_words(npg)
+        close_ctx(nctx, npg)
+        check("an empty profile says it in its own words: to its own person what puts a skribl there (the Pad's"
+              " tick), to anybody else only that there are none yet",
+              own_empty == ("Nothing here yet. Your skribls show here when you tick Show in the public gallery as"
+                            " you post, or later in your Library.")
+              and their_empty == "No skribls here yet." and nobodys_empty == "No skribls here yet.",
+              f"own {own_empty!r}; Juno's view {their_empty!r}; signed out {nobodys_empty!r}")
         actx, apg = browser_as(b, None)
         loud = profile_view(apg, "MiRa")
         close_ctx(actx, apg)
