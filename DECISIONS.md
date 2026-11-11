@@ -34067,3 +34067,67 @@ controller: section 3 under three busy cores, the old social.js and the new,
 11/11 each, twice. verify_postgres NOT RUN (no PostgreSQL here; CI runs
 it). The full battery was not run; main's run after the merge is. Not tested
 here: Safari, an iPhone's touch on the stage, Segoe UI.
+
+## After v330 -- Three small fixes: the site's limits, a passkey's address, the demo's own 404
+
+The owner's "all yes" (Nov 11) to the docket's three small fixes: the two
+follow-ups from sign-in's review (docs/SOCIAL-SITE.md, piece 2) and a
+console error found while building profiles.
+
+- THE LIMITS (social/security.py, over()). It counted the tries in the
+  window and then wrote this one, so tries landing at the same instant could
+  each count under the limit and all pass; and on SQLite a read-then-write
+  transaction under a burst failed outright ("database is locked"), an error
+  page for a person signing in. Now each try is written and committed first,
+  then counted among every try already committed, and a try past the limit
+  takes its own row back, one statement a transaction: no more than the
+  limit are ever let through, on SQLite and PostgreSQL alike, with no lock of
+  either's. In a burst it can refuse a try the limit had room for (tries
+  count each other before the extra ones take theirs back); that errs toward
+  the limit, and a try a moment later passes.
+- A PASSKEY'S ADDRESS (social/passkeys.py, rp()). A passkey was made at, and
+  asked for, each request's own address. SKRIBL_SOCIAL_HOSTS now names the
+  site's own (comma-separated). With it set, a request at any other address
+  begins no ceremony, and the page says "Passkeys work only at Skribl's own
+  address. Open Skribl there and try again." Unset, nothing changes: a site
+  reached by one name loses nothing. The demo is reached by one name, so it
+  is not set there; the move to a domain sets it (SOCIAL-SITE.md, decision
+  3), before anybody makes a passkey at the new name. A first draft also
+  took Render's own name for the service (RENDER_EXTERNAL_HOSTNAME) when the
+  list was unset. Render's docs could not be read from this box to confirm
+  what Render puts there, and a wrong guess would have told the owner, at
+  the site's own address, that it was not; so it came out.
+- THE DEMO'S OWN 404 (skribl/security.py). Where a page had no nonce (the
+  standalone app's own 404), the policy said script-src 'self' 'nonce-', and
+  Chrome reported the empty nonce as an invalid source, a console error on
+  every such page. _script_src() leaves it out when there is none, in the
+  blueprint's headers and the standalone app's alike.
+
+Pad and Flip: neither changed. Kind: a burst of sign-ins no longer ends in
+an error page, and a passkey at another address is told where to go, never
+blamed.
+
+THE CHECKS, each shown red before it was believed.
+- verify_socialauth section 17, one row: twelve tries released at once
+  against a limit of five (each one's write held 50ms), then eight one at a
+  time. Red on the old over(): tries failed with "database is locked". A
+  first rewrite (count and take back in one transaction) was red the same
+  way, SQLite's lock upgrade, hence one statement a transaction. Green: five
+  let through, seven refused, five rows; the eight after, all refused.
+- verify_socialauth section 18, one row: from elsewhere.test, 400
+  "elsewhere" and no options; at localhost, options for localhost. Red with
+  the check taken out (a ceremony began for elsewhere.test) and red with the
+  list unset; green with both, beside section 4 (sign-in end to end with the
+  list set), 7/7.
+- verify_csp, "A page no blueprint answers", two rows: the 404's script-src
+  names no empty nonce, and no console error. Red on the old security.py in
+  Chrome's own words; green, 34/34.
+
+Side by side, final tree: verify_socialauth 62/62, verify_social 36/36,
+verify_csp 34/34, verify_integration 29/29; verify_docs 144/144 and
+gen_docs.py --check current with this entry. The full battery was not run;
+main's run after the merge is.
+
+Not measured here: the limits on PostgreSQL (no PostgreSQL in this box, and
+verify_socialauth runs on its own SQLite file in every lane). Each count
+there runs after its own commit and sees every try committed before it.

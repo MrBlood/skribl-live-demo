@@ -216,6 +216,8 @@ def _rp_or_error():
         return passkeys.rp(), None
     except passkeys.NoName:
         return None, _json_error("no_name", 400)
+    except passkeys.Elsewhere:
+        return None, _json_error("elsewhere", 400)
 
 
 # ---- invites ----------------------------------------------------------------

@@ -304,8 +304,10 @@ The owner answered "all yes" on Nov 10: every default below is the decision.
    sign-in links are best sent from the site's own domain. What the owner
    sets up then: the domain itself (auto-renew and two-step sign-in on the
    registrar's account), the domain added to the Render service (Render
-   shows the DNS records to add and makes the HTTPS certificate), and later
-   the email service's few DNS records. What Cal sets up: the site answering
+   shows the DNS records to add and makes the HTTPS certificate), the site's
+   own addresses in Render's Environment (`SKRIBL_SOCIAL_HOSTS`: the domain,
+   and the demo's name while people move over), and later the email
+   service's few DNS records. What Cal sets up: the site answering
    at the top of the new domain while the demo keeps its own address, and
    the checks that both answer.
 4. **Sign-in:** passkeys (Face ID, Windows Hello), with a link by email for a
@@ -425,12 +427,13 @@ signed-in devices; a short undo before an account is deleted (rule 9's undo
 window waits for the job queue); and an account's skribls going with it,
 which needs a seam Skribl does not have yet (docs/INTEGRATION.md documents
 deleting one post by its id, not an author's all): until then the delete
-page says the skribls stay, and to delete them in the Library first. Two
-follow-ups from its review, small and not yet made: the limits count and
-then record (security.py), so tries landing at the same instant can each
-pass, a few extra at most; and a passkey's address is the request's own,
-where a list of the site's own addresses would be stricter (the move to a
-domain wants one anyway).
+page says the skribls stay, and to delete them in the Library first. The
+two follow-ups from its review were made on Nov 11 (the owner's yes): the
+limits now write a try first and count it after, so no more than the limit
+are ever let through, even at the same instant; and a passkey can be made
+and used only at the site's own addresses, once SKRIBL_SOCIAL_HOSTS names
+them (unset, each request's own, as before). The move to a domain sets that
+list, before anybody makes a passkey at the new name.
 
 `harness/verify_socialauth.py` holds it all through the demo's own server,
 with Chromium's own virtual authenticator; DECISIONS.md ("Sign-in at

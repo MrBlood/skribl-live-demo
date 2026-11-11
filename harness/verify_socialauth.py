@@ -115,7 +115,10 @@ ENV = dict(os.environ, DATABASE_URL=f"sqlite:///{DB}", SECRET_KEY="verify-social
            SKRIBL_CSRF_PROTECT="1", SKRIBL_SOCIAL_FIRST_INVITE=FIRST, SKRIBL_STAND_IN="0",
            SKRIBL_TRUSTED_PROXIES="1", SKRIBL_DEMO_IDENTITY="demo-owner", SKRIBL_DEMO_LOGIN_KEY=DEMO_KEY,
            SKRIBL_DEMO_IDENTITY_NAME="Demo Owner", SKRIBL_DEMO_INSECURE_COOKIE="1",
-           SKRIBL_RATE_MAX_POSTS="100000", SKRIBL_RATE_MAX_ATTEMPTS="100000")
+           SKRIBL_RATE_MAX_POSTS="100000", SKRIBL_RATE_MAX_ATTEMPTS="100000",
+           # The site's own address, so a passkey from any other is refused
+           # (section 18). Every other section is at localhost, as before.
+           SKRIBL_SOCIAL_HOSTS="localhost")
 for k in ("SKRIBL_SOCIAL", "SKRIBL_URL_PREFIX", "SKRIBL_FORCE_SECURE_COOKIES"):
     ENV.pop(k, None)
 subprocess.run([sys.executable, "-c", "from app import app, db; app.app_context().push(); db.create_all()"],
@@ -1492,6 +1495,84 @@ with sync_playwright() as p_:
               not fields and counted >= 12, "; ".join(fields[:6]))
 
     # ------------------------------------------------------------------ 16
+    # ------------------------------------------------------------------ 17
+    if part(17, "a limit is never passed, not even by tries at the very same instant"):
+        # The site's limiter, in a process of its own on this suite's
+        # database: twelve tries at once against a limit of five, then one at
+        # a time. A pause is held where a try is first written (RateEvent's
+        # insert), which in the old order, counted and then written, was the
+        # gap two tries at once could both pass through (the review of piece
+        # 2; DECISIONS, "Where things stand, Nov 10").
+        probe = r"""
+import json, sys, threading, time
+sys.path.insert(0, %r)
+from app import app
+from social import security as sec
+from social.models import RateEvent
+import sqlalchemy as sa
+sec.LIMITS["probe"] = (5, 3600)
+t = RateEvent.__table__
+first = t.insert
+def held(*a, **k):
+    time.sleep(0.05)
+    return first(*a, **k)
+t.insert = held
+N = 12
+gate = threading.Barrier(N)
+got = []
+def one():
+    with app.app_context():
+        gate.wait()
+        try:
+            got.append(sec.over("probe", "one-address"))
+        except Exception as exc:
+            got.append("error: " + type(exc).__name__ + ": " + str(exc).splitlines()[0][:80])
+ts = [threading.Thread(target=one) for _ in range(N)]
+for x in ts: x.start()
+for x in ts: x.join()
+def rows():
+    with app.app_context():
+        with sec.site().engine().connect() as c:
+            return c.execute(sa.select(sa.func.count()).select_from(t).where(t.c.bucket == "probe")).scalar()
+burst_rows = rows()
+after = []
+with app.app_context():
+    for _ in range(8):
+        after.append(sec.over("probe", "one-address"))
+print("PROBE " + json.dumps({"burst": got, "burst_rows": burst_rows, "after": after, "rows": rows()}))
+""" % str(ROOT)
+        out = subprocess.run([sys.executable, "-c", probe], cwd=ROOT, env=ENV, capture_output=True, text=True, timeout=180)
+        line = next((x for x in out.stdout.splitlines() if x.startswith("PROBE ")), None)
+        got = json.loads(line[6:]) if line else {}
+        let = (got.get("burst") or []).count(False)
+        after = got.get("after") or []
+        more = after.count(False)
+        check("a limit is never passed, not even by twelve tries at the very same instant: of twelve at once against a"
+              " limit of five, five at most are let through, and only those are counted; then one at a time, the rest"
+              " of the five are, and no more",
+              bool(got) and len(got["burst"]) == 12 and all(isinstance(x, bool) for x in got["burst"])
+              and let <= 5 and got["burst_rows"] == let and let + more == 5
+              and after == [False] * more + [True] * (8 - more) and got["rows"] == 5,
+              f"{got or (out.stdout[-300:] + out.stderr[-600:])}")
+
+    # ------------------------------------------------------------------ 18
+    if part(18, "a passkey is made and used only at the site's own address"):
+        other = f"elsewhere.test:{PORT}"
+        far = Client(origin=f"http://{other}")
+        far.get("/social/signin", headers={"Host": other})
+        st_far, body_far = far.post("/social/signin/options", {}, headers={"Host": other})[:2]
+        home = Client()
+        home.get("/social/signin")
+        st_home, body_home = home.post("/social/signin/options", {})[:2]
+        jfar = body_far if isinstance(body_far, dict) else {}
+        jhome = body_home if isinstance(body_home, dict) else {}
+        check("a passkey is begun only at the site's own address (SKRIBL_SOCIAL_HOSTS): from another, no ceremony,"
+              " and the page is told so (its own words); at its own, as ever",
+              st_far == 400 and jfar.get("error") == "elsewhere" and "options" not in jfar
+              and st_home == 200 and bool(jhome.get("options"))
+              and ((jhome.get("options") or {}).get("rpId") in (None, "localhost")),
+              f"elsewhere {st_far} {str(jfar)[:120]}; home {st_home} {str(jhome)[:120]}")
+
     if part(16, "no page errors, no console errors, no CSP violations"):
         check("no page errors, console errors or CSP violations on the site's sign-in pages, through every"
               " ceremony above (a refused request's own status line aside)",
