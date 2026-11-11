@@ -39,10 +39,11 @@
          data-handle="{{ who.handle }}"{% if c.mine %} data-mine{% endif %} aria-labelledby="pn-{{ p.public_id }}">
   <header class="post-head">
     <a class="post-face" href="{{ c.profile }}" tabindex="-1" aria-hidden="true">{{ face(who) }}</a>
-    <div class="post-who">
-      <a class="post-name" id="pn-{{ p.public_id }}" href="{{ c.profile }}">{{ who.display_name }}</a>
-      <span class="post-sub">@{{ who.handle }} · <a class="post-when" href="{{ c.url }}"><time datetime="{{ when_iso(p.created_at) }}" data-when="ago">{{ when_day(p.created_at) }}</time></a></span>
-    </div>
+    {#- One link, to their page, the size of a finger: the name, @handle and when. #}
+    <a class="post-who" href="{{ c.profile }}">
+      <b class="post-name" id="pn-{{ p.public_id }}">{{ who.display_name }}</b>
+      <span class="post-sub">@{{ who.handle }} · <time datetime="{{ when_iso(p.created_at) }}" data-when="ago">{{ when_day(p.created_at) }}</time></span>
+    </a>
     <button class="icon-btn post-more" type="button" data-post-menu aria-haspopup="dialog" aria-controls="postSheet"
             aria-expanded="false" aria-label="More for this post">{{ ic.dots() }}</button>
   </header>

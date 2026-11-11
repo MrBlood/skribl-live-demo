@@ -29,10 +29,10 @@
          data-handle="{{ who.handle }}"{% if card.mine %} data-mine{% endif %} data-autoplay aria-labelledby="postWho">
   <header class="post-head">
     <a class="post-face" href="{{ card.profile }}" tabindex="-1" aria-hidden="true">{{ face(who) }}</a>
-    <div class="post-who">
-      <a class="post-name" id="postWho" href="{{ card.profile }}">{{ who.display_name }}</a>
+    <a class="post-who" href="{{ card.profile }}">
+      <b class="post-name" id="postWho">{{ who.display_name }}</b>
       <span class="post-sub">@{{ who.handle }}</span>
-    </div>
+    </a>
     <button class="icon-btn post-more desk-only" type="button" data-post-menu aria-haspopup="dialog"
             aria-controls="postSheet" aria-expanded="false" aria-label="More for this post">{{ ic.dots() }}</button>
   </header>
