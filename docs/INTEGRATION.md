@@ -1122,7 +1122,16 @@ needs nothing new, and the drawing it came from is never touched.
   the drawing.
 - `check(payload)`: `null`, or why it cannot be a face yet: `'flip'`,
   `'photo'` (a picture under the drawing: not moved yet), `'empty'`,
-  `'unreadable'`. Say it kindly; a host's words are its own.
+  `'unreadable'`. Say it kindly; a host's words are its own. It answers at
+  once, so a picture the drawing began on counts until `inspect()` has
+  looked at it.
+- `inspect(payload)`: a Promise of `check()`'s answer once any picture the
+  drawing began on (its `baseSnapshot`) has been looked at. **Ask this one
+  before placing a drawing.** Every drawing made in the Pad carries the
+  canvas its first take began on, and on a fresh Pad that is see-through: no
+  picture, and nothing a face would lose. A base with any pixel painted, or
+  one that cannot be read, is a picture (`'photo'`). `place()` takes a base
+  only once `inspect()` has seen it blank, and leaves it out.
 - `place(payload, sq, side)`: the new drawing, `side` CSS px square (707, as
   the Pad's face mode draws). Its music stays behind (a face makes no sound).
 - `card(payload, box)`: a Promise of its share card, a data URL, painted by

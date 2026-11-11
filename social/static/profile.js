@@ -484,11 +484,19 @@
     }
     more.addEventListener('click', function () { list(true); });
 
+    /* inspect(), not check(): a drawing made in the Pad carries the blank its
+       first take began on, and only a look at it tells that from a picture
+       (lib/faceframe.js). Only the latest pick is answered. */
+    var asked = 0;
     function ready(p, where) {
-      var why = F ? F.check(p) : 'unreadable';
-      if (why) { sayIn(where, say(why)); return; }
-      sayIn(where, '');
-      place(p);
+      if (!F) { sayIn(where, say('unreadable')); return; }
+      var mine = ++asked;
+      F.inspect(p).then(function (why) {
+        if (mine !== asked) return;
+        if (why) { sayIn(where, say(why)); return; }
+        sayIn(where, '');
+        place(p);
+      });
     }
     function pickPosted(id) {
       if (!api) return;

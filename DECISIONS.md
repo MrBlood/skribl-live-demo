@@ -34217,3 +34217,40 @@ rgb(13,15,20), and every grey the chrome paints is a token. It is now the
 canvas's own shade token, --on-canvas-shade-rgb (the halo under white words:
 the same role); verify_surfaces 13/13, section 12 5/5 (5.67 and 5.65 light,
 5.88 and 5.75 dark), and the backing's break red again on the final line.
+
+## After v330 -- "Use one you made" takes drawings made in the Pad
+
+Found while building the face-fit mock (the owner, Nov 11: a traced face
+"didn't fit in the circle"), on the live tree since #851: Your face's "Use
+one you made" said "That one has a picture under it" to every drawing made
+in the Pad, so it could only place drawings a script had posted. The Pad
+keeps the canvas as it was when a drawing's first take began under the take
+(its frame's baseSnapshot, app.js beginRecording and captureCurrentFrame),
+and on a fresh Pad that canvas is empty: a see-through picture. A drawing
+drawn in the real Pad on the mock server and posted signed in carried one
+(531x944, every pixel's alpha 0, under 235 points), and the picker refused
+it. lib/faceframe.js's check() called any base a picture; section 11's
+drawings, posted through the API, had none, so no row could see it.
+
+THE FIX, in lib/faceframe.js: inspect(payload), a Promise of check()'s
+answer once each base has been looked at by the Pad's own rule for a blank
+base (forgetBlankBase, editor_draft.js): any pixel painted, and it is a
+picture; one that cannot be read is a picture too, so nothing is left out
+unseen. check() still answers at once, a base counting as a picture until
+inspect() has seen it blank, and place() takes a base only then, keyed by
+the very bases, and leaves it out of the face. The site's picker asks
+inspect() and answers only the latest pick (social/static/profile.js).
+docs/INTEGRATION.md names inspect() for any host.
+
+Pad and Flip: neither changes. What the Pad saves is as it was (a blank base
+under a take is also how a restore tells a fresh Pad from a drawn one); the
+face maker reads it. Flip drawings are not faces (check() says 'flip').
+
+THE CHECK. verify_socialprofile section 11, an eighth row: a drawing posted with
+the Pad's see-through base is placed, painted whole and kept as a face with
+no base and all 60 points; one on a base with ink is still said kindly to
+have a picture under it, and the picker stays. Four breaks, each red on that
+row alone: the picker asking check() as before (the blank one refused); every
+base read as blank (the inked one placed); check() never trusting a base
+inspect() saw blank (the blank one refused); place() refusing any base (the
+blank one placed, then no face kept).

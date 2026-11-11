@@ -420,9 +420,11 @@ def member(b, handle, name, **kw):
     return p
 
 
-def post_skribl(who, title, visibility="public"):
+def post_skribl(who, title, visibility="public", base=None):
     """One drawing through Skribl's own API as `who` (Skribl is told who is
-    signed in to the site: CSRF is on), or as nobody."""
+    signed in to the site: CSRF is on), or as nobody. `base` is the picture
+    it began on, a data URL, where the Pad keeps one (its frame's
+    baseSnapshot)."""
     ctx = who.ctx if who else None
     if ctx is None:
         jar = CookieJar()
@@ -438,6 +440,8 @@ def post_skribl(who, title, visibility="public"):
     body = {"title": title, "caption": "", "version": 2, "schemaVersion": 2, "playbackMode": "replay",
             "canvasSize": {"cssWidth": 816, "cssHeight": 612},
             "frames": [{"strokes": pts, "strokeGroups": [len(pts)], "background": {"color": "#f6f2ea"}}]}
+    if base:
+        body["frames"][0]["baseSnapshot"] = base
     if visibility:
         body["visibility"] = visibility
     h = {"Content-Type": "application/json", "X-Skribl-CSRF": tok}
@@ -1729,6 +1733,75 @@ with sync_playwright() as p_:
               " phone and desk, light and dark",
               reads >= 60 and not low and not small and not fields,
               f"{reads} read, the lowest {lowest}; under 4.5: {low[:4]}; small: {small[:4]}; fields: {fields[:3]}")
+
+        # THE BLANK A TAKE BEGAN ON IS NO PICTURE (after v330: "Use one you
+        # made" refused every drawing made in the Pad, as "a picture under
+        # it"). The Pad keeps the canvas its first take began on under the
+        # drawing (its frame's baseSnapshot), and on a fresh Pad that canvas
+        # is see-through. Such a drawing is placed like any other and its face
+        # keeps no base; a base with ink on it is still a picture.
+        def base_png(dot):
+            if Image is None:
+                return None
+            im = Image.new("RGBA", (816, 612), (0, 0, 0, 0))
+            if dot:
+                for x in range(404, 412):
+                    for y in range(302, 310):
+                        im.putpixel((x, y), (30, 30, 30, 255))
+            buf = io.BytesIO()
+            im.save(buf, "PNG")
+            return "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode()
+        inked = post_skribl(nell, f"Nell's on a picture {tag}", base=base_png(True))
+        padmade = post_skribl(nell, f"Nell's from the Pad {tag}", base=base_png(False))
+        pg.goto(BASE + "/social/@nell")
+        pg.wait_for_timeout(400)
+        open_face_sheet(pg)
+        pg.click("#faceSheet [data-face-go=pick]")
+        try:
+            pg.wait_for_function("() => document.querySelectorAll('#faceSheet .face-tile').length > 1", timeout=15000)
+        except Exception:
+            pass
+        pg.wait_for_timeout(300)
+        on_ink = on_pad = None
+        face3, fpay3, g3b = None, {}, {}
+        try:
+            pg.click(f"#faceSheet .face-tile:has-text(\"Nell's on a picture {tag}\")", timeout=5000)
+            try:
+                pg.wait_for_function("""() => [...document.querySelectorAll('#faceSheet [data-step=pick] [data-face-say]')]
+                    .some(s => !s.hidden && s.textContent.indexOf('picture under it') >= 0)""", timeout=10000)
+            except Exception:
+                pass
+            on_ink = pg.evaluate(SHEETSTATE)
+            pg.click(f"#faceSheet .face-tile:has-text(\"Nell's from the Pad {tag}\")", timeout=5000)
+            try:
+                pg.wait_for_function("() => !document.querySelector('#faceSheet [data-step=place]').hidden", timeout=15000)
+            except Exception:
+                pass
+            pg.wait_for_timeout(500)
+            on_pad = pg.evaluate(SHEETSTATE)
+            g3b = pg.evaluate(GEOM)
+            if on_pad["step"] == "place":
+                with pg.expect_navigation(timeout=30000):
+                    pg.click("#faceSheet [data-face-use]", timeout=5000)
+                pg.wait_for_timeout(400)
+                row3 = person_row("nell")
+                face3 = row3[3] if row3 and row3[3] != face2 else None
+                fpay3 = json.loads(db("select payload_json from skribl_posts where public_id = ?", (face3,))[0][0]) if face3 else {}
+        except Exception as exc:
+            on_pad = on_pad or {"step": f"could not: {str(exc).splitlines()[0][:90]}", "say": []}
+        f3 = (fpay3.get("frames") or [{}])[0]
+        check("a drawing made in the Pad, the see-through canvas its first take began on under it, is placed in the"
+              " circle like any other, painted whole, and kept as a face with no base and every point; a drawing on"
+              " a base with ink on it is still said kindly to have a picture under it, and the picker stays",
+              bool(inked and padmade) and on_ink is not None and on_ink["step"] == "pick"
+              and any("picture under it" in x for x in on_ink["say"])
+              and on_pad is not None and on_pad["step"] == "place" and not on_pad["say"] and g3b.get("ink", 0) > 20
+              and bool(face3) and not f3.get("baseSnapshot") and not fpay3.get("baseSnapshot")
+              and len(f3.get("strokes") or []) == 60 and post_row(face3) is not None and post_row(face3)[3] == 707,
+              f"posted {inked} {padmade}; on the inked base {on_ink and (on_ink['step'], on_ink['say'])};"
+              f" on the Pad's blank {on_pad and (on_pad['step'], on_pad['say'])} ink {g3b.get('ink')};"
+              f" face {face2} -> {face3}, its base {bool(f3.get('baseSnapshot') or fpay3.get('baseSnapshot'))},"
+              f" {len(f3.get('strokes') or [])} points")
 
     # ------------------------------------------------------------------ 12
     if part(12, "trace a photo: the third door, the photo under the canvas as a guide, the lines alone kept"):
