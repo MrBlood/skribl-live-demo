@@ -1,0 +1,47 @@
+{#  SIGN IN (phase 1, piece 2): the approved mock A (the owner's "all yes",
+    Nov 10), without its email half, since there is no email yet. One button:
+    the passkey says whose it is, so nothing is typed (a discoverable
+    credential). On a desk Blooby draws his card beside it, as on Home.
+
+    Invite-only for now, so "New to Skribl?" says how to get in, not "Make an
+    account". The mock's House rules and Privacy links wait for those pages
+    (piece 5). #}
+{% extends 'social/base.html' %}
+{% from 'skribl/_skribl_inline_player.html' import skribl_inline_draft %}
+{% import 'social/_icons.html' as ic %}
+
+{% block title %}Sign in · Skribl{% endblock %}
+{% block scripts %}<script src="{{ social_asset('passkey.js') }}" defer></script>
+<script src="{{ social_asset('hello.js') }}" defer></script>{% endblock %}
+
+{% block main %}
+<div class="si">
+  <div class="si-art">
+    <div class="hello-art" data-hello="{{ skribl_asset('help/demos/flip-blooby-card.json') }}"
+         data-hello-label="Play Blooby drawing his card">
+      <div class="hello-fade">{{ skribl_inline_draft('helloCard', controls=false, progress=false) }}</div>
+    </div>
+  </div>
+  <section class="si-card" aria-labelledby="siTitle">
+    <img class="si-icon" src="{{ skribl_asset('apple-touch-icon.png') }}" alt="" width="64" height="64">
+    <h1 class="si-title" id="siTitle">Sign in to Skribl</h1>
+    {% if note == 'out' %}<p class="note" role="status">You’re signed out. See you soon.</p>
+    {% elif note == 'out_all' %}<p class="note" role="status">You’re signed out everywhere: on every phone and computer.</p>{% endif %}
+    <p class="si-lede">No password here. Your phone or computer already knows it’s you.</p>
+    <div class="si-go">
+      <button class="btn btn-primary btn-big btn-wide" type="button" data-passkey="signin"
+              data-options="{{ url_for('social.signin_options') }}" data-verify="{{ url_for('social.signin_verify') }}"
+              data-next="{{ next_url }}">{{ ic.passkey() }}<span>Sign in with a passkey</span></button>
+      <p class="say" data-say role="status" hidden></p>
+      <p class="fine center">Face ID, Touch ID or Windows Hello.</p>
+    </div>
+    <div class="si-or"><span>On a new phone or computer?</span></div>
+    <p class="fine">Choose Sign in with a passkey, and your browser can use the phone your passkey is on. Lost them all? Ask us for a one-time link.</p>
+    <div class="si-new">
+      <p>New to Skribl? It’s invite-only for now: a friend on Skribl can send you a link.</p>
+      <p class="fine">You need to be 13 or older to have an account. Looking around is for everyone.</p>
+    </div>
+  </section>
+</div>
+{% include 'social/_passkey_words.html' %}
+{% endblock %}

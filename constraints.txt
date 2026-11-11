@@ -19,6 +19,15 @@
 # reported GHSA-g6x2-hccm-hh4m against 3.1.8 (safe_join accepted Windows device
 # names; Windows hosts only). The hash is the wheel's, checked against PyPI's.
 #
+# webauthn 3.0.1 and what it needs (cbor2, cffi, cryptography, pyasn1,
+# pyasn1_modules, pycparser, pyOpenSSL) on 2026-11-10: the site's passkeys
+# (social/passkeys.py). Each hash is the wheel `pip download` fetched in this
+# container, except cryptography's, which is its manylinux2014 (glibc 2.17)
+# wheel rather than the glibc 2.34 one pip prefers here: a hashed install
+# takes the wheel whose hash is listed (checked in a fresh venv), and the
+# older baseline installs on any build image this lock already runs on.
+# cbor2 6.2.1 ships only a glibc 2.28 wheel, the same baseline greenlet's has.
+#
 # Regenerated 2026-08-07 — the previous copy predated
 # alembic being added and pinned only 16 packages, so a strict hashed install
 # produced an environment where 'alembic upgrade head' could not run at all.
@@ -27,8 +36,14 @@ alembic==1.19.0 \
     --hash=sha256:cf839d3849116aab3cc047e09c6968b9bd6b2fde61b6bb7c1e97352fe5503580
 blinker==1.9.0 \
     --hash=sha256:ba0efaa9080b619ff2f3459d1d500c57bddea4a6b424b60a91141db6fd2f08bc
+cbor2==6.2.1 \
+    --hash=sha256:6a66bf0322d40534b3e8ff838cdaed345a6a707cabc447c8e4266d2b4f69d572
+cffi==2.1.1 \
+    --hash=sha256:c1453022f490d2459a11819d83ad1d586e9ff65a12ac3e705ffebd46d3685dcf
 click==8.4.2 \
     --hash=sha256:e6f9f66136c816745b9d65817da91d61d957fb16e02e4dcd0552553c5a197b76
+cryptography==50.0.2 \
+    --hash=sha256:630ebfea3bf689d075f82316324ff7433dc447fe6bc1bfc76524b74b4a9567d2
 Flask==3.1.3 \
     --hash=sha256:f4bcbefc124291925f1a26446da31a5178f9483862233b23c0c96a20701f670c
 Flask-SQLAlchemy==3.1.1 \
@@ -51,11 +66,21 @@ psycopg==3.3.4 \
     --hash=sha256:b6bbc25ccf05c8fad3b061d9db2ef0909a555171b84b07f29458a447253d679a
 psycopg-binary==3.3.4 \
     --hash=sha256:e7510c37550f91a187e3660a8cc50d4b760f8c3b8b2f89ebc5698cd2c7f2c85d
+pyasn1==0.6.5 \
+    --hash=sha256:4017b0fce125096b8573b39c989fdb1a4b19cf761e683398184550fea0e66587
+pyasn1_modules==0.4.2 \
+    --hash=sha256:29253a9207ce32b64c3ac6600edc75368f98473906e8fd1043bd6b5b1de2c14a
+pycparser==3.12 \
+    --hash=sha256:a076f3f489b39b43ed13563a1dafe42447445bec2e294154ec5c57fcdda4c85e
+pyOpenSSL==26.4.0 \
+    --hash=sha256:f0eb0cb2d581d3ad2b9c489468485e7f2ab6727d08401bcf9d824c3caddf3c1c
 python-dotenv==1.2.2 \
     --hash=sha256:1d8214789a24de455a8b8bd8ae6fe3c6b69a5e3d64aa8a8e5d68e694bbcb285a
 SQLAlchemy==2.0.51 \
     --hash=sha256:1d21ce524ab86c23046e992a5b81cb54c21079c6df6e78b8fc77d77cac70a6b9
 typing_extensions==4.16.0 \
     --hash=sha256:481caa481374e813c1b176ada14e97f1f67a4539ce9cfeb3f350d78d6370c2e8
+webauthn==3.0.1 \
+    --hash=sha256:9927b2f530773bd1d7f8194cd643a2e634a20995ea31f2d8f7a3e70b11c93e31
 Werkzeug==3.1.9 \
     --hash=sha256:6392e50c78460ba618e5b21f08a71f59c99ce99cdc6cf6e3dd7e6ccca8754fab

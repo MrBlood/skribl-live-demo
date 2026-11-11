@@ -1,0 +1,84 @@
+{#  INVITES, for admins only (anybody else gets the same 404 as a page that
+    is not there). Skribl is invite-only until a lawyer has read the terms
+    (docs/SOCIAL-SITE.md, section 8). Two kinds of link:
+
+      an invite     makes one account; works once, for 14 days
+      a sign-in     for one named person who cannot sign in: adds a passkey
+      link          to their account; once, for an hour (the stand-in for an
+                    emailed link until the site has email)
+
+    A link is shown once, as it is made: only its hash is kept, so it cannot
+    be shown again. The unused ones are listed, and each can be revoked. #}
+{% extends 'social/base.html' %}
+{% import 'social/_icons.html' as ic %}
+
+{% block title %}Invites · Skribl{% endblock %}
+{% block scripts %}<script src="{{ social_asset('you.js') }}" defer></script>{% endblock %}
+
+{% block main %}
+<div class="acct">
+  <div class="page-head">
+    <h1 class="page-title">Invites</h1>
+    <p class="page-sub">Skribl is invite-only for now. Each link works once.</p>
+  </div>
+
+  {% if made %}
+  <section class="panel panel-made" aria-labelledby="madeTitle">
+    <h2 class="panel-title" id="madeTitle">{% if made_kind == 'join' %}Here’s your invite link{% else %}Here’s the sign-in link for @{{ made_for }}{% endif %}</h2>
+    <p class="panel-sub">Copy it now: it won’t be shown again. {% if made_kind == 'join' %}It works once, for 14 days. Send it to one person.{% else %}It works once, for an hour, and adds a passkey to their account.{% endif %}</p>
+    <div class="copyrow">
+      <label class="sr" for="madeLink">The link</label>
+      <input id="madeLink" class="linkfield" type="text" value="{{ made }}" readonly data-made-link>
+      <button class="btn btn-primary" type="button" data-copy="madeLink" data-copied="Copied">Copy link</button>
+    </div>
+  </section>
+  {% endif %}
+  {% if unknown %}<p class="note" role="status">No one has the handle @{{ unknown }}. Check the spelling?</p>{% endif %}
+
+  <section class="panel" aria-labelledby="joinMakeTitle">
+    <h2 class="panel-title" id="joinMakeTitle">Invite someone</h2>
+    <p class="panel-sub">Works once, for 14 days. Send it to one person.</p>
+    <form method="post" action="{{ url_for('social.invites_make') }}">
+      <input type="hidden" name="csrf" value="{{ token }}">
+      <button class="btn btn-primary btn-wide" type="submit">{{ ic.link() }}<span>Make an invite link</span></button>
+    </form>
+  </section>
+
+  <section class="panel" aria-labelledby="recMakeTitle">
+    <h2 class="panel-title" id="recMakeTitle">Help someone back in</h2>
+    <p class="panel-sub">For someone who can’t sign in. It adds a passkey to their account, and works once, for an hour.</p>
+    <form class="form" method="post" action="{{ url_for('social.invites_recover') }}">
+      <input type="hidden" name="csrf" value="{{ token }}">
+      <div class="field">
+        <label for="recHandle">Their handle</label>
+        <div class="at"><span class="at-sign" aria-hidden="true">@</span><input id="recHandle" name="handle" type="text"
+             autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" maxlength="21" required></div>
+      </div>
+      <button class="btn btn-wide" type="submit">Make a sign-in link</button>
+    </form>
+  </section>
+
+  <section class="panel" aria-labelledby="waitTitle">
+    <h2 class="panel-title" id="waitTitle">Waiting to be used</h2>
+    {% if waiting %}
+    <ul class="links">
+      {% for inv, handle in waiting %}
+      <li class="link-row">
+        <span class="key-ic">{{ ic.link() }}</span>
+        <div class="key-body">
+          <p class="key-name">{% if inv.kind == 'join' %}Invite link{% else %}Sign-in link for @{{ handle }}{% endif %}</p>
+          <p class="key-meta">Made <time datetime="{{ when_iso(inv.created_at) }}">{{ when_day(inv.created_at) }}</time> · works until <time datetime="{{ when_iso(inv.expires_at) }}" data-time>{{ when_day(inv.expires_at) }}</time></p>
+        </div>
+        <form method="post" action="{{ url_for('social.invites_revoke', invite_id=inv.public_id) }}">
+          <input type="hidden" name="csrf" value="{{ token }}">
+          <button class="btn btn-small btn-quiet-danger" type="submit">Revoke</button>
+        </form>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="panel-text">No links waiting. Make one above when you want to let someone in.</p>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

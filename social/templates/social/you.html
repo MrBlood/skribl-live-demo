@@ -1,0 +1,100 @@
+{#  YOU (phase 1, piece 2): your name and handle, your passkeys, signing
+    out, and deleting the account. Profiles and drawn faces are piece 3: no
+    profile page yet, so this is the account, not a page about you.
+
+    A passkey is renamed or removed in place (a details row that opens under
+    it), never removed when it is the last one: an account with none could
+    not be signed in to. Dates are written in UTC and shown in the person's
+    own time zone by you.js. #}
+{% extends 'social/base.html' %}
+{% import 'social/_icons.html' as ic %}
+
+{% block title %}You · Skribl{% endblock %}
+{% block scripts %}<script src="{{ social_asset('passkey.js') }}" defer></script>
+<script src="{{ social_asset('you.js') }}" defer></script>{% endblock %}
+
+{% block main %}
+<div class="acct">
+  <div class="page-head">
+    <h1 class="page-title">{{ me.display_name }}</h1>
+    <p class="page-sub">@{{ me.handle }}</p>
+  </div>
+  {% if note == 'added' %}<p class="note" role="status">Your new passkey is ready. It signs you in here from now on.</p>
+  {% elif note == 'renamed' %}<p class="note" role="status">Renamed.</p>
+  {% elif note == 'removed' %}<p class="note" role="status">That passkey is removed. It won’t sign you in anymore.</p>
+  {% elif note == 'last' %}<p class="note" role="status">That’s your only passkey, so it stays. Add another first.</p>
+  {% elif note == 'name' %}<p class="note" role="status">A passkey’s name can be 1 to 40 characters. Try again?</p>{% endif %}
+
+  <section class="panel" aria-labelledby="keysTitle">
+    <h2 class="panel-title" id="keysTitle">Your passkeys</h2>
+    <p class="panel-sub">Each one signs you in on a phone, a computer or a security key.</p>
+    <ul class="keys">
+      {% for k in keys %}
+      <li class="key">
+        <span class="key-ic">{{ ic.passkey() }}</span>
+        <div class="key-body">
+          <p class="key-name">{{ k.nickname }}</p>
+          <p class="key-meta">Made <time datetime="{{ when_iso(k.created_at) }}">{{ when_day(k.created_at) }}</time>{% if k.last_used_at %} · last used <time datetime="{{ when_iso(k.last_used_at) }}">{{ when_day(k.last_used_at) }}</time>{% endif %}</p>
+          <div class="key-acts">
+            <details class="key-more">
+              <summary class="btn btn-small">Rename</summary>
+              <form class="key-form" method="post" action="{{ url_for('social.passkey_rename', key_id=k.public_id) }}">
+                <input type="hidden" name="csrf" value="{{ token }}">
+                <label for="keyName{{ loop.index }}">A name you’ll know it by</label>
+                <input id="keyName{{ loop.index }}" name="nickname" type="text" value="{{ k.nickname }}" maxlength="40" required autocomplete="off">
+                <button class="btn btn-primary" type="submit">Save name</button>
+              </form>
+            </details>
+            {% if keys|length > 1 %}
+            <details class="key-more">
+              <summary class="btn btn-small btn-quiet-danger">Remove</summary>
+              <form class="key-form" method="post" action="{{ url_for('social.passkey_remove', key_id=k.public_id) }}">
+                <input type="hidden" name="csrf" value="{{ token }}">
+                <p>Remove “{{ k.nickname }}”? It won’t sign you in after this.</p>
+                <button class="btn btn-danger" type="submit">Remove passkey</button>
+              </form>
+            </details>
+            {% endif %}
+          </div>
+          {% if keys|length == 1 %}<p class="key-last">Your only passkey. Add another before you remove this one.</p>{% endif %}
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+    <div class="panel-go">
+      <button class="btn btn-wide" type="button" data-passkey="add"
+              data-options="{{ url_for('social.passkey_add_options') }}"
+              data-verify="{{ url_for('social.passkey_add_verify') }}">{{ ic.passkey() }}<span>Add a passkey</span></button>
+      <p class="say" data-say role="status" hidden></p>
+      <p class="fine">For another phone or computer, or a security key.</p>
+    </div>
+  </section>
+
+  {% if me.is_admin %}
+  <section class="panel" aria-labelledby="invTitle">
+    <h2 class="panel-title" id="invTitle">Invites</h2>
+    <p class="panel-sub">Skribl is invite-only for now. You let people in.</p>
+    <a class="btn btn-wide" href="{{ url_for('social.invites') }}">{{ ic.link() }}<span>Invites and sign-in links</span></a>
+  </section>
+  {% endif %}
+
+  <section class="panel" aria-labelledby="outTitle">
+    <h2 class="panel-title" id="outTitle">Signing out</h2>
+    <form method="post" action="{{ url_for('social.signout') }}">
+      <input type="hidden" name="csrf" value="{{ token }}">
+      <button class="btn btn-wide" type="submit">Sign out</button>
+    </form>
+    <form method="post" action="{{ url_for('social.signout_everywhere') }}">
+      <input type="hidden" name="csrf" value="{{ token }}">
+      <button class="btn btn-wide" type="submit">Sign out everywhere</button>
+    </form>
+    <p class="fine">Everywhere means every phone and computer you’re signed in on, this one too.</p>
+  </section>
+
+  <section class="panel" aria-labelledby="acctTitle">
+    <h2 class="panel-title" id="acctTitle">Your account</h2>
+    <a class="danger-link" href="{{ url_for('social.delete_account') }}">Delete my account…</a>
+  </section>
+</div>
+{% include 'social/_passkey_words.html' %}
+{% endblock %}

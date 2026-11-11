@@ -19,7 +19,9 @@
 (function () {
   'use strict';
   var art = document.querySelector('[data-hello]');
-  if (!art) return;
+  /* Not drawn at all (the sign-in page's card is a desk's only): nothing to
+     fetch or play. */
+  if (!art || !art.getClientRects().length) return;
   var box = document.getElementById('helloCard');
   function gone() { art.hidden = true; }
   if (!box || !window.SkriblInline || !window.fetch) { gone(); return; }

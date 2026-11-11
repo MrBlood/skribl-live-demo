@@ -143,6 +143,20 @@ and so waiting for the owner's yes with an estimate (WORKING-AGREEMENTS,
 bigger database; a cache server; more web servers. None are needed for
 phases 1 and 2 with a few hundred people.
 
+**The setup Cal recommends for the long run (Nov 10, asked by the owner):
+Render and Cloudflare.** Render keeps running the app and its PostgreSQL
+(no server to patch or back up by hand; the harness and the deploy already
+target it), with a background worker added when the job queue arrives.
+Cloudflare holds the domain (its registrar sells at cost), its DNS, the CDN
+in front, R2 for drawings and music (S3-compatible, so Skribl's S3 store
+works with it, and no fees for downloads), and Email Routing for a free
+hello@ address. A sending service (Resend or Postmark) comes with the
+emailed sign-in link, and Sentry's free tier watches for errors. A rented
+server would be cheaper on paper and is a second job: no. Prices were given
+to the owner from memory, flagged as such (this container cannot reach those
+sites): roughly $15 to $25 a month plus the domain at first, $50 to $100 a
+month at thousands of people. Each step waits for the owner's yes.
+
 ---
 
 ## 5. The phases
@@ -187,7 +201,11 @@ here is tested (a check shown red before it is believed).
   2. *Sign-in.* Accounts with passkeys and an emailed link, 13 and over;
      the site's people become the people the Pad posts as. Asks first: the
      email service (it may cost), and the domain (passkeys are tied to the
-     address they are made on).
+     address they are made on). *The owner's "all yes" (Nov 10):* built on
+     the demo's address first, for invited people (their passkeys are made
+     again after the move to the domain); passkeys alone first, the emailed
+     link once an email service is picked and its price compared;
+     invite-only until a lawyer has read the terms.
   3. *Profiles and drawn faces.* "Draw your face", a face that draws itself
      once (a small new Skribl piece, the face player), the person's skribls.
   4. *Posts.* Words and a skribl, posted from the site; a post's own page
@@ -314,3 +332,64 @@ a cut. Pad and Flip are unchanged: Make opens them as they are.
 DECISIONS.md ("The site's frame at /social") says what each check was shown
 red by. Not yet, on purpose: accounts and You, posts, and tables (when they
 come, named `social_...` with their own migration chain).
+
+### Built: piece 2, sign-in (invite-only, passkeys)
+
+The owner's answers, built: on the demo's own address for invited people
+(each passkey keeps the address it was made on, and nothing names a host, so
+after the move to a domain people make theirs again), passkeys alone (no
+email yet), 13 and over, invite-only.
+
+| Where | What it is |
+|---|---|
+| `/social/join#<code>` | **Join**, from an invite link: a name, a handle, "I'm 13 or older", a passkey; signed in. The code is after the `#`, which a browser never sends to a server, so no log holds it: the page posts it to `/join/check`, then `/join/options` and `/join/verify`. A link that does not work (used, run out, revoked, never made) gets one kind card, and the server one answer. |
+| `/social/signin` | **Sign in with a passkey**: nothing typed (`/signin/options`, `/signin/verify`). Sign out is a button (`/signout`); so is **Sign out everywhere** (`/signout/everywhere`). |
+| `/social/you` | **You**: name and handle, the passkeys (add another: `/you/passkeys/options`, `/you/passkeys/verify`; rename and remove: `/you/passkeys/<key_id>/rename`, `/you/passkeys/<key_id>/remove`, never the last), signing out, and **Delete my account** (`/you/delete`). In the bar on a phone, at the rail's foot on a desk, once signed in; Sign in in its place before. |
+| `/social/invites` | **Invites**, admins only (a 404 like any missing page to anyone else): a join link (once, 14 days), a recovery link for a named person (`/invites/recover`: once, an hour, adds a passkey to their account), the unused ones, revoke (`/invites/<invite_id>/revoke`). |
+| `/social/recover#<code>` | **A recovery link**: names whose account it is for (`/recover/check`), makes a passkey there and signs in (`/recover/options`, `/recover/verify`). The stand-in for an emailed link until there is email. |
+
+**The first person.** `SKRIBL_SOCIAL_FIRST_INVITE` is a code that works as a
+join link only while the site has nobody, and makes that person an admin;
+from a shell, `flask --app app social invite --base https://...` prints a join
+link and `flask --app app social recover HANDLE --base ...` a recovery link
+(the way back for an admin who lost every passkey). `.env.example` says how.
+
+**Tables of its own.** `social_people`, `social_passkeys`, `social_invites`,
+`social_challenges`, `social_rate_events`: 64-bit keys that never leave the
+server, a random public id for every person (`site:` and 26 letters and
+digits, what Skribl stores as the author, stable for ever), every index
+written with its table, an invite's code kept only as a hash. Their chain is
+`social/alembic.ini` (`social/migrations`, stamped in `social_alembic_version`;
+Skribl's chain is untouched), run once per start by `gunicorn.conf.py` before
+any worker, since Render reads its start command and not the Procfile, and
+gunicorn is what both start. A chain that fails is logged and the demo serves
+on, the site's sign-in resting (a kind 503) until its tables are there.
+
+**One Skribl, shared.** While somebody is signed in to the site, the Pad and
+Flip post as them, and the Gallery names them (name and @handle); while
+nobody is, the demo's own identity is asked as before. The site hands both
+to Skribl through the seams any host has (`current_user_id`, the author
+resolver), composed in app.py, and only where Skribl's CSRF is on.
+
+**Safety, in short.** py_webauthn checks every passkey (discoverable, user
+verification required, the sign count stored and checked, a challenge for
+one browser used once, the relying party and origin the request's own). The
+site's own cookie is signed, HttpOnly, SameSite=Lax, Secure over HTTPS, and
+made again at sign-in; every request checks the person's sign-in generation,
+which "Sign out everywhere" moves on. Every state-changing request carries
+the site's token and its own Origin. Sign-ins, joins and link checks are
+limited per address, an invite's tries per invite and an admin's links per
+admin, in the database. Deleting an account deletes the person, their
+passkeys and their invites.
+
+**Not yet:** the emailed link (an email service, asked first); profiles and
+drawn faces (piece 3); a list of signed-in devices; a short undo before an
+account is deleted (rule 9's undo window waits for the job queue); and an
+account's skribls going with it, which needs a seam Skribl does not have yet
+(docs/INTEGRATION.md documents deleting one post by its id, not an author's
+all): until then the delete page says the skribls stay, and to delete them
+in the Library first.
+
+`harness/verify_socialauth.py` holds it all through the demo's own server,
+with Chromium's own virtual authenticator; DECISIONS.md ("Sign-in at
+/social") says what each check was shown red by.

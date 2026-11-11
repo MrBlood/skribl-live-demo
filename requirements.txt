@@ -35,3 +35,6 @@ psycopg[binary]>=3.1,<4.0
 # an option for a deployment that holds real posts. Scoped to SkriblBase.metadata
 # — see skribl/migrations/env.py — so it never touches a host's tables.
 alembic>=1.13,<2.0
+# The site's passkeys (social/passkeys.py): WebAuthn checked by a maintained
+# library, not by hand. Only the site at /social imports it; Skribl never does.
+webauthn>=3.0,<4.0

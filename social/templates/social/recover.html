@@ -1,0 +1,32 @@
+{#  A RECOVERY LINK (phase 1, piece 2): /social/recover#<code>. An admin made
+    it for one person, and it adds a passkey to their account on this phone
+    or computer, then signs in. Once, for an hour: the stand-in for an emailed
+    sign-in link until the site has email. The code is after the #, so no log
+    holds it; passkey.js asks whose account it is for, and fills in the handle
+    (or shows the kind "doesn't work anymore" card instead). #}
+{% extends 'social/base.html' %}
+{% import 'social/_icons.html' as ic %}
+
+{% block title %}Add a passkey · Skribl{% endblock %}
+{% block scripts %}<script src="{{ social_asset('passkey.js') }}" defer></script>{% endblock %}
+
+{% block main %}
+<div class="si si-solo">
+  <section class="si-card is-checking" aria-labelledby="recTitle" data-link="{{ url_for('social.recover_check') }}">
+    <img class="si-icon" src="{{ skribl_asset('apple-touch-icon.png') }}" alt="" width="64" height="64">
+    <div class="link-ok" data-link-ok>
+      <h1 class="si-title" id="recTitle">Add a passkey</h1>
+      <p class="si-lede">This link adds a passkey for <b data-link-handle>your account</b> on this phone or computer, then signs you in. It works once, for an hour.</p>
+      <div class="si-go">
+        <button class="btn btn-primary btn-big btn-wide" type="button" data-passkey="recover"
+                data-options="{{ url_for('social.recover_options') }}"
+                data-verify="{{ url_for('social.recover_verify') }}">{{ ic.passkey() }}<span>Make a passkey</span></button>
+        <p class="say" data-say role="status" hidden></p>
+        <p class="fine center">Face ID, Touch ID or Windows Hello.</p>
+      </div>
+    </div>
+    {% include 'social/_gone.html' %}
+  </section>
+</div>
+{% include 'social/_passkey_words.html' %}
+{% endblock %}

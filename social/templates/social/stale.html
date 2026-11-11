@@ -1,0 +1,7 @@
+{#  A form that did not come from the site's own page in this browser, or a
+    page that sat open long enough to go stale (403). Never the person's
+    fault, so it does not say it was. #}
+{% extends 'social/base.html' %}
+{% from 'social/_kind.html' import card %}
+{% block title %}That didn’t go through · Skribl{% endblock %}
+{% block main %}{{ card("That didn’t go through", "This page went stale. Go back, reload it, and try again.") }}{% endblock %}

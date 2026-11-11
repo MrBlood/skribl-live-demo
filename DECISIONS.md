@@ -33354,3 +33354,244 @@ it. Side by side on the merged tree: verify_social 36/36, verify_standin
 verify_example 59/59, verify_seam 458/458, verify_surfaces 13/13,
 verify_inline 192/192, verify_hostconfig 61/61, verify_boot 23/23,
 verify_csp 32/32, verify_a11ypages 162/162.
+
+## After v330 -- Sign-in at /social: invite-only, passkeys (phase 1, piece 2)
+
+docs/SOCIAL-SITE.md's build order, item 2, with the owner's answers ("all
+yes", Nov 10): built on the demo's own address for invited people (their
+passkeys are made again after the move to a domain, so nothing names a
+host); passkeys alone, no email yet; invite-only until a lawyer has read the
+terms. Built to the approved sign-in mock (A) without its email half.
+
+- INVITE-ONLY, WITH PASSKEYS. Join from an invite link (a name, a handle,
+  "I'm 13 or older", a passkey; signed in), Sign in with a passkey (nothing
+  typed: the passkey says whose it is), Sign out and Sign out everywhere as
+  buttons, You, Invites for admins, and a recovery link. py_webauthn checks
+  every ceremony: discoverable credentials, user verification required both
+  ways, the sign count stored and checked, a challenge for one browser, five
+  minutes, used once, and the relying party and origin the request's own (a
+  passkey keeps the address it was made on and signs in only there).
+- A LINK'S CODE IS AFTER THE # (/social/join#<code>, /social/recover#<code>),
+  NOT IN THE PATH THE BRIEF NAMED. A code in the path is in every access log,
+  proxy log and Referer on the way (the dev server already logged each
+  path), and a recovery link is the key to somebody's account for an hour. A
+  browser keeps what follows the # to itself: the page posts it to
+  /join/check, then options and verify, in the body. Only its SHA-256 is
+  stored. A link that does not work (used, run out, revoked, never made) gets
+  one kind card, and the server one answer, 404 {"error": "gone"}.
+- THE FIRST PERSON. SKRIBL_SOCIAL_FIRST_INVITE (16 characters or more) works
+  as a join link only while the site has nobody, compared in constant time,
+  and makes that person an admin; spent, it is a used invite row with its
+  hash, so two people racing for it cannot both win. `flask --app app social
+  invite --base https://...` prints a join link from a shell, and `social
+  recover HANDLE` a recovery link: the way back for an admin who lost every
+  passkey, through Render's shell.
+- YOU, AND SIGN IN IN ITS PLACE BEFORE. Once signed in, You is the bar's
+  fourth place on a phone and the rail's foot on a desk (name over @handle);
+  before, the place says Sign in, as the approved mock has it, and a phone's
+  first screen says Sign in at its top right too. verify_social's two rows
+  that pinned a bar of three now pin Sign in. You holds name and handle, the
+  passkeys (add another; rename and remove in place, never the last), Sign
+  out, Sign out everywhere and Delete my account. No profile page (piece 3).
+- INVITES ARE AN ADMIN'S: a join link (once, 14 days) and a recovery link for
+  a named person (once, an hour; it adds a passkey to their account, the
+  stand-in for the emailed link), each shown once, since only its hash is
+  kept; the unused ones listed with Revoke. To anybody else, signed in or
+  not, the page and its forms are a 404 with the same status, words and
+  headers as a page that is not there.
+- ONE SKRIBL, SHARED. While somebody is signed in to the site, the Pad and
+  Flip post as them (Skribl's user is their public id, "site:" and 26
+  letters and digits, stable for ever) and the Gallery names them; while
+  nobody is, the demo's own identity is asked as before. app.py composes
+  both through the seams any host has (current_user_id and the author
+  resolver), only where Skribl's CSRF is on: init_skribl refuses a cookie
+  identity without it. THE LIVE DEMO RUNS WITH IT OFF (START-HERE: no
+  SKRIBL_DEMO_* on Render), so there the site's people sign in and the Pad
+  still posts as nobody until SKRIBL_CSRF_PROTECT=1 is set; the boot log
+  says so as a warning wherever the app looks like a deployment. A demo
+  identity beginning "site:" is refused at boot.
+- TABLES OF ITS OWN, ON A CHAIN OF ITS OWN. social_people, social_passkeys,
+  social_invites, social_challenges, social_rate_events: 64-bit keys that
+  never leave the server (a person, a passkey and an invite each have a
+  random public id for addresses and forms), every index written with its
+  table. social/alembic.ini runs social/migrations into
+  social_alembic_version; Skribl's chain and tables are untouched, in either
+  order. RENDER DOES NOT READ THE PROCFILE (v270), so the chain is run by
+  gunicorn.conf.py's on_starting, once per start in gunicorn's master,
+  before any worker loads the app: Render's start command and the Procfile
+  both start gunicorn, and neither changes. CAREFULLY: a chain that fails or
+  takes over two minutes is logged with alembic's last lines (a database
+  address in them blanked), the server starts anyway, and the site's
+  sign-in answers a kind 503 ("resting") until its tables are there, while
+  the Pad and the rest of the demo serve. `flask init-db` and the harness's
+  fresh databases make the tables too (attach_to_metadata, as Skribl's).
+- WHAT AN ATTACKER WAS GIVEN TO THINK ABOUT. CSRF: every state-changing
+  request carries the site's token (HMAC of the browser's session id) and its
+  own Origin (Sec-Fetch-Site where a browser sends none), the passkey
+  ceremonies as JSON with the token in a header. Fixation: a new session id
+  at every sign-in. Stolen cookies: the cookie is the site's own, signed,
+  HttpOnly, SameSite=Lax, Secure over HTTPS (Render's X-Forwarded-Proto
+  believed: a client claiming HTTPS only makes its own cookie stricter), 30
+  days, path /; every request checks the person's sign-in generation, which
+  Sign out everywhere moves on (a copy taken before Sign out alone stays good
+  until then, as with any signed cookie). Guessing and flooding: codes are
+  128 random bits, and the database counts sign-ins, joins and link checks
+  per address (30, 20 and 60 an hour; one trusted proxy's address, IPv6 by
+  its /64), tries per invite (12), links per admin (60 a day) and passkeys
+  added per person (20). Replay: one challenge per browser and purpose, used
+  once; the sign count. A copied key: refused when its count does not rise.
+  Logs: no code, cookie or address reaches one. Enumeration: one answer for
+  every link that does not work; a hidden page's 404 like any other. Spoofed
+  names: a handle is ASCII letters, digits and underscores from a letter,
+  with the site's own words kept; a name may not hide bidi or other invisible
+  controls. Bodies: past 64 KiB a post to the site is refused by the
+  length it says, or read no further, and whatever a body says is answered,
+  never a 500. Scripts: none inline; the site's policy kept.
+- DELETING IS REAL, WITH ONE GAP SAID ALOUD. Delete my account says first
+  what goes and what stays, and needs the handle typed. It deletes the
+  person, their passkeys, the invite links they made, the recovery links for
+  them, the invite they came in by and ceremonies in progress. Their skribls
+  and drafts stay: docs/INTEGRATION.md documents deleting one post by its id
+  (delete_post) and no way for a host to take an author's drawings with them,
+  and the site does not reach past the seams; the page says they stay, and
+  to delete them in the Library first. A Skribl seam for it is the owner's
+  call (anything the site needs from Skribl, every host gets).
+- THE LOCK. webauthn 3.0.1 and its dependencies (cbor2, cffi, cryptography,
+  pyasn1, pyasn1_modules, pycparser, pyOpenSSL) in constraints.txt, one hash
+  each. cryptography's is its glibc 2.17 wheel, not the 2.34 one pip prefers
+  here: a hashed install takes the wheel whose hash is listed (checked in a
+  fresh venv: the whole lock installs, `pip check` clean), and it runs on any
+  build image the lock already runs on. cbor2 ships a glibc 2.28 wheel only,
+  greenlet's baseline already.
+
+FOR THE OWNER: two settings on Render, SKRIBL_CSRF_PROTECT=1 and
+SKRIBL_SOCIAL_FIRST_INVITE (a long random code), then open
+/social/join#<that code>. New screens beyond the mock (join, a recovery link,
+You, Invites, the delete confirm, the small kind pages) and every word on
+them want the owner's look; so do Sign in in the bar (the mock's, new to the
+built frame), the sign-in page's line in place of the email half ("Choose
+Sign in with a passkey, and your browser can use the phone your passkey is
+on. Lost them all? Ask us for a one-time link."), its invite-only line ("New
+to Skribl? It's invite-only for now: a friend on Skribl can send you a
+link."), and the mock's House rules and Privacy links, left out until those
+pages exist. Not tested here: Safari and iCloud Keychain (no WebKit), Windows
+Hello, a real phone's cross-device sign-in.
+
+WHAT IT DOES TO PAD AND FLIP: shared. Both post as the signed-in person
+through the one current_user_id Skribl is handed (a row each); no file of
+theirs changed.
+
+THE FOUR: kind (one card for every link that does not work, nobody blamed,
+13-or-older asked for kindly, deleting says what stays); simple (one button
+to sign in, nothing typed); powerful (passkeys, sign out everywhere, a
+recovery link); playful (Blooby draws his card beside sign-in on a desk).
+
+THE CHECKS: harness/verify_socialauth.py, sixteen sections, 59 rows, through
+the demo's own app on a server of its own (CSRF on, a first-invite code, the
+demo's identity, one trusted proxy so each section speaks from an address of
+its own), driven at localhost with Chromium's virtual authenticator (resident
+keys, user verification). Every row was shown red by breaking one part at a
+time (a driver changed one string, ran only that section on a server booted
+from the tree as it then was, and put the file back from memory), and green
+as built: 70 breaks, and four first tries that stayed green, each the
+instrument's fault (below):
+
+- 1, THE FIRST PERSON: the code never matching, red; the first person not an
+  admin, red; the code working with people here, red (never again); the code
+  stored as it is, red (it was in the table).
+- 2, JOIN: the CLI's link without the #, red; the age asked by neither page
+  nor server, red (a passkey made), and by the server alone, red (its
+  row); nothing reserved, a handle taken only as written, invisible controls
+  allowed in a name, each red; "@{handle}" left out of the taken words, red;
+  You taken out of the frame, red (phone and the rail); an invite spent on
+  nobody, red; every joiner an admin, red (Invites not a 404 to them).
+- 3, LINKS THAT DO NOT WORK: a used link still working, red (all three
+  rows); a run-out one, red; a used code answered apart from a missing one,
+  red.
+- 4, SIGN OUT AND IN: sign-out keeping the person, red; the sign count not
+  stored, red; the session id kept at sign-in, red (fixation); the count not
+  checked, red (a copied key signed in); user verification not required,
+  red (the page's own options made to ask for less, an authenticator that
+  verifies nobody).
+- 5, ONE SKRIBL: Skribl not told who is signed in, red (the Pad's post, Flip's,
+  the Gallery's card); the site's people not named, red; the demo's identity
+  not asked, red.
+- 6, INVITES: open to any member, red (the 404 rows, and a link made by
+  them); the hidden 404 in the site's own headers, red (headers apart from a
+  missing page's); a join link for a week, red; an unknown handle not said,
+  red.
+- 7, A RECOVERY LINK: the passkey put on another account, red; the link not
+  spent, red; the CLI's recovery link to the join page, red; the passkey
+  stored for another address, red (it then signs nobody in).
+- 8, PASSKEYS: a rename not kept, a passkey anybody's to remove, a remove that
+  removes nothing, the last removable: each red.
+- 9, SIGN OUT EVERYWHERE: the generation not moved on, red; not checked,
+  red.
+- 10, DELETE: what stays not said, red; any handle confirming, red; their
+  invite links kept, red (the link still let people in); the person kept,
+  red.
+- 11, LIMITS: sign-ins, joins, link checks and an invite's tries each
+  unlimited, red; the 429's words made unkind, red.
+- 12, CSRF AND BODIES: no token needed, red; any origin, red (the
+  ceremonies' row and the forms'); a name or a handle not checked for being
+  text, red (a 500); an answer not checked for its shape, red (a 500); no
+  cap by the length a body says, red; no cap on what is read, red (a code
+  past 64 KiB counted).
+- 13, THE COOKIE: readable by scripts, red; HTTPS not believed from the proxy,
+  red (no Secure on Render); a sign-in for a week, red; an unsigned cookie
+  believed, red.
+- 14, THE CHAIN: the site stamping Skribl's alembic_version, red; a model
+  column the chain has not, red (drift); a downgrade that leaves a table, red;
+  gunicorn running no site chain, red; a failing site chain stopping the
+  server, red (the demo down); database addresses logged as they are, red.
+- 15, THE NEW SCREENS: the second ink made #a3aab7, red; the small buttons
+  36px, red; the fields 15px, red.
+- 16, NO ERRORS: an inline script on sign-in, red (the site's policy blocked
+  it, and the row heard).
+
+FIVE GREENS THAT COULD NOT HAVE BEEN RED, found by that calibration and fixed
+in the instrument, not the site:
+
+- The run-out link was made to run out before the admin's Invites page was
+  read, and reading it deletes links that ran out unused: the row had been
+  testing a deleted link (green with expiry unchecked). It runs out after
+  now, and the row says the link is still there.
+- With sign-out broken, the suite died waiting for the sign-in page instead
+  of printing a red row. Every sign-out is pressed through a helper that
+  lands wherever the site sends, and a missing element reads as no words.
+- The forged cookie raised its own generation by hand, which the generation
+  check refuses whatever the signature says. It names somebody else now,
+  with their own current generation: only the signature can stop that.
+- The 429's words: the page maps a 429 to them and the server names it
+  "limited", so either alone keeps the scenario. Shown red by the words, and
+  by both taken out together.
+- The age: the page's own check and the server's say the same words, so the
+  page's row was shown red with both out, and the server's row by its own.
+
+FOUND BY THE SUITE, NOT BY A BREAK: a second link opened in the same tab
+changes only what follows the #, so the page did not load again and a good
+link read as gone. A link page now reloads on hashchange. FOUND READING THE
+ROUTES AGAIN: a number for a name or a list for a handle raised inside the
+field checks, and a verify with no credential raised inside py_webauthn:
+both answered 500, both answer 400 now (the rows in section 12). And the
+hidden Invites 404 carries the demo's missing-page policy on purpose (its
+empty nonce is the console error piece 1 recorded on the demo's own 404), so
+the page-error row navigates nowhere hidden.
+
+ALSO: the lock installs whole from its hashes in a fresh venv (`pip check`
+clean), and harness/tools/wheelhouse.py built and proved its offline zip from
+it (31 wheels; the README's own lines, pip's network refused, the app booted
+with the site). docs/INTEGRATION.md is unchanged: no seam of Skribl's moved.
+
+Side by side (run_parallel -j 3, 8.4 min), on this tree: verify_socialauth
+59/59, verify_social 36/36, verify_docs 144/144, verify_surfaces 13/13,
+verify_boot 23/23, verify_hostconfig 61/61, verify_standin 22/22,
+verify_example 59/59, verify_txcontract 95/95, verify_csrf 27/27, verify_csp
+32/32, verify_identity 135/135, verify_hostseams 88/88, verify_migrations
+77/77, verify_clouddrafts 116/116, verify_inline 192/192, verify_gallery
+232/232, verify_a11ypages 162/162, verify_review 292/292, verify_bootstrap
+7/7; none red, nothing intermittent; gen_docs.py --check current.
+verify_postgres NOT RUN: no PostgreSQL in this container (its CI job runs
+it). verify_contrast not run: no sheet or token of Skribl's changed (the
+site's own words are verify_social's section 6 and verify_socialauth's 15).
+The full battery was not run; main's run after the merge is.
