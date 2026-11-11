@@ -49,9 +49,9 @@ events with pressure, a hand's timing).
   10. NO PAGE ERRORS, NO CONSOLE ERRORS AND NO CSP VIOLATIONS on any of it.
   11. A FACE FROM A SKRIBL YOU MADE (the owner's yes on mock A, Nov 11): Add
       your face raises Your face, Make's own sheet, gliding up, its two doors;
-      Use one you made glides the sheet to its new height and lists her own
+      Use one you made glides the sheet to its new height and lists their own
       Pad skribls (the link-only one too; never a Flip, somebody else's or the
-      face she has); one picked is placed in the circle from its middle square,
+      face they have); one picked is placed in the circle from its middle square,
       moved by a drag and the arrow keys and sized by the slider; Use this
       face keeps a face of its own (707 square, unlisted, its card made, its
       points the drawing's moved and sized into the square) and the drawing it
@@ -1512,7 +1512,7 @@ with sync_playwright() as p_:
               f"before {before}; opened {opened}; rise from {rise[:1]} to {rise[-1:]} on {len(set(rise))} positions,"
               f" biggest step {max((abs(x) for x in rsteps), default=0):.1f} of {rtravel}; after Esc {gone}")
 
-        # PICK: the step's height glides; the list is hers, Pad drawings only.
+        # PICK: the step's height glides; the list is theirs, Pad drawings only.
         open_face_sheet(pg)
         GROW = """(ms) => new Promise(res => { const s = document.querySelector('#faceSheet .make-sheet'), out = [];
             const t0 = performance.now(); document.querySelector('#faceSheet [data-face-go=pick]').click();
@@ -1531,7 +1531,7 @@ with sync_playwright() as p_:
         gtravel = abs(grow[-1] - grow[0]) if grow else 0
         titles = [t["title"] for t in tiles]
         check("Use one you made glides the sheet to its new height (read every frame: one way, never a jump) and lists"
-              " her own skribls, newest first, the link-only one too: Pad drawings only, never a Flip, never somebody"
+              " their own skribls, newest first, the link-only one too: Pad drawings only, never a Flip, never somebody"
               " else's; each tile is the drawing cut from its own card",
               grow and gtravel > 40 and len(set(grow)) >= 6 and all(x >= 0 for x in gsteps)
               and max((abs(x) for x in gsteps), default=0) <= 0.45 * gtravel
@@ -1599,8 +1599,8 @@ with sync_playwright() as p_:
         fp, op = (fpay.get("frames") or [{}])[0].get("strokes", [{}])[0], opay["frames"][0]["strokes"][0]
         want = {"x": (op["x"] - s3["x"]) * 707 / s3["side"], "y": (op["y"] - s3["y"]) * 707 / s3["side"],
                 "size": op["size"] * 707 / s3["side"]}
-        check("Use this face keeps a face of its own: one new skribl, unlisted, hers, 707 square, its card made (a"
-              " picture, not the see-through blank), on her row; its points the drawing's, moved and sized into the"
+        check("Use this face keeps a face of its own: one new skribl, unlisted, theirs, 707 square, its card made (a"
+              " picture, not the see-through blank), on their row; its points the drawing's, moved and sized into the"
               " placed square; the drawing it came from byte for byte as it was",
               bool(face) and face != newer and frow is not None and frow[0] == "unlisted" and frow[1] == row[0]
               and (frow[3], frow[4]) == (707, 707) and tuple(row[4:6]) == (707, 707) and picture(face) in RASTER

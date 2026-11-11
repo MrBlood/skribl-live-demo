@@ -34000,9 +34000,9 @@ face mode, run end to end here before it was told.
   time. Whatever changes the sheet's height (a step, the list arriving, a
   line said) glides it there; under Reduce Motion the height is simply the
   new one, and only the fade remains.
-- PICK: her skribls from Skribl's own listing, her user id asked for (so the
+- PICK: their skribls from Skribl's own listing, their user id asked for (so the
   link-only ones too), newest first, paged by its cursor; Pad drawings only
-  (a face plays once, as a drawing does), never the face she has, never
+  (a face plays once, as a drawing does), never the face they have, never
   anybody else's; each tile the drawing cut from its own card by
   lib/sharecard.js's drawingRect, contained in the tile. Or Open a file...
   for a .skribl file, read in the page. The picker waits a moment for the
@@ -34038,7 +34038,7 @@ profile's face as an oval across the page. It is .face-place-ring, and a
 row now reads the profile's circle itself (red with the old name: 353.8 by
 769.1; green with the new: 112 by 112).
 
-THE FOUR: kind (nothing of hers is changed or lost; Back is always there;
+THE FOUR: kind (nothing of theirs is changed or lost; Back is always there;
 what cannot be a face yet is said where it was picked); simple (two doors,
 pick, place); playful (any drawing can be a face, and it still draws
 itself); powerful (the exact size and place, by hand, keys or slider).
@@ -34046,10 +34046,10 @@ itself); powerful (the exact size and place, by hand, keys or slider).
 THE CHECKS. verify_socialprofile section 11, seven rows, every one shown red
 by breaking one part and green as built (15 breaks): the sheet's opener not
 bound (the first row); the step's height not glided (the second: a jump);
-Flips not filtered, the listing without her id (the second); the start not
+Flips not filtered, the listing without their id (the second); the start not
 the middle square, the drag inverted (the third); sizes not scaled, the card
 not set, the original handed back instead of a copy (the fourth: its points,
-its blank picture, its 816 by 612); the face she has not left out (the
+its blank picture, its 816 by 612); the face they have not left out (the
 sixth); the photo and Flip checks taken out of lib/faceframe.js (the sixth,
 which first crashed on the photo and now reports it); the sheet's hint
 faded to 1.69:1 and the slider 24px tall (the seventh); the oval (the
