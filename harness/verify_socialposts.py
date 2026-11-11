@@ -879,11 +879,17 @@ with sync_playwright() as p:
         fields = [f"{' '.join(k)}: {x}" for k, v in seen.items() for x in v["fields"]]
         reads = sum(v["read"] for v in seen.values())
         lowest = min(((v["lowest"], " ".join(k)) for k, v in seen.items()), default=(0, "nothing"))
+        # Each screen read, not merely the lot: the fewest words each shows
+        # with nothing else made (this section alone: Home 7, a post 13, its
+        # ⋯ 5, Report 10), so a reader that missed a screen says so. It was a
+        # total of 150 once, met only with the sections before it run first.
+        FLOOR = {"home": 6, "post": 10, "menu": 4, "report": 8}
         check("every word on Home's composer and feed, a post's page, its ⋯ and Report reads at 4.5:1 or more on"
               " what is painted behind it, every control is 44px or more each way, every text field 16px: phone and"
               " desk, light and dark",
-              reads >= 150 and not low and not small and not fields,
-              f"{reads} read, the lowest {lowest}; under 4.5: {low[:4]}; small: {small[:4]}; fields: {fields[:3]}")
+              all(v["read"] >= FLOOR[k[2]] for k, v in seen.items()) and not low and not small and not fields,
+              f"{reads} read, the lowest {lowest}; under 4.5: {low[:4]}; small: {small[:4]}; fields: {fields[:3]};"
+              f" each {[(' '.join(k), v['read']) for k, v in seen.items()]}")
 
     # ------------------------------------------------------------------ 8
     if part(8, "no page errors, no console errors, no CSP violations"):
