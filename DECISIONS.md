@@ -34209,3 +34209,11 @@ unchanged. verify_postgres NOT RUN (no PostgreSQL here). The full battery
 was not run; main's run after the merge is. Not tested here: an iPhone's
 own photo picker (no WebKit here), Safari, Segoe UI. The owner's yes to the
 backing came before the merge ("yes to the backing, merge when green").
+
+After that run, the PR gate's own suites, run here because GitHub's runners
+could not install Chromium all day (the Ubuntu mirror did not resolve), went
+red in verify_surfaces: the backing's dark ground was a hard-coded neutral,
+rgb(13,15,20), and every grey the chrome paints is a token. It is now the
+canvas's own shade token, --on-canvas-shade-rgb (the halo under white words:
+the same role); verify_surfaces 13/13, section 12 5/5 (5.67 and 5.65 light,
+5.88 and 5.75 dark), and the backing's break red again on the final line.
