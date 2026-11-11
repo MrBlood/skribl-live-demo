@@ -13,7 +13,8 @@ authenticator for the site's people and a real pen in Skribl's real Pad.
      chain, its skribl through create_post (unlisted without the tick, its
      title the first words, no caption), and the post's own page, where the
      drawing plays by itself; under Reduce Motion it rests still. With the
-     tick, the skribl is public and Skribl's listing shows it.
+     tick, the skribl is public and Skribl's listing shows it. On a desk,
+     More from shows each other drawing alone, cut out of its share card.
   4. THE FEED: everyone's posts, newest first, each card still until
      tapped, its time said in the person's own; Load more brings the next
      page in place, by a cursor that names no internal id.

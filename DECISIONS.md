@@ -34428,3 +34428,112 @@ Reduce Motion; light and dark, phone and desk. Seven breaks, each red on it
 alone: stacked; Flip's stock icon; the brand purple for the ink (3.74:1);
 not drawn in; drawn in under Reduce Motion; Draw wider than Flip; the line
 under each name hidden.
+
+## After v330 -- Posts at /social (phase 1, piece 4)
+
+docs/SOCIAL-SITE.md's build order, item 4, from the approved mocks (Home's
+composer and feed, "A post", the ⋯ sheet) and the owner's "all yes" to
+piece 4's choices (Nov 11): "Open a post and its drawing starts, sound off,
+at the author's speed. Never with Reduce Motion. In the feed nothing moves
+until it's tapped." Built beside Your face first and Make's sheet (#858),
+set aside while they shipped and brought back over them: the composer's
+Draw and Flip wear Make's own drawn icons.
+
+- A POST IS A DRAWING AND WORDS. "Say something, then draw it…" heads Home,
+  signed in; the words are optional, up to 500 characters, nothing
+  invisible or turned around. Draw and Flip open Skribl's own editor over
+  Home in compose mode (the overlay Your face uses, SocialPadOverlay), with
+  "Show in the Skribls gallery" in its sheet (?gallery=1). Add hands the
+  drawing back, and the composer shows it in the in-post player the post
+  will have, with Edit drawing (the editor reopens with it) and Remove.
+- ONE TRANSACTION. Post sends the skribl through create_post and the site's
+  row (social_posts, on the site's own chain) together, or neither. Public
+  with the gallery tick, unlisted without (its link works; it is listed
+  nowhere but the site's feed). Its title is the post's first words, its
+  caption only what was written under the tick. A post's body may weigh up
+  to 24 MB (the editor's whole payload and its share card); every other
+  request to the site still stops at 64 KiB.
+- POST LOOKS PRESSABLE, where the mock drew it pale with nothing drawn: a
+  pale button says no without saying why. Pressed with nothing drawn, it
+  says "Draw something first, then Post." under the composer and sends
+  nothing. Shown to the owner in the pictures; pale is one rule away.
+- THE FEED is everyone's posts, newest first (Following is phase 2), 20 a
+  page, each card still until tapped, its time in the person's own; its
+  drawings' sizes, lines and plays come through Skribl's new
+  describe_posts, one query a page. Load more brings the next page in
+  place, by a cursor that names no internal id. Empty, it says "No posts
+  yet. Yours could be the first: say something, then draw it."
+- A POST'S OWN PAGE (/social/p/<id>) plays its drawing by itself, at the
+  author's speed, sound off until the viewer turns it on, never under
+  Reduce Motion: its author, words, when, plays, Share and Make your own;
+  Comments' place kept ("Comments open soon"); on a desk the drawing on the
+  left and, beside it, More from its author, three tiles, each the drawing
+  alone.
+- ⋯ is Copy link, Share… and Report this post, or on your own post Delete
+  post in Report's place. Report rises as a sheet of its own with the
+  Gallery's own reasons and words, into Skribl's report queue, and says
+  thanks; nothing is taken down by itself. The site's own queue (for words)
+  and Block come with piece 5. Delete asks once ("Delete this post?": Keep
+  it, Delete post) and takes the words and the drawing, and Home says so.
+  Deleting an account takes its posts the same way, and its page says so
+  first.
+- GUARDS: the page's token and its own Origin on every post and delete;
+  sign-in; 40 posts an hour per person (each one is a skribl); nobody
+  deletes a post that is not theirs.
+
+WHAT SKRIBL GAINED, FOR EVERY HOST (docs/INTEGRATION.md): "Reading them on
+your server", skribl.describe_posts(ids, viewer_id=...), the listing's own
+item for each by the rule every read of a skribl follows, no payload read,
+at most 200 ids, nothing flushed; and "A post's own page can start it",
+SkriblInline.mount(box) handing back the box's player, whose play() starts
+it.
+
+Pad and Flip: shared. Both open from the composer the same way, through
+lib/composehost.js and the site's one overlay, and a Flip post plays as a
+flip book in the same in-post player. Neither editor changed.
+
+THE FOUR: kind (Post says why instead of going pale; Delete asks once;
+Report thanks you and takes nothing down by itself; an empty feed invites);
+simple (one box: say something, then draw it); playful (a drawing draws
+itself when its post is opened; the feed waits for a tap); powerful (Pad or
+Flip, the gallery tick, the author's speed, Load more in place).
+
+CONTRAST: every word on the new screens (Home's composer and feed, a post's
+page, its ⋯, Report), phone and desk, light and dark, read against what is
+painted behind it: the lowest 5.33:1, on Home. Every control 44px or more,
+every text field 16px.
+
+FOUND IN THE PICTURES, FIXED BEFORE THEY WERE SHOWN: More from's tiles
+showed each drawing's whole share card, cover-cropped, its dark ground and
+wordmark strip around the drawing, which Skribl crops away everywhere else
+(lib/sharecard.js: it "reads as an advert twenty times down a timeline").
+post.html's more_frame cuts the drawing out as Skribl's face macro does
+(drawingRect, 3 card pixels in from the plate's line), whole, in its own
+shape. Also not a defect but worth knowing: a post made without its share
+card (by script, not through an editor) shows Skribl's blank poster until
+played, by design.
+
+THE CHECKS. verify_socialposts.py, eight sections through the demo's own
+server, people signing in with Chromium's virtual authenticator, drawings
+drawn with a pen in the real Pad. Each row was shown red by a break of its
+own: no composer on Home; the Pad without the gallery choice; Edit drawing
+opening a blank Pad; Flip opening the Pad; the post's row without its
+words; the post's page not playing; playing under Reduce Motion; oldest
+first; Load more's players not mounted; your own post's sheet as somebody
+else's; Report without Skribl's token; Delete without asking; no token
+check; no limit; an account's posts kept; the words field at 14px, a faint
+handle (1.64:1) and Report's reasons missing (section 7, each alone); a
+page error; and for More from, the old tile, no inset, and a cover crop.
+Instruments corrected on the way: "Delete post asks once" could not say red
+when a post went at the first tap (the suite stopped before the row; it
+notes where its steps stopped now); section 7's floor was 150 words in all,
+met only after the sections before it had filled the feed, so it was red
+alone with nothing broken (each screen has its own floor now); and the
+no-inset break was invisible to the paint, the plate line's 3 card pixels
+being under a pixel at a tile's size, so the row reads the crop's own
+geometry as well. Two mistakes were the calibration's, not the suite's:
+the token break first matched both routes' checks (aimed at posting, red),
+and the page-error break first ran without the pages it watches (with
+them, red). verify_createpost section 11, for describe_posts: four breaks,
+each red on its row (a private skribl shown to anyone, the payload handed
+over, no cap, not in __all__).

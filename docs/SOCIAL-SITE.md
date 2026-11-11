@@ -582,7 +582,8 @@ sound off until the viewer turns it on, and never under Reduce Motion (the
 player's own `play()`: docs/INTEGRATION.md, "A post's own page can start
 it"). Its author, its words, when (in the person's own time), its plays,
 Share and Make your own; Comments' place kept ("Comments open soon"); on a
-desk, the drawing on the left and More from its author beside it.
+desk, the drawing on the left and More from its author beside it, each tile
+the drawing alone, cut out of its share card as Skribl's face macro does.
 
 **The ⋯ sheet**, as the mock drew it: Copy link, Share…, and Report this
 post, or on your own Delete post. Report rises as a sheet of its own with
