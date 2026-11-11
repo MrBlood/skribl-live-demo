@@ -538,7 +538,10 @@ body.facepad-open { overflow: hidden; }
  * the sheet's height glides to it (is-resizing) as the new step fades in;
  * under Reduce Motion the height is put there and only the fade remains.
  * The circle is the face's own: 88% of the stage, the drawing beyond it
- * dimmed, a white ring on it (as a profile's face sits on its card). */
+ * dimmed, a white ring on it (as a profile's face sits on its card). Every
+ * class here is the sheet's own: .face-ring is the profile's circle, and a
+ * rule written for this sheet under that name once drew the profile's face
+ * as an oval across the page (caught in the pictures, Nov 11). */
 button.make-door { width: 100%; border: 0; font: inherit; text-align: left; cursor: pointer; }
 .face-card { max-width: 560px; }
 .face-card.is-resizing {
@@ -588,7 +591,7 @@ button.make-door { width: 100%; border: 0; font: inherit; text-align: left; curs
   position: absolute; inset: 0; pointer-events: none;
   background: radial-gradient(circle closest-side at 50% 50%, transparent 87.8%, rgba(23, 20, 42, 0.5) 88%);
 }
-.face-ring {
+.face-place-ring {
   position: absolute; left: 6%; top: 6%; width: 88%; height: 88%; border-radius: 50%; pointer-events: none;
   box-shadow: 0 0 0 2px #ffffff, 0 0 0 3.5px rgba(23, 20, 42, 0.35);
 }

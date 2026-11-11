@@ -1610,6 +1610,21 @@ with sync_playwright() as p_:
               f"face {face} row {row}; post {frow}; card {picture(face) if face else None}; first point {fp} want"
               f" {want}; original unchanged {orig_after == orig_before}; at {pg.url}")
 
+        # THE PROFILE'S OWN CIRCLE, UNTOUCHED BY THE SHEET'S STYLES. A rule the
+        # sheet wrote under the profile's own class name (.face-ring) once drew
+        # the profile's face as an oval across the page: caught in the
+        # pictures, not by a row, so this row reads the circle itself.
+        ring = pg.evaluate("""() => { const box = q => { const e = document.querySelector(q); if (!e) return null;
+              const b = e.getBoundingClientRect(); return { w: Math.round(b.width * 10) / 10, h: Math.round(b.height * 10) / 10,
+              cx: Math.round((b.left + b.width / 2) * 10) / 10, cy: Math.round((b.top + b.height / 2) * 10) / 10 }; };
+            return { prof: box('.prof-face'), face: box('.prof-face .skribl-face'), you: box('nav.nav .tab-you .face-ring') }; }""")
+        pf, ff, yf = ring["prof"], ring["face"], ring["you"]
+        check("the profile's own circle is untouched by the sheet's styles: on a phone its face sits in a 112px circle,"
+              " round and centred on it, and You's in the bar is a 28px one",
+              bool(pf and ff and yf) and (pf["w"], pf["h"]) == (112, 112) and abs(ff["w"] - ff["h"]) < 0.5
+              and 96 <= ff["w"] <= 112 and abs(ff["cx"] - pf["cx"]) < 1 and abs(ff["cy"] - pf["cy"]) < 1
+              and (yf["w"], yf["h"]) == (28, 28), json.dumps(ring))
+
         # ITS FACE NEVER AMONG THEM, and Change my face now.
         open_face_sheet(pg)
         pg.click("#faceSheet [data-face-go=pick]")
