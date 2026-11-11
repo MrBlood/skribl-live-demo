@@ -47,6 +47,17 @@ events with pressure, a hand's timing).
    9. DELETE MY ACCOUNT takes the face with it (delete_post) and the bio with
       the row; the profile is the kind 404 after.
   10. NO PAGE ERRORS, NO CONSOLE ERRORS AND NO CSP VIOLATIONS on any of it.
+  11. A FACE FROM A SKRIBL YOU MADE (the owner's yes on mock A, Nov 11): Add
+      your face raises Your face, Make's own sheet, gliding up, its two doors;
+      Use one you made glides the sheet to its new height and lists her own
+      Pad skribls (the link-only one too; never a Flip, somebody else's or the
+      face she has); one picked is placed in the circle from its middle square,
+      moved by a drag and the arrow keys and sized by the slider; Use this
+      face keeps a face of its own (707 square, unlisted, its card made, its
+      points the drawing's moved and sized into the square) and the drawing it
+      came from byte for byte as it was; Open a file... says a Flip and a
+      drawing with a picture under it kindly, and keeps a .skribl file; every
+      word on the sheet at 4.5:1, every target 44px.
 
 The layers (the site imports only Skribl's documented names, and its
 templates only documented partials, the face player's now among them) stay
