@@ -238,7 +238,8 @@ def sign_in(person):
     data = {"s": _b64(secrets.token_bytes(16)), "p": person.public_id, "g": int(person.session_gen)}
     g.social_fresh = data
     g.social_person = _Snapshot(person.id, person.public_id, person.handle, person.display_name,
-                                bool(person.is_admin), int(person.session_gen))
+                                bool(person.is_admin), int(person.session_gen),
+                                person.face_id, person.face_w, person.face_h)
     _write_cookie(data, SIGNED_IN_FOR)
     return data["s"]
 
@@ -254,12 +255,16 @@ def sign_out():
 # ---- who is signed in -----------------------------------------------------
 
 class _Snapshot:
-    """What a request needs to know of the signed-in person, read once."""
-    __slots__ = ("id", "public_id", "handle", "display_name", "is_admin", "session_gen")
+    """What a request needs to know of the signed-in person, read once: who
+    they are, and their drawn face for the bar's You (piece 3)."""
+    __slots__ = ("id", "public_id", "handle", "display_name", "is_admin", "session_gen",
+                 "face_id", "face_w", "face_h")
 
-    def __init__(self, id, public_id, handle, display_name, is_admin, session_gen):
+    def __init__(self, id, public_id, handle, display_name, is_admin, session_gen,
+                 face_id=None, face_w=None, face_h=None):
         self.id, self.public_id, self.handle = id, public_id, handle
         self.display_name, self.is_admin, self.session_gen = display_name, is_admin, session_gen
+        self.face_id, self.face_w, self.face_h = face_id, face_w, face_h
 
 
 def read_person_row(public_id):
@@ -267,7 +272,8 @@ def read_person_row(public_id):
     t = Person.__table__
     with site().engine().connect() as conn:
         return conn.execute(sa.select(t.c.id, t.c.public_id, t.c.handle, t.c.display_name,
-                                      t.c.is_admin, t.c.session_gen)
+                                      t.c.is_admin, t.c.session_gen, t.c.face_id, t.c.face_w,
+                                      t.c.face_h)
                             .where(t.c.public_id == public_id)).first()
 
 
@@ -292,7 +298,8 @@ def current_person():
         if row:
             if row.session_gen == data.get("g"):
                 person = _Snapshot(row.id, row.public_id, row.handle, row.display_name,
-                                   bool(row.is_admin), int(row.session_gen))
+                                   bool(row.is_admin), int(row.session_gen),
+                                   row.face_id, row.face_w, row.face_h)
             else:
                 _signed_out_here(data)               # signed out everywhere since
         elif row is None:
@@ -351,6 +358,8 @@ LIMITS = {
     "invite-use": (12, 3600),      # tries on one invite or recovery link
     "passkey-add": (20, 3600),     # passkeys added, per person
     "invite-make": (60, 86400),    # links made, per admin
+    "profile-edit": (60, 3600),    # name and bio saved, per person (piece 3)
+    "face": (20, 3600),            # faces drawn and kept, per person (piece 3): each one is a skribl
 }
 _SWEEP_EVERY = 64
 

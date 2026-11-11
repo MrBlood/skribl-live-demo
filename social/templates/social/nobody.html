@@ -1,0 +1,7 @@
+{#  A PROFILE THAT IS NOT THERE (404): a handle nobody has, or had and
+    deleted, or that could never be one. One kind card for all of them, so
+    the page says nothing about which, and nothing is anybody's fault. #}
+{% extends 'social/base.html' %}
+{% from 'social/_kind.html' import card %}
+{% block title %}Nobody here · Skribl{% endblock %}
+{% block main %}{{ card("Nobody here by that name", ("There’s no one on Skribl at @" ~ handle ~ "." if handle else "There’s no one on Skribl at that address.") ~ " Check the spelling, or look around for someone’s drawings.") }}{% endblock %}

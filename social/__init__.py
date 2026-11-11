@@ -26,6 +26,16 @@ a migration chain of their own (social/migrations, social/alembic.ini, its
 stamp in social_alembic_version), so Skribl's chain stays Skribl's alone.
 Without a session it is the frame alone, as in piece 1.
 
+PHASE 1, PIECE 3: PROFILES WITH DRAWN FACES (profiles.py). /@<handle> is a
+person's profile: their face, a skribl they drew of themselves in the Pad's
+face mode, drawing itself once (Skribl's face player), their name, handle and
+bio, and their public skribls as Skribl's own Gallery section. You is your
+own profile, with Edit profile, Draw your face (Redraw my face) and the gear
+to the account page (/you, Settings). A face is a skribl the site posts,
+unlisted, through Skribl's create_post in the same transaction as the row
+that names it; a new one replaces it, and the old one goes through
+delete_post.
+
 ONE SKRIBL, SHARED, PEOPLE TOO. The host hands Skribl the site's signed-in
 person as its current user (current_user_id() below) and names them with
 describe_author(), so a drawing made in the Pad while signed in is theirs.
@@ -37,12 +47,14 @@ not a second Skribl beside the first (the stand-in at /host is that, on
 purpose, as skribls.net would be).
 
 IT REACHES SKRIBL ONLY THROUGH THE SEAMS ANY HOST USES (docs/INTEGRATION.md):
-the in-post player's macros, the Gallery section's macros, Skribl's signature,
-the skribl_asset() global init_skribl adds, and url_for of Skribl's pages. It
-imports nothing from the skribl package, and Skribl never imports it. Anything
-the site needs from Skribl, every host gets (docs/SOCIAL-SITE.md, section 1).
-verify_social section 8 reads both directions, and the Skribl templates and
-files the site names.
+the in-post player's macros, the Gallery section's macros, the face player's
+macros, Skribl's signature, the skribl_asset() global init_skribl adds, url_for
+of Skribl's pages (the Pad's with its documented compose flags), and from the
+package only documented names: create_post and delete_post with their
+exceptions (piece 3, a face). Skribl never imports it. Anything the site needs
+from Skribl, every host gets (docs/SOCIAL-SITE.md, section 1). verify_social
+section 8 reads both directions, and the Skribl templates and files the site
+names.
 
     import skribl, social
     skribl.init_skribl(app, session=lambda: db.session, ...)
@@ -74,8 +86,9 @@ def current_user_id():
 
 
 def describe_author(user_id):
-    """{"username": handle, "display_name": name} for one of the site's
-    people, else None: for Skribl's author resolver."""
+    """For Skribl's author resolver: one of the site's people as
+    {"username": handle, "display_name": name, "url": their profile, and
+    "face": {"id", "w", "h"} once they have drawn one}, else None."""
     if not has_app_context() or "social" not in current_app.extensions:
         return None
     from .accounts import describe_author as _describe
@@ -185,8 +198,9 @@ def init_social(app, *, session=None, url_prefix="/social", skribl_blueprint="sk
         return render_template("social/explore.html", here="explore")
 
     if site is not None:
-        from . import accounts
+        from . import accounts, profiles
         accounts.register(bp)
+        profiles.register(bp, skribl_blueprint)
 
         @bp.before_request
         def _small_bodies():
@@ -194,10 +208,13 @@ def init_social(app, *, session=None, url_prefix="/social", skribl_blueprint="sk
             anything sent to the site past 64 KiB is refused (413) before it
             is read, rather than parsed at the app's 25 MB limit. By the
             length it declares, whichever page it was sent to (some never
-            read their body), and by what is read where it declares none."""
+            read their body), and by what is read where it declares none.
+            One page takes more: a drawn face (piece 3) is a whole drawing,
+            its share card and any photo under it, up to FACE_MAX_BODY."""
             if request.method == "POST":
-                request.max_content_length = SITE_MAX_BODY
-                if (request.content_length or 0) > SITE_MAX_BODY:
+                cap = profiles.FACE_MAX_BODY if request.endpoint == "social.face_save" else SITE_MAX_BODY
+                request.max_content_length = cap
+                if (request.content_length or 0) > cap:
                     abort(413)
 
     # Context for the site's own pages only (a blueprint processor, not an

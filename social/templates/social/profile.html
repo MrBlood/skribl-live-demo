@@ -1,0 +1,112 @@
+{#  A PERSON'S PROFILE (phase 1, piece 3): /social/@<handle>. The approved
+    mock A (the owner's "all yes", Nov 10), without what does not exist yet:
+    no follower or following counts (follows are phase 2) and no totals of
+    plays (a count is kept, never counted when a page is read: none is kept
+    yet), so no numbers at all rather than made-up ones.
+
+    THEIR FACE, BIG, DRAWING ITSELF ONCE: Skribl's face player
+    (skribl_face, play='once': 4x, or quicker for a long one, still under
+    Reduce Motion). Before somebody has drawn one: an empty circle, never a
+    stock silhouette; on your own profile it says "Draw your face" and opens
+    the Pad, as the button beside Edit profile does.
+
+    Their name, @handle, and a few lines about them, as typed (no links yet).
+    On your own profile: Edit profile, Draw your face (Redraw my face once you
+    have one), and Settings, the gear (piece 2's account page): at the top of
+    a phone, as the mock has it, and beside the buttons on a desk, where there
+    is no top. Share, on every profile.
+
+    THEIR SKRIBLS: Skribl's own Gallery section, that author's public ones
+    only (the section's `author`), newest first, paging by the listing's own
+    cursor. Their face is not among them: it is unlisted.
+
+    DRAW YOUR FACE opens the real Pad over the page, in its face mode
+    (?compose=1&face=1), through lib/composehost.js; what it hands back is
+    sent to /you/face, kept, and the page comes back with the new face
+    drawing itself. profile.js holds the moving parts; the words are here. #}
+{% extends 'social/base.html' %}
+{% from 'skribl/_skribl_gallery_section.html' import skribl_gallery_assets, skribl_gallery_section %}
+{% import 'social/_icons.html' as ic %}
+
+{% block title %}{{ who.display_name }} (@{{ who.handle }}) · Skribl{% endblock %}
+{% block head %}<link rel="canonical" href="{{ share_url }}">
+{{ skribl_gallery_assets() }}
+{% if mine %}<script src="{{ skribl_asset('lib/composehost.js') }}" defer></script>{% endif %}{% endblock %}
+{% block scripts %}<script src="{{ social_asset('profile.js') }}" defer></script>{% endblock %}
+
+{% block top %}
+  <span class="top-title">@{{ who.handle }}</span>
+  {% if mine %}<a class="icon-btn top-gear" href="{{ url_for('social.you') }}" aria-label="Settings" title="Settings">{{ ic.gear() }}</a>{% endif %}
+{% endblock %}
+
+{% block main %}
+<div class="prof-page" data-profile data-share-url="{{ share_url }}"
+     data-share-title="{{ who.display_name }} (@{{ who.handle }}) on Skribl">
+  {% if note == 'saved' %}<p class="note" role="status">Saved. This is your profile as everyone sees it.</p>
+  {% elif note == 'face' %}<p class="note" role="status">That’s your face now. It draws itself like this for everyone who visits.</p>{% endif %}
+  <section class="prof" aria-labelledby="profName">
+    <div class="prof-face face-ring">
+      {% if who.face_id %}
+      {{ skribl_face(who.face_id, play='once', canvas_w=who.face_w, canvas_h=who.face_h,
+                     alt=who.display_name ~ '’s face, drawn by ' ~ who.display_name, bp=skribl_bp) }}
+      {% elif mine %}
+      {# The empty circle that says what to do. The same as the button beside
+         Edit profile, so it is a shortcut for a finger and a pointer, not a
+         second button for the keyboard or a screen reader. #}
+      <span class="face-blank face-ask" data-face-open aria-hidden="true">
+        <span class="face-ask-ic">{{ ic.pen() }}</span><span class="face-ask-words">Draw your face</span></span>
+      {% else %}
+      <span class="face-blank" aria-hidden="true"></span>
+      {% endif %}
+    </div>
+    <div class="prof-words">
+      <h1 class="prof-name" id="profName">{{ who.display_name }}</h1>
+      <p class="prof-handle">@{{ who.handle }}</p>
+      {% if who.bio %}<p class="prof-bio">{{ who.bio }}</p>{% endif %}
+      <div class="prof-acts">
+        {% if mine %}
+        <a class="btn" href="{{ url_for('social.edit_profile') }}">Edit profile</a>
+        <button class="btn" type="button" data-face-open aria-haspopup="dialog" aria-controls="facePad" aria-expanded="false">{{ ic.pen() }}<span>{{ 'Redraw my face' if who.face_id else 'Draw your face' }}</span></button>
+        {% endif %}
+        <button class="icon-btn boxed" type="button" data-share aria-label="Share {{ 'your' if mine else who.display_name ~ '’s' }} profile" title="Share">{{ ic.share() }}</button>
+        {% if mine %}<a class="icon-btn boxed desk-only" href="{{ url_for('social.you') }}" aria-label="Settings" title="Settings">{{ ic.gear() }}</a>{% endif %}
+      </div>
+      <p class="say prof-say" data-say role="status" hidden></p>
+    </div>
+  </section>
+
+  <h2 class="sec" id="profSkribls">Skribls</h2>
+  {{ skribl_gallery_section(bp=skribl_bp, door='app', author=who.public_id) }}
+</div>
+
+{#  WHAT profile.js SAYS, in one place (docs/SOCIAL-SITE.md: words live in one
+    place per page). Kind, never blaming; each says what to do next. #}
+<div class="words" hidden>
+  <span data-word="saving">Keeping your face…</span>
+  <span data-word="failed">Your face didn’t save. Try again?</span>
+  <span data-word="limited">Lots of faces in a short while. Wait a little, then try again.</span>
+  <span data-word="stale">This page went stale. Reload it, then draw your face again.</span>
+  <span data-word="signed_out">You’ve been signed out. Sign in again to keep your face.</span>
+  <span data-word="too_big">That drawing is too big to keep as a face. Try one without a photo under it?</span>
+  <span data-word="network">That didn’t reach us. Check your connection and try again.</span>
+  <span data-word="copied">Link copied.</span>
+  <span data-word="copy_by_hand">Here’s the link to copy: {url}</span>
+</div>
+{% endblock %}
+
+{% block overlays %}{% if mine %}
+{#  THE PAD, OVER THE PAGE, for your face. The frame's address is set when
+    it is first opened, never here (lib/composehost.js, rule 1): a profile
+    visit does not download a drawing tool. On a phone it takes the whole
+    screen, as a composer does (the Pad's header needs the room, and brings
+    its own ×); on a desk a big card. It glides up and away; under Reduce
+    Motion it fades where it sits. Outside #main (base.html's `overlays`),
+    which goes inert while it is up. #}
+<div class="facepad" id="facePad" hidden data-compose="{{ face_compose }}" data-save="{{ url_for('social.face_save') }}">
+  <div class="facepad-scrim"></div>
+  <div class="facepad-sheet" role="dialog" aria-modal="true" aria-label="Draw your face">
+    <p class="facepad-wait" data-face-wait>Opening the Pad…</p>
+    <iframe class="facepad-frame" title="The Pad: draw your face"></iframe>
+  </div>
+</div>
+{% endif %}{% endblock %}

@@ -34,11 +34,15 @@ import sqlalchemy as sa
 from sqlalchemy.orm import DeclarativeBase
 
 __all__ = ["SocialBase", "Person", "Passkey", "Invite", "Challenge", "RateEvent",
-           "PERSON_PREFIX", "new_person_id", "new_public_id", "as_utc", "utcnow",
-           "attach_to_metadata"]
+           "PERSON_PREFIX", "BIO_MAX", "BIO_LINES", "new_person_id", "new_public_id", "as_utc",
+           "utcnow", "attach_to_metadata"]
 
 #: What every person's public id starts with. A demo identity never does.
 PERSON_PREFIX = "site:"
+
+#: A bio's most characters, and its most lines (accounts.check_bio).
+BIO_MAX = 160
+BIO_LINES = 4
 
 #: A 64-bit integer key that SQLite will still number by itself: SQLite only
 #: fills in an INTEGER PRIMARY KEY, so there it is INTEGER (64 bits wide on
@@ -93,6 +97,18 @@ class Person(SocialBase):
     #: When they ticked "I'm 13 or older" (the site's minimum age, section 8).
     age_confirmed_at = sa.Column(sa.DateTime(timezone=True), nullable=False)
     created_at = sa.Column(sa.DateTime(timezone=True), nullable=False, default=utcnow)
+    #: A few lines about them, plain text (piece 3, profiles): at most
+    #: BIO_MAX characters and BIO_LINES lines, no invisible or bidi
+    #: characters (accounts.check_bio). None until they write one.
+    bio = sa.Column(sa.String(BIO_MAX), nullable=True)
+    #: THEIR DRAWN FACE (piece 3): the public id of a skribl they drew in the
+    #: Pad's face mode, posted UNLISTED through Skribl's create_post in the
+    #: same request as this row's update, and its canvas size (the face
+    #: player frames its still picture from it). None until they draw one; a
+    #: new one replaces it, and the old skribl is deleted (delete_post).
+    face_id = sa.Column(sa.String(32), nullable=True)
+    face_w = sa.Column(sa.Integer(), nullable=True)
+    face_h = sa.Column(sa.Integer(), nullable=True)
 
     __table_args__ = (
         sa.Index("ix_social_people_public_id", "public_id", unique=True),

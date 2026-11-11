@@ -52,10 +52,11 @@ from datetime import datetime, timedelta
 import sqlalchemy as sa
 from flask import (abort, current_app, g, jsonify, redirect, render_template, request,
                    url_for)
+from werkzeug.routing import BuildError
 
 from . import passkeys
-from .models import (Challenge, Invite, Passkey, Person, as_utc, new_person_id,
-                     new_public_id, utcnow)
+from .models import (BIO_LINES, BIO_MAX, Challenge, Invite, Passkey, Person, as_utc,
+                     new_person_id, new_public_id, utcnow)
 from .security import (client_subject, csrf_token, current_person, guard, origin_ok, over,
                        public_origin, sign_in, sign_out, site, token_ok)
 
@@ -159,11 +160,50 @@ def check_name(raw, limit=40):
         return None, "name_empty"
     if len(n) > limit:
         return None, "name_long"
-    for ch in n:
+    if _hidden_in(n):
+        return None, "name_chars"
+    return n, None
+
+
+def _hidden_in(text):
+    """Whether `text` holds a character nobody can see or that turns the text
+    around (controls, bidi and other invisible formatting, unassigned or
+    private code points). A line break is a bio's own, and is allowed there."""
+    for ch in text:
+        if ch == "\n":
+            continue
         cat = unicodedata.category(ch)
         if cat in ("Cc", "Co", "Cs", "Cn") or (cat == "Cf" and ch not in _ALLOWED_FORMAT):
-            return None, "name_chars"
-    return n, None
+            return True
+    return False
+
+
+def check_bio(raw):
+    """A few lines about a person (piece 3), as people will see them, or why
+    not: plain text, at most BIO_MAX characters on at most BIO_LINES lines,
+    each line's spaces tidied and blank lines run together, nothing hidden or
+    turned around (as a name). Empty is allowed: no bio. Links are not made
+    into links (not yet): a bio is shown as the words typed. Anything but text
+    is no bio, answered, never a 500."""
+    text = unicodedata.normalize("NFC", raw if isinstance(raw, str) else "")
+    text = text.replace("\r\n", "\n").replace("\r", "\n")
+    lines = []
+    for line in text.split("\n"):
+        line = " ".join(line.split())
+        if line or (lines and lines[-1]):
+            lines.append(line)
+    while lines and not lines[-1]:
+        lines.pop()
+    bio = "\n".join(lines)
+    if not bio:
+        return None, None
+    if len(bio) > BIO_MAX:
+        return None, "bio_long"
+    if len(lines) > BIO_LINES:
+        return None, "bio_lines"
+    if _hidden_in(bio):
+        return None, "bio_chars"
+    return bio, None
 
 
 def _body():
@@ -231,13 +271,34 @@ def link_for(code, kind):
     return public_origin() + url_for("social.join" if kind == "join" else "social.recover") + "#" + code
 
 
+def drop_face(public_id, face_id):
+    """Delete a face skribl the site posted for `public_id`, through Skribl's
+    documented seam (delete_post, docs/INTEGRATION.md "Taking one back"), as
+    its author: in the request's transaction, which commits with the row
+    that stops naming it. One already gone (deleted in the Library, say) is
+    gone: nothing to do."""
+    if not face_id:
+        return False
+    from skribl import SkriblNotFound, delete_post
+    try:
+        delete_post(face_id, author_id=public_id)
+    except SkriblNotFound:
+        return False
+    return True
+
+
 def delete_person(sess, person_id):
     """REAL DELETION (docs/SOCIAL-SITE.md, section 3, rule 9): the person,
     their passkeys, the invites they made, the recovery links made for them,
-    the invite they came in by, and ceremonies in progress. Flushes; the
-    request commits. (Their skribls are Skribl's, and docs/INTEGRATION.md has
-    no seam for a host to take an author's drawings away in one go: they stay,
-    and the confirm page says so.)"""
+    the invite they came in by, ceremonies in progress, their bio with their
+    row, and their drawn face (the skribl the site posted for it, through
+    Skribl's delete_post). Flushes; the request commits. (Their other skribls
+    are Skribl's, and docs/INTEGRATION.md has no seam for a host to take an
+    author's drawings away in one go: they stay, and the confirm page says
+    so.)"""
+    row = sess.execute(sa.select(Person.public_id, Person.face_id).where(Person.id == person_id)).first()
+    if row is not None:
+        drop_face(row.public_id, row.face_id)
     sess.execute(sa.delete(Challenge).where(Challenge.person_id == person_id))
     invites = sa.select(Invite.id).where(sa.or_(Invite.created_by_id == person_id,
                                                Invite.for_person_id == person_id,
@@ -252,10 +313,12 @@ def delete_person(sess, person_id):
 
 
 def describe_author(user_id):
-    """For Skribl's author resolver: a site person's name and handle, or
-    None for any id that is not one of the site's people. Read on a
-    connection of its own, as the signed-in person is, and never a failure
-    that reaches Skribl's page."""
+    """For Skribl's author resolver: a site person's name and handle, the
+    address of their profile (`url`, which Skribl's Gallery card links their
+    name to), and their drawn face when they have one (`face`, which the card
+    shows in the avatar's circle: docs/INTEGRATION.md), or None for any id
+    that is not one of the site's people. Read on a connection of its own, as
+    the signed-in person is, and never a failure that reaches Skribl's page."""
     from .models import PERSON_PREFIX
     if not isinstance(user_id, str) or not user_id.startswith(PERSON_PREFIX):
         return None
@@ -264,7 +327,8 @@ def describe_author(user_id):
     t = Person.__table__
     try:
         with site().engine().connect() as conn:
-            row = conn.execute(sa.select(t.c.handle, t.c.display_name)
+            row = conn.execute(sa.select(t.c.handle, t.c.display_name, t.c.face_id, t.c.face_w,
+                                         t.c.face_h)
                                .where(t.c.public_id == user_id)).first()
     except sa.exc.SQLAlchemyError:
         site().say_once("unread-authors", "the site could not read its people for a drawing's "
@@ -272,7 +336,23 @@ def describe_author(user_id):
         return None
     if row is None:
         return None
-    return {"username": row.handle, "display_name": row.display_name}
+    out = {"username": row.handle, "display_name": row.display_name}
+    url = profile_url(row.handle)
+    if url:
+        out["url"] = url
+    if row.face_id:
+        out["face"] = {"id": row.face_id, "w": row.face_w or 1, "h": row.face_h or 1}
+    return out
+
+
+def profile_url(handle):
+    """A person's profile, /social/@<handle> where the site is mounted: a
+    path, which the Gallery resolves against the page it is on. None where no
+    address can be built (no request: a shell), so a name is still said."""
+    try:
+        return url_for("social.profile", handle=handle)
+    except (RuntimeError, BuildError):
+        return None
 
 
 # ---- the routes ---------------------------------------------------------------
