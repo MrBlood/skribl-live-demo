@@ -48,7 +48,7 @@ events with pressure, a hand's timing).
       the row; the profile is the kind 404 after.
   10. NO PAGE ERRORS, NO CONSOLE ERRORS AND NO CSP VIOLATIONS on any of it.
   11. A FACE FROM A SKRIBL YOU MADE (the owner's yes on mock A, Nov 11): Add
-      your face raises Your face, Make's own sheet, gliding up, its two doors;
+      your face raises Your face, Make's own sheet, gliding up, its three doors;
       Use one you made glides the sheet to its new height and lists their own
       Pad skribls (the link-only one too; never a Flip, somebody else's or the
       face they have); one picked is placed in the circle from its middle square,
@@ -58,6 +58,14 @@ events with pressure, a hand's timing).
       came from byte for byte as it was; Open a file... says a Flip and a
       drawing with a picture under it kindly, and keeps a .skribl file; every
       word on the sheet at 4.5:1, every target 44px.
+  12. TRACE A PHOTO (the owner's "all yes, build A", Nov 11): Your face's
+      third door opens the device's own picker for one photo, and a file
+      that is not one is said kindly; a photo picked opens the Pad with it
+      under the canvas, a guide at 40%, the drawer's row and its line saying
+      what it is, the empty canvas saying Trace your face on a backing that
+      reads at 4.5:1 over the photo's darkest middle (off the paint, light and
+      dark); Use this face sends the lines alone (no photo in any frame, none
+      on the card), and the site drops a photo sent anyway.
 
 The layers (the site imports only Skribl's documented names, and its
 templates only documented partials, the face player's now among them) stay
@@ -67,6 +75,7 @@ SOCIALPROFILE_PART=<n>[,<m>] runs those sections only (calibration); a section
 makes the people it needs. Every row was shown red by breaking one part and
 green as built: DECISIONS.md, "Profiles with drawn faces at /social".
 """
+import base64
 import io
 import json
 import math
@@ -1449,7 +1458,7 @@ with sync_playwright() as p_:
 
     # ------------------------------------------------------------------ 10
     # ------------------------------------------------------------------ 11
-    if part(11, "a face from a skribl you made: Your face's two doors, the picker, the circle, a face of its own"):
+    if part(11, "a face from a skribl you made: Your face's doors, the picker, the circle, a face of its own"):
         nell = member(b, "nell", "Nell Quist")
         junx = _people.get("juno") or member(b, "juno", "Juno Park")
 
@@ -1500,11 +1509,11 @@ with sync_playwright() as p_:
         pg.wait_for_timeout(600)
         gone = pg.evaluate(SHEETSTATE)
         check("Add your face raises Your face, Make's own sheet: it glides up from below the screen on many frames, one"
-              " way; a modal dialog, the page behind inert, focus on its first door; two doors, Draw a new one and Use"
-              " one you made; Esc puts it away and focus comes back to the button",
+              " way; a modal dialog, the page behind inert, focus on its first door; three doors, Draw a new one,"
+              " Trace a photo and Use one you made; Esc puts it away and focus comes back to the button",
               before["hidden"] and before["button"] == "Add your face"
               and opened["open"] and opened["step"] == "doors" and opened["role"] == "dialog" and opened["modal"] == "true"
-              and all(opened["inert"]) and opened["doors"] == ["Draw a new one", "Use one you made"]
+              and all(opened["inert"]) and opened["doors"] == ["Draw a new one", "Trace a photo", "Use one you made"]
               and (opened["focus"] or "").startswith("door:Draw a new one")
               and rise and rise[0] >= 860 and len(set(rise)) >= 8 and all(x <= 0 for x in rsteps)
               and max((abs(x) for x in rsteps), default=0) <= 0.3 * rtravel
@@ -1720,6 +1729,199 @@ with sync_playwright() as p_:
               " phone and desk, light and dark",
               reads >= 60 and not low and not small and not fields,
               f"{reads} read, the lowest {lowest}; under 4.5: {low[:4]}; small: {small[:4]}; fields: {fields[:3]}")
+
+    # ------------------------------------------------------------------ 12
+    if part(12, "trace a photo: the third door, the photo under the canvas as a guide, the lines alone kept"):
+        tess = member(b, "tess", "Tess Moreau")
+        pg = tess.pg
+        tmp = Path(tempfile.mkdtemp())
+        # A PHOTO TO TRACE, made here: a bright green ground (a colour no ink,
+        # paper or purple is, so a photo that reached the card would be seen
+        # on it) with a dark round in the middle, where the empty canvas's
+        # words sit: the hardest ground they will have (dark hair, a dark room).
+        snap = Image.new("RGB", (600, 600), (40, 200, 80))
+        from PIL import ImageDraw as _Draw
+        _Draw.Draw(snap).ellipse((130, 150, 470, 450), fill=(20, 20, 20))
+        snap.save(tmp / "IMG_0412.jpg", quality=92)
+        (tmp / "notes.txt").write_text("not a photo", encoding="utf-8")
+
+        DOORS = """() => { const s = document.querySelector('#faceSheet [data-step=doors]');
+          const d = [...s.querySelectorAll('.make-door')].map(b => ({ title: b.querySelector('b').textContent,
+            words: b.querySelector('.make-words > span').textContent, trace: b.hasAttribute('data-face-trace'),
+            h: Math.round(b.getBoundingClientRect().height), w: Math.round(b.getBoundingClientRect().width) }));
+          const i = s.querySelector('[data-face-photo]'), say = s.querySelector('[data-face-say]');
+          return { doors: d, accept: i ? i.getAttribute('accept') : null, multiple: i ? i.multiple : null,
+                   say: say && !say.hidden ? say.textContent : '',
+                   open: document.getElementById('faceSheet').classList.contains('is-open') }; }"""
+        pg.goto(BASE + "/social/@tess")
+        pg.wait_for_timeout(400)
+        open_face_sheet(pg, 700)
+        doors = pg.evaluate(DOORS)
+        try:
+            with pg.expect_file_chooser(timeout=8000) as fc:
+                pg.click("#faceSheet [data-face-trace]", timeout=5000)
+            chooser = {"multiple": fc.value.is_multiple()}
+            fc.value.set_files(str(tmp / "notes.txt"))
+            pg.wait_for_timeout(700)
+        except Exception as exc:
+            chooser = {"could not": str(exc).splitlines()[0][:100]}
+        after_txt = pg.evaluate(DOORS)
+        titles = [d["title"] for d in doors["doors"]]
+        tr = next((d for d in doors["doors"] if d["trace"]), {})
+        check("Your face has three doors, Trace a photo between Draw a new one and Use one you made, saying what it"
+              " does; it opens the device's own picker, for one photo of the kinds the Pad takes; a file that is"
+              " not a photo is said kindly, and the sheet stays",
+              titles == ["Draw a new one", "Trace a photo", "Use one you made"]
+              and tr.get("words") == "Draw over a photo. Only your lines are kept." and tr.get("h", 0) >= 44
+              and doors["accept"] == "image/jpeg,image/png,image/gif,image/webp" and chooser.get("multiple") is False
+              and after_txt["open"] and "isn’t a photo the Pad can use" in after_txt["say"],
+              f"doors {titles}; trace {tr}; accept {doors['accept']}; chooser {chooser};"
+              f" after a text file: open {after_txt['open']}, said {after_txt['say']!r}")
+
+        GUIDE_STATE = """() => { const z = document.getElementById('photoUploadBtn'), i = document.getElementById('photoBgImg'), h = document.getElementById('canvasEmptyHint');
+          const g = h.querySelector('.face-guide-words'), n = document.getElementById('photoGuideNote');
+          return { loaded: !!z && z.classList.contains('loaded'), slider: document.getElementById('photoOpacity').value,
+            shown: i ? +getComputedStyle(i).opacity : null, meta: (document.getElementById('photoBtnMeta') || {}).textContent,
+            note: n ? n.textContent : null, guide: h.classList.contains('is-guide'),
+            words: g ? [...g.children].map(c => c.textContent) : [] }; }"""
+
+        def trace_open(page):
+            """Your face, Trace a photo, the photo picked: the Pad in its frame,
+            once the photo is in."""
+            page.goto(BASE + "/social/@tess")
+            page.wait_for_timeout(400)
+            open_face_sheet(page, 700)
+            with page.expect_file_chooser(timeout=8000) as fc:
+                page.click("#faceSheet [data-face-trace]", timeout=5000)
+            fc.value.set_files(str(tmp / "IMG_0412.jpg"))
+            fr = pad_frame(page)
+            if fr is None:
+                return None
+            try:
+                fr.wait_for_function("() => { const z = document.getElementById('photoUploadBtn');"
+                                     " return !!z && z.classList.contains('loaded'); }", timeout=15000)
+            except Exception:
+                pass
+            page.wait_for_timeout(600)
+            return fr
+
+        def painted(page, fr, sel):
+            """The lowest contrast of the words at `sel` (in the Pad's frame)
+            against what is painted under them: the words made see-through, the
+            box photographed, every pixel of the ground against the words' own
+            colour laid over it, their see-through part included."""
+            box = fr.evaluate("""(sel) => { const e = document.querySelector(sel); if (!e) return null;
+              const r = e.getBoundingClientRect(); return { x: r.left, y: r.top, w: r.width, h: r.height,
+              color: getComputedStyle(e).color }; }""", sel)
+            if not box or box["w"] < 2:
+                return None
+            off = page.locator("#facePad iframe").bounding_box()
+            c = [float(v) for v in re.findall(r"[\d.]+", box["color"])]
+            rgb, a = c[:3], (c[3] if len(c) > 3 else 1.0)
+            fr.evaluate("(sel) => { document.querySelector(sel).style.color = 'transparent'; }", sel)
+            page.wait_for_timeout(150)
+            png = page.screenshot(clip={"x": off["x"] + box["x"], "y": off["y"] + box["y"],
+                                        "width": box["w"], "height": box["h"]})
+            fr.evaluate("(sel) => { document.querySelector(sel).style.color = ''; }", sel)
+            im = Image.open(io.BytesIO(png)).convert("RGB")
+
+            def lum(px):
+                v = [(x / 255) / 12.92 if x / 255 <= 0.03928 else ((x / 255 + 0.055) / 1.055) ** 2.4 for x in px]
+                return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]
+            low = 99.0
+            for px in set(im.getdata()):
+                shown = [a * t + (1 - a) * g for t, g in zip(rgb, px)]
+                x, y = lum(shown), lum(px)
+                low = min(low, (max(x, y) + 0.05) / (min(x, y) + 0.05))
+            return round(low, 2)
+
+        fr = trace_open(pg)
+        state = fr.evaluate(GUIDE_STATE) if fr else {"no Pad": True}
+        sheet_gone = pg.evaluate("() => !document.getElementById('faceSheet').classList.contains('is-open')")
+        check("a photo picked opens the Pad above with it under the canvas, a guide: at 40% to start (the slider"
+              " says so), the row says A guide to trace, the drawer says only the lines are kept, the empty canvas"
+              " says Trace your face; the sheet has gone",
+              bool(fr) and state.get("loaded") and state.get("slider") == "40" and state.get("shown") == 0.4
+              and state.get("meta") == "A guide to trace"
+              and state.get("note") == "Only your lines are kept. The photo is never posted."
+              and state.get("guide") and state.get("words") == ["Trace your face",
+                                                               "Draw over your photo. Only your lines are kept."]
+              and sheet_gone,
+              f"{state}; sheet gone {sheet_gone}")
+
+        # THE GUIDE'S WORDS, READ OFF THE PAINT over the photo's dark middle:
+        # light here, and dark in a second browser.
+        reads = {}
+        if fr:
+            reads["light"] = [painted(pg, fr, "#canvasEmptyHint .face-guide-words > span:first-child"),
+                              painted(pg, fr, "#canvasEmptyHint .face-guide-words > .canvas-empty-sub")]
+        dctx, dpg = browser_as(b, tess, "phone", "dark")
+        try:
+            dfr = trace_open(dpg)
+            if dfr:
+                reads["dark"] = [painted(dpg, dfr, "#canvasEmptyHint .face-guide-words > span:first-child"),
+                                 painted(dpg, dfr, "#canvasEmptyHint .face-guide-words > .canvas-empty-sub")]
+        except Exception as exc:
+            reads["dark"] = [f"could not: {str(exc).splitlines()[0][:80]}"]
+        close_ctx(dctx, dpg)
+        flat = [x for v in reads.values() for x in v]
+        check("the guide's words read at 4.5:1 or more over the photo's darkest middle, read off the paint with"
+              " their see-through ink laid over it: light and dark",
+              len(flat) == 4 and all(isinstance(x, float) and x >= 4.5 for x in flat), str(reads))
+
+        # USE THIS FACE: the lines alone, in what the page sends and on its card.
+        sent = None
+        if fr:
+            strokes = [artdraw.Stroke(_arc(354, 330, 150, 170, -90, 270, 30), "gesture", INK, size=18),
+                       artdraw.Stroke(_arc(300, 300, 14, 14, 0, 360, 10), "detail", INK, size=12),
+                       artdraw.Stroke(_arc(408, 300, 14, 14, 0, 360, 10), "detail", INK, size=12),
+                       artdraw.Stroke(_arc(354, 400, 50, 24, 20, 160, 10), "detail", PURPLE, size=10)]
+            draw_in_pad(pg, fr, strokes)
+            sheet, sent = keep_in_pad(pg, fr)
+        body = {}
+        try:
+            body = json.loads(sent or "{}").get("payload") or {}
+        except ValueError:
+            body = {}
+        photos = [body.get("photo")] + [f.get("photo") for f in (body.get("frames") or []) if isinstance(f, dict)]
+        green = None
+        thumb = body.get("thumbnail") or ""
+        if thumb.startswith("data:image"):
+            im = Image.open(io.BytesIO(base64.b64decode(thumb.split(",", 1)[1]))).convert("RGB")
+            green = sum(1 for (r_, g_, b_) in im.getdata() if g_ - max(r_, b_) > 30)
+        row = person_row("tess")
+        face = row[3] if row else None
+        kept = json.loads(db("select payload_json from skribl_posts where public_id = ?", (face,))[0][0]) if face else {}
+        kept_photos = [kept.get("photo")] + [f.get("photo") for f in (kept.get("frames") or [])]
+        check("Use this face keeps the lines alone: the drawing the page sends has no photo in any frame, its card"
+              " has none of the photo's colour on it, and the face kept is the lines, its strokes all there",
+              bool(body) and all(x is None for x in photos) and green == 0
+              and bool(face) and all(x is None for x in kept_photos)
+              and len((kept.get("frames") or [{}])[0].get("strokes") or []) > 40,
+              f"sent photos {[bool(x) for x in photos]}; green pixels on the card {green}; face {face};"
+              f" kept photos {[bool(x) for x in kept_photos]}")
+
+        # THE SITE DROPS A PHOTO SENT ANYWAY: the same lines, with a photo put
+        # back in, straight to /you/face.
+        sneaky = json.loads(json.dumps(body)) if body else {}
+        dot = ("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==")
+        if sneaky:
+            ph = {"data": dot, "fit": "cover", "opacity": 1, "blur": 0, "offset": {"x": 0.5, "y": 0.5}, "zoom": 1}
+            sneaky["photo"] = ph
+            for f in sneaky.get("frames") or []:
+                f["photo"] = ph
+        c = tess.client()
+        c.get("/social/@tess")
+        st, j = c.post_json("/social/you/face", {"payload": sneaky}) if sneaky else (None, None)
+        face3 = (person_row("tess") or [None] * 4)[3]
+        kept3 = json.loads(db("select payload_json from skribl_posts where public_id = ?", (face3,))[0][0]) \
+            if face3 and face3 != face else {}
+        kept3_photos = [kept3.get("photo")] + [f.get("photo") for f in (kept3.get("frames") or [])]
+        check("a face sent with a photo anyway (straight to /you/face) is kept without it: the site drops the"
+              " photo from every frame, and keeps the lines",
+              st == 200 and bool(kept3) and all(x is None for x in kept3_photos)
+              and len((kept3.get("frames") or [{}])[0].get("strokes") or []) > 40,
+              f"status {st} {str(j)[:80]}; face {face} -> {face3}; kept photos {[bool(x) for x in kept3_photos]}")
 
     if part(10, "no page errors, no console errors, no CSP violations"):
         for p in list(_people.values()):

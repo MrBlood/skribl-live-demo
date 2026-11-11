@@ -302,7 +302,9 @@
       const octx = out.getContext('2d');
       octx.fillStyle = bgColor || '#0d0f14';
       octx.fillRect(0, 0, w, h);
-      if (photoBgImg && photoBgImg.style.display !== 'none' && photoBgImg.src) {
+      /* A FACE'S PHOTO IS A GUIDE (after v330, editor_face.js): its card is
+         the lines on the paper, never the photo traced. */
+      if (!window.SKRIBL_FACE && photoBgImg && photoBgImg.style.display !== 'none' && photoBgImg.src) {
         octx.save();
         octx.globalAlpha = photoOpacityVal_ != null ? photoOpacityVal_ : 1;
         if (photoBlur_ > 0 && 'filter' in octx) octx.filter = `blur(${photoBlur_}px)`;
@@ -377,6 +379,15 @@
     // the crop can never be skipped for a buffer that is merely late.
     if (window._skriblDecodePending) { try { await window._skriblDecodePending; } catch (e) {} }
     const payload = serializeSkribl();
+    // A FACE CARRIES NO PHOTO (after v330, the owner's yes on Trace a photo):
+    // in face mode a photo is a guide to trace (editor_face.js), and only the
+    // lines are kept. Left out of the frames and the legacy mirror alike, as
+    // its card leaves it out (buildPreviewCanvas), so it never leaves the
+    // browser; the site that keeps the face drops one sent anyway.
+    if (window.SKRIBL_FACE) {
+      payload.photo = null;
+      (payload.frames || []).forEach(function (f) { if (f) f.photo = null; });
+    }
     const gallery = !!(publicInput && publicInput.checked);
     payload.title = (titleInput.value || '').trim() || 'Untitled Skribl';
     // ADDED TO A POST, the caption is the gallery's: it travels with the tick

@@ -1374,6 +1374,26 @@ body.playback-paused .tap-paused { display: grid; }
 .canvas-empty-hint.hidden {
   opacity: 0;
 }
+/* A FACE'S PHOTO TO TRACE (the Pad's ?face=1, editor_face.js): the guide's
+   two lines sit on one soft backing of the canvas's own lightness, so they
+   read over whatever the photo has under them. In the canvas's see-through
+   ink alone they measured 2.8:1 over dark hair at the guide's 40% and 3.7:1
+   over darker skin in ordinary light; on the backing, over any photo, they
+   read as they do on the bare canvas. */
+.canvas-empty-hint .face-guide-words {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  border-radius: 14px;
+  background: rgba(13,15,20,0.84);
+}
+.light-bg .canvas-empty-hint .face-guide-words { background: rgba(255,255,255,0.86); }
+/* On the backing both lines take the hint's stronger ink: the quieter one
+   is a step below a control on the bare canvas, and a backing over a bright
+   photo would take that step below 4.5:1. */
+.canvas-empty-hint .face-guide-words .canvas-empty-sub { color: rgba(var(--on-canvas-rgb), var(--on-canvas-a1, 0.55)); }
 /* WORDS STEP BACK FOR WORDS (lib/textwrite.js): while Text's words are
    placed and while they write themselves, the empty canvas's words (and the
    post box's snail) go in their own fade, so the two are never read through

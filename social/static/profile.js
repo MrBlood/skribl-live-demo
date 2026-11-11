@@ -25,9 +25,15 @@
  *
  * YOUR FACE (after v330, the owner's "all yes" on mock A, Nov 11). Change my
  * face (Add your face before there is one, and the empty circle) raises one
- * sheet, Make's own (social.js, window.SocialSheet), with two doors: Draw a
- * new one, which puts the sheet away and opens the Pad above, and Use one you
- * made, which leads on inside it, a step at a time:
+ * sheet, Make's own (social.js, window.SocialSheet), with three doors: Draw a
+ * new one, which puts the sheet away and opens the Pad above; Trace a photo;
+ * and Use one you made, which leads on inside it, a step at a time:
+ *
+ *   TRACE A PHOTO (the owner's "all yes, build A", Nov 11): the device's own
+ *   photo picker, then the Pad above with the photo faint under its canvas,
+ *   a guide to trace (Skribl's composehost guide() and editor_face.js). Only
+ *   the lines are kept: the Pad leaves the photo out of the face and its
+ *   card, and the site drops one sent anyway (profiles.py).
  *
  *   PICK: your skribls from Skribl's own listing, yours alone (GET the
  *   listing with your user id: the link-only ones too), newest first, paged
@@ -197,7 +203,7 @@
 
   function busy(on) {
     saving = on;
-    Array.prototype.forEach.call(doc.querySelectorAll('button[data-face-open], button[data-face-sheet], button[data-face-use]'), function (b) {
+    Array.prototype.forEach.call(doc.querySelectorAll('button[data-face-open], button[data-face-trace], button[data-face-sheet], button[data-face-use]'), function (b) {
       b.disabled = on; b.setAttribute('aria-busy', on ? 'true' : 'false');
     });
   }
@@ -225,7 +231,19 @@
     });
   }
 
-  return { keep: keep, busy: busy, isSaving: function () { return saving; } };
+  /* A PHOTO TO TRACE (Your face's Trace a photo): the Pad over the page, the
+     photo under its canvas as a guide (Skribl's composehost guide(), its
+     editor_face.js); what comes back on Use this face is the lines alone,
+     kept as any drawn face is. Focus comes back to the button that raised
+     the sheet. */
+  function trace(file) {
+    if (saving || !file) return;
+    show('');
+    from = doc.querySelector('button[data-face-sheet]');
+    pad.guide(file);
+  }
+
+  return { keep: keep, busy: busy, trace: trace, isSaving: function () { return saving; } };
   }
 
 
@@ -367,6 +385,29 @@
     wrap.addEventListener('click', function (e) {
       if (e.target.closest('[data-face-open]')) ctl.close(true);
     }, true);
+
+    /* TRACE A PHOTO: the press opens the device's own photo picker (only a
+       press on this page can); a photo picked puts the sheet away and opens
+       the Pad above with it to trace. Picking nothing leaves the sheet as it
+       was; a file that is not a photo is said, and the sheet stays. */
+    var photo = wrap.querySelector('[data-face-photo]');
+    var traceDoor = wrap.querySelector('[data-face-trace]');
+    if (traceDoor && photo && padApi) {
+      traceDoor.addEventListener('click', function () {
+        if (padApi.isSaving()) return;
+        sayIn('doors', '');
+        photo.value = '';
+        photo.click();
+      });
+      photo.addEventListener('change', function () {
+        var f = photo.files && photo.files[0];
+        photo.value = '';
+        if (!f) return;
+        if (!/^image\/(jpeg|png|gif|webp)$/.test(f.type || '')) { sayIn('doors', say('not_photo')); return; }
+        ctl.close(true);
+        padApi.trace(f);
+      });
+    }
 
     /* ---- pick -------------------------------------------------------------- */
     /* A drawing, contained in its tile: the drawing's own rectangle cut from

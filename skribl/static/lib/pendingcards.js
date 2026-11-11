@@ -89,6 +89,9 @@
    *         a real number (an element's duration can be Infinity or NaN)
    *   on    the on/off switch. Off reads "Hidden · Fit" / "Muted · 0:08", so
    *         the words never contradict the switch beside them.
+   * A face's photo (the Pad's ?face=1, after v330) is a guide to trace, and
+   * the row says the photo panel's data-guide ("A guide to trace") instead
+   * of where it sits behind the drawing.
    * Each editor calls it after every change it makes to the row's state.
    */
   var FALLBACK = { photo: 'Photo from draft', music: 'Music from draft' };
@@ -98,6 +101,10 @@
   function rowMeta(kind, st) {
     var on = st.on !== false;
     if (kind === 'photo') {
+      /* A face's photo is a guide to trace (the Pad's ?face=1): the panel
+         carries what to call it, and where it sits does not matter. */
+      var pp = $('photoPanel'), guide = pp && pp.dataset.guide;
+      if (guide) return on ? guide : 'Hidden';
       return (on ? 'Behind the drawing' : 'Hidden') + ' · ' + (FIT[st.fit] || 'Fill');
     }
     // The drawer's own word for what it loops under: "flip" on Flip, "drawing"

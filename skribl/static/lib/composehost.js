@@ -8,6 +8,16 @@
  *   });
  *   padButton.addEventListener('click', pad.open);
  *
+ *   pad.guide(file);   // a face's only: open it with a photo to trace
+ *
+ * A FACE'S PHOTO TO TRACE (after v330). In the Pad's face mode (?face=1),
+ * guide(file) opens the editor and hands it a photo the host's page picked
+ * (a File from an <input type=file>, which a click on the host's own page
+ * has to open: the frame cannot open a picker for it). The photo sits under
+ * the canvas as a guide, and what comes back on done is the lines alone
+ * (editor_face.js). Sent once the editor says it is ready, or at once if it
+ * already has.
+ *
  * WHAT THIS OWNS, and why each of these is a rule rather than a preference.
  * Skribl's side of compose mode is two things: the editor at ?compose=1 and the
  * four postMessage types in editor_compose.js. The HOST's side is the sequence
@@ -85,6 +95,8 @@
     var frameEditor = 'pad';
     var loaded = false;
     var open_ = false;
+    /* A face's photo to trace, waiting for the editor to be ready. */
+    var guideFile = null;
 
     function post(type, data) {
       var msg = { type: PREFIX + type };
@@ -110,6 +122,7 @@
         /* Re-editing: hand back what the draft is holding. A first open has no
            payload and sends nothing, which is what leaves the canvas blank. */
         if (payload && payloadEditor === frameEditor) post('load', { payload: payload });
+        sendGuide();
         if (opts.onReady) opts.onReady();
       } else if (kind === 'done') {
         payload = d.payload;
@@ -139,6 +152,18 @@
       if (opts.onOpen) opts.onOpen();
     }
 
+    function sendGuide() {
+      if (!guideFile || !loaded) return;
+      post('guide', { file: guideFile });
+      guideFile = null;
+    }
+
+    function guide(file) {
+      guideFile = file || null;
+      if (!open_) open();
+      sendGuide();
+    }
+
     function close() {
       if (!open_) return;
       open_ = false;
@@ -147,6 +172,7 @@
 
     function clear() {
       payload = null;
+      guideFile = null;
       payloadEditor = frameEditor = 'pad';
       loaded = false;
       /* RULE 3. Drop the editor as well as the payload, so the next open starts
@@ -156,6 +182,7 @@
 
     return {
       open: open,
+      guide: guide,
       close: close,
       clear: clear,
       isOpen: function () { return open_; },
@@ -167,6 +194,7 @@
         global.removeEventListener('message', onMessage);
         frame.setAttribute('src', BLANK);
         payload = null;
+        guideFile = null;
         loaded = false;
       }
     };

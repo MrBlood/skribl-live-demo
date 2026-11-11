@@ -24,6 +24,12 @@
 {{ _svg('<rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><path d="M7 15.5c1.6-3.2 3.4-3.6 5-1.2 1.2 1.8 2.6 1.6 4.5-1.3"/><circle cx="15.5" cy="9" r="1.4"/>') }}
 {%- endmacro %}
 
+{# A photo with a person in it, outlined in dashes, as it is traced
+   (Your face's Trace a photo). #}
+{% macro trace() -%}
+{{ _svg('<rect x="3.5" y="3.5" width="17" height="17" rx="3"/><circle cx="12" cy="10" r="3.2" stroke-dasharray="2.2 2.2"/><path d="M6.6 18.4c1.2-2.6 3.1-3.7 5.4-3.7s4.2 1.1 5.4 3.7" stroke-dasharray="2.2 2.2"/>') }}
+{%- endmacro %}
+
 {# A file you saved (Open a file..., as the editors' own menu draws it). #}
 {% macro folder() -%}
 {{ _svg('<path d="M21 18.5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-13a2 2 0 0 1 2-2h4.5l2 3H19a2 2 0 0 1 2 2z"/>') }}
