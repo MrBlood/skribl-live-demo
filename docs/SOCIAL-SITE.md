@@ -157,6 +157,16 @@ to the owner from memory, flagged as such (this container cannot reach those
 sites): roughly $15 to $25 a month plus the domain at first, $50 to $100 a
 month at thousands of people. Each step waits for the owner's yes.
 
+Asked again on Nov 10 ("Is it cheapest to keep Render?"), and checked by a
+web search this time (Fly's own pages; 2026 price round-ups for Render and
+Railway, whose pages could not be read from here): yes, for a setup with no
+server to keep by hand. The demo is about $13 a month (Starter $7, Postgres
+Basic $6). Fly's app would be cheaper, but its managed PostgreSQL starts at
+$38 a month; Railway meters an app and its database at about $15 to $22,
+and the bill moves; Render's free plans sleep and expire (the free database
+already did once). Worth asking again at thousands of people, or a bill
+near $50 to $100.
+
 ---
 
 ## 5. The phases
@@ -213,6 +223,9 @@ here is tested (a check shown red before it is believed).
   5. *Safety.* Report anything, the admin's queue, block; the legal pages
      in draft.
   6. *Media to storage.* When the owner says yes to its cost.
+
+  *Built and live on the demo by Nov 10: pieces 1, 2 and 3 (section 9).
+  Piece 4 is next.*
 - **Phase 2, the social core.** Follow, the Following feed, comments and
   replies, likes, in-app notifications, mute.
 - **Phase 3, growing.** Search and tags, push and email notifications, reply
@@ -407,13 +420,17 @@ limited per address, an invite's tries per invite and an admin's links per
 admin, in the database. Deleting an account deletes the person, their
 passkeys and their invites.
 
-**Not yet:** the emailed link (an email service, asked first); profiles and
-drawn faces (piece 3); a list of signed-in devices; a short undo before an
-account is deleted (rule 9's undo window waits for the job queue); and an
-account's skribls going with it, which needs a seam Skribl does not have yet
-(docs/INTEGRATION.md documents deleting one post by its id, not an author's
-all): until then the delete page says the skribls stay, and to delete them
-in the Library first.
+**Not yet:** the emailed link (an email service, asked first); a list of
+signed-in devices; a short undo before an account is deleted (rule 9's undo
+window waits for the job queue); and an account's skribls going with it,
+which needs a seam Skribl does not have yet (docs/INTEGRATION.md documents
+deleting one post by its id, not an author's all): until then the delete
+page says the skribls stay, and to delete them in the Library first. Two
+follow-ups from its review, small and not yet made: the limits count and
+then record (security.py), so tries landing at the same instant can each
+pass, a few extra at most; and a passkey's address is the request's own,
+where a list of the site's own addresses would be stricter (the move to a
+domain wants one anyway).
 
 `harness/verify_socialauth.py` holds it all through the demo's own server,
 with Chromium's own virtual authenticator; DECISIONS.md ("Sign-in at

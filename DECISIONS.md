@@ -33901,3 +33901,48 @@ no sheet, colour or token of Skribl's changed (the face mode's words sit on
 the Post sheet in its own styles; the site's words are
 verify_socialprofile's section 8). The full battery was not run; main's run
 after the merge is.
+
+## After v330 -- Where things stand, Nov 10 (not sealed since v330)
+
+Not sealed since v330, and that is fine. Since the last "where things stand"
+(the owner's first look at the live stand-in, the morning of Nov 10): the
+stand-in's More fixed; B, Skribl's Gallery section, embeddable and used by
+the stand-in's Skribls tab; the empty Gallery naming its door's tick; the
+owner's choice to build Skribl's own social site rather than copy another
+(docs/SOCIAL-SITE.md, the plan, with its phase 1 mocks: "all yes"); and
+phase 1's first three pieces, each built, shown, merged on the owner's yes
+and live on the demo: the frame at /social, sign-in by invite with passkeys
+(the owner joined that evening as its first person and admin, and posted),
+and profiles with drawn faces. And a principle, in the owner's words, kept
+in WORKING-AGREEMENTS: "Make it make sense. Simple and kind means intuitive
+and fun."
+
+At writing (about 9 PM Mountain Time, the owner asleep: "tidy up when
+you're done"), main was green through #846; #847's full run (profiles) was
+still running; the live site answered the owner's profile with its empty
+circle, their face not drawn yet. The branch matched main, with this entry's
+pull request the only one open.
+
+Still open, the owner's:
+- Piece 4, posts (SOCIAL-SITE section 5): next, built from the approved
+  mocks as piece 3 was, with pictures of anything beyond them for a yes.
+- The domain: the owner picks a name (section 8, decision 3); passkeys are
+  made again after the move (section 5, piece 2). Then Cloudflare in front
+  (section 4).
+- An email service for the emailed sign-in link: prices compared, asked
+  first.
+- Media to object storage (piece 6): its cost, asked first.
+- Render stays (asked "Is it cheapest to keep Render?"; yes, section 4).
+
+Found and not yet fixed, each a bug fix that merges on green:
+- The site's limits count and then record (social/security.py), so tries
+  landing at the same instant can each pass: a few extra at most.
+- A passkey's address is the request's own; a list of the site's own
+  addresses would be stricter, and the move to a domain wants one.
+- The demo's pages that are neither Skribl's nor the site's (its 404) carry
+  Skribl's policy with an empty nonce, a console error in Chrome on every
+  load (recorded at piece 1, not changed).
+- Deleting an account leaves its skribls, as its delete page says: it needs
+  a seam that deletes an author's all, which Skribl does not have.
+- A face deleted in the Library leaves its circle empty (piece 3's "not
+  yet").
