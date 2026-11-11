@@ -65,6 +65,12 @@
  * made it: a one-page Flip and a Pad drawing are both `playbackMode: 'replay'`,
  * so the payload cannot say which it is, and the message does.
  *   editor -> host   skribl:compose:cancel   closed without attaching
+ *   host   -> editor skribl:compose:guide    {file} a face's photo to trace
+ *
+ * `guide` is a face's only (?face=1, after v330): a photo the host's page
+ * picked, under the canvas as a guide to trace (editor_face.js). It is never
+ * part of the face: what goes back on done is the lines alone. Anywhere else
+ * the Pad ignores it.
  *
  * `preview` is a flat PNG of the finished drawing, so the host can show
  * something the instant the overlay closes without waiting on anything. The
@@ -135,6 +141,12 @@
   global.addEventListener('message', function (e) {
     if (e.origin !== HOST_ORIGIN) return;
     var d = e.data;
+    /* A face's photo to trace: face mode alone has the guide (editor_face.js
+       is loaded only there), so anywhere else this does nothing. */
+    if (d && d.type === 'skribl:compose:guide') {
+      if (d.file && global.SkriblFaceGuide) global.SkriblFaceGuide.take(d.file);
+      return;
+    }
     if (!d || d.type !== 'skribl:compose:load' || !d.payload) return;
     /* Re-editing. loadSkribl() is the same function the player and the
      * draft-restore path use, so a re-opened drawing is restored exactly as a

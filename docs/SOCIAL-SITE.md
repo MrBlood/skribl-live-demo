@@ -491,8 +491,8 @@ else, "No skribls here yet." (the Gallery section's `mine`, beside
 
 **A face from a skribl you made** (the owner's "all yes" on mock A, Nov 11).
 Change my face (Add your face before there is one, and the empty circle)
-raises Your face, Make's own sheet, with two doors: Draw a new one (the Pad,
-as before) and Use one you made. That lists your skribls (yours alone, the
+raises Your face, Make's own sheet, with two doors (three since Trace a
+photo, below): Draw a new one (the Pad, as before) and Use one you made. That lists your skribls (yours alone, the
 link-only ones too; Pad drawings, never a Flip or the face you have), or opens
 a .skribl file you saved, then places it in the circle: drag it (a finger,
 the pointer or the arrow keys), size it (the slider or a pinch), and Use this
@@ -502,6 +502,19 @@ drawing with its own card, posted unlisted as any face is. The drawing it
 came from is never changed. A Flip, or a drawing with a picture under it, is
 said kindly where it was picked ("not yet"), and the picker stays. Not yet: a
 Flip as a face (one that moves), and a face from a drawing with a photo.
+
+**Trace a photo** (the owner's "all yes, build A", Nov 11, after asking
+whether a person could upload a photo, or have Skribl draw one from it).
+Your face's third door, between the other two: the device's own photo
+picker, then the Pad with the photo faint under the canvas (40% to start), a
+guide to trace in your own lines. Only the lines are kept: the Pad leaves
+the photo out of the face and its card, and the site drops one sent anyway
+(profiles.py). In face mode any photo is a guide, which closed the side door
+where a photo under a face was kept with it. Why not a photo, or a drawing
+made from one: a face that draws itself is the site's signature, a photo of
+a teenager's face is the riskiest thing a 13-and-over site can hold, and a
+drawing made by a machine would replay a performance nobody gave.
+docs/INTEGRATION.md, "A photo to trace".
 
 `harness/verify_socialprofile.py` holds it all through the demo's own
 server, faces drawn through the real Pad with a pen; DECISIONS.md ("Profiles

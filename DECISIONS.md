@@ -34131,3 +34131,89 @@ main's run after the merge is.
 Not measured here: the limits on PostgreSQL (no PostgreSQL in this box, and
 verify_socialauth runs on its own SQLite file in every lane). Each count
 there runs after its own commit and sees every try committed before it.
+
+## After v330 -- Trace a photo: a face's photo is a guide, and only the lines are kept
+
+The owner asked (Nov 11) whether a person should be able to upload an image
+for their avatar, "or better yet, maybe skribl could interpret an avatar and
+generate a simple drawing of it". Cal's view: not a photo as a face (a face
+that draws itself is the site's signature; a photo of a teenager's face is
+the riskiest thing a site for 13 and over can hold, and every image needs
+watching), and not a drawing made from one (its replay would be a
+performance nobody gave, the one thing Skribl is about; a button that
+decides; people's face photos sent to an outside service, at a cost per
+face). Instead, Trace a photo: mocked through the real site and Pad (light
+and dark, phone and desk; the photo a portrait of nobody, painted here),
+and the owner's "all yes, build A" (the door and the guide; B was the guide
+alone, in the Pad's drawer, with no door).
+
+- THE DOOR (the site, profile.html and profile.js): Your face's third door,
+  between Draw a new one and Use one you made, "Trace a photo: Draw over a
+  photo. Only your lines are kept." It opens the device's own picker for
+  one photo of the kinds the Pad takes (the Pad's frame cannot open one for
+  the page); a file that is not one is said kindly where it was picked and
+  the sheet stays; a photo puts the sheet away and opens the Pad with it.
+- THE HANDOFF (Skribl): lib/composehost.js's guide(file) and a fifth
+  compose message, skribl:compose:guide {file}, the face mode's alone
+  (editor_compose.js); the Pad puts the file through its own photo drawer's
+  input, as a photo picked there.
+- THE GUIDE (Skribl, editor_face.js, loaded only in face mode): any photo
+  there starts at 40%; the drawer's row says "A guide to trace" (the panel's
+  data-guide, which lib/pendingcards.js reads) and a line under it "Only
+  your lines are kept. The photo is never posted."; while there is a photo,
+  the empty canvas says "Trace your face" and "Draw over your photo. Only
+  your lines are kept.", and the face's own words come back when it goes.
+- WHAT IS KEPT: editor_post.js leaves the photo out of a face's drawing
+  (every frame and the legacy mirror) and paints its card without it, so it
+  never leaves the browser; the site drops one sent anyway (profiles.py).
+  This closed a side door: the face mode's photo drawer used to keep a
+  photo under a face, with it.
+
+ONE THING BEYOND THE MOCK, shown to the owner before merging: while there is
+a photo, the empty canvas's two lines sit on one soft backing of the
+canvas's own lightness, both in the hint's stronger ink. The mock said those
+words read at 5.4:1 or better over the stand-in's face; that number was
+wrong, because it took the words' colour without its see-through part. Read
+off the paint with it, over a photo's dark middle at 40%, they read 3.5:1
+(light, both lines) and 3.5:1 (dark, the quieter line); on the backing, 5.7
+and 5.7 light, 5.9 and 5.7 dark.
+
+Pad and Flip: the Pad's face mode only. Flip has no face mode; the image
+drawer and lib/pendingcards.js are shared, and change only where the panel
+carries data-guide, which only the face mode's does.
+
+THE FOUR: kind (anyone can have a face that looks like them; the photo is
+never posted; the words read as well over darker skin as over lighter);
+simple (one door, a photo, trace, Use this face); playful (tracing paper,
+and the face still draws itself); powerful (the guide's Opacity, Blur and
+Fit, exactly).
+
+THE CHECKS. verify_socialprofile section 12, five rows, and section 11's
+first row (three doors). Thirteen breaks, each turning its own row red: the
+door gone (the first; hiding it with the hidden attribute changed nothing,
+since the doors' own display wins, so the door was taken out); any file
+taken (the first); composehost sending no guide, editor_compose ignoring
+it, the face flag gone (the second and the third); no 40% start,
+the row's words, the drawer's line (the second); the words not swapped (the
+second and third); no backing (the third: 3.54 and 3.49 light, 5.88 and 3.52
+dark); the photo kept in the drawing, the photo on the card (the fourth); the
+site keeping a photo (the fifth).
+
+Side by side, final tree: verify_socialprofile 47/47, verify_social 36/36,
+verify_compose 88/88, verify_example 59/59, verify_parity 434/434,
+verify_contrast 628/628, verify_player_isolation 85/85, verify_review
+292/292, verify_amber 111/111, verify_ux 487/487, verify_a11ypages
+162/162, verify_inline 192/192, verify_clouddrafts 116/116; verify_docs
+144/144, gen_docs.py --check current; the player's CSS re-emitted and
+unchanged. verify_postgres NOT RUN (no PostgreSQL here). The full battery
+was not run; main's run after the merge is. Not tested here: an iPhone's
+own photo picker (no WebKit here), Safari, Segoe UI. The owner's yes to the
+backing came before the merge ("yes to the backing, merge when green").
+
+After that run, the PR gate's own suites, run here because GitHub's runners
+could not install Chromium all day (the Ubuntu mirror did not resolve), went
+red in verify_surfaces: the backing's dark ground was a hard-coded neutral,
+rgb(13,15,20), and every grey the chrome paints is a token. It is now the
+canvas's own shade token, --on-canvas-shade-rgb (the halo under white words:
+the same role); verify_surfaces 13/13, section 12 5/5 (5.67 and 5.65 light,
+5.88 and 5.75 dark), and the backing's break red again on the final line.

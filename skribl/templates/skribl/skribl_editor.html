@@ -209,7 +209,10 @@
        of these words (lib/handwords.js leaves typed ones as they are). #}
     {% set empty_words = 'Draw your face' if face else 'Draw anything' %}
     {% set hand = skribl_hand_words(empty_words) if skribl_hand_words is defined else None %}
-    <div id="canvasEmptyHint" class="canvas-empty-hint{{ ' is-hand' if hand }}">
+    {# A FACE WITH A PHOTO TO TRACE says the guide's words instead, while
+       the photo is there (editor_face.js swaps them in and back). #}
+    <div id="canvasEmptyHint" class="canvas-empty-hint{{ ' is-hand' if hand }}"
+      {%- if face %} data-guide-words="Trace your face" data-guide-sub="Draw over your photo. Only your lines are kept."{% endif %}>
       {% if hand %}<span style="width: {{ hand.width }}px">{{ hand.svg }}</span>{% else %}<span>{{ empty_words }}</span>{% endif %}
       <span class="canvas-empty-sub">{{ 'Skribl records as you go — your face draws itself the same way' if face else 'Skribl records as you go — post it and it replays' }}</span>
     </div>
@@ -420,6 +423,9 @@
     {# A face (?face=1) starts square: the shape lib/chromefit.js padShape
        gives a new drawing here, and the early fit lays out (above). #}
     {% if face %}window.SKRIBL_SHAPE = "square";{% endif %}
+    {# ...and a photo there is a guide to trace, never part of the face
+       (editor_face.js; editor_post.js leaves it out of what is kept). #}
+    {% if face %}window.SKRIBL_FACE = true;{% endif %}
     {# The letter sheet (editor_letters.js). editor_draft.js reads it to keep
        no Pad draft there, as compose keeps none. #}
     {% if letters %}window.SKRIBL_LETTERS = true;{% endif %}
@@ -623,6 +629,11 @@
   {# Compose only. It is an editor_*.js carve, so verify_player_isolation.py's
      glob enrols it automatically and fails if the player ever loads it. #}
   <script src="{{ skribl_asset('editor_compose.js') }}" defer></script>
+  {% endif %}
+  {% if face %}
+  {# A face's guide (a photo to trace, never kept): face mode only. An
+     editor_*.js carve, so verify_player_isolation.py keeps it off the player. #}
+  <script src="{{ skribl_asset('editor_face.js') }}" defer></script>
   {% endif %}
   <script src="{{ skribl_asset('editor_draft.js') }}" defer></script>
   {% if letters %}

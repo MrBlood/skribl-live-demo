@@ -24,7 +24,7 @@
 {% if kind == 'flip' -%}
 <div class="tab-panel draw-popout" id="photoPanel" role="dialog" aria-label="Background image" hidden>
 {%- else -%}
-<div class="tab-panel" id="photoPanel" hidden>
+<div class="tab-panel" id="photoPanel" hidden{% if face %} data-guide="A guide to trace"{% endif %}>
 {%- endif %}
   <div class="music-dropzone" id="photoUploadBtn">
     <button type="button" class="dz-add" id="photoAddBtn">
@@ -42,6 +42,12 @@
   </div>
   {% if kind != 'flip' -%}
   <input type="file" id="photoInput" aria-label="Choose an image file" accept="image/jpeg,image/png,image/gif,image/webp" style="display:none">
+  {%- endif %}
+  {#- A FACE'S PHOTO IS A GUIDE TO TRACE (the Pad's ?face=1, after v330;
+      editor_face.js): the row says so (data-guide above, which
+      lib/pendingcards.js reads), and this line says what is kept. #}
+  {% if face and kind != 'flip' -%}
+  <p class="reposition-hint face-guide-note" id="photoGuideNote">Only your lines are kept. The photo is never posted.</p>
   {%- endif %}
 
   <div id="photoPending" class="pending-card" hidden>

@@ -104,6 +104,7 @@
   <span data-word="unreadable">That file isn’t a skribl we can read. Try another?</span>
   <span data-word="gone">That one isn’t there anymore. Pick another?</span>
   <span data-word="open_failed">That one didn’t open. Try again?</span>
+  <span data-word="not_photo">That one isn’t a photo the Pad can use. Try a JPG or PNG?</span>
 </div>
 {% endblock %}
 
@@ -146,10 +147,21 @@
         <span class="make-ic">{{ ic.pen() }}</span>
         <span class="make-words"><b>Draw a new one</b><span>It draws itself the way you drew it.</span></span>
       </button>
+      {#  TRACE A PHOTO (the owner's "all yes, build A", Nov 11): your
+          phone's own photo picker, then the Pad above with the photo under
+          the canvas as a guide; only your lines are kept (Skribl's
+          editor_face.js). The picker is opened from here: the Pad's frame
+          cannot open one for this page. #}
+      <button class="make-door" type="button" data-face-trace>
+        <span class="make-ic">{{ ic.trace() }}</span>
+        <span class="make-words"><b>Trace a photo</b><span>Draw over a photo. Only your lines are kept.</span></span>
+      </button>
+      <input class="face-input" type="file" accept="image/jpeg,image/png,image/gif,image/webp" data-face-photo hidden>
       <button class="make-door" type="button" data-face-go="pick">
         <span class="make-ic">{{ ic.picture() }}</span>
         <span class="make-words"><b>Use one you made</b><span>Pick a skribl, then place it in the circle.</span></span>
       </button>
+      <p class="say face-say" data-face-say role="status" hidden></p>
       <button class="btn btn-wide make-cancel" type="button" data-make-close>Cancel</button>
     </div>
     <div class="face-step" data-step="pick" hidden>

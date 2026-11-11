@@ -153,6 +153,16 @@ def register(bp, skribl_blueprint="skribl"):
         drawing["visibility"] = "unlisted"
         drawing["title"] = f"{row.display_name}’s face"
         drawing["caption"] = ""
+        # A FACE CARRIES NO PHOTO (Trace a photo, the owner's yes, Nov 11):
+        # in the Pad's face mode a photo is a guide to trace, and the Pad
+        # leaves it out of the drawing and its card. One sent anyway is
+        # dropped here, from every frame and the legacy mirror, so a face is
+        # the person's own lines. (The card is the browser's picture, as
+        # every skribl's is.)
+        drawing["photo"] = None
+        if isinstance(drawing.get("frames"), list):
+            drawing["frames"] = [dict(f, photo=None) if isinstance(f, dict) else f
+                                 for f in drawing["frames"]]
         try:
             made = create_post(drawing, author_id=row.public_id)
         except SkriblRejected as exc:

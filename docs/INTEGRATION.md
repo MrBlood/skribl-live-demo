@@ -528,13 +528,17 @@ still there on the next press. Do not float a close of your own over the
 frame: on a phone it lands on the editor's ⋯ button. On a phone, give the
 overlay the whole screen, as a phone composer does; the header needs the room.
 
-**The handshake** underneath it, four messages, all `postMessage` — you need
+**The handshake** underneath it, five messages, all `postMessage` — you need
 this only if you are not using the module:
 
     editor -> host   skribl:compose:ready    up; send a payload if re-editing
     host   -> editor skribl:compose:load     {payload} put this back on canvas
     editor -> host   skribl:compose:done     {payload, preview, hasAudio}
     editor -> host   skribl:compose:cancel   closed without attaching
+    host   -> editor skribl:compose:guide    {file} a face's photo to trace
+
+The last is the face mode's alone ("A photo to trace", below); anywhere else
+the Pad ignores it.
 
 Target your own origin, never `'*'`, and check `e.origin` on the way in — a
 wildcard hands the author's drawing to whatever page is framing the editor. If
@@ -975,7 +979,7 @@ and so can any host.
 
 **Drawing one: the Pad's face mode.** Open the Pad in compose mode with
 `face=1`, `GET /skribl-pad?compose=1&face=1`, through `lib/composehost.js` as
-for a post ("Drawing one from your own composer", above). Four things differ
+for a post ("Drawing one from your own composer", above). Five things differ
 from a post's compose mode, all in the Pad's own markup:
 
 - it starts on the square canvas, as a face is shown in a circle (a person
@@ -989,7 +993,8 @@ from a post's compose mode, all in the Pad's own markup:
 - the sheet asks nothing a face does not use: no title, no "Viewers start
   at" (the face player has its own speed), no gallery tick;
 - there is no switch to Flip in its ⋯ menu: a face is a drawing that draws
-  itself, the Pad's.
+  itself, the Pad's;
+- a photo there is a guide to trace, never part of the face (below).
 
 It still posts nothing: "Use this face" hands your page the payload, as "Add
 to post" does, and your server keeps it. Flip has no face mode, and nothing
@@ -1050,6 +1055,42 @@ drawn through the real Pad in its face mode and kept unlisted, drawing itself
 once at about 4x (read from the paint) and finished at once under Reduce
 Motion, still in the bar and on a Gallery card with no fetch, framed by
 lib/sharecard.js's own sums, replaced, and deleted with an account.
+
+### A photo to trace
+
+For someone who says "I can't draw myself" (after v330, the owner's "all
+yes, build A"): a photo of them under the canvas as a faint guide, traced in
+their own lines, which are all that is kept. The photo helps the hand and
+goes no further, so a face is never a photo and still draws itself.
+
+    var pad = SkriblComposeHost.create({ frame, src, onDone, ... });  // face=1
+    photoInput.addEventListener('change', function () {
+      pad.guide(photoInput.files[0]);   // opens the Pad with it to trace
+    });
+
+- **The picker is yours.** An `<input type="file">` on your page, opened by
+  the person's own press (a frame cannot open a picker for your page).
+  `accept="image/jpeg,image/png,image/gif,image/webp"`, the kinds the Pad's
+  photo drawer takes; check the file is one of them and say so kindly if not.
+- **`pad.guide(file)`** opens the editor if it is not open and hands it the
+  file (`skribl:compose:guide`) once the editor is ready. The Pad puts it in
+  its own photo drawer, exactly as a photo picked there, under the canvas.
+- **In face mode any photo is a guide**, however it arrived (`editor_face.js`):
+  it starts at 40% so the lines read over it from the first stroke, the
+  drawer's Opacity, Blur and Fit stay the person's to set exactly, its row
+  says "A guide to trace" and a line under it "Only your lines are kept. The
+  photo is never posted.", and the empty canvas says "Trace your face" on a
+  backing that reads over any photo.
+- **"Use this face" hands back the lines alone**: the payload carries no photo
+  in any frame, and its card (the face's still picture) is painted without it
+  (`editor_post.js`), so the photo never leaves the browser. Drop a photo on
+  your server all the same (`drawing["photo"] = None` and each frame's), as
+  the Skribl site does: a body can say anything.
+
+`harness/verify_socialprofile.py` section 12 holds it through the site: the
+door and its picker, the guide at 40% with its words, the words read off the
+paint over a photo's darkest middle in light and dark, the lines alone in what
+the page sends and on its card, and a photo sent anyway dropped.
 
 ### A face from a drawing you already have
 
