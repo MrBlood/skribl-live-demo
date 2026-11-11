@@ -34537,3 +34537,11 @@ and the page-error break first ran without the pages it watches (with
 them, red). verify_createpost section 11, for describe_posts: four breaks,
 each red on its row (a private skribl shown to anyone, the payload handed
 over, no cap, not in __all__).
+
+Side by side: verify_socialposts 18/18, verify_createpost 78/78,
+verify_docs 144/144, verify_social 38/38, verify_socialprofile 54/54.
+verify_socialauth was 61/62 there: its migration row still pinned the
+site's five tables of before posts (fixed: red with the posts migration
+short an index, green as built), then 62/62 alone. The full battery was not
+run; main's run after the merge is. Not tested here: Safari, and the
+owner's own fonts.
