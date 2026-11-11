@@ -1,9 +1,10 @@
 {#  DELETE MY ACCOUNT: a kind confirm that says what goes and what stays,
     before anything goes. Deleting is real (docs/SOCIAL-SITE.md, section 3):
     the person, their profile (its words, and their drawn face, a skribl the
-    site posted for it and deletes through Skribl's delete_post), their
-    passkeys and the invite links they made are removed, not hidden. Their
-    other skribls are Skribl's, and Skribl has no seam yet for a
+    site posted for it and deletes through Skribl's delete_post), their posts
+    (the words and the drawings, which the site posted too), their passkeys
+    and the invite links they made are removed, not hidden. Their other
+    skribls are Skribl's, and Skribl has no seam yet for a
     host to take an author's drawings with them, so this page says they stay,
     and where to delete them first. Typing the handle is the confirm. #}
 {% extends 'social/base.html' %}
@@ -21,11 +22,12 @@
     <ul class="bullets">
       <li>Your account: your name, {{ me.display_name }}, and your handle, @{{ me.handle }}</li>
       <li>Your profile{% if me.face_id %}, and the face you drew for it{% endif %}</li>
+      {% if n_posts %}<li>Your posts ({{ n_posts }}): their words and their drawings</li>{% endif %}
       <li>Your passkeys ({{ n_keys }})</li>
       <li>{% if n_links %}The invite links you made that nobody has used yet ({{ n_links }}){% else %}Any invite links you made{% endif %}</li>
     </ul>
     <h2 class="panel-title" id="staysTitle">What stays, for now</h2>
-    <p class="panel-text">Your skribls and saved drafts stay where they are: deleting your account doesn’t take them down yet. If you want them gone too, delete them in your Library first.</p>
+    <p class="panel-text">Your {% if n_posts %}other {% endif %}skribls and saved drafts stay where they are: deleting your account doesn’t take them down yet. If you want them gone too, delete them in your Library first.</p>
     <a class="btn" href="{{ url_for(skribl_bp ~ '.skribl_library') }}">Open your Library</a>
   </section>
   <form class="panel" method="post" action="{{ url_for('social.delete_account_now') }}">

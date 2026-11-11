@@ -55,7 +55,7 @@ from flask import (abort, current_app, g, jsonify, redirect, render_template, re
 from werkzeug.routing import BuildError
 
 from . import passkeys
-from .models import (BIO_LINES, BIO_MAX, Challenge, Invite, Passkey, Person, as_utc,
+from .models import (BIO_LINES, BIO_MAX, Challenge, Invite, Passkey, Person, Post, as_utc,
                      new_person_id, new_public_id, utcnow)
 from .security import (client_subject, csrf_token, current_person, guard, origin_ok, over,
                        public_origin, sign_in, sign_out, site, token_ok)
@@ -293,14 +293,18 @@ def delete_person(sess, person_id):
     """REAL DELETION (docs/SOCIAL-SITE.md, section 3, rule 9): the person,
     their passkeys, the invites they made, the recovery links made for them,
     the invite they came in by, ceremonies in progress, their bio with their
-    row, and their drawn face (the skribl the site posted for it, through
-    Skribl's delete_post). Flushes; the request commits. (Their other skribls
-    are Skribl's, and docs/INTEGRATION.md has no seam for a host to take an
-    author's drawings away in one go: they stay, and the confirm page says
-    so.)"""
+    row, their drawn face (the skribl the site posted for it, through
+    Skribl's delete_post), and their posts, the words and the drawings both
+    (piece 4: the site posted those too). Flushes; the request commits.
+    (Their other skribls are Skribl's, and docs/INTEGRATION.md has no seam
+    for a host to take an author's drawings away in one go: they stay, and
+    the confirm page says so.)"""
     row = sess.execute(sa.select(Person.public_id, Person.face_id).where(Person.id == person_id)).first()
     if row is not None:
         drop_face(row.public_id, row.face_id)
+        from .posts import drop_post
+        for post in sess.execute(sa.select(Post).where(Post.person_id == person_id)).scalars().all():
+            drop_post(row.public_id, post)
     sess.execute(sa.delete(Challenge).where(Challenge.person_id == person_id))
     invites = sa.select(Invite.id).where(sa.or_(Invite.created_by_id == person_id,
                                                Invite.for_person_id == person_id,
@@ -810,8 +814,10 @@ def register(bp):
                               .where(Passkey.person_id == person.id)).scalar()
         n_links = sess.execute(sa.select(sa.func.count()).select_from(Invite)
                                .where(Invite.created_by_id == person.id, Invite.used_at.is_(None))).scalar()
+        n_posts = sess.execute(sa.select(sa.func.count()).select_from(Post)
+                               .where(Post.person_id == person.id)).scalar()
         return _page("delete.html", here="you", me=person, n_keys=n_keys, n_links=n_links,
-                     token=csrf_token(), wrong=False)
+                     n_posts=n_posts, token=csrf_token(), wrong=False)
 
     @bp.post("/you/delete")
     @_rests()
@@ -831,8 +837,10 @@ def register(bp):
                                   .where(Passkey.person_id == person.id)).scalar()
             n_links = sess.execute(sa.select(sa.func.count()).select_from(Invite)
                                    .where(Invite.created_by_id == person.id, Invite.used_at.is_(None))).scalar()
+            n_posts = sess.execute(sa.select(sa.func.count()).select_from(Post)
+                                   .where(Post.person_id == person.id)).scalar()
             return _page("delete.html", 400, here="you", me=person, n_keys=n_keys, n_links=n_links,
-                         token=csrf_token(), wrong=True)
+                         n_posts=n_posts, token=csrf_token(), wrong=True)
         delete_person(site().session(), person.id)
         sign_out()
         return _page("deleted.html", here="deleted", hide_nav=True)

@@ -113,70 +113,12 @@
 
   function drawYourFace() {
   var wrap = doc.getElementById('facePad');
-  if (!wrap || !window.SkriblComposeHost) return null;
-  var frame = wrap.querySelector('.facepad-frame');
-  var scrim = wrap.querySelector('.facepad-scrim');
+  if (!wrap || !window.SocialPadOverlay) return null;
   var openers = doc.querySelectorAll('[data-face-open]');
-  var behind = [doc.querySelector('body > .top'), doc.querySelector('body > .nav'), doc.getElementById('main')];
-  /* Longer than the slowest glide (the scrim's), in case its transitionend
-     never comes (a tab put in the background mid-glide, say). */
-  var SETTLE_MS = 450;
-  var from = null, timer = 0, open = false, saving = false;
-
-  function mark(on) {
-    Array.prototype.forEach.call(openers, function (b) {
-      if (b.hasAttribute('aria-expanded')) b.setAttribute('aria-expanded', on ? 'true' : 'false');
-    });
-    behind.forEach(function (el) {
-      if (!el) return;
-      if (on) el.setAttribute('inert', ''); else el.removeAttribute('inert');
-    });
-  }
-
-  function settle() {
-    if (open) return;
-    clearTimeout(timer);
-    wrap.hidden = true;
-    wrap.classList.remove('is-closing');
-    doc.body.classList.remove('facepad-open');
-  }
-
-  var pad = window.SkriblComposeHost.create({
-    frame: frame,
-    src: wrap.getAttribute('data-compose'),
-    onOpen: function () {
-      if (open) return;
-      open = true;
-      clearTimeout(timer);
-      wrap.classList.remove('is-closing');
-      wrap.hidden = false;
-      doc.body.classList.add('facepad-open');
-      /* Read a size, so the glide starts from where the sheet rests closed. */
-      void wrap.offsetHeight;
-      wrap.classList.add('is-open');
-      mark(true);
-      try { frame.focus({ preventScroll: true }); } catch (e) { /* not focusable yet */ }
-    },
-    onClose: function () {
-      if (!open) return;
-      open = false;
-      wrap.classList.add('is-closing');
-      wrap.classList.remove('is-open');
-      mark(false);
-      if (from && from.getClientRects().length && from.focus) from.focus({ preventScroll: true });
-      from = null;
-      clearTimeout(timer);
-      timer = setTimeout(settle, SETTLE_MS);
-    },
-    onReady: function () { wrap.classList.add('is-ready'); },
-    onDone: function (payload) { keep(payload); }
-  });
-
-  if (scrim) {
-    scrim.addEventListener('transitionend', function (e) { if (e.target === scrim && !open) settle(); });
-    /* A tap beside a desk's card puts the Pad away; the drawing stays in it. */
-    scrim.addEventListener('click', function () { pad.close(); });
-  }
+  var saving = false;
+  /* The Pad over the page: social.js's SocialPadOverlay, as a post's is. */
+  var over = window.SocialPadOverlay(wrap, { openers: openers, onDone: function (payload) { keep(payload); } });
+  if (!over) return null;
   Array.prototype.forEach.call(openers, function (b) {
     b.addEventListener('click', function (e) {
       e.preventDefault();
@@ -185,8 +127,7 @@
       /* Focus comes back to the button the person pressed, or, from Your
          face's door (the sheet is gone by then), to the button that raised
          the sheet. */
-      from = b.closest('#faceSheet') || b.tagName !== 'BUTTON' ? doc.querySelector('button[data-face-sheet]') : b;
-      pad.open();
+      over.open(b.closest('#faceSheet') || b.tagName !== 'BUTTON' ? doc.querySelector('button[data-face-sheet]') : b);
     });
   });
 
@@ -239,8 +180,7 @@
   function trace(file) {
     if (saving || !file) return;
     show('');
-    from = doc.querySelector('button[data-face-sheet]');
-    pad.guide(file);
+    over.guide(file, doc.querySelector('button[data-face-sheet]'));
   }
 
   return { keep: keep, busy: busy, trace: trace, isSaving: function () { return saving; } };

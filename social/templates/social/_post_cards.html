@@ -1,0 +1,4 @@
+{#  A page of the feed's cards, for Load more (posts.feed_more): the same
+    card the page renders, so a post loaded later is the post loaded first. #}
+{% from 'social/_post.html' import post_card with context %}
+{% for c in cards %}{{ post_card(c) }}{% endfor %}
