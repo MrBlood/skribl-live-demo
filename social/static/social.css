@@ -404,6 +404,133 @@ body.focus .top { justify-content: center; }
   .btn-danger:hover { filter: brightness(1.08); }
 }
 
+/* ---- PROFILES AND DRAWN FACES (phase 1, piece 3) ---------------------------
+ * The approved profile mock A: the face big in a circle on a ring of the
+ * card's paper, the name, @handle and a few lines, the buttons, then the
+ * person's skribls (Skribl's own Gallery section). Centred on a phone; on a
+ * desk the face on the left and the words beside it. A face is Skribl's face
+ * player, sized by its token (--skribl-face-size) on the circle the site puts
+ * it in, on the Pad's paper as the mock has it (its own ground); before
+ * somebody has drawn one, an empty circle in the ground a drawing waits on
+ * (--draw-wait, same role, same token), never a stock silhouette. No rule
+ * here names a class of the face player's, as none names the Gallery's. */
+.face-ring { display: grid; place-items: center; flex: none; border-radius: 50%; }
+.face-blank {
+  display: grid; place-items: center; box-sizing: border-box; width: 100%; height: 100%;
+  border-radius: 50%; background: var(--draw-wait);
+}
+.icon-btn {
+  display: inline-grid; place-items: center; flex: none; width: 44px; height: 44px; padding: 0;
+  border: 0; border-radius: 999px; background: transparent; color: var(--ink-2); cursor: pointer;
+  text-decoration: none;
+}
+.icon-btn .ic { width: 22px; height: 22px; }
+.icon-btn.boxed { border: 1px solid var(--btn2-line); background: var(--btn2-bg); color: var(--btn2-ink); }
+
+/* The bar's You (a phone) and the rail's foot (a desk): your face, still,
+   ringed in the bar's ink, the ring the words' own colour where You is the
+   page you are on. Before you have drawn one, the empty circle, its ring
+   drawn dashed: a place for a face. */
+.nav .tab-you .face-ring {
+  --skribl-face-size: 28px; width: 28px; height: 28px; box-shadow: 0 0 0 1.5px var(--nav-ink);
+}
+.nav .tab-you[aria-current="page"] .face-ring { box-shadow: 0 0 0 2px var(--nav-on); }
+.nav .tab-you .face-ring.is-blank { box-shadow: none; }
+.nav .tab-you .face-blank { background: transparent; border: 1.5px dashed var(--nav-ink); }
+.nav .tab-you[aria-current="page"] .face-blank { border: 2px dashed var(--nav-on); }
+
+/* A profile's own words at the top of a phone: @handle, and the gear. */
+.top-title { overflow: hidden; color: var(--ink); font-size: 17px; font-weight: 700; line-height: 1.3;
+             text-overflow: ellipsis; white-space: nowrap; }
+.top-gear { margin-left: auto; margin-right: -10px; color: var(--ink); }
+
+.prof { display: flex; flex-direction: column; align-items: center; padding-top: 8px; text-align: center; }
+.prof-face {
+  --skribl-face-size: 112px; width: 112px; height: 112px; margin-bottom: 16px;
+  box-shadow: 0 0 0 4px var(--card), 0 0 0 5px var(--card-line), var(--card-drop);
+}
+/* Your own empty circle says what to do, and does it: the Pad opens. */
+.face-ask {
+  gap: 2px; align-content: center; padding: 10px; border: 1.5px dashed var(--btn2-line);
+  color: var(--accent-ink); cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.face-ask-ic { display: grid; place-items: center; }
+.face-ask-ic .ic { width: 22px; height: 22px; }
+.face-ask-words { font-size: 14px; font-weight: 600; line-height: 1.2; }
+.prof-words { display: flex; flex-direction: column; align-items: center; max-width: 100%; min-width: 0; }
+.prof-name { margin: 0; font: 700 26px/1.15 var(--font); letter-spacing: -0.015em; overflow-wrap: anywhere; }
+.prof-handle { margin: 2px 0 0; color: var(--ink-2); font-size: 15px; line-height: 1.45; }
+/* The bio as typed: its line breaks kept, a long word broken before the page is. */
+.prof-bio { max-width: 30em; margin: 12px 0 0; color: var(--ink); font-size: 16px; line-height: 1.45;
+            white-space: pre-line; overflow-wrap: anywhere; }
+.prof-acts { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 16px; }
+.prof-acts .desk-only { display: none; }
+.prof-say { margin-top: 10px; }
+.prof-page .sec { margin-top: 28px; }
+@media (min-width: 900px) {
+  .prof { flex-direction: row; align-items: center; gap: 32px; padding-top: 4px; text-align: left; }
+  .prof-face { --skribl-face-size: 168px; width: 168px; height: 168px; margin: 0; }
+  .face-ask-words { font-size: 15px; }
+  .prof-words { align-items: flex-start; }
+  .prof-name { font-size: 34px; }
+  .prof-acts { justify-content: flex-start; }
+  .prof-acts .desk-only { display: inline-grid; }
+  .prof-say { text-align: left; }
+  /* The rail's foot: the face beside the name, at 40px. */
+  .nav .tab-me .tab-ic { width: 40px; height: 40px; }
+  .nav .tab-you .face-ring { --skribl-face-size: 40px; width: 40px; height: 40px; }
+}
+@media (hover: hover) {
+  .face-ask:hover { border-color: var(--brand); }
+  .icon-btn.boxed:hover { border-color: var(--brand); }
+}
+
+/* Edit profile's bio: a text field that grows by hand. */
+.field textarea {
+  width: 100%; min-height: 112px; padding: 12px 14px; border: 1.5px solid var(--field-line); border-radius: 14px;
+  background: var(--field); color: var(--ink); font: 17px/1.45 var(--font); resize: vertical;
+}
+.field textarea[aria-invalid="true"] { border-color: var(--danger-ink); }
+.opt { margin-left: 4px; color: var(--ink-2); font-size: 14px; font-weight: 400; }
+
+/* DRAW YOUR FACE: the Pad over the page (lib/composehost.js runs it). A
+   phone gives it the whole screen, as a composer does, and it glides up
+   from the bottom and back down; a desk gives it a big card in the middle,
+   rising a little as it fades in. Nothing behind it moves or takes a tap
+   meanwhile. Under Reduce Motion it fades where it sits. */
+.facepad { position: fixed; inset: 0; z-index: 60; display: flex; align-items: flex-end; justify-content: center; }
+.facepad[hidden] { display: none; }
+.facepad-scrim { position: absolute; inset: 0; background: var(--scrim); opacity: 0; transition: opacity 0.3s ease; }
+.facepad-sheet {
+  position: relative; width: 100%; height: 100%; overflow: hidden; background: var(--page);
+  transform: translateY(100%); transition: transform 0.34s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.facepad.is-open .facepad-scrim { opacity: 1; }
+.facepad.is-open .facepad-sheet { transform: none; }
+.facepad.is-closing .facepad-sheet { transition-duration: 0.24s; transition-timing-function: cubic-bezier(0.4, 0, 1, 1); }
+.facepad-frame { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: transparent; }
+.facepad-wait {
+  position: absolute; top: 50%; left: 0; right: 0; margin: 0; transform: translateY(-50%);
+  color: var(--ink-2); font-size: 16px; line-height: 1.45; text-align: center; transition: opacity 0.2s ease;
+}
+.facepad.is-ready .facepad-wait { opacity: 0; }
+body.facepad-open { overflow: hidden; }
+@media (min-width: 900px) {
+  .facepad { align-items: center; }
+  .facepad-sheet {
+    width: min(1120px, calc(100vw - 64px)); height: min(840px, calc(100vh - 48px));
+    border-radius: 22px; box-shadow: 0 24px 64px rgba(0, 0, 0, 0.35);
+    opacity: 0; transform: translateY(28px);
+    transition: transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.2s ease;
+  }
+  .facepad.is-open .facepad-sheet { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .facepad-sheet, .facepad.is-open .facepad-sheet { transform: none; }
+  .facepad-sheet { opacity: 0; transition: opacity 0.2s ease; }
+  .facepad.is-open .facepad-sheet { opacity: 1; }
+}
+
 /* KIND TRANSITIONS BETWEEN PAGES, Skribl's own rule (styles.css, after v323:
    "No transitions should be jumpy"): from Home to Explore, and from Make's
    door into the Pad or Flip and back, the next page fades in over this one.

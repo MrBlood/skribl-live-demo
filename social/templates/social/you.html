@@ -1,6 +1,7 @@
-{#  YOU (phase 1, piece 2): your name and handle, your passkeys, signing
-    out, and deleting the account. Profiles and drawn faces are piece 3: no
-    profile page yet, so this is the account, not a page about you.
+{#  SETTINGS, the account (phase 1, piece 2; /social/you): your passkeys,
+    signing out, and deleting the account. Since piece 3 You is your profile
+    (/social/@<handle>), and this is where its gear leads, so it says
+    Settings; nothing on it changed but its name.
 
     A passkey is renamed or removed in place (a details row that opens under
     it), never removed when it is the last one: an account with none could
@@ -9,14 +10,14 @@
 {% extends 'social/base.html' %}
 {% import 'social/_icons.html' as ic %}
 
-{% block title %}You · Skribl{% endblock %}
+{% block title %}Settings · Skribl{% endblock %}
 {% block scripts %}<script src="{{ social_asset('passkey.js') }}" defer></script>
 <script src="{{ social_asset('you.js') }}" defer></script>{% endblock %}
 
 {% block main %}
 <div class="acct">
   <div class="page-head">
-    <h1 class="page-title">{{ me.display_name }}</h1>
+    <h1 class="page-title">Settings</h1>
     <p class="page-sub">@{{ me.handle }}</p>
   </div>
   {% if note == 'added' %}<p class="note" role="status">Your new passkey is ready. It signs you in here from now on.</p>

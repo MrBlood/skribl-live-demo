@@ -52,7 +52,7 @@
        collide with the header; it sends skribl:compose:cancel and the host's
        lib/composehost.js closes the overlay, keeping the drawing for reopening. #}
     {% if compose %}<div class="compose-lead">
-    <button type="button" class="icon-btn compose-close" id="composeCloseBtn" aria-label="Close — back to your post" title="Back to your post">
+    <button type="button" class="icon-btn compose-close" id="composeCloseBtn" aria-label="{{ 'Close — back to your profile' if face else 'Close — back to your post' }}" title="{{ 'Back to your profile' if face else 'Back to your post' }}">
       <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
     </button>{% endif %}
     <div class="brand" role="img" aria-label="Skribl Pad" title="Skribl Pad">
@@ -102,11 +102,15 @@
       </div>
       {# In its slot from first paint, disabled until a take exists — a primary
          action that pops in and out makes the header feel unstable. #}
-      <button type="button" id="postBtn" class="btn post" disabled title="Post it and get a link anyone can open">
+      {# A FACE (?face=1) says a face's words here too: its title, and what a
+         press on an empty canvas says (editor_compose.js, ADD IS NEVER GREYED
+         OUT HERE). #}
+      <button type="button" id="postBtn" class="btn post" disabled title="{{ 'Keep it as your face' if face else 'Post it and get a link anyone can open' }}"{% if face %} data-waiting-words="Draw your face first"{% endif %}>
         <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
         {# In compose mode nothing is published here: the drawing goes back to
            the host's post, and THEIR Post button publishes it. #}
-        <span class="btn-label">{% if compose %}Add<span class="post-long"> to post</span>{% else %}Post<span class="post-long"> to Skribl</span>{% endif %}</span>
+        {# A FACE (?face=1) is not added to a post: it is kept as your face. #}
+        <span class="btn-label">{% if face %}Use<span class="post-long"> this face</span>{% elif compose %}Add<span class="post-long"> to post</span>{% else %}Post<span class="post-long"> to Skribl</span>{% endif %}</span>
       </button>
       {# Tune (the tune drawer; "Canvas settings" until after v323, a name the canvas shape was never in) — in the header, mirroring Flip exactly,
          so the drawer slides down FROM the bar that opens it. It sits AFTER
@@ -167,7 +171,8 @@
   {% with kind='pad' %}{% include 'skribl/_skribl_export.html' %}{% endwith %}
 
   <!-- Post composer sheet (shared partial — the one sheet for Pad + Flip) -->
-  {% with speed_row=true %}{% include 'skribl/_skribl_post.html' %}{% endwith %}
+  {# A face plays at its host's speed (the face player's), so it asks none. #}
+  {% with speed_row=not face %}{% include 'skribl/_skribl_post.html' %}{% endwith %}
 
   <div class="canvas-area" role="main">
   <div class="canvas-wrap">
@@ -200,10 +205,13 @@
        the owner took him off after v323 ("It's too much"); Flip's hint
        follows. In a site's post box, once on a device, the snail draws itself
        above them (_skribl_hint_once.html). #}
-    {% set hand = skribl_hand_words('Draw anything') if skribl_hand_words is defined else None %}
+    {# A FACE (?face=1) says so, in typed letters: the hand has no recording
+       of these words (lib/handwords.js leaves typed ones as they are). #}
+    {% set empty_words = 'Draw your face' if face else 'Draw anything' %}
+    {% set hand = skribl_hand_words(empty_words) if skribl_hand_words is defined else None %}
     <div id="canvasEmptyHint" class="canvas-empty-hint{{ ' is-hand' if hand }}">
-      {% if hand %}<span style="width: {{ hand.width }}px">{{ hand.svg }}</span>{% else %}<span>Draw anything</span>{% endif %}
-      <span class="canvas-empty-sub">Skribl records as you go — post it and it replays</span>
+      {% if hand %}<span style="width: {{ hand.width }}px">{{ hand.svg }}</span>{% else %}<span>{{ empty_words }}</span>{% endif %}
+      <span class="canvas-empty-sub">{{ 'Skribl records as you go — your face draws itself the same way' if face else 'Skribl records as you go — post it and it replays' }}</span>
     </div>
     {% if compose %}{% with once_src='brand/hint-snail.json', once_rate=2, once_end='rest', once_share=0.62, once_max=320 %}{% include 'skribl/_skribl_hint_once.html' %}{% endwith %}{% endif %}
     </div>
@@ -409,6 +417,9 @@
     window.SKRIBL_MODE = {{ ("compose" if compose else "editor") | tojson }};
   window.SKRIBL_DRAFTS = { api: {{ skribl_drafts_api | tojson }}, signedIn: {{ skribl_signed_in | tojson }}, limit: {{ skribl_drafts_limit | tojson }} };
     {% if compose %}window.SKRIBL_COMPOSE = "pad";{% endif %}
+    {# A face (?face=1) starts square: the shape lib/chromefit.js padShape
+       gives a new drawing here, and the early fit lays out (above). #}
+    {% if face %}window.SKRIBL_SHAPE = "square";{% endif %}
     {# The letter sheet (editor_letters.js). editor_draft.js reads it to keep
        no Pad draft there, as compose keeps none. #}
     {% if letters %}window.SKRIBL_LETTERS = true;{% endif %}

@@ -1,0 +1,96 @@
+/* The face player's stylesheet: a skribl in a circle, as somebody's picture
+ * (skribl/templates/skribl/_skribl_face.html; lib/face.js plays one).
+ *
+ * Every rule is under .skribl-face, so nothing here reaches the page around
+ * it. Two tokens a page may set, both optional: --skribl-face-size (the
+ * circle's width, 40px unsaid) and --skribl-face-ground (the circle before a
+ * drawing is in it: the Pad's paper unsaid, as a face drawn on it reads).
+ * The frame on the still picture (--skribl-face-w/-x/-y) is the macro's,
+ * worked out from the drawing's size; the defaults here are a square's.
+ */
+
+.skribl-face {
+  position: relative;
+  display: inline-block;
+  flex: none;
+  box-sizing: border-box;
+  width: var(--skribl-face-size, 40px);
+  height: var(--skribl-face-size, 40px);
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border-radius: 50%;
+  vertical-align: middle;
+  background: var(--skribl-face-ground, #f6f2ea);
+  isolation: isolate;
+}
+div.skribl-face { display: block; }
+
+/* The still face: the share card, placed so the drawing's middle square
+   fills the circle (the rest of the card is outside it, clipped). */
+.skribl-face-still {
+  position: absolute;
+  left: var(--skribl-face-x, -73.4568%);
+  top: var(--skribl-face-y, -6.1728%);
+  display: block;
+  width: var(--skribl-face-w, 246.9136%);
+  max-width: none;
+  height: auto;
+  margin: 0;
+  border: 0;
+  transition: opacity 0.2s ease;
+}
+.skribl-face.is-gone .skribl-face-still { visibility: hidden; }
+
+/* The face drawing itself, over the still one: the player's box made the
+   circle, its drawing covering it, and no nib on a picture. Unseen until its
+   first frame is painted (lib/face.js adds is-live), then it fades in. */
+.skribl-face-draw {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+}
+.skribl-face.is-live .skribl-face-draw { opacity: 1; }
+.skribl-face-draw .skribl-inline {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  aspect-ratio: auto;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  cursor: default;
+}
+.skribl-face-draw .skribl-inline-canvas {
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  transform: none;
+  object-fit: cover;
+}
+.skribl-face-draw .skribl-inline-nib { display: none; }
+
+/* A FACE THAT DRAWS ITSELF STARTS FROM THE EMPTY CIRCLE: its still picture
+   waits unseen while the drawing comes (lib/face.js holds it: is-held), and
+   is the face whenever the drawing does not come (is-still). With no script
+   at all, nothing holds it, and it fades in after a moment on its own, so a
+   face is never left empty. Under Reduce Motion it is the face from the first
+   paint, and nothing moves. */
+@media (prefers-reduced-motion: no-preference) {
+  .skribl-face.is-once .skribl-face-still { opacity: 0; animation: skribl-face-late 0.2s ease 2.5s forwards; }
+  .skribl-face.is-once.is-held .skribl-face-still { animation: none; }
+  .skribl-face.is-once.is-still .skribl-face-still { opacity: 1; animation: none; }
+}
+@keyframes skribl-face-late { to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .skribl-face-still, .skribl-face-draw { transition: none; }
+}

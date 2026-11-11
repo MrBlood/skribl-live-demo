@@ -89,7 +89,10 @@ SURFACES = [("Pad", "skribl_editor.html"), ("Flip", "skribl_flip.html"),
             ("in-post", "_skribl_inline_player.html"), ("HOST", "skribl_feed.html"),
             # The Gallery section a host's page holds (skribl_gallery_assets(),
             # after v330, the owner's B). A macro, not an include, so read here.
-            ("host gallery", "_skribl_gallery_section.html")]
+            ("host gallery", "_skribl_gallery_section.html"),
+            # The face player a host's page holds (skribl_face_assets(), after
+            # v330: profiles with drawn faces). A macro too.
+            ("face", "_skribl_face.html")]
 
 
 def module_index():

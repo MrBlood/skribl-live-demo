@@ -1,0 +1,44 @@
+{#  EDIT PROFILE (phase 1, piece 3): your name and a few lines about you, as
+    everyone sees them on your profile. A form that works without a script;
+    the server has the last word, and says under each field, kindly, what to
+    change (a name as at joining: 1 to 40 characters, nothing hidden or
+    turned around; a bio: 160 characters, 4 lines, the same rule). Links in a
+    bio are not made into links yet: it is shown as typed. The face is drawn,
+    not typed: Redraw my face, on the profile. Fields are 17px: under 16px a
+    phone magnifies the page (WORKING-AGREEMENTS). #}
+{% extends 'social/base.html' %}
+
+{% block title %}Edit profile · Skribl{% endblock %}
+{% block scripts %}<script src="{{ social_asset('profile.js') }}" defer></script>{% endblock %}
+
+{% block main %}
+<div class="acct">
+  <div class="page-head">
+    <h1 class="page-title">Edit profile</h1>
+    <p class="page-sub">This is what everyone sees on your profile.</p>
+  </div>
+  <form class="panel form" method="post" action="{{ url_for('social.edit_profile_save') }}" data-edit-profile novalidate>
+    <input type="hidden" name="csrf" value="{{ token }}">
+    <div class="field">
+      <label for="editName">Your name</label>
+      <input id="editName" name="name" type="text" autocomplete="name" maxlength="40" required value="{{ form_name }}"
+             aria-describedby="editNameHint{% if errors.name %} editNameErr{% endif %}"{% if errors.name %} aria-invalid="true"{% endif %}>
+      <p class="hint" id="editNameHint">Shown beside your drawings.</p>
+      {% if errors.name %}<p class="err" id="editNameErr">{{ {'name_empty': 'Add a name, so people know who drew it.',
+        'name_long': 'That name is a little long: 40 characters at most.',
+        'name_chars': 'That name has a character we can’t show. Try another?'}[errors.name] }}</p>{% endif %}
+    </div>
+    <div class="field">
+      <label for="editBio">About you <span class="opt">optional</span></label>
+      <textarea id="editBio" name="bio" rows="4" maxlength="160"
+                aria-describedby="editBioHint{% if errors.bio %} editBioErr{% endif %}"{% if errors.bio %} aria-invalid="true"{% endif %}>{{ form_bio }}</textarea>
+      <p class="hint" id="editBioHint">A few lines: 160 characters, up to 4 lines. <span data-bio-count aria-hidden="true"></span></p>
+      {% if errors.bio %}<p class="err" id="editBioErr">{{ {'bio_long': 'That’s a little long: 160 characters at most.',
+        'bio_lines': 'That’s more than 4 lines. Try joining a couple?',
+        'bio_chars': 'That has a character we can’t show. Try another?'}[errors.bio] }}</p>{% endif %}
+    </div>
+    <button class="btn btn-primary btn-big btn-wide" type="submit">Save</button>
+    <a class="btn btn-big btn-wide" href="{{ url_for('social.profile', handle=who.handle) }}">Cancel</a>
+  </form>
+</div>
+{% endblock %}

@@ -135,8 +135,13 @@
   </div>
 {%- endmacro %}
 
-{% macro _skribl_inline_insides(controls=true, progress=true) -%}
+{#  `chrome=false` (after v330, the face player, _skribl_face.html): the parts
+    the engine needs and nothing it shows -- no veil with its play button, no
+    time chip -- for a drawing that is a picture, played by its page's own
+    script. inlineplayer.js null-guards both, as it does the controls. #}
+{% macro _skribl_inline_insides(controls=true, progress=true, chrome=true) -%}
   <canvas class="skribl-inline-canvas" hidden></canvas>
+{% if chrome %}
   <div class="skribl-inline-veil">
     <div class="skribl-inline-play">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
@@ -145,6 +150,7 @@
   <div class="skribl-inline-dur" hidden>
     <span class="skribl-inline-dur-text"></span>
   </div>
+{% endif %}
 {% if controls %}{{ _skribl_inline_controls() }}
 {% endif %}
   {# progress=false HIDES the hairline rather than omitting it: inlineplayer.js
@@ -236,7 +242,7 @@
 {%- endif %}
 {%- endmacro %}
 
-{% macro skribl_inline_draft(id='', controls=true, progress=true, plain=false, shaped=true) -%}
+{% macro skribl_inline_draft(id='', controls=true, progress=true, plain=false, shaped=true, chrome=true) -%}
 {#  A DRAFT: the same player, on a payload that has not been posted.
 
     Three deliberate absences, each load-bearing:
@@ -275,7 +281,11 @@
     shaped=false keeps the 16:9 box, for a surface laid out around one: the
     Library's stage, the Post sheet's card, the help cards, the hello. Why:
     inlineplayer.js, `is-preview`.
+
+    chrome=false leaves out the veil and the time chip as well (with
+    controls=false and progress=false: a drawing that is a picture), for the
+    face player (_skribl_face.html), whose script plays it.
 #}
 <div class="skribl-inline is-muted is-silent{% if plain %} is-plain{% endif %}{% if shaped %} is-preview{% endif %}"{% if id %} id="{{ id }}"{% endif %}>
-{{ _skribl_inline_insides(controls=controls, progress=progress) }}</div>
+{{ _skribl_inline_insides(controls=controls, progress=progress, chrome=chrome) }}</div>
 {%- endmacro %}

@@ -121,6 +121,10 @@
   // page saved, which holds no size, and whose note may be another drawing's).
   // Here, with the rest of the rule, where the link player never loads it.
   function padShape(row, fresh) {
+    /* A shape the page asked for (SKRIBL_SHAPE: a face starts square, the
+       Pad's ?compose=1&face=1), before the room's own. */
+    var t = global.SkriblCanvasSizes, asked = global.SKRIBL_SHAPE && t && t.byId ? t.byId(global.SKRIBL_SHAPE) : null;
+    if (asked) return asked;
     var room = roomOf(row);
     return (!fresh && noted('pad')) || startShape(room.col, room.row, room.h);
   }

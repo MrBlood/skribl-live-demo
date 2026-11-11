@@ -158,11 +158,13 @@
    * The property is shadowed ON THIS ONE ELEMENT, so every existing write and
    * read keeps its meaning; only the attribute that greys and deafens the
    * button is never set. The capture listener on the window runs before either
-   * editor's own click handler. */
+   * editor's own click handler. A host's face (?face=1, after v330) has its
+   * own words on the button (data-waiting-words), as its Use says Use. */
   var WAIT_MSG = 'Draw something first, then Add';
   function addAlwaysReady() {
     var btn = doc.getElementById('postBtn');
     if (!btn) return;
+    var said = btn.getAttribute('data-waiting-words') || WAIT_MSG;
     var native = Object.getOwnPropertyDescriptor(HTMLButtonElement.prototype, 'disabled');
     var waiting = native.get.call(btn);
     function show(v) {
@@ -181,8 +183,8 @@
       if (!waiting || !e.target || !e.target.closest || e.target.closest('#postBtn') !== btn) return;
       e.preventDefault();
       e.stopImmediatePropagation();
-      if (typeof global.showToast === 'function') global.showToast(WAIT_MSG, btn);
-      else if (typeof global.chip === 'function') global.chip(WAIT_MSG);
+      if (typeof global.showToast === 'function') global.showToast(said, btn);
+      else if (typeof global.chip === 'function') global.chip(said);
     }, true);
   }
 

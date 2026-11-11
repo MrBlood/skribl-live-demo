@@ -108,6 +108,8 @@
     else {
       var d = sizes ? sizes.DEFAULT : null;
       if (fit && fit.startShape && fit.roomOf) { var room = fit.roomOf(area); d = fit.startShape(room.col, room.row, room.h) || d; }
+      {# A face (?face=1) starts square, as lib/chromefit.js padShape starts it. #}
+      {% if face %}if (sizes && sizes.byId && sizes.byId('square')) d = sizes.byId('square');{% endif %}
       if (d) { W = d.w; H = d.h; }
     }
     if (!W || !H) return;

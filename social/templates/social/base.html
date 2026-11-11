@@ -20,10 +20,18 @@
     follow the device: the site has no switch of its own yet, and Skribl's
     own choice is kept where only Skribl's pages read it.
 
+    YOU IS YOUR PROFILE (piece 3): the bar's and the rail's You lead to
+    /social/@<handle>, and wear your drawn face, still, in a circle (Skribl's
+    face player); before you have drawn one, an empty circle, never a stock
+    silhouette (the owner: "no stock silhouette anywhere"). Sign in keeps its
+    icon: it is not anybody's picture. A page may put its own words at the
+    top of a phone (`top`: a profile says @handle there, and the gear).
+
     NO SCRIPT IN THE PAGE. The demo sends Skribl's standalone policy on every
     page that is not Skribl's (script-src 'self' and a nonce the site never
     needs), so every script here is a file. #}
 {% from 'skribl/_skribl_inline_player.html' import skribl_inline_assets %}
+{% from 'skribl/_skribl_face.html' import skribl_face_assets, skribl_face %}
 {% import 'social/_icons.html' as ic %}
 <!doctype html>
 <html lang="en">
@@ -40,6 +48,7 @@
 <link rel="icon" type="image/png" sizes="192x192" href="{{ skribl_asset('icon-192.png') }}">
 <link rel="apple-touch-icon" sizes="180x180" href="{{ skribl_asset('apple-touch-icon.png') }}">
 {{ skribl_inline_assets() }}
+{{ skribl_face_assets() }}
 {% block head %}{% endblock %}
 <link rel="stylesheet" href="{{ social_asset('social.css') }}">
 <script src="{{ social_asset('social.js') }}" defer></script>
@@ -51,8 +60,10 @@
    gradients have two ids (a page with one id twice is a page verify_a11y
    fails); the colour is the same, the site's accent purple. #}
 <header class="top">
+  {% block top %}
   <a class="brand" href="{{ url_for('social.home') }}" aria-label="Skribl, home">{% with brand_sweep=65 %}{% include 'skribl/_skribl_brand_mark.html' %}{% endwith %}</a>
   {% if accounts and not me and not hide_nav %}<a class="top-signin" href="{{ url_for('social.signin') }}">Sign in</a>{% endif %}
+  {% endblock %}
 </header>
 {% if not hide_nav %}
 <nav class="nav" aria-label="Main">
@@ -64,10 +75,11 @@
   <button class="tab tab-make" type="button" data-make aria-haspopup="dialog" aria-controls="makeSheet" aria-expanded="false">
     <span class="tab-ic">{{ ic.pen() }}</span><span class="tab-name">Make</span></button>
   {% if accounts and me %}
-  {# The desk's rail says whose You it is; the phone's bar says You. #}
+  {# The desk's rail says whose You it is; the phone's bar says You. Your
+     face, still, where the icon would be; the empty circle before it. #}
   {% set at_you = here in ('you', 'invites') %}
-  <a class="tab tab-you tab-me" href="{{ url_for('social.you') }}"{% if at_you %} aria-current="page"{% endif %}>
-    <span class="tab-ic">{{ ic.person(at_you) }}</span><span class="tab-name">You{% if at_you %}{{ ic.underline() }}{% endif %}</span><span class="tab-who"><b>{{ me.display_name }}{% if at_you %}{{ ic.underline() }}{% endif %}</b><small>@{{ me.handle }}</small></span></a>
+  <a class="tab tab-you tab-me" href="{{ url_for('social.profile', handle=me.handle) }}"{% if at_you %} aria-current="page"{% endif %}>
+    <span class="tab-ic"><span class="face-ring{% if not me.face_id %} is-blank{% endif %}">{% if me.face_id %}{{ skribl_face(me.face_id, canvas_w=me.face_w, canvas_h=me.face_h, bp=skribl_bp) }}{% else %}<span class="face-blank" aria-hidden="true"></span>{% endif %}</span></span><span class="tab-name">You{% if at_you %}{{ ic.underline() }}{% endif %}</span><span class="tab-who"><b>{{ me.display_name }}{% if at_you %}{{ ic.underline() }}{% endif %}</b><small>@{{ me.handle }}</small></span></a>
   {% elif accounts %}
   <a class="tab tab-you" href="{{ url_for('social.signin') }}">
     <span class="tab-ic">{{ ic.person() }}</span><span class="tab-name">Sign in</span></a>
@@ -77,6 +89,10 @@
 <main class="main" id="main"><div class="col">
 {% block main %}{% endblock %}
 </div></main>
+{# What rises over the page (Make's sheet; a profile's Pad for your face)
+   sits outside #main: opening one makes #main inert, and a sheet inside it
+   would go inert with it. #}
 {% if not hide_nav %}{% include 'social/_make.html' %}{% endif %}
+{% block overlays %}{% endblock %}
 </body>
 </html>

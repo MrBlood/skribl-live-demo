@@ -1516,6 +1516,24 @@ stays a sleep.
   new screens' words at 4.5:1, 44px targets, 16px fields; no page or CSP
   errors. `SOCIALAUTH_PART=<n>` runs one section.
 
+### After v330 — profiles with drawn faces
+
+- `verify_socialprofile.py` — profiles at `/social/@<handle>` and the faces
+  that draw themselves (docs/SOCIAL-SITE.md section 9, piece 3), through the
+  demo's own app on a server of its own (CSRF on, a first-invite code, one
+  trusted proxy), driven at `localhost` with Chromium's virtual authenticator:
+  a profile's name, handle, bio and only their public skribls, any case of the
+  handle, a kind 404; a face drawn through the real Pad in its face mode
+  (`compose=1&face=1`, pen input from `harness/tools/artdraw.py`) in an overlay
+  read on every frame, kept as an unlisted skribl; the face drawing itself
+  once at about 4x, photographed, and finished at once under Reduce Motion;
+  still in the bar and on a Gallery card, framed by `lib/sharecard.js`'s own
+  sums; a redraw replacing it; Edit profile's CSRF, limits and character
+  rules; card names linking to profiles and the listing's
+  `visibility=public`; the new screens' words at 4.5:1, 44px targets, 16px
+  fields; an account's deletion taking its face; no page or CSP errors.
+  `SOCIALPROFILE_PART=<n>` runs one section.
+
 ## Where a suite's rationale lives
 
 **In the suite's own docstring, next to the assertions it explains.**

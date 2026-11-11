@@ -418,3 +418,57 @@ in the Library first.
 `harness/verify_socialauth.py` holds it all through the demo's own server,
 with Chromium's own virtual authenticator; DECISIONS.md ("Sign-in at
 /social") says what each check was shown red by.
+
+### Built: piece 3, profiles and drawn faces
+
+The owner's "all yes" on the profile mock (A) and "Faces that draw
+themselves", built without what does not exist yet: no follower, following or
+play counts (follows are phase 2, and counts are kept, never made up), no
+comments, no pinned skribl.
+
+| Where | What it is |
+|---|---|
+| `/social/@<handle>` | **A profile**, any case of the handle: their face, big, in a circle, drawing itself once (Skribl's face player, at 4x or quicker so it takes about four seconds; finished and still under Reduce Motion); their name, @handle and a few lines about them (plain text, 160 characters, 4 lines, nothing invisible or turned around, no links); Share; and their public skribls as Skribl's own Gallery section, newest first, New and Hot and search within them, paging by cursor. Your own adds **Edit profile**, **Draw your face** (**Redraw my face** once you have one) and the gear to Settings. Nobody by that name, never made or deleted, is one kind 404. |
+| `/social/you/edit` | **Edit profile**: your name and a few lines about you, a form that works without a script, the server's limits said kindly under each field. |
+| `/social/you/face` | **Draw your face**: the real Pad over your profile, in its face mode (`?compose=1&face=1`, through `lib/composehost.js`: square, a face's words, no Flip), and "Use this face" sends the drawing here (JSON, the site's token). The site posts it through Skribl's `create_post`, UNLISTED, in the same transaction as your row that names it; a redraw deletes the old one through `delete_post`. |
+| `/social/you` | **Settings** now (the gear's): the account page of piece 2, its name the only change. |
+
+**You is your profile.** The bar's You and the rail's foot lead to
+`/social/@<handle>` and wear your face, still and small; before you have
+drawn one, an empty circle, never a stock silhouette: on your own profile it
+says "Draw your face" and opens the Pad, and to anybody else it is empty.
+Somebody else's profile marks no place in the bar. A Gallery card shows a
+person's face (still) once they have drawn one, and their initial before,
+as the card shows any author without a picture; its name links to their
+profile everywhere the Gallery is, Skribl's own pages too.
+
+**What Skribl gained, for every host** (docs/INTEGRATION.md, "A face that
+draws itself"): the face player (`skribl_face()` and `skribl_face_assets()` in
+`skribl/_skribl_face.html`, `face.css`, `lib/face.js`); the Pad's face mode
+(`face=1` beside `compose=1`; Flip has none and is unchanged); the in-post
+player's draft without its chrome (`chrome=false`); the Gallery section's
+`author` and the listing's `visibility=public`; and two keys the Gallery card
+reads from the author resolver, `url` (said before, not used by the site) and
+`face`.
+
+**Data.** Four nullable columns on `social_people` (`bio`, `face_id`,
+`face_w`, `face_h`; migration `fa82723cacc4` on the site's own chain, with its
+downgrade). No new index: a profile is found by `handle_key` and an author by
+`public_id`, both indexed since piece 2. Deleting an account deletes its face
+through `delete_post` and its bio with its row; its other skribls still stay,
+as piece 2's confirm says.
+
+**Not yet:** a pinned skribl (it needs a place on the person and a way into
+Skribl's Gallery section to show one card first; next); counts; a face
+deleted from the Library leaves its circle empty (the site cannot ask Skribl
+whether a skribl is still there through a documented seam).
+
+**An empty profile says it in its own words** (the owner's yes, Nov 10): to
+its own person, "Nothing here yet. Your skribls show here when you tick Show
+in the public gallery as you post, or later in your Library."; to anybody
+else, "No skribls here yet." (the Gallery section's `mine`, beside
+`author`).
+
+`harness/verify_socialprofile.py` holds it all through the demo's own
+server, faces drawn through the real Pad with a pen; DECISIONS.md ("Profiles
+with drawn faces at /social") says what each check was shown red by.
