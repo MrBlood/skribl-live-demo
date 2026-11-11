@@ -34198,3 +34198,14 @@ the row's words, the drawer's line (the second); the words not swapped (the
 second and third); no backing (the third: 3.54 and 3.49 light, 5.88 and 3.52
 dark); the photo kept in the drawing, the photo on the card (the fourth); the
 site keeping a photo (the fifth).
+
+Side by side, final tree: verify_socialprofile 47/47, verify_social 36/36,
+verify_compose 88/88, verify_example 59/59, verify_parity 434/434,
+verify_contrast 628/628, verify_player_isolation 85/85, verify_review
+292/292, verify_amber 111/111, verify_ux 487/487, verify_a11ypages
+162/162, verify_inline 192/192, verify_clouddrafts 116/116; verify_docs
+144/144, gen_docs.py --check current; the player's CSS re-emitted and
+unchanged. verify_postgres NOT RUN (no PostgreSQL here). The full battery
+was not run; main's run after the merge is. Not tested here: an iPhone's
+own photo picker (no WebKit here), Safari, Segoe UI. The owner's yes to the
+backing came before the merge ("yes to the backing, merge when green").
