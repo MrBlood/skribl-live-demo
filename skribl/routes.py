@@ -376,9 +376,19 @@ def register_routes(bp, *, index_route=False):
         # FUTURE 6ah). The payload then says so, and the host keeps what it
         # says (examples/host_app/app.py compose). Without it, the host's
         # composer decides alone, as Skribl's own /feed does.
+        #
+        # A FACE. ?face=1 (with compose=1, after v330) is a host asking for
+        # somebody's picture rather than a post's drawing (the face player,
+        # _skribl_face.html): the Pad starts square, its words say it is your
+        # face, and its sheet asks nothing a face does not use (no title, no
+        # "Viewers start at", no gallery tick, no switch to Flip). It still
+        # hands the payload back and posts nothing: the host keeps it.
         compose = request.args.get("compose") == "1"
+        face = compose and request.args.get("face") == "1"
         return render_template("skribl/skribl_editor.html", compose=compose,
-                               gallery_choice=compose and request.args.get("gallery") == "1",
+                               gallery_choice=(compose and not face
+                                               and request.args.get("gallery") == "1"),
+                               face=face,
                                letters=(not compose
                                         and request.args.get("letters") == "1"))
 
@@ -1080,6 +1090,17 @@ def register_routes(bp, *, index_route=False):
         # request, to render metadata.
         q = session().query(SkriblPost).options(sa.orm.defer(SkriblPost.payload_json))
 
+        # ONE AUTHOR'S PUBLIC SKRIBLS, FOR EVERYBODY, THE AUTHOR TOO (after
+        # v330, a profile's Gallery section: skribl_gallery_section author=).
+        # `visibility=public` narrows an author's own listing (below) to what
+        # anyone is shown, so a person looking at their own profile sees what
+        # their visitors see: not their unlisted posts, nor the face they drew
+        # for it (a face is unlisted, never a gallery post). It is the only
+        # value it takes, and it can only ever narrow: anything else is a 400.
+        only = request.args.get("visibility")
+        if only is not None and only != "public":
+            return jsonify({"error": "visibility may only be public."}), 400
+
         author = request.args.get("user_id")
         if author is not None:
             # NO int() COERCION. It used to parse this and 400 on anything
@@ -1113,7 +1134,9 @@ def register_routes(bp, *, index_route=False):
             # Still only ever for the owner: the branch is already gated on a
             # viewer who IS this author, and the else below is unchanged, so
             # nothing unlisted or private reaches anybody else's request.
-            if viewer is not None and author == normalise_user_id(viewer):
+            #
+            # Unless the request asks for the public ones only (`only`, above).
+            if only is None and viewer is not None and author == normalise_user_id(viewer):
                 q = q.filter(SkriblPost.visibility.in_(
                     ("public", "unlisted", "private")))
             else:

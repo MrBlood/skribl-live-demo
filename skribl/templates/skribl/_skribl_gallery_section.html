@@ -46,7 +46,21 @@
     that can turn it on later), 'host' when they post from a host's own
     composer opened with gallery=1 ("Show in the Skribls gallery"). Unsaid,
     it is 'app' on Skribl's own page and 'host' on a host's. The Skribl site
-    (social/) says 'app': its Make opens Skribl's own editors. #}
+    (social/) says 'app': its Make opens Skribl's own editors.
+
+    `author` (after v330, a profile's skribls) is the user id the host hands
+    Skribl as its current user: the section then lists that one author's
+    PUBLIC skribls, New and Hot and the search box working within them, and
+    pages by the listing's own cursor (GET /api/skribls?user_id=...&
+    visibility=public). Public for everybody, the author included, so a
+    person looking at their own profile sees what their visitors see, and
+    nothing unlisted: a face drawn for it (_skribl_face.html) is unlisted.
+
+    A FACE ON THE CARD. When the host's author resolver says an author has
+    a drawn face ("face": {"id", "w", "h"}: a skribl's public id and its
+    canvas size), the card's avatar is that drawing, still, framed from its
+    own poster the way the face macro frames it; data-skribl-poster is the
+    poster's templated address, as data-skribl-player is the player's. #}
 {% from 'skribl/_skribl_inline_player.html' import skribl_inline %}
 
 {#  The section's files, for a page that is not Skribl's. /gallery loads its
@@ -72,7 +86,7 @@
 <script src="{{ skribl_asset('gallery.js') }}" defer></script>
 {%- endmacro %}
 
-{% macro skribl_gallery_section(bp='skribl', page=false, door=none) -%}
+{% macro skribl_gallery_section(bp='skribl', page=false, door=none, author=none) -%}
 {#  THE WHOLE TEMPLATED URL for the player, placeholder and all, which is the
     shape the poster uses: "the real one is that same server-built path with
     the id substituted -- no path is assembled here, which keeps this correct
@@ -89,7 +103,9 @@
 <div class="skribl-gallery" id="skriblGallery" lang="en" data-skribl-gallery
      data-skribl-api="{{ url_for(bp ~ '.list_skribls') }}"
      data-skribl-player="{{ url_for(bp ~ '.skribl_player', public_id='__ID__') }}"
-     data-skribl-csrf="{{ skribl_csrf() }}"{% if page %} data-skribl-page{% endif %}>
+     data-skribl-poster="{{ url_for(bp ~ '.skribl_poster', public_id='__ID__') }}"
+     data-skribl-csrf="{{ skribl_csrf() }}"{% if page %} data-skribl-page{% endif %}
+     {%- if author %} data-skribl-author="{{ author }}"{% endif %}>
   {# NEW / HOT AND SEARCH (v304). New is the listing as it always was; Hot is
      plays in the last seven days, most first (GET /api/skribls?sort=hot,
      counted once per client per post per day). Search is the listing's own

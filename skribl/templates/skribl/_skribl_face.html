@@ -1,0 +1,105 @@
+{#  THE FACE PLAYER: a skribl in a circle, as somebody's picture (after v330,
+    the owner's "all yes" on phase 1's mocks: "Faces that draw themselves:
+    everyone's picture is a skribl they draw of themselves; it draws itself
+    once, in about four seconds (at 4×), when someone opens their profile,
+    and sits still everywhere else").
+
+        {% from 'skribl/_skribl_face.html' import skribl_face_assets, skribl_face %}
+
+        {{ skribl_face_assets() }}                      once per page, in <head>
+        ...
+        {{ skribl_face(face_id, canvas_w=w, canvas_h=h) }}              still
+        {{ skribl_face(face_id, play='once', canvas_w=w, canvas_h=h,
+                       alt="Mira's face, drawn by Mira") }}           draws itself
+
+    A SMALL PIECE OF ITS OWN, NOT THE IN-POST PLAYER WITH ITS CONTROLS HIDDEN.
+    A face has no transport, no line, no play button, no sound and no nib: it
+    is a picture that, once, draws itself. So it has its own macro, stylesheet
+    (face.css) and script (lib/face.js), and the in-post player's budget
+    (skribl_inline_assets, verify_inline) is untouched. What a face borrows is
+    the player's ENGINE: its insides come from the player's own macro
+    (skribl_inline_draft with chrome=false: the parts the engine needs and
+    none it shows), and lib/face.js hands the drawing to SkriblInline.attach(),
+    so a face replays with its own timing, pressure and colours, exactly as a
+    post and /s/<id> do. A page with a face that draws itself loads
+    skribl_inline_assets() too (in either order); a still face needs nothing
+    but this file's markup and stylesheet.
+
+    STILL ('still', the default): the face skribl's own poster
+    (/s/<id>/poster, the share card), framed so the drawing's middle square
+    fills the circle. One cached image, no script, no fetch, no play counted.
+    The frame is worked out here from the drawing's size (canvas_w and
+    canvas_h, the post's own columns, which create_post hands back on
+    made.post), with lib/sharecard.js drawingRect()'s sums and rounding, and
+    written as three custom properties face.css reads. Without the size it
+    takes a square, the shape the Pad's face mode draws on
+    (?compose=1&face=1).
+
+    ONCE ('once'): the still picture waits unseen under it, and over it the
+    face draws itself: lib/face.js fetches the drawing (GET /api/skribls/<id>,
+    which counts a play, as any player's fetch does) and plays it once, at
+    `speed` (4×), or faster where that would take longer than `most` seconds
+    (5: "about four seconds", the owner's words, with room for a face drawn
+    in twenty), so a face drawn for an hour is still a hello. It starts from
+    the empty circle, the drawing fades in on its first frame, and it rests
+    finished. UNDER REDUCE MOTION it never moves: the still picture is the
+    face from the first paint and nothing is fetched. If the drawing cannot
+    be had, the still picture fades in where it would have drawn; with no
+    script at all, after a moment on its own (face.css).
+
+    `size` is the circle's width in px, written on the face; leave it out and
+    the page's CSS sizes it (--skribl-face-size, 40px unsaid), which is how a
+    page gives one face two sizes at two widths. `alt` names the face for a
+    screen reader (role=img); without it the face is decoration, for a face
+    beside a name that already says whose it is. A still face is a span, so
+    it can sit in a link or a button; one that draws itself is a block.
+
+    EVERY URL IS BUILT FROM AN ABSOLUTE ENDPOINT NAME, as the player's are,
+    so a host renders this from its own views under any url_prefix; `bp` is
+    the blueprint's name for a host that renamed it. #}
+{% from 'skribl/_skribl_inline_player.html' import skribl_inline_draft %}
+
+{% macro skribl_face_assets() -%}
+<link rel="stylesheet" href="{{ skribl_asset('face.css') }}">
+<script src="{{ skribl_asset('lib/face.js') }}" defer></script>
+{%- endmacro %}
+
+{#  The drawing's middle square inside the share card, as the poster's frame:
+    lib/sharecard.js drawingRect() (the card 1200 x 630, its area 1092 x 492,
+    the footer 84), its Math.round as x + 0.5 floored (every term here is
+    positive), then the square, 3 card pixels in from the plate's hairline.
+    Three shares of the circle: the image's width, and where its left and top
+    edges sit. gallery.js does the same sums for a card's avatar (faceOf), and
+    verify_socialprofile holds both to the module. #}
+{% macro _skribl_face_frame(canvas_w, canvas_h) -%}
+{%- set w = (canvas_w or 0)|int -%}
+{%- set h = (canvas_h or 0)|int -%}
+{%- if not (w > 0 and h > 0 and w <= 8192 and h <= 8192) %}{% set w = 1 %}{% set h = 1 %}{% endif -%}
+{%- set sc = [1092 / w, 492 / h]|min -%}
+{%- set dw = (w * sc + 0.5)|round(0, 'floor')|int -%}
+{%- set dh = (h * sc + 0.5)|round(0, 'floor')|int -%}
+{%- set x = ((1200 - dw) / 2 + 0.5)|round(0, 'floor')|int -%}
+{%- set y = ((546 - dh) / 2 + 0.5)|round(0, 'floor')|int -%}
+{%- set m = [dw, dh]|min -%}
+{%- if m < 7 %}{% set dw = 492 %}{% set dh = 492 %}{% set x = 354 %}{% set y = 27 %}{% set m = 492 %}{% endif -%}
+{%- set side = m - 6 -%}
+--skribl-face-w: {{ '%.4f'|format(120000 / side) }}%; --skribl-face-x: {{ '%.4f'|format(-100 * (x + (dw - m) / 2 + 3) / side) }}%; --skribl-face-y: {{ '%.4f'|format(-100 * (y + (dh - m) / 2 + 3) / side) }}%
+{%- endmacro %}
+
+{% macro skribl_face(public_id, play='still', size=None, speed=4, most=5, canvas_w=None, canvas_h=None, alt='', bp='skribl') -%}
+{%- set once = play == 'once' -%}
+{%- set tag = 'div' if once else 'span' -%}
+<{{ tag }} class="skribl-face{% if once %} is-once{% endif %}" data-skribl-face data-play="{{ 'once' if once else 'still' }}"
+{%- if alt %} role="img" aria-label="{{ alt }}"{% else %} aria-hidden="true"{% endif %}
+{%- if once %}
+     data-skribl-id="{{ public_id }}" data-skribl-api="{{ url_for(bp ~ '.create_skribl') }}"
+     data-skribl-speed="{{ speed }}" data-skribl-most="{{ most }}"
+{%- endif %}
+     style="{% if size %}--skribl-face-size: {{ size|int }}px; {% endif %}{{ _skribl_face_frame(canvas_w, canvas_h) }}">
+<img class="skribl-face-still" src="{{ url_for(bp ~ '.skribl_poster', public_id=public_id) }}" alt=""
+{%- if not once %} loading="lazy"{% endif %} decoding="async">
+{%- if once %}
+<div class="skribl-face-draw" aria-hidden="true">{{ skribl_inline_draft(controls=false, progress=false, shaped=false, chrome=false) }}</div>
+{%- endif %}
+</{{ tag }}>
+{%- endmacro %}

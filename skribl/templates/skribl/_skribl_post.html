@@ -17,7 +17,7 @@
           </label>
 {%- endmacro %}
   <div id="postOverlay" class="menu-overlay" hidden>
-    <div class="menu-sheet post-sheet" id="postSheet" role="dialog" aria-modal="true" aria-label="Post your Skribl">
+    <div class="menu-sheet post-sheet" id="postSheet" role="dialog" aria-modal="true" aria-label="{{ 'Your face' if face else 'Post your Skribl' }}">
       <div class="menu-handle"></div>
       {# Compose mode is not publishing, and the sheet must not say it is: the
          drawing goes back to the host's draft and nothing is posted until they
@@ -32,13 +32,17 @@
          it carries no hover or active state and nothing invites a tap. #}
       {# The sheet's title and its line. Once a post comes back they fold away
          with the form, and the Posted! band below says what happened. #}
+      {# A FACE (the Pad's ?compose=1&face=1) is kept as the person's
+         picture, and the sheet says so; it posts nothing, as compose never
+         does. #}
       <div class="post-top">
         <div class="post-top-words">
-          <div class="export-head">{{ "Add to your post" if compose else "Post your Skribl" }}<span
+          <div class="export-head">{{ "Your face" if face else "Add to your post" if compose else "Post your Skribl" }}<span
                class="post-sound" id="postSound" hidden>{{ music_glyph() }}<span
                class="tab-dot" id="postSoundDot"></span><span class="post-sound-sr"
                id="postSoundText"></span></span></div>
-          <div class="export-sub" id="postSub">{{ "It goes inline in the post, and plays there"
+          <div class="export-sub" id="postSub">{{ "It draws itself once, the way you drew it, when someone opens your profile"
+                                     if face else "It goes inline in the post, and plays there"
                                      if compose else "Add a title and share it to Skribl" }}</div>
         </div>
       </div>
@@ -106,7 +110,7 @@
       <button type="button" class="post-submit" id="postSubmitBtn">
         <svg aria-hidden="true" id="postSubmitIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
         <svg aria-hidden="true" id="postBackupIcon" hidden viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-        <span id="postSubmitLabel">{{ "Add to post" if compose else "Post to Skribl" }}</span>
+        <span id="postSubmitLabel">{{ "Use this face" if face else "Add to post" if compose else "Post to Skribl" }}</span>
       </button>
       {# POSTED!, THE MOMENT (the owner, of the old one: "you don't really
          notice the top changing ... maybe think about a way to make it more of

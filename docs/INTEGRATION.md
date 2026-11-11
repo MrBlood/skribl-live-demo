@@ -394,6 +394,27 @@ pass `door='app'`, and it names their Post sheet's "Show in the public
 gallery" and the Library that can turn it on later:
 `{{ skribl_gallery_section(door='app') }}`.
 
+**One person's skribls** (after v330, for a profile): pass their user id, the
+one you hand Skribl as `current_user_id`, and the section lists that author's
+public skribls only, New and Hot and the search box working within them,
+paging by the listing's own cursor:
+`{{ skribl_gallery_section(author=person.user_id) }}`. It asks the listing for
+`GET /api/skribls?user_id=<id>&visibility=public`. `visibility=public` narrows
+an author's own listing, which shows its author everything they own (public,
+unlisted and private: the Library's), to what anybody is shown, so a person
+looking at their own page sees what their visitors see. It is the only value
+the parameter takes (anything else is a 400), and it can only narrow.
+
+**Who drew it** is what your author resolver says (below, "Identity and
+authorisation, worked"), in the keys skribls.net's own post head uses:
+`display_name`, `username` (shown as @username), `url` (the name is a link
+there: the person's page on your site), `avatar_url` (a picture in the
+circle; their initial without one), `verified`, and `face`, a drawn face
+("A face that draws itself", below): `{"id": <a skribl's public id>, "w":
+<its canvas_w>, "h": <its canvas_h>}`, shown still in the circle, as the face
+player shows it. A face that cannot be had falls back to the initial, as a
+photo does.
+
 `examples/host_app/templates/skribls.html` is this and nothing else, in the
 stand-in's frame. `verify_standin.py` holds it to `/gallery`: one drawing
 posted to both is the same card, pixel for pixel, on a phone and a desk, dark
@@ -441,7 +462,8 @@ behind that you have no way to withdraw. Hold the payload, exactly as you hold
 an image attachment, and post once.
 
 **The editor.** `GET /skribl-pad?compose=1` (with `&gallery=1` to let the
-author choose the Skribls gallery, above), in an iframe. An iframe even
+author choose the Skribls gallery, above, or `&face=1` for somebody's
+picture: "A face that draws itself", below), in an iframe. An iframe even
 though it is your own origin: the Pad is a whole application with its own
 stylesheet and some seventy scripts, and putting that inline in your feed has the
 two fight over every generic class name. Set the `src` when the button is
@@ -936,6 +958,94 @@ no row at risk, `NULL` preserved. On SQLite the table is rebuilt through
 `batch_alter_table`. The downgrade refuses if any id is non-numeric rather than
 truncating it, because a post whose owner silently became `0` is a post anybody
 can delete.
+
+## A face that draws itself: the face player, and the Pad's face mode
+
+A person's picture can be a skribl they drew of themselves, still wherever a
+small picture goes and drawing itself once where their own page opens (after
+v330; the owner's "all yes": "everyone's picture is a skribl they draw of
+themselves; it draws itself once, in about four seconds (at 4×), when
+someone opens their profile, and sits still everywhere else"). The Skribl
+site at `/social` does this through the seams below (docs/SOCIAL-SITE.md),
+and so can any host.
+
+**Drawing one: the Pad's face mode.** Open the Pad in compose mode with
+`face=1`, `GET /skribl-pad?compose=1&face=1`, through `lib/composehost.js` as
+for a post ("Drawing one from your own composer", above). Four things differ
+from a post's compose mode, all in the Pad's own markup:
+
+- it starts on the square canvas, as a face is shown in a circle (a person
+  can still pick another shape; the circle then shows its middle square);
+- its words are a face's: the empty canvas says "Draw your face", the header's
+  button and the sheet's say "Use this face" ("Use" where the header is
+  narrow; "Keep it as your face" its title, and a press with nothing drawn
+  says "Draw your face first"), the sheet is titled "Your face", its line says
+  it draws itself once, the way you drew it, when someone opens your profile,
+  and its × goes "back to your profile";
+- the sheet asks nothing a face does not use: no title, no "Viewers start
+  at" (the face player has its own speed), no gallery tick;
+- there is no switch to Flip in its ⋯ menu: a face is a drawing that draws
+  itself, the Pad's.
+
+It still posts nothing: "Use this face" hands your page the payload, as "Add
+to post" does, and your server keeps it. Flip has no face mode, and nothing
+of Flip's changed.
+
+**Keeping one.** Call `create_post(drawing, author_id=...)` with
+`"visibility": "unlisted"` (a face is a picture, not a gallery post: reachable
+by its own link, listed nowhere; set it, and the title, on the server rather
+than trusting the body) in the same transaction as your row that names it, and
+store `made.public_id` with the drawing's size, `made.post.canvas_w` and
+`made.post.canvas_h`. A new face replaces the old one: `delete_post(old_id,
+author_id=...)` in that same transaction; and when you delete an account,
+delete its face the same way. Rate-limit the view yourself ("When your
+composer is a form", above).
+
+**Showing one.**
+
+```jinja
+{% from 'skribl/_skribl_face.html' import skribl_face_assets, skribl_face %}
+
+{{ skribl_face_assets() }}     {# once per page, in <head> #}
+...
+{{ skribl_face(person.face_id, canvas_w=person.face_w, canvas_h=person.face_h) }}
+{{ skribl_face(person.face_id, play='once', canvas_w=person.face_w,
+               canvas_h=person.face_h, alt="Mira's face, drawn by Mira") }}
+```
+
+- **Still** (the default): the skribl's own poster, framed so the drawing's
+  middle square fills the circle, from its size (lib/sharecard.js
+  drawingRect()'s sums; a square without one). One cached image: no script,
+  no fetch, no play counted. A span, so it can sit in a link or a button.
+- **Once** (`play='once'`): it draws itself once, with the artist's own
+  timing, pressure and colours, at `speed` (4×), or faster where that would
+  take longer than `most` seconds (5), so a face drawn for an hour is still a
+  hello. It starts from the empty circle, its drawing fades in on the first
+  frame, and it rests finished. Under Reduce Motion it is the finished face
+  from the first paint, and nothing is fetched. It borrows the in-post
+  player's engine, so the page loads `skribl_inline_assets()` too (in either
+  order), and it fetches the drawing itself (`GET /api/skribls/<id>`, a counted
+  play). A drawing that cannot be had leaves the still picture in its place.
+- `size` is the circle's width in pixels; leave it out and your CSS sizes it
+  with `--skribl-face-size` (40px unsaid). `--skribl-face-ground` is the circle
+  before a drawing is in it (the Pad's paper unsaid). `alt` names the face for
+  a screen reader; without it the face is decoration, for one beside a name
+  that already says whose it is. `bp` as for the player.
+- Faces put in the page later: `SkriblFace.mount(container)`, as
+  `SkriblInline.mount()` is for posts.
+
+It is a small piece of its own, not the in-post player with its controls
+hidden: a face has no transport, no line, no play button, no sound and no
+nib, so `face.css` and `lib/face.js` are its own, and the in-post player's
+byte budget (`skribl_inline_assets()`, `verify_inline.py`) is untouched. The
+player's macro gives it the engine's parts and none of its chrome
+(`skribl_inline_draft(chrome=false)`: no veil, no time chip).
+
+`harness/verify_socialprofile.py` holds all of it through the site: a face
+drawn through the real Pad in its face mode and kept unlisted, drawing itself
+once at about 4x (read from the paint) and finished at once under Reduce
+Motion, still in the bar and on a Gallery card with no fetch, framed by
+lib/sharecard.js's own sums, replaced, and deleted with an account.
 
 ## Three things that will bite you if you skip them
 

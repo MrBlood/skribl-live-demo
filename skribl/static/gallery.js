@@ -32,6 +32,13 @@
   var more = part('galleryMore');
   var tpl = part('skriblTileTpl');
   var api = root.getAttribute('data-skribl-api');
+  /* ONE AUTHOR'S SKRIBLS (after v330, a profile: the macro's `author`). The
+     listing's own author filter, narrowed to what everybody is shown, the
+     author too (visibility=public), on every request this section makes, so
+     New, Hot, search and Load more all stay inside it. Nothing is filtered
+     here: the server's answer is the whole of it. */
+  var author = root.getAttribute('data-skribl-author');
+  var scope = author ? '&user_id=' + encodeURIComponent(author) + '&visibility=public' : '';
   var PAGE = 24;
   var cursor = null;       /* the keyset cursor for the next page, or null */
   var loading = false;
@@ -98,6 +105,32 @@
     var u;
     try { u = new URL(raw, document.baseURI); } catch (e) { return null; }
     return (u.protocol === 'http:' || u.protocol === 'https:') ? u.href : null;
+  }
+
+  /* A DRAWN FACE (after v330: skribl/_skribl_face.html, docs/INTEGRATION.md
+     "A face that draws itself"). The host's resolver may say an author's
+     face is a skribl: {"id", "w", "h"}, its public id and canvas size. Still,
+     it is that skribl's poster -- the share card, which CONTAINS the drawing
+     -- placed so the drawing's middle square fills the circle, a few card
+     pixels in from the plate's hairline. The rectangle is lib/sharecard.js
+     drawingRect() (as inlineplayer.js fitPoster() retypes it, rounding and
+     all), retyped here for the same reason: this page does not load the
+     module that composes the card. The face macro does the same sums in the
+     page's own markup; verify_socialprofile holds both to the module. Anything
+     that is not a face answers null and the avatar is what it was. */
+  var posterTpl = root.getAttribute('data-skribl-poster') || '';
+  var FACE_IN = 3;
+  function faceOf(f) {
+    if (!f || !posterTpl || typeof f.id !== 'string' || !/^[A-Za-z0-9_-]{1,64}$/.test(f.id)) return null;
+    var w = +f.w, h = +f.h;
+    if (!(w > 0 && h > 0 && w <= 8192 && h <= 8192)) return null;
+    var sc = Math.min(1092 / w, 492 / h), dw = Math.round(w * sc), dh = Math.round(h * sc);
+    var x = Math.round((1200 - dw) / 2), y = Math.round((546 - dh) / 2), m = Math.min(dw, dh);
+    var side = m - 2 * FACE_IN, sx = x + (dw - m) / 2 + FACE_IN, sy = y + (dh - m) / 2 + FACE_IN;
+    if (!(side > 0)) return null;
+    return { src: posterTpl.replace('__ID__', encodeURIComponent(f.id)),
+             w: (120000 / side).toFixed(4) + '%', x: (-100 * sx / side).toFixed(4) + '%',
+             y: (-100 * sy / side).toFixed(4) + '%' };
   }
 
   /* WHO MADE IT, under the title.
@@ -195,7 +228,32 @@
     av.className = 'tavatar';
     av.setAttribute('aria-hidden', 'true');
     var src = safeHref(a.avatar_url);
-    if (src) {
+    var face = faceOf(a.face);
+    if (face) {
+      /* A DRAWN FACE, still: the face skribl's own poster, framed on its
+         drawing (faceOf), in the avatar's circle. A drawing that cannot be
+         had falls back to the initial, as a photo's does. */
+      var fimg = document.createElement('img');
+      fimg.className = 'tface';
+      fimg.src = face.src;
+      fimg.alt = '';
+      fimg.loading = 'lazy';
+      fimg.decoding = 'async';
+      av.style.position = 'relative';
+      var fs = fimg.style;
+      fs.position = 'absolute';
+      fs.maxWidth = 'none';
+      fs.height = 'auto';
+      fs.width = face.w;
+      fs.left = face.x;
+      fs.top = face.y;
+      fimg.addEventListener('error', function () {
+        fimg.remove();
+        av.style.position = '';
+        av.textContent = name.charAt(0).toUpperCase();
+      });
+      av.appendChild(fimg);
+    } else if (src) {
       var img = document.createElement('img');
       img.src = src;
       img.alt = '';
@@ -823,7 +881,7 @@
       if (footWatch) footWatch.disconnect();
       while (list.firstChild) list.removeChild(list.firstChild);
     }
-    var url = api + '?limit=' + PAGE + '&sort=' + sort
+    var url = api + '?limit=' + PAGE + '&sort=' + sort + scope
             + (query ? '&q=' + encodeURIComponent(query) : '')
             + (cursor ? '&cursor=' + encodeURIComponent(cursor) : '');
     if (noneEl) noneEl.hidden = true;
@@ -885,7 +943,7 @@
     if (!e.persisted || !list.children.length) return;
     var tiles = Array.prototype.slice.call(list.children);
     var myGen = gen;
-    fetch(api + '?limit=' + Math.min(100, tiles.length + PAGE) + '&sort=' + sort
+    fetch(api + '?limit=' + Math.min(100, tiles.length + PAGE) + '&sort=' + sort + scope
           + (query ? '&q=' + encodeURIComponent(query) : ''), { credentials: 'same-origin' })
       .then(function (r) {
         if (!r.ok) throw new Error('HTTP ' + r.status);
