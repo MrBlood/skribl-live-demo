@@ -34301,3 +34301,28 @@ THE FOUR: kind (nothing redrawn from scratch, and a face is never cut off
 unseen; Back keeps the drawing and the photo); simple (one circle, the one
 Use one you made already has); playful (drag and pinch your face into
 place); powerful (exact size and place, and edit any time).
+
+THE CHECKS. verify_socialprofile section 13, three rows, run through the real
+Pad with a pen: (A) after the Pad, the circle glides up with the drawing laid
+out in every frame it is seen and painted at once, and a head and shoulders
+whose shoulders reach 114 units past the middle square's circle starts with
+every line inside, and is kept so; (B) Back is the Pad with all of the
+drawing (164 points) and the traced photo again at 40%, and Use brings the
+circle back; (C) Edit this face is the first of four doors once there is a
+face, and opens the face in the Pad, Keep drawing showing; a line added, the
+kept face has both. keep_in_pad goes through the circle, as a person does.
+Eight breaks, each red on its row: no circle (all three); the middle square
+(A, and C, whose edited face is cut too); not laid out once the sheet is open
+(A alone: the drawing 0 wide on every frame, the mock's empty circle);
+fit() the middle square (A, C); Back to the picker (B); Back without the
+photo (B: no photo, its slider at 100); no Edit door (C); Edit opening the
+Pad without the face (C).
+
+Side by side, the PR's tree: verify_socialprofile 51/51, verify_socialauth
+62/62, verify_sharecard 32/32, verify_docs 144/144; verify_social 35/36
+beside the others and 36/36 alone, INTERMITTENT: its red was Make's sheet's
+Esc glide sampled at 6 positions with one 204px step of 304, frames dropped
+under three suites at once. Load, not this change: social.js only gained
+lines here (SocialPadOverlay), and nothing on the page Make's sheet is read
+on calls them. The full battery was not run; main's run after the merge is.
+Not tested here: Safari, and a pinch on a real iPhone.
