@@ -117,7 +117,7 @@ with app.test_request_context():
 # The top of each address, and the site there: the site's own domain
 # (SKRIBL_SOCIAL_HOME_HOSTS) and the demo's name, as Render serves both.
 tops = {{}}
-for h in ("blooby.example", "blooby.example:443", "skribl-live-demo.onrender.com"):
+for h in ("blooby.example", "blooby.example:8443", "skribl-live-demo.onrender.com"):
     r = c.get("/", base_url="https://" + h)
     tops[h] = [r.status_code, r.headers.get("Location"), c.get("/social/", base_url="https://" + h).status_code]
 print("RESULT " + json.dumps({{"social": c.get("/social/").status_code,
@@ -354,17 +354,20 @@ with sync_playwright() as p:
         # Nov 11): / there opens the site's Home, the demo's name keeps the Pad.
         homed, _ = ask_app({"SKRIBL_SOCIAL_HOME_HOSTS": "Blooby.Example, "})
         homed_off, _ = ask_app({"SKRIBL_SOCIAL_HOME_HOSTS": "blooby.example", "SKRIBL_SOCIAL": "0"})
-        tops, plain, gone = [(g or {}).get("tops") or {} for g in (homed, mounted, homed_off)]
+        homed_broken, _ = ask_app({"SKRIBL_SOCIAL_HOME_HOSTS": "blooby.example"},
+                                  prelude="sys.modules['social'] = None   # the package cannot be imported")
+        tops, plain, gone, failed = [(g or {}).get("tops") or {} for g in (homed, mounted, homed_off, homed_broken)]
         demo = "skribl-live-demo.onrender.com"
         check("the top of an address SKRIBL_SOCIAL_HOME_HOSTS names opens the site's Home (302, any case, its port"
               " or none) and the site answers there; the demo's own name keeps the Pad at its top and the site at"
-              " /social; unset, every top is the Pad; with the site left out, nobody is sent to it",
-              all(tops.get(h, [None])[:2] == [302, "/social/"] for h in ("blooby.example", "blooby.example:443"))
+              " /social; unset, every top is the Pad; with the site left out, on purpose or failing to start,"
+              " nobody is sent to it",
+              all(tops.get(h, [None])[:2] == [302, "/social/"] for h in ("blooby.example", "blooby.example:8443"))
               and all((tops.get(h) or [0, 0, 0])[2] == 200 for h in tops) and len(tops) == 3
               and tops.get(demo, [None])[:2] == [200, None]
               and len(plain) == 3 and all(v[:2] == [200, None] for v in plain.values())
-              and len(gone) == 3 and all(v[:2] == [200, None] for v in gone.values()),
-              f"named {tops}; unset {plain}; site left out {gone}")
+              and all(len(g) == 3 and all(v[:2] == [200, None] for v in g.values()) for g in (gone, failed)),
+              f"named {tops}; unset {plain}; site left out {gone}; site that cannot start {failed}")
         DOORS = (mounted or {}).get("pad_url"), (mounted or {}).get("flip_url")
     else:
         got, _ = ask_app() if (not PART or "3" in PART.split(",")) else (None, "")
