@@ -1,8 +1,8 @@
-/* A FACE FROM A DRAWING YOU ALREADY HAVE: placed in the circle, then made a
- * face of its own (after v330; the owner's "all yes" on mock A, Nov 11: "Use
- * one you made: pick a skribl, then place it in the circle", and "your face
- * is its own copy, so deleting or changing the original never empties your
- * circle").
+/* A face from a drawing you already have, placed in the circle and made a face of its own.
+ *
+ * After v330; the owner's "all yes" on mock A, Nov 11: "Use one you made:
+ * pick a skribl, then place it in the circle", and "your face is its own
+ * copy, so deleting or changing the original never empties your circle".
  *
  * docs/INTEGRATION.md, "A face from a drawing you already have". A host with
  * a drawing (one of the person's skribls, fetched as any player fetches it,

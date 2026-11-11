@@ -811,6 +811,7 @@ rather than a shared rule.
 | `eventpoint.js` | Pad+Flip+player | Which contact a gesture belongs to — shared by Pad, Flip and the player. |
 | `eyedropper.js` | Pad+Flip | Eyedropper — the armed-state machine, shared by both editors. |
 | `face.js` | face | The face player: somebody's drawn face, still, or drawing itself once. |
+| `faceframe.js` | face | A face from a drawing you already have, placed in the circle and made a face of its own. |
 | `floodfill.js` | Flip | Flood fill, expressed in the only vocabulary this project has: strokes. |
 | `framebitmap.js` | Flip+player | Frame bitmaps — a painted page is rasterised once per playback, shared rule. |
 | `fullbar.js` | library+gallery+host gallery | The full-screen bar: one transport, and the SAME one on both surfaces. |
@@ -859,10 +860,10 @@ rather than a shared rule.
 | `pinchgesture.js` | Pad+Flip | Pinch contact tracking — the two editors only, never the player. |
 | `pointbudget.js` | Pad+Flip | The DOCUMENT's budget — the numbers the editors were spending without being able to see them. |
 | `pointpack.js` | Pad+Flip | A LONG DRAWING, PACKED: the compact form both editors' autosaves keep their points in once a drawing is long (v322 plan, step 1). |
-| `pointwrite.js` | Pad+Flip | How a point is WRITTEN — the shared rule for both editors' serializers. |
+| `pointwrite.js` | Pad+Flip+face | How a point is WRITTEN — the shared rule for both editors' serializers. |
 | `posted.js` | Pad+Flip+library | Your Skribls — a local record of what you have posted. |
 | `postedaudio.js` | Pad+Flip | What a POST stores, which is deliberately not what an EXPORT downloads. |
-| `postedcard.js` | Pad+Flip | Compositing /s/<id>/card.png — the post-time half of lib/sharecard.js. |
+| `postedcard.js` | Pad+Flip+face | Compositing /s/<id>/card.png — the post-time half of lib/sharecard.js. |
 | `postedui.js` | library+gallery+host gallery | Your Skribls — rendering. |
 | `postsheet.js` | Pad+Flip | The Post sheet — shared by Pad and Flip (skribl/_skribl_post.html). |
 | `pressure.js` | Pad+Flip | Stylus pressure — the curve, the floor, and the on/off, shared by both editors. |
@@ -879,7 +880,7 @@ rather than a shared rule.
 | `selection.js` | Pad+Flip | Selection — pick a region, then move what is inside it. |
 | `shapecard.js` | Pad+Flip | The shape card -- the picker that opens above the Shape tool -- one implementation, both editors. |
 | `shapes.js` | Pad+Flip | Shapes — line, rectangle and ellipse, expressed as ordinary stroke points. |
-| `sharecard.js` | Pad+Flip+library | /s/<id>/card.png: WHERE THE DRAWING SITS INSIDE IT. |
+| `sharecard.js` | Pad+Flip+library+face | /s/<id>/card.png: WHERE THE DRAWING SITS INSIDE IT. |
 | `sheetswipe.js` | Pad+Flip+library+gallery+host gallery | Sheets that go away — one swipe, every bottom sheet. |
 | `sizeclass.js` | Flip | One size decision, made once, for the whole app. |
 | `slidernudge.js` | Pad+Flip | - and + beside a range slider, for exact steps a slider alone cannot land on with a finger. |
