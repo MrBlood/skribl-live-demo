@@ -26,9 +26,6 @@
  * button that opened it. The words are all in the template: nothing here
  * says anything (docs/SOCIAL-SITE.md, words in one place per page).
  *
- * AND THE EDITOR OVER THE PAGE (window.SocialPadOverlay, below): the Pad or
- * Flip in compose mode for your face (profile.js) and for a post (posts.js).
- *
  * ONE CONTROLLER, EVERY SHEET: window.SocialSheet(wrap, options) gives a
  * `.make`-shaped sheet these moving parts and returns { open, close, isOpen }.
  * Options: openers (marked aria-expanded), first (what takes focus on open),
@@ -168,97 +165,6 @@
   }
 
   window.SocialSheet = sheetFor;
-
-  /* THE EDITOR, OVER THE PAGE: Skribl's Pad or Flip in compose mode, in a
-   * frame over the page, for your face (profile.js) and for a post (posts.js).
-   * Skribl's lib/composehost.js is the editor's side of it (the frame's
-   * address set on the first open and never in the page, a drawing reopened
-   * the one it handed back, messages checked by origin both ways); this is the
-   * page's: it glides up over the page and back down (a desk's card rises a
-   * little as it fades in), under Reduce Motion it fades where it sits
-   * (social.css, .facepad), and nothing here sets a position on a timer.
-   * While it is up the page behind is inert and still, and closing gives
-   * focus back to where the person was. The editor brings its own ×; a tap
-   * beside a desk's card puts it away, the drawing kept in it.
-   *
-   *   var over = SocialPadOverlay(wrap, { openers, onDone, onReady });
-   *   over.open(back)          // back: what takes focus when it goes
-   *   over.guide(file, back)   // a face's photo to trace (composehost guide)
-   *
-   * `wrap` is the overlay (.facepad: its scrim, its sheet, its frame, and the
-   * editor's address in data-compose); `openers` are marked aria-expanded. */
-  function padOver(wrap, o) {
-    o = o || {};
-    if (!wrap || !window.SkriblComposeHost) return null;
-    var frame = wrap.querySelector('.facepad-frame');
-    var scrim = wrap.querySelector('.facepad-scrim');
-    var openers = o.openers || [];
-    var behind = [doc.querySelector('body > .top'), doc.querySelector('body > .nav'), doc.getElementById('main')];
-    var from = null, timer = 0, open = false;
-
-    function mark(on) {
-      for (var i = 0; i < openers.length; i++) {
-        if (openers[i].hasAttribute('aria-expanded')) openers[i].setAttribute('aria-expanded', on ? 'true' : 'false');
-      }
-      for (var j = 0; j < behind.length; j++) {
-        if (!behind[j]) continue;
-        if (on) behind[j].setAttribute('inert', ''); else behind[j].removeAttribute('inert');
-      }
-    }
-
-    function settle() {
-      if (open) return;
-      clearTimeout(timer);
-      wrap.hidden = true;
-      wrap.classList.remove('is-closing');
-      doc.body.classList.remove('facepad-open');
-    }
-
-    var pad = window.SkriblComposeHost.create({
-      frame: frame,
-      src: wrap.getAttribute('data-compose'),
-      onOpen: function () {
-        if (open) return;
-        open = true;
-        clearTimeout(timer);
-        wrap.classList.remove('is-closing');
-        wrap.hidden = false;
-        doc.body.classList.add('facepad-open');
-        /* Read a size, so the glide starts from where the sheet rests closed. */
-        void wrap.offsetHeight;
-        wrap.classList.add('is-open');
-        mark(true);
-        try { frame.focus({ preventScroll: true }); } catch (e) { /* not focusable yet */ }
-      },
-      onClose: function () {
-        if (!open) return;
-        open = false;
-        wrap.classList.add('is-closing');
-        wrap.classList.remove('is-open');
-        mark(false);
-        if (from && from.getClientRects().length && from.focus) from.focus({ preventScroll: true });
-        from = null;
-        clearTimeout(timer);
-        timer = setTimeout(settle, SETTLE_MS);
-      },
-      onReady: function () { wrap.classList.add('is-ready'); if (o.onReady) o.onReady(); },
-      onDone: function (payload, preview, hasAudio) { if (o.onDone) o.onDone(payload, preview, hasAudio); }
-    });
-
-    if (scrim) {
-      scrim.addEventListener('transitionend', function (e) { if (e.target === scrim && !open) settle(); });
-      scrim.addEventListener('click', function () { pad.close(); });
-    }
-
-    return {
-      pad: pad,
-      open: function (back) { from = back || null; pad.open(); },
-      guide: function (file, back) { from = back || null; pad.guide(file); },
-      isOpen: function () { return open; }
-    };
-  }
-
-  window.SocialPadOverlay = padOver;
 
   var make = doc.getElementById('makeSheet');
   if (!make) return;

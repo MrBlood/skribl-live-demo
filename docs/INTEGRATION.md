@@ -180,30 +180,6 @@ Without it the line says what it can until the drawing arrives. A surface
 with a transport of its own passes `line=False` and keeps the 16:9 box with
 mute and loop on it.
 
-**Reading them on your server** (after v330). A host that keeps its own posts
-stores a skribl's public id on each; `skribl.describe_posts(ids,
-viewer_id=...)` hands back, by public id, the listing's own item for each
-(`id`, `title`, `caption`, `kind`, `pages`, `canvas_w`, `canvas_h`, `line`,
-`views`, `user_id`, `visibility`, `created_at`), so a page of your feed reads
-its drawings' sizes, lines and plays in one query without importing Skribl's
-models:
-
-```python
-drawings = skribl.describe_posts([p.skribl_id for p in posts], viewer_id=me_id)
-```
-```jinja
-{% set sk = drawings.get(post.skribl_id) %}
-{{ skribl_inline(post.skribl_id, canvas_w=sk.canvas_w, canvas_h=sk.canvas_h,
-                 line_info=sk.line) if sk else skribl_inline(post.skribl_id) }}
-```
-
-`viewer_id` is the person looking, as you hand Skribl its current user id; the
-rule is the one every read of a skribl follows (public and unlisted for
-anyone, anything else for its author alone). A skribl deleted, withheld or
-private to somebody else is simply absent, and its box still renders: the
-player says the drawing is not here anymore. It reads no payload, flushes
-nothing and takes at most 200 ids a call (`verify_createpost.py`, section 11).
-
 **What it costs and when.** `skribl_inline_assets()` pulls
 `inlineplayer.css`, `inlineplayer.js`, and the shared rule modules
 `lib/canvassizes.js`, `lib/holdtiming.js`, `lib/audiosession.js`,
@@ -243,14 +219,6 @@ Either way there are two buttons, beside the scrubber or on the drawing:
   leaves the drawing on its last frame — and stops the music with it, in the
   same call, so a finished drawing can never be left with a loop playing under
   it.
-
-**A post's own page can start it** (after v330: on the Skribl site, opening a
-post plays its drawing). `SkriblInline.mount(box)` returns the box's player,
-the one already mounted if it has one, and `player.play()` starts it, at the
-author's speed and with sound off until the viewer turns it on. Start it only
-where the viewer opened that drawing on purpose (a feed stays still until
-tapped), and never under Reduce Motion: that is yours to ask
-(`matchMedia('(prefers-reduced-motion: reduce)')`).
 
 One Skribl plays at a time, page-wide. Scrolling a playing post out of view
 settles it. A drawing that can't be shown says so, in your page's colours and
