@@ -94,3 +94,22 @@ div.skribl-face { display: block; }
 @media (prefers-reduced-motion: reduce) {
   .skribl-face-still, .skribl-face-draw { transition: none; }
 }
+
+/* The box a face made from a drawing you already have is painted in, for its
+   card (skribl_face_maker(), lib/faceframe.js card()): off the screen, its
+   own size, never seen and never in the way. */
+.skribl-face-maker {
+  position: fixed;
+  left: -10000px;
+  top: 0;
+  width: 707px;
+  height: 707px;
+  overflow: hidden;
+  pointer-events: none;
+}
+.skribl-face-maker .skribl-inline {
+  position: absolute;
+  inset: 0;
+  width: 707px;
+  height: 707px;
+}

@@ -64,6 +64,28 @@
 <script src="{{ skribl_asset('lib/face.js') }}" defer></script>
 {%- endmacro %}
 
+{#  A FACE FROM A DRAWING YOU ALREADY HAVE (after v330; lib/faceframe.js and
+    docs/INTEGRATION.md, "A face from a drawing you already have"): what the
+    one page where a person makes their face loads, beside
+    skribl_inline_assets(), whose engine paints the new face's card.
+
+        {{ skribl_face_maker_assets() }}        in <head>
+        {{ skribl_face_maker() }}               once, anywhere in <body>
+
+    skribl_face_maker() is the box that card is painted in, put aside off the
+    screen and hidden from a screen reader: SkriblFaceFrame.card(payload,
+    document.querySelector('[data-skribl-face-maker] .skribl-inline')). #}
+{% macro skribl_face_maker_assets() -%}
+<script src="{{ skribl_asset('lib/sharecard.js') }}" defer></script>
+<script src="{{ skribl_asset('lib/pointwrite.js') }}" defer></script>
+<script src="{{ skribl_asset('lib/postedcard.js') }}" defer></script>
+<script src="{{ skribl_asset('lib/faceframe.js') }}" defer></script>
+{%- endmacro %}
+
+{% macro skribl_face_maker() -%}
+<div class="skribl-face-maker" data-skribl-face-maker aria-hidden="true">{{ skribl_inline_draft(controls=false, progress=false, shaped=false, chrome=false) }}</div>
+{%- endmacro %}
+
 {#  The drawing's middle square inside the share card, as the poster's frame:
     lib/sharecard.js drawingRect() (the card 1200 x 630, its area 1092 x 492,
     the footer 84), its Math.round as x + 0.5 floored (every term here is

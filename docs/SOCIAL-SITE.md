@@ -486,6 +486,20 @@ in the public gallery as you post, or later in your Library."; to anybody
 else, "No skribls here yet." (the Gallery section's `mine`, beside
 `author`).
 
+**A face from a skribl you made** (the owner's "all yes" on mock A, Nov 11).
+Change my face (Add your face before there is one, and the empty circle)
+raises Your face, Make's own sheet, with two doors: Draw a new one (the Pad,
+as before) and Use one you made. That lists your skribls (yours alone, the
+link-only ones too; Pad drawings, never a Flip or the face you have), or opens
+a .skribl file you saved, then places it in the circle: drag it (a finger,
+the pointer or the arrow keys), size it (the slider or a pinch), and Use this
+face. It is kept as a face of its own, through Skribl's `lib/faceframe.js`
+(docs/INTEGRATION.md, "A face from a drawing you already have"): a new square
+drawing with its own card, posted unlisted as any face is. The drawing it
+came from is never changed. A Flip, or a drawing with a picture under it, is
+said kindly where it was picked ("not yet"), and the picker stays. Not yet: a
+Flip as a face (one that moves), and a face from a drawing with a photo.
+
 `harness/verify_socialprofile.py` holds it all through the demo's own
 server, faces drawn through the real Pad with a pen; DECISIONS.md ("Profiles
 with drawn faces at /social") says what each check was shown red by.

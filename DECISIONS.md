@@ -33979,3 +33979,91 @@ card's initial instead); the old line with the bar's face 4px smaller, red
 in main's own words (the same paint True, inked False); the new line there,
 green (You 24). The whole suite 35/35. Nothing of the site or Skribl
 changed.
+
+## After v330 -- A face from a skribl you made, placed in the circle (the owner's yes on mock A)
+
+The owner, Nov 11, asking whether a skribl already made could be their face
+("like the skeleton with the hat", posted before they joined and used in How
+it works). Mock A shown (phone and desk, light and dark, "now" beside):
+"Change my face" raising two doors, a picker, the circle. Their "all yes,
+mock A", then "all yes, build A". The skull went to them first as a .skribl
+file (skribl/static/help/demos/skull.json with a title), with today's way to
+use it: Draw your face, then ... > Your drafts > Open a file... in the Pad's
+face mode, run end to end here before it was told.
+
+- YOUR FACE, ONE SHEET. Change my face (Add your face before there is one,
+  and the empty circle) raises Make's own sheet: social.js's controller is
+  window.SocialSheet now, one for every sheet the site raises, Make's
+  behaviour unchanged. Two doors: Draw a new one (the Pad, as before; the
+  sheet goes first, so the page the Pad makes inert is the page it hands
+  back) and Use one you made, which leads on inside the sheet a step at a
+  time. Whatever changes the sheet's height (a step, the list arriving, a
+  line said) glides it there; under Reduce Motion the height is simply the
+  new one, and only the fade remains.
+- PICK: their skribls from Skribl's own listing, their user id asked for (so the
+  link-only ones too), newest first, paged by its cursor; Pad drawings only
+  (a face plays once, as a drawing does), never the face they have, never
+  anybody else's; each tile the drawing cut from its own card by
+  lib/sharecard.js's drawingRect, contained in the tile. Or Open a file...
+  for a .skribl file, read in the page. The picker waits a moment for the
+  list so its step arrives at its own height.
+- PLACE: the drawing painted whole by the in-post player's engine under the
+  circle (88% of the stage, the rest dimmed), starting on its middle square,
+  the face a drawing has today. A drag (finger or pointer), the arrow keys
+  (Shift for more), the slider and a pinch move and size it, from a quarter
+  of the short side to the whole drawing inside the circle.
+- USE THIS FACE: Skribl's new lib/faceframe.js (docs/INTEGRATION.md, "A
+  face from a drawing you already have") makes the placed square a face of
+  its own: a new 707 square drawing, every point moved and its size scaled,
+  its time, colours, groups and recolours kept, its music left behind, its
+  card painted by the player's engine and composed by lib/postedcard.js. It
+  is kept by /you/face exactly as a drawn face is (unlisted, the old face
+  deleted). The drawing it came from is never touched, so deleting or
+  changing it never empties the circle. Skribl's face player, the bar's still
+  You and a Gallery card's circle needed nothing new.
+- NOT YET, SAID KINDLY where it was picked, the picker staying: a Flip ("That
+  one's a Flip. Faces are drawings for now, so pick another."), a drawing
+  with a picture under it ("... faces can't use those yet. Pick another, or
+  draw a new one."). A face that moves (a Flip) and a face from a drawing
+  with a photo are next, if wanted.
+
+Pad and Flip: neither editor changed. Skribl gained lib/faceframe.js and two
+macros in _skribl_face.html (skribl_face_maker_assets, skribl_face_maker),
+documented for every host; the in-post player's assets and budget are
+untouched.
+
+FOUND IN THE PICTURES, NOT BY A ROW: the placing step's ring was first named
+.face-ring, the profile's own circle's class, and its rule drew the
+profile's face as an oval across the page. It is .face-place-ring, and a
+row now reads the profile's circle itself (red with the old name: 353.8 by
+769.1; green with the new: 112 by 112).
+
+THE FOUR: kind (nothing of theirs is changed or lost; Back is always there;
+what cannot be a face yet is said where it was picked); simple (two doors,
+pick, place); playful (any drawing can be a face, and it still draws
+itself); powerful (the exact size and place, by hand, keys or slider).
+
+THE CHECKS. verify_socialprofile section 11, seven rows, every one shown red
+by breaking one part and green as built (15 breaks): the sheet's opener not
+bound (the first row); the step's height not glided (the second: a jump);
+Flips not filtered, the listing without their id (the second); the start not
+the middle square, the drag inverted (the third); sizes not scaled, the card
+not set, the original handed back instead of a copy (the fourth: its points,
+its blank picture, its 816 by 612); the face they have not left out (the
+sixth); the photo and Flip checks taken out of lib/faceframe.js (the sixth,
+which first crashed on the photo and now reports it); the sheet's hint
+faded to 1.69:1 and the slider 24px tall (the seventh); the oval (the
+fifth). verify_sharecard: two rows, the face maker's card built through
+lib/postedcard.js and its macro loading it, each red alone. The suite's
+other rows now open the Pad through the sheet's first door and read Add
+your face / Change my face.
+
+Side by side, final tree: verify_socialprofile 42/42, verify_social 36/36,
+verify_socialauth 60/60; earlier, verify_sharecard 32/32 beside them.
+verify_docs 144/144, gen_docs.py --check current. One earlier side-by-side
+run had verify_social INTERMITTENT, 35/36 beside the others and 36/36
+alone: Make's glide read on too few frames under load. Load, not the shared
+controller: section 3 under three busy cores, the old social.js and the new,
+11/11 each, twice. verify_postgres NOT RUN (no PostgreSQL here; CI runs
+it). The full battery was not run; main's run after the merge is. Not tested
+here: Safari, an iPhone's touch on the stage, Segoe UI.

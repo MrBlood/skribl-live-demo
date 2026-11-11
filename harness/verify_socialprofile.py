@@ -47,6 +47,17 @@ events with pressure, a hand's timing).
    9. DELETE MY ACCOUNT takes the face with it (delete_post) and the bio with
       the row; the profile is the kind 404 after.
   10. NO PAGE ERRORS, NO CONSOLE ERRORS AND NO CSP VIOLATIONS on any of it.
+  11. A FACE FROM A SKRIBL YOU MADE (the owner's yes on mock A, Nov 11): Add
+      your face raises Your face, Make's own sheet, gliding up, its two doors;
+      Use one you made glides the sheet to its new height and lists their own
+      Pad skribls (the link-only one too; never a Flip, somebody else's or the
+      face they have); one picked is placed in the circle from its middle square,
+      moved by a drag and the arrow keys and sized by the slider; Use this
+      face keeps a face of its own (707 square, unlisted, its card made, its
+      points the drawing's moved and sized into the square) and the drawing it
+      came from byte for byte as it was; Open a file... says a Flip and a
+      drawing with a picture under it kindly, and keeps a .skribl file; every
+      word on the sheet at 4.5:1, every target 44px.
 
 The layers (the site imports only Skribl's documented names, and its
 templates only documented partials, the face player's now among them) stay
@@ -580,6 +591,13 @@ def keep_in_pad(pg, frame):
 FACE_PAYLOAD = {}
 
 
+def open_face_sheet(pg, wait=520):
+    """Your face, raised as a person raises it: the button beside Edit profile
+    (Change my face, or Add your face), and the sheet's glide let finish."""
+    pg.click("button[data-face-sheet]", timeout=5000)
+    pg.wait_for_timeout(wait)
+
+
 def draw_face(p, strokes=None, tempo=1.6, gaps=2.6):
     """`p` draws their face on their own profile, through the real Pad, and
     keeps it. Returns what the Pad's sheet said and where the page landed."""
@@ -587,7 +605,8 @@ def draw_face(p, strokes=None, tempo=1.6, gaps=2.6):
     pg.goto(BASE + f"/social/@{p.handle}")
     pg.wait_for_timeout(300)
     try:
-        pg.click("button[data-face-open]", timeout=5000)
+        open_face_sheet(pg)
+        pg.click("#faceSheet [data-face-open]", timeout=5000)
     except Exception as exc:
         return {"could not": str(exc).splitlines()[0][:120]}, None
     fr = pad_frame(pg)
@@ -657,7 +676,7 @@ DECODED = """(sels) => Promise.all(sels.map(s => { const i = document.querySelec
 # THE SITE'S OWN WORDS AND CONTROLS, read from the paint (verify_socialauth's
 # reader, with the face player counted among Skribl's parts, which keep their
 # own: a face has no words).
-READ = """() => {
+READ = """(sel) => {
   const rgba = s => { const m = (s.match(/[\\d.]+/g) || []).map(Number); return m.length >= 3 ? [m[0], m[1], m[2], m.length > 3 ? m[3] : 1] : null; };
   const lum = c => { const v = c.slice(0, 3).map(x => { x /= 255; return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); });
                      return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]; };
@@ -670,7 +689,7 @@ READ = """() => {
     return g; };
   const SKRIBLS = '.skribl-inline, #skriblGallery, .skribl-face';
   const out = { read: 0, low: [], small: [], fields: [], lowest: 99 };
-  const roots = [...document.querySelectorAll('main, header.top, nav.nav')];
+  const roots = [...document.querySelectorAll(sel || 'main, header.top, nav.nav')];
   roots.forEach(root => root.querySelectorAll('*').forEach(e => {
     if (!e.getClientRects().length || e.closest('[hidden], .words, .sr, ' + SKRIBLS)) return;
     const own = [...e.childNodes].some(n => n.nodeType === 3 && n.textContent.trim());
@@ -687,6 +706,7 @@ READ = """() => {
   }));
   document.querySelectorAll('a[href], button, summary, label.check, input:not([type=hidden]):not([type=checkbox]), textarea').forEach(e => {
     if (!e.getClientRects().length || e.closest('[hidden], .words, #makeSheet, #facePad, ' + SKRIBLS)) return;
+    if (sel && !e.closest(sel)) return;
     if (e.matches('input') && e.closest('.at')) { const a = e.closest('.at').getBoundingClientRect();
       if (a.height < 44) out.small.push('field ' + (e.id || e.name) + ' ' + Math.round(a.height)); }
     else { const r = e.getBoundingClientRect();
@@ -873,18 +893,19 @@ with sync_playwright() as p_:
         pg = theo.pg
         pg.goto(BASE + "/social/@theo")
         pg.wait_for_timeout(400)
-        blank = pg.evaluate("""() => { const a = document.querySelector('.prof-face .face-ask'), btn = document.querySelector('button[data-face-open]');
+        blank = pg.evaluate("""() => { const a = document.querySelector('.prof-face .face-ask'), btn = document.querySelector('button[data-face-sheet]');
             return { ask: a ? a.innerText.replace(/\\s+/g, ' ').trim() : null, button: btn ? btn.innerText.trim() : null,
                      img: !!document.querySelector('.prof-face img, .prof-face svg:not(.ic)') }; }""")
         closed = pg.evaluate(OVERLAY)
-        frames = pg.evaluate(GLIDE, ["button[data-face-open]", 900])
+        open_face_sheet(pg)
+        frames = pg.evaluate(GLIDE, ["#faceSheet [data-face-open]", 900])
         opened = pg.evaluate(OVERLAY)
         tops = [f[0] for f in frames]
         steps = [z - a for a, z in zip(tops, tops[1:])]
         travel = abs(tops[0] - opened["top"]) if tops else 0
-        check("Draw your face opens the Pad over the page: a modal dialog, the page behind inert, the Pad's address"
-              " set only now; it glides up from below the screen, on many frames, one way, never a jump",
-              blank["ask"] == "Draw your face" and blank["button"] == "Draw your face" and not blank["img"]
+        check("Add your face, then Draw a new one, opens the Pad over the page: a modal dialog, the page behind inert,"
+              " the Pad's address set only now; it glides up from below the screen, on many frames, one way, never a jump",
+              blank["ask"] == "Add your face" and blank["button"] == "Add your face" and not blank["img"]
               and closed["hidden"] and not closed["src"]
               and opened["open"] and opened["role"] == "dialog" and opened["modal"] == "true" and all(opened["inert"])
               and (opened["src"] or "").endswith("compose=1&face=1")
@@ -980,15 +1001,16 @@ with sync_playwright() as p_:
         back = pg.evaluate("""() => { const y = document.querySelector('nav.nav .tab-you .skribl-face'), i = y && y.querySelector('img');
             return { at: location.pathname + location.search, note: (document.querySelector('.note') || {}).textContent || '',
                      you: y ? y.getAttribute('data-play') : null, src: i ? i.getAttribute('src') : null,
-                     button: (document.querySelector('button[data-face-open]') || {}).textContent || '' }; }""")
-        check("the page comes back with a kind note, Redraw my face, and You in the bar wearing the new face, still",
+                     button: (document.querySelector('button[data-face-sheet]') || {}).textContent || '' }; }""")
+        check("the page comes back with a kind note, Change my face, and You in the bar wearing the new face, still",
               back["at"] == "/social/@theo?note=face" and "That’s your face now" in back["note"]
-              and back["you"] == "still" and back["src"] == f"/s/{face}/poster" and "Redraw my face" in back["button"],
+              and back["you"] == "still" and back["src"] == f"/s/{face}/poster" and "Change my face" in back["button"],
               json.dumps(back))
         rctx, rpg = browser_as(b, theo, reduced=True)
         rpg.goto(BASE + "/social/@theo")
         rpg.wait_for_timeout(400)
-        rframes = rpg.evaluate(GLIDE, ["button[data-face-open]", 700])
+        open_face_sheet(rpg)
+        rframes = rpg.evaluate(GLIDE, ["#faceSheet [data-face-open]", 700])
         # Read the way out too: with only opacity changing, an overlay that
         # would drop off the bottom stands where it rests on the way in either
         # way; on the way out it would leave in one frame, still showing.
@@ -1181,10 +1203,10 @@ with sync_playwright() as p_:
         jav = opg.evaluate("(id) => { const a = document.querySelector('#galleryList > article.tile[data-id=\"' + id + '\"] .tavatar');"
                            " return a ? { text: a.textContent.trim(), img: !!a.querySelector('img') } : null; }", jcard)
         close_ctx(octx, opg)
-        check("before a face is drawn, an empty circle and never a stock silhouette: on your own profile it says Draw"
+        check("before a face is drawn, an empty circle and never a stock silhouette: on your own profile it says Add"
               " your face, to anybody else it is empty, and You in the bar is an empty circle too; a Gallery card keeps"
               " Skribl's own initial",
-              own["words"] == "Draw your face" and not own["img"] and not own["svg"] and own["you"] and not own["youImg"]
+              own["words"] == "Add your face" and not own["img"] and not own["svg"] and own["you"] and not own["youImg"]
               and other["words"] == "" and other["blank"] and not other["img"]
               and bool(jav) and jav["text"] == "J" and not jav["img"],
               f"own {own}; another's view {other}; her card {jav}")
@@ -1202,7 +1224,7 @@ with sync_playwright() as p_:
         gone_card = picture(first)
         theo.pg.wait_for_timeout(500)
         now = theo.pg.evaluate("() => { const f = document.querySelector('.prof-face .skribl-face'); return f && f.getAttribute('data-skribl-id'); }")
-        check("Redraw my face draws a new one in the real Pad and keeps it: a new unlisted skribl on their row, the old"
+        check("Change my face, then Draw a new one, draws a new one in the real Pad and keeps it: a new unlisted skribl on their row, the old"
               " one deleted (no row; its link 404s and its picture is Skribl's see-through blank), and the profile"
               " plays the new one",
               bool(first) and bool(second) and second != first and post is not None and post[0] == "unlisted"
@@ -1426,6 +1448,279 @@ with sync_playwright() as p_:
               f" their other skribl {post_row(kept)}; {zid}")
 
     # ------------------------------------------------------------------ 10
+    # ------------------------------------------------------------------ 11
+    if part(11, "a face from a skribl you made: Your face's two doors, the picker, the circle, a face of its own"):
+        nell = member(b, "nell", "Nell Quist")
+        junx = _people.get("juno") or member(b, "juno", "Juno Park")
+
+        def post_body(who, body):
+            ctx = who.ctx
+            ctx.request.get(BASE + "/api/skribls?limit=1")
+            tok = next((c["value"] for c in ctx.cookies(BASE) if c["name"] == "skribl_csrf"), "")
+            r = ctx.request.post(BASE + "/api/skribls", data=json.dumps(body),
+                                 headers={"Content-Type": "application/json", "X-Skribl-CSRF": tok})
+            return r.json().get("id") if r.ok else f"refused {r.status} {r.text()[:120]}"
+
+        tag = secrets.token_hex(3)
+        older = post_skribl(nell, f"Nell's older {tag}")
+        linkonly = post_skribl(nell, f"Nell's link-only {tag}", visibility=None)
+        flipbody = {"title": f"Nell's flip {tag}", "caption": "", "version": 2, "schemaVersion": 2,
+                    "playbackMode": "flip", "fps": 12, "visibility": "public",
+                    "canvasSize": {"cssWidth": 816, "cssHeight": 612},
+                    "frames": [{"strokes": [{"x": 100 + i * 9, "y": 300, "color": "#7c5cff", "size": 8, "t": i * 30,
+                                             "start": i == 0} for i in range(12)], "strokeGroups": [12],
+                                "background": {"color": "#f6f2ea"}} for _ in range(2)]}
+        flipped = post_body(nell, flipbody)
+        newer = post_skribl(nell, f"Nell's newer {tag}")
+        theirs = post_skribl(junx, f"Juno's {tag}")
+        pg = nell.pg
+        pg.goto(BASE + "/social/@nell")
+        pg.wait_for_timeout(400)
+
+        SHEETSTATE = """() => { const w = document.getElementById('faceSheet'), s = w && w.querySelector('.make-sheet');
+            const vis = [...w.querySelectorAll('.face-step')].filter(x => !x.hidden).map(x => x.getAttribute('data-step'));
+            const r = s.getBoundingClientRect(), a = document.activeElement;
+            return { hidden: w.hidden, open: w.classList.contains('is-open'), step: vis.join(','), top: Math.round(r.top * 10) / 10,
+                     height: Math.round(r.height), role: s.getAttribute('role'), modal: s.getAttribute('aria-modal'),
+                     inert: ['body > .top', 'body > .nav', '#main'].map(q => { const e = document.querySelector(q); return !!e && e.hasAttribute('inert'); }),
+                     doors: [...w.querySelectorAll('.face-step[data-step=doors] .make-words b')].map(e => e.textContent.trim()),
+                     button: (document.querySelector('button[data-face-sheet]') || {}).textContent.trim(),
+                     focus: a ? (a.closest('.make-door') ? 'door:' + a.textContent.trim().slice(0, 16) : a.tagName + (a.getAttribute('data-face-sheet') !== null ? '[face-sheet]' : '')) : null,
+                     say: [...w.querySelectorAll('[data-face-say]')].filter(x => !x.hidden).map(x => x.textContent.trim()) }; }"""
+        RISE = """(ms) => new Promise(res => { const s = document.querySelector('#faceSheet .make-sheet'), out = [];
+            const t0 = performance.now(); document.querySelector('button[data-face-sheet]').click();
+            (function f() { out.push(Math.round(s.getBoundingClientRect().top * 10) / 10);
+              if (performance.now() - t0 < ms) requestAnimationFrame(f); else res(out); })(); })"""
+        before = pg.evaluate(SHEETSTATE)
+        rise = pg.evaluate(RISE, 700)
+        opened = pg.evaluate(SHEETSTATE)
+        rsteps = [z - a for a, z in zip(rise, rise[1:])]
+        rtravel = abs(rise[0] - opened["top"]) if rise else 0
+        pg.keyboard.press("Escape")
+        pg.wait_for_timeout(600)
+        gone = pg.evaluate(SHEETSTATE)
+        check("Add your face raises Your face, Make's own sheet: it glides up from below the screen on many frames, one"
+              " way; a modal dialog, the page behind inert, focus on its first door; two doors, Draw a new one and Use"
+              " one you made; Esc puts it away and focus comes back to the button",
+              before["hidden"] and before["button"] == "Add your face"
+              and opened["open"] and opened["step"] == "doors" and opened["role"] == "dialog" and opened["modal"] == "true"
+              and all(opened["inert"]) and opened["doors"] == ["Draw a new one", "Use one you made"]
+              and (opened["focus"] or "").startswith("door:Draw a new one")
+              and rise and rise[0] >= 860 and len(set(rise)) >= 8 and all(x <= 0 for x in rsteps)
+              and max((abs(x) for x in rsteps), default=0) <= 0.3 * rtravel
+              and gone["hidden"] and not any(gone["inert"]) and gone["focus"] == "BUTTON[face-sheet]",
+              f"before {before}; opened {opened}; rise from {rise[:1]} to {rise[-1:]} on {len(set(rise))} positions,"
+              f" biggest step {max((abs(x) for x in rsteps), default=0):.1f} of {rtravel}; after Esc {gone}")
+
+        # PICK: the step's height glides; the list is theirs, Pad drawings only.
+        open_face_sheet(pg)
+        GROW = """(ms) => new Promise(res => { const s = document.querySelector('#faceSheet .make-sheet'), out = [];
+            const t0 = performance.now(); document.querySelector('#faceSheet [data-face-go=pick]').click();
+            (function f() { out.push(Math.round(s.getBoundingClientRect().height));
+              if (performance.now() - t0 < ms) requestAnimationFrame(f); else res(out); })(); })"""
+        grow = pg.evaluate(GROW, 1000)
+        try:
+            pg.wait_for_function("() => document.querySelectorAll('#faceSheet .face-tile').length > 0", timeout=15000)
+        except Exception:
+            pass
+        pg.wait_for_timeout(300)
+        tiles = pg.evaluate("""() => [...document.querySelectorAll('#faceSheet .face-tile')].map(t => {
+            const i = t.querySelector('img'); return { title: t.querySelector('b').textContent, src: i ? i.getAttribute('src') : null,
+            style: i ? i.getAttribute('style') : null }; })""")
+        gsteps = [z - a for a, z in zip(grow, grow[1:])]
+        gtravel = abs(grow[-1] - grow[0]) if grow else 0
+        titles = [t["title"] for t in tiles]
+        check("Use one you made glides the sheet to its new height (read every frame: one way, never a jump) and lists"
+              " their own skribls, newest first, the link-only one too: Pad drawings only, never a Flip, never somebody"
+              " else's; each tile is the drawing cut from its own card",
+              grow and gtravel > 40 and len(set(grow)) >= 6 and all(x >= 0 for x in gsteps)
+              and max((abs(x) for x in gsteps), default=0) <= 0.45 * gtravel
+              and titles == [f"Nell's newer {tag}", f"Nell's link-only {tag}", f"Nell's older {tag}"]
+              and all(t["src"] and t["src"].endswith("/poster") for t in tiles),
+              f"heights {grow[:1]} to {grow[-1:]} on {len(set(grow))} values, biggest step"
+              f" {max((abs(x) for x in gsteps), default=0)} of {gtravel}; tiles {titles}; flip {flipped}; Juno's {theirs}")
+
+        # PLACE: pick the newest; it starts on its middle square, painted whole.
+        pg.click(f"#faceSheet .face-tile:has-text(\"Nell's newer {tag}\")", timeout=5000)
+        try:
+            pg.wait_for_function("() => !document.querySelector('#faceSheet [data-step=place]').hidden", timeout=15000)
+        except Exception:
+            pass
+        pg.wait_for_timeout(500)
+        GEOM = """() => { const st = document.querySelector('#faceSheet [data-face-stage]'), a = document.querySelector('#faceSheet [data-face-art]');
+            const c = a.querySelector('canvas'), S = st.clientWidth;
+            let ink = 0; try { const x = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+              for (let i = 0; i < x.length; i += 16) if (x[i + 3] > 0 && Math.abs(x[i] - 246) + Math.abs(x[i + 1] - 242) + Math.abs(x[i + 2] - 234) > 90) ink++; } catch (e) { ink = -1; }
+            return { S, left: parseFloat(a.style.left), top: parseFloat(a.style.top), w: parseFloat(a.style.width), h: parseFloat(a.style.height),
+                     slider: +document.querySelector('[data-face-size]').value, text: document.querySelector('[data-face-size]').getAttribute('aria-valuetext'), ink }; }"""
+
+        def square(g, W=816, H=612):
+            """The square of the drawing the circle shows, read back off the stage."""
+            D, m = g["S"] * 0.88, g["S"] * 0.06
+            k = g["w"] / W
+            return {"x": (m - g["left"]) / k, "y": (m - g["top"]) / k, "side": D / k}
+        g0 = pg.evaluate(GEOM)
+        s0 = square(g0)
+        st = pg.locator("#faceSheet [data-face-stage]").bounding_box()
+        cx, cy = st["x"] + st["width"] / 2, st["y"] + st["height"] / 2
+        pg.mouse.move(cx, cy)
+        pg.mouse.down()
+        for i in range(1, 9):
+            pg.mouse.move(cx + 5 * i, cy + 2.5 * i)
+        pg.mouse.up()
+        g1 = pg.evaluate(GEOM)
+        s1 = square(g1)
+        pg.focus("#faceSheet [data-face-stage]")
+        pg.keyboard.press("ArrowLeft")
+        g2 = pg.evaluate(GEOM)
+        pg.evaluate("() => { const r = document.querySelector('[data-face-size]'); r.value = '800'; r.dispatchEvent(new Event('input', { bubbles: true })); }")
+        g3 = pg.evaluate(GEOM)
+        s3 = square(g3)
+        check("picking one places it in the circle, painted whole by Skribl's engine and starting on its middle square;"
+              " a drag moves it with the hand, the arrow keys move it, and the slider sizes it about its middle",
+              abs(s0["x"] - 102) < 0.5 and abs(s0["y"]) < 0.5 and abs(s0["side"] - 612) < 0.5 and g0["ink"] > 20
+              and abs((g1["left"] - g0["left"]) - 40) < 1 and abs((g1["top"] - g0["top"]) - 20) < 1
+              and abs((g2["left"] - g1["left"]) + 8) < 0.6 and abs(g2["top"] - g1["top"]) < 0.01
+              and s3["side"] < s1["side"] * 0.75
+              and abs((s3["x"] + s3["side"] / 2) - (square(g2)["x"] + square(g2)["side"] / 2)) < 0.5,
+              f"start {s0} ink {g0['ink']}; dragged {s1}; arrow {square(g2)}; sized {s3} ({g3['text']})")
+
+        # USE THIS FACE: a face of its own, the drawing it came from untouched.
+        orig_before = db("select payload_json from skribl_posts where public_id = ?", (newer,))[0][0]
+        with pg.expect_navigation(timeout=30000):
+            pg.click("#faceSheet [data-face-use]", timeout=5000)
+        pg.wait_for_timeout(400)
+        row = person_row("nell")
+        face = row[3] if row else None
+        frow = post_row(face) if face else None
+        fpay = json.loads(db("select payload_json from skribl_posts where public_id = ?", (face,))[0][0]) if face else {}
+        opay = json.loads(orig_before)
+        orig_after = db("select payload_json from skribl_posts where public_id = ?", (newer,))[0][0]
+        fp, op = (fpay.get("frames") or [{}])[0].get("strokes", [{}])[0], opay["frames"][0]["strokes"][0]
+        want = {"x": (op["x"] - s3["x"]) * 707 / s3["side"], "y": (op["y"] - s3["y"]) * 707 / s3["side"],
+                "size": op["size"] * 707 / s3["side"]}
+        check("Use this face keeps a face of its own: one new skribl, unlisted, theirs, 707 square, its card made (a"
+              " picture, not the see-through blank), on their row; its points the drawing's, moved and sized into the"
+              " placed square; the drawing it came from byte for byte as it was",
+              bool(face) and face != newer and frow is not None and frow[0] == "unlisted" and frow[1] == row[0]
+              and (frow[3], frow[4]) == (707, 707) and tuple(row[4:6]) == (707, 707) and picture(face) in RASTER
+              and len(fpay["frames"][0]["strokes"]) == len(opay["frames"][0]["strokes"])
+              and all(abs(fp[k] - want[k]) < 0.06 for k in ("x", "y", "size"))
+              and orig_after == orig_before and pg.url.endswith("/social/@nell?note=face"),
+              f"face {face} row {row}; post {frow}; card {picture(face) if face else None}; first point {fp} want"
+              f" {want}; original unchanged {orig_after == orig_before}; at {pg.url}")
+
+        # THE PROFILE'S OWN CIRCLE, UNTOUCHED BY THE SHEET'S STYLES. A rule the
+        # sheet wrote under the profile's own class name (.face-ring) once drew
+        # the profile's face as an oval across the page: caught in the
+        # pictures, not by a row, so this row reads the circle itself.
+        ring = pg.evaluate("""() => { const box = q => { const e = document.querySelector(q); if (!e) return null;
+              const b = e.getBoundingClientRect(); return { w: Math.round(b.width * 10) / 10, h: Math.round(b.height * 10) / 10,
+              cx: Math.round((b.left + b.width / 2) * 10) / 10, cy: Math.round((b.top + b.height / 2) * 10) / 10 }; };
+            return { prof: box('.prof-face'), face: box('.prof-face .skribl-face'), you: box('nav.nav .tab-you .face-ring') }; }""")
+        pf, ff, yf = ring["prof"], ring["face"], ring["you"]
+        check("the profile's own circle is untouched by the sheet's styles: on a phone its face sits in a 112px circle,"
+              " round and centred on it, and You's in the bar is a 28px one",
+              bool(pf and ff and yf) and (pf["w"], pf["h"]) == (112, 112) and abs(ff["w"] - ff["h"]) < 0.5
+              and 96 <= ff["w"] <= 112 and abs(ff["cx"] - pf["cx"]) < 1 and abs(ff["cy"] - pf["cy"]) < 1
+              and (yf["w"], yf["h"]) == (28, 28), json.dumps(ring))
+
+        # ITS FACE NEVER AMONG THEM, and Change my face now.
+        open_face_sheet(pg)
+        pg.click("#faceSheet [data-face-go=pick]")
+        try:
+            pg.wait_for_function("() => document.querySelectorAll('#faceSheet .face-tile').length > 0", timeout=15000)
+        except Exception:
+            pass
+        pg.wait_for_timeout(300)
+        again = pg.evaluate("() => [...document.querySelectorAll('#faceSheet .face-tile b')].map(b => b.textContent)")
+        label = pg.evaluate("() => document.querySelector('button[data-face-sheet]').textContent.trim()")
+
+        # OPEN A FILE: a Flip and a drawing with a picture under it are said
+        # kindly and the picker stays; a .skribl file is placed and kept.
+        tmp = Path(tempfile.mkdtemp())
+        skull = json.loads((ROOT / "skribl" / "static" / "help" / "demos" / "skull.json").read_text(encoding="utf-8"))
+        skull["title"] = "Skull in a hat"
+        (tmp / "skull.skribl").write_text(json.dumps(skull), encoding="utf-8")
+        flipfile = dict(flipbody)
+        (tmp / "flip.skribl").write_text(json.dumps(flipfile), encoding="utf-8")
+        photo = json.loads(json.dumps(skull))
+        photo["frames"][0]["photo"] = {"data": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
+                                       "fit": "cover", "opacity": 1, "blur": 0, "offset": {"x": 0.5, "y": 0.5}, "zoom": 1}
+        (tmp / "photo.skribl").write_text(json.dumps(photo), encoding="utf-8")
+        said = {}
+
+        def open_file(name):
+            if pg.evaluate(SHEETSTATE)["step"] == "place":
+                pg.click("#faceSheet [data-step=place] [data-face-go=pick]", timeout=5000)
+                pg.wait_for_timeout(500)
+            with pg.expect_file_chooser(timeout=8000) as fc:
+                pg.click("#faceSheet [data-face-file]", timeout=5000)
+            fc.value.set_files(str(tmp / f"{name}.skribl"))
+            pg.wait_for_timeout(700)
+            return pg.evaluate(SHEETSTATE)
+        for name in ("flip", "photo"):
+            try:
+                said[name] = open_file(name)
+            except Exception as exc:
+                said[name] = {"step": f"could not: {str(exc).splitlines()[0][:80]}", "say": []}
+        try:
+            placed_skull = open_file("skull")
+            with pg.expect_navigation(timeout=30000):
+                pg.click("#faceSheet [data-face-use]", timeout=5000)
+        except Exception as exc:
+            placed_skull = {"step": f"could not: {str(exc).splitlines()[0][:80]}"}
+        pg.wait_for_timeout(400)
+        row2 = person_row("nell")
+        face2 = row2[3] if row2 else None
+        check("its own face is never among the ones to pick, and the button says Change my face; Open a file...: a"
+              " Flip's file and a drawing with a picture under it are said kindly where they were picked, and the"
+              " picker stays; a .skribl file is placed and kept as a face of its own, the old face gone",
+              face and f"Nell's flip {tag}" not in again and len(again) == 3 and label == "Change my face"
+              and said["flip"]["step"] == "pick" and any("That one’s a Flip" in x for x in said["flip"]["say"])
+              and said["photo"]["step"] == "pick" and any("picture under it" in x for x in said["photo"]["say"])
+              and placed_skull["step"] == "place"
+              and bool(face2) and face2 != face and post_row(face2) is not None and post_row(face2)[3] == 707
+              and post_row(face) is None and picture(face2) in RASTER,
+              f"listed again {again}; button {label}; flip {said['flip']['step']} {said['flip']['say']};"
+              f" photo {said['photo']['step']} {said['photo']['say']}; skull {placed_skull['step']}; faces {face} -> {face2}")
+
+        # THE SHEET'S OWN WORDS AND TARGETS, every step, as a profile's are
+        # (section 8): phone and desk, light and dark.
+        seen = {}
+        for screen in ("phone", "desk"):
+            for scheme in ("light", "dark"):
+                ctx, cpg = browser_as(b, nell, screen, scheme, reduced=True)
+                cpg.goto(BASE + "/social/@nell")
+                cpg.wait_for_timeout(400)
+                open_face_sheet(cpg, 700)
+                seen[(screen, scheme, "doors")] = cpg.evaluate(READ, "#faceSheet")
+                cpg.click("#faceSheet [data-face-go=pick]")
+                try:
+                    cpg.wait_for_function("() => document.querySelectorAll('#faceSheet .face-tile').length > 0", timeout=15000)
+                except Exception:
+                    pass
+                cpg.wait_for_timeout(700)
+                seen[(screen, scheme, "pick")] = cpg.evaluate(READ, "#faceSheet")
+                cpg.click("#faceSheet .face-tile >> nth=0")
+                try:
+                    cpg.wait_for_function("() => !document.querySelector('#faceSheet [data-step=place]').hidden", timeout=15000)
+                except Exception:
+                    pass
+                cpg.wait_for_timeout(700)
+                seen[(screen, scheme, "place")] = cpg.evaluate(READ, "#faceSheet")
+                close_ctx(ctx, cpg)
+        low = [f"{' '.join(k)}: {x}" for k, v in seen.items() for x in v["low"]]
+        small = [f"{' '.join(k)}: {x}" for k, v in seen.items() for x in v["small"]]
+        fields = [f"{' '.join(k)}: {x}" for k, v in seen.items() for x in v["fields"]]
+        reads = sum(v["read"] for v in seen.values())
+        lowest = min(((v["lowest"], " ".join(k)) for k, v in seen.items()), default=(0, "nothing"))
+        check("Your face's every word, at every step, reads at 4.5:1 or more on what is painted behind it, every"
+              " button, tile and the slider is 44px or more each way, and it has no text field to magnify a phone:"
+              " phone and desk, light and dark",
+              reads >= 60 and not low and not small and not fields,
+              f"{reads} read, the lowest {lowest}; under 4.5: {low[:4]}; small: {small[:4]}; fields: {fields[:3]}")
+
     if part(10, "no page errors, no console errors, no CSP violations"):
         for p in list(_people.values()):
             ERRS.extend(f"csp: {v}" for v in p.csp())

@@ -26,12 +26,15 @@
     drawing itself. profile.js holds the moving parts; the words are here. #}
 {% extends 'social/base.html' %}
 {% from 'skribl/_skribl_gallery_section.html' import skribl_gallery_assets, skribl_gallery_section %}
+{% from 'skribl/_skribl_face.html' import skribl_face_maker_assets, skribl_face_maker %}
+{% from 'skribl/_skribl_inline_player.html' import skribl_inline_draft %}
 {% import 'social/_icons.html' as ic %}
 
 {% block title %}{{ who.display_name }} (@{{ who.handle }}) · Skribl{% endblock %}
 {% block head %}<link rel="canonical" href="{{ share_url }}">
 {{ skribl_gallery_assets() }}
-{% if mine %}<script src="{{ skribl_asset('lib/composehost.js') }}" defer></script>{% endif %}{% endblock %}
+{% if mine %}<script src="{{ skribl_asset('lib/composehost.js') }}" defer></script>
+{{ skribl_face_maker_assets() }}{% endif %}{% endblock %}
 {% block scripts %}<script src="{{ social_asset('profile.js') }}" defer></script>{% endblock %}
 
 {% block top %}
@@ -51,10 +54,11 @@
                      alt=who.display_name ~ '’s face, drawn by ' ~ who.display_name, bp=skribl_bp) }}
       {% elif mine %}
       {# The empty circle that says what to do. The same as the button beside
-         Edit profile, so it is a shortcut for a finger and a pointer, not a
-         second button for the keyboard or a screen reader. #}
-      <span class="face-blank face-ask" data-face-open aria-hidden="true">
-        <span class="face-ask-ic">{{ ic.pen() }}</span><span class="face-ask-words">Draw your face</span></span>
+         Edit profile (it opens Your face, the two doors), so it is a shortcut
+         for a finger and a pointer, not a second button for the keyboard or a
+         screen reader. #}
+      <span class="face-blank face-ask" data-face-sheet aria-hidden="true">
+        <span class="face-ask-ic">{{ ic.pen() }}</span><span class="face-ask-words">Add your face</span></span>
       {% else %}
       <span class="face-blank" aria-hidden="true"></span>
       {% endif %}
@@ -66,7 +70,7 @@
       <div class="prof-acts">
         {% if mine %}
         <a class="btn" href="{{ url_for('social.edit_profile') }}">Edit profile</a>
-        <button class="btn" type="button" data-face-open aria-haspopup="dialog" aria-controls="facePad" aria-expanded="false">{{ ic.pen() }}<span>{{ 'Redraw my face' if who.face_id else 'Draw your face' }}</span></button>
+        <button class="btn" type="button" data-face-sheet aria-haspopup="dialog" aria-controls="faceSheet" aria-expanded="false">{{ ic.pen() }}<span>{{ 'Change my face' if who.face_id else 'Add your face' }}</span></button>
         {% endif %}
         <button class="icon-btn boxed" type="button" data-share aria-label="Share {{ 'your' if mine else who.display_name ~ '’s' }} profile" title="Share">{{ ic.share() }}</button>
         {% if mine %}<a class="icon-btn boxed desk-only" href="{{ url_for('social.you') }}" aria-label="Settings" title="Settings">{{ ic.gear() }}</a>{% endif %}
@@ -91,6 +95,15 @@
   <span data-word="network">That didn’t reach us. Check your connection and try again.</span>
   <span data-word="copied">Link copied.</span>
   <span data-word="copy_by_hand">Here’s the link to copy: {url}</span>
+  <span data-word="list_failed">Your skribls didn’t load. Try again?</span>
+  <span data-word="opening">Opening it…</span>
+  <span data-word="making">Making your face…</span>
+  <span data-word="flip">That one’s a Flip. Faces are drawings for now, so pick another.</span>
+  <span data-word="photo">That one has a picture under it, and faces can’t use those yet. Pick another, or draw a new one.</span>
+  <span data-word="empty">There’s nothing drawn in that one yet. Pick another?</span>
+  <span data-word="unreadable">That file isn’t a skribl we can read. Try another?</span>
+  <span data-word="gone">That one isn’t there anymore. Pick another?</span>
+  <span data-word="open_failed">That one didn’t open. Try again?</span>
 </div>
 {% endblock %}
 
@@ -109,4 +122,67 @@
     <iframe class="facepad-frame" title="The Pad: draw your face"></iframe>
   </div>
 </div>
+
+{#  YOUR FACE: two doors, then, for one you made, the picker and the circle
+    (the owner's "all yes" on mock A, Nov 11). One sheet that changes what it
+    shows, a step at a time: social.js moves it as it moves Make's, and
+    profile.js holds the steps. Draw a new one opens the Pad above. Use one you
+    made lists your skribls (Skribl's own listing, yours alone, the link-only
+    ones too; Pad drawings, since a face is one) or opens a .skribl file you
+    saved, then places it in the circle: drag it, size it, keep it. What is
+    kept is a face of its own (Skribl's lib/faceframe.js): the drawing it came
+    from is never changed. #}
+<div class="make face-sheet" id="faceSheet" hidden
+     data-list="{{ url_for(skribl_bp ~ '.list_skribls') }}"
+     data-skribl="{{ url_for(skribl_bp ~ '.create_skribl') }}"
+     data-poster="{{ url_for(skribl_bp ~ '.skribl_poster', public_id='__ID__') }}"
+     data-me="{{ who.public_id }}" data-face="{{ who.face_id or '' }}">
+  <div class="make-scrim" data-make-close></div>
+  <div class="make-sheet face-card" role="dialog" aria-modal="true" aria-labelledby="faceSheetTitle">
+    <div class="make-grip" data-make-close aria-hidden="true"></div>
+    <div class="face-step" data-step="doors">
+      <h2 class="make-title" id="faceSheetTitle">Your face</h2>
+      <button class="make-door" type="button" data-face-open>
+        <span class="make-ic">{{ ic.pen() }}</span>
+        <span class="make-words"><b>Draw a new one</b><span>It draws itself the way you drew it.</span></span>
+      </button>
+      <button class="make-door" type="button" data-face-go="pick">
+        <span class="make-ic">{{ ic.picture() }}</span>
+        <span class="make-words"><b>Use one you made</b><span>Pick a skribl, then place it in the circle.</span></span>
+      </button>
+      <button class="btn btn-wide make-cancel" type="button" data-make-close>Cancel</button>
+    </div>
+    <div class="face-step" data-step="pick" hidden>
+      <h2 class="make-title" id="facePickTitle">Pick a skribl</h2>
+      <div class="face-scroll" data-face-scroll>
+        <div class="face-grid" data-face-grid role="group" aria-labelledby="facePickTitle"></div>
+        <p class="face-none" data-face-none hidden>No skribls of yours yet. The ones you post while you’re signed in show here.</p>
+        <button class="btn btn-wide face-more" type="button" data-face-more hidden>Load more</button>
+      </div>
+      <button class="make-door" type="button" data-face-file>
+        <span class="make-ic">{{ ic.folder() }}</span>
+        <span class="make-words"><b>Open a file…</b><span>A .skribl file you saved.</span></span>
+      </button>
+      <input class="face-input" type="file" accept=".skribl,application/json,text/plain,application/octet-stream" data-face-input hidden>
+      <p class="say face-say" data-face-say role="status" hidden></p>
+      <button class="btn btn-wide make-cancel" type="button" data-make-close>Cancel</button>
+    </div>
+    <div class="face-step" data-step="place" hidden>
+      <h2 class="make-title" id="facePlaceTitle">Place it in the circle</h2>
+      <div class="face-stage" data-face-stage tabindex="0" role="group" aria-labelledby="facePlaceTitle" aria-describedby="facePlaceHint">
+        <div class="face-art" data-face-art>{{ skribl_inline_draft(controls=false, progress=false, shaped=false, chrome=false) }}</div>
+        <div class="face-mask" aria-hidden="true"></div>
+        <div class="face-place-ring" aria-hidden="true"></div>
+      </div>
+      <div class="face-size"><label for="faceSize">Size</label><input id="faceSize" type="range" min="0" max="1000" step="1" value="500" data-face-size></div>
+      <p class="face-hint" id="facePlaceHint">Drag it to move it. Slide to make it bigger or smaller.<span class="sr"> With a keyboard, the arrow keys move it.</span></p>
+      <p class="say face-say" data-face-say role="status" hidden></p>
+      <div class="face-acts">
+        <button class="btn btn-big" type="button" data-face-go="pick">Back</button>
+        <button class="btn btn-primary btn-big" type="button" data-face-use>Use this face</button>
+      </div>
+    </div>
+  </div>
+</div>
+{{ skribl_face_maker() }}
 {% endif %}{% endblock %}

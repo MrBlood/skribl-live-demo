@@ -1051,6 +1051,53 @@ once at about 4x (read from the paint) and finished at once under Reduce
 Motion, still in the bar and on a Gallery card with no fetch, framed by
 lib/sharecard.js's own sums, replaced, and deleted with an account.
 
+### A face from a drawing you already have
+
+A person can make their face from a drawing they already have, placed in the
+circle, instead of drawing a new one (after v330; the owner's "all yes" on
+mock A: "Use one you made: pick a skribl, then place it in the circle"). The
+drawing can be one of their skribls, fetched as any player fetches it
+(`GET /api/skribls/<id>`, the envelope's `skribl`), or a `.skribl` file they
+saved, read in the page. Skribl turns it and the square they placed into a
+face of its own: a NEW square drawing, the placed square filling it, every
+point moved and its size scaled, its timing untouched, with its own card. It
+is posted the way a face drawn in the Pad's face mode is, so the face player
+needs nothing new, and the drawing it came from is never touched.
+
+    {% from 'skribl/_skribl_face.html' import skribl_face_maker_assets, skribl_face_maker %}
+
+    {{ skribl_inline_assets() }}       in <head>, as for any player
+    {{ skribl_face_maker_assets() }}   in <head>, on the page that makes a face
+    {{ skribl_face_maker() }}          once, anywhere in <body>
+
+`lib/faceframe.js` is `window.SkriblFaceFrame`:
+
+- `start(w, h)`: the square a face starts on, the drawing's middle square,
+  which is what a face shows today. `{x, y, side}` in the drawing's pixels.
+- `range(w, h)`: the sides a person may choose, from a quarter of the short
+  side (four times in) to the drawing's diagonal (the whole drawing inside
+  the circle, its background colour around it).
+- `clamp(sq, w, h)`: that square with its side in range and its middle on
+  the drawing.
+- `check(payload)`: `null`, or why it cannot be a face yet: `'flip'`,
+  `'photo'` (a picture under the drawing: not moved yet), `'empty'`,
+  `'unreadable'`. Say it kindly; a host's words are its own.
+- `place(payload, sq, side)`: the new drawing, `side` CSS px square (707, as
+  the Pad's face mode draws). Its music stays behind (a face makes no sound).
+- `card(payload, box)`: a Promise of its share card, a data URL, painted by
+  the in-post player's own engine in the box `skribl_face_maker()` puts off
+  the screen and composed by `lib/postedcard.js`, as an editor composes one.
+  Set it as the payload's `thumbnail` and post the payload as the face.
+
+Where the square is chosen is the host's: the site shows the drawing under a
+circle, painted by the same engine in a `skribl_inline_draft(controls=false,
+progress=false, shaped=false, chrome=false)` box, dragged with a finger, the
+pointer or the arrow keys and sized with a slider or a pinch
+(`social/static/profile.js`). `harness/verify_socialprofile.py` section 11
+holds it: the square read back off the stage, the face's points against the
+drawing's, moved and sized, and the drawing it came from byte for byte as it
+was.
+
 ## Three things that will bite you if you skip them
 
 **`attach_to_metadata` is not optional in practice.** Skribl's models sit on a

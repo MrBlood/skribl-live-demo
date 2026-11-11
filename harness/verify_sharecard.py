@@ -106,6 +106,18 @@ for tpl, label in (("skribl_editor.html", "Pad"), ("skribl_flip.html", "Flip")):
     for mod in ("lib/sharecard.js", "lib/postedcard.js"):
         check(f"{label} loads {mod}", mod in body,
               "reading a global nothing loads is a silent fallback")
+# A FACE MADE FROM A DRAWING YOU ALREADY HAVE (after v330, lib/faceframe.js)
+# is posted with a card as an editor's post is, and that card is this
+# module's composition too: the face maker builds it through the module, and
+# the macro that loads the maker loads the module and its geometry.
+faceframe = (ROOT / "skribl" / "static" / "lib" / "faceframe.js").read_text(encoding="utf-8")
+face_macro = (ROOT / "skribl" / "templates" / "skribl" / "_skribl_face.html").read_text(encoding="utf-8")
+_maker = face_macro[face_macro.find("macro skribl_face_maker_assets"):]
+_maker = _maker[:_maker.find("endmacro")]
+check("a face made from a drawing builds its card through the module",
+      "SkriblPostedCard" in faceframe and "PC.build(" in faceframe)
+check("and the face maker's macro loads the module and its geometry",
+      "lib/postedcard.js" in _maker and "lib/sharecard.js" in _maker, _maker[:200])
 inline_macro = (ROOT / "skribl" / "templates" / "skribl"
                 / "_skribl_inline_player.html").read_text(encoding="utf-8")
 check("the in-post embed loads the geometry but NOT the compositor",
