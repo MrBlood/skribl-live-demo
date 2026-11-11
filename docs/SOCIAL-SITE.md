@@ -233,6 +233,26 @@ person is never blamed by the words on the screen). Pad and Flip move
 together. Skribl stands alone; the site borrows it like any other host. Every
 change is checked, and every check is shown red first.
 
+The owner, Nov 10, the evening the first person joined: "Don't lose track of
+our roots and evolution of kindness and our 4 pillars. Keep our vision." So
+every piece, its mock and its PR answer two things in plain words before it
+is built and again when it is shown:
+
+- **The roots:** what it does for watching a drawing come alive (a face that
+  draws itself, a post that starts on its own page, the drawing as the
+  biggest thing on the screen). A piece that does nothing for it says so,
+  and why it is still needed.
+- **The four pillars, kind first:** one line each for kind, powerful,
+  playful and simple. Kind is checked on the hard paths, not only the happy
+  one: what a person sees when something does not work (the words never
+  blame and always say what to do next), when they are new, and when they
+  want to leave (nothing they made is lost by mistake, and going is easy).
+
+The first evening showed where kind gets lost: a sign-in page that said "No
+passkey was picked" to someone who had not joined yet, and instructions that
+called an invite code a passkey. Fixing those words comes before new
+screens.
+
 ---
 
 ## 7. The honest part
