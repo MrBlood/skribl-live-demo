@@ -189,7 +189,14 @@ def init_social(app, *, session=None, url_prefix="/social", skribl_blueprint="sk
 
     @bp.get("/")
     def home():
-        """The site's Home: in phase 1's first piece, the first visit for everyone."""
+        """The site's Home. Signed in (piece 4): "Say something, then draw
+        it...", then everyone's posts, newest first. Otherwise the first visit:
+        Blooby's card above the newest public skribls."""
+        if site is not None:
+            from . import posts
+            page = posts.home_page(skribl_blueprint)
+            if page is not None:
+                return page
         return render_template("social/home.html", here="home")
 
     @bp.get("/explore")
@@ -198,9 +205,10 @@ def init_social(app, *, session=None, url_prefix="/social", skribl_blueprint="sk
         return render_template("social/explore.html", here="explore")
 
     if site is not None:
-        from . import accounts, profiles
+        from . import accounts, posts, profiles
         accounts.register(bp)
         profiles.register(bp, skribl_blueprint)
+        posts.register(bp, skribl_blueprint)
 
         @bp.before_request
         def _small_bodies():
@@ -209,10 +217,12 @@ def init_social(app, *, session=None, url_prefix="/social", skribl_blueprint="sk
             is read, rather than parsed at the app's 25 MB limit. By the
             length it declares, whichever page it was sent to (some never
             read their body), and by what is read where it declares none.
-            One page takes more: a drawn face (piece 3) is a whole drawing,
-            its share card and any photo under it, up to FACE_MAX_BODY."""
+            Two pages take more: a drawn face (piece 3) is a whole drawing
+            and its share card, up to FACE_MAX_BODY, and a post (piece 4) is
+            a whole drawing, a Flip's music included, up to POST_MAX_BODY."""
             if request.method == "POST":
-                cap = profiles.FACE_MAX_BODY if request.endpoint == "social.face_save" else SITE_MAX_BODY
+                cap = {"social.face_save": profiles.FACE_MAX_BODY,
+                       "social.post_new": posts.POST_MAX_BODY}.get(request.endpoint, SITE_MAX_BODY)
                 request.max_content_length = cap
                 if (request.content_length or 0) > cap:
                     abort(413)
