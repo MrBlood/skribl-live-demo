@@ -646,6 +646,32 @@ def shot(pg, sel):
         return None
 
 
+def changed(a, z):
+    """The share of pixels that differ between two photos of one element, by
+    more than a hair (a sub-pixel shift of the page around it moves an edge's
+    anti-aliasing, not the picture), or None when either photo is missing.
+    Two photos a pixel apart in size are compared over what they share."""
+    if not a or not z or Image is None:
+        return None
+    ia = Image.open(io.BytesIO(a)).convert("RGB")
+    iz = Image.open(io.BytesIO(z)).convert("RGB")
+    w, h = min(ia.width, iz.width), min(ia.height, iz.height)
+    if abs(ia.width - iz.width) > 2 or abs(ia.height - iz.height) > 2 or not w or not h:
+        return None
+    pa, pz = ia.load(), iz.load()
+    n = sum(1 for y in range(h) for x in range(w)
+            if abs(pa[x, y][0] - pz[x, y][0]) + abs(pa[x, y][1] - pz[x, y][1]) + abs(pa[x, y][2] - pz[x, y][2]) > 60)
+    return round(n / float(w * h), 4)
+
+
+# Every image under each selector loaded and decoded: a picture that has
+# come, not one on its way (section 4: the still face photographed twice).
+PAINTED = """(sels) => sels.every(s => { const i = document.querySelector(s + ' img');
+  return !!i && i.complete && i.naturalWidth > 0; })"""
+DECODED = """(sels) => Promise.all(sels.map(s => { const i = document.querySelector(s + ' img');
+  return i && i.decode ? i.decode().catch(() => null) : null; }))"""
+
+
 # THE SITE'S OWN WORDS AND CONTROLS, read from the paint (verify_socialauth's
 # reader, with the face player counted among Skribl's parts, which keep their
 # own: a face has no words).
@@ -1092,6 +1118,21 @@ with sync_playwright() as p_:
         pg.wait_for_timeout(500)
         card_sel = f'#galleryList > article.tile[data-id="{mine}"] .tavatar'
         you_sel = "nav.nav .tab-you .skribl-face"
+        # BOTH PICTURES PAINTED BEFORE THE FIRST PHOTO. This row asks whether a
+        # still face stands still, not how soon a busy machine serves it: on
+        # main's run after #847 (CI, sqlite 3/6) it went red, and with the
+        # network held back a second and a half it photographed the card's
+        # circle before its poster had come and read the face arriving as a
+        # face that moves. So each image is complete and decoded first, and
+        # the two photos are compared pixel by pixel, with room for the page
+        # shifting a fraction of a pixel around them and none for a drawing.
+        # The card's picture loads lazily, so it is brought into view first.
+        try:
+            pg.locator(card_sel).first.scroll_into_view_if_needed(timeout=5000)
+            pg.wait_for_function(PAINTED, arg=[card_sel, you_sel], timeout=15000)
+            pg.evaluate(DECODED, [card_sel, you_sel])
+        except Exception:
+            pass
         pics = [(shot(pg, card_sel), shot(pg, you_sel))]
         pg.wait_for_timeout(2500)
         pics.append((shot(pg, card_sel), shot(pg, you_sel)))
@@ -1100,14 +1141,17 @@ with sync_playwright() as p_:
             return { card: ci && ci.getAttribute('src'), cardStyle: ci && ci.getAttribute('style'),
                      you: yi && yi.getAttribute('src'), youPlay: y && y.getAttribute('data-play'), youStyle: y && y.getAttribute('style'),
                      players: document.querySelectorAll('.skribl-face-draw').length }; }""", [card_sel, you_sel])
-        same = all(a and z and a == z for a, z in zip(pics[0], pics[1]))
+        moved = [changed(a, z) for a, z in zip(pics[0], pics[1])]
+        same = all(m is not None and m <= 0.02 for m in moved)
         inked = Image is not None and all(ink(x) > 30 for x in pics[1] if x)
+        # What failed comes first in the detail: a run's summary keeps only
+        # its first 300 characters (run_harness.sh).
         check("elsewhere the face is a picture, still: You in the bar and the Gallery card's avatar wear it (its own"
               " poster), with no player, no fetch of the drawing, and the same paint seconds later",
               where["card"] == f"/s/{face}/poster" and where["you"] == f"/s/{face}/poster" and where["youPlay"] == "still"
               and where["players"] == 0 and not fetched and same and inked,
-              f"{ {k: where[k] for k in ('card', 'you', 'youPlay', 'players')} }; fetched {len(fetched)}; the same paint {same};"
-              f" inked {inked}")
+              f"the same paint {same} (changed: card {moved[0]}, You {moved[1]}); fetched {len(fetched)}; inked {inked};"
+              f" { {k: where[k] for k in ('card', 'you', 'youPlay', 'players')} }")
         sizes = [(707, 707), (816, 612), (450, 800)]
         want = pg.evaluate(FRAME_JS, [SHARECARD, sizes])
         got = []
