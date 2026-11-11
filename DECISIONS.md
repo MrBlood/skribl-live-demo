@@ -33946,3 +33946,36 @@ Found and not yet fixed, each a bug fix that merges on green:
   a seam that deletes an author's all, which Skribl does not have.
 - A face deleted in the Library leaves its circle empty (piece 3's "not
   yet").
+
+## After v330 -- Main red after #847: a still face's ink line stood on its own edge (verify_socialprofile)
+
+Issue #849: main's full run on 0feb024 (#847, profiles) was red in sqlite
+3/6, one row of verify_socialprofile, section 4, "elsewhere the face is a
+picture, still". Its detail, read from the job's own log (the run's summary
+keeps 300 characters of each failure, and had cut exactly the part that
+said what failed): fetched 0; the same paint True; inked False.
+
+NOT THE FACE. The pictures were the poster, still, with no player and no
+fetch; the row also asks that something drawn shows in them, by counting
+inked samples, and its line was 30. At this phone's one device pixel to a
+CSS pixel the bar's 28px face and the card's 34px circle read 36 and 34
+here: the line stood on the measurement's own edge, and CI read 30 or
+fewer.
+
+A FIRST GUESS, WRONG AND TAKEN BACK: that the first photo came before the
+picture had (the same paint). Calibrated before it was believed, it could
+not be: with the network held back a second and a half the old row stayed
+green (both pictures are one poster address, loaded once with the page),
+and a face made to move by an injected style never reached the paint. The
+job's full log then said what had failed.
+
+THE FIX, IN THE INSTRUMENT: the line is 10 (an empty or broken circle reads
+0); both pictures must have loaded and decoded before they are read (the
+card brought into view first, its picture being lazy), and whether they did
+is part of the row; the detail leads with the numbers. Calibrated on
+section 4 alone: as built green (card 34, You 36); the bar's still picture
+hidden, red (You 0); its picture never coming, red (painted False, the
+card's initial instead); the old line with the bar's face 4px smaller, red
+in main's own words (the same paint True, inked False); the new line there,
+green (You 24). The whole suite 35/35. Nothing of the site or Skribl
+changed.
