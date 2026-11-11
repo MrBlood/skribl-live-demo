@@ -33595,3 +33595,32 @@ verify_postgres NOT RUN: no PostgreSQL in this container (its CI job runs
 it). verify_contrast not run: no sheet or token of Skribl's changed (the
 site's own words are verify_social's section 6 and verify_socialauth's 15).
 The full battery was not run; main's run after the merge is.
+
+## After v330 -- The owner's first sign-in on the live site, and what tripped it
+
+Nov 10, evening (Mountain Time). After #844 the owner set the three settings on
+Render and joined the site at /social as its first person and admin, with a
+passkey on their iPhone, then posted a drawing from the Pad that the Gallery
+showed under their name. One Skribl, shared, working on the live demo.
+
+What tripped it, each a lesson for the words and the instructions:
+- SETTINGS NEED A DEPLOY. Saved in Render's Environment, they did nothing until
+  a Manual Deploy; read off the live pages (the Pad's SKRIBL_CSRF_TOKEN empty,
+  no CSRF cookie) before and after.
+- A VALUE THAT IS NOT EXACTLY 1. SKRIBL_CSRF_PROTECT stayed off after the first
+  deploy (the app reads `== "1"`); right after a second, the Pad's token came.
+- "PASSKEY" FOR TWO THINGS. The owner called the invite code Render held "my
+  passkey" and went to Sign in, where the phone had nothing to offer ("No
+  passkey was picked"). The words to put to the owner: the sign-in page's
+  answer to a picked-nothing says "Haven't joined yet? Open your invite link",
+  and every instruction calls the setting an invite code.
+- CHROME ON AN IPHONE. A passkey Chrome keeps in the Google account is not on
+  offer where the phone looks in iCloud Keychain unless Chrome is turned on
+  under AutoFill & Passwords; Safari was the plain way through.
+- THE JOIN LINK. Typed by hand, the address landed on Home (the path lost to
+  autocomplete); written out in Notes and tapped, it opened "Welcome to
+  Skribl".
+
+START-HERE's "The live demo" now names the two new settings. The database is
+Render's paid Postgres Basic, so the free-tier expiry warning given to the
+owner that afternoon does not apply.
