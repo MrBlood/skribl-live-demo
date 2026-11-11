@@ -605,6 +605,11 @@ WITHOUT the demo identity: its environment holds `DATABASE_URL`,
 `MAX_CONTENT_LENGTH`, `SECRET_KEY`, `SKRIBL_TRUSTED_PROXIES` and
 `WEB_CONCURRENCY` and no `SKRIBL_DEMO_*` (read with the owner on Render, Nov 3,
 names only), so `/demo-login` is not there and there is no sign-in key to rotate.
+Since Nov 10 it also holds `SKRIBL_CSRF_PROTECT` (1: the site at /social signs
+people in, and the Pad posts as them only with it on; read off the live Pad's
+token after the owner's deploy) and `SKRIBL_SOCIAL_FIRST_INVITE` (spent: the
+owner joined as the site's first person and admin that evening, and may delete
+it). `SKRIBL_TRUSTED_PROXIES` is 1 (the owner's screenshot, Nov 10).
 
 **The deployed code can lag this tree** — Render deploys from `main`, so
 anything merged is live after its build finishes and anything unmerged is not.

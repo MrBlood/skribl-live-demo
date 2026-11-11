@@ -182,6 +182,11 @@ Kind came first, on its own, and it applies everywhere: to the words on the scre
 to how mistakes are handled (nothing is lost, and the person is never blamed), to
 beginners, and to how we work together. The other three came after the 12px and
 drafts mocks. Check every mock against all four, and say in it how it does.
+And what two of them mean, in the owner's words (Nov 10, the evening the
+first person joined the site): "Make it make sense. Simple and kind means
+intuitive and fun." Simple is "would a person get it without being told?";
+kind is "does it feel good to use?". "Don't lose track of our roots and
+evolution of kindness and our 4 pillars. Keep our vision."
 
 **Where things stand** is in the newest `DECISIONS.md` entries, not here: this
 section holds what does not go stale.

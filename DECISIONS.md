@@ -33596,6 +33596,58 @@ it). verify_contrast not run: no sheet or token of Skribl's changed (the
 site's own words are verify_social's section 6 and verify_socialauth's 15).
 The full battery was not run; main's run after the merge is.
 
+## After v330 -- The owner's first sign-in on the live site, and what tripped it
+
+Nov 10, evening (Mountain Time). After #844 the owner set the three settings on
+Render and joined the site at /social as its first person and admin, with a
+passkey on their iPhone, then posted a drawing from the Pad that the Gallery
+showed under their name. One Skribl, shared, working on the live demo.
+
+What tripped it, each a lesson for the words and the instructions:
+- SETTINGS NEED A DEPLOY. Saved in Render's Environment, they did nothing until
+  a Manual Deploy; read off the live pages (the Pad's SKRIBL_CSRF_TOKEN empty,
+  no CSRF cookie) before and after.
+- A VALUE THAT IS NOT EXACTLY 1. SKRIBL_CSRF_PROTECT stayed off after the first
+  deploy (the app reads `== "1"`); right after a second, the Pad's token came.
+- "PASSKEY" FOR TWO THINGS. The owner called the invite code Render held "my
+  passkey" and went to Sign in, where the phone had nothing to offer ("No
+  passkey was picked"). The words to put to the owner: the sign-in page's
+  answer to a picked-nothing says "Haven't joined yet? Open your invite link",
+  and every instruction calls the setting an invite code.
+- CHROME ON AN IPHONE. A passkey Chrome keeps in the Google account is not on
+  offer where the phone looks in iCloud Keychain unless Chrome is turned on
+  under AutoFill & Passwords; Safari was the plain way through.
+- THE JOIN LINK. Typed by hand, the address landed on Home (the path lost to
+  autocomplete); written out in Notes and tapped, it opened "Welcome to
+  Skribl".
+
+START-HERE's "The live demo" now names the two new settings. The database is
+Render's paid Postgres Basic, so the free-tier expiry warning given to the
+owner that afternoon does not apply.
+
+## After v330 -- Sign-in says where joining starts; the first invite code is an invite code
+
+The owner's yes to both word fixes from the first evening, and a principle
+with them: "Make it make sense. Simple and kind means intuitive and fun."
+(WORKING-AGREEMENTS, "Powerful, playful, simple, and kind", and
+docs/SOCIAL-SITE.md section 6 now carry it: simple is "would a person get it
+without being told?", kind is "does it feel good to use?".)
+
+- On the sign-in page, a passkey not picked now says "No passkey was picked.
+  Haven't joined yet? Open the invite link you were sent." (a word of its
+  own, `cancelled_signin`, in _passkey_words.html; passkey.js uses it only
+  on sign-in, so joining, adding a passkey and recovery keep "Try again when
+  you're ready.").
+- SKRIBL_SOCIAL_FIRST_INVITE is called the first person's invite code, "not
+  a passkey", in .env.example, docs/SOCIAL-SITE.md and the log line that
+  warns of a short one.
+
+verify_socialauth section 4: a fresh browser with no passkey presses Sign in
+with a passkey and is told where joining starts. Red with passkey.js's
+choice of words taken out (it said "No passkey was picked. Try again when
+you're ready.", what the owner saw), green with it. Side by side:
+verify_socialauth 60/60, verify_social 36/36, verify_docs 144/144.
+
 ## After v330 -- Profiles with drawn faces at /social (phase 1, piece 3)
 
 docs/SOCIAL-SITE.md's build order, item 3, in the profile mock the owner
@@ -33733,8 +33785,8 @@ its own, and wrote the file back), and green as built: 52 breaks.
 
 - 1, A PROFILE: the Gallery section without author=, red (everyone's
   skribls, and the own-profile row); the bio's line breaks not kept, red;
-  gallery.js asking without visibility=public, red (her link-only skribl on
-  her own profile); gallery.js paging without the author's scope, red
+  gallery.js asking without visibility=public, red (a link-only skribl on
+  its author's own profile); gallery.js paging without the author's scope, red
   (Load more brought somebody else's); a handle found only as written, red;
   the canonical link
   taken out, red; the 404 saying back whatever the address said, red;
