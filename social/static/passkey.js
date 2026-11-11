@@ -204,7 +204,12 @@
         if (firstBad) firstBad.focus();
         return;
       }
-      show(box, say(why(j)));
+      /* On the sign-in page, a passkey not picked is most often a person
+         with no passkey here yet (the owner's first evening, Nov 10): the
+         words say where joining starts, not only "try again". */
+      var key = why(j);
+      if (getting && key === 'cancelled' && words.cancelled_signin) key = 'cancelled_signin';
+      show(box, say(key));
     });
   }
 

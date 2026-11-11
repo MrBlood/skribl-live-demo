@@ -726,6 +726,17 @@ with sync_playwright() as p_:
               unverified.get("path") == "/social/signin" and lazy.who() is None and "didn’t check out" in unverified["say"],
               str(unverified))
         lazy.close()
+        # SOMEBODY WITH NO PASSKEY HERE YET (the owner's first evening, Nov
+        # 10: an invite code taken for a passkey, Sign in pressed, and the
+        # phone with nothing to offer). The words say where joining starts.
+        stranger = Person(b)
+        nothing = signin(stranger)
+        check("Sign in with no passkey here yet says where joining starts: \"Haven’t joined yet? Open the invite"
+              " link you were sent.\"",
+              nothing.get("path") == "/social/signin" and stranger.who() is None and not stranger.creds()
+              and "Haven’t joined yet? Open the invite link you were sent." in nothing["say"],
+              str(nothing))
+        stranger.close()
         p.close()
 
     # ------------------------------------------------------------------ 5
