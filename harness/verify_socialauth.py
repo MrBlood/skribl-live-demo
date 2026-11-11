@@ -16,7 +16,7 @@ keys and user verification on, as Face ID or Windows Hello would be.
       in no log and no table (its hash is).
    2. JOIN: an invite link (from the CLI); 13 or older asked for kindly and
       required by the server; the handle's rules; a passkey made; signed in,
-      You in the bar and on the rail.
+      You in the bar and on the rail (leading to their profile, piece 3).
    3. LINKS THAT DO NOT WORK: used, run out, revoked, never made: one kind
       card for all, one answer from the server.
    4. SIGN OUT, SIGN IN: nothing typed; the sign count stored and checked;
@@ -608,9 +608,11 @@ with sync_playwright() as p_:
             const r = y.getBoundingClientRect(), n = document.querySelector('nav.nav').getBoundingClientRect();
             return { who: y.querySelector('.tab-who') ? y.querySelector('.tab-who').innerText.replace(/\\s+/g, ' ').trim() : null,
                      foot: Math.round(n.bottom - r.bottom), href: y.getAttribute('href') }; }""")
-        check("on a desk the rail's foot is You: the person's name and @handle, leading to /social/you",
-              bool(rail) and rail["who"] == "Sam Young @sam_young" and rail["href"] == "/social/you" and rail["foot"] < 60,
-              str(rail))
+        # You leads to the person's own profile since piece 3 (the account
+        # page is its gear's, Settings); verify_socialprofile holds the rest.
+        check("on a desk the rail's foot is You: the person's name and @handle, leading to their profile",
+              bool(rail) and rail["who"] == "Sam Young @sam_young" and rail["href"] == "/social/@sam_young"
+              and rail["foot"] < 60, str(rail))
         desk.close()
         nonadmin = p.ctx.request.get(BASE + "/social/invites", max_redirects=0)
         check("somebody who joined by invite is not an admin: Invites is a 404 to them",

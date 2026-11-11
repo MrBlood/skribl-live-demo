@@ -34,9 +34,10 @@ what it promises, through the demo's own server:
      first visit's player running, and through Draw's door into the Pad and
      back.
   8. THE LAYERS: no module under skribl/ imports social; social/ imports
-     from skribl only documented public names (none, today); its templates
-     reach only the Skribl partials docs/INTEGRATION.md documents; and every
-     Skribl file it names is there.
+     from skribl only documented public names (create_post and delete_post
+     with their exceptions, since piece 3's faces); its templates reach only
+     the Skribl partials docs/INTEGRATION.md documents (the face player's
+     among them since piece 3); and every Skribl file it names is there.
   9. THE EMPTY GALLERY'S WORDS: the site's Home and Explore name the tick on
      the Pad's own Post sheet, and the Library (the site's Make opens
      Skribl's own editors), not a host composer's.
@@ -787,7 +788,7 @@ with sync_playwright() as p:
         # pages import or include are the ones the guide documents for a
         # host, and each macro it imports from one is named there too.
         SEAMS = {"skribl/_skribl_inline_player.html", "skribl/_skribl_gallery_section.html",
-                 "skribl/_skribl_brand_mark.html"}
+                 "skribl/_skribl_brand_mark.html", "skribl/_skribl_face.html"}
         tpl_out, files, asked = [], set(), []
         for t in sorted((ROOT / "social" / "templates").rglob("*.html")):
             body = re.sub(r"\{#.*?#\}", "", t.read_text(encoding="utf-8"), flags=re.S)
@@ -801,7 +802,7 @@ with sync_playwright() as p:
             files |= set(re.findall(r"skribl_asset\(\s*['\"]([^'\"]+)['\"]\s*\)", body))
         missing = sorted(f for f in files if not (ROOT / "skribl" / "static" / f).is_file())
         check("the site's templates reach Skribl only through the partials docs/INTEGRATION.md documents"
-              " (the player's, the Gallery section's, the signature's), with documented macros",
+              " (the player's, the Gallery section's, the signature's, the face player's), with documented macros",
               asked and not tpl_out, f"reached {sorted(set(asked))}; undocumented: {tpl_out}")
         check("every Skribl file the site names (skribl_asset) is there",
               files and not missing, f"{sorted(files)}; missing {missing}")
