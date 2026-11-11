@@ -193,6 +193,27 @@ with sync_playwright() as p:
     check("the export raised no CSP violation", not flip.evaluate("() => window.__csp"),
           "; ".join(flip.evaluate("() => window.__csp")[:2]))
 
+    print("\nA PAGE NO BLUEPRINT ANSWERS — the standalone app's own 404 (after v330)")
+    # It had Skribl's policy with an empty nonce, `'nonce-'`, which is not a
+    # source: Chrome reports it as invalid, a console error on every load (found
+    # on the demo's 404 at piece 1 of the site; DECISIONS, "Where things stand,
+    # Nov 10").
+    miss_path = "/no-such-page-" + public_id
+    miss = ctx.request.get(BASE + miss_path)
+    md = directives(miss.headers.get("content-security-policy") or "")
+    check("a page no blueprint answers keeps a policy, and its script-src names no empty nonce",
+          miss.status == 404 and md.get("script-src", [])[:1] == ["'self'"]
+          and not any(x == "'nonce-'" for x in md.get("script-src", [])),
+          f"{miss.status}: script-src {md.get('script-src')}")
+    lost = ctx.new_page()
+    said = []
+    lost.on("console", lambda m: said.append(m.text) if m.type == "error" else None)
+    lost.goto(BASE + miss_path)
+    lost.wait_for_timeout(300)
+    bad = [x for x in said if "Content Security Policy" in x or "invalid source" in x]
+    check("and opening it says nothing about the policy in the console", not bad, "; ".join(bad[:2]))
+    lost.close()
+
     print("\nSTATIC — assets are covered too")
     st = ctx.request.get(BASE + "/static/skribl/gifenc.min.js")
     check("static assets carry the security headers",

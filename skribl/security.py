@@ -586,7 +586,7 @@ def register_security(bp, skribl_version, player_target="_blank", home=None):
             nonce = getattr(g, "csp_nonce", "")
             policy = "; ".join([
                 "default-src 'self'",
-                f"script-src 'self' 'nonce-{nonce}'",
+                _script_src(nonce),
                 "style-src 'self' 'unsafe-inline'",
                 "img-src 'self' data: blob:",
                 "media-src 'self' data: blob:",
@@ -644,6 +644,16 @@ def register_security(bp, skribl_version, player_target="_blank", home=None):
         state.app.after_request_funcs.setdefault(None, []).insert(0, _reassert_csp)
 
 
+def _script_src(nonce):
+    """script-src, with the page's nonce when it has one. A page no blueprint
+    answered (the standalone app's own 404) has none, and `'nonce-'` with
+    nothing after it is not a source: Chrome reports it as invalid, a console
+    error on every load (after v330; found on the demo's 404 at piece 1 of
+    the site, fixed on the owner's yes). Without one, scripts are the site's
+    own files, as they always were there."""
+    return "script-src 'self'" + (f" 'nonce-{nonce}'" if nonce else "")
+
+
 def install_standalone_security(app):
     """Apply Skribl's baseline headers to responses no blueprint handled.
 
@@ -666,7 +676,7 @@ def install_standalone_security(app):
             nonce = getattr(g, "csp_nonce", "")
             policy = "; ".join([
                 "default-src 'self'",
-                f"script-src 'self' 'nonce-{nonce}'",
+                _script_src(nonce),
                 "style-src 'self' 'unsafe-inline'",
                 "img-src 'self' data: blob:",
                 "media-src 'self' data: blob:",
