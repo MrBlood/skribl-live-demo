@@ -41,7 +41,6 @@ from .creation import (CreatedPost, SkriblIdempotencyRace, SkriblRejected,
                        SkriblUnavailable, create_post)
 from .deletion import (SkriblNotFound, SkriblRefused, delete_post,
                        set_post_visibility)
-from .describing import describe_posts
 from .models import (NO_SESSION, SkriblBase, bind_session, create_all,
                      session, set_visibility_policy)
 from .routes import register_routes
@@ -68,10 +67,6 @@ __all__ = ["create_blueprint", "init_skribl", "SKRIBL_VERSION",
            # docs/INTEGRATION.md for wiring them up.
            "delete_post", "set_post_visibility",
            "SkriblNotFound", "SkriblRefused",
-           # Reading them for a host's own feed: each skribl's size, line and
-           # plays by public id, for the person looking (skribl/describing.py,
-           # docs/INTEGRATION.md "Putting a Skribl inside your own posts").
-           "describe_posts",
            # Speed: do every file's strip-and-compress before the first
            # visitor (gunicorn.conf.py calls it in each worker).
            "warm_assets"]

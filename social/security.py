@@ -360,7 +360,6 @@ LIMITS = {
     "invite-make": (60, 86400),    # links made, per admin
     "profile-edit": (60, 3600),    # name and bio saved, per person (piece 3)
     "face": (20, 3600),            # faces drawn and kept, per person (piece 3): each one is a skribl
-    "post": (40, 3600),            # posts made, per person (piece 4): each one is a skribl
 }
 _SWEEP_EVERY = 64
 
