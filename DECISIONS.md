@@ -34254,3 +34254,50 @@ row alone: the picker asking check() as before (the blank one refused); every
 base read as blank (the inked one placed); check() never trusting a base
 inspect() saw blank (the blank one refused); place() refusing any base (the
 blank one placed, then no face kept).
+
+## After v330 -- Your face fits the circle: the circle after the Pad, its Back, Edit this face
+
+The owner, Nov 11, after tracing a photo for their own face: "when I traced an
+image it didn't fit in the circle. there should be a way to adjust the size so
+it fits in the circle. also, maybe you should be able to edit it after it's
+done rather than have to redraw the whole thing." The mock (phone light and
+dark, desk; Now beside it) asked three things, and the answer was "all yes":
+
+1. THE CIRCLE AFTER THE PAD, EVERY TIME. Whatever the Pad's face mode hands
+   back, drawn, traced or edited, goes to Your face's circle before it is
+   kept, starting with ALL of the drawing inside the circle: Skribl's
+   lib/faceframe.js fit(payload), the square whose circle holds every point
+   (its size included) with 4% room, kept in range. Before, a face was the
+   drawing's middle square, and a traced head and shoulders lost its
+   shoulders to the circle without the person seeing it. Dragged, pinched
+   and sized as a skribl you made is, then Use this face. A drawing the
+   circle cannot take (a base with ink) is kept as it was drawn. Shown
+   only when something would be cut off, and fitted with no step at all,
+   were the other two options; both decide for the person.
+2. EDIT THIS FACE, the first door once there is a face: the face fetched as
+   its player fetches it and handed to the Pad (composehost setPayload), so
+   it opens finished and locked, Keep drawing showing the way on; then the
+   circle.
+3. BACK FROM THE CIRCLE is the Pad again, the drawing it handed back still
+   in it (composehost reloads it), and, if it was traced, the photo under it
+   again: profile.js remembers the photo being traced and sends it again
+   (composehost guide); a new drawing or the face you have opens without
+   it. The mock showed the gap (the photo was gone after Back), and said so.
+
+ONE THING FOUND BUILDING THE MOCK: the circle came up empty. The place step
+lays the drawing out by the stage's width, and laid out while the sheet was
+still closed the stage had none; it is laid out again once the sheet is
+open. Read every frame now, the drawing is in the circle from the first
+frame the sheet is seen, as it rises.
+
+THE OVERLAY, MOVED. The Pad over the page is social.js's SocialPadOverlay,
+the controller profile.js had inline, moved out for posts (piece 4, still on
+the branch) and shipped here first because the face's circle uses it.
+
+Pad and Flip: the Pad's face mode only; Flip has no faces. Skribl gains
+fit() in lib/faceframe.js (docs/INTEGRATION.md), shared with any host.
+
+THE FOUR: kind (nothing redrawn from scratch, and a face is never cut off
+unseen; Back keeps the drawing and the photo); simple (one circle, the one
+Use one you made already has); playful (drag and pinch your face into
+place); powerful (exact size and place, and edit any time).

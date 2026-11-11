@@ -516,6 +516,19 @@ a teenager's face is the riskiest thing a 13-and-over site can hold, and a
 drawing made by a machine would replay a performance nobody gave.
 docs/INTEGRATION.md, "A photo to trace".
 
+**A face fits the circle, and Edit this face** (the owner's "all yes", Nov
+11, after a traced face did not fit: "there should be a way to adjust the
+size so it fits in the circle. also, maybe you should be able to edit it
+after it's done"). Whatever the Pad hands back, drawn, traced or edited, goes
+to the circle before it is kept: it starts with ALL of the drawing inside
+(Skribl's `lib/faceframe.js` fit), and is dragged and sized as a skribl you
+made is, then Use this face. Back from the circle is the Pad again, the
+drawing still in it, and the photo under it again if it was traced. Once
+there is a face, Your face's first door is **Edit this face**: the face back
+in the Pad (Keep drawing, then add, undo or erase), then the circle. A drawing
+the circle cannot take is kept as it was drawn. The Pad over the page is
+`social.js`'s `SocialPadOverlay`, one controller for a face and, next, a post.
+
 `harness/verify_socialprofile.py` holds it all through the demo's own
 server, faces drawn through the real Pad with a pen; DECISIONS.md ("Profiles
 with drawn faces at /social") says what each check was shown red by.
