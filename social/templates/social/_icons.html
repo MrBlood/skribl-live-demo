@@ -51,6 +51,21 @@
          'M 6.4,17.4 C 7.6,16.6 9.0,14.6 8.6,13.2 C 8.3,12.2 7.2,12.6 7.5,13.8 C 7.9,15.6 10.4,17.2 12.8,14.0']) }}
 {%- endmacro %}
 
+{# Make's Draw: a blank page, faint, and your line looping across it. #}
+{% macro make_draw() -%}
+{{ _pen(['@faint M 6.2,4.0 L 17.8,4.0 C 19.0,4.0 20.0,5.0 20.0,6.2 L 20.0,17.8 C 20.0,19.0 19.0,20.0 17.8,20.0 L 6.2,20.0 C 5.0,20.0 4.0,19.0 4.0,17.8 L 4.0,6.2 C 4.0,5.0 5.0,4.0 6.2,4.0',
+         'M 6.6,16.8 C 8.6,15.2 10.2,11.6 9.4,10.3 C 8.6,9.0 7.0,10.8 7.8,12.6 C 8.6,14.4 12.0,15.4 13.8,13.0 C 15.2,11.2 14.8,8.6 13.6,8.8 C 12.4,9.0 12.8,12.2 15.0,12.6 C 16.8,12.9 18.4,11.0 19.6,8.4']) }}
+{%- endmacro %}
+
+{# Make's Flip: onion skin, as Flip shows it. A page behind (faint), the
+   front page, the ball on it now, and where it was a page ago (faint). #}
+{% macro make_flip() -%}
+{{ _pen(['@faint M 9.2,3.6 L 18.2,3.6 C 19.4,3.6 20.4,4.6 20.4,5.8 L 20.4,14.8 C 20.4,16.0 19.4,17.0 18.2,17.0',
+         'M 5.8,7.0 L 14.8,7.0 C 16.0,7.0 17.0,8.0 17.0,9.2 L 17.0,18.2 C 17.0,19.4 16.0,20.4 14.8,20.4 L 5.8,20.4 C 4.6,20.4 3.6,19.4 3.6,18.2 L 3.6,9.2 C 3.6,8.0 4.6,7.0 5.8,7.0',
+         '@faint M 12.2,9.4 C 13.2,9.4 14.0,10.2 14.0,11.2 C 14.0,12.2 13.2,13.0 12.2,13.0 C 11.2,13.0 10.4,12.2 10.4,11.2 C 10.4,10.2 11.2,9.4 12.2,9.4',
+         'M 8.0,14.4 C 9.0,14.4 9.8,15.2 9.8,16.2 C 9.8,17.2 9.0,18.0 8.0,18.0 C 7.0,18.0 6.2,17.2 6.2,16.2 C 6.2,15.2 7.0,14.4 8.0,14.4']) }}
+{%- endmacro %}
+
 {# Home, in the pen: the roof, the walls, a rounded door. Filled (the page
    you are on), the house is solid and its door cut out in the bar's ground. #}
 {% macro home(filled=false) -%}
@@ -73,10 +88,6 @@
 {# A file you saved (Open a file..., as the editors' own menu draws it). #}
 {% macro folder() -%}
 {{ _svg('<path d="M21 18.5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-13a2 2 0 0 1 2-2h4.5l2 3H19a2 2 0 0 1 2 2z"/>') }}
-{%- endmacro %}
-
-{% macro flip() -%}
-{{ _svg('<rect x="7.5" y="3.5" width="12" height="15" rx="2"/><path d="M4.5 7v11.5a2 2 0 0 0 2 2h9"/>') }}
 {%- endmacro %}
 
 {# You, and Sign in before it: a head and shoulders. Filled on You's own page. #}

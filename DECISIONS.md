@@ -34393,3 +34393,38 @@ own sheets, not the site's; the site's words and icons are read by
 verify_socialprofile (sections 11 and 14). The full battery was not run;
 main's run after the merge is. Not tested here: Safari, and the owner's own
 font on the tiles' two-line titles.
+
+## After v330 -- Make's sheet, side by side and drawn in our pen
+
+The owner, Nov 11, after Your face first: "mock make's sheet next", then
+"all yes" to the mock (Now beside B, the same rows with drawn icons; C, Draw
+and Flip side by side as equals; D, Draw leading; phone dark and light,
+desk):
+
+1. SIDE BY SIDE, AS EQUALS (C). The Pad and Flip are siblings (the owner:
+   "I don't want them to drift"), so neither door leads: two cards on one
+   line, the same size, each its icon, its name, and the one line that says
+   what it makes. D said "Pad first" and left Flip an afterthought.
+2. THE ICONS IN THE PEN (_icons.html make_draw and make_flip): your line
+   across a blank page (faint), and onion skin as Flip shows it, the ball on
+   this page and, faint, where it was a page ago. The small violet ink on
+   the tint, 7.1:1 and 6.83:1 as Your face's; each draws itself once as the
+   sheet rises, Flip's a moment after Draw's; still under Reduce Motion.
+3. Home's "Make a skribl" raises the same sheet, as before.
+
+The old flip() icon had no other user and is gone.
+
+Pad and Flip: their doors, not the editors; both treated alike.
+
+THE FOUR: kind (two clear, calm choices); simple (one line says what each
+makes); playful (icons that draw themselves, Flip's a flip book); powerful
+(either one a tap away).
+
+THE CHECK. verify_social section 3, a row: Draw and Flip on one line, the
+same size, 44px or more, each still saying what it makes; their icons the
+pen's in --accent-ink on the tint, 4.5:1 or more, something faint in each;
+drawn in from 1 to 0 on many frames from the bar's Make; at once under
+Reduce Motion; light and dark, phone and desk. Seven breaks, each red on it
+alone: stacked; Flip's stock icon; the brand purple for the ink (3.74:1);
+not drawn in; drawn in under Reduce Motion; Draw wider than Flip; the line
+under each name hidden.

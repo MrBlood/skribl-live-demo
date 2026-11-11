@@ -2181,7 +2181,7 @@ search, then a domain (it costs money, so it is asked first); then Blooby's
 card and the first hello redrawn, and the name people see changed in the
 few hundred places it is written (the code's own name can stay).
 
-## 6ak. Make's sheet in the pen's icons (owner, Nov 11: "Make's sheet gets mocked next")
+## 6ak. Make's sheet in the pen's icons (owner, Nov 11: "Make's sheet gets mocked next") — BUILT
 
 Your face's doors and the bar's Home and Explore are drawn in our pen
 (after v330, the owner's "all yes" on mock C); Make's sheet still has its two
@@ -2189,6 +2189,12 @@ doors, Draw and Flip, on the solid tiles with the old line icons, so the
 family drifts until they join it. Mock them in the same pen (faint is what is
 already there, solid is your new line) beside Now, light and dark, phone and
 desk, before building.
+
+BUILT the same day, on the owner's "all yes" to mock C: Draw and Flip side
+by side as equals (the Pad and Flip are siblings, so neither leads), their
+icons in the pen (your line across a blank page; onion skin, as Flip shows
+it), each drawing itself once as the sheet rises (DECISIONS, "Make's sheet,
+side by side and drawn in our pen").
 
 ## 7. The honest state
 

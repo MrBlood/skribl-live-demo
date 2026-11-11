@@ -7,21 +7,28 @@
     swipe down, or Esc. social.js holds the moving parts, focus included.
 
     A DIALOG THAT SAYS SO: role and aria-modal, and while it is open the page
-    behind it is inert, so a keyboard or a screen reader stays inside. #}
+    behind it is inert, so a keyboard or a screen reader stays inside.
+
+    SIDE BY SIDE, AS EQUALS (the owner's "all yes" on mock C, Nov 11): the Pad
+    and Flip are siblings, so neither door leads. Their icons are drawn in our
+    pen (_icons.html: your line across a blank page; onion skin, as Flip
+    shows it) and draw themselves once as the sheet rises. #}
 {% import 'social/_icons.html' as ic %}
 <div class="make" id="makeSheet" hidden>
   <div class="make-scrim" data-make-close></div>
   <div class="make-sheet" role="dialog" aria-modal="true" aria-labelledby="makeTitle">
     <div class="make-grip" data-make-close aria-hidden="true"></div>
     <h2 class="make-title" id="makeTitle">Make something</h2>
-    <a class="make-door" href="{{ pad_url }}">
-      <span class="make-ic">{{ ic.pen() }}</span>
-      <span class="make-words"><b>Draw</b><span>It plays back the way you drew it.</span></span>
-    </a>
-    <a class="make-door" href="{{ flip_url }}">
-      <span class="make-ic">{{ ic.flip() }}</span>
-      <span class="make-words"><b>Flip</b><span>A flip book: draw page by page, and it moves.</span></span>
-    </a>
+    <div class="make-ways">
+      <a class="make-door" href="{{ pad_url }}">
+        <span class="make-ic is-pen">{{ ic.make_draw() }}</span>
+        <span class="make-words"><b>Draw</b><span>It plays back the way you drew it.</span></span>
+      </a>
+      <a class="make-door" href="{{ flip_url }}">
+        <span class="make-ic is-pen">{{ ic.make_flip() }}</span>
+        <span class="make-words"><b>Flip</b><span>A flip book: draw page by page, and it moves.</span></span>
+      </a>
+    </div>
     <button class="btn btn-wide make-cancel" type="button" data-make-close>Cancel</button>
   </div>
 </div>
