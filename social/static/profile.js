@@ -113,80 +113,30 @@
 
   function drawYourFace() {
   var wrap = doc.getElementById('facePad');
-  if (!wrap || !window.SkriblComposeHost) return null;
-  var frame = wrap.querySelector('.facepad-frame');
-  var scrim = wrap.querySelector('.facepad-scrim');
+  if (!wrap || !window.SocialPadOverlay) return null;
   var openers = doc.querySelectorAll('[data-face-open]');
-  var behind = [doc.querySelector('body > .top'), doc.querySelector('body > .nav'), doc.getElementById('main')];
-  /* Longer than the slowest glide (the scrim's), in case its transitionend
-     never comes (a tab put in the background mid-glide, say). */
-  var SETTLE_MS = 450;
-  var from = null, timer = 0, open = false, saving = false;
-
-  function mark(on) {
-    Array.prototype.forEach.call(openers, function (b) {
-      if (b.hasAttribute('aria-expanded')) b.setAttribute('aria-expanded', on ? 'true' : 'false');
-    });
-    behind.forEach(function (el) {
-      if (!el) return;
-      if (on) el.setAttribute('inert', ''); else el.removeAttribute('inert');
-    });
-  }
-
-  function settle() {
-    if (open) return;
-    clearTimeout(timer);
-    wrap.hidden = true;
-    wrap.classList.remove('is-closing');
-    doc.body.classList.remove('facepad-open');
-  }
-
-  var pad = window.SkriblComposeHost.create({
-    frame: frame,
-    src: wrap.getAttribute('data-compose'),
-    onOpen: function () {
-      if (open) return;
-      open = true;
-      clearTimeout(timer);
-      wrap.classList.remove('is-closing');
-      wrap.hidden = false;
-      doc.body.classList.add('facepad-open');
-      /* Read a size, so the glide starts from where the sheet rests closed. */
-      void wrap.offsetHeight;
-      wrap.classList.add('is-open');
-      mark(true);
-      try { frame.focus({ preventScroll: true }); } catch (e) { /* not focusable yet */ }
-    },
-    onClose: function () {
-      if (!open) return;
-      open = false;
-      wrap.classList.add('is-closing');
-      wrap.classList.remove('is-open');
-      mark(false);
-      if (from && from.getClientRects().length && from.focus) from.focus({ preventScroll: true });
-      from = null;
-      clearTimeout(timer);
-      timer = setTimeout(settle, SETTLE_MS);
-    },
-    onReady: function () { wrap.classList.add('is-ready'); },
-    onDone: function (payload) { keep(payload); }
-  });
-
-  if (scrim) {
-    scrim.addEventListener('transitionend', function (e) { if (e.target === scrim && !open) settle(); });
-    /* A tap beside a desk's card puts the Pad away; the drawing stays in it. */
-    scrim.addEventListener('click', function () { pad.close(); });
-  }
+  var saving = false;
+  /* What the Pad hands back goes to the circle first (yourFace's place
+     step: whenDrawn); kept at once only where nothing listens. */
+  var drawn = null;
+  /* The photo being traced, so the circle's Back puts it under the drawing
+     again (it is never kept: editor_post.js leaves it out of what comes
+     back). A new drawing or the face you have opens without it. */
+  var guided = null;
+  /* The Pad over the page: social.js's SocialPadOverlay, as a post's is. */
+  var over = window.SocialPadOverlay(wrap, { openers: openers,
+    onDone: function (payload) { if (drawn) drawn(payload); else keep(payload); } });
+  if (!over) return null;
   Array.prototype.forEach.call(openers, function (b) {
     b.addEventListener('click', function (e) {
       e.preventDefault();
       if (saving) return;
       show('');
+      guided = null;
       /* Focus comes back to the button the person pressed, or, from Your
          face's door (the sheet is gone by then), to the button that raised
          the sheet. */
-      from = b.closest('#faceSheet') || b.tagName !== 'BUTTON' ? doc.querySelector('button[data-face-sheet]') : b;
-      pad.open();
+      over.open(b.closest('#faceSheet') || b.tagName !== 'BUTTON' ? doc.querySelector('button[data-face-sheet]') : b);
     });
   });
 
@@ -203,7 +153,7 @@
 
   function busy(on) {
     saving = on;
-    Array.prototype.forEach.call(doc.querySelectorAll('button[data-face-open], button[data-face-trace], button[data-face-sheet], button[data-face-use]'), function (b) {
+    Array.prototype.forEach.call(doc.querySelectorAll('button[data-face-open], button[data-face-trace], button[data-face-edit], button[data-face-sheet], button[data-face-use]'), function (b) {
       b.disabled = on; b.setAttribute('aria-busy', on ? 'true' : 'false');
     });
   }
@@ -239,11 +189,28 @@
   function trace(file) {
     if (saving || !file) return;
     show('');
-    from = doc.querySelector('button[data-face-sheet]');
-    pad.guide(file);
+    guided = file;
+    over.guide(file, doc.querySelector('button[data-face-sheet]'));
   }
 
-  return { keep: keep, busy: busy, trace: trace, isSaving: function () { return saving; } };
+  /* EDIT THIS FACE: the face you have, back in the Pad, to add to, undo or
+     erase (composehost hands it over as it hands back any drawing). */
+  function edit(payload) {
+    if (saving || !payload) return;
+    show('');
+    guided = null;
+    over.pad.setPayload(payload);
+    over.open(doc.querySelector('button[data-face-sheet]'));
+  }
+  /* THE CIRCLE'S BACK: the Pad again, the drawing it handed back still in it
+     (composehost reloads it), and a traced photo under it again. */
+  function reopen() {
+    var back = doc.querySelector('button[data-face-sheet]');
+    if (guided) over.guide(guided, back); else over.open(back);
+  }
+
+  return { keep: keep, busy: busy, trace: trace, edit: edit, reopen: reopen,
+           whenDrawn: function (fn) { drawn = fn; }, isSaving: function () { return saving; } };
   }
 
 
@@ -276,6 +243,9 @@
     var RING = 0.88;
     var cursor = null, listed = false, loading = false;
     var drawing = null, sq = null, W = 0, H = 0, startSide = 0;
+    /* Where the drawing in the circle came from: 'pad' (just drawn, traced or
+       edited) or 'pick' (one you made, or a file). */
+    var source = null;
 
     var ctl = window.SocialSheet(wrap, {
       openers: openers,
@@ -377,8 +347,45 @@
       var to = e.target.closest('[data-face-go]');
       if (!to) return;
       var name = to.getAttribute('data-face-go');
+      /* From the circle, Back goes where the drawing came from: the Pad, the
+         drawing still in it, or the picker. */
+      if (name === 'pick' && source === 'pad' && padApi) { ctl.close(true); padApi.reopen(); return; }
       if (name === 'pick') openPicker(); else go(name);
     });
+
+    /* JUST DRAWN, TRACED OR EDITED (the owner, Nov 11: "there should be a way
+       to adjust the size so it fits in the circle"): what the Pad hands back
+       comes to the circle, starting with all of its ink inside it
+       (lib/faceframe.js fit), to drag and size before Use this face. What
+       the circle cannot take yet is kept as it was drawn. */
+    if (padApi && padApi.whenDrawn) padApi.whenDrawn(function (payload) {
+      if (!F || !F.inspect) { padApi.keep(payload); return; }
+      F.inspect(payload).then(function (why) {
+        if (why) { padApi.keep(payload); return; }
+        source = 'pad';
+        place(payload, 'fit');
+        ctl.open(doc.querySelector('button[data-face-sheet]'));
+        fit();   // laid out again now the stage has its size: closed, it had none
+      });
+    });
+
+    /* EDIT THIS FACE: the face you have, fetched as its player fetches it,
+       back in the Pad, to add to, undo or erase. */
+    var editDoor = wrap.querySelector('[data-face-edit]');
+    if (editDoor && padApi && current && api) {
+      editDoor.addEventListener('click', function () {
+        if (padApi.isSaving()) return;
+        sayIn('doors', say('opening'));
+        fetch(api + '/' + encodeURIComponent(current), { credentials: 'same-origin' })
+          .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+          .then(function (body) {
+            sayIn('doors', '');
+            ctl.close(true);
+            padApi.edit((body && (body.skribl || body.payload)) || body);
+          })
+          .catch(function () { sayIn('doors', say('open_failed')); });
+      });
+    }
     /* Draw a new one: this sheet goes FIRST (the capture runs before the
        door's own handler), so the page it hands back is the page the Pad
        then makes inert; the Pad opens above, and takes focus. */
@@ -495,6 +502,7 @@
         if (mine !== asked) return;
         if (why) { sayIn(where, say(why)); return; }
         sayIn(where, '');
+        source = 'pick';
         place(p);
       });
     }
@@ -530,11 +538,11 @@
        engine. `sq` is the square of the drawing the circle shows, in the
        drawing's own pixels; it starts on the middle square (the face a
        drawing has today) and lib/faceframe.js keeps it in range. */
-    function place(p) {
+    function place(p, how) {
       drawing = p;
       W = +p.canvasSize.cssWidth;
       H = +p.canvasSize.cssHeight;
-      sq = F.start(W, H);
+      sq = (how === 'fit' && F.fit && F.fit(p)) || F.start(W, H);
       startSide = sq.side;
       go('place');
       if (artBox && window.SkriblInline) {

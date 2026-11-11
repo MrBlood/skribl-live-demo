@@ -574,9 +574,31 @@ def draw_in_pad(pg, frame, strokes, tempo=1.6, gaps=2.6):
     pg.wait_for_timeout(400)
 
 
+# Your face's circle is up, at its place step.
+PLACED = """() => { const w = document.getElementById('faceSheet'), s = w && w.querySelector('[data-step=place]');
+  return !!s && !s.hidden && w.classList.contains('is-open'); }"""
+
+
+def use_in_pad(pg, frame):
+    """End the take, open the Pad's sheet and press its button ("Use"), as a
+    person does. Returns what the sheet said."""
+    if frame.evaluate("() => typeof recording !== 'undefined' && !!recording"):
+        frame.click("#recordBtn", timeout=5000)
+        pg.wait_for_timeout(400)
+    frame.click("#postBtn", timeout=5000)
+    pg.wait_for_timeout(700)
+    sheet = frame.evaluate("""() => ({ head: (document.querySelector('#postSheet .export-head') || {}).textContent,
+        label: (document.getElementById('postSubmitLabel') || {}).textContent })""")
+    frame.click("#postSubmitBtn", timeout=5000)
+    return sheet
+
+
 def keep_in_pad(pg, frame):
-    """End the take, open the Pad's sheet and press its button ("Use this
-    face"), and land wherever the site sends. What the page sent is kept."""
+    """Use in the Pad; the circle comes up with the drawing in it (the
+    owner's all yes, after v330: "the circle after the Pad, every time"), and
+    its Use this face keeps it; land wherever the site sends. A drawing the
+    circle cannot take is kept at once, as it was drawn. What the page sent is
+    kept, and the sheet says whether the circle came."""
     sent = {}
 
     def on_req(r):
@@ -584,15 +606,17 @@ def keep_in_pad(pg, frame):
             sent["body"] = r.post_data
     pg.on("request", on_req)
     try:
-        if frame.evaluate("() => typeof recording !== 'undefined' && !!recording"):
-            frame.click("#recordBtn", timeout=5000)
-            pg.wait_for_timeout(400)
-        frame.click("#postBtn", timeout=5000)
-        pg.wait_for_timeout(700)
-        sheet = frame.evaluate("""() => ({ head: (document.querySelector('#postSheet .export-head') || {}).textContent,
-            label: (document.getElementById('postSubmitLabel') || {}).textContent })""")
-        with pg.expect_navigation(timeout=30000):
-            frame.click("#postSubmitBtn", timeout=5000)
+        sheet = use_in_pad(pg, frame)
+        try:
+            pg.wait_for_function(PLACED, timeout=15000)
+            sheet["circle"] = True
+        except Exception:
+            sheet["circle"] = False
+        if sheet["circle"]:
+            pg.wait_for_timeout(500)
+            with pg.expect_navigation(timeout=30000):
+                pg.click("#faceSheet [data-face-use]", timeout=5000)
+        pg.wait_for_load_state()
         pg.wait_for_timeout(300)
     except Exception as exc:
         sheet = {"could not": str(exc).splitlines()[0][:140]}
@@ -1995,6 +2019,202 @@ with sync_playwright() as p_:
               st == 200 and bool(kept3) and all(x is None for x in kept3_photos)
               and len((kept3.get("frames") or [{}])[0].get("strokes") or []) > 40,
               f"status {st} {str(j)[:80]}; face {face} -> {face3}; kept photos {[bool(x) for x in kept3_photos]}")
+
+    # ------------------------------------------------------------------ 13
+    if part(13, "a face fits the circle: the circle after the Pad, its Back, and Edit this face"):
+        # The owner's "all yes" after v330: "when I traced an image it didn't
+        # fit in the circle. there should be a way to adjust the size", and
+        # "maybe you should be able to edit it after it's done".
+        uma = member(b, "uma", "Uma Reyes")
+        pg = uma.pg
+        S_ = artdraw.Stroke
+        # HEAD AND SHOULDERS, as a traced portrait is drawn: the shoulders run
+        # into the canvas's bottom corners, which the drawing's middle square
+        # (the face a drawing had before) leaves outside its circle.
+        PORTRAIT = [S_(_arc(354, 290, 140, 170, 0, 360, 24), "gesture", INK, size=20),
+                    S_([(40, 700), (90, 640), (200, 585), (354, 570), (510, 585), (620, 640), (668, 700)],
+                       "contour", PURPLE, size=22),
+                    S_(_arc(300, 280, 14, 12, 0, 360, 8), "detail", INK, size=12),
+                    S_(_arc(408, 280, 14, 12, 0, 360, 8), "detail", INK, size=12)]
+        R = 707 / 2
+        corner_out = max(math.hypot(x - R, y - R) for s in PORTRAIT for (x, y) in s.pts) - R
+
+        # The circle read every frame from the Pad's Use: whether the place
+        # step is up, the drawing laid out on the stage (its width) and
+        # painted (ink in its canvas), and where the sheet is.
+        WATCH = """() => { window.__fit = []; const t0 = performance.now(), sheet = document.querySelector('#faceSheet .make-sheet');
+          let inked = false;
+          (function f() { const st = document.querySelector('#faceSheet [data-step=place]');
+            const shown = !!st && !st.hidden && document.getElementById('faceSheet').classList.contains('is-open');
+            const a = document.querySelector('#faceSheet [data-face-art]'), c = a && a.querySelector('canvas');
+            let ink = inked ? 99 : 0;
+            if (shown && !inked && c && c.width) { try { const x = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+              for (let i = 0; i < x.length; i += 64) if (x[i + 3] > 0 && Math.abs(x[i] - 246) + Math.abs(x[i + 1] - 242) + Math.abs(x[i + 2] - 234) > 90) ink++;
+              inked = ink > 20; } catch (e) { ink = -1; } }
+            window.__fit.push([Math.round(performance.now() - t0), shown ? 1 : 0, a ? (parseFloat(a.style.width) || 0) : 0, ink,
+                               sheet ? Math.round(sheet.getBoundingClientRect().top) : null]);
+            if (performance.now() - t0 < 5000) requestAnimationFrame(f); })(); }"""
+
+        def kept_face():
+            row = person_row("uma")
+            fid = row[3] if row else None
+            pay = json.loads(db("select payload_json from skribl_posts where public_id = ?", (fid,))[0][0]) if fid else {}
+            return fid, (pay.get("frames") or [{}])[0]
+
+        def inside(frame0):
+            """How far the kept face's furthest line reaches past its circle
+            (negative: inside), each point's own size included."""
+            pts = [p for p in (frame0.get("strokes") or []) if not p.get("erase")]
+            return max((math.hypot(p["x"] - R, p["y"] - R) + (p.get("size") or 0) / 2 - R for p in pts), default=None), len(pts)
+
+        # A. DRAW A NEW ONE, then Use: the circle, the whole drawing inside it.
+        pg.goto(BASE + "/social/@uma")
+        pg.wait_for_timeout(400)
+        open_face_sheet(pg, 700)
+        pg.click("#faceSheet [data-face-open]", timeout=5000)
+        fr = pad_frame(pg)
+        drawn = 0
+        frames, stage = [], {}
+        face_a, frame_a = None, {}
+        if fr is not None:
+            draw_in_pad(pg, fr, PORTRAIT, tempo=2.4, gaps=3.0)
+            drawn = fr.evaluate("() => strokes.filter(p => !p.erase).length")
+            pg.evaluate(WATCH)
+            use_in_pad(pg, fr)
+            try:
+                pg.wait_for_function(PLACED, timeout=15000)
+            except Exception:
+                pass
+            pg.wait_for_timeout(1500)
+            frames = pg.evaluate("() => window.__fit || []")
+            stage = pg.evaluate("""() => { const st = document.querySelector('#faceSheet [data-face-stage]'), a = document.querySelector('#faceSheet [data-face-art]');
+                return st && a ? { S: st.clientWidth, w: parseFloat(a.style.width) || 0 } : {}; }""")
+            if pg.evaluate(PLACED):
+                with pg.expect_navigation(timeout=30000):
+                    pg.click("#faceSheet [data-face-use]", timeout=5000)
+                pg.wait_for_timeout(400)
+                face_a, frame_a = kept_face()
+        seen = [f for f in frames if f[1]]
+        first = seen[0] if seen else None
+        ink_at = next((f[0] for f in seen if f[3] > 20), None)
+        reach_a, kept_n = inside(frame_a)
+        tops = [f[4] for f in seen]
+        check("after the Pad, Use brings Your face's circle, every time: it glides up with the drawing already laid out"
+              " in it (no frame of it empty) and painted at once, and starts with ALL of the drawing inside the circle,"
+              " where its middle square cut the shoulders off; Use this face keeps it so, every line inside its circle",
+              corner_out > 40 and bool(first) and all(f[2] > 0 for f in seen) and ink_at is not None
+              and ink_at - first[0] <= 300 and len(set(tops)) >= 5 and stage.get("w", 0) > 0
+              and bool(face_a) and reach_a is not None and reach_a <= 0.5 and kept_n == drawn,
+              f"on the middle square the shoulders reach {corner_out:.0f} past the circle; circle first seen at"
+              f" {first and first[0]} ms, laid out {[f[2] for f in seen[:3]]}, painted at {ink_at} ms, the sheet at"
+              f" {len(set(tops))} places; stage {stage}; kept {face_a}: its furthest line {reach_a} past its circle,"
+              f" {kept_n} of {drawn} points")
+
+        # B. TRACE A PHOTO, Use, then the circle's Back: the Pad again, the
+        # drawing still in it and the photo under it again; Use comes back.
+        tmp = Path(tempfile.mkdtemp())
+        Image.new("RGB", (500, 500), (210, 170, 120)).save(tmp / "IMG_7731.jpg", quality=90)
+        GUIDED = """() => ({ n: strokes.filter(p => !p.erase).length,
+            photo: !!document.getElementById('photoUploadBtn') && document.getElementById('photoUploadBtn').classList.contains('loaded'),
+            slider: (document.getElementById('photoOpacity') || {}).value })"""
+        before = after = {}
+        overlay_back = {}
+        again = False
+        face_b = None
+        pg.goto(BASE + "/social/@uma")
+        pg.wait_for_timeout(400)
+        open_face_sheet(pg, 700)
+        try:
+            with pg.expect_file_chooser(timeout=8000) as fc:
+                pg.click("#faceSheet [data-face-trace]", timeout=5000)
+            fc.value.set_files(str(tmp / "IMG_7731.jpg"))
+            fr = pad_frame(pg)
+            fr.wait_for_function("() => { const z = document.getElementById('photoUploadBtn'); return !!z && z.classList.contains('loaded'); }",
+                                 timeout=15000)
+            pg.wait_for_timeout(500)
+            draw_in_pad(pg, fr, PORTRAIT[:2], tempo=2.6, gaps=3.0)
+            before = fr.evaluate(GUIDED)
+            use_in_pad(pg, fr)
+            pg.wait_for_function(PLACED, timeout=15000)
+            pg.wait_for_timeout(600)
+            pg.click("#faceSheet [data-step=place] [data-face-go=pick]", timeout=5000)
+            pg.wait_for_function("() => { const w = document.getElementById('facePad'); return !!w && !w.hidden && w.classList.contains('is-open'); }",
+                                 timeout=10000)
+            fr = pad_frame(pg)
+            try:
+                fr.wait_for_function("""(n) => strokes.filter(p => !p.erase).length === n
+                    && document.getElementById('photoUploadBtn').classList.contains('loaded')""", arg=before.get("n", -1), timeout=10000)
+            except Exception:
+                pass
+            pg.wait_for_timeout(400)
+            after = fr.evaluate(GUIDED)
+            overlay_back = pg.evaluate(OVERLAY) or {}
+            use_in_pad(pg, fr)
+            pg.wait_for_function(PLACED, timeout=15000)
+            again = True
+            pg.wait_for_timeout(500)
+            with pg.expect_navigation(timeout=30000):
+                pg.click("#faceSheet [data-face-use]", timeout=5000)
+            pg.wait_for_timeout(400)
+            face_b, frame_b = kept_face()
+            kept_b = inside(frame_b)[1]
+            photos_b = frame_b.get("photo")
+        except Exception as exc:
+            ERRS.append(f"section 13, Back: {str(exc).splitlines()[0][:120]}")
+            kept_b, photos_b = None, "?"
+        check("from the circle, Back goes to the Pad with the drawing still in it and, traced, the photo under it again"
+              " (at the guide's 40%); Use brings the circle back, and the face kept is the lines alone, every one",
+              before.get("n", 0) > 10 and before.get("photo") and overlay_back.get("open")
+              and after.get("n") == before.get("n") and after.get("photo") and after.get("slider") == "40"
+              and again and bool(face_b) and face_b != face_a and kept_b == before.get("n") and not photos_b,
+              f"before Use {before}; after Back {after}, overlay {overlay_back.get('open')}; the circle again {again};"
+              f" kept {face_b}: {kept_b} points, photo {bool(photos_b)}")
+
+        # C. EDIT THIS FACE: the first door once there is a face; the face in
+        # the Pad, a line added, the circle, and a face with both.
+        pg.goto(BASE + "/social/@uma")
+        pg.wait_for_timeout(400)
+        open_face_sheet(pg, 700)
+        doors = pg.evaluate("""() => [...document.querySelectorAll('#faceSheet [data-step=doors] .make-door')].map(b => ({
+            title: b.querySelector('b').textContent, words: b.querySelector('.make-words > span').textContent,
+            edit: b.hasAttribute('data-face-edit'), h: Math.round(b.getBoundingClientRect().height) }))""")
+        loaded = added = 0
+        pill = None
+        face_c, frame_c = None, {}
+        _, frame_had = kept_face()
+        had = inside(frame_had)[1]
+        try:
+            pg.click("#faceSheet [data-face-edit]", timeout=5000)
+            fr = pad_frame(pg)
+            fr.wait_for_function("(n) => strokes.filter(p => !p.erase).length === n", arg=had, timeout=15000)
+            pg.wait_for_timeout(500)
+            loaded = fr.evaluate("() => strokes.filter(p => !p.erase).length")
+            pill = fr.evaluate("() => { const p = document.getElementById('addTakePill'); return !!p && !p.hidden; }")
+            fr.click("#addTakePill", timeout=5000)
+            pg.wait_for_timeout(400)
+            draw_in_pad(pg, fr, [S_([(200, 120), (354, 90), (508, 120)], "accent", PURPLE, size=16)], tempo=2.6, gaps=3.0)
+            added = fr.evaluate("() => strokes.filter(p => !p.erase).length")
+            use_in_pad(pg, fr)
+            pg.wait_for_function(PLACED, timeout=15000)
+            pg.wait_for_timeout(500)
+            with pg.expect_navigation(timeout=30000):
+                pg.click("#faceSheet [data-face-use]", timeout=5000)
+            pg.wait_for_timeout(400)
+            face_c, frame_c = kept_face()
+        except Exception as exc:
+            ERRS.append(f"section 13, Edit: {str(exc).splitlines()[0][:120]}")
+        reach_c, kept_c = inside(frame_c)
+        titles = [d["title"] for d in doors]
+        ed = doors[0] if doors else {}
+        check("Edit this face is the first of Your face's four doors once there is a face (the others as before), saying"
+              " what it does; it opens the Pad with the face in it, every line, Keep drawing showing the way on; a line"
+              " added, Use brings the circle, and the face kept has both, every line inside its circle",
+              titles == ["Edit this face", "Draw a new one", "Trace a photo", "Use one you made"] and ed.get("edit")
+              and ed.get("words") == "Add to it, undo or erase, then fit it in the circle." and ed.get("h", 0) >= 44
+              and had > 10 and loaded == had and pill and added > loaded
+              and bool(face_c) and face_c != face_b and kept_c == added and reach_c is not None and reach_c <= 0.5,
+              f"doors {titles}; edit {ed}; the face had {had} points, the Pad loaded {loaded} (Keep drawing {pill}),"
+              f" {added} with the line; kept {face_c}: {kept_c} points, its furthest {reach_c} past its circle")
 
     if part(10, "no page errors, no console errors, no CSP violations"):
         for p in list(_people.values()):
