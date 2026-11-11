@@ -529,6 +529,20 @@ in the Pad (Keep drawing, then add, undo or erase), then the circle. A drawing
 the circle cannot take is kept as it was drawn. The Pad over the page is
 `social.js`'s `SocialPadOverlay`, one controller for a face and, next, a post.
 
+**Your face first, drawn in our pen** (the owner's "all yes" on mock C, Nov
+11: "do you think those icons represent skribl ... the 4 in a column look
+kinda weak"). The face you have leads Your face, the sheet's one big door,
+and draws itself again each time the sheet rises (a still under Reduce
+Motion); before there is one, the empty circle leads, Draw your face. The
+other ways sit side by side under it as tiles. Their icons, and the bar's
+Home and Explore (Explore a star to follow), are drawn in the signature's
+pen (`_icons.html`): faint is what is already there, solid is your new line,
+in the small violet ink on the note's tint; each draws itself once as the
+sheet rises. Make's sheet joined the family the same day (the owner's "all yes" on its
+mock C): Draw and Flip side by side as equals, the Pad and Flip being siblings,
+each with its icon in the same pen (your line across a blank page; onion skin,
+as Flip shows it), its name, and the line that says what it makes.
+
 `harness/verify_socialprofile.py` holds it all through the demo's own
 server, faces drawn through the real Pad with a pen; DECISIONS.md ("Profiles
 with drawn faces at /social") says what each check was shown red by.

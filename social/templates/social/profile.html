@@ -143,30 +143,46 @@
     <div class="make-grip" data-make-close aria-hidden="true"></div>
     <div class="face-step" data-step="doors">
       <h2 class="make-title" id="faceSheetTitle">Your face</h2>
+      {#  YOUR FACE FIRST (the owner's "all yes" on mock C, after v330: "the 4
+          in a column look kinda weak"). The face you have leads, big, and
+          draws itself again each time the sheet rises (the template's own
+          markup, lib/face.js's once; a still under Reduce Motion); before
+          there is one, the empty circle leads, Draw your face. The other ways
+          sit side by side under it, their icons drawn in our pen (_icons.html);
+          what each does stays said to a screen reader. #}
       {% if who.face_id %}
-      <button class="make-door" type="button" data-face-edit>
-        <span class="make-ic">{{ ic.redraw() }}</span>
+      <button class="make-door face-lead" type="button" data-face-edit>
+        <span class="face-lead-me" data-face-lead>{{ skribl_face(who.face_id, size=84, canvas_w=who.face_w, canvas_h=who.face_h, bp=skribl_bp) }}</span>
         <span class="make-words"><b>Edit this face</b><span>Add to it, undo or erase, then fit it in the circle.</span></span>
       </button>
+      <template data-face-once>{{ skribl_face(who.face_id, play='once', size=84, speed=4, most=3, canvas_w=who.face_w, canvas_h=who.face_h, bp=skribl_bp) }}</template>
+      <div class="face-ways">
+        <button class="make-door face-way" type="button" data-face-open>
+          <span class="make-ic is-pen">{{ ic.face_new() }}</span>
+          <span class="make-words"><b>Draw a new one</b><span class="sr">It draws itself the way you drew it.</span></span>
+        </button>
+      {% else %}
+      <button class="make-door face-lead" type="button" data-face-open>
+        <span class="face-lead-me is-new">{{ ic.face_new() }}</span>
+        <span class="make-words"><b>Draw your face</b><span>It draws itself the way you drew it.</span></span>
+      </button>
+      <div class="face-ways is-two">
       {% endif %}
-      <button class="make-door" type="button" data-face-open>
-        <span class="make-ic">{{ ic.pen() }}</span>
-        <span class="make-words"><b>Draw a new one</b><span>It draws itself the way you drew it.</span></span>
-      </button>
-      {#  TRACE A PHOTO (the owner's "all yes, build A", Nov 11): your
-          phone's own photo picker, then the Pad above with the photo under
-          the canvas as a guide; only your lines are kept (Skribl's
-          editor_face.js). The picker is opened from here: the Pad's frame
-          cannot open one for this page. #}
-      <button class="make-door" type="button" data-face-trace>
-        <span class="make-ic">{{ ic.trace() }}</span>
-        <span class="make-words"><b>Trace a photo</b><span>Draw over a photo. Only your lines are kept.</span></span>
-      </button>
+        {#  TRACE A PHOTO (the owner's "all yes, build A", Nov 11): your
+            phone's own photo picker, then the Pad above with the photo under
+            the canvas as a guide; only your lines are kept (Skribl's
+            editor_face.js). The picker is opened from here: the Pad's frame
+            cannot open one for this page. #}
+        <button class="make-door face-way" type="button" data-face-trace>
+          <span class="make-ic is-pen">{{ ic.face_trace() }}</span>
+          <span class="make-words"><b>Trace a photo</b><span class="sr">Draw over a photo. Only your lines are kept.</span></span>
+        </button>
+        <button class="make-door face-way" type="button" data-face-go="pick">
+          <span class="make-ic is-pen">{{ ic.face_made() }}</span>
+          <span class="make-words"><b>Use one you made</b><span class="sr">Pick a skribl, then place it in the circle.</span></span>
+        </button>
+      </div>
       <input class="face-input" type="file" accept="image/jpeg,image/png,image/gif,image/webp" data-face-photo hidden>
-      <button class="make-door" type="button" data-face-go="pick">
-        <span class="make-ic">{{ ic.picture() }}</span>
-        <span class="make-words"><b>Use one you made</b><span>Pick a skribl, then place it in the circle.</span></span>
-      </button>
       <p class="say face-say" data-face-say role="status" hidden></p>
       <button class="btn btn-wide make-cancel" type="button" data-make-close>Cancel</button>
     </div>

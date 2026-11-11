@@ -1537,12 +1537,12 @@ with sync_playwright() as p_:
         pg.wait_for_timeout(600)
         gone = pg.evaluate(SHEETSTATE)
         check("Add your face raises Your face, Make's own sheet: it glides up from below the screen on many frames, one"
-              " way; a modal dialog, the page behind inert, focus on its first door; three doors, Draw a new one,"
-              " Trace a photo and Use one you made; Esc puts it away and focus comes back to the button",
+              " way; a modal dialog, the page behind inert, focus on its first door; before a face, Draw your face"
+              " leads, then Trace a photo and Use one you made; Esc puts it away and focus comes back to the button",
               before["hidden"] and before["button"] == "Add your face"
               and opened["open"] and opened["step"] == "doors" and opened["role"] == "dialog" and opened["modal"] == "true"
-              and all(opened["inert"]) and opened["doors"] == ["Draw a new one", "Trace a photo", "Use one you made"]
-              and (opened["focus"] or "").startswith("door:Draw a new one")
+              and all(opened["inert"]) and opened["doors"] == ["Draw your face", "Trace a photo", "Use one you made"]
+              and (opened["focus"] or "").startswith("door:Draw your face")
               and rise and rise[0] >= 860 and len(set(rise)) >= 8 and all(x <= 0 for x in rsteps)
               and max((abs(x) for x in rsteps), default=0) <= 0.3 * rtravel
               and gone["hidden"] and not any(gone["inert"]) and gone["focus"] == "BUTTON[face-sheet]",
@@ -1865,10 +1865,10 @@ with sync_playwright() as p_:
         after_txt = pg.evaluate(DOORS)
         titles = [d["title"] for d in doors["doors"]]
         tr = next((d for d in doors["doors"] if d["trace"]), {})
-        check("Your face has three doors, Trace a photo between Draw a new one and Use one you made, saying what it"
-              " does; it opens the device's own picker, for one photo of the kinds the Pad takes; a file that is"
-              " not a photo is said kindly, and the sheet stays",
-              titles == ["Draw a new one", "Trace a photo", "Use one you made"]
+        check("Your face has Trace a photo between Draw your face and Use one you made, saying what it does to a"
+              " screen reader; it opens the device's own picker, for one photo of the kinds the Pad takes; a file"
+              " that is not a photo is said kindly, and the sheet stays",
+              titles == ["Draw your face", "Trace a photo", "Use one you made"]
               and tr.get("words") == "Draw over a photo. Only your lines are kept." and tr.get("h", 0) >= 44
               and doors["accept"] == "image/jpeg,image/png,image/gif,image/webp" and chooser.get("multiple") is False
               and after_txt["open"] and "isn’t a photo the Pad can use" in after_txt["say"],
@@ -2215,6 +2215,108 @@ with sync_playwright() as p_:
               and bool(face_c) and face_c != face_b and kept_c == added and reach_c is not None and reach_c <= 0.5,
               f"doors {titles}; edit {ed}; the face had {had} points, the Pad loaded {loaded} (Keep drawing {pill}),"
               f" {added} with the line; kept {face_c}: {kept_c} points, its furthest {reach_c} past its circle")
+
+    # ------------------------------------------------------------------ 14
+    if part(14, "your face first: the face leads, the other ways side by side, their icons drawn in our pen"):
+        # The owner's "all yes" on mock C after v330: "do you think those icons
+        # represent skribl ... the 4 in a column look kinda weak".
+        wyn = member(b, "wyn", "Wyn Adler")
+        vic = member(b, "vic", "Vic Moss")
+        face_w = give_face(b, wyn)
+        DOORSET = """() => { const st = document.querySelector('#faceSheet [data-step=doors]');
+          return [...st.querySelectorAll('.make-door')].map(d => { const r = d.getBoundingClientRect();
+            const img = d.querySelector('.face-lead-me .skribl-face img'), sr = d.querySelector('.make-words .sr');
+            return { title: d.querySelector('.make-words b').textContent, lead: d.classList.contains('face-lead'),
+                     face: img ? img.getAttribute('src') : null, circle: !!d.querySelector('.face-lead-me svg.pen-ic'),
+                     said: sr ? sr.textContent.trim() : null, x: Math.round(r.left), y: Math.round(r.top),
+                     w: Math.round(r.width), h: Math.round(r.height) }; }); }"""
+        INKS = """() => { const rgba = s => { const m = (s.match(/[\\d.]+/g) || []).map(Number); return m.length >= 3 ? [m[0], m[1], m[2], m.length > 3 ? m[3] : 1] : null; };
+          const lum = c => { const v = c.slice(0, 3).map(x => { x /= 255; return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); });
+                             return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]; };
+          const ratio = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+          const probe = document.createElement('span'); probe.style.color = 'var(--accent-ink)'; document.body.appendChild(probe);
+          const accent = getComputedStyle(probe).color; probe.remove();
+          return [...document.querySelectorAll('#faceSheet [data-step=doors] .make-ic, #faceSheet [data-step=doors] .face-lead-me.is-new')].map(t => {
+            const svg = t.querySelector('svg'), door = t.closest('.make-door');
+            const tile = rgba(getComputedStyle(t).backgroundColor), row = rgba(getComputedStyle(door).backgroundColor), ink = rgba(getComputedStyle(svg).color);
+            const ground = [0, 1, 2].map(k => tile[k] * tile[3] + row[k] * (1 - tile[3]));
+            return { door: door.querySelector('b').textContent, pen: svg.classList.contains('pen-ic'), ink: getComputedStyle(svg).color, accent,
+                     k: Math.round(ratio(ink, ground) * 100) / 100, faint: [...svg.querySelectorAll('path.faint')].map(p => +p.getAttribute('opacity')) }; }); }"""
+        # The sheet raised by its button, read every frame: the dash of one of
+        # Trace a photo's own lines (1 unseen, 0 drawn) and the lead's face.
+        DRAWIN = """(ms) => new Promise(res => { const out = [], t0 = performance.now();
+          document.querySelector('button[data-face-sheet]').click();
+          (function f() { const p = document.querySelector('#faceSheet [data-face-trace] svg.pen-ic path:not(.faint)');
+            const face = document.querySelector('#faceSheet [data-face-lead] .skribl-face');
+            out.push([Math.round(performance.now() - t0), p ? parseFloat(getComputedStyle(p).strokeDashoffset) || 0 : null,
+                      face ? face.getAttribute('data-play') : null, face ? face.className : '']);
+            if (performance.now() - t0 < ms) requestAnimationFrame(f); else res(out); })(); })"""
+        seen, still_in = {}, {}
+        for who, tag in ((wyn, "face"), (vic, "none")):
+            for scheme in ("light", "dark"):
+                ctx, cpg = browser_as(b, who, "phone", scheme)
+                cpg.goto(BASE + f"/social/@{who.handle}")
+                cpg.wait_for_timeout(500)
+                # The lead's still, in the page before the sheet rises (what
+                # shows under Reduce Motion and before the face draws itself).
+                still_in[(tag, scheme)] = cpg.evaluate("""() => { const i = document.querySelector('#faceSheet [data-face-lead] .skribl-face img');
+                    return i ? i.getAttribute('src') : null; }""")
+                open_face_sheet(cpg, 900)
+                seen[(tag, scheme)] = (cpg.evaluate(DOORSET), cpg.evaluate(INKS))
+                close_ctx(ctx, cpg)
+        d_face, d_none = seen[("face", "light")][0], seen[("none", "light")][0]
+
+        def side_by_side(row):
+            return (len(row) >= 2 and max(r["y"] for r in row) - min(r["y"] for r in row) <= 1
+                    and all(a["x"] < b_["x"] for a, b_ in zip(row, row[1:])) and all(r["w"] >= 44 and r["h"] >= 44 for r in row)
+                    and all(r["said"] for r in row))
+        lead, rest = (d_face[0] if d_face else {}), d_face[1:]
+        check("with a face, Your face leads with it: Edit this face, the sheet's one big door (twice any other's"
+              " area or more), holding a still of"
+              " their own face; Draw a new one, Trace a photo and Use one you made sit side by side under it, each"
+              " 44px or more and still saying what it does to a screen reader; before a face, the empty circle leads,"
+              " Draw your face, and the other two sit side by side",
+              [d["title"] for d in d_face] == ["Edit this face", "Draw a new one", "Trace a photo", "Use one you made"]
+              and lead.get("lead") and (lead.get("face") or "").endswith(f"/s/{face_w}/poster")
+              and all((still_in[("face", sc)] or "").endswith(f"/s/{face_w}/poster") for sc in ("light", "dark"))
+              and lead.get("w", 0) * lead.get("h", 0) >= 2 * max((r["w"] * r["h"] for r in rest), default=10 ** 9)
+              and side_by_side(rest)
+              and [d["title"] for d in d_none] == ["Draw your face", "Trace a photo", "Use one you made"]
+              and d_none[0]["lead"] and d_none[0]["circle"] and side_by_side(d_none[1:]),
+              f"with a face {[(d['title'], d['w'], d['h'], d['y']) for d in d_face]}, its face {lead.get('face')}"
+              f" (its still before the sheet rises {still_in.get(('face', 'light'))});"
+              f" before one {[(d['title'], d['w'], d['h'], d['y']) for d in d_none]}")
+        inks = [(t, s_, i) for (t, s_), (_, ii) in seen.items() for i in ii]
+        low = [f"{t} {s_} {i['door']}: {i['k']}" for t, s_, i in inks if i["k"] < 4.5]
+        check("every door's icon is drawn in our pen (the signature's pen, .pen-ic) in the small violet ink"
+              " (--accent-ink) on the note's tint, 4.5:1 or more against its tile, and what is already there (the"
+              " empty circle, the photo) faint at 40%: light and dark, with a face and before one",
+              len(inks) == 12 and all(i["pen"] and i["ink"] == i["accent"] for _, _, i in inks) and not low
+              and all(i["faint"] == [0.4] for _, _, i in inks if i["door"] in ("Draw a new one", "Draw your face"))
+              and all(i["faint"] == [0.4, 0.4] for _, _, i in inks if i["door"] == "Trace a photo"),
+              f"{len(inks)} icons; not the pen or not the ink: {[(t, s_, i['door']) for t, s_, i in inks if not (i['pen'] and i['ink'] == i['accent'])]};"
+              f" under 4.5: {low}; lowest {min((i['k'] for _, _, i in inks), default=None)}")
+        ctx, cpg = browser_as(b, wyn, "phone", "light")
+        cpg.goto(BASE + "/social/@wyn")
+        cpg.wait_for_timeout(5500)
+        drawn = cpg.evaluate(DRAWIN, 1600)
+        close_ctx(ctx, cpg)
+        ctx, cpg = browser_as(b, wyn, "phone", "light", reduced=True)
+        cpg.goto(BASE + "/social/@wyn")
+        cpg.wait_for_timeout(800)
+        still = cpg.evaluate(DRAWIN, 900)
+        close_ctx(ctx, cpg)
+        offs = [f[1] for f in drawn if f[1] is not None]
+        steps = [z - a for a, z in zip(offs, offs[1:])]
+        check("each icon draws itself once as the sheet rises, read every frame: a line goes from unseen (1) to"
+              " drawn (0) on many frames, one way; the face that leads draws itself again (a fresh copy, playing);"
+              " under Reduce Motion every line is there from the first frame and the face is the still",
+              bool(offs) and offs[0] >= 0.9 and offs[-1] <= 0.001 and all(s_ <= 1e-6 for s_ in steps)
+              and len({round(o, 3) for o in offs}) >= 8 and drawn[-1][2] == "once" and "is-live" in drawn[-1][3]
+              and still and all((f[1] or 0) <= 0.001 for f in still) and still[-1][2] == "still",
+              f"offsets {[round(o, 2) for o in offs[:4]]}..{[round(o, 2) for o in offs[-2:]]} on {len({round(o, 3) for o in offs})} values;"
+              f" the face {drawn[-1][2:] if drawn else None}; reduced: offsets {sorted({round(f[1] or 0, 3) for f in still})[:3]},"
+              f" face {still[-1][2] if still else None}")
 
     if part(10, "no page errors, no console errors, no CSP violations"):
         for p in list(_people.values()):

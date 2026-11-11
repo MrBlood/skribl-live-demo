@@ -34326,3 +34326,105 @@ under three suites at once. Load, not this change: social.js only gained
 lines here (SocialPadOverlay), and nothing on the page Make's sheet is read
 on calls them. The full battery was not run; main's run after the merge is.
 Not tested here: Safari, and a pinch on a real iPhone.
+
+## After v330 -- Your face first, and icons drawn in our pen
+
+The owner, Nov 11, with a picture of Your face's four doors in dark and the
+bar's Home and Explore: "do you think those icons represent skribl (or blooby
+someday)? theyre good, but the 4 in a column look kinda weak. what do you
+think?" Cal's answer: they were stock line icons any app has, four equal
+solid tiles reading as a settings list, and the sheet about your face did
+not show it. The mock (Now beside B, the same column with drawn icons, and
+C, your face first; phone dark and light, desk) and the owner's "all yes":
+
+1. YOUR FACE FIRST (C). The face you have leads Your face, the sheet's one
+   big door, Edit this face; it draws itself again each time the sheet
+   rises (a fresh copy of the template's lib/face.js once, started from the
+   sheet's new onOpen; the still under Reduce Motion and before it plays).
+   Before there is one, the empty circle leads, Draw your face. The other
+   ways sit side by side under it as tiles, each still saying what it does
+   to a screen reader (Trace a photo's "Only your lines are kept" among
+   them; the Pad says it again once the photo is in).
+2. ICONS DRAWN IN OUR PEN (_icons.html, _pen): the signature's rounded pen,
+   one idea across the set, faint is what is already there (the empty
+   circle, the photo, at the guide's 40%) and solid is your new line: a
+   face with the pen still going, a line looping into the empty circle, a
+   photo with your line over it, two drawings you made. In the small violet
+   ink on the note's tint: 7.1:1 light, 6.83:1 dark against the tile, where
+   the brand's own purple read 3.7:1 (enough for a graphic, dim in dark).
+3. EACH DRAWS ITSELF ONCE as the sheet rises: every path one unit long
+   (pathLength), drawn in by its dash, the tiles a little after each other;
+   still under Reduce Motion.
+4. THE BAR'S HOME AND EXPLORE in the same pen, Explore a star to follow
+   (Blooby's star); the page you are on still fills its own.
+
+Make's sheet keeps its two doors as they were, its tiles unchanged (the new
+look is Your face's own, .make-ic.is-pen), until its own mock (FUTURE.md 6ak).
+The two names mocked earlier the same day are shelved, their lettering kept
+in docs/brand (FUTURE.md 6aj).
+
+Pad and Flip: neither changes; these are the site's icons, not the editors'
+tools.
+
+THE FOUR: kind (your own face front and centre); simple (one obvious first
+choice); playful (icons drawn by our pen, drawing themselves); powerful (all
+four ways a tap away).
+
+THE CHECKS. verify_socialprofile section 14, three rows: the face leads (its
+still in the page before the sheet rises, its face once it has, twice any
+other door's area) and the other ways side by side, 44px or more, each still
+said to a screen reader, and before a face the empty circle leads; every
+icon the pen's, in --accent-ink on the tint, 4.5:1 or more, the faint parts
+at 40%, light and dark; read every frame from the button, a line drawn in
+from 1 to 0 on many values, the face playing a fresh copy, and under Reduce
+Motion every line there from the first frame and the face the still.
+verify_social section 2, a row: Home and Explore are the pen's, Explore the
+star, the page you are on filled and the other drawn, phone and desk. Ten
+breaks, each red on its row: the lead without its still (first green: the
+row read the lead once the sheet was up, where the fresh copy stood in for
+the still; it reads the page before the sheet rises now, red), the ways
+stacked, Trace a photo's stock icon, the brand purple for the ink, the faint
+parts at full strength, no drawing in, drawing in under Reduce Motion, the
+face not drawn again, Explore's stock compass, the page you are on unfilled.
+
+Side by side: verify_socialprofile 54/54, verify_social 37/37,
+verify_socialauth 62/62, verify_docs 144/144. verify_contrast reads Skribl's
+own sheets, not the site's; the site's words and icons are read by
+verify_socialprofile (sections 11 and 14). The full battery was not run;
+main's run after the merge is. Not tested here: Safari, and the owner's own
+font on the tiles' two-line titles.
+
+## After v330 -- Make's sheet, side by side and drawn in our pen
+
+The owner, Nov 11, after Your face first: "mock make's sheet next", then
+"all yes" to the mock (Now beside B, the same rows with drawn icons; C, Draw
+and Flip side by side as equals; D, Draw leading; phone dark and light,
+desk):
+
+1. SIDE BY SIDE, AS EQUALS (C). The Pad and Flip are siblings (the owner:
+   "I don't want them to drift"), so neither door leads: two cards on one
+   line, the same size, each its icon, its name, and the one line that says
+   what it makes. D said "Pad first" and left Flip an afterthought.
+2. THE ICONS IN THE PEN (_icons.html make_draw and make_flip): your line
+   across a blank page (faint), and onion skin as Flip shows it, the ball on
+   this page and, faint, where it was a page ago. The small violet ink on
+   the tint, 7.1:1 and 6.83:1 as Your face's; each draws itself once as the
+   sheet rises, Flip's a moment after Draw's; still under Reduce Motion.
+3. Home's "Make a skribl" raises the same sheet, as before.
+
+The old flip() icon had no other user and is gone.
+
+Pad and Flip: their doors, not the editors; both treated alike.
+
+THE FOUR: kind (two clear, calm choices); simple (one line says what each
+makes); playful (icons that draw themselves, Flip's a flip book); powerful
+(either one a tap away).
+
+THE CHECK. verify_social section 3, a row: Draw and Flip on one line, the
+same size, 44px or more, each still saying what it makes; their icons the
+pen's in --accent-ink on the tint, 4.5:1 or more, something faint in each;
+drawn in from 1 to 0 on many frames from the bar's Make; at once under
+Reduce Motion; light and dark, phone and desk. Seven breaks, each red on it
+alone: stacked; Flip's stock icon; the brand purple for the ink (3.74:1);
+not drawn in; drawn in under Reduce Motion; Draw wider than Flip; the line
+under each name hidden.

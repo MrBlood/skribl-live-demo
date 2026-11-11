@@ -252,8 +252,25 @@
       doorCloses: false,
       ownTouch: '.face-scroll, .face-stage, .face-size',
       first: function () { return firstIn(currentStep()); },
+      onOpen: function () { drawLead(); },
       onSettled: function () { go('doors', true); }
     });
+
+    /* YOUR FACE FIRST (the owner's "all yes" on mock C): the face you have
+       leads the doors, and draws itself again each time the sheet rises, a
+       fresh copy of the template's (lib/face.js's once, the profile's own
+       player); under Reduce Motion, and when the sheet opens on another
+       step, the still stays. */
+    var leadMe = wrap.querySelector('[data-face-lead]');
+    var leadOnce = wrap.querySelector('template[data-face-once]');
+    function drawLead() {
+      if (!leadMe || !leadOnce || !window.SkriblFace) return;
+      if (currentStep() !== stepEl('doors')) return;
+      if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      leadMe.textContent = '';
+      leadMe.appendChild(leadOnce.content.cloneNode(true));
+      window.SkriblFace.mount(leadMe);
+    }
 
     function stepEl(name) { return wrap.querySelector('.face-step[data-step="' + name + '"]'); }
     function currentStep() { return steps.filter(function (s) { return !s.hidden; })[0] || steps[0]; }

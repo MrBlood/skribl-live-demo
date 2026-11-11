@@ -349,7 +349,14 @@ with sync_playwright() as p:
 
     # ------------------------------------------------------------------ 2
     if part(2, "the bar on a phone, the rail on a desk"):
-        seen, twice = {}, {}
+        seen, twice, drawn = {}, {}, {}
+        # Home and Explore drawn in our pen (the owner's "all yes" after v330):
+        # each tab's icon, whether it is the pen's (.pen-ic), and whether any of
+        # its shapes is filled (the page you are on fills its own).
+        DRAWN = """() => Object.fromEntries([['Home', '/social/'], ['Explore', '/social/explore']].map(([n, h]) => {
+          const s = document.querySelector('nav.nav a[href$="' + h + '"] svg.ic');
+          return [n, { pen: !!s && s.classList.contains('pen-ic'), star: !!s && !!s.querySelector('path[d^="M 12.0,3.4"]'),
+                       filled: !!s && !!s.querySelector('[fill="currentColor"]') }]; }))"""
         for screen, ctx in (("phone", PHONE), ("desk", DESK)):
             c = b.new_context(**ctx)
             pg = c.new_page()
@@ -363,6 +370,7 @@ with sync_playwright() as p:
                                   " const r = a.getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height)]; }")
                 seen[(screen, page)] = (items, pens, top)
                 twice[(screen, page)] = pg.evaluate(TWICE)
+                drawn[(screen, page)] = pg.evaluate(DRAWN)
             pg.goto(SITE + "/")
             pg.wait_for_timeout(500)
             cover = pg.evaluate(COVER_PHONE if screen == "phone" else COVER_DESK)
@@ -405,6 +413,13 @@ with sync_playwright() as p:
               " above the bar at the end of the page; on a desk the column's edge beside the rail",
               all(pc["cta"]) and len(pc["cta"]) == 2 and pc["inMain"] and pc["foot"] < pc["barTop"]
               and all(d["inMain"] for d in dc), f"phone {json.dumps(pc)}; desk {json.dumps(dc)}")
+        pens_ok = [f"{s} {pg_}: {v}" for (s, pg_), v in drawn.items()
+                   if not (v["Home"]["pen"] and v["Explore"]["pen"] and v["Explore"]["star"]
+                           and v["Home"]["filled"] == (pg_ == "home") and v["Explore"]["filled"] == (pg_ == "explore"))]
+        check("Home and Explore are drawn in our pen, Explore a star to follow; the page you are on fills its own"
+              " icon and the other stays drawn (phone and desk, Home and Explore)",
+              len(drawn) == 4 and not pens_ok,
+              f"wrong: {pens_ok}; read {json.dumps({f'{k[0]} {k[1]}': v for k, v in drawn.items()})[:300]}")
         dup = {f"{s} {pg_}": v for (s, pg_), v in twice.items() if v}
         check("no id is on a page of the site twice (the two wordmarks' gradients have one each), phone and desk",
               len(twice) == 4 and not dup, f"repeated: {dup}")
@@ -571,6 +586,72 @@ with sync_playwright() as p:
               f"opening, its tops {seen_up[:4]}; closing, its tops while seen {tops_down[:4]}; rests at {still['top']};"
               f" opacities in the fades {fades}")
         c.close()
+
+        # SIDE BY SIDE, AS EQUALS, DRAWN IN OUR PEN (the owner's "all yes" on
+        # mock C after v330): Draw and Flip the same size on one line, each
+        # still saying what it makes; their icons the pen's, in the small
+        # violet ink on the tint; drawn in once as the sheet rises, read every
+        # frame from the bar's Make; still under Reduce Motion.
+        MAKE_PEN = """(ms) => new Promise(res => { const out = [], t0 = performance.now();
+          document.querySelector('.nav .tab-make').click();
+          (function f() { const p = document.querySelector('#makeSheet a[href*="flip"] svg.pen-ic path:not(.faint)');
+            out.push(p ? parseFloat(getComputedStyle(p).strokeDashoffset) || 0 : null);
+            if (performance.now() - t0 < ms) requestAnimationFrame(f); else res(out); })(); })"""
+        MAKE_LOOK = """() => { const rgba = s => { const m = (s.match(/[\\d.]+/g) || []).map(Number); return m.length >= 3 ? [m[0], m[1], m[2], m.length > 3 ? m[3] : 1] : null; };
+          const lum = c => { const v = c.slice(0, 3).map(x => { x /= 255; return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); });
+                             return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]; };
+          const ratio = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+          const probe = document.createElement('span'); probe.style.color = 'var(--accent-ink)'; document.body.appendChild(probe);
+          const accent = getComputedStyle(probe).color; probe.remove();
+          return [...document.querySelectorAll('#makeSheet .make-door')].map(d => { const r = d.getBoundingClientRect();
+            const t = d.querySelector('.make-ic'), svg = t && t.querySelector('svg'), said = d.querySelector('.make-words > span');
+            const tile = rgba(getComputedStyle(t).backgroundColor), row = rgba(getComputedStyle(d).backgroundColor), ink = rgba(getComputedStyle(svg).color);
+            const ground = [0, 1, 2].map(k => tile[k] * tile[3] + row[k] * (1 - tile[3]));
+            return { name: d.querySelector('b').textContent, x: Math.round(r.left), y: Math.round(r.top), w: Math.round(r.width), h: Math.round(r.height),
+                     pen: svg.classList.contains('pen-ic'), ink: getComputedStyle(svg).color, accent, k: Math.round(ratio(ink, ground) * 100) / 100,
+                     faint: svg.querySelectorAll('path.faint').length, said: said && said.getClientRects().length ? said.textContent.trim() : '' }; }); }"""
+        look, offs = {}, []
+        for scheme in ("light", "dark"):
+            for screen, opts in (("phone", PHONE), ("desk", DESK)):
+                c2 = b.new_context(color_scheme=scheme, **opts)
+                p2 = c2.new_page()
+                p2.on("pageerror", lambda e: errs.append(f"make, side by side: {e}"))
+                fresh(p2, "/")
+                if (scheme, screen) == ("light", "phone"):
+                    offs = [o for o in p2.evaluate(MAKE_PEN, 1400) if o is not None]
+                else:
+                    press(p2, ".nav .tab-make")
+                    p2.wait_for_timeout(900)
+                look[(scheme, screen)] = p2.evaluate(MAKE_LOOK)
+                c2.close()
+        c3 = b.new_context(reduced_motion="reduce", **PHONE)
+        p3 = c3.new_page()
+        fresh(p3, "/")
+        stilled = [o for o in p3.evaluate(MAKE_PEN, 900) if o is not None]
+        c3.close()
+        bad = []
+        for (scheme, screen), ds in look.items():
+            dr, fl = (ds + [{}, {}])[:2]
+            if [d.get("name") for d in ds] != ["Draw", "Flip"]:
+                bad.append(f"{scheme} {screen}: doors {[d.get('name') for d in ds]}")
+                continue
+            if not (abs(dr["y"] - fl["y"]) <= 1 and dr["x"] < fl["x"] and abs(dr["w"] - fl["w"]) <= 1 and abs(dr["h"] - fl["h"]) <= 1
+                    and min(dr["w"], dr["h"]) >= 44):
+                bad.append(f"{scheme} {screen}: not side by side as equals {[(d['x'], d['y'], d['w'], d['h']) for d in ds]}")
+            for d in ds:
+                if not (d["pen"] and d["ink"] == d["accent"] and d["k"] >= 4.5 and d["faint"] >= 1 and d["said"]):
+                    bad.append(f"{scheme} {screen} {d['name']}: pen {d['pen']}, ink {d['ink']} (accent {d['accent']}), {d['k']}:1,"
+                               f" faint {d['faint']}, says {d['said']!r}")
+        steps = [z - a for a, z in zip(offs, offs[1:])]
+        check("Make's two doors sit side by side as equals (one line, the same size), each still saying what it makes;"
+              " their icons drawn in our pen in the small violet ink on the tint, 4.5:1 or more, what is already there"
+              " faint; each draws itself once as the sheet rises (read every frame), and is there at once under"
+              " Reduce Motion: light and dark, phone and desk",
+              len(look) == 4 and not bad and bool(offs) and offs[0] >= 0.9 and offs[-1] <= 0.001
+              and all(s_ <= 1e-6 for s_ in steps) and len({round(o, 3) for o in offs}) >= 8
+              and bool(stilled) and all(o <= 0.001 for o in stilled),
+              f"wrong: {bad[:4]}; drawn in {[round(o, 2) for o in offs[:3]]}..{[round(o, 2) for o in offs[-2:]]} on"
+              f" {len({round(o, 3) for o in offs})} values; under Reduce Motion {sorted({round(o, 3) for o in stilled})[:3]}")
 
     # ------------------------------------------------------------------ 4
     if part(4, "the first visit: Blooby draws his card, the newest skribls under it"):
