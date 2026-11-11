@@ -15,6 +15,12 @@
  *
  *   start(w, h)               the square a face starts on: the drawing's middle
  *                             square, the one a face shows today.
+ *   fit(payload)              the square whose circle holds ALL of the drawing's
+ *                             ink, each point's own size included, with a little
+ *                             room (its middle square when it has none): where a
+ *                             face from the Pad's face mode starts in the circle
+ *                             (after v330, the owner: "there should be a way to
+ *                             adjust the size so it fits in the circle")
  *   range(w, h)               the sides a person may choose: from a quarter of
  *                             the short side (four times in) to the drawing's
  *                             diagonal (the whole drawing inside the circle,
@@ -82,6 +88,24 @@
   function start(w, h) {
     var s = Math.min(w, h);
     return { x: (w - s) / 2, y: (h - s) / 2, side: s };
+  }
+
+  /* A little room around the ink inside the circle, as a share of it. */
+  var ROOM = 1.04;
+
+  function fit(payload) {
+    var s = sizeOf(payload), f = frameOf(payload);
+    if (!s || !f) return null;
+    var x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    (Array.isArray(f.strokes) ? f.strokes : []).forEach(function (p) {
+      if (!p || p.erase || !num(p.x) || !num(p.y)) return;
+      var r = num(p.size) && p.size > 0 ? p.size / 2 : 0;
+      x0 = Math.min(x0, p.x - r); y0 = Math.min(y0, p.y - r);
+      x1 = Math.max(x1, p.x + r); y1 = Math.max(y1, p.y + r);
+    });
+    if (!(x1 > x0) || !(y1 > y0)) return start(s.w, s.h);
+    var side = Math.sqrt((x1 - x0) * (x1 - x0) + (y1 - y0) * (y1 - y0)) * ROOM;
+    return clamp({ x: (x0 + x1) / 2 - side / 2, y: (y0 + y1) / 2 - side / 2, side: side }, s.w, s.h);
   }
 
   function range(w, h) {
@@ -228,5 +252,5 @@
     });
   }
 
-  global.SkriblFaceFrame = { start: start, range: range, clamp: clamp, check: check, inspect: inspect, place: place, card: card };
+  global.SkriblFaceFrame = { start: start, fit: fit, range: range, clamp: clamp, check: check, inspect: inspect, place: place, card: card };
 })(typeof window !== 'undefined' ? window : this);

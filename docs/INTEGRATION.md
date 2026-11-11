@@ -1115,6 +1115,11 @@ needs nothing new, and the drawing it came from is never touched.
 
 - `start(w, h)`: the square a face starts on, the drawing's middle square,
   which is what a face shows today. `{x, y, side}` in the drawing's pixels.
+- `fit(payload)`: the square whose circle holds ALL of the drawing's ink,
+  each point's own size included, with a little room (its middle square when
+  nothing is drawn), kept in range. The site starts a face just drawn in the
+  Pad's face mode here, so a traced head and shoulders is never cut off by
+  the circle before the person has seen it.
 - `range(w, h)`: the sides a person may choose, from a quarter of the short
   side (four times in) to the drawing's diagonal (the whole drawing inside
   the circle, its background colour around it).

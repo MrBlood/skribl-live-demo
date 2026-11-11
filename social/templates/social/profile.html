@@ -143,6 +143,12 @@
     <div class="make-grip" data-make-close aria-hidden="true"></div>
     <div class="face-step" data-step="doors">
       <h2 class="make-title" id="faceSheetTitle">Your face</h2>
+      {% if who.face_id %}
+      <button class="make-door" type="button" data-face-edit>
+        <span class="make-ic">{{ ic.redraw() }}</span>
+        <span class="make-words"><b>Edit this face</b><span>Add to it, undo or erase, then fit it in the circle.</span></span>
+      </button>
+      {% endif %}
       <button class="make-door" type="button" data-face-open>
         <span class="make-ic">{{ ic.pen() }}</span>
         <span class="make-words"><b>Draw a new one</b><span>It draws itself the way you drew it.</span></span>
