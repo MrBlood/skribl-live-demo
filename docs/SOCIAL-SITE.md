@@ -243,7 +243,10 @@ is built and again when it is shown:
   biggest thing on the screen). A piece that does nothing for it says so,
   and why it is still needed.
 - **The four pillars, kind first:** one line each for kind, powerful,
-  playful and simple. Kind is checked on the hard paths, not only the happy
+  playful and simple. The owner, the same evening: "Make it make sense.
+  Simple and kind means intuitive and fun." So simple is checked as "would a
+  person get it without being told?", and kind as "does it feel good to
+  use?", not only "is it short?" and "is it polite?". Kind is checked on the hard paths, not only the happy
   one: what a person sees when something does not work (the words never
   blame and always say what to do next), when they are new, and when they
   want to leave (nothing they made is lost by mistake, and going is easy).
@@ -368,8 +371,10 @@ email yet), 13 and over, invite-only.
 | `/social/invites` | **Invites**, admins only (a 404 like any missing page to anyone else): a join link (once, 14 days), a recovery link for a named person (`/invites/recover`: once, an hour, adds a passkey to their account), the unused ones, revoke (`/invites/<invite_id>/revoke`). |
 | `/social/recover#<code>` | **A recovery link**: names whose account it is for (`/recover/check`), makes a passkey there and signs in (`/recover/options`, `/recover/verify`). The stand-in for an emailed link until there is email. |
 
-**The first person.** `SKRIBL_SOCIAL_FIRST_INVITE` is a code that works as a
-join link only while the site has nobody, and makes that person an admin;
+**The first person.** `SKRIBL_SOCIAL_FIRST_INVITE` is an invite code (not a
+passkey: the passkey is made by the phone or computer the person joins on)
+that works as a join link only while the site has nobody, and makes that
+person an admin;
 from a shell, `flask --app app social invite --base https://...` prints a join
 link and `flask --app app social recover HANDLE --base ...` a recovery link
 (the way back for an admin who lost every passkey). `.env.example` says how.

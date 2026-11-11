@@ -81,8 +81,8 @@ class Site:
         self.first_invite = None
         first = (os.environ.get("SKRIBL_SOCIAL_FIRST_INVITE") or "").strip()
         if first and len(first) < 16:
-            app.logger.warning("SKRIBL_SOCIAL_FIRST_INVITE is shorter than 16 characters, so it "
-                               "lets nobody in. Use a long random one: python3 -c \"import "
+            app.logger.warning("SKRIBL_SOCIAL_FIRST_INVITE (the first person's invite code, "
+                               "not a passkey) is shorter than 16 characters, so it lets nobody in. Use a long random one: python3 -c \"import "
                                "secrets; print(secrets.token_urlsafe(24))\"")
         elif first:
             self.first_invite = first
