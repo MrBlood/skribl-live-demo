@@ -33,9 +33,9 @@ from datetime import datetime, timezone
 import sqlalchemy as sa
 from sqlalchemy.orm import DeclarativeBase
 
-__all__ = ["SocialBase", "Person", "Passkey", "Invite", "Challenge", "RateEvent",
-           "PERSON_PREFIX", "BIO_MAX", "BIO_LINES", "new_person_id", "new_public_id", "as_utc",
-           "utcnow", "attach_to_metadata"]
+__all__ = ["SocialBase", "Person", "Passkey", "Invite", "Challenge", "RateEvent", "Post",
+           "PERSON_PREFIX", "BIO_MAX", "BIO_LINES", "WORDS_MAX", "new_person_id", "new_public_id",
+           "as_utc", "utcnow", "attach_to_metadata"]
 
 #: What every person's public id starts with. A demo identity never does.
 PERSON_PREFIX = "site:"
@@ -43,6 +43,9 @@ PERSON_PREFIX = "site:"
 #: A bio's most characters, and its most lines (accounts.check_bio).
 BIO_MAX = 160
 BIO_LINES = 4
+
+#: A post's words, at most (posts.check_words): the owner's "all yes" (Nov 11).
+WORDS_MAX = 500
 
 #: A 64-bit integer key that SQLite will still number by itself: SQLite only
 #: fills in an INTEGER PRIMARY KEY, so there it is INTEGER (64 bits wide on
@@ -211,6 +214,31 @@ class RateEvent(SocialBase):
     __table_args__ = (
         sa.Index("ix_social_rate_bucket_key_time", "bucket", "key_hash", "created_at"),
         sa.Index("ix_social_rate_created_at", "created_at"),
+    )
+
+
+class Post(SocialBase):
+    """A post (piece 4): a person's words and a skribl. The skribl is Skribl's,
+    posted through create_post in the same request as this row, which keeps
+    only its public id; the words are the site's. Deleting a post deletes
+    both, in one transaction (Skribl's delete_post); so does deleting the
+    account. The feed reads newest first, and a person's own newest first
+    ("More from"), each by an index of its own."""
+    __tablename__ = "social_posts"
+
+    id = sa.Column(BigId, primary_key=True)
+    public_id = sa.Column(sa.String(24), nullable=False)
+    person_id = sa.Column(BigId, sa.ForeignKey("social_people.id", ondelete="CASCADE"), nullable=False)
+    #: Plain text as typed, tidied (posts.check_words); may be empty.
+    words = sa.Column(sa.String(WORDS_MAX), nullable=False, default="", server_default="")
+    skribl_id = sa.Column(sa.String(32), nullable=False)
+    created_at = sa.Column(sa.DateTime(timezone=True), nullable=False, default=utcnow)
+
+    __table_args__ = (
+        sa.Index("ix_social_posts_public_id", "public_id", unique=True),
+        sa.Index("ix_social_posts_created", "created_at", "public_id"),
+        sa.Index("ix_social_posts_person_created", "person_id", "created_at"),
+        sa.Index("ix_social_posts_skribl_id", "skribl_id"),
     )
 
 

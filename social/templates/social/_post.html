@@ -1,0 +1,142 @@
+{#  A POST, AS THE FEED AND ITS OWN PAGE SHOW IT (piece 4; the approved mocks,
+    and the owner's "all yes" to piece 4's choices, Nov 11).
+
+    post_card(c)      one post in the feed: its author's face and name,
+                      @handle and when (posts.js says it in the person's own
+                      time), its ⋯, its words, the drawing in Skribl's in-post
+                      player (still until tapped, as every feed's), and its
+                      plays with Share.
+    post_sheets()     the ⋯ sheet ("This post": Copy link, Share…, and Report
+                      this post, or on your own Delete post), the report
+                      sheet (the Gallery's own reasons and words, into
+                      Skribl's report queue) and the delete sheet (it asks
+                      once). One of each a page; posts.js fills them for the
+                      post whose ⋯ was pressed, and social.js moves them.
+    post_words()      what posts.js says ([data-word]): this page's words.
+
+    `c` is posts.cards()'s: the post, its author, its drawing as Skribl
+    describes it (None when it cannot be had: the player then says the
+    drawing is not here anymore), its plays said, its address, its author's
+    page, and whether it is yours. Import these WITH CONTEXT: they read the
+    page's skribl_bp, when_iso and when_day. #}
+{% from 'skribl/_skribl_inline_player.html' import skribl_inline %}
+{% from 'skribl/_skribl_face.html' import skribl_face %}
+{% import 'social/_icons.html' as ic %}
+
+{% macro face(who, cls='') -%}
+<span class="face-ring{{ ' ' ~ cls if cls }}{% if not who.face_id %} is-blank{% endif %}">{% if who.face_id %}{{ skribl_face(who.face_id, canvas_w=who.face_w, canvas_h=who.face_h, bp=skribl_bp) }}{% else %}<span class="face-blank" aria-hidden="true"></span>{% endif %}</span>
+{%- endmacro %}
+
+{% macro player(c) -%}
+{%- set p = c.post %}{% set sk = c.sk -%}
+{%- if sk and sk.canvas_w %}{{ skribl_inline(p.skribl_id, canvas_w=sk.canvas_w, canvas_h=sk.canvas_h, line_info=sk.line, bp=skribl_bp) }}
+{%- else %}{{ skribl_inline(p.skribl_id, bp=skribl_bp) }}{% endif %}
+{%- endmacro %}
+
+{% macro post_card(c) -%}
+{%- set p = c.post %}{% set who = c.who -%}
+<article class="post-card" data-post="{{ p.public_id }}" data-url="{{ c.url }}" data-skribl="{{ p.skribl_id }}"
+         data-handle="{{ who.handle }}"{% if c.mine %} data-mine{% endif %} aria-labelledby="pn-{{ p.public_id }}">
+  <header class="post-head">
+    <a class="post-face" href="{{ c.profile }}" tabindex="-1" aria-hidden="true">{{ face(who) }}</a>
+    <div class="post-who">
+      <a class="post-name" id="pn-{{ p.public_id }}" href="{{ c.profile }}">{{ who.display_name }}</a>
+      <span class="post-sub">@{{ who.handle }} · <a class="post-when" href="{{ c.url }}"><time datetime="{{ when_iso(p.created_at) }}" data-when="ago">{{ when_day(p.created_at) }}</time></a></span>
+    </div>
+    <button class="icon-btn post-more" type="button" data-post-menu aria-haspopup="dialog" aria-controls="postSheet"
+            aria-expanded="false" aria-label="More for this post">{{ ic.dots() }}</button>
+  </header>
+  {% if p.words %}<p class="post-words">{{ p.words }}</p>{% endif %}
+  <div class="post-art">{{ player(c) }}</div>
+  <footer class="post-foot">
+    {% if c.sk %}<a class="post-plays" href="{{ c.url }}">{{ ic.play() }}<span>{{ c.plays or 'No plays yet' }}</span></a>{% else %}<span></span>{% endif %}
+    <button class="icon-btn post-share" type="button" data-post-share aria-label="Share this post">{{ ic.share() }}</button>
+  </footer>
+</article>
+{%- endmacro %}
+
+{% macro post_sheets() -%}
+{#  THE ⋯ SHEET, Make's own (social.js), as the mock drew it. #}
+<div class="make post-sheet" id="postSheet" hidden>
+  <div class="make-scrim" data-make-close></div>
+  <div class="make-sheet" role="dialog" aria-modal="true" aria-labelledby="postSheetTitle">
+    <div class="make-grip" data-make-close aria-hidden="true"></div>
+    <h2 class="make-title" id="postSheetTitle">This post</h2>
+    <div class="post-acts">
+      <button class="post-act" type="button" data-act="copy">{{ ic.link() }}<span>Copy link</span></button>
+      <button class="post-act" type="button" data-act="share">{{ ic.share() }}<span>Share…</span></button>
+      <button class="post-act is-danger" type="button" data-act="report" data-theirs>{{ ic.flag() }}<span>Report this post</span></button>
+      <button class="post-act is-danger" type="button" data-act="delete" data-mine-only>{{ ic.trash() }}<span>Delete post</span></button>
+    </div>
+    <p class="say post-say" data-post-say role="status" hidden></p>
+    <button class="btn btn-wide make-cancel" type="button" data-make-close>Cancel</button>
+  </div>
+</div>
+
+{#  REPORT THIS POST: the Gallery's own report sheet's words and reasons
+    (skribl_report, which init_skribl puts in every page), sent to Skribl's
+    report route with Skribl's own token (skribl_csrf); a report is a row in
+    the operator's queue, and the sheet promises nothing more. #}
+<div class="make post-sheet" id="reportSheet" hidden
+     data-report="{{ url_for(skribl_bp ~ '.report_skribl', public_id='__ID__') }}" data-skribl-csrf="{{ skribl_csrf() }}">
+  <div class="make-scrim" data-make-close></div>
+  <form class="make-sheet" role="dialog" aria-modal="true" aria-labelledby="reportTitle" data-report-form>
+    <div class="make-grip" data-make-close aria-hidden="true"></div>
+    <h2 class="make-title" id="reportTitle">Report this post</h2>
+    <p class="post-lede">Tell us what is wrong with it. Reports go to the people who run this site; nothing is taken down automatically.</p>
+    <fieldset class="post-reasons">
+      <legend class="sr">Reason</legend>
+      {% for r in skribl_report.reasons %}
+      <label class="post-reason"><input type="radio" name="reason" value="{{ r }}"{% if loop.first %} checked{% endif %}><span>{{ {'spam': 'Spam or misleading', 'abuse': 'Abusive or hateful', 'copyright': 'Copies someone else’s work', 'other': 'Something else'}[r] }}</span></label>
+      {% endfor %}
+    </fieldset>
+    <label class="post-note-label" for="reportNote">Anything else? <span>optional</span></label>
+    <textarea class="post-note" id="reportNote" name="note" rows="2" maxlength="{{ skribl_report.note_max }}"></textarea>
+    <p class="say post-say" data-report-say role="status" hidden></p>
+    <div class="post-sheet-acts">
+      <button class="btn btn-big" type="button" data-make-close>Cancel</button>
+      <button class="btn btn-primary btn-big" type="submit" data-report-send>Send report</button>
+    </div>
+  </form>
+</div>
+
+{#  DELETE POST, asked once: what goes, and that it is for good. #}
+<div class="make post-sheet" id="deleteSheet" hidden data-delete="{{ url_for('social.post_delete', public_id='__ID__') }}">
+  <div class="make-scrim" data-make-close></div>
+  <div class="make-sheet" role="dialog" aria-modal="true" aria-labelledby="deleteTitle">
+    <div class="make-grip" data-make-close aria-hidden="true"></div>
+    <h2 class="make-title" id="deleteTitle">Delete this post?</h2>
+    <p class="post-lede">Its words and its drawing go for good. This can’t be undone.</p>
+    <p class="say post-say" data-delete-say role="status" hidden></p>
+    <div class="post-sheet-acts">
+      <button class="btn btn-big" type="button" data-make-close>Keep it</button>
+      <button class="btn btn-danger btn-big" type="button" data-delete-now>Delete post</button>
+    </div>
+  </div>
+</div>
+{%- endmacro %}
+
+{% macro post_words() -%}
+<div class="words" hidden>
+  <span data-word="posting">Posting…</span>
+  <span data-word="no_drawing">Draw something first, then Post.</span>
+  <span data-word="words_long">That’s a little long: 500 characters at most.</span>
+  <span data-word="words_chars">That has a character we can’t show. Try another?</span>
+  <span data-word="limited">Lots of posts in a short while. Wait a little, then try again.</span>
+  <span data-word="stale">This page went stale. Reload it, then post again.</span>
+  <span data-word="signed_out">You’ve been signed out. Sign in again to post.</span>
+  <span data-word="too_big">That drawing is too big to post. Try it without a photo or music?</span>
+  <span data-word="network">That didn’t reach us. Check your connection and try again.</span>
+  <span data-word="failed">That didn’t go through. Try again?</span>
+  <span data-word="left">{n} left</span>
+  <span data-word="copied">Link copied.</span>
+  <span data-word="copy_by_hand">Here’s the link to copy: {url}</span>
+  <span data-word="sending">Sending…</span>
+  <span data-word="reported">Thanks. The people who run this site will look at it.</span>
+  <span data-word="report_limited">Too many reports from here right now. Try again later.</span>
+  <span data-word="done">Done</span>
+  <span data-word="deleting">Deleting…</span>
+  <span data-word="now">now</span>
+  <span data-word="at">{day} at {time}</span>
+</div>
+{%- endmacro %}

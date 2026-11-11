@@ -527,6 +527,41 @@ check("None stays None rather than becoming a string",
       skribl.models.normalise_user_id(None) is None,
       'the string "None" would be an owner somebody could authenticate as')
 
+print("\n11 — WHAT A HOST'S FEED READS: describe_posts")
+# A host that keeps its own posts (the Skribl site's, piece 4) shows each
+# skribl with skribl_inline() and needs its size, line and plays without
+# importing Skribl's models. describe_posts() hands over the listing's own
+# item, for the person looking, by the rule every read follows.
+check("describe_posts is exported, in __all__, and its docstring names viewer_id",
+      hasattr(skribl, "describe_posts") and "describe_posts" in skribl.__all__
+      and "viewer_id" in (skribl.describe_posts.__doc__ or ""))
+with host.app_context():
+    _pub = skribl.create_post(payload(title="d-public", visibility="public"), author_id=70)
+    _unl = skribl.create_post(payload(title="d-unlisted"), author_id=70)
+    _pri = skribl.create_post(payload(title="d-private", visibility="private"), author_id=70)
+    db.session.commit()
+    _ids = [_pub.public_id, _unl.public_id, _pri.public_id, "no-such-id", _pub.public_id, 7, None]
+    _anyone = skribl.describe_posts(_ids)
+    _author = skribl.describe_posts(_ids, viewer_id=70)
+    _other = skribl.describe_posts(_ids, viewer_id=71)
+    check("describe_posts shows anyone the public and the unlisted, its author the private too, and"
+          " nobody an id that is not there (repeats and non-strings left out)",
+          set(_anyone) == {_pub.public_id, _unl.public_id} and set(_other) == set(_anyone)
+          and set(_author) == {_pub.public_id, _unl.public_id, _pri.public_id},
+          f"anyone {sorted(_anyone)}; author {sorted(_author)}; another {sorted(_other)}")
+    _row = db.session.query(skribl.models.SkriblPost).filter_by(public_id=_pub.public_id).one()
+    _item = _anyone.get(_pub.public_id) or {}
+    check("...each item is the listing's own (feed_dict), with no payload in it",
+          _item == _row.feed_dict() and "payload" not in _item and "payload_json" not in _item
+          and {"canvas_w", "canvas_h", "line", "views", "title", "caption"} <= set(_item),
+          f"keys {sorted(_item)}")
+    _many = skribl.describe_posts([_pub.public_id] * 3 + [f"x{i}" for i in range(500)])
+    check("...and an empty or oversized ask reads nothing past its first 200 ids",
+          skribl.describe_posts([]) == {} and skribl.describe_posts(None) == {}
+          and set(_many) == {_pub.public_id}
+          and skribl.describe_posts([f"x{i}" for i in range(200)] + [_pub.public_id]) == {},
+          f"many {sorted(_many)}")
+
 bad = [(n, d) for ok, n, d in results if not ok]
 print("\n" + "=" * 62)
 print(f"{len(results) - len(bad)}/{len(results)} passed"
