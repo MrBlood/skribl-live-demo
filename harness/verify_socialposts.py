@@ -674,32 +674,37 @@ with sync_playwright() as p:
               and thanks == "Thanks. The people who run this site will look at it."
               and reported == [("abuse", "Testing the queue")],
               f"sheet {rsheet}; said {thanks!r}; queue {reported}")
-        pg.goto(BASE + f"/social/p/{pid}")
-        pg.wait_for_timeout(700)
-        pg.click(".top [data-post-menu]")
-        pg.wait_for_timeout(600)
-        pg.click("#postSheet [data-act=delete]")
-        pg.wait_for_timeout(700)
-        ask = pg.evaluate("() => ({ open: document.getElementById('deleteSheet').classList.contains('is-open'),"
-                          " title: document.getElementById('deleteTitle').textContent })")
-        pg.click("#deleteSheet .post-sheet-acts [data-make-close]")
-        pg.wait_for_timeout(600)
-        kept = post_row(pid) is not None and skribl_row(skid) is not None
-        pg.click(".top [data-post-menu]")
-        pg.wait_for_timeout(600)
-        pg.click("#postSheet [data-act=delete]")
-        pg.wait_for_timeout(700)
+        # A post deleted at the first tap leaves no sheet to read or close: the
+        # steps after it say so in `ask` rather than stop the suite before
+        # its row can say red (the calibration's "Delete without asking").
+        ask, kept = {"open": False, "title": None}, False
         try:
+            pg.goto(BASE + f"/social/p/{pid}")
+            pg.wait_for_timeout(700)
+            pg.click(".top [data-post-menu]")
+            pg.wait_for_timeout(600)
+            pg.click("#postSheet [data-act=delete]")
+            pg.wait_for_timeout(700)
+            ask = pg.evaluate("""() => { const s = document.getElementById('deleteSheet'), t = document.getElementById('deleteTitle');
+              return { open: !!s && s.classList.contains('is-open'), title: t ? t.textContent : null,
+                       at: location.pathname + location.search }; }""")
+            pg.click("#deleteSheet .post-sheet-acts [data-make-close]", timeout=5000)
+            pg.wait_for_timeout(600)
+            kept = post_row(pid) is not None and skribl_row(skid) is not None
+            pg.click(".top [data-post-menu]", timeout=5000)
+            pg.wait_for_timeout(600)
+            pg.click("#postSheet [data-act=delete]", timeout=5000)
+            pg.wait_for_timeout(700)
             with pg.expect_navigation(timeout=20000):
-                pg.click("[data-delete-now]")
+                pg.click("[data-delete-now]", timeout=5000)
         except Exception as exc:
-            ERRS.append(f"delete did not go: {str(exc).splitlines()[0][:100]}")
+            ask["stopped"] = str(exc).splitlines()[0][:100]
         pg.wait_for_timeout(600)
         home = pg.evaluate("() => ({ url: location.pathname + location.search, note: (document.querySelector('.note') || {}).textContent })")
         st404, _ = mira.client().get(f"/social/p/{pid}")
         check("Delete post asks once (Keep it keeps it); then the words and the drawing both go, Home says so,"
               " and the post's address is a kind not-found",
-              ask["open"] and ask["title"] == "Delete this post?" and kept
+              ask["open"] and ask["title"] == "Delete this post?" and "stopped" not in ask and kept
               and post_row(pid) is None and skribl_row(skid) is None
               and home["url"] == "/social/?note=deleted" and home["note"] == "Your post is gone, its drawing with it."
               and st404 == 404,
