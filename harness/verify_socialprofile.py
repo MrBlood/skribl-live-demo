@@ -665,7 +665,7 @@ DECODED = """(sels) => Promise.all(sels.map(s => { const i = document.querySelec
 # THE SITE'S OWN WORDS AND CONTROLS, read from the paint (verify_socialauth's
 # reader, with the face player counted among Skribl's parts, which keep their
 # own: a face has no words).
-READ = """() => {
+READ = """(sel) => {
   const rgba = s => { const m = (s.match(/[\\d.]+/g) || []).map(Number); return m.length >= 3 ? [m[0], m[1], m[2], m.length > 3 ? m[3] : 1] : null; };
   const lum = c => { const v = c.slice(0, 3).map(x => { x /= 255; return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); });
                      return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]; };
@@ -678,7 +678,7 @@ READ = """() => {
     return g; };
   const SKRIBLS = '.skribl-inline, #skriblGallery, .skribl-face';
   const out = { read: 0, low: [], small: [], fields: [], lowest: 99 };
-  const roots = [...document.querySelectorAll('main, header.top, nav.nav')];
+  const roots = [...document.querySelectorAll(sel || 'main, header.top, nav.nav')];
   roots.forEach(root => root.querySelectorAll('*').forEach(e => {
     if (!e.getClientRects().length || e.closest('[hidden], .words, .sr, ' + SKRIBLS)) return;
     const own = [...e.childNodes].some(n => n.nodeType === 3 && n.textContent.trim());
@@ -695,6 +695,7 @@ READ = """() => {
   }));
   document.querySelectorAll('a[href], button, summary, label.check, input:not([type=hidden]):not([type=checkbox]), textarea').forEach(e => {
     if (!e.getClientRects().length || e.closest('[hidden], .words, #makeSheet, #facePad, ' + SKRIBLS)) return;
+    if (sel && !e.closest(sel)) return;
     if (e.matches('input') && e.closest('.at')) { const a = e.closest('.at').getBoundingClientRect();
       if (a.height < 44) out.small.push('field ' + (e.id || e.name) + ' ' + Math.round(a.height)); }
     else { const r = e.getBoundingClientRect();
@@ -1622,19 +1623,27 @@ with sync_playwright() as p_:
                                        "fit": "cover", "opacity": 1, "blur": 0, "offset": {"x": 0.5, "y": 0.5}, "zoom": 1}
         (tmp / "photo.skribl").write_text(json.dumps(photo), encoding="utf-8")
         said = {}
-        for name in ("flip", "photo"):
+
+        def open_file(name):
+            if pg.evaluate(SHEETSTATE)["step"] == "place":
+                pg.click("#faceSheet [data-step=place] [data-face-go=pick]", timeout=5000)
+                pg.wait_for_timeout(500)
             with pg.expect_file_chooser(timeout=8000) as fc:
                 pg.click("#faceSheet [data-face-file]", timeout=5000)
             fc.value.set_files(str(tmp / f"{name}.skribl"))
-            pg.wait_for_timeout(600)
-            said[name] = pg.evaluate(SHEETSTATE)
-        with pg.expect_file_chooser(timeout=8000) as fc:
-            pg.click("#faceSheet [data-face-file]", timeout=5000)
-        fc.value.set_files(str(tmp / "skull.skribl"))
-        pg.wait_for_timeout(700)
-        placed_skull = pg.evaluate(SHEETSTATE)
-        with pg.expect_navigation(timeout=30000):
-            pg.click("#faceSheet [data-face-use]", timeout=5000)
+            pg.wait_for_timeout(700)
+            return pg.evaluate(SHEETSTATE)
+        for name in ("flip", "photo"):
+            try:
+                said[name] = open_file(name)
+            except Exception as exc:
+                said[name] = {"step": f"could not: {str(exc).splitlines()[0][:80]}", "say": []}
+        try:
+            placed_skull = open_file("skull")
+            with pg.expect_navigation(timeout=30000):
+                pg.click("#faceSheet [data-face-use]", timeout=5000)
+        except Exception as exc:
+            placed_skull = {"step": f"could not: {str(exc).splitlines()[0][:80]}"}
         pg.wait_for_timeout(400)
         row2 = person_row("nell")
         face2 = row2[3] if row2 else None
@@ -1649,6 +1658,42 @@ with sync_playwright() as p_:
               and post_row(face) is None and picture(face2) in RASTER,
               f"listed again {again}; button {label}; flip {said['flip']['step']} {said['flip']['say']};"
               f" photo {said['photo']['step']} {said['photo']['say']}; skull {placed_skull['step']}; faces {face} -> {face2}")
+
+        # THE SHEET'S OWN WORDS AND TARGETS, every step, as a profile's are
+        # (section 8): phone and desk, light and dark.
+        seen = {}
+        for screen in ("phone", "desk"):
+            for scheme in ("light", "dark"):
+                ctx, cpg = browser_as(b, nell, screen, scheme, reduced=True)
+                cpg.goto(BASE + "/social/@nell")
+                cpg.wait_for_timeout(400)
+                open_face_sheet(cpg, 700)
+                seen[(screen, scheme, "doors")] = cpg.evaluate(READ, "#faceSheet")
+                cpg.click("#faceSheet [data-face-go=pick]")
+                try:
+                    cpg.wait_for_function("() => document.querySelectorAll('#faceSheet .face-tile').length > 0", timeout=15000)
+                except Exception:
+                    pass
+                cpg.wait_for_timeout(700)
+                seen[(screen, scheme, "pick")] = cpg.evaluate(READ, "#faceSheet")
+                cpg.click("#faceSheet .face-tile >> nth=0")
+                try:
+                    cpg.wait_for_function("() => !document.querySelector('#faceSheet [data-step=place]').hidden", timeout=15000)
+                except Exception:
+                    pass
+                cpg.wait_for_timeout(700)
+                seen[(screen, scheme, "place")] = cpg.evaluate(READ, "#faceSheet")
+                close_ctx(ctx, cpg)
+        low = [f"{' '.join(k)}: {x}" for k, v in seen.items() for x in v["low"]]
+        small = [f"{' '.join(k)}: {x}" for k, v in seen.items() for x in v["small"]]
+        fields = [f"{' '.join(k)}: {x}" for k, v in seen.items() for x in v["fields"]]
+        reads = sum(v["read"] for v in seen.values())
+        lowest = min(((v["lowest"], " ".join(k)) for k, v in seen.items()), default=(0, "nothing"))
+        check("Your face's every word, at every step, reads at 4.5:1 or more on what is painted behind it, every"
+              " button, tile and the slider is 44px or more each way, and it has no text field to magnify a phone:"
+              " phone and desk, light and dark",
+              reads >= 60 and not low and not small and not fields,
+              f"{reads} read, the lowest {lowest}; under 4.5: {low[:4]}; small: {small[:4]}; fields: {fields[:3]}")
 
     if part(10, "no page errors, no console errors, no CSP violations"):
         for p in list(_people.values()):
