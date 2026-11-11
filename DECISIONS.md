@@ -33595,3 +33595,245 @@ verify_postgres NOT RUN: no PostgreSQL in this container (its CI job runs
 it). verify_contrast not run: no sheet or token of Skribl's changed (the
 site's own words are verify_social's section 6 and verify_socialauth's 15).
 The full battery was not run; main's run after the merge is.
+
+## After v330 -- Profiles with drawn faces at /social (phase 1, piece 3)
+
+docs/SOCIAL-SITE.md's build order, item 3, in the profile mock the owner
+said "all yes" to (A) and "Faces that draw themselves: everyone's picture is
+a skribl they draw of themselves; it draws itself once, in about four seconds
+(at 4×), when someone opens their profile, and sits still everywhere else".
+Built without what does not exist yet: no follower, following or play counts
+(follows are phase 2, and a count is kept, never made up), no comments, and no
+pinned skribl (next, below). Finished from a helper's unreviewed work, saved
+as one commit after a container restart; what was kept and what changed is at
+the end.
+
+- A PROFILE at /social/@<handle>, any case of the handle: the face, big, in a
+  circle on a ring of the card's paper, drawing itself once; the name,
+  @handle and a few lines about them (plain text, 160 characters, 4 lines,
+  nothing invisible or turned around, no links); Share; and their public
+  skribls as Skribl's own Gallery section, newest first, New and Hot and
+  search within them. Your own adds Edit profile, Draw your face (Redraw my
+  face once there is one) and the gear to Settings. Nobody by that name,
+  never made or deleted, is one kind 404 that says the handle back only when
+  it could be one. A person sees on their own profile what their visitors see.
+- YOU IS YOUR PROFILE. The bar's You and the rail's foot lead there and wear
+  the face, still. Somebody else's profile marks no place in the bar. The
+  account page of piece 2 is the gear's now, titled Settings; nothing else on
+  it changed.
+- DRAW YOUR FACE IN THE REAL PAD, over the profile, through lib/composehost.js
+  (the frame's address set on the first press): the whole screen on a phone,
+  gliding up and back down; a card on a desk, rising as it fades in; fading
+  where it sits under Reduce Motion; the page behind inert, focus given back.
+  "Use this face" sends the drawing to /social/you/face, which posts it
+  through Skribl's create_post, UNLISTED, titled as their face, in the same
+  transaction as the row that names it; a redraw deletes the old one through
+  delete_post, and so does deleting the account. Its own limit per person
+  (20 an hour), and a larger body for that one page (16 MB, a whole drawing
+  and its share card; the site's 64 KiB stays everywhere else).
+- NO STOCK SILHOUETTE. Before a face is drawn: on your own profile an empty
+  circle that says "Draw your face" and opens the Pad; to anybody else an
+  empty circle; in the bar's You a dashed empty circle. ON A GALLERY CARD THE
+  INITIAL STAYS (the brief left others' views to me): a card is Skribl's, and
+  its rule for any author without a picture is their initial on the tinted
+  disc, skribls.net's own; an empty circle beside a name in a grid of drawings
+  reads as a picture that failed to load. If the owner would rather see the
+  empty circle there too, it is a small change to the card.
+- THE CIRCLE'S GROUND IS THE PAD'S PAPER, as the mock has it in both themes,
+  so in the dark a face draws itself from paper, not from black.
+
+WHAT SKRIBL GAINED, FOR EVERY HOST (docs/INTEGRATION.md, "A face that draws
+itself"; the site reaches none of it any other way, and verify_social section
+8 holds that):
+
+- THE FACE PLAYER: skribl_face() and skribl_face_assets() in
+  skribl/_skribl_face.html, face.css, lib/face.js. Still: the face skribl's
+  own poster, framed so the drawing's middle square fills the circle, by
+  lib/sharecard.js drawingRect()'s sums, 3 card pixels in from the plate's
+  hairline: one cached image, no script, no fetch, no play counted. Once: the
+  in-post player's engine (SkriblInline.attach, ambient: it stops nothing and
+  nothing stops it), at 4×, or quicker where that would take over five seconds
+  ("about four", with room for a face drawn in twenty), from the empty
+  circle, resting finished; under Reduce Motion finished from the first
+  paint, nothing fetched; with no script at all, the still picture after a
+  moment. A small piece of its own, not the in-post player with its controls
+  hidden: the player's draft macro gives it the engine's parts and none of
+  its chrome (skribl_inline_draft(chrome=false): no veil, no time chip), and
+  the in-post player's assets and byte budget are untouched.
+- THE PAD'S FACE MODE, compose=1&face=1: square from the first paint (the
+  early fit, and lib/chromefit.js padShape reading SKRIBL_SHAPE); a face's
+  words ("Draw your face" on the empty canvas; "Use this face", "Use" where
+  the header is narrow, its title "Keep it as your face", and a press with
+  nothing drawn saying "Draw your face first" through editor_compose.js's own
+  status line; the sheet titled "Your face"; the × "back to your profile");
+  a sheet that asks nothing a face does not use (no title, no Viewers start
+  at, no gallery tick); no switch to Flip. It posts nothing, as compose mode
+  never does.
+- skribl_gallery_section(author=...), and the listing's visibility=public,
+  which narrows an author's own listing to what anybody is shown and takes no
+  other value (400).
+- The author resolver's `face` ({"id", "w", "h"}), shown still in a Gallery
+  card's circle, and its `url`, which the card already linked: the site's
+  people's names link to their profiles, on Skribl's own Gallery too.
+
+WHAT IT DOES TO PAD AND FLIP. The Pad: nothing unless a host asks for face=1.
+Flip: nothing. Rendered from the tree before and after, /flip, its compose
+and gallery forms, /skribl-pad, its compose and gallery forms and its letter
+sheet are the same pages, but for blank lines where the new template branches
+stand and the build id. Flip has no face mode, on purpose: a face is a
+drawing that draws itself once, the Pad's.
+
+DATA. Four nullable columns on social_people (bio, face_id, face_w, face_h),
+migration fa82723cacc4 on the site's own chain, with its downgrade; no new
+index (a profile is found by handle_key and an author by public_id, both
+indexed since piece 2).
+
+FOR THE OWNER, screens beyond the mock and words that want a yes: Edit
+profile (a page; "About you", "Shown beside your drawings."); the face mode's
+words in the Pad (above), "Use" alone in a phone's header among them; the
+notes ("That's your face now. It draws itself like this for everyone who
+visits."; "Saved. This is your profile as everyone sees it."); Settings as
+the account page's name; the empty circles (dashed in the bar); the initial
+kept on cards; Share (the device's share sheet, or the link copied). NEXT: a
+pinned skribl (a place on the person, and a seam for the Gallery section to
+show one card first); counts, once they are kept; the profile's empty
+Gallery in its own words; a face drawn on the dark canvas starts from the
+paper circle and fades to its own dark ground. Not tested here: Safari, an
+iPhone's Face ID passkeys, Segoe UI.
+
+FROM THE HELPER'S WORK, KEPT: the face player's shape (its own macro, sheet
+and script around the player's engine), chrome=false, the face mode, the
+author filter and visibility=public, the resolver's url and face, the
+profile, Edit profile, the kind 404, the data and its migration, the face
+deleted with the account. CHANGED: the Pad's overlay sat inside #main, which
+it makes inert while it is up, so the Pad took no pen at all (found drawing
+the first face; base.html has an `overlays` block outside #main now); Edit
+profile answered 500 (its form's `name` collided with the page helper's own
+argument); somebody else's profile marked Explore as the page you are on;
+the face's circle was the page's ground, black in the dark, not the mock's
+paper; a face that draws itself showed nothing without its script; the cap
+was six seconds; face.css's frame defaults were a different inset from the
+macro's; the face mode's × said "your face stays as it was", odd for a first
+face; and a press of Use with nothing drawn said "Draw something first, then
+Add".
+
+THE FOUR: kind (an empty circle that invites, never a silhouette; every
+refusal said under its field, what was typed kept; a face that cannot be had
+leaves its picture); playful (the face draws itself, in its artist's own
+hand); simple (one button to draw your face, one to keep it); powerful (the
+real Pad, every tool in it, for a picture).
+
+THE CHECKS: harness/verify_socialprofile.py, ten sections, 34 rows, through
+the demo's own app on a server of its own (CSRF on, a first-invite code, one
+trusted proxy), driven at localhost with Chromium's virtual authenticator,
+faces drawn through the real Pad with pen input (harness/tools/artdraw.py) in
+the profile's own overlay. Every row was shown red by breaking one part at a
+time (a driver changed one string, ran only that section on a fresh server of
+its own, and wrote the file back), and green as built: 52 breaks.
+
+- 1, A PROFILE: the Gallery section without author=, red (everyone's
+  skribls, and the own-profile row); the bio's line breaks not kept, red;
+  gallery.js asking without visibility=public, red (her link-only skribl on
+  her own profile); gallery.js paging without the author's scope, red
+  (Load more brought somebody else's); a handle found only as written, red;
+  the canonical link
+  taken out, red; the 404 saying back whatever the address said, red;
+  somebody else's profile marked Explore (the helper's), red; You leading to
+  the account page, red; Settings titled with the name, red; the desk's gear
+  on everybody's profile, red.
+- 2, DRAW YOUR FACE: the overlay with no transition, red (it jumped); the
+  overlay inside #main again, red (no pen reached the Pad: nothing kept);
+  face=1 ignored, red (a tall canvas and a post's words); lib/chromefit.js
+  padShape not reading the shape asked for, red; the early fit not told, red
+  (the first paint tall); editor_compose.js not reading the face's words for
+  an empty press, red; the overlay left open on the Pad's ×, red; focus not
+  given back, red; the face posted public, red; posted but not kept on the
+  row, red; You never wearing the face, red; Reduce Motion's transform: none
+  taken off the overlay, red.
+- 3, IT DRAWS ITSELF ONCE: the still face not held unseen, red (the finished
+  face in the circle while its drawing was on its way); play never pressed,
+  red (finished at once); its speed ignored (1×), red; left looping, red;
+  Reduce Motion not asked, red (it drew).
+- 4, ELSEWHERE, STILL: the bar's You drawing itself, red (a player and a
+  fetch); the card not reading face, red (its initial); the macro's frame 2
+  card pixels in, red; gallery.js's, red; a stock silhouette in the bar, red;
+  somebody else's empty circle saying Draw your face, red.
+- 5, REDRAW: the old face not deleted, red.
+- 6, EDIT PROFILE: a bio's blank lines kept, red; a good save without its
+  note, red; a bio's invisible characters allowed, red; a bio of 200 allowed,
+  red; the form without its token and Origin, red; /you/face without them,
+  red; a list taken for a drawing, red (a 500); the edit's limit and the
+  face's not counted, each red.
+- 7, CARD NAMES: the resolver without url, red; visibility=public not
+  narrowing, red; visibility taking any value, red.
+- 8, THE NEW SCREENS: the handle's ink #a3aab7, red; the round icon buttons
+  36px, red; the bio's field 15px, red.
+- 9, DELETE: the face kept, red.
+- 10, NO ERRORS: an inline script on the profile, red (the site's policy
+  blocked it, and the row heard).
+
+verify_social section 8 holds the face player's partial as a documented seam
+(its partial's name taken out of INTEGRATION.md: red), and verify_socialauth
+section 2 holds You leading to the profile (the account page again: red).
+
+TWO GREENS THAT COULD NOT HAVE BEEN RED, found by that calibration and fixed
+in the instrument, not the site:
+
+- With the overlay left open on the Pad's ×, the row stayed green: it read
+  only where things ended up, and the overlay still ended hidden, after a
+  timer, without gliding. The row reads the close on every frame now, the
+  sheet's top from where it rests to the screen's foot, with the × pressed as
+  a person presses it (pressed by script from the parent page, the Pad's ×
+  did nothing, which was the instrument's own doing).
+- With Reduce Motion's transform: none taken off, the row stayed green: it
+  read only the opening, where with opacity alone transitioned the sheet
+  stands at rest from the first frame either way (verify_social's lesson on
+  Make's sheet, met again). It reads the closing too.
+
+Two rows added because no row held a part: the early fit's square, read
+with the Pad's scripts held back, beside a post's Pad on the same phone,
+which starts tall (the reading's own red and green in one row); and Load
+more within one person's skribls, the cursor's page carrying the author.
+
+A RED BESIDE OTHERS, AND WHY. In the side-by-side run below, the row that
+photographs the face drawing itself went red beside two other suites (the
+first photo landed after the drawing had begun: ink 51 of 260) and green
+alone: load, and the instrument's fault, not the face's, since how soon the
+first photo lands depends on the machine. The row now holds the drawing's
+one fetch while it photographs the empty circle four times, then lets it go
+and films it coming in, so the empty circle is read whatever the machine
+(shown red again with the still face not held, and with play never
+pressed). The alone run already had it; the run after it, beside
+verify_ux and verify_layout, is quoted below.
+
+FOUND BUILDING IT, NOT BY A BREAK: the overlay inside #main (drawing the
+first face), Edit profile's 500 (taking the first pictures), and the face
+mode's "then Add" (reading compose mode's own guard while fixing the close's
+instrument).
+
+Side by side (run_parallel -j 3, 25.7 min), the suites the brief named and
+every suite that names a Skribl file this changed: verify_social 36/36,
+verify_docs 144/144, verify_surfaces 13/13, verify_socialauth 59/59,
+verify_player_isolation 85/85, verify_jsstrip 35/35, verify_seam 461/461,
+verify_standin 22/22, verify_inline 192/192, verify_example 59/59,
+verify_gallery 232/232, verify_hostseams 88/88, verify_integration 29/29,
+verify_compose 88/88, verify_migrations 77/77, verify_boot 23/23,
+verify_hostconfig 61/61, verify_txcontract 95/95, verify_clouddrafts 116/116,
+verify_csp 32/32, verify_identity 135/135, verify_canvas 48/48,
+verify_padcanvas 42/42, verify_a11ypages 162/162, verify_menu 69/69,
+verify_version 48/48, verify_layout 257/257, verify_icons 60/60, verify_theme
+120/120, verify_flipmeta 70/70, verify_audiosession 41/41, verify_cssplit
+18/18, verify_review 292/292, verify_sharecard 30/30, verify_music 37/37,
+verify_captions 76/76, verify_tips 72/72, verify_hot 56/56, verify_ux 487/487,
+verify_assetcache 20/20, verify_fullfade 70/70, verify_library 247/247,
+verify_feed 25/25, verify_hello 32/32, verify_postmoment 82/82: 45 ok.
+verify_socialprofile INTERMITTENT there, 32/33 beside others and 33/33 alone
+(load, and the instrument's: above). With the row fixed and the paging row
+added, side by side again (7.6 min): verify_socialprofile 34/34, verify_ux
+487/487, verify_layout 257/257. With this entry written: verify_docs
+144/144, gen_docs.py --check current. verify_postgres NOT RUN: no
+PostgreSQL in this container (its CI job runs it). verify_contrast not run:
+no sheet, colour or token of Skribl's changed (the face mode's words sit on
+the Post sheet in its own styles; the site's words are
+verify_socialprofile's section 8). The full battery was not run; main's run
+after the merge is.
