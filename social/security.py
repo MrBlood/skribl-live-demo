@@ -368,22 +368,41 @@ def over(bucket, subject):
     """Count one try at `bucket` by `subject`, and say whether it is past the
     limit (a refused try is not counted). Call it before the request reads
     anything through its own session: on SQLite a read held open there would
-    keep this commit waiting."""
+    keep this commit waiting.
+
+    WRITTEN FIRST, THEN COUNTED (after v330; the review of piece 2 found it).
+    It used to count and then write, so two tries at the same instant could
+    each count one under the limit and both be let through. Now each try is
+    written and committed, then counted with every try already committed: the
+    try counted last sees every try let through before it, so no more than
+    the limit are ever let through, on SQLite and on PostgreSQL alike, with no
+    lock of either's. A try past the limit takes its own row back out. Tries
+    at the very same instant at the limit's edge may both be refused, never
+    both let through."""
     cap, window = LIMITS[bucket]
     s = site()
     key = hmac.new(s.key, f"rate|{bucket}|{subject}".encode(), hashlib.sha256).hexdigest()
     t = RateEvent.__table__
     now = utcnow()
+    # ONE STATEMENT A TRANSACTION. A transaction that reads and then writes
+    # asks SQLite to raise its lock mid-way, and two such at once can each wait
+    # on the other: SQLite then fails one at once ("database is locked"), with
+    # its try written and never taken back. Written, counted and taken back
+    # each on its own, nothing waits on anything it holds.
     with s.engine().begin() as conn:
+        mine = conn.execute(t.insert().values(bucket=bucket, key_hash=key, created_at=now)).inserted_primary_key[0]
+    with s.engine().connect() as conn:
         n = conn.execute(sa.select(sa.func.count()).select_from(t)
                          .where(t.c.bucket == bucket, t.c.key_hash == key,
                                 t.c.created_at >= now - timedelta(seconds=window))).scalar()
-        if n >= cap:
-            return True
-        conn.execute(t.insert().values(bucket=bucket, key_hash=key, created_at=now))
-        # Rows past the longest window are swept now and then, a bounded
-        # batch at a time, so the table does not grow for ever.
-        if secrets.randbelow(_SWEEP_EVERY) == 0:
+    if n > cap:
+        with s.engine().begin() as conn:
+            conn.execute(t.delete().where(t.c.id == mine))
+        return True
+    # Rows past the longest window are swept now and then, a bounded batch at
+    # a time, so the table does not grow for ever.
+    if secrets.randbelow(_SWEEP_EVERY) == 0:
+        with s.engine().begin() as conn:
             old = sa.select(t.c.id).where(t.c.created_at < now - timedelta(days=2)).limit(500)
             conn.execute(t.delete().where(t.c.id.in_(old.scalar_subquery())))
     return False

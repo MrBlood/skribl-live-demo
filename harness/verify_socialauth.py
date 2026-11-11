@@ -1492,6 +1492,66 @@ with sync_playwright() as p_:
               not fields and counted >= 12, "; ".join(fields[:6]))
 
     # ------------------------------------------------------------------ 16
+    # ------------------------------------------------------------------ 17
+    if part(17, "a limit is never passed, not even by tries at the very same instant"):
+        # The site's limiter, in a process of its own on this suite's
+        # database: twelve tries at once against a limit of five, then one at
+        # a time. A pause is held where a try is first written (RateEvent's
+        # insert), which in the old order, counted and then written, was the
+        # gap two tries at once could both pass through (the review of piece
+        # 2; DECISIONS, "Where things stand, Nov 10").
+        probe = r"""
+import json, sys, threading, time
+sys.path.insert(0, %r)
+from app import app
+from social import security as sec
+from social.models import RateEvent
+import sqlalchemy as sa
+sec.LIMITS["probe"] = (5, 3600)
+t = RateEvent.__table__
+first = t.insert
+def held(*a, **k):
+    time.sleep(0.05)
+    return first(*a, **k)
+t.insert = held
+N = 12
+gate = threading.Barrier(N)
+got = []
+def one():
+    with app.app_context():
+        gate.wait()
+        try:
+            got.append(sec.over("probe", "one-address"))
+        except Exception as exc:
+            got.append("error: " + type(exc).__name__ + ": " + str(exc).splitlines()[0][:80])
+ts = [threading.Thread(target=one) for _ in range(N)]
+for x in ts: x.start()
+for x in ts: x.join()
+def rows():
+    with app.app_context():
+        with sec.site().engine().connect() as c:
+            return c.execute(sa.select(sa.func.count()).select_from(t).where(t.c.bucket == "probe")).scalar()
+burst_rows = rows()
+after = []
+with app.app_context():
+    for _ in range(8):
+        after.append(sec.over("probe", "one-address"))
+print("PROBE " + json.dumps({"burst": got, "burst_rows": burst_rows, "after": after, "rows": rows()}))
+""" % str(ROOT)
+        out = subprocess.run([sys.executable, "-c", probe], cwd=ROOT, env=ENV, capture_output=True, text=True, timeout=180)
+        line = next((x for x in out.stdout.splitlines() if x.startswith("PROBE ")), None)
+        got = json.loads(line[6:]) if line else {}
+        let = (got.get("burst") or []).count(False)
+        after = got.get("after") or []
+        more = after.count(False)
+        check("a limit is never passed, not even by twelve tries at the very same instant: of twelve at once against a"
+              " limit of five, five at most are let through, and only those are counted; then one at a time, the rest"
+              " of the five are, and no more",
+              bool(got) and len(got["burst"]) == 12 and all(isinstance(x, bool) for x in got["burst"])
+              and let <= 5 and got["burst_rows"] == let and let + more == 5
+              and after == [False] * more + [True] * (8 - more) and got["rows"] == 5,
+              f"{got or (out.stdout[-300:] + out.stderr[-600:])}")
+
     if part(16, "no page errors, no console errors, no CSP violations"):
         check("no page errors, console errors or CSP violations on the site's sign-in pages, through every"
               " ceremony above (a refused request's own status line aside)",
