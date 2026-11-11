@@ -461,8 +461,13 @@ as piece 2's confirm says.
 **Not yet:** a pinned skribl (it needs a place on the person and a way into
 Skribl's Gallery section to show one card first; next); counts; a face
 deleted from the Library leaves its circle empty (the site cannot ask Skribl
-whether a skribl is still there through a documented seam); the profile's
-empty Gallery says what any empty Gallery says.
+whether a skribl is still there through a documented seam).
+
+**An empty profile says it in its own words** (the owner's yes, Nov 10): to
+its own person, "Nothing here yet. Your skribls show here when you tick Show
+in the public gallery as you post, or later in your Library."; to anybody
+else, "No skribls here yet." (the Gallery section's `mine`, beside
+`author`).
 
 `harness/verify_socialprofile.py` holds it all through the demo's own
 server, faces drawn through the real Pad with a pen; DECISIONS.md ("Profiles

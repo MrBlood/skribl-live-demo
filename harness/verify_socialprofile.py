@@ -17,7 +17,8 @@ events with pressure, a hand's timing).
       to visitors and to the person alike, Load more paging within them;
       any case of the handle; a kind 404 for nobody; You leads to your own
       profile, and somebody else's marks no place in the bar; the gear leads
-      to Settings.
+      to Settings; an empty profile in its own words (to its own person, what
+      puts a skribl there; to anybody else, that there are none yet).
    2. DRAW YOUR FACE through the real Pad in its face mode (compose=1&face=1:
       square, a face's words, no Flip switch), in an overlay that glides up
       (read on every frame) and fades where it sits under Reduce Motion; the

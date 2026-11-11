@@ -33740,17 +33740,27 @@ migration fa82723cacc4 on the site's own chain, with its downgrade; no new
 index (a profile is found by handle_key and an author by public_id, both
 indexed since piece 2).
 
-FOR THE OWNER, screens beyond the mock and words that want a yes: Edit
-profile (a page; "About you", "Shown beside your drawings."); the face mode's
-words in the Pad (above), "Use" alone in a phone's header among them; the
-notes ("That's your face now. It draws itself like this for everyone who
-visits."; "Saved. This is your profile as everyone sees it."); Settings as
-the account page's name; the empty circles (dashed in the bar); the initial
-kept on cards; Share (the device's share sheet, or the link copied). NEXT: a
-pinned skribl (a place on the person, and a seam for the Gallery section to
-show one card first); counts, once they are kept; the profile's empty
-Gallery in its own words; a face drawn on the dark canvas starts from the
-paper circle and fades to its own dark ground. Not tested here: Safari, an
+THE OWNER'S YES, for the screens beyond the mock, shown to them in five
+pictures (phone and desk, light and dark) as eight items with a default of
+yes on each: their "Yes" (Nov 10, about 8:30 PM Mountain Time), taken as yes
+to all eight and said back to them that way. Edit profile (a page; "About
+you", "Shown beside your drawings."); the face mode's words in the Pad
+(above), "Use" alone in a phone's header among them; the notes ("That's your
+face now. It draws itself like this for everyone who visits."; "Saved. This
+is your profile as everyone sees it."); Settings as the account page's name;
+the empty circles (dashed in the bar); the initial kept on cards; Share (the
+device's share sheet, or the link copied); and an eighth, built after the
+yes: AN EMPTY PROFILE IN ITS OWN WORDS. The pictures showed a person's own
+empty profile saying "Skribls appear here when their author ticks ..." to
+that author. The Gallery section's `mine` (with `author`) now says to its own
+person "Nothing here yet. Your skribls show here when you tick Show in the
+public gallery as you post, or later in your Library." (a host's door: "Show
+in the Skribls gallery as you post."), and to anybody else "No skribls here
+yet."; without an author the section renders byte for byte as before (every
+door, page or not). NEXT: a pinned skribl (a place on the person, and a seam
+for the Gallery section to show one card first); counts, once they are
+kept; a face drawn on the dark canvas starts from the paper circle and fades
+to its own dark ground. Not tested here: Safari, an
 iPhone's Face ID passkeys, Segoe UI.
 
 FROM THE HELPER'S WORK, KEPT: the face player's shape (its own macro, sheet
@@ -33775,13 +33785,13 @@ leaves its picture); playful (the face draws itself, in its artist's own
 hand); simple (one button to draw your face, one to keep it); powerful (the
 real Pad, every tool in it, for a picture).
 
-THE CHECKS: harness/verify_socialprofile.py, ten sections, 34 rows, through
+THE CHECKS: harness/verify_socialprofile.py, ten sections, 35 rows, through
 the demo's own app on a server of its own (CSRF on, a first-invite code, one
 trusted proxy), driven at localhost with Chromium's virtual authenticator,
 faces drawn through the real Pad with pen input (harness/tools/artdraw.py) in
 the profile's own overlay. Every row was shown red by breaking one part at a
 time (a driver changed one string, ran only that section on a fresh server of
-its own, and wrote the file back), and green as built: 52 breaks.
+its own, and wrote the file back), and green as built: 54 breaks.
 
 - 1, A PROFILE: the Gallery section without author=, red (everyone's
   skribls, and the own-profile row); the bio's line breaks not kept, red;
@@ -33792,7 +33802,9 @@ its own, and wrote the file back), and green as built: 52 breaks.
   taken out, red; the 404 saying back whatever the address said, red;
   somebody else's profile marked Explore (the helper's), red; You leading to
   the account page, red; Settings titled with the name, red; the desk's gear
-  on everybody's profile, red.
+  on everybody's profile, red; the section's words for one author taken out,
+  red (its own person told "their author", what the owner saw); the profile
+  not saying `mine`, red (its own person told "No skribls here yet.").
 - 2, DRAW YOUR FACE: the overlay with no transition, red (it jumped); the
   overlay inside #main again, red (no pen reached the Pad: nothing kept);
   face=1 ignored, red (a tall canvas and a post's words); lib/chromefit.js

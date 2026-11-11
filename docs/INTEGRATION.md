@@ -403,7 +403,11 @@ paging by the listing's own cursor:
 an author's own listing, which shows its author everything they own (public,
 unlisted and private: the Library's), to what anybody is shown, so a person
 looking at their own page sees what their visitors see. It is the only value
-the parameter takes (anything else is a 400), and it can only narrow.
+the parameter takes (anything else is a 400), and it can only narrow. Say
+`mine=True` beside it when the person looking IS that author (their own
+page): an empty section then tells them what puts a skribl there, in their
+door's words ("Your skribls show here when you tick ..."), and tells anybody
+else only "No skribls here yet.".
 
 **Who drew it** is what your author resolver says (below, "Identity and
 authorisation, worked"), in the keys skribls.net's own post head uses:
