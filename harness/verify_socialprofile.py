@@ -646,6 +646,14 @@ def shot(pg, sel):
         return None
 
 
+# Every image under each selector loaded and decoded: a picture that has
+# come, not one on its way (section 4: the still face photographed twice).
+PAINTED = """(sels) => sels.every(s => { const i = document.querySelector(s + ' img');
+  return !!i && i.complete && i.naturalWidth > 0; })"""
+DECODED = """(sels) => Promise.all(sels.map(s => { const i = document.querySelector(s + ' img');
+  return i && i.decode ? i.decode().catch(() => null) : null; }))"""
+
+
 # THE SITE'S OWN WORDS AND CONTROLS, read from the paint (verify_socialauth's
 # reader, with the face player counted among Skribl's parts, which keep their
 # own: a face has no words).
@@ -1092,6 +1100,17 @@ with sync_playwright() as p_:
         pg.wait_for_timeout(500)
         card_sel = f'#galleryList > article.tile[data-id="{mine}"] .tavatar'
         you_sel = "nav.nav .tab-you .skribl-face"
+        # BOTH PICTURES COME BEFORE THEY ARE READ: the card brought into view
+        # (its picture loads lazily), then each image loaded and decoded, and
+        # whether they were is part of the row (a still face that never came
+        # is a broken face, not a face standing still).
+        try:
+            pg.locator(card_sel).first.scroll_into_view_if_needed(timeout=5000)
+            pg.wait_for_function(PAINTED, arg=[card_sel, you_sel], timeout=15000)
+            pg.evaluate(DECODED, [card_sel, you_sel])
+        except Exception:
+            pass
+        painted = pg.evaluate(PAINTED, [card_sel, you_sel])
         pics = [(shot(pg, card_sel), shot(pg, you_sel))]
         pg.wait_for_timeout(2500)
         pics.append((shot(pg, card_sel), shot(pg, you_sel)))
@@ -1101,13 +1120,24 @@ with sync_playwright() as p_:
                      you: yi && yi.getAttribute('src'), youPlay: y && y.getAttribute('data-play'), youStyle: y && y.getAttribute('style'),
                      players: document.querySelectorAll('.skribl-face-draw').length }; }""", [card_sel, you_sel])
         same = all(a and z and a == z for a, z in zip(pics[0], pics[1]))
-        inked = Image is not None and all(ink(x) > 30 for x in pics[1] if x)
+        # SOMETHING DRAWN SHOWS, read off the paint. At this phone's one device
+        # pixel to a CSS pixel the bar's 28px face and the card's 34px circle
+        # read 36 and 34 inked samples here (Nov 11), and on main's run after
+        # #847 (CI, sqlite 3/6) one read 30 or fewer: a line at 30 stood on the
+        # measurement's own edge: with the bar's face 4px smaller (24), that
+        # line went red in main's own words (the same paint True, inked
+        # False). An empty or broken circle reads 0 (the face hidden, or its
+        # picture never coming: red both), so the line is 10.
+        inks = [ink(x) if x else None for x in pics[1]]
+        inked = Image is not None and all(v is not None and v > 10 for v in inks)
+        # What failed comes first in the detail: a run's summary keeps only
+        # its first 300 characters (run_harness.sh).
         check("elsewhere the face is a picture, still: You in the bar and the Gallery card's avatar wear it (its own"
               " poster), with no player, no fetch of the drawing, and the same paint seconds later",
               where["card"] == f"/s/{face}/poster" and where["you"] == f"/s/{face}/poster" and where["youPlay"] == "still"
-              and where["players"] == 0 and not fetched and same and inked,
-              f"{ {k: where[k] for k in ('card', 'you', 'youPlay', 'players')} }; fetched {len(fetched)}; the same paint {same};"
-              f" inked {inked}")
+              and where["players"] == 0 and not fetched and same and painted and inked,
+              f"ink card {inks[0]}, You {inks[1]} (over 10); painted {painted}; the same paint {same};"
+              f" fetched {len(fetched)}; { {k: where[k] for k in ('card', 'you', 'youPlay', 'players')} }")
         sizes = [(707, 707), (816, 612), (450, 800)]
         want = pg.evaluate(FRAME_JS, [SHARECARD, sizes])
         got = []
