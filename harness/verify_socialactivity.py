@@ -467,6 +467,8 @@ BELL = r"""(sel) => { const a = document.querySelector(sel); if (!a || !a.getCli
   const lum = c => { const v = c.slice(0, 3).map(x => { x /= 255; return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); });
                      return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]; };
   const ratio = (x, y) => { const p = lum(x), q = lum(y); return Math.round((Math.max(p, q) + 0.05) / (Math.min(p, q) + 0.05) * 100) / 100; };
+  // A colour as it is painted: folded over its ground by its own alpha (a faint line reads faint).
+  const over = (c, g) => c[3] >= 1 ? c : [0, 1, 2].map(k => c[k] * c[3] + g[k] * (1 - c[3]));
   const ground = e => { const layers = [];
     for (let n = e; n; n = n.parentElement) { const b = rgba(getComputedStyle(n).backgroundColor);
       if (b && b[3] > 0) { layers.push(b); if (b[3] >= 1) break; } }
@@ -480,12 +482,12 @@ BELL = r"""(sel) => { const a = document.querySelector(sel); if (!a || !a.getCli
     mid: Math.round((r.top + r.height / 2 - (top.top + top.height / 2)) * 10) / 10,
     label: a.getAttribute('aria-label'), href: new URL(a.href).pathname, hit: !!at && (at === a || a.contains(at)),
     pen: !!svg && svg.classList.contains('pen-ic'), filled: !!svg && !!svg.querySelector('path[fill="currentColor"]'),
-    current: a.getAttribute('aria-current'), line: svg ? ratio(rgba(getComputedStyle(svg).color), g) : null, dot: null,
+    current: a.getAttribute('aria-current'), line: svg ? ratio(over(rgba(getComputedStyle(svg).color), g), g) : null, dot: null,
     underline: !!a.querySelector('.tab-name .pen-line') };
   const d = a.querySelector('.act-dot');
   if (d) { const dr = d.getBoundingClientRect(), cs = getComputedStyle(d);
     const hit = document.elementFromPoint(dr.left + dr.width / 2, dr.top + dr.height / 2);
-    out.dot = { fill: cs.fill, stroke: cs.stroke, opacity: +cs.opacity, painted: hit === d, k: ratio(rgba(cs.fill), g),
+    out.dot = { fill: cs.fill, stroke: cs.stroke, opacity: +cs.opacity, painted: hit === d, k: ratio(over(rgba(cs.fill), g), g),
                 page: getComputedStyle(document.body).backgroundColor, going: d.classList.contains('is-going') }; }
   return out; }"""
 
@@ -510,6 +512,22 @@ FRAMES = r"""window.__frames = [];
   window.__frames.push(f);
   if (performance.now() - t0 < 5000) requestAnimationFrame(step); };
   requestAnimationFrame(step); })();"""
+
+# EVERY PLAY ASKED FOR, from the page's start: the player's mount (what posts.js
+# and comments.js call) is wrapped as the player's own script sets it, so each
+# player they get back records its play() (a post's own started and stopped a
+# moment later by another is a start all the same, which states sampled
+# afterwards cannot see).
+PLAYS = """window.__plays = [];
+(function () { let api;
+  Object.defineProperty(window, 'SkriblInline', { configurable: true, get() { return api; }, set(v) {
+    api = v; if (!v || v.__wrapped) return; const mount = v.mount;
+    v.mount = function () { const ps = mount.apply(this, arguments) || [];
+      ps.forEach(p => { if (p.__hooked) return; p.__hooked = true; const play = p.play;
+        p.play = function () { try { window.__plays.push(p.state().id); } catch (e) { window.__plays.push('?'); }
+                               return play.apply(this, arguments); }; });
+      return ps; };
+    v.__wrapped = true; } }); })();"""
 
 STATES = """() => (window.SkriblInline ? SkriblInline.players() : []).map(p => { const s = p.state();
   return { id: s.id, state: s.state, ms: Math.round(s.elapsedMs || 0), muted: s.muted }; })"""
@@ -574,6 +592,14 @@ ON_TINT = r"""(id) => { const li = document.getElementById('c-' + id); if (!li) 
   const g = over(tint, page);
   const k = sel => { const e = li.querySelector(':scope > .cm-main ' + sel); return e ? ratio(over(rgba(getComputedStyle(e).color), g), g) : null; };
   return { landed: true, words: k('.cm-words'), name: k('.cm-name'), when: k('.cm-when'), answer: k('[data-cm-answer]') }; }"""
+
+
+def tap_row(pg, words):
+    """Tap the row whose quote is these words (found by what it says, never by
+    its link, so a wrong link fails its own row) and wait for where it goes."""
+    row = pg.locator("a.act-row", has_text=words).first
+    with pg.expect_navigation():
+        row.tap()
 
 
 def section_named(secs, name):
@@ -1047,16 +1073,20 @@ with sync_playwright() as p:
             jem = someone(b, "jem", "Jem Fox")
             kit = someone(b, "kit", "Kit Vale")
             post = make_post(ike, "Section 7, a lantern", seed=71)
+            # Older comments under it, so the page could move either way: a landing
+            # that moves the page is then seen moving.
+            for i in range(5):
+                comment(kit, ("p", post), f"Section 7, an older one {i}")
             target = comment(jem, ("p", post), "Section 7, look at the light on the water")
             comment(ike, ("p", post), "Thank you, Jem!", answer_to=target)
             ctx, pg = browser_as(b, ike, init=FRAMES)
             go(pg, "/social/activity")
-            row = f'a.act-row[href$="#c-{target}"]'
-            with pg.expect_navigation():
-                pg.tap(row)
+            tap_row(pg, "look at the light on the water")
             pg.wait_for_timeout(3600)
             frames = pg.evaluate("() => window.__frames")
-            where = pg.evaluate("""(id) => { const li = document.getElementById('c-' + id); const r = li.getBoundingClientRect();
+            where = pg.evaluate("""(id) => { const li = document.getElementById('c-' + id);
+              if (!li) return { url: location.pathname + location.hash, seen: false, painted: false, li: 0, own: 0 };
+              const r = li.getBoundingClientRect();
               const w = li.querySelector(':scope > .cm-main .cm-words').getBoundingClientRect(),
                     at = document.elementFromPoint(w.left + 8, w.top + w.height / 2),
                     main = li.querySelector(':scope > .cm-main').getBoundingClientRect(), bar = document.querySelector('body > .nav').getBoundingClientRect();
@@ -1103,8 +1133,7 @@ with sync_playwright() as p:
             on_s = comment(kit, ("s", sid), "Section 7, on the drawing")
             ctx, pg = browser_as(b, ike, init=FRAMES)
             go(pg, "/social/activity")
-            with pg.expect_navigation():
-                pg.tap(f'a.act-row[href$="#c-{on_s}"]')
+            tap_row(pg, "Section 7, on the drawing")
             pg.wait_for_timeout(1500)
             frames = pg.evaluate("() => window.__frames")
             url = pg.evaluate("() => location.pathname + location.hash")
@@ -1148,40 +1177,41 @@ with sync_playwright() as p:
                     pg.wait_for_timeout(250)
                 return seen
 
-            ctx, pg = browser_as(b, max_)
+            ctx, pg = browser_as(b, max_, init=PLAYS)
             go(pg, "/social/activity")
-            with pg.expect_navigation():
-                pg.tap(f'a.act-row[href$="#c-{drawn}"]')
+            tap_row(pg, "Here you go")
             ready(pg)
             at_drawing = watch(pg)
+            asked = pg.evaluate("() => window.__plays")
             sound = pg.evaluate("() => window.SkriblInline ? SkriblInline.soundOn() : null")
             close_ctx(ctx, pg)
             played = lambda seen, sk: any(s.get(sk, {}).get("state") == "playing" or s.get(sk, {}).get("ms", 0) > 0 for s in seen)  # noqa: E731
             check("a drawing answer opened from Activity draws itself once when you land, sound off, and the post's own"
-                  " drawing waits (one plays at a time)",
-                  played(at_drawing, drawn_sk) and not played(at_drawing, own_sk) and sound is False
-                  and all(s.get(drawn_sk, {}).get("muted", True) for s in at_drawing),
-                  f"answer {[s.get(drawn_sk, {}).get('state') for s in at_drawing][:8]}; post's"
+                  " drawing waits (one plays at a time: it is never asked to)",
+                  played(at_drawing, drawn_sk) and asked == [drawn_sk] and not played(at_drawing, own_sk)
+                  and sound is False and all(s.get(drawn_sk, {}).get("muted", True) for s in at_drawing),
+                  f"asked {asked}; answer {[s.get(drawn_sk, {}).get('state') for s in at_drawing][:8]}; post's"
                   f" {[s.get(own_sk, {}).get('state') for s in at_drawing][:4]}; sound {sound}")
-            ctx, pg = browser_as(b, max_)
+            ctx, pg = browser_as(b, max_, init=PLAYS)
             go(pg, "/social/activity")
-            with pg.expect_navigation():
-                pg.tap(f'a.act-row[href$="#c-{words}"]')
+            tap_row(pg, "Section 8, words alone")
             ready(pg)
             at_words = watch(pg)
+            asked = pg.evaluate("() => window.__plays")
             close_ctx(ctx, pg)
             check("opened at a comment of words, the post's own drawing plays as on any visit, and no comment's does",
-                  played(at_words, own_sk) and not played(at_words, drawn_sk),
-                  f"post's {[s.get(own_sk, {}).get('state') for s in at_words][:6]}; answer's"
+                  played(at_words, own_sk) and asked == [own_sk] and not played(at_words, drawn_sk),
+                  f"asked {asked}; post's {[s.get(own_sk, {}).get('state') for s in at_words][:6]}; answer's"
                   f" {[s.get(drawn_sk, {}).get('state') for s in at_words][:4]}")
-            ctx, pg = browser_as(b, max_, reduced=True)
+            ctx, pg = browser_as(b, max_, reduced=True, init=PLAYS)
             pg.goto(BASE + f"/social/p/{post}#c-{drawn}")
             ready(pg)
             calm = watch(pg, 3000)
+            asked = pg.evaluate("() => window.__plays")
             close_ctx(ctx, pg)
-            check("under Reduce Motion nothing plays: neither the drawing answer nor the post's own",
-                  calm and not played(calm, drawn_sk) and not played(calm, own_sk),
-                  f"{[{k: v['state'] for k, v in s.items()} for s in calm[-1:]]}")
+            check("under Reduce Motion nothing plays: neither the drawing answer nor the post's own is asked to",
+                  calm and asked == [] and not played(calm, drawn_sk) and not played(calm, own_sk),
+                  f"asked {asked}; {[{k: v['state'] for k, v in s.items()} for s in calm[-1:]]}")
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(8, exc)
 
@@ -1194,9 +1224,10 @@ with sync_playwright() as p:
                 ctx, pg = browser_as(b, sky, screen=screen)
                 go(pg, "/social/activity")
                 got[screen] = pg.evaluate("""() => { const s = document.querySelector('.act-empty'); if (!s) return null;
-                  const i = s.querySelector('img.si-icon'), ir = i.getBoundingClientRect(), b = s.querySelector('.btn'),
-                        br = b.getBoundingClientRect(), at = document.elementFromPoint(ir.left + ir.width / 2, ir.top + ir.height / 2);
-                  return { icon: new URL(i.src).pathname.split('/').pop(), w: ir.width, h: ir.height, painted: at === i,
+                  const i = s.querySelector('img.si-icon'), ir = i ? i.getBoundingClientRect() : { left: 0, top: 0, width: 0, height: 0 },
+                        b = s.querySelector('.btn'), br = b.getBoundingClientRect(),
+                        at = i ? document.elementFromPoint(ir.left + ir.width / 2, ir.top + ir.height / 2) : null;
+                  return { icon: i ? new URL(i.src).pathname.split('/').pop() : null, w: ir.width, h: ir.height, painted: !!i && at === i,
                            title: s.querySelector('.act-empty-title').textContent, words: s.querySelector('.act-empty-words').textContent,
                            button: b.textContent.trim(), bh: br.height, lists: document.querySelectorAll('.act-list, .act-sec').length }; }""")
                 if screen == "phone":
@@ -1252,10 +1283,11 @@ with sync_playwright() as p:
                     secs = pg.evaluate(ROWS)
                     rows[(screen, scheme)] = [(r["h"], r["isNew"], r["mark"]) for s in secs for r in s["rows"]]
                     dots[(screen, scheme, "row")] = pg.evaluate(r"""() => { const m = document.querySelector('.act-row.is-new .act-mark');
-                      if (!m) return null; const rgba = s => (s.match(/[\d.]+/g) || []).map(Number);
+                      if (!m) return null; const rgba = s => { const v = (s.match(/[\d.]+/g) || []).map(Number); return v.length > 3 ? v : v.concat([1]); };
                       const lum = c => { const v = c.slice(0, 3).map(x => { x /= 255; return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); });
                         return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]; };
-                      const a = rgba(getComputedStyle(m).backgroundColor), g = rgba(getComputedStyle(document.body).backgroundColor);
+                      const g = rgba(getComputedStyle(document.body).backgroundColor), c = rgba(getComputedStyle(m).backgroundColor),
+                            a = [0, 1, 2].map(k => c[k] * c[3] + g[k] * (1 - c[3]));
                       const p = lum(a), q = lum(g); return Math.round((Math.max(p, q) + 0.05) / (Math.min(p, q) + 0.05) * 100) / 100; }""")
                     pg.goto(BASE + f"/social/p/{post}#c-{land}")
                     ready(pg)
