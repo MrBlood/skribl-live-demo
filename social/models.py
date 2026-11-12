@@ -34,7 +34,7 @@ import sqlalchemy as sa
 from sqlalchemy.orm import DeclarativeBase
 
 __all__ = ["SocialBase", "Person", "Passkey", "Invite", "Challenge", "RateEvent", "Post",
-           "Block", "Report", "PERSON_PREFIX", "BIO_MAX", "BIO_LINES", "WORDS_MAX",
+           "Comment", "Block", "Report", "PERSON_PREFIX", "BIO_MAX", "BIO_LINES", "WORDS_MAX",
            "REPORT_KINDS", "REPORT_STATES", "REPORT_NOTE_MAX", "new_person_id", "new_public_id",
            "as_utc", "utcnow", "attach_to_metadata"]
 
@@ -259,6 +259,49 @@ class Post(SocialBase):
         sa.Index("ix_social_posts_created", "created_at", "public_id"),
         sa.Index("ix_social_posts_person_created", "person_id", "created_at"),
         sa.Index("ix_social_posts_skribl_id", "skribl_id"),
+    )
+
+
+class Comment(SocialBase):
+    """A comment on a post, or an answer to one (phase 2, comments; the
+    owner's "all yes on both", Nov 12): a person's words and, since its
+    second part, maybe a drawing. Answers sit ONE level under a comment:
+    parent_id is always a top-level comment's id, so answering an answer
+    puts the new one under the same comment (comments.py). The post's own
+    page reads its comments newest first and each comment's answers oldest
+    first, each by an index of its own.
+
+    DELETING IS REAL AND SAID IN CODE (comments.py, posts.drop_post,
+    accounts.delete_person): a comment goes with its answers, a post with
+    its comments, an account with its comments and the answers under them.
+    The ON DELETE CASCADEs below are the database's net under that, never
+    the way: SQLite enforces them only where Skribl's pragma hook is on."""
+    __tablename__ = "social_comments"
+
+    id = sa.Column(BigId, primary_key=True)
+    public_id = sa.Column(sa.String(24), nullable=False)
+    post_id = sa.Column(BigId, sa.ForeignKey("social_posts.id", ondelete="CASCADE"), nullable=False)
+    person_id = sa.Column(BigId, sa.ForeignKey("social_people.id", ondelete="CASCADE"), nullable=False)
+    #: The top-level comment an answer sits under; None for a comment.
+    parent_id = sa.Column(BigId, sa.ForeignKey("social_comments.id", ondelete="CASCADE"), nullable=True)
+    #: Plain text as typed, tidied (posts.check_words); may be empty when a
+    #: drawing says it.
+    words = sa.Column(sa.String(WORDS_MAX), nullable=False, default="", server_default="")
+    #: A drawing answer (the second part): a skribl posted UNLISTED through
+    #: create_post in the same request as this row, deleted with it
+    #: (delete_post). None for words alone.
+    skribl_id = sa.Column(sa.String(32), nullable=True)
+    created_at = sa.Column(sa.DateTime(timezone=True), nullable=False, default=utcnow)
+    #: TAKEN DOWN by an admin (Your Reports): when. Hidden from everybody but
+    #: its author, who sees it with the note; nothing is deleted by it.
+    taken_down_at = sa.Column(sa.DateTime(timezone=True), nullable=True)
+
+    __table_args__ = (
+        sa.Index("ix_social_comments_public_id", "public_id", unique=True),
+        sa.Index("ix_social_comments_post_created", "post_id", "created_at"),
+        sa.Index("ix_social_comments_parent_created", "parent_id", "created_at"),
+        sa.Index("ix_social_comments_person_id", "person_id"),
+        sa.Index("ix_social_comments_skribl_id", "skribl_id"),
     )
 
 

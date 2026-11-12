@@ -295,9 +295,10 @@ def delete_person(sess, person_id):
     the invite they came in by, ceremonies in progress, their bio with their
     row, their drawn face (the skribl the site posted for it, through
     Skribl's delete_post), their posts, the words and the drawings both
-    (piece 4: the site posted those too), and their blocks, both ways
-    (piece 5); a report that names them stays, naming nobody. Flushes; the
-    request commits.
+    (piece 4: the site posted those too), with every comment on them, their
+    own comments with every answer under them (phase 2: said here, never left
+    to a cascade), and their blocks, both ways (piece 5); a report that names
+    them stays, naming nobody. Flushes; the request commits.
     (Their other skribls are Skribl's, and docs/INTEGRATION.md has no seam
     for a host to take an author's drawings away in one go: they stay, and
     the confirm page says so.)"""
@@ -307,6 +308,9 @@ def delete_person(sess, person_id):
         from .posts import drop_post
         for post in sess.execute(sa.select(Post).where(Post.person_id == person_id)).scalars().all():
             drop_post(row.public_id, post)
+    # What they said on other people's posts, and the answers under it.
+    from .comments import drop_person_comments
+    drop_person_comments(person_id)
     sess.execute(sa.delete(Challenge).where(Challenge.person_id == person_id))
     invites = sa.select(Invite.id).where(sa.or_(Invite.created_by_id == person_id,
                                                Invite.for_person_id == person_id,

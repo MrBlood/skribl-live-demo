@@ -703,7 +703,7 @@ button.make-door { width: 100%; border: 0; font: inherit; text-align: left; curs
    A post's drawing is Skribl's in-post player, its five tokens the
    first visit's (same role, same values); everything else is the site's own
    cards, rows and words. ---- */
-.post-art, .composer-draft {
+.post-art, .composer-draft, .cm-art {
   --border: var(--draw-line); --radius: 14px; --bg-elev: var(--draw-wait);
   --accent: #7c5cff; --accent-2: #7c5cff; --text-dim: var(--ink-2);
 }
@@ -809,10 +809,6 @@ button.make-door { width: 100%; border: 0; font: inherit; text-align: left; curs
 .comments { margin-top: 24px; }
 .comments-title { display: flex; align-items: center; gap: 8px; margin: 0 0 10px; font-size: 20px; font-weight: 700; }
 .comments-title .ic { color: var(--accent-ink); }
-.comments-soon {
-  margin: 0; padding: 14px 16px; border: 1px dashed var(--card-line); border-radius: 16px;
-  background: var(--tint); color: var(--ink); font-size: 15px; line-height: 1.45;
-}
 .more-from { margin-top: 24px; }
 .more-title { margin: 0 0 10px; font-size: 18px; font-weight: 700; }
 .more-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
@@ -842,6 +838,67 @@ button.make-door { width: 100%; border: 0; font: inherit; text-align: left; curs
   .post-page > :not(.post-art) { grid-column: 2; }
   .post-page .desk-only { display: inline-grid; }
 }
+
+/* COMMENTS (phase 2; the comments mock, and the owner's "all yes on both",
+   Nov 12), in the mock's own sizes. The box on top is Home's composer, the
+   card a little smaller; a comment is its face, name and when, its words,
+   Answer and ⋯; its answers sit one level under it, in the words' column.
+   Same role, same token: the box is the composer's card, the words the
+   post's first ink, when, the count, Answer and ⋯ the second; "Sign in to
+   answer" the small violet words Sign in wears at the top of a phone. Every
+   target 44px; the words' field the composer's 17px. */
+.comments-title .cm-count { margin-left: 2px; color: var(--ink-2); font-size: 18px; font-weight: 600; }
+.cm-box { margin: 0 0 8px; padding: 14px; border-radius: 20px; }
+.cm-box .face-ring.composer-face { --skribl-face-size: 36px; width: 36px; height: 36px; }
+.cm-box .composer-acts { margin-top: 10px; }
+.cm-box .chip { min-height: 44px; padding: 0 16px; }
+/* A drawing waiting in the box, and a drawing answer: the mock's 150px, in
+   the drawing's own shape (Skribl's in-post player), on the words' edge. */
+.cm-box .composer-draft { margin: 10px 0 0 48px; }
+.cm-box .composer-draft .skribl-inline { width: min(100%, 150px); }
+.cm-art { margin-top: 8px; width: min(100%, 150px); }
+.cm-signin { margin: 0 0 8px; }
+.cm-signin a {
+  display: inline-flex; align-items: center; min-height: 44px; color: var(--accent-ink); font-size: 16px;
+  font-weight: 600; text-decoration: none;
+}
+.cm-list, .cm-answers { margin: 0; padding: 0; list-style: none; }
+.cm {
+  display: grid; grid-template-columns: 36px minmax(0, 1fr); column-gap: 12px; padding: 14px 0 2px;
+  border-top: 1px solid var(--rule);
+}
+.cm-list > .cm:first-child { border-top: 0; }
+.cm .face-ring { --skribl-face-size: 36px; width: 36px; height: 36px; }
+.cm-main { min-width: 0; }
+.cm-head { display: flex; align-items: baseline; gap: 6px; min-height: 22px; line-height: 1.3; }
+.cm-name { color: var(--ink); font-size: 16px; font-weight: 700; }
+.cm-when { color: var(--ink-2); font-size: 15px; }
+/* The words as typed: their line breaks kept, a long word broken before the page is. */
+.cm-words { margin: 3px 0 0; font-size: 16px; line-height: 1.45; white-space: pre-line; overflow-wrap: anywhere; }
+.cm-down { margin: 6px 0 0; }
+.cm-acts { display: flex; align-items: center; margin: 2px 0 0 -12px; }
+.cm-act {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 12px; border: 0;
+  background: none; color: var(--ink-2); font: inherit; font-size: 15px; font-weight: 600; cursor: pointer;
+}
+.cm-act .ic { width: 18px; height: 18px; }
+.cm-acts .icon-btn { margin-left: auto; margin-right: -10px; color: var(--ink-2); }
+.cm-answers { grid-column: 2; }
+.cm-answers .cm { padding-top: 8px; border-top: 0; }
+/* Answer brings the box to the comment: under its answers, across the row. */
+.cm > .cm-box { grid-column: 1 / -1; margin: 6px 0 12px; }
+.cm-more { margin-top: 12px; }
+/* KIND, NEVER JUMPY: a comment that arrives, and the box Answer brings,
+   fade in where they land (the page around them keeps its place:
+   comments.js); a comment that goes fades first. Reduce Motion: they are
+   simply there. */
+@keyframes cm-in { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: no-preference) {
+  .cm.is-new, .cm-box.is-arriving { animation: cm-in 0.22s ease both; }
+}
+.cm.is-going { opacity: 0; transition: opacity 0.2s ease; }
+/* Home's card: how many comments, beside the plays (the mock's 4), a way to them. */
+.post-foot .post-count { min-width: 44px; margin-left: 14px; margin-right: auto; }
 
 /* YOUR REPORTS (piece 5): a card per thing reported, as the mock drew it; a
    child's safety ringed in the danger fill, its picture blurred until Open it. */

@@ -597,7 +597,8 @@ with sync_playwright() as p:
         sk = skribl_row(row[1]) if row else None
         page = pg.evaluate("""() => ({ words: (document.querySelector('.post-words') || {}).textContent,
           meta: (document.querySelector('.post-meta') || {}).textContent,
-          comments: (document.querySelector('.comments-soon') || {}).textContent })""")
+          comments: (document.getElementById('commentsTitle') || {}).innerText,
+          box: !!document.querySelector('[data-cm-box]') })""")
         playing = pg.evaluate(STATE)
         check("Post sends the words and the drawing as one post: the post's own page, its row (the words as typed,"
               " the person), its skribl through create_post (unlisted without the tick, its title the first words,"
@@ -607,10 +608,11 @@ with sync_playwright() as p:
               and sk[1] == "Day 12. The beard took longer than the skull." and not sk[2]
               and sk[3] == db("select public_id from social_people where handle = 'mira'")[0][0],
               f"url {url}; row {row}; skribl {sk}")
-        check("the post's own page plays its drawing by itself, its words, when and Comments' place kept",
+        check("the post's own page plays its drawing by itself, its words, when and its comments (phase 2:"
+              " verify_socialcomments holds them)",
               playing[:1] == ["playing"] and page["words"] == "Day 12. The beard took longer than the skull.\nWatch it at 2×."
               and " at " in (page["meta"] or "")
-              and (page["comments"] or "").startswith("Comments open soon."),
+              and (page["comments"] or "").strip() == "Comments" and page["box"],
               f"players {playing}; page {page}")
         rctx, rpg = browser_as(b, mira, reduced=True)
         rpg.goto(BASE + url)

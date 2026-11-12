@@ -10,7 +10,7 @@ Nov 12): what people reported, for the site's admins, and their two answers.
     /reports/keep        Keep it: its reports closed, nothing hidden (a form).
 
 ONE QUEUE FROM TWO. The site's own reports (social_reports: somebody, a post,
-a drawing shown outside a post) and Skribl's (what people reported on
+a drawing shown outside a post, a comment) and Skribl's (what people reported on
 Skribl's own pages: the Gallery's tiles on Explore, a drawing's link page),
 read through Skribl's documented seams (list_reports, close_reports,
 set_post_visibility: docs/INTEGRATION.md, "Your own reports page"). A post's
@@ -21,8 +21,10 @@ TAKING IT DOWN keeps everything. A person: their profile is nobody's to
 everybody else, and all they made is hidden (they can still sign in, see
 their own with the note, and delete their account). A post: hidden from
 everybody but its author, its skribl withheld in Skribl. A drawing: withheld
-in Skribl. Its maker sees "Taken down: it broke the rules" on it. Nothing is
-deleted, and every report on it is closed, saying who answered and when.
+in Skribl. A comment (phase 2): hidden from everybody but its author, and
+neither shown nor counted under its post. Its maker sees "Taken down: it
+broke the rules" on it. Nothing is deleted, and every report on it is
+closed, saying who answered and when.
 
 A CHILD'S SAFETY: its card says what the law may ask (in the US, reporting
 to NCMEC) and that the owner's lawyer sets that up; taking it down keeps the
@@ -32,7 +34,7 @@ import sqlalchemy as sa
 from flask import abort, g, redirect, request, url_for
 
 from .accounts import _page, _rests, profile_url
-from .models import PERSON_PREFIX, Person, Post, Report, utcnow
+from .models import PERSON_PREFIX, Comment, Person, Post, Report, utcnow
 from .safety import REASONS
 from .security import csrf_token, current_person, origin_ok, site, token_ok
 
@@ -91,7 +93,11 @@ def queue():
         c["latest"] = when if c["latest"] is None or when > c["latest"] else c["latest"]
     for grp in list_reports(limit=500):
         post = sess.execute(sa.select(Post).where(Post.skribl_id == grp["id"])).scalar_one_or_none()
-        c = card("post", post.public_id) if post is not None else card("drawing", grp["id"])
+        # A drawing answer reported on Skribl's own link page is its comment's.
+        said_on = None if post is not None else sess.execute(
+            sa.select(Comment).where(Comment.skribl_id == grp["id"])).scalar_one_or_none()
+        c = (card("post", post.public_id) if post is not None else
+             card("comment", said_on.public_id) if said_on is not None else card("drawing", grp["id"]))
         for reason, n in grp["reasons"].items():
             c["reasons"][reason] = c["reasons"].get(reason, 0) + n
         c["count"] += grp["count"]
@@ -111,6 +117,10 @@ def queue():
         sa.select(Post, Person).join(Person, Person.id == Post.person_id)
         .where(Post.public_id.in_([c["target"] for c in cards.values() if c["kind"] == "post"]))).all()}
     skribls += [p.skribl_id for p, _ in posts.values()]
+    said = {cm.public_id: (cm, who, post) for cm, who, post in sess.execute(
+        sa.select(Comment, Person, Post).join(Person, Person.id == Comment.person_id)
+        .join(Post, Post.id == Comment.post_id)
+        .where(Comment.public_id.in_([c["target"] for c in cards.values() if c["kind"] == "comment"]))).all()}
     seen = describe_posts(skribls) if skribls else {}
     people = {p.public_id: p for p in sess.execute(sa.select(Person).where(Person.public_id.in_(
         [c["target"] for c in cards.values() if c["kind"] == "person"]
@@ -127,6 +137,15 @@ def queue():
             c["who"], c["what"] = who, p
             c["poster"] = url_for(site_bp() + ".skribl_poster", public_id=p.skribl_id) if p else None
             c["url"] = url_for("social.post_page", public_id=p.public_id) if p else None
+        elif c["kind"] == "comment":
+            # A COMMENT'S CARD (phase 2): its words, whose it is, and a link to
+            # it on its post's page.
+            cm, who, on = said.get(c["target"], (None, None, None))
+            c["who"], c["what"] = who, cm
+            c["url"] = (url_for("social.post_page", public_id=on.public_id) + "#c-" + cm.public_id) if cm else None
+            # A drawing answer's card shows its picture; words alone, whose face.
+            c["poster"] = (url_for(site_bp() + ".skribl_poster", public_id=cm.skribl_id)
+                           if cm is not None and cm.skribl_id else None)
         else:
             sk = seen.get(c["target"]) or {}
             c["who"] = people.get(str(sk.get("user_id") or ""))
@@ -182,6 +201,18 @@ def answer(kind, target, me, down):
         if down:
             _withhold(target)
         close_reports(target)
+    elif kind == "comment":
+        cm = sess.execute(sa.select(Comment).where(Comment.public_id == target)).scalar_one_or_none()
+        if cm is None:
+            return False
+        if down and cm.taken_down_at is None:
+            cm.taken_down_at = now
+        if cm.skribl_id:
+            # A drawing answer: withheld with its comment, and what was
+            # reported of it on Skribl's own pages closed with it.
+            if down:
+                _withhold(cm.skribl_id)
+            close_reports(cm.skribl_id)
     else:
         return False
     sess.execute(sa.update(Report).where(Report.kind == kind, Report.target == target, Report.state == "open")

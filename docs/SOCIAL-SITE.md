@@ -227,7 +227,8 @@ here is tested (a check shown red before it is believed).
   *Built and live on the demo by Nov 10: pieces 1, 2 and 3 (section 9).
   Piece 4 is next.*
 - **Phase 2, the social core.** Follow, the Following feed, comments and
-  replies, likes, in-app notifications, mute.
+  replies, likes, in-app notifications, mute. *Comments and their answers
+  built Nov 12 (section 10).*
 - **Phase 3, growing.** Search and tags, push and email notifications, reply
   with a skribl, repost, invite links.
 - **Phase 4, creators.** Editions, rights and prints, the co-op (FUTURE 6ag).
@@ -605,9 +606,10 @@ post's. Not one kept unlisted, nor one by somebody not on the site.
 sound off until the viewer turns it on, and never under Reduce Motion (the
 player's own `play()`: docs/INTEGRATION.md, "A post's own page can start
 it"). Its author, its words, when (in the person's own time), its plays,
-Share and Make your own; Comments' place kept ("Comments open soon"); on a
-desk, the drawing on the left and More from its author beside it, each tile
-the drawing alone, cut out of its share card as Skribl's face macro does.
+Share and Make your own; Comments' place kept ("Comments open soon"; since
+phase 2 the comments themselves, section 10); on a desk, the drawing on the
+left and More from its author beside it, each tile the drawing alone, cut out
+of its share card as Skribl's face macro does.
 
 **The ⋯ sheet**, as the mock drew it: Copy link, Share…, and Report this
 post (and since piece 5, signed in, Block @them), or on your own Delete
@@ -774,3 +776,83 @@ first); the link is opened with `blooby.app` in place of the old address
 From a shell instead: `flask --app app social recover HANDLE --base
 https://blooby.app`. The old address keeps working meanwhile.
 
+## 10. Built: phase 2, comments
+
+From the comments mock and the owner's "all yes on both" (Nov 12), in the
+mock's own classes, sizes and words. `social/comments.py`:
+
+    /social/p/<id>/comments   POST: a comment on a post, or an answer to one
+                              (JSON); GET: the next page of its comments, for
+                              Load more
+    /social/c/<id>/delete     your own comment, gone with its answers; or, on
+                              your own post, anybody's, removed from it (JSON)
+
+**On a post's own page** "Comments" and how many stand where "Comments open
+soon" was. The box on top is Home's composer in the mock's size: your face,
+"Say something, or draw it…", Draw and Flip, and Post. The comments come
+newest first, each with its face, name, a short time ("40m", "2h"), its words
+or its drawing, Answer and ⋯; twenty a page, then Load more. **Answers sit one
+level under a comment, oldest first**: answering an answer puts the new one
+under the same comment. Answer brings the box there ("Answer Theo…"): the
+comment keeps its place on the screen as the box moves, the box fades in, and
+if it landed below what the screen shows the page glides down to it. Answer
+again, Esc or Post sends the box home. On a desk the comments sit beside the
+drawing, under Share. Home's card says how many beside the plays ("3
+comments", a way to them), and nothing at none. A drawing shown outside a post
+(`/social/b/<id>`) has no comments: they are a post's.
+
+**Who may comment:** somebody signed in, not taken down, with no block
+either way with the post's author; an answer also with none with the author
+of the comment it answers. The route refuses anybody else kindly, and the
+box is not shown to them. Signed out, the comments are readable and "Sign in
+to answer" stands in the box's place, back to the post once signed in. The
+words are a post's: tidied, 500 characters at most, nothing hidden or turned
+around; 60 comments an hour a person (`comment` in security.LIMITS). A
+comment needs words or a drawing.
+
+**A drawing answer** (the second part; the mock's 6. "Reply with a skribl",
+phase 3's, came early with the owner's yes to this mock.) Draw and Flip in
+the box open Skribl's editor over the post in compose mode (`?compose=1`, no
+gallery tick; `lib/composehost.js` through `SocialPadOverlay`, as Home's
+composer). Add hands the drawing back, and it waits in the box, in the
+in-post player the comment will have, with Edit drawing and Remove, until
+Post. It is posted through Skribl's `create_post` in the same transaction as
+the comment that keeps its id, UNLISTED whatever the payload says (its link
+works, it is listed nowhere), titled by the comment's first words; a comment
+needs words or a drawing. On the page it is Skribl's in-post player, 150px
+wide in the drawing's own shape with the player's line under it, still and
+not even fetched until tapped: the post's own drawing alone plays by itself.
+It goes with its comment, its post and its person's account (Skribl's
+`delete_post`, as its author), is withheld with its comment when an admin
+takes it down, and what is reported of it on Skribl's own link page lands on
+its comment's card. A post's own page loads `lib/composehost.js` only for
+somebody who may comment.
+
+**What is shown, and counted:** nothing by anybody hidden from the viewer (a
+block either way, or taken down), nor the answers under it, on the post's
+page and on Home's card alike. A comment's ⋯: your own is "Your comment",
+Delete comment; somebody else's on your own post "Theo’s comment", Remove
+from my post and Report comment; anybody else's Report comment. Delete and
+Remove go at once (the ⋯ is the asking), the comment fading out with its
+answers. Report sends a post's reasons into the site's own queue (kind
+`comment`); Your Reports shows its card (whose, its words, a link to it on
+its post's page), and Take it down hides it from everybody but its author,
+who sees "Taken down: it broke the rules. Only you can see it."
+
+**Data.** `social_comments`, on the site's own chain (migration
+`e4b8c2a91f37`): `public_id`, `post_id`, `person_id`, `parent_id` (always a
+top-level comment's), `words`, `skribl_id`, `created_at`, `taken_down_at`;
+indexed by address, a post's newest first, a comment's answers oldest first,
+a person's, and a drawing's. Deleting a comment takes its answers, a post its
+comments, an account its comments and every answer under them: said in code
+(`comments.drop_comments`, `posts.drop_post`, `accounts.delete_person`),
+never left to the schema's ON DELETE CASCADE, which SQLite enforces only
+where Skribl's pragma hook is on.
+
+**Counted, not kept (for now).** Section 3's rule 3 keeps counts as stored
+numbers. A comment count that hides what a block hides is each viewer's own,
+so it is counted, one grouped query a page on the post's own index, by the
+page's own rules; a kept count waits for a measurement that asks for it.
+
+`harness/verify_socialcomments.py` holds it through the demo's own server;
+DECISIONS.md ("Comments at /social") says what each check was shown red by.

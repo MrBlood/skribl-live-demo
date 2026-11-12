@@ -94,6 +94,8 @@
     });
   }
   when();
+  /* One way to say a time, for what arrives later: a comment (comments.js). */
+  window.SocialWhen = when;
 
   /* ---- a post's link: copied, or the device's own share sheet ------------- */
   function absolute(url) { return new URL(url, window.location.href).href; }
@@ -238,7 +240,8 @@
   /* ---- a post's own page: it plays by itself ----------------------------- */
   var page = doc.querySelector('.post-page[data-autoplay]');
   if (page && !(reduced && reduced.matches) && window.SkriblInline) {
-    var players = window.SkriblInline.mount(page);
+    /* The post's own drawing alone: a comment's waits for a tap (phase 2). */
+    var players = window.SkriblInline.mount(page.querySelector('.post-art') || page);
     if (players && players[0] && players[0].play) players[0].play();
   }
 

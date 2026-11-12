@@ -5,7 +5,8 @@
                       @handle and when (posts.js says it in the person's own
                       time), its ⋯, its words, the drawing in Skribl's in-post
                       player (still until tapped, as every feed's), and its
-                      plays with Share.
+                      plays, how many comments (phase 2: the comments mock's
+                      4, "N comments", a way to them) and Share.
     post_sheets()     the ⋯ sheet ("This post": Copy link, Share…, and Report
                       this post, or on your own Delete post), the report
                       sheet (the Gallery's own reasons and words, into
@@ -53,6 +54,7 @@
   <div class="post-art">{{ player(c) }}</div>
   <footer class="post-foot">
     {% if c.sk %}<a class="post-plays" href="{{ c.url }}">{{ ic.play() }}<span>{{ c.plays or 'No plays yet' }}</span></a>{% else %}<span></span>{% endif %}
+    {% if c.comments %}<a class="post-plays post-count" href="{{ c.url }}#comments" aria-label="{{ c.comments }} comment{{ '' if c.comments == 1 else 's' }}">{{ ic.comment() }}<span>{{ c.comments }}</span></a>{% endif %}
     <button class="icon-btn post-share" type="button" data-post-share aria-label="Share this post">{{ ic.share() }}</button>
   </footer>
 </article>

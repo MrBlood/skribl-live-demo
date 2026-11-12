@@ -14,9 +14,9 @@ Nothing here is legal advice; it was written by the people building the site.
   they ticked it is kept. Looking around (Explore, a profile, a post) needs no
   account.
 - **What is kept about a person.** Name, handle, a short bio, a drawn face,
-  their posts and drawings and where each is shown, who invited them, and for
-  each passkey its public half and when it was last used. There are no
-  passwords.
+  their posts, comments and drawings and where each is shown, who invited
+  them, and for each passkey its public half and when it was last used.
+  There are no passwords.
 - **Cookies.** Two, both the site's own: one keeps a person signed in, one
   protects forms. Nothing is loaded from anyone else (no ads, no analytics, no
   outside fonts or scripts).
@@ -30,15 +30,16 @@ Nothing here is legal advice; it was written by the people building the site.
   keyed hash of their address, so the same report is not counted twice).
   Reports for a child's safety come first on the admins' page, blurred until
   opened.
-- **Taking something down.** An admin can take down a post, a drawing or a
-  whole account. It is hidden from everybody but its maker, not deleted, and
-  its maker is told: "Taken down: it broke the rules."
-- **Deleting an account.** The person's profile and posts (their words and
-  drawings) are deleted with it, including a post that was taken down. Their
-  other drawings and drafts stay until they delete them in their Library; the
-  confirm page says so first, and a drawing taken down outside a post stays
-  hidden. Their passkeys go, so nothing can sign in as them. Reports that
-  named them stay, naming nobody. Blocks they made or were part of go.
+- **Taking something down.** An admin can take down a post, a comment, a
+  drawing or a whole account. It is hidden from everybody but its maker, not
+  deleted, and its maker is told: "Taken down: it broke the rules."
+- **Deleting an account.** The person's profile, posts and comments (their
+  words and drawings) are deleted with it, including a post that was taken
+  down, and the answers under their comments. Their other drawings and drafts
+  stay until they delete them in their Library; the confirm page says so
+  first, and a drawing taken down outside a post stays hidden. Their passkeys
+  go, so nothing can sign in as them. Reports that named them stay, naming
+  nobody. Blocks they made or were part of go.
 
 ## Questions for the lawyer
 

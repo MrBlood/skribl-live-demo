@@ -36,6 +36,12 @@ unlisted, through Skribl's create_post in the same transaction as the row
 that names it; a new one replaces it, and the old one goes through
 delete_post.
 
+PHASE 2, COMMENTS (comments.py; the comments mock, the owner's "all yes on
+both", Nov 12). A post's own page holds its comments, newest first, each with
+its answers one level under it; the box on top for somebody who may comment;
+Home's card says how many. Deleting a post or an account takes its comments,
+in code.
+
 ONE SKRIBL, SHARED, PEOPLE TOO. The host hands Skribl the site's signed-in
 person as its current user (current_user_id() below) and names them with
 describe_author(), so a drawing made in the Pad while signed in is theirs.
@@ -216,10 +222,11 @@ def init_social(app, *, session=None, url_prefix="/social", skribl_blueprint="sk
         return render_template("social/explore.html", here="explore")
 
     if site is not None:
-        from . import accounts, posts, profiles, reports, rules, safety
+        from . import accounts, comments, posts, profiles, reports, rules, safety
         accounts.register(bp)
         profiles.register(bp, skribl_blueprint)
         posts.register(bp, skribl_blueprint)
+        comments.register(bp)
         safety.register(bp)
         reports.register(bp, skribl_blueprint)
         rules.register(bp)
@@ -233,10 +240,12 @@ def init_social(app, *, session=None, url_prefix="/social", skribl_blueprint="sk
             read their body), and by what is read where it declares none.
             Two pages take more: a drawn face (piece 3) is a whole drawing
             and its share card, up to FACE_MAX_BODY, and a post (piece 4) is
-            a whole drawing, a Flip's music included, up to POST_MAX_BODY."""
+            a whole drawing, a Flip's music included, up to POST_MAX_BODY;
+            so is a drawing answer (phase 2, comments)."""
             if request.method == "POST":
                 cap = {"social.face_save": profiles.FACE_MAX_BODY,
-                       "social.post_new": posts.POST_MAX_BODY}.get(request.endpoint, SITE_MAX_BODY)
+                       "social.post_new": posts.POST_MAX_BODY,
+                       "social.comment_new": posts.POST_MAX_BODY}.get(request.endpoint, SITE_MAX_BODY)
                 request.max_content_length = cap
                 if (request.content_length or 0) > cap:
                     abort(413)
