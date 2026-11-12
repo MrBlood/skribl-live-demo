@@ -766,18 +766,20 @@ with sync_playwright() as p:
         pg.goto(BASE + "/social/you")
         pg.wait_for_timeout(600)
         listed = pg.evaluate("() => [...document.querySelectorAll('.blocked-row')].map(r => r.querySelector('.blocked-who').innerText.replace(/\\s+/g, ' ').trim())")
+        said = pg.evaluate("() => { const t = document.getElementById('blockedTitle'); return t ? t.nextElementSibling.textContent : null; }")
         with pg.expect_navigation(timeout=15000):
             pg.click(".blocked-row:has-text('@fay') button")
         back = pg.evaluate("() => ({ url: location.pathname + location.search, note: (document.querySelector('.note') || {}).textContent,"
                            " rows: document.querySelectorAll('.blocked-row').length })")
         again = {"eve's home has fay": "fay" in home(eve.pg), "fay at eve": status(fay.pg, "/social/@eve"),
                  "eve at fay's post": status(eve.pg, f"/social/p/{fay_post}")}
-        check("Settings lists the people you blocked, newest first, each with Unblock; Unblock comes back to Settings"
-              " saying so, and they see each other again",
-              listed == ["Gus Oyelaran @gus", "Fay Imre @fay"] and back["url"] == "/social/you?note=unblocked"
+        check("Settings lists the people you blocked, newest first, each with Unblock, in the mock's words; Unblock comes"
+              " back to Settings saying so, and they see each other again",
+              listed == ["Gus Oyelaran @gus", "Fay Imre @fay"] and said == "You and they don’t see each other. They aren’t told."
+              and back["url"] == "/social/you?note=unblocked"
               and back["note"] == "Unblocked. You’ll see each other’s posts and drawings again." and back["rows"] == 1
               and again == {"eve's home has fay": True, "fay at eve": 200, "eve at fay's post": 200},
-              f"listed {listed}; back {back}; again {again}")
+              f"listed {listed}; said {said!r}; back {back}; again {again}")
         gc = gus.client()
         gc.get("/social/")
         lift = gc.post_json("/social/@eve/unblock", {})
@@ -982,7 +984,8 @@ with sync_playwright() as p:
         check("Your Reports is an admin's: anybody else, signed in or not, meets the same 404 as a page that is not there;"
               " Settings tells an admin how many wait",
               sent == [202] * 5 and anon == 404 and not_admin == 404
-              and panel == "3 waiting for you to look at.", f"sent {sent}; signed out {anon}; not an admin {not_admin}; panel {panel!r}")
+              and panel == "3 open. You run this site, so reports come to you.",
+              f"sent {sent}; signed out {anon}; not an admin {not_admin}; panel {panel!r}")
         want0 = {"kind": "drawing", "child": True, "tag": "A child’s safety", "why": ["Spam or misleading"],
                  "meta": "2 reports", "who": "Lee Varga @lee · a drawing", "notes": ["Somebody wrote: From Explore"],
                  "by": "Reported by Ora Quinn, somebody on Explore", "veiled": 1, "words": ["Hidden until you open it."],

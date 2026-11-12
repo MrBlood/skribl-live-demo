@@ -34951,7 +34951,10 @@ Open it; no "Hidden until you open it."; Open it showing no words, leaving
 the hidden line, lifting no blur, or offering no Keep it; Keep it or the link
 offered before Open it; no word about the law, or other words than the
 mock's; the tag, the law's words, the hidden line or who reported faint;
-reports.js throwing. One line goes past the mock, "Reported by ...", because
+reports.js throwing. Settings took the mock's words too: "3 open. You run
+this site, so reports come to you." and See reports; and the Blocked panel's
+"You and they don't see each other. They aren't told.", which #866 had said
+its own way. Two more breaks, each red. One line goes past the mock, "Reported by ...", because
 the page's heading promises who reported is seen only here; the owner was
 asked. Four instruments were wrong first. Home's
 row looked for the author's name, and the author had another post there; it
