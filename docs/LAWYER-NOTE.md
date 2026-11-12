@@ -35,10 +35,13 @@ Nothing here is legal advice; it was written by the people building the site.
   opened.
 - **Taking something down.** An admin can take down a post, a comment, a
   drawing or a whole account. It is hidden from everybody but its maker, not
-  deleted, and its maker is told: "Taken down: it broke the rules."
+  deleted, and its maker is told: "Taken down: it broke the rules." The
+  comments on a post or a drawing taken down are hidden with it.
 - **Deleting an account.** The person's profile, posts and comments (their
   words and drawings) are deleted with it, including a post that was taken
-  down, and the answers under their comments. Their other drawings and drafts
+  down, and the answers under their comments; so is every comment other
+  people left on their posts and on their drawings (since Nov 12 a drawing
+  shown outside a post has comments too). Their other drawings and drafts
   stay until they delete them in their Library; the confirm page says so
   first, and a drawing taken down outside a post stays hidden. Their passkeys
   go, so nothing can sign in as them. Reports that named them stay, naming

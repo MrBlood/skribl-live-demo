@@ -35620,3 +35620,258 @@ green as built, and still red with the mark's slot narrowed (48/50, alone
 too).
 
 Pad and Flip: shared, the seam both read.
+
+## After v330 -- Comments on every drawing, and a card opens its post from its words and its time
+
+The owner, Nov 12, yes to both. Comments shipped that morning (#872) on
+posts only, the rows Home's box makes; but Home, profiles and More from also
+show drawings shared outside a post (a skribl made in the Pad or Flip on
+their own pages and shown in the gallery: `/social/b/<id>`, kind `s` in
+posts.cards), and most of the owner's own drawings are that kind, since
+Make's Draw and Flip post from the editors' own sheets. The two look the same
+to people, so the owner opened several and found no comment box: "there was
+comments on one of them though. weird?"
+
+1. "Comments on every drawing, however it was made, so whatever you open has
+   the comment box."
+2. "Easier to open a post: tap its words, its name line or its time; the 💬
+   shows even at zero."
+3. Then, the same day, a plain yes to anywhere on a card opening its post:
+   but the drawing, which plays and pauses and never opens the post; the
+   face and the name, the person's page; ⋯ and Share, their own jobs; the
+   💬, the comments; and a drag that selects words opens nothing.
+
+- ON A DRAWING TOO. A drawing's own page has a post's comments: the box (Draw
+  and Flip in it open the editors over the drawing's page), answers one level
+  deep, drawing answers, the ⋯ (its maker removes, as a post's author does,
+  in the words the drawing's ⋯ already uses: "Remove from my post"), Report
+  into the site's queue, Load more, and the count on Home's card. Its own
+  routes, `/social/b/<skribl_id>/comments` (POST a comment or an answer, GET
+  the next page); `/social/c/<id>/delete` is both kinds'.
+- ITS PAGE DECIDES, AND ITS COMMENTS FOLLOW IT. posts.bloob is the drawing
+  page's rule, now one function the page and every comment route read
+  (comments.on_drawing): Skribl describes it to the viewer (deleted, withheld
+  or private to somebody else is absent, and so is what the host's visibility
+  policy hides: a block, a person taken down); public, or withheld and
+  theirs; its maker one of the site's people, not taken down unless it is
+  them; no block either way. A post's drawing is its post's, and so are its
+  comments. A block either way with its maker, the drawing taken down, its
+  maker taken down, or the drawing deleted in the Library: its page is a kind
+  404, and its comments are neither read (Load more), said, answered nor
+  reported. Its maker still sees them on a drawing taken down, with the note
+  and no box, as on a post. An answer is on what its comment is on: one
+  naming a comment on another drawing, or on a post, is refused.
+- THE DATA, the shape decided with the yes: social_comments.post_id nullable;
+  drawing_id, the drawing's skribl public id (Skribl's: the site has no row
+  of its own for a drawing); a CHECK that exactly one is set
+  (ck_social_comments_on_one); owner_id, whose the post or the drawing is,
+  ON DELETE CASCADE, so deleting an account and a block never ask Skribl
+  whose a drawing was. POSTS CARRY IT TOO (the brief left it ours), for one
+  code path: Remove reads it for both kinds, an account's comments on what it
+  owned go by it, and the comments already there are filled from their
+  posts' authors, then NOT NULL. Indexed for a drawing's comments newest
+  first and by owner. One migration on the site's chain (ded60afbc86d); a
+  comment whose post is not there (none can be) is deleted rather than stop
+  the chain at NOT NULL. The downgrade deletes the comments on drawings,
+  there being no post for them to be on; their drawing answers stay in
+  Skribl, unlisted, since the site's chain never touches Skribl's tables.
+  PostgreSQL: the DDL was rendered offline (alembic --sql) and read; not run
+  here.
+- DELETING, IN CODE. A drawing deleted through the site (its ⋯, Delete post)
+  takes its comments and their drawing answers (comments.drop_drawing_comments),
+  only after delete_post has said it was theirs: a refused delete still
+  commits, so dropping first would let anybody's try empty a drawing's
+  comments. An account takes every comment on what it owned
+  (comments.drop_owner_comments, by owner_id) before its own and the answers
+  under them.
+- NOT DONE: a drawing deleted in the Library (Skribl's own page) takes its
+  page, and so its comments, from everybody at once, but their rows stay
+  until its maker's account goes, or each commenter's: Skribl tells a host
+  nothing when a drawing is deleted on its own pages. A seam for that (or a
+  sweep asking describe_posts as the maker, which sees anything of theirs
+  that still exists) would let the site delete them then.
+- EASY TO OPEN, on Home's cards (More from's tiles were whole links already;
+  a profile shows Skribl's Gallery, not these cards). The words and the time
+  are each a link to the card's own page, a post's or a drawing's; the 💬
+  shows even at none, its icon alone, named "Comment", a 44px way to
+  #comments, where the number would be. THE NAME LINE KEEPS GOING TO THE
+  PERSON, the brief's call, said here because the owner's words were "tap
+  its words, its name line or its time": the name and the @handle go to a
+  profile everywhere on the site, and so do they here, and the face.
+- ANYWHERE ON A CARD (3): a tap or a click on a card's own ground opens its
+  page (posts.js: one that landed on nothing with a job of its own). The
+  card is not one big link, which a screen reader would read as one: its
+  words and its time stay its real links. The drawing plays and pauses and
+  never opens the post; it is set apart three ways (the card's tap leaves
+  .post-art alone, the player's box is a button by its role, and the player
+  stops its own taps, which Skribl's player has done since v316 for hosts
+  that make a whole post a link). The face, the name and the @handle, ⋯ and
+  Share, and the 💬 keep their own. A press that moved more than a few
+  pixels is a drag, and a click that ends a text selection opens nothing, a
+  link's included. Ctrl or ⌘, or the middle button, opens a new tab, as a
+  link's would. A keyboard's click is never read as a drag. On a desk the
+  card shows a pointer (hover and a fine pointer only); a phone's card is
+  unchanged.
+- THE WORDS SELECT AS WORDS. Found by its row, red on the tree as first
+  built: in Chromium a link's text cannot be selected by pressing and
+  pulling (the link drags itself), and with only draggable="false" it still
+  selects nothing while the press, let go on the same link, follows it. The
+  words' link is draggable="false" with -webkit-user-drag: none and
+  user-select: text, so they select; the click that ends the selection is
+  then stopped. (Measured on a bare page first: each property alone, and
+  each pair, before the card's.)
+- NOTHING ON THE CARD MOVED, measured before and after on HEAD and this tree,
+  four cards (a post with words and one without, a drawing with a title and
+  one without) on four screens (phone and desk, light and dark): every
+  painted word, the drawing and the footer at the same pixel, the 💬 at none
+  the only new paint. The line had been one link, the name, @handle and time,
+  the finger's 44px. Now the name's link lies under the @handle's line too
+  (padding given back by a negative margin, from the two lines' own heights,
+  so it holds in any face), and the @handle lets a tap through to it; the
+  time's link lies over it, 44px wide at least and 44px tall by reaching
+  down into the room under its line, toward the words, whose link goes where
+  it goes. THE TIME ON A CARD WITH NO WORDS, a judgment call: its box reaches
+  about 11px over the top edge of the drawing, and the drawing lies over
+  that (its own stacking order), since the drawing never opens the post. So
+  there the time's own tap is the 33px from its line to the drawing; the
+  card's ground beside and above the drawing opens the post too, and so does
+  its plays link (44px, the same page). Its box is still 44px by its rect,
+  which is all verify_socialposts section 7's census reads; section 10 reads
+  the paint, and there the time's lower corners land on the drawing. The
+  other ways to a 44px time were moving it
+  to the right of the header, or a taller header on a card with no words,
+  both of which change the card; this was first built the other way round
+  (the time over the drawing's edge), until the owner's addition said the
+  drawing never opens the post. The words' link is the paragraph, 10px of
+  padding above and below given back by margins, so a one-line post's is
+  44px; the ⋯ stays over all of it. Focus rings: the name's around both
+  lines as the line's was; the time's hugs the time. Measured again on the
+  final tree: the same sixteen renderings at the same pixels.
+
+Pad and Flip: not affected; a drawing answer on a drawing opens them over its
+page in compose mode, as on a post (lib/composehost.js, the site's one
+overlay). Neither editor changed.
+
+THE FOUR: kind (whatever is opened has the box; a drawing gone, blocked or
+taken down takes its comments with it and nobody is told; a refused delete
+takes nothing; a drag that selects words is never taken for a tap); simple
+(two kinds that look the same now behave the same, and a card opens where
+it is tapped, as people expect, the drawing playing as it always has);
+playful (a conversation under every drawing, drawing answers and all);
+powerful (a drawing's maker removes, and reports reach the admins with a
+link to the drawing; Ctrl or ⌘ opens a post in a new tab).
+
+CONTRAST: no colour or token changed. A drawing's comments are a post's
+markup and inks; section 28 reads them as section 13 reads a post's: 240
+read, phone and desk, light and dark, the lowest 5.33:1 (section 13, a
+post's: 328, 5.33:1).
+The card's new links wear the card's own inks, and verify_socialposts
+section 7 reads every word and target on Home as before (166 read, the
+lowest 5.33:1).
+
+THE CHECKS. verify_socialcomments gains nine sections, 20 to 28 (no page
+errors stays last): a drawing's page has the section (the box, a comment on
+the drawing whose row keeps its owner, signed out, Load more); answers and a
+drawing answer through the real Pad over its page, and answers from
+elsewhere refused; the ⋯, delete and remove; blocks either way, people, the
+drawing and its maker taken down; the drawing deleted through the site and
+in the Library; the account deleted (and in code, with the cascade off);
+reported, taken down, and Home's count; the chain on a populated database,
+both ways; every word and target, phone and desk, light and dark. Section 11
+now asks for the 💬 at none. verify_socialposts gains section 10, the card's
+ways in, read off what is painted (a tap's landing at the middle and the
+four corners of each link) on a post with words, one without and a drawing,
+phone and desk, light and dark: the words and the time open the card's page;
+the face, the name and the @handle the person's; the 💬 at none; and nothing
+moved (the header the face's 44px, the time on the @handle's line, the words
+and the drawing 12px under). Its section 4 reads the name's link where it
+read the line's. Section 11, anywhere on a card, presses for real (a touch
+on a phone, a click on a desk): the card's ground, its words and the 💬
+open it (the 💬 at its comments); the drawing plays, pauses and stays, at
+its middle and at its edge under the time on a card with no words; the
+face, the name and the @handle open the person's page; ⋯ opens its sheet
+and Share the device's (a stand-in navigator.share), the page staying; and
+on a desk, pressing on the words and pulling selects them and opens
+nothing. verify_socialauth's chain row knows the two new indexes.
+
+EVERY NEW ROW WAS SHOWN RED by a break of its own, each in a throwaway copy
+of the committed tree, its section run alone, and green as built:
+forty-six breaks, forty-four of them red. verify_socialcomments: the 💬
+only at one or more, the old card (11, and 26's count at none); no
+comments on a drawing's page
+(20, all three); a comment keeping its writer as whose the drawing is (20,
+21); Sign in to answer going back to Home (20); a drawing's Load more asking
+the post's route (20); an answer to an answer kept under the answer, and an
+answer taken from another drawing or a post (21); the editors' host script
+loaded for posts only, so Draw opens nothing over a drawing (21); Remove not
+offered on your own drawing (22); the count after a delete read as a post's
+(22); the drawing's owner unable to remove (22); a drawing's card counting
+people a block hides (23); the comment routes trusting their own rows rather
+than the drawing's page (23, every row of it, and 24's Library row); the
+page showing everything, no hidden or taken-down rule (23, 26); the maker of
+a taken-down drawing offered the box (23); a drawing deleted through the
+site leaving its comments, or dropping them before its delete was allowed
+(24); delete_person without the comments on what they owned (25, both rows),
+or dropping them without their drawings (25); Your Reports reading every
+comment's post as if each had one (26); Home counting no drawing's comments
+(26, 23); the chain without filling owner_id, or without the CHECK (27, both
+rows), and its downgrade keeping the comments on drawings (27); Answer too
+small to tap on a drawing's page (28). verify_socialposts: the 💬 only at
+one or more, and named "0 comments" at none (10); the words, and the time,
+not links (10); the time's link only as tall as its line, and under the
+words' (10: a tap at its lower corners landed on the player or the words,
+read off the paint); the name's link only as tall as the name, the @handle
+catching its own taps, the name going to the post (10, and 4), and the
+name's link worked out for exactly 44px, 43.99 on a phone (10, and 7); the
+words' link not giving back its padding (10, nothing moved); the time's link
+growing its line (10, nothing moved, and the person's row); for anywhere on
+a card (11), no tap on the card's ground; the drawing without its own
+stacking order, so the time's box over its edge opened the post (11, and
+10's time row); the @handle catching taps, so the card opened the post
+(11); buttons not set apart, so Share opened the post too (11); a click
+that ends a selection still following the link; and the words a link that
+drags itself (11). Two breaks stayed green, and rightly: the card's tap
+read in the capture phase with the drawing not set apart, and the drawing
+not set apart alone. The player's box is a button by its role and stops its
+own taps, so the middle of the drawing kept playing; its edge under the
+time is what the stacking order guards, and that break is red.
+verify_socialauth: the chain without the owner's index (14, the chain's and
+the drift row).
+
+ONE INSTRUMENT WAS WRONG FIRST, found by its break: a drawing's Load more
+that never brought anything stopped section 20 at its wait, red as "section
+20 ran to its end", while its own row never ran (its click and wait are now
+a step that fails the row). Two breaks reached further than meant, said so
+the list reads true: the comment routes trusting their own rows also left a
+new drawing unable to take its first comment, so 23's and 24's first rows
+went red for that reason too; and delete_person without the comments on
+what its person owned went red on the route row as well as the cascade-off
+probe, since SQLite's cascade takes the rows but cannot reach the drawing
+answers in Skribl (the first comments build found the route rows blind to a
+missing line of deleting code; a drawing answer under the comment is what
+lets this one see). The nothing-moved row was given the header's height
+before its breaks ran: a link that grows its line keeps every gap it read.
+
+THE AFFECTED SUITES, SIDE BY SIDE (run_parallel -j 2), FOUND THREE REDS,
+each the same alone, so defects rather than load, and all three mine. The
+censuses of Home in verify_socialposts section 7 and verify_socialauth (its
+every link 44px row) read the card's name link at 232 x 43.99 on a phone:
+the two lines and the padding worked out to make 44 are laid out in 64ths
+of a pixel. Its box is worked out for 45px now (its padding and margin
+still cancel: the sixteen renderings again at the same pixels). Section 10
+had rounded the size before comparing and stayed green on it; it reads
+sizes as the census does now, and the 44px box is a break of its own, red
+on section 10 and section 7 both. And verify_socialcomments section 24
+commented as Pia, whose account section 9 deletes, so in a whole run she
+was signed out (its runs alone had never run section 9 first); it makes
+Vee.
+
+On the final tree, side by side: verify_socialcomments 67/67,
+verify_socialposts 31/31, verify_socialauth 63/63, verify_socialsafety
+34/34, verify_social 40/40, verify_socialprofile 54/54, verify_migrations
+77/77, verify_seam 470/470, verify_hostseams 105/105, verify_txcontract
+102/102, verify_docs 144/144. The full battery was not run; main's run
+after the merge is.
+
+Not tested here: WebKit (the owner's iPhone), SF and Segoe UI, PostgreSQL
+(the migration's DDL rendered offline and read), and the live site.

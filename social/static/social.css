@@ -755,6 +755,50 @@ button.make-door { width: 100%; border: 0; font: inherit; text-align: left; curs
 .post-sub { color: var(--ink-2); font-size: 15px; }
 .post-head .post-more { margin-right: -8px; }
 .post-words { margin: 12px 0 0; font-size: 17px; line-height: 1.45; white-space: pre-wrap; overflow-wrap: anywhere; }
+/* EASY TO OPEN (the owner's yes, Nov 12): on a card, its words and its time
+   are each a link to its own page; the face, the name and the @handle are
+   still the person's. NOTHING MOVES, every target is a finger's 44px, and
+   no two ways overlap where a tap could mean either:
+   - the name's link reaches down under the @handle's line (padding, given
+     back by a negative margin, from the two lines' own heights), so the
+     person's link is the 44px the whole line's link was, and the @handle
+     lets a tap through to it;
+   - the time's link lies over it, 44px wide at least and tall by reaching
+     down into the room under the line (toward the words, which go where it
+     goes), and its ring hugs the time; on a card with no words the drawing
+     lies over the time's last 11px or so, since the drawing never opens the
+     post: there the time's own tap is the 33px from its line to the
+     drawing, and the card's ground around it opens the post as well;
+   - the words' link is the paragraph, 10px above and below it given back
+     the same way, so it is 44px tall on one line;
+   - the ⋯ stays over all of it.
+   ANYWHERE ELSE ON THE CARD opens its page too (posts.js): a pointer says
+   so on a desk, and nothing changes on a phone. */
+/* 45px, not 44: the two lines and the padding are laid out in 64ths of a
+   pixel, and a box worked out to 44 exactly came out at 43.99. */
+.post-card .post-name {
+  display: block; text-decoration: none;
+  padding: calc((45px - 17px * 1.3 - 15px * 1.3) / 2) 0 calc((45px - 17px * 1.3 + 15px * 1.3) / 2);
+  margin: calc((17px * 1.3 + 15px * 1.3 - 45px) / 2) 0 calc((17px * 1.3 - 15px * 1.3 - 45px) / 2);
+}
+.post-card .post-sub { pointer-events: none; }
+.post-when {
+  position: relative; z-index: 1; display: inline-block; min-width: 44px;
+  padding-bottom: calc(44px - 15px * 1.3); margin-bottom: calc(15px * 1.3 - 44px);
+  color: inherit; text-decoration: none; pointer-events: auto;
+}
+.post-when:focus-visible { outline: none; }
+.post-when:focus-visible > time { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 4px; }
+.post-card .post-more { position: relative; z-index: 2; }
+.post-card .post-words { display: block; margin: 2px 0 -10px; padding: 10px 0; color: inherit; text-decoration: none; }
+/* ...and they select as words when pressed and pulled (a link drags itself
+   otherwise, and selects nothing): with draggable="false" on the link, the
+   two Chromium needs; posts.js opens nothing when the press ends a selection. */
+.post-card .post-words { -webkit-user-drag: none; -webkit-user-select: text; user-select: text; }
+.post-card .post-art { position: relative; z-index: 1; }
+@media (hover: hover) and (pointer: fine) {
+  .post-card { cursor: pointer; }
+}
 .post-art { margin-top: 12px; }
 .post-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 4px; }
 .post-plays {

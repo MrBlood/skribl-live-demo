@@ -276,16 +276,34 @@ class Comment(SocialBase):
     page reads its comments newest first and each comment's answers oldest
     first, each by an index of its own.
 
+    ON A POST, OR ON A DRAWING (the owner's yes, Nov 12: "Comments on every
+    drawing, however it was made"): a comment belongs to a post (post_id),
+    or to a drawing shown outside a post (drawing_id, the skribl's own
+    public id: Skribl's, so the site has no row of its own for it). Exactly
+    one of the two, which the database holds too (ck_social_comments_on_one).
+    An answer is on what its comment is on. owner_id is whose that post or
+    drawing is, kept on the comment either way, so deleting an account and
+    a block never need to ask Skribl whose a drawing was.
+
     DELETING IS REAL AND SAID IN CODE (comments.py, posts.drop_post,
-    accounts.delete_person): a comment goes with its answers, a post with
-    its comments, an account with its comments and the answers under them.
+    posts.bloob_delete, accounts.delete_person): a comment goes with its
+    answers, a post or a drawing with its comments, an account with its
+    comments, the answers under them and every comment on what it owned.
     The ON DELETE CASCADEs below are the database's net under that, never
     the way: SQLite enforces them only where Skribl's pragma hook is on."""
     __tablename__ = "social_comments"
 
     id = sa.Column(BigId, primary_key=True)
     public_id = sa.Column(sa.String(24), nullable=False)
-    post_id = sa.Column(BigId, sa.ForeignKey("social_posts.id", ondelete="CASCADE"), nullable=False)
+    #: The post it is on, or None for one on a drawing shown outside a post.
+    post_id = sa.Column(BigId, sa.ForeignKey("social_posts.id", ondelete="CASCADE"), nullable=True)
+    #: The drawing it is on (shown outside a post: /social/b/<it>), by its
+    #: skribl's public id, or None for one on a post.
+    drawing_id = sa.Column(sa.String(32), nullable=True)
+    #: Whose the post or the drawing is: deleting their account takes every
+    #: comment on what they owned, and a block either way with them closes it.
+    owner_id = sa.Column(BigId, sa.ForeignKey("social_people.id", ondelete="CASCADE",
+                                              name="fk_social_comments_owner_id"), nullable=False)
     person_id = sa.Column(BigId, sa.ForeignKey("social_people.id", ondelete="CASCADE"), nullable=False)
     #: The top-level comment an answer sits under; None for a comment.
     parent_id = sa.Column(BigId, sa.ForeignKey("social_comments.id", ondelete="CASCADE"), nullable=True)
@@ -302,10 +320,15 @@ class Comment(SocialBase):
     taken_down_at = sa.Column(sa.DateTime(timezone=True), nullable=True)
 
     __table_args__ = (
+        #: On a post or on a drawing: exactly one.
+        sa.CheckConstraint("(post_id IS NOT NULL AND drawing_id IS NULL) OR (post_id IS NULL AND drawing_id IS NOT NULL)",
+                           name="ck_social_comments_on_one"),
         sa.Index("ix_social_comments_public_id", "public_id", unique=True),
         sa.Index("ix_social_comments_post_created", "post_id", "created_at"),
+        sa.Index("ix_social_comments_drawing_created", "drawing_id", "created_at"),
         sa.Index("ix_social_comments_parent_created", "parent_id", "created_at"),
         sa.Index("ix_social_comments_person_id", "person_id"),
+        sa.Index("ix_social_comments_owner_id", "owner_id"),
         sa.Index("ix_social_comments_skribl_id", "skribl_id"),
     )
 

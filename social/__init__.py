@@ -39,8 +39,9 @@ delete_post.
 PHASE 2, COMMENTS (comments.py; the comments mock, the owner's "all yes on
 both", Nov 12). A post's own page holds its comments, newest first, each with
 its answers one level under it; the box on top for somebody who may comment;
-Home's card says how many. Deleting a post or an account takes its comments,
-in code.
+Home's card says how many. So does a drawing's own page (/b/<id>), since the
+owner's yes the same day: whatever is opened has them. Deleting a post, a
+drawing or an account takes its comments, in code.
 
 ONE SKRIBL, SHARED, PEOPLE TOO. The host hands Skribl the site's signed-in
 person as its current user (current_user_id() below) and names them with
@@ -241,11 +242,13 @@ def init_social(app, *, session=None, url_prefix="/social", skribl_blueprint="sk
             Two pages take more: a drawn face (piece 3) is a whole drawing
             and its share card, up to FACE_MAX_BODY, and a post (piece 4) is
             a whole drawing, a Flip's music included, up to POST_MAX_BODY;
-            so is a drawing answer (phase 2, comments)."""
+            so is a drawing answer (phase 2, comments), on a post or on a
+            drawing."""
             if request.method == "POST":
                 cap = {"social.face_save": profiles.FACE_MAX_BODY,
                        "social.post_new": posts.POST_MAX_BODY,
-                       "social.comment_new": posts.POST_MAX_BODY}.get(request.endpoint, SITE_MAX_BODY)
+                       "social.comment_new": posts.POST_MAX_BODY,
+                       "social.bloob_comment_new": posts.POST_MAX_BODY}.get(request.endpoint, SITE_MAX_BODY)
                 request.max_content_length = cap
                 if (request.content_length or 0) > cap:
                     abort(413)

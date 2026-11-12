@@ -186,8 +186,8 @@ def _reported(kind, target, me):
     by a block: None."""
     sess = site().session()
     if kind == "comment":
-        # As its post's page shows it to them (comments.seen): never your own,
-        # nor one taken down.
+        # As its page shows it to them, a post's or a drawing's (comments.seen):
+        # never your own, nor one taken down.
         from .comments import seen
         got = seen(target, me)
         if (got is None or got["c"].taken_down_at is not None or got["who"].taken_down_at is not None

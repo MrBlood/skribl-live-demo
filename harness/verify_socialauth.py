@@ -1345,7 +1345,9 @@ with sync_playwright() as p_:
                     "ix_social_reports_about_id", "ix_social_reports_reporter_id", "ix_social_reports_handled_by_id",
                     "ix_social_comments_public_id", "ix_social_comments_post_created",
                     "ix_social_comments_parent_created", "ix_social_comments_person_id",
-                    "ix_social_comments_skribl_id"}
+                    "ix_social_comments_skribl_id",
+                    # comments on every drawing: a drawing's newest first, and whose it is
+                    "ix_social_comments_drawing_created", "ix_social_comments_owner_id"}
         check("on an empty SQLite file the site's chain builds its nine tables with every index, stamps its own"
               " version table (social_alembic_version) at its head, and touches nothing of Skribl's",
               r1.returncode == 0 and names == want | {"social_alembic_version"} and want_idx <= idx

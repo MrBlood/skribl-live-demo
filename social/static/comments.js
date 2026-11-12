@@ -1,8 +1,11 @@
 /* Comments (phase 2; the comments mock and the owner's "all yes on both",
- * Nov 12): a post's own page (post.html, social/_comments.html).
+ * Nov 12): a post's own page, and a drawing's (post.html,
+ * social/_comments.html), the same section on both: the page names its own
+ * addresses (data-new, data-more, data-drop).
  *
  * THE BOX ON TOP: the words grow as they are typed and say how many are left
- * once few are; Post sends them (/social/p/<id>/comments, the page's token in
+ * once few are; Post sends them (/social/p/<id>/comments, or a drawing's
+ * /social/b/<id>/comments; the page's token in
  * X-Social-CSRF) and the new comment fades in at the top, newest first, the
  * count with it. With nothing written or drawn, Post says so and sends
  * nothing.
