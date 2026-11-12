@@ -602,6 +602,38 @@ body.canvas-wide .app { background: transparent; border-left-color: transparent;
   .brand .brand-tag--script svg, .brand-tag--script svg { height: 26px; }
   .brand-tag--script { margin-left: -6px; }
 }
+/* A HOST'S OWN MARK (skribl/brand.py, _skribl_brand_own.html; docs/
+   INTEGRATION.md, "Your brand on Skribl's editors"). A host that serves the
+   editors at an address of its own may give them its mark, and it stands in
+   the signature's slot, so nothing in the header moves. It is drawn in the
+   signature's 30-unit hand at the signature's scale (36px to 30 units, 26px
+   on a phone); the part of its box past the hand (--brand-own-units, its
+   viewBox's height) hangs below the line by a negative margin, so the line
+   sits where the signature's does and the header keeps its height; and the
+   slot keeps the signature's 65 units of width, so the mode word beside it
+   stays where it was. It is pressed as the signature is, and its currentColor
+   is Skribl's purple, the colour the signature's ink starts in; whatever the
+   host's markup colours itself keeps its own colour. Flip's lockup has the
+   same rules (flip.css). */
+.header .brand .brand-own { display: flex; align-items: flex-start; min-width: calc(36px * 65 / 30); }
+.header .brand .brand-own > svg, .header .brand .brand-own > img {
+  height: calc(36px * var(--brand-own-units, 30) / 30);
+  margin-bottom: calc(36px * (30 - var(--brand-own-units, 30)) / 30);
+  width: auto;
+  display: block;
+  overflow: visible;
+  border-radius: 0;
+  box-shadow: none;
+  color: var(--accent);
+  filter: var(--brand-relief);
+}
+@media (max-width: 480px) {
+  .header .brand .brand-own { min-width: calc(26px * 65 / 30); }
+  .header .brand .brand-own > svg, .header .brand .brand-own > img {
+    height: calc(26px * var(--brand-own-units, 30) / 30);
+    margin-bottom: calc(26px * (30 - var(--brand-own-units, 30)) / 30);
+  }
+}
 .brand.brand-collapsed > span { display: none; }
 
 /* PLAYER-ONLY since the editor dropped its icon: the player keeps its mark

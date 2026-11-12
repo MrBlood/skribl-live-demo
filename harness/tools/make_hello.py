@@ -26,6 +26,26 @@ A Flip, drawn through the real Flip editor with real pen input, on 9:16:
     python3 harness/tools/make_hello.py OUTDIR
     cp OUTDIR/hello.json skribl/static/brand/hello.json
 
+THE SITE'S HELLO, --site (the owner's yes, Nov 12: on blooby.app "Draw and
+Flip say 'blooby.' too, at the top and in the first-open hello where the blush
+dot drops, splats and becomes the period"; landing B of the mock, "it splats a
+little"). The same tool with the site's look, not a copy of it: the word's and
+the period's paths read from the site's mark (social/_blooby_mark.html, drawn
+at the skribl mark's metrics), the word in the site's purple and the period in
+Blooby's blush, both read from the site's tokens (social.css --brand, its
+first and light value, and --blooby-blush), and B's pages in place of the
+bounce and the wink. The word is one colour, so the pen lays it down as the
+one stroke it is. The period's pages, in the mark's own units about where it
+rests, before the skew (so it falls along the writing's lean, as the mock's
+did): stretched as it falls, twice; it lands as a splat with three drops
+thrown up, which spread, then fall back as the splat pulls in; it gathers,
+rounds up a touch, and rests as the period for the last three. The site keeps
+it as its own file, and app.py hands it to Skribl's editors at blooby.app
+(skribl/brand.py):
+
+    python3 harness/tools/make_hello.py OUTDIR --site
+    cp OUTDIR/blooby-hello.json social/static/brand/blooby-hello.json
+
 Needs the local server (SKRIBL_BASE). The payload carries no background colour:
 the ground is the page's own (lib/hello.js), in either theme.
 """
@@ -45,6 +65,8 @@ import handmotion as hm  # noqa: E402
 
 BASE = os.environ.get("SKRIBL_BASE", "http://127.0.0.1:5001")
 MARK = ROOT / "skribl" / "templates" / "skribl" / "_skribl_brand_mark.html"
+SITE_MARK = ROOT / "social" / "templates" / "social" / "_blooby_mark.html"
+SITE_CSS = ROOT / "social" / "static" / "social.css"
 A, B = (0x7c, 0x5c, 0xff), (0x5b, 0x8c, 0xff)   # --accent -> --accent-2, as the mark's gradient runs
 PIECES = 64
 WORD_MS = 1600
@@ -56,21 +78,62 @@ FPS = 12                                         # the dot's thirteen pages are 
 DOT_PAGES = ((-0.20, 0.80, 1.35), (-0.09, 0.85, 1.25), (0.0, 1.38, 0.70), (-0.045, 0.95, 1.10),
              (-0.018, 1.0, 1.0), (0.0, 1.14, 0.88), (0.0, 1.0, 1.0), (0.0, 1.0, 1.0),
              (0.003, 1.22, 0.55), (0.006, 1.5, 0.2), (0.002, 1.18, 0.62), (0.0, 1.0, 1.0), (0.0, 1.0, 1.0))
+# THE SITE'S PERIOD, LANDING B ("it splats a little"), page by page as the
+# mock drew it: each a list of strokes ((x, y), (x, y) or None, pen), in the
+# mark's own units from where the period rests, before the skew; None is a
+# drop, a dot of that pen. Falling twice, stretched along the fall; the splat
+# with three drops thrown up; spread; pulled in, the drops falling back;
+# gathered; rounded up a touch; and at rest, the period, for the last three.
+_REST = [((-0.15, 0.0), (0.15, 0.0), 2.9)]
+SPLAT_PAGES = (
+    [((0.0, -25.0), (0.0, -23.4), 2.5)],
+    [((0.0, -12.6), (0.0, -9.8), 2.4)],
+    [((-2.6, 0.75), (2.6, 0.75), 1.4), ((-4.1, -1.3), None, 0.95), ((0.1, -2.5), None, 0.85), ((4.2, -1.1), None, 0.95)],
+    [((-2.9, 0.8), (2.9, 0.8), 1.25), ((-5.1, -0.9), None, 0.8), ((0.2, -3.3), None, 0.75), ((5.2, -0.6), None, 0.8)],
+    [((-1.7, 0.55), (1.7, 0.55), 1.9), ((-3.3, 0.3), None, 0.8), ((0.1, -1.6), None, 0.8), ((3.4, 0.4), None, 0.8)],
+    [((-0.7, 0.2), (0.7, 0.2), 2.5)],
+    [((0.0, -0.6), (0.0, -0.15), 2.75)],
+    _REST, _REST, _REST)
 
 
-def mark():
-    """The word's path, the dot's, the skew's slope and the pen's width, from the template."""
-    src = MARK.read_text(encoding="utf-8")
-    word = re.search(r'<path class="st" d="([^"]+)"', src).group(1)
-    dot = re.search(r'<path class="st dot" d="([^"]+)"', src).group(1)
-    skew = math.tan(math.radians(float(re.search(r'skewX\((-?[\d.]+)\)', src).group(1))))
-    pen = float(re.search(r'stroke-width="([\d.]+)"', src).group(1))
-    return word, dot, skew, pen
+def _token(css, name):
+    """A token's first value in a stylesheet (the light one, where a dark
+    block sets it again)."""
+    return re.search(r"--%s:\s*(#[0-9a-fA-F]{6})\b" % re.escape(name), css).group(1).lower()
 
 
 def sweep(t):
     t = max(0.0, min(1.0, t))
     return "#%02x%02x%02x" % tuple(round(a + (b - a) * t) for a, b in zip(A, B))
+
+
+# THE TWO LOOKS. Skribl's hello writes the header's own mark in its sweep, in
+# PIECES so the ink carries the gradient, and its dot bounces and winks; the
+# site's writes its own mark, the word one colour and so one stroke, and its
+# period splats. Everything else (the pen, the fit, the timing, the way the
+# drawing is made) is the one tool's.
+SKRIBL = {"name": "hello.json", "mark": MARK,
+          "word": r'<path class="st" d="([^"]+)"', "dot": r'<path class="st dot" d="([^"]+)"',
+          "ink": sweep, "dot_ink": None, "pieces": PIECES, "pages": "bounce"}
+
+
+def site_look():
+    css = SITE_CSS.read_text(encoding="utf-8")
+    word, blush = _token(css, "brand"), _token(css, "blooby-blush")
+    return {"name": "blooby-hello.json", "mark": SITE_MARK,
+            "word": r'<g transform="skewX\(-?[\d.]+\)"><path d="([^"]+)"',
+            "dot": r'<path class="brand-period"[^>]*? d="([^"]+)"',
+            "ink": lambda t: word, "dot_ink": blush, "pieces": 1, "pages": "splat"}
+
+
+def mark(look=SKRIBL):
+    """The word's path, the dot's, the skew's slope and the pen's width, from the template."""
+    src = look["mark"].read_text(encoding="utf-8")
+    word = re.search(look["word"], src).group(1)
+    dot = re.search(look["dot"], src).group(1)
+    skew = math.tan(math.radians(float(re.search(r'skewX\((-?[\d.]+)\)', src).group(1))))
+    pen = float(re.search(r'stroke-width="([\d.]+)"', src).group(1))
+    return word, dot, skew, pen
 
 
 def cubic(d, n=18):
@@ -89,11 +152,13 @@ def cubic(d, n=18):
     return pts
 
 
-def fit(cw, ch, width=0.78, at=0.46):
-    """The word and the dot on the canvas, the word with each point's sweep t
-    (the mark's own x / 65, before the skew, as its gradient is laid), and
-    the canvas pixels to one of the mark's units."""
-    wd, dd, skew, _ = mark()
+def placer(cw, ch, width=0.78, at=0.46, look=SKRIBL, back=False):
+    """Where a point in the mark's own units goes on the canvas (skewed as the
+    mark is, the word and dot together WIDTH of the canvas wide, their middle
+    AT its height), and the canvas pixels to one of the mark's units. With
+    `back`, the way back too: a point on the canvas in the mark's own units,
+    the skew taken out (verify_hello reads the period's pages so)."""
+    wd, dd, skew, _ = mark(look)
     word, dot = cubic(wd), cubic(dd, 6)
     sk = lambda p: (p[0] + skew * p[1], p[1])
     allp = [sk(p) for p in word + dot]
@@ -101,6 +166,22 @@ def fit(cw, ch, width=0.78, at=0.46):
     s = width * cw / (max(xs) - min(xs))
     cx, cy = (min(xs) + max(xs)) / 2, (min(ys) + max(ys)) / 2
     place = lambda p: (cw / 2 + (sk(p)[0] - cx) * s, ch * at + (sk(p)[1] - cy) * s)
+    if not back:
+        return place, s
+
+    def unplace(q):
+        y = (q[1] - ch * at) / s + cy
+        return ((q[0] - cw / 2) / s + cx - skew * y, y)
+    return place, s, unplace
+
+
+def fit(cw, ch, width=0.78, at=0.46, look=SKRIBL):
+    """The word and the dot on the canvas, the word with each point's sweep t
+    (the mark's own x / 65, before the skew, as its gradient is laid), and
+    the canvas pixels to one of the mark's units."""
+    wd, dd, _, _ = mark(look)
+    word, dot = cubic(wd), cubic(dd, 6)
+    place, s = placer(cw, ch, width, at, look)
     return ([place(p) for p in word], [p[0] / 65 for p in word],
             [place(p) for p in dot], sum(p[0] for p in dot) / len(dot) / 65, s)
 
@@ -111,10 +192,11 @@ def send(cdp, box, sx, sy, kind, x, y, buttons=1):
              "pointerType": "pen", "force": 0.0 if kind == "mouseReleased" else 1.0})
 
 
-def write(page, logical, path, ts, size, pace=0.95, seed=7):
-    """One continuous movement of the hand along `path`, laid down as PIECES
-    strokes, each in the sweep's colour at its middle: a lift and a touch at
-    the same point, so the line runs on unbroken."""
+def write(page, logical, path, ts, size, pace=0.95, seed=7, ink=sweep, pieces=PIECES):
+    """One continuous movement of the hand along `path`, laid down as `pieces`
+    strokes, each in its ink at its middle (the sweep's colour, for Skribl's):
+    a lift and a touch at the same point, so the line runs on unbroken. One
+    piece is the one stroke the pen never lifts from."""
     box = page.locator("#pad").bounding_box()
     sx, sy = box["width"] / logical[0], box["height"] / logical[1]
     timed = hm.stroke(hm.catmull(path, 1.2), pace=pace, seed=seed, pmin=0.5, pmax=1.0, tremor=0.15)
@@ -125,13 +207,13 @@ def write(page, logical, path, ts, size, pace=0.95, seed=7):
             j += 1
         tt.append(ts[j])
     n = len(timed)
-    cuts = [round(i * (n - 1) / PIECES) for i in range(PIECES + 1)]
+    cuts = [round(i * (n - 1) / pieces) for i in range(pieces + 1)]
     cdp = page.context.new_cdp_session(page)
     t0 = time.perf_counter()
     for a, b in zip(cuts, cuts[1:]):
         if b <= a:
             continue
-        page.evaluate("([c, s]) => { color = c; size = s; }", [sweep((tt[a] + tt[b]) / 2), size])
+        page.evaluate("([c, s]) => { color = c; size = s; }", [ink((tt[a] + tt[b]) / 2), size])
         for k in range(a, b + 1):
             x, y, ms, _ = timed[k]
             while (time.perf_counter() - t0) * 1000 < ms:
@@ -141,14 +223,11 @@ def write(page, logical, path, ts, size, pace=0.95, seed=7):
     cdp.detach()
 
 
-def blob(page, logical, cx, cy, w, h, color):
-    """A dot as the pen makes one: a pill along its long axis, as wide as the short."""
+def line(page, logical, a, b, size, color):
+    """One short stroke of the pen from a to b, `size` wide, round at both ends."""
     box = page.locator("#pad").bounding_box()
     sx, sy = box["width"] / logical[0], box["height"] / logical[1]
-    page.evaluate("([c, s]) => { color = c; size = s; }", [color, min(w, h)])
-    half = max(0.4, (max(w, h) - min(w, h)) / 2)
-    a = (cx - half, cy) if w >= h else (cx, cy - half)
-    b = (cx + half, cy) if w >= h else (cx, cy + half)
+    page.evaluate("([c, s]) => { color = c; size = s; }", [color, size])
     cdp = page.context.new_cdp_session(page)
     send(cdp, box, sx, sy, "mousePressed", *a)
     for i in range(1, 7):
@@ -159,7 +238,25 @@ def blob(page, logical, cx, cy, w, h, color):
     cdp.detach()
 
 
-def build(out_dir, browser):
+def blob(page, logical, cx, cy, w, h, color):
+    """A dot as the pen makes one: a pill along its long axis, as wide as the short."""
+    half = max(0.4, (max(w, h) - min(w, h)) / 2)
+    a = (cx - half, cy) if w >= h else (cx, cy - half)
+    b = (cx + half, cy) if w >= h else (cx, cy + half)
+    line(page, logical, a, b, min(w, h), color)
+
+
+def splat(page, logical, place, s, rest, strokes, color):
+    """One of the site's period pages: each stroke placed from where the
+    period rests (`rest`, in the mark's units), skewed and scaled as the mark
+    is; a drop is a dot of its pen (a tenth of a unit long)."""
+    for a, b, pen in strokes:
+        b = b if b is not None else (a[0] + 0.1, a[1])
+        line(page, logical, place((rest[0] + a[0], rest[1] + a[1])),
+             place((rest[0] + b[0], rest[1] + b[1])), pen * s, color)
+
+
+def build(out_dir, browser, look=SKRIBL):
     ctx = browser.new_context(viewport={"width": 1100, "height": 1500})
     page = ctx.new_page()
     errs = []
@@ -175,17 +272,28 @@ def build(out_dir, browser):
         if (typeof setTool === 'function') setTool('pen'); }}""")
     cw, ch = page.evaluate("() => [CW, CH]")
     logical = [cw, ch]
-    word, ts, dot, dot_t, s = fit(cw, ch)
-    pen = mark()[3] * s                              # the mark's own pen, at this size
+    word, ts, dot, dot_t, s = fit(cw, ch, look=look)
+    pen = mark(look)[3] * s                          # the mark's own pen, at this size
 
     # Page 0: the word, without its dot: Flip brings the dot in.
-    write(page, logical, word, ts, pen)
-    dcx, dcy = sum(p[0] for p in dot) / len(dot), sum(p[1] for p in dot) / len(dot)
-    dot_d = 3.0 * s                                  # the dot as the mark paints it: a short curl of the same pen
-    for dy, w, h in DOT_PAGES:
-        page.evaluate("() => addFrame(false)")
-        page.wait_for_timeout(60)
-        blob(page, logical, dcx, dcy + dy * cw, dot_d * w, dot_d * h, sweep(dot_t))
+    write(page, logical, word, ts, pen, ink=look["ink"], pieces=look["pieces"])
+    if look["pages"] == "splat":
+        # Where the period rests, in the mark's own units: the middle of its
+        # stroke (as the dot's below), so the last page sits on the mark's.
+        dd = cubic(mark(look)[1], 6)
+        rest = (sum(p[0] for p in dd) / len(dd), sum(p[1] for p in dd) / len(dd))
+        place, _ = placer(cw, ch, look=look)
+        for strokes in SPLAT_PAGES:
+            page.evaluate("() => addFrame(false)")
+            page.wait_for_timeout(60)
+            splat(page, logical, place, s, rest, strokes, look["dot_ink"])
+    else:
+        dcx, dcy = sum(p[0] for p in dot) / len(dot), sum(p[1] for p in dot) / len(dot)
+        dot_d = 3.0 * s                              # the dot as the mark paints it: a short curl of the same pen
+        for dy, w, h in DOT_PAGES:
+            page.evaluate("() => addFrame(false)")
+            page.wait_for_timeout(60)
+            blob(page, logical, dcx, dcy + dy * cw, dot_d * w, dot_d * h, look["dot_ink"] or sweep(dot_t))
     total = page.evaluate("() => frames.length")
     under = {"page": 0, "from": 1, "to": total - 1}
     # The word's page as the hand wrote it, fitted into WORD_MS: the pieces
@@ -207,7 +315,7 @@ def build(out_dir, browser):
         raise SystemExit(f"hello: page errors {errs[:2]}")
     for f in payload["frames"]:
         f["background"] = None
-    (pathlib.Path(out_dir) / "hello.json").write_text(json.dumps(payload))
+    (pathlib.Path(out_dir) / look["name"]).write_text(json.dumps(payload))
     f0 = payload["frames"][0]["strokes"]
     print(json.dumps({"pages": total, "under": payload.get("under"), "word_ms": f0[-1]["t"] - f0[0]["t"],
                       "pieces": sum(1 for p in f0 if p.get("start")),
@@ -217,11 +325,12 @@ def build(out_dir, browser):
 
 if __name__ == "__main__":
     from playwright.sync_api import sync_playwright
-    out = sys.argv[1] if len(sys.argv) > 1 else None
+    args = [a for a in sys.argv[1:] if a != "--site"]
+    out = args[0] if args else None
     if not out:
         raise SystemExit(__doc__)
     pathlib.Path(out).mkdir(parents=True, exist_ok=True)
     with sync_playwright() as pw:
         b = pw.chromium.launch()
-        build(out, b)
+        build(out, b, site_look() if "--site" in sys.argv[1:] else SKRIBL)
         b.close()

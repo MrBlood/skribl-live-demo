@@ -24,7 +24,15 @@
    data-hello-cover is "up" while it waits, "on" once the hello is over it,
    "lift" as it fades (styles.css, THE HELLO'S GROUND).
 
-   Any failure leaves both off: no hello, no ground, the page as it was. #}
+   Any failure leaves both off: no hello, no ground, the page as it was.
+
+   A HOST'S HELLO IS REMEMBERED BY ITS OWN KEY (skribl/brand.py): where the
+   request's brand gives a hello, the key read here is the brand's, the one
+   _skribl_hello.html hands lib/hello.js to mark, so somebody who met
+   Skribl's hello still meets the host's once. Otherwise it is Skribl's own,
+   skribl.hello.v2, as lib/hello.js's own default is. The brand's key is
+   letters, digits, ".", "_" and "-" (checked there), so it is written into
+   this script as it is. #}
 <script nonce="{{ csp_nonce }}">
-(function(){try{var q=location.search,a=/[?&]hello=again(&|$)/.test(q),f=window.__skriblHelloForce===true||a,s;try{s=localStorage.getItem('skribl.hello.v2')==='1';}catch(e){s=true;}if((navigator.webdriver&&!f)||(s&&!a)||window.top!==window||/[?&]compose=1\b/.test(q))return;var r=document.documentElement;r.setAttribute('data-hello-comes','');r.setAttribute('data-hello-cover','up');setTimeout(function(){if(r.getAttribute('data-hello-cover')!=='up')return;r.setAttribute('data-hello-cover','lift');setTimeout(function(){if(r.getAttribute('data-hello-cover')==='lift')r.removeAttribute('data-hello-cover');},400);},8000);}catch(e){}})();
+(function(){try{var q=location.search,a=/[?&]hello=again(&|$)/.test(q),f=window.__skriblHelloForce===true||a,s;try{s=localStorage.getItem('{{ skribl_brand.hello_key if skribl_brand and skribl_brand.hello_key else 'skribl.hello.v2' }}')==='1';}catch(e){s=true;}if((navigator.webdriver&&!f)||(s&&!a)||window.top!==window||/[?&]compose=1\b/.test(q))return;var r=document.documentElement;r.setAttribute('data-hello-comes','');r.setAttribute('data-hello-cover','up');setTimeout(function(){if(r.getAttribute('data-hello-cover')!=='up')return;r.setAttribute('data-hello-cover','lift');setTimeout(function(){if(r.getAttribute('data-hello-cover')==='lift')r.removeAttribute('data-hello-cover');},400);},8000);}catch(e){}})();
 </script>

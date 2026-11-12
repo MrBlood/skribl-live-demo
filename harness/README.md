@@ -328,7 +328,11 @@ stays a sleep.
   that a filtered feed still returns FULL pages and a cursor pointing at a row
   the viewer saw), `csrf=False` producing a working app, `visibility_values`,
   and `author_resolver` (the id is not overridable). In-process throwaway apps
-  over one temp SQLite file, like `verify_privacy.py`.
+  over one temp SQLite file, like `verify_privacy.py`. Since the blooby. hello,
+  also `brand_resolver` (THE HOST'S BRAND): an answer of nothing is the Pad and
+  Flip byte for byte; a host's mark in the signature's slot, its label, its
+  hello and its own key, per request; a wrong answer raises; Skribl names no
+  host.
 ### v226 filmstrip suites
 
 - `verify_pagespan.py` — a run of Flip pages as one object: shift-click
@@ -1092,7 +1096,19 @@ stays a sleep.
   the head the one place it is decided (one key with lib/hello.js); never in a
   composer's frame or to automation that did not ask, and nothing of it is
   fetched there. Each row was shown red by its own break, served or read in
-  place of the real file.
+  place of the real file. ITS SITE PART (after v330, the blooby. hello): it
+  boots the demo's own app with `SKRIBL_SOCIAL_HOME_HOSTS` on a port of its own
+  and reads one server at two addresses, the site's (`blooby.localhost`) and
+  another: the lockup there wears `blooby.`, painted (the word in Skribl's
+  purple, the period in Blooby's blush, contrast read on its ground), the line
+  where skribl's was and nothing else in the header or the dock moved, named
+  Blooby; the site's hello written from the site's own mark and tokens, landing
+  B read off its pages and off the screen (the splat, the drops, the period at
+  rest on the mark's), its glide read on every frame (the word point after
+  point, the pages in order, none held, the way out through the middle), once
+  by its own key, still and fading under Reduce Motion; at the other address
+  skribl's mark and hello; and the demo's pages byte for byte at any address
+  but the site's. `HELLO_PART=site` runs that part alone.
 - `verify_recolor.py` — Recolor (lib/recolor.js): a line already drawn takes
   the pen's colour, on the Pad and Flip. The button beside the eyedropper at
   the end of the Pen | Background row, and the colour row nine colours again,

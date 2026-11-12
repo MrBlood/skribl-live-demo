@@ -36,6 +36,21 @@
     color: var(--brand-ink, var(--text-primary)); /* the signature's pen — brand violet in both themes; see the token in styles.css */
     filter: var(--brand-relief); } /* letterpress, same press as Pad's — see the token in styles.css */
   @media (max-width: 480px) { .flip-word .brand-mark { height: 26px; } } /* phone step, same as Pad's */
+  /* A HOST'S OWN MARK in the signature's slot, as on the Pad: the same hand
+     and scale, the box's part past the hand hung below the line, the
+     signature's width kept so "flip" stays where it was, the same press and
+     purple. The reasons are at the Pad's rules (styles.css, A HOST'S OWN MARK). */
+  .flip-word .brand-own { display: flex; align-items: flex-start; min-width: calc(36px * 65 / 30); }
+  .flip-word .brand-own > svg, .flip-word .brand-own > img {
+    height: calc(36px * var(--brand-own-units, 30) / 30);
+    margin-bottom: calc(36px * (30 - var(--brand-own-units, 30)) / 30);
+    width: auto; display: block; overflow: visible; border-radius: 0; box-shadow: none;
+    color: var(--accent); filter: var(--brand-relief); }
+  @media (max-width: 480px) {
+    .flip-word .brand-own { min-width: calc(26px * 65 / 30); }
+    .flip-word .brand-own > svg, .flip-word .brand-own > img {
+      height: calc(26px * var(--brand-own-units, 30) / 30);
+      margin-bottom: calc(26px * (30 - var(--brand-own-units, 30)) / 30); } }
   .flip-lead { display: flex; align-items: center; gap: 6px; flex: none; }
   /* No gap of its own: the container is .actions too, and the Pad's .actions
      rules — 8px, 9px on a phone, 3px with margins at the narrowest — govern

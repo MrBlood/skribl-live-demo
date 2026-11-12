@@ -899,6 +899,176 @@ finally:
     for _k, _v in _saved4.items():
         _env(**{_k: _v})
 
+# ---------------------------------------------------------------------------
+print("\nTHE HOST'S BRAND — its mark, label and hello on Skribl's editors, per request (brand_resolver)")
+# The owner's yes (Nov 12): at the site's own address the Pad and Flip say
+# the site's name, at the top and in the first-open hello; everywhere else
+# they say skribl. Skribl cannot know a host's address or its mark, so it is
+# a seam (skribl/brand.py, docs/INTEGRATION.md "Your brand on Skribl's
+# editors"): the host answers per request, and an answer of nothing is
+# Skribl as it is, BYTE FOR BYTE. Read from what the server sends, through
+# throwaway hosts in this process. The site's own wiring and what is painted
+# are verify_hello's (its site section).
+import re as _re                                                    # noqa: E402
+from flask import request as _request                              # noqa: E402
+
+_HM = ('<svg class="host-mark" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 34" '
+       'fill="none" stroke="currentColor" stroke-width="2.3"><g transform="skewX(-8)">'
+       '<path d="M 4,23.4 C 10,8 20,8 26,23.4 C 32,8 42,8 46,23.4 C 45,28 43,31 41,33"/>'
+       '<path class="host-dot" stroke="#ff6f91" d="M 48.0,23.0 C 48.4,22.5 48.9,22.8 48.6,23.3"/></g></svg>')
+_BRAND = {"mark": _HM, "label": "Example", "hello": "/static/example/hello.json?v=1", "hello_key": "example.hello.v1"}
+_tmpl = tempfile.mkdtemp()
+with open(os.path.join(_tmpl, "hostmark.html"), "w", encoding="utf-8") as _fh:
+    _fh.write('<svg class="host-tmpl" viewBox="0 0 40 30" stroke="currentColor"><path d="M 2,23 L 38,23"/></svg>'
+              '<!-- rendered in {{ request.host }} -->')
+
+
+def _brand_host(resolver=None, **kw):
+    """A throwaway host as host_app's, with templates of its own, and the
+    brand seam given at init (or, with `later`, set afterwards)."""
+    later = kw.pop("later", None)
+    a = Flask(f"host-brand-{len(results)}", template_folder=_tmpl)
+    a.config["SQLALCHEMY_DATABASE_URI"] = DB_URL
+    a.config["SECRET_KEY"] = "harness-hostseams"
+    a.testing = True                          # so a wrong answer raises here, where the suite sees it
+    d = SQLAlchemy()
+    d.init_app(a)
+    skribl.init_skribl(a, session=lambda: d.session, csrf=False,
+                       **({"brand_resolver": resolver} if resolver is not None else {}))
+    if later is not None:
+        skribl.set_brand_resolver(later, app=a)
+    return a
+
+
+def _page(app, route, host="brand.example"):
+    """The page as sent, its nonce taken out; a page that raised says what."""
+    try:
+        r = app.test_client().get(route, base_url="http://" + host)
+    except Exception as exc:  # noqa: BLE001 (a red row, not a stopped suite)
+        return 500, f"raised {exc!r}"
+    return r.status_code, _re.sub(r'nonce="[^"]*"', 'nonce="N"', r.get_data(as_text=True))
+
+
+def _for_host(answer, host="brand.example"):
+    return lambda: answer if _request.host == host else None
+
+
+_plain = _brand_host()
+_quiet = _brand_host(lambda: None)
+_empty = _brand_host(lambda: {})
+_brand = _brand_host(_for_host(_BRAND))
+_later = _brand_host(later=_for_host(_BRAND))
+_tpl = _brand_host(_for_host({"mark_template": "hostmark.html", "label": "Example"}))
+_mark_only = _brand_host(_for_host({"mark": _HM, "label": "Example"}))
+_hello_only = _brand_host(_for_host({"label": "Example", "hello": "/static/example/hello.json",
+                                     "hello_key": "example.hello.v1"}))
+_EDITORS = (("/skribl-pad", "Pad", "101"), ("/flip", "Flip", "95"))
+_plainp = {r: _page(_plain, r) for r, _, _ in _EDITORS}
+check("(setup) the Pad and Flip render in a throwaway host, with Skribl's own mark and hello",
+      all(st == 200 and f'id="skink-m{sw}"' in h and "getItem('skribl.hello.v2')" in h and "brand-own" not in h
+          for r, _, sw in _EDITORS for st, h in [_plainp[r]]),
+      "; ".join(f"{r}: {_plainp[r][0]}" for r, _, _ in _EDITORS))
+_same = {name: all(_page(app, r, host) == _page(_plain, r, host) for r, _, _ in _EDITORS)
+         for name, app, host in (("answering None", _quiet, "brand.example"),
+                                 ("answering an empty mapping", _empty, "brand.example"),
+                                 ("answering for another address", _brand, "other.example"))}
+check("no brand, an answer of None, an empty answer, or an answer for another address: the Pad and Flip "
+      "are Skribl's, byte for byte", all(_same.values()), str(_same))
+for _route, _mode, _sw in _EDITORS:
+    _st, _h = _page(_brand, _route)
+    _slot = _re.search(r'<span class="brand-own" style="--brand-own-units: ([\d.]+)">(.*?)</span>', _h, _re.S)
+    _header = _h.split('<div class="header">', 1)[-1].split("</div>", 1)[0] if '<div class="header">' in _h else ""
+    check(f"{_mode}, at the host's address: its mark stands where the signature stood, its markup as given, "
+          "the box's height in the hand's units read from its viewBox (34); the signature is not in the header",
+          _st == 200 and _slot is not None and _slot.group(1) == "34" and _slot.group(2) == _HM
+          and f'id="skink-m{_sw}"' not in _h and _slot.start() < _h.find("brand-tag"),
+          f"{_st}; slot {_slot.group(1) if _slot else None}; Skribl's signature in the page: {f'skink-m{_sw}' in _h}")
+    # The lockup and the heading only: the rest of the page is Skribl's own
+    # words (its menu's version line, How it works), which stay Skribl's.
+    check(f"{_mode}: the lockup and the page's one heading name it: 'Example {_mode}'",
+          f'aria-label="Example {_mode}" title="Example {_mode}"' in _h
+          and _re.findall(r'<h1[^>]*>([^<]*)</h1>', _h) == [f"Example {_mode}"]
+          and f'aria-label="Skribl {_mode}" title=' not in _h,
+          f"heading {_re.findall(r'<h1[^>]*>([^<]*)</h1>', _h)}")
+    check(f"{_mode}: its hello: the head reads the host's key, not Skribl's; the hello's drawing is the "
+          "host's, its key handed to lib/hello.js, and it is named 'Example's signature'",
+          "getItem('example.hello.v1')" in _h and "skribl.hello.v2" not in _h
+          and 'data-hello="/static/example/hello.json?v=1" data-hello-key="example.hello.v1"' in _h
+          and 'aria-label="Example\'s signature"' in _h,
+          f"head {_re.findall(r'getItem[(]([^)]*)[)]', _h)[:3]}; hello {_re.findall(r'data-hello(?:-key)?=\"[^\"]*\"', _h)}")
+    check(f"{_mode}: set afterwards (set_brand_resolver(fn, app=app)), the same page as given at init",
+          _page(_later, _route) == (_st, _h))
+_pad = _page(_brand, "/skribl-pad")[1]
+check("Skribl's own signature stays where it is not the header's: 'made with' under the Pad's player",
+      'id="skink-m65"' in _pad and 'aria-label="Skribl"' in _pad,
+      "the brand is the editors' header and hello, not Skribl's player")
+_tp = _page(_tpl, "/flip")[1]
+check("a mark by a template the host names: rendered in the request, in the slot, at the hand's height when "
+      "its box is the hand's (30)",
+      '<span class="brand-own" style="--brand-own-units: 30"><svg class="host-tmpl"' in _tp
+      and "<!-- rendered in brand.example -->" in _tp and 'aria-label="Example Flip"' in _tp
+      and "getItem('skribl.hello.v2')" in _tp, "a brand with no hello keeps Skribl's")
+_mo, _ho = _page(_mark_only, "/skribl-pad")[1], _page(_hello_only, "/skribl-pad")[1]
+check("a brand of a mark alone keeps Skribl's hello and key; of a hello alone, Skribl's mark and name",
+      "brand-own" in _mo and "getItem('skribl.hello.v2')" in _mo and "brand/hello.json" in _mo
+      and "data-hello-key" not in _mo
+      and "brand-own" not in _ho and 'id="skink-m101"' in _ho and 'aria-label="Skribl Pad"' in _ho
+      and "getItem('example.hello.v1')" in _ho and 'aria-label="Example\'s signature"' in _ho)
+
+# A WRONG ANSWER FAILS LOUDLY, on the first page that asks, naming what is
+# wrong: never half a brand, and never a key or an address written into the
+# page that could break out of where it is written.
+_WRONG = {
+    "a hello without its key": {"label": "X", "hello": "/h.json"},
+    "a key without its hello": {"label": "X", "mark": _HM, "hello_key": "x.v1"},
+    "Skribl's own key": dict(_BRAND, hello_key="skribl.hello.v2"),
+    "a key with a quote in it": dict(_BRAND, hello_key="x');alert(1);('"),
+    "a hello on another site": dict(_BRAND, hello="https://elsewhere.example/hello.json"),
+    "a hello at //host": dict(_BRAND, hello="//elsewhere.example/hello.json"),
+    "a hello with a quote in it": dict(_BRAND, hello='/h.json" onload="x'),
+    "an unknown key": dict(_BRAND, colour="#fff"),
+    "a mark and a template": dict(_BRAND, mark_template="hostmark.html"),
+    "no label": {"mark": _HM},
+    "a label alone": {"label": "X"},
+    "a label of 41 characters": dict(_BRAND, label="x" * 41),
+    "a mark drawn at another scale": dict(_BRAND, mark=_HM.replace('viewBox="0 0 50 34"', 'viewBox="0 0 300 150"')),
+    "an answer that is not a mapping": ["mark"],
+}
+_loud = {}
+for _why, _ans in _WRONG.items():
+    try:
+        _brand_host(lambda _a=_ans: _a).test_client().get("/skribl-pad")
+        _loud[_why] = "rendered"
+    except (ValueError, TypeError) as exc:
+        _loud[_why] = None if "brand" in str(exc) else f"raised, unnamed: {exc}"
+check("a wrong answer fails loudly on the first page that asks, saying what is wrong: "
+      + ", ".join(_WRONG), not any(_loud.values()), str({k: v for k, v in _loud.items() if v}))
+try:
+    skribl.set_brand_resolver("not callable", app=_plain)
+    check("a resolver that is not callable is refused when it is set", False)
+except TypeError as exc:
+    check("a resolver that is not callable is refused when it is set", True, str(exc))
+check("it is a documented name: set_brand_resolver in skribl.__all__, and init_skribl takes brand_resolver",
+      "set_brand_resolver" in skribl.__all__ and callable(getattr(skribl, "set_brand_resolver", None)))
+# SKRIBL NAMES NO HOST. The seam's own code and markup name nobody, and
+# nothing under skribl/ names the site's address, mark, hello or blush: the
+# site reaches Skribl through the seam, never the other way (verify_social
+# section 8 holds the imports).
+_seam_files = [os.path.join(ROOT, "skribl", "brand.py"),
+               os.path.join(ROOT, "skribl", "templates", "skribl", "_skribl_brand_own.html")]
+_named = [f for f in _seam_files if "blooby" in open(f, encoding="utf-8").read().lower()]
+_site_words = _re.compile(r"blooby\.app|blooby-hello|blooby\.hello|_blooby_mark|brand-blooby|blooby-blush", _re.I)
+_leaks = []
+for _dir, _subs, _files in os.walk(os.path.join(ROOT, "skribl")):
+    _subs[:] = [x for x in _subs if x != "__pycache__"]
+    for _f in _files:
+        if _f.endswith((".py", ".html", ".js", ".css")):
+            _fp = os.path.join(_dir, _f)
+            if _site_words.search(open(_fp, encoding="utf-8", errors="ignore").read()):
+                _leaks.append(os.path.relpath(_fp, ROOT))
+check("Skribl names no host: the seam's code and markup name nobody, and nothing under skribl/ names the "
+      "site's address, mark, hello or blush", not _named and not _leaks, f"named in {_named}; {_leaks}")
+
 bad = [r for r in results if not r[0]]
 print(f"\n{'=' * 62}\n{len(results) - len(bad)}/{len(results)} passed"
       + ("" if not bad else "  FAILURES: " + ", ".join(r[1] for r in bad)))

@@ -108,14 +108,14 @@ def _to_line(p, line):
     return best
 
 
-def on_the_mark(path):
+def on_the_mark(path, look=make_hello.SKRIBL):
     """The hello's drawing against the header's paths, placed as make_hello.py
     places them: the farthest either line strays from the other (each way, so
     a mark with more to it than the drawing shows too), and how far its dot at
     rest is from the mark's dot, both in the mark's units."""
     d = json.load(open(path))
     cs = d["canvasSize"]
-    word, _, dot, _, s = make_hello.fit(cs["cssWidth"], cs["cssHeight"])
+    word, _, dot, _, s = make_hello.fit(cs["cssWidth"], cs["cssHeight"], look=look)
     drawn = [(p["x"], p["y"]) for p in d["frames"][0]["strokes"]]
     far = max(max(_to_line(p, word) for p in drawn), max(_to_line(p, drawn) for p in word)) / s
     last = d["frames"][-1]["strokes"]
@@ -259,12 +259,23 @@ check(f"the hello writes the header's own mark: its line within {NEAR} of the ma
 # Whether it comes is decided in the page's head, before the first paint
 # (_skribl_hello_boot.html), and lib/hello.js marks it seen: the one key in
 # both, and no second decision in lib/hello.js (no read of what was seen).
+# The key is Skribl's own, or a host's own hello's (skribl/brand.py), which
+# the one brand hands to both: the head reads it, and the hello's partial
+# gives it to lib/hello.js as data-hello-key (verify_hostseams reads both on
+# a host's page; the site's part below, in the browser).
 _boot = open(os.path.join(ROOT, "skribl", "templates", "skribl", "_skribl_hello_boot.html")).read()
+_part = open(os.path.join(ROOT, "skribl", "templates", "skribl", "_skribl_hello.html")).read()
 _js = open(os.path.join(ROOT, "skribl", "static", "lib", "hello.js")).read()
-_bk, _jk = re.findall(r"localStorage\.getItem\('([^']+)'\)", _boot), re.findall(r"var KEY = '([^']+)'", _js)
-check("the head decides whether it comes and lib/hello.js marks it seen, with the one key; lib/hello.js decides nothing again",
-      _bk == [KEY] and _jk == [KEY] and "localStorage.getItem" not in _js,
-      f"the head reads {_bk}, lib/hello.js marks {_jk}, and reads seen itself: {'localStorage.getItem' in _js}")
+_bk = re.findall(r"localStorage\.getItem\('\{\{ skribl_brand\.hello_key if skribl_brand and skribl_brand\.hello_key "
+                 r"else '([^']+)' \}\}'\)", _boot)
+_jk = re.findall(r"var KEY = el\.getAttribute\('data-hello-key'\) \|\| '([^']+)'", _js)
+_pk = re.findall(r'data-hello-key="\{\{ skribl_brand\.hello_key \}\}"', _part)
+check("the head decides whether it comes and lib/hello.js marks it seen, with the one key (Skribl's own, or a host's "
+      "own hello's, handed to both from the one brand); lib/hello.js decides nothing again",
+      _bk == [KEY] and _jk == [KEY] and len(_pk) == 1 and len(re.findall(r"localStorage\.getItem", _boot)) == 1
+      and "localStorage.getItem" not in _js,
+      f"the head reads {_bk} (or the brand's), lib/hello.js marks {_jk} (or the partial's {len(_pk)}), and reads "
+      f"seen itself: {'localStorage.getItem' in _js}")
 HELLO = json.load(open(HELLO_JSON))
 
 
@@ -476,6 +487,681 @@ def _seen(png, ground):
     if share(h // 3, 2 * h // 3, lambda c: off(c, ground, 40)) > 0.001:
         return "hello"
     return "ground"
+
+
+# ================================================================== THE SITE'S
+# BLOOBY. AT BLOOBY.APP (the owner's yes, Nov 12: "On blooby.app, Draw and
+# Flip say 'blooby.' too, at the top and in the first-open hello where the
+# blush dot drops, splats and becomes the period. The Skribl demo, and
+# skribls.net if they take Pad and Flip, keep 'skribl'."). The demo's app
+# hands Skribl the site's brand through Skribl's seam (skribl/brand.py) at the
+# addresses SKRIBL_SOCIAL_HOME_HOSTS names (app.py, _site_brand), so this part
+# boots the demo's own app with that set, on a port of its own, and reads the
+# same server at two addresses: the site's (blooby.localhost, this machine's
+# own and a secure context, as blooby.app is) and another (127.0.0.1), which
+# must be the demo exactly as it is. verify_hostseams holds the seam itself.
+# HELLO_PART=site runs this part alone (calibration).
+SITE = make_hello.site_look()
+SITE_JSON = os.path.join(ROOT, "social", "static", "brand", "blooby-hello.json")
+SITE_KEY = "blooby.hello.v1"
+SITE_HOST = "blooby.localhost"
+SITE_CSS_TEXT = open(os.path.join(ROOT, "social", "static", "social.css"), encoding="utf-8").read()
+PURPLE = make_hello._token(SITE_CSS_TEXT, "brand")          # the site's purple: the word
+BLUSH = make_hello._token(SITE_CSS_TEXT, "blooby-blush")    # Blooby's blush: the period
+REST_PAGES = 3
+
+
+def site_pages(d):
+    """The period's pages after the word, in the mark's own units from where
+    it rests (the skew taken out, as make_hello lays them): for each page,
+    its strokes as (x, y, w, h), x and y the middle of the stroke's ink, w and
+    h its ink's width and height (the pen's included), biggest first."""
+    cs = d["canvasSize"]
+    _, s, back = make_hello.placer(cs["cssWidth"], cs["cssHeight"], look=SITE, back=True)
+    rest = make_hello.cubic(make_hello.mark(SITE)[1], 6)
+    rx, ry = sum(q[0] for q in rest) / len(rest), sum(q[1] for q in rest) / len(rest)
+    out = []
+    for f in d["frames"][1:]:
+        strokes, cur = [], []
+        for q in f["strokes"]:
+            if q.get("start") and cur:
+                strokes.append(cur)
+                cur = []
+            cur.append(q)
+        if cur:
+            strokes.append(cur)
+        page = []
+        for st in strokes:
+            pts = [back((q["x"], q["y"])) for q in st]
+            pen = st[0]["size"] / s
+            x0, x1 = min(q[0] for q in pts), max(q[0] for q in pts)
+            y0, y1 = min(q[1] for q in pts), max(q[1] for q in pts)
+            page.append((round((x0 + x1) / 2 - rx, 2), round((y0 + y1) / 2 - ry, 2),
+                         round(x1 - x0 + pen, 2), round(y1 - y0 + pen, 2)))
+        out.append(sorted(page, key=lambda t: -t[2] * t[3]))
+    return out
+
+
+def landing_b(pages):
+    """Landing B, read off its pages ([] when it reads right, else what is
+    wrong): it falls twice, high then nearer, stretched along the fall; lands
+    as a splat on the line with three drops thrown up; spreads, the drops
+    flying out; pulls in as they fall back; gathers to one stroke still a
+    little wide; rounds up a touch; and rests as the period, round and on its
+    place, for the last three."""
+    bad = []
+    if len(pages) != 7 + REST_PAGES:
+        return [f"{len(pages)} pages after the word, where landing B has {7 + REST_PAGES}"]
+    one = lambda k: len(pages[k]) == 1
+    main = lambda k: pages[k][0]
+    drops = lambda k: pages[k][1:]
+    spread = lambda k: sum(math.hypot(x, y) for x, y, _, _ in drops(k)) / max(1, len(drops(k)))
+    if not (one(0) and one(1) and main(0)[1] < -18 and -16 < main(1)[1] < -6
+            and main(0)[3] > 1.4 * main(0)[2] and main(1)[3] > 1.4 * main(1)[2]):
+        bad.append(f"the fall {pages[:2]}")
+    if not all(len(pages[k]) == 4 and main(k)[2] > 2.5 * main(k)[3] and abs(main(k)[1]) < 1.2
+               and all(y < 0.6 for _, y, _, _ in drops(k)) for k in (2, 3, 4)):
+        bad.append(f"the splat, three drops above it {pages[2:5]}")
+    elif not (main(3)[2] > main(2)[2] > main(4)[2] and spread(3) > spread(2) > spread(4)
+              and max(abs(y) for _, y, _, _ in drops(4)) < max(abs(y) for _, y, _, _ in drops(2))):
+        bad.append(f"spread, then pulled in {[(main(k)[2], round(spread(k), 2)) for k in (2, 3, 4)]}")
+    if not (one(5) and 1.2 < main(5)[2] / main(5)[3] < 2.5 and abs(main(5)[1]) < 0.6):
+        bad.append(f"gathered {pages[5]}")
+    if not (one(6) and main(6)[3] > main(6)[2] and main(6)[1] < 0):
+        bad.append(f"rounded up {pages[6]}")
+    if not all(one(k) and 0.8 <= main(k)[2] / main(k)[3] <= 1.25 and math.hypot(*main(k)[:2]) <= NEAR
+               and pages[k] == pages[-1] for k in range(7, 7 + REST_PAGES)):
+        bad.append(f"at rest {pages[7:]}")
+    return bad
+
+
+print("\nTHE SITE'S HELLO — before any browser")
+far, dot_off = on_the_mark(SITE_JSON, SITE)
+check(f"the site's hello writes the site's own mark (social/_blooby_mark.html): its line within {NEAR} of the "
+      "mark's units of the mark's, its period at rest on the mark's period", far <= NEAR and dot_off <= NEAR,
+      f"its line strays {far}, its period is {dot_off} away (make_hello.py --site draws it from the template)")
+SITE_HELLO = json.load(open(SITE_JSON))
+_inks = [sorted({q["color"] for q in f["strokes"]}) for f in SITE_HELLO["frames"]]
+check(f"its word is the site's purple ({PURPLE}) and its period Blooby's blush ({BLUSH}), both read from the "
+      "site's own tokens (social.css), one colour each",
+      _inks[0] == [PURPLE] and all(k == [BLUSH] for k in _inks[1:]), f"the inks, page by page: {_inks}")
+SITE_PAGES = site_pages(SITE_HELLO)
+_b = landing_b(SITE_PAGES)
+check("landing B, read off the drawing's own pages: the period falls twice, stretched along the fall; lands as "
+      "a splat on the line, three drops thrown up; spreads; pulls in as they fall back; gathers; rounds up a "
+      "touch; and rests as the period, round and on its place, for the last three", not _b,
+      "; ".join(_b) or f"{len(SITE_PAGES)} pages")
+SITE_UNDER = SITE_HELLO.get("under") == {"page": 0, "from": 1, "to": len(SITE_HELLO["frames"]) - 1}
+check("...the word stays under every page of it, and nothing else is on them (the drawing has no ground)",
+      SITE_UNDER and all(f.get("background") is None for f in SITE_HELLO["frames"]),
+      f"under {SITE_HELLO.get('under')}")
+
+
+def free_port():
+    import socket
+    with socket.socket() as so:
+        so.bind(("127.0.0.1", 0))
+        return so.getsockname()[1]
+
+
+def site_server():
+    """The demo's own app on a port of its own, its database its own, with the
+    site at the top of SITE_HOST: what Render serves at blooby.app and at the
+    demo's own name, from one server. Returns (port, stop)."""
+    import atexit
+    import subprocess
+    import tempfile
+    tmp = tempfile.mkdtemp(prefix="hello-site-")
+    env = dict(os.environ, DATABASE_URL="sqlite:///" + os.path.join(tmp, "site.db"),
+               SECRET_KEY="verify-hello-site", SKRIBL_STAND_IN="0", SKRIBL_ALLOW_SQLITE="1",
+               SKRIBL_SOCIAL_HOME_HOSTS=SITE_HOST, SKRIBL_RATE_MAX_POSTS="100000")
+    for k in ("SKRIBL_SOCIAL", "SKRIBL_URL_PREFIX", "SKRIBL_FORCE_SECURE_COOKIES", "SKRIBL_CSRF_PROTECT"):
+        env.pop(k, None)
+    subprocess.run([sys.executable, "-c", "from app import app, db; app.app_context().push(); db.create_all()"],
+                   cwd=ROOT, env=env, check=True, capture_output=True, timeout=120)
+    port = free_port()
+    log = open(os.path.join(tmp, "server.log"), "w")
+    srv = subprocess.Popen([sys.executable, "-m", "flask", "--app", "app", "run", "--port", str(port), "--no-reload"],
+                           cwd=ROOT, env=env, stdout=log, stderr=subprocess.STDOUT)
+
+    def stop():
+        if srv.poll() is None:
+            srv.terminate()
+            try:
+                srv.wait(10)
+            except subprocess.TimeoutExpired:
+                srv.kill()
+    atexit.register(stop)
+    import urllib.request
+    for _ in range(160):
+        try:
+            with urllib.request.urlopen(f"http://127.0.0.1:{port}/api/skribls?limit=1", timeout=2) as r:
+                if r.status == 200:
+                    return port, stop
+        except Exception:  # noqa: BLE001 (not up yet)
+            time.sleep(0.25)
+    stop()
+    raise SystemExit(f"the site's server on {port} did not answer: {open(log.name).read()[-600:]}")
+
+
+# THE LOCKUP, as the page has it: the mark's box and the slot it stands in,
+# the word's and the period's strokes, whether each is what is painted at its
+# middle, the lockup's name, and every other thing in the header and the dock
+# with where it is (so a pair of pages can say nothing else moved).
+HEAD = """() => { const b = document.querySelector('.header .brand, .flip-word');
+  const own = b.querySelector('.brand-own'), svg = (own || b).querySelector('svg');
+  const R = e => { if (!e) return null; const r = e.getBoundingClientRect(); return [r.left, r.top, r.width, r.height].map(v => +v.toFixed(3)); };
+  const word = svg && svg.querySelector('path:not(.brand-period)'), dot = svg && svg.querySelector('.brand-period');
+  const hit = e => { if (!e) return null; const r = e.getBoundingClientRect();
+    const at = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return !!at && (at === svg || svg.contains(at)); };
+  const rest = [...document.querySelectorAll('.header .brand, .flip-word, .header button, .header a, .header .brand-tag, #toolBar, .flip-tools, #canvas, #pad')]
+    .filter(e => e.getClientRects().length && !e.closest('[hidden]')).map(e => (e.id || e.getAttribute('class')) + ' ' + R(e).join(','));
+  return { label: b.getAttribute('aria-label'), title: b.getAttribute('title'), h1: document.querySelector('h1').textContent,
+           own: !!own, svg: R(svg), slot: R(own || svg), word: word ? getComputedStyle(word).stroke : null,
+           dot: dot ? getComputedStyle(dot).stroke : null, dotBox: R(dot), painted: hit(svg), dotPainted: hit(dot),
+           gradient: !!(svg && svg.querySelector('linearGradient')), header: R(document.querySelector('.header')), rest: rest }; }"""
+
+
+def _near(c, ref, d=60):
+    return sum((a - b) ** 2 for a, b in zip(c, ref)) <= d * d
+
+
+def _pixels(im):
+    """Every pixel of `im` as a tuple of its bands, in order."""
+    raw, n = im.tobytes(), len(im.getbands())
+    return [tuple(raw[i:i + n]) for i in range(0, len(raw), n)]
+
+
+def blush_of(im):
+    """A canvas's picture with only its blush kept (ink on nothing), for _pieces."""
+    keep = bytearray()
+    for c in _pixels(im):
+        keep += bytes(c) if c[3] > 128 and _near(c[:3], _hex(BLUSH), 50) else b"\0\0\0\0"
+    return Image.frombytes("RGBA", im.size, bytes(keep))
+
+
+def mark_pixels(png, dot_box_px):
+    """The lockup's slot off the screen's own pixels: the ground (its most
+    common colour), the word's ink (the most common colour near the purple)
+    and the period's (near the blush), how many of each, and whether the
+    blush lies on the period's own stroke (its box, a pen either side)."""
+    im = _png(png).convert("RGB")
+    px = _pixels(im)
+    from collections import Counter
+    ground = Counter(c for c in px if not _near(c, _hex(PURPLE), 90) and not _near(c, _hex(BLUSH), 90)).most_common(1)[0][0]
+    word = [c for c in px if _near(c, _hex(PURPLE))]
+    blush = [(i % im.width, i // im.width) for i, c in enumerate(px) if _near(c, _hex(BLUSH), 50)]
+    ink = Counter(word).most_common(1)[0][0] if word else None
+    x0, y0, x1, y1 = dot_box_px
+    on = sum(1 for x, y in blush if x0 <= x <= x1 and y0 <= y <= y1)
+    return {"ground": ground, "ink": ink, "word": len(word), "blush": len(blush), "on": on}
+
+
+# THE HELLO, READ ON EVERY ANIMATION FRAME the screen makes, the way a replay
+# is read (verify_glide), from the moment it is on until it is gone: the
+# player's clock; the word's ink (its purple, over the whole canvas read a
+# quarter size); the period's blush in the box it moves in (its middle and
+# its ink's width and height, in the drawing's own pixels); and the way out
+# (the ground's opacity, the ink's rise and its edge). Read off the canvas's
+# pixels, not the clock: a probe that reads the clock agrees with the bug.
+GLIDE = """(r) => new Promise(res => {
+  const h = document.getElementById('skriblHello'), c = h && h.querySelector('canvas');
+  const p = h && window.SkriblInline && SkriblInline.players().find(x => x.el && h.contains(x.el));
+  if (!c || !p) { res(null); return; }
+  const k = c.width / r.cssW, box = h.querySelector('.skribl-inline');
+  const x0 = Math.max(0, Math.floor(r.box[0] * k)), y0 = Math.max(0, Math.floor(r.box[1] * k));
+  const w = Math.min(c.width - x0, Math.ceil((r.box[2] - r.box[0]) * k)), hh = Math.min(c.height - y0, Math.ceil((r.box[3] - r.box[1]) * k));
+  const sw = Math.ceil(c.width / 4), sh = Math.ceil(c.height / 4), sm = document.createElement('canvas');
+  sm.width = sw; sm.height = sh;
+  const sx = sm.getContext('2d', { willReadFrequently: true }), cx = c.getContext('2d');
+  const out = [];
+  (function f() {
+    const t = performance.now();
+    if (!document.getElementById('skriblHello')) { out.push(['gone', t]); res(out); return; }
+    sx.clearRect(0, 0, sw, sh); sx.drawImage(c, 0, 0, sw, sh);
+    const a = sx.getImageData(0, 0, sw, sh).data; let word = 0;
+    for (let i = 0; i < a.length; i += 4) if (a[i + 3] > 100 && a[i + 2] > 180 && a[i] < 200) word++;
+    const d = cx.getImageData(x0, y0, w, hh).data;
+    let n = 0, mnx = 1e9, mxx = -1, mny = 1e9, mxy = -1;
+    for (let y = 0, i = 0; y < hh; y++) for (let x = 0; x < w; x++, i += 4)
+      if (d[i + 3] > 128 && d[i] > 200 && d[i + 1] < 170 && d[i + 2] > 90 && d[i + 2] < 210) {
+        n++; if (x < mnx) mnx = x; if (x > mxx) mxx = x; if (y < mny) mny = y; if (y > mxy) mxy = y; }
+    const bs = getComputedStyle(box), m = /matrix\\(([^)]+)\\)/.exec(bs.transform);
+    out.push([t, Math.round(p.state().elapsedMs), word, n,
+              n ? +(((mnx + mxx) / 2 + x0) / k).toFixed(2) : null, n ? +(((mny + mxy) / 2 + y0) / k).toFixed(2) : null,
+              n ? +((mxx - mnx + 1) / k).toFixed(2) : 0, n ? +((mxy - mny + 1) / k).toFixed(2) : 0,
+              +getComputedStyle(h).opacity, m ? +m[1].split(',')[5] : 0, parseFloat(bs.maskPosition || bs.webkitMaskPosition) || 0,
+              h.classList.contains('is-leaving')]);
+    requestAnimationFrame(f);
+  })(); })"""
+
+
+def page_signs(d):
+    """Each of the period's pages as the GLIDE record reads one: the middle of
+    its blush and its width and height, in the drawing's own pixels."""
+    out = []
+    for f in d["frames"][1:]:
+        s = f["strokes"]
+        r = [(q["x"], q["y"], q["size"] / 2) for q in s]
+        x0, x1 = min(x - h for x, _, h in r), max(x + h for x, _, h in r)
+        y0, y1 = min(y - h for _, y, h in r), max(y + h for _, y, h in r)
+        out.append(((x0 + x1) / 2, (y0 + y1) / 2, x1 - x0, y1 - y0))
+    return out
+
+
+def glide_verdict(rec, word_ms, signs):
+    """(ok, frozen, parts) for a GLIDE record. Each part is read where it
+    moves, and says what it saw:
+      word  the word's ink grows point after point: on most frames while the
+            clock moves, never still for more than three, and never more than
+            a tenth of the word in one frame;
+      dot   the period's pages, each frame read as the page it looks most like:
+            in order, none skipped, every one seen, none held past one and a
+            half times its length and a frame;
+      out   the ground fades and the ink rises through the middle on several
+            frames, neither by more than a third in a frame of ordinary length.
+    Frozen: failed, but every jump came across a frame held past
+    HELLO_STALL_MS (the page's thread stalled on a busy runner)."""
+    rows = [r for r in rec if r[0] != "gone"]
+    gone = rec[-1][1] if rec and rec[-1][0] == "gone" else None
+    stalls = [(b[0] - a[0]) for a, b in zip(rows, rows[1:])]
+    longest = round(max(stalls, default=0))
+    # The word: frames whose clock is inside the word's own time.
+    wf = [r for r in rows if not r[11] and 0 < r[1] < word_ms - 30]
+    final = max((r[2] for r in rows if not r[11]), default=0)
+    moves, holds, run, big, cut = 0, 0, 0, 0.0, False
+    for a, b in zip(wf, wf[1:]):
+        if b[1] <= a[1]:
+            continue
+        step = (b[2] - a[2]) / max(1, final)
+        big = max(big, step)
+        if step > 0.10 and b[0] - a[0] <= HELLO_STALL_MS:
+            cut = True
+        if b[2] > a[2]:
+            moves += 1
+            run = 0
+        else:
+            run += 1
+            holds = max(holds, run)
+    pairs = sum(1 for a, b in zip(wf, wf[1:]) if b[1] > a[1])
+    word = {"frames": len(wf), "moved": round(moves / max(1, pairs), 2), "hold": holds, "largest": round(big, 3)}
+    word_ok = len(wf) >= 20 and word["moved"] >= 0.7 and holds <= 3 and big <= 0.10
+    # The period: every frame from the word's end until it leaves, as the
+    # nearest of its pages (the last three, at rest, are one look).
+    df = [r for r in rows if not r[11] and r[1] >= word_ms and r[3] > 0]
+    n_rest = REST_PAGES
+    look = lambda r: min(range(len(signs)), key=lambda k: math.hypot(r[4] - signs[k][0], r[5] - signs[k][1])
+                         + abs(r[6] - signs[k][2]) + abs(r[7] - signs[k][3]))
+    seq = [min(look(r), len(signs) - n_rest) for r in df]
+    runs = []
+    for r, k in zip(df, seq):
+        if runs and runs[-1][0] == k:
+            runs[-1][2] = r[0]
+        else:
+            runs.append([k, r[0], r[0]])
+    order = [k for k, _, _ in runs]
+    page_ms = 1000 / 12
+    held = [(k, round(b - a)) for k, a, b in runs[:-1] if b - a > 1.5 * page_ms + 17]
+    skip_at = [(a, b) for a, b in zip(order, order[1:]) if b != a + 1]
+    jump_stalled = all(any(r2[0] - r1[0] > HELLO_STALL_MS for r1, r2 in zip(df, df[1:]) if r1[0] <= t <= r2[0])
+                       for t in [runs[i + 1][1] for i, (a, b) in enumerate(zip(order, order[1:])) if b != a + 1])
+    held_stalled = all(any(r2[0] - r1[0] > HELLO_STALL_MS for r1, r2 in zip(df, df[1:]) if a <= r1[0] and r2[0] <= b)
+                       for k, a, b in runs[:-1] if b - a > 1.5 * page_ms + 17)
+    dot = {"pages": order, "held": held, "skips": skip_at}
+    dot_ok = order == list(range(len(signs) - n_rest + 1)) and not held
+    # The way out: from the frame before it leaves to the frame it is gone.
+    first = next((i for i, r in enumerate(rows) if r[11]), None)
+    out = {"frames": 0}
+    out_ok = False
+    if first is not None and gone is not None:
+        tail = rows[max(0, first - 1):]
+        o = [(r[8], r[0]) for r in tail] + [(0.0, gone)]
+        t0 = rows[max(0, first - 1)][9]
+        rise = [(r[9], r[0]) for r in tail]
+        end = min(v for v, _ in rise) if rise else 0
+
+        def steps(vals, lo, hi):
+            span = (hi - lo) or 1
+            mid = sum(1 for v, _ in vals if lo + 0.05 * span < v < hi - 0.05 * span)
+            big = max((abs(b[0] - a[0]) / abs(span) for a, b in zip(vals, vals[1:])), default=1.0)
+            cut = any(abs(b[0] - a[0]) / abs(span) > 0.34 and b[1] - a[1] <= HELLO_STALL_MS for a, b in zip(vals, vals[1:]))
+            return mid, round(big, 2), cut
+        fade = steps(o, 0.0, 1.0)
+        lift = steps(rise, end, t0) if end < t0 - 0.5 else (0, 1.0, True)
+        out = {"frames": len(tail), "fade": fade, "lift": lift}
+        out_ok = fade[0] >= 5 and fade[1] <= 0.34 and lift[0] >= 5 and lift[1] <= 0.34
+        cut = cut or fade[2] or lift[2]
+    ok = word_ok and dot_ok and out_ok
+    frozen = not ok and longest > HELLO_STALL_MS and not cut and jump_stalled and held_stalled
+    return ok, frozen, {"word": word, "dot": dot, "out": out, "longest frame": longest}
+
+
+def site_section(p):
+    print("\nBLOOBY. AT AN ADDRESS SKRIBL_SOCIAL_HOME_HOSTS NAMES — the site's name on the editors, and its hello")
+    port, stop = site_server()
+    at_site, at_other = f"http://{SITE_HOST}:{port}", f"http://127.0.0.1:{port}"
+    bb = p.chromium.launch(args=[f"--host-resolver-rules=MAP {SITE_HOST} 127.0.0.1"])
+    try:
+        _site_rows(bb, at_site, at_other)
+    finally:
+        bb.close()
+        stop()
+
+
+def _site_rows(bb, at_site, at_other):
+    # Warm the new server (it strips its scripts on first asking), both
+    # editors at both addresses.
+    w = bb.new_context(**PHONE)
+    for base in (at_site, at_other):
+        for route in ("/skribl-pad", "/flip"):
+            q = w.new_page()
+            q.goto(base + route, wait_until="load")
+            q.close()
+    w.close()
+
+    # THE LOCKUP: each editor, phone and desk, light and dark, at the site's
+    # address and at the other, read as the page has it and as it is painted.
+    heads = []
+    for dev, opts in (("phone", PHONE), ("desk", DESK)):
+        for scheme in ("light", "dark"):
+            c = bb.new_context(color_scheme=scheme, **opts)
+            for route, mode in (("/skribl-pad", "Pad"), ("/flip", "Flip")):
+                pair = {}
+                for name, base in (("site", at_site), ("other", at_other)):
+                    q = c.new_page()
+                    q.goto(base + route, wait_until="load")
+                    q.wait_for_timeout(600)
+                    h = q.evaluate(HEAD)
+                    if name == "site" and h["slot"]:
+                        x, y, ww, hh = h["slot"]
+                        dpr = q.evaluate("() => devicePixelRatio")
+                        png = q.screenshot(clip={"x": x, "y": y - 2, "width": ww, "height": hh + 8}, scale="device")
+                        dx, dy, dw, dh = h["dotBox"] or (0, 0, 0, 0)
+                        pen = 2.3 * h["svg"][3] / 34
+                        h["px"] = mark_pixels(png, [round((dx - pen - x) * dpr), round((dy - pen - y + 2) * dpr),
+                                                    round((dx + dw + pen - x) * dpr), round((dy + dh + pen - y + 2) * dpr)])
+                    pair[name] = h
+                    q.close()
+                heads.append((dev, scheme, mode, pair))
+            c.close()
+    bad, said = [], []
+    for dev, scheme, mode, pr in heads:
+        s_, o_ = pr["site"], pr["other"]
+        px = s_.get("px") or {}
+        g = px.get("ground")
+        word_c = contrast(px["ink"], g) if px.get("ink") and g else 0
+        blush_c = contrast(_hex(BLUSH), g) if g else 0
+        said.append(f"{dev} {scheme} {mode}: the word {word_c:.2f}:1, the period {blush_c:.2f}:1")
+        ok = (s_["own"] and not s_["gradient"] and s_["painted"] and s_["dotPainted"]
+              and s_["word"] == "rgb(%d, %d, %d)" % _hex(PURPLE) and s_["dot"] == "rgb(%d, %d, %d)" % _hex(BLUSH)
+              and px.get("word", 0) > 30 and px.get("on", 0) >= 4 and px.get("blush", 0) - px.get("on", 0) <= 2
+              and word_c >= 3.0)
+        if not ok:
+            bad.append(f"{dev} {scheme} {mode}: {json.dumps({k: s_[k] for k in ('own', 'gradient', 'painted', 'dotPainted', 'word', 'dot')})} {px}")
+    check("at the site's address the Pad and Flip wear blooby., painted: the word in Skribl's purple, the site's "
+          f"({PURPLE}), at 3:1 or more on its ground, and the period in Blooby's blush ({BLUSH}) on its own stroke; "
+          "phone and desk, light and dark",
+          heads and not bad, "; ".join(bad[:3]) or "; ".join(said))
+    bad = []
+    for dev, scheme, mode, pr in heads:
+        s_, o_ = pr["site"], pr["other"]
+        sx, sy, sw, sh = s_["slot"]
+        ox, oy, ow, oh = o_["svg"]
+        vx, vy, vw, vh = s_["svg"]
+        line = (abs(sx - ox) < 0.02 and abs(sy - oy) < 0.02 and abs(sw - ow) < 0.02 and abs(sh - oh) < 0.02
+                and abs(vy - oy) < 0.02 and abs(vh - oh * 34 / 30) < 0.05 and abs(vw / vh - 57 / 34) < 0.01)
+        if not (line and s_["rest"] == o_["rest"] and s_["header"] == o_["header"]):
+            moved = sorted(set(s_["rest"]) ^ set(o_["rest"]))
+            bad.append(f"{dev} {scheme} {mode}: the slot {s_['slot']} for skribl's {o_['svg']}, the mark {s_['svg']}; "
+                       f"header {s_['header']} / {o_['header']}; moved {moved[:4]}")
+    check("...the line where skribl's was: the slot is the signature's own box, the mark at the same scale and "
+          "top with its y's tail hung below (34 units for 30), and nothing else in the header or the dock moved",
+          heads and not bad, "; ".join(bad[:3]) or f"{len(heads)} pairs of pages")
+    bad = [f"{dev} {mode}: {pr['site']['label']!r}, {pr['site']['h1']!r}; other {pr['other']['label']!r}"
+           for dev, scheme, mode, pr in heads
+           if not (pr["site"]["label"] == pr["site"]["h1"] == f"Blooby {mode}"
+                   and pr["other"]["label"] == pr["other"]["h1"] == f"Skribl {mode}")]
+    check("...named Blooby there ('Blooby Pad', 'Blooby Flip', the lockup and the page's heading)",
+          heads and not bad, "; ".join(bad[:3]))
+    bad = [f"{dev} {scheme} {mode}" for dev, scheme, mode, pr in heads
+           if not (not pr["other"]["own"] and pr["other"]["gradient"] and pr["other"]["painted"])]
+    check("at any other address on the same server, the editors wear the skribl mark, as today",
+          heads and not bad, ", ".join(bad))
+
+    # THE HELLO AT THE SITE'S ADDRESS, the first open on a phone, light and
+    # dark: the site's own drawing on the page's own ground, sharp, its word
+    # at 3:1 or more there and its period's contrast said (the owner's pick).
+    firsts = []
+    for scheme in ("dark", "light"):
+        c = bb.new_context(color_scheme=scheme, **PHONE)
+        c.add_init_script(FORCE)
+        got = []
+        q = c.new_page()
+        q.on("request", lambda r, got=got: got.append(r.url.split("?")[0]) if "/brand/" in r.url and "hello" in r.url else None)
+        q.goto(at_site + "/skribl-pad", wait_until="load")
+        s, ms = _until(q, lambda s: s["painted"] and s["on"], 8000)
+        who = q.evaluate("""() => { const h = document.getElementById('skriblHello');
+            return { label: h && h.getAttribute('aria-label'), key: h && h.getAttribute('data-hello-key'),
+                     site: localStorage.getItem('%s'), skribl: localStorage.getItem('%s') }; }""" % (SITE_KEY, KEY))
+        ground = _hex(s["ground"]) if s["ground"] else None
+        sharp, why = _sharp(s)
+        firsts.append((scheme, ms, got, who, ground, s, sharp, why))
+        if scheme == "light":
+            break
+        c.close()
+    bad = []
+    for scheme, ms_, got_, who_, ground, s_, sharp, why in firsts:
+        if not (ms_ is not None and got_ == [at_site + "/social/static/brand/blooby-hello.json"]
+                and who_["label"] == "Blooby's signature" and who_["key"] == SITE_KEY and who_["site"] == "1"
+                and who_["skribl"] is None):
+            bad.append(f"{scheme}: came after {ms_} ms; fetched {got_}; {who_}")
+    check("the first open there says the site's hello: its own drawing (the site's file, and Skribl's not fetched), "
+          "named Blooby's signature, remembered by its own key with Skribl's left alone", not bad, "; ".join(bad))
+    # The inks the drawing carries (the word's page, the period's pages), so
+    # a fainter drawing reads fainter: not the tokens it was meant to use.
+    word_inks = {q_["color"] for q_ in SITE_HELLO["frames"][0]["strokes"]}
+    dot_inks = {q_["color"] for f_ in SITE_HELLO["frames"][1:] for q_ in f_["strokes"]}
+    bad, said = [], []
+    for scheme, ms_, got_, who_, ground, s_, sharp, why in firsts:
+        wc = min(contrast(_hex(k_), ground) for k_ in word_inks) if ground else 0
+        pc = min(contrast(_hex(k_), ground) for k_ in dot_inks) if ground else 0
+        said.append(f"{scheme}: the word {wc:.2f}:1, the period {pc:.2f}:1 on {s_['ground']}")
+        if not (ms_ is not None and s_["bg"] and _rgb(s_["bg"]) == ground and s_["image"] == "none"
+                and s_["corner"] == 0 and wc >= 3.0 and sharp):
+            bad.append(f"{scheme}: painted {s_['bg']} {s_['image']}, corner {s_['corner']}, the word {wc:.2f}:1; {why}")
+    check("...on the page's own ground, light and dark, through a drawing with no ground of its own, its word at 3:1 "
+          "or more there (the blush period said, the owner's pick), and sharp: its box on whole screen pixels",
+          not bad, "; ".join(bad) or "; ".join(said))
+    H = q.evaluate("(f) => SkriblHold.pageMs(f, 12)", SITE_HELLO["frames"][0]) if ms is not None else 0
+    late = q.evaluate(WORD, H - 300) if ms is not None else {}
+    t0 = time.time()
+    while ms is not None and "png" not in late and time.time() - t0 < 4:
+        q.wait_for_timeout(30)
+        late = q.evaluate(WORD, H - 300)
+    im = _png(late["png"]) if "png" in late else None
+    blush_px = sum(1 for c_ in _pixels(im) if c_[3] > 128 and _near(c_[:3], _hex(BLUSH), 50)) if im else -1
+    pieces = _pieces(im)[1] if im else []
+    check(f"...it writes blooby first ({H} ms), in one stroke of ink, and no blush until the word is written",
+          im is not None and late["el"] < H and len(pieces) == 1 and blush_px == 0,
+          f"at {late.get('el')} ms: {len(pieces)} piece(s) of ink, {blush_px} blush pixels")
+    c.close()
+
+    # IT GLIDES, read on every frame from the moment it is on until it is
+    # gone (GLIDE, glide_verdict). A frozen take, every jump across a frame
+    # the page's thread held, is taken again, at most twice.
+    signs = page_signs(SITE_HELLO)
+    allx = [v for sg in signs for v in (sg[0] - sg[2] / 2, sg[0] + sg[2] / 2)]
+    ally = [v for sg in signs for v in (sg[1] - sg[3] / 2, sg[1] + sg[3] / 2)]
+    region = {"cssW": SITE_HELLO["canvasSize"]["cssWidth"],
+              "box": [min(allx) - 12, min(ally) - 12, max(allx) + 12, max(ally) + 12]}
+    takes, verdict = 0, (False, True, {})
+    while takes < 3 and (takes == 0 or verdict[1]):
+        c = bb.new_context(**PHONE)
+        c.add_init_script(FORCE)
+        q = c.new_page()
+        q.goto(at_site + "/skribl-pad", wait_until="load")
+        s, ms = _until(q, lambda s: s["painted"] and s["on"], 8000)
+        rec = q.evaluate(GLIDE, region) if ms is not None else None
+        verdict = glide_verdict(rec or [], H, signs)
+        takes += 1
+        c.close()
+    ok, frozen, parts = verdict
+    check("...and it glides, read on every frame the screen makes: the word written point after point, the "
+          "period's pages in order (none skipped, none held), and the way out (the ground fading, the ink "
+          "rising) through the middle on several frames", ok,
+          json.dumps(parts) + (f"; taken {takes} times, a frame having frozen it" if takes > 1 else ""))
+
+    # WHERE IT LANDS, AND THE SPLAT, as the screen paints them: held on each
+    # page (the player's seek), read off the canvas's own pixels.
+    c = bb.new_context(**PHONE)
+    c.add_init_script(FORCE)
+    q = c.new_page()
+    q.goto(at_site + "/skribl-pad", wait_until="load")
+    s, ms = _until(q, lambda s: s["painted"] and s["on"], 8000)
+    SEEK = """(t) => { const h = document.getElementById('skriblHello'), c = h && h.querySelector('canvas');
+        const p = h && SkriblInline.players().find(q => q.el && h.contains(q.el));
+        if (!p) return null; p.seek(t); return [c.toDataURL('image/png'), c.width]; }"""
+    looks = {}
+    place, s_unit = make_hello.placer(SITE_HELLO["canvasSize"]["cssWidth"], SITE_HELLO["canvasSize"]["cssHeight"], look=SITE)
+    rest = make_hello.cubic(make_hello.mark(SITE)[1], 6)
+    want = place((sum(q_[0] for q_ in rest) / len(rest), sum(q_[1] for q_ in rest) / len(rest)))
+    for name, page in (("splat", 3), ("spread", 4), ("gathered", 6), ("rest", None)):
+        got_ = q.evaluate(SEEK, H + (page - 0.5) * 1000 / 12 if page else 1e9) if ms is not None else None
+        if not got_:
+            looks[name] = None
+            continue
+        im = _png(got_[0])
+        k = got_[1] / SITE_HELLO["canvasSize"]["cssWidth"]
+        ps = _pieces(blush_of(im), least=8)[1]
+        main_ = ps[0] if ps else None
+        looks[name] = None if not main_ else {
+            "pieces": len(ps), "wide": round((main_[4] - main_[2] + 1) / (main_[5] - main_[3] + 1), 2),
+            "off": round(math.hypot((main_[2] + main_[4]) / 2 / k - want[0], (main_[3] + main_[5]) / 2 / k - want[1]) / s_unit, 3)}
+    c.close()
+    L = looks
+    check(f"...the period lands where the period sits: at rest, one round dot on the mark's period, within {NEAR} of "
+          "the mark's units (read off the canvas's pixels)",
+          L.get("rest") is not None and L["rest"]["pieces"] == 1 and 0.8 <= L["rest"]["wide"] <= 1.25
+          and L["rest"]["off"] <= NEAR, str(L.get("rest")))
+    check("...and it splats a little and reforms, as the screen paints it: on landing a splat with three drops, "
+          "flatter still as it spreads, then gathered to one",
+          all(L.get(k_) is not None for k_ in ("splat", "spread", "gathered"))
+          and L["splat"]["pieces"] == 4 and L["splat"]["wide"] > 2.5 and L["spread"]["pieces"] == 4
+          and L["spread"]["wide"] > L["splat"]["wide"] and L["gathered"]["pieces"] == 1 and L["gathered"]["wide"] > 1.2,
+          str({k_: L.get(k_) for k_ in ("splat", "spread", "gathered")}))
+
+    # ONCE, BY ITS OWN KEY: somebody who met Skribl's hello (its key set in
+    # this browser) still meets the site's, a tap skips it, and the next
+    # editor at the same address does not show it again.
+    c = bb.new_context(**PHONE)
+    c.add_init_script(FORCE)
+    c.add_init_script("try { localStorage.setItem('%s', '1'); } catch (e) {}" % KEY)
+    q = c.new_page()
+    q.goto(at_site + "/skribl-pad", wait_until="load")
+    s, ms = _until(q, lambda s: s["painted"] and s["on"] and s["el"] >= 400, 8000)
+    q.touchscreen.tap(201, 437)
+    s2, ms2 = _until(q, lambda s: not s["here"], 1500)
+    q.goto(at_site + "/flip", wait_until="load")
+    q.wait_for_timeout(2500)
+    flip = q.evaluate(ST, False)
+    seen = q.evaluate("() => localStorage.getItem('%s')" % SITE_KEY)
+    check("once, by its own key: somebody who met Skribl's hello still meets the site's, a tap skips it, and Flip "
+          "at the same address does not show it again",
+          ms is not None and ms2 is not None and ms2 <= 1400 and not flip["painted"] and flip["canvasThere"] and seen == "1",
+          f"came after {ms} ms, gone {ms2} ms after the tap; Flip: hello painted {flip['painted']}; seen {seen}")
+    c.close()
+
+    # REDUCE MOTION at the site's address: it keeps still, the finished
+    # blooby. with its period in place, and it just fades, in and out.
+    takes, fv, still = 0, (False, True, None, None, 0), None
+    while takes < 3 and (takes == 0 or fv[1]):
+        c = bb.new_context(reduced_motion="reduce", **PHONE)
+        c.add_init_script(FORCE)
+        c.add_init_script(FADE_REC)
+        q = c.new_page()
+        q.goto(at_site + "/skribl-pad", wait_until="load")
+        s, ms = _until(q, lambda s: s["painted"] and s["on"], 8000)
+        if ms is not None and still is None:
+            im = _png(q.evaluate(BITMAP))
+            k = im.width / SITE_HELLO["canvasSize"]["cssWidth"] if im else 1
+            ps = _pieces(blush_of(im), least=8)[1]
+            word_px = sum(1 for c_ in _pixels(im)[::7] if c_[3] > 128 and _near(c_[:3], _hex(PURPLE)))
+            still = {"word": word_px, "pieces": len(ps),
+                     "off": round(math.hypot((ps[0][2] + ps[0][4]) / 2 / k - want[0], (ps[0][3] + ps[0][5]) / 2 / k - want[1])
+                                  / s_unit, 3) if ps else None}
+        states = set()
+        t0 = time.time()
+        while time.time() - t0 < 1.0:
+            states.add(q.evaluate(ST, False)["state"])
+            q.wait_for_timeout(100)
+        _until(q, lambda s: not s["here"], 12000)
+        fv = fade_verdict(*read_fade(q))
+        takes += 1
+        c.close()
+    ok, frozen, come, go, n = fv
+    check("Reduce Motion there: it keeps still, the finished blooby. with its period in place (never playing), "
+          "and it just fades, in and out, never there or gone in one frame",
+          still is not None and still["word"] > 50 and still["pieces"] == 1 and still["off"] is not None
+          and still["off"] <= NEAR and "playing" not in states and ok,
+          f"the still: {still}; states {sorted(map(str, states))}; coming in {come}, going {go}, {n} frames"
+          + (f"; taken {takes} times, a frame having frozen the fade" if takes > 1 else ""))
+
+    # AT ANY OTHER ADDRESS, the same server's hello is Skribl's: its own file
+    # (the one the rows above hold, the bounce and the wink), its own key.
+    c = bb.new_context(**PHONE)
+    c.add_init_script(FORCE)
+    bodies = []
+    q = c.new_page()
+    q.on("response", lambda r: bodies.append((r.url.split("?")[0], r)) if "/brand/" in r.url and "hello" in r.url else None)
+    q.goto(at_other + "/skribl-pad", wait_until="load")
+    s, ms = _until(q, lambda s: s["painted"] and s["on"], 8000)
+    seen = q.evaluate("() => [localStorage.getItem('%s'), localStorage.getItem('%s')]" % (KEY, SITE_KEY))
+    same = [json.loads(r.body()) == HELLO for _, r in bodies] if ms is not None else []
+    check("...and its hello there is Skribl's, as today: Skribl's own drawing (the bounce and the wink held above), "
+          "remembered by Skribl's key",
+          ms is not None and [u for u, _ in bodies] == [at_other + "/static/skribl/brand/hello.json"] and same == [True]
+          and seen == ["1", None], f"came after {ms} ms; fetched {[u for u, _ in bodies]}, Skribl's own: {same}; keys {seen}")
+    c.close()
+
+    # AND THE DEMO'S OWN PAGES ARE BYTE FOR BYTE AS THEY WERE: the Pad and
+    # Flip at any other address are what the same app serves with no site
+    # address named at all, read through the app's own test client.
+    import subprocess
+    import tempfile
+    probe = r'''
+import json, re, sys
+from app import app
+c = app.test_client()
+out = {}
+for h in ("skribl-live-demo.onrender.com", "127.0.0.1:5001", "blooby.example"):
+    for r in ("/skribl-pad", "/flip", "/skribl-pad?compose=1", "/flip?compose=1"):
+        t = c.get(r, base_url="https://" + h).get_data(as_text=True)
+        t = re.sub(r'nonce="[^"]*"', "", t)
+        out[h + r] = re.sub(r'(data-skribl-csrf|data-csrf)="[^"]*"', "", t)
+print("RESULT " + json.dumps(out))
+'''
+    got = {}
+    for name, homes in (("named", "blooby.example"), ("none", "")):
+        with tempfile.TemporaryDirectory() as tmp:
+            env = dict(os.environ, DATABASE_URL="sqlite:///" + os.path.join(tmp, "p.db"), SKRIBL_STAND_IN="0",
+                       SECRET_KEY="verify-hello-pages", SKRIBL_ALLOW_SQLITE="1", SKRIBL_SOCIAL_HOME_HOSTS=homes)
+            env.pop("SKRIBL_CSRF_PROTECT", None)
+            r = subprocess.run([sys.executable, "-c", probe], cwd=ROOT, env=env, capture_output=True, text=True, timeout=180)
+            line = next((ln for ln in r.stdout.splitlines() if ln.startswith("RESULT ")), None)
+            got[name] = json.loads(line[7:]) if line else {}
+    keys = [k for k in got.get("none", {}) if not k.startswith("blooby.example")]
+    differ = [k for k in keys if got["named"].get(k) != got["none"].get(k)]
+    branded = [k for k in got.get("named", {}) if k.startswith("blooby.example") and "brand-own" in got["named"][k]
+               and got["named"][k] != got["none"].get(k)]
+    check("the demo's own pages, at any address but the site's, are byte for byte what the app serves with no site "
+          "address named (the Pad and Flip, on their own and in a composer); at the site's, the site's brand",
+          keys and not differ and len(branded) == 4, f"differ: {differ}; branded at the site's: {len(branded)} of 4")
+
+
+if os.environ.get("HELLO_PART") == "site":
+    with sync_playwright() as p:
+        site_section(p)
+    summarise_and_exit()
 
 
 with sync_playwright() as p:
@@ -967,5 +1653,6 @@ with sync_playwright() as p:
         c.close()
 
     b.close()
+    site_section(p)
 
 summarise_and_exit()

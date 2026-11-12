@@ -171,9 +171,11 @@ for doc in DOCS + [ROOT / "ARCHIVE-README.md", SESSION]:
         # Lookbehind, not \b: the docs name `static/skribl/gifenc.min.js`,
         # which is the SERVED url path and not a file in the tree. Matching
         # mid-path turns every correct reference into a false failure.
+        # ...and the name ends at its extension: a .json file named in a doc
+        # is not a .js one (START-HERE names the site's hello, a .json).
         paths |= set(re.findall(r"(?<![A-Za-z0-9_/-])((?:docs|skribl|harness|social)/"
                                 r"[A-Za-z0-9_./-]+"
-                                r"\.(?:py|md|patch|css|js|html|txt|sh))", body))
+                                r"\.(?:py|md|patch|css|js|html|txt|sh))(?![A-Za-z0-9])", body))
 # A JINJA TEMPLATE NAME IS A NAMESPACE, NOT A PATH — and the docs have to be
 # able to quote one. `{% from 'skribl/_skribl_inline_player.html' import ... %}`
 # is what a host types verbatim to embed the in-post player; the file it names

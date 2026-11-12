@@ -1,0 +1,12 @@
+{#  A HOST'S OWN MARK, where Skribl's signature stands at the top of the Pad
+    and Flip (skribl/brand.py; docs/INTEGRATION.md, "Your brand on Skribl's
+    editors"). Both editors include this in place of _skribl_brand_mark.html
+    when the request's brand gives a mark, and nothing else changes.
+
+    The host's markup goes in as the host gave it. The span is the slot:
+    styles.css and flip.css (A HOST'S OWN MARK) draw the mark at the
+    signature's scale, hang the part of its box past the 30-unit hand below
+    the line (--brand-own-units is the box's height in the hand's units, from
+    the markup's own viewBox), and keep the signature's width, so the mode
+    word beside it and everything in the header stay where they are. #}
+<span class="brand-own" style="--brand-own-units: {{ '%g' % skribl_brand.units }}">{{ skribl_brand.mark }}</span>

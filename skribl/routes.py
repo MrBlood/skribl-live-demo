@@ -26,6 +26,7 @@ from .models import (SkriblIdempotency, SkriblPost, SkriblPostMedia, SkriblRepor
                      _visibility_policy, as_utc, normalise_user_id,
                      session, feed_filter, author_dict, sources_for)
 from .views import purge_views
+from .brand import page_brand
 from .mediameta import STRIPPED, strip_payload
 from .storage import KEY_RE
 from .ratelimit import (_client_ip, _rate_commit_post, _rate_key, _rate_limited,
@@ -345,7 +346,7 @@ def register_routes(bp, *, index_route=False):
         @bp.get("/")
         def home():
             """Standalone-site root, registered only when index_route=True."""
-            return render_template("skribl/skribl_editor.html")
+            return render_template("skribl/skribl_editor.html", skribl_brand=page_brand())
 
     @bp.get("/skribl-pad")
     def skribl_editor():
@@ -383,9 +384,15 @@ def register_routes(bp, *, index_route=False):
         # face, and its sheet asks nothing a face does not use (no title, no
         # "Viewers start at", no gallery tick, no switch to Flip). It still
         # hands the payload back and posts nothing: the host keeps it.
+        #
+        # A HOST'S BRAND. Where the host gives one for this request (its own
+        # address, say), the header wears its mark and the first open says its
+        # hello; None is Skribl's own, byte for byte (skribl/brand.py). Flip
+        # and the root ask the same, once a page.
         compose = request.args.get("compose") == "1"
         face = compose and request.args.get("face") == "1"
         return render_template("skribl/skribl_editor.html", compose=compose,
+                               skribl_brand=page_brand(),
                                gallery_choice=(compose and not face
                                                and request.args.get("gallery") == "1"),
                                face=face,
@@ -404,6 +411,7 @@ def register_routes(bp, *, index_route=False):
         # ?gallery=1 is the host's gallery choice, as on the Pad.
         compose = request.args.get("compose") == "1"
         return render_template("skribl/skribl_flip.html", compose=compose,
+                               skribl_brand=page_brand(),
                                gallery_choice=compose and request.args.get("gallery") == "1")
 
     @bp.get("/library")
