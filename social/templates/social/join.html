@@ -50,7 +50,11 @@
         <p class="say" data-say role="status" hidden></p>
         <p class="fine center">Your phone or computer keeps it: Face ID, Touch ID or Windows Hello.</p>
       </form>
-      {#  THE RULES (piece 5), as at the foot of Settings. #}
+      {#  THE RULES (piece 5), as at the foot of Settings; above them, what
+          joining agrees to (the owner's "all yes" to A, Nov 12): the Terms'
+          version and the moment are kept on the person's row (rules.py
+          TERMS_VERSION). #}
+      <p class="fine center legal-agree">Joining means you agree to the Terms and the Community rules. Privacy says what we keep.</p>
       <nav class="legal-foot" aria-label="The rules"><a href="{{ url_for('social.terms') }}">Terms</a><a href="{{ url_for('social.privacy') }}">Privacy</a><a href="{{ url_for('social.rules') }}">Community rules</a></nav>
     </div>
     {% include 'social/_gone.html' %}

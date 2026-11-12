@@ -35318,3 +35318,46 @@ verify_socialprofile 54/54, verify_socialauth 62/62, verify_migrations 77/77,
 verify_seam 469/469, verify_txcontract 101/101, verify_hostseams 88/88,
 verify_docs 144/144, and the PR gate's other source suites, each as on the
 first part. The full battery was not run; main's run after the merge is.
+
+## After v330 -- Join says what joining agrees to
+
+The owner's "all yes" (Nov 12) to A of the Join mock, after a friend's read
+of the lawyer note asked for it ("At registration, add: By creating an
+account, you agree to our Terms... Save the accepted Terms version and the
+timestamp"): one line, not a second box to tick.
+
+- JOIN says, just above its links to the rules: "Joining means you agree to
+  the Terms and the Community rules. Privacy says what we keep." (.fine, 14px,
+  20px under the passkey's words, the rules 4px under it, as the mock).
+- THE ROW keeps which Terms and when: social_people.terms_version
+  (social/rules.py TERMS_VERSION, the day the Terms' or the Community rules'
+  words last changed; move it whenever they change) and terms_agreed_at
+  (when Join was pressed: kept with the passkey's ceremony, as the age box's
+  moment is, and written with the person). One migration on the site's chain
+  (b7d4e2f9a618), two nullable columns: anybody who joined before was never
+  asked, and their row says nothing rather than something made up.
+- PRIVACY stays true: "...when you said you're 13 or older, and which Terms
+  you agreed to when you joined." The lawyer note says what is built and
+  asks whether a line is enough, and what to do for those who joined before.
+
+Pad and Flip: not affected.
+
+THE FOUR: kind (one line, nothing more to tick); simple (it says what the
+button does, where the rules are); playful (n/a: a promise is said plainly);
+powerful (which words, and when, are on the row).
+
+THE CHECK. verify_socialauth section 2, a row: on a fresh invite, the line
+is painted, in its words, at 14px, just above the rules' row (0 to 8px), and
+the row of somebody who joined keeps TERMS_VERSION (read from rules.py, never
+typed in the suite) and a time; section 15 reads its words' contrast with
+every other word on Join, phone and desk, light and dark. Breaks, each red:
+no line on Join; the version not kept; the time not kept; the line under the
+rules; the line faint (section 15); the migration without its time column
+(section 14, the chain against the models).
+
+ONE INSTRUMENT MOVED. verify_socialsafety section 16 read Join's rules row
+where it lands, and on a desk (1280 x 860) the card now runs past the first
+screen, so the row read no words at all and the row failed its own guard
+(16 places read, two of them empty). Its reader reads only what is on
+screen, so the row is scrolled into view first, as a person reaches it:
+174 words read again, and still red with the rules row too small to tap.

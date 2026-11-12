@@ -532,9 +532,12 @@ def register(bp):
         if errors:
             return _json_error("fields", 400, fields=errors)
         user_handle = secrets.token_bytes(32)
+        from .rules import TERMS_VERSION   # rules.py builds its pages with this module's helpers
         challenge = passkeys.begin("join", invite_id=inv.id if inv else None,
                                    data={"handle": handle, "name": name, "first": first,
                                          "age_at": utcnow().isoformat(),
+                                         # The Terms the page said they agree to by joining, and when.
+                                         "terms": TERMS_VERSION, "terms_at": utcnow().isoformat(),
                                          "user_handle": user_handle.hex()})
         return jsonify({"options": passkeys.registration_options(
             challenge, rp_id=where[0], user_handle=user_handle, handle=handle, display_name=name)})
@@ -571,7 +574,10 @@ def register(bp):
         person = Person(public_id=new_person_id(), handle=data["handle"], handle_key=data["handle"].lower(),
                         display_name=data["name"], user_handle=bytes.fromhex(data["user_handle"]),
                         is_admin=first, session_gen=1,
-                        age_confirmed_at=datetime.fromisoformat(data["age_at"]), created_at=utcnow())
+                        age_confirmed_at=datetime.fromisoformat(data["age_at"]),
+                        terms_version=data.get("terms"),
+                        terms_agreed_at=datetime.fromisoformat(data["terms_at"]) if data.get("terms_at") else None,
+                        created_at=utcnow())
         try:
             with sess.begin_nested():
                 sess.add(person)

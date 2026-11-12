@@ -1316,6 +1316,11 @@ with sync_playwright() as p:
                     seen[(screen, scheme, path.rsplit("/", 1)[1])] = cpg.evaluate(READ, "main")
                 cpg.goto(cli("invite"))
                 cpg.wait_for_timeout(600)
+                # Where a person meets it: on a desk Join's card runs past the
+                # first screen since it says what joining agrees to (Nov 12),
+                # and the reader reads only what is on screen.
+                cpg.evaluate("() => { const f = document.querySelector('.link-ok .legal-foot'); if (f) f.scrollIntoView({ block: 'center' }); }")
+                cpg.wait_for_timeout(200)
                 seen[(screen, scheme, "join's rules")] = cpg.evaluate(READ, ".legal-foot")
                 close_ctx(cctx, cpg)
         low = [(k, v["low"]) for k, v in seen.items() if v["low"]]

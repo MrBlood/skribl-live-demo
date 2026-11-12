@@ -11,8 +11,11 @@ Nothing here is legal advice; it was written by the people building the site.
 ## What the site does today
 
 - **Who can join.** People who tick "I'm 13 or older", by invite. The time
-  they ticked it is kept. Looking around (Explore, a profile, a post) needs no
-  account.
+  they ticked it is kept. Join says "Joining means you agree to the Terms and
+  the Community rules. Privacy says what we keep.", and which version of the
+  Terms they joined under, and when, is kept with them (from Nov 12; nobody
+  who joined before was asked). Looking around (Explore, a profile, a post)
+  needs no account.
 - **What is kept about a person.** Name, handle, a short bio, a drawn face,
   their posts, comments and drawings and where each is shown, who invited
   them, and for each passkey its public half and when it was last used.
@@ -57,8 +60,10 @@ Nothing here is legal advice; it was written by the people building the site.
 4. **Privacy law.** Which laws apply as the site grows (for example California's,
    or the GDPR if people in Europe join)? What should we say about how long
    reports, report senders' hashes and taken-down things are kept?
-5. **The terms themselves.** Should joining say "by joining you agree to the
-   Terms"? Do we need governing law, liability, or how changes are announced?
+5. **The terms themselves.** Joining now says so, in a line just above Join's
+   links to the rules, and keeps the version and the time; is a line enough,
+   or should it be a box to tick? Do we need governing law, liability, or how
+   changes are announced?
 6. **Rules not decided yet.** Are drawings with nudity or violence allowed?
    Today the rules do not say.
 7. **Contact.** The pages give no address to write to yet. What should it be?
@@ -88,10 +93,12 @@ what the site does now, and what is planned:
    reported as under 13, and a child's safety comes first on the admins'
    page. Not yet: an intimate image shared without consent (with point 8),
    and a credible threat apart from "Abusive or hateful".
-4. **Agree to the Terms at Join**, keeping which version and when. Agreed,
-   and small. It changes the words on Join, so it waits for the owner's yes
-   to how it reads. For the lawyer: the final wording, and which later
-   changes need agreeing to again.
+4. **Agree to the Terms at Join**, keeping which version and when. Built
+   (Nov 12; the owner chose a line over a second box to tick): Join says
+   "Joining means you agree to the Terms and the Community rules. Privacy
+   says what we keep.", and keeps the version (the day those words last
+   changed) and when. For the lawyer: the final wording, which later changes
+   need agreeing to again, and what to do for those who joined before.
 5. **Admin controls.** Already: an account can be taken down (hidden from
    everybody, its maker still signs in and sees their own, and nothing new
    can be shared from it), and each report keeps how it was answered, by
