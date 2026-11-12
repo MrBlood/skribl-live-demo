@@ -735,6 +735,16 @@ safety and NCMEC, copyright, privacy law, a contact address, the name) is in
 
 `harness/verify_socialsafety.py` sections 15 and 16 hold it. Piece 5 is done.
 
+**What joining agrees to** (the owner's "all yes" to A, Nov 12, a friend's
+read of the lawyer note having asked for it): Join says, just above its links
+to the rules, "Joining means you agree to the Terms and the Community rules.
+Privacy says what we keep." The person's row keeps which Terms
+(`terms_version`, `social/rules.py` TERMS_VERSION: the day those words last
+changed; move it whenever they change) and when they pressed Join
+(`terms_agreed_at`); both are empty for anybody who joined before, who was
+never asked. `harness/verify_socialauth.py` section 2 holds the line and the
+row, section 15 its words' contrast.
+
 ### The name: Blooby, and its wordmark, blooby.
 
 The owner named the site Blooby (Nov 12: "I like the name blooby and I would

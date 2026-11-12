@@ -20,6 +20,13 @@ from .security import current_person
 #: The three pages, in the order their pills show them: (route, name).
 PAGES = (("terms", "Terms"), ("privacy", "Privacy"), ("rules", "Community rules"))
 
+#: WHICH TERMS A PERSON AGREES TO when they join (the owner's "all yes" to A,
+#: Nov 12: Join says "Joining means you agree to the Terms and the Community
+#: rules. Privacy says what we keep."). The day the Terms' or the Community
+#: rules' words last changed; their row keeps it (Person.terms_version), with
+#: when (Person.terms_agreed_at). Move it whenever those words change.
+TERMS_VERSION = "2026-11-12"
+
 
 def register(bp):
     """Add the three rules pages to the site's blueprint."""

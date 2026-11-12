@@ -110,6 +110,11 @@ class Person(SocialBase):
     session_gen = sa.Column(sa.Integer(), nullable=False, default=1, server_default="1")
     #: When they ticked "I'm 13 or older" (the site's minimum age, section 8).
     age_confirmed_at = sa.Column(sa.DateTime(timezone=True), nullable=False)
+    #: Which Terms they agreed to by joining (rules.TERMS_VERSION, the line on
+    #: Join), and when they pressed Join. None for people who joined before
+    #: Join said so (Nov 12): they were never asked.
+    terms_version = sa.Column(sa.String(16), nullable=True)
+    terms_agreed_at = sa.Column(sa.DateTime(timezone=True), nullable=True)
     created_at = sa.Column(sa.DateTime(timezone=True), nullable=False, default=utcnow)
     #: A few lines about them, plain text (piece 3, profiles): at most
     #: BIO_MAX characters and BIO_LINES lines, no invisible or bidi

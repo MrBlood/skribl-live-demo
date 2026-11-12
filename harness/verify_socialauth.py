@@ -606,6 +606,31 @@ with sync_playwright() as p_:
               good.get("path") == "/social/" and len(made) == 1 and made[0]["isResidentCredential"]
               and bar[-1:] == ["You"] and p.who() == "sam_young" and spent == [(1, "sam_young")],
               f"{good}; credentials {len(made)}; bar {bar}; spent {spent}")
+        # WHAT JOINING AGREES TO (the owner's "all yes" to A, Nov 12): the line
+        # on Join, painted, in its words, just above the rules' row; and the
+        # row of somebody who joined keeps which Terms (rules.TERMS_VERSION,
+        # read from the module, never typed here) and when they pressed Join.
+        TERMS_VERSION = re.search(r'^TERMS_VERSION = "([^"]+)"', (ROOT / "social" / "rules.py").read_text(encoding="utf-8"),
+                                  re.M).group(1)
+        agreed = db("select terms_version, terms_agreed_at is not null from social_people where handle_key = ?",
+                    ("sam_young",))
+        fresh, _ = cli("invite")
+        q = Person(b)
+        q.pg.goto(fresh)
+        link_state(q.pg)
+        line = q.pg.evaluate("""() => { const p = document.querySelector('.link-ok p.legal-agree'), n = document.querySelector('.link-ok .legal-foot');
+            if (!p || !n || !p.getClientRects().length) return null;
+            const r = p.getBoundingClientRect(), f = n.getBoundingClientRect();
+            const at = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+            return { words: p.textContent.trim(), painted: !!at && (at === p || p.contains(at)),
+                     gap: Math.round((f.top - r.bottom) * 10) / 10, px: parseFloat(getComputedStyle(p).fontSize) }; }""")
+        q.close()
+        check("Join says what joining agrees to, just above the rules (\"Joining means you agree to the Terms and the"
+              " Community rules. Privacy says what we keep.\"), and the person's row keeps which Terms and when",
+              bool(line) and line["painted"] and line["px"] >= 14 and 0 <= line["gap"] <= 8
+              and line["words"] == "Joining means you agree to the Terms and the Community rules. Privacy says what we keep."
+              and agreed == [(TERMS_VERSION, 1)],
+              f"line {line}; row {agreed} (Terms {TERMS_VERSION})")
         desk = Person(b, screen="desk")
         desk.ctx.add_cookies([pw_cookie(p.cookie())])
         desk.pg.goto(BASE + "/social/")
