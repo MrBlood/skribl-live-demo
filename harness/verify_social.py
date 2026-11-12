@@ -376,13 +376,33 @@ with sync_playwright() as p:
     # ------------------------------------------------------------------ 2
     if part(2, "the bar on a phone, the rail on a desk"):
         seen, twice, drawn = {}, {}, {}
-        # Home and Explore drawn in our pen (the owner's "all yes" after v330):
-        # each tab's icon, whether it is the pen's (.pen-ic), and whether any of
-        # its shapes is filled (the page you are on fills its own).
-        DRAWN = """() => Object.fromEntries([['Home', '/social/'], ['Explore', '/social/explore']].map(([n, h]) => {
-          const s = document.querySelector('nav.nav a[href$="' + h + '"] svg.ic');
-          return [n, { pen: !!s && s.classList.contains('pen-ic'), star: !!s && !!s.querySelector('path[d^="M 12.0,3.4"]'),
-                       filled: !!s && !!s.querySelector('[fill="currentColor"]') }]; }))"""
+        # Home drawn in our pen (the owner's "all yes" after v330), filled on
+        # its own page; Explore is Blooby holding up a bloob (the owner's pick,
+        # Nov 12), drawn in the bar's colour away and lit up in his colours on
+        # Explore: his body's paint read, and his purple against the bar.
+        DRAWN = r"""() => { const rgba = s => (s.match(/[\d.]+/g) || []).map(Number);
+          const lum = c => { const v = c.slice(0, 3).map(x => { x /= 255; return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); });
+            return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]; };
+          const n = document.querySelector('nav.nav'), page = rgba(getComputedStyle(document.body).backgroundColor),
+                nb = rgba(getComputedStyle(n).backgroundColor), a = nb.length > 3 ? nb[3] : 1,
+                ground = [0, 1, 2].map(k => nb[k] * a + page[k] * (1 - a));
+          const ratio = (x, y) => { const p = lum(x), q = lum(y); return (Math.max(p, q) + 0.05) / (Math.min(p, q) + 0.05); };
+          const probe = v => { const d = document.createElement('i'); d.style.color = v; document.body.appendChild(d);
+                               const c = getComputedStyle(d).color; d.remove(); return c; };
+          const root = getComputedStyle(document.documentElement);
+          const brand = probe(root.getPropertyValue('--brand').trim()), ink = probe(root.getPropertyValue('--blooby-ink').trim());
+          return Object.fromEntries([['Home', '/social/'], ['Explore', '/social/explore']].map(([nm, h]) => {
+            const s = document.querySelector('nav.nav a[href$="' + h + '"] svg.ic');
+            const out = { pen: !!s && s.classList.contains('pen-ic'), filled: !!s && !!s.querySelector('[fill="currentColor"]') };
+            if (nm === 'Explore' && s) {
+              const body = s.querySelector('.bl-body'), st = body && getComputedStyle(body);
+              out.blooby = s.classList.contains('ic-blooby') && !!s.querySelector('.bl-card') && !!s.querySelector('.bl-squig')
+                           && s.querySelectorAll('.bl-eye').length === 2 && s.querySelectorAll('.bl-hand').length === 2;
+              out.lit = s.classList.contains('is-lit');
+              Object.assign(out, { fill: st ? st.fill : null, stroke: st ? st.stroke : null, color: getComputedStyle(s).color,
+                                   brand, ink, k: st && st.fill !== 'none' ? Math.round(ratio(rgba(st.fill), ground) * 100) / 100 : null });
+            }
+            return [nm, out]; })); }"""
         for screen, ctx in (("phone", PHONE), ("desk", DESK)):
             c = b.new_context(**ctx)
             pg = c.new_page()
@@ -402,6 +422,14 @@ with sync_playwright() as p:
             cover = pg.evaluate(COVER_PHONE if screen == "phone" else COVER_DESK)
             seen[(screen, "cover")] = cover
             c.close()
+        # ...and Blooby lit up on the dark bar, where his purple is the dark wordmark's.
+        c = b.new_context(color_scheme="dark", **PHONE)
+        pg = c.new_page()
+        for page in ("home", "explore"):
+            pg.goto(SITE + ("/" if page == "home" else "/explore"))
+            pg.wait_for_timeout(500)
+            drawn[("phone dark", page)] = pg.evaluate(DRAWN)
+        c.close()
 
         def names(screen, page):
             return [i["name"] for i in seen[(screen, page)][0]]
@@ -439,12 +467,17 @@ with sync_playwright() as p:
               " above the bar at the end of the page; on a desk the column's edge beside the rail",
               all(pc["cta"]) and len(pc["cta"]) == 2 and pc["inMain"] and pc["foot"] < pc["barTop"]
               and all(d["inMain"] for d in dc), f"phone {json.dumps(pc)}; desk {json.dumps(dc)}")
+        def blooby_ok(e, here):
+            if here:   # lit: his purple the wordmark's, his own ink line, 3:1 or more on the bar
+                return e.get("lit") and e["fill"] == e["brand"] and e["stroke"] == e["ink"] and (e["k"] or 0) >= 3
+            return not e.get("lit") and e["fill"] == "none" and e["stroke"] == e["color"]   # drawn in the bar's colour
         pens_ok = [f"{s} {pg_}: {v}" for (s, pg_), v in drawn.items()
-                   if not (v["Home"]["pen"] and v["Explore"]["pen"] and v["Explore"]["star"]
-                           and v["Home"]["filled"] == (pg_ == "home") and v["Explore"]["filled"] == (pg_ == "explore"))]
-        check("Home and Explore are drawn in our pen, Explore a star to follow; the page you are on fills its own"
-              " icon and the other stays drawn (phone and desk, Home and Explore)",
-              len(drawn) == 4 and not pens_ok,
+                   if not (v["Home"]["pen"] and v["Explore"]["pen"] and v["Explore"].get("blooby")
+                           and v["Home"]["filled"] == (pg_ == "home") and blooby_ok(v["Explore"], pg_ == "explore"))]
+        check("Home is drawn in our pen and fills on its own page; Explore is Blooby holding up a bloob, drawn in the"
+              " bar's colour away and lit up in his colours on Explore (his purple the wordmark's, 3:1 or more on the"
+              " bar): phone and desk, and the dark bar",
+              len(drawn) == 6 and not pens_ok,
               f"wrong: {pens_ok}; read {json.dumps({f'{k[0]} {k[1]}': v for k, v in drawn.items()})[:300]}")
         dup = {f"{s} {pg_}": v for (s, pg_), v in twice.items() if v}
         check("no id is on a page of the site twice (the two wordmarks' gradients have one each), phone and desk",
