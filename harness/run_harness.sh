@@ -319,8 +319,12 @@ for suite in "$@"; do
   # every tile and door it opens began to glide to what it opened (after
   # v330): 1429s on CI before, 1488s after, and one run cut off at 1500 with
   # every row it had read green (main after #814). A hang still ends here.
+  # verify_musictimeline measured 570s on CI (harness/shard.py) against the
+  # 600s every suite has, and a busy runner cut it off mid-run, its last rows
+  # green (main after #865): 900s for it alone. A hang still ends here.
   budget=600
   [ "$suite" = "verify_contrast.py" ] && budget=1800
+  [ "$suite" = "verify_musictimeline.py" ] && budget=900
   t0="$(date +%s%N)"
   setsid timeout -k 15 "$budget" python3 "$suite" >"$log" 2>&1 &
   suite_pid=$!

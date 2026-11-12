@@ -378,6 +378,60 @@ def _until(q, cond, ms, ink=False):
     return q.evaluate(ST, ink), None
 
 
+# THE FADE'S RECORD (Reduce Motion): the hello's opacity on every frame the
+# screen makes, whether it is on and leaving, and when the frame came; "gone"
+# on the first frame after it leaves the page, with when.
+FADE_REC = """window.__fade = []; (function f() {
+    const h = document.getElementById('skriblHello');
+    if (h) __fade.push([h.classList.contains('is-on'), h.classList.contains('is-leaving'),
+                        +getComputedStyle(h).opacity, performance.now()]);
+    else if (__fade.length && __fade[__fade.length - 1] !== 'gone') { __fade.push('gone'); window.__goneAt = performance.now(); }
+    requestAnimationFrame(f); })();"""
+# A frame held this long is the page's thread stalled, not the fade: three
+# frames at 60 Hz. The fade coming in is 0.25 s of ease, whose steepest step
+# passes a third of the way in about 53 ms.
+HELLO_STALL_MS = 50
+
+
+def read_fade(q):
+    """The fade's record, once its last frame has come: "gone" is written on
+    the first frame after the hello leaves the page; _until saw it leave, and
+    on a busy runner that frame had not come yet (main after #600, both lanes:
+    every step green, the record ending a frame early)."""
+    try:
+        q.wait_for_function("() => (window.__fade || []).slice(-1)[0] === 'gone'", timeout=3000)
+    except Exception:  # noqa: BLE001 (the record says it did not end)
+        pass
+    return q.evaluate("() => [window.__fade, window.__goneAt || null]")
+
+
+def fade_verdict(fade, gone_at):
+    """(ok, frozen, come, go, frames read). Each part with the frame either
+    side of it, so a jump at its edge is a step: coming in runs from before it
+    is on to its last frame resting; going, from that frame to gone (read as
+    nothing). Each part: (frames between, the largest step, whether a step over
+    a third came in a frame of ordinary length, the longest frame in ms).
+    Frozen: failed, but every step over a third came across a stalled frame."""
+    rows = [r for r in fade if r != "gone"]
+
+    def glide(part):
+        mid = sum(1 for r in part if 0.05 < r[2] < 0.95)
+        steps = [(abs(y[2] - x[2]), (y[3] - x[3]) if x[3] is not None and y[3] is not None else None)
+                 for x, y in zip(part, part[1:])]
+        step = max((s for s, _ in steps), default=1.0)
+        cut = any(s > 0.34 and (dt is None or dt <= HELLO_STALL_MS) for s, dt in steps)
+        longest = max((dt for _, dt in steps if dt is not None), default=0.0)
+        return mid, round(step, 2), cut, round(longest)
+
+    first_go = next((i for i, r in enumerate(rows) if r[1]), len(rows))
+    come = glide(rows[:first_go])
+    go = glide(rows[max(first_go - 1, 0):] + ([[False, True, 0.0, gone_at]] if fade[-1:] == ["gone"] else []))
+    ok = come[0] >= 3 and come[1] <= 0.34 and go[0] >= 5 and go[1] <= 0.34 and fade[-1:] == ["gone"]
+    frozen = (not ok and fade[-1:] == ["gone"] and not come[2] and not go[2]
+              and max(come[3], go[3]) > HELLO_STALL_MS)
+    return ok, frozen, come, go, len(rows)
+
+
 def _sharp(s):
     """The box on whole screen pixels, the drawing filling it a whole number of
     its pixels to a screen pixel: twice where the drawing stays within 8
@@ -574,13 +628,9 @@ with sync_playwright() as p:
     # Reduce Motion: a still hello, the finished mark with its dot in place, then it just fades.
     c = b.new_context(reduced_motion="reduce", **PHONE)
     # Its opacity on every frame the screen makes, with whether it is on and
-    # whether it is leaving, until it is gone: the fade is read, not its class.
-    c.add_init_script("""window.__fade = []; (function f() {
-        const h = document.getElementById('skriblHello');
-        if (h) __fade.push([h.classList.contains('is-on'), h.classList.contains('is-leaving'),
-                            +getComputedStyle(h).opacity]);
-        else if (__fade.length && __fade[__fade.length - 1] !== 'gone') __fade.push('gone');
-        requestAnimationFrame(f); })();""")
+    # whether it is leaving and when the frame came, until it is gone: the
+    # fade is read, not its class.
+    c.add_init_script(FADE_REC)
     q = _open(c, "/skribl-pad")
     s, ms = _until(q, lambda s: s["painted"] and s["on"], 8000)
     still, why = (None, "no canvas")
@@ -605,34 +655,28 @@ with sync_playwright() as p:
     # Reduce Motion rules take every transition to nothing, the hello's fade
     # with them, so it went in one frame. Read off every frame: coming in and
     # going, it passes through the middle on several frames, and no one frame
-    # moves it more than a third of the way.
-    # "gone" is written on the first frame after the hello leaves the page;
-    # _until saw it leave, and on a busy runner that frame had not come yet
-    # (main after #600, both lanes: every step green, the record ending a
-    # frame early). So the record is read once that frame has come.
-    try:
-        q.wait_for_function("() => (window.__fade || []).slice(-1)[0] === 'gone'", timeout=3000)
-    except Exception:
-        pass
-    fade = q.evaluate("() => window.__fade")
-    rows = [r for r in fade if r != "gone"]
-
-    def glide(part):
-        mid = sum(1 for _, _, o in part if 0.05 < o < 0.95)
-        step = max((abs(b_[2] - a_[2]) for a_, b_ in zip(part, part[1:])), default=1.0)
-        return mid, round(step, 2)
-
-    # Each part with the frame either side of it, so a jump at its edge is a
-    # step: coming in runs from before it is on to its last frame resting;
-    # going, from that frame to gone (read as nothing).
-    first_go = next((i for i, r in enumerate(rows) if r[1]), len(rows))
-    come = glide(rows[:first_go])
-    go = glide(rows[max(first_go - 1, 0):] + ([[False, True, 0.0]] if fade[-1:] == ["gone"] else []))
+    # moves it more than a third of the way (the record: read_fade).
+    ok, frozen, come, go, n = fade_verdict(*read_fade(q))
+    # A FROZEN TAKE IS TAKEN AGAIN, at most twice: main after #865 read the
+    # fade coming in with one step of 0.44, the page's thread held past three
+    # frames on a busy runner. Only a take whose every step over a third came
+    # across such a frame is taken again; a cut in a frame of ordinary length
+    # (the fade gone, as on the owner's iPhone) stays red at once.
+    takes = 1
+    while frozen and takes < 3:
+        c.close()
+        c = b.new_context(reduced_motion="reduce", **PHONE)
+        c.add_init_script(FADE_REC)
+        q = _open(c, "/skribl-pad")
+        _until(q, lambda s: s["painted"] and s["on"], 8000)
+        _until(q, lambda s: not s["here"], 12000)
+        ok, frozen, come, go, n = fade_verdict(*read_fade(q))
+        takes += 1
     check("Reduce Motion: the hello fades in and fades away, never there or gone in one frame "
-          "(the owner's iPhone: 'it just disappears')",
-          come[0] >= 3 and come[1] <= 0.34 and go[0] >= 5 and go[1] <= 0.34 and fade[-1:] == ["gone"],
-          f"coming in: {come[0]} frames between, the largest step {come[1]}; going: {go[0]} frames "
-          f"between, the largest step {go[1]}; {len(rows)} frames read")
+          "(the owner's iPhone: 'it just disappears')", ok,
+          f"coming in: {come[0]} frames between, the largest step {come[1]}, the longest frame {come[3]} ms; "
+          f"going: {go[0]} frames between, the largest step {go[1]}, the longest frame {go[3]} ms; {n} frames read"
+          + (f"; taken {takes} times, a frame having frozen the fade" if takes > 1 else ""))
     c.close()
 
     # A slow line: the player held for 5 s, past its 4. The page's load waits

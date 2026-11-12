@@ -34822,3 +34822,51 @@ drops the rows it refuses and refills the page, saying so once in the log (the r
 and a block lifted by the wrong side left no Unblock to press, which stopped the suite (now recorded).
 verify_socialposts' ⋯ rows now say Block and the site's queue, and
 verify_socialauth's chain eight tables.
+
+## After v330 -- Three checks tell a busy runner from a fault (main after #865)
+
+Main's run after #865 (run 43230997478) went red in two sqlite shards, on
+three suites, none near what #865 changed (the site's sign-in reads). Each was
+the instrument reading a busy runner as a fault; each now tells them apart,
+and each was shown red on the fault it is there for.
+
+- VERIFY_CARDFADE, "...and on a dark one, dark glass": at rest, Repeat and
+  Full screen read 0.30 and 0.77 on the dark drawing. The poster route serves
+  a blank stand-in for any read it cannot make (routes.py
+  _thumbnail_response: "best-effort and never an error"), and the stand-in,
+  a picture with nothing on it, reads as white under the bar, so the glass
+  turns light. Served the stand-in on purpose, the same row read 0.31 and
+  0.76: the only state found that reads as main's run did (unread, the bar
+  keeps the scrim and dark glass, 0.04; a card arriving slowly, in two halves
+  with a pause, is left unread until it lands). The at-rest rows now look at
+  the card image before reading it (the fixture's ground, opaque, where it was
+  painted) and, while the stand-in shows, open the page again, at most twice,
+  saying so in the row; and they wait for the bar's reading (is-smart, 10 s at
+  most), never a fixed time. Shown: the old rows red on a stand-in served once
+  (0.31/0.76); the new ones green on it, opened again once; red on a stand-in
+  served every time (opened again twice, its own image never showing); red on
+  glass that is never dark (a real defect: smartfade's tone forced light);
+  green as they are. The first look at the image matched the stand-in to the
+  dark ground (nothing on it reads as black), so it asks for paint too.
+  Found on the way, not changed here: a card whose own picture cannot be had
+  wears the glass for white even over a dark box (the stand-in is read as
+  white); the owner decides whether that is worth a fix.
+- VERIFY_HELLO, Reduce Motion: "the largest step 0.44" coming in, the page's
+  thread held past three frames. The fade's record now carries each frame's
+  time; a take whose every step over a third came across a frame longer than
+  50 ms (three frames: the 0.25 s ease passes a third of the way in about
+  53 ms) is taken again, at most twice, saying so; a cut in a frame of
+  ordinary length (the owner's "it just disappears") stays red at once.
+  Shown: the old row red on the page's thread held 150 ms once, two frames
+  into the fade in (one frame between, a step of 0.9); the new one green on
+  it, taken twice; both red on the real defect, the hello's own fade under
+  Reduce Motion taken out (lib/hello.js fade(): in and out in one frame each,
+  never taken again); green as it is. The first try at that defect, a sheet
+  rule taking the fade to nothing, stayed green: the hello sets its fade
+  inline, !important, which outranks any sheet, so the break is made where
+  the fade is.
+- VERIFY_MUSICTIMELINE was cut off at its 600 s budget mid-run, its last rows
+  green. It was measured at 570 s on CI (shard.py): too close. It alone gets
+  900 s (run_harness.sh), as contrast has 1800; a hang still ends there.
+
+Pad and Flip: not affected (instruments and a time budget).

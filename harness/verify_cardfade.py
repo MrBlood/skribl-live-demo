@@ -218,12 +218,33 @@ class Card:
             pg.wait_for_timeout(500)
         self.up()
         pg.wait_for_timeout(300)
+        self.read = self.settle()
         self.g = self.tile.evaluate(GEOM)
         s = self.g["stage"]
         self.clip = {"x": s[0] - 4, "y": s[1], "width": s[2] - s[0] + 8, "height": s[3] - s[1] + 4}
 
     def up(self):
         self.tile.evaluate("t => t.classList.add('ctl-on')")
+
+    def own(self, ground):
+        """Whether the card image showing is the drawing's own (its ground
+        where the fixture painted it), not the server's blank stand-in."""
+        return bool(self.tile.evaluate(f"(t) => ({OWN})([t, {json.dumps(ground)}])"))
+
+    def settle(self, ms=10000):
+        """THE BAR'S READING, WAITED FOR, never a fixed time. The bar reads
+        what is under it when the card image lands (lib/fullbar.js), and on a
+        busy machine that can come after every wait above: main's run after
+        #865 shot a dark drawing at rest with its Repeat and Full screen at
+        0.30 and 0.77, a bar that had not read yet. At most `ms`; a bar that
+        never reads is left to fail its rows. Whether it read."""
+        try:
+            self.pg.wait_for_function(
+                "t => { const b = t.querySelector('.skfull.skfull-card'); return !!b && b.classList.contains('is-smart'); }",
+                arg=self.tile.element_handle(), timeout=ms)
+            return True
+        except Exception:  # noqa: BLE001 (a timeout: the rows say what was painted)
+            return False
 
     def shot(self, mode=""):
         self.up()
@@ -289,6 +310,23 @@ def frange(a, b, step):
     while x < b:
         yield x
         x += step
+
+
+# WHICH CARD IMAGE IS SHOWING. The poster route serves the post's own card, or
+# a blank stand-in for any read it cannot make (routes.py _thumbnail_response:
+# "best-effort and never an error", a transient database error among them).
+# Read off the image itself: a few pixels at the top of the drawing's own
+# rectangle (fitPoster's `_d`), against the ground the fixture painted there.
+# The stand-in (poster-blank.svg) has nothing on it, so it reads as no paint
+# at all: opaque is part of the answer, or the dark ground matches its black.
+OWN = """([t, ground]) => { const img = t.querySelector('.skribl-inline-poster');
+  if (!img || !img.complete || !img.naturalWidth) return null;
+  const d = img._d || [0, 0, 1200, 630], k = img.naturalWidth / 1200, c = document.createElement('canvas');
+  c.width = c.height = 1;
+  const g = c.getContext('2d');
+  g.drawImage(img, (d[0] + d[2] / 2 - 2) * k, (d[1] + 6) * k, 4 * k, 4 * k, 0, 0, 1, 1);
+  const p = g.getImageData(0, 0, 1, 1).data, q = [1, 3, 5].map(i => parseInt(ground.slice(i, i + 2), 16));
+  return p[3] > 250 && [0, 1, 2].every(i => Math.abs(p[i] - q[i]) <= 24); }"""
 
 
 def open_gallery(b, view, theme):
@@ -372,25 +410,48 @@ with sync_playwright() as p:
     pg.close()
 
     print("\nCARD FADE — at rest, read off the card image, on a phone")
+
+    def at_rest(pg, name):
+        """A card at rest showing ITS OWN card image. On a busy runner the
+        server once served the dark drawing the blank stand-in, and the row
+        read the stand-in's glass (main after #865: Repeat and Full screen at
+        0.30 and 0.77, as the stand-in's are). So while the stand-in shows,
+        the page is opened again, at most twice; the rows say how often. A
+        card image that never shows is still the rows' failure."""
+        again = 0
+        c = Card(pg, titles[name], phone=True, play=False)
+        while not c.own(GROUND[name]) and again < 2:
+            pg.close()
+            pg = open_gallery(b, PHONE, "dark")
+            c = Card(pg, titles[name], phone=True, play=False)
+            again += 1
+        c.again, c.mine = again, c.own(GROUND[name])
+        return pg, c
+
+    def said(c):
+        return (f"; the bar read the card image: {c.read}; its own image: {c.mine}"
+                + (f" (opened again {c.again}x while the stand-in showed)" if c.again else ""))
+
     pg = open_gallery(b, PHONE, "dark")
-    c = Card(pg, titles["paper"], phone=True, play=False)
+    pg, c = at_rest(pg, "paper")
     check("at rest the card image is what is showing (nothing has played)", not c.g["live"])
     shown = c.shot()
     fills = {k: c.fill(shown, k) for k in ("loop", "full")}
     check("...and on a pale drawing the buttons are light glass, read off the card image",
-          all(v is not None and lum(v) > 0.5 for v in fills.values()),
-          ", ".join(f"{k} {lum(v):.2f}" if v else f"{k} not painted" for k, v in fills.items()))
+          c.read and c.mine and all(v is not None and lum(v) > 0.5 for v in fills.values()),
+          ", ".join(f"{k} {lum(v):.2f}" if v else f"{k} not painted" for k, v in fills.items()) + said(c))
     d, ym = c.g["drawing"], (c.g["bar"][1] + c.g["bar"][3]) / 2
     moved, bare, gone = c.fade_moves(d[0] + 3, d[2] - 3, ym)
     check("...and the fade cannot be seen on its empty paper", moved is not None and moved <= 1.10, f"median {moved:.2f}")
     worst, npts = outside_corners(c, bare, gone, d[0], d[2], d[3], c.g["plate"])
     check("...and it keeps to the card image's own rounder corners (the plate's)",
           worst <= 1.05, f"largest change {worst:.2f} over {npts} points outside the plate's {c.g['plate']:.1f}px rounds")
-    c = Card(pg, titles["dark"], phone=True, play=False)
+    pg, c = at_rest(pg, "dark")
     shown = c.shot()
     fills = {k: c.fill(shown, k) for k in ("loop", "full")}
-    check("...and on a dark one, dark glass", all(v is not None and lum(v) < 0.2 for v in fills.values()),
-          ", ".join(f"{k} {lum(v):.2f}" if v else f"{k} not painted" for k, v in fills.items()))
+    check("...and on a dark one, dark glass",
+          c.mine and all(v is not None and lum(v) < 0.2 for v in fills.values()),
+          ", ".join(f"{k} {lum(v):.2f}" if v else f"{k} not painted" for k, v in fills.items()) + said(c))
     pg.close()
 
     print("\nCARD FADE — a tall drawing on a desk card, narrower than the row")
