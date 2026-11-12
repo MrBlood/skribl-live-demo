@@ -35361,3 +35361,27 @@ screen, so the row read no words at all and the row failed its own guard
 (16 places read, two of them empty). Its reader reads only what is on
 screen, so the row is scrolled into view first, as a person reaches it:
 174 words read again, and still red with the rules row too small to tap.
+
+## After v330 -- Main red after #873: the card reader says it reads twice
+
+Main's run on 982ea40 (#873) went red on shard 1, both databases, in one row:
+verify_social's "no page errors, no console errors and no CSP violations on
+the site's pages", on a desk: Chrome's console warning "Canvas2D: Multiple
+readback operations using getImageData are faster with the willReadFrequently
+attribute set to true". The source was #870's: the card's reader
+(inlineplayer.js readCard) reads its small canvas twice, before the white
+goes behind the card (is anything painted?) and after (the colours), on a
+context that never said it would be read. The runs after #870, #871 and #872
+were cancelled by the next push to main, so this was the first to finish.
+This box's Chromium does not say it, which is how it went past the PR.
+
+- readCard's canvas is made with willReadFrequently, as lib/eyedropper.js
+  does: a sample this small is the CPU's anyway. +30 B, so the in-post
+  player's ratchet (verify_inline) is raised by that, with its reason.
+
+THE CHECK. verify_cardfade, a row asking the mechanism Chrome warns on rather
+than the warning, which not every Chromium prints: every 2D canvas read more
+than once was made saying it would be, at rest over a card with its picture.
+Red without the fix (each card canvas [2 reads, not said]), green with it.
+
+Pad and Flip: shared, the player both play in.

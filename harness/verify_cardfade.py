@@ -544,6 +544,39 @@ with sync_playwright() as p:
           + " (relative luminance; light glass is over 0.5)")
     pg.close()
 
+    print("\nCARD FADE — the card's reader says it reads twice")
+    # MAIN RED AFTER #873: Chrome warned "Multiple readback operations using
+    # getImageData are faster with the willReadFrequently attribute set to
+    # true" on the site's console (verify_social's no-console-errors row), from
+    # the canvas the card's reader reads twice (before the white goes behind
+    # the card and after). Not every Chromium says it (this box's did not), so
+    # the row asks the mechanism Chrome warns on: every 2D canvas read more
+    # than once was made saying it would be.
+    READS = """(() => { const made = new WeakMap(), log = [];
+      const gc = HTMLCanvasElement.prototype.getContext;
+      HTMLCanvasElement.prototype.getContext = function (kind, opts) {
+        const ctx = gc.call(this, kind, opts);
+        if (kind === '2d' && ctx && !made.has(ctx)) {
+          const e = { often: !!(opts && opts.willReadFrequently), reads: 0 }; made.set(ctx, e); log.push(e); }
+        return ctx; };
+      const gid = CanvasRenderingContext2D.prototype.getImageData;
+      CanvasRenderingContext2D.prototype.getImageData = function () {
+        const e = made.get(this); if (e) e.reads++; return gid.apply(this, arguments); };
+      window.__reads = log; })();"""
+    pg = b.new_page(color_scheme="dark", **PHONE)
+    pg.add_init_script(READS)
+    browsing.goto(pg, BASE, "/gallery")
+    pg.wait_for_timeout(1500)
+    pg.add_style_tag(content=SHOW)
+    c = Card(pg, titles["paper"], phone=True, play=False)
+    reads = pg.evaluate("() => (window.__reads || []).filter(e => e.reads > 0).map(e => [e.reads, e.often])")
+    twice = [r for r in reads if r[0] > 1]
+    check("the card's reader says it reads twice: every canvas read more than once was made willReadFrequently,"
+          " so Chrome has nothing to warn of on the console",
+          bool(c.read) and bool(twice) and all(often for _, often in twice),
+          f"read the card: {c.read}; canvases read [reads, willReadFrequently]: {reads}")
+    pg.close()
+
     print("\nCARD FADE — Mute steps aside on a silent drawing, on the card and in full screen")
     pg = b.new_page(color_scheme="dark", **PHONE)
     pg.add_init_script(NO_API)

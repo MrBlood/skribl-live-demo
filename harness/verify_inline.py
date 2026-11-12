@@ -1723,7 +1723,12 @@ with sync_playwright() as sp:
     #   first: the scan is the loop's own test (-7 B); testing one pixel would
     #   cost 72 B less and call a card empty wherever its first sample is
     #   clear, a guess this reader does not make. 78,363 B measured.
-    EMBED_RATCHET = 78_366
+    # RAISED (a bug fix: main red after #873, Chrome's console warning that
+    #   a canvas was read back twice without saying it would be), for one
+    #   named cost: +30 B, all inlineplayer.js -- the card reader's canvas made
+    #   with willReadFrequently. WHICH CALLER PAYS: every page that shows a
+    #   post. Spent first: nothing to spend; it is one option. 78,393 B measured.
+    EMBED_RATCHET = 78_396
     # THE RATCHET MEASURES DISPLAY, NOT COMPOSE, and the two are separate costs
     # paid by separate pages. Excluded here and measured on its own below:
     #   feed.js          the PREVIEW PAGE's own script (fetch the listing, clone

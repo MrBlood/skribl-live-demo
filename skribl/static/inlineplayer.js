@@ -1996,13 +1996,18 @@
      * and on white it read as a white drawing, so the card's fade turned to
      * light glass over the box's own ground, dark in full screen. Nothing
      * painted in the box is nothing to read: the fade keeps its scrim, and
-     * the pill its light glass, as for a card that cannot be read. */
+     * the pill its light glass, as for a card that cannot be read.
+     * READ TWICE, SAID SO (main red after #873): the canvas is read before
+     * the white goes behind it and after, and Chrome warns of a canvas read
+     * more than once that did not say it would be (willReadFrequently), on
+     * the console every site page is checked against. A sample this small
+     * is the CPU's anyway (lib/eyedropper.js asks the same). */
     function readCard(x, y, w, h, cw, ch) {
       if (!poster || !poster.naturalWidth) return null;
       try {
         var d = poster._d || [0, 0, CARD_W, CARD_H], k = poster.naturalWidth / CARD_W, c = doc.createElement('canvas'), g, px, i;
         c.width = cw; c.height = ch;
-        g = c.getContext('2d');
+        g = c.getContext('2d', { willReadFrequently: true });
         g.drawImage(poster, (d[0] + d[2] * x) * k, (d[1] + d[3] * y) * k, d[2] * w * k, d[3] * h * k, 0, 0, cw, ch);
         for (px = g.getImageData(0, 0, cw, ch).data, i = 3; i < px.length && !px[i]; i += 4);
         if (i >= px.length) return null;
