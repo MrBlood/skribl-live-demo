@@ -868,6 +868,20 @@ button.make-door { width: 100%; border: 0; font: inherit; text-align: left; curs
 .rep-acts form[hidden] { display: none; }
 .rep-acts .btn { flex: 1; min-height: 48px; }
 .rep-acts .btn[hidden] { display: none; }
+/* THE RULES (piece 5): Terms, Privacy and Community rules, the pills between
+   them and the draft note, as the Safety mock has them; and their links at the
+   foot of Settings. */
+.legal { max-width: 640px; }
+.legal-nav { display: flex; flex-wrap: wrap; gap: 10px; margin: 0 0 18px; }
+.legal-nav a { display: inline-flex; align-items: center; min-height: 44px; padding: 0 14px; border-radius: 999px;
+               border: 1px solid var(--card-line); color: var(--ink); font-size: 15px; font-weight: 600; text-decoration: none; }
+.legal-nav a[aria-current] { background: var(--tint); }
+.legal-draft { margin: 0 0 18px; padding: 12px 14px; border-radius: 14px; background: var(--tint); color: var(--ink);
+               font-size: 15px; }
+.legal h2 { margin: 22px 0 6px; font-size: 19px; }
+.legal p:not(.legal-draft) { margin: 0 0 10px; color: var(--ink); font-size: 16px; line-height: 1.55; }
+.legal-foot { display: flex; flex-wrap: wrap; justify-content: center; gap: 18px; margin: 20px 0 0; font-size: 15px; }
+.legal-foot a { display: inline-flex; align-items: center; min-height: 44px; color: var(--ink-2); }
 /* TAKEN DOWN (piece 5): what its maker sees on it, and on their profile. */
 .post-down, .prof-down { margin: 12px 0 0; padding: 10px 14px; border-radius: 12px; background: var(--tint);
                          color: var(--ink); font-size: 15px; line-height: 1.45; }

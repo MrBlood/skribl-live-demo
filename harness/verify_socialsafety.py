@@ -1,7 +1,8 @@
-"""Safety on the Skribl site (phase 1, piece 5: report and block, then your
-Reports and what taking something down does; docs/SOCIAL-SITE.md "Built: piece
-5, report and block" and "Built: piece 5, your Reports"), through the demo's
-own server, with Chromium's virtual authenticator for the site's people.
+"""Safety on the Skribl site (phase 1, piece 5: report and block, your Reports
+and what taking something down does, and the rules; docs/SOCIAL-SITE.md
+"Built: piece 5, report and block", "Built: piece 5, your Reports" and "Built:
+piece 5, the rules"), through the demo's own server, with Chromium's virtual
+authenticator for the site's people.
 
   1. REPORT SOMEBODY: a profile's ⋯ (never your own; Block only signed in),
      Report @them with a person's own reasons, in order; into the site's queue
@@ -41,13 +42,18 @@ own server, with Chromium's virtual authenticator for the site's people.
      ordered, naming nobody, taking nothing down.
  14. THE REPORTS PAGE AND THE NOTES: words at 4.5:1, targets 44px; phone and
      desk, light and dark.
- 15. NO PAGE ERRORS, NO CONSOLE ERRORS AND NO CSP VIOLATIONS (run last).
+ 15. THE RULES: Terms, Privacy and Community rules, three pages anybody can
+     read, each a draft, each with the pills to the others; Terms in the
+     mock's own words; Join and Settings link all three.
+ 16. THE RULES PAGES AND JOIN: words at 4.5:1, targets 44px; phone and desk,
+     light and dark.
+ 17. NO PAGE ERRORS, NO CONSOLE ERRORS AND NO CSP VIOLATIONS (run last).
 
 SOCIALSAFETY_PART=<n>[,<m>] runs those sections only (calibration); a section
 makes the people it needs (the first person a run makes is its admin, so a
 section that needs one asks for the admin first). Every row was shown red by
 breaking one part and green as built: DECISIONS.md, "Report and block at
-/social" and "Your Reports at /social".
+/social", "Your Reports at /social" and "The rules, in plain words".
 """
 import base64  # noqa: F401
 import json
@@ -1258,7 +1264,71 @@ with sync_playwright() as p:
               f" each {[(' '.join(k), v['read']) for k, v in seen.items()]}")
 
     # ------------------------------------------------------------------ 15
-    if part(15, "no page errors, no console errors and no CSP violations"):
+    if part(15, "the rules: three pages anybody can read, each a draft, each linking the others; Join and Settings link them"):
+        mira = admin(b)
+        PILLS = "() => [...document.querySelectorAll('.legal-nav a')].map(a => [a.textContent, new URL(a.href).pathname, a.getAttribute('aria-current')])"
+        HEADS = "() => [...document.querySelectorAll('.legal h2')].map(h => h.textContent)"
+        RULES = [("/social/terms", "Terms"), ("/social/privacy", "Privacy"), ("/social/rules", "Community rules")]
+        WANT_HEADS = {
+            "Terms": ["Your drawings are yours", "Who can join", "Be kind", "When something is reported"],
+            "Privacy": ["What we keep", "What we don’t do", "Who sees what", "When you leave"],
+            "Community rules": ["Be kind", "Keep children safe", "Be yourself", "Share what you made", "If something breaks the rules"]}
+        DRAFT = "A draft, in plain words. A lawyer reads it before Skribl opens to everyone."
+        nctx, npg = browser_as(b, None)
+        pages = {}
+        for path, name in RULES:
+            st = status(npg, path)
+            npg.wait_for_timeout(200)
+            pages[name] = {"status": st, "h1": npg.evaluate("() => (document.querySelector('h1') || {}).textContent"),
+                           "draft": npg.evaluate("() => (document.querySelector('.legal-draft') || {}).textContent"),
+                           "pills": npg.evaluate(PILLS), "heads": npg.evaluate(HEADS)}
+        close_ctx(nctx, npg)
+        pills_ok = all(p["pills"] == [[n, path, "page" if n == name else None] for path, n in RULES]
+                       for name, p in pages.items())
+        check("the rules are three pages anybody can read, signed out too, each a draft in plain words, each with the"
+              " pills to the others (its own marked), Terms in the mock's own words",
+              all(p["status"] == 200 and p["h1"] == name and p["draft"] == DRAFT and p["heads"] == WANT_HEADS[name]
+                  for name, p in pages.items()) and pills_ok,
+              f"{pages}")
+        FOOT = "() => [...document.querySelectorAll('.legal-foot a')].filter(a => a.getClientRects().length).map(a => [a.textContent, new URL(a.href).pathname])"
+        jctx, jpg = browser_as(b, None)
+        jpg.goto(cli("invite"))
+        jpg.wait_for_timeout(600)
+        joined = jpg.evaluate(FOOT)
+        close_ctx(jctx, jpg)
+        pg = mira.pg
+        pg.goto(BASE + "/social/you")
+        pg.wait_for_timeout(500)
+        settings = pg.evaluate(FOOT)
+        want = [[n, path] for path, n in RULES]
+        check("Join (from an invite) and Settings each link all three, at their foot", joined == want and settings == want,
+              f"join {joined}; settings {settings}")
+
+    # ------------------------------------------------------------------ 16
+    if part(16, "the rules pages: words at 4.5:1, targets 44px; phone and desk, light and dark"):
+        seen = {}
+        for screen in ("phone", "desk"):
+            for scheme in ("light", "dark"):
+                cctx, cpg = browser_as(b, None, screen=screen, scheme=scheme)
+                for path in ("/social/terms", "/social/privacy", "/social/rules"):
+                    cpg.goto(BASE + path)
+                    cpg.wait_for_timeout(400)
+                    seen[(screen, scheme, path.rsplit("/", 1)[1])] = cpg.evaluate(READ, "main")
+                cpg.goto(cli("invite"))
+                cpg.wait_for_timeout(600)
+                seen[(screen, scheme, "join's rules")] = cpg.evaluate(READ, ".legal-foot")
+                close_ctx(cctx, cpg)
+        low = [(k, v["low"]) for k, v in seen.items() if v["low"]]
+        small = [(k, v["small"]) for k, v in seen.items() if v["small"]]
+        lowest = min((v["lowest"], " ".join(k)) for k, v in seen.items())
+        check("every word on the three rules pages and in Join's rules row reads at 4.5:1 or more on what is"
+              " painted behind it, and every control is 44px or more each way: phone and desk, light and dark",
+              not low and not small and all(v["read"] >= 3 for v in seen.values()),
+              f"{sum(v['read'] for v in seen.values())} read, the lowest {lowest}; under 4.5: {low[:3]}; small: {small[:3]};"
+              f" each {[(' '.join(k), v['read']) for k, v in seen.items()]}")
+
+    # ------------------------------------------------------------------ 17
+    if part(17, "no page errors, no console errors and no CSP violations"):
         for who in list(_people.values()):
             ERRS.extend(f"csp: {v}" for v in who.csp())
         check("no page errors, no console errors and no CSP violations, in every browser the suite opened",
