@@ -536,13 +536,22 @@ kinda weak"). The face you have leads Your face, the sheet's one big door,
 and draws itself again each time the sheet rises (a still under Reduce
 Motion); before there is one, the empty circle leads, Draw your face. The
 other ways sit side by side under it as tiles. Their icons, and the bar's
-Home and Explore (Explore a star to follow), are drawn in the signature's
+Home, are drawn in the signature's
 pen (`_icons.html`): faint is what is already there, solid is your new line,
 in the small violet ink on the note's tint; each draws itself once as the
 sheet rises. Make's sheet joined the family the same day (the owner's "all yes" on its
 mock C): Draw and Flip side by side as equals, the Pad and Flip being siblings,
 each with its icon in the same pen (your line across a blank page; onion skin,
 as Flip shows it), its name, and the line that says what it makes.
+
+**Explore's icon is Blooby holding up a bloob** (the owner, Nov 12: "How
+bout a blooby icon? ... You're exploring bloobs, right," then "I do like
+g"): his head over a drawing on its card, his hands on its corners, from his
+own drawing. Drawn in the bar's colour away from Explore, as Home is; lit
+up in his colours on Explore's own page, in either theme (his purple the
+wordmark's, `--brand`; his ink, blush and the card's paper `--blooby-ink`,
+`--blooby-blush`, `--blooby-paper`). `harness/verify_social.py` section 2
+holds both, and his purple at 3:1 or more on the bar.
 
 `harness/verify_socialprofile.py` holds it all through the demo's own
 server, faces drawn through the real Pad with a pen; DECISIONS.md ("Profiles
