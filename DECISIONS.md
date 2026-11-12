@@ -35018,3 +35018,32 @@ the rules row too small to tap. Two of them were green first: the row was
 hidden with the hidden attribute, which its own display rule overrides, so
 it still showed; taken out of the page, it went red.
 
+## After v330 -- A card with no picture keeps its dark fade
+
+The owner's yes (Nov 12): a card with no picture keeps its dark fade. A
+drawing posted without a card picture shows the server's blank stand-in
+(poster-blank.svg), which paints nothing, so the box's own ground shows
+through it, dark on a dark page and in full screen. The card's reader
+(inlineplayer.js readCard) drew the card on white, as a see-through card
+shows, so it read a white drawing, and the card's fade (lib/fullbar.js) took
+light glass over a dark ground.
+
+- readCard answers null when nothing is painted in the box it reads: nothing
+  to read, as for a card that cannot be read (another origin's). The fade
+  keeps its scrim; the play pill keeps its light glass, as it had for the
+  white it read before.
+- One reader for both: Pad drawings and Flips play in the same player.
+- It costs every page that shows a post 175 B of script, so the in-post
+  player's ratchet (verify_inline) is raised by that, with its reason;
+  testing one pixel instead would cost 72 B less and call a card empty
+  wherever its first sample is clear, a guess this reader does not make.
+
+THE CHECK. verify_cardfade, a row: a drawing posted with no card picture, at
+rest on a phone on a dark page, read once its stand-in has landed and the
+page's theme has turned and back (an event the bar reads on, so the reading
+asked is one made after the stand-in landed): not smart, the near-black
+scrim, each button's fill dark (0.04, 0.00, 0.00). Red without the fix:
+smart, no scrim, light glass (0.31, 0.75, 0.76). The pill cannot fail this
+(light glass before and after), so no row pins it.
+
+Pad and Flip: shared, the player both play in.

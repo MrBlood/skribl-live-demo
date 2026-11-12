@@ -21,6 +21,8 @@ WHAT IS ASKED, every row read off PAINTED PIXELS, never off a class name:
     beside it is untouched, the controls over it take ITS tone, and they turn
     when the page's theme does.
   * A drawing that cannot be read keeps the scrim: nothing is set on a guess.
+    So does a card with no picture of its own (the blank stand-in paints
+    nothing, so there is nothing to read; the owner's yes, Nov 12).
   * Mute steps aside on a silent drawing, on the card and in full screen,
     from the first paint, so the row does not change at the first tap (the
     owner: yes).
@@ -127,7 +129,10 @@ def _card(name, pts):
     return "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode()
 
 
-def post(name, sound=True, title=None):
+def post(name, sound=True, title=None, card=True):
+    """A public drawing; with card=False it carries no card picture, as a
+    drawing sent through the API without one, so its poster is the server's
+    blank stand-in."""
     pts = _strokes(name)
     groups, n = [], 0
     for i, p in enumerate(pts):
@@ -141,7 +146,9 @@ def post(name, sound=True, title=None):
     title = title or f"Card fade {name} {TAG}"
     body = {"title": title, "version": 2, "schemaVersion": 2, "visibility": "public",
             "playbackMode": "replay", "canvasSize": {"cssWidth": W, "cssHeight": H},
-            "frames": [frame], "thumbnail": _card(name, pts)}
+            "frames": [frame]}
+    if card:
+        body["thumbnail"] = _card(name, pts)
     req = urllib.request.Request(BASE + "/api/skribls", data=json.dumps(body).encode(),
                                  headers={"Content-Type": "application/json"})
     json.loads(urllib.request.urlopen(req, timeout=30).read())
@@ -200,7 +207,7 @@ def frames(pg, n=2):
 class Card:
     """One card on the page, its bar shown, and its shots."""
 
-    def __init__(self, pg, title, phone, play=True):
+    def __init__(self, pg, title, phone, play=True, settle=True):
         self.pg = pg
         self.tile = pg.locator(".tile", has_text=title).first
         self.tile.scroll_into_view_if_needed()
@@ -218,7 +225,7 @@ class Card:
             pg.wait_for_timeout(500)
         self.up()
         pg.wait_for_timeout(300)
-        self.read = self.settle()
+        self.read = self.settle() if settle else None
         self.g = self.tile.evaluate(GEOM)
         s = self.g["stage"]
         self.clip = {"x": s[0] - 4, "y": s[1], "width": s[2] - s[0] + 8, "height": s[3] - s[1] + 4}
@@ -340,6 +347,7 @@ def open_gallery(b, view, theme):
 # ------------------------------------------------------------------ the rows
 titles = {n: post(n) for n in ("paper", "dark", "sky")}
 titles["silent"] = post("paper", sound=False, title=f"Card fade silent {TAG}")
+titles["bare"] = post("paper", title=f"Card fade no picture {TAG}", card=False)
 
 # The Fullscreen API taken away, so full screen is the page's own CSS state
 # (lib/immersive.js's fallback, iOS Safari's only one): the same bar, testable.
@@ -503,6 +511,37 @@ with sync_playwright() as p:
     check("a card that read its drawing wears the smart fade", smart_before)
     check("...and once its drawing cannot be read, the near-black scrim is back, not a guess",
           (not g2["smart"]) and "rgba(6, 7, 10" in g2["scrim"], f"smart {g2['smart']}, background {g2['scrim'][:60]}")
+    pg.close()
+
+    print("\nCARD FADE — a card with no picture keeps the scrim")
+    # THE OWNER'S YES (Nov 12): a drawing posted without a card picture shows
+    # the server's blank stand-in (poster-blank.svg), which paints nothing, so
+    # the box's own ground shows through it, dark here. Read on white, it was a
+    # white drawing, and the bar took light glass over a dark ground. Waited
+    # for: the stand-in landing, then the page's theme turning and back, an
+    # event the bar reads on (lib/fullbar.js), so the reading asked is one made
+    # after the stand-in landed, never an absence taken on time alone.
+    pg = open_gallery(b, PHONE, "dark")
+    c = Card(pg, titles["bare"], phone=True, play=False, settle=False)
+    pg.wait_for_function("t => { const i = t.querySelector('.skribl-inline-poster');"
+                         " return !!i && i.complete && i.naturalWidth > 0 && !!i._d; }",
+                         arg=c.tile.element_handle(), timeout=15000)
+    stand_in = not c.own(GROUND["paper"])
+    for theme in ("light", "dark"):
+        pg.evaluate("(m) => document.documentElement.setAttribute('data-theme', m)", theme)
+        frames(pg, 3)
+    c.up()
+    frames(pg, 2)
+    c.g = c.tile.evaluate(GEOM)
+    shown = c.shot()
+    fills = {k: c.fill(shown, k) for k in ("loop", "mute", "full")}
+    check("a card with no picture of its own (the blank stand-in) keeps the near-black scrim at rest, its buttons"
+          " dark on it, never light glass taken from nothing",
+          stand_in and not c.g["smart"] and "rgba(6, 7, 10" in c.g["scrim"]
+          and all(v is not None and lum(v) < 0.2 for v in fills.values()),
+          f"stand-in {stand_in}; smart {c.g['smart']}; background {c.g['scrim'][:60]}; "
+          + ", ".join(f"{k} {lum(v):.2f}" if v else f"{k} not painted" for k, v in fills.items())
+          + " (relative luminance; light glass is over 0.5)")
     pg.close()
 
     print("\nCARD FADE — Mute steps aside on a silent drawing, on the card and in full screen")

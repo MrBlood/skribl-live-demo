@@ -1990,15 +1990,24 @@
      * screen (shares of the drawing's own rectangle) into a cw x ch sample on
      * white, as a see-through card shows; null when it cannot be read
      * (another origin's). The pill's glass reads here and so does the card's
-     * fade (lib/fullbar.js), so the two read one drawing one way. */
+     * fade (lib/fullbar.js), so the two read one drawing one way.
+     * A CARD WITH NO PICTURE is null too (the owner's yes, Nov 12): the
+     * stand-in for a drawing without one (poster-blank.svg) paints nothing,
+     * and on white it read as a white drawing, so the card's fade turned to
+     * light glass over the box's own ground, dark in full screen. Nothing
+     * painted in the box is nothing to read: the fade keeps its scrim, and
+     * the pill its light glass, as for a card that cannot be read. */
     function readCard(x, y, w, h, cw, ch) {
       if (!poster || !poster.naturalWidth) return null;
       try {
-        var d = poster._d || [0, 0, CARD_W, CARD_H], k = poster.naturalWidth / CARD_W, c = doc.createElement('canvas'), g;
+        var d = poster._d || [0, 0, CARD_W, CARD_H], k = poster.naturalWidth / CARD_W, c = doc.createElement('canvas'), g, px, i;
         c.width = cw; c.height = ch;
         g = c.getContext('2d');
-        g.fillStyle = '#fff'; g.fillRect(0, 0, cw, ch);
         g.drawImage(poster, (d[0] + d[2] * x) * k, (d[1] + d[3] * y) * k, d[2] * w * k, d[3] * h * k, 0, 0, cw, ch);
+        for (px = g.getImageData(0, 0, cw, ch).data, i = 3; i < px.length && !px[i]; i += 4);
+        if (i >= px.length) return null;
+        g.globalCompositeOperation = 'destination-over';
+        g.fillStyle = '#fff'; g.fillRect(0, 0, cw, ch);
         return g.getImageData(0, 0, cw, ch).data;
       } catch (e) { return null; }
     }

@@ -1715,7 +1715,15 @@ with sync_playwright() as sp:
     #   own width keeps the whole line (258px on a 320px phone). Spent first:
     #   one selector for the words after the time, not one for each kind
     #   (-11 B). 78,188 B measured.
-    EMBED_RATCHET = 78_191
+    # RAISED (the owner's yes, Nov 12: a card with no picture keeps its dark
+    #   fade), for one named cost: +175 B, all inlineplayer.js -- readCard
+    #   answers null when nothing is painted in the box it reads (the blank
+    #   stand-in), and puts the white behind the card after that test, not
+    #   before it. WHICH CALLER PAYS: every page that shows a post. Spent
+    #   first: the scan is the loop's own test (-7 B); testing one pixel would
+    #   cost 72 B less and call a card empty wherever its first sample is
+    #   clear, a guess this reader does not make. 78,363 B measured.
+    EMBED_RATCHET = 78_366
     # THE RATCHET MEASURES DISPLAY, NOT COMPOSE, and the two are separate costs
     # paid by separate pages. Excluded here and measured on its own below:
     #   feed.js          the PREVIEW PAGE's own script (fetch the listing, clone
