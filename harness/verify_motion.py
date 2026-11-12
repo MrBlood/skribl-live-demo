@@ -25,6 +25,11 @@ resting, the drawer contents' fade removed, the page
 height hold removed (Pad and Flip each), Flip's scroll home put back to
 'auto', the popovers' transition removed (the stamp shelf's too), the
 Flip menu dim's animation removed, and the pill put back on its spring.
+The shape picker's two checks are taken again when a frame froze the fade
+(retaken, FADE_STALL_MS): a 300 ms stall two frames into the open, or into the
+close, fails the old check and passes the new one ("taken again after frames
+of [300] ms"), and the open's @starting-style removed, or the close's
+transition, stays red with its frames 17 ms apart, never taken again.
 """
 import re, sys, math
 from assertions import make_check
@@ -74,6 +79,36 @@ record.gap = 0
 # with nothing between: a cut the screen never showed. Longer than this between
 # two frames and a sample is taken again (see the drawer glide below).
 STALL_MS = 250
+# A popover's fade lasts 0.18 s and its check asks for two frames inside it, so
+# a frame longer than half the fade is a frozen sample of it. Main's run after
+# #862 read the shape picker "0 frames between" with nothing near it changed; on
+# this box a 300 ms stall two frames into the fade reads it red the same way.
+FADE_STALL_MS = 90
+
+
+def retaken(pg, probes, ms, action, undo, passes, stall=STALL_MS):
+    """record(), taken again at most twice when it FAILED on a frozen sample.
+
+    `passes(rows)` is the check's own test, and `undo()` puts the page back
+    as it was before `action`. Only a take that failed with a frame longer
+    than `stall` is taken again. A real cut has no frames between however far
+    apart its frames are, so a second look cannot turn one green.
+    retaken.stalls keeps the frame behind each retake, for the check's line."""
+    retaken.stalls = []
+    for attempt in range(3):
+        rows = record(pg, probes, ms, action)
+        if passes(rows) or record.gap <= stall or attempt == 2:
+            return rows
+        retaken.stalls.append(round(record.gap))
+        undo()
+
+
+def again():
+    """The words a retaken check adds to its line, or none."""
+    return f"; taken again after frames of {retaken.stalls} ms" if retaken.stalls else ""
+
+
+retaken.stalls = []
 
 
 def between(vals, a, b, margin=0.05):
@@ -166,16 +201,24 @@ with sync_playwright() as p:
 
     print("\nPOPOVERS — the shape picker")
     pg.click("#mediaOpenBtn"); pg.wait_for_timeout(700)
-    rows = record(pg, [["#shapePop", "opacity"], ["#shapePop", "display"]], 500,
-                  lambda: pg.click("#shapeToolBtn"))
-    sp = [r[0] for r in rows if r[1] != "none"]
+    probes = [["#shapePop", "opacity"], ["#shapePop", "display"]]
+    shown = lambda rows: [r[0] for r in rows if r[1] != "none"]
+    # Taken again only when a frame froze the fade (FADE_STALL_MS). Escape puts
+    # the picker away for another open, and Shape (the tool already chosen)
+    # brings it back for another close.
+    rows = retaken(pg, probes, 500, lambda: pg.click("#shapeToolBtn"),
+                   lambda: (pg.keyboard.press("Escape"), pg.wait_for_timeout(500)),
+                   lambda rows: between(shown(rows), 0, 1) >= 2, FADE_STALL_MS)
+    sp = shown(rows)
     check("the shape picker opens over several frames", between(sp, 0, 1) >= 2,
-          f"{between(sp, 0, 1)} frames between")
-    rows = record(pg, [["#shapePop", "opacity"], ["#shapePop", "display"]], 500,
-                  lambda: pg.keyboard.press("Escape"))
-    sp = [r[0] for r in rows if r[1] != "none"]
+          f"{between(sp, 0, 1)} frames between, shown in {len(sp)} of {len(rows)} frames, "
+          f"longest frame {record.gap:.0f} ms{again()}")
+    rows = retaken(pg, probes, 500, lambda: pg.keyboard.press("Escape"),
+                   lambda: (pg.click("#shapeToolBtn"), pg.wait_for_timeout(500)),
+                   lambda rows: between(shown(rows), 1, 0) >= 2, FADE_STALL_MS)
+    sp = shown(rows)
     check("...and closes over several frames", between(sp, 1, 0) >= 2,
-          f"{between(sp, 1, 0)} frames between")
+          f"{between(sp, 1, 0)} frames between, longest frame {record.gap:.0f} ms{again()}")
     ctx.close()
 
     def drawer_close(path, bar):
