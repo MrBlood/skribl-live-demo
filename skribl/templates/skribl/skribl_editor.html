@@ -1,4 +1,4 @@
-{% from 'skribl/_skribl_marks.html' import mark_templates %}
+{% from 'skribl/_skribl_marks.html' import mark_templates %}{% set _own = skribl_brand and skribl_brand.mark %}{% set _brand_name = skribl_brand.label if _own else 'Skribl' %}
 {#  THE MUSIC GLYPH, DEFINED ONCE -- in _skribl_music_glyph.html, imported
     here and by the Photo | Music tab strip (_skribl_media_tabs.html) and the
     music drawer (_skribl_music_drawer.html), which both editors include. See
@@ -34,7 +34,7 @@
 <body{% if letters %} class="letters-mode"{% endif %}>
   {# The page's one heading. Visually the brand mark is the title; assistive
      tech gets the same fact as text. #}
-  <h1 class="vis-hidden">Skribl Pad</h1>
+  <h1 class="vis-hidden">{{ _brand_name }} Pad</h1>
 
  <div class="app">
   <div class="header">
@@ -55,11 +55,11 @@
     <button type="button" class="icon-btn compose-close" id="composeCloseBtn" aria-label="{{ 'Close — back to your profile' if face else 'Close — back to your post' }}" title="{{ 'Back to your profile' if face else 'Back to your post' }}">
       <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
     </button>{% endif %}
-    <div class="brand" role="img" aria-label="Skribl Pad" title="Skribl Pad">
+    <div class="brand" role="img" aria-label="{{ _brand_name }} Pad" title="{{ _brand_name }} Pad">
       {# brand_sweep 101 = mark 65 + word origin offset (4px flex gap minus
          the -8px tail pull-back, in 30-unit svg units) + pad's 39: the
          signature runs 0->101 of one gradient and "pad" finishes it. #}
-      <span>{% with brand_sweep=101 %}{% include 'skribl/_skribl_brand_mark.html' %}{% endwith %}</span>
+      <span>{% if _own %}{% include 'skribl/_skribl_brand_own.html' %}{% else %}{% with brand_sweep=101 %}{% include 'skribl/_skribl_brand_mark.html' %}{% endwith %}{% endif %}</span>
       {# "pad", written by the same hand as the signature: one continuous
          stroke, same monoline pen and skew, hand-lettered against the
          skribl mark's own letterforms (the d's spike is the b/l spike, the

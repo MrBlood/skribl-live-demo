@@ -628,19 +628,34 @@ def _mount_social(app):
                              SOCIAL_PATH)
         return
     _site_at_root(app)
+    _site_brand(app)
+
+
+def _site_homes():
+    """The addresses SKRIBL_SOCIAL_HOME_HOSTS names (comma-separated, no
+    scheme; a port only where the address has one), as a request's host is
+    compared with them: any case, no trailing dot."""
+    raw = os.environ.get("SKRIBL_SOCIAL_HOME_HOSTS", "")
+    return {h.strip().lower().rstrip(".") for h in raw.split(",") if h.strip()}
+
+
+def _at_home(host, homes):
+    """Whether a request's host (its Host header, a port or none) is one of
+    `homes`, with its port or without."""
+    host = host.lower()
+    bare = host.rsplit(":", 1)[0] if host.count(":") == 1 else host
+    return host.rstrip(".") in homes or bare.rstrip(".") in homes
 
 
 def _site_at_root(app):
     """THE SITE AT THE TOP OF ITS OWN DOMAIN (the owner's "all yes", Nov 11:
     blooby.app opens the site's Home, its pages at /social/... for now). A
-    request for / at an address SKRIBL_SOCIAL_HOME_HOSTS names (comma-separated,
-    no scheme; a port only where the address has one) goes to the site's Home,
-    and every other address keeps the demo's own / (the Pad): the demo keeps
-    its name. Unset, nothing changes. Only once the site has started, so a
-    site left out sends nobody to a 404. 302, not 301: "for now" is the
-    owner's word, and a browser keeps a 301 for good."""
-    raw = os.environ.get("SKRIBL_SOCIAL_HOME_HOSTS", "")
-    homes = {h.strip().lower().rstrip(".") for h in raw.split(",") if h.strip()}
+    request for / at an address SKRIBL_SOCIAL_HOME_HOSTS names goes to the
+    site's Home, and every other address keeps the demo's own / (the Pad): the
+    demo keeps its name. Unset, nothing changes. Only once the site has
+    started, so a site left out sends nobody to a 404. 302, not 301: "for now"
+    is the owner's word, and a browser keeps a 301 for good."""
+    homes = _site_homes()
     if not homes:
         return
     from flask import redirect, request, url_for
@@ -649,11 +664,66 @@ def _site_at_root(app):
     def _home_at_root():
         if request.path != "/":
             return None
-        host = request.host.lower()
-        bare = host.rsplit(":", 1)[0] if host.count(":") == 1 else host
-        if host.rstrip(".") in homes or bare.rstrip(".") in homes:
+        if _at_home(request.host, homes):
             return redirect(url_for("social.home"), 302)
         return None
+
+
+#: The site's hello, in the site's own files (social/static), drawn through
+#: the real Flip editor by harness/tools/make_hello.py --site.
+SITE_HELLO = "brand/blooby-hello.json"
+#: The key a browser remembers the site's hello as seen by: its own, so
+#: somebody who met Skribl's hello on the demo still meets the site's once.
+SITE_HELLO_KEY = "blooby.hello.v1"
+
+
+def _site_brand(app):
+    """THE SITE'S NAME ON SKRIBL'S EDITORS AT ITS OWN DOMAIN (the owner's yes,
+    Nov 12: "On blooby.app, Draw and Flip say 'blooby.' too, at the top and in
+    the first-open hello where the blush dot drops, splats and becomes the
+    period. The Skribl demo, and skribls.net if they take Pad and Flip, keep
+    'skribl'."). Through the seam Skribl gives any host for this
+    (skribl.set_brand_resolver, docs/INTEGRATION.md): at an address
+    SKRIBL_SOCIAL_HOME_HOSTS names, the Pad and Flip wear the site's wordmark
+    (social/_blooby_mark.html) in place of skribl's, named Blooby, and their
+    first open says the site's hello, remembered by its own key. Every other
+    address, the demo's own name among them, gets nothing, which is Skribl as
+    it is. No setting of its own: the addresses where the site is at the top.
+    Only once the site has started, as _site_at_root."""
+    homes = _site_homes()
+    if not homes:
+        return
+    import hashlib
+
+    from flask import request, url_for
+    folder = app.blueprints["social"].static_folder
+    seen = {}
+
+    def hello_url():
+        # Busted by its content, as the site's own files are (social_asset),
+        # so a new drawing is never an old one from a cache. None when the
+        # file is not there: the mark alone, and Skribl's hello.
+        path = os.path.join(folder, SITE_HELLO)
+        try:
+            st = os.stat(path)
+        except OSError:
+            return None
+        key = (st.st_mtime_ns, st.st_size)
+        if seen.get("key") != key:
+            with open(path, "rb") as fh:
+                seen.update(key=key, v=hashlib.sha256(fh.read()).hexdigest()[:8])
+        return url_for("social.static", filename=SITE_HELLO, v=seen["v"])
+
+    def brand():
+        if not _at_home(request.host, homes):
+            return None
+        out = {"mark_template": "social/_blooby_mark.html", "label": "Blooby"}
+        url = hello_url()
+        if url:
+            out.update(hello=url, hello_key=SITE_HELLO_KEY)
+        return out
+
+    skribl.set_brand_resolver(brand, app=app)
 
 
 # ---- THE SKRIBLS.NET STAND-IN, AT /host --------------------------------------

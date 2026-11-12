@@ -18,7 +18,10 @@
  * not marked seen, so the canvas is never held up waiting for it.
  *
  * SEEN IS PER HELLO: v1 was Blooby's, on his star, and someone who met him
- * meets the mark once too.
+ * meets the mark once too. A host's own hello (skribl/brand.py, where the
+ * request's brand gives one) is remembered by the host's own key, which the
+ * partial hands over as data-hello-key, the one the head read; the drawing it
+ * plays is the host's too (data-hello). Without one, everything is Skribl's.
  *
  * ITS GROUND FROM THE FIRST PAINT (the owner, on a reload: "it goes to the
  * canvas first, then goes to the skribl cursive"). It shows once the page's
@@ -54,7 +57,9 @@
   'use strict';
   var el = document.getElementById('skriblHello');
   if (!el) return;
-  var KEY = 'skribl.hello.v2';   // the head reads the same key (_skribl_hello_boot.html)
+  // The head reads the same key (_skribl_hello_boot.html): a host's own when
+  // the partial carries one, else Skribl's.
+  var KEY = el.getAttribute('data-hello-key') || 'skribl.hello.v2';
   var LATE = 4000;
   var GRACE = 300;
   var BUDGET = 8e6;

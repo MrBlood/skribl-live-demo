@@ -36,6 +36,7 @@ from urllib.parse import urlsplit
 
 from flask import Blueprint, url_for
 
+from .brand import set_brand_resolver
 from .core import SKRIBL_VERSION
 from .creation import (CreatedPost, SkriblIdempotencyRace, SkriblRejected,
                        SkriblUnavailable, create_post)
@@ -82,7 +83,13 @@ __all__ = ["create_blueprint", "init_skribl", "SKRIBL_VERSION",
            "list_reports", "close_reports",
            # Speed: do every file's strip-and-compress before the first
            # visitor (gunicorn.conf.py calls it in each worker).
-           "warm_assets"]
+           "warm_assets",
+           # A host's brand on Skribl's own editors, per request: its mark at
+           # the top of the Pad and Flip, the label that names it, and a
+           # first-open hello of its own (skribl/brand.py, docs/INTEGRATION.md
+           # "Your brand on Skribl's editors"). Also init_skribl's
+           # brand_resolver=.
+           "set_brand_resolver"]
 
 
 _ASSET_CACHE = {}
@@ -555,6 +562,9 @@ def init_skribl(app, **kwargs):
     _vis_values = kwargs.pop("visibility_values", None)
     _author = kwargs.pop("author_resolver", None)
     _source = kwargs.pop("source_resolver", None)
+    # A host's brand on the editors, per request (skribl/brand.py): app-local
+    # for the same reason, so one host's address never wears another's mark.
+    _brand = kwargs.pop("brand_resolver", None)
     bp = create_blueprint(**kwargs)
     # THE FIRST NAME SKRIBL PUTS IN THE HOST'S JINJA ENVIRONMENT, and it is here
     # because the in-post player needs it. _skribl_inline_player.html's macros
@@ -607,6 +617,8 @@ def init_skribl(app, **kwargs):
     if _source is not None:
         from .models import set_source_resolver
         set_source_resolver(_source, app=app)
+    if _brand is not None:
+        set_brand_resolver(_brand, app=app)
     # Store the session factory PER APPLICATION. A module-level global meant the
     # most recently initialised app won for the whole process; see
     # skribl.models.session().

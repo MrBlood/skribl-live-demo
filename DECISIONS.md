@@ -35385,3 +35385,200 @@ than once was made saying it would be, at rest over a card with its picture.
 Red without the fix (each card canvas [2 reads, not said]), green with it.
 
 Pad and Flip: shared, the player both play in.
+
+## After v330 -- blooby.: at blooby.app the Pad and Flip say the site's name, and their hello's blush dot splats into the period
+
+The owner, Nov 12, after the wordmark: "i actually like the blooby blush
+period", landing B of the hello mock ("it splats a little"), and "On
+blooby.app, Draw and Flip say 'blooby.' too, at the top and in the first-open
+hello where the blush dot drops, splats and becomes the period. The Skribl
+demo, and skribls.net if they take Pad and Flip, keep 'skribl'."
+
+- A SEAM, NOT A SPECIAL CASE (skribl/brand.py; docs/INTEGRATION.md, "Your
+  brand on Skribl's editors"). Skribl must always be able to be its own site,
+  so it cannot know blooby.app: `init_skribl(brand_resolver=fn)`, or
+  `skribl.set_brand_resolver(fn, app=app)` (in `skribl.__all__`), asked once
+  for each editor page, in the request. It answers None, which is the Pad and
+  Flip byte for byte as Skribl's own (the templates take today's branch; the
+  normalised pages were compared with the tree before the change, and the
+  suites hold it from here), or the host's mark (its markup, or a template it
+  names), the label that names it, and a hello of its own with the key it is
+  remembered by. A wrong answer raises on the first page that asks, never
+  half a brand. Nothing under skribl/ imports the site or names its address,
+  mark, hello or blush.
+- THE MARK IN SKRIBL'S HEADER stands in the signature's slot
+  (_skribl_brand_own.html; styles.css and flip.css, A HOST'S OWN MARK): drawn
+  at the signature's scale in its 30-unit hand, the part of its box past 30
+  units hung below the line by a negative margin (read from the markup's own
+  viewBox: 34 for blooby.'s y), so the line sits where skribl's did and the
+  header keeps its height; and the slot keeps the signature's 65 units of
+  width, so "pad" and "flip" stay where they were and the header's own fit
+  measures what it always did. Nothing in the header or the dock moves (read:
+  every control, the tag, the dock and the canvas, the same at both
+  addresses, phone and desk). It is pressed as the signature is; its
+  currentColor is Skribl's purple; what the markup colours itself keeps its
+  colour.
+- THE PERIOD CARRIES ITS BLUSH ITSELF: one attribute on the site's mark
+  (social/_blooby_mark.html, stroke="#ff6f91" on the period), since Skribl's
+  pages load none of social.css. On the site's own pages social.css still sets
+  it from --blooby-blush, so nothing there changed. A touch to a site file,
+  named here because another conversation owns the site's pages.
+- THE NAME: "Blooby Pad" and "Blooby Flip" in the lockup and the page's
+  heading, and the hello is "Blooby's signature". Skribl's own words stay
+  Skribl's: the tab's title, the menu's version line, How it works.
+- THE HELLO is the site's file, social/static/brand/blooby-hello.json, drawn
+  through the real Flip editor with real pen input by
+  harness/tools/make_hello.py --site: the same tool with the site's look, not
+  a copy. The word's and the period's paths are read from
+  social/_blooby_mark.html; the word in the site's purple and the period in
+  Blooby's blush, read from the site's tokens (social.css --brand, its light
+  value, and --blooby-blush); the word one colour, so the pen lays it down as
+  the one stroke it is; and landing B's pages, as the mock drew them, in the
+  mark's own units from where the period rests: it falls twice along the
+  writing's lean, stretched; lands as a splat with three drops thrown up;
+  spreads; pulls in as they fall back; gathers; rounds up a touch; and rests
+  as the period for the last three. Eleven pages, 2.4 s, then the way out as
+  Skribl's goes. Remembered by blooby.hello.v1, so somebody who met Skribl's
+  hello still meets this one once. Skribl's own hello.json is untouched.
+- THE DEMO WIRES IT (app.py, _site_brand): at the addresses
+  SKRIBL_SOCIAL_HOME_HOSTS names, the same that put the site at the top, so no
+  new setting, the brand is the site's mark by its template, "Blooby", and the
+  hello, busted by its content as the site busts its own files. Every other
+  address gets nothing: the demo's name, and skribls.net if it takes the Pad
+  and Flip, keep skribl.
+
+JUDGMENT CALLS, AND WHERE IT LEAVES THE MOCK. (1) The mock's hello wrote the
+word and the dot in the skribl hello's sweep (#7c5cff to #5b8cff). Built as
+the owner's words and the site's mark have it: the word one purple, #7c5cff
+(where that sweep began, and the site's own purple), and the dot blush.
+(2) In the editors' header the word is Skribl's purple in both themes, the
+colour its own signature starts in; the site's dark bar uses its lighter
+#8f74ff. Side by side in dark the editors' word is a step deeper. (3) The
+mock's period fell along the writing's lean (it was skewed with the word):
+kept. (4) The mock held the period 2.7 s, which was its loop; the hello
+rests on it for three pages, as M1 rested its dot, and the way out takes the
+period last. (5) The tab's title stays "Skribl Pad" / "Skribl · Flip".
+(6) Served as the site serves its files, uncompressed: 70 KB where Skribl's
+own hello goes out gzipped at about 9 KB. It is asked for first, as Skribl's
+is, but its slow line is NOT MEASURED here: verify_hello's 3G row drives
+Skribl's hello, and the site's part reads the site's on this machine's own
+line. Compressing the site's files, or a 3G row for the site's hello, is a
+follow-up, not done here.
+
+Pad and Flip: shared. One seam, one slot partial, one hello module, and the
+same lockup rules in each editor's sheet.
+
+CONTRAST, the mark against what is painted behind it (3:1 for a mark). In the
+header: the word 3.93:1 light and 4.22:1 dark; the blush period 2.39:1 light
+(the owner's pick, said and not failed) and 6.93:1 dark. The hello on the
+page's ground: the word 4.23:1 light and 4.47:1 dark; the period 2.58:1 light
+and 7.34:1 dark.
+
+THE FOUR: kind (the period is his cheek's blush, it lands softly and gathers
+itself rather than snapping, and somebody who met Skribl's hello still gets
+the site's own once; under Reduce Motion it keeps still and fades); simple (on
+blooby.app every page says blooby., Skribl's editors too, and nothing in the
+header moves to make room); playful (a dot that drops, splats a little and
+becomes the period); powerful (any host can do the same through one
+documented seam, and Skribl stays its own site everywhere else).
+
+THE CHECKS. verify_hostseams, THE HOST'S BRAND: through throwaway hosts,
+an answer of nothing byte for byte, the host's mark in the slot as given
+with its box read from its viewBox, the lockup and heading named, the hello's
+drawing, key and name, set afterwards as at init, Skribl's "made with" left
+alone, a mark by a template, partial brands, fourteen wrong answers raising,
+a resolver that is not callable refused, the documented name, and Skribl
+naming no host. verify_hello's site part (HELLO_PART=site runs it alone)
+boots the demo's own app with SKRIBL_SOCIAL_HOME_HOSTS and reads one server
+at two addresses, blooby.localhost (this machine's own, a secure context as
+blooby.app is) and 127.0.0.1: before any browser, the site's hello on the
+site's mark, in the site's tokens, landing B read off its pages, the word
+under all of them; in the browser, the lockup painted (the word's and the
+period's strokes and pixels, contrast on its ground), the line where
+skribl's was and nothing else moved, named Blooby; the skribl mark at the
+other address; the site's hello said, its own file and key; sharp on whole
+screen pixels on the page's ground, light and dark; blooby written first
+with no blush; IT GLIDES, read on every frame the screen makes (the word's
+ink growing on every frame, never a tenth of the word in one; the period's
+pages in order, none skipped, none held; the way out's fade and rise through
+the middle on several frames; a frozen take, every jump across a frame the
+page's thread held, taken again at most twice); where it lands and the splat,
+off the canvas's pixels; once by its own key; Reduce Motion still and
+fading; Skribl's hello at the other address; and the demo's pages byte for
+byte at any address but the site's. The key row before any browser now reads
+the key as the head and lib/hello.js take it (Skribl's own, or the brand's,
+handed to both).
+
+EVERY ROW WAS SHOWN RED by a break of its own, one at a time, and green as
+built: verify_hostseams, twenty: Skribl's default key changed in the head (the
+setup row); an empty answer taken as a brand (byte for byte); the viewBox
+ignored, the host's markup escaped, and Skribl's signature left in the header
+beside it (the slot); the Pad's heading left "Skribl Pad" (the name); the head
+reading Skribl's key, the key not handed to lib/hello.js, and the hello still
+"Skribl's signature" (the hello); set_brand_resolver(app=) storing where
+nothing reads (set afterwards); the brand reaching the player's "made with"
+mark; a template's name put in as markup; a mark-only brand taken for a hello
+(partial brands); the key's characters unchecked, a hello at any address, and
+Skribl's own key allowed (wrong answers); the callable check removed;
+set_brand_resolver out of __all__; and "blooby.app" in a comment in
+styles.css, and "Blooby" in the seam's own docstring (Skribl names no host).
+verify_hello's site part, thirty: the period's rest pages moved a unit (the
+site's mark, and where it lands); the word in the skribl sweep, and the period
+purple (its inks); the splat's three pages taken out, and two rest pages for
+three (landing B); the word not under its pages; the period without its own
+blush, the word in Skribl's brand ink, and the slot hidden (painted); the tail
+not hung, the slot without the signature's width, and the mark not to scale
+(the line, nothing moved); app.py naming it "Skribl" (named); the brand at
+every address (the other address's mark, its hello, and the demo's pages byte
+for byte); no hello in app.py's answer, and the key not handed to lib/hello.js
+(said; once, Flip showing it again); the head reading Skribl's key (once: it
+never came); a drawing with a ground of its own, the stage 0.3 px off the
+grid, and the word made faint (1.44:1) (the page's ground, sharp, contrast);
+blush on the word's page (written first); and for the glide, the word at once,
+the word jumping half its length in one frame, the hello played at 8x (pages
+skipped), the page's thread stalled 300 ms at the splat (red after three
+takes, every jump across the stall), and the way out without its transitions;
+the splat's pages replaced by the gathered one (splats and reforms); and under
+Reduce Motion, its fade taken away, and the rest pages replaced by the
+rounding-up page (the still's period off its place).
+
+SIX INSTRUMENTS WERE WRONG FIRST, and one break. The byte row compared the
+branded host at its own address, which is branded by design (each host is now
+read at its own address). The heading row read the whole page for "Skribl
+Pad", which the tab's title and Skribl's own menu still say on purpose (it
+reads the lockup and the heading). The lockup's ground was read as the most
+common colour in its box, which on a phone is the ink itself (the ground is
+read among pixels that are neither ink). The lockup's title was read in the
+browser, where the tooltips take it off (the browser row reads the label and
+the heading; verify_hostseams reads the title as served). A break that raised
+stopped verify_hostseams instead of reddening its row (a page that raises is a
+red row now). And the contrast row read the site's token, not the drawn ink,
+so a faint word stayed green (it reads the drawing's own inks). The break: a
+page dropped from the drawing left the glide row green, rightly, since the
+glide is read against the drawing's own pages and the drawing still played
+in order; landing B's row went red. Two breaks that make the playback itself
+jump replaced it. Two other breaks were redrawn before they ran, each found
+reddening rows other than its own: set_brand_resolver ignoring app= went
+global, and a "made with" break added a mark rather than replacing it.
+
+SIDE BY SIDE (run_parallel -j 2, twenty suites, 38.9 min): verify_hello
+50/50, verify_social 40/40, verify_hostseams 105/105, verify_integration
+29/29, verify_identity 135/135, the header rule's verify_pointerpad 55/55,
+verify_ux 487/487, verify_layout 257/257, verify_sizeclass 89/89, verify_a11y
+444/444 and verify_a11ypages 162/162, verify_contrast 628/628, verify_parity
+434/434, verify_tools 142/142, verify_learncard 150/150, verify_csp 34/34,
+verify_surfaces 13/13 and verify_jsstrip 35/35. Two were red, each a real
+finding, fixed and run again: verify_seam 468/470 (brand.py asked Flask for
+its names inside functions, and verify_seam holds every name a module uses
+to a module-level import; 470/470 after), and verify_docs 143/144 (its
+repo-file gate read START-HERE's social/static/brand/blooby-hello.json as a
+missing .js, its extension list having no boundary after it; given one,
+shown red on a missing .js and green on the real .json; 144/144 after).
+On the final tree, side by side again: verify_hello 50/50, verify_social
+40/40, verify_seam 470/470, verify_hostseams 105/105, verify_integration
+29/29, verify_docs 144/144. The player's stylesheets were emitted again from styles.css
+(cssgraph) and came out unchanged. The full battery was not run; main's run
+after the merge is.
+
+Not tested here: WebKit (the owner's iPhone), SF and Segoe UI, and the live
+blooby.app; the site part's address is blooby.localhost on this machine.

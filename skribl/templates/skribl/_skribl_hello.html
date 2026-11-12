@@ -8,10 +8,16 @@
    with the real pen by harness/tools/make_hello.py, from the header's own
    mark) on the page's own ground. lib/hello.js decides whether it comes at
    all, takes this away at once when it does not, and fetches nothing then.
+
+   A HOST'S HELLO (skribl/brand.py): where the request's brand gives one, its
+   drawing is the host's (data-hello), it names itself by the brand's label,
+   and data-hello-key hands lib/hello.js the key the head read
+   (_skribl_hello_boot.html), the brand's own. Otherwise everything here is
+   Skribl's, as it always was.
 #}
-{% from 'skribl/_skribl_inline_player.html' import skribl_inline_draft %}
-<div id="skriblHello" class="skribl-hello" role="img" aria-label="Skribl's signature" hidden
-     data-hello="{{ skribl_asset('brand/hello.json') }}"
+{% from 'skribl/_skribl_inline_player.html' import skribl_inline_draft %}{% set _own_hello = skribl_brand and skribl_brand.hello %}
+<div id="skriblHello" class="skribl-hello" role="img" aria-label="{{ skribl_brand.label if _own_hello else 'Skribl' }}'s signature" hidden
+     data-hello="{{ skribl_brand.hello if _own_hello else skribl_asset('brand/hello.json') }}"{% if _own_hello %} data-hello-key="{{ skribl_brand.hello_key }}"{% endif %}
      data-player-css="{{ skribl_asset('inlineplayer.css') }}"
      data-player-js="{{ skribl_asset('inlineplayer.js') }}"
      data-hold-js="{{ skribl_asset('lib/holdtiming.js') }}">

@@ -503,7 +503,8 @@ with one id twice is invalid, and the second mark would draw with the
 first's). The site at `/social` wears it this way, at the top of a phone's
 page and at the top of a desk's rail (docs/SOCIAL-SITE.md), and
 `verify_social.py` holds the site's templates to the partials this page
-documents.
+documents. The other way round, your mark on Skribl's own editors, is
+`brand_resolver` ("Your brand on Skribl's editors", below).
 
 ## Drawing one from your own composer
 
@@ -1400,6 +1401,7 @@ All are arguments to `create_blueprint()` / `init_skribl()` unless noted.
 | `home_url` | `None` | Your site, for "Back to …" once a drawing has posted. See below. |
 | `home_label` | the address's host | What that button calls your site ("skribls.net"). |
 | `public_media_cache` | `False` | Let a CDN cache public media. See "Shared-cache opt-in" above, and read it before turning it on. |
+| `brand_resolver` | `None` (Skribl's own) | `init_skribl()` only, or `skribl.set_brand_resolver(fn, app=app)`. Your mark, its name and a first-open hello of your own on the Pad and Flip, decided per request. See below. |
 
 ### Where the player opens (`player_target`)
 
@@ -1441,6 +1443,67 @@ address is yours, given once here and never read from a request, so no link
 can send a person anywhere you did not name; anything but an http(s) address
 or a path, or one with a space or a backslash in it, is refused at startup.
 The editors read it as `window.SKRIBL_HOME` (`{"url", "label"}`, or `null`).
+
+### Your brand on Skribl's editors (`brand_resolver`)
+
+The Pad and Flip wear Skribl's mark at the top, and the first time they open
+they say hi: the mark writes itself with the real pen. Where you serve them at
+an address of your own, they can wear your mark instead and say your hello.
+You decide per request, with whatever the request carries:
+
+```python
+from flask import request, url_for
+
+def our_brand():
+    if request.host != "draw.example.com":
+        return None                                  # Skribl's own, byte for byte
+    return {"mark_template": "site/_mark.html",      # or "mark": your <svg> as markup
+            "label": "Example",                      # "Example Pad", "Example Flip"
+            "hello": url_for("static", filename="brand/hello.json"),
+            "hello_key": "example.hello.v1"}
+
+skribl.init_skribl(app, ..., brand_resolver=our_brand)
+# or, after init_skribl: skribl.set_brand_resolver(our_brand, app=app)
+```
+
+It is called in the request, once for each editor page (the Pad, Flip, and
+the Pad at `/` if you asked for that route). Answer `None`, or nothing at all,
+and the page is Skribl's own, byte for byte. Otherwise, a mapping of:
+
+- **`mark`** or **`mark_template`**: your mark, as markup (trusted as your own
+  HTML) or as the name of a template your app's loader finds, rendered in the
+  request. It stands where Skribl's signature stands, so nothing in the header
+  moves. Draw it in Skribl's hand (`skribl/_skribl_brand_mark.html`: a box 30
+  units tall, the baseline at 23.4, a pen 2.3 wide) and it is drawn at the
+  signature's scale; the part of its `viewBox` past 30 units hangs below the
+  line, as a y's tail does; and its slot keeps the signature's 65 units of
+  width, so the mode word beside it ("pad", "flip") stays where it was. A box
+  under 15 or over 60 units tall is a mark drawn at another scale, and is
+  refused. It is pressed into the header as the signature is; its
+  `currentColor` is Skribl's purple, and whatever your markup colours itself
+  keeps its own colour.
+- **`label`**: what names it, 1 to 40 characters. The lockup and the page's
+  heading read "Example Pad" and "Example Flip", and your hello is "Example's
+  signature". Required with any of the others. The rest of Skribl's words (its
+  menu, How it works, the tab's title) stay Skribl's.
+- **`hello`** and **`hello_key`**, together: your first-open hello. `hello` is
+  a Skribl payload, a Flip as Skribl's own hello is
+  (`harness/tools/make_hello.py` draws Skribl's, and the demo's site's, through
+  the real Flip editor), at a path on your site: Skribl's pages fetch from
+  their own origin only. `hello_key` is the key a browser remembers it as seen
+  by: letters, digits, `.`, `_` and `-`, up to 64, and not Skribl's own, so
+  somebody who met Skribl's hello still meets yours once. Everything else about
+  the hello is Skribl's: once only, a tap, a click or any key skips it, still
+  and fading under Reduce Motion, never in a composer's frame.
+
+A wrong answer (an unknown key, a hello without its key, a key or an address
+Skribl cannot write into the page safely, a mark drawn at another scale)
+raises on the first page that asks, rather than showing half a brand; and a
+resolver that raises is not caught, as a feed filter's is not.
+`verify_hostseams.py` holds the seam. The demo wires it for its own site
+(`app.py`, `_site_brand`: at the addresses `SKRIBL_SOCIAL_HOME_HOSTS` names, the
+site's wordmark `social/_blooby_mark.html` and its hello), and
+`verify_hello.py` reads that in the browser, painted and played.
 
 ### The file work before the first visitor (`warm_assets`)
 
