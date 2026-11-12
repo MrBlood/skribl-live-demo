@@ -1484,8 +1484,12 @@ and the page is Skribl's own, byte for byte. Otherwise, a mapping of:
   keeps its own colour.
 - **`label`**: what names it, 1 to 40 characters. The lockup and the page's
   heading read "Example Pad" and "Example Flip", and your hello is "Example's
-  signature". Required with any of the others. The rest of Skribl's words (its
-  menu, How it works, the tab's title) stay Skribl's.
+  signature". The words that name the app the person is in say it too: the
+  tab's title, Post's "to Example", the post sheet's line and button, How it
+  works' title and its Home Screen and new-version lines, the menu's names for
+  the two editors, and the Pad's empty canvas ("Example records as you go").
+  The drawing tool's own words stay Skribl's: the menu's version line, a
+  Skribl, Your Skribl Library, Skribl's pick. Required with any of the others.
 - **`hello`** and **`hello_key`**, together: your first-open hello. `hello` is
   a Skribl payload, a Flip as Skribl's own hello is
   (`harness/tools/make_hello.py` draws Skribl's, and the demo's site's, through

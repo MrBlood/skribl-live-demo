@@ -983,13 +983,37 @@ for _route, _mode, _sw in _EDITORS:
           _st == 200 and _slot is not None and _slot.group(1) == "34" and _slot.group(2) == _HM
           and f'id="skink-m{_sw}"' not in _h and _slot.start() < _h.find("brand-tag"),
           f"{_st}; slot {_slot.group(1) if _slot else None}; Skribl's signature in the page: {f'skink-m{_sw}' in _h}")
-    # The lockup and the heading only: the rest of the page is Skribl's own
-    # words (its menu's version line, How it works), which stay Skribl's.
+    # The lockup and the heading name it; so, since the owner's "all yes"
+    # (Nov 12), do the page's other words that name the app you are in (the
+    # next row). The drawing tool's own words stay Skribl's.
     check(f"{_mode}: the lockup and the page's one heading name it: 'Example {_mode}'",
           f'aria-label="Example {_mode}" title="Example {_mode}"' in _h
           and _re.findall(r'<h1[^>]*>([^<]*)</h1>', _h) == [f"Example {_mode}"]
           and f'aria-label="Skribl {_mode}" title=' not in _h,
           f"heading {_re.findall(r'<h1[^>]*>([^<]*)</h1>', _h)}")
+    # THE WORDS THAT NAME THE APP YOU ARE IN follow it too (the owner's "all
+    # yes", Nov 12: "Post to Skribl", the tab's title, How it works): the
+    # tab, Post's long words, the post sheet's line and button, How it works'
+    # title and its Home Screen and new-version lines, the menu's names for
+    # the two editors, and the Pad's empty canvas. The drawing tool's own
+    # words stay Skribl's: its menu's version line, a Skribl, Your Skribl
+    # Library, Skribl's pick.
+    _title = "<title>Example Pad</title>" if _mode == "Pad" else "<title>Example · Flip</title>"
+    _named = {"tab": _title in _h, "Post": '<span class="post-long"> to Example</span>' in _h,
+              "sheet line": "Add a title and share it to Example" in _h,
+              "sheet button": 'id="postSubmitLabel">Post to Example<' in _h,
+              "How it works": f"This is Example {_mode}</h2>" in _h,
+              "Home Screen": "keep Example on your Home Screen" in _h,
+              "new version": "Example tells you when a new version is ready" in _h,
+              "menu": ('aria-label="Back to Example Pad: ' in _h or 'aria-label="Example Flip: ' in _h)
+                      and 'aria-label="Back to Skribl Pad' not in _h and 'aria-label="Skribl Flip:' not in _h,
+              "empty canvas": _mode != "Pad" or "Example records as you go" in _h}
+    _kept = {"version line": f'class="menu-version">Skribl {_mode} ' in _h,
+             "Your Skribl Library": "Your Skribl Library" in _h}
+    check(f"{_mode}: the words that name the app you are in say 'Example' (the tab, Post, the post sheet, How it "
+          "works, the menu's editors, the empty canvas); the tool's own words stay Skribl's",
+          all(_named.values()) and all(_kept.values()),
+          f"not naming it: {[k for k, v in _named.items() if not v] or 'none'}; Skribl's own words kept: {_kept}")
     check(f"{_mode}: its hello: the head reads the host's key, not Skribl's; the hello's drawing is the "
           "host's, its key handed to lib/hello.js, and it is named 'Example's signature'",
           "getItem('example.hello.v1')" in _h and "skribl.hello.v2" not in _h

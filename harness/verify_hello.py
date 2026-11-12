@@ -902,6 +902,32 @@ def _site_rows(bb, at_site, at_other):
           f"({PURPLE}), at 3:1 or more on its ground, and the period in Blooby's blush ({BLUSH}) on its own stroke; "
           "phone and desk, light and dark",
           heads and not bad, "; ".join(bad[:3]) or "; ".join(said))
+    def _rects(lst):
+        out = {}
+        for e in lst:
+            name, _, xs = e.rpartition(" ")
+            out.setdefault(name, []).append([float(v) for v in xs.split(",")])
+        return out
+
+    def _unmoved(a, b):
+        """What did not move between the two pages, by name. POST'S WIDTH
+        FOLLOWS ITS WORDS (the owner's "all yes", Nov 12: "Post to Blooby" at
+        the site's address, narrower than "Post to Skribl" in this face), so
+        Post keeps its right edge, top and height; everything else keeps its
+        box, to a quarter of a pixel (what the text's own subpixels move)."""
+        A, B = _rects(a), _rects(b)
+        moved = sorted(set(A) ^ set(B))
+        for k in set(A) & set(B):
+            if len(A[k]) != len(B[k]):
+                moved.append(k)
+                continue
+            for (ax, ay, aw, ah), (bx, by, bw, bh) in zip(A[k], B[k]):
+                far = (max(abs(ax + aw - bx - bw), abs(ay - by), abs(ah - bh)) if k == "postBtn"
+                       else max(abs(ax - bx), abs(ay - by), abs(aw - bw), abs(ah - bh)))
+                if far > 0.25:
+                    moved.append(f"{k} {[ax, ay, aw, ah]} for {[bx, by, bw, bh]}")
+        return moved
+
     bad = []
     for dev, scheme, mode, pr in heads:
         s_, o_ = pr["site"], pr["other"]
@@ -910,8 +936,8 @@ def _site_rows(bb, at_site, at_other):
         vx, vy, vw, vh = s_["svg"]
         line = (abs(sx - ox) < 0.02 and abs(sy - oy) < 0.02 and abs(sw - ow) < 0.02 and abs(sh - oh) < 0.02
                 and abs(vy - oy) < 0.02 and abs(vh - oh * 34 / 30) < 0.05 and abs(vw / vh - 57 / 34) < 0.01)
-        if not (line and s_["rest"] == o_["rest"] and s_["header"] == o_["header"]):
-            moved = sorted(set(s_["rest"]) ^ set(o_["rest"]))
+        moved = _unmoved(s_["rest"], o_["rest"])
+        if not (line and not moved and s_["header"] == o_["header"]):
             bad.append(f"{dev} {scheme} {mode}: the slot {s_['slot']} for skribl's {o_['svg']}, the mark {s_['svg']}; "
                        f"header {s_['header']} / {o_['header']}; moved {moved[:4]}")
     check("...the line where skribl's was: the slot is the signature's own box, the mark at the same scale and "

@@ -1,4 +1,4 @@
-{#- THE POST SHEET -- one for both editors (owner, of Flip's own post dialog
+{% set _bn = skribl_brand.label if (skribl_brand and skribl_brand.mark) else 'Skribl' %}{#- THE POST SHEET -- one for both editors (owner, of Flip's own post dialog
     beside this one: "shouldn't flip and pad look the same? flip is not as clean
     as pad"). Included by skribl_editor.html and skribl_flip.html, as the export
     chooser is; lib/postsheet.js is its behaviour, and each editor's own post
@@ -43,7 +43,7 @@
                id="postSoundText"></span></span></div>
           <div class="export-sub" id="postSub">{{ "It draws itself once, the way you drew it, when someone opens your profile"
                                      if face else "It goes inline in the post, and plays there"
-                                     if compose else "Add a title and share it to Skribl" }}</div>
+                                     if compose else "Add a title and share it to " ~ _bn }}</div>
         </div>
       </div>
       <div class="post-body" id="postBody">
@@ -110,7 +110,7 @@
       <button type="button" class="post-submit" id="postSubmitBtn">
         <svg aria-hidden="true" id="postSubmitIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
         <svg aria-hidden="true" id="postBackupIcon" hidden viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-        <span id="postSubmitLabel">{{ "Use this face" if face else "Add to post" if compose else "Post to Skribl" }}</span>
+        <span id="postSubmitLabel">{{ "Use this face" if face else "Add to post" if compose else "Post to " ~ _bn }}</span>
       </button>
       {# POSTED!, THE MOMENT (the owner, of the old one: "you don't really
          notice the top changing ... maybe think about a way to make it more of

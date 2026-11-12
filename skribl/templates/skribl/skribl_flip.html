@@ -10,7 +10,7 @@
    review of v290). The Pad, player, feed and library never did. verify_a11y
    reads the meta on every page and lays each out at 200% zoom. #}
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Skribl · Flip</title>
+<title>{{ _brand_name }} · Flip</title>
 <!-- Same design system as the editor: real tokens, .header/.btn/.icon-btn/.slider/.seg-slider. -->
 <link rel="stylesheet" href="{{ skribl_asset('styles.css') }}">
 {# posted.css: the recovery-key panel (lib/recoverykey.js), shown at post
@@ -59,7 +59,7 @@
           </button>
           <span id="flipDuration" class="duration-badge">0:00</span>
         </div>
-        <button type="button" class="btn post" id="postBtn" disabled title="Post it and get a link anyone can open"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg><span class="btn-label">{% if compose %}Add<span class="post-long"> to post</span>{% else %}Post<span class="post-long"> to Skribl</span>{% endif %}</span></button>
+        <button type="button" class="btn post" id="postBtn" disabled title="Post it and get a link anyone can open"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg><span class="btn-label">{% if compose %}Add<span class="post-long"> to post</span>{% else %}Post<span class="post-long"> to {{ _brand_name }}</span>{% endif %}</span></button>
         {# Settings sit AFTER Post, beside ⋯ -- the Pad's layout B, kept identical
            (verify_parity compares the two headers item by item). #}
         <button type="button" id="tuneBtn" class="tool-open tune-tool" aria-expanded="false" aria-controls="tunePanel" title="Tune" aria-label="Tune"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="4" y1="8" x2="20" y2="8"/><circle cx="15" cy="8" r="2.4" fill="var(--surface-raised)"/><line x1="4" y1="16" x2="20" y2="16"/><circle cx="9" cy="16" r="2.4" fill="var(--surface-raised)"/></svg></button>

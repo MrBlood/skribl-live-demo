@@ -35582,3 +35582,41 @@ after the merge is.
 
 Not tested here: WebKit (the owner's iPhone), SF and Segoe UI, and the live
 blooby.app; the site part's address is blooby.localhost on this machine.
+
+## After v330 -- At blooby.app the editors' words name Blooby too
+
+The owner's "all yes" (Nov 12) to: "on blooby.app the editors still say
+'Skribl' in a few places: the 'Post to Skribl' button, the tab's title, and
+How it works. Make those say Blooby there too? The menu's version line keeps
+Skribl's name, since it's the drawing tool's version."
+
+- THE RULE: where the words name the app the person is in, they follow the
+  host's label (brand.py's `label`): the tab's title, Post's long words, the
+  post sheet's line ("Add a title and share it to Blooby") and button, How it
+  works' title ("This is Blooby Pad") and its Home Screen and new-version
+  lines, the menu's names for the two editors, and the Pad's empty canvas
+  ("Blooby records as you go"). Where they are the drawing tool's own
+  vocabulary, they stay Skribl's: the menu's version line, a Skribl (a
+  drawing), Your Skribl Library, Skribl's pick, Skribl purple.
+- Each partial reads the label itself from the page's brand (one set at its
+  top, nothing printed), so Skribl's own pages are the same words as before:
+  rendered from main and from this change with no brand, the Pad and Flip
+  differ only in data-build, the build's own fingerprint.
+
+THE CHECK. verify_hostseams, a row for each editor at the host's address:
+the words that name the app say 'Example', and Skribl's own (the version
+line, Your Skribl Library) stay. Five breaks, each red on its editor's row:
+Post's long words left Skribl (Pad); How it works' title left Skribl (both);
+the menu's Pad left Skribl (Flip, whose menu names the Pad); Flip's tab left
+Skribl (Flip); the version line renamed too (both).
+
+ONE ROW MOVED WITH IT. verify_hello's "nothing else in the header or the dock
+moved" compared every box exactly, and "Post to Blooby" is narrower than
+"Post to Skribl" in this face: on a desk Post was 138.2px wide for 146.1px,
+its right edge where it was, and the menu's button 0.08px over (49/50, the
+same alone). Post's width now follows its words (it keeps its right edge,
+top and height), and everything else keeps its box to a quarter of a pixel:
+green as built, and still red with the mark's slot narrowed (48/50, alone
+too).
+
+Pad and Flip: shared, the seam both read.
