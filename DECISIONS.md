@@ -34687,3 +34687,30 @@ payload handed over. One stayed green: Load more forgetting the drawings
 left once the posts run out. It bites only where a full page of drawings is
 older than every post, which the suite's one shared feed cannot hold (the
 sections before it post first); the code reads both sources' "more".
+
+## After v330 -- A frozen sample of the shape picker's fade is taken again
+
+Main's run after #862 (Home holds every drawing) went red on one row, in one
+shard of twelve: verify_motion, "the shape picker opens over several frames
+-- 0 frames between". Nothing near the picker had changed, and the same row
+passed in the PostgreSQL shard on the same tree. On this box it reads 7
+frames between, every time. A 300 ms stall on the page's thread two frames
+into the 0.18 s fade reads it red: the frozen sample the drawer glide met
+after v322 ("A frozen sample read as a jump"), where the compositor carries
+the fade on while the sampler, on the stalled thread, reads nothing.
+
+- The shape picker's open and its close are taken again, at most twice, and
+  only when a take failed with a frame longer than half the fade (90 ms). A
+  real cut has no frames between however far apart its frames are, so a
+  second look cannot turn one green.
+- Each row now says how many frames the picker was shown in and its longest
+  frame, so the next red says whether the picker froze, opened late or cut.
+- The suite's other fades keep their one take until one is seen frozen.
+
+Pad and Flip: not affected (a check, not the app).
+
+THE CHECK, per component: a 300 ms stall two frames into the open, or into
+the close, fails the old row and passes the new one ("taken again after
+frames of [300] ms"); the open's @starting-style removed, or the close's
+transition, stays red with its frames 17 ms apart and is never taken again;
+untouched, green with no retake.
