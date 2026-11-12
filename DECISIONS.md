@@ -34545,3 +34545,36 @@ site's five tables of before posts (fixed: red with the posts migration
 short an index, green as built), then 62/62 alone. The full battery was not
 run; main's run after the merge is. Not tested here: Safari, and the
 owner's own fonts.
+
+## After v330 -- blooby.app opens the site's Home; the demo keeps its name
+
+The owner bought blooby.app (Nov 11, on Cloudflare) and said "all yes" to
+three choices: blooby.app opens the site's Home, its pages at /social/...
+for now; the name "Skribl" inside for now; Cloudflare's proxy off (DNS
+only: Render makes the certificate, and the rate limits' proxy hops stay
+the one SKRIBL_TRUSTED_PROXIES counts).
+
+- SKRIBL_SOCIAL_HOME_HOSTS names the addresses whose top (/) goes to the
+  site's Home, 302 because "for now" is the owner's word and a browser
+  keeps a 301 for good. Any case, its port or none. Every other address
+  keeps the demo's own top, the Pad: skribl-live-demo.onrender.com stays
+  the demo. Only once the site has started, so a site left out sends
+  nobody to a 404. Named in .env.example, not in the code: Skribl never
+  needs any one host, and neither does the site.
+- Nothing else moves: the site's pages stay at /social, Skribl's at their
+  own paths, on both names. Passkeys follow SKRIBL_SOCIAL_HOSTS as before
+  (both names, while people move); each person adds a passkey at
+  blooby.app with a recovery link, its address changed to blooby.app.
+  docs/SOCIAL-SITE.md, "The move to blooby.app", has the owner's steps.
+
+Pad and Flip: not affected (the demo's top and the site's, only).
+
+THE CHECK. verify_social section 1, a row: the named address (any case, a
+port of its own or none) opens the site's Home, which answers there; the
+demo's name keeps the Pad and the site; unset, every top is the Pad; the
+site left out, on purpose or failing to start, sends nobody to it. Five
+breaks, each red on it: no redirect, a redirect at every address, a
+redirect with the site left out, the name's case kept, an address with its
+port missed. The last two were green first: a port of 443 is the test
+client's default and is dropped, so the port case never ran, and
+SKRIBL_SOCIAL=0 returns before the failing-site path; both are asked now.

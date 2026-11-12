@@ -287,7 +287,15 @@ with sync_playwright() as p:
     # Tap to pause, on the shared player too.
     open_player(eight["url"])
     pg.click("#playerPlayBtn")
-    pg.wait_for_timeout(400)
+    # Under way before the tap, not a fixed wait: main's run after #858 tapped
+    # 400 ms after Play on a busy runner and caught the replay still at 0%
+    # (the pause itself had worked: the mark showed and the fill held). Well
+    # short of the end, too, so the tap lands before the lap comes round.
+    try:
+        pg.wait_for_function("() => { const w = parseFloat(document.getElementById('playerProgressFill').style.width)"
+                             " || 0; return w > 2 && w < 70; }", timeout=10000)
+    except Exception:
+        pass
     pg.mouse.click(cv["x"] + cv["width"] / 2, cv["y"] + cv["height"] / 2)
     pg.wait_for_timeout(100)
     p0 = pg.evaluate(FILL)

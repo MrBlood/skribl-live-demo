@@ -605,6 +605,34 @@ def _mount_social(app):
     except Exception:
         app.logger.exception("the site at %s did not start; the demo runs without it",
                              SOCIAL_PATH)
+        return
+    _site_at_root(app)
+
+
+def _site_at_root(app):
+    """THE SITE AT THE TOP OF ITS OWN DOMAIN (the owner's "all yes", Nov 11:
+    blooby.app opens the site's Home, its pages at /social/... for now). A
+    request for / at an address SKRIBL_SOCIAL_HOME_HOSTS names (comma-separated,
+    no scheme; a port only where the address has one) goes to the site's Home,
+    and every other address keeps the demo's own / (the Pad): the demo keeps
+    its name. Unset, nothing changes. Only once the site has started, so a
+    site left out sends nobody to a 404. 302, not 301: "for now" is the
+    owner's word, and a browser keeps a 301 for good."""
+    raw = os.environ.get("SKRIBL_SOCIAL_HOME_HOSTS", "")
+    homes = {h.strip().lower().rstrip(".") for h in raw.split(",") if h.strip()}
+    if not homes:
+        return
+    from flask import redirect, request, url_for
+
+    @app.before_request
+    def _home_at_root():
+        if request.path != "/":
+            return None
+        host = request.host.lower()
+        bare = host.rsplit(":", 1)[0] if host.count(":") == 1 else host
+        if host.rstrip(".") in homes or bare.rstrip(".") in homes:
+            return redirect(url_for("social.home"), 302)
+        return None
 
 
 # ---- THE SKRIBLS.NET STAND-IN, AT /host --------------------------------------

@@ -309,7 +309,8 @@ The owner answered "all yes" on Nov 10: every default below is the decision.
    and the demo's name while people move over), and later the email
    service's few DNS records. What Cal sets up: the site answering
    at the top of the new domain while the demo keeps its own address, and
-   the checks that both answer.
+   the checks that both answer (built Nov 11 for blooby.app: "The move to
+   blooby.app", below).
 4. **Sign-in:** passkeys (Face ID, Windows Hello), with a link by email for a
    new device; no passwords to leak. Sending email needs a service (a free
    tier is likely enough at first; asked at phase 1). *Default: yes.*
@@ -593,3 +594,32 @@ words, and Block, come with piece 5. Delete asks once and takes the words
 and the drawing. Deleting an account takes its posts the same way.
 
 `harness/verify_socialposts.py` holds it through the demo's own server.
+
+### The move to blooby.app
+
+The owner bought blooby.app (Nov 11; on Cloudflare) and said "all yes" to:
+blooby.app opens the site's Home, its pages at /social/... for now; the
+name "Skribl" inside for now; Cloudflare's proxy off (DNS only), so Render
+makes the HTTPS certificate and the rate limits' one proxy hop stays one.
+
+What the app does: the top of an address `SKRIBL_SOCIAL_HOME_HOSTS` names
+goes to the site's Home (302: "for now"); every other address keeps the
+demo's own top, the Pad. `harness/verify_social.py` section 1 holds both.
+
+What the owner sets up, once:
+
+1. Render, the service's Settings, Custom Domains: add `blooby.app`. Render
+   shows the DNS records it wants and makes the certificate once they answer.
+2. Cloudflare, DNS: add exactly those records, each with the proxy OFF (the
+   grey cloud, "DNS only").
+3. Render, Environment: `SKRIBL_SOCIAL_HOSTS=blooby.app,skribl-live-demo.onrender.com`
+   and `SKRIBL_SOCIAL_HOME_HOSTS=blooby.app`, then let it deploy.
+
+Moving people: a passkey belongs to the address it was made at, so each
+person adds one at blooby.app with a recovery link. On the old address, an
+admin opens Invites and makes a recovery link for the person (themselves
+first); the link is opened with `blooby.app` in place of the old address
+(`https://blooby.app/social/recover#...`), which adds a passkey there.
+From a shell instead: `flask --app app social recover HANDLE --base
+https://blooby.app`. The old address keeps working meanwhile.
+
