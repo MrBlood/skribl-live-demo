@@ -836,6 +836,43 @@ button.make-door { width: 100%; border: 0; font: inherit; text-align: left; curs
   .post-page .desk-only { display: inline-grid; }
 }
 
+/* YOUR REPORTS (piece 5): a card per thing reported, as the mock drew it; a
+   child's safety ringed in the danger fill, its picture blurred until Open it. */
+.reps .rep-list { display: flex; flex-direction: column; gap: 14px; margin: 0; padding: 0; list-style: none; }
+.rep { padding: 14px 16px 16px; border: 1px solid var(--card-line); border-radius: 18px; background: var(--card);
+       box-shadow: var(--card-drop); }
+.rep.is-child { border-color: var(--danger-fill); box-shadow: 0 0 0 1px var(--danger-fill) inset, var(--card-drop); }
+.rep-top { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 10px; }
+.rep-why { color: var(--ink); font-weight: 700; }
+.rep-tag { display: inline-flex; align-items: center; min-height: 26px; padding: 0 10px; border-radius: 999px;
+           background: var(--danger-fill); color: #ffffff; font-size: 13px; font-weight: 700; }
+.rep-meta { color: var(--ink-2); font-size: 14px; }
+.rep-what { display: flex; align-items: flex-start; gap: 12px; margin: 0 0 10px; padding: 10px; border-radius: 14px;
+            background: var(--tint); }
+.rep-pic { flex: none; width: 76px; height: 76px; overflow: hidden; border-radius: 10px;
+           background: var(--draw-wait) 50% 42% / 300% auto no-repeat; }
+.rep-face .face-ring { --skribl-face-size: 56px; width: 56px; height: 56px; }
+.is-veiled { filter: blur(9px) saturate(.4); }
+.rep-said { min-width: 0; }
+.rep-who { margin: 0; color: var(--ink); font-size: 15px; overflow-wrap: anywhere; }
+.rep-who span { color: var(--ink-2); }
+.rep-words { margin: 4px 0 0; color: var(--ink); font-size: 15px; overflow-wrap: anywhere; }
+.rep-open { display: inline-flex; align-items: center; min-height: 44px; color: var(--accent-ink); font-size: 15px;
+            font-weight: 600; }
+.rep-open[hidden] { display: none; }
+.rep-note, .rep-by { margin: 0 0 12px; color: var(--ink); font-size: 15px; }
+.rep-law { margin: 0 0 12px; color: var(--ink); font-size: 14px; }
+.rep-note span, .rep-by { color: var(--ink-2); }
+.rep-acts { display: flex; gap: 10px; }
+.rep-acts form { display: flex; flex: 1; margin: 0; }
+.rep-acts form[hidden] { display: none; }
+.rep-acts .btn { flex: 1; min-height: 48px; }
+.rep-acts .btn[hidden] { display: none; }
+/* TAKEN DOWN (piece 5): what its maker sees on it, and on their profile. */
+.post-down, .prof-down { margin: 12px 0 0; padding: 10px 14px; border-radius: 12px; background: var(--tint);
+                         color: var(--ink); font-size: 15px; line-height: 1.45; }
+.prof-down { max-width: 30em; margin: 0 auto 14px; }
+
 /* KIND TRANSITIONS BETWEEN PAGES, Skribl's own rule (styles.css, after v323:
    "No transitions should be jumpy"): from Home to Explore, and from Make's
    door into the Pad or Flip and back, the next page fades in over this one.

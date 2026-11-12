@@ -1022,6 +1022,34 @@ no row at risk, `NULL` preserved. On SQLite the table is rebuilt through
 truncating it, because a post whose owner silently became `0` is a post anybody
 can delete.
 
+## Your own reports page: list_reports and close_reports
+
+The Gallery puts Report on every tile, and a drawing's link page has one too;
+each report is a row in `skribl_reports`, read by an operator with
+`python -m skribl.takedown --reports`. A host with an admin page of its own can
+read the same queue there, and answer it (after v330, for the Skribl site's
+Reports page):
+
+```python
+from skribl import close_reports, list_reports, set_post_visibility
+
+for group in list_reports(limit=100):     # a child's safety first, then the most reported
+    group["id"], group["title"], group["user_id"], group["visibility"]
+    group["count"], group["reasons"]      # {"spam": 2, "child_safety": 1}
+    group["notes"], group["child_safety"], group["first"], group["latest"]
+
+close_reports(public_id)                  # looked at: its open reports closed, nothing taken down
+set_post_visibility(public_id, "withheld", require_author=False)   # taken down, a copy kept
+```
+
+A group is one drawing's open reports. Nothing in the queue names a reporter
+(Skribl keeps only a salted hash, one row per reporter per drawing), so a
+note is just what somebody wrote. `withheld` is the operator's own state:
+hidden from everybody but the drawing's signed-in author, and only an
+operator lifts it. Both functions use Skribl's session inside your
+transaction: they flush and never commit, as every seam here does. Who may
+call them is yours to decide: Skribl has no notion of an admin.
+
 ## A face that draws itself: the face player, and the Pad's face mode
 
 A person's picture can be a skribl they drew of themselves, still wherever a

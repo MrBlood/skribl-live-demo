@@ -1,0 +1,72 @@
+{#  YOUR REPORTS (piece 5; the owner's "all yes" on the Safety mock, Nov 12),
+    for admins only: anybody else gets the same 404 as a page that is not
+    there (reports.py, as Invites). A card per thing reported, the site's own
+    reports and Skribl's (Explore's tiles, a drawing's link page) together: a
+    child's safety first, its picture blurred and its words hidden until Open
+    it; then the newest.
+    Each says what was reported and whose it is, why (each reason, how many),
+    what reporters wrote and who they are (seen only here), and two answers:
+    Keep it, or Take it down (hidden for everybody at once, a copy kept). The
+    page's own script (reports.js) only lifts the blur and says the times in
+    the person's own; without it, both answers still work, as forms. #}
+{% extends 'social/base.html' %}
+{% import 'social/_icons.html' as ic %}
+{% from 'social/_post.html' import face with context %}
+
+{% block title %}Reports · Skribl{% endblock %}
+{% block scripts %}<script src="{{ social_asset('reports.js') }}" defer></script>{% endblock %}
+
+{% block main %}
+<div class="acct reps">
+  <div class="page-head">
+    <h1 class="page-title">Reports</h1>
+    <p class="page-sub">{% if cards %}{{ cards|length }} open. Who reported something is seen only here.{% else %}Nothing waiting. When somebody reports something, it shows here.{% endif %}</p>
+  </div>
+  {% if note == 'down' %}<p class="note" role="status">Taken down. It’s hidden for everybody, and a copy is kept.</p>
+  {% elif note == 'kept' %}<p class="note" role="status">Kept. Its reports are closed.</p>
+  {% elif note == 'gone' %}<p class="note" role="status">That one isn’t there anymore.</p>{% endif %}
+
+  <ul class="rep-list">
+    {% for c in cards %}
+    <li class="rep{% if c.child %} is-child{% endif %}" data-rep data-kind="{{ c.kind }}" data-target="{{ c.target }}">
+      <p class="rep-top">
+        {% if c.child %}<span class="rep-tag">A child’s safety</span>{% endif %}
+        {% for words, n in c.reasons if not (c.child and words == 'A child’s safety') %}<span class="rep-why">{{ words }}{% if n > 1 %} ×{{ n }}{% endif %}</span>{% endfor %}
+        <span class="rep-meta">{{ c.count }} report{{ '' if c.count == 1 else 's' }}{% if c.latest %} · <time datetime="{{ when_iso(c.latest) }}" data-when="ago">{{ when_day(c.latest) }}</time>{% endif %}</span>
+      </p>
+      <div class="rep-what">
+        {% if c.kind == 'person' %}
+        <span class="rep-face{% if c.child %} is-veiled{% endif %}" data-veil>{% if c.who %}{{ face(c.who) }}{% endif %}</span>
+        {% else %}
+        <span class="rep-pic{% if c.child %} is-veiled{% endif %}" data-veil style="background-image: url('{{ c.poster }}')"></span>
+        {% endif %}
+        <div class="rep-said">
+          <p class="rep-who">{% if c.who %}<b>{{ c.who.display_name }}</b> <span>@{{ c.who.handle }} · {{ {'person': 'a profile', 'post': 'a post', 'drawing': 'a drawing'}[c.kind] }}</span>{% else %}<b>{{ {'person': 'Somebody', 'post': 'A post', 'drawing': 'A drawing'}[c.kind] }}</b> <span>{{ 'not on the site' if c.kind == 'drawing' else 'since deleted' }}</span>{% endif %}</p>
+          {% if c.kind == 'person' and c.who and c.who.bio %}{% set said = '“' ~ c.who.bio ~ '”' %}
+          {% elif c.kind == 'post' and c.what %}{% set said = ('“' ~ c.what.words.split('\n')[0] ~ '”') if c.what.words else 'A drawing' %}
+          {% elif c.kind == 'drawing' and c.what and c.what.title %}{% set said = '“' ~ c.what.title ~ '”' %}
+          {% else %}{% set said = '' %}{% endif %}
+          {% if c.child %}<p class="rep-words" data-veil-hide>Hidden until you open it.</p>{% if said %}<p class="rep-words" hidden data-veil-show>{{ said }}</p>{% endif %}
+          {% elif said %}<p class="rep-words">{{ said }}</p>{% endif %}
+          {% if c.url %}<a class="rep-open" href="{{ c.url }}"{% if c.child %} hidden data-veil-link{% endif %}>See it on its page</a>{% endif %}
+        </div>
+      </div>
+      {% for who, said in c.notes %}<p class="rep-note"><span>{{ who or 'Somebody' }} wrote:</span> {{ said }}</p>{% endfor %}
+      <p class="rep-by">Reported by {{ c.reporters|join(', ') }}</p>
+      {% if c.child %}<p class="rep-law">Look before anything else. Taking it down hides it at once and keeps a copy; the lawyer will say what the law asks of you next.</p>{% endif %}
+      <div class="rep-acts">
+        {% if c.child %}<button class="btn" type="button" data-unveil>Open it</button>{% endif %}
+        <form method="post" action="{{ url_for('social.reports_keep') }}"{% if c.child %} hidden data-kept{% endif %}>
+          <input type="hidden" name="csrf" value="{{ token }}"><input type="hidden" name="kind" value="{{ c.kind }}"><input type="hidden" name="target" value="{{ c.target }}">
+          <button class="btn" type="submit">Keep it</button>
+        </form>
+        <form method="post" action="{{ url_for('social.reports_down') }}">
+          <input type="hidden" name="csrf" value="{{ token }}"><input type="hidden" name="kind" value="{{ c.kind }}"><input type="hidden" name="target" value="{{ c.target }}">
+          <button class="btn btn-danger" type="submit">Take it down</button>
+        </form>
+      </div>
+    </li>
+    {% endfor %}
+  </ul>
+</div>
+{% endblock %}

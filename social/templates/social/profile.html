@@ -47,6 +47,7 @@
 {% block main %}
 <div class="prof-page" data-profile data-handle="{{ who.handle }}" data-share-url="{{ share_url }}"
      data-share-title="{{ who.display_name }} (@{{ who.handle }}) on Skribl">
+  {% if mine and who.taken_down_at %}<p class="prof-down" role="note">Your profile was taken down: it broke the rules. Only you can see it, and what you made.</p>{% endif %}
   {% if note == 'saved' %}<p class="note" role="status">Saved. This is your profile as everyone sees it.</p>
   {% elif note == 'face' %}<p class="note" role="status">That’s your face now. It draws itself like this for everyone who visits.</p>{% endif %}
   <section class="prof" aria-labelledby="profName">

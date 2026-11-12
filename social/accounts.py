@@ -703,9 +703,10 @@ def register(bp):
         keys = sess.execute(sa.select(Passkey).where(Passkey.person_id == person.id)
                             .order_by(Passkey.created_at, Passkey.id)).scalars().all()
         note = request.args.get("note")
+        from .reports import open_count
         from .safety import blocked_people
         return _page("you.html", here="you", me=person, keys=keys, token=csrf_token(),
-                     blocked=blocked_people(person),
+                     blocked=blocked_people(person), open_reports=open_count() if person.is_admin else 0,
                      note=note if note in ("added", "renamed", "removed", "last", "name",
                                            "unblocked", "limited") else None)
 

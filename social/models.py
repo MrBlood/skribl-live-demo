@@ -123,6 +123,11 @@ class Person(SocialBase):
     face_id = sa.Column(sa.String(32), nullable=True)
     face_w = sa.Column(sa.Integer(), nullable=True)
     face_h = sa.Column(sa.Integer(), nullable=True)
+    #: TAKEN DOWN by an admin (piece 5, Your Reports): when. Their profile is
+    #: nobody's to everybody else and all they made is hidden; they can still
+    #: sign in, see their own with the note, and delete their account. None
+    #: until then; nothing is deleted by it.
+    taken_down_at = sa.Column(sa.DateTime(timezone=True), nullable=True)
 
     __table_args__ = (
         sa.Index("ix_social_people_public_id", "public_id", unique=True),
@@ -244,6 +249,10 @@ class Post(SocialBase):
     words = sa.Column(sa.String(WORDS_MAX), nullable=False, default="", server_default="")
     skribl_id = sa.Column(sa.String(32), nullable=False)
     created_at = sa.Column(sa.DateTime(timezone=True), nullable=False, default=utcnow)
+    #: TAKEN DOWN by an admin (piece 5): when. Hidden from everybody but its
+    #: author, who sees it with the note; its skribl withheld in Skribl. A
+    #: copy is kept: nothing is deleted by it.
+    taken_down_at = sa.Column(sa.DateTime(timezone=True), nullable=True)
 
     __table_args__ = (
         sa.Index("ix_social_posts_public_id", "public_id", unique=True),

@@ -75,6 +75,12 @@
   </section>
 
   {% if me.is_admin %}
+  {#  YOUR REPORTS (piece 5): admins only, as Invites. #}
+  <section class="panel" aria-labelledby="repTitle">
+    <h2 class="panel-title" id="repTitle">Reports</h2>
+    <p class="panel-sub">{% if open_reports %}{{ open_reports }} open{% else %}Nothing open{% endif %}. You run this site, so reports come to you.</p>
+    <a class="btn btn-wide" href="{{ url_for('social.reports') }}">{{ ic.flag() }}<span>See reports</span></a>
+  </section>
   <section class="panel" aria-labelledby="invTitle">
     <h2 class="panel-title" id="invTitle">Invites</h2>
     <p class="panel-sub">Skribl is invite-only for now. You let people in.</p>
@@ -87,7 +93,7 @@
   <section class="panel" aria-labelledby="blockedTitle">
     <h2 class="panel-title" id="blockedTitle">Blocked</h2>
     {% if blocked %}
-    <p class="panel-sub">You don’t see each other’s posts or drawings, and they can’t see your profile.</p>
+    <p class="panel-sub">You and they don’t see each other. They aren’t told.</p>
     <ul class="blocked">
       {% for b in blocked %}
       <li class="blocked-row">
