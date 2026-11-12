@@ -34714,3 +34714,37 @@ the close, fails the old row and passes the new one ("taken again after
 frames of [300] ms"); the open's @starting-style removed, or the close's
 transition, stays red with its frames 17 ms apart and is never taken again;
 untouched, green with no retake.
+
+## After v330 -- A person signed in no longer looks signed out while SQLite is busy
+
+Main's run after #864 went red on one row: verify_socialposts section 9, a
+drawing's own page, where its own author's ⋯ offered "Report this post"
+instead of "Delete post". The page had taken her for nobody. Side by side on
+this box it failed one run in three, and the server's log said why: "database
+is locked", then "the site could not read its people".
+
+The site read who is signed in on a connection of its own. Skribl's SQLite
+recipe begins a request's transaction at its first read, so a request that
+has read anything holds the read lock to its end. A second connection's read
+then queued behind a writer waiting to commit (here, another page's player
+fetching its drawing), and that writer waited for the first request's lock:
+each waited on the other for the 5 s busy timeout, the read failed, and the
+page showed nobody signed in. The same was true of the author resolver,
+which names the site's people on Skribl's own pages.
+
+- security.read_aside: a read beside the request's own work goes through the
+  request's session once that has begun (sharing the lock it holds), and on a
+  connection of its own, closed at once, before (so it never begins the
+  request's transaction, which a limit's commit would then wait on). Who is
+  signed in and describe_author both read through it.
+
+Pad and Flip: not affected (who is signed in, read on the site).
+
+THE CHECKS, in verify_txcontract: with a request that has read and a writer
+waiting to commit behind it, who is signed in and whose drawing this is are
+read at once, the right person; the writer then commits; and before the
+request has read, those reads leave its transaction unbegun. The old code
+stalls both reads 5.0 s and fails them ("database is locked"); always reading
+through the session leaves the transaction begun, red on the last row. The
+section that went red ran six times side by side after: six green, no lock
+in any server's log.

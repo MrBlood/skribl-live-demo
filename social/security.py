@@ -48,6 +48,7 @@ import threading
 from datetime import timedelta
 
 import sqlalchemy as sa
+import sqlalchemy.orm  # noqa: F401  (sa.orm.scoped_session)
 from flask import abort, current_app, g, has_request_context, request
 from itsdangerous import BadSignature, URLSafeTimedSerializer
 
@@ -267,14 +268,43 @@ class _Snapshot:
         self.face_id, self.face_w, self.face_h = face_id, face_w, face_h
 
 
+def read_aside(stmt):
+    """The rows of one read a request makes beside its own work (who is
+    signed in, whose drawing this is), without ever deadlocking SQLite.
+
+    ON A CONNECTION OF ITS OWN, closed at once, while the request's session
+    has not begun: a read there would begin the request's transaction and
+    hold SQLite's read lock to its end, and a limit's commit (over(), on
+    connections of its own) would wait on it.
+
+    ON THE REQUEST'S OWN SESSION once that has begun (main's run after #864:
+    verify_socialposts section 9, one run in three side by side here).
+    Skribl's SQLite recipe begins every transaction at its first read, so a
+    request that has read anything holds the read lock to its end. A second
+    connection's read then queues behind any writer waiting to commit, and
+    that writer waits for this request's lock: each waits on the other until
+    the 5 s busy timeout, the read fails ("database is locked"), and a person
+    signed in looked signed out for a page. Through the session, the read
+    shares the lock the request already holds."""
+    s = site()
+    sess = s.session()
+    # A host's scoped session (Flask-SQLAlchemy's db.session) is asked for
+    # the session it stands for: only that one knows if it has begun.
+    real = sess() if isinstance(sess, sa.orm.scoped_session) else sess
+    if real.in_transaction():
+        return real.execute(stmt).all()
+    with s.engine().connect() as conn:
+        return conn.execute(stmt).all()
+
+
 def read_person_row(public_id):
-    """The person's row, on a connection of its own, closed at once."""
+    """The person's row (read_aside), or None."""
     t = Person.__table__
-    with site().engine().connect() as conn:
-        return conn.execute(sa.select(t.c.id, t.c.public_id, t.c.handle, t.c.display_name,
-                                      t.c.is_admin, t.c.session_gen, t.c.face_id, t.c.face_w,
-                                      t.c.face_h)
-                            .where(t.c.public_id == public_id)).first()
+    rows = read_aside(sa.select(t.c.id, t.c.public_id, t.c.handle, t.c.display_name,
+                                t.c.is_admin, t.c.session_gen, t.c.face_id, t.c.face_w,
+                                t.c.face_h)
+                      .where(t.c.public_id == public_id))
+    return rows[0] if rows else None
 
 
 def current_person():
