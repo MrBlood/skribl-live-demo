@@ -34625,3 +34625,65 @@ two hands), drawn in the bar's colour away and lit up on Explore, his body
 the wordmark's purple and his own ink, 3:1 or more on the bar, phone, desk
 and the dark bar. Five breaks, each red on it: the star back, lit up
 everywhere, never lit, a purple too pale for the bar, his line not his ink.
+
+## After v330 -- Home holds every drawing the site's people show
+
+The owner, Nov 12, with two pictures from the phone: Home said "No posts
+yet" while Explore was full ("there's a bunch of Skribls (bloobs)"). A
+drawing posted from the Pad on its own page (Make's Draw, or the Pad
+opened by itself) and shown in the gallery went to Explore and never
+became a post, and Home read posts only: a gap left in piece 4. "All yes"
+to A: Home shows every drawing the site's people show, from the post box
+or from the Pad, newest first, words where there are words.
+
+- SKRIBL GAINS list_public_posts (docs/INTEGRATION.md, "A feed of your own
+  people's drawings"), read only and for every host: the public skribls a
+  gallery would list, by one author or by a prefix its people's ids share
+  (the site's are site:...), a page at a time by (time, id), the host's
+  feed filter and visibility policy applied, no payload, at most 100.
+- THE FEED MERGES the site's posts with its people's drawings outside a
+  post, under one cursor that names no internal id (a post's card
+  p<id>, a drawing's s<id>; at one instant a drawing's card comes first),
+  so Load more walks both. A post's drawing shows once, as the post. Not
+  one kept unlisted, nor one by somebody not on the site (the prefix, and
+  the person looked up: two guards).
+- A DRAWING'S CARD is a post whose words are its title, the words its maker
+  gave it in the Pad's sheet (none for Skribl's own "Untitled Skribl"), as
+  Explore shows it. Its page is /social/b/<id>: its drawing plays by
+  itself, More from its author's posts and drawings alike, its ⋯ (Copy
+  link, Share…, Report, or for its author Delete, asked once in its own
+  words: "The drawing goes for good, from Home and from Explore"). A post's
+  drawing's page is the post's. Delete is its author's alone (Skribl's
+  delete_post, as its author), never a post's drawing without the post.
+
+Pad and Flip: not affected (where a drawing shows, not how it is made).
+
+THE FOUR: kind (nothing anybody showed goes missing from Home); simple
+(Home is everything people made, newest first); playful (Make's drawings
+draw themselves on Home too); powerful (one feed, posts and drawings).
+
+THE CHECKS. verify_socialposts section 9, four rows: Home holds a drawing
+shown from the Pad outside a post (newest first among the posts, its title
+for its words, its own page), not one kept unlisted nor one by somebody not
+on the site, a post's drawing once; Load more walks twelve posts and twelve
+drawings, one after another, in order, none twice and none missed; a
+drawing's own page, More from (an untitled one said as "A drawing"), its ⋯
+both ways, its Delete asked in its own words and then gone; the guards (the
+token, its author's alone, never a post's drawing alone, a kind 404 for one
+unlisted, one by somebody not on the site, and none). verify_createpost
+section 12, four rows, for list_public_posts: exported and documented;
+public only, by prefix or by author; a page at a time, two drawings at one
+instant ordered by id and "" leaving that instant out (the first version of
+that row could not tell, two drawings never sharing a time; they do now);
+the listing's own items, no payload, at most 100 of 101 (the first version
+had six drawings and proved nothing about the cap). Nineteen breaks, each
+red on its row: Home without drawings; a post's drawing twice; unlisted
+ones too; drawings not paged; More from without drawings; no titles;
+Delete through a post's route; Delete asked in a post's words; a post's
+drawing deleted alone; anybody's deleted; a page for an unlisted one; a
+post's drawing's page not the post's; and in Skribl, unlisted listed, the
+prefix ignored, before ignored, "" keeping that instant, no cap, the
+payload handed over. One stayed green: Load more forgetting the drawings
+left once the posts run out. It bites only where a full page of drawings is
+older than every post, which the suite's one shared feed cannot hold (the
+sections before it post first); the code reads both sources' "more".

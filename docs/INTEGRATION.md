@@ -244,6 +244,28 @@ Either way there are two buttons, beside the scrubber or on the drawing:
   same call, so a finished drawing can never be left with a loop playing under
   it.
 
+**A feed of your own people's drawings** (after v330: the Skribl site's Home
+shows every drawing its people show, made in its post box or not).
+`skribl.list_public_posts(author=..., author_prefix=..., before=..., limit=...,
+viewer_id=...)` hands back `(items, more)`: the public skribls a gallery would
+list, newest first, as the listing's own items (the same keys as
+`describe_posts`), by one author or by a prefix your people's ids share (the
+site's are `site:...`), a page at a time:
+
+```python
+items, more = skribl.list_public_posts(author_prefix="site:", limit=20, viewer_id=me_id)
+last = items[-1]
+older, more = skribl.list_public_posts(author_prefix="site:", limit=20, viewer_id=me_id,
+                                       before=(datetime.fromisoformat(last["created_at"]), last["id"]))
+```
+
+`before` is a time and an id: the ones older, by time and then id, both
+descending; an id of `""` leaves out everything at that very time. The rule
+is the gallery's own (public only, your feed filter and visibility policy
+applied), no payload is read, and a call returns at most 100
+(`verify_createpost.py`, section 12). A drawing your people also posted
+through your own posts is in it too; a host showing both shows it once.
+
 **A post's own page can start it** (after v330: on the Skribl site, opening a
 post plays its drawing). `SkriblInline.mount(box)` returns the box's player,
 the one already mounted if it has one, and `player.play()` starts it, at the
