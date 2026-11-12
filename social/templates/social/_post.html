@@ -68,6 +68,7 @@
       <button class="post-act" type="button" data-act="copy">{{ ic.link() }}<span>Copy link</span></button>
       <button class="post-act" type="button" data-act="share">{{ ic.share() }}<span>Share…</span></button>
       <button class="post-act is-danger" type="button" data-act="report" data-theirs>{{ ic.flag() }}<span>Report this post</span></button>
+      {% if me %}<button class="post-act is-danger" type="button" data-act="block" data-theirs>{{ ic.block() }}<span data-block-who>Block</span></button>{% endif %}
       <button class="post-act is-danger" type="button" data-act="delete" data-mine-only>{{ ic.trash() }}<span>Delete post</span></button>
     </div>
     <p class="say post-say" data-post-say role="status" hidden></p>
@@ -75,12 +76,12 @@
   </div>
 </div>
 
-{#  REPORT THIS POST: the Gallery's own report sheet's words and reasons
-    (skribl_report, which init_skribl puts in every page), sent to Skribl's
-    report route with Skribl's own token (skribl_csrf); a report is a row in
-    the operator's queue, and the sheet promises nothing more. #}
-<div class="make post-sheet" id="reportSheet" hidden
-     data-report="{{ url_for(skribl_bp ~ '.report_skribl', public_id='__ID__') }}" data-skribl-csrf="{{ skribl_csrf() }}">
+{#  REPORT THIS POST: the Gallery's own reasons and "A child's safety"
+    (safety.REASONS['post'], the owner's "all yes", Nov 12), sent to the
+    site's own queue with the page's token, for a post or a drawing shown
+    outside one; a report is a row an admin reads, and the sheet promises
+    nothing more. #}
+<div class="make post-sheet" id="reportSheet" hidden data-report="{{ url_for('social.report') }}">
   <div class="make-scrim" data-make-close></div>
   <form class="make-sheet" role="dialog" aria-modal="true" aria-labelledby="reportTitle" data-report-form>
     <div class="make-grip" data-make-close aria-hidden="true"></div>
@@ -88,12 +89,12 @@
     <p class="post-lede">Tell us what is wrong with it. Reports go to the people who run this site; nothing is taken down automatically.</p>
     <fieldset class="post-reasons">
       <legend class="sr">Reason</legend>
-      {% for r in skribl_report.reasons %}
-      <label class="post-reason"><input type="radio" name="reason" value="{{ r }}"{% if loop.first %} checked{% endif %}><span>{{ {'spam': 'Spam or misleading', 'abuse': 'Abusive or hateful', 'copyright': 'Copies someone else’s work', 'other': 'Something else'}[r] }}</span></label>
+      {% for r, words in report_reasons['post'] %}
+      <label class="post-reason"><input type="radio" name="reason" value="{{ r }}"{% if loop.first %} checked{% endif %}><span>{{ words }}</span></label>
       {% endfor %}
     </fieldset>
     <label class="post-note-label" for="reportNote">Anything else? <span>optional</span></label>
-    <textarea class="post-note" id="reportNote" name="note" rows="2" maxlength="{{ skribl_report.note_max }}"></textarea>
+    <textarea class="post-note" id="reportNote" name="note" rows="2" maxlength="300"></textarea>
     <p class="say post-say" data-report-say role="status" hidden></p>
     <div class="post-sheet-acts">
       <button class="btn btn-big" type="button" data-make-close>Cancel</button>

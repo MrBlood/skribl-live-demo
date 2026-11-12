@@ -391,6 +391,8 @@ LIMITS = {
     "profile-edit": (60, 3600),    # name and bio saved, per person (piece 3)
     "face": (20, 3600),            # faces drawn and kept, per person (piece 3): each one is a skribl
     "post": (40, 3600),            # posts made, per person (piece 4): each one is a skribl
+    "report": (30, 3600),          # reports sent, per person, or per address signed out (piece 5)
+    "block": (60, 3600),           # blocks and unblocks, per person (piece 5)
 }
 _SWEEP_EVERY = 64
 

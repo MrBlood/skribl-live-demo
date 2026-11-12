@@ -525,6 +525,27 @@ def create_app():
             return None
         skribl.models.set_author_resolver(_resolve_any_author, app)
 
+    # WHO SEES WHOM: a block on the site (both ways, quietly) reaches Skribl's
+    # own pages too, through the two seams docs/INTEGRATION.md gives a host
+    # for a block list: the listings (Explore's gallery, a profile's skribls,
+    # Home's drawings) leave out the people the viewer has blocked or been
+    # blocked by, and a drawing's link page, card, picture and payload are
+    # theirs no more (visible_to). Anybody else is decided as before: the
+    # policy says nothing (None) and Skribl's own rules stand.
+    if app.extensions.get("social") is not None:
+        import social
+        from skribl.models import SkriblPost
+
+        def _hide_blocked(query, viewer_id):
+            hidden = social.blocked_authors(viewer_id)
+            return query.filter(SkriblPost.user_id.notin_(sorted(hidden))) if hidden else query
+
+        def _deny_blocked(post, viewer_id):
+            return False if post.user_id in social.blocked_authors(viewer_id) else None
+
+        skribl.models.set_feed_filter(_hide_blocked, app)
+        skribl.models.set_visibility_policy(_deny_blocked, app)
+
     # So a single db.create_all() covers Skribl's tables too. Optional — see
     # skribl.models.attach_to_metadata; an Alembic host would migrate
     # SkriblBase.metadata separately instead.

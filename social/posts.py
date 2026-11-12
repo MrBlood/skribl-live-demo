@@ -41,6 +41,7 @@ import sqlalchemy as sa
 from flask import current_app, jsonify, redirect, render_template, request, url_for
 
 from .accounts import _hidden_in, _json_error, _page, _rests, profile_url
+from .safety import between
 from .models import PERSON_PREFIX, WORDS_MAX, Person, Post, as_utc, new_public_id
 from .security import csrf_token, current_person, origin_ok, over, public_origin, site, token_ok
 
@@ -61,7 +62,7 @@ MORE = 3
 TITLE_MAX = 80
 
 #: The notes Home says once, on the way back (?note=).
-NOTES = ("deleted", "deleted_drawing")
+NOTES = ("deleted", "deleted_drawing", "blocked")
 
 
 def check_words(raw):
@@ -142,14 +143,17 @@ def _entry(post, who):
     return {"kind": "p", "at": as_utc(post.created_at), "key": "p" + post.public_id, "post": post, "who": who}
 
 
-def _posts_before(at, limit, person=None):
+def _posts_before(at, limit, person=None, hidden=frozenset()):
     """A page of posts (and their authors) older than `at`, newest first:
     (rows, more). Every post at the very time of a drawing's card comes after
-    it (p < s), so a drawing's cursor keeps them all."""
+    it (p < s), so a drawing's cursor keeps them all. Nobody in `hidden` (a
+    block, either way: safety.blocked_ids) is in it."""
     q = (sa.select(Post, Person).join(Person, Post.person_id == Person.id)
          .order_by(Post.created_at.desc(), Post.public_id.desc()).limit(limit + 1))
     if person is not None:
         q = q.where(Post.person_id == person.id)
+    if hidden:
+        q = q.where(Post.person_id.notin_(sorted(hidden)))
     if at is not None:
         when, key = at
         if key.startswith("s"):
@@ -161,10 +165,13 @@ def _posts_before(at, limit, person=None):
     return rows[:limit], len(rows) > limit
 
 
-def _drawings_before(at, limit, viewer, person=None):
+def _drawings_before(at, limit, viewer, person=None, hidden=frozenset()):
     """A page of the drawings the site's people (or one of them) showed in
     Skribl's gallery and not in a post, older than `at`, newest first, each
-    with its author: (entries, more). Through Skribl's list_public_posts."""
+    with its author: (entries, more). Through Skribl's list_public_posts,
+    whose feed filter leaves out the people a block hides (the host installs
+    it: app.py); nobody in `hidden` is let through here either, whatever
+    the host installed."""
     from skribl import list_public_posts
     before = None
     if at is not None:
@@ -182,7 +189,8 @@ def _drawings_before(at, limit, viewer, person=None):
         sa.select(Person).where(Person.public_id.in_({i["user_id"] for i in items}))).scalars()}
     return [{"kind": "s", "at": as_utc(datetime.fromisoformat(i["created_at"])), "key": "s" + i["id"],
              "sk": i, "who": authors[i["user_id"]]}
-            for i in items if i["id"] not in in_posts and i["user_id"] in authors], more
+            for i in items if i["id"] not in in_posts and i["user_id"] in authors
+            and authors[i["user_id"]].id not in hidden], more
 
 
 def feed_page(before=None, limit=PAGE, viewer=None, person=None):
@@ -191,9 +199,11 @@ def feed_page(before=None, limit=PAGE, viewer=None, person=None):
     on its own), newest first, after `before` (a cursor); or one person's
     (More from). (entries, next cursor or None). A drawing that is a post's
     shows once, as the post."""
+    from .safety import blocked_ids
     at = _uncursor(before) if before else None
-    posts, more_p = _posts_before(at, limit, person)
-    drawings, more_s = _drawings_before(at, limit, viewer, person)
+    hidden = blocked_ids(viewer)
+    posts, more_p = _posts_before(at, limit, person, hidden)
+    drawings, more_s = _drawings_before(at, limit, viewer, person, hidden)
     out = sorted([_entry(p, who) for p, who in posts] + drawings, key=lambda e: (e["at"], e["key"]), reverse=True)
     page = out[:limit]
     more = len(out) > limit or more_p or more_s
@@ -334,9 +344,10 @@ def register(bp, skribl_blueprint="skribl"):
         sess = site().session()
         found = sess.execute(sa.select(Post, Person).join(Person, Post.person_id == Person.id)
                              .where(Post.public_id == public_id)).first()
-        if found is None:
-            return _page("post_gone.html", 404, here="post")
         me = current_person()
+        if found is None or between(me, found[1]):
+            # A block, either way, makes it as gone as a deleted one.
+            return _page("post_gone.html", 404, here="post")
         return _post_page(cards([found], me)[0], me)
 
     @bp.get("/b/<skribl_id>")
@@ -355,7 +366,7 @@ def register(bp, skribl_blueprint="skribl"):
         who = None
         if sk and sk.get("visibility") == "public" and str(sk.get("user_id") or "").startswith(PERSON_PREFIX):
             who = sess.execute(sa.select(Person).where(Person.public_id == sk["user_id"])).scalar_one_or_none()
-        if who is None:
+        if who is None or between(me, who):
             return _page("post_gone.html", 404, here="post")
         entry = {"kind": "s", "at": as_utc(datetime.fromisoformat(sk["created_at"])), "key": "s" + sk["id"],
                  "sk": sk, "who": who}
@@ -367,8 +378,9 @@ def register(bp, skribl_blueprint="skribl"):
         others, _ = feed_page(limit=MORE + 1, viewer=me, person=card["who"])
         key = ("s" + card["post"].skribl_id) if card["kind"] == "s" else ("p" + card["post"].public_id)
         others = [e for e in others if e["key"] != key][:MORE]
+        # The page's token for everybody: Report is anybody's (piece 5).
         return _page("post.html", here="post", card=card, more=cards(others, me) if others else [],
-                     share_url=public_origin() + card["url"], token=csrf_token() if me else None)
+                     share_url=public_origin() + card["url"], token=csrf_token())
 
     @bp.post("/p/<public_id>/delete")
     @_rests(json_answer=True)

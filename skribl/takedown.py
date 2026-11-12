@@ -145,8 +145,9 @@ def build_parser():
 
 
 def open_reports():
-    """Every post with open reports, most-reported first, newest report first
-    within each: [(post, [reports...]), ...]."""
+    """Every post with open reports: any with a report for a child's safety
+    first, then most-reported first, newest report first within each:
+    [(post, [reports...]), ...]."""
     s = resolve_session()
     rows = (s.query(SkriblReport)
             .filter(SkriblReport.state == "open")
@@ -158,7 +159,7 @@ def open_reports():
     posts = {p.id: p for p in s.query(SkriblPost)
              .filter(SkriblPost.id.in_(list(by_post))).all()} if by_post else {}
     groups = [(posts[pid], rs) for pid, rs in by_post.items() if pid in posts]
-    groups.sort(key=lambda g: (-len(g[1]), g[0].public_id))
+    groups.sort(key=lambda g: (not any(r.reason == "child_safety" for r in g[1]), -len(g[1]), g[0].public_id))
     return groups
 
 
@@ -200,6 +201,9 @@ def main(argv=None, out=sys.stdout):
                 for r in rows:
                     reasons[r.reason] = reasons.get(r.reason, 0) + 1
                 why = ", ".join(f"{k} x{v}" for k, v in sorted(reasons.items()))
+                if "child_safety" in reasons:
+                    print("  A CHILD'S SAFETY: the law may ask you to report this (in the US, to NCMEC);"
+                          " keep it, withheld, and ask your lawyer.", file=out)
                 print(f"  {post.public_id}  {post.visibility}  "
                       f"{len(rows)} report(s)  {why}  latest {rows[0].created_at}\n"
                       f"    title : {_plain(post.title) or '(untitled)'}", file=out)

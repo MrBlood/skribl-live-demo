@@ -407,6 +407,14 @@ body.focus .top { justify-content: center; }
 .key-form { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
 .key-form p { margin: 0; color: var(--ink); font-size: 15px; line-height: 1.45; }
 .key-last { margin: 8px 0 0; color: var(--ink-2); font-size: 14px; line-height: 1.45; }
+/* BLOCKED (piece 5): the people you blocked, a row each, as the keys are. */
+.blocked { display: flex; flex-direction: column; margin: 0; padding: 0; list-style: none; }
+.blocked-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-top: 1px solid var(--rule); }
+.blocked-row form { flex: none; }
+.face-ring.blocked-face { --skribl-face-size: 40px; flex: none; width: 40px; height: 40px; }
+.blocked-who { display: flex; flex: 1; flex-direction: column; min-width: 0; line-height: 1.35; }
+.blocked-who b { overflow: hidden; font-size: 16px; text-overflow: ellipsis; white-space: nowrap; }
+.blocked-who span { color: var(--ink-2); font-size: 14px; }
 .btn-small { min-height: 44px; padding: 0 16px; font-size: 15px; }
 .btn-danger { background: var(--danger-fill); border-color: transparent; color: #ffffff; }
 .btn-quiet-danger { color: var(--danger-ink); }
@@ -482,6 +490,10 @@ body.focus .top { justify-content: center; }
 .prof-acts { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 16px; }
 .prof-acts .desk-only { display: none; }
 .prof-say { margin-top: 10px; }
+/* Somebody you blocked (piece 5): that you did, and Unblock. */
+.prof-blocked { max-width: 30em; margin: 14px auto 0; padding: 10px 14px; border-radius: 12px; background: var(--tint);
+                color: var(--ink); font-size: 15px; line-height: 1.45; }
+.prof-unblock { display: flex; justify-content: center; margin: 14px 0 0; }
 .prof-page .sec { margin-top: 28px; }
 @media (min-width: 900px) {
   .prof { flex-direction: row; align-items: center; gap: 32px; padding-top: 4px; text-align: left; }

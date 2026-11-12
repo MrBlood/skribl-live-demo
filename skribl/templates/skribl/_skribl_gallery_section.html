@@ -200,7 +200,7 @@
       <fieldset class="reasons">
         <legend>Reason</legend>
         {% for r in skribl_report.reasons %}
-        <label class="reason"><input type="radio" name="reason" value="{{ r }}"{% if loop.first %} checked{% endif %}> {{ {'spam': 'Spam or misleading', 'abuse': 'Abusive or hateful', 'copyright': 'Copies someone else\'s work', 'other': 'Something else'}[r] }}</label>
+        <label class="reason"><input type="radio" name="reason" value="{{ r }}"{% if loop.first %} checked{% endif %}> {{ {'spam': 'Spam or misleading', 'abuse': 'Abusive or hateful', 'copyright': 'Copies someone else\'s work', 'child_safety': 'A child\'s safety', 'other': 'Something else'}[r] }}</label>
         {% endfor %}
       </fieldset>
       <label>

@@ -9,6 +9,7 @@
     own time zone by you.js. #}
 {% extends 'social/base.html' %}
 {% import 'social/_icons.html' as ic %}
+{% from 'social/_post.html' import face with context %}
 
 {% block title %}Settings · Skribl{% endblock %}
 {% block scripts %}<script src="{{ social_asset('passkey.js') }}" defer></script>
@@ -24,7 +25,9 @@
   {% elif note == 'renamed' %}<p class="note" role="status">Renamed.</p>
   {% elif note == 'removed' %}<p class="note" role="status">That passkey is removed. It won’t sign you in anymore.</p>
   {% elif note == 'last' %}<p class="note" role="status">That’s your only passkey, so it stays. Add another first.</p>
-  {% elif note == 'name' %}<p class="note" role="status">A passkey’s name can be 1 to 40 characters. Try again?</p>{% endif %}
+  {% elif note == 'name' %}<p class="note" role="status">A passkey’s name can be 1 to 40 characters. Try again?</p>
+  {% elif note == 'unblocked' %}<p class="note" role="status">Unblocked. You’ll see each other’s posts and drawings again.</p>
+  {% elif note == 'limited' %}<p class="note" role="status">Lots of that in a short while. Wait a little, then try again.</p>{% endif %}
 
   <section class="panel" aria-labelledby="keysTitle">
     <h2 class="panel-title" id="keysTitle">Your passkeys</h2>
@@ -78,6 +81,29 @@
     <a class="btn btn-wide" href="{{ url_for('social.invites') }}">{{ ic.link() }}<span>Invites and sign-in links</span></a>
   </section>
   {% endif %}
+
+  {#  BLOCKED (piece 5): the people you blocked, newest first, each with
+      Unblock (a form: it comes back here). Nobody is told either way. #}
+  <section class="panel" aria-labelledby="blockedTitle">
+    <h2 class="panel-title" id="blockedTitle">Blocked</h2>
+    {% if blocked %}
+    <p class="panel-sub">You don’t see each other’s posts or drawings, and they can’t see your profile.</p>
+    <ul class="blocked">
+      {% for b in blocked %}
+      <li class="blocked-row">
+        {{ face(b, 'blocked-face') }}
+        <span class="blocked-who"><b>{{ b.display_name }}</b><span>@{{ b.handle }}</span></span>
+        <form method="post" action="{{ url_for('social.unblock', handle=b.handle) }}">
+          <input type="hidden" name="csrf" value="{{ token }}">
+          <button class="btn btn-small" type="submit" aria-label="Unblock @{{ b.handle }}">Unblock</button>
+        </form>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="panel-sub">Nobody. If you block someone, they’re listed here, and you can unblock them.</p>
+    {% endif %}
+  </section>
 
   <section class="panel" aria-labelledby="outTitle">
     <h2 class="panel-title" id="outTitle">Signing out</h2>

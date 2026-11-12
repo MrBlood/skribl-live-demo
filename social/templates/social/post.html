@@ -11,6 +11,7 @@
     author beside it. Its ⋯ is the feed's. #}
 {% extends 'social/base.html' %}
 {% from 'social/_post.html' import post_sheets, post_words, face, player with context %}
+{% from 'social/_safety.html' import safety_sheets with context %}
 {% import 'social/_icons.html' as ic %}
 {% set p = card.post %}{% set who = card.who %}
 
@@ -37,7 +38,8 @@
 {%- endmacro %}
 
 {% block title %}{{ who.display_name }} on Skribl{% endblock %}
-{% block scripts %}<script src="{{ social_asset('posts.js') }}" defer></script>{% endblock %}
+{% block scripts %}<script src="{{ social_asset('posts.js') }}" defer></script>
+<script src="{{ social_asset('safety.js') }}" defer></script>{% endblock %}
 
 {% block top %}
   <a class="icon-btn top-back" href="{{ url_for('social.home') }}" aria-label="Back to Home">{{ ic.back() }}</a>
@@ -92,4 +94,4 @@
 {{ post_words() }}
 {% endblock %}
 
-{% block overlays %}{{ post_sheets() }}{% endblock %}
+{% block overlays %}{{ post_sheets() }}{{ safety_sheets() }}{% endblock %}
