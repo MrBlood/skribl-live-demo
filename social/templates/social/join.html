@@ -50,6 +50,8 @@
         <p class="say" data-say role="status" hidden></p>
         <p class="fine center">Your phone or computer keeps it: Face ID, Touch ID or Windows Hello.</p>
       </form>
+      {#  THE RULES (piece 5), as at the foot of Settings. #}
+      <nav class="legal-foot" aria-label="The rules"><a href="{{ url_for('social.terms') }}">Terms</a><a href="{{ url_for('social.privacy') }}">Privacy</a><a href="{{ url_for('social.rules') }}">Community rules</a></nav>
     </div>
     {% include 'social/_gone.html' %}
   </section>

@@ -708,8 +708,30 @@ migration on the site's chain). The page has no undo yet; since nothing is
 deleted, a takedown can be lifted by hand (`taken_down_at` emptied; for a
 drawing, `python -m skribl.takedown <id> --visibility public`).
 
-`harness/verify_socialsafety.py` sections 10 to 14 hold it. Still to come in
-piece 5: the draft rules pages.
+`harness/verify_socialsafety.py` sections 10 to 14 hold it.
+
+### Built: piece 5, the rules
+
+The third part of the same "all yes": three short pages in plain words,
+`social/rules.py`, each saying it is a draft that a lawyer reads before the
+site opens to everyone, with the mock's pills between them.
+
+    /social/terms     Terms: the mock's own words (your drawings are yours,
+                      who can join, be kind, when something is reported)
+    /social/privacy   Privacy: what is kept, what is not done, who sees what,
+                      and what goes when you leave
+    /social/rules     Community rules: one rule, with an example, for each
+                      reason a report can give
+
+Anybody can read them, signed in or not. Join and Settings link all three at
+their foot. Privacy says only what the code does: a person's row, the two
+cookies (`social_session`, `skribl_csrf`), flood limits counted by a keyed
+hash and never the address, a report's sender seen by admins alone. Keep it
+true when any of those change. What only a lawyer can say (age, a child's
+safety and NCMEC, copyright, privacy law, a contact address, the name) is in
+`docs/LAWYER-NOTE.md`, written for the owner's lawyer.
+
+`harness/verify_socialsafety.py` sections 15 and 16 hold it. Piece 5 is done.
 
 ### The move to blooby.app
 

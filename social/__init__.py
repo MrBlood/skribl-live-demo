@@ -216,12 +216,13 @@ def init_social(app, *, session=None, url_prefix="/social", skribl_blueprint="sk
         return render_template("social/explore.html", here="explore")
 
     if site is not None:
-        from . import accounts, posts, profiles, reports, safety
+        from . import accounts, posts, profiles, reports, rules, safety
         accounts.register(bp)
         profiles.register(bp, skribl_blueprint)
         posts.register(bp, skribl_blueprint)
         safety.register(bp)
         reports.register(bp, skribl_blueprint)
+        rules.register(bp)
 
         @bp.before_request
         def _small_bodies():

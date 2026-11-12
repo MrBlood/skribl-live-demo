@@ -1,0 +1,58 @@
+{#  THE RULES (piece 5, its third part; the owner's "all yes" on the Safety
+    mock, Nov 12): Terms, Privacy and Community rules, a page each, the pills
+    between them, each saying it is a draft a lawyer reads before the site
+    opens to everyone. Terms is the mock's own words. Privacy says what the
+    code does (social/models.py, security.py, safety.py: what a person's row
+    keeps, the two cookies, the limits' scrambled keys, a report's keyed
+    sender); keep it true when the code changes. Community rules has one rule
+    for each reason a report can give (safety.REASONS). What only a lawyer can
+    say is in docs/LAWYER-NOTE.md. #}
+{% extends 'social/base.html' %}
+
+{% block title %}{{ heading }} (draft) · Skribl{% endblock %}
+
+{% block main %}
+<div class="legal">
+  <div class="page-head"><h1 class="page-title">{{ heading }}</h1></div>
+  <nav class="legal-nav" aria-label="The rules">
+    {%- for route, label in pages %}<a href="{{ url_for('social.' ~ route) }}"{% if route == page %} aria-current="page"{% endif %}>{{ label }}</a>{% endfor -%}
+  </nav>
+  <p class="legal-draft">A draft, in plain words. A lawyer reads it before Skribl opens to everyone.</p>
+
+  {% if page == 'terms' %}
+  <h2>Your drawings are yours</h2>
+  <p>You keep everything you make. By posting, you let Skribl show it where you chose: in your post, on Home, and on Explore if you tick it. Delete it and it goes.</p>
+  <h2>Who can join</h2>
+  <p>People 13 and older, by invite for now. One account each, as yourself.</p>
+  <h2>Be kind</h2>
+  <p>No harassment, hate, or threats. Nothing that puts a child at risk, ever. The community rules say more, with examples.</p>
+  <h2>When something is reported</h2>
+  <p>A person looks at it. If it breaks the rules it comes down, and we tell its maker why.</p>
+
+  {% elif page == 'privacy' %}
+  <h2>What we keep</h2>
+  <p>Your name, your handle, what you write about yourself, and your face if you draw one. Your posts and drawings, and where you chose to show each. Who invited you, and when you said you’re 13 or older.</p>
+  <p>For signing in, the public half of each passkey and when it was last used. There are no passwords, and nothing kept here can sign in as you.</p>
+  <h2>What we don’t do</h2>
+  <p>No ads, and nothing sold. Everything on these pages comes from Skribl itself, so nobody else watches what you do here. Two cookies: one keeps you signed in, the other keeps your forms safe.</p>
+  <p>To stop floods of sign-ups or reports, we count tries by a scrambled form of you or your address, never the address itself.</p>
+  <h2>Who sees what</h2>
+  <p>Anyone can see your profile and what you share. A drawing you keep to yourself stays yours. When you report something, only the people who run Skribl see that it was you. When you block someone, they aren’t told. Something taken down for breaking the rules is hidden from everybody but its maker; it isn’t deleted.</p>
+  <h2>When you leave</h2>
+  <p>Delete your account and your profile and posts go with it, words and drawings both. Your other drawings and drafts stay until you delete them in your Library, and the page that deletes your account says so first. A report that named you stays, without your name.</p>
+
+  {% else %}
+  <p class="legal-lede">Skribl is for drawing, and for being kind about each other’s drawings. These are the few rules, with an example of each.</p>
+  <h2>Be kind</h2>
+  <p>No harassment, hate or threats. Saying what you’d change is fine; putting someone down isn’t. “I’d love it in brighter colors” is kind. “This is terrible” under someone’s post is not.</p>
+  <h2>Keep children safe</h2>
+  <p>Nothing that sexualizes a child or puts a child at risk, ever. It comes down at once, and we report it as the law requires.</p>
+  <h2>Be yourself</h2>
+  <p>One account each, as yourself, and you have to be 13 or older. Don’t pretend to be someone else, and don’t post the same thing over and over to be seen.</p>
+  <h2>Share what you made</h2>
+  <p>Post your own drawings. If you traced or built on someone else’s, say whose. Posting someone else’s drawing as yours isn’t allowed.</p>
+  <h2>If something breaks the rules</h2>
+  <p>Report it from its ⋯ menu. A person looks at it; if it breaks the rules it comes down, and its maker is told why. You can block anyone too: you won’t see each other, and they aren’t told.</p>
+  {% endif %}
+</div>
+{% endblock %}

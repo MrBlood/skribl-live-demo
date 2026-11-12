@@ -34967,3 +34967,54 @@ pressed and read back. And a child's safety's card was also the newest, so
 the oldest. The drawing page's own takedown test sits behind the visibility
 policy, so breaking it alone cannot fail the scenario; it stays as the site's
 own lock for a host that mounts it, like the block test beside it.
+
+## After v330 -- The rules, in plain words (piece 5, its third part)
+
+The same "all yes on both" (Nov 12): the Safety mock's rules pages. Three
+short pages, `social/rules.py`: Terms, Privacy and Community rules, each
+saying "A draft, in plain words. A lawyer reads it before Skribl opens to
+everyone.", with the mock's pills between them. Anybody can read them,
+signed in or not; Join and Settings link all three at their foot, a row of
+44px links as the Settings mock has them (an inline link in a sentence
+would be a target too small to tap).
+
+- TERMS is the mock's own words, four short sections.
+- PRIVACY says only what the code does, each claim checked against it: what a
+  person's row keeps, no passwords, the two cookies, nothing loaded from
+  anyone else, flood limits counted by a keyed hash and never the address,
+  who reported seen by admins alone, what deleting an account takes and
+  what it leaves (a person's other drawings stay until they delete them in
+  their Library, as the confirm page says). A first draft said a taken-down
+  thing outlives its maker's account, which the code does not do yet; the
+  words were made true before this went up. It names no contact address,
+  the owner's choice until the lawyer weighs in.
+- COMMUNITY RULES has one rule for each reason a report can give, each with
+  an example: be kind; keep children safe; be yourself (one account, 13 or
+  older, nobody else, no spam); share what you made (copyright); and what
+  happens when something breaks them.
+- docs/LAWYER-NOTE.md is for the owner's lawyer: what the site does today and
+  the questions only a lawyer answers. One it raises is real: a taken-down
+  thing is kept hidden, but deleting the account deletes it, and the law may
+  ask for it to be kept. It also files a friend's read of the note (Nov 12),
+  point by point: what the site does today, and what is planned before it
+  opens to everyone (keeping evidence through an account's deletion first).
+  The owner chose not to ask for a birthday: "kind of invasive".
+
+Pad and Flip: not affected.
+
+THE FOUR: kind (plain words, a person behind every report, nothing taken on a
+guess); simple (three pages, one tap from Join and Settings); playful (the
+examples sound like the site); powerful (each says what the code does).
+
+THE CHECKS. verify_socialsafety sections 15 and 16 (no page errors is now
+17): three pages anybody can read, each a draft, each with the pills to the
+others and its own marked, Terms in the mock's words; Join (from an invite)
+and Settings linking all three; every word at 4.5:1 and every target 44px,
+phone and desk, light and dark (174 read, the lowest 7.36:1). Ten breaks,
+each red on its row: a rules page needing an account; no word that it is a
+draft; Terms in other words; the pills not marking the page, or in another
+order; Join or Settings without the rules; the draft note faint; the pills or
+the rules row too small to tap. Two of them were green first: the row was
+hidden with the hidden attribute, which its own display rule overrides, so
+it still showed; taken out of the page, it went red.
+
