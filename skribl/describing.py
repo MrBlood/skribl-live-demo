@@ -13,7 +13,9 @@ never disagree about a drawing.
 
 Reads only, on the host's session: it flushes nothing and commits nothing.
 """
-from .models import SkriblPost, session
+import sqlalchemy as sa
+
+from .models import SkriblPost, feed_filter, normalise_user_id, session
 
 #: The most ids one call reads, in one query: a page of a feed, with room.
 MAX_DESCRIBE = 200
@@ -40,3 +42,53 @@ def describe_posts(public_ids, *, viewer_id=None):
         return {}
     rows = session().query(SkriblPost).filter(SkriblPost.public_id.in_(ids)).all()
     return {p.public_id: p.feed_dict() for p in rows if p.visible_to(viewer_id)}
+
+
+#: The most one call to list_public_posts returns: a page of a feed, with room.
+MAX_LIST = 100
+
+
+def _like_prefix(prefix):
+    """A LIKE pattern for `prefix` and anything after it, the prefix's own %
+    and _ escaped so they are letters."""
+    return prefix.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
+
+
+def list_public_posts(*, author=None, author_prefix=None, before=None, limit=20, viewer_id=None):
+    """(items, more): the public skribls a gallery would list, newest first,
+    as the listing's own items (SkriblPost.feed_dict), for a host's feed of
+    its own people's drawings (after v330, for the Skribl site's Home, which
+    shows every drawing its people show, made in its post box or not).
+
+    author          only this author's (their user id, as the host hands it).
+    author_prefix   only authors whose ids start with this (a host whose
+                    people's ids share a prefix: the site's are "site:...").
+    before          (created_at, public_id): only those older, by created_at
+                    and then public_id, both descending: the page after the
+                    last item shown. A public_id of "" leaves out everything
+                    at that very time.
+    limit           how many, at most MAX_LIST.
+    viewer_id       the person looking, for the host's own visibility policy
+                    and feed filter, as the gallery's listing asks them.
+
+    The rule is the gallery's: public only, the host's feed_filter and
+    visibility policy applied, no payload read. `more` says whether there
+    are older ones after these. Reads only, on the host's session.
+    """
+    limit = max(1, min(int(limit), MAX_LIST))
+    q = (session().query(SkriblPost).options(sa.orm.defer(SkriblPost.payload_json))
+         .filter(SkriblPost.visibility == "public"))
+    if author is not None:
+        q = q.filter(SkriblPost.user_id == normalise_user_id(author))
+    if author_prefix:
+        q = q.filter(SkriblPost.user_id.like(_like_prefix(str(author_prefix)), escape="\\"))
+    if before is not None:
+        when, pid = before
+        q = q.filter(sa.or_(SkriblPost.created_at < when,
+                            sa.and_(SkriblPost.created_at == when, SkriblPost.public_id < (pid or ""))))
+    ff = feed_filter()
+    if ff is not None:
+        q = ff(q, viewer_id)
+    rows = q.order_by(SkriblPost.created_at.desc(), SkriblPost.public_id.desc()).limit(limit + 1).all()
+    more = len(rows) > limit
+    return [p.feed_dict() for p in rows[:limit] if p.visible_to(viewer_id)], more

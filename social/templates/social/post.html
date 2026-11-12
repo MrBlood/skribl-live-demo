@@ -48,7 +48,8 @@
 
 {% block main %}
 <article class="post-page" data-post="{{ p.public_id }}" data-url="{{ card.url }}" data-skribl="{{ p.skribl_id }}"
-         data-handle="{{ who.handle }}"{% if card.mine %} data-mine{% endif %} data-autoplay aria-labelledby="postWho">
+         data-handle="{{ who.handle }}"{% if card.mine %} data-mine data-del="{{ card.delete }}"{% endif %} data-kind="{{ card.kind }}"
+         data-autoplay aria-labelledby="postWho">
   <header class="post-head">
     <a class="post-face" href="{{ card.profile }}" tabindex="-1" aria-hidden="true">{{ face(who) }}</a>
     <a class="post-who" href="{{ card.profile }}">

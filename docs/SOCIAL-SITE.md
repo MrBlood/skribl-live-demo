@@ -569,6 +569,8 @@ and the owner's "all yes" to piece 4's choices (Nov 11). `social/posts.py`:
     /social/feed          the next page of the feed, for Load more (JSON)
     /social/p/<id>        a post's own page: its drawing plays by itself
     /social/p/<id>/delete your own post, gone: its words and its drawing (JSON)
+    /social/b/<skribl_id> a drawing shown outside a post, on a page of its own
+    /social/b/<skribl_id>/delete  your own such drawing, gone (JSON)
 
 **A post is a drawing and words** (the words optional, up to 500
 characters). Draw and Flip open Skribl's editor over Home in compose mode,
@@ -586,6 +588,18 @@ written under the tick. A press on Post with nothing drawn says so.
 query a page, for the person looking; each card is still until tapped. Load
 more brings the next page in place, paged by a cursor that names no internal
 id.
+
+**Home holds every drawing the site's people show** (the owner, Nov 12, of
+Home saying "No posts yet" while Explore was full: "all yes" to A). A
+drawing posted from the Pad on its own page (Make's Draw) and shown in the
+gallery is on Home too, among the posts, newest first: a card whose words
+are its title, with a page of its own (`/social/b/<id>`: its drawing plays
+by itself, More from its author's posts and drawings, its ⋯ and its Delete,
+its author's alone). It comes through Skribl's `list_public_posts`
+(docs/INTEGRATION.md, "A feed of your own people's drawings"), one cursor
+walking both; a post's drawing shows once, as the post, and its page is the
+post's. Not one kept unlisted, nor one by somebody not on the site.
+`harness/verify_socialposts.py` section 9 holds it.
 
 **A post's own page** plays its drawing by itself, at the author's speed,
 sound off until the viewer turns it on, and never under Reduce Motion (the

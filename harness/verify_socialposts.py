@@ -28,7 +28,12 @@ authenticator for the site's people and a real pen in Skribl's real Pad.
   7. THE NEW SCREENS: every word at 4.5:1 on what is painted behind it,
      every target 44px, every text field 16px: phone and desk, light and
      dark.
-  8. NO PAGE ERRORS, NO CONSOLE ERRORS AND NO CSP VIOLATIONS.
+  8. NO PAGE ERRORS, NO CONSOLE ERRORS AND NO CSP VIOLATIONS (run last).
+  9. EVERY DRAWING THE SITE'S PEOPLE SHOW: Home holds the drawings they
+     posted from the Pad on its own page (Make) and showed in the gallery,
+     among the posts, newest first, once each; not one kept unlisted, nor
+     one by somebody not on the site; Load more walks both; a drawing's own
+     page, its ⋯ and its Delete, and their guards.
 
 SOCIALPOSTS_PART=<n>[,<m>] runs those sections only (calibration); a section
 makes the people it needs. Every row was shown red by breaking one part and
@@ -704,9 +709,9 @@ with sync_playwright() as p:
               and idle and all(s != "playing" for s in idle),
               f"{len(first)} cards; first {first[:2]}; idle {set(idle)}")
         check("Load more brings the rest in place, each player mounted, and goes away at the end; its cursor names"
-              " a time and a post's public id, never an internal id",
+              " a time and the card (p and a post's public id, or s and a drawing's), never an internal id",
               after["n"] == total and total > 20 and after["more"] and after["mounted"]
-              and re.fullmatch(r"\d{16}\.[A-Za-z0-9_-]{11}", raw or "") is not None,
+              and re.fullmatch(r"\d{16}\.[ps][A-Za-z0-9_-]{11}", raw or "") is not None,
               f"after {after} of {total}; cursor {raw!r}")
 
     # ------------------------------------------------------------------ 5
@@ -891,6 +896,165 @@ with sync_playwright() as p:
               all(v["read"] >= FLOOR[k[2]] for k, v in seen.items()) and not low and not small and not fields,
               f"{reads} read, the lowest {lowest}; under 4.5: {low[:4]}; small: {small[:4]}; fields: {fields[:3]};"
               f" each {[(' '.join(k), v['read']) for k, v in seen.items()]}")
+
+    # ------------------------------------------------------------------ 9
+    if part(9, "Home holds every drawing the site's people show: posts, and drawings from the Pad outside a post"):
+        mira = someone(b, "mira", "Mira Okafor")
+        juno = someone(b, "juno", "Juno Park")
+        # A drawing posted from the Pad on its own page (Make's Draw), as the
+        # Pad posts it: Skribl's API, as the person signed in (or nobody), its
+        # own token from its own cookie.
+        PAD = """async ([title, vis, seed]) => {
+          await fetch('/api/skribls?limit=1', { credentials: 'same-origin' });
+          const tok = (document.cookie.match(/(?:^|; )skribl_csrf=([^;]+)/) || [])[1] || '';
+          const pts = Array.from({ length: 30 }, (_, i) => ({ x: 300 + i * 6, y: 300 + Math.sin((i + seed) / 3) * 60,
+            color: '#7c5cff', size: 8, t: i * 30, start: i === 0 }));
+          const r = await fetch('/api/skribls', { method: 'POST', credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json', 'X-Skribl-CSRF': decodeURIComponent(tok) },
+            body: JSON.stringify({ title, visibility: vis, version: 2, schemaVersion: 2, playbackMode: 'replay',
+              canvasSize: { cssWidth: 816, cssHeight: 612 }, frames: [{ strokes: pts, strokeGroups: [pts.length] }] }) });
+          const j = await r.json().catch(() => ({})); return [r.status, j.id || null]; }"""
+        CARDS = """() => [...document.querySelectorAll('.post-card')].map(c => ({ kind: c.getAttribute('data-kind'),
+          id: c.getAttribute('data-post'), skribl: c.getAttribute('data-skribl'),
+          words: ((c.querySelector('.post-words') || {}).textContent || ''), url: c.getAttribute('data-url') }))"""
+
+        def pad(who_pg, title, vis="public", seed=0):
+            who_pg.goto(BASE + "/social/")
+            return who_pg.evaluate(PAD, [title, vis, seed])
+
+        def home_cards(pg_):
+            pg_.goto(BASE + "/social/")
+            pg_.wait_for_timeout(700)
+            return pg_.evaluate(CARDS)
+
+        st1, j1 = make_post(mira, "Section 9, a post", seed=91)
+        time.sleep(0.02)
+        st_s, shown = pad(mira.pg, "Section 9, shown from the Pad", "public", 1)
+        time.sleep(0.02)
+        st_u, kept = pad(mira.pg, "Section 9, kept unlisted", "unlisted", 2)
+        nb_ctx, nb_pg = browser_as(b, None)
+        nb_pg.goto(BASE + "/skribl-pad")
+        nb_pg.wait_for_timeout(800)
+        st_n, nobodys = nb_pg.evaluate(PAD, ["Section 9, nobody's", "public", 3])
+        close_ctx(nb_ctx, nb_pg)
+        time.sleep(0.02)
+        st_g, jg = make_post(mira, "Section 9, a post shown in the gallery", gallery=True, seed=92)
+        g_post = jg.get("post") if isinstance(jg, dict) else None
+        g_skribl = post_row(g_post)[1] if g_post else None
+        top = home_cards(juno.pg)[:3]
+        seen_ids = [c["skribl"] for c in home_cards(juno.pg)]
+        check("Home holds a drawing one of the site's people showed from the Pad, outside a post: newest first among"
+              " the posts, its title for its words, with a page of its own; not one kept unlisted, nor one by somebody not on"
+              " the site; and a post shown in the gallery shows once, as the post",
+              [st_s, st_u, st_n] == [201, 201, 201]
+              and [c["kind"] for c in top] == ["p", "s", "p"] and top[0]["id"] == g_post
+              and top[1]["skribl"] == shown and top[1]["words"] == "Section 9, shown from the Pad"
+              and top[1]["url"] == f"/social/b/{shown}"
+              and top[2]["id"] == (j1.get("post") if isinstance(j1, dict) else None)
+              and kept not in seen_ids and nobodys not in seen_ids and seen_ids.count(g_skribl) == 1,
+              f"top {top}; unlisted on Home {kept in seen_ids}; nobody's {nobodys in seen_ids};"
+              f" the gallery post's drawing {seen_ids.count(g_skribl)}x")
+
+        # Load more across both: twelve posts and twelve drawings, one after
+        # the other, read back page by page through the button.
+        made = []
+        for i in range(12):
+            st, j = make_post(juno, f"Interleave post {i:02d}", seed=100 + i)
+            made.append(("p", j.get("post") if isinstance(j, dict) else None))
+            time.sleep(0.02)
+            st, sid = pad(juno.pg, f"Interleave drawing {i:02d}", "public", 100 + i)
+            made.append(("s", sid))
+            time.sleep(0.02)
+        pg = mira.pg
+        pg.goto(BASE + "/social/")
+        pg.wait_for_timeout(800)
+        for _ in range(8):
+            nxt = pg.evaluate("() => { const b = document.querySelector('[data-feed-next]'); return !!b && !b.hidden; }")
+            if not nxt:
+                break
+            n0 = pg.evaluate("() => document.querySelectorAll('.post-card').length")
+            pg.click("[data-feed-next]")
+            pg.wait_for_function("(n) => document.querySelectorAll('.post-card').length > n", arg=n0, timeout=15000)
+            pg.wait_for_timeout(300)
+        allc = pg.evaluate(CARDS)
+        got = [("p", c["id"]) if c["kind"] == "p" else ("s", c["skribl"]) for c in allc]
+        want = list(reversed(made))
+        order_ok = got[:len(want)] == want
+        check("Load more walks the posts and the drawings together, newest first, none twice and none missed",
+              order_ok and len(got) == len(set(got)) and all(m in got for m in made),
+              f"first {got[:6]} want {want[:6]}; {len(got)} cards, {len(set(got))} different")
+
+        # A drawing's own page, its ⋯, and its Delete; and another of hers from
+        # the Pad, untitled, for More from.
+        st_a, another = pad(mira.pg, "", "public", 5)
+        jp = juno.pg
+        jp.goto(BASE + f"/social/b/{shown}")
+        jp.wait_for_timeout(1500)
+        page = jp.evaluate("""() => ({ at: location.pathname, kind: document.querySelector('.post-page').getAttribute('data-kind'),
+          words: (document.querySelector('.post-page .post-words') || {}).textContent || '',
+          more: [...document.querySelectorAll('.more-tile')].map(e => [e.getAttribute('href'), e.querySelector('.more-words').textContent]) })""")
+        playing = jp.evaluate(STATE)
+        OPEN = "(id) => document.getElementById(id).classList.contains('is-open')"
+        jp.click("[data-post-menu] >> visible=true")
+        jp.wait_for_function(OPEN, arg="postSheet", timeout=10000)
+        theirs = jp.evaluate("() => [...document.querySelectorAll('#postSheet .post-act')].filter(b => !b.hidden).map(b => b.textContent.trim())")
+        jp.keyboard.press("Escape")
+        to_post = jp.goto(BASE + f"/social/b/{g_skribl}")
+        landed = jp.evaluate("() => location.pathname")
+        mp = mira.pg
+        mp.goto(BASE + f"/social/b/{shown}")
+        mp.wait_for_function("() => !!window.SocialSheet && document.readyState === 'complete'", timeout=15000)
+        mp.wait_for_timeout(400)
+        mp.click("[data-post-menu] >> visible=true")
+        mp.wait_for_function(OPEN, arg="postSheet", timeout=10000)
+        mine = mp.evaluate("() => [...document.querySelectorAll('#postSheet .post-act')].filter(b => !b.hidden).map(b => b.textContent.trim())")
+        ask = {"open": False}
+        try:
+            mp.click("#postSheet [data-act=delete]", timeout=5000)
+            mp.wait_for_function(OPEN, arg="deleteSheet", timeout=10000)
+            ask = mp.evaluate("""() => ({ open: document.getElementById('deleteSheet').classList.contains('is-open'),
+              lede: [...document.querySelectorAll('#deleteSheet .post-lede')].filter(e => !e.hidden).map(e => e.textContent) })""")
+            with mp.expect_navigation(timeout=20000):
+                mp.click("[data-delete-now]", timeout=5000)
+        except Exception as exc:
+            ask["stopped"] = str(exc).splitlines()[0][:100]
+        mp.wait_for_timeout(600)
+        after = mp.evaluate("() => ({ url: location.pathname + location.search, note: (document.querySelector('.note') || {}).textContent })")
+        gone = skribl_row(shown) is None
+        check("a drawing's own page plays it by itself, its title for its words, with More from its author's"
+              " posts and drawings (one untitled, said as a drawing); its ⋯ says Report to anybody else and Delete"
+              " post to its author, asked once in the drawing's own words, and then it is gone (Home says so); a"
+              " post's drawing's page is the post's",
+              page["at"] == f"/social/b/{shown}" and page["kind"] == "s"
+              and page["words"].strip() == "Section 9, shown from the Pad"
+              and playing[:1] == ["playing"]
+              and [f"/social/b/{another}", "A drawing"] in page["more"]
+              and [f"/social/p/{g_post}", "Section 9, a post shown in the gallery"] in page["more"]
+              and theirs == ["Copy link", "Share…", "Report this post"] and landed == f"/social/p/{g_post}"
+              and mine == ["Copy link", "Share…", "Delete post"] and ask.get("open") and "stopped" not in ask
+              and ask.get("lede") == ["The drawing goes for good, from Home and from Explore. This can’t be undone."]
+              and after["url"] == "/social/?note=deleted_drawing" and after["note"] == "Your drawing is gone." and gone,
+              f"page {page}; players {playing}; theirs {theirs}; a post's drawing lands {landed}; mine {mine};"
+              f" ask {ask}; after {after}; gone {gone}")
+
+        # The guards.
+        st_k, sid_k = pad(mira.pg, "Section 9, for the guards", "public", 9)
+        c = juno.client()
+        c.get("/social/")
+        not_mine = c.post_json(f"/social/b/{sid_k}/delete", {})[0]
+        mc = mira.client()
+        mc.get("/social/")
+        no_token = mc.post_json(f"/social/b/{sid_k}/delete", {}, token=False)[0]
+        a_posts = mc.post_json(f"/social/b/{g_skribl}/delete", {})[0]
+        pages = {k: mc.get(f"/social/b/{v}")[0] for k, v in (("unlisted", kept), ("nobody's", nobodys), ("none", "nope0000000"))}
+        check("a drawing's Delete needs the page's token (403), is its author's alone (somebody else's: 404, the"
+              " drawing kept), and never takes a post's drawing without the post (404); a drawing's page is a kind"
+              " 404 for one kept unlisted, one by somebody not on the site, and none",
+              no_token == 403 and not_mine == 404 and skribl_row(sid_k) is not None
+              and a_posts == 404 and skribl_row(g_skribl) is not None and post_row(g_post) is not None
+              and pages == {"unlisted": 404, "nobody's": 404, "none": 404},
+              f"no token {no_token}; somebody else's {not_mine} (kept {skribl_row(sid_k) is not None});"
+              f" a post's drawing {a_posts}; pages {pages}")
 
     # ------------------------------------------------------------------ 8
     if part(8, "no page errors, no console errors, no CSP violations"):

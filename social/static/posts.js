@@ -112,7 +112,8 @@
     var p = el.closest('[data-post]') || doc.querySelector('.post-page[data-post]');
     if (!p) return null;
     return { el: p, id: p.getAttribute('data-post'), url: absolute(p.getAttribute('data-url')),
-             skribl: p.getAttribute('data-skribl'), mine: p.hasAttribute('data-mine') };
+             skribl: p.getAttribute('data-skribl'), mine: p.hasAttribute('data-mine'),
+             del: p.getAttribute('data-del'), kind: p.getAttribute('data-kind') || 'p' };
   }
 
   /* ---- the ⋯ sheet, and Report and Delete -------------------------------- */
@@ -164,6 +165,9 @@
       } else if (act === 'delete' && del) {
         menu.close(true);
         tell(deleteWrap.querySelector('[data-delete-say]'), '');
+        /* A drawing shown outside a post has no words to lose. */
+        deleteWrap.querySelector('[data-lede-p]').hidden = current.kind === 's';
+        deleteWrap.querySelector('[data-lede-s]').hidden = current.kind !== 's';
         del.open(opener);
       }
     });
@@ -210,7 +214,7 @@
       var b = e.currentTarget, box = deleteWrap.querySelector('[data-delete-say]');
       b.disabled = true;
       tell(box, say('deleting'));
-      post(deleteWrap.getAttribute('data-delete').replace('__ID__', encodeURIComponent(current.id)), {},
+      post(current.del || deleteWrap.getAttribute('data-delete').replace('__ID__', encodeURIComponent(current.id)), {},
            { 'X-Social-CSRF': token })
         .then(function (j) {
           if (j.ok && j.go) { window.location.assign(j.go); return; }
