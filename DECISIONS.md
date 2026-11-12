@@ -34578,3 +34578,50 @@ redirect with the site left out, the name's case kept, an address with its
 port missed. The last two were green first: a port of 443 is the test
 client's default and is dropped, so the port case never ran, and
 SKRIBL_SOCIAL=0 returns before the failing-site path; both are asked now.
+
+## After v330 -- Explore's icon is Blooby holding up a bloob
+
+The owner, Nov 12, of the four-point star and three replacements (a lens
+with a drawn line, a compass whose needle is the pen's nib, a globe with a
+drawn equator): "I don't like any of them. How bout a blooby icon? Can he
+be crisp enough? You're exploring bloobs, right. (Let's say they're bloobs
+instead of skribls)." A first Blooby round (him whole, tidied) came back
+"I think we can do better": it was the mistake the owner had named before,
+him made perfect, an emoji rather than Blooby, and it showed him standing,
+not exploring. The second round kept his drawing (his bean, tall oval
+eyes, small smile, blush, a little of his hand in the line) and gave him
+something to do; two ideas were dropped on the way (peeking over an edge
+read as a little car, his hands as its wheels; a close-up of his face read
+as a ghost). The owner: "I do like g".
+
+- BLOOBY HOLDS UP A BLOOB: his head over a drawing on its card, his hands
+  on its corners. Explore is where you look at what people made.
+- Drawn in the bar's colour away from Explore, as Home is, a touch lighter
+  than the pen's line so he weighs what Home does (29% of his box at 3x,
+  Home 26%); lit up in his colours on Explore's own page, in either theme.
+- His purple is the wordmark's, --brand (4.23:1 on the light bar, 5.63:1 on
+  the dark, where the wordmark's purple is lighter; a shape needs 3:1); his
+  ink, his blush and the card's paper are new tokens, the same in either
+  theme, as his Home Screen icon is: --blooby-ink (the Pad's ink),
+  --blooby-blush, --blooby-paper (the Pad's paper).
+- Crisp enough: at 2x and 3x (the owner's iPhone) every part of him reads;
+  at 1x (a Windows desk at 100%) his card and squiggle read and his face is
+  a few pixels.
+
+"Bloobs" for the drawings is the owner's word in the conversation; no word
+of the site has changed. Mocking it is offered: some of the words are the
+site's own (Explore's "Skribls people chose to show"), some are Skribl's
+(the Pad's "Show in the Skribls gallery").
+
+Pad and Flip: not affected (the site's bar only).
+
+THE FOUR: playful (Blooby, lit up where you are); simple (he is showing
+you a drawing); kind (the bar stays calm everywhere else); powerful (the
+brand is in your hand).
+
+THE CHECK. verify_social section 2, the icon row: Home drawn in the pen and
+filled on its own page; Explore is Blooby (his card, his squiggle, two eyes,
+two hands), drawn in the bar's colour away and lit up on Explore, his body
+the wordmark's purple and his own ink, 3:1 or more on the bar, phone, desk
+and the dark bar. Five breaks, each red on it: the star back, lit up
+everywhere, never lit, a purple too pale for the bar, his line not his ink.

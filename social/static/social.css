@@ -25,6 +25,9 @@
   --ink-2: #4b5563;                 /* its second */
   --accent-ink: #4c31c4;            /* small violet words */
   --brand: #7c5cff;                 /* the wordmark, and the pen's line */
+  --blooby-ink: #1f1b2e;            /* Blooby's own line, his eyes: the Pad's ink, either theme */
+  --blooby-blush: #ff6f91;          /* his blush */
+  --blooby-paper: #f6f2ea;          /* the paper a bloob is drawn on (the Pad's) */
   --fill: #6d4cf0;                  /* --accent-fill: an action, white on it */
   --on-fill: #ffffff;
   --fill-drop: 0 1px 0 rgba(255, 255, 255, 0.22) inset, 0 6px 16px rgba(109, 76, 240, 0.30);
@@ -147,6 +150,19 @@ body {
 .nav .tab[aria-current="page"] { color: var(--nav-on); }
 .nav .tab[aria-current="page"] .tab-name { font-weight: 700; }
 .nav .ic-cut { fill: var(--page); stroke: var(--page); }
+/* Explore's Blooby (_icons.html explore): drawn in the bar's colour, a touch
+   lighter than the pen's line so he weighs what Home does; lit up in his own
+   colours on Explore's own page, in either theme (his purple the wordmark's). */
+.ic-blooby .bl-eye { fill: currentColor; stroke: none; }
+.ic-blooby .bl-card { stroke-width: 1.45; }
+.ic-blooby .bl-squig { stroke-width: 1.4; }
+.ic-blooby .bl-hand { fill: currentColor; stroke: none; }
+.ic-blooby.is-lit .bl-body { fill: var(--brand); stroke: var(--blooby-ink); stroke-width: 1.35; }
+.ic-blooby.is-lit .bl-eye { fill: var(--blooby-ink); }
+.ic-blooby.is-lit .bl-blush { stroke: var(--blooby-blush); stroke-width: 1.15; }
+.ic-blooby.is-lit .bl-card { fill: var(--blooby-paper); stroke: var(--blooby-ink); stroke-width: 1.35; }
+.ic-blooby.is-lit .bl-squig { stroke: var(--brand); stroke-width: 1.5; }
+.ic-blooby.is-lit .bl-hand { fill: var(--brand); stroke: var(--blooby-ink); stroke-width: 1; }
 /* The pen's line under the page you are on, as wide as its name. */
 .nav .pen-line { position: absolute; left: -2px; bottom: -5px; width: calc(100% + 4px); height: 6px; color: var(--brand); }
 /* Make is the one action in the bar: its icon sits on the action purple. */

@@ -76,9 +76,16 @@
 <path{% if filled %} class="ic-cut"{% endif %} d="M 10.0,20.0 L 10.0,16.2 C 10.0,15.0 10.9,14.0 12.0,14.0 C 13.1,14.0 14.0,15.0 14.0,16.2 L 14.0,20.0"/></svg>
 {%- endmacro %}
 
-{# Explore, in the pen: a star to follow, drawn in one go; solid on its own page. #}
+{# Explore is Blooby holding up a bloob: a drawing on its card, his head over
+   it (the owner's pick, Nov 12, "I do like g": Explore is where you look at
+   bloobs). His own bean, his tall eyes and his blush, from his drawing
+   (harness/tools/flipworks.py wave()), with a little of his hand in the
+   line. Away from Explore he is drawn in the bar's colour, as Home is; on
+   Explore's own page he lights up in his colours, in either theme
+   (social.css: his purple is the wordmark's, --brand; his ink, his blush and
+   the card's paper are --blooby-ink, --blooby-blush, --blooby-paper). #}
 {% macro explore(filled=false) -%}
-<svg class="ic pen-ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M 12.0,3.4 C 12.6,8.2 14.2,10.4 20.0,11.2 C 14.4,12.0 12.8,14.2 12.0,20.6 C 11.2,14.2 9.6,12.0 4.0,11.2 C 9.8,10.4 11.4,8.2 12.0,3.4 Z"{% if filled %} fill="currentColor"{% endif %}/></svg>
+<svg class="ic pen-ic ic-blooby{% if filled %} is-lit{% endif %}" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path class="bl-body" d="M 11.96,3.92 C 12.17,3.94 12.84,3.95 13.25,4.08 C 13.65,4.21 14.04,4.43 14.40,4.68 C 14.76,4.93 15.06,5.24 15.40,5.59 C 15.73,5.93 16.09,6.32 16.41,6.74 C 16.73,7.15 17.02,7.56 17.30,8.08 C 17.59,8.60 17.90,9.31 18.10,9.88 C 18.31,10.45 18.40,10.90 18.54,11.50 C 18.68,12.10 21.17,13.19 18.93,13.51 C 16.69,13.82 7.36,13.72 5.12,13.38 C 2.88,13.03 5.34,12.06 5.48,11.46 C 5.62,10.85 5.79,10.31 5.96,9.75 C 6.13,9.19 6.26,8.57 6.51,8.09 C 6.75,7.60 7.11,7.24 7.43,6.83 C 7.75,6.42 8.05,5.96 8.42,5.60 C 8.79,5.25 9.25,4.94 9.65,4.68 C 10.04,4.43 10.43,4.20 10.80,4.08 C 11.18,3.95 11.71,3.95 11.89,3.93{% if filled %} Z{% endif %}"/><path class="bl-eye" d="M 10.30,7.05 C 10.77,7.05 11.15,7.70 11.15,8.50 C 11.15,9.30 10.77,9.95 10.30,9.95 C 9.83,9.95 9.45,9.30 9.45,8.50 C 9.45,7.70 9.83,7.05 10.30,7.05 Z"/><path class="bl-eye" d="M 13.50,6.85 C 13.97,6.85 14.35,7.50 14.35,8.30 C 14.35,9.10 13.97,9.75 13.50,9.75 C 13.03,9.75 12.65,9.10 12.65,8.30 C 12.65,7.50 13.03,6.85 13.50,6.85 Z"/>{% if filled %}<path class="bl-blush" d="M 15.0,10.9 L 15.9,11.1"/>{% endif %}<path class="bl-card" d="M 5.6,12.9 L 18.4,12.9 C 19.3,12.9 19.9,13.5 19.9,14.4 L 19.9,20.2 C 19.9,21.1 19.3,21.7 18.4,21.7 L 5.6,21.7 C 4.7,21.7 4.1,21.1 4.1,20.2 L 4.1,14.4 C 4.1,13.5 4.7,12.9 5.6,12.9 Z"/><path class="bl-squig" d="M 6.56,19.41 C 6.79,18.91 7.47,17.00 7.98,16.42 C 8.49,15.84 9.25,15.72 9.62,15.93 C 9.99,16.14 9.93,17.08 10.22,17.65 C 10.51,18.23 10.85,19.20 11.36,19.36 C 11.87,19.51 12.83,19.09 13.28,18.60 C 13.73,18.10 13.63,16.87 14.05,16.40 C 14.48,15.92 15.26,15.57 15.82,15.74 C 16.38,15.92 17.16,17.17 17.42,17.46"/><circle class="bl-hand" cx="5.2" cy="13.1" r="1.55"/><circle class="bl-hand" cx="18.8" cy="13.1" r="1.55"/></svg>
 {%- endmacro %}
 
 {% macro pen() -%}
