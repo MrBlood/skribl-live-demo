@@ -12,7 +12,7 @@
 {% extends 'social/base.html' %}
 {% import 'social/_icons.html' as ic %}
 
-{% block title %}Join · Skribl{% endblock %}
+{% block title %}Join · Blooby{% endblock %}
 {% block scripts %}<script src="{{ social_asset('passkey.js') }}" defer></script>{% endblock %}
 
 {% block main %}
@@ -20,7 +20,7 @@
   <section class="si-card is-checking" aria-labelledby="joinTitle" data-link="{{ url_for('social.join_check') }}">
     <img class="si-icon" src="{{ skribl_asset('apple-touch-icon.png') }}" alt="" width="64" height="64">
     <div class="link-ok" data-link-ok>
-      <h1 class="si-title" id="joinTitle">Welcome to Skribl</h1>
+      <h1 class="si-title" id="joinTitle">Welcome to Blooby</h1>
       <p class="si-lede">You’re invited. Pick your name and handle, then make a passkey. No password, ever.</p>
       <p class="note" data-link-first hidden>You’re the first one here, so this account looks after the site: it makes the invites.</p>
       <form class="form" data-passkey="join" novalidate
@@ -43,7 +43,7 @@
         </div>
         <div class="field">
           <label class="check"><input id="joinAge" name="age13" type="checkbox" required aria-describedby="joinAgeHint joinAgeErr"><span>I’m 13 or older</span></label>
-          <p class="hint" id="joinAgeHint">Skribl accounts are for people 13 and up. Looking around is for everyone.</p>
+          <p class="hint" id="joinAgeHint">Blooby accounts are for people 13 and up. Looking around is for everyone.</p>
           <p class="err" id="joinAgeErr" data-err="age13" hidden></p>
         </div>
         <button class="btn btn-primary btn-big btn-wide" type="submit">{{ ic.passkey() }}<span>Join with a passkey</span></button>

@@ -46,7 +46,7 @@ from .security import browser_sid, is_https, sid_hash, site
 CHALLENGE_FOR = timedelta(minutes=5)
 #: What the browser is told it has (it may give less).
 TIMEOUT_MS = 120000
-RP_NAME = "Skribl"
+RP_NAME = "Blooby"
 
 
 class NoName(Exception):

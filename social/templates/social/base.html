@@ -15,8 +15,9 @@
     have no bar and no rail, only the wordmark home: one thing to do.
 
     SKRIBL'S PARTS, THROUGH ITS SEAMS ONLY (docs/INTEGRATION.md): the
-    in-post player's files, Skribl's signature (the wordmark, coloured here
-    with the accent purple), and its two pages Make opens. Light and dark
+    in-post player's files and its two pages Make opens. The wordmark is the
+    site's own since Nov 12, blooby. (social/_blooby_mark.html), written in
+    Skribl's hand; Skribl's pages keep their own. Light and dark
     follow the device: the site has no switch of its own yet, and Skribl's
     own choice is kept where only Skribl's pages read it.
 
@@ -43,7 +44,7 @@
    (skribl.core.THEME_GROUND). #}
 <meta name="theme-color" content="#fbfcfd" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0b0d12" media="(prefers-color-scheme: dark)">
-<title>{% block title %}Skribl{% endblock %}</title>
+<title>{% block title %}Blooby{% endblock %}</title>
 {% if token %}<meta name="social-csrf" content="{{ token }}">{% endif %}
 <link rel="icon" type="image/png" sizes="192x192" href="{{ skribl_asset('icon-192.png') }}">
 <link rel="apple-touch-icon" sizes="180x180" href="{{ skribl_asset('apple-touch-icon.png') }}">
@@ -56,18 +57,19 @@
 </head>
 <body{% if hide_nav %} class="focus"{% endif %}>
 {# Two wordmarks, one shown at a time: the phone's at the top of the page,
-   the desk's at the top of the rail. Each carries its own sweep, so the two
-   gradients have two ids (a page with one id twice is a page verify_a11y
-   fails); the colour is the same, the site's accent purple. #}
+   the desk's at the top of the rail. Both are blooby. (social/_blooby_mark.html:
+   the site's purple, the period Blooby's blush), drawn without a gradient,
+   so the two carry no id to repeat (a page with one id twice is a page
+   verify_a11y fails). #}
 <header class="top">
   {% block top %}
-  <a class="brand" href="{{ url_for('social.home') }}" aria-label="Skribl, home">{% with brand_sweep=65 %}{% include 'skribl/_skribl_brand_mark.html' %}{% endwith %}</a>
+  <a class="brand" href="{{ url_for('social.home') }}" aria-label="Blooby, home">{% include 'social/_blooby_mark.html' %}</a>
   {% if accounts and not me and not hide_nav %}<a class="top-signin" href="{{ url_for('social.signin') }}">Sign in</a>{% endif %}
   {% endblock %}
 </header>
 {% if not hide_nav %}
 <nav class="nav" aria-label="Main">
-  <a class="brand" href="{{ url_for('social.home') }}" aria-label="Skribl, home">{% with brand_sweep=66 %}{% include 'skribl/_skribl_brand_mark.html' %}{% endwith %}</a>
+  <a class="brand" href="{{ url_for('social.home') }}" aria-label="Blooby, home">{% include 'social/_blooby_mark.html' %}</a>
   <a class="tab" href="{{ url_for('social.home') }}"{% if here == 'home' %} aria-current="page"{% endif %}>
     <span class="tab-ic">{{ ic.home(here == 'home') }}</span><span class="tab-name">Home{% if here == 'home' %}{{ ic.underline() }}{% endif %}</span></a>
   <a class="tab" href="{{ url_for('social.explore') }}"{% if here == 'explore' %} aria-current="page"{% endif %}>

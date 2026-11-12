@@ -35047,3 +35047,44 @@ smart, no scrim, light glass (0.31, 0.75, 0.76). The pill cannot fail this
 (light glass before and after), so no row pins it.
 
 Pad and Flip: shared, the player both play in.
+
+## After v330 -- The site is Blooby, and its wordmark is blooby.
+
+The owner named the site (Nov 12): "I like the name blooby and I would go
+with 'blooby.'", the period Blooby's blush ("i actually like the blooby blush
+period"), and "all yes" to the name everywhere on the site. It replaces the
+Nov 11 "the name Skribl inside for now".
+
+- THE WORDMARK, social/_blooby_mark.html: blooby. in Skribl's own hand at the
+  skribl mark's scale (a 30-unit hand, baseline 23.4, a pen 2.3 wide, skewed
+  8 degrees): b and l are that mark's own, the o's, the second b's rise and
+  the y new, one stroke; the period its own small stroke, as the i's dot is.
+  The word is the brand link's colour (the site's purple), the period
+  --blooby-blush. Its box is 34 units for the old mark's 30: the 4 are the
+  y's tail, hung below the line by a negative bottom margin, so the line
+  sits where it did and nothing around the mark moves. One stroke colour
+  each and no gradient, so no id to repeat.
+- THE NAME: the site's words and every page's title say Blooby (Welcome to
+  Blooby, Blooby accounts, Look around Blooby, the rules pages, the passkey
+  words); the passkey's name in a password manager is Blooby for passkeys
+  made from now on. Skribl's own words stay Skribl's: "Untitled Skribl", a
+  drawing's "skribl", and Skribl's pages and their mark.
+- Contrast, the mark against its ground (3:1 for a mark): the word 4.23:1 on
+  light and 5.65:1 on dark; the blush period 2.58:1 on light (the owner's
+  pick, told before the yes) and 7.34:1 on dark.
+
+Pad and Flip: not affected; whether they say blooby. on blooby.app, and the
+first-open hello's falling period, waits on the owner's answer.
+
+THE FOUR: kind (Blooby's own blush, and the name the owner chose); simple
+(one name on every page of the site); playful (the period is his cheek's
+colour); powerful (the same hand as the tools, so the two read as one family).
+
+THE CHECK. verify_social section 2, a row: the mark painted where it stands,
+its word's stroke the site's purple and its period's Blooby's blush, the word
+at 3:1 or more on its ground, its box the old mark's height (32px in a
+phone's bar, 38px in a desk's rail) with the tail hung below; phone and
+desk, light and dark. Five breaks, each red: the period purple; the old mark
+in the bar; the tail not hung below; the word in ink; the rail's link still
+named Skribl. Four lines elsewhere that pinned the old name now pin the new
+one (the Home title, the rail's names, Look around, the rules' draft note).
