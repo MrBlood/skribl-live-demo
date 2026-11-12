@@ -13,7 +13,9 @@ never disagree about a drawing.
 
 Reads only, on the host's session: it flushes nothing and commits nothing.
 """
-from .models import SkriblPost, session
+import sqlalchemy as sa
+
+from .models import SkriblPost, feed_filter, normalise_user_id, session
 
 #: The most ids one call reads, in one query: a page of a feed, with room.
 MAX_DESCRIBE = 200
@@ -73,8 +75,6 @@ def list_public_posts(*, author=None, author_prefix=None, before=None, limit=20,
     visibility policy applied, no payload read. `more` says whether there
     are older ones after these. Reads only, on the host's session.
     """
-    import sqlalchemy as sa
-    from .models import feed_filter, normalise_user_id
     limit = max(1, min(int(limit), MAX_LIST))
     q = (session().query(SkriblPost).options(sa.orm.defer(SkriblPost.payload_json))
          .filter(SkriblPost.visibility == "public"))
