@@ -1273,7 +1273,7 @@ with sync_playwright() as p:
             "Terms": ["Your drawings are yours", "Who can join", "Be kind", "When something is reported"],
             "Privacy": ["What we keep", "What we don’t do", "Who sees what", "When you leave"],
             "Community rules": ["Be kind", "Keep children safe", "Be yourself", "Share what you made", "If something breaks the rules"]}
-        DRAFT = "A draft, in plain words. A lawyer reads it before Skribl opens to everyone."
+        DRAFT = "A draft, in plain words. A lawyer reads it before Blooby opens to everyone."
         nctx, npg = browser_as(b, None)
         pages = {}
         for path, name in RULES:

@@ -733,6 +733,19 @@ safety and NCMEC, copyright, privacy law, a contact address, the name) is in
 
 `harness/verify_socialsafety.py` sections 15 and 16 hold it. Piece 5 is done.
 
+### The name: Blooby, and its wordmark, blooby.
+
+The owner named the site Blooby (Nov 12: "I like the name blooby and I would
+go with 'blooby.'"), in place of "Skribl inside for now" below. The site's
+own words and page titles say Blooby, and its wordmark at the top of the bar
+and of the rail is blooby. (`social/templates/social/_blooby_mark.html`):
+written in Skribl's hand at the skribl mark's scale, the word in the site's
+purple, the period in Blooby's blush (the owner: "i actually like the blooby
+blush period"). Skribl's own pages keep their name and their mark; "Untitled
+Skribl" and a drawing's "skribl" are Skribl's words, and stay.
+`harness/verify_social.py` section 2 holds the mark: its two colours read off
+each stroke, the word at 3:1 or more, and the line where the old mark's was.
+
 ### The move to blooby.app
 
 The owner bought blooby.app (Nov 11; on Cloudflare) and said "all yes" to:

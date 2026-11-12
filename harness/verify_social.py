@@ -333,7 +333,7 @@ with sync_playwright() as p:
             nav: !!document.querySelector('nav.nav'), make: !!document.getElementById('makeSheet'),
             sheet: [...document.querySelectorAll('link[rel=stylesheet]')].map(l => new URL(l.href).pathname) })""")
         check("/social answers with the site's own page: its frame, its Make sheet and its own stylesheet",
-              resp is not None and resp.status == 200 and shape["at"] == "/social/" and shape["title"] == "Skribl"
+              resp is not None and resp.status == 200 and shape["at"] == "/social/" and shape["title"] == "Blooby"
               and shape["nav"] and shape["make"] and "/social/static/social.css" in shape["sheet"],
               f"status {resp.status if resp else None}; {json.dumps(shape)[:240]}")
         c.close()
@@ -441,8 +441,56 @@ with sync_playwright() as p:
               ph == ["Home", "Explore", "Make", "Sign in"] and seen[("phone", "home")][2] is not None,
               f"the bar {ph}; the wordmark at the top {seen[('phone', 'home')][2]}")
         check("on a desk the rail holds the wordmark, Home, Explore, Make and Sign in, and nothing else",
-              dk == ["Skribl, home", "Home", "Explore", "Make", "Sign in"] and seen[("desk", "home")][2] is None,
+              dk == ["Blooby, home", "Home", "Explore", "Make", "Sign in"] and seen[("desk", "home")][2] is None,
               f"the rail {dk}; the phone's wordmark {seen[('desk', 'home')][2]}")
+        # THE WORDMARK IS blooby. (the owner, Nov 12: the name, then "i
+        # actually like the blooby blush period"): the word in the site's
+        # purple and its period in Blooby's blush, read off each stroke's own
+        # paint, the mark painted where it stands; the word 3:1 or more on its
+        # ground (a mark's floor; the blush period is the owner's pick at
+        # 2.58:1 on light, said in its detail); and the line where it was: the
+        # mark's box (its height and its bottom margin) as tall as the
+        # 30-unit mark it replaced, 32px on a phone's bar and 38px in a desk's
+        # rail, the y's tail hung below it so nothing around it moves.
+        MARK = r"""(sel) => { const a = document.querySelector(sel); if (!a || !a.getClientRects().length) return null;
+          const svg = a.querySelector('svg.brand-mark'); if (!svg) return { label: a.getAttribute('aria-label') };
+          const rgba = t => (t.match(/[\d.]+/g) || []).map(Number);
+          const lum = c => { const v = c.slice(0, 3).map(x => { x /= 255; return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); });
+            return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]; };
+          const ratio = (x, y) => { const p = lum(x), q = lum(y); return (Math.max(p, q) + 0.05) / (Math.min(p, q) + 0.05); };
+          const probe = v => { const d = document.createElement('i'); d.style.color = v; document.body.appendChild(d);
+                               const c = getComputedStyle(d).color; d.remove(); return c; };
+          let ground = null;
+          for (let n = a; n && !ground; n = n.parentElement) { const c = rgba(getComputedStyle(n).backgroundColor); if (c.length === 3 || c[3] > 0.99) ground = c; }
+          ground = ground || rgba(getComputedStyle(document.body).backgroundColor);
+          const root = getComputedStyle(document.documentElement), cs = getComputedStyle(svg), r = svg.getBoundingClientRect();
+          const word = svg.querySelector('path:not(.brand-period)'), dot = svg.querySelector('path.brand-period');
+          const ws = word ? getComputedStyle(word).stroke : null, ds = dot ? getComputedStyle(dot).stroke : null;
+          const at = document.elementFromPoint(r.left + r.width * 0.25, r.top + r.height * 0.55);
+          return { label: a.getAttribute('aria-label'), blooby: svg.classList.contains('brand-blooby'), word: ws, period: ds,
+                   brand: probe(root.getPropertyValue('--brand').trim()), blush: probe(root.getPropertyValue('--blooby-blush').trim()),
+                   k: ws ? Math.round(ratio(rgba(ws), ground) * 100) / 100 : null, kDot: ds ? Math.round(ratio(rgba(ds), ground) * 100) / 100 : null,
+                   h: Math.round(r.height * 100) / 100, box: Math.round((r.height + parseFloat(cs.marginBottom)) * 100) / 100,
+                   painted: !!at && a.contains(at) }; }"""
+        mark = {}
+        for screen, ctx, sel, tall in (("phone", PHONE, "body > .top .brand", 32), ("desk", DESK, "nav.nav .brand", 38)):
+            for scheme in ("light", "dark"):
+                c = b.new_context(color_scheme=scheme, **ctx)
+                pg = c.new_page()
+                pg.goto(SITE + "/")
+                pg.wait_for_timeout(400)
+                mark[(screen, scheme)] = (pg.evaluate(MARK, sel), tall)
+                c.close()
+
+        def mark_ok(m, tall):
+            return (bool(m) and m.get("label") == "Blooby, home" and m.get("blooby") and m.get("painted")
+                    and m["word"] == m["brand"] and m["period"] == m["blush"] and (m["k"] or 0) >= 3
+                    and abs(m["box"] - tall) <= 0.05 and abs(m["h"] - tall * 34 / 30) <= 0.05)
+        check("the wordmark is blooby.: the word in the site's purple at 3:1 or more, its period in Blooby's blush,"
+              " painted where it stands, on the line the old mark sat on (its box the old mark's height, the y's"
+              " tail hung below): a phone's bar and a desk's rail, light and dark",
+              all(mark_ok(m, tall) for m, tall in mark.values()),
+              "; ".join(f"{k[0]} {k[1]}: {json.dumps(m)}" for k, (m, _) in mark.items())[:1600])
         marks = []
         for screen in ("phone", "desk"):
             for page, here in (("home", "Home"), ("explore", "Explore")):
@@ -480,7 +528,7 @@ with sync_playwright() as p:
               len(drawn) == 6 and not pens_ok,
               f"wrong: {pens_ok}; read {json.dumps({f'{k[0]} {k[1]}': v for k, v in drawn.items()})[:300]}")
         dup = {f"{s} {pg_}": v for (s, pg_), v in twice.items() if v}
-        check("no id is on a page of the site twice (the two wordmarks' gradients have one each), phone and desk",
+        check("no id is on a page of the site twice (the two wordmarks carry none: one stroke colour each), phone and desk",
               len(twice) == 4 and not dup, f"repeated: {dup}")
 
     # ------------------------------------------------------------------ 3

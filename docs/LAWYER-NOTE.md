@@ -1,6 +1,7 @@
 # A note for the lawyer
 
-The Skribl site (the social part, at `/social` and on blooby.app) has three rules
+Blooby, the social site built on Skribl's drawing tools (at `/social`, and
+on blooby.app), has three rules
 pages, written in plain words and marked as drafts: Terms, Privacy and
 Community rules (`social/templates/social/rules.html`). The site is invite-only
 for now. Before it opens to everyone, a lawyer reads them. This note says what
@@ -60,9 +61,10 @@ Nothing here is legal advice; it was written by the people building the site.
 6. **Rules not decided yet.** Are drawings with nudity or violence allowed?
    Today the rules do not say.
 7. **Contact.** The pages give no address to write to yet. What should it be?
-8. **The name.** The owner is considering renaming the site "Blooby". A
-   trademark search for "blooby" (and a view on "Skribl" beside skribbl.io
-   and skribl.com) before the name goes on everything.
+8. **The name.** The owner named the site Blooby (Nov 12), and its pages
+   say so; the drawing tools inside it keep the name Skribl. A trademark
+   search for "blooby" is still worth doing, and a view on "Skribl" beside
+   skribbl.io and skribl.com.
 
 ## A friend's read (Nov 12), and where each point stands
 

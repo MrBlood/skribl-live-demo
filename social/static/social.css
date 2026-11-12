@@ -104,10 +104,15 @@ body {
 .ic { display: block; flex: none; width: 24px; height: 24px; }
 :is(a, button):focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 
-/* The wordmark: Skribl's signature, its gradient's two ends one colour. */
+/* The wordmark: blooby. (social/_blooby_mark.html), in Skribl's own hand at
+   the skribl mark's scale. Its box is 34 units for that mark's 30, the 4 for
+   the y's tail, which hangs below the line (a negative bottom margin of the
+   same 4), so the line sits where it did and nothing around it moves. The
+   word is the site's purple, the period Blooby's blush. */
 .brand { display: flex; align-items: center; min-height: 44px; min-width: 76px; color: var(--brand); }
 .brand .brand-mark { display: block; height: 32px; width: auto; overflow: visible; }
-.brand .brand-grad-a, .brand .brand-grad-b { stop-color: var(--brand); }
+.brand .brand-blooby { height: calc(32px * 34 / 30); margin-bottom: calc(-32px * 4 / 30); }
+.brand-blooby .brand-period { stroke: var(--blooby-blush); }
 
 /* ---- buttons -------------------------------------------------------------- */
 .btn {
@@ -189,6 +194,7 @@ body {
   }
   .nav .brand { display: flex; padding: 6px 12px 22px; }
   .nav .brand .brand-mark { height: 38px; }
+  .nav .brand .brand-blooby { height: calc(38px * 34 / 30); margin-bottom: calc(-38px * 4 / 30); }
   .nav .tab {
     flex-direction: row; justify-content: flex-start; gap: 14px;
     min-height: 52px; padding: 0 12px; border-radius: 14px; font-size: 17px; letter-spacing: 0;
@@ -344,6 +350,7 @@ body.focus .top { justify-content: center; }
 @media (min-width: 900px) {
   body.focus .top { display: flex; justify-content: flex-start; height: auto; padding: 22px 32px; }
   body.focus .top .brand-mark { height: 38px; }
+  body.focus .top .brand-blooby { height: calc(38px * 34 / 30); margin-bottom: calc(-38px * 4 / 30); }
   body.focus .main { margin-left: 0; }
   .si { align-items: center; min-height: calc(100vh - 160px); padding-top: 0; }
   .si-art { display: block; flex: none; width: 440px; }

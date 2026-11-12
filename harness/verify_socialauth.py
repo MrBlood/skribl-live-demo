@@ -665,7 +665,7 @@ with sync_playwright() as p_:
               " (\"This link doesn't work anymore\", ask for a new one, Look around, Sign in), never the form",
               ran_out == 1 and all(s and s["gone"] and not s["ok"] for s in seen.values()) and len(words) == 1
               and "doesn’t work anymore" in next(iter(words)) and "Ask whoever sent it for a new one" in next(iter(words))
-              and "Look around Skribl" in next(iter(words)),
+              and "Look around Blooby" in next(iter(words)),
               "; ".join(f"{k}: {v}" for k, v in seen.items())[:600])
         check("and the server answers each the same, 404 {\"error\": \"gone\"}: nothing tells a used code from one never made",
               all(st == 404 and j == {"error": "gone"} for st, j in answers.values()),
