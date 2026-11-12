@@ -21,8 +21,11 @@ a mapping of:
     mark_template  the name of a template the app's loader finds, rendered
                    in the request in its place;
     label          what names it, 1 to 40 characters: the lockup and the
-                   page's heading read "<label> Pad" and "<label> Flip", and
-                   the hello is "<label>'s signature". Required with any of
+                   page's heading read "<label> Pad" and "<label> Flip", the
+                   hello is "<label>'s signature", and the words that name
+                   the app the person is in say it (the tab, Post, the post
+                   sheet, How it works, the menu's editors, the empty canvas;
+                   the tool's own words stay Skribl's). Required with any of
                    the others;
     hello          the hello's drawing: a Skribl payload (a Flip, as
                    harness/tools/make_hello.py makes Skribl's), as a path on
