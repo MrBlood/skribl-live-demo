@@ -1,6 +1,7 @@
-"""Safety on the Skribl site, its first part (phase 1, piece 5: report and
-block; docs/SOCIAL-SITE.md "Built: piece 5, report and block"), through the
-demo's own server, with Chromium's virtual authenticator for the site's people.
+"""Safety on the Skribl site (phase 1, piece 5: report and block, then your
+Reports and what taking something down does; docs/SOCIAL-SITE.md "Built: piece
+5, report and block" and "Built: piece 5, your Reports"), through the demo's
+own server, with Chromium's virtual authenticator for the site's people.
 
   1. REPORT SOMEBODY: a profile's ⋯ (never your own; Block only signed in),
      Report @them with a person's own reasons, in order; into the site's queue
@@ -26,11 +27,27 @@ demo's own server, with Chromium's virtual authenticator for the site's people.
      the operator's queue lists those first, with a word about the law.
   9. THE NEW SCREENS: every word at 4.5:1 on what is painted behind it, every
      target 44px, every text field 16px: phone and desk, light and dark.
- 10. NO PAGE ERRORS, NO CONSOLE ERRORS AND NO CSP VIOLATIONS (run last).
+ 10. YOUR REPORTS: an admin's alone (the same 404 for anybody else); a card
+     per thing, a child's safety first (its picture blurred and its words
+     hidden until Open it, Keep it only then, a word about the law), then the
+     newest; what and whose, each reason, what reporters wrote and who they
+     are; Skribl's own reports on the same card.
+ 11. TAKE IT DOWN, OR KEEP IT: Keep it closes, hiding nothing; Take it down
+     hides a post or a drawing from everybody else at once, withholds it in
+     Skribl, keeps a copy and closes its reports; its maker sees the note.
+ 12. A PERSON TAKEN DOWN: nobody to everybody else, on the site's pages and
+     Skribl's; they see their own with the note, and share nothing new.
+ 13. SKRIBL'S SEAMS: list_reports and close_reports, exported, documented,
+     ordered, naming nobody, taking nothing down.
+ 14. THE REPORTS PAGE AND THE NOTES: words at 4.5:1, targets 44px; phone and
+     desk, light and dark.
+ 15. NO PAGE ERRORS, NO CONSOLE ERRORS AND NO CSP VIOLATIONS (run last).
 
 SOCIALSAFETY_PART=<n>[,<m>] runs those sections only (calibration); a section
-makes the people it needs. Every row was shown red by breaking one part and
-green as built: DECISIONS.md, "Report and block at /social (piece 5)".
+makes the people it needs (the first person a run makes is its admin, so a
+section that needs one asks for the admin first). Every row was shown red by
+breaking one part and green as built: DECISIONS.md, "Report and block at
+/social" and "Your Reports at /social".
 """
 import base64  # noqa: F401
 import json
@@ -302,6 +319,16 @@ def someone(b, handle, name, **kw):
     return _people.get(handle) or member(b, handle, name, **kw)
 
 
+def admin(b):
+    """The run's admin: the first person it made (the site makes its first
+    person its admin), or Mira when it has made nobody yet. A section that
+    needs one asks for it first, so a run of any sections has one."""
+    got = db("select handle from social_people where is_admin order by id limit 1")
+    if got:
+        return _people[got[0][0]]
+    return someone(b, "mira", "Mira Okafor")
+
+
 
 def make_post(who, words, gallery=False, seed=0):
     """A post as the composer sends one: (status, answer)."""
@@ -388,10 +415,35 @@ def pad(who, title, vis="public", seed=0, card=False):
     return who.pg.evaluate(PAD, [title, vis, seed, card])
 
 
+def explore_report(b, public_id, reason, note=None):
+    """A report sent the way a signed-out visitor sends one from Explore's
+    tiles or a drawing's link page: through Skribl's own report route, into
+    Skribl's queue (not the site's). Its HTTP status."""
+    ctx, pg = browser_as(b, None)
+    try:
+        pg.goto(BASE + "/social/explore")
+        pg.wait_for_timeout(500)
+        return pg.evaluate("""async ([id, reason, note]) => { await fetch('/api/skribls?limit=1', { credentials: 'same-origin' });
+          const tok = decodeURIComponent((document.cookie.match(/(?:^|; )skribl_csrf=([^;]+)/) || [])[1] || '');
+          const r = await fetch('/api/skribls/' + id + '/report', { method: 'POST', credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json', 'X-Skribl-CSRF': tok },
+            body: JSON.stringify(note ? { reason, note } : { reason }) }); return r.status; }""", [public_id, reason, note])
+    finally:
+        close_ctx(ctx, pg)
+
+
 def home(pg):
     pg.goto(BASE + "/social/")
     pg.wait_for_timeout(600)
     return pg.evaluate(CARDS)
+
+
+def on_home(pg, post):
+    """Whether one post's card is on this person's Home (by its id: a
+    person's other posts are not this one)."""
+    pg.goto(BASE + "/social/")
+    pg.wait_for_timeout(600)
+    return pg.evaluate("(id) => !!document.querySelector('.post-card[data-post=\"' + id + '\"]')", post)
 
 
 def pid_of(handle):
@@ -874,7 +926,336 @@ with sync_playwright() as p:
               f" fields: {fields[:3]}; each {[(' '.join(k), v['read']) for k, v in seen.items()]}")
 
     # ------------------------------------------------------------------ 10
-    if part(10, "no page errors, no console errors and no CSP violations"):
+    if part(10, "your Reports: an admin's, a card per thing, a child's safety first"):
+        # THE QUEUE STARTS EMPTY: what earlier sections reported is answered
+        # first, the site's and Skribl's, so the page holds this section's
+        # cards and Settings counts them (a whole run left seven open).
+        con = sqlite3.connect(DB, timeout=10)
+        try:
+            con.execute("update social_reports set state = 'kept' where state = 'open'")
+            con.execute("update skribl_reports set state = 'closed' where state = 'open'")
+            con.commit()
+        finally:
+            con.close()
+        mira = admin(b)
+        lee = someone(b, "lee", "Lee Varga")
+        ora = someone(b, "ora", "Ora Quinn")
+        st, j = make_post(lee, "Section 10, Lee's post", seed=101)
+        lee_post = j.get("post")
+        st_d, lee_d = pad(lee, "Section 10, Lee's drawing", "public", 102, card=True)
+        oc = ora.client()
+        oc.get("/social/")
+        # The oldest first: a child's safety must lead the page for its reason,
+        # not for being the newest.
+        sent = [oc.post_json("/social/report", {"kind": "drawing", "target": lee_d, "reason": "child_safety"})[0]]
+        sent.append(explore_report(b, lee_d, "spam", "From Explore"))
+        nc = Client()
+        nc.get(f"/social/p/{lee_post}")         # a post's page carries the page's token for anybody
+        sent.append(nc.post_json("/social/report", {"kind": "post", "target": lee_post, "reason": "abuse"})[0])
+        time.sleep(0.05)
+        sent.append(oc.post_json("/social/report", {"kind": "post", "target": lee_post, "reason": "abuse", "note": "Mean words"})[0])
+        time.sleep(0.05)
+        sent.append(oc.post_json("/social/report", {"kind": "person", "target": "lee", "reason": "impersonation"})[0])
+        nctx, npg = browser_as(b, None)
+        anon = status(npg, "/social/reports")
+        close_ctx(nctx, npg)
+        not_admin = status(ora.pg, "/social/reports")
+        pg = mira.pg
+        pg.goto(BASE + "/social/you")
+        pg.wait_for_timeout(500)
+        panel = pg.evaluate("() => { const t = document.getElementById('repTitle'); return t ? t.nextElementSibling.textContent : null; }")
+        pg.goto(BASE + "/social/reports")
+        pg.wait_for_timeout(800)
+        # What is painted: a blur is a computed filter, a control is one with a box.
+        CARD = """c => ({ kind: c.dataset.kind,
+          child: c.classList.contains('is-child'), tag: (c.querySelector('.rep-tag') || {}).textContent || null,
+          why: [...c.querySelectorAll('.rep-why')].map(e => e.textContent), meta: c.querySelector('.rep-meta').textContent.split(' · ')[0],
+          who: c.querySelector('.rep-who').innerText, notes: [...c.querySelectorAll('.rep-note')].map(n => n.innerText),
+          by: c.querySelector('.rep-by').innerText,
+          veiled: [...c.querySelectorAll('*')].filter(e => getComputedStyle(e).filter.includes('blur')).length,
+          words: [...c.querySelectorAll('.rep-words')].filter(e => e.getClientRects().length > 0).map(e => e.textContent),
+          link: !!c.querySelector('.rep-open') && c.querySelector('.rep-open').getClientRects().length > 0,
+          keep: c.querySelector('form[action$=keep] button').getClientRects().length > 0,
+          open: !!c.querySelector('[data-unveil]') && c.querySelector('[data-unveil]').getClientRects().length > 0,
+          law: (c.querySelector('.rep-law') || {}).textContent || null })"""
+        cards = pg.evaluate(f"() => [...document.querySelectorAll('[data-rep]')].map({CARD})")
+        check("Your Reports is an admin's: anybody else, signed in or not, meets the same 404 as a page that is not there;"
+              " Settings tells an admin how many wait",
+              sent == [202] * 5 and anon == 404 and not_admin == 404
+              and panel == "3 waiting for you to look at.", f"sent {sent}; signed out {anon}; not an admin {not_admin}; panel {panel!r}")
+        want0 = {"kind": "drawing", "child": True, "tag": "A child’s safety", "why": ["Spam or misleading"],
+                 "meta": "2 reports", "who": "Lee Varga @lee · a drawing", "notes": ["Somebody wrote: From Explore"],
+                 "by": "Reported by Ora Quinn, somebody on Explore", "veiled": 1, "words": ["Hidden until you open it."],
+                 "link": False, "keep": False, "open": True}
+        LAW = ("Look before anything else. Taking it down hides it at once and keeps a copy; the lawyer will say what"
+               " the law asks of you next.")
+        c0 = dict(cards[0]) if cards else {}
+        law = c0.pop("law", None)
+        opened = None
+        if cards and cards[0]["open"]:
+            pg.click("[data-rep] [data-unveil]")
+            pg.wait_for_timeout(300)
+            got = pg.evaluate(f"() => ({CARD})(document.querySelector('[data-rep]'))")
+            opened = {k: got[k] for k in ("veiled", "words", "link", "keep", "open")}
+        check("a card per thing: a child's safety first, ringed, its picture blurred and its words hidden until Open it,"
+              " Keep it only once opened, a word about the law; then the newest; each says what and whose, each reason and how many, what"
+              " reporters wrote and who they are (seen only here), Skribl's own reports of a drawing on its card",
+              c0 == want0 and law == LAW
+              and opened == {"veiled": 0, "words": ["“Section 10, Lee's drawing”"], "link": True, "keep": True, "open": False}
+              and [(c["kind"], c["why"], c["meta"], c["who"], c["words"], c["notes"], c["by"], c["keep"], c["link"])
+                   for c in cards[1:]]
+              == [("person", ["Pretending to be someone"], "1 report", "Lee Varga @lee · a profile", [], [],
+                   "Reported by Ora Quinn", True, True),
+                  ("post", ["Abusive or hateful ×2"], "2 reports", "Lee Varga @lee · a post", ["“Section 10, Lee's post”"],
+                   ["Ora Quinn wrote: Mean words"], "Reported by Ora Quinn, somebody signed out", True, True)],
+              f"{cards}; law {law!r}; opened {opened}")
+
+    # ------------------------------------------------------------------ 11
+    if part(11, "take it down, or keep it: what changes, for whom, and that a copy is kept"):
+        mira = admin(b)
+        lee = someone(b, "lee", "Lee Varga")
+        ora = someone(b, "ora", "Ora Quinn")
+        st, j = make_post(lee, "Section 11, Lee's post", seed=111)
+        lee_post = j.get("post")
+        lee_sk = db("select skribl_id from social_posts where public_id = ?", (lee_post,))[0][0]
+        st_d, lee_d = pad(lee, "Section 11, Lee's drawing", "public", 112, card=True)
+        oc = ora.client()
+        oc.get("/social/")
+        oc.post_json("/social/report", {"kind": "post", "target": lee_post, "reason": "abuse"})
+        oc.post_json("/social/report", {"kind": "person", "target": "lee", "reason": "fake"})
+        oc.post_json("/social/report", {"kind": "drawing", "target": lee_d, "reason": "child_safety"})
+        on_explore = [explore_report(b, lee_sk, "abuse"), explore_report(b, lee_d, "spam")]
+        pg = mira.pg
+
+        def skribl_states(public_id):
+            return db("select r.state from skribl_reports r join skribl_posts p on p.id = r.post_id"
+                      " where p.public_id = ?", (public_id,))
+
+        def answer(kind, target, how):
+            pg.goto(BASE + "/social/reports")
+            pg.wait_for_timeout(500)
+            card = f"[data-rep][data-kind='{kind}'][data-target='{target}']"
+            if how == "down" and pg.evaluate("(s) => !!document.querySelector(s + ' [data-unveil]')", card):
+                pg.click(f"{card} [data-unveil]")
+                pg.wait_for_timeout(200)
+            with pg.expect_navigation(timeout=15000):
+                pg.click(f"{card} form[action$={how if how == 'keep' else 'down'}] button")
+            return pg.evaluate("() => (document.querySelector('.note') || {}).textContent")
+
+        lee_pub = pid_of("lee")[1]
+        kept = answer("person", lee_pub, "keep")
+        kept_rows = db("select state, handled_by_id is not null from social_reports where kind = 'person' and target = ?", (lee_pub,))
+        check("Keep it closes a thing's reports, saying who answered and when, and hides nothing",
+              kept == "Kept. Its reports are closed." and kept_rows and all(r == ("kept", 1) for r in kept_rows)
+              and status(ora.pg, "/social/@lee") == 200, f"said {kept!r}; rows {kept_rows}")
+        before = on_home(ora.pg, lee_post)
+        down = answer("post", lee_post, "down")
+        rows = db("select state from social_reports where kind = 'post' and target = ?", (lee_post,))
+        seen = {"on ora's home before": before, "on ora's home": on_home(ora.pg, lee_post),
+                "ora at the post": status(ora.pg, f"/social/p/{lee_post}"),
+                "ora at its drawing's link": status(ora.pg, f"/s/{lee_sk}"),
+                "kept": bool(db("select 1 from social_posts where public_id = ?", (lee_post,))),
+                "withheld": db("select visibility from skribl_posts where public_id = ?", (lee_sk,))[0][0],
+                "explore's report": skribl_states(lee_sk)}
+        lpg = lee.pg
+        lpg.goto(BASE + "/social/")
+        lpg.wait_for_timeout(600)
+        lee_home = lpg.evaluate("(id) => { const c = document.querySelector('.post-card[data-post=\"' + id + '\"]'); return c ? (c.querySelector('.post-down') || {}).textContent || '' : null; }", lee_post)
+        lpg.goto(BASE + f"/social/p/{lee_post}")
+        lpg.wait_for_timeout(500)
+        lee_page = lpg.evaluate("() => (document.querySelector('.post-down') || {}).textContent || ''")
+        NOTE = "Taken down: it broke the rules. Only you can see it."
+        check("Take it down hides a post from everybody else at once (Home, its page, its drawing's link page), withholds its"
+              " drawing in Skribl, keeps a copy, and closes its reports; its maker sees it, on Home and on its page, saying"
+              " Taken down: it broke the rules",
+              down == "Taken down. It’s hidden for everybody, and a copy is kept." and rows == [("taken_down",)]
+              and seen == {"on ora's home before": True, "on ora's home": False, "ora at the post": 404,
+                           "ora at its drawing's link": 404, "kept": True, "withheld": "withheld",
+                           "explore's report": [("closed",)]} and lee_home == NOTE and lee_page == NOTE,
+              f"said {down!r}; rows {rows}; {seen}; lee's home {lee_home!r}; page {lee_page!r}")
+        dn = answer("drawing", lee_d, "down")
+        sk_rows = skribl_states(lee_d)
+        left = pg.evaluate("(ts) => ts.filter(t => document.querySelector('[data-rep][data-target=\"' + t + '\"]'))",
+                           [lee_post, lee_d, lee_pub])
+        lpg.goto(BASE + f"/social/b/{lee_d}")
+        lpg.wait_for_timeout(500)
+        lee_d_page = lpg.evaluate("() => (document.querySelector('.post-down') || {}).textContent || ''")
+        check("a drawing reported for a child's safety, opened and taken down, is withheld in Skribl and gone for everybody"
+              " else; its maker sees the note on its page; what Explore reported is closed with it, and nothing answered"
+              " stays on Your Reports",
+              dn.startswith("Taken down.") and db("select visibility from skribl_posts where public_id = ?", (lee_d,))[0][0] == "withheld"
+              and status(ora.pg, f"/social/b/{lee_d}") == 404 and lee_d_page == NOTE
+              and db("select state from social_reports where target = ?", (lee_d,)) == [("taken_down",)]
+              and sk_rows == [("closed",)] and on_explore == [202, 202] and left == [],
+              f"said {dn!r}; Explore's reports {on_explore}, now {sk_rows}; still on Your Reports {left};"
+              f" page {lee_d_page!r}")
+        mc = mira.client()
+        mc.get("/social/reports")
+        oc.get("/social/")
+        guard = {"no token": mc._req("POST", "/social/reports/down", body=None, headers={})[0],
+                 "not an admin": oc._req("POST", "/social/reports/keep", body=None,
+                                         headers={"X-Social-CSRF": oc.token or ""})[0]}
+        check("its answers need an admin (anybody else: 404) and the page's token (403)",
+              guard == {"no token": 403, "not an admin": 404}, f"{guard}")
+
+    # ------------------------------------------------------------------ 12
+    if part(12, "a person taken down: nobody to everybody else; they see their own, and share nothing new"):
+        mira = admin(b)
+        ora = someone(b, "ora", "Ora Quinn")
+        zoe = someone(b, "zoe", "Zoe Brand")
+        st, j = make_post(zoe, "Section 12, Zoe's post", seed=121)
+        zoe_post = j.get("post")
+        st_d, zoe_d = pad(zoe, "Section 12, Zoe's drawing", "public", 122)
+        oc = ora.client()
+        oc.get("/social/")
+        oc.post_json("/social/report", {"kind": "person", "target": "zoe", "reason": "fake"})
+        zpub = pid_of("zoe")[1]
+        pg = mira.pg
+        pg.goto(BASE + "/social/reports")
+        pg.wait_for_timeout(500)
+        with pg.expect_navigation(timeout=15000):
+            pg.click(f"[data-rep][data-kind='person'][data-target='{zpub}'] form[action$=down] button")
+        nctx, npg = browser_as(b, None)
+        npg.goto(BASE + "/social/explore")
+        npg.wait_for_timeout(400)
+        others = {"ora: profile": status(ora.pg, "/social/@zoe"), "ora: post": status(ora.pg, f"/social/p/{zoe_post}"),
+                  "ora: drawing": status(ora.pg, f"/social/b/{zoe_d}"), "ora: home": "zoe" in home(ora.pg),
+                  "signed out: listing": zoe_d in [i["id"] for i in (api(npg, "/api/skribls?limit=100")[1] or {}).get("items", [])],
+                  "signed out: link page": status(npg, f"/s/{zoe_d}")}
+        close_ctx(nctx, npg)
+        zpg = zoe.pg
+        zpg.goto(BASE + "/social/@zoe")
+        zpg.wait_for_timeout(500)
+        own = zpg.evaluate("() => (document.querySelector('.prof-down') || {}).textContent || ''")
+        posted = make_post(zoe, "Section 12, after", seed=123)
+        words = zpg.evaluate("() => { const w = document.querySelector('[data-word=taken_down]'); return w ? w.textContent : null; }") \
+            if zpg.goto(BASE + "/social/") else None
+        check("taken down, a person is nobody to everybody else: their profile, posts and drawings, on the site's pages and"
+              " Skribl's, signed in or out",
+              others == {"ora: profile": 404, "ora: post": 404, "ora: drawing": 404, "ora: home": False,
+                         "signed out: listing": False, "signed out: link page": 404}, f"{others}")
+        check("they can still sign in and see their own, with the note, and nothing new is shared from the account"
+              " (refused kindly, in its own words)",
+              own == "Your profile was taken down: it broke the rules. Only you can see it, and what you made."
+              and posted == (403, {"error": "taken_down"})
+              and words == "Your account was taken down, so nothing new can be shared from it.",
+              f"own {own!r}; posted {posted}; words {words!r}")
+
+    # ------------------------------------------------------------------ 13
+    if part(13, "Skribl's seams for a host's own reports page: list_reports and close_reports"):
+        import ast as _ast
+        init = (ROOT / "skribl" / "__init__.py").read_text(encoding="utf-8")
+        public = next((_ast.literal_eval(n.value) for n in _ast.parse(init).body if isinstance(n, _ast.Assign)
+                       and any(getattr(t, "id", None) == "__all__" for t in n.targets)), [])
+        guide = (ROOT / "docs" / "INTEGRATION.md").read_text(encoding="utf-8")
+        check("Skribl exports list_reports and close_reports and docs/INTEGRATION.md documents them",
+              {"list_reports", "close_reports"} <= set(public) and "## Your own reports page" in guide
+              and "list_reports(" in guide and "close_reports(" in guide, f"exported {[n for n in public if 'report' in n]}")
+        kim = someone(b, "kim", "Kim Ito")
+        st1, a = pad(kim, "Section 13, reported twice", "public", 131)
+        st2, c = pad(kim, "Section 13, a child's safety", "public", 132)
+        st3, d = pad(kim, "Section 13, to close", "public", 133)
+        nctx, npg = browser_as(b, None)
+        npg.goto(BASE + "/social/explore")
+        npg.wait_for_timeout(400)
+        npg.evaluate("""async ([a, c, d]) => { await fetch('/api/skribls?limit=1', { credentials: 'same-origin' });
+          const tok = decodeURIComponent((document.cookie.match(/(?:^|; )skribl_csrf=([^;]+)/) || [])[1] || '');
+          const go = (id, reason, note) => fetch('/api/skribls/' + id + '/report', { method: 'POST', credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json', 'X-Skribl-CSRF': tok }, body: JSON.stringify({ reason, note }) });
+          await go(a, 'spam', 'once'); await go(c, 'child_safety', null); await go(d, 'other', null); }""", [a, c, d])
+        close_ctx(nctx, npg)
+        con = sqlite3.connect(DB, timeout=10)     # a second reporter for `a`, as Skribl's queue would hold one
+        try:
+            con.execute("insert into skribl_reports (post_id, reason, note, reporter_hash, state, created_at)"
+                        " select post_id, 'abuse', null, reporter_hash || '-2', 'open', created_at from skribl_reports"
+                        " where post_id = (select id from skribl_posts where public_id = ?)", (a,))
+            con.commit()
+        finally:
+            con.close()
+        probe = subprocess.run([sys.executable, "-c", (
+            "import json; from app import create_app; import skribl; app = create_app()\n"
+            "with app.app_context():\n"
+            "    got = skribl.list_reports(limit=500)\n"
+            f"    closed = skribl.close_reports({d!r}); none = skribl.close_reports('nothinghere')\n"
+            "    skribl.models.session().commit()\n"
+            "    print(json.dumps({'got': got, 'closed': closed, 'none': none}))")],
+            cwd=ROOT, env=ENV, capture_output=True, text=True, timeout=120)
+        try:
+            out = json.loads(probe.stdout.strip().splitlines()[-1])
+        except Exception:  # noqa: BLE001
+            out = {"got": [], "closed": None, "none": None, "err": (probe.stderr or probe.stdout)[-300:]}
+        mine = [g for g in out["got"] if g["id"] in (a, c, d)]
+        order = [g["id"] for g in mine]
+        ga = next((g for g in mine if g["id"] == a), {})
+        still = db("select r.state from skribl_reports r join skribl_posts p on p.id = r.post_id where p.public_id = ?", (d,))
+        vis = db("select visibility from skribl_posts where public_id = ?", (d,))[0][0]
+        check("list_reports gives a group per drawing, a child's safety first and then the most reported, with its reasons,"
+              " notes, count and times, naming nobody; close_reports closes one drawing's reports, takes nothing down,"
+              " and answers 0 for none",
+              order == [c, a, d] and ga.get("count") == 2 and ga.get("reasons") == {"spam": 1, "abuse": 1}
+              and ga.get("notes") == ["once"] and ga.get("child_safety") is False and ga.get("first") and ga.get("latest")
+              and not any("reporter" in k for g in mine for k in g)
+              and next((g for g in mine if g["id"] == c), {}).get("child_safety") is True
+              and out["closed"] == 1 and out["none"] == 0 and still == [("closed",)] and vis == "public",
+              f"order {order} want {[c, a, d]}; a {ga}; closed {out.get('closed')}, none {out.get('none')}; d now {still} {vis};"
+              f" {out.get('err', '')}")
+
+    # ------------------------------------------------------------------ 14
+    if part(14, "the Reports page and the notes: words at 4.5:1, targets 44px; phone and desk, light and dark"):
+        mira = admin(b)
+        lee = someone(b, "lee", "Lee Varga")
+        ora = someone(b, "ora", "Ora Quinn")
+        st, j = make_post(lee, "Section 14, Lee's post", seed=141)
+        lee_post = j.get("post")
+        st_d, lee_d = pad(lee, "Section 14, Lee's drawing", "public", 142, card=True)
+        oc = ora.client()
+        oc.get("/social/")
+        oc.post_json("/social/report", {"kind": "drawing", "target": lee_d, "reason": "child_safety", "note": "Please look"})
+        oc.post_json("/social/report", {"kind": "post", "target": lee_post, "reason": "spam", "note": "Again and again"})
+        seen = {}
+        for screen in ("phone", "desk"):
+            for scheme in ("light", "dark"):
+                cctx, cpg = browser_as(b, mira, screen=screen, scheme=scheme)
+                cpg.goto(BASE + "/social/reports")
+                cpg.wait_for_timeout(700)
+                seen[(screen, scheme, "reports")] = cpg.evaluate(READ, "main")
+                cpg.goto(BASE + "/social/you")
+                cpg.wait_for_timeout(500)
+                cpg.evaluate("() => document.getElementById('repTitle').scrollIntoView({ block: 'center' })")
+                cpg.wait_for_timeout(300)
+                seen[(screen, scheme, "settings")] = cpg.evaluate(READ, "main")
+                close_ctx(cctx, cpg)
+        con = sqlite3.connect(DB, timeout=10)
+        try:
+            con.execute("update social_posts set taken_down_at = '2026-01-01 00:00:00' where public_id = ?", (lee_post,))
+            con.commit()
+        finally:
+            con.close()
+        for screen in ("phone", "desk"):
+            for scheme in ("light", "dark"):
+                cctx, cpg = browser_as(b, lee, screen=screen, scheme=scheme)
+                cpg.goto(BASE + f"/social/p/{lee_post}")
+                cpg.wait_for_timeout(700)
+                seen[(screen, scheme, "a post taken down")] = cpg.evaluate(READ, "main")
+                close_ctx(cctx, cpg)
+        con = sqlite3.connect(DB, timeout=10)
+        try:
+            con.execute("update social_posts set taken_down_at = null where public_id = ?", (lee_post,))
+            con.commit()
+        finally:
+            con.close()
+        low = [(k, v["low"]) for k, v in seen.items() if v["low"]]
+        small = [(k, v["small"]) for k, v in seen.items() if v["small"]]
+        lowest = min((v["lowest"], " ".join(k)) for k, v in seen.items())
+        check("every word on Your Reports (a child's safety's card among them), Settings' Reports and a post its maker sees"
+              " taken down reads at 4.5:1 or more on what is painted behind it, and every control is 44px or more each way:"
+              " phone and desk, light and dark",
+              not low and not small and all(v["read"] >= 3 for v in seen.values()),
+              f"{sum(v['read'] for v in seen.values())} read, the lowest {lowest}; under 4.5: {low[:3]}; small: {small[:3]};"
+              f" each {[(' '.join(k), v['read']) for k, v in seen.items()]}")
+
+    # ------------------------------------------------------------------ 15
+    if part(15, "no page errors, no console errors and no CSP violations"):
         for who in list(_people.values()):
             ERRS.extend(f"csp: {v}" for v in who.csp())
         check("no page errors, no console errors and no CSP violations, in every browser the suite opened",

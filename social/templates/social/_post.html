@@ -48,6 +48,7 @@
     <button class="icon-btn post-more" type="button" data-post-menu aria-haspopup="dialog" aria-controls="postSheet"
             aria-expanded="false" aria-label="More for this post">{{ ic.dots() }}</button>
   </header>
+  {% if c.down and c.mine %}<p class="post-down" role="note">Taken down: it broke the rules. Only you can see it.</p>{% endif %}
   {% if p.words %}<p class="post-words">{{ p.words }}</p>{% endif %}
   <div class="post-art">{{ player(c) }}</div>
   <footer class="post-foot">
@@ -130,6 +131,7 @@
   <span data-word="stale">This page went stale. Reload it, then post again.</span>
   <span data-word="signed_out">You’ve been signed out. Sign in again to post.</span>
   <span data-word="too_big">That drawing is too big to post. Try it without a photo or music?</span>
+  <span data-word="taken_down">Your account was taken down, so nothing new can be shared from it.</span>
   <span data-word="network">That didn’t reach us. Check your connection and try again.</span>
   <span data-word="failed">That didn’t go through. Try again?</span>
   <span data-word="left">{n} left</span>

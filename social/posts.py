@@ -143,17 +143,20 @@ def _entry(post, who):
     return {"kind": "p", "at": as_utc(post.created_at), "key": "p" + post.public_id, "post": post, "who": who}
 
 
-def _posts_before(at, limit, person=None, hidden=frozenset()):
+def _posts_before(at, limit, person=None, hidden=frozenset(), viewer=None):
     """A page of posts (and their authors) older than `at`, newest first:
     (rows, more). Every post at the very time of a drawing's card comes after
     it (p < s), so a drawing's cursor keeps them all. Nobody in `hidden` (a
-    block, either way: safety.blocked_ids) is in it."""
+    block either way, or taken down: safety.hidden_ids) is in it, nor a post
+    taken down, but to its own author (`viewer`), who sees it with the note."""
     q = (sa.select(Post, Person).join(Person, Post.person_id == Person.id)
          .order_by(Post.created_at.desc(), Post.public_id.desc()).limit(limit + 1))
     if person is not None:
         q = q.where(Post.person_id == person.id)
     if hidden:
         q = q.where(Post.person_id.notin_(sorted(hidden)))
+    mine = viewer.id if viewer is not None else -1
+    q = q.where(sa.or_(Post.taken_down_at.is_(None), Post.person_id == mine))
     if at is not None:
         when, key = at
         if key.startswith("s"):
@@ -199,10 +202,10 @@ def feed_page(before=None, limit=PAGE, viewer=None, person=None):
     on its own), newest first, after `before` (a cursor); or one person's
     (More from). (entries, next cursor or None). A drawing that is a post's
     shows once, as the post."""
-    from .safety import blocked_ids
+    from .safety import hidden_ids
     at = _uncursor(before) if before else None
-    hidden = blocked_ids(viewer)
-    posts, more_p = _posts_before(at, limit, person, hidden)
+    hidden = hidden_ids(viewer)
+    posts, more_p = _posts_before(at, limit, person, hidden, viewer)
     drawings, more_s = _drawings_before(at, limit, viewer, person, hidden)
     out = sorted([_entry(p, who) for p, who in posts] + drawings, key=lambda e: (e["at"], e["key"]), reverse=True)
     page = out[:limit]
@@ -233,7 +236,10 @@ def cards(entries, viewer):
                        created_at=e["at"])
             url = url_for("social.bloob_page", skribl_id=sk["id"])
             gone = url_for("social.bloob_delete", skribl_id=sk["id"])
-        out.append({"post": p, "who": who, "sk": sk, "kind": e["kind"],
+        # TAKEN DOWN (piece 5): only its maker is ever shown it, with the note.
+        down = (getattr(p, "taken_down_at", None) is not None or (sk or {}).get("visibility") == "withheld"
+                or getattr(who, "taken_down_at", None) is not None)
+        out.append({"post": p, "who": who, "sk": sk, "kind": e["kind"], "down": down,
                     "plays": plays_text(sk["views"]) if sk else None,
                     "url": url, "delete": gone,
                     "profile": profile_url(who.handle),
@@ -291,6 +297,9 @@ def register(bp, skribl_blueprint="skribl"):
             return _json_error("signed_out", 401)
         if over("post", "person|" + me.public_id):
             return _json_error("limited", 429)
+        if site().session().execute(sa.select(Person.taken_down_at).where(Person.id == me.id)).scalar() is not None:
+            # Taken down (piece 5): nothing new is shared from the account.
+            return _json_error("taken_down", 403)
         body = request.get_json(silent=True)
         if not isinstance(body, dict):
             return _json_error("no_drawing", 400)
@@ -345,8 +354,11 @@ def register(bp, skribl_blueprint="skribl"):
         found = sess.execute(sa.select(Post, Person).join(Person, Post.person_id == Person.id)
                              .where(Post.public_id == public_id)).first()
         me = current_person()
-        if found is None or between(me, found[1]):
-            # A block, either way, makes it as gone as a deleted one.
+        mine = found is not None and me is not None and found[1].id == me.id
+        if (found is None or between(me, found[1])
+                or (not mine and (found[0].taken_down_at is not None or found[1].taken_down_at is not None))):
+            # A block, either way, or a takedown makes it as gone as a deleted
+            # one, to all but its author.
             return _page("post_gone.html", 404, here="post")
         return _post_page(cards([found], me)[0], me)
 
@@ -364,9 +376,13 @@ def register(bp, skribl_blueprint="skribl"):
         me = current_person()
         sk = describe_posts([skribl_id], viewer_id=me.public_id if me else None).get(skribl_id)
         who = None
-        if sk and sk.get("visibility") == "public" and str(sk.get("user_id") or "").startswith(PERSON_PREFIX):
-            who = sess.execute(sa.select(Person).where(Person.public_id == sk["user_id"])).scalar_one_or_none()
-        if who is None or between(me, who):
+        author = str((sk or {}).get("user_id") or "")
+        # Its maker still sees one taken down (withheld), with the note.
+        shown = (sk or {}).get("visibility") == "public" or (
+            (sk or {}).get("visibility") == "withheld" and me is not None and author == me.public_id)
+        if sk and shown and author.startswith(PERSON_PREFIX):
+            who = sess.execute(sa.select(Person).where(Person.public_id == author)).scalar_one_or_none()
+        if who is None or between(me, who) or (who.taken_down_at is not None and (me is None or me.id != who.id)):
             return _page("post_gone.html", 404, here="post")
         entry = {"kind": "s", "at": as_utc(datetime.fromisoformat(sk["created_at"])), "key": "s" + sk["id"],
                  "sk": sk, "who": who}

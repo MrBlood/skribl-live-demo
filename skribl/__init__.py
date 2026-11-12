@@ -42,6 +42,7 @@ from .creation import (CreatedPost, SkriblIdempotencyRace, SkriblRejected,
 from .deletion import (SkriblNotFound, SkriblRefused, delete_post,
                        set_post_visibility)
 from .describing import describe_posts, list_public_posts
+from .moderation import close_reports, list_reports
 from .models import (NO_SESSION, SkriblBase, bind_session, create_all,
                      session, set_visibility_policy)
 from .routes import register_routes
@@ -75,6 +76,10 @@ __all__ = ["create_blueprint", "init_skribl", "SKRIBL_VERSION",
            # ...and the newest public ones, by author (skribl/describing.py,
            # docs/INTEGRATION.md "A feed of your own people's drawings").
            "list_public_posts",
+           # The report queue, for a host's own Reports page: read it, and
+           # close a drawing's reports once looked at (skribl/moderation.py,
+           # docs/INTEGRATION.md "Your own reports page").
+           "list_reports", "close_reports",
            # Speed: do every file's strip-and-compress before the first
            # visitor (gunicorn.conf.py calls it in each worker).
            "warm_assets"]

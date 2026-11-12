@@ -81,7 +81,8 @@ def register(bp, skribl_blueprint="skribl"):
         # the same page as a handle never made; to you, theirs says you
         # blocked them, with Unblock, and shows nothing they made.
         blocked_them = not mine and i_blocked(me, who)
-        if not mine and not blocked_them and between(me, who):
+        if not mine and ((not blocked_them and between(me, who)) or who.taken_down_at is not None):
+            # A block they made, or a takedown: nobody's, to anybody else.
             return _page("nobody.html", 404, here="nobody", handle=who.handle)
         note = request.args.get("note") if mine else None
         # Your own profile is You's page; somebody else's is none of the

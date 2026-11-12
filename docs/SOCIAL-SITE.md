@@ -656,13 +656,60 @@ host for a block list (docs/INTEGRATION.md): a feed filter (Explore's
 gallery, a profile's skribls, Home's drawings) and a visibility policy (a
 drawing's link page, payload and card; the card falls back to its blank
 canvas). A host that mounts the site installs both, asking
-`social.blocked_authors(viewer_id)`, as it installs the author resolver; the
-demo's `app.py` does.
+`social.hidden_authors(viewer_id)` (a block either way, and since the second
+part anybody an admin took down, below), as it installs the author resolver;
+the demo's `app.py` does.
 
 `harness/verify_socialsafety.py` holds it through the demo's own server.
-Still to come in piece 5: your Reports page (admins: take it down or keep it,
-a child's safety first, blurred), what its maker sees once something is
-taken down, and the draft rules pages.
+
+### Built: piece 5, your Reports, and what taking something down does
+
+The second part of the same "all yes". `social/reports.py`, for the site's
+admins alone: anybody else, signed in or not, gets the same 404 as a page
+that is not there (Invites' rule).
+
+    /social/reports          the open reports, a card per thing
+    /social/reports/down     Take it down (a form)
+    /social/reports/keep     Keep it (a form)
+
+**One queue from two.** The site's own reports (somebody, a post, a drawing
+shown outside a post) and Skribl's (what people reported on Skribl's own
+pages: Explore's tiles, a drawing's link page), read through the two seams
+Skribl gives a host for its own reports page, `list_reports` and
+`close_reports` (docs/INTEGRATION.md, "Your own reports page"). A post's
+drawing reported on Explore lands on the post's card.
+
+**A card per thing,** a child's safety first, then the newest. A child's
+safety's card is ringed, its picture and words blurred until Open it; Keep
+it and the link to its page come only once it is opened, and it says what
+the law may ask (in the US, reporting to NCMEC: the owner's lawyer sets that
+up). Every card says what was reported and whose it is, each reason and how
+many gave it, what reporters wrote, and who they are ("somebody signed out",
+"somebody on Explore"), seen only here. Settings tells an admin how many
+wait.
+
+**Keep it** closes the thing's reports, saying who answered and when, and
+hides nothing. **Take it down** hides it from everybody else at once and
+closes its reports, Skribl's too. Nothing is deleted:
+
+- A post is gone for everybody but its author, as a deleted one is, and its
+  drawing is withheld in Skribl (`set_post_visibility(..., "withheld",
+  require_author=False)`, the operator's own state).
+- A drawing is withheld in Skribl.
+- A person's profile is nobody's to everybody else, and all they made is
+  hidden, on the site's pages and Skribl's. They can still sign in, see their
+  own with the note, and delete their account; nothing new is shared from
+  it (posting answers `taken_down`, said kindly in the post box).
+
+Its maker sees "Taken down: it broke the rules. Only you can see it." on a
+post or a drawing taken down, and a person taken down sees it on their
+profile. `taken_down_at` on `social_people` and `social_posts` holds it (a
+migration on the site's chain). The page has no undo yet; since nothing is
+deleted, a takedown can be lifted by hand (`taken_down_at` emptied; for a
+drawing, `python -m skribl.takedown <id> --visibility public`).
+
+`harness/verify_socialsafety.py` sections 10 to 14 hold it. Still to come in
+piece 5: the draft rules pages.
 
 ### The move to blooby.app
 

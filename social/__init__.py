@@ -71,7 +71,7 @@ from flask import (Blueprint, abort, current_app, g, has_app_context, has_reques
 
 from .models import PERSON_PREFIX, attach_to_metadata
 
-__all__ = ["init_social", "current_user_id", "describe_author", "blocked_authors",
+__all__ = ["init_social", "current_user_id", "describe_author", "hidden_authors",
            "attach_to_metadata", "PERSON_PREFIX"]
 
 
@@ -94,16 +94,16 @@ def describe_author(user_id):
     from .accounts import describe_author as _describe
     return _describe(user_id)
 
-def blocked_authors(viewer_id):
+def hidden_authors(viewer_id):
     """For Skribl's feed filter and visibility policy (the host installs them,
     as app.py does; docs/SOCIAL-SITE.md "A block reaches Skribl's pages"):
-    the public ids of everybody `viewer_id` has blocked or been blocked by,
-    whose drawings Skribl's own pages then hide from them. Empty for anybody
-    who is not one of the site's people, and where the site is not running."""
+    the public ids of everybody whose drawings Skribl's own pages hide from
+    `viewer_id`: a block either way, and anybody an admin has taken down
+    (for everybody but themselves). Empty where the site is not running."""
     if not has_app_context() or "social" not in current_app.extensions:
         return frozenset()
-    from .safety import blocked_authors as _blocked
-    return _blocked(viewer_id)
+    from .safety import hidden_authors as _hidden
+    return _hidden(viewer_id)
 
 #: The globals init_skribl() puts in the app's Jinja environment that the
 #: site's pages use: skribl_asset for the player's and the Gallery's files,
@@ -216,11 +216,12 @@ def init_social(app, *, session=None, url_prefix="/social", skribl_blueprint="sk
         return render_template("social/explore.html", here="explore")
 
     if site is not None:
-        from . import accounts, posts, profiles, safety
+        from . import accounts, posts, profiles, reports, safety
         accounts.register(bp)
         profiles.register(bp, skribl_blueprint)
         posts.register(bp, skribl_blueprint)
         safety.register(bp)
+        reports.register(bp, skribl_blueprint)
 
         @bp.before_request
         def _small_bodies():

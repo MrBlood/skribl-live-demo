@@ -34870,3 +34870,97 @@ and each was shown red on the fault it is there for.
   900 s (run_harness.sh), as contrast has 1800; a hang still ends there.
 
 Pad and Flip: not affected (instruments and a time budget).
+
+## After v330 -- Your Reports at /social (piece 5, its second part)
+
+The same "all yes on both" (Nov 12): the Safety mock's Reports page, and what
+a maker sees once something is taken down.
+
+- AN ADMIN'S PAGE, AND ONLY THEIRS. /social/reports, with Take it down and
+  Keep it as forms (social/reports.py). Anybody else, signed in or not, meets
+  the same 404 as a page that is not there, as Invites does. Settings tells an
+  admin how many things wait.
+- ONE QUEUE FROM TWO. The site's own reports and Skribl's (what people
+  reported on Skribl's own pages: Explore's tiles, a drawing's link page) on
+  the same cards, a post's drawing reported on Explore on the post's card.
+  Skribl gains two seams for any host's own reports page,
+  list_reports(limit) and close_reports(public_id) (skribl/moderation.py,
+  docs/INTEGRATION.md "Your own reports page"): read the open reports a group
+  per drawing, a child's safety first, naming nobody; close one drawing's,
+  taking nothing down. takedown --reports reads the same groups.
+- A CARD PER THING, a child's safety first, then the newest. Its card is
+  ringed, its picture and words blurred until Open it, and Keep it and its
+  page's link come only once it is opened: nobody should meet that picture by
+  accident, and nobody should dismiss it unseen. It says what the law may ask
+  (in the US, reporting to NCMEC; the owner's lawyer sets that up). Every card
+  says what and whose, each reason and how many gave it, what reporters wrote
+  and who they are (somebody signed out, somebody on Explore), seen only here.
+- TAKE IT DOWN deletes nothing. A post is gone for everybody but its author,
+  its drawing withheld in Skribl (set_post_visibility as an operator); a
+  drawing is withheld; a person is nobody to everybody else, and all they
+  made is hidden, on the site's pages and Skribl's (the host's hooks now ask
+  social.hidden_authors, which the first part called blocked_authors: a
+  block either way, and anybody taken down). A person taken down can still
+  sign in, see their own with the note, and delete their account; nothing new
+  is shared from it (taken_down, said kindly in the post box). Its maker sees
+  "Taken down: it broke the rules. Only you can see it." Every report on it
+  is closed, Skribl's too, saying who answered and when. KEEP IT closes them
+  and hides nothing. taken_down_at on social_people and social_posts holds it
+  (a migration on the site's chain). No undo on the page yet: nothing is
+  deleted, so a takedown can be lifted by hand.
+
+Pad and Flip: not affected (who sees whose drawings, and an admin's page).
+
+THE FOUR: kind (a report is answered by a person, never a count; the maker
+is told, in plain words, and loses nothing; a child's safety is looked at
+first and never by accident); simple (two answers, one card per thing);
+playful (nothing in the way of a drawing for anybody who keeps the rules);
+powerful (one queue for the site and Skribl, and a takedown that reaches
+every page a drawing shows on).
+
+THE CHECKS. verify_socialsafety gains sections 10 to 14 (and its last,
+no page errors, is 15): the admin's page and Settings' count; the cards in
+order with what they say; Keep it and Take it down for a post, a drawing
+and a person, Explore's reports closed with them, nothing answered left on
+the page; a person taken down, to others and to themselves; Skribl's two
+seams through a probe; every word at 4.5:1 and every target 44px on the page
+and the notes, phone and desk, light and dark. Fifty breaks, each red on its
+row. The page: anybody signed in reading it; Settings counting reports, not
+things; newest first only; a child's safety's picture not blurred, or its
+blur not painted; Keep it, or its page's link, offered before Open it; Open
+it lifting no blur, or offering no Keep it; no word about the law; Skribl's
+queue not read; reporters not named; a reason counted once however many gave
+it; what reporters wrote left off. The answers: Keep it recording nobody,
+closing nothing, or taking the person down; Home or its page showing a post
+taken down; its drawing not withheld; what Explore reported of it left open;
+its maker not told, on Home or on its page, or losing it too; a drawing not
+withheld, Explore's reports of it left open, its maker not told; no token
+asked; anybody signed in answering. A person taken down: their profile,
+Skribl's pages, Home or a post's page still showing them; posting not
+refused; no note on their profile; the refusal in no words; their own profile
+lost to them. Skribl's seams: not exported; not documented; most reported
+first only; naming reporters; closing every drawing's reports; taking it
+down; every group counted as one. The page's words and targets: who reported
+faint; a child's safety's tag faint; See it on its page too small to tap;
+the taken-down note faint; the answers' buttons too small. And reports.js
+throwing once loaded. Then the card was set to the mock's own words (its
+words say "Hidden until you open it." where they were blurred; the mock's
+sentence about the lawyer; the mock's sizes), and seventeen more breaks went
+red: the picture not blurred or its blur not painted; its words shown before
+Open it; no "Hidden until you open it."; Open it showing no words, leaving
+the hidden line, lifting no blur, or offering no Keep it; Keep it or the link
+offered before Open it; no word about the law, or other words than the
+mock's; the tag, the law's words, the hidden line or who reported faint;
+reports.js throwing. One line goes past the mock, "Reported by ...", because
+the page's heading promises who reported is seen only here; the owner was
+asked. Four instruments were wrong first. Home's
+row looked for the author's name, and the author had another post there; it
+now looks for the post itself, before and after. The admin was assumed to be
+Mira, true only when her section runs first; a section now asks for the run's
+admin. The blur and Keep it were read off a class and an attribute; they are
+now read off what is painted (the computed filter; a box), and Open it is
+pressed and read back. And a child's safety's card was also the newest, so
+"first" could not tell its reason from its age; it is now reported first,
+the oldest. The drawing page's own takedown test sits behind the visibility
+policy, so breaking it alone cannot fail the scenario; it stays as the site's
+own lock for a host that mounts it, like the block test beside it.

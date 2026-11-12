@@ -67,6 +67,9 @@ import sys
 from .deletion import delete_post, set_post_visibility
 from .models import (SkriblPost, SkriblReport, session as resolve_session,
                      visibility_values)
+# The queue's groups, as a host's own Reports page reads them too
+# (skribl/moderation.py, docs/INTEGRATION.md "Your own reports page").
+from .moderation import open_reports  # noqa: F401  (also takedown.open_reports)
 from .sweep import _load_app, EXIT_CANNOT_RUN
 
 EXIT_OK = 0
@@ -142,25 +145,6 @@ def build_parser():
                    help="change who may read it instead of deleting it; "
                         "withheld hides it and its author cannot undo that")
     return p
-
-
-def open_reports():
-    """Every post with open reports: any with a report for a child's safety
-    first, then most-reported first, newest report first within each:
-    [(post, [reports...]), ...]."""
-    s = resolve_session()
-    rows = (s.query(SkriblReport)
-            .filter(SkriblReport.state == "open")
-            .order_by(SkriblReport.created_at.desc(), SkriblReport.id.desc())
-            .all())
-    by_post = {}
-    for r in rows:
-        by_post.setdefault(r.post_id, []).append(r)
-    posts = {p.id: p for p in s.query(SkriblPost)
-             .filter(SkriblPost.id.in_(list(by_post))).all()} if by_post else {}
-    groups = [(posts[pid], rs) for pid, rs in by_post.items() if pid in posts]
-    groups.sort(key=lambda g: (not any(r.reason == "child_safety" for r in g[1]), -len(g[1]), g[0].public_id))
-    return groups
 
 
 def main(argv=None, out=sys.stdout):

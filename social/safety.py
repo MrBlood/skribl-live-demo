@@ -32,7 +32,7 @@ Unblock. It reaches every page that shows either of them:
     share card, its picture and its payload (visible_to), through the two
     seams Skribl gives every host for exactly this (docs/INTEGRATION.md: a
     feed filter and a visibility policy). The host installs them, as it
-    does the author resolver, asking blocked_authors (app.py does).
+    does the author resolver, asking hidden_authors (app.py does).
 
 THE WORDS ARE THE PAGES'. The reasons are said here once, as the sheets
 show them; everything else the sheets say is in the templates.
@@ -91,28 +91,48 @@ def blocked_ids(person):
     return out
 
 
-def blocked_authors(viewer_id):
+def taken_down_ids():
+    """The ids of the people an admin has taken down (Your Reports), read
+    once a request: all they made is hidden from everybody but them."""
+    cache = g.setdefault("social_down", {}) if has_request_context() else {}
+    if "ids" not in cache:
+        t = Person.__table__
+        cache["ids"] = frozenset(r.id for r in read_aside(sa.select(t.c.id).where(t.c.taken_down_at.isnot(None))))
+    return cache["ids"]
+
+
+def hidden_ids(person):
+    """The ids of everybody whose posts and drawings the site's pages hide
+    from `person` (None for nobody signed in): a block either way, and
+    anybody taken down, except themselves."""
+    return (blocked_ids(person) | taken_down_ids()) - ({person.id} if person is not None else set())
+
+
+def hidden_authors(viewer_id):
     """For Skribl's hooks (the host installs them: app.py, and
     docs/SOCIAL-SITE.md "A block reaches Skribl's pages"): the public ids of
-    everybody the viewer, by Skribl's current user id, has blocked or been
-    blocked by. Read once a request (read_aside); empty for anybody who is
-    not one of the site's people."""
-    if not isinstance(viewer_id, str) or not viewer_id.startswith(PERSON_PREFIX):
-        return frozenset()
-    cache = g.setdefault("social_blocked_public", {}) if has_request_context() else {}
-    if viewer_id in cache:
-        return cache[viewer_id]
-    b, me, other = Block.__table__, Person.__table__.alias("me"), Person.__table__.alias("other")
-    mine = sa.select(me.c.id).where(me.c.public_id == viewer_id).scalar_subquery()
-    # Beside Skribl's own work in its request, so never on a second
-    # connection once that work has read (read_aside: the SQLite deadlock).
-    rows = read_aside(sa.union(
-        sa.select(other.c.public_id.label("pid")).join(b, b.c.blocked_id == other.c.id)
-        .where(b.c.blocker_id == mine),
-        sa.select(other.c.public_id.label("pid")).join(b, b.c.blocker_id == other.c.id)
-        .where(b.c.blocked_id == mine)))
-    out = frozenset(r.pid for r in rows)
-    cache[viewer_id] = out
+    everybody whose drawings Skribl's pages hide from this viewer (Skribl's
+    current user id, or None): a block either way, for one of the site's
+    people, and anybody an admin has taken down, for everybody but
+    themselves. Read once a request (read_aside), beside Skribl's own work,
+    so never on a second connection once that work has read."""
+    me = viewer_id if isinstance(viewer_id, str) and viewer_id.startswith(PERSON_PREFIX) else None
+    cache = g.setdefault("social_hidden_public", {}) if has_request_context() else {}
+    if me in cache:
+        return cache[me]
+    t = Person.__table__
+    out = {r.public_id for r in read_aside(sa.select(t.c.public_id).where(t.c.taken_down_at.isnot(None)))}
+    if me is not None:
+        b, mine_t, other = Block.__table__, Person.__table__.alias("me"), Person.__table__.alias("other")
+        mine = sa.select(mine_t.c.id).where(mine_t.c.public_id == me).scalar_subquery()
+        out |= {r.pid for r in read_aside(sa.union(
+            sa.select(other.c.public_id.label("pid")).join(b, b.c.blocked_id == other.c.id)
+            .where(b.c.blocker_id == mine),
+            sa.select(other.c.public_id.label("pid")).join(b, b.c.blocker_id == other.c.id)
+            .where(b.c.blocked_id == mine)))}
+        out.discard(me)
+    out = frozenset(out)
+    cache[me] = out
     return out
 
 
@@ -163,13 +183,14 @@ def _reported(kind, target, me):
     sess = site().session()
     if kind == "person":
         who = _person_by_handle(target)
-        if who is None or (me is not None and (who.id == me.id or between(me, who))):
+        if who is None or who.taken_down_at is not None or (me is not None and (who.id == me.id or between(me, who))):
             return None
         return who.public_id, who
     if kind == "post":
         found = sess.execute(sa.select(Post, Person).join(Person, Post.person_id == Person.id)
                              .where(Post.public_id == str(target or ""))).first()
-        if found is None or (me is not None and (found[1].id == me.id or between(me, found[1]))):
+        if (found is None or found[0].taken_down_at is not None or found[1].taken_down_at is not None
+                or (me is not None and (found[1].id == me.id or between(me, found[1])))):
             return None
         return found[0].public_id, found[1]
     if kind == "drawing":
@@ -181,7 +202,7 @@ def _reported(kind, target, me):
         if not sk or sk.get("visibility") != "public" or not str(sk.get("user_id") or "").startswith(PERSON_PREFIX):
             return None
         who = sess.execute(sa.select(Person).where(Person.public_id == sk["user_id"])).scalar_one_or_none()
-        if who is None or (me is not None and who.id == me.id):
+        if who is None or who.taken_down_at is not None or (me is not None and (who.id == me.id or between(me, who))):
             return None
         return sid, who
     return None
