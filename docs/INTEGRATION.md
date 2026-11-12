@@ -344,8 +344,9 @@ still does not accumulate, and `purge_views()` for you to schedule — see
 
 The gallery has Report on every tile: `POST /api/skribls/<id>/report` takes a reason from
 `skribl.core.REPORT_REASONS` and an optional note, writes one row per
-(post, reporter) into `skribl_reports`, and takes nothing down. The queue is
-read with `python -m skribl.takedown --reports`; the same tool's `--visibility
+(post, reporter) into `skribl_reports`, and takes nothing down. The reasons
+are spam, abuse, copyright, a child's safety (`child_safety`) and other. The queue is
+read with `python -m skribl.takedown --reports`, a child's safety first; the same tool's `--visibility
 withheld`, `--delete` and `--resolve` are the operator's three answers.
 `withheld` is the operator's own state: hidden from everyone but a signed-in
 author, and nobody but the tool can set or lift it. (Until v321 the answer was

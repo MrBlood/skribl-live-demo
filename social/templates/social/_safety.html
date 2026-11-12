@@ -1,0 +1,85 @@
+{#  SAFETY'S SHEETS (piece 5; the owner's "all yes" on the Safety mock, Nov 12),
+    raised by safety.js through social.js's SocialSheet, as Make's are:
+
+      a person's ⋯       Report @them, and signed in Block @them (a profile)
+      Report @them       a person's own reasons, a note, Send report
+      Block @them?       asked once: both ways, quietly, undone in Settings
+
+    Reporting a post or a drawing is the post sheet's own (_post.html). Who a
+    sheet is about is filled in as it opens, from the words here: nothing in
+    safety.js says anything of its own. #}
+{% import 'social/_icons.html' as ic %}
+
+{% macro person_sheet(who) -%}
+<div class="make post-sheet" id="personSheet" hidden data-handle="{{ who.handle }}">
+  <div class="make-scrim" data-make-close></div>
+  <div class="make-sheet" role="dialog" aria-modal="true" aria-labelledby="personSheetTitle">
+    <div class="make-grip" data-make-close aria-hidden="true"></div>
+    <h2 class="make-title" id="personSheetTitle">@{{ who.handle }}</h2>
+    <div class="post-acts">
+      <button class="post-act is-danger" type="button" data-safety="report-person">{{ ic.flag() }}<span>Report @{{ who.handle }}</span></button>
+      {% if me %}<button class="post-act is-danger" type="button" data-safety="block">{{ ic.block() }}<span>Block @{{ who.handle }}</span></button>{% endif %}
+    </div>
+    <button class="btn btn-wide make-cancel" type="button" data-make-close>Cancel</button>
+  </div>
+</div>
+{%- endmacro %}
+
+{% macro safety_sheets() -%}
+{#  REPORT A PERSON: their own reasons (safety.REASONS['person']), the first
+    picked as it opens; sent to the site's own queue. #}
+<div class="make post-sheet" id="personReportSheet" hidden data-report="{{ url_for('social.report') }}">
+  <div class="make-scrim" data-make-close></div>
+  <form class="make-sheet" role="dialog" aria-modal="true" aria-labelledby="personReportTitle" data-report-form>
+    <div class="make-grip" data-make-close aria-hidden="true"></div>
+    <h2 class="make-title" id="personReportTitle" data-safety-title="report_title">Report</h2>
+    <p class="post-lede">Tell us what is wrong. Reports go to the people who run this site; nothing is taken down automatically.</p>
+    <fieldset class="post-reasons">
+      <legend class="sr">Reason</legend>
+      {% for r, words in report_reasons['person'] %}
+      <label class="post-reason"><input type="radio" name="reason" value="{{ r }}"{% if loop.first %} checked{% endif %}><span>{{ words }}</span></label>
+      {% endfor %}
+    </fieldset>
+    <label class="post-note-label" for="personReportNote">Anything else? <span>optional</span></label>
+    <textarea class="post-note" id="personReportNote" name="note" rows="2" maxlength="300"></textarea>
+    <p class="say post-say" data-safety-say role="status" hidden></p>
+    <div class="post-sheet-acts">
+      <button class="btn btn-big" type="button" data-make-close>Cancel</button>
+      <button class="btn btn-primary btn-big" type="submit" data-safety-send>Send report</button>
+    </div>
+  </form>
+</div>
+
+{#  BLOCK, asked once: what it does, and that it is quiet and can be undone. #}
+<div class="make post-sheet" id="blockSheet" hidden data-block="{{ url_for('social.block', handle='__H__') }}"
+     data-home="{{ url_for('social.home', note='blocked') }}">
+  <div class="make-scrim" data-make-close></div>
+  <div class="make-sheet" role="dialog" aria-modal="true" aria-labelledby="blockTitle">
+    <div class="make-grip" data-make-close aria-hidden="true"></div>
+    <h2 class="make-title" id="blockTitle" data-safety-title="block_title">Block?</h2>
+    <p class="post-lede">You won’t see each other’s posts or drawings, and they can’t see your profile. They aren’t told. You can unblock them in Settings.</p>
+    <p class="say post-say" data-safety-say role="status" hidden></p>
+    <div class="post-sheet-acts">
+      <button class="btn btn-big" type="button" data-make-close>Cancel</button>
+      <button class="btn btn-danger btn-big" type="button" data-safety-block>Block</button>
+    </div>
+  </div>
+</div>
+
+<div class="words" data-safety-words hidden>
+  <span data-word="report_title">Report @{handle}</span>
+  <span data-word="block_title">Block @{handle}?</span>
+  <span data-word="block_who">Block @{handle}</span>
+  <span data-word="s_sending">Sending…</span>
+  <span data-word="s_reported">Thanks. The people who run this site will look at it.</span>
+  <span data-word="s_blocking">Blocking…</span>
+  <span data-word="s_unblocking">Unblocking…</span>
+  <span data-word="s_done">Done</span>
+  <span data-word="s_gone">They’re not here anymore.</span>
+  <span data-word="s_limited">Lots of that in a short while. Wait a little, then try again.</span>
+  <span data-word="s_stale">This page went stale. Reload it, then try again.</span>
+  <span data-word="s_signed_out">You’ve been signed out. Sign in again, then try again.</span>
+  <span data-word="s_network">That didn’t reach us. Check your connection and try again.</span>
+  <span data-word="s_failed">That didn’t go through. Try again?</span>
+</div>
+{%- endmacro %}

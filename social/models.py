@@ -34,7 +34,8 @@ import sqlalchemy as sa
 from sqlalchemy.orm import DeclarativeBase
 
 __all__ = ["SocialBase", "Person", "Passkey", "Invite", "Challenge", "RateEvent", "Post",
-           "PERSON_PREFIX", "BIO_MAX", "BIO_LINES", "WORDS_MAX", "new_person_id", "new_public_id",
+           "Block", "Report", "PERSON_PREFIX", "BIO_MAX", "BIO_LINES", "WORDS_MAX",
+           "REPORT_KINDS", "REPORT_STATES", "REPORT_NOTE_MAX", "new_person_id", "new_public_id",
            "as_utc", "utcnow", "attach_to_metadata"]
 
 #: What every person's public id starts with. A demo identity never does.
@@ -46,6 +47,16 @@ BIO_LINES = 4
 
 #: A post's words, at most (posts.check_words): the owner's "all yes" (Nov 11).
 WORDS_MAX = 500
+
+#: What a report can be about (safety.py): somebody, a post, a drawing shown
+#: outside a post, and a comment (with comments, phase 2's first piece).
+REPORT_KINDS = ("person", "post", "drawing", "comment")
+
+#: Where a report stands: waiting, looked at and kept, or taken down.
+REPORT_STATES = ("open", "kept", "taken_down")
+
+#: A report's note, at most (Skribl's own report note is 300 too).
+REPORT_NOTE_MAX = 300
 
 #: A 64-bit integer key that SQLite will still number by itself: SQLite only
 #: fills in an INTEGER PRIMARY KEY, so there it is INTEGER (64 bits wide on
@@ -239,6 +250,66 @@ class Post(SocialBase):
         sa.Index("ix_social_posts_created", "created_at", "public_id"),
         sa.Index("ix_social_posts_person_created", "person_id", "created_at"),
         sa.Index("ix_social_posts_skribl_id", "skribl_id"),
+    )
+
+
+class Block(SocialBase):
+    """One person blocking another (Safety, piece 5; the owner's "all yes",
+    Nov 12): both ways, and quietly. While a row stands neither sees the
+    other's posts, drawings or profile, and the blocked person is never told.
+    Only the blocker lifts it (Unblock, in Settings). It goes with either
+    account (ON DELETE CASCADE)."""
+    __tablename__ = "social_blocks"
+
+    id = sa.Column(BigId, primary_key=True)
+    blocker_id = sa.Column(BigId, sa.ForeignKey("social_people.id", ondelete="CASCADE"), nullable=False)
+    blocked_id = sa.Column(BigId, sa.ForeignKey("social_people.id", ondelete="CASCADE"), nullable=False)
+    created_at = sa.Column(sa.DateTime(timezone=True), nullable=False, default=utcnow)
+
+    __table_args__ = (
+        sa.Index("ix_social_blocks_pair", "blocker_id", "blocked_id", unique=True),
+        sa.Index("ix_social_blocks_blocked_id", "blocked_id"),
+    )
+
+
+class Report(SocialBase):
+    """One report of something on the site (Safety, piece 5): somebody, a post,
+    a drawing shown outside a post, or a comment, with a reason from a closed
+    set (safety.REASONS) and a note if they wrote one. A row in the admins'
+    queue, never an action by itself: nothing is hidden until an admin takes
+    it down. Who reported it (reporter_id) is for the admins' eyes only;
+    reporter_key is a keyed hash of the reporter (a person, or for somebody
+    signed out their address), so one reporter makes one row for one thing.
+    A report outlives the thing it is about: whose it was (about_id) is set
+    to nothing when their account goes, and the report stays a record."""
+    __tablename__ = "social_reports"
+
+    id = sa.Column(BigId, primary_key=True)
+    public_id = sa.Column(sa.String(24), nullable=False)
+    kind = sa.Column(sa.String(12), nullable=False)
+    #: What is reported, by its own public id: a person's (site:...), a
+    #: post's, a drawing's (Skribl's), a comment's.
+    target = sa.Column(sa.String(40), nullable=False)
+    #: Whose it is: the person reported, or the one who made the thing.
+    about_id = sa.Column(BigId, sa.ForeignKey("social_people.id", ondelete="SET NULL"), nullable=True)
+    reason = sa.Column(sa.String(16), nullable=False)
+    note = sa.Column(sa.String(REPORT_NOTE_MAX), nullable=True)
+    reporter_id = sa.Column(BigId, sa.ForeignKey("social_people.id", ondelete="SET NULL"), nullable=True)
+    reporter_key = sa.Column(sa.String(64), nullable=False)
+    state = sa.Column(sa.String(12), nullable=False, default="open", server_default="open")
+    created_at = sa.Column(sa.DateTime(timezone=True), nullable=False, default=utcnow)
+    handled_at = sa.Column(sa.DateTime(timezone=True), nullable=True)
+    handled_by_id = sa.Column(BigId, sa.ForeignKey("social_people.id", ondelete="SET NULL"), nullable=True)
+
+    __table_args__ = (
+        sa.CheckConstraint("kind IN ('person', 'post', 'drawing', 'comment')", name="ck_social_reports_kind"),
+        sa.CheckConstraint("state IN ('open', 'kept', 'taken_down')", name="ck_social_reports_state"),
+        sa.Index("ix_social_reports_public_id", "public_id", unique=True),
+        sa.Index("ix_social_reports_once", "kind", "target", "reporter_key", unique=True),
+        sa.Index("ix_social_reports_state_created", "state", "created_at"),
+        sa.Index("ix_social_reports_about_id", "about_id"),
+        sa.Index("ix_social_reports_reporter_id", "reporter_id"),
+        sa.Index("ix_social_reports_handled_by_id", "handled_by_id"),
     )
 
 

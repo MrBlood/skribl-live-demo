@@ -71,8 +71,8 @@ from flask import (Blueprint, abort, current_app, g, has_app_context, has_reques
 
 from .models import PERSON_PREFIX, attach_to_metadata
 
-__all__ = ["init_social", "current_user_id", "describe_author", "attach_to_metadata",
-           "PERSON_PREFIX"]
+__all__ = ["init_social", "current_user_id", "describe_author", "blocked_authors",
+           "attach_to_metadata", "PERSON_PREFIX"]
 
 
 def current_user_id():
@@ -93,6 +93,17 @@ def describe_author(user_id):
         return None
     from .accounts import describe_author as _describe
     return _describe(user_id)
+
+def blocked_authors(viewer_id):
+    """For Skribl's feed filter and visibility policy (the host installs them,
+    as app.py does; docs/SOCIAL-SITE.md "A block reaches Skribl's pages"):
+    the public ids of everybody `viewer_id` has blocked or been blocked by,
+    whose drawings Skribl's own pages then hide from them. Empty for anybody
+    who is not one of the site's people, and where the site is not running."""
+    if not has_app_context() or "social" not in current_app.extensions:
+        return frozenset()
+    from .safety import blocked_authors as _blocked
+    return _blocked(viewer_id)
 
 #: The globals init_skribl() puts in the app's Jinja environment that the
 #: site's pages use: skribl_asset for the player's and the Gallery's files,
@@ -205,10 +216,11 @@ def init_social(app, *, session=None, url_prefix="/social", skribl_blueprint="sk
         return render_template("social/explore.html", here="explore")
 
     if site is not None:
-        from . import accounts, posts, profiles
+        from . import accounts, posts, profiles, safety
         accounts.register(bp)
         profiles.register(bp, skribl_blueprint)
         posts.register(bp, skribl_blueprint)
+        safety.register(bp)
 
         @bp.before_request
         def _small_bodies():
@@ -240,8 +252,11 @@ def init_social(app, *, session=None, url_prefix="/social", skribl_blueprint="sk
                "me": None}
         if site is not None:
             from .models import as_utc
+            from .safety import REASONS
             from .security import current_person
             ctx["me"] = current_person()
+            # What each kind of report may say, in its sheet's order (piece 5).
+            ctx["report_reasons"] = REASONS
             # Times are kept in UTC; a page writes them so (an ISO stamp
             # for you.js to show in the person's own zone, and a plain
             # UTC day for a page without scripts).

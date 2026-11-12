@@ -34748,3 +34748,77 @@ stalls both reads 5.0 s and fails them ("database is locked"); always reading
 through the session leaves the transaction begun, red on the last row. The
 section that went red ran six times side by side after: six green, no lock
 in any server's log.
+
+## After v330 -- Report and block at /social (piece 5, its first part)
+
+The owner, Nov 12, "all yes on both" to the Safety mock and the comments
+mock. Safety comes first, in three parts: report and block (this), your
+Reports page with what a maker sees once something is taken down, and the
+draft rules pages.
+
+- REPORT ANYTHING. A profile's ⋯ (beside Share, never on your own) says
+  Report @them and, signed in, Block @them. A person has their own reasons:
+  spam or a fake account, abusive or hateful, pretending to be someone, under
+  13, a child's safety, something else. A post's and a drawing's Report has
+  the Gallery's reasons and a child's safety, and now goes to the site's own
+  queue (social_reports, on the site's chain), not Skribl's: the site owns
+  the moderation of people and words, and a person's report is the site's.
+  A report is a row, never an action. Who sent it is kept for the admins'
+  eyes only (reporter_id); one reporter makes one row for one thing (a keyed
+  hash of the person, or for somebody signed out their address). Anybody who
+  can see the thing can report it, signed in or not: a child's safety must
+  never wait on an account, so a post's and a profile's pages carry their
+  token for everybody now.
+- SKRIBL'S OWN REPORT offers a child's safety too (REPORT_REASONS; the
+  Gallery's sheet renders from it), and `takedown --reports` lists those
+  first, with a word about the law (in the US, reporting to NCMEC; the
+  owner's lawyer sets that up).
+- BLOCK, BOTH WAYS AND QUIETLY. From a profile's ⋯ or a post's ⋯, asked once
+  in its own words. While it stands neither sees the other's posts or
+  drawings (Home, a post's page, a drawing's page, More from); to the one
+  blocked the blocker's profile is "Nobody here by that name"; the blocker
+  finds theirs saying so, with Unblock, and nothing they made; nobody is
+  told. Settings lists the people you blocked, newest first, each with
+  Unblock; only the blocker lifts a block. Deleting an account takes its
+  blocks; a report that names it stays, naming nobody.
+- A BLOCK REACHES SKRIBL'S PAGES through the two seams Skribl gives every
+  host for a block list: a feed filter (Explore's gallery, a profile's
+  skribls, Home's drawings) and a visibility policy (a drawing's link page,
+  payload and card; the card falls back to its blank canvas, as it always
+  has for a drawing somebody may not see). The host installs both, asking
+  social.blocked_authors(viewer_id), as it installs the author resolver
+  (app.py). The site reads it beside Skribl's own work through read_aside
+  (the deadlock #865 fixed), never on a second connection once that work
+  has read.
+
+Pad and Flip: not affected (who sees whose drawings, and the reports' words).
+
+THE FOUR: kind (nothing is taken down by a report alone, nobody is told of a
+block, and a child's safety is one tap away for anybody); simple (⋯ on a
+person, as on a post; Settings holds who you blocked); playful (nothing
+here gets in the way of a drawing); powerful (both ways, everywhere a
+drawing shows, Skribl's pages too).
+
+THE CHECKS. verify_socialsafety, ten sections and twenty rows, its own
+server: reporting somebody (the ⋯, a person's reasons in order, the queue's
+row, once per reporter, signed out with no sender); a post and a drawing
+into the site's queue, Skribl's untouched; the report guards and limit;
+blocking from a profile and from Home, both ways on every page of the
+site's; Skribl's listings, link page, payload and card both ways, the author
+and anybody else unaffected, and no "install a feed filter" warning in the
+server's log; Settings' list and Unblock, the blocker's alone; the block
+guards and limit; deleting an account; Skribl's own sheet and queue; every
+new screen's words, targets and fields, phone and desk, light and dark; no
+page or console errors. Twenty-three breaks, each red on its row: a person's reasons out of order; who sent
+a report not kept; Block offered signed out; the post's sheet sending a reason it was not given; a drawing
+reported as a post; a hidden character let through; no limit on reports; the blocker's profile not saying
+so; Home without the block; Home not saying it; no feed filter; no visibility policy; the policy hiding
+everybody's from everybody else; Settings oldest first; either side lifting a block; blocking yourself; no
+limit on blocks; neither the code nor the cascade taking an account's blocks; a report deleted with the
+person it names; Skribl without a child's safety; its queue most-reported first only; no word about the
+law; the blocked profile's words faint; safety.js throwing once loaded. Two were green or stopped first:
+without the feed filter the listing still read right, because Skribl gives the policy the last word,
+drops the rows it refuses and refills the page, saying so once in the log (the row now reads the log);
+and a block lifted by the wrong side left no Unblock to press, which stopped the suite (now recorded).
+verify_socialposts' ⋯ rows now say Block and the site's queue, and
+verify_socialauth's chain eight tables.

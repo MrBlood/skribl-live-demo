@@ -19,14 +19,17 @@
 {% extends 'social/base.html' %}
 {% from 'skribl/_skribl_inline_player.html' import skribl_inline_draft %}
 {% from 'social/_post.html' import post_card, post_sheets, post_words, face with context %}
+{% from 'social/_safety.html' import safety_sheets with context %}
 {% import 'social/_icons.html' as ic %}
 
 {% block head %}<script src="{{ skribl_asset('lib/composehost.js') }}" defer></script>{% endblock %}
-{% block scripts %}<script src="{{ social_asset('posts.js') }}" defer></script>{% endblock %}
+{% block scripts %}<script src="{{ social_asset('posts.js') }}" defer></script>
+<script src="{{ social_asset('safety.js') }}" defer></script>{% endblock %}
 
 {% block main %}
 {% if note == 'deleted' %}<p class="note" role="status">Your post is gone, its drawing with it.</p>{% endif %}
 {% if note == 'deleted_drawing' %}<p class="note" role="status">Your drawing is gone.</p>{% endif %}
+{% if note == 'blocked' %}<p class="note" role="status">Blocked. You won’t see each other’s posts or drawings. You can unblock them in Settings.</p>{% endif %}
 <section class="composer" aria-label="Make a post" data-composer data-post-new="{{ url_for('social.post_new') }}">
   <div class="composer-row">
     {{ face(me, 'composer-face') }}
@@ -81,4 +84,5 @@
   </div>
 </div>
 {{ post_sheets() }}
+{{ safety_sheets() }}
 {% endblock %}

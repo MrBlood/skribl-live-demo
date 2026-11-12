@@ -49,7 +49,10 @@ _PUBLIC_ID_RE = re.compile(r"^[A-Za-z0-9_-]{6,64}$")
 # the gallery's sheet renders from this same tuple (routes.py passes it to the
 # template), so the sheet cannot offer a reason the server refuses. The note
 # width is the column's, like the title and caption widths above it.
-REPORT_REASONS = ("spam", "abuse", "copyright", "other")
+# "A child's safety" joined after v330 (the owner's "all yes" to Safety, Nov
+# 12): the report a site must never miss, so the operator's queue
+# (takedown --reports) lists it first, whatever else is waiting.
+REPORT_REASONS = ("spam", "abuse", "copyright", "child_safety", "other")
 MAX_REPORT_NOTE_CHARS = 300
 
 # HOW LONG HOT LOOKS BACK, and how long a view row therefore has to live.

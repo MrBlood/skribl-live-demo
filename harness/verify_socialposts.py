@@ -19,9 +19,10 @@ authenticator for the site's people and a real pen in Skribl's real Pad.
      tapped, its time said in the person's own; Load more brings the next
      page in place, by a cursor that names no internal id.
   5. THE ⋯ SHEET: your own post's Copy link, Share…, Delete post; somebody
-     else's Copy link, Share…, Report this post. Report sends Skribl's own
-     reasons into its queue and says thanks; Delete asks once, then the
-     words and the drawing go.
+     else's Copy link, Share…, Report this post and Block @them (piece 5).
+     Report sends the Gallery's reasons and "A child's safety" into the
+     site's own queue and says thanks (verify_socialsafety holds the rest);
+     Delete asks once, then the words and the drawing go.
   6. GUARDS: no token, no sign-in, too many words or a hidden character, no
      drawing, somebody else's post, the limit; a post's body may be bigger
      than the site's 64 KiB; deleting an account takes its posts.
@@ -715,7 +716,7 @@ with sync_playwright() as p:
               f"after {after} of {total}; cursor {raw!r}")
 
     # ------------------------------------------------------------------ 5
-    if part(5, "the ⋯ sheet: yours and somebody else's; Report into Skribl's queue; Delete asked once"):
+    if part(5, "the ⋯ sheet: yours and somebody else's; Report into the site's queue; Delete asked once"):
         mira = someone(b, "mira", "Mira Okafor")
         juno = someone(b, "juno", "Juno Park")
         st, j = make_post(mira, "Mira's to report and delete", seed=40)
@@ -748,18 +749,19 @@ with sync_playwright() as p:
         jp.click("#reportSheet [data-report-send]")
         jp.wait_for_timeout(1200)
         thanks = jp.evaluate("() => document.querySelector('[data-report-say]').textContent")
-        reported = db("select r.reason, r.note from skribl_reports r join skribl_posts p on p.id = r.post_id"
-                      " where p.public_id = ?", (skid,))
+        reported = db("select reason, note from social_reports where kind = 'post' and target = ?", (pid,))
         check("your own post's ⋯ says Copy link, Share…, Delete post; Copy link gives the link (or says it to copy"
               " by hand); somebody else's says Copy link, Share…, Report this post",
-              mine == ["Copy link", "Share…", "Delete post"] and theirs == ["Copy link", "Share…", "Report this post"]
+              mine == ["Copy link", "Share…", "Delete post"]
+              and theirs == ["Copy link", "Share…", "Report this post", "Block @mira"]
               and (copied == "Link copied." or copied.startswith("Here’s the link to copy: " + BASE + f"/social/p/{pid}")),
               f"mine {mine}; theirs {theirs}; copied {copied!r}")
-        check("Report this post rises as a sheet of its own with Skribl's own reasons in the Gallery's words, sends"
-              " into Skribl's report queue (the reason, the note), and says thanks",
+        check("Report this post rises as a sheet of its own with the Gallery's reasons and A child's safety, sends"
+              " into the site's own queue (the reason, the note), and says thanks",
               rsheet["open"] and not rsheet["menu"]
               and rsheet["reasons"] == [["spam", "Spam or misleading"], ["abuse", "Abusive or hateful"],
-                                        ["copyright", "Copies someone else’s work"], ["other", "Something else"]]
+                                        ["copyright", "Copies someone else’s work"],
+                                        ["child_safety", "A child’s safety"], ["other", "Something else"]]
               and thanks == "Thanks. The people who run this site will look at it."
               and reported == [("abuse", "Testing the queue")],
               f"sheet {rsheet}; said {thanks!r}; queue {reported}")
@@ -1030,7 +1032,8 @@ with sync_playwright() as p:
               and playing[:1] == ["playing"]
               and [f"/social/b/{another}", "A drawing"] in page["more"]
               and [f"/social/p/{g_post}", "Section 9, a post shown in the gallery"] in page["more"]
-              and theirs == ["Copy link", "Share…", "Report this post"] and landed == f"/social/p/{g_post}"
+              and theirs == ["Copy link", "Share…", "Report this post", "Block @mira"]
+              and landed == f"/social/p/{g_post}"
               and mine == ["Copy link", "Share…", "Delete post"] and ask.get("open") and "stopped" not in ask
               and ask.get("lede") == ["The drawing goes for good, from Home and from Explore. This can’t be undone."]
               and after["url"] == "/social/?note=deleted_drawing" and after["note"] == "Your drawing is gone." and gone,

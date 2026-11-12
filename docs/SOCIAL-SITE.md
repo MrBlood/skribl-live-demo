@@ -610,13 +610,59 @@ desk, the drawing on the left and More from its author beside it, each tile
 the drawing alone, cut out of its share card as Skribl's face macro does.
 
 **The ⋯ sheet**, as the mock drew it: Copy link, Share…, and Report this
-post, or on your own Delete post. Report rises as a sheet of its own with
-the Gallery's own reasons and words, into Skribl's report queue (the
-operator's: `python -m skribl.takedown --reports`); the site's own queue for
-words, and Block, come with piece 5. Delete asks once and takes the words
-and the drawing. Deleting an account takes its posts the same way.
+post (and since piece 5, signed in, Block @them), or on your own Delete
+post. Report rises as a sheet of its own (since piece 5 into the site's own
+queue, below). Delete asks once and takes the words and the drawing.
+Deleting an account takes its posts the same way.
 
 `harness/verify_socialposts.py` holds it through the demo's own server.
+
+### Built: piece 5, report and block
+
+From the Safety mock and the owner's "all yes" (Nov 12): report anything;
+block both ways, quietly. `social/safety.py`:
+
+    /social/report              a report of somebody, a post, or a drawing
+                                shown outside a post (JSON), from anybody who
+                                can see it, signed in or not
+    /social/@<handle>/block     block them (JSON)
+    /social/@<handle>/unblock   lift your block (JSON from a sheet; a form
+                                from Settings or their profile)
+
+**Report anything.** A profile's ⋯ (beside Share, never on your own) says
+Report @them and, signed in, Block @them. A person has their own reasons:
+spam or a fake account, abusive or hateful, pretending to be someone, under
+13, a child's safety, something else. A post's and a drawing's Report has the
+Gallery's reasons and a child's safety, and goes to the site's own queue
+(`social_reports`, on the site's chain), no longer Skribl's. A report is a
+row, never an action: nothing is hidden because somebody reported it. Who
+sent it is kept for the admins' eyes only, and one reporter makes one row for
+one thing. Skribl's own report sheet (Explore's tiles, a drawing's link page)
+offers a child's safety too, into Skribl's queue, where
+`python -m skribl.takedown --reports` lists those first, with a word about the
+law (in the US, reporting to NCMEC: the owner's lawyer sets that up).
+
+**Block, both ways and quietly.** From a profile's ⋯ or a post's ⋯, asked
+once. While it stands neither sees the other's posts or drawings: Home, a
+post's page, a drawing's page, More from. To the one blocked, the blocker's
+profile is "Nobody here by that name"; the blocker finds theirs saying so,
+with Unblock, and nothing they made. Nobody is told. Settings lists the
+people you blocked, newest first, each with Unblock, and only the blocker
+lifts a block. Deleting an account takes its blocks; a report naming it
+stays, naming nobody.
+
+**A block reaches Skribl's pages** through the two seams Skribl gives every
+host for a block list (docs/INTEGRATION.md): a feed filter (Explore's
+gallery, a profile's skribls, Home's drawings) and a visibility policy (a
+drawing's link page, payload and card; the card falls back to its blank
+canvas). A host that mounts the site installs both, asking
+`social.blocked_authors(viewer_id)`, as it installs the author resolver; the
+demo's `app.py` does.
+
+`harness/verify_socialsafety.py` holds it through the demo's own server.
+Still to come in piece 5: your Reports page (admins: take it down or keep it,
+a child's safety first, blurred), what its maker sees once something is
+taken down, and the draft rules pages.
 
 ### The move to blooby.app
 

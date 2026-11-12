@@ -294,8 +294,10 @@ def delete_person(sess, person_id):
     their passkeys, the invites they made, the recovery links made for them,
     the invite they came in by, ceremonies in progress, their bio with their
     row, their drawn face (the skribl the site posted for it, through
-    Skribl's delete_post), and their posts, the words and the drawings both
-    (piece 4: the site posted those too). Flushes; the request commits.
+    Skribl's delete_post), their posts, the words and the drawings both
+    (piece 4: the site posted those too), and their blocks, both ways
+    (piece 5); a report that names them stays, naming nobody. Flushes; the
+    request commits.
     (Their other skribls are Skribl's, and docs/INTEGRATION.md has no seam
     for a host to take an author's drawings away in one go: they stay, and
     the confirm page says so.)"""
@@ -314,6 +316,12 @@ def delete_person(sess, person_id):
         sess.execute(sa.delete(Challenge).where(Challenge.invite_id.in_(ids)))
         sess.execute(sa.delete(Invite).where(Invite.id.in_(ids)))
     sess.execute(sa.delete(Passkey).where(Passkey.person_id == person_id))
+    # Their blocks go, both ways (piece 5). The reports that name them stay,
+    # as a record, naming nobody: whose it was, who sent it, who handled it.
+    from .models import Block, Report
+    sess.execute(sa.delete(Block).where(sa.or_(Block.blocker_id == person_id, Block.blocked_id == person_id)))
+    for col in (Report.about_id, Report.reporter_id, Report.handled_by_id):
+        sess.execute(sa.update(Report).where(col == person_id).values({col.key: None}))
     sess.execute(sa.delete(Person).where(Person.id == person_id))
     sess.flush()
 
@@ -695,8 +703,11 @@ def register(bp):
         keys = sess.execute(sa.select(Passkey).where(Passkey.person_id == person.id)
                             .order_by(Passkey.created_at, Passkey.id)).scalars().all()
         note = request.args.get("note")
+        from .safety import blocked_people
         return _page("you.html", here="you", me=person, keys=keys, token=csrf_token(),
-                     note=note if note in ("added", "renamed", "removed", "last", "name") else None)
+                     blocked=blocked_people(person),
+                     note=note if note in ("added", "renamed", "removed", "last", "name",
+                                           "unblocked", "limited") else None)
 
     @bp.post("/you/passkeys/options")
     @_rests(json_answer=True)

@@ -29,13 +29,15 @@
 {% from 'skribl/_skribl_face.html' import skribl_face_maker_assets, skribl_face_maker %}
 {% from 'skribl/_skribl_inline_player.html' import skribl_inline_draft %}
 {% import 'social/_icons.html' as ic %}
+{% from 'social/_safety.html' import person_sheet, safety_sheets with context %}
 
 {% block title %}{{ who.display_name }} (@{{ who.handle }}) · Skribl{% endblock %}
 {% block head %}<link rel="canonical" href="{{ share_url }}">
 {{ skribl_gallery_assets() }}
 {% if mine %}<script src="{{ skribl_asset('lib/composehost.js') }}" defer></script>
 {{ skribl_face_maker_assets() }}{% endif %}{% endblock %}
-{% block scripts %}<script src="{{ social_asset('profile.js') }}" defer></script>{% endblock %}
+{% block scripts %}<script src="{{ social_asset('profile.js') }}" defer></script>
+{% if not mine %}<script src="{{ social_asset('safety.js') }}" defer></script>{% endif %}{% endblock %}
 
 {% block top %}
   <span class="top-title">@{{ who.handle }}</span>
@@ -43,7 +45,7 @@
 {% endblock %}
 
 {% block main %}
-<div class="prof-page" data-profile data-share-url="{{ share_url }}"
+<div class="prof-page" data-profile data-handle="{{ who.handle }}" data-share-url="{{ share_url }}"
      data-share-title="{{ who.display_name }} (@{{ who.handle }}) on Skribl">
   {% if note == 'saved' %}<p class="note" role="status">Saved. This is your profile as everyone sees it.</p>
   {% elif note == 'face' %}<p class="note" role="status">That’s your face now. It draws itself like this for everyone who visits.</p>{% endif %}
@@ -66,6 +68,18 @@
     <div class="prof-words">
       <h1 class="prof-name" id="profName">{{ who.display_name }}</h1>
       <p class="prof-handle">@{{ who.handle }}</p>
+      {% if blocked_them %}
+      {#  SOMEBODY YOU BLOCKED (piece 5): who they are, that you blocked them,
+          and Unblock; nothing they wrote or drew. Without safety.js the form
+          posts and comes back here. #}
+      <p class="prof-blocked">You blocked @{{ who.handle }}. You won’t see each other’s posts or drawings, and they can’t see your profile.</p>
+      <form class="prof-unblock" method="post" action="{{ url_for('social.unblock', handle=who.handle) }}" data-unblock>
+        <input type="hidden" name="csrf" value="{{ token }}">
+        <input type="hidden" name="back" value="profile">
+        <button class="btn" type="submit">Unblock</button>
+      </form>
+      <p class="say prof-say" data-safety-say role="status" hidden></p>
+      {% else %}
       {% if who.bio %}<p class="prof-bio">{{ who.bio }}</p>{% endif %}
       <div class="prof-acts">
         {% if mine %}
@@ -73,14 +87,19 @@
         <button class="btn" type="button" data-face-sheet aria-haspopup="dialog" aria-controls="faceSheet" aria-expanded="false">{{ ic.pen() }}<span>{{ 'Change my face' if who.face_id else 'Add your face' }}</span></button>
         {% endif %}
         <button class="icon-btn boxed" type="button" data-share aria-label="Share {{ 'your' if mine else who.display_name ~ '’s' }} profile" title="Share">{{ ic.share() }}</button>
-        {% if mine %}<a class="icon-btn boxed desk-only" href="{{ url_for('social.you') }}" aria-label="Settings" title="Settings">{{ ic.gear() }}</a>{% endif %}
+        {% if mine %}<a class="icon-btn boxed desk-only" href="{{ url_for('social.you') }}" aria-label="Settings" title="Settings">{{ ic.gear() }}</a>
+        {% else %}<button class="icon-btn boxed" type="button" data-person-menu aria-haspopup="dialog" aria-controls="personSheet"
+                aria-expanded="false" aria-label="More for {{ who.display_name }}" title="More">{{ ic.dots() }}</button>{% endif %}
       </div>
       <p class="say prof-say" data-say role="status" hidden></p>
+      {% endif %}
     </div>
   </section>
 
+  {% if not blocked_them %}
   <h2 class="sec" id="profSkribls">Skribls</h2>
   {{ skribl_gallery_section(bp=skribl_bp, door='app', author=who.public_id, mine=mine) }}
+  {% endif %}
 </div>
 
 {#  WHAT profile.js SAYS, in one place (docs/SOCIAL-SITE.md: words live in one
@@ -219,4 +238,4 @@
   </div>
 </div>
 {{ skribl_face_maker() }}
-{% endif %}{% endblock %}
+{% else %}{{ person_sheet(who) }}{{ safety_sheets() }}{% endif %}{% endblock %}

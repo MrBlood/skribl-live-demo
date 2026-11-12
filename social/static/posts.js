@@ -18,10 +18,12 @@
  * it"), sound off until the viewer turns it on, and never under Reduce
  * Motion; the feed's players wait for a tap.
  *
- * THE ⋯ SHEET (social.js's SocialSheet, as Make's): Copy link, Share…, and
- * Report this post, or on your own Delete post. Report and Delete each rise
- * as a sheet of their own: Report into Skribl's report queue (its route, its
- * token, the Gallery's reasons and words), Delete asked once.
+ * THE ⋯ SHEET (social.js's SocialSheet, as Make's): Copy link, Share…,
+ * Report this post and, signed in, Block @them; or on your own Delete post.
+ * Report and Delete each rise as a sheet of their own: Report into the
+ * site's own queue (/report, the page's token, the Gallery's reasons and "A
+ * child's safety"; piece 5), Delete asked once. Block is safety.js's sheet
+ * (window.SocialSafety), and afterwards Home says so.
  *
  * TIMES are said in the person's own time: "35m" in the feed, "Nov 10 at
  * 8:20 PM" on a post's page; without this file, the day in UTC.
@@ -113,7 +115,8 @@
     if (!p) return null;
     return { el: p, id: p.getAttribute('data-post'), url: absolute(p.getAttribute('data-url')),
              skribl: p.getAttribute('data-skribl'), mine: p.hasAttribute('data-mine'),
-             del: p.getAttribute('data-del'), kind: p.getAttribute('data-kind') || 'p' };
+             del: p.getAttribute('data-del'), kind: p.getAttribute('data-kind') || 'p',
+             handle: p.getAttribute('data-handle') || '' };
   }
 
   /* ---- the ⋯ sheet, and Report and Delete -------------------------------- */
@@ -140,6 +143,8 @@
       opener = m;
       Array.prototype.forEach.call(menuWrap.querySelectorAll('[data-mine-only]'), function (b) { b.hidden = !current.mine; });
       Array.prototype.forEach.call(menuWrap.querySelectorAll('[data-theirs]'), function (b) { b.hidden = current.mine; });
+      var who = menuWrap.querySelector('[data-block-who]');
+      if (who) who.textContent = say('block_who', { handle: current.handle });
       tell(menuWrap.querySelector('[data-post-say]'), '');
       menu.open(m);
       return;
@@ -162,6 +167,9 @@
         menu.close(true);
         resetReport();
         report.open(opener);
+      } else if (act === 'block' && window.SocialSafety) {
+        menu.close(true);
+        window.SocialSafety.block(current.handle, opener);
       } else if (act === 'delete' && del) {
         menu.close(true);
         tell(deleteWrap.querySelector('[data-delete-say]'), '');
@@ -191,9 +199,12 @@
       var picked = reportWrap.querySelector('input[name=reason]:checked');
       send.disabled = true;
       tell(box, say('sending'));
-      var url = reportWrap.getAttribute('data-report').replace('__ID__', encodeURIComponent(current.skribl));
-      post(url, { reason: picked ? picked.value : 'other', note: (reportWrap.querySelector('.post-note').value || '').trim() },
-           { 'X-Skribl-CSRF': reportWrap.getAttribute('data-skribl-csrf') || '' })
+      /* A drawing shown outside a post is reported as itself. */
+      var drawing = current.kind === 's';
+      post(reportWrap.getAttribute('data-report'),
+           { kind: drawing ? 'drawing' : 'post', target: drawing ? current.skribl : current.id,
+             reason: picked ? picked.value : 'other', note: (reportWrap.querySelector('.post-note').value || '').trim() },
+           { 'X-Social-CSRF': token })
         .then(function (j) {
           if (j.status === 202) {
             tell(box, say('reported'));

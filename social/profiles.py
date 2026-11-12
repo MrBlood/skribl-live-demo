@@ -36,6 +36,7 @@ from flask import jsonify, redirect, request, url_for
 from .accounts import (HANDLE_RE, _json_error, _page, _rests, check_bio, check_name, drop_face,
                        profile_url)
 from .models import Person
+from .safety import between, i_blocked
 from .security import csrf_token, current_person, origin_ok, over, public_origin, site, token_ok
 
 #: The most a face may weigh on its way here: the Pad's whole payload, its
@@ -76,12 +77,20 @@ def register(bp, skribl_blueprint="skribl"):
             return _page("nobody.html", 404, here="nobody", handle=said)
         me = current_person()
         mine = me is not None and me.id == who.id
+        # A BLOCK (piece 5): to somebody you blocked, your profile is nobody's,
+        # the same page as a handle never made; to you, theirs says you
+        # blocked them, with Unblock, and shows nothing they made.
+        blocked_them = not mine and i_blocked(me, who)
+        if not mine and not blocked_them and between(me, who):
+            return _page("nobody.html", 404, here="nobody", handle=who.handle)
         note = request.args.get("note") if mine else None
         # Your own profile is You's page; somebody else's is none of the
-        # bar's places, so no tab says it is.
+        # bar's places, so no tab says it is. The page's token for everybody:
+        # Report is anybody's, Block anybody's signed in (piece 5).
         return _page("profile.html", here="you" if mine else "profile", who=who, mine=mine,
+                     blocked_them=blocked_them,
                      share_url=public_origin() + profile_url(who.handle),
-                     token=csrf_token() if mine else None,
+                     token=csrf_token(),
                      note=note if note in NOTES else None,
                      face_compose=(url_for(skribl_blueprint + ".skribl_editor", compose=1, face=1)
                                    if mine else None))
