@@ -323,19 +323,20 @@ def describe_author(user_id):
     address of their profile (`url`, which Skribl's Gallery card links their
     name to), and their drawn face when they have one (`face`, which the card
     shows in the avatar's circle: docs/INTEGRATION.md), or None for any id
-    that is not one of the site's people. Read on a connection of its own, as
-    the signed-in person is, and never a failure that reaches Skribl's page."""
+    that is not one of the site's people. Read as the signed-in person is
+    (security.read_aside: beside the request's own work, never deadlocking
+    SQLite), and never a failure that reaches Skribl's page."""
     from .models import PERSON_PREFIX
     if not isinstance(user_id, str) or not user_id.startswith(PERSON_PREFIX):
         return None
     if "social" not in current_app.extensions:
         return None
     t = Person.__table__
+    from .security import read_aside
     try:
-        with site().engine().connect() as conn:
-            row = conn.execute(sa.select(t.c.handle, t.c.display_name, t.c.face_id, t.c.face_w,
-                                         t.c.face_h)
-                               .where(t.c.public_id == user_id)).first()
+        rows = read_aside(sa.select(t.c.handle, t.c.display_name, t.c.face_id, t.c.face_w, t.c.face_h)
+                          .where(t.c.public_id == user_id))
+        row = rows[0] if rows else None
     except sa.exc.SQLAlchemyError:
         site().say_once("unread-authors", "the site could not read its people for a drawing's "
                                           "author: those drawings show no name until it can")

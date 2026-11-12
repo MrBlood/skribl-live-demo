@@ -936,6 +936,86 @@ with A.create_app().app_context():
     check("and is durable across app contexts — app.py committed it",
           row is not None)
 
+print("\nTHE SITE'S READS BESIDE A REQUEST'S WORK — never a deadlock behind a writer")
+# Main's run after #864 (verify_socialposts section 9: a drawing's own page,
+# one run in three side by side here). The person signed in was read on a
+# SECOND SQLite connection while the request's own session held the read lock
+# (Skribl's recipe begins a transaction at the first read), queued behind a
+# writer waiting to commit, which waited for that very lock: five seconds,
+# "database is locked", and the page said nobody was signed in.
+# social.security.read_aside reads through the request's session once it has
+# begun. Here: the request reads, a writer waits to commit, and the site's two
+# reads beside the request's work (who is signed in, whose drawing this is)
+# must answer at once, with the right person.
+import sqlite3 as _sqlite3  # noqa: E402
+import threading as _thr  # noqa: E402
+import time as _time  # noqa: E402
+if "social" in standalone.extensions:
+    _ssec = importlib.import_module("social.security")
+    _sacc = importlib.import_module("social.accounts")
+    _smod = importlib.import_module("social.models")
+    with standalone.app_context():
+        _p = _smod.Person(public_id=_smod.new_person_id(), handle="txcheck", handle_key="txcheck",
+                          display_name="Tx Check", user_handle=os.urandom(32), age_confirmed_at=_smod.utcnow())
+        A.db.session.add(_p)
+        A.db.session.commit()
+        _pid = _p.public_id
+    _waited = {}
+
+    def _writer():
+        con = _sqlite3.connect(f"{_sa_tmp}/standalone.db", timeout=15, isolation_level=None)
+        con.execute("BEGIN")
+        con.execute("INSERT INTO social_rate_events (bucket, key_hash, created_at)"
+                    " VALUES ('tx', 'tx', '2026-01-01 00:00:00')")
+        t = _time.time()
+        con.execute("COMMIT")
+        _waited["s"] = _time.time() - t
+        con.close()
+
+    with standalone.test_request_context("/social/"):
+        A.db.session.execute(sa.select(_smod.Person.id).limit(1)).all()   # the request has read
+        _w = _thr.Thread(target=_writer)
+        _w.start()
+        _time.sleep(0.5)                       # the writer now waits to commit, behind the request's read lock
+        _t0 = _time.time()
+        try:
+            _row, _err = _ssec.read_person_row(_pid), None
+        except Exception as _e:  # noqa: BLE001
+            _row, _err = None, f"{type(_e).__name__}: {str(_e)[:60]}"
+        _took = _time.time() - _t0
+        _t0 = _time.time()
+        try:
+            _who = _sacc.describe_author(_pid)
+        except Exception:  # noqa: BLE001
+            _who = None
+        _took2 = _time.time() - _t0
+        _blocked = _w.is_alive()
+        A.db.session.rollback()                # the request ends: the writer goes on
+    _w.join(20)
+    check("with a writer waiting behind a request's read, the person signed in is read at once, through the"
+          " request's own session (no second connection to queue behind the writer)",
+          _blocked and _row is not None and _row.public_id == _pid and _took < 1.0,
+          f"writer waiting {_blocked}; row {bool(_row)}; {_took:.2f} s; {_err}")
+    check("...and so is whose drawing this is (describe_author, for Skribl's pages)",
+          _who is not None and _who.get("username") == "txcheck" and _took2 < 1.0,
+          f"{_who}; {_took2:.2f} s")
+    check("...and the writer then commits, once the request has ended",
+          not _w.is_alive() and "s" in _waited, f"waited {_waited}")
+    # The other half: before the request has read anything, the same reads
+    # must not begin its transaction, or a limit's commit after them (over(),
+    # on connections of its own) would wait on the request's own read lock.
+    with standalone.test_request_context("/social/"):
+        _real = A.db.session()
+        _fresh_row = _ssec.read_person_row(_pid)
+        _sacc.describe_author(_pid)
+        _begun = _real.in_transaction()
+        A.db.session.rollback()
+    check("...while before the request has read anything, those reads leave its transaction unbegun (a"
+          " limit's commit after them never waits on the request)",
+          _fresh_row is not None and not _begun, f"row {bool(_fresh_row)}; begun {_begun}")
+else:
+    check("the demo mounts the site, so its reads can be asked", False, "no social extension on the standalone app")
+
 # ---- v208 (v207 review F1): the AUTOCOMMIT refusal, against a REAL engine ----
 # The v202/v203 guard checked `dialect.isolation_level`, which SQLAlchemy 2.x
 # leaves None for `create_engine(..., isolation_level="AUTOCOMMIT")` — the
