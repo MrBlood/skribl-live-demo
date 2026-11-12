@@ -397,13 +397,14 @@ def register(bp, skribl_blueprint="skribl"):
         me = current_person()
         if me is None:
             return _json_error("signed_out", 401)
-        from skribl import SkriblNotFound, SkriblRefused, delete_post
+        from skribl import SkriblNotFound, delete_post
         sess = site().session()
         if sess.execute(sa.select(Post.id).where(Post.skribl_id == skribl_id)).first() is not None:
             return _json_error("gone", 404)
         try:
+            # Somebody else's is SkriblNotFound too, on purpose (docs/INTEGRATION.md).
             delete_post(skribl_id, author_id=me.public_id)
-        except (SkriblNotFound, SkriblRefused):
+        except SkriblNotFound:
             return _json_error("gone", 404)
         sess.flush()
         return jsonify({"ok": True, "go": url_for("social.home", note="deleted_drawing")})

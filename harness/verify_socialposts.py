@@ -709,9 +709,9 @@ with sync_playwright() as p:
               and idle and all(s != "playing" for s in idle),
               f"{len(first)} cards; first {first[:2]}; idle {set(idle)}")
         check("Load more brings the rest in place, each player mounted, and goes away at the end; its cursor names"
-              " a time and a post's public id, never an internal id",
+              " a time and the card (p and a post's public id, or s and a drawing's), never an internal id",
               after["n"] == total and total > 20 and after["more"] and after["mounted"]
-              and re.fullmatch(r"\d{16}\.[A-Za-z0-9_-]{11}", raw or "") is not None,
+              and re.fullmatch(r"\d{16}\.[ps][A-Za-z0-9_-]{11}", raw or "") is not None,
               f"after {after} of {total}; cursor {raw!r}")
 
     # ------------------------------------------------------------------ 5
@@ -994,22 +994,24 @@ with sync_playwright() as p:
           words: (document.querySelector('.post-page .post-words') || {}).textContent || '',
           more: [...document.querySelectorAll('.more-tile')].map(e => [e.getAttribute('href'), e.querySelector('.more-words').textContent]) })""")
         playing = jp.evaluate(STATE)
+        OPEN = "(id) => document.getElementById(id).classList.contains('is-open')"
         jp.click("[data-post-menu] >> visible=true")
-        jp.wait_for_timeout(600)
+        jp.wait_for_function(OPEN, arg="postSheet", timeout=10000)
         theirs = jp.evaluate("() => [...document.querySelectorAll('#postSheet .post-act')].filter(b => !b.hidden).map(b => b.textContent.trim())")
         jp.keyboard.press("Escape")
         to_post = jp.goto(BASE + f"/social/b/{g_skribl}")
         landed = jp.evaluate("() => location.pathname")
         mp = mira.pg
         mp.goto(BASE + f"/social/b/{shown}")
-        mp.wait_for_timeout(1000)
+        mp.wait_for_function("() => !!window.SocialSheet && document.readyState === 'complete'", timeout=15000)
+        mp.wait_for_timeout(400)
         mp.click("[data-post-menu] >> visible=true")
-        mp.wait_for_timeout(600)
+        mp.wait_for_function(OPEN, arg="postSheet", timeout=10000)
         mine = mp.evaluate("() => [...document.querySelectorAll('#postSheet .post-act')].filter(b => !b.hidden).map(b => b.textContent.trim())")
         ask = {"open": False}
         try:
             mp.click("#postSheet [data-act=delete]", timeout=5000)
-            mp.wait_for_timeout(700)
+            mp.wait_for_function(OPEN, arg="deleteSheet", timeout=10000)
             ask = mp.evaluate("""() => ({ open: document.getElementById('deleteSheet').classList.contains('is-open'),
               lede: [...document.querySelectorAll('#deleteSheet .post-lede')].filter(e => !e.hidden).map(e => e.textContent) })""")
             with mp.expect_navigation(timeout=20000):

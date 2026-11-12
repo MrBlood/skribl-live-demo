@@ -569,6 +569,8 @@ and the owner's "all yes" to piece 4's choices (Nov 11). `social/posts.py`:
     /social/feed          the next page of the feed, for Load more (JSON)
     /social/p/<id>        a post's own page: its drawing plays by itself
     /social/p/<id>/delete your own post, gone: its words and its drawing (JSON)
+    /social/b/<skribl_id> a drawing shown outside a post, on a page of its own
+    /social/b/<skribl_id>/delete  your own such drawing, gone (JSON)
 
 **A post is a drawing and words** (the words optional, up to 500
 characters). Draw and Flip open Skribl's editor over Home in compose mode,

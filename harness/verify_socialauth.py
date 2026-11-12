@@ -472,7 +472,9 @@ READ = """() => {
     return g; };
   // The site's own words and controls: Skribl's player and Gallery section
   // inside a page keep their own (verify_inline, verify_gallery).
-  const SKRIBLS = '.skribl-inline, #skriblGallery';
+  // Skribl's own parts keep their own (its player's box and its line under it: verify_inline's),
+  // as verify_socialposts reads them; Home holds drawings since the site's people's show there.
+  const SKRIBLS = '.skribl-inline, .skribl-inline-line, #skriblGallery';
   const out = { read: 0, low: [], small: [], fields: [], lowest: 99 };
   const roots = [...document.querySelectorAll('main, header.top, nav.nav')];
   roots.forEach(root => root.querySelectorAll('*').forEach(e => {
