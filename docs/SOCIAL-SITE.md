@@ -596,7 +596,8 @@ drawing posted from the Pad on its own page (Make's Draw) and shown in the
 gallery is on Home too, among the posts, newest first: a card whose words
 are its title, with a page of its own (`/social/b/<id>`: its drawing plays
 by itself, More from its author's posts and drawings, its ⋯ and its Delete,
-its author's alone). It comes through Skribl's `list_public_posts`
+its author's alone, and since phase 2 its comments, section 10). It comes
+through Skribl's `list_public_posts`
 (docs/INTEGRATION.md, "A feed of your own people's drawings"), one cursor
 walking both; a post's drawing shows once, as the post, and its page is the
 post's. Not one kept unlisted, nor one by somebody not on the site.
@@ -791,11 +792,14 @@ https://blooby.app`. The old address keeps working meanwhile.
 From the comments mock and the owner's "all yes on both" (Nov 12), in the
 mock's own classes, sizes and words. `social/comments.py`:
 
-    /social/p/<id>/comments   POST: a comment on a post, or an answer to one
-                              (JSON); GET: the next page of its comments, for
-                              Load more
-    /social/c/<id>/delete     your own comment, gone with its answers; or, on
-                              your own post, anybody's, removed from it (JSON)
+    /social/p/<id>/comments           POST: a comment on a post, or an answer
+                                      to one (JSON); GET: the next page of its
+                                      comments, for Load more
+    /social/b/<skribl_id>/comments    the same, on a drawing shown outside a
+                                      post (below)
+    /social/c/<id>/delete             your own comment, gone with its answers;
+                                      or, on your own post or drawing,
+                                      anybody's, removed from it (JSON)
 
 **On a post's own page** "Comments" and how many stand where "Comments open
 soon" was. The box on top is Home's composer in the mock's size: your face,
@@ -808,14 +812,59 @@ comment keeps its place on the screen as the box moves, the box fades in, and
 if it landed below what the screen shows the page glides down to it. Answer
 again, Esc or Post sends the box home. On a desk the comments sit beside the
 drawing, under Share. Home's card says how many beside the plays ("3
-comments", a way to them), and nothing at none. A drawing shown outside a post
-(`/social/b/<id>`) has no comments: they are a post's.
+comments", a way to them), and at none its icon alone, named "Comment" (below).
+
+**On every drawing** (the owner's yes, Nov 12: "Comments on every drawing,
+however it was made, so whatever you open has the comment box"). A drawing
+shown outside a post, made in the Pad or Flip on their own pages and shown in
+the gallery, has the same comments on its own page (`/social/b/<id>`): the
+box, answers, drawing answers, the ⋯ (its maker removes, as a post's author
+does), reports, Load more, Home's count. They follow its page, which decides
+who may see it (public, its maker one of the site's people, no block either
+way, nothing taken down but to its maker: `posts.bloob`, one rule for the page
+and its comments). A block either way with its maker, the drawing taken down
+(withheld) or its maker taken down, and the drawing deleted in the Library:
+its page is gone to them, and so are its comments, read, said, answered or
+reported. Its maker still sees them on a drawing taken down, with the note,
+and no box. Deleted through the site (its ⋯, Delete), it takes its comments
+with it, in code, and their drawing answers.
+
+**Easier to open a post** (the same yes: "tap its words, its name line or its
+time; the 💬 shows even at zero"). On Home's cards the words and the time are
+each a link to the card's own page (a post's or a drawing's); the face, the
+name and the @handle still go to the person's page, as everywhere else on the
+site (the owner was told: "its name line" kept going to the profile). The 💬
+shows even at none: its icon alone, named "Comment", a 44px way to the
+comments. Nothing on the card moved: the name's link lies under the @handle
+too, so the person's link is the whole name line's 44px as before, and the
+time's link, over it, is 44px by reaching down into the room under its line
+(toward the words, which go where it goes; on a card with no words the
+drawing lies over its last 11px or so and keeps its taps there, so the
+time's own tap is 33px tall, the card's ground around it opening the post
+too). More from's tiles were whole links already; a profile shows Skribl's
+Gallery, not these cards.
+
+**Anywhere on a card opens its post** (the owner's addition, the same day,
+a plain yes). A tap or a click on a card's own ground opens its page, as its
+words and its time do; they stay its real links, for a keyboard and a screen
+reader, and the card is not one big link (`posts.js`, a tap on the card's
+ground: one that did not land on anything with a job of its own). What has
+its own job keeps it: the drawing plays and pauses and never opens the post
+(its player stops its own taps, and is set apart besides); the face, the
+name and the @handle open the person's page; ⋯ and Share their own sheets;
+the 💬 the comments. A press that moved is a drag, and a click that ends a
+text selection opens nothing, a link's included; the words select when
+pressed and pulled (`draggable="false"` and `user-select: text`, which
+Chromium needs to select inside a link at all). Ctrl or ⌘, or the middle
+button, opens a new tab. On a desk the card shows a pointer; nothing on a
+phone changes.
 
 **Who may comment:** somebody signed in, not taken down, with no block
-either way with the post's author; an answer also with none with the author
-of the comment it answers. The route refuses anybody else kindly, and the
-box is not shown to them. Signed out, the comments are readable and "Sign in
-to answer" stands in the box's place, back to the post once signed in. The
+either way with the author of the post or the drawing; an answer also with
+none with the author of the comment it answers, and on what that comment is
+on. The route refuses anybody else kindly, and the box is not shown to them.
+Signed out, the comments are readable and "Sign in to answer" stands in the
+box's place, back to the page once signed in. The
 words are a post's: tidied, 500 characters at most, nothing hidden or turned
 around; 60 comments an hour a person (`comment` in security.LIMITS). A
 comment needs words or a drawing.
@@ -836,33 +885,51 @@ It goes with its comment, its post and its person's account (Skribl's
 `delete_post`, as its author), is withheld with its comment when an admin
 takes it down, and what is reported of it on Skribl's own link page lands on
 its comment's card. A post's own page loads `lib/composehost.js` only for
-somebody who may comment.
+somebody who may comment; so does a drawing's.
 
 **What is shown, and counted:** nothing by anybody hidden from the viewer (a
-block either way, or taken down), nor the answers under it, on the post's
-page and on Home's card alike. A comment's ⋯: your own is "Your comment",
-Delete comment; somebody else's on your own post "Theo’s comment", Remove
-from my post and Report comment; anybody else's Report comment. Delete and
-Remove go at once (the ⋯ is the asking), the comment fading out with its
-answers. Report sends a post's reasons into the site's own queue (kind
-`comment`); Your Reports shows its card (whose, its words, a link to it on
-its post's page), and Take it down hides it from everybody but its author,
-who sees "Taken down: it broke the rules. Only you can see it."
+block either way, or taken down), nor the answers under it, on the page and
+on Home's card alike. A comment's ⋯: your own is "Your comment", Delete
+comment; somebody else's on your own post or drawing "Theo’s comment",
+Remove from my post and Report comment; anybody else's Report comment.
+Delete and Remove go at once (the ⋯ is the asking), the comment fading out
+with its answers. Report sends a post's reasons into the site's own queue
+(kind `comment`); Your Reports shows its card (whose, its words, a link to it
+on its post's or its drawing's page), and Take it down hides it from
+everybody but its author, who sees "Taken down: it broke the rules. Only you
+can see it."
 
 **Data.** `social_comments`, on the site's own chain (migration
 `e4b8c2a91f37`): `public_id`, `post_id`, `person_id`, `parent_id` (always a
-top-level comment's), `words`, `skribl_id`, `created_at`, `taken_down_at`;
-indexed by address, a post's newest first, a comment's answers oldest first,
-a person's, and a drawing's. Deleting a comment takes its answers, a post its
-comments, an account its comments and every answer under them: said in code
-(`comments.drop_comments`, `posts.drop_post`, `accounts.delete_person`),
-never left to the schema's ON DELETE CASCADE, which SQLite enforces only
-where Skribl's pragma hook is on.
+top-level comment's), `words`, `skribl_id` (a drawing answer's), `created_at`,
+`taken_down_at`; indexed by address, a post's newest first, a comment's
+answers oldest first, a person's, and a drawing answer's. Since comments on
+every drawing (migration `ded60afbc86d`), a comment is on a post (`post_id`,
+nullable now) or on a drawing shown outside a post (`drawing_id`, the
+skribl's own public id: the site has no row of its own for it), exactly one
+(`ck_social_comments_on_one`); an answer is on what its comment is on.
+`owner_id` is whose the post or the drawing is (filled from each post's
+author for the comments already there), so deleting an account and a block
+never ask Skribl whose a drawing was; indexed too, as are a drawing's
+comments newest first. Deleting a comment takes its answers, a post or a
+drawing its comments, an account its comments, every answer under them and
+every comment on what it owned: said in code (`comments.drop_comments`,
+`posts.drop_post`, `posts.bloob_delete`, `accounts.delete_person`), never
+left to the schema's ON DELETE CASCADE, which SQLite enforces only where
+Skribl's pragma hook is on. A drawing deleted in the Library (Skribl's own
+page, outside the site) takes its page, and so its comments, from everybody
+at once; their rows stay until its maker's account goes, or each commenter's,
+since Skribl tells a host nothing when a drawing is deleted on its own pages.
+The chain taken back down deletes the comments on drawings (there is no post
+for them to be on).
 
 **Counted, not kept (for now).** Section 3's rule 3 keeps counts as stored
 numbers. A comment count that hides what a block hides is each viewer's own,
-so it is counted, one grouped query a page on the post's own index, by the
-page's own rules; a kept count waits for a measurement that asks for it.
+so it is counted, one grouped query a page for each kind (posts', drawings'),
+each on its own index, by the page's own rules; a kept count waits for a
+measurement that asks for it.
 
-`harness/verify_socialcomments.py` holds it through the demo's own server;
-DECISIONS.md ("Comments at /social") says what each check was shown red by.
+`harness/verify_socialcomments.py` holds it through the demo's own server
+(sections 20 to 28 the drawings'), and `harness/verify_socialposts.py`
+sections 10 and 11 the card's ways in; DECISIONS.md ("Comments at /social", and
+"Comments on every drawing") says what each check was shown red by.

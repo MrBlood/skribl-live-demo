@@ -35,10 +35,20 @@ authenticator for the site's people and a real pen in Skribl's real Pad.
      among the posts, newest first, once each; not one kept unlisted, nor
      one by somebody not on the site; Load more walks both; a drawing's own
      page, its ⋯ and its Delete, and their guards.
+ 10. A CARD'S WAYS IN (the owner's yes, Nov 12): its words and its time each a
+     link to its page, a tap landing on them across 44px; the face, the name
+     and the @handle the person's; the 💬 even at none; nothing moved. Phone
+     and desk, light and dark.
+ 11. ANYWHERE ON A CARD opens its post (the same yes): its ground, its words,
+     the 💬 at its comments; the drawing plays and pauses and stays, even at
+     its edge under the time; the face, the name and the @handle open the
+     person's page; ⋯ and Share do their own job; a drag that selects words
+     opens nothing. A touch on a phone, a click on a desk.
 
 SOCIALPOSTS_PART=<n>[,<m>] runs those sections only (calibration); a section
 makes the people it needs. Every row was shown red by breaking one part and
-green as built: DECISIONS.md, "Posts at /social (phase 1, piece 4)".
+green as built: DECISIONS.md, "Posts at /social (phase 1, piece 4)", and
+"Comments on every drawing" for 10 and 11.
 """
 import base64
 import json
@@ -482,6 +492,59 @@ READ = """(sel) => {
 STATE = """() => { const p = window.SkriblInline ? SkriblInline.players() : [];
   return p.map(x => x.state().state); }"""
 
+# A drawing posted from the Pad on its own page (Make's Draw), as the Pad posts
+# it: Skribl's API, as the person signed in (or nobody), its own token from its
+# own cookie (sections 9 and 10).
+PAD = """async ([title, vis, seed]) => {
+  await fetch('/api/skribls?limit=1', { credentials: 'same-origin' });
+  const tok = (document.cookie.match(/(?:^|; )skribl_csrf=([^;]+)/) || [])[1] || '';
+  const pts = Array.from({ length: 30 }, (_, i) => ({ x: 300 + i * 6, y: 300 + Math.sin((i + seed) / 3) * 60,
+    color: '#7c5cff', size: 8, t: i * 30, start: i === 0 }));
+  const r = await fetch('/api/skribls', { method: 'POST', credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json', 'X-Skribl-CSRF': decodeURIComponent(tok) },
+    body: JSON.stringify({ title, visibility: vis, version: 2, schemaVersion: 2, playbackMode: 'replay',
+      canvasSize: { cssWidth: 816, cssHeight: 612 }, frames: [{ strokes: pts, strokeGroups: [pts.length] }] }) });
+  const j = await r.json().catch(() => ({})); return [r.status, j.id || null]; }"""
+
+# A CARD'S WAYS IN (section 10), read off what is painted: each link's box, and
+# whether a tap anywhere in it (its middle and its four corners) lands on it,
+# not on something laid over it; where a tap on the @handle lands; and the
+# card's own rhythm (the time on the @handle's line, the words and the drawing
+# 12px under the header), so making them links moved nothing.
+WAYS = """(key) => {
+  const c = document.querySelector('.post-card[data-post="' + key + '"]') || document.querySelector('.post-card[data-skribl="' + key + '"]');
+  if (!c) return null;
+  c.scrollIntoView({ block: 'center' });
+  // Where a tap lands at the link's middle and its four corners (1px in): on
+  // the link itself, the drawing, another link (its address), or the card.
+  const landing = a => { const r = a.getBoundingClientRect();
+    return [[r.left + r.width / 2, r.top + r.height / 2], [r.left + 1, r.top + 1], [r.right - 1, r.top + 1],
+            [r.left + 1, r.bottom - 1], [r.right - 1, r.bottom - 1]]
+      .map(([x, y]) => { const e = document.elementFromPoint(x, y); if (!e) return null;
+        if (e.closest('.post-art')) return 'drawing'; const l = e.closest('a, button');
+        return l === a ? 'self' : l ? (l.getAttribute('href') || l.className) : 'card'; }); };
+  const one = sel => { const a = c.querySelector(sel); if (!a) return null; const r = a.getBoundingClientRect(), p = landing(a);
+    // Sizes as the census reads them: never rounded up (43.99 is under 44).
+    return { tag: a.tagName.toLowerCase(), href: a.getAttribute('href'), w: Math.floor(r.width * 100) / 100,
+             h: Math.floor(r.height * 100) / 100, lands: p.every(x => x === 'self'), at: p,
+             label: a.getAttribute('aria-label'), text: a.textContent.trim(), icon: !!a.querySelector('svg') }; };
+  const text = (root, needle) => { const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    for (let n = w.nextNode(); n; n = w.nextNode()) { const i = n.textContent.indexOf(needle); if (i >= 0) {
+      const g = document.createRange(); g.setStart(n, i); g.setEnd(n, i + needle.length); return g.getBoundingClientRect(); } }
+    return null; };
+  const head = c.querySelector('.post-head').getBoundingClientRect();
+  const handle = text(c.querySelector('.post-head'), '@' + c.dataset.handle);
+  const when = c.querySelector('time').getBoundingClientRect();
+  const at = handle ? document.elementFromPoint(handle.left + handle.width / 2, handle.top + handle.height / 2) : null;
+  const wl = c.querySelector('.post-words'), art = c.querySelector('.post-art').getBoundingClientRect();
+  const pad = wl ? parseFloat(getComputedStyle(wl).paddingTop) : 0, wr = wl ? wl.getBoundingClientRect() : null;
+  const r1 = v => Math.round(v * 10) / 10;
+  return { words: one('.post-words'), when: one('.post-when'), count: one('.post-count'), name: one('.post-name'),
+           face: one('.post-face'), handle: at && at.closest('a') ? at.closest('a').getAttribute('href') : null,
+           sameLine: !!handle && Math.abs(when.top - handle.top) < 1 && when.left > handle.right, headH: r1(head.height),
+           wordsGap: wr ? r1(wr.top + pad - head.bottom) : null,
+           artGap: r1(art.top - (wr ? wr.bottom - parseFloat(getComputedStyle(wl).paddingBottom) : head.bottom)) }; }"""
+
 
 with sync_playwright() as p:
     b = p.chromium.launch()
@@ -689,7 +752,7 @@ with sync_playwright() as p:
         pg.goto(BASE + "/social/")
         pg.wait_for_timeout(1200)
         first = pg.evaluate("""() => [...document.querySelectorAll('.post-card')].map(c => ({ id: c.getAttribute('data-post'),
-          name: c.querySelector('.post-name').textContent, href: c.querySelector('.post-who').getAttribute('href'),
+          name: c.querySelector('.post-name').textContent, href: c.querySelector('.post-name').getAttribute('href'),
           when: c.querySelector('time').textContent, words: (c.querySelector('.post-words') || {}).textContent }))""")
         idle = pg.evaluate(STATE)
         cursor = pg.evaluate("() => document.querySelector('[data-feed-next]').getAttribute('data-feed-next')")
@@ -905,19 +968,6 @@ with sync_playwright() as p:
     if part(9, "Home holds every drawing the site's people show: posts, and drawings from the Pad outside a post"):
         mira = someone(b, "mira", "Mira Okafor")
         juno = someone(b, "juno", "Juno Park")
-        # A drawing posted from the Pad on its own page (Make's Draw), as the
-        # Pad posts it: Skribl's API, as the person signed in (or nobody), its
-        # own token from its own cookie.
-        PAD = """async ([title, vis, seed]) => {
-          await fetch('/api/skribls?limit=1', { credentials: 'same-origin' });
-          const tok = (document.cookie.match(/(?:^|; )skribl_csrf=([^;]+)/) || [])[1] || '';
-          const pts = Array.from({ length: 30 }, (_, i) => ({ x: 300 + i * 6, y: 300 + Math.sin((i + seed) / 3) * 60,
-            color: '#7c5cff', size: 8, t: i * 30, start: i === 0 }));
-          const r = await fetch('/api/skribls', { method: 'POST', credentials: 'same-origin',
-            headers: { 'Content-Type': 'application/json', 'X-Skribl-CSRF': decodeURIComponent(tok) },
-            body: JSON.stringify({ title, visibility: vis, version: 2, schemaVersion: 2, playbackMode: 'replay',
-              canvasSize: { cssWidth: 816, cssHeight: 612 }, frames: [{ strokes: pts, strokeGroups: [pts.length] }] }) });
-          const j = await r.json().catch(() => ({})); return [r.status, j.id || null]; }"""
         CARDS = """() => [...document.querySelectorAll('.post-card')].map(c => ({ kind: c.getAttribute('data-kind'),
           id: c.getAttribute('data-post'), skribl: c.getAttribute('data-skribl'),
           words: ((c.querySelector('.post-words') || {}).textContent || ''), url: c.getAttribute('data-url') }))"""
@@ -1060,6 +1110,224 @@ with sync_playwright() as p:
               and pages == {"unlisted": 404, "nobody's": 404, "none": 404},
               f"no token {no_token}; somebody else's {not_mine} (kept {skribl_row(sid_k) is not None});"
               f" a post's drawing {a_posts}; pages {pages}")
+
+    # ------------------------------------------------------------------ 10
+    # EASY TO OPEN (the owner's yes, Nov 12: "tap its words, its name line or
+    # its time; the 💬 shows even at zero"). The name and @handle keep going to
+    # the person's page, as everywhere else; the words and the time each open
+    # the card's own page. Read on Home, phone and desk, light and dark, off
+    # what is painted (a tap's landing), on a post with words, one without,
+    # and a drawing shown outside a post.
+    if part(10, "a card opens its page from its words and its time; the face, name and @handle open the person's; the 💬 at none"):
+        mira = someone(b, "mira", "Mira Okafor")
+        juno = someone(b, "juno", "Juno Park")
+        st, j = make_post(juno, "Section 10, words that open the post", seed=301)
+        worded = j.get("post") if isinstance(j, dict) else None
+        st, j = make_post(juno, "", seed=302)
+        bare = j.get("post") if isinstance(j, dict) else None
+        juno.pg.goto(BASE + "/social/")
+        st_s, shown = juno.pg.evaluate(PAD, ["Section 10, a drawing's own title", "public", 303])
+        mc = mira.client()
+        mc.get(f"/social/p/{worded}")
+        commented = mc.post_json(f"/social/p/{worded}/comments", {"words": "Section 10, one comment"})[0]
+        want_page = {worded: f"/social/p/{worded}", bare: f"/social/p/{bare}", shown: f"/social/b/{shown}"}
+        seen = {}
+        for screen in ("phone", "desk"):
+            for scheme in ("light", "dark"):
+                ctx, cpg = browser_as(b, mira, screen, scheme)
+                cpg.goto(BASE + "/social/")
+                cpg.wait_for_timeout(800)
+                for key in (worded, bare, shown):
+                    seen[(screen, scheme, key)] = cpg.evaluate(WAYS, key or "")
+                close_ctx(ctx, cpg)
+        bad_open, bad_person, bad_count, bad_still = [], [], [], []
+        for (screen, scheme, key), w in seen.items():
+            tag = f"{screen}/{scheme} {'worded' if key == worded else 'bare' if key == bare else 'drawing'}"
+            if not w:
+                bad_open.append(f"{tag}: no card")
+                continue
+            big = lambda x: bool(x) and x["w"] >= 44 and x["h"] >= 44 and x["lands"]  # noqa: E731
+            ways = {"when": w["when"]} if key == bare else {"when": w["when"], "words": w["words"]}
+            for name, x in ways.items():
+                # A CARD WITH NO WORDS: the drawing lies over the time's last
+                # pixels and keeps its taps there (the drawing never opens the
+                # post); the time's middle and top corners are its own.
+                ok_at = (x or {}).get("at") == (["self"] * 3 + ["drawing"] * 2 if key == bare else ["self"] * 5)
+                if not (x and x["w"] >= 44 and x["h"] >= 44 and ok_at and x["tag"] == "a" and x["href"] == want_page[key]):
+                    bad_open.append(f"{tag} {name}: {x}")
+            if key == bare and w["words"] is not None:
+                bad_open.append(f"{tag}: words where there are none {w['words']}")
+            person = f"/social/@{'juno'}"
+            for name in ("name", "face"):
+                if not (big(w[name]) and w[name]["href"] == person):
+                    bad_person.append(f"{tag} {name}: {w[name]}")
+            if w["handle"] != person:
+                bad_person.append(f"{tag} @handle lands on {w['handle']}")
+            n = w["count"]
+            want_label, want_text = ("1 comment", "1") if key == worded else ("Comment", "")
+            if not (big(n) and n["href"] == want_page[key] + "#comments" and n["icon"] and n["label"] == want_label
+                    and n["text"] == want_text):
+                bad_count.append(f"{tag}: {n}")
+            if not (w["sameLine"] and w["headH"] == 44 and (w["wordsGap"] is None or abs(w["wordsGap"] - 12) <= 0.5)
+                    and abs(w["artGap"] - 12) <= 0.5):
+                bad_still.append(f"{tag}: on the @handle's line {w['sameLine']}, the header {w['headH']}px, words"
+                                 f" {w['wordsGap']}, drawing {w['artGap']}")
+        made = bool(worded and bare and shown and st_s == 201 and commented == 200)
+        check("a card's words and its time each open its own page (a post's, or a drawing's), each a link a tap lands on"
+              " anywhere in its 44px or more (on a card with no words, the time's down to the drawing, which keeps its"
+              " own taps): a post with words, one without, and a drawing shown outside a post; phone and desk, light"
+              " and dark",
+              made and len(seen) == 12 and not bad_open, f"made {made}; {len(seen)} read; {bad_open[:4]}")
+        check("the face, the name and the @handle still open the person's page: the name's link 44px, painted under the"
+              " @handle too, so a tap on the @handle lands on it",
+              made and not bad_person, f"{bad_person[:4]}")
+        check("the 💬 shows even at none: its icon alone, named \"Comment\", a way to the comments (#comments) a tap lands"
+              " on, 44px; with one, its number, \"1 comment\"",
+              made and not bad_count, f"{bad_count[:4]}")
+        check("and nothing moved: the header the face's 44px, the time on the @handle's line just after it, the words"
+              " 12px under the header, and the drawing 12px under the words (or the header, with none)",
+              made and not bad_still, f"{bad_still[:4]}")
+
+    # ------------------------------------------------------------------ 11
+    # ANYWHERE ON A CARD OPENS ITS POST (the owner's yes, Nov 12), but what
+    # does its own thing keeps it: the drawing plays and pauses and never opens
+    # the post; the face, the name and the @handle open the person's page; ⋯
+    # and Share do their own job; the 💬 opens the comments. A drag that
+    # selects words opens nothing. Pressed for real: a touch on a phone, a
+    # mouse on a desk, at the points a person would.
+    if part(11, "anywhere on a card opens its post; the drawing, the person, ⋯ and Share keep their own"):
+        mira = someone(b, "mira", "Mira Okafor")
+        juno = someone(b, "juno", "Juno Park")
+        st, j = make_post(juno, "Section 11, a card to tap", seed=401)
+        card = j.get("post") if isinstance(j, dict) else None
+        st, j = make_post(juno, "", seed=402)
+        bare = j.get("post") if isinstance(j, dict) else None
+        bare_sid = (post_row(bare) or (None, None))[1] if bare else None
+        SPOT = """([key, what]) => {
+          const c = document.querySelector('.post-card[data-post="' + key + '"]'); if (!c) return null;
+          c.scrollIntoView({ block: 'center' });
+          const R = s => c.querySelector(s).getBoundingClientRect(), mid = r => [r.left + r.width / 2, r.top + r.height / 2];
+          const text = (root, needle) => { const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+            for (let n = w.nextNode(); n; n = w.nextNode()) { const i = n.textContent.indexOf(needle); if (i >= 0) {
+              const g = document.createRange(); g.setStart(n, i); g.setEnd(n, i + needle.length); return g.getBoundingClientRect(); } }
+            return null; };
+          let xy;
+          if (what === 'ground') { const f = R('.post-foot'), n = R('.post-count'), s = R('.post-share');
+            xy = [(n.right + s.left) / 2, f.top + f.height / 2]; }
+          else if (what === 'words') xy = mid(text(c.querySelector('.post-words'), 'a card'));
+          else if (what === 'drawing') xy = mid(R('.post-art .skribl-inline'));
+          else if (what === 'under the time') { const t = R('.post-when'), a = R('.post-art .skribl-inline');
+            xy = [t.left + t.width / 2, a.top + 4]; }
+          else if (what === 'name') xy = mid(text(c.querySelector('.post-head'), c.querySelector('.post-name').textContent));
+          else if (what === 'handle') xy = mid(text(c.querySelector('.post-head'), '@' + c.dataset.handle));
+          else xy = mid(R({ face: '.post-face', more: '.post-more', share: '.post-share', count: '.post-count' }[what]));
+          const e = document.elementFromPoint(xy[0], xy[1]);
+          return { xy, on: e ? (e.closest('.post-art') ? 'drawing' : e.closest('a, button') ? e.closest('a, button').className : 'card') : null }; }"""
+        PLAYER = """(sid) => { const p = (window.SkriblInline ? SkriblInline.players() : []).find(x => x.state().id === sid);
+          return p ? p.state().state : null; }"""
+        SHARE = ("Object.defineProperty(navigator, 'share', { configurable: true,"
+                 " value: d => { window.__shared = d && d.url; return Promise.resolve(); } });")
+        res = {}
+        for screen in ("phone", "desk"):
+            touch = screen == "phone"
+            ctx, cpg = browser_as(b, mira, screen, "light")
+            ctx.add_init_script(SHARE)
+
+            def home():
+                cpg.goto(BASE + "/social/")
+                cpg.wait_for_function("() => !!window.SocialSheet && !!window.SocialWhen && document.readyState === 'complete'",
+                                      timeout=15000)
+                cpg.wait_for_timeout(300)
+
+            def press(key, what):
+                got = cpg.evaluate(SPOT, [key or "", what])
+                if not got:
+                    return None
+                cpg.wait_for_timeout(150)
+                (cpg.touchscreen.tap if touch else cpg.mouse.click)(*got["xy"])
+                return got["on"]
+
+            def landed(wait=2500):
+                try:
+                    cpg.wait_for_function("() => location.pathname !== '/social/'", timeout=wait)
+                except Exception:  # noqa: BLE001 -- staying is an answer
+                    pass
+                cpg.wait_for_timeout(200)
+                return cpg.evaluate("() => location.pathname + location.hash")
+
+            r = res[screen] = {}
+            try:
+                for what in ("ground", "words", "count"):
+                    home()
+                    on = press(card, what)
+                    r[what] = (on, landed())
+                home()
+                on1 = press(bare, "drawing")
+                try:
+                    cpg.wait_for_function(f"() => ({PLAYER})({json.dumps(bare_sid)}) === 'playing'", timeout=8000)
+                except Exception:  # noqa: BLE001 -- not playing is the row's red
+                    pass
+                first = (on1, cpg.evaluate(PLAYER, bare_sid), cpg.evaluate("() => location.pathname"))
+                on2 = press(bare, "under the time")
+                cpg.wait_for_timeout(900)
+                second = (on2, cpg.evaluate(PLAYER, bare_sid), cpg.evaluate("() => location.pathname"))
+                r["drawing"] = (first, second)
+                for what in ("face", "name", "handle"):
+                    home()
+                    on = press(card, what)
+                    r[what] = (on, landed())
+                home()
+                press(card, "more")
+                try:
+                    cpg.wait_for_function("() => document.getElementById('postSheet').classList.contains('is-open')", timeout=5000)
+                except Exception:  # noqa: BLE001 -- not opening is the row's red
+                    pass
+                r["more"] = (cpg.evaluate("() => document.getElementById('postSheet').classList.contains('is-open')"),
+                             landed(1500))
+                home()
+                press(card, "share")
+                cpg.wait_for_timeout(600)
+                r["share"] = (cpg.evaluate("() => window.__shared || null"), landed(1500))
+                if not touch:
+                    # A DRAG THAT SELECTS WORDS opens nothing: pressed on the words'
+                    # first letter and let go on their last.
+                    home()
+                    ends = cpg.evaluate("""(key) => { const c = document.querySelector('.post-card[data-post="' + key + '"]');
+                      c.scrollIntoView({ block: 'center' }); const w = c.querySelector('.post-words'), n = w.firstChild;
+                      const g = document.createRange(); g.setStart(n, 0); g.setEnd(n, 1); const a = g.getBoundingClientRect();
+                      g.setStart(n, n.length - 1); g.setEnd(n, n.length); const z = g.getBoundingClientRect();
+                      return [a.left + 1, a.top + a.height / 2, z.right - 1, z.top + z.height / 2]; }""", card)
+                    cpg.mouse.move(ends[0], ends[1])
+                    cpg.mouse.down()
+                    cpg.mouse.move(ends[2], ends[3], steps=12)
+                    cpg.mouse.up()
+                    cpg.wait_for_timeout(300)
+                    r["select"] = (cpg.evaluate("() => String(getSelection())"), landed(1500))
+            except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is its rows' red
+                r["stopped"] = str(exc).splitlines()[0][:160]
+            close_ctx(ctx, cpg)
+        page, people = f"/social/p/{card}", "/social/@juno"
+        ok_open = all(r.get("ground") == ("card", page) and r.get("words", (None, None))[1] == page
+                      and r.get("count", (None, None))[1] == page + "#comments" for r in res.values())
+        check("a tap anywhere on a card's own ground (here between the 💬 and Share) opens its page, as a tap on its"
+              " words does, and the 💬 opens it at its comments: a touch on a phone, a click on a desk",
+              bool(card) and ok_open, f"{ {s: {k: r.get(k) for k in ('ground', 'words', 'count', 'stopped')} for s, r in res.items()} }")
+        want_drawing = (("drawing", "playing", "/social/"), ("drawing", "paused", "/social/"))
+        check("a tap on the drawing plays it and a second pauses it, and the page stays, even at its top edge under the"
+              " time on a card with no words: the drawing never opens the post; phone and desk",
+              bool(bare_sid) and all(r.get("drawing") == want_drawing for r in res.values()),
+              f"{ {s: r.get('drawing') for s, r in res.items()} }")
+        check("a tap on the face, the name or the @handle opens the person's page, never the post: phone and desk",
+              all(r.get(k, (None, None))[1] == people for r in res.values() for k in ("face", "name", "handle")),
+              f"{ {s: {k: r.get(k) for k in ('face', 'name', 'handle')} for s, r in res.items()} }")
+        check("⋯ and Share do their own job and the page stays: ⋯ opens its sheet, Share the device's share sheet with"
+              " the post's link: phone and desk",
+              all(r.get("more") == (True, "/social/") and r.get("share") == (BASE + page, "/social/") for r in res.values()),
+              f"{ {s: {k: r.get(k) for k in ('more', 'share')} for s, r in res.items()} }")
+        sel = res.get("desk", {}).get("select") or ("", None)
+        check("pressing on a card's words and pulling selects them and opens nothing: a click that ends a selection is not"
+              " a tap (desk)",
+              sel[0].strip() == "Section 11, a card to tap" and sel[1] == "/social/", f"{sel}")
 
     # ------------------------------------------------------------------ 8
     if part(8, "no page errors, no console errors, no CSP violations"):

@@ -6,7 +6,13 @@
                       time), its ⋯, its words, the drawing in Skribl's in-post
                       player (still until tapped, as every feed's), and its
                       plays, how many comments (phase 2: the comments mock's
-                      4, "N comments", a way to them) and Share.
+                      4, "N comments", a way to them) and Share. EASY TO OPEN
+                      (the owner's yes, Nov 12): its words and its time are
+                      each a link to its own page, and the comments' icon is
+                      there even at none ("Comment"); the face, the name and
+                      the @handle still go to the person's page. A tap
+                      anywhere else on the card opens its page too (posts.js,
+                      "ANYWHERE ON A CARD"), but on the drawing, which plays.
     post_sheets()     the ⋯ sheet ("This post": Copy link, Share…, and Report
                       this post, or on your own Delete post), the report
                       sheet (the Gallery's own reasons and words, into
@@ -41,20 +47,24 @@
          aria-labelledby="pn-{{ p.public_id }}">
   <header class="post-head">
     <a class="post-face" href="{{ c.profile }}" tabindex="-1" aria-hidden="true">{{ face(who) }}</a>
-    {#- One link, to their page, the size of a finger: the name, @handle and when. #}
-    <a class="post-who" href="{{ c.profile }}">
-      <b class="post-name" id="pn-{{ p.public_id }}">{{ who.display_name }}</b>
-      <span class="post-sub">@{{ who.handle }} · <time datetime="{{ when_iso(p.created_at) }}" data-when="ago">{{ when_day(p.created_at) }}</time></span>
-    </a>
+    {#- Their page, the size of a finger: the name's link lies under the name and
+        the @handle both, as the whole line's did; when it was is a link of its
+        own, to the post's page, over it (social.css, "EASY TO OPEN"). #}
+    <div class="post-who">
+      <a class="post-name" id="pn-{{ p.public_id }}" href="{{ c.profile }}">{{ who.display_name }}</a>
+      <span class="post-sub">@{{ who.handle }} · <a class="post-when" href="{{ c.url }}"><time datetime="{{ when_iso(p.created_at) }}" data-when="ago">{{ when_day(p.created_at) }}</time></a></span>
+    </div>
     <button class="icon-btn post-more" type="button" data-post-menu aria-haspopup="dialog" aria-controls="postSheet"
             aria-expanded="false" aria-label="More for this post">{{ ic.dots() }}</button>
   </header>
   {% if c.down and c.mine %}<p class="post-down" role="note">Taken down: it broke the rules. Only you can see it.</p>{% endif %}
-  {% if p.words %}<p class="post-words">{{ p.words }}</p>{% endif %}
+  {#- The words are a link that drags as words: pressed and pulled, they select (posts.js opens nothing then). #}
+  {% if p.words %}<a class="post-words" href="{{ c.url }}" draggable="false">{{ p.words }}</a>{% endif %}
   <div class="post-art">{{ player(c) }}</div>
   <footer class="post-foot">
     {% if c.sk %}<a class="post-plays" href="{{ c.url }}">{{ ic.play() }}<span>{{ c.plays or 'No plays yet' }}</span></a>{% else %}<span></span>{% endif %}
-    {% if c.comments %}<a class="post-plays post-count" href="{{ c.url }}#comments" aria-label="{{ c.comments }} comment{{ '' if c.comments == 1 else 's' }}">{{ ic.comment() }}<span>{{ c.comments }}</span></a>{% endif %}
+    {#- The comments, even at none: the icon alone, "Comment", a way to the box. #}
+    <a class="post-plays post-count" href="{{ c.url }}#comments" aria-label="{{ ('%d comment%s' % (c.comments, '' if c.comments == 1 else 's')) if c.comments else 'Comment' }}">{{ ic.comment() }}{% if c.comments %}<span>{{ c.comments }}</span>{% endif %}</a>
     <button class="icon-btn post-share" type="button" data-post-share aria-label="Share this post">{{ ic.share() }}</button>
   </footer>
 </article>

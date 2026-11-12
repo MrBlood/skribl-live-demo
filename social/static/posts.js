@@ -11,7 +11,9 @@
  * nothing is posted before Post.
  *
  * THE FEED: Load more brings the next page in place and mounts its players
- * (SkriblInline.mount, as Skribl asks of a feed that adds posts later).
+ * (SkriblInline.mount, as Skribl asks of a feed that adds posts later). A tap
+ * anywhere on a card's own ground opens its post; what has a job of its own
+ * keeps it (below, "ANYWHERE ON A CARD").
  *
  * A POST'S OWN PAGE plays its drawing by itself once it is here (the
  * player's own play(), docs/INTEGRATION.md "A post's own page can start
@@ -236,6 +238,58 @@
         });
     });
   }
+
+  /* ---- ANYWHERE ON A CARD OPENS ITS POST ----------------------------------
+     (the owner's yes, Nov 12.) A tap or a click on a card's own ground opens
+     its page, as its words and its time do: they are its real links, for a
+     keyboard and a screen reader, and the card is not one big link. What
+     does a thing of its own keeps it: the drawing plays and pauses and never
+     opens the post (its player keeps its own taps from reaching here); the
+     face, the name and the @handle open the person's page; ⋯ and Share do
+     their own job; the 💬 opens the comments; any other control its own. A
+     press that moved is a drag, not a tap, and a click that ends a text
+     selection opens nothing, a link's included. With Ctrl or ⌘, or the
+     middle button, the post opens in a new tab, as a link's would. */
+  var OWN = 'a, button, input, textarea, select, label, summary, [role="button"], [role="slider"], [tabindex], .post-art';
+  var press = null;
+  doc.addEventListener('pointerdown', function (e) { press = { x: e.clientX, y: e.clientY }; }, true);
+  /* A keyboard's click (Enter on a link) has no press behind it (detail 0). */
+  function moved(e) {
+    return e.detail > 0 && !!press && Math.abs(e.clientX - press.x) + Math.abs(e.clientY - press.y) > 6;
+  }
+  function selectedIn(card) {
+    var s = window.getSelection ? window.getSelection() : null;
+    return !!s && !s.isCollapsed && !!String(s).trim() && (card.contains(s.anchorNode) || card.contains(s.focusNode));
+  }
+  /* The card a tap on its own ground opened, or null. */
+  function tapped(e) {
+    var card = e.target && e.target.closest ? e.target.closest('.post-card') : null;
+    if (!card || e.defaultPrevented) return null;
+    var own = e.target.closest(OWN);
+    if (own && card.contains(own)) return null;
+    if (moved(e) || selectedIn(card)) return null;
+    return card;
+  }
+  doc.addEventListener('click', function (e) {
+    var card = e.target && e.target.closest ? e.target.closest('.post-card') : null;
+    if (!card) return;
+    var a = e.target.closest('a');
+    if (a && card.contains(a)) {
+      /* A drag that selected words, ending on a link, is a selection. */
+      if (moved(e) && selectedIn(card)) e.preventDefault();
+      return;
+    }
+    if (e.button !== 0 || !tapped(e)) return;
+    var url = card.getAttribute('data-url');
+    if (!url) return;
+    if (e.ctrlKey || e.metaKey || e.shiftKey) window.open(url, '_blank', 'noopener');
+    else window.location.assign(url);
+  });
+  doc.addEventListener('auxclick', function (e) {
+    if (e.button !== 1) return;
+    var card = tapped(e);
+    if (card && card.getAttribute('data-url')) window.open(card.getAttribute('data-url'), '_blank', 'noopener');
+  });
 
   /* ---- a post's own page: it plays by itself ----------------------------- */
   var page = doc.querySelector('.post-page[data-autoplay]');

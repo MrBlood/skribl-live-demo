@@ -35,7 +35,7 @@ authenticator for the site's people.
      answers under its own, in code (shown with the database's cascade off).
  10. LOAD MORE: twenty comments a page, the next in place, none twice.
  11. HOME'S CARD: how many comments beside the plays, "N comments", a way to
-     them; none said at none.
+     them; at none the icon alone, "Comment" (the owner's yes, Nov 12).
  12. ON A DESK: the comments beside the drawing, under Share.
  13. THE NEW SCREENS: every word at 4.5:1 on what is painted behind it, every
      target 44px, every text field 16px: phone and desk, light and dark.
@@ -53,11 +53,32 @@ authenticator for the site's people.
      withheld in Skribl with it.
  18. THE BOX WITH A DRAWING: words at 4.5:1, targets 44px; phone and desk,
      light and dark.
- 19. NO PAGE ERRORS, NO CONSOLE ERRORS AND NO CSP VIOLATIONS (run last).
+ 19. NO PAGE ERRORS, NO CONSOLE ERRORS AND NO CSP VIOLATIONS (run last, after
+     20 to 28).
+
+COMMENTS ON EVERY DRAWING (the owner's yes, Nov 12): a drawing shown outside
+a post (made in the Pad, shown in the gallery: /social/b/<id>) has them too.
+ 20. ITS PAGE HAS THE SECTION: the box, a comment on the drawing (its row on
+     the drawing, whose it is kept), signed out readable, Load more.
+ 21. ANSWERS AND DRAWING ANSWERS on a drawing: one level deep; the real Pad
+     over its page; unlisted through create_post.
+ 22. THE ⋯, DELETE AND REMOVE: by its author, and by the drawing's owner.
+ 23. BLOCKS AND TAKEDOWNS: a block between commenters, or either way with the
+     drawing's maker; a person, the drawing, or its maker taken down.
+ 24. THE DRAWING DELETED: through the site its comments go, in code; in the
+     Library its page goes, and its comments with it.
+ 25. THE ACCOUNT DELETED: every comment on its drawings, and its own on
+     others', in code (shown with the database's cascade off).
+ 26. REPORTED AND TAKEN DOWN on a drawing; Home's card counts its comments.
+ 27. THE CHAIN on a populated database: on a post or a drawing, exactly one;
+     and back down.
+ 28. THE NEW SCREENS on a drawing's page: words at 4.5:1, targets 44px, text
+     fields 16px; phone and desk, light and dark.
 
 SOCIALCOMMENTS_PART=<n>[,<m>] runs those sections only (calibration); a
 section makes the people it needs. Every row was shown red by breaking one
-part and green as built: DECISIONS.md, "Comments at /social".
+part and green as built: DECISIONS.md, "Comments at /social" and "Comments
+on every drawing".
 """
 import base64
 import json
@@ -72,6 +93,7 @@ import sys
 import tempfile
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from http.cookiejar import CookieJar
 from pathlib import Path
@@ -417,6 +439,83 @@ def open_post(pg, post):
     pg.wait_for_timeout(300)
 
 
+# ---- a drawing shown outside a post (sections 20 to 28) --------------------------
+# A drawing posted from the Pad on its own page (Make's Draw), as the Pad posts
+# it: Skribl's API, as the person signed in, its own token from its own cookie
+# (verify_socialposts section 9's).
+PAD = """async ([title, vis, seed]) => {
+  await fetch('/api/skribls?limit=1', { credentials: 'same-origin' });
+  const tok = (document.cookie.match(/(?:^|; )skribl_csrf=([^;]+)/) || [])[1] || '';
+  const pts = Array.from({ length: 30 }, (_, i) => ({ x: 300 + i * 6, y: 300 + Math.sin((i + seed) / 3) * 60,
+    color: '#7c5cff', size: 8, t: i * 30, start: i === 0 }));
+  const r = await fetch('/api/skribls', { method: 'POST', credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json', 'X-Skribl-CSRF': decodeURIComponent(tok) },
+    body: JSON.stringify({ title, visibility: vis, version: 2, schemaVersion: 2, playbackMode: 'replay',
+      canvasSize: { cssWidth: 816, cssHeight: 612 }, frames: [{ strokes: pts, strokeGroups: [pts.length] }] }) });
+  const j = await r.json().catch(() => ({})); return [r.status, j.id || null]; }"""
+# Deleted in the Library, as its author: Skribl's own DELETE, not the site's.
+LIBRARY_DELETE = """async (id) => {
+  await fetch('/api/skribls?limit=1', { credentials: 'same-origin' });
+  const tok = (document.cookie.match(/(?:^|; )skribl_csrf=([^;]+)/) || [])[1] || '';
+  const r = await fetch('/api/skribls/' + id, { method: 'DELETE', credentials: 'same-origin',
+    headers: { 'X-Skribl-CSRF': decodeURIComponent(tok) } });
+  return r.status; }"""
+
+
+def make_drawing(who, title, seed=0, vis="public"):
+    """A drawing from the Pad, shown in the gallery: its skribl's public id, or None."""
+    who.pg.goto(BASE + "/social/")
+    st, sid = who.pg.evaluate(PAD, [title, vis, seed])
+    return sid if st == 201 else None
+
+
+def say_on(who, sid, words, answer_to=None, payload=None):
+    """A comment on a drawing (or an answer, or a drawing answer) as the box
+    sends one: (status, answer)."""
+    c = who.client()
+    c.get(f"/social/b/{sid}")
+    body = {"words": words}
+    if answer_to:
+        body["answer_to"] = answer_to
+    if payload is not None:
+        body["payload"] = payload
+    return c.post_json(f"/social/b/{sid}/comments", body)
+
+
+def said_on(who, sid, words, answer_to=None, payload=None):
+    st, j = say_on(who, sid, words, answer_to, payload)
+    return j.get("comment") if st == 200 and isinstance(j, dict) else None
+
+
+def open_drawing(pg, sid):
+    pg.goto(BASE + f"/social/b/{sid}")
+    ready(pg)
+    pg.wait_for_timeout(300)
+
+
+def on_row(cid):
+    """What a comment's row says it is on: (post_id, drawing_id, owner's handle, parent's public id)."""
+    got = db("select c.post_id, c.drawing_id, o.handle, p.public_id from social_comments c"
+             " join social_people o on o.id = c.owner_id left join social_comments p on p.id = c.parent_id"
+             " where c.public_id = ?", (cid or "",))
+    return got[0] if got else None
+
+
+def skribl_there(*sids):
+    return [bool(db("select 1 from skribl_posts where public_id = ?", (s or "",))) for s in sids]
+
+
+def card_count(pg, sid):
+    """Home's card for a drawing, as `pg` sees it: its comments' link, or None."""
+    pg.goto(BASE + "/social/")
+    pg.wait_for_timeout(600)
+    return pg.evaluate("""(sid) => { const c = document.querySelector('.post-card[data-skribl="' + sid + '"]');
+      if (!c) return null; const n = c.querySelector('.post-count'); if (!n) return { none: true };
+      const r = n.getBoundingClientRect();
+      return { label: n.getAttribute('aria-label'), text: n.textContent.trim(), icon: !!n.querySelector('svg'),
+               href: new URL(n.href).pathname + new URL(n.href).hash, w: r.width, h: r.height }; }""", sid)
+
+
 # The section as the page shows it: each comment, and the answers under it.
 SECTION = """() => { const one = li => ({ id: li.dataset.comment, name: li.querySelector(':scope > .cm-main .cm-name').textContent,
     when: li.querySelector(':scope > .cm-main .cm-when').textContent,
@@ -475,6 +574,22 @@ ANSWER_AND_WATCH = """async (id) => {
   return { now: Math.round(now * 10) / 10, frames, scrolled: Math.round(scrollY - y0),
            focus: document.activeElement === box.querySelector('[data-cm-words]'),
            pressed: btn.getAttribute('aria-expanded'), seen: br.top >= 0 && br.bottom <= floor }; }"""
+
+
+# A comment's ⋯, then Delete comment or Remove from my post (act), and the
+# comment's opacity on every frame until it has gone.
+DELETE_AND_WATCH = """async ([id, act]) => {
+  const li = document.getElementById('c-' + id);
+  li.querySelector(':scope > .cm-main [data-cm-menu]').click();
+  await new Promise(r => setTimeout(r, 450));
+  document.querySelector('#commentSheet [data-cm-act=' + act + ']').click();
+  const t0 = performance.now(), ops = [];
+  await new Promise(res => { const step = () => { if (li.isConnected) ops.push(Math.round(+getComputedStyle(li).opacity * 100) / 100);
+    if (!li.isConnected || performance.now() - t0 > 8000) res(); else requestAnimationFrame(step); }; requestAnimationFrame(step); });
+  return { gone: !li.isConnected, ops, count: (document.querySelector('[data-cm-count]') || {}).textContent }; }"""
+
+SIGNIN_LINK = ("() => { const a = document.querySelector('.cm-signin a');"
+               " return a ? [a.textContent, new URL(a.href).pathname + new URL(a.href).search] : null; }")
 
 
 def faded(ops):
@@ -667,6 +782,28 @@ with app.app_context():
     left_person = db.session.execute(sa.select(sa.func.count()).select_from(Comment).where(Comment.person_id == who.id)).scalar()
     left_under = db.session.execute(sa.select(sa.func.count()).select_from(Comment).where(Comment.parent_id.in_(mine or [-1]))).scalar()
     print(json.dumps({"fk": fk, "answers": left_answers, "post": left_post, "person": left_person, "under": left_under}))
+"""
+
+# The same for a drawing's comments (section 25): delete_person for the
+# drawing's owner, on a copy, the cascade off. With it on, owner_id's ON DELETE
+# CASCADE would take them whether or not the code said so.
+PROBE_DRAWING = r"""
+import json, sys
+from app import create_app, db
+import sqlalchemy as sa
+app = create_app()
+with app.app_context():
+    from social.models import Comment, Person
+    from social.accounts import delete_person
+    fk = db.session.execute(sa.text("PRAGMA foreign_keys")).scalar()
+    handle, sid = sys.argv[1], sys.argv[2]
+    who = db.session.execute(sa.select(Person).where(Person.handle_key == handle)).scalar_one()
+    on = lambda: db.session.execute(sa.select(sa.func.count()).select_from(Comment).where(Comment.drawing_id == sid)).scalar()
+    before = on()
+    delete_person(db.session, who.id)
+    db.session.commit()
+    owned = db.session.execute(sa.select(sa.func.count()).select_from(Comment).where(Comment.owner_id == who.id)).scalar()
+    print(json.dumps({"fk": fk, "before": before, "left": on(), "owned": owned}))
 """
 
 
@@ -911,15 +1048,6 @@ with sync_playwright() as p:
             under_mira = said(theo, post, "Section 5, Theo under Mira", answer_to=mira_c)
             keep_c = said(mira, post, "Section 5, Mira's, kept")
             lone = said(theo, post, "Section 5, an answer alone", answer_to=keep_c)
-            DELETE_AND_WATCH = """async ([id, act]) => {
-              const li = document.getElementById('c-' + id);
-              li.querySelector(':scope > .cm-main [data-cm-menu]').click();
-              await new Promise(r => setTimeout(r, 450));
-              document.querySelector('#commentSheet [data-cm-act=' + act + ']').click();
-              const t0 = performance.now(), ops = [];
-              await new Promise(res => { const step = () => { if (li.isConnected) ops.push(Math.round(+getComputedStyle(li).opacity * 100) / 100);
-                if (!li.isConnected || performance.now() - t0 > 8000) res(); else requestAnimationFrame(step); }; requestAnimationFrame(step); });
-              return { gone: !li.isConnected, ops, count: (document.querySelector('[data-cm-count]') || {}).textContent }; }"""
             tpg = theo.pg
             open_post(tpg, post)
             t_del = tpg.evaluate(DELETE_AND_WATCH, [theo_c, "delete"])
@@ -1286,12 +1414,18 @@ with sync_playwright() as p:
                        href: new URL(n.href).pathname + new URL(n.href).hash, beside: Math.round(r.left - p.right),
                        middle: Math.abs((r.top + r.height / 2) - (p.top + p.height / 2)) < 1, w: r.width, h: r.height }; }"""
             got = pg.evaluate(CARD, post)
-            none = pg.evaluate(CARD, bare)
+            none = pg.evaluate(CARD, bare) or {}
+            # EVEN AT NONE (the owner's yes, Nov 12: "the 💬 shows even at zero"):
+            # the icon alone, named Comment, the same way in, where the number goes.
             check("Home's card says how many comments beside the plays (the comment icon and the number, \"3 comments\"),"
-                  " a way to them on the post's page, 44px; a post with none says nothing",
+                  " a way to them on the post's page, 44px; a post with none shows the icon alone, no number, named"
+                  " \"Comment\", the same way in at the same place",
                   got is not None and got.get("label") == "3 comments" and got.get("text") == "3" and got.get("icon")
                   and got.get("href") == f"/social/p/{post}#comments" and 10 <= got.get("beside", 0) <= 18
-                  and got.get("middle") and got.get("w", 0) >= 44 and got.get("h", 0) >= 44 and none == {"none": True},
+                  and got.get("middle") and got.get("w", 0) >= 44 and got.get("h", 0) >= 44
+                  and none.get("label") == "Comment" and none.get("text") == "" and none.get("icon")
+                  and none.get("href") == f"/social/p/{bare}#comments" and none.get("beside") == got.get("beside")
+                  and none.get("middle") and none.get("w", 0) >= 44 and none.get("h", 0) >= 44,
                   f"{got}; with none {none}")
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(11, exc)
@@ -1707,6 +1841,597 @@ with sync_playwright() as p:
                   f" small: {small[:3]}; fields: {fields[:3]}; not read: {missing[:4]}")
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(18, exc)
+
+    # ------------------------------------------------------------------ 20
+    # COMMENTS ON EVERY DRAWING (the owner's yes, Nov 12): a drawing shown
+    # outside a post, made in the Pad and shown in the gallery, has a post's
+    # comments on its own page (/social/b/<id>), by the rules of that page.
+    if part(20, "a drawing's own page has the comments: the section, the box, signed out, Load more"):
+        try:
+            juno = someone(b, "juno", "Juno Park")
+            theo = someone(b, "theo", "Theo Lind")
+            sid = make_drawing(juno, "Section 20, a wave from the Pad", seed=201)
+            pg = theo.pg
+            open_drawing(pg, sid)
+            empty = pg.evaluate(SECTION)
+            box = pg.evaluate(BOX)
+            title = pg.evaluate("() => { const t = document.getElementById('commentsTitle');"
+                                " return t ? t.innerText.replace(/\\s+/g, ' ').trim() : null; }")
+            got = {}
+            if box:                     # no box is the row's red, never a stop
+                pg.fill("[data-cm-words]", "  That wave!   Hello to you too.  ")
+                got = pg.evaluate(POST_AND_WATCH)
+            after = pg.evaluate(SECTION)
+            words = db("select words from social_comments where public_id = ?", (got.get("id") or "",))
+            check("a drawing shown outside a post (/social/b/<id>, made in the Pad) has a post's comments: \"Comments\","
+                  " no number at none, the box on top (a face, \"Say something, or draw it…\", Draw, Flip, Post); the box"
+                  " sends the words, tidied, and the comment fades in at the top, said \"now\", the count with it; its row"
+                  " is on the drawing (its skribl's id, no post) and keeps whose the drawing is",
+                  bool(sid) and empty == {"count": None, "list": []} and title == "Comments" and box is not None
+                  and box["home"] and box["face"] and box["placeholder"] == "Say something, or draw it…"
+                  and box["chips"] == ["Draw", "Flip"] and box["post"] == "Post" and box["font"] >= 16
+                  and bool(got.get("id")) and faded(got.get("ops", [])) >= 2 and got["ops"][-1] == 1
+                  and words == [("That wave! Hello to you too.",)] and on_row(got["id"]) == (None, sid, "juno", None)
+                  and after["count"] == "1" and [c["when"] for c in after["list"]] == ["now"],
+                  f"drawing {sid}; before {empty}; title {title!r}; box {box}; posted {got.get('id')} (faded"
+                  f" {faded(got.get('ops', []))}); words {words}; row {on_row(got.get('id'))}; after {after}")
+            nctx, npg = browser_as(b, None)
+            open_drawing(npg, sid)
+            out = {"section": npg.evaluate(SECTION), "box": npg.evaluate(BOX), "link": npg.evaluate(SIGNIN_LINK)}
+            close_ctx(nctx, npg)
+            want = ["Sign in to answer", "/social/signin?next=/social/b/" + (sid or "")]
+            check("signed out, a drawing's comments are readable, with no box and no Answer: \"Sign in to answer\" in the"
+                  " box's place, back to the drawing's page once signed in",
+                  out["box"] is None and out["section"]["count"] == "1"
+                  and [(c["name"], c["answer"]) for c in out["section"]["list"]] == [("Theo Lind", False)]
+                  and out["link"] == want, f"{out}; want {want}")
+            # LOAD MORE on a drawing reads the drawing's own comments, by its own route.
+            sam = someone(b, "sam", "Sam Okafor")
+            busy = make_drawing(juno, "Section 20, a busy drawing", seed=202)
+            made = [said_on(sam, busy, f"Section 20, comment {k:02d}") for k in range(22)]
+            spg = sam.pg
+            open_drawing(spg, busy)
+            first = [c["id"] for c in spg.evaluate(SECTION)["list"]]
+            btn = spg.evaluate("() => { const b = document.querySelector('[data-cm-next]'); return b && !b.hidden ? b.textContent : null; }")
+
+            def more():
+                spg.click("[data-cm-next]")
+                spg.wait_for_function("() => document.querySelectorAll('[data-cm-list] > .cm').length > 20", timeout=10000)
+                spg.wait_for_timeout(300)
+
+            # No Load more, or one that never brings anything, is the row's red, never a stop.
+            _, stuck = steps(more) if btn else ({}, None)
+            allc = [c["id"] for c in spg.evaluate(SECTION)["list"]]
+            check("on a drawing too, twenty comments a page, newest first; Load more brings the rest in place, the"
+                  " drawing's own, in order, none twice and none missed",
+                  all(made) and first == list(reversed(made))[:20] and btn == "Load more" and stuck is None
+                  and allc == list(reversed(made)),
+                  f"made {sum(1 for m in made if m)}; first page {len(first)}; button {btn!r}; after {len(allc)}"
+                  f" ({len(set(allc))} different); stopped {stuck}")
+        except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
+            stopped(20, exc)
+
+    # ------------------------------------------------------------------ 21
+    if part(21, "answers and drawing answers on a drawing: one level deep, the real Pad over its page"):
+        try:
+            juno = someone(b, "juno", "Juno Park")
+            theo = someone(b, "theo", "Theo Lind")
+            mira = someone(b, "mira", "Mira Okafor")
+            sid = make_drawing(juno, "Section 21, a drawing", seed=211)
+            theo_c = said_on(theo, sid, "Section 21, Theo's")
+            for k in range(3):
+                said_on(juno, sid, f"Section 21, filler {k}: so the page scrolls")
+            pg = mira.pg
+            open_drawing(pg, sid)
+            pg.evaluate("(id) => { const r = document.getElementById('c-' + id).getBoundingClientRect();"
+                        " window.scrollBy(0, r.top - innerHeight / 2); }", theo_c)
+            pg.wait_for_timeout(300)
+            went = pg.evaluate(ANSWER_AND_WATCH, theo_c)
+            there = pg.evaluate(BOX)
+            pg.fill("[data-cm-words]", "Section 21, Mira under Theo's")
+            mine = pg.evaluate(POST_AND_WATCH)
+            deep = said_on(juno, sid, "Section 21, Juno answering Mira", answer_to=mine["id"])
+            open_drawing(pg, sid)
+            under = [a["words"] for a in next((c for c in pg.evaluate(SECTION)["list"] if c["id"] == theo_c),
+                                              {"answers": []})["answers"]]
+            rows = [on_row(mine["id"]), on_row(deep)]
+            # An answer is on what its comment is on: never from another drawing, nor from a post.
+            elsewhere = make_drawing(juno, "Section 21, another drawing", seed=212)
+            a_post = make_post(juno, "Section 21, a post", seed=213)
+            crossed = [say_on(mira, elsewhere, "Section 21, crossing over", answer_to=theo_c)[0],
+                       say(mira, a_post, "Section 21, crossing from a post", answer_to=theo_c)[0]]
+            check("on a drawing, Answer brings the box under the comment (\"Answer Theo…\"), the comment keeping its place;"
+                  " the answer sits under it, and an answer to an answer under the same comment, oldest first, each on"
+                  " the drawing, whose the drawing is kept; an answer to it from another drawing, or from a post, is"
+                  " refused (404)",
+                  there["under"] == theo_c and there["placeholder"] == "Answer Theo…" and steady(went)
+                  and under == ["Section 21, Mira under Theo's", "Section 21, Juno answering Mira"]
+                  and rows == [(None, sid, "juno", theo_c)] * 2 and crossed == [404, 404],
+                  f"box {there}; the move {went['now']}px, then {glide(went)}; under Theo's {under}; rows {rows};"
+                  f" crossing over {crossed}")
+
+            def drawn():
+                open_drawing(pg, sid)
+                pg.click("[data-cm-open=pad]", timeout=8000)
+                fr = editor_frame(pg, "skribl-pad")
+                src = pg.evaluate("() => document.querySelector('#commentPad iframe').getAttribute('src')")
+                sheet = add_from_pad(pg, fr) if fr else {}
+                pg.fill("[data-cm-words]", "Section 21, a drawing back")
+                return {"fr": bool(fr), "src": src or "", "sheet": sheet, "got": pg.evaluate(POST_AND_WATCH)}
+
+            got, err = steps(drawn)
+            cid = (got.get("got") or {}).get("id")
+            row = db("select skribl_id from social_comments where public_id = ?", (cid or "",))
+            skr = row[0][0] if row else None
+            sk = db("select visibility, user_id, title from skribl_posts where public_id = ?", (skr or "",))
+            shown = pg.evaluate(ART, cid or "") if cid else None
+            said = {k: v for k, v in got.items() if k != "got"}
+            check("a drawing answer on a drawing: Draw opens the real Pad over the drawing's page in compose mode, no"
+                  " gallery tick; Post sends it with the words through create_post, unlisted, the person its author,"
+                  " titled by the words; its comment is on the drawing; it arrives in Skribl's in-post player",
+                  err is None and got.get("fr") and "compose=1" in got.get("src", "")
+                  and "gallery=1" not in got.get("src", "") and not (got.get("sheet") or {}).get("tick")
+                  and bool(skr) and on_row(cid) == (None, sid, "juno", None)
+                  and sk == [("unlisted", pid_of("mira")[1], "Section 21, a drawing back")] and shown == skr,
+                  f"{said}; comment {cid}, row {on_row(cid)}; skribl {sk}; on the page {shown}; stopped {err}")
+        except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
+            stopped(21, exc)
+
+    # ------------------------------------------------------------------ 22
+    if part(22, "a comment's ⋯ on a drawing; delete and remove, by its author and by the drawing's owner"):
+        try:
+            juno = someone(b, "juno", "Juno Park")
+            theo = someone(b, "theo", "Theo Lind")
+            mira = someone(b, "mira", "Mira Okafor")
+            kim = someone(b, "kim", "Kim Ito")
+            sid = make_drawing(juno, "Section 22, a drawing", seed=221)
+            theo_c = said_on(theo, sid, "Section 22, Theo's, to be deleted")
+            under = said_on(mira, sid, "Section 22, Mira's drawing under Theo's", answer_to=theo_c,
+                            payload=drawing(seed=222))
+            under_s = (db("select skribl_id from social_comments where public_id = ?", (under or "",)) or [(None,)])[0][0]
+            mira_c = said_on(mira, sid, "Section 22, Mira's, to be removed")
+            juno_c = said_on(juno, sid, "Section 22, Juno's own, kept")
+            open_drawing(juno.pg, sid)
+            on_mine = {"own": menu_of(juno.pg, juno_c), "theo's": menu_of(juno.pg, theo_c)}
+            open_drawing(mira.pg, sid)
+            elsewhere = menu_of(mira.pg, theo_c)
+            check("on a drawing the ⋯ is a post's: on your own drawing your own comment's is \"Your comment\": Delete"
+                  " comment, somebody else's \"Theo’s comment\": Remove from my post, Report comment; on somebody else's"
+                  " drawing, Report comment alone",
+                  on_mine == {"own": {"title": "Your comment", "acts": ["Delete comment"]},
+                              "theo's": {"title": "Theo’s comment", "acts": ["Remove from my post", "Report comment"]}}
+                  and elsewhere == {"title": "Theo’s comment", "acts": ["Report comment"]},
+                  f"{on_mine}; on somebody else's {elsewhere}")
+            before = skribl_there(under_s)
+            open_drawing(theo.pg, sid)
+            t_del = theo.pg.evaluate(DELETE_AND_WATCH, [theo_c, "delete"])
+            left = db("select public_id from social_comments where public_id in (?, ?)", (theo_c, under or ""))
+            check("on a drawing, Delete comment takes your own comment and every answer under it, their drawings too:"
+                  " it fades out and is gone, the count with it",
+                  t_del["gone"] and faded(t_del["ops"]) >= 2 and t_del["count"] == "2" and left == []
+                  and bool(under_s) and before == [True] and skribl_there(under_s) == [False],
+                  f"{t_del}; rows left {left}; the answer's drawing {before}, then {skribl_there(under_s)}")
+            open_drawing(juno.pg, sid)
+            j_rm = juno.pg.evaluate(DELETE_AND_WATCH, [mira_c, "remove"])
+            kc = kim.client()
+            kc.get(f"/social/b/{sid}")
+            other = kc.post_json(f"/social/c/{juno_c}/delete", {})
+            kept = db("select public_id from social_comments where public_id in (?, ?)", (mira_c, juno_c))
+            check("the drawing's owner removes anybody's comment from it the same way (Remove from my post); nobody else"
+                  " can (somebody else's, on somebody else's drawing, is gone to them: 404), and it stays",
+                  j_rm["gone"] and faded(j_rm["ops"]) >= 2 and j_rm["count"] == "1" and other[0] == 404
+                  and kept == [(juno_c,)],
+                  f"{j_rm}; somebody else's {other}; rows {kept}")
+        except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
+            stopped(22, exc)
+
+    # ------------------------------------------------------------------ 23
+    if part(23, "on a drawing: blocks either way, people taken down, the drawing taken down"):
+        try:
+            ada = someone(b, "ada", "Ada Quist")
+            ben = someone(b, "ben", "Ben Reyes")
+            cyd = someone(b, "cyd", "Cyd Mbeki")
+            dee = someone(b, "dee", "Dee Varga")
+            sid = make_drawing(ada, "Section 23, Ada's drawing", seed=231)
+            ben_c = said_on(ben, sid, "Section 23, Ben's")
+            cyd_c = said_on(cyd, sid, "Section 23, Cyd's")
+            said_on(ben, sid, "Section 23, Ben under Cyd", answer_to=cyd_c)
+            said_on(cyd, sid, "Section 23, Cyd under Ben", answer_to=ben_c)
+
+            def seen_by(who):
+                open_drawing(who.pg, sid)
+                sec = who.pg.evaluate(SECTION)
+                card = card_count(who.pg, sid)
+                return {"count": sec["count"], "card": (card or {}).get("label"),
+                        "shown": sorted([c["words"] for c in sec["list"]] + [a["words"] for c in sec["list"] for a in c["answers"]])}
+
+            before = seen_by(dee)
+            dc = dee.client()
+            dc.get("/social/")
+            dc.post_json("/social/@cyd/block", {})
+            dee_blocked = seen_by(dee)
+            dc.post_json("/social/@cyd/unblock", {})
+            cc = cyd.client()
+            cc.get("/social/")
+            cc.post_json("/social/@dee/block", {})
+            dee_by_cyd = seen_by(dee)
+            cc.post_json("/social/@dee/unblock", {})
+            all4 = sorted(["Section 23, Ben's", "Section 23, Cyd's", "Section 23, Ben under Cyd", "Section 23, Cyd under Ben"])
+            bens = {"count": "1", "card": "1 comment", "shown": ["Section 23, Ben's"]}
+            check("on a drawing, a block either way hides the other's comments and every answer under them: neither shown"
+                  " nor counted, on the drawing's page and on its card on Home",
+                  before == {"count": "4", "card": "4 comments", "shown": all4} and dee_blocked == bens
+                  and dee_by_cyd == bens,
+                  f"before {before}; dee blocked cyd {dee_blocked}; cyd blocked dee {dee_by_cyd}")
+
+            # A BLOCK EITHER WAY WITH THE DRAWING'S MAKER: its page is gone to them,
+            # and everything its comments' routes would answer.
+            def asks(who, on_sid, a_comment):
+                c = who.client()
+                c.get("/social/")
+                return {"page": status(who.pg, f"/social/b/{on_sid}"),
+                        "comment": c.post_json(f"/social/b/{on_sid}/comments", {"words": "hi"}),
+                        "answer": c.post_json(f"/social/b/{on_sid}/comments", {"words": "hi", "answer_to": a_comment}),
+                        "more": c.get_json(f"/social/b/{on_sid}/comments")[0],
+                        "report": c.post_json("/social/report", {"kind": "comment", "target": a_comment, "reason": "spam"})[0]}
+
+            gone = {"page": 404, "comment": (404, {"error": "gone"}), "answer": (404, {"error": "gone"}), "more": 404,
+                    "report": 404}
+            eli = someone(b, "eli", "Eli Sato")
+            fay = someone(b, "fay", "Fay Lund")
+            ec = eli.client()
+            ec.get("/social/")
+            ec.post_json("/social/@ada/block", {})            # Eli blocks the drawing's maker
+            ac = ada.client()
+            ac.get("/social/")
+            ac.post_json("/social/@fay/block", {})            # the drawing's maker blocks Fay
+            eli_asks, fay_asks = asks(eli, sid, ben_c), asks(fay, sid, ben_c)
+            n_rows = db("select count(*) from social_comments where drawing_id = ?", (sid,))[0][0]
+            ec.post_json("/social/@ada/unblock", {})
+            ac.post_json("/social/@fay/unblock", {})
+            check("a block either way with the drawing's maker: its page is gone to them (a kind 404), and its comments"
+                  " with it: none read (Load more), said, answered or reported, nothing written",
+                  eli_asks == gone and fay_asks == gone and n_rows == 4,
+                  f"eli, who blocked ada {eli_asks}; fay, whom ada blocked {fay_asks}; rows {n_rows}")
+            db_write("update social_people set taken_down_at = datetime('now') where handle_key = 'cyd'")
+            ben_after = seen_by(ben)
+            cyd_own = seen_by(cyd)
+            db_write("update social_people set taken_down_at = null where handle_key = 'cyd'")
+            check("on a drawing, a person taken down: their comments, and the answers under them, neither shown nor"
+                  " counted for anybody else; they still see their own",
+                  ben_after == bens and cyd_own["count"] == "4", f"ben {ben_after}; cyd {cyd_own}")
+
+            # THE DRAWING TAKEN DOWN (Your Reports' Take it down: withheld in Skribl):
+            # its comments go from everybody else with its page; its maker keeps them.
+            juno = admin(b)
+            jc = juno.client()
+            jc.get("/social/reports")
+            down = jc._req("POST", "/social/reports/down", raw=urllib.parse.urlencode({"kind": "drawing", "target": sid}).encode(),
+                           headers={"Content-Type": "application/x-www-form-urlencoded", "X-Social-CSRF": jc.token})[0]
+            vis = db("select visibility from skribl_posts where public_id = ?", (sid,))
+            ben_asks = asks(ben, sid, ben_c)
+            own = status(ada.pg, f"/social/b/{sid}")
+            own_sec, own_box = ada.pg.evaluate(SECTION), ada.pg.evaluate(BOX)
+            own_note = ada.pg.evaluate("() => (document.querySelector('.post-page > .post-down') || {}).textContent || null")
+            check("the drawing taken down by an admin (withheld in Skribl) takes its comments from everybody else with its"
+                  " page: none read, said, answered or reported; its maker still sees them all on its page, with the note,"
+                  " and no box",
+                  down == 303 and vis == [("withheld",)] and ben_asks == gone and own == 200
+                  and own_sec["count"] == "4" and own_box is None and own_note == NOTE,
+                  f"take it down {down}, visibility {vis}; ben {ben_asks}; ada: page {own}, count {own_sec['count']},"
+                  f" box {own_box}, note {own_note!r}")
+            # Its maker taken down: the same for every drawing they made.
+            other = make_drawing(ada, "Section 23, another of Ada's", seed=232)
+            on_other = said_on(ben, other, "Section 23, Ben on the other")
+            db_write("update social_people set taken_down_at = datetime('now') where handle_key = 'ada'")
+            maker_down = asks(ben, other, on_other)
+            db_write("update social_people set taken_down_at = null where handle_key = 'ada'")
+            check("a drawing whose maker was taken down: its page and its comments are gone to everybody else the same way",
+                  bool(on_other) and maker_down == gone, f"{maker_down}")
+        except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
+            stopped(23, exc)
+
+    # ------------------------------------------------------------------ 24
+    if part(24, "a drawing deleted takes its comments: through the site, in code; in the Library, with its page"):
+        try:
+            nia = someone(b, "nia", "Nia Holm")
+            oz = someone(b, "ozan", "Oz Brandt")
+            # Somebody no earlier section deletes (section 9 deletes Pia's account).
+            vee = someone(b, "vee", "Vee Laine")
+            sid = make_drawing(nia, "Section 24, deleted on the site", seed=241)
+            oz_c = said_on(oz, sid, "Section 24, Oz's")
+            pia_a = said_on(vee, sid, "Section 24, Vee's drawing under it", answer_to=oz_c, payload=drawing(seed=242))
+            pia_s = (db("select skribl_id from social_comments where public_id = ?", (pia_a or "",)) or [(None,)])[0][0]
+            kept = make_drawing(nia, "Section 24, kept", seed=243)
+            said_on(oz, kept, "Section 24, on the one kept")
+            oc = oz.client()
+            oc.get(f"/social/b/{kept}")
+            not_hers = oc.post_json(f"/social/b/{kept}/delete", {})[0]
+            before = skribl_there(pia_s)
+            nc = nia.client()
+            nc.get(f"/social/b/{sid}")
+            gone = nc.post_json(f"/social/b/{sid}/delete", {})[0]
+            left = db("select count(*) from social_comments where drawing_id = ?", (sid,))[0][0]
+            still = db("select count(*) from social_comments where drawing_id = ?", (kept,))[0][0]
+            check("a drawing deleted through the site (its ⋯, Delete post) takes every comment and answer on it, their"
+                  " drawings too (Skribl's delete_post, as their authors); somebody else's try deletes nothing, its"
+                  " comments kept",
+                  gone == 200 and left == 0 and bool(pia_s) and before == [True] and skribl_there(pia_s) == [False]
+                  and not_hers == 404 and still == 1 and skribl_there(kept) == [True],
+                  f"deleted {gone}, comments left {left}; the answer's drawing {before}, then {skribl_there(pia_s)};"
+                  f" somebody else's try {not_hers}, kept {still}")
+            lib = make_drawing(nia, "Section 24, deleted in the Library", seed=244)
+            lib_c = said_on(oz, lib, "Section 24, on it")
+            nia.pg.goto(BASE + "/social/")
+            st = nia.pg.evaluate(LIBRARY_DELETE, lib)
+            asked = {"page, oz": status(oz.pg, f"/social/b/{lib}"), "page, nia": status(nia.pg, f"/social/b/{lib}")}
+            c = oz.client()
+            c.get("/social/")
+            asked["more"] = c.get_json(f"/social/b/{lib}/comments")[0]
+            asked["comment"] = c.post_json(f"/social/b/{lib}/comments", {"words": "hi"})[0]
+            asked["answer"] = c.post_json(f"/social/b/{lib}/comments", {"words": "hi", "answer_to": lib_c})[0]
+            asked["report"] = c.post_json("/social/report", {"kind": "comment", "target": lib_c, "reason": "spam"})[0]
+            asked["home"] = card_count(oz.pg, lib)
+            check("a drawing deleted in the Library, outside the site: its page is a kind 404 for everybody, its maker too,"
+                  " and its comments go with it: none read (Load more), said, answered or reported, and no card on Home",
+                  bool(lib_c) and st == 204
+                  and asked == {"page, oz": 404, "page, nia": 404, "more": 404, "comment": 404, "answer": 404,
+                                "report": 404, "home": None},
+                  f"Library delete {st}; {asked}")
+        except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
+            stopped(24, exc)
+
+    # ------------------------------------------------------------------ 25
+    if part(25, "an account deleted takes every comment on its drawings, and its own on others', in code"):
+        try:
+            qua = someone(b, "qua", "Qua Imre")
+            rho = someone(b, "rho", "Rho Ngata")
+            sol = someone(b, "sol", "Sol Berg")
+            sid = make_drawing(qua, "Section 25, Qua's drawing", seed=251)
+            rho_c = said_on(rho, sid, "Section 25, Rho on Qua's drawing")
+            sol_a = said_on(sol, sid, "Section 25, Sol's drawing under Rho's", answer_to=rho_c, payload=drawing(seed=252))
+            sol_s = (db("select skribl_id from social_comments where public_id = ?", (sol_a or "",)) or [(None,)])[0][0]
+            rho_d = make_drawing(rho, "Section 25, Rho's drawing", seed=253)
+            qua_c = said_on(qua, rho_d, "Section 25, Qua on Rho's drawing")
+            rho_under = said_on(rho, rho_d, "Section 25, Rho under Qua's", answer_to=qua_c)
+            rho_own = said_on(rho, rho_d, "Section 25, Rho's own")
+            qpg = qua.pg
+            qpg.goto(BASE + "/social/you/delete")
+            qpg.wait_for_timeout(400)
+            qpg.fill("input[name=confirm]", "qua")
+            with qpg.expect_navigation(timeout=15000):
+                qpg.click("form button[type=submit].btn-danger, form button[type=submit]")
+            n = lambda cid: db("select count(*) from social_comments where public_id = ?", (cid or "",))[0][0]  # noqa: E731
+            left = {"on her drawing": db("select count(*) from social_comments where drawing_id = ?", (sid,))[0][0],
+                    "the drawing under it": skribl_there(sol_s)[0], "hers on rho's": n(qua_c),
+                    "under hers": n(rho_under), "rho's own": n(rho_own)}
+            check("through the site: deleting an account takes every comment and answer on its drawings (their drawings"
+                  " too), its own comments on other people's drawings and every answer under them, and leaves anybody"
+                  " else's",
+                  pid_of("qua")[0] is None and bool(sol_s) and bool(rho_own)
+                  and left == {"on her drawing": 0, "the drawing under it": False, "hers on rho's": 0, "under hers": 0,
+                               "rho's own": 1},
+                  f"account gone {pid_of('qua')[0] is None}; left {left}")
+            # IN CODE, NOT BY THE CASCADE: owner_id's ON DELETE CASCADE takes these
+            # with SQLite's foreign keys on, so a copy runs delete_person with them off.
+            tia = someone(b, "tia", "Tia Moss")
+            uma = someone(b, "uma", "Uma Roy")
+            tsid = make_drawing(tia, "Section 25, Tia's drawing", seed=254)
+            u1 = said_on(uma, tsid, "Section 25, Uma on Tia's")
+            said_on(tia, tsid, "Section 25, Tia under Uma's", answer_to=u1)
+            said_on(uma, tsid, "Section 25, Uma again")
+            copy = os.path.join(TMP, "probe-drawing.db")
+            src = sqlite3.connect(DB, timeout=10)
+            dst = sqlite3.connect(copy)
+            src.backup(dst)
+            src.close()
+            dst.close()
+            probe = subprocess.run([sys.executable, "-c", PROBE_DRAWING, "tia", tsid or ""], cwd=ROOT, capture_output=True,
+                                   text=True, timeout=180,
+                                   env=dict(ENV, DATABASE_URL=f"sqlite:///{copy}", SKRIBL_SQLITE_FOREIGN_KEYS="0"))
+            try:
+                out = json.loads(probe.stdout.strip().splitlines()[-1])
+            except Exception:  # noqa: BLE001
+                out = {"err": (probe.stderr or probe.stdout)[-400:]}
+            check("in code, not by the database's cascade: with SQLite's foreign keys off, delete_person for a drawing's"
+                  " maker leaves no comment or answer on the drawing, nor any on anything they owned",
+                  out == {"fk": 0, "before": 3, "left": 0, "owned": 0}, f"{out}")
+        except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
+            stopped(25, exc)
+
+    # ------------------------------------------------------------------ 26
+    if part(26, "on a drawing: Report comment, Your Reports' card and its link, Take it down; Home's count"):
+        try:
+            juno = admin(b)
+            theo = someone(b, "theo", "Theo Lind")
+            mira = someone(b, "mira", "Mira Okafor")
+            kim = someone(b, "kim", "Kim Ito")
+            db_write("update social_reports set state = 'kept' where state = 'open'")
+            db_write("update skribl_reports set state = 'closed' where state = 'open'")
+            sid = make_drawing(mira, "Section 26, Mira's drawing", seed=261)
+            bare = make_drawing(mira, "Section 26, nothing said yet", seed=262)
+            theo_c = said_on(theo, sid, "Section 26, a mean thing")
+            kept_c = said_on(theo, sid, "Section 26, kept")
+            said_on(kim, sid, "Section 26, Kim under it", answer_to=kept_c)
+            pg = kim.pg
+            open_drawing(pg, sid)
+
+            def report():
+                pg.click(f"#c-{theo_c} > .cm-main [data-cm-menu]", timeout=8000)
+                pg.wait_for_function(OPEN, arg="commentSheet", timeout=10000)
+                pg.click("#commentSheet [data-cm-act=report]")
+                pg.wait_for_function(OPEN, arg="commentReportSheet", timeout=10000)
+                pg.check("#commentReportSheet input[value=abuse]")
+                pg.click("#commentReportSheet [data-cm-report-send]")
+                pg.wait_for_function("() => (document.querySelector('#commentReportSheet [data-cm-report-say]') || {})"
+                                     ".textContent.length > 12", timeout=10000)
+                return pg.evaluate("() => document.querySelector('#commentReportSheet [data-cm-report-say]').textContent")
+
+            thanks, err = steps(report)
+            rows = db("select kind, target, about_id, reason from social_reports where target = ?", (theo_c or "",))
+            apg = juno.pg
+            apg.goto(BASE + "/social/reports")
+            apg.wait_for_timeout(700)
+            card = apg.evaluate("""(t) => { const c = document.querySelector('[data-rep][data-target="' + t + '"]'); if (!c) return null;
+              const a = c.querySelector('.rep-open'); return { kind: c.dataset.kind, who: c.querySelector('.rep-who').innerText,
+              words: [...c.querySelectorAll('.rep-words')].map(e => e.textContent),
+              link: a ? new URL(a.href).pathname + new URL(a.href).hash : null }; }""", theo_c)
+            check("on a drawing, Report comment sends it into the site's own queue and says thanks; Your Reports' card"
+                  " says whose it is and its words, with a link to it on the drawing's page",
+                  err is None and thanks == THANKS and rows == [("comment", theo_c, pid_of("theo")[0], "abuse")]
+                  and card == {"kind": "comment", "who": "Theo Lind @theo · a comment",
+                               "words": ["“Section 26, a mean thing”"], "link": f"/social/b/{sid}#c-{theo_c}"},
+                  f"said {thanks!r}; rows {rows}; card {card}; stopped {err}")
+            if card:
+                with apg.expect_navigation(timeout=15000):
+                    apg.click(f"[data-rep][data-target='{theo_c}'] form[action$=down] button")
+            open_drawing(mira.pg, sid)
+            others = mira.pg.evaluate(SECTION)
+            open_drawing(theo.pg, sid)
+            his = theo.pg.evaluate(SECTION)
+            mine = next((c for c in his["list"] if c["id"] == theo_c), {})
+            state = db("select state from social_reports where target = ?", (theo_c or "",))
+            check("Take it down hides a drawing's comment from everybody else at once (neither shown nor counted), keeps"
+                  " it and closes its reports; its author sees it, with the note",
+                  [c["id"] for c in others["list"]] == [kept_c] and others["count"] == "2" and mine.get("down") == NOTE
+                  and his["count"] == "3" and state == [("taken_down",)]
+                  and db("select count(*) from social_comments where public_id = ?", (theo_c or "",))[0][0] == 1,
+                  f"mira sees {[c['id'] for c in others['list']]} ({others['count']}); theo's own {mine.get('down')!r}"
+                  f" ({his['count']}); reports {state}")
+            home = card_count(mira.pg, sid) or {}
+            none = card_count(mira.pg, bare) or {}
+            check("Home's card for a drawing counts its comments as its page does (the one taken down not counted): the"
+                  " icon and the number, \"2 comments\", a way to them on the drawing's page, 44px; a drawing with none,"
+                  " the icon alone, named \"Comment\"",
+                  home.get("label") == "2 comments" and home.get("text") == "2" and home.get("icon")
+                  and home.get("href") == f"/social/b/{sid}#comments" and home.get("w", 0) >= 44 and home.get("h", 0) >= 44
+                  and none.get("label") == "Comment" and none.get("text") == "" and none.get("icon")
+                  and none.get("href") == f"/social/b/{bare}#comments" and none.get("w", 0) >= 44
+                  and none.get("h", 0) >= 44,
+                  f"{home}; with none {none}")
+        except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
+            stopped(26, exc)
+
+    # ------------------------------------------------------------------ 27
+    if part(27, "the site's chain on a populated database: a comment is on a post or a drawing, exactly one"):
+        try:
+            mdb = os.path.join(TMP, "chain-comments.db")
+            # The chain's head before comments on drawings (that migration's down_revision).
+            BEFORE = "b7d4e2f9a618"
+
+            def chain(*args):
+                return subprocess.run([sys.executable, "-m", "alembic", "-c", "social/alembic.ini", *args], cwd=ROOT,
+                                      env=dict(os.environ, DATABASE_URL=f"sqlite:///{mdb}"), capture_output=True,
+                                      text=True, timeout=180)
+
+            def at(sql, args=()):
+                con = sqlite3.connect(mdb)
+                try:
+                    return con.execute(sql, args).fetchall()
+                finally:
+                    con.close()
+
+            up1 = chain("upgrade", BEFORE)
+            con = sqlite3.connect(mdb)
+            then = "2026-11-12 10:00:00"
+            for i, h in ((1, "ann"), (2, "bob")):
+                con.execute("insert into social_people (id, public_id, handle, handle_key, display_name, user_handle,"
+                            " is_admin, session_gen, age_confirmed_at, created_at) values (?, ?, ?, ?, ?, ?, 0, 1, ?, ?)",
+                            (i, "site:" + h, h, h, h.title(), bytes([i]) * 32, then, then))
+            con.execute("insert into social_posts (id, public_id, person_id, words, skribl_id, created_at)"
+                        " values (10, 'P1', 1, 'hi', 'S1', ?)", (then,))
+            for row in ((100, "C1", 10, 2, None), (101, "C2", 10, 1, 100), (102, "C3", 99, 2, None)):
+                con.execute("insert into social_comments (id, public_id, post_id, person_id, parent_id, words, created_at)"
+                            " values (?, ?, ?, ?, ?, 'x', ?)", row + (then,))
+            con.commit()
+            con.close()
+            up2 = chain("upgrade", "head")
+            filled = at("select public_id, post_id, drawing_id, owner_id from social_comments order by id")
+            con = sqlite3.connect(mdb)
+            took = {}
+            for name, post, drawing_id in (("both", 10, "D1"), ("neither", None, None), ("a drawing", None, "D1")):
+                try:
+                    con.execute("insert into social_comments (public_id, post_id, drawing_id, owner_id, person_id, words,"
+                                " created_at) values (?, ?, ?, 1, 2, 'x', ?)", ("N-" + name, post, drawing_id, then))
+                    took[name] = True
+                except sqlite3.IntegrityError:
+                    took[name] = False
+            con.commit()
+            con.close()
+            check("the site's chain on a database with comments in it: each stays on its post and keeps whose the post is"
+                  " (owner_id, from its author); one whose post is not there goes; the database takes a comment on a"
+                  " post or on a drawing, never both or neither",
+                  up1.returncode == 0 and up2.returncode == 0
+                  and filled == [("C1", 10, None, 1), ("C2", 10, None, 1)]
+                  and took == {"both": False, "neither": False, "a drawing": True},
+                  f"up {up1.returncode}/{up2.returncode} {up2.stderr.strip().splitlines()[-1:] if up2.returncode else ''};"
+                  f" rows {filled}; taken {took}")
+            down = chain("downgrade", BEFORE)
+            kept = at("select public_id from social_comments order by id")
+            notnull = {r[1]: r[3] for r in at("pragma table_info(social_comments)")}
+            check("taken back down, the chain deletes the comments on drawings (there is no post for them to be on) and"
+                  " keeps every comment on a post, post_id NOT NULL again",
+                  down.returncode == 0 and kept == [("C1",), ("C2",)] and notnull.get("post_id") == 1
+                  and "drawing_id" not in notnull and "owner_id" not in notnull,
+                  f"down {down.returncode} {down.stderr.strip().splitlines()[-1:] if down.returncode else ''};"
+                  f" kept {kept}; columns {notnull}")
+        except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
+            stopped(27, exc)
+
+    # ------------------------------------------------------------------ 28
+    if part(28, "a drawing's comments: words at 4.5:1, targets 44px, text fields 16px; phone and desk, light and dark"):
+        try:
+            juno = someone(b, "juno", "Juno Park")
+            theo = someone(b, "theo", "Theo Lind")
+            mira = someone(b, "mira", "Mira Okafor")
+            sid = make_drawing(juno, "Section 28, a drawing", seed=281)
+            t28 = said_on(theo, sid, "That wave is so good.")
+            said_on(juno, sid, "Thank you!", answer_to=t28)
+            said_on(mira, sid, "My cat would wave like that")
+            seen = {}
+            for screen in ("phone", "desk"):
+                for scheme in ("light", "dark"):
+                    cctx, cpg = browser_as(b, mira, screen=screen, scheme=scheme)
+                    open_drawing(cpg, sid)
+                    cpg.evaluate("() => document.getElementById('comments').scrollIntoView({ block: 'start' })")
+                    cpg.wait_for_timeout(300)
+                    seen[(screen, scheme, "comments")] = cpg.evaluate(READ, "#comments")
+                    cpg.click(f"#c-{t28} > .cm-main [data-cm-answer]")
+                    cpg.wait_for_timeout(450)
+                    seen[(screen, scheme, "answering")] = cpg.evaluate(READ, "#comments")
+                    cpg.keyboard.press("Escape")
+                    cpg.wait_for_timeout(300)
+                    cpg.click(f"#c-{t28} > .cm-main [data-cm-menu]")
+                    cpg.wait_for_function(OPEN, arg="commentSheet", timeout=10000)
+                    cpg.wait_for_timeout(450)
+                    seen[(screen, scheme, "⋯")] = cpg.evaluate(READ, "#commentSheet")
+                    cpg.click("#commentSheet [data-cm-act=report]")
+                    cpg.wait_for_function(OPEN, arg="commentReportSheet", timeout=10000)
+                    cpg.wait_for_timeout(450)
+                    seen[(screen, scheme, "report")] = cpg.evaluate(READ, "#commentReportSheet")
+                    close_ctx(cctx, cpg)
+                    nctx, npg = browser_as(b, None, screen=screen, scheme=scheme)
+                    open_drawing(npg, sid)
+                    npg.evaluate("() => document.getElementById('comments').scrollIntoView({ block: 'start' })")
+                    npg.wait_for_timeout(300)
+                    seen[(screen, scheme, "signed out")] = npg.evaluate(READ, "#comments")
+                    close_ctx(nctx, npg)
+            low = [(k, v["low"]) for k, v in seen.items() if v["low"]]
+            small = [(k, v["small"]) for k, v in seen.items() if v["small"]]
+            fields = [(k, v["fields"]) for k, v in seen.items() if v["fields"]]
+            lowest = min((v["lowest"], " ".join(k)) for k, v in seen.items())
+            musts = {"comments": ("Comments", "Theo Lind", "That wave is so good.", "Answer", "Post"),
+                     "signed out": ("Sign in to answer",), "⋯": ("Report comment",), "report": ("Report this comment",)}
+            missing = [(" ".join(k), w) for k, v in seen.items() for w in musts.get(k[2], ())
+                       if not any(x == w or (len(w) > 3 and x.startswith(w[:24])) for x in v["words"])]
+            check("every word in a drawing's comments (a comment, an answer, the box, the count, Answer, Sign in to answer),"
+                  " a comment's ⋯ and its report reads at 4.5:1 or more on what is painted behind it, every control is"
+                  " 44px or more each way, every text field 16px: phone and desk, light and dark",
+                  not low and not small and not fields and not missing and all(v["read"] >= 1 for v in seen.values()),
+                  f"{sum(v['read'] for v in seen.values())} read, the lowest {lowest}; under 4.5: {low[:3]};"
+                  f" small: {small[:3]}; fields: {fields[:3]}; not read: {missing[:4]}")
+        except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
+            stopped(28, exc)
 
     # ------------------------------------------------------------------ 19
     if part(19, "no page errors, no console errors and no CSP violations"):

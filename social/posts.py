@@ -12,6 +12,14 @@
                         off, never under Reduce Motion; posts.js), its
                         comments (comments.py), More from its author.
     /p/<id>/delete      your own post, gone: its words and its drawing (JSON).
+    /b/<skribl_id>      a drawing shown outside a post, on a page of its own:
+                        a post's page without words, its comments and all
+                        (bloob(): the one rule for the page and its comments).
+    /b/<skribl_id>/delete  your own such drawing, gone, its comments with it.
+
+ON HOME'S CARDS (the owner's yes, Nov 12): the words and the time each open
+the card's own page; the face, the name and the @handle the person's; the
+comments' icon is there even at none (_post.html, social.css "EASY TO OPEN").
 
 A POST IS WORDS AND A SKRIBL. The skribl is posted through Skribl's
 create_post (docs/INTEGRATION.md, "When your composer is a form") in the same
@@ -217,15 +225,18 @@ def cards(entries, viewer):
     """What each card shows: the post (a drawing shown outside a post is a
     post whose words are its title), its author, and its drawing's size, line and plays
     as Skribl describes them for `viewer` (None where it cannot be had:
-    deleted or withheld since); where it goes, and its Delete."""
+    deleted or withheld since); how many comments; where it goes, and its
+    Delete."""
     from skribl import describe_posts
     from .comments import counts
     entries = [e if isinstance(e, dict) else _entry(*e) for e in entries]
     drawings = describe_posts([e["post"].skribl_id for e in entries if e["kind"] == "p"],
                               viewer_id=viewer.public_id if viewer else None)
-    # HOW MANY COMMENTS each post's card says (phase 2): what its page will
-    # show this viewer, so a block or a takedown is neither shown nor counted.
-    said = counts([e["post"].id for e in entries if e["kind"] == "p"], viewer)
+    # HOW MANY COMMENTS each card says (phase 2; a drawing's too, since every
+    # drawing has comments): what its page will show this viewer, so a block
+    # or a takedown is neither shown nor counted.
+    said = counts(viewer, posts=[e["post"].id for e in entries if e["kind"] == "p"],
+                  drawings=[e["sk"]["id"] for e in entries if e["kind"] == "s"])
     out = []
     for e in entries:
         who = e["who"]
@@ -245,7 +256,7 @@ def cards(entries, viewer):
                 or getattr(who, "taken_down_at", None) is not None)
         out.append({"post": p, "who": who, "sk": sk, "kind": e["kind"], "down": down,
                     "plays": plays_text(sk["views"]) if sk else None,
-                    "comments": said.get(p.id, 0) if e["kind"] == "p" else None,
+                    "comments": said.get(("p", p.id) if e["kind"] == "p" else ("s", p.skribl_id), 0),
                     "url": url, "delete": gone,
                     "profile": profile_url(who.handle),
                     "mine": viewer is not None and viewer.id == who.id})
@@ -268,6 +279,34 @@ class _Shown:
     def __init__(self, **kw):
         for k, v in kw.items():
             setattr(self, k, v)
+
+
+def bloob(skribl_id, viewer):
+    """A drawing shown outside a post, as its own page shows it to `viewer`:
+    (Skribl's description of it, its author's person row), or None. THE ONE
+    RULE its page, its comments (comments.on_drawing) and their routes read:
+    Skribl describes it to them (describe_posts: deleted, or withheld or
+    private to somebody else, is absent, and so is whatever the host's
+    visibility policy hides); it is public, or taken down (withheld) and
+    theirs; its author is one of the site's people; no block stands between
+    them either way; and its author is not taken down, unless it is them.
+    Whether it is a post's drawing (whose page is the post's) is the
+    caller's to ask first."""
+    from skribl import describe_posts
+    sid = str(skribl_id or "")
+    if not sid:
+        return None
+    sk = describe_posts([sid], viewer_id=viewer.public_id if viewer else None).get(sid)
+    author = str((sk or {}).get("user_id") or "")
+    # Its maker still sees one taken down (withheld), with the note.
+    shown = (sk or {}).get("visibility") == "public" or (
+        (sk or {}).get("visibility") == "withheld" and viewer is not None and author == viewer.public_id)
+    if not (sk and shown and author.startswith(PERSON_PREFIX)):
+        return None
+    who = site().session().execute(sa.select(Person).where(Person.public_id == author)).scalar_one_or_none()
+    if who is None or between(viewer, who) or (who.taken_down_at is not None and (viewer is None or viewer.id != who.id)):
+        return None
+    return sk, who
 
 
 @_rests()
@@ -371,37 +410,33 @@ def register(bp, skribl_blueprint="skribl"):
     @_rests()
     def bloob_page(skribl_id):
         """A drawing one of the site's people showed in the gallery outside a
-        post, on a page of its own: a post's page without words. A drawing
-        that is a post's goes to its post; anything else is a kind 404."""
-        from skribl import describe_posts
+        post, on a page of its own: a post's page without words, its comments
+        and all. A drawing that is a post's goes to its post; anything else
+        is a kind 404."""
         sess = site().session()
         post = sess.execute(sa.select(Post).where(Post.skribl_id == skribl_id)).scalar_one_or_none()
         if post is not None:
             return redirect(url_for("social.post_page", public_id=post.public_id))
         me = current_person()
-        sk = describe_posts([skribl_id], viewer_id=me.public_id if me else None).get(skribl_id)
-        who = None
-        author = str((sk or {}).get("user_id") or "")
-        # Its maker still sees one taken down (withheld), with the note.
-        shown = (sk or {}).get("visibility") == "public" or (
-            (sk or {}).get("visibility") == "withheld" and me is not None and author == me.public_id)
-        if sk and shown and author.startswith(PERSON_PREFIX):
-            who = sess.execute(sa.select(Person).where(Person.public_id == author)).scalar_one_or_none()
-        if who is None or between(me, who) or (who.taken_down_at is not None and (me is None or me.id != who.id)):
+        got = bloob(skribl_id, me)
+        if got is None:
             return _page("post_gone.html", 404, here="post")
+        sk, who = got
         entry = {"kind": "s", "at": as_utc(datetime.fromisoformat(sk["created_at"])), "key": "s" + sk["id"],
                  "sk": sk, "who": who}
         return _post_page(cards([entry], me)[0], me)
 
     def _post_page(card, me):
         """A post's page, or a drawing's: More from its author, posts and
-        drawings alike, newest first; and a post's comments (a drawing shown
-        outside a post has none: comments are a post's)."""
+        drawings alike, newest first; and its comments (a post's, or since the
+        owner's yes on Nov 12, a drawing's: whatever is opened has them)."""
         others, _ = feed_page(limit=MORE + 1, viewer=me, person=card["who"])
         key = ("s" + card["post"].skribl_id) if card["kind"] == "s" else ("p" + card["post"].public_id)
         others = [e for e in others if e["key"] != key][:MORE]
         from . import comments
-        cm = comments.section(card["post"], card["who"], me, skribl_blueprint) if card["kind"] == "p" else None
+        on = (comments.On(card["who"], post=card["post"]) if card["kind"] == "p" else
+              comments.On(card["who"], drawing=card["post"].skribl_id, sk=card["sk"]))
+        cm = comments.section(on, me, skribl_blueprint)
         # The page's token for everybody: Report is anybody's (piece 5).
         return _page("post.html", here="post", card=card, more=cards(others, me) if others else [],
                      share_url=public_origin() + card["url"], token=csrf_token(), cm=cm)
@@ -427,7 +462,8 @@ def register(bp, skribl_blueprint="skribl"):
     @_rests(json_answer=True)
     def bloob_delete(skribl_id):
         """Your own drawing, shown outside a post, gone (Skribl's delete_post,
-        as its author). A post's drawing goes with its post, never alone."""
+        as its author), and its comments with it. A post's drawing goes with
+        its post, never alone."""
         if not origin_ok() or not token_ok():
             return _json_error("stale", 403)
         me = current_person()
@@ -442,6 +478,10 @@ def register(bp, skribl_blueprint="skribl"):
             delete_post(skribl_id, author_id=me.public_id)
         except SkriblNotFound:
             return _json_error("gone", 404)
+        # ITS COMMENTS GO WITH IT, in code (phase 2): only once delete_post has
+        # said it was theirs, since a refused delete still commits.
+        from .comments import drop_drawing_comments
+        drop_drawing_comments(skribl_id)
         sess.flush()
         return jsonify({"ok": True, "go": url_for("social.home", note="deleted_drawing")})
 

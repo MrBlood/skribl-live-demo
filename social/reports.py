@@ -21,8 +21,9 @@ TAKING IT DOWN keeps everything. A person: their profile is nobody's to
 everybody else, and all they made is hidden (they can still sign in, see
 their own with the note, and delete their account). A post: hidden from
 everybody but its author, its skribl withheld in Skribl. A drawing: withheld
-in Skribl. A comment (phase 2): hidden from everybody but its author, and
-neither shown nor counted under its post. Its maker sees "Taken down: it
+in Skribl, its page and its comments with it. A comment (phase 2): hidden
+from everybody but its author, and neither shown nor counted under its post
+or its drawing. Its maker sees "Taken down: it
 broke the rules" on it. Nothing is deleted, and every report on it is
 closed, saying who answered and when.
 
@@ -119,7 +120,7 @@ def queue():
     skribls += [p.skribl_id for p, _ in posts.values()]
     said = {cm.public_id: (cm, who, post) for cm, who, post in sess.execute(
         sa.select(Comment, Person, Post).join(Person, Person.id == Comment.person_id)
-        .join(Post, Post.id == Comment.post_id)
+        .outerjoin(Post, Post.id == Comment.post_id)
         .where(Comment.public_id.in_([c["target"] for c in cards.values() if c["kind"] == "comment"]))).all()}
     seen = describe_posts(skribls) if skribls else {}
     people = {p.public_id: p for p in sess.execute(sa.select(Person).where(Person.public_id.in_(
@@ -139,10 +140,13 @@ def queue():
             c["url"] = url_for("social.post_page", public_id=p.public_id) if p else None
         elif c["kind"] == "comment":
             # A COMMENT'S CARD (phase 2): its words, whose it is, and a link to
-            # it on its post's page.
+            # it on its page: its post's, or its drawing's.
             cm, who, on = said.get(c["target"], (None, None, None))
             c["who"], c["what"] = who, cm
-            c["url"] = (url_for("social.post_page", public_id=on.public_id) + "#c-" + cm.public_id) if cm else None
+            page = (None if cm is None else
+                    url_for("social.post_page", public_id=on.public_id) if on is not None else
+                    url_for("social.bloob_page", skribl_id=cm.drawing_id) if cm.drawing_id else None)
+            c["url"] = (page + "#c-" + cm.public_id) if page else None
             # A drawing answer's card shows its picture; words alone, whose face.
             c["poster"] = (url_for(site_bp() + ".skribl_poster", public_id=cm.skribl_id)
                            if cm is not None and cm.skribl_id else None)
