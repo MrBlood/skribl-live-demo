@@ -26,6 +26,7 @@
 
 {% block main %}
 {% if note == 'deleted' %}<p class="note" role="status">Your post is gone, its drawing with it.</p>{% endif %}
+{% if note == 'deleted_drawing' %}<p class="note" role="status">Your drawing is gone.</p>{% endif %}
 <section class="composer" aria-label="Make a post" data-composer data-post-new="{{ url_for('social.post_new') }}">
   <div class="composer-row">
     {{ face(me, 'composer-face') }}

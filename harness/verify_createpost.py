@@ -562,6 +562,62 @@ with host.app_context():
           and skribl.describe_posts([f"x{i}" for i in range(200)] + [_pub.public_id]) == {},
           f"many {sorted(_many)}")
 
+print("\n12 — A FEED OF YOUR OWN PEOPLE'S DRAWINGS: list_public_posts")
+# A host whose feed shows every drawing its people put in the gallery (the
+# Skribl site's Home, after v330): the newest public ones, by one author or by
+# a prefix its people's ids share, a page at a time.
+check("list_public_posts is exported, in __all__, and its docstring names author_prefix and before",
+      hasattr(skribl, "list_public_posts") and "list_public_posts" in skribl.__all__
+      and "author_prefix" in (skribl.list_public_posts.__doc__ or "") and "before" in (skribl.list_public_posts.__doc__ or ""))
+with host.app_context():
+    import time as _t
+    _mine = []
+    for _i, (_who, _vis) in enumerate((("host:ann", "public"), ("host:ann", "unlisted"), ("host:ann", "private"),
+                                        ("other:zed", "public"), ("host:bo", "public"), ("host:ann", "public"))):
+        _mine.append((_who, _vis, skribl.create_post(payload(title=f"l{_i}", visibility=_vis), author_id=_who).public_id))
+        db.session.commit()
+        _t.sleep(0.01)
+    _pubs = [pid for who, vis, pid in _mine if vis == "public" and who.startswith("host:")]
+    _items, _more = skribl.list_public_posts(author_prefix="host:")
+    _ann, _ = skribl.list_public_posts(author="host:ann")
+    check("list_public_posts holds the public ones only, newest first: by a prefix its authors share, or by one author;"
+          " never unlisted, private, or another prefix's",
+          [i["id"] for i in _items] == list(reversed(_pubs)) and not _more
+          and [i["id"] for i in _ann] == [_mine[5][2], _mine[0][2]],
+          f"by prefix {[i['title'] for i in _items]}; ann {[i['title'] for i in _ann]}")
+    _p1, _m1 = skribl.list_public_posts(author_prefix="host:", limit=2)
+    from datetime import datetime as _dt
+    _last = _p1[-1]
+    _p2, _m2 = skribl.list_public_posts(author_prefix="host:", limit=2,
+                                        before=(_dt.fromisoformat(_last["created_at"]), _last["id"]))
+    # Two at the very same time (l4 and l5), then the ones after that time:
+    # from the larger id, the smaller at that time and older; from "", only older.
+    _l4 = db.session.query(skribl.models.SkriblPost).filter_by(public_id=_mine[4][2]).one()
+    _l5 = db.session.query(skribl.models.SkriblPost).filter_by(public_id=_mine[5][2]).one()
+    _l4.created_at = _l5.created_at
+    db.session.commit()
+    _at = _dt.fromisoformat(_l5.feed_dict()["created_at"])
+    _hi, _lo = sorted([_l4.public_id, _l5.public_id], reverse=True)
+    _same, _ = skribl.list_public_posts(author_prefix="host:", limit=5, before=(_at, _hi))
+    _p0, _ = skribl.list_public_posts(author_prefix="host:", limit=5, before=(_at, ""))
+    check("...a page at a time: before (time, id) gives the ones after, two at the very same time ordered by id, and"
+          " an id of \"\" leaves out that time; more says there are older ones",
+          [i["id"] for i in _p1] == list(reversed(_pubs))[:2] and _m1
+          and [i["id"] for i in _p2] == list(reversed(_pubs))[2:] and not _m2
+          and [i["id"] for i in _same] == [_lo, _mine[0][2]] and [i["id"] for i in _p0] == [_mine[0][2]],
+          f"page 1 {[i['title'] for i in _p1]} more {_m1}; page 2 {[i['title'] for i in _p2]} more {_m2};"
+          f" after the larger at that time {[i['title'] for i in _same]}; after that time {[i['title'] for i in _p0]}")
+    _row = db.session.query(skribl.models.SkriblPost).filter_by(public_id=_pubs[0]).one()
+    _one = next(i for i in _items if i["id"] == _pubs[0])
+    for _i in range(101):
+        skribl.create_post(payload(title=f"cap{_i}", visibility="public"), author_id="cap:many")
+    db.session.commit()
+    _cap, _capmore = skribl.list_public_posts(author_prefix="cap:", limit=10 ** 6)
+    check("...each item the listing's own (feed_dict), no payload in it, and no more than 100 to a call (of 101)",
+          _one == _row.feed_dict() and "payload" not in _one and "payload_json" not in _one
+          and len(_cap) == 100 and _capmore,
+          f"keys {sorted(_one)}; {len(_cap)} of 101, more {_capmore}")
+
 bad = [(n, d) for ok, n, d in results if not ok]
 print("\n" + "=" * 62)
 print(f"{len(results) - len(bad)}/{len(results)} passed"

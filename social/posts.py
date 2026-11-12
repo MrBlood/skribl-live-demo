@@ -38,10 +38,10 @@ import unicodedata
 from datetime import datetime, timezone
 
 import sqlalchemy as sa
-from flask import current_app, jsonify, render_template, request, url_for
+from flask import current_app, jsonify, redirect, render_template, request, url_for
 
 from .accounts import _hidden_in, _json_error, _page, _rests, profile_url
-from .models import WORDS_MAX, Person, Post, as_utc, new_public_id
+from .models import PERSON_PREFIX, WORDS_MAX, Person, Post, as_utc, new_public_id
 from .security import csrf_token, current_person, origin_ok, over, public_origin, site, token_ok
 
 #: The most a post may weigh on its way here: the editor's whole payload (a
@@ -61,7 +61,7 @@ MORE = 3
 TITLE_MAX = 80
 
 #: The notes Home says once, on the way back (?note=).
-NOTES = ("deleted",)
+NOTES = ("deleted", "deleted_drawing")
 
 
 def check_words(raw):
@@ -116,54 +116,137 @@ def plays_text(n):
     return f"{n} plays"
 
 
-def _cursor(row):
-    """Where a page of the feed ended: its time and address, in a form that
-    names no internal id."""
-    at = as_utc(row.created_at)
-    raw = f"{int(at.timestamp() * 1_000_000)}.{row.public_id}"
+def _cursor(entry):
+    """Where a page of the feed ended: its time and which card, in a form
+    that names no internal id. A post's card is p<its address>, a drawing
+    shown outside a post s<its skribl's address>."""
+    at = as_utc(entry["at"])
+    raw = f"{int(at.timestamp() * 1_000_000)}.{entry['key']}"
     return base64.urlsafe_b64encode(raw.encode()).rstrip(b"=").decode()
 
 
 def _uncursor(text):
+    """(time, card) from _cursor, or None. A cursor from before drawings came
+    to Home names a post's address alone (11 letters): it is a post's."""
     try:
         raw = base64.urlsafe_b64decode((text or "") + "=" * (-len(text or "") % 4)).decode()
-        us, pid = raw.split(".", 1)
-        return datetime.fromtimestamp(int(us) / 1_000_000, tz=timezone.utc), pid
+        us, key = raw.split(".", 1)
+        if not (len(key) == 12 and key[0] in "ps"):
+            key = "p" + key
+        return datetime.fromtimestamp(int(us) / 1_000_000, tz=timezone.utc), key
     except (ValueError, TypeError, UnicodeDecodeError):
         return None
 
 
-def feed_page(before=None, limit=PAGE):
-    """A page of everyone's posts, newest first, after `before` (a cursor),
-    with their authors: (rows, next cursor or None)."""
+def _entry(post, who):
+    return {"kind": "p", "at": as_utc(post.created_at), "key": "p" + post.public_id, "post": post, "who": who}
+
+
+def _posts_before(at, limit, person=None):
+    """A page of posts (and their authors) older than `at`, newest first:
+    (rows, more). Every post at the very time of a drawing's card comes after
+    it (p < s), so a drawing's cursor keeps them all."""
     q = (sa.select(Post, Person).join(Person, Post.person_id == Person.id)
          .order_by(Post.created_at.desc(), Post.public_id.desc()).limit(limit + 1))
-    at = _uncursor(before) if before else None
+    if person is not None:
+        q = q.where(Post.person_id == person.id)
     if at is not None:
-        when, pid = at
-        q = q.where(sa.or_(Post.created_at < when, sa.and_(Post.created_at == when, Post.public_id < pid)))
+        when, key = at
+        if key.startswith("s"):
+            q = q.where(Post.created_at <= when)
+        else:
+            q = q.where(sa.or_(Post.created_at < when,
+                               sa.and_(Post.created_at == when, Post.public_id < key[1:])))
     rows = site().session().execute(q).all()
-    more = len(rows) > limit
-    rows = rows[:limit]
-    return rows, (_cursor(rows[-1][0]) if more and rows else None)
+    return rows[:limit], len(rows) > limit
 
 
-def cards(rows, viewer):
-    """What each post's card shows: the post, its author, and its drawing's
-    size, line and plays as Skribl describes them for `viewer` (None where
-    it cannot be had: deleted or withheld since)."""
+def _drawings_before(at, limit, viewer, person=None):
+    """A page of the drawings the site's people (or one of them) showed in
+    Skribl's gallery and not in a post, older than `at`, newest first, each
+    with its author: (entries, more). Through Skribl's list_public_posts."""
+    from skribl import list_public_posts
+    before = None
+    if at is not None:
+        when, key = at
+        before = (when, key[1:] if key.startswith("s") else "")
+    who_kw = {"author": person.public_id} if person is not None else {"author_prefix": PERSON_PREFIX}
+    items, more = list_public_posts(before=before, limit=limit,
+                                    viewer_id=viewer.public_id if viewer is not None else None, **who_kw)
+    if not items:
+        return [], more
+    sess = site().session()
+    ids = [i["id"] for i in items]
+    in_posts = set(sess.execute(sa.select(Post.skribl_id).where(Post.skribl_id.in_(ids))).scalars())
+    authors = {p.public_id: p for p in sess.execute(
+        sa.select(Person).where(Person.public_id.in_({i["user_id"] for i in items}))).scalars()}
+    return [{"kind": "s", "at": as_utc(datetime.fromisoformat(i["created_at"])), "key": "s" + i["id"],
+             "sk": i, "who": authors[i["user_id"]]}
+            for i in items if i["id"] not in in_posts and i["user_id"] in authors], more
+
+
+def feed_page(before=None, limit=PAGE, viewer=None, person=None):
+    """A page of Home's feed: everyone's posts and the drawings the site's
+    people showed in the gallery outside a post (made with Make, or the Pad
+    on its own), newest first, after `before` (a cursor); or one person's
+    (More from). (entries, next cursor or None). A drawing that is a post's
+    shows once, as the post."""
+    at = _uncursor(before) if before else None
+    posts, more_p = _posts_before(at, limit, person)
+    drawings, more_s = _drawings_before(at, limit, viewer, person)
+    out = sorted([_entry(p, who) for p, who in posts] + drawings, key=lambda e: (e["at"], e["key"]), reverse=True)
+    page = out[:limit]
+    more = len(out) > limit or more_p or more_s
+    return page, (_cursor(page[-1]) if more and page else None)
+
+
+def cards(entries, viewer):
+    """What each card shows: the post (a drawing shown outside a post is a
+    post whose words are its title), its author, and its drawing's size, line and plays
+    as Skribl describes them for `viewer` (None where it cannot be had:
+    deleted or withheld since); where it goes, and its Delete."""
     from skribl import describe_posts
-    drawings = describe_posts([p.skribl_id for p, _ in rows],
+    entries = [e if isinstance(e, dict) else _entry(*e) for e in entries]
+    drawings = describe_posts([e["post"].skribl_id for e in entries if e["kind"] == "p"],
                               viewer_id=viewer.public_id if viewer else None)
     out = []
-    for p, who in rows:
-        sk = drawings.get(p.skribl_id)
-        out.append({"post": p, "who": who, "sk": sk,
+    for e in entries:
+        who = e["who"]
+        if e["kind"] == "p":
+            p = e["post"]
+            sk = drawings.get(p.skribl_id)
+            url = url_for("social.post_page", public_id=p.public_id)
+            gone = url_for("social.post_delete", public_id=p.public_id)
+        else:
+            sk = e["sk"]
+            p = _Shown(public_id="b-" + sk["id"], words=_title_words(sk.get("title")), skribl_id=sk["id"],
+                       created_at=e["at"])
+            url = url_for("social.bloob_page", skribl_id=sk["id"])
+            gone = url_for("social.bloob_delete", skribl_id=sk["id"])
+        out.append({"post": p, "who": who, "sk": sk, "kind": e["kind"],
                     "plays": plays_text(sk["views"]) if sk else None,
-                    "url": url_for("social.post_page", public_id=p.public_id),
+                    "url": url, "delete": gone,
                     "profile": profile_url(who.handle),
-                    "mine": viewer is not None and viewer.id == p.person_id})
+                    "mine": viewer is not None and viewer.id == who.id})
     return out
+
+
+def _title_words(title):
+    """A drawing's title, the words its maker gave it in the Pad's sheet, as
+    a card's words; none for Skribl's own stand-in for no title."""
+    title = (title or "").strip()
+    return "" if title in ("", "Untitled Skribl") else title
+
+
+class _Shown:
+    """A drawing shown outside a post, as a card reads a post: its address
+    (b-<the skribl's>, so no post's can match it), its title for its words,
+    its skribl, when."""
+    __slots__ = ("public_id", "words", "skribl_id", "created_at")
+
+    def __init__(self, **kw):
+        for k, v in kw.items():
+            setattr(self, k, v)
 
 
 @_rests()
@@ -175,7 +258,7 @@ def home_page(skribl_blueprint="skribl"):
     me = current_person()
     if me is None:
         return None
-    rows, nxt = feed_page()
+    rows, nxt = feed_page(viewer=me)
     note = request.args.get("note")
     return _page("feed.html", here="home", cards=cards(rows, me), next=nxt, token=csrf_token(),
                  note=note if note in NOTES else None,
@@ -240,7 +323,7 @@ def register(bp, skribl_blueprint="skribl"):
     def feed_more():
         """The next page of the feed, as its cards (Load more): {html, next}."""
         me = current_person()
-        rows, nxt = feed_page(request.args.get("before"))
+        rows, nxt = feed_page(request.args.get("before"), viewer=me)
         html = render_template("social/_post_cards.html", cards=cards(rows, me), me=me)
         return jsonify({"html": html, "next": nxt})
 
@@ -254,10 +337,36 @@ def register(bp, skribl_blueprint="skribl"):
         if found is None:
             return _page("post_gone.html", 404, here="post")
         me = current_person()
-        card = cards([found], me)[0]
-        others = sess.execute(sa.select(Post, Person).join(Person, Post.person_id == Person.id)
-                              .where(Post.person_id == found[0].person_id, Post.id != found[0].id)
-                              .order_by(Post.created_at.desc()).limit(MORE)).all()
+        return _post_page(cards([found], me)[0], me)
+
+    @bp.get("/b/<skribl_id>")
+    @_rests()
+    def bloob_page(skribl_id):
+        """A drawing one of the site's people showed in the gallery outside a
+        post, on a page of its own: a post's page without words. A drawing
+        that is a post's goes to its post; anything else is a kind 404."""
+        from skribl import describe_posts
+        sess = site().session()
+        post = sess.execute(sa.select(Post).where(Post.skribl_id == skribl_id)).scalar_one_or_none()
+        if post is not None:
+            return redirect(url_for("social.post_page", public_id=post.public_id))
+        me = current_person()
+        sk = describe_posts([skribl_id], viewer_id=me.public_id if me else None).get(skribl_id)
+        who = None
+        if sk and sk.get("visibility") == "public" and str(sk.get("user_id") or "").startswith(PERSON_PREFIX):
+            who = sess.execute(sa.select(Person).where(Person.public_id == sk["user_id"])).scalar_one_or_none()
+        if who is None:
+            return _page("post_gone.html", 404, here="post")
+        entry = {"kind": "s", "at": as_utc(datetime.fromisoformat(sk["created_at"])), "key": "s" + sk["id"],
+                 "sk": sk, "who": who}
+        return _post_page(cards([entry], me)[0], me)
+
+    def _post_page(card, me):
+        """A post's page, or a drawing's: More from its author, posts and
+        drawings alike, newest first."""
+        others, _ = feed_page(limit=MORE + 1, viewer=me, person=card["who"])
+        key = ("s" + card["post"].skribl_id) if card["kind"] == "s" else ("p" + card["post"].public_id)
+        others = [e for e in others if e["key"] != key][:MORE]
         return _page("post.html", here="post", card=card, more=cards(others, me) if others else [],
                      share_url=public_origin() + card["url"], token=csrf_token() if me else None)
 
@@ -277,6 +386,27 @@ def register(bp, skribl_blueprint="skribl"):
         drop_post(me.public_id, row)
         sess.flush()
         return jsonify({"ok": True, "go": url_for("social.home", note="deleted")})
+
+    @bp.post("/b/<skribl_id>/delete")
+    @_rests(json_answer=True)
+    def bloob_delete(skribl_id):
+        """Your own drawing, shown outside a post, gone (Skribl's delete_post,
+        as its author). A post's drawing goes with its post, never alone."""
+        if not origin_ok() or not token_ok():
+            return _json_error("stale", 403)
+        me = current_person()
+        if me is None:
+            return _json_error("signed_out", 401)
+        from skribl import SkriblNotFound, SkriblRefused, delete_post
+        sess = site().session()
+        if sess.execute(sa.select(Post.id).where(Post.skribl_id == skribl_id)).first() is not None:
+            return _json_error("gone", 404)
+        try:
+            delete_post(skribl_id, author_id=me.public_id)
+        except (SkriblNotFound, SkriblRefused):
+            return _json_error("gone", 404)
+        sess.flush()
+        return jsonify({"ok": True, "go": url_for("social.home", note="deleted_drawing")})
 
 
 def drop_post(author_public_id, row):

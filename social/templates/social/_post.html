@@ -36,7 +36,8 @@
 {% macro post_card(c) -%}
 {%- set p = c.post %}{% set who = c.who -%}
 <article class="post-card" data-post="{{ p.public_id }}" data-url="{{ c.url }}" data-skribl="{{ p.skribl_id }}"
-         data-handle="{{ who.handle }}"{% if c.mine %} data-mine{% endif %} aria-labelledby="pn-{{ p.public_id }}">
+         data-handle="{{ who.handle }}"{% if c.mine %} data-mine data-del="{{ c.delete }}"{% endif %} data-kind="{{ c.kind }}"
+         aria-labelledby="pn-{{ p.public_id }}">
   <header class="post-head">
     <a class="post-face" href="{{ c.profile }}" tabindex="-1" aria-hidden="true">{{ face(who) }}</a>
     {#- One link, to their page, the size of a finger: the name, @handle and when. #}
@@ -107,7 +108,8 @@
   <div class="make-sheet" role="dialog" aria-modal="true" aria-labelledby="deleteTitle">
     <div class="make-grip" data-make-close aria-hidden="true"></div>
     <h2 class="make-title" id="deleteTitle">Delete this post?</h2>
-    <p class="post-lede">Its words and its drawing go for good. This can’t be undone.</p>
+    <p class="post-lede" data-lede-p>Its words and its drawing go for good. This can’t be undone.</p>
+    <p class="post-lede" data-lede-s hidden>The drawing goes for good, from Home and from Explore. This can’t be undone.</p>
     <p class="say post-say" data-delete-say role="status" hidden></p>
     <div class="post-sheet-acts">
       <button class="btn btn-big" type="button" data-make-close>Keep it</button>
