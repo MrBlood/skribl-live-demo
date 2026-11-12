@@ -133,6 +133,10 @@ class Person(SocialBase):
     #: sign in, see their own with the note, and delete their account. None
     #: until then; nothing is deleted by it.
     taken_down_at = sa.Column(sa.DateTime(timezone=True), nullable=True)
+    #: WHEN THEY LAST LOOKED AT ACTIVITY (phase 2, notifications; the owner's
+    #: "all yes", Nov 12): what came after it is new, and the bell has its
+    #: dot. None until they first look: then everything is new.
+    activity_seen_at = sa.Column(sa.DateTime(timezone=True), nullable=True)
 
     __table_args__ = (
         sa.Index("ix_social_people_public_id", "public_id", unique=True),
@@ -307,6 +311,14 @@ class Comment(SocialBase):
     person_id = sa.Column(BigId, sa.ForeignKey("social_people.id", ondelete="CASCADE"), nullable=False)
     #: The top-level comment an answer sits under; None for a comment.
     parent_id = sa.Column(BigId, sa.ForeignKey("social_comments.id", ondelete="CASCADE"), nullable=True)
+    #: WHOM AN ANSWER ANSWERS (notifications): the author of the comment or the
+    #: answer whose Answer was pressed. parent_id cannot say it: an answer to
+    #: an answer sits under the same top-level comment, whoever wrote that.
+    #: Activity's "answered your comment" reads it. None for a comment; set to
+    #: nothing, in code, when that person's account goes (ON DELETE SET NULL
+    #: is the net).
+    to_person_id = sa.Column(BigId, sa.ForeignKey("social_people.id", ondelete="SET NULL",
+                                                  name="fk_social_comments_to_person_id"), nullable=True)
     #: Plain text as typed, tidied (posts.check_words); may be empty when a
     #: drawing says it.
     words = sa.Column(sa.String(WORDS_MAX), nullable=False, default="", server_default="")
@@ -328,7 +340,11 @@ class Comment(SocialBase):
         sa.Index("ix_social_comments_drawing_created", "drawing_id", "created_at"),
         sa.Index("ix_social_comments_parent_created", "parent_id", "created_at"),
         sa.Index("ix_social_comments_person_id", "person_id"),
-        sa.Index("ix_social_comments_owner_id", "owner_id"),
+        #: Whose it is, newest first: Activity's comments on what you own, and
+        #: the bell's dot (since you last looked); deleting an account by it.
+        sa.Index("ix_social_comments_owner_created", "owner_id", "created_at"),
+        #: Answers to you, newest first: Activity's "answered your comment".
+        sa.Index("ix_social_comments_to_created", "to_person_id", "created_at"),
         sa.Index("ix_social_comments_skribl_id", "skribl_id"),
     )
 

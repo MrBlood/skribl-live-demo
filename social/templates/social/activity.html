@@ -1,0 +1,77 @@
+{#  ACTIVITY (/social/activity; phase 2, notifications; the notifications mock
+    and the owner's "all yes", Nov 12), in the mock's own classes, sizes and
+    words. activity.py says what a row is and who is never in it; this is
+    what it looks like.
+
+    NEW, THEN EARLIER: a row each, a dot on each new one. Every row is one
+    link to its comment on its page (#c-<id>), where it glows a moment
+    (comments.js): their face (two faces, the newest in front, for several
+    people), who and what ("Mira and 2 others said something on your post",
+    "Theo answered your comment", "Juno answered with a drawing", "Juno drew
+    something on your post"), when, as comments say it ("5m"), their words
+    under it in quotes, two lines at most, and the small picture: the
+    drawing they answered with, or the post's.
+
+    ON A PHONE the top says Activity, the way back beside it, as a post's
+    page says Post; the page's own heading is a screen reader's there, and a
+    desk, with no top, shows it. The bar marks no place: Activity is not in
+    it (the rail's Activity is lit on a desk).
+
+    NOTHING YET: Blooby as his Home Screen icon in small (the sign-in pages'
+    own, which brings its lilac in both themes), "Nothing new yet", and Make
+    a skribl, Make's own sheet, as Home's first visit says it.
+
+    Times are said by posts.js (its words: post_words()). #}
+{% extends 'social/base.html' %}
+{% from 'social/_post.html' import face, post_words with context %}
+{% import 'social/_icons.html' as ic %}
+
+{% block title %}Activity · Blooby{% endblock %}
+{% block scripts %}<script src="{{ social_asset('posts.js') }}" defer></script>{% endblock %}
+
+{% block top %}
+  <a class="icon-btn top-back" href="{{ url_for('social.home') }}" aria-label="Back to Home">{{ ic.back() }}</a>
+  <span class="top-title">Activity</span>
+{% endblock %}
+
+{% macro row(r) -%}
+{%- set says = {'comment': 'said something on your post', 'answer': 'answered your comment',
+                'answer_drawing': 'answered with a drawing', 'drawing': 'drew something on your post'} -%}
+{%- set c = r.c %}{% set n = r.people|length -%}
+<li><a class="act-row{% if r.new %} is-new{% endif %}" href="{{ r.href }}">
+  <span class="act-mark" aria-hidden="true"></span>
+  {%- if n > 1 %}<span class="act-faces">{{ face(r.people[1]) }}{{ face(r.people[0]) }}</span>{% else %}{{ face(r.people[0]) }}{% endif %}
+  <span class="act-text">{% if r.new %}<span class="sr">New: </span>{% endif %}<span class="act-say"><b>{{ r.names[0] }}</b>
+    {%- if n == 2 %} and <b>{{ r.names[1] }}</b>{% elif n > 2 %} and {{ n - 1 }} others{% endif %} {{ says[r.kind] }}</span>
+    <time class="act-when" datetime="{{ when_iso(c.created_at) }}" data-when="ago">{{ when_day(c.created_at) }}</time>
+    {%- if c.words %}<span class="act-peek">“{{ c.words }}”</span>{% endif %}</span>
+  <span class="act-pic"{% if r.pic %} style="background-image: url('{{ r.pic.src }}'); background-size: {{ r.pic.size }}; background-position: {{ r.pic.at }}"{% endif %} aria-hidden="true"></span>
+</a></li>
+{%- endmacro %}
+
+{% block main %}
+<div class="act">
+  <header class="page-head act-head">
+    <h1 class="page-title">Activity</h1>
+    <p class="page-sub">Who said something on your posts, and who answered you.</p>
+  </header>
+  {% if fresh %}
+  <h2 class="act-sec" id="actNew">New</h2>
+  <ul class="act-list" aria-labelledby="actNew">{% for r in fresh %}{{ row(r) }}{% endfor %}</ul>
+  {% endif %}
+  {% if earlier %}
+  <h2 class="act-sec" id="actEarlier">Earlier</h2>
+  <ul class="act-list" aria-labelledby="actEarlier">{% for r in earlier %}{{ row(r) }}{% endfor %}</ul>
+  {% endif %}
+  {% if not fresh and not earlier %}
+  <section class="act-empty" aria-labelledby="actEmptyTitle">
+    <img class="si-icon" src="{{ skribl_asset('apple-touch-icon.png') }}" alt="" width="64" height="64">
+    <h2 class="act-empty-title" id="actEmptyTitle">Nothing new yet</h2>
+    <p class="act-empty-words">When someone says something on your post, or answers you, you’ll see it here.</p>
+    <button class="btn btn-primary btn-big" type="button" data-make aria-haspopup="dialog" aria-controls="makeSheet"
+            aria-expanded="false">{{ ic.pen() }}<span>Make a skribl</span></button>
+  </section>
+  {% endif %}
+</div>
+{{ post_words() }}
+{% endblock %}

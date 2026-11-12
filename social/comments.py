@@ -437,14 +437,15 @@ def register(bp):
         if on is None or not on.open_to(me):
             # Not there, taken down, or a block either way: gone, as its page is.
             return _json_error("gone", 404)
-        parent = None
+        parent = to = None
         if body.get("answer_to") is not None:
             got = seen(body.get("answer_to"), me)
             if (got is None or got["on"].key != on.key or got["c"].taken_down_at is not None
                     or got["top"].taken_down_at is not None):
                 return _json_error("gone", 404)
-            # ONE LEVEL DEEP: an answer to an answer sits under the same comment.
-            parent = got["top"]
+            # ONE LEVEL DEEP: an answer to an answer sits under the same comment,
+            # and keeps whom it answers (notifications: Activity tells them).
+            parent, to = got["top"], got["c"].person_id
         made = None
         if payload is not None:
             from skribl import SkriblRejected, SkriblUnavailable, create_post
@@ -464,7 +465,7 @@ def register(bp):
                 return _json_error("busy", 503)
         sess = site().session()
         row = Comment(public_id=new_public_id(8), person_id=me.id,
-                      parent_id=parent.id if parent is not None else None, words=words or "",
+                      parent_id=parent.id if parent is not None else None, to_person_id=to, words=words or "",
                       skribl_id=made.public_id if made is not None else None, **on.row())
         sess.add(row)
         sess.flush()

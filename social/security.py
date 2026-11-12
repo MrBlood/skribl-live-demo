@@ -240,7 +240,7 @@ def sign_in(person):
     g.social_fresh = data
     g.social_person = _Snapshot(person.id, person.public_id, person.handle, person.display_name,
                                 bool(person.is_admin), int(person.session_gen),
-                                person.face_id, person.face_w, person.face_h)
+                                person.face_id, person.face_w, person.face_h, person.activity_seen_at)
     _write_cookie(data, SIGNED_IN_FOR)
     return data["s"]
 
@@ -257,15 +257,17 @@ def sign_out():
 
 class _Snapshot:
     """What a request needs to know of the signed-in person, read once: who
-    they are, and their drawn face for the bar's You (piece 3)."""
+    they are, their drawn face for the bar's You (piece 3), and when they last
+    looked at Activity, for the bell's dot (notifications)."""
     __slots__ = ("id", "public_id", "handle", "display_name", "is_admin", "session_gen",
-                 "face_id", "face_w", "face_h")
+                 "face_id", "face_w", "face_h", "activity_seen_at")
 
     def __init__(self, id, public_id, handle, display_name, is_admin, session_gen,
-                 face_id=None, face_w=None, face_h=None):
+                 face_id=None, face_w=None, face_h=None, activity_seen_at=None):
         self.id, self.public_id, self.handle = id, public_id, handle
         self.display_name, self.is_admin, self.session_gen = display_name, is_admin, session_gen
         self.face_id, self.face_w, self.face_h = face_id, face_w, face_h
+        self.activity_seen_at = activity_seen_at
 
 
 def read_aside(stmt):
@@ -302,7 +304,7 @@ def read_person_row(public_id):
     t = Person.__table__
     rows = read_aside(sa.select(t.c.id, t.c.public_id, t.c.handle, t.c.display_name,
                                 t.c.is_admin, t.c.session_gen, t.c.face_id, t.c.face_w,
-                                t.c.face_h)
+                                t.c.face_h, t.c.activity_seen_at)
                       .where(t.c.public_id == public_id))
     return rows[0] if rows else None
 
@@ -329,7 +331,7 @@ def current_person():
             if row.session_gen == data.get("g"):
                 person = _Snapshot(row.id, row.public_id, row.handle, row.display_name,
                                    bool(row.is_admin), int(row.session_gen),
-                                   row.face_id, row.face_w, row.face_h)
+                                   row.face_id, row.face_w, row.face_h, row.activity_seen_at)
             else:
                 _signed_out_here(data)               # signed out everywhere since
         elif row is None:

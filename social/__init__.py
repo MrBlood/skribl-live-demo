@@ -43,6 +43,12 @@ Home's card says how many. So does a drawing's own page (/b/<id>), since the
 owner's yes the same day: whatever is opened has them. Deleting a post, a
 drawing or an account takes its comments, in code.
 
+PHASE 2, NOTIFICATIONS (activity.py; the notifications mock, the owner's
+"all yes", Nov 12). /activity is who said something on your posts and who
+answered you, worked out from the comments; a bell at the top right of a
+phone's Home and Explore and Activity in a desk's rail take you there, each
+with a dot when something is new since you last looked.
+
 ONE SKRIBL, SHARED, PEOPLE TOO. The host hands Skribl the site's signed-in
 person as its current user (current_user_id() below) and names them with
 describe_author(), so a drawing made in the Pad while signed in is theirs.
@@ -223,11 +229,12 @@ def init_social(app, *, session=None, url_prefix="/social", skribl_blueprint="sk
         return render_template("social/explore.html", here="explore")
 
     if site is not None:
-        from . import accounts, comments, posts, profiles, reports, rules, safety
+        from . import accounts, activity, comments, posts, profiles, reports, rules, safety
         accounts.register(bp)
         profiles.register(bp, skribl_blueprint)
         posts.register(bp, skribl_blueprint)
         comments.register(bp)
+        activity.register(bp, skribl_blueprint)
         safety.register(bp)
         reports.register(bp, skribl_blueprint)
         rules.register(bp)
@@ -265,10 +272,14 @@ def init_social(app, *, session=None, url_prefix="/social", skribl_blueprint="sk
                "accounts": site is not None,
                "me": None}
         if site is not None:
+            from .activity import dot_for_request
             from .models import as_utc
             from .safety import REASONS
             from .security import current_person
             ctx["me"] = current_person()
+            # Activity's dot (notifications): asked only by a page that shows
+            # the bell or the rail, and then once a request.
+            ctx["activity_dot"] = dot_for_request
             # What each kind of report may say, in its sheet's order (piece 5).
             ctx["report_reasons"] = REASONS
             # Times are kept in UTC; a page writes them so (an ISO stamp
