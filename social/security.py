@@ -393,6 +393,7 @@ LIMITS = {
     "post": (40, 3600),            # posts made, per person (piece 4): each one is a skribl
     "report": (30, 3600),          # reports sent, per person, or per address signed out (piece 5)
     "block": (60, 3600),           # blocks and unblocks, per person (piece 5)
+    "comment": (60, 3600),         # comments and answers sent, per person (phase 2)
 }
 _SWEEP_EVERY = 64
 

@@ -1,0 +1,5 @@
+{#  Comments' cards, for a new comment put in place and for Load more
+    (comments.py): the same card the page renders, so a comment that arrives
+    later is the comment the page would have shown. #}
+{% from 'social/_comments.html' import comment with context %}
+{% for it in items %}{{ comment(it, can, post_mine) }}{% endfor %}

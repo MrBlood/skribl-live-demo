@@ -1,0 +1,189 @@
+{#  COMMENTS ON A POST'S OWN PAGE (phase 2, comments; the comments mock and the
+    owner's "all yes on both", Nov 12). comments.py says the rules; this is
+    what they look like, the mock's own classes and words.
+
+    comments_section(cm)  "Comments" and how many; the box on top for
+                          somebody who may comment, "Sign in to answer" for
+                          nobody signed in; the comments newest first, each
+                          with its answers oldest first, one level under it;
+                          Load more for the next page.
+    comment(it, ...)      one comment: its author's face and name, when (in
+                          the person's own time: "40m", "2h"), its words, its
+                          drawing (Skribl's in-post player, still until
+                          tapped), Answer and its ⋯; its answers under it.
+    comment_box()         Home's composer, as the mock styled it (.cm-box):
+                          your face, the words, Draw and Flip, Post; a drawing
+                          waits in it, in the in-post player the comment will
+                          have, with Edit drawing and Remove, until Post.
+                          Answer brings it under the comment it answers
+                          ("Answer Theo…").
+    comment_sheets(cm)    a comment's ⋯ sheet (Your comment: Delete comment;
+                          Theo’s comment: Remove from my post and Report
+                          comment, or Report comment alone), its report sheet
+                          (the post's reasons), the Pad and Flip over the page
+                          for a drawing answer, and comments.js's words.
+
+    `cm` is comments.section()'s. Import these WITH CONTEXT: they read the
+    page's me, skribl_bp, when_iso and when_day. comments.js holds the moving
+    parts; the words are here. #}
+{% from 'skribl/_skribl_inline_player.html' import skribl_inline, skribl_inline_draft %}
+{% from 'social/_post.html' import face with context %}
+{% import 'social/_icons.html' as ic %}
+
+{#  A DRAWING ANSWER: Skribl's in-post player, in the drawing's own shape,
+    still until tapped (a post's own page plays only the post's: posts.js),
+    the line under it saying what it is. Gone or withheld since, the box
+    says the drawing is not here anymore. #}
+{% macro comment_art(it) -%}
+{%- set sk = it.sk -%}
+{%- if sk and sk.canvas_w %}{{ skribl_inline(it.c.skribl_id, canvas_w=sk.canvas_w, canvas_h=sk.canvas_h, line_info=sk.line, bp=skribl_bp) }}
+{%- else %}{{ skribl_inline(it.c.skribl_id, bp=skribl_bp) }}{% endif %}
+{%- endmacro %}
+
+{% macro comment(it, can, post_mine) -%}
+{%- set c = it.c %}{% set who = it.who -%}
+<li class="cm" id="c-{{ c.public_id }}" data-comment="{{ c.public_id }}" data-first="{{ who.display_name.split(' ')[0] }}"{% if me and me.id == c.person_id %} data-mine{% endif %}>
+  {{ face(who) }}
+  <div class="cm-main">
+    <div class="cm-head"><b class="cm-name">{{ who.display_name }}</b><time class="cm-when" datetime="{{ when_iso(c.created_at) }}" data-when="ago">{{ when_day(c.created_at) }}</time></div>
+    {% if c.taken_down_at and me and me.id == c.person_id %}<p class="post-down cm-down" role="note">Taken down: it broke the rules. Only you can see it.</p>{% endif %}
+    {% if c.words %}<p class="cm-words">{{ c.words }}</p>{% endif %}
+    {% if c.skribl_id %}<div class="cm-art">{{ comment_art(it) }}</div>{% endif %}
+    <div class="cm-acts">
+      {% if can %}<button class="cm-act" type="button" data-cm-answer aria-expanded="false">{{ ic.comment() }}<span>Answer</span></button>{% endif %}
+      <button class="icon-btn" type="button" data-cm-menu aria-haspopup="dialog" aria-controls="commentSheet"
+              aria-expanded="false" aria-label="More for this comment">{{ ic.dots() }}</button>
+    </div>
+  </div>
+  {% if it.answers %}<ol class="cm-answers">{% for a in it.answers %}{{ comment(a, can, post_mine) }}{% endfor %}</ol>{% endif %}
+</li>
+{%- endmacro %}
+
+{% macro comment_box() -%}
+<div class="composer cm-box" data-cm-box role="group" aria-labelledby="cmWordsLabel">
+  <div class="composer-row">
+    {{ face(me, 'composer-face') }}
+    <label class="sr" id="cmWordsLabel" for="cmWords" data-cm-label>Say something</label>
+    <textarea class="composer-words" id="cmWords" rows="1" maxlength="500" placeholder="Say something, or draw it…"
+              data-cm-words></textarea>
+  </div>
+  <div class="composer-draft" data-cm-draft hidden>
+    {{ skribl_inline_draft('commentDraft') }}
+    <div class="composer-draft-acts">
+      <button class="btn btn-small" type="button" data-cm-edit>{{ ic.pen() }}<span>Edit drawing</span></button>
+      <button class="btn btn-small btn-quiet-danger" type="button" data-cm-remove>{{ ic.close() }}<span>Remove</span></button>
+    </div>
+  </div>
+  <div class="composer-acts">
+    <button class="chip" type="button" data-cm-open="pad" aria-haspopup="dialog" aria-controls="commentPad"
+            aria-expanded="false">{{ ic.make_draw() }}<span>Draw</span></button>
+    <button class="chip" type="button" data-cm-open="flip" aria-haspopup="dialog" aria-controls="commentFlip"
+            aria-expanded="false">{{ ic.make_flip() }}<span>Flip</span></button>
+    <span class="composer-left" data-cm-left></span>
+    <button class="btn btn-primary composer-post" type="button" data-cm-post>Post</button>
+  </div>
+  <p class="say composer-say" data-cm-say role="status" hidden></p>
+</div>
+{%- endmacro %}
+
+{% macro comments_section(cm) -%}
+<section class="comments" id="comments" aria-labelledby="commentsTitle" data-comments data-new="{{ cm.new }}"
+         data-more="{{ cm.more }}" data-drop="{{ cm.drop }}"{% if cm.post_mine %} data-post-mine{% endif %}>
+  <h2 class="comments-title" id="commentsTitle">{{ ic.comment() }}<span>Comments</span><span class="cm-count" data-cm-count{% if not cm.count %} hidden{% endif %}>{{ cm.count }}</span></h2>
+  {% if cm.can %}{{ comment_box() }}
+  {% elif not me %}<p class="cm-signin"><a href="{{ cm.signin }}">Sign in to answer</a></p>{% endif %}
+  <ol class="cm-list" data-cm-list>{% for it in cm.cards %}{{ comment(it, cm.can, cm.post_mine) }}{% endfor %}</ol>
+  <button class="btn btn-wide feed-more cm-more" type="button" data-cm-next="{{ cm.next or '' }}"{% if not cm.next %} hidden{% endif %}>Load more</button>
+  <p class="say" data-cm-page-say role="status" hidden></p>
+</section>
+{%- endmacro %}
+
+{% macro comment_sheets(cm) -%}
+{#  A COMMENT'S ⋯, Make's own sheet (social.js), as the post's: comments.js
+    shows the rows for whose comment it is, and titles it. #}
+<div class="make post-sheet" id="commentSheet" hidden>
+  <div class="make-scrim" data-make-close></div>
+  <div class="make-sheet" role="dialog" aria-modal="true" aria-labelledby="commentSheetTitle">
+    <div class="make-grip" data-make-close aria-hidden="true"></div>
+    <h2 class="make-title" id="commentSheetTitle">Your comment</h2>
+    <div class="post-acts">
+      <button class="post-act is-danger" type="button" data-cm-act="delete">{{ ic.trash() }}<span>Delete comment</span></button>
+      <button class="post-act is-danger" type="button" data-cm-act="remove">{{ ic.trash() }}<span>Remove from my post</span></button>
+      <button class="post-act is-danger" type="button" data-cm-act="report">{{ ic.flag() }}<span>Report comment</span></button>
+    </div>
+    <p class="say post-say" data-cm-sheet-say role="status" hidden></p>
+    <button class="btn btn-wide make-cancel" type="button" data-make-close>Cancel</button>
+  </div>
+</div>
+
+{#  REPORT THIS COMMENT: a post's reasons (safety.REASONS['comment']), into
+    the site's own queue, as a post's report goes. #}
+<div class="make post-sheet" id="commentReportSheet" hidden data-report="{{ url_for('social.report') }}">
+  <div class="make-scrim" data-make-close></div>
+  <form class="make-sheet" role="dialog" aria-modal="true" aria-labelledby="commentReportTitle" data-report-form>
+    <div class="make-grip" data-make-close aria-hidden="true"></div>
+    <h2 class="make-title" id="commentReportTitle">Report this comment</h2>
+    <p class="post-lede">Tell us what is wrong with it. Reports go to the people who run this site; nothing is taken down automatically.</p>
+    <fieldset class="post-reasons">
+      <legend class="sr">Reason</legend>
+      {% for r, words in report_reasons['comment'] %}
+      <label class="post-reason"><input type="radio" name="reason" value="{{ r }}"{% if loop.first %} checked{% endif %}><span>{{ words }}</span></label>
+      {% endfor %}
+    </fieldset>
+    <label class="post-note-label" for="commentReportNote">Anything else? <span>optional</span></label>
+    <textarea class="post-note" id="commentReportNote" name="note" rows="2" maxlength="300"></textarea>
+    <p class="say post-say" data-cm-report-say role="status" hidden></p>
+    <div class="post-sheet-acts">
+      <button class="btn btn-big" type="button" data-make-close>Cancel</button>
+      <button class="btn btn-primary btn-big" type="submit" data-cm-report-send>Send report</button>
+    </div>
+  </form>
+</div>
+
+{#  THE EDITORS, OVER THE POST: the Pad, and Flip, for a drawing answer, each
+    in a frame whose address is set when it is first opened, never here
+    (lib/composehost.js, as Home's composer). No gallery tick: a drawing
+    answer is the conversation's, unlisted. #}
+{% if cm.can %}
+<div class="facepad" id="commentPad" hidden data-compose="{{ cm.pad }}">
+  <div class="facepad-scrim"></div>
+  <div class="facepad-sheet" role="dialog" aria-modal="true" aria-label="Draw your answer">
+    <p class="facepad-wait">Opening the Pad…</p>
+    <iframe class="facepad-frame" title="The Pad: draw your answer"></iframe>
+  </div>
+</div>
+<div class="facepad" id="commentFlip" hidden data-compose="{{ cm.flip }}">
+  <div class="facepad-scrim"></div>
+  <div class="facepad-sheet" role="dialog" aria-modal="true" aria-label="Make a flip for your answer">
+    <p class="facepad-wait">Opening Flip…</p>
+    <iframe class="facepad-frame" title="Flip: make a flip book for your answer"></iframe>
+  </div>
+</div>
+{% endif %}
+
+<div class="words" data-comment-words hidden>
+  <span data-word="c_posting">Posting…</span>
+  <span data-word="c_empty">Say something or draw something first, then Post.</span>
+  <span data-word="c_too_big">That drawing is too big to post. Try it without a photo or music?</span>
+  <span data-word="c_words_long">That’s a little long: 500 characters at most.</span>
+  <span data-word="c_words_chars">That has a character we can’t show. Try another?</span>
+  <span data-word="c_limited">Lots of comments in a short while. Wait a little, then try again.</span>
+  <span data-word="c_stale">This page went stale. Reload it, then try again.</span>
+  <span data-word="c_signed_out">You’ve been signed out. Sign in again to answer.</span>
+  <span data-word="c_taken_down">Your account was taken down, so nothing new can be shared from it.</span>
+  <span data-word="c_gone">That isn’t here anymore. Reload the page to see what’s new.</span>
+  <span data-word="c_network">That didn’t reach us. Check your connection and try again.</span>
+  <span data-word="c_failed">That didn’t go through. Try again?</span>
+  <span data-word="c_left">{n} left</span>
+  <span data-word="c_say">Say something</span>
+  <span data-word="c_answer">Answer {name}…</span>
+  <span data-word="c_answer_label">Answer {name}</span>
+  <span data-word="c_yours">Your comment</span>
+  <span data-word="c_theirs">{name}’s comment</span>
+  <span data-word="c_deleting">Deleting…</span>
+  <span data-word="c_sending">Sending…</span>
+  <span data-word="c_reported">Thanks. The people who run this site will look at it.</span>
+  <span data-word="c_report_limited">Too many reports from here right now. Try again later.</span>
+  <span data-word="c_done">Done</span>
+</div>
+{%- endmacro %}

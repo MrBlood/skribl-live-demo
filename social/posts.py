@@ -9,8 +9,8 @@
                         handed back in compose mode (JSON).
     /feed               the next page of the feed, for Load more (JSON).
     /p/<id>             a post's own page: its drawing plays by itself (sound
-                        off, never under Reduce Motion; posts.js), Comments'
-                        place kept, More from its author.
+                        off, never under Reduce Motion; posts.js), its
+                        comments (comments.py), More from its author.
     /p/<id>/delete      your own post, gone: its words and its drawing (JSON).
 
 A POST IS WORDS AND A SKRIBL. The skribl is posted through Skribl's
@@ -219,9 +219,13 @@ def cards(entries, viewer):
     as Skribl describes them for `viewer` (None where it cannot be had:
     deleted or withheld since); where it goes, and its Delete."""
     from skribl import describe_posts
+    from .comments import counts
     entries = [e if isinstance(e, dict) else _entry(*e) for e in entries]
     drawings = describe_posts([e["post"].skribl_id for e in entries if e["kind"] == "p"],
                               viewer_id=viewer.public_id if viewer else None)
+    # HOW MANY COMMENTS each post's card says (phase 2): what its page will
+    # show this viewer, so a block or a takedown is neither shown nor counted.
+    said = counts([e["post"].id for e in entries if e["kind"] == "p"], viewer)
     out = []
     for e in entries:
         who = e["who"]
@@ -241,6 +245,7 @@ def cards(entries, viewer):
                 or getattr(who, "taken_down_at", None) is not None)
         out.append({"post": p, "who": who, "sk": sk, "kind": e["kind"], "down": down,
                     "plays": plays_text(sk["views"]) if sk else None,
+                    "comments": said.get(p.id, 0) if e["kind"] == "p" else None,
                     "url": url, "delete": gone,
                     "profile": profile_url(who.handle),
                     "mine": viewer is not None and viewer.id == who.id})
@@ -390,13 +395,16 @@ def register(bp, skribl_blueprint="skribl"):
 
     def _post_page(card, me):
         """A post's page, or a drawing's: More from its author, posts and
-        drawings alike, newest first."""
+        drawings alike, newest first; and a post's comments (a drawing shown
+        outside a post has none: comments are a post's)."""
         others, _ = feed_page(limit=MORE + 1, viewer=me, person=card["who"])
         key = ("s" + card["post"].skribl_id) if card["kind"] == "s" else ("p" + card["post"].public_id)
         others = [e for e in others if e["key"] != key][:MORE]
+        from . import comments
+        cm = comments.section(card["post"], card["who"], me, skribl_blueprint) if card["kind"] == "p" else None
         # The page's token for everybody: Report is anybody's (piece 5).
         return _page("post.html", here="post", card=card, more=cards(others, me) if others else [],
-                     share_url=public_origin() + card["url"], token=csrf_token())
+                     share_url=public_origin() + card["url"], token=csrf_token(), cm=cm)
 
     @bp.post("/p/<public_id>/delete")
     @_rests(json_answer=True)
@@ -439,10 +447,13 @@ def register(bp, skribl_blueprint="skribl"):
 
 
 def drop_post(author_public_id, row):
-    """A post's drawing (Skribl's delete_post, as its author) and its row.
+    """A post's comments and answers (phase 2, said here and not left to a
+    cascade), its drawing (Skribl's delete_post, as its author) and its row.
     A drawing already gone is no reason to keep the words. Flushes nothing:
     the caller does, with whatever else goes in the same transaction."""
     from skribl import SkriblNotFound, delete_post
+    from .comments import drop_post_comments
+    drop_post_comments(row.id)
     try:
         delete_post(row.skribl_id, author_id=author_public_id)
     except SkriblNotFound:

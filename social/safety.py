@@ -1,9 +1,10 @@
 """Safety (phase 1, piece 5; docs/SOCIAL-SITE.md section 5, build order item
 5), from the owner's "all yes" on the Safety mock (Nov 12).
 
-    /report             a report of somebody, a post, or a drawing shown
-                        outside a post: a reason from REASONS, and a note if
-                        they wrote one, into the admins' queue (JSON). From
+    /report             a report of somebody, a post, a drawing shown
+                        outside a post, or a comment (phase 2): a reason from
+                        REASONS, and a note if they wrote one, into the
+                        admins' queue (JSON). From
                         anybody who can see the thing, signed in or not: a
                         child's safety must never wait on an account.
     /@<handle>/block    block them: both ways, and quietly (JSON).
@@ -66,9 +67,11 @@ REASONS = {
              ("other", "Something else")),
 }
 REASONS["drawing"] = REASONS["post"]
+#: A comment's are a post's (phase 2, comments).
+REASONS["comment"] = REASONS["post"]
 
-#: The kinds this route takes. (A comment's comes with comments.)
-KINDS = ("person", "post", "drawing")
+#: The kinds this route takes.
+KINDS = ("person", "post", "drawing", "comment")
 
 
 # ---- who is blocked, both ways ----------------------------------------------
@@ -179,8 +182,18 @@ def _person_by_handle(handle):
 def _reported(kind, target, me):
     """(stored target, whose it is) for a thing `me` can see, or None: a
     person by handle, a post by its address, a drawing shown outside a post
-    by its skribl's. Gone, never made, or hidden by a block: None."""
+    by its skribl's, a comment by its address. Gone, never made, or hidden
+    by a block: None."""
     sess = site().session()
+    if kind == "comment":
+        # As its post's page shows it to them (comments.seen): never your own,
+        # nor one taken down.
+        from .comments import seen
+        got = seen(target, me)
+        if (got is None or got["c"].taken_down_at is not None or got["who"].taken_down_at is not None
+                or (me is not None and got["who"].id == me.id)):
+            return None
+        return got["c"].public_id, got["who"]
     if kind == "person":
         who = _person_by_handle(target)
         if who is None or who.taken_down_at is not None or (me is not None and (who.id == me.id or between(me, who))):

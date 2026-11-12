@@ -7,11 +7,14 @@
     player's own play(): docs/INTEGRATION.md, "A post's own page can start
     it"), sound off until the viewer turns it on, and rests still under
     Reduce Motion. Its author, its words, when, its plays, Share and Make your
-    own; Comments' place kept ("open soon": phase 2); on a desk, More from its
-    author beside it. Its ⋯ is the feed's. #}
+    own; its comments (phase 2: _comments.html, comments.py), on a desk beside
+    the drawing under Share; on a desk, More from its author beside it. A
+    drawing shown outside a post (/social/b/<id>) has no comments: they are a
+    post's. Its ⋯ is the feed's. #}
 {% extends 'social/base.html' %}
 {% from 'social/_post.html' import post_sheets, post_words, face, player with context %}
 {% from 'social/_safety.html' import safety_sheets with context %}
+{% from 'social/_comments.html' import comments_section, comment_sheets with context %}
 {% import 'social/_icons.html' as ic %}
 {% set p = card.post %}{% set who = card.who %}
 
@@ -38,8 +41,12 @@
 {%- endmacro %}
 
 {% block title %}{{ who.display_name }} on Blooby{% endblock %}
+{# A drawing answer (phase 2): the Pad and Flip over the post, run by
+   Skribl's lib/composehost.js, as Home's composer; only where one can be made. #}
+{% block head %}{% if cm and cm.can %}<script src="{{ skribl_asset('lib/composehost.js') }}" defer></script>{% endif %}{% endblock %}
 {% block scripts %}<script src="{{ social_asset('posts.js') }}" defer></script>
-<script src="{{ social_asset('safety.js') }}" defer></script>{% endblock %}
+<script src="{{ social_asset('safety.js') }}" defer></script>
+{% if cm %}<script src="{{ social_asset('comments.js') }}" defer></script>{% endif %}{% endblock %}
 
 {% block top %}
   <a class="icon-btn top-back" href="{{ url_for('social.home') }}" aria-label="Back to Home">{{ ic.back() }}</a>
@@ -72,10 +79,7 @@
     <button class="btn" type="button" data-make aria-haspopup="dialog" aria-controls="makeSheet"
             aria-expanded="false">{{ ic.pen() }}<span>Make your own</span></button>
   </div>
-  <section class="comments" aria-labelledby="commentsTitle">
-    <h2 class="comments-title" id="commentsTitle">{{ ic.comment() }}<span>Comments</span></h2>
-    <p class="comments-soon">Comments open soon. You’ll be able to answer with words, or with a drawing of your own.</p>
-  </section>
+  {% if cm %}{{ comments_section(cm) }}{% endif %}
   {% if more %}
   <section class="more-from" aria-labelledby="moreTitle">
     <h2 class="more-title" id="moreTitle">More from {{ who.display_name.split(' ')[0] }}</h2>
@@ -95,4 +99,4 @@
 {{ post_words() }}
 {% endblock %}
 
-{% block overlays %}{{ post_sheets() }}{{ safety_sheets() }}{% endblock %}
+{% block overlays %}{{ post_sheets() }}{{ safety_sheets() }}{% if cm %}{{ comment_sheets(cm) }}{% endif %}{% endblock %}

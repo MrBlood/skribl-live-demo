@@ -4,6 +4,8 @@
     reports and Skribl's (Explore's tiles, a drawing's link page) together: a
     child's safety first, its picture blurred and its words hidden until Open
     it; then the newest.
+    A comment's card (phase 2) shows whose face, its words and the link to
+    it on its post's page.
     Each says what was reported and whose it is, why (each reason, how many),
     what reporters wrote and who they are (seen only here), and two answers:
     Keep it, or Take it down (hidden for everybody at once, a copy kept). The
@@ -35,15 +37,15 @@
         <span class="rep-meta">{{ c.count }} report{{ '' if c.count == 1 else 's' }}{% if c.latest %} · <time datetime="{{ when_iso(c.latest) }}" data-when="ago">{{ when_day(c.latest) }}</time>{% endif %}</span>
       </p>
       <div class="rep-what">
-        {% if c.kind == 'person' %}
+        {% if c.kind == 'person' or (c.kind == 'comment' and not c.poster) %}
         <span class="rep-face{% if c.child %} is-veiled{% endif %}" data-veil>{% if c.who %}{{ face(c.who) }}{% endif %}</span>
         {% else %}
         <span class="rep-pic{% if c.child %} is-veiled{% endif %}" data-veil style="background-image: url('{{ c.poster }}')"></span>
         {% endif %}
         <div class="rep-said">
-          <p class="rep-who">{% if c.who %}<b>{{ c.who.display_name }}</b> <span>@{{ c.who.handle }} · {{ {'person': 'a profile', 'post': 'a post', 'drawing': 'a drawing'}[c.kind] }}</span>{% else %}<b>{{ {'person': 'Somebody', 'post': 'A post', 'drawing': 'A drawing'}[c.kind] }}</b> <span>{{ 'not on the site' if c.kind == 'drawing' else 'since deleted' }}</span>{% endif %}</p>
+          <p class="rep-who">{% if c.who %}<b>{{ c.who.display_name }}</b> <span>@{{ c.who.handle }} · {{ {'person': 'a profile', 'post': 'a post', 'drawing': 'a drawing', 'comment': 'a comment'}[c.kind] }}</span>{% else %}<b>{{ {'person': 'Somebody', 'post': 'A post', 'drawing': 'A drawing', 'comment': 'A comment'}[c.kind] }}</b> <span>{{ 'not on the site' if c.kind == 'drawing' else 'since deleted' }}</span>{% endif %}</p>
           {% if c.kind == 'person' and c.who and c.who.bio %}{% set said = '“' ~ c.who.bio ~ '”' %}
-          {% elif c.kind == 'post' and c.what %}{% set said = ('“' ~ c.what.words.split('\n')[0] ~ '”') if c.what.words else 'A drawing' %}
+          {% elif c.kind in ('post', 'comment') and c.what %}{% set said = ('“' ~ c.what.words.split('\n')[0] ~ '”') if c.what.words else 'A drawing' %}
           {% elif c.kind == 'drawing' and c.what and c.what.title %}{% set said = '“' ~ c.what.title ~ '”' %}
           {% else %}{% set said = '' %}{% endif %}
           {% if c.child %}<p class="rep-words" data-veil-hide>Hidden until you open it.</p>{% if said %}<p class="rep-words" hidden data-veil-show>{{ said }}</p>{% endif %}

@@ -35088,3 +35088,233 @@ desk, light and dark. Five breaks, each red: the period purple; the old mark
 in the bar; the tail not hung below; the word in ink; the rail's link still
 named Skribl. Four lines elsewhere that pinned the old name now pin the new
 one (the Home title, the rail's names, Look around, the rules' draft note).
+
+## After v330 -- Comments at /social (phase 2, comments)
+
+The owner, Nov 12, "all yes on both" to the Safety mock and the comments
+mock. Safety came first (piece 5); this is the comments mock, built in its
+own classes, sizes and words (`social/comments.py`, `_comments.html`,
+`comments.js`), in two parts: words, then drawing answers.
+
+- THE SECTION. On a post's own page "Comments" and how many replace
+  "Comments open soon". The box on top is Home's composer in the mock's size
+  (.cm-box): your face, the words, Post. Comments come newest first, each its
+  face, name, a short time ("40m", "2h", posts.js's own), its words (line
+  breaks kept), Answer and ⋯; twenty a page, then Load more.
+- ANSWERS, ONE LEVEL DEEP, oldest first under their comment. Answering an
+  answer puts the new one under the same comment (parent_id is always a
+  top-level comment's). Answer brings the box there, "Answer Theo…"; Answer
+  again, Esc or Post sends it home.
+- KIND, NEVER JUMPY. The comment keeps its place on the screen while the box
+  moves (the page scrolls by what moved above it, the browser's own scroll
+  anchoring held off for that one change so the two never both move it; an
+  iPhone has none); the box fades in where it lands; a new comment fades in,
+  a deleted one fades out. FOUND IN THE PICTURES, FIXED BEFORE THEY WERE
+  SHOWN: under a long thread, Answer left the box below the fold, under the
+  phone's bar, so a person would type into a field they cannot see. The page
+  now glides down to it (scrollBy, smooth; put there at once under Reduce
+  Motion).
+- WHO MAY COMMENT: somebody signed in, not taken down, with no block either
+  way with the post's author; answering, none with the comment's author
+  either. The route refuses anybody else kindly (gone, signed_out,
+  taken_down: each said in the box), and the box is not shown to them.
+  Signed out, the comments are readable and "Sign in to answer" (the small
+  violet words Sign in wears at the top of a phone) stands in the box's
+  place, back to the post once signed in. Words are a post's (check_words:
+  tidied, 500 at most, nothing hidden or turned around); a comment needs
+  words (and, from the second part, or a drawing). 60 an hour a person.
+- HIDDEN, NEITHER SHOWN NOR COUNTED: nothing by anybody a block either way
+  or a takedown hides from the viewer, nor any answer under such a comment,
+  on the post's page and on Home's card alike (comments.counts reads the same
+  rules as the page). A comment taken down is its author's alone, with "Taken
+  down: it broke the rules. Only you can see it."
+- THE ⋯, as the post's: "Your comment", Delete comment; on your own post
+  somebody else's, "Theo’s comment", Remove from my post and Report comment;
+  anybody else's, Report comment (signed out too). Delete and Remove go at
+  once, as the mock has them (the ⋯ is the asking), the comment fading out
+  with its answers. Report rises as "Report this comment" with a post's
+  reasons (REASONS['comment']; KINDS gains comment) into the site's own
+  queue. Your Reports shows a comment's card: whose face, "Theo Lind @theo ·
+  a comment", its first line, a link to it on its post's page; Take it down
+  sets taken_down_at, deleting nothing; Keep it closes, hiding nothing.
+- HOME'S CARD says how many beside the plays: the comment icon and the
+  number, "3 comments", a link to the post's comments, 44px; nothing at none.
+  On a desk the comments sit beside the drawing, under Share.
+- DATA: social_comments on the site's chain (e4b8c2a91f37), indexed by
+  address, a post's newest first, a comment's answers oldest first, a
+  person's, a drawing's. DELETING IS SAID IN CODE: a comment with its answers
+  (drop_comments), a post with its comments (drop_post), an account with its
+  comments and every answer under them (delete_person). The schema's ON
+  DELETE CASCADEs are a net, not the way. The brief said SQLite does not
+  enforce them here; it does, in the demo: Skribl's pragma hook turns
+  foreign keys on for the engine the site shares (measured: deleting a
+  person's row took their posts). So the route-level rows cannot see a
+  missing line of that code, and a probe runs the three deletions on a copy
+  of the database with SKRIBL_SQLITE_FOREIGN_KEYS=0, the documented opt-out.
+- COUNTED, NOT KEPT. docs/SOCIAL-SITE.md section 3's rule 3 keeps counts as
+  stored numbers. A comment count that hides what a block hides is each
+  viewer's own, so it is counted: one grouped query a page, on the post's
+  own index. A kept count waits for a measurement that asks for one.
+- A drawing shown outside a post (/social/b/<id>) has no comments: they are
+  a post's, so its page lost the "open soon" note rather than keep a promise
+  this does not keep.
+
+Pad and Flip: not affected in this first part (words; the drawing answers of
+the second part open them as they are).
+
+THE FOUR: kind (a refusal says why in the box and blames nobody; nobody is
+told of a block; a takedown tells its maker in plain words; signed out, the
+comments are there to read and "Sign in to answer" invites; the comment you
+answer stays where your eyes are); simple (one box, and it comes to what you
+answer and says whom: "Answer Theo…"; answers one level deep; a comment's ⋯
+offers only what you may do to it); playful (a conversation under the
+drawing, and Home's count a door to it); powerful (Remove from my post keeps
+a post's author in charge of their own page; a block and a takedown reach
+comments too; Load more).
+
+THE CHECKS. verify_socialcomments.py, fourteen sections through the demo's
+own server, people joining with Chromium's virtual authenticator: the
+section, commenting, answers, the ⋯, delete and remove, who may comment,
+hidden, reported and taken down, deleting a post or an account, Load more,
+Home's card, a desk, every word and target (phone and desk, light and dark:
+312 read, the lowest 5.33:1), and no page errors. Every row was shown red by a
+break of its own, one at a time on a fresh server, and green as built:
+fifty-eight breaks. The section: no box; a number said at none; the old note
+kept; Post with nothing sending; signed out without Sign in to answer, or
+offered Answer; the words' field at 14px. Commenting: the words not tidied;
+oldest first; a new comment appearing at once; the count not moved; its time
+not said. Answers: an answer to an answer under the answer; the comment
+jumping as the box moves; the box appearing at once; answers newest first;
+the box staying under the thread after Post; Esc doing nothing; the box left
+below the fold; the page snapping to it. The ⋯: your own offering Report;
+Remove on a post not yours; every sheet "Your comment". Delete and remove: a
+comment going at once; anybody deleting anybody's; the post's author unable
+to remove; a comment's answers left to the cascade. Who may comment: no
+token; a hidden character let through; a block with the post's author, or
+the comment's, ignored; somebody taken down commenting, or offered the box;
+no limit. Hidden: a hidden person's comments shown; counted; answers under
+a hidden comment counted; people taken down not hidden. Reports: a
+comment's report refused; your own reportable; the card without its link,
+or its words; Take it down hiding nothing; its author not told; a comment
+taken down still counted. Deleting: drop_post and delete_person each leaving
+comments to the cascade; an account taking others' comments too. Load more
+missing, or repeating the last. Home's card saying nothing, a count too
+small to tap, a count said at none. On a desk, the comments under
+everything. When, and Sign in to answer, made faint; Answer too small to
+tap. comments.js throwing once loaded.
+
+FIVE INSTRUMENTS WERE WRONG FIRST. Four were found by a break that stayed
+green or stopped: a missing box, and a missing Load more, stopped the run at
+a click instead of failing their row (each section now records a step that
+cannot go on as a red row, and those two steps ask first); the answers'
+order was read off answers the page had put in place itself, so the server's
+order was never read with two of them (the row reloads now); and the census
+read a word's colour alone, so words made faint with opacity read as full
+(it folds every opacity over a word into its colour now: both faint breaks
+red). The fifth by the whole run, green alone: a short glide to the box (34
+px over six frames, its largest step 19) failed "no step over half the way".
+A snap carries the whole way in one frame, so a glide is now three frames or
+more with none carrying three quarters of it; the snap break stays red. The
+deletion rows through the site cannot see a missing line of the deleting
+code while SQLite's cascade is on, so the cascade-off probe pins the code and
+the route rows pin what the person sees; an account taking others' comments
+is the route row's own red.
+
+Two older suites changed with it, each row shown red first: verify_socialposts'
+post-page row now asks for the comments where it asked for "Comments open
+soon" (red on the old page; first red as built too, having read the
+heading's hidden count, so it reads what is shown), and verify_socialauth's
+chain builds nine tables (red with the comments' migration short an index).
+
+Side by side (run_parallel -j 2), on the first part: verify_socialcomments
+31/31, verify_socialposts 22/22 (alone, after that fix), verify_socialsafety
+34/34, verify_social 39/39, verify_socialprofile 54/54, verify_socialauth
+62/62, verify_migrations 77/77, verify_seam 469/469, verify_txcontract
+101/101, verify_hostseams 88/88, verify_docs 144/144, and the PR gate's other
+source suites (verify_boot 23/23, verify_privacy 54/54, verify_createpost
+82/82, verify_sweepjob 66/66, verify_deletion 67/67, verify_backfill 23/23,
+verify_mediareport 15/15, verify_surfaces 13/13, verify_integration 29/29,
+verify_mediameta 61/61, verify_takedown 56/56, verify_runreport 13/13,
+verify_bootstrap 7/7, verify_draftrace 4/4, verify_pagewide 7/7). The full
+battery was not run; main's run after the merge is. Not tested here: Safari
+and the owner's own fonts (no WebKit, no SF or Segoe UI in this box).
+
+THE SECOND PART, DRAWING ANSWERS (the mock's 6; "reply with a skribl", which
+docs/SOCIAL-SITE.md put in phase 3, came early with the owner's yes to it).
+
+- DRAW AND FLIP IN THE BOX open Skribl's editor over the post in compose
+  mode, as Home's composer does (lib/composehost.js through social.js's
+  SocialPadOverlay), with no gallery tick. Add hands the drawing back; it
+  waits in the box in the in-post player the comment will have, Draw and Flip
+  stepping aside, with Edit drawing (the editor again, the drawing in it) and
+  Remove, until Post. The box says "Say something, or draw it…" now, and with
+  neither, "Say something or draw something first, then Post."
+- A DRAWING ANSWER IS ITS CONVERSATION'S: posted through create_post in the
+  same transaction as the comment that keeps its id, UNLISTED whatever the
+  payload says (its link works, it is listed nowhere, never Home or
+  Explore), titled by the comment's first words. A drawing alone is a
+  comment; so is an answer. A drawing answer's body may weigh what a post's
+  does (POST_MAX_BODY); every other request to the site still stops at 64 KiB.
+- STILL UNTIL TAPPED, and not even fetched: posts.js mounts and plays the
+  post's own drawing alone. It used to mount the whole page and play the
+  first box it found, right only by the order of the page.
+- IT GOES WITH ITS COMMENT: deleted or removed, its post deleted, its
+  person's account deleted, through Skribl's delete_post as its author
+  (_drop_drawings, before the rows; Skribl's tables have no cascade from the
+  site's, so this is the only way). Taken down with its comment, it is
+  withheld in Skribl too, and Skribl's own reports of it close with the
+  site's. What somebody reports of it on its link page lands on its
+  comment's card, which shows its picture ("A drawing" when it has no
+  words).
+- THE LINE UNDER IT, a departure from the mock. The mock's cat was the
+  player's box alone: its markup was copied from a feed card without the
+  line Skribl puts under every posted drawing. The in-post player takes the
+  drawing's own shape only with its line (a box without one keeps the 16:9
+  band, a tall drawing a strip), and the line holds mute for a drawing with
+  sound. So a drawing answer wears it, 150px wide, where it keeps "Drawn in 2
+  sec" and the scrubber. Hiding it would be the site reaching into Skribl's
+  parts, and a drawing with sound nobody could hear. Shown to the owner in
+  the pictures; theirs to call.
+
+Pad and Flip: shared, as Home's composer has them: both open from the
+comment box the same way, through lib/composehost.js and the site's one
+overlay. Neither editor changed.
+
+THE FOUR, for the second part: playful (answer a drawing with a drawing, and
+watch it draw itself when tapped); powerful (Pad or Flip, the whole editor,
+in a comment); simple (the same Draw and Flip as Home's box, the drawing
+waiting where the words are); kind (a drawing answer stays in its
+conversation, listed nowhere else, and goes when its comment goes).
+
+THE CHECKS, for the second part. verify_socialcomments gains five sections
+(no page errors is now 19): a drawing answer in the box (Draw with a pen in
+the real Pad, Add, Edit drawing, Remove, Flip); posted (unlisted through
+create_post, its id on the comment, alone or as an answer, still and not
+fetched until tapped while the post's own plays, listed nowhere, as heavy as
+a post's); gone with its comment, its post or its person's account;
+reported and taken down; the box with a drawing waiting, every word and
+target (phone and desk, light and dark: 24 read, the lowest 5.33:1).
+Section 1 now asks for Draw and Flip. Twenty-one breaks, each red on its
+row: the box without Draw and Flip; the Pad opened with the gallery tick;
+Add handing nothing back; Edit drawing doing nothing; Remove keeping the
+editor's drawing; Flip opening the Pad; a drawing answer kept public; the
+comment without its drawing's id; a drawing alone refused by the server, or
+by the box; every drawing on the page playing by itself; a drawing answer
+held to the site's 64 KiB; a deleted comment keeping its drawing, or its
+answers' drawings; a deleted post keeping its comments' drawings; the card
+without the drawing's picture; what Skribl's link page reported landing on a
+card of its own; Take it down leaving the drawing up, or Skribl's reports of
+it open; Draw and Flip too small to tap; Edit drawing faint. Five
+instruments were wrong first: three breaks stopped section 14 at a click
+(now each of its rows runs its own steps and fails itself); a hidden caption
+field's label read as a gallery tick (only what the sheet shows counts now);
+and the 64 KiB break stayed green, no drawing the suite sent being that
+heavy (a long one is now). A drawing's missing caption is stored as nothing
+rather than null, which the row now allows.
+
+Side by side (run_parallel -j 2), on both parts: verify_socialcomments 44/44,
+verify_socialposts 22/22, verify_socialsafety 34/34, verify_social 39/39,
+verify_socialprofile 54/54, verify_socialauth 62/62, verify_migrations 77/77,
+verify_seam 469/469, verify_txcontract 101/101, verify_hostseams 88/88,
+verify_docs 144/144, and the PR gate's other source suites, each as on the
+first part. The full battery was not run; main's run after the merge is.
