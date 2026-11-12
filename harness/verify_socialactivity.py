@@ -1065,7 +1065,9 @@ with sync_playwright() as p:
             close_ctx(ctx, pg)
             lit = [f for f in frames if f["landed"]]
             ops = [f["op"] for f in lit]
-            ys = [f["y"] for f in frames if f["there"]]
+            # While it glows (the browser's own jump to the address's comment, as
+            # the page arrives, can come a frame after the comment is there).
+            ys = [f["y"] for f in lit]
             check("a tap on a row opens its comment on its page (#c-<id>), in view above the bar and painted there",
                   where["url"] == f"/social/p/{post}#c-{target}" and where["seen"] and where["painted"],
                   json.dumps(where))
@@ -1192,15 +1194,15 @@ with sync_playwright() as p:
                 ctx, pg = browser_as(b, sky, screen=screen)
                 go(pg, "/social/activity")
                 got[screen] = pg.evaluate("""() => { const s = document.querySelector('.act-empty'); if (!s) return null;
-                  const i = s.querySelector('img.si-icon'), ir = i.getBoundingClientRect(), b = s.querySelector('button[data-make]'),
+                  const i = s.querySelector('img.si-icon'), ir = i.getBoundingClientRect(), b = s.querySelector('.btn'),
                         br = b.getBoundingClientRect(), at = document.elementFromPoint(ir.left + ir.width / 2, ir.top + ir.height / 2);
                   return { icon: new URL(i.src).pathname.split('/').pop(), w: ir.width, h: ir.height, painted: at === i,
                            title: s.querySelector('.act-empty-title').textContent, words: s.querySelector('.act-empty-words').textContent,
                            button: b.textContent.trim(), bh: br.height, lists: document.querySelectorAll('.act-list, .act-sec').length }; }""")
                 if screen == "phone":
-                    pg.tap(".act-empty button[data-make]")
+                    pg.tap(".act-empty .btn")
                 else:
-                    pg.click(".act-empty button[data-make]")
+                    pg.click(".act-empty .btn")
                 pg.wait_for_timeout(600)
                 got[screen]["sheet"] = pg.evaluate("() => { const m = document.getElementById('makeSheet');"
                                                    " return !!m && !m.hidden && m.classList.contains('is-open')"
