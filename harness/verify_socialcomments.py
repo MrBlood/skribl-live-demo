@@ -710,6 +710,17 @@ def open_box(pg, by=".cm-say"):
     pg.wait_for_timeout(100)
 
 
+def box_room(pg):
+    """The room the open box takes, as the mock drew it: 136px, with Draw, Flip and
+    Post on one line. In a font too wide for that line (GitHub's DejaVu Sans), Post
+    keeps to the right on the next: one line more, its 44px and the 6px between.
+    Read off the open box, so no row holds this box's font as everybody's."""
+    two = pg.evaluate("""() => { const b = document.querySelector('[data-cm-box]');
+      const p = b && b.querySelector('[data-cm-post]'), c = b && b.querySelector('.composer-acts .chip');
+      return !!(p && c) && Math.abs(p.getBoundingClientRect().top - c.getBoundingClientRect().top) >= 1; }""")
+    return 136 + (50 if two else 0)
+
+
 def answer_box(pg, cid):
     """Answer on comment `cid`: the box open for it, at rest."""
     pg.evaluate("(id) => document.getElementById('c-' + id).scrollIntoView({ block: 'center' })", cid)
@@ -3020,13 +3031,15 @@ with sync_playwright() as p:
             g_open = glided(track(opened, 0))
             ops = fades_of(opened, 0)
             room = dpg.evaluate("() => Math.round(document.querySelector('[data-cm-fold]').getBoundingClientRect().height * 100) / 100")
+            want = box_room(dpg)
             check("a click glides the box open under the heading: the comments under it slide down to make room (read on every"
-                  " frame, 136px) while the box fades in, nothing above it moving; the field focused, the icon lit",
+                  " frame, 136px, or a line more where a wider font puts Post on the next) while the box fades in, nothing"
+                  " above it moving; the field focused, the icon lit",
                   there and there["open"] == "home" and there["focus"] and there["icon"] == "true" and there["font"] == 17
-                  and g_open["ok"] and abs(g_open["way"] - room) <= 1 and room == 136
+                  and g_open["ok"] and abs(g_open["way"] - room) <= 1 and room == want
                   and len([o for o in ops if 0.02 < o < 0.98]) >= 3 and ops[-1] == 1
                   and still_(track(opened, 1)) and still_(track(opened, 2)),
-                  f"box {there}; the room {room}; the comments {g_open}; the fade {ops[:5]}..; the heading"
+                  f"box {there}; the room {room} (the box's {want}); the comments {g_open}; the fade {ops[:5]}..; the heading"
                   f" {glided(track(opened, 1))}")
             folds = {}
             for how in ("a second click", "Esc", "a press elsewhere"):
@@ -3039,6 +3052,7 @@ with sync_playwright() as p:
                     open_post(dpg, post)
                     open_box(dpg)
                     dpg.fill("[data-cm-words]", f"Typed, then {how}")
+                    room_ = box_room(dpg)
                     fr = dpg.evaluate(FRAMES, [act, ["[data-cm-list] > .cm .cm-name"], ["[data-cm-box]"], 600])
                     dpg.wait_for_function(GONE, timeout=8000)
                     after_ = dpg.evaluate("() => ({ icon: document.querySelector('.cm-say').getAttribute('aria-expanded'), focus: document.activeElement.className })")
@@ -3046,13 +3060,15 @@ with sync_playwright() as p:
                     words_ = dpg.evaluate(BOX)["words"]
                     dpg.click(".cm-say")
                     dpg.wait_for_function(GONE, timeout=8000)
-                    return {"g": glided(track(fr, 0)), "icon": after_["icon"], "focus": after_["focus"], "words": words_}
+                    return {"g": glided(track(fr, 0)), "icon": after_["icon"], "focus": after_["focus"], "words": words_,
+                            "room": room_}
 
                 got_, err = steps(fold_away)
-                folds[how] = dict(got_ or {"g": {"ok": False, "way": 0}, "icon": None, "focus": "", "words": None}, stopped=err)
+                folds[how] = dict(got_ or {"g": {"ok": False, "way": 0}, "icon": None, "focus": "", "words": None, "room": 136},
+                                  stopped=err)
             check("a second click, Esc (focus back on the icon) or a press anywhere else folds it away, the comments sliding back"
                   " up (read on every frame) and the icon going out; open it again and what was typed is there",
-                  all(v["stopped"] is None and v["g"]["ok"] and abs(v["g"]["way"] + 136) <= 1 and v["icon"] == "false"
+                  all(v["stopped"] is None and v["g"]["ok"] and abs(v["g"]["way"] + v["room"]) <= 1 and v["icon"] == "false"
                       and v["words"] == f"Typed, then {k}" for k, v in folds.items())
                   and folds["Esc"]["focus"].startswith("icon-btn cm-say"),
                   f"{folds}")
@@ -3114,13 +3130,14 @@ with sync_playwright() as p:
             moved = dpg.evaluate(FRAMES, [f"document.querySelector('#c-{theo_c} > .cm-main [data-cm-answer]').click()",
                                           [f"#c-{theo_c} > .cm-main .cm-name", f"#c-{other} > .cm-main .cm-name"], ["[data-cm-box]"], 1300])
             under = dpg.evaluate(BOX)
+            want = box_room(dpg)
             ops = fades_of(moved, 0)
             g_theo, g_other = glided(track(moved, 0)), glided(track(moved, 1))
             check("on a desk, Answer opens it under that conversation (\"Answer Theo…\"); open under the heading first, it folds"
                   " away there and then glides open under the conversation, every move a glide (read on every frame), the box"
                   " fading out and in",
                   under["open"] == "under" and under["under"] == theo_c and under["placeholder"] == "Answer Theo…" and under["focus"]
-                  and g_theo["ok"] and abs(g_theo["way"] + 136) <= 1 and (g_other["ok"] or still_(track(moved, 1)))
+                  and g_theo["ok"] and abs(g_theo["way"] + want) <= 1 and (g_other["ok"] or still_(track(moved, 1)))
                   and min(ops) == 0 and ops[-1] == 1 and len([o for o in ops if 0.02 < o < 0.98]) >= 4,
                   f"{under}; Theo's {g_theo}; the next conversation {g_other}; the box {ops[:3]}..{min(ops)}..{ops[-1]}")
             again, err = steps(lambda: (dpg.click(f"#c-{theo_c} > .cm-main [data-cm-answer]"),
@@ -3279,7 +3296,8 @@ with sync_playwright() as p:
                 _, err = steps(lambda: cpg.wait_for_function(BOX_STILL, timeout=8000))
                 opened = cpg.evaluate(BOX)
                 line_open = cpg.evaluate(FIRST_LINE)
-                got[screen] = {"line": line, "opened": opened, "line_open": line_open, "fr": fr, "stopped": err}
+                got[screen] = {"line": line, "opened": opened, "line_open": line_open, "fr": fr, "stopped": err,
+                               "room": box_room(cpg)}
                 close_ctx(cctx, cpg)
             d = got["desk"]
             check("with nothing said yet, \"Say the first thing\" stands where the comments will be: the small violet words (16px,"
@@ -3290,7 +3308,7 @@ with sync_playwright() as p:
                       and v["line"]["ink"] in ("rgb(76, 49, 196)",) for v in got.values())
                   and got["phone"]["opened"]["open"] == "sheet" and got["phone"]["line_open"]["open"]
                   and d["opened"]["open"] == "home" and not d["line_open"]["open"] and d["line_open"]["seen"] == "hidden"
-                  and glided(track(d["fr"], 0), 136 - 52)["ok"] and still_(track(got["phone"]["fr"], 0)),
+                  and glided(track(d["fr"], 0), d["room"] - 52)["ok"] and still_(track(got["phone"]["fr"], 0)),
                   f"phone {got['phone']['line']} -> {got['phone']['opened']['open']}; desk {d['line']} -> {d['opened']['open']},"
                   f" the line {d['line_open']}; under it on a desk {glided(track(d['fr'], 0))}")
             dctx, dpg = browser_as(b, theo, "desk")
@@ -3343,6 +3361,7 @@ with sync_playwright() as p:
             open_post(dpg, post)
             dn = dpg.evaluate(FRAMES, ["document.querySelector('.cm-say').click()", ["[data-cm-list] > .cm .cm-name"], ["[data-cm-box]"], 600])
             dpg.wait_for_function(BOX_STILL, timeout=8000)
+            room35 = box_room(dpg)
             dpg.fill("[data-cm-words]", "Section 35, posted on a desk under Reduce Motion")
             dw = dpg.evaluate(POSTED, [900])
             close_ctx(dctx, dpg)
@@ -3353,7 +3372,7 @@ with sync_playwright() as p:
                   " place (one step) and fades in; a posted comment is put in place and fades in, what was under it moving in"
                   " one step",
                   still_(sheet_tops) and len([o for o in sheet_ops if 0.02 < o < 0.98]) >= 2 and sheet_ops[-1] == 1
-                  and len(moves) == 1 and abs(moves[0] - 136) <= 1 and len([o for o in box_ops if 0.02 < o < 0.98]) >= 2
+                  and len(moves) == 1 and abs(moves[0] - room35) <= 1 and len([o for o in box_ops if 0.02 < o < 0.98]) >= 2
                   and still_(pw["new"]) and len([o for o in pw["ops"] if 0.02 < o < 0.98]) >= 2
                   and still_(dw["new"]) and len([o for o in dw["ops"] if 0.02 < o < 0.98]) >= 2
                   and one_step(pw["old"]) and one_step(dw["old"]),
