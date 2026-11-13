@@ -584,12 +584,18 @@ TOAST = r"""() => { const t = document.querySelector('.mu-toast'); if (!t) retur
 LINE = r"""() => { const l = document.querySelector('[data-mute-line]'); if (!l || !l.getClientRects().length) return null;
   const r = l.getBoundingClientRect(), u = l.querySelector('.mu-unmute'), ur = u.getBoundingClientRect();
   const acts = document.querySelector('.prof-acts').getBoundingClientRect(), cx = ur.left + ur.width / 2, cy = ur.top + ur.height / 2;
+  // Where the line and the buttons ARE, not their boxes: each is a full-width
+  // row, so its box is the same wherever its contents sit. The span of what
+  // each holds (the eye to Unmute; the first button to the last).
+  const span = (el) => { const k = [...el.children].filter(e => e.getClientRects().length).map(e => e.getBoundingClientRect());
+    return [Math.min(...k.map(x => x.left)), Math.max(...k.map(x => x.right))]; };
+  const [inL, inR] = span(l), [aL, aR] = span(document.querySelector('.prof-acts'));
   const lands = [[cx, cy], [cx - 21, cy], [cx + 21, cy], [cx, cy - 21], [cx, cy + 21]].map(([x, y]) => {
     const e = document.elementFromPoint(x, y); return !!e && (e === u || u.contains(e)); });
   const ic = l.querySelector('svg');
   return { words: l.textContent.replace(/\s+/g, ' ').trim(), unmute: u.textContent.trim(), label: u.getAttribute('aria-label'),
-           top: r.top, mid: r.left + r.width / 2, left: r.left, actsBottom: acts.bottom, actsLeft: acts.left,
-           actsMid: acts.left + acts.width / 2, h: Math.round(ur.height), lands,
+           top: r.top, mid: (inL + inR) / 2, left: inL, actsBottom: acts.bottom, actsLeft: aL,
+           actsMid: (aL + aR) / 2, h: Math.round(ur.height), lands,
            eye: !!ic && ic.classList.contains('pen-ic') && ic.querySelectorAll('path').length === 4,
            op: +getComputedStyle(l).opacity }; }"""
 
@@ -2093,8 +2099,11 @@ with sync_playwright() as p:
                   " its ground, and the painted pixels), the lower counting, phone and desk, light and dark; a colour"
                   " the reader can't read is a red that names it",
                   len(kinds) >= 15 and not weak and not unread,
-                  f"under {weak[:3]}; unread {[(t, w, r['unread']) for t, w, r in unread[:2]]}; lowest by kind and screen: "
-                  + json.dumps({f"{w} {t}": v for (w, t), v in sorted(low.items())})[:900])
+                  f"under {weak[:3]}; unread {[(t, w, r['unread']) for t, w, r in unread[:2]]}; the lowest of each, light"
+                  " (phone/desk) and dark (phone/desk): "
+                  + "; ".join(f"{w} " + "/".join(f"{low[(w, t)]:g}" if (w, t) in low else "-"
+                                               for t in ("phone/light", "desk/light", "phone/dark", "desk/dark"))
+                              for w in kinds))
             short = [(t, w, x) for t, w, x in taps if not x["all"] or x["h"] < 44]
             check("every new control 44px to a finger (a press at its middle and 21px out each way lands on it): the row,"
                   " Undo, Unmute on their page, the fold, Settings' Unmute; no target under 44px and no text field under"
