@@ -44,11 +44,22 @@ authenticator for the site's people and a real pen in Skribl's real Pad.
      its edge under the time; the face, the name and the @handle open the
      person's page; ⋯ and Share do their own job; a drag that selects words
      opens nothing. A touch on a phone, a click on a desk.
+ 12. EVERY CARD OPENS ITS POST (the owner's "I thought on card?", Nov 13):
+     Cal's tap map of Home's cards and Explore's and a profile's Skribls
+     cards, on a touch phone in light and dark: every 4px one of the card's
+     own controls or its ground, and an exact tap on every part of the
+     ground opens the card's page (a post's, a drawing's, or Skribl's own
+     for one by somebody not on the site); a finger on the drawing plays it,
+     on the name opens the person, on the ground opens the page, followed;
+     /social/b/<id>'s ways on; the line's own controls; on a desk Ctrl and
+     the middle button, a drag, the title a keyboard's link; the ⋯; and
+     Skribl's own /gallery as it was.
 
 SOCIALPOSTS_PART=<n>[,<m>] runs those sections only (calibration); a section
 makes the people it needs. Every row was shown red by breaking one part and
-green as built: DECISIONS.md, "Posts at /social (phase 1, piece 4)", and
-"Comments on every drawing" for 10 and 11.
+green as built: DECISIONS.md, "Posts at /social (phase 1, piece 4)",
+"Comments on every drawing" for 10 and 11, and "Every card opens its post"
+for 12.
 """
 import base64
 import json
@@ -548,6 +559,66 @@ WAYS = """(key) => {
            sameLine: !!handle && Math.abs(when.top - handle.top) < 1 && when.left > handle.right, headH: r1(head.height),
            wordsGap: wr ? r1(wr.top + pad - head.bottom) : null,
            artGap: r1(art.top - (wr ? wr.bottom - parseFloat(getComputedStyle(wl).paddingBottom) : head.bottom)) }; }"""
+
+
+# THE TAP MAP (section 12; Cal's map of the owner's "I thought on card?",
+# Nov 13): every `step` px of a card, what a tap there lands on, read as a
+# phone has it. Each row is scrolled to the screen's middle, clear of the bars
+# at the top and the foot, at the phone's own height (a drawing's box is sized
+# by it: inlineplayer.css, min(70vh, 640px)), and read with elementFromPoint:
+# one of the card's own controls (a link, a button, a role, a tab stop: it
+# does its own job), or the card's ground, keyed by the element itself, so
+# each part of the ground can be tapped for what it does. Off the card (past
+# its round corners) is not the card's.
+TAPMAP = """([sel, step]) => {
+  const card = document.querySelector(sel);
+  if (!card) return null;
+  const OWN = 'a, button, input, textarea, select, label, summary, [role="button"], [role="slider"], [role="group"], [tabindex]';
+  const name = e => e.tagName.toLowerCase() + (e.classList.length ? '.' + e.classList[0] : '');
+  const spacer = document.createElement('div');
+  spacer.style.height = '100vh';
+  document.body.appendChild(spacer);
+  const box = card.getBoundingClientRect(), top = box.top + scrollY, left = box.left, mid = innerHeight / 2;
+  const keys = {}, grid = [];
+  for (let y = 1; y < box.height - 1; y += step) {
+    window.scrollTo({ top: top + y - mid, behavior: 'instant' });
+    const vy = top + y - scrollY, row = [];
+    for (let x = 1; x < box.width - 1; x += step) {
+      const e = document.elementFromPoint(left + x, vy);
+      let k = 'off';
+      if (e && card.contains(e)) {
+        const own = e.closest(OWN);
+        k = own && card.contains(own) ? 'own|' + name(own) : 'ground|' + name(e);
+      }
+      keys[k] = (keys[k] || 0) + 1;
+      row.push(k);
+    }
+    grid.push(row);
+  }
+  spacer.remove();
+  return { w: box.width, h: box.height, keys, grid };
+}"""
+
+# Where a point of a card (its own px, as TAPMAP read it) is on the screen,
+# once it is scrolled to the screen's middle as TAPMAP read it.
+AIM = """([sel, x, y]) => { const c = document.querySelector(sel); if (!c) return null;
+  const b = c.getBoundingClientRect();
+  window.scrollTo({ top: b.top + scrollY + y - innerHeight / 2, behavior: 'instant' });
+  const r = c.getBoundingClientRect(); return [r.left + x, r.top + y]; }"""
+
+
+def inmost(grid, key, step):
+    """A point of `key`'s part of the map that is as far inside it as any:
+    every neighbour the same part where the part has such points, and of
+    those the nearest its middle. In the card's own px."""
+    pts = [(i, j) for j, row in enumerate(grid) for i, k in enumerate(row) if k == key]
+    inner = [(i, j) for i, j in pts
+             if all(0 <= j + dj < len(grid) and 0 <= i + di < len(grid[0]) and grid[j + dj][i + di] == key
+                    for di, dj in ((1, 0), (-1, 0), (0, 1), (0, -1)))]
+    use = inner or pts
+    cx, cy = sum(i for i, _ in use) / len(use), sum(j for _, j in use) / len(use)
+    i, j = min(use, key=lambda q: (q[0] - cx) ** 2 + (q[1] - cy) ** 2)
+    return 1 + i * step, 1 + j * step
 
 
 with sync_playwright() as p:
@@ -1106,12 +1177,14 @@ with sync_playwright() as p:
         no_token = mc.post_json(f"/social/b/{sid_k}/delete", {}, token=False)[0]
         a_posts = mc.post_json(f"/social/b/{g_skribl}/delete", {})[0]
         pages = {k: mc.get(f"/social/b/{v}")[0] for k, v in (("unlisted", kept), ("nobody's", nobodys), ("none", "nope0000000"))}
+        # One by somebody not on the site has no page here, so since every card
+        # opens /social/b/<id> (section 12) it goes on to Skribl's own (a 302).
         check("a drawing's Delete needs the page's token (403), is its author's alone (somebody else's: 404, the"
               " drawing kept), and never takes a post's drawing without the post (404); a drawing's page is a kind"
-              " 404 for one kept unlisted, one by somebody not on the site, and none",
+              " 404 for one kept unlisted and none, and one by somebody not on the site goes on to Skribl's own page",
               no_token == 403 and not_mine == 404 and skribl_row(sid_k) is not None
               and a_posts == 404 and skribl_row(g_skribl) is not None and post_row(g_post) is not None
-              and pages == {"unlisted": 404, "nobody's": 404, "none": 404},
+              and pages == {"unlisted": 404, "nobody's": 302, "none": 404},
               f"no token {no_token}; somebody else's {not_mine} (kept {skribl_row(sid_k) is not None});"
               f" a post's drawing {a_posts}; pages {pages}")
 
@@ -1332,6 +1405,356 @@ with sync_playwright() as p:
         check("pressing on a card's words and pulling selects them and opens nothing: a click that ends a selection is not"
               " a tap (desk)",
               sel[0].strip() == "Section 11, a card to tap" and sel[1] == "/social/", f"{sel}")
+
+    # ------------------------------------------------------------------ 12
+    # EVERY CARD OPENS ITS POST (the owner, Nov 13, from the phone: "Show me
+    # where you click or touch to go to post view? It's not clear. I thought on
+    # card?"). The rule said yes to on Nov 12, "anywhere on the card should open
+    # the post and clicking on the player should make it play", on every card
+    # the site shows: Home's (a post, and a drawing on its own), and Explore's
+    # and a profile's Skribls, which are Skribl's own Gallery cards opening where
+    # the site says (skribl.set_card_url, app.py), with on Explore one by
+    # somebody not on the site. Cal's tap map as rows: every 4px of each card,
+    # light and dark, on a touch phone (TAPMAP); an EXACT tap on every part of
+    # its ground, followed to where it lands (exact: a phone's own targeting
+    # moves a tap that lands near a control onto it, which is the phone's
+    # doing, not the page's); and a finger's tap on the drawing, the name and
+    # the ground. Then /social/b/<id>'s three ways on, the line's controls, and
+    # on a desk Ctrl, the middle button, a drag, a keyboard and the ⋯.
+    if part(12, "every card opens its post: the tap map of Home's, Explore's and a profile's cards"):
+        mira = someone(b, "mira", "Mira Okafor")
+        juno = someone(b, "juno", "Juno Park")
+        st_g, jg = make_post(juno, "Section 12, a post shown in the gallery", gallery=True, seed=121)
+        g_post = jg.get("post") if isinstance(jg, dict) else None
+        g_sid = (post_row(g_post) or (None, None))[1] if g_post else None
+        # A Flip too: the Gallery and Home show a Flip's card as a drawing's.
+        st_f, jf = make_post(juno, "Section 12, a Flip shown in the gallery", gallery=True, flip=True, seed=125)
+        f_post = jf.get("post") if isinstance(jf, dict) else None
+        f_sid = (post_row(f_post) or (None, None))[1] if f_post else None
+        juno.pg.goto(BASE + "/social/")
+        st_l, lone = juno.pg.evaluate(PAD, ["Section 12, a drawing on its own", "public", 122])
+        nb_ctx, nb_pg = browser_as(b, None)
+        nb_pg.goto(BASE + "/skribl-pad")
+        nb_pg.wait_for_timeout(800)
+        st_n, nobodys = nb_pg.evaluate(PAD, ["Section 12, nobody's", "public", 123])
+        st_u, unlisted = nb_pg.evaluate(PAD, ["Section 12, nobody's, kept unlisted", "unlisted", 124])
+        close_ctx(nb_ctx, nb_pg)
+        made = bool(g_sid and f_sid and lone and nobodys and unlisted) and [st_l, st_n, st_u] == [201, 201, 201]
+        to_post, to_lone, to_skribl = f"/social/p/{g_post}", f"/social/b/{lone}", f"/s/{nobodys}"
+        to_flip = f"/social/p/{f_post}"
+        TILE = '#skriblGallery .tile[data-id="{}"]'
+        CARDS = [("Home", "/social/", f'.post-card[data-post="{g_post}"]', g_sid, to_post),
+                 ("Home", "/social/", f'.post-card[data-post="{f_post}"]', f_sid, to_flip),
+                 ("Home", "/social/", f'.post-card[data-skribl="{lone}"]', lone, to_lone),
+                 ("Explore", "/social/explore", TILE.format(g_sid), g_sid, to_post),
+                 ("Explore", "/social/explore", TILE.format(f_sid), f_sid, to_flip),
+                 ("Explore", "/social/explore", TILE.format(lone), lone, to_lone),
+                 ("Explore", "/social/explore", TILE.format(nobodys), nobodys, to_skribl),
+                 ("a profile", "/social/@juno", TILE.format(g_sid), g_sid, to_post),
+                 ("a profile", "/social/@juno", TILE.format(lone), lone, to_lone)]
+        # Where a finger goes on a card: the drawing's middle, the name's, and
+        # the ground's: Home's "watching at" (the line under the drawing), a
+        # Gallery card's time; scrolled to the screen's middle first.
+        SPOT12 = """([sel, what]) => { const c = document.querySelector(sel); if (!c) return null;
+          const text = (root, needle) => { if (!root) return null; const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+            for (let n = w.nextNode(); n; n = w.nextNode()) { const i = n.textContent.indexOf(needle); if (i >= 0) {
+              const g = document.createRange(); g.setStart(n, i); g.setEnd(n, i + needle.length); return g; } }
+            return null; };
+          const at = { drawing: () => c.querySelector('.skribl-inline'),
+                       name: () => { const e = c.querySelector('.post-name, .tdn'); return e && text(e, e.textContent.trim()); },
+                       ground: () => text(c.querySelector('.skribl-inline-say'), 'watching at') || text(c.querySelector('.tm'), c.querySelector('.tm') ? c.querySelector('.tm').textContent.trim() : '') }[what];
+          const it = at && at(); if (!it || !it.getBoundingClientRect().width) return null;
+          let r = it.getBoundingClientRect();
+          window.scrollTo({ top: r.top + scrollY + r.height / 2 - innerHeight / 2, behavior: 'instant' });
+          r = it.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; }"""
+        PLAYING = """(sid) => { const p = (window.SkriblInline ? SkriblInline.players() : []).find(x => x.state().id === sid);
+          return p ? p.state().state : null; }"""
+
+        def ready(pg_, path, sel):
+            pg_.goto(BASE + path)
+            pg_.wait_for_function("(s) => document.readyState === 'complete' && !!window.SkriblInline && !!document.querySelector(s)",
+                                  arg=sel, timeout=15000)
+            pg_.wait_for_timeout(250)
+
+        def follow(pg_, path, wait=2500):
+            """Where a tap took the page: its path (and #), redirects followed."""
+            try:
+                pg_.wait_for_url(lambda u: urllib.parse.urlsplit(u).path != path, timeout=wait)
+                pg_.wait_for_load_state("load", timeout=10000)
+            except Exception:  # noqa: BLE001 -- staying is an answer
+                pass
+            pg_.wait_for_timeout(150)
+            u = urllib.parse.urlsplit(pg_.url)
+            return u.path + ("#" + u.fragment if u.fragment else "")
+
+        maps = {}
+        for scheme in ("light", "dark"):
+            ctx, cpg = browser_as(b, mira, "phone", scheme)
+            for surface, path, sel, sid, want in CARDS:
+                got = maps[(scheme, surface, sel)] = {"want": want, "path": path,
+                                                     "label": f"{surface} ({scheme}), the card for {want}"}
+                try:
+                    ready(cpg, path, sel)
+                    m = cpg.evaluate(TAPMAP, [sel, 4])
+                    got["keys"] = m["keys"]
+                    parts = got["parts"] = {}
+                    for key in sorted(k for k in m["keys"] if k.startswith("ground|")):
+                        x, y = inmost(m["grid"], key, 4)
+                        ready(cpg, path, sel)
+                        cpg.mouse.click(*cpg.evaluate(AIM, [sel, x, y]))
+                        parts[key] = ((x, y), follow(cpg, path))
+                    for what, spot in (("drawing", "drawing"), ("person", "name"), ("finger", "ground")):
+                        ready(cpg, path, sel)
+                        xy = cpg.evaluate(SPOT12, [sel, spot])
+                        if not xy:
+                            got[what] = None
+                            continue
+                        cpg.touchscreen.tap(*xy)
+                        if what == "drawing":
+                            try:
+                                cpg.wait_for_function(f"() => ({PLAYING})({json.dumps(sid)}) === 'playing'", timeout=8000)
+                            except Exception:  # noqa: BLE001 -- not playing is the row's red
+                                pass
+                            got[what] = (cpg.evaluate(PLAYING, sid), follow(cpg, path, 900))
+                        else:
+                            got[what] = follow(cpg, path)
+                except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is its rows' red
+                    got["stopped"] = str(exc).splitlines()[0][:160]
+            close_ctx(ctx, cpg)
+
+        cards12 = list(maps.values())
+        dead = {r["label"]: {k: v for k, v in r.get("parts", {}).items() if v[1] != r["want"]} for r in cards12}
+        dead = {k: v for k, v in dead.items() if v}
+        lacking = [(r["label"], r.get("stopped")) for r in cards12 if "stopped" in r or not r.get("parts")]
+        check("THE TAP MAP: on Home's cards, Explore's and a profile's Skribls cards (a post's drawing, a Flip's, one on"
+              " its own, and on Explore one by somebody not on the site), a touch phone in light and dark, every 4px is one of"
+              " the card's own controls or its ground, and an exact tap on every part of the ground (its words, its"
+              " time, its edges, the line under the drawing, the space between) opens the card's page: no part does"
+              " nothing",
+              made and len(cards12) == 2 * len(CARDS) and not dead and not lacking,
+              f"made {made}; does nothing or goes elsewhere: {dict(list(dead.items())[:3])}; stopped {lacking[:3]};"
+              f" parts of the ground per card {[len(r.get('parts', {})) for r in cards12]}")
+        check("...a finger's tap on the drawing plays it there, and the page stays",
+              made and all(r.get("drawing") == ("playing", r["path"]) for r in cards12),
+              f"{ {r['label']: r.get('drawing') for r in cards12 if r.get('drawing') != ('playing', r['path'])} }")
+        check("...a finger's tap on the name opens the person's page (on the card by somebody not on the site,"
+              " 'Anonymous' names nobody: it is the card's ground, and opens the card)",
+              made and all(r.get("person") == ("/social/@juno" if r["want"] != to_skribl else r["want"])
+                           for r in cards12),
+              f"{ {r['label']: r.get('person') for r in cards12} }")
+        check("...and a finger's tap on the ground opens the right page, followed: a post's drawing its post"
+              " (/social/p/…), one on its own its page (/social/b/…), one by somebody not on the site Skribl's own"
+              " page for it (/s/…); on Home under the drawing at \"watching at\", on a Gallery card at its time",
+              made and all(r.get("finger") == r["want"] for r in cards12),
+              f"{ {r['label']: r.get('finger') for r in cards12 if r.get('finger') != r['want']} }")
+
+        # /social/b/<id>, WHERE EVERY GALLERY CARD ON THE SITE OPENS: a post's
+        # drawing goes on to its post for anybody who may see the post, and is
+        # as gone as the post to anybody it is hidden from (here a block), without
+        # naming it; one by somebody not on the site goes to Skribl's own page
+        # for it; one of theirs kept unlisted is a kind 404, as before.
+        kit = someone(b, "kit", "Kit Vale")
+        kc = kit.client()
+        kc.get("/social/")
+        blocked = kc.post_json("/social/@juno/block", {})[0]
+
+        def where(cookies, path):
+            op = urllib.request.build_opener(_NoRedirect())
+            req = urllib.request.Request(BASE + path, headers={"X-Forwarded-For": address(),
+                                                                **({"Cookie": cookies} if cookies else {})})
+            try:
+                with op.open(req, timeout=30) as r_:
+                    return r_.status, None, r_.read().decode("utf-8", "replace")
+            except urllib.error.HTTPError as e:
+                return e.code, e.headers.get("Location"), e.read().decode("utf-8", "replace")
+
+        def jar(who):
+            return "; ".join(f"{c['name']}={c['value']}" for c in who.ctx.cookies(BASE))
+        on = {"mira": where(jar(mira), f"/social/b/{g_sid}"), "nobody": where(None, f"/social/b/{g_sid}"),
+              "kit": where(jar(kit), f"/social/b/{g_sid}"), "theirs": where(None, f"/social/b/{nobodys}"),
+              "unlisted": where(None, f"/social/b/{unlisted}"), "lone": where(None, f"/social/b/{lone}")}
+        check("/social/b/<id> takes a post's drawing on to its post for anybody who may see it, signed in or not; to"
+              " somebody the post is hidden from (a block) it is a kind 404 that names no post; one by somebody not on"
+              " the site goes to Skribl's own page for it; one of theirs kept unlisted is a kind 404; one on its own"
+              " is its own page",
+              made and blocked == 200
+              and all(on[k][0] == 302 and (on[k][1] or "").endswith(to_post) for k in ("mira", "nobody"))
+              and on["kit"][0] == 404 and not on["kit"][1] and g_post not in on["kit"][2]
+              and on["theirs"][0] == 302 and (on["theirs"][1] or "").endswith(to_skribl)
+              and on["unlisted"][0] == 404 and on["lone"][0] == 200,
+              f"block {blocked}; {[(k, v[0], v[1]) for k, v in on.items()]}; the 404 names the post"
+              f" {bool(g_post and g_post in on['kit'][2])}")
+
+        # THE LINE'S OWN CONTROLS KEEP THEIR TAPS (Home's card): the speed opens
+        # its choices and takes one, the loop stops repeating, and the page stays.
+        ctx, cpg = browser_as(b, mira, "phone", "light")
+        line = {}
+        try:
+            sel = f'.post-card[data-post="{g_post}"]'
+            ready(cpg, "/social/", sel)
+            cpg.locator(sel + " .rl-speed").scroll_into_view_if_needed()
+            cpg.locator(sel + " .rl-speed").tap()
+            cpg.wait_for_timeout(300)
+            line["chips"] = cpg.evaluate("(s) => document.querySelector(s + ' .rl-speed').getAttribute('aria-expanded')", sel)
+            # Between two of the choices, an exact tap lands on their group: a near
+            # miss, which opens nothing and leaves the choices open.
+            gap = cpg.evaluate("""(s) => { const g = document.querySelector(s + ' .rl-chips'), r = g.getBoundingClientRect();
+              for (let y = r.top + 1; y < r.bottom; y += 2) for (let x = r.left + 1; x < r.right; x += 1)
+                if (document.elementFromPoint(x, y) === g) return [x, y];
+              return null; }""", sel)
+            if gap:
+                cpg.mouse.click(*gap)
+            line["between"] = (bool(gap), follow(cpg, "/social/", 900),
+                               cpg.evaluate("(s) => document.querySelector(s + ' .rl-speed').getAttribute('aria-expanded')", sel))
+            cpg.locator(sel + ' .rl-chips button[data-r="2"]').tap()
+            cpg.wait_for_timeout(300)
+            line["speed"] = cpg.evaluate("(s) => document.querySelector(s + ' .rl-speed').textContent.trim()", sel)
+            cpg.locator(sel + " .skribl-inline-line .skribl-inline-loop").tap()
+            cpg.wait_for_timeout(300)
+            line["loop"] = cpg.evaluate("(s) => document.querySelector(s + ' .skribl-inline-line .skribl-inline-loop').getAttribute('aria-pressed')", sel)
+            line["at"] = follow(cpg, "/social/", 600)
+        except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is the row's red
+            line["stopped"] = str(exc).splitlines()[0][:160]
+        close_ctx(ctx, cpg)
+        check("...and on Home the line's own controls keep their taps: the speed opens its choices (a tap between two"
+              " of them opens nothing and leaves them open) and takes one (2×), the loop stops repeating, and the page"
+              " stays",
+              made and line.get("chips") == "true" and line.get("between") == (True, "/social/", "true")
+              and line.get("speed", "").startswith("2") and line.get("loop") == "false"
+              and line.get("at") == "/social/", f"{line}")
+
+        # ON A DESK: Ctrl (as ⌘ is on a Mac) and the middle button open the card
+        # in a new tab and leave this page be; a drag that selects a card's words
+        # opens nothing, nor does one across its ground; the title is the card's
+        # link for a keyboard (Tab from ⋯ reaches it, Enter opens it).
+        ctx, cpg = browser_as(b, mira, "desk", "light")
+        desk = {}
+
+        def newtab(press_):
+            try:
+                with ctx.expect_page(timeout=5000) as info:
+                    press_()
+                tab = info.value
+                tab.wait_for_load_state("load", timeout=15000)
+                u = urllib.parse.urlsplit(tab.url).path
+                tab.close()
+                return u
+            except Exception:  # noqa: BLE001 -- no tab is the row's red
+                return None
+
+        try:
+            hsel, esel = f'.post-card[data-post="{g_post}"]', TILE.format(lone)
+            for name_, path, sel in (("home", "/social/", hsel), ("explore", "/social/explore", esel)):
+                ready(cpg, path, sel)
+                xy = cpg.evaluate(SPOT12, [sel, "ground"])
+
+                def ctrl_click():
+                    cpg.keyboard.down("Control")
+                    cpg.mouse.click(*xy)
+                    cpg.keyboard.up("Control")
+                desk[name_ + " ctrl"] = (newtab(ctrl_click), follow(cpg, path, 600))
+                ready(cpg, path, sel)
+                xy = cpg.evaluate(SPOT12, [sel, "ground"])
+                desk[name_ + " middle"] = (newtab(lambda: cpg.mouse.click(*xy, button="middle")), follow(cpg, path, 600))
+            # A drag that selects a Gallery card's caption, and one across its ground.
+            csel = TILE.format(g_sid)
+            ready(cpg, "/social/explore", csel)
+            ends = cpg.evaluate("""(s) => { const c = document.querySelector(s); const w = c.querySelector('.tcap'), n = w.firstChild;
+              w.scrollIntoView({ block: 'center' }); const g = document.createRange(); g.setStart(n, 0); g.setEnd(n, 1);
+              const a = g.getBoundingClientRect(); g.setStart(n, n.length - 1); g.setEnd(n, n.length); const z = g.getBoundingClientRect();
+              return [a.left + 1, a.top + a.height / 2, z.right - 1, z.top + z.height / 2]; }""", csel)
+            cpg.mouse.move(ends[0], ends[1])
+            cpg.mouse.down()
+            cpg.mouse.move(ends[2], ends[3], steps=12)
+            cpg.mouse.up()
+            cpg.wait_for_timeout(300)
+            desk["select"] = (cpg.evaluate("() => String(getSelection())"), follow(cpg, "/social/explore", 1500))
+            ready(cpg, "/social/explore", csel)
+            g0 = cpg.evaluate(SPOT12, [csel, "ground"])
+            cpg.mouse.move(g0[0], g0[1])
+            cpg.mouse.down()
+            cpg.mouse.move(g0[0] - 40, g0[1] + 2, steps=8)
+            cpg.mouse.up()
+            desk["drag"] = follow(cpg, "/social/explore", 1500)
+            # The keyboard: from the card's ⋯, Tab reaches its title, a link, and Enter opens it.
+            ready(cpg, "/social/explore", esel)
+            cpg.evaluate("(s) => document.querySelector(s + ' .tileMore').focus()", esel)
+            cpg.keyboard.press("Tab")
+            desk["tab"] = cpg.evaluate("""(s) => { const a = document.activeElement, c = document.querySelector(s);
+              return a && c.contains(a) ? [a.tagName.toLowerCase(), a.className, a.getAttribute('href'), a.textContent.trim()] : null; }""", esel)
+            cpg.keyboard.press("Enter")
+            desk["enter"] = follow(cpg, "/social/explore")
+        except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is its rows' red
+            desk["stopped"] = str(exc).splitlines()[0][:160]
+        close_ctx(ctx, cpg)
+        check("on a desk, Ctrl or the middle button opens the card in a new tab and this page stays: Home's card (at"
+              " \"watching at\") and a Gallery card (at its time)",
+              made and all(desk.get(k) == (w, p_) for k, w, p_ in (("home ctrl", to_post, "/social/"),
+                                                                  ("home middle", to_post, "/social/"),
+                                                                  ("explore ctrl", to_lone, "/social/explore"),
+                                                                  ("explore middle", to_lone, "/social/explore"))),
+              f"{ {k: desk.get(k) for k in ('home ctrl', 'home middle', 'explore ctrl', 'explore middle', 'stopped')} }")
+        check("...pressing on a Gallery card's caption and pulling selects its words and opens nothing, and a drag"
+              " across its ground opens nothing: a drag is not a tap",
+              made and (desk.get("select") or ("", ""))[0].strip() == "From the gallery tick"
+              and (desk.get("select") or ("", ""))[1] == "/social/explore" and desk.get("drag") == "/social/explore",
+              f"select {desk.get('select')}; drag {desk.get('drag')}")
+        check("...and for a keyboard the card's title is its link: Tab from its ⋯ reaches it, and Enter opens the"
+              " card's page",
+              made and (desk.get("tab") or [None])[0] == "a"
+              and urllib.parse.urlsplit((desk.get("tab") or [None, None, ""])[2] or "").path == to_lone
+              and desk.get("enter") == to_lone, f"tab {desk.get('tab')}; enter {desk.get('enter')}")
+
+        # ⋯ ON A GALLERY CARD: Open goes to the card's page, in this tab as a tap
+        # does, and Copy link and Share… give its address.
+        ctx, cpg = browser_as(b, mira, "phone", "light")
+        ctx.add_init_script("Object.defineProperty(navigator, 'share', { configurable: true,"
+                            " value: d => { window.__shared = d && d.url; return Promise.resolve(); } });")
+        menu12 = {}
+        try:
+            for act in ("Copy link", "Share", "Open"):
+                ready(cpg, "/social/explore", TILE.format(g_sid))
+                cpg.evaluate("() => { if (window.SkriblPostedUI) SkriblPostedUI.copyText = t => { window.__copied = t;"
+                             " return Promise.resolve(true); }; }")
+                cpg.locator(TILE.format(g_sid) + " .tileMore").tap()
+                cpg.locator(f'.cardMenu .cmItem:has-text("{act}")').tap()
+                if act == "Open":
+                    menu12[act] = follow(cpg, "/social/explore")
+                else:
+                    cpg.wait_for_timeout(400)
+                    menu12[act] = cpg.evaluate("() => window.__copied || window.__shared || null")
+        except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is the row's red
+            menu12["stopped"] = str(exc).splitlines()[0][:160]
+        close_ctx(ctx, cpg)
+        check("a Gallery card's ⋯ on the site: Open goes to the card's page in this tab (followed, a post's drawing its"
+              " post), and Copy link and Share… give the card's address",
+              made and menu12.get("Open") == to_post
+              and menu12.get("Copy link") == BASE + f"/social/b/{g_sid}" and menu12.get("Share") == BASE + f"/social/b/{g_sid}",
+              f"{menu12}")
+
+        # SKRIBL'S OWN /gallery IS AS IT WAS: the site says nothing for Skribl's
+        # pages, so its section carries no address, a card's title is no link, a
+        # tap on its ground opens nothing, and ⋯ → Open opens the player's page
+        # in a new tab.
+        ctx, cpg = browser_as(b, mira, "phone", "light")
+        own = {}
+        try:
+            gsel = TILE.format(lone)
+            ready(cpg, "/gallery", gsel)
+            own["root"] = cpg.evaluate("() => document.querySelector('[data-skribl-gallery]').hasAttribute('data-skribl-open')")
+            own["title"] = cpg.evaluate("(s) => document.querySelector(s + ' .tt').tagName.toLowerCase()", gsel)
+            cpg.mouse.click(*cpg.evaluate(SPOT12, [gsel, "ground"]))
+            own["ground"] = follow(cpg, "/gallery", 1500)
+            ready(cpg, "/gallery", gsel)
+            cpg.locator(gsel + " .tileMore").tap()
+            own["open"] = (newtab(lambda: cpg.locator('.cardMenu .cmItem:has-text("Open")').tap()), follow(cpg, "/gallery", 600))
+        except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is the row's red
+            own["stopped"] = str(exc).splitlines()[0][:160]
+        close_ctx(ctx, cpg)
+        check("Skribl's own /gallery is as it was: no address on its section, a card's title is no link, a tap on its"
+              " ground opens nothing, and ⋯ → Open opens the player's page in a new tab",
+              made and own.get("root") is False and own.get("title") == "div" and own.get("ground") == "/gallery"
+              and own.get("open") == (f"/s/{lone}", "/gallery"), f"{own}")
 
     # ------------------------------------------------------------------ 8
     if part(8, "no page errors, no console errors, no CSP violations"):

@@ -215,6 +215,7 @@
     if (words.scrollHeight) words.style.height = words.scrollHeight + 'px';   // none while folded away
     var n = LIMIT - words.value.length;
     left.textContent = n <= 100 ? say('c_left', { n: n }) : '';
+    holdPost();
   }
   if (words) { words.addEventListener('input', grow); grow(); }
 
@@ -532,7 +533,16 @@
      A line that came and went there made everything under the box jump twice
      as it went. What goes wrong is still said in the box, which stays. */
   var postWord = postBtn ? postBtn.textContent : '';
-  if (postBtn) postBtn.setAttribute('data-busy', say('c_posting'));   // its width holds both words (social.css)
+  /* Post as wide as its longer word (social.css says why): measured once the
+     box is laid out, then held as its least width. */
+  function holdPost() {
+    if (!postBtn || postBtn.style.minWidth) return;
+    var was = postBtn.textContent;
+    postBtn.textContent = say('c_posting');
+    var w = postBtn.getBoundingClientRect().width;
+    postBtn.textContent = was;
+    if (w > 0) postBtn.style.minWidth = Math.ceil(w) + 'px';
+  }
   function busy(on) {
     postBtn.disabled = on;
     postBtn.textContent = on ? say('c_posting') : postWord;

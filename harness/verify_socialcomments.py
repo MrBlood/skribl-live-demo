@@ -616,17 +616,14 @@ POST_AT = """() => { const p = document.querySelector('[data-cm-post]').getBound
   const boxEl = document.querySelector('[data-cm-box]'), box = boxEl.getBoundingClientRect(), cs = getComputedStyle(boxEl);
   const c = document.querySelector('[data-cm-box] .composer-acts .chip').getBoundingClientRect();
   const post = document.querySelector('[data-cm-post]'), was = post.textContent, w1 = p.width;
-  const word = post.getAttribute('data-busy') || '';
+  const w = document.querySelector('[data-word="c_posting"]'), word = w ? w.textContent : '';
   post.textContent = word;
   const busy = post.getBoundingClientRect(), said = post.textContent;
-  // A longer word, standing in for a wider font: Post is as wide as it before
-  // it is said, so saying it changes nothing. Restored after.
-  const longer = word + ' ' + word;
-  post.setAttribute('data-busy', longer); post.textContent = was;
-  const w3 = post.getBoundingClientRect().width;
-  post.textContent = longer;
-  const w4 = post.getBoundingClientRect().width;
-  post.textContent = was; post.setAttribute('data-busy', word);
+  post.textContent = was;
+  // Held by comments.js as its least width (in any font: it measures the word
+  // in the font it is drawn in); this box's font fits both words in 96px
+  // anyway, so the hold is asked of directly too.
+  const w3 = parseFloat(post.style.minWidth) || 0, w4 = Math.ceil(busy.width) <= w3 ? w3 : -1;
   return { x: Math.round(p.left), dy: Math.round(p.top - c.top),
            edge: Math.round(box.right - parseFloat(cs.paddingRight) - p.right),
            foot: Math.round(box.bottom - parseFloat(cs.paddingBottom) - p.bottom),

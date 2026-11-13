@@ -785,6 +785,82 @@ check("the site goes through the seam alone: likes.js gives the player its marks
       and "skribl-inline-marks" not in _scss and "--mark:" in _scss,
       f"scripts naming the dots {_draws}; social.css names them {'skribl-inline-marks' in _scss}")
 
+# ---------------------------------------------------------------------------
+print("\nWHERE A CARD OPENS — a host's address for the Gallery's cards (card_url)")
+# docs/INTEGRATION.md, "Where a Gallery card opens" (the owner's "I thought on
+# card?", Nov 13): a host says, per request, where a card of Skribl's own
+# Gallery opens on its pages (init_skribl card_url= or skribl.set_card_url: an
+# address with __ID__). The section writes it on its root as data-skribl-open,
+# and gallery.js then opens it from anywhere on a card that is the card's own,
+# makes the title its link, and sends the ⋯'s Open, Copy link and Share there.
+# Unsaid, nothing is written, and the Gallery is Skribl's own as it was.
+# Pinned as source here; verify_hostseams renders it (per request, checked,
+# app-local), and verify_socialposts section 12 taps it on the Skribl site.
+_gsec = (_layout.TEMPLATES_DIR / "_skribl_gallery_section.html").read_text(encoding="utf-8")
+_gsec_code = re.sub(r"\{#.*?#\}", "", _gsec, flags=re.S)
+_gjs = strip_comments((_layout.STATIC_DIR / "gallery.js").read_text(encoding="utf-8"))
+check("the section writes the host's address on its root, and only what skribl_card_url() answers, only when it"
+      " answers",
+      _gsec_code.count("data-skribl-open") == 1
+      and re.search(r"\{%-?\s*set opens = skribl_card_url\(\) if skribl_card_url is defined else none\s*%\}", _gsec_code)
+      is not None
+      and re.search(r'\{%-?\s*if opens\s*%\}\s*data-skribl-open="\{\{ opens \}\}"\s*\{%-?\s*endif\s*%\}', _gsec_code)
+      is not None, "the section's root" if "data-skribl-open" in _gsec_code else "no data-skribl-open in the section")
+check("gallery.js reads it once, from the section's root, and makes a card's address by putting the drawing's id"
+      " where __ID__ stands (every one), never by assembling a route",
+      _gjs.count("data-skribl-open") == 1 and "root.getAttribute('data-skribl-open')" in _gjs
+      and "opensTpl.split('__ID__').join(encodeURIComponent(id))" in _gjs, "")
+_tile = _fn("tile", _gjs)
+check("with it, a card's title is a link to that address and the card says where it opens (data-open); without,"
+      " the title is the plain words it always was",
+      "document.createElement(opens ? 'a' : 'div')" in _tile and "tt.href = opens" in _tile
+      and "art.setAttribute('data-open', opens)" in _tile and "tt.draggable = false" in _tile,
+      _tile[_tile.find("var opens"):_tile.find("var opens") + 200] if "var opens" in _tile else "no `opens` in tile()")
+_ground = _gjs[_gjs.find("var OWN = "):_gjs.find("function load(")]
+check("the card's ground opens it as Home's does: only on a card that has an address, never through a control of its"
+      " own or the drawing's stage, never after a drag or a selection, and in a new tab with Ctrl, ⌘ or Shift or the"
+      " middle button",
+      ".tileStage" in _ground.split("\n", 1)[0] and "closest('.tile[data-open]')" in _ground
+      and "if (moved(e) || selectedIn(card)) return null;" in _ground
+      and "if (e.ctrlKey || e.metaKey || e.shiftKey) window.open(url, '_blank', 'noopener');" in _ground
+      and "list.addEventListener('auxclick'" in _ground and "e.button !== 1" in _ground,
+      _ground[:160] or "no ground handler")
+_menu = _fn("openMenu", _gjs)
+check("its ⋯: Open goes to the address in this tab, and Copy link and Share give it; without one, Open opens the"
+      " player's page in a new tab, as always",
+      "var url = opens || location.origin + tpl.replace('__ID__', encodeURIComponent(item.id));" in _menu
+      and re.search(r"if \(opens\) window\.location\.assign\(opens\);\s*else window\.open\(url, '_blank', 'noopener'\);",
+                    _menu) is not None
+      and "copier(url)" in _menu and "url: url" in _menu, "")
+_mods = (ROOT / "skribl" / "models.py").read_text(encoding="utf-8")
+_init = (ROOT / "skribl" / "__init__.py").read_text(encoding="utf-8")
+_pcu = _mods[_mods.find("def page_card_url"):_mods.find("def ", _mods.find("def page_card_url") + 10)]
+check("the seam is asked per request and checked: set_card_url installs a callable (app-local with app=);"
+      " page_card_url asks it, takes None or nothing as Skribl's own, and raises on an answer that is not an address"
+      " with __ID__ in it; init_skribl takes card_url= and adds skribl_card_url() for the section",
+      "def set_card_url(fn, app=None):" in _mods and '["card_url"] = fn' in _mods
+      and "fn = _CARD_URL" in _pcu and 'get("card_url", _POLICY_UNSET)' in _pcu and "got = fn()" in _pcu
+      and "if CARD_ID not in got:" in _pcu and "_safe_source_url(got) is None" in _pcu and _pcu.count("raise ") == 3
+      and '_cards = kwargs.pop("card_url", None)' in _init and 'app.add_template_global(page_card_url, "skribl_card_url")' in _init
+      and "set_card_url(_cards, app=app)" in _init and '"set_card_url"' in _init, _pcu[:120])
+_knows_host = sorted({m.group(0) for src in (_gjs, _gsec_code, _pcu)
+                      for m in re.finditer(r"social|blooby|/b/", src, re.I)})
+check("it is general: nothing of Skribl's that does it (the section, gallery.js, the seam) names a host or a host's"
+      " address", not _knows_host, f"{_knows_host}")
+_cg = re.search(r"### Where a Gallery card opens \(`card_url`\)(.*?)\n### ", _guide, re.S)
+check("docs/INTEGRATION.md documents it: per request, __ID__, None as Skribl's own, the card's ground, its title a"
+      " link, ⋯ → Open, and a wrong answer raising; and the seams table names it",
+      bool(_cg) and all(w in _cg.group(1) for w in ("per request", "__ID__", "None", "title is a link", "⋯ → Open",
+                                                    "raises", "set_card_url"))
+      and "| `card_url` |" in _guide, (_cg.group(1)[:120] if _cg else "no such section"))
+_app = (ROOT / "app.py").read_text(encoding="utf-8")
+_site_files = [f for f in (ROOT / "social").rglob("*") if f.suffix in (".py", ".html", ".js") and f.is_file()]
+_site_writes = [str(f.relative_to(ROOT)) for f in _site_files if "data-skribl-open" in f.read_text(encoding="utf-8")]
+check("the site goes through the seam alone: app.py installs it for the site's own pages (request.blueprint) with"
+      " skribl.set_card_url, to its drawing's page, and nothing of the site writes the section's address itself",
+      "skribl.set_card_url(where, app=app)" in _app and 'if request.blueprint != "social":' in _app
+      and 'url_for("social.bloob_page", skribl_id="__ID__")' in _app and not _site_writes, f"{_site_writes}")
+
 bad = [r for r in results if not r[0]]
 print(f"\n{'='*62}\n{len(results)-len(bad)}/{len(results)} passed" +
       ("" if not bad else "  FAILURES: " + ", ".join(r[1] for r in bad)))

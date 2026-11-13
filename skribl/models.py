@@ -455,6 +455,73 @@ def sources_for(public_ids):
     return out
 
 
+#: Where the Gallery's cards open, per request (set_card_url): the
+#: process-wide answer, for an app with none of its own.
+_CARD_URL = None
+
+#: What a host's address for a card holds in place of the drawing's id.
+CARD_ID = "__ID__"
+
+
+def set_card_url(fn, app=None):
+    """Install `fn() -> None | str`: where a card of the Gallery opens, asked
+    in the request (docs/INTEGRATION.md, "Where a Gallery card opens").
+
+    A HOST BORROWS SKRIBL; SKRIBL NEVER NEEDS A HOST. A drawing shown in a
+    host's frame may have a page there (its post, its comments) that Skribl
+    knows nothing of, so the host says, per request, with whatever the
+    request carries (its own pages, say, and not Skribl's): an address with
+    __ID__ where the drawing's public id goes, as an http(s) address or a
+    path on the site. The Gallery section then opens it from anywhere on a
+    card that is the card's own (its title, its words, its time, the space
+    between them), from its ⋯ (Open, and the link Copy link and Share give),
+    and its title is a link to it. Answering None, or with nothing set, is
+    Skribl's own Gallery as it was: a card opens nothing but its drawing, and
+    its ⋯ opens Skribl's player page in a new tab.
+
+    With `app`, for that application alone; without, for every application
+    in the process that has none of its own (one app per process only)."""
+    if fn is not None and not callable(fn):
+        raise TypeError("card url must be a callable answering an address, or None")
+    if app is not None:
+        app.extensions.setdefault("skribl", {})["card_url"] = fn
+        return
+    global _CARD_URL
+    _CARD_URL = fn
+
+
+def page_card_url():
+    """This request's address for a card, checked; or None for Skribl's own.
+    Called by the Gallery section's macro (as `skribl_card_url()`, the
+    template global init_skribl adds), once a page.
+
+    FAILS LOUDLY, as a brand does: an answer that is not a string, holds no
+    __ID__, or is not an address Skribl can put behind a link (a script, a
+    protocol-relative //, a backslash, a space) raises on the first page that
+    asks, rather than leaving every card on it opening nothing or somewhere
+    else. The host wrote it, so it is told."""
+    fn = _CARD_URL
+    try:
+        local = current_app.extensions.get("skribl", {}).get("card_url", _POLICY_UNSET)
+        if local is not _POLICY_UNSET:
+            fn = local
+    except RuntimeError:          # no application here: the process-wide one
+        pass
+    if fn is None:
+        return None
+    got = fn()
+    if got is None or got == "":
+        return None
+    if not isinstance(got, str):
+        raise TypeError(f"card url: answer None or an address, not {type(got).__name__}")
+    if CARD_ID not in got:
+        raise ValueError(f"card url: the address holds {CARD_ID} where the drawing's id goes. Got {got!r}.")
+    if got != got.strip() or _safe_source_url(got) is None:
+        raise ValueError("card url: an http(s) address or a path on this site, starting with '/', with no "
+                         f"space or backslash in it. Got {got!r}.")
+    return got
+
+
 def _visibility_policy():
     try:
         from flask import current_app

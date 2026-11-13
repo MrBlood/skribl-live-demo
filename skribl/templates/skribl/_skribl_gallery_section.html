@@ -63,7 +63,15 @@
     a drawn face ("face": {"id", "w", "h"}: a skribl's public id and its
     canvas size), the card's avatar is that drawing, still, framed from its
     own poster the way the face macro frames it; data-skribl-poster is the
-    poster's templated address, as data-skribl-player is the player's. #}
+    poster's templated address, as data-skribl-player is the player's.
+
+    WHERE A CARD OPENS. When the host says, for this request, where a card
+    opens on its site (skribl_card_url(), the template global init_skribl
+    adds: models.set_card_url, docs/INTEGRATION.md "Where a Gallery card
+    opens"), its address, __ID__ and all, is data-skribl-open, and gallery.js
+    opens it from anywhere on a card that is the card's own, from its ⋯, and
+    from its title, which becomes a link to it. Unsaid, nothing is written,
+    and the Gallery is Skribl's own as it was. #}
 {% from 'skribl/_skribl_inline_player.html' import skribl_inline %}
 
 {#  The section's files, for a page that is not Skribl's. /gallery loads its
@@ -103,12 +111,14 @@
     fonts goes by it too, but the section's sheet starts its root from nothing,
     which drops what the attribute says to it there; so gallerysection.css says
     the language again, from /gallery's <html> (harness/tools/cssgraph.py). #}
+{%- set opens = skribl_card_url() if skribl_card_url is defined else none %}
 <div class="skribl-gallery" id="skriblGallery" lang="en" data-skribl-gallery
      data-skribl-api="{{ url_for(bp ~ '.list_skribls') }}"
      data-skribl-player="{{ url_for(bp ~ '.skribl_player', public_id='__ID__') }}"
      data-skribl-poster="{{ url_for(bp ~ '.skribl_poster', public_id='__ID__') }}"
      data-skribl-csrf="{{ skribl_csrf() }}"{% if page %} data-skribl-page{% endif %}
-     {%- if author %} data-skribl-author="{{ author }}"{% endif %}>
+     {%- if author %} data-skribl-author="{{ author }}"{% endif %}
+     {%- if opens %} data-skribl-open="{{ opens }}"{% endif %}>
   {# NEW / HOT AND SEARCH (v304). New is the listing as it always was; Hot is
      plays in the last seven days, most first (GET /api/skribls?sort=hot,
      counted once per client per post per day). Search is the listing's own
