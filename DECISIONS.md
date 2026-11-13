@@ -36450,8 +36450,9 @@ THE RULES CHOSEN (the brief's "decide well, and say what you decided"):
   glows under Reduce Motion. A JUDGMENT CALL: the cap is the host's, not the
   seam's; the player tells every dot and a host decides how many to show.
   At 16x on a busy drawing (40 likes, 40 dots on a phone) the player told
-  80 dots in 3.6 seconds and 11 hearts rose, never more than three at once,
-  the closest 333ms apart.
+  81 dots in 3.6 seconds and 10 hearts rose, never more than three at once,
+  the closest 334ms apart, each starting at its dot within 1.7px of the
+  playhead (the final run below).
 - A FLIP'S DOTS WAIT FOR ITS PAGES (a judgment call). A Flip's line gives
   each page an equal share, so where a moment sits depends on its pages'
   lengths, which only the drawing carries, and a feed never fetches a
@@ -36611,6 +36612,32 @@ dot or just past it); a pixel read off the picture stopped section 15
 before its row (a red now). In round 2 the calm row still let through a
 heart pushed into the flow, as "the playhead just came round" (each heart
 must start at a dot now, and the busy piece has no dot at its very end).
+
+THE AFFECTED SUITES, SIDE BY SIDE (run_parallel -j 2), on the final tree
+(all of it but this paragraph), green on the first run, none red beside the
+others, 40.9 minutes: verify_sociallikes 96/96, verify_seam 488/488,
+verify_inline 222/222, verify_social 40/40, verify_socialposts 31/31,
+verify_socialcomments 67/67, verify_socialactivity 44/44,
+verify_socialauth 64/64, verify_socialsafety 34/34, verify_socialprofile
+54/54, verify_docs 144/144, verify_a11ypages 162/162, verify_contrast
+628/628 (the player's sheet changed); and the suites that read the
+player's line or its sheets, verify_cardfade 27/27, verify_watchfull 76/76,
+verify_replayspeed 186/186, verify_example 59/59, verify_onefull 57/57,
+verify_jsstrip 35/35, verify_player_isolation 85/85, verify_audiosession
+41/41, verify_createpost 82/82, verify_flipnib 17/17, verify_gallery
+232/232, verify_hello 50/50, verify_helpdemos 129/129, verify_identity
+135/135, verify_library 247/247, verify_sharecard 32/32, verify_sharedrules
+106/106, verify_soundfade 25/25, verify_surfaces 13/13 and verify_viewedges
+19/19. What that run read: the dots on light 3.64:1, 4.22:1 and 5.24:1 on a
+page and 3.74:1, 4.34:1 and 5.38:1 on a card; on dark 7.34:1, 6.09:1 and
+5.36:1, and 6.01:1, 4.99:1 and 4.39:1; a phone and a desk alike, the mock's
+own figures to the hundredth, off the pixels. The rising heart: 30px over
+52 moving frames, its largest step 1.37px, 0.22 strong on its first frame,
+never growing, gone in 0.98s; under Reduce Motion a glow of 0.32 at most and
+0px moved. verify_migrations was not run: the chain is unchanged. This
+paragraph is the only change since; verify_docs, the suite that reads it,
+was run on it again. The full battery was not run; main's run after the
+merge is.
 
 Not tested here: WebKit (the owner's iPhone) and Firefox: a new dot's fade
 in is @starting-style (Safari 17.5 and Firefox 129 on), the rising heart a
