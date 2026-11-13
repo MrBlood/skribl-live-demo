@@ -1818,16 +1818,16 @@ with sync_playwright() as sp:
     # RAISED (the owner's D on the likes mock, Nov 13, "Just put a smaller dot
     #   (same color as blooby blush) wherever someone likes it. If it doubles
     #   someone it gets redder.", then "All yes, b": the site's dots on the
-    #   line and the hearts that rise from them), for one named cost: +2,311 B
+    #   line and the hearts that rise from them), for one named cost: +2,300 B
     #   -- the line's MARKS, a GENERAL seam (docs/INTEGRATION.md, "Marks on the
     #   line"): a host's moments read from the box or given by marks(list)
     #   (+266), a 5px dot each where the line puts the moment by the
     #   playhead's own mapping, before the drawing comes as after it, dots
     #   that would overlap made one standing for all, each dot kept while it
     #   stands for the same moment so a change is one dot's, one that goes
-    #   fading out (+1,152), and skribl:mark when the playhead reaches one in
+    #   fading out (+1,141), and skribl:mark when the playhead reaches one in
     #   normal play, never on a scrub, a seek or a jump (+424), all
-    #   inlineplayer.js (+1,842); inlineplayer.css the layer over the
+    #   inlineplayer.js (+1,831); inlineplayer.css the layer over the
     #   scrubber that takes no taps, the 5px dot in the host's --mark tokens
     #   by how many it stands for, its fade in (+469). Skribl never knows what
     #   a mark is; the site draws the hearts (likes.js). WHICH CALLER PAYS:
@@ -1838,9 +1838,11 @@ with sync_playwright() as sp:
     #   dot never moves left, so it never needs a second), a dot's fade in by
     #   @starting-style with no script, its colours by one custom property
     #   each level falls back to, the playhead's frac() made the mapping both
-    #   use rather than a second copy, and no aria-hidden on a layer of empty
-    #   elements: 2,807 B down to 2,311. 81,252 B measured.
-    EMBED_RATCHET = 81_255
+    #   use rather than a second copy, no aria-hidden on a layer of empty
+    #   elements, and no test for a Flip before its pages come (its line has
+    #   no length to put a moment on): 2,807 B down to 2,300. 81,241 B
+    #   measured.
+    EMBED_RATCHET = 81_244
     # THE RATCHET MEASURES DISPLAY, NOT COMPOSE, and the two are separate costs
     # paid by separate pages. Excluded here and measured on its own below:
     #   feed.js          the PREVIEW PAGE's own script (fetch the listing, clone

@@ -734,10 +734,10 @@ check("the player reads them once, as it mounts, and a host changes them with ma
       (_mm.group(1).strip()[:160] if _mm else "no marks() on the player"))
 _where, _place, _reach, _frame, _play = (_fn(n) for n in ("where", "placeMarks", "reach", "frame", "play"))
 check("a mark's place is the playhead's own: where() puts a moment through fracAt, the very mapping frac() gives"
-      " the playhead; before the drawing comes, a replay's moment over the listing's play length, and a Flip's"
-      " none until its pages come",
+      " the playhead; before the drawing comes, a replay's moment over the listing's play length (a Flip's line"
+      " has none, so its marks wait for its pages)",
       re.search(r"function frac\(\)\s*\{\s*return payload && totalMs \? fracAt\(curMs\(\)\) : 0;\s*\}", _ipjs) is not None
-      and "fracAt(ms)" in _where and "info.play" in _where and "!pagesN" in _where and "where(" in _place,
+      and "fracAt(ms)" in _where and "info.play > 0" in _where and "where(" in _place,
       _where.strip()[:200] or "no where()")
 check("dots closer than their 5px are one, at their middle, standing for all of them (data-n 1, 2, or 3 for three or"
       " more)",

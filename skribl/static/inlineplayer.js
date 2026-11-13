@@ -1525,10 +1525,11 @@
     /* WHERE THE LINE PUTS A MOMENT, 0..1: once the drawing is here, the
      * playhead's own place for it (fracAt); before, a replay's moment over the
      * length the listing gave (its `line.play`, the same number). A Flip's
-     * pages, or a line the listing said nothing of, cannot say until the
-     * drawing comes: null, and no dot yet. */
+     * line has no such length (its pages say where its moments are, and they
+     * come with the drawing), nor has a line the listing said nothing of:
+     * null, and no dot until the drawing comes. */
     function where(ms) {
-      return payload ? totalMs && fracAt(ms) : !pagesN && info && info.play > 0 ? Math.min(1, ms / info.play) : null;
+      return payload ? totalMs && fracAt(ms) : info && info.play > 0 ? Math.min(1, ms / info.play) : null;
     }
     /* THE PLAYHEAD REACHES A MARK, in normal play alone: each frame tells the
      * host of the dots it passed since the last, by a skribl:mark from the
