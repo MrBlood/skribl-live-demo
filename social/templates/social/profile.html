@@ -262,4 +262,4 @@
 </div>
 {{ skribl_face_maker() }}
 {{ follow_sheets(who, fl, true) }}
-{% else %}{{ person_sheet(who, muted) }}{{ safety_sheets() }}{% if not blocked_them %}{{ follow_sheets(who, none, false) }}{% endif %}{% if me and not blocked_them %}{{ mute_parts() }}{% endif %}{% endif %}{% endblock %}
+{% else %}{{ person_sheet(who, muted, not blocked_them) }}{{ safety_sheets() }}{% if not blocked_them %}{{ follow_sheets(who, none, false) }}{% endif %}{% if me and not blocked_them %}{{ mute_parts() }}{% endif %}{% endif %}{% endblock %}
