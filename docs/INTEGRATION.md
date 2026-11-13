@@ -308,6 +308,11 @@ lists nothing. Everything else is as above, `before` and paging included:
 items, more = skribl.list_public_posts(authors=[me_id] + followed_ids, limit=20, viewer_id=me_id)
 ```
 
+Your feed filter is asked here as on the gallery's listing, and a filter that
+names `author` is told which listing this is: `author`'s own (the one author
+it is narrowed to), or `None` for many people's (`authors`, `author_prefix`).
+See "A filter can ask which listing it is", below.
+
 **A post's own page can start it** (after v330: on the Skribl site, opening a
 post plays its drawing). `SkriblInline.mount(box)` returns the box's player,
 the one already mounted if it has one, and `player.play()` starts it, at the
@@ -1811,6 +1816,29 @@ skribl.init_skribl(app, ..., feed_filter=hide_blocked)   # or set_feed_filter(fn
 Your callable receives the query with Skribl's own visibility filter already
 applied and returns a query. Raising is **not** caught — a broken feed filter
 should fail loudly rather than fall back to listing everything.
+
+**A filter can ask which listing it is** (after v330: the Skribl site's mute).
+Name an `author` parameter and Skribl tells your filter the one author the
+listing is narrowed to: the author of a profile's listing (`GET
+/api/skribls?user_id=`, a Gallery section's `author`) or of
+`list_public_posts(author=)`; and `None` for a listing of many people's (the
+gallery, a search, `list_public_posts` with `authors` or `author_prefix`).
+A host leaves somebody out of the second and keeps them on the first: what
+comes to a viewer goes quiet, and the page they went to stays.
+
+```python
+def hide_from_feeds(query, viewer_id, author=None):
+    hidden = blocked_authors_for(viewer_id)
+    if author is None:                      # a listing of many people's
+        hidden = hidden | muted_authors_for(viewer_id)
+    return query.filter(SkriblPost.user_id.notin_(hidden)) if hidden else query
+```
+
+Skribl reads the parameter from the filter's signature, never by trying a
+call; a filter written for two arguments is called as it always was.
+`verify_hostseams.py` and `verify_createpost.py` hold both. Keep anything that
+must hide a PAGE in the visibility policy, which a listing's author does not
+change: a mute in a feed filter hides nothing anybody goes to on purpose.
 
 Whether you need one depends on your policy. If it only restricts private and
 unlisted posts, the feed already excludes those and there is nothing to do. If

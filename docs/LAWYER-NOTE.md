@@ -24,7 +24,8 @@ Nothing here is legal advice; it was written by the people building the site.
   tapped the heart, if it was playing. Who they follow (from Nov 13), and
   since when; after an unfollow, that they once did and when it ended (so
   following again does not notify the person twice). Whether their Home
-  opens on Following or Everyone.
+  opens on Following or Everyone. Who they mute (from Nov 13), and since
+  when; unmuting deletes it.
 - **Likes.** Everyone sees how many people liked a post or a drawing; who
   liked it, when, and that moment in the replay are shown only to its maker.
   A like by somebody blocked either way, or taken down, is neither shown nor
@@ -35,6 +36,13 @@ Nothing here is legal advice; it was written by the people building the site.
   follow between the two people, both ways, and none can begin while it
   stands; lifting the block does not restore it. The person followed is not
   told when somebody stops following them.
+- **Mutes.** A person can mute somebody (from Nov 13): that person's posts
+  and drawings leave their Home and Explore, their comments fold to one line
+  they can open, and their likes, comments and follows leave their Activity.
+  It is one way and private: the person muted is not told, nothing changes for
+  them or for anybody else, and only the person who muted sees whom they
+  muted (Settings). A mute never changes a count, never hides a page (their
+  profile and posts still open), and never ends a follow. Unmuting deletes it.
 - **Cookies.** Two, both the site's own: one keeps a person signed in, one
   protects forms. Nothing is loaded from anyone else (no ads, no analytics, no
   outside fonts or scripts).
@@ -59,8 +67,8 @@ Nothing here is legal advice; it was written by the people building the site.
   shown outside a post has comments too). Their other drawings and drafts
   stay until they delete them in their Library; the confirm page says so
   first, and a drawing taken down outside a post stays hidden. Their likes
-  are deleted, and so is every like on what they made, and their follows,
-  both ways. Their passkeys go, so nothing can sign in as them. Reports that named them stay, naming
+  are deleted, and so is every like on what they made, and their follows
+  and their mutes, both ways. Their passkeys go, so nothing can sign in as them. Reports that named them stay, naming
   nobody. Blocks they made or were part of go.
 
 ## Questions for the lawyer
