@@ -12,9 +12,10 @@
 
     Their name, @handle, and a few lines about them, as typed (no links yet).
     On your own profile: Edit profile, Draw your face (Redraw my face once you
-    have one), and Settings, the gear (piece 2's account page): at the top of
-    a phone, as the mock has it, and beside the buttons on a desk, where there
-    is no top. Share, on every profile.
+    have one), and Settings (piece 2's account page): at the top of a phone,
+    as the mock has it, and beside the buttons on a desk, where there is no
+    top. Share, on every profile. THE GEAR SAYS SETTINGS (the Settings
+    mock's a): the word with the gear, in both places, so nothing moves.
 
     THEIR SKRIBLS: Skribl's own Gallery section, that author's public ones
     only (the section's `author`), newest first, paging by the listing's own
@@ -49,7 +50,7 @@
 
 {% block top %}
   <span class="top-title">@{{ who.handle }}</span>
-  {% if mine %}<a class="icon-btn top-gear" href="{{ url_for('social.you') }}" aria-label="Settings" title="Settings">{{ ic.gear() }}</a>{% endif %}
+  {% if mine %}<a class="top-gear" href="{{ url_for('social.you') }}">{{ ic.gear() }}<span>Settings</span></a>{% endif %}
 {% endblock %}
 
 {% block main %}
@@ -97,7 +98,7 @@
         <button class="btn" type="button" data-face-sheet aria-haspopup="dialog" aria-controls="faceSheet" aria-expanded="false">{{ ic.pen() }}<span>{{ 'Change my face' if who.face_id else 'Add your face' }}</span></button>
         {% endif %}
         <button class="icon-btn boxed" type="button" data-share aria-label="Share {{ 'your' if mine else who.display_name ~ '’s' }} profile" title="Share">{{ ic.share() }}</button>
-        {% if mine %}<a class="icon-btn boxed desk-only" href="{{ url_for('social.you') }}" aria-label="Settings" title="Settings">{{ ic.gear() }}</a>
+        {% if mine %}<a class="btn desk-only" href="{{ url_for('social.you') }}">{{ ic.gear() }}<span>Settings</span></a>
         {% else %}<button class="icon-btn boxed" type="button" data-person-menu aria-haspopup="dialog" aria-controls="personSheet"
                 aria-expanded="false" aria-label="More for {{ who.display_name }}" title="More">{{ ic.dots() }}</button>{% endif %}
       </div>

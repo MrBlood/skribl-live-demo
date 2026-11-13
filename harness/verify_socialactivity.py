@@ -713,7 +713,7 @@ with sync_playwright() as p:
                   f"signed out {signed_out['bell']}; post {got['post']}; profile {got['profile']}")
             check("on a desk the rail has Activity after Explore (its bell drawn, a 52px row to Activity), and the phone's"
                   " top is not shown",
-                  desk["rail"] == ["brand", "Home", "Explore", "Activity", "Make", "You"] and desk["act"]
+                  desk["rail"] == ["brand", "Home", "Explore", "Activity", "Make", "Settings", "You"] and desk["act"]
                   and desk["act"]["pen"] and not desk["act"]["filled"] and desk["act"]["h"] >= 52
                   and desk["act"]["href"] == "/social/activity" and desk["act"]["hit"] and desk["top"] is None,
                   f"rail {desk['rail']}; Activity {desk['act']}; top {desk['top']}")

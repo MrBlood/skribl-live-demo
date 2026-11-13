@@ -881,12 +881,12 @@ with sync_playwright() as p_:
                 places[(screen, where)] = pg.evaluate("""() => { const y = document.querySelector('nav.nav .tab-you');
                     return { href: y && y.getAttribute('href'), current: [...document.querySelectorAll('nav.nav [aria-current]')]
                              .map(e => (e.querySelector('.tab-name') || e).textContent.trim()),
-                             gear: [...document.querySelectorAll('a[aria-label=Settings]')].filter(a => a.getClientRects().length)
-                                   .map(a => a.getAttribute('href')),
+                             gear: [...document.querySelectorAll('header.top a[href$="/social/you"], .prof-acts a[href$="/social/you"]')]
+                                   .filter(a => a.getClientRects().length).map(a => a.getAttribute('href')),
                              acts: [...document.querySelectorAll('.prof-acts > *')].filter(e => e.getClientRects().length)
                                    .map(e => e.matches('.fo-btn') ? 'follow' : e.matches('[data-share]') ? 'share'
                                         : e.matches('[data-person-menu]') ? 'more' : e.matches('[href$="/you/edit"]') ? 'edit'
-                                        : e.matches('[data-face-sheet]') ? 'face' : e.matches('[aria-label=Settings]') ? 'gear'
+                                        : e.matches('[data-face-sheet]') ? 'face' : e.matches('a[href$="/social/you"]') ? 'gear'
                                         : e.tagName.toLowerCase()) }; }""")
             close_ctx(ctx, pg)
         # FOLLOWS (the owner's B, Nov 13): Follow first in the row on somebody
@@ -930,6 +930,9 @@ with sync_playwright() as p_:
               f" others' among them {sorted(set(both) - set(juno_all))[:3]}")
         sp = mira.client()
         st_set, _, set_text = sp.get("/social/you")
+        # The gear says Settings since the Settings mock's a (after v330), so it
+        # is found by where it leads, not by a name only it had;
+        # verify_socialsettings holds its word and its size.
         check("the gear on your own profile (the phone's top, beside the buttons on a desk) leads to Settings, the"
               " account page as before; nobody else's profile has one",
               all(places[(s, "mira")]["gear"] == ["/social/you"] and places[(s, "juno")]["gear"] == []

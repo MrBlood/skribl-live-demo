@@ -935,10 +935,30 @@ with sync_playwright() as p:
         check("no page errors, no console errors and no CSP violations on the site's pages, phone and desk,"
               " the first visit playing, Make opened, and through Draw's door into the Pad and back",
               not noted, "; ".join(noted[:3]))
-        pol = heads.get("content-security-policy", "")
-        check("the site's pages carry a policy with no inline script allowed: script-src 'self' alone",
-              "script-src 'self';" in pol + ";" and "unsafe-inline" not in pol.split("script-src", 1)[1].split(";", 1)[0]
-              and "nonce-" not in pol, pol[:160])
+        # ONE INLINE SCRIPT, SKRIBL'S THEME BOOT (Settings, after v330): it must
+        # run in <head> before the first paint, so the site's policy allows it
+        # by the page's own nonce, new on every response, and nothing else
+        # inline: never 'unsafe-inline'. The boot is the same as the Pad's
+        # (one partial), and it is the page's only inline script.
+        def _got(path):
+            with urllib.request.urlopen(SITE + path, timeout=20) as r:
+                return r.headers.get("Content-Security-Policy", ""), r.read().decode("utf-8", "replace")
+        (pol, body), (pol2, _) = _got("/"), _got("/")
+        with urllib.request.urlopen(BASE + "/", timeout=20) as r:
+            pad_page = r.read().decode("utf-8", "replace")
+        src = pol.split("script-src", 1)[1].split(";", 1)[0] if "script-src" in pol else ""
+        nonces = re.findall(r"'nonce-([^']+)'", src)
+        inline = re.findall(r"<script(?![^>]*\bsrc=)([^>]*)>(.*?)</script>", body, re.S)
+        pad_boot = [s for s in re.findall(r"<script nonce=\"[^\"]*\">(.*?)</script>", pad_page, re.S) if "skribl_theme_v1" in s]
+        check("the site's pages allow one inline script, Skribl's theme boot: script-src 'self' and the page's own"
+              " nonce, new on every response, never 'unsafe-inline'; the boot, the same as the Pad's, is the page's"
+              " only inline script and carries that nonce",
+              src.split()[:1] == ["'self'"] and "unsafe-inline" not in src and len(nonces) == 1 and len(src.split()) == 2
+              and nonces[0] not in pol2 and len(inline) == 1 and f'nonce="{nonces[0]}"' in inline[0][0]
+              and bool(pad_boot) and inline[0][1] == pad_boot[0],
+              f"script-src {src.strip()!r}; the next response's {pol2.split('script-src', 1)[-1].split(';', 1)[0].strip()!r};"
+              f" {len(inline)} inline script(s), the first {(inline[0][0] if inline else '')!r}, the Pad's boot the same:"
+              f" {bool(inline) and bool(pad_boot) and inline[0][1] == pad_boot[0]}")
 
     # ------------------------------------------------------------------ 8
     if part(8, "the layers: Skribl never imports the site, the site reaches only Skribl's public seams"):
@@ -976,7 +996,8 @@ with sync_playwright() as p:
         # pages import or include are the ones the guide documents for a
         # host, and each macro it imports from one is named there too.
         SEAMS = {"skribl/_skribl_inline_player.html", "skribl/_skribl_gallery_section.html",
-                 "skribl/_skribl_brand_mark.html", "skribl/_skribl_face.html"}
+                 "skribl/_skribl_brand_mark.html", "skribl/_skribl_face.html",
+                 "skribl/_skribl_theme_boot.html"}
         tpl_out, files, asked = [], set(), []
         for t in sorted((ROOT / "social" / "templates").rglob("*.html")):
             body = re.sub(r"\{#.*?#\}", "", t.read_text(encoding="utf-8"), flags=re.S)
@@ -990,7 +1011,8 @@ with sync_playwright() as p:
             files |= set(re.findall(r"skribl_asset\(\s*['\"]([^'\"]+)['\"]\s*\)", body))
         missing = sorted(f for f in files if not (ROOT / "skribl" / "static" / f).is_file())
         check("the site's templates reach Skribl only through the partials docs/INTEGRATION.md documents"
-              " (the player's, the Gallery section's, the signature's, the face player's), with documented macros",
+              " (the player's, the Gallery section's, the signature's, the face player's, the theme's boot), with"
+              " documented macros",
               asked and not tpl_out, f"reached {sorted(set(asked))}; undocumented: {tpl_out}")
         check("every Skribl file the site names (skribl_asset) is there",
               files and not missing, f"{sorted(files)}; missing {missing}")

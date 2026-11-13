@@ -17,9 +17,18 @@
     SKRIBL'S PARTS, THROUGH ITS SEAMS ONLY (docs/INTEGRATION.md): the
     in-post player's files and its two pages Make opens. The wordmark is the
     site's own since Nov 12, blooby. (social/_blooby_mark.html), written in
-    Skribl's hand; Skribl's pages keep their own. Light and dark
-    follow the device: the site has no switch of its own yet, and Skribl's
-    own choice is kept where only Skribl's pages read it.
+    Skribl's hand; Skribl's pages keep their own.
+
+    LIGHT AND DARK ARE SKRIBL'S ONE CHOICE (Settings; the owner's "Yes to
+    all", Nov 13): System, Dark or Light, kept under skribl_theme_v1, for
+    Blooby, Pad and Flip alike. The site reads and sets it only through
+    Skribl's own theme code: its head boot (the partial below, inline before
+    the first paint, with this page's nonce), which stamps data-theme "light"
+    or "dark", and lib/theme.js (SkriblTheme), which keeps the page with the
+    choice afterwards. social.css follows the stamp; with nothing stamped (no
+    script ran) it follows the device. The browser's bar follows too: both
+    theme-color metas carry both grounds, and the boot says the chosen one
+    in each, whichever the device picks.
 
     ACTIVITY (notifications; the owner's "all yes", Nov 12): signed in, a
     bell drawn in our pen at the top right of a phone's Home and Explore,
@@ -34,7 +43,13 @@
     face player); before you have drawn one, an empty circle, never a stock
     silhouette (the owner: "no stock silhouette anywhere"). Sign in keeps its
     icon: it is not anybody's picture. A page may put its own words at the
-    top of a phone (`top`: a profile says @handle there, and the gear).
+    top of a phone (`top`: a profile says @handle there, and Settings).
+
+    SETTINGS IN A DESK'S RAIL (the Settings mock's b): above your name at the
+    rail's foot, on every page, lit like Home on Settings and the pages it
+    leads to (Invites, deleting the account), where You stays lit too, as
+    the mock's picture has it. A phone's bar keeps its four places, as it
+    did for Activity: there Settings is the word on your profile.
 
     NO SCRIPT IN THE PAGE. The demo sends Skribl's standalone policy on every
     page that is not Skribl's (script-src 'self' and a nonce the site never
@@ -49,9 +64,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
 {# The browser's own bar in the page's ground, as Skribl's pages do it
-   (skribl.core.THEME_GROUND). #}
-<meta name="theme-color" content="#fbfcfd" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0b0d12" media="(prefers-color-scheme: dark)">
+   (skribl.core.THEME_GROUND): the device's own until a script runs, then
+   the chosen theme's in both (the boot below reads data-light and
+   data-dark, so it holds no colour of its own). #}
+<meta name="theme-color" content="#fbfcfd" media="(prefers-color-scheme: light)" data-light="#fbfcfd" data-dark="#0b0d12">
+<meta name="theme-color" content="#0b0d12" media="(prefers-color-scheme: dark)" data-light="#fbfcfd" data-dark="#0b0d12">
+{% include 'skribl/_skribl_theme_boot.html' %}
 <title>{% block title %}Blooby{% endblock %}</title>
 {% if token %}<meta name="social-csrf" content="{{ token }}">{% endif %}
 <link rel="icon" type="image/png" sizes="192x192" href="{{ skribl_asset('icon-192.png') }}">
@@ -60,6 +78,7 @@
 {{ skribl_face_assets() }}
 {% block head %}{% endblock %}
 <link rel="stylesheet" href="{{ social_asset('social.css') }}">
+<script src="{{ skribl_asset('lib/theme.js') }}" defer></script>
 <script src="{{ social_asset('social.js') }}" defer></script>
 {% block scripts %}{% endblock %}
 </head>
@@ -92,9 +111,13 @@
   <button class="tab tab-make" type="button" data-make aria-haspopup="dialog" aria-controls="makeSheet" aria-expanded="false">
     <span class="tab-ic">{{ ic.pen() }}</span><span class="tab-name">Make</span></button>
   {% if accounts and me %}
+  {# Settings, a desk's rail only (hidden in a phone's bar), above You. #}
+  {% set at_settings = here in ('settings', 'invites') %}
+  <a class="tab tab-settings" href="{{ url_for('social.you') }}"{% if at_settings %} aria-current="page"{% endif %}>
+    <span class="tab-ic">{{ ic.gear() }}</span><span class="tab-name">Settings{% if at_settings %}{{ ic.underline() }}{% endif %}</span></a>
   {# The desk's rail says whose You it is; the phone's bar says You. Your
      face, still, where the icon would be; the empty circle before it. #}
-  {% set at_you = here in ('you', 'invites') %}
+  {% set at_you = here in ('you', 'settings', 'invites') %}
   <a class="tab tab-you tab-me" href="{{ url_for('social.profile', handle=me.handle) }}"{% if at_you %} aria-current="page"{% endif %}>
     <span class="tab-ic"><span class="face-ring{% if not me.face_id %} is-blank{% endif %}">{% if me.face_id %}{{ skribl_face(me.face_id, canvas_w=me.face_w, canvas_h=me.face_h, bp=skribl_bp) }}{% else %}<span class="face-blank" aria-hidden="true"></span>{% endif %}</span></span><span class="tab-name">You{% if at_you %}{{ ic.underline() }}{% endif %}</span><span class="tab-who"><b>{{ me.display_name }}{% if at_you %}{{ ic.underline() }}{% endif %}</b><small>@{{ me.handle }}</small></span></a>
   {% elif accounts %}

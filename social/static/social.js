@@ -294,6 +294,15 @@
     });
   };
 
+  /* THE THEME, ON A PAGE THE BACK BUTTON BRINGS BACK WHOLE (the bfcache):
+     a choice made while it was away (Settings, the Pad's or Flip's own menu,
+     another tab) never reached it, so it takes the one chosen now, through
+     Skribl's own theme code (lib/theme.js), as the page comes back. */
+  window.addEventListener('pageshow', function (e) {
+    var T = window.SkriblTheme;
+    if (e.persisted && T) T.apply(T.get());
+  });
+
   /* ACTIVITY'S DOT GOES AS YOU LOOK (notifications): a tap on the bell (a
      phone's top) or the rail's Activity lets the dot fade while Activity
      opens (social.css, .is-seen), so a page the back button brings back

@@ -92,6 +92,7 @@ The demo's app.py does exactly this (SKRIBL_SOCIAL=0 leaves the site out).
 import hashlib
 import importlib.util
 import os
+import secrets
 
 from flask import (Blueprint, abort, current_app, g, has_app_context, has_request_context,
                    render_template, request, url_for)
@@ -139,12 +140,17 @@ _SKRIBL_GLOBALS = ("skribl_asset", "skribl_csrf", "skribl_report")
 
 #: THE SITE'S OWN POLICY, ON ITS OWN PAGES (docs/INTEGRATION.md, "Your site's
 #: security headers": Skribl's pages carry Skribl's, and a host's pages keep
-#: the host's). Every script here is a file, so there is no nonce. The rest is
-#: what Skribl's player and Gallery section need on any page: style
-#: attributes, and data: and blob: for images, sound and fetches. The demo's
-#: standalone baseline would otherwise give these pages Skribl's policy with
-#: an empty nonce, which Chrome reports on every load as an invalid source.
-SITE_CSP = "; ".join([
+#: the host's). Every script here is a file but one: Skribl's theme boot
+#: (skribl/_skribl_theme_boot.html, docs/INTEGRATION.md "Skribl's theme on
+#: your pages"), which must run inline in <head>, before the first paint, so
+#: the page opens in the chosen theme (Settings, after v330). It carries the
+#: page's own nonce, made for each response (site_csp below), and nothing else
+#: inline may run: no 'unsafe-inline'. The rest is what Skribl's player and
+#: Gallery section need on any page: style attributes, and data: and blob: for
+#: images, sound and fetches. The demo's standalone baseline would otherwise
+#: give these pages Skribl's policy with an empty nonce, which Chrome reports
+#: on every load as an invalid source.
+_SITE_CSP = (
     "default-src 'self'",
     "script-src 'self'",
     "style-src 'self' 'unsafe-inline'",
@@ -157,7 +163,27 @@ SITE_CSP = "; ".join([
     "form-action 'self'",
     "object-src 'none'",
     "frame-ancestors 'self'",
-])
+)
+
+
+def site_csp(nonce=None):
+    """The site's policy for one response: script-src with the page's nonce
+    when a page of the site's was rendered (the theme boot carries it), and
+    'self' alone when none was (a redirect's body, say)."""
+    return "; ".join((d + f" 'nonce-{nonce}'") if nonce and d == "script-src 'self'" else d for d in _SITE_CSP)
+
+
+#: The policy of a response that rendered no page of the site's.
+SITE_CSP = site_csp()
+
+
+def page_nonce():
+    """This request's nonce for the one inline script a page of the site's
+    carries (Skribl's theme boot), made the first time it is asked for."""
+    n = g.get("social_nonce")
+    if not n:
+        n = g.social_nonce = secrets.token_urlsafe(16)
+    return n
 
 
 #: The most a request to the site's own pages may send (64 KiB).
@@ -282,6 +308,9 @@ def init_social(app, *, session=None, url_prefix="/social", skribl_blueprint="sk
     def _site_context():
         ctx = {"social_asset": social_asset,
                "skribl_bp": skribl_blueprint,
+               # Skribl's theme boot, inline in every page's <head>, reads its
+               # nonce under this name, as on Skribl's own pages.
+               "csp_nonce": page_nonce(),
                # Make's two doors, Skribl's own pages, from its own routes.
                "pad_url": url_for(skribl_blueprint + ".skribl_editor"),
                "flip_url": url_for(skribl_blueprint + ".skribl_flip"),
@@ -323,8 +352,9 @@ def init_social(app, *, session=None, url_prefix="/social", skribl_blueprint="sk
             # button still restores it whole.
             resp.headers.setdefault("Cache-Control", "private, no-cache")
             # Before any app-wide handler, which a blueprint's always is, so
-            # a host's own setdefault leaves this one standing.
-            resp.headers.setdefault("Content-Security-Policy", SITE_CSP)
+            # a host's own setdefault leaves this one standing. The nonce is
+            # the one the page was rendered with, if it was one of the site's.
+            resp.headers.setdefault("Content-Security-Policy", site_csp(g.get("social_nonce")))
         return resp
 
     app.register_blueprint(bp)
