@@ -2854,7 +2854,10 @@ with sync_playwright() as p:
                     ppg.wait_for_timeout(200)
                     gone = ppg.evaluate("() => ({ inert: !!document.querySelector('#main[inert]'), focus: document.activeElement.className })")
                     open_box(ppg)
-                    return {"words": ppg.evaluate(BOX)["words"], "gone": gone, "down": down}
+                    words_ = ppg.evaluate(BOX)["words"]
+                    ppg.keyboard.press("Escape")
+                    ppg.wait_for_function(GONE, timeout=8000)
+                    return {"words": words_, "gone": gone, "down": down}
 
                 got_, err = steps(put_away)
                 got_ = got_ or {"words": None, "gone": {"inert": True, "focus": ""}, "down": {"ok": False}}
@@ -2867,6 +2870,7 @@ with sync_playwright() as p:
                   and all(g is None or g["ok"] for g in downs.values()),
                   f"{kept}; going down {downs}")
             # ON A PHONE'S KEYBOARD it rides above it (stood in: this box has no phone keyboard).
+            open_post(ppg, post)
             open_box(ppg)
             ppg.evaluate("() => window.__keyboard(336)")
             ppg.wait_for_timeout(500)
@@ -2948,8 +2952,10 @@ with sync_playwright() as p:
                     dpg.wait_for_function(GONE, timeout=8000)
                     after_ = dpg.evaluate("() => ({ icon: document.querySelector('.cm-say').getAttribute('aria-expanded'), focus: document.activeElement.className })")
                     open_box(dpg)
-                    return {"g": glided(track(fr, 0)), "icon": after_["icon"], "focus": after_["focus"],
-                            "words": dpg.evaluate(BOX)["words"]}
+                    words_ = dpg.evaluate(BOX)["words"]
+                    dpg.click(".cm-say")
+                    dpg.wait_for_function(GONE, timeout=8000)
+                    return {"g": glided(track(fr, 0)), "icon": after_["icon"], "focus": after_["focus"], "words": words_}
 
                 got_, err = steps(fold_away)
                 folds[how] = dict(got_ or {"g": {"ok": False, "way": 0}, "icon": None, "focus": "", "words": None}, stopped=err)
@@ -2961,6 +2967,7 @@ with sync_playwright() as p:
                   f"{folds}")
             # Draw opens the Pad over the page with the box open; a press on the Pad's ground is not "elsewhere".
             def pad_kept():
+                open_post(dpg, post)
                 open_box(dpg)
                 dpg.click("[data-cm-open=pad]", timeout=8000)
                 fr = editor_frame(dpg, "skribl-pad")
@@ -3176,7 +3183,8 @@ with sync_playwright() as p:
                 cpg.evaluate("() => document.getElementById('comments').scrollIntoView({ block: 'center' })")
                 cpg.wait_for_timeout(300)
                 line = cpg.evaluate(FIRST_LINE)
-                fr = cpg.evaluate(FRAMES, ["document.querySelector('[data-cm-first]').click()", [".more-from"], [".cm-first"], 700])
+                fr = cpg.evaluate(FRAMES, ["const f = document.querySelector('[data-cm-first]'); if (f) f.click();",
+                                           [".more-from"], [".cm-first"], 700])
                 _, err = steps(lambda: cpg.wait_for_function(BOX_STILL, timeout=8000))
                 opened = cpg.evaluate(BOX)
                 line_open = cpg.evaluate(FIRST_LINE)
