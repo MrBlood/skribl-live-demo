@@ -36927,3 +36927,37 @@ signing in. Firefox (the fold's grid-template-rows and the arriving
 comment's clip-path transitions; main's Firefox lane runs its smoke after
 the merge). SF and Segoe UI: every measure is in this box's fonts. The live
 site.
+
+## After v330 -- blooby.app's own Home Screen icon, chosen and filed
+
+The owner, Nov 12 and 13, over seven rounds of mocks on the phone: blooby.app
+gets its own Home Screen icon and its own name under it, Blooby, and the demo
+keeps the name Skribl and today's icon (Blooby waving on the white star).
+"All yes" on Nov 13, with building it in left for the next session.
+
+THE PICK, the owner: "I like the last round one that is 82% tall." Waving
+Blooby on his own, on today's lilac (the ground behind the star, blooby.py's
+icon_ground), with no star. He is the same Pad drawing as today's icon
+(blooby.py's wave pose), 82% of the icon tall where today's is 76%
+(ICON_FILL), placed halfway between centring his box and centring his body,
+so his raised arm does not pull him off the middle. His unpainted spots stay
+white, as they are on the star, and his soft shadow is today's
+(ICON_SHADOW). Filed as pictures, made in the session's scratchpad from
+blooby.py's own parts, read only: `docs/brand/blooby-app-icon-1024.png` and
+the 512, 192 and 180 sizes beside it. FUTURE.md 6al has what building it in
+takes, starting with blooby.py making it from his strokes.
+
+ON THE WAY, so a later session does not mock them again: the owner's own
+concept picture, a cursive b. with a little character and a dashed trail,
+with Blooby in the character's place ("the b doesn't look quite right and
+the dotted line doesn't look quite right either"); Blooby flying, leaping
+and gliding beside the b.; Blooby alone in four poses; the b. and a bigger
+Blooby jumping or waving; the b. alone on three grounds ("i don't like any of
+them. I like waving blooby as big as he can be"); and Blooby as big as he
+fits, 96% of the icon, which led back to 82%.
+
+Pad and Flip: not affected; nothing in the app changed.
+
+THE FOUR: kind (Blooby saying hello); simple (just him, no star); playful
+(his own drawn line and his wave); powerful (the brand's face, as big as the
+owner wanted him).
