@@ -263,7 +263,7 @@ def cards(entries, viewer):
         out.append({"post": p, "who": who, "sk": sk, "kind": e["kind"], "down": down,
                     "plays": plays_text(sk["views"]) if sk else None,
                     "comments": said.get(key, 0),
-                    "likes": liked.get(key, {"n": 0, "mine": False}),
+                    "likes": liked.get(key, {"n": 0, "mine": False, "at": None, "marks": []}),
                     "like": (url_for("social.like_post", public_id=p.public_id) if e["kind"] == "p"
                              else url_for("social.like_drawing", skribl_id=p.skribl_id)),
                     "url": url, "delete": gone,

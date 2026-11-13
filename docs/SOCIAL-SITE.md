@@ -229,7 +229,8 @@ here is tested (a check shown red before it is believed).
 - **Phase 2, the social core.** Follow, the Following feed, comments and
   replies, likes, in-app notifications, mute. *Comments and their answers
   built Nov 12 (section 10); in-app notifications (Activity) the same day
-  (section 11); likes Nov 13 (section 12).*
+  (section 11); likes Nov 13, their dots on the line and the hearts that
+  rise from them the same day (section 12).*
 - **Phase 3, growing.** Search and tags, push and email notifications, reply
   with a skribl, repost, invite links.
 - **Phase 4, creators.** Editions, rights and prints, the co-op (FUTURE 6ag).
@@ -1098,10 +1099,51 @@ where its replay was, in ms on the drawing's own clock (so the same moment
 whether it was watched at ¼× or 16×), read from Skribl's in-post player
 through its playhead seam (docs/INTEGRATION.md, "Where the playhead is");
 tapped while it is still or paused, no moment, and it counts all the same.
-The site keeps only a whole number of ms from 0 to a day. The pink dots on the
-line under the drawing, and the hearts that rise from them as it plays (the
-owner's D, on light the bell dot's deeper blush, "b"), come next, on a seam of
-their own; every like given from today will have its dot.
+The site keeps only a whole number of ms from 0 to a day.
+
+**The dots on the line** (part 2; the owner's "Just put a smaller dot (same
+color as blooby blush) wherever someone likes it. If it doubles someone it
+gets redder.", then "All yes, b"). Every like with a moment is a small dot
+(5px, phone and desk alike) over the line under the drawing, in the middle of
+the gap between the drawing and the scrubber, where *the line itself* puts that
+moment: the playhead's own place for it, so a piece played with its long
+pauses squeezed lines up as its playhead does, and a Flip's pages each take
+their share. Likes that land so close their dots would overlap are one dot of
+the same size, a step redder: two together, then three or more, never bigger
+and never a number (a desk's longer line can keep apart what a phone's
+doubles). On Home's cards and a post's or a drawing's page alike, from the
+same grouped read as the count (one a kind for Home's whole page), counted by
+the viewer in the same way: a like with no moment has no dot, and nobody
+hidden from the viewer (a block either way, or taken down) has one. Dots say
+where, never who: the page is sent each moment and how many, nothing else.
+Your own like moves your dot with your heart: liked while it plays, a dot
+fades in where you tapped; taken back, it fades out. Nothing taken down has
+dots. They take no taps: a finger on one lands on the scrubber under it. The
+colours are (b), the bell dot's pairing: on light `--heart` (`#e64a78`, the
+sheet's dot: same role, same token), then `--heart-2` (`#e33157`) and
+`--heart-3` (`#d11a32`); on dark his blush, then `#ff4d78` and `#ff2d5f`;
+each 3:1 or more on what is painted behind it (on light 3.64:1, 4.22:1 and
+5.24:1 on the page, 3.74:1, 4.34:1 and 5.38:1 on a card; on dark 7.34:1,
+6.09:1 and 5.36:1, and 6.01:1, 4.99:1 and 4.39:1). Skribl's player draws
+them through its marks seam (docs/INTEGRATION.md, "Marks on the line"); the
+site gives the moments and the colours (`--mark`, `--mark-2`, `--mark-3` on
+`.post-art`), and never names a part of Skribl's.
+
+**The hearts that rise.** As the replay reaches a dot in normal play (the
+player says so: `skribl:mark`), a small heart rises from it about 30px and
+fades, gone in a second: it fades in as it starts and never pops, never
+grows, and the dot stays. It is the liked heart, 14px, its line the deeper
+blush in both themes (`--heart-paper`, `#e64a78`), because the paper it
+crosses is the drawing's own, the same in both (3.35:1 on the cream paper,
+3.64:1 and 5.20:1 on the page where it starts). A redder dot sends one heart.
+Scrubbing, a seek or a jump sends none (the player's rule: only frames of
+normal play tell, counted from where play starts; a loop coming round tells
+again). CALM AT EVERY SPEED: at most three hearts in the air, each at least a
+third of a second after the one before; a dot reached meanwhile sends none,
+and nothing waits, so no heart rises late from a dot the playhead has left.
+Under Reduce Motion nothing rises: the dot glows a moment (a soft halo of its
+own colour fading in and out) and nothing moves. Hearts take no taps: a tap
+on the drawing where one is rising pauses it, as ever.
 
 **"Liked by…", the maker's alone.** On their own post's or drawing's page,
 under the time-and-plays line: the newest three faces and "Liked by Mira, Ada
@@ -1144,10 +1186,13 @@ looked and before, each one search).
 
 **Pad and Flip:** the seams are shared. `player.playhead()` is one read-only
 method on the in-post player that plays Pad drawings and Flips alike, so a
-like on a Flip keeps its moment the same way; and the line's lead is one slot
-in that player's line, which a Flip's post wears as a drawing's does, so the
-heart sits on both the same. Nothing changes in either editor.
+like on a Flip keeps its moment the same way; the line's lead is one slot in
+that player's line, which a Flip's post wears as a drawing's does, so the
+heart sits on both the same; and the line's marks are that player's too, so a
+Flip's likes are dots on its line and send up hearts as a drawing's do (a
+Flip's dots wait for its pages, which say where its moments are and come
+with the drawing on the first tap). Nothing changes in either editor.
 
 `harness/verify_sociallikes.py` holds it through the demo's own server;
 `verify_inline.py` and `verify_seam.py` hold the seams. DECISIONS.md ("Likes
-at /social") says what each check was shown red by.
+at /social", parts 1 and 2) says what each check was shown red by.

@@ -24,8 +24,17 @@ Home's feed asks once for all its cards (stats(): one grouped query a kind).
 EACH LIKE KEEPS ITS MOMENT: at_ms, where the drawing's replay was when the
 heart was tapped while it played, read from Skribl's in-post player through
 its playhead seam (docs/INTEGRATION.md, "Where the playhead is"); nothing when
-it was not playing. It counts either way. The pink dots on the line that will
-show them come later; nothing here shows a moment but the maker's sheet.
+it was not playing. It counts either way.
+
+THE DOTS ON THE LINE (part 2; the owner's "Just put a smaller dot (same color
+as blooby blush) wherever someone likes it. If it doubles someone it gets
+redder.", then "All yes, b"): every card and page sends its drawing's
+moments, counted by the viewer as the count is (stats(): the same grouped
+query, by the thing and the moment), to Skribl's player through its marks
+seam (docs/INTEGRATION.md, "Marks on the line"), which puts one small dot
+where its line puts each moment, a step redder where they double. A like
+with no moment has no dot; dots say where, never who. The hearts that rise
+from them as the replay plays are the page's (likes.js).
 
 WHO LIKED IT is the maker's alone: on their own post's or drawing's page,
 "Liked by Mira, Ada and 3 others" opens the sheet of who, newest first, each
@@ -55,6 +64,12 @@ WHO_MAX = 200
 #: A moment past this is no moment (a day of replay): kept as none.
 AT_MAX = 24 * 3600 * 1000
 
+#: The most moments a drawing's line is sent: past it, the others' moments
+#: within one MARKS_MAX-th of the latest are one, at their middle, standing
+#: for them all (a line shows far fewer dots than this; the cap only keeps a
+#: very liked drawing's page small).
+MARKS_MAX = 200
+
 
 def _col(kind):
     return Like.post_id if kind == "p" else Like.drawing_id
@@ -67,26 +82,61 @@ def _where(on):
 
 def stats(viewer, posts=(), drawings=()):
     """{("p", a post's internal id) or ("s", a drawing's public id):
-    {"n": how many likes `viewer` is shown, "mine": whether one is theirs}},
+    {"n": how many likes `viewer` is shown, "mine": whether one is theirs,
+     "at": the moment theirs keeps (None for none), "marks": where they
+     landed, for the dots on the drawing's line (_marks())}},
     for every thing asked, liked or not: one grouped query for each kind
-    asked, nobody hidden from `viewer` counted (their own never is)."""
+    asked (by the thing and the moment, so the dots come with the count),
+    nobody hidden from `viewer` counted (their own never is)."""
     hidden = sorted(hidden_ids(viewer))
     mine_id = viewer.id if viewer is not None else -1
     out = {}
     for kind, ids in (("p", posts), ("s", drawings)):
         ids = [i for i in dict.fromkeys(ids or ()) if i is not None]
         for i in ids:
-            out[(kind, i)] = {"n": 0, "mine": False}
+            out[(kind, i)] = {"n": 0, "mine": False, "at": None, "marks": []}
         if not ids:
             continue
         col = _col(kind)
-        q = (sa.select(col, sa.func.count(), sa.func.max(sa.case((Like.person_id == mine_id, 1), else_=0)))
-             .where(col.in_(ids)).group_by(col))
+        q = (sa.select(col, Like.at_ms, sa.func.count(), sa.func.max(sa.case((Like.person_id == mine_id, 1), else_=0)))
+             .where(col.in_(ids)).group_by(col, Like.at_ms))
         if hidden:
             q = q.where(Like.person_id.notin_(hidden))
-        for k, n, m in site().session().execute(q).all():
-            out[(kind, k)] = {"n": int(n), "mine": bool(m)}
+        moments = {}
+        for k, at, n, m in site().session().execute(q).all():
+            got = out[(kind, k)]
+            got["n"] += int(n)
+            if m:
+                got["mine"], got["at"] = True, at
+            if at is not None:
+                moments.setdefault(k, []).append((int(at), int(n) - (1 if m else 0)))
+        for k, those in moments.items():
+            out[(kind, k)]["marks"] = _marks(those, out[(kind, k)]["at"])
     return out
+
+
+def _marks(moments, mine):
+    """The moments for the dots on a drawing's line, [{"ms", "n"}] in order:
+    everybody's that was kept while it played (a like with none has no dot),
+    `n` how many landed at that very ms. The others' (`moments`: (ms, how
+    many)), and past MARKS_MAX of them, those within one MARKS_MAX-th of the
+    latest as one at their middle; then the viewer's own (`mine`), always at
+    its exact ms, so the page can take it away again if they take it back.
+    Where two would overlap on a line is the player's to say (its width)."""
+    others = sorted((at, n) for at, n in moments if n > 0)
+    if len(others) > MARKS_MAX:
+        span, kept = others[-1][0] + 1, {}
+        for at, n in others:
+            got = kept.setdefault(at * MARKS_MAX // span, [0, 0])
+            got[0] += at * n
+            got[1] += n
+        others = [(round(t / n), n) for t, n in kept.values()]
+    if mine is not None:
+        others.append((int(mine), 1))
+    merged = {}
+    for at, n in others:
+        merged[at] = merged.get(at, 0) + n
+    return [{"ms": at, "n": n} for at, n in sorted(merged.items())]
 
 
 def stat_on(on, viewer):

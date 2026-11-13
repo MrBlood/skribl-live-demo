@@ -64,12 +64,31 @@ authenticator for the site's people.
      built on every one of them (the census leaves Skribl's line, the heart's
      place now, to Skribl's own suites, so it is read here as section 1 reads
      it).
- 13. NO PAGE ERRORS, NO CONSOLE ERRORS AND NO CSP VIOLATIONS (run last).
+ 13. NO PAGE ERRORS, NO CONSOLE ERRORS AND NO CSP VIOLATIONS (run last, after
+     14 and 15).
+ 14. THE DOTS ON THE LINE (part 2, the owner's D, "All yes, b"): one 5px dot
+     a like at its moment, where the drawing's line puts it (where its
+     playhead is at that moment), on a post's page and Home's card, a phone
+     and a desk; likes together one dot a step redder, two then three or
+     more; (b)'s colours, each 3:1 on what is painted behind it, read off the
+     screen, light and dark; no dot for a like with no moment or by anybody
+     hidden from the viewer; the page sends moments and how many, never who;
+     nothing taken down has dots; your own dot follows your heart, fading in
+     and out; a dot takes no tap (the scrubber under it does); nothing else
+     moves for them.
+ 15. THE HEARTS THAT RISE: as the replay reaches a dot a heart rises from it,
+     read on every frame (fades in, about 30px over many frames, never grows,
+     gone in a second; the dot stays), the deeper blush in both themes at
+     3:1 on the drawing's paper and the page; one from a redder dot; under
+     Reduce Motion a glow and 0px moved; no heart on a scrub; calm at 16x on
+     a busy drawing (three in the air at most, a third of a second apart,
+     never late); nothing else on the card moves; a heart takes no tap.
 
 SOCIALLIKES_PART=<n>[,<m>] runs those sections only (calibration); a section
 makes the people it needs. Every row was shown red by breaking one part and
 green as built: DECISIONS.md, "Likes at /social".
 """
+import io
 import json
 import math
 import os
@@ -88,6 +107,7 @@ from http.cookiejar import CookieJar
 from pathlib import Path
 
 from assertions import make_check
+from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "harness"))
@@ -800,6 +820,146 @@ BLUSH = "rgb(255, 111, 145)"
 INK2 = {"light": "rgb(75, 85, 99)", "dark": "rgb(183, 191, 204)"}
 TINT = {"light": "rgba(124, 92, 255, 0.12)", "dark": "rgba(124, 92, 255, 0.18)"}
 
+# ---- the dots on the line and the hearts that rise (sections 14 and 15) -----------
+# The page's own drawing is here (its player has the drawing).
+PLAYER_LOADED = ("() => { const art = document.querySelector('.post-page > .post-art');"
+                 " const p = art && window.SkriblInline && SkriblInline.mount(art)[0]; return !!p && p.state().loaded; }")
+
+# The dots on the line in `sel` (Skribl's marks, the page's moments): each one's
+# place on the scrubber (x, its middle from the scrubber's left), where it is on
+# the screen, how far above the scrubber, its size, its count, its paint, any
+# words, and whether a press there lands on the scrubber; left to right. With
+# the scrubber's width, the replay's length the line was given, the moments the
+# page sent, and where the playhead is drawn.
+DOTS = r"""(sel) => { const root = document.querySelector(sel); if (!root) return null;
+  const box = root.querySelector('.skribl-inline'), bar = root.querySelector('.skribl-inline-scrub');
+  if (!box || !bar) return null;
+  const br = bar.getBoundingClientRect(), head = bar.querySelector('.rl-head');
+  let play = null; try { play = JSON.parse(box.getAttribute('data-skribl-line') || 'null').play; } catch (e) {}
+  return { w: br.width, play, marks: box.getAttribute('data-skribl-marks'),
+    head: head ? head.getBoundingClientRect().left + 1 - br.left : null,
+    dots: [...root.querySelectorAll('.skribl-inline-marks i')].map(e => { const r = e.getBoundingClientRect(), cs = getComputedStyle(e);
+      const cx = r.left + r.width / 2, cy = r.top + r.height / 2, at = document.elementFromPoint(cx, cy);
+      return { x: Math.round((cx - br.left) * 100) / 100, cx, cy, above: Math.round((br.top - cy) * 100) / 100,
+               w: r.width, h: r.height, n: e.dataset.n, bg: cs.backgroundColor, op: +cs.opacity,
+               words: (e.textContent || '') + (e.getAttribute('title') || '') + (e.getAttribute('aria-label') || ''),
+               bar: at === bar }; }).sort((p, q) => p.x - q.x) }; }"""
+
+# For 700ms from now, every frame: the opacity of a dot that came (new) and of
+# one on its way out (gone), on the line in `sel`.
+DOT_OPS = r"""(sel) => { const root = document.querySelector(sel); window.__do = { new: [], gone: [] };
+  const was = new Set(root.querySelectorAll('.skribl-inline-marks i')), t0 = performance.now();
+  const step = () => { const now = [...root.querySelectorAll('.skribl-inline-marks i')];
+    const added = now.filter(e => !was.has(e));
+    if (added.length) window.__do.new.push(+getComputedStyle(added[0]).opacity);
+    const going = [...was].filter(e => e.isConnected && +getComputedStyle(e).opacity < 0.999);
+    if (going.length) window.__do.gone.push(+getComputedStyle(going[0]).opacity);
+    if (performance.now() - t0 < 700) requestAnimationFrame(step); };
+  requestAnimationFrame(step); }"""
+
+# The drawing and its line in `sel`, part by part, as boxes from the drawing's top.
+LINE_BOXES = r"""(sel) => { const root = document.querySelector(sel), t = root.querySelector('.skribl-inline').getBoundingClientRect().top;
+  return ['.skribl-inline', '.skribl-inline-line', '.skribl-inline-lead', '.skribl-inline-scrub', '.skribl-inline-controls',
+          '.skribl-inline-say'].map(s => { const e = root.querySelector(s); if (!e) return null; const r = e.getBoundingClientRect();
+    return [Math.round(r.left * 100) / 100, Math.round((r.top - t) * 100) / 100, Math.round(r.width * 100) / 100,
+            Math.round(r.height * 100) / 100]; }); }"""
+
+# For `ms` from now, every frame: each rising heart (or glow) in `sel`, as
+# painted: which one, its middle, its size, its opacity, its ground colour, and
+# the time (T, the page's clock).
+RISE = r"""([sel, ms]) => { window.__rf = []; const root = document.querySelector(sel), t0 = performance.now(); let n = 0;
+  const step = () => { const T = performance.now();
+    root.querySelectorAll('.lk-rise, .lk-glow').forEach(e => { if (!e.__k) e.__k = ++n;
+      const r = e.getBoundingClientRect(), cs = getComputedStyle(e);
+      window.__rf.push({ T, t: Math.round(T - t0), k: e.__k, c: e.className, x: r.left + r.width / 2, y: r.top + r.height / 2,
+                         w: Math.round(r.width * 100) / 100, h: Math.round(r.height * 100) / 100, o: +cs.opacity,
+                         bg: cs.backgroundColor }); });
+    if (T - t0 < ms) requestAnimationFrame(step); };
+  requestAnimationFrame(step); }"""
+
+# A rising heart's paint now: its line and its inside, and a point of the
+# drawing's paper beside it.
+RISE_PAINT = r"""(sel) => { const h = document.querySelector(sel + ' .lk-rise'); if (!h) return null;
+  const r = h.getBoundingClientRect();
+  return { ink: getComputedStyle(h.querySelector('.ht-ink')).stroke, fill: getComputedStyle(h.querySelector('.ht-fill')).fill,
+           paper: [r.right + 10, r.top + r.height / 2] }; }"""
+
+# For `ms` from now, every frame: the boxes of a card's parts.
+CARD_FRAMES = r"""([sel, ms]) => { window.__cf = []; const c = document.querySelector(sel), t0 = performance.now();
+  const parts = { head: '.post-head', words: '.post-words', drawing: '.skribl-inline', heart: '.lk-heart',
+                  scrubber: '.skribl-inline-scrub', line: '.skribl-inline-line', words2: '.skribl-inline-say', foot: '.post-foot' };
+  const step = () => { const boxes = {};
+    for (const [k, s] of Object.entries(parts)) { const e = c.querySelector(s); if (!e) continue;
+      const r = e.getBoundingClientRect(); boxes[k] = [r.left, r.top, r.width, r.height]; }
+    window.__cf.push({ t: performance.now() - t0, boxes });
+    if (performance.now() - t0 < ms) requestAnimationFrame(step); };
+  requestAnimationFrame(step); }"""
+
+# One like's dot, two together and three or more: (b), the owner's "All yes, b".
+DOT_INK = {"light": ["rgb(230, 74, 120)", "rgb(227, 49, 87)", "rgb(209, 26, 50)"],
+           "dark": ["rgb(255, 111, 145)", "rgb(255, 77, 120)", "rgb(255, 45, 95)"]}
+
+
+def _lum(c):
+    v = [x / 255 for x in c[:3]]
+    v = [x / 12.92 if x <= 0.03928 else ((x + 0.055) / 1.055) ** 2.4 for x in v]
+    return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]
+
+
+def contrast(a, b):
+    x, y = _lum(a), _lum(b)
+    return (max(x, y) + 0.05) / (min(x, y) + 0.05)
+
+
+def ratio_over(css, op, ground):
+    """A colour (as Chrome writes it, rgb()) at opacity `op` over `ground` (a pixel), against that ground."""
+    c = [float(v) for v in re.findall(r"[\d.]+", css or "")[:3]]
+    if len(c) < 3 or not ground:
+        return 0
+    return round(contrast([c[i] * op + ground[i] * (1 - op) for i in range(3)], ground), 2)
+
+
+def dot_pixels(pg, sel):
+    """Each dot on the line in `sel`, read off the screen (one CSS pixel a
+    pixel): its middle pixel, the ground 5px above it (between the drawing and
+    the line), and their contrast. The caller scrolls the line into view."""
+    d = pg.evaluate(DOTS, sel)
+    if not d or not d["dots"]:
+        return []
+    shot = Image.open(io.BytesIO(pg.screenshot())).convert("RGB")
+    out = []
+    for dot in d["dots"]:
+        x, y = int(dot["cx"]), int(dot["cy"])
+        if 0 <= x < shot.width and 5 <= y < shot.height:
+            fg, bg = shot.getpixel((x, y)), shot.getpixel((x, y - 5))
+            out.append({"n": dot["n"], "fg": fg, "bg": bg, "k": round(contrast(fg, bg), 2)})
+    return out
+
+
+def rise_of(fs, dot):
+    """A heart rising from `dot`, read on every frame (RISE): it starts at the
+    dot, fades in (never whole on its first frame, no frame more than half its
+    strength at once), rises about 30px over many frames (none carries a
+    quarter of the way), never grows past its 14px, and is gone in about a
+    second."""
+    one = [f for f in fs if fs and f["k"] == fs[0]["k"]]
+    if not one or not dot:
+        return {"ok": False, "seen": len(one), "dot": bool(dot)}
+    pos = [dot["cy"]] + [f["y"] for f in one]
+    rise = max(dot["cy"] - f["y"] for f in one)
+    steps = [abs(q - p) for p, q in zip(pos, pos[1:])]
+    ops = [0.0] + [f["o"] for f in one]
+    out = {"frames": len(one), "rise": round(rise, 2), "moving": len([s for s in steps if s > 0.05]),
+           "step": round(max(steps), 2), "first": round(one[0]["o"], 3),
+           "o_step": round(max(abs(q - p) for p, q in zip(ops, ops[1:])), 3),
+           "grow": round(max(max(f["w"], f["h"]) for f in one) - 14, 2), "life": round(one[-1]["T"] - one[0]["T"]),
+           "from": [round(one[0]["x"] - dot["cx"], 2), round(one[0]["y"] - dot["cy"], 2)]}
+    out["ok"] = (26 <= rise <= 34 and out["moving"] >= 20 and out["step"] <= 0.25 * rise and out["first"] < 0.5
+                 and out["o_step"] < 0.5 and out["grow"] <= 0.5 and 850 <= out["life"] <= 1150
+                 and abs(out["from"][0]) < 0.6 and -3 < out["from"][1] <= 0.6)
+    return out
+
+
 # On a copy of the database, the site's code with SQLite's cascade OFF
 # (SKRIBL_SQLITE_FOREIGN_KEYS=0, the documented opt-out): what goes then goes
 # because the code said so. And the reads, as the code sends them, planned
@@ -858,6 +1018,7 @@ with app.app_context():
     html = page.get_data(as_text=True)
     out["reads"] = seen
     out["cards"] = html.count('class="post-card"')
+    out["marked"] = html.count("data-skribl-marks=")
     out["kinds"] = sorted(set(re.findall(r'data-like="/social/([pb])/', html)))
     # Deleting, with the cascade off: a post with its likes; an account with
     # its likes and every like on what it owned.
@@ -1698,9 +1859,9 @@ with sync_playwright() as p:
             d10t = make_drawing(tex, "Section 10, Tex's drawing", seed=102)
             like(tex, ("p", p10d))
             like(sly, ("p", p10d))
-            like(sly, ("p", p10e))
+            like(sly, ("p", p10e), at=600)
             like(tex, ("p", p10e))
-            like(tex, ("p", p10f))       # theirs, on what somebody else made
+            like(tex, ("p", p10f), at=900)  # theirs, on what somebody else made
             like(sly, ("s", d10t))       # on what they made that no post takes with it
             copy = os.path.join(TMP, "probe.db")
             src = sqlite3.connect(DB, timeout=10)
@@ -1795,7 +1956,7 @@ with sync_playwright() as p:
                 ova = someone(b, "ova", "Ova Ruhr")
                 pex = someone(b, "pex", "Pex Iles")
                 p11 = make_post(ova, "Section 11, Ova's")
-                like(pex, ("p", p11))
+                like(pex, ("p", p11), at=600)
                 like(ova, ("p", p11))
                 for i in range(6):
                     make_post(ova, f"Section 11, Ova's {i}")
@@ -1823,9 +1984,11 @@ with sync_playwright() as p:
                   and any("ix_social_likes_owner_created (owner_id=? AND created_at<?)" in s for s in plans.get("activity", []))
                   and not any(s.startswith("SCAN social_likes") for v in plans.values() for s in v),
                   json.dumps(plans or out.get("err"))[:600])
-            check("Home's feed asks for its cards' likes once a kind: a page of posts and drawings, two grouped reads",
-                  out.get("reads") == ["SELECT", "SELECT"] and (out.get("cards") or 0) >= 5 and out.get("kinds") == ["b", "p"],
-                  json.dumps({k: out.get(k) for k in ("reads", "cards", "kinds", "err")})[:400])
+            check("Home's feed asks for its cards' likes once a kind, their moments for the dots with them: a page of"
+                  " posts and drawings, two grouped reads, cards with dots among them",
+                  out.get("reads") == ["SELECT", "SELECT"] and (out.get("cards") or 0) >= 5 and out.get("kinds") == ["b", "p"]
+                  and (out.get("marked") or 0) >= 1,
+                  json.dumps({k: out.get(k) for k in ("reads", "cards", "kinds", "marked", "err")})[:400])
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(11, exc)
 
@@ -1915,6 +2078,411 @@ with sync_playwright() as p:
                   json.dumps(tints))
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(12, exc)
+
+    # ------------------------------------------------------------------ 14
+    if part(14, "the dots on the line: a like's moment, where the line puts it; doubles redder; nobody hidden; Home's card"):
+        try:
+            mae = someone(b, "mae", "Mae Orr")
+            sky = someone(b, "sky", "Sky Lund")
+            ted = someone(b, "ted", "Ted Rowe")
+            by = {h: someone(b, h, n) for h, n in (("fen", "Fen Ash"), ("gil", "Gil Hart"), ("hux", "Hux Bell"),
+                                                   ("ike", "Ike Dorn"), ("jem", "Jem Ford"), ("kai", "Kai Lowe"),
+                                                   ("lux", "Lux Penn"), ("ned", "Ned Quay"), ("oda", "Oda Reis"),
+                                                   ("pia", "Pia Sand"), ("rio", "Rio Tate"))}
+            # Sixteen seconds of drawing, and its moments: one alone at 0:05 and
+            # 0:09, two together at 0:12, three at 0:14; Ned's with none; and
+            # three by people Sky is not shown: Oda (Sky blocked), Pia (blocked
+            # Sky) and Rio (taken down).
+            p14 = make_post(mae, "Section 14, Mae's", payload=drawing(n=400, step=40))
+            p14d = make_post(mae, "Section 14, Mae's, taken down", payload=drawing(n=400, step=40, seed=3))
+            moments = {"fen": 5000, "gil": 9000, "hux": 12000, "ike": 12000, "jem": 14000, "kai": 14000,
+                       "lux": 14000, "ned": None, "oda": 3000, "pia": 7000, "rio": 10500}
+            for h, at in moments.items():
+                like(by[h], ("p", p14), at=at)
+                like(by[h], ("p", p14d), at=at)
+            block(sky, "oda")
+            block(by["pia"], "sky")
+            db_write("update social_people set taken_down_at = datetime('now') where handle_key = 'rio'")
+            db_write("update social_posts set taken_down_at = datetime('now') where public_id = ?", (p14d,))
+            SKY_SEES = [(5000, "1"), (9000, "1"), (12000, "2"), (14000, "3")]
+            seen = {}
+            for screen in ("phone", "desk"):
+                for scheme in ("light", "dark"):
+                    tag = f"{screen}/{scheme}"
+                    ctx, pg = browser_as(b, sky, screen=screen, scheme=scheme)
+                    go(pg, f"/social/p/{p14}", wait=0)
+                    pg.wait_for_function(PLAYER_LOADED, timeout=15000)
+                    pg.evaluate("() => SkriblInline.mount(document.querySelector('.post-page > .post-art'))[0].pause()")
+                    pg.locator(".post-page > .post-art .skribl-inline-line").scroll_into_view_if_needed()
+                    pg.wait_for_timeout(400)
+                    page_ = pg.evaluate(DOTS, ".post-page > .post-art")
+                    heads = []
+                    for at, _ in SKY_SEES:
+                        pg.evaluate("(ms) => SkriblInline.mount(document.querySelector('.post-page > .post-art'))[0].seek(ms)", at)
+                        pg.wait_for_timeout(60)
+                        heads.append(pg.evaluate(DOTS, ".post-page > .post-art")["head"])
+                    page_px = dot_pixels(pg, ".post-page > .post-art")
+                    go(pg, "/social/")
+                    pg.locator(card(p14) + " .skribl-inline-line").scroll_into_view_if_needed()
+                    pg.wait_for_timeout(400)
+                    card_ = pg.evaluate(DOTS, card(p14))
+                    card_px = dot_pixels(pg, card(p14))
+                    close_ctx(ctx, pg)
+                    seen[tag] = {"page": page_, "heads": heads, "page_px": page_px, "card": card_, "card_px": card_px}
+            ph = seen["phone/light"]
+            want = [round(at / ph["page"]["play"] * ph["page"]["w"], 2) for at, _ in SKY_SEES]
+            check("on a post's page, one small dot a like at its moment, 5px, over the drawing's line, where the line"
+                  " puts that moment (where its playhead is at it), in the middle of the 17px above the scrubber:"
+                  " a phone and a desk alike",
+                  all(len(s["page"]["dots"]) == 4 and all(d["w"] == 5 and d["h"] == 5 and abs(d["above"] - 8.5) < 0.6
+                                                          for d in s["page"]["dots"])
+                      and all(h is not None and abs(d["x"] - h) < 0.6 for d, h in zip(s["page"]["dots"], s["heads"]))
+                      for s in seen.values())
+                  and all(abs(d["x"] - x) < 0.6 for d, x in zip(ph["page"]["dots"], want)),
+                  json.dumps({t: [[d["x"] for d in s["page"]["dots"]], s["heads"]] for t, s in seen.items()})[:700])
+            check("likes that land together are one dot, the same size, a step redder: two, then three or more; never"
+                  " bigger and never a number",
+                  all([d["n"] for d in s[k]["dots"]] == [n for _, n in SKY_SEES] and not any(d["words"] for d in s[k]["dots"])
+                      for s in seen.values() for k in ("page", "card")),
+                  json.dumps({t: [d["n"] for d in s["page"]["dots"]] for t, s in seen.items()}))
+            weak = [(t, k, p) for t, s in seen.items() for k in ("page_px", "card_px") for p in s[k] if p["k"] < 3]
+            inks = {t: [d["bg"] for d in s["page"]["dots"]] + [d["bg"] for d in s["card"]["dots"]] for t, s in seen.items()}
+            check("the colours, (b): on light #e64a78, #e33157 and #d11a32, on dark #ff6f91, #ff4d78 and #ff2d5f, one,"
+                  " two and three or more; each 3:1 or more against what is painted behind it, read off the screen's"
+                  " pixels, on a post's page and Home's card, a phone and a desk",
+                  all(inks[t] == [DOT_INK[t.split("/")[1]][i] for i in (0, 0, 1, 2)] * 2 for t in seen)
+                  and all(len(s["page_px"]) == 4 and len(s["card_px"]) == 4 for s in seen.values()) and not weak,
+                  json.dumps({"inks": inks, "lowest": {t: min(p["k"] for k in ("page_px", "card_px") for p in s[k])
+                                                       for t, s in seen.items() if s["page_px"] and s["card_px"]},
+                              "under": weak[:3]})[:900])
+            cw = seen["phone/light"]["card"]
+            check("Home's card shows the same dots on its line, where its own line puts each moment",
+                  [d["n"] for d in cw["dots"]] == [n for _, n in SKY_SEES]
+                  and all(abs(d["x"] - at / cw["play"] * cw["w"]) < 0.6 for d, (at, _) in zip(cw["dots"], SKY_SEES))
+                  and json.loads(cw["marks"] or "[]") == json.loads(ph["page"]["marks"] or "[]"),
+                  json.dumps({"card": [d["x"] for d in cw["dots"]], "w": cw["w"], "marks": cw["marks"]}))
+            sent = json.loads(ph["page"]["marks"] or "[]")
+            ctx, pg = browser_as(b, ted)
+            go(pg, f"/social/p/{p14}")
+            ted_sees = pg.evaluate(DOTS, ".post-page > .post-art")
+            ted_n = pg.evaluate(HEART, PAGE_HEART)
+            close_ctx(ctx, pg)
+            ctx, pg = browser_as(b, sky)
+            go(pg, f"/social/p/{p14}")
+            sky_n = pg.evaluate(HEART, PAGE_HEART)
+            close_ctx(ctx, pg)
+            check("a like with no moment has no dot, and nobody hidden from the viewer has one, as they have no count:"
+                  " not Ned's (no moment), Oda's (Sky blocked her), Pia's (she blocked Sky) or Rio's (taken down);"
+                  " somebody else is shown Oda's and Pia's, never Rio's",
+                  sent == [{"ms": 5000, "n": 1}, {"ms": 9000, "n": 1}, {"ms": 12000, "n": 2}, {"ms": 14000, "n": 3}]
+                  and sky_n and sky_n["n"] == "8"
+                  and [d["x"] for d in ted_sees["dots"]] and len(ted_sees["dots"]) == 6
+                  and json.loads(ted_sees["marks"]) == [{"ms": 3000, "n": 1}, {"ms": 5000, "n": 1}, {"ms": 7000, "n": 1},
+                                                        {"ms": 9000, "n": 1}, {"ms": 12000, "n": 2}, {"ms": 14000, "n": 3}]
+                  and ted_n and ted_n["n"] == "10",
+                  json.dumps({"sky": sent, "sky_count": sky_n and sky_n["n"], "ted": ted_sees["marks"],
+                              "ted_count": ted_n and ted_n["n"]}))
+            check("dots say where, never who: the page sends each moment and how many and nothing more, and no dot"
+                  " carries a word",
+                  all(set(m) == {"ms", "n"} for m in sent) and not any(d["words"] for d in ph["page"]["dots"])
+                  and not any(h in (ph["page"]["marks"] or "") for h in ("fen", "gil", "hux", "Fen", "Gil")),
+                  ph["page"]["marks"])
+            ctx, pg = browser_as(b, mae)
+            go(pg, "/social/")
+            down_card = pg.evaluate(DOTS, card(p14d))
+            go(pg, f"/social/p/{p14d}")
+            down_page = pg.evaluate(DOTS, ".post-page > .post-art")
+            close_ctx(ctx, pg)
+            check("nothing taken down has dots: its maker's own card and page send no moments and show none",
+                  down_card and down_page and not down_card["marks"] and not down_page["marks"]
+                  and down_card["dots"] == [] and down_page["dots"] == [],
+                  json.dumps({"card": down_card and down_card["marks"], "page": down_page and down_page["marks"]}))
+            # YOUR OWN DOT: Ugo likes it while it plays (a dot where he tapped,
+            # fading in), takes it back (fading out), and likes it while it is
+            # still (no dot).
+            ugo = someone(b, "ugo", "Ugo Vane")
+            ctx, pg = browser_as(b, ugo)
+            go(pg, f"/social/p/{p14}", wait=0)
+            pg.wait_for_function(PLAYER_LOADED, timeout=15000)
+            pg.evaluate("() => { const p = SkriblInline.mount(document.querySelector('.post-page > .post-art'))[0];"
+                        " p.pause(); p.seek(6000); p.play(); }")
+            pg.wait_for_timeout(300)
+            pg.evaluate(DOT_OPS, ".post-page > .post-art")
+            tap_heart(pg, PAGE_HEART, after=500)
+            came = pg.evaluate("() => window.__do")
+            kept = [k[1] for k in likes_on(("p", p14)) if k[0] == "ugo"]
+            mine = pg.evaluate(DOTS, ".post-page > .post-art")
+            pg.evaluate("() => SkriblInline.mount(document.querySelector('.post-page > .post-art'))[0].pause()")
+            pg.evaluate(DOT_OPS, ".post-page > .post-art")
+            tap_heart(pg, PAGE_HEART, after=500)
+            went = pg.evaluate("() => window.__do")
+            after = pg.evaluate(DOTS, ".post-page > .post-art")
+            tap_heart(pg, PAGE_HEART, after=500)
+            still = pg.evaluate(DOTS, ".post-page > .post-art")
+            close_ctx(ctx, pg)
+            mx = round(kept[0] / mine["play"] * mine["w"], 2) if kept and kept[0] is not None else None
+            new = [d for d in mine["dots"] if mx is not None and abs(d["x"] - mx) < 0.6]
+            check("your own like moves your dot with your heart: liked while it plays, a dot comes where you tapped,"
+                  " fading in; taken back, it fades out and is gone; liked while it is still, no dot",
+                  kept and kept[0] is not None and 6000 < kept[0] < 7500 and len(mine["dots"]) == 7 and len(new) == 1
+                  and faded(came.get("new", [])) >= 2 and faded(went.get("gone", [])) >= 2
+                  and len(after["dots"]) == 6 and len(still["dots"]) == 6,
+                  json.dumps({"kept": kept, "dots": [d["x"] for d in mine["dots"]], "want": mx, "in": came.get("new", [])[:8],
+                              "out": went.get("gone", [])[:8], "then": len(after["dots"]), "still": len(still["dots"])}))
+            # A DOT TAKES NO TAP: a finger where one is painted lands on the
+            # scrubber under it, which shows the drawing there.
+            ctx, pg = browser_as(b, sky)
+            go(pg, f"/social/p/{p14}", wait=0)
+            pg.wait_for_function(PLAYER_LOADED, timeout=15000)
+            pg.evaluate("() => SkriblInline.mount(document.querySelector('.post-page > .post-art'))[0].pause()")
+            pg.locator(".post-page > .post-art .skribl-inline-line").scroll_into_view_if_needed()
+            pg.wait_for_timeout(300)
+            dd = pg.evaluate(DOTS, ".post-page > .post-art")
+            d2 = dd["dots"][1] if len(dd["dots"]) > 1 else None
+            if d2:
+                pg.touchscreen.tap(d2["cx"], d2["cy"])
+                pg.wait_for_timeout(400)
+            at2 = pg.evaluate(PLAYHEAD)
+            # NOTHING ELSE MOVES: the same line with its dots and without.
+            before_ = pg.evaluate(LINE_BOXES, ".post-page > .post-art")
+            pg.evaluate("() => SkriblInline.mount(document.querySelector('.post-page > .post-art'))[0].marks([])")
+            pg.wait_for_timeout(400)
+            without = pg.evaluate(LINE_BOXES, ".post-page > .post-art")
+            gone = pg.evaluate(DOTS, ".post-page > .post-art")
+            close_ctx(ctx, pg)
+            check("a dot takes no tap: a finger where it is painted lands on the scrubber under it, which shows the"
+                  " drawing at that moment",
+                  d2 and all(d["bar"] for d in dd["dots"]) and at2 and not at2["playing"]
+                  and abs(at2["ms"] - 9000) < 0.02 * dd["play"] + 60,
+                  json.dumps({"dot": d2, "then": at2}))
+            check("nothing else moves for the dots: the drawing, the line, the heart, the scrubber, mute and loop and the"
+                  " words under them are where they are with no dots",
+                  gone["dots"] == [] and before_ == without, json.dumps([before_, without])[:600])
+        except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
+            stopped(14, exc)
+
+    # ------------------------------------------------------------------ 15
+    if part(15, "the hearts that rise: from each dot as the replay reaches it, kind; a glow under Reduce Motion; calm"):
+        try:
+            via = someone(b, "via", "Via Wolde")
+            wim = someone(b, "wim", "Wim Xu")
+            xan = someone(b, "xan", "Xan Young")
+            yul = someone(b, "yul", "Yul Zane")
+            zoe = someone(b, "zoe", "Zoe Abbott")
+            p15 = make_post(via, "Section 15, Via's", payload=drawing(n=400, step=40))
+            like(wim, ("p", p15), at=5000)
+            like(xan, ("p", p15), at=9000)
+            like(yul, ("p", p15), at=12000)
+            like(zoe, ("p", p15), at=12000)
+            like(via, ("p", p15), at=12000)
+            sel = ".post-page > .post-art"
+            glides, colours, stays = {}, {}, {}
+            for scheme in ("light", "dark"):
+                ctx, pg = browser_as(b, wim, scheme=scheme)
+                go(pg, f"/social/p/{p15}", wait=0)
+                pg.wait_for_function(PLAYER_LOADED, timeout=15000)
+                pg.evaluate("() => SkriblInline.mount(document.querySelector('.post-page > .post-art'))[0].pause()")
+                pg.locator(sel + " .skribl-inline-line").scroll_into_view_if_needed()
+                pg.wait_for_timeout(300)
+                dots = pg.evaluate(DOTS, sel)
+                pg.evaluate(RISE, [sel, 1600])
+                pg.evaluate("() => { const p = SkriblInline.mount(document.querySelector('.post-page > .post-art'))[0];"
+                            " p.seek(4600); p.setRate(1); p.play(); }")
+                pg.wait_for_timeout(700)
+                peak = pg.evaluate(RISE_PAINT, sel)
+                shot = Image.open(io.BytesIO(pg.screenshot())).convert("RGB") if peak else None
+                pg.wait_for_timeout(1100)
+                fs = pg.evaluate("() => window.__rf")
+                pg.evaluate("() => SkriblInline.mount(document.querySelector('.post-page > .post-art'))[0].pause()")
+                after = pg.evaluate(DOTS, sel)
+                close_ctx(ctx, pg)
+                d5 = dots["dots"][0] if dots["dots"] else None
+                glides[scheme] = rise_of([f for f in fs if f["c"] == "lk-rise"], d5)
+                stays[scheme] = bool(d5) and [(d["x"], d["n"], d["op"]) for d in after["dots"]] == [
+                    (d["x"], d["n"], d["op"]) for d in dots["dots"]]
+                paper = shot.getpixel((int(peak["paper"][0]), int(peak["paper"][1]))) if peak and shot else None
+                ground = shot.getpixel((int(d5["cx"]) + 12, int(d5["cy"]))) if d5 and shot else None
+                colours[scheme] = {"ink": peak and peak["ink"], "fill": peak and peak["fill"], "paper": paper,
+                                   "page": ground, "on the paper": ratio_over(peak and peak["ink"], 1, paper),
+                                   "on the page": ratio_over(peak and peak["ink"], 1, ground)}
+            check("as the replay reaches a dot, a small heart rises from it: from the dot, fading in as it starts (never"
+                  " whole on its first frame), about 30px up over many frames (no frame carries a quarter of the way),"
+                  " never growing, gone in about a second; the dot stays, light and dark",
+                  all(g["ok"] for g in glides.values()) and all(stays.values()), json.dumps({"glides": glides, "stays": stays}))
+            check("the heart wears the deeper blush in both themes (its line #e64a78, his blush inside): at full strength"
+                  " 3:1 or more on the drawing's paper it crosses and on the page where it starts, read off the screen",
+                  all(c["ink"] == "rgb(230, 74, 120)" and c["fill"] == "rgb(255, 111, 145)" and c["on the paper"] >= 3
+                      and c["on the page"] >= 3 for c in colours.values()), json.dumps(colours))
+            # ONE HEART FROM A REDDER DOT; and under Reduce Motion, a glow.
+            ctx, pg = browser_as(b, wim)
+            go(pg, f"/social/p/{p15}", wait=0)
+            pg.wait_for_function(PLAYER_LOADED, timeout=15000)
+            pg.evaluate("() => SkriblInline.mount(document.querySelector('.post-page > .post-art'))[0].pause()")
+            pg.locator(sel + " .skribl-inline-line").scroll_into_view_if_needed()
+            pg.evaluate(RISE, [sel, 1500])
+            pg.evaluate("() => { const p = SkriblInline.mount(document.querySelector('.post-page > .post-art'))[0];"
+                        " p.seek(11700); p.play(); }")
+            pg.wait_for_timeout(1700)
+            fs = pg.evaluate("() => window.__rf")
+            pg.evaluate("() => SkriblInline.mount(document.querySelector('.post-page > .post-art'))[0].pause()")
+            close_ctx(ctx, pg)
+            check("a redder dot (three at 0:12) sends up one heart", len({f["k"] for f in fs if f["c"] == "lk-rise"}) == 1,
+                  f"{len({f['k'] for f in fs if f['c'] == 'lk-rise'})} hearts")
+            ctx, pg = browser_as(b, wim, reduced=True)
+            go(pg, f"/social/p/{p15}")
+            pg.evaluate("() => SkriblInline.mount(document.querySelector('.post-page > .post-art'))[0].play()")
+            pg.wait_for_function(PLAYER_LOADED, timeout=15000)
+            pg.evaluate("() => SkriblInline.mount(document.querySelector('.post-page > .post-art'))[0].pause()")
+            pg.locator(sel + " .skribl-inline-line").scroll_into_view_if_needed()
+            pg.wait_for_timeout(300)
+            dots = pg.evaluate(DOTS, sel)
+            pg.evaluate(RISE, [sel, 1600])
+            pg.evaluate("() => { const p = SkriblInline.mount(document.querySelector('.post-page > .post-art'))[0];"
+                        " p.seek(4600); p.play(); }")
+            pg.wait_for_timeout(1800)
+            fs = pg.evaluate("() => window.__rf")
+            pg.evaluate("() => SkriblInline.mount(document.querySelector('.post-page > .post-art'))[0].pause()")
+            close_ctx(ctx, pg)
+            gl = [f for f in fs if f["c"] == "lk-glow"]
+            d5 = dots["dots"][0] if dots["dots"] else {}
+            ops = [f["o"] for f in gl]
+            check("under Reduce Motion nothing rises: the dot glows a moment, a halo of its own colour round it fading in"
+                  " and out where it sits, 0px moved, and no heart",
+                  gl and not [f for f in fs if f["c"] == "lk-rise"] and spread(gl, "x") < 0.01 and spread(gl, "y") < 0.01
+                  and abs(gl[0]["x"] - d5.get("cx", -9)) < 0.6 and abs(gl[0]["y"] - d5.get("cy", -9)) < 0.6
+                  and faded(ops) >= 8 and 0.2 < max(ops) <= 0.4 and gl[0]["bg"] == d5.get("bg"),
+                  json.dumps({"frames": len(gl), "moved": [spread(gl, "x"), spread(gl, "y")] if gl else None,
+                              "most": max(ops) if ops else None, "bg": gl and gl[0]["bg"], "dot": d5.get("bg")}))
+            # NO BURST ON A SCRUB: a drag across every dot and back while it
+            # plays, then on from where it was let go.
+            ctx, pg = browser_as(b, wim)
+            go(pg, f"/social/p/{p15}", wait=0)
+            pg.wait_for_function(PLAYER_LOADED, timeout=15000)
+            pg.evaluate("() => { const p = SkriblInline.mount(document.querySelector('.post-page > .post-art'))[0];"
+                        " p.seek(500); p.play(); }")
+            pg.locator(sel + " .skribl-inline-line").scroll_into_view_if_needed()
+            pg.wait_for_timeout(200)
+            sb = pg.evaluate("(s) => { const r = document.querySelector(s + ' .skribl-inline-scrub').getBoundingClientRect();"
+                             " return [r.left, r.top + r.height / 2, r.width]; }", sel)
+            dots = pg.evaluate(DOTS, sel)
+            pg.evaluate(RISE, [sel, 4200])
+            t_drag = pg.evaluate("() => performance.now()")
+            pg.mouse.move(sb[0] + 2, sb[1])
+            pg.mouse.down()
+            for k in range(36):
+                f = k / 35 if k < 24 else 1 - (k - 23) / 12 * 0.55
+                pg.mouse.move(sb[0] + 2 + (sb[2] - 4) * f, sb[1])
+                pg.wait_for_timeout(16)
+            pg.mouse.up()
+            t_up = pg.evaluate("() => performance.now()")
+            pg.wait_for_timeout(3300)
+            fs = pg.evaluate("() => window.__rf")
+            pg.evaluate("() => SkriblInline.mount(document.querySelector('.post-page > .post-art'))[0].pause()")
+            close_ctx(ctx, pg)
+            starts = {}
+            for f in fs:
+                if f["c"] == "lk-rise" and f["k"] not in starts:
+                    starts[f["k"]] = f
+            during = [s for s in starts.values() if s["T"] <= t_up + 20]
+            later = [s for s in starts.values() if s["T"] > t_up + 20]
+            d9 = next((d for d in dots["dots"] if abs(d["x"] - 9000 / dots["play"] * dots["w"]) < 1), None)
+            check("no burst on a scrub: a finger dragged across every dot and back while it plays sends up no heart;"
+                  " let go, it plays on from there, and the next dot it reaches sends one",
+                  not during and len(later) == 1 and d9 and abs(later[0]["x"] - d9["cx"]) < 1.5,
+                  json.dumps({"during": len(during), "after": [round(s["x"], 1) for s in later], "next": d9 and d9["cx"]}))
+            # CALM AT 16x: a busy drawing, forty likes over thirty seconds (the
+            # likes kept straight into the site's rows, by people kept the same
+            # way: what the line shows is under test, not the liking).
+            pz = make_post(via, "Section 15, Via's busy one", payload=drawing(n=750, step=40, seed=7))
+            pid = db("select id, person_id from social_posts where public_id = ?", (pz,))[0]
+            for i in range(40):
+                h = f"bz{i:02d}"
+                db_write("insert into social_people (public_id, handle, handle_key, display_name, user_handle, is_admin,"
+                         " session_gen, age_confirmed_at, created_at) values (?, ?, ?, ?, ?, 0, 1, datetime('now'),"
+                         " datetime('now'))", ("site:" + h, h, h, "Busy " + h, secrets.token_bytes(32)))
+                at = 400 + i * 730 + (i % 5) * 37
+                db_write("insert into social_likes (post_id, owner_id, person_id, at_ms, created_at) values (?, ?,"
+                         " (select id from social_people where handle_key = ?), ?, datetime('now'))", (pid[0], pid[1], h, at))
+            ctx, pg = browser_as(b, wim)
+            go(pg, f"/social/p/{pz}", wait=0)
+            pg.wait_for_function(PLAYER_LOADED, timeout=15000)
+            pg.evaluate("() => SkriblInline.mount(document.querySelector('.post-page > .post-art'))[0].pause()")
+            pg.locator(sel + " .skribl-inline-line").scroll_into_view_if_needed()
+            pg.wait_for_timeout(300)
+            busy = pg.evaluate(DOTS, sel)
+            pg.evaluate(RISE, [sel, 3600])
+            pg.evaluate("() => { window.__mk = []; document.addEventListener('skribl:mark', (e) => {"
+                        " const r = e.target.getBoundingClientRect(); window.__mk.push([performance.now(), r.left + r.width / 2]); });"
+                        " const p = SkriblInline.mount(document.querySelector('.post-page > .post-art'))[0];"
+                        " p.setLoop(true); p.seek(0); p.setRate(16); p.play(); }")
+            pg.wait_for_timeout(3700)
+            fs = pg.evaluate("() => window.__rf")
+            mk = pg.evaluate("() => window.__mk")
+            pg.evaluate("() => SkriblInline.mount(document.querySelector('.post-page > .post-art'))[0].pause()")
+            close_ctx(ctx, pg)
+            rs = {}
+            for f in fs:
+                if f["c"] == "lk-rise":
+                    rs.setdefault(f["k"], []).append(f)
+            born = sorted(v[0]["T"] for v in rs.values())
+            gaps = [q - p for p, q in zip(born, born[1:])]
+            air = max((len({f["k"] for f in fs if f["c"] == "lk-rise" and f["T"] == T}) for T in {f["T"] for f in fs}), default=0)
+            fresh = all(any(abs(v[0]["x"] - m[1]) < 1.5 and 0 <= v[0]["T"] - m[0] < 120 for m in mk)
+                        for v in rs.values())
+            check("calm at 16x: on a busy drawing (40 likes, %d dots) the playhead reaches dots by the dozen, and at"
+                  " most three hearts are in the air, each a third of a second or more after the one before, each"
+                  " rising from a dot just reached (never late)" % len(busy["dots"]),
+                  len(busy["dots"]) >= 30 and len(mk) >= 40 and len(rs) >= 6 and air <= 3 and min(gaps or [0]) >= 320
+                  and fresh,
+                  json.dumps({"dots": len(busy["dots"]), "reached": len(mk), "hearts": len(rs), "most in the air": air,
+                              "closest": round(min(gaps or [0])), "fresh": fresh}))
+            # NOTHING ELSE MOVES on Home's card while a heart rises from its line,
+            # and a heart takes no tap: one on the drawing where it is pauses it.
+            ctx, pg = browser_as(b, wim)
+            go(pg, "/social/")
+            c15 = card(p15)
+            pg.locator(c15 + " .skribl-inline-line").scroll_into_view_if_needed()
+            pg.wait_for_timeout(300)
+            pg.evaluate("(s) => { const p = SkriblInline.mount(document.querySelector(s))[0]; p.play(); }", c15)
+            pg.wait_for_function("(s) => SkriblInline.mount(document.querySelector(s))[0].state().loaded", arg=c15,
+                                 timeout=15000)
+            pg.evaluate("(s) => { const p = SkriblInline.mount(document.querySelector(s))[0]; p.pause(); }", c15)
+            pg.wait_for_timeout(200)
+            pg.evaluate(CARD_FRAMES, [c15, 1300])
+            pg.evaluate(RISE, [c15, 1300])
+            pg.evaluate("(s) => { const p = SkriblInline.mount(document.querySelector(s))[0]; p.seek(4700); p.play(); }", c15)
+            pg.wait_for_timeout(700)
+            mid = pg.evaluate("(s) => { const h = document.querySelector(s + ' .lk-rise'); if (!h) return null;"
+                              " const r = h.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height / 2,"
+                              " at = document.elementFromPoint(x, y);"
+                              " return { x, y, heart: !!at && !!at.closest('.lk-rise'), box: !!at && !!at.closest('.skribl-inline') }; }", c15)
+            pg.wait_for_timeout(700)
+            cf = pg.evaluate("() => window.__cf")
+            fs = pg.evaluate("() => window.__rf")
+            # A finger on a heart while it rises (a third of a second into it):
+            # the drawing under it takes the tap and pauses.
+            pg.evaluate("(s) => { const p = SkriblInline.mount(document.querySelector(s))[0]; p.seek(4700); p.play(); }", c15)
+            pg.wait_for_timeout(650)
+            here = pg.evaluate("(s) => { const h = document.querySelector(s + ' .lk-rise'); if (!h) return null;"
+                               " const r = h.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; }", c15)
+            if here:
+                pg.touchscreen.tap(here[0], here[1])
+                pg.wait_for_timeout(300)
+            paused = pg.evaluate("(s) => SkriblInline.mount(document.querySelector(s))[0].playhead()", c15)
+            nav = urllib.parse.urlparse(pg.url).path
+            close_ctx(ctx, pg)
+            parts = sorted(cf[0]["boxes"]) if cf else []
+            moved = {k: max(abs(f["boxes"][k][i] - cf[0]["boxes"][k][i]) for f in cf for i in range(4)) for k in parts}
+            check("nothing else on the card moves while a heart rises from its line: its head, words, drawing, heart,"
+                  " scrubber, line and foot keep their boxes, frame by frame",
+                  cf and len(cf) > 20 and {f["k"] for f in fs if f["c"] == "lk-rise"} and parts
+                  and all(v < 0.01 for v in moved.values()),
+                  json.dumps({"frames": len(cf or []), "hearts": len({f["k"] for f in fs if f["c"] == "lk-rise"}), "moved": moved}))
+            check("a heart takes no tap: one on the drawing where a heart is rising lands on the drawing, which pauses",
+                  mid and not mid["heart"] and mid["box"] and here and paused and not paused["playing"] and nav == "/social/",
+                  json.dumps({"at": mid, "tapped": here, "then": paused, "page": nav}))
+        except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
+            stopped(15, exc)
 
     # ------------------------------------------------------------------ 13
     if part(13, "no page errors, no console errors and no CSP violations"):

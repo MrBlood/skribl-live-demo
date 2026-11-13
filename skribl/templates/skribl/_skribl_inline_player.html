@@ -162,7 +162,7 @@
   <div class="skribl-inline-err" hidden></div>
 {%- endmacro %}
 
-{% macro skribl_inline(public_id, alt='', bp='skribl', canvas_w=None, canvas_h=None, progress=true, title=None, line=true, line_info=None, lead=None) -%}
+{% macro skribl_inline(public_id, alt='', bp='skribl', canvas_w=None, canvas_h=None, progress=true, title=None, line=true, line_info=None, lead=None, marks=None) -%}
 {# is-muted and is-silent are the pre-script truth: sound is off by default, and
    nothing yet knows whether this Skribl has any. inlineplayer.js clears
    is-silent when the payload turns out to carry a loop.
@@ -198,7 +198,18 @@
    from the first paint; it shows when the line does, and steps away with it
    while a drawing can't be shown. line=false has no line, so no lead. What
    it does is the host's: Skribl never knows. A click on the line stops at
-   the line, so listen on the control itself (or while capturing). #}
+   the line, so listen on the control itself (or while capturing).
+
+   `marks` (after v330: the Skribl site's likes, each where it was given) is
+   a host's MOMENTS ON THE DRAWING'S OWN CLOCK, a list of {"ms": ..., "n": ...}
+   (n, how many a moment stands for, 1 if left out), the same moments
+   player.playhead() answers. The player draws a small dot over the scrubber
+   for each, where its line puts that moment, one dot standing for those that
+   would overlap, and tells the host when the playhead reaches a dot in
+   normal play (a `skribl:mark` event from the dot). Written onto the box, so
+   the dots are there from the line's first paint; player.marks(list) changes
+   them later. line=false has no line, so no marks. What a mark means is the
+   host's: Skribl never knows. #}
 {%- set shaped = line and canvas_w and canvas_h %}
 <div class="skribl-inline is-muted is-silent{% if line %} has-line{% endif %}{% if shaped %} is-shaped{% endif %}"
      data-skribl-inline
@@ -212,6 +223,9 @@
 {%- endif %}
 {%- if line and line_info %}
      data-skribl-line='{{ line_info|tojson }}'
+{%- endif %}
+{%- if line and marks %}
+     data-skribl-marks='{{ marks|tojson }}'
 {%- endif %}
      data-skribl-api="{{ url_for(bp ~ '.create_skribl') }}"
      role="button"

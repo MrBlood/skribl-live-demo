@@ -317,6 +317,50 @@ const p = SkriblInline.mount(post.querySelector('.post-art'))[0];
 const h = p && p.playhead();          // { ms: 6420, playing: true }
 ```
 
+**Marks on the line** (after v330: the Skribl site's likes, each a dot
+where it was given). Pass `marks=` a list of moments on the drawing's own
+clock, the same `ms` that `player.playhead()` answers, each `{"ms": 6420,
+"n": 1}` (`n`, how many that moment stands for, 1 if left out), and the
+player draws a small dot (5px) over the scrubber for each, where its line
+puts that moment: through the playhead's own mapping, so a replay whose long
+pauses are squeezed lines up as its playhead does, and a Flip's pages each
+take their share of the line, whatever their length. Dots that would overlap
+on this line are one, at their middle, standing for them all: it carries
+`data-n` 1, 2, or 3 for three or more, and is never bigger and never a
+number; a wider line keeps apart what a narrow one joins. Colour them with
+your tokens: `--mark`, and `--mark-2` and `--mark-3` for a dot standing for
+two, or for three or more, each falling back to `--mark` and that to
+`--accent`. They take no taps (the scrubber's reach is under them) and move
+nothing on the line. A Pad drawing's are there from the line's first paint
+(the listing's `line` says how long it plays); a Flip's wait for its pages,
+which come with the drawing on the first tap, and fade in.
+
+```jinja
+{{ skribl_inline(post.skribl_id, canvas_w=post.canvas_w, canvas_h=post.canvas_h,
+                 line_info=post.line, marks=[{"ms": 5000}, {"ms": 12000, "n": 2}]) }}
+```
+
+`player.marks(list)` changes them later (a dot that comes fades in, one that
+goes fades out, one whose count changes keeps its place) and answers the
+list it holds. As the playhead reaches a dot in normal play the player sends
+a `skribl:mark` event from the dot, bubbling, its `detail` the dot's `{ ms, n }`
+(the middle of the moments it stands for, and how many): once a pass, again
+when a loop comes round, and never for a scrub, a seek, a jump, or a frame
+that comes long after the last (a page put away and back). The dot is the
+event's target, so where it is on the page is yours to read:
+
+```js
+document.addEventListener('skribl:mark', (e) => {
+  const r = e.target.getBoundingClientRect();   // the dot
+  cheer(r.left + r.width / 2, r.top + r.height / 2, e.detail.n);
+});
+```
+
+What a mark means, and what happens when one is reached, are yours: Skribl
+never knows. With `line=False` there is no line, so no marks. A Pad drawing
+and a Flip carry them alike. `verify_inline.py` draws, presses and plays
+them; `verify_seam.py` holds the source.
+
 One Skribl plays at a time, page-wide. Scrolling a playing post out of view
 settles it. A drawing that can't be shown says so, in your page's colours and
 type, where the drawing would be: one that has been deleted, or is no longer

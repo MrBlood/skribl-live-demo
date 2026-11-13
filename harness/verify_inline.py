@@ -1815,7 +1815,32 @@ with sync_playwright() as sp:
     #   line's own (inherited), its selector names no element (`>*`), and the
     #   slot needs no display of its own: 570 B down to 448 with the focus
     #   ring added. 78,941 B measured.
-    EMBED_RATCHET = 78_944
+    # RAISED (the owner's D on the likes mock, Nov 13, "Just put a smaller dot
+    #   (same color as blooby blush) wherever someone likes it. If it doubles
+    #   someone it gets redder.", then "All yes, b": the site's dots on the
+    #   line and the hearts that rise from them), for one named cost: +2,311 B
+    #   -- the line's MARKS, a GENERAL seam (docs/INTEGRATION.md, "Marks on the
+    #   line"): a host's moments read from the box or given by marks(list)
+    #   (+266), a 5px dot each where the line puts the moment by the
+    #   playhead's own mapping, before the drawing comes as after it, dots
+    #   that would overlap made one standing for all, each dot kept while it
+    #   stands for the same moment so a change is one dot's, one that goes
+    #   fading out (+1,152), and skribl:mark when the playhead reaches one in
+    #   normal play, never on a scrub, a seek or a jump (+424), all
+    #   inlineplayer.js (+1,842); inlineplayer.css the layer over the
+    #   scrubber that takes no taps, the 5px dot in the host's --mark tokens
+    #   by how many it stands for, its fade in (+469). Skribl never knows what
+    #   a mark is; the site draws the hearts (likes.js). WHICH CALLER PAYS:
+    #   every page that shows a post, for dots only a host that gives marks
+    #   shows; a module of its own would be a tenth asset fetched by every
+    #   page the site shows a post on, to save two kilobytes on a host's that
+    #   gives none. Spent first: the merge one pass left to right (a joined
+    #   dot never moves left, so it never needs a second), a dot's fade in by
+    #   @starting-style with no script, its colours by one custom property
+    #   each level falls back to, the playhead's frac() made the mapping both
+    #   use rather than a second copy, and no aria-hidden on a layer of empty
+    #   elements: 2,807 B down to 2,311. 81,252 B measured.
+    EMBED_RATCHET = 81_255
     # THE RATCHET MEASURES DISPLAY, NOT COMPOSE, and the two are separate costs
     # paid by separate pages. Excluded here and measured on its own below:
     #   feed.js          the PREVIEW PAGE's own script (fetch the listing, clone
@@ -2656,6 +2681,297 @@ with sync_playwright() as sp:
           _poster.get("withUnder") == 1 and _poster.get("without") == 0, json.dumps(_poster))
 
     b.close()
+
+# ---------------------------------------------------------------------------
+# MARKS ON THE LINE (docs/INTEGRATION.md, "Marks on the line"; after v330, the
+# Skribl site's likes, each a dot where it was given, the owner's D).
+# skribl_inline(..., marks=[{ms, n}]) and player.marks(list) give the player a
+# host's moments on the drawing's own clock; it draws a 5px dot over the
+# scrubber for each, WHERE ITS LINE PUTS THAT MOMENT (the playhead's own
+# mapping: a replay's clock over its length, a Flip's pages in equal
+# segments), one dot standing for those that would overlap (data-n 1, 2, or 3
+# for three or more), and says when the playhead reaches a dot in normal play
+# (skribl:mark, from the dot). Rendered by the macro in-process, as a host's
+# view renders it, put into the feed and mounted as a host mounts a post it
+# adds, on a touch phone. verify_seam.py holds the source; this is what it
+# does. Its own browser, so a trimmed copy runs it alone.
+print("\nTHE POST — marks on the line (marks=, player.marks(), skribl:mark)")
+sys.path.insert(0, str(ROOT))
+from flask import render_template_string as _rts_m      # noqa: E402
+from app import app as _app_m                           # noqa: E402
+
+
+def _mk_post(body):
+    _rq = urllib.request.Request(BASE + "/api/skribls", data=json.dumps(body).encode(),
+                                 headers={"Content-Type": "application/json"})
+    with urllib.request.urlopen(_rq, timeout=20) as _r:
+        return json.loads(_r.read().decode())["id"]
+
+
+# A PIECE WITH A LONG PAUSE, SQUEEZED: forty points 30ms apart, five seconds
+# away from the page, forty more. Played Tight (the payload names no
+# pauseMode), the pause passes in 50ms: 2.39s of replay for 7.34s of drawing,
+# so a moment placed by the artist's clock would sit 30% further along the
+# line than the playhead ever is at it.
+_mpts = [{"x": 80 + (i % 40) * 16, "y": 120 + (i // 40) * 300 + (i % 5) * 20, "color": "#222222", "size": 8,
+          "t": i * 30 + (5000 if i >= 40 else 0), "erase": False, "start": i in (0, 40)} for i in range(80)]
+_m_pad = _mk_post({"title": "Marks fixture", "version": 2, "schemaVersion": 2, "visibility": "public",
+                   "canvasSize": {"cssWidth": 800, "cssHeight": 600},
+                   "frames": [{"strokes": _mpts, "strokeGroups": [40, 40]}]})
+# A Flip whose pages last 333, 667 and 333ms (holds 2, 4, 2 at 6fps): its line
+# gives each page a third, so its moments are not where a clock over its
+# length would put them.
+_fpts = [{"x": 120 + i * 40, "y": 140, "color": "#ffffff", "size": 14, "t": i * 4, "erase": False,
+          "start": i == 0} for i in range(8)]
+_m_flip = _mk_post({"title": "Marks flip fixture", "visibility": "public", "version": 2, "schemaVersion": 2,
+                    "playbackMode": "flip", "fps": 6, "canvasSize": {"cssWidth": 816, "cssHeight": 612},
+                    "frames": [{"strokes": [dict(q, y=q["y"] + dy) for q in _fpts], "strokeGroups": [8], "hold": h}
+                               for dy, h in ((0, 2), (180, 4), (360, 2))]})
+_mitems = json.loads(urllib.request.urlopen(BASE + "/api/skribls?limit=100", timeout=20).read())
+_mitems = {i["id"]: i for i in (_mitems.get("items", _mitems) if isinstance(_mitems, dict) else _mitems)}
+_MT = ("{% from 'skribl/_skribl_inline_player.html' import skribl_inline %}"
+       "{{ skribl_inline(i, canvas_w=w, canvas_h=h, line_info=li, marks=marks, line=line) }}")
+
+
+def _mrender(i, marks=None, line=True):
+    _it = _mitems.get(i) or {}
+    with _app_m.test_request_context():
+        return _rts_m(_MT, i=i, w=_it.get("canvas_w"), h=_it.get("canvas_h"), li=_it.get("line"), marks=marks,
+                      line=line)
+
+
+_PLAY = (_mitems.get(_m_pad) or {}).get("line", {}).get("play") or 0
+_DRAWN = (_mitems.get(_m_pad) or {}).get("line", {}).get("drawn") or 0
+_PMARKS = [{"ms": 300, "n": 1}, {"ms": 1300}, {"ms": 1900, "n": 2}]
+_FMARKS = [{"ms": 200}, {"ms": 500}, {"ms": 1200, "n": 3}]
+_mw, _mwo = _mrender(_m_pad, _PMARKS), _mrender(_m_pad)
+_mfl = _mrender(_m_flip, _FMARKS)
+_attr = "data-skribl-marks='" + json.dumps(_PMARKS) + "'"
+check("the macro writes a host's marks onto the box as given, only with a line: with none, or no line, nothing,"
+      " and otherwise the same markup",
+      _attr in _mw and "data-skribl-marks" not in _mwo and "data-skribl-marks" not in _mrender(_m_pad, _PMARKS, line=False)
+      and re.sub(r"\s+", "", _mw.replace(_attr, "")) == re.sub(r"\s+", "", _mwo),
+      _mw[_mw.find("data-skribl-marks"):][:120])
+check("the fixture's long pause is squeezed: its replay much shorter than its drawing",
+      _PLAY and _DRAWN and _DRAWN - _PLAY > 4000, f"play {_PLAY}, drawn {_DRAWN}")
+
+# Where every dot and the playhead are, in the scrubber's own pixels, read
+# where they are painted, left to right (a dot that splits off on a resize is
+# a new element, last in the layer); and whether a press at a dot lands on
+# the scrubber.
+_DOTS = """(id) => { const a = document.getElementById(id), bar = a.querySelector('.skribl-inline-scrub');
+  const br = bar.getBoundingClientRect(), head = bar.querySelector('.rl-head');
+  return { w: br.width, head: head ? head.getBoundingClientRect().left + 1 - br.left : null,
+    dots: [...a.querySelectorAll('.skribl-inline-marks i')].map(e => { const r = e.getBoundingClientRect(),
+      cx = r.left + r.width / 2, cy = r.top + r.height / 2, at = document.elementFromPoint(cx, cy);
+      return { x: Math.round((cx - br.left) * 100) / 100, y: Math.round((br.top - cy) * 100) / 100, w: r.width, h: r.height,
+               n: e.dataset.n, op: +getComputedStyle(e).opacity, taps: !!at && (at === e || e.contains(at)),
+               bar: at === bar }; }).sort((p, q) => p.x - q.x) }; }"""
+
+_mp = sync_playwright().start()
+try:
+    _mb = _mp.chromium.launch(args=["--autoplay-policy=no-user-gesture-required"])
+    _mctx = _mb.new_context(viewport={"width": 402, "height": 874}, is_mobile=True, has_touch=True)
+    _mg = _mctx.new_page()
+    _merrs, _mreqs = [], []
+    _mg.on("pageerror", lambda e: _merrs.append(str(e)))
+    _mg.on("request", lambda r: _mreqs.append(r.url) if re.search(r"/api/skribls/[A-Za-z0-9_-]+$", r.url) else None)
+    browsing.goto(_mg, BASE, "/feed")
+    _mg.wait_for_timeout(600)
+    _mg.evaluate("""(posts) => {
+        const feed = document.querySelector('.skribl-inline').parentElement.parentElement;
+        for (const [key, html] of posts.reverse()) {
+          const a = document.createElement('article'); a.id = key; a.style.padding = '0 16px'; a.innerHTML = html;
+          feed.prepend(a); SkriblInline.mount(a); }
+        window.__mk = []; document.addEventListener('skribl:mark', (e) => { const a = e.target.closest('article');
+          window.__mk.push({ id: a && a.id, ms: e.detail.ms, n: e.detail.n, t: performance.now(),
+                             at: SkriblInline.mount(a)[0].playhead().ms, dot: e.target.tagName }); });
+      }""", [["mkPad", _mw], ["mkBare", _mwo], ["mkFlip", _mfl]])
+    _mg.wait_for_timeout(500)
+    _mg.evaluate("() => document.getElementById('mkPad').querySelector('.skribl-inline-line').scrollIntoView({ block: 'center' })")
+    _mg.wait_for_timeout(300)
+    _rest = _mg.evaluate(_DOTS, "mkPad")
+    _want = [round(m["ms"] / _PLAY * _rest["w"], 2) for m in _PMARKS]
+    check("at rest, before anybody taps, each mark is a 5px dot where the line puts its moment (its listing's"
+          " length): in the middle of the 17px between the drawing and the scrubber, nothing fetched",
+          len(_rest["dots"]) == 3 and all(abs(d["x"] - x) < 0.6 for d, x in zip(_rest["dots"], _want))
+          and all(d["w"] == 5 and d["h"] == 5 and abs(d["y"] - 8.5) < 0.6 for d in _rest["dots"])
+          and [d["n"] for d in _rest["dots"]] == ["1", "1", "2"] and not _mreqs,
+          json.dumps({"dots": _rest["dots"], "want": _want, "fetched": len(_mreqs)}))
+    check("a dot takes no tap: a press where it is painted lands on the scrubber under it",
+          _rest["dots"] and all(d["bar"] and not d["taps"] for d in _rest["dots"]), json.dumps(_rest["dots"]))
+    # The playhead's own place at each moment, once the drawing is here.
+    _mg.evaluate("(id) => { const p = SkriblInline.mount(document.getElementById(id))[0]; p.play(); }", "mkPad")
+    _mg.wait_for_function("(id) => SkriblInline.mount(document.getElementById(id))[0].state().loaded", arg="mkPad",
+                          timeout=15000)
+    _heads = []
+    for _m in _PMARKS:
+        _mg.evaluate("([id, ms]) => SkriblInline.mount(document.getElementById(id))[0].seek(ms)", ["mkPad", _m["ms"]])
+        _mg.wait_for_timeout(80)
+        _heads.append(_mg.evaluate(_DOTS, "mkPad")["head"])
+    _now = _mg.evaluate(_DOTS, "mkPad")
+    _artist = [round(min(1, (m["ms"] + (5000 - 50 if m["ms"] > 1170 else 0)) / _DRAWN) * _now["w"], 2) for m in _PMARKS]
+    check("...and once it is here, each dot is where the playhead is at that moment: the pause squeezed, its dots"
+          " line up with the playhead, never where the artist's clock would put them (30% on)",
+          len(_now["dots"]) == 3 and all(h is not None and abs(d["x"] - h) < 0.6 for d, h in zip(_now["dots"], _heads))
+          and all(abs(d["x"] - x) < 0.6 for d, x in zip(_now["dots"], [d["x"] for d in _rest["dots"]]))
+          and abs(_now["dots"][1]["x"] - _artist[1]) > 40,
+          json.dumps({"dots": [d["x"] for d in _now["dots"]], "heads": _heads, "artist": _artist}))
+    # REACHED, IN NORMAL PLAY: from the start at 1x, each dot once, in order,
+    # as the playhead reaches it (the clock at it or a frame past it).
+    _mg.evaluate("(id) => { window.__mk = []; const p = SkriblInline.mount(document.getElementById(id))[0];"
+                 " p.setLoop(false); p.seek(0); p.setRate(1); p.play(); }", "mkPad")
+    _mg.wait_for_timeout(int(_PLAY) + 500)
+    _ev = [e for e in _mg.evaluate("() => window.__mk") if e["id"] == "mkPad"]
+    check("playing, it tells the host as the playhead reaches each dot: once each, in order, from the dot, with its"
+          " moment and how many it stands for, the clock at it or within a frame past it",
+          [(e["ms"], e["n"]) for e in _ev] == [(300, 1), (1300, 1), (1900, 2)] and all(e["dot"] == "I" for e in _ev)
+          and all(0 <= e["at"] - e["ms"] <= 60 for e in _ev),
+          json.dumps(_ev))
+    # A LOOP COMING ROUND: from just before the end at 4x, round to its start:
+    # the first dots again.
+    _mg.evaluate("(id) => { window.__mk = []; const p = SkriblInline.mount(document.getElementById(id))[0];"
+                 " p.setLoop(true); p.seek(2200); p.setRate(4); p.play(); }", "mkPad")
+    _mg.wait_for_timeout(600)
+    _mg.evaluate("(id) => SkriblInline.mount(document.getElementById(id))[0].pause()", "mkPad")
+    _loop = [e["ms"] for e in _mg.evaluate("() => window.__mk") if e["id"] == "mkPad"]
+    check("a loop coming round goes on from its start: the dots it reaches again tell again (once a pass)",
+          _loop[:2] == [300, 1300], json.dumps(_loop))
+    # NO BURST: a drag across every dot while it plays, a seek past them all,
+    # and a frame that comes after a long gap (the page put away and back).
+    _mg.evaluate("(id) => { window.__mk = []; const p = SkriblInline.mount(document.getElementById(id))[0];"
+                 " p.setLoop(true); p.setRate(1); p.seek(0); p.play(); }", "mkPad")
+    _bb = _mg.evaluate("""(id) => { const r = document.getElementById(id).querySelector('.skribl-inline-scrub').getBoundingClientRect();
+        return [r.left, r.top + r.height / 2, r.width]; }""", "mkPad")
+    _mg.mouse.move(_bb[0] + 1, _bb[1])
+    _mg.mouse.down()
+    for _k in range(24):
+        _mg.mouse.move(_bb[0] + 1 + (_bb[2] - 2) * _k / 23, _bb[1])
+        _mg.wait_for_timeout(16)
+    _drag = [e["ms"] for e in _mg.evaluate("() => window.__mk") if e["id"] == "mkPad"]
+    _mg.mouse.up()
+    _mg.wait_for_timeout(200)
+    _mg.evaluate("(id) => { window.__mk = []; const p = SkriblInline.mount(document.getElementById(id))[0];"
+                 " p.seek(100); p.seek(2300); p.play(); }", "mkPad")
+    _mg.wait_for_timeout(60)
+    _seek = [e["ms"] for e in _mg.evaluate("() => window.__mk") if e["id"] == "mkPad"]
+    _mg.evaluate("""(id) => { window.__mk = []; const p = SkriblInline.mount(document.getElementById(id))[0];
+        p.pause(); p.setLoop(false); p.seek(100); const raf = window.requestAnimationFrame;
+        p.play(); window.requestAnimationFrame = (f) => { window.__held = f; return 0; };
+        setTimeout(() => { window.requestAnimationFrame = raf; raf(window.__held);
+          setTimeout(() => p.pause(), 120); }, 1500); }""", "mkPad")
+    _mg.wait_for_timeout(1900)
+    _gap = [e["ms"] for e in _mg.evaluate("() => window.__mk") if e["id"] == "mkPad"]
+    _gst = _mg.evaluate("(id) => SkriblInline.mount(document.getElementById(id))[0].playhead()", "mkPad")
+    check("a scrub, a seek or a jump tells nothing: a drag across every dot while it plays, a seek past them all, and"
+          " a frame that comes 1.5 seconds after the last (the clock passing two dots meanwhile)",
+          _drag == [] and _seek == [] and _gap == [] and 1300 < _gst["ms"] < 1900,
+          json.dumps({"drag": _drag, "seek": _seek, "gap": _gap, "then": _gst}))
+    _mg.evaluate("(id) => SkriblInline.mount(document.getElementById(id))[0].pause()", "mkPad")
+    # MERGING, by the line's own width: dots closer than their size are one,
+    # at their middle, standing for all of them. Marks set for this line's
+    # pixels: a pair 4px apart, three within 4px, five within 4px, a chain 4px
+    # apart (the first two join; the third is 6px from their middle), and one
+    # alone. A line a third wider or more keeps the pair apart.
+    _w = _mg.evaluate(_DOTS, "mkPad")["w"]
+    _px = lambda x: x / _w * _PLAY  # noqa: E731
+    _MM = ([{"ms": _px(20)}, {"ms": _px(24)}] + [{"ms": _px(60 + k * 2)} for k in range(3)]
+           + [{"ms": _px(100 + k)} for k in range(5)] + [{"ms": _px(140)}, {"ms": _px(144)}, {"ms": _px(148)}]
+           + [{"ms": _px(200)}])
+    _mg.evaluate("([id, m]) => SkriblInline.mount(document.getElementById(id))[0].marks(m)", ["mkPad", _MM])
+    _mg.wait_for_timeout(400)
+    _mm = _mg.evaluate(_DOTS, "mkPad")["dots"]
+    _got = [(round(d["x"], 1), d["n"]) for d in _mm]
+    check("dots that would overlap are one, at their middle, standing for them all: two a step (data-n 2), three or"
+          " more the next (3, never higher); never bigger than 5px, never a number; a chain joins only what"
+          " overlaps",
+          _got == [(22.0, "2"), (62.0, "3"), (102.0, "3"), (142.0, "2"), (148.0, "1"), (200.0, "1")]
+          and all(d["w"] == 5 and d["h"] == 5 for d in _mm)
+          and _mg.evaluate("(id) => [...document.getElementById(id).querySelectorAll('.skribl-inline-marks i')]"
+                           ".every(e => !e.textContent && !e.children.length)", "mkPad"),
+          json.dumps(_got))
+    _mg.set_viewport_size({"width": 1200, "height": 874})
+    _mg.wait_for_timeout(500)
+    _wide = _mg.evaluate(_DOTS, "mkPad")
+    _mg.set_viewport_size({"width": 402, "height": 874})
+    _mg.wait_for_timeout(400)
+    check("...by the line's own width: a wider line keeps apart the pair a phone's line doubles",
+          _wide["w"] / _w > 1.3 and [d["n"] for d in _wide["dots"]][:2] == ["1", "1"],
+          json.dumps({"w": [_w, _wide["w"]], "n": [d["n"] for d in _wide["dots"]]}))
+    # marks(list) changes them: one added fades in where its moment is, one
+    # taken away fades out, and a dot whose count changes keeps its element
+    # and its place, its colour gliding.
+    _mg.evaluate("([id, m]) => SkriblInline.mount(document.getElementById(id))[0].marks(m)", ["mkPad", _PMARKS])
+    _mg.wait_for_timeout(400)
+    _ch = _mg.evaluate("""async (id) => { const a = document.getElementById(id), p = SkriblInline.mount(a)[0];
+        const els = () => [...a.querySelectorAll('.skribl-inline-marks i')];
+        const before = els(), second = before[1];
+        p.marks([{ ms: 300 }, { ms: 1300, n: 2 }, { ms: 1900, n: 2 }, { ms: 900 }]);
+        const op = [], gone = [];
+        for (let k = 0; k < 14; k++) { await new Promise(r => requestAnimationFrame(r));
+          const add = els().find(e => !before.includes(e)); op.push(add ? +getComputedStyle(add).opacity : null); }
+        const after = els(), kept = after.includes(second), bg = second.dataset.n;
+        p.marks([{ ms: 300 }, { ms: 1300, n: 2 }, { ms: 900 }]);
+        const last = before[2];
+        for (let k = 0; k < 20; k++) { await new Promise(r => requestAnimationFrame(r));
+          gone.push(last.isConnected ? +getComputedStyle(last).opacity : -1); }
+        return { op, kept, n: bg, left: [second.style.left], fade: gone, returned: p.marks(), mine: p.marks() !== p.marks() }; }""",
+                       "mkPad")
+    check("player.marks(list) changes them: a moment added is a dot that fades in where its moment is; one whose"
+          " count changes keeps its dot (the same element, in its place); one taken away fades out and is gone; it"
+          " answers the list it holds (a copy)",
+          _ch["op"] and _ch["op"][0] is not None and _ch["op"][0] < 0.5 and _ch["op"][-1] == 1 and len([o for o in _ch["op"] if o and 0.03 < o < 0.97]) >= 3
+          and _ch["kept"] and _ch["n"] == "2" and len([o for o in _ch["fade"] if 0.03 < o < 0.97]) >= 3
+          and _ch["fade"][-1] == -1 and _ch["returned"] == [{"ms": 300}, {"ms": 1300, "n": 2}, {"ms": 900}] and _ch["mine"],
+          json.dumps(_ch))
+    # NOTHING ELSE MOVES: the same post with marks and without.
+    _LINE = """(id) => { const a = document.getElementById(id), R = e => { const r = e.getBoundingClientRect();
+        return [Math.round(r.left * 100) / 100, Math.round(r.top * 100) / 100, Math.round(r.width * 100) / 100, Math.round(r.height * 100) / 100]; };
+      const line = a.querySelector('.skribl-inline-line'), box = a.querySelector('.skribl-inline'), t = R(box)[1];
+      return [box, line, line.querySelector('.skribl-inline-scrub'), line.querySelector('.skribl-inline-controls'),
+              line.querySelector('.skribl-inline-say')].map(e => { const r = R(e); r[1] = Math.round((r[1] - t) * 100) / 100; return r; }); }"""
+    check("nothing else moves: with marks the drawing, the line, the scrubber, mute and loop and the words are where"
+          " they are without",
+          _mg.evaluate(_LINE, "mkPad") == _mg.evaluate(_LINE, "mkBare"),
+          json.dumps([_mg.evaluate(_LINE, "mkPad"), _mg.evaluate(_LINE, "mkBare")]))
+    # A FLIP: none at rest (its pages say where a moment is, and they come
+    # with the drawing); then each where its pages put it, fading in; and its
+    # dots tell as the playhead reaches them, as a drawing's do.
+    _mg.evaluate("() => document.getElementById('mkFlip').querySelector('.skribl-inline-line').scrollIntoView({ block: 'center' })")
+    _mg.wait_for_timeout(300)
+    _f0 = _mg.evaluate(_DOTS, "mkFlip")
+    _mg.evaluate("(id) => { window.__mk = []; const p = SkriblInline.mount(document.getElementById(id))[0];"
+                 " p.setLoop(false); p.play(); }", "mkFlip")
+    _mg.wait_for_function("(id) => SkriblInline.mount(document.getElementById(id))[0].state().loaded", arg="mkFlip",
+                          timeout=15000)
+    _fop = _mg.evaluate("""async (id) => { const a = document.getElementById(id), out = [];
+        for (let k = 0; k < 6; k++) { await new Promise(r => requestAnimationFrame(r));
+          out.push([...a.querySelectorAll('.skribl-inline-marks i')].map(e => +getComputedStyle(e).opacity)); }
+        return out; }""", "mkFlip")
+    _mg.wait_for_timeout(1600)
+    _fev = [(e["ms"], e["n"]) for e in _mg.evaluate("() => window.__mk") if e["id"] == "mkFlip"]
+    _fh = []
+    for _m in _FMARKS:
+        _mg.evaluate("([id, ms]) => SkriblInline.mount(document.getElementById(id))[0].seek(ms)", ["mkFlip", _m["ms"]])
+        _mg.wait_for_timeout(80)
+        _fh.append(_mg.evaluate(_DOTS, "mkFlip")["head"])
+    _f1 = _mg.evaluate(_DOTS, "mkFlip")
+    _flin = [round(m["ms"] / 1333.33 * _f1["w"], 2) for m in _FMARKS]
+    check("a Flip's marks wait for its pages: none at rest; once its drawing comes, each where the playhead is at"
+          " that moment (a page a third of the line, whatever its length), not where its clock's share would be;"
+          " they fade in",
+          _f0["dots"] == [] and len(_f1["dots"]) == 3
+          and all(h is not None and abs(d["x"] - h) < 0.6 for d, h in zip(_f1["dots"], _fh))
+          and abs(_f1["dots"][1]["x"] - _flin[1]) > 8 and _fop and min(_fop[0] or [1]) < 0.9,
+          json.dumps({"rest": _f0["dots"], "dots": [d["x"] for d in _f1["dots"]], "heads": _fh, "linear": _flin,
+                      "fading": _fop[:2]}))
+    check("...and they tell as the playhead reaches them, as a drawing's do",
+          _fev == [(200, 1), (500, 1), (1200, 3)], json.dumps(_fev))
+    check("no page errors with marks on the line", not _merrs, "; ".join(_merrs[:2]))
+    _mctx.close()
+    _mb.close()
+finally:
+    _mp.stop()
 
 # ---------------------------------------------------------------------------
 # THE PLAYER'S INSIDES ARE WRITTEN ONCE.

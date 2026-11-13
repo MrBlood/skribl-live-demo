@@ -22,6 +22,11 @@
                       everyone's, inside the pill, none at zero. Signed out, a
                       tap raises the small sheet that says how (_likes.html,
                       likes.js). Nothing taken down has one.
+                      THE DOTS (likes, part 2): player(c) gives the drawing's
+                      moments, counted by this viewer, to the player as its
+                      line's marks, which it draws (a small dot a like, a
+                      step redder where they double); the hearts that rise
+                      from them are likes.js's. Nothing taken down has any.
     post_sheets()     the ⋯ sheet ("This post": Copy link, Share…, and Report
                       this post, or on your own Delete post), the report
                       sheet (the Gallery's own reasons and words, into
@@ -45,13 +50,20 @@
 
 {% macro player(c) -%}
 {%- set p = c.post %}{% set sk = c.sk %}{% set lead = heart(c) if not c.down else none -%}
-{%- if sk and sk.canvas_w %}{{ skribl_inline(p.skribl_id, canvas_w=sk.canvas_w, canvas_h=sk.canvas_h, line_info=sk.line, bp=skribl_bp, lead=lead) }}
-{%- else %}{{ skribl_inline(p.skribl_id, bp=skribl_bp, lead=lead) }}{% endif %}
+{%- set marks = c.likes.marks if not c.down else none -%}
+{%- if sk and sk.canvas_w %}{{ skribl_inline(p.skribl_id, canvas_w=sk.canvas_w, canvas_h=sk.canvas_h, line_info=sk.line, bp=skribl_bp, lead=lead, marks=marks) }}
+{%- else %}{{ skribl_inline(p.skribl_id, bp=skribl_bp, lead=lead, marks=marks) }}{% endif %}
 {%- endmacro %}
 
+{#  THE DOTS (likes, part 2): the drawing's moments, counted by this viewer,
+    go to the player as its line's marks (Skribl's seam, docs/INTEGRATION.md
+    "Marks on the line"), which draws them; data-like-at is where this
+    viewer's own like landed, so likes.js can move their dot with their
+    heart. Nothing taken down has any. #}
 {% macro heart(c) -%}
 {%- set n = c.likes.n %}{% set mine = c.likes.mine -%}
 <button class="lk-heart{% if mine %} is-liked{% endif %}{% if not n %} is-zero{% endif %}" type="button" data-first="{{ c.who.display_name.split(' ')[0] }}"
+        {%- if mine and c.likes.at is not none %} data-like-at="{{ c.likes.at }}"{% endif %}
         {%- if me %} data-like="{{ c.like }}"{% else %} data-like-out aria-haspopup="dialog" aria-controls="likeOutSheet" aria-expanded="false"{% endif %}
         aria-pressed="{{ 'true' if mine else 'false' }}" aria-label="{{ 'Liked' if mine else 'Like' }}{% if n %}, {{ n }} {{ 'like' if n == 1 else 'likes' }}{% endif %}">{{ ic.heart() }}{% if n %}<span class="lk-n">{{ n }}</span>{% endif %}</button>
 {%- endmacro %}

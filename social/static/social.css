@@ -68,6 +68,17 @@
   /* ...and on the line's lilac (the pill), a step deeper, the dots' third:
      #d11a32 holds 3:1 there, where --heart would not. */
   --heart-line: #d11a32;
+  /* THE DOTS ON THE LINE (likes, part 2; the owner's "If it doubles someone
+     it gets redder", then "All yes, b"): one like's dot is --heart, the
+     sheet's dot (same role, same token); where two land together a step
+     redder, three or more redder still. On the page 4.22:1 and 5.24:1, on a
+     card 4.34:1 and 5.38:1 (one: 3.64:1 and 3.74:1); a mark needs 3:1. */
+  --heart-2: #e33157;
+  --heart-3: #d11a32;
+  /* THE HEART THAT RISES from a dot as the replay reaches it crosses the
+     drawing's paper, which is the same in both themes, so its line is the
+     deeper blush in both (3.35:1 on the cream paper at full strength). */
+  --heart-paper: #e64a78;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -103,6 +114,10 @@
     --new-dot: var(--blooby-blush); /* his blush itself: 7.34:1 on the dark page */
     --heart: var(--blooby-blush);   /* the same: 6.01:1 on a dark card */
     --heart-line: var(--blooby-blush);
+    /* The dots' redder steps from his blush: 6.09:1 and 5.36:1 on the page,
+       4.99:1 and 4.39:1 on a card. --heart-paper stays: the paper is cream. */
+    --heart-2: #ff4d78;
+    --heart-3: #ff2d5f;
   }
 }
 
@@ -1016,6 +1031,25 @@ button.make-door { width: 100%; border: 0; font: inherit; text-align: left; curs
 .lk-heart .ic { width: 18px; height: 18px; }
 .lk-n { font-variant-numeric: tabular-nums; }
 .lk-heart.is-liked .ic-heart .ht-ink { stroke: var(--heart-line); }
+/* THE DOTS ON THE LINE (likes, part 2; "Just put a smaller dot (same color as
+   blooby blush) wherever someone likes it. If it doubles someone it gets
+   redder.", then "All yes, b"): Skribl's player draws them, one 5px dot where
+   its line puts each like's moment, one a step redder where they would
+   overlap (its marks seam); the site gives the colours, its tokens for a
+   mark, two and three or more. Dots say where, never who. */
+.post-art { position: relative; --mark: var(--heart); --mark-2: var(--heart-2); --mark-3: var(--heart-3); }
+/* THE HEART THAT RISES from a dot as the replay reaches it (likes.js): 14px,
+   the liked heart, its line the deeper blush in both themes, put where the
+   dot is and taking no taps. It fades in as it starts (likes.js animates
+   it), so it is see-through until then. UNDER REDUCE MOTION the dot glows
+   instead: a halo of its own colour round it, fading in and out. */
+.lk-rise, .lk-glow { position: absolute; z-index: 2; pointer-events: none; opacity: 0; }
+.lk-rise { width: 14px; height: 14px; margin: -7px 0 0 -7px; }
+.lk-rise .ic { display: block; width: 14px; height: 14px; }
+.lk-rise .ic-heart .ht-fill { opacity: 1; }
+.lk-rise .ic-heart .ht-line { opacity: 0; }
+.lk-rise .ic-heart .ht-ink { stroke: var(--heart-paper); stroke-dashoffset: 0; opacity: 1; }
+.lk-glow { width: 13px; height: 13px; margin: -6.5px 0 0 -6.5px; border-radius: 50%; }
 /* WHO LIKED IT, its maker's alone: a line under that one, clear of the
    heart's 44px, the newest faces and the first names in the first ink. */
 .lk-by {
