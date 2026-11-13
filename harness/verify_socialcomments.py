@@ -708,6 +708,17 @@ def still_(xs):
     return bool(xs) and max(xs) - min(xs) <= 0.5
 
 
+def moved_by(xs):
+    """The frames something moved on, and by how much each time."""
+    xs = [x for x in xs if x is not None]
+    return [round(y - x, 2) for x, y in zip(xs, xs[1:]) if abs(y - x) > 0.3]
+
+
+def one_step(xs):
+    """Put in place: it moved on one frame at most (Reduce Motion), never a glide."""
+    return len(moved_by(xs)) <= 1
+
+
 def lum(c):
     v = [x / 255 for x in c[:3]]
     v = [x / 12.92 if x <= 0.03928 else ((x + 0.055) / 1.055) ** 2.4 for x in v]
@@ -1066,16 +1077,21 @@ with sync_playwright() as p:
             title = pg.evaluate("() => document.getElementById('commentsTitle').innerText.replace(/\\s+/g, ' ').trim()")
             box, err = steps(lambda: (open_box(pg), pg.evaluate(BOX))[1])
             nothing = blank = None
-            if box:                     # no box is the first row's red, never a stop
-                pg.click("[data-cm-post]")
+            def nothing_sent():         # a box that cannot be used is this row's red, never a stop
+                pg.click("[data-cm-post]", timeout=8000)
                 pg.wait_for_timeout(300)
-                nothing = pg.evaluate("() => document.querySelector('[data-cm-say]').textContent")
-                pg.fill("[data-cm-words]", "   \n  ")
-                pg.click("[data-cm-post]")
+                said_ = pg.evaluate("() => document.querySelector('[data-cm-say]').textContent")
+                pg.fill("[data-cm-words]", "   \n  ", timeout=8000)
+                pg.click("[data-cm-post]", timeout=8000)
                 pg.wait_for_timeout(300)
-                blank = pg.evaluate("() => document.querySelector('[data-cm-say]').textContent")
+                again_ = pg.evaluate("() => document.querySelector('[data-cm-say]').textContent")
                 pg.keyboard.press("Escape")
                 pg.wait_for_function(GONE, timeout=8000)
+                return said_, again_
+
+            if box:                     # no box is the first row's red, never a stop
+                got_, _ = steps(nothing_sent)
+                nothing, blank = got_ or (None, None)
             check("a post's page says Comments, with no number at none, and at the heading's end the icon (\"Say something\"),"
                   " the box folded away behind it; a tap opens it on a phone's sheet, \"Say something to Juno\": their face, the"
                   " words' field (17px, focused), \"Say something, or draw it…\", Draw, Flip and Post; no \"Comments open soon\"",
@@ -1886,16 +1902,21 @@ with sync_playwright() as p:
             theo_c = said(theo, post, "Section 15, Theo's")
             pg = mira.pg
             open_post(pg, post)
-            open_box(pg)
-            pg.click("[data-cm-open=pad]")
-            fr = editor_frame(pg, "skribl-pad")
-            if fr:
-                add_from_pad(pg, fr)
-            pg.fill("[data-cm-words]", "My cat would never be this patient")
-            got = pg.evaluate(POST_AND_WATCH)
-            pg.wait_for_function(GONE, timeout=8000)
-            pg.wait_for_timeout(300)
-            after = pg.evaluate(DRAFT)
+
+            def drawn_and_posted():    # a box that cannot be used is this row's red, never a stop
+                open_box(pg)
+                pg.click("[data-cm-open=pad]", timeout=8000)
+                fr = editor_frame(pg, "skribl-pad")
+                if fr:
+                    add_from_pad(pg, fr)
+                pg.fill("[data-cm-words]", "My cat would never be this patient", timeout=8000)
+                g = pg.evaluate(POST_AND_WATCH)
+                pg.wait_for_function(GONE, timeout=8000)
+                pg.wait_for_timeout(300)
+                return g, pg.evaluate(DRAFT)
+
+            got_, err15 = steps(drawn_and_posted)
+            got, after = got_ or ({"id": None, "ops": []}, {"shown": True, "chips": []})
             row = db("select skribl_id, words from social_comments where public_id = ?", (got["id"] or "",))
             sid = row[0][0] if row else None
             sk = db("select visibility, user_id, title, caption from skribl_posts where public_id = ?", (sid or "",))
@@ -1907,7 +1928,7 @@ with sync_playwright() as p:
                   and sk and sk[0][:3] == ("unlisted", pid_of("mira")[1], "My cat would never be this patient")
                   and not sk[0][3]
                   and shown == sid and not after["shown"] and after["chips"] == [False, False],
-                  f"row {row}; skribl {sk}; on the page {shown}; box {after}")
+                  f"row {row}; skribl {sk}; on the page {shown}; box {after}; stopped {err15}")
             # A drawing answer, alone, and under a comment.
             open_post(pg, post)
             answer_box(pg, theo_c)
@@ -2089,15 +2110,21 @@ with sync_playwright() as p:
                     open_post(cpg, post)
                     cpg.evaluate("() => document.getElementById('comments').scrollIntoView({ block: 'start' })")
                     cpg.wait_for_timeout(300)
-                    open_box(cpg)
-                    seen[(screen, scheme, "the box")] = cpg.evaluate(READ, "[data-cm-box]")
-                    cpg.click("[data-cm-open=pad]")
-                    fr = editor_frame(cpg, "skribl-pad")
-                    if fr:
-                        add_from_pad(cpg, fr)
-                    cpg.evaluate("() => document.querySelector('[data-cm-box]').scrollIntoView({ block: 'center' })")
-                    cpg.wait_for_timeout(400)
-                    seen[(screen, scheme, "a drawing waiting")] = cpg.evaluate(READ, "[data-cm-box]")
+                    def read_box():    # a box that cannot be used is this row's red, never a stop
+                        open_box(cpg)
+                        seen[(screen, scheme, "the box")] = cpg.evaluate(READ, "[data-cm-box]")
+                        cpg.click("[data-cm-open=pad]", timeout=8000)
+                        fr = editor_frame(cpg, "skribl-pad")
+                        if fr:
+                            add_from_pad(cpg, fr)
+                        cpg.evaluate("() => document.querySelector('[data-cm-box]').scrollIntoView({ block: 'center' })")
+                        cpg.wait_for_timeout(400)
+                        seen[(screen, scheme, "a drawing waiting")] = cpg.evaluate(READ, "[data-cm-box]")
+
+                    _, err = steps(read_box)
+                    for k in ("the box", "a drawing waiting"):
+                        seen.setdefault((screen, scheme, k), {"read": 0, "low": [], "small": [], "fields": [], "lowest": 99,
+                                                              "words": [], "stopped": err})
                     close_ctx(cctx, cpg)
             low = [(k, v["low"]) for k, v in seen.items() if v["low"]]
             small = [(k, v["small"]) for k, v in seen.items() if v["small"]]
@@ -2132,8 +2159,8 @@ with sync_playwright() as p:
             box, err = steps(lambda: (open_box(pg), pg.evaluate(BOX))[1])
             got = {}
             if box:                     # no box is the row's red, never a stop
-                pg.fill("[data-cm-words]", "  That wave!   Hello to you too.  ")
-                got = pg.evaluate(POST_AND_WATCH)
+                got = steps(lambda: (pg.fill("[data-cm-words]", "  That wave!   Hello to you too.  ", timeout=8000),
+                                     pg.evaluate(POST_AND_WATCH))[1])[0]
             after = pg.evaluate(SECTION)
             words = db("select words from social_comments where public_id = ?", (got.get("id") or "",))
             check("a drawing shown outside a post (/social/b/<id>, made in the Pad) has a post's comments: \"Comments\","
@@ -2205,8 +2232,8 @@ with sync_playwright() as p:
             pg.wait_for_timeout(300)
             went = pg.evaluate(ANSWER_AND_WATCH, theo_c)
             there = pg.evaluate(BOX)
-            pg.fill("[data-cm-words]", "Section 21, Mira under Theo's")
-            mine = pg.evaluate(POST_AND_WATCH)
+            mine = steps(lambda: (pg.fill("[data-cm-words]", "Section 21, Mira under Theo's", timeout=8000),
+                                  pg.evaluate(POST_AND_WATCH))[1])[0] or {"id": None}
             deep = said_on(juno, sid, "Section 21, Juno answering Mira", answer_to=mine["id"])
             open_drawing(pg, sid)
             under = [a["words"] for a in next((c for c in pg.evaluate(SECTION)["list"] if c["id"] == theo_c),
@@ -3099,13 +3126,19 @@ with sync_playwright() as p:
             nctx, npg = browser_as(b, None)
             open_post(npg, post)
             icon = npg.evaluate(ICON)
-            npg.click(".cm-say")
-            npg.wait_for_function(OPEN, arg="commentOutSheet", timeout=8000)
-            npg.wait_for_timeout(450)
-            out = npg.evaluate(OUT_SHEET)
-            npg.click("#commentOutSheet .post-sheet-acts [data-make-close]")
-            npg.wait_for_timeout(500)
-            shut = npg.evaluate("() => ({ open: document.getElementById('commentOutSheet').classList.contains('is-open'), focus: document.activeElement.className })")
+
+            def out_sheet():          # no icon, or no sheet, is this row's red, never a stop
+                npg.click(".cm-say", timeout=8000)
+                npg.wait_for_function(OPEN, arg="commentOutSheet", timeout=8000)
+                npg.wait_for_timeout(450)
+                o = npg.evaluate(OUT_SHEET)
+                npg.click("#commentOutSheet .post-sheet-acts [data-make-close]", timeout=8000)
+                npg.wait_for_timeout(500)
+                return o, npg.evaluate("() => ({ open: document.getElementById('commentOutSheet').classList.contains('is-open'), focus: document.activeElement.className })")
+
+            got_, err34 = steps(out_sheet)
+            out, shut = got_ or ({"open": False, "title": None, "lede": None, "acts": [], "path": None, "next": None,
+                                  "focus": None, "old": None}, {"open": True, "focus": ""})
             close_ctx(nctx, npg)
             check("signed out, the icon is there all the same (\"Say something\", a dialog); a tap raises a small sheet like the"
                   " heart's: \"Say something?\", \"Sign in, and you can answer Juno in words or with a drawing.\", Not now and"
@@ -3117,7 +3150,8 @@ with sync_playwright() as p:
                   and out["acts"] == ["Not now", "Sign in"] and out["path"] == "/social/signin"
                   and out["next"] == f"/social/p/{post}#say" and out["focus"] == "Not now" and not out["old"]
                   and not shut["open"] and shut["focus"].startswith("icon-btn cm-say"),
-                  f"icon {icon and {k: icon[k] for k in ('name', 'popup', 'controls')}}; sheet {out}; after Not now {shut}")
+                  f"icon {icon and {k: icon[k] for k in ('name', 'popup', 'controls')}}; sheet {out}; after Not now {shut};"
+                  f" stopped {err34}")
             # Signed in from there: back on the post with the box open, nothing posted, the address without #say.
             before = db("select count(*) from social_comments")[0][0]
             back = {}
@@ -3217,13 +3251,16 @@ with sync_playwright() as p:
             box_ops = fades_of(dn, 0)
             moves = [abs(y - x) for x, y in zip(track(dn, 0), track(dn, 0)[1:]) if abs(y - x) > 0.3]
             check("under Reduce Motion nothing glides: a phone's sheet fades in where it sits (0px moved), a desk's box is put in"
-                  " place (one step) and fades in; a posted comment is put in place and fades in",
+                  " place (one step) and fades in; a posted comment is put in place and fades in, what was under it moving in"
+                  " one step",
                   still_(sheet_tops) and len([o for o in sheet_ops if 0.02 < o < 0.98]) >= 2 and sheet_ops[-1] == 1
                   and len(moves) == 1 and abs(moves[0] - 136) <= 1 and len([o for o in box_ops if 0.02 < o < 0.98]) >= 2
                   and still_(pw["new"]) and len([o for o in pw["ops"] if 0.02 < o < 0.98]) >= 2
-                  and still_(dw["new"]) and len([o for o in dw["ops"] if 0.02 < o < 0.98]) >= 2,
+                  and still_(dw["new"]) and len([o for o in dw["ops"] if 0.02 < o < 0.98]) >= 2
+                  and one_step(pw["old"]) and one_step(dw["old"]),
                   f"the sheet's top {sorted(set(sheet_tops))[:3]}, its fade {sheet_ops[:4]}; the desk's moves {moves}, the box's fade"
-                  f" {box_ops[:4]}; posted on a phone {pw['new'][:3]} {pw['ops'][:4]}, on a desk {dw['new'][:3]} {dw['ops'][:4]}")
+                  f" {box_ops[:4]}; posted on a phone {pw['new'][:3]} {pw['ops'][:4]}, what was under it {moved_by(pw['old'])};"
+                  f" on a desk {dw['new'][:3]} {dw['ops'][:4]}, what was under it {moved_by(dw['old'])}")
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(35, exc)
 
