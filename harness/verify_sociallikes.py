@@ -2452,13 +2452,15 @@ with sync_playwright() as p:
             born = sorted(v[0]["T"] for v in rs.values())
             gaps = [q - p for p, q in zip(born, born[1:])]
             air = max((len({f["k"] for f in fs if f["c"] == "lk-rise" and f["T"] == T}) for T in {f["T"] for f in fs}), default=0)
-            # NEVER LATE, judged by the playhead itself: on a heart's first
-            # frame the playhead is at its dot or just past it (3px: at 16x it
-            # covers about one a frame here), unless it has just come round.
-            # Not by the events: a host can send one again, late.
+            # NEVER LATE, judged by the playhead itself: each heart starts at a
+            # dot, and on its first frame the playhead is at that dot or just
+            # past it (3px: at 16x it covers about one a frame here). Not by
+            # the events: a host can send one again, late. (The busy piece's
+            # last like is 3% before its end, so no heart is born as the
+            # playhead comes round.)
             behind = [round(v[0]["head"] - v[0]["x"], 2) for v in rs.values() if v[0]["head"] is not None]
-            fresh = len(behind) == len(rs) and all(0 <= d <= 3 or d < -rs[k][0]["bw"] / 2
-                                                   for d, k in zip(behind, rs))
+            at_dot = all(any(abs(v[0]["x"] - d["cx"]) < 1 for d in busy["dots"]) for v in rs.values())
+            fresh = at_dot and len(behind) == len(rs) and all(0 <= d <= 3 for d in behind)
             check("calm at 16x: on a busy drawing (40 likes, %d dots) the playhead reaches dots by the dozen, and at"
                   " most three hearts are in the air, each a third of a second or more after the one before, each"
                   " rising from a dot just reached (never late)" % len(busy["dots"]),
