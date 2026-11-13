@@ -10,11 +10,12 @@ site's people. The owner's "Yes to all" on the Settings mock (Nov 13).
      Your passkeys 102px further down), the one pill under the choice; named
      Theme, the choice pressed; phone (touch) and desk.
   2. ONE CHOICE, SKRIBL'S OWN, BOTH WAYS: Dark on Settings opens the Pad and
-     Flip dark, their switch saying Dark; Light in the Pad's own menu is light
-     back on the site, its row saying Light, and Flip's System is System; kept
-     under skribl_theme_v1 and nowhere else; another tab hears it; a page the
-     back button brings back takes it; the site's code names neither the key
-     nor the attribute, and Skribl's theme code names nothing of the site's.
+     Flip dark, their switch saying Dark; on a dark device Light in the Pad's
+     own menu is light back on the site, its row saying Light, and Flip's
+     System is System, the device again; kept under skribl_theme_v1 and
+     nowhere else; another tab hears it; a page the back button brings back
+     takes it; the site's code names neither the key nor the attribute, and
+     Skribl's theme code names nothing of the site's.
   3. SYSTEM FOLLOWS THE DEVICE: nothing stored and System, on a light and a
      dark device, and as the device changes; Dark and Light ignore it; with no
      script at all, nothing stamped, the device.
@@ -696,7 +697,11 @@ with sync_playwright() as p:
                   and pad_dark["mode"] == "dark" and pad_dark["stamp"] == "dark" and pad_dark["on"] == ["dark"]
                   and flip_dark["mode"] == "dark" and flip_dark["stamp"] == "dark" and flip_dark["on"] == ["dark"],
                   f"site {site_dark}; added keys {sorted(set(keys1) - set(keys0))}; Pad {pad_dark}; Flip {flip_dark}")
-            # The other way: Light in the Pad's own menu, then System in Flip's.
+            close_ctx(ctx, pg)
+            # The other way, on a DARK device, so the site following the choice
+            # and the site following the device read differently: Light in the
+            # Pad's own menu, then System in Flip's.
+            ctx, pg = browser_as(b, nico, "phone", "dark", theme=None)
             editor(pg, "/skribl-pad")
             editor_choose(pg, "light", "#menuBtn")
             pad_light = pg.evaluate(EDITOR)
@@ -709,12 +714,12 @@ with sync_playwright() as p:
             go(pg, "/social/you")
             site_system, row_system = pg.evaluate(STATE), pg.evaluate(ROW)
             close_ctx(ctx, pg)
-            check("Light picked in the Pad's own menu is light back on the site, Settings' row saying Light and Home"
-                  " light; System picked in Flip's is System there (the device: light)",
+            check("on a dark device, Light picked in the Pad's own menu is light back on the site, Settings' row saying"
+                  " Light and Home light; System picked in Flip's is System there, and the site follows the device again",
                   pad_light["mode"] == "light" and site_light["stamp"] == "light" and site_light["page"] == PAGE_RGB["light"]
                   and row_light and row_light["pressed"] == "Light" and row_light["under"]
                   and home_light["stamp"] == "light" and home_light["page"] == PAGE_RGB["light"]
-                  and site_system["kept"] == "system" and site_system["stamp"] == "light"
+                  and site_system["kept"] == "system" and site_system["stamp"] == "dark" and site_system["page"] == PAGE_RGB["dark"]
                   and row_system and row_system["pressed"] == "System",
                   f"Pad {pad_light}; Settings {site_light} row {row_light and row_light['pressed']}; Home {home_light};"
                   f" after Flip's System {site_system} row {row_system and row_system['pressed']}")
