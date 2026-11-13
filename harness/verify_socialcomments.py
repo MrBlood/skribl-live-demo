@@ -630,7 +630,9 @@ ICON = """() => { const b = document.querySelector('.cm-say'); if (!b) return nu
     fold: fold ? { h: Math.round(fold.getBoundingClientRect().height * 100) / 100, seen: getComputedStyle(inner).visibility } : null }; }"""
 # What the signed-out sheet says, and where its Sign in goes.
 OUT_SHEET = """() => { const w = document.getElementById('commentOutSheet'); if (!w) return null; const a = w.querySelector('a.btn');
+  const i = document.querySelector('.cm-say');
   return { open: w.classList.contains('is-open') && !w.hidden, title: w.querySelector('.make-title').textContent,
+    lit: i ? getComputedStyle(i).backgroundColor === getComputedStyle(document.querySelector('.composer-post, .btn-primary')).backgroundColor : null,
     lede: w.querySelector('.post-lede').textContent, acts: [...w.querySelectorAll('.post-sheet-acts .btn')].map(e => e.textContent.trim()),
     next: a ? new URL(a.href).searchParams.get('next') : null, path: a ? new URL(a.href).pathname : null,
     focus: document.activeElement ? document.activeElement.textContent.trim() : null,
@@ -3147,8 +3149,8 @@ with sync_playwright() as p:
             out, shut = got_ or ({"open": False, "title": None, "lede": None, "acts": [], "path": None, "next": None,
                                   "focus": None, "old": None}, {"open": True, "focus": ""})
             close_ctx(nctx, npg)
-            check("signed out, the icon is there all the same (\"Say something\", a dialog); a tap raises a small sheet like the"
-                  " heart's: \"Say something?\", \"Sign in, and you can answer Juno in words or with a drawing.\", Not now and"
+            check("signed out, the icon is there all the same (\"Say something\", a dialog, and unlit while it is up: no box is"
+                  " open); a tap raises a small sheet like the heart's: \"Say something?\", \"Sign in, and you can answer Juno in words or with a drawing.\", Not now and"
                   " Sign in, which comes back to this post with the box open (#say); Not now puts it away; no \"Sign in to"
                   " answer\" anywhere",
                   icon and icon["name"] == "Say something" and icon["popup"] == "dialog" and icon["controls"] == "commentOutSheet"
@@ -3156,7 +3158,7 @@ with sync_playwright() as p:
                   and out["lede"] == "Sign in, and you can answer Juno in words or with a drawing."
                   and out["acts"] == ["Not now", "Sign in"] and out["path"] == "/social/signin"
                   and out["next"] == f"/social/p/{post}#say" and out["focus"] == "Not now" and not out["old"]
-                  and not shut["open"] and shut["focus"].startswith("icon-btn cm-say"),
+                  and out["lit"] is False and not shut["open"] and shut["focus"].startswith("icon-btn cm-say"),
                   f"icon {icon and {k: icon[k] for k in ('name', 'popup', 'controls')}}; sheet {out}; after Not now {shut};"
                   f" stopped {err34}")
             # Signed in from there: back on the post with the box open, nothing posted, the address without #say.

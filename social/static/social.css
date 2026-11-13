@@ -965,12 +965,15 @@ button.make-door { width: 100%; border: 0; font: inherit; text-align: left; curs
    light, 8.62:1 dark, a mark's 3:1), reaching 7.5px above and below the
    heading's 29px line into the room already round it, so the heading keeps
    its height. While the box it opened is open it lights: white on the action
-   purple (5.33:1), as an action is; the light comes and goes as a fade. */
+   purple (5.33:1), as an action is; the light comes and goes as a fade.
+   Signed out it raises "Say something?" and stays as it is: no box is open. */
 .cm-say {
   margin: -7.5px 0 -7.5px auto; background: var(--tint); color: var(--accent-ink);
   transition: background-color 0.2s ease, color 0.2s ease;
 }
-.cm-say[aria-expanded="true"] { background: var(--fill); color: var(--on-fill); }
+.cm-say[aria-expanded="true"]:is([aria-controls="commentFold"], [aria-controls="commentBoxSheet"]) {
+  background: var(--fill); color: var(--on-fill);
+}
 /* "SAY THE FIRST THING", at none, where the comments will be: the small
    violet words, 44px, opening the box as the icon does. */
 .cm-first { margin: 0 0 8px; }
