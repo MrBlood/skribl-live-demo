@@ -1212,7 +1212,8 @@ with sync_playwright() as p:
               const g = document.createRange(); g.setStart(n, i); g.setEnd(n, i + needle.length); return g.getBoundingClientRect(); } }
             return null; };
           let xy;
-          if (what === 'ground') { const f = R('.post-foot'), n = R('.post-count'), s = R('.post-share');
+          if (what === 'ground') { const f = R('.post-foot'), n = R('.post-count'), h = c.querySelector('.lk-heart');
+            const s = h ? h.getBoundingClientRect() : R('.post-share');   // the heart (likes) sits before Share
             xy = [(n.right + s.left) / 2, f.top + f.height / 2]; }
           else if (what === 'words') xy = mid(text(c.querySelector('.post-words'), 'a card'));
           else if (what === 'drawing') xy = mid(R('.post-art .skribl-inline'));

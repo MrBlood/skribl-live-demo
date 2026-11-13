@@ -1240,7 +1240,8 @@ with sync_playwright() as p:
                                                    " && [...m.querySelectorAll('.make-door b')].map(x => x.textContent); }")
                 close_ctx(ctx, pg)
             want = {"icon": "apple-touch-icon.png", "title": "Nothing new yet",
-                    "words": "When someone says something on your post, or answers you, you’ll see it here.",
+                    # likes (the likes mock): a like is in Activity too
+                    "words": "When someone likes your post, says something on it, or answers you, you’ll see it here.",
                     "button": "Make a skribl"}
             check("with nothing yet: Blooby as his Home Screen icon (64px, painted), \"Nothing new yet\", the words, and"
                   " Make a skribl (52px); no New, no Earlier; phone and desk",
