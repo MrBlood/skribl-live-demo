@@ -644,6 +644,9 @@ DOT = r"""(sel) => { const a = document.querySelector(sel); if (!a || !a.getClie
 # its rows (face, name, @handle, Unmute's box and where a finger lands).
 SETTINGS = r"""() => { const titles = [...document.querySelectorAll('.panel .panel-title')].map(t => t.textContent.trim());
   const p = document.getElementById('mutedTitle'); const s = p ? p.closest('.panel') : null; if (!s) return { titles };
+  // In view first: a finger can only reach what is on the screen (the first
+  // person to join has Reports and Invites above it).
+  s.scrollIntoView({ block: 'start' });
   const rows = [...s.querySelectorAll('.blocked-row')].map(li => { const b = li.querySelector('button'), r = b.getBoundingClientRect();
     const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
     const lands = [[cx, cy], [cx - 21, cy], [cx + 21, cy], [cx, cy - 21], [cx, cy + 21]].map(([x, y]) => {
@@ -1470,7 +1473,7 @@ with sync_playwright() as p:
             mute(lee, "mox")
             follow(lee, "mox", False)
             check("unfollowing never unmutes: Lee stops following Mox and is still muting him",
-                  mutes_of("lee", "mox") == [("lee", "mox")] and follows_of("lee", "mox")[0][0] is not None,
+                  mutes_of("lee", "mox") == [("lee", "mox")] and [e is not None for (e,) in follows_of("lee", "mox")] == [True],
                   f"mutes {mutes_of('lee', 'mox')}; follow {follows_of('lee', 'mox')}")
             unmute(lee, "mox")
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
