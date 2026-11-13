@@ -50,7 +50,7 @@
  * a moment in the note's tint, and a drawing answer draws itself once (below).
  *
  * The words are the page's ([data-comment-words]): this file says nothing of
- * its own. Times are said by posts.js (window.SocialWhen).
+ * its own. Times are said by social.js (window.SocialWhen).
  */
 (function () {
   'use strict';
