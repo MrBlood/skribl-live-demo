@@ -19,7 +19,8 @@ authenticator for the site's people and a real pen in Skribl's real Pad.
      tapped, its time said in the person's own; Load more brings the next
      page in place, by a cursor that names no internal id.
   5. THE ⋯ SHEET: your own post's Copy link, Share…, Delete post; somebody
-     else's Copy link, Share…, Report this post and Block @them (piece 5).
+     else's Copy link, Share…, Mute @them (mutes: its name read, its line is
+     verify_socialmute's), Report this post and Block @them (piece 5).
      Report sends the Gallery's reasons and "A child's safety" into the
      site's own queue and says thanks (verify_socialsafety holds the rest);
      Delete asks once, then the words and the drawing go.
@@ -867,7 +868,7 @@ with sync_playwright() as p:
         pg.wait_for_timeout(800)
         pg.click(".top [data-post-menu]")
         pg.wait_for_timeout(600)
-        mine = pg.evaluate("() => [...document.querySelectorAll('#postSheet .post-act')].filter(b => !b.hidden).map(b => b.textContent.trim())")
+        mine = pg.evaluate("() => [...document.querySelectorAll('#postSheet .post-act')].filter(b => !b.hidden).map(b => (b.querySelector('.mu-words b') || b).textContent.trim())")
         pg.click("#postSheet [data-act=copy]")
         pg.wait_for_timeout(400)
         copied = pg.evaluate("() => document.querySelector('#postSheet [data-post-say]').textContent")
@@ -878,7 +879,7 @@ with sync_playwright() as p:
         jp.wait_for_timeout(800)
         jp.click(".top [data-post-menu]")
         jp.wait_for_timeout(600)
-        theirs = jp.evaluate("() => [...document.querySelectorAll('#postSheet .post-act')].filter(b => !b.hidden).map(b => b.textContent.trim())")
+        theirs = jp.evaluate("() => [...document.querySelectorAll('#postSheet .post-act')].filter(b => !b.hidden).map(b => (b.querySelector('.mu-words b') || b).textContent.trim())")
         jp.click("#postSheet [data-act=report]")
         jp.wait_for_timeout(800)
         rsheet = jp.evaluate("""() => ({ open: document.getElementById('reportSheet').classList.contains('is-open'),
@@ -891,9 +892,9 @@ with sync_playwright() as p:
         thanks = jp.evaluate("() => document.querySelector('[data-report-say]').textContent")
         reported = db("select reason, note from social_reports where kind = 'post' and target = ?", (pid,))
         check("your own post's ⋯ says Copy link, Share…, Delete post; Copy link gives the link (or says it to copy"
-              " by hand); somebody else's says Copy link, Share…, Report this post",
+              " by hand); somebody else's says Copy link, Share…, Mute @them (mutes), Report this post",
               mine == ["Copy link", "Share…", "Delete post"]
-              and theirs == ["Copy link", "Share…", "Report this post", "Block @mira"]
+              and theirs == ["Copy link", "Share…", "Mute @mira", "Report this post", "Block @mira"]
               and (copied == "Link copied." or copied.startswith("Here’s the link to copy: " + BASE + f"/social/p/{pid}")),
               f"mine {mine}; theirs {theirs}; copied {copied!r}")
         check("Report this post rises as a sheet of its own with the Gallery's reasons and A child's safety, sends"
@@ -1126,7 +1127,7 @@ with sync_playwright() as p:
         OPEN = "(id) => document.getElementById(id).classList.contains('is-open')"
         jp.click("[data-post-menu] >> visible=true")
         jp.wait_for_function(OPEN, arg="postSheet", timeout=10000)
-        theirs = jp.evaluate("() => [...document.querySelectorAll('#postSheet .post-act')].filter(b => !b.hidden).map(b => b.textContent.trim())")
+        theirs = jp.evaluate("() => [...document.querySelectorAll('#postSheet .post-act')].filter(b => !b.hidden).map(b => (b.querySelector('.mu-words b') || b).textContent.trim())")
         jp.keyboard.press("Escape")
         to_post = jp.goto(BASE + f"/social/b/{g_skribl}")
         landed = jp.evaluate("() => location.pathname")
@@ -1136,7 +1137,7 @@ with sync_playwright() as p:
         mp.wait_for_timeout(400)
         mp.click("[data-post-menu] >> visible=true")
         mp.wait_for_function(OPEN, arg="postSheet", timeout=10000)
-        mine = mp.evaluate("() => [...document.querySelectorAll('#postSheet .post-act')].filter(b => !b.hidden).map(b => b.textContent.trim())")
+        mine = mp.evaluate("() => [...document.querySelectorAll('#postSheet .post-act')].filter(b => !b.hidden).map(b => (b.querySelector('.mu-words b') || b).textContent.trim())")
         ask = {"open": False}
         try:
             mp.click("#postSheet [data-act=delete]", timeout=5000)
@@ -1159,7 +1160,7 @@ with sync_playwright() as p:
               and playing[:1] == ["playing"]
               and [f"/social/b/{another}", "A drawing"] in page["more"]
               and [f"/social/p/{g_post}", "Section 9, a post shown in the gallery"] in page["more"]
-              and theirs == ["Copy link", "Share…", "Report this post", "Block @mira"]
+              and theirs == ["Copy link", "Share…", "Mute @mira", "Report this post", "Block @mira"]
               and landed == f"/social/p/{g_post}"
               and mine == ["Copy link", "Share…", "Delete post"] and ask.get("open") and "stopped" not in ask
               and ask.get("lede") == ["The drawing goes for good, from Home and from Explore. This can’t be undone."]
