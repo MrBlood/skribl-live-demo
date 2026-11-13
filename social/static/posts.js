@@ -18,7 +18,9 @@
  * A POST'S OWN PAGE plays its drawing by itself once it is here (the
  * player's own play(), docs/INTEGRATION.md "A post's own page can start
  * it"), sound off until the viewer turns it on, and never under Reduce
- * Motion; the feed's players wait for a tap.
+ * Motion; the feed's players wait for a tap. Opened at a comment from
+ * Activity (#c-<id>), comments.js says whether it plays: a drawing answer
+ * there draws itself instead.
  *
  * THE ⋯ SHEET (social.js's SocialSheet, as Make's): Copy link, Share…,
  * Report this post and, signed in, Block @them; or on your own Delete post.
@@ -293,11 +295,18 @@
 
   /* ---- a post's own page: it plays by itself ----------------------------- */
   var page = doc.querySelector('.post-page[data-autoplay]');
-  if (page && !(reduced && reduced.matches) && window.SkriblInline) {
+  function playOwn() {
+    if (!page || (reduced && reduced.matches) || !window.SkriblInline) return;
     /* The post's own drawing alone: a comment's waits for a tap (phase 2). */
     var players = window.SkriblInline.mount(page.querySelector('.post-art') || page);
     if (players && players[0] && players[0].play) players[0].play();
   }
+  /* OPENED AT A COMMENT (#c-<id>: a row in Activity, notifications), the
+     comment decides (comments.js, window.SocialPlayOwn): a drawing answer
+     draws itself and the post's own waits, since one plays at a time; any
+     other comment, and the post's own plays here as always. */
+  window.SocialPlayOwn = playOwn;
+  if (!(/^#c-/.test(window.location.hash || '') && doc.querySelector('[data-comments]'))) playOwn();
 
   /* ---- the feed: Load more ------------------------------------------------ */
   var feed = doc.querySelector('[data-feed]');

@@ -1550,6 +1550,25 @@ stays a sleep.
   fields; an account's deletion taking its face; no page or CSP errors.
   `SOCIALPROFILE_PART=<n>` runs one section.
 
+### After v330 — Activity: notifications
+
+- `verify_socialactivity.py` — Activity at `/social/activity` and the bell
+  that leads there (docs/SOCIAL-SITE.md section 11), through the demo's own
+  app on a server of its own, people joining with Chromium's virtual
+  authenticator: the bell at the top right of a phone's Home and Explore and
+  Activity in a desk's rail; the dot's paint and colour (`--new-dot`) light
+  and dark, gone once looked, its fade read on every frame; each kind of row
+  and its words, face, quote, picture and link; grouping since you last
+  looked; New, Earlier and seen on open; nobody hidden, nothing taken down,
+  deleted or gone, and the dot agreeing; a row's tap landing on its comment,
+  which glows in the tint and fades, read on every frame (Load more and a
+  glide for one on a later page, still under Reduce Motion); a drawing answer
+  drawing itself once; the empty state and Make a skribl; every word at
+  4.5:1 and every target 44px, phone (touch) and desk, light and dark; the
+  chain on a populated database, the bell's query plan on its indexes, and an
+  account's deletion in code with the cascade off; no page, console or CSP
+  errors. `SOCIALACTIVITY_PART=<n>` runs one section.
+
 ## Where a suite's rationale lives
 
 **In the suite's own docstring, next to the assertions it explains.**

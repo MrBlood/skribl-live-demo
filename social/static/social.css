@@ -56,6 +56,11 @@
   --tint: rgba(124, 92, 255, 0.12); /* a note: words in the first ink on it */
   --danger-ink: #7a0a2d;            /* the drafts sheet's Delete (--row-danger-ink) */
   --danger-fill: #b3283f;           /* --danger-fill: white on it, in both themes */
+  /* THE DOT FOR SOMETHING NEW (notifications: the bell's, and each new row's
+     in Activity), a new token for a new job: Blooby's blush a shade deeper,
+     3.64:1 on the page, where his own blush reads 2.58:1, under the 3:1 a
+     mark needs; on dark, his blush itself (below). */
+  --new-dot: #e64a78;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -88,6 +93,7 @@
     --field-line: rgba(167, 146, 255, 0.7);
     --tint: rgba(124, 92, 255, 0.18);
     --danger-ink: #ffb3c6;
+    --new-dot: var(--blooby-blush); /* his blush itself: 7.34:1 on the dark page */
   }
 }
 
@@ -943,6 +949,88 @@ button.make-door { width: 100%; border: 0; font: inherit; text-align: left; curs
 .cm.is-going { opacity: 0; transition: opacity 0.2s ease; }
 /* Home's card: how many comments, beside the plays (the mock's 4), a way to them. */
 .post-foot .post-count { min-width: 44px; margin-left: 14px; margin-right: auto; }
+
+/* A COMMENT OPENED FROM ACTIVITY (#c-<id>; notifications) glows a moment in
+   the note's tint, the comment alone and not the answers under it (its own
+   height, --cm-own: comments.js), a little wider than its words each side,
+   then the tint fades over a second and a half. Nothing moves, so Reduce
+   Motion keeps it: the tint fades where it sits. Landing leaves room above
+   it, so the comment it answers is in view. */
+.cm { scroll-margin-top: 96px; }
+.cm.is-landed { position: relative; isolation: isolate; }
+.cm.is-landed::before {
+  content: ""; position: absolute; z-index: -1; left: -10px; right: -10px; top: 0; height: var(--cm-own, 100%);
+  border-radius: 16px; background: var(--tint); transition: opacity 1.5s ease;
+}
+.cm.is-landed.is-fading::before { opacity: 0; }
+
+/* ---- ACTIVITY (phase 2, notifications; the notifications mock and the
+   owner's "all yes", Nov 12), in the mock's own sizes. A bell drawn in our
+   pen at the top right of a phone's Home and Explore, where Sign in sits
+   before you sign in; Activity in a desk's rail, after Explore; the bar
+   keeps its four places. The dot for something new is --new-dot, ringed in
+   the page's own ground so it stands clear of the line; the bell's line is
+   the top's ink (17.5:1 light, 17.2:1 dark) and in the rail the rail's
+   (7.36:1 and 10.49:1; lit, 17.5:1 and 19.4:1). SAME ROLE, SAME TOKEN: the
+   rows are the comments' (their rule, the first ink and the second, the
+   faces' circles), Make a skribl the action. ---- */
+.ic-bell .act-dot { fill: var(--new-dot); stroke: var(--page); stroke-width: 1.8; transition: opacity 0.4s ease; }
+/* The dot goes as you look: tapped, it fades while Activity opens
+   (social.js), so a page the back button brings back whole has it gone too;
+   on Activity's own page the rail's fades once the page is there. A fade,
+   never a move: Reduce Motion keeps it. */
+.is-seen .act-dot { opacity: 0; }
+@keyframes act-dot-go { to { opacity: 0; } }
+.act-dot.is-going { animation: act-dot-go 0.5s ease 0.9s both; }
+.top-bell { margin-left: auto; margin-right: -10px; color: var(--ink); }
+.top-bell .ic { width: 26px; height: 26px; }
+.nav .tab-activity { display: none; }
+/* THE LIST: a row each, its rule between, as the comments are; every row one
+   link, the whole row the target. */
+.act { max-width: 640px; }
+/* On a phone the top says Activity (a post's page says Post the same way), so
+   the page's own heading is a screen reader's; a desk, with no top, shows it. */
+.act-head { position: absolute; width: 1px; height: 1px; margin: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.act-sec { margin: 18px 0 2px; font-size: 18px; font-weight: 700; line-height: 1.3; }
+.act-head + .act-sec { margin-top: 4px; }
+.act-list { margin: 0; padding: 0; list-style: none; }
+.act-row {
+  display: grid; grid-template-columns: 8px 44px minmax(0, 1fr) 52px; column-gap: 12px; align-items: center;
+  min-height: 76px; padding: 12px 0; border-top: 1px solid var(--rule); color: var(--ink); text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.act-list > li:first-child > .act-row { border-top: 0; }
+.act-mark { width: 8px; height: 8px; border-radius: 50%; }
+.act-row.is-new .act-mark { background: var(--new-dot); }
+.act-row > .face-ring { --skribl-face-size: 44px; width: 44px; height: 44px; }
+/* Several people: two faces, the newest in front, each ringed in the ground. */
+.act-faces { position: relative; width: 44px; height: 44px; }
+.act-faces .face-ring { position: absolute; --skribl-face-size: 32px; width: 32px; height: 32px; box-shadow: 0 0 0 2px var(--page); }
+.act-faces .face-ring:first-child { left: 0; top: 0; }
+.act-faces .face-ring:last-child { right: 0; bottom: 0; }
+.act-text { min-width: 0; font-size: 16px; line-height: 1.35; }
+.act-say b { font-weight: 700; }
+.act-when { color: var(--ink-2); font-size: 15px; white-space: nowrap; }
+/* Their words in quotes, two lines at most. */
+.act-peek {
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden;
+  margin-top: 3px; color: var(--ink-2); font-size: 15px; line-height: 1.4; overflow-wrap: anywhere;
+}
+/* The small picture: the drawing's middle, cut from its poster (activity.py _pic). */
+.act-pic {
+  width: 52px; height: 52px; border-radius: 10px; border: 1px solid var(--card-line); background-color: var(--draw-wait);
+  background-repeat: no-repeat;
+}
+/* NOTHING YET: Blooby as his Home Screen icon in small (the sign-in pages' own), and a way to make something. */
+.act-empty { display: flex; flex-direction: column; align-items: center; max-width: 360px; margin: 56px auto 0; text-align: center; }
+.act-empty .si-icon { margin: 0 0 18px; }
+.act-empty-title { margin: 0 0 8px; font: 700 24px/1.2 var(--font); letter-spacing: -0.01em; }
+.act-empty-words { margin: 0 0 20px; color: var(--ink-2); font-size: 16px; line-height: 1.5; }
+@media (min-width: 900px) {
+  .nav .tab-activity { display: flex; }
+  .act-head { position: static; width: auto; height: auto; margin: 4px 0 8px; overflow: visible; clip: auto; white-space: normal; }
+  .act-head + .act-sec { margin-top: 18px; }
+}
 
 /* YOUR REPORTS (piece 5): a card per thing reported, as the mock drew it; a
    child's safety ringed in the danger fill, its picture blurred until Open it. */

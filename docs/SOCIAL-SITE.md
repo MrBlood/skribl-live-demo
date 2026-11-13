@@ -228,7 +228,8 @@ here is tested (a check shown red before it is believed).
   Piece 4 is next.*
 - **Phase 2, the social core.** Follow, the Following feed, comments and
   replies, likes, in-app notifications, mute. *Comments and their answers
-  built Nov 12 (section 10).*
+  built Nov 12 (section 10); in-app notifications (Activity) the same day
+  (section 11).*
 - **Phase 3, growing.** Search and tags, push and email notifications, reply
   with a skribl, repost, invite links.
 - **Phase 4, creators.** Editions, rights and prints, the co-op (FUTURE 6ag).
@@ -933,3 +934,97 @@ measurement that asks for it.
 (sections 20 to 28 the drawings'), and `harness/verify_socialposts.py`
 sections 10 and 11 the card's ways in; DECISIONS.md ("Comments at /social", and
 "Comments on every drawing") says what each check was shown red by.
+
+## 11. Built: notifications
+
+From the notifications mock and the owner's "all yes" (Nov 12), A, in the
+mock's own classes, sizes and words. `social/activity.py`:
+
+    /social/activity    who said something on your posts, and who answered
+                        you: New, then Earlier, a row each; opening it marks
+                        everything seen
+
+**Where it lives.** Signed in, a bell drawn in our pen stands at the top right
+of a phone's Home and Explore, where "Sign in" sits before you sign in (44px,
+named "Activity"); on a desk, Activity is in the rail after Explore, on every
+page, its bell filled and the pen's line under its name on its own page. The
+bar keeps its four places: Activity is not in it, and on Activity's own page
+a phone's top says "Activity" with the way back, as a post's says "Post". The
+bell has a dot when something is new since you last looked, and the dot goes
+once you look: a tap on the bell lets it fade as Activity opens, and on a
+desk's Activity page the rail's fades once the page is there.
+
+**The dot's colour** is a new token for a new job, `--new-dot`: Blooby's
+blush a shade deeper on light (`#e64a78`, 3.64:1 on the page, where his own
+blush reads 2.58:1, under the 3:1 a mark needs), his blush itself on dark
+(`--blooby-blush`, 7.34:1). It is ringed in the page's own ground, so it
+stands clear of the bell's line, and each new row in the list wears it too.
+
+**A row** is a comment or an answer, not yours: answering you ("Theo answered
+your comment", or with a drawing, "Juno answered with a drawing"), or else on
+what you own, a post or a drawing shown outside a post ("Mira said something
+on your post", or with a drawing, "Juno drew something on your post"). Their
+face, who and what, when as comments say it ("5m", "2h"), their words under it
+in quotes (two lines at most), and the small picture: the drawing they
+answered with or drew, else the post's (or the drawing's), cut from its poster
+as More from's tiles are. Each row is one link to that comment on its page
+(`#c-<id>`, a post's or a drawing's).
+
+**Grouped since you last looked.** Several comments on one post since you
+last looked are one row, the newest face in front and the next behind, the
+newest words under it, and the row opens the newest: "Mira and 2 others said
+something on your post" ("Mira and Theo" for two). Answers to you in one
+conversation are one row the same way. A drawing keeps a row of its own, so
+its picture shows. Earlier keeps a row for each comment, as it was said (the
+mock's pictures show the cottage's two comments as two rows).
+
+**Seen is opening Activity.** The page reads the list, then keeps the time it
+was opened on your row; the rows that were new keep their dot while you are
+there, and next time they sit under Earlier. Nothing to tick or clear.
+
+**Never in it:** yourself; anybody hidden from you (a block either way, or
+taken down); a comment taken down, or an answer under a comment you are not
+shown; anything on a post or a drawing whose page you cannot see (a block
+either way with its maker, it or its maker taken down, a drawing deleted in
+the Library or no longer public). A comment deleted or removed takes its row
+with it. These are the rules a comment's own page reads (`comments.seen`),
+read for many comments at once, so a row always lands on a comment that is
+there. The bell's dot reads the same rules, so it never promises a row the
+list will not show.
+
+**Landing.** The comment glows a moment in the note's tint, the comment alone
+and not the answers under it, then the tint fades over a second and a half
+(`comments.js`); nothing moves, so Reduce Motion keeps the fade. One on a
+later page of comments is brought in with Load more, a page at a time, and
+the page glides to it (under Reduce Motion it is put there). A drawing answer
+opened this way draws itself once, sound off, as a post's drawing starts on
+its own page, and the post's own waits: the player plays one at a time.
+Landing at words, the post's own plays as on any visit. Under Reduce Motion
+nothing plays.
+
+**Nothing yet:** Blooby as his Home Screen icon in small, "Nothing new yet",
+"When someone says something on your post, or answers you, you’ll see it
+here.", and "Make a skribl", which opens Make's sheet, as the first visit's
+button of the same name does.
+
+**Data.** Worked out from the comments, not kept: there is no table of
+notifications to keep in step, so a comment deleted, removed or hidden takes
+its row with it at once and nothing is ever swept. Two things are kept, on the
+site's chain (migration `c276c1445bc1`): `social_people.activity_seen_at`,
+when the person last looked (nothing until then: everything is new), and
+`social_comments.to_person_id`, whom an answer answers, the author of the
+comment or answer whose Answer was pressed. `parent_id` cannot say it: an
+answer to an answer sits under the same top-level comment, whoever wrote that,
+so without it "answered your comment" would miss every answer to an answer.
+Answers already there were filled from the comment they sit under. It is set
+to nothing, in code, when that person's account goes (`accounts.delete_person`;
+ON DELETE SET NULL is the net). Indexed newest first by whose
+(`owner_id, created_at`, which takes the place of the owner's own index) and
+by whom (`to_person_id, created_at`): the dot is two searches, one on each,
+since you last looked, a handful of rows at most, and Skribl is asked only
+when every new one is on a drawing (whether its page is still there). It is
+asked once a request, by a page with the bell or the rail. The page reads the
+newest 100 comments.
+
+`harness/verify_socialactivity.py` holds it through the demo's own server;
+DECISIONS.md ("Activity at /social") says what each check was shown red by.

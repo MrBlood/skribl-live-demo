@@ -299,7 +299,9 @@ def delete_person(sess, person_id):
     comment on the drawings they showed outside a post (whose pages go with
     them), their own comments with every answer under them (phase 2: said
     here, never left to a cascade), and their blocks, both ways (piece 5); a
-    report that names them stays, naming nobody. Flushes; the request commits.
+    report that names them stays, naming nobody, and an answer to them by
+    somebody who stays answers nobody (notifications). Flushes; the request
+    commits.
     (Their other skribls are Skribl's, and docs/INTEGRATION.md has no seam
     for a host to take an author's drawings away in one go: they stay, and
     the confirm page says so.)"""
@@ -315,6 +317,10 @@ def delete_person(sess, person_id):
     from .comments import drop_owner_comments, drop_person_comments
     drop_owner_comments(person_id)
     drop_person_comments(person_id)
+    # Answers to them, by people who stay, stay too, answering nobody now
+    # (notifications: Activity's "answered your comment" reads whom).
+    from .models import Comment
+    sess.execute(sa.update(Comment).where(Comment.to_person_id == person_id).values(to_person_id=None))
     sess.execute(sa.delete(Challenge).where(Challenge.person_id == person_id))
     invites = sa.select(Invite.id).where(sa.or_(Invite.created_by_id == person_id,
                                                Invite.for_person_id == person_id,

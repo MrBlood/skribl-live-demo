@@ -21,6 +21,14 @@
     follow the device: the site has no switch of its own yet, and Skribl's
     own choice is kept where only Skribl's pages read it.
 
+    ACTIVITY (notifications; the owner's "all yes", Nov 12): signed in, a
+    bell drawn in our pen at the top right of a phone's Home and Explore,
+    where Sign in sits before you sign in, and Activity in a desk's rail
+    after Explore (the bar keeps its four places: it is not in the bar).
+    Each wears a dot when something is new since you last looked
+    (activity.dot_for_request, asked once a request), and leads to
+    /social/activity. Its bell is filled on its own page, as Home is.
+
     YOU IS YOUR PROFILE (piece 3): the bar's and the rail's You lead to
     /social/@<handle>, and wear your drawn face, still, in a circle (Skribl's
     face player); before you have drawn one, an empty circle, never a stock
@@ -65,6 +73,9 @@
   {% block top %}
   <a class="brand" href="{{ url_for('social.home') }}" aria-label="Blooby, home">{% include 'social/_blooby_mark.html' %}</a>
   {% if accounts and not me and not hide_nav %}<a class="top-signin" href="{{ url_for('social.signin') }}">Sign in</a>{% endif %}
+  {% if accounts and me and not hide_nav and here in ('home', 'explore') %}{% set dot = activity_dot() %}
+  <a class="icon-btn top-bell" href="{{ url_for('social.activity') }}" data-activity title="Activity"
+     aria-label="{{ 'Activity, something new' if dot == 'new' else 'Activity' }}">{{ ic.bell(dot=dot) }}</a>{% endif %}
   {% endblock %}
 </header>
 {% if not hide_nav %}
@@ -74,6 +85,10 @@
     <span class="tab-ic">{{ ic.home(here == 'home') }}</span><span class="tab-name">Home{% if here == 'home' %}{{ ic.underline() }}{% endif %}</span></a>
   <a class="tab" href="{{ url_for('social.explore') }}"{% if here == 'explore' %} aria-current="page"{% endif %}>
     <span class="tab-ic">{{ ic.explore(here == 'explore') }}</span><span class="tab-name">Explore{% if here == 'explore' %}{{ ic.underline() }}{% endif %}</span></a>
+  {% if accounts and me %}{% set dot = activity_dot() %}
+  <a class="tab tab-activity" href="{{ url_for('social.activity') }}" data-activity{% if here == 'activity' %} aria-current="page"{% endif %}{% if dot == 'new' %} aria-label="Activity, something new"{% endif %}>
+    <span class="tab-ic">{{ ic.bell(here == 'activity', dot) }}</span><span class="tab-name">Activity{% if here == 'activity' %}{{ ic.underline() }}{% endif %}</span></a>
+  {% endif %}
   <button class="tab tab-make" type="button" data-make aria-haspopup="dialog" aria-controls="makeSheet" aria-expanded="false">
     <span class="tab-ic">{{ ic.pen() }}</span><span class="tab-name">Make</span></button>
   {% if accounts and me %}

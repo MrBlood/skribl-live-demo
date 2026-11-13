@@ -35875,3 +35875,203 @@ after the merge is.
 
 Not tested here: WebKit (the owner's iPhone), SF and Segoe UI, PostgreSQL
 (the migration's DDL rendered offline and read), and the live site.
+
+## After v330 -- Activity at /social (phase 2, notifications)
+
+The owner, Nov 12, "all yes" to the notifications mock made that day: A of
+its three (a bell at the top right of a phone's Home and Explore, Activity in
+a desk's rail; B was a fifth place in the bar, C a "New for you" card on
+Home), the dot's colour, the Activity list as drawn, and one extra: a drawing
+answer opened from Activity draws itself once when you land. Built in the
+mock's own classes, sizes and words (`social/activity.py`, `activity.html`,
+and comments.js for the landing).
+
+- WHERE IT LIVES. Signed in, a bell drawn in our pen (the _pen set: 24
+  units, the signature's round pen at 2.1, each line one unit long) at the
+  top right of a phone's Home and Explore, where Sign in sits before you sign
+  in: 44px, named "Activity", "Activity, something new" with its dot. On a
+  desk, Activity in the rail after Explore, on every page; on its own page
+  the rail's bell is filled, as Home's house is, with the pen's line under
+  its name. THE BAR KEEPS ITS FOUR: Activity is not in it, and on Activity's
+  own page a phone's top says "Activity" with the way back, as a post's says
+  "Post"; the page's own heading is then a screen reader's (a desk shows it).
+- THE DOT, a new token for a new job: --new-dot, Blooby's blush a shade
+  deeper on light (#e64a78, 3.64:1 on the page, where his own blush reads
+  2.58:1, under the 3:1 a mark needs) and his blush itself on dark
+  (var(--blooby-blush), 7.34:1). Ringed in the page's own ground, so it stands
+  clear of the line; each new row in the list wears it too. IT GOES AS YOU
+  LOOK: a tap on the bell lets it fade while Activity opens (social.js), so a
+  page the back button brings back whole has it gone too; on a desk's Activity
+  page the rail's fades once the page is there. A fade, never a move, so
+  Reduce Motion keeps it.
+- THE LIST, AS DRAWN. New, then Earlier, a dot on each new row. A row is a
+  comment or an answer, not yours: answering you ("Theo answered your
+  comment", with a drawing "Juno answered with a drawing"), else on what you
+  own, a post or a drawing shown outside a post ("Mira said something on your
+  post", with a drawing "Juno drew something on your post"). Their face, when
+  as comments say it, their words under it in quotes (two lines at most), the
+  small picture (the drawing they answered with or drew, else the post's,
+  cut from its poster as More from's tiles are), and one link to the comment
+  on its page (#c-<id>, a post's or a drawing's).
+- GROUPED SINCE YOU LAST LOOKED, as the words say: several on one post, or
+  answering you in one conversation, are one row, the newest face in front
+  and the next behind, the newest words, opening the newest ("Mira and 2
+  others", "Mira and Theo" for two). A drawing keeps its own row. EARLIER
+  KEEPS A ROW FOR EACH, a judgment call read off the approved pictures, whose
+  Earlier shows the cottage's two comments as two rows: grouping is what was
+  new since you looked, and history is said as it was said. So a group of
+  three in New is three rows under Earlier next time.
+- SEEN IS OPENING IT. The page reads the list, then keeps on your row the
+  time it was opened (the time taken before the list is read, so a comment
+  made meanwhile is still new next time). The rows that were new keep their
+  dot while you are there; next time they sit under Earlier. Nothing to tick.
+- NEVER IN IT: yourself; anybody a block either way or a takedown hides; a
+  comment taken down; an answer under a comment you are not shown; anything on
+  a post or a drawing whose page you cannot see (a block either way with its
+  maker, it or its maker taken down, a drawing deleted in the Library or no
+  longer public). comments.seen's rules, read for many comments at once, so
+  every row lands on a comment that is there. The dot reads the same rules,
+  so it never promises a row the list will not show.
+- LANDING. The comment glows a moment in the note's tint, the comment alone
+  and not the answers under it (its own height, set by comments.js), then the
+  tint fades over a second and a half; nothing moves, so Reduce Motion keeps
+  the fade. One on a later page of comments is brought in with Load more, a
+  page at a time (ten at most), and the page glides to it; under Reduce
+  Motion it is put there. THE DRAW-ONCE: a drawing answer opened this way
+  draws itself once, sound off, never under Reduce Motion, and THE POST'S OWN
+  WAITS, a judgment call: Skribl's player plays one post at a time, so both
+  started would have the later stop the earlier, and the one you came for is
+  the answer. Landing at words, the post's own plays as on any visit.
+  posts.js asks comments.js (window.SocialPlayOwn) when the address names a
+  comment; otherwise nothing about a post's page changed.
+- NOTHING YET: Blooby as his Home Screen icon in small (the sign-in pages'
+  own), "Nothing new yet", the mock's words, and "Make a skribl", which opens
+  Make's sheet. The brief left the word to me ("Make something" or the
+  mock's): "Make a skribl" is what the first visit's button says, and it
+  opens the same sheet; same role, same words.
+- WORKED OUT FROM THE COMMENTS, NOT KEPT, as the brief preferred: no table of
+  notifications to keep in step with them, so a comment deleted, removed or
+  hidden takes its row with it at once and nothing is ever swept. TWO THINGS
+  ARE KEPT, on the site's chain (c276c1445bc1): social_people.activity_seen_at
+  (nothing until you first look: then everything is new), and
+  social_comments.to_person_id, WHOM AN ANSWER ANSWERS, a departure from the
+  brief's "owner_id, parent_id, created_at", for a real reason: an answer to
+  an answer sits under the same top-level comment, whoever wrote that, so
+  parent_id cannot say whom it answered, and "answered your comment" would
+  miss every answer to an answer, though the box said "Answer Nico…". The
+  answers already there were filled from the comment they sit under (all an
+  answer kept until now). It is set to nothing, in code, when that person's
+  account goes (accounts.delete_person; ON DELETE SET NULL is the net).
+  Answers to you in one conversation group by the comment they sit under.
+- CHEAP, AS ASKED. Indexed newest first by whose (owner_id, created_at),
+  which takes the place of the owner's own index (it starts with it, so
+  deleting an account and the cascade still use it), and by whom
+  (to_person_id, created_at). The dot is two searches, one on each index,
+  since you last looked, twenty rows at most, and Skribl is asked only when
+  every new one is on a drawing (whether its page is still there); asked once
+  a request (the phone's bell and the desk's rail are the same page), by a
+  page with the bell or the rail. SQLite's own plan for the code's own query
+  says SEARCH on each index, no scan and no sort. The page reads the newest
+  100 comments. A DESK'S RAIL HAS THE DOT ON EVERY PAGE (the mock's "on a
+  desk the rail names it, always in view"), so every signed-in page with the
+  rail asks it, not Home and Explore alone: the same two searches.
+- PRIVACY says what is kept: "And when you last looked at Activity, so it
+  can tell you what's new."
+
+Pad and Flip: not affected. This is the site's chrome and its own page; a
+drawing answer made in either shows its small picture the same way and,
+opened from Activity, draws itself in the in-post player it always had.
+
+THE FOUR: kind (one quiet dot, gone once you look, never a count shouting;
+nobody hidden or blocked ever surfaces, and nothing is lost: what was new
+sits under Earlier); simple (a bell at the top right is read without being
+told; one tap from a row to the comment, which glows so you see which);
+playful (a bell drawn in our pen, its dot Blooby's blush; a drawing answer
+draws itself as you arrive); powerful (every answer in one list, grouped
+since you looked, a tap from its comment; Load more brings an old one).
+
+CONTRAST, measured on the built pages, as the mock quoted: the bell's line
+17.47:1 light and 17.17:1 dark at the top, 7.36:1 and 10.49:1 in the rail;
+the dot 3.64:1 and 7.34:1 (a mark's 3:1); a landed comment on the tint, its
+words 15.05:1 and 14.44:1, its time 6.34:1 and 8.82:1. Every word on Activity
+and on the chrome with the bell, phone (touch) and desk, light and dark:
+164 read, the lowest 5.33:1 (the white "Make" on the action purple,
+as everywhere). One token added (--new-dot); nothing else changed.
+
+THE CHECKS. verify_socialactivity.py, twelve sections through the demo's own
+server, people joining with Chromium's virtual authenticator: the bell and
+the rail; the dot's paint and colour, light and dark, gone once looked, its
+fades read on every frame; each kind of row; grouping; New, Earlier and seen
+on open; never in the list, and the dot agreeing; a tap landing on its
+comment, which glows and fades, read on every frame from the page's first
+(Load more and a glide; a drawing's page; still under Reduce Motion); the
+draw-once (every play() asked for recorded from the page's start); the empty
+state; every word and target; the chain on a populated database, the bell's
+query plan, and an account deleted with the cascade off; no page, console or
+CSP errors. verify_socialauth's chain row knows the two new indexes.
+
+EVERY ROW WAS SHOWN RED by a break of its own, each in a throwaway copy of
+the committed tree (git archive), its section run alone: fifty-nine breaks,
+each red on its row. The bell and the rail: the bell as a fifth place in the
+bar; the bell 36px; the bell signed out; Activity after Make in the rail; its
+own page unlit; a dot with nothing new. The dot: Blooby's own blush on light
+(2.58:1, and section 10's); the dot unringed; the rail's dot on Home and
+Explore only; a faint bell; opening Activity marking nothing (and section
+5's); the rail's dot staying, or snapping; a tap on the bell fading nothing,
+or snapping. The rows: the words wrong; the link without its #c- (and section
+7's); answers to you not told apart; four lines of words; the post's picture
+for a drawing. Grouping: none; the faces swapped; a drawing answer grouped;
+whom an answer answers read from the comment it sits under (and section 11's);
+Earlier grouped. Seen: every row dotted; seen kept before the list is read.
+Never in it: yourself; nobody hidden; a comment taken down shown; a deleted
+comment kept; an answer on a post taken down, or on a drawing deleted in the
+Library, shown; the dot lit by any new row. Landing: no fade; a snap; the
+tint over the answers too; the page gliding a moment after it lands; no Load
+more; Load more snapping there; a drawing's comment linked as a post's; a
+glide under Reduce Motion. The draw-once: the post's own always started; no
+draw-once; the post's own waiting at words; drawing under Reduce Motion. The
+empty state: "Make something"; no icon; the button without Make's door. Words
+and targets: the time faint; rows 52px; the tint a solid purple. The data:
+the chain without the backfill; the owner's own index kept; the downgrade
+without it; no index on whom (the plan then scans); delete_person leaving
+whom. No page errors: the landing throwing. verify_socialauth: the chain short
+the whom index.
+
+FIVE INSTRUMENTS WERE WRONG FIRST, found building the suite: its first wait
+asked for posts.js's SocialWhen, which Explore does not load (section 1
+stopped: the page is ready once it is complete); section 6 read who was in
+the list from New, where grouping folds a post's comments into one row (it
+saw 3 of 10: it reads Earlier now, a row each), and cleared "seen" before
+opening Activity, which marks it seen again (the dot's row read none);
+section 10's must-read words were not what the census keeps (an element's
+first 24 characters) and named a group backwards; and the side-by-side run
+read a move on one frame of a first-page landing, the browser's own jump to
+the address's comment as the page arrived (stillness is read while it glows).
+FIVE MORE WERE FOUND BY THE BREAKS, five that stayed green or stopped a
+section, each the instrument: the bell's line and the row's dot read without
+their alpha, so a faint line read solid (bell-faint: folded over the ground
+now, as the census does); rows found by their links, so a link without its
+#c- stopped section 7 at a tap (found by their words now); the first landing
+on the last comment of a short page, which could not have moved (older
+comments sit under it now); the draw-once sampling players' states, where a
+post's own started and stopped a moment later by the answer reads idle (every
+play() asked for is recorded now); and the empty state's icon read unguarded
+(no-icon stopped section 9). One break was itself a no-op, said so the list
+reads true: a scroll on landing at a comment the first page holds is
+overtaken by the browser's own jump to the address, so it never showed; the
+break that shows is a glide a moment after the page has settled, and it is
+red.
+
+THE AFFECTED SUITES, SIDE BY SIDE (run_parallel -j 2), on the final tree,
+green on the first run, none red beside the others: verify_socialactivity
+44/44, verify_socialcomments 67/67, verify_socialposts 31/31,
+verify_social 40/40, verify_socialsafety 34/34, verify_socialauth 63/63,
+verify_socialprofile 54/54, verify_migrations 77/77, verify_seam 470/470,
+verify_docs 144/144, verify_a11ypages 162/162; and verify_txcontract
+102/102 alone (Activity's page writes when you looked, and flushes). The
+full battery was not run; main's run after the merge is.
+
+Not tested here: WebKit (the owner's iPhone), SF and Segoe UI, PostgreSQL
+(the migration's DDL rendered offline and read: plain ADD COLUMN, ADD
+CONSTRAINT, one correlated UPDATE, and the index swaps, both ways), and the
+live site.

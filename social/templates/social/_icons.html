@@ -88,6 +88,22 @@
 <svg class="ic pen-ic ic-blooby{% if filled %} is-lit{% endif %}" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path class="bl-body" d="M 11.96,3.92 C 12.17,3.94 12.84,3.95 13.25,4.08 C 13.65,4.21 14.04,4.43 14.40,4.68 C 14.76,4.93 15.06,5.24 15.40,5.59 C 15.73,5.93 16.09,6.32 16.41,6.74 C 16.73,7.15 17.02,7.56 17.30,8.08 C 17.59,8.60 17.90,9.31 18.10,9.88 C 18.31,10.45 18.40,10.90 18.54,11.50 C 18.68,12.10 21.17,13.19 18.93,13.51 C 16.69,13.82 7.36,13.72 5.12,13.38 C 2.88,13.03 5.34,12.06 5.48,11.46 C 5.62,10.85 5.79,10.31 5.96,9.75 C 6.13,9.19 6.26,8.57 6.51,8.09 C 6.75,7.60 7.11,7.24 7.43,6.83 C 7.75,6.42 8.05,5.96 8.42,5.60 C 8.79,5.25 9.25,4.94 9.65,4.68 C 10.04,4.43 10.43,4.20 10.80,4.08 C 11.18,3.95 11.71,3.95 11.89,3.93{% if filled %} Z{% endif %}"/><path class="bl-eye" d="M 10.30,7.05 C 10.77,7.05 11.15,7.70 11.15,8.50 C 11.15,9.30 10.77,9.95 10.30,9.95 C 9.83,9.95 9.45,9.30 9.45,8.50 C 9.45,7.70 9.83,7.05 10.30,7.05 Z"/><path class="bl-eye" d="M 13.50,6.85 C 13.97,6.85 14.35,7.50 14.35,8.30 C 14.35,9.10 13.97,9.75 13.50,9.75 C 13.03,9.75 12.65,9.10 12.65,8.30 C 12.65,7.50 13.03,6.85 13.50,6.85 Z"/>{% if filled %}<path class="bl-blush" d="M 15.0,10.9 L 15.9,11.1"/>{% endif %}<path class="bl-card" d="M 5.6,12.9 L 18.4,12.9 C 19.3,12.9 19.9,13.5 19.9,14.4 L 19.9,20.2 C 19.9,21.1 19.3,21.7 18.4,21.7 L 5.6,21.7 C 4.7,21.7 4.1,21.1 4.1,20.2 L 4.1,14.4 C 4.1,13.5 4.7,12.9 5.6,12.9 Z"/><path class="bl-squig" d="M 6.56,19.41 C 6.79,18.91 7.47,17.00 7.98,16.42 C 8.49,15.84 9.25,15.72 9.62,15.93 C 9.99,16.14 9.93,17.08 10.22,17.65 C 10.51,18.23 10.85,19.20 11.36,19.36 C 11.87,19.51 12.83,19.09 13.28,18.60 C 13.73,18.10 13.63,16.87 14.05,16.40 C 14.48,15.92 15.26,15.57 15.82,15.74 C 16.38,15.92 17.16,17.17 17.42,17.46"/><circle class="bl-hand" cx="5.2" cy="13.1" r="1.55"/><circle class="bl-hand" cx="18.8" cy="13.1" r="1.55"/></svg>
 {%- endmacro %}
 
+{# Activity's bell, in the pen (notifications; the owner's "all yes", Nov 12):
+   the bell in one line, up its side, over and down; its mouth a line of its
+   own, a little wider each side and sagging a touch, as a bell's lip is seen
+   from just below; a short stem; the clapper a small smile. Its ink centred
+   across its box. Filled on its own page, as Home is. `dot`: "new" rings the
+   dot for something new on its shoulder, in the page's own ground (social.css,
+   --new-dot); "going" lets it fade, on Activity's own page, as you look. #}
+{% macro bell(filled=false, dot=none) -%}
+<svg class="ic pen-ic ic-bell{% if dot %} is-new{% endif %}" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+{%- if filled %}<path pathLength="1" d="M 6.1,16.5 C 6.9,15.3 7.0,13.8 7.0,11.6 C 7.0,8.0 9.1,5.5 12.0,5.5 C 14.9,5.5 17.0,8.0 17.0,11.6 C 17.0,13.8 17.1,15.3 17.9,16.5 Z" fill="currentColor"/>
+{%- else %}<path pathLength="1" d="M 6.1,16.5 C 6.9,15.3 7.0,13.8 7.0,11.6 C 7.0,8.0 9.1,5.5 12.0,5.5 C 14.9,5.5 17.0,8.0 17.0,11.6 C 17.0,13.8 17.1,15.3 17.9,16.5"/>{% endif -%}
+<path pathLength="1" d="M 4.6,16.9 C 8.6,17.6 15.4,17.6 19.4,16.9"/><path pathLength="1" d="M 12.0,5.4 L 12.0,3.6"/><path pathLength="1" d="M 10.1,19.6 C 10.6,20.6 11.3,21.0 12.0,21.0 C 12.7,21.0 13.4,20.6 13.9,19.6"/>
+{%- if dot %}<circle class="act-dot{% if dot == 'going' %} is-going{% endif %}" cx="18.4" cy="5.6" r="3.6"/>{% endif -%}
+</svg>
+{%- endmacro %}
+
 {% macro pen() -%}
 {{ _svg('<path d="M15 5.5 18.5 9"/><path d="M4.5 19.5l1-4.2L16.2 4.6a2.4 2.4 0 0 1 3.4 3.4L8.9 18.7z"/>') }}
 {%- endmacro %}

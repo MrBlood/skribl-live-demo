@@ -261,6 +261,15 @@
 
   window.SocialPadOverlay = padOver;
 
+  /* ACTIVITY'S DOT GOES AS YOU LOOK (notifications): a tap on the bell (a
+     phone's top) or the rail's Activity lets the dot fade while Activity
+     opens (social.css, .is-seen), so a page the back button brings back
+     whole has it gone too. Opening Activity is what marks it seen. */
+  doc.addEventListener('click', function (e) {
+    var a = e.target && e.target.closest ? e.target.closest('a[data-activity]') : null;
+    if (a) a.classList.add('is-seen');
+  });
+
   var make = doc.getElementById('makeSheet');
   if (!make) return;
   var openers = doc.querySelectorAll('[data-make]');

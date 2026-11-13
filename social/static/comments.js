@@ -35,6 +35,9 @@
  *
  * LOAD MORE brings the next page of comments in place.
  *
+ * OPENED AT A COMMENT (#c-<id>, a row in Activity; notifications): it glows
+ * a moment in the note's tint, and a drawing answer draws itself once (below).
+ *
  * The words are the page's ([data-comment-words]): this file says nothing of
  * its own. Times are said by posts.js (window.SocialWhen).
  */
@@ -393,24 +396,83 @@
 
   /* ---- Load more ------------------------------------------------------------ */
   var more = root.querySelector('[data-cm-next]');
-  if (more) {
-    more.addEventListener('click', function () {
-      var next = more.getAttribute('data-cm-next');
-      if (!next) return;
-      more.disabled = true;
-      fetch(root.getAttribute('data-more') + '?before=' + encodeURIComponent(next), { credentials: 'same-origin' })
-        .then(function (r) { return r.ok ? r.json() : Promise.reject(new Error(String(r.status))); })
-        .then(function (j) {
-          var holder = doc.createElement('div');
-          holder.innerHTML = j.html || '';
-          Array.prototype.slice.call(holder.children).forEach(function (li) { list.appendChild(li); settle(li); });
-          if (j.next) more.setAttribute('data-cm-next', j.next);
-          else { more.setAttribute('data-cm-next', ''); more.hidden = true; }
-          more.disabled = false;
-        }, function () {
-          more.disabled = false;
-          tell(pageSay, say('c_network'));
-        });
-    });
+  /* The next page in place: a promise of whether one came. */
+  function loadMore() {
+    var next = more ? more.getAttribute('data-cm-next') : '';
+    if (!next) return Promise.resolve(false);
+    more.disabled = true;
+    return fetch(root.getAttribute('data-more') + '?before=' + encodeURIComponent(next), { credentials: 'same-origin' })
+      .then(function (r) { return r.ok ? r.json() : Promise.reject(new Error(String(r.status))); })
+      .then(function (j) {
+        var holder = doc.createElement('div');
+        holder.innerHTML = j.html || '';
+        Array.prototype.slice.call(holder.children).forEach(function (li) { list.appendChild(li); settle(li); });
+        if (j.next) more.setAttribute('data-cm-next', j.next);
+        else { more.setAttribute('data-cm-next', ''); more.hidden = true; }
+        more.disabled = false;
+        return true;
+      }, function () {
+        more.disabled = false;
+        tell(pageSay, say('c_network'));
+        return false;
+      });
   }
+  if (more) more.addEventListener('click', function () { loadMore(); });
+
+  /* ---- OPENED AT A COMMENT (#c-<id>: a row in Activity; notifications) ------
+     The comment glows a moment in the note's tint, then the tint fades over a
+     second and a half (social.css, .cm.is-landed: the comment alone, its own
+     height, not the answers under it). A drawing answer draws itself once,
+     sound off, as a post's drawing starts on its own page, and the post's own
+     waits (one plays at a time); at any other comment the post's own plays,
+     as it always does (posts.js, window.SocialPlayOwn). One on a later page is
+     brought in with Load more, a page at a time, and the page glides to it.
+     UNDER REDUCE MOTION nothing moves or plays: the page is put there, and the
+     tint fades where it sits. */
+  var GLOW_MS = 900, FADE_MS = 1500, LAND_PAGES = 10;
+  function playOwn() { if (window.SocialPlayOwn) window.SocialPlayOwn(); }
+  function still() { return !!(reduced && reduced.matches); }
+  function glow(li) {
+    var main = li.querySelector(':scope > .cm-main');
+    if (main) {
+      var own = main.getBoundingClientRect().bottom - li.getBoundingClientRect().top + 2;
+      li.style.setProperty('--cm-own', Math.max(0, Math.round(own)) + 'px');
+    }
+    li.classList.add('is-landed');
+    var done = false;
+    function end() {
+      if (done) return;
+      done = true;
+      li.classList.remove('is-landed', 'is-fading');
+      li.style.removeProperty('--cm-own');
+    }
+    setTimeout(function () {
+      li.classList.add('is-fading');
+      li.addEventListener('transitionend', function (e) { if (e.target === li && e.pseudoElement === '::before') end(); });
+      setTimeout(end, FADE_MS + 400);
+    }, GLOW_MS);
+  }
+  function drawOnce(art) {
+    if (still() || !window.SkriblInline) return;
+    var players = window.SkriblInline.mount(art);
+    if (players && players[0] && players[0].play) players[0].play();
+  }
+  function landed(li, brought) {
+    if (brought) li.scrollIntoView({ block: 'center', behavior: still() ? 'auto' : 'smooth' });
+    glow(li);
+    var art = li.querySelector(':scope > .cm-main .cm-art');
+    if (art) drawOnce(art); else playOwn();
+  }
+  (function land() {
+    var m = /^#(c-[A-Za-z0-9_-]+)$/.exec(window.location.hash || '');
+    if (!m) return;
+    var pages = 0;
+    (function look() {
+      var li = doc.getElementById(m[1]);
+      if (li && li.classList.contains('cm')) { landed(li, pages > 0); return; }
+      if (pages >= LAND_PAGES || !more || !more.getAttribute('data-cm-next')) { playOwn(); return; }
+      pages++;
+      loadMore().then(function (got) { if (got) look(); else playOwn(); });
+    })();
+  })();
 })();
