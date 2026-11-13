@@ -1608,8 +1608,9 @@ stays a sleep.
   block either way, a body that is not a yes or a no, the limit) and a refusal
   putting the button back; nothing of follows on somebody else's page or its
   source, your own page's "Followed by…" and "You follow…", counted by the
-  viewer; the lists' sheet and its landings; the button's fade and draw read
-  on every frame, and Reduce Motion; Home's pill (its place, the Gallery's
+  viewer; the lists' sheet, its switch read on every frame, and its landings;
+  the button's fade and draw read on every frame, and Reduce Motion; Home's
+  pill (its place, the Gallery's
   values, the default and the pick kept across devices, the switch read on
   every frame, Reduce Motion); Following's order, caught up, Fresh from
   everyone, Load more through both, the kind card; Activity's follow rows,

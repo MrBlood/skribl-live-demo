@@ -249,6 +249,10 @@
     var none = swap.querySelector('[data-feed-none]');
     var pageSay = doc.querySelector('[data-feed-say]');
     var turn = 0;
+    /* The tab the posts are showing: where the pill goes back to if the
+       other's posts cannot be had. */
+    var showing = (home.querySelector('button[aria-pressed="true"]') || { getAttribute: function () { return null; } })
+      .getAttribute('data-show');
     /* The posts fade out (social.css, .feed-swap.is-out); this waits for them
        to be gone, however the fade ends. */
     var faded = function () {
@@ -264,7 +268,6 @@
     home.addEventListener('click', function (e) {
       var b = e.target.closest('button[data-show]');
       if (!b || b.getAttribute('aria-pressed') === 'true') return;
-      var was = home.querySelector('button[aria-pressed="true"]');
       var show = b.getAttribute('data-show');
       var n = ++turn;
       choose(home, b);
@@ -279,6 +282,7 @@
            its place, then faded back. */
         swap.style.minHeight = swap.offsetHeight + 'px';
         feed.innerHTML = j.html || '';
+        showing = show;
         if (window.SocialWhen) window.SocialWhen(feed);
         if (window.SkriblInline) window.SkriblInline.mount(feed);
         if (more) {
@@ -294,7 +298,8 @@
         });
       }, function () {
         if (n !== turn) return;
-        if (was) choose(home, was);
+        var back = home.querySelector('button[data-show="' + showing + '"]');
+        if (back) choose(home, back);
         swap.classList.remove('is-out');
         if (pageSay) {
           pageSay.textContent = say('fo_network');

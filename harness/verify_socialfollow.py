@@ -26,22 +26,25 @@ mock, B (Nov 13): who follows whom is yours alone.
      counted by the viewer (somebody taken down is in no line and no list).
   5. THE LISTS: Make's own sheet in its paper, the one pill, Followers and
      Following newest first with when, "Only you can see…", a row to their
-     page; the sheet keeps its height between them; #followers and
-     #following open it on that list.
+     page; the sheet keeps its height between them; the switch read on every
+     frame (the pill glides, one list fades out before the other fades in;
+     under Reduce Motion the pill is put there); #followers and #following
+     open it on that list.
   6. KIND, NEVER JUMPY (the button), read on every frame: following fades the
      fill and the words and draws the check, nothing moving; unfollowing
      fades, nothing un-drawing; under Reduce Motion only fades.
   7. HOME'S PILL: Following | Everyone under the composer, the Gallery's pill
      value for value, 44px to a finger; opens on Everyone before you follow
      anybody and on Following after; your pick kept for the account, on
-     another device too; the switch read on every frame (the pill glides,
-     the posts fade, change while unseen and fade back, the page doesn't
-     scroll); under Reduce Motion the pill is put there and the posts fade.
+     another device too; a switch that cannot reach the site puts the pill
+     back and says why; the switch read on every frame (the pill glides, the
+     posts fade, change while unseen and fade back, the page doesn't scroll);
+     under Reduce Motion the pill is put there and the posts fade.
   8. FOLLOWING NEVER RUNS OUT: the people you follow and you, posts and
      drawings, newest first, nothing else; then "You're caught up…" with its
      check and Fresh from everyone, everybody else's, nothing twice; Load more
      carries on through both; following nobody, the kind card and everyone's;
-     somebody taken down is in nobody's Following.
+     somebody taken down is in nobody's Following (all of it walked).
   9. ACTIVITY: "Mira followed you", the face wearing a small Follow (the
      action's purple, a white plus), no picture; grouped since you last
      looked ("… and 2 others", "… and …"); one person opens their page,
@@ -470,6 +473,19 @@ def tap_to(pg, loc, timeout=10000):
         pass
 
 
+def walk(pg, pages=6):
+    """Home's feed as Load more brings it, page after page (at most `pages`
+    more), in order (FEED)."""
+    for _ in range(pages):
+        if not pg.evaluate("() => { const b = document.querySelector('[data-feed-next]'); return !!b && !b.hidden; }"):
+            break
+        n0 = pg.evaluate("() => document.querySelectorAll('[data-feed] > *').length")
+        pg.locator("[data-feed-next]").click()
+        pg.wait_for_function("(n) => document.querySelectorAll('[data-feed] > *').length > n", arg=n0, timeout=15000)
+        pg.wait_for_timeout(300)
+    return pg.evaluate(FEED)
+
+
 def handle_of(pid):
     got = db("select p.handle from social_posts s join social_people p on p.id = s.person_id where s.public_id = ?", (pid or "",))
     return got[0][0] if got else None
@@ -744,23 +760,41 @@ def colour(css):
     return [m[0] * k, m[1] * k, m[2] * k, m[3] if len(m) > 3 else 1.0]
 
 
-def steps_of(vals):
+# A DISPLAY FRAME, 60 a second. A frame the browser drops is several of them:
+# a step is judged over the frames it spans (a 70ms gap is four), so a busy
+# machine is not read as a jump. A snap cannot hide in a long frame: each
+# change must also show over several frames of its own (`frames`, counted
+# as they came).
+FRAME_MS = 1000 / 60
+
+
+def _spans(ts):
+    return [max(1.0, round((b - a) / FRAME_MS)) for a, b in zip(ts, ts[1:])] if ts else None
+
+
+def steps_of(vals, ts=None):
     """How a value changed over frames, as shares of the whole change: the
-    frames it changed on, and its biggest step."""
-    vals = [v for v in vals if v is not None]
+    frames it changed on, and its biggest step (over the display frames each
+    spans, when the frames' times `ts` are given)."""
+    pairs = [(v, t) for v, t in zip(vals, ts or [None] * len(vals)) if v is not None]
+    vals = [v for v, _ in pairs]
+    spans = _spans([t for _, t in pairs]) if ts else [1.0] * max(0, len(vals) - 1)
     if len(vals) < 2:
         return {"frames": 0, "step": 0.0, "way": 0.0}
     way = abs(vals[-1] - vals[0])
     steps = [abs(b - a) for a, b in zip(vals, vals[1:])]
     if way < 1e-6:
         return {"frames": 0, "step": 0.0, "way": 0.0}
-    return {"frames": len([s for s in steps if s / way > 0.005]), "step": round(max(steps) / way, 3), "way": round(way, 3)}
+    return {"frames": len([s for s in steps if s / way > 0.005]),
+            "step": round(max(s / n for s, n in zip(steps, spans)) / way, 3), "way": round(way, 3)}
 
 
-def colour_steps(cs):
-    """steps_of() for colours: each frame's distance from the first, as a share of the last's."""
-    cs = [colour(c) for c in cs]
-    cs = [c for c in cs if c]
+def colour_steps(cs, ts=None):
+    """steps_of() for colours: each frame's distance from the one before, as a share of the whole change."""
+    pairs = [(colour(c), t) for c, t in zip(cs, ts or [None] * len(cs))]
+    pairs = [(c, t) for c, t in pairs if c]
+    cs = [c for c, _ in pairs]
+    spans = _spans([t for _, t in pairs]) if ts else [1.0] * max(0, len(cs) - 1)
     if len(cs) < 2:
         return {"frames": 0, "step": 0.0, "way": 0.0}
     d = lambda a, b: math.sqrt(sum((a[i] - b[i]) ** 2 for i in range(3)) + ((a[3] - b[3]) * 255) ** 2)
@@ -768,7 +802,8 @@ def colour_steps(cs):
     if whole < 1e-6:
         return {"frames": 0, "step": 0.0, "way": 0.0}
     steps = [d(a, b) / whole for a, b in zip(cs, cs[1:])]
-    return {"frames": len([s for s in steps if s > 0.005]), "step": round(max(steps), 3), "way": round(whole, 1)}
+    return {"frames": len([s for s in steps if s > 0.005]), "step": round(max(s / n for s, n in zip(steps, spans)), 3),
+            "way": round(whole, 1)}
 
 
 def moved(fs, keys=("b", "share", "more")):
@@ -787,12 +822,14 @@ def judge_button(fs, reduced=False, to=True):
     the check drew over six frames or more, none more than 35% (under Reduce
     Motion there at once, with nothing to draw); unfollowing, it never un-drew
     while it could be seen."""
-    fill, off, on = colour_steps([f["bg"] for f in fs]), steps_of([f["off"] for f in fs]), steps_of([f["on"] for f in fs])
-    dash = steps_of([f["dash"] for f in fs])
+    ts = [f["t"] for f in fs]
+    fill, off, on = colour_steps([f["bg"] for f in fs], ts), steps_of([f["off"] for f in fs], ts), steps_of([f["on"] for f in fs], ts)
+    dash = steps_of([f["dash"] for f in fs], ts)
     out = {"moved": moved(fs), "fill": fill, "off": off, "on": on, "dash": dash, "frames": len(fs),
            "arr": fs[-1]["arr"] if fs else None}
     ok = (out["moved"] == 0 and fill["way"] > 0 and fill["step"] <= 0.35 and fill["frames"] >= 4
-          and off["way"] > 0.9 and off["step"] <= 0.35 and on["way"] > 0.9 and on["step"] <= 0.35)
+          and off["way"] > 0.9 and off["step"] <= 0.35 and off["frames"] >= 4
+          and on["way"] > 0.9 and on["step"] <= 0.35 and on["frames"] >= 4)
     if to and not reduced:
         ok = ok and dash["way"] > 0.9 and dash["frames"] >= 6 and dash["step"] <= 0.35
     elif to and reduced:
@@ -804,31 +841,50 @@ def judge_button(fs, reduced=False, to=True):
     return out
 
 
+def judge_lists(fs, reduced=False):
+    """A tap on the lists' pill read on every frame (LFRAMES): the tint glided
+    (over eight frames or more, none more than 30% of the way), or under Reduce
+    Motion was put there; the list shown faded out before the other faded in
+    (never both seen at once, no frame more than 35% of a fade); the sheet kept
+    its place and its height."""
+    ts = [f["t"] for f in fs]
+    glide = steps_of([f["x"] for f in fs], ts)
+    a, b_ = steps_of([f["a"] for f in fs], ts), steps_of([f["b"] for f in fs], ts)
+    both = max((min(f["a"], f["b"]) for f in fs), default=0)
+    still = round(max((max(abs(f["top"] - fs[0]["top"]), abs(f["h"] - fs[0]["h"])) for f in fs), default=0), 2)
+    out = {"glide": glide, "out": a, "in": b_, "both": round(both, 3), "moved": still, "frames": len(fs)}
+    ok = (a["way"] > 0.99 and b_["way"] > 0.99 and a["step"] <= 0.35 and b_["step"] <= 0.35 and both <= 0.05
+          and a["frames"] >= 4 and b_["frames"] >= 4 and still == 0 and glide["way"] > 10)
+    ok = ok and (glide["frames"] <= 1 if reduced else glide["frames"] >= 8 and glide["step"] <= 0.30)
+    out["ok"] = ok
+    return out
+
+
 def judge_pill(fs, reduced=False):
     """A tap on Home's pill read on every frame (PFRAMES): the tint glided (over
     eight frames or more, none more than 30% of the way), or under Reduce
     Motion was put there; the posts faded (no frame more than 35%), changed
     only while they could not be seen (0.05 or less), after the tint had
     started; the page did not scroll."""
-    xs = [f["x"] for f in fs]
-    glide = steps_of(xs)
-    fade = steps_of([f["op"] for f in fs[:max(1, next((i for i, f in enumerate(fs) if f["op"] > 0.99 and i > 2
-                                                      and any(g["op"] < 0.05 for g in fs[:i])), len(fs)))]])
+    xs, ts = [f["x"] for f in fs], [f["t"] for f in fs]
+    glide = steps_of(xs, ts)
     ops = [f["op"] for f in fs]
-    biggest = round(max([abs(b - a) for a, b in zip(ops, ops[1:])] or [0]), 3)
+    spans = _spans(ts) or []
+    biggest = round(max([abs(b - a) / n for a, b, n in zip(ops, ops[1:], spans)] or [0]), 3)
+    fading = len([1 for a, b in zip(ops, ops[1:]) if abs(b - a) > 0.005])
     change = next((i for i in range(1, len(fs)) if fs[i]["sig"] != fs[i - 1]["sig"]), None)
     started = change is not None and any(abs(fs[j]["x"] - fs[0]["x"]) > 0.3 for j in range(0, change + 1))
-    out = {"glide": glide, "fade_step": biggest, "seen_when_changed": fs[change]["op"] if change is not None else None,
+    out = {"glide": glide, "fade_step": biggest, "fade_frames": fading,
+           "seen_when_changed": fs[change]["op"] if change is not None else None,
            "started_first": started, "scrolled": round(max(abs(f["y"] - fs[0]["y"]) for f in fs), 2) if fs else None,
            "frames": len(fs), "back": fs[-1]["op"] if fs else None}
-    ok = (change is not None and out["seen_when_changed"] <= 0.05 and biggest <= 0.35 and out["scrolled"] == 0
-          and out["back"] > 0.99 and glide["way"] > 10)
+    ok = (change is not None and out["seen_when_changed"] <= 0.05 and biggest <= 0.35 and fading >= 8
+          and out["scrolled"] == 0 and out["back"] > 0.99 and glide["way"] > 10)
     if reduced:
         ok = ok and glide["frames"] <= 1
     else:
         ok = ok and glide["frames"] >= 8 and glide["step"] <= 0.30 and started
     out["ok"] = ok
-    del fade
     return out
 
 
@@ -1247,6 +1303,22 @@ with sync_playwright() as p:
                   " height", l6 and l6["pressed"] == "Following" and l6["following"]["shown"] and not l6["followers"]["shown"]
                   and [r["handle"] for r in l6["following"]["rows"]] == ["@rik"] and l6["h"] == h0,
                   f"{l6 and (l6['pressed'], [r['handle'] for r in l6['following']['rows']], l6['h'])} from {h0}")
+            seen = {}
+            for scheme in ("light", "dark"):
+                for reduced in (False, True):
+                    tag = f"{scheme}{' reduced' if reduced else ''}"
+                    lctx, lpg = browser_as(b, pia, scheme=scheme, reduced=reduced)
+                    go(lpg, "/social/@pia#followers", wait=900)
+                    lpg.evaluate(LFRAMES, [900])
+                    lpg.locator("#followsSheet .fo-seg button[data-tab=following]").tap()
+                    lpg.wait_for_timeout(1200)
+                    seen[tag] = judge_lists(lpg.evaluate("() => window.__lf"), reduced=reduced)
+                    close_ctx(lctx, lpg)
+            check("between the lists, read on every frame (light and dark): the pill glides (eight frames or more, none"
+                  " more than 30% of the way), the list shown fades out before the other fades in (never both at once,"
+                  " no frame more than 35%), and the sheet keeps its place and height; under Reduce Motion the pill is"
+                  " put there and the lists only fade",
+                  all(v["ok"] for v in seen.values()) and len(seen) == 4, json.dumps(seen))
             tap_to(pg, pg.locator("#followsSheet [data-list=following] .lk-row").first)
             landed = urllib.parse.urlparse(pg.url).path
             check("a row opens their page (where you unfollow, too)", landed == "/social/@rik", landed)
@@ -1350,6 +1422,22 @@ with sync_playwright() as p:
                   kept == [("everyone",)] and there and there["pressed"] == "Everyone" and "caught" not in (showing or [])
                   and kept2 == [("following",)],
                   f"kept {kept} then {kept2}; the desk's {there and there['pressed']}; shown {showing and showing[:3]}")
+            ctx, pg = browser_as(b, vic)
+            go(pg, "/social/")
+            before_sw = pg.evaluate(FEED)
+            pg.route("**/social/feed?show=*", lambda r: r.abort())
+            pg.locator("[data-home-pill] button[data-show=everyone]").tap()
+            pg.wait_for_timeout(1200)
+            back = pg.evaluate(PILL, "[data-home-pill]")
+            seen_sw = pg.evaluate("() => +getComputedStyle(document.querySelector('[data-feed-swap]')).opacity")
+            said = pg.evaluate("() => { const s = document.querySelector('[data-feed-say]'); return s && !s.hidden ? s.textContent : null; }")
+            after_sw = pg.evaluate(FEED)
+            close_ctx(ctx, pg)
+            check("a switch that cannot reach the site puts the pill back on what the posts show, brings the posts back"
+                  " into view, unchanged, and says why, kindly",
+                  back and back["pressed"] == "Following" and seen_sw == 1 and after_sw == before_sw
+                  and said == "That didn’t reach us. Check your connection and try again.",
+                  f"pill {back and back['pressed']}; posts at {seen_sw}, same {after_sw == before_sw}; said {said!r}")
             got = {}
             for scheme in ("light", "dark"):
                 for reduced in (False, True):
@@ -1425,16 +1513,7 @@ with sync_playwright() as p:
             go(pg, "/social/", wait=600)
             first_page = pg.evaluate(FEED)
             cursor = pg.evaluate(EXTRAS)["more"]
-            for _ in range(4):
-                nxt = pg.evaluate("() => { const b = document.querySelector('[data-feed-next]'); return !!b && !b.hidden; }")
-                if not nxt:
-                    break
-                n0 = pg.evaluate("() => document.querySelectorAll('[data-feed] > *').length")
-                pg.locator("[data-feed-next]").click()
-                pg.wait_for_function("(n) => document.querySelectorAll('[data-feed] > *').length > n", arg=n0, timeout=15000)
-                pg.wait_for_timeout(400)
-            walked = pg.evaluate(FEED)
-            zeds = [x for x in walked if x.startswith(("p:", "s:")) and x in circle or x not in rest]
+            walked = walk(pg, 4)
             cut = walked.index("caught") if "caught" in walked else -1
             check("Load more carries on: a first page of twenty of theirs (its cursor Following's own), then the rest of"
                   " theirs, then the line and everybody else's, nothing twice and nothing missed",
@@ -1443,15 +1522,36 @@ with sync_playwright() as p:
                   and all(x in walked[cut:] for x in rest) and all(x in walked[:cut] for x in circle)
                   and len(walked) == len(set(walked)),
                   f"first {len(first_page)} (cursor {cursor and cursor[:2]}); walked {len(walked)}, line at {cut}; {walked[cut - 1:cut + 4] if cut > 0 else walked[-4:]}")
-            del zeds
             db_write("update social_people set taken_down_at = datetime('now') where handle_key = 'abe'")
             go(pg, "/social/", wait=500)
-            down = pg.evaluate(FEED)
+            down = walk(pg, 4)
             db_write("update social_people set taken_down_at = null where handle_key = 'abe'")
             close_ctx(ctx, pg)
             abes = [k for h, k in seq if h == "abe"]
-            check("somebody taken down is in nobody's Following (nor anywhere on Home)",
-                  down and not any(a in down for a in abes), f"{abes} in {down[:6] if down else down}")
+            dcut = down.index("caught") if "caught" in down else len(down)
+            check("somebody taken down is in nobody's Following: all of Following walked, theirs there before and not"
+                  " after, everybody else's still there",
+                  abes and all(a in walked[:cut] for a in abes) and not any(a in down for a in abes)
+                  and all(x in down[:dcut] for x in circle if x not in abes),
+                  f"{abes}: before {[a in walked[:cut] for a in abes]}, after {[a in down for a in abes]};"
+                  f" the rest kept {all(x in down[:dcut] for x in circle if x not in abes)}")
+            # Following's own cursor, outliving the follows (they stopped following
+            # everybody in another tab, then pressed Load more): everyone's carries
+            # on, the kind card not again.
+            follow(yan, "zed", False)
+            follow(yan, "abe", False)
+            yc = yan.client()
+            st_c, page_c = yc.get("/social/feed?before=" + urllib.parse.quote(cursor or ""))
+            try:
+                got_c = json.loads(page_c)
+            except ValueError:
+                got_c = {}
+            follow(yan, "zed")
+            follow(yan, "abe")
+            check("a Following page asked for after its follows have gone carries on with everyone's, without the kind"
+                  " card again",
+                  st_c == 200 and "post-card" in (got_c.get("html") or "") and "fo-none" not in (got_c.get("html") or ""),
+                  f"{st_c}; cards {(got_c.get('html') or '').count('post-card')}, card again {'fo-none' in (got_c.get('html') or '')}")
             dan = someone(b, "dan", "Dan Ivey")
             dp = make_post(dan, "Section 8, Dan's first")
             pick(dan, "following")
@@ -1858,7 +1958,9 @@ with sync_playwright() as p:
             check("every new mark at 3:1 or more on what is painted behind it, light and dark: Follow's plus, Following's"
                   " check, the caught-up check, Activity's small Follow on the page and its white plus",
                   {"plus", "check", "caught", "disc", "disc plus"} <= kinds and not weak,
-                  f"kinds {sorted(kinds)}; under {weak[:3]}; lowest {min((m['k'] for _, _, m in marks), default=None)}")
+                  f"under {weak[:3]}; lowest by kind, light and dark: "
+                  + json.dumps({k: [min((m["k"] for t, _, m in marks if m["what"] == k and t.endswith(sch)), default=None)
+                                    for sch in ("light", "dark")] for k in sorted(kinds)}))
             check("each pill's chosen option on its tint, and the other on the track, at 4.5:1 or more, light and dark",
                   len(inks) == 8 and all(i and not i.get("unread") and i["on"] >= 4.5 and i["off"] >= 4.5 for _, _, i in inks),
                   json.dumps(inks))

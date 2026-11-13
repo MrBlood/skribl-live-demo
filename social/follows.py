@@ -233,6 +233,11 @@ def home_items(me, show, before=None):
         return page, nxt, "following"
     them = circle(me)
     if not them:
+        if before:
+            # Following's own cursor, from before they stopped following
+            # everybody: everyone's carries on from there, the card not again.
+            page, nxt = feed_page(before[len(_FOLLOWING):] or None, viewer=me)
+            return page, nxt, "following"
         page, nxt = feed_page(None, viewer=me)
         return [{"extra": "none"}, {"extra": "fresh"}] + page, nxt, "following"
     ids = {pid for pid, _ in them} | {me.id}
