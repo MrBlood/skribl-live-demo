@@ -2,11 +2,14 @@
 likes"), through the demo's own server, with Chromium's virtual
 authenticator for the site's people.
 
-  1. THE HEART AND THE COUNT, WHERE THEY ARE: on Home's card beside Share,
-     after the comment count; on a post's page and a drawing's at the right
-     end of the time-and-plays line, the line keeping its height; 44px and
-     painted; the pen's heart, empty until liked, named "Like"; no number at
-     zero; the count everyone's, "1 like", "2 likes".
+  1. THE HEART AND THE COUNT, WHERE THEY ARE (the owner's way 3): a pill at
+     the start of the line under the drawing, on Home's cards and on a post's
+     page and a drawing's, the player's lead: in the loop button's dress (32px,
+     its lilac and ink), a 44px tap area clear of the speed chip's, the
+     scrubber giving it room and nothing else moving (the foot and the
+     time-and-plays line as they were); the pen's heart, empty until liked,
+     named "Like"; no number at zero; the count everyone's, "1 like", "2
+     likes".
   2. A TAP LIKES, THE SAME TAP TAKES IT BACK: pressed and counted at once,
      kept by the site, still so after a reload, taken back by the same tap;
      one like a person a thing; quick taps end where the last one left it,
@@ -27,8 +30,9 @@ authenticator for the site's people.
   6. KIND, NEVER JUMPY: liking draws the blush line round over many frames
      and fills, the heart's box never moving; taking it back fades, nothing
      un-drawing; under Reduce Motion it only fades; a count that comes fades
-     in and the heart glides aside, one that goes fades first; under Reduce
-     Motion nothing glides. Read on every animation frame.
+     in and the pill grows to it, the scrubber giving up its room over many
+     frames, one that goes fades first; under Reduce Motion nothing glides.
+     Read on every animation frame.
   7. SIGNED OUT: the heart and its count are there; a tap raises "Like this
      drawing?" naming the maker, in a sheet's paper; Not now gives the heart
      its focus back; Sign in comes back to the same page, and the heart waits,
@@ -54,8 +58,12 @@ authenticator for the site's people.
  12. WORDS AND MARKS: every word on Home, a post's page with "Liked by…", its
      sheet, the signed-out sheet and Activity with likes at 4.5:1 on what is
      painted behind it, every target 44px, no field under 16px, phone (touch)
-     and desk, light and dark; the heart's line, empty and liked, the small
-     heart and the sheet's dot at 3:1; a landed "Liked by…" on the tint.
+     and desk, light and dark; the heart's line on the pill's lilac, empty and
+     liked, the small heart and the sheet's dot at 3:1, the pill's count at
+     4.5:1; a landed "Liked by…" on the tint; and the heart on the line as
+     built on every one of them (the census leaves Skribl's line, the heart's
+     place now, to Skribl's own suites, so it is read here as section 1 reads
+     it).
  13. NO PAGE ERRORS, NO CONSOLE ERRORS AND NO CSP VIOLATIONS (run last).
 
 SOCIALLIKES_PART=<n>[,<m>] runs those sections only (calibration); a section
@@ -453,6 +461,9 @@ def tap_to(pg, loc, timeout=10000):
         pass
 
 
+PAGE_HEART = ".post-page > .post-art .lk-heart"
+
+
 def card(post):
     return f'.post-card[data-post="{post}"]'
 
@@ -479,19 +490,77 @@ HEART = r"""(sel) => { const el = document.querySelector(sel); if (!el || !el.ge
     inkColor: cs('.ht-ink') ? cs('.ht-ink').stroke : null, fillColor: cs('.ht-fill') ? cs('.ht-fill').fill : null,
     like: el.getAttribute('data-like'), out: el.hasAttribute('data-like-out'), color: getComputedStyle(el).color }; }"""
 
-# A card's foot: what is shown in it, in order, with each one's edges.
+# A card's foot: what is shown in it, in order.
 FOOT = r"""(sel) => { const f = document.querySelector(sel + ' .post-foot'); if (!f) return null;
-  return [...f.children].filter(e => e.getClientRects().length).map(e => { const r = e.getBoundingClientRect();
-    return { k: e.classList.contains('lk-heart') ? 'heart' : e.classList.contains('post-share') ? 'share'
-              : e.classList.contains('post-count') ? 'count' : e.classList.contains('post-plays') ? 'plays' : e.tagName,
-             left: Math.round(r.left * 10) / 10, right: Math.round(r.right * 10) / 10 }; }); }"""
+  return [...f.children].filter(e => e.getClientRects().length).map(e =>
+    e.classList.contains('lk-heart') ? 'heart' : e.classList.contains('post-share') ? 'share'
+    : e.classList.contains('post-count') ? 'count' : e.classList.contains('post-plays') ? 'plays' : e.tagName); }"""
 
-# A post's page: the time-and-plays line, its words and its heart.
-META = r"""() => { const m = document.querySelector('.post-page > .post-meta'), h = m && m.querySelector('.lk-heart');
-  if (!m) return null; const r = m.getBoundingClientRect(), w = m.querySelector('.lk-meta-words');
-  return { top: r.top, bottom: r.bottom, h: Math.round(r.height * 100) / 100, right: r.right,
-           lh: parseFloat(getComputedStyle(m).lineHeight), words: w ? w.textContent.replace(/\s+/g, ' ').trim() : null,
-           inLine: !!h && m.contains(h), last: !!h && m.lastElementChild === h }; }"""
+# The line under a drawing (the player's), in `sel`: what its row holds, in
+# order; the heart's box beside the loop button's, their dress, the room the
+# scrubber gives; the heart's tap area (its ::after) and the speed chip's
+# (its ::before), and whether a press lands on the heart at the edges of its
+# own; and the line's height.
+LINE = r"""(sel) => { const root = document.querySelector(sel); if (!root) return null;
+  const line = root.querySelector('.skribl-inline-line'), row = line && line.querySelector('.skribl-inline-row');
+  if (!row) return null;
+  const heart = row.querySelector('.lk-heart'), scrub = row.querySelector('.skribl-inline-scrub'),
+        loop = row.querySelector('.skribl-inline-loop'), speed = line.querySelector('.rl-speed');
+  const kids = [...row.children].filter(e => e.getClientRects().length).map(e => e.classList.contains('skribl-inline-lead')
+    ? (e.querySelector('.lk-heart') ? 'heart' : 'lead') : e.classList.contains('skribl-inline-scrub') ? 'scrub'
+    : e.classList.contains('skribl-inline-controls') ? 'controls' : e.className);
+  const box = e => { const r = e.getBoundingClientRect(); return { left: r.left, right: r.right, top: r.top, bottom: r.bottom,
+                                                                   w: r.width, h: r.height }; };
+  const grown = (r, cs) => ({ left: r.left - -parseFloat(cs.left), right: r.right + -parseFloat(cs.right),
+                              top: r.top - -parseFloat(cs.top), bottom: r.bottom + -parseFloat(cs.bottom) });
+  const out = { kids, line: Math.round(line.getBoundingClientRect().height * 100) / 100, heart: null };
+  if (!heart) return out;
+  const h = box(heart), s = box(scrub), l = loop ? box(loop) : null, hc = getComputedStyle(heart), lc = loop ? getComputedStyle(loop) : null;
+  const tap = grown(h, getComputedStyle(heart, '::after'));
+  const hits = (x, y) => { const e = document.elementFromPoint(x, y); return !!e && (e === heart || heart.contains(e)); };
+  const cx = (h.left + h.right) / 2;
+  let sp = null;
+  if (speed && speed.getClientRects().length) { const st = grown(box(speed), getComputedStyle(speed, '::before'));
+    sp = { tap: st, apart: tap.right <= st.left || st.right <= tap.left || tap.bottom <= st.top || st.bottom <= tap.top }; }
+  out.heart = { h: Math.round(h.h * 100) / 100, w: Math.round(h.w * 100) / 100, loopH: l && Math.round(l.h * 100) / 100,
+    mid: Math.round((h.top + h.bottom) / 2 * 10) / 10, loopMid: l && Math.round((l.top + l.bottom) / 2 * 10) / 10,
+    room: Math.round((s.left - h.right) * 100) / 100, startsLine: Math.abs(h.left - row.getBoundingClientRect().left) < 0.5,
+    ground: hc.backgroundColor, loopGround: lc && lc.backgroundColor, ink: hc.color, loopInk: lc && lc.color,
+    tapH: Math.round((tap.bottom - tap.top) * 100) / 100, tapW: Math.round((tap.right - tap.left) * 100) / 100,
+    hitTop: hits(cx, tap.top + 1), hitBottom: hits(cx, tap.bottom - 0.5), hitMid: hits(cx, (h.top + h.bottom) / 2),
+    speed: sp };
+  return out; }"""
+
+def placed(ln, foot=None):
+    """The heart's place on a line (LINE's reading), as way 3 has it: first in
+    the row, the loop button's height, middle, ground and ink, 10px from the
+    scrubber, 44px to tap where a press lands, clear of the speed's; a card's
+    foot, when given, as it was before likes (plays, comments, Share)."""
+    h = (ln or {}).get("heart") or {}
+    sp = h.get("speed")
+    return (bool(ln) and ln["kids"] == ["heart", "scrub", "controls"] and h.get("startsLine")
+            and h.get("h") == 32 and h.get("loopH") == 32 and abs(h.get("mid", 0) - h.get("loopMid", 99)) < 0.6
+            and h.get("ground") == h.get("loopGround") and h.get("ink") == h.get("loopInk")
+            and abs(h.get("room", 0) - 10) < 0.6 and h.get("tapH") == 44 and h.get("tapW", 0) >= 44
+            and h.get("hitTop") and h.get("hitBottom") and h.get("hitMid") and sp is not None and sp["apart"]
+            and (foot is None or foot == ["plays", "count", "share"]))
+
+
+def told(ln):
+    h = (ln or {}).get("heart") or {}
+    return (f"row {ln and ln['kids']}; heart {h.get('w')}x{h.get('h')} (the loop's {h.get('loopH')}), middle"
+            f" {h.get('mid')} / {h.get('loopMid')}; dress {h.get('ground')} {h.get('ink')} vs the loop's"
+            f" {h.get('loopGround')} {h.get('loopInk')}; room {h.get('room')}; tap {h.get('tapW')}x{h.get('tapH')},"
+            f" lands {h.get('hitTop')}/{h.get('hitMid')}/{h.get('hitBottom')}; apart from the speed's"
+            f" {(h.get('speed') or {}).get('apart')}")
+
+
+# A post's page: the time-and-plays line, its words, and whether a heart is in it.
+META = r"""() => { const m = document.querySelector('.post-page > .post-meta');
+  if (!m) return null; const r = m.getBoundingClientRect();
+  return { top: r.top, bottom: r.bottom, h: Math.round(r.height * 100) / 100,
+           lh: parseFloat(getComputedStyle(m).lineHeight), words: m.textContent.replace(/\s+/g, ' ').trim(),
+           heart: !!m.querySelector('.lk-heart') }; }"""
 
 # The maker's "Liked by…": its words, its faces (a face's still picture names
 # whose it is), its size and whether it is painted.
@@ -555,13 +624,16 @@ ROWS = r"""() => [...document.querySelectorAll('.act-list')].map(ul => {
 DOT = r"""(sel) => { const a = document.querySelector(sel); if (!a || !a.getClientRects().length) return 'no bell';
   return !!a.querySelector('.act-dot'); }"""
 
-# Every animation frame for `ms` from now: a heart's parts' paint and its icon's box.
+# Every animation frame for `ms` from now: a heart's parts' paint, its icon's
+# box, the pill's width and the scrubber's beside it on the line.
 HSAMPLE = r"""([sel, ms]) => { window.__hf = []; const el = document.querySelector(sel); const t0 = performance.now();
+  const scrub = el.closest('.skribl-inline-row') && el.closest('.skribl-inline-row').querySelector('.skribl-inline-scrub');
   const step = () => { const svg = el.querySelector('svg.ic-heart'), r = svg.getBoundingClientRect();
     const g = s => getComputedStyle(svg.querySelector(s)), n = el.querySelector('.lk-n');
     window.__hf.push({ t: Math.round(performance.now() - t0), off: parseFloat(g('.ht-ink').strokeDashoffset),
       dash: g('.ht-ink').strokeDasharray, ink: +g('.ht-ink').opacity, fill: +g('.ht-fill').opacity,
       line: +g('.ht-line').opacity, x: r.left, y: r.top, w: r.width, h: r.height,
+      pw: el.getBoundingClientRect().width, sw: scrub ? scrub.getBoundingClientRect().width : null,
       n: n ? +getComputedStyle(n).opacity : null, tf: getComputedStyle(svg).transform });
     if (performance.now() - t0 < ms) requestAnimationFrame(step); };
   requestAnimationFrame(step); }"""
@@ -603,7 +675,8 @@ PLAYHEAD = r"""() => { const art = document.querySelector('.post-page > .post-ar
 # Every word painted in the page's roots against what is painted behind it,
 # every target and every text field (verify_socialcomments' census), in `sel`.
 READ = r"""(sel) => {
-  const rgba = s => { const m = (s.match(/[\d.]+/g) || []).map(Number); return m.length >= 3 ? [m[0], m[1], m[2], m.length > 3 ? m[3] : 1] : null; };
+  const rgba = s => { const m = (s.match(/[\d.]+/g) || []).map(Number), k = /^color\(srgb/.test(s) ? 255 : 1;
+    return m.length >= 3 ? [m[0] * k, m[1] * k, m[2] * k, m.length > 3 ? m[3] : 1] : null; };
   const lum = c => { const v = c.slice(0, 3).map(x => { x /= 255; return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); });
                      return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]; };
   const over = (c, g) => c[3] >= 1 ? c : [0, 1, 2].map(k => c[k] * c[3] + g[k] * (1 - c[3]));
@@ -650,7 +723,8 @@ READ = r"""(sel) => {
 # A landed "Liked by…": its words and names against the note's tint over the
 # page (the tint is its ::before, which the census cannot see).
 LK_TINT = r"""() => { const a = document.getElementById('liked'); if (!a || !a.classList.contains('is-landed')) return null;
-  const rgba = s => { const m = (s.match(/[\d.]+/g) || []).map(Number); return m.length >= 3 ? [m[0], m[1], m[2], m.length > 3 ? m[3] : 1] : null; };
+  const rgba = s => { const m = (s.match(/[\d.]+/g) || []).map(Number), k = /^color\(srgb/.test(s) ? 255 : 1;
+    return m.length >= 3 ? [m[0] * k, m[1] * k, m[2] * k, m.length > 3 ? m[3] : 1] : null; };
   const lum = c => { const v = c.slice(0, 3).map(x => { x /= 255; return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); });
                      return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]; };
   const over = (c, g) => [0, 1, 2].map(k => c[k] * c[3] + g[k] * (1 - c[3]));
@@ -663,7 +737,8 @@ LK_TINT = r"""() => { const a = document.getElementById('liked'); if (!a || !a.c
 # A mark's line against what is painted behind its box: the hearts (empty,
 # liked; on a card or a page), Activity's small heart, the sheet's dot.
 MARKS = r"""() => {
-  const rgba = s => { const m = (s.match(/[\d.]+/g) || []).map(Number); return m.length >= 3 ? [m[0], m[1], m[2], m.length > 3 ? m[3] : 1] : null; };
+  const rgba = s => { const m = (s.match(/[\d.]+/g) || []).map(Number), k = /^color\(srgb/.test(s) ? 255 : 1;
+    return m.length >= 3 ? [m[0] * k, m[1] * k, m[2] * k, m.length > 3 ? m[3] : 1] : null; };
   const lum = c => { const v = c.slice(0, 3).map(x => { x /= 255; return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); });
                      return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]; };
   const over = (c, g) => c[3] >= 1 ? c : [0, 1, 2].map(k => c[k] * c[3] + g[k] * (1 - c[3]));
@@ -680,8 +755,10 @@ MARKS = r"""() => {
     const liked = h.classList.contains('is-liked') || h.classList.contains('act-badge');
     const p = svg.querySelector(liked ? '.ht-ink' : '.ht-line'), cs = getComputedStyle(p), g = ground(h);
     const c = rgba(cs.stroke); if (!c) return; c[3] *= +cs.opacity;
-    out.push({ what: (h.classList.contains('act-badge') ? 'badge' : h.classList.contains('lk-foot') ? 'card' : 'page')
-                     + (liked ? ' liked' : ' empty'), k: ratio(over(c, g), g) }); });
+    const where = h.classList.contains('act-badge') ? 'badge' : h.closest('.post-card') ? 'card' : 'page';
+    out.push({ what: where + (liked ? ' liked' : ' empty'), k: ratio(over(c, g), g) });
+    const n = h.querySelector('.lk-n');
+    if (n) out.push({ what: 'count', word: true, k: ratio(over(rgba(getComputedStyle(n).color), g), g) }); });
   document.querySelectorAll('#likeSheet:not([hidden]) .lk-mark').forEach(d => { const g = ground(d.parentElement);
     out.push({ what: 'sheet dot', k: ratio(rgba(getComputedStyle(d).backgroundColor), g) }); });
   return out; }"""
@@ -801,44 +878,62 @@ with sync_playwright() as p:
             cyd = someone(b, "cyd", "Cyd Park")
             dov = someone(b, "dov", "Dov Reyes")
             p1 = make_post(ann, "Section 1, Ann's")
+            p1d = make_post(ann, "Section 1, Ann's, taken down")
             d1 = make_drawing(ann, "Section 1, Ann's drawing", seed=11)
+            db_write("update social_posts set taken_down_at = datetime('now') where public_id = ?", (p1d,))
+
+
+            ctx, pg = browser_as(b, ann)
+            go(pg, "/social/")
+            pg.locator(card(p1) + " .skribl-inline-line").scroll_into_view_if_needed()
+            pg.wait_for_timeout(300)
+            with_h = pg.evaluate(LINE, card(p1))
+            pg.locator(card(p1d) + " .skribl-inline-line").scroll_into_view_if_needed()
+            pg.wait_for_timeout(300)
+            without = pg.evaluate(LINE, card(p1d))
+            close_ctx(ctx, pg)
             ctx, pg = browser_as(b, bea)
             go(pg, "/social/")
-            pg.locator(card(p1) + " .lk-heart").scroll_into_view_if_needed()
-            pg.wait_for_timeout(200)
+            pg.locator(card(p1) + " .skribl-inline-line").scroll_into_view_if_needed()
+            pg.wait_for_timeout(300)
+            ln = pg.evaluate(LINE, card(p1))
             foot = pg.evaluate(FOOT, card(p1))
             h = pg.evaluate(HEART, card(p1) + " .lk-heart")
-            ks = [f["k"] for f in foot or []]
-            hi = ks.index("heart") if "heart" in ks else -1
-            gap = foot[hi + 1]["left"] - foot[hi]["right"] if 0 <= hi < len(ks) - 1 else None
-            check("on Home's card the heart sits in the foot after the comment count, beside Share and nothing between"
-                  " them; 44px each way, painted where it stands",
-                  ks[-2:] == ["heart", "share"] and ks.index("count") < hi and gap is not None and -1 <= gap <= 4
-                  and h and h["w"] >= 44 and h["h"] >= 44 and h["hit"],
-                  f"foot {ks}, gap {gap}; heart {h and (h['w'], h['h'], h['hit'])}")
+            check("on Home's card the heart is a pill at the start of the line under the drawing, before the scrubber:"
+                  " the loop button's dress at the line's other end (32px, its lilac and its ink, on its middle), the"
+                  " scrubber giving it room (10px from it), a 44px tap area that lands and stays clear of the speed"
+                  " chip's; the card's foot as it was (plays, comments, Share)",
+                  placed(ln, foot), told(ln) + f"; foot {foot}")
             check("with nothing liked it stays empty and says so: not pressed, named 'Like', no number at zero; the"
-                  " pen's heart (one line drawn round), its blush and ink hidden, its line the words' second ink",
+                  " pen's heart (one line drawn round), its blush and ink hidden, its line the line's own ink",
                   h and h["pressed"] == "false" and h["label"] == "Like" and h["n"] is None and not h["digits"]
                   and h["pen"] and h["fill"] == 0 and h["ink"] == 0 and h["line"] == 1
-                  and h["lineColor"] == INK2["light"] and not h["liked"],
+                  and h["lineColor"] == (ln or {}).get("heart", {}).get("loopInk") and not h["liked"],
                   json.dumps({k: h.get(k) for k in ("pressed", "label", "n", "pen", "fill", "ink", "line", "lineColor")} if h else None))
+            check("nothing else moves: a line with the heart is the height of one without (its maker's taken-down card,"
+                  " which has none), and nothing but the scrubber gives it room",
+                  with_h and without and with_h["line"] == without["line"] and without["kids"] == ["scrub", "controls"]
+                  and with_h["kids"] == ["heart", "scrub", "controls"],
+                  f"with {with_h and (with_h['kids'], with_h['line'])}; without {without and (without['kids'], without['line'])}")
             go(pg, f"/social/p/{p1}")
+            pg.locator(".post-page > .post-art .skribl-inline-line").scroll_into_view_if_needed()
+            pg.wait_for_timeout(300)
             m = pg.evaluate(META)
-            hp = pg.evaluate(HEART, ".post-page > .post-meta .lk-heart")
-            check("on a post's page the heart sits at the right end of the time-and-plays line, riding in the 12px"
-                  " either side of it: the line keeps its one line's height; 44px, painted",
-                  m and hp and m["inLine"] and m["last"] and abs(m["h"] - m["lh"]) < 0.6 and m["top"] <= hp["mid"] <= m["bottom"]
-                  and hp["right"] >= m["right"] - 1 and hp["w"] >= 44 and hp["h"] >= 44 and hp["hit"]
+            lp = pg.evaluate(LINE, ".post-page > .post-art")
+            hp = pg.evaluate(HEART, PAGE_HEART)
+            check("on a post's page the same pill at the start of its drawing's line, in the same dress and the same"
+                  " room; the time-and-plays line as it was, one line, no heart in it",
+                  placed(lp) and m and not m["heart"] and abs(m["h"] - m["lh"]) < 0.6 and hp
                   and hp["pressed"] == "false" and hp["label"] == "Like" and hp["n"] is None,
-                  f"meta {m and (m['h'], m['lh'], m['words'])}; heart {hp and (hp['w'], hp['h'], hp['hit'], round(hp['mid'], 1), round(hp['right'], 1))}"
-                  f" vs line {m and (round(m['top'], 1), round(m['bottom'], 1), round(m['right'], 1))}")
+                  told(lp) + f"; meta {m and (m['h'], m['lh'], m['heart'])}")
             go(pg, f"/social/b/{d1}")
-            m2 = pg.evaluate(META)
-            hd = pg.evaluate(HEART, ".post-page > .post-meta .lk-heart")
-            check("on a drawing's own page (/social/b/<id>) the same heart in the same place, to its own like",
-                  m2 and hd and m2["inLine"] and m2["last"] and abs(m2["h"] - m2["lh"]) < 0.6 and hd["hit"] and hd["w"] >= 44
-                  and hd["like"] == f"/social/b/{d1}/like" and hd["label"] == "Like",
-                  f"meta {m2 and (m2['h'], m2['lh'])}; heart {hd and (hd['w'], hd['hit'], hd['like'])}")
+            pg.locator(".post-page > .post-art .skribl-inline-line").scroll_into_view_if_needed()
+            pg.wait_for_timeout(300)
+            ld = pg.evaluate(LINE, ".post-page > .post-art")
+            hd = pg.evaluate(HEART, PAGE_HEART)
+            check("on a drawing's own page (/social/b/<id>) the same pill in the same place, to its own like",
+                  placed(ld) and hd and hd["like"] == f"/social/b/{d1}/like" and hd["label"] == "Like",
+                  told(ld) + f"; like {hd and hd['like']}")
             st1, _ = like(cyd, ("p", p1))
             go(pg, "/social/")
             one = pg.evaluate(HEART, card(p1) + " .lk-heart")
@@ -863,7 +958,7 @@ with sync_playwright() as p:
             p2b = make_post(cal, "Section 2, Cal's second")
             ctx, pg = browser_as(b, dee, init=FETCHES)
             go(pg, f"/social/p/{p2}")
-            sel = ".post-page > .post-meta .lk-heart"
+            sel = PAGE_HEART
             tap_heart(pg, sel)
             h = pg.evaluate(HEART, sel)
             kept = likes_on(("p", p2))
@@ -947,6 +1042,8 @@ with sync_playwright() as p:
             p3 = make_post(eli, "Section 3, Eli's")
             p3d = make_post(eli, "Section 3, Eli's, taken down")
             d3u = make_drawing(eli, "Section 3, Eli's, unlisted", seed=31, vis="unlisted")
+            # A post whose drawing is in the gallery too: still its post's, and liked there.
+            p3g = make_post(eli, "Section 3, Eli's, in the gallery", payload=dict(drawing(seed=32), visibility="public"))
             anon = Client()
             anon.get(f"/social/p/{p3}")
             sa_, ja = anon.post_json(f"/social/p/{p3}/like", {"liked": True})
@@ -993,10 +1090,13 @@ with sync_playwright() as p:
                   and not down_page,
                   f"{s6} {s7}; card shown {down_shown}, heart {down_card}; on its page {down_page}")
             s8, _ = like(fay, ("s", d3u))
-            s9, _ = like(fay, ("s", skribl_of(p3)))
-            check("a drawing kept unlisted, and a post's own drawing asked as a drawing, take no likes (404)",
-                  s8 == 404 and s9 == 404 and likes_on(("s", d3u)) == [] and likes_on(("s", skribl_of(p3))) == [],
-                  f"{s8} {s9}")
+            g3 = skribl_of(p3g)
+            vis = db("select visibility from skribl_posts where public_id = ?", (g3 or "",))
+            s9, _ = like(fay, ("s", g3))
+            check("a drawing kept unlisted, and a post's own drawing asked as a drawing (in the gallery, too), take no"
+                  " likes (404)",
+                  s8 == 404 and s9 == 404 and vis == [("public",)] and likes_on(("s", d3u)) == [] and likes_on(("s", g3)) == [],
+                  f"{s8} {s9} (its drawing {vis})")
             s10, j10 = like(fay, ("p", p3), raw={})
             s11, j11 = like(fay, ("p", p3), raw={"liked": "yes"})
             check("a like that is not a yes or a no is refused (400), nothing kept",
@@ -1012,7 +1112,7 @@ with sync_playwright() as p:
             ctx, pg = browser_as(b, fay)
             go(pg, f"/social/p/{p3}")
             block(eli, "fay")
-            sel = ".post-page > .post-meta .lk-heart"
+            sel = PAGE_HEART
             tap_heart(pg, sel, after=700)
             back = pg.evaluate(HEART, sel)
             said = pg.evaluate("() => { const s = document.querySelector('[data-page-say]'); return s && !s.hidden ? s.textContent : null; }")
@@ -1042,7 +1142,7 @@ with sync_playwright() as p:
                 go(pg, "/social/")
                 h1 = pg.evaluate(HEART, card(p4) + " .lk-heart")
                 go(pg, f"/social/p/{p4}")
-                h2 = pg.evaluate(HEART, ".post-page > .post-meta .lk-heart")
+                h2 = pg.evaluate(HEART, PAGE_HEART)
                 by = pg.evaluate(BY)
                 close_ctx(ctx, pg)
                 return (h1 and h1["n"], h2 and h2["n"], by and by["words"])
@@ -1080,7 +1180,7 @@ with sync_playwright() as p:
             long_ = drawing(n=200, seed=5, step=30)
             p5 = make_post(pat, "Section 5, Pat's slow one", payload=long_)
             p5b = make_post(pat, "Section 5, Pat's second", payload=long_)
-            sel = ".post-page > .post-meta .lk-heart"
+            sel = PAGE_HEART
             ctx, pg = browser_as(b, quin)
             go(pg, f"/social/p/{p5}", wait=0)
             pg.wait_for_function("() => { const art = document.querySelector('.post-page > .post-art');"
@@ -1150,7 +1250,7 @@ with sync_playwright() as p:
             stopped(5, exc)
 
     # ------------------------------------------------------------------ 6
-    if part(6, "kind, never jumpy: the heart draws and fills, fades back; the count fades, the heart glides"):
+    if part(6, "kind, never jumpy: the heart draws and fills, fades back; the count fades, the pill grows round the heart"):
         try:
             rae = someone(b, "rae", "Rae Oaks")
             sam = someone(b, "sam", "Sam Pike")
@@ -1160,7 +1260,7 @@ with sync_playwright() as p:
             p6r = make_post(rae, "Section 6, Rae's, for Reduce Motion")
             like(tam, ("p", p6))
             like(tam, ("p", p6r))
-            sel = ".post-page > .post-meta .lk-heart"
+            sel = PAGE_HEART
 
             def frames(pg, ms=900):
                 pg.locator(sel).scroll_into_view_if_needed()
@@ -1212,29 +1312,32 @@ with sync_playwright() as p:
             ctx, pg = browser_as(b, sam)
             go(pg, f"/social/p/{p6z}")
             fs = frames(pg)
-            g = glide_of([f["x"] for f in fs])
+            g = glide_of([f["sw"] for f in fs])
             ns = [f["n"] for f in fs if f["n"] is not None]
             fs2 = frames(pg)
-            g2 = glide_of([f["x"] for f in fs2])
+            g2 = glide_of([f["sw"] for f in fs2])
             ns2 = [f["n"] for f in fs2 if f["n"] is not None]
-            first_move = next((i for i, f in enumerate(fs2) if abs(f["x"] - fs2[0]["x"]) > 0.3), None)
+            first_move = next((i for i, f in enumerate(fs2) if abs(f["sw"] - fs2[0]["sw"]) > 0.3), None)
             first_fade = next((i for i, f in enumerate(fs2) if f["n"] is not None and f["n"] < 0.97), None)
-            check("a count that comes fades in, and the heart glides aside for it (no frame carries half the way); one"
-                  " that goes fades first, then the heart glides back",
+            check("a count that comes fades in, and the pill grows to hold it, the scrubber giving up its room over many"
+                  " frames (none carries half the way), the heart itself never moving; one that goes fades first, then"
+                  " the pill gives the room back the same way",
                   faded(ns) >= 2 and g["way"] >= 6 and g["frames"] >= 4 and g["step"] <= 0.5 * g["way"]
                   and faded(ns2) >= 2 and g2["way"] >= 6 and g2["frames"] >= 4 and g2["step"] <= 0.5 * g2["way"]
-                  and first_fade is not None and first_move is not None and first_fade < first_move,
-                  f"comes: fading {faded(ns)}, glide {g}; goes: fading {faded(ns2)}, glide {g2},"
-                  f" fade from frame {first_fade}, move from {first_move}")
+                  and first_fade is not None and first_move is not None and first_fade < first_move
+                  and spread(fs + fs2, "x") < 0.5,
+                  f"comes: fading {faded(ns)}, the scrubber {g}; goes: fading {faded(ns2)}, the scrubber {g2},"
+                  f" fade from frame {first_fade}, room from {first_move}; the heart moved {spread(fs + fs2, 'x')}")
             close_ctx(ctx, pg)
             ctx, pg = browser_as(b, tam, reduced=True)
             go(pg, f"/social/p/{p6z}")
             fs = frames(pg)
             ns = [f["n"] for f in fs if f["n"] is not None]
+            gr = glide_of([f["sw"] for f in fs])
             close_ctx(ctx, pg)
-            check("under Reduce Motion a count that comes fades in, and nothing glides: the heart takes its place",
-                  faded(ns) >= 2 and all(f["tf"] == "none" for f in fs),
-                  f"fading {faded(ns)}; transforms {sorted({f['tf'] for f in fs})[:2]}")
+            check("under Reduce Motion a count that comes fades in, and nothing glides: the pill takes its width at once",
+                  faded(ns) >= 2 and gr["way"] >= 6 and gr["frames"] == 1,
+                  f"fading {faded(ns)}; the scrubber {gr}")
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(6, exc)
 
@@ -1249,7 +1352,7 @@ with sync_playwright() as p:
             like(vee, ("p", p7))
             ctx, pg = browser_as(b, None)
             go(pg, f"/social/p/{p7}")
-            sel = ".post-page > .post-meta .lk-heart"
+            sel = PAGE_HEART
             h = pg.evaluate(HEART, sel)
             check("signed out, the heart is there with its count, not pressed, and it asks for a sheet",
                   h and h["pressed"] == "false" and h["n"] == "1" and h["out"] and h["like"] is None and h["hit"],
@@ -1367,7 +1470,7 @@ with sync_playwright() as p:
                   not other["by"] and not other["sheet"] and not names, f"{other}; names in the page {names}")
             ctx, pg = browser_as(b, vic)
             go(pg, f"/social/p/{p8}")
-            sel = ".post-page > .post-meta .lk-heart"
+            sel = PAGE_HEART
             tap_heart(pg, sel)
             by1 = pg.evaluate(BY)
             pg.locator("[data-like-by]").tap()
@@ -1730,7 +1833,7 @@ with sync_playwright() as p:
             like(wyn, ("p", p12))
             like(una, ("p", p12))
             like(una, ("p", p12b))
-            lows, smalls, fields, marks, read, tints = [], [], [], [], 0, []
+            lows, smalls, fields, marks, read, tints, sits = [], [], [], [], 0, [], []
             for screen in ("phone", "desk"):
                 for scheme in ("light", "dark"):
                     tag = f"{screen}/{scheme}"
@@ -1741,11 +1844,20 @@ with sync_playwright() as p:
                     pg.wait_for_timeout(200)
                     got.append(("Home", pg.evaluate(READ)))
                     marks += [(tag, "Home", m) for m in pg.evaluate(MARKS)]
+                    # The heart sits as built on this screen too (the census
+                    # above leaves Skribl's line to Skribl's suites): read
+                    # after it, so its scroll moves nothing it reads.
+                    pg.locator(card(p12b) + " .skribl-inline-line").scroll_into_view_if_needed()
+                    pg.wait_for_timeout(200)
+                    sits.append((tag, "Home's card", pg.evaluate(LINE, card(p12b)), pg.evaluate(FOOT, card(p12b))))
                     go(pg, f"/social/p/{p12}#liked", wait=200)
                     tints.append((tag, pg.evaluate(LK_TINT)))
                     pg.wait_for_timeout(3000)
                     got.append(("a post's page", pg.evaluate(READ)))
                     marks += [(tag, "post", m) for m in pg.evaluate(MARKS)]
+                    pg.locator(".post-page > .post-art .skribl-inline-line").scroll_into_view_if_needed()
+                    pg.wait_for_timeout(200)
+                    sits.append((tag, "a post's page", pg.evaluate(LINE, ".post-page > .post-art"), None))
                     pg.locator("[data-like-by]").click()
                     pg.wait_for_timeout(700)
                     got.append(("the sheet of who", pg.evaluate(READ, "#likeSheet")))
@@ -1756,7 +1868,7 @@ with sync_playwright() as p:
                     close_ctx(ctx, pg)
                     ctx, pg = browser_as(b, None, screen=screen, scheme=scheme)
                     go(pg, f"/social/p/{p12}")
-                    pg.locator(".post-page > .post-meta .lk-heart").click()
+                    pg.locator(PAGE_HEART).click()
                     pg.wait_for_timeout(700)
                     got.append(("the signed-out sheet", pg.evaluate(READ, "#likeOutSheet")))
                     marks += [(tag, "signed out", m) for m in pg.evaluate(MARKS)]
@@ -1772,12 +1884,22 @@ with sync_playwright() as p:
                           f"read {[(w, r['read'], r['lowest']) for w, r in got]}; low {[x for _, r in got for x in r['low']][:3]}")
             check("every target 44px or more and no text field under 16px, on all of them",
                   not smalls and not fields, f"small {smalls[:4]}; fields {fields[:3]}")
+            off = [f"{t} {w}: {told(ln)}; foot {ft}" for t, w, ln, ft in sits if not placed(ln, ft)]
+            check("the heart sits as built on every screen, light and dark, on Home's card and a post's page: first in"
+                  " the drawing's line, the loop button's dress, 44px to tap where a press lands, clear of the speed's;"
+                  " the card's foot as it was",
+                  len(sits) == 8 and not off, f"{len(sits)} read; off {off[:2]}")
             kinds = {m["what"] for _, _, m in marks}
-            weak = [(t, w, m) for t, w, m in marks if m["k"] < 3]
-            check("the heart's marks at 3:1 or more on their ground, light and dark: empty and liked, on a card and a"
-                  " page; Activity's small heart; the sheet's dot",
-                  {"card empty", "card liked", "page empty", "page liked", "badge liked", "sheet dot"} <= kinds and not weak,
-                  f"kinds {sorted(kinds)}; under 3:1 {weak[:3]}; lowest {min((m['k'] for _, _, m in marks), default=None)}")
+            weak = [(t, w, m) for t, w, m in marks if m["k"] < (4.5 if m.get("word") else 3)]
+            lines = [m["k"] for _, _, m in marks if not m.get("word")]
+            counts = [m["k"] for _, _, m in marks if m.get("word")]
+            check("the heart's marks at 3:1 or more on their ground, light and dark: its line on the pill's lilac, empty"
+                  " and liked, on a card and a page; Activity's small heart; the sheet's dot; and the pill's count, a"
+                  " word, at 4.5:1",
+                  {"card empty", "card liked", "page empty", "page liked", "badge liked", "sheet dot", "count"} <= kinds
+                  and not weak,
+                  f"kinds {sorted(kinds)}; under {weak[:3]}; lowest mark {min(lines, default=None)}, lowest count"
+                  f" {min(counts, default=None)}")
             check("a landed 'Liked by…' reads 4.5:1 or more on the note's tint, its names and its words, light and dark",
                   len(tints) == 4 and all(t and t["words"] >= 4.5 and t["name"] and t["name"] >= 4.5 for _, t in tints),
                   json.dumps(tints))
