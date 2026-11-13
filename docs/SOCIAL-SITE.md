@@ -1429,3 +1429,118 @@ dark said out loud, which their stylesheets do not read.
 `verify_theme.py` holds the boot for any host. DECISIONS.md ("Settings: the
 theme, one choice for Blooby, Pad and Flip") says what each check was shown
 red by.
+
+## 15. Built: mutes
+
+From the mute mock and the owner's "Yes to all" (Nov 13): C, quiet
+everywhere, and rule 3, mute and follow kept apart. Mute is a break from
+somebody, not a wall: what comes to you goes quiet, and what you go to stays.
+`social/mutes.py`:
+
+    /social/@<handle>/mute      POST: mute them (JSON: {ok, muted, following})
+    /social/@<handle>/unmute    POST: unmute them (JSON from the ⋯, the
+                                toast's Undo or the line on their page; a
+                                form from Settings, which comes back to it)
+
+**Where.** "Mute @theo" in the ⋯ on somebody's page, first, the gentlest, and
+on their posts and drawings after Copy link and Share…, before Report and
+Block, so the two danger rows stay together; under it, what it does: "Their
+posts, comments and likes stop reaching you. They aren't told." Its icon is
+a closed eye drawn in our pen, never a speaker (a drawing's own sound switch
+is the speaker). The row is the sheet's own (17px at 600, its words starting
+where Report's and Block's do, its eye centred on the other icons), with a
+second line as Make's doors have. Signed in alone; never on your own; muted,
+it says "Unmute @theo" and "Everything comes back, just as it was."
+
+**Nothing is asked first.** The tap mutes. The sheet goes down; on Home every
+card of theirs folds away from where you are (it fades, then its room closes
+and the next post rises into its place); on their page a line opens under
+the buttons; a post's own page stays as it is, since you went there. Once the
+sheet has gone and the site has said yes, a toast rises: "Theo is muted.
+They aren't told." with Undo, for seven seconds, the Pad's own time for an
+Undo; on a phone 12px above the bar, on a desk at the foot of the page in the
+middle of the column, clear of the rail. Only Undo takes a tap: a tap on its
+words reaches the page under it. Undo brings everything back the same way and
+says "Unmuted. Theo's posts are back." A refusal puts everything back and the
+toast says why. Under Reduce Motion nothing glides: a room is put there or
+away only while what it holds can't be seen, and the fades remain.
+
+**What goes quiet** (C), for you alone:
+- Home, Following and Everyone: their posts and drawings, left out in the
+  query (Home's own posts, and its drawings through Skribl's listing and the
+  host's feed filter), so every page stays whole;
+- Explore, and Skribl's other listings of everybody's: their drawings,
+  through the feed filter the host installs (below);
+- comments, on what you read and on your own: their comment or answer is one
+  quiet line in its place, in Activity's own voice: "Someone you muted said
+  something. Show" ("… answered." for an answer), the eye where their face
+  was. The whole line is the button; Show opens it for that visit (the line
+  fades, the room opens, the comment fades in). The comment is hidden for
+  real while folded (no tap or screen reader reaches its Answer or ⋯), and
+  the answers under it, by others, stay as they are;
+- Activity: their comments, answers, likes and follows leave it and never
+  light the bell's dot; a group they were in says the rest ("Juno and Mira
+  liked your post"). Nothing is deleted: Activity is worked out each time, so
+  unmute them and every row is back.
+
+**What stays.** Their page, which says "You muted Theo · Unmute" under the
+buttons to you alone (to them and to everybody else their page is exactly as
+it was, in its source too); their posts and their drawings' pages, More from
+them, their skribls on their page, a drawing's link page and its payload. The
+visibility policy is untouched: a mute never hides a page.
+
+**Counts and "Liked by…" stay true,** for everybody and for you: a folded
+comment is counted, their like is in the count and in "Liked by…", their
+follow in "Followed by…".
+
+**Rule 3: mute and follow stay apart.** Muting never unfollows (so nothing
+changes on their side, not even their own list of who follows them), and
+unfollowing never unmutes. Following them, the toast says "Theo is muted.
+You still follow them." Their posts stay out of Home, Following too, until
+you unmute; to unfollow, tap Following, as always.
+
+**Settings** lists Muted just above Blocked, in the Blocked panel's own rows,
+newest first: their face, name, @handle and Unmute; "You see less of them.
+They aren't told, and nothing changes for them."; with nobody, "Nobody. If you
+mute someone, they're listed here, and you can unmute them." Nobody a block
+either way or a takedown hides is listed: somebody you muted and then blocked
+is under Blocked, and back under Muted, still muted, once unblocked.
+
+**Who may mute:** somebody signed in; anybody who is there for them (not taken
+down, no block either way), never themselves; the token and Origin first,
+then the limit (60 an hour, mutes and unmutes alike). Unmuting lifts your own
+row, whoever it named. A mute is private: nothing on their side changes, and
+they aren't told. Later, not now: muting words and tags, a mute for a while,
+muting from an Activity row.
+
+**A mute reaches Skribl's listings** through the feed filter the host
+installs, which Skribl now tells which listing it is (docs/INTEGRATION.md, "A
+filter can ask which listing it is"): a filter that names `author` is told the
+one author a listing is narrowed to, or `None` for many people's. The host
+leaves out `social.muted_authors(viewer_id)` only when it is `None` (the demo's
+`app.py` does), so a mute quiets Explore and Home's drawings and keeps their
+page's skribls and More from. The visibility policy never hears of mutes.
+
+**Data.** One table on the site's chain (migration `4cdc4af46a77`, after
+`1757a4385be8`), `social_mutes`: `muter_id`, `muted_id` (both to
+`social_people`, ON DELETE CASCADE), `created_at`; unique on the pair, never
+yourself (`ck_social_mutes_not_self`); indexed by whose newest first
+(`muter_id, created_at`: Settings) and by whom (`muted_id`: deleting an
+account). Unmuting deletes the row. Whom you muted is one read a request, by
+your public id and the pair's index, shared by the site's pages and the
+host's filter, so Home reads it once whatever it shows. **Deleting is real:**
+an account goes with its mutes both ways, in code
+(`accounts.delete_person`, through `mutes.drop_person_mutes`); the CASCADEs
+are the net. Privacy and docs/LAWYER-NOTE.md say mutes are kept, who and
+since when.
+
+**Pad and Flip:** nothing changes in either editor. Mute goes by who made a
+post, so a muted person's Flips leave Home as their drawings do, and the
+in-post player that Pad drawings and Flips share is untouched. The one change
+on Skribl's side is the feed filter being told a listing's `author`, which is
+no editor's.
+
+`harness/verify_socialmute.py` holds it through the demo's own server;
+`verify_hostseams.py` and `verify_createpost.py` hold the feed filter's
+`author`. DECISIONS.md ("Mute at /social: quiet everywhere") says what each
+check was shown red by.
