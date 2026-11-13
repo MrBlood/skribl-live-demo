@@ -14,6 +14,7 @@ app.py does exactly the same thing with the only SQLAlchemy instance in the tree
 `SkriblBase.metadata` is exported so a host can create or migrate these tables
 with its own tooling (Alembic included) without importing Flask.
 """
+import inspect
 import json
 import os
 import weakref
@@ -280,7 +281,6 @@ def feed_filter():
 def _names_author(fn):
     """Whether a feed filter names an `author` parameter (set_feed_filter,
     "WHICH LISTING IT IS"): by its signature, never by trying a call."""
-    import inspect
     try:
         p = inspect.signature(fn).parameters.get("author")
     except (TypeError, ValueError):
