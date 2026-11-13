@@ -3,7 +3,7 @@
     the passkey says whose it is, so nothing is typed (a discoverable
     credential). On a desk Blooby draws his card beside it, as on Home.
 
-    Invite-only for now, so "New to Skribl?" says how to get in, not "Make an
+    Invite-only for now, so "New to Blooby?" says how to get in, not "Make an
     account". The mock's House rules and Privacy links wait for those pages
     (piece 5). #}
 {% extends 'social/base.html' %}
@@ -24,7 +24,7 @@
   </div>
   <section class="si-card" aria-labelledby="siTitle">
     <img class="si-icon" src="{{ skribl_asset('apple-touch-icon.png') }}" alt="" width="64" height="64">
-    <h1 class="si-title" id="siTitle">Sign in to Skribl</h1>
+    <h1 class="si-title" id="siTitle">Sign in to Blooby</h1>
     {% if note == 'out' %}<p class="note" role="status">You’re signed out. See you soon.</p>
     {% elif note == 'out_all' %}<p class="note" role="status">You’re signed out everywhere: on every phone and computer.</p>{% endif %}
     <p class="si-lede">No password here. Your phone or computer already knows it’s you.</p>
