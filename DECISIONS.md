@@ -37488,3 +37488,21 @@ control, a long press on the title link) and Firefox (main's lanes run
 their smoke after the merge); SF and Segoe UI (no words or sizes changed);
 PostgreSQL (bloob_page's reads run on SQLite here; CI's postgres job runs
 after the merge); and the live site.
+
+POST'S WIDTH, HELD BY THE SCRIPT, NOT THE STYLESHEET. Laid on Following and
+the comment box's fix, verify_socialposts went red in its console row in
+every full run (five of five, alone and beside others): Chrome dropped the
+page's cross-fade from Explore to a drawing's own page (/s/<id>, where a
+card for somebody not on the site now goes), "Transition was aborted
+because of invalid state. ViewTransition opt-in disabled". Bisected by
+whole runs: the card fix on the comment icon alone was green, on Following
+without the box's fix green, and with the box's fix minus its two Post rules
+green. Those rules (Post as an inline grid, and "Posting…" measured under it
+through ::after with content: attr(data-busy)) match nothing on Explore or on
+Skribl's page, so this is Chrome's, and not understood beyond that. The width
+is now held by comments.js: it measures "Posting…" once the box is laid out
+and sets it as Post's least width (through the style object, which the
+page's policy allows); Post's sides stay 12px. Same result for the person,
+in any font. Section 12's row asks that comments.js set it (red with the
+call removed, green with it); sections 12 and 33 are green in this box's font
+and in DejaVu, and verify_socialposts 42/42 alone.
