@@ -274,6 +274,22 @@ where the viewer opened that drawing on purpose (a feed stays still until
 tapped), and never under Reduce Motion: that is yours to ask
 (`matchMedia('(prefers-reduced-motion: reduce)')`).
 
+**Where the playhead is** (after v330: the Skribl site keeps it with a like).
+The same player answers `player.playhead()` with `{ ms, playing }`: `ms` is
+where the replay is on the drawing's own clock, from 0 to its length, and the
+same whether it is watched at ¼× or 16× (a moment in the drawing, never in the
+viewer's time); `playing` is whether that clock is running now. A Pad drawing
+and a Flip answer alike (a Flip's clock is its pages' time, one pass of its
+loop). At rest, before anybody taps or before the drawing has come, it is
+`{ ms: 0, playing: false }`; paused, `playing` is false and `ms` stays where it
+stopped. It only reads: asking moves nothing, starts nothing and counts no
+play. What a host does with the moment is the host's.
+
+```js
+const p = SkriblInline.mount(post.querySelector('.post-art'))[0];
+const h = p && p.playhead();          // { ms: 6420, playing: true }
+```
+
 One Skribl plays at a time, page-wide. Scrolling a playing post out of view
 settles it. A drawing that can't be shown says so, in your page's colours and
 type, where the drawing would be: one that has been deleted, or is no longer

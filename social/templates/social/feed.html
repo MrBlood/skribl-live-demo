@@ -13,17 +13,21 @@
 
     THE FEED: everyone's posts, newest first (Following comes in phase 2),
     each card still until tapped, as every feed's player is. Load more brings
-    the next page in place (posts.feed_more), mounted as Skribl asks.
+    the next page in place (posts.feed_more), mounted as Skribl asks. Each
+    card's heart and how many beside Share (likes: _post.html, heart();
+    likes.js).
 
     posts.js holds the moving parts; the words are this page's. #}
 {% extends 'social/base.html' %}
 {% from 'skribl/_skribl_inline_player.html' import skribl_inline_draft %}
 {% from 'social/_post.html' import post_card, post_sheets, post_words, face with context %}
+{% from 'social/_likes.html' import like_sheets with context %}
 {% from 'social/_safety.html' import safety_sheets with context %}
 {% import 'social/_icons.html' as ic %}
 
 {% block head %}<script src="{{ skribl_asset('lib/composehost.js') }}" defer></script>{% endblock %}
 {% block scripts %}<script src="{{ social_asset('posts.js') }}" defer></script>
+<script src="{{ social_asset('likes.js') }}" defer></script>
 <script src="{{ social_asset('safety.js') }}" defer></script>{% endblock %}
 
 {% block main %}
@@ -63,6 +67,7 @@
 <button class="btn btn-wide feed-more" type="button" data-feed-next="{{ next or '' }}"{% if not next %} hidden{% endif %}>Load more</button>
 <p class="say" data-feed-say role="status" hidden></p>
 {{ post_words() }}
+{{ like_sheets(none, none) }}
 {% endblock %}
 
 {% block overlays %}

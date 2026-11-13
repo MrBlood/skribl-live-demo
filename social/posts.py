@@ -229,6 +229,7 @@ def cards(entries, viewer):
     Delete."""
     from skribl import describe_posts
     from .comments import counts
+    from .likes import stats
     entries = [e if isinstance(e, dict) else _entry(*e) for e in entries]
     drawings = describe_posts([e["post"].skribl_id for e in entries if e["kind"] == "p"],
                               viewer_id=viewer.public_id if viewer else None)
@@ -236,6 +237,10 @@ def cards(entries, viewer):
     # drawing has comments): what its page will show this viewer, so a block
     # or a takedown is neither shown nor counted.
     said = counts(viewer, posts=[e["post"].id for e in entries if e["kind"] == "p"],
+                  drawings=[e["sk"]["id"] for e in entries if e["kind"] == "s"])
+    # HOW MANY LIKES, and whether one is this viewer's (likes, phase 2): every
+    # card's at once, by the same rules (nobody hidden counted).
+    liked = stats(viewer, posts=[e["post"].id for e in entries if e["kind"] == "p"],
                   drawings=[e["sk"]["id"] for e in entries if e["kind"] == "s"])
     out = []
     for e in entries:
@@ -254,9 +259,13 @@ def cards(entries, viewer):
         # TAKEN DOWN (piece 5): only its maker is ever shown it, with the note.
         down = (getattr(p, "taken_down_at", None) is not None or (sk or {}).get("visibility") == "withheld"
                 or getattr(who, "taken_down_at", None) is not None)
+        key = ("p", p.id) if e["kind"] == "p" else ("s", p.skribl_id)
         out.append({"post": p, "who": who, "sk": sk, "kind": e["kind"], "down": down,
                     "plays": plays_text(sk["views"]) if sk else None,
-                    "comments": said.get(("p", p.id) if e["kind"] == "p" else ("s", p.skribl_id), 0),
+                    "comments": said.get(key, 0),
+                    "likes": liked.get(key, {"n": 0, "mine": False}),
+                    "like": (url_for("social.like_post", public_id=p.public_id) if e["kind"] == "p"
+                             else url_for("social.like_drawing", skribl_id=p.skribl_id)),
                     "url": url, "delete": gone,
                     "profile": profile_url(who.handle),
                     "mine": viewer is not None and viewer.id == who.id})
@@ -437,9 +446,14 @@ def register(bp, skribl_blueprint="skribl"):
         on = (comments.On(card["who"], post=card["post"]) if card["kind"] == "p" else
               comments.On(card["who"], drawing=card["post"].skribl_id, sk=card["sk"]))
         cm = comments.section(on, me, skribl_blueprint)
+        # WHO LIKED IT is the maker's alone (likes): the line and the sheet's
+        # rows; nothing of likes on what is taken down.
+        from .likes import for_maker
+        lk = for_maker(on, me) if not card["down"] else None
         # The page's token for everybody: Report is anybody's (piece 5).
         return _page("post.html", here="post", card=card, more=cards(others, me) if others else [],
-                     share_url=public_origin() + card["url"], token=csrf_token(), cm=cm)
+                     share_url=public_origin() + card["url"], token=csrf_token(), cm=cm, lk=lk,
+                     signin_here=url_for("social.signin", next=card["url"]))
 
     @bp.post("/p/<public_id>/delete")
     @_rests(json_answer=True)
@@ -478,22 +492,26 @@ def register(bp, skribl_blueprint="skribl"):
             delete_post(skribl_id, author_id=me.public_id)
         except SkriblNotFound:
             return _json_error("gone", 404)
-        # ITS COMMENTS GO WITH IT, in code (phase 2): only once delete_post has
-        # said it was theirs, since a refused delete still commits.
+        # ITS COMMENTS AND LIKES GO WITH IT, in code (phase 2): only once
+        # delete_post has said it was theirs, since a refused delete still commits.
         from .comments import drop_drawing_comments
+        from .likes import drop_drawing_likes
         drop_drawing_comments(skribl_id)
+        drop_drawing_likes(skribl_id)
         sess.flush()
         return jsonify({"ok": True, "go": url_for("social.home", note="deleted_drawing")})
 
 
 def drop_post(author_public_id, row):
-    """A post's comments and answers (phase 2, said here and not left to a
-    cascade), its drawing (Skribl's delete_post, as its author) and its row.
-    A drawing already gone is no reason to keep the words. Flushes nothing:
-    the caller does, with whatever else goes in the same transaction."""
+    """A post's comments and answers and its likes (phase 2, said here and not
+    left to a cascade), its drawing (Skribl's delete_post, as its author) and
+    its row. A drawing already gone is no reason to keep the words. Flushes
+    nothing: the caller does, with whatever else goes in the same transaction."""
     from skribl import SkriblNotFound, delete_post
     from .comments import drop_post_comments
+    from .likes import drop_post_likes
     drop_post_comments(row.id)
+    drop_post_likes(row.id)
     try:
         delete_post(row.skribl_id, author_id=author_public_id)
     except SkriblNotFound:

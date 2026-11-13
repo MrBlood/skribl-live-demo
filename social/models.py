@@ -34,7 +34,7 @@ import sqlalchemy as sa
 from sqlalchemy.orm import DeclarativeBase
 
 __all__ = ["SocialBase", "Person", "Passkey", "Invite", "Challenge", "RateEvent", "Post",
-           "Comment", "Block", "Report", "PERSON_PREFIX", "BIO_MAX", "BIO_LINES", "WORDS_MAX",
+           "Comment", "Like", "Block", "Report", "PERSON_PREFIX", "BIO_MAX", "BIO_LINES", "WORDS_MAX",
            "REPORT_KINDS", "REPORT_STATES", "REPORT_NOTE_MAX", "new_person_id", "new_public_id",
            "as_utc", "utcnow", "attach_to_metadata"]
 
@@ -346,6 +346,56 @@ class Comment(SocialBase):
         #: Answers to you, newest first: Activity's "answered your comment".
         sa.Index("ix_social_comments_to_created", "to_person_id", "created_at"),
         sa.Index("ix_social_comments_skribl_id", "skribl_id"),
+    )
+
+
+class Like(SocialBase):
+    """A like (phase 2, likes; the owner's D on the likes mock, Nov 13): one
+    person liking a post, or a drawing shown outside a post, once; tapping the
+    heart again unlikes, and the row goes. Shaped as a comment is: on a post
+    (post_id) or a drawing (drawing_id, the skribl's own public id), exactly
+    one (ck_social_likes_on_one), and owner_id is whose that post or drawing
+    is, kept on the row so a block, Activity and deleting an account never ask
+    Skribl. A person likes a thing once: the two unique indexes (a post's or a
+    drawing's id is empty on the other kind, and empties never collide).
+
+    EACH LIKE KEEPS ITS MOMENT: at_ms is where the drawing's replay was when
+    the heart was tapped while it played, on the drawing's own clock (the
+    in-post player's playhead seam), or nothing when it was not playing; such
+    a like counts all the same.
+
+    DELETING IS REAL AND SAID IN CODE (likes.py, from posts.drop_post,
+    posts.bloob_delete and accounts.delete_person): a post or a drawing goes
+    with its likes, an account with its own and every like on what it owned.
+    The ON DELETE CASCADEs are the net under that, as for comments."""
+    __tablename__ = "social_likes"
+
+    id = sa.Column(BigId, primary_key=True)
+    #: The post it is on, or None for one on a drawing shown outside a post.
+    post_id = sa.Column(BigId, sa.ForeignKey("social_posts.id", ondelete="CASCADE"), nullable=True)
+    #: The drawing it is on (shown outside a post), by its skribl's public id.
+    drawing_id = sa.Column(sa.String(32), nullable=True)
+    #: Whose the post or the drawing is (its maker).
+    owner_id = sa.Column(BigId, sa.ForeignKey("social_people.id", ondelete="CASCADE"), nullable=False)
+    #: Who liked it.
+    person_id = sa.Column(BigId, sa.ForeignKey("social_people.id", ondelete="CASCADE"), nullable=False)
+    #: Where the drawing was, in ms on its own replay clock, when the heart was
+    #: tapped while it played; None when it was not playing.
+    at_ms = sa.Column(sa.Integer(), nullable=True)
+    created_at = sa.Column(sa.DateTime(timezone=True), nullable=False, default=utcnow)
+
+    __table_args__ = (
+        #: On a post or on a drawing: exactly one.
+        sa.CheckConstraint("(post_id IS NOT NULL AND drawing_id IS NULL) OR (post_id IS NULL AND drawing_id IS NOT NULL)",
+                           name="ck_social_likes_on_one"),
+        #: Once a person, once a thing.
+        sa.Index("ix_social_likes_person_post", "person_id", "post_id", unique=True),
+        sa.Index("ix_social_likes_person_drawing", "person_id", "drawing_id", unique=True),
+        #: A thing's likes, newest first: its count, and who liked it.
+        sa.Index("ix_social_likes_post_created", "post_id", "created_at"),
+        sa.Index("ix_social_likes_drawing_created", "drawing_id", "created_at"),
+        #: Whose, newest first: Activity's likes on what you made.
+        sa.Index("ix_social_likes_owner_created", "owner_id", "created_at"),
     )
 
 

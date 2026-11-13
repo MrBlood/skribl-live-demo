@@ -565,6 +565,38 @@ check("no tracked Python file raises a SyntaxWarning (or fails to compile)",
       _git.returncode == 0 and len(_git.stdout.split()) > 50 and not _noisy,
       "; ".join(_noisy[:4]) or f"{len(_git.stdout.split())} files")
 
+# ---------------------------------------------------------------------------
+print("\nTHE PLAYHEAD — a host's read-only seam on the in-post player")
+# docs/INTEGRATION.md, "Where the playhead is": player.playhead() answers
+# { ms, playing } on the drawing's own clock, for any host (the Skribl site
+# keeps it with a like; Skribl never depends on the site). Pinned here as
+# source: the method is on the player, it returns those two and nothing more,
+# it reads and never assigns or calls anything but the clock and Math.min, the
+# guide names it, and the site reads where a drawing's playhead is only
+# through it (never the suite's state().elapsedMs, not a host's to rely on).
+# The player's own suite (verify_inline.py, "where the playhead is") plays it.
+_ip = strip_comments((_layout.STATIC_DIR / "inlineplayer.js").read_text(encoding="utf-8"))
+_m = re.search(r"\bplayhead:\s*function\s*\(\)\s*\{(.*?)\},\n", _ip, re.S)
+_body = _m.group(1) if _m else ""
+_ret = re.fullmatch(r"\s*return\s*\{\s*ms:\s*(.+?),\s*playing:\s*(.+?)\s*\};\s*", _body, re.S)
+check("the in-post player has playhead(), returning { ms, playing } and nothing else",
+      bool(_ret), _body.strip()[:160] or "no playhead method on the player")
+_assigns = re.findall(r"(?<![=!<>])=(?!=)", _body)
+_calls = sorted(set(re.findall(r"([A-Za-z_$][\w$.]*)\s*\(", _body)) - {"Math.min", "curMs"})
+check("playhead() only reads: no assignment, and no call but the clock's (curMs) and Math.min",
+      bool(_m) and not _assigns and not _calls and "curMs()" in _body and "totalMs" in _body,
+      f"assignments {len(_assigns)}; other calls {_calls}")
+_guide = (ROOT / "docs" / "INTEGRATION.md").read_text(encoding="utf-8")
+_gm = re.search(r"\*\*Where the playhead is\*\*(.*?)\n\n", _guide, re.S)
+check("docs/INTEGRATION.md documents it: playhead(), its ms on the drawing's own clock, and playing",
+      bool(_gm) and "player.playhead()" in _gm.group(1) and "`ms`" in _gm.group(1) and "`playing`" in _gm.group(1)
+      and "own clock" in _gm.group(1), (_gm.group(1)[:120] if _gm else "no such section"))
+_site_js = sorted((ROOT / "social" / "static").glob("*.js"))
+_peek = [p.name for p in _site_js if "elapsedMs" in strip_comments(p.read_text(encoding="utf-8"))]
+_reads = [p.name for p in _site_js if ".playhead()" in strip_comments(p.read_text(encoding="utf-8"))]
+check("the site reads where a drawing's playhead is through playhead() alone, never state()'s elapsedMs",
+      len(_site_js) >= 5 and not _peek and _reads, f"peeking: {_peek}; reading the seam: {_reads}")
+
 bad = [r for r in results if not r[0]]
 print(f"\n{'='*62}\n{len(results)-len(bad)}/{len(results)} passed" +
       ("" if not bad else "  FAILURES: " + ", ".join(r[1] for r in bad)))

@@ -19,7 +19,13 @@ Nothing here is legal advice; it was written by the people building the site.
 - **What is kept about a person.** Name, handle, a short bio, a drawn face,
   their posts, comments and drawings and where each is shown, who invited
   them, and for each passkey its public half and when it was last used.
-  There are no passwords.
+  There are no passwords. Their likes (from Nov 13): which post or drawing
+  they liked, when, and where its drawing was in its replay when they
+  tapped the heart, if it was playing.
+- **Likes.** Everyone sees how many people liked a post or a drawing; who
+  liked it, when, and that moment in the replay are shown only to its maker.
+  A like by somebody blocked either way, or taken down, is neither shown nor
+  counted. Deleting a post or a drawing deletes its likes.
 - **Cookies.** Two, both the site's own: one keeps a person signed in, one
   protects forms. Nothing is loaded from anyone else (no ads, no analytics, no
   outside fonts or scripts).
@@ -43,7 +49,8 @@ Nothing here is legal advice; it was written by the people building the site.
   people left on their posts and on their drawings (since Nov 12 a drawing
   shown outside a post has comments too). Their other drawings and drafts
   stay until they delete them in their Library; the confirm page says so
-  first, and a drawing taken down outside a post stays hidden. Their passkeys
+  first, and a drawing taken down outside a post stays hidden. Their likes
+  are deleted, and so is every like on what they made. Their passkeys
   go, so nothing can sign in as them. Reports that named them stay, naming
   nobody. Blocks they made or were part of go.
 

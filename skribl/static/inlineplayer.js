@@ -943,6 +943,12 @@
         var T = payload ? totalMs : info ? info.play || 0 : 0;
         return { at: clockFn ? clockFn(curMs()) : curMs(), dur: clockFn ? clockFn(T) : T };
       },
+      /* WHERE THE PLAYHEAD IS, a host's to read (docs/INTEGRATION.md, "Where
+       * the playhead is"): ms on the drawing's own replay clock, 0 to its
+       * length, the same at whatever speed it is watched; and whether that
+       * clock is running. It reads; it never moves anything. Any host's, for
+       * any use: the Skribl site keeps it with a like. */
+      playhead: function () { return { ms: Math.min(curMs(), totalMs), playing: state === 'playing' }; },
       /* The drawing's ground, which a full screen wears to its edges. */
       ground: function () { return under ? under.color : null; }
     };

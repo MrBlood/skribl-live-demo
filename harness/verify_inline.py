@@ -997,6 +997,68 @@ with sync_playwright() as sp:
               "600 ms is page 1 and 1150 ms is page 2")
         fp.close()
 
+    # ---- WHERE THE PLAYHEAD IS (a host's seam: docs/INTEGRATION.md) -----------
+    # player.playhead() answers { ms, playing }: ms on the drawing's OWN clock
+    # (0 to its length, the same at any speed it is watched), and whether that
+    # clock runs. Read on the page as a host reads it, through the player
+    # SkriblInline.mount() hands back. Asked a hundred times between two reads,
+    # it must move nothing; read every millisecond across a dozen loops at 16x,
+    # it must never say a moment past the drawing's end (between two frames the
+    # running clock does, until the loop wraps it).
+    print("\nIN-POST — where the playhead is: the drawing's own clock, read-only")
+    HEAD = """async ([id, rate, wait]) => {
+      const p = SkriblInline.mount(document.querySelector('[data-skribl-id="' + id + '"]').parentNode)
+                .find(q => q.state().id === id);
+      p.setRate(rate); p.seek(80); p.play();
+      await new Promise(r => setTimeout(r, 60));
+      const a = p.playhead(), t0 = performance.now(), st0 = p.state().state;
+      for (let i = 0; i < 100; i++) p.playhead();
+      await new Promise(r => setTimeout(r, wait));
+      const b = p.playhead(), wall = performance.now() - t0;
+      p.pause();
+      const c = p.playhead(); await new Promise(r => setTimeout(r, 250)); const d = p.playhead();
+      return { a, b, c, d, wall, rate, st0, total: p.state().totalMs }; }"""
+    hp = b.new_page(viewport={"width": 620, "height": 900})
+    hp_reqs = []
+    hp.on("request", lambda r: hp_reqs.append(r.url) if re.search(r"/api/skribls/[A-Za-z0-9_-]+$", r.url) else None)
+    browsing.goto(hp, BASE, "/feed")
+    _rest = hp.evaluate("""(id) => { const p = SkriblInline.mount(document).find(q => q.state().id === id);
+      for (let i = 0; i < 100; i++) p.playhead();
+      return { h: p.playhead(), s: p.state().state, loaded: p.state().loaded }; }""", id_b)
+    check("at rest, before anybody taps, the playhead is at 0 and not playing, and asking fetches nothing",
+          _rest["h"] == {"ms": 0, "playing": False} and _rest["s"] == "idle" and not _rest["loaded"]
+          and not hp_reqs, f"{_rest}; fetched {len(hp_reqs)}")
+    hp.evaluate("(id) => SkriblInline.find(id).play()", id_b)
+    hp.wait_for_function("(id) => SkriblInline.find(id).state().loaded", arg=id_b, timeout=15000)
+    _one = hp.evaluate(HEAD, [id_b, 1, 400])
+    _four = hp.evaluate(HEAD, [id_b, 4, 150])
+    _went = lambda h: (h["b"]["ms"] - h["a"]["ms"]) / max(1, h["wall"])  # noqa: E731
+    check("playing, it says so, and its ms runs on the drawing's own clock: at 1x as fast as the wall's, at 4x"
+          " four times as fast (a moment in the drawing, never in the viewer's time)",
+          _one["a"]["playing"] and _one["b"]["playing"] and 0.75 <= _went(_one) <= 1.25
+          and _four["a"]["playing"] and 3.0 <= _went(_four) <= 5.0 and _one["st0"] == "playing"
+          and 0 <= _four["b"]["ms"] <= _four["total"],
+          f"1x: {_one['a']} -> {_one['b']} over {_one['wall']:.0f} ms ({_went(_one):.2f}x); "
+          f"4x: {_four['a']} -> {_four['b']} over {_four['wall']:.0f} ms ({_went(_four):.2f}x)")
+    check("paused, it says not playing and stays where it stopped; asking a hundred times moves nothing",
+          not _one["c"]["playing"] and _one["c"] == _one["d"] and abs(_one["c"]["ms"] - _one["b"]["ms"]) < 120,
+          f"paused {_one['c']} -> {_one['d']}; was {_one['b']}")
+    _edge = hp.evaluate("""async (id) => { const p = SkriblInline.find(id); p.setLoop(true); p.setRate(16); p.seek(0); p.play();
+      let most = 0, n = 0; const t0 = performance.now();
+      await new Promise(r => { const iv = setInterval(() => { const h = p.playhead(); most = Math.max(most, h.ms); n++;
+        if (performance.now() - t0 > 2000) { clearInterval(iv); r(); } }, 1); });
+      p.pause(); p.setRate(1); return { most, n, total: p.state().totalMs }; }""", id_b)
+    check("never past the drawing's end: read every millisecond across a dozen loops at 16x",
+          _edge["n"] > 200 and _edge["most"] <= _edge["total"] and _edge["most"] > _edge["total"] * 0.8,
+          json.dumps(_edge))
+    if flip_id:
+        _flip = hp.evaluate(HEAD, [flip_id, 1, 300])
+        check("a Flip answers the same: playing, its ms on its pages' clock, within one pass",
+              _flip["a"]["playing"] and _flip["b"]["playing"] and 0.75 <= _went(_flip) <= 1.25
+              and 0 <= _flip["b"]["ms"] <= _flip["total"] and not _flip["c"]["playing"],
+              f"{_flip['a']} -> {_flip['b']} over {_flip['wall']:.0f} ms; paused {_flip['c']}")
+    hp.close()
+
     # ---- DRAW-ON, AT ITS THREE BOUNDARIES, ON THIS SURFACE SPECIFICALLY ----
     #
     # One semantic timeline, four renderers. The editor, /s/ and the exporter
@@ -1728,7 +1790,17 @@ with sync_playwright() as sp:
     #   named cost: +30 B, all inlineplayer.js -- the card reader's canvas made
     #   with willReadFrequently. WHICH CALLER PAYS: every page that shows a
     #   post. Spent first: nothing to spend; it is one option. 78,393 B measured.
-    EMBED_RATCHET = 78_396
+    # RAISED (the owner's D on the likes mock, Nov 13: a like keeps where the
+    #   drawing was when it was tapped, from day one), for one named cost:
+    #   +100 B, all inlineplayer.js -- playhead(), the read-only seam any host
+    #   asks where the playhead is on the drawing's own clock and whether it
+    #   runs (docs/INTEGRATION.md; the site reads it, Skribl never knows why).
+    #   WHICH CALLER PAYS: every page that shows a post, for a line any host
+    #   may call. Spent first: it reads the clock the player already keeps
+    #   (curMs) rather than a second one, and returns the two answers and no
+    #   more; state() could not be documented instead, its fields being the
+    #   suite's. 78,493 B measured.
+    EMBED_RATCHET = 78_496
     # THE RATCHET MEASURES DISPLAY, NOT COMPOSE, and the two are separate costs
     # paid by separate pages. Excluded here and measured on its own below:
     #   feed.js          the PREVIEW PAGE's own script (fetch the listing, clone

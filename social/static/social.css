@@ -61,6 +61,10 @@
      3.64:1 on the page, where his own blush reads 2.58:1, under the 3:1 a
      mark needs; on dark, his blush itself (below). */
   --new-dot: #e64a78;
+  /* A LIKED HEART'S LINE (likes; the likes mock, "I like d."), a new name for
+     a new job with the dot's values: Blooby's blush reads 2.65:1 as a line on
+     a card, under the 3:1 a mark needs; this one 3.74:1. His blush inside it. */
+  --heart: #e64a78;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -94,6 +98,7 @@
     --tint: rgba(124, 92, 255, 0.18);
     --danger-ink: #ffb3c6;
     --new-dot: var(--blooby-blush); /* his blush itself: 7.34:1 on the dark page */
+    --heart: var(--blooby-blush);   /* the same: 6.01:1 on a dark card */
   }
 }
 
@@ -964,6 +969,98 @@ button.make-door { width: 100%; border: 0; font: inherit; text-align: left; curs
 }
 .cm.is-landed.is-fading::before { opacity: 0; }
 
+/* ---- LIKES (phase 2; the likes mock and the owner's "I like d.", Nov 13), in
+   the mock's own sizes. THE HEART in our pen (_icons.html, heart()): its line
+   the words' second ink until you like it, whatever the count beside it says;
+   liked, Blooby's blush inside and --heart round it. The heart and its count
+   are one part (_post.html, heart()), so it moves in one place: on Home's
+   card beside Share, the two things you do; on a post's or a drawing's page
+   at the right end of the time-and-plays line. Every target 44px. ---- */
+.ic-heart .ht-fill { fill: var(--blooby-blush); stroke: none; opacity: 0; }
+.ic-heart .ht-ink { stroke: var(--heart); stroke-dasharray: 1 1; stroke-dashoffset: 1; opacity: 0; }
+.is-liked > .ic-heart .ht-fill, .act-badge > .ic-heart .ht-fill { opacity: 1; }
+.is-liked > .ic-heart .ht-line, .act-badge > .ic-heart .ht-line { opacity: 0; }
+.is-liked > .ic-heart .ht-ink, .act-badge > .ic-heart .ht-ink { stroke-dashoffset: 0; opacity: 1; }
+/* KIND, NEVER JUMPY: a tap draws the blush line round the heart from its
+   notch (0.36s), the blush fades in behind it as the line passes the point,
+   and the grey line fades away under it; nothing grows, bounces or moves.
+   Tapped again, the blush and its line fade and the grey line comes back
+   (0.2s); nothing un-draws. Under Reduce Motion nothing draws: the blush
+   fades in where it sits. likes.js puts .lk-anim or .lk-fade on as it taps. */
+@media (prefers-reduced-motion: no-preference) {
+  .lk-anim .ht-ink { transition: stroke-dashoffset 0.36s cubic-bezier(0.3, 0.6, 0.3, 1); }
+  .lk-anim .ht-fill { transition: opacity 0.22s ease 0.16s; }
+  .lk-anim .ht-line { transition: opacity 0.2s ease 0.16s; }
+}
+.lk-fade .ht-ink { transition: opacity 0.2s ease, stroke-dashoffset 0s linear 0.2s; }
+.lk-fade .ht-fill, .lk-fade .ht-line { transition: opacity 0.2s ease; }
+@media (prefers-reduced-motion: reduce) {
+  .ic-heart .ht-ink { stroke-dasharray: none; }
+  .lk-anim .ht-ink, .lk-anim .ht-fill, .lk-anim .ht-line { transition: opacity 0.2s ease; }
+}
+.lk-heart {
+  display: inline-flex; align-items: center; justify-content: center; gap: 5px; flex: none; min-width: 44px;
+  height: 44px; padding: 0 12px; border: 0; border-radius: 999px; background: none; color: var(--ink-2);
+  font: inherit; font-size: 15px; line-height: 1; cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.lk-n { font-variant-numeric: tabular-nums; }
+/* HOME'S CARD: beside Share; plays and comments keep their places on the left. */
+.post-foot .lk-foot { margin-left: auto; }
+.lk-foot .ic { width: 20px; height: 20px; }
+/* A POST'S PAGE, AND A DRAWING'S: at the right end of the line under the
+   drawing, laid over the 12px either side of it, so the line keeps its
+   height and nothing below it moves. */
+.post-meta.lk-meta { display: flex; align-items: center; gap: 8px; }
+.lk-meta-words { flex: 1; min-width: 0; }
+.lk-page { margin: -12px -8px -12px 0; padding: 0 11px; }
+.lk-page .ic { width: 22px; height: 22px; }
+/* WHO LIKED IT, its maker's alone: a line under that one, clear of the
+   heart's 44px, the newest faces and the first names in the first ink. */
+.lk-by {
+  display: flex; align-items: center; gap: 10px; min-height: 44px; margin: 12px 0 0; padding: 0; border: 0;
+  background: none; color: var(--ink-2); font: inherit; font-size: 15px; line-height: 1.35; text-align: left;
+  cursor: pointer; scroll-margin-top: 200px;
+}
+.lk-by b { color: var(--ink); font-weight: 600; }
+.lk-faces { display: flex; flex: none; }
+.lk-faces .face-ring { --skribl-face-size: 26px; width: 26px; height: 26px; box-shadow: 0 0 0 2px var(--page); }
+.lk-faces .face-ring + .face-ring { margin-left: -7px; }
+/* Opened from a like in Activity (#liked: likes.js) it glows a moment in the
+   note's tint, then the tint fades over a second and a half, as a comment
+   does when you land on it. Nothing moves, so Reduce Motion keeps it. */
+.lk-by.is-landed { position: relative; isolation: isolate; }
+.lk-by.is-landed::before {
+  content: ""; position: absolute; z-index: -1; inset: 0 -10px; border-radius: 16px; background: var(--tint);
+  transition: opacity 1.5s ease;
+}
+.lk-by.is-landed.is-fading::before { opacity: 0; }
+/* THE SHEET OF WHO: Make's (--menu-paper), the people on one card
+   (--menu-card), a row each split by the card's rule, each a way to their
+   page; when, and under it the moment their heart landed, with a dot in the
+   heart's blush. The list scrolls inside the sheet when it is long. */
+.lk-list {
+  max-height: min(56vh, 520px); margin: 0; padding: 0 14px; overflow: auto; overscroll-behavior: contain;
+  touch-action: pan-y; list-style: none; border-radius: 18px; background: var(--row-bg);
+}
+.lk-row {
+  display: flex; align-items: center; gap: 12px; min-height: 60px; padding: 8px 0; border-top: 1px solid var(--rule);
+  color: var(--ink); text-decoration: none;
+}
+.lk-list > li:first-child > .lk-row { border-top: 0; }
+.lk-row .face-ring { --skribl-face-size: 40px; width: 40px; height: 40px; }
+.lk-who { display: flex; flex: 1; flex-direction: column; min-width: 0; line-height: 1.3; }
+.lk-who b { overflow: hidden; font-size: 16px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.lk-who span { overflow: hidden; color: var(--ink-2); font-size: 14px; text-overflow: ellipsis; white-space: nowrap; }
+.lk-when {
+  display: flex; flex: none; flex-direction: column; align-items: flex-end; gap: 2px; color: var(--ink-2);
+  font-size: 15px; line-height: 1.3;
+}
+.lk-at { display: flex; align-items: center; gap: 6px; font-variant-numeric: tabular-nums; }
+.lk-mark { width: 5px; height: 5px; border-radius: 50%; background: var(--heart); }
+.lk-note { margin: 12px 4px 0; color: var(--ink-2); font-size: 14px; line-height: 1.45; }
+/* SIGNED OUT: Make's sheet, small, saying how. */
+.lk-out .post-sheet-acts a.btn { text-decoration: none; }
+
 /* ---- ACTIVITY (phase 2, notifications; the notifications mock and the
    owner's "all yes", Nov 12), in the mock's own sizes. A bell drawn in our
    pen at the top right of a phone's Home and Explore, where Sign in sits
@@ -1005,6 +1102,16 @@ button.make-door { width: 100%; border: 0; font: inherit; text-align: left; curs
 .act-row > .face-ring { --skribl-face-size: 44px; width: 44px; height: 44px; }
 /* Several people: two faces, the newest in front, each ringed in the ground. */
 .act-faces { position: relative; width: 44px; height: 44px; }
+/* A LIKE (likes): the face, or faces, wearing a small liked heart on the
+   ground's own circle. */
+.act-who { position: relative; width: 44px; height: 44px; }
+.act-who > .act-faces { display: block; }
+.act-who > .face-ring { --skribl-face-size: 44px; width: 44px; height: 44px; }
+.act-badge {
+  position: absolute; right: -6px; bottom: -6px; display: grid; place-items: center; width: 22px; height: 22px;
+  border-radius: 50%; background: var(--page);
+}
+.act-badge .ic { width: 16px; height: 16px; }
 .act-faces .face-ring { position: absolute; --skribl-face-size: 32px; width: 32px; height: 32px; box-shadow: 0 0 0 2px var(--page); }
 .act-faces .face-ring:first-child { left: 0; top: 0; }
 .act-faces .face-ring:last-child { right: 0; bottom: 0; }

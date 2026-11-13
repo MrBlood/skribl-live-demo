@@ -1,0 +1,84 @@
+{#  LIKES, THE PARTS AROUND THE HEART (phase 2; the likes mock and the owner's
+    "I like d.", Nov 13). likes.py says the rules; the heart itself is a card's
+    part (_post.html, heart()), so it moves in one place.
+
+    liked_by(lk)        the maker's line, under the time-and-plays line on their
+                        own post's or drawing's page: "Liked by Mira, Ada and 3
+                        others" (you first when one is yours), the newest faces,
+                        opening the sheet of who. id="liked": a like row in
+                        Activity lands here, and it glows a moment (likes.js).
+    who_rows(lk)        the sheet's rows, newest first: face, name, @handle,
+                        when, and the moment their heart landed, if one was
+                        kept; each a way to their page.
+    like_sheets(lk, c)  the sheet of who (the maker's: Make's own sheet, its
+                        paper, the people on one card), the signed-out sheet
+                        ("Like this drawing?"), and likes.js's words.
+
+    `lk` is posts._post_page's, for the maker alone: who()'s rows, by_line()'s
+    line (none at no likes), and moment() to say a kept moment. Import these
+    WITH CONTEXT: they read the page's me, when_iso, when_day and signin_here.
+    A like the maker gives or takes back answers with the line and the rows
+    again (_liked_by.html), so what they read is never stale. #}
+{% from 'social/_post.html' import face with context %}
+
+{% macro liked_by(lk) -%}
+{%- set l = lk.line -%}
+<button class="lk-by" id="liked" type="button" data-like-by aria-haspopup="dialog" aria-controls="likeSheet" aria-expanded="false">
+  <span class="lk-faces" aria-hidden="true">{% for p in l.faces %}{{ face(p) }}{% endfor %}</span>
+  <span class="lk-by-words">Liked by {% for n in l.names %}{% if not loop.first %}{{ ' and ' if loop.last and not l.more else ', ' }}{% endif %}{% if n == 'you' %}you{% else %}<b>{{ n }}</b>{% endif %}{% endfor %}{% if l.more %} and {{ l.more }} {{ 'other' if l.more == 1 else 'others' }}{% endif %}</span>
+</button>
+{%- endmacro %}
+
+{% macro who_rows(lk) -%}
+{%- for like, p in lk.rows %}
+<li><a class="lk-row" href="{{ url_for('social.profile', handle=p.handle) }}">{{ face(p) }}<span class="lk-who"><b>{{ p.display_name }}</b><span>@{{ p.handle }}</span></span><span class="lk-when"><time datetime="{{ when_iso(like.created_at) }}" data-when="ago">{{ when_day(like.created_at) }}</time>{% if like.at_ms is not none %}<span class="lk-at"><span class="lk-mark" aria-hidden="true"></span><span class="sr">its moment in the replay, </span>{{ lk.moment(like.at_ms) }}</span>{% endif %}</span></a></li>
+{%- endfor %}
+{%- endmacro %}
+
+{% macro like_sheets(lk, c) -%}
+{% if lk %}
+{#  WHO LIKED IT: Make's own sheet (social.js), the people on one card; the
+    list scrolls inside it when it is long. #}
+<div class="make post-sheet lk-sheet" id="likeSheet" hidden>
+  <div class="make-scrim" data-make-close></div>
+  <div class="make-sheet" role="dialog" aria-modal="true" aria-labelledby="likeSheetTitle">
+    <div class="make-grip" data-make-close aria-hidden="true"></div>
+    <h2 class="make-title" id="likeSheetTitle">Liked by</h2>
+    <ul class="lk-list" data-like-who>{{ who_rows(lk) }}</ul>
+    <p class="lk-note">Only you can see who liked it.</p>
+    <button class="btn btn-wide make-cancel" type="button" data-make-close>Close</button>
+  </div>
+</div>
+{% endif %}
+{% if not me and c %}
+{#  SIGNED OUT: the heart is there for everybody; a tap raises this, small,
+    saying how (a line pushed into the page would move the buttons under the
+    reader). Sign in comes back here, and the heart waits: nothing is pressed
+    for them. #}
+<div class="make post-sheet lk-out" id="likeOutSheet" hidden>
+  <div class="make-scrim" data-make-close></div>
+  <div class="make-sheet" role="dialog" aria-modal="true" aria-labelledby="likeOutTitle">
+    <div class="make-grip" data-make-close aria-hidden="true"></div>
+    <h2 class="make-title" id="likeOutTitle">Like this drawing?</h2>
+    <p class="post-lede">Sign in, and a tap on the heart lets <span data-like-first>{{ c.who.display_name.split(' ')[0] }}</span> know you like it.</p>
+    <div class="post-sheet-acts">
+      <button class="btn btn-big" type="button" data-make-close>Not now</button>
+      <a class="btn btn-primary btn-big" href="{{ signin_here }}">Sign in</a>
+    </div>
+  </div>
+</div>
+{% endif %}
+<div class="words" data-like-words hidden>
+  <span data-word="lk_like">Like</span>
+  <span data-word="lk_liked">Liked</span>
+  <span data-word="lk_one">{n} like</span>
+  <span data-word="lk_many">{n} likes</span>
+  <span data-word="lk_stale">This page went stale. Reload it, then try again.</span>
+  <span data-word="lk_limited">Lots of likes in a short while. Wait a little, then try again.</span>
+  <span data-word="lk_signed_out">You’ve been signed out. Sign in again to like it.</span>
+  <span data-word="lk_taken_down">Your account was taken down, so nothing new can be shared from it.</span>
+  <span data-word="lk_gone">That isn’t here anymore. Reload the page to see what’s new.</span>
+  <span data-word="lk_network">That didn’t reach us. Check your connection and try again.</span>
+  <span data-word="lk_failed">That didn’t go through. Try again?</span>
+</div>
+{%- endmacro %}

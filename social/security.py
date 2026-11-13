@@ -396,6 +396,7 @@ LIMITS = {
     "report": (30, 3600),          # reports sent, per person, or per address signed out (piece 5)
     "block": (60, 3600),           # blocks and unblocks, per person (piece 5)
     "comment": (60, 3600),         # comments and answers sent, per person (phase 2)
+    "like": (120, 3600),           # likes and unlikes, per person (phase 2: the same tap does both)
 }
 _SWEEP_EVERY = 64
 
