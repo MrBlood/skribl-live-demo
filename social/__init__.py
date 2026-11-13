@@ -63,6 +63,14 @@ pill, Following | Everyone: the people you follow and you, newest first,
 then everyone's, so Home never runs out. Follows wait in Activity; they
 never light the bell's dot.
 
+PHASE 2, MUTES (mutes.py; the mute mock, the owner's "Yes to all", C, Nov
+13). "Mute @theo" in the ⋯ on their page and on their posts: nothing asked
+first, a toast with Undo. What comes to you goes quiet (their posts and
+drawings leave Home and Explore, their comments fold to a line with Show,
+they leave Activity); what you go to stays (their page, which says "You
+muted Theo · Unmute" to you alone, and their posts). Nobody is told, no
+number changes, and a mute never touches a follow. Settings lists them.
+
 ONE SKRIBL, SHARED, PEOPLE TOO. The host hands Skribl the site's signed-in
 person as its current user (current_user_id() below) and names them with
 describe_author(), so a drawing made in the Pad while signed in is theirs.
@@ -99,7 +107,7 @@ from flask import (Blueprint, abort, current_app, g, has_app_context, has_reques
 
 from .models import PERSON_PREFIX, attach_to_metadata
 
-__all__ = ["init_social", "current_user_id", "describe_author", "hidden_authors",
+__all__ = ["init_social", "current_user_id", "describe_author", "hidden_authors", "muted_authors",
            "attach_to_metadata", "PERSON_PREFIX"]
 
 
@@ -132,6 +140,19 @@ def hidden_authors(viewer_id):
         return frozenset()
     from .safety import hidden_authors as _hidden
     return _hidden(viewer_id)
+
+
+def muted_authors(viewer_id):
+    """For the host's feed filter (docs/SOCIAL-SITE.md "Built: mutes"): the
+    public ids of everybody `viewer_id` muted, which a listing of
+    everybody's leaves out (Explore's gallery, Home's drawings) and a listing
+    of one person's own keeps (their page's skribls): what comes to you goes
+    quiet, and what you go to stays. Never for the visibility policy: a mute
+    hides no page. Empty where the site is not running."""
+    if not has_app_context() or "social" not in current_app.extensions:
+        return frozenset()
+    from .mutes import muted_authors as _muted
+    return _muted(viewer_id)
 
 #: The globals init_skribl() puts in the app's Jinja environment that the
 #: site's pages use: skribl_asset for the player's and the Gallery's files,
@@ -269,13 +290,14 @@ def init_social(app, *, session=None, url_prefix="/social", skribl_blueprint="sk
         return render_template("social/explore.html", here="explore")
 
     if site is not None:
-        from . import accounts, activity, comments, follows, likes, posts, profiles, reports, rules, safety
+        from . import accounts, activity, comments, follows, likes, mutes, posts, profiles, reports, rules, safety
         accounts.register(bp)
         profiles.register(bp, skribl_blueprint)
         posts.register(bp, skribl_blueprint)
         comments.register(bp)
         likes.register(bp)
         follows.register(bp)
+        mutes.register(bp)
         activity.register(bp, skribl_blueprint)
         safety.register(bp)
         reports.register(bp, skribl_blueprint)

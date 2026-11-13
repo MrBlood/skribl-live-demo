@@ -23,11 +23,13 @@
  * there draws itself instead.
  *
  * THE ⋯ SHEET (social.js's SocialSheet, as Make's): Copy link, Share…,
- * Report this post and, signed in, Block @them; or on your own Delete post.
- * Report and Delete each rise as a sheet of their own: Report into the
- * site's own queue (/report, the page's token, the Gallery's reasons and "A
- * child's safety"; piece 5), Delete asked once. Block is safety.js's sheet
- * (window.SocialSafety), and afterwards Home says so.
+ * signed in Mute @them (Unmute @them once muted: the card says which), Report
+ * this post and, signed in, Block @them; or on your own Delete post. Report
+ * and Delete each rise as a sheet of their own: Report into the site's own
+ * queue (/report, the page's token, the Gallery's reasons and "A child's
+ * safety"; piece 5), Delete asked once. Block is safety.js's sheet
+ * (window.SocialSafety), and afterwards Home says so. Mute asks nothing:
+ * mutes.js (window.SocialMute) folds their cards away and offers Undo.
  *
  * TIMES are said in the person's own time: "35m" in the feed, "Nov 10 at
  * 8:20 PM" on a post's page (social.js's SocialWhen, with this page's
@@ -107,7 +109,8 @@
     return { el: p, id: p.getAttribute('data-post'), url: absolute(p.getAttribute('data-url')),
              skribl: p.getAttribute('data-skribl'), mine: p.hasAttribute('data-mine'),
              del: p.getAttribute('data-del'), kind: p.getAttribute('data-kind') || 'p',
-             handle: p.getAttribute('data-handle') || '' };
+             handle: p.getAttribute('data-handle') || '', first: p.getAttribute('data-first') || '',
+             muted: p.hasAttribute('data-muted') };
   }
 
   /* ---- the ⋯ sheet, and Report and Delete -------------------------------- */
@@ -136,6 +139,13 @@
       Array.prototype.forEach.call(menuWrap.querySelectorAll('[data-theirs]'), function (b) { b.hidden = current.mine; });
       var who = menuWrap.querySelector('[data-block-who]');
       if (who) who.textContent = say('block_who', { handle: current.handle });
+      /* MUTE (mutes): Mute @them, or Unmute @them, as the card says. */
+      var mu = menuWrap.querySelector('[data-act="mute"]');
+      if (mu) {
+        mu.setAttribute('data-muted', current.muted ? 'true' : 'false');
+        mu.querySelector('[data-mute-name]').textContent = say(current.muted ? 'mu_unmute' : 'mu_mute', { handle: current.handle });
+        mu.querySelector('[data-mute-say]').textContent = say(current.muted ? 'mu_say_un' : 'mu_say');
+      }
       tell(menuWrap.querySelector('[data-post-say]'), '');
       menu.open(m);
       return;
@@ -161,6 +171,10 @@
       } else if (act === 'block' && window.SocialSafety) {
         menu.close(true);
         window.SocialSafety.block(current.handle, opener);
+      } else if (act === 'mute' && window.SocialMute) {
+        /* Nothing asked first: the sheet goes down, focus back on the ⋯. */
+        menu.close();
+        window.SocialMute.act({ handle: current.handle, first: current.first, muted: current.muted, opener: opener });
       } else if (act === 'delete' && del) {
         menu.close(true);
         tell(deleteWrap.querySelector('[data-delete-say]'), '');

@@ -27,8 +27,10 @@
                       line's marks, which it draws (a small dot a like, a
                       step redder where they double); the hearts that rise
                       from them are likes.js's. Nothing taken down has any.
-    post_sheets()     the ⋯ sheet ("This post": Copy link, Share…, and Report
-                      this post, or on your own Delete post), the report
+    post_sheets()     the ⋯ sheet ("This post": Copy link, Share…, and signed
+                      in Mute @them (mutes: _mute.html, after Share… so the
+                      two danger rows stay together), Report this post and
+                      Block @them, or on your own Delete post), the report
                       sheet (the Gallery's own reasons and words, into
                       Skribl's report queue) and the delete sheet (it asks
                       once). One of each a page; posts.js fills them for the
@@ -43,6 +45,7 @@
 {% from 'skribl/_skribl_inline_player.html' import skribl_inline %}
 {% from 'skribl/_skribl_face.html' import skribl_face %}
 {% import 'social/_icons.html' as ic %}
+{% from 'social/_mute.html' import mute_row with context %}
 
 {% macro face(who, cls='') -%}
 <span class="face-ring{{ ' ' ~ cls if cls }}{% if not who.face_id %} is-blank{% endif %}">{% if who.face_id %}{{ skribl_face(who.face_id, canvas_w=who.face_w, canvas_h=who.face_h, bp=skribl_bp) }}{% else %}<span class="face-blank" aria-hidden="true"></span>{% endif %}</span>
@@ -71,8 +74,8 @@
 {% macro post_card(c) -%}
 {%- set p = c.post %}{% set who = c.who -%}
 <article class="post-card" data-post="{{ p.public_id }}" data-url="{{ c.url }}" data-skribl="{{ p.skribl_id }}"
-         data-handle="{{ who.handle }}"{% if c.mine %} data-mine data-del="{{ c.delete }}"{% endif %} data-kind="{{ c.kind }}"
-         aria-labelledby="pn-{{ p.public_id }}">
+         data-handle="{{ who.handle }}" data-first="{{ who.display_name.split(' ')[0] }}"{% if c.mine %} data-mine data-del="{{ c.delete }}"{% endif %}
+         {%- if c.muted %} data-muted{% endif %} data-kind="{{ c.kind }}" aria-labelledby="pn-{{ p.public_id }}">
   <header class="post-head">
     <a class="post-face" href="{{ c.profile }}" tabindex="-1" aria-hidden="true">{{ face(who) }}</a>
     {#- Their page, the size of a finger: the name's link lies under the name and
@@ -108,6 +111,7 @@
     <div class="post-acts">
       <button class="post-act" type="button" data-act="copy">{{ ic.link() }}<span>Copy link</span></button>
       <button class="post-act" type="button" data-act="share">{{ ic.share() }}<span>Share…</span></button>
+      {% if me %}{{ mute_row('', false, 'post') }}{% endif %}
       <button class="post-act is-danger" type="button" data-act="report" data-theirs>{{ ic.flag() }}<span>Report this post</span></button>
       {% if me %}<button class="post-act is-danger" type="button" data-act="block" data-theirs>{{ ic.block() }}<span data-block-who>Block</span></button>{% endif %}
       <button class="post-act is-danger" type="button" data-act="delete" data-mine-only>{{ ic.trash() }}<span>Delete post</span></button>

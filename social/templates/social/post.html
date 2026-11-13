@@ -16,12 +16,18 @@
     LIKES (phase 2; the likes mock, "I like d.", and way 3): the heart and how
     many at the start of the line under the drawing (_post.html, heart(), the
     player's lead), and for its maker alone "Liked by…" under the
-    time-and-plays line, opening who (_likes.html). #}
+    time-and-plays line, opening who (_likes.html).
+
+    MUTE (mutes; the owner's C): signed in, the ⋯ says Mute @them after
+    Share… (Unmute once muted), and the toast says so; a post's own page is
+    what you went to, so it stays as it is. Somebody you muted has their
+    comments folded to one line with Show (_comments.html). #}
 {% extends 'social/base.html' %}
 {% from 'social/_post.html' import post_sheets, post_words, face, player with context %}
 {% from 'social/_likes.html' import liked_by, like_sheets with context %}
 {% from 'social/_safety.html' import safety_sheets with context %}
 {% from 'social/_comments.html' import comments_section, comment_sheets with context %}
+{% from 'social/_mute.html' import mute_parts with context %}
 {% import 'social/_icons.html' as ic %}
 {% set p = card.post %}{% set who = card.who %}
 
@@ -54,6 +60,7 @@
 {% block scripts %}<script src="{{ social_asset('posts.js') }}" defer></script>
 <script src="{{ social_asset('likes.js') }}" defer></script>
 <script src="{{ social_asset('safety.js') }}" defer></script>
+{% if me %}<script src="{{ social_asset('mutes.js') }}" defer></script>{% endif %}
 {% if cm %}<script src="{{ social_asset('comments.js') }}" defer></script>{% endif %}{% endblock %}
 
 {% block top %}
@@ -65,8 +72,8 @@
 
 {% block main %}
 <article class="post-page" data-post="{{ p.public_id }}" data-url="{{ card.url }}" data-skribl="{{ p.skribl_id }}"
-         data-handle="{{ who.handle }}"{% if card.mine %} data-mine data-del="{{ card.delete }}"{% endif %} data-kind="{{ card.kind }}"
-         data-autoplay aria-labelledby="postWho">
+         data-handle="{{ who.handle }}" data-first="{{ who.display_name.split(' ')[0] }}"{% if card.mine %} data-mine data-del="{{ card.delete }}"{% endif %}
+         {%- if card.muted %} data-muted{% endif %} data-kind="{{ card.kind }}" data-autoplay aria-labelledby="postWho">
   <header class="post-head">
     <a class="post-face" href="{{ card.profile }}" tabindex="-1" aria-hidden="true">{{ face(who) }}</a>
     <a class="post-who" href="{{ card.profile }}">
@@ -108,4 +115,4 @@
 {{ post_words() }}
 {% endblock %}
 
-{% block overlays %}{{ post_sheets() }}{{ safety_sheets() }}{% if cm %}{{ comment_sheets(cm) }}{% endif %}{{ like_sheets(lk, card) }}{% endblock %}
+{% block overlays %}{{ post_sheets() }}{{ safety_sheets() }}{% if cm %}{{ comment_sheets(cm) }}{% endif %}{{ like_sheets(lk, card) }}{% if me %}{{ mute_parts() }}{% endif %}{% endblock %}

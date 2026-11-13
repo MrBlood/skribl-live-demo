@@ -532,12 +532,20 @@ def create_app():
     # people the site hides from the viewer, and a drawing's link page, card,
     # picture and payload are not theirs (visible_to). Anybody else is
     # decided as before: the policy says nothing (None) and Skribl's rules stand.
+    # A MUTE on the site (C, quiet everywhere) leaves the people this viewer
+    # muted out of a listing of everybody's (Explore's gallery, Home's
+    # drawings), never out of one person's own (their page's skribls, More
+    # from): Skribl tells the filter which, by `author` (docs/INTEGRATION.md,
+    # "The feed does not call your policy"). The policy never hears of mutes:
+    # a mute hides no page.
     if app.extensions.get("social") is not None:
         import social
         from skribl.models import SkriblPost
 
-        def _hide_blocked(query, viewer_id):
+        def _hide_blocked(query, viewer_id, author=None):
             hidden = social.hidden_authors(viewer_id)
+            if author is None:
+                hidden = hidden | social.muted_authors(viewer_id)
             return query.filter(SkriblPost.user_id.notin_(sorted(hidden))) if hidden else query
 
         def _deny_blocked(post, viewer_id):

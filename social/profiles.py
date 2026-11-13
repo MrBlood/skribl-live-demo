@@ -89,12 +89,16 @@ def register(bp, skribl_blueprint="skribl"):
         # follow them; on your own, who follows you and whom you follow, for
         # your eyes and nobody else's.
         from .follows import for_owner, is_following
+        # MUTES (C): their page is what you go to, so it stays; to you alone it
+        # says "You muted Theo · Unmute", and its ⋯ says Unmute.
+        from .mutes import i_muted
         # Your own profile is You's page; somebody else's is none of the
         # bar's places, so no tab says it is. The page's token for everybody:
         # Report is anybody's, Block anybody's signed in (piece 5).
         return _page("profile.html", here="you" if mine else "profile", who=who, mine=mine,
                      blocked_them=blocked_them,
                      following=not mine and not blocked_them and is_following(me, who),
+                     muted=not mine and not blocked_them and i_muted(me, who),
                      fl=for_owner(me) if mine else None,
                      signin_here=url_for("social.signin", next=profile_url(who.handle)),
                      share_url=public_origin() + profile_url(who.handle),

@@ -50,6 +50,13 @@ comment that is; a comment taken down only to its author, with the note.
 The same rules count (counts(): Home's card, and the section's heading), so
 a number never promises a comment the page will not show.
 
+SOMEBODY YOU MUTED (mutes; the owner's C): their comment or answer is one
+quiet line in its place, "Someone you muted said something. Show" ("…
+answered." for an answer), the eye where their face was; Show opens it for
+that visit (comments.js). thread() marks it (`quiet`); it is still shown and
+still counted, so the numbers add up, and the answers under it, by others,
+stay as they are.
+
 DELETING IS REAL, AND SAID IN CODE: a comment goes with its answers
 (drop_comments), a post with its comments (posts.drop_post), a drawing
 deleted through the site with its comments (posts.bloob_delete), an account
@@ -219,8 +226,11 @@ def _uncursor(text):
 def thread(on, viewer, before=None, limit=PAGE):
     """A page of the comments on `on` (a post or a drawing) for `viewer`:
     (items, next cursor or None). Newest first; each item {"c": the comment,
-    "who": its author, "answers": its answers as items, oldest first}."""
+    "who": its author, "answers": its answers as items, oldest first,
+    "quiet": whether the viewer muted its author (it folds to one line)}."""
+    from .mutes import muted_ids
     hidden = hidden_ids(viewer)
+    muted = muted_ids(viewer)
     sess = site().session()
     q = (sa.select(Comment, Person).join(Person, Person.id == Comment.person_id)
          .where(on.where(), Comment.parent_id.is_(None))
@@ -233,14 +243,15 @@ def thread(on, viewer, before=None, limit=PAGE):
                            sa.and_(Comment.created_at == when, Comment.public_id < key)))
     rows = sess.execute(q).all()
     tops, more = rows[:limit], len(rows) > limit
-    items = [{"c": c, "who": who, "answers": [], "sk": None} for c, who in tops]
+    items = [{"c": c, "who": who, "answers": [], "sk": None, "quiet": who.id in muted} for c, who in tops]
     if items:
         by = {i["c"].id: i for i in items}
         aq = (sa.select(Comment, Person).join(Person, Person.id == Comment.person_id)
               .where(Comment.parent_id.in_(sorted(by)))
               .order_by(Comment.created_at, Comment.public_id).limit(ANSWERS_MAX))
         for c, who in sess.execute(_shown(aq, viewer, hidden)).all():
-            by[c.parent_id]["answers"].append({"c": c, "who": who, "answers": [], "sk": None})
+            by[c.parent_id]["answers"].append({"c": c, "who": who, "answers": [], "sk": None,
+                                               "quiet": who.id in muted})
         described(items + [a for i in items for a in i["answers"]], viewer)
     return items, (_cursor(tops[-1][0]) if more and tops else None)
 

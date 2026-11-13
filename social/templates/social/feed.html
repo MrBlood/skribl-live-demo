@@ -25,6 +25,11 @@
     asks. Each card's heart and how many at the start of its drawing's line
     (likes: _post.html, heart(); likes.js).
 
+    MUTE (mutes; the owner's C): "Mute @theo" in a card's ⋯, after Share…;
+    nothing asked first. Every card of theirs folds away (a fade, then its
+    room closes and the next rises into its place), and the toast rises with
+    Undo, which brings them back the same way (_mute.html; mutes.js).
+
     posts.js holds the moving parts; the words are this page's. #}
 {% extends 'social/base.html' %}
 {% from 'skribl/_skribl_inline_player.html' import skribl_inline_draft %}
@@ -32,13 +37,15 @@
 {% from 'social/_likes.html' import like_sheets with context %}
 {% from 'social/_safety.html' import safety_sheets with context %}
 {% from 'social/_follow.html' import home_pill, feed_extra, follow_words with context %}
+{% from 'social/_mute.html' import mute_parts with context %}
 {% import 'social/_icons.html' as ic %}
 
 {% block head %}<script src="{{ skribl_asset('lib/composehost.js') }}" defer></script>{% endblock %}
 {% block scripts %}<script src="{{ social_asset('posts.js') }}" defer></script>
 <script src="{{ social_asset('likes.js') }}" defer></script>
 <script src="{{ social_asset('follows.js') }}" defer></script>
-<script src="{{ social_asset('safety.js') }}" defer></script>{% endblock %}
+<script src="{{ social_asset('safety.js') }}" defer></script>
+<script src="{{ social_asset('mutes.js') }}" defer></script>{% endblock %}
 
 {% block main %}
 {% if note == 'deleted' %}<p class="note" role="status">Your post is gone, its drawing with it.</p>{% endif %}
@@ -104,4 +111,5 @@
 </div>
 {{ post_sheets() }}
 {{ safety_sheets() }}
+{{ mute_parts() }}
 {% endblock %}
