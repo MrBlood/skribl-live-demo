@@ -2,19 +2,21 @@
 phase 2, comments"), through the demo's own server, with Chromium's virtual
 authenticator for the site's people.
 
-  1. THE SECTION: a post's page says "Comments" and how many; the box on top
-     for somebody signed in (their face, "Say something, or draw it…", Draw,
-     Flip, Post); signed out, the comments are readable and "Sign in to
-     answer" stands in the box's place; Post with nothing written or drawn
+  1. THE SECTION: a post's page says "Comments" and how many, and at the
+     heading's end the icon that opens the box (folded away until asked for:
+     a phone's sheet, "Say something to Juno": their face, "Say something, or
+     draw it…", Draw, Flip, Post); signed out, the comments are readable and
+     the icon raises "Say something?"; Post with nothing written or drawn
      says so and sends nothing.
   2. COMMENTING, NEWEST FIRST: the box sends the words (tidied, as a post's);
      the new comment fades in at the top, the count with it; its time is
      short ("now", "40m"); its row names the post and the person.
-  3. ANSWERS, ONE LEVEL DEEP: Answer brings the box under the comment
-     ("Answer Theo…"), the comment keeping its place on the screen and the
-     box fading in; answers sit under it oldest first; an answer to an answer
-     sits under the same comment; the box goes back once posted, on Answer
-     again, and on Esc.
+  3. ANSWERS, ONE LEVEL DEEP: Answer opens the box for the comment (a phone's
+     sheet, "Answer Theo"; a desk's fold under the conversation, "Answer
+     Theo…"), the comment keeping its place on the screen; answers sit under
+     it oldest first; an answer to an answer sits under the same comment; on
+     a desk, Answer again and Esc fold it away, and under a long thread the
+     page glides to it.
   4. THE ⋯ SHEET: Your comment (Delete comment); somebody else's on your own
      post ("Theo’s comment": Remove from my post, Report comment); anybody
      else's (Report comment); signed out, Report comment.
@@ -36,7 +38,8 @@ authenticator for the site's people.
  10. LOAD MORE: twenty comments a page, the next in place, none twice.
  11. HOME'S CARD: how many comments beside the plays, "N comments", a way to
      them; at none the icon alone, "Comment" (the owner's yes, Nov 12).
- 12. ON A DESK: the comments beside the drawing, under Share.
+ 12. ON A DESK: the comments beside the drawing, under Share; the icon at
+     their heading's end; the box opening right under it.
  13. THE NEW SCREENS: every word at 4.5:1 on what is painted behind it, every
      target 44px, every text field 16px: phone and desk, light and dark.
  14. A DRAWING ANSWER, IN THE BOX: Draw and Flip open Skribl's editor over
@@ -75,10 +78,36 @@ a post (made in the Pad, shown in the gallery: /social/b/<id>) has them too.
  28. THE NEW SCREENS on a drawing's page: words at 4.5:1, targets 44px, text
      fields 16px; phone and desk, light and dark.
 
+THE COMMENT BOX IS AN ICON (the owner, Nov 13: "The comment needs to be an icon
+not a card. It takes up too much room sitting there", then "Yes to all"):
+ 29. THE ICON at the heading's end (44px, round, its line 3:1 off the pixels,
+     lit while open), the heading keeping its height, the box folded away
+     (no room, unseen, nothing focusable); nobody who may not comment offered it.
+ 30. A PHONE: the box rises on Make's sheet, ready (read on every frame, the
+     page under it still and inert); the dimmed page, a drag down or Esc puts
+     it away, keeping the words; on a keyboard (stood in) it rides above it;
+     Draw opens the Pad over it, and the page stays inert behind it after.
+ 31. A DESK: the box glides open under the heading (read on every frame),
+     the icon lit; a second click, Esc or a press elsewhere folds it away,
+     keeping the words; the Pad over the page is not "elsewhere".
+ 32. ANSWER: a phone's sheet, "Answer Theo" and Theo's words in a line; a
+     desk's fold under the conversation, folding first from the heading,
+     Answer again folding it; the page glides to it under a long thread.
+ 33. POSTED: the box goes as the comment comes, glowing in the landing's tint
+     that fades; on a desk in step; "Posting…" on Post, no line growing the
+     box; the box emptied once it has gone.
+ 34. SIGNED OUT, "Say something?" and Sign in back with the box open (#say,
+     nothing posted, the address cleaned); "Say the first thing" at none.
+ 35. REDUCE MOTION: the sheet fades where it sits; a desk's box is put in
+     place and fades; a posted comment too.
+ 36. A DRAWING'S OWN PAGE: the same.
+ 37. THE NEW SCREENS: every word at 4.5:1, targets 44px, fields 16px; phone
+     and desk, light and dark.
+
 SOCIALCOMMENTS_PART=<n>[,<m>] runs those sections only (calibration); a
 section makes the people it needs. Every row was shown red by breaking one
-part and green as built: DECISIONS.md, "Comments at /social" and "Comments
-on every drawing".
+part and green as built: DECISIONS.md, "Comments at /social", "Comments on
+every drawing" and "The comment box is an icon".
 """
 import base64
 import json
@@ -525,14 +554,6 @@ SECTION = """() => { const one = li => ({ id: li.dataset.comment, name: li.query
   return { count: (() => { const c = document.querySelector('[data-cm-count]'); return c && !c.hidden ? c.textContent : null; })(),
     list: [...document.querySelectorAll('[data-cm-list] > .cm')].map(li => Object.assign(one(li),
       { answers: [...li.querySelectorAll(':scope > .cm-answers > .cm')].map(one) })) }; }"""
-BOX = """() => { const b = document.querySelector('[data-cm-box]'); if (!b) return null;
-  const w = b.querySelector('[data-cm-words]'); const p = b.parentElement;
-  return { placeholder: w.placeholder, label: b.querySelector('[data-cm-label]').textContent,
-    under: p.classList.contains('cm') ? p.dataset.comment : null,
-    home: !!b.previousElementSibling && b.previousElementSibling.id === 'commentsTitle',
-    face: !!b.querySelector('.face-ring'), post: (b.querySelector('[data-cm-post]') || {}).textContent || null,
-    chips: [...b.querySelectorAll('.chip')].filter(c => c.getClientRects().length).map(c => c.textContent.trim()),
-    font: parseFloat(getComputedStyle(w).fontSize) }; }"""
 OPEN = "(id) => document.getElementById(id).classList.contains('is-open')"
 ACTS = "(s) => [...document.querySelectorAll(s + ' .post-act')].filter(b => !b.hidden).map(b => b.textContent.trim())"
 REASONS = "(s) => [...document.querySelectorAll(s + ' input[name=reason]')].map(i => [i.value, i.closest('label').textContent.trim()])"
@@ -555,27 +576,6 @@ POST_AND_WATCH = """async () => {
     requestAnimationFrame(step); });
   return { id: li ? li.dataset.comment : null, ops }; }"""
 
-# Press a comment's Answer, and read on every frame where the comment is on the
-# screen (against where it was) and the box's opacity: did anything jump?
-ANSWER_AND_WATCH = """async (id) => {
-  const li = document.getElementById('c-' + id), box = document.querySelector('[data-cm-box]');
-  const btn = li.querySelector(':scope > .cm-main [data-cm-answer]');
-  const top0 = li.getBoundingClientRect().top, y0 = scrollY;
-  btn.click();
-  const now = li.getBoundingClientRect().top - top0;
-  const t0 = performance.now(), frames = [];
-  await new Promise(res => { const step = () => {
-    frames.push({ dy: Math.round((li.getBoundingClientRect().top - top0) * 10) / 10,
-                  op: Math.round(+getComputedStyle(box).opacity * 100) / 100 });
-    if (performance.now() - t0 < 600) requestAnimationFrame(step); else res(); };
-    requestAnimationFrame(step); });
-  const bar = document.querySelector('body > .nav').getBoundingClientRect();
-  const floor = bar.top > innerHeight / 2 ? bar.top : innerHeight, br = box.getBoundingClientRect();
-  return { now: Math.round(now * 10) / 10, frames, scrolled: Math.round(scrollY - y0),
-           focus: document.activeElement === box.querySelector('[data-cm-words]'),
-           pressed: btn.getAttribute('aria-expanded'), seen: br.top >= 0 && br.bottom <= floor }; }"""
-
-
 # A comment's ⋯, then Delete comment or Remove from my post (act), and the
 # comment's opacity on every frame until it has gone.
 DELETE_AND_WATCH = """async ([id, act]) => {
@@ -588,8 +588,247 @@ DELETE_AND_WATCH = """async ([id, act]) => {
     if (!li.isConnected || performance.now() - t0 > 8000) res(); else requestAnimationFrame(step); }; requestAnimationFrame(step); });
   return { gone: !li.isConnected, ops, count: (document.querySelector('[data-cm-count]') || {}).textContent }; }"""
 
-SIGNIN_LINK = ("() => { const a = document.querySelector('.cm-signin a');"
-               " return a ? [a.textContent, new URL(a.href).pathname + new URL(a.href).search] : null; }")
+# ---- THE COMMENT BOX IS AN ICON (the owner, Nov 13: "The comment needs to be an
+# icon not a card"; "Yes to all"). The box is folded away behind the icon at the
+# heading's end: a phone opens it on Make's own sheet, a desk in place (the
+# fold). These open it as a person does, and read where it is.
+BOX = """() => { const b = document.querySelector('[data-cm-box]'); if (!b) return null;
+  const w = b.querySelector('[data-cm-words]'), fold = document.querySelector('[data-cm-fold]');
+  const sheet = document.getElementById('commentBoxSheet'), inSheet = !!sheet && sheet.contains(b);
+  const at = fold && fold.parentElement.classList.contains('cm') ? fold.parentElement.dataset.comment : null;
+  const open = inSheet ? (sheet.classList.contains('is-open') ? 'sheet' : null)
+                       : (fold && fold.classList.contains('is-open') ? (at ? 'under' : 'home') : null);
+  const q = sheet && sheet.querySelector('[data-cm-quote]'), i = document.querySelector('.cm-say');
+  return { placeholder: w.placeholder, label: b.querySelector('[data-cm-label]').textContent,
+    under: at, home: !at, open, inSheet, title: sheet ? sheet.querySelector('[data-cm-sheet-title]').textContent : null,
+    quote: q && !q.hidden ? q.textContent : null, focus: document.activeElement === w,
+    face: !!b.querySelector('.face-ring'), post: (b.querySelector('[data-cm-post]') || {}).textContent || null,
+    chips: [...b.querySelectorAll('.chip')].filter(c => c.getClientRects().length).map(c => c.textContent.trim()),
+    font: parseFloat(getComputedStyle(w).fontSize), words: w.value, icon: i ? i.getAttribute('aria-expanded') : null }; }"""
+# Open and at rest: a phone's sheet risen (or faded in) all the way, or a desk's fold open and still.
+BOX_STILL = """() => { const s = document.getElementById('commentBoxSheet'), f = document.querySelector('[data-cm-fold]');
+  const m = s && s.querySelector('.make-sheet'), cs = m && getComputedStyle(m);
+  return !!((s && !s.hidden && s.classList.contains('is-open') && cs.transform === 'none' && +cs.opacity === 1)
+            || (f && f.classList.contains('is-still'))); }"""
+GONE = """() => { const s = document.getElementById('commentBoxSheet'), f = document.querySelector('[data-cm-fold]');
+  return (!s || s.hidden) && (!f || (!f.classList.contains('is-open') && f.parentElement.id === 'comments')); }"""
+# The icon, the heading it sits in, and the box folded under it.
+ICON = """() => { const b = document.querySelector('.cm-say'); if (!b) return null;
+  const h = document.querySelector('.comments-head'), t = document.getElementById('commentsTitle'), sec = document.getElementById('comments');
+  const r = b.getBoundingClientRect(), hr = h.getBoundingClientRect(), tr = t.getBoundingClientRect(), sr = sec.getBoundingClientRect();
+  const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+  const lands = [[cx, cy], [cx - 19, cy], [cx + 19, cy], [cx, cy - 19], [cx, cy + 19]].map(([x, y]) => {
+    const e = document.elementFromPoint(x, y); return !!e && (e === b || b.contains(e)); });
+  const list = document.querySelector('[data-cm-list]').getBoundingClientRect();
+  const fold = document.querySelector('[data-cm-fold]'), inner = fold && fold.querySelector('.cm-fold-in');
+  return { name: b.getAttribute('aria-label'), tip: b.getAttribute('title'), w: r.width, h: r.height,
+    round: getComputedStyle(b).borderTopLeftRadius, right: Math.round((sr.right - r.right) * 100) / 100,
+    centre: Math.round((cy - (tr.top + tr.height / 2)) * 100) / 100, head: Math.round(hr.height * 100) / 100,
+    line: Math.round(tr.height * 100) / 100, lands: lands.every(Boolean), gap: Math.round((list.top - hr.bottom) * 100) / 100,
+    expanded: b.getAttribute('aria-expanded'), popup: b.getAttribute('aria-haspopup'), controls: b.getAttribute('aria-controls'),
+    plus: b.querySelectorAll('svg path').length,
+    fold: fold ? { h: Math.round(fold.getBoundingClientRect().height * 100) / 100, seen: getComputedStyle(inner).visibility } : null }; }"""
+# What the signed-out sheet says, and where its Sign in goes.
+OUT_SHEET = """() => { const w = document.getElementById('commentOutSheet'); if (!w) return null; const a = w.querySelector('a.btn');
+  return { open: w.classList.contains('is-open') && !w.hidden, title: w.querySelector('.make-title').textContent,
+    lede: w.querySelector('.post-lede').textContent, acts: [...w.querySelectorAll('.post-sheet-acts .btn')].map(e => e.textContent.trim()),
+    next: a ? new URL(a.href).searchParams.get('next') : null, path: a ? new URL(a.href).pathname : null,
+    focus: document.activeElement ? document.activeElement.textContent.trim() : null,
+    old: !!document.querySelector('.cm-signin') }; }"""
+# "Say the first thing", where the comments will be at none.
+FIRST_LINE = """() => { const b = document.querySelector('[data-cm-first]'); if (!b) return null;
+  const f = document.querySelector('[data-cm-first-fold]'), r = b.getBoundingClientRect(), h = document.querySelector('.comments-head').getBoundingClientRect();
+  const c = getComputedStyle(b);
+  return { words: b.textContent.trim(), open: f.classList.contains('is-open'), w: r.width, h: Math.round(r.height * 100) / 100,
+    room: Math.round(f.getBoundingClientRect().height * 100) / 100, gap: Math.round((r.top - h.bottom) * 100) / 100,
+    ink: c.color, size: parseFloat(c.fontSize), weight: c.fontWeight, seen: getComputedStyle(f.querySelector('.cm-fold-in')).visibility,
+    lands: (() => { const e = document.elementFromPoint(r.left + 10, r.top + r.height / 2); return !!e && (e === b || b.contains(e)); })() }; }"""
+
+
+def open_box(pg, by=".cm-say"):
+    """The box, opened as a person opens it (the icon, or `by`), once it is at rest."""
+    pg.click(by, timeout=8000)
+    pg.wait_for_function(BOX_STILL, timeout=8000)
+    pg.wait_for_timeout(100)
+
+
+def answer_box(pg, cid):
+    """Answer on comment `cid`: the box open for it, at rest."""
+    pg.evaluate("(id) => document.getElementById('c-' + id).scrollIntoView({ block: 'center' })", cid)
+    pg.wait_for_timeout(150)
+    pg.click(f"#c-{cid} > .cm-main [data-cm-answer]", timeout=8000)
+    pg.wait_for_function(BOX_STILL, timeout=8000)
+    pg.wait_for_timeout(100)
+
+
+# KIND, NEVER JUMPY, READ ON EVERY FRAME: run `act` (a function's body), then
+# read where `sels` are on the screen (each one's top, null while it is not
+# painted) and the opacity of `fades`, on every animation frame for `ms`.
+FRAMES = """async ([act, sels, fades, ms]) => {
+  const q = s => document.querySelector(s);
+  const top = s => { const e = q(s); return e && e.getClientRects().length ? Math.round(e.getBoundingClientRect().top * 100) / 100 : null; };
+  const op = s => { const e = q(s); return e && e.getClientRects().length ? Math.round(+getComputedStyle(e).opacity * 100) / 100 : null; };
+  const read = () => ({ tops: sels.map(top), ops: fades.map(op), y: Math.round(scrollY * 100) / 100 });
+  const frames = [read()];
+  (new Function(act))();
+  frames.push(read());
+  const t0 = performance.now();
+  await new Promise(res => { const step = () => { frames.push(read());
+    if (performance.now() - t0 < ms) requestAnimationFrame(step); else res(); }; requestAnimationFrame(step); });
+  return frames; }"""
+
+
+def track(frames, k):
+    return [f["tops"][k] for f in frames if f["tops"][k] is not None]
+
+
+def fades_of(frames, k):
+    return [f["ops"][k] for f in frames if f["ops"][k] is not None]
+
+
+def glided(xs, want=None):
+    """A glide: three frames or more carry the move, none more than three
+    quarters of it (a snap, or a late jump, carries all of it in one), nothing
+    goes back against it, and, given `want`, it went that far. The rule the
+    comments' own checks have used since they were built."""
+    xs = [x for x in xs if x is not None]
+    steps = [y - x for x, y in zip(xs, xs[1:])]
+    way = xs[-1] - xs[0] if xs else 0
+    moving = [s for s in steps if abs(s) > 0.3]
+    back = [round(s, 2) for s in steps if way and s * way < -0.5]
+    big = max((abs(s) for s in steps), default=0)
+    ok = abs(way) > 0.5 and len(moving) >= 3 and big <= 0.75 * abs(way) and not back
+    if want is not None:
+        ok = ok and abs(abs(way) - want) <= 1.5
+    return {"ok": ok, "way": round(way, 2), "frames": len(moving), "step": round(big, 2), "back": back}
+
+
+def still_(xs):
+    xs = [x for x in xs if x is not None]
+    return bool(xs) and max(xs) - min(xs) <= 0.5
+
+
+def lum(c):
+    v = [x / 255 for x in c[:3]]
+    v = [x / 12.92 if x <= 0.03928 else ((x + 0.055) / 1.055) ** 2.4 for x in v]
+    return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]
+
+
+def contrast(a, b):
+    x, y = lum(a), lum(b)
+    return (max(x, y) + 0.05) / (min(x, y) + 0.05)
+
+
+def icon_mark(pg):
+    """The icon's line against its own ground, read off the painted pixels
+    (not the stylesheet: the comment mock found a reader that misread a colour
+    form): the most contrasting pixel inside the icon's drawing, and the
+    button's ground 5px in from its left edge at its middle."""
+    import io
+    from PIL import Image
+    r = pg.evaluate("""() => { const b = document.querySelector('.cm-say'); const s = b.querySelector('svg').getBoundingClientRect(),
+      o = b.getBoundingClientRect(); return { sx: s.left, sy: s.top, sw: s.width, sh: s.height, ox: o.left, oy: o.top, oh: o.height,
+      dpr: devicePixelRatio }; }""")
+    shot = Image.open(io.BytesIO(pg.screenshot())).convert("RGB")
+    k = r["dpr"]
+    ground = shot.getpixel((int((r["ox"] + 5) * k), int((r["oy"] + r["oh"] / 2) * k)))
+    best, ink = 0.0, None
+    for x in range(int(r["sx"] * k), int((r["sx"] + r["sw"]) * k)):
+        for y in range(int(r["sy"] * k), int((r["sy"] + r["sh"]) * k)):
+            px = shot.getpixel((x, y))
+            c = contrast(px, ground)
+            if c > best:
+                best, ink = c, px
+    return {"ink": ink, "ground": ground, "k": round(best, 2)}
+
+
+# A swipe down on the box's sheet, as a finger makes one (verify_social's, for this sheet).
+SWIPE = """([dys, every]) => new Promise(res => { const s = document.querySelector('#commentBoxSheet .make-sheet'), r = s.getBoundingClientRect();
+  const x = r.left + r.width / 2, y = r.top + 12;
+  const fire = (type, yy) => { const t = new Touch({ identifier: 9, target: s, clientX: x, clientY: yy });
+    const end = type === 'touchend';
+    s.dispatchEvent(new TouchEvent(type, { touches: end ? [] : [t], targetTouches: end ? [] : [t], changedTouches: [t],
+                                           bubbles: true, cancelable: true, view: window })); };
+  fire('touchstart', y);
+  let i = 0;
+  (function step() { if (i < dys.length) { fire('touchmove', y + dys[i++]); setTimeout(step, every); }
+                     else { fire('touchend', y + dys[dys.length - 1]); setTimeout(res, 700); } })(); })"""
+
+# A PHONE'S KEYBOARD, STOOD IN: this box has none, so the visual viewport is
+# stood in for (before the page's own scripts run), and a keyboard of `px`
+# reported the way iPhone's Safari reports one: the visual viewport shorter,
+# the layout viewport the sheet is fixed to unchanged. Not a phone.
+KEYBOARD = """(() => { const t = new EventTarget(); let h = null, off = 0, scale = 1;
+  const vv = { get width() { return innerWidth; }, get height() { return h === null ? innerHeight : h; },
+    get offsetTop() { return off; }, get offsetLeft() { return 0; }, get scale() { return scale; },
+    addEventListener: (...a) => t.addEventListener(...a), removeEventListener: (...a) => t.removeEventListener(...a) };
+  Object.defineProperty(window, 'visualViewport', { configurable: true, get: () => vv });
+  window.__keyboard = (px, zoom) => { scale = zoom || 1; h = innerHeight - px; off = 0; t.dispatchEvent(new Event('resize')); }; })();"""
+
+# Press Post in the open box and read on every frame, until `ms`: the old first
+# comment's name (painted), the new comment's top, opacity and glow (the landing's
+# tint on it, and that tint's own fade), a phone's sheet, and the box's height
+# while it is seen (it must not change on its way out: emptied once gone); what
+# Post says meanwhile, and whether a line was shown in the box.
+POSTED = """async ([ms]) => {
+  const q = s => document.querySelector(s);
+  const oldName = q('[data-cm-list] > .cm > .cm-main .cm-name');
+  const before = new Set([...document.querySelectorAll('.cm')].map(e => e.id));
+  const box = q('[data-cm-box]'), say = box.querySelector('[data-cm-say]'), post = q('[data-cm-post]'), sheet = q('#commentBoxSheet .make-sheet');
+  const top = e => e && e.isConnected && e.getClientRects().length ? Math.round(e.getBoundingClientRect().top * 100) / 100 : null;
+  const seen = e => { if (!e.getClientRects().length) return false;
+    for (let n = e; n; n = n.parentElement) { const c = getComputedStyle(n); if (c.visibility === 'hidden' || c.display === 'none') return false; }
+    return true; };
+  const out = { old: [], new: [], ops: [], sheet: [], glow: [], tints: [], heights: [], line: false, tint: null };
+  const fold = q('[data-cm-fold]'), room = fold ? Math.round(fold.getBoundingClientRect().height * 100) / 100 : 0;
+  post.click();
+  out.label = post.textContent.trim();
+  let li = null; const t0 = performance.now();
+  await new Promise(res => { const step = () => {
+    li = li || [...document.querySelectorAll('.cm')].find(e => !before.has(e.id));
+    if (oldName) out.old.push(top(oldName));
+    if (li) { out.new.push(top(li)); out.ops.push(Math.round(+getComputedStyle(li).opacity * 100) / 100);
+              out.glow.push(li.classList.contains('is-landed'));
+              const b = getComputedStyle(li, '::before');
+              if (out.tint === null && li.classList.contains('is-landed')) out.tint = b.backgroundColor;
+              out.tints.push(li.classList.contains('is-landed') ? Math.round(+b.opacity * 100) / 100 : 0); }
+    if (sheet) { const t = top(sheet); if (t !== null) out.sheet.push(t); }
+    if (seen(box)) out.heights.push(Math.round(box.getBoundingClientRect().height * 100) / 100);
+    if (!say.hidden && !say.classList.contains('sr')) out.line = true;
+    if (performance.now() - t0 < ms) requestAnimationFrame(step); else res(); }; requestAnimationFrame(step); });
+  const head = q('.comments-head').getBoundingClientRect(), hs = out.heights;
+  return { id: li ? li.id : null, room, old: out.old, new: out.new, ops: out.ops, sheet: out.sheet, glow: out.glow,
+           tint: out.tint, fade: out.tints.filter(o => o > 0.03 && o < 0.97).length,
+           step: hs.some((h, i) => i && Math.abs(h - hs[i - 1]) > 0.5), label: out.label, line: out.line,
+           focus: document.activeElement ? document.activeElement.className : null,
+           first: (q('[data-cm-list] > .cm') || {}).id || null, under_head: Math.round((head.bottom + 10) * 100) / 100 }; }"""
+
+# The landing's tint (Activity's): what a posted comment glows in.
+TINT = {"light": "rgba(124, 92, 255, 0.12)", "dark": "rgba(124, 92, 255, 0.18)"}
+
+# Press a comment's Answer, and read on every frame where the comment is on the
+# screen (against where it was), the box's opacity and a phone's sheet: did
+# anything jump? At the end, whether the box is in view (above a phone's bar,
+# unless it rides the sheet over it).
+ANSWER_AND_WATCH = """async (id) => {
+  const li = document.getElementById('c-' + id), box = document.querySelector('[data-cm-box]');
+  const sheet = document.querySelector('#commentBoxSheet .make-sheet');
+  const btn = li.querySelector(':scope > .cm-main [data-cm-answer]');
+  const top0 = li.getBoundingClientRect().top, y0 = scrollY;
+  btn.click();
+  const now = li.getBoundingClientRect().top - top0;
+  const t0 = performance.now(), frames = [];
+  await new Promise(res => { const step = () => {
+    frames.push({ dy: Math.round((li.getBoundingClientRect().top - top0) * 10) / 10,
+                  op: Math.round(+getComputedStyle(box).opacity * 100) / 100,
+                  sheet: sheet && sheet.getClientRects().length ? Math.round(sheet.getBoundingClientRect().top * 10) / 10 : null });
+    if (performance.now() - t0 < 1500) requestAnimationFrame(step); else res(); };
+    requestAnimationFrame(step); });
+  const bar = document.querySelector('body > .nav').getBoundingClientRect(), riding = !!sheet && sheet.contains(box);
+  const floor = !riding && bar.top > innerHeight / 2 ? bar.top : innerHeight, br = box.getBoundingClientRect();
+  return { now: Math.round(now * 10) / 10, frames, scrolled: Math.round(scrollY - y0),
+           focus: document.activeElement === box.querySelector('[data-cm-words]'),
+           pressed: btn.getAttribute('aria-expanded'), seen: br.top >= 0 && br.bottom <= floor + 0.5 }; }"""
 
 
 def faded(ops):
@@ -811,7 +1050,7 @@ with sync_playwright() as p:
     b = p.chromium.launch()
 
     # ------------------------------------------------------------------ 1
-    if part(1, "the section: Comments and how many, the box on top, signed out readable"):
+    if part(1, "the section: Comments and how many, the box behind the icon, signed out readable"):
         try:
             juno = someone(b, "juno", "Juno Park")
             theo = someone(b, "theo", "Theo Lind")
@@ -821,9 +1060,11 @@ with sync_playwright() as p:
             pg.on("request", lambda r: sent.append(r.url) if r.method == "POST" and "/comments" in r.url else None)
             open_post(pg, post)
             empty = pg.evaluate(SECTION)
-            box = pg.evaluate(BOX)
+            folded = pg.evaluate(BOX)
+            icon = pg.evaluate(ICON)
             soon = pg.evaluate("() => !!document.querySelector('.comments-soon')")
             title = pg.evaluate("() => document.getElementById('commentsTitle').innerText.replace(/\\s+/g, ' ').trim()")
+            box, err = steps(lambda: (open_box(pg), pg.evaluate(BOX))[1])
             nothing = blank = None
             if box:                     # no box is the first row's red, never a stop
                 pg.click("[data-cm-post]")
@@ -833,31 +1074,37 @@ with sync_playwright() as p:
                 pg.click("[data-cm-post]")
                 pg.wait_for_timeout(300)
                 blank = pg.evaluate("() => document.querySelector('[data-cm-say]').textContent")
-            check("a post's page says Comments, with no number at none; the box on top for somebody signed in: their"
-                  " face, the words' field (17px), \"Say something, or draw it…\", Draw, Flip and Post; no"
-                  " \"Comments open soon\"",
+                pg.keyboard.press("Escape")
+                pg.wait_for_function(GONE, timeout=8000)
+            check("a post's page says Comments, with no number at none, and at the heading's end the icon (\"Say something\"),"
+                  " the box folded away behind it; a tap opens it on a phone's sheet, \"Say something to Juno\": their face, the"
+                  " words' field (17px, focused), \"Say something, or draw it…\", Draw, Flip and Post; no \"Comments open soon\"",
                   empty == {"count": None, "list": []} and title == "Comments" and not soon
-                  and box is not None and box["home"] and box["face"]
-                  and box["placeholder"] == "Say something, or draw it…" and box["chips"] == ["Draw", "Flip"]
+                  and icon is not None and icon["name"] == "Say something" and folded is not None and folded["open"] is None
+                  and box is not None and box["open"] == "sheet" and box["title"] == "Say something to Juno" and box["face"]
+                  and box["focus"] and box["placeholder"] == "Say something, or draw it…" and box["chips"] == ["Draw", "Flip"]
                   and box["post"] == "Post" and box["font"] >= 16,
-                  f"section {empty}; title {title!r}; open soon {soon}; box {box}")
+                  f"section {empty}; title {title!r}; open soon {soon}; icon {icon and icon['name']}; folded"
+                  f" {folded and folded['open']}; opened {box}; stopped {err}")
             check("Post with nothing written or drawn (or only spaces) says so and sends nothing",
                   nothing == "Say something or draw something first, then Post." and blank == nothing and not sent,
                   f"said {nothing!r} / {blank!r}; sent {len(sent)}")
             said(theo, post, "Read by somebody signed out")
             nctx, npg = browser_as(b, None)
             open_post(npg, post)
-            out = {"section": npg.evaluate(SECTION), "box": npg.evaluate(BOX),
-                   "link": npg.evaluate("() => { const a = document.querySelector('.cm-signin a'); return a ? [a.textContent, new URL(a.href).pathname + new URL(a.href).search] : null; }")}
+            out = {"section": npg.evaluate(SECTION), "box": npg.evaluate(BOX), "icon": npg.evaluate(ICON)}
+            sheet, err2 = steps(lambda: (npg.click(".cm-say", timeout=8000),
+                                         npg.wait_for_function(OPEN, arg="commentOutSheet", timeout=8000),
+                                         npg.wait_for_timeout(450), npg.evaluate(OUT_SHEET))[-1])
             close_ctx(nctx, npg)
-            want_link = ["Sign in to answer", "/social/signin?next=/social/p/" + post]
-            check("signed out, the comments are readable, with no box and no Answer: \"Sign in to answer\" in the box's"
-                  " place, back to the post once signed in",
+            check("signed out, the comments are readable, with no box and no Answer; the icon is there all the same, and a tap"
+                  " raises \"Say something?\", its Sign in back to the post with the box open; no \"Sign in to answer\"",
                   out["box"] is None and out["section"]["count"] == "1"
                   and [(c["name"], c["words"], c["answer"]) for c in out["section"]["list"]]
                   == [("Theo Lind", "Read by somebody signed out", False)]
-                  and out["link"] == want_link,
-                  f"{out}; want link {want_link}")
+                  and out["icon"] is not None and sheet and sheet["open"] and sheet["title"] == "Say something?"
+                  and sheet["next"] == f"/social/p/{post}#say" and not sheet["old"],
+                  f"{out['section']}; box {out['box']}; icon {out['icon'] and out['icon']['name']}; sheet {sheet}; stopped {err2}")
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(1, exc)
 
@@ -870,14 +1117,17 @@ with sync_playwright() as p:
             post = make_post(juno, "Section 2, a snail for a slow Sunday", seed=21)
             pg = theo.pg
             open_post(pg, post)
+            open_box(pg)
             pg.fill("[data-cm-words]", "  That shell spiral   is so good.\n\n\n\nWatching it go round is the best part.  ")
             theo_said = pg.evaluate(POST_AND_WATCH)
+            pg.wait_for_function(GONE, timeout=8000)
+            pg.wait_for_timeout(300)
             after1 = pg.evaluate(SECTION)
             cleared = pg.evaluate("() => document.querySelector('[data-cm-words]').value")
             row = db("select c.words, c.parent_id, pe.handle, c.post_id from social_comments c join social_people pe"
                      " on pe.id = c.person_id where c.public_id = ?", (theo_said["id"] or "",))
             check("the box sends the words, tidied as a post's (spaces run together, blank lines to one); the comment"
-                  " fades in at the top, said \"now\", the count 1, the box emptied; its row names the post and the person",
+                  " fades in at the top, said \"now\", the count 1, the box gone and emptied; its row names the post and the person",
                   theo_said["id"] and faded(theo_said["ops"]) >= 2 and theo_said["ops"][-1] == 1
                   and row == [("That shell spiral is so good.\n\nWatching it go round is the best part.", None, "theo",
                                post_id(post))]
@@ -888,6 +1138,7 @@ with sync_playwright() as p:
             db_write("update social_comments set created_at = datetime('now', '-2 hours') where public_id = ?",
                      (theo_said["id"] or "",))
             open_post(pg, post)
+            open_box(pg)
             pg.fill("[data-cm-words]", "And the colour!")
             third = pg.evaluate(POST_AND_WATCH)
             listed = pg.evaluate(SECTION)
@@ -905,7 +1156,7 @@ with sync_playwright() as p:
             stopped(2, exc)
 
     # ------------------------------------------------------------------ 3
-    if part(3, "answers, one level deep: Answer brings the box, nothing jumps"):
+    if part(3, "answers, one level deep: Answer opens the box for the comment, nothing jumps"):
         try:
             juno = someone(b, "juno", "Juno Park")
             theo = someone(b, "theo", "Theo Lind")
@@ -922,29 +1173,33 @@ with sync_playwright() as p:
             pg.wait_for_timeout(300)
             went = pg.evaluate(ANSWER_AND_WATCH, theo_c)
             there = pg.evaluate(BOX)
-            check("Answer brings the box under the comment, after its answers, saying \"Answer Theo…\" (its label too),"
-                  " the words' field focused; the comment keeps its place on the screen while the box moves (the page"
-                  " scrolls by what moved above it), the box fades in where it lands, and nothing after jumps",
-                  there["under"] == theo_c and there["placeholder"] == "Answer Theo…" and there["label"] == "Answer Theo"
-                  and went["focus"] and went["pressed"] == "true" and steady(went)
-                  and faded([f["op"] for f in went["frames"]]) >= 2 and went["frames"][-1]["op"] == 1,
-                  f"box {there}; the move {went['now']}px, then {glide(went)}, in view {went['seen']}; faded over"
-                  f" {faded([f['op'] for f in went['frames']])} frames; focus {went['focus']}")
+            rise = glided([f["sheet"] for f in went["frames"]])
+            check("Answer on a phone raises the box on Make's sheet for that comment: \"Answer Theo\", the field saying"
+                  " \"Answer Theo…\" (its label too) and focused, Answer pressed; the comment stays where it is on the screen"
+                  " and the sheet glides up (read on every frame)",
+                  there["open"] == "sheet" and there["title"] == "Answer Theo" and there["placeholder"] == "Answer Theo…"
+                  and there["label"] == "Answer Theo" and went["focus"] and went["pressed"] == "true" and steady(went)
+                  and all(abs(f["dy"]) <= 0.5 for f in went["frames"]) and rise["ok"],
+                  f"box {there}; the comment {went['now']}px then {glide(went)}; the sheet {rise}; focus {went['focus']}")
             pg.fill("[data-cm-words]", "Same! I watched it three times.")
             mine = pg.evaluate(POST_AND_WATCH)
-            pg.wait_for_timeout(400)
-            back = pg.evaluate(BOX)
+            pg.wait_for_function(GONE, timeout=8000)
+            pg.wait_for_timeout(300)
             sec = pg.evaluate(SECTION)
             theo_li = next((c for c in sec["list"] if c["id"] == theo_c), {"answers": []})
+            open_box(pg)
+            back = pg.evaluate(BOX)
+            pg.keyboard.press("Escape")
+            pg.wait_for_function(GONE, timeout=8000)
             # ...and as the server renders them, which the page's own insertion cannot show.
             open_post(pg, post)
             again = next((c for c in pg.evaluate(SECTION)["list"] if c["id"] == theo_c), {"answers": []})
             want = ["Thank you! It took me two tries to get the spiral right.", "Same! I watched it three times."]
             check("the answer sits under the comment, after the ones before it (oldest first, put in place and after a"
-                  " reload), fading in; the box goes back on top, \"Say something, or draw it…\" again",
+                  " reload), fading in; the box goes, and the icon opens it as \"Say something, or draw it…\" again",
                   [a["words"] for a in theo_li["answers"]] == want and [a["words"] for a in again["answers"]] == want
-                  and faded(mine["ops"]) >= 2 and back["home"] and back["placeholder"] == "Say something, or draw it…"
-                  and back["label"] == "Say something",
+                  and faded(mine["ops"]) >= 2 and back["open"] == "sheet" and back["placeholder"] == "Say something, or draw it…"
+                  and back["label"] == "Say something" and back["title"] == "Say something to Juno",
                   f"answers {[a['words'][:24] for a in theo_li['answers']]}; after a reload"
                   f" {[a['words'][:24] for a in again['answers']]}; faded {faded(mine['ops'])}; box {back}")
             jpg = juno.pg
@@ -959,44 +1214,44 @@ with sync_playwright() as p:
                       " where c.words like 'Three times!%'")
             jsec = jpg.evaluate(SECTION)
             under = [a["words"] for a in next((c for c in jsec["list"] if c["id"] == theo_c), {"answers": []})["answers"]]
-            check("answering an answer: the box comes under the same comment, saying \"Answer Mira…\", and the new answer"
-                  " sits under that comment, last, its row's parent the comment, not the answer",
-                  jbox["under"] == theo_c and jbox["placeholder"] == "Answer Mira…" and steady(jwent)
+            check("answering an answer: the box answers Mira (\"Answer Mira…\"), and the new answer sits under the same"
+                  " comment, last, its row's parent the comment, not the answer",
+                  jbox["title"] == "Answer Mira" and jbox["placeholder"] == "Answer Mira…" and steady(jwent)
                   and len(rows) == 1 and rows[0][1] == theo_c and under[-1] == "Three times! Thank you, Mira."
                   and len(under) == 3,
                   f"box {jbox}; rows {rows}; under Theo's {[u[:20] for u in under]}; the move {jwent['now']}px,"
                   f" then {glide(jwent)}")
-            open_post(pg, post)
-            pg.evaluate("(id) => document.getElementById('c-' + id).scrollIntoView({ block: 'center' })", juno_a)
-            pg.click(f"#c-{juno_a} > .cm-main [data-cm-answer]")
-            pg.wait_for_timeout(300)
-            toggled_in = pg.evaluate(BOX)
-            pg.click(f"#c-{juno_a} > .cm-main [data-cm-answer]")
-            pg.wait_for_timeout(300)
-            toggled_out = pg.evaluate(BOX)
-            pg.click(f"#c-{juno_a} > .cm-main [data-cm-answer]")
-            pg.wait_for_timeout(300)
-            pg.keyboard.press("Escape")
-            pg.wait_for_timeout(300)
-            escaped = pg.evaluate(BOX)
-            check("the box goes back on top when Answer is pressed again, and on Esc",
-                  toggled_in["under"] == theo_c and toggled_in["placeholder"] == "Answer Juno…"
-                  and toggled_out["home"] and toggled_out["placeholder"] == "Say something, or draw it…"
-                  and escaped["home"] and escaped["placeholder"] == "Say something, or draw it…",
+            # A desk: Answer opens it under the conversation; Answer again, or Esc, folds it away.
+            dctx, dpg = browser_as(b, mira, "desk")
+            open_post(dpg, post)
+            answer_box(dpg, juno_a)
+            toggled_in = dpg.evaluate(BOX)
+            dpg.click(f"#c-{juno_a} > .cm-main [data-cm-answer]")
+            dpg.wait_for_function(GONE, timeout=8000)
+            toggled_out = dpg.evaluate(BOX)
+            answer_box(dpg, juno_a)
+            dpg.keyboard.press("Escape")
+            dpg.wait_for_function(GONE, timeout=8000)
+            escaped = dpg.evaluate(BOX)
+            check("on a desk, Answer opens the box under the conversation (\"Answer Juno…\"); Answer again folds it away, and so"
+                  " does Esc, home under the heading",
+                  toggled_in["open"] == "under" and toggled_in["under"] == theo_c and toggled_in["placeholder"] == "Answer Juno…"
+                  and toggled_out["open"] is None and toggled_out["home"] and escaped["open"] is None and escaped["home"],
                   f"in {toggled_in}; again {toggled_out}; Esc {escaped}")
             long_c = said(theo, post, "Section 3, a long thread")
             for k in range(7):
                 said(juno if k % 2 else mira, post, f"Section 3, answer {k} in a long thread, long enough to take two lines",
                      answer_to=long_c)
-            open_post(pg, post)
-            pg.evaluate("(id) => { const r = document.getElementById('c-' + id).getBoundingClientRect();"
-                        " window.scrollBy(0, r.top - innerHeight / 3); }", long_c)
-            pg.wait_for_timeout(300)
-            far = pg.evaluate(ANSWER_AND_WATCH, long_c)
+            open_post(dpg, post)
+            dpg.evaluate("(id) => { const r = document.getElementById('c-' + id).getBoundingClientRect();"
+                         " window.scrollBy(0, r.top - innerHeight / 3); }", long_c)
+            dpg.wait_for_timeout(300)
+            far = dpg.evaluate(ANSWER_AND_WATCH, long_c)
             g = glide(far)
-            check("under a long thread, where the box lands below what the screen shows, the page glides down to it (over"
-                  " several frames, none carrying three quarters of the way) and leaves it in view above the bar; the"
-                  " comment does not jump as the box moves",
+            close_ctx(dctx, dpg)
+            check("under a long thread, where the box opens below what the screen shows, the page glides down to it (over"
+                  " several frames, none carrying three quarters of the way) and leaves it in view; the comment does not jump"
+                  " as the box opens",
                   steady(far) and g["way"] > 60,
                   f"the move {far['now']}px; then {g}; in view {far['seen']}")
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
@@ -1439,17 +1694,22 @@ with sync_playwright() as p:
             said(theo, post, "Section 12, beside the drawing")
             dctx, dpg = browser_as(b, juno, "desk", "light")
             open_post(dpg, post)
-            where = dpg.evaluate("""() => { const r = s => document.querySelector(s).getBoundingClientRect();
-              const art = r('.post-art'), share = r('.post-actions'), sec = r('#comments'), box = r('[data-cm-box]');
+            WHERE = """() => { const r = s => document.querySelector(s).getBoundingClientRect();
+              const art = r('.post-art'), share = r('.post-actions'), sec = r('#comments'), box = r('[data-cm-box]'), icon = r('.cm-say');
               return { right: Math.round(sec.left - art.right), under: Math.round(sec.top - share.bottom),
                        left: Math.round(sec.left - share.left), width: Math.round(sec.width), box: Math.round(box.width),
-                       onscreen: sec.top < innerHeight }; }""")
+                       boxTop: Math.round(box.top - r('.comments-head').bottom), icon: Math.round(sec.right - icon.right),
+                       onscreen: icon.bottom < innerHeight }; }"""
+            where = dpg.evaluate(WHERE)
+            _, err = steps(lambda: open_box(dpg))
+            opened = dpg.evaluate(WHERE)
             close_ctx(dctx, dpg)
-            check("on a desk the comments sit beside the drawing, under Share and Make your own, in the same column, the box"
-                  " on top within reach",
+            check("on a desk the comments sit beside the drawing, under Share and Make your own, in the same column, the icon at"
+                  " the end of their heading within reach; the box opens right under the heading, as wide as the column",
                   where["right"] >= 24 and 0 < where["under"] <= 40 and where["left"] == 0 and where["width"] >= 300
-                  and where["box"] == where["width"] and where["onscreen"],
-                  f"{where}")
+                  and where["icon"] == 0 and where["onscreen"] and err is None and opened["box"] == opened["width"]
+                  and opened["boxTop"] == 10,
+                  f"{where}; opened {opened}; stopped {err}")
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(12, exc)
 
@@ -1477,11 +1737,11 @@ with sync_playwright() as p:
                     cpg.wait_for_timeout(300)
                     seen[(screen, scheme, "comments")] = cpg.evaluate(READ, "#comments")
                     cpg.evaluate("(id) => document.getElementById('c-' + id).scrollIntoView({ block: 'center' })", m13)
-                    cpg.click(f"#c-{t13} > .cm-main [data-cm-answer]")
-                    cpg.wait_for_timeout(450)
-                    seen[(screen, scheme, "answering")] = cpg.evaluate(READ, "#comments")
+                    answer_box(cpg, t13)
+                    seen[(screen, scheme, "answering")] = cpg.evaluate(READ, "#comments, #commentBoxSheet")
                     cpg.keyboard.press("Escape")
-                    cpg.wait_for_timeout(300)
+                    cpg.wait_for_function(GONE, timeout=8000)
+                    cpg.wait_for_timeout(200)
                     cpg.click(f"#c-{t13} > .cm-main [data-cm-menu]")
                     cpg.wait_for_function(OPEN, arg="commentSheet", timeout=10000)
                     cpg.wait_for_timeout(450)
@@ -1502,6 +1762,10 @@ with sync_playwright() as p:
                     npg.evaluate("() => document.getElementById('comments').scrollIntoView({ block: 'start' })")
                     npg.wait_for_timeout(300)
                     seen[(screen, scheme, "signed out")] = npg.evaluate(READ, "#comments")
+                    npg.click(".cm-say")
+                    npg.wait_for_function(OPEN, arg="commentOutSheet", timeout=8000)
+                    npg.wait_for_timeout(450)
+                    seen[(screen, scheme, "say something?")] = npg.evaluate(READ, "#commentOutSheet")
                     close_ctx(nctx, npg)
                     actx, apg = browser_as(b, juno, screen=screen, scheme=scheme)
                     apg.goto(BASE + "/social/reports")
@@ -1516,12 +1780,13 @@ with sync_playwright() as p:
             lowest = min((v["lowest"], " ".join(k)) for k, v in seen.items())
             musts = {"comments": ("Comments", "Mira Okafor", "My cat would never be this patient", "Answer", NOTE[:24]),
                      # Mira sees her own comment taken down, so four, said alone.
-                     "signed out": ("Sign in to answer",), "home's card": ("4",), "⋯": ("Report comment",),
-                     "your reports": ("Theo Lind",)}
+                     "answering": ("Post",), "signed out": ("Comments", "Theo Lind"),
+                     "say something?": ("Say something?", "Sign in, and you can answer", "Not now", "Sign in"),
+                     "home's card": ("4",), "⋯": ("Report comment",), "your reports": ("Theo Lind",)}
             missing = [(" ".join(k), w) for k, v in seen.items() for w in musts.get(k[2], ())
                        if not any(x == w or (len(w) > 3 and x.startswith(w[:24])) for x in v["words"])]
-            check("every word on the comments (a comment, an answer, the box, the count, Answer, a taken-down note, Sign in to"
-                  " answer), a comment's ⋯ and its report, Home's card's count and Your Reports' comment card reads at 4.5:1"
+            check("every word on the comments (a comment, an answer, the box answering, the count, Answer, a taken-down note,"
+                  " \"Say something?\" signed out), a comment's ⋯ and its report, Home's card's count and Your Reports' comment card reads at 4.5:1"
                   " or more on what is painted behind it, every control is 44px or more each way, every text field 16px:"
                   " phone and desk, light and dark",
                   not low and not small and not fields and not missing and all(v["read"] >= 1 for v in seen.values()),
@@ -1540,6 +1805,7 @@ with sync_playwright() as p:
             open_post(pg, post)
 
             def draw():
+                open_box(pg)
                 pg.click("[data-cm-open=pad]", timeout=8000)
                 fr = editor_frame(pg, "skribl-pad")
                 src = pg.evaluate("() => document.querySelector('#commentPad iframe').getAttribute('src')")
@@ -1614,13 +1880,15 @@ with sync_playwright() as p:
             theo_c = said(theo, post, "Section 15, Theo's")
             pg = mira.pg
             open_post(pg, post)
+            open_box(pg)
             pg.click("[data-cm-open=pad]")
             fr = editor_frame(pg, "skribl-pad")
             if fr:
                 add_from_pad(pg, fr)
             pg.fill("[data-cm-words]", "My cat would never be this patient")
             got = pg.evaluate(POST_AND_WATCH)
-            pg.wait_for_timeout(400)
+            pg.wait_for_function(GONE, timeout=8000)
+            pg.wait_for_timeout(300)
             after = pg.evaluate(DRAFT)
             row = db("select skribl_id, words from social_comments where public_id = ?", (got["id"] or "",))
             sid = row[0][0] if row else None
@@ -1636,9 +1904,7 @@ with sync_playwright() as p:
                   f"row {row}; skribl {sk}; on the page {shown}; box {after}")
             # A drawing answer, alone, and under a comment.
             open_post(pg, post)
-            pg.evaluate("(id) => document.getElementById('c-' + id).scrollIntoView({ block: 'center' })", theo_c)
-            pg.click(f"#c-{theo_c} > .cm-main [data-cm-answer]")
-            pg.wait_for_timeout(500)
+            answer_box(pg, theo_c)
             pg.click("[data-cm-open=pad]")
             fr = editor_frame(pg, "skribl-pad")
             if fr:
@@ -1817,6 +2083,7 @@ with sync_playwright() as p:
                     open_post(cpg, post)
                     cpg.evaluate("() => document.getElementById('comments').scrollIntoView({ block: 'start' })")
                     cpg.wait_for_timeout(300)
+                    open_box(cpg)
                     seen[(screen, scheme, "the box")] = cpg.evaluate(READ, "[data-cm-box]")
                     cpg.click("[data-cm-open=pad]")
                     fr = editor_frame(cpg, "skribl-pad")
@@ -1854,9 +2121,9 @@ with sync_playwright() as p:
             pg = theo.pg
             open_drawing(pg, sid)
             empty = pg.evaluate(SECTION)
-            box = pg.evaluate(BOX)
             title = pg.evaluate("() => { const t = document.getElementById('commentsTitle');"
                                 " return t ? t.innerText.replace(/\\s+/g, ' ').trim() : null; }")
+            box, err = steps(lambda: (open_box(pg), pg.evaluate(BOX))[1])
             got = {}
             if box:                     # no box is the row's red, never a stop
                 pg.fill("[data-cm-words]", "  That wave!   Hello to you too.  ")
@@ -1864,11 +2131,12 @@ with sync_playwright() as p:
             after = pg.evaluate(SECTION)
             words = db("select words from social_comments where public_id = ?", (got.get("id") or "",))
             check("a drawing shown outside a post (/social/b/<id>, made in the Pad) has a post's comments: \"Comments\","
-                  " no number at none, the box on top (a face, \"Say something, or draw it…\", Draw, Flip, Post); the box"
-                  " sends the words, tidied, and the comment fades in at the top, said \"now\", the count with it; its row"
-                  " is on the drawing (its skribl's id, no post) and keeps whose the drawing is",
+                  " no number at none, the box behind the icon (a face, \"Say something, or draw it…\", Draw, Flip, Post,"
+                  " \"Say something to Juno\"); the box sends the words, tidied, and the comment fades in at the top, said"
+                  " \"now\", the count with it; its row is on the drawing (its skribl's id, no post) and keeps whose the drawing is",
                   bool(sid) and empty == {"count": None, "list": []} and title == "Comments" and box is not None
-                  and box["home"] and box["face"] and box["placeholder"] == "Say something, or draw it…"
+                  and box["open"] == "sheet" and box["title"] == "Say something to Juno"
+                  and box["face"] and box["placeholder"] == "Say something, or draw it…"
                   and box["chips"] == ["Draw", "Flip"] and box["post"] == "Post" and box["font"] >= 16
                   and bool(got.get("id")) and faded(got.get("ops", [])) >= 2 and got["ops"][-1] == 1
                   and words == [("That wave! Hello to you too.",)] and on_row(got["id"]) == (None, sid, "juno", None)
@@ -1877,14 +2145,17 @@ with sync_playwright() as p:
                   f" {faded(got.get('ops', []))}); words {words}; row {on_row(got.get('id'))}; after {after}")
             nctx, npg = browser_as(b, None)
             open_drawing(npg, sid)
-            out = {"section": npg.evaluate(SECTION), "box": npg.evaluate(BOX), "link": npg.evaluate(SIGNIN_LINK)}
+            out = {"section": npg.evaluate(SECTION), "box": npg.evaluate(BOX)}
+            sheet, err2 = steps(lambda: (npg.click(".cm-say", timeout=8000),
+                                         npg.wait_for_function(OPEN, arg="commentOutSheet", timeout=8000),
+                                         npg.wait_for_timeout(450), npg.evaluate(OUT_SHEET))[-1])
             close_ctx(nctx, npg)
-            want = ["Sign in to answer", "/social/signin?next=/social/b/" + (sid or "")]
-            check("signed out, a drawing's comments are readable, with no box and no Answer: \"Sign in to answer\" in the"
-                  " box's place, back to the drawing's page once signed in",
+            check("signed out, a drawing's comments are readable, with no box and no Answer: the icon raises \"Say"
+                  " something?\", its Sign in back to the drawing's page with the box open",
                   out["box"] is None and out["section"]["count"] == "1"
                   and [(c["name"], c["answer"]) for c in out["section"]["list"]] == [("Theo Lind", False)]
-                  and out["link"] == want, f"{out}; want {want}")
+                  and sheet and sheet["path"] == "/social/signin" and sheet["next"] == f"/social/b/{sid}#say",
+                  f"{out}; sheet {sheet}; stopped {err2}")
             # LOAD MORE on a drawing reads the drawing's own comments, by its own route.
             sam = someone(b, "sam", "Sam Okafor")
             busy = make_drawing(juno, "Section 20, a busy drawing", seed=202)
@@ -1940,11 +2211,12 @@ with sync_playwright() as p:
             a_post = make_post(juno, "Section 21, a post", seed=213)
             crossed = [say_on(mira, elsewhere, "Section 21, crossing over", answer_to=theo_c)[0],
                        say(mira, a_post, "Section 21, crossing from a post", answer_to=theo_c)[0]]
-            check("on a drawing, Answer brings the box under the comment (\"Answer Theo…\"), the comment keeping its place;"
+            check("on a drawing, Answer opens the box for the comment (\"Answer Theo\", \"Answer Theo…\"), the comment keeping its place;"
                   " the answer sits under it, and an answer to an answer under the same comment, oldest first, each on"
                   " the drawing, whose the drawing is kept; an answer to it from another drawing, or from a post, is"
                   " refused (404)",
-                  there["under"] == theo_c and there["placeholder"] == "Answer Theo…" and steady(went)
+                  there["open"] == "sheet" and there["title"] == "Answer Theo" and there["placeholder"] == "Answer Theo…"
+                  and steady(went)
                   and under == ["Section 21, Mira under Theo's", "Section 21, Juno answering Mira"]
                   and rows == [(None, sid, "juno", theo_c)] * 2 and crossed == [404, 404],
                   f"box {there}; the move {went['now']}px, then {glide(went)}; under Theo's {under}; rows {rows};"
@@ -1952,6 +2224,7 @@ with sync_playwright() as p:
 
             def drawn():
                 open_drawing(pg, sid)
+                open_box(pg)
                 pg.click("[data-cm-open=pad]", timeout=8000)
                 fr = editor_frame(pg, "skribl-pad")
                 src = pg.evaluate("() => document.querySelector('#commentPad iframe').getAttribute('src')")
@@ -2396,11 +2669,11 @@ with sync_playwright() as p:
                     cpg.evaluate("() => document.getElementById('comments').scrollIntoView({ block: 'start' })")
                     cpg.wait_for_timeout(300)
                     seen[(screen, scheme, "comments")] = cpg.evaluate(READ, "#comments")
-                    cpg.click(f"#c-{t28} > .cm-main [data-cm-answer]")
-                    cpg.wait_for_timeout(450)
-                    seen[(screen, scheme, "answering")] = cpg.evaluate(READ, "#comments")
+                    answer_box(cpg, t28)
+                    seen[(screen, scheme, "answering")] = cpg.evaluate(READ, "#comments, #commentBoxSheet")
                     cpg.keyboard.press("Escape")
-                    cpg.wait_for_timeout(300)
+                    cpg.wait_for_function(GONE, timeout=8000)
+                    cpg.wait_for_timeout(200)
                     cpg.click(f"#c-{t28} > .cm-main [data-cm-menu]")
                     cpg.wait_for_function(OPEN, arg="commentSheet", timeout=10000)
                     cpg.wait_for_timeout(450)
@@ -2415,16 +2688,21 @@ with sync_playwright() as p:
                     npg.evaluate("() => document.getElementById('comments').scrollIntoView({ block: 'start' })")
                     npg.wait_for_timeout(300)
                     seen[(screen, scheme, "signed out")] = npg.evaluate(READ, "#comments")
+                    npg.click(".cm-say")
+                    npg.wait_for_function(OPEN, arg="commentOutSheet", timeout=8000)
+                    npg.wait_for_timeout(450)
+                    seen[(screen, scheme, "say something?")] = npg.evaluate(READ, "#commentOutSheet")
                     close_ctx(nctx, npg)
             low = [(k, v["low"]) for k, v in seen.items() if v["low"]]
             small = [(k, v["small"]) for k, v in seen.items() if v["small"]]
             fields = [(k, v["fields"]) for k, v in seen.items() if v["fields"]]
             lowest = min((v["lowest"], " ".join(k)) for k, v in seen.items())
-            musts = {"comments": ("Comments", "Theo Lind", "That wave is so good.", "Answer", "Post"),
-                     "signed out": ("Sign in to answer",), "⋯": ("Report comment",), "report": ("Report this comment",)}
+            musts = {"comments": ("Comments", "Theo Lind", "That wave is so good.", "Answer"), "answering": ("Post",),
+                     "signed out": ("Comments", "Theo Lind"), "say something?": ("Say something?", "Not now", "Sign in"),
+                     "⋯": ("Report comment",), "report": ("Report this comment",)}
             missing = [(" ".join(k), w) for k, v in seen.items() for w in musts.get(k[2], ())
                        if not any(x == w or (len(w) > 3 and x.startswith(w[:24])) for x in v["words"])]
-            check("every word in a drawing's comments (a comment, an answer, the box, the count, Answer, Sign in to answer),"
+            check("every word in a drawing's comments (a comment, an answer, the box answering, the count, Answer, \"Say something?\"),"
                   " a comment's ⋯ and its report reads at 4.5:1 or more on what is painted behind it, every control is"
                   " 44px or more each way, every text field 16px: phone and desk, light and dark",
                   not low and not small and not fields and not missing and all(v["read"] >= 1 for v in seen.values()),
@@ -2432,6 +2710,590 @@ with sync_playwright() as p:
                   f" small: {small[:3]}; fields: {fields[:3]}; not read: {missing[:4]}")
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(28, exc)
+
+    # ------------------------------------------------------------------ 29
+    # THE COMMENT BOX IS AN ICON (the owner, Nov 13: "The comment needs to be an
+    # icon not a card. It takes up too much room sitting there", "Yes to all").
+    if part(29, "the icon at the heading's end, the box folded away behind it; who is offered it"):
+        try:
+            juno = someone(b, "juno", "Juno Park")
+            theo = someone(b, "theo", "Theo Lind")
+            post = make_post(juno, "Section 29, a snail", seed=291)
+            said(theo, post, "Section 29, so there is a list")
+            seen = {}
+            for screen in ("phone", "desk"):
+                for scheme in ("light", "dark"):
+                    cctx, cpg = browser_as(b, theo, screen=screen, scheme=scheme)
+                    open_post(cpg, post)
+                    cpg.evaluate("() => document.getElementById('comments').scrollIntoView({ block: 'center' })")
+                    cpg.wait_for_timeout(300)
+                    got = {"icon": cpg.evaluate(ICON), "box": cpg.evaluate(BOX)}
+                    got["focusable"] = cpg.evaluate("""() => { const w = document.querySelector('[data-cm-words]'); w.focus();
+                      const f = document.activeElement === w; w.blur(); return f; }""")
+                    got["mark"] = icon_mark(cpg)
+                    if screen == "desk":            # lit while its box is open: white on the action purple
+                        _, err = steps(lambda: open_box(cpg))
+                        got["lit"] = icon_mark(cpg) if err is None else {"k": 0, "stopped": err}
+                        got["lit_ground"] = cpg.evaluate("() => getComputedStyle(document.querySelector('.cm-say')).backgroundColor")
+                    seen[(screen, scheme)] = got
+                    close_ctx(cctx, cpg)
+            ok_place = all(v["icon"] and v["icon"]["name"] == "Say something" and v["icon"]["tip"] == "Say something"
+                           and v["icon"]["w"] == 44 and v["icon"]["h"] == 44 and v["icon"]["round"] == "999px"
+                           and abs(v["icon"]["right"]) <= 0.5 and abs(v["icon"]["centre"]) <= 0.5 and v["icon"]["lands"]
+                           and v["icon"]["head"] == v["icon"]["line"] == 29 and v["icon"]["gap"] == 10 and v["icon"]["plus"] == 3
+                           for v in seen.values())
+            check("the icon at the end of the Comments heading: a round 44px button, a bubble with a plus, named \"Say"
+                  " something\" (its tip too), every tap point on it landing on it; the heading keeps its 29px (the icon"
+                  " reaches into the room round it) and the comments start 10px under it: phone and desk, light and dark",
+                  ok_place, "; ".join(f"{' '.join(k)}: {v['icon']}" for k, v in seen.items())[:900])
+            ok_fold = all(v["box"] and v["box"]["open"] is None and v["icon"]["fold"]["h"] == 0
+                          and v["icon"]["fold"]["seen"] == "hidden" and not v["focusable"] and v["icon"]["expanded"] == "false"
+                          for v in seen.values())
+            check("the box is folded away until asked for: no room under the heading, unseen, and nothing in it takes focus",
+                  ok_fold, "; ".join(f"{' '.join(k)}: box {v['box'] and v['box']['open']}, fold {v['icon']['fold']},"
+                                     f" focusable {v['focusable']}" for k, v in seen.items()))
+            ok_mark = all(v["mark"]["k"] >= 3 for v in seen.values()) and all(v["lit"]["k"] >= 3 and v["lit_ground"] in (
+                "rgb(109, 76, 240)",) for k, v in seen.items() if k[0] == "desk")
+            check("its line reads at 3:1 or more on its lilac, off the painted pixels, light and dark; lit while its box is"
+                  " open, white on the action purple",
+                  ok_mark, "; ".join(f"{' '.join(k)}: {v['mark']['k']}" + (f", lit {v['lit']['k']} on {v.get('lit_ground')}"
+                                                                          if k[0] == 'desk' else '') for k, v in seen.items()))
+            # Who is offered it: nobody who may not comment, as the box was not shown to them.
+            zed = someone(b, "zed", "Zed Okoro")
+            db_write("update social_people set taken_down_at = datetime('now') where handle_key = 'zed'")
+            open_post(zed.pg, post)
+            zed_icon = zed.pg.evaluate("() => [!!document.querySelector('.cm-say'), !!document.querySelector('[data-cm-first]')]")
+            db_write("update social_people set taken_down_at = null where handle_key = 'zed'")
+            db_write("update social_posts set taken_down_at = datetime('now') where public_id = ?", (post,))
+            open_post(juno.pg, post)
+            maker = juno.pg.evaluate("() => [!!document.querySelector('.cm-say'), !!document.querySelector('[data-cm-box]')]")
+            db_write("update social_posts set taken_down_at = null where public_id = ?", (post,))
+            check("nobody who may not comment is offered it: somebody taken down, or the maker of a post taken down (they"
+                  " read its comments, with the note, and no box)",
+                  zed_icon == [False, False] and maker == [False, False], f"taken down {zed_icon}; maker {maker}")
+        except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
+            stopped(29, exc)
+
+    # ------------------------------------------------------------------ 30
+    if part(30, "a phone: the box rises on Make's sheet, ready; it goes kindly and keeps the words"):
+        try:
+            juno = someone(b, "juno", "Juno Park")
+            theo = someone(b, "theo", "Theo Lind")
+            post = make_post(juno, "Section 30, a snail", seed=301)
+            said(theo, post, "Section 30, the page under the sheet")
+            pctx, ppg = browser_as(b, theo)
+            ppg.add_init_script(KEYBOARD)
+            open_post(ppg, post)
+            ppg.evaluate("() => document.getElementById('comments').scrollIntoView({ block: 'center' })")
+            ppg.wait_for_timeout(300)
+            rise = ppg.evaluate(FRAMES, ["document.querySelector('.cm-say').click()",
+                                         ["#commentBoxSheet .make-sheet", "[data-cm-list] > .cm .cm-name", "#commentsTitle"],
+                                         ["#commentBoxSheet .make-scrim"], 700])
+            up = ppg.evaluate(BOX)
+            inert = ppg.evaluate("() => ['body > .top', 'body > .nav', '#main'].map(s => document.querySelector(s).hasAttribute('inert'))")
+            g_up = glided(track(rise, 0))
+            dim = fades_of(rise, 0)
+            check("a tap on the icon raises Make's own sheet from the bottom, the box on it: \"Say something to Juno\", their"
+                  " face, the field focused and ready (17px), Draw, Flip and Post; it glides up (read on every frame) while the"
+                  " page dims, the page under it holding still and inert; the icon lit",
+                  up and up["open"] == "sheet" and up["title"] == "Say something to Juno" and up["quote"] is None
+                  and up["focus"] and up["font"] == 17 and up["chips"] == ["Draw", "Flip"] and up["post"] == "Post"
+                  and up["placeholder"] == "Say something, or draw it…" and up["icon"] == "true"
+                  and g_up["ok"] and 150 <= abs(g_up["way"]) and len([o for o in dim if 0.02 < o < 0.98]) >= 3
+                  and still_(track(rise, 1)) and still_(track(rise, 2)) and all(inert),
+                  f"box {up}; the rise {g_up}; the dimming {dim[:4]}..{dim[-1:]}; the page {glided(track(rise, 1))}; inert {inert}")
+            # Put away three ways, each keeping what was typed.
+            kept, downs = {}, {}
+            for how in ("the dimmed page", "a drag down", "Esc"):
+                if how != "the dimmed page":
+                    open_box(ppg)
+                ppg.fill("[data-cm-words]", f"Typed, then {how}")
+                act = {"the dimmed page": "document.querySelector('#commentBoxSheet .make-scrim').click()",
+                       "a drag down": "window.__swiping = true",
+                       "Esc": "document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))"}[how]
+                if how == "a drag down":
+                    ppg.evaluate(SWIPE, [[12, 40, 90, 160, 220], 60])
+                    downs[how] = None
+                else:
+                    downs[how] = glided(track(ppg.evaluate(FRAMES, [act, ["#commentBoxSheet .make-sheet"], [], 600]), 0))
+                ppg.wait_for_function(GONE, timeout=8000)
+                ppg.wait_for_timeout(200)
+                gone = ppg.evaluate("() => ({ inert: !!document.querySelector('#main[inert]'), focus: document.activeElement.className })")
+                _, err = steps(lambda: open_box(ppg))
+                kept[how] = {"words": ppg.evaluate(BOX)["words"] if err is None else None, "gone": gone, "stopped": err}
+                ppg.keyboard.press("Escape")
+                ppg.wait_for_function(GONE, timeout=8000)
+                ppg.wait_for_timeout(200)
+            check("a tap on the dimmed page, a drag down or Esc puts it away (gliding down, read on every frame), focus back on"
+                  " the icon and the page no longer inert; open it again and what was typed is there",
+                  all(v["words"] == f"Typed, then {k}" and not v["gone"]["inert"] and v["gone"]["focus"].startswith("icon-btn cm-say")
+                      for k, v in kept.items())
+                  and all(g is None or g["ok"] for g in downs.values()),
+                  f"{kept}; going down {downs}")
+            # ON A PHONE'S KEYBOARD it rides above it (stood in: this box has no phone keyboard).
+            open_box(ppg)
+            ppg.evaluate("() => window.__keyboard(336)")
+            ppg.wait_for_timeout(500)
+            on_kb = ppg.evaluate("""() => { const s = document.querySelector('#commentBoxSheet .make-sheet').getBoundingClientRect(),
+              w = document.querySelector('[data-cm-words]').getBoundingClientRect();
+              return { bottom: Math.round(s.bottom), field: Math.round(w.bottom), floor: innerHeight - 336 }; }""")
+            ppg.evaluate("() => window.__keyboard(0)")
+            ppg.wait_for_timeout(500)
+            off_kb = ppg.evaluate("() => Math.round(document.querySelector('#commentBoxSheet .make-sheet').getBoundingClientRect().bottom)")
+            ppg.evaluate("() => window.__keyboard(300, 2)")
+            ppg.wait_for_timeout(500)
+            zoomed = ppg.evaluate("() => Math.round(document.querySelector('#commentBoxSheet .make-sheet').getBoundingClientRect().bottom)")
+            ppg.evaluate("() => window.__keyboard(0)")
+            close_ctx(pctx, ppg)
+            check("on a phone's keyboard the sheet rides above it, its field in view, and goes back down with it; a pinch's zoom"
+                  " is no keyboard (a stand-in visual viewport: this box has no phone keyboard)",
+                  abs(on_kb["bottom"] - on_kb["floor"]) <= 1 and on_kb["field"] < on_kb["floor"] and off_kb == 874 and zoomed == 874,
+                  f"on a 336px keyboard {on_kb}; after {off_kb}; zoomed {zoomed}")
+            # Draw over the sheet: the Pad rises above it and goes; the page behind stays inert under the sheet.
+            dctx, dpg = browser_as(b, theo)
+            open_post(dpg, post)
+
+            def pad_over():
+                open_box(dpg)
+                dpg.click("[data-cm-open=pad]", timeout=8000)
+                fr = editor_frame(dpg, "skribl-pad")
+                if fr:
+                    fr.click("#composeCloseBtn", timeout=8000)
+                dpg.wait_for_timeout(800)
+                return dpg.evaluate("""() => ({ sheet: document.getElementById('commentBoxSheet').classList.contains('is-open'),
+                  inert: ['body > .top', 'body > .nav', '#main'].map(s => document.querySelector(s).hasAttribute('inert')),
+                  pad: document.getElementById('commentPad').hidden, focus: document.activeElement.textContent.trim() })""")
+
+            got, err = steps(pad_over)
+            close_ctx(dctx, dpg)
+            check("Draw on the sheet opens the Pad over it; closed, the sheet is still there with focus back on Draw, and the page"
+                  " behind it is still inert (the editor gives back only what it made inert)",
+                  err is None and got.get("sheet") and got.get("inert") == [True, True, True] and got.get("pad")
+                  and got.get("focus") == "Draw", f"{got}; stopped {err}")
+        except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
+            stopped(30, exc)
+
+    # ------------------------------------------------------------------ 31
+    if part(31, "a desk: the box glides open under the heading, the icon lit; it folds away kindly and keeps the words"):
+        try:
+            juno = someone(b, "juno", "Juno Park")
+            theo = someone(b, "theo", "Theo Lind")
+            post = make_post(juno, "Section 31, a snail", seed=311)
+            said(theo, post, "Section 31, the comment under the box")
+            dctx, dpg = browser_as(b, theo, "desk")
+            open_post(dpg, post)
+            opened = dpg.evaluate(FRAMES, ["document.querySelector('.cm-say').click()",
+                                           ["[data-cm-list] > .cm .cm-name", "#commentsTitle", ".post-page > .post-art"],
+                                           ["[data-cm-box]"], 700])
+            there = dpg.evaluate(BOX)
+            g_open = glided(track(opened, 0))
+            ops = fades_of(opened, 0)
+            room = dpg.evaluate("() => Math.round(document.querySelector('[data-cm-fold]').getBoundingClientRect().height * 100) / 100")
+            check("a click glides the box open under the heading: the comments under it slide down to make room (read on every"
+                  " frame, 136px) while the box fades in, nothing above it moving; the field focused, the icon lit",
+                  there and there["open"] == "home" and there["focus"] and there["icon"] == "true" and there["font"] == 17
+                  and g_open["ok"] and abs(g_open["way"] - room) <= 1 and room == 136
+                  and len([o for o in ops if 0.02 < o < 0.98]) >= 3 and ops[-1] == 1
+                  and still_(track(opened, 1)) and still_(track(opened, 2)),
+                  f"box {there}; the room {room}; the comments {g_open}; the fade {ops[:5]}..; the heading"
+                  f" {glided(track(opened, 1))}")
+            folds = {}
+            for how in ("a second click", "Esc", "a press elsewhere"):
+                if how != "a second click":
+                    open_box(dpg)
+                dpg.fill("[data-cm-words]", f"Typed, then {how}")
+                act = {"a second click": "document.querySelector('.cm-say').click()",
+                       "Esc": "document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))",
+                       "a press elsewhere": "document.querySelector('.post-page > .post-meta').dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }))"}[how]
+                if how == "Esc":
+                    act = "document.querySelector('[data-cm-words]').focus();" + act
+                fr = dpg.evaluate(FRAMES, [act, ["[data-cm-list] > .cm .cm-name"], ["[data-cm-box]"], 600])
+                dpg.wait_for_function(GONE, timeout=8000)
+                after_ = dpg.evaluate("() => ({ icon: document.querySelector('.cm-say').getAttribute('aria-expanded'), focus: document.activeElement.className })")
+                _, err = steps(lambda: open_box(dpg))
+                folds[how] = {"g": glided(track(fr, 0)), "icon": after_["icon"], "focus": after_["focus"],
+                              "words": dpg.evaluate(BOX)["words"] if err is None else None, "stopped": err}
+                dpg.click(".cm-say")
+                dpg.wait_for_function(GONE, timeout=8000)
+            check("a second click, Esc (focus back on the icon) or a press anywhere else folds it away, the comments sliding back"
+                  " up (read on every frame) and the icon going out; open it again and what was typed is there",
+                  all(v["g"]["ok"] and abs(v["g"]["way"] + 136) <= 1 and v["icon"] == "false"
+                      and v["words"] == f"Typed, then {k}" for k, v in folds.items())
+                  and folds["Esc"]["focus"].startswith("icon-btn cm-say"),
+                  f"{folds}")
+            # Draw opens the Pad over the page with the box open; a press on the Pad's ground is not "elsewhere".
+            def pad_kept():
+                open_box(dpg)
+                dpg.click("[data-cm-open=pad]", timeout=8000)
+                fr = editor_frame(dpg, "skribl-pad")
+                dpg.mouse.click(30, 400)                 # beside the Pad's card: puts the Pad away, the drawing kept in it
+                dpg.wait_for_timeout(800)
+                return {"frame": bool(fr), "box": dpg.evaluate(BOX)["open"], "pad": dpg.evaluate("() => document.getElementById('commentPad').hidden")}
+
+            got, err = steps(pad_kept)
+            close_ctx(dctx, dpg)
+            check("a press beside the Pad (opened by Draw in the box) puts the Pad away and leaves the box open: the editor over"
+                  " the page is not \"elsewhere\"",
+                  err is None and got.get("frame") and got.get("box") == "home" and got.get("pad"), f"{got}; stopped {err}")
+        except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
+            stopped(31, exc)
+
+    # ------------------------------------------------------------------ 32
+    if part(32, "Answer opens the same box: a phone's sheet says whom and what; a desk's opens under the conversation"):
+        try:
+            juno = someone(b, "juno", "Juno Park")
+            theo = someone(b, "theo", "Theo Lind")
+            mira = someone(b, "mira", "Mira Okafor")
+            post = make_post(juno, "Section 32, a snail", seed=321)
+            theo_c = said(theo, post, "Ha, I counted too.\nAll three on each side.")
+            other = said(mira, post, "Section 32, another conversation")
+            pg = mira.pg
+            open_post(pg, post)
+            went = pg.evaluate(ANSWER_AND_WATCH, theo_c)
+            sheet = pg.evaluate(BOX)
+            check("on a phone, Answer raises the sheet titled \"Answer Theo\", Theo's words in a line under it (in quotes, one"
+                  " line), the field saying \"Answer Theo…\" and focused; the comment answered does not move, the sheet glides up",
+                  sheet["open"] == "sheet" and sheet["title"] == "Answer Theo" and sheet["quote"] == "“Ha, I counted too. All three on each side.”"
+                  and sheet["placeholder"] == "Answer Theo…" and sheet["label"] == "Answer Theo" and went["focus"]
+                  and went["pressed"] == "true" and sheet["icon"] == "false"
+                  and all(abs(f["dy"]) <= 0.5 for f in went["frames"]) and glided([f["sheet"] for f in went["frames"]])["ok"],
+                  f"{sheet}; the comment {[f['dy'] for f in went['frames']][:3]}..; the sheet {glided([f['sheet'] for f in went['frames']])}")
+            quote_line = pg.evaluate("""() => { const q = document.querySelector('[data-cm-quote]'), c = getComputedStyle(q);
+              return { lines: Math.round(q.getBoundingClientRect().height / parseFloat(c.lineHeight)), wrap: c.whiteSpace, cut: c.textOverflow }; }""")
+            pg.keyboard.press("Escape")
+            pg.wait_for_function(GONE, timeout=8000)
+            open_box(pg)
+            home_again = pg.evaluate(BOX)
+            pg.keyboard.press("Escape")
+            pg.wait_for_function(GONE, timeout=8000)
+            check("its words stay one line, cut short with an ellipsis when long; the icon opens it as \"Say something to Juno\""
+                  " again, its field back to \"Say something, or draw it…\" and no quote",
+                  quote_line == {"lines": 1, "wrap": "nowrap", "cut": "ellipsis"} and home_again["title"] == "Say something to Juno"
+                  and home_again["quote"] is None and home_again["placeholder"] == "Say something, or draw it…",
+                  f"quote {quote_line}; again {home_again}")
+            # A desk: under the conversation, as today; open on the heading first, it folds there, then opens there.
+            dctx, dpg = browser_as(b, mira, "desk")
+            open_post(dpg, post)
+            open_box(dpg)
+            moved = dpg.evaluate(FRAMES, [f"document.querySelector('#c-{theo_c} > .cm-main [data-cm-answer]').click()",
+                                          [f"#c-{theo_c} > .cm-main .cm-name", f"#c-{other} > .cm-main .cm-name"], ["[data-cm-box]"], 1300])
+            under = dpg.evaluate(BOX)
+            ops = fades_of(moved, 0)
+            g_theo, g_other = glided(track(moved, 0)), glided(track(moved, 1))
+            check("on a desk, Answer opens it under that conversation (\"Answer Theo…\"); open under the heading first, it folds"
+                  " away there and then glides open under the conversation, every move a glide (read on every frame), the box"
+                  " fading out and in",
+                  under["open"] == "under" and under["under"] == theo_c and under["placeholder"] == "Answer Theo…" and under["focus"]
+                  and g_theo["ok"] and abs(g_theo["way"] + 136) <= 1 and (g_other["ok"] or still_(track(moved, 1)))
+                  and min(ops) == 0 and ops[-1] == 1 and len([o for o in ops if 0.02 < o < 0.98]) >= 4,
+                  f"{under}; Theo's {g_theo}; the next conversation {g_other}; the box {ops[:3]}..{min(ops)}..{ops[-1]}")
+            dpg.click(f"#c-{theo_c} > .cm-main [data-cm-answer]")
+            dpg.wait_for_function(GONE, timeout=8000)
+            again = dpg.evaluate(BOX)
+            check("Answer again folds it away, home and unseen",
+                  again["open"] is None and again["home"], f"{again}")
+            long_c = said(theo, post, "Section 32, a long thread")
+            for k in range(7):
+                said(juno if k % 2 else mira, post, f"Section 32, answer {k} in a long thread, long enough to take two lines",
+                     answer_to=long_c)
+            open_post(dpg, post)
+            dpg.evaluate("(id) => { const r = document.getElementById('c-' + id).getBoundingClientRect(); window.scrollBy(0, r.top - innerHeight / 3); }", long_c)
+            dpg.wait_for_timeout(300)
+            far = dpg.evaluate(ANSWER_AND_WATCH, long_c)
+            g = glide(far)
+            close_ctx(dctx, dpg)
+            check("on a desk, under a long thread below the screen, it opens there and the page glides down to it (several"
+                  " frames, none carrying three quarters of the way), the comment not jumping as it opens",
+                  steady(far) and g["way"] > 60, f"the move {far['now']}px; then {g}; in view {far['seen']}")
+        except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
+            stopped(32, exc)
+
+    # ------------------------------------------------------------------ 33
+    if part(33, "posted: the box goes as the comment comes, glowing a moment; on a desk in step"):
+        try:
+            juno = someone(b, "juno", "Juno Park")
+            theo = someone(b, "theo", "Theo Lind")
+            mira = someone(b, "mira", "Mira Okafor")
+            post = make_post(juno, "Section 33, a snail", seed=331)
+            said(theo, post, "Section 33, the comment that was first")
+            got = {}
+            for screen in ("phone", "desk"):
+                cctx, cpg = browser_as(b, mira, screen)
+                open_post(cpg, post)
+                cpg.evaluate("() => document.getElementById('comments').scrollIntoView({ block: 'center' })")
+                cpg.wait_for_timeout(300)
+                open_box(cpg)
+                cpg.fill("[data-cm-words]", f"Section 33 on a {screen}: her tail is a question mark. What is she asking?")
+                w = cpg.evaluate(POSTED, [1800])
+                cpg.wait_for_timeout(2200)
+                got[screen] = {"w": w, "box": cpg.evaluate(BOX), "after": cpg.evaluate(SECTION),
+                               "glow": cpg.evaluate("(id) => document.getElementById(id).classList.contains('is-landed')", w["id"])}
+                close_ctx(cctx, cpg)
+            ok, why_ = True, []
+            for screen, v in got.items():
+                w = v["w"]
+                g_old, g_new = glided(w["old"]), glided(w["new"])
+                want = {"posted, at the top": bool(w["id"]) and w["first"] == w["id"],
+                        "counted": v["after"]["count"] in ("2", "3"),
+                        "glowing in the tint": bool(w["glow"]) and w["glow"][0] and w["tint"] == TINT["light"],
+                        "the tint fading": w["fade"] >= 10 and not v["glow"],
+                        "fading in": len([o for o in w["ops"] if 0.02 < o < 0.98]) >= 3 and w["ops"][-1] == 1,
+                        "the box gone and emptied": v["box"]["open"] is None and v["box"]["words"] == "",
+                        "focus on the icon": w["focus"] == "icon-btn cm-say",
+                        "what was under it, a glide": g_old["ok"],
+                        "the box not changing on its way": not w["step"],
+                        "Post says Posting": w["label"] == "Posting…" and not w["line"]}
+                if screen == "desk":
+                    want["in step, where the box was"] = (g_new["ok"] and abs(g_new["way"] + w["room"]) <= 1.5
+                                                          and abs(w["new"][-1] - w["under_head"]) <= 1)
+                else:
+                    want["the sheet gliding down"] = glided(w["sheet"])["ok"] and still_(w["new"])
+                ok = ok and all(want.values())
+                why_.append(f"{screen}: not {[k for k, x in want.items() if not x]}; the old first {g_old}; the new {g_new}"
+                            f" (the box's room {w['room']}); sheet {glided(w['sheet']) if w['sheet'] else None}; fade in"
+                            f" {w['ops'][:4]}..{w['ops'][-1:]}; the tint {w['tint']}, fading {w['fade']} frames; Post said"
+                            f" {w['label']!r}, a line {w['line']}, a step {w['step']}; box {v['box']['open']} {v['box']['words']!r};"
+                            f" focus {w['focus']}")
+            check("posted, the box goes (a phone's sheet glides down; a desk's fold folds away in step as the comment opens its"
+                  " room where the box was) and the comment sits at the top, fading in and glowing in the landing's tint, which"
+                  " fades; what was under it moves only as a glide (read on every frame); Post says \"Posting…\" meanwhile and no"
+                  " line grows the box; the box is emptied once it has gone; focus on the icon",
+                  ok, " | ".join(why_))
+            # An answer posted on a desk: under its comment, the fold folding away there in step.
+            dctx, dpg = browser_as(b, mira, "desk")
+            open_post(dpg, post)
+            top_c = db("select public_id from social_comments where words = 'Section 33, the comment that was first'")[0][0]
+            answer_box(dpg, top_c)
+            dpg.fill("[data-cm-words]", "Section 33, an answer from a desk")
+            w = dpg.evaluate(POSTED, [1800])
+            dpg.wait_for_timeout(600)
+            sec = dpg.evaluate(SECTION)
+            close_ctx(dctx, dpg)
+            under = [a["words"] for a in next((c for c in sec["list"] if c["id"] == top_c), {"answers": []})["answers"]]
+            check("an answer posted on a desk sits under its comment and glows; the fold folds away under the conversation and"
+                  " goes home; focus on the new answer's Answer",
+                  under[-1:] == ["Section 33, an answer from a desk"] and w["glow"][0] and w["focus"] == "cm-act",
+                  f"under {under}; glow {w['glow'][:2]}; focus {w['focus']}")
+        except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
+            stopped(33, exc)
+
+    # ------------------------------------------------------------------ 34
+    if part(34, "signed out the icon raises Say something?; signed in it comes back open; Say the first thing at none"):
+        try:
+            juno = someone(b, "juno", "Juno Park")
+            theo = someone(b, "theo", "Theo Lind")
+            post = make_post(juno, "Section 34, a snail", seed=341)
+            said(theo, post, "Section 34, readable signed out")
+            nctx, npg = browser_as(b, None)
+            open_post(npg, post)
+            icon = npg.evaluate(ICON)
+            npg.click(".cm-say")
+            npg.wait_for_function(OPEN, arg="commentOutSheet", timeout=8000)
+            npg.wait_for_timeout(450)
+            out = npg.evaluate(OUT_SHEET)
+            npg.click("#commentOutSheet .post-sheet-acts [data-make-close]")
+            npg.wait_for_timeout(500)
+            shut = npg.evaluate("() => ({ open: document.getElementById('commentOutSheet').classList.contains('is-open'), focus: document.activeElement.className })")
+            close_ctx(nctx, npg)
+            check("signed out, the icon is there all the same (\"Say something\", a dialog); a tap raises a small sheet like the"
+                  " heart's: \"Say something?\", \"Sign in, and you can answer Juno in words or with a drawing.\", Not now and"
+                  " Sign in, which comes back to this post with the box open (#say); Not now puts it away; no \"Sign in to"
+                  " answer\" anywhere",
+                  icon and icon["name"] == "Say something" and icon["popup"] == "dialog" and icon["controls"] == "commentOutSheet"
+                  and out["open"] and out["title"] == "Say something?"
+                  and out["lede"] == "Sign in, and you can answer Juno in words or with a drawing."
+                  and out["acts"] == ["Not now", "Sign in"] and out["path"] == "/social/signin"
+                  and out["next"] == f"/social/p/{post}#say" and out["focus"] == "Not now" and not out["old"]
+                  and not shut["open"] and shut["focus"].startswith("icon-btn cm-say"),
+                  f"icon {icon and {k: icon[k] for k in ('name', 'popup', 'controls')}}; sheet {out}; after Not now {shut}")
+            # Signed in from there: back on the post with the box open, nothing posted, the address without #say.
+            before = db("select count(*) from social_comments")[0][0]
+            back = {}
+            for screen in ("phone", "desk"):
+                cctx, cpg = browser_as(b, theo, screen)
+                cpg.goto(BASE + "/social/signin?next=" + urllib.parse.quote(f"/social/p/{post}#say", safe="/"))
+                cpg.wait_for_function("() => document.readyState === 'complete' && !!document.querySelector('[data-comments]')", timeout=15000)
+                _, err = steps(lambda: cpg.wait_for_function(BOX_STILL, timeout=8000))
+                back[screen] = {"box": cpg.evaluate(BOX), "url": cpg.evaluate("() => location.pathname + location.hash"), "stopped": err}
+                close_ctx(cctx, cpg)
+            check("signed in from it, the post comes back with the box open and ready (a phone's sheet, a desk's fold), its field"
+                  " focused, nothing posted, and the address without its #say",
+                  all(v["box"]["open"] == ("sheet" if k == "phone" else "home") and v["box"]["focus"] and v["url"] == f"/social/p/{post}"
+                      for k, v in back.items()) and db("select count(*) from social_comments")[0][0] == before,
+                  f"{back}; comments {before} -> {db('select count(*) from social_comments')[0][0]}")
+            # At none: "Say the first thing" where the comments will be.
+            quiet = make_post(juno, "Section 34, nobody has said anything yet", seed=342)
+            got = {}
+            for screen in ("phone", "desk"):
+                cctx, cpg = browser_as(b, theo, screen)
+                open_post(cpg, quiet)
+                cpg.evaluate("() => document.getElementById('comments').scrollIntoView({ block: 'center' })")
+                cpg.wait_for_timeout(300)
+                line = cpg.evaluate(FIRST_LINE)
+                fr = cpg.evaluate(FRAMES, ["document.querySelector('[data-cm-first]').click()", [".more-from"], [".cm-first"], 700])
+                cpg.wait_for_function(BOX_STILL, timeout=8000)
+                opened = cpg.evaluate(BOX)
+                line_open = cpg.evaluate(FIRST_LINE)
+                got[screen] = {"line": line, "opened": opened, "line_open": line_open, "fr": fr}
+                close_ctx(cctx, cpg)
+            d = got["desk"]
+            check("with nothing said yet, \"Say the first thing\" stands where the comments will be: the small violet words (16px,"
+                  " 600, Sign in's ink), 44px tall, 10px under the heading; a tap opens the box (a phone's sheet; a desk's fold,"
+                  " where the words fold away in step as the box opens in their place)",
+                  all(v["line"] and v["line"]["words"] == "Say the first thing" and v["line"]["h"] == 44 and v["line"]["open"]
+                      and v["line"]["gap"] == 10 and v["line"]["size"] == 16 and v["line"]["weight"] == "600" and v["line"]["lands"]
+                      and v["line"]["ink"] in ("rgb(76, 49, 196)",) for v in got.values())
+                  and got["phone"]["opened"]["open"] == "sheet" and got["phone"]["line_open"]["open"]
+                  and d["opened"]["open"] == "home" and not d["line_open"]["open"] and d["line_open"]["seen"] == "hidden"
+                  and glided(track(d["fr"], 0), 136 - 52)["ok"] and still_(track(got["phone"]["fr"], 0)),
+                  f"phone {got['phone']['line']} -> {got['phone']['opened']['open']}; desk {d['line']} -> {d['opened']['open']},"
+                  f" the line {d['line_open']}; under it on a desk {glided(track(d['fr'], 0))}")
+            dctx, dpg = browser_as(b, theo, "desk")
+            open_post(dpg, quiet)
+            open_box(dpg, "[data-cm-first]")
+            dpg.fill("[data-cm-words]", "Section 34, the first thing")
+            w = dpg.evaluate(POSTED, [900])
+            dpg.wait_for_timeout(400)
+            after_first = dpg.evaluate(FIRST_LINE)
+            dpg.evaluate("(id) => document.querySelector('#' + id + ' > .cm-main [data-cm-menu]').click()", w["id"])
+            dpg.wait_for_function(OPEN, arg="commentSheet", timeout=10000)
+            dpg.wait_for_timeout(450)
+            back_fr = dpg.evaluate(FRAMES, ["document.querySelector('#commentSheet [data-cm-act=delete]').click()",
+                                            [".more-from"], [".cm-first"], 1400])
+            again_line = dpg.evaluate(FIRST_LINE)
+            close_ctx(dctx, dpg)
+            check("the first comment takes its place (the line gone, folded away); the last one deleted, it comes back, fading in"
+                  " as its room opens",
+                  w["id"] and after_first and not after_first["open"] and after_first["seen"] == "hidden"
+                  and again_line and again_line["open"] and fades_of(back_fr, 0)[-1] == 1
+                  and len([o for o in fades_of(back_fr, 0) if 0.02 < o < 0.98]) >= 2,
+                  f"posted {w['id']}; the line {after_first}; after the delete {again_line}; its fade {fades_of(back_fr, 0)[-6:]}")
+        except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
+            stopped(34, exc)
+
+    # ------------------------------------------------------------------ 35
+    if part(35, "under Reduce Motion the sheet fades where it sits; a desk's box is put in place and fades"):
+        try:
+            juno = someone(b, "juno", "Juno Park")
+            theo = someone(b, "theo", "Theo Lind")
+            post = make_post(juno, "Section 35, a snail", seed=351)
+            said(theo, post, "Section 35, a comment")
+            pctx, ppg = browser_as(b, theo, reduced=True)
+            open_post(ppg, post)
+            ppg.evaluate("() => document.getElementById('comments').scrollIntoView({ block: 'center' })")
+            ppg.wait_for_timeout(300)
+            up = ppg.evaluate(FRAMES, ["document.querySelector('.cm-say').click()", ["#commentBoxSheet .make-sheet"], ["#commentBoxSheet .make-sheet"], 600])
+            ppg.wait_for_function(BOX_STILL, timeout=8000)
+            ppg.fill("[data-cm-words]", "Section 35, posted under Reduce Motion")
+            pw = ppg.evaluate(POSTED, [900])
+            close_ctx(pctx, ppg)
+            dctx, dpg = browser_as(b, theo, "desk", reduced=True)
+            open_post(dpg, post)
+            dn = dpg.evaluate(FRAMES, ["document.querySelector('.cm-say').click()", ["[data-cm-list] > .cm .cm-name"], ["[data-cm-box]"], 600])
+            dpg.wait_for_function(BOX_STILL, timeout=8000)
+            dpg.fill("[data-cm-words]", "Section 35, posted on a desk under Reduce Motion")
+            dw = dpg.evaluate(POSTED, [900])
+            close_ctx(dctx, dpg)
+            sheet_tops, sheet_ops = track(up, 0), fades_of(up, 0)
+            box_ops = fades_of(dn, 0)
+            moves = [abs(y - x) for x, y in zip(track(dn, 0), track(dn, 0)[1:]) if abs(y - x) > 0.3]
+            check("under Reduce Motion nothing glides: a phone's sheet fades in where it sits (0px moved), a desk's box is put in"
+                  " place (one step) and fades in; a posted comment is put in place and fades in",
+                  still_(sheet_tops) and len([o for o in sheet_ops if 0.02 < o < 0.98]) >= 2 and sheet_ops[-1] == 1
+                  and len(moves) == 1 and abs(moves[0] - 136) <= 1 and len([o for o in box_ops if 0.02 < o < 0.98]) >= 2
+                  and still_(pw["new"]) and len([o for o in pw["ops"] if 0.02 < o < 0.98]) >= 2
+                  and still_(dw["new"]) and len([o for o in dw["ops"] if 0.02 < o < 0.98]) >= 2,
+                  f"the sheet's top {sorted(set(sheet_tops))[:3]}, its fade {sheet_ops[:4]}; the desk's moves {moves}, the box's fade"
+                  f" {box_ops[:4]}; posted on a phone {pw['new'][:3]} {pw['ops'][:4]}, on a desk {dw['new'][:3]} {dw['ops'][:4]}")
+        except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
+            stopped(35, exc)
+
+    # ------------------------------------------------------------------ 36
+    if part(36, "a drawing's own page: the same icon, sheet, fold and posting; signed out back to the drawing"):
+        try:
+            juno = someone(b, "juno", "Juno Park")
+            theo = someone(b, "theo", "Theo Lind")
+            sid = make_drawing(juno, "Section 36, a wave", seed=361)
+            open_drawing(theo.pg, sid)
+            first = theo.pg.evaluate(FIRST_LINE)
+            icon = theo.pg.evaluate(ICON)
+            open_box(theo.pg)
+            sheet = theo.pg.evaluate(BOX)
+            theo.pg.fill("[data-cm-words]", "Section 36, on the drawing")
+            pw = theo.pg.evaluate(POSTED, [900])
+            dctx, dpg = browser_as(b, theo, "desk")
+            open_drawing(dpg, sid)
+            opened = dpg.evaluate(FRAMES, ["document.querySelector('.cm-say').click()", ["[data-cm-list] > .cm .cm-name"], ["[data-cm-box]"], 700])
+            fold = dpg.evaluate(BOX)
+            close_ctx(dctx, dpg)
+            nctx, npg = browser_as(b, None)
+            open_drawing(npg, sid)
+            npg.click(".cm-say")
+            npg.wait_for_function(OPEN, arg="commentOutSheet", timeout=8000)
+            out = npg.evaluate(OUT_SHEET)
+            close_ctx(nctx, npg)
+            check("on a drawing's own page the same: \"Say the first thing\" at none, the icon, a phone's sheet (\"Say something to"
+                  " Juno\"), posting (it glows at the top), a desk's fold gliding open; signed out, Sign in comes back to the"
+                  " drawing with the box open",
+                  first and first["words"] == "Say the first thing" and icon and icon["w"] == 44 and sheet["open"] == "sheet"
+                  and sheet["title"] == "Say something to Juno" and pw["id"] and pw["glow"][0]
+                  and fold["open"] == "home" and glided(track(opened, 0))["ok"]
+                  and out["next"] == f"/social/b/{sid}#say" and out["lede"] == "Sign in, and you can answer Juno in words or with a drawing.",
+                  f"first {first}; icon {icon and icon['w']}; sheet {sheet}; posted {pw['id']}; fold {fold['open']}"
+                  f" {glided(track(opened, 0))}; signed out {out}")
+        except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
+            stopped(36, exc)
+
+    # ------------------------------------------------------------------ 37
+    if part(37, "the new screens' words and marks: the sheet, Say something?, Say the first thing; 4.5:1, 44px, 16px"):
+        try:
+            juno = someone(b, "juno", "Juno Park")
+            theo = someone(b, "theo", "Theo Lind")
+            post = make_post(juno, "Section 37, a snail", seed=371)
+            t37 = said(theo, post, "That shell spiral is so good, and the long words under its title are cut short nicely")
+            quiet = make_post(juno, "Section 37, nothing yet", seed=372)
+            seen = {}
+            for screen in ("phone", "desk"):
+                for scheme in ("light", "dark"):
+                    cctx, cpg = browser_as(b, juno, screen=screen, scheme=scheme)
+                    open_post(cpg, post)
+                    answer_box(cpg, t37)
+                    seen[(screen, scheme, "answering")] = cpg.evaluate(READ, "#comments, #commentBoxSheet")
+                    cpg.keyboard.press("Escape")
+                    cpg.wait_for_function(GONE, timeout=8000)
+                    open_box(cpg)
+                    seen[(screen, scheme, "the box")] = cpg.evaluate(READ, "#comments, #commentBoxSheet")
+                    open_post(cpg, quiet)
+                    cpg.evaluate("() => document.getElementById('comments').scrollIntoView({ block: 'center' })")
+                    cpg.wait_for_timeout(300)
+                    seen[(screen, scheme, "none yet")] = cpg.evaluate(READ, "#comments")
+                    close_ctx(cctx, cpg)
+                    nctx, npg = browser_as(b, None, screen=screen, scheme=scheme)
+                    open_post(npg, post)
+                    npg.click(".cm-say")
+                    npg.wait_for_function(OPEN, arg="commentOutSheet", timeout=8000)
+                    npg.wait_for_timeout(450)
+                    seen[(screen, scheme, "say something?")] = npg.evaluate(READ, "#commentOutSheet")
+                    close_ctx(nctx, npg)
+            low = [(k, v["low"]) for k, v in seen.items() if v["low"]]
+            small = [(k, v["small"]) for k, v in seen.items() if v["small"]]
+            fields = [(k, v["fields"]) for k, v in seen.items() if v["fields"]]
+            lowest = min((v["lowest"], " ".join(k)) for k, v in seen.items())
+            musts = {"answering": ("Post",), "the box": ("Draw", "Flip", "Post"),
+                     "none yet": ("Comments", "Say the first thing"),
+                     "say something?": ("Say something?", "Sign in, and you can answer", "Not now", "Sign in")}
+            phone_only = {"answering": ("Answer Theo", "“That shell spiral is so good"), "the box": ("Say something",)}
+            missing = [(" ".join(k), w) for k, v in seen.items()
+                       for w in musts.get(k[2], ()) + (phone_only.get(k[2], ()) if k[0] == "phone" else ())
+                       if not any(x == w or (len(w) > 3 and x.startswith(w[:24])) for x in v["words"])]
+            check("every word on the new screens (the sheet's title and the words it answers, the box on it and in place, \"Say"
+                  " the first thing\", \"Say something?\" and its words and buttons) reads at 4.5:1 or more on what is painted"
+                  " behind it, every control is 44px or more each way, every text field 16px: phone and desk, light and dark",
+                  not low and not small and not fields and not missing and all(v["read"] >= 1 for v in seen.values()),
+                  f"{sum(v['read'] for v in seen.values())} read, the lowest {lowest}; under 4.5: {low[:3]}; small: {small[:3]};"
+                  f" fields: {fields[:3]}; not read: {missing[:4]}")
+        except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
+            stopped(37, exc)
 
     # ------------------------------------------------------------------ 19
     if part(19, "no page errors, no console errors and no CSP violations"):
