@@ -943,13 +943,18 @@ with sync_playwright() as p:
                     pg.mouse.click(light_at[0], light_at[1])
                 pg.wait_for_timeout(1300)
                 st, row, vts = pg.evaluate(STATE), pg.evaluate(ROW), pg.evaluate("() => window.__vts || []")
+                # A fade started while another runs ends that one at once (the
+                # browser skips it), so "the second began as the first ended"
+                # holds either way: each must also have run its whole length.
                 kept.append((st["kept"] == "light" and st["stamp"] == "light" and row and row["pressed"] == "Light"
-                             and len(vts) == 2 and vts[0]["done"] is not None and vts[1]["t0"] >= vts[0]["done"] - 1,
+                             and len(vts) == 2 and all(x["done"] is not None and x["done"] - x["t0"] >= 270 for x in vts)
+                             and vts[1]["t0"] >= vts[0]["done"] - 1,
                              f"{screen}: kept {st['kept']}, page {st['stamp']}, switch {row and row['pressed']},"
                              f" fades {[{k: round(v, 1) if v else v for k, v in x.items()} for x in vts]}"))
                 close_ctx(ctx, pg)
             check("a tap made while the page fades is kept (Light, 90ms after Dark), and its fade begins only once the"
-                  " first has ended, so the page never jumps from half way", all(o for o, _ in kept), "; ".join(w for _, w in kept))
+                  " first has run its whole length, so the page never jumps from half way", all(o for o, _ in kept),
+                  "; ".join(w for _, w in kept))
         except Exception as exc:  # noqa: BLE001
             stopped(5, exc)
 
