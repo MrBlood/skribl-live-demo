@@ -162,7 +162,7 @@
   <div class="skribl-inline-err" hidden></div>
 {%- endmacro %}
 
-{% macro skribl_inline(public_id, alt='', bp='skribl', canvas_w=None, canvas_h=None, progress=true, title=None, line=true, line_info=None) -%}
+{% macro skribl_inline(public_id, alt='', bp='skribl', canvas_w=None, canvas_h=None, progress=true, title=None, line=true, line_info=None, lead=None) -%}
 {# is-muted and is-silent are the pre-script truth: sound is off by default, and
    nothing yet knows whether this Skribl has any. inlineplayer.js clears
    is-silent when the payload turns out to carry a loop.
@@ -186,7 +186,19 @@
    shows the drawing's shape and keeps mute's place before anybody presses
    play; leave it out and it says what it can until the drawing arrives.
    line=false leaves the line out, for a surface with a transport of its own
-   (the gallery's cards). #}
+   (the gallery's cards).
+
+   `lead` (after v330: the Skribl site's like) is ONE CONTROL OF THE HOST'S
+   at the start of the line, before the scrubber: markup (another macro's
+   output, or Markup; a plain string is escaped like any text). The player
+   sets it in the line's own button dress, the loop button's at the other end
+   (32px tall, its ground, ink, hover and focus ring, a 44px tap area that
+   reaches up to the drawing and only 2px down), and the scrubber gives it
+   room; nothing else on the line moves. Rendered here, so it holds its place
+   from the first paint; it shows when the line does, and steps away with it
+   while a drawing can't be shown. line=false has no line, so no lead. What
+   it does is the host's: Skribl never knows. A click on the line stops at
+   the line, so listen on the control itself (or while capturing). #}
 {%- set shaped = line and canvas_w and canvas_h %}
 <div class="skribl-inline is-muted is-silent{% if line %} has-line{% endif %}{% if shaped %} is-shaped{% endif %}"
      data-skribl-inline
@@ -226,6 +238,9 @@
 {%- if line %}
 <div class="skribl-inline-line is-muted is-silent">
   <div class="skribl-inline-row">
+{%- if lead %}
+    <div class="skribl-inline-lead">{{ lead }}</div>
+{%- endif %}
     <div class="skribl-inline-scrub" aria-label="Scrub"></div>
 {{ _skribl_inline_controls() }}
   </div>

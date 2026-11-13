@@ -1040,34 +1040,49 @@ everyone sees how many, and who liked it is only ever the maker's to see.
     /social/b/<skribl_id>/like      the same, on a drawing shown outside a post
 
 **The heart.** Drawn in our pen, one line round from the notch at the top (the
-mock's own path). On Home's card it sits beside Share, the two things you do,
-after the plays and the comment count; on a post's page and a drawing's own
-page (`/social/b/<id>`) at the right end of the time-and-plays line, riding in
-the 12px either side of it so the line keeps its height. 44px each way,
-`aria-pressed`, named "Like" or "Liked", with how many. It stays empty, just
-its line in the words' second ink, until *you* like it, whatever the number
-beside it says. The heart and its count are one part (`_post.html`, `heart()`,
-and one block of `social.css`, "LIKES"), so its place can change in one go.
+mock's own path), in a pill at the start of the line under the drawing (the
+owner's way 3, "Yes", after "I don't even see the heart to like on many
+pages"): on Home's cards, a post's page and a drawing's own page
+(`/social/b/<id>`) alike. It is that line's lead, Skribl's general seam for
+one control of a host's (docs/INTEGRATION.md, "A control at the line's
+start"), so Skribl dresses it as the loop button at the line's other end:
+32px tall, its lilac ground and the line's ink, its hover and focus ring, a
+44px tap area from the drawing's edge to 2px under the pill, clear of the
+speed's. The scrubber gives it the room (59px with one figure) and nothing
+else moves: a card's foot (plays, comments, Share) and a page's
+time-and-plays line are as they were. `aria-pressed`, named "Like" or "Liked",
+with how many. It stays empty, just its line in the line's ink, until *you*
+like it, whatever the number beside it says. The heart and its count are one
+part (`_post.html`, `heart()`, and one block of `social.css`, "LIKES"), so its
+place can change in one go. Being on the line, it shows when the line does,
+and while a drawing can't be shown the line steps away with it.
 
 **Liking.** A tap draws the line round in blush from the notch (about a third
 of a second), the blush fills in behind it and the grey line fades under it;
 nothing grows, bounces or moves. The same tap takes it back: the blush and its
 line fade and the grey line comes back, nothing un-drawing. Under Reduce
-Motion it only fades. A count that comes fades in, and the heart glides aside
-for it; one that goes fades first, then the heart glides back (nothing glides
+Motion it only fades. A count that comes fades in as the pill grows round it,
+the scrubber giving up its room as it does and the heart never moving; one
+that goes fades first, then the pill closes round the heart (nothing glides
 under Reduce Motion). The page changes at once and tells the site; one
 request at a time a heart, so quick taps end where the last one left them,
 and if the site says no, the heart goes back and the page says why, kindly.
 
 **The liked heart's line** is a new token for a new job, `--heart`, with the
 dot's values (`#e64a78` on light, 3.74:1 on a card where Blooby's blush would
-read 2.65:1; his blush itself on dark, 6.01:1), his blush inside it.
+read 2.65:1; his blush itself on dark, 6.01:1), his blush inside it; Activity's
+small heart wears it. ON THE PILL'S LILAC the line is a step deeper on light,
+`--heart-line` (`#d11a32`, the dots' third step: 4.28:1 on a card's pill and
+4.17:1 on a page's, where `--heart` would read 2.97:1), his blush itself on
+dark (4.89:1 and 6.18:1). The empty heart's line and the count are the line's
+ink: 14.27:1 and 13.93:1 on light, 11.43:1 and 14.44:1 on dark.
 
-**How many** is everyone's, beside the heart, with no number at zero, counted
-by the viewer as comment counts are: a like by anybody hidden from them (a
-block either way, or taken down) is neither shown nor counted, anywhere. Home
-asks once for all its cards (one grouped read a kind, posts and drawings).
-One like a person a thing; you may like your own.
+**How many** is everyone's, in the pill beside the heart, with no number at
+zero (just the heart, a 32px circle), counted by the viewer as comment counts
+are: a like by anybody hidden from them (a block either way, or taken down) is
+neither shown nor counted, anywhere. Home asks once for all its cards (one
+grouped read a kind, posts and drawings). One like a person a thing; you may
+like your own.
 
 **Who may like:** somebody signed in, not taken down, on a post or a drawing
 open to them (the comments' rules, through the same `comments.On`: there for
@@ -1127,11 +1142,12 @@ and on (person, drawing); indexed by the thing and when (a thing's count, and
 who liked it, newest first) and by whose and when (Activity, since you last
 looked and before, each one search).
 
-**Pad and Flip:** the seam is shared. `player.playhead()` is one read-only
+**Pad and Flip:** the seams are shared. `player.playhead()` is one read-only
 method on the in-post player that plays Pad drawings and Flips alike, so a
-like on a Flip keeps its moment the same way; nothing changes in either
-editor.
+like on a Flip keeps its moment the same way; and the line's lead is one slot
+in that player's line, which a Flip's post wears as a drawing's does, so the
+heart sits on both the same. Nothing changes in either editor.
 
 `harness/verify_sociallikes.py` holds it through the demo's own server;
-`verify_inline.py` and `verify_seam.py` hold the seam. DECISIONS.md ("Likes
+`verify_inline.py` and `verify_seam.py` hold the seams. DECISIONS.md ("Likes
 at /social") says what each check was shown red by.

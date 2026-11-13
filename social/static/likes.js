@@ -23,9 +23,15 @@
  * now stand. Opened from a like in Activity (#liked), the line glows a moment
  * in the note's tint, as a comment does when you land on it.
  *
+ * THE HEART SITS ON THE DRAWING'S OWN LINE (the owner's way 3), at its start:
+ * the player's lead (Skribl's seam, docs/INTEGRATION.md), which Skribl dresses
+ * as its loop button and makes room for.
+ *
  * KIND, NEVER JUMPY: the heart draws or fades (social.css, "LIKES"); a count
- * that comes or goes fades, and what it moves glides there, as does the line
- * of who. Under Reduce Motion nothing moves: things fade where they sit.
+ * that comes or goes fades, and the pill grows or shrinks round the heart,
+ * which keeps its place (social.css), the scrubber beside it giving up or
+ * taking back its room a frame at a time, as the line of who opens and
+ * closes. Under Reduce Motion nothing moves: things fade where they sit.
  *
  * The words are the page's ([data-like-words]): this file says nothing of
  * its own.
@@ -76,19 +82,21 @@
   }
 
   /* ---- what moves, glides ------------------------------------------------- */
-  /* `change` alters the layout around `el`; whatever of `els` it moves glides
-     from where it was to where it is (nothing under Reduce Motion). */
-  function glide(els, change) {
-    var before = els.map(function (e) { return e.getBoundingClientRect(); });
+  /* `change` makes the heart wider or narrower (a count that comes or goes):
+     it grows or shrinks from where it was to where it is, and the line's
+     scrubber beside it gives up or takes back its room as it does, a frame at
+     a time (nothing under Reduce Motion). */
+  function grow(b, change) {
+    var w0 = b.getBoundingClientRect().width;
+    /* One still going ends where it is (w0): measured without it, so the
+       width it is going to is the pill's own. */
+    if (b._grow) b._grow.cancel();
     change();
-    if (still()) return;
-    els.forEach(function (e, i) {
-      if (!e.isConnected || !e.animate) return;
-      var r = e.getBoundingClientRect();
-      var dx = before[i].left - r.left, dy = before[i].top - r.top;
-      if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) return;
-      e.animate([{ transform: 'translate(' + dx + 'px, ' + dy + 'px)' }, { transform: 'none' }], GLIDE);
-    });
+    var w1 = b.getBoundingClientRect().width;
+    if (still() || !b.animate || Math.abs(w1 - w0) < 0.5) return;
+    b.style.overflow = 'hidden';
+    var a = b._grow = b.animate([{ width: w0 + 'px' }, { width: w1 + 'px' }], GLIDE);
+    a.onfinish = a.oncancel = function () { if (b._grow === a) { b._grow = null; b.style.overflow = ''; } };
   }
   function fade(el, from, to, done) {
     if (!el.animate) { if (done) done(); return null; }
@@ -96,14 +104,6 @@
     a.onfinish = function () { if (done) done(); };
     return a;
   }
-  /* The heart's icon, and what sits after it on its row: what a count that
-     comes or goes can move. */
-  function movers(b) {
-    var out = [b.querySelector('.ic-heart')];
-    for (var s = b.nextElementSibling; s; s = s.nextElementSibling) out.push(s);
-    return out.filter(Boolean);
-  }
-
   /* ---- the heart ---------------------------------------------------------- */
   function count(b, n) {
     var span = b.querySelector('.lk-n');
@@ -121,15 +121,15 @@
       span = doc.createElement('span');
       span.className = 'lk-n';
       span.textContent = String(n);
-      glide(movers(b), function () { b.appendChild(span); });
+      grow(b, function () { b.appendChild(span); b.classList.remove('is-zero'); });
       fade(span, 0, 1, function () { span.getAnimations().forEach(function (a) { a.cancel(); }); });
     } else if (span && !span._going) {
       span._going = fade(span, 1, 0, function () {
         if (!span._going) return;
         span._going = null;
-        glide(movers(b), function () { span.remove(); });
+        grow(b, function () { span.remove(); b.classList.add('is-zero'); });
       });
-      if (!span._going) span.remove();
+      if (!span._going) { span.remove(); b.classList.add('is-zero'); }
     }
   }
   /* What the heart shows: liked or not (a change draws or fades: social.css,
@@ -156,10 +156,9 @@
   }
 
   /* Where the drawing is, on its own replay clock, if it is playing: the
-     playhead seam of the player on this heart's card or page. Else null. */
+     playhead seam of the player whose line this heart is on. Else null. */
   function moment(b) {
-    var holder = b.closest('.post-card, .post-page');
-    var art = holder && holder.querySelector('.post-art');
+    var art = b.closest('.post-art');
     if (!art || !window.SkriblInline) return null;
     var players = window.SkriblInline.mount(art);
     var p = players && players[0];
@@ -263,6 +262,9 @@
     first: function () { return outWrap.querySelector('.post-sheet-acts [data-make-close]'); }
   }) : null;
 
+  /* Read while capturing: the heart sits on the player's line, which keeps
+     the clicks on it to itself (a post that is a link must not navigate on a
+     scrub), so one listened for as it bubbles would never come. */
   doc.addEventListener('click', function (e) {
     var t = e.target && e.target.closest ? e.target : null;
     if (!t) return;
@@ -279,7 +281,7 @@
     }
     var by = t.closest('[data-like-by]');
     if (by && who) { e.preventDefault(); who.open(by); }
-  });
+  }, true);
 
   /* ---- landing from Activity (#liked) ------------------------------------- */
   (function land() {

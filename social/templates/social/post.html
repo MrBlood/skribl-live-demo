@@ -13,11 +13,12 @@
     comments and all (the owner's yes, Nov 12: "whatever you open has the
     comment box"). Its ⋯ is the feed's.
 
-    LIKES (phase 2; the likes mock, "I like d."): the heart and how many at
-    the right end of the time-and-plays line (_post.html, heart()), and for
-    its maker alone "Liked by…" under it, opening who (_likes.html). #}
+    LIKES (phase 2; the likes mock, "I like d.", and way 3): the heart and how
+    many at the start of the line under the drawing (_post.html, heart(), the
+    player's lead), and for its maker alone "Liked by…" under the
+    time-and-plays line, opening who (_likes.html). #}
 {% extends 'social/base.html' %}
-{% from 'social/_post.html' import post_sheets, post_words, face, player, heart with context %}
+{% from 'social/_post.html' import post_sheets, post_words, face, player with context %}
 {% from 'social/_likes.html' import liked_by, like_sheets with context %}
 {% from 'social/_safety.html' import safety_sheets with context %}
 {% from 'social/_comments.html' import comments_section, comment_sheets with context %}
@@ -80,8 +81,7 @@
   <div class="post-art">{{ player(card) }}
     {% if card.sk and card.sk.caption %}<p class="post-caption">{{ card.sk.caption }}</p>{% endif %}
   </div>
-  <p class="post-meta{% if not card.down %} lk-meta{% endif %}"><span class="lk-meta-words"><time datetime="{{ when_iso(p.created_at) }}" data-when="at">{{ when_day(p.created_at) }}</time>{% if card.plays %} · {{ card.plays }}{% endif %}</span>
-    {%- if not card.down %}{{ heart(card, 'page') }}{% endif %}</p>
+  <p class="post-meta"><time datetime="{{ when_iso(p.created_at) }}" data-when="at">{{ when_day(p.created_at) }}</time>{% if card.plays %} · {{ card.plays }}{% endif %}</p>
   {% if lk and lk.line %}{{ liked_by(lk) }}{% endif %}
   <div class="post-actions">
     <button class="btn" type="button" data-post-share>{{ ic.share() }}<span>Share</span></button>

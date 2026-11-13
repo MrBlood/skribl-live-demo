@@ -13,12 +13,15 @@
                       the @handle still go to the person's page. A tap
                       anywhere else on the card opens its page too (posts.js,
                       "ANYWHERE ON A CARD"), but on the drawing, which plays.
-    heart(c, where)   the like's heart and how many (likes, phase 2): `where`
-                      "foot" on Home's card, beside Share; "page" at the right
-                      end of a post's or a drawing's time-and-plays line. It
-                      stays empty until THIS viewer likes it; the count is
-                      everyone's, none at zero. Signed out, a tap raises the
-                      small sheet that says how (_likes.html, likes.js).
+    heart(c)          the like's heart and how many (likes, phase 2; the
+                      owner's way 3, "Yes"): a pill at the start of the line
+                      under the drawing, on Home's card and on a post's or a
+                      drawing's page alike, given to the player as its line's
+                      lead (Skribl's seam: docs/INTEGRATION.md). It stays
+                      empty until THIS viewer likes it; the count is
+                      everyone's, inside the pill, none at zero. Signed out, a
+                      tap raises the small sheet that says how (_likes.html,
+                      likes.js). Nothing taken down has one.
     post_sheets()     the ⋯ sheet ("This post": Copy link, Share…, and Report
                       this post, or on your own Delete post), the report
                       sheet (the Gallery's own reasons and words, into
@@ -41,14 +44,14 @@
 {%- endmacro %}
 
 {% macro player(c) -%}
-{%- set p = c.post %}{% set sk = c.sk -%}
-{%- if sk and sk.canvas_w %}{{ skribl_inline(p.skribl_id, canvas_w=sk.canvas_w, canvas_h=sk.canvas_h, line_info=sk.line, bp=skribl_bp) }}
-{%- else %}{{ skribl_inline(p.skribl_id, bp=skribl_bp) }}{% endif %}
+{%- set p = c.post %}{% set sk = c.sk %}{% set lead = heart(c) if not c.down else none -%}
+{%- if sk and sk.canvas_w %}{{ skribl_inline(p.skribl_id, canvas_w=sk.canvas_w, canvas_h=sk.canvas_h, line_info=sk.line, bp=skribl_bp, lead=lead) }}
+{%- else %}{{ skribl_inline(p.skribl_id, bp=skribl_bp, lead=lead) }}{% endif %}
 {%- endmacro %}
 
-{% macro heart(c, where) -%}
+{% macro heart(c) -%}
 {%- set n = c.likes.n %}{% set mine = c.likes.mine -%}
-<button class="lk-heart lk-{{ where }}{% if mine %} is-liked{% endif %}" type="button" data-first="{{ c.who.display_name.split(' ')[0] }}"
+<button class="lk-heart{% if mine %} is-liked{% endif %}{% if not n %} is-zero{% endif %}" type="button" data-first="{{ c.who.display_name.split(' ')[0] }}"
         {%- if me %} data-like="{{ c.like }}"{% else %} data-like-out aria-haspopup="dialog" aria-controls="likeOutSheet" aria-expanded="false"{% endif %}
         aria-pressed="{{ 'true' if mine else 'false' }}" aria-label="{{ 'Liked' if mine else 'Like' }}{% if n %}, {{ n }} {{ 'like' if n == 1 else 'likes' }}{% endif %}">{{ ic.heart() }}{% if n %}<span class="lk-n">{{ n }}</span>{% endif %}</button>
 {%- endmacro %}
@@ -78,8 +81,6 @@
     {% if c.sk %}<a class="post-plays" href="{{ c.url }}">{{ ic.play() }}<span>{{ c.plays or 'No plays yet' }}</span></a>{% else %}<span></span>{% endif %}
     {#- The comments, even at none: the icon alone, "Comment", a way to the box. #}
     <a class="post-plays post-count" href="{{ c.url }}#comments" aria-label="{{ ('%d comment%s' % (c.comments, '' if c.comments == 1 else 's')) if c.comments else 'Comment' }}">{{ ic.comment() }}{% if c.comments %}<span>{{ c.comments }}</span>{% endif %}</a>
-    {#- The heart beside Share: the two things you do, together (likes). #}
-    {% if not c.down %}{{ heart(c, 'foot') }}{% endif %}
     <button class="icon-btn post-share" type="button" data-post-share aria-label="Share this post">{{ ic.share() }}</button>
   </footer>
 </article>
