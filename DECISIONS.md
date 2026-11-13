@@ -37237,3 +37237,58 @@ fonts; the button's width comes from its longer word, so it holds in any),
 PostgreSQL itself (the chain's DDL read offline; the Following read's plan is
 SQLite's, a MULTI-INDEX OR on the posts' person index; CI's postgres job runs
 the suites after the merge), and the live site.
+
+## After v330 -- The comment box keeps to its column
+
+Main's full run after #883 (the comment box as an icon) went red in one row
+on GitHub's machines, on both databases, and again on Following's branch
+run: verify_socialcomments section 12, "the box opens right under the
+heading, as wide as the column", read the desk box 350 wide in a 340 column.
+Here it read 340.
+
+THE CAUSE, a defect and not the instrument. This box's sans is Inter
+(fontconfig maps system-ui and sans-serif to it); GitHub's ubuntu-latest has
+DejaVu Sans, which is wider. In DejaVu, Draw, Flip and Post need 320 of the
+310 the box's line has. The fold that opens the box is a grid whose one
+column was auto, and an auto column grows to the min-content of what is in
+it once the fold is still (overflow visible), so the box grew to 350 and its
+right edge left the column. The same happened here, in Inter, once the
+counter showed ("5 left", from a hundred characters left): 360 in 340, and
+Post slid 20px right while the person typed. So it was never only GitHub's
+font: anybody typing a long comment on a desk would have seen the box spill
+past its column.
+
+Reproduced here by standing in for GitHub's font: a fonts.conf that maps
+system-ui and sans-serif to DejaVu Sans, handed to the suite as
+FONTCONFIG_FILE (Chromium reads it), read the same 350 in 340 to the pixel.
+That is a way to see what CI's fonts do without waiting for CI.
+
+THE FIX, in social.css (the fold's block and the comments' block):
+- The fold's column is minmax(0, 1fr), and the fold min-width 0, so nothing
+  in it can widen it.
+- The box's line wraps. Draw, Flip and Post share it while they fit; when
+  they don't (a wide font, larger text), Post keeps to the right on the next.
+- The counter reads on its own line under Post, at its right edge, and makes
+  no line at all while it is empty. Post never moves while someone types.
+In this box's font, and in the mock, the box looks exactly as before until
+the counter shows; the counter now sits under Post instead of beside it.
+Home's composer is unchanged: its line has room for the counter.
+
+THE CHECK: a new row in section 12 asks it of the box whatever is in it: the
+chips' words spread (6px letter-spacing, standing in for a wider font or
+larger text), something 600px wide put in the box, typing to the last
+hundred characters, and the same in an answer's box. The box stays as wide
+as its column, the chips and Post inside it, Post at its right edge, no gap
+under Post while there is no counter, the counter painted under Post at its
+right edge, and Post where it was. Shown red on the old CSS here (the
+counter: 360 in 340, Post moved 20px). Each of the fix's five parts removed
+alone (the fold's column, the wrap, Post's right margin, the counter's own
+line, its :empty) turned the row red, and the unbroken control stayed green.
+The old row is green again in DejaVu.
+
+Pad and Flip: not touched; the box is the site's. The four: kind (Post stays
+under your finger while you type, and nothing spills off the column), simple
+(one line while it fits), playful and powerful (unchanged: a comment to its
+last character).
+
+It rides on Following's PR (#884), which was waiting on main going green.
