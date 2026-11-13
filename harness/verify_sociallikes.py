@@ -918,7 +918,7 @@ with sync_playwright() as p:
                   " pen's heart (one line drawn round), its blush and ink hidden, its line the line's own ink",
                   h and h["pressed"] == "false" and h["label"] == "Like" and h["n"] is None and not h["digits"]
                   and h["pen"] and h["fill"] == 0 and h["ink"] == 0 and h["line"] == 1
-                  and h["lineColor"] == (ln or {}).get("heart", {}).get("loopInk") and not h["liked"],
+                  and h["lineColor"] == ((ln or {}).get("heart") or {}).get("loopInk") and not h["liked"],
                   json.dumps({k: h.get(k) for k in ("pressed", "label", "n", "pen", "fill", "ink", "line", "lineColor")} if h else None))
             check("nothing else moves: a line with the heart is the height of one without (its maker's taken-down card,"
                   " which has none), and nothing but the scrubber gives it room",
