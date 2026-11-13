@@ -610,6 +610,47 @@ BOX_STILL = """() => { const s = document.getElementById('commentBoxSheet'), f =
   const m = s && s.querySelector('.make-sheet'), cs = m && getComputedStyle(m);
   return !!((s && !s.hidden && s.classList.contains('is-open') && cs.transform === 'none' && +cs.opacity === 1)
             || (f && f.classList.contains('is-still'))); }"""
+# Post's place in the box: its left edge, and how far below the first chip it
+# sits (the same line, or the next), so a counter that moved it shows.
+POST_AT = """() => { const p = document.querySelector('[data-cm-post]').getBoundingClientRect();
+  const boxEl = document.querySelector('[data-cm-box]'), box = boxEl.getBoundingClientRect(), cs = getComputedStyle(boxEl);
+  const c = document.querySelector('[data-cm-box] .composer-acts .chip').getBoundingClientRect();
+  return { x: Math.round(p.left), dy: Math.round(p.top - c.top),
+           edge: Math.round(box.right - parseFloat(cs.paddingRight) - p.right),
+           foot: Math.round(box.bottom - parseFloat(cs.paddingBottom) - p.bottom) }; }"""
+# When what is in the box is wider than its line, whatever the font: the chips'
+# words spread (as a wider font or larger text would make them), then something
+# far wider than the column put in the box. The box keeps to its column, the
+# chips and Post keep inside it, and Post keeps to its right edge. Restored
+# after; set through the style object, which the page's policy allows.
+TOO_WIDE = """() => { const boxEl = document.querySelector('[data-cm-box]'), sec = document.getElementById('comments');
+  const words = [...boxEl.querySelectorAll('.composer-acts .chip span')];
+  words.forEach(w => { w.style.letterSpacing = '6px'; });
+  const cs = getComputedStyle(boxEl), inner = boxEl.getBoundingClientRect().right - parseFloat(cs.paddingRight);
+  const box = boxEl.getBoundingClientRect(), post = boxEl.querySelector('[data-cm-post]').getBoundingClientRect();
+  const chips = [...boxEl.querySelectorAll('.composer-acts .chip')].map(c => c.getBoundingClientRect().right);
+  const spread = { box: Math.round(box.width), col: Math.round(sec.getBoundingClientRect().width),
+                   edge: Math.round(inner - post.right), chipsIn: chips.every(r => r <= inner + 0.5) };
+  words.forEach(w => { w.style.letterSpacing = ''; });
+  const wide = document.createElement('div');
+  wide.style.width = '600px'; wide.style.height = '1px';
+  boxEl.appendChild(wide);
+  const withWide = Math.round(boxEl.getBoundingClientRect().width);
+  wide.remove();
+  return Object.assign(spread, { withWide: withWide }); }"""
+# Near the limit: the box against what holds it (the comments' column, or the
+# comment it answers), Post's place, and the counter, asked of what is painted.
+NEAR_LIMIT = """() => { const q = s => document.querySelector(s);
+  const boxEl = q('[data-cm-box]'), left = q('[data-cm-left]');
+  left.scrollIntoView({ block: 'center' });
+  const holder = (boxEl.closest('.cm') || document.getElementById('comments')).getBoundingClientRect();
+  const box = boxEl.getBoundingClientRect(), post = q('[data-cm-post]').getBoundingClientRect(), lr = left.getBoundingClientRect();
+  const chip = q('[data-cm-box] .composer-acts .chip').getBoundingClientRect();
+  const hit = document.elementFromPoint(lr.left + lr.width / 2, lr.top + lr.height / 2);
+  return { text: left.textContent.trim(), painted: !!hit && (hit === left || left.contains(hit)),
+           box: Math.round(box.width), holder: Math.round(holder.width), right: Math.round(box.right),
+           holderRight: Math.round(holder.right), x: Math.round(post.left), dy: Math.round(post.top - chip.top),
+           under: Math.round(lr.top - post.bottom), edge: Math.round(post.right - lr.right) }; }"""
 GONE = """() => { const s = document.getElementById('commentBoxSheet'), f = document.querySelector('[data-cm-fold]');
   return (!s || s.hidden) && (!f || (!f.classList.contains('is-open') && f.parentElement.id === 'comments')); }"""
 # The icon, the heading it sits in, and the box folded under it.
@@ -1716,7 +1757,7 @@ with sync_playwright() as p:
             juno = someone(b, "juno", "Juno Park")
             theo = someone(b, "theo", "Theo Lind")
             post = make_post(juno, "Section 12, a snail", seed=121)
-            said(theo, post, "Section 12, beside the drawing")
+            cid = said(theo, post, "Section 12, beside the drawing")
             dctx, dpg = browser_as(b, juno, "desk", "light")
             open_post(dpg, post)
             WHERE = """() => { const r = s => document.querySelector(s).getBoundingClientRect();
@@ -1728,6 +1769,20 @@ with sync_playwright() as p:
             where = dpg.evaluate(WHERE)
             _, err = steps(lambda: open_box(dpg))
             opened = dpg.evaluate(WHERE)
+            # TYPING TO THE LAST HUNDRED (the counter, "5 left"), in the box and in
+            # an answer's: the box keeps to its column (main's run after #883 read it
+            # 350 in a 340 column in GitHub's wider font, and here the counter pushed
+            # it to 360), Post stays where it was, and the counter reads on its own
+            # line under Post, at its right edge.
+            before = dpg.evaluate(POST_AT)
+            spread = dpg.evaluate(TOO_WIDE)
+            dpg.fill("#cmWords", "word " * 99)
+            dpg.wait_for_timeout(200)
+            near = dpg.evaluate(NEAR_LIMIT)
+            _, err2 = steps(lambda: answer_box(dpg, cid))
+            dpg.fill("#cmWords", "word " * 99)
+            dpg.wait_for_timeout(200)
+            answering = dpg.evaluate(NEAR_LIMIT)
             close_ctx(dctx, dpg)
             check("on a desk the comments sit beside the drawing, under Share and Make your own, in the same column, the icon at"
                   " the end of their heading within reach; the box opens right under the heading, as wide as the column",
@@ -1735,6 +1790,20 @@ with sync_playwright() as p:
                   and where["icon"] == 0 and where["onscreen"] and err is None and opened["box"] == opened["width"]
                   and opened["boxTop"] == 10,
                   f"{where}; opened {opened}; stopped {err}")
+            check("the box keeps to its column whatever is in it (a wider font, larger words, something far too wide):"
+                  " Post at its right edge, nothing past it, no gap under Post; typing to the last hundred characters,"
+                  " the counter (\"5 left\") reads on its own line under Post, at its right edge, and Post stays where"
+                  " it was; the same in an answer's box",
+                  abs(before["edge"]) <= 1 and abs(before["foot"]) <= 1
+                  and spread["box"] == spread["col"] and spread["chipsIn"] and abs(spread["edge"]) <= 1
+                  and spread["withWide"] == spread["col"]
+                  and near["text"] == "5 left" and near["painted"] and near["box"] == near["holder"]
+                  and near["right"] <= near["holderRight"] and near["x"] == before["x"] and near["dy"] == before["dy"]
+                  and near["under"] >= 0 and abs(near["edge"]) <= 1
+                  and err2 is None and answering["text"] == "5 left" and answering["painted"]
+                  and answering["box"] <= answering["holder"] and answering["right"] <= answering["holderRight"]
+                  and answering["under"] >= 0 and abs(answering["edge"]) <= 1,
+                  f"before {before}; too wide {spread}; near {near}; answering {answering}; stopped {err2}")
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(12, exc)
 

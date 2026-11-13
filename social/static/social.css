@@ -934,7 +934,16 @@ button.make-door { width: 100%; border: 0; font: inherit; text-align: left; curs
 .comments-title .cm-count { margin-left: 2px; color: var(--ink-2); font-size: 18px; font-weight: 600; }
 .cm-box { margin: 0 0 8px; padding: 14px; border-radius: 20px; }
 .cm-box .face-ring.composer-face { --skribl-face-size: 36px; width: 36px; height: 36px; }
-.cm-box .composer-acts { margin-top: 10px; }
+.cm-box .composer-acts { margin-top: 10px; flex-wrap: wrap; row-gap: 6px; }
+/* THE BOX KEEPS TO ITS COLUMN, whatever the font and however much is typed
+   (main's run after #883: 350 in a 340 column in GitHub's wider font, and
+   360 here once the counter showed). Draw, Flip and Post share a line while
+   they fit; when they don't, Post keeps to the right on the next. The counter
+   ("5 left") reads on its own line under Post, at its right edge, so Post
+   never moves while someone types. */
+.cm-box .composer-post { margin-left: auto; }
+.cm-box .composer-left { order: 1; flex: 0 0 100%; margin-left: 0; text-align: right; }
+.cm-box .composer-left:empty { display: none; }
 .cm-box .chip { min-height: 44px; padding: 0 16px; }
 /* A drawing waiting in the box, and a drawing answer: the mock's 150px, in
    the drawing's own shape (Skribl's in-post player), on the words' edge. */
@@ -999,7 +1008,10 @@ button.make-door { width: 100%; border: 0; font: inherit; text-align: left; curs
    pops. "Say the first thing" folds the same way, in step with the box: one
    room closes as the other opens, and posting the first comment takes its
    place. comments.js says open or closed; the stylesheet moves them. */
-.cm-fold, .cm-first-fold { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 0.32s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.cm-fold, .cm-first-fold {
+  display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: 0fr; min-width: 0;
+  transition: grid-template-rows 0.32s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
 .cm-fold > .cm-fold-in, .cm-first-fold > .cm-fold-in {
   min-height: 0; overflow: hidden; visibility: hidden; transition: visibility 0s linear 0.32s;
 }
