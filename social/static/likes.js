@@ -14,6 +14,12 @@
  * from Skribl's in-post player through its playhead seam (player.playhead():
  * docs/INTEGRATION.md, "Where the playhead is"); nothing when it was not.
  *
+ * THE DOTS AND THE HEARTS THAT RISE (part 2, the owner's D): the moments are
+ * small dots on the drawing's line, drawn by the player from the page's
+ * marks (Skribl's marks seam: "Marks on the line"); yours follows your
+ * heart. As the replay reaches a dot, a heart rises from it and fades, at
+ * most three in the air; under Reduce Motion the dot glows instead.
+ *
  * SIGNED OUT the heart raises a small sheet that says how (social.js's
  * SocialSheet, as Make's); Sign in comes back to the same page, and nothing
  * is pressed for them.
@@ -144,27 +150,94 @@
     count(b, n);
     b.setAttribute('aria-label', say(liked ? 'lk_liked' : 'lk_like')
       + (n > 0 ? ', ' + say(n === 1 ? 'lk_one' : 'lk_many', { n: n }) : ''));
+    own(b);
   }
   function stateOf(b) {
     if (!b._lk) {
-      var span = b.querySelector('.lk-n');
+      var span = b.querySelector('.lk-n'), at = b.getAttribute('data-like-at');
       var liked = b.getAttribute('aria-pressed') === 'true', n = span ? parseInt(span.textContent, 10) || 0 : 0;
-      /* What they see, and what the site last said. */
-      b._lk = { liked: liked, n: n, sure: liked, sureN: n, at: null, busy: false };
+      /* What they see, and what the site last said; `at`, where theirs
+         landed (the site's, until a tap keeps a new one). */
+      b._lk = { liked: liked, n: n, sure: liked, sureN: n, at: at === null ? null : +at, busy: false, base: null };
     }
     return b._lk;
   }
 
+  /* The player whose line this heart is on (Skribl's, mounted once). */
+  function playerOf(b) {
+    var art = b.closest('.post-art');
+    return art && window.SkriblInline ? window.SkriblInline.mount(art)[0] || null : null;
+  }
   /* Where the drawing is, on its own replay clock, if it is playing: the
      playhead seam of the player whose line this heart is on. Else null. */
   function moment(b) {
-    var art = b.closest('.post-art');
-    if (!art || !window.SkriblInline) return null;
-    var players = window.SkriblInline.mount(art);
-    var p = players && players[0];
+    var p = playerOf(b);
     var h = p && p.playhead ? p.playhead() : null;
     return h && h.playing && isFinite(h.ms) ? Math.max(0, Math.round(h.ms)) : null;
   }
+
+  /* ---- the dots on the line, and the hearts that rise --------------------- */
+  /* THE DOTS are the player's (Skribl's marks seam, docs/INTEGRATION.md
+     "Marks on the line"): the page gives it the drawing's moments, counted by
+     this viewer, and it puts one small dot where its line puts each, a step
+     redder where they double (social.css says the colours). YOUR OWN DOT
+     FOLLOWS YOUR HEART: liked while it plays, a dot comes where you tapped;
+     taken back, yours goes; one that did not take is back as it was. The
+     others' moments (`base`) are the line's own less yours, read once. */
+  function own(b) {
+    var st = stateOf(b), p = playerOf(b);
+    if (!p || !p.marks) return;
+    if (!st.base) {
+      var took = !st.sure || st.at === null;
+      st.base = [];
+      p.marks().forEach(function (m) {
+        var n = m.n > 0 ? m.n : 1;
+        if (!took && m.ms === st.at) { took = true; n--; }
+        if (n > 0) st.base.push({ ms: m.ms, n: n });
+      });
+    }
+    p.marks(st.base.concat(st.liked && st.at !== null ? [{ ms: st.at, n: 1 }] : []));
+  }
+
+  /* THE HEARTS THAT RISE (the owner's D: "then heart goes up when it gets to
+     that dot"). As the playhead reaches a dot in normal play the player says
+     so (skribl:mark, from the dot; never for a scrub, a seek, a jump or a
+     page put away and back: Skribl's rule), and a small heart rises from it
+     about 30px over the drawing's paper and fades, gone in a second: it
+     fades in as it starts, never popping, and the dot stays. A redder dot
+     sends one heart. It wears the deeper blush in both themes, as the paper
+     it crosses is the drawing's (social.css, --heart-paper).
+     CALM AT EVERY SPEED (16x, or Fit on a two-hour piece, passes dots by the
+     dozen): at most three hearts in the air, and each at least a third of a
+     second after the one before; a dot reached meanwhile sends none. Nothing
+     waits its turn, so no heart rises late from a dot the playhead has left.
+     UNDER REDUCE MOTION nothing rises: the dot glows a moment, a soft halo of
+     its own colour fading in and out where it sits, by the same rule. */
+  var rising = 0, lastRise = -1e9;
+  doc.addEventListener('skribl:mark', function (e) {
+    var dot = e.target, art = dot && dot.closest ? dot.closest('.post-art') : null;
+    var pen = art && art.querySelector('.lk-heart .ic-heart'), now = performance.now();
+    if (!pen || !pen.animate || rising >= 3 || now - lastRise < 330) return;
+    var r = dot.getBoundingClientRect(), a = art.getBoundingClientRect(), el = doc.createElement('span'), go;
+    el.style.left = (r.left + r.width / 2 - a.left) + 'px';
+    el.style.top = (r.top + r.height / 2 - a.top) + 'px';
+    if (still()) {
+      el.className = 'lk-glow';
+      el.style.background = getComputedStyle(dot).backgroundColor;
+      art.appendChild(el);
+      go = el.animate([{ opacity: 0 }, { opacity: 0.32, offset: 0.35 }, { opacity: 0 }], { duration: 900, easing: 'ease' });
+    } else {
+      el.className = 'lk-rise';
+      el.appendChild(pen.cloneNode(true));
+      art.appendChild(el);
+      go = el.animate([{ opacity: 0, transform: 'translateY(0)' }, { opacity: 1, transform: 'translateY(-6px)', offset: 0.18 },
+                       { opacity: 0, transform: 'translateY(-30px)' }],
+                      { duration: 1000, easing: 'cubic-bezier(0.25, 0.6, 0.35, 1)', fill: 'both' });
+    }
+    rising++;
+    lastRise = now;
+    go.onfinish = go.oncancel = function () { rising--; el.remove(); };
+  });
 
   function tap(b) {
     var st = stateOf(b);

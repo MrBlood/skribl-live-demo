@@ -389,6 +389,18 @@
 .skribl-inline-lead{flex:none;margin-right:6px}
 .skribl-inline-lead>*{position:relative;display:flex;align-items:center;justify-content:center;gap:4px;min-width:32px;height:32px;padding:0 8px;border:0;border-radius:999px;font:inherit;font-weight:600;text-decoration:none;cursor:pointer}
 .skribl-inline-lead>*::after{content:'';position:absolute;inset:-10px -6px -2px}
+/* MARKS ON THE LINE (skribl_inline marks=..., player.marks(): a host's
+   moments). A 5px dot each, over the scrubber, in the middle of the 17px
+   between it and the drawing, never taking a tap (the scrubber's reach is
+   under them). Their colour is the host's: --mark, and --mark-2 and --mark-3
+   for a dot standing for two, or three or more (data-n), each falling back
+   to --mark, and that to --accent. One that comes fades in. Why:
+   inlineplayer.js. */
+.skribl-inline-marks{position:absolute;inset:0;pointer-events:none}
+.skribl-inline-marks i{--m:var(--mark,var(--accent,#7c5cff));position:absolute;top:-11px;width:5px;height:5px;margin-left:-2.5px;border-radius:50%;background:var(--m);transition:opacity .2s,background-color .2s}
+@starting-style{.skribl-inline-marks i{opacity:0}}
+.skribl-inline-marks [data-n="2"]{background:var(--mark-2,var(--m))}
+.skribl-inline-marks [data-n="3"]{background:var(--mark-3,var(--m))}
 
 /* The optional title line under the player (skribl_inline title=...). */
 .skribl-inline-title{display:flex;align-items:baseline;gap:8px;margin:8px 2px 0;font-size:14px;line-height:1.3}

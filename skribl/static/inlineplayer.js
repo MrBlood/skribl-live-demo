@@ -819,6 +819,12 @@
     var RL = global.SkriblReplayLine, lineUI = null, scrubUI = null, bar = null, sayEl = null;
     var info = null, pagesN = 0, shapeCols = null, drawnMs = null, held = false, pendingF = null;
     var clockFn = null;   // replay ms -> the artist's, for the scrubber's bubble
+    /* MARKS ON THE LINE, a host's (docs/INTEGRATION.md): its moments on the
+     * drawing's own clock, [{ ms, n }]; the dots they make (`dots`: each its
+     * place, its moment, how many it stands for and its element) in `layer`,
+     * placed for a scrubber `markW` wide; and where the clock was in normal
+     * play (`markAt`, from play() on) and when (`markWall`). */
+    var marks = [], dots = [], layer, markW, markAt, markWall;
     var state = 'idle';                       // idle | playing | paused
     /* `lap`: the passes already played, so the song keeps its place across
      * them (it is lap + elapsed into its loop); zero when the drawing is put
@@ -949,6 +955,11 @@
        * clock is running. It reads; it never moves anything. Any host's, for
        * any use: the Skribl site keeps it with a like. */
       playhead: function () { return { ms: Math.min(curMs(), totalMs), playing: state === 'playing' }; },
+      /* MARKS ON THE LINE, a host's to give (docs/INTEGRATION.md, "Marks on
+       * the line"): given a list of { ms, n }, they are those now; it answers
+       * the list it holds. The dots are the line's (placeMarks), and so is
+       * saying when the playhead reaches one (reach). */
+      marks: function (list) { if (list) { marks = [].concat(list); markW = -1; paintLine(); } return marks.slice(); },
       /* The drawing's ground, which a full screen wears to its edges. */
       ground: function () { return under ? under.color : null; }
     };
@@ -1220,6 +1231,9 @@
         if (fitB) fitB.hidden = !!flipFrames;
       }
       if (scrubUI) scrubUI.reset();
+      /* The drawing says where its moments are now (a Flip's, for the first
+       * time): the marks are placed again at the next paint. */
+      markW = -1;
       renderIdle();
     }
 
@@ -1466,6 +1480,70 @@
       var f = frac();
       scrubUI.paint(f);
       if (global.SkriblScrub) global.SkriblScrub.sync(bar, f);
+      /* The marks again when the scrubber's width or the marks changed (a
+       * phone's line doubles what a desk's keeps apart). */
+      if (marks.length + dots.length && bar.clientWidth !== markW) placeMarks();
+    }
+
+    /* MARKS ON THE LINE (docs/INTEGRATION.md, "Marks on the line"): a 5px dot
+     * over the scrubber for each moment a host gives, WHERE THE LINE PUTS IT,
+     * by the playhead's own mapping (where()), so a piece played with its
+     * long pauses squeezed lines up as the playhead does. Dots that would
+     * overlap are one, at their middle and their moments' middle, standing
+     * for them all: data-n 1, 2, or 3 for three or more; never bigger, never a
+     * number (the owner's "If it doubles someone it gets redder"). A dot keeps
+     * its element while it stands for the same first moment, so a moment
+     * added or taken away changes one dot (its colour glides); one that comes
+     * fades in (inlineplayer.css, @starting-style) and one that goes fades
+     * out. They take no taps (inlineplayer.css). */
+    function placeMarks() {
+      var W = markW = bar.clientWidth, g = [], was = {}, i, e;
+      if (!layer) (layer = bar.appendChild(doc.createElement('span'))).className = 'skribl-inline-marks';
+      dots.forEach(function (d) { was[d.k] = d.e; });
+      marks.forEach(function (m) {
+        var f = W && m && m.ms >= 0 ? where(m.ms) : null;
+        if (f != null) g.push({ f: f, ms: +m.ms, n: +m.n || 1, k: +m.ms });
+      });
+      /* Left to right, each dot joins the one before when they would
+       * overlap; the one they make is never further left than the first, so
+       * it never comes back within reach of the dot before that. */
+      g.sort(function (p, q) { return p.f - q.f; });
+      dots = [];
+      g.forEach(function (d) {
+        var l = dots[dots.length - 1], n;
+        if (l && (d.f - l.f) * W < 5) { n = l.n + d.n; l.f = (l.f * l.n + d.f * d.n) / n; l.ms = (l.ms * l.n + d.ms * d.n) / n; l.n = n; }
+        else dots.push(d);
+      });
+      dots.forEach(function (d) {
+        e = d.e = was[d.k] || layer.appendChild(doc.createElement('i'));
+        delete was[d.k];
+        e.style.left = d.f * 100 + '%';
+        e.dataset.n = d.n > 2 ? 3 : d.n;
+      });
+      for (i in was) { e = was[i]; e.style.opacity = 0; setTimeout(e.remove.bind(e), 250); }
+    }
+    /* WHERE THE LINE PUTS A MOMENT, 0..1: once the drawing is here, the
+     * playhead's own place for it (fracAt); before, a replay's moment over the
+     * length the listing gave (its `line.play`, the same number). A Flip's
+     * line has no such length (its pages say where its moments are, and they
+     * come with the drawing), nor has a line the listing said nothing of:
+     * null, and no dot until the drawing comes. */
+    function where(ms) {
+      return payload ? totalMs && fracAt(ms) : info && info.play > 0 ? Math.min(1, ms / info.play) : null;
+    }
+    /* THE PLAYHEAD REACHES A MARK, in normal play alone: each frame tells the
+     * host of the dots it passed since the last, by a skribl:mark from the
+     * dot (its ms and n), once a pass. A scrub, a seek or a jump never does:
+     * play() starts the count where the clock is, and a frame that comes more
+     * than a quarter of a second after the last (a page put away and back)
+     * starts it again without telling. */
+    function reach(t) {
+      var w = now();
+      if (w - markWall < 250) dots.forEach(function (d) {
+        if (d.ms > markAt && d.ms <= t) d.e.dispatchEvent(new CustomEvent('skribl:mark', { bubbles: true, detail: { ms: d.ms, n: d.n } }));
+      });
+      markWall = w;
+      markAt = Math.max(markAt, t);
     }
 
     function curMs() { return state === 'playing' ? elapsed + segElapsed() : elapsed; }
@@ -1476,10 +1554,10 @@
      * because a page is what a viewer aims at and a held page or a long
      * drawing page would otherwise squeeze the rest to slivers. A forever
      * loop's clock wraps inside its stretch (lib/holdtiming.js), so its
-     * playhead circles those pages and never goes back to page 1. */
-    function frac() {
-      if (!payload || !totalMs) return 0;
-      var t = curMs();
+     * playhead circles those pages and never goes back to page 1. fracAt(t)
+     * is the same for any moment on the clock: a mark's place (where()). */
+    function frac() { return payload && totalMs ? fracAt(curMs()) : 0; }
+    function fracAt(t) {
       if (!flipFrames || !flipPlan) return Math.max(0, Math.min(1, t / totalMs));
       var P = flipPlan, n = flipFrames.length;
       if (P.forever && t >= P.introMs) t = P.introMs + ((t - P.introMs) % P.stretchMs);
@@ -1766,6 +1844,10 @@
     function frame() {
       var at = elapsed + segElapsed();
       if (songClk) { var t = songClk.at(lap + at) - lap; elapsed += t - at; at = t; }
+      /* The marks this frame passed, up to the end of a pass; a pass that
+       * comes round goes on from its start (its stretch's, for a forever
+       * loop), as the playhead does. */
+      reach(Math.min(at, totalMs));
       /* A FOREVER loop never ends and never starts over: past one pass the
        * clock wraps inside the stretch, whatever this post's loop switch says
        * (the stretch is meant to keep going for as long as it is on screen). */
@@ -1774,6 +1856,8 @@
         lap += at - elapsed;
         t0 = now();
         render(elapsed, false);
+        markAt = flipPlan.introMs - 1e-9;
+        reach(elapsed);
         raf = global.requestAnimationFrame(frame);
         return;
       }
@@ -1804,6 +1888,8 @@
         lap += at - elapsed;
         t0 = now();
         render(elapsed, true);
+        markAt = -1;
+        reach(elapsed);
         raf = global.requestAnimationFrame(frame);
         return;
       }
@@ -1842,7 +1928,10 @@
       if (elapsed === 0) render(0, true);
       state = 'playing';
       look(true);
-      t0 = now();
+      /* The marks count from here: where a scrub, a seek or a pause left the
+       * clock, nothing behind it; from the very start, a mark at 0 too. */
+      markAt = elapsed || -1;
+      markWall = t0 = now();
       raf = global.requestAnimationFrame(frame);
       startAudio();
     }
@@ -2029,6 +2118,9 @@
        * from the first paint and the row does not change at the first tap. */
       if (info && typeof info.sound === 'boolean') mark('is-silent', !info.sound);
       if (info) { choice = RL.fromPost(info.speed, info.drawn); rate = RL.rate(choice, info.play); }
+      /* A host's marks, given with the post (skribl_inline marks=...), so
+       * they are on the line from its first paint. */
+      try { marks = [].concat(JSON.parse(el.getAttribute('data-skribl-marks')) || []); } catch (e) {}
       wire(line.querySelector('.skribl-inline-scrub'), line.querySelector('.skribl-inline-say'));
       /* A tap on the line is the line's: a host that makes the whole post a
        * link must not navigate on a scrub or a speed. */

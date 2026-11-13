@@ -690,6 +690,101 @@ check("docs/INTEGRATION.md documents it: lead=, one control, before the scrubber
       bool(_lg) and "lead=" in _lg.group(1) and "scrubber" in _lg.group(1) and "loop" in _lg.group(1)
       and "stops at the line" in _lg.group(1), (_lg.group(1)[:140] if _lg else "no such section"))
 
+# ---------------------------------------------------------------------------
+print("\nMARKS ON THE LINE — a host's moments, as dots where the line puts them")
+# docs/INTEGRATION.md, "Marks on the line" (after v330, the owner's D for the
+# Skribl site's likes): skribl_inline(..., marks=[{ms, n}]) and
+# player.marks(list) give the player a host's moments on the drawing's own
+# clock; it draws a 5px dot over the scrubber for each where ITS LINE puts
+# that moment (the playhead's own mapping), one dot standing for those that
+# would overlap (data-n 1, 2, 3 for three or more), coloured by the host's
+# tokens, taking no taps; and says when the playhead reaches one in normal
+# play (skribl:mark, from the dot), never on a scrub, a seek or a jump.
+# General: the lead's row above reads every part of the player for a host's
+# words. Pinned as source here; verify_inline.py ("marks on the line") draws
+# them, presses them and plays them, on a drawing and a Flip.
+_ipjs = strip_comments((_layout.STATIC_DIR / "inlineplayer.js").read_text(encoding="utf-8"))
+
+
+def _fn(name, src=None):
+    """The body of `function name(...) { ... }` in the player, braces matched."""
+    src = src or _ipjs
+    m = re.search(r"\bfunction " + name + r"\s*\([^)]*\)\s*\{", src)
+    if not m:
+        return ""
+    depth, i = 1, m.end()
+    while depth and i < len(src):
+        depth += (src[i] == "{") - (src[i] == "}")
+        i += 1
+    return src[m.end():i - 1]
+
+
+_box = re.search(r'<div class="skribl-inline is-muted is-silent\{% if line %\}.*?aria-label="Play this Skribl">', _macro_code, re.S)
+check("skribl_inline() takes marks (none unless given) and writes them onto the box as JSON, only when there is a"
+      " line",
+      bool(_sig) and re.search(r"\bmarks=None\b", _sig.group(1)) is not None and bool(_box)
+      and re.search(r"\{%-?\s*if line and marks\s*%\}\s*data-skribl-marks='\{\{ marks\|tojson \}\}'\s*\{%-?\s*endif\s*%\}",
+                    _box.group(0)) is not None,
+      (_box.group(0)[-420:] if _box else "no box in the macro"))
+_mm = re.search(r"\bmarks:\s*function\s*\(list\)\s*\{(.*?)\},\n", _ipjs, re.S)
+check("the player reads them once, as it mounts, and a host changes them with marks(list), which answers the list"
+      " it holds (a copy)",
+      _ipjs.count("data-skribl-marks") == 1 and "JSON.parse(el.getAttribute('data-skribl-marks'))" in _ipjs
+      and bool(_mm) and "marks = [].concat(list)" in _mm.group(1) and "return marks.slice()" in _mm.group(1),
+      (_mm.group(1).strip()[:160] if _mm else "no marks() on the player"))
+_where, _place, _reach, _frame, _play = (_fn(n) for n in ("where", "placeMarks", "reach", "frame", "play"))
+check("a mark's place is the playhead's own: where() puts a moment through fracAt, the very mapping frac() gives"
+      " the playhead; before the drawing comes, a replay's moment over the listing's play length (a Flip's line"
+      " has none, so its marks wait for its pages)",
+      re.search(r"function frac\(\)\s*\{\s*return payload && totalMs \? fracAt\(curMs\(\)\) : 0;\s*\}", _ipjs) is not None
+      and "fracAt(ms)" in _where and "info.play > 0" in _where and "where(" in _place,
+      _where.strip()[:200] or "no where()")
+check("dots closer than their 5px are one, at their middle, standing for all of them (data-n 1, 2, or 3 for three or"
+      " more)",
+      "* W < 5" in _place and "d.n > 2 ? 3 : d.n" in _place and "l.n + d.n" in _place, _place.strip()[:200])
+_mk = _decl([".skribl-inline-marks"])
+_mi = _decl([".skribl-inline-marks i"])
+_m2, _m3 = _decl(['.skribl-inline-marks [data-n="2"]']), _decl(['.skribl-inline-marks [data-n="3"]'])
+check("they are 5px and take no taps, moving nothing: the layer lies over the scrubber, out of the flow, with no"
+      " pointer events; each dot placed in it",
+      _mk.get("position") == "absolute" and _mk.get("inset") == "0" and _mk.get("pointer-events") == "none"
+      and _mi.get("position") == "absolute" and _mi.get("width") == "5px" and _mi.get("height") == "5px"
+      and _mi.get("border-radius") == "50%" and "pointer-events" not in _mi,
+      f"layer {_mk}; dot {_mi}")
+check("their colour is the host's, by token: --mark, and --mark-2 and --mark-3 for two and for three or more, each"
+      " falling back to --mark and that to --accent; a dot that comes fades in",
+      _mi.get("--m") == "var(--mark,var(--accent,#7c5cff))" and _mi.get("background") == "var(--m)"
+      and _m2.get("background") == "var(--mark-2,var(--m))" and _m3.get("background") == "var(--mark-3,var(--m))"
+      and "opacity" in _mi.get("transition", "") and "@starting-style{.skribl-inline-marks i{opacity:0}}" in _css,
+      f"dot {_mi}; two {_m2}; three {_m3}")
+_calls = [m.start() for m in re.finditer(r"\breach\(", _ipjs)]
+_fstart = _ipjs.find(_frame) if _frame else -1
+check("reaching a dot is said in normal play alone: skribl:mark is sent only by reach(), reach() is called only as"
+      " a frame plays, play() starts the count where the clock is, and a frame after a quarter second's gap tells"
+      " nothing",
+      _ipjs.count("skribl:mark") == 1 and "skribl:mark" in _reach and len(_calls) >= 4
+      and all(_fstart <= c < _fstart + len(_frame) for c in _calls[1:])
+      and "function reach(" in _ipjs[_calls[0] - 9:_calls[0] + 6] and "markAt = elapsed || -1" in _play
+      and re.search(r"\bw - markWall < 250\b", _reach) is not None and "d.ms > markAt && d.ms <= t)" in _reach,
+      f"{len(_calls)} reach( in the player; skribl:mark {_ipjs.count('skribl:mark')}; reach: {_reach.strip()[:120]}")
+# The section runs to the paragraph after it, its words read with their
+# line breaks as spaces.
+_mg_ = re.search(r"\*\*Marks on the line\*\*(.*?)\nOne Skribl plays at a time", _guide, re.S)
+_mgw = " ".join(_mg_.group(1).split()) if _mg_ else ""
+check("docs/INTEGRATION.md documents it: marks= and player.marks(), on the drawing's own clock, where its line puts"
+      " them, skribl:mark in normal play and never on a scrub, and the tokens that colour them",
+      bool(_mg_) and all(w in _mgw for w in ("marks=", "player.marks(", "own clock", "where its line puts",
+                                             "skribl:mark", "in normal play", "never for a scrub", "--mark")),
+      (_mgw[:160] if _mg_ else "no such section"))
+_site = {p.name: strip_comments(p.read_text(encoding="utf-8")) for p in sorted((ROOT / "social" / "static").glob("*.js"))}
+_scss = re.sub(r"/\*.*?\*/", "", (ROOT / "social" / "static" / "social.css").read_text(encoding="utf-8"), flags=re.S)
+_draws = [n for n, s in _site.items() if "skribl-inline-marks" in s]
+check("the site goes through the seam alone: likes.js gives the player its marks (marks()) and hears skribl:mark;"
+      " no site script or style names the player's dots",
+      ".marks(" in _site.get("likes.js", "") and "'skribl:mark'" in _site.get("likes.js", "") and not _draws
+      and "skribl-inline-marks" not in _scss and "--mark:" in _scss,
+      f"scripts naming the dots {_draws}; social.css names them {'skribl-inline-marks' in _scss}")
+
 bad = [r for r in results if not r[0]]
 print(f"\n{'='*62}\n{len(results)-len(bad)}/{len(results)} passed" +
       ("" if not bad else "  FAILURES: " + ", ".join(r[1] for r in bad)))
