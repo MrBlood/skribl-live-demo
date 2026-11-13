@@ -3,11 +3,14 @@
     since the owner's yes the same day). comments.py says the rules; this is
     what they look like, the mock's own classes and words, the same on both.
 
-    comments_section(cm)  "Comments" and how many; the box on top for
-                          somebody who may comment, "Sign in to answer" for
-                          nobody signed in; the comments newest first, each
-                          with its answers oldest first, one level under it;
-                          Load more for the next page.
+    comments_section(cm)  "Comments" and how many, and at the heading's end
+                          the icon that opens the box (a bubble with a plus,
+                          round, 44px, lilac), for somebody who may comment
+                          and for nobody signed in; the box folded away under
+                          the heading until asked for; "Say the first thing"
+                          where the comments will be, at none; the comments
+                          newest first, each with its answers oldest first,
+                          one level under it; Load more for the next page.
     comment(it, ...)      one comment: its author's face and name, when (in
                           the person's own time: "40m", "2h"), its words, its
                           drawing (Skribl's in-post player, still until
@@ -15,14 +18,24 @@
     comment_box()         Home's composer, as the mock styled it (.cm-box):
                           your face, the words, Draw and Flip, Post; a drawing
                           waits in it, in the in-post player the comment will
-                          have, with Edit drawing and Remove, until Post.
-                          Answer brings it under the comment it answers
-                          ("Answer Theo…").
-    comment_sheets(cm)    a comment's ⋯ sheet (Your comment: Delete comment;
-                          Theo’s comment: Remove from my post and Report
-                          comment, or Report comment alone), its report sheet
-                          (the post's reasons), the Pad and Flip over the page
-                          for a drawing answer, and comments.js's words.
+                          have, with Edit drawing and Remove, until Post. ONE
+                          BOX, WHEREVER IT OPENS: on a phone it rides Make's
+                          own sheet from the bottom ("Say something to Mira",
+                          or "Answer Theo" with Theo's words under it); on a
+                          desk it glides open in place, under the heading or
+                          under the conversation it answers ("Answer Theo…").
+                          Put away, it keeps what was typed.
+    comment_sheets(cm)    the box's sheet (a phone's), the signed-out sheet
+                          ("Say something?"), a comment's ⋯ sheet (Your
+                          comment: Delete comment; Theo’s comment: Remove from
+                          my post and Report comment, or Report comment
+                          alone), its report sheet (the post's reasons), the
+                          Pad and Flip over the page for a drawing answer, and
+                          comments.js's words.
+
+    THE COMMENT BOX IS AN ICON (the owner, Nov 13: "The comment needs to be an
+    icon not a card. It takes up too much room sitting there", then "Yes to
+    all" to the mock's choices: its option 2, the icon at the heading's end).
 
     `cm` is comments.section()'s. Import these WITH CONTEXT: they read the
     page's me, skribl_bp, when_iso and when_day. comments.js holds the moving
@@ -87,12 +100,28 @@
 </div>
 {%- endmacro %}
 
+{#  THE HEADING'S ROW: "Comments" and how many, and at its end the icon that
+    opens the box (Say something), for somebody who may comment, and for
+    nobody signed in (it raises "Say something?"); nobody else is offered it.
+    The icon reaches into the room already round the heading, so the heading
+    keeps its height. THE BOX, folded away under it until asked for (a desk
+    glides it open there; a phone's sheet takes it); folded, it is not laid
+    out at all (hidden), so nothing reads its words as shown. "SAY THE FIRST THING",
+    at none, where the comments will be: the small violet words, 44px,
+    opening the box as the icon does. #}
 {% macro comments_section(cm) -%}
+{%- set say = cm.can or not me -%}
 <section class="comments" id="comments" aria-labelledby="commentsTitle" data-comments data-new="{{ cm.new }}"
          data-more="{{ cm.more }}" data-drop="{{ cm.drop }}"{% if cm.post_mine %} data-post-mine{% endif %}>
-  <h2 class="comments-title" id="commentsTitle">{{ ic.comment() }}<span>Comments</span><span class="cm-count" data-cm-count{% if not cm.count %} hidden{% endif %}>{{ cm.count }}</span></h2>
-  {% if cm.can %}{{ comment_box() }}
-  {% elif not me %}<p class="cm-signin"><a href="{{ cm.signin }}">Sign in to answer</a></p>{% endif %}
+  <div class="comments-head">
+    <h2 class="comments-title" id="commentsTitle">{{ ic.comment() }}<span>Comments</span><span class="cm-count" data-cm-count{% if not cm.count %} hidden{% endif %}>{{ cm.count }}</span></h2>
+    {% if say %}<button class="icon-btn cm-say" type="button" data-cm-new aria-expanded="false" aria-label="Say something" title="Say something"
+            {%- if not cm.can %} aria-haspopup="dialog" aria-controls="commentOutSheet"{% endif %}>{{ ic.comment_new() }}</button>{% endif %}
+  </div>
+  {% if cm.can %}<div class="cm-fold" id="commentFold" data-cm-fold><div class="cm-fold-in" hidden>{{ comment_box() }}</div></div>{% endif %}
+  {% if say %}<div class="cm-first-fold{% if not cm.cards %} is-open is-still{% endif %}" data-cm-first-fold><div class="cm-fold-in"{% if cm.cards %} hidden{% endif %}>
+    <p class="cm-first"><button type="button" data-cm-new data-cm-first{% if not cm.can %} aria-haspopup="dialog" aria-controls="commentOutSheet" aria-expanded="false"{% endif %}>Say the first thing</button></p>
+  </div></div>{% endif %}
   <ol class="cm-list" data-cm-list>{% for it in cm.cards %}{{ comment(it, cm.can, cm.post_mine) }}{% endfor %}</ol>
   <button class="btn btn-wide feed-more cm-more" type="button" data-cm-next="{{ cm.next or '' }}"{% if not cm.next %} hidden{% endif %}>Load more</button>
   <p class="say" data-cm-page-say role="status" hidden></p>
@@ -100,6 +129,42 @@
 {%- endmacro %}
 
 {% macro comment_sheets(cm) -%}
+{#  THE BOX ON A PHONE: Make's own sheet (social.js), rising from the bottom
+    with the box on it (comments.js moves the one box here), its field ready
+    to type in. Titled whom it says something to; answering, "Answer Theo",
+    Theo's words in a line under it, so what is answered stays in view while
+    the sheet covers the page. A tap on the dimmed page, a drag down or Esc
+    puts it away, keeping the words. #}
+{% if cm.can %}
+<div class="make post-sheet cm-sheet" id="commentBoxSheet" hidden>
+  <div class="make-scrim" data-make-close></div>
+  <div class="make-sheet" role="dialog" aria-modal="true" aria-labelledby="commentBoxTitle">
+    <div class="make-grip" data-make-close aria-hidden="true"></div>
+    <h2 class="make-title" id="commentBoxTitle" data-cm-sheet-title>{% if cm.post_mine %}Say something{% else %}Say something to {{ cm.first }}{% endif %}</h2>
+    <p class="cm-quote" data-cm-quote hidden></p>
+    <div class="cm-slot" data-cm-slot></div>
+  </div>
+</div>
+{% endif %}
+
+{#  SIGNED OUT: the icon is there for everybody; a tap raises this, small,
+    saying how, as the heart's "Like this drawing?" does. Sign in comes back
+    to the page with the box open (#say), and nothing is posted until Post. #}
+{% if not me %}
+<div class="make post-sheet cm-out" id="commentOutSheet" hidden>
+  <div class="make-scrim" data-make-close></div>
+  <div class="make-sheet" role="dialog" aria-modal="true" aria-labelledby="commentOutTitle">
+    <div class="make-grip" data-make-close aria-hidden="true"></div>
+    <h2 class="make-title" id="commentOutTitle">Say something?</h2>
+    <p class="post-lede">Sign in, and you can answer {{ cm.first }} in words or with a drawing.</p>
+    <div class="post-sheet-acts">
+      <button class="btn btn-big" type="button" data-make-close>Not now</button>
+      <a class="btn btn-primary btn-big" href="{{ cm.signin }}">Sign in</a>
+    </div>
+  </div>
+</div>
+{% endif %}
+
 {#  A COMMENT'S ⋯, Make's own sheet (social.js), as the post's: comments.js
     shows the rows for whose comment it is, and titles it. #}
 <div class="make post-sheet" id="commentSheet" hidden>
@@ -179,6 +244,7 @@
   <span data-word="c_say">Say something</span>
   <span data-word="c_answer">Answer {name}…</span>
   <span data-word="c_answer_label">Answer {name}</span>
+  <span data-word="c_quote">“{words}”</span>
   <span data-word="c_yours">Your comment</span>
   <span data-word="c_theirs">{name}’s comment</span>
   <span data-word="c_deleting">Deleting…</span>

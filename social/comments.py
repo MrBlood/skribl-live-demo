@@ -24,9 +24,13 @@ site's people, no block either way, nothing taken down but to its maker). A
 drawing gone (deleted, or taken down for everybody else) takes its comments
 with its page: none is shown, counted, answered or reported.
 
-ON ITS OWN PAGE (post.html, _comments.html): "Comments" and how many, the
-box on top (your face, the words, Post), then the comments newest first,
-each with its answers under it, oldest first. ANSWERS ARE ONE LEVEL DEEP:
+ON ITS OWN PAGE (post.html, _comments.html): "Comments" and how many, and at
+the heading's end a round icon (a bubble with a plus) that opens the box
+(your face, the words, Draw, Flip, Post), folded away until asked for: a
+sheet from the bottom of a phone, gliding open under the heading on a desk
+(the owner, Nov 13: "The comment needs to be an icon not a card"). Then the
+comments newest first, each with its answers under it, oldest first; "Say
+the first thing" where they will be, at none. ANSWERS ARE ONE LEVEL DEEP:
 answering an answer puts the new one under the same comment (parent_id is
 always a top-level comment's), and Answer brings the box to that comment
 (comments.js). Each comment's ⋯: on your own, Delete comment; on somebody
@@ -36,8 +40,9 @@ on anybody else's, Report comment.
 WHO MAY COMMENT: somebody signed in who is not taken down, with no block
 either way with the author of the post or the drawing; an answer also with
 none with the author of the comment it answers. The route refuses anybody
-else kindly, and the box is not shown to them. Signed out, the comments are
-readable, and "Sign in to answer" stands where the box would be.
+else kindly, and neither the box nor its icon is shown to them. Signed out,
+the comments are readable, and the icon raises a small sheet ("Say
+something?") whose Sign in comes back to the page with the box open.
 
 WHAT IS SHOWN, AND COUNTED: nothing by anybody hidden from the viewer (a
 block either way, or taken down: safety.hidden_ids), nor the answers under a
@@ -393,11 +398,17 @@ def section(on, viewer, skribl_blueprint="skribl"):
             "count": count_on(on, viewer),
             "can": may_comment(viewer) and on.open_to(viewer),
             "post_mine": viewer is not None and viewer.id == on.owner.id,
+            # Whom the box says something to ("Say something to Mira"), and
+            # the signed-out sheet's "you can answer Mira": the first name, as
+            # More from and the heart's sheet say it.
+            "first": (on.owner.display_name or "").split(" ")[0],
             "new": new, "more": more,
             "drop": url_for("social.comment_delete", public_id="__ID__"),
             "pad": url_for(skribl_blueprint + ".skribl_editor", compose=1),
             "flip": url_for(skribl_blueprint + ".skribl_flip", compose=1),
-            "signin": url_for("social.signin", next=on.page())}
+            # Signing in comes back to the page with the box open (#say:
+            # comments.js), and nothing is posted until Post.
+            "signin": url_for("social.signin", next=on.page() + "#say")}
 
 
 def _cards(items, viewer, can, post_mine):

@@ -179,6 +179,16 @@
 {{ _svg('<path d="M12 4.5c4.4 0 8 3 8 6.8s-3.6 6.8-8 6.8c-1 0-2-.2-2.9-.5L4.5 19.5l1.2-3.6C4.6 14.7 4 13.1 4 11.3 4 7.5 7.6 4.5 12 4.5z"/>') }}
 {%- endmacro %}
 
+{# Say something: the comment's bubble with a small plus in it, in the pen (the
+   comment box as an icon; the owner, Nov 13: "The comment needs to be an icon
+   not a card. It takes up too much room sitting there", then "Yes to all").
+   The bubble is comment()'s line, the plus in its middle, as the mock drew
+   them. #}
+{% macro comment_new() -%}
+{{ _pen(['M12 4.5c4.4 0 8 3 8 6.8s-3.6 6.8-8 6.8c-1 0-2-.2-2.9-.5L4.5 19.5l1.2-3.6C4.6 14.7 4 13.1 4 11.3 4 7.5 7.6 4.5 12 4.5z',
+         'M 12,8.5 L 12,14.1', 'M 9.2,11.3 L 14.8,11.3']) }}
+{%- endmacro %}
+
 {% macro back() -%}
 {{ _svg('<path d="M14.5 5.5 8 12l6.5 6.5"/>') }}
 {%- endmacro %}
