@@ -804,17 +804,28 @@ mock's own classes, sizes and words. `social/comments.py`:
                                       anybody's, removed from it (JSON)
 
 **On a post's own page** "Comments" and how many stand where "Comments open
-soon" was. The box on top is Home's composer in the mock's size: your face,
-"Say something, or draw it…", Draw and Flip, and Post. The comments come
-newest first, each with its face, name, a short time ("40m", "2h"), its words
-or its drawing, Answer and ⋯; twenty a page, then Load more. **Answers sit one
-level under a comment, oldest first**: answering an answer puts the new one
-under the same comment. Answer brings the box there ("Answer Theo…"): the
-comment keeps its place on the screen as the box moves, the box fades in, and
-if it landed below what the screen shows the page glides down to it. Answer
-again, Esc or Post sends the box home. On a desk the comments sit beside the
-drawing, under Share. Home's card says how many beside the plays ("3
-comments", a way to them), and at none its icon alone, named "Comment" (below).
+soon" was, and **the comment box is an icon** at the heading's end (the owner,
+Nov 13: "The comment needs to be an icon not a card. It takes up too much room
+sitting there"): a round lilac button, a bubble with a plus, "Say something".
+The box is Home's composer in the mock's size (your face, "Say something, or
+draw it…", Draw and Flip, and Post), folded away until asked for. On a phone
+it rises on Make's own sheet, "Say something to Mira", its field ready; on a
+desk it glides open under the heading, the icon lit. Put away (the dimmed
+page, a drag down or Esc on a phone; a second click, Esc or a press elsewhere
+on a desk), it keeps what was typed for as long as the page is open. With no
+comments yet, "Say the first thing" stands where they will be and opens it
+too. The comments come newest first, each with its face, name, a short time
+("40m", "2h"), its words or its drawing, Answer and ⋯; twenty a page, then
+Load more. **Answers sit one level under a comment, oldest first**:
+answering an answer puts the new one under the same comment. Answer opens
+the same box for it: on a phone the sheet is titled "Answer Theo", Theo's
+words in a line under it; on a desk it glides open under that conversation
+("Answer Theo…"), and if that is below what the screen shows the page glides
+down to it. Answer again, Esc or Post puts it away. Posted, the box goes as
+the comment comes (on a desk in step), and the comment glows a moment in
+Activity's landing tint. On a desk the comments sit beside the drawing, under
+Share. Home's card says how many beside the plays ("3 comments", a way to
+them), and at none its icon alone, named "Comment" (below).
 
 **On every drawing** (the owner's yes, Nov 12: "Comments on every drawing,
 however it was made, so whatever you open has the comment box"). A drawing
@@ -864,16 +875,18 @@ phone changes.
 **Who may comment:** somebody signed in, not taken down, with no block
 either way with the author of the post or the drawing; an answer also with
 none with the author of the comment it answers, and on what that comment is
-on. The route refuses anybody else kindly, and the box is not shown to them.
-Signed out, the comments are readable and "Sign in to answer" stands in the
-box's place, back to the page once signed in. The
+on. The route refuses anybody else kindly, and neither the box nor its icon
+is shown to them. Signed out, the comments are readable and the icon raises
+"Say something?", whose Sign in comes back to the page with the box open
+(nothing is posted until Post). The
 words are a post's: tidied, 500 characters at most, nothing hidden or turned
 around; 60 comments an hour a person (`comment` in security.LIMITS). A
 comment needs words or a drawing.
 
 **A drawing answer** (the second part; the mock's 6. "Reply with a skribl",
 phase 3's, came early with the owner's yes to this mock.) Draw and Flip in
-the box open Skribl's editor over the post in compose mode (`?compose=1`, no
+the box (on a phone's sheet as in place) open Skribl's editor over the post
+in compose mode (`?compose=1`, no
 gallery tick; `lib/composehost.js` through `SocialPadOverlay`, as Home's
 composer). Add hands the drawing back, and it waits in the box, in the
 in-post player the comment will have, with Edit drawing and Remove, until

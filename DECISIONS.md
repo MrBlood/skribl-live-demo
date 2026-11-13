@@ -36647,3 +36647,259 @@ merge); SF and Segoe UI (no words were added, but every measure is in this
 box's fonts); PostgreSQL itself (the read by the thing and the moment runs
 on SQLite here; CI's postgres job runs it after the merge); and the live
 site.
+
+## After v330 -- The comment box is an icon
+
+The owner, Nov 13, looking at a post's page: "The comment needs to be an icon
+not a card. It takes up too much room sitting there." The comment mock that
+day offered three places for the icon (on the drawing's line beside the
+heart, at the end of the Comments heading, or in the row with Share) and
+recommended the heading; the owner answered "Yes to all": every default.
+Built in the mock's own sizes, words and classes (`_comments.html`,
+`comments.js`, `social.css`, the icon in `_icons.html`).
+
+1. WHERE IT SITS, the mock's 2: a round 44px button at the right end of the
+   "Comments 3" heading, in the chips' lilac and the small violet ink: the
+   comment's bubble with a small plus, in the pen (`_icons.html`,
+   comment_new()), named "Say something" (its tip too). The heading keeps
+   its 29px line: the button reaches 7.5px above and below it into the room
+   already there (font-independent: (44 - 20 x 1.45) / 2). The box is folded
+   away until asked for, which takes its 136px off the page.
+2. A PHONE: a tap raises Make's own sheet from the bottom with the one box on
+   it (comments.js moves it there), its field focused and ready (the
+   composer's 17px), titled "Say something to Mira", Draw, Flip and Post as
+   before. It glides up in a third of a second while the page dims (Make's
+   own sheet, social.js's SocialSheet). A tap on the dimmed page, a drag down
+   or Esc puts it away, keeping the words.
+3. A DESK: a click glides the box open under the heading (its room opening
+   while it fades in, the comments under it sliding down), the field ready,
+   and the icon lights (white on the action purple) while it is open. A
+   second click, Esc or a press anywhere else folds it away, keeping the
+   words; Esc gives focus back to the icon.
+4. ANSWER on any comment opens the same box: on a phone the sheet titled
+   "Answer Theo", Theo's words in a line under it (in quotes, one line, cut
+   short with an ellipsis), the field saying "Answer Theo…"; on a desk under
+   that conversation as before ("Answer Theo…"), the page gliding down to it
+   when it opened below the screen. Answer again, Esc or a press elsewhere
+   puts it away.
+5. AFTER POSTING the box closes (the sheet glides down, or the fold folds
+   away) and the new comment sits at the top of the list, fading in as its
+   room opens, glowing a moment in Activity's landing tint (`.is-landed`,
+   comments.js glow()), which then fades over a second and a half. ON A DESK
+   THE TWO MOVE IN STEP: the fold closes in the same 0.32s, on the same curve,
+   as the comment opens its room where the box was, so what is under them
+   moves only by how much taller or shorter the comment is than the box. An
+   answer glows under its comment, and the page glides to it when it landed
+   below the screen.
+6. PUT AWAY, IT KEEPS WHAT WAS TYPED for as long as the page is open: the one
+   field keeps its words (and a drawing waiting in it) whichever way it was
+   put away.
+7. SIGNED OUT, the icon still shows; a tap raises a small sheet like the
+   heart's "Like this drawing?": "Say something?", "Sign in, and you can
+   answer Mira in words or with a drawing.", Not now and Sign in. Sign in
+   comes back to the same page with the box open (its next names the page
+   and #say; comments.js opens the box, focuses its field, and takes #say off
+   the address so a reload is just the page). Nothing is posted until Post.
+   On an iPhone the keyboard waits for a tap in the field (Safari raises it
+   only for a tap). The old "Sign in to answer" line is gone.
+8. WITH NO COMMENTS YET, "Say the first thing" stands where they will be: the
+   small violet words "Sign in to answer" wore (16px, 600, --accent-ink),
+   44px tall, opening the box as the icon does (for nobody signed in, the
+   same small sheet).
+
+The same on a drawing's own page (/social/b/<id>), which is this template.
+Home's cards are as they were: their own box for a new post, and the 💬
+count that takes you to a post's comments.
+
+JUDGMENT CALLS, said so they can be changed:
+- THE ICON LIGHTS FOR THE BOX IT OPENED. Answer marks its own Answer as
+  open, as before, and the heading's icon stays unlit then (the mock's phone
+  picture of Answer showed it lit under the dimmed page). Signed out it
+  stays unlit while "Say something?" is up, as the mock's picture had it:
+  no box is open (found in the pictures, where that sheet's own
+  aria-expanded lit it).
+- ON YOUR OWN POST the sheet says "Say something", not "Say something to"
+  your own name.
+- POSTING SAYS "Posting…" ON POST ITSELF (dimmed, as a button at work is),
+  and the box's line says it to a screen reader only. FOUND IN THE FRAMES:
+  the line appearing for the round trip and going as the box went made
+  everything under the box jump twice (31.75px each way); now nothing under
+  it moves until it goes. What goes wrong is still said in the box, which
+  stays open.
+- THE BOX EMPTIES ONCE IT HAS GONE. Found in the frames too: emptying the
+  field at once shrank a two-line box by a line (23.6px) as it began to go,
+  and a drawing taken out would have shrunk it more. It keeps what was sent
+  while it goes, and empties when it is away.
+- A NEW COMMENT NUDGES NOTHING. It lands right under the icon that was
+  pressed; an answer, which can land at the end of a long conversation below
+  the screen, is glided to once in place. (A first build glided the page
+  5px to show the last of a new comment's height above a phone's bar: a
+  small late move, found by section 33, gone.)
+- ONE BOX, ONE SET OF WORDS: words typed for an answer are there when the
+  icon opens it for a new comment (the box says whom it is for each time).
+- OPEN IN ONE PLACE AND ASKED FOR IN ANOTHER (a desk), it folds away there
+  first and then opens, both glides, rather than jumping across the page.
+- "ELSEWHERE" IS A PRESS, NOT A CLICK, so selecting words in the field and
+  letting go outside it does not fold the box; and the editor over the page
+  (Draw or Flip opened from the box) and a sheet are not elsewhere: a press
+  beside the Pad puts the Pad away and leaves the box open.
+- "SAY THE FIRST THING" FOLDS IN STEP with the box on a desk (one room
+  closing as the other opens), goes when the first comment comes, and comes
+  back, fading in as its room opens, when the last one is deleted.
+- PHONE OR DESK FOLLOWS THE SITE'S OWN DESK WIDTH (900px); a window that
+  crosses it puts the box away, keeping the words.
+- THE EDITOR OVER THE PAGE GIVES BACK ONLY THE INERTNESS IT SET (social.js,
+  SocialPadOverlay): opened from the phone's sheet, the Pad used to un-inert
+  the page behind the sheet when it went. A general fix in the site's
+  chrome, the one change outside the post page's files.
+- ON A PHONE'S KEYBOARD THE SHEET RIDES ABOVE IT: comments.js reads the
+  keyboard off the visual viewport (what it lost at the bottom of the layout
+  viewport the sheet is fixed to, at a zoom of 1 only, so a pinch is no
+  keyboard) and the sheet glides up by that much (`--cm-kb`). This box has
+  no phone keyboard: see Not tested.
+
+Pad and Flip: NOT AFFECTED, and nothing for Flip to catch up on. The comment
+box is the site's; Draw and Flip in it open the editors over the page as
+before (lib/composehost.js through SocialPadOverlay), from the phone's sheet
+too, where the Pad opens over the sheet and the sheet is still there when it
+goes. Neither editor changed.
+
+THE FOUR: kind (the box only when you want it; put it away any way and
+nothing is lost; every move glides, and posting no longer makes anything
+jump; signed out, an invitation, not a wall); simple (it sits on the word
+"Comments", so nobody needs telling; "Say the first thing" where a list
+would be; Answer says whom, and shows what); playful (a small lilac bubble,
+the heart pill's colour; your comment glows as it lands); powerful (on a
+desk it opens right where you are; a phone's sheet keeps the drawing you are
+answering in view above it).
+
+CONTRAST, from the tokens and off the painted pixels: the icon's line on its
+lilac 6.92:1 light and 8.62:1 dark (read off the pixels at 1x, through the
+anti-aliasing, 6.88 and 8.65; a mark needs 3:1); lit, white on the action
+purple 5.33:1; "Say the first thing" 8.04:1 and 10.25:1; the sheet's title
+and the words it answers 6.74:1 and 9.69:1; "Say something?"'s words
+16.00:1 and 15.85:1. Every word on the new screens (section 37: the sheet,
+answering and not, the box in place, "Say the first thing", "Say
+something?"), phone (touch) and desk, light and dark, read at 4.5:1 or more
+on what is painted behind it: 78 read, the lowest 5.33:1, the white Post on
+the action purple, as everywhere; sections 13 and 28, the comments'
+censuses, read the sheet answering and "Say something?" now: 294 and 216
+read, the same lowest. No token was added or changed.
+
+NOTHING ELSE MOVED, measured against main itself (its own server, the same
+database) on Mira's cat, Juno's pug and Oz's first drawing, phone (touch)
+and desk, light and dark, signed in as somebody else, as the maker, and
+signed out (36 renderings): the post's head, its words, the drawing, its
+line and heart, the time and plays, "Liked by…", Share and Make your own,
+the heading's own words and icon, all at the same pixel. The comments start
+136px higher signed in (the box and its margin) and 52px higher signed out
+("Sign in to answer"), as the mock measured. The heading's own box is as
+wide as its words now (the icon beside it, in a row): its place and height
+are the same.
+
+KIND, NEVER JUMPY, READ ON EVERY FRAME (a glide is three frames or more
+carrying the move, none more than three quarters of it, nothing going back):
+the sheet rising 195px over 18 frames (its largest step 20%) and going down
+over 15 (11%), the mock's own figures; the fold opening 136px over 16 frames
+(21%) and folding over 15 (11%); posting on a desk, what was under the box
+moving by the difference over 11 to 13 frames (21%), the new comment rising
+into the box's place over 17; posting on a phone, the comments under it
+sliding down over 16 to 17 frames (21%). Under Reduce Motion the sheet fades
+with 0px moved; on a desk the box is put in place in one step and fades in;
+a posted comment is put in place and fades in.
+
+THE CHECKS. verify_socialcomments.py gains nine sections, 29 to 37 (no page
+errors stays last): the icon and the folded box (its place and names, its
+line off the pixels at rest and lit, nothing in the closed fold seen or
+focusable; nobody who may not comment offered it); a phone's sheet (the rise
+and the fall read on every frame, the page under it still and inert, the
+dimmed page, a drag down and Esc each keeping the words, the keyboard stood
+in, the Pad over the sheet leaving the page inert behind it); a desk's fold
+(open and fold read on every frame, a second click, Esc and a press
+elsewhere each keeping the words, the Pad not "elsewhere"); Answer (a
+phone's "Answer Theo" and its line of words; a desk's fold under the
+conversation, folding first from the heading, Answer again; the long
+thread's glide); posting (in step on a desk, the sheet on a phone, the glow
+in the tint and its fade, Post's "Posting…", no line, the box emptied once
+gone); signed out and back with #say, and "Say the first thing" at none
+(opening, folding in step, going with the first comment, back with the
+last's delete); Reduce Motion; a drawing's own page; the new screens' words
+and targets. Sections 1, 2, 3, 12, 13, 14, 15, 18, 20, 21 and 28 open the
+box the way a person now does, and 13 and 28 read the sheet answering and
+"Say something?" where they read "Sign in to answer".
+
+EVERY NEW OR CHANGED ROW WAS SHOWN RED by a break of its own, each in a
+throwaway copy of the committed tree (git archive), its sections run alone
+(SOCIALCOMMENTS_PART), with a control beside them (sections 29 to 37 on an
+unbroken copy: green, 25 of 25). 74 breaks over four rounds, on the commits
+the rounds ran against: 70 red on their rows, and every one of the 45 new or
+changed rows red by at least one; four were breaks that broke nothing (two
+of them one idea), replaced by three that do. The icon: 36px; a heading
+grown to the button's 44px; the box left open on top; a closed fold seen and
+focusable; the icon's ink faint (1.45:1); unlit while open; offered to
+somebody taken down, and to a taken-down post's maker. A phone's sheet: a
+snap and a late jump, rising and going (each one frame carrying the whole
+195px); titled "Say something" for everybody; its field unfocused; the field
+14px; the words forgotten when it goes; no lift on the keyboard; the editor
+taking the page's inertness with it; the page under it pushed as it rises. A
+desk's fold: a snap and a late jump (one frame, 136px); the box there at
+once; the icon unlit; Esc, a press elsewhere and a second click each doing
+nothing; the words forgotten; focus lost on Esc; the Pad counted as
+"elsewhere". Answer: titled as a new comment (a phone, a desk and a
+drawing's page); no quote; the quote wrapping; the icon's box still aimed at
+the last answer; a desk's Answer opening under the heading; open on the
+heading and asked for under a conversation, jumping there; Answer again
+doing nothing; the page snapping to it, and not going to it at all. Posting:
+the box staying; no glow; the glow snapping off; the comment's room out of
+step with the fold (desk only, where they share a clock); the box emptied at
+once; the posting line back; the comment there at once, and after a late
+jump; an answer's focus on the icon; a new comment put at the end; the box
+not emptied. Signed out and none yet: Sign in without #say (the post's and a
+drawing's); #say not opening the box; #say kept in the address; the sheet's
+old words; "Sign in to answer" kept; the icon for the signed in alone; "Say
+the first thing" gone, 36px, opening nothing, never leaving, never coming
+back, snapping instead of folding in step; the icon lit for "Say
+something?". Reduce Motion: the sheet moving, the fold gliding, the box
+snapping in, a posted comment gliding. The rest: the quote and "Say
+something?"'s words faint (both censuses), a drawing's page naming the wrong
+maker, Sign in going Home from a drawing, the box never reaching a phone's
+sheet (every section that opens it), Post sending nothing, and a desk's box
+narrower than its column.
+
+FOUND WRONG, AND MENDED. Four breaks broke nothing, said so the list reads
+true: a scroll forced as the sheet rose, either way, moved nothing on a
+post short enough not to scroll (a push of the page's padding replaced
+them, red); `hidden` on "Say the first thing" lost to the button's own
+display rule, so nothing hid (the markup taken out instead, red); and a
+Reduce Motion fade taken away was still given by a more specific rule
+(`transition: none !important` instead, red). AND FIVE INSTRUMENTS WERE
+WRONG FIRST, four found by the breaks and one by its section's first run:
+(1) a box that never went, or never
+opened, stopped its section at a wait before the row could fail (sections
+1, 3, 15, 18, 20, 21, 30, 31, 32 and 34: each such step is its row's own
+now, a red row, never a stop); (2) section 21 named a dict `said`,
+shadowing
+the module's said() for every later section: a whole run would have stopped
+at 29 (found by a break that ran 21 before 32); (3) section 35 read a posted
+comment's own top under Reduce Motion, which never moves either way: a
+comment gliding into place under Reduce Motion stayed green (it reads what
+was under it now, which must move in one step); (4) the put-away loops left
+the box open for the step after them (my own rework, caught before the
+final run); and, on the section's first run, (5) section 33 counted the
+box as 136px tall, where three lines of words make it 182 (it reads the
+fold's own height at the press), and read the old first comment's box
+rather than its painted name (a comment that stops being first takes its
+rule inside its own box).
+
+
+Not tested here: WebKit, so not the owner's iPhone, and above all THE SHEET
+ON THE IPHONE'S KEYBOARD: the lift is read off the visual viewport, and here
+a stand-in visual viewport reports a 336px keyboard the way iPhone's Safari
+reports one; whether Safari reports it that way, and whether its own scroll
+of the focused field fights the sheet, is the first thing to try on the
+phone. Nor whether a tap on the icon raises the keyboard at once (the field
+is focused in the tap's own handler), nor the keyboard waiting after
+signing in. Firefox (the fold's grid-template-rows and the arriving
+comment's clip-path transitions; main's Firefox lane runs its smoke after
+the merge). SF and Segoe UI: every measure is in this box's fonts. The live
+site.
