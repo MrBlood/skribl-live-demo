@@ -1308,7 +1308,9 @@ with sync_playwright() as p:
                 for reduced in (False, True):
                     tag = f"{scheme}{' reduced' if reduced else ''}"
                     lctx, lpg = browser_as(b, pia, scheme=scheme, reduced=reduced)
-                    go(lpg, "/social/@pia#followers", wait=900)
+                    go(lpg, "/social/@pia")
+                    lpg.locator("[data-follows-open]").tap()
+                    lpg.wait_for_timeout(900)
                     lpg.evaluate(LFRAMES, [900])
                     lpg.locator("#followsSheet .fo-seg button[data-tab=following]").tap()
                     lpg.wait_for_timeout(1200)
