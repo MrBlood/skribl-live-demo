@@ -735,32 +735,42 @@ LK_TINT = r"""() => { const a = document.getElementById('liked'); if (!a || !a.c
            name: k(a.querySelector('.lk-by-words b')) }; }"""
 
 # A mark's line against what is painted behind its box: the hearts (empty,
-# liked; on a card or a page), Activity's small heart, the sheet's dot.
+# liked; on a card or a page), Activity's small heart, the sheet's dot. The
+# heart's pill is the player's lilac, a color-mix() Chrome reports as
+# color(srgb r g b / a) in 0 to 1: read as such (the likes mock's own reader
+# took those for 0 to 255 numbers and read the lilac as grey), and a colour
+# in any other form it cannot read is a red mark that says so, never a guess.
 MARKS = r"""() => {
-  const rgba = s => { const m = (s.match(/[\d.]+/g) || []).map(Number), k = /^color\(srgb/.test(s) ? 255 : 1;
+  const KNOWN = /^(rgba?\(|color\(srgb )/;
+  const rgba = s => { if (!KNOWN.test(s)) return null;
+    const m = (s.match(/[\d.]+/g) || []).map(Number), k = /^color\(srgb/.test(s) ? 255 : 1;
     return m.length >= 3 ? [m[0] * k, m[1] * k, m[2] * k, m.length > 3 ? m[3] : 1] : null; };
   const lum = c => { const v = c.slice(0, 3).map(x => { x /= 255; return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); });
                      return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]; };
   const over = (c, g) => c[3] >= 1 ? c : [0, 1, 2].map(k => c[k] * c[3] + g[k] * (1 - c[3]));
   const ratio = (a, b) => { const x = lum(a), y = lum(b); return Math.round((Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05) * 100) / 100; };
+  let unread = null;
+  const read = s => { const c = rgba(s); if (!c && !unread) unread = s; return c; };
   const ground = e => { const layers = [];
-    for (let n = e; n; n = n.parentElement) { const b = rgba(getComputedStyle(n).backgroundColor);
+    for (let n = e; n; n = n.parentElement) { const b = read(getComputedStyle(n).backgroundColor);
       if (b && b[3] > 0) { layers.push(b); if (b[3] >= 1) break; } }
     let g = [255, 255, 255];
     for (let i = layers.length - 1; i >= 0; i--) { const l = layers[i]; g = [0, 1, 2].map(k => l[k] * l[3] + g[k] * (1 - l[3])); }
     return g; };
   const out = [];
+  const put = (what, word, fg, g) => { out.push(unread || !fg ? { what, word, k: 0, unread: unread || 'no colour' }
+                                                               : { what, word, k: ratio(over(fg, g), g) }); unread = null; };
   document.querySelectorAll('.lk-heart, .act-badge').forEach(h => { if (!h.getClientRects().length) return;
     const svg = h.querySelector('svg.ic-heart'); if (!svg) return;
     const liked = h.classList.contains('is-liked') || h.classList.contains('act-badge');
-    const p = svg.querySelector(liked ? '.ht-ink' : '.ht-line'), cs = getComputedStyle(p), g = ground(h);
-    const c = rgba(cs.stroke); if (!c) return; c[3] *= +cs.opacity;
+    const p = svg.querySelector(liked ? '.ht-ink' : '.ht-line'), cs = getComputedStyle(p);
     const where = h.classList.contains('act-badge') ? 'badge' : h.closest('.post-card') ? 'card' : 'page';
-    out.push({ what: where + (liked ? ' liked' : ' empty'), k: ratio(over(c, g), g) });
+    let g = ground(h), c = read(cs.stroke); if (c) c[3] *= +cs.opacity;
+    put(where + (liked ? ' liked' : ' empty'), false, c, g);
     const n = h.querySelector('.lk-n');
-    if (n) out.push({ what: 'count', word: true, k: ratio(over(rgba(getComputedStyle(n).color), g), g) }); });
+    if (n) { g = ground(h); put('count', true, read(getComputedStyle(n).color), g); } });
   document.querySelectorAll('#likeSheet:not([hidden]) .lk-mark').forEach(d => { const g = ground(d.parentElement);
-    out.push({ what: 'sheet dot', k: ratio(rgba(getComputedStyle(d).backgroundColor), g) }); });
+    put('sheet dot', false, read(getComputedStyle(d).backgroundColor), g); });
   return out; }"""
 
 
