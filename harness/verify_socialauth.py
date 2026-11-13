@@ -720,6 +720,16 @@ with sync_playwright() as p_:
               and bar[-1:] == ["Sign in"] and p.who() is None,
               f"joined {said.get('path')}; cookie before {was} after {held}; note {note!r}; bar {bar}")
         p.pg.goto(BASE + "/social/signin")
+        # THE SITE SAYS ITS OWN NAME (Nov 12: after the site became Blooby, two
+        # places it names itself still said Skribl): sign-in's heading, signed
+        # out, and the Invites line on Settings, for whoever runs the site.
+        title = text_of(p.pg, "#siTitle").strip()
+        boss = admin(b)
+        boss.pg.goto(BASE + "/social/you")
+        invites = text_of(boss.pg, "section[aria-labelledby=invTitle] .panel-sub").strip()
+        check("where the site names itself it says Blooby, never Skribl: sign-in's heading, and the Invites line on Settings",
+              title == "Sign in to Blooby" and invites.startswith("Blooby is invite-only") and "Skribl" not in title + invites,
+              f"heading {title!r}; invites {invites!r}")
         pre = session_data((p.cookie() or {}).get("value", ""))
         pre_token = p.pg.get_attribute("meta[name=social-csrf]", "content")
         back = signin(p)

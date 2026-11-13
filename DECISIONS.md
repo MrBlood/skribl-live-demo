@@ -36075,3 +36075,20 @@ Not tested here: WebKit (the owner's iPhone), SF and Segoe UI, PostgreSQL
 (the migration's DDL rendered offline and read: plain ADD COLUMN, ADD
 CONSTRAINT, one correlated UPDATE, and the index swaps, both ways), and the
 live site.
+
+## After v330 -- The site says its own name: sign-in and Settings
+
+Found while answering the owner's "where is the theme picker and other
+settings?" (Nov 12): two places where the site names itself still said
+Skribl after it became Blooby. Sign-in's heading read "Sign in to Skribl"
+over its own "New to Blooby?", and the Invites line on Settings read "Skribl
+is invite-only for now". Both say Blooby now, as the Invites page already
+did. Skribl's own names (the Pad, Flip, a skribl you make) are untouched.
+
+THE CHECK: verify_socialauth, section 4, reads sign-in's heading signed out
+and the Invites line on the admin's Settings, and wants Blooby in both and
+Skribl in neither. CALIBRATED: on the old words it went red, 63/64 (heading
+'Sign in to Skribl'; invites 'Skribl is invite-only for now. You let people
+in.'), and green on the new.
+
+Pad and Flip: not affected; these are the site's own pages.
