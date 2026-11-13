@@ -615,9 +615,23 @@ BOX_STILL = """() => { const s = document.getElementById('commentBoxSheet'), f =
 POST_AT = """() => { const p = document.querySelector('[data-cm-post]').getBoundingClientRect();
   const boxEl = document.querySelector('[data-cm-box]'), box = boxEl.getBoundingClientRect(), cs = getComputedStyle(boxEl);
   const c = document.querySelector('[data-cm-box] .composer-acts .chip').getBoundingClientRect();
+  const post = document.querySelector('[data-cm-post]'), was = post.textContent, w1 = p.width;
+  const word = post.getAttribute('data-busy') || '';
+  post.textContent = word;
+  const busy = post.getBoundingClientRect(), said = post.textContent;
+  // A longer word, standing in for a wider font: Post is as wide as it before
+  // it is said, so saying it changes nothing. Restored after.
+  const longer = word + ' ' + word;
+  post.setAttribute('data-busy', longer); post.textContent = was;
+  const w3 = post.getBoundingClientRect().width;
+  post.textContent = longer;
+  const w4 = post.getBoundingClientRect().width;
+  post.textContent = was; post.setAttribute('data-busy', word);
   return { x: Math.round(p.left), dy: Math.round(p.top - c.top),
            edge: Math.round(box.right - parseFloat(cs.paddingRight) - p.right),
-           foot: Math.round(box.bottom - parseFloat(cs.paddingBottom) - p.bottom) }; }"""
+           foot: Math.round(box.bottom - parseFloat(cs.paddingBottom) - p.bottom),
+           posting: said, held: Math.abs(busy.width - w1) < 0.5 && Math.abs(busy.top - p.top) < 0.5 && Math.abs(w4 - w3) < 0.5,
+           sides: getComputedStyle(post).paddingLeft + ' ' + getComputedStyle(post).paddingRight }; }"""
 # When what is in the box is wider than its line, whatever the font: the chips'
 # words spread (as a wider font or larger text would make them), then something
 # far wider than the column put in the box. The box keeps to its column, the
@@ -1775,6 +1789,7 @@ with sync_playwright() as p:
             # it to 360), Post stays where it was, and the counter reads on its own
             # line under Post, at its right edge.
             before = dpg.evaluate(POST_AT)
+            named = dpg.locator("[data-cm-box]").get_by_role("button", name="Post", exact=True).count()
             spread = dpg.evaluate(TOO_WIDE)
             dpg.fill("#cmWords", "word " * 99)
             dpg.wait_for_timeout(200)
@@ -1791,10 +1806,12 @@ with sync_playwright() as p:
                   and opened["boxTop"] == 10,
                   f"{where}; opened {opened}; stopped {err}")
             check("the box keeps to its column whatever is in it (a wider font, larger words, something far too wide):"
-                  " Post at its right edge, nothing past it, no gap under Post; typing to the last hundred characters,"
+                  " Post at its right edge, nothing past it, no gap under Post, and as wide saying \"Posting…\" (named"
+                  " Post all the same); typing to the last hundred characters,"
                   " the counter (\"5 left\") reads on its own line under Post, at its right edge, and Post stays where"
                   " it was; the same in an answer's box",
                   abs(before["edge"]) <= 1 and abs(before["foot"]) <= 1
+                  and before["posting"] == "Posting…" and before["held"] and before["sides"] == "12px 12px" and named == 1
                   and spread["box"] == spread["col"] and spread["chipsIn"] and abs(spread["edge"]) <= 1
                   and spread["withWide"] == spread["col"]
                   and near["text"] == "5 left" and near["painted"] and near["box"] == near["holder"]
@@ -1803,7 +1820,8 @@ with sync_playwright() as p:
                   and err2 is None and answering["text"] == "5 left" and answering["painted"]
                   and answering["box"] <= answering["holder"] and answering["right"] <= answering["holderRight"]
                   and answering["under"] >= 0 and abs(answering["edge"]) <= 1,
-                  f"before {before}; too wide {spread}; near {near}; answering {answering}; stopped {err2}")
+                  f"before {before}; named Post {named}; too wide {spread}; near {near}; answering {answering};"
+                  f" stopped {err2}")
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(12, exc)
 

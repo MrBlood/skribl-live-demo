@@ -942,6 +942,14 @@ button.make-door { width: 100%; border: 0; font: inherit; text-align: left; curs
    ("5 left") reads on its own line under Post, at its right edge, so Post
    never moves while someone types. */
 .cm-box .composer-post { margin-left: auto; }
+/* POST IS AS WIDE AS ITS LONGER WORD, as Following's button is: "Posting…"
+   is measured under "Post" in a row with no height, so saying it never
+   widens the button and the line never wraps differently as the comment
+   goes (in this box's font it pushed Post onto a second line, and the box
+   grew 50px as it folded away). Its sides are 12px, so both words still fit
+   the 96px it always was. */
+.cm-box .composer-post { display: inline-grid; justify-items: center; align-content: center; gap: 0; padding: 0 12px; }
+.cm-box .composer-post::after { content: attr(data-busy); height: 0; overflow: hidden; visibility: hidden; }
 .cm-box .composer-left { order: 1; flex: 0 0 100%; margin-left: 0; text-align: right; }
 .cm-box .composer-left:empty { display: none; }
 .cm-box .chip { min-height: 44px; padding: 0 16px; }
