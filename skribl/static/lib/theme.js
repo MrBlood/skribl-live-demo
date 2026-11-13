@@ -24,7 +24,8 @@
  * is the same decision for a different reason: the light ramp is one block
  * keyed on data-theme="light", and a media rule would be a second copy of it
  * to drift. The resolution happens HERE and in the inline boot, which stamp
- * the attribute; the CSS has one ramp and one switch.
+ * the attribute ("light" or "dark", since Settings at /social); the CSS has
+ * one ramp and one switch.
  *
  * WHY THE FLASH MATTERS. The setting lives in localStorage, which no CSS can
  * read, so the attribute has to be stamped on <html> before first paint or a
@@ -34,8 +35,8 @@
  * KEY and the values are the contract between them.
  *
  * FAILS QUIET. localStorage throws on ACCESS in Safari's private mode, not
- * merely on write. Every read and write here is wrapped, and the fallback is
- * dark, which is the app as it has always looked.
+ * merely on write. Every read and write here is wrapped, and a choice that
+ * cannot be read is system: the device decides (dark where nothing says).
  */
 (function (global) {
   'use strict';
@@ -81,18 +82,22 @@
     return m;
   }
 
+  /* DARK IS SAID OUT LOUD (after v330, Settings at /social): data-theme is
+   * "light" or "dark", as the inline boot stamps it, so a host page can tell
+   * a choice from nothing stamped at all (follow the device). Skribl's own
+   * stylesheets only look for light, so its pages look as they always did. */
   function apply(mode) {
     var root = global.document && global.document.documentElement;
     if (!root) return mode;
-    if (mode === LIGHT) root.setAttribute('data-theme', LIGHT);
-    else root.removeAttribute('data-theme');
-    /* The browser's own chrome follows the page (SK-AUD-013): the theme-color
+    root.setAttribute('data-theme', mode === LIGHT ? LIGHT : DARK);
+    /* The browser's own chrome follows the page (SK-AUD-013): a theme-color
        meta carries both grounds as data- attributes (_skribl_app_identity.html),
-       so this holds no colour of its own. A page without the meta is a host's. */
-    var meta = global.document.querySelector('meta[name="theme-color"]');
-    if (meta) {
-      var want = meta.getAttribute(mode === LIGHT ? 'data-light' : 'data-dark');
-      if (want) meta.setAttribute('content', want);
+       so this holds no colour of its own. Every one that carries them follows:
+       a host page may key two by media, and both then say the chosen ground. */
+    var metas = global.document.querySelectorAll('meta[name="theme-color"]');
+    for (var i = 0; i < metas.length; i++) {
+      var want = metas[i].getAttribute(mode === LIGHT ? 'data-light' : 'data-dark');
+      if (want) metas[i].setAttribute('content', want);
     }
     return mode;
   }

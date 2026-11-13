@@ -2208,8 +2208,8 @@ with sync_playwright() as _spt:
     check("light: a light preference stored by an editor is light here too",
           _L["attr"] == "light" and lum_ok(_L["body"], light=True),
           f"data-theme={_L['attr']!r}, body {_L['body']}")
-    check("dark: and a dark one is still the page it always was",
-          _D["attr"] is None and lum_ok(_D["body"], light=False),
+    check("dark: and a dark one is still the page it always was (said out loud: data-theme=\"dark\")",
+          _D["attr"] == "dark" and lum_ok(_D["body"], light=False),
           f"data-theme={_D['attr']!r}, body {_D['body']}")
     check("light: the browser chrome follows the page (theme-color is the ground)",
           _L["meta"].lower() == _hex(_L["body"]),
@@ -2343,7 +2343,7 @@ with sync_playwright() as _spm:
         _pp.emulate_media(color_scheme="dark")
         _pp.wait_for_timeout(300)
         _a2 = _pp.evaluate("() => document.documentElement.getAttribute('data-theme')")
-        check(f"{_here}: System follows the device, both ways", _a1 == "light" and _a2 is None, f"{_a1} / {_a2}")
+        check(f"{_here}: System follows the device, both ways", _a1 == "light" and _a2 == "dark", f"{_a1} / {_a2}")
         # REPORT A PROBLEM (v315): the row copies the editors' diagnostic
         # details from here too. The clipboard is stubbed so the check reads
         # WHAT was copied, not merely that a button was pressed.

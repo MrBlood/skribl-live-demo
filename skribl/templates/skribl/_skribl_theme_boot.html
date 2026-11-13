@@ -9,9 +9,17 @@
    with lib/theme.js, and a second copy of a contract is a second thing to
    drift — which is the whole subject of verify_surfaces.py.
 
-   Kept deliberately tiny and total: any read failure (Safari private mode
-   throws on ACCESS, not just on write) and any unrecognised value leave the
-   attribute off, which is dark, which is the app as it has always looked.
+   Kept deliberately tiny and total: a read that fails (Safari private mode
+   throws on ACCESS, not just on write) and a value it does not know both read
+   as system, and the device decides.
+
+   IT SAYS DARK OUT LOUD (after v330, Settings at /social: one choice for
+   Blooby, Pad and Flip). data-theme is "light" or "dark", never left off, so
+   a host page can tell three things apart: light, dark, and nothing stamped
+   at all, which means "follow the device" (a page whose scripts never ran).
+   That is what skribls.net and Skribl's own Gallery section read already.
+   Skribl's own stylesheets only look for light, so its pages look exactly
+   as they did; dark used to be the attribute being absent.
 
    ?theme=light|dark ON THE URL WINS, for this document only (v288). A host
    that iframes /s/<id> cannot reach into the frame's localStorage and the
@@ -26,9 +34,12 @@
    the stored value is — a deferred script would flash. lib/theme.js is the
    same resolution for everything that runs afterwards; keep them agreeing.
 
-   THE BROWSER'S OWN CHROME FOLLOWS (SK-AUD-013): a light page also re-stamps
-   the theme-color meta _skribl_app_identity.html rendered just above, from
-   the light ground that tag carries -- no colour is held here. #}
+   THE BROWSER'S OWN CHROME FOLLOWS (SK-AUD-013): every theme-color meta that
+   carries both grounds as data-light and data-dark is re-stamped with the
+   ground of the theme stamped here -- no colour is held here. Skribl's pages
+   have one, rendered just above by _skribl_app_identity.html; a host page
+   may key two by media (one for a light device, one for a dark), and both
+   then say the chosen ground, whichever the device picks. #}
 <script nonce="{{ csp_nonce }}">
-(function(){try{var m=/[?&]theme=(light|dark)(?:&|$)/.exec(location.search);var t=m?m[1]:null;if(!t){try{t=localStorage.getItem('skribl_theme_v1');}catch(e){t=null;}}if(t!=='light'&&t!=='dark'){t=(window.matchMedia&&matchMedia('(prefers-color-scheme: light)').matches)?'light':'dark';}if(t==='light'){document.documentElement.setAttribute('data-theme','light');var c=document.querySelector('meta[name=theme-color]');if(c&&c.dataset.light){c.content=c.dataset.light;}}}catch(e){}})();
+(function(){try{var m=/[?&]theme=(light|dark)(?:&|$)/.exec(location.search);var t=m?m[1]:null;if(!t){try{t=localStorage.getItem('skribl_theme_v1');}catch(e){t=null;}}if(t!=='light'&&t!=='dark'){t=(window.matchMedia&&matchMedia('(prefers-color-scheme: light)').matches)?'light':'dark';}document.documentElement.setAttribute('data-theme',t);var c=document.querySelectorAll('meta[name=theme-color]');for(var i=0;i<c.length;i++){if(c[i].dataset[t]){c[i].content=c[i].dataset[t];}}}catch(e){}})();
 </script>
