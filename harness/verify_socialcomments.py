@@ -627,7 +627,8 @@ ICON = """() => { const b = document.querySelector('.cm-say'); if (!b) return nu
     line: Math.round(tr.height * 100) / 100, lands: lands.every(Boolean), gap: Math.round((list.top - hr.bottom) * 100) / 100,
     expanded: b.getAttribute('aria-expanded'), popup: b.getAttribute('aria-haspopup'), controls: b.getAttribute('aria-controls'),
     plus: b.querySelectorAll('svg path').length,
-    fold: fold ? { h: Math.round(fold.getBoundingClientRect().height * 100) / 100, seen: getComputedStyle(inner).visibility } : null }; }"""
+    fold: fold ? { h: Math.round(fold.getBoundingClientRect().height * 100) / 100, seen: getComputedStyle(inner).visibility,
+                   laid: fold.querySelector('[data-cm-words]').getClientRects().length > 0 } : null }; }"""
 # What the signed-out sheet says, and where its Sign in goes.
 OUT_SHEET = """() => { const w = document.getElementById('commentOutSheet'); if (!w) return null; const a = w.querySelector('a.btn');
   const i = document.querySelector('.cm-say');
@@ -2782,9 +2783,10 @@ with sync_playwright() as p:
                   " reaches into the room round it) and the comments start 10px under it: phone and desk, light and dark",
                   ok_place, "; ".join(f"{' '.join(k)}: {v['icon']}" for k, v in seen.items())[:900])
             ok_fold = all(v["box"] and v["box"]["open"] is None and v["icon"]["fold"]["h"] == 0
-                          and v["icon"]["fold"]["seen"] == "hidden" and not v["focusable"] and v["icon"]["expanded"] == "false"
-                          for v in seen.values())
-            check("the box is folded away until asked for: no room under the heading, unseen, and nothing in it takes focus",
+                          and v["icon"]["fold"]["seen"] == "hidden" and not v["icon"]["fold"]["laid"] and not v["focusable"]
+                          and v["icon"]["expanded"] == "false" for v in seen.values())
+            check("the box is folded away until asked for: no room under the heading, unseen, not laid out at all (so no"
+                  " reader takes its words for shown words), and nothing in it takes focus",
                   ok_fold, "; ".join(f"{' '.join(k)}: box {v['box'] and v['box']['open']}, fold {v['icon']['fold']},"
                                      f" focusable {v['focusable']}" for k, v in seen.items()))
             ok_mark = all(v["mark"]["k"] >= 3 for v in seen.values()) and all(v["lit"]["k"] >= 3 and v["lit_ground"] in (

@@ -105,7 +105,8 @@
     nobody signed in (it raises "Say something?"); nobody else is offered it.
     The icon reaches into the room already round the heading, so the heading
     keeps its height. THE BOX, folded away under it until asked for (a desk
-    glides it open there; a phone's sheet takes it). "SAY THE FIRST THING",
+    glides it open there; a phone's sheet takes it); folded, it is not laid
+    out at all (hidden), so nothing reads its words as shown. "SAY THE FIRST THING",
     at none, where the comments will be: the small violet words, 44px,
     opening the box as the icon does. #}
 {% macro comments_section(cm) -%}
@@ -117,8 +118,8 @@
     {% if say %}<button class="icon-btn cm-say" type="button" data-cm-new aria-expanded="false" aria-label="Say something" title="Say something"
             {%- if not cm.can %} aria-haspopup="dialog" aria-controls="commentOutSheet"{% endif %}>{{ ic.comment_new() }}</button>{% endif %}
   </div>
-  {% if cm.can %}<div class="cm-fold" id="commentFold" data-cm-fold><div class="cm-fold-in">{{ comment_box() }}</div></div>{% endif %}
-  {% if say %}<div class="cm-first-fold{% if not cm.cards %} is-open is-still{% endif %}" data-cm-first-fold><div class="cm-fold-in">
+  {% if cm.can %}<div class="cm-fold" id="commentFold" data-cm-fold><div class="cm-fold-in" hidden>{{ comment_box() }}</div></div>{% endif %}
+  {% if say %}<div class="cm-first-fold{% if not cm.cards %} is-open is-still{% endif %}" data-cm-first-fold><div class="cm-fold-in"{% if cm.cards %} hidden{% endif %}>
     <p class="cm-first"><button type="button" data-cm-new data-cm-first{% if not cm.can %} aria-haspopup="dialog" aria-controls="commentOutSheet" aria-expanded="false"{% endif %}>Say the first thing</button></p>
   </div></div>{% endif %}
   <ol class="cm-list" data-cm-list>{% for it in cm.cards %}{{ comment(it, cm.can, cm.post_mine) }}{% endfor %}</ol>

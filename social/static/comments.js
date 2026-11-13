@@ -212,7 +212,7 @@
   function grow() {
     if (!words) return;
     words.style.height = 'auto';
-    words.style.height = words.scrollHeight + 'px';
+    if (words.scrollHeight) words.style.height = words.scrollHeight + 'px';   // none while folded away
     var n = LIMIT - words.value.length;
     left.textContent = n <= 100 ? say('c_left', { n: n }) : '';
   }
@@ -305,6 +305,7 @@
      none, unless the box is open under the heading in its place. It folds in
      step with the box: `quick` as the box folds away quickly. */
   var firstOff = null;
+  var firstIn = firstFold ? firstFold.querySelector('.cm-fold-in') : null;
   function syncFirst(quick) {
     if (!firstFold) return;
     var want = !list.querySelector(':scope > .cm') && !(at === root && onDesk());
@@ -312,11 +313,13 @@
     if (firstOff) firstOff();
     firstFold.classList.remove('is-still');
     firstFold.classList.toggle('is-quick', !!quick);
+    if (want) { firstIn.hidden = false; void firstFold.offsetHeight; }   // laid out, then it opens
     firstFold.classList.toggle('is-open', want);
     firstOff = after(firstFold, 'grid-template-rows', 500, function () {
       firstOff = null;
       firstFold.classList.remove('is-quick');
       if (firstFold.classList.contains('is-open')) firstFold.classList.add('is-still');
+      else firstIn.hidden = true;
     });
   }
 
@@ -336,6 +339,7 @@
     house();
     placeFold(top);
     fold.classList.remove('is-quick', 'is-still');
+    foldIn.hidden = false;           // laid out again: folded, it is not
     void fold.offsetHeight;          // the glide starts from where it is
     fold.classList.add('is-open');
     at = where;
@@ -367,6 +371,7 @@
       closing = false;
       fold.classList.remove('is-quick');
       placeFold(null);
+      foldIn.hidden = true;          // folded away: not laid out, so nothing reads it as shown
       if (done) done();
       var next = afterFold;
       afterFold = null;
