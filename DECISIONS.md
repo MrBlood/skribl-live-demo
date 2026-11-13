@@ -36927,3 +36927,277 @@ signing in. Firefox (the fold's grid-template-rows and the arriving
 comment's clip-path transitions; main's Firefox lane runs its smoke after
 the merge). SF and Segoe UI: every measure is in this box's fonts. The live
 site.
+
+## After v330 -- Following at /social
+
+The owner, Nov 13, on the follow mock: "Yes to all": B (yours alone) and
+every default. Built in the mock's own classes, sizes and words
+(`social/follows.py`, `_follow.html`, `follows.js`, the FOLLOWING block of
+`social.css`), with one general seam on Skribl's listing.
+
+- B, YOURS ALONE. On somebody else's page there is only Follow, or
+  Following: no line, no count and no list, for anybody, not in the page and
+  not in its source. Your own page says who under its buttons, the twin of
+  "Liked by…" (its own classes): "Followed by Mira, Theo and 2 others" with
+  their drawn faces, every name up to three, else two and how many more,
+  newest first; before anybody follows you "You follow Mira and Juno"; with
+  nobody either way no line at all, so nothing ever says zero. The line opens
+  Make's own sheet (--menu-paper) with the one pill, Followers | Following,
+  each newest first with when, "Only you can see who follows you, and who you
+  follow."; a row opens their page. Counted by the viewer: anybody a block
+  either way or a takedown hides is in no line, no count and no list.
+- THE BUTTON. First in the row on somebody's page, before Share and ⋯ (on a
+  desk the same row beside their face, as the profile already lays it), in
+  the action's purple with a plus drawn in the pen; once tapped "Following",
+  the quiet button, its check drawing itself. Both words sit in one grid cell,
+  so it is as wide as "Following" in any font: on a touch phone 135.31px at
+  81.34px from the left, Share at 224.66px and ⋯ at 276.66px, both times, the
+  mock's own figures to the hundredth. The motion fades and draws, never moves;
+  under Reduce Motion it only fades.
+- UNFOLLOWING ASKS ONCE: "Unfollow Theo?", "You'll still see Theo's drawings
+  under Everyone. They aren't told.", Unfollow the big button (the action),
+  Keep following beside it with the focus. Nobody is told.
+- HOME'S PILL, Following | Everyone, under the composer: the Gallery's New /
+  Hot value for value (44px, the card's ground and line, 12px round, the
+  tint rgba(124, 92, 255, 0.22) gliding under the chosen option over 0.42s,
+  13px words at 600, the Gallery's inks). The site cannot name Skribl's
+  classes, so it is the site's own control with the Gallery's values, under
+  three new tokens for the role (--pill-on-fill, --pill-on-ink,
+  --pill-off-ink): the same values, not new ones. Home opens on Following
+  once you follow somebody and on Everyone before that; a tap keeps your pick
+  on the account (social_people.home_feed), so it holds on every device. The
+  switch: the pill glides, the posts fade, change while unseen, fade back; the
+  page doesn't scroll (held at its place and height while the posts change).
+- FOLLOWING NEVER RUNS OUT. The people you follow and you, posts and drawings
+  alike, newest first, nothing ranked; then "You're caught up with the people
+  you follow." with a check in the pen, then Fresh from everyone (a heading)
+  and everybody else's, so nothing shows twice; Load more carries on through
+  both. Somebody who follows nobody sees the kind card, "You're not following
+  anyone yet", how, and Look around (Explore), then everyone's.
+- ACTIVITY: "Mira followed you", the face wearing a small Follow disc (the
+  action's purple, a white plus), no picture; grouped since you last looked
+  ("Mira and 2 others followed you", "Mira and Theo followed you"); one person
+  opens their page, several open who follows you (your page, #followers, the
+  sheet rising on Followers). The heading and the empty page say follows, in
+  the mock's words. A FOLLOW NEVER LIGHTS THE BELL'S DOT.
+- SIGNED OUT: Follow raises the heart's small sheet: "Follow Theo?", "Sign in,
+  and Theo's new drawings show first on your Home.", Not now, Sign in, which
+  comes back to Theo's page; nothing is pressed for them.
+- NEVER: Follow on a card, "Follow back", "Follows you".
+- BLOCKS: a block ends a follow both ways (the rows go) and none can begin
+  while it stands; lifting it restores nothing. Somebody taken down drops out
+  of every list and every Following.
+- Following again doesn't ping twice; 60 an hour; you can't follow yourself;
+  deleting an account takes its follows both ways, in code; Privacy and
+  docs/LAWYER-NOTE.md say follows are kept. Later, not now: pings for new
+  posts, private accounts, suggestions.
+
+DATA, on the site's chain (1757a4385be8, after a81c5c4dde3a): social_follows,
+follower_id and followed_id (both to social_people, ON DELETE CASCADE),
+created_at (when they first followed), ended_at (when they unfollowed, or
+nothing while they follow); unique on the pair (ix_social_follows_pair);
+never yourself (ck_social_follows_not_self); indexed newest first both ways,
+(follower_id, created_at) and (followed_id, created_at). And
+social_people.home_feed, Home's pick. Offline, the PostgreSQL DDL is plain:
+CREATE TABLE with its CHECK and two foreign keys, three CREATE INDEX and one
+ADD COLUMN; the downgrade the reverse.
+
+JUDGMENT CALLS, said so the list reads true:
+- AN UNFOLLOW KEEPS ITS ROW (ended_at), the one way "following again doesn't
+  ping twice" can hold: Activity reads the follow's first time, so a second
+  follow has nothing new to say, and a follow taken back has no row. A block
+  deletes the rows instead (a clean break, which is what "lifting it doesn't
+  restore it" asks). Privacy says the first: "if you unfollow someone, we keep
+  that you once did, so following them again doesn't tell them twice."
+- COUNTED WHEN READ, BY THE VIEWER, not kept as a number as the mock's "What
+  it takes" line said: under B the only count anybody sees is their own, in
+  names, and "by the viewer" leaves out anybody hidden, which a kept number
+  cannot. It is an indexed count on your own page alone.
+- SKRIBL'S LISTING TAKES `authors` (the mock said "nothing in Skribl"):
+  drawings shown outside a post are Home's cards too, so Following must hold
+  them, and without it the choices were a read per person followed or a scan
+  of everyone's. It is general (any host's feed of the people somebody
+  follows), documented in docs/INTEGRATION.md, any number of authors (asked
+  in pieces of 500 inside, one query a piece, the newest of all kept). The
+  site's layering rule holds: it imports only the documented name.
+- 60 AN HOUR, follows and unfollows alike: comments' and blocks' number, not
+  likes' 120 ("A rate limit, as likes have"), for the mock's reason, "nobody
+  can follow everyone at once to be noticed".
+- UNDER EARLIER A DAY'S FOLLOWS are those within 24 hours of the newest of
+  them: the site keeps no time zone of a person's, so a calendar date would
+  be UTC's, the owner's evening split in two.
+- THE BUTTON'S NAME FOLLOWS ITS WORD ("Follow Theo Lind", then "Following Theo
+  Lind"; a tap on Following says it raises a dialog), not aria-pressed under a
+  fixed name: the name always holds the word on the button (WCAG's label in
+  name), and a status line says "You're following Theo Lind." to a screen
+  reader.
+- THE LISTS show the newest 200 each, as "Liked by" does; the line's count is
+  exact. An empty one (only reachable when the other has somebody) says so
+  kindly, in new words: "When someone follows you, they'll show here." and
+  "Tap Follow on someone's page, and they'll show here."
+- WHEN THE PEOPLE YOU FOLLOW END PART-WAY DOWN A PAGE, at least five of
+  everybody else's follow on it, and a page of everybody else's reads at most
+  four of Everyone's pages looking for one that isn't all the people you
+  follow. Following nobody, Following is everyone's, your own among them (the
+  mock's own page did so).
+- ONE WAY TO SAY A TIME, MOVED: window.SocialWhen now lives in social.js
+  (loaded on every page) instead of posts.js, so your own page's lists can
+  say "8m" in your own time: posts.js cannot load on a profile, where it
+  would take Skribl's Gallery's own #reportSheet for the site's. posts.js
+  calls it as before, so nothing a post's page or Home says changed.
+  comments.js's own comment still says posts.js (not touched: the comment
+  icon's helper is in that file).
+- Home's pick is a short string the route checks, not a CHECK in the table,
+  so SQLite never rebuilds social_people to add it.
+
+Pad and Flip: nothing changes in either editor. Home's cards play Pad drawings
+and Flips in the one player they share, so Following shows both alike. The one
+change on Skribl's side is the listing's general `authors`, which is no
+editor's; nothing is left for Flip to catch up on.
+
+THE FOUR: kind (no scoreboard on anybody: who follows you is yours, as who
+liked your drawing is; nothing says zero; unfollowing asks once and tells
+nobody; a follow never pulls you back to the bell; nothing jumps); simple
+(one button, first in the row, as wide as its longest word so nothing beside
+it moves; your page says who in plain words); playful (their drawn faces in
+the line, a check that draws itself in the pen); powerful (Home shows the
+people you follow first and never runs out, and the next drawing of the
+artists you love comes to the top, where it plays at the artist's own speed).
+
+CONTRAST, measured on the built pages (verify_socialfollow section 13),
+phone (touch) and desk, light and dark: 456 words read on eleven screens a
+look (somebody's page with Follow and with Following, the unfollow sheet,
+your own page with its line, the lists on each tab, Home on Following at the
+top and at "caught up", Home following nobody, Activity with follows, the
+signed-out sheet), none under 4.5:1, the lowest 5.33:1 (the white Follow,
+Post and Make on the action purple, as everywhere); the lists' words 6.74:1
+light and 8.59:1 dark. Each pill's chosen word on its tint 7.66:1 and 7.96:1
+(the mock's pixels said 7.65 and 8.03), the other on the track 9.35:1 and
+8.59:1: the tint is a sibling under the word, which a ground read from its
+ancestors cannot see, so it is laid over the track. The marks are the mock's
+to the hundredth: Follow's plus 5.33:1, Following's check 17.95:1 and
+15.09:1, the caught-up check 4.23:1 and 5.65:1, Activity's small Follow
+5.19:1 and 3.65:1 on the page, its plus 5.33:1. Every target 44px to a finger
+(each pill's option by its 44px band, a press at its middle and 21px either
+side landing on it), no text field under 16px, and no new field at all.
+verify_contrast does not read /social, so this suite measures it; three
+tokens added for a role that already had its values (the Gallery pill's).
+
+THE CHECKS. verify_socialfollow.py, fourteen sections and 71 rows through
+the demo's own server, people joining with Chromium's virtual authenticator:
+the button's place, paint and name (phone and desk, signed out, never yours,
+never blocked, never on a card); a tap, the sheet that asks once, nothing
+beside it moving, following again keeping the first time; who may follow,
+the limit, a refusal put back; yours alone (nothing in somebody else's page
+or source), your line's words and faces, counted by the viewer; the lists,
+their switch read on every frame, their landings; the button read on every
+frame both ways and under Reduce Motion; Home's pill (its place, the
+Gallery's values, the default, the pick across devices, a switch that cannot
+reach the site, the switch read on every frame and under Reduce Motion);
+Following's order, caught up, Fresh from everyone, Load more through both,
+an outlived cursor, the kind card, somebody taken down (all of Following
+walked); Activity's rows, grouping, Earlier by the day, the bell left dark
+(and lit by a comment, so it can be), the landings, the words; signed out;
+blocks; the chain on a populated database, the constraints, the reads'
+plans, Home with no read a card, deleting with the cascade off; words, marks
+and targets on every screen; no page, console or CSP errors.
+verify_createpost.py, two rows for the listing's `authors` (those authors'
+public ones only, newest first, an empty list nothing, paging; 600 authors in
+pieces, the newest of all kept). The affected suites learnt the change:
+verify_socialauth's chain row the eleventh table and its three indexes;
+verify_socialactivity's and verify_sociallikes' rows Activity's new words;
+verify_socialsafety a row that a block ends a follow both ways and none can
+begin; verify_socialprofile a row for the row of buttons (Follow first on
+somebody else's page, none on your own).
+
+MOTION JUDGED FAIRLY. Every motion row reads its thing on every animation
+frame, and a step is judged over the display frames it spans (60 a second),
+so a frame the browser drops on a busy machine is not read as a jump; a snap
+cannot hide in a long frame, because each change must also show over several
+frames of its own (a 30ms fade is red). The thresholds are the mock's:
+nothing moves; a fill or a word no more than 35% of its change a frame; a
+check drawn over six frames or more; a pill no more than 30% of its way a
+frame over eight or more; posts changed only at 0.05 or less, after the pill
+started; nothing scrolled. Read as built: the button's fill at most 15% a
+frame over 15, its check 11% over 18; Home's pill 11% over 20, its posts' fade
+26%, the posts changed at 0, the page 0px moved; the lists' pill 11% over 20,
+one list gone before the other comes.
+
+EVERY NEW OR CHANGED ROW WAS SHOWN RED by a break of its own, each in a
+throwaway copy of the committed tree (git archive), its section run alone,
+with the copy unbroken beside each section as a control: 96 breaks over 107
+runs in three rounds, 94 meant to go red, every one red on its own row in
+the end, and two that check the readers and stay green; 24 controls, all
+green. verify_socialfollow, 87: Follow after Share; not the action; named
+without whom; its plus not the pen's; on your own page; on a card; "Follows
+you" on a card; gone signed out; not kept; each word its own width; Unfollow
+not the action; the sheet's words; Keep following that unfollows; an
+unfollow that deletes the row; following again with a new time; no token
+asked; following yourself; following through a block; a taken-down account
+following; no limit; a refusal not put back; any pick kept; your line for
+everybody; oldest first; the faces backwards; names without "and"; never
+"You follow"; a line at zero; the hidden counted; the sheet untitled; the
+lists' note; the sheet changing height; rows to nowhere; no landing; the
+lists snapping, seen together, their pill snapping, gliding under Reduce
+Motion; a jumpy button; one that fades in a blink (30ms); a check that snaps,
+one that un-draws, one under Reduce Motion that draws; a button that moves;
+Home opening on Everyone; the tint not the Gallery's; a 36px band; the pick
+not kept; a failed switch left there, and silent; the pill snapping; posts
+changed while seen; a page that scrolls; the pill gliding under Reduce
+Motion; Following as everyone's; everybody else's twice; never caught up;
+Everyone saying "caught up"; Following's cursor plain; a taken-down account
+in Following; an outlived cursor bringing the card again; the card's words;
+follows ungrouped; a follow wearing a heart; several opening their page;
+follows lighting the dot; one opening the lists; Earlier as one row; ended
+follows shown; hidden followers shown; the dot never lit; Activity's old
+words; the signed-out words; Sign in going Home; Follow pressed for them on
+signing in; a block keeping follows; an unblock restoring them; no index by
+whom; no CHECK; a downgrade keeping the pick; a read a card; deleting keeping
+follows; a faint caught-up line; a faint check; a weak pill word; the tint in
+oklab() (the reader fails closed, naming it); and follows.js throwing. The
+two that stay green: the tint written as color-mix(), which Chrome reports as
+color(srgb ...) in 0 to 1, read as the same lilac (7.66:1 and 7.96:1); and
+the same tint read by the pill's reader made rgb()-only, the mock's way,
+shown blind (6.01:1 on light and 11.2:1 on dark, where the pill is 7.66:1
+and 7.96:1: on dark it overstates by 40%). verify_createpost, two (authors
+ignored; the pieces unsorted); verify_socialauth, verify_socialactivity,
+verify_sociallikes, verify_socialsafety and verify_socialprofile, one each
+(the chain without the table; the old empty words; the old heading; a block
+keeping follows; Follow after Share).
+
+FOUND WRONG, AND MENDED. In the product: (1) posts.js, loaded on a profile
+for its way of saying a time, took Skribl's Gallery's own #reportSheet for
+the site's and threw; the way of saying a time moved to social.js (above);
+(2) the site's layering rule (verify_social section 8) forbids importing
+skribl.describing for a piece size, so Skribl takes any number of authors
+itself; (3) two quick switches, the second failing, would have put the pill
+back on the wrong word; it goes back to the tab the posts show; (4) a
+Following cursor that outlived the follows would have shown the kind card
+again mid-feed. In the instruments, each red on its row now: a first join
+with a two-letter handle (handles are three or more) stopped section 1; a
+pick sent signed out without a token is refused for the token first (403,
+as every route), so the row takes a token from a profile, which carries one
+for everybody; "#following" after "#followers" was a change in place, not a
+load (the row loads between, and the lists answer a change in place now);
+the probe planned Home's read on a connection its request had closed; its
+reads differed for two reasons that are not per card (a process's first
+request, and new cards among the people followed changing how many of
+everyone's pages were read), and in the full run the first page was already
+full, so it now clears its copy to the people in question first; a desk
+offers no tap(), so the census's helper never followed there and the unfollow
+sheet never opened (the row read no words and went red: a click on a desk
+now); the taken-down row read Following's first page only, where the post it
+looked for never was (its break stayed green: all of Following is walked now,
+the post seen there before the takedown); the lists' switch row opened the
+sheet through the #followers landing, so a broken landing stopped the
+section before the landing's own row (it opens by the line now); and two of
+four readings of the lists' switch read a dropped frame as a jump while
+three calibration copies ran beside it (judged over the frames spanned now,
+above).
+
+Not tested here: WebKit (the owner's iPhone) and Firefox (main's lanes run
+their smoke after the merge), SF and Segoe UI (every measure is in this box's
+fonts; the button's width comes from its longer word, so it holds in any),
+PostgreSQL itself (the chain's DDL read offline; the Following read's plan is
+SQLite's, a MULTI-INDEX OR on the posts' person index; CI's postgres job runs
+the suites after the merge), and the live site.
