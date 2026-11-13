@@ -37207,6 +37207,30 @@ writing to the same /tmp/run_parallel, overwrote verify_socialposts' log
 before it could be read; that run was stopped, the censuses taught (above),
 and the run below has logs of its own.
 
+THE AFFECTED SUITES, SIDE BY SIDE (run_parallel -j 2), on the final tree
+(all of it but this paragraph), 21.8 minutes, thirteen of fourteen green
+beside the others: verify_socialfollow 71/71, verify_social 40/40,
+verify_socialposts 31/31, verify_socialcomments 67/67,
+verify_socialactivity 44/44, verify_socialauth 64/64, verify_socialprofile
+55/55, verify_socialsafety 35/35, verify_createpost 84/84,
+verify_migrations 77/77, verify_docs 144/144, verify_a11ypages 162/162 and
+verify_seam 488/488; and verify_sociallikes INTERMITTENT, 95/96 beside the
+others and 96/96 alone. Load, not this change: its red was the calm row at
+16x, which asks that each rising heart's first frame find the playhead at
+its dot or at most 3px past it, about one frame's step there; beside the
+others two hearts of ten started 4.27px and 8.39px past theirs, frames
+dropped with the box's load average between 12 and 17 (other helpers' runs
+beside these), and alone all ten were within 2.41px. The hearts are
+likes.js's, on a post's own page, and this change touches neither:
+follows.js is not on that page, and social.js's way of saying a time is the
+work posts.js did there before. verify_social (the site's frame; Home's
+Following is this suite's), verify_migrations and verify_a11ypages
+(Skribl's own chain and pages; the site's chain is verify_socialauth's, and
+its fields and targets are the site's censuses') needed no change. This
+paragraph is the only change since; verify_docs, the suite that reads it,
+was run on it again. The full battery was not run; main's run after the
+merge is.
+
 Not tested here: WebKit (the owner's iPhone) and Firefox (main's lanes run
 their smoke after the merge), SF and Segoe UI (every measure is in this box's
 fonts; the button's width comes from its longer word, so it holds in any),
