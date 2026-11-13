@@ -765,7 +765,7 @@ check("reaching a dot is said in normal play alone: skribl:mark is sent only by 
       _ipjs.count("skribl:mark") == 1 and "skribl:mark" in _reach and len(_calls) >= 4
       and all(_fstart <= c < _fstart + len(_frame) for c in _calls[1:])
       and "function reach(" in _ipjs[_calls[0] - 9:_calls[0] + 6] and "markAt = elapsed || -1" in _play
-      and "w - markWall < 250" in _reach and "d.ms > markAt && d.ms <= t" in _reach,
+      and re.search(r"\bw - markWall < 250\b", _reach) is not None and "d.ms > markAt && d.ms <= t)" in _reach,
       f"{len(_calls)} reach( in the player; skribl:mark {_ipjs.count('skribl:mark')}; reach: {_reach.strip()[:120]}")
 # The section runs to the paragraph after it, its words read with their
 # line breaks as spaces.

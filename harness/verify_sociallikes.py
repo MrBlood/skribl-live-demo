@@ -865,15 +865,17 @@ LINE_BOXES = r"""(sel) => { const root = document.querySelector(sel), t = root.q
             Math.round(r.height * 100) / 100]; }); }"""
 
 # For `ms` from now, every frame: each rising heart (or glow) in `sel`, as
-# painted: which one, its middle, its size, its opacity, its ground colour, and
-# the time (T, the page's clock).
+# painted: which one, its middle, its size, its opacity, its ground colour,
+# the time (T, the page's clock), and where the playhead is drawn then (head,
+# the middle of the line's playhead mark, and the scrubber's width).
 RISE = r"""([sel, ms]) => { window.__rf = []; const root = document.querySelector(sel), t0 = performance.now(); let n = 0;
-  const step = () => { const T = performance.now();
+  const step = () => { const T = performance.now(), hd = root.querySelector('.rl-head'), sc = root.querySelector('.skribl-inline-scrub');
+    const head = hd ? hd.getBoundingClientRect().left + 1 : null, bw = sc ? sc.getBoundingClientRect().width : null;
     root.querySelectorAll('.lk-rise, .lk-glow').forEach(e => { if (!e.__k) e.__k = ++n;
       const r = e.getBoundingClientRect(), cs = getComputedStyle(e);
       window.__rf.push({ T, t: Math.round(T - t0), k: e.__k, c: e.className, x: r.left + r.width / 2, y: r.top + r.height / 2,
                          w: Math.round(r.width * 100) / 100, h: Math.round(r.height * 100) / 100, o: +cs.opacity,
-                         bg: cs.backgroundColor }); });
+                         bg: cs.backgroundColor, head, bw }); });
     if (T - t0 < ms) requestAnimationFrame(step); };
   requestAnimationFrame(step); }"""
 
@@ -917,6 +919,12 @@ def ratio_over(css, op, ground):
     if len(c) < 3 or not ground:
         return 0
     return round(contrast([c[i] * op + ground[i] * (1 - op) for i in range(3)], ground), 2)
+
+
+def px(img, x, y):
+    """The pixel at (x, y), or None where that point is off the picture."""
+    x, y = int(x), int(y)
+    return img.getpixel((x, y)) if img is not None and 0 <= x < img.width and 0 <= y < img.height else None
 
 
 def dot_pixels(pg, sel):
@@ -2095,11 +2103,15 @@ with sync_playwright() as p:
             # Sky) and Rio (taken down).
             p14 = make_post(mae, "Section 14, Mae's", payload=drawing(n=400, step=40))
             p14d = make_post(mae, "Section 14, Mae's, taken down", payload=drawing(n=400, step=40, seed=3))
+            # The same drawing, liked as often by the same people, with no
+            # moments: a line that never had a dot, to measure against.
+            p14n = make_post(mae, "Section 14, Mae's, no moments", payload=drawing(n=400, step=40))
             moments = {"fen": 5000, "gil": 9000, "hux": 12000, "ike": 12000, "jem": 14000, "kai": 14000,
                        "lux": 14000, "ned": None, "oda": 3000, "pia": 7000, "rio": 10500}
             for h, at in moments.items():
                 like(by[h], ("p", p14), at=at)
                 like(by[h], ("p", p14d), at=at)
+                like(by[h], ("p", p14n))
             block(sky, "oda")
             block(by["pia"], "sky")
             db_write("update social_people set taken_down_at = datetime('now') where handle_key = 'rio'")
@@ -2243,12 +2255,22 @@ with sync_playwright() as p:
                 pg.touchscreen.tap(d2["cx"], d2["cy"])
                 pg.wait_for_timeout(400)
             at2 = pg.evaluate(PLAYHEAD)
-            # NOTHING ELSE MOVES: the same line with its dots and without.
+            # NOTHING ELSE MOVES: the line with its dots, the same drawing's
+            # line that never had one (as many likes, none with a moment), and
+            # the first line again once its dots are taken away.
             before_ = pg.evaluate(LINE_BOXES, ".post-page > .post-art")
             pg.evaluate("() => SkriblInline.mount(document.querySelector('.post-page > .post-art'))[0].marks([])")
             pg.wait_for_timeout(400)
             without = pg.evaluate(LINE_BOXES, ".post-page > .post-art")
             gone = pg.evaluate(DOTS, ".post-page > .post-art")
+            go(pg, f"/social/p/{p14n}", wait=0)
+            pg.wait_for_function(PLAYER_LOADED, timeout=15000)
+            pg.evaluate("() => SkriblInline.mount(document.querySelector('.post-page > .post-art'))[0].pause()")
+            pg.locator(".post-page > .post-art .skribl-inline-line").scroll_into_view_if_needed()
+            pg.wait_for_timeout(300)
+            never = pg.evaluate(LINE_BOXES, ".post-page > .post-art")
+            never_dots = pg.evaluate(DOTS, ".post-page > .post-art")
+            never_n = pg.evaluate(HEART, PAGE_HEART)
             close_ctx(ctx, pg)
             check("a dot takes no tap: a finger where it is painted lands on the scrubber under it, which shows the"
                   " drawing at that moment",
@@ -2256,8 +2278,11 @@ with sync_playwright() as p:
                   and abs(at2["ms"] - 9000) < 0.02 * dd["play"] + 60,
                   json.dumps({"dot": d2, "then": at2}))
             check("nothing else moves for the dots: the drawing, the line, the heart, the scrubber, mute and loop and the"
-                  " words under them are where they are with no dots",
-                  gone["dots"] == [] and before_ == without, json.dumps([before_, without])[:600])
+                  " words under them are where they are on the same drawing's line that never had a dot (as many"
+                  " likes, none with a moment), and where they were once its dots are taken away",
+                  gone["dots"] == [] and before_ == without and never_dots["dots"] == [] and not never_dots["marks"]
+                  and never_n and never_n["n"] == "8" and before_ == never,
+                  json.dumps({"with": before_, "never": never, "taken": without})[:700])
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(14, exc)
 
@@ -2300,8 +2325,8 @@ with sync_playwright() as p:
                 glides[scheme] = rise_of([f for f in fs if f["c"] == "lk-rise"], d5)
                 stays[scheme] = bool(d5) and [(d["x"], d["n"], d["op"]) for d in after["dots"]] == [
                     (d["x"], d["n"], d["op"]) for d in dots["dots"]]
-                paper = shot.getpixel((int(peak["paper"][0]), int(peak["paper"][1]))) if peak and shot else None
-                ground = shot.getpixel((int(d5["cx"]) + 12, int(d5["cy"]))) if d5 and shot else None
+                paper = px(shot, peak["paper"][0], peak["paper"][1]) if peak else None
+                ground = px(shot, d5["cx"] + 12, d5["cy"]) if d5 else None
                 colours[scheme] = {"ink": peak and peak["ink"], "fill": peak and peak["fill"], "paper": paper,
                                    "page": ground, "on the paper": ratio_over(peak and peak["ink"], 1, paper),
                                    "on the page": ratio_over(peak and peak["ink"], 1, ground)}
@@ -2427,15 +2452,20 @@ with sync_playwright() as p:
             born = sorted(v[0]["T"] for v in rs.values())
             gaps = [q - p for p, q in zip(born, born[1:])]
             air = max((len({f["k"] for f in fs if f["c"] == "lk-rise" and f["T"] == T}) for T in {f["T"] for f in fs}), default=0)
-            fresh = all(any(abs(v[0]["x"] - m[1]) < 1.5 and 0 <= v[0]["T"] - m[0] < 120 for m in mk)
-                        for v in rs.values())
+            # NEVER LATE, judged by the playhead itself: on a heart's first
+            # frame the playhead is at its dot or just past it (3px: at 16x it
+            # covers about one a frame here), unless it has just come round.
+            # Not by the events: a host can send one again, late.
+            behind = [round(v[0]["head"] - v[0]["x"], 2) for v in rs.values() if v[0]["head"] is not None]
+            fresh = len(behind) == len(rs) and all(0 <= d <= 3 or d < -rs[k][0]["bw"] / 2
+                                                   for d, k in zip(behind, rs))
             check("calm at 16x: on a busy drawing (40 likes, %d dots) the playhead reaches dots by the dozen, and at"
                   " most three hearts are in the air, each a third of a second or more after the one before, each"
                   " rising from a dot just reached (never late)" % len(busy["dots"]),
                   len(busy["dots"]) >= 30 and len(mk) >= 40 and len(rs) >= 6 and air <= 3 and min(gaps or [0]) >= 320
                   and fresh,
                   json.dumps({"dots": len(busy["dots"]), "reached": len(mk), "hearts": len(rs), "most in the air": air,
-                              "closest": round(min(gaps or [0])), "fresh": fresh}))
+                              "closest": round(min(gaps or [0])), "fresh": fresh, "behind the playhead": behind}))
             # NOTHING ELSE MOVES on Home's card while a heart rises from its line,
             # and a heart takes no tap: one on the drawing where it is pauses it.
             ctx, pg = browser_as(b, wim)
