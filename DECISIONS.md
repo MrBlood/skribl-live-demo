@@ -36356,3 +36356,267 @@ finger, SF and Segoe UI (every measure is in this box's fonts; the pill's
 width follows its figure's), PostgreSQL itself (the chain's likes table is
 held on SQLite here; CI's postgres job runs it after the merge), and the live
 site.
+
+## After v330 -- Likes at /social, part 2: the dots and the rising hearts
+
+The owner, Nov 13, on the likes mock: "I like d.", then "Just put a smaller
+dot (same color as blooby blush) wherever someone likes it. If it doubles
+someone it gets redder.", then "All yes, b". Part 1 kept each like's moment
+from day one; this piece shows them, as the mock's "D, drawn your way" drew
+it: the pink dots on the drawing's line and the hearts that rise from them
+as the replay plays, on a general seam of Skribl's player. NOT IN THIS
+PIECE, as briefed: the comment box as an icon, which is being decided
+(post.html is untouched).
+
+- ONE SMALL DOT A LIKE, AT ITS MOMENT: 5px on a phone and a desk alike, over
+  the line under the drawing, in the middle of the 17px between the drawing
+  and the scrubber. No bigger dots, no numbers. WHERE THE LINE ITSELF PUTS
+  THAT MOMENT: the playhead's own mapping, so a piece played with its long
+  pauses squeezed lines up as its playhead does (a five-second pause played
+  in 50ms: each dot sits on the playhead at its moment, where the artist's
+  clock would have put one 30% further on), and a Flip's pages each take
+  their share of the line, as its playhead's do.
+- DOUBLES GET REDDER: likes whose dots would overlap on this line (closer
+  than their 5px) are one dot of the same size, at their middle, a step
+  redder for two and redder still for three or more. A desk's longer line
+  keeps apart what a phone's doubles, as the mock said.
+- THE COLOURS, (b), the bell dot's pairing: on light #e64a78, #e33157,
+  #d11a32; on dark his blush #ff6f91, then #ff4d78, #ff2d5f. One like's dot
+  is --heart, the "Liked by" sheet's dot (same role, same token); two new
+  tokens for the new job, --heart-2 and --heart-3. They reach Skribl's dots
+  as its --mark tokens, set on the site's own .post-art, so the site never
+  names a part of Skribl's.
+- ON HOME'S CARDS TOO, on the same line, from the same grouped read as the
+  count: Home still asks once a kind (posts, drawings) for a whole page.
+- THE HEARTS THAT RISE: as the playhead reaches a dot in normal play, a
+  small heart (the liked heart, 14px) rises from it about 30px and fades,
+  gone in a second: it fades in as it starts and never pops, never grows,
+  and the dot stays. It wears the deeper blush in both themes (a new token,
+  --heart-paper, #e64a78): the paper it crosses is the drawing's, cream in
+  both. A redder dot sends one heart.
+- UNDER REDUCE MOTION nothing rises: the dot glows a moment, a 13px halo of
+  its own colour fading in and out (at most 0.32, over 0.9s) where it sits;
+  nothing moves.
+- A LIKE WITH NO MOMENT GETS NO DOT. DOTS SAY WHERE, NEVER WHO: a page is
+  sent each moment and how many landed there, nothing else, and a dot
+  carries no words. Likes by anybody hidden from the viewer (a block either
+  way, or taken down) have no dot, as they have no count: one query does
+  both. Nothing taken down has dots, its maker's view included.
+- YOUR OWN DOT FOLLOWS YOUR HEART (a judgment call, from the mock's "After
+  your tap: the blush heart, 5, and your dot at 0:14"): liked while it
+  plays, a dot fades in where you tapped; taken back, it fades out; a like
+  the site refused goes back with the heart. Liked while it is still, no
+  dot, as the like keeps no moment.
+
+THE SEAM, Skribl's, general (docs/INTEGRATION.md, "Marks on the line";
+Skribl never knows they are likes). `skribl_inline(..., marks=[{"ms": 6420,
+"n": 1}])` writes a host's moments, on the drawing's own clock, onto the
+box, only when there is a line; `player.marks(list)` changes them and
+answers the list it holds (a copy). The player draws a 5px dot over the
+scrubber for each, where its line puts the moment: through fracAt(), the
+mapping frac() now gives the playhead, once the drawing is here; before it,
+a replay's moment over the listing's `line.play` (the same number). One dot
+stands for those that would overlap, carrying data-n 1, 2, or 3 for three or
+more; coloured by the host's --mark, --mark-2 and --mark-3, each falling
+back to --mark and that to --accent; taking no taps (the layer has no
+pointer events, and the scrubber's own reach lies over it); a dot that comes
+fades in (@starting-style), one that goes fades out, and one whose count
+changes keeps its element, its colour gliding. As the playhead reaches a dot
+in normal play the player sends `skribl:mark` from the dot, bubbling, its
+detail { ms, n }: the middle of the moments it stands for, and how many.
+
+WHO DRAWS THE HEART: the host, from that event and the dot's own box (the
+event's target), as the brief preferred. Skribl stays generic: a mark may
+mean anything to a host, and what it does when one is reached (a heart, a
+glow, a sound, nothing) is its own. The site puts each heart in its own
+.post-art, never inside Skribl's elements, so a resize that places the dots
+again never cuts a heart short.
+
+THE RULES CHOSEN (the brief's "decide well, and say what you decided"):
+- A SCRUB, A SEEK OR A JUMP TELLS NOTHING. Only a frame of normal play
+  tells, of the dots between the clock's last place and its new one. play()
+  starts the count where the clock is, so a scrub, a seek or a press on the
+  line (each pauses, moves the clock, and plays again) passes its dots
+  silently and carries on from where it was let go: the next dot ahead
+  tells. A frame that comes more than a quarter of a second after the last
+  (a tab put away and back, a long stall) starts the count again without
+  telling.
+- A LOOP COMING ROUND tells again, once a pass, from its start (a forever
+  loop's from its stretch's start). From the very start, a dot at 0 tells.
+- CALM AT EVERY SPEED, the site's rule (likes.js): at most three hearts in
+  the air, and each at least a third of a second after the one before; a dot
+  reached meanwhile sends none. Nothing waits its turn: a heart held back
+  would rise late, from a dot the playhead had left. The same rule holds the
+  glows under Reduce Motion. A JUDGMENT CALL: the cap is the host's, not the
+  seam's; the player tells every dot and a host decides how many to show.
+  At 16x on a busy drawing (40 likes, 40 dots on a phone) the player told
+  80 dots in 3.6 seconds and 11 hearts rose, never more than three at once,
+  the closest 333ms apart.
+- A FLIP'S DOTS WAIT FOR ITS PAGES (a judgment call). A Flip's line gives
+  each page an equal share, so where a moment sits depends on its pages'
+  lengths, which only the drawing carries, and a feed never fetches a
+  drawing nobody asked for (inlineplayer.js, "NOTHING FETCHES UNTIL SOMEBODY
+  ASKS"). So a Flip's dots come with its drawing, on the first tap or touch
+  of its line, fading in; a Pad drawing's are there from the first paint.
+  Keeping a Flip's page plan with its listing (a port of lib/holdtiming.js
+  plan() to the server) would put them there at rest; that is not this
+  piece.
+
+DATA, no change to the chain: stats() reads by the thing and the moment, so
+a card's count, whether one is yours, your moment and the dots' moments come
+in the one grouped read a kind (its plan still a search on
+ix_social_likes_post_created, with a temporary tree for the grouping). A
+JUDGMENT CALL: past 200 distinct moments on one drawing (MARKS_MAX), the
+others' moments within a two-hundredth of the latest are sent as one, at
+their middle, standing for them all (a line shows far fewer dots than that;
+it only keeps a very liked drawing's page small); the viewer's own is always
+sent exactly, so taking it back can take its dot.
+
+EMBED_RATCHET 78,944 -> 81,244, written beside it: +2,300 B, 81,241 B
+measured. inlineplayer.js +1,831 (the moments read +266, placed +1,141,
+told +424), inlineplayer.css +469 (the layer that takes no taps, the dot in
+the host's tokens by how many, its fade in). Spent first, 2,807 B down to
+2,300: the merge one pass left to right (a joined dot never moves left, so
+it never needs a second pass: the same answer as the mock's repeated
+pairwise merge), a dot's fade in by @starting-style with no script, its
+colours through one custom property every level falls back to, the
+playhead's frac() made the mapping both use rather than a second copy, no
+aria-hidden on a layer of empty elements, and no test for a Flip before its
+pages come (its line has no length to put a moment on).
+gallerysection.css is the tool's output again (cssgraph.py --emit): it
+resets the player's custom properties for the Gallery section, and now
+names --mark, --mark-2, --mark-3 and --m.
+
+Pad and Flip: SHARED, ONE PLAYER, the same day. The marks are the in-post
+player's, which plays Pad drawings and Flips alike: a like on a Flip is a
+dot on its line where its pages put it and sends up a heart as a drawing's
+does (verify_inline places them, reads them against its playhead and plays
+them on a drawing and a Flip). Nothing changes in either editor, and nothing
+is left for Flip to catch up on: a Flip's dots coming with its drawing is
+its own nature (its line is its pages, not a clock), not a gap.
+
+THE FOUR: kind (a heart fades in and never pops; nothing jumps at any
+speed; a scrub sends no burst; the dot stays; your own dot comes and goes
+gently; Reduce Motion gets a glow, and nothing moves); simple (a dot where
+people loved the drawing, redder where they agreed, no numbers, no names);
+playful (hearts rise from the line as the replay reaches the moments people
+loved, on Home as on a page); powerful (where a drawing was loved, at a
+glance, at any speed from ¼× to 16× and Fit, and one seam any host can
+use).
+
+CONTRAST, READ OFF THE SCREEN. The mock's colour reader parsed only rgb()
+and read the player's lilac (written color(srgb ...)) as grey; these are
+read off the painted pixels instead: each dot's middle against the ground
+5px above it, between the drawing and the line, on a post's page and Home's
+card, a phone and a desk, light and dark, every step at 3:1 or more (the
+final run's figures below). The rising heart at full strength: 3.35:1 on
+the drawing's cream paper (light and dark alike, the paper being the
+drawing's own), 3.64:1 and 5.20:1 on the page where it starts. No words were
+added anywhere; section 12's census of every word runs in the final run.
+
+THE CHECKS. verify_sociallikes.py, two new sections through the demo's own
+server: 14, THE DOTS ON THE LINE (ten rows: a dot a like at its moment where
+the line puts it, read against the playhead at that moment, on a phone and
+a desk; doubles one dot a step redder, two then three or more, never bigger
+or a number; (b)'s colours exactly and each 3:1 off the pixels, page and
+card, light and dark; Home's card; no dot for a like with no moment or for
+anybody hidden from the viewer, counted the same; dots say where, never
+who; nothing taken down has dots; your own dot follows your heart, fading
+in and out; a dot takes no tap, the scrubber under it does; nothing else on
+the line moves for them) and 15, THE HEARTS THAT RISE (eight rows: the
+rising heart read on every frame, from the dot, fading in, about 30px over
+many frames, never growing, gone in a second, the dot staying, light and
+dark; its colours in both themes at 3:1; one heart from a redder dot; under
+Reduce Motion a glow, 0px moved, no heart; no heart on a scrub, and the
+next dot's after it; calm at 16x on a busy drawing of 40 likes; nothing
+else on Home's card moves while a heart rises; a heart takes no tap).
+Section 11's Home row now says the moments come in the same two reads, with
+dots on the page. verify_seam.py, MARKS ON THE LINE, nine rows of source:
+the macro's marks= (only with a line), the player reading them once and
+marks() answering a copy, the place through fracAt (frac()'s own), the
+merge at 5px and data-n's cap, the layer out of the flow with no pointer
+events and the 5px dot, the colour tokens and their fallbacks and the fade
+in, skribl:mark sent by reach() alone and reach() called only as a frame
+plays (play() starting the count where the clock is, the quarter second),
+the guide, and the site going through the seam alone (likes.js calls
+marks() and hears skribl:mark; no site script or style names the dots).
+verify_inline.py, THE POST: MARKS ON THE LINE, fifteen rows in a browser of
+its own: the macro's markup with and without; the fixture's squeezed pause;
+at rest each dot where the listing's length puts it, 5px, mid-gap, nothing
+fetched; a press on a dot landing on the scrubber; loaded, each dot on the
+playhead at its moment and not where the artist's clock would put it;
+skribl:mark from the dot, once each, in order, within a frame; a loop coming
+round; a drag across every dot while it plays, a seek past them and a frame
+after a 1.5-second gap telling nothing; merging at the line's own width (a
+pair, three, five, a chain), a wider line keeping a pair apart; marks()
+adding a dot that fades in, keeping a dot whose count changes, fading one
+out, answering a copy; nothing else on the line moving; a Flip's dots none
+at rest, then on its pages' places and fading in, and telling as a
+drawing's do; no page errors.
+
+EVERY NEW OR CHANGED ROW WAS SHOWN RED by a break of its own, each in a
+throwaway copy of the committed tree (git archive), its section run alone
+(verify_inline's in a trimmed copy, its own server; verify_sociallikes with
+SOCIALLIKES_PART), one per component of a row, in three rounds, with a
+control (the copy unbroken) beside each. ROUND 1, 70 breaks: 64 red on their
+rows, six not, each a lesson below. ROUND 2, seven: all red. ROUND 3, two:
+both red. 73 distinct breaks over 79 runs; every one of the 43 new or
+changed rows red by at least one; every control green. In every copy verify_seam's row for
+tracked Python files is red as well: a copy has no .git to list them from.
+verify_inline, 26: the macro writing marks without a line; the fixture's
+pause kept; the rest place by the drawn time; the dot off the gap's middle;
+the dots lifted over the scrubber's reach to take taps (round 2); the
+loaded place by the artist's clock; telling 400ms early; telling from the
+box, not the dot; the loop not counting again; a scrub telling, a seek
+telling, a gap telling (each its own); no merge, no cap on data-n, a merged
+dot at its first; no new merge on a resize; no element kept, no fade in, no
+fade out, marks() handing out its own list; the layer in the row; a Flip
+placed by its clock's share, placed at rest, not telling; a throw while
+telling. verify_seam, 17: the macro's line test; the copy; the place
+through fracAt; the merge at 6px and data-n to 4; pointer events and 6px
+dots; a token without its fallback and no fade in; reach() in a scrub,
+play() keeping the old count, the quarter second as 2,500ms (round 2) and
+telling 400ms early (round 2); the guide silent on scrubs; the site styling
+the dots, not hearing skribl:mark, drawing a dot. verify_sociallikes, 30
+(14: thirteen, 15: fifteen, 11: two): the moments sent 700ms on; a double
+counted as one; (a)'s blush on light for a double; the dots' paint clipped
+(their colours still right: the pixel reader alone sees it); the card's dots
+hidden; the hidden people's likes counted; a like with no moment a dot at
+0; a name in the moments; a taken-down post's dots; your dot not following
+your heart; a dot lifted to take a tap (round 2); the layer in the row
+(round 2); a heart that pops, one that jumps, one off its dot, a dot that
+goes when its heart rises; the heart's line the theme's blush, a weak one; a
+heart for each of a redder dot's likes; a heart under Reduce Motion, a glow
+that moves; a scrub that tells; no cap, no spacing, a heart that waits its
+turn (rounds 2 and 3), a heart in the flow (rounds 2 and 3); a heart that
+takes a tap; the moments in a read of their own (four reads), none on Home.
+
+FOUND WRONG, AND MENDED: instruments, each red on its row now. While
+building: the gap check waited long enough for the playhead to reach the
+next dot in normal play after the gap, which rightly told (it stops 120ms
+after the gap now); a desk's line was only 1.66 times a phone's, so a pair
+3px apart stayed under 5px (4px apart now, and a third wider is enough);
+the dots were read in the layer's order, and a dot a resize splits off is a
+new element, last (read left to right now). In round 1: verify_seam's
+quarter-second pin matched 2500 as a prefix (a whole number now); a layer
+that takes pointer events still never got a tap, because the scrubber's own
+reach is painted over the dots, so the property holds twice and only a
+break that lifts the dots above that reach can make them take one (both tap
+rows, round 2); section 14's "nothing else moves" compared the line with its
+dots taken away, where the layer stays (also against the same drawing's
+line that never had a dot now: as many likes, none with a moment); section
+15's calm row judged a heart fresh by any skribl:mark, and a host can send
+one again late (by the playhead now: on a heart's first frame it is at its
+dot or just past it); a pixel read off the picture stopped section 15
+before its row (a red now). In round 2 the calm row still let through a
+heart pushed into the flow, as "the playhead just came round" (each heart
+must start at a dot now, and the busy piece has no dot at its very end).
+
+Not tested here: WebKit (the owner's iPhone) and Firefox: a new dot's fade
+in is @starting-style (Safari 17.5 and Firefox 129 on), the rising heart a
+Web Animation, and neither was seen in either engine, nor were the tap areas
+under a finger (main's Firefox and WebKit lanes run their smoke after the
+merge); SF and Segoe UI (no words were added, but every measure is in this
+box's fonts); PostgreSQL itself (the read by the thing and the moment runs
+on SQLite here; CI's postgres job runs it after the merge); and the live
+site.

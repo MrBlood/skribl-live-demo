@@ -2164,9 +2164,10 @@ with sync_playwright() as p:
                   " pixels, on a post's page and Home's card, a phone and a desk",
                   all(inks[t] == [DOT_INK[t.split("/")[1]][i] for i in (0, 0, 1, 2)] * 2 for t in seen)
                   and all(len(s["page_px"]) == 4 and len(s["card_px"]) == 4 for s in seen.values()) and not weak,
-                  json.dumps({"inks": inks, "lowest": {t: min(p["k"] for k in ("page_px", "card_px") for p in s[k])
-                                                       for t, s in seen.items() if s["page_px"] and s["card_px"]},
-                              "under": weak[:3]})[:900])
+                  json.dumps({"read": {t: {k[:4]: {n: min(p["k"] for p in s[k] if p["n"] == n) for n in "123"
+                                                   if any(p["n"] == n for p in s[k])} for k in ("page_px", "card_px")}
+                                       for t, s in seen.items()},
+                              "inks": {t: sorted(set(v)) for t, v in inks.items()}, "under": weak[:3]}))
             cw = seen["phone/light"]["card"]
             check("Home's card shows the same dots on its line, where its own line puts each moment",
                   [d["n"] for d in cw["dots"]] == [n for _, n in SKY_SEES]
