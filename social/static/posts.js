@@ -236,8 +236,16 @@
      their own job; the 💬 opens the comments; any other control its own. A
      press that moved is a drag, not a tap, and a click that ends a text
      selection opens nothing, a link's included. With Ctrl or ⌘, or the
-     middle button, the post opens in a new tab, as a link's would. */
-  var OWN = 'a, button, input, textarea, select, label, summary, [role="button"], [role="slider"], [tabindex], .post-art';
+     middle button, the post opens in a new tab, as a link's would.
+     THE LINE UNDER THE DRAWING IS THE CARD'S TOO (Nov 13, from the owner's
+     "I thought on card?"): "Drawn in 16 sec · watching at" and the space
+     around the drawing open the post; the speed and its choices (a group),
+     the heart, the scrubber and the loop keep theirs. The line keeps its
+     clicks from bubbling (docs/INTEGRATION.md, the lead: a host's whole-post
+     link must not open on a scrub or a speed), so they are heard here on
+     the way down, and only there. */
+  var OWN = 'a, button, input, textarea, select, label, summary, [role="button"], [role="slider"], [role="group"], [tabindex]';
+  var LINE = '.skribl-inline-line';
   var press = null;
   doc.addEventListener('pointerdown', function (e) { press = { x: e.clientX, y: e.clientY }; }, true);
   /* A keyboard's click (Enter on a link) has no press behind it (detail 0). */
@@ -257,7 +265,7 @@
     if (moved(e) || selectedIn(card)) return null;
     return card;
   }
-  doc.addEventListener('click', function (e) {
+  function openCard(e) {
     var card = e.target && e.target.closest ? e.target.closest('.post-card') : null;
     if (!card) return;
     var a = e.target.closest('a');
@@ -271,7 +279,10 @@
     if (!url) return;
     if (e.ctrlKey || e.metaKey || e.shiftKey) window.open(url, '_blank', 'noopener');
     else window.location.assign(url);
-  });
+  }
+  function inLine(e) { return !!(e.target && e.target.closest && e.target.closest(LINE)); }
+  doc.addEventListener('click', function (e) { if (inLine(e)) openCard(e); }, true);
+  doc.addEventListener('click', function (e) { if (!inLine(e)) openCard(e); });
   doc.addEventListener('auxclick', function (e) {
     if (e.button !== 1) return;
     var card = tapped(e);

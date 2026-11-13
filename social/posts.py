@@ -17,6 +17,9 @@
     /b/<skribl_id>      a drawing shown outside a post, on a page of its own:
                         a post's page without words, its comments and all
                         (bloob(): the one rule for the page and its comments).
+                        Where every gallery card on the site opens: a post's
+                        drawing goes on to its post, and one by somebody not
+                        on the site to Skribl's own page for it.
     /b/<skribl_id>/delete  your own such drawing, gone, its comments with it.
 
 ON HOME'S CARDS (the owner's yes, Nov 12): the words and the time each open
@@ -333,6 +336,23 @@ def bloob(skribl_id, viewer):
     return sk, who
 
 
+def shown_elsewhere(skribl_id, viewer, skribl_blueprint="skribl"):
+    """Skribl's own page for a drawing a gallery shows `viewer` that is
+    nobody's on the site (made in Skribl's own Pad, say: Explore lists every
+    public skribl), or None. The site has no page for it, so its card opens
+    the one it has. Public to them as Skribl describes it (the host's
+    visibility policy applied), and its author not one of the site's people,
+    whose drawings are bloob()'s alone."""
+    from skribl import describe_posts
+    sid = str(skribl_id or "")
+    if not sid:
+        return None
+    sk = describe_posts([sid], viewer_id=viewer.public_id if viewer else None).get(sid)
+    if not sk or sk.get("visibility") != "public" or str(sk.get("user_id") or "").startswith(PERSON_PREFIX):
+        return None
+    return url_for(skribl_blueprint + ".skribl_player", public_id=sid)
+
+
 @_rests()
 def home_page(skribl_blueprint="skribl"):
     """Home for somebody signed in: the composer, with the editors' compose
@@ -445,15 +465,28 @@ def register(bp, skribl_blueprint="skribl"):
     def bloob_page(skribl_id):
         """A drawing one of the site's people showed in the gallery outside a
         post, on a page of its own: a post's page without words, its comments
-        and all. A drawing that is a post's goes to its post; anything else
-        is a kind 404."""
+        and all. EVERY CARD OPENS HERE (the owner's "I thought on card?", Nov
+        13): Explore's, a profile's Skribls and the first visit's newest open
+        /b/<id> (app.py, skribl.set_card_url), so one address serves every
+        drawing a gallery can show. A post's drawing goes to its post, for
+        anybody who may see the post (comments.on_post, the post's own page's
+        rule), and is as gone as the post to anybody else, without naming it;
+        a drawing by somebody not on the site that the gallery shows them
+        (public, made in Skribl's own Pad, say) goes to Skribl's own page for
+        it, since the site has none; anything else is a kind 404."""
         sess = site().session()
+        me = current_person()
         post = sess.execute(sa.select(Post).where(Post.skribl_id == skribl_id)).scalar_one_or_none()
         if post is not None:
+            from .comments import on_post
+            if on_post(me, post_id=post.id) is None:
+                return _page("post_gone.html", 404, here="post")
             return redirect(url_for("social.post_page", public_id=post.public_id))
-        me = current_person()
         got = bloob(skribl_id, me)
         if got is None:
+            elsewhere = shown_elsewhere(skribl_id, me, skribl_blueprint)
+            if elsewhere:
+                return redirect(elsewhere)
             return _page("post_gone.html", 404, here="post")
         sk, who = got
         entry = {"kind": "s", "at": as_utc(datetime.fromisoformat(sk["created_at"])), "key": "s" + sk["id"],

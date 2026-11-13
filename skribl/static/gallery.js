@@ -39,6 +39,18 @@
      here: the server's answer is the whole of it. */
   var author = root.getAttribute('data-skribl-author');
   var scope = author ? '&user_id=' + encodeURIComponent(author) + '&visibility=public' : '';
+  /* WHERE A CARD OPENS, when the host says (data-skribl-open: its address
+     for a card, __ID__ where the drawing's id goes; the macro writes it from
+     skribl_card_url(), docs/INTEGRATION.md "Where a Gallery card opens").
+     Then a card opens there from anywhere that is the card's own, its title
+     is a link there, and its ⋯ opens and gives that address. Unsaid, a card
+     opens nothing but its drawing, and its ⋯ opens the player's page in a
+     new tab, as Skribl's own Gallery always has. Substituted, not assembled,
+     as the poster's address is. */
+  var opensTpl = root.getAttribute('data-skribl-open') || '';
+  function opensFor(id) {
+    return opensTpl ? new URL(opensTpl.split('__ID__').join(encodeURIComponent(id)), document.baseURI).href : null;
+  }
   var PAGE = 24;
   var cursor = null;       /* the keyset cursor for the next page, or null */
   var loading = false;
@@ -368,8 +380,20 @@
        null check with a `.tsolo` fallback that drew the title alone, which is
        the gap this change is about. */
     var who = authorBlock(item.author);
-    var tt = document.createElement('div');
+    /* WITH THE HOST'S ADDRESS, THE TITLE IS ITS LINK: the card's real way
+       in for a keyboard and a screen reader, since the card itself is not
+       one big link (its drawing, its person and its ⋯ each do a thing of
+       their own). Pressed and pulled it selects its words, as text does
+       (draggable off), and then opens nothing (below). */
+    var opens = opensFor(item.id);
+    var tt = document.createElement(opens ? 'a' : 'div');
     tt.className = 'tt';
+    if (opens) {
+      tt.href = opens;
+      tt.draggable = false;
+      art.classList.add('opens');
+      art.setAttribute('data-open', opens);
+    }
     tt.textContent = item.title || 'Untitled Skribl';
     /* THE TITLE IS THE HEAD'S SECOND ROW, NOT THE NAME BLOCK'S SECOND LINE.
        Inside `.tnames` its width was whatever the fact run and the menu left,
@@ -851,6 +875,56 @@
     return art;
   }
 
+  /* ANYWHERE ON A CARD OPENS IT, where the host has said where (opensTpl;
+     a card then carries data-open). A tap or a click on a card's own ground
+     -- its title, its words, its time and plays, the space between them --
+     opens the card's address, as its title does. What does a thing of its
+     own keeps it: the drawing and its row (the stage) play, scrub and go
+     full screen; the author's link opens the person; ⋯ opens its menu;
+     "more" opens the caption; any other link or control does its own. A
+     press that moved is a drag, not a tap, and a click that ends a text
+     selection opens nothing, a link's included. With Ctrl, ⌘ or Shift, or
+     the middle button, it opens in a new tab, as a link would. */
+  var OWN = 'a, button, input, textarea, select, label, summary, [role="button"], [role="slider"], [tabindex], .tileStage';
+  var press = null;
+  list.addEventListener('pointerdown', function (e) { press = { x: e.clientX, y: e.clientY }; }, true);
+  /* A keyboard's click (Enter on a link) has no press behind it (detail 0). */
+  function moved(e) {
+    return e.detail > 0 && !!press && Math.abs(e.clientX - press.x) + Math.abs(e.clientY - press.y) > 6;
+  }
+  function selectedIn(card) {
+    var s = window.getSelection ? window.getSelection() : null;
+    return !!s && !s.isCollapsed && !!String(s).trim() && (card.contains(s.anchorNode) || card.contains(s.focusNode));
+  }
+  /* The card a tap on its own ground opened, or null. */
+  function tapped(e) {
+    var card = e.target && e.target.closest ? e.target.closest('.tile[data-open]') : null;
+    if (!card || e.defaultPrevented) return null;
+    var own = e.target.closest(OWN);
+    if (own && card.contains(own)) return null;
+    if (moved(e) || selectedIn(card)) return null;
+    return card;
+  }
+  list.addEventListener('click', function (e) {
+    var card = e.target && e.target.closest ? e.target.closest('.tile[data-open]') : null;
+    if (!card) return;
+    var a = e.target.closest('a');
+    if (a && card.contains(a)) {
+      /* A drag that selected words, ending on a link, is a selection. */
+      if (moved(e) && selectedIn(card)) e.preventDefault();
+      return;
+    }
+    if (e.button !== 0 || !tapped(e)) return;
+    var url = card.getAttribute('data-open');
+    if (e.ctrlKey || e.metaKey || e.shiftKey) window.open(url, '_blank', 'noopener');
+    else window.location.assign(url);
+  });
+  list.addEventListener('auxclick', function (e) {
+    if (e.button !== 1) return;
+    var card = tapped(e);
+    if (card) window.open(card.getAttribute('data-open'), '_blank', 'noopener');
+  });
+
   /* One page of the listing. `reset` starts from the top with a clean grid —
      a retry after a response that failed mid-way must not double every row —
      and otherwise the page is appended after the cursor the last one gave. */
@@ -1119,10 +1193,16 @@
        running the blueprint under a url_prefix gets a correct link without
        this file knowing the route. */
     var tpl = root.getAttribute('data-skribl-player') || '';
-    var url = location.origin + tpl.replace('__ID__', encodeURIComponent(item.id));
+    /* WITH THE HOST'S ADDRESS (opensTpl), Open goes there, in this tab as a
+       tap on the card does, and it is the link Copy link and Share give: the
+       drawing's page on the host's site. Without, the player's page, in a
+       new tab, as always. */
+    var opens = opensFor(item.id);
+    var url = opens || location.origin + tpl.replace('__ID__', encodeURIComponent(item.id));
 
     menuEl.appendChild(menuItem('Open', function () {
-      window.open(url, '_blank', 'noopener');
+      if (opens) window.location.assign(opens);
+      else window.open(url, '_blank', 'noopener');
     }, '', 'open'));
     /* ONE COPY IMPLEMENTATION, AND IT ANSWERS WHETHER THE TEXT ARRIVED.
        lib/postedui.js owns it; a handler that reports success from both arms

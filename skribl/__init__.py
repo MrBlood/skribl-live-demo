@@ -45,7 +45,7 @@ from .deletion import (SkriblNotFound, SkriblRefused, delete_post,
 from .describing import describe_posts, list_public_posts
 from .moderation import close_reports, list_reports
 from .models import (NO_SESSION, SkriblBase, bind_session, create_all,
-                     session, set_visibility_policy)
+                     session, set_card_url, set_visibility_policy)
 from .routes import register_routes
 from .security import register_security
 from .views import purge_views
@@ -89,7 +89,12 @@ __all__ = ["create_blueprint", "init_skribl", "SKRIBL_VERSION",
            # first-open hello of its own (skribl/brand.py, docs/INTEGRATION.md
            # "Your brand on Skribl's editors"). Also init_skribl's
            # brand_resolver=.
-           "set_brand_resolver"]
+           "set_brand_resolver",
+           # Where a card of the Gallery opens on a host's page, per request:
+           # the drawing's page on the host's site, with __ID__ for its id
+           # (skribl/models.py, docs/INTEGRATION.md "Where a Gallery card
+           # opens"). Also init_skribl's card_url=.
+           "set_card_url"]
 
 
 _ASSET_CACHE = {}
@@ -565,6 +570,9 @@ def init_skribl(app, **kwargs):
     # A host's brand on the editors, per request (skribl/brand.py): app-local
     # for the same reason, so one host's address never wears another's mark.
     _brand = kwargs.pop("brand_resolver", None)
+    # Where a card of the Gallery opens, per request (models.set_card_url):
+    # app-local too, so one host's pages never open another's.
+    _cards = kwargs.pop("card_url", None)
     bp = create_blueprint(**kwargs)
     # THE FIRST NAME SKRIBL PUTS IN THE HOST'S JINJA ENVIRONMENT, and it is here
     # because the in-post player needs it. _skribl_inline_player.html's macros
@@ -577,7 +585,7 @@ def init_skribl(app, **kwargs):
     # helper builds a RELATIVE endpoint from outside the blueprint and raises
     # BuildError — was answered by making asset_url() name the blueprint
     # outright (see its docstring). What is left is namespace: `skribl_`-
-    # prefixed globals (this one and the two below), each added rather than
+    # prefixed globals (this one and the three below), each added rather than
     # overwritten, so a host that already defines a name keeps theirs and
     # simply cannot use the macros until they rename. Inside Skribl's own
     # templates the context processor still wins, so nothing about those pages
@@ -585,11 +593,12 @@ def init_skribl(app, **kwargs):
     if "skribl_asset" not in app.jinja_env.globals:
         app.add_template_global(lambda filename: asset_url(bp, filename),
                                 "skribl_asset")
-    # AND TWO MORE, FOR THE GALLERY SECTION (after v330, the owner's B: a
+    # AND THREE MORE, FOR THE GALLERY SECTION (after v330, the owner's B: a
     # host's Skribls page holds Skribl's own Gallery, _skribl_gallery_section
     # .html). Its report sheet needs the reasons the API accepts and a CSRF
-    # token, and a host's page gets neither from Skribl's context processors.
-    # Added the same way, never overwriting a host's own name.
+    # token, its cards where they open, and a host's page gets none of these
+    # from Skribl's context processors. Added the same way, never overwriting
+    # a host's own name.
     #   skribl_csrf()   the page's token (security.page_csrf_token); on a
     #                   host's page the hook below sets the cookie it pairs with.
     #   skribl_report   the report's closed set of reasons and the note's limit.
@@ -602,6 +611,12 @@ def init_skribl(app, **kwargs):
         app.add_template_global({"reasons": REPORT_REASONS,
                                  "note_max": MAX_REPORT_NOTE_CHARS},
                                 "skribl_report")
+    #   skribl_card_url()  where this page's cards open: the host's address
+    #                      for a card (set_card_url, asked per request), or
+    #                      None for Skribl's own Gallery as it was.
+    if "skribl_card_url" not in app.jinja_env.globals:
+        from .models import page_card_url
+        app.add_template_global(page_card_url, "skribl_card_url")
     if _policy is not None:
         from .models import set_visibility_policy
         set_visibility_policy(_policy, app=app)
@@ -619,6 +634,8 @@ def init_skribl(app, **kwargs):
         set_source_resolver(_source, app=app)
     if _brand is not None:
         set_brand_resolver(_brand, app=app)
+    if _cards is not None:
+        set_card_url(_cards, app=app)
     # Store the session factory PER APPLICATION. A module-level global meant the
     # most recently initialised app won for the whole process; see
     # skribl.models.session().

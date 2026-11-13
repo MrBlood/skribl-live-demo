@@ -629,6 +629,7 @@ def _mount_social(app):
         return
     _site_at_root(app)
     _site_brand(app)
+    _site_cards(app)
 
 
 def _site_homes():
@@ -724,6 +725,28 @@ def _site_brand(app):
         return out
 
     skribl.set_brand_resolver(brand, app=app)
+
+
+def _site_cards(app):
+    """EVERY CARD OPENS ITS POST (the owner's "I thought on card?", Nov 13):
+    on the site's own pages (Explore, a profile's Skribls, the first visit's
+    newest), a card of Skribl's Gallery opens the drawing's page on the site,
+    /social/b/<id>, which goes on to the post where the drawing is a post's
+    (social/posts.py, bloob_page). Through the seam Skribl gives any host for
+    this (skribl.set_card_url, docs/INTEGRATION.md "Where a Gallery card
+    opens"), asked per request: Skribl's own pages (/gallery) get nothing,
+    which is Skribl's own Gallery as it was. Only once the site has started,
+    with its pages, as _site_brand."""
+    if "social.bloob_page" not in app.view_functions:
+        return
+    from flask import request, url_for
+
+    def where():
+        if request.blueprint != "social":
+            return None
+        return url_for("social.bloob_page", skribl_id="__ID__")
+
+    skribl.set_card_url(where, app=app)
 
 
 # ---- THE SKRIBLS.NET STAND-IN, AT /host --------------------------------------
