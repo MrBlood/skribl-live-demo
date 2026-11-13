@@ -1117,7 +1117,11 @@ with sync_playwright() as sp:
     # the caption's "more" button, the script that asks whether there is
     # more (lib/capmore.js, the gallery's own, shared), and where Flip is,
     # for a Flip's way back. 14,138 measured.
-    HTML_RATCHET = 14_139
+    # RAISED (Settings: the theme, one choice for Blooby, Pad and Flip; the
+    # owner's "Yes to all"), for one named cost: +8 B -- the head boot says
+    # dark out loud (data-theme="dark", for every host), so a host's styles
+    # can tell light, dark and nothing chosen apart. 14,147 measured.
+    HTML_RATCHET = 14_148
 
     present = pg.evaluate(
         "(names) => names.filter(n => typeof window[n] !== 'undefined')",
