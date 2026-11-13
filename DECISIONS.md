@@ -37755,3 +37755,327 @@ none here, and the site's signed-in pages are no-store, so that row drives
 a restore's event, not a restore); Firefox; SF and Segoe UI (every measure
 is in this box's font, Inter: the Settings buttons are 112.48 and 125.48
 here); and the live site.
+
+## After v330 -- Mute at /social: quiet everywhere
+
+The owner, Nov 13, on the mute mock: "Yes to all": C (quiet everywhere),
+every default, and rule 3 (mute and follow stay apart). Built in the mock's
+own words, sizes and timings (`social/mutes.py`, `_mute.html`, `mutes.js`,
+the MUTE block of `social.css`, the fold in `_comments.html` and
+`comments.js`), with one general seam on Skribl's listings. Mute is a break
+from somebody, not a wall: what comes to you goes quiet, and what you go to
+stays.
+
+- C, QUIET EVERYWHERE. Their posts and drawings leave Home (Following and
+  Everyone) and Explore (New, Hot, a search), in the query, so every page is
+  whole; their comments and answers fold to one line; their comments,
+  answers, likes and follows leave Activity and never light the bell's dot.
+  Their page, their posts, their drawings' pages, More from them, their
+  skribls, a drawing's link page and its payload stay open: the visibility
+  policy is untouched, so a mute never hides a page.
+- WHERE. "Mute @theo" first in the ⋯ on somebody's page, the gentlest; on
+  their posts' and drawings' ⋯ after Copy link and Share…, before Report and
+  Block, so the two danger rows stay together. Under it, C's line: "Their
+  posts, comments and likes stop reaching you. They aren't told." It is the
+  sheet's own row (its words 17px at 600, as Report's and Block's, starting
+  on the same pixel) with a second line, as Make's doors have, 56px tall.
+  Muted, it says "Unmute @theo" and "Everything comes back, just as it was."
+  Signed in alone; never on your own; never while a block stands.
+- THE EYE: closed, drawn in our pen (the lid and three lashes), never a
+  speaker, since a drawing's own sound switch is the speaker. Its painted ink
+  is centred on Copy link's, Share's and Block's icons within 0.17px
+  (Report's flag sits 1.75px left of them, as it does today).
+- NOTHING ASKED FIRST. The tap mutes. The sheet goes down; on Home every
+  card of theirs folds away (it fades, then its room closes and the next
+  post rises into its place); on their page the line opens. Once the sheet
+  has gone and the site has said yes, a toast rises: "Theo is muted. They
+  aren't told." with Undo, for seven seconds (the Pad's own time for an
+  Undo); on a phone 12px above the bar, on a desk at the foot of the page in
+  the middle of the column, clear of the rail. Only Undo takes a tap (a tap
+  on its words reaches the page under it), and it never covers the ⋯ that
+  opened the sheet. Undo brings it all back the same way, says "Unmuted.
+  Theo's posts are back." and gives the ⋯ its focus back. A refusal puts
+  everything back and the toast says why, with no Undo. Under Reduce Motion
+  nothing glides: a room is put there or taken away only while what it holds
+  can't be seen, and the toast only fades.
+- THEIR PAGE: "You muted Theo · Unmute" under the buttons, to you alone (not
+  to them, nor anybody else, nor signed out); their ⋯ says "Unmute @theo".
+  Its Unmute unmutes, and the line closes the way it opened.
+- RULE 3. A mute never touches a follow: following them, the toast says
+  "Theo is muted. You still follow them."; nothing changes on their side, not
+  even their own "Followed by…"; their posts stay out of Home, Following too,
+  until you unmute; unfollowing never unmutes.
+- THE FOLD, in Activity's own voice: "Someone you muted said something. Show"
+  ("Someone you muted answered. Show" for an answer), the eye where their
+  face was and the words where the names start. The whole line is the button;
+  Show opens it for that visit (the line fades, the room opens, the comment
+  fades in). Hidden for real while folded: no tap and no screen reader
+  reaches its Answer or ⋯. On your own post too; the count beside Comments
+  unchanged; a page Load more brings folds the same way.
+- ACTIVITY, C's own: their comments, answers, likes and follows leave it, a
+  group they were in says the rest, and they never light the dot (somebody
+  else's comment still does). Activity is worked out each time, so unmute
+  and every row is back.
+- COUNTS AND "LIKED BY…" STAY TRUE, for everybody and for you: a folded
+  comment is counted, their like is in the count and in "Liked by…", their
+  follow in "Followed by…".
+- SETTINGS: Muted just above Blocked, in the Blocked panel's own rows, newest
+  first (face, name, @handle, Unmute); "You see less of them. They aren't
+  told, and nothing changes for them."; with nobody, "Nobody. If you mute
+  someone, they're listed here, and you can unmute them." Unmute (a form)
+  comes back to Settings at Muted. Somebody muted and then blocked is under
+  Blocked alone; unblocked, muted still.
+- WHO MAY MUTE: somebody signed in, with the token and Origin, then the limit
+  (60 an hour, mutes and unmutes alike, blocks' number); nobody by that name,
+  yourself, somebody taken down, or a block either way: "gone" (404), nothing
+  kept. Deleting an account takes its mutes both ways, in code. Privacy and
+  docs/LAWYER-NOTE.md say mutes are kept (who, and since when) and private.
+- LATER, NOT NOW, as the owner said: muting words or tags, a mute for a
+  while, muting from an Activity row.
+
+DATA, on the site's chain (4cdc4af46a77, after 1757a4385be8): social_mutes,
+muter_id and muted_id (both to social_people, ON DELETE CASCADE) and
+created_at; unique on the pair (ix_social_mutes_pair); never yourself
+(ck_social_mutes_not_self); indexed by whose, newest first
+(ix_social_mutes_muter_created: Settings) and by whom
+(ix_social_mutes_muted_id: deleting an account). Unmuting deletes the row.
+Offline, the PostgreSQL DDL is plain: CREATE TABLE (a BIGSERIAL id, two
+BIGINT foreign keys ON DELETE CASCADE, TIMESTAMPTZ) with its CHECK, and three
+CREATE INDEX; the downgrade three DROP INDEX and the DROP TABLE. Whom you
+muted is one read a request, by your public id on the pair's index, shared by
+the site's pages and the host's filter.
+
+JUDGMENT CALLS, said so the list reads true:
+- SKRIBL TELLS THE FEED FILTER WHICH LISTING IT IS. The mock said "nothing
+  in Skribl", and that the host's filter "reads the listing's own author";
+  but a filter called with (query, viewer_id) cannot tell Explore from
+  somebody's own page. So a filter that names `author` is now told the one
+  author a listing is narrowed to, or None for many people's
+  (`skribl.models.apply_feed_filter`, which reads the filter's signature; one
+  written for two arguments is called as before). The demo's app.py leaves
+  muted people out only when it is None, so a mute quiets Explore and Home's
+  drawings and keeps their page's skribls and More from. It is general (any
+  host's "quiet in the feeds, whole on their own page"), documented in
+  docs/INTEGRATION.md ("A filter can ask which listing it is"), held by
+  verify_hostseams and verify_createpost. The visibility policy never hears
+  of mutes.
+- THE ANSWERS UNDER A FOLDED COMMENT STAY. The mock folded an answer of
+  Theo's, and a comment of Theo's that nobody had answered. A comment of
+  theirs that others answered folds alone, its answers by others staying as
+  they were: they aren't Theo's, and hiding them would quiet people you
+  didn't mute.
+- THE FOLD LIES OVER ITS COMMENT'S OWN PLACE: the comment stays in the page,
+  its room cut to the line's height (measured, so the words can wrap in any
+  font), and Show opens that room, so nothing under it moves twice.
+- A POST'S OWN PAGE DOESN'T FOLD when you mute from its ⋯: you went there,
+  and what you go to stays. The toast says it's done, and Home and Explore
+  leave them out from then on.
+- THE TOAST WAITS FOR THE SITE'S ANSWER, which says whether you follow them
+  (rule 3's words), and for the sheet to have gone; the fold or the line
+  begins at once, and a refusal puts it back.
+- WORDS THE MOCK DIDN'T WRITE are its own or the site's: the refusals are
+  follows' and comments' ("This page went stale. Reload it, then try again.",
+  "They aren't here anymore. Reload the page to see what's new."), with "Lots
+  of that in a short while. Wait a little, then try again." for the limit and
+  "You've been signed out. Sign in again, then try again."; Settings' note
+  after Unmute is the row's own line, "Unmuted. Everything comes back, just as
+  it was."; the Undo toast's "Unmuted. Theo's posts are back." is the mock's,
+  for 2.8 seconds, with nothing to press.
+- THE LINE'S TEMPLATE IS IN THE PAGE for everybody signed in who opens
+  somebody else's page, the same for all whether or not anybody muted them,
+  so a mute made there opens the line without asking the site again. It says
+  nothing about anybody's mutes; their own page has neither line nor
+  template.
+- A TAKEN-DOWN ACCOUNT CAN STILL MUTE, as it can still block: a mute tells
+  nobody anything and changes nothing for anybody else. Follows and likes,
+  which reach somebody, refuse it.
+- NO MUTE ROW WHILE A BLOCK STANDS, either way: a blocked person's page
+  offers Unblock, and the route says "gone". Muted lists nobody a block
+  either way or a takedown hides, as everywhere; the row stays, so an unblock
+  brings them back muted, as the mock said.
+- ON A HOME THAT ENDS JUST UNDER THE CARD the browser keeps the page's
+  bottom in place as the room closes, so the posts above glide down into the
+  space instead of the next rising: still one glide. The suite reads a Home
+  that goes on past the card, as Home does.
+
+Pad and Flip: nothing changes in either editor. Mute goes by who made a post,
+so a muted person's Flips leave Home just as their drawings do, and the
+in-post player that Pad drawings and Flips share is untouched. The one change
+on Skribl's side is the feed filter being told a listing's `author`, which is
+no editor's; there is nothing for Flip to catch up on.
+
+THE FOUR: kind (a real break, and nothing is lost: nobody is told, nothing
+changes for them, Undo is there for seven seconds, Activity is worked out
+each time so unmute brings every row back, and on your own post the fold
+still says something was said; a refusal says why without blame; nothing
+jumps); simple (one rule, what comes to you goes quiet and what you go to
+stays; one row where Report and Block already are, its line saying exactly
+what it does); playful (the card folds away and comes back, the fold glides
+open, their drawings stay one tap away on their page); powerful (the gentle
+tool that works, Home kept full of the drawings you want to watch; Block
+stays the strong one).
+
+CONTRAST, measured on the built pages (verify_socialmute section 14), phone
+(touch) and desk, light and dark: 471 words read on ten screens a look (a
+post's ⋯, the toast, their page muted, their ⋯ with Unmute and with Mute, the
+fold, Settings' Muted, rule 3's toast, the Unmuted toast, Activity quiet),
+none under 4.5:1, the lowest 5.33:1 (white on the action purple, as
+everywhere), on a phone 6.74:1 light and 8.59:1 dark. Every new word and mark
+read two ways (its colour against what is painted behind it, and the painted
+pixels), the lower counting, light (phone/desk) and dark (phone/desk): the
+row's name 17.95:1 light and 14.05:1 dark, its line and its eye 7.56:1 and
+8.59:1; the toast's words 17.95:1 and 14.05:1, its Undo 17.95:1 and 11.86:1,
+its eye 8.26:1 and 8.39:1; the line's words and eye 7.36:1 and 10.49:1, its
+Unmute 8.04:1 and 10.25:1; the fold's words and eye 7.36:1 and 10.49:1, its
+Show 8.04:1 and 10.25:1; Settings' title and a name 17.95:1 and 14.05:1, its
+Unmute 17.95:1 and 11.86:1, its line and an @handle 7.56:1 and 8.59:1. Phone
+and desk read alike, and each is the mock's own figure to the hundredth, but
+for the line's dot, read on its own here (the mock read it with the words):
+7.36:1 and 10.49:1 on a phone, 7.02:1 and 10.15:1 on a desk. Every new
+control 44px to a finger (32 read, each landing at its middle and 21px out
+each way: the row, Undo, Unmute on their page, the fold, Settings' Unmute);
+no text field under 16px, and no new field at all. verify_contrast does not
+read /social, so this suite measures it; no token was added, each part
+wearing its role's (the row the sheet's own row and Make's second line, the
+toast a card, Show and Unmute --accent-ink, Settings' Muted the Blocked
+panel's rows).
+
+THE CHECKS. verify_socialmute.py, fifteen sections and 67 rows through the
+demo's own server, people joining with Chromium's virtual authenticator:
+where you mute (both sheets, the row's words and line, the eye in the pen and
+on the other icons' centre, the row's size and where its words start,
+Unmute's words; never your own, never signed out); nothing asked first (kept
+at once, the toast's words in a status, its place on a phone and on a desk,
+its words letting a tap through, Undo 44px, seven seconds, Undo bringing
+everything back and the focus with it); Home's fold, the toast and Undo read
+on every frame, light and dark, and under Reduce Motion; their page (the line
+yours alone, its glide both ways and under Reduce Motion, its words centred
+under the buttons on a phone and starting under them on a desk, everything
+you go to still there); rule 3; Home and Explore, walked to their ends, and
+every page of theirs still open; the fold (its words, its eye and words in
+line with the faces and names, hidden for real, others' answers, the count,
+your own post, Show on every frame and under Reduce Motion, Load more);
+Activity (quiet, a group, the dot, unmute bringing it back); the counts;
+Settings; who may mute (the refusals, the limit, a refusal put back in the
+page); nothing for anybody else; the data (the chain on a populated database
+up, down and up again, the pair and the CHECK, the PostgreSQL DDL offline,
+the reads' plans, Home's reads, deleting with the cascade off); words, marks
+and targets; no page, console or CSP errors. It runs alone in
+release_run.py's batches ("measures"). The affected suites learnt the change:
+verify_socialposts and verify_socialsafety, the ⋯'s rows (Mute after Share…
+on somebody else's post and drawing, first on a profile; a row's name read
+from its first line, now that a row can have two); verify_socialauth's chain
+row, the twelfth table and its three indexes; verify_hostseams and
+verify_createpost, a row each for the feed filter's `author` (told the one
+author of a listing narrowed to one, None for many people's; a filter written
+for two arguments called as before).
+
+MOTION JUDGED FAIRLY, as the Following entry set out: every motion row reads
+its thing on every animation frame, a step judged over the display frames it
+spans. The thresholds are the mock's: a fade no more than 35% a frame; a room
+no more than 30% of its way a frame, over eight frames or more; the toast's
+fade and rise no more than 35% a frame, over five and six frames or more,
+never on the bar; the next post, the heading or the answer below never going
+back, and nothing hopping after a stop; under Reduce Motion a room put there
+or away only while what it holds can't be seen (0.05), and the toast 0px
+moved. Read as built, alone, the mock's own figures within a point and a
+frame: Home's card fades at most 19% a frame over 12 frames, its room closes
+13% over 17 and 18, the next post rises 13%, 0px back; the toast fades in 17%
+over 13 and rises 20% over 15, 10px, so it stays 12px clear of the bar;
+Undo's room opens 13% over 19 and the card fades in 17% over 12; the line's
+room opens 13% over 18 and it fades in 17% over 13, the Skribls heading 0px
+back, and closes 13% over 18; Show's room opens 13% over 18, the fold line
+fades out 22% a frame at most and the comment in 15% over 14, never both more
+than half there, the answer below 0px back; under Reduce Motion every room is
+put there or away at opacity 0, and the toast moves 0px. Two break runs in
+the second round, with the box's load average between 10 and 15 from other
+helpers' suites, also read one frame past the mark on a row their break
+didn't touch (a card's fade at 36%, a fold line's at 51%); the same rows read
+19% and 22% in the controls. Load, not the change, and the reason the motion
+sections ran alone.
+
+EVERY NEW OR CHANGED ROW WAS SHOWN RED by a break of its own, each in a
+throwaway copy of the committed tree (git archive), its section run alone,
+with an unbroken copy of each section as a control: 87 breaks over 129 runs
+in three rounds (the first two at a time; the motion sections, and every run
+again after a mend, alone), every one red on its own row in the end; 23
+controls, all green in the end. verify_socialmute, 79: Mute last on their
+page; Mute before Share… on a post; a speaker for the eye; the row's words at
+16px; its eye 1px off; a post's ⋯ always saying Mute; Mute on your own post;
+Mute signed out; Home's cards staying; no status; the toast's words cut
+short; the toast 7px lower, where its rise crosses the bar; its words taking
+taps; Undo 36px; five seconds; the focus lost; Undo's words cut short; the
+desk's toast in the middle of the window, over the rail; a card that snaps
+away; a toast up at once; Undo snapping back; under Reduce Motion a room
+taken away while seen; a toast that rises under Reduce Motion; the line's
+words; a line put in at once; its room measured without its margin (a hop);
+the line shown to everybody once anybody muted them; their page's own listing
+quieted; the line taken out before its room closed; a line as wide as its
+column, its words centred on a desk, and at the left on a phone; under Reduce
+Motion the line's room put there while seen; a mute that unfollows; the toast
+forgetting the follow; their side changing (their own list leaving the muter
+out); Following keeping them; an unfollow that unmutes; Home keeping them;
+Home leaving them out after the query (short pages); Explore keeping them;
+the visibility policy hiding them; "replied" for "answered"; the fold's eye
+2px off the faces' column; a fold not hidden for real; others' answers
+hidden; a folded comment not counted; Show snapping; the fold line and the
+comment seen at once; under Reduce Motion the comment seen as its room comes;
+Load more's page unfitted; Activity keeping them; their comment lighting the
+dot; an unmute that keeps the mute; likes counted without them; "Liked by…"
+without them; Muted below Blocked; the empty words; no note after Unmute; the
+hidden listed; no token asked; muting through a block; a limit of 61; a
+refusal not put back; a post's Mute signed out; Mute in a blocked person's
+sheet; no index by whose; no CHECK; a downgrade keeping the table; no
+cascade; Settings sorted by name (a sort of its own); a read a card; deleting
+that keeps mutes; a faint line in light; faint words in dark; a faint Show; a
+faint eye; the eye in oklab() (the reader fails closed, naming it); Unmute
+36px; and mutes.js throwing. verify_socialposts, two (Mute after Report on a
+post's ⋯, and on a drawing's page); verify_socialsafety, three (no Mute on a
+profile's ⋯; Mute after Report from a post's page, and from Home);
+verify_socialauth, one (the chain without the table: its four chain rows
+red); verify_hostseams and verify_createpost, one each (a filter never told;
+told None for one person's listing). Two first tries moved nothing a person
+could see, and their rows stayed green, rightly: the toast's resting place
+under Reduce Motion (it leaves it before it can be seen) and the desk line's
+flex-start (the line is as wide as its words, placed by its column, so the
+rule only shapes a line long enough to wrap, which no first name here is).
+Each was redone as a break that moves the paint, and is red.
+
+FOUND WRONG, AND MENDED. In the product, while it was built: (1) Undo pressed
+while a card was still folding read the room's height after its transition
+was cancelled, so the card snapped shut before it came back; a room now holds
+what is painted (height, opacity, margin) before it turns round; (2) an
+ending that had been cancelled still ran, taking apart a room the way back
+was using; an ending knows now when it was cancelled; (3) taking a room apart
+moves the card, which dropped the focus Undo gives back to the ⋯; the focus
+is kept; (4) the line was taken out once it had faded, before its room had
+closed, and the heading jumped; its room's height ends it; (5) a blocked
+person's ⋯ offered Mute; not while a block stands; (6) mutes.js named /social
+itself; it takes its addresses from the page, so the site mounts anywhere;
+(7) Home read whom you muted twice (the site's pages and the host's filter);
+once a request. In the instruments, each red on its row now: the line's room
+was read without its 8px margin, a hop that wasn't there; Home's reader
+counted a card in its closed room as on the page; the toast's judge read "no
+toast yet" as a place; on a Home that ended just under the card the browser
+held the page's bottom and the posts above moved down, read as the next post
+going back (section 3's Home goes on past the card now, as a Home does); the
+probe of Home's reads shared one app context across its requests, so the
+second read the first's mutes, and its first page was full already (each
+request has its own context now, and it clears its copy to the people in
+question); the More from row first looked for the wrong post. Calibration
+found three more: run alone, section 10's first person is the site's first,
+with Reports and Invites above Muted, so on a phone the Unmute buttons sat
+below the screen where no finger could reach them, and the control was red
+(the reader brings Muted into view first); section 5's last row read the
+follow by index and stopped the section when a break ended the follow (it
+reads it whole); and the line and the buttons were read by their boxes, which
+are as wide as what they hold today but would have kept a centred box round
+words off to one side (they are read by the span of what they hold now: the
+stretched breaks above).
+
+Not tested here: WebKit (the owner's iPhone) and Firefox (main's lanes run
+their smoke after the merge); SF and Segoe UI (every measure is in this box's
+fonts; the line, the fold's words and the toast's words wrap and the fold
+measures its own height, so each fits in any font); PostgreSQL itself (the
+chain's DDL read offline, the reads' plans SQLite's; CI's postgres job runs
+the suites after the merge); and the live site.
