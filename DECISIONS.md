@@ -37304,3 +37304,168 @@ under your finger while you type, and nothing spills off the column), simple
 last character).
 
 It rides on Following's PR (#884), which was waiting on main going green.
+
+## After v330 -- Every card opens its post
+
+The owner, Nov 13, with screenshots from the phone: "Show me where you click
+or touch to go to post view? It's not clear. I thought on card?" The rule
+said yes to on Nov 12: "anywhere on the card should open the post and
+clicking on the player should make it play", with the face, the name and the
+@handle opening the person's page, ⋯, Share and 💬 keeping their jobs, and
+every other control its own. Home's posts.js already did this; Cal's tap map
+(every point of real cards on a touch phone, coloured by what a tap does)
+found where it did not.
+
+THE MAP BEFORE, measured on main (3a9d1f75): an exact tap on every part of
+each card's ground, followed to where it went.
+- HOME'S CARD: three parts did nothing, all inside .post-art, which posts.js
+  counted as a job of its own: the line under the drawing ("Drawn in 16 sec
+  · watching at": its words take no taps, so a tap lands on the line, which
+  keeps its clicks from bubbling), the gaps in the line's row between the
+  heart, the scrubber and the loop, and the drawing's edge (the 10px under it
+  and its round corners).
+- EXPLORE'S AND A PROFILE'S SKRIBLS CARDS (Skribl's own Gallery cards): the
+  title, the caption, the time, the plays, the head's empty space and the
+  card's margins all did nothing. A tap only played the drawing, and ⋯ → Open
+  went to Skribl's player page (/s/<id>, not /p/<id> as the brief had it) in a
+  new tab: from Explore or a profile there was no way to a drawing's page on
+  the site, its comments or its heart.
+
+THE MAP AFTER: no part does nothing, light and dark, on Home, Explore and a
+profile. Its pictures, measured the same way before and after, went with
+this change, beside Cal's map.
+
+HOME (posts.js, inside its card-open block): .post-art is no longer a job of
+its own (the drawing's box is role="button" in its own markup, so it plays,
+script or not); a group of controls (the speed's choices, role="group") keeps
+its taps, so a near miss between two speeds opens nothing; and since the
+player and its line keep their clicks from bubbling (docs/INTEGRATION.md,
+the lead: a host whose whole post is a link must not navigate on a scrub), a
+click inside .post-art (the site's own class; it names nothing of the
+player's) is heard on the way down. The speed, the heart, the scrubber, the
+loop and the drawing keep theirs.
+
+THE SEAM, Skribl's, general (docs/INTEGRATION.md, "Where a Gallery card
+opens (`card_url`)"; Skribl never knows the site): init_skribl(...,
+card_url=fn) or skribl.set_card_url(fn, app=app). fn() is asked in the
+request, once a page that holds the Gallery section, and answers None or an
+address with __ID__ for the drawing's id (a path on the site or an http(s)
+address). The section writes it on its root (data-skribl-open, through the
+template global skribl_card_url()), and gallery.js then opens it from the
+card's own ground by Home's rules (a drag is not a tap, a click that ends a
+selection opens nothing, Ctrl, ⌘ or Shift or the middle button a new tab),
+makes the title a real link to it (a keyboard's and a screen reader's way
+in; the card is not one big link), and sends ⋯ → Open there, Copy link and
+Share… giving it. Unsaid, the Gallery is Skribl's own byte for byte: /gallery
+and the skribls.net stand-in are unchanged. A wrong answer raises on the
+first page that asks, as a brand's does. Two rules in /gallery's own sheet,
+met only by a card with an address (the title link without an underline and
+selectable as words; a pointer over the card on a desk), re-emitted into
+gallerysection.css. Explore's and the profile's templates are untouched.
+
+THE SITE (app.py, _site_cards, beside _site_brand) sets it for its own pages
+(the site's blueprint: Explore, a profile's Skribls, and the first visit's
+newest under Blooby's card): /social/b/<id>. ONE ADDRESS FOR EVERY CARD, so
+that page learned two things (social/posts.py, bloob_page):
+- A post's drawing goes on to the post (302 to /social/p/<public id>) for
+  anybody who may see the post, signed in or not, by the post's own page's
+  rule (comments.on_post); to anybody it is hidden from (a block either way,
+  a takedown not theirs) it is the kind 404, and the answer names no post.
+  It used to redirect everybody, naming the post in the Location before the
+  post's page said it was gone.
+- A JUDGMENT CALL: a public drawing by somebody not on the site (made on
+  Skribl's own Pad; Explore lists every public skribl) goes to Skribl's own
+  page for it (/s/<id>), the one page it has and the one its ⋯ → Open gave
+  before. Section 9 pinned a kind 404 there, from when nothing on screen
+  led to that address; its row now pins this. Unlisted, gone or none: a
+  kind 404, as before.
+
+THE OTHER JUDGMENT CALLS: ⋯ → Open goes in the same tab, as a tap on the
+card does (the address is the site's own page; Skribl's player page still
+opens in a new tab where nothing is said); Copy link and Share… give the
+card's address, so one card has one address; "Anonymous" names nobody, so
+on its card it is ground and opens the card; the first visit's Home holds
+the same section and opens the same way.
+
+A FINDING, NOT CHANGED: a phone moves a tap that lands near a control onto
+it. Chromium does here, whatever the touch's radius and with
+--disable-touch-adjustment: a finger in a card's 16px padding beside the
+drawing plays it, and one in the head's band under the name opens the
+person, where an exact click opens the post. That targeting is the
+browser's, not the page's, and Safari's (the owner's iPhone) is its own,
+not seen here. So the map's rows tap every part of the ground EXACTLY (a
+click at the point, in the touch phone's context), and a finger (a real
+touch) the drawing, the name and the spots a person aims for ("watching
+at", the time).
+
+Pad and Flip: SHARED. The Gallery shows Pad drawings and Flips alike, and
+Home's card is one card for both; section 12 maps a Flip post's card on Home
+and on Explore beside a drawing's, under the same rules. Nothing changes in
+either editor, and nothing is left for Flip.
+
+THE FOUR: kind (no dead ends on a card; a near miss between speeds, a drag
+or a selection never takes you away); simple ("I thought on card?": the card
+is the way in, as expected, on every card the site shows); playful (the
+drawing still plays where it is; the card around it opens its page, with
+its comments and hearts); powerful (Ctrl, ⌘ and the middle button open a
+new tab, the title is a keyboard's link, and one seam serves any host).
+
+CONTRAST: no words, colours or tokens changed; the title link keeps the
+title's ink. verify_contrast ran (/gallery's sheet gained two rules).
+
+THE CHECKS. verify_socialposts section 12, eleven rows, Cal's map as rows: on
+nine cards (Home: a post, a Flip, a drawing on its own; Explore: a post's
+drawing, a Flip's, one on its own, one by somebody not on the site; a
+profile: a post's drawing, one on its own), a touch phone, light and dark,
+every 4px read with elementFromPoint (each row scrolled to the screen's
+middle at the phone's own height, which sizes a drawing's box) and an exact
+tap on every part of the ground, followed: none does nothing; a finger on
+the drawing plays it and the page stays; on the name, the person's page; on
+the ground, the right page, followed (a post's, a drawing's, Skribl's own);
+/social/b/<id>'s ways on (two who may, one blocked, nobody's, unlisted, a
+drawing on its own); the line's controls (the speed, a tap between its
+choices, a choice, the loop); on a desk Ctrl and the middle button (a new
+tab, the page stays), a drag selecting a caption and one across the ground
+(nothing), the keyboard (Tab from ⋯ reaches the title, a link; Enter opens
+it); the ⋯ (Open, Copy link, Share…); Skribl's own /gallery as it was.
+Section 9's guard row as above. verify_seam, WHERE A CARD OPENS, nine rows
+of source; verify_hostseams, WHERE A CARD OPENS, seven rows through
+throwaway hosts in-process.
+
+RED FIRST. The final suite file alone, copied onto main: section 12 red on
+seven of its eleven rows (the map, the name on the card by nobody named,
+the finger on the ground, /social/b/'s ways, Ctrl and the middle button, the
+keyboard, the ⋯), and section 9's changed row. The four green on main guard
+what must not change (the drawing plays, the line's controls, a drag opens
+nothing, /gallery as it was); each was shown red by a break. BREAKS, one per
+component, each in a throwaway worktree with a control (unbroken) green
+beside it, section 12 trimmed to light (nothing in the logic reads the
+theme): posts.js, .post-art back in OWN; the capture listener gone; the group
+gone from OWN; the drawing's role and tab stop gone from OWN (the drawing
+row); gallery.js, the ground's listener gone, its drag and selection test
+gone, Ctrl ignored, the middle button ignored, the title a div, Open in a
+new tab, the menu's address Skribl's; the macro not writing the address;
+app.py answering on every page; bloob_page redirecting everybody, and
+without its way to Skribl's own page: fifteen, each red on its rows. For
+verify_seam and verify_hostseams, fourteen: the macro always writing it, no
+__ID__ test, no address test, the answer not app-local, no callable test,
+not exported, None taken as an address, Open in a new tab, the title a div,
+no drag test, __ID__ replaced once, the site's address in gallery.js, the
+guide's section renamed, the site answering on every page; each red.
+
+FOUND WRONG, AND MENDED (instruments). The census by element reads the same
+on main and fixed: what tells them apart is the tap, so every part of the
+ground is tapped. The first taps were a finger's, and Chromium's targeting
+moved them (above): exact taps since. The keyboard row compared the link's
+absolute address with a path. verify_hostseams' setup row searched the
+whole of /gallery for the attribute's name, which /gallery's own <style>
+comment spelled: the comment no longer spells it, and the row reads the
+section's root.
+
+THE AFFECTED SUITES: FINAL RUN PARAGRAPH.
+
+Not tested here: WebKit (the owner's iPhone: its tap targeting near a
+control, a long press on the title link) and Firefox (main's lanes run
+their smoke after the merge); SF and Segoe UI (no words or sizes changed);
+PostgreSQL (bloob_page's reads run on SQLite here; CI's postgres job runs
+after the merge); and the live site.

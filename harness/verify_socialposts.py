@@ -1427,6 +1427,10 @@ with sync_playwright() as p:
         st_g, jg = make_post(juno, "Section 12, a post shown in the gallery", gallery=True, seed=121)
         g_post = jg.get("post") if isinstance(jg, dict) else None
         g_sid = (post_row(g_post) or (None, None))[1] if g_post else None
+        # A Flip too: the Gallery and Home show a Flip's card as a drawing's.
+        st_f, jf = make_post(juno, "Section 12, a Flip shown in the gallery", gallery=True, flip=True, seed=125)
+        f_post = jf.get("post") if isinstance(jf, dict) else None
+        f_sid = (post_row(f_post) or (None, None))[1] if f_post else None
         juno.pg.goto(BASE + "/social/")
         st_l, lone = juno.pg.evaluate(PAD, ["Section 12, a drawing on its own", "public", 122])
         nb_ctx, nb_pg = browser_as(b, None)
@@ -1435,12 +1439,15 @@ with sync_playwright() as p:
         st_n, nobodys = nb_pg.evaluate(PAD, ["Section 12, nobody's", "public", 123])
         st_u, unlisted = nb_pg.evaluate(PAD, ["Section 12, nobody's, kept unlisted", "unlisted", 124])
         close_ctx(nb_ctx, nb_pg)
-        made = bool(g_sid and lone and nobodys and unlisted) and [st_l, st_n, st_u] == [201, 201, 201]
+        made = bool(g_sid and f_sid and lone and nobodys and unlisted) and [st_l, st_n, st_u] == [201, 201, 201]
         to_post, to_lone, to_skribl = f"/social/p/{g_post}", f"/social/b/{lone}", f"/s/{nobodys}"
+        to_flip = f"/social/p/{f_post}"
         TILE = '#skriblGallery .tile[data-id="{}"]'
         CARDS = [("Home", "/social/", f'.post-card[data-post="{g_post}"]', g_sid, to_post),
+                 ("Home", "/social/", f'.post-card[data-post="{f_post}"]', f_sid, to_flip),
                  ("Home", "/social/", f'.post-card[data-skribl="{lone}"]', lone, to_lone),
                  ("Explore", "/social/explore", TILE.format(g_sid), g_sid, to_post),
+                 ("Explore", "/social/explore", TILE.format(f_sid), f_sid, to_flip),
                  ("Explore", "/social/explore", TILE.format(lone), lone, to_lone),
                  ("Explore", "/social/explore", TILE.format(nobodys), nobodys, to_skribl),
                  ("a profile", "/social/@juno", TILE.format(g_sid), g_sid, to_post),
@@ -1519,8 +1526,8 @@ with sync_playwright() as p:
         dead = {r["label"]: {k: v for k, v in r.get("parts", {}).items() if v[1] != r["want"]} for r in cards12}
         dead = {k: v for k, v in dead.items() if v}
         lacking = [(r["label"], r.get("stopped")) for r in cards12 if "stopped" in r or not r.get("parts")]
-        check("THE TAP MAP: on Home's cards, Explore's and a profile's Skribls cards (a post's drawing, one on its own,"
-              " and on Explore one by somebody not on the site), a touch phone in light and dark, every 4px is one of"
+        check("THE TAP MAP: on Home's cards, Explore's and a profile's Skribls cards (a post's drawing, a Flip's, one on"
+              " its own, and on Explore one by somebody not on the site), a touch phone in light and dark, every 4px is one of"
               " the card's own controls or its ground, and an exact tap on every part of the ground (its words, its"
               " time, its edges, the line under the drawing, the space between) opens the card's page: no part does"
               " nothing",

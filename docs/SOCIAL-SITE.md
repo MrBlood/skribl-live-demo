@@ -354,7 +354,7 @@ left out: the demo never depends on it.
 | Where | What it is |
 |---|---|
 | `/social/` | **Home.** For now the first visit, for everyone: Blooby draws his card (How it works' own Flip, in Skribl's own player, resting finished under Reduce Motion), "Drawings that draw themselves", **Make a skribl** and **Look around**, and the newest public skribls under it, in Skribl's own Gallery section. |
-| `/social/explore` | **Explore:** Skribl's own Gallery section, New and Hot, search, Report, Load more. |
+| `/social/explore` | **Explore:** Skribl's own Gallery section, New and Hot, search, Report, Load more. A card opens the drawing's page here from anywhere on it (`/social/b/<id>`, on to its post where it is a post's; "Every card opens its post", below). |
 | Make | Not a page: a small sheet with two doors, **Draw** (Skribl's Pad) and **Flip** (Skribl's Flip), from the bar on a phone, the rail on a desk and Home's button. |
 
 A phone has a bar along the bottom (Home, Explore, Make; You comes with
@@ -573,7 +573,8 @@ and the owner's "all yes" to piece 4's choices (Nov 11). `social/posts.py`:
     /social/feed          the next page of the feed, for Load more (JSON)
     /social/p/<id>        a post's own page: its drawing plays by itself
     /social/p/<id>/delete your own post, gone: its words and its drawing (JSON)
-    /social/b/<skribl_id> a drawing shown outside a post, on a page of its own
+    /social/b/<skribl_id> a drawing shown outside a post, on a page of its own;
+                          where every gallery card on the site opens
     /social/b/<skribl_id>/delete  your own such drawing, gone (JSON)
 
 **A post is a drawing and words** (the words optional, up to 500
@@ -605,6 +606,25 @@ through Skribl's `list_public_posts`
 walking both; a post's drawing shows once, as the post, and its page is the
 post's. Not one kept unlisted, nor one by somebody not on the site.
 `harness/verify_socialposts.py` section 9 holds it.
+
+**Every card opens its post** (the owner, Nov 13, from the phone: "Show me
+where you click or touch to go to post view? It's not clear. I thought on
+card?"; the rule said yes to on Nov 12, "anywhere on the card should open the
+post and clicking on the player should make it play"). On Home's cards the
+line under the drawing ("Drawn in 16 sec · watching at") and the space around
+the drawing open the post too, as the rest of the card did (`posts.js`); the
+speed and its choices, the heart, the scrubber and the loop keep their own
+taps. Explore's cards, a profile's Skribls and the first visit's newest are
+Skribl's own Gallery cards, and they open where the site says, through
+Skribl's seam for it (`skribl.set_card_url`, docs/INTEGRATION.md "Where a
+Gallery card opens"; the demo's `app.py` sets it for the site's own pages):
+`/social/b/<id>`, from anywhere on the card that is the card's own, by Home's
+rules, with the title a link to it and the ⋯'s Open going there. One address
+serves every card: `/social/b/<id>` takes a post's drawing on to its post for
+anybody who may see it (and is as gone as the post to anybody else, naming
+nothing), and sends a drawing by somebody not on the site, which has no page
+here, to Skribl's own page for it. Skribl's own `/gallery` is as it was.
+`harness/verify_socialposts.py` section 12 holds it: Cal's tap map as rows.
 
 **A post's own page** plays its drawing by itself, at the author's speed,
 sound off until the viewer turns it on, and never under Reduce Motion (the
