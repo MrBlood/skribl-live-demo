@@ -37724,7 +37724,29 @@ switch on), and verify_library's break twice (that, then a stray server from
 an earlier run on its port); all ran again on the harness's own server, the
 breaks red on their rows and the control green.
 
-THE AFFECTED SUITES, SIDE BY SIDE: RUN_PARAGRAPH
+THE AFFECTED SUITES, SIDE BY SIDE (run_parallel -j 2), on the final tree
+(all of it but this paragraph; a comment in base.html, which renders
+nothing, was mended while it ran), 24.3 minutes, all seventeen green beside
+the others, none needing its run alone: verify_socialsettings 32/32,
+verify_theme 124/124, verify_library 247/247, verify_identity 135/135,
+verify_gallery 232/232, verify_a11ypages 162/162, verify_social 40/40,
+verify_socialauth 64/64, verify_socialposts 31/31, verify_socialprofile
+55/55, verify_socialsafety 35/35, verify_socialactivity 44/44,
+verify_socialcomments 92/92, verify_sociallikes 96/96, verify_socialfollow
+71/71, verify_txcontract 102/102 and verify_docs 144/144. Why these: the
+boot and lib/theme.js are on every Skribl page (verify_theme; verify_library,
+verify_identity and verify_gallery read the stamp or the theme-color meta;
+verify_a11ypages reads Skribl's five pages in both themes); base.html,
+social.css and social.js are every page of the site's (every site suite);
+social/__init__.py's policy is verify_social's and its modules
+verify_txcontract's; the docs are verify_docs'. The suites that only keep a
+choice or set the attribute themselves (verify_parity, verify_ux,
+verify_onepill, verify_onefull, verify_viewedges, verify_a11y,
+verify_cardfade, verify_fullsmart, verify_helpdemos, verify_tray) needed no
+change and were not run, nor verify_contrast (no Skribl sheet or token
+changed). This paragraph and that comment are the only changes since;
+verify_docs, the suite that reads it, was run on it again. The full battery
+was not run; main's run after the merge is.
 
 Not tested here: WebKit, the owner's iPhone: the cross-fade (Safari has a
 page's own view transitions from 18), the theme in place before the first

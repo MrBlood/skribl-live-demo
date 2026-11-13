@@ -51,9 +51,9 @@
     the mock's picture has it. A phone's bar keeps its four places, as it
     did for Activity: there Settings is the word on your profile.
 
-    NO SCRIPT IN THE PAGE. The demo sends Skribl's standalone policy on every
-    page that is not Skribl's (script-src 'self' and a nonce the site never
-    needs), so every script here is a file. #}
+    ONE SCRIPT IN THE PAGE, SKRIBL'S THEME BOOT. The site's own policy
+    (social/__init__.py, site_csp) is script-src 'self' and this page's own
+    nonce, which only the boot carries: every other script here is a file. #}
 {% from 'skribl/_skribl_inline_player.html' import skribl_inline_assets %}
 {% from 'skribl/_skribl_face.html' import skribl_face_assets, skribl_face %}
 {% import 'social/_icons.html' as ic %}
