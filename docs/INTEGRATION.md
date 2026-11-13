@@ -190,7 +190,12 @@ focus ring, 32px tall and a pill as wide as what it holds. Its tap area is
 under the line. The scrubber gives it the room; nothing else on the line
 moves, and the post is the same height with it or without. A click on the
 line stops at the line (a post that is a link must not navigate on a scrub),
-so listen on the control itself, or on the document while capturing.
+so listen on the control itself, or on the document while capturing. A card
+that opens its post from anywhere on it hears the line the same way: the
+words under the drawing ("Drawn in 15 sec · watching at") take no taps of
+their own, so a tap there lands on the line, and is the card's; the speed
+and its choices (a `role="group"`), the scrubber, mute, loop and your lead
+keep theirs (the Skribl site's Home does this: `social/static/posts.js`).
 
 ```jinja
 {% macro like(post) %}<button type="button" class="like" aria-pressed="false">♡ {{ post.likes }}</button>{% endmacro %}
@@ -537,6 +542,12 @@ card's ⋯ menu opens at its button inside a positioned box too.)
 
 If you registered the blueprint under another name, pass it:
 `{{ skribl_gallery_section(bp='drawings') }}`.
+
+**Where its cards open** is yours to say, per request: a drawing's page on
+your site (its post, its comments), opened from anywhere on the card, its
+title a link to it, and its ⋯ → Open going there ("Where a Gallery card
+opens (`card_url`)", below). Unsaid, a card opens nothing but its drawing,
+and its ⋯ → Open opens Skribl's player page for it in a new tab.
 
 **Say which way your people post.** When the gallery is empty it tells people
 which tick puts a skribl there, in the words they will see. If they post from
@@ -1499,6 +1510,7 @@ All are arguments to `create_blueprint()` / `init_skribl()` unless noted.
 | `home_label` | the address's host | What that button calls your site ("skribls.net"). |
 | `public_media_cache` | `False` | Let a CDN cache public media. See "Shared-cache opt-in" above, and read it before turning it on. |
 | `brand_resolver` | `None` (Skribl's own) | `init_skribl()` only, or `skribl.set_brand_resolver(fn, app=app)`. Your mark, its name and a first-open hello of your own on the Pad and Flip, decided per request. See below. |
+| `card_url` | `None` (Skribl's own) | `init_skribl()` only, or `skribl.set_card_url(fn, app=app)`. Where a card of the Gallery section opens on your pages, an address with `__ID__`, decided per request. See below. |
 
 ### Where the player opens (`player_target`)
 
@@ -1605,6 +1617,56 @@ resolver that raises is not caught, as a feed filter's is not.
 (`app.py`, `_site_brand`: at the addresses `SKRIBL_SOCIAL_HOME_HOSTS` names, the
 site's wordmark `social/_blooby_mark.html` and its hello), and
 `verify_hello.py` reads that in the browser, painted and played.
+
+### Where a Gallery card opens (`card_url`)
+
+Skribl's own Gallery on your page ("Skribl's own Gallery on your page",
+above) shows drawings that may have a page on your site: the post one was
+posted in, with its comments and its likes. Skribl knows nothing of those
+pages, so you say where a card opens, per request, with whatever the request
+carries (your own pages, and not Skribl's, say):
+
+```python
+from flask import request, url_for
+
+def where_cards_open():
+    if request.blueprint != "site":
+        return None                                       # Skribl's own Gallery, as it is
+    return url_for("site.drawing", skribl_id="__ID__")    # "/drawings/__ID__"
+
+skribl.init_skribl(app, ..., card_url=where_cards_open)
+# or, after init_skribl: skribl.set_card_url(where_cards_open, app=app)
+```
+
+It is called in the request, once for each page that holds the Gallery
+section (`/gallery` too), and answers `None`, or an address with `__ID__`
+where the drawing's public id goes: a path on your site, or an http(s)
+address. With an address, on that page:
+
+- **A tap or a click anywhere on a card's own ground opens it**: its title,
+  its caption, its time and plays, the space between them. What does a thing
+  of its own keeps it: the drawing plays (and its row scrubs and goes full
+  screen), the author's name opens their page (your author resolver's
+  `url`), ⋯ opens its menu, "more" opens the caption. A press that moved is a
+  drag, not a tap, and a click that ends a text selection opens nothing. Ctrl,
+  ⌘ or Shift, or the middle button, opens it in a new tab, as a link would.
+- **The card's title is a link to it**, so a keyboard and a screen reader
+  have a way in; the card itself is not one big link.
+- **Its ⋯ → Open goes there**, in the same tab, and Copy link and Share…
+  give that address.
+
+Answer `None`, or install nothing, and the Gallery is Skribl's own as it
+was: a card opens nothing but its drawing, and ⋯ → Open opens its player
+page (`/s/<id>`) in a new tab. One address serves every card on the page,
+so give one that answers for every drawing the section can show, those that
+have no page of yours included: the Skribl site's `/social/b/<id>` goes on
+to the post where the drawing is a post's, and to Skribl's own page for a
+drawing made outside the site. A wrong answer (not a string, no `__ID__`, a
+script, another site's `//`, a backslash or a space) raises on the first
+page that asks, rather than leaving every card on it opening nothing.
+`verify_seam.py` and `verify_hostseams.py` hold the seam, and
+`verify_socialposts.py` (section 12) drives it on the Skribl site's
+Explore and profiles.
 
 ### The file work before the first visitor (`warm_assets`)
 

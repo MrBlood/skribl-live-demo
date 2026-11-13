@@ -1589,6 +1589,16 @@ with sync_playwright() as p:
             cpg.locator(sel + " .rl-speed").tap()
             cpg.wait_for_timeout(300)
             line["chips"] = cpg.evaluate("(s) => document.querySelector(s + ' .rl-speed').getAttribute('aria-expanded')", sel)
+            # Between two of the choices, an exact tap lands on their group: a near
+            # miss, which opens nothing and leaves the choices open.
+            gap = cpg.evaluate("""(s) => { const g = document.querySelector(s + ' .rl-chips'), r = g.getBoundingClientRect();
+              for (let y = r.top + 1; y < r.bottom; y += 2) for (let x = r.left + 1; x < r.right; x += 1)
+                if (document.elementFromPoint(x, y) === g) return [x, y];
+              return null; }""", sel)
+            if gap:
+                cpg.mouse.click(*gap)
+            line["between"] = (bool(gap), follow(cpg, "/social/", 900),
+                               cpg.evaluate("(s) => document.querySelector(s + ' .rl-speed').getAttribute('aria-expanded')", sel))
             cpg.locator(sel + ' .rl-chips button[data-r="2"]').tap()
             cpg.wait_for_timeout(300)
             line["speed"] = cpg.evaluate("(s) => document.querySelector(s + ' .rl-speed').textContent.trim()", sel)
@@ -1599,9 +1609,11 @@ with sync_playwright() as p:
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is the row's red
             line["stopped"] = str(exc).splitlines()[0][:160]
         close_ctx(ctx, cpg)
-        check("...and on Home the line's own controls keep their taps: the speed opens its choices and takes one (2×),"
-              " the loop stops repeating, and the page stays",
-              made and line.get("chips") == "true" and line.get("speed", "").startswith("2") and line.get("loop") == "false"
+        check("...and on Home the line's own controls keep their taps: the speed opens its choices (a tap between two"
+              " of them opens nothing and leaves them open) and takes one (2×), the loop stops repeating, and the page"
+              " stays",
+              made and line.get("chips") == "true" and line.get("between") == (True, "/social/", "true")
+              and line.get("speed", "").startswith("2") and line.get("loop") == "false"
               and line.get("at") == "/social/", f"{line}")
 
         # ON A DESK: Ctrl (as ⌘ is on a Mac) and the middle button open the card

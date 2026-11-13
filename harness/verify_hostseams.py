@@ -1093,6 +1093,87 @@ for _dir, _subs, _files in os.walk(os.path.join(ROOT, "skribl")):
 check("Skribl names no host: the seam's code and markup name nobody, and nothing under skribl/ names the "
       "site's address, mark, hello or blush", not _named and not _leaks, f"named in {_named}; {_leaks}")
 
+
+print("\nWHERE A CARD OPENS — the host's address for the Gallery's cards, per request (card_url)")
+# The owner's "I thought on card?" (Nov 13): on the Skribl site a card of
+# Skribl's own Gallery opens the drawing's page there. Skribl knows no host's
+# pages, so it is a seam (skribl/models.py set_card_url, docs/INTEGRATION.md
+# "Where a Gallery card opens"): the host answers per request with an address
+# holding __ID__, and an answer of nothing is the Gallery as it was, byte for
+# byte. Read from what the server sends for /gallery, which holds the section,
+# through throwaway hosts in this process. What gallery.js does with it is
+# verify_socialposts section 12's (tapped, on the site).
+
+
+def _cards_host(fn=None, later=None):
+    a = Flask(f"host-cards-{len(results)}")
+    a.config["SQLALCHEMY_DATABASE_URI"] = DB_URL
+    a.config["SECRET_KEY"] = "harness-hostseams"
+    a.testing = True                          # so a wrong answer raises here, where the suite sees it
+    d = SQLAlchemy()
+    d.init_app(a)
+    skribl.init_skribl(a, session=lambda: d.session, csrf=False, **({"card_url": fn} if fn is not None else {}))
+    if later is not None:
+        skribl.set_card_url(later, app=a)
+    return a
+
+
+def _gallery(app, host="cards.example"):
+    """/gallery as sent, its token and nonce taken out (they differ per page); a page that raised says what."""
+    try:
+        r = app.test_client().get("/gallery", base_url="http://" + host)
+    except Exception as exc:  # noqa: BLE001 (a red row, not a stopped suite)
+        return 500, f"raised {exc!r}"
+    h = _re.sub(r'nonce="[^"]*"', 'nonce="N"', r.get_data(as_text=True))
+    return r.status_code, _re.sub(r'data-skribl-csrf="[^"]*"', 'data-skribl-csrf="T"', h)
+
+
+def _open_of(page):
+    m = _re.search(r'<div class="skribl-gallery" id="skriblGallery"[^>]*>', page[1])
+    if not m:
+        return "no section"
+    a = _re.search(r'data-skribl-open="([^"]*)"', m.group(0))
+    return a.group(1) if a else None
+
+
+_cplain = _gallery(_cards_host())
+check("(setup) /gallery renders in a throwaway host, its section saying nothing of where a card opens",
+      _cplain[0] == 200 and _open_of(_cplain) is None, f"{_cplain[0]}; {_open_of(_cplain)}")
+_csame = {name: _gallery(app) == _cplain for name, app in (("answering None", _cards_host(lambda: None)),
+                                                          ("answering nothing", _cards_host(lambda: "")))}
+check("no card_url, an answer of None or of nothing: the Gallery is Skribl's own, byte for byte",
+      all(_csame.values()), str(_csame))
+_cpath = _gallery(_cards_host(lambda: "/drawings/__ID__"))
+_cabs = _gallery(_cards_host(lambda: "https://site.example/d/__ID__?from=gallery"))
+check("an address answered is on the section's root as given, a path on the site or an http(s) address, and"
+      " nothing else in the page changes",
+      _open_of(_cpath) == "/drawings/__ID__" and _open_of(_cabs) == "https://site.example/d/__ID__?from=gallery"
+      and _cpath[1].replace(' data-skribl-open="/drawings/__ID__"', "", 1) == _cplain[1],
+      f"{_open_of(_cpath)}; {_open_of(_cabs)}")
+_cper = _cards_host(lambda: "/d/__ID__" if _request.host == "cards.example" else None)
+_clater = _cards_host(later=lambda: "/d/__ID__")
+check("asked per request (an answer for one address only: another gets none), set later with"
+      " skribl.set_card_url(fn, app=app), and app-local (an app without one carries none)",
+      _open_of(_gallery(_cper)) == "/d/__ID__" and _open_of(_gallery(_cper, "other.example")) is None
+      and _open_of(_gallery(_clater)) == "/d/__ID__" and _open_of(_gallery(_cards_host())) is None,
+      f"{_open_of(_gallery(_cper))}, {_open_of(_gallery(_cper, 'other.example'))}, {_open_of(_gallery(_clater))}")
+_CWRONG = {"no __ID__": "/drawings/", "a script": "javascript:alert('__ID__')", "another site's //": "//elsewhere.example/__ID__",
+           "a backslash": "/\\elsewhere.example/__ID__", "a space": "/d/ __ID__", "space around it": " /d/__ID__",
+           "a number": 42, "a mapping": {"url": "/d/__ID__"}}
+_cloud = {}
+for _why, _ans in _CWRONG.items():
+    _st, _h = _gallery(_cards_host(lambda _a=_ans: _a))
+    _cloud[_why] = None if (_st == 500 and "card url" in _h) else f"{_st}: {_h[:80]}"
+check("a wrong answer fails loudly on the first page that asks, saying what is wrong: " + ", ".join(_CWRONG),
+      not any(_cloud.values()), str({k: v for k, v in _cloud.items() if v}))
+try:
+    skribl.set_card_url("/d/__ID__", app=_cards_host())
+    check("a card_url that is not callable is refused when it is set", False)
+except TypeError as exc:
+    check("a card_url that is not callable is refused when it is set", True, str(exc))
+check("it is a documented name: set_card_url in skribl.__all__, and init_skribl takes card_url",
+      "set_card_url" in skribl.__all__ and callable(getattr(skribl, "set_card_url", None)))
+
 bad = [r for r in results if not r[0]]
 print(f"\n{'=' * 62}\n{len(results) - len(bad)}/{len(results)} passed"
       + ("" if not bad else "  FAILURES: " + ", ".join(r[1] for r in bad)))

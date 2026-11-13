@@ -885,7 +885,7 @@
      press that moved is a drag, not a tap, and a click that ends a text
      selection opens nothing, a link's included. With Ctrl, ⌘ or Shift, or
      the middle button, it opens in a new tab, as a link would. */
-  var OWN = 'a, button, input, textarea, select, label, summary, [role="button"], [role="slider"], [tabindex], .tileStage';
+  var OWN = 'a, button, input, textarea, select, label, summary, [role="button"], [role="slider"], [role="group"], [tabindex], .tileStage';
   var press = null;
   list.addEventListener('pointerdown', function (e) { press = { x: e.clientX, y: e.clientY }; }, true);
   /* A keyboard's click (Enter on a link) has no press behind it (detail 0). */
