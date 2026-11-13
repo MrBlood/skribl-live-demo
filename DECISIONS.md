@@ -37270,6 +37270,14 @@ THE FIX, in social.css (the fold's block and the comments' block):
   they don't (a wide font, larger text), Post keeps to the right on the next.
 - The counter reads on its own line under Post, at its right edge, and makes
   no line at all while it is empty. Post never moves while someone types.
+- Post is as wide as its longer word, as Following's button is. The first
+  cut of this fix let the line wrap, and then "Posting…" (11px wider than
+  Post in this box's font) pushed Post onto a second line just as the comment
+  went: the box grew 50px while it folded away, and the comment no longer
+  opened in step (section 33, red alone as well as beside the others).
+  "Posting…" is now measured under "Post" in a row with no height (the
+  page's own word, set on the button as data-busy by comments.js), and
+  Post's sides are 12px, so both words still fit the 96px it always was.
 In this box's font, and in the mock, the box looks exactly as before until
 the counter shows; the counter now sits under Post instead of beside it.
 Home's composer is unchanged: its line has room for the counter.
@@ -37280,11 +37288,15 @@ larger text), something 600px wide put in the box, typing to the last
 hundred characters, and the same in an answer's box. The box stays as wide
 as its column, the chips and Post inside it, Post at its right edge, no gap
 under Post while there is no counter, the counter painted under Post at its
-right edge, and Post where it was. Shown red on the old CSS here (the
-counter: 360 in 340, Post moved 20px). Each of the fix's five parts removed
-alone (the fold's column, the wrap, Post's right margin, the counter's own
-line, its :empty) turned the row red, and the unbroken control stayed green.
-The old row is green again in DejaVu.
+right edge, and Post where it was; Post is as wide saying "Posting…" (and
+with a longer stand-in word, so the rule holds in a wider font than this
+box's), is named Post all the same, and has 12px sides. Shown red on the old
+CSS here (the counter: 360 in 340, Post moved 20px). Each of the fix's nine
+parts removed alone (the fold's column, the wrap, Post's right margin, the
+counter's own line, its :empty, the measured word, Post's grid, its sides,
+comments.js setting the word) turned the row red, and the unbroken control
+stayed green. Section 33's posting row, red with the first cut, is green
+again. Sections 12 and 33 are green in this box's font and in DejaVu.
 
 Pad and Flip: not touched; the box is the site's. The four: kind (Post stays
 under your finger while you type, and nothing spills off the column), simple
