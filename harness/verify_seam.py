@@ -565,6 +565,131 @@ check("no tracked Python file raises a SyntaxWarning (or fails to compile)",
       _git.returncode == 0 and len(_git.stdout.split()) > 50 and not _noisy,
       "; ".join(_noisy[:4]) or f"{len(_git.stdout.split())} files")
 
+# ---------------------------------------------------------------------------
+print("\nTHE PLAYHEAD — a host's read-only seam on the in-post player")
+# docs/INTEGRATION.md, "Where the playhead is": player.playhead() answers
+# { ms, playing } on the drawing's own clock, for any host (the Skribl site
+# keeps it with a like; Skribl never depends on the site). Pinned here as
+# source: the method is on the player, it returns those two and nothing more,
+# it reads and never assigns or calls anything but the clock and Math.min, the
+# guide names it, and the site reads where a drawing's playhead is only
+# through it (never the suite's state().elapsedMs, not a host's to rely on).
+# The player's own suite (verify_inline.py, "where the playhead is") plays it.
+_ip = strip_comments((_layout.STATIC_DIR / "inlineplayer.js").read_text(encoding="utf-8"))
+_m = re.search(r"\bplayhead:\s*function\s*\(\)\s*\{(.*?)\},\n", _ip, re.S)
+_body = _m.group(1) if _m else ""
+# Its answer's keys, read with every call's own parentheses folded away
+# (innermost first, each to a mark that is not one), so a comma inside
+# Math.min(...) is not taken for the next key.
+_flat = _body
+while re.search(r"\([^()]*\)", _flat):
+    _flat = re.sub(r"\([^()]*\)", "\u2026", _flat)
+_ret = re.fullmatch(r"\s*return\s*\{(.*)\};\s*", _flat, re.S)
+_keys = re.findall(r"([A-Za-z_$][\w$]*)\s*:", _ret.group(1)) if _ret else []
+check("the in-post player has playhead(), returning { ms, playing } and nothing else",
+      _keys == ["ms", "playing"], f"keys {_keys}; {_body.strip()[:160] or 'no playhead method on the player'}")
+_assigns = re.findall(r"(?<![=!<>])=(?!=)", _body)
+_calls = sorted(set(re.findall(r"([A-Za-z_$][\w$.]*)\s*\(", _body)) - {"Math.min", "curMs"})
+check("playhead() only reads: no assignment, and no call but the clock's (curMs) and Math.min",
+      bool(_m) and not _assigns and not _calls and "curMs()" in _body and "totalMs" in _body,
+      f"assignments {len(_assigns)}; other calls {_calls}")
+_guide = (ROOT / "docs" / "INTEGRATION.md").read_text(encoding="utf-8")
+_gm = re.search(r"\*\*Where the playhead is\*\*(.*?)\n\n", _guide, re.S)
+check("docs/INTEGRATION.md documents it: playhead(), its ms on the drawing's own clock, and playing",
+      bool(_gm) and "player.playhead()" in _gm.group(1) and "`ms`" in _gm.group(1) and "`playing`" in _gm.group(1)
+      and "own clock" in _gm.group(1), (_gm.group(1)[:120] if _gm else "no such section"))
+_site_js = sorted((ROOT / "social" / "static").glob("*.js"))
+_peek = [p.name for p in _site_js if "elapsedMs" in strip_comments(p.read_text(encoding="utf-8"))]
+_reads = [p.name for p in _site_js if ".playhead()" in strip_comments(p.read_text(encoding="utf-8"))]
+check("the site reads where a drawing's playhead is through playhead() alone, never state()'s elapsedMs",
+      len(_site_js) >= 5 and not _peek and _reads, f"peeking: {_peek}; reading the seam: {_reads}")
+
+# ---------------------------------------------------------------------------
+print("\nTHE LINE'S LEAD — one control of a host's at the start of the line")
+# docs/INTEGRATION.md, "A control at the line's start" (after v330, the
+# owner's way 3 for the Skribl site's like): skribl_inline(..., lead=markup)
+# puts one control of the host's first in the line under the drawing, before
+# the scrubber, which gives it room; the player dresses it as its loop button
+# (32px, the loop's ground, ink, hover and focus ring) with a 44px tap area.
+# General: nothing of Skribl's names what a host puts there. Pinned as source
+# here; the player's own suite (verify_inline.py, "a host's control at the
+# line's start") renders it, lays it out and presses it, on a drawing and a Flip.
+_macro = (_layout.TEMPLATES_DIR / "_skribl_inline_player.html").read_text(encoding="utf-8")
+_macro_code = re.sub(r"\{#.*?#\}", "", _macro, flags=re.S)
+_sig = re.search(r"\{%\s*macro\s+skribl_inline\((.*?)\)\s*-?%\}", _macro_code, re.S)
+_row = re.search(r'<div class="skribl-inline-row">\s*(.*?)<div class="skribl-inline-scrub"', _macro_code, re.S)
+check("skribl_inline() takes lead (none unless given) and puts it first in the line's row, before the scrubber,"
+      " in its own slot, only when given",
+      bool(_sig) and re.search(r"\blead=None\b", _sig.group(1)) is not None and bool(_row)
+      and re.fullmatch(r'\{%-?\s*if lead\s*%\}\s*<div class="skribl-inline-lead">\{\{ lead \}\}</div>\s*\{%-?\s*endif\s*%\}\s*',
+                       _row.group(1)) is not None,
+      (_row.group(1).strip()[:160] if _row else "no row in the macro") + f"; signature {(_sig.group(1)[-60:] if _sig else None)}")
+_css = re.sub(r"/\*.*?\*/", "", (_layout.STATIC_DIR / "inlineplayer.css").read_text(encoding="utf-8"), flags=re.S)
+
+
+def _sels(text):
+    """A rule's selectors, split at its own commas (not those inside :is())."""
+    out, depth, cur = [], 0, ""
+    for ch in text:
+        depth += (ch == "(") - (ch == ")")
+        if ch == "," and depth == 0:
+            out.append(cur.strip())
+            cur = ""
+        else:
+            cur += ch
+    return out + [cur.strip()]
+
+
+# Every rule, a @media's own included: (its selectors, its declarations).
+_rules = [(_sels(m.group(1)), dict(kv.strip().split(":", 1) for kv in m.group(2).split(";") if ":" in kv))
+          for m in re.finditer(r"([^{}@]+)\{([^{}]*)\}", _css)]
+
+
+def _with(sel, prop):
+    """The selectors of every rule that lists `sel` and sets `prop`."""
+    return [ss for ss, d in _rules if sel in ss and prop in d]
+
+
+def _decl(sels):
+    """The declarations of the rule with exactly these selectors."""
+    return next((d for ss, d in _rules if ss == sels), {})
+
+
+_lead, _slot = _decl([".skribl-inline-lead>*"]), _decl([".skribl-inline-lead"])
+_tap, _scrub = _decl([".skribl-inline-lead>*::after"]), _decl([".skribl-inline-scrub"])
+_loop_box = _decl([".skribl-inline-line :is(.skribl-inline-mute,.skribl-inline-loop)"])
+_ground = _with(".skribl-inline-line .skribl-inline-loop", "background")
+_hover = [ss for ss, d in _rules if any(s.startswith(".skribl-inline-line :is(") and ".skribl-inline-loop" in s
+                                        and s.endswith(":hover") for s in ss)]
+_ring = _with(".skribl-inline-loop:focus-visible", "outline")
+_inset = [float(v.replace("px", "")) for v in _tap.get("inset", "").split()]
+_up, _side, _down = (_inset + [0, 0, 0])[:3] if len(_inset) == 3 else (0, 0, 0)
+check("the player dresses it as its loop button: the loop's height (32px), in the very rules that give the loop its"
+      " ground and ink, its hover and its focus ring",
+      _lead.get("height") == _loop_box.get("height") == "32px" and _lead.get("min-width") == "32px"
+      and len(_ground) == 1 and ".skribl-inline-lead>*" in _ground[0] and _decl(_ground[0]).get("color") == "inherit"
+      and len(_hover) == 1 and any(".skribl-inline-lead>*" in s for s in _hover[0])
+      and len(_ring) == 1 and ".skribl-inline-lead>:focus-visible" in _ring[0],
+      f"lead {_lead.get('height')} (the loop's {_loop_box.get('height')}); ground {_ground}; hover {_hover};"
+      f" ring {_ring}")
+check("its tap area is 44px tall, up to the drawing (10px) and only 2px down, 6px either side; the slot never"
+      " shrinks, so the scrubber gives it the room",
+      _tap.get("content") in ("''", '""') and _tap.get("position") == "absolute" and _lead.get("position") == "relative"
+      and (_up, _side, _down) == (-10, -6, -2) and 32 - _up - _down == 44 and _slot.get("flex") == "none"
+      and _scrub.get("flex") == "1",
+      f"tap {_tap}; slot {_slot}; the scrubber's flex {_scrub.get('flex')}")
+_skribl_parts = {"the macro": _macro_code, "inlineplayer.css": _css,
+                 "inlineplayer.js": strip_comments((_layout.STATIC_DIR / "inlineplayer.js").read_text(encoding="utf-8"))}
+_knows = sorted(f"{k}: {m.group(0)}" for k, v in _skribl_parts.items()
+                for m in re.finditer(r"\b(?:lk-[\w-]+|likes?|heart|social)\b", v, re.I))
+check("it is general: nothing of the player's (its markup, its stylesheet, its script) names what a host puts there",
+      not _knows, "; ".join(_knows[:4]))
+_lg = re.search(r"\*\*A control at the line's start\*\*(.*?)\n\n", _guide, re.S)
+check("docs/INTEGRATION.md documents it: lead=, one control, before the scrubber, in the loop button's dress, and"
+      " that a click on the line stops at the line",
+      bool(_lg) and "lead=" in _lg.group(1) and "scrubber" in _lg.group(1) and "loop" in _lg.group(1)
+      and "stops at the line" in _lg.group(1), (_lg.group(1)[:140] if _lg else "no such section"))
+
 bad = [r for r in results if not r[0]]
 print(f"\n{'='*62}\n{len(results)-len(bad)}/{len(results)} passed" +
       ("" if not bad else "  FAILURES: " + ", ".join(r[1] for r in bad)))

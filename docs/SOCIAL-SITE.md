@@ -229,7 +229,7 @@ here is tested (a check shown red before it is believed).
 - **Phase 2, the social core.** Follow, the Following feed, comments and
   replies, likes, in-app notifications, mute. *Comments and their answers
   built Nov 12 (section 10); in-app notifications (Activity) the same day
-  (section 11).*
+  (section 11); likes Nov 13 (section 12).*
 - **Phase 3, growing.** Search and tags, push and email notifications, reply
   with a skribl, repost, invite links.
 - **Phase 4, creators.** Editions, rights and prints, the co-op (FUTURE 6ag).
@@ -1028,3 +1028,126 @@ newest 100 comments.
 
 `harness/verify_socialactivity.py` holds it through the demo's own server;
 DECISIONS.md ("Activity at /social") says what each check was shown red by.
+
+## 12. Built: likes
+
+From the likes mock and the owner's "I like d." (Nov 13), then "All yes, b":
+everyone sees how many, and who liked it is only ever the maker's to see.
+`social/likes.py`:
+
+    /social/p/<id>/like             POST {liked, at_ms}: your like on a post,
+                                    given or taken back
+    /social/b/<skribl_id>/like      the same, on a drawing shown outside a post
+
+**The heart.** Drawn in our pen, one line round from the notch at the top (the
+mock's own path), in a pill at the start of the line under the drawing (the
+owner's way 3, "Yes", after "I don't even see the heart to like on many
+pages"): on Home's cards, a post's page and a drawing's own page
+(`/social/b/<id>`) alike. It is that line's lead, Skribl's general seam for
+one control of a host's (docs/INTEGRATION.md, "A control at the line's
+start"), so Skribl dresses it as the loop button at the line's other end:
+32px tall, its lilac ground and the line's ink, its hover and focus ring, a
+44px tap area from the drawing's edge to 2px under the pill, clear of the
+speed's. The scrubber gives it the room (59px with one figure) and nothing
+else moves: a card's foot (plays, comments, Share) and a page's
+time-and-plays line are as they were. `aria-pressed`, named "Like" or "Liked",
+with how many. It stays empty, just its line in the line's ink, until *you*
+like it, whatever the number beside it says. The heart and its count are one
+part (`_post.html`, `heart()`, and one block of `social.css`, "LIKES"), so its
+place can change in one go. Being on the line, it shows when the line does,
+and while a drawing can't be shown the line steps away with it.
+
+**Liking.** A tap draws the line round in blush from the notch (about a third
+of a second), the blush fills in behind it and the grey line fades under it;
+nothing grows, bounces or moves. The same tap takes it back: the blush and its
+line fade and the grey line comes back, nothing un-drawing. Under Reduce
+Motion it only fades. A count that comes fades in as the pill grows round it,
+the scrubber giving up its room as it does and the heart never moving; one
+that goes fades first, then the pill closes round the heart (nothing glides
+under Reduce Motion). The page changes at once and tells the site; one
+request at a time a heart, so quick taps end where the last one left them,
+and if the site says no, the heart goes back and the page says why, kindly.
+
+**The liked heart's line** is a new token for a new job, `--heart`, with the
+dot's values (`#e64a78` on light, 3.74:1 on a card where Blooby's blush would
+read 2.65:1; his blush itself on dark, 6.01:1), his blush inside it; Activity's
+small heart wears it. ON THE PILL'S LILAC the line is a step deeper on light,
+`--heart-line` (`#d11a32`, the dots' third step: 4.28:1 on a card's pill and
+4.17:1 on a page's, where `--heart` would read 2.97:1), his blush itself on
+dark (4.89:1 and 6.18:1). The empty heart's line and the count are the line's
+ink: 14.27:1 and 13.93:1 on light, 11.43:1 and 14.44:1 on dark.
+
+**How many** is everyone's, in the pill beside the heart, with no number at
+zero (just the heart, a 32px circle), counted by the viewer as comment counts
+are: a like by anybody hidden from them (a block either way, or taken down) is
+neither shown nor counted, anywhere. Home asks once for all its cards (one
+grouped read a kind, posts and drawings). One like a person a thing; you may
+like your own.
+
+**Who may like:** somebody signed in, not taken down, on a post or a drawing
+open to them (the comments' rules, through the same `comments.On`: there for
+everybody, no block either way with its maker). Every like shows the site's
+token and Origin and is limited a person (120 an hour, likes and taking back
+alike). Signed out, the heart is there all the same, and a tap raises a small
+sheet: "Like this drawing?", "Sign in, and a tap on the heart lets Mira know
+you like it.", Not now and Sign in, which comes back to the same page, where
+the heart waits: nothing is pressed for them.
+
+**Each like keeps its moment.** Tapped while the drawing plays, a like keeps
+where its replay was, in ms on the drawing's own clock (so the same moment
+whether it was watched at ¼× or 16×), read from Skribl's in-post player
+through its playhead seam (docs/INTEGRATION.md, "Where the playhead is");
+tapped while it is still or paused, no moment, and it counts all the same.
+The site keeps only a whole number of ms from 0 to a day. The pink dots on the
+line under the drawing, and the hearts that rise from them as it plays (the
+owner's D, on light the bell dot's deeper blush, "b"), come next, on a seam of
+their own; every like given from today will have its dot.
+
+**"Liked by…", the maker's alone.** On their own post's or drawing's page,
+under the time-and-plays line: the newest three faces and "Liked by Mira, Ada
+and 3 others" (all the names up to three, "you" first when one is yours),
+newest first. It opens the sheet of who, Make's own sheet in its paper with
+the people on one card: each one's face, name, @handle and when, and under
+when the moment their heart landed ("0:06") where one was kept, newest first,
+each a way to their page, and "Only you can see who liked it." Nobody else is
+sent any of it. The maker's own like, given or taken back, brings the line
+and the rows up to date at once, the line's room opening or closing.
+
+**In Activity** a like is a row like a comment's, its face wearing a small
+liked heart: "Mira liked your post", when, and the post's small picture.
+Several since you last looked on one post are one row, the newest face in
+front ("Mira and 4 others liked your post"); a like says no words, so under
+Earlier likes stay one row a post as well. A like row opens the post at
+"Liked by…" (`#liked`), which glows a moment in the note's tint and fades, as
+a landed comment does. **Likes never light the bell's dot:** a like needs no
+answer, so it waits under New, with its own dot. You never see yourself;
+nobody hidden is in a row. Activity's line says "Who liked your posts or said
+something on them, and who answered you.", and with nothing yet, "When
+someone likes your post, says something on it, or answers you, you’ll see it
+here."
+
+**Deleting is real, and said in code:** a post goes with its likes
+(`posts.drop_post`), a drawing deleted through the site with its likes
+(`posts.bloob_delete`), an account with its own likes and every like on what
+it made (`accounts.delete_person`). The ON DELETE CASCADEs are the net. The
+Privacy page and docs/LAWYER-NOTE.md say likes are kept: who liked what,
+when, and where in the replay.
+
+**Data.** One table on the site's chain (migration `a81c5c4dde3a`, after
+`c276c1445bc1`), `social_likes`, shaped as `social_comments` is: on a post
+(`post_id`) or a drawing (`drawing_id`, its skribl's public id), exactly one
+(`ck_social_likes_on_one`); `owner_id` (whose it is), `person_id` (who),
+`at_ms` (the moment, or nothing) and `created_at`. Unique on (person, post)
+and on (person, drawing); indexed by the thing and when (a thing's count, and
+who liked it, newest first) and by whose and when (Activity, since you last
+looked and before, each one search).
+
+**Pad and Flip:** the seams are shared. `player.playhead()` is one read-only
+method on the in-post player that plays Pad drawings and Flips alike, so a
+like on a Flip keeps its moment the same way; and the line's lead is one slot
+in that player's line, which a Flip's post wears as a drawing's does, so the
+heart sits on both the same. Nothing changes in either editor.
+
+`harness/verify_sociallikes.py` holds it through the demo's own server;
+`verify_inline.py` and `verify_seam.py` hold the seams. DECISIONS.md ("Likes
+at /social") says what each check was shown red by.

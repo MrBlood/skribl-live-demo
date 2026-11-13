@@ -997,6 +997,68 @@ with sync_playwright() as sp:
               "600 ms is page 1 and 1150 ms is page 2")
         fp.close()
 
+    # ---- WHERE THE PLAYHEAD IS (a host's seam: docs/INTEGRATION.md) -----------
+    # player.playhead() answers { ms, playing }: ms on the drawing's OWN clock
+    # (0 to its length, the same at any speed it is watched), and whether that
+    # clock runs. Read on the page as a host reads it, through the player
+    # SkriblInline.mount() hands back. Asked a hundred times between two reads,
+    # it must move nothing; read every millisecond across a dozen loops at 16x,
+    # it must never say a moment past the drawing's end (between two frames the
+    # running clock does, until the loop wraps it).
+    print("\nIN-POST — where the playhead is: the drawing's own clock, read-only")
+    HEAD = """async ([id, rate, wait]) => {
+      const p = SkriblInline.mount(document.querySelector('[data-skribl-id="' + id + '"]').parentNode)
+                .find(q => q.state().id === id);
+      p.setRate(rate); p.seek(80); p.play();
+      await new Promise(r => setTimeout(r, 60));
+      const a = p.playhead(), t0 = performance.now(), st0 = p.state().state;
+      for (let i = 0; i < 100; i++) p.playhead();
+      await new Promise(r => setTimeout(r, wait));
+      const b = p.playhead(), wall = performance.now() - t0;
+      p.pause();
+      const c = p.playhead(); await new Promise(r => setTimeout(r, 250)); const d = p.playhead();
+      return { a, b, c, d, wall, rate, st0, total: p.state().totalMs }; }"""
+    hp = b.new_page(viewport={"width": 620, "height": 900})
+    hp_reqs = []
+    hp.on("request", lambda r: hp_reqs.append(r.url) if re.search(r"/api/skribls/[A-Za-z0-9_-]+$", r.url) else None)
+    browsing.goto(hp, BASE, "/feed")
+    _rest = hp.evaluate("""(id) => { const p = SkriblInline.mount(document).find(q => q.state().id === id);
+      for (let i = 0; i < 100; i++) p.playhead();
+      return { h: p.playhead(), s: p.state().state, loaded: p.state().loaded }; }""", id_b)
+    check("at rest, before anybody taps, the playhead is at 0 and not playing, and asking fetches nothing",
+          _rest["h"] == {"ms": 0, "playing": False} and _rest["s"] == "idle" and not _rest["loaded"]
+          and not hp_reqs, f"{_rest}; fetched {len(hp_reqs)}")
+    hp.evaluate("(id) => SkriblInline.find(id).play()", id_b)
+    hp.wait_for_function("(id) => SkriblInline.find(id).state().loaded", arg=id_b, timeout=15000)
+    _one = hp.evaluate(HEAD, [id_b, 1, 400])
+    _four = hp.evaluate(HEAD, [id_b, 4, 150])
+    _went = lambda h: (h["b"]["ms"] - h["a"]["ms"]) / max(1, h["wall"])  # noqa: E731
+    check("playing, it says so, and its ms runs on the drawing's own clock: at 1x as fast as the wall's, at 4x"
+          " four times as fast (a moment in the drawing, never in the viewer's time)",
+          _one["a"]["playing"] and _one["b"]["playing"] and 0.75 <= _went(_one) <= 1.25
+          and _four["a"]["playing"] and 3.0 <= _went(_four) <= 5.0 and _one["st0"] == "playing"
+          and 0 <= _four["b"]["ms"] <= _four["total"],
+          f"1x: {_one['a']} -> {_one['b']} over {_one['wall']:.0f} ms ({_went(_one):.2f}x); "
+          f"4x: {_four['a']} -> {_four['b']} over {_four['wall']:.0f} ms ({_went(_four):.2f}x)")
+    check("paused, it says not playing and stays where it stopped; asking a hundred times moves nothing",
+          not _one["c"]["playing"] and _one["c"] == _one["d"] and abs(_one["c"]["ms"] - _one["b"]["ms"]) < 120,
+          f"paused {_one['c']} -> {_one['d']}; was {_one['b']}")
+    _edge = hp.evaluate("""async (id) => { const p = SkriblInline.find(id); p.setLoop(true); p.setRate(16); p.seek(0); p.play();
+      let most = 0, n = 0; const t0 = performance.now();
+      await new Promise(r => { const iv = setInterval(() => { const h = p.playhead(); most = Math.max(most, h.ms); n++;
+        if (performance.now() - t0 > 2000) { clearInterval(iv); r(); } }, 1); });
+      p.pause(); p.setRate(1); return { most, n, total: p.state().totalMs }; }""", id_b)
+    check("never past the drawing's end: read every millisecond across a dozen loops at 16x",
+          _edge["n"] > 200 and _edge["most"] <= _edge["total"] and _edge["most"] > _edge["total"] * 0.8,
+          json.dumps(_edge))
+    if flip_id:
+        _flip = hp.evaluate(HEAD, [flip_id, 1, 300])
+        check("a Flip answers the same: playing, its ms on its pages' clock, within one pass",
+              _flip["a"]["playing"] and _flip["b"]["playing"] and 0.75 <= _went(_flip) <= 1.25
+              and 0 <= _flip["b"]["ms"] <= _flip["total"] and not _flip["c"]["playing"],
+              f"{_flip['a']} -> {_flip['b']} over {_flip['wall']:.0f} ms; paused {_flip['c']}")
+    hp.close()
+
     # ---- DRAW-ON, AT ITS THREE BOUNDARIES, ON THIS SURFACE SPECIFICALLY ----
     #
     # One semantic timeline, four renderers. The editor, /s/ and the exporter
@@ -1728,7 +1790,32 @@ with sync_playwright() as sp:
     #   named cost: +30 B, all inlineplayer.js -- the card reader's canvas made
     #   with willReadFrequently. WHICH CALLER PAYS: every page that shows a
     #   post. Spent first: nothing to spend; it is one option. 78,393 B measured.
-    EMBED_RATCHET = 78_396
+    # RAISED (the owner's D on the likes mock, Nov 13: a like keeps where the
+    #   drawing was when it was tapped, from day one), for one named cost:
+    #   +100 B, all inlineplayer.js -- playhead(), the read-only seam any host
+    #   asks where the playhead is on the drawing's own clock and whether it
+    #   runs (docs/INTEGRATION.md; the site reads it, Skribl never knows why).
+    #   WHICH CALLER PAYS: every page that shows a post, for a line any host
+    #   may call. Spent first: it reads the clock the player already keeps
+    #   (curMs) rather than a second one, and returns the two answers and no
+    #   more; state() could not be documented instead, its fields being the
+    #   suite's. 78,493 B measured.
+    # RAISED (the owner's "Yes" to way 3 on the likes mock, Nov 13: the
+    #   site's heart on the drawing's own line, at its start, "a heart you
+    #   can't miss"), for one named cost: +448 B, all inlineplayer.css -- the
+    #   line's lead, a GENERAL seam: one control of any host's before the
+    #   scrubber, in the loop button's dress (32px, its ground and ink, hover
+    #   and focus ring), a 44px tap area, the scrubber giving it the room
+    #   (docs/INTEGRATION.md, "A control at the line's start"). Skribl never
+    #   knows what it is. WHICH CALLER PAYS: every page that shows a post, for
+    #   a slot only a host that passes `lead=` fills; a stylesheet of its own
+    #   would be a tenth asset to save under half a kilobyte. Spent first: the
+    #   dress joins the loop's own rules for its ground and ink, its hover and
+    #   its focus ring instead of repeating them, the tap highlight is the
+    #   line's own (inherited), its selector names no element (`>*`), and the
+    #   slot needs no display of its own: 570 B down to 448 with the focus
+    #   ring added. 78,941 B measured.
+    EMBED_RATCHET = 78_944
     # THE RATCHET MEASURES DISPLAY, NOT COMPOSE, and the two are separate costs
     # paid by separate pages. Excluded here and measured on its own below:
     #   feed.js          the PREVIEW PAGE's own script (fetch the listing, clone
@@ -2341,6 +2428,198 @@ with sync_playwright() as sp:
           _th["color"] == "rgb(29, 26, 43)" and float(_th["opacity"]) < 0.8, json.dumps(_th))
     check("no page errors on the post", not _perrs, "; ".join(_perrs[:2]))
     _pp.close()
+
+    # A HOST'S CONTROL AT THE LINE'S START (docs/INTEGRATION.md, "A control at
+    # the line's start"; after v330, the Skribl site's like, the owner's way 3).
+    # skribl_inline(..., lead=markup) puts one control of the host's first in
+    # the line, before the scrubber, in the loop button's dress, and the
+    # scrubber gives it the room; nothing else moves. Rendered by the macro
+    # itself, in-process, as a host's view renders it; put into the feed
+    # beside the same post rendered without one, mounted as a host mounts a
+    # post it adds, and read and pressed on a touch phone, for a Pad drawing
+    # and a Flip, which share the line. verify_seam.py holds the dress as
+    # source; this is what it does.
+    print("\nTHE POST — a host's control at the line's start (lead=)")
+    sys.path.insert(0, str(ROOT))
+    from flask import render_template_string as _rts_l      # noqa: E402
+    from markupsafe import Markup as _Markup                # noqa: E402
+    from app import app as _app_l                           # noqa: E402
+
+    def _api_post(body):
+        _rq = urllib.request.Request(BASE + "/api/skribls", data=json.dumps(body).encode(),
+                                     headers={"Content-Type": "application/json"})
+        with urllib.request.urlopen(_rq, timeout=20) as _r:
+            return json.loads(_r.read().decode())["id"]
+    _lead_pad = _api_post({"title": "Lead fixture", "version": 2, "schemaVersion": 2, "visibility": "public",
+                           "canvasSize": {"cssWidth": 800, "cssHeight": 600},
+                           "frames": [{"strokes": [{"x": 60 + i * 15, "y": 100 + (i % 7) * 50, "color": "#222222",
+                                                    "size": 8, "t": i * 90, "erase": False, "start": i == 0}
+                                                   for i in range(44)], "strokeGroups": [44]}]})
+    _lead_flip = post_flip("Lead flip fixture")["id"]
+    _litems = json.loads(urllib.request.urlopen(BASE + "/api/skribls?limit=100", timeout=20).read())
+    _litems = {i["id"]: i for i in (_litems.get("items", _litems) if isinstance(_litems, dict) else _litems)}
+    _LT = ("{% from 'skribl/_skribl_inline_player.html' import skribl_inline %}"
+           "{{ skribl_inline(i, canvas_w=w, canvas_h=h, line_info=li, lead=lead, line=line) }}")
+    _CTL = _Markup('<button type="button" class="host-ctl" aria-label="Host control, 4"><svg viewBox="0 0 24 24"'
+                   ' width="18" height="18" aria-hidden="true"><circle cx="12" cy="12" r="8" fill="none"'
+                   ' stroke="currentColor" stroke-width="2"/></svg><span>4</span></button>')
+
+    def _render(i, lead=None, line=True):
+        _it = _litems.get(i) or {}
+        with _app_l.test_request_context():
+            return _rts_l(_LT, i=i, w=_it.get("canvas_w"), h=_it.get("canvas_h"), li=_it.get("line"), lead=lead,
+                          line=line)
+    _pw_, _pwo = _render(_lead_pad, _CTL), _render(_lead_pad)
+    _fw_, _fwo = _render(_lead_flip, _CTL), _render(_lead_flip)
+    _slot = '<div class="skribl-inline-lead">' + str(_CTL) + "</div>"
+    _row_m = re.search(r'<div class="skribl-inline-row">(.*?)<div class="skribl-inline-scrub"', _pw_, re.S)
+    check("the macro puts the host's control first in the line's row, before the scrubber, in one slot, as given"
+          " (a drawing and a Flip alike)",
+          bool(_litems.get(_lead_pad, {}).get("line")) and bool(_row_m) and _row_m.group(1).strip() == _slot
+          and _pw_.count("skribl-inline-lead") == 1 and _fw_.count(_slot) == 1,
+          (_row_m.group(1).strip()[:200] if _row_m else "no row") + f"; listing line {bool(_litems.get(_lead_pad, {}).get('line'))}")
+    _same = lambda a, b: re.sub(r"\s+", "", a) == re.sub(r"\s+", "", b)  # noqa: E731
+    check("...and without one the macro renders exactly what it did: the same markup, less that slot",
+          "skribl-inline-lead" not in _pwo and _same(_pw_.replace(_slot, ""), _pwo) and _same(_fw_.replace(_slot, ""), _fwo),
+          _pwo[-160:])
+    _nl, _esc = _render(_lead_pad, _CTL, line=False), _render(_lead_pad, "<b>4</b>")
+    check("line=False has no line, so no lead; a plain string is escaped, never markup",
+          "skribl-inline-lead" not in _nl and "skribl-inline-line" not in _nl
+          and "&lt;b&gt;4&lt;/b&gt;" in _esc and "<b>4</b>" not in _esc, _esc[_esc.find("skribl-inline-lead"):][:120])
+
+    _lctx = b.new_context(viewport={"width": 402, "height": 874}, is_mobile=True, has_touch=True)
+    _lp = _lctx.new_page()
+    _lerrs, _lreqs = [], []
+    _lp.on("pageerror", lambda e: _lerrs.append(str(e)))
+    _lp.on("request", lambda r: _lreqs.append(r.url) if re.search(r"/api/skribls/[A-Za-z0-9_-]+$", r.url) else None)
+    browsing.goto(_lp, BASE, "/feed")
+    _lp.wait_for_timeout(600)
+    # Each drawing twice at the top of the feed, with the host's control and
+    # without: each its own post, which a click on navigates (a host whose
+    # posts are links), mounted as docs/INTEGRATION.md tells a host to.
+    _lp.evaluate("""(posts) => {
+        const feed = document.querySelector('.skribl-inline').parentElement.parentElement;
+        for (const [key, html] of posts.reverse()) {
+          const a = document.createElement('article'); a.id = key; a.className = 'lead-probe'; a.dataset.nav = '0'; a.style.padding = '0 16px';
+          a.innerHTML = html; a.addEventListener('click', () => { a.dataset.nav = String(+a.dataset.nav + 1); });
+          feed.prepend(a); SkriblInline.mount(a); }
+        document.querySelectorAll('.lead-probe .host-ctl').forEach(c => c.addEventListener('click',
+          () => { c.dataset.pressed = String(+(c.dataset.pressed || 0) + 1); }));
+        window.__cap = 0;
+        document.addEventListener('click', (e) => { if (e.target.closest && e.target.closest('.host-ctl')) window.__cap++; }, true);
+      }""", [["padLead", _pw_], ["padBare", _pwo], ["flipLead", _fw_], ["flipBare", _fwo]])
+    _lp.wait_for_timeout(400)
+    # The line of post `id`, read where it is painted: what its row holds, the
+    # control's box beside the loop button's, their dress, the control's tap
+    # area (its ::after) and whether a press at each of its edges lands on it,
+    # the speed's tap area (its ::before), and everything that must not move.
+    _LEAD = """(id) => {
+      const a = document.getElementById(id), box = a.querySelector('.skribl-inline'), line = a.querySelector('.skribl-inline-line');
+      line.scrollIntoView({ block: 'center' });
+      const row = line.querySelector('.skribl-inline-row'), say = line.querySelector('.skribl-inline-say');
+      const ctl = row.querySelector('.skribl-inline-lead > *'), scrub = row.querySelector('.skribl-inline-scrub');
+      const loop = row.querySelector('.skribl-inline-loop'), speed = say.querySelector('.rl-speed'), R = e => e.getBoundingClientRect();
+      const L = R(line), r = R(row), rd = v => Math.round(v * 100) / 100;
+      const out = { on: line.classList.contains('is-on'), line: rd(L.height), box: rd(R(box).height),
+        kids: [...row.children].filter(e => e.getClientRects().length).map(e => e.className.split(' ')[0]),
+        sayTop: rd(R(say).top - L.top), sayH: rd(R(say).height), scrubW: rd(R(scrub).width),
+        scrubRight: rd(r.right - R(scrub).right), loopRight: rd(r.right - R(loop).right),
+        loopMid: rd((R(loop).top + R(loop).bottom) / 2 - L.top), ctl: null };
+      if (!ctl) return out;
+      const c = R(ctl), cs = getComputedStyle(ctl), ls = getComputedStyle(loop), af = getComputedStyle(ctl, '::after');
+      const tap = { l: c.left + parseFloat(af.left), r: c.right - parseFloat(af.right),
+                    t: c.top + parseFloat(af.top), b: c.bottom - parseFloat(af.bottom) };
+      const hit = (x, y) => { const e = document.elementFromPoint(x, y); return !!e && (e === ctl || ctl.contains(e)); };
+      const mx = (c.left + c.right) / 2, my = (c.top + c.bottom) / 2;
+      let sp = null;
+      if (speed && speed.getClientRects().length) { const s = R(speed), ss = getComputedStyle(speed, '::before');
+        sp = { l: s.left + parseFloat(ss.left), r: s.right - parseFloat(ss.right), t: s.top + parseFloat(ss.top),
+               b: s.bottom - parseFloat(ss.bottom) }; }
+      out.ctl = { h: rd(c.height), w: rd(c.width), start: rd(c.left - r.left), mid: rd(my - L.top),
+        room: rd(R(scrub).left - c.right), ground: cs.backgroundColor, loopGround: ls.backgroundColor,
+        ink: cs.color, loopInk: ls.color, round: cs.borderTopLeftRadius, tapH: rd(tap.b - tap.t), tapW: rd(tap.r - tap.l),
+        upTo: rd(tap.t - R(box).bottom), hits: [hit(mx, tap.t + 0.5), hit(mx, tap.b - 0.5), hit(tap.l + 0.5, my),
+        hit(tap.r - 0.5, my), hit(mx, my)], speed: !!sp,
+        apart: !!sp && (tap.r <= sp.l || sp.r <= tap.l || tap.b <= sp.t || sp.b <= tap.t),
+        press: [[mx, my], [mx, tap.t + 2]] };
+      return out; }"""
+    _pl, _pb_, _fl, _fb_ = (_lp.evaluate(_LEAD, k) for k in ("padLead", "padBare", "flipLead", "flipBare"))
+
+    def _dressed(w, wo):
+        c = (w or {}).get("ctl") or {}
+        return (bool(w) and bool(wo) and w["on"] and w["kids"] == ["skribl-inline-lead", "skribl-inline-scrub", "skribl-inline-controls"]
+                and wo["kids"] == ["skribl-inline-scrub", "skribl-inline-controls"] and c.get("start") == 0
+                and c.get("h") == 32 and abs(c.get("mid", 0) - w["loopMid"]) < 0.6 and c.get("ground") == c.get("loopGround")
+                and c.get("ink") == c.get("loopInk") and c.get("round") == "999px" and abs(c.get("room", 0) - 10) < 0.6)
+
+    def _tapped(w):
+        c = (w or {}).get("ctl") or {}
+        return (c.get("tapH") == 44 and c.get("tapW", 0) >= 44 and abs(c.get("upTo", 9)) < 0.6 and all(c.get("hits") or [False])
+                and c.get("speed") and c.get("apart"))
+
+    def _still(w, wo):
+        c = (w or {}).get("ctl") or {}
+        return (bool(w) and bool(wo) and w["line"] == wo["line"] and w["box"] == wo["box"] and w["sayTop"] == wo["sayTop"]
+                and w["sayH"] == wo["sayH"] and w["loopRight"] == wo["loopRight"] and w["loopMid"] == wo["loopMid"]
+                and w["scrubRight"] == wo["scrubRight"] and abs((wo["scrubW"] - w["scrubW"]) - (c.get("w", 0) + 10)) < 0.6)
+    _said = lambda w, wo: json.dumps({"with": w, "without": {k: v for k, v in (wo or {}).items() if k != "ctl"}})[:900]  # noqa: E731
+    check("on a touch phone the host's control is first in the line, at its start, in the loop button's dress (32px,"
+          " on its middle, its ground and its ink, a pill), 10px from the scrubber: a drawing and a Flip alike",
+          _dressed(_pl, _pb_) and _dressed(_fl, _fb_), _said(_pl, _pb_))
+    check("its tap area is 44px tall, from the drawing's edge to 2px under it, 6px either side, and a press lands on"
+          " it at every edge; it never meets the speed's",
+          _tapped(_pl) and _tapped(_fl), json.dumps([(_pl or {}).get("ctl"), (_fl or {}).get("ctl")])[:700])
+    check("nothing else moves: the line, the drawing, the words under it and mute and loop where they are without"
+          " one; only the scrubber is shorter, by the control and its 10px",
+          _still(_pl, _pb_) and _still(_fl, _fb_), _said(_pl, _pb_) + " | flip " + _said(_fl, _fb_)[:300])
+    # A finger on it, for real: its middle, and the top of its tap area, over
+    # the gap between the drawing and the line.
+    for _k in ("padLead", "flipLead"):
+        for _xy in (_lp.evaluate(_LEAD, _k)["ctl"] or {}).get("press", []):
+            _lp.touchscreen.tap(_xy[0], _xy[1])
+            _lp.wait_for_timeout(250)
+    _prs = _lp.evaluate("""() => ({ cap: window.__cap,
+        pressed: Object.fromEntries([...document.querySelectorAll('.lead-probe')].map(a => [a.id,
+          a.querySelector('.host-ctl') ? +(a.querySelector('.host-ctl').dataset.pressed || 0) : null])),
+        nav: Object.fromEntries([...document.querySelectorAll('.lead-probe')].map(a => [a.id, +a.dataset.nav])),
+        state: Object.fromEntries([...document.querySelectorAll('.lead-probe')].map(a => [a.id, SkriblInline.mount(a)[0].state().state])) })""")
+    check("a press on it is the host's: its own listener hears every one, and one on the document while capturing;"
+          " it never reaches the post's own click, and the drawing stays still, nothing fetched",
+          _prs["pressed"] == {"padLead": 2, "padBare": None, "flipLead": 2, "flipBare": None} and _prs["cap"] == 4
+          and set(_prs["nav"].values()) == {0} and set(_prs["state"].values()) == {"idle"} and not _lreqs,
+          json.dumps(_prs) + f"; fetched {len(_lreqs)}")
+    # Its focus ring is the loop's: Tab from the drawing to it, then on to loop.
+    _lp.focus("#padLead .skribl-inline")
+    _lp.keyboard.press("Tab")
+    _r1 = _lp.evaluate("""() => { const e = document.activeElement, s = getComputedStyle(e);
+        return { host: e.classList.contains('host-ctl'), ring: [s.outlineStyle, s.outlineWidth, s.outlineColor, s.outlineOffset].join(' ') }; }""")
+    _r2 = None
+    for _i in range(4):
+        _lp.keyboard.press("Tab")
+        _r2 = _lp.evaluate("""() => { const e = document.activeElement, s = getComputedStyle(e);
+            return { loop: e.classList.contains('skribl-inline-loop') && !!e.closest('#padLead'),
+                     ring: [s.outlineStyle, s.outlineWidth, s.outlineColor, s.outlineOffset].join(' ') }; }""")
+        if _r2["loop"]:
+            break
+    check("from the keyboard it comes next after the drawing, with the loop button's own focus ring",
+          _r1["host"] and bool(_r2) and _r2["loop"] and _r1["ring"] == _r2["ring"] and _r1["ring"].startswith("solid 2px"),
+          f"{_r1} / {_r2}")
+    # The scrubber, shorter, still scrubs across its own width: a press at its
+    # middle shows the drawing's middle.
+    _sb = _lp.evaluate("""() => { const s = document.querySelector('#padLead .skribl-inline-scrub'); s.scrollIntoView({ block: 'center' });
+        const r = s.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; }""")
+    _lp.mouse.click(_sb[0], _sb[1])
+    try:
+        _lp.wait_for_function("() => SkriblInline.mount(document.getElementById('padLead'))[0].state().loaded", timeout=15000)
+    except PWTimeout:
+        pass
+    _lp.wait_for_timeout(300)
+    _sf = _lp.evaluate("""() => { const s = SkriblInline.mount(document.getElementById('padLead'))[0].state();
+        return { state: s.state, frac: s.totalMs ? s.elapsedMs / s.totalMs : null }; }""")
+    check("...and the scrubber, shorter, still scrubs its own width: a press at its middle shows the drawing's middle",
+          _sf["state"] == "paused" and _sf["frac"] is not None and abs(_sf["frac"] - 0.5) < 0.06, json.dumps(_sf))
+    check("no page errors with a host's control on the line", not _lerrs, "; ".join(_lerrs[:2]))
+    _lctx.close()
 
     # NO STICKY HOVER. iOS keeps :hover on the last thing tapped, so a hover
     # outside (hover: hover) stays lit on a phone. Asked of the sheet's rules,

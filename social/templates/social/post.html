@@ -11,9 +11,15 @@
     the drawing under Share; on a desk, More from its author beside it. A
     drawing shown outside a post (/social/b/<id>) is this page too, its
     comments and all (the owner's yes, Nov 12: "whatever you open has the
-    comment box"). Its ⋯ is the feed's. #}
+    comment box"). Its ⋯ is the feed's.
+
+    LIKES (phase 2; the likes mock, "I like d.", and way 3): the heart and how
+    many at the start of the line under the drawing (_post.html, heart(), the
+    player's lead), and for its maker alone "Liked by…" under the
+    time-and-plays line, opening who (_likes.html). #}
 {% extends 'social/base.html' %}
 {% from 'social/_post.html' import post_sheets, post_words, face, player with context %}
+{% from 'social/_likes.html' import liked_by, like_sheets with context %}
 {% from 'social/_safety.html' import safety_sheets with context %}
 {% from 'social/_comments.html' import comments_section, comment_sheets with context %}
 {% import 'social/_icons.html' as ic %}
@@ -46,6 +52,7 @@
    Skribl's lib/composehost.js, as Home's composer; only where one can be made. #}
 {% block head %}{% if cm and cm.can %}<script src="{{ skribl_asset('lib/composehost.js') }}" defer></script>{% endif %}{% endblock %}
 {% block scripts %}<script src="{{ social_asset('posts.js') }}" defer></script>
+<script src="{{ social_asset('likes.js') }}" defer></script>
 <script src="{{ social_asset('safety.js') }}" defer></script>
 {% if cm %}<script src="{{ social_asset('comments.js') }}" defer></script>{% endif %}{% endblock %}
 
@@ -75,6 +82,7 @@
     {% if card.sk and card.sk.caption %}<p class="post-caption">{{ card.sk.caption }}</p>{% endif %}
   </div>
   <p class="post-meta"><time datetime="{{ when_iso(p.created_at) }}" data-when="at">{{ when_day(p.created_at) }}</time>{% if card.plays %} · {{ card.plays }}{% endif %}</p>
+  {% if lk and lk.line %}{{ liked_by(lk) }}{% endif %}
   <div class="post-actions">
     <button class="btn" type="button" data-post-share>{{ ic.share() }}<span>Share</span></button>
     <button class="btn" type="button" data-make aria-haspopup="dialog" aria-controls="makeSheet"
@@ -100,4 +108,4 @@
 {{ post_words() }}
 {% endblock %}
 
-{% block overlays %}{{ post_sheets() }}{{ safety_sheets() }}{% if cm %}{{ comment_sheets(cm) }}{% endif %}{% endblock %}
+{% block overlays %}{{ post_sheets() }}{{ safety_sheets() }}{% if cm %}{{ comment_sheets(cm) }}{% endif %}{{ like_sheets(lk, card) }}{% endblock %}

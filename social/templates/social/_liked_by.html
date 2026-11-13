@@ -1,0 +1,5 @@
+{#  The maker's "Liked by" line and the sheet's rows, again, after a like they
+    gave or took back on their own post or drawing (likes.py, set_like): `part`
+    "by" (the line, nothing at no likes) or "who" (the rows). #}
+{% from 'social/_likes.html' import liked_by, who_rows with context %}
+{%- if part == 'by' %}{% if lk.line %}{{ liked_by(lk) }}{% endif %}{% else %}{{ who_rows(lk) }}{% endif -%}

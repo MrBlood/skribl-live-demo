@@ -1337,8 +1337,11 @@ stays a sleep.
   at a time, sound is off by default and the choice is page-wide and session-only,
   scrolling out of view settles a post — plus a flip document whose pages carry
   different holds, which is what says the hold is being read from
-  `lib/holdtiming.js` rather than re-derived. Its pixel tolerances were set by
-  MUTATION, and the first set was worthless: see the note beside them.
+  `lib/holdtiming.js` rather than re-derived. And a host's two seams on the
+  line under a post: where the playhead is (`playhead()`), and a control at the
+  line's start (`lead=`), rendered by the macro, laid out beside the same post
+  without one and pressed, on a drawing and a Flip. Its pixel tolerances were
+  set by MUTATION, and the first set was worthless: see the note beside them.
 
 - `verify_input.py` — the coalesced pointer samples a per-frame listener
   throws away, which is why a fast circle drew as a polygon and a slow one did
@@ -1568,6 +1571,30 @@ stays a sleep.
   chain on a populated database, the bell's query plan on its indexes, and an
   account's deletion in code with the cascade off; no page, console or CSP
   errors. `SOCIALACTIVITY_PART=<n>` runs one section.
+
+### After v330 — Likes
+
+- `verify_sociallikes.py` — likes at `/social` (docs/SOCIAL-SITE.md section
+  12), through the demo's own app on a server of its own, people joining with
+  Chromium's virtual authenticator: the heart's place at the start of the
+  line under the drawing on Home's card, a post's page and a drawing's (the
+  player's lead, in its loop button's dress, 44px to tap, nothing else
+  moving), its size, paint and names, and the count everyone sees; a tap that likes and takes back, kept by the site, one like a
+  person a thing and one request out at a time; who may like (signed out,
+  stale, taken down, a block either way, a post taken down, a drawing not
+  open, a body that is not a yes or a no, the limit) and a refusal putting the
+  heart back; counts by the viewer; the moment kept from the player's
+  `playhead()` (between the reads either side of the tap, the drawing's clock
+  at 4x, none when still or paused, only 0 to a day); the heart's draw and
+  fade, a count's fade and the pill growing round a heart that never moves,
+  read on every frame, and Reduce Motion; the signed-out sheet and signing in back to the same page; the
+  maker's "Liked by…", its sheet and nobody else being sent who; Activity's
+  like rows, grouping, the dot left dark, and the landing's glow read on
+  every frame; deleting a post, a drawing and an account, with the cascade
+  off too; the chain on a populated database, the constraints, the reads'
+  query plans and Home's one read a kind; every word at 4.5:1, every target
+  44px and the marks at 3:1, phone (touch) and desk, light and dark, the
+  heart's place read on every one; no page, console or CSP errors. `SOCIALLIKES_PART=<n>` runs one section.
 
 ## Where a suite's rationale lives
 

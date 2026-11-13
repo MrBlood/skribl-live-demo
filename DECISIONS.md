@@ -36092,3 +36092,267 @@ Skribl in neither. CALIBRATED: on the old words it went red, 63/64 (heading
 in.'), and green on the new.
 
 Pad and Flip: not affected; these are the site's own pages.
+
+## After v330 -- Likes at /social, part 1
+
+The owner, Nov 13, on the likes mock: "I like d.", then "All yes, b" to its
+choices. D: everyone sees how many (and, next, where); who liked it is only
+ever the maker's to see; the heart stays empty until you like it; no number
+at zero; "b", on light the dots wear the bell dot's deeper blush. Then, asked
+where the heart was ("I don't even see the heart to like on many pages"),
+way 3 of "A heart you can't miss", answered "Yes": the heart on the drawing's
+own line. Built in the mock's own sizes, words and classes
+(`social/likes.py`, `_likes.html`, `likes.js`, the heart in `_post.html`),
+with two small, general seams in Skribl's in-post player. NOT IN THIS PIECE,
+as briefed: the pink dots on the line and the hearts that rise from them
+(part 2, with a marks seam of its own), and the comment box as an icon,
+which is being mocked (post.html's change is kept to its imports, its
+scripts, "Liked by…" and the sheets, so that lands cleanly after).
+
+- THE HEART ON THE DRAWING'S LINE (way 3). A lilac pill, [♡ 4], at the start
+  of the line under every drawing, before the scrubber, on Home's cards and on
+  a post's page and a drawing's (`/social/b/<id>`) alike: the player's lead
+  (below). Dressed as the loop button at the line's other end: 32px tall, its
+  lilac and the line's ink, its hover and focus ring; a 44px tap area from the
+  drawing's edge to 2px under the pill, 6px either side, clear of the 1×
+  speed's (whose own reaches 10px up from the words). The scrubber gives it
+  the room, 59px with one figure (the mock's 49px pill and 10px), 42px at
+  none, and NOTHING ELSE MOVES: a card's foot (plays, comments, Share) and a
+  page's time-and-plays line are what they were before likes, and a line with
+  the heart is the height of one without. The old places (beside Share on the
+  card, the end of the time-and-plays line) are gone. `aria-pressed`, named
+  "Like" or "Liked" with how many ("Like, 4 likes"); hidden on anything taken
+  down, its maker's view too.
+- ITS COUNT inside it, none at zero (just the heart, a 32px circle). Its line
+  is the line's ink until you like it; liked, Blooby's blush inside and round
+  it a NEW TOKEN FOR A NEW JOB, --heart-line, the line a step deeper on light
+  as way 3 said (#d11a32, the dots' third step), his blush itself on dark.
+  --heart (#e64a78, the bell dot's) stays the liked line off the pill:
+  Activity's small heart. A JUDGMENT CALL: THE HEART KEEPS ONE PLACE, 7px
+  into the pill, with a count or without. The mock had 7px at none and 8px
+  with a count, which a count that comes or goes would turn into a pixel's
+  hop under your finger; the count's gap is 5px instead of 4, so the pill is
+  the mock's to the pixel (49px with "4") and only the heart sits 1px further
+  in. Being on the line, it shows when the line does, once the player has
+  started it, and A SECOND JUDGMENT CALL, the player's own rule kept: while a
+  drawing can't be shown (one deleted in the Library, or a dropped connection
+  until a tap retries) the line steps away and the heart with it; the likes
+  are kept, and it comes back with the line.
+- LIKING, KIND AND NEVER JUMPY, as the mock drew it: the blush line draws
+  itself round from the notch (0.36s), the blush fills in behind it and the
+  line's ink fades under it; nothing grows, bounces or moves. TAKING IT BACK
+  FADES (0.2s), nothing un-drawing (a class for each way, `.lk-anim` and
+  `.lk-fade`: the mock's CSS alone would have snapped the line off and
+  un-drawn it). A COUNT THAT COMES fades in as the pill grows round it, the
+  heart never moving and the scrubber giving up its room a frame at a time
+  (0.22s); one that goes fades first, then the pill closes round the heart.
+  Under Reduce Motion it only fades, the pill taking its width at once.
+- ONE LIKE A PERSON A THING, the same tap taking it back; you may like your
+  own. The page changes at once and tells the site what it should now be (a
+  yes or a no, never "toggle", so a retry cannot flip it twice), ONE REQUEST
+  AT A TIME A HEART: quick taps end where the last one left them, and the
+  site's answer is what stays. One that did not take goes back and the page
+  says why, kindly ("That isn't here anymore. Reload the page to see what's
+  new."). The heart sits inside the player's line, which keeps its clicks
+  from a post that is a link, so likes.js reads them while capturing.
+- HOW MANY is everyone's, COUNTED BY THE VIEWER as comment counts are: a like
+  by anybody hidden from them (a block either way, or taken down) is neither
+  shown nor counted, anywhere. Home asks once for all its cards: one grouped
+  read a kind (posts, drawings).
+- WHO MAY LIKE: signed in, not taken down, on what is open to them, read
+  through the comments' own comments.On (there for everybody, no block either
+  way with its maker; a post's own drawing is liked through its post, even
+  when it is in the gallery too); the token and Origin first, then the
+  limit, A JUDGMENT CALL: 120 an hour a person, likes and taking back alike
+  (comments' is 60; a heart is lighter and gets tapped twice). Signed out,
+  the heart is there all the same; a tap raises the mock's small sheet ("Like
+  this drawing?", "Sign in, and a tap on the heart lets Mira know you like
+  it.", Not now, Sign in), which comes back to the same page, where the heart
+  waits: nothing pressed for them.
+- EACH LIKE KEEPS ITS MOMENT, from day one, so the dots can come with
+  nothing lost: at_ms, where the drawing's replay was when the heart was
+  tapped while it played, ON THE DRAWING'S OWN REPLAY CLOCK (the same moment
+  watched at a quarter or at sixteen times), nothing when it was still or
+  paused (it counts all the same). The site keeps a whole number of ms from 0
+  to a day, else nothing.
+- "LIKED BY…", THE MAKER'S ALONE. On their own post's or drawing's page,
+  under the time-and-plays line: the newest three faces and "Liked by Mira,
+  Ada and 3 others" (every name up to three, else two and how many more; YOU
+  FIRST when one is yours, a judgment call), newest first. It opens the sheet
+  of who, Make's own sheet in its paper with the people on one card, newest
+  first: face, name, @handle, when, and under when the moment their heart
+  landed ("0:06") where one was kept, with a dot in --heart; each row their
+  page; "Only you can see who liked it." It lists the newest 200; the count
+  is exact. Nobody else is sent any of it, not in the page and not in its
+  source. The maker's own like, given or taken back, answers with the line
+  and the rows as they now stand, so the line never says "you" after they
+  took theirs back; the line's room opens and closes.
+- ACTIVITY: a like is a row like a comment's, its face wearing a small liked
+  heart: "Mira liked your post", when, the post's small picture (a drawing's
+  own, outside a post). Grouped since you last looked, the newest face in
+  front ("Mira and 4 others liked your post"); a like says no words, so
+  EARLIER KEEPS LIKES ONE ROW A POST too, as the mock said. A like row opens
+  the post at "Liked by…" (#liked), which glows a moment in the note's tint
+  and fades, as a landed comment does. LIKES NEVER LIGHT THE BELL'S DOT (the
+  mock's recommendation, in the "all yes"): they wait under New, with their
+  own dot. Never yourself, never anybody hidden. The heading's line and the
+  empty page's words are the mock's.
+- DELETING IS REAL, AND SAID IN CODE: a post goes with its likes
+  (posts.drop_post), a drawing deleted through the site with its likes
+  (posts.bloob_delete: a drawing's likes have no cascade under them at all),
+  an account with its own likes and every like on what it made
+  (accounts.delete_person). The ON DELETE CASCADEs are the net. Privacy and
+  docs/LAWYER-NOTE.md say likes are kept: who liked what, when, and where in
+  the replay.
+- DATA, on the site's chain (a81c5c4dde3a, after c276c1445bc1): social_likes,
+  shaped as social_comments is: on a post or a drawing, exactly one (a
+  CHECK); owner_id, person_id, at_ms, created_at; unique on (person, post)
+  and (person, drawing); indexed by the thing and when (counts, and who,
+  newest first) and by whose and when (Activity, since you last looked and
+  before, each one search).
+- TWO SEAMS IN SKRIBL'S IN-POST PLAYER, both general, both documented in
+  docs/INTEGRATION.md; Skribl never knows they are likes. WHERE THE PLAYHEAD
+  IS: `player.playhead()` answers { ms, playing } from the clock the player
+  already keeps (on the drawing's own clock, clamped to its length); it only
+  reads. A CONTROL AT THE LINE'S START: `skribl_inline(..., lead=markup)`
+  puts one control of a host's first in the line, before the scrubber, in
+  the loop button's dress, with the 44px tap area; the scrubber gives it the
+  room and nothing else on the line moves; it shows with the line; with
+  line=False there is none; a click on the line stops at the line. Nothing
+  of the player's names what a host puts there. EMBED_RATCHET raised by each
+  cost, written beside it: +100 B (playhead(), inlineplayer.js) and +448 B
+  (the lead, inlineplayer.css: its dress joins the loop's own rules for
+  ground, ink, hover and focus ring instead of repeating them; 570 B down to
+  448 with the focus ring added), 78,941 B measured.
+
+Pad and Flip: SHARED, ONE PLAYER. Both seams are on the in-post player that
+plays Pad drawings and Flips alike: a like on a Flip keeps its moment on its
+pages' clock, and a Flip's line wears the heart as a drawing's does
+(verify_inline lays out and presses the lead on both, and plays the
+playhead on both). Nothing changes in either editor, and nothing is left for
+Flip to catch up on.
+
+THE FOUR: kind (no number at zero; who liked it is the maker's alone; a like
+never pulls you back to the bell; a refused tap goes back gently and says
+why; signing in presses nothing for you; the heart never hops under your
+finger); simple (one heart in one place under every drawing, dressed as the
+button beside it, so it reads as a button; the same tap takes it back);
+playful (the line draws itself round in Blooby's blush, right where the
+replay plays; a like row lands with "Liked by…" glowing); powerful (every
+like keeps its moment, for the dots to come; the maker sees who and when in
+the replay).
+
+CONTRAST, READ RIGHT. The pill's lilac is a color-mix() that Chrome reports
+as color(srgb r g b / a), in 0 to 1. The likes mock's way-3 reader took those
+numbers for 0 to 255 and read the lilac as grey (209, 209, 209), so its
+figures for way 3 were off (the liked line 3.53:1 and 3.44:1, the empty one
+11.47:1 to 17.41:1); the comment mock's helper found the same, against the
+painted pixels (the pill (227, 223, 253) on a page). Read right, on the
+built pages: the empty heart's line and the count 14.27:1 on a card's pill
+and 13.93:1 on a page's, light, 11.43:1 and 14.44:1 dark; the liked line
+4.28:1 and 4.17:1 light (where --heart would read 2.97:1 and 2.90:1), 4.89:1
+and 6.18:1 dark; Activity's small heart 3.64:1 and 7.34:1; every word on
+Home, a post's page with "Liked by…", its sheet, Activity with likes and the
+signed-out sheet at 4.5:1 or more, phone (touch) and desk, light and dark,
+the lowest 5.33:1 (the white Make on the action purple, as everywhere).
+verify_contrast does not read /social, so verify_sociallikes measures it.
+One token added (--heart-line); nothing else changed.
+
+THE CHECKS. verify_sociallikes.py, thirteen sections through the demo's own
+server, people joining with Chromium's virtual authenticator: the heart's
+place and names (on the line, in the loop's dress, 44px where a press lands,
+clear of the speed's, the line the height of one without, the foot and the
+time-and-plays line as they were); a tap and the site's word; who may like;
+counts by the viewer; the kept moment; the heart's motion read on every
+frame (the draw, the fade, the pill growing round a heart that never moves,
+Reduce Motion); signed out; the maker's "Liked by…"; Activity; deleting in
+code; the chain and the reads' plans; words and marks on every screen, and
+the heart's place on every screen (its census leaves Skribl's line to
+Skribl's suites); no page, console or CSP errors. Its marks reader reads
+color(srgb …) as such and fails closed, a red that names it, on a colour in
+any form it cannot read. verify_seam.py pins both seams as source (the
+playhead's answer and that it only reads; the lead's slot, its dress in the
+loop's own rules, its tap area, nothing of Skribl's naming a host's part,
+and the guide). verify_inline.py plays the playhead on a drawing and a Flip,
+and renders the lead through the macro, lays it out on a touch phone beside
+the same post without one (a drawing and a Flip), and presses it (a tap at
+its middle and at the top of its tap area, the host's listener and a
+capturing one hear each, the post's own click never does, the drawing stays
+still), Tabs to it (the loop's own ring), and scrubs the shorter scrubber.
+
+EVERY NEW OR CHANGED ROW WAS SHOWN RED by a break of its own, each in a
+throwaway copy of the committed tree (git archive), its section run alone,
+in two rounds. ROUND 1, the heart in its first places (the previous
+helper's): 83 of 86 breaks red on their rows. ROUND 2, way 3: 41 breaks,
+every one as wanted: forty red on their own rows and one instrument shown
+blind (below),
+with two controls, the trimmed suites on the unbroken tree, green.
+verify_sociallikes, twenty-one: the heart back in the card's foot; the pill
+36px; its tap area cut to 38px; the 1× moved under its tap area; a fourth
+thing in the foot; its line in the words' second ink; the slot taller than
+the row; a taken-down card with a heart; the heart in the time-and-plays
+line again; a drawing's heart sent to a post's address; a post's own drawing
+in the gallery liked as a drawing (round 1's miss); the heart centred in its
+pill (it moved 17px as a count came) and 8px in with a count (1px); a count
+that snaps (the scrubber in one frame); the pill growing under Reduce
+Motion; a desk-only pill 28px (section 1 is a phone's, so only section 12's
+every-screen row can see it, and does); --heart as the liked line on light
+(2.97:1) and a weak line on dark (2.60:1); a faint count (3.91:1, under the
+4.5:1 a word needs); the lilac mixed in oklab, a form the reader does not
+read (red, and named). verify_seam, eight: playhead() answering a third key
+(round 1's miss); the slot after the scrubber; the lead's own ground; no
+focus ring; a 36px tap area; a slot that shrinks; a rule of the player's
+naming the site's count; the guide silent on clicks stopping at the line.
+verify_inline, eleven: the slot after the scrubber; an empty slot without a
+lead; a lead let through unescaped; the lead's own ground; a 36px tap area;
+a scrubber that keeps a fixed share (mute and loop moved); the line's clicks
+let through to the post (it navigated twice); no focus ring; the scrubber
+reading a press from the page's edge (a press at its middle landed at 88%);
+a throw on a lead's line; a paused playhead read as playing (round 1's
+miss). verify_socialposts, one: a tap on a card's ground going nowhere. In
+every throwaway copy verify_seam's row for tracked Python files is red as
+well: a copy has no .git to list them from.
+
+FOUND WRONG, AND MENDED. Round 1's three misses were instruments, each red
+on its row now: a post's own drawing asked as a drawing was refused for being
+unlisted before the rule the row names could matter (its post's drawing is in
+the gallery now); playhead()'s keys were read through Math.min's comma (now
+with every call's parentheses folded away); and round 1's paused-playhead
+break read a neighbour's server, the same fault as below (its reds were
+watcher-time's: the 4× clock read as 1×); a paused playhead read as playing,
+run alone, is red on its row. In round 2: verify_seam's new fold turned
+"(…)" into "()", which still matched, so it never ended (it had not yet run
+to its end on the tree: it folds to a mark that is not a parenthesis now);
+section 1's
+empty-heart row read the loop's ink through a None and stopped the section
+when the line had no heart (heart-in-foot found it; it is its own red now);
+the first speed break moved the 1× first in its words, which stay centred,
+so nothing overlapped (the words started at the line's left show the row
+red); and the calibration itself ran three trimmed verify_inline copies at
+once, each run_parallel starting its server at 5101, so two read a
+neighbour tree's server and one had none (run one at a time, each red on its
+own row). An rgb()-only reader, the mock's, was shown blind: a liked line of
+#b84a6a on dark reads 2.60:1 on the pill and red; read as the mock read it,
+3.43:1 and green.
+
+THE AFFECTED SUITES, SIDE BY SIDE (run_parallel -j 2), on the final tree,
+green on the first run, none red beside the others: verify_sociallikes
+78/78, verify_seam 479/479, verify_inline 207/207, verify_social 40/40,
+verify_socialposts 31/31, verify_socialcomments 67/67, verify_socialactivity
+44/44, verify_socialsafety 34/34, verify_socialauth 63/63,
+verify_socialprofile 54/54, verify_migrations 77/77, verify_docs 144/144,
+verify_a11ypages 162/162; and the suites that read the player's line,
+verify_cardfade 27/27, verify_watchfull 76/76, verify_replayspeed 186/186,
+verify_example 59/59, verify_onefull 57/57, and verify_jsstrip 35/35 (the
+served stylesheet changed). ONE RED WAS SEEN AND NOT EXPLAINED, said so the
+list reads true: while building, section 12 once read a word under 4.5:1 on
+a desk in light, beside a verify_inline run, and its detail was not kept; it
+did not come back in six runs of the section (three alone, three with the
+CPU kept busy) nor in the run above. The full battery was not run; main's
+run after the merge is.
+
+Not tested here: WebKit (the owner's iPhone) and its tap areas under a
+finger, SF and Segoe UI (every measure is in this box's fonts; the pill's
+width follows its figure's), PostgreSQL itself (the chain's likes table is
+held on SQLite here; CI's postgres job runs it after the merge), and the live
+site.

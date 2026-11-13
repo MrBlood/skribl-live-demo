@@ -180,6 +180,33 @@ Without it the line says what it can until the drawing arrives. A surface
 with a transport of its own passes `line=False` and keeps the 16:9 box with
 mute and loop on it.
 
+**A control at the line's start** (after v330: the Skribl site's like sits
+there). Pass `lead=` ONE control of yours, as markup (another macro's output;
+a plain string is escaped like any other text), and it goes first in the line
+under the drawing, before the scrubber, dressed as the loop button at the
+line's other end: the loop's ground and the line's ink, its hover and its
+focus ring, 32px tall and a pill as wide as what it holds. Its tap area is
+44px tall, reaching up to the drawing and only 2px down, toward the words
+under the line. The scrubber gives it the room; nothing else on the line
+moves, and the post is the same height with it or without. A click on the
+line stops at the line (a post that is a link must not navigate on a scrub),
+so listen on the control itself, or on the document while capturing.
+
+```jinja
+{% macro like(post) %}<button type="button" class="like" aria-pressed="false">♡ {{ post.likes }}</button>{% endmacro %}
+{{ skribl_inline(post.skribl_id, canvas_w=post.canvas_w, canvas_h=post.canvas_h,
+                 line_info=post.line, lead=like(post)) }}
+```
+
+It is rendered with the post, so it holds its place from the first paint;
+like the rest of the line it shows once the player's script has started it,
+and steps away with the line while a drawing can't be shown. With
+`line=False` there is no line, so no lead. What it does is yours: Skribl never
+reads it, and a Pad drawing and a Flip carry it alike. A control there can ask
+where the drawing is as it is pressed ("Where the playhead is", below).
+`verify_inline.py` lays it out and presses it; `verify_seam.py` holds the
+dress.
+
 **Reading them on your server** (after v330). A host that keeps its own posts
 stores a skribl's public id on each; `skribl.describe_posts(ids,
 viewer_id=...)` hands back, by public id, the listing's own item for each
@@ -273,6 +300,22 @@ author's speed and with sound off until the viewer turns it on. Start it only
 where the viewer opened that drawing on purpose (a feed stays still until
 tapped), and never under Reduce Motion: that is yours to ask
 (`matchMedia('(prefers-reduced-motion: reduce)')`).
+
+**Where the playhead is** (after v330: the Skribl site keeps it with a like).
+The same player answers `player.playhead()` with `{ ms, playing }`: `ms` is
+where the replay is on the drawing's own clock, from 0 to its length, and the
+same whether it is watched at ¼× or 16× (a moment in the drawing, never in the
+viewer's time); `playing` is whether that clock is running now. A Pad drawing
+and a Flip answer alike (a Flip's clock is its pages' time, one pass of its
+loop). At rest, before anybody taps or before the drawing has come, it is
+`{ ms: 0, playing: false }`; paused, `playing` is false and `ms` stays where it
+stopped. It only reads: asking moves nothing, starts nothing and counts no
+play. What a host does with the moment is the host's.
+
+```js
+const p = SkriblInline.mount(post.querySelector('.post-art'))[0];
+const h = p && p.playhead();          // { ms: 6420, playing: true }
+```
 
 One Skribl plays at a time, page-wide. Scrolling a playing post out of view
 settles it. A drawing that can't be shown says so, in your page's colours and
