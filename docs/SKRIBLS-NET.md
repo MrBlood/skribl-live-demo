@@ -162,6 +162,11 @@ says so.
    composer's `src` covers the Pad only: that hand-over to Flip drops it, and
    Flip comes up in the phone's own setting. (Seen in the mock of Skribl
    inside skribls.net, Nov 2026; the owner asked for it on this list.)
+   Since the Skribl site's Settings there is a documented seam for the whole
+   join: the site's pages include Skribl's head boot and `lib/theme.js`, and
+   its toggle calls `SkriblTheme.set()` (INTEGRATION.md, "Skribl's theme on
+   your pages"); the boot says `data-theme="light"` or `"dark"`, as this
+   site's own CSS already reads it.
 
 10. **Let the author choose the Skribls gallery** (the owner's pick A, Nov
     2026, FUTURE 6ah). Open the Pad with `?compose=1&gallery=1` (Flip keeps

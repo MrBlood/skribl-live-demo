@@ -519,9 +519,10 @@ rings step back (`data-input`). What can still reach in: a rule of yours with
 an id or `!important` in it, and the player box inside each card, which is the
 in-post player as it is everywhere (above).
 
-**Light and dark.** It follows `data-theme="light"` on `<html>`, as Skribl's
-own pages and skribls.net say it; on a page that sets no `data-theme`, it
-follows the device.
+**Light and dark.** It follows `data-theme` on `<html>`, as Skribl's own
+pages and skribls.net say it: `"light"` is light, and `"dark"` (as Skribl's
+boot says it, "Skribl's theme on your pages", above) or any other value is
+dark; on a page that sets no `data-theme`, it follows the device.
 
 **Its layout is the Gallery's.** Two cards across on a screen wider than
 860px, one on a narrower one, as on `/gallery`. Give the section the width you
@@ -613,6 +614,70 @@ page and at the top of a desk's rail (docs/SOCIAL-SITE.md), and
 `verify_social.py` holds the site's templates to the partials this page
 documents. The other way round, your mark on Skribl's own editors, is
 `brand_resolver` ("Your brand on Skribl's editors", below).
+
+## Skribl's theme on your pages
+
+Skribl keeps one light-or-dark choice for its pages: System, Dark or Light,
+in `localStorage` under `skribl_theme_v1` at its own address, set by the
+switch in the Pad's and Flip's menus. A page of yours at the same address can
+wear that same choice, so a person picks once for your pages and Skribl's
+alike (the site at `/social` does: its Settings has the switch,
+docs/SOCIAL-SITE.md). Two parts, both Skribl's own:
+
+```jinja
+<head>
+  <meta name="theme-color" content="#fbfcfd" media="(prefers-color-scheme: light)" data-light="#fbfcfd" data-dark="#0b0d12">
+  <meta name="theme-color" content="#0b0d12" media="(prefers-color-scheme: dark)" data-light="#fbfcfd" data-dark="#0b0d12">
+  {% include 'skribl/_skribl_theme_boot.html' %}
+  ...
+  <script src="{{ skribl_asset('lib/theme.js') }}" defer></script>
+</head>
+```
+
+**The boot** (`skribl/_skribl_theme_boot.html`) is a small inline script that
+stamps the choice on `<html>` before the first paint, so a page never opens
+in the wrong theme for a frame. It says the theme out loud: `data-theme` is
+`"light"` or `"dark"` (System resolved there, from the device), never left
+off. So your stylesheet can tell three things apart, and should: light, dark,
+and NOTHING STAMPED, which means no script ran, so follow the device:
+
+```css
+:root { /* your light ramp */ }
+:root[data-theme="dark"] { /* your dark ramp */ }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) { /* the same dark ramp */ }
+}
+```
+
+The boot is inline, so your policy must let it run: it carries
+`nonce="{{ csp_nonce }}"`, so give your template a per-request nonce under
+that name and put the same one in your `script-src` (the site does:
+`social/__init__.py`, `site_csp`), or allow the script by its hash. Do not
+reach for `'unsafe-inline'`.
+
+**`lib/theme.js`** keeps the page with the choice afterwards (the device
+changing its mind while System is chosen, another tab choosing) and is the
+one way to read or change it: `SkriblTheme.mode()` is the choice (`system`,
+`dark` or `light`), `SkriblTheme.get()` what the page wears now,
+`SkriblTheme.set(choice)` keeps a new choice and stamps it, and
+`SkriblTheme.onChange(fn)` tells you when it changes under you. Never write
+the key or the attribute yourself: the key, its values and the attribute are
+a contract between the boot and this file. A switch of your own calls
+`set()`; how the change looks is yours (the site's Settings cross-fades it
+with `document.startViewTransition`).
+
+**The browser's bar** follows too: every `theme-color` meta that carries both
+grounds as `data-light` and `data-dark` is set to the chosen one, by the boot
+and on every change, whichever the device's media picks. Two keyed by media,
+as above, are the device's own until a script runs. A meta without both is
+yours and is left alone.
+
+Skribl's own pages only look for `data-theme="light"`; dark used to be the
+attribute left off, and is said out loud since the site's Settings. Nothing in
+the boot or the library knows your page: any host at Skribl's address gets
+the same. `verify_theme.py` holds the boot on a host page (both metas, dark
+said with every script blocked), and `verify_socialsettings.py` holds the
+site's use of it, its policy included.
 
 ## Drawing one from your own composer
 
