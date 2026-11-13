@@ -16,7 +16,8 @@ authenticator for the site's people.
   4. BLOCK, BOTH WAYS AND QUIETLY: from a profile's ⋯ and from a post's ⋯,
      asked once; then neither sees the other on Home or on a post's or a
      drawing's page; the blocker's Home says so; the blocker finds the
-     profile saying so, with Unblock; the one blocked meets nobody.
+     profile saying so, with Unblock; the one blocked meets nobody; and a
+     follow between them ends, both ways, and cannot begin again (follows).
   5. AND ON SKRIBL'S OWN PAGES: Explore's listing, a profile's skribls, a
      drawing's link page, its payload and its card; anybody else, and the
      author, as before.
@@ -637,6 +638,16 @@ with sync_playwright() as p:
         ben_post = j3.get("post")
         st4, ben_d = pad(ben, "Section 4, Ben's drawing", "public", 44)
         before = (home(ada.pg).count("ben"), home(ben.pg).count("ada"))
+        # FOLLOWS: each follows the other before the block.
+        aid, _ = pid_of("ada")
+        nid, _ = pid_of("ben")
+        pair = ("select count(*) from social_follows where (follower_id = ? and followed_id = ?)"
+                " or (follower_id = ? and followed_id = ?)")
+        for x, y in ((ada, "ben"), (ben, "ada")):
+            fc = x.client()
+            fc.get(f"/social/@{y}")
+            fc.post_json(f"/social/@{y}/follow", {"following": True})
+        followed = db(pair, (aid, nid, nid, aid))
         pg = ada.pg
         pg.goto(BASE + "/social/@ben")
         pg.wait_for_function("() => !!window.SocialSafety", timeout=15000)
@@ -665,6 +676,16 @@ with sync_playwright() as p:
               and prof["note"] == "You blocked @ben. You won’t see each other’s posts or drawings, and they can’t see your profile."
               and prof["unblock"] and not prof["skribls"] and not prof["more"] and rows == [(aid, nid)],
               f"asked {ask}; profile {prof}; rows {rows}")
+        left = db(pair, (aid, nid, nid, aid))
+        again = []
+        for x, y in ((ada, "ben"), (ben, "ada")):
+            fc = x.client()
+            fc.get("/social/")
+            again.append(fc.post_json(f"/social/@{y}/follow", {"following": True})[0])
+        check("a block ends a follow between them, both ways (each followed the other; neither does now), and neither"
+              " can follow the other while it stands (follows)",
+              followed == [(2,)] and left == [(0,)] and again == [404, 404] and db(pair, (aid, nid, nid, aid)) == [(0,)],
+              f"before {followed}; after {left}; again {again}")
         after = {"ada's home": home(ada.pg), "ben's home": home(ben.pg)}
         pages = {"ada at ben's post": status(ada.pg, f"/social/p/{ben_post}"),
                  "ada at ben's drawing": status(ada.pg, f"/social/b/{ben_d}"),

@@ -397,6 +397,8 @@ LIMITS = {
     "block": (60, 3600),           # blocks and unblocks, per person (piece 5)
     "comment": (60, 3600),         # comments and answers sent, per person (phase 2)
     "like": (120, 3600),           # likes and unlikes, per person (phase 2: the same tap does both)
+    "follow": (60, 3600),          # follows and unfollows, per person (follows): nobody follows everyone at once
+    "home-pick": (120, 3600),      # Home's pill, Following or Everyone, kept for the account (follows)
 }
 _SWEEP_EVERY = 64
 

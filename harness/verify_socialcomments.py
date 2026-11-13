@@ -610,6 +610,61 @@ BOX_STILL = """() => { const s = document.getElementById('commentBoxSheet'), f =
   const m = s && s.querySelector('.make-sheet'), cs = m && getComputedStyle(m);
   return !!((s && !s.hidden && s.classList.contains('is-open') && cs.transform === 'none' && +cs.opacity === 1)
             || (f && f.classList.contains('is-still'))); }"""
+# Post's place in the box: its left edge, and how far below the first chip it
+# sits (the same line, or the next), so a counter that moved it shows.
+POST_AT = """() => { const p = document.querySelector('[data-cm-post]').getBoundingClientRect();
+  const boxEl = document.querySelector('[data-cm-box]'), box = boxEl.getBoundingClientRect(), cs = getComputedStyle(boxEl);
+  const c = document.querySelector('[data-cm-box] .composer-acts .chip').getBoundingClientRect();
+  const post = document.querySelector('[data-cm-post]'), was = post.textContent, w1 = p.width;
+  const word = post.getAttribute('data-busy') || '';
+  post.textContent = word;
+  const busy = post.getBoundingClientRect(), said = post.textContent;
+  // A longer word, standing in for a wider font: Post is as wide as it before
+  // it is said, so saying it changes nothing. Restored after.
+  const longer = word + ' ' + word;
+  post.setAttribute('data-busy', longer); post.textContent = was;
+  const w3 = post.getBoundingClientRect().width;
+  post.textContent = longer;
+  const w4 = post.getBoundingClientRect().width;
+  post.textContent = was; post.setAttribute('data-busy', word);
+  return { x: Math.round(p.left), dy: Math.round(p.top - c.top),
+           edge: Math.round(box.right - parseFloat(cs.paddingRight) - p.right),
+           foot: Math.round(box.bottom - parseFloat(cs.paddingBottom) - p.bottom),
+           posting: said, held: Math.abs(busy.width - w1) < 0.5 && Math.abs(busy.top - p.top) < 0.5 && Math.abs(w4 - w3) < 0.5,
+           sides: getComputedStyle(post).paddingLeft + ' ' + getComputedStyle(post).paddingRight }; }"""
+# When what is in the box is wider than its line, whatever the font: the chips'
+# words spread (as a wider font or larger text would make them), then something
+# far wider than the column put in the box. The box keeps to its column, the
+# chips and Post keep inside it, and Post keeps to its right edge. Restored
+# after; set through the style object, which the page's policy allows.
+TOO_WIDE = """() => { const boxEl = document.querySelector('[data-cm-box]'), sec = document.getElementById('comments');
+  const words = [...boxEl.querySelectorAll('.composer-acts .chip span')];
+  words.forEach(w => { w.style.letterSpacing = '6px'; });
+  const cs = getComputedStyle(boxEl), inner = boxEl.getBoundingClientRect().right - parseFloat(cs.paddingRight);
+  const box = boxEl.getBoundingClientRect(), post = boxEl.querySelector('[data-cm-post]').getBoundingClientRect();
+  const chips = [...boxEl.querySelectorAll('.composer-acts .chip')].map(c => c.getBoundingClientRect().right);
+  const spread = { box: Math.round(box.width), col: Math.round(sec.getBoundingClientRect().width),
+                   edge: Math.round(inner - post.right), chipsIn: chips.every(r => r <= inner + 0.5) };
+  words.forEach(w => { w.style.letterSpacing = ''; });
+  const wide = document.createElement('div');
+  wide.style.width = '600px'; wide.style.height = '1px';
+  boxEl.appendChild(wide);
+  const withWide = Math.round(boxEl.getBoundingClientRect().width);
+  wide.remove();
+  return Object.assign(spread, { withWide: withWide }); }"""
+# Near the limit: the box against what holds it (the comments' column, or the
+# comment it answers), Post's place, and the counter, asked of what is painted.
+NEAR_LIMIT = """() => { const q = s => document.querySelector(s);
+  const boxEl = q('[data-cm-box]'), left = q('[data-cm-left]');
+  left.scrollIntoView({ block: 'center' });
+  const holder = (boxEl.closest('.cm') || document.getElementById('comments')).getBoundingClientRect();
+  const box = boxEl.getBoundingClientRect(), post = q('[data-cm-post]').getBoundingClientRect(), lr = left.getBoundingClientRect();
+  const chip = q('[data-cm-box] .composer-acts .chip').getBoundingClientRect();
+  const hit = document.elementFromPoint(lr.left + lr.width / 2, lr.top + lr.height / 2);
+  return { text: left.textContent.trim(), painted: !!hit && (hit === left || left.contains(hit)),
+           box: Math.round(box.width), holder: Math.round(holder.width), right: Math.round(box.right),
+           holderRight: Math.round(holder.right), x: Math.round(post.left), dy: Math.round(post.top - chip.top),
+           under: Math.round(lr.top - post.bottom), edge: Math.round(post.right - lr.right) }; }"""
 GONE = """() => { const s = document.getElementById('commentBoxSheet'), f = document.querySelector('[data-cm-fold]');
   return (!s || s.hidden) && (!f || (!f.classList.contains('is-open') && f.parentElement.id === 'comments')); }"""
 # The icon, the heading it sits in, and the box folded under it.
@@ -653,6 +708,17 @@ def open_box(pg, by=".cm-say"):
     pg.click(by, timeout=8000)
     pg.wait_for_function(BOX_STILL, timeout=8000)
     pg.wait_for_timeout(100)
+
+
+def box_room(pg):
+    """The room the open box takes, as the mock drew it: 136px, with Draw, Flip and
+    Post on one line. In a font too wide for that line (GitHub's DejaVu Sans), Post
+    keeps to the right on the next: one line more, its 44px and the 6px between.
+    Read off the open box, so no row holds this box's font as everybody's."""
+    two = pg.evaluate("""() => { const b = document.querySelector('[data-cm-box]');
+      const p = b && b.querySelector('[data-cm-post]'), c = b && b.querySelector('.composer-acts .chip');
+      return !!(p && c) && Math.abs(p.getBoundingClientRect().top - c.getBoundingClientRect().top) >= 1; }""")
+    return 136 + (50 if two else 0)
 
 
 def answer_box(pg, cid):
@@ -1716,7 +1782,7 @@ with sync_playwright() as p:
             juno = someone(b, "juno", "Juno Park")
             theo = someone(b, "theo", "Theo Lind")
             post = make_post(juno, "Section 12, a snail", seed=121)
-            said(theo, post, "Section 12, beside the drawing")
+            cid = said(theo, post, "Section 12, beside the drawing")
             dctx, dpg = browser_as(b, juno, "desk", "light")
             open_post(dpg, post)
             WHERE = """() => { const r = s => document.querySelector(s).getBoundingClientRect();
@@ -1728,6 +1794,21 @@ with sync_playwright() as p:
             where = dpg.evaluate(WHERE)
             _, err = steps(lambda: open_box(dpg))
             opened = dpg.evaluate(WHERE)
+            # TYPING TO THE LAST HUNDRED (the counter, "5 left"), in the box and in
+            # an answer's: the box keeps to its column (main's run after #883 read it
+            # 350 in a 340 column in GitHub's wider font, and here the counter pushed
+            # it to 360), Post stays where it was, and the counter reads on its own
+            # line under Post, at its right edge.
+            before = dpg.evaluate(POST_AT)
+            named = dpg.locator("[data-cm-box]").get_by_role("button", name="Post", exact=True).count()
+            spread = dpg.evaluate(TOO_WIDE)
+            dpg.fill("#cmWords", "word " * 99)
+            dpg.wait_for_timeout(200)
+            near = dpg.evaluate(NEAR_LIMIT)
+            _, err2 = steps(lambda: answer_box(dpg, cid))
+            dpg.fill("#cmWords", "word " * 99)
+            dpg.wait_for_timeout(200)
+            answering = dpg.evaluate(NEAR_LIMIT)
             close_ctx(dctx, dpg)
             check("on a desk the comments sit beside the drawing, under Share and Make your own, in the same column, the icon at"
                   " the end of their heading within reach; the box opens right under the heading, as wide as the column",
@@ -1735,6 +1816,23 @@ with sync_playwright() as p:
                   and where["icon"] == 0 and where["onscreen"] and err is None and opened["box"] == opened["width"]
                   and opened["boxTop"] == 10,
                   f"{where}; opened {opened}; stopped {err}")
+            check("the box keeps to its column whatever is in it (a wider font, larger words, something far too wide):"
+                  " Post at its right edge, nothing past it, no gap under Post, and as wide saying \"Posting…\" (named"
+                  " Post all the same); typing to the last hundred characters,"
+                  " the counter (\"5 left\") reads on its own line under Post, at its right edge, and Post stays where"
+                  " it was; the same in an answer's box",
+                  abs(before["edge"]) <= 1 and abs(before["foot"]) <= 1
+                  and before["posting"] == "Posting…" and before["held"] and before["sides"] == "12px 12px" and named == 1
+                  and spread["box"] == spread["col"] and spread["chipsIn"] and abs(spread["edge"]) <= 1
+                  and spread["withWide"] == spread["col"]
+                  and near["text"] == "5 left" and near["painted"] and near["box"] == near["holder"]
+                  and near["right"] <= near["holderRight"] and near["x"] == before["x"] and near["dy"] == before["dy"]
+                  and near["under"] >= 0 and abs(near["edge"]) <= 1
+                  and err2 is None and answering["text"] == "5 left" and answering["painted"]
+                  and answering["box"] <= answering["holder"] and answering["right"] <= answering["holderRight"]
+                  and answering["under"] >= 0 and abs(answering["edge"]) <= 1,
+                  f"before {before}; named Post {named}; too wide {spread}; near {near}; answering {answering};"
+                  f" stopped {err2}")
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(12, exc)
 
@@ -2933,13 +3031,15 @@ with sync_playwright() as p:
             g_open = glided(track(opened, 0))
             ops = fades_of(opened, 0)
             room = dpg.evaluate("() => Math.round(document.querySelector('[data-cm-fold]').getBoundingClientRect().height * 100) / 100")
+            want = box_room(dpg)
             check("a click glides the box open under the heading: the comments under it slide down to make room (read on every"
-                  " frame, 136px) while the box fades in, nothing above it moving; the field focused, the icon lit",
+                  " frame, 136px, or a line more where a wider font puts Post on the next) while the box fades in, nothing"
+                  " above it moving; the field focused, the icon lit",
                   there and there["open"] == "home" and there["focus"] and there["icon"] == "true" and there["font"] == 17
-                  and g_open["ok"] and abs(g_open["way"] - room) <= 1 and room == 136
+                  and g_open["ok"] and abs(g_open["way"] - room) <= 1 and room == want
                   and len([o for o in ops if 0.02 < o < 0.98]) >= 3 and ops[-1] == 1
                   and still_(track(opened, 1)) and still_(track(opened, 2)),
-                  f"box {there}; the room {room}; the comments {g_open}; the fade {ops[:5]}..; the heading"
+                  f"box {there}; the room {room} (the box's {want}); the comments {g_open}; the fade {ops[:5]}..; the heading"
                   f" {glided(track(opened, 1))}")
             folds = {}
             for how in ("a second click", "Esc", "a press elsewhere"):
@@ -2952,6 +3052,7 @@ with sync_playwright() as p:
                     open_post(dpg, post)
                     open_box(dpg)
                     dpg.fill("[data-cm-words]", f"Typed, then {how}")
+                    room_ = box_room(dpg)
                     fr = dpg.evaluate(FRAMES, [act, ["[data-cm-list] > .cm .cm-name"], ["[data-cm-box]"], 600])
                     dpg.wait_for_function(GONE, timeout=8000)
                     after_ = dpg.evaluate("() => ({ icon: document.querySelector('.cm-say').getAttribute('aria-expanded'), focus: document.activeElement.className })")
@@ -2959,13 +3060,15 @@ with sync_playwright() as p:
                     words_ = dpg.evaluate(BOX)["words"]
                     dpg.click(".cm-say")
                     dpg.wait_for_function(GONE, timeout=8000)
-                    return {"g": glided(track(fr, 0)), "icon": after_["icon"], "focus": after_["focus"], "words": words_}
+                    return {"g": glided(track(fr, 0)), "icon": after_["icon"], "focus": after_["focus"], "words": words_,
+                            "room": room_}
 
                 got_, err = steps(fold_away)
-                folds[how] = dict(got_ or {"g": {"ok": False, "way": 0}, "icon": None, "focus": "", "words": None}, stopped=err)
+                folds[how] = dict(got_ or {"g": {"ok": False, "way": 0}, "icon": None, "focus": "", "words": None, "room": 136},
+                                  stopped=err)
             check("a second click, Esc (focus back on the icon) or a press anywhere else folds it away, the comments sliding back"
                   " up (read on every frame) and the icon going out; open it again and what was typed is there",
-                  all(v["stopped"] is None and v["g"]["ok"] and abs(v["g"]["way"] + 136) <= 1 and v["icon"] == "false"
+                  all(v["stopped"] is None and v["g"]["ok"] and abs(v["g"]["way"] + v["room"]) <= 1 and v["icon"] == "false"
                       and v["words"] == f"Typed, then {k}" for k, v in folds.items())
                   and folds["Esc"]["focus"].startswith("icon-btn cm-say"),
                   f"{folds}")
@@ -3027,13 +3130,14 @@ with sync_playwright() as p:
             moved = dpg.evaluate(FRAMES, [f"document.querySelector('#c-{theo_c} > .cm-main [data-cm-answer]').click()",
                                           [f"#c-{theo_c} > .cm-main .cm-name", f"#c-{other} > .cm-main .cm-name"], ["[data-cm-box]"], 1300])
             under = dpg.evaluate(BOX)
+            want = box_room(dpg)
             ops = fades_of(moved, 0)
             g_theo, g_other = glided(track(moved, 0)), glided(track(moved, 1))
             check("on a desk, Answer opens it under that conversation (\"Answer Theo…\"); open under the heading first, it folds"
                   " away there and then glides open under the conversation, every move a glide (read on every frame), the box"
                   " fading out and in",
                   under["open"] == "under" and under["under"] == theo_c and under["placeholder"] == "Answer Theo…" and under["focus"]
-                  and g_theo["ok"] and abs(g_theo["way"] + 136) <= 1 and (g_other["ok"] or still_(track(moved, 1)))
+                  and g_theo["ok"] and abs(g_theo["way"] + want) <= 1 and (g_other["ok"] or still_(track(moved, 1)))
                   and min(ops) == 0 and ops[-1] == 1 and len([o for o in ops if 0.02 < o < 0.98]) >= 4,
                   f"{under}; Theo's {g_theo}; the next conversation {g_other}; the box {ops[:3]}..{min(ops)}..{ops[-1]}")
             again, err = steps(lambda: (dpg.click(f"#c-{theo_c} > .cm-main [data-cm-answer]"),
@@ -3192,7 +3296,8 @@ with sync_playwright() as p:
                 _, err = steps(lambda: cpg.wait_for_function(BOX_STILL, timeout=8000))
                 opened = cpg.evaluate(BOX)
                 line_open = cpg.evaluate(FIRST_LINE)
-                got[screen] = {"line": line, "opened": opened, "line_open": line_open, "fr": fr, "stopped": err}
+                got[screen] = {"line": line, "opened": opened, "line_open": line_open, "fr": fr, "stopped": err,
+                               "room": box_room(cpg)}
                 close_ctx(cctx, cpg)
             d = got["desk"]
             check("with nothing said yet, \"Say the first thing\" stands where the comments will be: the small violet words (16px,"
@@ -3203,7 +3308,7 @@ with sync_playwright() as p:
                       and v["line"]["ink"] in ("rgb(76, 49, 196)",) for v in got.values())
                   and got["phone"]["opened"]["open"] == "sheet" and got["phone"]["line_open"]["open"]
                   and d["opened"]["open"] == "home" and not d["line_open"]["open"] and d["line_open"]["seen"] == "hidden"
-                  and glided(track(d["fr"], 0), 136 - 52)["ok"] and still_(track(got["phone"]["fr"], 0)),
+                  and glided(track(d["fr"], 0), d["room"] - 52)["ok"] and still_(track(got["phone"]["fr"], 0)),
                   f"phone {got['phone']['line']} -> {got['phone']['opened']['open']}; desk {d['line']} -> {d['opened']['open']},"
                   f" the line {d['line_open']}; under it on a desk {glided(track(d['fr'], 0))}")
             dctx, dpg = browser_as(b, theo, "desk")
@@ -3256,6 +3361,7 @@ with sync_playwright() as p:
             open_post(dpg, post)
             dn = dpg.evaluate(FRAMES, ["document.querySelector('.cm-say').click()", ["[data-cm-list] > .cm .cm-name"], ["[data-cm-box]"], 600])
             dpg.wait_for_function(BOX_STILL, timeout=8000)
+            room35 = box_room(dpg)
             dpg.fill("[data-cm-words]", "Section 35, posted on a desk under Reduce Motion")
             dw = dpg.evaluate(POSTED, [900])
             close_ctx(dctx, dpg)
@@ -3266,7 +3372,7 @@ with sync_playwright() as p:
                   " place (one step) and fades in; a posted comment is put in place and fades in, what was under it moving in"
                   " one step",
                   still_(sheet_tops) and len([o for o in sheet_ops if 0.02 < o < 0.98]) >= 2 and sheet_ops[-1] == 1
-                  and len(moves) == 1 and abs(moves[0] - 136) <= 1 and len([o for o in box_ops if 0.02 < o < 0.98]) >= 2
+                  and len(moves) == 1 and abs(moves[0] - room35) <= 1 and len([o for o in box_ops if 0.02 < o < 0.98]) >= 2
                   and still_(pw["new"]) and len([o for o in pw["ops"] if 0.02 < o < 0.98]) >= 2
                   and still_(dw["new"]) and len([o for o in dw["ops"] if 0.02 < o < 0.98]) >= 2
                   and one_step(pw["old"]) and one_step(dw["old"]),

@@ -230,7 +230,8 @@ here is tested (a check shown red before it is believed).
   replies, likes, in-app notifications, mute. *Comments and their answers
   built Nov 12 (section 10); in-app notifications (Activity) the same day
   (section 11); likes Nov 13, their dots on the line and the hearts that
-  rise from them the same day (section 12).*
+  rise from them the same day (section 12); follows and Home's Following the
+  same day (section 13).*
 - **Phase 3, growing.** Search and tags, push and email notifications, reply
   with a skribl, repost, invite links.
 - **Phase 4, creators.** Editions, rights and prints, the co-op (FUTURE 6ag).
@@ -1209,3 +1210,123 @@ with the drawing on the first tap). Nothing changes in either editor.
 `harness/verify_sociallikes.py` holds it through the demo's own server;
 `verify_inline.py` and `verify_seam.py` hold the seams. DECISIONS.md ("Likes
 at /social", parts 1 and 2) says what each check was shown red by.
+
+## 13. Built: follows
+
+From the follow mock and the owner's "Yes to all" (Nov 13): B, yours alone.
+Who follows whom is only ever the person's own to see; nobody has a count on
+show. `social/follows.py`:
+
+    /social/@<handle>/follow    POST {following}: follow them, or stop (a yes
+                                or a no, never "toggle")
+    /social/home/show           POST {show}: what Home opens on, "following"
+                                or "everyone", kept for the account
+
+**The button.** First in the row on somebody's page, before Share and ⋯ (on a
+desk the same row, beside their face): Follow, the action's purple with a
+plus drawn in our pen, 44px. A tap makes it Following at once, the quiet
+button, its check drawing itself in the pen; nothing moves, the purple fades
+and the words cross over, and under Reduce Motion it only fades. Both words
+sit in one place inside it (one grid cell), so it is as wide as "Following" in
+any font and Share and ⋯ never move. It is named "Follow Theo Lind", then
+"Following Theo Lind", and says so to a screen reader. Never on your own
+page, nor on somebody you blocked (Unblock is there), and never on a card:
+the name on a card already opens the person's page. No "Follow back", no
+"Follows you".
+
+**Unfollowing asks once.** A tap on Following raises a small sheet, Make's
+own: "Unfollow Theo?", "You'll still see Theo's drawings under Everyone.
+They aren't told.", Keep following beside Unfollow, the big button, the
+focus on Keep following. Nobody is told either way.
+
+**Yours alone.** On somebody else's page there is only Follow or Following:
+no line, no count, no list, not in the page and not in its source. Your own
+page says who under its buttons, the twin of "Liked by…": "Followed by Mira,
+Theo and 2 others" with their drawn faces (every name up to three, else two
+and how many more, newest first), or before anybody follows you "You follow
+Mira and Juno"; with nobody either way there is no line, so nothing ever says
+zero. The line opens Make's own sheet in its paper with the one pill,
+Followers | Following, each list newest first with when (in your own time),
+the people on one card, each a way to their page (where you unfollow), and
+"Only you can see who follows you, and who you follow." Both lists sit in one
+place in the sheet, so it keeps its height as the pill moves between them. It
+lists the newest 200 of each; the line's count is exact. Opened at
+`#followers` or `#following` (a follow row in Activity), the sheet rises on
+that list.
+
+**Counted by the viewer**, as likes are: anybody hidden from you (a block
+either way, or taken down) is in no line, no count and no list, and in
+nobody's Following.
+
+**Who may follow:** somebody signed in and not taken down, anybody else who
+is there for them (not taken down, no block either way), never themselves;
+the token and Origin first, then the limit (60 an hour, follows and unfollows
+alike). A refusal in the page puts the button back and says why, kindly.
+Signed out, Follow is there all the same, and a tap raises the small sheet the
+heart uses: "Follow Theo?", "Sign in, and Theo's new drawings show first on
+your Home.", Not now and Sign in, which comes back to the same page, where
+Follow waits: nothing is pressed for them.
+
+**Home's pill, Following | Everyone**, under the composer, the Gallery's New /
+Hot value for value (the same control, the same glide; the site names its own
+tokens for the Gallery's values, `--pill-on-fill`, `--pill-on-ink` and
+`--pill-off-ink`). Home opens on Following once you follow somebody, on
+Everyone before that, and on your own pick once you make one: a tap keeps it
+for the account (`social_people.home_feed`), so it holds on every device. The
+switch: the pill glides, the posts fade, change while they can't be seen, and
+fade back; the page doesn't scroll. Under Reduce Motion the pill is put there
+and the posts only fade.
+
+**Following never runs out.** It is the people you follow and you, posts and
+drawings alike (Skribl's listing, through its `authors`:
+docs/INTEGRATION.md), newest first, nothing ranked. After the last of them,
+"You're caught up with the people you follow." with a small check in the pen,
+then Fresh from everyone: everybody else's, so nothing shows twice. Load more
+carries on through both (a cursor of Following's own says which part it is
+in). Somebody who follows nobody and is on Following gets a kind card, "You're
+not following anyone yet", how, and Look around (Explore), then everyone's.
+
+**In Activity** a follow is a row like a like's, its face wearing a small
+Follow (the action's purple, a white plus in the pen), and no picture: "Mira
+followed you"; several since you last looked one row, the newest face in
+front ("Mira and 2 others followed you", "Mira and Theo followed you"). One
+person opens their page; several open who follows you. Under Earlier a day's
+follows stay one row: those within a day of the newest of them (the site
+keeps no time zone of yours, so a day is 24 hours, not a date). **Follows
+never light the bell's dot:** a follow needs no answer. **Following again
+never tells them twice:** an unfollow keeps the row with the time it ended,
+so following again keeps the first time, and Activity, which reads it, has
+nothing new to say; a follow taken back has no row. Activity's line says "Who
+followed you, liked your posts or said something on them, and who answered
+you.", and with nothing yet, "When someone follows you, likes your post, says
+something on it, or answers you, you'll see it here."
+
+**Blocks:** a block ends a follow both ways, and for good (the rows go), and
+none can begin while it stands; lifting the block brings none back. Somebody
+taken down drops out of every list and every Following.
+
+**Deleting is real, and said in code:** an account goes with its follows both
+ways (`accounts.delete_person`, through `follows.drop_person_follows`); the ON
+DELETE CASCADEs are the net. The Privacy page and docs/LAWYER-NOTE.md say
+follows are kept: who you follow and since when, and that you once did after
+an unfollow.
+
+**Data.** One table on the site's chain (migration `1757a4385be8`, after
+`a81c5c4dde3a`), `social_follows`: `follower_id`, `followed_id` (both to
+`social_people`, ON DELETE CASCADE), `created_at` (when they first followed),
+`ended_at` (when they unfollowed, or nothing while they follow); unique on the
+pair, never yourself (`ck_social_follows_not_self`); indexed both ways newest
+first, by `(follower_id, created_at)` and `(followed_id, created_at)`. And
+`social_people.home_feed`, Home's pick. Home's Following is one read of posts
+(the people you follow as a subquery, on the posts' own person index: SQLite
+plans it as a MULTI-INDEX OR) and one of drawings, as Everyone's page reads
+them, with no read a card.
+
+**Pad and Flip:** nothing changes in either editor. Home's cards play Pad
+drawings and Flips in the one player they share, so Following shows both
+alike; the one change on Skribl's side is the listing's general `authors`,
+which any host may use for a feed of the people somebody follows.
+
+`harness/verify_socialfollow.py` holds it through the demo's own server;
+`verify_createpost.py` holds the listing's `authors`. DECISIONS.md
+("Following at /social") says what each check was shown red by.

@@ -47,6 +47,10 @@ def describe_posts(public_ids, *, viewer_id=None):
 #: The most one call to list_public_posts returns: a page of a feed, with room.
 MAX_LIST = 100
 
+#: The most authors one query of list_public_posts names (`authors`): more
+#: are asked in pieces of this many, and the newest of all of them kept.
+MAX_AUTHORS = 500
+
 
 def _like_prefix(prefix):
     """A LIKE pattern for `prefix` and anything after it, the prefix's own %
@@ -54,7 +58,7 @@ def _like_prefix(prefix):
     return prefix.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
 
 
-def list_public_posts(*, author=None, author_prefix=None, before=None, limit=20, viewer_id=None):
+def list_public_posts(*, author=None, author_prefix=None, authors=None, before=None, limit=20, viewer_id=None):
     """(items, more): the public skribls a gallery would list, newest first,
     as the listing's own items (SkriblPost.feed_dict), for a host's feed of
     its own people's drawings (after v330, for the Skribl site's Home, which
@@ -63,6 +67,11 @@ def list_public_posts(*, author=None, author_prefix=None, before=None, limit=20,
     author          only this author's (their user id, as the host hands it).
     author_prefix   only authors whose ids start with this (a host whose
                     people's ids share a prefix: the site's are "site:...").
+    authors         only these authors' (an iterable of user ids, any
+                    number: past MAX_AUTHORS they are asked in pieces, one
+                    query a piece, and the newest of all kept): a feed of the
+                    people somebody follows (the Skribl site's Following). An
+                    empty one lists nothing.
     before          (created_at, public_id): only those older, by created_at
                     and then public_id, both descending: the page after the
                     last item shown. A public_id of "" leaves out everything
@@ -76,10 +85,28 @@ def list_public_posts(*, author=None, author_prefix=None, before=None, limit=20,
     are older ones after these. Reads only, on the host's session.
     """
     limit = max(1, min(int(limit), MAX_LIST))
+    if authors is not None:
+        authors = list(dict.fromkeys(normalise_user_id(a) for a in authors if a is not None))
+        if not authors:
+            return [], False
+        if len(authors) > MAX_AUTHORS:
+            # In pieces, each its own newest `limit`: the newest `limit` of all
+            # of them are among those, by the listing's own order.
+            items, more = [], False
+            for k in range(0, len(authors), MAX_AUTHORS):
+                got, m = list_public_posts(author=author, author_prefix=author_prefix,
+                                           authors=authors[k:k + MAX_AUTHORS], before=before, limit=limit,
+                                           viewer_id=viewer_id)
+                items += got
+                more = more or m
+            items.sort(key=lambda i: (i["created_at"], i["id"]), reverse=True)
+            return items[:limit], more or len(items) > limit
     q = (session().query(SkriblPost).options(sa.orm.defer(SkriblPost.payload_json))
          .filter(SkriblPost.visibility == "public"))
     if author is not None:
         q = q.filter(SkriblPost.user_id == normalise_user_id(author))
+    if authors is not None:
+        q = q.filter(SkriblPost.user_id.in_(authors))
     if author_prefix:
         q = q.filter(SkriblPost.user_id.like(_like_prefix(str(author_prefix)), escape="\\"))
     if before is not None:

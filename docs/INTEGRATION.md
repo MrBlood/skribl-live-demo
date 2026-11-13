@@ -293,6 +293,16 @@ applied), no payload is read, and a call returns at most 100
 (`verify_createpost.py`, section 12). A drawing your people also posted
 through your own posts is in it too; a host showing both shows it once.
 
+**A feed of the people someone follows** (after v330: the Skribl site's
+Following). `authors=[...]` names the authors whose drawings to list, by the
+user ids you hand Skribl, as many as you like: past 500 Skribl asks in
+pieces, one query a piece, and keeps the newest of all of them. An empty list
+lists nothing. Everything else is as above, `before` and paging included:
+
+```python
+items, more = skribl.list_public_posts(authors=[me_id] + followed_ids, limit=20, viewer_id=me_id)
+```
+
 **A post's own page can start it** (after v330: on the Skribl site, opening a
 post plays its drawing). `SkriblInline.mount(box)` returns the box's player,
 the one already mounted if it has one, and `player.play()` starts it, at the

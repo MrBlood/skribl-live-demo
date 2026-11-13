@@ -301,7 +301,8 @@ def delete_person(sess, person_id):
     here, never left to a cascade), and their blocks, both ways (piece 5); a
     report that names them stays, naming nobody, and an answer to them by
     somebody who stays answers nobody (notifications); their likes, and every
-    like on what they owned (likes). Flushes; the request commits.
+    like on what they owned (likes); their follows, both ways (follows).
+    Flushes; the request commits.
     (Their other skribls are Skribl's, and docs/INTEGRATION.md has no seam
     for a host to take an author's drawings away in one go: they stay, and
     the confirm page says so.)"""
@@ -321,6 +322,10 @@ def delete_person(sess, person_id):
     from .likes import drop_owner_likes, drop_person_likes
     drop_owner_likes(person_id)
     drop_person_likes(person_id)
+    # Their follows, both ways: whom they followed and who followed them
+    # (follows: said here too, never left to the cascade).
+    from .follows import drop_person_follows
+    drop_person_follows(person_id)
     # Answers to them, by people who stay, stay too, answering nobody now
     # (notifications: Activity's "answered your comment" reads whom).
     from .models import Comment

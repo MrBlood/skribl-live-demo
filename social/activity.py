@@ -4,10 +4,12 @@ notifications"), from the notifications mock and the owner's "all yes" (Nov
 Explore (where Sign in sits before you sign in), and Activity in a desk's
 rail after Explore; each with a dot when something is new.
 
-    /activity     who liked your posts or said something on them, and who
-                  answered you: New, then Earlier, a row each, every row one
-                  link to its comment on its page (or, for likes, to "Liked
-                  by…" there); opening it marks everything seen.
+    /activity     who followed you, liked your posts or said something on
+                  them, and who answered you: New, then Earlier, a row each,
+                  every row one link to its comment on its page (or, for
+                  likes, to "Liked by…" there; for a follow, to their page, or
+                  for several to who follows you); opening it marks
+                  everything seen.
 
 WORKED OUT FROM THE COMMENTS, NOT KEPT. There is no table of notifications to
 keep in step with them: the rows are the comments themselves, read by the
@@ -39,6 +41,18 @@ small heart. A like says no words, so Earlier keeps them one row a post as
 well. A like row opens the post with "Liked by…" glowing (#liked: likes.js).
 LIKES NEVER LIGHT THE DOT: a like needs no answer, so it waits under New.
 
+FOLLOWS TOO (follows; the follow mock, the owner's "Yes to all", Nov 13),
+read from the follows that stand, never kept as rows of their own: "Mira
+followed you", their face wearing a small Follow (the action's purple, a
+white plus), and several since you last looked one row, the newest face in
+front ("Mira and 2 others followed you"). One person opens their page;
+several open who follows you (your own page, #followers). Under Earlier a
+day's follows stay one row: those within a day of the newest of them (the
+site keeps no time zone of yours, so a day is 24 hours, not a date).
+Following again never tells you twice (the follow keeps its first time). A
+follow they took back is not in it. FOLLOWS NEVER LIGHT THE DOT either: a
+follow needs no answer.
+
 NEVER IN IT: yourself; anybody hidden from you (a block either way, or
 taken down: safety.hidden_ids); a comment taken down, or an answer under a
 comment you are not shown; anything on a post or a drawing whose page you
@@ -48,8 +62,8 @@ comments.seen's rules, read for many comments at once: what a row links to
 is on its page. A comment deleted or removed is not there to read.
 
 THE DOT (dot()): whether anything is said that is new since they last
-looked (comments and answers, never likes), by the same rules, asked once a
-request by a page with the bar or the rail (the
+looked (comments and answers, never likes or follows), by the same rules,
+asked once a request by a page with the bar or the rail (the
 phone's bell on Home and Explore, a desk's rail on every page): newest
 first on the two indexes it reads, (owner_id, created_at) and
 (to_person_id, created_at), a handful of rows at most, and Skribl asked
@@ -66,6 +80,7 @@ there for the viewer; each small picture's size), and the poster's address
 by url_for, as More from's tiles take theirs.
 """
 import math
+from datetime import timedelta
 
 import sqlalchemy as sa
 import sqlalchemy.orm  # noqa: F401  (sa.orm.aliased)
@@ -88,6 +103,10 @@ LIKE_GROUPS = 60
 
 #: Skribl's describe_posts answers this many ids a call, at most.
 _DESCRIBE = 200
+
+#: Under Earlier, the follows within this of the newest of them are one row
+#: (follows: "a day's follows stay one row").
+FOLLOW_DAY = timedelta(hours=24)
 
 
 # ---- what may be a row ---------------------------------------------------------
@@ -194,6 +213,30 @@ def _like_groups(conds, new):
         if g is not None:
             g["people"].append(person)
     return list(groups.values())
+
+
+def _follows(me, hidden, since, owner_url):
+    """Activity's rows of who followed `me` (follows.of_me: those that stand,
+    nobody hidden), newest first: since they last looked one row, all of
+    them; before, a row for each day's (FOLLOW_DAY of the newest). One person
+    opens their page; several open who follows you (`owner_url`, your own
+    page, at #followers)."""
+    from .accounts import profile_url
+    from .follows import of_me
+    rows, row = [], None
+    for f, who in of_me(me, hidden):
+        at = as_utc(f.created_at)
+        new = since is None or at > since
+        if row is None or row["new"] != new or (not new and as_utc(row["when"]) - at >= FOLLOW_DAY):
+            row = {"kind": "follow", "new": new, "when": f.created_at, "words": None, "people": [], "names": [],
+                   "pic": None}
+            rows.append(row)
+        row["people"].append(who)
+        row["names"].append(who.display_name.split(" ")[0])
+    for row in rows:
+        row["n"] = len(row["people"])
+        row["href"] = profile_url(row["people"][0].handle) if row["n"] == 1 else owner_url + "#followers"
+    return rows
 
 
 def _described(me, ids):
@@ -315,10 +358,10 @@ def _pic(sid, sk, skribl_blueprint, inner=50):
 
 def listing(me, skribl_blueprint="skribl"):
     """(new rows, earlier rows) for `me`, newest first, as Activity shows
-    them. Each row: {"kind" ("like" for likes), "new", "when" (the newest
-    comment's, or like's), "words" (that comment's), "people" (newest first,
-    each once; a like row's newest two), "names" (their first names), "n"
-    (how many people), "href", "pic"}."""
+    them. Each row: {"kind" ("like" for likes, "follow" for follows), "new",
+    "when" (the newest comment's, like's or follow's), "words" (that
+    comment's), "people" (newest first, each once; a like row's newest two),
+    "names" (their first names), "n" (how many people), "href", "pic"}."""
     since = as_utc(me.activity_seen_at) if getattr(me, "activity_seen_at", None) else None
     hidden = hidden_ids(me)
     items = _read(me, hidden)
@@ -363,6 +406,11 @@ def listing(me, skribl_blueprint="skribl"):
             "names": [p.display_name.split(" ")[0] for p in g["people"]], "n": g["n"],
             "href": page(g["post_public"], g["drawing_id"]) + "#liked",
             "pic": _pic(g["skribl_id"], sk.get(g["skribl_id"]), skribl_blueprint)})
+    # FOLLOWS: since you last looked one row, before a row a day; they open
+    # their page, or several, who follows you.
+    from .accounts import profile_url
+    for row in _follows(me, hidden, since, profile_url(me.handle)):
+        sections[0 if row["new"] else 1].append(row)
     for rows in sections:
         rows.sort(key=lambda r: as_utc(r["when"]), reverse=True)
     return sections
@@ -376,7 +424,7 @@ def register(bp, skribl_blueprint="skribl"):
     @bp.get("/activity")
     @_rests()
     def activity():
-        """Activity: who liked your posts or said something on them, and who answered you."""
+        """Activity: who followed you, liked your posts or said something on them, and who answered you."""
         me = current_person()
         if me is None:
             return redirect(url_for("social.signin", next=request.path), 303)
@@ -388,8 +436,8 @@ def register(bp, skribl_blueprint="skribl"):
         sess.execute(sa.update(Person).where(Person.id == me.id).values(activity_seen_at=now))
         sess.flush()
         # The rail's dot (a desk) fades as they look, where there was one: a
-        # like never lit it.
-        g.social_activity_dot = "going" if any(r["kind"] != "like" for r in fresh) else None
+        # like or a follow never lit it.
+        g.social_activity_dot = "going" if any(r["kind"] not in ("like", "follow") for r in fresh) else None
         return _page("activity.html", here="activity", fresh=fresh, earlier=earlier)
 
     return bp

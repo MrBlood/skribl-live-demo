@@ -1,8 +1,8 @@
 {#  A PERSON'S PROFILE (phase 1, piece 3): /social/@<handle>. The approved
-    mock A (the owner's "all yes", Nov 10), without what does not exist yet:
-    no follower or following counts (follows are phase 2) and no totals of
-    plays (a count is kept, never counted when a page is read: none is kept
-    yet), so no numbers at all rather than made-up ones.
+    mock A (the owner's "all yes", Nov 10), without its numbers: no follower
+    or following counts, ever (the owner's B, Nov 13: who follows whom is
+    the person's own, below), and no totals of plays (a count is kept, never
+    counted when a page is read: none is kept yet).
 
     THEIR FACE, BIG, DRAWING ITSELF ONCE: Skribl's face player
     (skribl_face, play='once': 4x, or quicker for a long one, still under
@@ -23,13 +23,20 @@
     DRAW YOUR FACE opens the real Pad over the page, in its face mode
     (?compose=1&face=1), through lib/composehost.js; what it hands back is
     sent to /you/face, kept, and the page comes back with the new face
-    drawing itself. profile.js holds the moving parts; the words are here. #}
+    drawing itself. profile.js holds the moving parts; the words are here.
+
+    FOLLOWS (B, yours alone; the owner's "Yes to all", Nov 13): Follow first
+    in the row on somebody else's page (Following once tapped), and nothing
+    else of follows there for anybody; on your own, under the buttons, who
+    follows you ("Followed by…") or whom you follow, opening the lists, for
+    your eyes alone (social/_follow.html; follows.js). #}
 {% extends 'social/base.html' %}
 {% from 'skribl/_skribl_gallery_section.html' import skribl_gallery_assets, skribl_gallery_section %}
 {% from 'skribl/_skribl_face.html' import skribl_face_maker_assets, skribl_face_maker %}
 {% from 'skribl/_skribl_inline_player.html' import skribl_inline_draft %}
 {% import 'social/_icons.html' as ic %}
 {% from 'social/_safety.html' import person_sheet, safety_sheets with context %}
+{% from 'social/_follow.html' import follow_button, followed_line, follow_sheets with context %}
 
 {% block title %}{{ who.display_name }} (@{{ who.handle }}) · Blooby{% endblock %}
 {% block head %}<link rel="canonical" href="{{ share_url }}">
@@ -37,6 +44,7 @@
 {% if mine %}<script src="{{ skribl_asset('lib/composehost.js') }}" defer></script>
 {{ skribl_face_maker_assets() }}{% endif %}{% endblock %}
 {% block scripts %}<script src="{{ social_asset('profile.js') }}" defer></script>
+<script src="{{ social_asset('follows.js') }}" defer></script>
 {% if not mine %}<script src="{{ social_asset('safety.js') }}" defer></script>{% endif %}{% endblock %}
 
 {% block top %}
@@ -83,6 +91,7 @@
       {% else %}
       {% if who.bio %}<p class="prof-bio">{{ who.bio }}</p>{% endif %}
       <div class="prof-acts">
+        {% if not mine %}{{ follow_button(who, following) }}{% endif %}
         {% if mine %}
         <a class="btn" href="{{ url_for('social.edit_profile') }}">Edit profile</a>
         <button class="btn" type="button" data-face-sheet aria-haspopup="dialog" aria-controls="faceSheet" aria-expanded="false">{{ ic.pen() }}<span>{{ 'Change my face' if who.face_id else 'Add your face' }}</span></button>
@@ -92,7 +101,9 @@
         {% else %}<button class="icon-btn boxed" type="button" data-person-menu aria-haspopup="dialog" aria-controls="personSheet"
                 aria-expanded="false" aria-label="More for {{ who.display_name }}" title="More">{{ ic.dots() }}</button>{% endif %}
       </div>
+      {% if mine and fl and fl.line %}{{ followed_line(fl) }}{% endif %}
       <p class="say prof-say" data-say role="status" hidden></p>
+      <p class="sr" data-follow-said role="status"></p>
       {% endif %}
     </div>
   </section>
@@ -239,4 +250,5 @@
   </div>
 </div>
 {{ skribl_face_maker() }}
-{% else %}{{ person_sheet(who) }}{{ safety_sheets() }}{% endif %}{% endblock %}
+{{ follow_sheets(who, fl, true) }}
+{% else %}{{ person_sheet(who) }}{{ safety_sheets() }}{% if not blocked_them %}{{ follow_sheets(who, none, false) }}{% endif %}{% endif %}{% endblock %}

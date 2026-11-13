@@ -50,7 +50,7 @@
  * a moment in the note's tint, and a drawing answer draws itself once (below).
  *
  * The words are the page's ([data-comment-words]): this file says nothing of
- * its own. Times are said by posts.js (window.SocialWhen).
+ * its own. Times are said by social.js (window.SocialWhen).
  */
 (function () {
   'use strict';
@@ -532,6 +532,7 @@
      A line that came and went there made everything under the box jump twice
      as it went. What goes wrong is still said in the box, which stays. */
   var postWord = postBtn ? postBtn.textContent : '';
+  if (postBtn) postBtn.setAttribute('data-busy', say('c_posting'));   // its width holds both words (social.css)
   function busy(on) {
     postBtn.disabled = on;
     postBtn.textContent = on ? say('c_posting') : postWord;

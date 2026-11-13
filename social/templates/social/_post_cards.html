@@ -1,4 +1,6 @@
 {#  A page of the feed's cards, for Load more (posts.feed_more): the same
-    card the page renders, so a post loaded later is the post loaded first. #}
+    card the page renders, so a post loaded later is the post loaded first;
+    and on Following what it says between them (follows: _follow.html). #}
 {% from 'social/_post.html' import post_card with context %}
-{% for c in cards %}{{ post_card(c) }}{% endfor %}
+{% from 'social/_follow.html' import feed_extra with context %}
+{% for c in cards %}{% if c.extra %}{{ feed_extra(c.extra) }}{% else %}{{ post_card(c) }}{% endif %}{% endfor %}

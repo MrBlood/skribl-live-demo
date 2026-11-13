@@ -1816,11 +1816,12 @@ with sync_playwright() as p:
             go(pg, "/social/activity")
             empty = pg.evaluate("() => (document.querySelector('.act-empty-words') || {}).textContent")
             close_ctx(ctx, pg)
-            check("Activity's words say likes: 'Who liked your posts or said something on them, and who answered you.',"
-                  " and with nothing yet 'When someone likes your post, says something on it, or answers you, you’ll see"
-                  " it here.'",
-                  sub == "Who liked your posts or said something on them, and who answered you."
-                  and empty == "When someone likes your post, says something on it, or answers you, you’ll see it here.",
+            # Since follows (the follow mock, Nov 13) the same lines say follows too.
+            check("Activity's words say likes: 'Who followed you, liked your posts or said something on them, and who"
+                  " answered you.', and with nothing yet 'When someone follows you, likes your post, says something on"
+                  " it, or answers you, you’ll see it here.'",
+                  sub == "Who followed you, liked your posts or said something on them, and who answered you."
+                  and empty == "When someone follows you, likes your post, says something on it, or answers you, you’ll see it here.",
                   f"{sub!r}; {empty!r}")
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(9, exc)

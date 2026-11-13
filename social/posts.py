@@ -3,11 +3,13 @@
 "all yes" to piece 4's choices (Nov 11).
 
     /                   Home, signed in: "Say something, then draw it...",
-                        then everyone's posts, newest first (Following comes
-                        with phase 2). Signed out, Home is the first visit.
+                        then the pill, Following | Everyone (follows.py),
+                        and its posts, newest first. Signed out, Home is the
+                        first visit.
     /posts              a post: the words and the drawing the Pad or Flip
                         handed back in compose mode (JSON).
-    /feed               the next page of the feed, for Load more (JSON).
+    /feed               the next page of the feed, for Load more, or the
+                        first of Following or Everyone, for the pill (JSON).
     /p/<id>             a post's own page: its drawing plays by itself (sound
                         off, never under Reduce Motion; posts.js), its
                         comments (comments.py), More from its author.
@@ -151,16 +153,20 @@ def _entry(post, who):
     return {"kind": "p", "at": as_utc(post.created_at), "key": "p" + post.public_id, "post": post, "who": who}
 
 
-def _posts_before(at, limit, person=None, hidden=frozenset(), viewer=None):
+def _posts_before(at, limit, person=None, hidden=frozenset(), viewer=None, among=None):
     """A page of posts (and their authors) older than `at`, newest first:
     (rows, more). Every post at the very time of a drawing's card comes after
     it (p < s), so a drawing's cursor keeps them all. Nobody in `hidden` (a
     block either way, or taken down: safety.hidden_ids) is in it, nor a post
-    taken down, but to its own author (`viewer`), who sees it with the note."""
+    taken down, but to its own author (`viewer`), who sees it with the note.
+    `among` (follows: Home's Following), a subquery of people's ids: only
+    theirs, and the viewer's own."""
     q = (sa.select(Post, Person).join(Person, Post.person_id == Person.id)
          .order_by(Post.created_at.desc(), Post.public_id.desc()).limit(limit + 1))
     if person is not None:
         q = q.where(Post.person_id == person.id)
+    if among is not None:
+        q = q.where(sa.or_(Post.person_id.in_(among), Post.person_id == (viewer.id if viewer is not None else -1)))
     if hidden:
         q = q.where(Post.person_id.notin_(sorted(hidden)))
     mine = viewer.id if viewer is not None else -1
@@ -176,19 +182,25 @@ def _posts_before(at, limit, person=None, hidden=frozenset(), viewer=None):
     return rows[:limit], len(rows) > limit
 
 
-def _drawings_before(at, limit, viewer, person=None, hidden=frozenset()):
+def _drawings_before(at, limit, viewer, person=None, hidden=frozenset(), authors=None):
     """A page of the drawings the site's people (or one of them) showed in
     Skribl's gallery and not in a post, older than `at`, newest first, each
     with its author: (entries, more). Through Skribl's list_public_posts,
     whose feed filter leaves out the people a block hides (the host installs
     it: app.py); nobody in `hidden` is let through here either, whatever
-    the host installed."""
+    the host installed. `authors` (follows: Home's Following), people's
+    public ids: only theirs (Skribl's `authors`, which takes any number)."""
     from skribl import list_public_posts
     before = None
     if at is not None:
         when, key = at
         before = (when, key[1:] if key.startswith("s") else "")
-    who_kw = {"author": person.public_id} if person is not None else {"author_prefix": PERSON_PREFIX}
+    if authors is not None:
+        who_kw = {"authors": authors}
+    elif person is not None:
+        who_kw = {"author": person.public_id}
+    else:
+        who_kw = {"author_prefix": PERSON_PREFIX}
     items, more = list_public_posts(before=before, limit=limit,
                                     viewer_id=viewer.public_id if viewer is not None else None, **who_kw)
     if not items:
@@ -204,17 +216,20 @@ def _drawings_before(at, limit, viewer, person=None, hidden=frozenset()):
             and authors[i["user_id"]].id not in hidden], more
 
 
-def feed_page(before=None, limit=PAGE, viewer=None, person=None):
+def feed_page(before=None, limit=PAGE, viewer=None, person=None, among=None, authors=None):
     """A page of Home's feed: everyone's posts and the drawings the site's
     people showed in the gallery outside a post (made with Make, or the Pad
     on its own), newest first, after `before` (a cursor); or one person's
-    (More from). (entries, next cursor or None). A drawing that is a post's
-    shows once, as the post."""
+    (More from); or, with `among` and `authors` (follows: Home's Following),
+    the people somebody follows and theirs: their ids as a subquery for the
+    posts, and their public ids for the drawings (follows.home_items).
+    (entries, next cursor or None). A drawing that is a post's shows once,
+    as the post."""
     from .safety import hidden_ids
     at = _uncursor(before) if before else None
     hidden = hidden_ids(viewer)
-    posts, more_p = _posts_before(at, limit, person, hidden, viewer)
-    drawings, more_s = _drawings_before(at, limit, viewer, person, hidden)
+    posts, more_p = _posts_before(at, limit, person, hidden, viewer, among)
+    drawings, more_s = _drawings_before(at, limit, viewer, person, hidden, authors)
     out = sorted([_entry(p, who) for p, who in posts] + drawings, key=lambda e: (e["at"], e["key"]), reverse=True)
     page = out[:limit]
     more = len(out) > limit or more_p or more_s
@@ -327,9 +342,12 @@ def home_page(skribl_blueprint="skribl"):
     me = current_person()
     if me is None:
         return None
-    rows, nxt = feed_page(viewer=me)
+    # FOLLOWING OR EVERYONE (follows): their own pick, else Following once
+    # they follow somebody, Everyone before that.
+    from .follows import home_cards, home_items, home_shows
+    items, nxt, show = home_items(me, home_shows(me))
     note = request.args.get("note")
-    return _page("feed.html", here="home", cards=cards(rows, me), next=nxt, token=csrf_token(),
+    return _page("feed.html", here="home", cards=home_cards(items, me), next=nxt, show=show, token=csrf_token(),
                  note=note if note in NOTES else None,
                  pad_compose=url_for(skribl_blueprint + ".skribl_editor", compose=1, gallery=1),
                  flip_compose=url_for(skribl_blueprint + ".skribl_flip", compose=1, gallery=1))
@@ -393,11 +411,18 @@ def register(bp, skribl_blueprint="skribl"):
     @bp.get("/feed")
     @_rests(json_answer=True)
     def feed_more():
-        """The next page of the feed, as its cards (Load more): {html, next}."""
+        """The next page of the feed, as its cards (Load more), or the first
+        page of Following or Everyone (?show=, Home's pill; follows):
+        {html, next, show}. A cursor says which it continues."""
+        from .follows import home_cards, home_items, is_following_cursor
         me = current_person()
-        rows, nxt = feed_page(request.args.get("before"), viewer=me)
-        html = render_template("social/_post_cards.html", cards=cards(rows, me), me=me)
-        return jsonify({"html": html, "next": nxt})
+        before = request.args.get("before") or None
+        show = request.args.get("show")
+        if before:
+            show = "following" if is_following_cursor(before) else "everyone"
+        items, nxt, show = home_items(me, show if show in ("following", "everyone") else "everyone", before)
+        html = render_template("social/_post_cards.html", cards=home_cards(items, me), me=me)
+        return jsonify({"html": html, "next": nxt, "show": show})
 
     @bp.get("/p/<public_id>")
     @_rests()

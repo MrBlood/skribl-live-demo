@@ -491,11 +491,15 @@ READ = """() => {
     out.read++; out.lowest = Math.min(out.lowest, Math.round(k * 100) / 100);
     if (k < 4.5) out.low.push((e.className || e.tagName) + ' "' + e.textContent.trim().slice(0, 24) + '" ' + k.toFixed(2));
   }));
+  // A pill's option (Home's Following | Everyone: follows) is 36px to see and
+  // 44px to a finger, by its band: it counts when a press at its middle and
+  // 21px above and below lands on it.
   document.querySelectorAll('a[href], button, summary, label.check, input:not([type=hidden]):not([type=checkbox])').forEach(e => {
     if (!e.getClientRects().length || e.closest('[hidden], .words, #makeSheet, ' + SKRIBLS)) return;
     if (e.matches('input') && e.closest('.at')) { const a = e.closest('.at').getBoundingClientRect();
       if (a.height < 44) out.small.push('field ' + (e.id || e.name) + ' ' + Math.round(a.height)); }
     else { const r = e.getBoundingClientRect();
+      if (e.matches('.fo-seg > button')) { const mid = r.left + r.width / 2, hit = d => { const x = document.elementFromPoint(mid, r.top + r.height / 2 + d); return !!x && (x === e || e.contains(x)); }; if (r.width >= 44 && hit(0) && hit(-21) && hit(21)) return; }
       if (r.width < 44 || r.height < 44) out.small.push((e.className || e.tagName) + ' "' + (e.textContent || e.value || '').trim().slice(0, 20) + '" ' + Math.round(r.width) + 'x' + Math.round(r.height)); }
   });
   document.querySelectorAll('input[type=text], input:not([type]), textarea, select').forEach(e => {
@@ -1342,7 +1346,8 @@ with sync_playwright() as p_:
                 "social_posts",                          # posts: piece 4
                 "social_blocks", "social_reports",       # report and block: piece 5
                 "social_comments",                       # comments: phase 2
-                "social_likes"}                          # likes: phase 2
+                "social_likes",                          # likes: phase 2
+                "social_follows"}                        # follows: phase 2
         want_idx = {"ix_social_people_public_id", "ix_social_people_handle_key", "ix_social_people_user_handle",
                     "ix_social_passkeys_credential_id", "ix_social_passkeys_public_id", "ix_social_passkeys_person_id",
                     "ix_social_invites_code_hash", "ix_social_invites_public_id", "ix_social_invites_expires_at",
@@ -1364,8 +1369,10 @@ with sync_playwright() as p_:
                     "ix_social_comments_owner_created", "ix_social_comments_to_created",
                     # likes: once a person a thing, a thing's newest first, whose newest first
                     "ix_social_likes_person_post", "ix_social_likes_person_drawing", "ix_social_likes_post_created",
-                    "ix_social_likes_drawing_created", "ix_social_likes_owner_created"}
-        check("on an empty SQLite file the site's chain builds its ten tables with every index, stamps its own"
+                    "ix_social_likes_drawing_created", "ix_social_likes_owner_created",
+                    # follows: one row a pair, and newest first both ways
+                    "ix_social_follows_pair", "ix_social_follows_follower_created", "ix_social_follows_followed_created"}
+        check("on an empty SQLite file the site's chain builds its eleven tables with every index, stamps its own"
               " version table (social_alembic_version) at its head, and touches nothing of Skribl's",
               r1.returncode == 0 and names == want | {"social_alembic_version"} and want_idx <= idx
               and stamps == {"social_alembic_version": [heads]},

@@ -22,7 +22,9 @@ block hides from you, is "gone", as it is to the page.
 
 A BLOCK IS BOTH WAYS, AND QUIET. While one stands, neither person sees the
 other's posts or drawings, and the one blocked meets an empty profile where
-the blocker's was, as if nobody had that name; nobody is told. The blocker
+the blocker's was, as if nobody had that name; nobody is told. It ends a
+follow between them, both ways, for good (follows), and none can begin
+while it stands. The blocker
 still finds the blocked person's profile, saying they are blocked, with
 Unblock. It reaches every page that shows either of them:
 
@@ -299,6 +301,12 @@ def register(bp):
                     sess.flush()
             except sa.exc.IntegrityError:
                 pass            # blocked already, a moment ago
+        # A BLOCK ENDS A FOLLOW BOTH WAYS, and for good (follows): the rows go,
+        # so lifting the block brings none back; follows.py refuses a new one
+        # while it stands.
+        from .follows import end_between
+        end_between(me.id, who.id)
+        sess.flush()
         return jsonify({"ok": True, "handle": who.handle})
 
     @bp.post("/@<handle>/unblock")

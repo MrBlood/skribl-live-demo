@@ -85,11 +85,18 @@ def register(bp, skribl_blueprint="skribl"):
             # A block they made, or a takedown: nobody's, to anybody else.
             return _page("nobody.html", 404, here="nobody", handle=who.handle)
         note = request.args.get("note") if mine else None
+        # FOLLOWS (B, yours alone): on somebody else's page only whether you
+        # follow them; on your own, who follows you and whom you follow, for
+        # your eyes and nobody else's.
+        from .follows import for_owner, is_following
         # Your own profile is You's page; somebody else's is none of the
         # bar's places, so no tab says it is. The page's token for everybody:
         # Report is anybody's, Block anybody's signed in (piece 5).
         return _page("profile.html", here="you" if mine else "profile", who=who, mine=mine,
                      blocked_them=blocked_them,
+                     following=not mine and not blocked_them and is_following(me, who),
+                     fl=for_owner(me) if mine else None,
+                     signin_here=url_for("social.signin", next=profile_url(who.handle)),
                      share_url=public_origin() + profile_url(who.handle),
                      token=csrf_token(),
                      note=note if note in NOTES else None,

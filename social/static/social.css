@@ -79,6 +79,13 @@
      drawing's paper, which is the same in both themes, so its line is the
      deeper blush in both (3.35:1 on the cream paper at full strength). */
   --heart-paper: #e64a78;
+  /* THE ONE PILL (follows: Home's Following | Everyone, and the lists'
+     Followers | Following): the Gallery's New / Hot as the site's pages wear
+     it (gallerysection.css: --seg-on-fill, --seg-on-ink, --seg-off-ink),
+     value for value. Same role, same values; the site names its own. */
+  --pill-on-fill: rgba(124, 92, 255, 0.22);
+  --pill-on-ink: #3f27a8;
+  --pill-off-ink: #3f4756;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -118,6 +125,8 @@
        4.99:1 and 4.39:1 on a card. --heart-paper stays: the paper is cream. */
     --heart-2: #ff4d78;
     --heart-3: #ff2d5f;
+    --pill-on-ink: #d4c9ff;
+    --pill-off-ink: #b7bfcc;
   }
 }
 
@@ -925,7 +934,24 @@ button.make-door { width: 100%; border: 0; font: inherit; text-align: left; curs
 .comments-title .cm-count { margin-left: 2px; color: var(--ink-2); font-size: 18px; font-weight: 600; }
 .cm-box { margin: 0 0 8px; padding: 14px; border-radius: 20px; }
 .cm-box .face-ring.composer-face { --skribl-face-size: 36px; width: 36px; height: 36px; }
-.cm-box .composer-acts { margin-top: 10px; }
+.cm-box .composer-acts { margin-top: 10px; flex-wrap: wrap; row-gap: 6px; }
+/* THE BOX KEEPS TO ITS COLUMN, whatever the font and however much is typed
+   (main's run after #883: 350 in a 340 column in GitHub's wider font, and
+   360 here once the counter showed). Draw, Flip and Post share a line while
+   they fit; when they don't, Post keeps to the right on the next. The counter
+   ("5 left") reads on its own line under Post, at its right edge, so Post
+   never moves while someone types. */
+.cm-box .composer-post { margin-left: auto; }
+/* POST IS AS WIDE AS ITS LONGER WORD, as Following's button is: "Posting…"
+   is measured under "Post" in a row with no height, so saying it never
+   widens the button and the line never wraps differently as the comment
+   goes (in this box's font it pushed Post onto a second line, and the box
+   grew 50px as it folded away). Its sides are 12px, so both words still fit
+   the 96px it always was. */
+.cm-box .composer-post { display: inline-grid; justify-items: center; align-content: center; gap: 0; padding: 0 12px; }
+.cm-box .composer-post::after { content: attr(data-busy); height: 0; overflow: hidden; visibility: hidden; }
+.cm-box .composer-left { order: 1; flex: 0 0 100%; margin-left: 0; text-align: right; }
+.cm-box .composer-left:empty { display: none; }
 .cm-box .chip { min-height: 44px; padding: 0 16px; }
 /* A drawing waiting in the box, and a drawing answer: the mock's 150px, in
    the drawing's own shape (Skribl's in-post player), on the words' edge. */
@@ -990,7 +1016,10 @@ button.make-door { width: 100%; border: 0; font: inherit; text-align: left; curs
    pops. "Say the first thing" folds the same way, in step with the box: one
    room closes as the other opens, and posting the first comment takes its
    place. comments.js says open or closed; the stylesheet moves them. */
-.cm-fold, .cm-first-fold { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 0.32s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.cm-fold, .cm-first-fold {
+  display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: 0fr; min-width: 0;
+  transition: grid-template-rows 0.32s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
 .cm-fold > .cm-fold-in, .cm-first-fold > .cm-fold-in {
   min-height: 0; overflow: hidden; visibility: hidden; transition: visibility 0s linear 0.32s;
 }
@@ -1246,6 +1275,112 @@ button.make-door { width: 100%; border: 0; font: inherit; text-align: left; curs
   .act-head { position: static; width: auto; height: auto; margin: 4px 0 8px; overflow: visible; clip: auto; white-space: normal; }
   .act-head + .act-sec { margin-top: 18px; }
 }
+
+/* ---- FOLLOWING (phase 2, follows; the follow mock and the owner's "Yes to
+   all", B, Nov 13), in the mock's own sizes. Follow first in the row on a
+   person's page; your own page's "Followed by…", the twin of "Liked by…" (its
+   own classes, .lk-by and .lk-faces); the lists in Make's sheet (.lk-list,
+   .lk-row: the people on one card); Home's pill and what Following says
+   between its cards; Activity's small Follow. SAME ROLE, SAME TOKEN: an
+   action is --fill with white on it, the second button --btn2-*, a sheet
+   --sheet-paper, a choice the one pill. ---- */
+/* THE BUTTON. Follow is the action (--fill, its drop), a plus in our pen;
+   Following is the second button, its check in our pen. Both words sit in
+   one grid cell, so the button is as wide as the wider in any font and
+   nothing beside it ever moves. A tap fades the fill and the words across
+   and draws the check (0.36s, from a tenth of a second in); nothing moves.
+   Under Reduce Motion it only fades, the check there at once. follows.js
+   puts .fo-anim on as it taps, so a page that loads following draws nothing. */
+.fo-btn {
+  display: inline-grid; grid-template-areas: "say"; place-items: center; padding: 0 18px;
+  transition: background-color 0.26s ease, color 0.26s ease, border-color 0.26s ease, box-shadow 0.26s ease;
+}
+.fo-btn > .fo-say {
+  grid-area: say; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  transition: opacity 0.2s ease;
+}
+.fo-btn:not(.is-following) { background: var(--fill); color: var(--on-fill); border-color: transparent; box-shadow: var(--fill-drop); }
+.fo-btn:not(.is-following) > .fo-on, .fo-btn.is-following > .fo-off { opacity: 0; }
+.fo-check path { stroke-dasharray: 1 1; stroke-dashoffset: 1; }
+.fo-btn.is-following .fo-check path { stroke-dashoffset: 0; }
+@media (prefers-reduced-motion: no-preference) {
+  .fo-btn.fo-anim.is-following .fo-check path { transition: stroke-dashoffset 0.36s cubic-bezier(0.3, 0.6, 0.3, 1) 0.1s; }
+}
+/* Unfollowed, the check fades with its word and is put away once it has
+   gone: nothing un-draws (follows.js puts .fo-fade on). */
+.fo-btn.fo-fade .fo-check path { transition: stroke-dashoffset 0s linear 0.2s; }
+@media (prefers-reduced-motion: reduce) { .fo-check path { stroke-dasharray: none; } }
+@media (hover: hover) {
+  .fo-btn:not(.is-following):hover { filter: brightness(1.08); }
+  .fo-btn.is-following:hover { border-color: var(--brand); }
+}
+/* YOUR OWN PAGE'S LINE, under the buttons, where "Liked by…" sits under a
+   post's line: their faces and "Followed by Mira, Theo and 2 others". */
+.prof-acts + .fo-by { margin-top: 8px; }
+/* THE ONE PILL: the Gallery's New / Hot (gallerysection.css .seg-track, as
+   the site's pages wear it), value for value: 44px, every option 36px to see
+   and 44px to a finger, the tint sliding under the chosen one (follows.js
+   places it); until it is placed the chosen option wears the tint itself.
+   Under Reduce Motion it is put there. */
+.fo-seg {
+  position: relative; display: inline-flex; align-items: stretch; height: 44px; padding: 3px;
+  border: 1px solid var(--card-line); border-radius: 12px; background: var(--card);
+}
+.fo-seg > button {
+  position: relative; z-index: 1; display: inline-flex; align-items: center; justify-content: center;
+  min-width: 44px; margin: 0; padding: 0 14px; border: 0; border-radius: 9px; background: transparent;
+  color: var(--pill-off-ink); font: 600 13px/1 var(--font); white-space: nowrap; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.fo-seg > button::before { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 44px; transform: translateY(-50%); }
+.fo-seg > button:first-of-type::before { left: -4px; }
+.fo-seg > button:last-of-type::before { right: -4px; }
+.fo-seg > button[aria-pressed="true"] { color: var(--pill-on-ink); }
+.fo-seg:not([data-pill]) > button[aria-pressed="true"] { background: var(--pill-on-fill); }
+.fo-seg > .fo-slider {
+  position: absolute; top: 3px; bottom: 3px; left: 3px; width: 0; border-radius: 9px; background: var(--pill-on-fill);
+  opacity: 0; pointer-events: none;
+  transition: transform 0.42s cubic-bezier(0.4, 0, 0.2, 1.1), width 0.42s cubic-bezier(0.4, 0, 0.2, 1.1), opacity 0.18s ease;
+}
+.fo-seg[data-pill] > .fo-slider { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { .fo-seg > .fo-slider { transition: none; } }
+/* HOME'S PILL, under the composer, over the posts. A tap glides the pill,
+   fades the posts, changes them while they can't be seen, and fades them
+   back (follows.js); the page doesn't scroll. Reduce Motion: a fade. */
+.fo-home { display: flex; width: max-content; margin: 2px 0 14px; }
+.feed-swap { overflow-anchor: none; transition: opacity 0.2s ease; }
+.feed-swap.is-out { opacity: 0; transition-duration: 0.14s; }
+/* FOLLOWING NEVER RUNS OUT: the people you follow, then a check and "You're
+   caught up…", then Fresh from everyone. Somebody who follows nobody gets a
+   kind card, then everyone's. */
+.fo-caught { display: flex; align-items: center; gap: 12px; margin: 8px 4px 0; color: var(--ink-2); font-size: 15px; line-height: 1.4; }
+.fo-caught .ic { width: 22px; height: 22px; color: var(--brand); }
+.feed > .fo-fresh { margin: 8px 0 0; }
+.fo-none {
+  display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 22px 18px 20px;
+  border: 1px solid var(--card-line); border-radius: 22px; background: var(--card); box-shadow: var(--card-drop);
+  text-align: center;
+}
+.fo-none h2 { margin: 0; font: 700 19px/1.3 var(--font); }
+.fo-none p { max-width: 26em; margin: 0; color: var(--ink-2); font-size: 15px; line-height: 1.45; }
+.fo-none .btn { margin-top: 4px; }
+/* THE LISTS: Make's sheet, the one pill across it, both lists in one place
+   (so the sheet keeps its height); the one shown fades in once the other
+   has faded out. */
+.fo-sheet .fo-seg { display: flex; width: 100%; margin: 0 0 12px; }
+.fo-sheet .fo-seg > button { flex: 1; }
+.fo-lists { display: grid; }
+.fo-lists > .fo-list {
+  grid-area: 1 / 1; opacity: 0; visibility: hidden;
+  transition: opacity 0.14s ease, visibility 0s linear 0.14s;
+}
+.fo-lists > .fo-list.is-on { opacity: 1; visibility: visible; transition: opacity 0.2s ease 0.14s, visibility 0s linear 0.14s; }
+.fo-empty { padding: 16px 0; color: var(--ink-2); font-size: 15px; line-height: 1.45; }
+/* ACTIVITY: a follow's face wears a small Follow, the action's purple and a
+   white plus in our pen, on the ground's own circle; no picture. */
+.fo-badge > .fo-disc { display: grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; background: var(--fill); color: var(--on-fill); }
+.fo-badge .fo-disc .ic { width: 13px; height: 13px; }
+.act-pic.is-none { visibility: hidden; }
 
 /* YOUR REPORTS (piece 5): a card per thing reported, as the mock drew it; a
    child's safety ringed in the danger fill, its picture blurred until Open it. */
