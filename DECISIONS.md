@@ -37462,7 +37462,26 @@ whole of /gallery for the attribute's name, which /gallery's own <style>
 comment spelled: the comment no longer spells it, and the row reads the
 section's root.
 
-THE AFFECTED SUITES: FINAL RUN PARAGRAPH.
+THE AFFECTED SUITES, SIDE BY SIDE (run_parallel -j 2), on the final tree
+(all of it but this paragraph), 50.6 minutes: verify_socialposts 42/42,
+verify_gallery 232/232, verify_standin 22/22, verify_seam 497/497,
+verify_hostseams 114/114, verify_social 40/40, verify_socialprofile 54/54,
+verify_socialactivity 44/44, verify_socialcomments 67/67,
+verify_socialsafety 34/34, verify_a11ypages 162/162, verify_a11y 444/444,
+verify_docs 144/144, verify_contrast 628/628 (/gallery's sheet changed); and
+the suites that read gallery.js, the Gallery section or init_skribl:
+verify_captions 76/76, verify_hot 56/56, verify_fullfade 70/70, verify_icons
+60/60, verify_player_isolation 85/85, verify_surfaces 13/13, verify_library
+247/247, verify_tilereport 32/32, verify_galib 176/176, verify_example
+59/59 and verify_integration 29/29. verify_sociallikes was INTERMITTENT:
+95/96 beside the others, 96/96 alone. Its red was section 15's rising heart
+in dark, whose largest step between two frames read 4.06px beside the others
+(1.37px in light) and 1.37px alone: a dropped frame under load (two other
+sessions ran suites on this box throughout), not a defect; nothing of the
+heart, likes.js or the player's marks changed. verify_migrations was not
+run: the chain is unchanged. The full battery was not run; main's run after
+the merge is. This paragraph is the only change since; verify_docs, the
+suite that reads it, ran on it again.
 
 Not tested here: WebKit (the owner's iPhone: its tap targeting near a
 control, a long press on the title link) and Firefox (main's lanes run
