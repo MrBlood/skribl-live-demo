@@ -37506,3 +37506,230 @@ page's policy allows); Post's sides stay 12px. Same result for the person,
 in any font. Section 12's row asks that comments.js set it (red with the
 call removed, green with it); sections 12 and 33 are green in this box's font
 and in DejaVu, and verify_socialposts 42/42 alone.
+
+## After v330 -- Settings: the theme, one choice for Blooby, Pad and Flip
+
+The owner asked "where is the theme picker and other settings?", and on Nov
+13 said "Yes to all" to the Settings mock: every default. Built in the mock's
+own sizes and words (you.html's Theme row and you.js, the theme's blocks of
+social.css, the boot, metas and rail of base.html, the gear of
+profile.html), with one change in Skribl, for every host.
+
+- THE THEME ROW, FIRST ON SETTINGS, a small card of its own: the Pad's own
+  row in its words and order, Theme, then System, Dark, Light, System keeping
+  the Pad's tip ("Follow the device's appearance setting", the Pad's and
+  Flip's own string to the letter), and "For Blooby, Pad and Flip" under the
+  row's name. The switch is the Pad's: 216 x 52, three 44px choices in equal
+  thirds (69.33px), 15px words at one weight (600), one pill sliding under
+  the choice in the Pad's 0.26s. The card is 86px, so Your passkeys sits
+  102px lower: its top at 236.94px on a touch phone and 217.75px on a desk,
+  the mock's own figures to the hundredth.
+- ONE CHOICE, SKRIBL'S OWN, kept under skribl_theme_v1 and read and set only
+  through Skribl's own theme code: every page of the site includes Skribl's
+  head boot (skribl/_skribl_theme_boot.html, inline in <head>, before the
+  first paint) and loads lib/theme.js; the row calls SkriblTheme.set(). Dark
+  on Settings opens the Pad and Flip dark, their switch saying Dark; Light in
+  the Pad's menu is light back on the site, its row saying Light. Another tab
+  follows, and so does a page the back button brings back whole (social.js,
+  on pageshow, through SkriblTheme.apply). Skribl knows nothing of the site.
+- THE CSS FOLLOWS THE STAMP: light chosen is the light ramp, dark chosen the
+  dark ramp, and nothing stamped (no script ran) follows the device, before
+  any script runs.
+- THE BROWSER'S BAR follows the choice: both of the site's theme-color metas
+  (one for a light device, one for a dark) carry both grounds, and the boot
+  says the chosen one in each, whichever the device picks.
+- THE SWITCH CROSS-FADES: a tap fades the whole page into the chosen theme in
+  the site's 0.28 seconds (a view transition in the page, the fade a page
+  change already has) while the pill slides there; under Reduce Motion the
+  page still fades and the pill is put there. Never a flash: the next page
+  opens in the chosen theme from its first frame.
+- FINDING SETTINGS: (a) the gear says Settings, at the top right of your own
+  profile on a phone (112.48 x 44 here, in the Share button's dress) and in
+  your row of buttons on a desk (125.48 x 44, after Share); (b) on a desk,
+  Settings in the rail above your name at its foot, on every page (215 x 52),
+  lit like Home on Settings. A phone's bar keeps its four places. Not (c).
+- SIGNED OUT, nothing new: the device decides, and the Pad's and Flip's own
+  switch (Make is open to everyone) sets the one choice.
+- NO OTHER SETTINGS NOW: the mock's list waits for the owner to pick.
+
+THE ONE CHANGE IN SKRIBL, FOR EVERY HOST: THE BOOT SAYS DARK OUT LOUD.
+data-theme is "light" or "dark", never left off (the boot, and
+lib/theme.js's apply()), so a host can tell a choice from nothing stamped.
+Skribl's own stylesheets only look for light, so its pages look as they did.
+In the same two places one line more: every theme-color meta that carries
+both grounds is set to the chosen one, dark included (before, only a light
+page re-stamped the first meta). Without it the site's two metas could not
+agree with the choice whichever the device picked, and the bar would be the
+device's own on a phone set the other way. It is general, for any host's
+metas, keyed by media or not. docs/INTEGRATION.md documents the boot and
+lib/theme.js as a host's seam ("Skribl's theme on your pages").
+
+JUDGMENT CALLS, said so the list reads true:
+- THE PILL WEARS THE SITE'S ONE PILL, not the mock's inks. The mock was drawn
+  before Following gave the site tokens for the one pill (--pill-on-fill,
+  --pill-on-ink, --pill-off-ink: the Gallery's values, as Home's pill wears
+  them), and reached for the editors' #36209a and the site's --ink-2. Same
+  role, same token: the chosen word is #3f27a8 on light and the others
+  #3f4756, reading 7.66:1 and 9.35:1 where the mock's read 8.65 and 7.56; on
+  dark they are the mock's to the hundredth (6.85 and 7.25). The track is
+  the mock's, the second button's dress.
+- ONE INLINE SCRIPT ON THE SITE'S PAGES. The mock put its stand-in for the
+  boot in with a browser's init script, which no policy sees. The site's
+  policy was script-src 'self' alone ("every script is a file"); the boot has
+  to run inline before the first paint, so the site makes a nonce for each
+  response, gives it to its pages as csp_nonce (the name the partial reads,
+  as on Skribl's pages) and allows it in script-src. The boot is the one
+  inline script; never 'unsafe-inline' (social/__init__.py, site_csp).
+- THE DARK RAMP WRITTEN TWICE in social.css, once for each way to dark, and
+  held to one by a check: CSS cannot say "dark chosen, or nothing stamped on
+  a dark device" in one rule. light-dark() could, but a phone before Safari
+  17.5 would lose every colour.
+- THE SWITCH AS SETTINGS STARTS: the choice lives in this browser, so the page
+  is sent with nothing pressed and you.js presses it. Read here on every
+  frame: three or four frames in, the pill fades in at its place over 0.18s,
+  never sliding in. The page is in the theme from its first frame; the pill
+  comes a moment later. Pressing it before the first paint would need a
+  script that reads the key, the boot's contract, which the site must not.
+- A TAP WHILE THE PAGE FADES: during a view transition the browser shows a
+  picture of the page, and a tap lands on the page itself, not the switch.
+  you.js matches such a tap to the choice under it and keeps it, and a choice
+  made while the page fades waits for that fade to end, then fades again, so
+  the page never jumps from half way. Not in the mock; a quick second tap
+  would otherwise be lost.
+- LIT ON SETTINGS, AND YOU TOO: the rail's Settings is lit on Settings and on
+  the pages it leads to that lit You before (Invites, deleting the account),
+  and You stays lit there, as the mock's own picture of (b) has it; a phone
+  is as it was. Reports lit nothing and still lights nothing. Settings and
+  deleting the account say here='settings' now ('you' before; your profile
+  and Edit profile still say it).
+- THE THEME'S FADE IS 0.28s UNDER REDUCE MOTION TOO: its length moved out of
+  the motion query in social.css. The fade between pages is still only asked
+  for without Reduce Motion, as on Skribl's pages.
+- LIB/THEME.JS ON EVERY PAGE OF THE SITE, not only Settings: with the stamp, a
+  page open on System would stop following the device as it changes (the
+  media query followed it before), and another tab's choice would not reach
+  it.
+- A NARROW PHONE: below 370px the words would have under 76px, so the switch
+  goes under them. The mock drew 402 and 1280 only.
+- THE WORD IS THE NAME: the gear's aria-label and title went with the
+  icon-only gear (WCAG's label in name).
+- A browser without view transitions (Safari before 18) changes at once.
+- The demo's own sign-in page (app.py) keeps its small copy of the boot,
+  which only says light; its own CSS only reads light, so it is unchanged.
+
+Pad and Flip: shared, and nothing visible changes in either. Their switch is
+exactly as it was and now sets Blooby too; the change is in Skribl's head
+boot and lib/theme.js, which both editors share (one module, both editors):
+data-theme="dark", which neither stylesheet reads. Photographed on the base
+tree and on this one (each editor with its menu closed and open on Settings,
+a touch phone and a desk, a light and a dark device, with nothing, Dark and
+Light kept: 48 pictures), 43 were the same pixel for pixel and 5 differed by
+at most 2 levels in at most 26 pixels of Flip's page strip, the same as this
+tree photographed against itself. Nothing is left for Flip to catch up on.
+
+THE FOUR: kind (the page cross-fades, never a flash or a jump, a quick tap is
+kept, the next page opens in your choice); simple (one row in the Pad's own
+words, the word Settings where the gear was); playful (the pill slides as
+the page fades, and Blooby, the Pad and Flip change together); powerful (one
+choice for three places, and Settings one click from every page on a desk).
+
+CONTRAST, measured on the built pages (verify_socialsettings section 9),
+phone (touch) and desk, light and dark, with System and with a choice
+against the device: 474 words on 24 screens (Settings with the row, your
+profile with Settings, a desk's rail on Home and lit on Settings, deleting
+and Invites), none under 4.5:1, the lowest 5.33:1 (the white Make on the
+purple, as everywhere). The new words: Theme 17.95:1 and 14.05:1, its line
+7.56:1 and 8.59:1, Settings on its button 17.95:1 and 15.09:1, the rail's
+Settings 7.36:1 and 10.49:1 (lit, 17.47:1 and 19.43:1), the switch's chosen
+word on its pill 7.66:1 and 6.85:1 and the other two 9.35:1 and 7.25:1. The
+track's outline on the card is the site's button outline (1.56:1 and
+1.61:1), as every button's. Every target 44px to a finger (Home's pill by its
+44px band, as the site's censuses count it); no text field anywhere new, and
+none under 16px. verify_contrast does not read /social and no Skribl sheet
+or token changed, so it was not run.
+
+THE CHECKS. verify_socialsettings.py, ten sections and 32 rows through the
+demo's own server, people joining with Chromium's virtual authenticator: the
+row (its words, order and tip against the Pad's and Flip's own, its sizes,
+its name, its pill, its first frames); one choice both ways (Settings to the
+Pad and Flip through Make's doors, the Pad's and Flip's menus to the site on
+a dark device, the key and nothing else, another tab, a page brought back,
+the site's code reaching only SkriblTheme and Skribl's naming nothing of
+the site); System and the device (nothing kept and System on both, the
+device changing, no script at all); the next pages' first 40 frames and the
+bar as <body> appears; the cross-fade read on every 1/60 s frame on the
+transitions' own clock (every animation paused and stepped, the page's
+brightness read off the screen away from the pill: 16 frames, the biggest
+13.6% on a phone and 13.7% on a desk, never back, no flash; each half
+280ms; the pill 69.33px over 15 frames, the biggest 17%; under Reduce Motion
+the same fade and the pill put there in one); a tap 90ms into the fade
+kept, both fades whole; the gear's word on a phone and a desk, nothing
+moving for it and nobody else's profile having it; the rail on ten pages,
+lit where it should be and only there, a phone's four places; signed out;
+the dark ramp's two copies word for word and all 45 tokens the same in the
+three ways to dark and the three to light; words, marks and targets; no
+page, console or CSP errors. verify_theme: its six dark rows read "dark",
+and two new rows, the boot alone saying dark with every script blocked, and
+a host's page with two media-keyed metas both following (and a meta of its
+own left alone). verify_library: its two dark rows read "dark".
+verify_social: section 7's policy row (one inline script, the boot, by a
+nonce new on every response, never 'unsafe-inline', the same as the Pad's
+boot) and section 8's seams (the boot partial documented).
+verify_socialprofile's census finds the gear by where it leads;
+verify_socialactivity's desk rail has Settings before You.
+
+EVERY NEW OR CHANGED ROW WAS SHOWN RED by a break of its own, each in a
+throwaway copy of the committed tree (git archive), its section run alone,
+unbroken copies beside them as controls: 53 breaks over 65 runs, every one
+red on its own row in the end (71 rows meant to go red); 8 control runs, 7
+green (verify_socialsettings whole 32/32, verify_theme 124/124,
+verify_library 247/247 and the base tree's 247/247, verify_social 7 and 8
+7/7, verify_socialprofile 1 9/9, verify_socialactivity 1 4/4) and one that
+could not post its fixture (below). verify_socialsettings, 46: the line's
+words; Dark and Light swapped; the tip with a curly apostrophe; a 228px
+switch; a 94px card; a bold chosen word; the editors' ink; the group
+unnamed; the pill sliding in as the page starts; a key of the site's own; a
+stylesheet keyed on the device alone; the switch saying System whatever is
+kept; no pageshow; no onChange; the site stamping the attribute; Skribl
+naming /social; System always light; the device's change unheard; no copy
+for nothing stamped; the old boot; the theme put in two frames late; one
+meta; a snap; a 30ms fade; a 0.4s fade; the fade's length back in the motion
+query; no glide; a glide under Reduce Motion; no fade under Reduce Motion; a
+tap lost; a tap not waiting; the icon-only gear; the boxed gear; a row above
+the face; Settings on everybody's profile; Settings never lit; lit
+everywhere; below You; in a phone's bar; in the rail signed out; a token
+apart; a token changed under @supports; faint words; a 38px switch; a faint
+pill; an inline script. verify_theme and verify_library on the old boot and
+the old lib/theme.js: 107/124, all eleven changed rows red, and 244/247,
+both rows red (one on two pages). verify_social, three: the policy without
+the nonce, 'unsafe-inline', the boot's name gone from INTEGRATION.md.
+verify_socialprofile and verify_socialactivity, one each (the gear leading
+Home; no Settings in the rail).
+
+FOUND WRONG, AND MENDED, all in the instruments, each red on its row now:
+the Pad's tip read as nothing (the editors' styled tooltips move a title into
+data-tip as they start); the seam row read the key in the site's comments (a
+check for absence matches the mechanism: it reads code, comments and
+docstrings out); the census counted Home's pill's 36px options as small (it
+counts the band now, as the site's other censuses); the Pad-sets-the-site
+row ran on a light device, where Light chosen and a site ignoring it read
+the same (a dark device now); the tap-during-the-fade row stayed green with
+the waiting taken out, because a fade started mid-way ends the first at
+once, so "the second began as the first ended" held either way (each fade
+must run its whole length now, and the break is red); the row's first
+frames were not read at first. Four calibration runs died on my helper
+servers, not on their breaks: verify_theme's fixture post was refused, on its
+break and on its control (403: the helper ran with the site suites' CSRF
+switch on), and verify_library's break twice (that, then a stray server from
+an earlier run on its port); all ran again on the harness's own server, the
+breaks red on their rows and the control green.
+
+THE AFFECTED SUITES, SIDE BY SIDE: RUN_PARAGRAPH
+
+Not tested here: WebKit, the owner's iPhone: the cross-fade (Safari has a
+page's own view transitions from 18), the theme in place before the first
+paint, and a real back-forward cache restore (Playwright's Chromium keeps
+none here, and the site's signed-in pages are no-store, so that row drives
+a restore's event, not a restore); Firefox; SF and Segoe UI (every measure
+is in this box's font, Inter: the Settings buttons are 112.48 and 125.48
+here); and the live site.
