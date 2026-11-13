@@ -152,6 +152,7 @@ BATCHES = [
     ["verify_socialactivity.py"],          # measures — Activity's dot and a landed comment's glow read on every frame; its own server
     ["verify_sociallikes.py"],             # measures — the heart's draw and fade, the pill growing round it and a landing read on every frame; its own server
     ["verify_socialfollow.py"],            # measures — the button's fade and draw and Home's pill read on every frame; its own server
+    ["verify_socialsettings.py"],          # measures — the theme's cross-fade read off the screen on every frame, the first frames of the next page; its own server
     ["verify_clouddrafts.py"],             # measures — real drawings in its own host app (v316)
     ["verify_flipspeed.py"],               # measures — pixels mid-stroke on Flip (v317)
     ["verify_sheetswipe.py"],              # touch — every sheet swipes away (v317)
