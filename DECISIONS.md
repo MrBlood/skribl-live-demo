@@ -37108,7 +37108,12 @@ verify_socialauth's chain row the eleventh table and its three indexes;
 verify_socialactivity's and verify_sociallikes' rows Activity's new words;
 verify_socialsafety a row that a block ends a follow both ways and none can
 begin; verify_socialprofile a row for the row of buttons (Follow first on
-somebody else's page, none on your own).
+somebody else's page, none on your own); verify_socialauth's and
+verify_socialposts' own censuses of every target, which read signed-in Home,
+count a pill's option by its 44px band, as this suite's does (each its own
+copy of the census, by the site's habit). verify_sociallikes' census reads
+Home scrolled to a card, where the pill is out of view: a pill made 36px left
+its row green, so it is unchanged.
 
 MOTION JUDGED FAIRLY. Every motion row reads its thing on every animation
 frame, and a step is judged over the display frames it spans (60 a second),
@@ -37125,10 +37130,10 @@ one list gone before the other comes.
 
 EVERY NEW OR CHANGED ROW WAS SHOWN RED by a break of its own, each in a
 throwaway copy of the committed tree (git archive), its section run alone,
-with the copy unbroken beside each section as a control: 96 breaks over 107
-runs in three rounds, 94 meant to go red, every one red on its own row in
-the end, and two that check the readers and stay green; 24 controls, all
-green. verify_socialfollow, 87: Follow after Share; not the action; named
+with the copy unbroken beside each section as a control: 99 breaks over 110
+runs in four rounds, 96 meant to go red, every one red on its own row in the
+end; two that check the readers and stay green; and one that showed a change
+could not matter (below); 27 controls, all green. verify_socialfollow, 87: Follow after Share; not the action; named
 without whom; its plus not the pen's; on your own page; on a card; "Follows
 you" on a card; gone signed out; not kept; each word its own width; Unfollow
 not the action; the sheet's words; Keep following that unfollows; an
@@ -37163,7 +37168,10 @@ and 7.96:1: on dark it overstates by 40%). verify_createpost, two (authors
 ignored; the pieces unsorted); verify_socialauth, verify_socialactivity,
 verify_sociallikes, verify_socialsafety and verify_socialprofile, one each
 (the chain without the table; the old empty words; the old heading; a block
-keeping follows; Follow after Share).
+keeping follows; Follow after Share); verify_socialauth and
+verify_socialposts, one more each (the pill's band cut to 36px: their
+censuses' rows red). The same 36px band left verify_sociallikes' census green,
+which is how its pill rule was found unneeded and taken out again.
 
 FOUND WRONG, AND MENDED. In the product: (1) posts.js, loaded on a profile
 for its way of saying a time, took Skribl's Gallery's own #reportSheet for
@@ -37193,7 +37201,11 @@ sheet through the #followers landing, so a broken landing stopped the
 section before the landing's own row (it opens by the line now); and two of
 four readings of the lists' switch read a dropped frame as a jump while
 three calibration copies ran beside it (judged over the frames spanned now,
-above).
+above). The first side-by-side run found verify_socialauth's census red on the
+pill's 36px options (88x36 and 87x36), and another helper's run on this box,
+writing to the same /tmp/run_parallel, overwrote verify_socialposts' log
+before it could be read; that run was stopped, the censuses taught (above),
+and the run below has logs of its own.
 
 Not tested here: WebKit (the owner's iPhone) and Firefox (main's lanes run
 their smoke after the merge), SF and Segoe UI (every measure is in this box's
