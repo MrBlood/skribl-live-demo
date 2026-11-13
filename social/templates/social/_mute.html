@@ -30,7 +30,7 @@
 {%- endmacro %}
 
 {% macro _line(who) -%}
-<p class="mu-line" data-mute-line>{{ ic.eye_closed() }}<span class="mu-line-words">You muted {{ who.display_name.split(' ')[0] }}</span><span class="mu-dot" aria-hidden="true">·</span><button class="mu-unmute" type="button" data-mute-unmute aria-label="Unmute @{{ who.handle }}">Unmute</button></p>
+<p class="mu-line" data-mute-line>{{ ic.eye_closed() }} <span class="mu-line-words">You muted {{ who.display_name.split(' ')[0] }}</span> <span class="mu-dot" aria-hidden="true">·</span> <button class="mu-unmute" type="button" data-mute-unmute aria-label="Unmute @{{ who.handle }}">Unmute</button></p>
 {%- endmacro %}
 
 {% macro mute_line(who, shown) -%}

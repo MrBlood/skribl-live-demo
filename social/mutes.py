@@ -61,26 +61,36 @@ from .safety import _person_by_handle, between, hidden_ids
 from .security import current_person, origin_ok, over, read_aside, site, token_ok
 
 
+def _muted(public_id):
+    """(ids, public ids) of everybody the person with this public id muted: ONE
+    READ A REQUEST, shared by the site's pages (muted_ids) and the host's feed
+    filter (muted_authors), so Home asks it once whatever it shows; beside the
+    request's own work (read_aside), on the people's public-id index and the
+    pair's."""
+    cache = g.setdefault("social_muted", {}) if has_request_context() else {}
+    if public_id in cache:
+        return cache[public_id]
+    m, me, other = Mute.__table__, Person.__table__.alias("me"), Person.__table__.alias("other")
+    rows = read_aside(sa.select(m.c.muted_id, other.c.public_id)
+                      .join(me, me.c.id == m.c.muter_id).join(other, other.c.id == m.c.muted_id)
+                      .where(me.c.public_id == public_id))
+    out = (frozenset(r[0] for r in rows), frozenset(r[1] for r in rows))
+    cache[public_id] = out
+    return out
+
+
 def muted_ids(person):
     """The ids of everybody `person` muted (a person row or the request's
-    snapshot; None for nobody, whose set is empty): read once a request, on
-    the pair's index."""
+    snapshot; None for nobody, whose set is empty), read once a request."""
     if person is None:
         return frozenset()
-    cache = g.setdefault("social_muted", {}) if has_request_context() else {}
-    if person.id in cache:
-        return cache[person.id]
-    rows = site().session().execute(sa.select(Mute.muted_id).where(Mute.muter_id == person.id)).all()
-    out = frozenset(r[0] for r in rows)
-    cache[person.id] = out
-    return out
+    return _muted(person.public_id)[0]
 
 
 def _forget():
     """A mute or an unmute was written: this request reads them afresh."""
     if has_request_context():
         g.pop("social_muted", None)
-        g.pop("social_muted_public", None)
 
 
 def i_muted(me, who):
@@ -94,20 +104,12 @@ def muted_authors(viewer_id):
     """For the host's feed filter (app.py; docs/SOCIAL-SITE.md "Built:
     mutes"): the public ids of everybody this viewer (Skribl's current user
     id, or None) muted, for a listing of everybody's to leave out. Empty for
-    anybody who is not one of the site's people. Read once a request
-    (read_aside), beside Skribl's own work, as hidden_authors is."""
+    anybody who is not one of the site's people. The same read as
+    muted_ids', once a request."""
     me = viewer_id if isinstance(viewer_id, str) and viewer_id.startswith(PERSON_PREFIX) else None
     if me is None:
         return frozenset()
-    cache = g.setdefault("social_muted_public", {}) if has_request_context() else {}
-    if me in cache:
-        return cache[me]
-    m, mine_t, other = Mute.__table__, Person.__table__.alias("me"), Person.__table__.alias("other")
-    mine = sa.select(mine_t.c.id).where(mine_t.c.public_id == me).scalar_subquery()
-    rows = read_aside(sa.select(other.c.public_id).join(m, m.c.muted_id == other.c.id).where(m.c.muter_id == mine))
-    out = frozenset(r[0] for r in rows)
-    cache[me] = out
-    return out
+    return _muted(me)[1]
 
 
 def muted_people(person):

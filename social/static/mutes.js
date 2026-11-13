@@ -128,31 +128,41 @@
   }
 
   /* ---- A ROOM: what comes or goes, so nothing below it jumps ---------------- */
+  /* Moving a node blurs whatever it holds: the focus is put back where it was. */
+  function keep(el, move) {
+    var had = el && el.contains(doc.activeElement) ? doc.activeElement : null;
+    move();
+    if (had && doc.activeElement !== had && had.isConnected) had.focus({ preventScroll: true });
+  }
   function roomOf(el) {
     var p = el.parentElement;
     if (p && p.classList.contains('mu-room')) return p;
     var r = doc.createElement('div');
     r.className = 'mu-room';
-    el.parentNode.insertBefore(r, el);
-    r.appendChild(el);
+    keep(el, function () {
+      el.parentNode.insertBefore(r, el);
+      r.appendChild(el);
+    });
     return r;
   }
   /* Its work done, what the room holds stands where it was without it. */
   function unroom(r) {
     if (!r.parentNode) return;
     var el = r.firstElementChild;
-    if (el) r.parentNode.insertBefore(el, r);
-    r.parentNode.removeChild(r);
+    keep(el, function () {
+      if (el) r.parentNode.insertBefore(el, r);
+      r.parentNode.removeChild(r);
+    });
   }
-  /* `fn` once `r`'s opacity has finished moving (the last of its glide), or a
-     little after it should have: a tab put in the background mid-glide may
-     never say. A glide turned round before then calls it off, its ending
-     never run (freeze). */
-  function settled(r, ms, fn) {
+  /* `fn` once `r`'s `prop` has finished moving (the last of its glide: going,
+     its height; coming, its fade), or a little after it should have: a tab
+     put in the background mid-glide may never say. A glide turned round
+     before then calls it off, its ending never run (freeze). */
+  function settled(r, prop, ms, fn) {
     var t = 0;
     function off() { clearTimeout(t); r.removeEventListener('transitionend', on); if (r.__muOff === off) r.__muOff = null; }
     function end() { off(); fn(); }
-    function on(e) { if (e.target === r && e.propertyName === 'opacity') end(); }
+    function on(e) { if (e.target === r && e.propertyName === prop) end(); }
     r.addEventListener('transitionend', on);
     t = setTimeout(end, ms);
     r.__muOff = off;
@@ -182,7 +192,7 @@
     r.style.height = '0px';
     r.style.marginBottom = (-gap) + 'px';
     r.setAttribute('data-mute-shut', '');
-    settled(r, (delay + 0.6) * 1000, function () { if (then) then(r); });
+    settled(r, 'height', (delay + 0.7) * 1000, function () { if (then) then(r); });
     return r;
   }
   /* COMING: its room opens to its whole height (what it holds and its
@@ -206,7 +216,7 @@
     r.style.marginBottom = '0px';
     r.style.opacity = '1';
     r.removeAttribute('data-mute-shut');
-    settled(r, (delay + 0.7) * 1000, function () { unroom(r); });
+    settled(r, 'opacity', (delay + 0.7) * 1000, function () { unroom(r); });
     return r;
   }
 
