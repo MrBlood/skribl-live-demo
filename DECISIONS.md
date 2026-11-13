@@ -36748,6 +36748,17 @@ JUDGMENT CALLS, said so they can be changed:
   back, fading in as its room opens, when the last one is deleted.
 - PHONE OR DESK FOLLOWS THE SITE'S OWN DESK WIDTH (900px); a window that
   crosses it puts the box away, keeping the words.
+- A FOLDED BOX IS NOT LAID OUT AT ALL. Found by the first side-by-side run:
+  verify_sociallikes' census of a post's page (a desk, a post with nothing
+  under the heading) read the folded box's Draw, Flip and Post at 1.00:1.
+  The box had kept its layout, unseen at opacity 0, and that census takes a
+  word for shown when the point at its middle hits any of its ancestors
+  (here the section). Folded, the box's inside is hidden now, not laid out,
+  and laid out again just before it glides open: the glide is unchanged, a
+  drawing waiting in it comes back at its size, and the field's
+  grow-to-fit never takes a height off a field that is not laid out. "Say
+  the first thing" folds the same way. Section 29 asks it, and a break that
+  lays the box out again turns both section 29 and that census red.
 - THE EDITOR OVER THE PAGE GIVES BACK ONLY THE INERTNESS IT SET (social.js,
   SocialPadOverlay): opened from the phone's sheet, the Pad used to un-inert
   the page behind the sheet when it went. A general fix in the site's
@@ -36810,13 +36821,13 @@ a posted comment is put in place and fades in.
 
 THE CHECKS. verify_socialcomments.py gains nine sections, 29 to 37 (no page
 errors stays last): the icon and the folded box (its place and names, its
-line off the pixels at rest and lit, nothing in the closed fold seen or
-focusable; nobody who may not comment offered it); a phone's sheet (the rise
-and the fall read on every frame, the page under it still and inert, the
-dimmed page, a drag down and Esc each keeping the words, the keyboard stood
-in, the Pad over the sheet leaving the page inert behind it); a desk's fold
-(open and fold read on every frame, a second click, Esc and a press
-elsewhere each keeping the words, the Pad not "elsewhere"); Answer (a
+line off the pixels at rest and lit, nothing in the closed fold laid out,
+seen or focusable; nobody who may not comment offered it); a phone's sheet
+(the rise and the fall read on every frame, the page under it still and
+inert, the dimmed page, a drag down and Esc each keeping the words, the
+keyboard stood in, the Pad over the sheet leaving the page inert behind it);
+a desk's fold (open and fold read on every frame, a second click, Esc and a
+press elsewhere each keeping the words, the Pad not "elsewhere"); Answer (a
 phone's "Answer Theo" and its line of words; a desk's fold under the
 conversation, folding first from the heading, Answer again; the long
 thread's glide); posting (in step on a desk, the sheet on a phone, the glow
@@ -36831,21 +36842,22 @@ box the way a person now does, and 13 and 28 read the sheet answering and
 EVERY NEW OR CHANGED ROW WAS SHOWN RED by a break of its own, each in a
 throwaway copy of the committed tree (git archive), its sections run alone
 (SOCIALCOMMENTS_PART), with a control beside them (sections 29 to 37 on an
-unbroken copy: green, 25 of 25). 74 breaks over four rounds, on the commits
-the rounds ran against: 70 red on their rows, and every one of the 45 new or
+unbroken copy: green, 25 of 25). 75 breaks over five rounds, on the commits
+the rounds ran against: 71 red on their rows, and every one of the 45 new or
 changed rows red by at least one; four were breaks that broke nothing (two
 of them one idea), replaced by three that do. The icon: 36px; a heading
 grown to the button's 44px; the box left open on top; a closed fold seen and
-focusable; the icon's ink faint (1.45:1); unlit while open; offered to
-somebody taken down, and to a taken-down post's maker. A phone's sheet: a
-snap and a late jump, rising and going (each one frame carrying the whole
-195px); titled "Say something" for everybody; its field unfocused; the field
-14px; the words forgotten when it goes; no lift on the keyboard; the editor
-taking the page's inertness with it; the page under it pushed as it rises. A
-desk's fold: a snap and a late jump (one frame, 136px); the box there at
-once; the icon unlit; Esc, a press elsewhere and a second click each doing
-nothing; the words forgotten; focus lost on Esc; the Pad counted as
-"elsewhere". Answer: titled as a new comment (a phone, a desk and a
+focusable; the folded box laid out again (red in verify_sociallikes' census
+of a post's page too); the icon's ink faint (1.45:1); unlit while open;
+offered to somebody taken down, and to a taken-down post's maker. A phone's
+sheet: a snap and a late jump, rising and going (each one frame carrying the
+whole 195px); titled "Say something" for everybody; its field unfocused; the
+field 14px; the words forgotten when it goes; no lift on the keyboard; the
+editor taking the page's inertness with it; the page under it pushed as it
+rises. A desk's fold: a snap and a late jump (one frame, 136px); the box
+there at once; the icon unlit; Esc, a press elsewhere and a second click
+each doing nothing; the words forgotten; focus lost on Esc; the Pad counted
+as "elsewhere". Answer: titled as a new comment (a phone, a desk and a
 drawing's page); no quote; the quote wrapping; the icon's box still aimed at
 the last answer; a desk's Answer opening under the heading; open on the
 heading and asked for under a conversation, jumping there; Answer again
