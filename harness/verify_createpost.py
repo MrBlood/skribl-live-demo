@@ -655,6 +655,34 @@ with host.app_context():
           and [i["id"] for i in _top] == [_newer] and _topmore,
           f"all {[i['title'] for i in _all]} {_allmore}; top {[i['title'] for i in _top]} {_topmore}")
 
+    # WHICH LISTING IT IS (after v330, for a host's mute: the Skribl site's): a
+    # feed filter that names `author` is told the one author list_public_posts
+    # is narrowed to, and None for many people's (`authors`, `author_prefix`);
+    # one written for two arguments is called as before.
+    _told = []
+
+    def _quiets(q, viewer_id, author=None):
+        _told.append(author)
+        return q.filter(skribl.models.SkriblPost.user_id != "fol:cy") if author is None else q
+    _two_args = []
+    skribl.models.set_feed_filter(_quiets, app=host)
+    try:
+        _ab, _ = skribl.list_public_posts(authors=["fol:ann", "fol:cy"])
+        _pre, _ = skribl.list_public_posts(author_prefix="fol:")
+        _cy, _ = skribl.list_public_posts(author="fol:cy")
+        _plain = list(_told)
+        skribl.models.set_feed_filter(lambda q, v: (_two_args.append(v), q)[1], app=host)
+        _still, _ = skribl.list_public_posts(author="fol:cy", viewer_id="someone")
+    finally:
+        skribl.models.set_feed_filter(None, app=host)
+    check("a feed filter that names `author` is told the one author list_public_posts is narrowed to (fol:cy's own,"
+          " kept) and None for many people's (`authors` and `author_prefix`, fol:cy left out); one written for two"
+          " arguments is called as before",
+          _plain == [None, None, "fol:cy"] and _fol[3][2] not in [i["id"] for i in _ab + _pre]
+          and [i["id"] for i in _cy] == [_fol[3][2]] and _two_args == ["someone"]
+          and [i["id"] for i in _still] == [_fol[3][2]],
+          f"told {_plain}; two-argument {_two_args}; cy's own {[i['title'] for i in _cy]}")
+
 bad = [(n, d) for ok, n, d in results if not ok]
 print("\n" + "=" * 62)
 print(f"{len(results) - len(bad)}/{len(results)} passed"

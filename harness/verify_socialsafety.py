@@ -404,7 +404,7 @@ PAD = """async ([title, vis, seed, card]) => {
   const j = await r.json().catch(() => ({})); return [r.status, j.id || null]; }"""
 CARDS = "() => [...document.querySelectorAll('.post-card')].map(c => c.getAttribute('data-handle'))"
 OPEN = "(id) => document.getElementById(id).classList.contains('is-open')"
-ACTS = "(s) => [...document.querySelectorAll(s + ' .post-act')].filter(b => !b.hidden).map(b => b.textContent.trim())"
+ACTS = "(s) => [...document.querySelectorAll(s + ' .post-act')].filter(b => !b.hidden).map(b => (b.querySelector('.mu-words b') || b).textContent.trim())"
 REASONS = "(s) => [...document.querySelectorAll(s + ' input[name=reason]')].map(i => [i.value, i.closest('label').textContent.trim()])"
 PERSON_REASONS = [["fake", "Spam or a fake account"], ["abuse", "Abusive or hateful"],
                   ["impersonation", "Pretending to be someone"], ["under13", "Under 13"],
@@ -509,9 +509,9 @@ with sync_playwright() as p:
         mid, _ = pid_of("mira")
         jid, jpub = pid_of("juno")
         rows = db("select kind, target, about_id, reason, note, reporter_id, state from social_reports where kind = 'person'")
-        check("a profile's ⋯ (never on your own) offers Report @them and, signed in, Block @them; Report @them rises"
-              " with a person's own reasons, in order, the first picked",
-              not own_more and sheet == ["Report @juno", "Block @juno"] and title == "Report @juno"
+        check("a profile's ⋯ (never on your own) offers Report @them and, signed in, Block @them (after Mute @them,"
+              " first: mutes); Report @them rises with a person's own reasons, in order, the first picked",
+              not own_more and sheet == ["Mute @juno", "Report @juno", "Block @juno"] and title == "Report @juno"
               and reasons == PERSON_REASONS and first == "fake",
               f"own ⋯ {own_more}; sheet {sheet}; title {title!r}; reasons {reasons}; first {first}")
         c = mira.client()
@@ -578,10 +578,10 @@ with sync_playwright() as p:
         pg.wait_for_timeout(1200)
         drow = db("select kind, about_id, reason from social_reports where target = ?", (shown,))
         sk_queue = db("select count(*) from skribl_reports")[0][0]
-        check("somebody else's post's ⋯ says Copy link, Share…, Report this post and Block @them; Report sends the"
-              " Gallery's reasons and A child's safety, in order, into the site's own queue (the post, whose it is,"
-              " the reason, the note, who sent it), and says thanks; Skribl's own queue is not asked",
-              st == 200 and acts == ["Copy link", "Share…", "Report this post", "Block @juno"]
+        check("somebody else's post's ⋯ says Copy link, Share…, Mute @them (mutes), Report this post and Block @them;"
+              " Report sends the Gallery's reasons and A child's safety, in order, into the site's own queue (the post,"
+              " whose it is, the reason, the note, who sent it), and says thanks; Skribl's own queue is not asked",
+              st == 200 and acts == ["Copy link", "Share…", "Mute @juno", "Report this post", "Block @juno"]
               and reasons == POST_REASONS and said == THANKS
               and prow == [("post", jid, "child_safety", "Not something for here", mid)] and sk_queue == 0,
               f"post {st}; sheet {acts}; reasons {reasons}; said {said!r}; row {prow}; Skribl's queue {sk_queue}")
@@ -718,7 +718,7 @@ with sync_playwright() as p:
         cafter = cpg.evaluate("""() => ({ url: location.pathname + location.search, note: (document.querySelector('.note') || {}).textContent,
           cards: [...document.querySelectorAll('.post-card')].map(c => c.getAttribute('data-handle')) })""")
         check("from a post's ⋯ on Home: Block @them, asked once; then Home says so and holds nothing of theirs",
-              cacts == ["Copy link", "Share…", "Report this post", "Block @ben"] and ctitle == "Block @ben?"
+              cacts == ["Copy link", "Share…", "Mute @ben", "Report this post", "Block @ben"] and ctitle == "Block @ben?"
               and cafter["url"] == "/social/?note=blocked"
               and cafter["note"] == "Blocked. You won’t see each other’s posts or drawings. You can unblock them in Settings."
               and "ben" not in cafter["cards"],
