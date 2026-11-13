@@ -36904,6 +36904,18 @@ rather than its painted name (a comment that stops being first takes its
 rule inside its own box).
 
 
+THE AFFECTED SUITES, SIDE BY SIDE (run_parallel -j 2), on the final tree
+(all of it but this paragraph), green on the first run, none red beside the
+others, 15.1 minutes: verify_socialcomments 92/92, verify_socialposts 31/31,
+verify_sociallikes 96/96, verify_socialactivity 44/44, verify_social 40/40,
+verify_a11ypages 162/162, verify_socialsafety 34/34, verify_socialprofile
+54/54, verify_socialauth 64/64 and verify_docs 144/144. The run before it,
+on the tree before a folded box left the layout, is where verify_sociallikes
+read 94/96 (above); it was stopped once that was mended, the tree having
+moved under it. This paragraph is the only change since; verify_docs, the
+suite that reads it, was run on it again. The full battery was not run;
+main's run after the merge is.
+
 Not tested here: WebKit, so not the owner's iPhone, and above all THE SHEET
 ON THE IPHONE'S KEYBOARD: the lift is read off the visual viewport, and here
 a stand-in visual viewport reports a 336px keyboard the way iPhone's Safari
