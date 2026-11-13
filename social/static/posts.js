@@ -240,12 +240,13 @@
      THE LINE UNDER THE DRAWING IS THE CARD'S TOO (Nov 13, from the owner's
      "I thought on card?"): "Drawn in 16 sec · watching at" and the space
      around the drawing open the post; the speed and its choices (a group),
-     the heart, the scrubber and the loop keep theirs. The line keeps its
-     clicks from bubbling (docs/INTEGRATION.md, the lead: a host's whole-post
-     link must not open on a scrub or a speed), so they are heard here on
-     the way down, and only there. */
+     the heart, the scrubber and the loop keep theirs. The player and its
+     line keep their clicks from bubbling (docs/INTEGRATION.md, the lead: a
+     host's whole-post link must not open on a scrub or a speed), so a click
+     in the drawing's part of the card (.post-art, the site's own) is heard
+     here on the way down, and only there. */
   var OWN = 'a, button, input, textarea, select, label, summary, [role="button"], [role="slider"], [role="group"], [tabindex]';
-  var LINE = '.skribl-inline-line';
+  var ART = '.post-art';
   var press = null;
   doc.addEventListener('pointerdown', function (e) { press = { x: e.clientX, y: e.clientY }; }, true);
   /* A keyboard's click (Enter on a link) has no press behind it (detail 0). */
@@ -280,9 +281,9 @@
     if (e.ctrlKey || e.metaKey || e.shiftKey) window.open(url, '_blank', 'noopener');
     else window.location.assign(url);
   }
-  function inLine(e) { return !!(e.target && e.target.closest && e.target.closest(LINE)); }
-  doc.addEventListener('click', function (e) { if (inLine(e)) openCard(e); }, true);
-  doc.addEventListener('click', function (e) { if (!inLine(e)) openCard(e); });
+  function inArt(e) { return !!(e.target && e.target.closest && e.target.closest(ART)); }
+  doc.addEventListener('click', function (e) { if (inArt(e)) openCard(e); }, true);
+  doc.addEventListener('click', function (e) { if (!inArt(e)) openCard(e); });
   doc.addEventListener('auxclick', function (e) {
     if (e.button !== 1) return;
     var card = tapped(e);
