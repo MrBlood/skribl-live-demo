@@ -881,7 +881,8 @@ button.make-door { width: 100%; border: 0; font: inherit; text-align: left; curs
 .post-meta { margin: 12px 0 0; color: var(--ink-2); font-size: 15px; }
 .post-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
 .comments { margin-top: 24px; }
-.comments-title { display: flex; align-items: center; gap: 8px; margin: 0 0 10px; font-size: 20px; font-weight: 700; }
+.comments-head { display: flex; align-items: center; margin: 0 0 10px; }
+.comments-title { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 20px; font-weight: 700; }
 .comments-title .ic { color: var(--accent-ink); }
 .more-from { margin-top: 24px; }
 .more-title { margin: 0 0 10px; font-size: 18px; font-weight: 700; }
@@ -931,11 +932,6 @@ button.make-door { width: 100%; border: 0; font: inherit; text-align: left; curs
 .cm-box .composer-draft { margin: 10px 0 0 48px; }
 .cm-box .composer-draft .skribl-inline { width: min(100%, 150px); }
 .cm-art { margin-top: 8px; width: min(100%, 150px); }
-.cm-signin { margin: 0 0 8px; }
-.cm-signin a {
-  display: inline-flex; align-items: center; min-height: 44px; color: var(--accent-ink); font-size: 16px;
-  font-weight: 600; text-decoration: none;
-}
 .cm-list, .cm-answers { margin: 0; padding: 0; list-style: none; }
 .cm {
   display: grid; grid-template-columns: 36px minmax(0, 1fr); column-gap: 12px; padding: 14px 0 2px;
@@ -959,18 +955,91 @@ button.make-door { width: 100%; border: 0; font: inherit; text-align: left; curs
 .cm-acts .icon-btn { margin-left: auto; margin-right: -10px; color: var(--ink-2); }
 .cm-answers { grid-column: 2; }
 .cm-answers .cm { padding-top: 8px; border-top: 0; }
-/* Answer brings the box to the comment: under its answers, across the row. */
-.cm > .cm-box { grid-column: 1 / -1; margin: 6px 0 12px; }
 .cm-more { margin-top: 12px; }
-/* KIND, NEVER JUMPY: a comment that arrives, and the box Answer brings,
-   fade in where they land (the page around them keeps its place:
-   comments.js); a comment that goes fades first. Reduce Motion: they are
-   simply there. */
-@keyframes cm-in { from { opacity: 0; } to { opacity: 1; } }
-@media (prefers-reduced-motion: no-preference) {
-  .cm.is-new, .cm-box.is-arriving { animation: cm-in 0.22s ease both; }
-}
 .cm.is-going { opacity: 0; transition: opacity 0.2s ease; }
+
+/* THE COMMENT BOX, AS AN ICON (the owner, Nov 13: "The comment needs to be an
+   icon not a card. It takes up too much room sitting there", then "Yes to
+   all" to the mock's choices, its option 2). THE ICON at the heading's end:
+   a round 44px button in the chips' lilac and the small violet ink (6.92:1
+   light, 8.62:1 dark, a mark's 3:1), reaching 7.5px above and below the
+   heading's 29px line into the room already round it, so the heading keeps
+   its height. While the box it opened is open it lights: white on the action
+   purple (5.33:1), as an action is; the light comes and goes as a fade. */
+.cm-say {
+  margin: -7.5px 0 -7.5px auto; background: var(--tint); color: var(--accent-ink);
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+.cm-say[aria-expanded="true"] { background: var(--fill); color: var(--on-fill); }
+/* "SAY THE FIRST THING", at none, where the comments will be: the small
+   violet words, 44px, opening the box as the icon does. */
+.cm-first { margin: 0 0 8px; }
+.cm-first button {
+  display: inline-flex; align-items: center; min-height: 44px; padding: 0; border: 0; background: none;
+  color: var(--accent-ink); font: inherit; font-size: 16px; font-weight: 600; cursor: pointer;
+}
+/* THE FOLD (a desk): the box under the heading, or under the conversation it
+   answers, folded to nothing until asked for. Opening glides its room open
+   (0.32s) while the box fades in (a quarter in by 100ms), so what is under it
+   slides down rather than jumps; folding away is quicker and the same in
+   reverse. A closed fold is unseen, so nothing in it takes focus. Its edges
+   clip only while it moves; at rest its card's shadow fades in, so nothing
+   pops. "Say the first thing" folds the same way, in step with the box: one
+   room closes as the other opens, and posting the first comment takes its
+   place. comments.js says open or closed; the stylesheet moves them. */
+.cm-fold, .cm-first-fold { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 0.32s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.cm-fold > .cm-fold-in, .cm-first-fold > .cm-fold-in {
+  min-height: 0; overflow: hidden; visibility: hidden; transition: visibility 0s linear 0.32s;
+}
+.cm-fold.is-open, .cm-first-fold.is-open { grid-template-rows: 1fr; }
+.cm-fold.is-open > .cm-fold-in, .cm-first-fold.is-open > .cm-fold-in { visibility: visible; transition: none; }
+.cm-fold.is-still > .cm-fold-in, .cm-first-fold.is-still > .cm-fold-in { overflow: visible; }
+.cm-fold.is-quick, .cm-first-fold.is-quick { transition-duration: 0.24s; transition-timing-function: cubic-bezier(0.4, 0, 1, 1); }
+.cm-fold.is-quick > .cm-fold-in, .cm-first-fold.is-quick > .cm-fold-in { transition-delay: 0.24s; }
+.cm-fold .cm-box { opacity: 0; box-shadow: none; transition: opacity 0.18s ease, box-shadow 0.18s ease; }
+.cm-fold.is-open .cm-box { opacity: 1; transition: opacity 0.22s ease 0.06s, box-shadow 0.2s ease; }
+.cm-fold.is-still .cm-box { box-shadow: var(--card-drop); }
+.cm-first-fold .cm-first { opacity: 0; transition: opacity 0.18s ease; }
+.cm-first-fold.is-open .cm-first { opacity: 1; transition: opacity 0.22s ease 0.06s; }
+/* Answering on a desk: the fold under the conversation, across the row. */
+.cm > .cm-fold { grid-column: 1 / -1; }
+.cm > .cm-fold .cm-box { margin: 6px 0 12px; }
+/* THE SHEET (a phone): Make's own, rising from the bottom with the box on it,
+   the field ready to type in; answering, the words it answers in a line under
+   its title. The box sits on the sheet's paper as Make's doors do, without
+   the page's shadow. ON A PHONE'S KEYBOARD it rides above it: comments.js
+   reads the keyboard off the visual viewport (--cm-kb) and the sheet glides
+   up by that much. (Not seen here: this box has no phone keyboard.) */
+.cm-sheet { bottom: var(--cm-kb, 0px); transition: bottom 0.25s ease; }
+.cm-sheet .make-sheet { padding-bottom: calc(14px + env(safe-area-inset-bottom)); }
+.cm-sheet .make-title { margin-bottom: 6px; }
+.cm-quote {
+  margin: -2px 4px 10px; overflow: hidden; color: var(--ink-2); font-size: 15px; line-height: 1.4;
+  text-overflow: ellipsis; white-space: nowrap;
+}
+.cm-quote[hidden] { display: none; }
+.cm-sheet .composer.cm-box { margin: 0; box-shadow: none; }
+/* SIGNED OUT: Make's sheet, small, saying how (the heart's twin). */
+.cm-out .post-sheet-acts a.btn { text-decoration: none; }
+/* A COMMENT THAT ARRIVES (yours, posted) opens its room as it fades in, and
+   what is under it slides down to make way; on a desk, in step with the box
+   folding away above it (the same 0.32s), so a comment the size of the box
+   lands where the box was and nothing moves. It is laid out whole from the
+   start and shown from its top down (a clip, its edges 10px out for the
+   landing's tint), while a negative margin under it gives its room back a
+   frame at a time: nothing inside it moves. comments.js sets where it starts;
+   then it glows a moment in the landing's tint (.is-landed). */
+.cm.is-growing { transition: margin-bottom 0.32s cubic-bezier(0.2, 0.8, 0.2, 1),
+  clip-path 0.32s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.24s ease; }
+/* REDUCE MOTION: nothing glides. The box is put in place and fades in; it is
+   put away at once; a comment that arrives is put in place and fades in; the
+   sheet fades where it sits (below). */
+@media (prefers-reduced-motion: reduce) {
+  .cm-fold, .cm-first-fold, .cm-fold > .cm-fold-in, .cm-first-fold > .cm-fold-in, .cm-sheet { transition: none; }
+  .cm-fold .cm-box, .cm-first-fold .cm-first { transition: none; }
+  .cm-fold.is-open .cm-box, .cm-first-fold.is-open .cm-first { transition: opacity 0.2s ease; }
+  .cm.is-growing { transition: opacity 0.2s ease; }
+}
 /* Home's card: how many comments, beside the plays (the mock's 4), a way to them. */
 .post-foot .post-count { min-width: 44px; margin-left: 14px; margin-right: auto; }
 

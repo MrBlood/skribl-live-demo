@@ -195,15 +195,19 @@
     var scrim = wrap.querySelector('.facepad-scrim');
     var openers = o.openers || [];
     var behind = [doc.querySelector('body > .top'), doc.querySelector('body > .nav'), doc.getElementById('main')];
-    var from = null, timer = 0, open = false;
+    var from = null, timer = 0, open = false, was = [];
 
+    /* The page behind goes inert while it is up, and comes back as it was:
+       opened from a sheet (a phone's comment box), the page stays inert
+       behind the sheet once the editor goes. */
     function mark(on) {
       for (var i = 0; i < openers.length; i++) {
         if (openers[i].hasAttribute('aria-expanded')) openers[i].setAttribute('aria-expanded', on ? 'true' : 'false');
       }
       for (var j = 0; j < behind.length; j++) {
         if (!behind[j]) continue;
-        if (on) behind[j].setAttribute('inert', ''); else behind[j].removeAttribute('inert');
+        if (on) { was[j] = behind[j].hasAttribute('inert'); behind[j].setAttribute('inert', ''); }
+        else if (!was[j]) behind[j].removeAttribute('inert');
       }
     }
 
