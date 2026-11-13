@@ -337,6 +337,19 @@ ROW = r"""() => { const sw = document.querySelector('[data-theme-switch]'); if (
     under: !!on && Math.abs(pill.getBoundingClientRect().left - on.getBoundingClientRect().left) < 0.6
            && Math.abs(pill.getBoundingClientRect().width - on.getBoundingClientRect().width) < 0.6 }; }"""
 
+# The Theme row on each of the page's first frames, from the document's start
+# (an init script): whether its pill is placed, where it is and how strong, and
+# which choice is pressed.
+ROW_FRAMES = r"""(() => { window.__rowf = []; let n = 0;
+  const look = () => { const sw = document.querySelector('[data-theme-switch]');
+    if (sw) { const pill = sw.querySelector('.theme-pill'), on = sw.querySelector('button[aria-pressed="true"]');
+      window.__rowf.push({ n: n, placed: sw.hasAttribute('data-pill'),
+        x: Math.round((pill.getBoundingClientRect().left - sw.getBoundingClientRect().left) * 100) / 100,
+        op: +getComputedStyle(pill).opacity, pressed: on ? on.textContent.trim() : null }); }
+    else window.__rowf.push({ n: n, none: true });
+    if (++n < 40) requestAnimationFrame(look); };
+  requestAnimationFrame(look); })();"""
+
 # The page's theme as it stands: the stamp, the ground, what is kept, and the
 # browser's bar (each theme-color meta, and the one the device picks).
 STATE = r"""() => { const ms = [...document.querySelectorAll('meta[name="theme-color"]')];
@@ -660,6 +673,24 @@ with sync_playwright() as p:
                       for r in rows.values()),
                   json.dumps({k: v and {x: v[x] for x in ("role", "name", "pressed", "placed", "under", "pill", "tint", "track")}
                               | {"inks": [o["color"] for o in v["options"]]} for k, v in rows.items()}))
+            # AS THE PAGE STARTS: the choice lives in the browser, so you.js
+            # presses it; the pill then fades in where it belongs and never
+            # slides in (Dark kept, so a slide would cross the switch).
+            starts = []
+            for screen, _ in SCREENS:
+                ctx, pg = browser_as(b, nico, screen, "light", theme="dark", init=ROW_FRAMES)
+                go(pg, "/social/you", wait=900)
+                fs = [f for f in pg.evaluate("() => window.__rowf || []") if not f.get("none")]
+                placed = [f for f in fs if f["placed"]]
+                xs = {f["x"] for f in placed}
+                ops = [f["op"] for f in placed]
+                starts.append((bool(placed) and len(xs) == 1 and all(b2 >= a2 - 0.001 for a2, b2 in zip(ops, ops[1:])) and ops[-1] > 0.99
+                               and all(f["pressed"] == "Dark" for f in placed) and placed[-1]["x"] > 60,
+                               f"{screen}: {len(fs)} frames read, placed from frame {placed[0]['n'] if placed else None} (the first read"
+                               f" {fs[0]['n'] if fs else None}), at {sorted(xs)}, its strength {[round(o, 2) for o in ops[:8]]}…"))
+                close_ctx(ctx, pg)
+            check("as Settings starts, the kept choice is pressed and its pill fades in where it belongs, never sliding"
+                  " in (Dark kept; phone and desk)", all(o for o, _ in starts), "; ".join(w for _, w in starts))
         except Exception as exc:  # noqa: BLE001
             stopped(1, exc)
 
