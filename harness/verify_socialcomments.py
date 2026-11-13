@@ -1224,20 +1224,26 @@ with sync_playwright() as p:
             # A desk: Answer opens it under the conversation; Answer again, or Esc, folds it away.
             dctx, dpg = browser_as(b, mira, "desk")
             open_post(dpg, post)
-            answer_box(dpg, juno_a)
-            toggled_in = dpg.evaluate(BOX)
-            dpg.click(f"#c-{juno_a} > .cm-main [data-cm-answer]")
-            dpg.wait_for_function(GONE, timeout=8000)
-            toggled_out = dpg.evaluate(BOX)
-            answer_box(dpg, juno_a)
-            dpg.keyboard.press("Escape")
-            dpg.wait_for_function(GONE, timeout=8000)
-            escaped = dpg.evaluate(BOX)
+
+            def toggles():             # a box that never goes is this row's red, never a stop
+                answer_box(dpg, juno_a)
+                t_in = dpg.evaluate(BOX)
+                dpg.click(f"#c-{juno_a} > .cm-main [data-cm-answer]")
+                dpg.wait_for_function(GONE, timeout=8000)
+                t_out = dpg.evaluate(BOX)
+                answer_box(dpg, juno_a)
+                dpg.keyboard.press("Escape")
+                dpg.wait_for_function(GONE, timeout=8000)
+                return t_in, t_out, dpg.evaluate(BOX)
+
+            got_, err = steps(toggles)
+            toggled_in, toggled_out, escaped = got_ if err is None else ({}, {}, {})
             check("on a desk, Answer opens the box under the conversation (\"Answer Juno…\"); Answer again folds it away, and so"
                   " does Esc, home under the heading",
-                  toggled_in["open"] == "under" and toggled_in["under"] == theo_c and toggled_in["placeholder"] == "Answer Juno…"
+                  err is None and toggled_in["open"] == "under" and toggled_in["under"] == theo_c
+                  and toggled_in["placeholder"] == "Answer Juno…"
                   and toggled_out["open"] is None and toggled_out["home"] and escaped["open"] is None and escaped["home"],
-                  f"in {toggled_in}; again {toggled_out}; Esc {escaped}")
+                  f"in {toggled_in}; again {toggled_out}; Esc {escaped}; stopped {err}")
             long_c = said(theo, post, "Section 3, a long thread")
             for k in range(7):
                 said(juno if k % 2 else mira, post, f"Section 3, answer {k} in a long thread, long enough to take two lines",
@@ -2238,7 +2244,7 @@ with sync_playwright() as p:
             skr = row[0][0] if row else None
             sk = db("select visibility, user_id, title from skribl_posts where public_id = ?", (skr or "",))
             shown = pg.evaluate(ART, cid or "") if cid else None
-            said = {k: v for k, v in got.items() if k != "got"}
+            sheet_said = {k: v for k, v in got.items() if k != "got"}   # not `said`: that is the module's helper
             check("a drawing answer on a drawing: Draw opens the real Pad over the drawing's page in compose mode, no"
                   " gallery tick; Post sends it with the words through create_post, unlisted, the person its author,"
                   " titled by the words; its comment is on the drawing; it arrives in Skribl's in-post player",
@@ -2246,7 +2252,7 @@ with sync_playwright() as p:
                   and "gallery=1" not in got.get("src", "") and not (got.get("sheet") or {}).get("tick")
                   and bool(skr) and on_row(cid) == (None, sid, "juno", None)
                   and sk == [("unlisted", pid_of("mira")[1], "Section 21, a drawing back")] and shown == skr,
-                  f"{said}; comment {cid}, row {on_row(cid)}; skribl {sk}; on the page {shown}; stopped {err}")
+                  f"{sheet_said}; comment {cid}, row {on_row(cid)}; skribl {sk}; on the page {shown}; stopped {err}")
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(21, exc)
 
@@ -2805,29 +2811,32 @@ with sync_playwright() as p:
             # Put away three ways, each keeping what was typed.
             kept, downs = {}, {}
             for how in ("the dimmed page", "a drag down", "Esc"):
-                if how != "the dimmed page":
-                    open_box(ppg)
-                ppg.fill("[data-cm-words]", f"Typed, then {how}")
                 act = {"the dimmed page": "document.querySelector('#commentBoxSheet .make-scrim').click()",
-                       "a drag down": "window.__swiping = true",
-                       "Esc": "document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))"}[how]
-                if how == "a drag down":
-                    ppg.evaluate(SWIPE, [[12, 40, 90, 160, 220], 60])
-                    downs[how] = None
-                else:
-                    downs[how] = glided(track(ppg.evaluate(FRAMES, [act, ["#commentBoxSheet .make-sheet"], [], 600]), 0))
-                ppg.wait_for_function(GONE, timeout=8000)
-                ppg.wait_for_timeout(200)
-                gone = ppg.evaluate("() => ({ inert: !!document.querySelector('#main[inert]'), focus: document.activeElement.className })")
-                _, err = steps(lambda: open_box(ppg))
-                kept[how] = {"words": ppg.evaluate(BOX)["words"] if err is None else None, "gone": gone, "stopped": err}
-                ppg.keyboard.press("Escape")
-                ppg.wait_for_function(GONE, timeout=8000)
-                ppg.wait_for_timeout(200)
+                       "Esc": "document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))"}.get(how)
+
+                def put_away():        # a sheet that never goes is this row's red, never a stop
+                    open_post(ppg, post)
+                    open_box(ppg)
+                    ppg.fill("[data-cm-words]", f"Typed, then {how}")
+                    if act is None:
+                        ppg.evaluate(SWIPE, [[12, 40, 90, 160, 220], 60])
+                        down = None
+                    else:
+                        down = glided(track(ppg.evaluate(FRAMES, [act, ["#commentBoxSheet .make-sheet"], [], 600]), 0))
+                    ppg.wait_for_function(GONE, timeout=8000)
+                    ppg.wait_for_timeout(200)
+                    gone = ppg.evaluate("() => ({ inert: !!document.querySelector('#main[inert]'), focus: document.activeElement.className })")
+                    open_box(ppg)
+                    return {"words": ppg.evaluate(BOX)["words"], "gone": gone, "down": down}
+
+                got_, err = steps(put_away)
+                got_ = got_ or {"words": None, "gone": {"inert": True, "focus": ""}, "down": {"ok": False}}
+                downs[how] = got_.pop("down")
+                kept[how] = dict(got_, stopped=err)
             check("a tap on the dimmed page, a drag down or Esc puts it away (gliding down, read on every frame), focus back on"
                   " the icon and the page no longer inert; open it again and what was typed is there",
-                  all(v["words"] == f"Typed, then {k}" and not v["gone"]["inert"] and v["gone"]["focus"].startswith("icon-btn cm-say")
-                      for k, v in kept.items())
+                  all(v["stopped"] is None and v["words"] == f"Typed, then {k}" and not v["gone"]["inert"]
+                      and v["gone"]["focus"].startswith("icon-btn cm-say") for k, v in kept.items())
                   and all(g is None or g["ok"] for g in downs.values()),
                   f"{kept}; going down {downs}")
             # ON A PHONE'S KEYBOARD it rides above it (stood in: this box has no phone keyboard).
@@ -2899,25 +2908,27 @@ with sync_playwright() as p:
                   f" {glided(track(opened, 1))}")
             folds = {}
             for how in ("a second click", "Esc", "a press elsewhere"):
-                if how != "a second click":
-                    open_box(dpg)
-                dpg.fill("[data-cm-words]", f"Typed, then {how}")
                 act = {"a second click": "document.querySelector('.cm-say').click()",
-                       "Esc": "document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))",
+                       "Esc": "document.querySelector('[data-cm-words]').focus();"
+                              " document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))",
                        "a press elsewhere": "document.querySelector('.post-page > .post-meta').dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }))"}[how]
-                if how == "Esc":
-                    act = "document.querySelector('[data-cm-words]').focus();" + act
-                fr = dpg.evaluate(FRAMES, [act, ["[data-cm-list] > .cm .cm-name"], ["[data-cm-box]"], 600])
-                dpg.wait_for_function(GONE, timeout=8000)
-                after_ = dpg.evaluate("() => ({ icon: document.querySelector('.cm-say').getAttribute('aria-expanded'), focus: document.activeElement.className })")
-                _, err = steps(lambda: open_box(dpg))
-                folds[how] = {"g": glided(track(fr, 0)), "icon": after_["icon"], "focus": after_["focus"],
-                              "words": dpg.evaluate(BOX)["words"] if err is None else None, "stopped": err}
-                dpg.click(".cm-say")
-                dpg.wait_for_function(GONE, timeout=8000)
+
+                def fold_away():       # a fold that never goes is this row's red, never a stop
+                    open_post(dpg, post)
+                    open_box(dpg)
+                    dpg.fill("[data-cm-words]", f"Typed, then {how}")
+                    fr = dpg.evaluate(FRAMES, [act, ["[data-cm-list] > .cm .cm-name"], ["[data-cm-box]"], 600])
+                    dpg.wait_for_function(GONE, timeout=8000)
+                    after_ = dpg.evaluate("() => ({ icon: document.querySelector('.cm-say').getAttribute('aria-expanded'), focus: document.activeElement.className })")
+                    open_box(dpg)
+                    return {"g": glided(track(fr, 0)), "icon": after_["icon"], "focus": after_["focus"],
+                            "words": dpg.evaluate(BOX)["words"]}
+
+                got_, err = steps(fold_away)
+                folds[how] = dict(got_ or {"g": {"ok": False, "way": 0}, "icon": None, "focus": "", "words": None}, stopped=err)
             check("a second click, Esc (focus back on the icon) or a press anywhere else folds it away, the comments sliding back"
                   " up (read on every frame) and the icon going out; open it again and what was typed is there",
-                  all(v["g"]["ok"] and abs(v["g"]["way"] + 136) <= 1 and v["icon"] == "false"
+                  all(v["stopped"] is None and v["g"]["ok"] and abs(v["g"]["way"] + 136) <= 1 and v["icon"] == "false"
                       and v["words"] == f"Typed, then {k}" for k, v in folds.items())
                   and folds["Esc"]["focus"].startswith("icon-btn cm-say"),
                   f"{folds}")
@@ -2987,11 +2998,12 @@ with sync_playwright() as p:
                   and g_theo["ok"] and abs(g_theo["way"] + 136) <= 1 and (g_other["ok"] or still_(track(moved, 1)))
                   and min(ops) == 0 and ops[-1] == 1 and len([o for o in ops if 0.02 < o < 0.98]) >= 4,
                   f"{under}; Theo's {g_theo}; the next conversation {g_other}; the box {ops[:3]}..{min(ops)}..{ops[-1]}")
-            dpg.click(f"#c-{theo_c} > .cm-main [data-cm-answer]")
-            dpg.wait_for_function(GONE, timeout=8000)
-            again = dpg.evaluate(BOX)
+            again, err = steps(lambda: (dpg.click(f"#c-{theo_c} > .cm-main [data-cm-answer]"),
+                                        dpg.wait_for_function(GONE, timeout=8000), dpg.evaluate(BOX))[-1])
             check("Answer again folds it away, home and unseen",
-                  again["open"] is None and again["home"], f"{again}")
+                  err is None and again["open"] is None and again["home"], f"{again}; stopped {err}")
+            if err is not None:
+                open_post(dpg, post)
             long_c = said(theo, post, "Section 32, a long thread")
             for k in range(7):
                 said(juno if k % 2 else mira, post, f"Section 32, answer {k} in a long thread, long enough to take two lines",
@@ -3131,16 +3143,16 @@ with sync_playwright() as p:
                 cpg.wait_for_timeout(300)
                 line = cpg.evaluate(FIRST_LINE)
                 fr = cpg.evaluate(FRAMES, ["document.querySelector('[data-cm-first]').click()", [".more-from"], [".cm-first"], 700])
-                cpg.wait_for_function(BOX_STILL, timeout=8000)
+                _, err = steps(lambda: cpg.wait_for_function(BOX_STILL, timeout=8000))
                 opened = cpg.evaluate(BOX)
                 line_open = cpg.evaluate(FIRST_LINE)
-                got[screen] = {"line": line, "opened": opened, "line_open": line_open, "fr": fr}
+                got[screen] = {"line": line, "opened": opened, "line_open": line_open, "fr": fr, "stopped": err}
                 close_ctx(cctx, cpg)
             d = got["desk"]
             check("with nothing said yet, \"Say the first thing\" stands where the comments will be: the small violet words (16px,"
                   " 600, Sign in's ink), 44px tall, 10px under the heading; a tap opens the box (a phone's sheet; a desk's fold,"
                   " where the words fold away in step as the box opens in their place)",
-                  all(v["line"] and v["line"]["words"] == "Say the first thing" and v["line"]["h"] == 44 and v["line"]["open"]
+                  all(v["stopped"] is None and v["line"] and v["line"]["words"] == "Say the first thing" and v["line"]["h"] == 44 and v["line"]["open"]
                       and v["line"]["gap"] == 10 and v["line"]["size"] == 16 and v["line"]["weight"] == "600" and v["line"]["lands"]
                       and v["line"]["ink"] in ("rgb(76, 49, 196)",) for v in got.values())
                   and got["phone"]["opened"]["open"] == "sheet" and got["phone"]["line_open"]["open"]
@@ -3150,24 +3162,31 @@ with sync_playwright() as p:
                   f" the line {d['line_open']}; under it on a desk {glided(track(d['fr'], 0))}")
             dctx, dpg = browser_as(b, theo, "desk")
             open_post(dpg, quiet)
-            open_box(dpg, "[data-cm-first]")
-            dpg.fill("[data-cm-words]", "Section 34, the first thing")
-            w = dpg.evaluate(POSTED, [900])
-            dpg.wait_for_timeout(400)
-            after_first = dpg.evaluate(FIRST_LINE)
-            dpg.evaluate("(id) => document.querySelector('#' + id + ' > .cm-main [data-cm-menu]').click()", w["id"])
-            dpg.wait_for_function(OPEN, arg="commentSheet", timeout=10000)
-            dpg.wait_for_timeout(450)
-            back_fr = dpg.evaluate(FRAMES, ["document.querySelector('#commentSheet [data-cm-act=delete]').click()",
-                                            [".more-from"], [".cm-first"], 1400])
-            again_line = dpg.evaluate(FIRST_LINE)
+
+            def first_and_last():      # a step that cannot go on is this row's red, never a stop
+                dpg.click(".cm-say")    # the icon, as "Say the first thing" may not be there to press
+                dpg.wait_for_function(BOX_STILL, timeout=8000)
+                dpg.fill("[data-cm-words]", "Section 34, the first thing")
+                w = dpg.evaluate(POSTED, [900])
+                dpg.wait_for_timeout(400)
+                after_first = dpg.evaluate(FIRST_LINE)
+                dpg.evaluate("(id) => document.querySelector('#' + id + ' > .cm-main [data-cm-menu]').click()", w["id"])
+                dpg.wait_for_function(OPEN, arg="commentSheet", timeout=10000)
+                dpg.wait_for_timeout(450)
+                back_fr = dpg.evaluate(FRAMES, ["document.querySelector('#commentSheet [data-cm-act=delete]').click()",
+                                                [".more-from"], [".cm-first"], 1400])
+                return w, after_first, back_fr, dpg.evaluate(FIRST_LINE)
+
+            got_, err = steps(first_and_last)
+            w, after_first, back_fr, again_line = got_ if err is None else ({"id": None}, None, [], None)
             close_ctx(dctx, dpg)
             check("the first comment takes its place (the line gone, folded away); the last one deleted, it comes back, fading in"
                   " as its room opens",
-                  w["id"] and after_first and not after_first["open"] and after_first["seen"] == "hidden"
-                  and again_line and again_line["open"] and fades_of(back_fr, 0)[-1] == 1
+                  err is None and w["id"] and after_first and not after_first["open"] and after_first["seen"] == "hidden"
+                  and again_line and again_line["open"] and fades_of(back_fr, 0)[-1:] == [1]
                   and len([o for o in fades_of(back_fr, 0) if 0.02 < o < 0.98]) >= 2,
-                  f"posted {w['id']}; the line {after_first}; after the delete {again_line}; its fade {fades_of(back_fr, 0)[-6:]}")
+                  f"posted {w['id']}; the line {after_first}; after the delete {again_line}; its fade"
+                  f" {fades_of(back_fr, 0)[-6:] if back_fr else None}; stopped {err}")
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(34, exc)
 

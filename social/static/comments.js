@@ -375,14 +375,15 @@
   }
 
   /* Put the box away, keeping its words: what it answered is answered no more,
-     and focus, if it was in the box, goes back to what opened it. */
-  function putAway() {
+     and focus, if it was in the box, goes back to what opened it (`stay`: a
+     press elsewhere, where the browser puts focus itself). */
+  function putAway(stay) {
     var was = answering;
     answering = null;
     afterFold = null;
     pressed(was && was.btn, false);
     pressed(icon, false);
-    var inside = box.contains(doc.activeElement);
+    var inside = !stay && box.contains(doc.activeElement);
     shutFold('quick');
     if (inside) {
       var back = was && was.btn && was.btn.isConnected ? was.btn : icon;
@@ -437,7 +438,7 @@
       var t = e.target;
       if (!t || !t.closest || fold.contains(t)) return;
       if (t.closest('[data-cm-new], [data-cm-answer], .make, .facepad')) return;
-      putAway();
+      putAway(true);
     }, true);
     /* A window widened into a desk, or narrowed into a phone: whatever is
        open is put away, its words kept. */
