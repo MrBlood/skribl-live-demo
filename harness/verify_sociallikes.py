@@ -432,11 +432,25 @@ def go(pg, path, wait=300):
     return r.status if r else None
 
 
-def tap_heart(pg, sel):
-    """Tap a heart and wait for the site's answer."""
-    with pg.expect_response(lambda r: r.url.endswith("/like") and r.request.method == "POST", timeout=15000):
-        pg.locator(sel).first.tap()
-    pg.wait_for_timeout(250)
+def tap_heart(pg, sel, after=250):
+    """Tap a heart and wait for the site's answer. A tap that sends nothing
+    reads as the row's own red, never a section that stops."""
+    try:
+        with pg.expect_response(lambda r: r.url.endswith("/like") and r.request.method == "POST", timeout=8000):
+            pg.locator(sel).first.tap(timeout=5000)
+    except Exception:  # noqa: BLE001
+        pass
+    pg.wait_for_timeout(after)
+
+
+def tap_to(pg, loc, timeout=10000):
+    """Tap something that should open a page, and wait for it: one that does
+    not go anywhere reads as the row's own red."""
+    try:
+        with pg.expect_navigation(timeout=timeout):
+            loc.tap(timeout=5000)
+    except Exception:  # noqa: BLE001
+        pass
 
 
 def card(post):
@@ -999,9 +1013,7 @@ with sync_playwright() as p:
             go(pg, f"/social/p/{p3}")
             block(eli, "fay")
             sel = ".post-page > .post-meta .lk-heart"
-            with pg.expect_response(lambda r: r.url.endswith("/like"), timeout=15000):
-                pg.locator(sel).tap()
-            pg.wait_for_timeout(700)
+            tap_heart(pg, sel, after=700)
             back = pg.evaluate(HEART, sel)
             said = pg.evaluate("() => { const s = document.querySelector('[data-page-say]'); return s && !s.hidden ? s.textContent : null; }")
             close_ctx(ctx, pg)
@@ -1075,10 +1087,9 @@ with sync_playwright() as p:
                                  " const p = art && window.SkriblInline && SkriblInline.mount(art)[0];"
                                  " return !!p && p.playhead().playing && p.playhead().ms > 600; }", timeout=15000)
             before = pg.evaluate(PLAYHEAD)
-            with pg.expect_response(lambda r: r.url.endswith("/like"), timeout=15000):
-                pg.locator(sel).tap()
+            pg.locator(sel).tap()
             after = pg.evaluate(PLAYHEAD)
-            pg.wait_for_timeout(300)
+            pg.wait_for_timeout(700)
             kept = likes_on(("p", p5))
             at = kept[0][1] if kept else None
             check("tapped while the post's drawing plays on its page, the like keeps where the replay was: between the"
@@ -1095,10 +1106,9 @@ with sync_playwright() as p:
                         " p.seek(0); p.setRate(4); window.__t0 = performance.now(); p.play(); }")
             pg.wait_for_timeout(400)
             before4, wall = pg.evaluate("() => [(" + PLAYHEAD + ")(), performance.now() - window.__t0]")
-            with pg.expect_response(lambda r: r.url.endswith("/like"), timeout=15000):
-                pg.locator(sel).tap()
+            pg.locator(sel).tap()
             after4 = pg.evaluate(PLAYHEAD)
-            pg.wait_for_timeout(300)
+            pg.wait_for_timeout(700)
             kept4 = likes_on(("p", p5b))
             at4 = kept4[0][1] if kept4 else None
             check("watched at 4x, the moment is the drawing's, not the watcher's: between the reads either side of the"
@@ -1157,8 +1167,7 @@ with sync_playwright() as p:
                 pg.wait_for_timeout(200)
                 pg.evaluate(HSAMPLE, [sel, ms])
                 pg.wait_for_timeout(60)
-                with pg.expect_response(lambda r: r.url.endswith("/like"), timeout=15000):
-                    pg.locator(sel).tap()
+                pg.locator(sel).tap()
                 pg.wait_for_timeout(ms + 200)
                 return pg.evaluate("() => window.__hf")
 
@@ -1280,12 +1289,14 @@ with sync_playwright() as p:
             go(upg, f"/social/p/{p7}")
             upg.locator(sel).tap()
             upg.wait_for_timeout(600)
-            with upg.expect_navigation(timeout=15000):
-                upg.locator("#likeOutSheet .post-sheet-acts a").tap()
-            with upg.expect_navigation(timeout=20000):
-                upg.click("[data-passkey=signin]")
-            ready(upg)
-            upg.wait_for_timeout(400)
+            tap_to(upg, upg.locator("#likeOutSheet .post-sheet-acts a"))
+            try:
+                with upg.expect_navigation(timeout=20000):
+                    upg.click("[data-passkey=signin]", timeout=5000)
+                ready(upg)
+            except Exception:  # noqa: BLE001 -- not landing is the row's red
+                pass
+            upg.wait_for_timeout(1200)
             landed = urllib.parse.urlparse(upg.url).path
             hu = upg.evaluate(HEART, sel)
             check("signed in from there, they land on the same page, and the heart waits: not pressed, nothing liked for"
@@ -1342,8 +1353,7 @@ with sync_playwright() as p:
                   and [r["face"] for r in sh["rows"]] == [f"/s/{faces[h]}/poster" for h in ("abe", "zed", "yan", "xia", "wes")]
                   and sh["note"] == "Only you can see who liked it.",
                   json.dumps(sh)[:600])
-            with pg.expect_navigation(timeout=15000):
-                pg.locator("#likeSheet .lk-row").first.tap()
+            tap_to(pg, pg.locator("#likeSheet .lk-row").first)
             check("a row opens their page", urllib.parse.urlparse(pg.url).path == "/social/@abe", pg.url)
             close_ctx(ctx, pg)
             ctx, pg = browser_as(b, likers[0])
@@ -1377,9 +1387,7 @@ with sync_playwright() as p:
             none_yet = pg.evaluate(BY)
             pg.locator(sel).scroll_into_view_if_needed()
             pg.evaluate(BSAMPLE, 900)
-            with pg.expect_response(lambda r: r.url.endswith("/like"), timeout=15000):
-                pg.locator(sel).tap()
-            pg.wait_for_timeout(1100)
+            tap_heart(pg, sel, after=1100)
             bf = pg.evaluate("() => window.__bf")
             came = pg.evaluate(BY)
             hs = [f["h"] for f in bf if f.get("there")]
@@ -1390,9 +1398,7 @@ with sync_playwright() as p:
                   and acts["way"] >= 30 and acts["frames"] >= 4 and acts["step"] <= 0.5 * acts["way"],
                   f"before {none_yet}; after {came and came['words']}; heights {len(set(round(x) for x in hs))}; under it {acts}")
             pg.evaluate(BSAMPLE, 900)
-            with pg.expect_response(lambda r: r.url.endswith("/like"), timeout=15000):
-                pg.locator(sel).tap()
-            pg.wait_for_timeout(1100)
+            tap_heart(pg, sel, after=1100)
             bf = pg.evaluate("() => window.__bf")
             acts2 = glide_of([f["acts"] for f in bf if f["acts"] is not None])
             went = pg.evaluate(BY)
@@ -1488,9 +1494,11 @@ with sync_playwright() as p:
             go(pg, "/social/activity")
             row = pg.locator("a.act-row", has_text="liked your post").first
             href = row.get_attribute("href")
-            with pg.expect_navigation():
-                row.tap()
-            ready(pg)
+            tap_to(pg, row)
+            try:
+                ready(pg)
+            except Exception:  # noqa: BLE001
+                pass
             pg.wait_for_timeout(4200)
             lf = pg.evaluate("() => window.__lf")
             vh = pg.evaluate("() => innerHeight")
