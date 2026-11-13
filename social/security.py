@@ -398,6 +398,7 @@ LIMITS = {
     "comment": (60, 3600),         # comments and answers sent, per person (phase 2)
     "like": (120, 3600),           # likes and unlikes, per person (phase 2: the same tap does both)
     "follow": (60, 3600),          # follows and unfollows, per person (follows): nobody follows everyone at once
+    "mute": (60, 3600),            # mutes and unmutes, per person (mutes): as follows, nobody mutes and unmutes hundreds a minute
     "home-pick": (120, 3600),      # Home's pill, Following or Everyone, kept for the account (follows)
 }
 _SWEEP_EVERY = 64

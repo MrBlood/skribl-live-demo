@@ -1481,6 +1481,102 @@ button.make-door { width: 100%; border: 0; font: inherit; text-align: left; curs
 .fo-badge .fo-disc .ic { width: 13px; height: 13px; }
 .act-pic.is-none { visibility: hidden; }
 
+/* ---- MUTE (phase 2, mutes; the mute mock and the owner's "Yes to all", C,
+   quiet everywhere, Nov 13), in the mock's own sizes. SAME ROLE, SAME TOKEN:
+   the ⋯'s row is the sheet's own row on --row-bg, its second line Make's
+   doors' (--ink-2, 15px); the toast a small card (--card, --card-line,
+   --card-drop) with the second button for Undo; Show and Unmute the small
+   violet words (--accent-ink); Settings' Muted the Blocked panel's own rows.
+   The icon is a closed eye in our pen (_icons.html eye_closed), never a
+   speaker: a drawing's own sound switch is the speaker. ---- */
+/* THE ROW in a ⋯ sheet: its name, and under it what it does. */
+.post-act.mu-act { min-height: 56px; padding: 10px 16px; align-items: center; }
+.mu-words { display: flex; flex-direction: column; gap: 2px; min-width: 0; line-height: 1.3; }
+.mu-words b { font-size: 17px; font-weight: 600; }
+.mu-words .mu-say { color: var(--ink-2); font-size: 15px; font-weight: 400; line-height: 1.35; }
+
+/* THE TOAST: a small card above the bar on a phone (12px clear of it: it
+   rises 10px, less than its gap, so it never touches the bar) and at the
+   foot of the page on a desk, in the middle of the column, clear of the
+   rail. It comes once the sheet has gone (--mu-wait, mutes.js: 0.3s from the
+   tap) and stays seven seconds, the Pad's own time for an Undo. ONLY UNDO
+   TAKES A TAP: a tap on its words reaches the page under it. Reduce Motion:
+   it fades where it sits. */
+.mu-toasts {
+  position: fixed; z-index: 50; left: 0; right: 0; bottom: calc(77px + env(safe-area-inset-bottom, 0px));
+  display: flex; justify-content: center; pointer-events: none;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.mu-toast {
+  display: flex; align-items: center; gap: 10px; width: 100%; max-width: 460px; min-height: 56px; padding: 6px 6px 6px 14px;
+  border-radius: 18px; background: var(--card); border: 1px solid var(--card-line); color: var(--ink);
+  box-shadow: var(--card-drop), 0 16px 36px rgba(0, 0, 0, 0.16); font-size: 15px; line-height: 1.35;
+  opacity: 0; transform: translateY(10px); pointer-events: none;
+}
+.mu-toast[hidden] { display: none; }
+.mu-toast.is-up { opacity: 1; transform: none; }
+.mu-toast.is-up .mu-undo { pointer-events: auto; }
+.mu-toast .ic { width: 20px; height: 20px; color: var(--accent-ink); }
+.mu-toast-words { flex: 1; min-width: 0; }
+.mu-toast .mu-undo { flex: none; min-height: 44px; padding: 0 16px; }
+.mu-toast .mu-undo[hidden] { display: none; }
+@media (prefers-reduced-motion: no-preference) {
+  .mu-toast { transition: opacity 0.22s ease var(--mu-wait, 0.3s), transform 0.34s cubic-bezier(0.2, 0.8, 0.2, 1) var(--mu-wait, 0.3s); }
+  .mu-toast.is-going { transition: opacity 0.2s ease, transform 0.2s ease; transform: translateY(6px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mu-toast, .mu-toast.is-up { transform: none; }
+  .mu-toast { transition: opacity 0.22s ease var(--mu-wait, 0.3s); }
+  .mu-toast.is-going { transition: opacity 0.2s ease; }
+}
+.mu-toast.is-going { opacity: 0; }
+@media (min-width: 900px) {
+  .mu-toasts { left: 248px; bottom: 28px; }
+  .mu-toast { width: auto; }
+}
+
+/* A ROOM that opens or closes round what comes or goes (a card leaving Home,
+   the line on their page), so nothing below it jumps: going, it fades first,
+   then its room closes; coming, its room opens, then it fades in (mutes.js).
+   Under Reduce Motion the room is put there while what it holds can't be
+   seen, and only the fade remains. */
+.mu-room { overflow: hidden; }
+
+/* THEIR PAGE: one small line under the buttons, yours alone. */
+.mu-line {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0 6px; margin: 8px 0 0;
+  color: var(--ink-2); font-size: 15px; line-height: 1.35;
+}
+.mu-line .ic { width: 20px; height: 20px; }
+.mu-line .mu-dot { color: var(--ink-2); }
+.mu-unmute {
+  display: inline-flex; align-items: center; min-height: 44px; margin: 0 0 0 -2px; padding: 0 8px; border: 0;
+  background: none; color: var(--accent-ink); font: 600 15px/1.2 var(--font); cursor: pointer;
+}
+@media (min-width: 900px) { .mu-line { justify-content: flex-start; } }
+
+/* A COMMENT FOLDED AWAY: where it was, one quiet line, the eye where the face
+   would be, in Activity's own voice, and Show. The whole line is the button
+   (56px at least); its words wrap if a column is narrow, and the line grows
+   with them (comments.js measures it: --cm-fold-h). The comment's own parts
+   wait under it, hidden for real (no tap and no screen reader reaches its
+   Answer or ⋯), in a room the line's height; the answers under it, by
+   others, stay. Show opens the room and the comment fades in (comments.js);
+   under Reduce Motion the room is put there while it can't be seen. */
+.cm.is-quiet { position: relative; }
+.cm.is-quiet > .face-ring, .cm.is-quiet > .cm-main { opacity: 0; visibility: hidden; }
+.cm.is-quiet > .cm-main { height: calc(var(--cm-fold-h, 56px) - 16px); overflow: hidden; }
+.cm-answers .cm.is-quiet > .cm-main { height: calc(var(--cm-fold-h, 56px) - 10px); }
+.cm-fold-line {
+  position: absolute; z-index: 1; left: 0; right: 0; top: 0; display: flex; align-items: center; gap: 12px;
+  min-height: 56px; margin: 0; padding: 6px 0; border: 0; background: none; color: var(--ink-2);
+  font: 400 15px/1.35 var(--font); text-align: left; cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.cm-fold-ic { display: grid; place-items: center; flex: none; width: 36px; }
+.cm-fold-line .ic { width: 20px; height: 20px; }
+.cm-fold-words { flex: 1; min-width: 0; }
+.cm-show { color: var(--accent-ink); font-weight: 600; white-space: nowrap; }
+
 /* YOUR REPORTS (piece 5): a card per thing reported, as the mock drew it; a
    child's safety ringed in the danger fill, its picture blurred until Open it. */
 .reps .rep-list { display: flex; flex-direction: column; gap: 14px; margin: 0; padding: 0; list-style: none; }

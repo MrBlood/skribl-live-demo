@@ -24,7 +24,7 @@ from .core import (HOT_DAYS, MAX_REPORT_NOTE_CHARS, REPORT_REASONS,
                    THEME_GROUND, _og_meta, _valid_public_id)
 from .models import (SkriblIdempotency, SkriblPost, SkriblPostMedia, SkriblReport, SkriblView,
                      _visibility_policy, as_utc, normalise_user_id,
-                     session, feed_filter, author_dict, sources_for)
+                     session, apply_feed_filter, author_dict, sources_for)
 from .views import purge_views
 from .brand import page_brand
 from .mediameta import STRIPPED, strip_payload
@@ -1215,9 +1215,10 @@ def register_routes(bp, *, index_route=False):
         # (outside review #3). It has to be part of the QUERY: this feed is
         # keyset-paginated, and dropping rows after the fetch returns short
         # pages and a next_cursor pointing at a row the viewer never saw.
-        _ff = feed_filter()
-        if _ff is not None:
-            q = _ff(q, viewer)
+        # A filter that names `author` is told the one author this listing is
+        # narrowed to (a profile's), or None for everybody's (the gallery, a
+        # search): models.set_feed_filter, "WHICH LISTING IT IS".
+        q = apply_feed_filter(q, viewer, author=author)
 
         if score is not None:
             q = q.add_columns(score.label("hot")).order_by(score.desc(), SkriblPost.id.desc())

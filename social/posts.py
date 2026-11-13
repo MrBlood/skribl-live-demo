@@ -227,10 +227,18 @@ def feed_page(before=None, limit=PAGE, viewer=None, person=None, among=None, aut
     the people somebody follows and theirs: their ids as a subquery for the
     posts, and their public ids for the drawings (follows.home_items).
     (entries, next cursor or None). A drawing that is a post's shows once,
-    as the post."""
+    as the post.
+
+    MUTES (C, quiet everywhere): a feed of everybody's (Home, Following and
+    Everyone alike) leaves out the people the viewer muted, in its query, so
+    its pages stay whole; one person's (More from) is what the viewer went
+    to, and keeps them."""
+    from .mutes import muted_ids
     from .safety import hidden_ids
     at = _uncursor(before) if before else None
     hidden = hidden_ids(viewer)
+    if person is None:
+        hidden = hidden | muted_ids(viewer)
     posts, more_p = _posts_before(at, limit, person, hidden, viewer, among)
     drawings, more_s = _drawings_before(at, limit, viewer, person, hidden, authors)
     out = sorted([_entry(p, who) for p, who in posts] + drawings, key=lambda e: (e["at"], e["key"]), reverse=True)
@@ -248,7 +256,10 @@ def cards(entries, viewer):
     from skribl import describe_posts
     from .comments import counts
     from .likes import stats
+    from .mutes import muted_ids
     entries = [e if isinstance(e, dict) else _entry(*e) for e in entries]
+    # WHOM THIS VIEWER MUTED (mutes): their ⋯ says Unmute. Read once a request.
+    muted = muted_ids(viewer)
     drawings = describe_posts([e["post"].skribl_id for e in entries if e["kind"] == "p"],
                               viewer_id=viewer.public_id if viewer else None)
     # HOW MANY COMMENTS each card says (phase 2; a drawing's too, since every
@@ -286,7 +297,8 @@ def cards(entries, viewer):
                              else url_for("social.like_drawing", skribl_id=p.skribl_id)),
                     "url": url, "delete": gone,
                     "profile": profile_url(who.handle),
-                    "mine": viewer is not None and viewer.id == who.id})
+                    "mine": viewer is not None and viewer.id == who.id,
+                    "muted": who.id in muted})
     return out
 
 

@@ -134,6 +134,16 @@
          'M 8.2,12.2 C 9.2,13.0 10.2,14.0 11.0,15.2 C 13.4,11.4 16.2,8.4 20.4,5.6']) }}
 {%- endmacro %}
 
+{# MUTE (the mute mock; the owner's "Yes to all", Nov 13), in the pen: a
+   closed eye, the lid and three lashes as a hand draws them, its ink centred
+   in its box (3.4 to 20.6 across, 7.6 to 16.4 down). Never a speaker: a
+   drawing's own sound switch is the speaker, and mute here is about seeing
+   less, not hearing less. #}
+{% macro eye_closed() -%}
+{{ _pen(['M 3.4,7.8 C 6.1,11.7 9.0,13.3 12.0,13.3 C 15.1,13.3 17.9,11.6 20.6,7.6',
+         'M 6.6,11.1 L 5.0,13.5', 'M 12.0,13.4 L 11.9,16.4', 'M 17.4,11.0 L 19.0,13.4']) }}
+{%- endmacro %}
+
 {% macro pen() -%}
 {{ _svg('<path d="M15 5.5 18.5 9"/><path d="M4.5 19.5l1-4.2L16.2 4.6a2.4 2.4 0 0 1 3.4 3.4L8.9 18.7z"/>') }}
 {%- endmacro %}

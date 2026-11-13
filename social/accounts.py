@@ -301,8 +301,8 @@ def delete_person(sess, person_id):
     here, never left to a cascade), and their blocks, both ways (piece 5); a
     report that names them stays, naming nobody, and an answer to them by
     somebody who stays answers nobody (notifications); their likes, and every
-    like on what they owned (likes); their follows, both ways (follows).
-    Flushes; the request commits.
+    like on what they owned (likes); their follows, both ways (follows);
+    their mutes, both ways (mutes). Flushes; the request commits.
     (Their other skribls are Skribl's, and docs/INTEGRATION.md has no seam
     for a host to take an author's drawings away in one go: they stay, and
     the confirm page says so.)"""
@@ -326,6 +326,10 @@ def delete_person(sess, person_id):
     # (follows: said here too, never left to the cascade).
     from .follows import drop_person_follows
     drop_person_follows(person_id)
+    # Their mutes, both ways: whom they muted and who muted them (mutes: said
+    # here too, never left to the cascade).
+    from .mutes import drop_person_mutes
+    drop_person_mutes(person_id)
     # Answers to them, by people who stay, stay too, answering nobody now
     # (notifications: Activity's "answered your comment" reads whom).
     from .models import Comment
@@ -733,12 +737,14 @@ def register(bp):
         keys = sess.execute(sa.select(Passkey).where(Passkey.person_id == person.id)
                             .order_by(Passkey.created_at, Passkey.id)).scalars().all()
         note = request.args.get("note")
+        from .mutes import muted_people
         from .reports import open_count
         from .safety import blocked_people
         return _page("you.html", here="settings", me=person, keys=keys, token=csrf_token(),
-                     blocked=blocked_people(person), open_reports=open_count() if person.is_admin else 0,
+                     muted=muted_people(person), blocked=blocked_people(person),
+                     open_reports=open_count() if person.is_admin else 0,
                      note=note if note in ("added", "renamed", "removed", "last", "name",
-                                           "unblocked", "limited") else None)
+                                           "unmuted", "unblocked", "limited") else None)
 
     @bp.post("/you/passkeys/options")
     @_rests(json_answer=True)
