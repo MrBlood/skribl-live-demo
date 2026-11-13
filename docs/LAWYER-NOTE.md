@@ -21,11 +21,20 @@ Nothing here is legal advice; it was written by the people building the site.
   them, and for each passkey its public half and when it was last used.
   There are no passwords. Their likes (from Nov 13): which post or drawing
   they liked, when, and where its drawing was in its replay when they
-  tapped the heart, if it was playing.
+  tapped the heart, if it was playing. Who they follow (from Nov 13), and
+  since when; after an unfollow, that they once did and when it ended (so
+  following again does not notify the person twice). Whether their Home
+  opens on Following or Everyone.
 - **Likes.** Everyone sees how many people liked a post or a drawing; who
   liked it, when, and that moment in the replay are shown only to its maker.
   A like by somebody blocked either way, or taken down, is neither shown nor
   counted. Deleting a post or a drawing deletes its likes.
+- **Follows.** Who follows a person, and whom they follow, is shown only to
+  that person; nobody else sees a list or a count, theirs or anybody's.
+  Somebody blocked either way, or taken down, is in no list. A block ends a
+  follow between the two people, both ways, and none can begin while it
+  stands; lifting the block does not restore it. The person followed is not
+  told when somebody stops following them.
 - **Cookies.** Two, both the site's own: one keeps a person signed in, one
   protects forms. Nothing is loaded from anyone else (no ads, no analytics, no
   outside fonts or scripts).
@@ -50,8 +59,8 @@ Nothing here is legal advice; it was written by the people building the site.
   shown outside a post has comments too). Their other drawings and drafts
   stay until they delete them in their Library; the confirm page says so
   first, and a drawing taken down outside a post stays hidden. Their likes
-  are deleted, and so is every like on what they made. Their passkeys
-  go, so nothing can sign in as them. Reports that named them stay, naming
+  are deleted, and so is every like on what they made, and their follows,
+  both ways. Their passkeys go, so nothing can sign in as them. Reports that named them stay, naming
   nobody. Blocks they made or were part of go.
 
 ## Questions for the lawyer

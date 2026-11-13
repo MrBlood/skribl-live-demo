@@ -11,11 +11,19 @@
     and Remove. Post sends the words and the drawing; nothing is posted
     before. A press on Post with nothing drawn says so.
 
-    THE FEED: everyone's posts, newest first (Following comes in phase 2),
-    each card still until tapped, as every feed's player is. Load more brings
-    the next page in place (posts.feed_more), mounted as Skribl asks. Each
-    card's heart and how many at the start of its drawing's line (likes:
-    _post.html, heart(); likes.js).
+    THE PILL (follows; the owner's "Yes to all", Nov 13): Following |
+    Everyone under the composer, the Gallery's New / Hot (social/_follow.html,
+    home_pill). Following is the people you follow and you, newest first,
+    then "You're caught up…" and Fresh from everyone; Everyone is everyone's.
+    Home opens on Following once you follow somebody, on Everyone before
+    that, and on your own pick once you make one (follows.home_shows). A tap
+    glides the pill, fades the posts, changes them while they can't be seen
+    and fades them back; the page doesn't scroll (follows.js).
+
+    THE FEED: each card still until tapped, as every feed's player is. Load
+    more brings the next page in place (posts.feed_more), mounted as Skribl
+    asks. Each card's heart and how many at the start of its drawing's line
+    (likes: _post.html, heart(); likes.js).
 
     posts.js holds the moving parts; the words are this page's. #}
 {% extends 'social/base.html' %}
@@ -23,11 +31,13 @@
 {% from 'social/_post.html' import post_card, post_sheets, post_words, face with context %}
 {% from 'social/_likes.html' import like_sheets with context %}
 {% from 'social/_safety.html' import safety_sheets with context %}
+{% from 'social/_follow.html' import home_pill, feed_extra, follow_words with context %}
 {% import 'social/_icons.html' as ic %}
 
 {% block head %}<script src="{{ skribl_asset('lib/composehost.js') }}" defer></script>{% endblock %}
 {% block scripts %}<script src="{{ social_asset('posts.js') }}" defer></script>
 <script src="{{ social_asset('likes.js') }}" defer></script>
+<script src="{{ social_asset('follows.js') }}" defer></script>
 <script src="{{ social_asset('safety.js') }}" defer></script>{% endblock %}
 
 {% block main %}
@@ -59,15 +69,19 @@
   <p class="say composer-say" data-compose-say role="status" hidden></p>
 </section>
 
+{{ home_pill(show) }}
 <h2 class="sr">Posts</h2>
+<div class="feed-swap" data-feed-swap>
 <div class="feed" data-feed data-more="{{ url_for('social.feed_more') }}">
-  {% for c in cards %}{{ post_card(c) }}{% endfor %}
+  {% for c in cards %}{% if c.extra %}{{ feed_extra(c.extra) }}{% else %}{{ post_card(c) }}{% endif %}{% endfor %}
 </div>
-{% if not cards %}<p class="feed-none" data-feed-none>No posts yet. Yours could be the first: say something, then draw it.</p>{% endif %}
+<p class="feed-none" data-feed-none{% if cards %} hidden{% endif %}>No posts yet. Yours could be the first: say something, then draw it.</p>
 <button class="btn btn-wide feed-more" type="button" data-feed-next="{{ next or '' }}"{% if not next %} hidden{% endif %}>Load more</button>
+</div>
 <p class="say" data-feed-say role="status" hidden></p>
 {{ post_words() }}
 {{ like_sheets(none, none) }}
+{{ follow_words() }}
 {% endblock %}
 
 {% block overlays %}

@@ -56,6 +56,13 @@ who liked it is the maker's alone ("Liked by…"). Each like keeps where the
 drawing was when it was tapped, through Skribl's playhead seam. Likes wait in
 Activity; they never light the bell's dot.
 
+PHASE 2, FOLLOWS (follows.py; the follow mock, the owner's "Yes to all", B,
+Nov 13). Follow on a person's page, Following once tapped; who follows you
+and whom you follow is yours alone ("Followed by…" on your own page). Home's
+pill, Following | Everyone: the people you follow and you, newest first,
+then everyone's, so Home never runs out. Follows wait in Activity; they
+never light the bell's dot.
+
 ONE SKRIBL, SHARED, PEOPLE TOO. The host hands Skribl the site's signed-in
 person as its current user (current_user_id() below) and names them with
 describe_author(), so a drawing made in the Pad while signed in is theirs.
@@ -236,12 +243,13 @@ def init_social(app, *, session=None, url_prefix="/social", skribl_blueprint="sk
         return render_template("social/explore.html", here="explore")
 
     if site is not None:
-        from . import accounts, activity, comments, likes, posts, profiles, reports, rules, safety
+        from . import accounts, activity, comments, follows, likes, posts, profiles, reports, rules, safety
         accounts.register(bp)
         profiles.register(bp, skribl_blueprint)
         posts.register(bp, skribl_blueprint)
         comments.register(bp)
         likes.register(bp)
+        follows.register(bp)
         activity.register(bp, skribl_blueprint)
         safety.register(bp)
         reports.register(bp, skribl_blueprint)

@@ -1,0 +1,160 @@
+{#  FOLLOWS, THE PARTS (phase 2; the follow mock and the owner's "Yes to all",
+    B, Nov 13). follows.py says the rules; follows.js moves them; social.css,
+    "FOLLOWING", dresses them.
+
+    follow_button(who, following)   first in the row on somebody else's page:
+                        Follow, the action's purple with a plus in our pen;
+                        Following once tapped, the quiet button, its check
+                        drawing itself. Both words sit in one place inside it,
+                        so it is as wide as "Following" in any font and
+                        nothing beside it moves. Signed out it raises the
+                        small sheet that says how; following, a tap raises
+                        "Unfollow Theo?".
+    followed_line(fl)   your own page alone: "Followed by Mira, Theo and 2
+                        others", their faces (or before anybody follows you,
+                        "You follow Mira and Juno"), the twin of "Liked by…";
+                        it opens the lists. No line with nobody either way.
+    follow_sheets(who, fl, mine)   "Unfollow Theo?" (somebody else's page,
+                        signed in), "Follow Theo?" (signed out), and the lists
+                        (your own page): Make's sheet with the one pill,
+                        Followers | Following, newest first, with when; and
+                        follows.js's words (follow_words(), Home's too).
+    home_pill(show)     Home's pill under the composer: Following | Everyone,
+                        the Gallery's New / Hot, value for value.
+    feed_extra(kind)    what Home's Following says between its cards: the
+                        kind card for somebody who follows nobody ("none"),
+                        "You're caught up…" ("caught"), Fresh from everyone
+                        ("fresh").
+
+    Import these WITH CONTEXT: they read the page's me, when_iso, when_day and
+    signin_here. #}
+{% import 'social/_icons.html' as ic %}
+{% from 'social/_post.html' import face with context %}
+
+{% macro follow_button(who, following) -%}
+{%- set first = who.display_name.split(' ')[0] -%}
+<button class="btn fo-btn{% if following %} is-following{% endif %}" type="button" data-first="{{ first }}" data-name="{{ who.display_name }}"
+        {%- if me %} data-follow="{{ url_for('social.follow', handle=who.handle) }}"{% if following %} aria-haspopup="dialog" aria-controls="unfollowSheet" aria-expanded="false"{% endif %}
+        {%- else %} data-follow-out aria-haspopup="dialog" aria-controls="followOutSheet" aria-expanded="false"{% endif %}
+        aria-label="{{ 'Following' if following else 'Follow' }} {{ who.display_name }}">
+  <span class="fo-say fo-off" aria-hidden="true">{{ ic.plus() }}<span>Follow</span></span>
+  <span class="fo-say fo-on" aria-hidden="true">{{ ic.check() }}<span>Following</span></span>
+</button>
+{%- endmacro %}
+
+{% macro followed_line(fl) -%}
+{%- set l = fl.line -%}
+<button class="lk-by fo-by" type="button" data-follows-open="{{ l.which }}" aria-haspopup="dialog" aria-controls="followsSheet" aria-expanded="false">
+  <span class="lk-faces" aria-hidden="true">{% for p in l.faces %}{{ face(p) }}{% endfor %}</span>
+  <span class="lk-by-words">{{ 'Followed by' if l.which == 'followers' else 'You follow' }} {% for n in l.names %}{% if not loop.first %}{{ ' and ' if loop.last and not l.more else ', ' }}{% endif %}<b>{{ n }}</b>{% endfor %}{% if l.more %} and {{ l.more }} {{ 'other' if l.more == 1 else 'others' }}{% endif %}</span>
+</button>
+{%- endmacro %}
+
+{% macro _rows(rows, which) -%}
+{%- for f, p in rows %}
+<li><a class="lk-row" href="{{ url_for('social.profile', handle=p.handle) }}">{{ face(p) }}<span class="lk-who"><b>{{ p.display_name }}</b><span>@{{ p.handle }}</span></span><span class="lk-when"><time datetime="{{ when_iso(f.created_at) }}" data-when="ago">{{ when_day(f.created_at) }}</time></span></a></li>
+{%- else %}
+<li class="fo-empty">{{ 'When someone follows you, they’ll show here.' if which == 'followers' else 'Tap Follow on someone’s page, and they’ll show here.' }}</li>
+{%- endfor %}
+{%- endmacro %}
+
+{% macro _pill(label, opts, on, data, cls='') -%}
+<div class="fo-seg{{ ' ' ~ cls if cls }}" role="group" aria-label="{{ label }}"{{ caller() if caller }}>
+  <span class="fo-slider" aria-hidden="true"></span>
+  {%- for key, words in opts %}
+  <button type="button" data-{{ data }}="{{ key }}" aria-pressed="{{ 'true' if key == on else 'false' }}">{{ words }}</button>
+  {%- endfor %}
+</div>
+{%- endmacro %}
+
+{% macro follow_sheets(who, fl, mine) -%}
+{%- set first = who.display_name.split(' ')[0] -%}
+{% if mine and fl and fl.line %}
+{#  WHO FOLLOWS YOU, AND WHOM YOU FOLLOW: yours alone. Make's own sheet
+    (social.js), the one pill, the people on one card, newest first, with
+    when; both lists in one place, so the sheet keeps its height as the pill
+    moves between them. A row opens their page; that's where you unfollow. #}
+<div class="make post-sheet lk-sheet fo-sheet" id="followsSheet" hidden>
+  <div class="make-scrim" data-make-close></div>
+  <div class="make-sheet" role="dialog" aria-modal="true" aria-labelledby="followsTitle">
+    <div class="make-grip" data-make-close aria-hidden="true"></div>
+    <h2 class="make-title" id="followsTitle">@{{ who.handle }}</h2>
+    {{ _pill('Show', (('followers', 'Followers'), ('following', 'Following')), fl.tab, 'tab') }}
+    <div class="fo-lists">
+      <ul class="lk-list fo-list{% if fl.tab == 'followers' %} is-on{% endif %}" data-list="followers" aria-label="Followers">{{ _rows(fl.followers, 'followers') }}</ul>
+      <ul class="lk-list fo-list{% if fl.tab == 'following' %} is-on{% endif %}" data-list="following" aria-label="Following">{{ _rows(fl.following, 'following') }}</ul>
+    </div>
+    <p class="lk-note">Only you can see who follows you, and who you follow.</p>
+    <button class="btn btn-wide make-cancel" type="button" data-make-close>Close</button>
+  </div>
+</div>
+{% elif not mine and me %}
+{#  UNFOLLOW, ASKED ONCE: Unfollow is the big button, because it is what
+    they came to do; Keep following beside it. Nobody is told. #}
+<div class="make post-sheet fo-un" id="unfollowSheet" hidden>
+  <div class="make-scrim" data-make-close></div>
+  <div class="make-sheet" role="dialog" aria-modal="true" aria-labelledby="unfollowTitle">
+    <div class="make-grip" data-make-close aria-hidden="true"></div>
+    <h2 class="make-title" id="unfollowTitle">Unfollow {{ first }}?</h2>
+    <p class="post-lede">You’ll still see {{ first }}’s drawings under Everyone. They aren’t told.</p>
+    <div class="post-sheet-acts">
+      <button class="btn btn-big" type="button" data-make-close>Keep following</button>
+      <button class="btn btn-primary btn-big" type="button" data-unfollow>Unfollow</button>
+    </div>
+  </div>
+</div>
+{% elif not mine %}
+{#  SIGNED OUT: Follow is there for everybody; a tap raises this, small,
+    saying how, as the heart's does. Sign in comes back to this page, where
+    Follow waits: nothing is pressed for them. #}
+<div class="make post-sheet lk-out fo-out" id="followOutSheet" hidden>
+  <div class="make-scrim" data-make-close></div>
+  <div class="make-sheet" role="dialog" aria-modal="true" aria-labelledby="followOutTitle">
+    <div class="make-grip" data-make-close aria-hidden="true"></div>
+    <h2 class="make-title" id="followOutTitle">Follow {{ first }}?</h2>
+    <p class="post-lede">Sign in, and {{ first }}’s new drawings show first on your Home.</p>
+    <div class="post-sheet-acts">
+      <button class="btn btn-big" type="button" data-make-close>Not now</button>
+      <a class="btn btn-primary btn-big" href="{{ signin_here }}">Sign in</a>
+    </div>
+  </div>
+</div>
+{% endif %}
+{{ follow_words(mine) }}
+{%- endmacro %}
+
+{% macro follow_words(mine=false) -%}
+<div class="words" data-follow-words hidden>
+  <span data-word="fo_follow">Follow {name}</span>
+  <span data-word="fo_following">Following {name}</span>
+  <span data-word="fo_now_following">You’re following {name}.</span>
+  <span data-word="fo_stale">This page went stale. Reload it, then try again.</span>
+  <span data-word="fo_limited">Lots of follows in a short while. Wait a little, then try again.</span>
+  <span data-word="fo_signed_out">You’ve been signed out. Sign in again to follow.</span>
+  <span data-word="fo_taken_down">Your account was taken down, so nothing new can be shared from it.</span>
+  <span data-word="fo_gone">They aren’t here anymore. Reload the page to see what’s new.</span>
+  <span data-word="fo_network">That didn’t reach us. Check your connection and try again.</span>
+  <span data-word="fo_failed">That didn’t go through. Try again?</span>
+  {% if mine %}<span data-word="now">now</span>{% endif %}
+</div>
+{%- endmacro %}
+
+{% macro home_pill(show) -%}
+{% call _pill('Show posts from', (('following', 'Following'), ('everyone', 'Everyone')), show, 'show', 'fo-home') -%}
+{{ ' ' }}data-home-pill data-pick="{{ url_for('social.home_show') }}" data-first="{{ url_for('social.feed_more') }}"
+{%- endcall %}
+{%- endmacro %}
+
+{% macro feed_extra(kind) -%}
+{%- if kind == 'none' %}
+<section class="fo-none" aria-labelledby="foNoneTitle">
+  <h2 id="foNoneTitle">You’re not following anyone yet</h2>
+  <p>Tap Follow on someone’s page, and their new drawings show up here first. Until then, here’s everyone’s.</p>
+  <a class="btn" href="{{ url_for('social.explore') }}">Look around</a>
+</section>
+{%- elif kind == 'caught' %}
+<p class="fo-caught">{{ ic.caught() }}<span>You’re caught up with the people you follow.</span></p>
+{%- elif kind == 'fresh' %}
+<h2 class="sec fo-fresh">Fresh from everyone</h2>
+{%- endif %}
+{%- endmacro %}

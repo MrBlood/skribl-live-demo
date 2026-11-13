@@ -882,8 +882,21 @@ with sync_playwright() as p_:
                     return { href: y && y.getAttribute('href'), current: [...document.querySelectorAll('nav.nav [aria-current]')]
                              .map(e => (e.querySelector('.tab-name') || e).textContent.trim()),
                              gear: [...document.querySelectorAll('a[aria-label=Settings]')].filter(a => a.getClientRects().length)
-                                   .map(a => a.getAttribute('href')) }; }""")
+                                   .map(a => a.getAttribute('href')),
+                             acts: [...document.querySelectorAll('.prof-acts > *')].filter(e => e.getClientRects().length)
+                                   .map(e => e.matches('.fo-btn') ? 'follow' : e.matches('[data-share]') ? 'share'
+                                        : e.matches('[data-person-menu]') ? 'more' : e.matches('[href$="/you/edit"]') ? 'edit'
+                                        : e.matches('[data-face-sheet]') ? 'face' : e.matches('[aria-label=Settings]') ? 'gear'
+                                        : e.tagName.toLowerCase()) }; }""")
             close_ctx(ctx, pg)
+        # FOLLOWS (the owner's B, Nov 13): Follow first in the row on somebody
+        # else's profile, before Share and ⋯; never on your own.
+        check("the row of buttons: on somebody else's profile Follow, Share and ⋯ (follows: Follow first); on your own"
+              " Edit profile, your face and Share (and on a desk the gear), no Follow",
+              all(places[(s, "juno")]["acts"] == ["follow", "share", "more"] for s in ("phone", "desk"))
+              and places[("phone", "mira")]["acts"] == ["edit", "face", "share"]
+              and places[("desk", "mira")]["acts"] == ["edit", "face", "share", "gear"],
+              json.dumps({f"{k[0]} @{k[1]}": v["acts"] for k, v in places.items()}))
         check("You leads to your own profile, on the bar and the rail, and is the place marked there; somebody else's"
               " profile marks no place",
               all(places[(s, "mira")]["href"] == "/social/@mira" and places[(s, "mira")]["current"] == ["You"]

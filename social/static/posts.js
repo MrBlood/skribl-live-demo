@@ -30,7 +30,8 @@
  * (window.SocialSafety), and afterwards Home says so.
  *
  * TIMES are said in the person's own time: "35m" in the feed, "Nov 10 at
- * 8:20 PM" on a post's page; without this file, the day in UTC.
+ * 8:20 PM" on a post's page (social.js's SocialWhen, with this page's
+ * words); without the scripts, the day in UTC.
  *
  * The words are the page's ([data-word]): this file says nothing of its own.
  */
@@ -80,26 +81,10 @@
   }
 
   /* ---- times, in the person's own -------------------------------------- */
-  function when(root) {
-    var now = Date.now();
-    Array.prototype.forEach.call((root || doc).querySelectorAll('time[data-when]'), function (t) {
-      var d = new Date(t.getAttribute('datetime'));
-      if (isNaN(d)) return;
-      var sameYear = d.getFullYear() === new Date(now).getFullYear();
-      var day = d.toLocaleDateString(undefined, sameYear ? { month: 'short', day: 'numeric' }
-                                                         : { month: 'short', day: 'numeric', year: 'numeric' });
-      if (t.getAttribute('data-when') === 'at') {
-        t.textContent = say('at', { day: day, time: d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }) });
-        return;
-      }
-      var mins = Math.floor((now - d) / 60000);
-      t.textContent = mins < 1 ? say('now') : mins < 60 ? mins + 'm' : mins < 1440 ? Math.floor(mins / 60) + 'h'
-        : mins < 10080 ? Math.floor(mins / 1440) + 'd' : day;
-    });
-  }
+  /* One way to say a time, social.js's (window.SocialWhen), for this page and
+     for what arrives later: a comment (comments.js), a page of the feed. */
+  var when = window.SocialWhen || function () {};
   when();
-  /* One way to say a time, for what arrives later: a comment (comments.js). */
-  window.SocialWhen = when;
 
   /* ---- a post's link: copied, or the device's own share sheet ------------- */
   function absolute(url) { return new URL(url, window.location.href).href; }

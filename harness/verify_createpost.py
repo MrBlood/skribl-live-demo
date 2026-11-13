@@ -618,6 +618,43 @@ with host.app_context():
           and len(_cap) == 100 and _capmore,
           f"keys {sorted(_one)}; {len(_cap)} of 101, more {_capmore}")
 
+    # A FEED OF THE PEOPLE SOMEBODY FOLLOWS (after v330, the Skribl site's
+    # Following): `authors`, these authors' alone, any number of them.
+    _fol = []
+    for _i, (_who, _vis) in enumerate((("fol:ann", "public"), ("fol:bo", "public"), ("fol:ann", "unlisted"),
+                                        ("fol:cy", "public"), ("fol:ann", "public"))):
+        _fol.append((_who, _vis, skribl.create_post(payload(title=f"f{_i}", visibility=_vis), author_id=_who).public_id))
+        db.session.commit()
+        _t.sleep(0.01)
+    _two, _twomore = skribl.list_public_posts(authors=["fol:ann", "fol:cy", "fol:ann"])
+    _none, _nonemore = skribl.list_public_posts(authors=[])
+    _p1, _m1 = skribl.list_public_posts(authors=["fol:ann", "fol:cy"], limit=2)
+    _last = _p1[-1] if _p1 else {"created_at": "2000-01-01T00:00:00", "id": ""}
+    _p2, _m2 = skribl.list_public_posts(authors=["fol:ann", "fol:cy"], limit=2,
+                                        before=(_dt.fromisoformat(_last["created_at"]), _last["id"]))
+    check("list_public_posts(authors=[...]) holds those authors' public ones only, newest first, each once (never"
+          " unlisted, never another's); an empty list lists nothing; it pages by before as the rest do; the"
+          " docstring names it",
+          [i["id"] for i in _two] == [_fol[4][2], _fol[3][2], _fol[0][2]] and not _twomore
+          and _none == [] and not _nonemore and [i["id"] for i in _p1] == [_fol[4][2], _fol[3][2]] and _m1
+          and [i["id"] for i in _p2] == [_fol[0][2]] and not _m2
+          and "authors" in (skribl.list_public_posts.__doc__ or ""),
+          f"two {[i['title'] for i in _two]}; none {_none}; page 1 {[i['title'] for i in _p1]} {_m1};"
+          f" page 2 {[i['title'] for i in _p2]} {_m2}")
+    _older = skribl.create_post(payload(title="many-older", visibility="public"), author_id="many:5").public_id
+    db.session.commit()
+    _t.sleep(0.01)
+    _newer = skribl.create_post(payload(title="many-newer", visibility="public"), author_id="many:550").public_id
+    db.session.commit()
+    _many = [f"many:{i}" for i in range(600)]
+    _all, _allmore = skribl.list_public_posts(authors=_many)
+    _top, _topmore = skribl.list_public_posts(authors=_many, limit=1)
+    check("...and any number of them: 600 authors are asked in pieces and the newest of all kept, in order, the limit"
+          " and more holding across the pieces",
+          [i["id"] for i in _all] == [_newer, _older] and not _allmore
+          and [i["id"] for i in _top] == [_newer] and _topmore,
+          f"all {[i['title'] for i in _all]} {_allmore}; top {[i['title'] for i in _top]} {_topmore}")
+
 bad = [(n, d) for ok, n, d in results if not ok]
 print("\n" + "=" * 62)
 print(f"{len(results) - len(bad)}/{len(results)} passed"

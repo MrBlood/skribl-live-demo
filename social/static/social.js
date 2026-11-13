@@ -265,6 +265,35 @@
 
   window.SocialPadOverlay = padOver;
 
+  /* TIMES, IN THE PERSON'S OWN (window.SocialWhen): every <time data-when>
+   * under `root` said as the site says a time: "now", "35m", "2h", "3d", then
+   * the day ("Nov 3"); data-when="at", the day and the hour ("Nov 10 at 8:20
+   * PM"). Here, not in posts.js, so any page can say them (follows: your
+   * own page's lists, where Skribl's Gallery leaves no room for posts.js).
+   * The words are the page's ([data-word="now"], [data-word="at"]). */
+  function word(key) {
+    var w = doc.querySelector('[data-word="' + key + '"]');
+    return w ? w.textContent : '';
+  }
+  window.SocialWhen = function (root) {
+    var now = Date.now();
+    Array.prototype.forEach.call((root || doc).querySelectorAll('time[data-when]'), function (t) {
+      var d = new Date(t.getAttribute('datetime'));
+      if (isNaN(d)) return;
+      var sameYear = d.getFullYear() === new Date(now).getFullYear();
+      var day = d.toLocaleDateString(undefined, sameYear ? { month: 'short', day: 'numeric' }
+                                                         : { month: 'short', day: 'numeric', year: 'numeric' });
+      if (t.getAttribute('data-when') === 'at') {
+        t.textContent = word('at').split('{day}').join(day)
+          .split('{time}').join(d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }));
+        return;
+      }
+      var mins = Math.floor((now - d) / 60000);
+      t.textContent = mins < 1 ? word('now') : mins < 60 ? mins + 'm' : mins < 1440 ? Math.floor(mins / 60) + 'h'
+        : mins < 10080 ? Math.floor(mins / 1440) + 'd' : day;
+    });
+  };
+
   /* ACTIVITY'S DOT GOES AS YOU LOOK (notifications): a tap on the bell (a
      phone's top) or the rail's Activity lets the dot fade while Activity
      opens (social.css, .is-seen), so a page the back button brings back

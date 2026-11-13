@@ -17,6 +17,11 @@
     your post", when, and the post's small picture; no words of its own. It
     opens the post at "Liked by…" (#liked), which glows a moment (likes.js).
 
+    A FOLLOW (follows; the follow mock) is a row like a like's, its face
+    wearing a small Follow, the action's purple and a white plus: "Mira
+    followed you", "Mira and 2 others followed you", when; no picture. One
+    person opens their page; several, who follows you (your page, #followers).
+
     ON A PHONE the top says Activity, the way back beside it, as a post's
     page says Post; the page's own heading is a screen reader's there, and a
     desk, with no top, shows it. The bar marks no place: Activity is not in
@@ -46,17 +51,18 @@
 {% macro row(r) -%}
 {%- set says = {'comment': 'said something on your post', 'answer': 'answered your comment',
                 'answer_drawing': 'answered with a drawing', 'drawing': 'drew something on your post',
-                'like': 'liked your post'} -%}
+                'like': 'liked your post', 'follow': 'followed you'} -%}
 {%- set n = r.n -%}
 <li><a class="act-row{% if r.new %} is-new{% endif %}" href="{{ r.href }}">
   <span class="act-mark" aria-hidden="true"></span>
   {%- if r.kind == 'like' %}<span class="act-who">{{ faces(r) }}<span class="act-badge" aria-hidden="true">{{ ic.heart() }}</span></span>
+  {%- elif r.kind == 'follow' %}<span class="act-who">{{ faces(r) }}<span class="act-badge fo-badge" aria-hidden="true"><span class="fo-disc">{{ ic.plus() }}</span></span></span>
   {%- else %}{{ faces(r) }}{% endif %}
   <span class="act-text">{% if r.new %}<span class="sr">New: </span>{% endif %}<span class="act-say"><b>{{ r.names[0] }}</b>
     {%- if n == 2 %} and <b>{{ r.names[1] }}</b>{% elif n > 2 %} and {{ n - 1 }} others{% endif %} {{ says[r.kind] }}</span>
     <time class="act-when" datetime="{{ when_iso(r.when) }}" data-when="ago">{{ when_day(r.when) }}</time>
     {%- if r.words %}<span class="act-peek">“{{ r.words }}”</span>{% endif %}</span>
-  <span class="act-pic"{% if r.pic %} style="background-image: url('{{ r.pic.src }}'); background-size: {{ r.pic.size }}; background-position: {{ r.pic.at }}"{% endif %} aria-hidden="true"></span>
+  <span class="act-pic{% if r.kind == 'follow' %} is-none{% endif %}"{% if r.pic %} style="background-image: url('{{ r.pic.src }}'); background-size: {{ r.pic.size }}; background-position: {{ r.pic.at }}"{% endif %} aria-hidden="true"></span>
 </a></li>
 {%- endmacro %}
 
@@ -64,7 +70,7 @@
 <div class="act">
   <header class="page-head act-head">
     <h1 class="page-title">Activity</h1>
-    <p class="page-sub">Who liked your posts or said something on them, and who answered you.</p>
+    <p class="page-sub">Who followed you, liked your posts or said something on them, and who answered you.</p>
   </header>
   {% if fresh %}
   <h2 class="act-sec" id="actNew">New</h2>
@@ -78,7 +84,7 @@
   <section class="act-empty" aria-labelledby="actEmptyTitle">
     <img class="si-icon" src="{{ skribl_asset('apple-touch-icon.png') }}" alt="" width="64" height="64">
     <h2 class="act-empty-title" id="actEmptyTitle">Nothing new yet</h2>
-    <p class="act-empty-words">When someone likes your post, says something on it, or answers you, you’ll see it here.</p>
+    <p class="act-empty-words">When someone follows you, likes your post, says something on it, or answers you, you’ll see it here.</p>
     <button class="btn btn-primary btn-big" type="button" data-make aria-haspopup="dialog" aria-controls="makeSheet"
             aria-expanded="false">{{ ic.pen() }}<span>Make a skribl</span></button>
   </section>

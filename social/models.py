@@ -34,9 +34,9 @@ import sqlalchemy as sa
 from sqlalchemy.orm import DeclarativeBase
 
 __all__ = ["SocialBase", "Person", "Passkey", "Invite", "Challenge", "RateEvent", "Post",
-           "Comment", "Like", "Block", "Report", "PERSON_PREFIX", "BIO_MAX", "BIO_LINES", "WORDS_MAX",
-           "REPORT_KINDS", "REPORT_STATES", "REPORT_NOTE_MAX", "new_person_id", "new_public_id",
-           "as_utc", "utcnow", "attach_to_metadata"]
+           "Comment", "Like", "Follow", "Block", "Report", "PERSON_PREFIX", "BIO_MAX", "BIO_LINES",
+           "WORDS_MAX", "REPORT_KINDS", "REPORT_STATES", "REPORT_NOTE_MAX", "HOME_FEEDS",
+           "new_person_id", "new_public_id", "as_utc", "utcnow", "attach_to_metadata"]
 
 #: What every person's public id starts with. A demo identity never does.
 PERSON_PREFIX = "site:"
@@ -57,6 +57,10 @@ REPORT_STATES = ("open", "kept", "taken_down")
 
 #: A report's note, at most (Skribl's own report note is 300 too).
 REPORT_NOTE_MAX = 300
+
+#: What Home can open on (follows; Home's pill): the people you follow and
+#: you, or everyone's posts.
+HOME_FEEDS = ("following", "everyone")
 
 #: A 64-bit integer key that SQLite will still number by itself: SQLite only
 #: fills in an INTEGER PRIMARY KEY, so there it is INTEGER (64 bits wide on
@@ -137,6 +141,11 @@ class Person(SocialBase):
     #: "all yes", Nov 12): what came after it is new, and the bell has its
     #: dot. None until they first look: then everything is new.
     activity_seen_at = sa.Column(sa.DateTime(timezone=True), nullable=True)
+    #: WHAT HOME OPENS ON (follows; the owner's "Yes to all", Nov 13): one of
+    #: HOME_FEEDS, as they last picked on Home's pill, kept with the account so
+    #: it holds on every device. None until they pick: then Following once
+    #: they follow somebody, and Everyone before that (follows.home_shows).
+    home_feed = sa.Column(sa.String(12), nullable=True)
 
     __table_args__ = (
         sa.Index("ix_social_people_public_id", "public_id", unique=True),
@@ -396,6 +405,52 @@ class Like(SocialBase):
         sa.Index("ix_social_likes_drawing_created", "drawing_id", "created_at"),
         #: Whose, newest first: Activity's likes on what you made.
         sa.Index("ix_social_likes_owner_created", "owner_id", "created_at"),
+    )
+
+
+class Follow(SocialBase):
+    """One person following another (phase 2, follows; the owner's "Yes to
+    all" on the follow mock, B, Nov 13): their new drawings show first on the
+    follower's Home. Who follows whom is only ever the person's own to see
+    (follows.py).
+
+    ONE ROW A PAIR, FOR AS LONG AS THEY BOTH STAY (unique on the pair), and
+    nobody follows themselves (ck_social_follows_not_self). created_at is when
+    the follower FIRST followed. Unfollowing sets ended_at and keeps the row,
+    so that following again (ended_at back to nothing, created_at kept) never
+    tells them twice: Activity reads created_at. Every read of who follows
+    whom takes ended_at IS NULL.
+
+    A BLOCK ENDS IT BOTH WAYS, and for good: the rows go (safety.py), so
+    lifting the block brings nothing back. Deleting an account takes its rows
+    both ways, in code (accounts.delete_person); the ON DELETE CASCADEs are
+    the net under that.
+
+    Indexed both ways, newest first: whom a person follows (their Following
+    list, and Home's Following, through the pair), and who follows a person
+    (their Followers list, their "Followed by…" line, and Activity's "followed
+    you", since you last looked and before)."""
+    __tablename__ = "social_follows"
+
+    id = sa.Column(BigId, primary_key=True)
+    #: Who follows.
+    follower_id = sa.Column(BigId, sa.ForeignKey("social_people.id", ondelete="CASCADE"), nullable=False)
+    #: Whom.
+    followed_id = sa.Column(BigId, sa.ForeignKey("social_people.id", ondelete="CASCADE"), nullable=False)
+    #: When they first followed (kept through an unfollow and a follow again).
+    created_at = sa.Column(sa.DateTime(timezone=True), nullable=False, default=utcnow)
+    #: When they unfollowed; None while they follow.
+    ended_at = sa.Column(sa.DateTime(timezone=True), nullable=True)
+
+    __table_args__ = (
+        #: Nobody follows themselves.
+        sa.CheckConstraint("follower_id <> followed_id", name="ck_social_follows_not_self"),
+        #: One row a pair.
+        sa.Index("ix_social_follows_pair", "follower_id", "followed_id", unique=True),
+        #: Whom a person follows, newest first.
+        sa.Index("ix_social_follows_follower_created", "follower_id", "created_at"),
+        #: Who follows a person, newest first.
+        sa.Index("ix_social_follows_followed_created", "followed_id", "created_at"),
     )
 
 

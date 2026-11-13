@@ -1596,6 +1596,31 @@ stays a sleep.
   44px and the marks at 3:1, phone (touch) and desk, light and dark, the
   heart's place read on every one; no page, console or CSP errors. `SOCIALLIKES_PART=<n>` runs one section.
 
+### After v330 — Following
+
+- `verify_socialfollow.py` — follows at `/social` (docs/SOCIAL-SITE.md
+  section 13), through the demo's own app on a server of its own, people
+  joining with Chromium's virtual authenticator: the Follow button's place
+  (first in the row, before Share and ⋯, phone and desk), paint and name;
+  a tap that follows and is kept, as wide as Following either way so nothing
+  beside it moves, the unfollow sheet asking once, following again keeping
+  the first time; who may follow (signed out, stale, taken down, yourself, a
+  block either way, a body that is not a yes or a no, the limit) and a refusal
+  putting the button back; nothing of follows on somebody else's page or its
+  source, your own page's "Followed by…" and "You follow…", counted by the
+  viewer; the lists' sheet and its landings; the button's fade and draw read
+  on every frame, and Reduce Motion; Home's pill (its place, the Gallery's
+  values, the default and the pick kept across devices, the switch read on
+  every frame, Reduce Motion); Following's order, caught up, Fresh from
+  everyone, Load more through both, the kind card; Activity's follow rows,
+  grouping, Earlier by the day, the bell left dark; the signed-out sheet and
+  signing in back to the page; blocks ending follows; the chain on a
+  populated database, the constraints, the reads' query plans, Home with no
+  read a card, deleting an account with the cascade off; every word at 4.5:1,
+  every mark at 3:1 and every target 44px, phone (touch) and desk, light and
+  dark; no page, console or CSP errors. `SOCIALFOLLOW_PART=<n>` runs one
+  section.
+
 ## Where a suite's rationale lives
 
 **In the suite's own docstring, next to the assertions it explains.**
