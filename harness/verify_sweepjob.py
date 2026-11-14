@@ -336,7 +336,8 @@ check("…with one line on stderr and no traceback",
 # instances until each has been driven. `takedown` and `backfill_canvas` import
 # this function from `sweep` rather than copying it, and that is the property
 # worth pinning: a fourth command that copies it instead can regress alone.
-for _cmd in ("skribl.sweep", "skribl.takedown", "skribl.backfill_canvas"):
+# `backfill_ground` (after v330) is a fourth, and imports it too.
+for _cmd in ("skribl.sweep", "skribl.takedown", "skribl.backfill_canvas", "skribl.backfill_ground"):
     for _form, _spec in (("the app object", "app:app"),
                          ("the factory", "app:create_app")):
         _p = subprocess.run([sys.executable, "-m", _cmd, "--app", _spec,
@@ -349,10 +350,10 @@ for _cmd in ("skribl.sweep", "skribl.takedown", "skribl.backfill_canvas"):
               and "raised TypeError" not in _p.stderr,
               f"exit {_p.returncode} — {_p.stderr.strip()[:150]}")
 
-check("...and the three commands share ONE resolver rather than a copy each",
+check("...and the commands share ONE resolver rather than a copy each",
       all(__import__(m, fromlist=["_load_app"])._load_app
           is __import__("skribl.sweep", fromlist=["_load_app"])._load_app
-          for m in ("skribl.takedown", "skribl.backfill_canvas")),
+          for m in ("skribl.takedown", "skribl.backfill_canvas", "skribl.backfill_ground")),
       "a second spelling of `--app` is a second thing to fix when this recurs")
 
 code, out, err = cli(env=dict(ENV, SKRIBL_MEDIA_BACKEND="inline"))

@@ -281,6 +281,101 @@ def _payload_canvas(payload):
     return (w, h)
 
 
+# WHAT THE DRAWING IS PAINTED ON, two more columns on this row for the same
+# reason as the four above (after v330, the owner's "Yes to both, build them",
+# Nov 14): a host's tile lays the box around a drawing in the drawing's own
+# ground, and a drawing made on a picture (a photo, or the picture the Pad
+# began on) keeps that picture, blurred, at its sides. Both used to be read out
+# of the payload by the database on every page of a feed, and on PostgreSQL the
+# payload is plain `json`, so every path read re-parses the whole drawing
+# (measured on PG 16, 24 drawings: the ground's two reads 80-260 ms a page,
+# four more for the picture 310-425 ms). Written once at post time now
+# (creation.py), from the payload, by the player's own rules; describe_posts
+# reads the columns, and only a row from before them reads the drawing, until
+# `python -m skribl.backfill_ground` fills it in.
+
+#: A ground a host may lay a box in: a hex colour, three or six digits, as the
+#: editors' swatches and colour picker write one (#0d0f14, the Pad's dark).
+_GROUND = re.compile(r"#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})")
+
+
+def _ground(raw):
+    """A drawing's ground as `describe_posts` hands it: "#rrggbb", lowercase,
+    or None for anything else (none written, a number, a name, a gradient,
+    words after the colour). A page lays it in as a value of its own CSS, so
+    nothing but a colour ever gets through."""
+    m = _GROUND.fullmatch(raw) if isinstance(raw, str) else None
+    if not m:
+        return None
+    h = m.group(1).lower()
+    return "#" + (h if len(h) == 6 else "".join(c * 2 for c in h))
+
+
+def _js_truthy(v):
+    """Whether a value read from a payload is true to the player's JavaScript:
+    anything but null, false, 0 (and NaN) and the empty string. An empty list
+    or object is true there, as it is not in Python."""
+    if v is None or v is False:
+        return False
+    if isinstance(v, (int, float)) and not isinstance(v, bool):
+        return v == v and v != 0
+    if isinstance(v, str):
+        return v != ""
+    return True
+
+
+def _first_page(payload):
+    """The page the player lays first (inlineplayer.js framesOf): frames[0]
+    when `frames` is a list with something in it (a page that is not an object
+    is a page with nothing on it), else the payload's own top level, the way a
+    payload from before pages carries the drawing."""
+    frames = payload.get("frames")
+    if isinstance(frames, list) and frames:
+        return frames[0] if isinstance(frames[0], dict) else {}
+    return payload
+
+
+def _payload_ground(payload):
+    """The `ground` column: the colour the player paints the first page on,
+    "#rrggbb", or "" when the drawing has none a page could use.
+
+    inlineplayer.js lays its underlay with `(f0.background &&
+    f0.background.color) || (payload.background || {}).color`: the first
+    page's colour, else the payload's own, an empty or false one passed over
+    as `||` does. What it finds goes through _ground, the rule describe_posts
+    hands a host: a hex colour, lowercase, six digits, or nothing ("") for a
+    name, a number, eight digits or words after a colour. Pure; a host
+    constructing SkriblPost directly never passes through here, and a NULL
+    column is read from the drawing (describe_posts)."""
+    if not isinstance(payload, dict):
+        return ""
+    picks = []
+    for page in (_first_page(payload), payload):
+        bg = page.get("background")
+        if isinstance(bg, dict):
+            picks.append(bg.get("color"))
+    raw = next((c for c in picks if _js_truthy(c)), None)
+    return _ground(raw) or ""
+
+
+def _payload_on_photo(payload):
+    """The `on_photo` column: whether the drawing is made on a picture, a
+    photo or the picture the Pad began on, as the player lays its underlay.
+
+    inlineplayer.js: `(ph && ph.data) || f0.baseSnapshot ||
+    payload.baseSnapshot`, where `ph` is the first page's photo and `f0` the
+    page framesOf hands it (for a payload from before pages, the top level's
+    photo and snapshot). True when any of them is there, each as JavaScript
+    reads it (_js_truthy); a picture that will not load is still the
+    drawing's picture, as the player still tries it. Pure."""
+    if not isinstance(payload, dict):
+        return False
+    page = _first_page(payload)
+    photo = page.get("photo")
+    return bool((isinstance(photo, dict) and _js_truthy(photo.get("data")))
+                or _js_truthy(page.get("baseSnapshot")) or _js_truthy(payload.get("baseSnapshot")))
+
+
 # --- Server-side media validation (INTEGRATION §7) ---------------------------
 # The post endpoint is public and unauthenticated, and every media item arrives as
 # a base64 data URL inside payload_json. Until now the only limit was

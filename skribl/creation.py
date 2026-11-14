@@ -72,7 +72,7 @@ from .mediameta import STRIPPED, strip_payload
 from .storage import claim_media, externalise_payload, pending_media_ready
 from .validation import (_iter_media_items, _payload_has_audio,
                          _payload_canvas, _payload_kind, _payload_pages,
-                         _payload_line,
+                         _payload_line, _payload_ground, _payload_on_photo,
                          _validate_payload_complexity, _validate_payload_extra,
                          _validate_payload_media, media_refusal)
 
@@ -409,6 +409,12 @@ def create_post(payload, *, author_id=None, media_store=None,
     # re-walk the payload five times to reach the same two numbers.
     _canvas = _payload_canvas(payload)
     _line = _payload_line(payload)
+    # What it is painted on (after v330): its ground, "" for none a page could
+    # use, and whether it is made on a picture, by the player's own rules, so
+    # a page of a feed reads two small columns and never the drawing
+    # (describe_posts). One place for both editors: the Pad and Flip post here.
+    _ground_col = _payload_ground(payload)
+    _on_photo = _payload_on_photo(payload)
 
     for _attempt in range(5):
         candidate = secrets.token_urlsafe(8)
@@ -435,6 +441,8 @@ def create_post(payload, *, author_id=None, media_store=None,
                     canvas_h=_canvas[1],
                     line_json=(json.dumps(_line, separators=(",", ":"))
                                if _line else None),
+                    ground=_ground_col,
+                    on_photo=_on_photo,
                     visibility=visibility,
                     delete_token_hash=delete_token_hash,
                 )

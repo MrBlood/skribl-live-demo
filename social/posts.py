@@ -282,9 +282,9 @@ def person_page(person, viewer, before=None, limit=PAGE):
 def cards(entries, viewer):
     """What each card shows: the post (a drawing shown outside a post is a
     post whose words are its title), its author, and its drawing's size, line,
-    plays and ground as Skribl describes them for `viewer` (None where it
-    cannot be had: deleted or withheld since); how many comments; where it
-    goes, and its Delete."""
+    plays, ground and whether it is on a picture as Skribl describes them for
+    `viewer` (None where it cannot be had: deleted or withheld since); how
+    many comments; where it goes, and its Delete."""
     from skribl import describe_posts
     from .comments import counts
     from .likes import stats
@@ -293,8 +293,9 @@ def cards(entries, viewer):
     # WHOM THIS VIEWER MUTED (mutes): their ⋯ says Unmute. Read once a request.
     muted = muted_ids(viewer)
     # A drawing shown outside a post is asked too, in the same one read: the
-    # listing it came from says no ground (the payload's), and a tile lays
-    # its box in it as a post's does (_gallery.html plate_ground).
+    # listing it came from says no ground and no picture, and a tile lays
+    # its box in them as a post's does (_gallery.html plate_ground and
+    # plate_fill).
     drawings = describe_posts([e["post"].skribl_id if e["kind"] == "p" else e["sk"]["id"] for e in entries],
                               viewer_id=viewer.public_id if viewer else None)
     # HOW MANY COMMENTS each card says (phase 2; a drawing's too, since every
@@ -316,13 +317,14 @@ def cards(entries, viewer):
             gone = url_for("social.post_delete", public_id=p.public_id)
         else:
             # A drawing shown outside a post: as Skribl describes it now (its
-            # ground too). The Gallery's read names its id and visibility
-            # alone (gallery._read), so one Skribl no longer describes is no
-            # card there; the listing's own item (More from's) stays as read.
+            # ground and whether it is on a picture too). The Gallery's read
+            # names its id and visibility alone (gallery._read), so one Skribl
+            # no longer describes is no card there; the listing's own item
+            # (More from's) stays as read, its ground and picture not known.
             sid = e["sk"]["id"]
             got = drawings.get(sid)
             sk = (dict(e["sk"], **got) if got is not None
-                  else dict(e["sk"], ground=None) if "title" in e["sk"] else None)
+                  else dict(e["sk"], ground=None, on_photo=False) if "title" in e["sk"] else None)
             p = _Shown(public_id="b-" + sid, words=_title_words((sk or {}).get("title")), skribl_id=sid,
                        created_at=e["at"])
             url = url_for("social.bloob_page", skribl_id=sid)

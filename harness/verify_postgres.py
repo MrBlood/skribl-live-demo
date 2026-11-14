@@ -630,6 +630,174 @@ except Exception as _e9outer:                                     # noqa: BLE001
     check("the backfill is drivable on PostgreSQL", False,
           f"{type(_e9outer).__name__}: {str(_e9outer)[:200]}")
 
+print("\nTHE GROUND AND THE PICTURE — two columns, read by describe_posts, filled by backfill_ground")
+# After v330 (the owner's "Yes to both, build them", Nov 14): a host's tile
+# lays the box around a drawing in its own ground, and a drawing made on a
+# picture keeps that picture at its sides. describe_posts read both out of the
+# payload, and on PostgreSQL the payload is plain `json`: every path read
+# re-parses the whole drawing (measured on PG 16, 24 drawings: 80-260 ms a
+# page for the ground's two reads, 310-425 ms with the picture's four). They
+# are columns now (the revision is in the chain this suite migrates), written
+# at post time; describe_posts reads the drawing, with #>> inside a CASE, only
+# where a column is NULL, and `python -m skribl.backfill_ground` fills those
+# in. Both driven here, each in a schema of its own, as the canvas command is
+# above: describe_posts through a throwaway host (a column answers where it
+# disagrees with the drawing; a NULL reads the drawing), and the command's
+# PostgreSQL extraction against the shapes verify_migrations gives SQLite.
+_GPIC = "data:image/png;base64," + "A" * 120000
+_GSHAPES_PG = [
+    ("a Pad drawing on the Pad's dark", '{"frames":[{"background":{"color":"#0D0F14"}}]}', ("#0d0f14", False)),
+    ("a page on a photo", '{"frames":[{"background":{"color":"#fff"},"photo":{"data":"%s"}}]}' % _GPIC, ("#ffffff", True)),
+    ("a page on the picture it began on", '{"frames":[{"baseSnapshot":"%s"}]}' % _GPIC, ("", True)),
+    ("the payload's own snapshot beside pages", '{"frames":[{"background":{"color":"#123"}}],"baseSnapshot":"%s"}' % _GPIC,
+     ("#112233", True)),
+    ("from before pages, on a photo", '{"background":{"color":"#ABC"},"photo":{"data":"%s"}}' % _GPIC, ("#aabbcc", True)),
+    ("from before pages, plain", '{"background":{"color":"#f6f2ea"},"strokes":[]}', ("#f6f2ea", False)),
+    ("a photo on the second page alone", '{"frames":[{"background":{"color":"#000000"}},{"photo":{"data":"x"}}]}',
+     ("#000000", False)),
+    ("a top-level photo beside pages", '{"frames":[{}],"photo":{"data":"x"}}', ("", False)),
+    ("no pages in the list, a top photo", '{"frames":[],"photo":{"data":"x"},"background":{"color":"#010203"}}',
+     ("#010203", True)),
+    # PostgreSQL's path operator reads a key "0" of an object as a first page,
+    # which the player does not: the command asks the type of `frames` first.
+    ("pages an object", '{"frames":{"0":{"photo":{"data":"x"}}},"background":{"color":"#0a0b0c"}}', ("#0a0b0c", False)),
+    ("a first page that is words", '{"frames":["a page"],"baseSnapshot":"x"}', ("", True)),
+    ("a first page that is null", '{"frames":[null],"background":{"color":"#111"}}', ("#111111", False)),
+    ("an empty photo", '{"frames":[{"photo":{"data":""}}]}', ("", False)),
+    ("a photo that is words", '{"frames":[{"photo":"data:image/png;base64,AAAA"}]}', ("", False)),
+    ("a photo of 0", '{"frames":[{"photo":{"data":0}}]}', ("", False)),
+    ("a photo of true", '{"frames":[{"photo":{"data":true}}]}', ("", True)),
+    ("an empty first-page colour", '{"frames":[{"background":{"color":""}}],"background":{"color":"#456"}}',
+     ("#445566", False)),
+    ("a false first-page colour", '{"frames":[{"background":{"color":false}}],"background":{"color":"#456"}}',
+     ("#445566", False)),
+    ("a name for a colour", '{"frames":[{"background":{"color":"red"}}],"background":{"color":"#456"}}', ("", False)),
+    ("a long string for a colour", '{"frames":[{"background":{"color":"#0d0f14; background: url(%s)"}}]}' % ("x" * 200),
+     ("", False)),
+    ("a number for a colour", '{"frames":[{"background":{"color":7}}]}', ("", False)),
+    ("an object for a colour", '{"frames":[{"background":{"color":{"a":1}}}],"background":{"color":"#456"}}', ("", False)),
+    ("a payload that is an array", '[1,2,3]', ("", False)),
+    ("a payload that is a string", '"a string"', ("", False)),
+    ("a square one on a photo", '{"frames":[{"background":{"color":"#fafafa"},"photo":{"data":"%s"}}]}' % _GPIC,
+     ("#fafafa", True)),
+    ("a plain one, last", '{"frames":[{"background":{"color":"#0d0f14"}}]}', ("#0d0f14", False)),
+]
+try:
+    import io as _iog                                             # noqa: E402
+    import sqlalchemy as _sag                                     # noqa: E402
+    from sqlalchemy.orm import Session as _Sessiong               # noqa: E402
+    sys.path.insert(0, str(ROOT))
+    from skribl import backfill_ground as _bgg                    # noqa: E402
+
+    _gschema = "groundprobe_" + uuid.uuid4().hex[:8]
+    _geng = _sag.create_engine(SA_DSN)
+    with _geng.begin() as _cg:
+        _cg.exec_driver_sql(f'CREATE SCHEMA "{_gschema}"')
+    _gopts = {"options": f"-csearch_path={_gschema}"}
+    _gengs = _sessg = _ghost_db = None
+    try:
+        _gengs = _sag.create_engine(SA_DSN, connect_args=_gopts)
+        with _gengs.begin() as _cg:
+            _cg.exec_driver_sql("CREATE TABLE skribl_posts (id serial primary key, payload_json json, "
+                                "ground varchar(7), on_photo boolean)")
+            for _lbl, _pl, _want in _GSHAPES_PG:
+                _cg.exec_driver_sql("INSERT INTO skribl_posts (payload_json) VALUES (%s)", (_pl,))
+            _cg.exec_driver_sql("INSERT INTO skribl_posts (payload_json) VALUES (NULL)")
+        _sessg = _Sessiong(_gengs)
+        _wireg = _sessg.execute(_sag.text(_bgg._extract_sql("postgresql")), {"n": 1000, "last": 0}).fetchall()
+        _sessg.rollback()
+        _errg = None
+        try:
+            _seeng, _filledg, _failedg = _bgg.run(_sessg, batch=4, write=True, out=_iog.StringIO())
+        except Exception as _eg:                                  # noqa: BLE001
+            _errg, _seeng, _filledg, _failedg = _eg, 0, 0, 1
+        check("the ground's backfill survives every payload shape a gallery holds on PostgreSQL",
+              _errg is None and not _failedg,
+              f"{type(_errg).__name__}: {str(_errg)[:180]}" if _errg else f"{_failedg} failed batches")
+        if _errg is None:
+            with _gengs.connect() as _cg:
+                _gotg = [tuple(r) for r in _cg.exec_driver_sql(
+                    "SELECT ground, on_photo FROM skribl_posts ORDER BY id").fetchall()]
+            _badg = [(lbl, want, got) for (lbl, _pl, want), got in zip(_GSHAPES_PG, _gotg) if got != want]
+            check("...and fills both columns as the player would paint them, on every shape (pages an object read as"
+                  " none, as the player reads it)",
+                  not _badg and _gotg[-1] == ("", False) and _seeng == len(_GSHAPES_PG) + 1,
+                  "; ".join(f"{lbl}: want {w} got {g}" for lbl, w, g in _badg)[:400]
+                  or f"{len(_gotg)} rows agree; {_seeng} looked at")
+            _longg = max((len(str(v)) for r in _wireg for v in r[1:] if v is not None), default=0)
+            check("...and only a few characters of each picture cross the wire, never the payload",
+                  _longg <= _bgg.CUT and "SELECT id, payload_json" not in _bgg._extract_sql("postgresql"),
+                  f"the longest value sent is {_longg} characters")
+        _sessg.close()
+        _sessg = None
+
+        # describe_posts, as a host asks it, on the full table in its schema.
+        from flask import Flask as _Flaskg                        # noqa: E402
+        from flask_sqlalchemy import SQLAlchemy as _SQLAlchemyg   # noqa: E402
+        import skribl as _skg                                     # noqa: E402
+        from skribl.models import SkriblPost as _SPg              # noqa: E402
+        with _gengs.begin() as _cg:
+            _cg.exec_driver_sql("DROP TABLE skribl_posts")
+        _SPg.__table__.create(bind=_gengs)
+        _ghost = _Flaskg("pg-ground-host")
+        _ghost.config.update(SQLALCHEMY_DATABASE_URI=SA_DSN, SECRET_KEY="pg-ground-host",
+                             SQLALCHEMY_ENGINE_OPTIONS={"connect_args": _gopts})
+        _ghost_db = _SQLAlchemyg()
+        _ghost_db.init_app(_ghost)
+        _skg.init_skribl(_ghost, session=lambda: _ghost_db.session, current_user_id=lambda: None, csrf=False)
+        _GROWS = {
+            # name: (payload, ground column, on_photo column, what describe_posts says)
+            "on a photo, its columns NULL": ({"frames": [{"background": {"color": "#0d0f14"}, "photo": {"data": _GPIC}}]},
+                                             None, None, ("#0d0f14", True)),
+            "on its first picture, NULL": ({"frames": [{"background": {"color": "#F6F2EA"}}], "baseSnapshot": _GPIC},
+                                           None, None, ("#f6f2ea", True)),
+            "plain, NULL": ({"frames": [{"background": {"color": "#0D0F14"}}]}, None, None, ("#0d0f14", False)),
+            "on a photo, its columns saying otherwise": ({"frames": [{"background": {"color": "#0d0f14"},
+                                                                      "photo": {"data": _GPIC}}]},
+                                                         "#123456", False, ("#123456", False)),
+            "plain, its columns saying otherwise": ({"frames": [{"background": {"color": "#0d0f14"}}]},
+                                                    "", True, (None, True)),
+        }
+        with _ghost.app_context():
+            _ghost_db.session.execute(_SPg.__table__.insert(), [
+                {"public_id": f"pgg{k}", "title": name, "payload_json": pl, "has_audio": False, "visibility": "public",
+                 "ground": g, "on_photo": o} for k, (name, (pl, g, o, _w)) in enumerate(_GROWS.items())])
+            _ghost_db.session.commit()
+            _said = _skg.describe_posts([f"pgg{k}" for k in range(len(_GROWS))])
+            _ghost_db.session.rollback()
+        _saidg = {name: ((_said.get(f"pgg{k}") or {}).get("ground"), (_said.get(f"pgg{k}") or {}).get("on_photo"))
+                  for k, name in enumerate(_GROWS)}
+        _wrongg = {n: (_saidg[n], v[3]) for n, v in _GROWS.items() if _saidg[n] != v[3]}
+        check("PostgreSQL: describe_posts answers from the columns where they are (one that disagrees with the drawing"
+              " answers), and reads the drawing (#>>, inside the CASE) only where they are NULL",
+              not _wrongg, str(_wrongg) or str(_saidg))
+    finally:
+        # The session first, then the engines, then the schema (the canvas
+        # block's note: an idle transaction holds a lock DROP SCHEMA waits on).
+        try:
+            if _sessg is not None:
+                _sessg.close()
+        except Exception:                                         # noqa: BLE001
+            pass
+        try:
+            if _ghost_db is not None:
+                with _ghost.app_context():
+                    _ghost_db.session.remove()
+                    _ghost_db.engine.dispose()
+        except Exception:                                         # noqa: BLE001
+            pass
+        try:
+            if _gengs is not None:
+                _gengs.dispose()
+        except Exception:                                         # noqa: BLE001
+            pass
+        with _geng.begin() as _cg:
+            _cg.exec_driver_sql(f'DROP SCHEMA "{_gschema}" CASCADE')
+        _geng.dispose()
+except Exception as _egouter:                                     # noqa: BLE001
+    check("the ground and the picture are drivable on PostgreSQL", False,
+          f"{type(_egouter).__name__}: {str(_egouter)[:200]}")
+
 # DRAFTS ARE SAVED ONE AT A TIME PER AUTHOR (the PRE-331 review's 2). A save
 # checked the author's draft count and bytes, then inserted, with nothing
 # holding the two together, so on PostgreSQL saves at once could each see

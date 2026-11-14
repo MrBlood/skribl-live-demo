@@ -36,7 +36,7 @@
 {% from 'social/_safety.html' import safety_sheets with context %}
 {% from 'social/_comments.html' import comments_section, comment_sheets with context %}
 {% from 'social/_mute.html' import mute_parts with context %}
-{% from 'social/_gallery.html' import plate_frame, plate_ground %}
+{% from 'social/_gallery.html' import plate_frame, plate_ground, plate_fill with context %}
 {% import 'social/_icons.html' as ic %}
 {% set p = card.post %}{% set who = card.who %}
 
@@ -82,7 +82,7 @@
     <div class="more-grid">
       {% for m in more %}
       <a class="more-tile" href="{{ m.url }}">
-        <span class="more-pic"{{ plate_ground(m.sk) }}>{% if m.sk %}<span class="more-plate" style="{{ plate_frame(m.sk) }}"><img src="{{ url_for(skribl_bp ~ '.skribl_poster', public_id=m.post.skribl_id) }}" alt="" loading="lazy" decoding="async"></span>{% endif %}</span>
+        <span class="more-pic"{{ plate_ground(m.sk) }}>{% if m.sk %}{{ plate_fill(m.sk) }}<span class="more-plate" style="{{ plate_frame(m.sk) }}"><img src="{{ url_for(skribl_bp ~ '.skribl_poster', public_id=m.post.skribl_id) }}" alt="" loading="lazy" decoding="async"></span>{% endif %}</span>
         <b class="more-words">{{ m.post.words.split('\n')[0] if m.post.words else 'A drawing' }}</b>
         {% if m.plays %}<span class="more-plays">{{ m.plays }}</span>{% endif %}
       </a>
