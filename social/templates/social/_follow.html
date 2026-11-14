@@ -59,7 +59,7 @@
 {%- endmacro %}
 
 {% macro follow_counts(n, mine) -%}
-<p class="fo-counts{% if mine %} is-mine{% endif %}" data-follow-counts>
+<p class="fo-counts" data-follow-counts>
   {%- if n.followers %}{{ _count(n.followers, 'follower' if n.followers == 1 else 'followers', 'followers', mine) }}
   {%- else %}<span class="fo-new">New here</span>{% endif %}
   {%- if n.following %} <span class="fo-dot" aria-hidden="true">·</span> {{ _count(n.following, 'following', 'following', mine) }}{% endif -%}

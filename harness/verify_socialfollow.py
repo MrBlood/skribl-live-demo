@@ -1,7 +1,9 @@
 """Following on the Skribl site (phase 2, follows; docs/SOCIAL-SITE.md "Built:
 follows"), through the demo's own server, with Chromium's virtual
 authenticator for the site's people. The owner's "Yes to all" on the follow
-mock, B (Nov 13): who follows whom is yours alone.
+mock, B (Nov 13): who follows whom is yours alone; and since the
+quick-patterns mock's A ("Yes on everything", Nov 13), counts on every
+profile, the lists still yours alone.
 
   1. THE BUTTON, WHERE IT IS: first in the row on somebody's page, before
      Share and ⋯ (on a desk the same row, beside their face); Follow in the
@@ -19,20 +21,28 @@ mock, B (Nov 13): who follows whom is yours alone.
      down, a body that is not a yes or a no: refused, nothing kept; the limit
      (60 an hour); a refusal in the page puts the button back and says why;
      Home's pick, its guards.
-  4. YOURS ALONE: nothing of follows on somebody else's page, not in the page
-     and not in its source; your own page's "Followed by…" (every name up to
-     three, else two and how many more; the newest three faces), "You
-     follow…" before anybody follows you, no line with nobody either way;
-     counted by the viewer (somebody taken down is in no line and no list).
-  5. THE LISTS: Make's own sheet in its paper, the one pill, Followers and
+  4. COUNTS ON EVERY PROFILE (the quick-patterns mock's A, the map's step 5):
+     "3 followers · 2 following", "1 follower", "New here" (never "0
+     followers"), a following count only when it isn't zero, the same signed
+     in and out; right under the @handle, centred on a phone and from the left
+     on a desk, the number in the first ink and its word in the second, "New
+     here" in the small violet words; THE LISTS YOURS ALONE: on somebody
+     else's page words, not links, and none of who, not in the page and not
+     in its source; on your own each count a 44px button opening its own list
+     ("Followed by…" gone), "New here" never a way anywhere; counted by the
+     viewer (a block either way leaves them out, a mute changes no number,
+     somebody taken down is in nobody's counts or lists).
+  5. THE LISTS: your count opens Make's own sheet in its paper, the one pill, Followers and
      Following newest first with when, "Only you can see…", a row to their
      page; the sheet keeps its height between them; the switch read on every
      frame (the pill glides, one list fades out before the other fades in;
      under Reduce Motion the pill is put there); #followers and #following
      open it on that list.
-  6. KIND, NEVER JUMPY (the button), read on every frame: following fades the
-     fill and the words and draws the check, nothing moving; unfollowing
-     fades, nothing un-drawing; under Reduce Motion only fades.
+  6. KIND, NEVER JUMPY (the button, and the counts), read on every frame:
+     following fades the fill and the words and draws the check, nothing
+     moving; unfollowing fades, nothing un-drawing; the counts follow the tap,
+     changing only while unseen, a fade out and back, nothing beside them
+     moving; under Reduce Motion only fades.
   7. HOME'S PILL: Following | Everyone under the composer, the Gallery's pill
      value for value, 44px to a finger; opens on Everyone before you follow
      anybody and on Following after; your pick kept for the account, on
@@ -59,7 +69,8 @@ mock, B (Nov 13): who follows whom is yours alone.
      stands; lifting it brings none back.
  12. THE DATA: the chain on a populated database (the table, its three
      indexes, its CHECK, Home's pick; back down); one row a pair, never
-     yourself; the reads on their indexes (SQLite's own plan); Home's
+     yourself; the reads on their indexes (SQLite's own plan), a profile's
+     counts one read; Home's
      Following with no read a card; deleting an account takes its follows
      both ways in code, with SQLite's cascade off.
  13. WORDS AND MARKS: every word on every new screen at 4.5:1 on what is
@@ -464,6 +475,14 @@ def tap_follow(pg, after=300):
     pg.wait_for_timeout(after)
 
 
+def tap_if(pg, sel, after=800):
+    """Tap `sel` if the page has it, and wait: one that is not there reads as
+    the row's own red (what it opens is not open), never a section that stops."""
+    if pg.locator(sel).count():
+        pg.locator(sel).first.tap(timeout=5000)
+    pg.wait_for_timeout(after)
+
+
 def tap_to(pg, loc, timeout=10000):
     """Tap something that should open a page, and wait for it: one that does
     not go anywhere reads as the row's own red."""
@@ -519,14 +538,43 @@ FBTN = r"""() => { const b = document.querySelector('.fo-btn'); if (!b || !b.get
     onWider: onw >= offw, follow: b.getAttribute('data-follow'), out: b.hasAttribute('data-follow-out'),
     face: fr ? { right: fr.right, top: fr.top, bottom: fr.bottom } : null }; }"""
 
-# Your own page's line: its words, its faces (a face's still picture names whose
-# it is), and whether it is painted where it stands.
-LINE = r"""() => { const a = document.querySelector('[data-follows-open]'); if (!a || !a.getClientRects().length) return null;
-  const r = a.getBoundingClientRect(), at = document.elementFromPoint(r.left + 40, r.top + r.height / 2);
-  return { words: a.querySelector('.lk-by-words').textContent.replace(/\s+/g, ' ').trim(), tab: a.getAttribute('data-follows-open'),
-           faces: [...a.querySelectorAll('.face-ring')].map(f => { const i = f.querySelector('img.skribl-face-still');
-                                                                    return i ? new URL(i.src).pathname : 'blank'; }),
-           h: Math.round(r.height * 10) / 10, hit: !!at && (at === a || a.contains(at)), popup: a.getAttribute('aria-haspopup') }; }"""
+# A profile's counts (the quick-patterns mock's A, the map's step 5): their
+# words as the page reads (the dot's spaces collapsed), where they stand (right
+# after the @handle, the gap under it, their middle against the handle's on a
+# phone and their left against its left on a desk), their size, their inks
+# against the name's and the handle's (the first ink and the second) and "New
+# here"'s against the small violet words; each count's button where there is
+# one (what it opens, its height, its reach: a press at its middle and 21px
+# above and below lands on it), any link, whether the page holds the lists,
+# and whether the old "Followed by…" line is there.
+COUNTS = r"""() => { const c = document.querySelector('[data-follow-counts]'); if (!c || !c.getClientRects().length) return null;
+  const h = document.querySelector('.prof-handle'), r = c.getBoundingClientRect(), hr = h.getBoundingClientRect();
+  const kids = [...c.children].filter(e => e.getClientRects().length).map(e => e.getBoundingClientRect());
+  const left = Math.min(...kids.map(q => q.left)), right = Math.max(...kids.map(q => q.right));
+  const probe = document.createElement('span'); probe.style.color = 'var(--accent-ink)'; c.parentElement.appendChild(probe);
+  const accent = getComputedStyle(probe).color; probe.remove();
+  const num = c.querySelector('b'), word = c.querySelector('.fo-n'), nw = c.querySelector('.fo-new');
+  return { words: c.textContent.replace(/\s+/g, ' ').trim(), after: h.nextElementSibling === c,
+    gap: Math.round((r.top - hr.bottom) * 100) / 100, mid: Math.round(((left + right) / 2 - (hr.left + hr.width / 2)) * 100) / 100,
+    left: Math.round((left - hr.left) * 100) / 100, size: getComputedStyle(c).fontSize,
+    num: num ? getComputedStyle(num).color === getComputedStyle(document.querySelector('.prof-name')).color
+               && getComputedStyle(num).fontWeight === '600' : null,
+    word: word ? getComputedStyle(word).color === getComputedStyle(h).color : null,
+    newHere: nw ? getComputedStyle(nw).color === accent && getComputedStyle(nw).fontWeight === '600' : null,
+    links: c.querySelectorAll('a').length,
+    buttons: [...c.querySelectorAll('button')].map(b => { const q = b.getBoundingClientRect(), mx = q.left + q.width / 2, my = q.top + q.height / 2;
+      const hit = d => { const e = document.elementFromPoint(mx, my + d); return !!e && (e === b || b.contains(e)); };
+      return { words: b.textContent.replace(/\s+/g, ' ').trim(), opens: b.getAttribute('data-follows-open'), h: Math.round(q.height * 100) / 100,
+               popup: b.getAttribute('aria-haspopup'), controls: b.getAttribute('aria-controls'), reach: hit(0) && hit(-21) && hit(21) }; }),
+    lists: !!document.getElementById('followsSheet'), line: !!document.querySelector('.fo-by, .lk-by-words') }; }"""
+
+
+def counts_of(who, handle):
+    """A profile's counts as the server sends them to `who` (None: signed out):
+    their words, the tags taken out, or None where there are none."""
+    st, html = (who.client() if who is not None else Client()).get(f"/social/@{handle}")
+    m = re.search(r"data-follow-counts>(.*?)</p>", html, re.S)
+    return re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", m.group(1))).strip() if st == 200 and m else None
 
 # A sheet: open, its paper, its title, its words, its buttons (in order, and
 # which is the action), where Sign in goes, and what has focus.
@@ -620,6 +668,15 @@ BFRAMES = r"""([ms]) => { window.__ff = []; const b = document.querySelector('.f
     window.__ff.push({ t: Math.round(performance.now() - t0), b: box(b), share: share ? box(share) : null, more: more ? box(more) : null,
       bg: getComputedStyle(b).backgroundColor, off: +getComputedStyle(b.querySelector('.fo-off')).opacity,
       on: +getComputedStyle(b.querySelector('.fo-on')).opacity, dash: parseFloat(pc.strokeDashoffset), arr: pc.strokeDasharray });
+    if (performance.now() - t0 < ms) requestAnimationFrame(step); };
+  requestAnimationFrame(step); }"""
+
+# Every animation frame for `ms` from now: the profile's counts (their
+# opacity, their words, their top) and the top of the row of buttons under them.
+CFRAMES = r"""([ms]) => { window.__cf = []; const c = document.querySelector('[data-follow-counts]'), acts = document.querySelector('.prof-acts');
+  const t0 = performance.now();
+  const step = () => { window.__cf.push({ t: Math.round(performance.now() - t0), op: +getComputedStyle(c).opacity,
+      words: c.textContent.replace(/\s+/g, ' ').trim(), top: c.getBoundingClientRect().top, acts: acts.getBoundingClientRect().top });
     if (performance.now() - t0 < ms) requestAnimationFrame(step); };
   requestAnimationFrame(step); }"""
 
@@ -842,6 +899,30 @@ def judge_button(fs, reduced=False, to=True):
     return out
 
 
+def judge_counts(fs, before, after):
+    """The counts as a follow changes them, read on every frame: they start on
+    `before` and end on `after`, changed once and only while they can't be
+    seen (opacity 0.02 or less there and on the frame before); they fade out
+    and back, three frames or more each way, none carrying more than 60% of
+    it (a fade, not a cut); and nothing moves, not they nor the buttons."""
+    ops = [f["op"] for f in fs]
+    words = [f["words"] for f in fs]
+    if not fs:
+        return {"ok": False, "frames": 0}
+    changes = [i for i in range(1, len(fs)) if words[i] != words[i - 1]]
+    unseen = all(fs[i]["op"] <= 0.02 and fs[i - 1]["op"] <= 0.02 for i in changes)
+    low = min(ops)
+    at = ops.index(low)
+    down = [a - b_ for a, b_ in zip(ops[:at + 1], ops[1:at + 1]) if a - b_ > 0.005]
+    up = [b_ - a for a, b_ in zip(ops[at:], ops[at + 1:]) if b_ - a > 0.005]
+    biggest = round(max(down + up, default=1), 2)
+    still = len({round(f["top"], 2) for f in fs}) == 1 and len({round(f["acts"], 2) for f in fs}) == 1
+    return {"ok": words[0] == before and words[-1] == after and len(changes) == 1 and unseen and low <= 0.02
+            and ops[-1] >= 0.99 and len(down) >= 3 and len(up) >= 3 and biggest <= 0.6 and still,
+            "from": words[0], "to": words[-1], "changes": len(changes), "unseen": unseen, "low": round(low, 3),
+            "down": len(down), "up": len(up), "biggest": biggest, "still": still}
+
+
 def judge_lists(fs, reduced=False):
     """A tap on the lists' pill read on every frame (LFRAMES): the tint glided
     (over eight frames or more, none more than 30% of the way), or under Reduce
@@ -930,13 +1011,15 @@ with app.app_context():
     with app.test_request_context("/social/"):
         for name, call in (("followers", lambda: F.people(who, "followers")), ("following", lambda: F.people(who, "following")),
                            ("count", lambda: F.how_many(who, "followers")), ("is", lambda: F.is_following(who, other)),
-                           ("circle", lambda: F.circle(who)), ("activity", lambda: F.of_me(who, frozenset({-1})))):
+                           ("circle", lambda: F.circle(who)), ("activity", lambda: F.of_me(who, frozenset({-1}))),
+                           ("counts", lambda: F.counts(other, who))):
             rec.clear()
             call()
             calls[name] = list(rec)
     event.remove(db.engine, "before_cursor_execute", keep)
     plan = lambda st, params: [r[3] for r in db.session.connection().exec_driver_sql("EXPLAIN QUERY PLAN " + st, params).fetchall()]
     out["plans"] = {name: [x for st, params in sent for x in plan(st, params)] for name, sent in calls.items()}
+    out["sent"] = {name: len(sent) for name, sent in calls.items()}
     def home():
         seen = []
         def count(conn, cursor, statement, params, context, executemany):
@@ -1187,85 +1270,160 @@ with sync_playwright() as p:
             stopped(3, exc)
 
     # ------------------------------------------------------------------ 4
-    if part(4, "yours alone: nothing on somebody else's page; your own line, in names; counted by the viewer"):
+    if part(4, "counts on every profile: their words, under the @handle; the lists yours alone; counted by the viewer"):
         try:
             kim = someone(b, "kim", "Kim Bryn")
             lou = someone(b, "lou", "Lou Dale")
             mae = someone(b, "mae", "Mae Fox")
             ned = someone(b, "ned", "Ned Gray")
             oli = someone(b, "oli", "Oli Hart")
-            for who in (lou, mae, ned, oli):
-                give_face(who, 40 + len(who.handle) + ord(who.handle[0]))
-            for who in (lou, mae, ned, oli):
+            moe = someone(b, "moe", "Moe Ives")
+            nia = someone(b, "nia", "Nia Jory")
+            kip = someone(b, "kip", "Kip Kerr")
+            lyn = someone(b, "lyn", "Lyn Lowe")
+            # Kim: followed by Ned, Nia and Mae (in that order), following Lou
+            # and Mae; Nia follows Kim, Lou and Moe. So every count's words:
+            for who in (ned, nia, mae):
                 follow(who, "kim")
                 time.sleep(0.02)
-            follow(kim, "lou")
-            st, page = lou.client().get("/social/@kim")
+            for h in ("lou", "mae"):
+                follow(kim, h)
+                time.sleep(0.02)
+            for h in ("lou", "moe"):
+                follow(nia, h)
+            want = {"kim": "3 followers · 2 following", "mae": "1 follower · 1 following", "lou": "2 followers",
+                    "moe": "1 follower", "nia": "New here · 3 following", "ned": "New here · 1 following", "oli": "New here"}
+            seen_in, seen_out = {}, {}
+            ctx, pg = browser_as(b, oli)
+            octx, opg = browser_as(b, None)
+            for h in want:
+                if h != "oli":
+                    go(pg, f"/social/@{h}")
+                    seen_in[h] = pg.evaluate(COUNTS)
+                go(opg, f"/social/@{h}")
+                seen_out[h] = opg.evaluate(COUNTS)
+            close_ctx(ctx, pg)
+            close_ctx(octx, opg)
+            got_in = {h: (v or {}).get("words") for h, v in seen_in.items()}
+            got_out = {h: (v or {}).get("words") for h, v in seen_out.items()}
+            check("every profile says its counts: “3 followers · 2 following”, “1 follower · 1 following”, “2 followers”,"
+                  " “1 follower”; “New here” while nobody follows them, never “0 followers” (“New here · 3 following”,"
+                  " “New here · 1 following”, “New here”); a following count only when it isn't zero; the same to"
+                  " somebody signed in and to nobody",
+                  got_in == {h: w for h, w in want.items() if h != "oli"} and got_out == want,
+                  json.dumps({"signed in": got_in, "signed out": got_out}))
+            words_only = [h for h, v in list(seen_in.items()) + list(seen_out.items()) if not v or v["links"] or v["buttons"] or v["lists"]]
+            st, page = oli.client().get("/social/@kim")
             stn, pagen = Client().get("/social/@kim")
-            leaks = [w for w in ("Followed by", "You follow", "followsSheet", "data-follows-open", "fo-by", "@mae", "@ned",
-                                 "@oli", "Mae Fox", "Ned Gray", "Oli Hart", "follower") if w in page or w in pagen]
-            check("on somebody else's page nothing of follows but Follow or Following: no line, no count, no list, none"
-                  " of who follows them, not in the page and not in its source, signed in or out",
-                  st == 200 and stn == 200 and not leaks and "Following Kim Bryn" in page and "Follow Kim Bryn" in pagen,
-                  f"{st}/{stn}; found {leaks}")
+            leaks = [w for w in ("Followed by", "You follow", "followsSheet", "data-follows-open", "fo-by", "@ned", "@nia", "@mae",
+                                 "@lou", "Ned Gray", "Nia Jory", "Mae Fox", "Lou Dale") if w in page or w in pagen]
+            check("on somebody else's page the counts are words, not links: no button, no way to a list, no lists in the"
+                  " page, and none of who follows them or whom they follow, not in the page and not in its source, signed"
+                  " in or out", st == 200 and stn == 200 and not words_only and not leaks
+                  and "Following Kim Bryn" not in page and "Follow Kim Bryn" in page and "Follow Kim Bryn" in pagen,
+                  f"{st}/{stn}; a way in on {words_only}; found {leaks}")
+            looks = {}
+            for screen in ("phone", "desk"):
+                for scheme in ("light", "dark"):
+                    ctx, pg = browser_as(b, oli, screen=screen, scheme=scheme)
+                    for h in ("kim", "ned"):
+                        go(pg, f"/social/@{h}")
+                        looks[(screen, scheme, h)] = pg.evaluate(COUNTS)
+                    close_ctx(ctx, pg)
+            bad = [f"{k}: {json.dumps(v)}" for k, v in looks.items()
+                   if not (v and v["after"] and v["gap"] == 6 and v["size"] == "15px" and v["num"] and v["word"]
+                           and (k[2] != "ned" or v["newHere"]) and (abs(v["mid"]) <= 1 if k[0] == "phone" else v["left"] == 0))]
+            check("they sit right under the @handle, 6px below it, at 15px: centred on a phone, as the words above them"
+                  " are, and from the left on a desk; each number in the first ink (the name's, 600), its word in the"
+                  " second (the handle's), “New here” in the small violet words (600); light and dark",
+                  not bad and len(looks) == 8, "; ".join(bad)[:1200])
             ctx, pg = browser_as(b, kim)
             go(pg, "/social/@kim")
-            line4 = pg.evaluate(LINE)
-            faces = {h: f"/social/s/{db('select face_id from social_people where handle_key = ?', (h,))[0][0]}/still"
-                     for h in ("oli", "ned", "mae")}
-            check("your own page says who, in names, the twin of 'Liked by…': 'Followed by Oli, Ned and 2 others',"
-                  " newest first, with the newest three faces, a 44px way to the lists",
-                  line4 and line4["words"] == "Followed by Oli, Ned and 2 others" and line4["tab"] == "followers"
-                  and len(line4["faces"]) == 3 and line4["h"] >= 44 and line4["hit"] and line4["popup"] == "dialog",
-                  json.dumps(line4))
-            check("...the faces are theirs, newest first",
-                  line4 and [f.rsplit("/", 2)[-2] if f != "blank" else f for f in line4["faces"]]
-                  == [faces[h].rsplit("/", 2)[-2] for h in ("oli", "ned", "mae")],
-                  f"{line4 and line4['faces']} want {[faces[h] for h in ('oli', 'ned', 'mae')]}")
-            follow(ned, "kim", False)
-            follow(oli, "kim", False)
-            go(pg, "/social/@kim")
-            three = pg.evaluate(LINE)
-            follow(mae, "kim", False)
-            go(pg, "/social/@kim")
-            two = pg.evaluate(LINE)
-            check("every name up to three, else two and how many more: 'Followed by Mae and Lou', then 'Followed by Lou'",
-                  three and three["words"] == "Followed by Mae and Lou" and two and two["words"] == "Followed by Lou",
-                  f"{three and three['words']}; {two and two['words']}")
-            follow(lou, "kim", False)
-            follow(kim, "mae")
-            go(pg, "/social/@kim")
-            mine = pg.evaluate(LINE)
-            for who in ("lou", "mae"):
-                follow(kim, who, False)
-            go(pg, "/social/@kim")
-            nothing = pg.evaluate(LINE)
-            sheet_there = pg.evaluate("() => !!document.getElementById('followsSheet')")
-            check("before anybody follows you it says whom you follow ('You follow Mae and Lou'), and with nobody either"
-                  " way there is no line at all, so nothing ever says zero",
-                  mine and mine["words"] == "You follow Mae and Lou" and mine["tab"] == "following"
-                  and nothing is None and not sheet_there,
-                  f"{mine and mine['words']}; then {nothing}; sheet {sheet_there}")
-            for who in (lou, mae, ned):
-                follow(who, "kim")
-            db_write("update social_people set taken_down_at = datetime('now') where handle_key = 'ned'")
-            go(pg, "/social/@kim")
-            counted = pg.evaluate(LINE)
-            pg.locator("[data-follows-open]").tap()
-            pg.wait_for_timeout(700)
-            listed = pg.evaluate(LISTS)
-            db_write("update social_people set taken_down_at = null where handle_key = 'ned'")
+            mine = pg.evaluate(COUNTS)
+            tap_if(pg, "[data-follows-open=followers]")
+            on_f = pg.evaluate(LISTS)
+            pg.keyboard.press("Escape")
+            pg.wait_for_timeout(600)
+            back_f = pg.evaluate("() => document.activeElement && document.activeElement.getAttribute('data-follows-open')")
+            tap_if(pg, "[data-follows-open=following]")
+            on_g = pg.evaluate(LISTS)
             close_ctx(ctx, pg)
-            check("counted by the viewer: somebody taken down is in no line and no list ('Followed by Mae and Lou', Ned"
-                  " left out)",
-                  counted and counted["words"] == "Followed by Mae and Lou" and listed
-                  and [r["handle"] for r in listed["followers"]["rows"]] == ["@mae", "@lou"],
-                  f"{counted and counted['words']}; listed {listed and [r['handle'] for r in listed['followers']['rows']]}")
+            check("on your own page each count is a button 44px tall, painted and 44px to a finger, opening a dialog:"
+                  " “3 followers” opens your lists on Followers (Mae, Nia, Ned, newest first), “2 following” on Following"
+                  " (Mae, Lou), Esc giving the count its focus back; “Followed by…” is gone, the counts in its place",
+                  mine and mine["words"] == want["kim"]
+                  and [(x["words"], x["opens"], x["h"], x["popup"], x["controls"], x["reach"]) for x in mine["buttons"]]
+                  == [("3 followers", "followers", 44, "dialog", "followsSheet", True),
+                      ("2 following", "following", 44, "dialog", "followsSheet", True)]
+                  and mine["lists"] and not mine["line"] and not mine["links"]
+                  and on_f and on_f["open"] and on_f["pressed"] == "Followers"
+                  and [r["handle"] for r in on_f["followers"]["rows"]] == ["@mae", "@nia", "@ned"] and back_f == "followers"
+                  and on_g and on_g["open"] and on_g["pressed"] == "Following"
+                  and [r["handle"] for r in on_g["following"]["rows"]] == ["@mae", "@lou"],
+                  json.dumps({"buttons": mine and mine["buttons"], "line": mine and mine["line"],
+                              "followers": on_f and [on_f["pressed"], [r["handle"] for r in on_f["followers"]["rows"]]],
+                              "following": on_g and [on_g["pressed"], [r["handle"] for r in on_g["following"]["rows"]]],
+                              "focus back": back_f}))
+            own = {}
+            for who in (ned, oli):
+                ctx, pg = browser_as(b, who)
+                go(pg, f"/social/@{who.handle}")
+                own[who.handle] = pg.evaluate(COUNTS)
+                if who is ned:
+                    tap_if(pg, "[data-follows-open=following]")
+                    own["ned's lists"] = pg.evaluate(LISTS)
+                close_ctx(ctx, pg)
+            n_, o_, nl = own.get("ned"), own.get("oli"), own.get("ned's lists")
+            check("“New here” is never a way anywhere, on your own page too: Ned's “New here · 1 following” opens his lists"
+                  " from “1 following” alone, on Following; Oli's “New here” opens nothing, and his page holds no lists",
+                  n_ and n_["words"] == want["ned"] and [x["words"] for x in n_["buttons"]] == ["1 following"]
+                  and nl and nl["open"] and nl["pressed"] == "Following" and [r["handle"] for r in nl["following"]["rows"]] == ["@kim"]
+                  and o_ and o_["words"] == "New here" and not o_["buttons"] and not o_["lists"],
+                  json.dumps({"ned": n_ and [n_["words"], n_["buttons"]], "oli": o_ and [o_["words"], o_["buttons"], o_["lists"]],
+                              "ned's lists": nl and [nl["open"], nl["pressed"]]}))
+            # COUNTED BY THE VIEWER. Kip follows Kim too. Oli blocks Kip (a
+            # follower) and Lou (whom Kim follows); Kip blocks Lyn; Oli mutes Nia.
+            follow(kip, "kim")
+            before = {t_: counts_of(w_, "kim") for t_, w_ in (("nobody", None), ("kim", kim), ("oli", oli), ("lyn", lyn))}
+            block(oli, "kip")
+            block(oli, "lou")
+            block(kip, "lyn")
+            blocked = {t_: counts_of(w_, "kim") for t_, w_ in (("nobody", None), ("kim", kim), ("oli", oli), ("lyn", lyn))}
+            mc = oli.client()
+            mc.get("/social/")
+            muted_st = mc.post_json("/social/@nia/mute", {})[0]
+            muted = counts_of(oli, "kim")
+            _, oli_page = oli.client().get("/social/@kim")
+            check("counted by the viewer, as a like's count is: a block either way leaves them out of the counts the"
+                  " viewer sees (Oli blocked Kip, who follows Kim, and Lou, whom Kim follows: “3 followers · 1"
+                  " following”; Kip blocked Lyn: “3 followers · 2 following” to her), and nothing of them in the page,"
+                  " while to nobody, to Kim and before the blocks it is “4 followers · 2 following”; a mute changes no"
+                  " number (Oli muted Nia, who follows Kim: still 3)",
+                  all(v == "4 followers · 2 following" for v in before.values())
+                  and blocked == {"nobody": "4 followers · 2 following", "kim": "4 followers · 2 following",
+                                  "oli": "3 followers · 1 following", "lyn": "3 followers · 2 following"}
+                  and muted_st == 200 and muted == "3 followers · 1 following"
+                  and "@kip" not in oli_page and "Kip Kerr" not in oli_page,
+                  json.dumps({"before": before, "after the blocks": blocked, "muted": [muted_st, muted]}))
+            db_write("update social_people set taken_down_at = datetime('now') where handle_key = 'ned'")
+            down = {t_: counts_of(w_, "kim") for t_, w_ in (("nobody", None), ("kim", kim), ("oli", oli))}
+            ctx, pg = browser_as(b, kim)
+            go(pg, "/social/@kim")
+            tap_if(pg, "[data-follows-open=followers]", after=700)
+            listed = pg.evaluate(LISTS)
+            close_ctx(ctx, pg)
+            db_write("update social_people set taken_down_at = null where handle_key = 'ned'")
+            check("somebody taken down is in nobody's counts and nobody's list: Ned out of Kim's, to nobody, to Kim (her"
+                  " Followers Kip, Mae and Nia) and to Oli",
+                  down == {"nobody": "3 followers · 2 following", "kim": "3 followers · 2 following",
+                           "oli": "2 followers · 1 following"}
+                  and listed and [r["handle"] for r in listed["followers"]["rows"]] == ["@kip", "@mae", "@nia"],
+                  json.dumps({"down": down, "listed": listed and [r["handle"] for r in listed["followers"]["rows"]]}))
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(4, exc)
 
     # ------------------------------------------------------------------ 5
-    if part(5, "the lists: Make's sheet, the one pill, newest first with when; a row to their page; #followers"):
+    if part(5, "the lists: your count opens Make's sheet, the one pill, newest first with when; a row to their page; #followers"):
         try:
             pia = someone(b, "pia", "Pia Lund")
             qua = someone(b, "qua", "Qua Nye")
@@ -1277,11 +1435,11 @@ with sync_playwright() as p:
             follow(pia, "rik")
             ctx, pg = browser_as(b, pia)
             go(pg, "/social/@pia")
-            pg.locator("[data-follows-open]").tap()
+            pg.locator("[data-follows-open=followers]").tap()
             pg.wait_for_timeout(800)
             l5 = pg.evaluate(LISTS)
             pill5 = pg.evaluate(PILL, "#followsSheet .fo-seg")
-            check("the line opens Make's own sheet in its paper (--menu-paper), titled with your handle: the one pill,"
+            check("your followers' count opens Make's own sheet in its paper (--menu-paper), titled with your handle: the one pill,"
                   " Followers | Following, on Followers, its tint under it; the people on one card",
                   l5 and l5["open"] and l5["paper"] == SHEET_PAPER["light"] and l5["title"] == "@pia"
                   and l5["pill"] == ["Followers", "Following"] and l5["pressed"] == "Followers"
@@ -1310,7 +1468,7 @@ with sync_playwright() as p:
                     tag = f"{scheme}{' reduced' if reduced else ''}"
                     lctx, lpg = browser_as(b, pia, scheme=scheme, reduced=reduced)
                     go(lpg, "/social/@pia")
-                    lpg.locator("[data-follows-open]").tap()
+                    lpg.locator("[data-follows-open=followers]").tap()
                     lpg.wait_for_timeout(900)
                     lpg.evaluate(LFRAMES, [900])
                     lpg.locator("#followsSheet .fo-seg button[data-tab=following]").tap()
@@ -1340,11 +1498,11 @@ with sync_playwright() as p:
             stopped(5, exc)
 
     # ------------------------------------------------------------------ 6
-    if part(6, "kind, never jumpy: the button fades and draws, nothing moves; unfollowing fades; Reduce Motion fades"):
+    if part(6, "kind, never jumpy: the button fades and draws, nothing moves; unfollowing fades; the counts fade; Reduce Motion fades"):
         try:
             tom = someone(b, "tom", "Tom Quin")
             uma = someone(b, "uma", "Uma Roth")
-            got = {}
+            got, counted = {}, {}
             for scheme in ("light", "dark"):
                 for reduced in (False, True):
                     tag = f"{scheme}{' reduced' if reduced else ''}"
@@ -1352,16 +1510,21 @@ with sync_playwright() as p:
                     ctx, pg = browser_as(b, tom, scheme=scheme, reduced=reduced)
                     go(pg, "/social/@uma", wait=500)
                     pg.evaluate(BFRAMES, [900])
+                    pg.evaluate(CFRAMES, [1500])
                     pg.locator(".fo-btn").tap()
-                    pg.wait_for_timeout(1300)
+                    pg.wait_for_timeout(1700)
                     on = judge_button(pg.evaluate("() => window.__ff"), reduced=reduced, to=True)
+                    con = judge_counts(pg.evaluate("() => window.__cf"), "New here", "1 follower")
                     pg.locator(".fo-btn").tap()
                     pg.wait_for_timeout(800)
                     pg.evaluate(BFRAMES, [900])
+                    pg.evaluate(CFRAMES, [1500])
                     pg.locator("#unfollowSheet [data-unfollow]").tap()
-                    pg.wait_for_timeout(1300)
+                    pg.wait_for_timeout(1700)
                     off = judge_button(pg.evaluate("() => window.__ff"), reduced=reduced, to=False)
+                    coff = judge_counts(pg.evaluate("() => window.__cf"), "1 follower", "New here")
                     got[tag] = (on, off)
+                    counted[tag] = (con, coff)
                     close_ctx(ctx, pg)
             brief = {t: [{k: v for k, v in x.items() if k in ("moved", "fill", "on", "dash", "frames", "arr", "ok")} for x in pair]
                      for t, pair in got.items()}
@@ -1374,6 +1537,14 @@ with sync_playwright() as p:
             check("under Reduce Motion it only fades, both ways: the check there at once, nothing drawn, nothing moved",
                   all(got[t][0]["ok"] and got[t][1]["ok"] for t in ("light reduced", "dark reduced")),
                   json.dumps({t: brief[t] for t in ("light reduced", "dark reduced")}))
+            check("the counts follow the tap, read on every frame (light and dark): “New here” becomes “1 follower”,"
+                  " changed once and only while they can't be seen, fading out and back over three frames or more each"
+                  " way, never more than 60% in a frame, nothing beside them moving; unfollowing, back to “New here” the"
+                  " same way", all(counted[t][0]["ok"] and counted[t][1]["ok"] for t in ("light", "dark")),
+                  json.dumps({t: counted[t] for t in ("light", "dark")}))
+            check("under Reduce Motion the counts change the same way, a fade, which moves nothing",
+                  all(counted[t][0]["ok"] and counted[t][1]["ok"] for t in ("light reduced", "dark reduced")),
+                  json.dumps({t: counted[t] for t in ("light reduced", "dark reduced")}))
         except Exception as exc:  # noqa: BLE001 -- a step that cannot go on is a red row, never a stop
             stopped(6, exc)
 
@@ -1863,8 +2034,11 @@ with sync_playwright() as p:
             flat = [x for v in plans.values() for x in v]
             check("the reads, as the code sends them, are searches on their own indexes (SQLite's own plan): who follows"
                   " you and how many by whom, newest first; whom you follow by who; whether you follow somebody by the"
-                  " pair; Activity's by whom",
+                  " pair; Activity's by whom; a profile's counts, for whoever looks, one read, by whom and by who",
                   any("ix_social_follows_followed_created (followed_id=?)" in x for x in plans.get("followers", []))
+                  and any("(followed_id=?)" in x and "social_follows" in x for x in plans.get("counts", []))
+                  and any("(follower_id=?)" in x and "social_follows" in x for x in plans.get("counts", []))
+                  and (out.get("sent") or {}).get("counts") == 1
                   and any("ix_social_follows_follower_created (follower_id=?)" in x for x in plans.get("following", []))
                   and any("(followed_id=?)" in x and "social_follows" in x for x in plans.get("count", []))
                   and any("ix_social_follows_pair (follower_id=? AND followed_id=?)" in x for x in plans.get("is", []))
@@ -1921,7 +2095,7 @@ with sync_playwright() as p:
                     got.append(("the unfollow sheet", pg.evaluate(READ, "#unfollowSheet")))
                     go(pg, "/social/@ada")
                     got.append(("your own page", pg.evaluate(READ)))
-                    press(pg, "[data-follows-open]")
+                    press(pg, "[data-follows-open=followers]")
                     pg.wait_for_timeout(800)
                     got.append(("the lists, Followers", pg.evaluate(READ, "#followsSheet")))
                     inks.append((tag, "the lists' pill", pg.evaluate(PILL_INK, "#followsSheet .fo-seg")))
@@ -1955,8 +2129,9 @@ with sync_playwright() as p:
                         lows += [f"{tag} {where}: {x}" for x in r["low"]]
                         smalls += [f"{tag} {where}: {x}" for x in r["small"]]
                         fields += [f"{tag} {where}: {x}" for x in r["fields"]]
-                    check(f"every word at 4.5:1 or more on what is painted behind it, {tag}: somebody's page (Follow, then"
-                          " Following), the unfollow sheet, your own page with its line, the lists (both), Home on"
+                    check(f"every word at 4.5:1 or more on what is painted behind it, {tag}: somebody's page (its counts,"
+                          " “New here · 1 following”, Follow, then Following and “1 follower · 1 following”), the"
+                          " unfollow sheet, your own page with its counts, the lists (both), Home on"
                           " Following (the pill, caught up, Fresh from everyone), following nobody, Activity with follows,"
                           " the signed-out sheet",
                           all(r["read"] > 0 for _, r in got) and not any(r["low"] for _, r in got),

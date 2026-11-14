@@ -282,9 +282,9 @@ body {
 }
 /* THE ☰ ON A PHONE (the quick-patterns mock; the owner's "Yes on everything",
    Nov 13): at the top left of Home and the Gallery, before the wordmark, its
-   44px reaching 10px past the top's edge so its three strokes start near
-   where the page's words do, as the mock placed it; the top's ink, as the
-   bell at the other end. It is the top's, so a desk, which has no top, has
+   44px reaching 10px past the top's edge, as the bell's does at the right and
+   as the mock placed it; the top's ink, as the bell's (an .icon-btn alone
+   would wear the second ink). It is the top's, so a desk, which has no top, has
    none. Its sheet is the ⋯'s (.post-sheet, its rows .post-act): a row there
    is a link, or Sign out's form, dressed as the ⋯'s buttons are. */
 .top > .top-menu { margin-left: -10px; margin-right: 2px; color: var(--ink); }

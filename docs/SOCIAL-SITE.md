@@ -1503,7 +1503,8 @@ visibility policy is untouched: a mute never hides a page.
 
 **Counts and "Liked by…" stay true,** for everybody and for you: a folded
 comment is counted, their like is in the count and in "Liked by…", their
-follow in "Followed by…".
+follow in "Followed by…" (since the map's step 5, in the counts and the
+lists).
 
 **Rule 3: mute and follow stay apart.** Muting never unfollows (so nothing
 changes on their side, not even their own list of who follows them), and
@@ -1702,6 +1703,20 @@ keeps its own page (`/social/b/<id>`), its maker's page (their Skribls, which
 step 4 makes their Gallery) and More from, so nothing is lost. The first
 visit is as it was: Skribl's own Gallery section, every public skribl. Next
 is step 4.
+
+**Step 5 is built** (DECISIONS, "The ☰ on a phone, and the counts"),
+before step 4 (a profile's tabs), which is not built yet. The ☰, drawn in our pen, sits at the
+top left of a phone's Home and Gallery and opens the site's own sheet, the
+⋯'s (`_menu.html`): Settings, Community rules, Privacy, Your reports (an
+admin's alone: the page is nobody else's) and Sign out; signed out, the
+same ☰ holds Sign in, Community rules and Privacy. A desk is unchanged.
+Every profile says its counts under the @handle (`follows.counts`, counted
+by whoever looks, as a like's count is): "3 followers · 2 following", "New
+here" while nobody follows them yet, a following count only when it isn't
+zero. On your own page the counts open your lists and took the place of
+"Followed by…"; on anybody else's they are words, and the lists stay yours
+alone. Where section 13 says nobody has a count on show, this is the
+decision.
 
 **The four.** Simple: one thing to share, one card for it, one Gallery
 (everyone's, the people you follow, or one person's), one place for your
